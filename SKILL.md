@@ -23,7 +23,12 @@ end of every work stage.
   - `cargo.rs` — cargo kinds, pieces, and placement rules.
   - `barter.rs` — valuation and trade resolution.
   - `event.rs` — the suspicious-jump state machine.
-  - `save.rs` — `STV1` serialization.
+  - `save.rs` — `STV2` serialization.
+- `src/net/` — deterministic lockstep multiplayer per `docs/NETWORKING.md`:
+  protocol messages, helm/client session state machines, the guild server
+  (idempotent max-merge delivery counters), and the seeded flaky-network
+  harness the tests run on. Pure and macroquad-free like `sim`; transports
+  are a later adapter. `examples/convoy.rs` runs six clients in one command.
 - `src/synth.rs` — procedural sound effects as WAV bytes. Also pure, also
   unit-tested; the game ships no audio assets.
 - `src/main.rs` — thin macroquad frontend. Window, draw calls, input gathering.
@@ -93,13 +98,15 @@ Anything genuinely unavoidable gets isolated in one place for future
 translation.
 
 Cargo is conserved: a piece the player owns never vanishes or changes hands
-except through the accept lever, and no drag can destroy anything. The
-ownership rule lives in exactly one place (`cargo::player_owned`), the drop
-matrix consumes it in `Sim::resolve_drop`, and the renderer's affordances
-come from `Sim::drop_targets()` — never restate any of them. The
-drag-monkey test in `src/sim/mod.rs` feeds thousands of arbitrary input
-frames and fails the moment any interaction loses a piece without an
-accept, so new surfaces are guarded the moment they exist.
+except through two ceremonies — the accept lever, and the Guild's hangar
+steal on docking (`Cue::Delivered`, per DESIGN.md's Central Server section).
+No drag can destroy anything. The ownership rule lives in exactly one place
+(`cargo::player_owned`), the drop matrix consumes it in `Sim::resolve_drop`,
+and the renderer's affordances come from `Sim::drop_targets()` — never
+restate any of them. The drag-monkey tests in `src/sim/mod.rs` feed
+thousands of arbitrary input frames (solo and six-player) and fail the
+moment any interaction loses a piece outside those two doors, so new
+surfaces are guarded the moment they exist.
 
 Aesthetics are directed, not defaulted: `docs/ART_DIRECTION.md` holds the
 conceit (a worn instrument panel; screens vs metal), and all frontend color
@@ -107,7 +114,7 @@ lives in `src/palette.rs` — a purity test fails the build on any raw color
 constructor elsewhere in the frontend. Follow the file or amend it in the
 same change.
 
-The save string is versioned (magic `STV1`), hand-rolled in
+The save string is versioned (magic `STV2`), hand-rolled in
 `src/sim/save.rs`, with no compatibility guarantees before 1.0. Bump the
 magic on any breaking change; an old or corrupt save fails safe into a fresh
 game, never a panic.

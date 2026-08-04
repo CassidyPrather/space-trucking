@@ -21,8 +21,13 @@ deliberately below.
 - [ ] Determinism proven: bit-identical, save-round-trip, and
       catch-up-equivalence tests cover every new mechanic and pass.
 - [ ] Cargo is conserved: nothing the player owns vanishes or changes hands
-      except through the accept lever, and the drag-monkey test covers any
-      new interactive surface automatically.
+      except through the accept lever or the Guild's hangar steal, and the
+      drag-monkey tests (solo and six-player) cover any new interactive
+      surface automatically.
+- [ ] Netcode holds the lockstep contract: state never travels, only
+      inputs; new protocol messages are idempotent under duplication and
+      reordering, fuzz-parsed, and the six flaky-harness properties in
+      `src/net/` stay green.
 - [ ] Affordances derive from the rules: anything drawn as a drop target or
       invitation comes from `Sim::drop_targets()`, `placement_check`, or the
       shared `layout` rects — never from re-derived geometry or a restated
@@ -53,8 +58,11 @@ changing; remove a line only by shipping it or striking it in review.
 
 - Orbital POI motion
 - Mid-flight retargeting
-- Major modules / multiplayer / crewing
-- Central-server global objectives
+- Major modules
+- Live multiplayer frontend (console ↔ lockstep session, remote pointers;
+  the sim, protocol, and harness are in — see docs/NETWORKING.md)
+- Real transport adapter (WebSocket) behind `net`'s transport seam
+- Guild-server hosting + wiring global progress into the console
 - Telemetry + consent flow
 - 3D/VRChat port
 - Additional star systems

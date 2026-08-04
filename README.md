@@ -24,14 +24,18 @@ ship travels there in real time — roughly half a minute to two minutes a
 leg — and docks itself on arrival. Then barter: drag your goods onto the give
 pad and the station's shelf goods onto the take pad until the eagerness dial
 looks agreeable, then pull the accept lever. A give pad with nothing asked in
-return is a gift, and stations never refuse gifts — that lever is the only
-way cargo ever leaves you; no stray drop can lose a piece.
+return is a gift, and stations never refuse gifts — no stray drop can ever
+lose a piece; cargo leaves you only through that lever, or through one other
+door described below.
 
 The cargo carries the lore, and it has opinions about where it sits: heavy
 pieces ride the bottom rows, volatiles refuse adjacency, cryo hugs the hull
-edge, and at most one Suspicious Crate comes aboard — a matte-black box from
-the Guild that audibly hums, and occasionally does something about it
-mid-flight.
+edge, and at most one Suspicious Crate comes aboard — a matte-black box that
+audibly hums, surfaces on far stations' shelves without explanation, and
+occasionally does something about it mid-flight. Dock at the Guild carrying
+one and it is gone before the bartering opens, shuttled off to a hangar
+nobody mentions; an unlabeled lamp plate on the console fills, slowly, with
+whatever it is that is being counted.
 
 | Input   | Effect                                          |
 | ------- | ----------------------------------------------- |
@@ -44,8 +48,20 @@ mid-flight.
 The game auto-saves — to localStorage on the web, to a `local.data` file
 natively (via quad-storage) — and on load fast-forwards up to six hours of
 elapsed real time, so the ship keeps flying while the tab is closed. The save
-format is versioned (`STV1`) with no compatibility promises before 1.0; an
+format is versioned (`STV2`) with no compatibility promises before 1.0; an
 unreadable save becomes a fresh run, quietly.
+
+## Multiplayer
+
+The deterministic core is multiplayer-ready: up to six players crew one ship
+in input-only lockstep (nobody transmits state — a save string is a join
+ticket), and ship crews report hangar deliveries to a central guild server
+whose counters cannot double-count. The architecture and its six required
+network-failure properties live in [docs/NETWORKING.md](docs/NETWORKING.md);
+`cargo run --example convoy` runs a six-client crew over a deliberately
+hostile simulated network and prints the convergence trace. The live
+multiplayer console (and a real transport) are later slices; the protocol
+they will speak is already under test.
 
 Sound is wired up and works in the browser, which is fiddlier than it sounds:
 it needs macroquad's `audio` feature, quad-snd's `audio.js` plugin in `web/`,

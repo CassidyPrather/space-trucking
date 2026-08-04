@@ -1,0 +1,8 @@
+[target.wasm32-unknown-unknown]
+# miniquad's GL/JS bindings (glBindTexture, init_webgl, now, ...) are plain
+# `extern "C"` blocks with no `#[link(wasm_import_module = ...)]`, so rust-lld
+# sees them as undefined rather than as wasm imports and refuses to link.
+# web/gl.js supplies them at instantiation time; tell the linker to emit imports.
+# --import-undefined, not --allow-undefined: this covers function symbols only,
+# so an undefined *data* symbol is still a hard link error.
+rustflags = ["-C", "link-arg=--import-undefined"]

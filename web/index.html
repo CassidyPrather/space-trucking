@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A small Rust + macroquad web toy.">
+    <title>game-template</title>
+    <!-- Inline so the shell keeps making zero external requests (and the console
+         keeps making zero 404s). -->
+    <link rel="icon"
+        href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxNiAxNic+PHJlY3Qgd2lkdGg9JzE2JyBoZWlnaHQ9JzE2JyByeD0nMycgZmlsbD0nIzBkMGQxMicvPjxjaXJjbGUgY3g9JzUnIGN5PSc2JyByPScyJyBmaWxsPScjZTg3MzRhJy8+PGNpcmNsZSBjeD0nMTEnIGN5PSc1JyByPScxLjUnIGZpbGw9JyM0YWMyZTgnLz48Y2lyY2xlIGN4PSc4JyBjeT0nMTEnIHI9JzIuNScgZmlsbD0nIzhmNmJlOCcvPjwvc3ZnPg==">
+    <style>
+        /* House shell: zero external requests. The canvas paints over #status
+           once GL initializes; until then (or on failure) the status shows. */
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0d0d12;
+        }
+
+        @media (prefers-color-scheme: light) {
+
+            html,
+            body {
+                background: #e9e9ef;
+            }
+        }
+
+        .center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font: 16px system-ui, sans-serif;
+            color: #808090;
+            text-align: center;
+            padding: 0 2em;
+        }
+
+        #status {
+            z-index: 0;
+        }
+
+        #status.loading::after {
+            content: "\2026";
+            animation: pulse 1.2s infinite;
+        }
+
+        @keyframes pulse {
+            50% {
+                opacity: 0.2;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #status.loading::after {
+                animation: none;
+            }
+        }
+
+        canvas#glcanvas {
+            position: absolute;
+            inset: 0;
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            outline: none;
+            z-index: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="status" class="center loading">loading</div>
+    <noscript>
+        <style>
+            #status {
+                display: none;
+            }
+        </style>
+        <div class="center">This toy is WebAssembly in a canvas; it needs JavaScript to run.</div>
+    </noscript>
+    <canvas id="glcanvas" tabindex="1"></canvas>
+    <!-- gl.js is miniquad's loader, vendored from the miniquad crate (see CREDITS.md).
+         It grabs #glcanvas at parse time, so it must come after the canvas. -->
+    <script src="gl.js"></script>
+    <!-- audio.js is quad-snd's miniquad plugin, vendored likewise; macroquad's `audio`
+         feature is useless on the web without it. Order is load-bearing: it calls
+         gl.js's miniquad_add_plugin() at parse time, and its imports have to be
+         registered before load() instantiates the wasm below. It also installs the
+         first-gesture handler that resumes the audio context, which browsers keep
+         suspended until the user presses something. -->
+    <script src="audio.js"></script>
+    <script>
+        "use strict";
+        const status = document.getElementById("status");
+        function fail(message) {
+            status.classList.remove("loading");
+            status.textContent = message;
+        }
+        // gl.js reports some failures as errors and some as rejected promises
+        window.addEventListener("error", (e) => fail("Something broke: " + e.message));
+        window.addEventListener("unhandledrejection", (e) => fail("Failed to load: " + e.reason));
+        if (typeof WebAssembly !== "object") {
+            fail("This browser lacks WebAssembly support.");
+        } else if (!document.createElement("canvas").getContext("webgl")) {
+            fail("This browser lacks WebGL support.");
+        } else {
+            load("game-template.wasm"); // keep in sync with the [[bin]] name in Cargo.toml
+            // Translucent draws write alpha into the framebuffer and let the
+            // page show through — including this status line. Remove it once
+            // the wasm is actually running (gl.js sets wasm_exports at
+            // instantiation; on failure it never does, and the error handlers
+            // above repurpose the element).
+            const gone = setInterval(() => {
+                if (window.wasm_exports) {
+                    status.remove();
+                    clearInterval(gone);
+                }
+            }, 100);
+        }
+    </script>
+</body>
+
+</html>

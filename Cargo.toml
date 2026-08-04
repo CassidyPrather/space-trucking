@@ -1,0 +1,57 @@
+[package]
+name = "game-template"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Cassidy Prather <pratherea@gmail.com>"]
+description = "Cassidy's opinionated Rust game/toy template"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/CassidyPrather/game-template"
+keywords = ["game", "gamedev", "macroquad", "wasm", "template"]
+categories = ["games", "wasm"]
+publish = false
+
+[lib]
+name = "game_template"
+path = "src/lib.rs"
+
+[[bin]]
+name = "game-template"
+path = "src/main.rs"
+
+[[bench]]
+name = "sim_bench"
+harness = false
+
+[dependencies]
+# `audio` is off in macroquad's default features; the web build also needs
+# quad-snd's audio.js plugin in web/ (see CREDITS.md). It costs ~300 bytes of
+# wasm: on the web quad-snd is a few extern declarations and the browser does
+# the decoding, so the heavy native decoders never reach this target.
+macroquad = { version = "0.4", features = ["audio"] }
+fastrand = "2"
+
+[dev-dependencies]
+criterion = "0.7"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+# Turn everything up. I'm not a coward!
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+# Targeted allows (each one earns its place, like the ruff ignores did)
+multiple_crate_versions = "allow" # Transitive deps disagree; not actionable here
+missing_errors_doc = "allow" # Undocumented stuff is fine (the D10 of clippy)
+missing_panics_doc = "allow" # Ditto
+cast_precision_loss = "allow" # usize -> f32 in render math; the counts are tiny
+cast_possible_truncation = "allow" # f32 -> i32 for pixel/window sizes is the point
+
+[profile.release]
+# Smaller, faster binaries at the cost of compile time
+lto = "thin"
+strip = "symbols"

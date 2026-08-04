@@ -16,6 +16,7 @@ mod juice;
 mod palette;
 mod render;
 mod storage;
+mod tutor;
 
 use audio::Audio;
 use juice::Juice;
@@ -28,6 +29,7 @@ use macroquad::text::{draw_text, measure_text};
 use macroquad::texture::{FilterMode, RenderTarget, RenderTargetParams, render_target_ex};
 use macroquad::time::get_frame_time;
 use macroquad::window::{Conf, next_frame, screen_height, screen_width};
+use tutor::Tutor;
 
 use space_trucking::VERSION;
 use space_trucking::replay::Recording;
@@ -97,6 +99,11 @@ async fn main() {
     let mut telemetry = boot_telemetry(caught_up_seconds);
     let mut audio = Audio::load().await;
     let mut juice = Juice::default();
+    let mut tutor = Tutor::default();
+    // Wall-clock idle for the onboarding ghost: seconds since the player
+    // last pressed, keyed, or toggled anything. Pointer motion deliberately
+    // does not count — watching must not hold the tutor at bay.
+    let mut idle_seconds: f32 = 0.0;
     let target = pixel_target();
     if arrived_while_away {
         juice.catch_up_arrival();
@@ -114,6 +121,18 @@ async fn main() {
         sim.advance(dt, &input);
         juice.update(dt, &sim, input.pointer, input.press);
         audio.update(dt, &sim, toggle_mute);
+
+        // Any real input resets the idle clock, which is also how the tutor
+        // learns to snuff its ghost mid-demonstration.
+        let interacted = input.press
+            || input.held
+            || input.release
+            || input.toggle_pause
+            || input.toggle_warp
+            || input.reseed.is_some()
+            || toggle_mute;
+        idle_seconds = if interacted { 0.0 } else { idle_seconds + dt };
+        tutor.update(dt, idle_seconds, &sim);
 
         if sim.cues().iter().any(|cue| matches!(cue, Cue::Reseed)) {
             // The black box tells one run's story: a new world, a new tape.
@@ -161,6 +180,7 @@ async fn main() {
                 sim: &sim,
                 juice: &juice,
                 pointer: input.pointer,
+                ghost: tutor.ghost(),
                 audio_waiting: audio.needs_gesture(),
                 audio_muted: audio.muted(),
             },
@@ -234,6 +254,8 @@ async fn replay_session(path: Option<String>) {
                 sim: &sim,
                 juice: &juice,
                 pointer,
+                // Replays show the recorded hand, never the tutor's.
+                ghost: None,
                 audio_waiting: audio.needs_gesture(),
                 audio_muted: audio.muted(),
             },

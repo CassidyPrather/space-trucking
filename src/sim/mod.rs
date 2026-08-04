@@ -620,7 +620,9 @@ impl Sim {
         self.omen.light
     }
 
-    /// Departures so far this run.
+    /// Departures so far this run: how many legs the ship has ever flown.
+    /// Zero means a rig that has never left its first dock — which is what
+    /// keeps the onboarding ghost's first lesson eligible.
     #[must_use]
     pub const fn legs(&self) -> u64 {
         self.legs

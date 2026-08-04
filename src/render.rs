@@ -46,6 +46,7 @@ use crate::palette::{
     TRIM_RECEIVED, TRIM_SHELF, TRIM_TAKE, VOID, dim, fade, kind_color, lerp, mix, omen_tint,
     phosphorize, variant_tint,
 };
+use crate::tutor::{Echo, Ghost};
 
 /// Everything one frame of drawing needs, gathered by `main`.
 pub struct Scene<'a> {
@@ -53,6 +54,8 @@ pub struct Scene<'a> {
     pub juice: &'a Juice,
     /// Pointer position in world coordinates, for ghosts and hover glows.
     pub pointer: Vec2,
+    /// The onboarding tutor's ghost hand mid-demonstration, if any.
+    pub ghost: Option<Ghost>,
     /// Audio still waits on the browser's first-gesture rule.
     pub audio_waiting: bool,
     /// The player has muted.
@@ -320,6 +323,7 @@ pub fn draw(view: &View, target: &RenderTarget, scene: &Scene) {
     draw_rat(&canvas, scene);
     draw_violation_flash(&canvas, scene);
     draw_held(&canvas, scene);
+    draw_tutor_ghost(&canvas, scene);
     draw_omen_fx(scene);
 
     // Blit the crunched frame into the letterbox, hard pixels intact. The
@@ -1933,6 +1937,82 @@ fn snowflake_glyph(c: &Canvas, mid: Vec2, s: f32, col: Color) {
         c.seg(polar(mid, s, angle), polar(mid, s, angle + PI), 1.8, col);
     }
     c.ring(mid, s * 0.45, 1.2, col);
+}
+
+// ------------------------------------------------------------ ghost tutor --
+
+/// The previous contractor's hand: the onboarding ghost from
+/// `crate::tutor`, drawn last inside the fiction so it floats over the
+/// furniture it points at, through the [`Canvas`] so it crunches and dims
+/// with everything else. Overlay only — it consumes tutor output and
+/// touches nothing. Every stroke is GLINT-family at low alpha, translucent
+/// and calm and visibly not the player's own cursor, and its echoes borrow
+/// dim versions of the glows the real interactions would light.
+fn draw_tutor_ghost(c: &Canvas, scene: &Scene) {
+    let Some(ghost) = scene.ghost else {
+        return;
+    };
+    let a = ghost.alpha;
+    if a <= 0.0 {
+        return;
+    }
+    draw_ghost_echo(c, scene, ghost.echo, a);
+    // The hand itself: a soft halo around a ring that sinks toward its dot
+    // as the ghost "presses", with a bloom while the press holds. Bigger
+    // and steadier than the juice conventions' flashes on purpose — it has
+    // to read as a hand, not a spark.
+    let press = ghost.press;
+    let radius = press.mul_add(-3.0, 9.0);
+    c.dot(ghost.pos, radius + 3.0, fade(GLINT, 0.10 * a));
+    c.ring(ghost.pos, radius, 1.0, fade(GLINT, 0.75 * a));
+    c.dot(ghost.pos, 3.0, fade(GLINT, 0.85 * a));
+    if press > 0.01 {
+        c.dot(ghost.pos, radius, fade(GLINT, 0.22 * press * a));
+        c.ring(
+            ghost.pos,
+            press.mul_add(8.0, radius),
+            1.0,
+            fade(GLINT, 0.40 * press * a),
+        );
+    }
+}
+
+/// The ghost's dim echo of what a real press would light up. The console
+/// cannot react to a fake hand, so the demonstration carries its own faint
+/// consequences instead of lying loudly.
+fn draw_ghost_echo(c: &Canvas, scene: &Scene, echo: Echo, a: f32) {
+    match echo {
+        Echo::None => {}
+        Echo::Poi(id) => {
+            // A dim cousin of the real selection ring.
+            let poi = &POIS[usize::from(id)];
+            c.ring(poi.pos, poi.radius + 5.0, 1.2, fade(PHOSPHOR, 0.30 * a));
+        }
+        Echo::LaunchLever => ghost_lever_glow(c, layout::LAUNCH_LEVER, a),
+        Echo::AcceptLever => ghost_lever_glow(c, layout::ACCEPT_LEVER, a),
+        Echo::GiveSlot(slot) => {
+            // A dim cousin of the drop-target invite.
+            let r = inflate(layout::GIVE_SLOTS[usize::from(slot)], 2.0);
+            c.fill(r, fade(AMBER, 0.06 * a));
+            c.frame(r, fade(AMBER, 0.30 * a));
+        }
+        Echo::HoldPiece(id) => {
+            if let Some(piece) = piece_by_id(scene.sim, id) {
+                c.frame_thick(
+                    inflate(layout::piece_rect(piece), PX),
+                    1.0,
+                    fade(GLINT, 0.35 * a),
+                );
+            }
+        }
+    }
+}
+
+/// A faint go-glow over a lever plate: the dim echo of its ready lamp.
+fn ghost_lever_glow(c: &Canvas, r: layout::Rect, a: f32) {
+    let inner = scaled(r, 0.9);
+    c.fill(inner, fade(LAMP_OK, 0.10 * a));
+    c.frame(inner, fade(LAMP_OK, 0.40 * a));
 }
 
 /// The omen's whole-panel cast and the jump's flash, drawn raw in world

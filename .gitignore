@@ -1,2 +1,4 @@
 /target/
 /dist/
+# Claude Code session workspace (agent worktrees, local settings)
+/.claude/

@@ -75,10 +75,6 @@ pub const BARTER_PANEL: Rect = Rect::new(260.0, 440.0, 530.0, 150.0);
 /// The station's goods on offer, top-left of the barter panel.
 pub const SHELF_SLOTS: [Rect; 4] = slot_row(270.0, 448.0);
 
-/// The whole shelf row as one target: dropping a player piece anywhere in
-/// here abandons it to the station, so the discard gesture is forgiving.
-pub const SHELF_AREA: Rect = row_area(&SHELF_SLOTS);
-
 /// Goods received in a concluded trade, below the shelf.
 pub const RECEIVED_SLOTS: [Rect; 4] = slot_row(270.0, 542.0);
 
@@ -99,16 +95,6 @@ const SLOT: f32 = 40.0;
 
 /// Horizontal spacing between slot lefts in a row.
 const SLOT_STEP: f32 = 46.0;
-
-/// The bounding rect of a slot row, gaps included.
-const fn row_area(slots: &[Rect; 4]) -> Rect {
-    Rect::new(
-        slots[0].x,
-        slots[0].y,
-        slots[3].x + slots[3].w - slots[0].x,
-        slots[0].h,
-    )
-}
 
 /// A row of four slots starting at `(x, y)`.
 const fn slot_row(x: f32, y: f32) -> [Rect; 4] {
@@ -169,5 +155,96 @@ pub fn piece_rect(piece: &Piece) -> Rect {
         Loc::GivePad { slot } => GIVE_SLOTS[usize::from(slot)],
         Loc::TakePad { slot } => TAKE_SLOTS[usize::from(slot)],
         Loc::ReceivedShelf { slot } => RECEIVED_SLOTS[usize::from(slot)],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every interactive rect, named, for the pairwise checks below.
+    fn interactive() -> Vec<(&'static str, Rect)> {
+        let mut rects = vec![
+            ("launch", LAUNCH_LEVER),
+            ("accept", ACCEPT_LEVER),
+            ("pause", PAUSE_BTN),
+            ("warp", WARP_BTN),
+            ("speaker", SPEAKER),
+            (
+                "grid",
+                Rect::new(
+                    GRID_ORIGIN.x,
+                    GRID_ORIGIN.y,
+                    f32::from(GRID_COLS) * CELL,
+                    f32::from(GRID_ROWS) * CELL,
+                ),
+            ),
+        ];
+        for (name, row) in [
+            ("shelf", &SHELF_SLOTS),
+            ("received", &RECEIVED_SLOTS),
+            ("give", &GIVE_SLOTS),
+            ("take", &TAKE_SLOTS),
+        ] {
+            for (i, &slot) in row.iter().enumerate() {
+                // The name survives the loop; leaking four tiny strings in a
+                // test beats losing which slot collided.
+                rects.push((&*format!("{name}[{i}]").leak(), slot));
+            }
+        }
+        rects
+    }
+
+    fn overlaps(a: Rect, b: Rect) -> bool {
+        a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+    }
+
+    /// A drop can only mean one thing: no two click/drop targets may share
+    /// any area. This is the guard against a hit-test resolving somewhere
+    /// the player did not aim.
+    #[test]
+    fn interactive_rects_never_overlap() {
+        let rects = interactive();
+        for (i, &(name_a, a)) in rects.iter().enumerate() {
+            for &(name_b, b) in &rects[i + 1..] {
+                assert!(
+                    !overlaps(a, b),
+                    "{name_a} and {name_b} overlap: a drop there is ambiguous"
+                );
+            }
+        }
+    }
+
+    /// The barter furniture stays inside its panel, so hiding the panel
+    /// while traveling also hides every target that needs a station.
+    #[test]
+    fn barter_furniture_sits_inside_the_panel() {
+        let inside = |r: Rect| {
+            r.x >= BARTER_PANEL.x
+                && r.y >= BARTER_PANEL.y
+                && r.x + r.w <= BARTER_PANEL.x + BARTER_PANEL.w
+                && r.y + r.h <= BARTER_PANEL.y + BARTER_PANEL.h
+        };
+        for row in [&SHELF_SLOTS, &RECEIVED_SLOTS, &GIVE_SLOTS, &TAKE_SLOTS] {
+            for &slot in row {
+                assert!(inside(slot), "slot {slot:?} escapes the barter panel");
+            }
+        }
+        assert!(inside(ACCEPT_LEVER));
+        assert!(BARTER_PANEL.contains(DIAL_CENTER));
+    }
+
+    /// Everything sits inside the logical world.
+    #[test]
+    fn everything_fits_the_world() {
+        for (name, r) in interactive() {
+            assert!(
+                r.x >= 0.0
+                    && r.y >= 0.0
+                    && r.x + r.w <= crate::sim::WORLD_W
+                    && r.y + r.h <= crate::sim::WORLD_H,
+                "{name} leaves the world"
+            );
+        }
     }
 }

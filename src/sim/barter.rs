@@ -177,26 +177,42 @@ pub(crate) fn rebuild(seed: u64, station: PoiId, visit: u32, pieces: &[Piece]) -
     }
 }
 
+/// How far past break-even the dial swings per point of gifted value. Gifts
+/// always read as generosity on the gauge, scaled so a token gift barely
+/// clears the notch and a rich one pins it.
+const GIFT_WARMTH: f32 = 8.0;
+
 /// Trade quality from the pads: value given over cost taken, both priced by
 /// this visit's table, with a +1 markup per taken item so nothing is free.
-/// Ready means something is taken and the station at least breaks even.
+/// Ready means the station at least breaks even — or the trade is a pure
+/// gift, which every station accepts. Gifting through the lever is the one
+/// way to shed cargo, so hold space can always be freed and nothing is ever
+/// lost to a stray drop.
 #[must_use]
 pub(crate) fn eagerness_of(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> (f32, bool) {
     let mut give = 0_u32;
+    let mut giving = false;
     let mut take = 0_u32;
     for piece in pieces {
         let value = u32::from(values[piece.kind.index()]);
         match piece.loc {
-            Loc::GivePad { .. } => give += value,
+            Loc::GivePad { .. } => {
+                give += value;
+                giving = true;
+            }
             Loc::TakePad { .. } => take += value + 1,
             _ => {}
         }
     }
-    if take == 0 {
-        (0.0, false)
-    } else {
+    if take > 0 {
         let eagerness = give as f32 / take as f32;
         (eagerness, eagerness >= 1.0)
+    } else if giving {
+        // A pure gift — even a worthless one — is always taken; presence on
+        // the pad counts, not the sum, so junk can still be shed.
+        ((give as f32 / GIFT_WARMTH + 1.0).min(EAGER_MAX), true)
+    } else {
+        (0.0, false)
     }
 }
 
@@ -321,11 +337,30 @@ mod tests {
     }
 
     #[test]
-    fn empty_take_pad_is_zero_and_never_ready() {
+    fn empty_pads_are_zero_and_never_ready() {
+        let values = visit_values(1, VENUS, 1);
+        assert_eq!(eagerness_of(&[], &values), (0.0, false));
+    }
+
+    #[test]
+    fn a_pure_gift_is_always_ready_and_reads_as_generosity() {
         let values = visit_values(1, VENUS, 1);
         let pieces = [piece(Kind::BrinePearls, Loc::GivePad { slot: 0 })];
-        assert_eq!(eagerness_of(&pieces, &values), (0.0, false));
-        assert_eq!(eagerness_of(&[], &values), (0.0, false));
+        let (eagerness, ready) = eagerness_of(&pieces, &values);
+        assert!(ready, "a gift must always be accepted");
+        assert!(
+            eagerness > 1.0 && eagerness <= EAGER_MAX,
+            "gift dial {eagerness} should sit past break-even"
+        );
+        // A worthless gift is still a gift: ready even at value zero.
+        let mut zeroed = [0_u8; KIND_COUNT];
+        zeroed[Kind::BrinePearls.index()] = 0;
+        let (floor, ready) = eagerness_of(&pieces, &zeroed);
+        assert!(ready);
+        assert!(
+            (floor - 1.0).abs() < 1e-6,
+            "zero-value gift sits at the notch"
+        );
     }
 
     #[test]

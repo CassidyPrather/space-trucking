@@ -92,6 +92,15 @@ sound, because the game is meant to be readable without a shared language.
 Anything genuinely unavoidable gets isolated in one place for future
 translation.
 
+Cargo is conserved: a piece the player owns never vanishes or changes hands
+except through the accept lever, and no drag can destroy anything. The
+ownership rule lives in exactly one place (`cargo::player_owned`), the drop
+matrix consumes it in `Sim::resolve_drop`, and the renderer's affordances
+come from `Sim::drop_targets()` — never restate any of them. The
+drag-monkey test in `src/sim/mod.rs` feeds thousands of arbitrary input
+frames and fails the moment any interaction loses a piece without an
+accept, so new surfaces are guarded the moment they exist.
+
 The save string is versioned (magic `STV1`), hand-rolled in
 `src/sim/save.rs`, with no compatibility guarantees before 1.0. Bump the
 magic on any breaking change; an old or corrupt save fails safe into a fresh

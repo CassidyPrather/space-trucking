@@ -24,7 +24,7 @@ use macroquad::window::{clear_background, screen_height, screen_width};
 
 use space_trucking::sim::{
     Barter, EAGER_MAX, Kind, Loc, POIS, Piece, PoiId, ShipState, Sim, Vec2, Violation, layout,
-    placement_check, splitmix,
+    placement_check, player_owned, splitmix,
 };
 
 use crate::View;
@@ -215,15 +215,6 @@ fn grid_rect() -> layout::Rect {
         layout::GRID_ORIGIN.y,
         f32::from(layout::GRID_COLS) * layout::CELL,
         f32::from(layout::GRID_ROWS) * layout::CELL,
-    )
-}
-
-/// Whether a piece at `loc` belongs to the player (may enter the hold, may
-/// be abandoned to the shelf) rather than to the station.
-const fn ours(loc: Loc) -> bool {
-    matches!(
-        loc,
-        Loc::Hold { .. } | Loc::GivePad { .. } | Loc::ReceivedShelf { .. }
     )
 }
 
@@ -877,7 +868,7 @@ fn draw_drop_hints(c: &Canvas, scene: &Scene) {
     let Some(held) = sim.held() else {
         return;
     };
-    if !ours(held.origin) {
+    if !player_owned(held.origin) {
         return;
     }
     let Some(piece) = piece_by_id(sim, held.piece) else {
@@ -923,15 +914,23 @@ fn draw_slot_rows(c: &Canvas, scene: &Scene) {
         }
     }
 
-    // The station shelf is also the abandon target: while the player holds
-    // one of their own pieces it glows faintly hungry, brighter when the
-    // piece hovers over it.
-    if let Some(held) = scene.sim.held() {
-        if ours(held.origin) {
-            let over = layout::SHELF_AREA.contains(scene.pointer);
-            let base = if over { 0.20 } else { 0.06 };
-            let alpha = (scene.juice.clock() * 3.0).sin().mul_add(0.04, base);
-            c.fill(inflate(layout::SHELF_AREA, 4.0), fade(AMBER, alpha));
+    // While a piece is held, glow the rows that would actually accept it.
+    // The set comes from the sim's own drop matrix, never re-derived here:
+    // an affordance the rules would refuse cannot be drawn.
+    if let Some(targets) = scene.sim.drop_targets() {
+        for (slots, invited) in [
+            (&layout::SHELF_SLOTS, targets.shelf),
+            (&layout::RECEIVED_SLOTS, targets.received),
+            (&layout::GIVE_SLOTS, targets.give),
+            (&layout::TAKE_SLOTS, targets.take),
+        ] {
+            if !invited {
+                continue;
+            }
+            for &slot in slots {
+                c.fill(inflate(slot, 2.0), fade(AMBER, 0.08));
+                c.frame(inflate(slot, 2.0), fade(AMBER, 0.45));
+            }
         }
     }
 }

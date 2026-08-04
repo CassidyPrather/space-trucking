@@ -29,7 +29,9 @@ pub mod save;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub};
 
 pub use barter::{Barter, EAGER_MAX, VALUE};
-pub use cargo::{KIND_COUNT, Kind, Loc, Piece, Tag, Violation, placement_check, placement_legal};
+pub use cargo::{
+    KIND_COUNT, Kind, Loc, Piece, Tag, Violation, placement_check, placement_legal, player_owned,
+};
 use event::Events;
 pub use map::{GUILD, POI_COUNT, POIS, Poi, PoiId, SHIP_SPEED, Ship, ShipState};
 pub use save::SaveError;
@@ -225,14 +227,27 @@ pub struct Held {
     pub legal: bool,
 }
 
-/// What a legal drop does. Private: the outside world only sees the
-/// resulting piece state and cue.
-enum DropAction {
-    /// Settle onto a surface.
-    Move(Loc),
-    /// Abandon to the station shelf: a free slot if one exists, gone if not.
-    /// This is the anti-stuck valve — hold space can always be freed.
-    Abandon,
+/// Which regions could accept the held piece.
+///
+/// Derived from the same ownership matrix [`Sim::resolve_drop`] applies.
+/// The renderer glows exactly these, so what the console invites is always
+/// what a release does — affordances are computed from the rules, never
+/// restated.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+// One independent flag per console region is the honest shape here; folding
+// them into an enum would misrepresent that several can invite at once.
+#[allow(clippy::struct_excessive_bools)]
+pub struct DropTargets {
+    /// The hold grid (player pieces, anywhere, any time).
+    pub hold: bool,
+    /// The give pad (player pieces, while docked).
+    pub give: bool,
+    /// The take pad (station pieces, while docked).
+    pub take: bool,
+    /// The station shelf (station pieces re-shelving, while docked).
+    pub shelf: bool,
+    /// The received shelf (received pieces re-slotting, while docked).
+    pub received: bool,
 }
 
 /// What [`Sim::fast_forward`] lived through, so the frontend can summarise
@@ -605,8 +620,9 @@ impl Sim {
         }
     }
 
-    /// A release drops the held piece: place (or abandon) it if the target
-    /// is legal, snap it back otherwise.
+    /// A release drops the held piece: place it if the target is legal,
+    /// snap it back otherwise. A drop never destroys or surrenders a piece
+    /// — ownership changes only through the accept lever.
     fn on_release(&mut self, p: Vec2) {
         let Some(held) = self.held.take() else {
             return;
@@ -616,14 +632,10 @@ impl Sim {
         };
         let piece = self.pieces[index];
         match self.resolve_drop(&piece, p) {
-            Ok(DropAction::Move(loc)) => {
+            Ok(loc) => {
                 self.pieces[index].loc = loc;
                 self.last_violation = None;
-                self.cues.push(Cue::Place);
-            }
-            Ok(DropAction::Abandon) => {
-                self.abandon(index);
-                self.last_violation = None;
+                self.refresh_ready();
                 self.cues.push(Cue::Place);
             }
             Err(violation) => {
@@ -637,22 +649,21 @@ impl Sim {
         }
     }
 
-    /// Where dropping `piece` at `p` would put it, or which flavour of
+    /// Where dropping `piece` at `p` would settle it, or which flavour of
     /// rejection it earns. `Err(Some(_))` is the hard reject — a stowage
     /// rule refused an in-grid drop — and names the rule; `Err(None)` is a
-    /// soft, ignorable miss.
-    fn resolve_drop(&self, piece: &Piece, p: Vec2) -> Result<DropAction, Option<Violation>> {
-        let ours = matches!(
-            piece.loc,
-            Loc::Hold { .. } | Loc::GivePad { .. } | Loc::ReceivedShelf { .. }
-        );
+    /// soft, ignorable miss that snaps the piece home. Every arm gates on
+    /// [`player_owned`], the same predicate [`Sim::drop_targets`] advertises
+    /// from, so the glowing regions and the legal ones cannot drift apart.
+    fn resolve_drop(&self, piece: &Piece, p: Vec2) -> Result<Loc, Option<Violation>> {
+        let ours = player_owned(piece.loc);
         if let Some((x, y)) = layout::cell_at(p) {
             if !ours {
                 // Station goods never enter the hold before a trade.
                 return Err(None);
             }
             return match placement_check(&self.pieces, piece.id, piece.kind, x, y) {
-                Ok(()) => Ok(DropAction::Move(Loc::Hold { x, y })),
+                Ok(()) => Ok(Loc::Hold { x, y }),
                 Err(violation) => Err(Some(violation)),
             };
         }
@@ -660,49 +671,63 @@ impl Sim {
             if let Some(slot) = layout::slot_at(&layout::GIVE_SLOTS, p) {
                 let loc = Loc::GivePad { slot };
                 return (ours && self.slot_free(loc, piece.id))
-                    .then_some(DropAction::Move(loc))
+                    .then_some(loc)
                     .ok_or(None);
             }
             if let Some(slot) = layout::slot_at(&layout::TAKE_SLOTS, p) {
                 let loc = Loc::TakePad { slot };
                 return (!ours && self.slot_free(loc, piece.id))
-                    .then_some(DropAction::Move(loc))
+                    .then_some(loc)
                     .ok_or(None);
             }
-            if ours && layout::SHELF_AREA.contains(p) {
-                // A player piece anywhere over the shelf is a gift to the
-                // station, so hold space can always be freed.
-                return Ok(DropAction::Abandon);
-            }
             if let Some(slot) = layout::slot_at(&layout::SHELF_SLOTS, p) {
+                // The shelf is the station's: only its own goods re-shelve
+                // here. Player cargo leaves the player through the accept
+                // lever (a gift trade), never through a stray drop.
                 let loc = Loc::StationShelf { slot };
-                return self
-                    .slot_free(loc, piece.id)
-                    .then_some(DropAction::Move(loc))
+                return (!ours && self.slot_free(loc, piece.id))
+                    .then_some(loc)
                     .ok_or(None);
             }
             if let Some(slot) = layout::slot_at(&layout::RECEIVED_SLOTS, p) {
                 let loc = Loc::ReceivedShelf { slot };
                 return (matches!(piece.loc, Loc::ReceivedShelf { .. })
                     && self.slot_free(loc, piece.id))
-                .then_some(DropAction::Move(loc))
+                .then_some(loc)
                 .ok_or(None);
             }
         }
         Err(None)
     }
 
-    /// Abandon the piece at `index` to the station: first free shelf slot,
-    /// or gone entirely if the shelf is full.
-    fn abandon(&mut self, index: usize) {
-        let id = self.pieces[index].id;
-        let free = (0..layout::SHELF_SLOTS.len() as u8)
-            .find(|&slot| self.slot_free(Loc::StationShelf { slot }, id));
-        match free {
-            Some(slot) => self.pieces[index].loc = Loc::StationShelf { slot },
-            None => {
-                self.pieces.remove(index);
-            }
+    /// Which regions would accept the held piece, for the renderer to glow.
+    /// `None` while nothing is held. Derived from [`player_owned`] and the
+    /// dock state exactly as [`Sim::resolve_drop`] is; per-slot freeness
+    /// stays with the drop itself (a glowing row with one occupied socket
+    /// is still an honest invitation).
+    #[must_use]
+    pub fn drop_targets(&self) -> Option<DropTargets> {
+        let held = self.held?;
+        let piece = self.pieces.iter().find(|piece| piece.id == held.piece)?;
+        let ours = player_owned(piece.loc);
+        let docked = self.barter.is_some();
+        Some(DropTargets {
+            hold: ours,
+            give: ours && docked,
+            take: !ours && docked,
+            shelf: !ours && docked,
+            received: docked && matches!(piece.loc, Loc::ReceivedShelf { .. }),
+        })
+    }
+
+    /// Re-derive the lever's readiness from the pads this instant. Called
+    /// whenever a piece lands or a trade concludes, so the lever lights the
+    /// frame a trade becomes viable instead of one tick later. The dial's
+    /// sweep still eases in the tick; only readiness is instantaneous.
+    fn refresh_ready(&mut self) {
+        let ready = barter::eagerness_of(&self.pieces, &self.values).1;
+        if let Some(barter) = &mut self.barter {
+            barter.ready = ready;
         }
     }
 
@@ -753,6 +778,7 @@ impl Sim {
                 piece.loc = Loc::ReceivedShelf { slot };
             }
         }
+        self.refresh_ready();
         self.cues.push(Cue::Accept { value });
     }
 
@@ -1683,9 +1709,9 @@ mod tests {
     }
 
     #[test]
-    fn abandon_fills_a_free_shelf_slot_or_vanishes() {
-        // A run whose opening shelf has exactly two goods: slots 2, 3 free.
-        // A third of shelf-count rolls land on two, so the scan is short.
+    fn own_cargo_dropped_on_the_shelf_snaps_back() {
+        // A run whose opening shelf has a free slot, so the refusal below is
+        // an ownership call and not a full-slot technicality.
         let seed = (0_u64..64)
             .find(|&s| {
                 Sim::new(s)
@@ -1693,47 +1719,158 @@ mod tests {
                     .iter()
                     .filter(|p| matches!(p.loc, Loc::StationShelf { .. }))
                     .count()
-                    == 2
+                    < 4
             })
-            .expect("no two-good shelf in 64 seeds");
+            .expect("no shelf with a free slot in 64 seeds");
         let mut sim = Sim::new(seed);
-        // Aim between two slots: the whole shelf area accepts the gesture.
+        let free_slot = (0..4)
+            .find(|&slot| {
+                !sim.pieces()
+                    .iter()
+                    .any(|p| p.loc == Loc::StationShelf { slot })
+            })
+            .unwrap();
         let gap = Vec2::new(
             layout::SHELF_SLOTS[0].x + layout::SHELF_SLOTS[0].w + 3.0,
             layout::SHELF_SLOTS[0].y + 20.0,
         );
-        assert!(layout::SHELF_AREA.contains(gap));
-        assert!(layout::slot_at(&layout::SHELF_SLOTS, gap).is_none());
-        let loc_of = |s: &Sim, id: u32| s.pieces().iter().find(|p| p.id == id).map(|p| p.loc);
-        // The vial abandons from a give pad into free slot 2.
+        let before = sim.pieces().to_vec();
+        // Neither an open shelf slot nor the gap between slots takes player
+        // cargo: the shelf is the station's. Nothing is ever lost to a drop.
+        for target in [
+            slot_center(&layout::SHELF_SLOTS, usize::from(free_slot)),
+            gap,
+        ] {
+            drag(&mut sim, cell_center(0, 0), target);
+            assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
+            assert_eq!(sim.pieces(), before);
+        }
+        // From a give pad the shelf refuses all the same.
         drag(
             &mut sim,
             cell_center(0, 0),
             slot_center(&layout::GIVE_SLOTS, 0),
         );
-        drag(&mut sim, slot_center(&layout::GIVE_SLOTS, 0), gap);
-        assert_eq!(sim.cues(), [Cue::Place]);
-        assert_eq!(loc_of(&sim, 1), Some(Loc::StationShelf { slot: 2 }));
-        // The scrap abandons from the hold into free slot 3.
-        drag(&mut sim, cell_center(0, 2), gap);
-        assert_eq!(loc_of(&sim, 0), Some(Loc::StationShelf { slot: 3 }));
-        // The shelf is now full: the pearls vanish outright.
-        let count = sim.pieces().len();
-        drag(&mut sim, cell_center(2, 0), gap);
-        assert_eq!(sim.cues(), [Cue::Place]);
-        assert_eq!(sim.pieces().len(), count - 1);
-        assert_eq!(loc_of(&sim, 2), None);
-        // A station good dropped between slots stays put: the abandon
-        // gesture is for player pieces only.
-        let station = sim
+        drag(
+            &mut sim,
+            slot_center(&layout::GIVE_SLOTS, 0),
+            slot_center(&layout::SHELF_SLOTS, usize::from(free_slot)),
+        );
+        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
+        assert_eq!(sim.pieces().len(), before.len());
+    }
+
+    #[test]
+    fn a_pure_gift_clears_the_hold_through_the_lever() {
+        let mut sim = Sim::new(1);
+        let owned_before = sim.pieces().iter().filter(|p| player_owned(p.loc)).count();
+        // Vial to the give pad, take pad empty: the dial must arm.
+        drag(
+            &mut sim,
+            cell_center(0, 0),
+            slot_center(&layout::GIVE_SLOTS, 0),
+        );
+        let barter = sim.barter().unwrap();
+        assert!(barter.ready, "a pure gift must arm the accept lever");
+        let accept = rect_center(layout::ACCEPT_LEVER);
+        sim.advance(0.0, &press_at(accept.x, accept.y));
+        assert!(
+            matches!(sim.cues(), [Cue::Accept { .. }]),
+            "gift refused: {:?}",
+            sim.cues()
+        );
+        // The vial left the player's side through the ceremony — the only
+        // door cargo ever leaves through.
+        let owned_after = sim.pieces().iter().filter(|p| player_owned(p.loc)).count();
+        assert_eq!(owned_after, owned_before - 1);
+        assert!(
+            !sim.pieces()
+                .iter()
+                .any(|p| matches!(p.loc, Loc::GivePad { .. })),
+            "give pad should be consumed"
+        );
+    }
+
+    #[test]
+    fn drop_targets_come_from_the_ownership_matrix() {
+        let mut sim = Sim::new(1);
+        assert_eq!(sim.drop_targets(), None, "nothing held, nothing invited");
+        // Hold a player piece: hold and give invite; station rows never do.
+        let vial = cell_center(0, 0);
+        sim.advance(0.0, &press_at(vial.x, vial.y));
+        assert_eq!(
+            sim.drop_targets(),
+            Some(DropTargets {
+                hold: true,
+                give: true,
+                take: false,
+                shelf: false,
+                received: false,
+            })
+        );
+        sim.advance(0.0, &release_at(vial.x, vial.y));
+        // Hold a station piece: only its own furniture invites.
+        let shelf_piece = sim
             .pieces()
             .iter()
-            .find(|p| p.loc == Loc::StationShelf { slot: 0 })
-            .unwrap()
-            .id;
-        drag(&mut sim, slot_center(&layout::SHELF_SLOTS, 0), gap);
-        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-        assert_eq!(loc_of(&sim, station), Some(Loc::StationShelf { slot: 0 }));
+            .find(|p| matches!(p.loc, Loc::StationShelf { .. }))
+            .expect("opening shelf is never empty");
+        let at = rect_center(layout::piece_rect(shelf_piece));
+        sim.advance(0.0, &press_at(at.x, at.y));
+        assert_eq!(
+            sim.drop_targets(),
+            Some(DropTargets {
+                hold: false,
+                give: false,
+                take: true,
+                shelf: true,
+                received: false,
+            })
+        );
+    }
+
+    /// The conservation drag-monkey: thousands of arbitrary press/hold/
+    /// release frames — including nonsense the frontend would never send —
+    /// must never cost the player a piece outside an accept. This is the
+    /// standing guard for the whole class of "dragged it somewhere and it
+    /// vanished" bugs; every new interactive surface is automatically under
+    /// test the moment it exists.
+    #[test]
+    fn no_input_stream_loses_cargo_without_an_accept() {
+        let mut sim = Sim::new(0xC0FF_EE00);
+        let mut rng = fastrand::Rng::with_seed(0xF00D);
+        let owned = |sim: &Sim| sim.pieces().iter().filter(|p| player_owned(p.loc)).count();
+        let mut before = owned(&sim);
+        for frame in 0_u32..6000 {
+            let input = InputFrame {
+                pointer: Vec2::new(rng.f32() * WORLD_W, rng.f32() * WORLD_H),
+                press: rng.bool(),
+                held: rng.bool(),
+                release: rng.bool(),
+                toggle_pause: rng.u8(..) < 3,
+                toggle_warp: rng.u8(..) < 3,
+                reseed: None,
+            };
+            sim.advance(TICK_DT, &input);
+            let accepted = sim
+                .cues()
+                .iter()
+                .any(|cue| matches!(cue, Cue::Accept { .. }));
+            let after = owned(&sim);
+            assert!(
+                after >= before || accepted,
+                "frame {frame}: {before} -> {after} player pieces with no accept"
+            );
+            // Held pieces must stay real: a lifted id always exists.
+            if let Some(held) = sim.held() {
+                assert!(
+                    sim.pieces().iter().any(|p| p.id == held.piece),
+                    "frame {frame}: held piece {} is a ghost",
+                    held.piece
+                );
+            }
+            before = after;
+        }
     }
 
     #[test]

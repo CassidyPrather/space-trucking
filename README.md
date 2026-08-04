@@ -21,9 +21,11 @@ The screen is the ship's console: a star map (Venus, Earth, Mars, Jupiter,
 Uranus, Neptune, and a Spacing Guild station), a 6×4 cargo hold, and a barter
 panel. While docked, click a point of interest and pull the launch lever. The
 ship travels there in real time — roughly half a minute to two minutes a
-leg — and docks itself on arrival. Then barter: drag cargo between your hold,
-the station's shelf, and the give/take pads until the eagerness dial looks
-agreeable, and pull the accept lever.
+leg — and docks itself on arrival. Then barter: drag your goods onto the give
+pad and the station's shelf goods onto the take pad until the eagerness dial
+looks agreeable, then pull the accept lever. A give pad with nothing asked in
+return is a gift, and stations never refuse gifts — that lever is the only
+way cargo ever leaves you; no stray drop can lose a piece.
 
 The cargo carries the lore, and it has opinions about where it sits: heavy
 pieces ride the bottom rows, volatiles refuse adjacency, cryo hugs the hull

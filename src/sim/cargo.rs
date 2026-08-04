@@ -105,6 +105,20 @@ pub enum Loc {
     ReceivedShelf { slot: u8 },
 }
 
+/// Whether a piece at `loc` belongs to the player rather than the station.
+///
+/// This is THE ownership rule: the drop matrix in `resolve_drop`, the
+/// [`crate::sim::Sim::drop_targets`] affordances, and any renderer hint all
+/// derive from this one predicate. Never restate it — a hand-mirrored copy
+/// is how a highlight ends up inviting a drop the rules refuse.
+#[must_use]
+pub const fn player_owned(loc: Loc) -> bool {
+    matches!(
+        loc,
+        Loc::Hold { .. } | Loc::GivePad { .. } | Loc::ReceivedShelf { .. }
+    )
+}
+
 /// One cargo piece.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Piece {

@@ -20,6 +20,13 @@ deliberately below.
       increases.
 - [ ] Determinism proven: bit-identical, save-round-trip, and
       catch-up-equivalence tests cover every new mechanic and pass.
+- [ ] Cargo is conserved: nothing the player owns vanishes or changes hands
+      except through the accept lever, and the drag-monkey test covers any
+      new interactive surface automatically.
+- [ ] Affordances derive from the rules: anything drawn as a drop target or
+      invitation comes from `Sim::drop_targets()`, `placement_check`, or the
+      shared `layout` rects — never from re-derived geometry or a restated
+      ownership rule.
 - [ ] Pause, fast-forward, and save/load all still reachable and exercised
       this session.
 - [ ] `src/sim/` and `src/synth.rs` import no macroquad; cues say what

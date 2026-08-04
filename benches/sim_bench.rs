@@ -1,11 +1,11 @@
-//! Criterion benchmark over the sim's two hot paths: the per-frame tick and
-//! the offline catch-up loop.
+//! Criterion benchmark over the sim's hot paths: the per-frame tick, the
+//! offline catch-up loop, and the dock-arrival visit generation.
 
 use std::hint::black_box;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 
-use space_trucking::sim::{InputFrame, POIS, Sim, TICK_DT, Vec2, layout};
+use space_trucking::sim::{InputFrame, POIS, ShipState, Sim, TICK_DT, Vec2, layout};
 
 /// One hour of sim time, in ticks.
 const HOUR_TICKS: u64 = 216_000;
@@ -59,5 +59,33 @@ fn bench_fast_forward_hour(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_travel_tick, bench_fast_forward_hour);
+/// A sim one tick short of the Venus dock, so a single advance runs the
+/// whole arrival: visit counting, value jitter, and shelf generation.
+fn bench_barter_regen(c: &mut Criterion) {
+    let mut base = mid_travel();
+    let ShipState::Traveling {
+        progress,
+        leg_ticks,
+        ..
+    } = base.ship().state
+    else {
+        unreachable!("mid_travel() travels")
+    };
+    base.fast_forward(leg_ticks - progress - 1);
+    let input = InputFrame::default();
+    c.bench_function("sim_barter_regen", |b| {
+        b.iter_batched_ref(
+            || base.clone(),
+            |sim| sim.advance(black_box(TICK_DT), black_box(&input)),
+            BatchSize::SmallInput,
+        );
+    });
+}
+
+criterion_group!(
+    benches,
+    bench_travel_tick,
+    bench_fast_forward_hour,
+    bench_barter_regen
+);
 criterion_main!(benches);

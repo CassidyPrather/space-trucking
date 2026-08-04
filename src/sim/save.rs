@@ -1,11 +1,11 @@
 //! Versioned, line-oriented text saves.
 //!
 //! The format stores only what cannot be recomputed: seed, clock, RNG state,
-//! visit counts, ship, event machine, and the pieces. Everything a visit
-//! derives (shelf layout hashes, wants, eagerness) is rebuilt from the seed
-//! on load, which keeps the format small and the determinism honest. Floats
-//! that must survive exactly (the eased light and omen) travel as hex bit
-//! patterns rather than decimal.
+//! visit counts, ship, event machine, eased dial, and the pieces. Everything
+//! a visit derives (shelf layout hashes, wants, trade readiness) is rebuilt
+//! from the seed on load, which keeps the format small and the determinism
+//! honest. Floats that must survive exactly (the eased light, omen, and
+//! eagerness) travel as hex bit patterns rather than decimal.
 //!
 //! Parsing never panics: every malformed line maps to
 //! [`SaveError::Parse`] with its 1-based line number (line 0 means the text
@@ -101,6 +101,10 @@ pub(crate) fn serialize(sim: &Sim) -> String {
         events.light.to_bits(),
         events.omen.to_bits()
     );
+    // The dial is eased state, not derivable from the pieces alone: its bits
+    // travel like light and omen do. Zero when traveling.
+    let eagerness = sim.barter.as_ref().map_or(0.0, |barter| barter.eagerness);
+    let _ = writeln!(out, "eager {:08x}", eagerness.to_bits());
     for piece in &sim.pieces {
         let _ = write!(
             out,
@@ -148,10 +152,16 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let visits = parse_visits(&mut reader)?;
     let ship = parse_ship(&mut reader)?;
     let events = parse_event(&mut reader)?;
+    let eagerness = f32::from_bits(reader.kv_hex32("eager")?);
     let (pieces, next_piece) = parse_pieces(&mut reader)?;
 
     let barter = match ship.state {
-        ShipState::Docked(at) => Some(barter::rebuild(seed, at, visits[usize::from(at)], &pieces)),
+        ShipState::Docked(at) => {
+            let mut barter = barter::rebuild(seed, at, visits[usize::from(at)], &pieces);
+            barter.eagerness = eagerness;
+            barter.prev_eagerness = eagerness;
+            Some(barter)
+        }
         ShipState::Traveling { .. } => None,
     };
     let values = barter.as_ref().map_or([0; KIND_COUNT], |b| {
@@ -174,6 +184,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         values,
         visits,
         events,
+        last_violation: None,
     })
 }
 
@@ -417,6 +428,16 @@ impl<'a> Reader<'a> {
             .ok_or_else(|| self.err())
     }
 
+    /// A `key <8-hex-digits>` line.
+    fn kv_hex32(&mut self, key: &str) -> Result<u32, SaveError> {
+        let line = self.next_line()?;
+        let mut tokens = line.split_whitespace();
+        if tokens.next() != Some(key) {
+            return Err(self.err());
+        }
+        self.hex32(tokens.next())
+    }
+
     /// One token of 8 hex digits, as raw bits.
     fn hex32(&self, token: Option<&str>) -> Result<u32, SaveError> {
         token
@@ -427,6 +448,7 @@ impl<'a> Reader<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::{InputFrame, TICK_DT, Vec2, layout};
     use super::*;
 
     #[test]
@@ -440,5 +462,92 @@ mod tests {
             SaveError::Parse { line: 0 }.to_string(),
             "save ends too early"
         );
+    }
+
+    /// A worked save with every section populated: docked pieces composed
+    /// into a trade, then relaunched mid-leg so ship/event lines are rich.
+    fn worked_save() -> String {
+        let mut sim = Sim::new(0xFADE);
+        let press = |p: Vec2| InputFrame {
+            pointer: p,
+            press: true,
+            held: true,
+            ..InputFrame::default()
+        };
+        sim.advance(0.0, &press(super::super::POIS[0].pos));
+        let lever = layout::LAUNCH_LEVER;
+        sim.advance(
+            0.0,
+            &press(Vec2::new(lever.x + lever.w / 2.0, lever.y + lever.h / 2.0)),
+        );
+        for _ in 0..90 {
+            sim.advance(TICK_DT, &InputFrame::default());
+        }
+        sim.save_string()
+    }
+
+    #[test]
+    fn truncation_at_every_line_boundary_fails_safe() {
+        let save = worked_save();
+        assert!(Sim::from_save(&save).is_ok(), "the untruncated save parses");
+        let lines: Vec<&str> = save.lines().collect();
+        for keep in 0..lines.len() {
+            let truncated = lines[..keep].join("\n");
+            assert!(
+                Sim::from_save(&truncated).is_err(),
+                "save truncated to {keep}/{} lines parsed anyway",
+                lines.len()
+            );
+        }
+    }
+
+    #[test]
+    fn mangling_any_line_fails_safe() {
+        let save = worked_save();
+        let lines: Vec<&str> = save.lines().collect();
+        for target in 0..lines.len() {
+            for garbage in ["", "!!! ???", "piece x y z", "seed NaN", "\u{1F680}"] {
+                let mangled: String = lines
+                    .iter()
+                    .enumerate()
+                    .map(|(i, line)| if i == target { garbage } else { line })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                assert!(
+                    Sim::from_save(&mangled).is_err(),
+                    "line {target} replaced by {garbage:?} parsed anyway"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn out_of_range_fields_fail_safe() {
+        let save = worked_save();
+        for (needle, bad) in [
+            ("ship travel 6 0", "ship travel 9 0"), // POI out of range
+            ("tick 90", "tick -90"),
+            ("tick 90", "tick 99999999999999999999999"),
+        ] {
+            let mangled = save.replacen(needle, bad, 1);
+            assert_ne!(mangled, save, "needle {needle:?} not found in save");
+            assert!(Sim::from_save(&mangled).is_err(), "{bad:?} parsed anyway");
+        }
+        // Piece fields: an unknown kind, an off-grid hold cell, a bad slot.
+        let docked = Sim::new(3).save_string();
+        let piece_line = docked
+            .lines()
+            .find(|line| line.starts_with("piece"))
+            .expect("a fresh save has pieces")
+            .to_owned();
+        for bad in [
+            "piece 0 99 0 hold 0 0",
+            "piece 0 0 0 hold 9 9",
+            "piece 0 0 0 shelf 7",
+            "piece 0 0 0 nowhere 0",
+        ] {
+            let mangled = docked.replacen(&piece_line, bad, 1);
+            assert!(Sim::from_save(&mangled).is_err(), "{bad:?} parsed anyway");
+        }
     }
 }

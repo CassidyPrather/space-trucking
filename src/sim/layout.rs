@@ -75,6 +75,10 @@ pub const BARTER_PANEL: Rect = Rect::new(260.0, 440.0, 530.0, 150.0);
 /// The station's goods on offer, top-left of the barter panel.
 pub const SHELF_SLOTS: [Rect; 4] = slot_row(270.0, 448.0);
 
+/// The whole shelf row as one target: dropping a player piece anywhere in
+/// here abandons it to the station, so the discard gesture is forgiving.
+pub const SHELF_AREA: Rect = row_area(&SHELF_SLOTS);
+
 /// Goods received in a concluded trade, below the shelf.
 pub const RECEIVED_SLOTS: [Rect; 4] = slot_row(270.0, 542.0);
 
@@ -95,6 +99,16 @@ const SLOT: f32 = 40.0;
 
 /// Horizontal spacing between slot lefts in a row.
 const SLOT_STEP: f32 = 46.0;
+
+/// The bounding rect of a slot row, gaps included.
+const fn row_area(slots: &[Rect; 4]) -> Rect {
+    Rect::new(
+        slots[0].x,
+        slots[0].y,
+        slots[3].x + slots[3].w - slots[0].x,
+        slots[0].h,
+    )
+}
 
 /// A row of four slots starting at `(x, y)`.
 const fn slot_row(x: f32, y: f32) -> [Rect; 4] {

@@ -1,16 +1,20 @@
 //! The no-currency barter minigame: shelves, pads, and an eagerness dial.
 //!
-//! Each dock generates a fresh visit — shelf goods weighted toward what the
+//! Each dock generates a fresh visit — a shelf leaning toward what the
 //! station produces, a jittered copy of its value table, and a top-three
 //! wants list — all derived from `splitmix(seed, station, visit)`, so a save
 //! can rebuild the whole thing without storing it. The persistent run RNG is
 //! spent only on cosmetic variant rolls, per the determinism rules.
 
-use super::cargo::{KIND_COUNT, Kind, Loc, Piece, VARIANTS};
-use super::map::{POI_COUNT, PoiId};
+use super::cargo::{KIND_COUNT, Kind, Loc, Piece, Tag, VARIANTS};
+use super::map::{GUILD, POI_COUNT, PoiId};
 use super::splitmix;
 
 /// One station visit's trading state. Regenerated per dock, rebuilt on load.
+///
+/// Deliberately currency-free: nothing here (or anywhere in the public API)
+/// is a player-visible balance. `eagerness` is a ratio the dial displays,
+/// values stay internal, and trades settle piece-for-piece.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Barter {
     pub station: PoiId,
@@ -18,19 +22,23 @@ pub struct Barter {
     pub visit: u32,
     /// Top-three kinds the station values this visit, with 1–3 want pips.
     pub wants: [(Kind, u8); 3],
-    /// Trade quality as the station sees it: give value over take cost.
+    /// The dial reading, `0..=EAGER_MAX`: eased toward the trade's true
+    /// give-over-take ratio a little every tick.
     pub eagerness: f32,
-    /// Last tick's eagerness, for dial interpolation.
+    /// Last tick's dial reading, for render interpolation.
     pub prev_eagerness: f32,
-    /// Whether pulling the accept lever would conclude the trade.
+    /// Whether pulling the accept lever would conclude the trade. Tracks the
+    /// true ratio, not the eased dial, so accepting never races an animation.
     pub ready: bool,
 }
 
 /// How much each station values each kind, `0..=6`.
 ///
 /// Rows follow map order (Venus, Earth, Mars, Jupiter, Uranus, Neptune,
-/// Guild), columns follow [`Kind::index`] order. Low value doubles as "local
-/// produce": stations shelve what they barely value.
+/// Guild), columns follow [`Kind::index`] order. A zero doubles as "local
+/// produce": stations shelve the kind they do not value. Every row must keep
+/// at least three kinds at 2 or above so the wants list survives the ±1
+/// jitter, and column 8 (the crate) is 4 everywhere but the Guild.
 pub const VALUE: [[u8; KIND_COUNT]; POI_COUNT] = [
     [0, 1, 2, 1, 3, 2, 3, 5, 4], // Venus
     [4, 3, 0, 2, 4, 1, 2, 3, 4], // Earth
@@ -50,47 +58,96 @@ const SHELF_MIN: usize = 2;
 /// Most goods a station shelves; also the number of shelf slots.
 const SHELF_MAX: usize = 4;
 
+/// Dial ceiling: the eased eagerness pegs here however lavish the offer.
+pub const EAGER_MAX: f32 = 2.0;
+
+/// Dial speed in eagerness units per second: the full sweep takes one.
+pub(crate) const EAGER_RATE: f32 = 2.0;
+
+/// Chance a shelf roll picks from the station's produce, in tenths.
+const PRODUCE_CHANCE: u64 = 7;
+
+/// Chance denominator for the Guild's crate offer: one visit in three.
+const CRATE_CHANCE: u64 = 3;
+
+/// Stream salts under the visit hash, so the crate roll, the shelf count,
+/// and each shelf kind draw independent values.
+const SALT_CRATE: u64 = 1;
+const SALT_COUNT: u64 = 2;
+const SALT_KIND: u64 = 0x100;
+
 /// This visit's value table: the station row jittered by ±1 per kind,
 /// clamped to `0..=6`. Pure, so saves rebuild it instead of storing it.
+/// One pin: the Guild's crate valuation stays zero — it gives crates out,
+/// it never wants them back.
 #[must_use]
 pub(crate) fn visit_values(seed: u64, station: PoiId, visit: u32) -> [u8; KIND_COUNT] {
     let h = visit_hash(seed, station, visit);
     let mut values = [0_u8; KIND_COUNT];
     for (k, value) in values.iter_mut().enumerate() {
         let base = VALUE[usize::from(station)][k];
-        *value = match splitmix(h, k as u64) % 3 {
-            0 => base.saturating_sub(1),
-            1 => base,
-            _ => (base + 1).min(VALUE_MAX),
+        *value = if station == GUILD && k == Kind::SuspiciousCrate.index() {
+            0
+        } else {
+            match splitmix(h, k as u64) % 3 {
+                0 => base.saturating_sub(1),
+                1 => base,
+                _ => (base + 1).min(VALUE_MAX),
+            }
         };
     }
     values
 }
 
 /// Generate one visit: the barter state plus the station's shelf pieces.
-/// `rng` is the persistent run RNG, spent only on variant rolls.
+///
+/// The shelf holds 2–4 goods, each 70% from the station's produce and 30%
+/// uniform over the rest; crates never come from those rolls. The Guild
+/// alone shelves a crate, one visit in three, and never while `aboard`
+/// already carries one anywhere. `rng` is the persistent run RNG, spent only
+/// on variant rolls.
 pub(crate) fn generate(
     seed: u64,
     station: PoiId,
     visit: u32,
+    aboard: &[Piece],
     rng: &mut fastrand::Rng,
     next_id: &mut u32,
 ) -> (Barter, Vec<Piece>) {
     let values = visit_values(seed, station, visit);
-    let mut throwaway = fastrand::Rng::with_seed(visit_hash(seed, station, visit));
-    let count = SHELF_MIN + throwaway.usize(..=SHELF_MAX - SHELF_MIN);
-    let shelf = (0..count)
-        .map(|slot| {
-            let piece = Piece {
-                id: *next_id,
-                kind: produce_kind(station, &mut throwaway),
-                variant: rng.u8(..VARIANTS),
-                loc: Loc::StationShelf { slot: slot as u8 },
-            };
-            *next_id += 1;
-            piece
-        })
-        .collect();
+    let h = visit_hash(seed, station, visit);
+
+    let crate_aboard = aboard
+        .iter()
+        .any(|piece| matches!(piece.kind.tag(), Some(Tag::Suspicious)));
+    let offer_crate =
+        station == GUILD && !crate_aboard && splitmix(h, SALT_CRATE) % CRATE_CHANCE == 0;
+
+    let mut shelve = |kind: Kind, slot: usize| {
+        let piece = Piece {
+            id: *next_id,
+            kind,
+            variant: rng.u8(..VARIANTS),
+            loc: Loc::StationShelf { slot: slot as u8 },
+        };
+        *next_id += 1;
+        piece
+    };
+
+    let mut goods = Vec::new();
+    if offer_crate {
+        goods.push(shelve(Kind::SuspiciousCrate, 0));
+    }
+    let span = (SHELF_MAX - SHELF_MIN) as u64 + 1;
+    let count = SHELF_MIN + (splitmix(h, SALT_COUNT) % span) as usize;
+    // The crate takes a slot, so ordinary goods yield rather than overflow.
+    let count = count.min(SHELF_MAX - goods.len());
+    for i in 0..count {
+        let slot = goods.len();
+        let kind = shelf_kind(station, splitmix(h, SALT_KIND + i as u64));
+        goods.push(shelve(kind, slot));
+    }
+
     let barter = Barter {
         station,
         visit,
@@ -99,15 +156,17 @@ pub(crate) fn generate(
         prev_eagerness: 0.0,
         ready: false,
     };
-    (barter, shelf)
+    (barter, goods)
 }
 
 /// Rebuild a visit's barter state from a save: same wants as [`generate`]
-/// produced, eagerness recomputed from the restored pieces.
+/// produced, dial snapped to the trade the restored pieces compose. The
+/// loader then overwrites the dial with the save's eased value.
 #[must_use]
 pub(crate) fn rebuild(seed: u64, station: PoiId, visit: u32, pieces: &[Piece]) -> Barter {
     let values = visit_values(seed, station, visit);
-    let (eagerness, ready) = eagerness_of(pieces, &values);
+    let (target, ready) = eagerness_of(pieces, &values);
+    let eagerness = target.clamp(0.0, EAGER_MAX);
     Barter {
         station,
         visit,
@@ -119,7 +178,7 @@ pub(crate) fn rebuild(seed: u64, station: PoiId, visit: u32, pieces: &[Piece]) -
 }
 
 /// Trade quality from the pads: value given over cost taken, both priced by
-/// this visit's table, with a floor of 1 per taken item so nothing is free.
+/// this visit's table, with a +1 markup per taken item so nothing is free.
 /// Ready means something is taken and the station at least breaks even.
 #[must_use]
 pub(crate) fn eagerness_of(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> (f32, bool) {
@@ -129,7 +188,7 @@ pub(crate) fn eagerness_of(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> (f32,
         let value = u32::from(values[piece.kind.index()]);
         match piece.loc {
             Loc::GivePad { .. } => give += value,
-            Loc::TakePad { .. } => take += value.max(1),
+            Loc::TakePad { .. } => take += value + 1,
             _ => {}
         }
     }
@@ -147,26 +206,241 @@ const fn visit_hash(seed: u64, station: PoiId, visit: u32) -> u64 {
     splitmix(splitmix(seed, station as u64), visit as u64)
 }
 
-/// Top-three valued kinds this visit, pips `ceil(value / 2)`.
+/// Top-three valued kinds this visit, zeros excluded, ties broken by kind
+/// index; pips `ceil(value / 2)`, so `1..=3`.
 fn wants(values: &[u8; KIND_COUNT]) -> [(Kind, u8); 3] {
-    let mut order: Vec<usize> = (0..KIND_COUNT).collect();
+    let mut order: Vec<usize> = (0..KIND_COUNT).filter(|&k| values[k] > 0).collect();
     order.sort_by_key(|&k| (std::cmp::Reverse(values[k]), k));
+    debug_assert!(order.len() >= 3, "VALUE rows must survive jitter, see doc");
     let want = |k: usize| (Kind::ALL[k], values[k].div_ceil(2));
     [want(order[0]), want(order[1]), want(order[2])]
 }
 
-/// Pick a shelf kind weighted toward the station's produce — the less it
-/// values a kind, the more of it sits on the dock.
-fn produce_kind(station: PoiId, throwaway: &mut fastrand::Rng) -> Kind {
-    let weight = |k: &Kind| u32::from(VALUE_MAX + 1 - VALUE[usize::from(station)][k.index()]);
-    let total: u32 = Kind::ALL.iter().map(weight).sum();
-    let mut roll = throwaway.u32(..total);
-    for kind in Kind::ALL {
-        let w = weight(&kind);
-        if roll < w {
-            return kind;
+/// One shelf kind from one roll: 70% the station's produce (base value
+/// zero), 30% uniform over the others. Crates are excluded on both branches
+/// — they enter the world only through the Guild's special offer — which
+/// also empties the Guild's produce pool, making it shelve a uniform spread.
+fn shelf_kind(station: PoiId, roll: u64) -> Kind {
+    let produce = |kind: Kind| {
+        kind != Kind::SuspiciousCrate && VALUE[usize::from(station)][kind.index()] == 0
+    };
+    let has_produce = Kind::ALL.iter().any(|&kind| produce(kind));
+    let from_produce = has_produce && roll % 10 < PRODUCE_CHANCE;
+    let pool: Vec<Kind> = Kind::ALL
+        .iter()
+        .copied()
+        .filter(|&kind| kind != Kind::SuspiciousCrate && produce(kind) == from_produce)
+        .collect();
+    pool[((roll / 10) % pool.len() as u64) as usize]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Venus, whose produce is the perfume at kind index 0.
+    const VENUS: PoiId = 0;
+
+    /// A piece at `loc`, id and variant immaterial to valuation.
+    const fn piece(kind: Kind, loc: Loc) -> Piece {
+        Piece {
+            id: 0,
+            kind,
+            variant: 0,
+            loc,
         }
-        roll -= w;
     }
-    unreachable!("weights sum to total, so the roll always lands")
+
+    /// Run [`generate`] with fixed cosmetics, returning barter and shelf.
+    fn visit(seed: u64, station: PoiId, n: u32, aboard: &[Piece]) -> (Barter, Vec<Piece>) {
+        let mut rng = fastrand::Rng::with_seed(0);
+        let mut next_id = 0;
+        generate(seed, station, n, aboard, &mut rng, &mut next_id)
+    }
+
+    #[test]
+    fn same_visit_regenerates_identically_and_the_next_differs() {
+        let (a, shelf_a) = visit(42, VENUS, 3, &[]);
+        let (b, shelf_b) = visit(42, VENUS, 3, &[]);
+        assert_eq!(a, b);
+        assert_eq!(shelf_a, shelf_b);
+        assert_eq!(visit_values(42, VENUS, 3), visit_values(42, VENUS, 3));
+
+        // The next visit re-rolls: over a handful of visits the shelves and
+        // value tables cannot all repeat.
+        let differs = (4..10).any(|n| {
+            let (_, shelf) = visit(42, VENUS, n, &[]);
+            let kinds = |s: &[Piece]| s.iter().map(|piece| piece.kind).collect::<Vec<_>>();
+            kinds(&shelf) != kinds(&shelf_a)
+                || visit_values(42, VENUS, n) != visit_values(42, VENUS, 3)
+        });
+        assert!(differs, "six later visits identical to visit 3");
+    }
+
+    #[test]
+    fn values_jitter_within_one_of_base_and_guild_crate_stays_zero() {
+        for station in 0..POI_COUNT as PoiId {
+            for n in 1..40 {
+                let values = visit_values(99, station, n);
+                for (k, &value) in values.iter().enumerate() {
+                    let base = VALUE[usize::from(station)][k];
+                    assert!(value <= VALUE_MAX);
+                    assert!(
+                        i16::from(value).abs_diff(i16::from(base)) <= 1,
+                        "kind {k} at station {station} jittered {base} -> {value}"
+                    );
+                }
+                assert_eq!(
+                    visit_values(99, GUILD, n)[Kind::SuspiciousCrate.index()],
+                    0,
+                    "the Guild never wants its crates back"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn wants_skip_zero_valued_kinds_and_break_ties_by_index() {
+        let values = [2, 4, 4, 0, 1, 0, 0, 0, 6];
+        assert_eq!(
+            wants(&values),
+            [
+                (Kind::SuspiciousCrate, 3), // value 6
+                (Kind::GildedIdol, 2),      // value 4, lower index wins the tie
+                (Kind::RationBricks, 2),    // value 4
+            ]
+        );
+        // Zeros never appear, so pips are always 1..=3.
+        for station in 0..POI_COUNT as PoiId {
+            for n in 1..30 {
+                for (_, pips) in wants(&visit_values(7, station, n)) {
+                    assert!((1..=3).contains(&pips), "pips {pips} out of range");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn empty_take_pad_is_zero_and_never_ready() {
+        let values = visit_values(1, VENUS, 1);
+        let pieces = [piece(Kind::BrinePearls, Loc::GivePad { slot: 0 })];
+        assert_eq!(eagerness_of(&pieces, &values), (0.0, false));
+        assert_eq!(eagerness_of(&[], &values), (0.0, false));
+    }
+
+    #[test]
+    fn take_cost_marks_every_item_up_by_one() {
+        let mut values = [0_u8; KIND_COUNT];
+        values[Kind::PerfumeVial.index()] = 1;
+        values[Kind::Seedlings.index()] = 0;
+        values[Kind::CryoCore.index()] = 2;
+        // A worthless taken piece still costs 1: give 1 exactly breaks even.
+        let pieces = [
+            piece(Kind::PerfumeVial, Loc::GivePad { slot: 0 }),
+            piece(Kind::Seedlings, Loc::TakePad { slot: 0 }),
+        ];
+        assert_eq!(eagerness_of(&pieces, &values), (1.0, true));
+        // A valued piece costs value + 1: give 1 against cost 3 is short.
+        let pieces = [
+            piece(Kind::PerfumeVial, Loc::GivePad { slot: 0 }),
+            piece(Kind::CryoCore, Loc::TakePad { slot: 0 }),
+        ];
+        let (eagerness, ready) = eagerness_of(&pieces, &values);
+        assert!((eagerness - 1.0 / 3.0).abs() < 1e-6);
+        assert!(!ready);
+    }
+
+    #[test]
+    fn generosity_overshoots_past_the_dial() {
+        let mut values = [0_u8; KIND_COUNT];
+        values[Kind::BrinePearls.index()] = 6;
+        values[Kind::Seedlings.index()] = 0;
+        let pieces = [
+            piece(Kind::BrinePearls, Loc::GivePad { slot: 0 }),
+            piece(Kind::BrinePearls, Loc::GivePad { slot: 1 }),
+            piece(Kind::Seedlings, Loc::TakePad { slot: 0 }),
+        ];
+        // Give 12 against cost 1: the raw ratio runs far past EAGER_MAX;
+        // the dial cap and the accept-value clamp are applied by the sim.
+        assert_eq!(eagerness_of(&pieces, &values), (12.0, true));
+    }
+
+    #[test]
+    fn shelves_lean_toward_produce_and_never_hold_crates() {
+        let mut perfume = 0_usize;
+        let mut total = 0_usize;
+        let mut kinds_seen = std::collections::BTreeSet::new();
+        for n in 1..200 {
+            let (_, shelf) = visit(0xFEED, VENUS, n, &[]);
+            assert!((SHELF_MIN..=SHELF_MAX).contains(&shelf.len()));
+            for (slot, piece) in shelf.iter().enumerate() {
+                assert_eq!(piece.loc, Loc::StationShelf { slot: slot as u8 });
+                assert_ne!(piece.kind, Kind::SuspiciousCrate);
+                kinds_seen.insert(piece.kind.index());
+                perfume += usize::from(piece.kind == Kind::PerfumeVial);
+                total += 1;
+            }
+        }
+        // 70% produce with generous statistical slack.
+        assert!(
+            perfume * 10 > total * 5,
+            "only {perfume}/{total} shelf goods were Venus produce"
+        );
+        assert!(perfume < total, "the 30% branch never fired");
+        assert!(
+            kinds_seen.len() >= 3,
+            "shelves lack variety: {kinds_seen:?}"
+        );
+    }
+
+    #[test]
+    fn guild_crates_are_a_third_of_visits_and_respect_the_singleton() {
+        let mut offered = 0_usize;
+        for n in 1..=600 {
+            let (_, shelf) = visit(0xFEED, GUILD, n, &[]);
+            let crates = shelf
+                .iter()
+                .filter(|piece| piece.kind == Kind::SuspiciousCrate)
+                .count();
+            assert!(crates <= 1, "visit {n} shelved {crates} crates");
+            assert!((SHELF_MIN..=SHELF_MAX).contains(&shelf.len()));
+            offered += crates;
+        }
+        assert!(
+            (120..=280).contains(&offered),
+            "{offered}/600 crate offers is far from one in three"
+        );
+
+        // One aboard anywhere — hold or a pad — suppresses the offer.
+        for loc in [Loc::Hold { x: 0, y: 0 }, Loc::GivePad { slot: 0 }] {
+            let aboard = [piece(Kind::SuspiciousCrate, loc)];
+            for n in 1..=100 {
+                let (_, shelf) = visit(0xFEED, GUILD, n, &aboard);
+                assert!(
+                    shelf
+                        .iter()
+                        .all(|piece| piece.kind != Kind::SuspiciousCrate),
+                    "visit {n} offered a second crate"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn other_stations_never_shelve_crates() {
+        for station in 0..POI_COUNT as PoiId {
+            if station == GUILD {
+                continue;
+            }
+            for n in 1..=60 {
+                let (_, shelf) = visit(0xFEED, station, n, &[]);
+                assert!(
+                    shelf
+                        .iter()
+                        .all(|piece| piece.kind != Kind::SuspiciousCrate),
+                    "station {station} shelved a crate"
+                );
+            }
+        }
+    }
 }

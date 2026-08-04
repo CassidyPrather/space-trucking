@@ -4,10 +4,9 @@
 //! the middle half of the leg. The omen dims the console light and swells the
 //! hum, the jump skips most of the remaining distance, and then everything
 //! eases back to normal. All timing derives from `splitmix(seed, leg)`, so
-//! the whole episode replays and saves exactly. This is the skeleton; the
-//! full determinism suite lands with the sim-logic stage.
+//! the whole episode replays and saves exactly.
 
-use super::{Cue, TICK_DT, splitmix};
+use super::{Cue, TICK_DT, splitmix, step_toward};
 
 /// Omen duration before the jump fires: 3 s.
 const OMEN_LEAD_TICKS: u32 = 180;
@@ -152,9 +151,4 @@ pub fn creak(seed: u64, tick: u64) -> Option<Cue> {
     } else {
         None
     }
-}
-
-/// Move `value` toward `target` by at most `step`.
-fn step_toward(value: f32, target: f32, step: f32) -> f32 {
-    value + (target - value).clamp(-step, step)
 }

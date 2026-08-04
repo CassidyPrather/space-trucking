@@ -95,6 +95,17 @@ Web build: `./scripts/build-web.sh` (needs
 
 Serve the result: `python3 -m http.server --directory dist/web 8080`
 
+### Flight recorder
+
+The game keeps a black box: a recent save plus every input frame since,
+stored beside the autosave under the key `space-trucking/replay`
+(localStorage on the web, quad-storage's `local.data` natively) and re-based
+on a rolling cap so it always holds the recent past. The sim is
+deterministic, so that small text file *is* the session: copy it out and
+`cargo run -- --replay <file>` plays it back natively, bit-identically,
+with the version string tinted amber as the only tell. A recording attached
+to a bug report is a perfect reproduction.
+
 ### Advanced
 
 Benchmark: `cargo bench --bench sim_bench -- --quick`

@@ -15,6 +15,7 @@ tool for watching drift.
 | 100k crew ticks × 6 players | 250 ms | ~13 ms | `tests/perf.rs` (release) |
 | Convoy delivery voyage (6 replicas, hostile links) | 5,000 ms | ~100 ms | `tests/perf.rs` (release) |
 | 1000 save round-trips | 500 ms | ~40 ms | `tests/perf.rs` (release) |
+| Black box at cap: serialize / parse / replay 50k entries | 500 / 500 / 1000 ms | ~21 / 16 / 3 ms | `tests/perf.rs` (release) |
 | Debug test suite wall time | keep under ~5 s | ~0.5 s | courtesy, not a gate |
 
 Not yet enforced, deliberately: frame time (needs a headless GPU story —

@@ -13,7 +13,8 @@ use std::time::Instant;
 
 use space_trucking::net::harness::delivery_voyage;
 use space_trucking::net::{Convoy, GuildServer, LinkProfile};
-use space_trucking::sim::{CrewFrame, InputFrame, MAX_CREW, Sim, Vec2};
+use space_trucking::replay::{MAX_ENTRIES, Recording};
+use space_trucking::sim::{CrewFrame, InputFrame, MAX_CREW, Sim, TICK_DT, Vec2};
 
 /// One wall-clock ceiling, asserted with the measurement in the message.
 fn within(label: &str, budget_ms: u128, work: impl FnOnce()) {
@@ -77,6 +78,51 @@ fn the_convoy_voyage_fits_the_budget() {
     assert!(
         convoy.converged(),
         "voyage must still converge inside budget"
+    );
+}
+
+/// The flight recorder persists on the autosave cadence, so a black box at
+/// its rolling cap (50k drag entries, ~2.4 MB — the worst case; a typical
+/// minute of play is ~70 KB) must serialise, parse, and replay comfortably.
+/// Measured ~21 ms / ~16 ms / ~3 ms.
+#[test]
+#[ignore = "perf budget; CI runs this target in release"]
+fn a_full_black_box_round_trip_fits_the_budget() {
+    let mut sim = Sim::new(0xB0);
+    let mut recording = Recording::new(sim.save_string());
+    let drag = InputFrame {
+        pointer: Vec2::new(200.0, 460.0),
+        held: true,
+        ..InputFrame::default()
+    };
+    for _ in 0..MAX_ENTRIES {
+        recording.record_frame(sim.tick(), &drag);
+        sim.advance(TICK_DT, &drag);
+    }
+    recording.seal(sim.tick());
+
+    let mut text = String::new();
+    within("serialize 50k-entry recording", 500, || {
+        text = recording.serialize();
+    });
+    let mut parsed = None;
+    within("parse 50k-entry recording", 500, || {
+        parsed = Some(Recording::parse(&text).expect("own recording must parse"));
+    });
+    let mut replayed = None;
+    within("replay 50k ticks", 1_000, || {
+        replayed = Some(
+            parsed
+                .as_ref()
+                .expect("parse ran first")
+                .replay()
+                .expect("own recording must replay"),
+        );
+    });
+    assert_eq!(
+        replayed.expect("replay ran").save_string(),
+        sim.save_string(),
+        "the budgeted replay must still be exact"
     );
 }
 

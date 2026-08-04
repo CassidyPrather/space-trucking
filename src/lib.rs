@@ -10,8 +10,13 @@
 //! [`net`] extends the same purity to multiplayer: lockstep protocol,
 //! session state machines, the guild server, and the hostile-network
 //! harness that proves them, all driven by messages and sim time alone.
+//!
+//! [`replay`] is the black-box flight recorder built on the same property:
+//! a session is (base save + input log), so a small text file replays a run
+//! bit-identically and a bug report becomes a failing test.
 
 pub mod net;
+pub mod replay;
 pub mod sim;
 pub mod synth;
 

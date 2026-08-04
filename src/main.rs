@@ -5,8 +5,10 @@
 //! it gathers an [`InputFrame`] each frame (folding the console's icon
 //! buttons into the pause/warp/mute toggles), advances the sim, and hands
 //! the result to [`render`] and [`audio`]. It also owns the save slot —
-//! load-and-catch-up on startup, cue-driven autosave forever after — and the
-//! game's one and only piece of text, the version string.
+//! load-and-catch-up on startup, cue-driven autosave forever after — the
+//! flight recorder's black box, and the game's one and only piece of text,
+//! the version string. Run natively with `--replay <file>` to watch a
+//! recorded session play itself back.
 
 mod audio;
 mod juice;
@@ -16,6 +18,7 @@ mod storage;
 
 use audio::Audio;
 use juice::Juice;
+use macroquad::color::Color;
 use macroquad::input::{
     KeyCode, MouseButton, is_key_pressed, is_mouse_button_down, is_mouse_button_pressed,
     is_mouse_button_released, mouse_position,
@@ -26,7 +29,10 @@ use macroquad::time::get_frame_time;
 use macroquad::window::{Conf, next_frame, screen_height, screen_width};
 
 use space_trucking::VERSION;
-use space_trucking::sim::{Cue, InputFrame, Sim, Vec2, WORLD_H, WORLD_W, layout};
+use space_trucking::replay::Recording;
+use space_trucking::sim::{
+    Cue, InputFrame, Sim, TICK_DT, Vec2, WARP_FACTOR, WORLD_H, WORLD_W, layout,
+};
 
 const TEXT_SIZE: u16 = 16;
 const TEXT_MARGIN: f32 = 8.0;
@@ -40,6 +46,14 @@ pub const CRUNCH: f32 = 2.0;
 
 /// Seconds between wall-clock autosaves; cue-driven saves come sooner.
 const SAVE_EVERY: f64 = 10.0;
+
+/// Storage key for the flight recorder's black box, persisted on the same
+/// cadence as the save.
+const REPLAY_KEY: &str = "space-trucking/replay";
+
+/// Longest frame the replay pacer banks, matching the sim's own clamp so a
+/// backgrounded playback does not spiral catching up.
+const REPLAY_FRAME_CLAMP: f32 = 0.25;
 
 /// Longest absence the startup catch-up replays, in seconds (six hours).
 const MAX_CATCH_UP: f64 = 6.0 * 3600.0;
@@ -59,7 +73,20 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    // `--replay <file>`: the native black-box playback mode. On the web
+    // there are no args, so this never triggers there. (`Args` is scoped so
+    // the non-Send iterator never lives across an await.)
+    let (replay_mode, replay_path) = {
+        let mut args = std::env::args();
+        (args.nth(1).as_deref() == Some("--replay"), args.next())
+    };
+    if replay_mode {
+        replay_session(replay_path).await;
+        return;
+    }
+
     let (mut sim, arrived_while_away) = restore();
+    let mut recording = Recording::new(sim.save_string());
     let mut audio = Audio::load().await;
     let mut juice = Juice::default();
     let target = pixel_target();
@@ -75,13 +102,25 @@ async fn main() {
             is_key_pressed(KeyCode::M) || (input.press && layout::SPEAKER.contains(input.pointer));
         let dt = get_frame_time();
 
+        recording.record_frame(sim.tick(), &input);
         sim.advance(dt, &input);
         juice.update(dt, &sim, input.pointer, input.press);
         audio.update(dt, &sim, toggle_mute);
 
+        if sim.cues().iter().any(|cue| matches!(cue, Cue::Reseed)) {
+            // The black box tells one run's story: a new world, a new tape.
+            recording = Recording::new(sim.save_string());
+        }
+
         let now = macroquad::miniquad::date::now();
         if save_worthy(&sim) || now - last_save >= SAVE_EVERY {
             storage::store(&sim.save_string(), now);
+            if recording.is_full() && sim.held(0).is_none() {
+                // Roll the tape. Saves drop drags, so only cut between them.
+                recording.rebase(sim.save_string(), sim.tick());
+            }
+            recording.seal(sim.tick());
+            storage::set(REPLAY_KEY, &recording.serialize());
             last_save = now;
         }
 
@@ -96,7 +135,80 @@ async fn main() {
                 audio_muted: audio.muted(),
             },
         );
-        draw_version();
+        draw_version(palette::VERSION_TEXT);
+        next_frame().await;
+    }
+}
+
+/// Play a recording back at real time: one sim tick per elapsed [`TICK_DT`]
+/// (times [`WARP_FACTOR`] while the recorded session warped), rendering
+/// normally with the recorded pointer as a ghost cursor. Local input is
+/// ignored — close the window to leave. The version string turns amber as
+/// the "this is a replay" tell.
+// macroquad's future runs on the main thread; Send is not on the menu.
+#[allow(clippy::future_not_send)]
+async fn replay_session(path: Option<String>) {
+    let Some(path) = path else {
+        eprintln!("usage: space-trucking --replay <file>");
+        return;
+    };
+    let text = match std::fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(err) => {
+            eprintln!("cannot read {path}: {err}");
+            return;
+        }
+    };
+    let recording = match Recording::parse(&text) {
+        Ok(recording) => recording,
+        Err(err) => {
+            eprintln!("cannot replay {path}: {err}");
+            return;
+        }
+    };
+    let Ok(mut sim) = recording.base_sim() else {
+        // Unreachable in practice: parse already validated the base.
+        eprintln!("cannot replay {path}: base save refused");
+        return;
+    };
+    let mut cursor = recording.cursor();
+    let mut audio = Audio::load().await;
+    let mut juice = Juice::default();
+    let target = pixel_target();
+    let mut accumulator: f32 = 0.0;
+    let mut rolling = true;
+
+    loop {
+        let view = View::fit(screen_width(), screen_height());
+        let dt = get_frame_time();
+        if rolling {
+            let scale = if sim.is_warp() { WARP_FACTOR } else { 1.0 };
+            accumulator += (dt * scale).clamp(0.0, REPLAY_FRAME_CLAMP * scale);
+            // The float condition is the fixed-timestep idiom; the clamp
+            // above bounds the loop.
+            #[allow(clippy::while_float)]
+            while rolling && accumulator >= TICK_DT {
+                accumulator -= TICK_DT;
+                // A refused tick (corrupt tape) simply freezes the frame:
+                // the box shows as much of the story as it holds.
+                rolling = cursor.next_tick(&mut sim).unwrap_or(false);
+            }
+        }
+        let pointer = cursor.pointer();
+        juice.update(dt, &sim, pointer, false);
+        audio.update(dt, &sim, false);
+        render::draw(
+            &view,
+            &target,
+            &render::Scene {
+                sim: &sim,
+                juice: &juice,
+                pointer,
+                audio_waiting: audio.needs_gesture(),
+                audio_muted: audio.muted(),
+            },
+        );
+        draw_version(palette::fade(palette::AMBER, 0.75));
         next_frame().await;
     }
 }
@@ -213,8 +325,10 @@ fn gather_input(view: &View) -> InputFrame {
     }
 }
 
-/// The one permitted piece of text: the version, bottom-right.
-fn draw_version() {
+/// The one permitted piece of text: the version, bottom-right. The colour is
+/// a palette role — live play uses [`palette::VERSION_TEXT`], replay tints
+/// it amber as its only tell.
+fn draw_version(color: Color) {
     let version = format!("{} {VERSION}", env!("CARGO_PKG_NAME"));
     let size = measure_text(&version, None, TEXT_SIZE, 1.0);
     draw_text(
@@ -222,6 +336,6 @@ fn draw_version() {
         screen_width() - size.width - TEXT_MARGIN,
         screen_height() - TEXT_MARGIN,
         f32::from(TEXT_SIZE),
-        palette::VERSION_TEXT,
+        color,
     );
 }

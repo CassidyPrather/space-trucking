@@ -41,6 +41,9 @@ deliberately below.
       preferred.
 - [ ] Cargo tells the story: any new kind has a lore reason and a distinct
       silhouette.
+- [ ] Visuals follow [ART_DIRECTION.md](ART_DIRECTION.md) or amend it in the
+      same change: palette roles only (the purity test enforces it), correct
+      material family, top-left light, deterministic wear.
 - [ ] Deferred-deliberately list is current.
 
 ## Deferred deliberately

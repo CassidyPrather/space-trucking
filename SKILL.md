@@ -101,6 +101,12 @@ drag-monkey test in `src/sim/mod.rs` feeds thousands of arbitrary input
 frames and fails the moment any interaction loses a piece without an
 accept, so new surfaces are guarded the moment they exist.
 
+Aesthetics are directed, not defaulted: `docs/ART_DIRECTION.md` holds the
+conceit (a worn instrument panel; screens vs metal), and all frontend color
+lives in `src/palette.rs` — a purity test fails the build on any raw color
+constructor elsewhere in the frontend. Follow the file or amend it in the
+same change.
+
 The save string is versioned (magic `STV1`), hand-rolled in
 `src/sim/save.rs`, with no compatibility guarantees before 1.0. Bump the
 magic on any breaking change; an old or corrupt save fails safe into a fresh

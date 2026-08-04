@@ -63,6 +63,12 @@ const SELECT_GAIN: f32 = 0.12;
 /// moderate, because this all plays for hours in the background.
 const JUMP_GAIN: f32 = 0.7;
 
+/// Gain for the Guild hangar swallowing a delivered crate. It borrows the
+/// jump's stinger at half strength: the hangar's take is kin to the crate's
+/// own magic, and the shared voice says so — quietly, since it lands under
+/// the arrival clunk and belongs to the Guild, not the player.
+const DELIVERED_GAIN: f32 = 0.35;
+
 /// Peak gain for a hull creak, scaled by [`loudness`] of its intensity.
 /// Quiet: creaks are texture, not information.
 const CREAK_GAIN: f32 = 0.25;
@@ -285,10 +291,10 @@ impl Audio {
             Cue::Refuse => (&self.buzz, REFUSE_GAIN),
             Cue::Accept { value } => (&self.deal, ACCEPT_GAIN * loudness(value)),
             Cue::Jump => (&self.stinger, JUMP_GAIN),
+            Cue::Delivered => (&self.stinger, DELIVERED_GAIN),
             // No one-shot: the omen is the hum swelling, and marking its
-            // edges with a sting would give the mystery away. Delivered
-            // stays silent until the ceremony gets its own voice.
-            Cue::OmenStart | Cue::OmenEnd | Cue::Delivered => return,
+            // edges with a sting would give the mystery away.
+            Cue::OmenStart | Cue::OmenEnd => return,
             Cue::Creak { intensity } => {
                 let creak = &self.creaks[self.next_creak];
                 self.next_creak = (self.next_creak + 1) % self.creaks.len();

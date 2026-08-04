@@ -32,12 +32,12 @@ use macroquad::texture::{DrawTextureParams, RenderTarget, draw_texture_ex};
 use macroquad::window::clear_background;
 
 use space_trucking::sim::{
-    Barter, EAGER_MAX, Kind, Loc, POIS, Piece, PoiId, ShipState, Sim, Vec2, Violation, WORLD_H,
-    WORLD_W, layout, placement_check, player_owned, splitmix,
+    Barter, EAGER_MAX, GUILD, Kind, Loc, POIS, Piece, PoiId, ShipState, Sim, Vec2, Violation,
+    WORLD_H, WORLD_W, layout, placement_check, player_owned, splitmix,
 };
 
 use crate::View;
-use crate::juice::Juice;
+use crate::juice::{DELIVERY_LAMPS, Juice};
 use crate::palette::{
     AMBER, BLIT, BRASS, EERIE, EERIE_BRIGHT, GLASS, GLINT, HULL, ICON, ICON_LIT, LAMP_NO, LAMP_OK,
     PHOSPHOR, PHOSPHOR_DIM, PHOSPHOR_HOT, PLATE, PLATE_LIT, PLATE_SHADE, POI_EARTH, POI_GUILD,
@@ -361,6 +361,7 @@ const SALT_HOLD: u64 = 4;
 const SALT_BARTER: u64 = 5;
 const SALT_LAUNCH: u64 = 6;
 const SALT_ACCEPT: u64 = 7;
+const SALT_HANGAR: u64 = 8;
 
 /// One-pixel bevel edges: `top_left` along the edges facing the light,
 /// `bottom_right` along the ones facing away. Light is always top-left.
@@ -748,6 +749,23 @@ fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
             }
         }
 
+        // The hangar swallow: as `Delivered` fires, the Guild station
+        // blooms violet for a moment. Hangar business, not a phosphor
+        // reading — the same licence the omen cast and jump flash hold to
+        // put the suspicious colour on a screen.
+        if id == GUILD {
+            let flash = scene.juice.delivered_flash();
+            if flash > 0.0 {
+                c.dot(poi.pos, poi.radius + 2.0, fade(EERIE, 0.30 * flash));
+                c.ring(
+                    poi.pos,
+                    (1.0 - flash).mul_add(10.0, poi.radius + 3.0),
+                    1.4,
+                    fade(EERIE_BRIGHT, 0.7 * flash),
+                );
+            }
+        }
+
         // Docked: a solid ring; pop on arrival; a long pulse after an
         // offline catch-up so the returning player spots where they landed.
         if docked == Some(id) {
@@ -901,6 +919,51 @@ fn draw_console(c: &Canvas, scene: &Scene) {
     draw_eta(c, scene);
     draw_launch_lever(c, scene);
     draw_toggle_buttons(c, scene);
+    draw_hangar_plate(c, scene);
+}
+
+// ------------------------------------------------------- hangar lamp plate --
+
+/// The hangar tally plate, filling the bare console metal right of the
+/// toggle buttons. Display-only — nothing hit-tests it — so like the wants
+/// row its geometry is render-chosen rather than `layout`'s business.
+const HANGAR_PLATE: layout::Rect = layout::Rect::new(682.0, 380.0, 100.0, 40.0);
+
+/// The recessed glass strip the six lamps sit behind.
+const HANGAR_WELL: layout::Rect = layout::Rect::new(690.0, 392.0, 84.0, 16.0);
+
+/// Left-most lamp centre x, and the spacing between lamp centres.
+const HANGAR_LAMP_X0: f32 = 699.0;
+const HANGAR_LAMP_STEP: f32 = 13.2;
+
+/// Six unlabeled lamps behind one glass strip, filling as the Guild's
+/// hangar swallows crates — one per [`DELIVERY_LAMPS`] threshold. Violet,
+/// not a status green: this is hangar business, and the plate says only
+/// that something is being counted, never what.
+fn draw_hangar_plate(c: &Canvas, scene: &Scene) {
+    plate(c, HANGAR_PLATE, SALT_HANGAR);
+    socket_well(c, HANGAR_WELL);
+    let deliveries = scene.sim.deliveries();
+    let wake = scene.juice.lamp_wake();
+    let t = scene.juice.clock();
+    let mid_y = HANGAR_WELL.h.mul_add(0.5, HANGAR_WELL.y);
+    for (i, &threshold) in DELIVERY_LAMPS.iter().enumerate() {
+        let at = Vec2::new((i as f32).mul_add(HANGAR_LAMP_STEP, HANGAR_LAMP_X0), mid_y);
+        // Lit lamps idle on a faint out-of-step shimmer: counting,
+        // not signalling.
+        let shimmer = (i as f32).mul_add(1.7, t * 1.1).sin().mul_add(0.06, 0.82);
+        let level = match wake {
+            // The newest lamp blinks awake: a couple of stutters easing
+            // into the steady shimmer.
+            Some((lamp, rise)) if lamp == i => {
+                let stutter = (rise * TAU * 2.5).sin().mul_add(0.5, 0.5);
+                shimmer * ease_out(rise) * lerp(stutter, 1.0, rise)
+            }
+            _ if deliveries >= threshold => shimmer,
+            _ => 0.0,
+        };
+        lamp(c, at, 2.0 * PX, EERIE, level);
+    }
 }
 
 /// Destination preview: the console's second CRT, showing where you are
@@ -1410,9 +1473,14 @@ fn draw_pieces(c: &Canvas, scene: &Scene) {
     let juice = scene.juice;
     let t = juice.clock();
     let shaken = c.shifted(grid_shake_offset(juice));
-    let held_id = sim.held(0).map(|held| held.piece);
     for piece in sim.pieces() {
-        if held_id == Some(piece.id) {
+        let held_by = sim
+            .all_held()
+            .find(|(_, held)| held.piece == piece.id)
+            .map(|(player, _)| player);
+        if held_by == Some(0) {
+            // The local player's drag: drawn glued to the pointer by
+            // `draw_held` instead.
             continue;
         }
         let mut rect = layout::piece_rect(piece);
@@ -1428,8 +1496,27 @@ fn draw_pieces(c: &Canvas, scene: &Scene) {
         }
         let on_grid = matches!(piece.loc, Loc::Hold { .. });
         let canvas = if on_grid { &shaken } else { c };
-        piece_glyph(canvas, piece.kind, piece.variant, rect, t);
+        if held_by.is_some() {
+            crew_ghost(canvas, piece, rect, t);
+        } else {
+            piece_glyph(canvas, piece.kind, piece.variant, rect, t);
+        }
     }
+}
+
+/// Another crew member's drag, seen from this seat. There is no remote
+/// pointer to follow yet, so the honest rendering is a dim ghost at the
+/// piece's home (the sim parks `loc` at the origin until the drop): the
+/// glyph sunk toward the socket under a faint slow-breathing frame —
+/// someone is holding this, and it is not you.
+fn crew_ghost(c: &Canvas, piece: &Piece, rect: layout::Rect, t: f32) {
+    piece_glyph(c, piece.kind, piece.variant, rect, t);
+    c.fill(rect, fade(SOCKET, 0.55));
+    c.frame_thick(
+        inflate(rect, -PX),
+        1.0,
+        fade(GLINT, (t * 2.0).sin().mul_add(0.05, 0.25)),
+    );
 }
 
 /// The held piece: enlarged, shadowed, glued to the pointer, tinted by

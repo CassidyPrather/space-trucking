@@ -46,6 +46,17 @@ const JUMP_LEN: f32 = 0.45;
 /// Red dial flash after a refused trade.
 const DIAL_LEN: f32 = 0.35;
 
+/// Violet flash on the Guild station as its hangar swallows a delivery.
+const DELIVERED_LEN: f32 = 0.45;
+
+/// A hangar lamp blinking awake after a delivery crosses its threshold.
+const LAMP_WAKE_LEN: f32 = 0.40;
+
+/// Lifetime-delivery thresholds at which the hangar plate's six lamps
+/// light, in lamp order. Log scale: the early lamps feel immediate, the
+/// long tail stays mysterious.
+pub const DELIVERY_LAMPS: [u32; 6] = [1, 2, 4, 8, 16, 32];
+
 /// Normalized cooldown: 1.0 the instant a timer is wound, 0.0 once spent.
 const fn heat(remaining: f32, length: f32) -> f32 {
     (remaining / length).clamp(0.0, 1.0)
@@ -71,6 +82,10 @@ pub struct Juice {
     /// The refused rule and the world rect of the attempted footprint.
     violation_at: Option<(Violation, layout::Rect)>,
     jump_flash: f32,
+    delivered: f32,
+    lamp_wake: f32,
+    /// Which hangar lamp the wake belongs to, once one has ever woken.
+    lamp_woken: Option<usize>,
     dock_pop: f32,
     dock_pulse: f32,
     select_blip: f32,
@@ -98,6 +113,8 @@ impl Juice {
             &mut self.slide,
             &mut self.violation,
             &mut self.jump_flash,
+            &mut self.delivered,
+            &mut self.lamp_wake,
             &mut self.dock_pop,
             &mut self.dock_pulse,
             &mut self.select_blip,
@@ -129,6 +146,19 @@ impl Juice {
                     self.station_shake = SHAKE_LEN;
                 }
                 Cue::Jump => self.jump_flash = JUMP_LEN,
+                Cue::Delivered => {
+                    self.delivered = DELIVERED_LEN;
+                    // The tally has already counted this crate when the cue
+                    // fires, so a lamp that just crossed its threshold is an
+                    // exact match against the ladder.
+                    if let Some(lamp) = DELIVERY_LAMPS
+                        .iter()
+                        .position(|&threshold| threshold == sim.deliveries())
+                    {
+                        self.lamp_wake = LAMP_WAKE_LEN;
+                        self.lamp_woken = Some(lamp);
+                    }
+                }
                 _ => {}
             }
         }
@@ -245,6 +275,20 @@ impl Juice {
     #[must_use]
     pub const fn jump_flash(&self) -> f32 {
         heat(self.jump_flash, JUMP_LEN)
+    }
+
+    /// Violet flash heat on the Guild station after a delivery.
+    #[must_use]
+    pub const fn delivered_flash(&self) -> f32 {
+        heat(self.delivered, DELIVERED_LEN)
+    }
+
+    /// The hangar lamp mid-wake and its blink progress (`0..=1`, rising),
+    /// while a just-crossed threshold's blink lives.
+    #[must_use]
+    pub fn lamp_wake(&self) -> Option<(usize, f32)> {
+        let lamp = self.lamp_woken?;
+        (self.lamp_wake > 0.0).then_some((lamp, 1.0 - heat(self.lamp_wake, LAMP_WAKE_LEN)))
     }
 
     /// Dock-ring pop heat right after an arrival.

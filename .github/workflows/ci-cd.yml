@@ -47,6 +47,10 @@ jobs:
       - name: Run tests
         run: cargo test --all-features
 
+      - name: Enforce performance budgets
+        # Release-only ceilings with wide headroom; see docs/BUDGETS.md.
+        run: cargo test --release --test perf -- --ignored
+
       - name: Install cargo-audit
         uses: taiki-e/install-action@cargo-audit
 

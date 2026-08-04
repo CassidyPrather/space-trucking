@@ -41,7 +41,9 @@ deliberately below.
 - [ ] `src/sim/` and `src/synth.rs` import no macroquad; cues say what
       happened, never what it sounds like.
 - [ ] Ambient soundscape only — no melodies; new loops pass the seam test.
-- [ ] wasm within budget: ≤ 1.5 MB (paste the current byte count).
+- [ ] Budgets green: wasm ≤ 1.5 MB (paste the byte count) and the release
+      perf gates pass (`cargo test --release --test perf -- --ignored`);
+      any retuned ceiling is amended in [BUDGETS.md](BUDGETS.md) with a why.
 - [ ] Every asset, including vendored JS, has a CREDITS.md row; CC0/MIT
       preferred.
 - [ ] Cargo tells the story: any new kind has a lore reason and a distinct

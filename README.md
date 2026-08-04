@@ -99,6 +99,9 @@ Serve the result: `python3 -m http.server --directory dist/web 8080`
 
 Benchmark: `cargo bench --bench sim_bench -- --quick`
 
+Performance budgets (CI-enforced ceilings, see
+[docs/BUDGETS.md](docs/BUDGETS.md)): `cargo test --release --test perf -- --ignored`
+
 Security audit: `cargo audit` (requires `cargo install cargo-audit`)
 
 Pre-commit hook: `git config core.hooksPath .githooks` (runs `cargo fmt`)

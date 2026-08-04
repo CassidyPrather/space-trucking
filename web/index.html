@@ -97,6 +97,15 @@
          first-gesture handler that resumes the audio context, which browsers keep
          suspended until the user presses something. -->
     <script src="audio.js"></script>
+    <!-- sapp_jsutils.js is sapp-jsutils' miniquad plugin, vendored likewise; it owns
+         the rust<->js object handoff. Same load-bearing order as audio.js: it calls
+         miniquad_add_plugin() at parse time, so after gl.js and before load(). It
+         must also come before quad-storage.js, which leans on its helpers. -->
+    <script src="sapp_jsutils.js"></script>
+    <!-- quad-storage.js is quad-storage's miniquad plugin, vendored likewise; it maps
+         the storage extern fns onto localStorage, so without it saves have nowhere
+         to go in the browser. Same rule: after sapp_jsutils.js, before load(). -->
+    <script src="quad-storage.js"></script>
     <script>
         "use strict";
         const status = document.getElementById("status");

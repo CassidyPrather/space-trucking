@@ -1,9 +1,9 @@
 //! The save slot: browser `localStorage` on the web, quad-storage's data
-//! file natively.
+//! file natively (`local.data`, gitignored).
 //!
-//! Binary-crate module with the final signatures; the persistence stage
-//! wires it into the frontend loop and vendors quad-storage's js plugin into
-//! `web/` (without the plugin, the browser side has nowhere to write).
+//! The wall-clock stamp is stored as `f64::to_bits` in hex — an exact
+//! round-trip with no float-formatting drift. Binary-crate module; the
+//! renderer stage wires it into the frontend loop.
 
 /// Storage key for the save string.
 pub const SAVE_KEY: &str = "space-trucking/save";
@@ -19,7 +19,12 @@ pub fn load() -> Option<(String, f64)> {
         let storage = quad_storage::STORAGE.lock().ok()?;
         (storage.get(SAVE_KEY), storage.get(SAVED_AT_KEY))
     };
-    let saved_at = stamp?.parse().ok()?;
+    let saved_at = f64::from_bits(u64::from_str_radix(&stamp?, 16).ok()?);
+    // The bits always round-trip, but a stamp that is not a finite moment
+    // is a corrupt stamp all the same.
+    if !saved_at.is_finite() {
+        return None;
+    }
     Some((save?, saved_at))
 }
 
@@ -27,6 +32,6 @@ pub fn load() -> Option<(String, f64)> {
 pub fn store(save: &str, now: f64) {
     if let Ok(mut storage) = quad_storage::STORAGE.lock() {
         storage.set(SAVE_KEY, save);
-        storage.set(SAVED_AT_KEY, &now.to_string());
+        storage.set(SAVED_AT_KEY, &format!("{:x}", now.to_bits()));
     }
 }

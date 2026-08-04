@@ -65,8 +65,9 @@ inputs (which we do not care about — see DESIGN.md on anti-cheat).
 
 ## The harness is the point
 
-Real sockets are an adapter to write later; `net::Transport` is a trait so
-that day is plumbing. What CI runs — and what any protocol change must keep
+Real sockets are an adapter to write later; the session machines are driven
+purely by messages and tick pulses — no I/O, no clocks — so that day is a
+loop that pumps them, exactly as the harness's `Convoy` driver does. What CI runs — and what any protocol change must keep
 green — is the **seeded flaky harness**: N in-process endpoints joined by
 links with deterministic latency, drop, duplication, and reordering drawn
 from `splitmix` streams. The required properties, each a test:

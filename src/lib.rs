@@ -6,7 +6,12 @@
 //! [`sim::InputFrame`]s and sim state into pixels and sound. No macroquad
 //! types appear anywhere in here, so the interesting half runs headless in
 //! `cargo test` and `cargo bench` at whatever speed the CPU allows.
+//!
+//! [`net`] extends the same purity to multiplayer: lockstep protocol,
+//! session state machines, the guild server, and the hostile-network
+//! harness that proves them, all driven by messages and sim time alone.
 
+pub mod net;
 pub mod sim;
 pub mod synth;
 

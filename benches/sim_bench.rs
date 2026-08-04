@@ -1,11 +1,14 @@
 //! Criterion benchmark over the sim's hot paths: the per-frame tick, the
-//! offline catch-up loop, and the dock-arrival visit generation.
+//! offline catch-up loop, the dock-arrival visit generation, and the
+//! lockstep crew tick under a full crew.
 
 use std::hint::black_box;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 
-use space_trucking::sim::{InputFrame, POIS, ShipState, Sim, TICK_DT, Vec2, layout};
+use space_trucking::sim::{
+    CrewFrame, InputFrame, MAX_CREW, POIS, ShipState, Sim, TICK_DT, Vec2, layout,
+};
 
 /// One hour of sim time, in ticks.
 const HOUR_TICKS: u64 = 216_000;
@@ -82,10 +85,50 @@ fn bench_barter_regen(c: &mut Criterion) {
     });
 }
 
+/// A docked sim with as many players as pieces mid-drag: every crew tick
+/// re-resolves one drop legality per dragging player, the per-player cost
+/// a lockstep replica pays each sealed tick.
+fn bench_crew_tick(c: &mut Criterion) {
+    let mut base = Sim::new(0x5EED);
+    let centers: Vec<Vec2> = base
+        .pieces()
+        .iter()
+        .take(MAX_CREW)
+        .map(|piece| {
+            let rect = layout::piece_rect(piece);
+            Vec2::new(rect.w.mul_add(0.5, rect.x), rect.h.mul_add(0.5, rect.y))
+        })
+        .collect();
+    assert_eq!(
+        centers.len(),
+        MAX_CREW,
+        "seed must offer a piece per player"
+    );
+    let mut lift: CrewFrame = [InputFrame::default(); MAX_CREW];
+    let mut drag: CrewFrame = [InputFrame::default(); MAX_CREW];
+    for (player, &pos) in centers.iter().enumerate() {
+        lift[player] = press_at(pos);
+        drag[player] = InputFrame {
+            pointer: pos,
+            held: true,
+            ..InputFrame::default()
+        };
+    }
+    base.crew_tick(&lift);
+    c.bench_function("sim_crew_tick", |b| {
+        b.iter_batched_ref(
+            || base.clone(),
+            |sim| sim.crew_tick(black_box(&drag)),
+            BatchSize::SmallInput,
+        );
+    });
+}
+
 criterion_group!(
     benches,
     bench_travel_tick,
     bench_fast_forward_hour,
-    bench_barter_regen
+    bench_barter_regen,
+    bench_crew_tick
 );
 criterion_main!(benches);

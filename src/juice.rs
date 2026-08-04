@@ -134,7 +134,7 @@ impl Juice {
         }
 
         self.held_was = sim
-            .held()
+            .held(0)
             .and_then(|held| sim.pieces().iter().find(|piece| piece.id == held.piece))
             .map(|piece| (piece.id, piece.kind));
     }

@@ -286,8 +286,9 @@ impl Audio {
             Cue::Accept { value } => (&self.deal, ACCEPT_GAIN * loudness(value)),
             Cue::Jump => (&self.stinger, JUMP_GAIN),
             // No one-shot: the omen is the hum swelling, and marking its
-            // edges with a sting would give the mystery away.
-            Cue::OmenStart | Cue::OmenEnd => return,
+            // edges with a sting would give the mystery away. Delivered
+            // stays silent until the ceremony gets its own voice.
+            Cue::OmenStart | Cue::OmenEnd | Cue::Delivered => return,
             Cue::Creak { intensity } => {
                 let creak = &self.creaks[self.next_creak];
                 self.next_creak = (self.next_creak + 1) % self.creaks.len();

@@ -15,6 +15,12 @@
 //! and [`Sim::fast_forward`] replays offline time through the same tick
 //! function with cues suppressed.
 //!
+//! The sim is crewed: up to [`MAX_CREW`] players share one ship, each with
+//! their own pointer and drag. [`Sim::crew_tick`] is the lockstep entry
+//! point — one sealed [`CrewFrame`] in, exactly one fixed step out — and
+//! [`Sim::advance`] is the solo frontend's wrapper around the same
+//! machinery with player 0's input and the accumulator on top.
+//!
 //! Sound follows the same rule as pixels: the sim reports that something
 //! happened and how hard, as a [`Cue`], and the frontend decides what that
 //! sounds like. No audio types cross into this module.
@@ -150,6 +156,15 @@ pub const fn splitmix(state: u64, salt: u64) -> u64 {
     z ^ (z >> 31)
 }
 
+/// Index of one crew member, `0..MAX_CREW`. Player 0 is the solo player.
+pub type PlayerId = u8;
+
+/// Most players that can crew one ship.
+pub const MAX_CREW: usize = 6;
+
+/// One sealed tick's input for the whole crew; absent players are default.
+pub type CrewFrame = [InputFrame; MAX_CREW];
+
 /// Everything the sim is allowed to know about the outside world for one
 /// frame. The sim never reads global input state, which is what makes replay
 /// and testing possible.
@@ -182,6 +197,9 @@ pub enum Cue {
     Select,
     Depart,
     Arrive,
+    /// The Guild seized a suspicious crate at its dock and shuttled it to
+    /// the hangar. Fires alongside `Arrive`, before that visit's barter.
+    Delivered,
     /// A piece was lifted.
     Pickup,
     /// A piece landed somewhere legal.
@@ -216,7 +234,8 @@ pub enum Cue {
     Reseed,
 }
 
-/// A piece mid-drag.
+/// A piece mid-drag. Each crew member can hold at most one, and a piece
+/// held by anyone is unGrabbable by everyone else.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Held {
     /// Id of the piece being dragged.
@@ -278,7 +297,11 @@ pub struct Sim {
     pieces: Vec<Piece>,
     /// Next piece id; never reused within a run.
     next_piece: u32,
-    held: Option<Held>,
+    /// Each crew member's drag in progress, indexed by [`PlayerId`].
+    held: [Option<Held>; MAX_CREW],
+    /// Crates the Guild has seized at its dock, monotonic within a run.
+    /// This is the counter cluster helms report to the guild server.
+    deliveries: u32,
     /// The current visit's trade, `Some` iff docked.
     barter: Option<Barter>,
     /// The current visit's jittered value table; meaningful iff docked.
@@ -343,7 +366,8 @@ impl Sim {
             },
             pieces,
             next_piece,
-            held: None,
+            held: [None; MAX_CREW],
+            deliveries: 0,
             barter: Some(barter),
             values: barter::visit_values(seed, GUILD, 1),
             visits,
@@ -352,13 +376,76 @@ impl Sim {
         }
     }
 
-    /// Consume one frame's worth of real time, returning how many fixed
-    /// ticks ran. `frame_dt` is clamped to [`MAX_FRAME_DT`]; warp multiplies
-    /// both the frame and the clamp by [`WARP_FACTOR`].
+    /// Consume one frame's worth of real time as player 0, returning how
+    /// many fixed ticks ran. `frame_dt` is clamped to [`MAX_FRAME_DT`]; warp
+    /// multiplies both the frame and the clamp by [`WARP_FACTOR`]. The solo
+    /// frontend's entry point; lockstep replicas call [`Sim::crew_tick`].
     pub fn advance(&mut self, frame_dt: f32, input: &InputFrame) -> u32 {
         // Cues describe this frame only; last frame's have been consumed.
         self.cues.clear();
+        let mut placed = Vec::new();
+        self.apply_input(0, input, &mut placed);
+        if self.paused {
+            return 0;
+        }
 
+        let scale = if self.warp { WARP_FACTOR } else { 1.0 };
+        self.accumulator += (frame_dt * scale).clamp(0.0, MAX_FRAME_DT * scale);
+        let mut ticks = 0;
+        // The float condition is the fixed-timestep idiom; the clamp above
+        // bounds the loop.
+        #[allow(clippy::while_float)]
+        while self.accumulator >= TICK_DT {
+            self.accumulator -= TICK_DT;
+            self.step();
+            ticks += 1;
+        }
+        ticks
+    }
+
+    /// Apply one sealed tick's crew inputs and run exactly one fixed step.
+    /// No accumulator is involved; [`Sim::alpha`] is untouched.
+    ///
+    /// This is the lockstep entry point: every replica calls it once per
+    /// sealed tick, and inputs are applied **in player order
+    /// `0..MAX_CREW`** — that ordering is the determinism. The rules that
+    /// order implies:
+    ///
+    /// - Grabs: the lowest-index player pressing on a free piece wins it;
+    ///   a press on a piece someone already holds (this tick or earlier)
+    ///   does nothing, silently.
+    /// - Drops: releases resolve in order against the world as earlier
+    ///   players left it; a release refused only because an earlier player
+    ///   just took the spot snaps back with a soft reject.
+    /// - Toggles: each player's pause/warp edge flips the flag in order and
+    ///   announces its cue, so two pause toggles in one tick net to no
+    ///   change and read `Pause { true }` then `Pause { false }`.
+    /// - Pause: a player whose input lands while the sim is paused still
+    ///   toggles, but their pointer events are ignored, exactly as
+    ///   [`Sim::advance`] ignores them.
+    /// - Reseed: rebuilds the world where it lands (discarding earlier
+    ///   players' cues with the rest of the old state), so the last reseed
+    ///   in order wins.
+    ///
+    /// Warp does not multiply this function: one call is one tick, and a
+    /// warped lockstep session realises the speed-up by sealing ticks
+    /// faster. [`Sim::is_warp`] still reports the flag for that purpose.
+    pub fn crew_tick(&mut self, inputs: &CrewFrame) {
+        self.cues.clear();
+        let mut placed = Vec::new();
+        for (player, input) in inputs.iter().enumerate() {
+            self.apply_input(player as PlayerId, input, &mut placed);
+        }
+        if !self.paused {
+            self.step();
+        }
+    }
+
+    /// One player's input events: reseed, toggles, then — unless the sim is
+    /// paused by the time their turn comes — pointer edges. `placed` carries
+    /// the pieces successfully dropped earlier in the same application
+    /// round, for same-tick drop contention.
+    fn apply_input(&mut self, player: PlayerId, input: &InputFrame, placed: &mut Vec<u32>) {
         if let Some(seed) = input.reseed {
             // Note the ordering: reseeding rebuilds `self`, cue list
             // included, so the cue has to be pushed after it.
@@ -376,26 +463,13 @@ impl Sim {
             self.cues.push(Cue::Warp { engaged: self.warp });
         }
         if self.paused {
-            return 0;
+            return;
         }
 
         // Pointer edges are per-frame events, exactly like the template's
         // burst was: handling them inside the tick loop would fire them once
         // per tick.
-        self.handle_pointer(input);
-
-        let scale = if self.warp { WARP_FACTOR } else { 1.0 };
-        self.accumulator += (frame_dt * scale).clamp(0.0, MAX_FRAME_DT * scale);
-        let mut ticks = 0;
-        // The float condition is the fixed-timestep idiom; the clamp above
-        // bounds the loop.
-        #[allow(clippy::while_float)]
-        while self.accumulator >= TICK_DT {
-            self.accumulator -= TICK_DT;
-            self.step();
-            ticks += 1;
-        }
-        ticks
+        self.handle_pointer(player, input, placed);
     }
 
     /// Run `ticks` default-input ticks for offline catch-up, suppressing cue
@@ -407,9 +481,9 @@ impl Sim {
         let ran = if self.paused {
             0
         } else {
-            // A default frame carries no pointer, so a drag in progress
+            // A default frame carries no pointer, so every drag in progress
             // snaps back exactly as N real advances would snap it.
-            self.held = None;
+            self.held = [None; MAX_CREW];
             for _ in 0..ticks {
                 self.step();
             }
@@ -481,10 +555,26 @@ impl Sim {
         &self.pieces
     }
 
-    /// The piece mid-drag, if any.
+    /// The piece `player` is mid-drag with, if any. Out-of-range players
+    /// hold nothing.
     #[must_use]
-    pub const fn held(&self) -> Option<&Held> {
-        self.held.as_ref()
+    pub fn held(&self, player: PlayerId) -> Option<&Held> {
+        self.held.get(usize::from(player))?.as_ref()
+    }
+
+    /// Every drag in progress, in player order.
+    pub fn all_held(&self) -> impl Iterator<Item = (PlayerId, &Held)> {
+        self.held
+            .iter()
+            .enumerate()
+            .filter_map(|(player, held)| held.as_ref().map(|held| (player as PlayerId, held)))
+    }
+
+    /// Crates the Guild has seized at its dock, monotonic within a run.
+    /// The frontend's lamp plate reads this, and helms report it upstream.
+    #[must_use]
+    pub const fn deliveries(&self) -> u32 {
+        self.deliveries
     }
 
     /// The current visit's trade. `Some` iff docked.
@@ -542,45 +632,63 @@ impl Sim {
         self.paused = paused;
     }
 
-    /// One frame's pointer handling: presses lift or actuate, releases drop,
-    /// and the held piece's legality tracks the pointer.
-    fn handle_pointer(&mut self, input: &InputFrame) {
+    /// One frame of one player's pointer handling: presses lift or actuate,
+    /// releases drop, and the held piece's legality tracks the pointer.
+    fn handle_pointer(&mut self, player: PlayerId, input: &InputFrame, placed: &mut Vec<u32>) {
         if input.press {
-            self.on_press(input.pointer);
+            self.on_press(player, input.pointer);
         }
         if input.release {
-            self.on_release(input.pointer);
+            self.on_release(player, input.pointer, placed);
         }
-        if self.held.is_some() && !input.held && !input.press && !input.release {
-            // The release never arrived (window blur, touch cancel): snap
-            // back silently rather than glue a piece to a phantom pointer.
-            self.held = None;
+        let slot = usize::from(player);
+        if self.held[slot].is_some() && !input.held && !input.press && !input.release {
+            // The release never arrived (window blur, touch cancel, a crew
+            // member vanished mid-drag): snap back silently rather than
+            // glue a piece to a phantom pointer.
+            self.held[slot] = None;
         }
-        if let Some(held) = self.held {
+        if let Some(held) = self.held[slot] {
             let legal = self
                 .pieces
                 .iter()
                 .find(|piece| piece.id == held.piece)
                 .is_some_and(|piece| self.resolve_drop(piece, input.pointer).is_ok());
-            if let Some(held) = &mut self.held {
+            if let Some(held) = &mut self.held[slot] {
                 held.legal = legal;
             }
         }
     }
 
+    /// Whether any crew member currently holds `piece`.
+    fn held_by_crew(&self, piece: u32) -> bool {
+        self.held.iter().flatten().any(|held| held.piece == piece)
+    }
+
     /// A press either lifts a piece or actuates whatever it landed on.
-    fn on_press(&mut self, p: Vec2) {
-        if self.held.is_some() {
+    fn on_press(&mut self, player: PlayerId, p: Vec2) {
+        if self.held(player).is_some() {
             return;
         }
         let docked = matches!(self.ship.state, ShipState::Docked(_));
-        if let Some(piece) = self.pieces.iter().find(|piece| {
-            layout::piece_rect(piece).contains(p)
-                && (docked || matches!(piece.loc, Loc::Hold { .. }))
-        }) {
-            self.held = Some(Held {
-                piece: piece.id,
-                origin: piece.loc,
+        let grabbed = self
+            .pieces
+            .iter()
+            .find(|piece| {
+                layout::piece_rect(piece).contains(p)
+                    && (docked || matches!(piece.loc, Loc::Hold { .. }))
+            })
+            .map(|piece| (piece.id, piece.loc));
+        if let Some((id, origin)) = grabbed {
+            if self.held_by_crew(id) {
+                // Someone else got there first — this tick (first in
+                // player order wins) or an earlier one. Losing a grab race
+                // is not an error, so it makes no noise at all.
+                return;
+            }
+            self.held[usize::from(player)] = Some(Held {
+                piece: id,
+                origin,
                 legal: true,
             });
             self.cues.push(Cue::Pickup);
@@ -623,8 +731,8 @@ impl Sim {
     /// A release drops the held piece: place it if the target is legal,
     /// snap it back otherwise. A drop never destroys or surrenders a piece
     /// — ownership changes only through the accept lever.
-    fn on_release(&mut self, p: Vec2) {
-        let Some(held) = self.held.take() else {
+    fn on_release(&mut self, player: PlayerId, p: Vec2, placed: &mut Vec<u32>) {
+        let Some(held) = self.held[usize::from(player)].take() else {
             return;
         };
         let Some(index) = self.pieces.iter().position(|piece| piece.id == held.piece) else {
@@ -636,17 +744,41 @@ impl Sim {
                 self.pieces[index].loc = loc;
                 self.last_violation = None;
                 self.refresh_ready();
+                placed.push(piece.id);
                 self.cues.push(Cue::Place);
             }
             Err(violation) => {
-                if violation.is_some() {
+                // Same-tick drop contention: refused only because an
+                // earlier player's piece just landed there means this
+                // player lost a race, not broke a stowage rule — soft
+                // snap-back, no violation flash.
+                let contested = violation == Some(Violation::Overlap)
+                    && !placed.is_empty()
+                    && self.contested_only(&piece, p, placed);
+                let hard = violation.is_some() && !contested;
+                if hard {
                     self.last_violation = violation;
                 }
-                self.cues.push(Cue::Reject {
-                    hard: violation.is_some(),
-                });
+                self.cues.push(Cue::Reject { hard });
             }
         }
+    }
+
+    /// Whether dropping `piece` at `p` would have been legal without the
+    /// pieces placed earlier this round — i.e. the refusal is pure
+    /// same-tick contention. Slot drops need no such check: an occupied
+    /// slot is already a soft reject.
+    fn contested_only(&self, piece: &Piece, p: Vec2, placed: &[u32]) -> bool {
+        let Some((x, y)) = layout::cell_at(p) else {
+            return false;
+        };
+        let rest: Vec<Piece> = self
+            .pieces
+            .iter()
+            .filter(|other| !placed.contains(&other.id))
+            .copied()
+            .collect();
+        placement_check(&rest, piece.id, piece.kind, x, y).is_ok()
     }
 
     /// Where dropping `piece` at `p` would settle it, or which flavour of
@@ -700,14 +832,14 @@ impl Sim {
         Err(None)
     }
 
-    /// Which regions would accept the held piece, for the renderer to glow.
-    /// `None` while nothing is held. Derived from [`player_owned`] and the
-    /// dock state exactly as [`Sim::resolve_drop`] is; per-slot freeness
-    /// stays with the drop itself (a glowing row with one occupied socket
-    /// is still an honest invitation).
+    /// Which regions would accept `player`'s held piece, for the renderer
+    /// to glow. `None` while that player holds nothing. Derived from
+    /// [`player_owned`] and the dock state exactly as [`Sim::resolve_drop`]
+    /// is; per-slot freeness stays with the drop itself (a glowing row with
+    /// one occupied socket is still an honest invitation).
     #[must_use]
-    pub fn drop_targets(&self) -> Option<DropTargets> {
-        let held = self.held?;
+    pub fn drop_targets(&self, player: PlayerId) -> Option<DropTargets> {
+        let held = self.held(player)?;
         let piece = self.pieces.iter().find(|piece| piece.id == held.piece)?;
         let ours = player_owned(piece.loc);
         let docked = self.barter.is_some();
@@ -891,13 +1023,18 @@ impl Sim {
         }
     }
 
-    /// Arrive: snap to the pad, count the visit, and lay out its trade.
+    /// Arrive: snap to the pad, count the visit, and lay out its trade. At
+    /// the Guild the hangar steal runs first, so the visit's barter never
+    /// sees the crate.
     fn dock(&mut self, poi: PoiId) {
         let pos = POIS[usize::from(poi)].pos;
         self.ship.pos = pos;
         self.ship.state = ShipState::Docked(poi);
         self.ship.selected = None;
         self.events.on_arrive(&mut self.cues);
+        if poi == GUILD {
+            self.steal_crate();
+        }
         self.visits[usize::from(poi)] += 1;
         let visit = self.visits[usize::from(poi)];
         let (barter, goods) = barter::generate(
@@ -912,6 +1049,30 @@ impl Sim {
         self.pieces.extend(goods);
         self.barter = Some(barter);
         self.cues.push(Cue::Arrive);
+    }
+
+    /// The hangar steal: any suspicious crate aboard is seized the moment
+    /// the ship docks at the Guild — in front of the usual bartering — and
+    /// counted on the delivery tally with a [`Cue::Delivered`]. The
+    /// singleton rule caps this at one crate per docking, and a crate held
+    /// mid-drag drops first: it is dock time.
+    fn steal_crate(&mut self) {
+        let Some(index) = self
+            .pieces
+            .iter()
+            .position(|piece| matches!(piece.kind.tag(), Some(Tag::Suspicious)))
+        else {
+            return;
+        };
+        let id = self.pieces[index].id;
+        for held in &mut self.held {
+            if matches!(held, Some(held) if held.piece == id) {
+                *held = None;
+            }
+        }
+        self.pieces.remove(index);
+        self.deliveries += 1;
+        self.cues.push(Cue::Delivered);
     }
 }
 
@@ -977,7 +1138,7 @@ mod tests {
     /// Drag as three zero-dt frames: press, mid-drag hold, release.
     fn drag(sim: &mut Sim, from: Vec2, to: Vec2) {
         sim.advance(0.0, &press_at(from.x, from.y));
-        assert!(sim.held().is_some(), "nothing to lift at {from:?}");
+        assert!(sim.held(0).is_some(), "nothing to lift at {from:?}");
         sim.advance(0.0, &held_at(to.x, to.y));
         sim.advance(0.0, &release_at(to.x, to.y));
     }
@@ -1347,13 +1508,13 @@ mod tests {
         let vial = rect_center(layout::cell_rect(0, 0));
         sim.advance(0.0, &press_at(vial.x, vial.y));
         assert_eq!(sim.cues(), [Cue::Pickup]);
-        assert!(sim.held().is_some());
+        assert!(sim.held(0).is_some());
 
         // Drop onto the scrap at (0, 2): overlap, a hard reject.
         let scrap = rect_center(layout::cell_rect(0, 2));
         sim.advance(0.0, &release_at(scrap.x, scrap.y));
         assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
-        assert!(sim.held().is_none());
+        assert!(sim.held(0).is_none());
 
         // Lift again and drop on a free cell: placed.
         sim.advance(0.0, &press_at(vial.x, vial.y));
@@ -1388,6 +1549,11 @@ mod tests {
         assert_eq!(Sim::from_save("hello").unwrap_err(), SaveError::BadMagic);
         assert_eq!(
             Sim::from_save("STV9\nseed 1").unwrap_err(),
+            SaveError::UnsupportedVersion
+        );
+        // STV1 predates the delivery tally: fail safe into a fresh game.
+        assert_eq!(
+            Sim::from_save("STV1\nseed 1").unwrap_err(),
             SaveError::UnsupportedVersion
         );
         let mangled = Sim::new(1).save_string().replace("seed", "sneed");
@@ -1485,10 +1651,10 @@ mod tests {
         let mut sim = Sim::new(11);
         let vial = cell_center(0, 0);
         sim.advance(0.0, &press_at(vial.x, vial.y));
-        let held = sim.held().expect("lifted the vial").piece;
+        let held = sim.held(0).expect("lifted the vial").piece;
         let saved = sim.save_string();
         let restored = Sim::from_save(&saved).expect("mid-drag save parses");
-        assert!(restored.held().is_none(), "held state is transient");
+        assert!(restored.held(0).is_none(), "held state is transient");
         let loc_of = |s: &Sim| s.pieces().iter().find(|p| p.id == held).unwrap().loc;
         assert_eq!(
             loc_of(&restored),
@@ -1794,12 +1960,12 @@ mod tests {
     #[test]
     fn drop_targets_come_from_the_ownership_matrix() {
         let mut sim = Sim::new(1);
-        assert_eq!(sim.drop_targets(), None, "nothing held, nothing invited");
+        assert_eq!(sim.drop_targets(0), None, "nothing held, nothing invited");
         // Hold a player piece: hold and give invite; station rows never do.
         let vial = cell_center(0, 0);
         sim.advance(0.0, &press_at(vial.x, vial.y));
         assert_eq!(
-            sim.drop_targets(),
+            sim.drop_targets(0),
             Some(DropTargets {
                 hold: true,
                 give: true,
@@ -1818,7 +1984,7 @@ mod tests {
         let at = rect_center(layout::piece_rect(shelf_piece));
         sim.advance(0.0, &press_at(at.x, at.y));
         assert_eq!(
-            sim.drop_targets(),
+            sim.drop_targets(0),
             Some(DropTargets {
                 hold: false,
                 give: false,
@@ -1852,17 +2018,19 @@ mod tests {
                 reseed: None,
             };
             sim.advance(TICK_DT, &input);
-            let accepted = sim
+            // The two legitimate exits: the accept lever, and the Guild's
+            // hangar steal.
+            let ceded = sim
                 .cues()
                 .iter()
-                .any(|cue| matches!(cue, Cue::Accept { .. }));
+                .any(|cue| matches!(cue, Cue::Accept { .. } | Cue::Delivered));
             let after = owned(&sim);
             assert!(
-                after >= before || accepted,
+                after >= before || ceded,
                 "frame {frame}: {before} -> {after} player pieces with no accept"
             );
             // Held pieces must stay real: a lifted id always exists.
-            if let Some(held) = sim.held() {
+            if let Some(held) = sim.held(0) {
                 assert!(
                     sim.pieces().iter().any(|p| p.id == held.piece),
                     "frame {frame}: held piece {} is a ghost",
@@ -1949,20 +2117,131 @@ mod tests {
         assert_eq!(sim.last_violation(), None);
     }
 
+    /// Crates of any location, aboard or shelved.
+    fn crates(sim: &Sim) -> usize {
+        sim.pieces()
+            .iter()
+            .filter(|p| p.kind == Kind::SuspiciousCrate)
+            .count()
+    }
+
     #[test]
-    fn guild_never_offers_a_crate_while_one_is_aboard() {
+    fn each_guild_docking_steals_the_crate_and_counts_it() {
         let mut sim = Sim::new(0x0051_C0DE);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        for _ in 0..6 {
+        for round in 1..=3_u32 {
+            inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
             travel_to(&mut sim, VENUS);
+            // Venus neither steals the crate nor offers a second: the
+            // singleton aboard suppresses the shelf offer.
+            assert_eq!(crates(&sim), 1, "round {round}: the singleton broke");
+            assert_eq!(sim.deliveries(), round - 1);
             travel_to(&mut sim, GUILD);
-            let crates = sim
+            assert_eq!(crates(&sim), 0, "round {round}: the crate survived");
+            assert_eq!(sim.deliveries(), round, "round {round}: not counted");
+            // The steal ran in front of the barter: the visit is laid out
+            // as usual, one piece per shelf slot.
+            let barter = sim.barter().expect("docked means barter");
+            assert_eq!(barter.station, GUILD);
+            let shelved: Vec<u8> = sim
                 .pieces()
                 .iter()
-                .filter(|p| p.kind == Kind::SuspiciousCrate)
-                .count();
-            assert_eq!(crates, 1, "the singleton rule broke");
+                .filter_map(|p| match p.loc {
+                    Loc::StationShelf { slot } => Some(slot),
+                    _ => None,
+                })
+                .collect();
+            assert!(!shelved.is_empty(), "the steal ate the shelf");
+            let mut deduped = shelved.clone();
+            deduped.sort_unstable();
+            deduped.dedup();
+            assert_eq!(deduped.len(), shelved.len(), "shelf slot conflict");
         }
+    }
+
+    #[test]
+    fn guild_steal_fires_delivered_beside_arrive() {
+        let mut sim = Sim::new(0xDE11);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        travel_to(&mut sim, VENUS);
+        launch(&mut sim, GUILD);
+        // Walk to the dock live, so the arrival frame's cues are visible.
+        let mut arrival = Vec::new();
+        for _ in 0..=leg_of(&sim) {
+            sim.advance(TICK_DT, &InputFrame::default());
+            if sim.cues().contains(&Cue::Arrive) {
+                arrival = sim.cues().to_vec();
+                break;
+            }
+        }
+        let delivered = arrival
+            .iter()
+            .position(|c| matches!(c, Cue::Delivered))
+            .expect("no Delivered on the arrival frame");
+        let arrive = arrival
+            .iter()
+            .position(|c| matches!(c, Cue::Arrive))
+            .expect("no Arrive on the arrival frame");
+        assert!(delivered < arrive, "the steal happens in front of the dock");
+        assert_eq!(sim.deliveries(), 1);
+        assert_eq!(crates(&sim), 0);
+        assert!(sim.barter().is_some(), "the barter must survive the steal");
+    }
+
+    #[test]
+    fn docking_without_a_crate_never_delivers() {
+        let mut sim = Sim::new(0x00DE);
+        travel_to(&mut sim, VENUS);
+        travel_to(&mut sim, GUILD);
+        assert_eq!(sim.deliveries(), 0);
+        let mut sim = Sim::new(0x00DE);
+        travel_to(&mut sim, VENUS);
+        launch(&mut sim, GUILD);
+        let mut log = Vec::new();
+        for _ in 0..=leg_of(&sim) {
+            sim.advance(TICK_DT, &InputFrame::default());
+            log.extend_from_slice(sim.cues());
+        }
+        assert_eq!(count_cues(&log, |c| matches!(c, Cue::Arrive)), 1);
+        assert_eq!(count_cues(&log, |c| matches!(c, Cue::Delivered)), 0);
+        assert_eq!(sim.deliveries(), 0);
+    }
+
+    #[test]
+    fn a_crate_held_mid_drag_is_still_stolen_at_the_dock() {
+        let mut sim = Sim::new(0xD00D);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        travel_to(&mut sim, VENUS);
+        launch(&mut sim, GUILD);
+        // Lift the crate mid-flight and keep dragging through the dock.
+        let (crate_id, at) = {
+            let piece = sim
+                .pieces()
+                .iter()
+                .find(|p| p.kind == Kind::SuspiciousCrate)
+                .expect("the crate rides along");
+            (piece.id, rect_center(layout::piece_rect(piece)))
+        };
+        sim.advance(0.0, &press_at(at.x, at.y));
+        assert_eq!(sim.held(0).map(|h| h.piece), Some(crate_id));
+        while matches!(sim.ship().state, ShipState::Traveling { .. }) {
+            sim.advance(TICK_DT, &held_at(at.x, at.y));
+        }
+        // Dock time: the drag dropped, the crate is gone, the count is in.
+        assert_eq!(sim.held(0), None, "the steal must clear the drag");
+        assert_eq!(crates(&sim), 0);
+        assert_eq!(sim.deliveries(), 1);
+    }
+
+    #[test]
+    fn deliveries_survive_the_save_round_trip() {
+        let mut sim = Sim::new(0x5AFE);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        travel_to(&mut sim, VENUS);
+        travel_to(&mut sim, GUILD);
+        assert_eq!(sim.deliveries(), 1);
+        let restored = Sim::from_save(&sim.save_string()).expect("own save must parse");
+        assert_eq!(restored.deliveries(), 1);
+        assert_save_continues(sim, 5_000);
     }
 
     #[test]
@@ -2109,5 +2388,347 @@ mod tests {
         assert!(!sim.is_warp(), "warp must reset with the world");
         assert_eq!(sim.seed(), 2);
         assert_eq!(sim.tick(), 0);
+    }
+
+    // -------------------------------------------------------------- crew --
+
+    /// A sealed tick's frames with the given players' inputs set; everyone
+    /// else is default, exactly as absent crew are in lockstep.
+    fn crew(entries: &[(PlayerId, InputFrame)]) -> CrewFrame {
+        let mut frame = [InputFrame::default(); MAX_CREW];
+        for &(player, input) in entries {
+            frame[usize::from(player)] = input;
+        }
+        frame
+    }
+
+    /// A crew schedule with some of everything: three players dragging
+    /// different pieces in parallel (a gift, a restow, a snap-back-to-self),
+    /// warp toggled on by one player and off by another, a destination
+    /// selected, the gift accepted, a departure, and the Venus leg coasted
+    /// onto the dock.
+    fn crew_schedule() -> Vec<CrewFrame> {
+        let vial = cell_center(0, 0);
+        let scrap = cell_center(0, 2);
+        let pearls = cell_center(2, 0);
+        let give0 = slot_center(&layout::GIVE_SLOTS, 0);
+        let restow = cell_center(4, 2);
+        let warp = InputFrame {
+            toggle_warp: true,
+            ..InputFrame::default()
+        };
+        let venus = POIS[usize::from(VENUS)].pos;
+        let launch_lever = rect_center(layout::LAUNCH_LEVER);
+        let accept = rect_center(layout::ACCEPT_LEVER);
+        let mut s = vec![
+            crew(&[
+                (1, press_at(vial.x, vial.y)),
+                (2, press_at(scrap.x, scrap.y)),
+                (4, warp),
+            ]),
+            crew(&[
+                (1, held_at(give0.x, give0.y)),
+                (2, held_at(restow.x, restow.y)),
+                (3, press_at(pearls.x, pearls.y)),
+            ]),
+            crew(&[
+                (1, release_at(give0.x, give0.y)),
+                (2, release_at(restow.x, restow.y)),
+                (3, release_at(pearls.x, pearls.y)),
+            ]),
+            crew(&[(0, press_at(venus.x, venus.y)), (5, warp)]),
+            crew(&[(0, press_at(accept.x, accept.y))]),
+            crew(&[(0, press_at(launch_lever.x, launch_lever.y))]),
+        ];
+        for _ in 0..=map::leg_ticks(GUILD, VENUS) {
+            s.push(crew(&[]));
+        }
+        s
+    }
+
+    #[test]
+    fn crew_schedules_replay_bit_identically() {
+        let schedule = crew_schedule();
+        let mut a = Sim::new(0xCE11);
+        let mut b = Sim::new(0xCE11);
+        let mut log_a = Vec::new();
+        let mut log_b = Vec::new();
+        for frame in &schedule {
+            a.crew_tick(frame);
+            log_a.extend_from_slice(a.cues());
+        }
+        for frame in &schedule {
+            b.crew_tick(frame);
+            log_b.extend_from_slice(b.cues());
+        }
+        assert_eq!(log_a, log_b, "cue streams diverged");
+        // The choreography really happened, once each.
+        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Pickup)), 3);
+        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Place)), 3);
+        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Warp { .. })), 2);
+        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Select)), 1);
+        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Accept { .. })), 1);
+        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Depart)), 1);
+        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Arrive)), 1);
+        assert_eq!(a.ship().state, ShipState::Docked(VENUS));
+        assert_eq!(a.save_string(), b.save_string());
+        assert_eq!(a.pieces(), b.pieces());
+        assert_eq!(a.barter(), b.barter());
+        assert_eq!(a.ship(), b.ship());
+        assert_eq!(a.tick(), b.tick());
+    }
+
+    /// One frame per tick with only player 0 active: select Venus, launch,
+    /// pause and resume mid-leg, coast onto the dock, gift the vial, accept.
+    /// No warp toggles: warp multiplies ticks-per-frame in [`Sim::advance`],
+    /// while a lockstep session realises it by sealing ticks faster.
+    fn solo_schedule() -> Vec<InputFrame> {
+        let venus = POIS[usize::from(VENUS)].pos;
+        let launch_lever = rect_center(layout::LAUNCH_LEVER);
+        let accept = rect_center(layout::ACCEPT_LEVER);
+        let pause = InputFrame {
+            toggle_pause: true,
+            ..InputFrame::default()
+        };
+        let vial = cell_center(0, 0);
+        let give0 = slot_center(&layout::GIVE_SLOTS, 0);
+        let mut s = vec![
+            press_at(venus.x, venus.y),
+            press_at(launch_lever.x, launch_lever.y),
+        ];
+        for _ in 0..500 {
+            s.push(InputFrame::default());
+        }
+        s.push(pause);
+        for _ in 0..3 {
+            s.push(InputFrame::default());
+        }
+        s.push(pause);
+        for _ in 0..=map::leg_ticks(GUILD, VENUS) {
+            s.push(InputFrame::default());
+        }
+        s.push(press_at(vial.x, vial.y));
+        s.push(held_at(give0.x, give0.y));
+        s.push(release_at(give0.x, give0.y));
+        for _ in 0..30 {
+            s.push(InputFrame::default());
+        }
+        s.push(press_at(accept.x, accept.y));
+        for _ in 0..30 {
+            s.push(InputFrame::default());
+        }
+        s
+    }
+
+    /// The equivalence the whole lockstep slice rests on: a solo crew run
+    /// through [`Sim::crew_tick`] is bit-identical, cues included, to the
+    /// same inputs through [`Sim::advance`] one tick at a time.
+    #[test]
+    fn crew_tick_equals_advance_for_a_solo_crew() {
+        let script = solo_schedule();
+        let mut via_crew = Sim::new(0x5010);
+        let mut via_advance = Sim::new(0x5010);
+        for (i, input) in script.iter().enumerate() {
+            via_crew.crew_tick(&crew(&[(0, *input)]));
+            let ticks = via_advance.advance(TICK_DT, input);
+            assert!(ticks <= 1, "solo equivalence needs one tick per frame");
+            assert_eq!(
+                via_crew.cues(),
+                via_advance.cues(),
+                "cues diverged at frame {i}"
+            );
+            if i % 512 == 0 {
+                assert_eq!(
+                    via_crew.save_string(),
+                    via_advance.save_string(),
+                    "state diverged by frame {i}"
+                );
+            }
+        }
+        assert_eq!(via_advance.ship().state, ShipState::Docked(VENUS));
+        assert_eq!(via_crew.save_string(), via_advance.save_string());
+        assert_eq!(via_crew.pieces(), via_advance.pieces());
+        assert_eq!(via_crew.barter(), via_advance.barter());
+        assert_eq!(via_crew.ship(), via_advance.ship());
+        assert_eq!(via_crew.tick(), via_advance.tick());
+        assert_eq!(via_crew.held(0), via_advance.held(0));
+    }
+
+    #[test]
+    fn same_tick_grab_goes_to_the_lowest_player_in_silence() {
+        let mut sim = Sim::new(5);
+        let vial = cell_center(0, 0);
+        let press = press_at(vial.x, vial.y);
+        sim.crew_tick(&crew(&[(1, press), (4, press)]));
+        let piece = sim.held(1).expect("player 1 wins the grab").piece;
+        assert_eq!(sim.held(4), None, "player 4 must lose the grab");
+        assert_eq!(
+            sim.cues(),
+            [Cue::Pickup],
+            "one lift; the loser makes no noise"
+        );
+        // Across ticks the piece stays claimed, in the same silence.
+        sim.crew_tick(&crew(&[(1, held_at(vial.x, vial.y)), (4, press)]));
+        assert_eq!(sim.held(4), None, "a held piece is not grabbable");
+        assert!(sim.cues().is_empty(), "a losing grab is silence, not buzz");
+        let all: Vec<(PlayerId, u32)> = sim.all_held().map(|(p, h)| (p, h.piece)).collect();
+        assert_eq!(all, [(1, piece)]);
+    }
+
+    #[test]
+    fn same_tick_release_contention_first_wins_second_snaps_back() {
+        let mut sim = Sim::new(5);
+        let vial = cell_center(0, 0);
+        let pearls = cell_center(2, 0);
+        sim.crew_tick(&crew(&[
+            (0, press_at(vial.x, vial.y)),
+            (1, press_at(pearls.x, pearls.y)),
+        ]));
+        assert_eq!(sim.cues(), [Cue::Pickup, Cue::Pickup]);
+        // Both release onto hold cell (5, 2): the earlier player lands it;
+        // the later snaps home with a soft reject — losing a race is not a
+        // stowage violation, so no rule icon flashes either.
+        let target = cell_center(5, 2);
+        sim.crew_tick(&crew(&[
+            (0, release_at(target.x, target.y)),
+            (1, release_at(target.x, target.y)),
+        ]));
+        assert_eq!(sim.cues(), [Cue::Place, Cue::Reject { hard: false }]);
+        assert_eq!(sim.last_violation(), None);
+        let loc = |id: u32| sim.pieces().iter().find(|p| p.id == id).unwrap().loc;
+        assert_eq!(loc(1), Loc::Hold { x: 5, y: 2 }, "the winner lands");
+        assert_eq!(loc(2), Loc::Hold { x: 2, y: 0 }, "the loser snaps home");
+
+        // The same race over a barter slot: first fills it, second bounces.
+        let shelf: Vec<Vec2> = sim
+            .pieces()
+            .iter()
+            .filter(|p| matches!(p.loc, Loc::StationShelf { .. }))
+            .map(|p| rect_center(layout::piece_rect(p)))
+            .collect();
+        assert!(shelf.len() >= 2, "a shelf always offers at least two");
+        sim.crew_tick(&crew(&[
+            (2, press_at(shelf[0].x, shelf[0].y)),
+            (3, press_at(shelf[1].x, shelf[1].y)),
+        ]));
+        let take0 = slot_center(&layout::TAKE_SLOTS, 0);
+        sim.crew_tick(&crew(&[
+            (2, release_at(take0.x, take0.y)),
+            (3, release_at(take0.x, take0.y)),
+        ]));
+        assert_eq!(sim.cues(), [Cue::Place, Cue::Reject { hard: false }]);
+        let on_take = sim
+            .pieces()
+            .iter()
+            .filter(|p| matches!(p.loc, Loc::TakePad { .. }))
+            .count();
+        assert_eq!(on_take, 1, "one slot takes one piece");
+    }
+
+    #[test]
+    fn same_tick_pause_toggles_net_out_and_announce_in_order() {
+        let mut sim = Sim::new(7);
+        let toggle = InputFrame {
+            toggle_pause: true,
+            ..InputFrame::default()
+        };
+        sim.crew_tick(&crew(&[(0, toggle), (3, toggle)]));
+        assert!(!sim.is_paused(), "two toggles must cancel");
+        assert_eq!(
+            sim.cues(),
+            [Cue::Pause { paused: true }, Cue::Pause { paused: false }]
+        );
+        assert_eq!(sim.tick(), 1, "a cancelled pause still ticks");
+        // An odd toggle count lands paused, and later players' pointer
+        // events are dropped from the moment the flag flips.
+        let vial = cell_center(0, 0);
+        sim.crew_tick(&crew(&[(1, toggle), (2, press_at(vial.x, vial.y))]));
+        assert!(sim.is_paused());
+        assert_eq!(sim.cues(), [Cue::Pause { paused: true }]);
+        assert_eq!(sim.held(2), None, "pointer input under pause is dropped");
+        assert_eq!(sim.tick(), 1, "a paused tick must not step");
+        // The mirror case: a press lands while still paused even though a
+        // later player unpauses the same tick.
+        sim.crew_tick(&crew(&[(1, press_at(vial.x, vial.y)), (5, toggle)]));
+        assert!(!sim.is_paused());
+        assert_eq!(sim.cues(), [Cue::Pause { paused: false }]);
+        assert_eq!(sim.held(1), None, "the press came while still paused");
+        assert_eq!(sim.tick(), 2, "the unpaused tick steps");
+    }
+
+    #[test]
+    fn crew_reseed_last_in_order_wins() {
+        let mut sim = Sim::new(1);
+        let reseed = |seed: u64| InputFrame {
+            reseed: Some(seed),
+            ..InputFrame::default()
+        };
+        sim.crew_tick(&crew(&[(2, reseed(0xAAA)), (4, reseed(0xBBB))]));
+        assert_eq!(sim.seed(), 0xBBB, "the last reseed in order wins");
+        assert_eq!(sim.cues(), [Cue::Reseed], "one replacement announced");
+        assert_eq!(sim.tick(), 1);
+    }
+
+    /// The conservation monkey, crewed: six chaotic players per tick
+    /// through [`Sim::crew_tick`]. The solo monkey's guarantee holds under
+    /// contention, plus the crew invariants — no held id is a ghost, no
+    /// piece is held twice, no two pieces share a surface spot.
+    #[test]
+    fn no_crew_input_stream_loses_cargo_without_an_accept() {
+        let mut sim = Sim::new(0xC0FF_EE01);
+        let mut rng = fastrand::Rng::with_seed(0xF00D);
+        let owned = |sim: &Sim| sim.pieces().iter().filter(|p| player_owned(p.loc)).count();
+        let mut before = owned(&sim);
+        for tick in 0_u32..4000 {
+            let mut frames = [InputFrame::default(); MAX_CREW];
+            for frame in &mut frames {
+                *frame = InputFrame {
+                    pointer: Vec2::new(rng.f32() * WORLD_W, rng.f32() * WORLD_H),
+                    press: rng.bool(),
+                    held: rng.bool(),
+                    release: rng.bool(),
+                    toggle_pause: rng.u8(..) < 2,
+                    toggle_warp: rng.u8(..) < 2,
+                    reseed: None,
+                };
+            }
+            sim.crew_tick(&frames);
+            let ceded = sim
+                .cues()
+                .iter()
+                .any(|cue| matches!(cue, Cue::Accept { .. } | Cue::Delivered));
+            let after = owned(&sim);
+            assert!(
+                after >= before || ceded,
+                "tick {tick}: {before} -> {after} player pieces with no accept"
+            );
+            let mut held_ids: Vec<u32> = sim.all_held().map(|(_, held)| held.piece).collect();
+            for &id in &held_ids {
+                assert!(
+                    sim.pieces().iter().any(|p| p.id == id),
+                    "tick {tick}: held piece {id} is a ghost"
+                );
+            }
+            held_ids.sort_unstable();
+            held_ids.dedup();
+            assert_eq!(
+                held_ids.len(),
+                sim.all_held().count(),
+                "tick {tick}: two players hold one piece"
+            );
+            let pieces = sim.pieces();
+            for (i, a) in pieces.iter().enumerate() {
+                for b in &pieces[i + 1..] {
+                    assert!(
+                        a.loc != b.loc,
+                        "tick {tick}: pieces {} and {} share {:?}",
+                        a.id,
+                        b.id,
+                        a.loc
+                    );
+                }
+            }
+            before = after;
+        }
     }
 }

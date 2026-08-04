@@ -1170,7 +1170,7 @@ fn draw_hold(c: &Canvas, scene: &Scene) {
 /// the drop would land, red where a rule refuses it.
 fn draw_drop_hints(c: &Canvas, scene: &Scene) {
     let sim = scene.sim;
-    let Some(held) = sim.held() else {
+    let Some(held) = sim.held(0) else {
         return;
     };
     if !player_owned(held.origin) {
@@ -1228,7 +1228,7 @@ fn draw_slot_rows(c: &Canvas, scene: &Scene) {
     // While a piece is held, glow the rows that would actually accept it.
     // The set comes from the sim's own drop matrix, never re-derived here:
     // an affordance the rules would refuse cannot be drawn.
-    if let Some(targets) = scene.sim.drop_targets() {
+    if let Some(targets) = scene.sim.drop_targets(0) {
         for (slots, invited) in [
             (&layout::SHELF_SLOTS, targets.shelf),
             (&layout::RECEIVED_SLOTS, targets.received),
@@ -1410,7 +1410,7 @@ fn draw_pieces(c: &Canvas, scene: &Scene) {
     let juice = scene.juice;
     let t = juice.clock();
     let shaken = c.shifted(grid_shake_offset(juice));
-    let held_id = sim.held().map(|held| held.piece);
+    let held_id = sim.held(0).map(|held| held.piece);
     for piece in sim.pieces() {
         if held_id == Some(piece.id) {
             continue;
@@ -1436,7 +1436,7 @@ fn draw_pieces(c: &Canvas, scene: &Scene) {
 /// whether letting go would work.
 fn draw_held(c: &Canvas, scene: &Scene) {
     let sim = scene.sim;
-    let Some(held) = sim.held() else {
+    let Some(held) = sim.held(0) else {
         return;
     };
     let Some(piece) = piece_by_id(sim, held.piece) else {

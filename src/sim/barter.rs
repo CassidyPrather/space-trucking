@@ -67,8 +67,8 @@ pub(crate) const EAGER_RATE: f32 = 2.0;
 /// Chance a shelf roll picks from the station's produce, in tenths.
 const PRODUCE_CHANCE: u64 = 7;
 
-/// Chance denominator for the Guild's crate offer: one visit in three.
-const CRATE_CHANCE: u64 = 3;
+/// Chance denominator for a far station's crate offer: one visit in five.
+const CRATE_CHANCE: u64 = 5;
 
 /// Stream salts under the visit hash, so the crate roll, the shelf count,
 /// and each shelf kind draw independent values.
@@ -78,8 +78,8 @@ const SALT_KIND: u64 = 0x100;
 
 /// This visit's value table: the station row jittered by ±1 per kind,
 /// clamped to `0..=6`. Pure, so saves rebuild it instead of storing it.
-/// One pin: the Guild's crate valuation stays zero — it gives crates out,
-/// it never wants them back.
+/// One pin: the Guild's crate valuation stays zero — it seizes crates at
+/// the dock, it never pays for them.
 #[must_use]
 pub(crate) fn visit_values(seed: u64, station: PoiId, visit: u32) -> [u8; KIND_COUNT] {
     let h = visit_hash(seed, station, visit);
@@ -102,10 +102,11 @@ pub(crate) fn visit_values(seed: u64, station: PoiId, visit: u32) -> [u8; KIND_C
 /// Generate one visit: the barter state plus the station's shelf pieces.
 ///
 /// The shelf holds 2–4 goods, each 70% from the station's produce and 30%
-/// uniform over the rest; crates never come from those rolls. The Guild
-/// alone shelves a crate, one visit in three, and never while `aboard`
-/// already carries one anywhere. `rng` is the persistent run RNG, spent only
-/// on variant rolls.
+/// uniform over the rest; crates never come from those rolls. A far station
+/// shelves a crate one visit in five — never while `aboard` already carries
+/// one anywhere — and the Guild never offers one: crates flow outward from
+/// the frontier and home to the hangar. `rng` is the persistent run RNG,
+/// spent only on variant rolls.
 pub(crate) fn generate(
     seed: u64,
     station: PoiId,
@@ -121,7 +122,7 @@ pub(crate) fn generate(
         .iter()
         .any(|piece| matches!(piece.kind.tag(), Some(Tag::Suspicious)));
     let offer_crate =
-        station == GUILD && !crate_aboard && splitmix(h, SALT_CRATE) % CRATE_CHANCE == 0;
+        station != GUILD && !crate_aboard && splitmix(h, SALT_CRATE) % CRATE_CHANCE == 0;
 
     let mut shelve = |kind: Kind, slot: usize| {
         let piece = Piece {
@@ -260,8 +261,9 @@ fn wants(values: &[u8; KIND_COUNT]) -> [(Kind, u8); 3] {
 
 /// One shelf kind from one roll: 70% the station's produce (base value
 /// zero), 30% uniform over the others. Crates are excluded on both branches
-/// — they enter the world only through the Guild's special offer — which
-/// also empties the Guild's produce pool, making it shelve a uniform spread.
+/// — they enter the world only through the far stations' special offer —
+/// which also empties the Guild's produce pool, making it shelve a uniform
+/// spread.
 fn shelf_kind(station: PoiId, roll: u64) -> Kind {
     let produce = |kind: Kind| {
         kind != Kind::SuspiciousCrate && VALUE[usize::from(station)][kind.index()] == 0
@@ -481,12 +483,15 @@ mod tests {
     }
 
     #[test]
-    fn shelves_lean_toward_produce_and_never_hold_crates() {
+    fn shelves_lean_toward_produce_and_ordinary_rolls_never_yield_crates() {
         let mut perfume = 0_usize;
         let mut total = 0_usize;
         let mut kinds_seen = std::collections::BTreeSet::new();
+        // A crate aboard suppresses the special offer, so every shelf good
+        // here comes from the ordinary rolls under test.
+        let aboard = [piece(Kind::SuspiciousCrate, Loc::Hold { x: 0, y: 0 })];
         for n in 1..200 {
-            let (_, shelf) = visit(0xFEED, VENUS, n, &[]);
+            let (_, shelf) = visit(0xFEED, VENUS, n, &aboard);
             assert!((SHELF_MIN..=SHELF_MAX).contains(&shelf.len()));
             for (slot, piece) in shelf.iter().enumerate() {
                 assert_eq!(piece.loc, Loc::StationShelf { slot: slot as u8 });
@@ -509,10 +514,10 @@ mod tests {
     }
 
     #[test]
-    fn guild_crates_are_a_third_of_visits_and_respect_the_singleton() {
+    fn far_stations_offer_crates_one_in_five_and_respect_the_singleton() {
         let mut offered = 0_usize;
         for n in 1..=600 {
-            let (_, shelf) = visit(0xFEED, GUILD, n, &[]);
+            let (_, shelf) = visit(0xFEED, VENUS, n, &[]);
             let crates = shelf
                 .iter()
                 .filter(|piece| piece.kind == Kind::SuspiciousCrate)
@@ -522,15 +527,29 @@ mod tests {
             offered += crates;
         }
         assert!(
-            (120..=280).contains(&offered),
-            "{offered}/600 crate offers is far from one in three"
+            (70..=180).contains(&offered),
+            "{offered}/600 crate offers is far from one in five"
         );
+
+        // Every far station rolls its own offers; none is crate-dry.
+        for station in 0..POI_COUNT as PoiId {
+            if station == GUILD {
+                continue;
+            }
+            let some = (1..=60).any(|n| {
+                let (_, shelf) = visit(0xFEED, station, n, &[]);
+                shelf
+                    .iter()
+                    .any(|piece| piece.kind == Kind::SuspiciousCrate)
+            });
+            assert!(some, "station {station} never offered a crate");
+        }
 
         // One aboard anywhere — hold or a pad — suppresses the offer.
         for loc in [Loc::Hold { x: 0, y: 0 }, Loc::GivePad { slot: 0 }] {
             let aboard = [piece(Kind::SuspiciousCrate, loc)];
             for n in 1..=100 {
-                let (_, shelf) = visit(0xFEED, GUILD, n, &aboard);
+                let (_, shelf) = visit(0xFEED, VENUS, n, &aboard);
                 assert!(
                     shelf
                         .iter()
@@ -542,20 +561,15 @@ mod tests {
     }
 
     #[test]
-    fn other_stations_never_shelve_crates() {
-        for station in 0..POI_COUNT as PoiId {
-            if station == GUILD {
-                continue;
-            }
-            for n in 1..=60 {
-                let (_, shelf) = visit(0xFEED, station, n, &[]);
-                assert!(
-                    shelf
-                        .iter()
-                        .all(|piece| piece.kind != Kind::SuspiciousCrate),
-                    "station {station} shelved a crate"
-                );
-            }
+    fn the_guild_never_offers_crates() {
+        for n in 1..=200 {
+            let (_, shelf) = visit(0xFEED, GUILD, n, &[]);
+            assert!(
+                shelf
+                    .iter()
+                    .all(|piece| piece.kind != Kind::SuspiciousCrate),
+                "the Guild shelved a crate on visit {n}"
+            );
         }
     }
 }

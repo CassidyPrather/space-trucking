@@ -1,7 +1,9 @@
 //! Versioned, line-oriented text saves.
 //!
 //! The format stores only what cannot be recomputed: seed, clock, RNG state,
-//! visit counts, ship, event machine, eased dial, and the pieces. Everything
+//! delivery tally, visit counts, ship, event machine, eased dial, and the
+//! pieces. Drags are transient — a held piece serialises at its origin, so
+//! a save mid-drag drops every player's drag on load. Everything
 //! a visit derives (shelf layout hashes, wants, trade readiness) is rebuilt
 //! from the seed on load, which keeps the format small and the determinism
 //! honest. Floats that must survive exactly (the eased light, omen, and
@@ -19,10 +21,11 @@ use super::cargo::{Kind, Loc, Piece};
 use super::event::{Events, Phase};
 use super::layout::{GRID_COLS, GRID_ROWS, SHELF_SLOTS};
 use super::map::{POI_COUNT, POIS, PoiId, Ship, ShipState};
-use super::{KIND_COUNT, Sim, barter};
+use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 
-/// Magic-plus-version header of every save this build writes.
-const MAGIC: &str = "STV1";
+/// Magic-plus-version header of every save this build writes. `STV2` added
+/// the `deliveries` line; older versions fail safe as unsupported.
+const MAGIC: &str = "STV2";
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -58,6 +61,7 @@ pub(crate) fn serialize(sim: &Sim) -> String {
     let _ = writeln!(out, "rng {:016x}", sim.rng.get_seed());
     let _ = writeln!(out, "warp {}", u8::from(sim.warp));
     let _ = writeln!(out, "paused {}", u8::from(sim.paused));
+    let _ = writeln!(out, "deliveries {}", sim.deliveries);
     let _ = write!(out, "visits");
     for visit in sim.visits {
         let _ = write!(out, " {visit}");
@@ -149,6 +153,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let rng_state = reader.kv_hex64("rng")?;
     let warp = reader.kv::<u8>("warp")? != 0;
     let paused = reader.kv::<u8>("paused")? != 0;
+    let deliveries = reader.kv("deliveries")?;
     let visits = parse_visits(&mut reader)?;
     let ship = parse_ship(&mut reader)?;
     let events = parse_event(&mut reader)?;
@@ -179,7 +184,8 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         ship,
         pieces,
         next_piece,
-        held: None,
+        held: [None; MAX_CREW],
+        deliveries,
         barter,
         values,
         visits,

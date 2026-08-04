@@ -85,7 +85,7 @@ jobs:
       - name: Enforce size budget
         run: |
           # Keep the wasm filename in sync with the [[bin]] name in Cargo.toml
-          actual=$(wc -c < dist/web/game-template.wasm)
+          actual=$(wc -c < dist/web/space-trucking.wasm)
           echo "wasm size: ${actual} bytes (budget: ${MAX_WASM_BYTES})"
           if [ "${actual}" -gt "${MAX_WASM_BYTES}" ]; then
             echo "::error::wasm payload ${actual} bytes exceeds budget ${MAX_WASM_BYTES}"
@@ -107,13 +107,13 @@ jobs:
       - name: Attach web bundle to release
         if: github.event_name == 'release'
         run: |
-          cd dist/web && zip -r ../game-template-web.zip .
+          cd dist/web && zip -r ../space-trucking-web.zip .
 
       - name: Upload web bundle to GitHub Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/game-template-web.zip
+          files: dist/space-trucking-web.zip
           fail_on_unmatched_files: true
 
   deploy-pages:
@@ -174,7 +174,7 @@ jobs:
         shell: bash
         run: |
           # Keep this in sync with the [[bin]] name in Cargo.toml
-          BIN="game-template"
+          BIN="space-trucking"
           TARGET="${{ matrix.target }}"
           mkdir -p dist
           if [[ "${{ runner.os }}" == "Windows" ]]; then

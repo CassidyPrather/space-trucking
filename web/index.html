@@ -4,12 +4,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="A small Rust + macroquad web toy.">
-    <title>game-template</title>
+    <meta name="description" content="Space Trucking — an ambient space-freight bartering toy.">
+    <title>space trucking</title>
     <!-- Inline so the shell keeps making zero external requests (and the console
-         keeps making zero 404s). -->
+         keeps making zero 404s). A little freighter nosing toward a planet. -->
     <link rel="icon"
-        href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxNiAxNic+PHJlY3Qgd2lkdGg9JzE2JyBoZWlnaHQ9JzE2JyByeD0nMycgZmlsbD0nIzBkMGQxMicvPjxjaXJjbGUgY3g9JzUnIGN5PSc2JyByPScyJyBmaWxsPScjZTg3MzRhJy8+PGNpcmNsZSBjeD0nMTEnIGN5PSc1JyByPScxLjUnIGZpbGw9JyM0YWMyZTgnLz48Y2lyY2xlIGN4PSc4JyBjeT0nMTEnIHI9JzIuNScgZmlsbD0nIzhmNmJlOCcvPjwvc3ZnPg==">
+        href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxNiAxNic+PHJlY3Qgd2lkdGg9JzE2JyBoZWlnaHQ9JzE2JyByeD0nMycgZmlsbD0nIzBkMGQxMicvPjxjaXJjbGUgY3g9JzEyJyBjeT0nNC41JyByPScyLjUnIGZpbGw9JyM0YWMyZTgnLz48cmVjdCB4PScyJyB5PSc4JyB3aWR0aD0nNycgaGVpZ2h0PSc0JyByeD0nMScgZmlsbD0nI2U4Yjg0YScvPjxwYXRoIGQ9J005IDhsNCAyLTQgMnonIGZpbGw9JyNlODczNGEnLz48L3N2Zz4=">
     <style>
         /* House shell: zero external requests. The canvas paints over #status
            once GL initializes; until then (or on failure) the status shows. */
@@ -112,7 +112,7 @@
         } else if (!document.createElement("canvas").getContext("webgl")) {
             fail("This browser lacks WebGL support.");
         } else {
-            load("game-template.wasm"); // keep in sync with the [[bin]] name in Cargo.toml
+            load("space-trucking.wasm"); // keep in sync with the [[bin]] name in Cargo.toml
             // Translucent draws write alpha into the framebuffer and let the
             // page show through — including this status line. Remove it once
             // the wasm is actually running (gl.js sets wasm_exports at

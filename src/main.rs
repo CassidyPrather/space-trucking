@@ -1,31 +1,37 @@
-//! macroquad frontend: input in, circles and sound out.
+//! macroquad frontend: input in, placeholder shapes out.
 //!
-//! Everything that decides what happens lives in [`game_template::sim`]. This
-//! file only translates between the window and the sim's logical world; the
-//! sim's [`Cue`](game_template::sim::Cue)s become sound over in [`audio`].
+//! Everything that decides what happens lives in [`space_trucking::sim`].
+//! This file only translates between the window and the sim's logical world;
+//! the drawing below is throwaway scaffolding for the renderer stage — POIs
+//! as circles, the ship as a dot, cargo as coloured rects — with the version
+//! string as the game's one and only piece of text.
 
 mod audio;
+#[allow(dead_code)] // Wired into the loop by the persistence stage.
+mod storage;
 
 use audio::Audio;
-use macroquad::color::{Color, hsl_to_rgb};
+use macroquad::color::Color;
 use macroquad::input::{
     KeyCode, MouseButton, is_key_pressed, is_mouse_button_down, is_mouse_button_pressed,
-    mouse_position,
+    is_mouse_button_released, mouse_position,
 };
-use macroquad::shapes::draw_circle;
-use macroquad::text::draw_text;
+use macroquad::shapes::{draw_circle, draw_rectangle, draw_rectangle_lines};
+use macroquad::text::{draw_text, measure_text};
 use macroquad::time::get_frame_time;
 use macroquad::window::{Conf, clear_background, next_frame, screen_height, screen_width};
 
-use game_template::VERSION;
-use game_template::sim::{InputFrame, Sim, Vec2, WORLD_H, WORLD_W};
+use space_trucking::VERSION;
+use space_trucking::sim::{InputFrame, Kind, Sim, Vec2, WORLD_H, WORLD_W, layout};
 
 const BACKGROUND: Color = Color::new(0.05, 0.05, 0.07, 1.0);
+const POI_COLOR: Color = Color::new(0.55, 0.60, 0.75, 1.0);
+const SHIP_COLOR: Color = Color::new(0.95, 0.85, 0.55, 1.0);
+const GRID_COLOR: Color = Color::new(0.25, 0.27, 0.33, 1.0);
 const OVERLAY: Color = Color::new(0.85, 0.85, 0.90, 0.75);
-/// For the one HUD line that is asking for something rather than reporting.
 const HIGHLIGHT: Color = Color::new(1.0, 0.83, 0.42, 0.95);
-const TEXT_SIZE: f32 = 18.0;
-const TEXT_MARGIN: f32 = 12.0;
+const TEXT_SIZE: u16 = 16;
+const TEXT_MARGIN: f32 = 8.0;
 
 fn window_conf() -> Conf {
     Conf {
@@ -49,14 +55,13 @@ async fn main() {
         let dt = get_frame_time();
 
         sim.advance(dt, &input);
-        audio.update(dt, sim.cues(), &input, toggle_mute);
+        audio.update(dt, sim.cues(), toggle_mute);
         draw(&sim, &view, &audio);
         next_frame().await;
     }
 }
 
-/// Wall-clock seed. Swap in `quad-url` here if you want seeds that survive in
-/// a shareable URL fragment (see the docs).
+/// Wall-clock seed for fresh runs; determinism starts once the sim owns it.
 fn fresh_seed() -> u64 {
     macroquad::miniquad::date::now().to_bits()
 }
@@ -96,48 +101,79 @@ fn gather_input(view: &View) -> InputFrame {
     let (mouse_x, mouse_y) = mouse_position();
     InputFrame {
         pointer: view.to_world(Vec2::new(mouse_x, mouse_y)),
-        attract: is_mouse_button_down(MouseButton::Left),
-        burst: is_mouse_button_pressed(MouseButton::Left),
+        press: is_mouse_button_pressed(MouseButton::Left),
+        held: is_mouse_button_down(MouseButton::Left),
+        release: is_mouse_button_released(MouseButton::Left),
         toggle_pause: is_key_pressed(KeyCode::Space),
+        toggle_warp: is_key_pressed(KeyCode::F),
         reseed: is_key_pressed(KeyCode::R).then(fresh_seed),
+    }
+}
+
+/// Flat placeholder colour per cargo kind; sprites are the renderer stage's.
+const fn kind_color(kind: Kind) -> Color {
+    match kind {
+        Kind::PerfumeVial => Color::new(0.85, 0.55, 0.75, 1.0),
+        Kind::GildedIdol => Color::new(0.90, 0.75, 0.30, 1.0),
+        Kind::RationBricks => Color::new(0.60, 0.45, 0.30, 1.0),
+        Kind::ScrapAlloy => Color::new(0.55, 0.55, 0.60, 1.0),
+        Kind::Seedlings => Color::new(0.45, 0.75, 0.40, 1.0),
+        Kind::GasCanister => Color::new(0.80, 0.45, 0.25, 1.0),
+        Kind::CryoCore => Color::new(0.45, 0.75, 0.90, 1.0),
+        Kind::BrinePearls => Color::new(0.75, 0.80, 0.85, 1.0),
+        Kind::SuspiciousCrate => Color::new(0.50, 0.30, 0.55, 1.0),
+    }
+}
+
+fn draw_rect(view: &View, rect: layout::Rect, color: Color, filled: bool) {
+    let pos = view.to_screen(Vec2::new(rect.x, rect.y));
+    let (w, h) = (rect.w * view.scale, rect.h * view.scale);
+    if filled {
+        draw_rectangle(pos.x, pos.y, w, h, color);
+    } else {
+        draw_rectangle_lines(pos.x, pos.y, w, h, 1.0, color);
     }
 }
 
 fn draw(sim: &Sim, view: &View, audio: &Audio) {
     clear_background(BACKGROUND);
 
-    let alpha = sim.alpha();
-    for particle in sim.particles() {
-        let pos = view.to_screen(particle.interpolated(alpha));
-        draw_circle(
-            pos.x,
-            pos.y,
-            particle.radius * view.scale,
-            hsl_to_rgb(particle.hue, 0.65, 0.62),
+    for poi in sim.pois() {
+        let pos = view.to_screen(poi.pos);
+        draw_circle(pos.x, pos.y, poi.radius * view.scale, POI_COLOR);
+    }
+
+    for y in 0..layout::GRID_ROWS {
+        for x in 0..layout::GRID_COLS {
+            draw_rect(view, layout::cell_rect(x, y), GRID_COLOR, false);
+        }
+    }
+
+    for piece in sim.pieces() {
+        draw_rect(
+            view,
+            layout::piece_rect(piece),
+            kind_color(piece.kind),
+            true,
         );
     }
 
-    let state = if sim.is_paused() { "paused" } else { "running" };
-    let lines = [
-        (format!("{} {VERSION}", env!("CARGO_PKG_NAME")), OVERLAY),
-        (format!("seed {:016x} - {state}", sim.seed()), OVERLAY),
-        (
-            format!("audio: {}", audio.status()),
-            // Highlighted only while it needs a press, so the web build
-            // explains its own silence instead of looking broken.
-            if audio.needs_gesture() {
-                HIGHLIGHT
-            } else {
-                OVERLAY
-            },
-        ),
-        (
-            "drag: attract | click: burst | space: pause | R: reseed | M: mute".to_owned(),
-            OVERLAY,
-        ),
-    ];
-    for (row, (line, color)) in lines.iter().enumerate() {
-        let baseline = TEXT_SIZE.mul_add(row as f32, TEXT_MARGIN + TEXT_SIZE);
-        draw_text(line, TEXT_MARGIN, baseline, TEXT_SIZE, *color);
-    }
+    let ship = view.to_screen(sim.ship().interpolated(sim.alpha()));
+    draw_circle(ship.x, ship.y, 5.0 * view.scale, SHIP_COLOR);
+
+    // The one permitted piece of text: the version, bottom-right.
+    let version = format!("{} {VERSION}", env!("CARGO_PKG_NAME"));
+    let size = measure_text(&version, None, TEXT_SIZE, 1.0);
+    let color = if audio.needs_gesture() {
+        HIGHLIGHT
+    } else {
+        OVERLAY
+    };
+    draw_text(
+        &version,
+        screen_width() - size.width - TEXT_MARGIN,
+        screen_height() - TEXT_MARGIN,
+        f32::from(TEXT_SIZE),
+        color,
+    );
 }

@@ -1,0 +1,176 @@
+//! Cargo pieces: what they are, where they sit, and the stowage rules.
+//!
+//! A [`Piece`] is one draggable object. Its [`Loc`] says which surface it is
+//! on — the ship's hold grid or one of the barter panel's shelves and pads —
+//! and [`placement_legal`] is the single arbiter of whether a piece may sit
+//! at a given hold cell. The renderer and the drag logic both defer to it, so
+//! there is exactly one opinion about what fits.
+
+use super::layout::{GRID_COLS, GRID_ROWS};
+
+/// Everything haulable. Declaration order is the stable [`Kind::index`]
+/// order that the barter value table is written in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Kind {
+    PerfumeVial,
+    GildedIdol,
+    RationBricks,
+    ScrapAlloy,
+    Seedlings,
+    GasCanister,
+    CryoCore,
+    BrinePearls,
+    SuspiciousCrate,
+}
+
+/// Number of cargo kinds.
+pub const KIND_COUNT: usize = 9;
+
+/// Cosmetic variant rolls per kind, for the renderer to vary sprites with.
+/// The persistent run RNG is spent on these and nothing else.
+pub(crate) const VARIANTS: u8 = 4;
+
+/// Special handling a kind demands in the hold.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Tag {
+    /// Must be stowed low: anchor row 2 or below.
+    Heavy,
+    /// No two volatile pieces may sit orthogonally adjacent.
+    Volatile,
+    /// Must touch the hold's outer edge.
+    Cryo,
+    /// At most one suspicious piece aboard, and hauling it has consequences.
+    Suspicious,
+}
+
+impl Kind {
+    /// Every kind, in [`Kind::index`] order. For iteration; the sim itself
+    /// never needs to enumerate kinds by number.
+    pub const ALL: [Self; KIND_COUNT] = [
+        Self::PerfumeVial,
+        Self::GildedIdol,
+        Self::RationBricks,
+        Self::ScrapAlloy,
+        Self::Seedlings,
+        Self::GasCanister,
+        Self::CryoCore,
+        Self::BrinePearls,
+        Self::SuspiciousCrate,
+    ];
+
+    /// Footprint in hold cells, `(w, h)`.
+    #[must_use]
+    pub const fn cells(self) -> (u8, u8) {
+        match self {
+            Self::PerfumeVial | Self::Seedlings | Self::CryoCore => (1, 1),
+            Self::GildedIdol | Self::BrinePearls => (1, 2),
+            Self::RationBricks | Self::SuspiciousCrate => (2, 2),
+            Self::ScrapAlloy | Self::GasCanister => (2, 1),
+        }
+    }
+
+    /// Stowage constraint, if any.
+    #[must_use]
+    pub const fn tag(self) -> Option<Tag> {
+        match self {
+            Self::GildedIdol | Self::ScrapAlloy => Some(Tag::Heavy),
+            Self::GasCanister => Some(Tag::Volatile),
+            Self::CryoCore => Some(Tag::Cryo),
+            Self::SuspiciousCrate => Some(Tag::Suspicious),
+            _ => None,
+        }
+    }
+
+    /// Stable column index into the barter value table.
+    #[must_use]
+    pub const fn index(self) -> usize {
+        self as usize
+    }
+}
+
+/// Which surface a piece sits on. Hold coordinates are grid cells; every
+/// other variant is a slot index into the matching layout rect array.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Loc {
+    /// Anchor cell in the ship's hold grid (top-left of the footprint).
+    Hold { x: u8, y: u8 },
+    /// The station's goods on offer.
+    StationShelf { slot: u8 },
+    /// What the player is offering.
+    GivePad { slot: u8 },
+    /// What the player is asking for.
+    TakePad { slot: u8 },
+    /// Goods just traded for, waiting to be stowed.
+    ReceivedShelf { slot: u8 },
+}
+
+/// One cargo piece.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Piece {
+    /// Stable identity, never reused within a run.
+    pub id: u32,
+    pub kind: Kind,
+    /// Visual flavour roll, for the renderer to vary sprites with.
+    pub variant: u8,
+    pub loc: Loc,
+}
+
+/// Whether `kind` may be anchored at hold cell `(x, y)` given every other
+/// piece in `pieces`. The piece with `id` is ignored, so a held piece never
+/// collides with its own old footprint.
+#[must_use]
+pub fn placement_legal(pieces: &[Piece], id: u32, kind: Kind, x: u8, y: u8) -> bool {
+    let (w, h) = kind.cells();
+    if x + w > GRID_COLS || y + h > GRID_ROWS {
+        return false;
+    }
+    if matches!(kind.tag(), Some(Tag::Heavy)) && y < 2 {
+        return false;
+    }
+    if matches!(kind.tag(), Some(Tag::Cryo)) && !touches_edge(x, y, w, h) {
+        return false;
+    }
+    for other in pieces {
+        if other.id == id {
+            continue;
+        }
+        let Loc::Hold { x: ox, y: oy } = other.loc else {
+            continue;
+        };
+        let (ow, oh) = other.kind.cells();
+        if overlaps((x, y, w, h), (ox, oy, ow, oh)) {
+            return false;
+        }
+        if matches!(kind.tag(), Some(Tag::Volatile))
+            && matches!(other.kind.tag(), Some(Tag::Volatile))
+            && adjacent((x, y, w, h), (ox, oy, ow, oh))
+        {
+            return false;
+        }
+        if matches!(kind.tag(), Some(Tag::Suspicious))
+            && matches!(other.kind.tag(), Some(Tag::Suspicious))
+        {
+            return false;
+        }
+    }
+    true
+}
+
+/// Whether a footprint touches the hold's outer edge.
+const fn touches_edge(x: u8, y: u8, w: u8, h: u8) -> bool {
+    x == 0 || y == 0 || x + w == GRID_COLS || y + h == GRID_ROWS
+}
+
+/// Cell-rect intersection test.
+const fn overlaps(a: (u8, u8, u8, u8), b: (u8, u8, u8, u8)) -> bool {
+    a.0 < b.0 + b.2 && b.0 < a.0 + a.2 && a.1 < b.1 + b.3 && b.1 < a.1 + a.3
+}
+
+/// Whether two footprints share an orthogonal edge (corners do not count).
+const fn adjacent(a: (u8, u8, u8, u8), b: (u8, u8, u8, u8)) -> bool {
+    let x_overlap = a.0 < b.0 + b.2 && b.0 < a.0 + a.2;
+    let y_overlap = a.1 < b.1 + b.3 && b.1 < a.1 + a.3;
+    let x_touch = a.0 + a.2 == b.0 || b.0 + b.2 == a.0;
+    let y_touch = a.1 + a.3 == b.1 || b.1 + b.3 == a.1;
+    (x_overlap && y_touch) || (y_overlap && x_touch)
+}

@@ -8,11 +8,11 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=game-template",
-                    "--package=game-template"
+                    "--bin=space-trucking",
+                    "--package=space-trucking"
                 ],
                 "filter": {
-                    "name": "game-template",
+                    "name": "space-trucking",
                     "kind": "bin"
                 }
             },
@@ -28,10 +28,10 @@
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=game-template"
+                    "--package=space-trucking"
                 ],
                 "filter": {
-                    "name": "game_template",
+                    "name": "space_trucking",
                     "kind": "lib"
                 }
             },

@@ -10,26 +10,33 @@
 
 mod audio;
 mod juice;
+mod palette;
 mod render;
 mod storage;
 
 use audio::Audio;
 use juice::Juice;
-use macroquad::color::Color;
 use macroquad::input::{
     KeyCode, MouseButton, is_key_pressed, is_mouse_button_down, is_mouse_button_pressed,
     is_mouse_button_released, mouse_position,
 };
 use macroquad::text::{draw_text, measure_text};
+use macroquad::texture::{FilterMode, RenderTarget, RenderTargetParams, render_target_ex};
 use macroquad::time::get_frame_time;
 use macroquad::window::{Conf, next_frame, screen_height, screen_width};
 
 use space_trucking::VERSION;
 use space_trucking::sim::{Cue, InputFrame, Sim, Vec2, WORLD_H, WORLD_W, layout};
 
-const OVERLAY: Color = Color::new(0.85, 0.85, 0.90, 0.75);
 const TEXT_SIZE: u16 = 16;
 const TEXT_MARGIN: f32 = 8.0;
+
+/// Pixel crunch: world units per rendered pixel.
+///
+/// The fiction draws into a target this many times smaller than the logical
+/// world and upscales nearest-neighbour — hard pixel edges everywhere, per
+/// the art doc. Set to 1.0 and everything still draws, just uncrunched.
+pub const CRUNCH: f32 = 2.0;
 
 /// Seconds between wall-clock autosaves; cue-driven saves come sooner.
 const SAVE_EVERY: f64 = 10.0;
@@ -55,6 +62,7 @@ async fn main() {
     let (mut sim, arrived_while_away) = restore();
     let mut audio = Audio::load().await;
     let mut juice = Juice::default();
+    let target = pixel_target();
     if arrived_while_away {
         juice.catch_up_arrival();
     }
@@ -79,6 +87,7 @@ async fn main() {
 
         render::draw(
             &view,
+            &target,
             &render::Scene {
                 sim: &sim,
                 juice: &juice,
@@ -90,6 +99,24 @@ async fn main() {
         draw_version();
         next_frame().await;
     }
+}
+
+/// The low-res target the whole fiction renders into. Nearest filtering is
+/// what makes the upscale pixels instead of blur. `sample_count` must be 0:
+/// even 1 makes macroquad allocate an MSAA-resolve pass whose blit needs
+/// WebGL2, and the vendored `gl.js` context is WebGL 1.
+#[allow(clippy::cast_sign_loss)] // Both operands are positive constants.
+fn pixel_target() -> RenderTarget {
+    let target = render_target_ex(
+        (WORLD_W / CRUNCH) as u32,
+        (WORLD_H / CRUNCH) as u32,
+        RenderTargetParams {
+            sample_count: 0,
+            depth: false,
+        },
+    );
+    target.texture.set_filter(FilterMode::Nearest);
+    target
 }
 
 /// Load the save and replay the absence, or start fresh. The second value
@@ -195,6 +222,6 @@ fn draw_version() {
         screen_width() - size.width - TEXT_MARGIN,
         screen_height() - TEXT_MARGIN,
         f32::from(TEXT_SIZE),
-        OVERLAY,
+        palette::VERSION_TEXT,
     );
 }

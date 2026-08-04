@@ -2,33 +2,50 @@
 //!
 //! No text, no numbers, no labels — the one string the game ever renders
 //! lives in `main.rs`. Everything here communicates by shape, colour, and
-//! motion: hand-built planet glyphs, cargo silhouettes from primitives,
-//! levers that glow when they will work and shake when they will not. All
-//! geometry comes from [`layout`], the same constants the sim hit-tests
-//! against, so things are always drawn exactly where they can be clicked.
+//! motion, and every colour is a role from [`crate::palette`] (a purity test
+//! there enforces it). All geometry comes from [`layout`], the same
+//! constants the sim hit-tests against, so things are always drawn exactly
+//! where they can be clicked.
 //!
-//! The [`Canvas`] wrapper applies the letterbox transform and the console
-//! light level ([`Sim::light`]) plus the omen's violet cast to every draw
-//! call, so the whole palette dims as one when the event wants it dark.
+//! The look follows `docs/ART_DIRECTION.md`: the screen is the instrument
+//! panel of an old freighter. Two material families — worn metal (plates,
+//! sockets, levers, lamps) and phosphor CRTs (the star map and destination
+//! preview, the only screens) — and one light source at the top-left.
+//!
+//! The whole fiction renders into a low-res target ([`crate::CRUNCH`] world
+//! units per pixel) and upscales nearest-neighbour into the letterbox, so
+//! the pixels are honest. The [`Canvas`] wrapper applies the console light
+//! level ([`Sim::light`]) plus the omen's violet cast to every draw call,
+//! so the whole palette dims as one when the event wants it dark.
 
 use std::f32::consts::{PI, TAU};
 
+use macroquad::camera::{Camera2D, set_camera, set_default_camera};
 use macroquad::color::Color;
-use macroquad::math::vec2;
+use macroquad::math::{Rect as ScreenRect, vec2};
 use macroquad::shapes::{
     draw_arc, draw_circle, draw_circle_lines, draw_ellipse, draw_ellipse_lines, draw_hexagon,
     draw_line, draw_poly, draw_poly_lines, draw_rectangle, draw_rectangle_lines, draw_triangle,
     draw_triangle_lines,
 };
-use macroquad::window::{clear_background, screen_height, screen_width};
+use macroquad::texture::{DrawTextureParams, RenderTarget, draw_texture_ex};
+use macroquad::window::clear_background;
 
 use space_trucking::sim::{
-    Barter, EAGER_MAX, Kind, Loc, POIS, Piece, PoiId, ShipState, Sim, Vec2, Violation, layout,
-    placement_check, player_owned, splitmix,
+    Barter, EAGER_MAX, Kind, Loc, POIS, Piece, PoiId, ShipState, Sim, Vec2, Violation, WORLD_H,
+    WORLD_W, layout, placement_check, player_owned, splitmix,
 };
 
 use crate::View;
 use crate::juice::Juice;
+use crate::palette::{
+    AMBER, BLIT, BRASS, EERIE, EERIE_BRIGHT, GLASS, GLINT, HULL, ICON, ICON_LIT, LAMP_NO, LAMP_OK,
+    PHOSPHOR, PHOSPHOR_DIM, PHOSPHOR_HOT, PLATE, PLATE_LIT, PLATE_SHADE, POI_EARTH, POI_GUILD,
+    POI_GUILD_EDGE, POI_JUPITER, POI_MARS, POI_MARS_PATCH, POI_NEPTUNE, POI_SMOG, POI_URANUS,
+    POI_URANUS_RING, POI_VENUS, POI_VENUS_HALO, RIVET, SCREEN, SHADOW, SOCKET, TRIM_GIVE,
+    TRIM_RECEIVED, TRIM_SHELF, TRIM_TAKE, VOID, dim, fade, kind_color, lerp, mix, omen_tint,
+    phosphorize, variant_tint,
+};
 
 /// Everything one frame of drawing needs, gathered by `main`.
 pub struct Scene<'a> {
@@ -42,119 +59,20 @@ pub struct Scene<'a> {
     pub audio_muted: bool,
 }
 
-// ---------------------------------------------------------------- palette --
+// ------------------------------------------------------------- crunch grid --
 
-const fn rgb(r: f32, g: f32, b: f32) -> Color {
-    Color::new(r, g, b, 1.0)
-}
+/// World units per crunched target pixel. Anything thinner than this
+/// vanishes at the low resolution, so strokes, bevels, and dots are sized
+/// in multiples of it.
+const PX: f32 = crate::CRUNCH;
 
-/// Alpha-scaled copy of `col`.
-const fn fade(col: Color, alpha: f32) -> Color {
-    Color::new(col.r, col.g, col.b, col.a * alpha)
-}
-
-/// Brightness-scaled copy of `col`.
-const fn dim(col: Color, by: f32) -> Color {
-    Color::new(col.r * by, col.g * by, col.b * by, col.a)
-}
-
-const BG: Color = rgb(0.030, 0.034, 0.050);
-const MAP_PLATE: Color = rgb(0.043, 0.048, 0.066);
-const PLATE: Color = rgb(0.075, 0.080, 0.104);
-const PLATE_DEEP: Color = rgb(0.058, 0.062, 0.082);
-const PLATE_EDGE: Color = rgb(0.210, 0.230, 0.300);
-const SOCKET: Color = rgb(0.045, 0.049, 0.068);
-const SOCKET_EDGE: Color = rgb(0.150, 0.160, 0.215);
-const STAR: Color = rgb(0.80, 0.85, 0.95);
-const ROUTE: Color = rgb(0.70, 0.76, 0.92);
-const RING: Color = rgb(0.75, 0.80, 0.95);
-const SHIP: Color = rgb(0.95, 0.86, 0.55);
-const ENGINE: Color = rgb(1.00, 0.62, 0.25);
-const AMBER: Color = rgb(1.00, 0.72, 0.33);
-const AMBER_EDGE: Color = rgb(1.00, 0.85, 0.55);
-const HANDLE_DIM: Color = rgb(0.30, 0.31, 0.38);
-const ICON_DIM: Color = rgb(0.42, 0.44, 0.54);
-const ICON_LIT: Color = rgb(0.78, 0.81, 0.92);
-const GOOD: Color = rgb(0.42, 0.85, 0.48);
-const BAD: Color = rgb(0.92, 0.30, 0.28);
-const VIOLET: Color = rgb(0.55, 0.32, 0.75);
-const VIOLET_FLASH: Color = rgb(0.70, 0.45, 0.95);
-const WHITE: Color = rgb(0.95, 0.96, 1.00);
-const INK: Color = rgb(0.0, 0.0, 0.0);
-
-const SHELF_EDGE: Color = rgb(0.34, 0.28, 0.42);
-const GIVE_EDGE: Color = rgb(0.42, 0.34, 0.22);
-const TAKE_EDGE: Color = rgb(0.22, 0.36, 0.42);
-const RECEIVED_EDGE: Color = rgb(0.24, 0.38, 0.28);
-
-const VENUS: Color = rgb(0.94, 0.70, 0.55);
-const VENUS_HALO: Color = rgb(1.00, 0.86, 0.60);
-const EARTH: Color = rgb(0.45, 0.55, 0.65);
-const SMOG: Color = rgb(0.48, 0.36, 0.24);
-const MARS: Color = rgb(0.76, 0.34, 0.22);
-const MARS_PATCH: Color = rgb(0.58, 0.24, 0.17);
-const JUPITER: Color = rgb(0.86, 0.60, 0.34);
-const URANUS: Color = rgb(0.62, 0.85, 0.88);
-const URANUS_RING: Color = rgb(0.72, 0.84, 0.90);
-const NEPTUNE: Color = rgb(0.26, 0.40, 0.85);
-const GUILD_FILL: Color = rgb(0.42, 0.38, 0.55);
-const GUILD_EDGE: Color = rgb(0.62, 0.56, 0.78);
-
-/// The colour the omen leans everything toward.
-const CAST: (f32, f32, f32) = (0.42, 0.22, 0.58);
-
-/// Flat base colour per cargo kind; variants tint it.
-const fn kind_color(kind: Kind) -> Color {
-    match kind {
-        Kind::PerfumeVial => rgb(0.90, 0.55, 0.75),
-        Kind::GildedIdol => rgb(0.92, 0.76, 0.30),
-        Kind::RationBricks => rgb(0.55, 0.55, 0.30),
-        Kind::ScrapAlloy => rgb(0.70, 0.42, 0.28),
-        Kind::Seedlings => rgb(0.45, 0.78, 0.40),
-        Kind::GasCanister => rgb(0.90, 0.52, 0.22),
-        Kind::CryoCore => rgb(0.45, 0.80, 0.92),
-        Kind::BrinePearls => rgb(0.60, 0.70, 0.88),
-        Kind::SuspiciousCrate => rgb(0.10, 0.09, 0.12),
-    }
-}
-
-/// Sibling-crate hue shifts, one per cosmetic variant roll.
-const VARIANT_SHIFT: [(f32, f32, f32); 4] = [
-    (0.0, 0.0, 0.0),
-    (0.06, -0.03, -0.02),
-    (-0.05, 0.04, 0.02),
-    (0.02, 0.02, -0.06),
-];
-
-fn variant_tint(col: Color, variant: u8) -> Color {
-    let (dr, dg, db) = VARIANT_SHIFT[usize::from(variant % 4)];
-    Color::new(
-        (col.r + dr).clamp(0.0, 1.0),
-        (col.g + dg).clamp(0.0, 1.0),
-        (col.b + db).clamp(0.0, 1.0),
-        col.a,
-    )
-}
-
-/// Inner-detail scale per variant, `0.85..=1.15`.
-fn variant_scale(variant: u8) -> f32 {
-    f32::from(variant % 4).mul_add(0.1, 0.85)
+/// `v` snapped down to the target pixel grid, for things (stars, scanlines)
+/// that must land on whole pixels or shimmer.
+fn snap(v: f32) -> f32 {
+    (v / PX).floor() * PX
 }
 
 // ------------------------------------------------------------- small math --
-
-fn lerp(a: f32, b: f32, t: f32) -> f32 {
-    (b - a).mul_add(t, a)
-}
-
-fn mix(a: Color, b: Color, t: f32) -> Color {
-    Color::new(
-        lerp(a.r, b.r, t),
-        lerp(a.g, b.g, t),
-        lerp(a.b, b.b, t),
-        lerp(a.a, b.a, t),
-    )
-}
 
 /// Cubic ease-out over `0..=1`.
 fn ease_out(t: f32) -> f32 {
@@ -208,6 +126,11 @@ fn rect_lerp(a: layout::Rect, b: layout::Rect, t: f32) -> layout::Rect {
     )
 }
 
+/// `p` clamped inside `r`, for wear marks that must not leave their plate.
+fn clamp_into(p: Vec2, r: layout::Rect) -> Vec2 {
+    Vec2::new(p.x.clamp(r.x, r.x + r.w), p.y.clamp(r.y, r.y + r.h))
+}
+
 /// The whole hold grid as one world rect.
 fn grid_rect() -> layout::Rect {
     layout::Rect::new(
@@ -241,18 +164,18 @@ fn grid_shake_offset(juice: &Juice) -> Vec2 {
 
 // ------------------------------------------------------------------ canvas --
 
-/// World-to-screen draw helper: applies the letterbox transform, a cosmetic
-/// world-space offset (shakes), the console light level, and the omen cast
-/// to every call.
+/// World-space draw helper: applies a cosmetic offset (shakes), the console
+/// light level, and the omen cast to every call. The camera set up in
+/// [`draw`] maps world coordinates onto the crunch target, so no scaling
+/// happens here.
 #[derive(Clone, Copy)]
-struct Canvas<'a> {
-    view: &'a View,
+struct Canvas {
     light: f32,
     omen: f32,
     offset: Vec2,
 }
 
-impl Canvas<'_> {
+impl Canvas {
     fn shifted(&self, by: Vec2) -> Self {
         Self {
             offset: self.offset + by,
@@ -261,32 +184,23 @@ impl Canvas<'_> {
     }
 
     fn point(&self, p: Vec2) -> Vec2 {
-        self.view.to_screen(p + self.offset)
+        p + self.offset
     }
 
-    fn s(&self, v: f32) -> f32 {
-        v * self.view.scale()
-    }
-
-    /// Line width in pixels: scaled, but never below one.
-    fn stroke(&self, w: f32) -> f32 {
-        self.s(w).max(1.0)
+    /// Line width quantized to whole target pixels, never below one, so
+    /// strokes survive the crunch instead of shimmering at half-coverage.
+    fn stroke(w: f32) -> f32 {
+        (w / PX).round().max(1.0) * PX
     }
 
     /// The whole palette runs through here: light level times omen cast.
     fn tint(&self, col: Color) -> Color {
-        let cast = self.omen * 0.35;
-        Color::new(
-            (CAST.0 - col.r).mul_add(cast, col.r) * self.light,
-            (CAST.1 - col.g).mul_add(cast, col.g) * self.light,
-            (CAST.2 - col.b).mul_add(cast, col.b) * self.light,
-            col.a,
-        )
+        omen_tint(col, self.light, self.omen)
     }
 
     fn fill(&self, r: layout::Rect, col: Color) {
         let p = self.point(Vec2::new(r.x, r.y));
-        draw_rectangle(p.x, p.y, self.s(r.w), self.s(r.h), self.tint(col));
+        draw_rectangle(p.x, p.y, r.w, r.h, self.tint(col));
     }
 
     fn frame(&self, r: layout::Rect, col: Color) {
@@ -295,30 +209,24 @@ impl Canvas<'_> {
 
     fn frame_thick(&self, r: layout::Rect, w: f32, col: Color) {
         let p = self.point(Vec2::new(r.x, r.y));
-        draw_rectangle_lines(
-            p.x,
-            p.y,
-            self.s(r.w),
-            self.s(r.h),
-            self.stroke(w),
-            self.tint(col),
-        );
+        draw_rectangle_lines(p.x, p.y, r.w, r.h, Self::stroke(w), self.tint(col));
     }
 
     fn dot(&self, at: Vec2, r: f32, col: Color) {
         let p = self.point(at);
-        draw_circle(p.x, p.y, self.s(r), self.tint(col));
+        // Sub-pixel dots vanish at the crunch resolution; keep a floor.
+        draw_circle(p.x, p.y, r.max(PX * 0.5), self.tint(col));
     }
 
     fn ring(&self, at: Vec2, r: f32, w: f32, col: Color) {
         let p = self.point(at);
-        draw_circle_lines(p.x, p.y, self.s(r), self.stroke(w), self.tint(col));
+        draw_circle_lines(p.x, p.y, r, Self::stroke(w), self.tint(col));
     }
 
     fn seg(&self, a: Vec2, b: Vec2, w: f32, col: Color) {
         let pa = self.point(a);
         let pb = self.point(b);
-        draw_line(pa.x, pa.y, pb.x, pb.y, self.stroke(w), self.tint(col));
+        draw_line(pa.x, pa.y, pb.x, pb.y, Self::stroke(w), self.tint(col));
     }
 
     fn tri(&self, a: Vec2, b: Vec2, d: Vec2, col: Color) {
@@ -337,61 +245,36 @@ impl Canvas<'_> {
             vec2(pa.x, pa.y),
             vec2(pb.x, pb.y),
             vec2(pd.x, pd.y),
-            self.stroke(w),
+            Self::stroke(w),
             self.tint(col),
         );
     }
 
     fn poly(&self, at: Vec2, sides: u8, r: f32, rot: f32, col: Color) {
         let p = self.point(at);
-        draw_poly(p.x, p.y, sides, self.s(r), rot, self.tint(col));
+        draw_poly(p.x, p.y, sides, r, rot, self.tint(col));
     }
 
     fn poly_ring(&self, at: Vec2, sides: u8, r: f32, rot: f32, w: f32, col: Color) {
         let p = self.point(at);
-        draw_poly_lines(
-            p.x,
-            p.y,
-            sides,
-            self.s(r),
-            rot,
-            self.stroke(w),
-            self.tint(col),
-        );
+        draw_poly_lines(p.x, p.y, sides, r, rot, Self::stroke(w), self.tint(col));
     }
 
     /// Arc from `rot` degrees, sweeping `sweep` degrees clockwise, drawn
     /// outward from `r`.
     fn arc(&self, at: Vec2, r: f32, rot: f32, sweep: f32, w: f32, col: Color) {
         let p = self.point(at);
-        draw_arc(
-            p.x,
-            p.y,
-            48,
-            self.s(r),
-            rot,
-            self.stroke(w),
-            sweep,
-            self.tint(col),
-        );
+        draw_arc(p.x, p.y, 48, r, rot, Self::stroke(w), sweep, self.tint(col));
     }
 
     fn oval(&self, at: Vec2, rx: f32, ry: f32, rot: f32, col: Color) {
         let p = self.point(at);
-        draw_ellipse(p.x, p.y, self.s(rx), self.s(ry), rot, self.tint(col));
+        draw_ellipse(p.x, p.y, rx, ry, rot, self.tint(col));
     }
 
     fn oval_ring(&self, at: Vec2, rx: f32, ry: f32, rot: f32, w: f32, col: Color) {
         let p = self.point(at);
-        draw_ellipse_lines(
-            p.x,
-            p.y,
-            self.s(rx),
-            self.s(ry),
-            rot,
-            self.stroke(w),
-            self.tint(col),
-        );
+        draw_ellipse_lines(p.x, p.y, rx, ry, rot, Self::stroke(w), self.tint(col));
     }
 
     fn hexagon(&self, at: Vec2, r: f32, edge: Color, fill: Color) {
@@ -399,8 +282,8 @@ impl Canvas<'_> {
         draw_hexagon(
             p.x,
             p.y,
-            self.s(r),
-            self.stroke(1.0),
+            r,
+            Self::stroke(1.0),
             true,
             self.tint(edge),
             self.tint(fill),
@@ -410,43 +293,331 @@ impl Canvas<'_> {
 
 // ------------------------------------------------------------------- entry --
 
-/// Draw the whole console for one frame.
-pub fn draw(view: &View, scene: &Scene) {
+/// Draw the whole console for one frame: the fiction into the crunch
+/// target, then one nearest-neighbour blit into the letterbox.
+pub fn draw(view: &View, target: &RenderTarget, scene: &Scene) {
     let canvas = Canvas {
-        view,
         light: scene.sim.light(),
         omen: scene.sim.omen(),
         offset: Vec2::default(),
     };
-    clear_background(canvas.tint(BG));
+
+    // The camera maps the full logical world onto the low-res target.
+    // `from_display_rect` keeps world y pointing down, which lands upside
+    // down in the target's texture; the blit below flips it back.
+    let camera = Camera2D {
+        render_target: Some(target.clone()),
+        ..Camera2D::from_display_rect(ScreenRect::new(0.0, 0.0, WORLD_W, WORLD_H))
+    };
+    set_camera(&camera);
+
+    clear_background(canvas.tint(HULL));
     draw_map(&canvas, scene);
     draw_console(&canvas, scene);
     draw_hold(&canvas, scene);
-    if let Some(barter) = scene.sim.barter() {
-        draw_barter(&canvas, scene, barter);
-    }
+    draw_barter(&canvas, scene);
     draw_pieces(&canvas, scene);
     draw_violation_flash(&canvas, scene);
     draw_held(&canvas, scene);
-    draw_screen_fx(scene);
+    draw_omen_fx(scene);
+
+    // Blit the crunched frame into the letterbox, hard pixels intact. The
+    // destination is exactly the View's rect, so what you see is where you
+    // click. The version string draws after this, outside the fiction.
+    set_default_camera();
+    clear_background(VOID);
+    let corner = view.to_screen(Vec2::default());
+    draw_texture_ex(
+        &target.texture,
+        corner.x,
+        corner.y,
+        BLIT,
+        DrawTextureParams {
+            dest_size: Some(vec2(WORLD_W * view.scale(), WORLD_H * view.scale())),
+            flip_y: true,
+            ..Default::default()
+        },
+    );
+}
+
+// -------------------------------------------------------------- worn metal --
+
+/// Fixed render-side seed for wear marks; cosmetic only, never the sim's.
+const WEAR_SEED: u64 = 0x5C2A_7C4E;
+
+/// One wear mark per this much plate area, world units². The single
+/// density knob the art doc asks for.
+const WEAR_PER_MARK: f32 = 4500.0;
+
+/// Wear alpha ceiling — above this it reads as dirt on the player's own
+/// monitor, says the art doc.
+const WEAR_ALPHA: f32 = 0.12;
+
+// One wear stream per plate, so plates never share scratches.
+const SALT_MAP: u64 = 1;
+const SALT_PREVIEW: u64 = 2;
+const SALT_CONSOLE: u64 = 3;
+const SALT_HOLD: u64 = 4;
+const SALT_BARTER: u64 = 5;
+const SALT_LAUNCH: u64 = 6;
+const SALT_ACCEPT: u64 = 7;
+
+/// One-pixel bevel edges: `top_left` along the edges facing the light,
+/// `bottom_right` along the ones facing away. Light is always top-left.
+fn bevel(c: &Canvas, r: layout::Rect, top_left: Color, bottom_right: Color) {
+    c.fill(layout::Rect::new(r.x, r.y, r.w, PX), top_left);
+    c.fill(layout::Rect::new(r.x, r.y, PX, r.h), top_left);
+    c.fill(
+        layout::Rect::new(r.x, r.y + r.h - PX, r.w, PX),
+        bottom_right,
+    );
+    c.fill(
+        layout::Rect::new(r.x + r.w - PX, r.y, PX, r.h),
+        bottom_right,
+    );
+}
+
+/// A riveted plate face: raised bevel, deterministic wear, corner rivets.
+fn plate(c: &Canvas, r: layout::Rect, wear_salt: u64) {
+    c.fill(r, PLATE);
+    bevel(c, r, PLATE_LIT, PLATE_SHADE);
+    wear(c, r, wear_salt);
+    rivets(c, r, 4.0 * PX);
+}
+
+fn rivets(c: &Canvas, r: layout::Rect, inset: f32) {
+    for (x, y) in [
+        (r.x + inset, r.y + inset),
+        (r.x + r.w - inset, r.y + inset),
+        (r.x + inset, r.y + r.h - inset),
+        (r.x + r.w - inset, r.y + r.h - inset),
+    ] {
+        rivet(c, Vec2::new(snap(x), snap(y)));
+    }
+}
+
+/// A pixel rivet: head, a glint toward the light, a cast shadow away.
+fn rivet(c: &Canvas, at: Vec2) {
+    c.fill(
+        layout::Rect::new(at.x - PX, at.y - PX, 2.0 * PX, 2.0 * PX),
+        RIVET,
+    );
+    c.fill(
+        layout::Rect::new(at.x - PX, at.y - PX, PX, PX),
+        fade(GLINT, 0.25),
+    );
+    c.fill(layout::Rect::new(at.x + PX, at.y, PX, PX), PLATE_SHADE);
+    c.fill(layout::Rect::new(at.x, at.y + PX, PX, PX), PLATE_SHADE);
+}
+
+/// An inset well: light falls away at the top/left lip and catches the
+/// bottom/right one — the reverse of a raised plate.
+fn socket_well(c: &Canvas, r: layout::Rect) {
+    c.fill(r, SOCKET);
+    bevel(c, r, PLATE_SHADE, fade(PLATE_LIT, 0.6));
+}
+
+/// Deterministic wear: scratches, scuffs, and smudges hashed from
+/// [`WEAR_SEED`], so every ship is scuffed the same way every boot.
+fn wear(c: &Canvas, r: layout::Rect, salt: u64) {
+    let count = ((r.w * r.h / WEAR_PER_MARK) as i64)
+        .clamp(2, 24)
+        .unsigned_abs();
+    let inset = 2.0 * PX;
+    for i in 0..count {
+        let h = splitmix(WEAR_SEED ^ salt, i);
+        let fx = (h & 0xFFFF) as f32 / 65_535.0;
+        let fy = ((h >> 16) & 0xFFFF) as f32 / 65_535.0;
+        let at = Vec2::new(
+            fx.mul_add(2.0f32.mul_add(-inset, r.w), r.x + inset),
+            fy.mul_add(2.0f32.mul_add(-inset, r.h), r.y + inset),
+        );
+        match (h >> 32) % 5 {
+            // Scratches: short strokes, light or dark by coin flip.
+            0..=2 => {
+                let len = (((h >> 40) & 0xF) as f32).mul_add(1.0, 6.0);
+                let angle = ((h >> 44) & 0xF) as f32 / 16.0 * TAU;
+                let col = if h & (1 << 60) == 0 {
+                    fade(GLINT, WEAR_ALPHA * 0.8)
+                } else {
+                    fade(SHADOW, WEAR_ALPHA)
+                };
+                c.seg(at, clamp_into(polar(at, len, angle), r), 1.0, col);
+            }
+            // Scuffs: a couple of chipped pixels.
+            3 => c.fill(
+                layout::Rect::new(at.x, at.y, 2.0 * PX, PX),
+                fade(SHADOW, WEAR_ALPHA),
+            ),
+            // Smudges: someone's decade-old glove print.
+            _ => {
+                let side = (((h >> 48) & 0xF) as f32).mul_add(1.0, 10.0);
+                c.fill(
+                    layout::Rect::new(at.x - side * 0.5, at.y - side * 0.5, side, side),
+                    fade(SHADOW, 0.05),
+                );
+            }
+        }
+    }
+}
+
+/// A lamp behind glass: bright core with a soft halo when lit, dark glass
+/// when off. `level` in `0..=1` eases the whole treatment for pulses.
+fn lamp(c: &Canvas, at: Vec2, r: f32, col: Color, level: f32) {
+    c.dot(at, r, GLASS);
+    if level > 0.01 {
+        c.dot(at, r * 2.2, fade(col, 0.18 * level));
+        c.dot(at, r * 0.95, fade(col, level));
+        c.dot(at, r * 0.4, fade(GLINT, 0.75 * level));
+    } else {
+        c.dot(
+            at + Vec2::new(-r * 0.35, -r * 0.35),
+            r * 0.3,
+            fade(GLINT, 0.10),
+        );
+    }
+}
+
+/// A brass lever handle: beveled block with grip grooves.
+fn brass_handle(c: &Canvas, r: layout::Rect) {
+    c.fill(r, BRASS);
+    bevel(c, r, fade(GLINT, 0.35), fade(SHADOW, 0.45));
+    for fy in [0.50, 0.68, 0.86] {
+        c.fill(
+            layout::Rect::new(r.x + PX, r.h.mul_add(fy, r.y), 2.0f32.mul_add(-PX, r.w), PX),
+            fade(SHADOW, 0.30),
+        );
+    }
+}
+
+// ------------------------------------------------------- phosphor screens --
+
+/// How far the map's CRT leans POI colours toward phosphor (identity by
+/// silhouette); the preview is the "big screen" and keeps a richer tint.
+const MAP_PH: f32 = 0.85;
+const PREVIEW_PH: f32 = 0.35;
+
+/// Seconds per sonar-sweep revolution. Ambient, not attention-seeking.
+const SWEEP_PERIOD: f32 = 20.0;
+
+/// A CRT set into the panel: raised bezel ring, then the inset glass.
+/// Returns the glass rect the caller draws its picture inside.
+fn crt_screen(c: &Canvas, r: layout::Rect, wear_salt: u64) -> layout::Rect {
+    c.fill(r, PLATE);
+    bevel(c, r, PLATE_LIT, PLATE_SHADE);
+    // Wear lands across the whole rect; the glass fill below keeps only
+    // the bezel ring's share, which is exactly right.
+    wear(c, r, wear_salt);
+    let glass = inflate(r, -4.0 * PX);
+    c.fill(glass, SCREEN);
+    bevel(c, glass, PLATE_SHADE, fade(PLATE_LIT, 0.5));
+    rivets(c, r, 2.0 * PX);
+    glass
+}
+
+/// Scanlines, vignette, and the pre-jump flicker — drawn last inside a
+/// screen so the picture shows through them.
+fn finish_screen(c: &Canvas, glass: layout::Rect, scene: &Scene) {
+    scanlines(c, glass);
+    screen_vignette(c, glass);
+    let omen = scene.sim.omen();
+    if omen > 0.0 {
+        let flicker = (scene.juice.clock() * 9.0).sin().mul_add(0.5, 0.5);
+        c.fill(glass, fade(SHADOW, omen * 0.12 * flicker));
+    }
+}
+
+/// Every other target-pixel row, very low alpha.
+fn scanlines(c: &Canvas, r: layout::Rect) {
+    let step = 2.0 * PX;
+    let y0 = (r.y / step).ceil() * step;
+    let rows = ((r.y + r.h - y0 - PX) / step) as i32;
+    for i in 0..=rows.max(0) {
+        let y = (i as f32).mul_add(step, y0);
+        c.fill(
+            layout::Rect::new(r.x, y, r.w, PX),
+            fade(dim(PHOSPHOR_DIM, 0.3), 0.4),
+        );
+    }
+}
+
+/// The corners darken: the map is a tube, not a viewport.
+fn screen_vignette(c: &Canvas, r: layout::Rect) {
+    let s = r.w.min(r.h) * 0.18;
+    let corners = [
+        (Vec2::new(r.x, r.y), 1.0, 1.0),
+        (Vec2::new(r.x + r.w, r.y), -1.0, 1.0),
+        (Vec2::new(r.x, r.y + r.h), 1.0, -1.0),
+        (Vec2::new(r.x + r.w, r.y + r.h), -1.0, -1.0),
+    ];
+    for (corner, sx, sy) in corners {
+        for reach in [s, s * 0.55] {
+            c.tri(
+                corner,
+                corner + Vec2::new(sx * reach, 0.0),
+                corner + Vec2::new(0.0, sy * reach),
+                fade(SHADOW, 0.12),
+            );
+        }
+    }
+    c.frame_thick(r, 1.0, fade(SHADOW, 0.30));
+}
+
+/// Sweep bearing at cosmetic time `t`, radians.
+fn sweep_angle(t: f32) -> f32 {
+    (t * (TAU / SWEEP_PERIOD)).rem_euclid(TAU)
+}
+
+/// How lit `pos` still is by the sweep that last passed it, `0..=1` —
+/// a slow phosphor afterglow trailing the beam by up to ~5 seconds.
+fn sweep_glow(center: Vec2, angle: f32, pos: Vec2) -> f32 {
+    let d = pos - center;
+    let behind = (angle - d.y.atan2(d.x)).rem_euclid(TAU);
+    (behind / 1.7).mul_add(-1.0, 1.0).max(0.0)
+}
+
+/// One slow sonar line about the map centre with a short fading trail.
+fn draw_sweep(c: &Canvas, glass: layout::Rect, t: f32) {
+    let center = rect_center(glass);
+    let radius = glass.w.min(glass.h).mul_add(0.5, -2.0 * PX);
+    let angle = sweep_angle(t);
+    for k in 0..5_u8 {
+        let a0 = f32::from(k).mul_add(-0.04, angle);
+        let alpha = f32::from(k).mul_add(-0.012, 0.065);
+        c.tri(
+            center,
+            polar(center, radius, a0),
+            polar(center, radius, a0 - 0.04),
+            fade(PHOSPHOR, alpha),
+        );
+    }
+    c.seg(
+        center,
+        polar(center, radius, angle),
+        1.0,
+        fade(PHOSPHOR, 0.28),
+    );
+    c.dot(center, PX, fade(PHOSPHOR, 0.5));
 }
 
 // --------------------------------------------------------------------- map --
 
 fn draw_map(c: &Canvas, scene: &Scene) {
-    c.fill(layout::MAP_PANEL, MAP_PLATE);
-    c.frame(layout::MAP_PANEL, PLATE_EDGE);
-    draw_starfield(c, scene.juice.clock());
+    let t = scene.juice.clock();
+    let glass = crt_screen(c, layout::MAP_PANEL, SALT_MAP);
+    draw_starfield(c, glass, t);
+    draw_range_rings(c, glass);
     draw_route_and_ship(c, scene);
-    draw_pois(c, scene);
+    draw_pois(c, scene, glass);
+    draw_sweep(c, glass, t);
+    finish_screen(c, glass, scene);
 }
 
 /// Fixed render-side seed for the starfield hash; cosmetic only.
 const STAR_SEED: u64 = 0x57A2_F1E1;
 const STAR_COUNT: u64 = 110;
 
-fn draw_starfield(c: &Canvas, t: f32) {
-    let area = layout::MAP_PANEL;
+fn draw_starfield(c: &Canvas, glass: layout::Rect, t: f32) {
     for i in 0..STAR_COUNT {
         let hash = splitmix(STAR_SEED, i);
         let fx = (hash & 0xFFFF) as f32 / 65_535.0;
@@ -454,15 +625,25 @@ fn draw_starfield(c: &Canvas, t: f32) {
         let base = ((hash >> 32) & 0xFF) as f32 / 255.0;
         let phase = ((hash >> 40) & 0xFF) as f32 / 255.0 * TAU;
         let speed = (((hash >> 48) & 0x3) as f32).mul_add(0.6, 0.4);
-        let star_x = fx.mul_add(area.w - 8.0, area.x + 4.0);
-        let star_y = fy.mul_add(area.h - 8.0, area.y + 4.0);
+        // Snapped to the pixel grid: a half-covered star is an off star.
+        let star_x = snap(fx.mul_add(3.0f32.mul_add(-PX, glass.w), glass.x + PX));
+        let star_y = snap(fy.mul_add(3.0f32.mul_add(-PX, glass.h), glass.y + PX));
         let twinkle = 0.15 * speed.mul_add(t, phase).sin();
         let alpha = (base.mul_add(0.45, 0.2) + twinkle).clamp(0.05, 0.8);
-        let size = if hash & 0x300 == 0 { 2.0 } else { 1.3 };
+        let size = if hash & 0x300 == 0 { 2.0 * PX } else { PX };
         c.fill(
             layout::Rect::new(star_x, star_y, size, size),
-            fade(STAR, alpha),
+            fade(mix(PHOSPHOR_DIM, PHOSPHOR, base), alpha),
         );
+    }
+}
+
+/// Faint radar range rings around the sweep centre: CRT furniture.
+fn draw_range_rings(c: &Canvas, glass: layout::Rect) {
+    let center = rect_center(glass);
+    let radius = glass.w.min(glass.h).mul_add(0.5, -2.0 * PX);
+    for f in [0.5, 1.0] {
+        c.ring(center, radius * f, 1.0, fade(PHOSPHOR_DIM, 0.55));
     }
 }
 
@@ -490,7 +671,7 @@ fn draw_route_and_ship(c: &Canvas, scene: &Scene) {
             a + dir * at,
             a + dir * (at + dash).min(length),
             1.0,
-            fade(ROUTE, 0.35),
+            fade(PHOSPHOR, 0.45),
         );
     }
 
@@ -506,36 +687,44 @@ fn draw_route_and_ship(c: &Canvas, scene: &Scene) {
     };
     let flick = 0.3f32.mul_add((t * freq).sin(), 0.7);
     let tail = (3.5 * boost).mul_add(flick, 3.0);
-    let stern = pos - dir * 3.0;
+    let stern = pos - dir * 4.0;
     c.tri(
-        stern + perp * 1.7,
-        stern - perp * 1.7,
+        stern + perp * 2.2,
+        stern - perp * 2.2,
         stern - dir * tail,
-        fade(ENGINE, 0.85),
+        fade(PHOSPHOR, 0.75),
     );
     c.tri(
-        pos + dir * 6.0,
-        stern + perp * 3.5,
-        stern - perp * 3.5,
-        SHIP,
+        pos + dir * 8.0,
+        stern + perp * 4.5,
+        stern - perp * 4.5,
+        PHOSPHOR_HOT,
     );
 }
 
-fn draw_pois(c: &Canvas, scene: &Scene) {
+fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
     let sim = scene.sim;
     let t = scene.juice.clock();
+    let sweep = sweep_angle(t);
+    let center = rect_center(glass);
     let docked = match sim.ship().state {
         ShipState::Docked(at) => Some(at),
         ShipState::Traveling { .. } => None,
     };
     for (i, poi) in sim.pois().iter().enumerate() {
-        poi_glyph(c, i, poi.pos, poi.radius, t);
+        poi_glyph(c, i, poi.pos, poi.radius, t, MAP_PH);
         let id = i as PoiId;
+
+        // The sweep's afterglow brightens a POI it just passed.
+        let glow = sweep_glow(center, sweep, poi.pos);
+        if glow > 0.0 {
+            c.ring(poi.pos, poi.radius + PX, 1.0, fade(PHOSPHOR, 0.30 * glow));
+        }
 
         // Hover: a faint ring over any POI the player could pick right now.
         if let Some(at) = docked {
             if id != at && (scene.pointer - poi.pos).length() <= poi.radius {
-                c.ring(poi.pos, poi.radius + 3.0, 1.0, fade(RING, 0.3));
+                c.ring(poi.pos, poi.radius + 3.0, 1.0, fade(PHOSPHOR, 0.3));
             }
         }
 
@@ -546,7 +735,7 @@ fn draw_pois(c: &Canvas, scene: &Scene) {
                 poi.pos,
                 wave.mul_add(1.5, poi.radius + 5.0),
                 1.4,
-                fade(RING, wave.mul_add(0.15, 0.7)),
+                fade(PHOSPHOR, wave.mul_add(0.15, 0.7)),
             );
             let blip = scene.juice.select_blip();
             if blip > 0.0 {
@@ -554,7 +743,7 @@ fn draw_pois(c: &Canvas, scene: &Scene) {
                     poi.pos,
                     (1.0 - blip).mul_add(9.0, poi.radius + 4.0),
                     1.2,
-                    fade(RING, blip * 0.8),
+                    fade(PHOSPHOR, blip * 0.8),
                 );
             }
         }
@@ -562,14 +751,14 @@ fn draw_pois(c: &Canvas, scene: &Scene) {
         // Docked: a solid ring; pop on arrival; a long pulse after an
         // offline catch-up so the returning player spots where they landed.
         if docked == Some(id) {
-            c.ring(poi.pos, poi.radius + 4.0, 1.6, fade(RING, 0.85));
+            c.ring(poi.pos, poi.radius + 4.0, 1.6, fade(PHOSPHOR, 0.85));
             let pop = scene.juice.dock_pop();
             if pop > 0.0 {
                 c.ring(
                     poi.pos,
                     (1.0 - pop).mul_add(12.0, poi.radius + 4.0),
                     1.5,
-                    fade(RING, pop * 0.9),
+                    fade(PHOSPHOR, pop * 0.9),
                 );
             }
             let pulse = scene.juice.dock_pulse();
@@ -579,7 +768,10 @@ fn draw_pois(c: &Canvas, scene: &Scene) {
                     poi.pos,
                     wave.mul_add(2.5, poi.radius + 7.0),
                     1.5,
-                    fade(AMBER, wave.mul_add(0.25, 0.45) * (pulse * 3.0).min(1.0)),
+                    fade(
+                        PHOSPHOR_HOT,
+                        wave.mul_add(0.25, 0.45) * (pulse * 3.0).min(1.0),
+                    ),
                 );
             }
         }
@@ -588,23 +780,30 @@ fn draw_pois(c: &Canvas, scene: &Scene) {
 
 // -------------------------------------------------------------- POI glyphs --
 
-/// One hand-drawn glyph per POI index, shared by the map and the preview.
-fn poi_glyph(c: &Canvas, id: usize, pos: Vec2, r: f32, t: f32) {
+/// One hand-drawn glyph per POI index, shared by the map, the preview, and
+/// the dial badge. `ph` is how far its colours lean toward phosphor: the
+/// CRT shows a *reading* of Venus, not Venus.
+fn poi_glyph(c: &Canvas, id: usize, pos: Vec2, r: f32, t: f32, ph: f32) {
     match id {
-        0 => venus_glyph(c, pos, r, t),
-        1 => earth_glyph(c, pos, r),
-        2 => mars_glyph(c, pos, r),
-        3 => jupiter_glyph(c, pos, r),
-        4 => uranus_glyph(c, pos, r),
-        5 => neptune_glyph(c, pos, r),
-        _ => guild_glyph(c, pos, r, t),
+        0 => venus_glyph(c, pos, r, t, ph),
+        1 => earth_glyph(c, pos, r, ph),
+        2 => mars_glyph(c, pos, r, ph),
+        3 => jupiter_glyph(c, pos, r, ph),
+        4 => uranus_glyph(c, pos, r, ph),
+        5 => neptune_glyph(c, pos, r, ph),
+        _ => guild_glyph(c, pos, r, t, ph),
     }
 }
 
 /// Venus: pink-gold, with a glittery halo the rich paid extra for.
-fn venus_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32) {
-    c.dot(pos, r, VENUS);
-    c.ring(pos, r * 1.45, 1.0, fade(VENUS_HALO, 0.5));
+fn venus_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32, ph: f32) {
+    c.dot(pos, r, phosphorize(POI_VENUS, ph));
+    c.ring(
+        pos,
+        r * 1.45,
+        1.0,
+        fade(phosphorize(POI_VENUS_HALO, ph), 0.5),
+    );
     for i in 0..3_u8 {
         let angle = f32::from(i).mul_add(2.1, t * 0.5);
         let sparkle = polar(pos, r * 1.45, angle);
@@ -612,40 +811,41 @@ fn venus_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32) {
         c.dot(
             sparkle,
             r.mul_add(0.10, 0.6),
-            fade(WHITE, glint.mul_add(0.3, 0.65)),
+            fade(phosphorize(GLINT, ph), glint.mul_add(0.3, 0.65)),
         );
     }
 }
 
 /// Earth: blue-gray under a brown smog ring.
-fn earth_glyph(c: &Canvas, pos: Vec2, r: f32) {
-    c.dot(pos, r, EARTH);
+fn earth_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
+    c.dot(pos, r, phosphorize(POI_EARTH, ph));
     c.arc(
         pos,
         r * 1.1,
         -160.0,
         240.0,
         (r * 0.16).max(1.2),
-        fade(SMOG, 0.85),
+        fade(phosphorize(POI_SMOG, ph), 0.85),
     );
 }
 
 /// Mars: rust-red with a patchwork wedge of the scrappy republic.
-fn mars_glyph(c: &Canvas, pos: Vec2, r: f32) {
-    c.dot(pos, r, MARS);
+fn mars_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
+    c.dot(pos, r, phosphorize(POI_MARS, ph));
     c.tri(
         pos,
         polar(pos, r * 0.96, -0.7),
         polar(pos, r * 0.96, 0.45),
-        MARS_PATCH,
+        phosphorize(POI_MARS_PATCH, ph),
     );
 }
 
 /// Jupiter: a banded orange ellipse.
-fn jupiter_glyph(c: &Canvas, pos: Vec2, r: f32) {
+fn jupiter_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
     let rx = r * 1.12;
     let ry = r * 0.82;
-    c.oval(pos, rx, ry, 0.0, JUPITER);
+    let col = phosphorize(POI_JUPITER, ph);
+    c.oval(pos, rx, ry, 0.0, col);
     for (fy, shade) in [(-0.42_f32, 0.78), (0.05, 0.66), (0.5, 0.8)] {
         let chord = rx * fy.mul_add(-fy, 1.0_f32).sqrt() * 0.94;
         c.oval(
@@ -653,74 +853,148 @@ fn jupiter_glyph(c: &Canvas, pos: Vec2, r: f32) {
             chord,
             ry * 0.12,
             0.0,
-            dim(JUPITER, shade),
+            dim(col, shade),
         );
     }
 }
 
 /// Uranus: pale cyan with a thin tilted ring.
-fn uranus_glyph(c: &Canvas, pos: Vec2, r: f32) {
-    c.dot(pos, r * 0.92, URANUS);
-    c.oval_ring(pos, r * 1.7, r * 0.5, 20.0, 1.0, fade(URANUS_RING, 0.7));
+fn uranus_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
+    c.dot(pos, r * 0.92, phosphorize(POI_URANUS, ph));
+    c.oval_ring(
+        pos,
+        r * 1.7,
+        r * 0.5,
+        20.0,
+        1.0,
+        fade(phosphorize(POI_URANUS_RING, ph), 0.7),
+    );
 }
 
-/// Neptune: deep blue with a faint white streak of storm.
-fn neptune_glyph(c: &Canvas, pos: Vec2, r: f32) {
-    c.dot(pos, r, NEPTUNE);
+/// Neptune: deep blue with a faint pale streak of storm.
+fn neptune_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
+    c.dot(pos, r, phosphorize(POI_NEPTUNE, ph));
     c.seg(
         pos + Vec2::new(-r * 0.5, -r * 0.3),
         pos + Vec2::new(r * 0.6, -r * 0.15),
         (r * 0.16).max(1.0),
-        fade(WHITE, 0.5),
+        fade(phosphorize(GLINT, ph), 0.5),
     );
 }
 
 /// The Guild Station: a gray-violet hexagon, pulsing like it knows things.
-fn guild_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32) {
+fn guild_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32, ph: f32) {
     let pulse = (t * 2.4).sin().mul_add(0.05, 1.0);
-    c.hexagon(pos, r * pulse, GUILD_EDGE, GUILD_FILL);
+    c.hexagon(
+        pos,
+        r * pulse,
+        phosphorize(POI_GUILD_EDGE, ph),
+        phosphorize(POI_GUILD, ph),
+    );
 }
 
 // ----------------------------------------------------------------- console --
 
 fn draw_console(c: &Canvas, scene: &Scene) {
-    c.fill(layout::CONSOLE, PLATE);
-    c.frame(layout::CONSOLE, PLATE_EDGE);
+    plate(c, layout::CONSOLE, SALT_CONSOLE);
     draw_preview(c, scene);
     draw_eta(c, scene);
     draw_launch_lever(c, scene);
     draw_toggle_buttons(c, scene);
 }
 
-/// Destination preview: the big glyph of where you are going — or, dimmed,
-/// where you already are.
+/// Destination preview: the console's second CRT, showing where you are
+/// going — or, dimmed, where you already are.
 fn draw_preview(c: &Canvas, scene: &Scene) {
     let sim = scene.sim;
-    c.fill(layout::DEST_PREVIEW, SOCKET);
-    c.frame(layout::DEST_PREVIEW, SOCKET_EDGE);
+    let glass = crt_screen(c, layout::DEST_PREVIEW, SALT_PREVIEW);
+    preview_grid(c, glass);
     let (id, bright) = match sim.ship().state {
         ShipState::Traveling { to, .. } => (to, true),
         ShipState::Docked(at) => sim.ship().selected.map_or((at, false), |sel| (sel, true)),
     };
+    // Idle shows the tube's green *reading* of where you already are; the
+    // richer enamel tint is reserved for an armed destination, so the
+    // screen visibly wakes up when there is somewhere to go.
+    let ph = if bright { PREVIEW_PH } else { MAP_PH };
     poi_glyph(
         c,
         usize::from(id),
-        rect_center(layout::DEST_PREVIEW),
-        52.0,
+        rect_center(glass),
+        48.0,
         scene.juice.clock(),
+        ph,
     );
     if !bright {
-        c.fill(layout::DEST_PREVIEW, fade(BG, 0.55));
+        c.fill(glass, fade(SHADOW, 0.35));
+    }
+    finish_screen(c, glass, scene);
+}
+
+/// Faint alignment grid on the preview glass: the tube is powered even
+/// with nothing armed.
+fn preview_grid(c: &Canvas, glass: layout::Rect) {
+    let step = 12.0 * PX;
+    let x0 = (glass.x / step).ceil() * step;
+    for i in 0..=((glass.x + glass.w - x0) / step) as i32 {
+        c.fill(
+            layout::Rect::new((i as f32).mul_add(step, x0), glass.y, PX, glass.h),
+            fade(PHOSPHOR_DIM, 0.40),
+        );
+    }
+    let y0 = (glass.y / step).ceil() * step;
+    for i in 0..=((glass.y + glass.h - y0) / step) as i32 {
+        c.fill(
+            layout::Rect::new(glass.x, (i as f32).mul_add(step, y0), glass.w, PX),
+            fade(PHOSPHOR_DIM, 0.40),
+        );
     }
 }
 
-/// ETA arc: a ring around nothing that drains as the leg completes; a full
-/// dim ring while docked with a destination armed.
+/// ETA gauge: a recessed ring that drains as the leg completes; a full dim
+/// ring while docked with a destination armed. Metal, not a screen.
 fn draw_eta(c: &Canvas, scene: &Scene) {
     let sim = scene.sim;
     let mid = layout::ETA_ARC_CENTER;
     let radius = layout::ETA_ARC_RADIUS;
-    c.ring(mid, radius, 1.0, fade(RING, 0.18));
+    // At rest this is still an instrument, not a hole in the panel: dark
+    // glass with a reflection, a ticked track, and a standby ember.
+    c.dot(mid, 3.0f32.mul_add(PX, radius), GLASS);
+    c.arc(
+        mid,
+        3.0f32.mul_add(PX, radius),
+        135.0,
+        180.0,
+        1.0,
+        PLATE_SHADE,
+    );
+    c.arc(
+        mid,
+        3.0f32.mul_add(PX, radius),
+        -45.0,
+        180.0,
+        1.0,
+        fade(PLATE_LIT, 0.7),
+    );
+    c.dot(
+        mid + Vec2::new(-radius * 0.4, -radius * 0.4),
+        radius * 0.3,
+        fade(GLINT, 0.08),
+    );
+    c.ring(mid, radius, 1.0, fade(GLINT, 0.16));
+    // Tick marks around the track; twelve o'clock, where the arc starts
+    // and ends, reads brightest.
+    for i in 0..8_u8 {
+        let angle = f32::from(i).mul_add(TAU / 8.0, -PI / 2.0);
+        let alpha = if i == 0 { 0.32 } else { 0.18 };
+        c.seg(
+            polar(mid, radius - 3.0, angle),
+            polar(mid, radius + 1.0, angle),
+            1.0,
+            fade(GLINT, alpha),
+        );
+    }
+    c.dot(mid, PX, fade(AMBER, 0.45));
     match sim.ship().state {
         ShipState::Traveling {
             progress,
@@ -741,20 +1015,23 @@ fn draw_eta(c: &Canvas, scene: &Scene) {
     }
 }
 
-/// The launch lever: glowing when a pull would work, dim otherwise, with a
-/// thunk slide on departure and a rattle on a refused pull.
+/// The launch lever: a brass handle on a riveted plate, its go-lamp lit
+/// when a pull would work, with a thunk slide on departure and a rattle on
+/// a refused pull.
 fn draw_launch_lever(c: &Canvas, scene: &Scene) {
     let sim = scene.sim;
     let juice = scene.juice;
     let rect = layout::LAUNCH_LEVER;
-    c.fill(rect, PLATE_DEEP);
-    c.frame(rect, PLATE_EDGE);
+    plate(c, rect, SALT_LAUNCH);
     let mid_y = rect.h.mul_add(0.5, rect.y);
-    c.seg(
-        Vec2::new(rect.x + 16.0, mid_y),
-        Vec2::new(rect.x + rect.w - 16.0, mid_y),
-        4.0,
-        SOCKET,
+    socket_well(
+        c,
+        layout::Rect::new(
+            rect.x + 16.0,
+            2.0f32.mul_add(-PX, mid_y),
+            rect.w - 32.0,
+            4.0 * PX,
+        ),
     );
 
     let pullable = matches!(sim.ship().state, ShipState::Docked(_))
@@ -769,39 +1046,67 @@ fn draw_launch_lever(c: &Canvas, scene: &Scene) {
     let shake = (juice.clock() * 70.0).sin() * 3.0 * juice.lever_shake();
     let x = pull.mul_add(rect.w - 68.0, rect.x + 34.0) + shake;
     let handle = layout::Rect::new(x - 9.0, rect.y + 8.0, 18.0, rect.h - 16.0);
+    let glow = (juice.clock() * 2.2).sin().mul_add(0.12, 0.78);
     if pullable {
-        let glow = (juice.clock() * 2.2).sin().mul_add(0.1, 0.28);
-        c.fill(inflate(handle, 6.0), fade(AMBER, glow));
-        c.fill(handle, AMBER);
-        c.frame(handle, AMBER_EDGE);
-    } else {
-        c.fill(handle, HANDLE_DIM);
-        c.frame(handle, PLATE_EDGE);
+        c.fill(inflate(handle, 2.0 * PX), fade(LAMP_OK, 0.12 * glow));
     }
+    brass_handle(c, handle);
+    lamp(
+        c,
+        Vec2::new(rect_center(handle).x, 4.5f32.mul_add(PX, handle.y)),
+        2.2 * PX,
+        LAMP_OK,
+        if pullable { glow } else { 0.0 },
+    );
 }
 
 fn draw_toggle_buttons(c: &Canvas, scene: &Scene) {
     let sim = scene.sim;
-    button_plate(c, layout::PAUSE_BTN, sim.is_paused());
-    button_plate(c, layout::WARP_BTN, sim.is_warp());
-    button_plate(c, layout::SPEAKER, scene.audio_waiting);
+    for r in [layout::PAUSE_BTN, layout::WARP_BTN, layout::SPEAKER] {
+        // A raised cap on the console plate; too small for rivets or wear.
+        c.fill(r, PLATE);
+        bevel(c, r, PLATE_LIT, PLATE_SHADE);
+    }
 
-    // Pause: two bars.
-    let mid = rect_center(layout::PAUSE_BTN);
-    let bars = if sim.is_paused() { AMBER } else { ICON_DIM };
+    // Pause: two bars, and its lamp.
+    let mid = icon_center(layout::PAUSE_BTN);
+    let bars = if sim.is_paused() { AMBER } else { ICON };
     c.fill(layout::Rect::new(mid.x - 7.0, mid.y - 9.0, 5.0, 18.0), bars);
     c.fill(layout::Rect::new(mid.x + 2.0, mid.y - 9.0, 5.0, 18.0), bars);
+    button_lamp(
+        c,
+        layout::PAUSE_BTN,
+        AMBER,
+        if sim.is_paused() { 1.0 } else { 0.0 },
+    );
 
-    // Warp: a double chevron.
-    let warp_col = if sim.is_warp() { AMBER } else { ICON_DIM };
-    chevrons(c, rect_center(layout::WARP_BTN), 7.0, warp_col);
+    // Warp: a double chevron, and its lamp.
+    let warp_col = if sim.is_warp() { AMBER } else { ICON };
+    chevrons(c, icon_center(layout::WARP_BTN), 7.0, warp_col);
+    button_lamp(
+        c,
+        layout::WARP_BTN,
+        AMBER,
+        if sim.is_warp() { 1.0 } else { 0.0 },
+    );
 
     draw_speaker(c, scene);
 }
 
-fn button_plate(c: &Canvas, rect: layout::Rect, lit: bool) {
-    c.fill(rect, if lit { fade(AMBER, 0.16) } else { SOCKET });
-    c.frame(rect, SOCKET_EDGE);
+/// Icon anchor inside a toggle button, nudged up to clear the lamp.
+fn icon_center(r: layout::Rect) -> Vec2 {
+    rect_center(r) - Vec2::new(0.0, 2.5 * PX)
+}
+
+/// The state lamp under a toggle button's icon.
+fn button_lamp(c: &Canvas, r: layout::Rect, col: Color, level: f32) {
+    lamp(
+        c,
+        Vec2::new(rect_center(r).x, 4.5f32.mul_add(-PX, r.y + r.h)),
+        2.0 * PX,
+        col,
+        level,
+    );
 }
 
 /// Two chevrons pointing right, centred on `mid`.
@@ -815,47 +1120,47 @@ fn chevrons(c: &Canvas, mid: Vec2, size: f32, col: Color) {
     }
 }
 
-/// Speaker: pulses amber until the browser lets audio start, slashed while
-/// muted.
+/// Speaker: its lamp pulses amber until the browser lets audio start,
+/// holds a calm green while sound runs, and goes dark glass when muted.
 fn draw_speaker(c: &Canvas, scene: &Scene) {
-    let mid = rect_center(layout::SPEAKER);
+    let mid = icon_center(layout::SPEAKER);
     let t = scene.juice.clock();
-    let col = if scene.audio_waiting {
-        fade(AMBER, (t * 5.0).sin().mul_add(0.3, 0.7))
+    let (icon, lamp_col, level) = if scene.audio_waiting {
+        (AMBER, AMBER, (t * 5.0).sin().mul_add(0.3, 0.65))
     } else if scene.audio_muted {
-        ICON_DIM
+        (ICON, AMBER, 0.0)
     } else {
-        ICON_LIT
+        (ICON_LIT, LAMP_OK, 0.45)
     };
     c.tri(
         Vec2::new(mid.x - 4.0, mid.y),
         Vec2::new(mid.x + 7.0, mid.y - 9.0),
         Vec2::new(mid.x + 7.0, mid.y + 9.0),
-        col,
+        icon,
     );
-    c.fill(layout::Rect::new(mid.x - 10.0, mid.y - 5.0, 7.0, 10.0), col);
+    c.fill(
+        layout::Rect::new(mid.x - 10.0, mid.y - 5.0, 7.0, 10.0),
+        icon,
+    );
     if scene.audio_muted {
         c.seg(
             Vec2::new(mid.x - 12.0, mid.y + 11.0),
             Vec2::new(mid.x + 12.0, mid.y - 11.0),
             2.0,
-            fade(BAD, 0.9),
+            fade(LAMP_NO, 0.9),
         );
     }
+    button_lamp(c, layout::SPEAKER, lamp_col, level);
 }
 
 // -------------------------------------------------------------------- hold --
 
 fn draw_hold(c: &Canvas, scene: &Scene) {
     let cs = c.shifted(grid_shake_offset(scene.juice));
-    let plate = inflate(grid_rect(), 10.0);
-    cs.fill(plate, PLATE);
-    cs.frame(plate, PLATE_EDGE);
+    plate(&cs, inflate(grid_rect(), 10.0), SALT_HOLD);
     for y in 0..layout::GRID_ROWS {
         for x in 0..layout::GRID_COLS {
-            let cell = inflate(layout::cell_rect(x, y), -2.0);
-            cs.fill(cell, SOCKET);
-            cs.frame(cell, SOCKET_EDGE);
+            socket_well(&cs, inflate(layout::cell_rect(x, y), -2.0));
         }
     }
     draw_drop_hints(&cs, scene);
@@ -878,7 +1183,7 @@ fn draw_drop_hints(c: &Canvas, scene: &Scene) {
         return;
     };
     let legal = placement_check(sim.pieces(), piece.id, piece.kind, anchor_x, anchor_y).is_ok();
-    let col = if legal { GOOD } else { BAD };
+    let col = if legal { LAMP_OK } else { LAMP_NO };
     let (foot_w, foot_h) = piece.kind.cells();
     for dy in 0..foot_h {
         for dx in 0..foot_w {
@@ -892,25 +1197,31 @@ fn draw_drop_hints(c: &Canvas, scene: &Scene) {
 
 // ------------------------------------------------------------------ barter --
 
-fn draw_barter(c: &Canvas, scene: &Scene, barter: &Barter) {
-    c.fill(layout::BARTER_PANEL, PLATE);
-    c.frame(layout::BARTER_PANEL, PLATE_EDGE);
+/// The barter surface. Its furniture is bolted to the panel, so it stays
+/// drawn mid-flight — dormant, lamps dark — and lights up when the sim
+/// opens a trade.
+fn draw_barter(c: &Canvas, scene: &Scene) {
+    plate(c, layout::BARTER_PANEL, SALT_BARTER);
+    let barter = scene.sim.barter();
     draw_slot_rows(c, scene);
-    draw_wants(c, scene, barter);
+    if let Some(barter) = barter {
+        draw_wants(c, scene, barter);
+    }
     draw_dial(c, scene, barter);
     draw_accept_lever(c, barter, scene.juice);
 }
 
 fn draw_slot_rows(c: &Canvas, scene: &Scene) {
-    for (slots, edge) in [
-        (&layout::SHELF_SLOTS, SHELF_EDGE),
-        (&layout::RECEIVED_SLOTS, RECEIVED_EDGE),
-        (&layout::GIVE_SLOTS, GIVE_EDGE),
-        (&layout::TAKE_SLOTS, TAKE_EDGE),
+    for (slots, trim) in [
+        (&layout::SHELF_SLOTS, TRIM_SHELF),
+        (&layout::RECEIVED_SLOTS, TRIM_RECEIVED),
+        (&layout::GIVE_SLOTS, TRIM_GIVE),
+        (&layout::TAKE_SLOTS, TRIM_TAKE),
     ] {
         for &slot in slots {
-            c.fill(slot, SOCKET);
-            c.frame(slot, edge);
+            // Painted trim on the plate names the row; the well is inset.
+            c.frame(inflate(slot, PX), fade(trim, 0.8));
+            socket_well(c, slot);
         }
     }
 
@@ -927,9 +1238,10 @@ fn draw_slot_rows(c: &Canvas, scene: &Scene) {
             if !invited {
                 continue;
             }
+            let pulse = (scene.juice.clock() * 2.0).sin().mul_add(0.08, 0.55);
             for &slot in slots {
-                c.fill(inflate(slot, 2.0), fade(AMBER, 0.08));
-                c.frame(inflate(slot, 2.0), fade(AMBER, 0.45));
+                c.fill(inflate(slot, 2.0), fade(AMBER, 0.10));
+                c.frame(inflate(slot, 2.0), fade(AMBER, pulse));
             }
         }
     }
@@ -952,7 +1264,7 @@ fn draw_wants(c: &Canvas, scene: &Scene, barter: &Barter) {
             let px = (f32::from(pips) - 1.0)
                 .mul_add(-0.5, f32::from(p))
                 .mul_add(7.0, x);
-            c.dot(Vec2::new(px, 528.0), 1.8, fade(AMBER, 0.85));
+            c.dot(Vec2::new(px, 528.0), 2.5, fade(AMBER, 0.85));
         }
     }
 }
@@ -967,30 +1279,43 @@ const DIAL_SWEEP: f32 = 270.0;
 /// green into generosity.
 fn dial_color(value: f32) -> Color {
     if value <= 1.0 {
-        mix(BAD, AMBER, value)
+        mix(LAMP_NO, AMBER, value)
     } else {
-        mix(AMBER, GOOD, (value - 1.0).clamp(0.0, 1.0))
+        mix(AMBER, LAMP_OK, (value - 1.0).clamp(0.0, 1.0))
     }
 }
 
-/// The eagerness dial: an arc gauge around the station's own glyph, needle
-/// eased by the sim, notch at break-even.
-fn draw_dial(c: &Canvas, scene: &Scene, barter: &Barter) {
+/// The eagerness dial: a physical gauge in a raised round housing, needle
+/// eased by the sim, notch at break-even, the station's badge in the
+/// middle. Metal, never a screen.
+fn draw_dial(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
     let juice = scene.juice;
     let mid = layout::DIAL_CENTER;
     let t = juice.clock();
 
-    // The station glyph sits in the middle and shakes off refused trades.
-    let shake = juice.station_shake();
-    let wobble = Vec2::new(
-        (t * 67.0).sin() * 2.2 * shake,
-        (t * 51.0).sin() * 1.6 * shake,
-    );
-    poi_glyph(c, usize::from(barter.station), mid + wobble, 11.0, t);
+    // The housing: a raised disc, rim lit toward the light.
+    c.dot(mid, 34.0, PLATE);
+    c.arc(mid, 32.0, 135.0, 180.0, 1.0, PLATE_LIT);
+    c.arc(mid, 32.0, -45.0, 180.0, 1.0, PLATE_SHADE);
 
-    // Track, then the gradient fill up to the eased needle.
-    c.arc(mid, 23.0, DIAL_START, DIAL_SWEEP, 5.0, fade(RING, 0.15));
-    let value = lerp(barter.prev_eagerness, barter.eagerness, scene.sim.alpha());
+    // The station badge: enamel colours while docked, dark glass in flight.
+    if let Some(barter) = barter {
+        let shake = juice.station_shake();
+        let wobble = Vec2::new(
+            (t * 67.0).sin() * 2.2 * shake,
+            (t * 51.0).sin() * 1.6 * shake,
+        );
+        poi_glyph(c, usize::from(barter.station), mid + wobble, 11.0, t, 0.0);
+    } else {
+        c.dot(mid, 11.0, GLASS);
+        c.dot(mid + Vec2::new(-3.5, -3.5), 3.0, fade(GLINT, 0.08));
+    }
+
+    // Track groove, then the gradient fill up to the eased needle.
+    c.arc(mid, 23.0, DIAL_START, DIAL_SWEEP, 5.0, fade(SHADOW, 0.5));
+    let value = barter.map_or(0.0, |barter| {
+        lerp(barter.prev_eagerness, barter.eagerness, scene.sim.alpha())
+    });
     let frac = (value / EAGER_MAX).clamp(0.0, 1.0);
     let segments = 20_u32;
     let seg_sweep = DIAL_SWEEP / segments as f32;
@@ -1017,14 +1342,14 @@ fn draw_dial(c: &Canvas, scene: &Scene, barter: &Barter) {
         polar(mid, 20.0, notch),
         polar(mid, 31.0, notch),
         1.4,
-        fade(WHITE, 0.8),
+        fade(GLINT, 0.8),
     );
     let needle = DIAL_SWEEP.mul_add(frac, DIAL_START).to_radians();
     c.seg(
         polar(mid, 8.0, needle),
         polar(mid, 29.0, needle),
         2.0,
-        WHITE,
+        GLINT,
     );
 
     // Refused: the gauge flashes red. Accepted: a radial celebration,
@@ -1037,37 +1362,45 @@ fn draw_dial(c: &Canvas, scene: &Scene, barter: &Barter) {
             DIAL_START,
             DIAL_SWEEP,
             9.0,
-            fade(BAD, flash * 0.5),
+            fade(LAMP_NO, flash * 0.5),
         );
     }
     if let Some((heat, value)) = juice.accept_flash() {
         let grow = (1.0 - heat) * 45.0 * value.mul_add(1.2, 1.0);
-        c.ring(mid, 12.0 + grow, 2.5, fade(GOOD, heat * 0.9));
+        c.ring(mid, 12.0 + grow, 2.5, fade(LAMP_OK, heat * 0.9));
         c.ring(mid, (12.0 + grow) * 0.65, 1.5, fade(AMBER, heat * 0.7));
     }
 }
 
-/// The accept lever: glowing green the instant the station would say yes.
-fn draw_accept_lever(c: &Canvas, barter: &Barter, juice: &Juice) {
+/// The accept lever: brass on its own small plate, go-lamp lit the instant
+/// the station would say yes.
+fn draw_accept_lever(c: &Canvas, barter: Option<&Barter>, juice: &Juice) {
     let rect = layout::ACCEPT_LEVER;
-    c.fill(rect, PLATE_DEEP);
-    c.frame(rect, PLATE_EDGE);
+    plate(c, rect, SALT_ACCEPT);
     let mid_y = rect.h.mul_add(0.5, rect.y);
-    c.seg(
-        Vec2::new(rect.x + 12.0, mid_y),
-        Vec2::new(rect.x + rect.w - 12.0, mid_y),
-        3.0,
-        SOCKET,
+    socket_well(
+        c,
+        layout::Rect::new(
+            rect.x + 12.0,
+            1.5f32.mul_add(-PX, mid_y),
+            rect.w - 24.0,
+            3.0 * PX,
+        ),
     );
     let handle = layout::Rect::new(rect.x + 20.0, rect.y + 6.0, 14.0, rect.h - 12.0);
-    if barter.ready {
-        let glow = (juice.clock() * 2.8).sin().mul_add(0.1, 0.3);
-        c.fill(inflate(handle, 5.0), fade(GOOD, glow));
-        c.fill(handle, GOOD);
-    } else {
-        c.fill(handle, HANDLE_DIM);
+    let ready = barter.is_some_and(|barter| barter.ready);
+    let glow = (juice.clock() * 2.8).sin().mul_add(0.12, 0.78);
+    if ready {
+        c.fill(inflate(handle, 2.0 * PX), fade(LAMP_OK, 0.12 * glow));
     }
-    c.frame(handle, PLATE_EDGE);
+    brass_handle(c, handle);
+    lamp(
+        c,
+        Vec2::new(rect_center(handle).x, 3.5f32.mul_add(PX, handle.y)),
+        1.8 * PX,
+        LAMP_OK,
+        if ready { glow } else { 0.0 },
+    );
 }
 
 // ------------------------------------------------------------------ pieces --
@@ -1119,9 +1452,9 @@ fn draw_held(c: &Canvas, scene: &Scene) {
         gw,
         gh,
     );
-    c.fill(shifted_rect(rect, 3.0, 4.0), fade(INK, 0.35));
+    c.fill(shifted_rect(rect, 3.0, 4.0), fade(SHADOW, 0.5));
     piece_glyph(c, piece.kind, piece.variant, rect, scene.juice.clock());
-    let col = if held.legal { GOOD } else { BAD };
+    let col = if held.legal { LAMP_OK } else { LAMP_NO };
     c.fill(rect, fade(col, 0.10));
     c.frame_thick(rect, 1.5, fade(col, 0.7));
 }
@@ -1146,6 +1479,11 @@ fn piece_glyph(c: &Canvas, kind: Kind, variant: u8, rect: layout::Rect, t: f32) 
         Kind::BrinePearls => pearls_glyph(c, b, col, vs),
         Kind::SuspiciousCrate => crate_glyph(c, b, col, vs, t),
     }
+}
+
+/// Inner-detail scale per variant, `0.85..=1.15`.
+fn variant_scale(variant: u8) -> f32 {
+    f32::from(variant % 4).mul_add(0.1, 0.85)
 }
 
 /// The kind's footprint aspect fitted inside `rect` with padding, so a wide
@@ -1178,13 +1516,13 @@ fn vial_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
         sparkle - Vec2::new(arm, 0.0),
         sparkle + Vec2::new(arm, 0.0),
         1.0,
-        WHITE,
+        GLINT,
     );
     c.seg(
         sparkle - Vec2::new(0.0, arm),
         sparkle + Vec2::new(0.0, arm),
         1.0,
-        WHITE,
+        GLINT,
     );
 }
 
@@ -1303,7 +1641,7 @@ fn cryo_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
     let mid = rect_center(b);
     c.poly(mid, 6, b.w * 0.34 * vs, 90.0, col);
     c.poly(mid, 6, b.w * 0.16 * vs, 90.0, dim(col, 0.7));
-    c.poly_ring(mid, 6, b.w * 0.46, 90.0, 1.0, fade(WHITE, 0.55));
+    c.poly_ring(mid, 6, b.w * 0.46, 90.0, 1.0, fade(GLINT, 0.55));
 }
 
 /// Brine pearls: a stack of blue spheres, each with a wet glint.
@@ -1316,7 +1654,7 @@ fn pearls_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
         c.dot(
             center + Vec2::new(-r * 0.3, -r * 0.3),
             r * 0.24 * vs,
-            fade(WHITE, 0.75),
+            fade(GLINT, 0.75),
         );
     }
 }
@@ -1326,18 +1664,18 @@ fn pearls_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
 fn crate_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, t: f32) {
     let body = scaled(b, 0.86);
     let pulse = (TAU * t).sin().mul_add(0.5, 0.5);
-    c.fill(inflate(body, 3.0), fade(VIOLET, pulse.mul_add(0.22, 0.08)));
+    c.fill(inflate(body, 3.0), fade(EERIE, pulse.mul_add(0.22, 0.08)));
     c.fill(body, col);
-    c.frame(body, rgb(0.20, 0.18, 0.26));
+    c.frame(body, dim(EERIE, 0.4));
     c.frame_thick(
         inflate(body, 1.5),
         1.0,
-        fade(VIOLET, pulse.mul_add(0.35, 0.15)),
+        fade(EERIE, pulse.mul_add(0.35, 0.15)),
     );
     c.dot(
         rect_center(b),
         b.w * 0.05 * vs,
-        fade(VIOLET_FLASH, pulse.mul_add(0.5, 0.3)),
+        fade(EERIE_BRIGHT, pulse.mul_add(0.5, 0.3)),
     );
 }
 
@@ -1352,25 +1690,25 @@ fn draw_violation_flash(c: &Canvas, scene: &Scene) {
     match rule {
         // Off the grid or onto another piece: a plain red edge flash.
         Violation::Bounds | Violation::Overlap => {
-            c.frame_thick(grid_rect(), 2.0, fade(BAD, heat));
-            c.frame_thick(rect, 2.0, fade(BAD, heat * 0.9));
+            c.frame_thick(grid_rect(), 2.0, fade(LAMP_NO, heat));
+            c.frame_thick(rect, 2.0, fade(LAMP_NO, heat * 0.9));
         }
         Violation::Heavy => {
-            c.fill(rect, fade(BAD, heat * 0.18));
-            weight_glyph(c, mid, 12.0, fade(WHITE, heat));
+            c.fill(rect, fade(LAMP_NO, heat * 0.18));
+            weight_glyph(c, mid, 12.0, fade(GLINT, heat));
         }
         Violation::Volatile => {
-            c.fill(rect, fade(BAD, heat * 0.18));
-            hazard_glyph(c, mid, 12.0, fade(AMBER_EDGE, heat));
+            c.fill(rect, fade(LAMP_NO, heat * 0.18));
+            hazard_glyph(c, mid, 12.0, fade(AMBER, heat));
         }
         Violation::Cryo => {
-            c.fill(rect, fade(BAD, heat * 0.18));
-            snowflake_glyph(c, mid, 12.0, fade(URANUS, heat));
+            c.fill(rect, fade(LAMP_NO, heat * 0.18));
+            snowflake_glyph(c, mid, 12.0, fade(kind_color(Kind::CryoCore), heat));
         }
         // A second crate aboard: the hold itself objects in violet.
         Violation::Suspicious => {
-            c.fill(rect, fade(VIOLET, heat * 0.45));
-            c.frame_thick(rect, 2.0, fade(VIOLET_FLASH, heat));
+            c.fill(rect, fade(EERIE, heat * 0.45));
+            c.frame_thick(rect, 2.0, fade(EERIE_BRIGHT, heat));
         }
     }
 }
@@ -1428,20 +1766,37 @@ fn snowflake_glyph(c: &Canvas, mid: Vec2, s: f32, col: Color) {
     c.ring(mid, s * 0.45, 1.2, col);
 }
 
-/// Screen-space effects, drawn raw (outside the palette tint): the omen's
-/// violet vignette and the jump's flash.
-fn draw_screen_fx(scene: &Scene) {
-    let sw = screen_width();
-    let sh = screen_height();
+/// The omen's whole-panel cast and the jump's flash, drawn raw in world
+/// space (inside the crunch target, so they pixelate with everything else)
+/// but outside the canvas tint: they *are* the light change, and tinting
+/// them would apply it twice.
+fn draw_omen_fx(scene: &Scene) {
     let omen = scene.sim.omen();
     if omen > 0.0 {
-        draw_rectangle(0.0, 0.0, sw, sh, fade(VIOLET, omen * 0.14));
-        let band = sh * 0.12;
-        draw_rectangle(0.0, 0.0, sw, band, fade(INK, omen * 0.35));
-        draw_rectangle(0.0, sh - band, sw, band, fade(INK, omen * 0.35));
+        overlay(
+            layout::Rect::new(0.0, 0.0, WORLD_W, WORLD_H),
+            fade(EERIE, omen * 0.14),
+        );
+        let band = WORLD_H * 0.12;
+        overlay(
+            layout::Rect::new(0.0, 0.0, WORLD_W, band),
+            fade(SHADOW, omen * 0.45),
+        );
+        overlay(
+            layout::Rect::new(0.0, WORLD_H - band, WORLD_W, band),
+            fade(SHADOW, omen * 0.45),
+        );
     }
     let jump = scene.juice.jump_flash();
     if jump > 0.0 {
-        draw_rectangle(0.0, 0.0, sw, sh, fade(VIOLET_FLASH, jump * jump * 0.55));
+        overlay(
+            layout::Rect::new(0.0, 0.0, WORLD_W, WORLD_H),
+            fade(EERIE_BRIGHT, jump * jump * 0.55),
+        );
     }
+}
+
+/// An untinted world-space fill, for effects that skip the palette tint.
+fn overlay(r: layout::Rect, col: Color) {
+    draw_rectangle(r.x, r.y, r.w, r.h, col);
 }

@@ -38,7 +38,6 @@ pub fn store(save: &str, now: f64) {
 
 /// Read one arbitrary key. The generic little sibling of [`load`], for the
 /// slots that are not the save: consent, telemetry, the replay black box.
-#[allow(dead_code)] // Consumed as the replay and telemetry slices land.
 pub fn get(key: &str) -> Option<String> {
     quad_storage::STORAGE.lock().ok()?.get(key)
 }
@@ -52,7 +51,6 @@ pub fn set(key: &str, value: &str) {
 
 /// Delete one arbitrary key. Removal, not an empty write: a revoked
 /// consent must leave nothing behind to misread later.
-#[allow(dead_code)] // Consumed as the replay and telemetry slices land.
 pub fn remove(key: &str) {
     if let Ok(mut storage) = quad_storage::STORAGE.lock() {
         storage.remove(key);

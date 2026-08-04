@@ -73,6 +73,84 @@
             outline: none;
             z-index: 1;
         }
+
+        /* The telemetry consent card (docs/TELEMETRY.md): meta-UI in the
+           shell, so the game itself stays wordless. The overlay covers the
+           canvas and swallows pointer events while a choice is pending; the
+           wasm may boot and idle beneath it. Shown only while no choice is
+           recorded — see the consent script below. */
+        #consent {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(13, 13, 18, 0.55);
+            font: 14px/1.45 system-ui, sans-serif;
+        }
+
+        #consent[hidden] {
+            display: none;
+        }
+
+        .consent-card {
+            max-width: 26em;
+            margin: 1em;
+            padding: 1.1em 1.3em;
+            background: #16161d;
+            color: #b8b8c4;
+            border: 1px solid #2a2a33;
+            border-radius: 8px;
+        }
+
+        .consent-card p {
+            margin: 0 0 1em;
+        }
+
+        .consent-buttons {
+            display: flex;
+            gap: 0.6em;
+        }
+
+        /* Deliberately equal: declining is a first-class choice. */
+        .consent-buttons button {
+            flex: 1;
+            font: inherit;
+            color: inherit;
+            background: #22222b;
+            border: 1px solid #3a3a45;
+            border-radius: 6px;
+            padding: 0.5em 1em;
+            cursor: pointer;
+        }
+
+        .consent-buttons button:hover,
+        .consent-buttons button:focus-visible {
+            background: #2a2a35;
+        }
+
+        @media (prefers-color-scheme: light) {
+            #consent {
+                background: rgba(233, 233, 239, 0.55);
+            }
+
+            .consent-card {
+                background: #f6f6f9;
+                color: #3a3a45;
+                border-color: #c9c9d4;
+            }
+
+            .consent-buttons button {
+                background: #e4e4ec;
+                border-color: #b9b9c6;
+            }
+
+            .consent-buttons button:hover,
+            .consent-buttons button:focus-visible {
+                background: #d9d9e3;
+            }
+        }
     </style>
 </head>
 
@@ -87,6 +165,23 @@
         <div class="center">This toy is WebAssembly in a canvas; it needs JavaScript to run.</div>
     </noscript>
     <canvas id="glcanvas" tabindex="1"></canvas>
+    <!-- Telemetry consent (docs/TELEMETRY.md): asked once, before first play,
+         in the shell where translatable text is legitimate. The wording must
+         stay aligned with that file: anonymous statistics, stored locally,
+         sent nowhere today, choice cleared with site data. -->
+    <div id="consent" lang="en" hidden>
+        <div class="consent-card" role="dialog" aria-modal="true" aria-describedby="consent-text">
+            <p id="consent-text">May this game keep anonymous play statistics?
+                Coarse counts only &mdash; legs flown, trades made, time in
+                flight &mdash; stored in this browser and sent nowhere. The
+                game is identical either way, and clearing site data clears
+                the choice.</p>
+            <div class="consent-buttons">
+                <button id="consent-yes">Yes, count them</button>
+                <button id="consent-no">No, count nothing</button>
+            </div>
+        </div>
+    </div>
     <!-- gl.js is miniquad's loader, vendored from the miniquad crate (see CREDITS.md).
          It grabs #glcanvas at parse time, so it must come after the canvas. -->
     <script src="gl.js"></script>
@@ -134,6 +229,38 @@
                 }
             }, 100);
         }
+    </script>
+    <script>
+        "use strict";
+        // The consent card's one job: show itself only while no choice is
+        // recorded, store the choice under the same localStorage key the
+        // wasm reads through quad-storage (which maps keys 1:1), and get out
+        // of the way. If localStorage is unavailable the card stays hidden
+        // and telemetry stays off — no consent recorded means off, so the
+        // failure mode is the private one.
+        (() => {
+            const card = document.getElementById("consent");
+            const KEY = "space-trucking/telemetry-consent";
+            let stored = null;
+            try {
+                stored = localStorage.getItem(KEY);
+            } catch (e) {
+                return;
+            }
+            if (stored !== null) return;
+            const choose = (value) => {
+                try {
+                    localStorage.setItem(KEY, value);
+                } catch (e) {
+                    // Storage refused the write: the card still leaves, the
+                    // choice just does not stick, and next load re-asks.
+                }
+                card.remove();
+            };
+            document.getElementById("consent-yes").addEventListener("click", () => choose("yes"));
+            document.getElementById("consent-no").addEventListener("click", () => choose("no"));
+            card.hidden = false;
+        })();
     </script>
 </body>
 

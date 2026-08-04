@@ -51,6 +51,17 @@ elapsed real time, so the ship keeps flying while the tab is closed. The save
 format is versioned (`STV2`) with no compatibility promises before 1.0; an
 unreadable save becomes a fresh run, quietly.
 
+### Privacy
+
+Telemetry is opt-in and off by default. The web page asks once, before first
+play, whether the game may keep anonymous play statistics — coarse counts
+and whole-second durations only, no identity — stored in your own browser's
+localStorage and sent nowhere. Decline, or never answer, and nothing is
+recorded; any previously stored buffer is deleted on the next boot. Clearing
+site data clears the choice and re-asks. Native builds never ask and never
+collect. The full contract, including the exact schema, lives in
+[docs/TELEMETRY.md](docs/TELEMETRY.md).
+
 ## Multiplayer
 
 The deterministic core is multiplayer-ready: up to six players crew one ship

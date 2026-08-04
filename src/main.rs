@@ -6,9 +6,10 @@
 //! buttons into the pause/warp/mute toggles), advances the sim, and hands
 //! the result to [`render`] and [`audio`]. It also owns the save slot —
 //! load-and-catch-up on startup, cue-driven autosave forever after — the
-//! flight recorder's black box, and the game's one and only piece of text,
-//! the version string. Run natively with `--replay <file>` to watch a
-//! recorded session play itself back.
+//! flight recorder's black box, the opt-in telemetry buffer behind the web
+//! shell's consent card (`docs/TELEMETRY.md`), and the game's one and only
+//! piece of text, the version string. Run natively with `--replay <file>`
+//! to watch a recorded session play itself back.
 
 mod audio;
 mod juice;
@@ -33,6 +34,7 @@ use space_trucking::replay::Recording;
 use space_trucking::sim::{
     Cue, InputFrame, Sim, TICK_DT, Vec2, WARP_FACTOR, WORLD_H, WORLD_W, layout,
 };
+use space_trucking::telemetry::{Aggregate, BUFFER_KEY, CONSENT_KEY, Snapshot};
 
 const TEXT_SIZE: u16 = 16;
 const TEXT_MARGIN: f32 = 8.0;
@@ -85,8 +87,14 @@ async fn main() {
         return;
     }
 
-    let (mut sim, arrived_while_away) = restore();
+    let (mut sim, arrived_while_away, caught_up_seconds) = restore();
     let mut recording = Recording::new(sim.save_string());
+    // On a first visit the consent card's answer necessarily arrives AFTER
+    // boot — the card floats over the already-running game — so while no
+    // choice is recorded yet, keep asking at the persist cadence and let a
+    // late "yes" start counting mid-session.
+    let mut consent_pending = storage::get(CONSENT_KEY).is_none();
+    let mut telemetry = boot_telemetry(caught_up_seconds);
     let mut audio = Audio::load().await;
     let mut juice = Juice::default();
     let target = pixel_target();
@@ -112,6 +120,13 @@ async fn main() {
             recording = Recording::new(sim.save_string());
         }
 
+        if let Some(aggregate) = &mut telemetry {
+            // Cues live until the next advance, so the aggregator sees this
+            // frame's — the reseed just counted included — with the coarse
+            // state as the advance left it.
+            aggregate.observe(sim.cues(), dt, Snapshot::of(&sim));
+        }
+
         let now = macroquad::miniquad::date::now();
         if save_worthy(&sim) || now - last_save >= SAVE_EVERY {
             storage::store(&sim.save_string(), now);
@@ -121,6 +136,21 @@ async fn main() {
             }
             recording.seal(sim.tick());
             storage::set(REPLAY_KEY, &recording.serialize());
+            if consent_pending {
+                match storage::get(CONSENT_KEY).as_deref() {
+                    Some("yes") => {
+                        telemetry = Some(consented_aggregate(caught_up_seconds));
+                        consent_pending = false;
+                    }
+                    Some(_) => consent_pending = false,
+                    None => {}
+                }
+            }
+            if let Some(aggregate) = &telemetry {
+                // Boot merged this aggregate with its stored predecessor,
+                // so the write is the running total across sessions.
+                storage::set(BUFFER_KEY, &aggregate.serialize());
+            }
             last_save = now;
         }
 
@@ -233,18 +263,52 @@ fn pixel_target() -> RenderTarget {
 
 /// Load the save and replay the absence, or start fresh. The second value
 /// reports whether the ship docked somewhere while the player was away, so
-/// the renderer can pulse the dock ring about it.
-fn restore() -> (Sim, bool) {
+/// the renderer can pulse the dock ring about it; the third is how many
+/// seconds of absence were actually replayed, for the telemetry catch-up
+/// row.
+fn restore() -> (Sim, bool, f64) {
     let Some((save, saved_at)) = storage::load() else {
-        return (Sim::new(fresh_seed()), false);
+        return (Sim::new(fresh_seed()), false, 0.0);
     };
     let Ok(mut sim) = Sim::from_save(&save) else {
-        return (Sim::new(fresh_seed()), false);
+        return (Sim::new(fresh_seed()), false, 0.0);
     };
     let elapsed = (macroquad::miniquad::date::now() - saved_at).clamp(0.0, MAX_CATCH_UP);
     let ticks = u64::try_from((elapsed * CATCH_UP_RATE) as i64).unwrap_or(0);
     let caught_up = sim.fast_forward(ticks);
-    (sim, caught_up.arrived)
+    (
+        sim,
+        caught_up.arrived,
+        caught_up.ticks as f64 / CATCH_UP_RATE,
+    )
+}
+
+/// Construct the telemetry aggregator iff consent is recorded as `"yes"`
+/// (docs/TELEMETRY.md): load the stored buffer if it parses — the merge
+/// across sessions — count the session, and count the replayed absence.
+/// Anything else — declined, or no consent recorded, which is every native
+/// build since only the web shell's consent card writes the key — means
+/// opt-in never happened: nothing is constructed, nothing will be written,
+/// and any previously stored buffer is deleted. Declining cleans up.
+fn boot_telemetry(catch_up_seconds: f64) -> Option<Aggregate> {
+    if storage::get(CONSENT_KEY).as_deref() == Some("yes") {
+        Some(consented_aggregate(catch_up_seconds))
+    } else {
+        storage::remove(BUFFER_KEY);
+        None
+    }
+}
+
+/// The consented aggregator: the stored buffer if it parses — the merge
+/// across sessions — with this session and its replayed absence counted.
+/// Shared by boot and by a first visit's late "yes" from the consent card.
+fn consented_aggregate(catch_up_seconds: f64) -> Aggregate {
+    let mut aggregate = storage::get(BUFFER_KEY)
+        .and_then(|text| Aggregate::parse(&text).ok())
+        .unwrap_or_default();
+    aggregate.note_session();
+    aggregate.note_catch_up(catch_up_seconds);
+    aggregate
 }
 
 /// Whether this frame produced a cue worth writing the save for.

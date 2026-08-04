@@ -14,11 +14,17 @@
 //! [`replay`] is the black-box flight recorder built on the same property:
 //! a session is (base save + input log), so a small text file replays a run
 //! bit-identically and a bug report becomes a failing test.
+//!
+//! [`telemetry`] is the opt-in play-statistics aggregator behind
+//! `docs/TELEMETRY.md`: cue-derived counters only, folded into one local,
+//! human-readable buffer, gated by the web shell's consent card, and
+//! transmitted nowhere.
 
 pub mod net;
 pub mod replay;
 pub mod sim;
 pub mod synth;
+pub mod telemetry;
 
 /// `git describe` version, embedded by `build.rs`.
 pub const VERSION: &str = env!("GIT_DESCRIBE_VERSION");

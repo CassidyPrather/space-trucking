@@ -177,19 +177,14 @@ pub(crate) fn rebuild(seed: u64, station: PoiId, visit: u32, pieces: &[Piece]) -
     }
 }
 
-/// How far past break-even the dial swings per point of gifted value. Gifts
-/// always read as generosity on the gauge, scaled so a token gift barely
-/// clears the notch and a rich one pins it.
+/// Gifted value that saturates the accept cue's celebration. The dial pegs
+/// for any gift; only the deal's *sound* scales with what was given.
 const GIFT_WARMTH: f32 = 8.0;
 
-/// Trade quality from the pads: value given over cost taken, both priced by
-/// this visit's table, with a +1 markup per taken item so nothing is free.
-/// Ready means the station at least breaks even — or the trade is a pure
-/// gift, which every station accepts. Gifting through the lever is the one
-/// way to shed cargo, so hold space can always be freed and nothing is ever
-/// lost to a stray drop.
-#[must_use]
-pub(crate) fn eagerness_of(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> (f32, bool) {
+/// Value given, cost asked, and whether the give pad holds anything at all,
+/// priced by this visit's table. The +1 markup per taken item keeps even
+/// worthless goods from being free.
+fn pad_totals(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> (u32, u32, bool) {
     let mut give = 0_u32;
     let mut giving = false;
     let mut take = 0_u32;
@@ -204,15 +199,46 @@ pub(crate) fn eagerness_of(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> (f32,
             _ => {}
         }
     }
+    (give, take, giving)
+}
+
+/// Trade quality from the pads: value given over cost asked. Ready means
+/// the station at least breaks even — or the trade is a pure gift, which
+/// every station accepts. Gifting through the lever is the one way to shed
+/// cargo, so hold space can always be freed and nothing is ever lost to a
+/// stray drop.
+///
+/// A pure gift reads as the limiting case of "you ask for nothing": the
+/// ratio's limit is unbounded eagerness, so the dial pegs. That keeps the
+/// gauge monotone — loading the give pad never lowers it, loading the take
+/// pad never raises it — which the property test below holds it to. Two
+/// scales that disagree at the boundary is how a needle jumps the wrong
+/// way when a piece crosses pads.
+#[must_use]
+pub(crate) fn eagerness_of(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> (f32, bool) {
+    let (give, take, giving) = pad_totals(pieces, values);
     if take > 0 {
         let eagerness = give as f32 / take as f32;
         (eagerness, eagerness >= 1.0)
     } else if giving {
-        // A pure gift — even a worthless one — is always taken; presence on
-        // the pad counts, not the sum, so junk can still be shed.
-        ((give as f32 / GIFT_WARMTH + 1.0).min(EAGER_MAX), true)
+        (f32::INFINITY, true)
     } else {
         (0.0, false)
+    }
+}
+
+/// Generosity of the concluded deal in `0..=1`, for the accept cue's gain:
+/// the overshoot past break-even for a trade, the gifted value itself for a
+/// pure gift. Separate from the dial on purpose — the gauge answers "would
+/// the station take this?", the cue answers "how big a deal was that?", and
+/// a pegged needle must not make every token gift sound lavish.
+#[must_use]
+pub(crate) fn deal_value(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> f32 {
+    let (give, take, _) = pad_totals(pieces, values);
+    if take > 0 {
+        (give as f32 / take as f32 - 1.0).clamp(0.0, 1.0)
+    } else {
+        (give as f32 / GIFT_WARMTH).clamp(0.0, 1.0)
     }
 }
 
@@ -343,24 +369,78 @@ mod tests {
     }
 
     #[test]
-    fn a_pure_gift_is_always_ready_and_reads_as_generosity() {
+    fn a_pure_gift_pegs_the_dial_and_scales_the_celebration() {
         let values = visit_values(1, VENUS, 1);
         let pieces = [piece(Kind::BrinePearls, Loc::GivePad { slot: 0 })];
         let (eagerness, ready) = eagerness_of(&pieces, &values);
         assert!(ready, "a gift must always be accepted");
         assert!(
-            eagerness > 1.0 && eagerness <= EAGER_MAX,
-            "gift dial {eagerness} should sit past break-even"
+            eagerness >= EAGER_MAX,
+            "a gift is the limit of asking nothing: the dial pegs, never a \
+             lower reading a take item could jump above"
         );
         // A worthless gift is still a gift: ready even at value zero.
-        let mut zeroed = [0_u8; KIND_COUNT];
-        zeroed[Kind::BrinePearls.index()] = 0;
-        let (floor, ready) = eagerness_of(&pieces, &zeroed);
+        let zeroed = [0_u8; KIND_COUNT];
+        let (pegged, ready) = eagerness_of(&pieces, &zeroed);
         assert!(ready);
-        assert!(
-            (floor - 1.0).abs() < 1e-6,
-            "zero-value gift sits at the notch"
-        );
+        assert!(pegged >= EAGER_MAX);
+        // The celebration, unlike the dial, scales with what was given.
+        assert!(deal_value(&pieces, &zeroed) < deal_value(&pieces, &values));
+    }
+
+    /// The gauge's contract, held under fire: whatever already sits on the
+    /// pads, adding to the give pad never lowers the reading and adding to
+    /// the take pad never raises it. This is the genre guard for "the
+    /// needle moved the wrong way" — any future pricing tweak that breaks
+    /// gauge monotonicity fails here, not in someone's hands.
+    #[test]
+    fn dial_reading_is_monotone_under_pad_changes() {
+        let mut rng = fastrand::Rng::with_seed(0xD1A1);
+        let dial = |pieces: &[Piece], values: &[u8; KIND_COUNT]| {
+            eagerness_of(pieces, values).0.clamp(0.0, EAGER_MAX)
+        };
+        for _ in 0..500 {
+            let mut values = [0_u8; KIND_COUNT];
+            for v in &mut values {
+                *v = rng.u8(0..=6);
+            }
+            // A random starting spread across both pads, possibly empty.
+            let mut pieces = Vec::new();
+            for slot in 0..3 {
+                if rng.bool() {
+                    pieces.push(piece(
+                        Kind::ALL[rng.usize(..KIND_COUNT)],
+                        Loc::GivePad { slot },
+                    ));
+                }
+                if rng.bool() {
+                    pieces.push(piece(
+                        Kind::ALL[rng.usize(..KIND_COUNT)],
+                        Loc::TakePad { slot },
+                    ));
+                }
+            }
+            let before = dial(&pieces, &values);
+            let kind = Kind::ALL[rng.usize(..KIND_COUNT)];
+            let (loc, raises) = if rng.bool() {
+                (Loc::GivePad { slot: 3 }, true)
+            } else {
+                (Loc::TakePad { slot: 3 }, false)
+            };
+            pieces.push(piece(kind, loc));
+            let after = dial(&pieces, &values);
+            if raises {
+                assert!(
+                    after >= before - 1e-6,
+                    "giving {kind:?} lowered the dial: {before} -> {after}"
+                );
+            } else {
+                assert!(
+                    after <= before + 1e-6,
+                    "asking for {kind:?} raised the dial: {before} -> {after}"
+                );
+            }
+        }
     }
 
     #[test]

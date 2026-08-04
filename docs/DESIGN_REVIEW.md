@@ -27,6 +27,10 @@ deliberately below.
       invitation comes from `Sim::drop_targets()`, `placement_check`, or the
       shared `layout` rects — never from re-derived geometry or a restated
       ownership rule.
+- [ ] Instruments read monotonically: an action that is better for a party
+      moves its gauge toward better, never the reverse — one scale per
+      gauge, no special-case formulas that disagree at a boundary, and the
+      property test proves it (see `dial_reading_is_monotone_under_pad_changes`).
 - [ ] Pause, fast-forward, and save/load all still reachable and exercised
       this session.
 - [ ] `src/sim/` and `src/synth.rs` import no macroquad; cues say what

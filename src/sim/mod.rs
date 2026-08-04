@@ -759,19 +759,19 @@ impl Sim {
 
     /// Pull the accept lever: swap the pads if the station agrees, refuse
     /// otherwise. Received goods must be stowed before trading again, so the
-    /// received shelf never double-books a slot. Readiness and the overshoot
-    /// value come from the instantaneous ratio, not the eased dial, so a
+    /// received shelf never double-books a slot. Readiness and the deal
+    /// value come from the instantaneous pads, not the eased dial, so a
     /// quick pull is never judged by an animation.
     fn conclude(&mut self) {
         if self.barter.is_none() {
             return;
         }
-        let (target, ready) = barter::eagerness_of(&self.pieces, &self.values);
+        let (_, ready) = barter::eagerness_of(&self.pieces, &self.values);
         if !ready || self.received_occupied() {
             self.cues.push(Cue::Refuse);
             return;
         }
-        let value = (target - 1.0).clamp(0.0, 1.0);
+        let value = barter::deal_value(&self.pieces, &self.values);
         self.restock_from_give_pads();
         for piece in &mut self.pieces {
             if let Loc::TakePad { slot } = piece.loc {

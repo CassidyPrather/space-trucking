@@ -60,6 +60,26 @@ pub struct Scene<'a> {
     pub audio_waiting: bool,
     /// The player has muted.
     pub audio_muted: bool,
+    /// The OS asked for reduced motion (the web shell mirrors the media
+    /// query into storage; absent natively). Decoration freezes to its calm
+    /// static pose; feedback and the instructional ghost still run. See
+    /// `docs/ART_DIRECTION.md`, Motion.
+    pub reduced_motion: bool,
+}
+
+impl Scene<'_> {
+    /// The decoration clock: the free-running cosmetic clock normally,
+    /// frozen at zero under reduced motion — every idle loop here is a sine
+    /// of `t` times a frequency (plus a per-element phase for variety), so
+    /// zero parks each one exactly at its calm midpoint. Feedback tweens
+    /// read [`Juice`]'s clocks directly and never come through here.
+    const fn idle_clock(&self) -> f32 {
+        if self.reduced_motion {
+            0.0
+        } else {
+            self.juice.clock()
+        }
+    }
 }
 
 // ------------------------------------------------------------- crunch grid --
@@ -528,7 +548,10 @@ fn finish_screen(c: &Canvas, glass: layout::Rect, scene: &Scene) {
     screen_vignette(c, glass);
     let omen = scene.sim.omen();
     if omen > 0.0 {
-        let flicker = (scene.juice.clock() * 9.0).sin().mul_add(0.5, 0.5);
+        // The flicker loops for as long as the omen holds, so it gates as
+        // decoration; frozen it is a steady half-strength dimming, and the
+        // omen still reads through the whole-panel light drop and cast.
+        let flicker = (scene.idle_clock() * 9.0).sin().mul_add(0.5, 0.5);
         c.fill(glass, fade(SHADOW, omen * 0.12 * flicker));
     }
 }
@@ -609,7 +632,10 @@ fn draw_sweep(c: &Canvas, glass: layout::Rect, t: f32) {
 // --------------------------------------------------------------------- map --
 
 fn draw_map(c: &Canvas, scene: &Scene) {
-    let t = scene.juice.clock();
+    // Star twinkle and the sweep are decoration: under reduced motion the
+    // idle clock holds at zero, so the stars sit steady and the sweep parks
+    // at its zero bearing — still visibly a radar, just not a moving one.
+    let t = scene.idle_clock();
     let glass = crt_screen(c, layout::MAP_PANEL, SALT_MAP);
     draw_starfield(c, glass, t);
     draw_range_rings(c, glass);
@@ -685,7 +711,9 @@ fn draw_route_and_ship(c: &Canvas, scene: &Scene) {
     // engine-flicker triangle behind it (bigger and faster under warp).
     let pos = sim.ship().interpolated(sim.alpha());
     let perp = Vec2::new(-dir.y, dir.x);
-    let t = scene.juice.clock();
+    // Engine flicker is decoration (it loops the whole leg); frozen it is a
+    // steady flame, still longer under warp. The ship's travel is the sim's.
+    let t = scene.idle_clock();
     let (freq, boost): (f32, f32) = if sim.is_warp() {
         (26.0, 1.9)
     } else {
@@ -710,21 +738,29 @@ fn draw_route_and_ship(c: &Canvas, scene: &Scene) {
 
 fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
     let sim = scene.sim;
+    // Two clocks: `idle` for the decorative loops (glyph sparkles, the
+    // armed-selection breathing), the real one for feedback tweens (the
+    // catch-up dock pulse), which run under reduced motion.
     let t = scene.juice.clock();
-    let sweep = sweep_angle(t);
+    let idle = scene.idle_clock();
+    let sweep = sweep_angle(idle);
     let center = rect_center(glass);
     let docked = match sim.ship().state {
         ShipState::Docked(at) => Some(at),
         ShipState::Traveling { .. } => None,
     };
     for (i, poi) in sim.pois().iter().enumerate() {
-        poi_glyph(c, i, poi.pos, poi.radius, t, MAP_PH);
+        poi_glyph(c, i, poi.pos, poi.radius, idle, MAP_PH);
         let id = i as PoiId;
 
-        // The sweep's afterglow brightens a POI it just passed.
-        let glow = sweep_glow(center, sweep, poi.pos);
-        if glow > 0.0 {
-            c.ring(poi.pos, poi.radius + PX, 1.0, fade(PHOSPHOR, 0.30 * glow));
+        // The sweep's afterglow brightens a POI it just passed. A parked
+        // sweep passes nothing, so under reduced motion the afterglow stays
+        // off instead of freezing into a phantom highlight.
+        if !scene.reduced_motion {
+            let glow = sweep_glow(center, sweep, poi.pos);
+            if glow > 0.0 {
+                c.ring(poi.pos, poi.radius + PX, 1.0, fade(PHOSPHOR, 0.30 * glow));
+            }
         }
 
         // Hover: a faint ring over any POI the player could pick right now.
@@ -734,9 +770,11 @@ fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
             }
         }
 
-        // Selected: a pulsing ring, plus a blip right when picked.
+        // Selected: a pulsing ring (the pulse is decoration — frozen it is
+        // a steady ring that still says "armed"), plus a blip right when
+        // picked (feedback).
         if sim.ship().selected == Some(id) {
-            let wave = (t * 4.0).sin();
+            let wave = (idle * 4.0).sin();
             c.ring(
                 poi.pos,
                 wave.mul_add(1.5, poi.radius + 5.0),
@@ -950,7 +988,10 @@ fn draw_hangar_plate(c: &Canvas, scene: &Scene) {
     socket_well(c, HANGAR_WELL);
     let deliveries = scene.sim.deliveries();
     let wake = scene.juice.lamp_wake();
-    let t = scene.juice.clock();
+    // The shimmer is decoration: frozen, each lit lamp holds a steady
+    // brightness near the shimmer's midpoint. The wake blink is feedback
+    // and still runs off its juice timer.
+    let t = scene.idle_clock();
     let mid_y = HANGAR_WELL.h.mul_add(0.5, HANGAR_WELL.y);
     for (i, &threshold) in DELIVERY_LAMPS.iter().enumerate() {
         let at = Vec2::new((i as f32).mul_add(HANGAR_LAMP_STEP, HANGAR_LAMP_X0), mid_y);
@@ -990,7 +1031,7 @@ fn draw_preview(c: &Canvas, scene: &Scene) {
         usize::from(id),
         rect_center(glass),
         48.0,
-        scene.juice.clock(),
+        scene.idle_clock(),
         ph,
     );
     if !bright {
@@ -1114,7 +1155,10 @@ fn draw_launch_lever(c: &Canvas, scene: &Scene) {
     let shake = (juice.clock() * 70.0).sin() * 3.0 * juice.lever_shake();
     let x = pull.mul_add(rect.w - 68.0, rect.x + 34.0) + shake;
     let handle = layout::Rect::new(x - 9.0, rect.y + 8.0, 18.0, rect.h - 16.0);
-    let glow = (juice.clock() * 2.2).sin().mul_add(0.12, 0.78);
+    // The go-glow's breathing is decoration; frozen it holds its midpoint,
+    // and pullable still reads from the lit lamp. The shake above is
+    // feedback and keeps the real clock.
+    let glow = (scene.idle_clock() * 2.2).sin().mul_add(0.12, 0.78);
     if pullable {
         c.fill(inflate(handle, 2.0 * PX), fade(LAMP_OK, 0.12 * glow));
     }
@@ -1192,7 +1236,9 @@ fn chevrons(c: &Canvas, mid: Vec2, size: f32, col: Color) {
 /// holds a calm green while sound runs, and goes dark glass when muted.
 fn draw_speaker(c: &Canvas, scene: &Scene) {
     let mid = icon_center(layout::SPEAKER);
-    let t = scene.juice.clock();
+    // The waiting pulse is decoration; frozen, the lamp holds mid-bright
+    // amber, which still reads against the running state's calm green.
+    let t = scene.idle_clock();
     let (icon, lamp_col, level) = if scene.audio_waiting {
         (AMBER, AMBER, (t * 5.0).sin().mul_add(0.3, 0.65))
     } else if scene.audio_muted {
@@ -1257,7 +1303,19 @@ fn draw_drop_hints(c: &Canvas, scene: &Scene) {
         for dx in 0..foot_w {
             let (cx, cy) = (anchor_x + dx, anchor_y + dy);
             if cx < layout::GRID_COLS && cy < layout::GRID_ROWS {
-                c.fill(inflate(layout::cell_rect(cx, cy), -2.0), fade(col, 0.22));
+                let cell = inflate(layout::cell_rect(cx, cy), -2.0);
+                c.fill(cell, fade(col, 0.22));
+                if !legal {
+                    // No hue alone: every refused footprint cell wears a
+                    // diagonal slash (the mute slash's angle), so illegal
+                    // reads by shape where legal stays a plain fill.
+                    c.seg(
+                        Vec2::new(cell.x + PX, cell.y + cell.h - PX),
+                        Vec2::new(cell.x + cell.w - PX, cell.y + PX),
+                        1.5,
+                        fade(LAMP_NO, 0.65),
+                    );
+                }
             }
         }
     }
@@ -1276,7 +1334,7 @@ fn draw_barter(c: &Canvas, scene: &Scene) {
         draw_wants(c, scene, barter);
     }
     draw_dial(c, scene, barter);
-    draw_accept_lever(c, barter, scene.juice);
+    draw_accept_lever(c, scene, barter);
 }
 
 fn draw_slot_rows(c: &Canvas, scene: &Scene) {
@@ -1306,7 +1364,9 @@ fn draw_slot_rows(c: &Canvas, scene: &Scene) {
             if !invited {
                 continue;
             }
-            let pulse = (scene.juice.clock() * 2.0).sin().mul_add(0.08, 0.55);
+            // The invite glow's breathing is decoration; frozen at its
+            // midpoint the amber frame still reads as an invitation.
+            let pulse = (scene.idle_clock() * 2.0).sin().mul_add(0.08, 0.55);
             for &slot in slots {
                 c.fill(inflate(slot, 2.0), fade(AMBER, 0.10));
                 c.frame(inflate(slot, 2.0), fade(AMBER, pulse));
@@ -1318,7 +1378,7 @@ fn draw_slot_rows(c: &Canvas, scene: &Scene) {
 /// The station's top-three wants: small kind glyphs with 1-3 pips under
 /// them, tucked between the shelf and the received row.
 fn draw_wants(c: &Canvas, scene: &Scene, barter: &Barter) {
-    let t = scene.juice.clock();
+    let t = scene.idle_clock();
     for (i, &(kind, pips)) in barter.wants.iter().enumerate() {
         let x = (i as f32).mul_add(56.0, 303.0);
         piece_glyph(
@@ -1368,13 +1428,22 @@ fn draw_dial(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
     c.arc(mid, 32.0, -45.0, 180.0, 1.0, PLATE_SHADE);
 
     // The station badge: enamel colours while docked, dark glass in flight.
+    // The refusal wobble is feedback (real clock); the glyph's own sparkle
+    // loop is decoration (idle clock).
     if let Some(barter) = barter {
         let shake = juice.station_shake();
         let wobble = Vec2::new(
             (t * 67.0).sin() * 2.2 * shake,
             (t * 51.0).sin() * 1.6 * shake,
         );
-        poi_glyph(c, usize::from(barter.station), mid + wobble, 11.0, t, 0.0);
+        poi_glyph(
+            c,
+            usize::from(barter.station),
+            mid + wobble,
+            11.0,
+            scene.idle_clock(),
+            0.0,
+        );
     } else {
         c.dot(mid, 11.0, GLASS);
         c.dot(mid + Vec2::new(-3.5, -3.5), 3.0, fade(GLINT, 0.08));
@@ -1443,7 +1512,7 @@ fn draw_dial(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
 
 /// The accept lever: brass on its own small plate, go-lamp lit the instant
 /// the station would say yes.
-fn draw_accept_lever(c: &Canvas, barter: Option<&Barter>, juice: &Juice) {
+fn draw_accept_lever(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
     let rect = layout::ACCEPT_LEVER;
     plate(c, rect, SALT_ACCEPT);
     let mid_y = rect.h.mul_add(0.5, rect.y);
@@ -1458,7 +1527,8 @@ fn draw_accept_lever(c: &Canvas, barter: Option<&Barter>, juice: &Juice) {
     );
     let handle = layout::Rect::new(rect.x + 20.0, rect.y + 6.0, 14.0, rect.h - 12.0);
     let ready = barter.is_some_and(|barter| barter.ready);
-    let glow = (juice.clock() * 2.8).sin().mul_add(0.12, 0.78);
+    // Decoration, like the launch lever's glow: frozen at its midpoint.
+    let glow = (scene.idle_clock() * 2.8).sin().mul_add(0.12, 0.78);
     if ready {
         c.fill(inflate(handle, 2.0 * PX), fade(LAMP_OK, 0.12 * glow));
     }
@@ -1477,7 +1547,9 @@ fn draw_accept_lever(c: &Canvas, barter: Option<&Barter>, juice: &Juice) {
 fn draw_pieces(c: &Canvas, scene: &Scene) {
     let sim = scene.sim;
     let juice = scene.juice;
-    let t = juice.clock();
+    // The clock here only feeds decoration — the crate's breathing and the
+    // crew ghost's breathing frame; slides and settles are juice heats.
+    let t = scene.idle_clock();
     let shaken = c.shifted(grid_shake_offset(juice));
     for piece in sim.pieces() {
         let held_by = sim
@@ -1552,11 +1624,21 @@ fn draw_held(c: &Canvas, scene: &Scene) {
         piece.variant,
         piece.gnawed,
         rect,
-        scene.juice.clock(),
+        scene.idle_clock(),
     );
     let col = if held.legal { LAMP_OK } else { LAMP_NO };
     c.fill(rect, fade(col, 0.10));
     c.frame_thick(rect, 1.5, fade(col, 0.7));
+    if !held.legal {
+        // No hue alone: a refused drop wears a diagonal slash as well as
+        // the red tint, so the state survives without colour.
+        c.seg(
+            Vec2::new(rect.x + PX, rect.y + rect.h - PX),
+            Vec2::new(rect.x + rect.w - PX, rect.y + PX),
+            1.5,
+            fade(LAMP_NO, 0.7),
+        );
+    }
 }
 
 // ----------------------------------------------------------- cargo glyphs --
@@ -1825,7 +1907,9 @@ fn draw_rat(c: &Canvas, scene: &Scene) {
     let mut at = from.lerp(to, ease_out(t));
     // A shallow arc while mid-hop.
     at.y -= (PI * t).sin() * 5.0;
-    rat_glyph(&cs, at, to.x <= from.x, scene.juice.clock());
+    // The hop is sim-driven feedback and always runs; the tail sway inside
+    // the glyph is decoration and takes the idle clock.
+    rat_glyph(&cs, at, to.x <= from.x, scene.idle_clock());
 }
 
 /// Where the rat sits in cell `(x, y)`: low and left of centre, out of the

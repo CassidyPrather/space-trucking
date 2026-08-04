@@ -92,12 +92,53 @@ destination preview may afford a slightly richer tint as the "big screen."
   alpha, drawn last.
 - **Sweep**: one slow sonar line rotating about the map center (~20 s per
   revolution) with a short fading trail; POIs it passes brighten briefly.
-  Ambient, not attention-seeking — this game is a background hum.
+  Ambient, not attention-seeking — this game is a background hum. Under
+  reduced motion it parks (see Motion) and the afterglow stays off.
 - **Vignette**: screen corners darken slightly; the map is a tube, not a
   viewport.
 - The omen dims the *whole panel* (`sim.light()`), and adds an `EERIE` cast
   on top; screens flicker slightly before the jump. The dimming multiplies
   the palette — no element opts out.
+
+## Motion
+
+Every animation is one of three things, and each must know which:
+
+- **Feedback** answers a player action or a sim event and communicates a
+  change: the juice tweens, the rat's sim-driven hop, a lamp waking, the
+  dial's needle easing, shakes and flashes, ship travel itself. Feedback
+  finishes inside half a second (the catch-up dock pulse is the one
+  sanctioned exception) and **always runs**.
+- **Decoration** loops while nothing changes: the sonar sweep and its
+  afterglow, star twinkle, Venus's orbiting sparkles, the Guild hexagon's
+  pulse, the lit-lamp shimmer, the crate's violet breathing, the invite
+  glow's and go-glows' breathing, engine flicker, the rat's tail sway, the
+  crew-ghost's breathing frame, the omen's screen flicker. Decoration
+  **gates on the reduced-motion flag** and freezes to a legible static
+  state — the sweep parks at its zero bearing, shimmers and pulses hold
+  their calm midpoint — and every gated element must still read as itself,
+  just motionless. In the renderer that means idle loops take their time
+  from `Scene::idle_clock` (zero under the flag); feedback reads `Juice`'s
+  real clocks and never comes through it.
+- **Instruction** is the onboarding ghost demonstrating an interaction:
+  motion *as* meaning, a third category that runs regardless of the flag.
+
+The flag: the web shell mirrors `prefers-reduced-motion` into
+`localStorage["space-trucking/reduced-motion"]` (`"1"` while reduced,
+removed otherwise), and the game reads it once at boot — honestly, a
+mid-session OS toggle applies on the next load. Native builds have no shell
+writing the key, so they always run full motion.
+
+## No hue alone
+
+No meaning may be carried by hue alone: every signal needs a second channel
+— geometry, brightness, or position. The dial has its needle and break-even
+notch under the colour ramp, lamps carry lit-versus-dark-glass brightness,
+violation flashes carry rule glyphs, the bite mark and the mute stroke are
+geometry, the row trims sit at fixed positions. The refused half of the drag
+placement hint therefore wears a diagonal slash across each refused
+footprint cell — and across the held piece itself — `LAMP_NO`-coloured but
+shape-carried; the legal state stays a plain fill.
 
 ## Do / Don't
 

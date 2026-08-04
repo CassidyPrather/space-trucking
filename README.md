@@ -45,6 +45,13 @@ whatever it is that is being counted.
 | `M`     | mute                                            |
 | `R`     | new run                                         |
 
+Accessibility: on the web the game honors your system's reduced-motion
+preference (applied at load) — decorative idle animation like the sonar
+sweep, shimmers, and pulses freezes to a readable static pose, while
+everything caused by play still moves. No signal relies on color alone;
+refusals, warnings, and states all carry a shape, brightness, or position
+tell alongside their hue.
+
 The game auto-saves — to localStorage on the web, to a `local.data` file
 natively (via quad-storage) — and on load fast-forwards up to six hours of
 elapsed real time, so the ship keeps flying while the tab is closed. The save

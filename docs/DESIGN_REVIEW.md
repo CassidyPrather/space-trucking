@@ -51,6 +51,12 @@ deliberately below.
 - [ ] Visuals follow [ART_DIRECTION.md](ART_DIRECTION.md) or amend it in the
       same change: palette roles only (the purity test enforces it), correct
       material family, top-left light, deterministic wear.
+- [ ] Accessible by default: every new animation is filed as feedback,
+      decoration, or instruction per ART_DIRECTION.md's Motion section —
+      decoration gates on the reduced-motion flag and freezes to a state
+      that still reads — and no signal rides on hue alone (No hue alone
+      section); the bar is a walk of the renderer showing nothing loops
+      while reduced motion is on and nothing gated became unreadable.
 - [ ] Deferred-deliberately list is current.
 
 ## Deferred deliberately

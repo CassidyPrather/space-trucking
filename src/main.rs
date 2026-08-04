@@ -55,6 +55,17 @@ const SAVE_EVERY: f64 = 10.0;
 /// cadence as the save.
 const REPLAY_KEY: &str = "space-trucking/replay";
 
+/// Storage key the web shell mirrors `prefers-reduced-motion` into: `"1"`
+/// while reduced, absent otherwise (see `web/index.html`). Read once at
+/// boot — a mid-session OS toggle applies on the next load. Native builds
+/// have no shell writing it, so the key stays absent and motion stays full.
+const REDUCED_MOTION_KEY: &str = "space-trucking/reduced-motion";
+
+/// Whether the player's OS asked for reduced motion, per the mirrored key.
+fn reduced_motion() -> bool {
+    storage::get(REDUCED_MOTION_KEY).as_deref() == Some("1")
+}
+
 /// Longest frame the replay pacer banks, matching the sim's own clamp so a
 /// backgrounded playback does not spiral catching up.
 const REPLAY_FRAME_CLAMP: f32 = 0.25;
@@ -100,6 +111,7 @@ async fn main() {
     let mut audio = Audio::load().await;
     let mut juice = Juice::default();
     let mut tutor = Tutor::default();
+    let reduced_motion = reduced_motion();
     // Wall-clock idle for the onboarding ghost: seconds since the player
     // last pressed, keyed, or toggled anything. Pointer motion deliberately
     // does not count — watching must not hold the tutor at bay.
@@ -183,6 +195,7 @@ async fn main() {
                 ghost: tutor.ghost(),
                 audio_waiting: audio.needs_gesture(),
                 audio_muted: audio.muted(),
+                reduced_motion,
             },
         );
         draw_version(palette::VERSION_TEXT);
@@ -224,6 +237,9 @@ async fn replay_session(path: Option<String>) {
     let mut cursor = recording.cursor();
     let mut audio = Audio::load().await;
     let mut juice = Juice::default();
+    // The viewer's own preference, not the recorded session's: reduced
+    // motion is presentation, and the tape carries only inputs.
+    let reduced_motion = reduced_motion();
     let target = pixel_target();
     let mut accumulator: f32 = 0.0;
     let mut rolling = true;
@@ -258,6 +274,7 @@ async fn replay_session(path: Option<String>) {
                 ghost: None,
                 audio_waiting: audio.needs_gesture(),
                 audio_muted: audio.muted(),
+                reduced_motion,
             },
         );
         draw_version(palette::fade(palette::AMBER, 0.75));

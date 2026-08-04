@@ -203,6 +203,33 @@
     <script src="quad-storage.js"></script>
     <script>
         "use strict";
+        // Reduced motion: the game gates its decorative animation on this
+        // key (docs/ART_DIRECTION.md, Motion). Mirror the OS preference into
+        // the localStorage key the wasm reads through quad-storage at boot:
+        // '1' while reduced, removed otherwise. The change listener keeps
+        // the mirror current if the OS setting flips mid-session, though the
+        // game itself applies it on the next load.
+        (() => {
+            const KEY = "space-trucking/reduced-motion";
+            const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+            const mirror = () => {
+                try {
+                    if (query.matches) {
+                        localStorage.setItem(KEY, "1");
+                    } else {
+                        localStorage.removeItem(KEY);
+                    }
+                } catch (e) {
+                    // Storage refused: the key stays as it was, and the
+                    // game errs toward full motion.
+                }
+            };
+            mirror();
+            query.addEventListener("change", mirror);
+        })();
+    </script>
+    <script>
+        "use strict";
         const status = document.getElementById("status");
         function fail(message) {
             status.classList.remove("loading");

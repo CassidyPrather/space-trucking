@@ -29,6 +29,7 @@ const POI_COLOR: Color = Color::new(0.55, 0.60, 0.75, 1.0);
 const SHIP_COLOR: Color = Color::new(0.95, 0.85, 0.55, 1.0);
 const GRID_COLOR: Color = Color::new(0.25, 0.27, 0.33, 1.0);
 const OVERLAY: Color = Color::new(0.85, 0.85, 0.90, 0.75);
+const MUTED_OVERLAY: Color = Color::new(0.55, 0.55, 0.60, 0.55);
 const HIGHLIGHT: Color = Color::new(1.0, 0.83, 0.42, 0.95);
 const TEXT_SIZE: u16 = 16;
 const TEXT_MARGIN: f32 = 8.0;
@@ -55,7 +56,7 @@ async fn main() {
         let dt = get_frame_time();
 
         sim.advance(dt, &input);
-        audio.update(dt, sim.cues(), toggle_mute);
+        audio.update(dt, &sim, toggle_mute);
         draw(&sim, &view, &audio);
         next_frame().await;
     }
@@ -166,6 +167,8 @@ fn draw(sim: &Sim, view: &View, audio: &Audio) {
     let size = measure_text(&version, None, TEXT_SIZE, 1.0);
     let color = if audio.needs_gesture() {
         HIGHLIGHT
+    } else if audio.muted() {
+        MUTED_OVERLAY
     } else {
         OVERLAY
     };

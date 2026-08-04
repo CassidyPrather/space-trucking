@@ -7,12 +7,11 @@
 //! playing nothing at all. It deliberately does not touch `synth`, which is
 //! being rewritten in parallel.
 
-use space_trucking::sim::Cue;
+use space_trucking::sim::Sim;
 
 /// Placeholder audio state: tracks mute and wakefulness, plays nothing.
 pub struct Audio {
     /// Whether the player has muted.
-    #[allow(dead_code)] // Read again once the audio stage lands.
     muted: bool,
     /// Whether a real user gesture has arrived. Browsers keep the audio
     /// context suspended until one does, so anything looping must wait.
@@ -31,9 +30,10 @@ impl Audio {
     }
 
     /// One frame: track the mute key and wakefulness. Cue playback and loop
-    /// easing arrive with the audio stage.
+    /// easing arrive with the audio stage, which reads both `sim.cues()` and
+    /// the continuous state accessors (travel, warp, hum, omen, docked).
     #[allow(clippy::missing_const_for_fn)] // The real update will play sounds.
-    pub fn update(&mut self, _dt: f32, _cues: &[Cue], toggle_mute: bool) {
+    pub fn update(&mut self, _dt: f32, _sim: &Sim, toggle_mute: bool) {
         if toggle_mute {
             self.muted = !self.muted;
             self.awake = true;
@@ -45,5 +45,11 @@ impl Audio {
     #[must_use]
     pub const fn needs_gesture(&self) -> bool {
         !self.awake
+    }
+
+    /// Whether the player has muted, for the speaker icon.
+    #[must_use]
+    pub const fn muted(&self) -> bool {
+        self.muted
     }
 }

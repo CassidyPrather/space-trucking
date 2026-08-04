@@ -48,7 +48,7 @@ whatever it is that is being counted.
 The game auto-saves — to localStorage on the web, to a `local.data` file
 natively (via quad-storage) — and on load fast-forwards up to six hours of
 elapsed real time, so the ship keeps flying while the tab is closed. The save
-format is versioned (`STV2`) with no compatibility promises before 1.0; an
+format is versioned (`STV3`) with no compatibility promises before 1.0; an
 unreadable save becomes a fresh run, quietly.
 
 ### Privacy

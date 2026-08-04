@@ -228,6 +228,11 @@ impl Aggregate {
                 Cue::Select
                 | Cue::OmenEnd
                 | Cue::Creak { .. }
+                | Cue::RatAboard
+                | Cue::RatSkitter { .. }
+                | Cue::RatNibble
+                | Cue::RatChased
+                | Cue::RatLeft
                 | Cue::Pause { .. }
                 | Cue::Warp { .. } => {}
             }

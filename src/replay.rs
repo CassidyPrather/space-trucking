@@ -2,7 +2,7 @@
 //!
 //! The sim is a pure function of (state, input sequence) — the sealed-log
 //! idea from `docs/NETWORKING.md`, reused offline. A [`Recording`] keeps a
-//! starting save (the same `STV2` string the autosave writes) plus a sparse,
+//! starting save (the same save string the autosave writes) plus a sparse,
 //! tick-stamped list of the frames that actually said anything, and
 //! [`Recording::replay`] rebuilds the sim from the save and re-applies the
 //! log. The result is bit-identical to the live session at the same tick —
@@ -124,7 +124,7 @@ const fn active(frame: &InputFrame) -> bool {
 /// sparse log that [`Recording::replay`] turns back into the identical run.
 #[derive(Clone, Debug)]
 pub struct Recording {
-    /// The starting state: an `STV2` save, embedded verbatim.
+    /// The starting state: a save string, embedded verbatim.
     base: String,
     /// Tick-stamped interesting frames, in the order they were applied.
     /// Several entries may share a tick (frames outnumber ticks at high

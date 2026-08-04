@@ -73,6 +73,31 @@ const DELIVERED_GAIN: f32 = 0.35;
 /// Quiet: creaks are texture, not information.
 const CREAK_GAIN: f32 = 0.25;
 
+/// Gain for a rat stowing away: one soft creak off the round-robin bank —
+/// something shifted in the hold as the ship cast off. Under [`CREAK_GAIN`]
+/// so it hides among the ordinary hull noises; the rat is a discovery, not
+/// an announcement.
+const RAT_ABOARD_GAIN: f32 = 0.2;
+
+/// Peak gain for a rat hop, scaled by [`loudness`] of its intensity. The
+/// quietest recurring sound in the game — `tick_pick` at a whisper, every
+/// ten seconds or so, deliberately ignorable.
+const RAT_SKITTER_GAIN: f32 = 0.12;
+
+/// Gain for a nibble: the buzz voice at very low gain, more felt than
+/// heard. It recurs for as long as the rat is ignored, so anything louder
+/// would nag — and nagging is exactly what this event must not do.
+const RAT_NIBBLE_GAIN: f32 = 0.08;
+
+/// Gain for a chase: `tick_pick` at pickup strength — the player acted and
+/// gets the same tactile acknowledgement a lift does.
+const RAT_CHASED_GAIN: f32 = 0.3;
+
+/// Gain for the rat leaving: the latch voice, low — a small door closing
+/// somewhere below decks. Under [`DEPART_GAIN`], since it usually lands
+/// beside an arrival clunk.
+const RAT_LEFT_GAIN: f32 = 0.25;
+
 /// Gain for the pause and warp blips, which do not vary.
 const UI_GAIN: f32 = 0.35;
 
@@ -300,6 +325,17 @@ impl Audio {
                 self.next_creak = (self.next_creak + 1) % self.creaks.len();
                 (creak, CREAK_GAIN * loudness(intensity))
             }
+            Cue::RatAboard => {
+                let creak = &self.creaks[self.next_creak];
+                self.next_creak = (self.next_creak + 1) % self.creaks.len();
+                (creak, RAT_ABOARD_GAIN)
+            }
+            Cue::RatSkitter { intensity } => {
+                (&self.tick_pick, RAT_SKITTER_GAIN * loudness(intensity))
+            }
+            Cue::RatNibble => (&self.buzz, RAT_NIBBLE_GAIN),
+            Cue::RatChased => (&self.tick_pick, RAT_CHASED_GAIN),
+            Cue::RatLeft => (&self.latch, RAT_LEFT_GAIN),
             Cue::Pause { paused: false } | Cue::Warp { engaged: true } => (&self.blip_up, UI_GAIN),
             Cue::Pause { paused: true } | Cue::Warp { engaged: false } => {
                 (&self.blip_down, UI_GAIN)

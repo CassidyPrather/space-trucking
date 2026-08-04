@@ -22,8 +22,10 @@ end of every work stage.
   - `map.rs` — points of interest and travel.
   - `cargo.rs` — cargo kinds, pieces, and placement rules.
   - `barter.rs` — valuation and trade resolution.
-  - `event.rs` — the suspicious-jump state machine.
-  - `save.rs` — `STV2` serialization.
+  - `event.rs` / `rats.rs` — the events, as siblings with a uniform hook
+    shape (on_depart/on_dock/on_tick/on_press + own save lines and cues);
+    a third event should copy the shape, not invent one.
+  - `save.rs` — `STV3` serialization.
 - `src/net/` — deterministic lockstep multiplayer per `docs/NETWORKING.md`:
   protocol messages, helm/client session state machines, the guild server
   (idempotent max-merge delivery counters), and the seeded flaky-network
@@ -114,7 +116,7 @@ lives in `src/palette.rs` — a purity test fails the build on any raw color
 constructor elsewhere in the frontend. Follow the file or amend it in the
 same change.
 
-The save string is versioned (magic `STV2`), hand-rolled in
+The save string is versioned (magic `STV3`), hand-rolled in
 `src/sim/save.rs`, with no compatibility guarantees before 1.0. Bump the
 magic on any breaking change; an old or corrupt save fails safe into a fresh
 game, never a panic.

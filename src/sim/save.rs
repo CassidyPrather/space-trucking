@@ -1,8 +1,9 @@
 //! Versioned, line-oriented text saves.
 //!
 //! The format stores only what cannot be recomputed: seed, clock, RNG state,
-//! delivery tally, visit counts, ship, event machine, eased dial, and the
-//! pieces. Drags are transient — a held piece serialises at its origin, so
+//! delivery tally, visit counts, ship, leg counter, both event machines (the
+//! omen and the rat), eased dial, and the pieces with their gnaw marks.
+//! Drags are transient — a held piece serialises at its origin, so
 //! a save mid-drag drops every player's drag on load. Everything
 //! a visit derives (shelf layout hashes, wants, trade readiness) is rebuilt
 //! from the seed on load, which keeps the format small and the determinism
@@ -18,14 +19,16 @@ use std::fmt::Write as _;
 use std::str::FromStr;
 
 use super::cargo::{Kind, Loc, Piece};
-use super::event::{Events, Phase};
+use super::event::{Omen, Phase};
 use super::layout::{GRID_COLS, GRID_ROWS, SHELF_SLOTS};
 use super::map::{POI_COUNT, POIS, PoiId, Ship, ShipState};
+use super::rats::{CHASE_LIMIT, Rat, Rats};
 use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 
-/// Magic-plus-version header of every save this build writes. `STV2` added
-/// the `deliveries` line; older versions fail safe as unsupported.
-const MAGIC: &str = "STV2";
+/// Magic-plus-version header of every save this build writes. `STV3` split
+/// the leg counter out of the omen line and added the rat state line plus
+/// the per-piece gnaw token; `STV2` and older fail safe as unsupported.
+const MAGIC: &str = "STV3";
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -81,14 +84,10 @@ pub(crate) fn serialize(sim: &Sim) -> String {
         }
     }
     let _ = writeln!(out, " {}", opt_token(sim.ship.selected));
-    let events = &sim.events;
-    let _ = write!(
-        out,
-        "event {} {}",
-        events.leg_counter,
-        opt_token(events.jump_at)
-    );
-    match events.phase {
+    let _ = writeln!(out, "legs {}", sim.legs);
+    let omen = &sim.omen;
+    let _ = write!(out, "omen {}", opt_token(omen.jump_at));
+    match omen.phase {
         Phase::Idle => {
             let _ = write!(out, " idle 0");
         }
@@ -102,9 +101,28 @@ pub(crate) fn serialize(sim: &Sim) -> String {
     let _ = writeln!(
         out,
         " {:08x} {:08x}",
-        events.light.to_bits(),
-        events.omen.to_bits()
+        omen.light.to_bits(),
+        omen.swell.to_bits()
     );
+    match &sim.rats.rat {
+        None => {
+            let _ = writeln!(out, "rat -");
+        }
+        Some(rat) => {
+            let _ = writeln!(
+                out,
+                "rat {} {} {} {} {} {} {} {}",
+                rat.cell.0,
+                rat.cell.1,
+                rat.prev_cell.0,
+                rat.prev_cell.1,
+                rat.moved_at,
+                rat.next_move,
+                rat.next_nibble,
+                rat.chases
+            );
+        }
+    }
     // The dial is eased state, not derivable from the pieces alone: its bits
     // travel like light and omen do. Zero when traveling.
     let eagerness = sim.barter.as_ref().map_or(0.0, |barter| barter.eagerness);
@@ -112,10 +130,11 @@ pub(crate) fn serialize(sim: &Sim) -> String {
     for piece in &sim.pieces {
         let _ = write!(
             out,
-            "piece {} {} {}",
+            "piece {} {} {} {}",
             piece.id,
             piece.kind.index(),
-            piece.variant
+            piece.variant,
+            u8::from(piece.gnawed)
         );
         match piece.loc {
             Loc::Hold { x, y } => {
@@ -156,7 +175,9 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let deliveries = reader.kv("deliveries")?;
     let visits = parse_visits(&mut reader)?;
     let ship = parse_ship(&mut reader)?;
-    let events = parse_event(&mut reader)?;
+    let legs = reader.kv("legs")?;
+    let omen = parse_omen(&mut reader)?;
+    let rats = parse_rat(&mut reader)?;
     let eagerness = f32::from_bits(reader.kv_hex32("eager")?);
     let (pieces, next_piece) = parse_pieces(&mut reader)?;
 
@@ -189,7 +210,9 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         barter,
         values,
         visits,
-        events,
+        legs,
+        omen,
+        rats,
         last_violation: None,
     })
 }
@@ -253,14 +276,13 @@ fn parse_ship(reader: &mut Reader<'_>) -> Result<Ship, SaveError> {
     })
 }
 
-/// The `event` line: leg counter, jump schedule, phase, eased floats.
-fn parse_event(reader: &mut Reader<'_>) -> Result<Events, SaveError> {
+/// The `omen` line: jump schedule, phase, eased floats.
+fn parse_omen(reader: &mut Reader<'_>) -> Result<Omen, SaveError> {
     let line = reader.next_line()?;
     let mut tokens = line.split_whitespace();
-    if tokens.next() != Some("event") {
+    if tokens.next() != Some("omen") {
         return Err(reader.err());
     }
-    let leg_counter = reader.token(tokens.next())?;
     let jump_at = reader.opt_token(tokens.next())?;
     let phase_name = tokens.next();
     let elapsed: u32 = reader.token(tokens.next())?;
@@ -271,14 +293,54 @@ fn parse_event(reader: &mut Reader<'_>) -> Result<Events, SaveError> {
         _ => return Err(reader.err()),
     };
     let light = f32::from_bits(reader.hex32(tokens.next())?);
-    let omen = f32::from_bits(reader.hex32(tokens.next())?);
-    Ok(Events {
-        leg_counter,
+    let swell = f32::from_bits(reader.hex32(tokens.next())?);
+    Ok(Omen {
         jump_at,
         phase,
         light,
-        omen,
+        swell,
     })
+}
+
+/// The `rat` line: `-` for no stowaway, else its cell, the cell it last
+/// hopped from, the hop tick, both schedules, and the chase count — all
+/// bounds-checked so a hostile save cannot smuggle a rat off the grid or
+/// past the chase limit.
+fn parse_rat(reader: &mut Reader<'_>) -> Result<Rats, SaveError> {
+    let line = reader.next_line()?;
+    let mut tokens = line.split_whitespace();
+    if tokens.next() != Some("rat") {
+        return Err(reader.err());
+    }
+    match tokens.next() {
+        Some("-") => Ok(Rats { rat: None }),
+        first => {
+            let x: u8 = reader.token(first)?;
+            let y: u8 = reader.token(tokens.next())?;
+            let px: u8 = reader.token(tokens.next())?;
+            let py: u8 = reader.token(tokens.next())?;
+            if x >= GRID_COLS || y >= GRID_ROWS || px >= GRID_COLS || py >= GRID_ROWS {
+                return Err(reader.err());
+            }
+            let moved_at = reader.token(tokens.next())?;
+            let next_move = reader.token(tokens.next())?;
+            let next_nibble = reader.token(tokens.next())?;
+            let chases: u8 = reader.token(tokens.next())?;
+            if chases >= CHASE_LIMIT {
+                return Err(reader.err());
+            }
+            Ok(Rats {
+                rat: Some(Rat {
+                    cell: (x, y),
+                    prev_cell: (px, py),
+                    moved_at,
+                    next_move,
+                    next_nibble,
+                    chases,
+                }),
+            })
+        }
+    }
 }
 
 /// The `piece` lines, terminated by the `next_piece` line.
@@ -293,11 +355,17 @@ fn parse_pieces(reader: &mut Reader<'_>) -> Result<(Vec<Piece>, u32), SaveError>
                 let kind_index: usize = reader.token(tokens.next())?;
                 let kind = *Kind::ALL.get(kind_index).ok_or_else(|| reader.err())?;
                 let variant = reader.token(tokens.next())?;
+                let gnawed = match tokens.next() {
+                    Some("0") => false,
+                    Some("1") => true,
+                    _ => return Err(reader.err()),
+                };
                 let loc = parse_loc(reader, &mut tokens, kind)?;
                 pieces.push(Piece {
                     id,
                     kind,
                     variant,
+                    gnawed,
                     loc,
                 });
             }
@@ -471,7 +539,9 @@ mod tests {
     }
 
     /// A worked save with every section populated: docked pieces composed
-    /// into a trade, then relaunched mid-leg so ship/event lines are rich.
+    /// into a trade, then relaunched mid-leg so ship/event lines are rich —
+    /// including a mid-tenure rat and a bitten piece, so the STV3 grammar
+    /// is exercised in full.
     fn worked_save() -> String {
         let mut sim = Sim::new(0xFADE);
         let press = |p: Vec2| InputFrame {
@@ -489,7 +559,36 @@ mod tests {
         for _ in 0..90 {
             sim.advance(TICK_DT, &InputFrame::default());
         }
+        sim.rats.rat = Some(Rat {
+            cell: (4, 1),
+            prev_cell: (2, 3),
+            moved_at: 30,
+            next_move: 700,
+            next_nibble: 2800,
+            chases: 1,
+        });
+        sim.pieces[0].gnawed = true;
         sim.save_string()
+    }
+
+    #[test]
+    fn the_rat_line_and_gnaw_token_round_trip_exactly() {
+        let save = worked_save();
+        let sim = Sim::from_save(&save).expect("the worked save parses");
+        assert_eq!(
+            sim.rats.rat,
+            Some(Rat {
+                cell: (4, 1),
+                prev_cell: (2, 3),
+                moved_at: 30,
+                next_move: 700,
+                next_nibble: 2800,
+                chases: 1,
+            })
+        );
+        assert!(sim.pieces[0].gnawed, "the bite must survive the trip");
+        assert!(!sim.pieces[1].gnawed, "and must not spread in transit");
+        assert_eq!(sim.save_string(), save);
     }
 
     #[test]
@@ -530,16 +629,27 @@ mod tests {
     #[test]
     fn out_of_range_fields_fail_safe() {
         let save = worked_save();
+        let rat_line = "rat 4 1 2 3 30 700 2800 1";
+        assert!(save.contains(rat_line), "worked save must carry the rat");
         for (needle, bad) in [
             ("ship travel 6 0", "ship travel 9 0"), // POI out of range
             ("tick 90", "tick -90"),
             ("tick 90", "tick 99999999999999999999999"),
+            // The rat must sit inside the grid, hop from inside the grid,
+            // and stay under the chase limit.
+            (rat_line, "rat 6 1 2 3 30 700 2800 1"),
+            (rat_line, "rat 4 4 2 3 30 700 2800 1"),
+            (rat_line, "rat 4 1 9 3 30 700 2800 1"),
+            (rat_line, "rat 4 1 2 4 30 700 2800 1"),
+            (rat_line, "rat 4 1 2 3 30 700 2800 3"),
+            (rat_line, "rat 4 1 2 3 30 700 2800 -1"),
         ] {
             let mangled = save.replacen(needle, bad, 1);
             assert_ne!(mangled, save, "needle {needle:?} not found in save");
             assert!(Sim::from_save(&mangled).is_err(), "{bad:?} parsed anyway");
         }
-        // Piece fields: an unknown kind, an off-grid hold cell, a bad slot.
+        // Piece fields: an unknown kind, an off-grid hold cell, a bad slot,
+        // an unknown surface, a gnaw token that is neither 0 nor 1.
         let docked = Sim::new(3).save_string();
         let piece_line = docked
             .lines()
@@ -547,10 +657,12 @@ mod tests {
             .expect("a fresh save has pieces")
             .to_owned();
         for bad in [
-            "piece 0 99 0 hold 0 0",
-            "piece 0 0 0 hold 9 9",
-            "piece 0 0 0 shelf 7",
-            "piece 0 0 0 nowhere 0",
+            "piece 0 99 0 0 hold 0 0",
+            "piece 0 0 0 0 hold 9 9",
+            "piece 0 0 0 0 shelf 7",
+            "piece 0 0 0 0 nowhere 0",
+            "piece 0 0 0 2 hold 0 0",
+            "piece 0 0 0 gnawed hold 0 0",
         ] {
             let mangled = docked.replacen(&piece_line, bad, 1);
             assert!(Sim::from_save(&mangled).is_err(), "{bad:?} parsed anyway");

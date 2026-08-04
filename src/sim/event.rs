@@ -1,10 +1,17 @@
-//! Travel-time events: the suspicious-cargo jump, and ambient hull creaks.
+//! The suspicious-cargo omen: the game's first event, plus ambient creaks.
 //!
 //! Departing with a suspicious crate aboard schedules an omen somewhere in
 //! the middle half of the leg. The omen dims the console light and swells the
 //! hum, the jump skips most of the remaining distance, and then everything
-//! eases back to normal. All timing derives from `splitmix(seed, leg)`, so
+//! eases back to normal. All timing derives from `splitmix(seed, legs)`, so
 //! the whole episode replays and saves exactly.
+//!
+//! Structurally [`Omen`] is one of the two event siblings (the other is
+//! `rats::Rats`): its own state struct, a deterministic schedule hashed off
+//! the seed, `on_depart` / `on_dock` / `on_tick` hooks called from `Sim`,
+//! its own save line, its own cues. The one extra hook, [`Omen::travel_tick`],
+//! exists because this event steers leg progress; a sibling adds hooks like
+//! that when its mechanics genuinely need them, and no framework grows.
 
 use super::{Cue, TICK_DT, splitmix, step_toward};
 
@@ -47,39 +54,35 @@ pub enum Phase {
     },
 }
 
-/// Per-leg event state plus the eased ambience values it drives.
+/// Per-leg omen state plus the eased ambience values it drives.
 #[derive(Clone, Debug)]
-pub struct Events {
-    /// Departures so far, salting each leg's schedule hash.
-    pub leg_counter: u64,
+pub struct Omen {
     /// Progress tick the omen starts at, if this leg carries one.
     pub jump_at: Option<u64>,
     pub phase: Phase,
     /// Console light, `0..=1`, eased every tick.
     pub light: f32,
     /// Omen intensity for the hum swell, `0..=1`, eased every tick.
-    pub omen: f32,
+    pub swell: f32,
 }
 
-impl Events {
+impl Omen {
     pub const fn new() -> Self {
         Self {
-            leg_counter: 0,
             jump_at: None,
             phase: Phase::Idle,
             light: 1.0,
-            omen: 0.0,
+            swell: 0.0,
         }
     }
 
-    /// Called once per departure: count the leg and, if a suspicious crate
-    /// is aboard, schedule an omen in `[leg_ticks / 2, leg_ticks * 3 / 4)`.
-    pub fn on_depart(&mut self, seed: u64, leg_ticks: u64, suspicious: bool) {
-        self.leg_counter += 1;
+    /// Called once per departure with the run's leg count: if a suspicious
+    /// crate is aboard, schedule an omen in `[leg_ticks / 2, leg_ticks * 3 / 4)`.
+    pub fn on_depart(&mut self, seed: u64, legs: u64, leg_ticks: u64, suspicious: bool) {
         self.jump_at = suspicious.then(|| {
             let lo = leg_ticks / 2;
             let hi = leg_ticks * 3 / 4;
-            lo + splitmix(seed, self.leg_counter) % (hi - lo).max(1)
+            lo + splitmix(seed, legs) % (hi - lo).max(1)
         });
     }
 
@@ -120,7 +123,7 @@ impl Events {
 
     /// Docked before the episode finished (a jump can land nearly on the
     /// pad): close it out so the omen cues always pair up.
-    pub fn on_arrive(&mut self, cues: &mut Vec<Cue>) {
+    pub fn on_dock(&mut self, cues: &mut Vec<Cue>) {
         if self.phase != Phase::Idle {
             self.phase = Phase::Idle;
             cues.push(Cue::OmenEnd);
@@ -128,16 +131,16 @@ impl Events {
         self.jump_at = None;
     }
 
-    /// Every tick, traveling or docked: ease light and omen toward what the
+    /// Every tick, traveling or docked: ease light and swell toward what the
     /// current phase asks for.
-    pub fn ease_tick(&mut self) {
-        let (light_target, omen_target) = match self.phase {
+    pub fn on_tick(&mut self) {
+        let (light_target, swell_target) = match self.phase {
             Phase::Idle => (1.0, 0.0),
             Phase::Omen { .. } => (LIGHT_DIM, 1.0),
             Phase::Wake { .. } => (LIGHT_DIM, 0.0),
         };
         self.light = step_toward(self.light, light_target, LIGHT_RATE * TICK_DT);
-        self.omen = step_toward(self.omen, omen_target, OMEN_RATE * TICK_DT);
+        self.swell = step_toward(self.swell, swell_target, OMEN_RATE * TICK_DT);
     }
 }
 

@@ -30,6 +30,7 @@ pub mod cargo;
 mod event;
 pub mod layout;
 pub mod map;
+mod rats;
 pub mod save;
 
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub};
@@ -38,8 +39,10 @@ pub use barter::{Barter, EAGER_MAX, VALUE};
 pub use cargo::{
     KIND_COUNT, Kind, Loc, Piece, Tag, Violation, placement_check, placement_legal, player_owned,
 };
-use event::Events;
+use event::Omen;
 pub use map::{GUILD, POI_COUNT, POIS, Poi, PoiId, SHIP_SPEED, Ship, ShipState};
+pub use rats::Rat;
+use rats::Rats;
 pub use save::SaveError;
 
 /// Length of one simulation step. Ticks are always exactly this long.
@@ -222,6 +225,19 @@ pub enum Cue {
     Creak {
         intensity: f32,
     },
+    /// A rat stowed away as the ship cast off.
+    RatAboard,
+    /// The rat hopped to another hold cell. Quiet; ambient texture.
+    RatSkitter {
+        intensity: f32,
+    },
+    /// The rat gnawed the piece nearest its cell (see `rats` for the rule).
+    RatNibble,
+    /// A press on the rat's cell shooed it; it relocated instantly.
+    RatChased,
+    /// The rat left the ship — walked off at a lean-hold dock, or driven
+    /// off by the third chase.
+    RatLeft,
     /// Pause was toggled. `paused` is the state just entered.
     Pause {
         paused: bool,
@@ -308,7 +324,11 @@ pub struct Sim {
     values: [u8; KIND_COUNT],
     /// Times each POI has been docked at.
     visits: [u32; POI_COUNT],
-    events: Events,
+    /// Departures so far, salting each leg's event schedules. Shared by the
+    /// event siblings, so it lives here rather than in either of them.
+    legs: u64,
+    omen: Omen,
+    rats: Rats,
     /// The rule behind the most recent hard reject, for the renderer's
     /// icon flash. Transient UI feedback: never serialized.
     last_violation: Option<Violation>,
@@ -328,6 +348,7 @@ impl Sim {
                     id: next_piece,
                     kind,
                     variant: rng.u8(..cargo::VARIANTS),
+                    gnawed: false,
                     loc: Loc::Hold { x, y },
                 };
                 next_piece += 1;
@@ -371,7 +392,9 @@ impl Sim {
             barter: Some(barter),
             values: barter::visit_values(seed, GUILD, 1),
             visits,
-            events: Events::new(),
+            legs: 0,
+            omen: Omen::new(),
+            rats: Rats::new(),
             last_violation: None,
         }
     }
@@ -594,7 +617,20 @@ impl Sim {
     /// Console light, `0..=1`. The suspicious-jump omen dims it.
     #[must_use]
     pub const fn light(&self) -> f32 {
-        self.events.light
+        self.omen.light
+    }
+
+    /// Departures so far this run.
+    #[must_use]
+    pub const fn legs(&self) -> u64 {
+        self.legs
+    }
+
+    /// The stowaway rat, if one is aboard. The renderer derives its hop
+    /// tween from `prev_cell` and `moved_at` plus [`Sim::alpha`].
+    #[must_use]
+    pub const fn rat(&self) -> Option<Rat> {
+        self.rats.rat
     }
 
     /// Whether a suspicious piece is stowed in the hold.
@@ -609,7 +645,7 @@ impl Sim {
     /// Omen intensity for the hum swell, `0..=1`; zero when idle.
     #[must_use]
     pub const fn omen(&self) -> f32 {
-        self.events.omen
+        self.omen.swell
     }
 
     /// Serialise the whole run as versioned line-oriented text.
@@ -665,9 +701,18 @@ impl Sim {
         self.held.iter().flatten().any(|held| held.piece == piece)
     }
 
-    /// A press either lifts a piece or actuates whatever it landed on.
+    /// A press either chases the rat, lifts a piece, or actuates whatever
+    /// it landed on. The rat comes first: a press on its cell shoos it and
+    /// does NOT lift the piece under it — piece picks happen only where no
+    /// rat sits. Every other press path is unchanged.
     fn on_press(&mut self, player: PlayerId, p: Vec2) {
         if self.held(player).is_some() {
+            return;
+        }
+        if self
+            .rats
+            .on_press(self.seed, self.tick, p, &self.pieces, &mut self.cues)
+        {
             return;
         }
         let docked = matches!(self.ship.state, ShipState::Docked(_));
@@ -962,8 +1007,10 @@ impl Sim {
         self.pieces
             .retain(|piece| matches!(piece.loc, Loc::Hold { .. }));
         self.barter = None;
-        self.events
-            .on_depart(self.seed, leg_ticks, self.suspicious_aboard());
+        self.legs += 1;
+        let suspicious = self.suspicious_aboard();
+        self.omen
+            .on_depart(self.seed, self.legs, leg_ticks, suspicious);
         self.ship.state = ShipState::Traveling {
             from,
             to,
@@ -971,6 +1018,15 @@ impl Sim {
             leg_ticks,
         };
         self.cues.push(Cue::Depart);
+        // After the departure clunk: the stowaway slips in with the cargo.
+        self.rats.on_depart(
+            self.seed,
+            self.legs,
+            self.tick,
+            &self.pieces,
+            suspicious,
+            &mut self.cues,
+        );
     }
 
     /// One fixed step.
@@ -986,7 +1042,7 @@ impl Sim {
         } = self.ship.state
         {
             progress += 1;
-            self.events
+            self.omen
                 .travel_tick(&mut progress, leg_ticks, &mut self.cues);
             if let Some(cue) = event::creak(self.seed, self.tick) {
                 self.cues.push(cue);
@@ -1007,7 +1063,9 @@ impl Sim {
             }
         }
 
-        self.events.ease_tick();
+        self.omen.on_tick();
+        self.rats
+            .on_tick(self.seed, self.tick, &mut self.pieces, &mut self.cues);
 
         if let Some(barter) = &mut self.barter {
             // The dial eases toward the trade's true ratio (capped at the
@@ -1031,10 +1089,13 @@ impl Sim {
         self.ship.pos = pos;
         self.ship.state = ShipState::Docked(poi);
         self.ship.selected = None;
-        self.events.on_arrive(&mut self.cues);
+        self.omen.on_dock(&mut self.cues);
         if poi == GUILD {
             self.steal_crate();
         }
+        // After any hangar steal, so the walk-off gate reads the hold as
+        // the dock leaves it.
+        self.rats.on_dock(&self.pieces, &mut self.cues);
         self.visits[usize::from(poi)] += 1;
         let visit = self.visits[usize::from(poi)];
         let (barter, goods) = barter::generate(
@@ -1175,6 +1236,7 @@ mod tests {
             id,
             kind,
             variant: 0,
+            gnawed: false,
             loc: Loc::Hold { x, y },
         });
         assert!(
@@ -1192,9 +1254,34 @@ mod tests {
             id,
             kind,
             variant: 0,
+            gnawed: false,
             loc,
         });
         id
+    }
+
+    /// Test scaffolding: a rat mid-tenure, schedules wound close so the
+    /// monkeys meet skitters and nibbles quickly.
+    const fn inject_rat(sim: &mut Sim) {
+        sim.rats.rat = Some(Rat {
+            cell: (3, 1),
+            prev_cell: (3, 1),
+            moved_at: 0,
+            next_move: 60,
+            next_nibble: 120,
+            chases: 0,
+        });
+    }
+
+    /// Whether a stowed piece's footprint covers `cell`.
+    fn cell_covered(sim: &Sim, cell: (u8, u8)) -> bool {
+        sim.pieces().iter().any(|p| {
+            let Loc::Hold { x, y } = p.loc else {
+                return false;
+            };
+            let (w, h) = p.kind.cells();
+            cell.0 >= x && cell.0 < x + w && cell.1 >= y && cell.1 < y + h
+        })
     }
 
     /// Select `poi` and pull the launch lever; zero-dt frames run no ticks,
@@ -1205,7 +1292,9 @@ mod tests {
         sim
     }
 
-    /// Select `poi` on an already-docked sim and pull the lever.
+    /// Select `poi` on an already-docked sim and pull the lever. The depart
+    /// frame may also carry a `RatAboard` on a crowded hold, so only the
+    /// departure itself is asserted exactly.
     fn launch(sim: &mut Sim, poi: PoiId) {
         let target = POIS[usize::from(poi)].pos;
         sim.advance(0.0, &press_at(target.x, target.y));
@@ -1213,7 +1302,7 @@ mod tests {
         assert_eq!(sim.ship().selected, Some(poi));
         let lever = rect_center(layout::LAUNCH_LEVER);
         sim.advance(0.0, &press_at(lever.x, lever.y));
-        assert_eq!(sim.cues(), [Cue::Depart]);
+        assert_eq!(sim.cues().first(), Some(&Cue::Depart));
         assert!(matches!(sim.ship().state, ShipState::Traveling { .. }));
     }
 
@@ -1554,6 +1643,11 @@ mod tests {
         // STV1 predates the delivery tally: fail safe into a fresh game.
         assert_eq!(
             Sim::from_save("STV1\nseed 1").unwrap_err(),
+            SaveError::UnsupportedVersion
+        );
+        // STV2 predates the rat and the gnaw token: same fail-safe refusal.
+        assert_eq!(
+            Sim::from_save("STV2\nseed 1").unwrap_err(),
             SaveError::UnsupportedVersion
         );
         let mangled = Sim::new(1).save_string().replace("seed", "sneed");
@@ -2004,6 +2098,9 @@ mod tests {
     #[test]
     fn no_input_stream_loses_cargo_without_an_accept() {
         let mut sim = Sim::new(0xC0FF_EE00);
+        // The second event runs live under the monkey: skitters, nibbles,
+        // and chases must leave every invariant standing.
+        inject_rat(&mut sim);
         let mut rng = fastrand::Rng::with_seed(0xF00D);
         let owned = |sim: &Sim| sim.pieces().iter().filter(|p| player_owned(p.loc)).count();
         let mut before = owned(&sim);
@@ -2035,6 +2132,14 @@ mod tests {
                     sim.pieces().iter().any(|p| p.id == held.piece),
                     "frame {frame}: held piece {} is a ghost",
                     held.piece
+                );
+            }
+            // The rat, while it lasts, stays on the grid.
+            if let Some(rat) = sim.rat() {
+                assert!(
+                    rat.cell.0 < layout::GRID_COLS && rat.cell.1 < layout::GRID_ROWS,
+                    "frame {frame}: rat off the grid at {:?}",
+                    rat.cell
                 );
             }
             before = after;
@@ -2670,12 +2775,14 @@ mod tests {
     }
 
     /// The conservation monkey, crewed: six chaotic players per tick
-    /// through [`Sim::crew_tick`]. The solo monkey's guarantee holds under
-    /// contention, plus the crew invariants — no held id is a ghost, no
-    /// piece is held twice, no two pieces share a surface spot.
+    /// through [`Sim::crew_tick`], with a rat aboard from the first frame.
+    /// The solo monkey's guarantee holds under contention, plus the crew
+    /// invariants — no held id is a ghost, no piece is held twice, no two
+    /// pieces share a surface spot.
     #[test]
     fn no_crew_input_stream_loses_cargo_without_an_accept() {
         let mut sim = Sim::new(0xC0FF_EE01);
+        inject_rat(&mut sim);
         let mut rng = fastrand::Rng::with_seed(0xF00D);
         let owned = |sim: &Sim| sim.pieces().iter().filter(|p| player_owned(p.loc)).count();
         let mut before = owned(&sim);
@@ -2728,7 +2835,347 @@ mod tests {
                     );
                 }
             }
+            if let Some(rat) = sim.rat() {
+                assert!(
+                    rat.cell.0 < layout::GRID_COLS && rat.cell.1 < layout::GRID_ROWS,
+                    "tick {tick}: rat off the grid at {:?}",
+                    rat.cell
+                );
+            }
             before = after;
         }
+    }
+
+    // -------------------------------------------------------------- rats --
+
+    /// Stow enough extra cargo that the hold crosses the boarding gate:
+    /// starter cargo's 5 cells plus two ration bricks is 13 of 24.
+    fn crowd_hold(sim: &mut Sim) {
+        inject_hold(sim, Kind::RationBricks, 2, 2);
+        inject_hold(sim, Kind::RationBricks, 4, 2);
+    }
+
+    /// Fill the hold to all 24 cells, so a boarding rat must perch on a
+    /// piece. Laid out around the starter cargo with untagged kinds only.
+    fn fill_hold(sim: &mut Sim) {
+        for (x, y) in [(1, 0), (5, 0), (0, 1), (1, 1), (5, 1), (0, 3), (1, 3)] {
+            inject_hold(sim, Kind::Seedlings, x, y);
+        }
+        inject_hold(sim, Kind::RationBricks, 3, 0);
+        inject_hold(sim, Kind::RationBricks, 2, 2);
+        inject_hold(sim, Kind::RationBricks, 4, 2);
+    }
+
+    /// A seed whose first departure wins the boarding roll.
+    fn rat_seed() -> u64 {
+        (0..500_u64)
+            .find(|&s| splitmix(s ^ rats::SALT_BOARD, 1) % rats::BOARD_CHANCE == 0)
+            .expect("a boarding roll within 500 seeds")
+    }
+
+    /// A crowded sim just departed for Venus on a boarding seed.
+    fn rat_underway() -> Sim {
+        let mut sim = Sim::new(rat_seed());
+        crowd_hold(&mut sim);
+        launch(&mut sim, VENUS);
+        sim
+    }
+
+    #[test]
+    fn a_crowded_departure_rolls_a_stowaway_deterministically() {
+        let sim = rat_underway();
+        assert!(
+            sim.cues().contains(&Cue::RatAboard),
+            "the boarding roll must announce itself: {:?}",
+            sim.cues()
+        );
+        let rat = sim.rat().expect("the boarding roll hit");
+        assert_eq!(rat.chases, 0);
+        assert_eq!(rat.cell, rat.prev_cell, "a fresh stowaway has not hopped");
+        assert!(
+            !cell_covered(&sim, rat.cell),
+            "with empty cells on offer it boards bare floor"
+        );
+        let again = rat_underway();
+        assert_eq!(again.rat(), sim.rat());
+        assert_eq!(again.save_string(), sim.save_string());
+    }
+
+    #[test]
+    fn boarding_is_one_in_four_and_gated_by_crowding_and_the_crate() {
+        // Crowded holds: the roll lands near one in four over many seeds.
+        let mut boarded = 0_usize;
+        for seed in 0..400_u64 {
+            let mut sim = Sim::new(seed);
+            crowd_hold(&mut sim);
+            launch(&mut sim, VENUS);
+            boarded += usize::from(sim.rat().is_some());
+        }
+        assert!(
+            (60..=140).contains(&boarded),
+            "{boarded}/400 boardings is far from one in four"
+        );
+        // A lean hold (starter cargo, 5 of 24 cells): never.
+        for seed in 0..100_u64 {
+            let mut sim = Sim::new(seed);
+            launch(&mut sim, VENUS);
+            assert!(
+                sim.rat().is_none(),
+                "seed {seed} boarded a rat onto a lean hold"
+            );
+        }
+        // A suspicious crate aboard: never, even crowded on a boarding
+        // seed — the hum unnerves them at the gangway.
+        let mut sim = Sim::new(rat_seed());
+        crowd_hold(&mut sim);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 0);
+        launch(&mut sim, VENUS);
+        assert!(sim.rat().is_none(), "the hum should keep rats ashore");
+        assert!(!sim.cues().contains(&Cue::RatAboard));
+    }
+
+    #[test]
+    fn the_rat_skitters_and_nibbles_on_its_derived_schedule() {
+        let mut sim = rat_underway();
+        let rat = sim.rat().expect("boarding seed");
+        let (mut due_move, mut due_nibble) = (rat.next_move, rat.next_nibble);
+        let mut skitters = 0_usize;
+        let mut nibbles = 0_usize;
+        for _ in 0..6000 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            for cue in sim.cues() {
+                match cue {
+                    Cue::RatSkitter { intensity } => {
+                        assert!((0.0..=1.0).contains(intensity), "skitter {intensity}");
+                        assert_eq!(sim.tick(), due_move, "skitter off schedule");
+                        let rat = sim.rat().expect("it skittered, it is aboard");
+                        assert_eq!(rat.moved_at, sim.tick());
+                        assert_ne!(rat.cell, rat.prev_cell, "a hop must move");
+                        assert!(
+                            !cell_covered(&sim, rat.cell),
+                            "11 empty cells: every hop lands on bare floor"
+                        );
+                        due_move = rat.next_move;
+                        skitters += 1;
+                    }
+                    Cue::RatNibble => {
+                        assert_eq!(sim.tick(), due_nibble, "nibble off schedule");
+                        due_nibble = sim.rat().expect("it nibbled, it is aboard").next_nibble;
+                        nibbles += 1;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        // 13 of 24 cells stowed keeps it fed through the Venus dock.
+        assert!(sim.rat().is_some(), "the rat left a well-stocked hold");
+        // ~10 s hops and ~45 s nibbles across 100 s of sim time.
+        assert!((7..=13).contains(&skitters), "{skitters} skitters in 100 s");
+        assert!((1..=3).contains(&nibbles), "{nibbles} nibbles in 100 s");
+        assert!(
+            sim.pieces().iter().any(|p| p.gnawed),
+            "a nibble must leave a mark"
+        );
+    }
+
+    #[test]
+    fn the_nibble_gnaws_the_nearest_piece_breaking_ties_low() {
+        // Scripted: the rat placed by hand between the starter pieces —
+        // scrap (id 0) at (0,2)-(1,2), vial (id 1) at (0,0), pearls (id 2)
+        // at (2,0)-(2,1) — with the nibble due on the next tick.
+        let mut sim = Sim::new(7);
+        sim.rats.rat = Some(Rat {
+            cell: (1, 1),
+            prev_cell: (1, 1),
+            moved_at: 0,
+            next_move: u64::MAX,
+            next_nibble: 1,
+            chases: 0,
+        });
+        sim.advance(TICK_DT, &InputFrame::default());
+        assert_eq!(sim.cues(), [Cue::RatNibble]);
+        let gnawed = |sim: &Sim| -> Vec<u32> {
+            sim.pieces()
+                .iter()
+                .filter(|p| p.gnawed)
+                .map(|p| p.id)
+                .collect()
+        };
+        // From (1,1) both the scrap and the pearls are one cell away; the
+        // vial is two. The tie breaks to the lower id: the scrap.
+        assert_eq!(gnawed(&sim), [0], "nearest rule or tie-break broke");
+        // Perched on the pearls, distance zero wins outright.
+        sim.rats.rat.as_mut().expect("still aboard").cell = (2, 1);
+        sim.rats.rat.as_mut().expect("still aboard").next_nibble = 2;
+        sim.advance(TICK_DT, &InputFrame::default());
+        assert_eq!(sim.cues(), [Cue::RatNibble]);
+        assert_eq!(gnawed(&sim), [0, 2]);
+        // A re-gnaw of a bitten piece changes nothing but the sound.
+        sim.rats.rat.as_mut().expect("still aboard").next_nibble = 3;
+        let before = sim.pieces().to_vec();
+        sim.advance(TICK_DT, &InputFrame::default());
+        assert_eq!(sim.cues(), [Cue::RatNibble]);
+        assert_eq!(sim.pieces(), before, "a re-gnaw must change nothing");
+    }
+
+    #[test]
+    fn three_chases_evict_the_stowaway() {
+        let mut sim = rat_underway();
+        for round in 1..=2_u8 {
+            let cell = sim.rat().expect("still aboard").cell;
+            let at = cell_center(cell.0, cell.1);
+            sim.advance(0.0, &press_at(at.x, at.y));
+            assert_eq!(sim.cues(), [Cue::RatChased], "chase {round}");
+            let rat = sim.rat().expect("two chases are survivable");
+            assert_eq!(rat.chases, round);
+            assert_ne!(rat.cell, cell, "a chased rat relocates instantly");
+            assert!(sim.held(0).is_none(), "a chase lifts nothing");
+        }
+        let cell = sim.rat().expect("still aboard").cell;
+        let at = cell_center(cell.0, cell.1);
+        sim.advance(0.0, &press_at(at.x, at.y));
+        assert_eq!(sim.cues(), [Cue::RatChased, Cue::RatLeft]);
+        assert!(sim.rat().is_none(), "the third chase abandons ship");
+    }
+
+    #[test]
+    fn a_press_on_a_perched_rat_chases_and_never_lifts_the_piece() {
+        let mut sim = Sim::new(rat_seed());
+        fill_hold(&mut sim);
+        launch(&mut sim, VENUS);
+        let rat = sim.rat().expect("a full hold still boards");
+        assert!(
+            cell_covered(&sim, rat.cell),
+            "a full hold leaves only perches"
+        );
+        let at = cell_center(rat.cell.0, rat.cell.1);
+        let before = sim.pieces().to_vec();
+        sim.advance(0.0, &press_at(at.x, at.y));
+        // Rat first: no Pickup, no cargo cues, nothing lifted or moved.
+        assert_eq!(sim.cues(), [Cue::RatChased]);
+        assert!(sim.held(0).is_none(), "the piece under the rat stays put");
+        assert_eq!(sim.pieces(), before);
+        // The rat hopped away, so the same press now lifts that piece: a
+        // piece pick happens exactly where no rat sits.
+        assert_ne!(sim.rat().expect("chased, not gone").cell, rat.cell);
+        sim.advance(0.0, &press_at(at.x, at.y));
+        assert_eq!(sim.cues(), [Cue::Pickup]);
+        assert!(sim.held(0).is_some());
+    }
+
+    #[test]
+    fn a_lean_hold_at_the_dock_sends_the_rat_ashore() {
+        let mut sim = rat_underway();
+        travel_to_dock(&mut sim);
+        assert!(
+            sim.rat().is_some(),
+            "13 of 24 cells is plenty to eat: it stays aboard"
+        );
+        // Test scaffolding: unload the injected bricks as if traded away,
+        // leaving the starter 5 of 24 cells — under the walk-off gate.
+        sim.pieces
+            .retain(|p| !(p.kind == Kind::RationBricks && matches!(p.loc, Loc::Hold { .. })));
+        launch(&mut sim, GUILD);
+        let mut left_at = None;
+        while matches!(sim.ship().state, ShipState::Traveling { .. }) {
+            sim.advance(TICK_DT, &InputFrame::default());
+            if sim.cues().contains(&Cue::RatLeft) {
+                left_at = Some(sim.tick());
+                assert!(
+                    sim.cues().contains(&Cue::Arrive),
+                    "the walk-off happens at the dock, not mid-flight"
+                );
+            }
+        }
+        assert!(left_at.is_some(), "nothing to eat: the rat walks");
+        assert!(sim.rat().is_none());
+    }
+
+    /// Fast-forward the current leg onto its dock.
+    fn travel_to_dock(sim: &mut Sim) {
+        let leg = leg_of(sim);
+        sim.fast_forward(leg + 10);
+        assert!(matches!(sim.ship().state, ShipState::Docked(_)));
+    }
+
+    #[test]
+    fn a_gnawed_piece_still_trades_and_the_station_resells_it_bitten() {
+        // A run whose opening shelf has a free slot, so the gifted piece
+        // restocks instead of vanishing into the back room.
+        let seed = (0_u64..64)
+            .find(|&s| {
+                Sim::new(s)
+                    .pieces()
+                    .iter()
+                    .filter(|p| matches!(p.loc, Loc::StationShelf { .. }))
+                    .count()
+                    < 4
+            })
+            .expect("no shelf with a free slot in 64 seeds");
+        let mut sim = Sim::new(seed);
+        // Bite the vial by hand (the schedule tests earn the nibble).
+        let vial = sim
+            .pieces
+            .iter_mut()
+            .find(|p| p.kind == Kind::PerfumeVial)
+            .expect("starter vial");
+        vial.gnawed = true;
+        let vial = vial.id;
+        // Gift it through the lever: the one door out.
+        drag(
+            &mut sim,
+            cell_center(0, 0),
+            slot_center(&layout::GIVE_SLOTS, 0),
+        );
+        let accept = rect_center(layout::ACCEPT_LEVER);
+        sim.advance(0.0, &press_at(accept.x, accept.y));
+        assert!(
+            matches!(sim.cues(), [Cue::Accept { .. }]),
+            "a gnawed gift still trades: {:?}",
+            sim.cues()
+        );
+        // It restocked the shelf still bitten: the gnaw travels the economy.
+        let resold = sim
+            .pieces()
+            .iter()
+            .find(|p| p.id == vial)
+            .expect("restocked, not destroyed");
+        assert!(matches!(resold.loc, Loc::StationShelf { .. }));
+        assert!(resold.gnawed, "the bite is permanent");
+    }
+
+    #[test]
+    fn saves_continue_mid_rat_tenure_with_the_bite_intact() {
+        let mut sim = rat_underway();
+        // Deep enough into the leg that the rat has skittered and nibbled.
+        let mut nibbled = false;
+        for _ in 0..3000 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            nibbled |= sim.cues().contains(&Cue::RatNibble);
+        }
+        assert!(nibbled, "the first nibble lands inside 50 s");
+        assert!(sim.pieces().iter().any(|p| p.gnawed));
+        let restored = Sim::from_save(&sim.save_string()).expect("own save must parse");
+        assert_eq!(restored.rat(), sim.rat());
+        assert_eq!(restored.pieces(), sim.pieces());
+        assert_eq!(restored.legs(), sim.legs());
+        assert_save_continues(sim, 8_000);
+    }
+
+    #[test]
+    fn fast_forward_matches_stepwise_across_a_rat_tenure() {
+        let base = rat_underway();
+        // Through every skitter, the first nibble, and the Venus dock.
+        let n = leg_of(&base) + 200;
+        let mut ff = base.clone();
+        ff.fast_forward(n);
+        assert!(ff.cues().is_empty(), "fast_forward must suppress rat cues");
+        let mut step = base;
+        for _ in 0..n {
+            step.advance(TICK_DT, &InputFrame::default());
+        }
+        assert_eq!(ff.save_string(), step.save_string());
+        assert_eq!(ff.rat(), step.rat());
+        assert_eq!(ff.pieces(), step.pieces());
     }
 }

@@ -127,6 +127,11 @@ pub struct Piece {
     pub kind: Kind,
     /// Visual flavour roll, for the renderer to vary sprites with.
     pub variant: u8,
+    /// A rat has been at it: permanently bitten (see `rats`), worth a
+    /// little less at every station (see `barter::GNAW_MALUS`), rendered
+    /// with a notch, and otherwise a perfectly ordinary piece — it stows,
+    /// trades, and resells like anything else.
+    pub gnawed: bool,
     pub loc: Loc,
 }
 
@@ -236,6 +241,7 @@ mod tests {
                 id: i as u32,
                 kind,
                 variant: 0,
+                gnawed: false,
                 loc: Loc::Hold { x, y },
             })
             .collect()

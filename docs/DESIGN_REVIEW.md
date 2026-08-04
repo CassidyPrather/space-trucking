@@ -65,7 +65,10 @@ changing; remove a line only by shipping it or striking it in review.
   the sim, protocol, and harness are in — see docs/NETWORKING.md)
 - Real transport adapter (WebSocket) behind `net`'s transport seam
 - Guild-server hosting + wiring global progress into the console
-- Telemetry + consent flow
 - 3D/VRChat port
 - Additional star systems
-- More events (rats, mimics, ad bots, hull breaches)
+- More events (mimics, ad bots, hull breaches, secret color-code objectives)
+- Rat-gnaw repair: DESIGN.md's "requiring repair" reading is deliberately
+  deferred — `gnawed` is permanent this pass, a scar the cargo carries
+  through the economy. When repair lands it belongs in `src/sim/rats.rs`,
+  next to the teeth.

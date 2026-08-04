@@ -129,6 +129,7 @@ pub(crate) fn generate(
             id: *next_id,
             kind,
             variant: rng.u8(..VARIANTS),
+            gnawed: false,
             loc: Loc::StationShelf { slot: slot as u8 },
         };
         *next_id += 1;
@@ -182,15 +183,33 @@ pub(crate) fn rebuild(seed: u64, station: PoiId, visit: u32, pieces: &[Piece]) -
 /// for any gift; only the deal's *sound* scales with what was given.
 const GIFT_WARMTH: f32 = 8.0;
 
+/// What a rat's bite knocks off a piece's value, floored at zero. The gnaw
+/// is permanent, so the discount follows the piece through the economy —
+/// on the give pad, on the take pad, and back off the station's shelf.
+pub(crate) const GNAW_MALUS: u8 = 2;
+
+/// One piece's worth under this visit's table: its kind's jittered value,
+/// less [`GNAW_MALUS`] if a rat has been at it. The single per-piece
+/// pricing rule; both pad totals read it, so a gnawed piece is cheaper to
+/// buy exactly as it is poorer to sell.
+fn piece_value(piece: &Piece, values: &[u8; KIND_COUNT]) -> u32 {
+    let value = values[piece.kind.index()];
+    u32::from(if piece.gnawed {
+        value.saturating_sub(GNAW_MALUS)
+    } else {
+        value
+    })
+}
+
 /// Value given, cost asked, and whether the give pad holds anything at all,
-/// priced by this visit's table. The +1 markup per taken item keeps even
-/// worthless goods from being free.
+/// priced by this visit's table via [`piece_value`]. The +1 markup per
+/// taken item keeps even worthless goods from being free.
 fn pad_totals(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> (u32, u32, bool) {
     let mut give = 0_u32;
     let mut giving = false;
     let mut take = 0_u32;
     for piece in pieces {
-        let value = u32::from(values[piece.kind.index()]);
+        let value = piece_value(piece, values);
         match piece.loc {
             Loc::GivePad { .. } => {
                 give += value;
@@ -291,6 +310,18 @@ mod tests {
             id: 0,
             kind,
             variant: 0,
+            gnawed: false,
+            loc,
+        }
+    }
+
+    /// The same piece after a rat has been at it.
+    const fn gnawed(kind: Kind, loc: Loc) -> Piece {
+        Piece {
+            id: 0,
+            kind,
+            variant: 0,
+            gnawed: true,
             loc,
         }
     }
@@ -465,6 +496,32 @@ mod tests {
         let (eagerness, ready) = eagerness_of(&pieces, &values);
         assert!((eagerness - 1.0 / 3.0).abs() < 1e-6);
         assert!(!ready);
+    }
+
+    #[test]
+    fn a_gnawed_piece_prices_two_lower_with_a_floor_at_zero() {
+        let mut values = [0_u8; KIND_COUNT];
+        values[Kind::BrinePearls.index()] = 5;
+        values[Kind::PerfumeVial.index()] = 1;
+        // On the give pad: 5 fresh, 3 bitten, against a cost-1 ask.
+        let ask = piece(Kind::Seedlings, Loc::TakePad { slot: 0 });
+        let fresh = [piece(Kind::BrinePearls, Loc::GivePad { slot: 0 }), ask];
+        let bitten = [gnawed(Kind::BrinePearls, Loc::GivePad { slot: 0 }), ask];
+        assert_eq!(eagerness_of(&fresh, &values), (5.0, true));
+        assert_eq!(eagerness_of(&bitten, &values), (3.0, true));
+        // The malus floors at zero rather than going negative: a bitten
+        // vial (value 1) gives nothing, and the ratio simply reads short.
+        let worthless = [gnawed(Kind::PerfumeVial, Loc::GivePad { slot: 0 }), ask];
+        assert_eq!(eagerness_of(&worthless, &values), (0.0, false));
+        // The take side discounts identically — stations resell the bite —
+        // while keeping the +1 markup: cost (5 - 2) + 1 = 4.
+        let buying_bitten = [
+            piece(Kind::BrinePearls, Loc::GivePad { slot: 0 }),
+            gnawed(Kind::BrinePearls, Loc::TakePad { slot: 0 }),
+        ];
+        assert_eq!(eagerness_of(&buying_bitten, &values), (5.0 / 4.0, true));
+        // The celebration reads the same totals: overshoot 5/4 - 1.
+        assert!((deal_value(&buying_bitten, &values) - 0.25).abs() < 1e-6);
     }
 
     #[test]

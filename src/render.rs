@@ -317,6 +317,7 @@ pub fn draw(view: &View, target: &RenderTarget, scene: &Scene) {
     draw_hold(&canvas, scene);
     draw_barter(&canvas, scene);
     draw_pieces(&canvas, scene);
+    draw_rat(&canvas, scene);
     draw_violation_flash(&canvas, scene);
     draw_held(&canvas, scene);
     draw_omen_fx(scene);
@@ -1320,6 +1321,7 @@ fn draw_wants(c: &Canvas, scene: &Scene, barter: &Barter) {
             c,
             kind,
             0,
+            false,
             layout::Rect::new(x - 11.0, 500.0, 22.0, 22.0),
             t,
         );
@@ -1499,7 +1501,7 @@ fn draw_pieces(c: &Canvas, scene: &Scene) {
         if held_by.is_some() {
             crew_ghost(canvas, piece, rect, t);
         } else {
-            piece_glyph(canvas, piece.kind, piece.variant, rect, t);
+            piece_glyph(canvas, piece.kind, piece.variant, piece.gnawed, rect, t);
         }
     }
 }
@@ -1510,7 +1512,7 @@ fn draw_pieces(c: &Canvas, scene: &Scene) {
 /// glyph sunk toward the socket under a faint slow-breathing frame —
 /// someone is holding this, and it is not you.
 fn crew_ghost(c: &Canvas, piece: &Piece, rect: layout::Rect, t: f32) {
-    piece_glyph(c, piece.kind, piece.variant, rect, t);
+    piece_glyph(c, piece.kind, piece.variant, piece.gnawed, rect, t);
     c.fill(rect, fade(SOCKET, 0.55));
     c.frame_thick(
         inflate(rect, -PX),
@@ -1540,7 +1542,14 @@ fn draw_held(c: &Canvas, scene: &Scene) {
         gh,
     );
     c.fill(shifted_rect(rect, 3.0, 4.0), fade(SHADOW, 0.5));
-    piece_glyph(c, piece.kind, piece.variant, rect, scene.juice.clock());
+    piece_glyph(
+        c,
+        piece.kind,
+        piece.variant,
+        piece.gnawed,
+        rect,
+        scene.juice.clock(),
+    );
     let col = if held.legal { LAMP_OK } else { LAMP_NO };
     c.fill(rect, fade(col, 0.10));
     c.frame_thick(rect, 1.5, fade(col, 0.7));
@@ -1550,8 +1559,8 @@ fn draw_held(c: &Canvas, scene: &Scene) {
 
 /// One silhouette per cargo kind, fitted into `rect` (a hold footprint or a
 /// slot). Variants shift the hue and scale the inner detail — same kind,
-/// sibling crates.
-fn piece_glyph(c: &Canvas, kind: Kind, variant: u8, rect: layout::Rect, t: f32) {
+/// sibling crates. A gnawed piece wears the rat's bite on top.
+fn piece_glyph(c: &Canvas, kind: Kind, variant: u8, gnawed: bool, rect: layout::Rect, t: f32) {
     let b = glyph_box(kind, rect);
     let col = variant_tint(kind_color(kind), variant);
     let vs = variant_scale(variant);
@@ -1565,6 +1574,28 @@ fn piece_glyph(c: &Canvas, kind: Kind, variant: u8, rect: layout::Rect, t: f32) 
         Kind::CryoCore => cryo_glyph(c, b, col, vs),
         Kind::BrinePearls => pearls_glyph(c, b, col, vs),
         Kind::SuspiciousCrate => crate_glyph(c, b, col, vs, t),
+    }
+    if gnawed {
+        bite_mark(c, b);
+    }
+}
+
+/// The rat's mark: two socket-coloured teeth scalloped out of the glyph's
+/// upper-right shoulder, angled toward the middle so every kind's
+/// silhouette gets visibly cut. Geometry, not hue, per the accessibility
+/// direction — it survives any palette and any variant tint.
+fn bite_mark(c: &Canvas, b: layout::Rect) {
+    let edge = b.x + b.w;
+    let depth = b.w * 0.38;
+    let tooth = b.h * 0.19;
+    for i in 0..2_u8 {
+        let top = (f32::from(i)).mul_add(tooth, b.h.mul_add(0.08, b.y));
+        c.tri(
+            Vec2::new(edge, top),
+            Vec2::new(edge, top + tooth),
+            Vec2::new(edge - depth, tooth.mul_add(0.5, top)),
+            SOCKET,
+        );
     }
 }
 
@@ -1764,6 +1795,57 @@ fn crate_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, t: f32) {
         b.w * 0.05 * vs,
         fade(EERIE_BRIGHT, pulse.mul_add(0.5, 0.3)),
     );
+}
+
+// ----------------------------------------------------------------- the rat --
+
+/// Hop tween length in ticks: 0.35 s, inside the juice conventions'
+/// half-second cap.
+const RAT_HOP_TICKS: f32 = 21.0;
+
+/// The stowaway: a few pixels of gray-brown metal-family paint tucked into
+/// its cell's lower corner, drawn over the cargo (it perches on pieces when
+/// the hold is full). The hop tween derives from sim state — `prev_cell`,
+/// `moved_at`, the tick count, and the interpolation alpha — so it needs no
+/// renderer clock of its own, replays exactly, and a skitter cue and its
+/// hop can never disagree.
+fn draw_rat(c: &Canvas, scene: &Scene) {
+    let Some(rat) = scene.sim.rat() else {
+        return;
+    };
+    let cs = c.shifted(grid_shake_offset(scene.juice));
+    let age = scene.sim.tick().saturating_sub(rat.moved_at) as f32 + scene.sim.alpha();
+    let t = (age / RAT_HOP_TICKS).clamp(0.0, 1.0);
+    let from = rat_perch(rat.prev_cell);
+    let to = rat_perch(rat.cell);
+    let mut at = from.lerp(to, ease_out(t));
+    // A shallow arc while mid-hop.
+    at.y -= (PI * t).sin() * 5.0;
+    rat_glyph(&cs, at, to.x <= from.x, scene.juice.clock());
+}
+
+/// Where the rat sits in cell `(x, y)`: low and left of centre, out of the
+/// way of the piece silhouette above it.
+fn rat_perch((x, y): (u8, u8)) -> Vec2 {
+    let cell = layout::cell_rect(x, y);
+    Vec2::new(cell.w.mul_add(0.42, cell.x), cell.h.mul_add(0.74, cell.y))
+}
+
+/// Body, head, ear, eye, tail — all metal-family grays (`RIVET` and
+/// friends), nothing hue-coded, per the art doc. `facing_left` keeps its
+/// nose pointed the way it last hopped; the tail sways on the cosmetic
+/// clock.
+fn rat_glyph(c: &Canvas, at: Vec2, facing_left: bool, t: f32) {
+    let flip = if facing_left { -1.0 } else { 1.0 };
+    let sway = (t * 3.0).sin() * 1.4;
+    let tail_root = at + Vec2::new(-4.0 * flip, 0.5);
+    let tail_tip = at + Vec2::new(-9.5 * flip, sway - 1.0);
+    c.seg(tail_root, tail_tip, 1.0, dim(RIVET, 0.75));
+    c.oval(at, 5.0, 3.0, 0.0, RIVET);
+    let head = at + Vec2::new(5.0 * flip, -1.4);
+    c.dot(head, 2.4, RIVET);
+    c.dot(head + Vec2::new(-0.4 * flip, -2.2), 1.2, dim(RIVET, 0.85));
+    c.dot(head + Vec2::new(1.3 * flip, -0.5), 0.7, SHADOW);
 }
 
 // ---------------------------------------------------------------- flashes --

@@ -1,16 +1,56 @@
-# Game Template
+# Space Trucking
 
-Cassidy's opinionated template for small Rust web toys. Enter at your own peril.
+An ambient game about hauling cargo across the solar system, built to be
+played in the background: launch, let the ship fly while you do something
+else, come back to barter. There is no currency — trade is cargo for cargo,
+read off an eagerness dial — and no text or dialogue anywhere but the version
+string, because everything the game has to say it says with shape, color,
+motion, and sound. The full design notepad (including the eventual 3D/VRChat
+ambitions) lives in [DESIGN.md](DESIGN.md); the recurring
+stay-on-target checklist lives in
+[docs/DESIGN_REVIEW.md](docs/DESIGN_REVIEW.md).
 
 Rust + [macroquad](https://macroquad.rs/), compiled to wasm, deployed as a
-static page. Based on [rust-template](https://github.com/CassidyPrather/rust-template)
-Native desktop builds work too.
+static page. Native desktop builds work too. Initialized from
+[CassidyPrather/game-template](https://github.com/CassidyPrather/game-template),
+which is based on [rust-template](https://github.com/CassidyPrather/rust-template).
+
+## Playing
+
+The screen is the ship's console: a star map (Venus, Earth, Mars, Jupiter,
+Uranus, Neptune, and a Spacing Guild station), a 6×4 cargo hold, and a barter
+panel. While docked, click a point of interest and pull the launch lever. The
+ship travels there in real time — roughly half a minute to two minutes a
+leg — and docks itself on arrival. Then barter: drag cargo between your hold,
+the station's shelf, and the give/take pads until the eagerness dial looks
+agreeable, and pull the accept lever.
+
+The cargo carries the lore, and it has opinions about where it sits: heavy
+pieces ride the bottom rows, volatiles refuse adjacency, cryo hugs the hull
+edge, and at most one Suspicious Crate comes aboard — a matte-black box from
+the Guild that audibly hums, and occasionally does something about it
+mid-flight.
+
+| Input   | Effect                                          |
+| ------- | ----------------------------------------------- |
+| Mouse   | everything — select, pull levers, drag cargo    |
+| `Space` | pause                                           |
+| `F`     | fast-forward, 16× (warp)                        |
+| `M`     | mute                                            |
+| `R`     | new run                                         |
+
+The game auto-saves — to localStorage on the web, to a `local.data` file
+natively (via quad-storage) — and on load fast-forwards up to six hours of
+elapsed real time, so the ship keeps flying while the tab is closed. The save
+format is versioned (`STV1`) with no compatibility promises before 1.0; an
+unreadable save becomes a fresh run, quietly.
 
 Sound is wired up and works in the browser, which is fiddlier than it sounds:
 it needs macroquad's `audio` feature, quad-snd's `audio.js` plugin in `web/`,
 and something to do about browsers refusing to make noise before the user
-clicks. The effects themselves are synthesised in `src/synth.rs` rather than
-loaded, so there are no audio assets to ship or credit. `M` mutes.
+clicks. The soundscape — engine drones, dock clunks, hull creaks, the hum —
+is synthesised in `src/synth.rs` at startup rather than loaded, so there are
+no audio assets to ship or credit. Ambient only; no music. `M` mutes.
 
 ## Development
 
@@ -45,61 +85,8 @@ Security audit: `cargo audit` (requires `cargo install cargo-audit`)
 
 Pre-commit hook: `git config core.hooksPath .githooks` (runs `cargo fmt`)
 
-## Template Setup
+## More
 
-1. **Create a new repository** from this template on GitHub (click "Use this
-   template")
-
-2. **Clone your new repository** and navigate to it
-
-3. **Update project metadata** in `Cargo.toml`:
-   - Change `name` to your toy's name (kebab-case, e.g. `orbit-fidget`)
-   - Update the `[lib]` name to match (snake_case, e.g. `orbit_fidget`)
-   - Update the `[[bin]]` name to match (kebab-case)
-   - Update `description`, `repository`, and `keywords`
-   - Update dependencies as required
-
-4. **Update the binary name everywhere it is hardcoded**:
-   - `web/index.html`: the `.wasm` filename it loads
-   - `scripts/build-web.sh`: `BIN=`
-   - `.github/workflows/ci-cd.yml`: `BIN=` in the package step
-
-5. **Update `.vscode/launch.json`** (if using VS Code):
-   - Replace the old crate name in the `cargo` sections
-
-6. **Tune `MAX_WASM_BYTES`** in `.github/workflows/ci-cd.yml` — the default
-   budget is sized for a toy, not for your sprite atlas
-
-7. **Update the README**:
-   - Replace the title and description
-   - Remove or customize this Template Setup section
-
-8. **Verify everything works**:
-   ```bash
-   cargo fmt --check
-   cargo clippy --all-targets --all-features -- -D warnings
-   cargo test
-   ./scripts/build-web.sh
-   ```
-
-### Replacing the demo
-
-The fidget exists so the template ships exercised, not because it is precious.
-Its full blast radius, in gutting order:
-
-1. `src/sim.rs` — replace wholesale. Keep the shape: seed and `InputFrame` in,
-   fixed ticks, `particles()`/`cues()` and an interpolation alpha out.
-   Turn-based toys can swap the accumulator for one-command-per-advance; the
-   determinism contract does not care.
-2. `src/synth.rs` — replace the sound recipes; keep the header tests, which
-   exist because the browser hangs instead of erroring on a bad header.
-3. `src/main.rs` and `src/audio.rs` — `gather_input`, `draw`, and the
-   cue-to-sound mapping are demo-specific. `window_conf`, the main loop, the
-   `View` letterboxing, and the mute/resume plumbing are genre-agnostic.
-4. `benches/sim_bench.rs` — rewrite against your sim's hot path.
-
-Nothing else references the demo. Keep new logic in the sim like the old logic
-was: modules that import macroquad panic under `cargo test` (see SKILL.md).
-
-See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for generated tips: Frameworks, asset
-sources, shader references, and so on and so forth.
+See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for framework and
+asset-source links, and [docs/DEPLOYING.md](docs/DEPLOYING.md) for how the
+web build reaches GitHub Pages (or any static host).

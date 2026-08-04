@@ -1,23 +1,36 @@
 ---
-name: game-template
-description: Cassidy's opinionated template for small Rust web toys — macroquad, wasm, static deploy
+name: space-trucking
+description: Ambient space-freight bartering toy — macroquad, wasm, static deploy
 ---
 
-# game-template
+# space-trucking
 
-A template for small web toys: Rust + macroquad, compiled to wasm, shipped as a
-static page. Native desktop builds also work. Crate `game-template`, lib
-`game_template`, bin `game-template`. Code is AGPL-3.0-or-later.
+An ambient, background-playable game about hauling cargo across the solar
+system: Rust + macroquad, compiled to wasm, shipped as a static page. Native
+desktop builds also work. Crate `space-trucking`, lib `space_trucking`, bin
+`space-trucking`. Code is AGPL-3.0-or-later. Design intent lives in
+`DESIGN.md`; the recurring checklist in `docs/DESIGN_REVIEW.md` runs at the
+end of every work stage.
 
 ## Repo Map
 
-- `src/sim.rs` — the simulation. Pure, deterministic, no macroquad. Most work
+- `src/sim/` — the simulation. Pure, deterministic, no macroquad. Most work
   belongs here.
+  - `mod.rs` — `Sim`, `InputFrame`, `Cue`, `advance`, `fast_forward`.
+  - `layout.rs` — shared console geometry, used for both hit-tests and
+    rendering so they cannot disagree.
+  - `map.rs` — points of interest and travel.
+  - `cargo.rs` — cargo kinds, pieces, and placement rules.
+  - `barter.rs` — valuation and trade resolution.
+  - `event.rs` — the suspicious-jump state machine.
+  - `save.rs` — `STV1` serialization.
 - `src/synth.rs` — procedural sound effects as WAV bytes. Also pure, also
-  unit-tested; the toy ships no audio assets.
+  unit-tested; the game ships no audio assets.
 - `src/main.rs` — thin macroquad frontend. Window, draw calls, input gathering.
 - `src/audio.rs` — the other half of the frontend: turns `sim::Cue`s into
   playback. Binary-crate module, not part of the library.
+- `src/storage.rs` — quad-storage wrapper: localStorage on the web, a
+  `local.data` file natively. Binary-crate module, both targets.
 - `build.rs` — embeds a `git describe` version string.
 - `web/index.html`, `web/gl.js`, `web/audio.js` — the static shell, the
   vendored miniquad loader, and the vendored quad-snd audio plugin. Zero
@@ -26,7 +39,7 @@ static page. Native desktop builds also work. Crate `game-template`, lib
 - `scripts/build-web.sh` — wasm build → `dist/web/`.
 - `.github/workflows/ci-cd.yml` — lint, test, audit, size-budgeted web bundle,
   Pages deploy, release artifacts.
-- `benches/` — criterion bench over the sim. Unit tests live in `src/sim.rs`.
+- `benches/` — criterion bench over the sim. Unit tests live in `src/sim/`.
 
 ## Commands
 
@@ -49,19 +62,22 @@ The web build needs `rustup target add wasm32-unknown-unknown`, and uses
 ## The Determinism Contract
 
 The sim advances on a fixed 60 Hz timestep via an accumulator with a frame-dt
-clamp, seeded through `fastrand`, and receives input only as an `InputFrame`
-struct — so a given seed plus a given input sequence always produces the same
-run, and rendering interpolates between the last two states using an alpha.
+clamp, and receives input only as an `InputFrame` struct: pointer edges
+(press/held/release with position) plus the toggles. A given seed plus a
+given input sequence produces a bit-identical run — determinism is
+structural, via splitmix RNG streams derived from the seed, not incidental —
+and rendering interpolates between the last two states using an alpha.
 
 Do not read wall-clock time, macroquad state, or randomness from inside
-`src/sim.rs`. If the frontend needs to tell the sim something, it goes in
+`src/sim/`. If the frontend needs to tell the sim something, it goes in
 `InputFrame`.
 
-The sim has two output channels, and sound uses the second one exactly the way
-rendering uses the first: `Sim::particles()` for what to draw, `Sim::cues()`
+The sim has two output channels, and sound uses the second one exactly the
+way rendering uses the first: scene accessors for what to draw, `Sim::cues()`
 for what to play. A `Cue` says what happened and how hard, in `0..=1`, never
 what it should sound like. Cues live for one `advance()` and are cleared by
-the next.
+the next. `fast_forward` (used for warp and offline catch-up) suppresses
+cues, so six hours of catch-up does not arrive as six hours of clunks.
 
 The wider rule: any module that imports macroquad is untestable — macroquad's
 globals panic under `cargo test` (a thread assert), they do not fail politely.
@@ -70,6 +86,17 @@ frontend modules get verified by bot playouts or eyeballs.
 
 ## House Rules
 
+No rendered text or dialogue anywhere except the version string in the
+corner — every game state must communicate through shape, color, motion, and
+sound, because the game is meant to be readable without a shared language.
+Anything genuinely unavoidable gets isolated in one place for future
+translation.
+
+The save string is versioned (magic `STV1`), hand-rolled in
+`src/sim/save.rs`, with no compatibility guarantees before 1.0. Bump the
+magic on any breaking change; an old or corrupt save fails safe into a fresh
+game, never a panic.
+
 Every asset gets a `CREDITS.md` line at intake — source, author, license, URL.
 CC0 first.
 
@@ -77,15 +104,17 @@ CI enforces a hard wasm size budget (`MAX_WASM_BYTES`, ~1.5 MB by default);
 if a change blows it, shrink the change or retune the budget deliberately.
 
 Audio is on: macroquad's `audio` feature plus quad-snd's `audio.js` plugin in
-`web/`, which must load after `gl.js` and before `load()` runs. Sounds are
-synthesised in `src/synth.rs` rather than loaded, so there are no audio assets
-and nothing to credit. macroquad gives you volume and looping and no pitch
-control, so pitch variation means baking another buffer.
+`web/`, which must load after `gl.js` and before `load()` runs. The
+soundscape is synthesised in `src/synth.rs` — four seamless loops (engine,
+warp engine, suspicious hum, station air) plus one-shots mapped from cues —
+so there are no audio assets and nothing to credit. Ambient only, no
+melodies. macroquad gives you volume and looping and no pitch control, so
+pitch variation means baking another buffer.
 
 Browsers keep the audio context suspended until a real gesture. `audio.js`
-handles the resume; the looping drone additionally waits for the first press
-so it never starts mid-note, and the HUD says `press or click to start` until
-it does. Anything long-lived and looping needs the same treatment.
+handles the resume; the loops additionally wait for the first press so they
+never start mid-note. Anything long-lived and looping needs the same
+treatment.
 
 Two independent decoders read `synth`'s bytes — `audrey` natively and the
 browser's `decodeAudioData` on the web — and the web one reports failure by

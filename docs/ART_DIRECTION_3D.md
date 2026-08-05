@@ -132,6 +132,13 @@ clips a wall, is handled structurally, not by eyeballing:
   of any panel face, every focus pose must be a legal camera position
   facing its panels, and the roaming envelope must be clear of every
   slab. Break the layout and the build breaks.
+- **Sightlines are tested, not eyeballed**: from each station's focus
+  viewpoint, every panel corner and every interactive control (levers,
+  dial, slots, buttons, grid cells) must sit inside the camera frustum
+  with an unoccluded line from the eye — checked by frustum math plus
+  occlusion rays against every slab and panel plate. A control that a
+  refit pushes off-screen or behind furniture fails the build with the
+  blocking geometry named.
 - The cabin has a **screenshot mode** (`--shot out.png`, optionally
   `--view tank|console|desk`) that renders, saves one capture, and
   exits. It runs headless under xvfb with llvmpipe, so visual review

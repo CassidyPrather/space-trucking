@@ -851,6 +851,167 @@ fn smooth(t: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use space_trucking::sim::Vec2 as SimVec2;
+
+    /// Nearest positive parameter where a ray enters a slab, if any.
+    /// `dir` need not be normalized — parameters are in units of `dir`.
+    fn ray_slab_entry(origin: Vec3, dir: Vec3, slab: &Slab) -> Option<f32> {
+        let half = slab.size * 0.5;
+        let (lo, hi) = (slab.center - half, slab.center + half);
+        let mut t_min = f32::NEG_INFINITY;
+        let mut t_max = f32::INFINITY;
+        for axis in 0..3 {
+            let (o, d) = (origin[axis], dir[axis]);
+            let (a, b) = (lo[axis], hi[axis]);
+            if d.abs() < 1e-9 {
+                if o < a || o > b {
+                    return None;
+                }
+            } else {
+                let (t1, t2) = ((a - o) / d, (b - o) / d);
+                t_min = t_min.max(t1.min(t2));
+                t_max = t_max.min(t1.max(t2));
+            }
+        }
+        (t_max >= t_min && t_max > 0.0).then(|| t_min.max(0.0))
+    }
+
+    /// Ray versus a panel's physical plate (the oriented slab behind the
+    /// mapped quad), in the panel's own frame.
+    fn ray_plate_entry(origin: Vec3, dir: Vec3, surface: &SimSurface) -> Option<f32> {
+        let frame = surface.orientation().inverse();
+        let center = surface.center + surface.normal() * -0.028;
+        let local = Slab::new(
+            Vec3::ZERO,
+            Vec3::new(
+                surface.half_u.length().mul_add(2.0, PLATE_MARGIN * 2.0),
+                surface.half_v.length().mul_add(2.0, PLATE_MARGIN * 2.0),
+                0.05,
+            ),
+            Finish::Plate,
+        );
+        ray_slab_entry(frame * (origin - center), frame * dir, &local)
+    }
+
+    /// The sightline rule the screenshots check by eye, made mechanical:
+    /// `point` must sit inside the camera frustum AND nothing structural
+    /// may stand between the eye and it.
+    fn visible_from(
+        eye: Vec3,
+        rot: Quat,
+        point: Vec3,
+        slabs: &[Slab],
+        panels: &[(Station, SimSurface); 4],
+    ) -> Result<(), String> {
+        // Frustum containment, using the pinned FOV and crunch aspect.
+        let local = rot.inverse() * (point - eye);
+        if local.z >= -0.01 {
+            return Err(format!("{point} is behind the eye at {eye}"));
+        }
+        let depth = -local.z;
+        let half_v = (FOV * 0.5).tan();
+        let half_h = half_v * (CRUNCH_W as f32 / CRUNCH_H as f32);
+        if local.x.abs() > depth * half_h || local.y.abs() > depth * half_v {
+            return Err(format!("{point} falls outside the frustum from {eye}"));
+        }
+        // Occlusion: nothing structural may enter the segment eye→point.
+        let dir = point - eye;
+        for slab in slabs {
+            if let Some(t) = ray_slab_entry(eye, dir, slab)
+                && t < 1.0 - 1e-3
+            {
+                return Err(format!(
+                    "slab at {} blocks the line from {eye} to {point} (t={t:.3})",
+                    slab.center
+                ));
+            }
+        }
+        for (station, surface) in panels {
+            if let Some(t) = ray_plate_entry(eye, dir, surface)
+                && t < 1.0 - 1e-3
+            {
+                return Err(format!(
+                    "{station:?}'s plate blocks the line from {eye} to {point} (t={t:.3})"
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// A panel's must-see set: quad corners (nudged 2% inward so the
+    /// test speaks about the face, not the trim) plus the center.
+    fn corner_points(surface: &SimSurface) -> Vec<Vec3> {
+        let mut points = vec![surface.center];
+        for su in [-0.98f32, 0.98] {
+            for sv in [-0.98f32, 0.98] {
+                points.push(surface.center + surface.half_u * su + surface.half_v * sv);
+            }
+        }
+        points
+    }
+
+    /// Every interactive control a station carries, as sim rect centers
+    /// mapped onto its surface — the exact spots a click must reach.
+    fn control_points(station: Station, surface: &SimSurface) -> Vec<Vec3> {
+        let mid = |r: layout::Rect| SimVec2::new(r.w.mul_add(0.5, r.x), r.h.mul_add(0.5, r.y));
+        let mut spots: Vec<SimVec2> = Vec::new();
+        match station {
+            Station::Map => {
+                spots.push(space_trucking::sim::map::SUN);
+            }
+            Station::Console => {
+                spots.push(mid(layout::LAUNCH_LEVER));
+                spots.push(mid(layout::PAUSE_BTN));
+                spots.push(mid(layout::WARP_BTN));
+                spots.push(mid(layout::SPEAKER));
+                spots.push(mid(layout::DEST_PREVIEW));
+                spots.push(layout::ETA_ARC_CENTER);
+            }
+            Station::Hold => {
+                for (x, y) in [(0, 0), (5, 0), (0, 3), (5, 3), (2, 1)] {
+                    spots.push(mid(layout::cell_rect(x, y)));
+                }
+            }
+            Station::Barter => {
+                spots.push(mid(layout::ACCEPT_LEVER));
+                spots.push(layout::DIAL_CENTER);
+                spots.push(mid(layout::ENCOUNTER_BADGE));
+                for row in [
+                    &layout::SHELF_SLOTS,
+                    &layout::RECEIVED_SLOTS,
+                    &layout::GIVE_SLOTS,
+                    &layout::TAKE_SLOTS,
+                ] {
+                    spots.push(mid(row[0]));
+                    spots.push(mid(row[3]));
+                }
+            }
+        }
+        spots.into_iter().map(|s| surface.to_world(s)).collect()
+    }
+
+    /// The sightline contract: from a station's own focus viewpoint,
+    /// every panel corner and every control it carries must be visible —
+    /// framed and unoccluded. This is the "corner must be visible from
+    /// the perspective" rule, enforced at build time.
+    #[test]
+    fn every_control_is_visible_from_its_focus() {
+        let panels = panels();
+        let slabs = structure(&panels);
+        for (station, surface) in &panels {
+            let (eye, rot) = focus_pose(Focus::of(*station), &panels);
+            let mut points = corner_points(surface);
+            points.extend(control_points(*station, surface));
+            for point in points {
+                // Lift each point a hair off the face so the ray test
+                // asks about the air in front of it, not the face itself.
+                let probe = point + surface.normal() * 0.004;
+                if let Err(reason) = visible_from(eye, rot, probe, &slabs, &panels) {
+                    panic!("{station:?} sightline broken: {reason}");
+                }
+            }
+        }
+    }
 
     /// Sample points across a panel's plate face (quad + margin).
     fn plate_face_points(surface: &SimSurface) -> Vec<Vec3> {

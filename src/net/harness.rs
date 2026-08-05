@@ -375,16 +375,17 @@ pub fn delivery_voyage(crew: usize) -> (Script, u64) {
     // Roles are spread over the crew; parallel drags use role numbers that
     // stay distinct mod any allowed crew size.
     let role = |k: usize| (k % crew) as PlayerId;
-    let venus = map::POIS[usize::from(VENUS)].pos;
-    let guild = map::POIS[usize::from(map::GUILD)].pos;
     let launch = rect_center(layout::LAUNCH_LEVER);
     let accept = rect_center(layout::ACCEPT_LEVER);
-    let leg = map::leg_ticks(map::GUILD, VENUS);
 
     let mut script = Script::new();
-    // Outbound: pick Venus, pull the lever, warp most of the cruise.
+    // Outbound: pick Venus, pull the lever, warp most of the cruise. The
+    // sky moves, so press coordinates and leg lengths are sampled at the
+    // exact sealed ticks the presses land on — sealed tick N is applied
+    // while the sim's clock reads N.
     let start = 10;
-    script.press(start, role(1), venus);
+    let leg = map::leg_ticks(map::GUILD, VENUS, start + 2);
+    script.press(start, role(1), map::poi_pos(VENUS, start));
     script.press(start + 2, role(0), launch);
     script.toggle_warp(start + 6, role(4));
     script.toggle_warp(start + 2 + leg - 8, role(4));
@@ -422,12 +423,14 @@ pub fn delivery_voyage(crew: usize) -> (Script, u64) {
         slot_center(&layout::RECEIVED_SLOTS, 0),
         cell_center(0, 2),
     );
-    // Home: pick the Guild, launch, warp the return leg.
-    script.press(a + 14, role(1), guild);
+    // Home: pick the Guild, launch, warp the return leg (its own length —
+    // both worlds moved while the crew was trading).
+    let leg_home = map::leg_ticks(VENUS, map::GUILD, a + 16);
+    script.press(a + 14, role(1), map::poi_pos(map::GUILD, a + 14));
     script.press(a + 16, role(0), launch);
     script.toggle_warp(a + 20, role(4));
-    script.toggle_warp(a + 16 + leg - 8, role(4));
-    let end = a + 16 + leg + 6;
+    script.toggle_warp(a + 16 + leg_home - 8, role(4));
+    let end = a + 16 + leg_home + 6;
     (script, end)
 }
 
@@ -1017,7 +1020,7 @@ mod tests {
     fn sealed_schedule_replay_equals_live_play() {
         let (script, _) = delivery_voyage(6);
         let mut convoy = Convoy::new(CONVOY_SEED, 0x4E91, 6, 1, &LinkProfile::hostile(), script);
-        let leg = map::leg_ticks(map::GUILD, VENUS);
+        let leg = map::leg_ticks(map::GUILD, VENUS, 12);
         let mut warp_bursts = 0_u64;
         while convoy.sealed() < 12 + leg {
             let before = convoy.sealed();

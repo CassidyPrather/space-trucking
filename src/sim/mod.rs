@@ -40,7 +40,10 @@ pub use cargo::{
     KIND_COUNT, Kind, Loc, Piece, Tag, Violation, placement_check, placement_legal, player_owned,
 };
 use event::Omen;
-pub use map::{GUILD, POI_COUNT, POIS, Poi, PoiId, SHIP_SPEED, Ship, ShipState};
+pub use map::{
+    COMET, GUILD, HERMITAGE, INNER_RING, POI_COUNT, POIS, Poi, PoiId, SATURN, SHIP_SPEED, SUN,
+    Ship, ShipState, Track, UMBRA, WANDERER, comet_visible, leg_endpoints, poi_pos,
+};
 pub use rats::Rat;
 use rats::Rats;
 pub use save::SaveError;
@@ -369,7 +372,7 @@ impl Sim {
         visits[usize::from(GUILD)] = 1;
         let (barter, goods) = barter::generate(seed, GUILD, 1, &pieces, &mut rng, &mut next_piece);
         pieces.extend(goods);
-        let pos = POIS[usize::from(GUILD)].pos;
+        let pos = map::poi_pos(GUILD, 0);
 
         Self {
             seed,
@@ -560,10 +563,17 @@ impl Sim {
         self.warp
     }
 
-    /// The star map's points of interest.
+    /// The star map's points of interest (tracks and radii; positions are
+    /// a function of the tick — see [`Sim::poi_pos`]).
     #[must_use]
     pub const fn pois(&self) -> &[Poi; POI_COUNT] {
         &POIS
+    }
+
+    /// Where POI `id` is right now.
+    #[must_use]
+    pub fn poi_pos(&self, id: PoiId) -> Vec2 {
+        map::poi_pos(id, self.tick)
     }
 
     /// The freighter.
@@ -753,7 +763,7 @@ impl Sim {
         };
         for (i, poi) in POIS.iter().enumerate() {
             let id = i as PoiId;
-            if id != at && (p - poi.pos).length() <= poi.radius {
+            if id != at && (p - map::poi_pos(id, self.tick)).length() <= poi.radius {
                 self.ship.selected = Some(id);
                 self.cues.push(Cue::Select);
                 return;
@@ -1005,7 +1015,7 @@ impl Sim {
             return;
         };
         debug_assert!(!self.pads_occupied(), "launch gate must clear the pads");
-        let leg_ticks = map::leg_ticks(from, to);
+        let leg_ticks = map::leg_ticks(from, to, self.tick);
         self.pieces
             .retain(|piece| matches!(piece.loc, Loc::Hold { .. }));
         self.barter = None;
@@ -1052,10 +1062,7 @@ impl Sim {
             if progress >= leg_ticks {
                 self.dock(to);
             } else {
-                let t = progress as f32 / leg_ticks as f32;
-                self.ship.pos = POIS[usize::from(from)]
-                    .pos
-                    .lerp(POIS[usize::from(to)].pos, t);
+                self.ship.pos = map::travel_pos(from, to, progress, leg_ticks, self.tick);
                 self.ship.state = ShipState::Traveling {
                     from,
                     to,
@@ -1063,6 +1070,9 @@ impl Sim {
                     leg_ticks,
                 };
             }
+        } else if let ShipState::Docked(at) = self.ship.state {
+            // Docked means moored: the ship rides its planet's orbit.
+            self.ship.pos = map::poi_pos(at, self.tick);
         }
 
         self.omen.on_tick();
@@ -1087,8 +1097,7 @@ impl Sim {
     /// the Guild the hangar steal runs first, so the visit's barter never
     /// sees the crate.
     fn dock(&mut self, poi: PoiId) {
-        let pos = POIS[usize::from(poi)].pos;
-        self.ship.pos = pos;
+        self.ship.pos = map::poi_pos(poi, self.tick);
         self.ship.state = ShipState::Docked(poi);
         self.ship.selected = None;
         self.omen.on_dock(&mut self.cues);
@@ -1298,7 +1307,7 @@ mod tests {
     /// frame may also carry a `RatAboard` on a crowded hold, so only the
     /// departure itself is asserted exactly.
     fn launch(sim: &mut Sim, poi: PoiId) {
-        let target = POIS[usize::from(poi)].pos;
+        let target = sim.poi_pos(poi);
         sim.advance(0.0, &press_at(target.x, target.y));
         assert_eq!(sim.cues(), [Cue::Select]);
         assert_eq!(sim.ship().selected, Some(poi));
@@ -1364,7 +1373,9 @@ mod tests {
         let accept = rect_center(layout::ACCEPT_LEVER);
         s.push((0.0, press_at(accept.x, accept.y)));
         // Select Mars and hit the lever too early: received still loaded.
-        let mars = POIS[usize::from(MARS)].pos;
+        // Only the 30 dial frames above advance the clock, so the press
+        // lands at tick 30 exactly.
+        let mars = map::poi_pos(MARS, 30);
         s.push((0.0, press_at(mars.x, mars.y)));
         let launch = rect_center(layout::LAUNCH_LEVER);
         s.push((0.0, press_at(launch.x, launch.y)));
@@ -1376,13 +1387,16 @@ mod tests {
             cell_center(0, 2),
         );
         s.push((0.0, press_at(launch.x, launch.y)));
-        // Warp sixteen-fold through most of the leg, then coast in.
+        // Warp sixteen-fold through most of the leg — its length depends on
+        // where the sky stands at the tick-30 departure — then coast in.
+        let leg = map::leg_ticks(GUILD, MARS, 30);
+        let warp_frames = (leg / u64::from(WARP_FACTOR as u32)).saturating_sub(20);
         let warp = InputFrame {
             toggle_warp: true,
             ..InputFrame::default()
         };
         s.push((0.0, warp));
-        for _ in 0..200 {
+        for _ in 0..warp_frames {
             s.push((TICK_DT, InputFrame::default()));
         }
         s.push((0.0, warp));
@@ -2151,7 +2165,7 @@ mod tests {
     #[test]
     fn launch_gate_refuses_while_pads_hold_pieces() {
         let mut sim = Sim::new(3);
-        let venus = POIS[usize::from(VENUS)].pos;
+        let venus = sim.poi_pos(VENUS);
         sim.advance(0.0, &press_at(venus.x, venus.y));
         let lever = rect_center(layout::LAUNCH_LEVER);
         // Give pad occupied: refused.
@@ -2524,7 +2538,9 @@ mod tests {
             toggle_warp: true,
             ..InputFrame::default()
         };
-        let venus = POIS[usize::from(VENUS)].pos;
+        // The Venus press lands on sealed tick 3 and the departure on
+        // sealed tick 5; the sky is sampled for those exact moments.
+        let venus = map::poi_pos(VENUS, 3);
         let launch_lever = rect_center(layout::LAUNCH_LEVER);
         let accept = rect_center(layout::ACCEPT_LEVER);
         let mut s = vec![
@@ -2547,7 +2563,7 @@ mod tests {
             crew(&[(0, press_at(accept.x, accept.y))]),
             crew(&[(0, press_at(launch_lever.x, launch_lever.y))]),
         ];
-        for _ in 0..=map::leg_ticks(GUILD, VENUS) {
+        for _ in 0..=map::leg_ticks(GUILD, VENUS, 5) + 1 {
             s.push(crew(&[]));
         }
         s
@@ -2590,7 +2606,7 @@ mod tests {
     /// No warp toggles: warp multiplies ticks-per-frame in [`Sim::advance`],
     /// while a lockstep session realises it by sealing ticks faster.
     fn solo_schedule() -> Vec<InputFrame> {
-        let venus = POIS[usize::from(VENUS)].pos;
+        let venus = map::poi_pos(VENUS, 0);
         let launch_lever = rect_center(layout::LAUNCH_LEVER);
         let accept = rect_center(layout::ACCEPT_LEVER);
         let pause = InputFrame {
@@ -2611,7 +2627,7 @@ mod tests {
             s.push(InputFrame::default());
         }
         s.push(pause);
-        for _ in 0..=map::leg_ticks(GUILD, VENUS) {
+        for _ in 0..=map::leg_ticks(GUILD, VENUS, 1) + 1 {
             s.push(InputFrame::default());
         }
         s.push(press_at(vial.x, vial.y));

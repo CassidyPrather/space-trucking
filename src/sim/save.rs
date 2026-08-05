@@ -21,14 +21,16 @@ use std::str::FromStr;
 use super::cargo::{Kind, Loc, Piece};
 use super::event::{Omen, Phase};
 use super::layout::{GRID_COLS, GRID_ROWS, SHELF_SLOTS};
-use super::map::{POI_COUNT, POIS, PoiId, Ship, ShipState};
+use super::map::{POI_COUNT, PoiId, Ship, ShipState};
 use super::rats::{CHASE_LIMIT, Rat, Rats};
 use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 
-/// Magic-plus-version header of every save this build writes. `STV3` split
-/// the leg counter out of the omen line and added the rat state line plus
-/// the per-piece gnaw token; `STV2` and older fail safe as unsupported.
-const MAGIC: &str = "STV3";
+/// Magic-plus-version header of every save this build writes. `STV4` widened
+/// the visits line for the orbital sky's new POIs (positions themselves are
+/// derived from the tick, so none are stored); `STV3` split the leg counter
+/// out of the omen line and added the rat state line plus the per-piece gnaw
+/// token. Older versions fail safe as unsupported.
+const MAGIC: &str = "STV4";
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -174,7 +176,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let paused = reader.kv::<u8>("paused")? != 0;
     let deliveries = reader.kv("deliveries")?;
     let visits = parse_visits(&mut reader)?;
-    let ship = parse_ship(&mut reader)?;
+    let ship = parse_ship(&mut reader, tick)?;
     let legs = reader.kv("legs")?;
     let omen = parse_omen(&mut reader)?;
     let rats = parse_rat(&mut reader)?;
@@ -231,8 +233,9 @@ fn parse_visits(reader: &mut Reader<'_>) -> Result<[u32; POI_COUNT], SaveError> 
     Ok(visits)
 }
 
-/// The `ship` line, with the selected destination as its last token.
-fn parse_ship(reader: &mut Reader<'_>) -> Result<Ship, SaveError> {
+/// The `ship` line, with the selected destination as its last token. The
+/// sim's tick is needed to rebuild positions: the sky is a function of time.
+fn parse_ship(reader: &mut Reader<'_>, tick: u64) -> Result<Ship, SaveError> {
     let line = reader.next_line()?;
     let mut tokens = line.split_whitespace();
     if tokens.next() != Some("ship") {
@@ -241,7 +244,7 @@ fn parse_ship(reader: &mut Reader<'_>) -> Result<Ship, SaveError> {
     let (pos, state) = match tokens.next() {
         Some("docked") => {
             let at = reader.poi(tokens.next())?;
-            (POIS[usize::from(at)].pos, ShipState::Docked(at))
+            (super::map::poi_pos(at, tick), ShipState::Docked(at))
         }
         Some("travel") => {
             let from = reader.poi(tokens.next())?;
@@ -251,12 +254,8 @@ fn parse_ship(reader: &mut Reader<'_>) -> Result<Ship, SaveError> {
             if leg_ticks == 0 || progress > leg_ticks {
                 return Err(reader.err());
             }
-            let t = progress as f32 / leg_ticks as f32;
-            let pos = POIS[usize::from(from)]
-                .pos
-                .lerp(POIS[usize::from(to)].pos, t);
             (
-                pos,
+                super::map::travel_pos(from, to, progress, leg_ticks, tick),
                 ShipState::Traveling {
                     from,
                     to,
@@ -550,7 +549,7 @@ mod tests {
             held: true,
             ..InputFrame::default()
         };
-        sim.advance(0.0, &press(super::super::POIS[0].pos));
+        sim.advance(0.0, &press(super::super::poi_pos(0, sim.tick())));
         let lever = layout::LAUNCH_LEVER;
         sim.advance(
             0.0,
@@ -632,7 +631,7 @@ mod tests {
         let rat_line = "rat 4 1 2 3 30 700 2800 1";
         assert!(save.contains(rat_line), "worked save must carry the rat");
         for (needle, bad) in [
-            ("ship travel 6 0", "ship travel 9 0"), // POI out of range
+            ("ship travel 6 0", "ship travel 12 0"), // POI out of range
             ("tick 90", "tick -90"),
             ("tick 90", "tick 99999999999999999999999"),
             // The rat must sit inside the grid, hop from inside the grid,

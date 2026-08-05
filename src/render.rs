@@ -32,8 +32,9 @@ use macroquad::texture::{DrawTextureParams, RenderTarget, draw_texture_ex};
 use macroquad::window::clear_background;
 
 use space_trucking::sim::{
-    Barter, EAGER_MAX, GUILD, Kind, Loc, POIS, Piece, PoiId, ShipState, Sim, Vec2, Violation,
-    WORLD_H, WORLD_W, layout, placement_check, player_owned, splitmix,
+    Barter, EAGER_MAX, GUILD, Kind, Loc, POIS, Piece, PoiId, SATURN, SUN, ShipState, Sim, Track,
+    Vec2, Violation, WORLD_H, WORLD_W, layout, leg_endpoints, placement_check, player_owned,
+    splitmix,
 };
 
 use crate::View;
@@ -681,11 +682,19 @@ fn draw_range_rings(c: &Canvas, glass: layout::Rect) {
 
 fn draw_route_and_ship(c: &Canvas, scene: &Scene) {
     let sim = scene.sim;
-    let ShipState::Traveling { from, to, .. } = sim.ship().state else {
+    let ShipState::Traveling {
+        from,
+        to,
+        progress,
+        leg_ticks,
+    } = sim.ship().state
+    else {
         return;
     };
-    let a = POIS[usize::from(from)].pos;
-    let b = POIS[usize::from(to)].pos;
+    // The charted line: cast-off point to where the destination will be at
+    // the arrival tick. Same derivation the sim flies, so the dashes and
+    // the freighter agree — and a jump re-aims both at once.
+    let (a, b) = leg_endpoints(from, to, progress, leg_ticks, sim.tick());
     let span = b - a;
     let length = span.length();
     if length <= f32::EPSILON {
@@ -750,23 +759,24 @@ fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
         ShipState::Traveling { .. } => None,
     };
     for (i, poi) in sim.pois().iter().enumerate() {
-        poi_glyph(c, i, poi.pos, poi.radius, idle, MAP_PH);
         let id = i as PoiId;
+        let pos = sim.poi_pos(id);
+        poi_glyph(c, i, pos, poi.radius, idle, MAP_PH);
 
         // The sweep's afterglow brightens a POI it just passed. A parked
         // sweep passes nothing, so under reduced motion the afterglow stays
         // off instead of freezing into a phantom highlight.
         if !scene.reduced_motion {
-            let glow = sweep_glow(center, sweep, poi.pos);
+            let glow = sweep_glow(center, sweep, pos);
             if glow > 0.0 {
-                c.ring(poi.pos, poi.radius + PX, 1.0, fade(PHOSPHOR, 0.30 * glow));
+                c.ring(pos, poi.radius + PX, 1.0, fade(PHOSPHOR, 0.30 * glow));
             }
         }
 
         // Hover: a faint ring over any POI the player could pick right now.
         if let Some(at) = docked {
-            if id != at && (scene.pointer - poi.pos).length() <= poi.radius {
-                c.ring(poi.pos, poi.radius + 3.0, 1.0, fade(PHOSPHOR, 0.3));
+            if id != at && (scene.pointer - pos).length() <= poi.radius {
+                c.ring(pos, poi.radius + 3.0, 1.0, fade(PHOSPHOR, 0.3));
             }
         }
 
@@ -776,7 +786,7 @@ fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
         if sim.ship().selected == Some(id) {
             let wave = (idle * 4.0).sin();
             c.ring(
-                poi.pos,
+                pos,
                 wave.mul_add(1.5, poi.radius + 5.0),
                 1.4,
                 fade(PHOSPHOR, wave.mul_add(0.15, 0.7)),
@@ -784,7 +794,7 @@ fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
             let blip = scene.juice.select_blip();
             if blip > 0.0 {
                 c.ring(
-                    poi.pos,
+                    pos,
                     (1.0 - blip).mul_add(9.0, poi.radius + 4.0),
                     1.2,
                     fade(PHOSPHOR, blip * 0.8),
@@ -799,9 +809,9 @@ fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
         if id == GUILD {
             let flash = scene.juice.delivered_flash();
             if flash > 0.0 {
-                c.dot(poi.pos, poi.radius + 2.0, fade(EERIE, 0.30 * flash));
+                c.dot(pos, poi.radius + 2.0, fade(EERIE, 0.30 * flash));
                 c.ring(
-                    poi.pos,
+                    pos,
                     (1.0 - flash).mul_add(10.0, poi.radius + 3.0),
                     1.4,
                     fade(EERIE_BRIGHT, 0.7 * flash),
@@ -812,11 +822,11 @@ fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
         // Docked: a solid ring; pop on arrival; a long pulse after an
         // offline catch-up so the returning player spots where they landed.
         if docked == Some(id) {
-            c.ring(poi.pos, poi.radius + 4.0, 1.6, fade(PHOSPHOR, 0.85));
+            c.ring(pos, poi.radius + 4.0, 1.6, fade(PHOSPHOR, 0.85));
             let pop = scene.juice.dock_pop();
             if pop > 0.0 {
                 c.ring(
-                    poi.pos,
+                    pos,
                     (1.0 - pop).mul_add(12.0, poi.radius + 4.0),
                     1.5,
                     fade(PHOSPHOR, pop * 0.9),
@@ -826,7 +836,7 @@ fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
             if pulse > 0.0 {
                 let wave = (t * 5.0).sin();
                 c.ring(
-                    poi.pos,
+                    pos,
                     wave.mul_add(2.5, poi.radius + 7.0),
                     1.5,
                     fade(
@@ -2068,9 +2078,11 @@ fn draw_ghost_echo(c: &Canvas, scene: &Scene, echo: Echo, a: f32) {
     match echo {
         Echo::None => {}
         Echo::Poi(id) => {
-            // A dim cousin of the real selection ring.
-            let poi = &POIS[usize::from(id)];
-            c.ring(poi.pos, poi.radius + 5.0, 1.2, fade(PHOSPHOR, 0.30 * a));
+            // A dim cousin of the real selection ring, kept glued to the
+            // moving planet rather than where it was at lesson start.
+            let radius = POIS[usize::from(id)].radius;
+            let at = scene.sim.poi_pos(id);
+            c.ring(at, radius + 5.0, 1.2, fade(PHOSPHOR, 0.30 * a));
         }
         Echo::LaunchLever => ghost_lever_glow(c, layout::LAUNCH_LEVER, a),
         Echo::AcceptLever => ghost_lever_glow(c, layout::ACCEPT_LEVER, a),

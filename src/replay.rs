@@ -491,7 +491,7 @@ fn plan(base_tick: u64, entries: &[(u64, InputFrame)], end: u64) -> Result<u64, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sim::{Cue, POIS, ShipState, layout, splitmix};
+    use crate::sim::{Cue, ShipState, layout, poi_pos, splitmix};
 
     /// Mars, the scripted session's destination.
     const MARS: u8 = 2;
@@ -568,7 +568,7 @@ mod tests {
         let pearls = cell_center(2, 0);
         let accept = rect_center(layout::ACCEPT_LEVER);
         let launch = rect_center(layout::LAUNCH_LEVER);
-        let mars = POIS[usize::from(MARS)].pos;
+        let mars = poi_pos(MARS, 0);
         let pause = |p: Vec2, held| InputFrame {
             pointer: p,
             held,
@@ -644,7 +644,10 @@ mod tests {
         s.push((0.017, pause(Vec2::default(), false)));
         s.push((0.023, InputFrame::default()));
         s.push((0.019, pause(Vec2::default(), false)));
-        for _ in 0..80 {
+        // Enough warped 0.031 s frames (just under 30 ticks each) to carry
+        // the whole leg; the leg length is read off the sky near departure.
+        let leg = crate::sim::map::leg_ticks(crate::sim::GUILD, MARS, 60);
+        for _ in 0..leg / 29 + 60 {
             s.push((0.031, InputFrame::default()));
         }
         s.push((0.0, warp));

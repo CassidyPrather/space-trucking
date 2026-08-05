@@ -35,10 +35,13 @@ pub struct Barter {
 /// How much each station values each kind, `0..=6`.
 ///
 /// Rows follow map order (Venus, Earth, Mars, Jupiter, Uranus, Neptune,
-/// Guild), columns follow [`Kind::index`] order. A zero doubles as "local
-/// produce": stations shelve the kind they do not value. Every row must keep
-/// at least three kinds at 2 or above so the wants list survives the ±1
-/// jitter, and column 8 (the crate) is 4 everywhere but the Guild.
+/// Guild, Saturn, Umbra Market, Hermitage, comet, `???`), columns follow
+/// [`Kind::index`] order. A zero doubles as "local produce": stations
+/// shelve the kind they do not value. Every row must keep at least three
+/// kinds at 2 or above so the wants list survives the ±1 jitter, and the
+/// crate column is 4 everywhere but the Guild. The comet and `???` never
+/// open a barter, so their rows are placeholders kept valid for the
+/// invariants above.
 pub const VALUE: [[u8; KIND_COUNT]; POI_COUNT] = [
     [0, 1, 2, 1, 3, 2, 3, 5, 4], // Venus
     [4, 3, 0, 2, 4, 1, 2, 3, 4], // Earth
@@ -47,6 +50,11 @@ pub const VALUE: [[u8; KIND_COUNT]; POI_COUNT] = [
     [2, 3, 3, 2, 4, 4, 0, 1, 4], // Uranus
     [3, 2, 4, 3, 3, 2, 1, 0, 4], // Neptune
     [2, 2, 2, 2, 2, 2, 2, 2, 0], // Guild
+    [1, 3, 2, 6, 1, 0, 2, 1, 4], // Saturn: the ring-barons pay dearly for scrap
+    [3, 2, 1, 1, 2, 0, 5, 4, 4], // Umbra Market: cold things and sea-things, at night
+    [1, 1, 3, 1, 4, 1, 1, 2, 4], // Hermitage: seeds and staples; wealth bores hermits
+    [2, 2, 2, 2, 2, 2, 2, 2, 4], // comet (no barter)
+    [2, 2, 2, 2, 2, 2, 2, 2, 4], // ??? (no barter)
 ];
 
 /// Ceiling for jittered per-visit values.

@@ -23,7 +23,7 @@
 //! decoration — a future accessibility slice that gates decorative motion
 //! deliberately leaves it running, calm as it is.
 
-use space_trucking::sim::{Cue, Loc, POIS, PoiId, ShipState, Sim, Vec2, layout};
+use space_trucking::sim::{Cue, Loc, PoiId, ShipState, Sim, Vec2, layout};
 
 /// Idle seconds before the fly lesson may begin.
 pub const FLY_IDLE: f32 = 8.0;
@@ -164,7 +164,7 @@ impl Tutor {
                 }
                 if idle_seconds >= FLY_IDLE {
                     if let Some(at) = fly_eligible(sim) {
-                        self.state = playing(fly_script(at));
+                        self.state = playing(fly_script(at, sim));
                         return;
                     }
                 }
@@ -289,9 +289,12 @@ const fn demo_poi(docked: PoiId) -> PoiId {
 
 /// Lesson one: fade in near the hold, drift to a port, press (ring echo),
 /// drift to the launch lever, press (glow echo), fade.
-fn fly_script(docked: PoiId) -> Vec<Key> {
+///
+/// The port's position is sampled from the sim at lesson start; planets
+/// drift far too slowly for an eight-second demonstration to miss.
+fn fly_script(docked: PoiId, sim: &Sim) -> Vec<Key> {
     let target = demo_poi(docked);
-    let poi = POIS[usize::from(target)].pos;
+    let poi = sim.poi_pos(target);
     let lever = rect_center(layout::LAUNCH_LEVER);
     let start = hold_center();
     vec![
@@ -427,7 +430,7 @@ mod tests {
 
     /// Select Venus, pull the lever, and fast-forward onto the dock.
     fn fly_to_venus(sim: &mut Sim) {
-        sim.advance(0.0, &press_at(POIS[usize::from(VENUS)].pos));
+        sim.advance(0.0, &press_at(sim.poi_pos(VENUS)));
         sim.advance(0.0, &press_at(rect_center(layout::LAUNCH_LEVER)));
         let ShipState::Traveling { leg_ticks, .. } = sim.ship().state else {
             panic!("lever pull must depart");
@@ -467,7 +470,7 @@ mod tests {
         let ghost = tutor.ghost().expect("mid-lesson ghost");
         assert_eq!(ghost.echo, Echo::Poi(DEMO_POI));
         assert!(ghost.press > 0.9, "press was {}", ghost.press);
-        let poi = POIS[usize::from(DEMO_POI)].pos;
+        let poi = sim.poi_pos(DEMO_POI);
         assert!((ghost.pos - poi).length() < 1.0, "hand not on the port");
     }
 
@@ -534,7 +537,7 @@ mod tests {
     #[test]
     fn traveling_keeps_the_ghost_away() {
         let mut sim = Sim::new(7);
-        sim.advance(0.0, &press_at(POIS[usize::from(VENUS)].pos));
+        sim.advance(0.0, &press_at(sim.poi_pos(VENUS)));
         sim.advance(0.0, &press_at(rect_center(layout::LAUNCH_LEVER)));
         assert!(matches!(sim.ship().state, ShipState::Traveling { .. }));
         let mut tutor = Tutor::default();
@@ -571,9 +574,12 @@ mod tests {
     #[test]
     fn scripts_stay_inside_the_world() {
         let in_world = |p: Vec2| p.x >= 0.0 && p.x <= WORLD_W && p.y >= 0.0 && p.y <= WORLD_H;
-        // Every possible docked port, for the fly lesson.
-        for docked in 0..POIS.len() as PoiId {
-            for k in fly_script(docked) {
+        // Every possible docked port, for the fly lesson. The sky is
+        // sampled a long way into a run, so drifted planets are covered.
+        let mut sim = Sim::new(7);
+        sim.fast_forward(500_000);
+        for docked in 0..space_trucking::sim::POI_COUNT as PoiId {
+            for k in fly_script(docked, &sim) {
                 assert!(in_world(k.pos), "fly key leaves the world: {:?}", k.pos);
             }
         }
@@ -604,7 +610,8 @@ mod tests {
             offer: 0,
             offer_from: hold_center(),
         };
-        for keys in [fly_script(GUILD), trade_script(&demo)] {
+        let sim = Sim::new(7);
+        for keys in [fly_script(GUILD, &sim), trade_script(&demo)] {
             assert!(keys.len() >= 2);
             for pair in keys.windows(2) {
                 assert!(pair[0].t < pair[1].t, "keyframe times must ascend");

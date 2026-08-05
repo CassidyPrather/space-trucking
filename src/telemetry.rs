@@ -230,6 +230,17 @@ impl Aggregate {
                 | Cue::Harvest { .. }
                 | Cue::Exchange
                 | Cue::Shutter
+                | Cue::EncounterStart
+                | Cue::EncounterEnd
+                | Cue::GasBoost
+                | Cue::CasinoWin
+                | Cue::CasinoLoss
+                | Cue::WhaleSong { .. }
+                | Cue::AdStart
+                | Cue::AdSwat
+                | Cue::AdEnd
+                | Cue::FluffBirth
+                | Cue::ParadeStart
                 | Cue::Creak { .. }
                 | Cue::RatAboard
                 | Cue::RatSkitter { .. }

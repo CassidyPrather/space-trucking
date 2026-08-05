@@ -32,8 +32,9 @@ use macroquad::texture::{DrawTextureParams, RenderTarget, draw_texture_ex};
 use macroquad::window::clear_background;
 
 use space_trucking::sim::{
-    Barter, EAGER_MAX, GUILD, Kind, Loc, POIS, Piece, PoiId, SUN, ShipState, Sim, Track, Vec2,
-    Violation, WORLD_H, WORLD_W, layout, leg_endpoints, placement_check, player_owned, splitmix,
+    Barter, EAGER_MAX, EncounterKind, GUILD, Kind, Loc, POIS, Piece, PoiId, SUN, ShipState, Sim,
+    Track, Vec2, Violation, WORLD_H, WORLD_W, layout, leg_endpoints, placement_check, player_owned,
+    splitmix,
 };
 
 use crate::View;
@@ -632,8 +633,11 @@ fn draw_map(c: &Canvas, scene: &Scene) {
     draw_orbits(c, scene, t);
     draw_route_and_ship(c, scene);
     draw_pois(c, scene, glass);
+    draw_parade(c, scene, glass);
+    draw_travel_company(c, scene, glass);
     draw_sweep(c, glass, t);
     finish_screen(c, glass, scene);
+    draw_ad_static(c, scene, glass);
 }
 
 /// Fixed render-side seed for the starfield hash; cosmetic only.
@@ -971,6 +975,229 @@ fn neptune_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
     );
 }
 
+/// The Grand Parade: once the hangar counter fills, a procession of
+/// heptagons crosses the whole sky, once, slowly, and does not explain.
+fn draw_parade(c: &Canvas, scene: &Scene, glass: layout::Rect) {
+    let Some(frac) = scene.sim.parade() else {
+        return;
+    };
+    let t = scene.idle_clock();
+    let across = frac.mul_add(glass.w + 120.0, glass.x - 60.0);
+    let lead = Vec2::new(across, frac.mul_add(-60.0, glass.y + glass.h * 0.4));
+    for i in 0..5_u32 {
+        let back = lead - Vec2::new(26.0 + 22.0 * i as f32, (i as f32) * -6.0);
+        let r = if i == 0 { 14.0 } else { 7.0 - i as f32 };
+        if back.x < glass.x + 8.0 || back.x > glass.x + glass.w - 8.0 {
+            continue;
+        }
+        let pulse = (t * 2.0 + i as f32).sin().mul_add(0.08, 0.8);
+        c.poly(back, 7, r.max(2.5), t * 6.0, fade(EERIE, 0.5 * pulse));
+        c.poly_ring(back, 7, r.max(2.5), t * 6.0, 1.0, fade(EERIE_BRIGHT, 0.8 * pulse));
+    }
+}
+
+/// Whatever is alongside mid-leg: its badge on the encounter plate, its
+/// spectacle on the glass, the flotsam nets, and the ad drone.
+fn draw_travel_company(c: &Canvas, scene: &Scene, glass: layout::Rect) {
+    let sim = scene.sim;
+    if !matches!(sim.ship().state, ShipState::Traveling { .. }) {
+        return;
+    }
+    let t = scene.idle_clock();
+
+    // Flotsam nets: wells appear when there is (or could be) drift.
+    let drifting = sim
+        .pieces()
+        .iter()
+        .any(|p| matches!(p.loc, Loc::Flotsam { .. }));
+    let open = sim.encounter().is_some_and(space_trucking::sim::Encounter::open);
+    if drifting || open {
+        for &slot in &layout::FLOTSAM_SLOTS {
+            c.frame(inflate(slot, PX), fade(PHOSPHOR_DIM, 0.7));
+            socket_well(c, slot);
+        }
+    }
+
+    if let Some(enc) = sim.encounter() {
+        if enc.open() {
+            let badge = layout::ENCOUNTER_BADGE;
+            c.frame(inflate(badge, PX), fade(PHOSPHOR, 0.5));
+            c.fill(badge, fade(SCREEN, 0.6));
+            let mid = rect_center(badge);
+            match enc.kind {
+                EncounterKind::Derelict => derelict_badge(c, mid, t),
+                EncounterKind::GasStation => gas_badge(c, mid, enc.used, t),
+                EncounterKind::Casino => casino_badge(c, mid, t),
+                EncounterKind::MeteorShower => meteor_badge(c, mid, t),
+                EncounterKind::Whale => whale_badge(c, mid, t),
+            }
+            // The whale itself, vast and patient, crossing under the sky.
+            if enc.kind == EncounterKind::Whale {
+                if let ShipState::Traveling { progress, .. } = sim.ship().state {
+                    let frac = (progress.saturating_sub(enc.start)) as f32
+                        / (enc.end - enc.start).max(1) as f32;
+                    let at = Vec2::new(
+                        frac.mul_add(glass.w * 0.8, glass.x + glass.w * 0.1),
+                        glass.y + glass.h * 0.78 + (t * 0.5).sin() * 4.0,
+                    );
+                    c.oval(at, 26.0, 7.0, -4.0, fade(PHOSPHOR_DIM, 0.5));
+                    let tail = at + Vec2::new(-30.0, 0.0);
+                    c.tri(
+                        tail,
+                        tail + Vec2::new(-8.0, -7.0),
+                        tail + Vec2::new(-8.0, 7.0),
+                        fade(PHOSPHOR_DIM, 0.5),
+                    );
+                    c.dot(at + Vec2::new(18.0, -2.0), 1.2, fade(PHOSPHOR, 0.8));
+                }
+            }
+        }
+    }
+
+    // The ad drone: a tiny billboard on a tight orbit, wobbling per swat.
+    if let Some(at) = sim.drone_pos() {
+        let wobble = f32::from(sim.drone_swats()) * (t * 21.0).sin() * 2.0;
+        let at = at + Vec2::new(wobble, 0.0);
+        c.dot(at, 2.2, fade(AMBER, 0.9));
+        let board = layout::Rect::new(at.x - 7.0, at.y - 12.0, 14.0, 8.0);
+        c.fill(board, fade(GLINT, 0.85));
+        for (i, ch) in [3_u8, 11, 7].into_iter().enumerate() {
+            ad_rune(
+                c,
+                ch.wrapping_add((t * 2.0) as u8),
+                Vec2::new((i as f32).mul_add(4.4, board.x + 2.0), board.y + 1.5),
+                4.0,
+                SHADOW,
+            );
+        }
+        c.seg(at, at + Vec2::new(0.0, -4.0), 1.0, fade(AMBER, 0.7));
+    }
+}
+
+/// A dead ship, keel up, one porthole dark.
+fn derelict_badge(c: &Canvas, mid: Vec2, t: f32) {
+    let list = (t * 0.8).sin() * 0.1;
+    c.tri(
+        mid + Vec2::new(-16.0, 8.0),
+        mid + Vec2::new(18.0, list.mul_add(10.0, 4.0)),
+        mid + Vec2::new(-10.0, -8.0),
+        fade(PHOSPHOR_DIM, 0.9),
+    );
+    c.dot(mid + Vec2::new(-4.0, 0.0), 2.2, SCREEN);
+    c.seg(
+        mid + Vec2::new(6.0, -2.0),
+        mid + Vec2::new(12.0, -10.0),
+        1.0,
+        fade(PHOSPHOR_DIM, 0.6),
+    );
+}
+
+/// The inexplicable gas station: pump, hose, one honest drip. Dimmed
+/// once its one top-up is spent.
+fn gas_badge(c: &Canvas, mid: Vec2, used: bool, t: f32) {
+    let a = if used { 0.35 } else { 0.9 };
+    c.fill(
+        layout::Rect::new(mid.x - 8.0, mid.y - 10.0, 10.0, 20.0),
+        fade(PHOSPHOR, a),
+    );
+    c.fill(
+        layout::Rect::new(mid.x - 6.0, mid.y - 7.0, 6.0, 5.0),
+        fade(SCREEN, 0.9),
+    );
+    c.arc(mid + Vec2::new(6.0, -6.0), 6.0, -90.0, 180.0, 1.2, fade(PHOSPHOR, a));
+    let drip = (t * 2.0).fract() * 6.0;
+    c.dot(mid + Vec2::new(12.0, drip), 1.0, fade(PHOSPHOR, a * 0.8));
+}
+
+/// The casino: a neon heptagram with running lights. No visible doors.
+fn casino_badge(c: &Canvas, mid: Vec2, t: f32) {
+    c.poly_ring(mid, 7, 15.0, t * 14.0, 1.4, fade(AMBER, 0.9));
+    c.poly_ring(mid, 7, 10.0, t * -20.0, 1.0, fade(EERIE_BRIGHT, 0.8));
+    for i in 0..7_u32 {
+        let angle = (i as f32).mul_add(std::f32::consts::TAU / 7.0, t * 1.5);
+        let on = ((t * 6.0) as u32 + i) % 3 == 0;
+        c.dot(
+            polar(mid, 18.0, angle),
+            1.2,
+            fade(GLINT, if on { 0.9 } else { 0.2 }),
+        );
+    }
+}
+
+/// Gravel weather, incoming.
+fn meteor_badge(c: &Canvas, mid: Vec2, t: f32) {
+    for (i, off) in [-8.0_f32, 0.0, 9.0].into_iter().enumerate() {
+        let jitter = ((t * 3.0) + i as f32).fract() * 5.0;
+        let head = mid + Vec2::new(off + jitter, -6.0 + jitter);
+        c.seg(head + Vec2::new(-8.0, -8.0), head, 1.2, fade(AMBER, 0.7));
+        c.dot(head, 1.5, fade(GLINT, 0.9));
+    }
+}
+
+/// A fluke, mid-dive.
+fn whale_badge(c: &Canvas, mid: Vec2, t: f32) {
+    let sway = (t * 0.9).sin() * 2.0;
+    c.tri(
+        mid + Vec2::new(sway, 8.0),
+        mid + Vec2::new(-13.0, -8.0),
+        mid + Vec2::new(-2.0, -2.0),
+        fade(PHOSPHOR, 0.85),
+    );
+    c.tri(
+        mid + Vec2::new(sway, 8.0),
+        mid + Vec2::new(13.0, -8.0),
+        mid + Vec2::new(2.0, -2.0),
+        fade(PHOSPHOR, 0.85),
+    );
+    c.arc(mid + Vec2::new(0.0, 12.0), 8.0, 180.0, 180.0, 1.0, fade(PHOSPHOR_DIM, 0.6));
+}
+
+/// One rune of the ad tongue: an angular scrawl derived from the byte, in
+/// a language nobody aboard reads. (It is trying very hard to sell you
+/// something; the glyphs are procedural so it never accidentally succeeds.)
+fn ad_rune(c: &Canvas, ch: u8, at: Vec2, size: f32, col: Color) {
+    let h = splitmix(0xAD_51_11, u64::from(ch));
+    let point = |n: u64| {
+        Vec2::new(
+            ((h >> n) % 4) as f32 / 3.0 * size + at.x,
+            ((h >> (n + 8)) % 5) as f32 / 4.0 * size * 1.4 + at.y,
+        )
+    };
+    let mut prev = point(0);
+    for leg_bits in [16_u64, 32, 48] {
+        let next = point(leg_bits);
+        c.seg(prev, next, 1.0, col);
+        prev = next;
+    }
+}
+
+/// The ad ticker: while the drone is attached, every screen in the shop
+/// runs its incomprehensible pitch. Swat the drone to make it stop.
+fn draw_ad_static(c: &Canvas, scene: &Scene, glass: layout::Rect) {
+    if !scene.sim.advertising() {
+        return;
+    }
+    let t = scene.juice.clock();
+    // The pitch, in lojban, transliterated into the rune alphabet. It
+    // says something like "buy the great shining thing"; nobody asked.
+    let pitch = b"ko te vecnu lo banli je carmi dacti .i e'osai";
+    let band = layout::Rect::new(glass.x, glass.y + 6.0, glass.w, 12.0);
+    c.fill(band, fade(SHADOW, 0.55));
+    let step = 9.0;
+    let scroll = if scene.reduced_motion {
+        0.0
+    } else {
+        (t * 30.0) % (pitch.len() as f32 * step)
+    };
+    for (i, &ch) in pitch.iter().enumerate() {
+        let x = (i as f32).mul_add(step, band.x + band.w - scroll);
+        if x < band.x + 2.0 || x > band.x + band.w - step {
+            continue;
+        }
+        ad_rune(c, ch, Vec2::new(x, band.y + 2.0), 6.0, fade(AMBER, 0.85));
+    }
+}
+
 /// The Guild Station: a gray-violet heptagon, pulsing like it knows
 /// things. Seven sides; the officially published schematics show six.
 fn guild_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32, ph: f32) {
@@ -1105,6 +1332,7 @@ fn draw_hangar_plate(c: &Canvas, scene: &Scene) {
 /// Destination preview: the console's second CRT, showing where you are
 /// going — or, dimmed, where you already are.
 fn draw_preview(c: &Canvas, scene: &Scene) {
+    // (The ad overlay lands at the end of this function, over the glass.)
     let sim = scene.sim;
     let glass = crt_screen(c, layout::DEST_PREVIEW, SALT_PREVIEW);
     preview_grid(c, glass);
@@ -1128,6 +1356,7 @@ fn draw_preview(c: &Canvas, scene: &Scene) {
         c.fill(glass, fade(SHADOW, 0.35));
     }
     finish_screen(c, glass, scene);
+    draw_ad_static(c, scene, glass);
 }
 
 /// Faint alignment grid on the preview glass: the tube is powered even

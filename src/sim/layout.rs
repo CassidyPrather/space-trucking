@@ -94,6 +94,11 @@ pub const FLOTSAM_SLOTS: [Rect; 2] = [
     Rect::new(66.0, 380.0, 40.0, 40.0),
 ];
 
+/// The encounter badge, top-right of the map glass: whatever is alongside
+/// shows its sign here, and pressing (or dropping cargo on) it is how the
+/// player engages. Dormant except mid-encounter.
+pub const ENCOUNTER_BADGE: Rect = Rect::new(430.0, 20.0, 60.0, 60.0);
+
 /// Centre of the eagerness dial, right of the pads.
 pub const DIAL_CENTER: Vec2 = Vec2::new(700.0, 485.0);
 
@@ -200,6 +205,7 @@ mod tests {
         for (i, &slot) in FLOTSAM_SLOTS.iter().enumerate() {
             rects.push((&*format!("flotsam[{i}]").leak(), slot));
         }
+        rects.push(("encounter", ENCOUNTER_BADGE));
         for (name, row) in [
             ("shelf", &SHELF_SLOTS),
             ("received", &RECEIVED_SLOTS),

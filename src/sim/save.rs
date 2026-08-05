@@ -19,6 +19,7 @@ use std::fmt::Write as _;
 use std::str::FromStr;
 
 use super::cargo::{Kind, Loc, Piece};
+use super::encounter::{Drone, Drones, Encounter, EncounterKind, Encounters};
 use super::event::{Omen, Phase};
 use super::layout::{FLOTSAM_SLOTS, GRID_COLS, GRID_ROWS, SHELF_SLOTS};
 use super::map::{POI_COUNT, PoiId, Ship, ShipState};
@@ -112,6 +113,40 @@ pub(crate) fn serialize(sim: &Sim) -> String {
         omen.light.to_bits(),
         omen.swell.to_bits()
     );
+    match &sim.encounters.current {
+        None => {
+            let _ = writeln!(out, "enc -");
+        }
+        Some(enc) => {
+            let _ = writeln!(
+                out,
+                "enc {} {} {} {} {} {}",
+                enc.kind.token(),
+                enc.start,
+                enc.end,
+                u8::from(enc.opened),
+                u8::from(enc.closed),
+                u8::from(enc.used)
+            );
+        }
+    }
+    match &sim.drones.drone {
+        None => {
+            let _ = writeln!(out, "drone -");
+        }
+        Some(drone) => {
+            let _ = writeln!(
+                out,
+                "drone {} {} {} {} {}",
+                drone.start,
+                drone.end,
+                u8::from(drone.attached),
+                u8::from(drone.gone),
+                drone.swats
+            );
+        }
+    }
+    let _ = writeln!(out, "parade {}", opt_token(sim.parade_at));
     match &sim.rats.rat {
         None => {
             let _ = writeln!(out, "rat -");
@@ -195,6 +230,9 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let ship = parse_ship(&mut reader, tick)?;
     let legs = reader.kv("legs")?;
     let omen = parse_omen(&mut reader)?;
+    let encounters = parse_encounter(&mut reader)?;
+    let drones = parse_drone(&mut reader)?;
+    let parade_at = parse_parade(&mut reader)?;
     let rats = parse_rat(&mut reader)?;
     let (eagerness, patience) = parse_eager(&mut reader)?;
     let (pieces, next_piece) = parse_pieces(&mut reader)?;
@@ -239,11 +277,111 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         legs,
         omen,
         rats,
+        encounters,
+        drones,
+        parade_at,
         karma,
         familiar,
         night: false,
         last_violation: None,
     })
+}
+
+/// The `enc` line: this leg's encounter, if any.
+fn parse_encounter(reader: &mut Reader<'_>) -> Result<Encounters, SaveError> {
+    let line = reader.next_line()?;
+    let mut tokens = line.split_whitespace();
+    if tokens.next() != Some("enc") {
+        return Err(reader.err());
+    }
+    match tokens.next() {
+        Some("-") => Ok(Encounters { current: None }),
+        Some(token) => {
+            let kind = token
+                .parse::<u8>()
+                .ok()
+                .and_then(EncounterKind::from_token)
+                .ok_or_else(|| reader.err())?;
+            let start: u64 = reader.token(tokens.next())?;
+            let end: u64 = reader.token(tokens.next())?;
+            if end <= start {
+                return Err(reader.err());
+            }
+            let flag = |reader: &Reader<'_>, t: Option<&str>| match t {
+                Some("0") => Ok(false),
+                Some("1") => Ok(true),
+                _ => Err(reader.err()),
+            };
+            let opened = flag(reader, tokens.next())?;
+            let closed = flag(reader, tokens.next())?;
+            let used = flag(reader, tokens.next())?;
+            Ok(Encounters {
+                current: Some(Encounter {
+                    kind,
+                    start,
+                    end,
+                    opened,
+                    closed,
+                    used,
+                }),
+            })
+        }
+        None => Err(reader.err()),
+    }
+}
+
+/// The `drone` line: this leg's ad drone, if any.
+fn parse_drone(reader: &mut Reader<'_>) -> Result<Drones, SaveError> {
+    let line = reader.next_line()?;
+    let mut tokens = line.split_whitespace();
+    if tokens.next() != Some("drone") {
+        return Err(reader.err());
+    }
+    match tokens.next() {
+        Some("-") => Ok(Drones { drone: None }),
+        Some(token) => {
+            let start: u64 = token.parse().map_err(|_| reader.err())?;
+            let end: u64 = reader.token(tokens.next())?;
+            if end <= start {
+                return Err(reader.err());
+            }
+            let flag = |reader: &Reader<'_>, t: Option<&str>| match t {
+                Some("0") => Ok(false),
+                Some("1") => Ok(true),
+                _ => Err(reader.err()),
+            };
+            let attached = flag(reader, tokens.next())?;
+            let gone = flag(reader, tokens.next())?;
+            let swats: u8 = reader.token(tokens.next())?;
+            if swats >= super::encounter::AD_SWATS + 1 {
+                return Err(reader.err());
+            }
+            Ok(Drones {
+                drone: Some(Drone {
+                    start,
+                    end,
+                    attached,
+                    gone,
+                    swats,
+                }),
+            })
+        }
+        None => Err(reader.err()),
+    }
+}
+
+/// The `parade` line: the tick the counter filled, or `-`.
+fn parse_parade(reader: &mut Reader<'_>) -> Result<Option<u64>, SaveError> {
+    let line = reader.next_line()?;
+    let mut tokens = line.split_whitespace();
+    if tokens.next() != Some("parade") {
+        return Err(reader.err());
+    }
+    match tokens.next() {
+        Some("-") => Ok(None),
+        Some(token) => token.parse().map(Some).map_err(|_| reader.err()),
+        None => Err(reader.err()),
+    }
 }
 
 /// The `familiar` line: one 4-hex kind bitmask per POI, in map order.

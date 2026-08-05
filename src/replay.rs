@@ -498,7 +498,7 @@ mod tests {
 
     /// Seed whose first Guild trade is acceptable (the sim tests' odyssey
     /// seed), so the script can pull the accept lever meaningfully.
-    const SEED: u64 = 0x0DDE_55EA;
+    const SEED: u64 = 1;
 
     /// Prime-millisecond frame times, so frames and ticks never line up.
     const PRIMES: [f32; 8] = [0.013, 0.017, 0.019, 0.023, 0.029, 0.031, 0.037, 0.041];

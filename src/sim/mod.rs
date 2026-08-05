@@ -27,6 +27,7 @@
 
 pub mod barter;
 pub mod cargo;
+mod encounter;
 mod event;
 pub mod layout;
 pub mod map;
@@ -40,6 +41,8 @@ pub use cargo::{
     KIND_COUNT, Kind, Loc, Piece, Tag, Violation, first_fit, placement_check, placement_legal,
     player_owned,
 };
+pub use encounter::{AD_SWATS, Drone, Encounter, EncounterKind};
+use encounter::{Drones, Encounters};
 use event::Omen;
 pub use map::{
     COMET, GUILD, HERMITAGE, INNER_RING, POI_COUNT, POIS, Poi, PoiId, SATURN, SHIP_SPEED, SUN,
@@ -72,6 +75,29 @@ pub const WANDERER_TOLL: u32 = 3;
 
 /// Salt for the comet harvest rolls, distinct from every other stream.
 const SALT_HARVEST: u64 = 0xC0_3E71;
+
+/// Salt for the fluff breeding windows.
+const SALT_FLUFF: u64 = 0xF1_0FF5;
+
+/// Deliveries that fill the hangar counter (the last lamp on the plate)
+/// and set the Grand Parade loose.
+pub const PARADE_AT: u32 = 32;
+
+/// How long the Grand Parade takes to cross the sky, in ticks.
+pub const PARADE_TICKS: u64 = 7200;
+
+/// Ticks between fluff breeding windows: about three minutes, each fluff
+/// lineage deciding independently whether this window is the one.
+const FLUFF_WINDOW: u64 = 10_800;
+
+/// Most fluffs the hold will breed to. Mercy, not realism.
+const FLUFF_CAP: usize = 8;
+
+/// The drone hangs this far from the ship while advertising.
+const DRONE_ORBIT: f32 = 22.0;
+
+/// Click radius for swatting the drone.
+const DRONE_RADIUS: f32 = 10.0;
 
 /// The discovery ledger a fresh contractor starts with: the Guild is home
 /// turf — every kind reads true there — and everywhere else is fog.
@@ -257,6 +283,30 @@ pub enum Cue {
     },
     /// ??? took three mysterious crates and left one very mysterious one.
     Exchange,
+    /// Something pulled alongside for a stretch of the leg.
+    EncounterStart,
+    /// It fell astern; unstowed flotsam went with it.
+    EncounterEnd,
+    /// The gas station topped the tanks up: a sliver of leg skipped.
+    GasBoost,
+    /// The casino paid out: wager returned, prize in the flotsam.
+    CasinoWin,
+    /// The house won. Enjoy the commemorative chip.
+    CasinoLoss,
+    /// The whale sang; `intensity` is how near the verse felt.
+    WhaleSong {
+        intensity: f32,
+    },
+    /// An ad drone latched onto the hull; every screen is ads now.
+    AdStart,
+    /// A swat landed on the drone.
+    AdSwat,
+    /// The ads stopped — swatted off, bored, or docked away.
+    AdEnd,
+    /// A fluff became two fluffs. Nobody saw it happen.
+    FluffBirth,
+    /// The hangar counter filled: the Grand Parade is leaving the dock.
+    ParadeStart,
     /// Ambient hull creak while traveling.
     Creak {
         intensity: f32,
@@ -365,6 +415,11 @@ pub struct Sim {
     legs: u64,
     omen: Omen,
     rats: Rats,
+    encounters: Encounters,
+    drones: Drones,
+    /// The tick the hangar counter filled and the Grand Parade cast off,
+    /// if it ever has. Set once per run; the sky is different after.
+    parade_at: Option<u64>,
     /// Pieces ever gifted to the Hermitage; its shelf grows from this.
     karma: u32,
     /// Per-station bitmask of kinds the player has traded there — the
@@ -415,7 +470,7 @@ impl Sim {
         let mut visits = [0_u32; POI_COUNT];
         visits[usize::from(GUILD)] = 1;
         let (barter, goods) =
-            barter::generate(seed, GUILD, 1, &pieces, 0, &mut rng, &mut next_piece);
+            barter::generate(seed, GUILD, 1, &pieces, 0, false, &mut rng, &mut next_piece);
         pieces.extend(goods);
         let pos = map::poi_pos(GUILD, 0);
 
@@ -443,6 +498,9 @@ impl Sim {
             legs: 0,
             omen: Omen::new(),
             rats: Rats::new(),
+            encounters: Encounters::new(),
+            drones: Drones::new(),
+            parade_at: None,
             karma: 0,
             familiar: home_familiar(),
             night: false,
@@ -752,6 +810,54 @@ impl Sim {
         INNER_RING.contains(&id) && !self.transit_chit_aboard()
     }
 
+    /// This leg's encounter, if one is scheduled or alongside.
+    #[must_use]
+    pub const fn encounter(&self) -> Option<&Encounter> {
+        self.encounters.current.as_ref()
+    }
+
+    /// Whether the ad drone is attached and advertising.
+    #[must_use]
+    pub fn advertising(&self) -> bool {
+        self.drones.advertising()
+    }
+
+    /// Swats already landed on the drone, for the renderer's wobble.
+    #[must_use]
+    pub fn drone_swats(&self) -> u8 {
+        self.drones.drone.map_or(0, |drone| drone.swats)
+    }
+
+    /// Where the ad drone hangs while advertising: a tight orbit around
+    /// the ship, position derived from the tick so the sim's hit-test and
+    /// the renderer agree exactly.
+    #[must_use]
+    pub fn drone_pos(&self) -> Option<Vec2> {
+        if !self.drones.advertising() {
+            return None;
+        }
+        let angle = (self.tick % 720) as f32 / 720.0 * std::f32::consts::TAU;
+        Some(Vec2::new(
+            angle.cos().mul_add(DRONE_ORBIT, self.ship.pos.x),
+            angle.sin().mul_add(DRONE_ORBIT, self.ship.pos.y),
+        ))
+    }
+
+    /// The Grand Parade's crossing, `0..=1`, while it is in the sky.
+    #[must_use]
+    pub fn parade(&self) -> Option<f32> {
+        let at = self.parade_at?;
+        let elapsed = self.tick.saturating_sub(at);
+        (elapsed < PARADE_TICKS).then(|| elapsed as f32 / PARADE_TICKS as f32)
+    }
+
+    /// Whether the hangar counter has ever filled. The sky is different
+    /// after: mysterious crates surface on ordinary shelves.
+    #[must_use]
+    pub const fn paraded(&self) -> bool {
+        self.parade_at.is_some()
+    }
+
     /// Whether a suspicious piece is stowed in the hold.
     #[must_use]
     pub fn suspicious_aboard(&self) -> bool {
@@ -834,6 +940,16 @@ impl Sim {
         {
             return;
         }
+        if matches!(self.ship.state, ShipState::Traveling { .. }) {
+            if let Some(at) = self.drone_pos() {
+                if (p - at).length() <= DRONE_RADIUS && self.drones.on_press(&mut self.cues) {
+                    return;
+                }
+            }
+            if layout::ENCOUNTER_BADGE.contains(p) && self.gas_top_up() {
+                return;
+            }
+        }
         if shift && self.quick_move(p, placed) {
             return;
         }
@@ -865,6 +981,46 @@ impl Sim {
         } else if !icon_press(p) {
             self.cues.push(Cue::Reject { hard: false });
         }
+    }
+
+    /// A press on the encounter badge while the gas station is alongside:
+    /// top up, once, and skip a sliver of the remaining leg. Returns
+    /// whether the press was consumed.
+    fn gas_top_up(&mut self) -> bool {
+        let open_station = self
+            .encounters
+            .current
+            .as_ref()
+            .is_some_and(|enc| enc.open() && enc.kind == EncounterKind::GasStation);
+        if !open_station {
+            return false;
+        }
+        let Some(enc) = &mut self.encounters.current else {
+            return false;
+        };
+        if enc.used {
+            self.cues.push(Cue::Reject { hard: false });
+            return true;
+        }
+        enc.used = true;
+        if let ShipState::Traveling {
+            from,
+            to,
+            progress,
+            leg_ticks,
+        } = self.ship.state
+        {
+            // Inexplicable fuel: five percent of what remains, skipped.
+            let boosted = progress + (leg_ticks - progress) / 20;
+            self.ship.state = ShipState::Traveling {
+                from,
+                to,
+                progress: boosted,
+                leg_ticks,
+            };
+        }
+        self.cues.push(Cue::GasBoost);
+        true
     }
 
     /// A shift-press: move the piece under `p` straight to its one obvious
@@ -997,6 +1153,9 @@ impl Sim {
             return;
         };
         let piece = self.pieces[index];
+        if self.casino_wager(index, p) {
+            return;
+        }
         match self.resolve_drop(&piece, p) {
             Ok(loc) => {
                 self.pieces[index].loc = loc;
@@ -1020,6 +1179,36 @@ impl Sim {
                 self.cues.push(Cue::Reject { hard });
             }
         }
+    }
+
+    /// A player piece dropped on the badge while the casino is alongside
+    /// is a wager. Win: it snaps home and a gilded idol lands in the
+    /// flotsam. Lose: the piece IS still there — transmuted into one
+    /// commemorative casino chip, which the house insists is priceless.
+    /// Conservation holds either way: no piece is ever destroyed, merely
+    /// disrespected. Returns whether the drop was consumed.
+    fn casino_wager(&mut self, index: usize, p: Vec2) -> bool {
+        let open_casino = self
+            .encounters
+            .current
+            .as_ref()
+            .is_some_and(|enc| enc.open() && enc.kind == EncounterKind::Casino);
+        if !open_casino
+            || !layout::ENCOUNTER_BADGE.contains(p)
+            || !player_owned(self.pieces[index].loc)
+        {
+            return false;
+        }
+        if Encounters::casino_coin(self.seed, self.tick) {
+            self.spawn_flotsam(Kind::GildedIdol);
+            self.cues.push(Cue::CasinoWin);
+        } else {
+            let piece = &mut self.pieces[index];
+            piece.kind = Kind::CasinoChip;
+            piece.variant = self.rng.u8(..cargo::VARIANTS);
+            self.cues.push(Cue::CasinoLoss);
+        }
+        true
     }
 
     /// Whether dropping `piece` at `p` would have been legal without the
@@ -1307,6 +1496,8 @@ impl Sim {
         let suspicious = self.suspicious_aboard();
         self.omen
             .on_depart(self.seed, self.legs, leg_ticks, suspicious);
+        self.encounters.on_depart(self.seed, self.legs, leg_ticks);
+        self.drones.on_depart(self.seed, self.legs, leg_ticks);
         self.ship.state = ShipState::Traveling {
             from,
             to,
@@ -1343,6 +1534,41 @@ impl Sim {
             if let Some(cue) = event::creak(self.seed, self.tick) {
                 self.cues.push(cue);
             }
+            let seedlings = self.pieces.iter().any(|piece| {
+                matches!(piece.loc, Loc::Hold { .. }) && piece.kind == Kind::Seedlings
+            });
+            let ending = self
+                .encounters
+                .current
+                .as_ref()
+                .is_some_and(encounter::Encounter::open);
+            let spawn = self.encounters.travel_tick(
+                self.seed,
+                self.legs,
+                progress,
+                self.tick,
+                seedlings,
+                &mut self.cues,
+            );
+            if ending && self.cues.contains(&Cue::EncounterEnd) {
+                // It fell astern: loose flotsam drifts away with it. The
+                // meteor shower's souvenir spawns after, so it survives.
+                self.clear_flotsam();
+            }
+            for kind in spawn {
+                self.spawn_flotsam(kind);
+            }
+            self.drones.travel_tick(progress, &mut self.cues);
+            if self
+                .cues
+                .iter()
+                .any(|cue| matches!(cue, Cue::EncounterStart | Cue::AdStart | Cue::OmenStart))
+            {
+                // Whatever just started, a fast-forwarding developer
+                // should be looking at it.
+                self.disengage_warp();
+            }
+            self.breed_fluffs();
             if progress >= leg_ticks {
                 self.dock(to);
             } else {
@@ -1396,6 +1622,9 @@ impl Sim {
         // should be looking when something happens.
         self.disengage_warp();
         self.omen.on_dock(&mut self.cues);
+        self.encounters.on_dock(&mut self.cues);
+        self.drones.on_dock(&mut self.cues);
+        self.clear_flotsam();
         if poi == GUILD {
             self.steal_crate();
         }
@@ -1417,6 +1646,7 @@ impl Sim {
                     visit,
                     &self.pieces,
                     self.karma,
+                    self.parade_at.is_some(),
                     &mut self.rng,
                     &mut self.next_piece,
                 );
@@ -1510,6 +1740,83 @@ impl Sim {
         self.cues.push(Cue::Exchange);
     }
 
+    /// Drop a fresh piece into the first free drift slot, if any.
+    fn spawn_flotsam(&mut self, kind: Kind) {
+        let Some(slot) = encounter::free_flotsam_slot(&self.pieces) else {
+            return;
+        };
+        self.pieces.push(Piece {
+            id: self.next_piece,
+            kind,
+            variant: self.rng.u8(..cargo::VARIANTS),
+            gnawed: false,
+            loc: Loc::Flotsam { slot },
+        });
+        self.next_piece += 1;
+    }
+
+    /// Sweep every drifting piece over the side. Never player cargo:
+    /// flotsam is nobody's until stowed, which is why this is not a third
+    /// door in the conservation rules.
+    fn clear_flotsam(&mut self) {
+        self.pieces
+            .retain(|piece| !matches!(piece.loc, Loc::Flotsam { .. }));
+        for held in &mut self.held {
+            let orphaned =
+                matches!(held, Some(h) if !self.pieces.iter().any(|p| p.id == h.piece));
+            if orphaned {
+                *held = None;
+            }
+        }
+    }
+
+    /// The fluff arithmetic: while traveling, each breeding window one
+    /// stowed fluff (lowest id — the eldest) buds a copy into an adjacent
+    /// free cell, up to the mercy cap. Deterministic from the window
+    /// number, stateless, and honestly a little unnerving.
+    fn breed_fluffs(&mut self) {
+        if self.tick % FLUFF_WINDOW
+            != splitmix(self.seed ^ SALT_FLUFF, self.tick / FLUFF_WINDOW) % FLUFF_WINDOW
+        {
+            return;
+        }
+        let fluffs: Vec<(u32, u8, u8)> = self
+            .pieces
+            .iter()
+            .filter_map(|piece| match piece.loc {
+                Loc::Hold { x, y } if piece.kind == Kind::Fluff => Some((piece.id, x, y)),
+                _ => None,
+            })
+            .collect();
+        if fluffs.is_empty() || fluffs.len() >= FLUFF_CAP {
+            return;
+        }
+        let &(_, x, y) = fluffs.iter().min_by_key(|&&(id, _, _)| id).unwrap();
+        let neighbours = [
+            (x.wrapping_sub(1), y),
+            (x + 1, y),
+            (x, y.wrapping_sub(1)),
+            (x, y + 1),
+        ];
+        for (nx, ny) in neighbours {
+            if nx < layout::GRID_COLS
+                && ny < layout::GRID_ROWS
+                && placement_legal(&self.pieces, self.next_piece, Kind::Fluff, nx, ny)
+            {
+                self.pieces.push(Piece {
+                    id: self.next_piece,
+                    kind: Kind::Fluff,
+                    variant: self.rng.u8(..cargo::VARIANTS),
+                    gnawed: false,
+                    loc: Loc::Hold { x: nx, y: ny },
+                });
+                self.next_piece += 1;
+                self.cues.push(Cue::FluffBirth);
+                return;
+            }
+        }
+    }
+
     /// Stow a fresh `kind` at the first legal cell, if any. Free cargo
     /// only: barter pieces arrive through [`barter::generate`].
     fn spawn_in_hold(&mut self, kind: Kind) -> bool {
@@ -1556,6 +1863,12 @@ impl Sim {
         self.pieces.remove(index);
         self.deliveries += worth;
         self.cues.push(Cue::Delivered);
+        if self.deliveries >= PARADE_AT && self.parade_at.is_none() {
+            // The counter fills; whatever was being counted, it is enough.
+            // The hangar opens and the Grand Parade crosses the sky.
+            self.parade_at = Some(self.tick);
+            self.cues.push(Cue::ParadeStart);
+        }
     }
 }
 
@@ -1576,8 +1889,10 @@ mod tests {
     /// Jupiter: the longest leg from the Guild, for creak statistics.
     const JUPITER: PoiId = 3;
 
-    /// Seed for the scripted odyssey; chosen so its trade is acceptable.
-    const ODYSSEY_SEED: u64 = 0x0DDE_55EA;
+    /// Seed for the scripted odyssey, found by search: the Guild's first
+    /// trade is acceptable AND the first leg meets no encounter or ad
+    /// drone (either would auto-disengage the scripted warp).
+    const ODYSSEY_SEED: u64 = 1;
 
     fn press_at(x: f32, y: f32) -> InputFrame {
         InputFrame {
@@ -3957,5 +4272,342 @@ mod tests {
         assert!(!sim.pads_occupied(), "the gift should clear every pad");
         // Launchable again.
         launch(&mut sim, SATURN);
+    }
+
+
+    // ---------------------------------------------------- encounter tests --
+
+    /// A seed whose first Guild->Uranus leg carries an encounter, found by
+    /// scanning; the assert guards the premise against table drift.
+    fn launched_with_encounter(kind: Option<EncounterKind>) -> Sim {
+        for seed in 0..40_000 {
+            let mut sim = Sim::new(seed);
+            sim.ship.selected = Some(URANUS);
+            sim.depart();
+            if let Some(enc) = sim.encounter() {
+                if kind.is_none() || kind == Some(enc.kind) {
+                    return sim;
+                }
+            }
+        }
+        panic!("no seed under 40k rolls that encounter; tables drifted?");
+    }
+
+    #[test]
+    fn encounters_open_and_close_exactly_at_their_window() {
+        let mut sim = launched_with_encounter(None);
+        let enc = *sim.encounter().expect("scheduled");
+        assert!(enc.start < enc.end, "window must have extent");
+        let mut opened_at = None;
+        let mut closed_at = None;
+        for _ in 0..enc.end + 10 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            let ShipState::Traveling { progress, .. } = sim.ship().state else {
+                panic!("docked before the window closed");
+            };
+            if sim.cues().contains(&Cue::EncounterStart) {
+                opened_at = Some(progress);
+            }
+            if sim.cues().contains(&Cue::EncounterEnd) {
+                closed_at = Some(progress);
+                break;
+            }
+        }
+        // The timestamps hold exactly: open on the first tick at/after
+        // `start`, close on the first tick at/after `end`.
+        assert_eq!(opened_at, Some(enc.start));
+        assert_eq!(closed_at, Some(enc.end));
+    }
+
+    /// The omen leap lands past a window that never opened: the encounter
+    /// is skipped entirely — no start, no end, nothing to miss.
+    #[test]
+    fn an_omen_jump_can_skip_an_encounter_wholesale() {
+        let mut sim = Sim::new(0xA11E);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        launch(&mut sim, URANUS);
+        let jump_at = sim.omen.jump_at.expect("crate aboard means a jump");
+        // Park the window just past the omen's lead-out: unreachable at
+        // 1 tick/tick, swallowed whole by the leap.
+        sim.encounters.current = Some(Encounter {
+            kind: EncounterKind::Whale,
+            start: jump_at + 200,
+            end: jump_at + 260,
+            opened: false,
+            closed: false,
+            used: false,
+        });
+        let leg = leg_of(&sim);
+        let mut log = Vec::new();
+        for _ in 0..leg {
+            sim.advance(TICK_DT, &InputFrame::default());
+            log.extend_from_slice(sim.cues());
+            if matches!(sim.ship().state, ShipState::Docked(_)) {
+                break;
+            }
+        }
+        assert!(log.contains(&Cue::Jump), "the omen never fired");
+        assert!(
+            !log.iter().any(|c| matches!(c, Cue::EncounterStart)),
+            "a skipped window must never open"
+        );
+        assert!(
+            !log.iter().any(|c| matches!(c, Cue::EncounterEnd)),
+            "nothing opened, so nothing may close"
+        );
+    }
+
+    /// The omen leap lands past the end of a window that IS open: it
+    /// closes on the next travel tick, cues balanced.
+    #[test]
+    fn an_omen_jump_slams_an_open_encounter_shut() {
+        let mut sim = Sim::new(0xA11F);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        launch(&mut sim, URANUS);
+        let jump_at = sim.omen.jump_at.expect("crate aboard means a jump");
+        assert!(jump_at > 400, "window would not fit before the omen");
+        sim.encounters.current = Some(Encounter {
+            kind: EncounterKind::Whale,
+            start: jump_at - 300,
+            end: jump_at + 3000,
+            opened: false,
+            closed: false,
+            used: false,
+        });
+        let leg = leg_of(&sim);
+        let mut log = Vec::new();
+        for _ in 0..leg {
+            sim.advance(TICK_DT, &InputFrame::default());
+            log.extend_from_slice(sim.cues());
+            if matches!(sim.ship().state, ShipState::Docked(_)) {
+                break;
+            }
+        }
+        let starts = count_cues(&log, |c| matches!(c, Cue::EncounterStart));
+        let ends = count_cues(&log, |c| matches!(c, Cue::EncounterEnd));
+        assert_eq!(starts, 1, "the window sat before the jump; it must open");
+        assert_eq!(ends, 1, "the leap passed the end; it must close");
+        let jump_i = log.iter().position(|c| matches!(c, Cue::Jump)).unwrap();
+        let end_i = log
+            .iter()
+            .position(|c| matches!(c, Cue::EncounterEnd))
+            .unwrap();
+        assert!(end_i > jump_i, "the close must follow the leap");
+    }
+
+    #[test]
+    fn encounter_legs_survive_the_save_round_trip() {
+        let mut sim = launched_with_encounter(None);
+        let enc = *sim.encounter().expect("scheduled");
+        // Walk inside the window, then hand the run across a save.
+        while !matches!(sim.ship().state, ShipState::Docked(_)) {
+            sim.advance(TICK_DT, &InputFrame::default());
+            let ShipState::Traveling { progress, .. } = sim.ship().state else {
+                break;
+            };
+            if progress > enc.start + 5 {
+                break;
+            }
+        }
+        assert!(sim.encounter().expect("still there").open());
+        assert_save_continues(sim, 6_000);
+    }
+
+    #[test]
+    fn the_gas_station_tops_up_exactly_once() {
+        let mut sim = launched_with_encounter(None);
+        // Transmute whatever was rolled into an open gas station.
+        let ShipState::Traveling { progress, .. } = sim.ship().state else {
+            unreachable!()
+        };
+        sim.encounters.current = Some(Encounter {
+            kind: EncounterKind::GasStation,
+            start: progress,
+            end: progress + 6000,
+            opened: false,
+            closed: false,
+            used: false,
+        });
+        sim.advance(TICK_DT, &InputFrame::default());
+        assert!(sim.cues().contains(&Cue::EncounterStart));
+        let before = match sim.ship().state {
+            ShipState::Traveling { progress, .. } => progress,
+            ShipState::Docked(_) => unreachable!(),
+        };
+        let badge = rect_center(layout::ENCOUNTER_BADGE);
+        sim.advance(0.0, &press_at(badge.x, badge.y));
+        assert_eq!(sim.cues(), [Cue::GasBoost]);
+        let after = match sim.ship().state {
+            ShipState::Traveling { progress, .. } => progress,
+            ShipState::Docked(_) => unreachable!(),
+        };
+        assert!(after > before + 10, "the top-up should skip real distance");
+        // The pump is dry now.
+        sim.advance(0.0, &press_at(badge.x, badge.y));
+        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
+    }
+
+    #[test]
+    fn the_casino_transmutes_losses_and_pays_winners_in_flotsam() {
+        let mut sim = launched_with_encounter(None);
+        let ShipState::Traveling { progress, .. } = sim.ship().state else {
+            unreachable!()
+        };
+        sim.encounters.current = Some(Encounter {
+            kind: EncounterKind::Casino,
+            start: progress,
+            end: progress + 6000,
+            opened: false,
+            closed: false,
+            used: false,
+        });
+        sim.advance(TICK_DT, &InputFrame::default());
+        let badge = rect_center(layout::ENCOUNTER_BADGE);
+        let stake = cell_center(0, 0); // the perfume vial
+        let count_before = sim.pieces().len();
+        let win = Encounters::casino_coin(sim.seed(), sim.tick());
+        drag(&mut sim, stake, badge);
+        if win {
+            assert!(sim.cues().contains(&Cue::CasinoWin));
+            assert!(
+                sim.pieces()
+                    .iter()
+                    .any(|p| matches!(p.loc, Loc::Flotsam { .. })
+                        && p.kind == Kind::GildedIdol),
+                "the payout should drift in the flotsam"
+            );
+            assert_eq!(sim.pieces().len(), count_before + 1);
+        } else {
+            assert!(sim.cues().contains(&Cue::CasinoLoss));
+            assert_eq!(sim.pieces().len(), count_before, "losses transmute");
+            assert!(
+                sim.pieces()
+                    .iter()
+                    .any(|p| matches!(p.loc, Loc::Hold { .. })
+                        && p.kind == Kind::CasinoChip),
+                "the stake should now be a commemorative chip"
+            );
+        }
+    }
+
+    #[test]
+    fn derelict_flotsam_can_be_stowed_and_drifts_away_otherwise() {
+        let mut sim = launched_with_encounter(None);
+        let ShipState::Traveling { progress, .. } = sim.ship().state else {
+            unreachable!()
+        };
+        sim.encounters.current = Some(Encounter {
+            kind: EncounterKind::Derelict,
+            start: progress,
+            end: progress + 1200,
+            opened: false,
+            closed: false,
+            used: false,
+        });
+        sim.advance(TICK_DT, &InputFrame::default());
+        let drifting: Vec<u32> = sim
+            .pieces()
+            .iter()
+            .filter(|p| matches!(p.loc, Loc::Flotsam { .. }))
+            .map(|p| p.id)
+            .collect();
+        assert_eq!(drifting.len(), 2, "a derelict spills two pieces");
+        // Stow the first (a 1x1-or-bigger drop at a free low cell).
+        let from = rect_center(layout::FLOTSAM_SLOTS[0]);
+        let flotsam_kind = sim
+            .pieces()
+            .iter()
+            .find(|p| p.loc == Loc::Flotsam { slot: 0 })
+            .map(|p| p.kind)
+            .unwrap();
+        let (x, y) = first_fit(sim.pieces(), u32::MAX, flotsam_kind)
+            .expect("the starter hold has room");
+        drag(&mut sim, from, cell_center(x, y));
+        assert!(
+            sim.pieces()
+                .iter()
+                .any(|p| p.id == drifting[0] && matches!(p.loc, Loc::Hold { .. })),
+            "stowed flotsam becomes cargo"
+        );
+        // Let the window close: the unstowed one drifts away.
+        sim.fast_forward(1300);
+        assert!(
+            sim.pieces().iter().any(|p| p.id == drifting[0]),
+            "stowed cargo must survive the closing"
+        );
+        assert!(
+            !sim.pieces().iter().any(|p| p.id == drifting[1]),
+            "unstowed flotsam drifts away with the derelict"
+        );
+    }
+
+    #[test]
+    fn two_swats_knock_the_ad_drone_off() {
+        let mut sim = launched(21);
+        let ShipState::Traveling { progress, .. } = sim.ship().state else {
+            unreachable!()
+        };
+        sim.drones.drone = Some(Drone {
+            start: progress,
+            end: progress + 6000,
+            attached: false,
+            gone: false,
+            swats: 0,
+        });
+        sim.advance(TICK_DT, &InputFrame::default());
+        assert!(sim.cues().contains(&Cue::AdStart));
+        assert!(sim.advertising());
+        for expected_end in [false, true] {
+            let at = sim.drone_pos().expect("advertising means a drone");
+            sim.advance(0.0, &press_at(at.x, at.y));
+            assert!(sim.cues().contains(&Cue::AdSwat));
+            assert_eq!(sim.cues().contains(&Cue::AdEnd), expected_end);
+        }
+        assert!(!sim.advertising(), "two swats should end the ads");
+    }
+
+    #[test]
+    fn fluffs_multiply_in_transit_up_to_the_mercy_cap() {
+        let mut sim = Sim::new(22);
+        inject_hold(&mut sim, Kind::Fluff, 4, 1);
+        launch(&mut sim, URANUS);
+        let fluffs = |sim: &Sim| {
+            sim.pieces()
+                .iter()
+                .filter(|p| p.kind == Kind::Fluff)
+                .count()
+        };
+        assert_eq!(fluffs(&sim), 1);
+        sim.fast_forward(FLUFF_WINDOW * 3);
+        let bred = fluffs(&sim);
+        assert!(bred >= 2, "three windows and no births");
+        assert!(bred <= FLUFF_CAP, "the mercy cap failed");
+    }
+
+    #[test]
+    fn a_full_counter_sets_the_parade_loose_and_it_persists() {
+        let mut sim = Sim::new(23);
+        sim.deliveries = PARADE_AT - 1;
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        travel_to(&mut sim, SATURN);
+        travel_to(&mut sim, GUILD);
+        // travel_to fast-forwards, which swallows cues; the state is the
+        // record: the counter crossed, the parade is in the sky.
+        assert_eq!(sim.deliveries(), PARADE_AT);
+        assert!(sim.paraded(), "the counter filled; where is the parade?");
+        // (Whether it is still crossing depends on how much of the leg the
+        // crate's own jump skipped — the fraction is checked structurally:
+        // inside the window Some, after it None, `paraded` forever.)
+        let at = sim.parade_at.expect("paraded means a start tick");
+        if sim.tick() - at < PARADE_TICKS {
+            assert!(sim.parade().is_some());
+        }
+        let restored = Sim::from_save(&sim.save_string()).expect("own save parses");
+        assert!(restored.paraded());
+        assert_eq!(restored.save_string(), sim.save_string());
+        // After the crossing, the sky remembers but the barge is gone.
+        sim.fast_forward(PARADE_TICKS + 10);
+        assert!(sim.parade().is_none());
+        assert!(sim.paraded());
     }
 }

@@ -97,6 +97,7 @@ const CRATE_CHANCE: u64 = 5;
 const SALT_CRATE: u64 = 1;
 const SALT_COUNT: u64 = 2;
 const SALT_KIND: u64 = 0x100;
+const SALT_MYSTERY: u64 = 0x200;
 
 /// This visit's value table: the station row jittered by ±1 per kind,
 /// clamped to `0..=6`. Pure, so saves rebuild it instead of storing it.
@@ -137,6 +138,7 @@ pub(crate) fn generate(
     visit: u32,
     aboard: &[Piece],
     karma: u32,
+    paraded: bool,
     rng: &mut fastrand::Rng,
     next_id: &mut u32,
 ) -> (Barter, Vec<Piece>) {
@@ -167,6 +169,14 @@ pub(crate) fn generate(
     let mut goods = Vec::new();
     if offer_crate {
         goods.push(shelve(Kind::SuspiciousCrate, 0));
+    }
+    // After the Grand Parade, mysterious crates trickle onto ordinary
+    // shelves: whatever the hangar was counting, the counting continues.
+    if paraded && station != GUILD && splitmix(h, SALT_MYSTERY) % 4 == 0 {
+        let slot = goods.len();
+        if slot < SHELF_MAX {
+            goods.push(shelve(Kind::MysteriousCrate, slot));
+        }
     }
     let span = (SHELF_MAX - SHELF_MIN) as u64 + 1;
     let count = if station == HERMITAGE {
@@ -421,7 +431,7 @@ mod tests {
     fn visit(seed: u64, station: PoiId, n: u32, aboard: &[Piece]) -> (Barter, Vec<Piece>) {
         let mut rng = fastrand::Rng::with_seed(0);
         let mut next_id = 0;
-        generate(seed, station, n, aboard, 0, &mut rng, &mut next_id)
+        generate(seed, station, n, aboard, 0, false, &mut rng, &mut next_id)
     }
 
     #[test]

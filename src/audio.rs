@@ -113,6 +113,31 @@ const EXCHANGE_GAIN: f32 = 0.3;
 /// Shutters coming down on a station out of patience.
 const SHUTTER_GAIN: f32 = 0.6;
 
+/// Encounter window opening and closing blips.
+const ENCOUNTER_GAIN: f32 = 0.4;
+
+/// The gas station's top-up clunk.
+const GAS_GAIN: f32 = 0.4;
+
+/// Casino payout and casino consolation.
+const CASINO_WIN_GAIN: f32 = 0.55;
+const CASINO_LOSS_GAIN: f32 = 0.35;
+
+/// Peak gain for a whale verse, scaled by [`loudness`].
+const WHALE_GAIN: f32 = 0.45;
+
+/// The ad drone's arrival buzz and departure blip.
+const AD_GAIN: f32 = 0.3;
+
+/// A swat landing on the drone.
+const AD_SWAT_GAIN: f32 = 0.5;
+
+/// One fluff becoming two, barely audibly.
+const FLUFF_GAIN: f32 = 0.15;
+
+/// The Grand Parade's stinger — the biggest ceremony the game has.
+const PARADE_GAIN: f32 = 0.6;
+
 /// Cruising engine loop target while traveling out of warp.
 const ENGINE_GAIN: f32 = 0.25;
 
@@ -331,6 +356,28 @@ impl Audio {
             Cue::OmenStart | Cue::OmenEnd => return,
             // Shutters slamming: the latch, hard. The message lands.
             Cue::Shutter => (&self.latch, SHUTTER_GAIN),
+            // Something pulled alongside; something fell astern.
+            Cue::EncounterStart => (&self.blip_up, ENCOUNTER_GAIN),
+            Cue::EncounterEnd => (&self.blip_down, ENCOUNTER_GAIN),
+            // The gas station's inexplicable generosity.
+            Cue::GasBoost => (&self.latch, GAS_GAIN),
+            // The casino's two moods.
+            Cue::CasinoWin => (&self.deal, CASINO_WIN_GAIN),
+            Cue::CasinoLoss => (&self.buzz, CASINO_LOSS_GAIN),
+            // The whale, through the hull. The creak bank at whale scale.
+            Cue::WhaleSong { intensity } => {
+                let sound = &self.creaks[0];
+                let volume = WHALE_GAIN * loudness(intensity);
+                (sound, volume)
+            }
+            // Ads. Ads ads ads. Then, mercifully, not.
+            Cue::AdStart => (&self.buzz, AD_GAIN),
+            Cue::AdSwat => (&self.thock, AD_SWAT_GAIN),
+            Cue::AdEnd => (&self.blip_down, AD_GAIN),
+            // A very soft pop, like a second yawn.
+            Cue::FluffBirth => (&self.tick_pick, FLUFF_GAIN),
+            // The hangar opens. Whatever it was for, it is happening.
+            Cue::ParadeStart => (&self.stinger, PARADE_GAIN),
             // Free cargo thunking into the hold, scaled by the haul.
             Cue::Harvest { intensity } => (&self.thock, HARVEST_GAIN * loudness(intensity)),
             // The exchange gets the stinger, quiet: ??? is not loud.

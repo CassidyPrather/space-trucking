@@ -793,9 +793,17 @@ fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
             }
         }
 
-        // Hover: a faint ring over any POI the player could pick right now.
+        // A comet already picked clean this pass sits under a haze: still
+        // there, nothing left to chip.
+        if id == space_trucking::sim::COMET && sim.comet_spent() {
+            c.dot(pos, poi.radius, fade(SCREEN, 0.45));
+        }
+
+        // Hover: a faint ring over any POI the player could actually
+        // chart right now — the invite comes from the same predicate the
+        // press consults, so the glass never invites a refusal silently.
         if let Some(at) = docked {
-            if id != at && (scene.pointer - pos).length() <= poi.radius {
+            if id != at && sim.poi_chartable(id) && (scene.pointer - pos).length() <= poi.radius {
                 c.ring(pos, poi.radius + 3.0, 1.0, fade(PHOSPHOR, 0.3));
             }
         }
@@ -1288,16 +1296,19 @@ fn hermitage_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32, ph: f32) {
     );
 }
 
-/// The comet: an icy head with its tail thrown away from the sun.
+/// The comet: an icy head with its tail thrown away from the sun. The
+/// tail rides a capped radius so the destination preview's enlarged
+/// glyph keeps its plume on the glass instead of across the console.
 fn comet_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
     let away = pos - SUN;
     let len = away.length().max(f32::EPSILON);
     let dir = away * len.recip();
     let perp = Vec2::new(-dir.y, dir.x);
+    let stretch = r.min(12.0);
     for (spread, reach, a) in [(0.0, 3.2, 0.6), (0.5, 2.4, 0.4), (-0.5, 2.4, 0.4)] {
         c.seg(
             pos + dir * r * 0.4,
-            pos + (dir + perp * spread * 0.3) * r * reach,
+            pos + dir * r * 0.4 + (dir + perp * spread * 0.3) * stretch * reach,
             1.2,
             fade(phosphorize(POI_COMET, ph), a),
         );

@@ -420,6 +420,10 @@ pub struct Sim {
     /// The tick the hangar counter filled and the Grand Parade cast off,
     /// if it ever has. Set once per run; the sky is different after.
     parade_at: Option<u64>,
+    /// The comet apparition (perihelion pass) already harvested, if any.
+    /// One haul of ice per pass: after that the comet is picked clean
+    /// until it swings out and back again.
+    comet_visit: Option<u64>,
     /// Pieces ever gifted to the Hermitage; its shelf grows from this.
     karma: u32,
     /// Per-station bitmask of kinds the player has traded there — the
@@ -501,6 +505,7 @@ impl Sim {
             encounters: Encounters::new(),
             drones: Drones::new(),
             parade_at: None,
+            comet_visit: None,
             karma: 0,
             familiar: home_familiar(),
             night: false,
@@ -783,6 +788,22 @@ impl Sim {
             WANDERER => self.mysterious_aboard() >= WANDERER_TOLL,
             _ => true,
         }
+    }
+
+    /// Whether the comet is around but already picked clean this
+    /// apparition: physically there, nothing left to chip off.
+    #[must_use]
+    pub fn comet_spent(&self) -> bool {
+        map::comet_visible(self.tick) && self.comet_visit == Some(map::comet_apparition(self.tick))
+    }
+
+    /// Whether a course can be charted to `id` right now: it is there,
+    /// its papers (if any) are satisfied, and it has something left to
+    /// visit. The renderer's hover invite reads this too, so the console
+    /// never invites a click the sim would refuse.
+    #[must_use]
+    pub fn poi_chartable(&self, id: PoiId) -> bool {
+        self.poi_visible(id) && !self.inner_ring_locked(id) && !(id == COMET && self.comet_spent())
     }
 
     /// Mysterious crates stowed in the hold.
@@ -1108,9 +1129,10 @@ impl Sim {
                     // glass, exactly as if the POI did not exist.
                     continue;
                 }
-                if self.inner_ring_locked(id) {
-                    // Inner-to-inner courses check papers at charting
-                    // time. No transit chit in the hold, no course.
+                if self.inner_ring_locked(id) || (id == COMET && self.comet_spent()) {
+                    // Refused with feedback: papers missing for an
+                    // inner-to-inner hop, or a comet already picked clean
+                    // this pass — visibly there, not chartable.
                     self.cues.push(Cue::Reject { hard: false });
                     return;
                 }
@@ -1124,7 +1146,7 @@ impl Sim {
                 // Conditions can lapse between selection and the lever: the
                 // comet sets, dawn closes the Umbra Market, the chit gets
                 // gifted away. Re-check, and disarm a stale selection.
-                self.poi_visible(to) && !self.inner_ring_locked(to)
+                self.poi_chartable(to)
             });
             if self.ship.selected.is_some() && !armed_valid {
                 self.ship.selected = None;
@@ -1671,8 +1693,16 @@ impl Sim {
 
     /// Docked at the comet: chip off some ice, free. One to three shards
     /// (as the hold's edges allow — ice hugs the hull like any cryo cargo)
-    /// plus, one visit in three, something odd frozen inside.
+    /// plus, one visit in three, something odd frozen inside. Once per
+    /// apparition: a comet is not a vending machine, and a second dock in
+    /// the same perihelion pass finds only chisel marks.
     fn harvest_comet(&mut self, visit: u32) {
+        let apparition = map::comet_apparition(self.tick);
+        if self.comet_visit == Some(apparition) {
+            self.cues.push(Cue::Reject { hard: false });
+            return;
+        }
+        self.comet_visit = Some(apparition);
         let h = splitmix(self.seed ^ SALT_HARVEST, u64::from(visit));
         let shards = 1 + h % 3;
         let mut placed = 0_u32;
@@ -4615,5 +4645,62 @@ mod tests {
         sim.fast_forward(PARADE_TICKS + 10);
         assert!(sim.parade().is_none());
         assert!(sim.paraded());
+    }
+
+    #[test]
+    fn the_comet_gives_ice_once_per_apparition() {
+        let mut sim = Sim::new(8);
+        // Walk the clock into the comet's visible window first: picked
+        // clean is a statement about the pass being harvested, and a pass
+        // must be happening to make it.
+        let mut probe = 0;
+        while !map::comet_visible(probe) {
+            probe += 600;
+        }
+        sim.fast_forward(probe);
+        sim.dock(COMET);
+        assert!(sim.cues().iter().any(|c| matches!(c, Cue::Harvest { .. })));
+        let ice = |sim: &Sim| {
+            sim.pieces()
+                .iter()
+                .filter(|p| p.kind == Kind::CometIce)
+                .count()
+        };
+        let first_haul = ice(&sim);
+        assert!(first_haul >= 1);
+        assert!(sim.comet_spent(), "harvested means picked clean");
+        assert!(
+            !sim.poi_chartable(COMET),
+            "a picked-clean comet must not invite a second trip"
+        );
+
+        // A second dock the same pass finds only chisel marks. (The flush
+        // frame consumes the first haul's cues.)
+        sim.advance(0.0, &InputFrame::default());
+        sim.dock(COMET);
+        assert!(
+            !sim.cues().iter().any(|c| matches!(c, Cue::Harvest { .. })),
+            "no second haul in one apparition"
+        );
+        assert_eq!(ice(&sim), first_haul);
+
+        // The ledger survives a save, and the NEXT apparition is fresh.
+        let restored = Sim::from_save(&sim.save_string()).expect("own save parses");
+        assert!(restored.comet_visit.is_some());
+        assert_eq!(restored.save_string(), sim.save_string());
+        let apparition = map::comet_apparition(sim.tick());
+        sim.fast_forward(240 * 3600); // one comet period
+        assert_eq!(map::comet_apparition(sim.tick()), apparition + 1);
+        assert!(!sim.comet_spent(), "a new pass brings new ice");
+    }
+
+    #[test]
+    fn earlier_stv4_saves_without_the_comet_token_still_load() {
+        let sim = Sim::new(8);
+        let save = sim.save_string();
+        assert!(save.contains("parade - -"), "format drifted; fix this test");
+        let elder = save.replacen("parade - -", "parade -", 1);
+        let restored = Sim::from_save(&elder).expect("earlier STV4 must load");
+        assert_eq!(restored.comet_visit, None);
     }
 }

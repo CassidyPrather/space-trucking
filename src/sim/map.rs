@@ -239,6 +239,20 @@ pub fn comet_visible(tick: u64) -> bool {
     comet_sun_distance(tick) < COMET_VISIBLE_R
 }
 
+/// Which perihelion pass `tick` belongs to.
+///
+/// The visible window is centred on perihelion — where
+/// `(tick + phase) % period` wraps — so shifting by half a period drops
+/// each whole window inside one integer bucket. The comet gives up its
+/// ice once per apparition, and this is the apparition.
+#[must_use]
+pub const fn comet_apparition(tick: u64) -> u64 {
+    let Track::Ellipse { period, phase } = POIS[COMET as usize].track else {
+        return 0;
+    };
+    (tick + phase + period / 2) / period
+}
+
 /// Where the ship is in its docked/traveling cycle. Travel is measured in
 /// whole ticks so a leg replays and saves exactly.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

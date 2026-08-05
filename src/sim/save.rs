@@ -149,7 +149,12 @@ pub(crate) fn serialize(sim: &Sim) -> String {
             );
         }
     }
-    let _ = writeln!(out, "parade {}", opt_token(sim.parade_at));
+    let _ = writeln!(
+        out,
+        "parade {} {}",
+        opt_token(sim.parade_at),
+        opt_token(sim.comet_visit)
+    );
     match &sim.rats.rat {
         None => {
             let _ = writeln!(out, "rat -");
@@ -235,7 +240,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let omen = parse_omen(&mut reader)?;
     let encounters = parse_encounter(&mut reader)?;
     let drones = parse_drone(&mut reader)?;
-    let parade_at = parse_parade(&mut reader)?;
+    let (parade_at, comet_visit) = parse_parade(&mut reader)?;
     let rats = parse_rat(&mut reader)?;
     let (eagerness, patience) = parse_eager(&mut reader)?;
     let (pieces, next_piece) = parse_pieces(&mut reader)?;
@@ -283,6 +288,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         encounters,
         drones,
         parade_at,
+        comet_visit,
         karma,
         familiar,
         night: false,
@@ -373,18 +379,25 @@ fn parse_drone(reader: &mut Reader<'_>) -> Result<Drones, SaveError> {
     }
 }
 
-/// The `parade` line: the tick the counter filled, or `-`.
-fn parse_parade(reader: &mut Reader<'_>) -> Result<Option<u64>, SaveError> {
+/// The `parade` line: the tick the counter filled (or `-`), then the
+/// harvested comet apparition (or `-`). The second token is absent in
+/// earlier `STV4` saves and defaults to none, so those still load.
+fn parse_parade(reader: &mut Reader<'_>) -> Result<(Option<u64>, Option<u64>), SaveError> {
     let line = reader.next_line()?;
     let mut tokens = line.split_whitespace();
     if tokens.next() != Some("parade") {
         return Err(reader.err());
     }
-    match tokens.next() {
-        Some("-") => Ok(None),
+    let opt = |reader: &Reader<'_>, token: Option<&str>| match token {
+        Some("-") | None => Ok(None),
         Some(token) => token.parse().map(Some).map_err(|_| reader.err()),
-        None => Err(reader.err()),
-    }
+    };
+    let parade_at = match tokens.next() {
+        None => return Err(reader.err()),
+        token => opt(reader, token)?,
+    };
+    let comet_visit = opt(reader, tokens.next())?;
+    Ok((parade_at, comet_visit))
 }
 
 /// The `familiar` line: one 4-hex kind bitmask per POI, in map order.

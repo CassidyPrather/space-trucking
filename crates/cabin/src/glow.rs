@@ -40,7 +40,7 @@ pub fn enamel(materials: &mut Assets<StandardMaterial>, color: Color) -> Handle<
 /// The calm sine loop every decoration breathes with; returns `0..=1`.
 #[must_use]
 pub fn breathe(t: f32, freq: f32, phase: f32) -> f32 {
-    (t * freq + phase).sin().mul_add(0.5, 0.5)
+    t.mul_add(freq, phase).sin().mul_add(0.5, 0.5)
 }
 
 /// A lamp's glass-and-glow, written into its own material each frame:

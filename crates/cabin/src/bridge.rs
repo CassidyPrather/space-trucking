@@ -46,6 +46,8 @@ pub const POINTER_PARKED: Vec2 = Vec2::new(-1000.0, -1000.0);
 
 /// What the Bevy side gathered this frame, in sim terms. The pointer is
 /// already in sim world coordinates (or [`POINTER_PARKED`]).
+// An input snapshot is honestly a pile of booleans, same as InputFrame.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Copy, Debug)]
 pub struct FrameInput {
     pub pointer: Vec2,
@@ -98,19 +100,17 @@ impl Bridge {
     #[must_use]
     pub fn boot(dev: bool) -> Self {
         let now = unix_now();
-        let (sim, arrived_while_away) = match load_save() {
-            Some((save, saved_at)) => match Sim::from_save(&save) {
-                Ok(mut sim) => {
+        // An absent or unreadable save becomes a fresh run, quietly.
+        let (sim, arrived_while_away) = load_save()
+            .and_then(|(save, saved_at)| Sim::from_save(&save).ok().map(|sim| (sim, saved_at)))
+            .map_or_else(
+                || (Sim::new(fresh_seed()), false),
+                |(mut sim, saved_at)| {
                     let elapsed = (now - saved_at).clamp(0.0, MAX_CATCH_UP);
-                    let ticks = ticks_of(elapsed);
-                    let caught_up = sim.fast_forward(ticks);
+                    let caught_up = sim.fast_forward(ticks_of(elapsed));
                     (sim, caught_up.arrived)
-                }
-                // An unreadable save becomes a fresh run, quietly.
-                Err(_) => (Sim::new(fresh_seed()), false),
-            },
-            None => (Sim::new(fresh_seed()), false),
-        };
+                },
+            );
         let recording = Recording::new(sim.save_string());
         Self {
             sim,

@@ -90,8 +90,8 @@ impl SimSurface {
             return None;
         }
         let sim = SimVec2::new(
-            (a + 1.0) * 0.5 * self.rect.w + self.rect.x,
-            (b + 1.0) * 0.5 * self.rect.h + self.rect.y,
+            ((a + 1.0) * 0.5).mul_add(self.rect.w, self.rect.x),
+            ((b + 1.0) * 0.5).mul_add(self.rect.h, self.rect.y),
         );
         Some((t, sim, world))
     }
@@ -99,7 +99,7 @@ impl SimSurface {
     /// Sim position → world position on the quad's plane. Positions
     /// outside the bound rect extrapolate — callers clamp if they care.
     #[must_use]
-    pub fn to_world(&self, sim: SimVec2) -> Vec3 {
+    pub fn to_world(self, sim: SimVec2) -> Vec3 {
         let a = ((sim.x - self.rect.x) / self.rect.w).mul_add(2.0, -1.0);
         let b = ((sim.y - self.rect.y) / self.rect.h).mul_add(2.0, -1.0);
         self.center + self.half_u * a + self.half_v * b
@@ -195,10 +195,10 @@ mod tests {
         let s = map_panel();
         let r = s.rect;
         for (sx, sy) in [
-            (r.x + r.w * 0.5, r.y + r.h * 0.5),
+            (r.w.mul_add(0.5, r.x), r.h.mul_add(0.5, r.y)),
             (r.x, r.y),
             (r.x + r.w, r.y + r.h),
-            (r.x + r.w * 0.25, r.y + r.h * 0.75),
+            (r.w.mul_add(0.25, r.x), r.h.mul_add(0.75, r.y)),
         ] {
             let world = s.to_world(SimVec2::new(sx, sy));
             // Cast from straight in front of the found point.
@@ -234,7 +234,7 @@ mod tests {
         // The center of hold cell (2, 1) should round-trip through a ray
         // fired along the panel normal.
         let cell = layout::cell_rect(2, 1);
-        let target = SimVec2::new(cell.x + cell.w * 0.5, cell.y + cell.h * 0.5);
+        let target = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
         let world = s.to_world(target);
         let n = s.normal();
         let ray = Ray3d::new(world + n * 0.5, Dir3::new(-n).expect("unit"));

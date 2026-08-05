@@ -271,7 +271,7 @@ pub fn spawn(
     // Wall ribs and a ceiling duct: the junk that says somebody built
     // this hull in a hurry, decades ago. Deterministic, hand-placed.
     for i in 0..5 {
-        let z = -1.2 + 0.7 * i as f32;
+        let z = 0.7f32.mul_add(i as f32, -1.2);
         wall(
             &mut commands,
             Vec3::new(-1.66, 1.15, z),
@@ -301,8 +301,8 @@ pub fn spawn(
     for (station, surface) in panels() {
         let n = surface.normal();
         let size = Vec3::new(
-            surface.half_u.length() * 2.0 + 0.06,
-            surface.half_v.length() * 2.0 + 0.06,
+            surface.half_u.length().mul_add(2.0, 0.06),
+            surface.half_v.length().mul_add(2.0, 0.06),
             0.05,
         );
         commands.spawn((

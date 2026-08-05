@@ -9,6 +9,10 @@
 //! No raw color constructors outside this file — the purity test at the
 //! bottom greps the crate the same way the 2D `palette.rs` does.
 
+// Hex colors read as `0xRRGGBB`, the same spelling as the art doc's
+// tables; separators would break the correspondence.
+#![allow(clippy::unreadable_literal)]
+
 use bevy::prelude::*;
 
 /// Build a full-alpha sRGB color from `0xRRGGBB`, the shared idiom.
@@ -171,10 +175,10 @@ pub fn mix(a: Color, b: Color, t: f32) -> Color {
     let (a, b) = (a.to_srgba(), b.to_srgba());
     let t = t.clamp(0.0, 1.0);
     Color::srgba(
-        a.red + (b.red - a.red) * t,
-        a.green + (b.green - a.green) * t,
-        a.blue + (b.blue - a.blue) * t,
-        a.alpha + (b.alpha - a.alpha) * t,
+        (b.red - a.red).mul_add(t, a.red),
+        (b.green - a.green).mul_add(t, a.green),
+        (b.blue - a.blue).mul_add(t, a.blue),
+        (b.alpha - a.alpha).mul_add(t, a.alpha),
     )
 }
 
@@ -197,15 +201,13 @@ mod tests {
     /// outside this file. Same enforcement style as the 2D palette.
     #[test]
     fn palette_purity() {
-        let sources = ["main.rs"];
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
         for entry in std::fs::read_dir(&dir).expect("src dir readable") {
             let path = entry.expect("entry").path();
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            if name == "palette.rs" || !name.ends_with(".rs") {
+            if name == "palette.rs" || path.extension().is_none_or(|ext| ext != "rs") {
                 continue;
             }
-            let _ = sources; // every .rs sibling is checked, listed or not
             let text = std::fs::read_to_string(&path).expect("source readable");
             for banned in [
                 "Color::srgb",

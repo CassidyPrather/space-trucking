@@ -19,6 +19,7 @@ mod fx;
 mod glow;
 mod nav;
 mod palette;
+mod pieces;
 mod rig;
 mod surface;
 
@@ -79,6 +80,7 @@ fn main() {
             console::ConsolePlugin,
             fx::FxPlugin,
             nav::NavPlugin,
+            pieces::PiecesPlugin,
         ))
         .add_systems(Startup, rig::spawn)
         .add_systems(

@@ -16,6 +16,7 @@ mod audio;
 mod bridge;
 mod fx;
 mod glow;
+mod nav;
 mod palette;
 mod rig;
 mod surface;
@@ -72,7 +73,7 @@ fn main() {
         })
         .init_resource::<VirtualPointer>()
         .configure_sets(Update, (Phase::Input, Phase::Advance, Phase::View).chain())
-        .add_plugins((audio::AudioPlugin, fx::FxPlugin))
+        .add_plugins((audio::AudioPlugin, fx::FxPlugin, nav::NavPlugin))
         .add_systems(Startup, rig::spawn)
         .add_systems(
             Update,

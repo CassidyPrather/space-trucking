@@ -316,4 +316,75 @@ mod tests {
         assert_eq!(ticks_of(1.0), 60);
         assert_eq!(ticks_of(-5.0), 0);
     }
+
+    /// The whole point of the cabin: a synthetic pointer, pressed where
+    /// the surface mapper would put it, flies the ship exactly like a 2D
+    /// mouse. Select Jupiter on the tank, pull the launch lever, travel.
+    #[test]
+    fn a_synthetic_pointer_flies_the_ship() {
+        use space_trucking::sim::{ShipState, layout};
+
+        let sim = Sim::new(42);
+        let mut bridge = Bridge {
+            recording: Recording::new(sim.save_string()),
+            sim,
+            dev: false,
+            night: false,
+            last_save: unix_now(),
+            last_frame: unix_now(),
+            clock_check: SAVE_EVERY,
+            arrived_while_away: false,
+        };
+        let quiet = FrameInput {
+            pointer: POINTER_PARKED,
+            press: false,
+            held: false,
+            release: false,
+            shift: false,
+            key_pause: false,
+            key_warp: false,
+            key_mute: false,
+            key_reseed: false,
+            icon_pause: false,
+            icon_warp: false,
+            icon_mute: false,
+        };
+
+        // Press on Jupiter's live tank position: the sim arms the course.
+        let jupiter: space_trucking::sim::map::PoiId = 3;
+        let press_at = |pointer| FrameInput {
+            pointer,
+            press: true,
+            held: true,
+            ..quiet
+        };
+        bridge.frame(0.02, &press_at(bridge.sim.poi_pos(jupiter)));
+        bridge.frame(
+            0.02,
+            &FrameInput {
+                release: true,
+                ..quiet
+            },
+        );
+        assert_eq!(bridge.sim.ship().selected, Some(jupiter));
+
+        // Pull the lever (a press inside its rect): the ship departs.
+        let lever = layout::LAUNCH_LEVER;
+        bridge.frame(
+            0.02,
+            &press_at(Vec2::new(
+                lever.w.mul_add(0.5, lever.x),
+                lever.h.mul_add(0.5, lever.y),
+            )),
+        );
+        assert!(
+            matches!(
+                bridge.sim.ship().state,
+                ShipState::Traveling { to, .. } if to == jupiter
+            ),
+            "lever pull should cast off toward Jupiter, state: {:?}",
+            bridge.sim.ship().state
+        );
+        assert_eq!(bridge.sim.legs(), 1);
+    }
 }

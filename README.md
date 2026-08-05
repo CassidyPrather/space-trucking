@@ -12,6 +12,16 @@ static page. Native desktop builds work too. Initialized from
 [CassidyPrather/game-template](https://github.com/CassidyPrather/game-template),
 which is based on [rust-template](https://github.com/CassidyPrather/rust-template).
 
+The game itself — sim, saves, replay tapes, netcode, soundscape — is a pure
+library both frontends share. The 2D console above is one window onto it;
+the **3D cabin** (`crates/cabin`, Rust + [Bevy](https://bevy.org/), native
+only for now) is the other: a first-person freighter cabin where the
+console's regions are physical panels. Same deterministic game, same save
+string, same flight-recorder tape format. Direction for the 3D pass lives
+in [docs/ART_DIRECTION_3D.md](docs/ART_DIRECTION_3D.md); run it with
+`cargo run --manifest-path crates/cabin/Cargo.toml` (add `-- --dev` for the
+warp unlock).
+
 ## Playing
 
 The screen is the ship's console: a star map, a 6×4 cargo hold, and a barter

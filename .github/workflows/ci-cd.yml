@@ -21,10 +21,13 @@ jobs:
 
       - name: Install native audio dependencies
         # macroquad's `audio` feature pulls in quad-alsa-sys, which links
-        # -lasound; the cabin crate's Bevy adds cpal (also ALSA) and needs
-        # libudev for gamepad enumeration. The runner image ships the .so.2
-        # runtime libraries but not the dev symlinks the linker needs.
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
+        # -lasound; the cabin crate's Bevy adds cpal (also ALSA), libudev
+        # for gamepad enumeration, and wayland/xkbcommon headers for winit.
+        # The runner image ships runtime .so.2 libraries but not the dev
+        # symlinks and .pc files the build scripts need.
+        run: >
+          sudo apt-get update && sudo apt-get install -y
+          libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -53,6 +56,18 @@ jobs:
         # Release-only ceilings with wide headroom; see docs/BUDGETS.md.
         # -p: don't release-build the whole Bevy cabin just to time the sim.
         run: cargo test --release -p space-trucking --test perf -- --ignored
+
+      # The cabin is its own workspace (see crates/cabin/Cargo.toml for the
+      # links-collision story), so it gets its own passes. Same bar: fmt,
+      # clippy -D warnings, tests.
+      - name: Check formatting (cabin)
+        run: cargo fmt --check --manifest-path crates/cabin/Cargo.toml
+
+      - name: Lint with clippy (cabin)
+        run: cargo clippy --manifest-path crates/cabin/Cargo.toml --all-targets -- -D warnings
+
+      - name: Run tests (cabin)
+        run: cargo test --manifest-path crates/cabin/Cargo.toml
 
       - name: Install cargo-audit
         uses: taiki-e/install-action@cargo-audit

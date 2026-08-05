@@ -1,6 +1,13 @@
 /target/
 /dist/
+# The cabin is its own cargo workspace with its own build directory
+/crates/cabin/target/
 # Claude Code session workspace (agent worktrees, local settings)
 /.claude/
 # quad-storage's native persistence file (the desktop stand-in for localStorage)
 /local.data
+# The cabin's save + flight recorder (same roles, different frontend)
+/cabin.data
+/cabin.replay
+/crates/cabin/cabin.data
+/crates/cabin/cabin.replay

@@ -1,9 +1,13 @@
-# Workspace root. This package is the original prototype — the pure game
-# library (sim, net, replay, synth, telemetry) plus the 2D macroquad console
-# binary. The 3D Bevy frontend lives in crates/cabin and depends on the
-# library half only (`default-features = false` skips the console's deps).
+# Workspace root (sole member: this package) — the pure game library (sim,
+# net, replay, synth, telemetry) plus the 2D macroquad console binary. The
+# 3D Bevy frontend lives in crates/cabin as its OWN workspace, excluded
+# here, because Cargo allows only one `links = "alsa"` package per
+# workspace graph and macroquad's quad-alsa-sys would collide with Bevy's
+# alsa-sys. The cabin path-depends on this package with
+# `default-features = false`, which keeps macroquad (and the collision)
+# out of its graph entirely.
 [workspace]
-members = ["crates/*"]
+exclude = ["crates/cabin"]
 resolver = "3"
 
 [workspace.lints.rust]

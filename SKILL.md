@@ -12,6 +12,17 @@ desktop builds also work. Crate `space-trucking`, lib `space_trucking`, bin
 `DESIGN.md`; the recurring checklist in `docs/DESIGN_REVIEW.md` runs at the
 end of every work stage.
 
+The repo is two cargo workspaces on purpose: the root package (library +
+2D console), and `crates/cabin` — the Bevy 3D first-person frontend, kept
+out of the root workspace because Cargo allows only one `links = "alsa"`
+package per graph (macroquad's quad-alsa-sys vs Bevy's alsa-sys). The
+cabin path-depends on the library with `default-features = false`; the
+`console` feature (default-on) carries the macroquad half. Both frontends
+run the same sim, read the same `STV4` saves, and record the same replay
+tapes. The cabin's art rules live in `docs/ART_DIRECTION_3D.md`; its
+surface trick (3D panels mapped onto `layout` rects so the sim keeps
+doing all hit-testing) lives in `crates/cabin/src/surface.rs`.
+
 ## Repo Map
 
 - `src/sim/` — the simulation. Pure, deterministic, no macroquad. Most work
@@ -52,6 +63,14 @@ end of every work stage.
 - `.github/workflows/ci-cd.yml` — lint, test, audit, size-budgeted web bundle,
   Pages deploy, release artifacts.
 - `benches/` — criterion bench over the sim. Unit tests live in `src/sim/`.
+- `crates/cabin/` — the Bevy 3D cabin (its own workspace; see above).
+  `bridge.rs` owns the sim/save/tape (the 2D `main.rs`'s shell duties),
+  `surface.rs` maps panels onto sim rects, `rig.rs` builds the room and
+  the 480×270 pixel-crunch pipeline, `palette.rs` restates the palette
+  discipline (purity test included), and the view modules (`nav`, `console`,
+  `barter`, `pieces`, `fx`, `audio`) read sim accessors onto geometry.
+  Native-only for now; run with `cargo run --manifest-path
+  crates/cabin/Cargo.toml`.
 
 ## Commands
 

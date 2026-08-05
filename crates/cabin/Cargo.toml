@@ -1,7 +1,14 @@
+# Its own workspace on purpose: Cargo permits one `links = "alsa"` package
+# per workspace graph, and Bevy's alsa-sys would collide with macroquad's
+# quad-alsa-sys next door. The path dependency below carries the whole game
+# library across the boundary; only the lockfiles stay separate.
+[workspace]
+
 [package]
 name = "cabin"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.95" # Bevy 0.19's floor; the root package still builds on 1.85
 authors = ["Cassidy Prather <pratherea@gmail.com>"]
 description = "Space Trucking's 3D cabin — the Bevy first-person frontend prototype"
 license = "AGPL-3.0-or-later"
@@ -14,6 +21,36 @@ publish = false
 # The whole game, headless: sim, net, replay, synth, telemetry. No default
 # features means no macroquad — the cabin brings its own window.
 space-trucking = { path = "../..", default-features = false }
+# Default features are the known-coherent set; `wav` is added because the
+# soundscape arrives as synth.rs's WAV bytes, no audio assets anywhere.
+# Trimming features is a later, deliberate pass with measurements.
+bevy = { version = "0.19", features = ["wav"] }
+# The deep-night window for the Umbra Market, read the same way the 2D
+# native build reads it.
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
-[lints]
-workspace = true
+# Same lint posture as the root workspace, restated because workspaces
+# cannot share lint tables across their boundary.
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+multiple_crate_versions = "allow" # Transitive deps disagree; not actionable here
+missing_errors_doc = "allow" # Undocumented stuff is fine (the D10 of clippy)
+missing_panics_doc = "allow" # Ditto
+cast_precision_loss = "allow" # usize -> f32 in render math; the counts are tiny
+cast_possible_truncation = "allow" # f32 -> i32 for pixel/window sizes is the point
+
+[profile.release]
+# Smaller, faster binaries at the cost of compile time
+lto = "thin"
+strip = "symbols"
+
+# Dependencies get real optimization even in dev builds: Bevy at -O0 is
+# unplayably slow. The cabin's own code stays at -O0 for quick edit loops.
+[profile.dev.package."*"]
+opt-level = 2

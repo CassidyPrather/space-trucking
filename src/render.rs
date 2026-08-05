@@ -1906,7 +1906,7 @@ fn draw_rat(c: &Canvas, scene: &Scene) {
     let to = rat_perch(rat.cell);
     let mut at = from.lerp(to, ease_out(t));
     // A shallow arc while mid-hop.
-    at.y -= (PI * t).sin() * 5.0;
+    at.y = (PI * t).sin().mul_add(-5.0, at.y);
     // The hop is sim-driven feedback and always runs; the tail sway inside
     // the glyph is decoration and takes the idle clock.
     rat_glyph(&cs, at, to.x <= from.x, scene.idle_clock());

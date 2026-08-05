@@ -1,0 +1,19 @@
+[package]
+name = "cabin"
+version = "0.1.0"
+edition = "2024"
+authors = ["Cassidy Prather <pratherea@gmail.com>"]
+description = "Space Trucking's 3D cabin — the Bevy first-person frontend prototype"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/CassidyPrather/space-trucking"
+keywords = ["game", "gamedev", "bevy", "3d", "space"]
+categories = ["games"]
+publish = false
+
+[dependencies]
+# The whole game, headless: sim, net, replay, synth, telemetry. No default
+# features means no macroquad — the cabin brings its own window.
+space-trucking = { path = "../..", default-features = false }
+
+[lints]
+workspace = true

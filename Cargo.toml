@@ -1,3 +1,27 @@
+# Workspace root. This package is the original prototype — the pure game
+# library (sim, net, replay, synth, telemetry) plus the 2D macroquad console
+# binary. The 3D Bevy frontend lives in crates/cabin and depends on the
+# library half only (`default-features = false` skips the console's deps).
+[workspace]
+members = ["crates/*"]
+resolver = "3"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+# Turn everything up. I'm not a coward!
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+# Targeted allows (each one earns its place, like the ruff ignores did)
+multiple_crate_versions = "allow" # Transitive deps disagree; not actionable here
+missing_errors_doc = "allow" # Undocumented stuff is fine (the D10 of clippy)
+missing_panics_doc = "allow" # Ditto
+cast_precision_loss = "allow" # usize -> f32 in render math; the counts are tiny
+cast_possible_truncation = "allow" # f32 -> i32 for pixel/window sizes is the point
+
 [package]
 name = "space-trucking"
 version = "0.1.0"
@@ -19,46 +43,43 @@ path = "src/lib.rs"
 [[bin]]
 name = "space-trucking"
 path = "src/main.rs"
+# The console binary needs macroquad; the library never does. Building with
+# --no-default-features yields just the headless game library.
+required-features = ["console"]
 
 [[bench]]
 name = "sim_bench"
 harness = false
+
+[features]
+default = ["console"]
+# The 2D macroquad frontend and its storage/clock companions. Everything the
+# feature gates lives in binary-only modules (main.rs and friends); the
+# library is dependency-light with or without it.
+console = ["dep:macroquad", "dep:quad-storage", "dep:chrono"]
 
 [dependencies]
 # `audio` is off in macroquad's default features; the web build also needs
 # quad-snd's audio.js plugin in web/ (see CREDITS.md). It costs ~300 bytes of
 # wasm: on the web quad-snd is a few extern declarations and the browser does
 # the decoding, so the heavy native decoders never reach this target.
-macroquad = { version = "0.4", features = ["audio"] }
+macroquad = { version = "0.4", features = ["audio"], optional = true }
 fastrand = "2"
 # localStorage on the web, a data file natively; needs quad-storage's js
 # plugin vendored into web/ before the browser side actually persists.
-quad-storage = "0.1"
+quad-storage = { version = "0.1", optional = true }
 
 # Native builds read the OS clock and timezone directly for the deep-night
 # window; on the web the shell mirrors the browser's answer instead, so the
 # wasm target never pulls this in.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-chrono = { version = "0.4", default-features = false, features = ["clock"] }
+chrono = { version = "0.4", default-features = false, features = ["clock"], optional = true }
 
 [dev-dependencies]
 criterion = "0.7"
 
-[lints.rust]
-unsafe_code = "forbid"
-
-[lints.clippy]
-# Turn everything up. I'm not a coward!
-all = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-nursery = { level = "warn", priority = -1 }
-cargo = { level = "warn", priority = -1 }
-# Targeted allows (each one earns its place, like the ruff ignores did)
-multiple_crate_versions = "allow" # Transitive deps disagree; not actionable here
-missing_errors_doc = "allow" # Undocumented stuff is fine (the D10 of clippy)
-missing_panics_doc = "allow" # Ditto
-cast_precision_loss = "allow" # usize -> f32 in render math; the counts are tiny
-cast_possible_truncation = "allow" # f32 -> i32 for pixel/window sizes is the point
+[lints]
+workspace = true
 
 [profile.release]
 # Smaller, faster binaries at the cost of compile time

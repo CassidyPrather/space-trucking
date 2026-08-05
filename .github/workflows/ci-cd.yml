@@ -21,9 +21,10 @@ jobs:
 
       - name: Install native audio dependencies
         # macroquad's `audio` feature pulls in quad-alsa-sys, which links
-        # -lasound. The runner image ships libasound.so.2 but not the .so
-        # symlink the linker needs, so native builds fail without this.
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+        # -lasound; the cabin crate's Bevy adds cpal (also ALSA) and needs
+        # libudev for gamepad enumeration. The runner image ships the .so.2
+        # runtime libraries but not the dev symlinks the linker needs.
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -41,15 +42,17 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Lint with clippy (wasm)
-        # No --all-targets: benches and tests only build natively
-        run: cargo clippy --target wasm32-unknown-unknown -- -D warnings
+        # No --all-targets: benches and tests only build natively.
+        # -p: only the 2D console ships to wasm; the Bevy cabin is native-only.
+        run: cargo clippy --target wasm32-unknown-unknown -p space-trucking -- -D warnings
 
       - name: Run tests
         run: cargo test --all-features
 
       - name: Enforce performance budgets
         # Release-only ceilings with wide headroom; see docs/BUDGETS.md.
-        run: cargo test --release --test perf -- --ignored
+        # -p: don't release-build the whole Bevy cabin just to time the sim.
+        run: cargo test --release -p space-trucking --test perf -- --ignored
 
       - name: Install cargo-audit
         uses: taiki-e/install-action@cargo-audit
@@ -172,7 +175,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build release binary
-        run: cargo build --release --target ${{ matrix.target }}
+        # -p: releases ship the 2D console; the cabin is a dev-run prototype
+        # for now (`cargo run -p cabin`) and stays out of the artifact set.
+        run: cargo build --release --target ${{ matrix.target }} -p space-trucking
 
       - name: Package binary
         shell: bash

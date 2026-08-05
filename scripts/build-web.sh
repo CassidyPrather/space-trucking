@@ -8,7 +8,8 @@ cd "$(git rev-parse --show-toplevel)"
 BIN="space-trucking"
 OUT="dist/web"
 
-cargo build --release --target wasm32-unknown-unknown
+# -p: the workspace also carries the native-only Bevy cabin crate
+cargo build --release --target wasm32-unknown-unknown -p space-trucking
 
 rm -rf "$OUT"
 mkdir -p "$OUT"

@@ -16,9 +16,9 @@ mod audio;
 mod barter;
 mod bridge;
 mod console;
+mod crt;
 mod fx;
 mod glow;
-mod nav;
 mod palette;
 mod pieces;
 mod rig;
@@ -106,8 +106,8 @@ fn main() {
         audio::AudioPlugin,
         barter::BarterPlugin,
         console::ConsolePlugin,
+        crt::CrtPlugin,
         fx::FxPlugin,
-        nav::NavPlugin,
         pieces::PiecesPlugin,
     ))
     .add_systems(Startup, rig::spawn)

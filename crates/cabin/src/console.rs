@@ -40,9 +40,6 @@ const HANGAR_WELL: (f32, f32, f32, f32) = (690.0, 392.0, 84.0, 16.0);
 const HANGAR_LAMP_X0: f32 = 699.0;
 const HANGAR_LAMP_STEP: f32 = 13.2;
 
-/// The preview reading's disc radius, in sim units.
-const READING_RADIUS: f32 = 48.0;
-
 /// How far off the panel plane the lever handle's centre rides, metres.
 const HANDLE_LIFT: f32 = 0.014;
 
@@ -55,14 +52,6 @@ const ARC_LIFT: f32 = 0.012;
 /// coordinates back onto the cabin without re-querying.
 #[derive(Resource, Clone, Copy)]
 struct ConsolePanel(SimSurface);
-
-/// The destination preview's emissive reading disc.
-#[derive(Component)]
-struct PreviewDisc;
-
-/// The thin identity ring around the reading.
-#[derive(Component)]
-struct PreviewRing;
 
 /// The brass launch handle (its children: go-lamp and glow halo).
 #[derive(Component)]
@@ -126,7 +115,7 @@ impl Plugin for ConsolePlugin {
             .add_systems(PostStartup, spawn)
             .add_systems(
                 Update,
-                (preview, eta, lever_motion, lever_lamp, buttons, hangar).in_set(Phase::View),
+                (eta, lever_motion, lever_lamp, buttons, hangar).in_set(Phase::View),
             );
     }
 }
@@ -254,61 +243,15 @@ fn spawn(
         panel,
         puck,
     };
-    spawn_preview(&mut build);
     spawn_eta(&mut build);
     spawn_lever(&mut build);
     spawn_buttons(&mut build, shell.bridge.dev());
     spawn_hangar(&mut build);
 }
 
-/// The destination preview: a recessed square CRT — raised PLATE bezel,
-/// SCREEN glass backing, a faint powered-tube alignment grid, and the one
-/// emissive reading (disc plus identity ring) the view system repaints.
-fn spawn_preview(b: &mut Build<'_, '_, '_>) {
-    let r = layout::DEST_PREVIEW;
-    let cx = r.w.mul_add(0.5, r.x);
-    let cy = r.h.mul_add(0.5, r.y);
-
-    let plate = b.skin.plate.clone();
-    b.slab((cx, r.y + 6.0), (r.w, 12.0), 0.014, 0.007, &plate);
-    b.slab((cx, r.y + r.h - 6.0), (r.w, 12.0), 0.014, 0.007, &plate);
-    b.slab((r.x + 6.0, cy), (12.0, r.h - 24.0), 0.014, 0.007, &plate);
-    b.slab(
-        (r.x + r.w - 6.0, cy),
-        (12.0, r.h - 24.0),
-        0.014,
-        0.007,
-        &plate,
-    );
-
-    let screen = b.skin.screen.clone();
-    b.slab((cx, cy), (r.w - 16.0, r.h - 16.0), 0.006, 0.004, &screen);
-
-    // The alignment grid: static PHOSPHOR_DIM strips — the tube is
-    // visibly powered even with nothing armed, so one shared material.
-    let grid = glow::phosphor(b.materials, palette::PHOSPHOR_DIM, 0.55);
-    for step in [-47.5, 0.0, 47.5] {
-        b.slab((cx + step, cy), (1.5, r.h - 16.0), 0.002, 0.0075, &grid);
-        b.slab((cx, cy + step), (r.w - 16.0, 1.5), 0.002, 0.0075, &grid);
-    }
-
-    // The reading: disc and ring each get their own phosphor instance;
-    // `preview` rewrites their emissives every frame.
-    let disc_mat = glow::phosphor(b.materials, palette::PHOSPHOR, 1.0);
-    let disc = b.disc((cx, cy), READING_RADIUS, 0.004, 0.011, &disc_mat);
-    b.commands.entity(disc).insert(PreviewDisc);
-
-    let major = (READING_RADIUS + 8.0) * b.panel.scale_u();
-    let ring_mesh = b.meshes.add(Torus::new(major - 0.0035, major + 0.0035));
-    let ring_mat = glow::phosphor(b.materials, palette::PHOSPHOR, 1.0);
-    b.commands.spawn((
-        Mesh3d(ring_mesh),
-        MeshMaterial3d(ring_mat),
-        Transform::from_translation(b.at(cx, cy, 0.011))
-            .with_rotation(b.panel.orientation() * Quat::from_rotation_x(FRAC_PI_2)),
-        PreviewRing,
-    ));
-}
+// The destination preview surface itself is painted by `crt` — the
+// faithful software-rasterized port of the 2D tube. The console keeps
+// only the instruments around it.
 
 /// The ETA gauge: a physical metal instrument — plate housing, dark glass
 /// face, eight GLINT ticks, an amber standby ember. The draining arc
@@ -509,33 +452,6 @@ fn spawn_hangar(b: &mut Build<'_, '_, '_>) {
 }
 
 // ------------------------------------------------------------------- view --
-
-/// The preview's one reading: where you are going, or — dimmed and leaned
-/// harder toward phosphor — where you already are. Mirrors `draw_preview`.
-fn preview(
-    shell: Res<Shell>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    disc: Single<&MeshMaterial3d<StandardMaterial>, With<PreviewDisc>>,
-    ring: Single<&MeshMaterial3d<StandardMaterial>, With<PreviewRing>>,
-) {
-    let sim = &shell.bridge.sim;
-    let ship = sim.ship();
-    let (id, bright) = match ship.state {
-        ShipState::Traveling { to, .. } => (to, true),
-        ShipState::Docked(at) => ship.selected.map_or((at, false), |sel| (sel, true)),
-    };
-    // The richer enamel tint is reserved for an armed destination; idle
-    // shows the tube's green reading of where you already are.
-    let lean = if bright { 0.35 } else { 0.85 };
-    let color = palette::mix(palette::poi_color(id), palette::PHOSPHOR, lean);
-    let (disc_glow, ring_glow) = if bright { (3.0, 1.8) } else { (0.7, 0.45) };
-    if let Some(mut mat) = materials.get_mut(&disc.0) {
-        mat.emissive = color.to_linear() * disc_glow;
-    }
-    if let Some(mut mat) = materials.get_mut(&ring.0) {
-        mat.emissive = color.to_linear() * ring_glow;
-    }
-}
 
 /// The ETA arc: amber, from twelve o'clock, draining clockwise as the leg
 /// completes; a full dim ring while docked with a destination armed.

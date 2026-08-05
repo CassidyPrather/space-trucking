@@ -54,6 +54,18 @@ emissive here; if it drew it as metal, it is a lit surface. Lamps are
 still glass first — a dark `GLASS` body whose emissive wakes, never a
 recolored box.
 
+**The screens are the 2D renderer, kept.** After trying a diegetic
+shadow-box orrery, the map and destination preview went back to the 2D
+prototype's rendering discipline on purpose: `crt.rs` is a software
+rasterizer — the 2D `Canvas` reborn — that repaints both screens into
+small emissive textures each frame at the 2D's own pixel density
+(2 world units per texel), porting `draw_map`/`draw_preview` semantics
+whole: every glyph identity and accent, the sweep and its afterglow,
+scanlines, vignette, the omen tint on every stroke. Surfaces stay
+consciously material: the tube shows a *rendering*, and the room shows
+the tube. The canvas paints headless, so screen content is unit-testable
+without a GPU.
+
 ## Pixel crunch, third dimension edition
 
 The whole cabin renders into a **480×270 target upscaled

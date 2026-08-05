@@ -96,11 +96,8 @@ pub const POI_HERMITAGE: Color = hex(0xa68a6b);
 pub const POI_COMET: Color = hex(0xcfeaf2);
 pub const POI_WANDERER: Color = hex(0x7de0c0);
 
-/// Accent hues the 2D glyphs spend on planet detail — Venus's halo,
-/// Earth's smog, the ring systems. The tank's first-pass readings are
-/// simpler silhouettes and don't consume them yet; they stay registered
-/// so the glyph-detail pass retunes in one place like everything else.
-#[allow(dead_code)]
+/// Accent hues the glyphs spend on planet detail — Venus's halo,
+/// Earth's smog, the ring systems — consumed by the faithful CRT port.
 pub mod accent {
     use super::{Color, hex};
     pub const VENUS_HALO: Color = hex(0xffdb99);

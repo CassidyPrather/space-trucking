@@ -13,6 +13,7 @@
 #![allow(clippy::needless_pass_by_value)]
 
 mod audio;
+mod barter;
 mod bridge;
 mod console;
 mod fx;
@@ -77,6 +78,7 @@ fn main() {
         .configure_sets(Update, (Phase::Input, Phase::Advance, Phase::View).chain())
         .add_plugins((
             audio::AudioPlugin,
+            barter::BarterPlugin,
             console::ConsolePlugin,
             fx::FxPlugin,
             nav::NavPlugin,

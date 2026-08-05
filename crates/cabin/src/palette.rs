@@ -84,23 +84,32 @@ pub const VERSION_TEXT: Color = Color::srgba(0.851, 0.851, 0.902, 0.75);
 // ---- POI identity hues (enamel; the tank phosphorizes its readings) ----
 
 pub const POI_VENUS: Color = hex(0xf0b38c);
-pub const POI_VENUS_HALO: Color = hex(0xffdb99);
 pub const POI_EARTH: Color = hex(0x738ca6);
-pub const POI_SMOG: Color = hex(0x7a5c3d);
 pub const POI_MARS: Color = hex(0xc25738);
-pub const POI_MARS_PATCH: Color = hex(0x943d2b);
 pub const POI_JUPITER: Color = hex(0xdb9957);
 pub const POI_URANUS: Color = hex(0x9ed9e0);
-pub const POI_URANUS_RING: Color = hex(0xb8d6e6);
 pub const POI_NEPTUNE: Color = hex(0x4266d9);
 pub const POI_GUILD: Color = hex(0x6b618c);
-pub const POI_GUILD_EDGE: Color = hex(0x9e8fc7);
 pub const POI_SATURN: Color = hex(0xd6c28a);
-pub const POI_SATURN_RING: Color = hex(0xa8936b);
 pub const POI_UMBRA: Color = hex(0x8c93c9);
 pub const POI_HERMITAGE: Color = hex(0xa68a6b);
 pub const POI_COMET: Color = hex(0xcfeaf2);
 pub const POI_WANDERER: Color = hex(0x7de0c0);
+
+/// Accent hues the 2D glyphs spend on planet detail — Venus's halo,
+/// Earth's smog, the ring systems. The tank's first-pass readings are
+/// simpler silhouettes and don't consume them yet; they stay registered
+/// so the glyph-detail pass retunes in one place like everything else.
+#[allow(dead_code)]
+pub mod accent {
+    use super::{Color, hex};
+    pub const VENUS_HALO: Color = hex(0xffdb99);
+    pub const SMOG: Color = hex(0x7a5c3d);
+    pub const MARS_PATCH: Color = hex(0x943d2b);
+    pub const URANUS_RING: Color = hex(0xb8d6e6);
+    pub const GUILD_EDGE: Color = hex(0x9e8fc7);
+    pub const SATURN_RING: Color = hex(0xa8936b);
+}
 
 /// Identity hue per POI index, for the tank's readings and enamel badges.
 #[must_use]

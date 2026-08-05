@@ -89,18 +89,34 @@ fn dev_mode() -> bool {
 }
 
 /// Whether it is deep night (23:30–06:00) on the player's clock: the web
-/// shell's mirrored local answer when present, otherwise the same window
-/// read off the UTC wall clock.
+/// shell's mirrored local answer when present, otherwise the platform
+/// fallback below. Deliberately a frontend concern — the sim only ever
+/// sees the resulting `InputFrame` bit, so timezones, travel, and
+/// multiplayer clocks are all somebody else's problem out here.
 fn night_now() -> bool {
     match storage::get(NIGHT_KEY).as_deref() {
         Some("1") => true,
         Some(_) => false,
-        None => {
-            let day = macroquad::miniquad::date::now().rem_euclid(86_400.0);
-            let hour = day / 3600.0;
-            !(6.0..23.5).contains(&hour)
-        }
+        None => local_night(),
     }
+}
+
+/// Native: the OS clock and timezone, read directly.
+#[cfg(not(target_arch = "wasm32"))]
+fn local_night() -> bool {
+    use chrono::Timelike;
+    let now = chrono::Local::now();
+    let minutes = now.hour() * 60 + now.minute();
+    !(360..1410).contains(&minutes)
+}
+
+/// Web without the shell's mirror (storage refused): UTC, the honest
+/// approximation of last resort.
+#[cfg(target_arch = "wasm32")]
+fn local_night() -> bool {
+    let day = macroquad::miniquad::date::now().rem_euclid(86_400.0);
+    let hour = day / 3600.0;
+    !(6.0..23.5).contains(&hour)
 }
 
 /// Longest frame the replay pacer banks, matching the sim's own clamp so a

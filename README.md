@@ -22,8 +22,10 @@ right conditions. While docked, click a point of interest and pull the
 launch lever: the course is charted to where the destination *will* be, and
 the ship crawls there in real time. Journeys between the outer-ring worlds
 run tens of minutes on purpose; this is a game meant to sit in a corner of
-your day. Charting a direct course to the inner ring (Venus, Earth, Mars)
-takes transit papers, which the Guild happens to broker.
+your day. The three inner-ring factions barely tolerate each
+other: charting a direct course from one inner world to another takes
+transit papers, which the Guild happens to broker. Approaching from the
+outer ring is nobody's business but yours.
 
 Then barter — no currency, cargo for cargo, read off an eagerness dial. The
 dial only reads true for goods you have traded at that station before;

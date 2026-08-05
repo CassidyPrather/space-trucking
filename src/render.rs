@@ -773,8 +773,9 @@ fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
         let pos = sim.poi_pos(id);
         poi_glyph(c, i, pos, poi.radius, idle, MAP_PH);
 
-        // Inner-ring worlds check transit papers at charting time. Without
-        // a chit aboard, they wear a barred ring: visible, not chartable.
+        // Inner-to-inner courses check transit papers at charting time:
+        // docked at one inner world without a chit, its rivals wear a
+        // barred ring — visible, not chartable.
         if docked.is_some() && sim.inner_ring_locked(id) {
             let r = poi.radius + 4.0;
             c.ring(pos, r, 1.2, fade(LAMP_NO, 0.55));

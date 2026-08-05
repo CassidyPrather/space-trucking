@@ -36,8 +36,11 @@ pub const COMET: PoiId = 10;
 /// `???`. It is only there when three mysterious crates hum in the hold.
 pub const WANDERER: PoiId = 11;
 
-/// The inner-ring planets a direct course cannot be charted to without a
-/// transit chit aboard: Venus, Earth, Mars.
+/// The inner-ring planets: Venus, Earth, Mars.
+///
+/// Their factions barely tolerate each other, so a direct course from one
+/// to another needs a transit chit aboard; approaches from outside the
+/// ring are unpoliced.
 pub const INNER_RING: [PoiId; 3] = [0, 1, 2];
 
 /// The sun sits at the centre of the map panel; every orbit is around it.

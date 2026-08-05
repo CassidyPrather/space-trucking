@@ -35,7 +35,8 @@ pub enum Kind {
     /// moment ago. (It multiplies in transit; see the fluff event.)
     Fluff,
     /// Inner-ring transit papers, brokered by the Guild. Carrying one
-    /// lets a course be charted to Venus, Earth, or Mars.
+    /// lets a course be charted directly between Venus, Earth, and Mars,
+    /// whose factions otherwise refuse each other's traffic.
     TransitChit,
     /// What the space casino hands back when the house wins. The house
     /// says it is worth a fortune. Every station disagrees.

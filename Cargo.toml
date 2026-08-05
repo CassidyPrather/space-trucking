@@ -35,6 +35,12 @@ fastrand = "2"
 # plugin vendored into web/ before the browser side actually persists.
 quad-storage = "0.1"
 
+# Native builds read the OS clock and timezone directly for the deep-night
+# window; on the web the shell mirrors the browser's answer instead, so the
+# wasm target never pulls this in.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+
 [dev-dependencies]
 criterion = "0.7"
 

@@ -805,9 +805,20 @@ impl Sim {
     }
 
     /// Whether charting to `id` is currently refused for want of papers.
+    ///
+    /// The three inner-ring factions barely tolerate each other: a direct
+    /// course from one inner world to another needs a transit chit aboard.
+    /// Arriving from the outer ring (or the Guild) is nobody's business
+    /// but yours.
     #[must_use]
     pub fn inner_ring_locked(&self, id: PoiId) -> bool {
-        INNER_RING.contains(&id) && !self.transit_chit_aboard()
+        let ShipState::Docked(at) = self.ship.state else {
+            return false;
+        };
+        INNER_RING.contains(&at)
+            && INNER_RING.contains(&id)
+            && at != id
+            && !self.transit_chit_aboard()
     }
 
     /// This leg's encounter, if one is scheduled or alongside.
@@ -1098,8 +1109,8 @@ impl Sim {
                     continue;
                 }
                 if self.inner_ring_locked(id) {
-                    // The inner ring checks papers at charting time. No
-                    // transit chit in the hold, no course.
+                    // Inner-to-inner courses check papers at charting
+                    // time. No transit chit in the hold, no course.
                     self.cues.push(Cue::Reject { hard: false });
                     return;
                 }
@@ -3917,20 +3928,35 @@ mod tests {
     // ------------------------------------------------- polish-pass tests --
 
     #[test]
-    fn inner_ring_needs_a_transit_chit() {
+    fn inner_to_inner_courses_need_a_transit_chit() {
+        // From the Guild, the inner ring is open: nobody polices arrivals
+        // from outside.
         let mut sim = Sim::new(4);
         let venus = sim.poi_pos(0);
-        sim.advance(0.0, &press_at(venus.x, venus.y));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-        assert_eq!(sim.ship().selected, None, "charted inner without papers");
-
-        let chit = inject_hold(&mut sim, Kind::TransitChit, 5, 3);
         sim.advance(0.0, &press_at(venus.x, venus.y));
         assert_eq!(sim.cues(), [Cue::Select]);
         assert_eq!(sim.ship().selected, Some(0));
 
-        // Papers vanish between charting and the lever: the selection
-        // disarms rather than launching an illegal course.
+        // Docked AT Venus, its rivals check papers.
+        travel_to(&mut sim, 0);
+        let earth = sim.poi_pos(1);
+        sim.advance(0.0, &press_at(earth.x, earth.y));
+        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
+        assert_eq!(sim.ship().selected, None, "charted inner-to-inner bare");
+
+        // Leaving the ring entirely stays free.
+        let saturn = sim.poi_pos(SATURN);
+        sim.advance(0.0, &press_at(saturn.x, saturn.y));
+        assert_eq!(sim.cues(), [Cue::Select]);
+
+        // With a chit aboard the course opens...
+        let chit = inject_hold(&mut sim, Kind::TransitChit, 5, 3);
+        sim.advance(0.0, &press_at(earth.x, earth.y));
+        assert_eq!(sim.cues(), [Cue::Select]);
+        assert_eq!(sim.ship().selected, Some(1));
+
+        // ...and papers vanishing between charting and the lever disarm
+        // the selection rather than launching an illegal course.
         sim.pieces.retain(|piece| piece.id != chit);
         let lever = rect_center(layout::LAUNCH_LEVER);
         sim.advance(0.0, &press_at(lever.x, lever.y));

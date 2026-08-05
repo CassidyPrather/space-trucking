@@ -1710,33 +1710,54 @@ fn draw_drop_hints(c: &Canvas, scene: &Scene) {
 
 // ------------------------------------------------------------------ barter --
 
-/// The barter surface. Its furniture is bolted to the panel, so it stays
-/// drawn mid-flight — dormant, lamps dark — and lights up when the sim
-/// opens a trade.
+/// The barter surface — or, when no trade is open, the wayside surface.
+/// Two purpose-built faces of one panel, never both: trading furniture
+/// exists only while a counterparty does, and the transit readout exists
+/// only while it does not. What is drawn is exactly what can be used.
 fn draw_barter(c: &Canvas, scene: &Scene) {
     plate(c, layout::BARTER_PANEL, SALT_BARTER);
-    let barter = scene.sim.barter();
-    draw_slot_rows(c, scene);
-    if let Some(barter) = barter {
+    if let Some(barter) = scene.sim.barter() {
+        draw_slot_rows(c, scene);
         draw_wants(c, scene, barter);
+        draw_dial(c, scene, barter);
+        draw_accept_lever(c, scene, barter);
     } else {
         draw_wayside(c, scene);
     }
-    draw_dial(c, scene, barter);
-    draw_accept_lever(c, scene, barter);
 }
 
-/// The panel's other lives, whenever no trade is open. Underway, the dial
-/// housing wears the encounter's badge and the shelf row is the outboard
-/// rail; docked at ???, the housing wears the diamond and the shelf row
-/// shows the toll — three sockets, filling as crates come aboard; docked
-/// at the comet, the housing acknowledges the berth, dimly.
+/// The wayside surface: the outboard rail across the top, and below it a
+/// voyage strip — departure glyph, dashed course, the freighter riding
+/// it, destination glyph — so a glance says where the ship is between.
+/// An open encounter hangs its badge in the panel's corner; a barterless
+/// berth (comet, ???) shows the berth instead of the voyage, and ???
+/// lays out its toll: three violet sockets, filling as crates come
+/// aboard. No dial, no lever, no dead rows.
 fn draw_wayside(c: &Canvas, scene: &Scene) {
     let sim = scene.sim;
     let t = scene.idle_clock();
-    let mid = layout::DIAL_CENTER;
+
+    // The outboard rail: the shelf sockets in phosphor trim, glowing
+    // amber when a held piece could actually be jettisoned here.
+    let invited = sim.drop_targets(0).is_some_and(|targets| targets.net);
+    for &slot in &layout::FLOTSAM_SLOTS {
+        c.frame(inflate(slot, PX), fade(PHOSPHOR_DIM, 0.8));
+        socket_well(c, slot);
+        if invited {
+            let pulse = (t * 2.0).sin().mul_add(0.08, 0.55);
+            c.fill(inflate(slot, 2.0), fade(AMBER, 0.10));
+            c.frame(inflate(slot, 2.0), fade(AMBER, pulse));
+        }
+    }
+
     match sim.ship().state {
-        ShipState::Traveling { .. } => {
+        ShipState::Traveling {
+            from,
+            to,
+            progress,
+            leg_ticks,
+        } => {
+            draw_voyage_strip(c, scene, from, to, progress, leg_ticks);
             if let Some(enc) = sim.encounter().filter(|enc| enc.open()) {
                 let badge = layout::ENCOUNTER_BADGE;
                 c.frame(inflate(badge, PX), fade(PHOSPHOR_DIM, 0.8));
@@ -1751,8 +1772,9 @@ fn draw_wayside(c: &Canvas, scene: &Scene) {
             }
         }
         ShipState::Docked(at) => {
-            // A barterless berth: say where we are moored, quietly.
-            poi_glyph(c, usize::from(at), mid, 11.0, t, 0.0);
+            // A barterless berth: say where we are moored, plainly, where
+            // the voyage strip would run.
+            poi_glyph(c, usize::from(at), Vec2::new(310.0, 556.0), 14.0, t, 0.0);
             if at == space_trucking::sim::WANDERER {
                 draw_wanderer_toll(c, scene, t);
             }
@@ -1760,46 +1782,82 @@ fn draw_wayside(c: &Canvas, scene: &Scene) {
     }
 }
 
-/// ???'s donation ledger on the shelf row: three sockets — the toll — each
-/// glowing violet once a mysterious crate is stowed against it. Wordless:
-/// three holes, your parcels, do the arithmetic.
+/// The voyage strip: where the trading rows would be, the leg itself —
+/// origin and destination as their own glyphs, a dashed line between,
+/// and the freighter exactly as far along it as the sky says.
+fn draw_voyage_strip(
+    canvas: &Canvas,
+    scene: &Scene,
+    from: PoiId,
+    to: PoiId,
+    progress: u64,
+    leg_ticks: u64,
+) {
+    let clock = scene.idle_clock();
+    let row_y = 556.0;
+    let origin = Vec2::new(310.0, row_y);
+    let target = Vec2::new(620.0, row_y);
+    poi_glyph(canvas, usize::from(from), origin, 14.0, clock, MAP_PH);
+    poi_glyph(canvas, usize::from(to), target, 14.0, clock, MAP_PH);
+    let (line_x0, line_x1) = (origin.x + 22.0, target.x - 22.0);
+    let dashes = ((line_x1 - line_x0) / 13.0) as i32;
+    for i in 0..dashes {
+        let dash_x = (i as f32).mul_add(13.0, line_x0);
+        canvas.seg(
+            Vec2::new(dash_x, row_y),
+            Vec2::new((dash_x + 6.0).min(line_x1), row_y),
+            1.0,
+            fade(PHOSPHOR_DIM, 0.9),
+        );
+    }
+    let frac = ((progress as f32 + scene.sim.alpha()) / leg_ticks.max(1) as f32).clamp(0.0, 1.0);
+    let ship = Vec2::new(frac.mul_add(line_x1 - line_x0, line_x0), row_y);
+    canvas.tri(
+        ship + Vec2::new(6.0, 0.0),
+        ship + Vec2::new(-4.0, -4.5),
+        ship + Vec2::new(-4.0, 4.5),
+        PHOSPHOR_HOT,
+    );
+}
+
+/// ???'s donation ledger: violet toll sockets over the rail's first
+/// three wells. Lay a parcel in a marked socket and it lights; three lit
+/// and something happens. Wordless: three holes, your parcels, do the
+/// arithmetic.
 fn draw_wanderer_toll(c: &Canvas, scene: &Scene, t: f32) {
-    let aboard = scene.sim.mysterious_aboard();
     for (i, &slot) in layout::FLOTSAM_SLOTS.iter().take(3).enumerate() {
-        let lit = (i as u32) < aboard;
+        let lit =
+            scene.sim.pieces().iter().any(|p| {
+                p.loc == Loc::Flotsam { slot: i as u8 } && p.kind == Kind::MysteriousCrate
+            });
         let mid = rect_center(slot);
         let breath = t.mul_add(0.8, i as f32).sin().mul_add(0.1, 0.55);
         c.poly_ring(
             mid,
             4,
-            slot.w * 0.3,
+            slot.w * 0.42,
             45.0,
-            1.2,
-            fade(EERIE_BRIGHT, if lit { breath } else { 0.18 }),
+            1.4,
+            fade(EERIE_BRIGHT, if lit { breath } else { 0.3 }),
         );
-        if lit {
-            c.dot(mid, 2.0, fade(EERIE, breath));
+        if !lit {
+            c.dot(mid, 2.0, fade(EERIE, 0.25));
         }
     }
 }
 
+/// The trading furniture, drawn only while a barter is open (the wayside
+/// surface owns the panel otherwise).
 fn draw_slot_rows(c: &Canvas, scene: &Scene) {
-    let trading = scene.sim.barter().is_some();
     let shuttered = scene
         .sim
         .barter()
         .is_some_and(|barter| barter.patience == 0);
-    // No trade open: the shelf row is the outboard rail — same sockets,
-    // phosphor trim instead of shelf paint — and the trading rows go dark.
-    let shelf_trim = if trading { TRIM_SHELF } else { PHOSPHOR_DIM };
     for (slots, trim) in [
-        (&layout::SHELF_SLOTS, shelf_trim),
-        (
-            &layout::RECEIVED_SLOTS,
-            if trading { TRIM_RECEIVED } else { GLASS },
-        ),
-        (&layout::GIVE_SLOTS, if trading { TRIM_GIVE } else { GLASS }),
-        (&layout::TAKE_SLOTS, if trading { TRIM_TAKE } else { GLASS }),
+        (&layout::SHELF_SLOTS, TRIM_SHELF),
+        (&layout::RECEIVED_SLOTS, TRIM_RECEIVED),
+        (&layout::GIVE_SLOTS, TRIM_GIVE),
+        (&layout::TAKE_SLOTS, TRIM_TAKE),
     ] {
         for &slot in slots {
             // Painted trim on the plate names the row; the well is inset.
@@ -1831,7 +1889,7 @@ fn draw_slot_rows(c: &Canvas, scene: &Scene) {
     // an affordance the rules would refuse cannot be drawn.
     if let Some(targets) = scene.sim.drop_targets(0) {
         for (slots, invited) in [
-            (&layout::SHELF_SLOTS, targets.shelf || targets.net),
+            (&layout::SHELF_SLOTS, targets.shelf),
             (&layout::RECEIVED_SLOTS, targets.received),
             (&layout::GIVE_SLOTS, targets.give),
             (&layout::TAKE_SLOTS, targets.take),
@@ -1895,7 +1953,7 @@ fn dial_color(value: f32) -> Color {
 // The gauge is one instrument: housing, badge, track, fog, needle, pips,
 // and flashes belong together even past the line lint's comfort.
 #[allow(clippy::too_many_lines)]
-fn draw_dial(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
+fn draw_dial(c: &Canvas, scene: &Scene, barter: &Barter) {
     let juice = scene.juice;
     let mid = layout::DIAL_CENTER;
     let t = juice.clock();
@@ -1908,30 +1966,23 @@ fn draw_dial(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
     // The station badge: enamel colours while docked, dark glass in flight.
     // The refusal wobble is feedback (real clock); the glyph's own sparkle
     // loop is decoration (idle clock).
-    if let Some(barter) = barter {
-        let shake = juice.station_shake();
-        let wobble = Vec2::new(
-            (t * 67.0).sin() * 2.2 * shake,
-            (t * 51.0).sin() * 1.6 * shake,
-        );
-        poi_glyph(
-            c,
-            usize::from(barter.station),
-            mid + wobble,
-            11.0,
-            scene.idle_clock(),
-            0.0,
-        );
-    } else {
-        c.dot(mid, 11.0, GLASS);
-        c.dot(mid + Vec2::new(-3.5, -3.5), 3.0, fade(GLINT, 0.08));
-    }
+    let shake = juice.station_shake();
+    let wobble = Vec2::new(
+        (t * 67.0).sin() * 2.2 * shake,
+        (t * 51.0).sin() * 1.6 * shake,
+    );
+    poi_glyph(
+        c,
+        usize::from(barter.station),
+        mid + wobble,
+        11.0,
+        scene.idle_clock(),
+        0.0,
+    );
 
     // Track groove, then the gradient fill up to the eased needle.
     c.arc(mid, 23.0, DIAL_START, DIAL_SWEEP, 5.0, fade(SHADOW, 0.5));
-    let value = barter.map_or(0.0, |barter| {
-        lerp(barter.prev_eagerness, barter.eagerness, scene.sim.alpha())
-    });
+    let value = lerp(barter.prev_eagerness, barter.eagerness, scene.sim.alpha());
     let frac = (value / EAGER_MAX).clamp(0.0, 1.0);
     let segments = 20_u32;
     let seg_sweep = DIAL_SWEEP / segments as f32;
@@ -1964,7 +2015,7 @@ fn draw_dial(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
     // band whose width is the guesswork fraction. What the station would
     // actually say stays hidden until these kinds have been traded here —
     // or until somebody gambles a pull.
-    let fog = barter.map_or(0.0, |barter| barter.fog);
+    let fog = barter.fog;
     let needle = DIAL_SWEEP.mul_add(frac, DIAL_START).to_radians();
     if fog > 0.0 {
         let half = fog * 0.55;
@@ -1994,7 +2045,7 @@ fn draw_dial(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
 
     // Patience pips under the housing: how many refused pulls this visit
     // will still tolerate. All dark means the shutters are down.
-    if let Some(barter) = barter {
+    {
         for i in 0..space_trucking::sim::PATIENCE {
             let at = Vec2::new(f32::from(i).mul_add(9.0, mid.x - 9.0), mid.y + 40.0);
             let left = i < barter.patience;
@@ -2030,7 +2081,7 @@ fn draw_dial(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
 
 /// The accept lever: brass on its own small plate, go-lamp lit the instant
 /// the station would say yes.
-fn draw_accept_lever(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
+fn draw_accept_lever(c: &Canvas, scene: &Scene, barter: &Barter) {
     let rect = layout::ACCEPT_LEVER;
     plate(c, rect, SALT_ACCEPT);
     let mid_y = rect.h.mul_add(0.5, rect.y);
@@ -2044,8 +2095,8 @@ fn draw_accept_lever(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
         ),
     );
     let handle = layout::Rect::new(rect.x + 20.0, rect.y + 6.0, 14.0, rect.h - 12.0);
-    let ready = barter.is_some_and(|barter| barter.ready);
-    let certain = barter.is_some_and(|barter| barter.fog <= 0.0);
+    let ready = barter.ready;
+    let certain = barter.fog <= 0.0;
     // Decoration, like the launch lever's glow: frozen at its midpoint.
     let glow = (scene.idle_clock() * 2.8).sin().mul_add(0.12, 0.78);
     if ready && certain {

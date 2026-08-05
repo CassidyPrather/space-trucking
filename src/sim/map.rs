@@ -233,6 +233,17 @@ pub fn comet_sun_distance(tick: u64) -> f32 {
     (poi_pos(COMET, tick) - SUN).length()
 }
 
+/// Whether the Hermitage's one window is lit.
+///
+/// Hermits keep odd hours: roughly one fifteen-minute stretch in three,
+/// on no schedule anyone has mapped. Gift them something once and they
+/// will always answer — the sim checks karma before this.
+#[must_use]
+pub const fn hermitage_lit(tick: u64) -> bool {
+    const WINDOW: u64 = 15 * MIN;
+    super::splitmix(0x4E12_317E, tick / WINDOW) % 3 == 0
+}
+
 /// Whether the comet is currently near enough to visit.
 #[must_use]
 pub fn comet_visible(tick: u64) -> bool {

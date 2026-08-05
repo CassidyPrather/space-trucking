@@ -1096,6 +1096,7 @@ impl Sim {
                 self.refresh_ready();
                 placed.push(piece.id);
                 self.cues.push(Cue::Place);
+                self.wanderer_retry();
             }
             None => self.cues.push(Cue::Reject { hard: false }),
         }
@@ -1192,6 +1193,7 @@ impl Sim {
                 self.refresh_ready();
                 placed.push(piece.id);
                 self.cues.push(Cue::Place);
+                self.wanderer_retry();
             }
             Err(violation) => {
                 // Same-tick drop contention: refused only because an
@@ -1723,16 +1725,19 @@ impl Sim {
     }
 
     /// Docked at ???: three mysterious crates become one very mysterious
-    /// crate, no barter, no explanation. If the bigger crate cannot sit
-    /// anywhere legally (a suspicious crate already hums in the hold, or
-    /// no 2x2 gap survives), nothing is taken — the exchange never
-    /// half-completes, which is the anti-softlock guarantee.
+    /// crate, no barter, no explanation. ??? picks WHICH three it takes —
+    /// every three-crate subset is tried, in deterministic id order, for
+    /// one whose removal leaves the bigger crate a legal berth. If none
+    /// works (a suspicious crate already hums in the hold, or no 2x2 gap
+    /// can be opened), nothing is taken: the exchange never
+    /// half-completes, which is the anti-softlock guarantee. Re-run after
+    /// every stow while docked here, so making room mid-visit completes
+    /// the deal without a fresh round trip.
     fn wanderer_exchange(&mut self) {
         if self.mysterious_aboard() < WANDERER_TOLL {
             return;
         }
-        // Candidate board: the three lowest-id mysterious crates removed.
-        let mut doomed: Vec<u32> = self
+        let mut crates: Vec<u32> = self
             .pieces
             .iter()
             .filter(|piece| {
@@ -1740,15 +1745,8 @@ impl Sim {
             })
             .map(|piece| piece.id)
             .collect();
-        doomed.sort_unstable();
-        doomed.truncate(WANDERER_TOLL as usize);
-        let remainder: Vec<Piece> = self
-            .pieces
-            .iter()
-            .filter(|piece| !doomed.contains(&piece.id))
-            .copied()
-            .collect();
-        let Some((x, y)) = first_fit(&remainder, self.next_piece, Kind::VeryMysteriousCrate) else {
+        crates.sort_unstable();
+        let Some((doomed, x, y)) = self.wanderer_toll_pick(&crates) else {
             self.cues.push(Cue::Reject { hard: false });
             return;
         };
@@ -1757,7 +1755,7 @@ impl Sim {
                 *held = None;
             }
         }
-        self.pieces = remainder;
+        self.pieces.retain(|piece| !doomed.contains(&piece.id));
         self.pieces.push(Piece {
             id: self.next_piece,
             kind: Kind::VeryMysteriousCrate,
@@ -1767,6 +1765,42 @@ impl Sim {
         });
         self.next_piece += 1;
         self.cues.push(Cue::Exchange);
+    }
+
+    /// The first (in lexicographic id order) three-crate toll whose
+    /// removal leaves a legal cell for the very mysterious crate, with
+    /// that cell. Deterministic, and n stays tiny — a hold has room for
+    /// only so many crates.
+    fn wanderer_toll_pick(&self, crates: &[u32]) -> Option<([u32; 3], u8, u8)> {
+        let n = crates.len();
+        for a in 0..n {
+            for b in a + 1..n {
+                for c in b + 1..n {
+                    let doomed = [crates[a], crates[b], crates[c]];
+                    let remainder: Vec<Piece> = self
+                        .pieces
+                        .iter()
+                        .filter(|piece| !doomed.contains(&piece.id))
+                        .copied()
+                        .collect();
+                    if let Some((x, y)) =
+                        first_fit(&remainder, self.next_piece, Kind::VeryMysteriousCrate)
+                    {
+                        return Some((doomed, x, y));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Placements while docked at ??? re-offer the toll: the player just
+    /// rearranged, and the exchange that failed for want of a 2x2 gap may
+    /// fit now.
+    fn wanderer_retry(&mut self) {
+        if matches!(self.ship.state, ShipState::Docked(WANDERER)) {
+            self.wanderer_exchange();
+        }
     }
 
     /// Drop a fresh piece into the first free drift slot, if any.
@@ -4702,5 +4736,51 @@ mod tests {
         let elder = save.replacen("parade - -", "parade -", 1);
         let restored = Sim::from_save(&elder).expect("earlier STV4 must load");
         assert_eq!(restored.comet_visit, None);
+    }
+
+    #[test]
+    fn making_room_mid_visit_completes_the_wanderer_exchange() {
+        let mut sim = Sim::new(10);
+        // Three crates along the top, their 2x2 shadow blocked by vials,
+        // and the low rows bricked solid with heavy scrap: no toll subset
+        // opens a berth for the big crate at dock time.
+        inject_hold(&mut sim, Kind::MysteriousCrate, 3, 0);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 4, 0);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 0);
+        let blocker = inject_hold(&mut sim, Kind::PerfumeVial, 4, 1);
+        inject_hold(&mut sim, Kind::PerfumeVial, 3, 1);
+        inject_hold(&mut sim, Kind::ScrapAlloy, 2, 2);
+        inject_hold(&mut sim, Kind::ScrapAlloy, 4, 2);
+        inject_hold(&mut sim, Kind::ScrapAlloy, 0, 3);
+        inject_hold(&mut sim, Kind::ScrapAlloy, 2, 3);
+        inject_hold(&mut sim, Kind::ScrapAlloy, 4, 3);
+        sim.dock(WANDERER);
+        assert!(
+            !sim.cues().contains(&Cue::Exchange),
+            "no berth for the big crate; the toll must wait"
+        );
+        assert_eq!(sim.mysterious_aboard(), 3, "nothing may be half-taken");
+
+        // Slide one blocking vial out of the crates' shadow: the retry on
+        // that very placement completes the deal, no round trip needed.
+        let vial_at = sim
+            .pieces()
+            .iter()
+            .find(|p| p.id == blocker)
+            .map(|p| rect_center(layout::piece_rect(p)))
+            .unwrap();
+        drag(&mut sim, vial_at, cell_center(1, 1));
+        assert!(
+            sim.cues().contains(&Cue::Exchange),
+            "the freed 2x2 should close the exchange on the spot"
+        );
+        assert_eq!(sim.mysterious_aboard(), 0);
+        assert_eq!(
+            sim.pieces()
+                .iter()
+                .filter(|p| p.kind == Kind::VeryMysteriousCrate)
+                .count(),
+            1
+        );
     }
 }

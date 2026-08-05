@@ -810,10 +810,22 @@ pub fn present_mode(
     let (window, cursor) = &mut *window;
     let roaming = matches!(rig.mode, Mode::Roam);
     let focused = rig.interactive();
-    if roaming {
-        cursor.grab_mode = CursorGrabMode::Locked;
+    if roaming && window.focused {
+        // Windows' winit cannot Lock the cursor, only Confine it — and a
+        // confined, hidden cursor still wanders (to the taskbar, where a
+        // click steals the window), so it gets pinned to center every
+        // frame instead. Look input reads raw deltas and never notices.
+        if cfg!(target_os = "windows") {
+            cursor.grab_mode = CursorGrabMode::Confined;
+            let center = window.size() * 0.5;
+            window.set_cursor_position(Some(center));
+        } else {
+            cursor.grab_mode = CursorGrabMode::Locked;
+        }
         cursor.visible = false;
     } else {
+        // Focused stations and unfocused windows both hand the cursor
+        // back — the player must always be able to click their way home.
         cursor.grab_mode = CursorGrabMode::None;
         cursor.visible = true;
     }

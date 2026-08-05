@@ -28,6 +28,9 @@ bevy = { version = "0.19", features = ["wav"] }
 # The deep-night window for the Umbra Market, read the same way the 2D
 # native build reads it.
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
+# Reading the 2D console's quad-storage container (local.data is JSON) so
+# an existing run walks aboard on first boot. Already in Bevy's graph.
+serde_json = "1"
 
 # Same lint posture as the root workspace, restated because workspaces
 # cannot share lint tables across their boundary.

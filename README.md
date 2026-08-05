@@ -29,6 +29,13 @@ cursor frees for the usual clicking and dragging. `Esc`, right-click, or
 console. Dev tooling: `-- --shot out.png --view desk` renders one
 screenshot and exits.
 
+Saves: the cabin keeps its own slot (`cabin.data` + `cabin.replay`
+beside the working directory), but on a boot with no slot of its own it
+**adopts the 2D console's `local.data`** — same `STV4` string, same
+offline catch-up, and a dev mode earned in the console carries over.
+Adoption happens once; from then on each frontend keeps its own run.
+Delete `cabin.data`/`cabin.replay` to re-adopt the console's run.
+
 ## Playing
 
 The screen is the ship's console: a star map, a 6×4 cargo hold, and a barter

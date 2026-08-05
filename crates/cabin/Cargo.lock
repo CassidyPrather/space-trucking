@@ -1918,6 +1918,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "chrono",
+ "serde_json",
  "space-trucking",
 ]
 

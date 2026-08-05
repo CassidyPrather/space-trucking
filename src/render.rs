@@ -2080,6 +2080,11 @@ fn draw_ghost_echo(c: &Canvas, scene: &Scene, echo: Echo, a: f32) {
             c.fill(r, fade(AMBER, 0.06 * a));
             c.frame(r, fade(AMBER, 0.30 * a));
         }
+        Echo::TakeSlot(slot) => {
+            let r = inflate(layout::TAKE_SLOTS[usize::from(slot)], 2.0);
+            c.fill(r, fade(AMBER, 0.06 * a));
+            c.frame(r, fade(AMBER, 0.30 * a));
+        }
         Echo::HoldPiece(id) => {
             if let Some(piece) = piece_by_id(scene.sim, id) {
                 c.frame_thick(

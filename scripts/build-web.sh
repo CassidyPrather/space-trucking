@@ -15,6 +15,24 @@ mkdir -p "$OUT"
 cp web/* "$OUT/"
 cp "target/wasm32-unknown-unknown/release/${BIN}.wasm" "$OUT/"
 
+# Cache-bust every asset reference with the commit hash. The filenames never
+# change across deploys, so without this a browser (and Pages' ~10 minute
+# cache) happily keeps serving last week's game after a deploy; with it,
+# every deploy is a fresh URL and a plain reload gets the new build.
+STAMP=$(git rev-parse --short HEAD 2>/dev/null || date +%s)
+sed -i.bak \
+    -e "s|src=\"gl.js\"|src=\"gl.js?v=${STAMP}\"|" \
+    -e "s|src=\"audio.js\"|src=\"audio.js?v=${STAMP}\"|" \
+    -e "s|src=\"sapp_jsutils.js\"|src=\"sapp_jsutils.js?v=${STAMP}\"|" \
+    -e "s|src=\"quad-storage.js\"|src=\"quad-storage.js?v=${STAMP}\"|" \
+    -e "s|load(\"${BIN}.wasm\")|load(\"${BIN}.wasm?v=${STAMP}\")|" \
+    "$OUT/index.html"
+rm -f "$OUT/index.html.bak"
+grep -q "v=${STAMP}" "$OUT/index.html" || {
+    echo "cache-bust stamp failed to apply; index.html references changed?" >&2
+    exit 1
+}
+
 # rustc's wasm32-unknown-unknown baseline emits these six post-MVP features
 # (`rustc --print cfg --target wasm32-unknown-unknown` lists them). wasm-opt
 # only enables them by default in newer binaryen, and refuses to validate its

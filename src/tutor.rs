@@ -63,10 +63,13 @@ pub enum Echo {
     Poi(PoiId),
     /// A faint go-glow on the launch lever.
     LaunchLever,
-    /// A faint outline on the hold piece the ghost is "holding".
+    /// A faint outline on the piece the ghost is "holding", wherever it
+    /// sits — a stowed piece for the offering, a shelf piece for the ask.
     HoldPiece(u32),
     /// A faint invite on a give-pad slot.
     GiveSlot(u8),
+    /// A faint invite on a take-pad slot.
+    TakeSlot(u8),
     /// A faint go-glow on the accept lever.
     AcceptLever,
 }
@@ -166,8 +169,8 @@ impl Tutor {
                     }
                 }
                 if idle_seconds >= TRADE_IDLE && !self.ever_accepted {
-                    if let Some((piece, from)) = trade_eligible(sim) {
-                        self.state = playing(trade_script(piece, from));
+                    if let Some(demo) = trade_eligible(sim) {
+                        self.state = playing(trade_script(&demo));
                     }
                 }
             }
@@ -232,25 +235,45 @@ fn fly_eligible(sim: &Sim) -> Option<PoiId> {
     (sim.legs() == 0 && sim.all_held().next().is_none()).then_some(at)
 }
 
-/// Lesson two's preconditions: docked with a trade open, the give pad
-/// untouched, at least one piece stowed to offer, and every hand empty.
-/// Returns the piece the ghost will pretend to carry and where it sits.
-fn trade_eligible(sim: &Sim) -> Option<(u32, Vec2)> {
+/// What lesson two demonstrates with: the shelf piece to ask for and the
+/// stowed piece to offer, each with where it sits.
+struct TradeDemo {
+    ask: u32,
+    ask_from: Vec2,
+    offer: u32,
+    offer_from: Vec2,
+}
+
+/// Lesson two's preconditions: docked with a trade open, both pads
+/// untouched, something on the shelf to ask for, at least one piece stowed
+/// to offer, and every hand empty. A demonstration that only loaded the
+/// give pad would teach charity, not trade — the previous contractor may
+/// be dead, but they were not a mark.
+fn trade_eligible(sim: &Sim) -> Option<TradeDemo> {
     if sim.barter().is_none() || sim.all_held().next().is_some() {
         return None;
     }
     if sim
         .pieces()
         .iter()
-        .any(|piece| matches!(piece.loc, Loc::GivePad { .. }))
+        .any(|piece| matches!(piece.loc, Loc::GivePad { .. } | Loc::TakePad { .. }))
     {
         return None;
     }
-    let piece = sim
+    let ask = sim
+        .pieces()
+        .iter()
+        .find(|piece| matches!(piece.loc, Loc::StationShelf { .. }))?;
+    let offer = sim
         .pieces()
         .iter()
         .find(|piece| matches!(piece.loc, Loc::Hold { .. }))?;
-    Some((piece.id, rect_center(layout::piece_rect(piece))))
+    Some(TradeDemo {
+        ask: ask.id,
+        ask_from: rect_center(layout::piece_rect(ask)),
+        offer: offer.id,
+        offer_from: rect_center(layout::piece_rect(offer)),
+    })
 }
 
 // ----------------------------------------------------------------- scripts --
@@ -285,24 +308,31 @@ fn fly_script(docked: PoiId) -> Vec<Key> {
     ]
 }
 
-/// Lesson two: fade in over a stowed piece, press and hold, carry to the
-/// first give slot (invite echo), release, drift to the accept lever,
-/// press (glow echo), fade.
-fn trade_script(piece: u32, from: Vec2) -> Vec<Key> {
+/// Lesson two, the whole ritual: carry a shelf piece to the take pad (ask
+/// for something), carry a stowed piece to the give pad (offer something),
+/// then the accept lever. Ask before offer, so the demonstration reads as
+/// a trade from its first gesture and never as a donation.
+fn trade_script(demo: &TradeDemo) -> Vec<Key> {
+    let take = rect_center(layout::TAKE_SLOTS[0]);
     let give = rect_center(layout::GIVE_SLOTS[0]);
     let accept = rect_center(layout::ACCEPT_LEVER);
     vec![
-        key(0.0, from, Echo::None, false),
-        key(1.0, from, Echo::HoldPiece(piece), false),
-        key(1.4, from, Echo::HoldPiece(piece), true),
-        key(1.9, from, Echo::GiveSlot(0), true),
-        key(3.6, give, Echo::GiveSlot(0), true),
-        key(4.2, give, Echo::GiveSlot(0), false),
-        key(5.2, give, Echo::GiveSlot(0), false),
-        key(6.7, accept, Echo::AcceptLever, false),
-        key(7.0, accept, Echo::AcceptLever, true),
-        key(7.6, accept, Echo::AcceptLever, false),
-        key(8.5, accept, Echo::AcceptLever, false),
+        key(0.0, demo.ask_from, Echo::None, false),
+        key(1.0, demo.ask_from, Echo::HoldPiece(demo.ask), false),
+        key(1.4, demo.ask_from, Echo::HoldPiece(demo.ask), true),
+        key(1.9, demo.ask_from, Echo::TakeSlot(0), true),
+        key(3.4, take, Echo::TakeSlot(0), true),
+        key(4.0, take, Echo::TakeSlot(0), false),
+        key(5.2, demo.offer_from, Echo::HoldPiece(demo.offer), false),
+        key(5.6, demo.offer_from, Echo::HoldPiece(demo.offer), true),
+        key(6.1, demo.offer_from, Echo::GiveSlot(0), true),
+        key(7.6, give, Echo::GiveSlot(0), true),
+        key(8.2, give, Echo::GiveSlot(0), false),
+        key(9.2, give, Echo::GiveSlot(0), false),
+        key(10.6, accept, Echo::AcceptLever, false),
+        key(10.9, accept, Echo::AcceptLever, true),
+        key(11.5, accept, Echo::AcceptLever, false),
+        key(12.4, accept, Echo::AcceptLever, false),
     ]
 }
 
@@ -547,12 +577,20 @@ mod tests {
                 assert!(in_world(k.pos), "fly key leaves the world: {:?}", k.pos);
             }
         }
-        // Every hold cell a carried piece could start from.
+        // Every hold cell the offered piece could start from, against every
+        // shelf slot the asked piece could start from.
         for y in 0..layout::GRID_ROWS {
             for x in 0..layout::GRID_COLS {
-                let from = rect_center(layout::cell_rect(x, y));
-                for k in trade_script(0, from) {
-                    assert!(in_world(k.pos), "trade key leaves the world: {:?}", k.pos);
+                for slot in 0..4_usize {
+                    let demo = TradeDemo {
+                        ask: 1,
+                        ask_from: rect_center(layout::SHELF_SLOTS[slot]),
+                        offer: 0,
+                        offer_from: rect_center(layout::cell_rect(x, y)),
+                    };
+                    for k in trade_script(&demo) {
+                        assert!(in_world(k.pos), "trade key leaves the world: {:?}", k.pos);
+                    }
                 }
             }
         }
@@ -560,11 +598,40 @@ mod tests {
 
     #[test]
     fn scripts_keep_their_keys_in_order() {
-        for keys in [fly_script(GUILD), trade_script(0, hold_center())] {
+        let demo = TradeDemo {
+            ask: 1,
+            ask_from: rect_center(layout::SHELF_SLOTS[0]),
+            offer: 0,
+            offer_from: hold_center(),
+        };
+        for keys in [fly_script(GUILD), trade_script(&demo)] {
             assert!(keys.len() >= 2);
             for pair in keys.windows(2) {
                 assert!(pair[0].t < pair[1].t, "keyframe times must ascend");
             }
         }
+    }
+
+    #[test]
+    fn the_trade_lesson_asks_before_it_offers() {
+        // The regression from the first human playtest: a demonstration
+        // that only loads the give pad teaches charity. The script must
+        // visit the take pad, and do so before the give pad.
+        let demo = TradeDemo {
+            ask: 1,
+            ask_from: rect_center(layout::SHELF_SLOTS[0]),
+            offer: 0,
+            offer_from: hold_center(),
+        };
+        let keys = trade_script(&demo);
+        let first_take = keys
+            .iter()
+            .position(|k| matches!(k.echo, Echo::TakeSlot(_)))
+            .expect("the lesson must visit the take pad");
+        let first_give = keys
+            .iter()
+            .position(|k| matches!(k.echo, Echo::GiveSlot(_)))
+            .expect("the lesson must visit the give pad");
+        assert!(first_take < first_give, "ask before offer");
     }
 }

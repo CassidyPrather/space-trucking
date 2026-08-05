@@ -90,6 +90,23 @@ cargo audit                                                   # audit
 The web build needs `rustup target add wasm32-unknown-unknown`, and uses
 `wasm-opt` from binaryen when it is on PATH.
 
+## Solid vs. soft (change tolerance)
+
+DESIGN.md work is ongoing and requirements will keep moving. Know which
+walls are load-bearing:
+
+- **Solid — change deliberately, with tests and a save-magic bump**:
+  `src/sim/` (the game), `src/net/` (lockstep + guild), the save/tape
+  formats, the `InputFrame` contract, and the cabin's bridge/surface
+  contract (panels map layout rects; the sim does all hit-testing).
+- **Soft — expected to churn freely**: every cabin view module (`crt`,
+  `console`, `barter`, `pieces`, `viewport`, `fx`), the rig's room
+  layout (data-first geometry + invariant/sightline tests make
+  rearrangement cheap), palette values, canvas paintings, audio gains.
+- **Amend-in-the-same-change**: the art direction docs and
+  `docs/DESIGN_REVIEW.md`'s deferred list — divergence without amendment
+  is the failure mode, not change itself.
+
 ## The Determinism Contract
 
 The sim advances on a fixed 60 Hz timestep via an accumulator with a frame-dt

@@ -157,6 +157,45 @@ clips a wall, is handled structurally, not by eyeballing:
   happens in CI-shaped environments too — geometry changes should come
   with fresh captures, looked at.
 
+## The cargo question
+
+The owner's playtest note: drag-and-drop cargo between little slots is a
+2D prototype artifact, not the design — 3D space wants cargo to be
+*significant*, and the system must plan for extensibility (crews,
+networking). The architectural answer, so the experiment can run free:
+
+**The sim's discrete cargo model is the network model, and it is already
+right.** A piece is `(id, kind, variant, gnawed, Loc)` where `Loc` is a
+discrete berth — hold cell, pad slot, rail slot. Lockstep multiplayer
+ships only `InputFrame`s; cargo state never travels, and the drag-monkey
+tests prove no interleaving of six players' inputs can lose a piece.
+Every future presentation must keep that spine: **presentation may be as
+physical as it likes, but what the sim sees must remain discrete berth
+transitions driven by input frames.** DESIGN.md's "cargo must not have
+physics" is this same rule seen from the other side.
+
+What that frees us to do in 3D, next experiments in rough order:
+
+1. **Bigger, heavier presentation**: crates at furniture scale in a
+   walkable bay, not desk trinkets; a berth is a floor plate or wall
+   bracket, still exactly one sim cell.
+2. **Carry instead of drag**: grabbing a crate parks it "in hand" (the
+   sim already models a held piece per player); walking to a berth and
+   clicking places it. The bridge synthesizes the same press/held/release
+   frames it does today — the gesture layer already shows how.
+3. **Placement rules become physical staging**: heavy-rides-low means
+   floor plates versus high shelves; cryo-hugs-the-hull means berths on
+   the outer wall; violatile adjacency reads as spacing between plates.
+   The rules stay in `cargo.rs`; the room *is* the diagram.
+4. **Crew ownership** maps to lockstep player indices unchanged — two
+   players carrying crates in 3D is exactly two `held` slots the sim
+   already simulates.
+
+What must NOT happen: cargo positions as free 3D coordinates in sim
+state, physics on pieces, or any frontend-authoritative cargo movement.
+That would break saves, tapes, lockstep, and the conservation tests in
+one stroke.
+
 ## Open questions for the aesthetic experiment
 
 Deliberately unsettled, to be answered by iteration in this crate:

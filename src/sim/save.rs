@@ -68,6 +68,11 @@ pub(crate) fn serialize(sim: &Sim) -> String {
     let _ = writeln!(out, "paused {}", u8::from(sim.paused));
     let _ = writeln!(out, "deliveries {}", sim.deliveries);
     let _ = writeln!(out, "karma {}", sim.karma);
+    let _ = write!(out, "familiar");
+    for mask in sim.familiar {
+        let _ = write!(out, " {mask:04x}");
+    }
+    let _ = writeln!(out);
     let _ = write!(out, "visits");
     for visit in sim.visits {
         let _ = write!(out, " {visit}");
@@ -127,9 +132,14 @@ pub(crate) fn serialize(sim: &Sim) -> String {
         }
     }
     // The dial is eased state, not derivable from the pieces alone: its bits
-    // travel like light and omen do. Zero when traveling.
+    // travel like light and omen do. Zero when traveling. Patience rides
+    // beside it: also per-visit, also not derivable.
     let eagerness = sim.barter.as_ref().map_or(0.0, |barter| barter.eagerness);
-    let _ = writeln!(out, "eager {:08x}", eagerness.to_bits());
+    let patience = sim
+        .barter
+        .as_ref()
+        .map_or(barter::PATIENCE, |barter| barter.patience);
+    let _ = writeln!(out, "eager {:08x} {patience}", eagerness.to_bits());
     for piece in &sim.pieces {
         let _ = write!(
             out,
@@ -180,20 +190,28 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let paused = reader.kv::<u8>("paused")? != 0;
     let deliveries = reader.kv("deliveries")?;
     let karma = reader.kv("karma")?;
+    let familiar = parse_familiar(&mut reader)?;
     let visits = parse_visits(&mut reader)?;
     let ship = parse_ship(&mut reader, tick)?;
     let legs = reader.kv("legs")?;
     let omen = parse_omen(&mut reader)?;
     let rats = parse_rat(&mut reader)?;
-    let eagerness = f32::from_bits(reader.kv_hex32("eager")?);
+    let (eagerness, patience) = parse_eager(&mut reader)?;
     let (pieces, next_piece) = parse_pieces(&mut reader)?;
 
     let barter = match ship.state {
         // The comet and ??? dock without a counterparty: no barter opens.
         ShipState::Docked(at) if at != super::map::COMET && at != super::map::WANDERER => {
-            let mut barter = barter::rebuild(seed, at, visits[usize::from(at)], &pieces);
+            let mut barter = barter::rebuild(
+                seed,
+                at,
+                visits[usize::from(at)],
+                &pieces,
+                familiar[usize::from(at)],
+            );
             barter.eagerness = eagerness;
             barter.prev_eagerness = eagerness;
+            barter.patience = patience;
             Some(barter)
         }
         _ => None,
@@ -222,9 +240,43 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         omen,
         rats,
         karma,
+        familiar,
         night: false,
         last_violation: None,
     })
+}
+
+/// The `familiar` line: one 4-hex kind bitmask per POI, in map order.
+fn parse_familiar(reader: &mut Reader<'_>) -> Result<[u16; POI_COUNT], SaveError> {
+    let line = reader.next_line()?;
+    let mut tokens = line.split_whitespace();
+    if tokens.next() != Some("familiar") {
+        return Err(reader.err());
+    }
+    let mut familiar = [0_u16; POI_COUNT];
+    for mask in &mut familiar {
+        let token = tokens.next().ok_or_else(|| reader.err())?;
+        *mask = u16::from_str_radix(token, 16).map_err(|_| reader.err())?;
+    }
+    Ok(familiar)
+}
+
+/// The `eager` line: the eased dial's bits plus the visit's patience.
+fn parse_eager(reader: &mut Reader<'_>) -> Result<(f32, u8), SaveError> {
+    let line = reader.next_line()?;
+    let mut tokens = line.split_whitespace();
+    if tokens.next() != Some("eager") {
+        return Err(reader.err());
+    }
+    let bits = tokens
+        .next()
+        .and_then(|t| u32::from_str_radix(t, 16).ok())
+        .ok_or_else(|| reader.err())?;
+    let patience: u8 = reader.token(tokens.next())?;
+    if patience > barter::PATIENCE {
+        return Err(reader.err());
+    }
+    Ok((f32::from_bits(bits), patience))
 }
 
 /// The `visits` line: one count per POI, in map order.
@@ -516,15 +568,6 @@ impl<'a> Reader<'a> {
             .ok_or_else(|| self.err())
     }
 
-    /// A `key <8-hex-digits>` line.
-    fn kv_hex32(&mut self, key: &str) -> Result<u32, SaveError> {
-        let line = self.next_line()?;
-        let mut tokens = line.split_whitespace();
-        if tokens.next() != Some(key) {
-            return Err(self.err());
-        }
-        self.hex32(tokens.next())
-    }
 
     /// One token of 8 hex digits, as raw bits.
     fn hex32(&self, token: Option<&str>) -> Result<u32, SaveError> {

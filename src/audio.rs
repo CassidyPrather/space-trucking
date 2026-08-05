@@ -110,6 +110,9 @@ const HARVEST_GAIN: f32 = 0.5;
 /// The ??? exchange's quiet stinger.
 const EXCHANGE_GAIN: f32 = 0.3;
 
+/// Shutters coming down on a station out of patience.
+const SHUTTER_GAIN: f32 = 0.6;
+
 /// Cruising engine loop target while traveling out of warp.
 const ENGINE_GAIN: f32 = 0.25;
 
@@ -326,6 +329,8 @@ impl Audio {
             // No one-shot: the omen is the hum swelling, and marking its
             // edges with a sting would give the mystery away.
             Cue::OmenStart | Cue::OmenEnd => return,
+            // Shutters slamming: the latch, hard. The message lands.
+            Cue::Shutter => (&self.latch, SHUTTER_GAIN),
             // Free cargo thunking into the hold, scaled by the haul.
             Cue::Harvest { intensity } => (&self.thock, HARVEST_GAIN * loudness(intensity)),
             // The exchange gets the stinger, quiet: ??? is not loud.

@@ -35,7 +35,7 @@ pub mod save;
 
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub};
 
-pub use barter::{Barter, EAGER_MAX, VALUE};
+pub use barter::{Barter, EAGER_MAX, PATIENCE, VALUE};
 pub use cargo::{
     KIND_COUNT, Kind, Loc, Piece, Tag, Violation, first_fit, placement_check, placement_legal,
     player_owned,
@@ -72,6 +72,14 @@ pub const WANDERER_TOLL: u32 = 3;
 
 /// Salt for the comet harvest rolls, distinct from every other stream.
 const SALT_HARVEST: u64 = 0xC0_3E71;
+
+/// The discovery ledger a fresh contractor starts with: the Guild is home
+/// turf — every kind reads true there — and everywhere else is fog.
+fn home_familiar() -> [u16; POI_COUNT] {
+    let mut familiar = [0_u16; POI_COUNT];
+    familiar[usize::from(GUILD)] = u16::MAX;
+    familiar
+}
 
 /// Starter cargo and where it is stowed: three pieces, placed legally
 /// (the scrap is heavy, so it sits low).
@@ -236,6 +244,9 @@ pub enum Cue {
     },
     /// Accept lever pulled on a trade the station will not take.
     Refuse,
+    /// The station's patience ran out: shutters down, shelf withdrawn,
+    /// gifts only until one of those gifts reopens it.
+    Shutter,
     OmenStart,
     Jump,
     OmenEnd,
@@ -356,6 +367,10 @@ pub struct Sim {
     rats: Rats,
     /// Pieces ever gifted to the Hermitage; its shelf grows from this.
     karma: u32,
+    /// Per-station bitmask of kinds the player has traded there — the
+    /// discovery ledger the barter fog reads. Bit k set means kind k's
+    /// value at that station reads true on the dial.
+    familiar: [u16; POI_COUNT],
     /// Whether any crew member's wall clock reads deep night, refreshed
     /// from the frame every application round. Transient: consulted only
     /// by press handlers (Umbra selection), never by the tick, and never
@@ -429,6 +444,7 @@ impl Sim {
             omen: Omen::new(),
             rats: Rats::new(),
             karma: 0,
+            familiar: home_familiar(),
             night: false,
             last_violation: None,
         }
@@ -685,6 +701,16 @@ impl Sim {
     #[must_use]
     pub const fn karma(&self) -> u32 {
         self.karma
+    }
+
+    /// Whether the player has ever traded `kind` at the current dock, so
+    /// its value reads true on the dial. Meaningless while traveling.
+    #[must_use]
+    pub fn kind_familiar(&self, kind: Kind) -> bool {
+        let Some(barter) = &self.barter else {
+            return true;
+        };
+        self.familiar[usize::from(barter.station)] & (1 << kind.index()) != 0
     }
 
     /// Whether POI `id` is currently on the map at all. The comet exists
@@ -1106,6 +1132,10 @@ impl Sim {
                 barter::gnaw_loved(barter.station),
             )
             .1;
+            barter.fog = barter::fog_of(
+                &self.pieces,
+                self.familiar[usize::from(barter.station)],
+            );
         }
     }
 
@@ -1148,6 +1178,11 @@ impl Sim {
         let (_, ready) = barter::eagerness_of(&self.pieces, &self.values, gnaw_love);
         if !ready || self.received_occupied() {
             self.cues.push(Cue::Refuse);
+            if !ready {
+                // Wasting the station's time is the one discovery cost a
+                // gamble can pay: patience runs out, shutters come down.
+                self.spend_patience();
+            }
             return;
         }
         let value = barter::deal_value(&self.pieces, &self.values, gnaw_love);
@@ -1159,14 +1194,65 @@ impl Sim {
                 .filter(|piece| matches!(piece.loc, Loc::GivePad { .. }))
                 .count() as u32;
         }
+        // Every kind that crossed the pads is learned here for good: the
+        // deal's arithmetic was just demonstrated in public.
+        let mask = &mut self.familiar[usize::from(station)];
+        let mut gave_only = true;
+        for piece in &self.pieces {
+            match piece.loc {
+                Loc::GivePad { .. } => *mask |= 1 << piece.kind.index(),
+                Loc::TakePad { .. } => {
+                    *mask |= 1 << piece.kind.index();
+                    gave_only = false;
+                }
+                _ => {}
+            }
+        }
         self.restock_from_give_pads();
         for piece in &mut self.pieces {
             if let Loc::TakePad { slot } = piece.loc {
                 piece.loc = Loc::ReceivedShelf { slot };
             }
         }
+        if gave_only {
+            if let Some(barter) = &mut self.barter {
+                if barter.patience == 0 {
+                    // A gift through the shutters: grudgingly, they reopen
+                    // a crack. (The shelf now holds exactly what you gave
+                    // them, and yes, they would sell it back to you.)
+                    barter.patience = 1;
+                }
+            }
+        }
         self.refresh_ready();
         self.cues.push(Cue::Accept { value });
+    }
+
+    /// One refused pull's worth of patience gone. At zero the station
+    /// shutters: shelf and take pad withdrawn (they are the station's),
+    /// leaving gifts as the only trade the lever will move.
+    fn spend_patience(&mut self) {
+        let Some(barter) = &mut self.barter else {
+            return;
+        };
+        if barter.patience == 0 {
+            return;
+        }
+        barter.patience -= 1;
+        if barter.patience > 0 {
+            return;
+        }
+        self.pieces.retain(|piece| {
+            !matches!(piece.loc, Loc::StationShelf { .. } | Loc::TakePad { .. })
+        });
+        for held in &mut self.held {
+            let holds_gone = matches!(held, Some(h) if !self.pieces.iter().any(|p| p.id == h.piece));
+            if holds_gone {
+                *held = None;
+            }
+        }
+        self.refresh_ready();
+        self.cues.push(Cue::Shutter);
     }
 
     /// The station consumes the give pads: pieces restock free shelf slots
@@ -1287,6 +1373,10 @@ impl Sim {
                 barter::gnaw_loved(barter.station),
             );
             barter.ready = ready;
+            barter.fog = barter::fog_of(
+                &self.pieces,
+                self.familiar[usize::from(barter.station)],
+            );
             barter.eagerness = step_toward(
                 barter.eagerness,
                 target.clamp(0.0, EAGER_MAX),
@@ -1314,6 +1404,9 @@ impl Sim {
         self.rats.on_dock(&self.pieces, &mut self.cues);
         self.visits[usize::from(poi)] += 1;
         let visit = self.visits[usize::from(poi)];
+        // Cleared first so the barterless docks (comet, ???) never inherit
+        // a stale counterparty from anywhere.
+        self.barter = None;
         match poi {
             COMET => self.harvest_comet(visit),
             WANDERER => self.wanderer_exchange(),
@@ -3521,5 +3614,348 @@ mod tests {
         assert_eq!(ff.save_string(), step.save_string());
         assert_eq!(ff.rat(), step.rat());
         assert_eq!(ff.pieces(), step.pieces());
+    }
+
+    // ------------------------------------------------- polish-pass tests --
+
+    #[test]
+    fn inner_ring_needs_a_transit_chit() {
+        let mut sim = Sim::new(4);
+        let venus = sim.poi_pos(0);
+        sim.advance(0.0, &press_at(venus.x, venus.y));
+        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
+        assert_eq!(sim.ship().selected, None, "charted inner without papers");
+
+        let chit = inject_hold(&mut sim, Kind::TransitChit, 5, 3);
+        sim.advance(0.0, &press_at(venus.x, venus.y));
+        assert_eq!(sim.cues(), [Cue::Select]);
+        assert_eq!(sim.ship().selected, Some(0));
+
+        // Papers vanish between charting and the lever: the selection
+        // disarms rather than launching an illegal course.
+        sim.pieces.retain(|piece| piece.id != chit);
+        let lever = rect_center(layout::LAUNCH_LEVER);
+        sim.advance(0.0, &press_at(lever.x, lever.y));
+        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
+        assert_eq!(sim.ship().selected, None);
+        assert!(matches!(sim.ship().state, ShipState::Docked(_)));
+    }
+
+    #[test]
+    fn the_umbra_market_only_answers_at_night() {
+        let mut sim = Sim::new(4);
+        let umbra = sim.poi_pos(UMBRA);
+        sim.advance(0.0, &press_at(umbra.x, umbra.y));
+        assert_eq!(sim.ship().selected, None, "the market was open by day");
+
+        let mut press = press_at(umbra.x, umbra.y);
+        press.night = true;
+        sim.advance(0.0, &press);
+        assert_eq!(sim.cues(), [Cue::Select]);
+        assert_eq!(sim.ship().selected, Some(UMBRA));
+    }
+
+    #[test]
+    fn shift_press_moves_cargo_to_its_obvious_slot() {
+        let mut sim = Sim::new(5);
+        // Hold piece -> first free give slot.
+        let from = cell_center(0, 0);
+        let mut press = press_at(from.x, from.y);
+        press.shift = true;
+        sim.advance(0.0, &press);
+        assert_eq!(sim.cues(), [Cue::Place]);
+        assert!(sim.held(0).is_none(), "shift must move, never lift");
+        assert!(
+            sim.pieces()
+                .iter()
+                .any(|p| p.loc == Loc::GivePad { slot: 0 }),
+            "the vial should sit on give pad 0"
+        );
+
+        // Give pad piece -> back to the first legal hold cell.
+        let back = slot_center(&layout::GIVE_SLOTS, 0);
+        let mut press = press_at(back.x, back.y);
+        press.shift = true;
+        sim.advance(0.0, &press);
+        assert_eq!(sim.cues(), [Cue::Place]);
+        assert!(
+            sim.pieces()
+                .iter()
+                .all(|p| !matches!(p.loc, Loc::GivePad { .. })),
+            "the give pad should be empty again"
+        );
+
+        // Shelf good -> first free take slot.
+        let shelf_piece = sim
+            .pieces()
+            .iter()
+            .find(|p| matches!(p.loc, Loc::StationShelf { .. }))
+            .expect("a fresh dock shelves goods");
+        let at = rect_center(layout::piece_rect(shelf_piece));
+        let mut press = press_at(at.x, at.y);
+        press.shift = true;
+        sim.advance(0.0, &press);
+        assert_eq!(sim.cues(), [Cue::Place]);
+        assert!(
+            sim.pieces()
+                .iter()
+                .any(|p| p.loc == Loc::TakePad { slot: 0 }),
+            "the shelf good should sit on take pad 0"
+        );
+    }
+
+    #[test]
+    fn patience_runs_out_shutters_the_shop_and_a_gift_reopens_it() {
+        let mut sim = Sim::new(6);
+        // Ask for the first shelf good with nothing offered: never ready.
+        drag(
+            &mut sim,
+            slot_center(&layout::SHELF_SLOTS, 0),
+            slot_center(&layout::TAKE_SLOTS, 0),
+        );
+        let lever = rect_center(layout::ACCEPT_LEVER);
+        for pull in 1..=PATIENCE {
+            sim.advance(0.0, &press_at(lever.x, lever.y));
+            let cues = sim.cues();
+            assert_eq!(cues.first(), Some(&Cue::Refuse), "pull {pull}");
+            if pull == PATIENCE {
+                assert!(cues.contains(&Cue::Shutter), "no shutter on the last straw");
+            }
+        }
+        let barter = sim.barter().expect("still docked");
+        assert_eq!(barter.patience, 0);
+        assert!(
+            sim.pieces()
+                .iter()
+                .all(|p| !matches!(p.loc, Loc::StationShelf { .. } | Loc::TakePad { .. })),
+            "the station should have withdrawn its goods"
+        );
+
+        // A gift through the shutters reopens them a crack.
+        drag(
+            &mut sim,
+            cell_center(0, 0),
+            slot_center(&layout::GIVE_SLOTS, 0),
+        );
+        sim.advance(0.0, &press_at(lever.x, lever.y));
+        assert!(
+            sim.cues().iter().any(|c| matches!(c, Cue::Accept { .. })),
+            "a gift is always accepted, shutters or not"
+        );
+        assert_eq!(sim.barter().expect("docked").patience, 1);
+    }
+
+    #[test]
+    fn trading_a_kind_teaches_its_value_and_burns_off_the_fog() {
+        let mut sim = Sim::new(7);
+        // Home turf: the Guild's ledger starts fully familiar.
+        drag(
+            &mut sim,
+            cell_center(0, 0),
+            slot_center(&layout::GIVE_SLOTS, 0),
+        );
+        assert!(
+            sim.barter().expect("docked").fog.abs() < f32::EPSILON,
+            "the Guild is home; nothing there is guesswork"
+        );
+        drag(
+            &mut sim,
+            slot_center(&layout::GIVE_SLOTS, 0),
+            cell_center(0, 0),
+        );
+
+        // Abroad, the same cargo reads foggy until it is traded once.
+        travel_to(&mut sim, SATURN);
+        drag(
+            &mut sim,
+            cell_center(0, 0),
+            slot_center(&layout::GIVE_SLOTS, 0),
+        );
+        let foggy = sim.barter().expect("docked").fog;
+        assert!(foggy > 0.0, "an untraded kind should fog the dial");
+        let lever = rect_center(layout::ACCEPT_LEVER);
+        sim.advance(0.0, &press_at(lever.x, lever.y));
+        assert!(
+            sim.cues().iter().any(|c| matches!(c, Cue::Accept { .. })),
+            "the gift concludes"
+        );
+        // The vial is now a known quantity at Saturn, this run and forever.
+        drag(
+            &mut sim,
+            slot_center(&layout::SHELF_SLOTS, 0),
+            slot_center(&layout::TAKE_SLOTS, 0),
+        );
+        assert!(sim.kind_familiar(Kind::PerfumeVial));
+
+        // And the ledger survives the save round trip.
+        let restored = Sim::from_save(&sim.save_string()).expect("own save parses");
+        assert_eq!(restored.familiar, sim.familiar);
+        assert_eq!(restored.save_string(), sim.save_string());
+    }
+
+    #[test]
+    fn the_comet_hands_over_free_ice_and_no_barter() {
+        let mut sim = Sim::new(8);
+        let hold_before = sim
+            .pieces()
+            .iter()
+            .filter(|p| matches!(p.loc, Loc::Hold { .. }))
+            .count();
+        sim.dock(COMET);
+        assert!(sim.barter().is_none(), "comets do not haggle");
+        assert!(sim.cues().iter().any(|c| matches!(c, Cue::Harvest { .. })));
+        let ice = sim
+            .pieces()
+            .iter()
+            .filter(|p| matches!(p.loc, Loc::Hold { .. }) && p.kind == Kind::CometIce)
+            .count();
+        assert!(ice >= 1, "no ice chipped off");
+        assert!(
+            sim.pieces()
+                .iter()
+                .filter(|p| matches!(p.loc, Loc::Hold { .. }))
+                .count()
+                > hold_before
+        );
+        // The accept lever is dead furniture here; launching still works.
+        let lever = rect_center(layout::ACCEPT_LEVER);
+        sim.advance(0.0, &press_at(lever.x, lever.y));
+        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
+        launch(&mut sim, SATURN);
+    }
+
+    #[test]
+    fn three_mysterious_crates_summon_and_feed_the_wanderer() {
+        let mut sim = Sim::new(9);
+        assert!(!sim.poi_visible(WANDERER), "??? showed up uninvited");
+        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 0);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 1);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 2);
+        assert!(sim.poi_visible(WANDERER), "three crates should call it");
+
+        sim.dock(WANDERER);
+        assert!(sim.cues().contains(&Cue::Exchange));
+        assert_eq!(sim.mysterious_aboard(), 0, "the toll was not taken");
+        assert_eq!(
+            sim.pieces()
+                .iter()
+                .filter(|p| p.kind == Kind::VeryMysteriousCrate)
+                .count(),
+            1
+        );
+        assert!(sim.barter().is_none());
+
+        // Delivered home, the hangar counts it four times.
+        let before = sim.deliveries();
+        travel_to(&mut sim, GUILD);
+        assert_eq!(sim.deliveries(), before + 4);
+    }
+
+    #[test]
+    fn a_suspicious_crate_blocks_the_exchange_and_nothing_is_taken() {
+        let mut sim = Sim::new(10);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 0);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 1, 0);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 3, 0);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 1, 1);
+        sim.dock(WANDERER);
+        assert!(
+            !sim.cues().contains(&Cue::Exchange),
+            "two hums in one hold should quarrel"
+        );
+        assert_eq!(sim.mysterious_aboard(), 3, "the toll must not half-take");
+    }
+
+    #[test]
+    fn the_hermitage_shelves_nothing_until_gifts_have_been_given() {
+        let mut sim = Sim::new(12);
+        travel_to(&mut sim, HERMITAGE);
+        assert!(
+            sim.pieces()
+                .iter()
+                .all(|p| !matches!(p.loc, Loc::StationShelf { .. })),
+            "hermits shelve nothing for strangers"
+        );
+        // Gift two pieces.
+        drag(
+            &mut sim,
+            cell_center(0, 0),
+            slot_center(&layout::GIVE_SLOTS, 0),
+        );
+        drag(
+            &mut sim,
+            cell_center(2, 0),
+            slot_center(&layout::GIVE_SLOTS, 1),
+        );
+        let lever = rect_center(layout::ACCEPT_LEVER);
+        sim.advance(0.0, &press_at(lever.x, lever.y));
+        assert!(sim.cues().iter().any(|c| matches!(c, Cue::Accept { .. })));
+        assert_eq!(sim.karma(), 2);
+
+        // Generosity comes back on the next visit: one good per two gifts.
+        travel_to(&mut sim, SATURN);
+        travel_to(&mut sim, HERMITAGE);
+        assert_eq!(
+            sim.pieces()
+                .iter()
+                .filter(|p| matches!(p.loc, Loc::StationShelf { .. }))
+                .count(),
+            1
+        );
+        // Karma survives the save round trip.
+        let restored = Sim::from_save(&sim.save_string()).expect("own save parses");
+        assert_eq!(restored.karma(), 2);
+    }
+
+    #[test]
+    fn arrival_disengages_warp() {
+        let mut sim = launched(13);
+        sim.advance(
+            0.0,
+            &InputFrame {
+                toggle_warp: true,
+                ..InputFrame::default()
+            },
+        );
+        assert!(sim.is_warp());
+        let leg = leg_of(&sim);
+        sim.fast_forward(leg + 10);
+        assert!(
+            !sim.is_warp(),
+            "fast-forward must not carry anyone obliviously past the dock"
+        );
+        assert!(matches!(sim.ship().state, ShipState::Docked(_)));
+    }
+
+    /// The anti-softlock guarantee, exercised: whatever is stranded on the
+    /// pads or received shelf, gifting always clears it — so the launch
+    /// lever can always be satisfied and no dock is a dead end.
+    #[test]
+    fn the_gift_escape_hatch_always_clears_the_pads() {
+        let mut sim = Sim::new(14);
+        // Strand things everywhere strandable: one hold piece on a give
+        // pad, one shelf good asked for.
+        drag(
+            &mut sim,
+            cell_center(0, 0),
+            slot_center(&layout::GIVE_SLOTS, 0),
+        );
+        drag(
+            &mut sim,
+            slot_center(&layout::SHELF_SLOTS, 0),
+            slot_center(&layout::TAKE_SLOTS, 0),
+        );
+        // Put the asked good back on the shelf; gift the rest.
+        drag(
+            &mut sim,
+            slot_center(&layout::TAKE_SLOTS, 0),
+            slot_center(&layout::SHELF_SLOTS, 0),
+        );
+        let lever = rect_center(layout::ACCEPT_LEVER);
+        sim.advance(0.0, &press_at(lever.x, lever.y));
+        assert!(sim.cues().iter().any(|c| matches!(c, Cue::Accept { .. })));
+        assert!(!sim.pads_occupied(), "the gift should clear every pad");
+        // Launchable again.
+        launch(&mut sim, SATURN);
     }
 }

@@ -229,6 +229,7 @@ impl Aggregate {
                 | Cue::OmenEnd
                 | Cue::Harvest { .. }
                 | Cue::Exchange
+                | Cue::Shutter
                 | Cue::Creak { .. }
                 | Cue::RatAboard
                 | Cue::RatSkitter { .. }

@@ -30,6 +30,15 @@ pub struct Barter {
     /// Whether pulling the accept lever would conclude the trade. Tracks the
     /// true ratio, not the eased dial, so accepting never races an animation.
     pub ready: bool,
+    /// How much of the composed trade is guesswork, `0..=1`: the fraction
+    /// of pad pieces whose kind the player has never traded at this
+    /// station. The renderer fogs the needle and withholds the go-lamp by
+    /// this — discovery has a cost, and the cost is finding out.
+    pub fog: f32,
+    /// Refused lever pulls the station will still tolerate this visit.
+    /// At zero the shutters come down (see `Sim::conclude`); a gift is
+    /// the one thing that reopens them.
+    pub patience: u8,
 }
 
 /// How much each station values each kind, `0..=6`.
@@ -70,6 +79,9 @@ const SHELF_MAX: usize = 4;
 
 /// Dial ceiling: the eased eagerness pegs here however lavish the offer.
 pub const EAGER_MAX: f32 = 2.0;
+
+/// Refused pulls a station tolerates per visit before shuttering.
+pub const PATIENCE: u8 = 3;
 
 /// Dial speed in eagerness units per second: the full sweep takes one.
 pub(crate) const EAGER_RATE: f32 = 2.0;
@@ -180,6 +192,8 @@ pub(crate) fn generate(
         eagerness: 0.0,
         prev_eagerness: 0.0,
         ready: false,
+        fog: 0.0,
+        patience: PATIENCE,
     };
     (barter, goods)
 }
@@ -188,7 +202,13 @@ pub(crate) fn generate(
 /// produced, dial snapped to the trade the restored pieces compose. The
 /// loader then overwrites the dial with the save's eased value.
 #[must_use]
-pub(crate) fn rebuild(seed: u64, station: PoiId, visit: u32, pieces: &[Piece]) -> Barter {
+pub(crate) fn rebuild(
+    seed: u64,
+    station: PoiId,
+    visit: u32,
+    pieces: &[Piece],
+    familiar: u16,
+) -> Barter {
     let values = visit_values(seed, station, visit);
     let (target, ready) = eagerness_of(pieces, &values, gnaw_loved(station));
     let eagerness = target.clamp(0.0, EAGER_MAX);
@@ -199,6 +219,30 @@ pub(crate) fn rebuild(seed: u64, station: PoiId, visit: u32, pieces: &[Piece]) -
         eagerness,
         prev_eagerness: eagerness,
         ready,
+        fog: fog_of(pieces, familiar),
+        patience: PATIENCE,
+    }
+}
+
+/// The guesswork fraction of the composed trade: pad pieces whose kind is
+/// not in this station's `familiar` bitmask, over all pad pieces. Empty
+/// pads read zero — nothing composed, nothing foggy.
+#[must_use]
+pub(crate) fn fog_of(pieces: &[Piece], familiar: u16) -> f32 {
+    let mut on_pads = 0_u32;
+    let mut unknown = 0_u32;
+    for piece in pieces {
+        if matches!(piece.loc, Loc::GivePad { .. } | Loc::TakePad { .. }) {
+            on_pads += 1;
+            if familiar & (1 << piece.kind.index()) == 0 {
+                unknown += 1;
+            }
+        }
+    }
+    if on_pads == 0 {
+        0.0
+    } else {
+        unknown as f32 / on_pads as f32
     }
 }
 

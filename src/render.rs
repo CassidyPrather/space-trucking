@@ -1436,6 +1436,10 @@ fn draw_barter(c: &Canvas, scene: &Scene) {
 }
 
 fn draw_slot_rows(c: &Canvas, scene: &Scene) {
+    let shuttered = scene
+        .sim
+        .barter()
+        .is_some_and(|barter| barter.patience == 0);
     for (slots, trim) in [
         (&layout::SHELF_SLOTS, TRIM_SHELF),
         (&layout::RECEIVED_SLOTS, TRIM_RECEIVED),
@@ -1446,6 +1450,24 @@ fn draw_slot_rows(c: &Canvas, scene: &Scene) {
             // Painted trim on the plate names the row; the well is inset.
             c.frame(inflate(slot, PX), fade(trim, 0.8));
             socket_well(c, slot);
+        }
+    }
+
+    // Out of patience: corrugated shutters over the station's own row.
+    // Gifts still move through the give pads — and one may reopen this.
+    if shuttered {
+        for &slot in &layout::SHELF_SLOTS {
+            c.fill(inflate(slot, PX), PLATE_SHADE);
+            let mut y = slot.y + 3.0;
+            while y < slot.y + slot.h - 2.0 {
+                c.seg(
+                    Vec2::new(slot.x + 2.0, y),
+                    Vec2::new(slot.x + slot.w - 2.0, y),
+                    1.0,
+                    fade(PLATE_LIT, 0.35),
+                );
+                y += 5.0;
+            }
         }
     }
 
@@ -1580,13 +1602,53 @@ fn draw_dial(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
         1.4,
         fade(GLINT, 0.8),
     );
+    // Unfamiliar goods fog the reading: the needle wanders inside a hazy
+    // band whose width is the guesswork fraction. What the station would
+    // actually say stays hidden until these kinds have been traded here —
+    // or until somebody gambles a pull.
+    let fog = barter.map_or(0.0, |barter| barter.fog);
     let needle = DIAL_SWEEP.mul_add(frac, DIAL_START).to_radians();
-    c.seg(
-        polar(mid, 8.0, needle),
-        polar(mid, 29.0, needle),
-        2.0,
-        GLINT,
-    );
+    if fog > 0.0 {
+        let half = fog * 0.55;
+        c.arc(
+            mid,
+            18.0,
+            needle.to_degrees() - half.to_degrees(),
+            2.0 * half.to_degrees(),
+            10.0,
+            fade(GLASS, 0.75),
+        );
+        let wobble = (scene.idle_clock() * 9.0).sin() * half * 0.6;
+        c.seg(
+            polar(mid, 8.0, needle + wobble),
+            polar(mid, 29.0, needle + wobble),
+            2.0,
+            fade(GLINT, 0.55),
+        );
+    } else {
+        c.seg(
+            polar(mid, 8.0, needle),
+            polar(mid, 29.0, needle),
+            2.0,
+            GLINT,
+        );
+    }
+
+    // Patience pips under the housing: how many refused pulls this visit
+    // will still tolerate. All dark means the shutters are down.
+    if let Some(barter) = barter {
+        for i in 0..space_trucking::sim::PATIENCE {
+            let at = Vec2::new(f32::from(i).mul_add(9.0, mid.x - 9.0), mid.y + 40.0);
+            let left = i < barter.patience;
+            lamp(
+                c,
+                at,
+                1.6,
+                if barter.patience == 0 { LAMP_NO } else { AMBER },
+                if left { 0.8 } else { 0.0 },
+            );
+        }
+    }
 
     // Refused: the gauge flashes red. Accepted: a radial celebration,
     // scaled by how generous the trade was.
@@ -1625,22 +1687,47 @@ fn draw_accept_lever(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
     );
     let handle = layout::Rect::new(rect.x + 20.0, rect.y + 6.0, 14.0, rect.h - 12.0);
     let ready = barter.is_some_and(|barter| barter.ready);
+    let certain = barter.is_some_and(|barter| barter.fog <= 0.0);
     // Decoration, like the launch lever's glow: frozen at its midpoint.
     let glow = (scene.idle_clock() * 2.8).sin().mul_add(0.12, 0.78);
-    if ready {
+    if ready && certain {
         c.fill(inflate(handle, 2.0 * PX), fade(LAMP_OK, 0.12 * glow));
     }
     brass_handle(c, handle);
-    lamp(
-        c,
-        Vec2::new(rect_center(handle).x, 3.5f32.mul_add(PX, handle.y)),
-        1.8 * PX,
-        LAMP_OK,
-        if ready { glow } else { 0.0 },
-    );
+    // The go-lamp answers only for trades made of known quantities. Fogged
+    // pads get an amber shimmer instead: pull if you like, it says, and
+    // find out — that is the price of knowing.
+    let lamp_at = Vec2::new(rect_center(handle).x, 3.5f32.mul_add(PX, handle.y));
+    if certain {
+        lamp(c, lamp_at, 1.8 * PX, LAMP_OK, if ready { glow } else { 0.0 });
+    } else {
+        let shimmer = (scene.idle_clock() * 5.0).sin().mul_add(0.2, 0.45);
+        lamp(c, lamp_at, 1.8 * PX, AMBER, shimmer);
+    }
 }
 
 // ------------------------------------------------------------------ pieces --
+
+/// The discovery haze: a shimmer over pieces whose kind this station has
+/// never traded with the player. Their worth is a rumor until they cross
+/// the pads in a concluded deal.
+fn unfamiliar_veil(c: &Canvas, scene: &Scene, piece: &Piece, rect: layout::Rect) {
+    if scene.sim.barter().is_none()
+        || !matches!(
+            piece.loc,
+            Loc::StationShelf { .. } | Loc::GivePad { .. } | Loc::TakePad { .. }
+        )
+        || scene.sim.kind_familiar(piece.kind)
+    {
+        return;
+    }
+    let t = scene.idle_clock();
+    c.fill(rect, fade(GLASS, 0.4));
+    let mid = rect_center(rect);
+    let drift = Vec2::new((t * 1.7).sin() * 3.0, (t * 1.3).cos() * 2.0);
+    c.dot(mid + drift, 1.2, fade(GLINT, 0.5));
+    c.ring(mid - drift, 3.5, 1.0, fade(GLINT, 0.25));
+}
 
 fn draw_pieces(c: &Canvas, scene: &Scene) {
     let sim = scene.sim;
@@ -1676,6 +1763,7 @@ fn draw_pieces(c: &Canvas, scene: &Scene) {
             crew_ghost(canvas, piece, rect, t);
         } else {
             piece_glyph(canvas, piece.kind, piece.variant, piece.gnawed, rect, t);
+            unfamiliar_veil(canvas, scene, piece, rect);
         }
     }
 }

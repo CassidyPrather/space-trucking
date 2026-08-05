@@ -1,23 +1,23 @@
 [package]
-name = "game-template"
+name = "space-trucking"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 authors = ["Cassidy Prather <pratherea@gmail.com>"]
-description = "Cassidy's opinionated Rust game/toy template"
+description = "Space Trucking — an ambient space-freight bartering toy"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
-repository = "https://github.com/CassidyPrather/game-template"
-keywords = ["game", "gamedev", "macroquad", "wasm", "template"]
+repository = "https://github.com/CassidyPrather/space-trucking"
+keywords = ["game", "gamedev", "macroquad", "wasm", "space"]
 categories = ["games", "wasm"]
 publish = false
 
 [lib]
-name = "game_template"
+name = "space_trucking"
 path = "src/lib.rs"
 
 [[bin]]
-name = "game-template"
+name = "space-trucking"
 path = "src/main.rs"
 
 [[bench]]
@@ -31,6 +31,9 @@ harness = false
 # the decoding, so the heavy native decoders never reach this target.
 macroquad = { version = "0.4", features = ["audio"] }
 fastrand = "2"
+# localStorage on the web, a data file natively; needs quad-storage's js
+# plugin vendored into web/ before the browser side actually persists.
+quad-storage = "0.1"
 
 [dev-dependencies]
 criterion = "0.7"

@@ -1,2 +1,6 @@
 /target/
 /dist/
+# Claude Code session workspace (agent worktrees, local settings)
+/.claude/
+# quad-storage's native persistence file (the desktop stand-in for localStorage)
+/local.data

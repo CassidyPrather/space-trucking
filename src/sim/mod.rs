@@ -1286,23 +1286,26 @@ impl Sim {
                 Err(violation) => Err(Some(violation)),
             };
         }
-        if let Some(slot) = layout::slot_at2(&layout::FLOTSAM_SLOTS, p) {
-            // The outboard net: drifting pieces re-slot freely, and the
-            // player's own cargo can be put outside the hull — jettison,
-            // reversible until the next sweep (dock, depart, or the
-            // encounter that owns the drift falling astern). One thing
-            // will not go: cargo that hums. It prefers to stay.
-            if !ours && !flotsam {
-                return Err(None);
+        if self.barter.is_none() {
+            if let Some(slot) = layout::slot_at(&layout::FLOTSAM_SLOTS, p) {
+                // With no counterparty the shelf row is the outboard rail:
+                // drifting pieces re-slot freely, and the player's own
+                // cargo can be put outside the hull — jettison, reversible
+                // until the next sweep (dock, depart, or the encounter
+                // that owns the drift falling astern). One thing will not
+                // go: the crate that hums. It prefers to stay.
+                if !ours && !flotsam {
+                    return Err(None);
+                }
+                if ours && piece.kind == Kind::SuspiciousCrate {
+                    return Err(Some(Violation::Suspicious));
+                }
+                let loc = Loc::Flotsam { slot };
+                return self.slot_free(loc, piece.id).then_some(loc).ok_or(None);
             }
-            if ours && matches!(piece.kind.tag(), Some(Tag::Suspicious)) {
-                return Err(Some(Violation::Suspicious));
-            }
-            let loc = Loc::Flotsam { slot };
-            return self.slot_free(loc, piece.id).then_some(loc).ok_or(None);
         }
         if flotsam {
-            // Adrift and not headed for the hold or back to the net:
+            // Adrift and not headed for the hold or back to the rail:
             // nothing else may take it.
             return Err(None);
         }
@@ -1351,7 +1354,7 @@ impl Sim {
         let ours = player_owned(piece.loc);
         let docked = self.barter.is_some();
         Some(DropTargets {
-            net: (ours && !matches!(piece.kind.tag(), Some(Tag::Suspicious)))
+            net: (!docked && ours && piece.kind != Kind::SuspiciousCrate)
                 || matches!(piece.loc, Loc::Flotsam { .. }),
             hold: ours || matches!(piece.loc, Loc::Flotsam { .. }),
             give: ours && docked,
@@ -2903,7 +2906,9 @@ mod tests {
                 take: false,
                 shelf: false,
                 received: false,
-                net: true,
+                // No net while a trade is open: the gift lever is the
+                // disposal path at a counterparty's berth.
+                net: false,
             })
         );
         sim.advance(0.0, &release_at(vial.x, vial.y));
@@ -2941,7 +2946,16 @@ mod tests {
         // and chases must leave every invariant standing.
         inject_rat(&mut sim);
         let mut rng = fastrand::Rng::with_seed(0xF00D);
-        let owned = |sim: &Sim| sim.pieces().iter().filter(|p| player_owned(p.loc)).count();
+        // Netted cargo is off the manifest but recoverable, so the
+        // conservation count keeps it: only an announced ceremony —
+        // accept, hangar steal, exchange, or a net sweep — may shrink
+        // this number.
+        let owned = |sim: &Sim| {
+            sim.pieces()
+                .iter()
+                .filter(|p| player_owned(p.loc) || matches!(p.loc, Loc::Flotsam { .. }))
+                .count()
+        };
         let mut before = owned(&sim);
         for frame in 0_u32..6000 {
             let input = InputFrame {
@@ -3631,7 +3645,16 @@ mod tests {
         let mut sim = Sim::new(0xC0FF_EE01);
         inject_rat(&mut sim);
         let mut rng = fastrand::Rng::with_seed(0xF00D);
-        let owned = |sim: &Sim| sim.pieces().iter().filter(|p| player_owned(p.loc)).count();
+        // Netted cargo is off the manifest but recoverable, so the
+        // conservation count keeps it: only an announced ceremony —
+        // accept, hangar steal, exchange, or a net sweep — may shrink
+        // this number.
+        let owned = |sim: &Sim| {
+            sim.pieces()
+                .iter()
+                .filter(|p| player_owned(p.loc) || matches!(p.loc, Loc::Flotsam { .. }))
+                .count()
+        };
         let mut before = owned(&sim);
         for tick in 0_u32..4000 {
             let mut frames = [InputFrame::default(); MAX_CREW];
@@ -4828,7 +4851,10 @@ mod tests {
     #[test]
     fn jettison_is_reversible_until_the_departure_sweep() {
         let mut sim = Sim::new(15);
-        // Overboard: the vial goes onto the net, off the manifest.
+        // The rail only exists where there is no counterparty; moor at
+        // the comet (barterless) and put the vial overboard there.
+        sim.dock(COMET);
+        sim.advance(0.0, &InputFrame::default());
         let net0 = rect_center(layout::FLOTSAM_SLOTS[0]);
         drag(&mut sim, cell_center(0, 0), net0);
         let netted = sim
@@ -4891,6 +4917,7 @@ mod tests {
     fn the_humming_crate_refuses_the_net() {
         let mut sim = Sim::new(17);
         inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 0);
+        launch(&mut sim, SATURN);
         let crate_at = cell_center(4, 0);
         let net0 = rect_center(layout::FLOTSAM_SLOTS[0]);
         sim.advance(0.0, &press_at(crate_at.x, crate_at.y));

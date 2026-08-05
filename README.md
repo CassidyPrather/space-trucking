@@ -35,10 +35,13 @@ and three wasted pulls ends the visit's trading — though no station in the
 system refuses a gift. Cargo has opinions about stowage (heavy rides low,
 volatiles refuse adjacency, cryo hugs the hull), and one matte-black kind of
 crate hums, vanishes into a Guild hangar on delivery, and fills an unlabeled
-lamp plate with whatever is being counted. When space runs truly short,
-cargo dragged onto the outboard net (lower-left of the map glass) rides
-outside the hull — recoverable until the next port call or cast-off sweeps
-it away for good. The humming crate refuses to go.
+lamp plate with whatever is being counted. The barter panel moonlights
+when no trade is open: underway, its shelf row becomes the outboard rail —
+drag cargo there to jettison it, recoverable until the next port call or
+cast-off sweeps it away (the humming crate refuses to go) — and its dial
+housing wears the badge of whatever pulls alongside mid-leg. Encounter
+salvage drifts into the same rail, and at stranger berths the panel shows
+stranger things.
 
 | Input           | Effect                                                     |
 | --------------- | ---------------------------------------------------------- |

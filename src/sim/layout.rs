@@ -87,17 +87,21 @@ pub const TAKE_SLOTS: [Rect; 4] = slot_row(470.0, 542.0);
 /// Pull to conclude the trade on the pads.
 pub const ACCEPT_LEVER: Rect = Rect::new(660.0, 530.0, 120.0, 40.0);
 
-/// Where travel-encounter flotsam drifts, bottom-left of the map glass.
-/// Only populated mid-leg, when nothing else on the map is clickable.
-pub const FLOTSAM_SLOTS: [Rect; 2] = [
-    Rect::new(20.0, 380.0, 40.0, 40.0),
-    Rect::new(66.0, 380.0, 40.0, 40.0),
-];
+/// Where travel-encounter flotsam drifts: the station shelf's own four
+/// sockets, doubling as the outboard rail.
+///
+/// The two meanings are mutually exclusive by construction — shelf goods
+/// exist only docked at a trading station (barter open), drift only
+/// underway or at barterless berths — so one row of wells serves both
+/// without a single ambiguous drop.
+pub const FLOTSAM_SLOTS: [Rect; 4] = SHELF_SLOTS;
 
-/// The encounter badge, top-right of the map glass: whatever is alongside
-/// shows its sign here, and pressing (or dropping cargo on) it is how the
-/// player engages. Dormant except mid-encounter.
-pub const ENCOUNTER_BADGE: Rect = Rect::new(430.0, 20.0, 60.0, 60.0);
+/// The encounter badge.
+///
+/// Whatever is alongside shows its sign in the dial housing's corner of
+/// the barter panel — which is dormant underway, when encounters happen —
+/// and pressing (or dropping cargo on) it is how the player engages.
+pub const ENCOUNTER_BADGE: Rect = Rect::new(666.0, 451.0, 68.0, 68.0);
 
 /// Centre of the eagerness dial, right of the pads.
 pub const DIAL_CENTER: Vec2 = Vec2::new(700.0, 485.0);
@@ -153,15 +157,6 @@ pub fn slot_at(slots: &[Rect; 4], p: Vec2) -> Option<u8> {
         .map(|i| i as u8)
 }
 
-/// [`slot_at`] for the two-slot flotsam row.
-#[must_use]
-pub fn slot_at2(slots: &[Rect; 2], p: Vec2) -> Option<u8> {
-    slots
-        .iter()
-        .position(|slot| slot.contains(p))
-        .map(|i| i as u8)
-}
-
 /// World rect a piece occupies at its current [`Loc`]. Shared by hit-testing
 /// and the renderer, so pieces are grabbed exactly where they are drawn.
 #[must_use]
@@ -202,9 +197,8 @@ mod tests {
                 ),
             ),
         ];
-        for (i, &slot) in FLOTSAM_SLOTS.iter().enumerate() {
-            rects.push((&*format!("flotsam[{i}]").leak(), slot));
-        }
+        // FLOTSAM_SLOTS are the shelf rects themselves (exclusive
+        // contexts), so listing them would self-collide by design.
         rects.push(("encounter", ENCOUNTER_BADGE));
         for (name, row) in [
             ("shelf", &SHELF_SLOTS),

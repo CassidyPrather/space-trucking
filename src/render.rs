@@ -625,23 +625,6 @@ fn draw_sweep(c: &Canvas, glass: layout::Rect, t: f32) {
 
 // --------------------------------------------------------------------- map --
 
-/// The outboard net: two wells riveted to the map's lower corner. Cargo
-/// dragged out here rides outside the hull — encounter loot drifts in,
-/// jettisoned goods wait for the sweep — so the wells are permanent
-/// furniture, glowing only when a drop would take.
-fn draw_net(c: &Canvas, scene: &Scene) {
-    let invited = scene.sim.drop_targets(0).is_some_and(|targets| targets.net);
-    for &slot in &layout::FLOTSAM_SLOTS {
-        c.frame(inflate(slot, PX), fade(PHOSPHOR_DIM, 0.7));
-        socket_well(c, slot);
-        if invited {
-            let pulse = (scene.idle_clock() * 2.0).sin().mul_add(0.08, 0.55);
-            c.fill(inflate(slot, 2.0), fade(AMBER, 0.10));
-            c.frame(inflate(slot, 2.0), fade(AMBER, pulse));
-        }
-    }
-}
-
 fn draw_map(c: &Canvas, scene: &Scene) {
     // Star twinkle and the sweep are decoration: under reduced motion the
     // idle clock holds at zero, so the stars sit steady and the sweep parks
@@ -653,7 +636,6 @@ fn draw_map(c: &Canvas, scene: &Scene) {
     draw_route_and_ship(c, scene);
     draw_pois(c, scene, glass);
     draw_parade(c, scene, glass);
-    draw_net(c, scene);
     draw_travel_company(c, scene, glass);
     draw_sweep(c, glass, t);
     finish_screen(c, glass, scene);
@@ -1059,18 +1041,10 @@ fn draw_travel_company(c: &Canvas, scene: &Scene, glass: layout::Rect) {
 
     if let Some(enc) = sim.encounter() {
         if enc.open() {
-            let badge = layout::ENCOUNTER_BADGE;
-            c.frame(inflate(badge, PX), fade(PHOSPHOR, 0.5));
-            c.fill(badge, fade(SCREEN, 0.6));
-            let mid = rect_center(badge);
-            match enc.kind {
-                EncounterKind::Derelict => derelict_badge(c, mid, t),
-                EncounterKind::GasStation => gas_badge(c, mid, enc.used, t),
-                EncounterKind::Casino => casino_badge(c, mid, t),
-                EncounterKind::MeteorShower => meteor_badge(c, mid, t),
-                EncounterKind::Whale => whale_badge(c, mid, t),
-            }
             // The whale itself, vast and patient, crossing under the sky.
+            // (Its badge, like every encounter's, sits on the barter
+            // panel's dial housing — the console's one context-dependent
+            // corner.)
             if enc.kind == EncounterKind::Whale {
                 if let ShipState::Traveling { progress, .. } = sim.ship().state {
                     let frac = (progress.saturating_sub(enc.start)) as f32
@@ -1745,21 +1719,87 @@ fn draw_barter(c: &Canvas, scene: &Scene) {
     draw_slot_rows(c, scene);
     if let Some(barter) = barter {
         draw_wants(c, scene, barter);
+    } else {
+        draw_wayside(c, scene);
     }
     draw_dial(c, scene, barter);
     draw_accept_lever(c, scene, barter);
 }
 
+/// The panel's other lives, whenever no trade is open. Underway, the dial
+/// housing wears the encounter's badge and the shelf row is the outboard
+/// rail; docked at ???, the housing wears the diamond and the shelf row
+/// shows the toll — three sockets, filling as crates come aboard; docked
+/// at the comet, the housing acknowledges the berth, dimly.
+fn draw_wayside(c: &Canvas, scene: &Scene) {
+    let sim = scene.sim;
+    let t = scene.idle_clock();
+    let mid = layout::DIAL_CENTER;
+    match sim.ship().state {
+        ShipState::Traveling { .. } => {
+            if let Some(enc) = sim.encounter().filter(|enc| enc.open()) {
+                let badge = layout::ENCOUNTER_BADGE;
+                c.frame(inflate(badge, PX), fade(PHOSPHOR_DIM, 0.8));
+                let bmid = rect_center(badge);
+                match enc.kind {
+                    EncounterKind::Derelict => derelict_badge(c, bmid, t),
+                    EncounterKind::GasStation => gas_badge(c, bmid, enc.used, t),
+                    EncounterKind::Casino => casino_badge(c, bmid, t),
+                    EncounterKind::MeteorShower => meteor_badge(c, bmid, t),
+                    EncounterKind::Whale => whale_badge(c, bmid, t),
+                }
+            }
+        }
+        ShipState::Docked(at) => {
+            // A barterless berth: say where we are moored, quietly.
+            poi_glyph(c, usize::from(at), mid, 11.0, t, 0.0);
+            if at == space_trucking::sim::WANDERER {
+                draw_wanderer_toll(c, scene, t);
+            }
+        }
+    }
+}
+
+/// ???'s donation ledger on the shelf row: three sockets — the toll — each
+/// glowing violet once a mysterious crate is stowed against it. Wordless:
+/// three holes, your parcels, do the arithmetic.
+fn draw_wanderer_toll(c: &Canvas, scene: &Scene, t: f32) {
+    let aboard = scene.sim.mysterious_aboard();
+    for (i, &slot) in layout::FLOTSAM_SLOTS.iter().take(3).enumerate() {
+        let lit = (i as u32) < aboard;
+        let mid = rect_center(slot);
+        let breath = t.mul_add(0.8, i as f32).sin().mul_add(0.1, 0.55);
+        c.poly_ring(
+            mid,
+            4,
+            slot.w * 0.3,
+            45.0,
+            1.2,
+            fade(EERIE_BRIGHT, if lit { breath } else { 0.18 }),
+        );
+        if lit {
+            c.dot(mid, 2.0, fade(EERIE, breath));
+        }
+    }
+}
+
 fn draw_slot_rows(c: &Canvas, scene: &Scene) {
+    let trading = scene.sim.barter().is_some();
     let shuttered = scene
         .sim
         .barter()
         .is_some_and(|barter| barter.patience == 0);
+    // No trade open: the shelf row is the outboard rail — same sockets,
+    // phosphor trim instead of shelf paint — and the trading rows go dark.
+    let shelf_trim = if trading { TRIM_SHELF } else { PHOSPHOR_DIM };
     for (slots, trim) in [
-        (&layout::SHELF_SLOTS, TRIM_SHELF),
-        (&layout::RECEIVED_SLOTS, TRIM_RECEIVED),
-        (&layout::GIVE_SLOTS, TRIM_GIVE),
-        (&layout::TAKE_SLOTS, TRIM_TAKE),
+        (&layout::SHELF_SLOTS, shelf_trim),
+        (
+            &layout::RECEIVED_SLOTS,
+            if trading { TRIM_RECEIVED } else { GLASS },
+        ),
+        (&layout::GIVE_SLOTS, if trading { TRIM_GIVE } else { GLASS }),
+        (&layout::TAKE_SLOTS, if trading { TRIM_TAKE } else { GLASS }),
     ] {
         for &slot in slots {
             // Painted trim on the plate names the row; the well is inset.
@@ -1791,7 +1831,7 @@ fn draw_slot_rows(c: &Canvas, scene: &Scene) {
     // an affordance the rules would refuse cannot be drawn.
     if let Some(targets) = scene.sim.drop_targets(0) {
         for (slots, invited) in [
-            (&layout::SHELF_SLOTS, targets.shelf),
+            (&layout::SHELF_SLOTS, targets.shelf || targets.net),
             (&layout::RECEIVED_SLOTS, targets.received),
             (&layout::GIVE_SLOTS, targets.give),
             (&layout::TAKE_SLOTS, targets.take),

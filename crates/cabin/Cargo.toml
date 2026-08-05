@@ -54,6 +54,13 @@ lto = "thin"
 strip = "symbols"
 
 # Dependencies get real optimization even in dev builds: Bevy at -O0 is
-# unplayably slow. The cabin's own code stays at -O0 for quick edit loops.
+# unplayably slow.
 [profile.dev.package."*"]
 opt-level = 2
+
+# The cabin's own code gets light optimization too: the CRT screens are a
+# CPU rasterizer repainting every frame, and -O0 made whole dev builds
+# feel "way worse than such a simple game should" (playtest verdict).
+# -O1 keeps edit-compile loops quick; `--release` is the way to *play*.
+[profile.dev]
+opt-level = 1

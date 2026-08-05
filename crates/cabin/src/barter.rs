@@ -120,6 +120,7 @@ impl Plugin for BarterPlugin {
                         update_flashes,
                         update_lever,
                         update_shutter,
+                        slide_accept_handle,
                         update_wants,
                         update_voyage,
                         update_encounter,
@@ -145,6 +146,10 @@ struct BarterFrame {
     su: f32,
     sv: f32,
 }
+
+/// The accept lever's brass handle — slides with the pull gesture.
+#[derive(Component)]
+struct AcceptHandle;
 
 impl BarterFrame {
     /// A sim-rect position as a translation local to the counter root
@@ -711,13 +716,16 @@ fn spawn_lever(
         shop.frame.local(rect.w.mul_add(0.5, rect.x), mid_y, 0.002),
         Vec3::new((rect.w - 24.0) * su, 4.0 * sv, 0.004),
     );
-    // Handle: brass, chunky, static — the sim owns whether pulls land.
-    shop.flat(
+    // Handle: brass, chunky — rides the gesture layer's pull and springs
+    // home when a timid pull lets go. The sim owns whether pulls land.
+    let handle = shop.slab(
         root,
         &skin.brass.clone(),
         shop.frame.local(rect.x + 27.0, mid_y, 0.01),
         Vec3::new(14.0 * su, (rect.h - 12.0) * sv, 0.02),
+        Quat::IDENTITY,
     );
+    shop.commands.entity(handle).insert(AcceptHandle);
     // Go-lamp above the handle.
     let lamp = meshes.add(Cylinder::new(3.0 * su, 0.004));
     shop.commands.spawn((
@@ -1313,6 +1321,20 @@ fn update_flashes(
 
 /// The go-lamp: green breathing when the station would say yes to a trade
 /// of known quantities; amber shimmer over fogged pads — pull and find
+/// The brass handle follows the pull gesture along its track and springs
+/// home on a timid release — the gesture layer owns the throw math.
+fn slide_accept_handle(
+    grips: Res<crate::gesture::Grips>,
+    frame: Option<Res<BarterFrame>>,
+    mut handle: Single<&mut Transform, With<AcceptHandle>>,
+) {
+    let Some(frame) = frame else { return };
+    let rect = layout::ACCEPT_LEVER;
+    let mid_y = rect.h.mul_add(0.5, rect.y);
+    let x = grips.accept.travel.mul_add(rect.w - 54.0, rect.x + 27.0);
+    handle.translation = frame.local(x, mid_y, 0.01);
+}
+
 /// out, it says; dark glass otherwise.
 fn update_lever(
     time: Res<Time>,

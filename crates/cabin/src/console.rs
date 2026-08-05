@@ -499,6 +499,7 @@ fn lever_motion(
     shell: Res<Shell>,
     pointer: Res<VirtualPointer>,
     panel: Option<Res<ConsolePanel>>,
+    grips: Res<crate::gesture::Grips>,
     mut juice: ResMut<LeverJuice>,
     mut handle: Single<&mut Transform, With<LeverHandle>>,
 ) {
@@ -521,12 +522,14 @@ fn lever_motion(
 
     // The thunk throws the handle right fast, then eases it home; the
     // rattle jitters it around its rest. Same envelope as the 2D lever.
+    // A live pull gesture overrides both: the handle is in the hand.
     let heat = juice.thunk / THUNK_LEN;
     let pull = if heat > 0.65 {
         (1.0 - heat) / 0.35
     } else {
         heat / 0.65
-    };
+    }
+    .max(grips.launch.travel);
     let shake = (time.elapsed_secs() * 70.0).sin() * 3.0 * (juice.shake / SHAKE_LEN);
     let rect = layout::LAUNCH_LEVER;
     let x = pull.mul_add(rect.w - 68.0, rect.x + 34.0) + shake;

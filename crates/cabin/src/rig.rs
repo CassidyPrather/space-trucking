@@ -75,13 +75,17 @@ pub fn panels() -> [(Station, SimSurface); 4] {
         f32::from(layout::GRID_ROWS) * layout::CELL,
     );
     [
+        // The chart nook: the star tank reads from the left wall, so the
+        // front wall can hold the window — stations spread around the
+        // room instead of crowding one bulkhead.
         (
             Station::Map,
-            SimSurface::panel(
-                Vec3::new(-0.56, 1.52, -1.28),
+            SimSurface::panel_yawed(
+                Vec3::new(-1.60, 1.45, -0.20),
                 1.00,
                 0.84,
                 0.10,
+                std::f32::consts::FRAC_PI_2,
                 layout::MAP_PANEL,
             ),
         ),
@@ -188,13 +192,17 @@ pub fn structure(panels: &[(Station, SimSurface); 4]) -> Vec<Slab> {
         ),
     ];
     // Wall ribs: the junk that says somebody built this hull in a hurry.
+    // The left wall's ribs skip the chart tank's span — the invariant
+    // test below is what keeps this honest, not the comment.
     for i in 0..5 {
         let z = 0.7f32.mul_add(i as f32, -1.2);
-        slabs.push(Slab::new(
-            Vec3::new(-1.66, 1.15, z),
-            Vec3::new(0.06, 2.3, 0.08),
-            Finish::Hull,
-        ));
+        if !(-0.90..=0.50).contains(&z) {
+            slabs.push(Slab::new(
+                Vec3::new(-1.66, 1.15, z),
+                Vec3::new(0.06, 2.3, 0.08),
+                Finish::Hull,
+            ));
+        }
         slabs.push(Slab::new(
             Vec3::new(1.66, 1.15, z),
             Vec3::new(0.06, 2.3, 0.08),

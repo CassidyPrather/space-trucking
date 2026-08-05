@@ -44,10 +44,25 @@ impl SimSurface {
     /// raises the face toward the viewer — desk-like at large angles.
     #[must_use]
     pub fn panel(center: Vec3, width: f32, height: f32, tilt: f32, rect: SimRect) -> Self {
-        let rot = Quat::from_rotation_x(-tilt);
+        Self::panel_yawed(center, width, height, tilt, 0.0, rect)
+    }
+
+    /// [`Self::panel`] rotated `yaw` radians about Y afterwards, for
+    /// panels mounted on other walls: `FRAC_PI_2` faces +X (the left
+    /// wall's inward normal), `-FRAC_PI_2` faces -X.
+    #[must_use]
+    pub fn panel_yawed(
+        center: Vec3,
+        width: f32,
+        height: f32,
+        tilt: f32,
+        yaw: f32,
+        rect: SimRect,
+    ) -> Self {
+        let rot = Quat::from_rotation_y(yaw) * Quat::from_rotation_x(-tilt);
         Self {
             center,
-            half_u: Vec3::X * (width * 0.5),
+            half_u: rot * (Vec3::X * (width * 0.5)),
             half_v: rot * (Vec3::NEG_Y * (height * 0.5)),
             rect,
         }

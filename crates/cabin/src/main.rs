@@ -15,9 +15,11 @@
 mod audio;
 mod barter;
 mod bridge;
+mod canvas;
 mod console;
 mod crt;
 mod fx;
+mod gesture;
 mod glow;
 mod palette;
 mod pieces;
@@ -108,6 +110,7 @@ fn main() {
         console::ConsolePlugin,
         crt::CrtPlugin,
         fx::FxPlugin,
+        gesture::GesturePlugin,
         pieces::PiecesPlugin,
     ))
     .add_systems(Startup, rig::spawn)
@@ -166,15 +169,24 @@ fn advance(
     buttons: Res<ButtonInput<MouseButton>>,
     pointer: Res<VirtualPointer>,
     camera: Res<rig::CameraRig>,
+    grips: Res<gesture::Grips>,
     mut shell: ResMut<Shell>,
 ) {
     let live = camera.interactive();
-    let at = pointer.sim;
+    // The lever rects belong to the gesture layer while hands are empty:
+    // raw presses there are withheld, and a completed pull arrives as
+    // one synthesized press at the lever's center — the same frame the
+    // 2D console would have sent.
+    let holding = shell.bridge.sim.held(0).is_some();
+    let fired = grips.fired_press();
+    let masked = fired.is_none() && gesture::Grips::masks(pointer.sim, holding);
+    let at = fired.unwrap_or(pointer.sim);
+    let raw = live && !masked;
     let input = FrameInput {
         pointer: at,
-        press: live && buttons.just_pressed(MouseButton::Left),
-        held: live && buttons.pressed(MouseButton::Left),
-        release: live && buttons.just_released(MouseButton::Left),
+        press: fired.is_some() || (raw && buttons.just_pressed(MouseButton::Left)),
+        held: raw && buttons.pressed(MouseButton::Left),
+        release: raw && buttons.just_released(MouseButton::Left),
         shift: keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight),
         key_pause: keys.just_pressed(KeyCode::Space),
         key_warp: keys.just_pressed(KeyCode::KeyF),

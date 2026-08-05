@@ -72,7 +72,11 @@ changing; remove a line only by shipping it or striking it in review.
   the sim, protocol, and harness are in — see docs/NETWORKING.md)
 - Real transport adapter (WebSocket) behind `net`'s transport seam
 - Guild-server hosting + wiring global progress into the console
-- 3D/VRChat port
+- VRChat port (the 3D Bevy cabin in `crates/cabin` is the first step:
+  same sim, native-only, aesthetic experimentation underway — see
+  ART_DIRECTION_3D.md; still deferred from the cabin: the tutor ghost,
+  `--replay` playback, wasm/web build, telemetry consent surface, and
+  the 2D console's per-rule violation glyphs)
 - Additional star systems
 - More events (mimics, ad bots, hull breaches, secret color-code objectives)
 - Rat-gnaw repair: DESIGN.md's "requiring repair" reading is deliberately

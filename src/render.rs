@@ -24,7 +24,7 @@ use macroquad::camera::{Camera2D, set_camera, set_default_camera};
 use macroquad::color::Color;
 use macroquad::math::{Rect as ScreenRect, vec2};
 use macroquad::shapes::{
-    draw_arc, draw_circle, draw_circle_lines, draw_ellipse, draw_ellipse_lines, draw_hexagon,
+    draw_arc, draw_circle, draw_circle_lines, draw_ellipse, draw_ellipse_lines,
     draw_line, draw_poly, draw_poly_lines, draw_rectangle, draw_rectangle_lines, draw_triangle,
     draw_triangle_lines,
 };
@@ -32,20 +32,20 @@ use macroquad::texture::{DrawTextureParams, RenderTarget, draw_texture_ex};
 use macroquad::window::clear_background;
 
 use space_trucking::sim::{
-    Barter, EAGER_MAX, GUILD, Kind, Loc, POIS, Piece, PoiId, SATURN, SUN, ShipState, Sim, Track,
-    Vec2, Violation, WORLD_H, WORLD_W, layout, leg_endpoints, placement_check, player_owned,
-    splitmix,
+    Barter, EAGER_MAX, GUILD, Kind, Loc, POIS, Piece, PoiId, SUN, ShipState, Sim, Track, Vec2,
+    Violation, WORLD_H, WORLD_W, layout, leg_endpoints, placement_check, player_owned, splitmix,
 };
 
 use crate::View;
 use crate::juice::{DELIVERY_LAMPS, Juice};
 use crate::palette::{
     AMBER, BLIT, BRASS, EERIE, EERIE_BRIGHT, GLASS, GLINT, HULL, ICON, ICON_LIT, LAMP_NO, LAMP_OK,
-    PHOSPHOR, PHOSPHOR_DIM, PHOSPHOR_HOT, PLATE, PLATE_LIT, PLATE_SHADE, POI_EARTH, POI_GUILD,
-    POI_GUILD_EDGE, POI_JUPITER, POI_MARS, POI_MARS_PATCH, POI_NEPTUNE, POI_SMOG, POI_URANUS,
-    POI_URANUS_RING, POI_VENUS, POI_VENUS_HALO, RIVET, SCREEN, SHADOW, SOCKET, TRIM_GIVE,
-    TRIM_RECEIVED, TRIM_SHELF, TRIM_TAKE, VOID, dim, fade, kind_color, lerp, mix, omen_tint,
-    phosphorize, variant_tint,
+    PHOSPHOR, PHOSPHOR_DIM, PHOSPHOR_HOT, PLATE, PLATE_LIT, PLATE_SHADE, POI_COMET, POI_EARTH,
+    POI_GUILD, POI_GUILD_EDGE, POI_HERMITAGE, POI_JUPITER, POI_MARS, POI_MARS_PATCH, POI_NEPTUNE,
+    POI_SATURN, POI_SATURN_RING, POI_SMOG, POI_UMBRA, POI_URANUS, POI_URANUS_RING, POI_VENUS,
+    POI_VENUS_HALO, POI_WANDERER, RIVET, SCREEN, SHADOW, SOCKET, TRIM_GIVE, TRIM_RECEIVED,
+    TRIM_SHELF, TRIM_TAKE, VOID, dim, fade, kind_color, lerp, mix, omen_tint, phosphorize,
+    variant_tint,
 };
 use crate::tutor::{Echo, Ghost};
 
@@ -66,6 +66,8 @@ pub struct Scene<'a> {
     /// static pose; feedback and the instructional ghost still run. See
     /// `docs/ART_DIRECTION.md`, Motion.
     pub reduced_motion: bool,
+    /// Developer mode: the only state in which the warp button exists.
+    pub dev: bool,
 }
 
 impl Scene<'_> {
@@ -301,18 +303,6 @@ impl Canvas {
         draw_ellipse_lines(p.x, p.y, rx, ry, rot, Self::stroke(w), self.tint(col));
     }
 
-    fn hexagon(&self, at: Vec2, r: f32, edge: Color, fill: Color) {
-        let p = self.point(at);
-        draw_hexagon(
-            p.x,
-            p.y,
-            r,
-            Self::stroke(1.0),
-            true,
-            self.tint(edge),
-            self.tint(fill),
-        );
-    }
 }
 
 // ------------------------------------------------------------------- entry --
@@ -639,7 +629,7 @@ fn draw_map(c: &Canvas, scene: &Scene) {
     let t = scene.idle_clock();
     let glass = crt_screen(c, layout::MAP_PANEL, SALT_MAP);
     draw_starfield(c, glass, t);
-    draw_range_rings(c, glass);
+    draw_orbits(c, scene, t);
     draw_route_and_ship(c, scene);
     draw_pois(c, scene, glass);
     draw_sweep(c, glass, t);
@@ -672,11 +662,22 @@ fn draw_starfield(c: &Canvas, glass: layout::Rect, t: f32) {
 }
 
 /// Faint radar range rings around the sweep centre: CRT furniture.
-fn draw_range_rings(c: &Canvas, glass: layout::Rect) {
-    let center = rect_center(glass);
-    let radius = glass.w.min(glass.h).mul_add(0.5, -2.0 * PX);
-    for f in [0.5, 1.0] {
-        c.ring(center, radius * f, 1.0, fade(PHOSPHOR_DIM, 0.55));
+fn draw_orbits(c: &Canvas, scene: &Scene, t: f32) {
+    // The sun, and the orbit each world rides: the new range rings. The
+    // comet's path stays undrawn — a comet should feel like a visitor.
+    let flicker = (t * 3.0).sin().mul_add(0.06, 0.9);
+    c.dot(SUN, 7.0, fade(AMBER, 0.85 * flicker));
+    c.dot(SUN, 3.5, fade(GLINT, 0.9));
+    c.ring(SUN, 10.0, 1.0, fade(AMBER, 0.25 * flicker));
+    for (i, poi) in scene.sim.pois().iter().enumerate() {
+        let Track::Circle { orbit, .. } = poi.track else {
+            continue;
+        };
+        // The Umbra Market's little orbit stays secret in daylight.
+        if !scene.sim.poi_visible(i as PoiId) {
+            continue;
+        }
+        c.ring(SUN, orbit, 1.0, fade(PHOSPHOR_DIM, 0.4));
     }
 }
 
@@ -760,8 +761,20 @@ fn draw_pois(c: &Canvas, scene: &Scene, glass: layout::Rect) {
     };
     for (i, poi) in sim.pois().iter().enumerate() {
         let id = i as PoiId;
+        if !sim.poi_visible(id) {
+            continue;
+        }
         let pos = sim.poi_pos(id);
         poi_glyph(c, i, pos, poi.radius, idle, MAP_PH);
+
+        // Inner-ring worlds check transit papers at charting time. Without
+        // a chit aboard, they wear a barred ring: visible, not chartable.
+        if docked.is_some() && sim.inner_ring_locked(id) {
+            let r = poi.radius + 4.0;
+            c.ring(pos, r, 1.2, fade(LAMP_NO, 0.55));
+            let bar = Vec2::new(r * 0.8, -r * 0.8);
+            c.seg(pos - bar, pos + bar, 1.4, fade(LAMP_NO, 0.55));
+        }
 
         // The sweep's afterglow brightens a POI it just passed. A parked
         // sweep passes nothing, so under reduced motion the afterglow stays
@@ -862,6 +875,11 @@ fn poi_glyph(c: &Canvas, id: usize, pos: Vec2, r: f32, t: f32, ph: f32) {
         3 => jupiter_glyph(c, pos, r, ph),
         4 => uranus_glyph(c, pos, r, ph),
         5 => neptune_glyph(c, pos, r, ph),
+        7 => saturn_glyph(c, pos, r, ph),
+        8 => umbra_glyph(c, pos, r, ph),
+        9 => hermitage_glyph(c, pos, r, t, ph),
+        10 => comet_glyph(c, pos, r, ph),
+        11 => wanderer_glyph(c, pos, r, t, ph),
         _ => guild_glyph(c, pos, r, t, ph),
     }
 }
@@ -953,15 +971,77 @@ fn neptune_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
     );
 }
 
-/// The Guild Station: a gray-violet hexagon, pulsing like it knows things.
+/// The Guild Station: a gray-violet heptagon, pulsing like it knows
+/// things. Seven sides; the officially published schematics show six.
 fn guild_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32, ph: f32) {
     let pulse = (t * 2.4).sin().mul_add(0.05, 1.0);
-    c.hexagon(
+    let rot = t * 4.0;
+    c.poly(pos, 7, r * pulse, rot, phosphorize(POI_GUILD, ph));
+    c.poly_ring(pos, 7, r * pulse, rot, 1.0, phosphorize(POI_GUILD_EDGE, ph));
+}
+
+/// Saturn: pale gold under a broad debris ring — the ring-barons'
+/// graveyard, a thousand failed hauling companies ground to gravel.
+fn saturn_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
+    c.dot(pos, r * 0.85, phosphorize(POI_SATURN, ph));
+    c.oval_ring(pos, r * 1.8, r * 0.55, -18.0, 1.4, phosphorize(POI_SATURN_RING, ph));
+    // Gravel in the ring: three coarse grains along its long axis.
+    for f in [-1.35_f32, -0.6, 1.1] {
+        let a = (-18.0_f32).to_radians();
+        let at = pos + Vec2::new(a.cos(), a.sin()) * (r * f);
+        c.dot(at, 1.2, phosphorize(POI_SATURN_RING, ph));
+    }
+}
+
+/// The Umbra Market: a crescent sliver in Mercury's shadow. Only drawn at
+/// all while somebody's clock reads deep night.
+fn umbra_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
+    c.dot(pos, r, phosphorize(POI_UMBRA, ph));
+    // The shadowed face: a screen-dark bite that leaves a crescent.
+    c.dot(pos + Vec2::new(r * 0.45, -r * 0.2), r * 0.85, SCREEN);
+    c.dot(pos + Vec2::new(-r * 0.45, r * 0.3), 1.3, phosphorize(GLINT, ph));
+}
+
+/// The Hermitage: a lumpy rock in the belt with one warm lit window.
+fn hermitage_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32, ph: f32) {
+    c.poly(pos, 5, r, 23.0, phosphorize(POI_HERMITAGE, ph));
+    c.poly_ring(pos, 5, r, 23.0, 1.0, phosphorize(dim(POI_HERMITAGE, 0.35), ph));
+    // The window: a lamp that breathes very slowly. Hermits keep odd hours.
+    let warmth = (t * 0.7).sin().mul_add(0.2, 0.75);
+    c.dot(pos + Vec2::new(r * 0.3, -r * 0.15), 1.6, fade(AMBER, warmth));
+}
+
+/// The comet: an icy head with its tail thrown away from the sun.
+fn comet_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
+    let away = pos - SUN;
+    let len = away.length().max(f32::EPSILON);
+    let dir = away * len.recip();
+    let perp = Vec2::new(-dir.y, dir.x);
+    for (spread, reach, a) in [(0.0, 3.2, 0.6), (0.5, 2.4, 0.4), (-0.5, 2.4, 0.4)] {
+        c.seg(
+            pos + dir * r * 0.4,
+            pos + (dir + perp * spread * 0.3) * r * reach,
+            1.2,
+            fade(phosphorize(POI_COMET, ph), a),
+        );
+    }
+    c.dot(pos, r * 0.75, phosphorize(POI_COMET, ph));
+    c.dot(pos + dir * -0.2 * r, r * 0.35, phosphorize(GLINT, ph));
+}
+
+/// ???: a diamond that is not entirely committed to existing.
+fn wanderer_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32, ph: f32) {
+    let there = (t * 6.3).sin().mul_add(0.25, 0.65);
+    c.poly_ring(pos, 4, r, 45.0, 1.4, fade(phosphorize(POI_WANDERER, ph), there));
+    c.poly_ring(
         pos,
-        r * pulse,
-        phosphorize(POI_GUILD_EDGE, ph),
-        phosphorize(POI_GUILD, ph),
+        4,
+        r * 0.55,
+        45.0,
+        1.0,
+        fade(phosphorize(POI_WANDERER, ph), 1.0 - there),
     );
+    c.dot(pos, 1.5, fade(phosphorize(GLINT, ph), there));
 }
 
 // ----------------------------------------------------------------- console --
@@ -1184,10 +1264,16 @@ fn draw_launch_lever(c: &Canvas, scene: &Scene) {
 
 fn draw_toggle_buttons(c: &Canvas, scene: &Scene) {
     let sim = scene.sim;
-    for r in [layout::PAUSE_BTN, layout::WARP_BTN, layout::SPEAKER] {
+    for r in [layout::PAUSE_BTN, layout::SPEAKER] {
         // A raised cap on the console plate; too small for rivets or wear.
         c.fill(r, PLATE);
         bevel(c, r, PLATE_LIT, PLATE_SHADE);
+    }
+    if scene.dev {
+        // Fast-forward exists only for developers who said pretty-please;
+        // everyone else gets a blank patch of console and real time.
+        c.fill(layout::WARP_BTN, PLATE);
+        bevel(c, layout::WARP_BTN, PLATE_LIT, PLATE_SHADE);
     }
 
     // Pause: two bars, and its lamp.
@@ -1202,15 +1288,17 @@ fn draw_toggle_buttons(c: &Canvas, scene: &Scene) {
         if sim.is_paused() { 1.0 } else { 0.0 },
     );
 
-    // Warp: a double chevron, and its lamp.
-    let warp_col = if sim.is_warp() { AMBER } else { ICON };
-    chevrons(c, icon_center(layout::WARP_BTN), 7.0, warp_col);
-    button_lamp(
-        c,
-        layout::WARP_BTN,
-        AMBER,
-        if sim.is_warp() { 1.0 } else { 0.0 },
-    );
+    // Warp: a double chevron, and its lamp. Dev-only furniture.
+    if scene.dev {
+        let warp_col = if sim.is_warp() { AMBER } else { ICON };
+        chevrons(c, icon_center(layout::WARP_BTN), 7.0, warp_col);
+        button_lamp(
+            c,
+            layout::WARP_BTN,
+            AMBER,
+            if sim.is_warp() { 1.0 } else { 0.0 },
+        );
+    }
 
     draw_speaker(c, scene);
 }
@@ -1670,9 +1758,131 @@ fn piece_glyph(c: &Canvas, kind: Kind, variant: u8, gnawed: bool, rect: layout::
         Kind::CryoCore => cryo_glyph(c, b, col, vs),
         Kind::BrinePearls => pearls_glyph(c, b, col, vs),
         Kind::SuspiciousCrate => crate_glyph(c, b, col, vs, t),
+        Kind::MysteriousCrate => mysterious_glyph(c, b, col, vs, t),
+        Kind::VeryMysteriousCrate => very_mysterious_glyph(c, b, col, vs, t),
+        Kind::CometIce => ice_glyph(c, b, col, vs),
+        Kind::BottledMidnight => midnight_glyph(c, b, col, vs),
+        Kind::Fluff => fluff_glyph(c, b, col, vs, t),
+        Kind::TransitChit => chit_glyph(c, b, col, vs),
+        Kind::CasinoChip => chip_glyph(c, b, col, vs),
     }
     if gnawed {
         bite_mark(c, b);
+    }
+}
+
+/// A small box that hums to itself, quieter than its suspicious cousin.
+fn mysterious_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, t: f32) {
+    c.fill(b, col);
+    bevel(c, b, dim(col, -0.15), dim(col, 0.3));
+    let hum = (t * 4.4).sin().mul_add(0.12, 0.3);
+    c.dot(rect_center(b), b.w * 0.16 * vs, fade(EERIE, hum));
+}
+
+/// The big one. It hums a chord.
+fn very_mysterious_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, t: f32) {
+    c.fill(b, col);
+    bevel(c, b, dim(col, -0.1), SHADOW);
+    let hum = (t * 2.2).sin().mul_add(0.18, 0.45);
+    c.ring(rect_center(b), b.w * 0.28 * vs, 1.4, fade(EERIE_BRIGHT, hum));
+    c.dot(rect_center(b), b.w * 0.1, fade(EERIE_BRIGHT, hum * 0.8));
+}
+
+/// A shard chipped off the comet, still cold enough to demand the hull.
+fn ice_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
+    let mid = rect_center(b);
+    c.tri(
+        Vec2::new(mid.x, b.y + b.h * (1.0 - vs) * 0.5),
+        Vec2::new(b.x + b.w * 0.2, b.y + b.h * 0.85),
+        Vec2::new(b.x + b.w * 0.85, b.y + b.h * 0.75),
+        col,
+    );
+    c.seg(
+        Vec2::new(mid.x, b.y + b.h * 0.25),
+        Vec2::new(b.x + b.w * 0.35, b.y + b.h * 0.7),
+        1.0,
+        fade(GLINT, 0.7),
+    );
+}
+
+/// A bottle of the dark between stars, corked.
+fn midnight_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
+    let body = layout::Rect::new(
+        b.w.mul_add(0.28, b.x),
+        b.h.mul_add(0.35, b.y),
+        b.w * 0.44,
+        b.h * 0.6,
+    );
+    c.fill(body, col);
+    c.fill(
+        layout::Rect::new(b.w.mul_add(0.42, b.x), b.h.mul_add(0.12, b.y), b.w * 0.16, b.h * 0.26),
+        col,
+    );
+    c.fill(
+        layout::Rect::new(b.w.mul_add(0.40, b.x), b.h.mul_add(0.06, b.y), b.w * 0.2, b.h * 0.08),
+        BRASS,
+    );
+    // One star, somewhere inside the bottle.
+    c.dot(
+        Vec2::new(
+            body.x + body.w * 0.6 * vs,
+            body.y + body.h * 0.4,
+        ),
+        1.0,
+        fade(GLINT, 0.9),
+    );
+}
+
+/// A legally distinct ball of fur. Do not feed after midnight; do not
+/// feed at all, actually — see what happened to the hold.
+fn fluff_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, t: f32) {
+    let mid = rect_center(b);
+    let breathe = (t * 2.8).sin().mul_add(0.04, 1.0) * vs;
+    let r = b.w * 0.34 * breathe;
+    c.dot(mid + Vec2::new(-r * 0.4, r * 0.2), r * 0.8, dim(col, 0.12));
+    c.dot(mid + Vec2::new(r * 0.45, r * 0.25), r * 0.7, dim(col, 0.06));
+    c.dot(mid + Vec2::new(0.0, -r * 0.2), r, col);
+    // Two dark bead eyes. It is looking at you. It is multiplying.
+    c.dot(mid + Vec2::new(-r * 0.25, -r * 0.25), 1.0, SHADOW);
+    c.dot(mid + Vec2::new(r * 0.25, -r * 0.25), 1.0, SHADOW);
+}
+
+/// Inner-ring transit papers: a punch-card with the Guild's stripe.
+fn chit_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
+    let card = layout::Rect::new(
+        b.w.mul_add(0.15, b.x),
+        b.h.mul_add(0.28, b.y),
+        b.w * 0.7,
+        b.h * 0.46,
+    );
+    c.fill(card, col);
+    bevel(c, card, dim(col, -0.1), dim(col, 0.25));
+    c.fill(
+        layout::Rect::new(card.x + card.w * 0.12, card.y, card.w * 0.14, card.h),
+        POI_GUILD,
+    );
+    for i in 0..3_u8 {
+        c.dot(
+            Vec2::new(
+                card.x + card.w * f32::from(i + 1).mul_add(0.2, 0.25) * vs,
+                card.y + card.h * 0.5,
+            ),
+            0.9,
+            SOCKET,
+        );
+    }
+}
+
+/// One casino chip. The house assures you it is priceless.
+fn chip_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
+    let mid = rect_center(b);
+    let r = b.w * 0.36 * vs;
+    c.dot(mid, r, col);
+    c.ring(mid, r * 0.94, 1.2, dim(col, 0.3));
+    c.ring(mid, r * 0.55, 1.0, fade(GLINT, 0.65));
+    for i in 0..4_u8 {
+        let a = f32::from(i) * std::f32::consts::FRAC_PI_2 + 0.4;
+        c.dot(polar(mid, r * 0.8, a), 1.0, fade(GLINT, 0.8));
     }
 }
 

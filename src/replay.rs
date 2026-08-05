@@ -22,8 +22,8 @@
 //! hold: that is the frame that can silently snap a phantom drag home
 //! (window blur mid-drag), and the replay must snap at the same tick.
 //!
-//! Format `RPL1`, line-oriented like the save and the wire: a header, the
-//! byte-length-prefixed base save embedded verbatim, then one `SNP1 input`
+//! Format `RPL2`, line-oriented like the save and the wire: a header, the
+//! byte-length-prefixed base save embedded verbatim, then one `SNP2 input`
 //! line per entry — the recorder reuses the lockstep wire codec
 //! ([`Message::Input`]) rather than invent a second frame encoding, so
 //! pointer floats travel as exact bit patterns. Parsing never panics; every
@@ -39,7 +39,7 @@ use crate::sim::{CrewFrame, InputFrame, SaveError, Sim, Vec2};
 
 /// Magic-plus-version header of every recording this build writes. Bump on
 /// any breaking change; older versions fail safe as unsupported.
-const MAGIC: &str = "RPL1";
+const MAGIC: &str = "RPL2";
 
 /// Rolling cap on recorded entries.
 ///
@@ -494,7 +494,7 @@ mod tests {
     use crate::sim::{Cue, ShipState, layout, poi_pos, splitmix};
 
     /// Mars, the scripted session's destination.
-    const MARS: u8 = 2;
+    const URANUS: u8 = 4;
 
     /// Seed whose first Guild trade is acceptable (the sim tests' odyssey
     /// seed), so the script can pull the accept lever meaningfully.
@@ -568,7 +568,7 @@ mod tests {
         let pearls = cell_center(2, 0);
         let accept = rect_center(layout::ACCEPT_LEVER);
         let launch = rect_center(layout::LAUNCH_LEVER);
-        let mars = poi_pos(MARS, 0);
+        let mars = poi_pos(URANUS, 0);
         let pause = |p: Vec2, held| InputFrame {
             pointer: p,
             held,
@@ -646,11 +646,12 @@ mod tests {
         s.push((0.019, pause(Vec2::default(), false)));
         // Enough warped 0.031 s frames (just under 30 ticks each) to carry
         // the whole leg; the leg length is read off the sky near departure.
-        let leg = crate::sim::map::leg_ticks(crate::sim::GUILD, MARS, 60);
+        let leg = crate::sim::map::leg_ticks(crate::sim::GUILD, URANUS, 60);
         for _ in 0..leg / 29 + 60 {
             s.push((0.031, InputFrame::default()));
         }
-        s.push((0.0, warp));
+        // No closing warp toggle: the dock disengages warp itself now, and
+        // that auto-off is exactly what this script wants on tape.
         coast(&mut s, 40);
         (s, rebase_at)
     }
@@ -684,7 +685,7 @@ mod tests {
         let (script, _) = thorough_script();
         let (live, recording, cues) = record_session(SEED, &script);
         // The choreography really happened.
-        assert_eq!(live.ship().state, ShipState::Docked(MARS));
+        assert_eq!(live.ship().state, ShipState::Docked(URANUS));
         assert_eq!(count_cues(&cues, |c| matches!(c, Cue::Accept { .. })), 1);
         assert_eq!(count_cues(&cues, |c| matches!(c, Cue::Depart)), 1);
         assert_eq!(count_cues(&cues, |c| matches!(c, Cue::Arrive)), 1);
@@ -936,15 +937,15 @@ mod tests {
             Err(ReplayError::UnsupportedVersion)
         ));
         assert!(matches!(
-            Recording::parse("RPL1"),
+            Recording::parse("RPL2"),
             Err(ReplayError::Parse { line: 0 })
         ));
         assert!(matches!(
-            Recording::parse("RPL1\nend NaN\nbase 0\n"),
+            Recording::parse("RPL2\nend NaN\nbase 0\n"),
             Err(ReplayError::Parse { line: 2 })
         ));
         assert!(matches!(
-            Recording::parse("RPL1\nend 0\nbase 99999999999999999999999\n"),
+            Recording::parse("RPL2\nend 0\nbase 99999999999999999999999\n"),
             Err(ReplayError::Parse { line: 3 })
         ));
 
@@ -958,7 +959,7 @@ mod tests {
             .to_wire()
         };
         let build = |end: u64, entries: &str| {
-            format!("RPL1\nend {end}\nbase {}\n{base}{entries}", base.len())
+            format!("RPL2\nend {end}\nbase {}\n{base}{entries}", base.len())
         };
         // A player other than 0 has no business in a solo black box.
         assert!(Recording::parse(&build(5, &entry(1, 3))).is_err());
@@ -978,7 +979,7 @@ mod tests {
     /// anything that happens to parse re-serialises without panicking.
     #[test]
     fn arbitrary_garbage_never_panics() {
-        let alphabet: Vec<char> = "RPL1 SNP\nend base input 0-9abcdefx \u{FFFD}\u{1F680}\t"
+        let alphabet: Vec<char> = "RPL2 SNP\nend base input 0-9abcdefx \u{FFFD}\u{1F680}\t"
             .chars()
             .collect();
         for round in 0_u64..300 {

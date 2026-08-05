@@ -87,6 +87,13 @@ pub const TAKE_SLOTS: [Rect; 4] = slot_row(470.0, 542.0);
 /// Pull to conclude the trade on the pads.
 pub const ACCEPT_LEVER: Rect = Rect::new(660.0, 530.0, 120.0, 40.0);
 
+/// Where travel-encounter flotsam drifts, bottom-left of the map glass.
+/// Only populated mid-leg, when nothing else on the map is clickable.
+pub const FLOTSAM_SLOTS: [Rect; 2] = [
+    Rect::new(20.0, 380.0, 40.0, 40.0),
+    Rect::new(66.0, 380.0, 40.0, 40.0),
+];
+
 /// Centre of the eagerness dial, right of the pads.
 pub const DIAL_CENTER: Vec2 = Vec2::new(700.0, 485.0);
 
@@ -141,6 +148,15 @@ pub fn slot_at(slots: &[Rect; 4], p: Vec2) -> Option<u8> {
         .map(|i| i as u8)
 }
 
+/// [`slot_at`] for the two-slot flotsam row.
+#[must_use]
+pub fn slot_at2(slots: &[Rect; 2], p: Vec2) -> Option<u8> {
+    slots
+        .iter()
+        .position(|slot| slot.contains(p))
+        .map(|i| i as u8)
+}
+
 /// World rect a piece occupies at its current [`Loc`]. Shared by hit-testing
 /// and the renderer, so pieces are grabbed exactly where they are drawn.
 #[must_use]
@@ -155,6 +171,7 @@ pub fn piece_rect(piece: &Piece) -> Rect {
         Loc::GivePad { slot } => GIVE_SLOTS[usize::from(slot)],
         Loc::TakePad { slot } => TAKE_SLOTS[usize::from(slot)],
         Loc::ReceivedShelf { slot } => RECEIVED_SLOTS[usize::from(slot)],
+        Loc::Flotsam { slot } => FLOTSAM_SLOTS[usize::from(slot)],
     }
 }
 
@@ -180,6 +197,9 @@ mod tests {
                 ),
             ),
         ];
+        for (i, &slot) in FLOTSAM_SLOTS.iter().enumerate() {
+            rects.push((&*format!("flotsam[{i}]").leak(), slot));
+        }
         for (name, row) in [
             ("shelf", &SHELF_SLOTS),
             ("received", &RECEIVED_SLOTS),

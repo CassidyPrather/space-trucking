@@ -37,7 +37,8 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Sub};
 
 pub use barter::{Barter, EAGER_MAX, VALUE};
 pub use cargo::{
-    KIND_COUNT, Kind, Loc, Piece, Tag, Violation, placement_check, placement_legal, player_owned,
+    KIND_COUNT, Kind, Loc, Piece, Tag, Violation, first_fit, placement_check, placement_legal,
+    player_owned,
 };
 use event::Omen;
 pub use map::{
@@ -65,6 +66,12 @@ pub const WARP_FACTOR: f32 = 16.0;
 /// backgrounded tab or a debugger pause hands us an enormous `frame_dt`;
 /// without this cap the sim would try to catch up all at once and spiral.
 const MAX_FRAME_DT: f32 = 0.25;
+
+/// Mysterious crates ??? asks for, and consumes, in one exchange.
+pub const WANDERER_TOLL: u32 = 3;
+
+/// Salt for the comet harvest rolls, distinct from every other stream.
+const SALT_HARVEST: u64 = 0xC0_3E71;
 
 /// Starter cargo and where it is stowed: three pieces, placed legally
 /// (the scrap is heavy, so it sits low).
@@ -191,6 +198,14 @@ pub struct InputFrame {
     pub toggle_pause: bool,
     /// Edge, precomputed by the frontend (F or the warp icon).
     pub toggle_warp: bool,
+    /// Quick-move modifier held (Shift): a press moves the piece under the
+    /// pointer straight to its obvious destination instead of lifting it.
+    pub shift: bool,
+    /// Whether the player's own wall clock reads deep night (23:30–06:00
+    /// local). The frontend measures it, the sim only ever consults it
+    /// inside press handlers — never in the tick — so sparse recordings
+    /// stay exact.
+    pub night: bool,
     /// Restart with a new seed.
     pub reseed: Option<u64>,
 }
@@ -224,6 +239,13 @@ pub enum Cue {
     OmenStart,
     Jump,
     OmenEnd,
+    /// Free cargo came aboard at a barterless dock: comet ice chipped at
+    /// perihelion, `intensity` scaling with the haul.
+    Harvest {
+        intensity: f32,
+    },
+    /// ??? took three mysterious crates and left one very mysterious one.
+    Exchange,
     /// Ambient hull creak while traveling.
     Creak {
         intensity: f32,
@@ -332,6 +354,13 @@ pub struct Sim {
     legs: u64,
     omen: Omen,
     rats: Rats,
+    /// Pieces ever gifted to the Hermitage; its shelf grows from this.
+    karma: u32,
+    /// Whether any crew member's wall clock reads deep night, refreshed
+    /// from the frame every application round. Transient: consulted only
+    /// by press handlers (Umbra selection), never by the tick, and never
+    /// serialized.
+    night: bool,
     /// The rule behind the most recent hard reject, for the renderer's
     /// icon flash. Transient UI feedback: never serialized.
     last_violation: Option<Violation>,
@@ -370,7 +399,8 @@ impl Sim {
 
         let mut visits = [0_u32; POI_COUNT];
         visits[usize::from(GUILD)] = 1;
-        let (barter, goods) = barter::generate(seed, GUILD, 1, &pieces, &mut rng, &mut next_piece);
+        let (barter, goods) =
+            barter::generate(seed, GUILD, 1, &pieces, 0, &mut rng, &mut next_piece);
         pieces.extend(goods);
         let pos = map::poi_pos(GUILD, 0);
 
@@ -398,6 +428,8 @@ impl Sim {
             legs: 0,
             omen: Omen::new(),
             rats: Rats::new(),
+            karma: 0,
+            night: false,
             last_violation: None,
         }
     }
@@ -409,6 +441,7 @@ impl Sim {
     pub fn advance(&mut self, frame_dt: f32, input: &InputFrame) -> u32 {
         // Cues describe this frame only; last frame's have been consumed.
         self.cues.clear();
+        self.night = input.night;
         let mut placed = Vec::new();
         self.apply_input(0, input, &mut placed);
         if self.paused {
@@ -458,6 +491,9 @@ impl Sim {
     /// faster. [`Sim::is_warp`] still reports the flag for that purpose.
     pub fn crew_tick(&mut self, inputs: &CrewFrame) {
         self.cues.clear();
+        // Night is the union of the crew's clocks: if it is deep night for
+        // anyone aboard, the Umbra Market will see the ship.
+        self.night = inputs.iter().any(|input| input.night);
         let mut placed = Vec::new();
         for (player, input) in inputs.iter().enumerate() {
             self.apply_input(player as PlayerId, input, &mut placed);
@@ -645,6 +681,51 @@ impl Sim {
         self.rats.rat
     }
 
+    /// Pieces ever gifted to the Hermitage this run.
+    #[must_use]
+    pub const fn karma(&self) -> u32 {
+        self.karma
+    }
+
+    /// Whether POI `id` is currently on the map at all. The comet exists
+    /// only near perihelion, the Umbra Market only while somebody's clock
+    /// reads deep night, and ??? only while three mysterious crates hum in
+    /// the hold. Everything else is always there.
+    #[must_use]
+    pub fn poi_visible(&self, id: PoiId) -> bool {
+        match id {
+            COMET => map::comet_visible(self.tick),
+            UMBRA => self.night,
+            WANDERER => self.mysterious_aboard() >= WANDERER_TOLL,
+            _ => true,
+        }
+    }
+
+    /// Mysterious crates stowed in the hold.
+    #[must_use]
+    pub fn mysterious_aboard(&self) -> u32 {
+        self.pieces
+            .iter()
+            .filter(|piece| {
+                matches!(piece.loc, Loc::Hold { .. }) && piece.kind == Kind::MysteriousCrate
+            })
+            .count() as u32
+    }
+
+    /// Whether a transit chit rides in the hold — the inner ring's toll.
+    #[must_use]
+    pub fn transit_chit_aboard(&self) -> bool {
+        self.pieces.iter().any(|piece| {
+            matches!(piece.loc, Loc::Hold { .. }) && piece.kind == Kind::TransitChit
+        })
+    }
+
+    /// Whether charting to `id` is currently refused for want of papers.
+    #[must_use]
+    pub fn inner_ring_locked(&self, id: PoiId) -> bool {
+        INNER_RING.contains(&id) && !self.transit_chit_aboard()
+    }
+
     /// Whether a suspicious piece is stowed in the hold.
     #[must_use]
     pub fn suspicious_aboard(&self) -> bool {
@@ -684,7 +765,7 @@ impl Sim {
     /// releases drop, and the held piece's legality tracks the pointer.
     fn handle_pointer(&mut self, player: PlayerId, input: &InputFrame, placed: &mut Vec<u32>) {
         if input.press {
-            self.on_press(player, input.pointer);
+            self.on_press(player, input.pointer, input.shift, placed);
         }
         if input.release {
             self.on_release(player, input.pointer, placed);
@@ -717,7 +798,7 @@ impl Sim {
     /// it landed on. The rat comes first: a press on its cell shoos it and
     /// does NOT lift the piece under it — piece picks happen only where no
     /// rat sits. Every other press path is unchanged.
-    fn on_press(&mut self, player: PlayerId, p: Vec2) {
+    fn on_press(&mut self, player: PlayerId, p: Vec2, shift: bool, placed: &mut Vec<u32>) {
         if self.held(player).is_some() {
             return;
         }
@@ -727,13 +808,17 @@ impl Sim {
         {
             return;
         }
+        if shift && self.quick_move(p, placed) {
+            return;
+        }
         let docked = matches!(self.ship.state, ShipState::Docked(_));
         let grabbed = self
             .pieces
             .iter()
             .find(|piece| {
                 layout::piece_rect(piece).contains(p)
-                    && (docked || matches!(piece.loc, Loc::Hold { .. }))
+                    && (docked
+                        || matches!(piece.loc, Loc::Hold { .. } | Loc::Flotsam { .. }))
             })
             .map(|piece| (piece.id, piece.loc));
         if let Some((id, origin)) = grabbed {
@@ -756,6 +841,71 @@ impl Sim {
         }
     }
 
+    /// A shift-press: move the piece under `p` straight to its one obvious
+    /// destination — hold pieces to the give pads, shelf goods to the take
+    /// pad, pad pieces back where they came from, received goods and
+    /// flotsam into the first legal hold cell (per the QoL brief: the
+    /// first legal spot, even if that is a bad idea). Returns whether the
+    /// press was consumed; `false` means nothing shift-worthy sat under
+    /// the pointer and the press falls through to the ordinary paths.
+    fn quick_move(&mut self, p: Vec2, placed: &mut Vec<u32>) -> bool {
+        let docked = self.barter.is_some();
+        let Some(piece) = self
+            .pieces
+            .iter()
+            .find(|piece| {
+                layout::piece_rect(piece).contains(p)
+                    && (docked
+                        || matches!(piece.loc, Loc::Hold { .. } | Loc::Flotsam { .. }))
+            })
+            .copied()
+        else {
+            return false;
+        };
+        if self.held_by_crew(piece.id) {
+            // Someone is dragging it; a modifier press cannot yank it away.
+            return true;
+        }
+        let target = match piece.loc {
+            Loc::Hold { .. } if docked => self.free_slot(Loc::GivePad { slot: 0 }, 4),
+            Loc::StationShelf { .. } if docked => self.free_slot(Loc::TakePad { slot: 0 }, 4),
+            Loc::TakePad { .. } if docked => self.free_slot(Loc::StationShelf { slot: 0 }, 4),
+            Loc::GivePad { .. } | Loc::ReceivedShelf { .. } | Loc::Flotsam { .. } => {
+                first_fit(&self.pieces, piece.id, piece.kind)
+                    .map(|(x, y)| Loc::Hold { x, y })
+            }
+            _ => None,
+        };
+        match target {
+            Some(loc) => {
+                if let Some(stored) = self.pieces.iter_mut().find(|other| other.id == piece.id)
+                {
+                    stored.loc = loc;
+                }
+                self.last_violation = None;
+                self.refresh_ready();
+                placed.push(piece.id);
+                self.cues.push(Cue::Place);
+            }
+            None => self.cues.push(Cue::Reject { hard: false }),
+        }
+        true
+    }
+
+    /// The first free slot in a row of `count` slots shaped like `proto`.
+    fn free_slot(&self, proto: Loc, count: u8) -> Option<Loc> {
+        (0..count)
+            .map(|slot| match proto {
+                Loc::GivePad { .. } => Loc::GivePad { slot },
+                Loc::TakePad { .. } => Loc::TakePad { slot },
+                Loc::StationShelf { .. } => Loc::StationShelf { slot },
+                Loc::ReceivedShelf { .. } => Loc::ReceivedShelf { slot },
+                Loc::Flotsam { .. } => Loc::Flotsam { slot },
+                Loc::Hold { .. } => proto,
+            })
+            .find(|&loc| self.slot_free(loc, u32::MAX))
+    }
+
     /// Docked-only press targets: POIs, the launch lever, the accept lever.
     fn on_press_docked(&mut self, p: Vec2) {
         let ShipState::Docked(at) = self.ship.state else {
@@ -764,13 +914,33 @@ impl Sim {
         for (i, poi) in POIS.iter().enumerate() {
             let id = i as PoiId;
             if id != at && (p - map::poi_pos(id, self.tick)).length() <= poi.radius {
+                if !self.poi_visible(id) {
+                    // Nothing there right now: the press falls on empty
+                    // glass, exactly as if the POI did not exist.
+                    continue;
+                }
+                if self.inner_ring_locked(id) {
+                    // The inner ring checks papers at charting time. No
+                    // transit chit in the hold, no course.
+                    self.cues.push(Cue::Reject { hard: false });
+                    return;
+                }
                 self.ship.selected = Some(id);
                 self.cues.push(Cue::Select);
                 return;
             }
         }
         if layout::LAUNCH_LEVER.contains(p) {
-            if self.ship.selected.is_some() && !self.pads_occupied() {
+            let armed_valid = self.ship.selected.is_some_and(|to| {
+                // Conditions can lapse between selection and the lever: the
+                // comet sets, dawn closes the Umbra Market, the chit gets
+                // gifted away. Re-check, and disarm a stale selection.
+                self.poi_visible(to) && !self.inner_ring_locked(to)
+            });
+            if self.ship.selected.is_some() && !armed_valid {
+                self.ship.selected = None;
+            }
+            if armed_valid && !self.pads_occupied() {
                 self.depart();
             } else {
                 // No destination, or pieces on a pad or the received shelf:
@@ -779,7 +949,12 @@ impl Sim {
                 self.cues.push(Cue::Reject { hard: false });
             }
         } else if layout::ACCEPT_LEVER.contains(p) {
-            self.conclude();
+            if self.barter.is_some() {
+                self.conclude();
+            } else {
+                // A comet or ??? has no counterparty; the lever is dead.
+                self.cues.push(Cue::Reject { hard: false });
+            }
         } else if !icon_press(p) {
             self.cues.push(Cue::Reject { hard: false });
         }
@@ -846,15 +1021,25 @@ impl Sim {
     /// from, so the glowing regions and the legal ones cannot drift apart.
     fn resolve_drop(&self, piece: &Piece, p: Vec2) -> Result<Loc, Option<Violation>> {
         let ours = player_owned(piece.loc);
+        let flotsam = matches!(piece.loc, Loc::Flotsam { .. });
         if let Some((x, y)) = layout::cell_at(p) {
-            if !ours {
+            if !ours && !flotsam {
                 // Station goods never enter the hold before a trade.
+                // Flotsam is nobody's: stowing it is how it becomes yours.
                 return Err(None);
             }
             return match placement_check(&self.pieces, piece.id, piece.kind, x, y) {
                 Ok(()) => Ok(Loc::Hold { x, y }),
                 Err(violation) => Err(Some(violation)),
             };
+        }
+        if flotsam {
+            // Not stowed: it can only go back to a drift slot.
+            if let Some(slot) = layout::slot_at2(&layout::FLOTSAM_SLOTS, p) {
+                let loc = Loc::Flotsam { slot };
+                return self.slot_free(loc, piece.id).then_some(loc).ok_or(None);
+            }
+            return Err(None);
         }
         if self.barter.is_some() {
             if let Some(slot) = layout::slot_at(&layout::GIVE_SLOTS, p) {
@@ -901,7 +1086,7 @@ impl Sim {
         let ours = player_owned(piece.loc);
         let docked = self.barter.is_some();
         Some(DropTargets {
-            hold: ours,
+            hold: ours || matches!(piece.loc, Loc::Flotsam { .. }),
             give: ours && docked,
             take: !ours && docked,
             shelf: !ours && docked,
@@ -914,9 +1099,13 @@ impl Sim {
     /// frame a trade becomes viable instead of one tick later. The dial's
     /// sweep still eases in the tick; only readiness is instantaneous.
     fn refresh_ready(&mut self) {
-        let ready = barter::eagerness_of(&self.pieces, &self.values).1;
         if let Some(barter) = &mut self.barter {
-            barter.ready = ready;
+            barter.ready = barter::eagerness_of(
+                &self.pieces,
+                &self.values,
+                barter::gnaw_loved(barter.station),
+            )
+            .1;
         }
     }
 
@@ -952,15 +1141,24 @@ impl Sim {
     /// value come from the instantaneous pads, not the eased dial, so a
     /// quick pull is never judged by an animation.
     fn conclude(&mut self) {
-        if self.barter.is_none() {
+        let Some(station) = self.barter.as_ref().map(|barter| barter.station) else {
             return;
-        }
-        let (_, ready) = barter::eagerness_of(&self.pieces, &self.values);
+        };
+        let gnaw_love = barter::gnaw_loved(station);
+        let (_, ready) = barter::eagerness_of(&self.pieces, &self.values, gnaw_love);
         if !ready || self.received_occupied() {
             self.cues.push(Cue::Refuse);
             return;
         }
-        let value = barter::deal_value(&self.pieces, &self.values);
+        let value = barter::deal_value(&self.pieces, &self.values, gnaw_love);
+        if station == HERMITAGE {
+            // The hermits remember every piece given, forever.
+            self.karma += self
+                .pieces
+                .iter()
+                .filter(|piece| matches!(piece.loc, Loc::GivePad { .. }))
+                .count() as u32;
+        }
         self.restock_from_give_pads();
         for piece in &mut self.pieces {
             if let Loc::TakePad { slot } = piece.loc {
@@ -1083,7 +1281,11 @@ impl Sim {
             // The dial eases toward the trade's true ratio (capped at the
             // dial's peg); readiness tracks the ratio itself.
             barter.prev_eagerness = barter.eagerness;
-            let (target, ready) = barter::eagerness_of(&self.pieces, &self.values);
+            let (target, ready) = barter::eagerness_of(
+                &self.pieces,
+                &self.values,
+                barter::gnaw_loved(barter.station),
+            );
             barter.ready = ready;
             barter.eagerness = step_toward(
                 barter.eagerness,
@@ -1100,6 +1302,9 @@ impl Sim {
         self.ship.pos = map::poi_pos(poi, self.tick);
         self.ship.state = ShipState::Docked(poi);
         self.ship.selected = None;
+        // Arriving anywhere drops out of warp: a developer fast-forwarding
+        // should be looking when something happens.
+        self.disengage_warp();
         self.omen.on_dock(&mut self.cues);
         if poi == GUILD {
             self.steal_crate();
@@ -1109,18 +1314,124 @@ impl Sim {
         self.rats.on_dock(&self.pieces, &mut self.cues);
         self.visits[usize::from(poi)] += 1;
         let visit = self.visits[usize::from(poi)];
-        let (barter, goods) = barter::generate(
-            self.seed,
-            poi,
-            visit,
-            &self.pieces,
-            &mut self.rng,
-            &mut self.next_piece,
-        );
-        self.values = barter::visit_values(self.seed, poi, visit);
-        self.pieces.extend(goods);
-        self.barter = Some(barter);
+        match poi {
+            COMET => self.harvest_comet(visit),
+            WANDERER => self.wanderer_exchange(),
+            _ => {
+                let (barter, goods) = barter::generate(
+                    self.seed,
+                    poi,
+                    visit,
+                    &self.pieces,
+                    self.karma,
+                    &mut self.rng,
+                    &mut self.next_piece,
+                );
+                self.values = barter::visit_values(self.seed, poi, visit);
+                self.pieces.extend(goods);
+                self.barter = Some(barter);
+            }
+        }
         self.cues.push(Cue::Arrive);
+    }
+
+    /// Turn warp off if it is on, with its cue. Arrivals and event
+    /// openings call this: fast-forward is a dev tool, and it must not
+    /// carry anyone obliviously past the interesting parts.
+    fn disengage_warp(&mut self) {
+        if self.warp {
+            self.warp = false;
+            self.cues.push(Cue::Warp { engaged: false });
+        }
+    }
+
+    /// Docked at the comet: chip off some ice, free. One to three shards
+    /// (as the hold's edges allow — ice hugs the hull like any cryo cargo)
+    /// plus, one visit in three, something odd frozen inside.
+    fn harvest_comet(&mut self, visit: u32) {
+        let h = splitmix(self.seed ^ SALT_HARVEST, u64::from(visit));
+        let shards = 1 + h % 3;
+        let mut placed = 0_u32;
+        for _ in 0..shards {
+            if !self.spawn_in_hold(Kind::CometIce) {
+                break;
+            }
+            placed += 1;
+        }
+        if (h >> 32) % 3 == 0 && self.spawn_in_hold(Kind::MysteriousCrate) {
+            placed += 1;
+        }
+        if placed > 0 {
+            self.cues.push(Cue::Harvest {
+                intensity: placed as f32 / 4.0,
+            });
+        }
+    }
+
+    /// Docked at ???: three mysterious crates become one very mysterious
+    /// crate, no barter, no explanation. If the bigger crate cannot sit
+    /// anywhere legally (a suspicious crate already hums in the hold, or
+    /// no 2x2 gap survives), nothing is taken — the exchange never
+    /// half-completes, which is the anti-softlock guarantee.
+    fn wanderer_exchange(&mut self) {
+        if self.mysterious_aboard() < WANDERER_TOLL {
+            return;
+        }
+        // Candidate board: the three lowest-id mysterious crates removed.
+        let mut doomed: Vec<u32> = self
+            .pieces
+            .iter()
+            .filter(|piece| {
+                matches!(piece.loc, Loc::Hold { .. }) && piece.kind == Kind::MysteriousCrate
+            })
+            .map(|piece| piece.id)
+            .collect();
+        doomed.sort_unstable();
+        doomed.truncate(WANDERER_TOLL as usize);
+        let remainder: Vec<Piece> = self
+            .pieces
+            .iter()
+            .filter(|piece| !doomed.contains(&piece.id))
+            .copied()
+            .collect();
+        let Some((x, y)) =
+            first_fit(&remainder, self.next_piece, Kind::VeryMysteriousCrate)
+        else {
+            self.cues.push(Cue::Reject { hard: false });
+            return;
+        };
+        for held in &mut self.held {
+            if matches!(held, Some(h) if doomed.contains(&h.piece)) {
+                *held = None;
+            }
+        }
+        self.pieces = remainder;
+        self.pieces.push(Piece {
+            id: self.next_piece,
+            kind: Kind::VeryMysteriousCrate,
+            variant: self.rng.u8(..cargo::VARIANTS),
+            gnawed: false,
+            loc: Loc::Hold { x, y },
+        });
+        self.next_piece += 1;
+        self.cues.push(Cue::Exchange);
+    }
+
+    /// Stow a fresh `kind` at the first legal cell, if any. Free cargo
+    /// only: barter pieces arrive through [`barter::generate`].
+    fn spawn_in_hold(&mut self, kind: Kind) -> bool {
+        let Some((x, y)) = first_fit(&self.pieces, self.next_piece, kind) else {
+            return false;
+        };
+        self.pieces.push(Piece {
+            id: self.next_piece,
+            kind,
+            variant: self.rng.u8(..cargo::VARIANTS),
+            gnawed: false,
+            loc: Loc::Hold { x, y },
+        });
+        self.next_piece += 1;
+        true
     }
 
     /// The hangar steal: any suspicious crate aboard is seized the moment
@@ -1137,13 +1448,20 @@ impl Sim {
             return;
         };
         let id = self.pieces[index].id;
+        let worth = if self.pieces[index].kind == Kind::VeryMysteriousCrate {
+            // Whatever it is, the hangar counts it four times. Nobody
+            // explains the arithmetic.
+            4
+        } else {
+            1
+        };
         for held in &mut self.held {
             if matches!(held, Some(held) if held.piece == id) {
                 *held = None;
             }
         }
         self.pieces.remove(index);
-        self.deliveries += 1;
+        self.deliveries += worth;
         self.cues.push(Cue::Delivered);
     }
 }
@@ -1158,11 +1476,9 @@ const fn icon_press(p: Vec2) -> bool {
 mod tests {
     use super::*;
 
-    /// Venus, the first POI, as a test destination.
-    const VENUS: PoiId = 0;
-
-    /// Mars, the odyssey's destination.
-    const MARS: PoiId = 2;
+    /// Uranus, an outer-ring test destination (the inner ring needs a
+    /// transit chit, so generic travel tests chart outward).
+    const URANUS: PoiId = 4;
 
     /// Jupiter: the longest leg from the Guild, for creak statistics.
     const JUPITER: PoiId = 3;
@@ -1318,7 +1634,7 @@ mod tests {
     }
 
     fn launched(seed: u64) -> Sim {
-        launched_toward(seed, VENUS)
+        launched_toward(seed, SATURN)
     }
 
     /// Launch toward `poi` and fast-forward past the arrival.
@@ -1375,7 +1691,7 @@ mod tests {
         // Select Mars and hit the lever too early: received still loaded.
         // Only the 30 dial frames above advance the clock, so the press
         // lands at tick 30 exactly.
-        let mars = map::poi_pos(MARS, 30);
+        let mars = map::poi_pos(URANUS, 30);
         s.push((0.0, press_at(mars.x, mars.y)));
         let launch = rect_center(layout::LAUNCH_LEVER);
         s.push((0.0, press_at(launch.x, launch.y)));
@@ -1389,7 +1705,7 @@ mod tests {
         s.push((0.0, press_at(launch.x, launch.y)));
         // Warp sixteen-fold through most of the leg — its length depends on
         // where the sky stands at the tick-30 departure — then coast in.
-        let leg = map::leg_ticks(GUILD, MARS, 30);
+        let leg = map::leg_ticks(GUILD, URANUS, 30);
         let warp_frames = (leg / u64::from(WARP_FACTOR as u32)).saturating_sub(20);
         let warp = InputFrame {
             toggle_warp: true,
@@ -1601,7 +1917,7 @@ mod tests {
         };
         let caught_up = sim.fast_forward(leg_ticks + 10);
         assert!(caught_up.arrived, "leg of {leg_ticks} ticks never arrived");
-        assert_eq!(sim.ship().state, ShipState::Docked(VENUS));
+        assert_eq!(sim.ship().state, ShipState::Docked(SATURN));
         assert!(sim.barter().is_some(), "docked means barter");
         assert!(sim.cues().is_empty(), "fast_forward must suppress cues");
     }
@@ -1688,7 +2004,7 @@ mod tests {
         assert_eq!(count_cues(&cues_a, |c| matches!(c, Cue::Arrive)), 1);
         assert_eq!(count_cues(&cues_a, |c| matches!(c, Cue::Warp { .. })), 2);
         assert!(count_cues(&cues_a, |c| matches!(c, Cue::Reject { hard: false })) >= 1);
-        assert_eq!(a.ship().state, ShipState::Docked(MARS));
+        assert_eq!(a.ship().state, ShipState::Docked(URANUS));
         assert!(a.barter().is_some());
         assert_eq!(a.save_string(), b.save_string());
         assert_eq!(a.pieces(), b.pieces());
@@ -1701,7 +2017,7 @@ mod tests {
     fn save_load_continues_mid_travel() {
         let mut sim = Sim::new(ODYSSEY_SEED);
         play(&mut sim, &odyssey_script());
-        launch(&mut sim, VENUS);
+        launch(&mut sim, SATURN);
         coast(&mut sim, 1000);
         assert!(matches!(sim.ship().state, ShipState::Traveling { .. }));
         assert_save_continues(sim, 10_000);
@@ -1737,7 +2053,7 @@ mod tests {
     fn save_load_continues_mid_omen() {
         let mut sim = Sim::new(0xB00);
         inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        launch(&mut sim, VENUS);
+        launch(&mut sim, SATURN);
         // Walk to the omen's opening, then a beat further: light mid-dim,
         // hum mid-swell, jump still pending.
         for _ in 0..leg_of(&sim) {
@@ -1804,7 +2120,7 @@ mod tests {
     fn fast_forward_matches_stepwise_across_an_omen_jump() {
         let mut base = Sim::new(0xD1CE);
         inject_hold(&mut base, Kind::SuspiciousCrate, 3, 0);
-        launch(&mut base, VENUS);
+        launch(&mut base, SATURN);
         // Past the latest possible jump, not necessarily past the dock.
         let n = leg_of(&base) * 3 / 4 + 200;
         let mut ff = base.clone();
@@ -2128,6 +2444,10 @@ mod tests {
                 release: rng.bool(),
                 toggle_pause: rng.u8(..) < 3,
                 toggle_warp: rng.u8(..) < 3,
+                // The quick-move path runs under the monkey too: shift
+                // presses must obey the same conservation rules as drags.
+                shift: rng.bool(),
+                night: rng.bool(),
                 reseed: None,
             };
             sim.advance(TICK_DT, &input);
@@ -2136,7 +2456,9 @@ mod tests {
             let ceded = sim
                 .cues()
                 .iter()
-                .any(|cue| matches!(cue, Cue::Accept { .. } | Cue::Delivered));
+                .any(|cue| {
+                    matches!(cue, Cue::Accept { .. } | Cue::Delivered | Cue::Exchange)
+                });
             let after = owned(&sim);
             assert!(
                 after >= before || ceded,
@@ -2165,7 +2487,7 @@ mod tests {
     #[test]
     fn launch_gate_refuses_while_pads_hold_pieces() {
         let mut sim = Sim::new(3);
-        let venus = sim.poi_pos(VENUS);
+        let venus = sim.poi_pos(SATURN);
         sim.advance(0.0, &press_at(venus.x, venus.y));
         let lever = rect_center(layout::LAUNCH_LEVER);
         // Give pad occupied: refused.
@@ -2251,7 +2573,7 @@ mod tests {
         let mut sim = Sim::new(0x0051_C0DE);
         for round in 1..=3_u32 {
             inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-            travel_to(&mut sim, VENUS);
+            travel_to(&mut sim, SATURN);
             // Venus neither steals the crate nor offers a second: the
             // singleton aboard suppresses the shelf offer.
             assert_eq!(crates(&sim), 1, "round {round}: the singleton broke");
@@ -2283,7 +2605,7 @@ mod tests {
     fn guild_steal_fires_delivered_beside_arrive() {
         let mut sim = Sim::new(0xDE11);
         inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        travel_to(&mut sim, VENUS);
+        travel_to(&mut sim, SATURN);
         launch(&mut sim, GUILD);
         // Walk to the dock live, so the arrival frame's cues are visible.
         let mut arrival = Vec::new();
@@ -2311,11 +2633,11 @@ mod tests {
     #[test]
     fn docking_without_a_crate_never_delivers() {
         let mut sim = Sim::new(0x00DE);
-        travel_to(&mut sim, VENUS);
+        travel_to(&mut sim, SATURN);
         travel_to(&mut sim, GUILD);
         assert_eq!(sim.deliveries(), 0);
         let mut sim = Sim::new(0x00DE);
-        travel_to(&mut sim, VENUS);
+        travel_to(&mut sim, SATURN);
         launch(&mut sim, GUILD);
         let mut log = Vec::new();
         for _ in 0..=leg_of(&sim) {
@@ -2331,7 +2653,7 @@ mod tests {
     fn a_crate_held_mid_drag_is_still_stolen_at_the_dock() {
         let mut sim = Sim::new(0xD00D);
         inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        travel_to(&mut sim, VENUS);
+        travel_to(&mut sim, SATURN);
         launch(&mut sim, GUILD);
         // Lift the crate mid-flight and keep dragging through the dock.
         let (crate_id, at) = {
@@ -2357,7 +2679,7 @@ mod tests {
     fn deliveries_survive_the_save_round_trip() {
         let mut sim = Sim::new(0x5AFE);
         inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        travel_to(&mut sim, VENUS);
+        travel_to(&mut sim, SATURN);
         travel_to(&mut sim, GUILD);
         assert_eq!(sim.deliveries(), 1);
         let restored = Sim::from_save(&sim.save_string()).expect("own save must parse");
@@ -2370,7 +2692,7 @@ mod tests {
         let seed = 0xE7E7;
         let mut sim = Sim::new(seed);
         inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        launch(&mut sim, VENUS);
+        launch(&mut sim, SATURN);
         let leg = leg_of(&sim);
         let lo = leg / 2;
         let jump_at = lo + splitmix(seed, 1) % (leg * 3 / 4 - lo).max(1);
@@ -2540,7 +2862,7 @@ mod tests {
         };
         // The Venus press lands on sealed tick 3 and the departure on
         // sealed tick 5; the sky is sampled for those exact moments.
-        let venus = map::poi_pos(VENUS, 3);
+        let venus = map::poi_pos(SATURN, 3);
         let launch_lever = rect_center(layout::LAUNCH_LEVER);
         let accept = rect_center(layout::ACCEPT_LEVER);
         let mut s = vec![
@@ -2563,7 +2885,7 @@ mod tests {
             crew(&[(0, press_at(accept.x, accept.y))]),
             crew(&[(0, press_at(launch_lever.x, launch_lever.y))]),
         ];
-        for _ in 0..=map::leg_ticks(GUILD, VENUS, 5) + 1 {
+        for _ in 0..=map::leg_ticks(GUILD, SATURN, 5) + 1 {
             s.push(crew(&[]));
         }
         s
@@ -2593,7 +2915,7 @@ mod tests {
         assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Accept { .. })), 1);
         assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Depart)), 1);
         assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Arrive)), 1);
-        assert_eq!(a.ship().state, ShipState::Docked(VENUS));
+        assert_eq!(a.ship().state, ShipState::Docked(SATURN));
         assert_eq!(a.save_string(), b.save_string());
         assert_eq!(a.pieces(), b.pieces());
         assert_eq!(a.barter(), b.barter());
@@ -2606,7 +2928,7 @@ mod tests {
     /// No warp toggles: warp multiplies ticks-per-frame in [`Sim::advance`],
     /// while a lockstep session realises it by sealing ticks faster.
     fn solo_schedule() -> Vec<InputFrame> {
-        let venus = map::poi_pos(VENUS, 0);
+        let venus = map::poi_pos(SATURN, 0);
         let launch_lever = rect_center(layout::LAUNCH_LEVER);
         let accept = rect_center(layout::ACCEPT_LEVER);
         let pause = InputFrame {
@@ -2627,7 +2949,7 @@ mod tests {
             s.push(InputFrame::default());
         }
         s.push(pause);
-        for _ in 0..=map::leg_ticks(GUILD, VENUS, 1) + 1 {
+        for _ in 0..=map::leg_ticks(GUILD, SATURN, 1) + 1 {
             s.push(InputFrame::default());
         }
         s.push(press_at(vial.x, vial.y));
@@ -2668,7 +2990,7 @@ mod tests {
                 );
             }
         }
-        assert_eq!(via_advance.ship().state, ShipState::Docked(VENUS));
+        assert_eq!(via_advance.ship().state, ShipState::Docked(SATURN));
         assert_eq!(via_crew.save_string(), via_advance.save_string());
         assert_eq!(via_crew.pieces(), via_advance.pieces());
         assert_eq!(via_crew.barter(), via_advance.barter());
@@ -2814,6 +3136,8 @@ mod tests {
                     release: rng.bool(),
                     toggle_pause: rng.u8(..) < 2,
                     toggle_warp: rng.u8(..) < 2,
+                    shift: rng.bool(),
+                    night: rng.bool(),
                     reseed: None,
                 };
             }
@@ -2821,7 +3145,9 @@ mod tests {
             let ceded = sim
                 .cues()
                 .iter()
-                .any(|cue| matches!(cue, Cue::Accept { .. } | Cue::Delivered));
+                .any(|cue| {
+                    matches!(cue, Cue::Accept { .. } | Cue::Delivered | Cue::Exchange)
+                });
             let after = owned(&sim);
             assert!(
                 after >= before || ceded,
@@ -2895,7 +3221,7 @@ mod tests {
     fn rat_underway() -> Sim {
         let mut sim = Sim::new(rat_seed());
         crowd_hold(&mut sim);
-        launch(&mut sim, VENUS);
+        launch(&mut sim, SATURN);
         sim
     }
 
@@ -2926,7 +3252,7 @@ mod tests {
         for seed in 0..400_u64 {
             let mut sim = Sim::new(seed);
             crowd_hold(&mut sim);
-            launch(&mut sim, VENUS);
+            launch(&mut sim, SATURN);
             boarded += usize::from(sim.rat().is_some());
         }
         assert!(
@@ -2936,7 +3262,7 @@ mod tests {
         // A lean hold (starter cargo, 5 of 24 cells): never.
         for seed in 0..100_u64 {
             let mut sim = Sim::new(seed);
-            launch(&mut sim, VENUS);
+            launch(&mut sim, SATURN);
             assert!(
                 sim.rat().is_none(),
                 "seed {seed} boarded a rat onto a lean hold"
@@ -2947,7 +3273,7 @@ mod tests {
         let mut sim = Sim::new(rat_seed());
         crowd_hold(&mut sim);
         inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 0);
-        launch(&mut sim, VENUS);
+        launch(&mut sim, SATURN);
         assert!(sim.rat().is_none(), "the hum should keep rats ashore");
         assert!(!sim.cues().contains(&Cue::RatAboard));
     }
@@ -3060,7 +3386,7 @@ mod tests {
     fn a_press_on_a_perched_rat_chases_and_never_lifts_the_piece() {
         let mut sim = Sim::new(rat_seed());
         fill_hold(&mut sim);
-        launch(&mut sim, VENUS);
+        launch(&mut sim, SATURN);
         let rat = sim.rat().expect("a full hold still boards");
         assert!(
             cell_covered(&sim, rat.cell),

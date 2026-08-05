@@ -22,8 +22,8 @@ use audio::Audio;
 use juice::Juice;
 use macroquad::color::Color;
 use macroquad::input::{
-    KeyCode, MouseButton, is_key_pressed, is_mouse_button_down, is_mouse_button_pressed,
-    is_mouse_button_released, mouse_position,
+    KeyCode, MouseButton, is_key_down, is_key_pressed, is_mouse_button_down,
+    is_mouse_button_pressed, is_mouse_button_released, mouse_position,
 };
 use macroquad::text::{draw_text, measure_text};
 use macroquad::texture::{FilterMode, RenderTarget, RenderTargetParams, render_target_ex};
@@ -61,9 +61,46 @@ const REPLAY_KEY: &str = "space-trucking/replay";
 /// have no shell writing it, so the key stays absent and motion stays full.
 const REDUCED_MOTION_KEY: &str = "space-trucking/reduced-motion";
 
+/// Storage key for developer mode, which is the only thing that unlocks
+/// fast-forward. The web shell sets it after the pretty-please dialogue
+/// (see `web/index.html`); natively, `--dev` on the command line sets it
+/// for good. Players never need it: the game is meant to run at 1x.
+const DEV_KEY: &str = "space-trucking/dev";
+
+/// Storage key the web shell mirrors the local wall clock's deep-night
+/// window into (23:30–06:00): `"1"` inside it, `"0"` outside. Native
+/// builds fall back to the same window in UTC — close enough for a
+/// mystery.
+const NIGHT_KEY: &str = "space-trucking/night";
+
+/// A frame gap larger than this means the tab was backgrounded or the
+/// machine slept: real time kept passing, so the missing ticks are
+/// replayed through `fast_forward` instead of being clamped away.
+const STALL_SECONDS: f64 = 1.0;
+
 /// Whether the player's OS asked for reduced motion, per the mirrored key.
 fn reduced_motion() -> bool {
     storage::get(REDUCED_MOTION_KEY).as_deref() == Some("1")
+}
+
+/// Whether developer mode is unlocked (the pretty-please was said).
+fn dev_mode() -> bool {
+    storage::get(DEV_KEY).as_deref() == Some("1")
+}
+
+/// Whether it is deep night (23:30–06:00) on the player's clock: the web
+/// shell's mirrored local answer when present, otherwise the same window
+/// read off the UTC wall clock.
+fn night_now() -> bool {
+    match storage::get(NIGHT_KEY).as_deref() {
+        Some("1") => true,
+        Some(_) => false,
+        None => {
+            let day = macroquad::miniquad::date::now().rem_euclid(86_400.0);
+            let hour = day / 3600.0;
+            !(6.0..23.5).contains(&hour)
+        }
+    }
 }
 
 /// Longest frame the replay pacer banks, matching the sim's own clamp so a
@@ -78,7 +115,9 @@ const CATCH_UP_RATE: f64 = 60.0;
 
 fn window_conf() -> Conf {
     Conf {
-        window_title: env!("CARGO_PKG_NAME").to_owned(),
+        // The one place the game says its own name: lowercase, one space,
+        // matching the browser tab.
+        window_title: "space trucking".to_owned(),
         window_width: WORLD_W as i32,
         window_height: WORLD_H as i32,
         high_dpi: true,
@@ -99,6 +138,10 @@ async fn main() {
         replay_session(replay_path).await;
         return;
     }
+    if std::env::args().any(|arg| arg == "--dev") {
+        // The native pretty-please. Saying it once is saying it forever.
+        storage::set(DEV_KEY, "1");
+    }
 
     let (mut sim, arrived_while_away, caught_up_seconds) = restore();
     let mut recording = Recording::new(sim.save_string());
@@ -112,6 +155,8 @@ async fn main() {
     let mut juice = Juice::default();
     let mut tutor = Tutor::default();
     let reduced_motion = reduced_motion();
+    let mut dev = dev_mode();
+    let mut night = night_now();
     // Wall-clock idle for the onboarding ghost: seconds since the player
     // last pressed, keyed, or toggled anything. Pointer motion deliberately
     // does not count — watching must not hold the tutor at bay.
@@ -121,13 +166,28 @@ async fn main() {
         juice.catch_up_arrival();
     }
     let mut last_save = macroquad::miniquad::date::now();
+    let mut last_frame = last_save;
 
     loop {
         let view = View::fit(screen_width(), screen_height());
-        let input = gather_input(&view);
+        let input = gather_input(&view, dev, night);
         let toggle_mute =
             is_key_pressed(KeyCode::M) || (input.press && layout::SPEAKER.contains(input.pointer));
         let dt = get_frame_time();
+
+        // A backgrounded tab or a sleeping laptop does not pause the world:
+        // when the wall clock says far more passed than the frame did,
+        // replay the difference silently, exactly like the boot catch-up.
+        let wall_now = macroquad::miniquad::date::now();
+        let wall_gap = wall_now - last_frame;
+        last_frame = wall_now;
+        if wall_gap > STALL_SECONDS {
+            let missed = (wall_gap - f64::from(dt)).clamp(0.0, MAX_CATCH_UP);
+            let ticks = u64::try_from((missed * CATCH_UP_RATE) as i64).unwrap_or(0);
+            if sim.fast_forward(ticks).arrived {
+                juice.catch_up_arrival();
+            }
+        }
 
         recording.record_frame(sim.tick(), &input);
         sim.advance(dt, &input);
@@ -182,6 +242,10 @@ async fn main() {
                 // so the write is the running total across sessions.
                 storage::set(BUFFER_KEY, &aggregate.serialize());
             }
+            // Cheap clock work rides the save cadence: the night window
+            // creeps, and the shell may have heard a pretty-please.
+            night = night_now();
+            dev = dev_mode();
             last_save = now;
         }
 
@@ -196,6 +260,7 @@ async fn main() {
                 audio_waiting: audio.needs_gesture(),
                 audio_muted: audio.muted(),
                 reduced_motion,
+                dev,
             },
         );
         draw_version(palette::VERSION_TEXT);
@@ -275,6 +340,7 @@ async fn replay_session(path: Option<String>) {
                 audio_waiting: audio.needs_gesture(),
                 audio_muted: audio.muted(),
                 reduced_motion,
+                dev: true,
             },
         );
         draw_version(palette::fade(palette::AMBER, 0.75));
@@ -410,7 +476,7 @@ impl View {
     }
 }
 
-fn gather_input(view: &View) -> InputFrame {
+fn gather_input(view: &View, dev_mode: bool, night: bool) -> InputFrame {
     let (mouse_x, mouse_y) = mouse_position();
     let pointer = view.to_world(Vec2::new(mouse_x, mouse_y));
     let press = is_mouse_button_pressed(MouseButton::Left);
@@ -423,7 +489,10 @@ fn gather_input(view: &View) -> InputFrame {
         // deliberately ignores presses on those rects.
         toggle_pause: is_key_pressed(KeyCode::Space)
             || (press && layout::PAUSE_BTN.contains(pointer)),
-        toggle_warp: is_key_pressed(KeyCode::F) || (press && layout::WARP_BTN.contains(pointer)),
+        toggle_warp: dev_mode
+            && (is_key_pressed(KeyCode::F) || (press && layout::WARP_BTN.contains(pointer))),
+        shift: is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift),
+        night,
         reseed: is_key_pressed(KeyCode::R).then(fresh_seed),
     }
 }

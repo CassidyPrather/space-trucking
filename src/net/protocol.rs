@@ -1,7 +1,7 @@
 //! The wire protocol: versioned, line-oriented lockstep messages.
 //!
 //! Style and defenses mirror `sim/save.rs`: a magic-plus-version header
-//! (`SNP1`), whitespace-separated tokens, and parsing that never panics —
+//! (`SNP2`), whitespace-separated tokens, and parsing that never panics —
 //! every malformed message maps to a [`WireError`] with its 1-based line
 //! number (line 0 means the text ended too early). Floats travel as hex bit
 //! patterns, never decimal, because a pointer position that drifts by one
@@ -19,7 +19,7 @@ use crate::sim::{CrewFrame, InputFrame, MAX_CREW, PlayerId, Vec2};
 
 /// Magic-plus-version header of every message this build writes. Bump on
 /// any breaking change; older versions fail safe as unsupported.
-const MAGIC: &str = "SNP1";
+const MAGIC: &str = "SNP2";
 
 /// Why a wire payload was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -177,16 +177,16 @@ impl Message {
     }
 }
 
-/// One frame as eight tokens plus a newline: pointer x/y as f32 bit
-/// patterns (exact), the five buttons as 0/1, reseed as `-` or 16 hex
-/// digits.
+/// One frame as ten tokens plus a newline: pointer x/y as f32 bit
+/// patterns (exact), the seven buttons/modifiers as 0/1, reseed as `-` or
+/// 16 hex digits.
 fn write_frame(out: &mut String, frame: &InputFrame) {
     let reseed = frame
         .reseed
         .map_or_else(|| "-".to_owned(), |seed| format!("{seed:016x}"));
     let _ = writeln!(
         out,
-        "{:08x} {:08x} {} {} {} {} {} {reseed}",
+        "{:08x} {:08x} {} {} {} {} {} {} {} {reseed}",
         frame.pointer.x.to_bits(),
         frame.pointer.y.to_bits(),
         u8::from(frame.press),
@@ -194,10 +194,12 @@ fn write_frame(out: &mut String, frame: &InputFrame) {
         u8::from(frame.release),
         u8::from(frame.toggle_pause),
         u8::from(frame.toggle_warp),
+        u8::from(frame.shift),
+        u8::from(frame.night),
     );
 }
 
-/// The eight frame tokens back into an [`InputFrame`].
+/// The ten frame tokens back into an [`InputFrame`].
 fn parse_frame<'a>(
     at: &At,
     tokens: &mut impl Iterator<Item = &'a str>,
@@ -212,6 +214,8 @@ fn parse_frame<'a>(
         release: at.bit(tokens.next())?,
         toggle_pause: at.bit(tokens.next())?,
         toggle_warp: at.bit(tokens.next())?,
+        shift: at.bit(tokens.next())?,
+        night: at.bit(tokens.next())?,
         reseed: at.opt_hex64(tokens.next())?,
     })
 }
@@ -297,6 +301,8 @@ mod tests {
             release: true,
             toggle_pause: true,
             toggle_warp: true,
+            shift: true,
+            night: true,
             reseed: Some(u64::MAX),
         }
     }
@@ -464,11 +470,11 @@ mod tests {
             Err(WireError::UnsupportedVersion)
         ));
         // Out-of-range crew indices are refused at the wire.
-        assert!(Message::from_wire("SNP1 hello 6").is_err());
-        assert!(Message::from_wire("SNP1 input 1 6 0 0 0 0 0 0 0 -").is_err());
+        assert!(Message::from_wire("SNP2 hello 6").is_err());
+        assert!(Message::from_wire("SNP2 input 1 6 0 0 0 0 0 0 0 0 0 -").is_err());
         // Loose booleans are refused: the strict wire has no "2" or "true".
-        assert!(Message::from_wire("SNP1 input 1 0 0 0 2 0 0 0 0 -").is_err());
-        assert!(Message::from_wire("SNP1 input 1 0 0 0 true 0 0 0 0 -").is_err());
+        assert!(Message::from_wire("SNP2 input 1 0 0 0 2 0 0 0 0 -").is_err());
+        assert!(Message::from_wire("SNP2 input 1 0 0 0 true 0 0 0 0 -").is_err());
     }
 
     #[test]
@@ -490,7 +496,7 @@ mod tests {
         }
         // Any frame line replaced by garbage names its line.
         for target in 1..lines.len() {
-            for garbage in ["", "frame", "frame 0 0 0 0 0 0 0", "noise 0 0 0 0 0 0 0 -"] {
+            for garbage in ["", "frame", "frame 0 0 0 0 0 0 0 0 0", "noise 0 0 0 0 0 0 0 0 0 -"] {
                 let mangled: String = lines
                     .iter()
                     .enumerate()
@@ -509,7 +515,7 @@ mod tests {
     #[test]
     fn arbitrary_garbage_never_panics() {
         // Deterministic fuzz: random-ish strings over a spicy alphabet.
-        let alphabet: Vec<char> = "SNP1 hello\nframe 0-9abcdefx \u{FFFD}\u{1F680}\t"
+        let alphabet: Vec<char> = "SNP2 hello\nframe 0-9abcdefx \u{FFFD}\u{1F680}\t"
             .chars()
             .collect();
         for round in 0_u64..300 {

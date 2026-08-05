@@ -104,6 +104,12 @@ const UI_GAIN: f32 = 0.35;
 /// Gain for the reseed chime.
 const CHIME_GAIN: f32 = 0.4;
 
+/// Comet ice thunking aboard, before the haul scaling.
+const HARVEST_GAIN: f32 = 0.5;
+
+/// The ??? exchange's quiet stinger.
+const EXCHANGE_GAIN: f32 = 0.3;
+
 /// Cruising engine loop target while traveling out of warp.
 const ENGINE_GAIN: f32 = 0.25;
 
@@ -320,6 +326,10 @@ impl Audio {
             // No one-shot: the omen is the hum swelling, and marking its
             // edges with a sting would give the mystery away.
             Cue::OmenStart | Cue::OmenEnd => return,
+            // Free cargo thunking into the hold, scaled by the haul.
+            Cue::Harvest { intensity } => (&self.thock, HARVEST_GAIN * loudness(intensity)),
+            // The exchange gets the stinger, quiet: ??? is not loud.
+            Cue::Exchange => (&self.stinger, EXCHANGE_GAIN),
             Cue::Creak { intensity } => {
                 let creak = &self.creaks[self.next_creak];
                 self.next_creak = (self.next_creak + 1) % self.creaks.len();

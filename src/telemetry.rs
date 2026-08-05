@@ -227,6 +227,8 @@ impl Aggregate {
                 // Not in the schema table, so not collected.
                 Cue::Select
                 | Cue::OmenEnd
+                | Cue::Harvest { .. }
+                | Cue::Exchange
                 | Cue::Creak { .. }
                 | Cue::RatAboard
                 | Cue::RatSkitter { .. }
@@ -652,7 +654,7 @@ mod tests {
         assert!(!at.traveling && !at.warp && !at.paused && !at.received_occupied);
 
         // Select Venus, launch, then toggle warp and pause.
-        sim.advance(0.0, &press_at(sim.poi_pos(0)));
+        sim.advance(0.0, &press_at(sim.poi_pos(3)));
         sim.advance(0.0, &press_at(rect_center(layout::LAUNCH_LEVER)));
         sim.advance(
             0.0,

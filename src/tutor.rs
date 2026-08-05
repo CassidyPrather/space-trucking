@@ -46,13 +46,15 @@ const FADE_OUT: f32 = 0.8;
 /// Seconds the fake press takes to sink in or lift off.
 const PRESS_EASE: f32 = 0.08;
 
-/// The port the fly lesson demonstrates picking: Mars reads nicely
-/// mid-map…
-const DEMO_POI: PoiId = 2;
+/// The port the fly lesson demonstrates picking: Jupiter reads nicely —
+/// big, banded, and never behind the inner ring's transit-chit gate a
+/// fresh run cannot pass.
+const DEMO_POI: PoiId = 3;
 
-/// …unless the run happens to be docked there, in which case Venus stands
-/// in. Either way the position comes from [`POIS`], never a hardcoded point.
-const DEMO_POI_ALT: PoiId = 0;
+/// …unless the run happens to be docked there, in which case Saturn
+/// stands in. Either way the position comes from the sim's live sky,
+/// never a hardcoded point.
+const DEMO_POI_ALT: PoiId = 7;
 
 /// What the ghost's dim echo highlights. The real console cannot react to
 /// a fake hand, so the demonstration names its own faint consequences.
@@ -406,7 +408,7 @@ mod tests {
     const DT: f32 = 1.0 / 60.0;
 
     /// Venus, the trade-lesson test destination.
-    const VENUS: PoiId = 0;
+    const URANUS: PoiId = 4;
 
     fn press_at(p: Vec2) -> InputFrame {
         InputFrame {
@@ -430,13 +432,13 @@ mod tests {
 
     /// Select Venus, pull the lever, and fast-forward onto the dock.
     fn fly_to_venus(sim: &mut Sim) {
-        sim.advance(0.0, &press_at(sim.poi_pos(VENUS)));
+        sim.advance(0.0, &press_at(sim.poi_pos(URANUS)));
         sim.advance(0.0, &press_at(rect_center(layout::LAUNCH_LEVER)));
         let ShipState::Traveling { leg_ticks, .. } = sim.ship().state else {
             panic!("lever pull must depart");
         };
         sim.fast_forward(leg_ticks + 10);
-        assert_eq!(sim.ship().state, ShipState::Docked(VENUS));
+        assert_eq!(sim.ship().state, ShipState::Docked(URANUS));
     }
 
     #[test]
@@ -537,7 +539,7 @@ mod tests {
     #[test]
     fn traveling_keeps_the_ghost_away() {
         let mut sim = Sim::new(7);
-        sim.advance(0.0, &press_at(sim.poi_pos(VENUS)));
+        sim.advance(0.0, &press_at(sim.poi_pos(URANUS)));
         sim.advance(0.0, &press_at(rect_center(layout::LAUNCH_LEVER)));
         assert!(matches!(sim.ship().state, ShipState::Traveling { .. }));
         let mut tutor = Tutor::default();

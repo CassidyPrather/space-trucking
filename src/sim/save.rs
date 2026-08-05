@@ -20,7 +20,7 @@ use std::str::FromStr;
 
 use super::cargo::{Kind, Loc, Piece};
 use super::event::{Omen, Phase};
-use super::layout::{GRID_COLS, GRID_ROWS, SHELF_SLOTS};
+use super::layout::{FLOTSAM_SLOTS, GRID_COLS, GRID_ROWS, SHELF_SLOTS};
 use super::map::{POI_COUNT, PoiId, Ship, ShipState};
 use super::rats::{CHASE_LIMIT, Rat, Rats};
 use super::{KIND_COUNT, MAX_CREW, Sim, barter};
@@ -67,6 +67,7 @@ pub(crate) fn serialize(sim: &Sim) -> String {
     let _ = writeln!(out, "warp {}", u8::from(sim.warp));
     let _ = writeln!(out, "paused {}", u8::from(sim.paused));
     let _ = writeln!(out, "deliveries {}", sim.deliveries);
+    let _ = writeln!(out, "karma {}", sim.karma);
     let _ = write!(out, "visits");
     for visit in sim.visits {
         let _ = write!(out, " {visit}");
@@ -154,6 +155,9 @@ pub(crate) fn serialize(sim: &Sim) -> String {
             Loc::ReceivedShelf { slot } => {
                 let _ = writeln!(out, " recv {slot}");
             }
+            Loc::Flotsam { slot } => {
+                let _ = writeln!(out, " flot {slot}");
+            }
         }
     }
     let _ = writeln!(out, "next_piece {}", sim.next_piece);
@@ -175,6 +179,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let warp = reader.kv::<u8>("warp")? != 0;
     let paused = reader.kv::<u8>("paused")? != 0;
     let deliveries = reader.kv("deliveries")?;
+    let karma = reader.kv("karma")?;
     let visits = parse_visits(&mut reader)?;
     let ship = parse_ship(&mut reader, tick)?;
     let legs = reader.kv("legs")?;
@@ -184,13 +189,14 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let (pieces, next_piece) = parse_pieces(&mut reader)?;
 
     let barter = match ship.state {
-        ShipState::Docked(at) => {
+        // The comet and ??? dock without a counterparty: no barter opens.
+        ShipState::Docked(at) if at != super::map::COMET && at != super::map::WANDERER => {
             let mut barter = barter::rebuild(seed, at, visits[usize::from(at)], &pieces);
             barter.eagerness = eagerness;
             barter.prev_eagerness = eagerness;
             Some(barter)
         }
-        ShipState::Traveling { .. } => None,
+        _ => None,
     };
     let values = barter.as_ref().map_or([0; KIND_COUNT], |b| {
         barter::visit_values(seed, b.station, b.visit)
@@ -215,6 +221,8 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         legs,
         omen,
         rats,
+        karma,
+        night: false,
         last_violation: None,
     })
 }
@@ -405,6 +413,13 @@ fn parse_loc<'a>(
                 _ => Loc::ReceivedShelf { slot },
             })
         }
+        Some("flot") => {
+            let slot: u8 = reader.token(tokens.next())?;
+            if usize::from(slot) >= FLOTSAM_SLOTS.len() {
+                return Err(reader.err());
+            }
+            Ok(Loc::Flotsam { slot })
+        }
         _ => Err(reader.err()),
     }
 }
@@ -549,7 +564,7 @@ mod tests {
             held: true,
             ..InputFrame::default()
         };
-        sim.advance(0.0, &press(super::super::poi_pos(0, sim.tick())));
+        sim.advance(0.0, &press(super::super::poi_pos(7, sim.tick())));
         let lever = layout::LAUNCH_LEVER;
         sim.advance(
             0.0,
@@ -631,7 +646,7 @@ mod tests {
         let rat_line = "rat 4 1 2 3 30 700 2800 1";
         assert!(save.contains(rat_line), "worked save must carry the rat");
         for (needle, bad) in [
-            ("ship travel 6 0", "ship travel 12 0"), // POI out of range
+            ("ship travel 6 7", "ship travel 6 12"), // POI out of range
             ("tick 90", "tick -90"),
             ("tick 90", "tick 99999999999999999999999"),
             // The rat must sit inside the grid, hop from inside the grid,

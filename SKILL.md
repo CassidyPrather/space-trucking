@@ -105,10 +105,13 @@ Anything genuinely unavoidable gets isolated in one place for future
 translation.
 
 Cargo is conserved: a piece the player owns never vanishes or changes hands
-except through three ceremonies — the accept lever, the Guild's hangar
+except through four ceremonies — the accept lever, the Guild's hangar
 steal on docking (`Cue::Delivered`, per DESIGN.md's Central Server section),
-and ???'s three-for-one exchange (`Cue::Exchange`). The casino only ever
-transmutes a wagered piece (`Cue::CasinoLoss`), never destroys it.
+???'s three-for-one exchange (`Cue::Exchange`), and the outboard net's
+sweep (`Cue::Jettison`): cargo dragged onto the net rides outside the hull,
+recoverable until the next dock, departure, or encounter close carries it
+off. The suspicious crate refuses the net. The casino only ever transmutes
+a wagered piece (`Cue::CasinoLoss`), never destroys it.
 No drag can destroy anything. The ownership rule lives in exactly one place
 (`cargo::player_owned`), the drop matrix consumes it in `Sim::resolve_drop`,
 and the renderer's affordances come from `Sim::drop_targets()` — never

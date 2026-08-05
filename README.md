@@ -35,7 +35,10 @@ and three wasted pulls ends the visit's trading — though no station in the
 system refuses a gift. Cargo has opinions about stowage (heavy rides low,
 volatiles refuse adjacency, cryo hugs the hull), and one matte-black kind of
 crate hums, vanishes into a Guild hangar on delivery, and fills an unlabeled
-lamp plate with whatever is being counted.
+lamp plate with whatever is being counted. When space runs truly short,
+cargo dragged onto the outboard net (lower-left of the map glass) rides
+outside the hull — recoverable until the next port call or cast-off sweeps
+it away for good. The humming crate refuses to go.
 
 | Input           | Effect                                                     |
 | --------------- | ---------------------------------------------------------- |

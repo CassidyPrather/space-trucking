@@ -305,6 +305,10 @@ pub enum Cue {
     AdEnd,
     /// A fluff became two fluffs. Nobody saw it happen.
     FluffBirth,
+    /// The outboard net was swept: jettisoned cargo drifted away for
+    /// good. Fires at the ceremonies that sweep it — docking, casting
+    /// off, an encounter falling astern — never on the reversible drop.
+    Jettison,
     /// The hangar counter filled: the Grand Parade is leaving the dock.
     ParadeStart,
     /// Ambient hull creak while traveling.
@@ -369,6 +373,9 @@ pub struct DropTargets {
     pub shelf: bool,
     /// The received shelf (received pieces re-slotting, while docked).
     pub received: bool,
+    /// The outboard net (player pieces, any time — jettison, reversible
+    /// until the next sweep). Suspicious cargo refuses it.
+    pub net: bool,
 }
 
 /// What [`Sim::fast_forward`] lived through, so the frontend can summarise
@@ -1279,12 +1286,24 @@ impl Sim {
                 Err(violation) => Err(Some(violation)),
             };
         }
-        if flotsam {
-            // Not stowed: it can only go back to a drift slot.
-            if let Some(slot) = layout::slot_at2(&layout::FLOTSAM_SLOTS, p) {
-                let loc = Loc::Flotsam { slot };
-                return self.slot_free(loc, piece.id).then_some(loc).ok_or(None);
+        if let Some(slot) = layout::slot_at2(&layout::FLOTSAM_SLOTS, p) {
+            // The outboard net: drifting pieces re-slot freely, and the
+            // player's own cargo can be put outside the hull — jettison,
+            // reversible until the next sweep (dock, depart, or the
+            // encounter that owns the drift falling astern). One thing
+            // will not go: cargo that hums. It prefers to stay.
+            if !ours && !flotsam {
+                return Err(None);
             }
+            if ours && matches!(piece.kind.tag(), Some(Tag::Suspicious)) {
+                return Err(Some(Violation::Suspicious));
+            }
+            let loc = Loc::Flotsam { slot };
+            return self.slot_free(loc, piece.id).then_some(loc).ok_or(None);
+        }
+        if flotsam {
+            // Adrift and not headed for the hold or back to the net:
+            // nothing else may take it.
             return Err(None);
         }
         if self.barter.is_some() {
@@ -1332,6 +1351,8 @@ impl Sim {
         let ours = player_owned(piece.loc);
         let docked = self.barter.is_some();
         Some(DropTargets {
+            net: (ours && !matches!(piece.kind.tag(), Some(Tag::Suspicious)))
+                || matches!(piece.loc, Loc::Flotsam { .. }),
             hold: ours || matches!(piece.loc, Loc::Flotsam { .. }),
             give: ours && docked,
             take: !ours && docked,
@@ -1517,6 +1538,12 @@ impl Sim {
         };
         debug_assert!(!self.pads_occupied(), "launch gate must clear the pads");
         let leg_ticks = map::leg_ticks(from, to, self.tick);
+        // Casting off tears the net clean: jettisoned cargo stays behind
+        // with the berth. Noted here, announced after the departure clunk.
+        let swept = self
+            .pieces
+            .iter()
+            .any(|piece| matches!(piece.loc, Loc::Flotsam { .. }));
         self.pieces
             .retain(|piece| matches!(piece.loc, Loc::Hold { .. }));
         self.barter = None;
@@ -1533,6 +1560,9 @@ impl Sim {
             leg_ticks,
         };
         self.cues.push(Cue::Depart);
+        if swept {
+            self.cues.push(Cue::Jettison);
+        }
         // After the departure clunk: the stowaway slips in with the cargo.
         self.rats.on_depart(
             self.seed,
@@ -1818,12 +1848,17 @@ impl Sim {
         self.next_piece += 1;
     }
 
-    /// Sweep every drifting piece over the side. Never player cargo:
-    /// flotsam is nobody's until stowed, which is why this is not a third
-    /// door in the conservation rules.
+    /// Sweep every drifting piece over the side, announcing it when
+    /// anything actually went. Encounter loot out here was never the
+    /// player's; jettisoned cargo was, which is why the sweep is a named
+    /// ceremony (`Cue::Jettison`) rather than a silent tidy-up.
     fn clear_flotsam(&mut self) {
+        let before = self.pieces.len();
         self.pieces
             .retain(|piece| !matches!(piece.loc, Loc::Flotsam { .. }));
+        if self.pieces.len() < before {
+            self.cues.push(Cue::Jettison);
+        }
         for held in &mut self.held {
             let orphaned = matches!(held, Some(h) if !self.pieces.iter().any(|p| p.id == h.piece));
             if orphaned {
@@ -2868,6 +2903,7 @@ mod tests {
                 take: false,
                 shelf: false,
                 received: false,
+                net: true,
             })
         );
         sim.advance(0.0, &release_at(vial.x, vial.y));
@@ -2887,6 +2923,7 @@ mod tests {
                 take: true,
                 shelf: true,
                 received: false,
+                net: false,
             })
         );
     }
@@ -2923,10 +2960,12 @@ mod tests {
             sim.advance(TICK_DT, &input);
             // The two legitimate exits: the accept lever, and the Guild's
             // hangar steal.
-            let ceded = sim
-                .cues()
-                .iter()
-                .any(|cue| matches!(cue, Cue::Accept { .. } | Cue::Delivered | Cue::Exchange));
+            let ceded = sim.cues().iter().any(|cue| {
+                matches!(
+                    cue,
+                    Cue::Accept { .. } | Cue::Delivered | Cue::Exchange | Cue::Jettison
+                )
+            });
             let after = owned(&sim);
             assert!(
                 after >= before || ceded,
@@ -3610,10 +3649,12 @@ mod tests {
                 };
             }
             sim.crew_tick(&frames);
-            let ceded = sim
-                .cues()
-                .iter()
-                .any(|cue| matches!(cue, Cue::Accept { .. } | Cue::Delivered | Cue::Exchange));
+            let ceded = sim.cues().iter().any(|cue| {
+                matches!(
+                    cue,
+                    Cue::Accept { .. } | Cue::Delivered | Cue::Exchange | Cue::Jettison
+                )
+            });
             let after = owned(&sim);
             assert!(
                 after >= before || ceded,
@@ -4781,6 +4822,88 @@ mod tests {
                 .filter(|p| p.kind == Kind::VeryMysteriousCrate)
                 .count(),
             1
+        );
+    }
+
+    #[test]
+    fn jettison_is_reversible_until_the_departure_sweep() {
+        let mut sim = Sim::new(15);
+        // Overboard: the vial goes onto the net, off the manifest.
+        let net0 = rect_center(layout::FLOTSAM_SLOTS[0]);
+        drag(&mut sim, cell_center(0, 0), net0);
+        let netted = sim
+            .pieces()
+            .iter()
+            .find(|p| p.loc == Loc::Flotsam { slot: 0 })
+            .expect("the vial should ride the net")
+            .id;
+        // Second thoughts: back into the hold, no harm done.
+        drag(&mut sim, net0, cell_center(0, 0));
+        assert!(
+            sim.pieces()
+                .iter()
+                .any(|p| p.id == netted && matches!(p.loc, Loc::Hold { .. })),
+            "netted cargo must be recoverable before a sweep"
+        );
+        // Third thoughts: overboard again, and cast off. The sweep is the
+        // ceremony, and it announces itself.
+        drag(&mut sim, cell_center(0, 0), net0);
+        launch(&mut sim, SATURN);
+        assert!(
+            sim.cues().contains(&Cue::Jettison),
+            "the departure sweep must be announced"
+        );
+        assert!(
+            !sim.pieces().iter().any(|p| p.id == netted),
+            "jettisoned cargo stays behind with the berth"
+        );
+    }
+
+    #[test]
+    fn the_dock_sweep_takes_what_rides_the_net() {
+        let mut sim = launched(16);
+        // Mid-leg: the pearls go over the side, and stay grabbable...
+        drag(
+            &mut sim,
+            cell_center(2, 0),
+            rect_center(layout::FLOTSAM_SLOTS[1]),
+        );
+        let netted = sim
+            .pieces()
+            .iter()
+            .find(|p| p.loc == Loc::Flotsam { slot: 1 })
+            .expect("pearls on the net")
+            .id;
+        // ...until the dock. Walk in stepwise so the cue is observable.
+        let mut saw_sweep = false;
+        for _ in 0..leg_of(&sim) + 10 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            saw_sweep |= sim.cues().contains(&Cue::Jettison);
+            if matches!(sim.ship().state, ShipState::Docked(_)) {
+                break;
+            }
+        }
+        assert!(saw_sweep, "the dock sweep must be announced");
+        assert!(!sim.pieces().iter().any(|p| p.id == netted));
+    }
+
+    #[test]
+    fn the_humming_crate_refuses_the_net() {
+        let mut sim = Sim::new(17);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 0);
+        let crate_at = cell_center(4, 0);
+        let net0 = rect_center(layout::FLOTSAM_SLOTS[0]);
+        sim.advance(0.0, &press_at(crate_at.x, crate_at.y));
+        assert!(sim.held(0).is_some());
+        sim.advance(0.0, &held_at(net0.x, net0.y));
+        sim.advance(0.0, &release_at(net0.x, net0.y));
+        assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
+        assert_eq!(sim.last_violation(), Some(Violation::Suspicious));
+        assert!(
+            sim.pieces()
+                .iter()
+                .any(|p| p.kind == Kind::SuspiciousCrate && matches!(p.loc, Loc::Hold { .. })),
+            "it prefers to stay, and it stays"
         );
     }
 }

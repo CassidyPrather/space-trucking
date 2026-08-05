@@ -135,6 +135,9 @@ const AD_SWAT_GAIN: f32 = 0.5;
 /// One fluff becoming two, barely audibly.
 const FLUFF_GAIN: f32 = 0.15;
 
+/// The outboard net sweeping clean.
+const JETTISON_GAIN: f32 = 0.3;
+
 /// The Grand Parade's stinger — the biggest ceremony the game has.
 const PARADE_GAIN: f32 = 0.6;
 
@@ -376,6 +379,8 @@ impl Audio {
             Cue::AdEnd => (&self.blip_down, AD_GAIN),
             // A very soft pop, like a second yawn.
             Cue::FluffBirth => (&self.tick_pick, FLUFF_GAIN),
+            // The net sweeping clean: a low latch, cargo going its own way.
+            Cue::Jettison => (&self.latch, JETTISON_GAIN),
             // The hangar opens. Whatever it was for, it is happening.
             Cue::ParadeStart => (&self.stinger, PARADE_GAIN),
             // Free cargo thunking into the hold, scaled by the haul.

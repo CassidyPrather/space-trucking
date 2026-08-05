@@ -240,6 +240,7 @@ impl Aggregate {
                 | Cue::AdSwat
                 | Cue::AdEnd
                 | Cue::FluffBirth
+                | Cue::Jettison
                 | Cue::ParadeStart
                 | Cue::Creak { .. }
                 | Cue::RatAboard

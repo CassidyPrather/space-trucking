@@ -625,6 +625,23 @@ fn draw_sweep(c: &Canvas, glass: layout::Rect, t: f32) {
 
 // --------------------------------------------------------------------- map --
 
+/// The outboard net: two wells riveted to the map's lower corner. Cargo
+/// dragged out here rides outside the hull — encounter loot drifts in,
+/// jettisoned goods wait for the sweep — so the wells are permanent
+/// furniture, glowing only when a drop would take.
+fn draw_net(c: &Canvas, scene: &Scene) {
+    let invited = scene.sim.drop_targets(0).is_some_and(|targets| targets.net);
+    for &slot in &layout::FLOTSAM_SLOTS {
+        c.frame(inflate(slot, PX), fade(PHOSPHOR_DIM, 0.7));
+        socket_well(c, slot);
+        if invited {
+            let pulse = (scene.idle_clock() * 2.0).sin().mul_add(0.08, 0.55);
+            c.fill(inflate(slot, 2.0), fade(AMBER, 0.10));
+            c.frame(inflate(slot, 2.0), fade(AMBER, pulse));
+        }
+    }
+}
+
 fn draw_map(c: &Canvas, scene: &Scene) {
     // Star twinkle and the sweep are decoration: under reduced motion the
     // idle clock holds at zero, so the stars sit steady and the sweep parks
@@ -636,6 +653,7 @@ fn draw_map(c: &Canvas, scene: &Scene) {
     draw_route_and_ship(c, scene);
     draw_pois(c, scene, glass);
     draw_parade(c, scene, glass);
+    draw_net(c, scene);
     draw_travel_company(c, scene, glass);
     draw_sweep(c, glass, t);
     finish_screen(c, glass, scene);
@@ -2165,12 +2183,38 @@ fn piece_glyph(c: &Canvas, kind: Kind, variant: u8, gnawed: bool, rect: layout::
     }
 }
 
-/// A small box that hums to itself, quieter than its suspicious cousin.
+/// A small parcel in dun paper, lashed with twine, addressed to no one.
+/// Deliberately nothing like the matte-black crates: muted, domestic,
+/// almost boring — until you catch the faint violet breath under the
+/// wrapping, on a slow cycle you have to be watching to see.
 fn mysterious_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, t: f32) {
-    c.fill(b, col);
-    bevel(c, b, dim(col, -0.15), dim(col, 0.3));
-    let hum = (t * 4.4).sin().mul_add(0.12, 0.3);
-    c.dot(rect_center(b), b.w * 0.16 * vs, fade(EERIE, hum));
+    let parcel = inflate(b, -b.w * 0.08);
+    c.fill(parcel, col);
+    bevel(c, parcel, dim(col, -0.08), dim(col, 0.18));
+    // Twine, crossed, with a knot slightly off-centre (hand-tied).
+    let twine = dim(col, 0.35);
+    let knot = Vec2::new(
+        parcel.w.mul_add(0.42 * vs, parcel.x),
+        parcel.h.mul_add(0.5, parcel.y),
+    );
+    c.seg(
+        Vec2::new(knot.x, parcel.y),
+        Vec2::new(knot.x, parcel.y + parcel.h),
+        1.2,
+        twine,
+    );
+    c.seg(
+        Vec2::new(parcel.x, knot.y),
+        Vec2::new(parcel.x + parcel.w, knot.y),
+        1.2,
+        twine,
+    );
+    c.dot(knot, 1.4, dim(col, 0.5));
+    // The breath: a slow, easily-missed violet seep at the paper's seam.
+    let breath = (t * 0.8).sin().max(0.0) * 0.14;
+    if breath > 0.01 {
+        c.frame(inflate(parcel, -PX), fade(EERIE, breath));
+    }
 }
 
 /// The big one. It hums a chord.

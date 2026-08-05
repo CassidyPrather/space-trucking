@@ -192,7 +192,7 @@ pub const fn kind_color(kind: Kind) -> Color {
         Kind::CryoCore => hex(0x6c_c4_d9),
         Kind::BrinePearls => hex(0x93_a8_cf),
         Kind::SuspiciousCrate => hex(0x16_13_1c),
-        Kind::MysteriousCrate => hex(0x3a_2f_4a),
+        Kind::MysteriousCrate => hex(0x5c_54_49),
         Kind::VeryMysteriousCrate => hex(0x24_10_38),
         Kind::CometIce => hex(0xbf_e4_ef),
         Kind::BottledMidnight => hex(0x1c_25_4d),

@@ -148,9 +148,15 @@ pub fn track_pointer(
     window: Single<&Window, With<bevy::window::PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<crate::rig::CabinCamera>>,
     surfaces: Query<(&Station, &SimSurface)>,
+    rig: Res<crate::rig::CameraRig>,
     mut pointer: ResMut<VirtualPointer>,
 ) {
     *pointer = VirtualPointer::default();
+    // Roaming and gliding park the pointer: the cursor belongs to the
+    // camera until a station is focused.
+    if !rig.interactive() {
+        return;
+    }
     let Some(cursor) = window.cursor_position() else {
         return;
     };

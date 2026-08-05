@@ -22,6 +22,13 @@ in [docs/ART_DIRECTION_3D.md](docs/ART_DIRECTION_3D.md); run it with
 `cargo run --manifest-path crates/cabin/Cargo.toml` (add `-- --dev` for the
 warp unlock).
 
+Cabin controls: mouse looks and `WASD` walks; aim at a station and click
+(or `E`) to focus it — the camera glides to a fitted viewpoint and the
+cursor frees for the usual clicking and dragging. `Esc`, right-click, or
+`E` steps back out. `Space`, `M`, `R` (and `F` in dev mode) match the 2D
+console. Dev tooling: `-- --shot out.png --view desk` renders one
+screenshot and exits.
+
 ## Playing
 
 The screen is the ship's console: a star map, a 6×4 cargo hold, and a barter

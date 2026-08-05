@@ -51,63 +51,130 @@ pub enum Phase {
     View,
 }
 
+/// Dev tooling: `--shot <path>` renders a settling period, saves one
+/// screenshot of the window, and exits — the visual-verification loop.
+#[derive(Resource)]
+struct ShotMode {
+    path: String,
+    frames: u32,
+    fired: bool,
+}
+
 fn main() {
-    let dev = std::env::args().any(|arg| arg == "--dev");
-    App::new()
-        .add_plugins(
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        // The one place the game says its own name.
-                        title: "space trucking".into(),
-                        resolution: (1280, 720).into(),
-                        present_mode: PresentMode::AutoVsync,
-                        ..default()
-                    }),
+    let args: Vec<String> = std::env::args().collect();
+    let dev = args.iter().any(|arg| arg == "--dev");
+    let flag_value = |flag: &str| {
+        args.iter()
+            .position(|arg| arg == flag)
+            .and_then(|at| args.get(at + 1).cloned())
+    };
+    let shot = flag_value("--shot");
+    // `--view tank|console|desk` boots parked at that focus viewpoint —
+    // mostly for screenshot runs, harmless interactively.
+    let view = flag_value("--view").and_then(|name| match name.as_str() {
+        "tank" => Some(rig::Focus::Tank),
+        "console" => Some(rig::Focus::Console),
+        "desk" => Some(rig::Focus::Desk),
+        _ => None,
+    });
+
+    let mut app = App::new();
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    // The one place the game says its own name.
+                    title: "space trucking".into(),
+                    resolution: (1280, 720).into(),
+                    present_mode: PresentMode::AutoVsync,
                     ..default()
-                })
-                // Nearest sampling everywhere: small textures, hard edges.
-                .set(ImagePlugin::default_nearest()),
+                }),
+                ..default()
+            })
+            // Nearest sampling everywhere: small textures, hard edges.
+            .set(ImagePlugin::default_nearest()),
+    )
+    .insert_resource(Shell {
+        bridge: Bridge::boot(dev),
+        outcome: FrameOutcome::default(),
+        muted: false,
+    })
+    .insert_resource(rig::CameraRig::boot(view))
+    .init_resource::<VirtualPointer>()
+    .configure_sets(Update, (Phase::Input, Phase::Advance, Phase::View).chain())
+    .add_plugins((
+        audio::AudioPlugin,
+        barter::BarterPlugin,
+        console::ConsolePlugin,
+        fx::FxPlugin,
+        nav::NavPlugin,
+        pieces::PiecesPlugin,
+    ))
+    .add_systems(Startup, rig::spawn)
+    .add_systems(
+        Update,
+        (
+            rig::steer,
+            rig::pose,
+            rig::present_mode,
+            surface::track_pointer,
         )
-        .insert_resource(Shell {
-            bridge: Bridge::boot(dev),
-            outcome: FrameOutcome::default(),
-            muted: false,
+            .chain()
+            .in_set(Phase::Input),
+    )
+    .add_systems(Update, advance.in_set(Phase::Advance));
+    if let Some(path) = shot {
+        app.insert_resource(ShotMode {
+            path,
+            frames: 0,
+            fired: false,
         })
-        .init_resource::<VirtualPointer>()
-        .configure_sets(Update, (Phase::Input, Phase::Advance, Phase::View).chain())
-        .add_plugins((
-            audio::AudioPlugin,
-            barter::BarterPlugin,
-            console::ConsolePlugin,
-            fx::FxPlugin,
-            nav::NavPlugin,
-            pieces::PiecesPlugin,
-        ))
-        .add_systems(Startup, rig::spawn)
-        .add_systems(
-            Update,
-            (rig::glance, surface::track_pointer).in_set(Phase::Input),
-        )
-        .add_systems(Update, advance.in_set(Phase::Advance))
-        .run();
+        .add_systems(Update, shoot.in_set(Phase::View));
+    }
+    app.run();
+}
+
+/// Let the scene settle, capture the window once, exit when the write
+/// lands. Drives the in-container visual verification loop.
+fn shoot(
+    mut commands: Commands,
+    mut mode: ResMut<ShotMode>,
+    capturing: Query<(), With<bevy::render::view::screenshot::Capturing>>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    mode.frames += 1;
+    if !mode.fired && mode.frames > 45 {
+        mode.fired = true;
+        commands
+            .spawn(bevy::render::view::screenshot::Screenshot::primary_window())
+            .observe(bevy::render::view::screenshot::save_to_disk(
+                mode.path.clone(),
+            ));
+    } else if mode.fired && mode.frames > 50 && capturing.is_empty() {
+        exit.write(AppExit::Success);
+    }
 }
 
 /// Gather this frame's input in sim terms and advance the world exactly
 /// once — the sim drains pointer edges per call, so once is the law.
+/// Pointer interaction reaches the sim only while a station is focused;
+/// roaming clicks steer the camera, not the cargo. Keys stay live in
+/// every mode.
 fn advance(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     buttons: Res<ButtonInput<MouseButton>>,
     pointer: Res<VirtualPointer>,
+    camera: Res<rig::CameraRig>,
     mut shell: ResMut<Shell>,
 ) {
+    let live = camera.interactive();
     let at = pointer.sim;
     let input = FrameInput {
         pointer: at,
-        press: buttons.just_pressed(MouseButton::Left),
-        held: buttons.pressed(MouseButton::Left),
-        release: buttons.just_released(MouseButton::Left),
+        press: live && buttons.just_pressed(MouseButton::Left),
+        held: live && buttons.pressed(MouseButton::Left),
+        release: live && buttons.just_released(MouseButton::Left),
         shift: keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight),
         key_pause: keys.just_pressed(KeyCode::Space),
         key_warp: keys.just_pressed(KeyCode::KeyF),

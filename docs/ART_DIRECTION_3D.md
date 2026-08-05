@@ -8,16 +8,33 @@ different rule amends this file in the same change.
 
 ## The conceit
 
-**You are in the seat. The console became a room.**
+**You are aboard. The console became a room.**
 
 The 2D console's regions are physical stations bolted into a cramped
 freighter cabin, arranged so muscle memory transfers: the star map is a
 recessed phosphor tank upper-left, the console face (destination screen,
 ETA gauge, launch lever, icon buttons) upper-right, the hold is a racked
-tray low-left, the barter counter low-right. One seat, no locomotion — the
-camera leans gently toward the cursor and never leaves the chair. DESIGN.md
-calls the first 3D pass "an enclosed box with flavor"; the flavor is ribs,
-pipes, and panel mass, not detail assets.
+tray low-left, the barter counter low-right. DESIGN.md calls the first 3D
+pass "an enclosed box with flavor"; the flavor is ribs, pipes, and panel
+mass, not detail assets.
+
+Two camera postures, and the camera **never trails the cursor** — every
+move is deliberate, nothing to get seasick over:
+
+- **Roaming**: conventional first person. Pointer locked, mouse looks,
+  WASD walks a clamped envelope, a small glint crosshair marks aim. Aim
+  at a station and its frame invites with a glint outline.
+- **Focused**: click (or `E`) glides the camera (~0.4 s, eased, no
+  overshoot) to that station's authored viewpoint; the cursor frees and
+  precise sim interaction works exactly as in 2D. `Esc`, right-click, or
+  `E` steps back out. The two desk panels share one viewpoint so cargo
+  drags can cross from hold to counter without leaving focus.
+
+Focus viewpoints are *fitted*, not eyeballed: each is derived from its
+panel group's extents and the camera FOV, so panels fill the view and a
+retuned panel moves its viewpoint with it. Stations only need to look
+composed from their focus pose and presentable in passing — the focused
+view is the contract, the roam is atmosphere.
 
 The sim is the same one the 2D console runs — same save string, same
 flight-recorder tape. Every interactive panel is a `SimSurface`: an
@@ -101,6 +118,25 @@ shake, lamps carry lit-versus-dark-glass, rows sit at fixed stations.
 - **Don't** let the GPU budget creep: the target is integrated graphics
   at 60fps into a 480×270 buffer. Prefer emissives to lights; keep
   shadow-casting lights to one.
+
+## Keeping geometry honest
+
+The class of defect where furniture swallows a panel edge, or a viewpoint
+clips a wall, is handled structurally, not by eyeballing:
+
+- Structural masses are **data before entities** (`rig::structure()`),
+  and anything that must relate to a panel — the desk supports, the
+  focus viewpoints — is **derived from the panel's own corners and
+  extents**, never authored twice.
+- Unit tests walk the invariants: no slab may contain any sample point
+  of any panel face, every focus pose must be a legal camera position
+  facing its panels, and the roaming envelope must be clear of every
+  slab. Break the layout and the build breaks.
+- The cabin has a **screenshot mode** (`--shot out.png`, optionally
+  `--view tank|console|desk`) that renders, saves one capture, and
+  exits. It runs headless under xvfb with llvmpipe, so visual review
+  happens in CI-shaped environments too — geometry changes should come
+  with fresh captures, looked at.
 
 ## Open questions for the aesthetic experiment
 

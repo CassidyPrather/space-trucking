@@ -6,9 +6,7 @@ use std::hint::black_box;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 
-use space_trucking::sim::{
-    CrewFrame, InputFrame, MAX_CREW, POIS, ShipState, Sim, TICK_DT, Vec2, layout,
-};
+use space_trucking::sim::{CrewFrame, InputFrame, MAX_CREW, ShipState, Sim, TICK_DT, Vec2, layout};
 
 /// One hour of sim time, in ticks.
 const HOUR_TICKS: u64 = 216_000;

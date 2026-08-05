@@ -175,19 +175,7 @@ async fn main() {
             is_key_pressed(KeyCode::M) || (input.press && layout::SPEAKER.contains(input.pointer));
         let dt = get_frame_time();
 
-        // A backgrounded tab or a sleeping laptop does not pause the world:
-        // when the wall clock says far more passed than the frame did,
-        // replay the difference silently, exactly like the boot catch-up.
-        let wall_now = macroquad::miniquad::date::now();
-        let wall_gap = wall_now - last_frame;
-        last_frame = wall_now;
-        if wall_gap > STALL_SECONDS {
-            let missed = (wall_gap - f64::from(dt)).clamp(0.0, MAX_CATCH_UP);
-            let ticks = u64::try_from((missed * CATCH_UP_RATE) as i64).unwrap_or(0);
-            if sim.fast_forward(ticks).arrived {
-                juice.catch_up_arrival();
-            }
-        }
+        last_frame = stall_catch_up(&mut sim, &mut juice, last_frame, dt);
 
         recording.record_frame(sim.tick(), &input);
         sim.advance(dt, &input);
@@ -364,6 +352,23 @@ fn pixel_target() -> RenderTarget {
     );
     target.texture.set_filter(FilterMode::Nearest);
     target
+}
+
+/// A backgrounded tab or a sleeping laptop does not pause the world: when
+/// the wall clock says far more passed than the frame did, replay the
+/// difference silently, exactly like the boot catch-up. Returns the new
+/// frame timestamp.
+fn stall_catch_up(sim: &mut Sim, juice: &mut Juice, last_frame: f64, dt: f32) -> f64 {
+    let wall_now = macroquad::miniquad::date::now();
+    let wall_gap = wall_now - last_frame;
+    if wall_gap > STALL_SECONDS {
+        let missed = (wall_gap - f64::from(dt)).clamp(0.0, MAX_CATCH_UP);
+        let ticks = u64::try_from((missed * CATCH_UP_RATE) as i64).unwrap_or(0);
+        if sim.fast_forward(ticks).arrived {
+            juice.catch_up_arrival();
+        }
+    }
+    wall_now
 }
 
 /// Load the save and replay the absence, or start fresh. The second value

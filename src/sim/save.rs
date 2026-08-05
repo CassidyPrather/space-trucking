@@ -58,6 +58,9 @@ impl fmt::Display for SaveError {
 impl std::error::Error for SaveError {}
 
 /// Serialise a sim. The inverse of [`parse`].
+// One line per field is the format's clarity; splitting the writer into
+// halves would only scatter it.
+#[allow(clippy::too_many_lines)]
 pub(crate) fn serialize(sim: &Sim) -> String {
     let mut out = String::new();
     // Writing into a String cannot fail, so the fmt plumbing is dropped.
@@ -353,7 +356,7 @@ fn parse_drone(reader: &mut Reader<'_>) -> Result<Drones, SaveError> {
             let attached = flag(reader, tokens.next())?;
             let gone = flag(reader, tokens.next())?;
             let swats: u8 = reader.token(tokens.next())?;
-            if swats >= super::encounter::AD_SWATS + 1 {
+            if swats > super::encounter::AD_SWATS {
                 return Err(reader.err());
             }
             Ok(Drones {
@@ -705,7 +708,6 @@ impl<'a> Reader<'a> {
             .and_then(|t| u64::from_str_radix(t, 16).ok())
             .ok_or_else(|| self.err())
     }
-
 
     /// One token of 8 hex digits, as raw bits.
     fn hex32(&self, token: Option<&str>) -> Result<u32, SaveError> {

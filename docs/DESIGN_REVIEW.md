@@ -64,8 +64,9 @@ deliberately below.
 Out of scope on purpose, not forgotten. Revisit when the core loop stops
 changing; remove a line only by shipping it or striking it in review.
 
-- Orbital POI motion
-- Mid-flight retargeting
+- Mid-flight retargeting (orbital POI motion shipped: intercept courses
+  re-aim automatically when the arrival tick moves, but there is still no
+  steering once underway)
 - Major modules
 - Live multiplayer frontend (console ↔ lockstep session, remote pointers;
   the sim, protocol, and harness are in — see docs/NETWORKING.md)

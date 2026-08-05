@@ -132,6 +132,9 @@ pub(crate) fn visit_values(seed: u64, station: PoiId, visit: u32) -> [u8; KIND_C
 /// one anywhere — and the Guild never offers one: crates flow outward from
 /// the frontier and home to the hangar. `rng` is the persistent run RNG,
 /// spent only on variant rolls.
+// A visit is genuinely this many ingredients; a params struct would just
+// rename the arguments.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn generate(
     seed: u64,
     station: PoiId,
@@ -386,8 +389,7 @@ fn shelf_kind(station: PoiId, roll: u64) -> Kind {
             Kind::SuspiciousCrate | Kind::VeryMysteriousCrate | Kind::CasinoChip
         )
     };
-    let produce =
-        |kind: Kind| shelvable(kind) && VALUE[usize::from(station)][kind.index()] == 0;
+    let produce = |kind: Kind| shelvable(kind) && VALUE[usize::from(station)][kind.index()] == 0;
     let has_produce = Kind::ALL.iter().any(|&kind| produce(kind));
     let from_produce = has_produce && roll % 10 < PRODUCE_CHANCE;
     let pool: Vec<Kind> = Kind::ALL
@@ -620,7 +622,10 @@ mod tests {
             piece(Kind::BrinePearls, Loc::GivePad { slot: 0 }),
             gnawed(Kind::BrinePearls, Loc::TakePad { slot: 0 }),
         ];
-        assert_eq!(eagerness_of(&buying_bitten, &values, false), (5.0 / 4.0, true));
+        assert_eq!(
+            eagerness_of(&buying_bitten, &values, false),
+            (5.0 / 4.0, true)
+        );
         // The celebration reads the same totals: overshoot 5/4 - 1.
         assert!((deal_value(&buying_bitten, &values, false) - 0.25).abs() < 1e-6);
     }
@@ -736,4 +741,3 @@ mod tests {
         }
     }
 }
-

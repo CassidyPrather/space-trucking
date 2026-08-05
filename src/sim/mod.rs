@@ -799,9 +799,9 @@ impl Sim {
     /// Whether a transit chit rides in the hold — the inner ring's toll.
     #[must_use]
     pub fn transit_chit_aboard(&self) -> bool {
-        self.pieces.iter().any(|piece| {
-            matches!(piece.loc, Loc::Hold { .. }) && piece.kind == Kind::TransitChit
-        })
+        self.pieces
+            .iter()
+            .any(|piece| matches!(piece.loc, Loc::Hold { .. }) && piece.kind == Kind::TransitChit)
     }
 
     /// Whether charting to `id` is currently refused for want of papers.
@@ -959,8 +959,7 @@ impl Sim {
             .iter()
             .find(|piece| {
                 layout::piece_rect(piece).contains(p)
-                    && (docked
-                        || matches!(piece.loc, Loc::Hold { .. } | Loc::Flotsam { .. }))
+                    && (docked || matches!(piece.loc, Loc::Hold { .. } | Loc::Flotsam { .. }))
             })
             .map(|piece| (piece.id, piece.loc));
         if let Some((id, origin)) = grabbed {
@@ -1026,7 +1025,7 @@ impl Sim {
     /// A shift-press: move the piece under `p` straight to its one obvious
     /// destination — hold pieces to the give pads, shelf goods to the take
     /// pad, pad pieces back where they came from, received goods and
-    /// flotsam into the first legal hold cell (per the QoL brief: the
+    /// flotsam into the first legal hold cell (per the quality-of-life brief: the
     /// first legal spot, even if that is a bad idea). Returns whether the
     /// press was consumed; `false` means nothing shift-worthy sat under
     /// the pointer and the press falls through to the ordinary paths.
@@ -1037,8 +1036,7 @@ impl Sim {
             .iter()
             .find(|piece| {
                 layout::piece_rect(piece).contains(p)
-                    && (docked
-                        || matches!(piece.loc, Loc::Hold { .. } | Loc::Flotsam { .. }))
+                    && (docked || matches!(piece.loc, Loc::Hold { .. } | Loc::Flotsam { .. }))
             })
             .copied()
         else {
@@ -1053,15 +1051,13 @@ impl Sim {
             Loc::StationShelf { .. } if docked => self.free_slot(Loc::TakePad { slot: 0 }, 4),
             Loc::TakePad { .. } if docked => self.free_slot(Loc::StationShelf { slot: 0 }, 4),
             Loc::GivePad { .. } | Loc::ReceivedShelf { .. } | Loc::Flotsam { .. } => {
-                first_fit(&self.pieces, piece.id, piece.kind)
-                    .map(|(x, y)| Loc::Hold { x, y })
+                first_fit(&self.pieces, piece.id, piece.kind).map(|(x, y)| Loc::Hold { x, y })
             }
             _ => None,
         };
         match target {
             Some(loc) => {
-                if let Some(stored) = self.pieces.iter_mut().find(|other| other.id == piece.id)
-                {
+                if let Some(stored) = self.pieces.iter_mut().find(|other| other.id == piece.id) {
                     stored.loc = loc;
                 }
                 self.last_violation = None;
@@ -1321,10 +1317,7 @@ impl Sim {
                 barter::gnaw_loved(barter.station),
             )
             .1;
-            barter.fog = barter::fog_of(
-                &self.pieces,
-                self.familiar[usize::from(barter.station)],
-            );
+            barter.fog = barter::fog_of(&self.pieces, self.familiar[usize::from(barter.station)]);
         }
     }
 
@@ -1431,11 +1424,11 @@ impl Sim {
         if barter.patience > 0 {
             return;
         }
-        self.pieces.retain(|piece| {
-            !matches!(piece.loc, Loc::StationShelf { .. } | Loc::TakePad { .. })
-        });
+        self.pieces
+            .retain(|piece| !matches!(piece.loc, Loc::StationShelf { .. } | Loc::TakePad { .. }));
         for held in &mut self.held {
-            let holds_gone = matches!(held, Some(h) if !self.pieces.iter().any(|p| p.id == h.piece));
+            let holds_gone =
+                matches!(held, Some(h) if !self.pieces.iter().any(|p| p.id == h.piece));
             if holds_gone {
                 *held = None;
             }
@@ -1599,10 +1592,7 @@ impl Sim {
                 barter::gnaw_loved(barter.station),
             );
             barter.ready = ready;
-            barter.fog = barter::fog_of(
-                &self.pieces,
-                self.familiar[usize::from(barter.station)],
-            );
+            barter.fog = barter::fog_of(&self.pieces, self.familiar[usize::from(barter.station)]);
             barter.eagerness = step_toward(
                 barter.eagerness,
                 target.clamp(0.0, EAGER_MAX),
@@ -1717,9 +1707,7 @@ impl Sim {
             .filter(|piece| !doomed.contains(&piece.id))
             .copied()
             .collect();
-        let Some((x, y)) =
-            first_fit(&remainder, self.next_piece, Kind::VeryMysteriousCrate)
-        else {
+        let Some((x, y)) = first_fit(&remainder, self.next_piece, Kind::VeryMysteriousCrate) else {
             self.cues.push(Cue::Reject { hard: false });
             return;
         };
@@ -1762,8 +1750,7 @@ impl Sim {
         self.pieces
             .retain(|piece| !matches!(piece.loc, Loc::Flotsam { .. }));
         for held in &mut self.held {
-            let orphaned =
-                matches!(held, Some(h) if !self.pieces.iter().any(|p| p.id == h.piece));
+            let orphaned = matches!(held, Some(h) if !self.pieces.iter().any(|p| p.id == h.piece));
             if orphaned {
                 *held = None;
             }
@@ -2114,7 +2101,7 @@ mod tests {
         // Warp sixteen-fold through most of the leg — its length depends on
         // where the sky stands at the tick-30 departure — then coast in.
         let leg = map::leg_ticks(GUILD, URANUS, 30);
-        let warp_frames = (leg / u64::from(WARP_FACTOR as u32)).saturating_sub(20);
+        let warp_frames = (leg / 16).saturating_sub(20);
         let warp = InputFrame {
             toggle_warp: true,
             ..InputFrame::default()
@@ -2864,9 +2851,7 @@ mod tests {
             let ceded = sim
                 .cues()
                 .iter()
-                .any(|cue| {
-                    matches!(cue, Cue::Accept { .. } | Cue::Delivered | Cue::Exchange)
-                });
+                .any(|cue| matches!(cue, Cue::Accept { .. } | Cue::Delivered | Cue::Exchange));
             let after = owned(&sim);
             assert!(
                 after >= before || ceded,
@@ -3553,9 +3538,7 @@ mod tests {
             let ceded = sim
                 .cues()
                 .iter()
-                .any(|cue| {
-                    matches!(cue, Cue::Accept { .. } | Cue::Delivered | Cue::Exchange)
-                });
+                .any(|cue| matches!(cue, Cue::Accept { .. } | Cue::Delivered | Cue::Exchange));
             let after = owned(&sim);
             assert!(
                 after >= before || ceded,
@@ -4274,7 +4257,6 @@ mod tests {
         launch(&mut sim, SATURN);
     }
 
-
     // ---------------------------------------------------- encounter tests --
 
     /// A seed whose first Guild->Uranus leg carries an encounter, found by
@@ -4472,8 +4454,7 @@ mod tests {
             assert!(
                 sim.pieces()
                     .iter()
-                    .any(|p| matches!(p.loc, Loc::Flotsam { .. })
-                        && p.kind == Kind::GildedIdol),
+                    .any(|p| matches!(p.loc, Loc::Flotsam { .. }) && p.kind == Kind::GildedIdol),
                 "the payout should drift in the flotsam"
             );
             assert_eq!(sim.pieces().len(), count_before + 1);
@@ -4483,8 +4464,7 @@ mod tests {
             assert!(
                 sim.pieces()
                     .iter()
-                    .any(|p| matches!(p.loc, Loc::Hold { .. })
-                        && p.kind == Kind::CasinoChip),
+                    .any(|p| matches!(p.loc, Loc::Hold { .. }) && p.kind == Kind::CasinoChip),
                 "the stake should now be a commemorative chip"
             );
         }
@@ -4520,8 +4500,8 @@ mod tests {
             .find(|p| p.loc == Loc::Flotsam { slot: 0 })
             .map(|p| p.kind)
             .unwrap();
-        let (x, y) = first_fit(sim.pieces(), u32::MAX, flotsam_kind)
-            .expect("the starter hold has room");
+        let (x, y) =
+            first_fit(sim.pieces(), u32::MAX, flotsam_kind).expect("the starter hold has room");
         drag(&mut sim, from, cell_center(x, y));
         assert!(
             sim.pieces()

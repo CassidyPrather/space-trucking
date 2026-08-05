@@ -28,7 +28,30 @@ Earth is a dystopia of some sort. Pick a creative one.
 
 Mars broke off in a rebellion and are now a scrappy republic.
 
-Worlds in the outer ring probably need their own lore, to be written.
+Worlds in the outer ring probably need their own lore, to be written. A
+start (prototype canon, revise freely):
+
+- **Saturn** is the planet the outer-ring roster never mentions, and the
+  ring-barons like it that way. The rings are a debris field of a thousand
+  failed hauling companies, ground fine and picked over; salvage is the
+  whole economy, scrap trades like treasure, and every docking clamp on the
+  station was pulled off a repossessed freighter — including, possibly,
+  yours.
+- **The Umbra Market** floats in Mercury's shadow (Mercury itself is too
+  hot, but its shadow is prime real estate) and only answers hails while
+  the *caller's* clock reads deep night, which should not be possible and
+  is not explained. They bottle midnight and sell it. They pay extra for
+  rat-gnawed goods — "aged in transit, artisanal."
+- **The Hermitage** is a hollowed rock in the asteroid belt. The hermits
+  do not trade with strangers; they remember gifts, forever, and shelves
+  slowly grow things for people who gave first. Nobody has seen more than
+  one lit window.
+- **The comet** has no name on any chart. When it dives near the sun,
+  people go chip ice off it, because it is there and the ice is free.
+  Sometimes there is something else in the ice.
+- **???** is only there when three mysterious crates hum in a hold at
+  once. It trades three for one bigger one. The Guild counts the bigger
+  one four times. Nobody explains the arithmetic, least of all Cor.
 
 # Aesthetic
 

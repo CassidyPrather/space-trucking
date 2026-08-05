@@ -148,8 +148,10 @@ impl Encounters {
         // Somewhere in the 20%..70% belly of the leg, never brushing the
         // dock, capped so even a monster leg meets it for minutes only.
         let start = leg_ticks / 5 + (h >> 16) % (leg_ticks / 2).max(1);
-        let duration = (leg_ticks / 4).min(WINDOW_CAP).max(1800);
-        let end = (start + duration).min(leg_ticks.saturating_sub(600)).max(start + 1);
+        let duration = (leg_ticks / 4).clamp(1800, WINDOW_CAP);
+        let end = (start + duration)
+            .min(leg_ticks.saturating_sub(600))
+            .max(start + 1);
         self.current = Some(Encounter {
             kind,
             start,
@@ -259,7 +261,7 @@ impl Encounters {
 
     /// The casino's coin, flipped once per wager. `true` is a win.
     #[must_use]
-    pub fn casino_coin(seed: u64, tick: u64) -> bool {
+    pub const fn casino_coin(seed: u64, tick: u64) -> bool {
         splitmix(seed ^ SALT_CASINO, tick) % 2 == 0
     }
 }

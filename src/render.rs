@@ -24,8 +24,8 @@ use macroquad::camera::{Camera2D, set_camera, set_default_camera};
 use macroquad::color::Color;
 use macroquad::math::{Rect as ScreenRect, vec2};
 use macroquad::shapes::{
-    draw_arc, draw_circle, draw_circle_lines, draw_ellipse, draw_ellipse_lines,
-    draw_line, draw_poly, draw_poly_lines, draw_rectangle, draw_rectangle_lines, draw_triangle,
+    draw_arc, draw_circle, draw_circle_lines, draw_ellipse, draw_ellipse_lines, draw_line,
+    draw_poly, draw_poly_lines, draw_rectangle, draw_rectangle_lines, draw_triangle,
     draw_triangle_lines,
 };
 use macroquad::texture::{DrawTextureParams, RenderTarget, draw_texture_ex};
@@ -51,6 +51,9 @@ use crate::palette::{
 use crate::tutor::{Echo, Ghost};
 
 /// Everything one frame of drawing needs, gathered by `main`.
+// Independent presentation flags, not a state machine in disguise — the
+// same plea `InputFrame` makes.
+#[allow(clippy::struct_excessive_bools)]
 pub struct Scene<'a> {
     pub sim: &'a Sim,
     pub juice: &'a Juice,
@@ -303,7 +306,6 @@ impl Canvas {
         let p = self.point(at);
         draw_ellipse_lines(p.x, p.y, rx, ry, rot, Self::stroke(w), self.tint(col));
     }
-
 }
 
 // ------------------------------------------------------------------- entry --
@@ -983,21 +985,29 @@ fn draw_parade(c: &Canvas, scene: &Scene, glass: layout::Rect) {
     };
     let t = scene.idle_clock();
     let across = frac.mul_add(glass.w + 120.0, glass.x - 60.0);
-    let lead = Vec2::new(across, frac.mul_add(-60.0, glass.y + glass.h * 0.4));
+    let lead = Vec2::new(across, frac.mul_add(-60.0, glass.h.mul_add(0.4, glass.y)));
     for i in 0..5_u32 {
-        let back = lead - Vec2::new(26.0 + 22.0 * i as f32, (i as f32) * -6.0);
+        let back = lead - Vec2::new(22.0f32.mul_add(i as f32, 26.0), (i as f32) * -6.0);
         let r = if i == 0 { 14.0 } else { 7.0 - i as f32 };
         if back.x < glass.x + 8.0 || back.x > glass.x + glass.w - 8.0 {
             continue;
         }
-        let pulse = (t * 2.0 + i as f32).sin().mul_add(0.08, 0.8);
+        let pulse = t.mul_add(2.0, i as f32).sin().mul_add(0.08, 0.8);
         c.poly(back, 7, r.max(2.5), t * 6.0, fade(EERIE, 0.5 * pulse));
-        c.poly_ring(back, 7, r.max(2.5), t * 6.0, 1.0, fade(EERIE_BRIGHT, 0.8 * pulse));
+        c.poly_ring(
+            back,
+            7,
+            r.max(2.5),
+            t * 6.0,
+            1.0,
+            fade(EERIE_BRIGHT, 0.8 * pulse),
+        );
     }
 }
 
 /// Whatever is alongside mid-leg: its badge on the encounter plate, its
 /// spectacle on the glass, the flotsam nets, and the ad drone.
+#[allow(clippy::cast_sign_loss)] // cosmetic clocks are non-negative
 fn draw_travel_company(c: &Canvas, scene: &Scene, glass: layout::Rect) {
     let sim = scene.sim;
     if !matches!(sim.ship().state, ShipState::Traveling { .. }) {
@@ -1010,7 +1020,9 @@ fn draw_travel_company(c: &Canvas, scene: &Scene, glass: layout::Rect) {
         .pieces()
         .iter()
         .any(|p| matches!(p.loc, Loc::Flotsam { .. }));
-    let open = sim.encounter().is_some_and(space_trucking::sim::Encounter::open);
+    let open = sim
+        .encounter()
+        .is_some_and(space_trucking::sim::Encounter::open);
     if drifting || open {
         for &slot in &layout::FLOTSAM_SLOTS {
             c.frame(inflate(slot, PX), fade(PHOSPHOR_DIM, 0.7));
@@ -1037,8 +1049,8 @@ fn draw_travel_company(c: &Canvas, scene: &Scene, glass: layout::Rect) {
                     let frac = (progress.saturating_sub(enc.start)) as f32
                         / (enc.end - enc.start).max(1) as f32;
                     let at = Vec2::new(
-                        frac.mul_add(glass.w * 0.8, glass.x + glass.w * 0.1),
-                        glass.y + glass.h * 0.78 + (t * 0.5).sin() * 4.0,
+                        frac.mul_add(glass.w * 0.8, glass.w.mul_add(0.1, glass.x)),
+                        (t * 0.5).sin().mul_add(4.0, glass.h.mul_add(0.78, glass.y)),
                     );
                     c.oval(at, 26.0, 7.0, -4.0, fade(PHOSPHOR_DIM, 0.5));
                     let tail = at + Vec2::new(-30.0, 0.0);
@@ -1104,12 +1116,20 @@ fn gas_badge(c: &Canvas, mid: Vec2, used: bool, t: f32) {
         layout::Rect::new(mid.x - 6.0, mid.y - 7.0, 6.0, 5.0),
         fade(SCREEN, 0.9),
     );
-    c.arc(mid + Vec2::new(6.0, -6.0), 6.0, -90.0, 180.0, 1.2, fade(PHOSPHOR, a));
+    c.arc(
+        mid + Vec2::new(6.0, -6.0),
+        6.0,
+        -90.0,
+        180.0,
+        1.2,
+        fade(PHOSPHOR, a),
+    );
     let drip = (t * 2.0).fract() * 6.0;
     c.dot(mid + Vec2::new(12.0, drip), 1.0, fade(PHOSPHOR, a * 0.8));
 }
 
 /// The casino: a neon heptagram with running lights. No visible doors.
+#[allow(clippy::cast_sign_loss)] // cosmetic clocks are non-negative
 fn casino_badge(c: &Canvas, mid: Vec2, t: f32) {
     c.poly_ring(mid, 7, 15.0, t * 14.0, 1.4, fade(AMBER, 0.9));
     c.poly_ring(mid, 7, 10.0, t * -20.0, 1.0, fade(EERIE_BRIGHT, 0.8));
@@ -1127,7 +1147,7 @@ fn casino_badge(c: &Canvas, mid: Vec2, t: f32) {
 /// Gravel weather, incoming.
 fn meteor_badge(c: &Canvas, mid: Vec2, t: f32) {
     for (i, off) in [-8.0_f32, 0.0, 9.0].into_iter().enumerate() {
-        let jitter = ((t * 3.0) + i as f32).fract() * 5.0;
+        let jitter = t.mul_add(3.0, i as f32).fract() * 5.0;
         let head = mid + Vec2::new(off + jitter, -6.0 + jitter);
         c.seg(head + Vec2::new(-8.0, -8.0), head, 1.2, fade(AMBER, 0.7));
         c.dot(head, 1.5, fade(GLINT, 0.9));
@@ -1149,7 +1169,14 @@ fn whale_badge(c: &Canvas, mid: Vec2, t: f32) {
         mid + Vec2::new(2.0, -2.0),
         fade(PHOSPHOR, 0.85),
     );
-    c.arc(mid + Vec2::new(0.0, 12.0), 8.0, 180.0, 180.0, 1.0, fade(PHOSPHOR_DIM, 0.6));
+    c.arc(
+        mid + Vec2::new(0.0, 12.0),
+        8.0,
+        180.0,
+        180.0,
+        1.0,
+        fade(PHOSPHOR_DIM, 0.6),
+    );
 }
 
 /// One rune of the ad tongue: an angular scrawl derived from the byte, in
@@ -1159,8 +1186,8 @@ fn ad_rune(c: &Canvas, ch: u8, at: Vec2, size: f32, col: Color) {
     let h = splitmix(0xAD_51_11, u64::from(ch));
     let point = |n: u64| {
         Vec2::new(
-            ((h >> n) % 4) as f32 / 3.0 * size + at.x,
-            ((h >> (n + 8)) % 5) as f32 / 4.0 * size * 1.4 + at.y,
+            (((h >> n) % 4) as f32 / 3.0).mul_add(size, at.x),
+            (((h >> (n + 8)) % 5) as f32 / 4.0 * size).mul_add(1.4, at.y),
         )
     };
     let mut prev = point(0);
@@ -1211,7 +1238,14 @@ fn guild_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32, ph: f32) {
 /// graveyard, a thousand failed hauling companies ground to gravel.
 fn saturn_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
     c.dot(pos, r * 0.85, phosphorize(POI_SATURN, ph));
-    c.oval_ring(pos, r * 1.8, r * 0.55, -18.0, 1.4, phosphorize(POI_SATURN_RING, ph));
+    c.oval_ring(
+        pos,
+        r * 1.8,
+        r * 0.55,
+        -18.0,
+        1.4,
+        phosphorize(POI_SATURN_RING, ph),
+    );
     // Gravel in the ring: three coarse grains along its long axis.
     for f in [-1.35_f32, -0.6, 1.1] {
         let a = (-18.0_f32).to_radians();
@@ -1226,16 +1260,31 @@ fn umbra_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
     c.dot(pos, r, phosphorize(POI_UMBRA, ph));
     // The shadowed face: a screen-dark bite that leaves a crescent.
     c.dot(pos + Vec2::new(r * 0.45, -r * 0.2), r * 0.85, SCREEN);
-    c.dot(pos + Vec2::new(-r * 0.45, r * 0.3), 1.3, phosphorize(GLINT, ph));
+    c.dot(
+        pos + Vec2::new(-r * 0.45, r * 0.3),
+        1.3,
+        phosphorize(GLINT, ph),
+    );
 }
 
 /// The Hermitage: a lumpy rock in the belt with one warm lit window.
 fn hermitage_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32, ph: f32) {
     c.poly(pos, 5, r, 23.0, phosphorize(POI_HERMITAGE, ph));
-    c.poly_ring(pos, 5, r, 23.0, 1.0, phosphorize(dim(POI_HERMITAGE, 0.35), ph));
+    c.poly_ring(
+        pos,
+        5,
+        r,
+        23.0,
+        1.0,
+        phosphorize(dim(POI_HERMITAGE, 0.35), ph),
+    );
     // The window: a lamp that breathes very slowly. Hermits keep odd hours.
     let warmth = (t * 0.7).sin().mul_add(0.2, 0.75);
-    c.dot(pos + Vec2::new(r * 0.3, -r * 0.15), 1.6, fade(AMBER, warmth));
+    c.dot(
+        pos + Vec2::new(r * 0.3, -r * 0.15),
+        1.6,
+        fade(AMBER, warmth),
+    );
 }
 
 /// The comet: an icy head with its tail thrown away from the sun.
@@ -1259,7 +1308,14 @@ fn comet_glyph(c: &Canvas, pos: Vec2, r: f32, ph: f32) {
 /// ???: a diamond that is not entirely committed to existing.
 fn wanderer_glyph(c: &Canvas, pos: Vec2, r: f32, t: f32, ph: f32) {
     let there = (t * 6.3).sin().mul_add(0.25, 0.65);
-    c.poly_ring(pos, 4, r, 45.0, 1.4, fade(phosphorize(POI_WANDERER, ph), there));
+    c.poly_ring(
+        pos,
+        4,
+        r,
+        45.0,
+        1.4,
+        fade(phosphorize(POI_WANDERER, ph), there),
+    );
     c.poly_ring(
         pos,
         4,
@@ -1687,15 +1743,15 @@ fn draw_slot_rows(c: &Canvas, scene: &Scene) {
     if shuttered {
         for &slot in &layout::SHELF_SLOTS {
             c.fill(inflate(slot, PX), PLATE_SHADE);
-            let mut y = slot.y + 3.0;
-            while y < slot.y + slot.h - 2.0 {
+            let slats = ((slot.h - 5.0) / 5.0) as i32;
+            for i in 0..slats {
+                let y = (i as f32).mul_add(5.0, slot.y + 3.0);
                 c.seg(
                     Vec2::new(slot.x + 2.0, y),
                     Vec2::new(slot.x + slot.w - 2.0, y),
                     1.0,
                     fade(PLATE_LIT, 0.35),
                 );
-                y += 5.0;
             }
         }
     }
@@ -1766,6 +1822,9 @@ fn dial_color(value: f32) -> Color {
 /// The eagerness dial: a physical gauge in a raised round housing, needle
 /// eased by the sim, notch at break-even, the station's badge in the
 /// middle. Metal, never a screen.
+// The gauge is one instrument: housing, badge, track, fog, needle, pips,
+// and flashes belong together even past the line lint's comfort.
+#[allow(clippy::too_many_lines)]
 fn draw_dial(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
     let juice = scene.juice;
     let mid = layout::DIAL_CENTER;
@@ -1928,7 +1987,13 @@ fn draw_accept_lever(c: &Canvas, scene: &Scene, barter: Option<&Barter>) {
     // find out — that is the price of knowing.
     let lamp_at = Vec2::new(rect_center(handle).x, 3.5f32.mul_add(PX, handle.y));
     if certain {
-        lamp(c, lamp_at, 1.8 * PX, LAMP_OK, if ready { glow } else { 0.0 });
+        lamp(
+            c,
+            lamp_at,
+            1.8 * PX,
+            LAMP_OK,
+            if ready { glow } else { 0.0 },
+        );
     } else {
         let shimmer = (scene.idle_clock() * 5.0).sin().mul_add(0.2, 0.45);
         lamp(c, lamp_at, 1.8 * PX, AMBER, shimmer);
@@ -2101,7 +2166,12 @@ fn very_mysterious_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, t: f3
     c.fill(b, col);
     bevel(c, b, dim(col, -0.1), SHADOW);
     let hum = (t * 2.2).sin().mul_add(0.18, 0.45);
-    c.ring(rect_center(b), b.w * 0.28 * vs, 1.4, fade(EERIE_BRIGHT, hum));
+    c.ring(
+        rect_center(b),
+        b.w * 0.28 * vs,
+        1.4,
+        fade(EERIE_BRIGHT, hum),
+    );
     c.dot(rect_center(b), b.w * 0.1, fade(EERIE_BRIGHT, hum * 0.8));
 }
 
@@ -2109,14 +2179,14 @@ fn very_mysterious_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, t: f3
 fn ice_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
     let mid = rect_center(b);
     c.tri(
-        Vec2::new(mid.x, b.y + b.h * (1.0 - vs) * 0.5),
-        Vec2::new(b.x + b.w * 0.2, b.y + b.h * 0.85),
-        Vec2::new(b.x + b.w * 0.85, b.y + b.h * 0.75),
+        Vec2::new(mid.x, (b.h * (1.0 - vs)).mul_add(0.5, b.y)),
+        Vec2::new(b.w.mul_add(0.2, b.x), b.h.mul_add(0.85, b.y)),
+        Vec2::new(b.w.mul_add(0.85, b.x), b.h.mul_add(0.75, b.y)),
         col,
     );
     c.seg(
-        Vec2::new(mid.x, b.y + b.h * 0.25),
-        Vec2::new(b.x + b.w * 0.35, b.y + b.h * 0.7),
+        Vec2::new(mid.x, b.h.mul_add(0.25, b.y)),
+        Vec2::new(b.w.mul_add(0.35, b.x), b.h.mul_add(0.7, b.y)),
         1.0,
         fade(GLINT, 0.7),
     );
@@ -2132,18 +2202,28 @@ fn midnight_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
     );
     c.fill(body, col);
     c.fill(
-        layout::Rect::new(b.w.mul_add(0.42, b.x), b.h.mul_add(0.12, b.y), b.w * 0.16, b.h * 0.26),
+        layout::Rect::new(
+            b.w.mul_add(0.42, b.x),
+            b.h.mul_add(0.12, b.y),
+            b.w * 0.16,
+            b.h * 0.26,
+        ),
         col,
     );
     c.fill(
-        layout::Rect::new(b.w.mul_add(0.40, b.x), b.h.mul_add(0.06, b.y), b.w * 0.2, b.h * 0.08),
+        layout::Rect::new(
+            b.w.mul_add(0.40, b.x),
+            b.h.mul_add(0.06, b.y),
+            b.w * 0.2,
+            b.h * 0.08,
+        ),
         BRASS,
     );
     // One star, somewhere inside the bottle.
     c.dot(
         Vec2::new(
-            body.x + body.w * 0.6 * vs,
-            body.y + body.h * 0.4,
+            (body.w * 0.6).mul_add(vs, body.x),
+            body.h.mul_add(0.4, body.y),
         ),
         1.0,
         fade(GLINT, 0.9),
@@ -2175,14 +2255,14 @@ fn chit_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
     c.fill(card, col);
     bevel(c, card, dim(col, -0.1), dim(col, 0.25));
     c.fill(
-        layout::Rect::new(card.x + card.w * 0.12, card.y, card.w * 0.14, card.h),
+        layout::Rect::new(card.w.mul_add(0.12, card.x), card.y, card.w * 0.14, card.h),
         POI_GUILD,
     );
     for i in 0..3_u8 {
         c.dot(
             Vec2::new(
-                card.x + card.w * f32::from(i + 1).mul_add(0.2, 0.25) * vs,
-                card.y + card.h * 0.5,
+                (card.w * f32::from(i + 1).mul_add(0.2, 0.25)).mul_add(vs, card.x),
+                card.h.mul_add(0.5, card.y),
             ),
             0.9,
             SOCKET,
@@ -2198,7 +2278,7 @@ fn chip_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
     c.ring(mid, r * 0.94, 1.2, dim(col, 0.3));
     c.ring(mid, r * 0.55, 1.0, fade(GLINT, 0.65));
     for i in 0..4_u8 {
-        let a = f32::from(i) * std::f32::consts::FRAC_PI_2 + 0.4;
+        let a = f32::from(i).mul_add(std::f32::consts::FRAC_PI_2, 0.4);
         c.dot(polar(mid, r * 0.8, a), 1.0, fade(GLINT, 0.8));
     }
 }

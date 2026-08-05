@@ -19,13 +19,16 @@ end of every work stage.
   - `mod.rs` — `Sim`, `InputFrame`, `Cue`, `advance`, `fast_forward`.
   - `layout.rs` — shared console geometry, used for both hit-tests and
     rendering so they cannot disagree.
-  - `map.rs` — points of interest and travel.
+  - `map.rs` — points of interest, their orbits, and intercept travel.
+    Positions are pure functions of the tick; nothing is stored.
   - `cargo.rs` — cargo kinds, pieces, and placement rules.
   - `barter.rs` — valuation and trade resolution.
-  - `event.rs` / `rats.rs` — the events, as siblings with a uniform hook
-    shape (on_depart/on_dock/on_tick/on_press + own save lines and cues);
-    a third event should copy the shape, not invent one.
-  - `save.rs` — `STV3` serialization.
+  - `event.rs` / `rats.rs` / `encounter.rs` — the events, as siblings
+    with a uniform hook shape (on_depart/on_dock/travel_tick/on_press +
+    own save lines and cues); a new event should copy the shape, not
+    invent a framework. `encounter.rs` holds both the travel encounters
+    (derelict/gas station/casino/meteors/whale) and the ad drone.
+  - `save.rs` — `STV4` serialization.
 - `src/net/` — deterministic lockstep multiplayer per `docs/NETWORKING.md`:
   protocol messages, helm/client session state machines, the guild server
   (idempotent max-merge delivery counters), and the seeded flaky-network
@@ -39,10 +42,12 @@ end of every work stage.
 - `src/storage.rs` — quad-storage wrapper: localStorage on the web, a
   `local.data` file natively. Binary-crate module, both targets.
 - `build.rs` — embeds a `git describe` version string.
-- `web/index.html`, `web/gl.js`, `web/audio.js` — the static shell, the
-  vendored miniquad loader, and the vendored quad-snd audio plugin. Zero
+- `web/index.html`, `web/gl.js`, `web/audio.js`, `web/sapp_jsutils.js`,
+  `web/quad-storage.js` — the static shell and the vendored miniquad
+  plugins (load order is load-bearing; index.html documents it). Zero
   external requests; honors `prefers-color-scheme` and
-  `prefers-reduced-motion`.
+  `prefers-reduced-motion`, mirrors the local deep-night window, and owns
+  the `#pretty-please` developer-mode ceremony.
 - `scripts/build-web.sh` — wasm build → `dist/web/`.
 - `.github/workflows/ci-cd.yml` — lint, test, audit, size-budgeted web bundle,
   Pages deploy, release artifacts.
@@ -100,8 +105,10 @@ Anything genuinely unavoidable gets isolated in one place for future
 translation.
 
 Cargo is conserved: a piece the player owns never vanishes or changes hands
-except through two ceremonies — the accept lever, and the Guild's hangar
-steal on docking (`Cue::Delivered`, per DESIGN.md's Central Server section).
+except through three ceremonies — the accept lever, the Guild's hangar
+steal on docking (`Cue::Delivered`, per DESIGN.md's Central Server section),
+and ???'s three-for-one exchange (`Cue::Exchange`). The casino only ever
+transmutes a wagered piece (`Cue::CasinoLoss`), never destroys it.
 No drag can destroy anything. The ownership rule lives in exactly one place
 (`cargo::player_owned`), the drop matrix consumes it in `Sim::resolve_drop`,
 and the renderer's affordances come from `Sim::drop_targets()` — never
@@ -116,7 +123,7 @@ lives in `src/palette.rs` — a purity test fails the build on any raw color
 constructor elsewhere in the frontend. Follow the file or amend it in the
 same change.
 
-The save string is versioned (magic `STV3`), hand-rolled in
+The save string is versioned (magic `STV4`), hand-rolled in
 `src/sim/save.rs`, with no compatibility guarantees before 1.0. Bump the
 magic on any breaking change; an old or corrupt save fails safe into a fresh
 game, never a panic.

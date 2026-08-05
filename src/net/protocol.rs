@@ -496,7 +496,12 @@ mod tests {
         }
         // Any frame line replaced by garbage names its line.
         for target in 1..lines.len() {
-            for garbage in ["", "frame", "frame 0 0 0 0 0 0 0 0 0", "noise 0 0 0 0 0 0 0 0 0 -"] {
+            for garbage in [
+                "",
+                "frame",
+                "frame 0 0 0 0 0 0 0 0 0",
+                "noise 0 0 0 0 0 0 0 0 0 -",
+            ] {
                 let mangled: String = lines
                     .iter()
                     .enumerate()

@@ -255,8 +255,9 @@ const fn overlaps(a: (u8, u8, u8, u8), b: (u8, u8, u8, u8)) -> bool {
     a.0 < b.0 + b.2 && b.0 < a.0 + a.2 && a.1 < b.1 + b.3 && b.1 < a.1 + a.3
 }
 
-/// The first hold cell (row-major scan) where `kind` may legally sit, if
-/// any. Shared by the shift-click quick-stow, the comet harvest, and the
+/// The first hold cell (row-major scan) where `kind` may legally sit.
+///
+/// Shared by the shift-click quick-stow, the comet harvest, and the
 /// ??? exchange — "first legal spot, even if that is a bad idea" is the
 /// contract, so all three agree on what "first" means.
 #[must_use]

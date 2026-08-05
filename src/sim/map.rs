@@ -96,7 +96,8 @@ const fn circle(orbit: f32, period_min: u64, phase_deg: u64) -> Track {
     }
 }
 
-/// Every POI, in the fixed order the barter value table rows follow:
+/// Every POI, in the fixed order the barter value table rows follow.
+///
 /// Venus, Earth, Mars, Jupiter, Uranus, Neptune, Guild Station, Saturn,
 /// Umbra Market, Hermitage, comet, `???`. The first seven keep their
 /// historical indices; newcomers append. Orbital speeds are aesthetic —
@@ -269,14 +270,22 @@ impl Ship {
     }
 }
 
-/// The two ends of the current leg's charted line: where the ship cast off,
-/// and where the destination will be when it docks. Both are derived — the
-/// departure tick is `tick - progress` and the arrival tick is
-/// `tick - progress + leg_ticks` — so a progress-skipping jump moves the
-/// arrival tick earlier and the far endpoint re-aims itself at the planet's
-/// true position for the new arrival. The one place this geometry lives.
+/// The two ends of the current leg's charted line: where the ship cast
+/// off, and where the destination will be when it docks.
+///
+/// Both are derived — the departure tick is `tick - progress` and the
+/// arrival tick is `tick - progress + leg_ticks` — so a progress-skipping
+/// jump moves the arrival tick earlier and the far endpoint re-aims itself
+/// at the planet's true position for the new arrival. The one place this
+/// geometry lives.
 #[must_use]
-pub fn leg_endpoints(from: PoiId, to: PoiId, progress: u64, leg_ticks: u64, tick: u64) -> (Vec2, Vec2) {
+pub fn leg_endpoints(
+    from: PoiId,
+    to: PoiId,
+    progress: u64,
+    leg_ticks: u64,
+    tick: u64,
+) -> (Vec2, Vec2) {
     let depart = tick.saturating_sub(progress);
     (poi_pos(from, depart), poi_pos(to, depart + leg_ticks))
 }
@@ -297,6 +306,7 @@ pub fn travel_pos(from: PoiId, to: PoiId, progress: u64, leg_ticks: u64, tick: u
 /// the iteration contracts; [`INTERCEPT_STEPS`] rounds land it well inside
 /// a tick of the true meet.
 #[must_use]
+#[allow(clippy::cast_sign_loss)] // clamped non-negative before the cast
 pub fn leg_ticks(from: PoiId, to: PoiId, depart_tick: u64) -> u64 {
     let start = poi_pos(from, depart_tick);
     let flight = |ticks: f32| {
@@ -418,9 +428,8 @@ mod tests {
 
     #[test]
     fn the_comet_comes_and_goes() {
-        let period = match POIS[usize::from(COMET)].track {
-            Track::Ellipse { period, .. } => period,
-            _ => unreachable!("the comet lost its ellipse"),
+        let Track::Ellipse { period, .. } = POIS[usize::from(COMET)].track else {
+            unreachable!("the comet lost its ellipse")
         };
         let mut seen_visible = false;
         let mut seen_hidden = false;

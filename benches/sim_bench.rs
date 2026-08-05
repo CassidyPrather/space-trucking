@@ -6,9 +6,7 @@ use std::hint::black_box;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 
-use space_trucking::sim::{
-    CrewFrame, InputFrame, MAX_CREW, POIS, ShipState, Sim, TICK_DT, Vec2, layout,
-};
+use space_trucking::sim::{CrewFrame, InputFrame, MAX_CREW, ShipState, Sim, TICK_DT, Vec2, layout};
 
 /// One hour of sim time, in ticks.
 const HOUR_TICKS: u64 = 216_000;
@@ -27,7 +25,7 @@ fn press_at(pos: Vec2) -> InputFrame {
 /// launch lever, cruise briefly.
 fn mid_travel() -> Sim {
     let mut sim = Sim::new(0x5EED);
-    sim.advance(0.0, &press_at(POIS[0].pos));
+    sim.advance(0.0, &press_at(space_trucking::sim::poi_pos(3, 0)));
     let lever = Vec2::new(
         layout::LAUNCH_LEVER.w.mul_add(0.5, layout::LAUNCH_LEVER.x),
         layout::LAUNCH_LEVER.h.mul_add(0.5, layout::LAUNCH_LEVER.y),

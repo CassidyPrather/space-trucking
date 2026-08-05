@@ -87,6 +87,22 @@ pub const TAKE_SLOTS: [Rect; 4] = slot_row(470.0, 542.0);
 /// Pull to conclude the trade on the pads.
 pub const ACCEPT_LEVER: Rect = Rect::new(660.0, 530.0, 120.0, 40.0);
 
+/// Where travel-encounter flotsam drifts: the station shelf's own four
+/// sockets, doubling as the outboard rail.
+///
+/// The two meanings are mutually exclusive by construction — shelf goods
+/// exist only docked at a trading station (barter open), drift only
+/// underway or at barterless berths — so one row of wells serves both
+/// without a single ambiguous drop.
+pub const FLOTSAM_SLOTS: [Rect; 4] = SHELF_SLOTS;
+
+/// The encounter badge.
+///
+/// Whatever is alongside shows its sign in the dial housing's corner of
+/// the barter panel — which is dormant underway, when encounters happen —
+/// and pressing (or dropping cargo on) it is how the player engages.
+pub const ENCOUNTER_BADGE: Rect = Rect::new(666.0, 451.0, 68.0, 68.0);
+
 /// Centre of the eagerness dial, right of the pads.
 pub const DIAL_CENTER: Vec2 = Vec2::new(700.0, 485.0);
 
@@ -155,6 +171,7 @@ pub fn piece_rect(piece: &Piece) -> Rect {
         Loc::GivePad { slot } => GIVE_SLOTS[usize::from(slot)],
         Loc::TakePad { slot } => TAKE_SLOTS[usize::from(slot)],
         Loc::ReceivedShelf { slot } => RECEIVED_SLOTS[usize::from(slot)],
+        Loc::Flotsam { slot } => FLOTSAM_SLOTS[usize::from(slot)],
     }
 }
 
@@ -180,6 +197,9 @@ mod tests {
                 ),
             ),
         ];
+        // FLOTSAM_SLOTS are the shelf rects themselves (exclusive
+        // contexts), so listing them would self-collide by design.
+        rects.push(("encounter", ENCOUNTER_BADGE));
         for (name, row) in [
             ("shelf", &SHELF_SLOTS),
             ("received", &RECEIVED_SLOTS),

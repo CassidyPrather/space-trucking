@@ -22,10 +22,29 @@ pub enum Kind {
     CryoCore,
     BrinePearls,
     SuspiciousCrate,
+    /// A small humming box. Three aboard and something notices.
+    MysteriousCrate,
+    /// What ??? trades three mysterious crates for. The Guild counts it
+    /// as four deliveries; nobody explains the arithmetic.
+    VeryMysteriousCrate,
+    /// Chipped off a comet at perihelion. Free, if you can catch it.
+    CometIce,
+    /// Bottled at the Umbra Market during business hours only.
+    BottledMidnight,
+    /// A legally distinct ball of fur. It was two balls of fur a
+    /// moment ago. (It multiplies in transit; see the fluff event.)
+    Fluff,
+    /// Inner-ring transit papers, brokered by the Guild. Carrying one
+    /// lets a course be charted directly between Venus, Earth, and Mars,
+    /// whose factions otherwise refuse each other's traffic.
+    TransitChit,
+    /// What the space casino hands back when the house wins. The house
+    /// says it is worth a fortune. Every station disagrees.
+    CasinoChip,
 }
 
 /// Number of cargo kinds.
-pub const KIND_COUNT: usize = 9;
+pub const KIND_COUNT: usize = 16;
 
 /// Cosmetic variant rolls per kind, for the renderer to vary sprites with.
 /// The persistent run RNG is spent on these and nothing else.
@@ -57,15 +76,30 @@ impl Kind {
         Self::CryoCore,
         Self::BrinePearls,
         Self::SuspiciousCrate,
+        Self::MysteriousCrate,
+        Self::VeryMysteriousCrate,
+        Self::CometIce,
+        Self::BottledMidnight,
+        Self::Fluff,
+        Self::TransitChit,
+        Self::CasinoChip,
     ];
 
     /// Footprint in hold cells, `(w, h)`.
     #[must_use]
     pub const fn cells(self) -> (u8, u8) {
         match self {
-            Self::PerfumeVial | Self::Seedlings | Self::CryoCore => (1, 1),
+            Self::PerfumeVial
+            | Self::Seedlings
+            | Self::CryoCore
+            | Self::MysteriousCrate
+            | Self::CometIce
+            | Self::BottledMidnight
+            | Self::Fluff
+            | Self::TransitChit
+            | Self::CasinoChip => (1, 1),
             Self::GildedIdol | Self::BrinePearls => (1, 2),
-            Self::RationBricks | Self::SuspiciousCrate => (2, 2),
+            Self::RationBricks | Self::SuspiciousCrate | Self::VeryMysteriousCrate => (2, 2),
             Self::ScrapAlloy | Self::GasCanister => (2, 1),
         }
     }
@@ -76,8 +110,8 @@ impl Kind {
         match self {
             Self::GildedIdol | Self::ScrapAlloy => Some(Tag::Heavy),
             Self::GasCanister => Some(Tag::Volatile),
-            Self::CryoCore => Some(Tag::Cryo),
-            Self::SuspiciousCrate => Some(Tag::Suspicious),
+            Self::CryoCore | Self::CometIce => Some(Tag::Cryo),
+            Self::SuspiciousCrate | Self::VeryMysteriousCrate => Some(Tag::Suspicious),
             _ => None,
         }
     }
@@ -103,6 +137,9 @@ pub enum Loc {
     TakePad { slot: u8 },
     /// Goods just traded for, waiting to be stowed.
     ReceivedShelf { slot: u8 },
+    /// Adrift beside the ship during a travel encounter. Not the player's
+    /// until stowed; whatever is left drifts away when the encounter ends.
+    Flotsam { slot: u8 },
 }
 
 /// Whether a piece at `loc` belongs to the player rather than the station.
@@ -217,6 +254,23 @@ const fn touches_edge(x: u8, y: u8, w: u8, h: u8) -> bool {
 /// Cell-rect intersection test.
 const fn overlaps(a: (u8, u8, u8, u8), b: (u8, u8, u8, u8)) -> bool {
     a.0 < b.0 + b.2 && b.0 < a.0 + a.2 && a.1 < b.1 + b.3 && b.1 < a.1 + a.3
+}
+
+/// The first hold cell (row-major scan) where `kind` may legally sit.
+///
+/// Shared by the shift-click quick-stow, the comet harvest, and the
+/// ??? exchange — "first legal spot, even if that is a bad idea" is the
+/// contract, so all three agree on what "first" means.
+#[must_use]
+pub fn first_fit(pieces: &[Piece], id: u32, kind: Kind) -> Option<(u8, u8)> {
+    for y in 0..GRID_ROWS {
+        for x in 0..GRID_COLS {
+            if placement_legal(pieces, id, kind, x, y) {
+                return Some((x, y));
+            }
+        }
+    }
+    None
 }
 
 /// Whether two footprints share an orthogonal edge (corners do not count).

@@ -230,6 +230,57 @@
     </script>
     <script>
         "use strict";
+        // Deep night (23:30-06:00 local): certain destinations only answer
+        // then. The sim never reads a wall clock itself, so the shell
+        // mirrors the answer into the key the wasm polls through
+        // quad-storage — same pattern as reduced-motion above.
+        (() => {
+            const KEY = "space-trucking/night";
+            const mirror = () => {
+                try {
+                    const now = new Date();
+                    const minutes = now.getHours() * 60 + now.getMinutes();
+                    const night = minutes >= 23 * 60 + 30 || minutes < 6 * 60;
+                    localStorage.setItem(KEY, night ? "1" : "0");
+                } catch (e) {
+                    // Storage refused: the wasm falls back to UTC.
+                }
+            };
+            mirror();
+            setInterval(mirror, 30000);
+        })();
+    </script>
+    <script>
+        "use strict";
+        // The pretty-please: fast-forward is a developer tool, and asking
+        // for it is a small ceremony. Open the page with #pretty-please
+        // (documented in the README's development section) and the shell
+        // asks the one question that matters. #no-thank-you revokes.
+        (() => {
+            const KEY = "space-trucking/dev";
+            const consider = () => {
+                if (window.location.hash === "#no-thank-you") {
+                    try { localStorage.removeItem(KEY); } catch (e) { }
+                    return;
+                }
+                if (window.location.hash !== "#pretty-please") return;
+                let dev = null;
+                try { dev = localStorage.getItem(KEY); } catch (e) { return; }
+                if (dev === "1") return;
+                const truly = window.confirm(
+                    "Fast-forward skips the ambient part of an ambient game." +
+                    "\n\nPretty please: are you truly a developer?"
+                );
+                if (truly) {
+                    try { localStorage.setItem(KEY, "1"); } catch (e) { }
+                }
+            };
+            consider();
+            window.addEventListener("hashchange", consider);
+        })();
+    </script>
+    <script>
+        "use strict";
         const status = document.getElementById("status");
         function fail(message) {
             status.classList.remove("loading");

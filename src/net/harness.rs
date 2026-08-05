@@ -29,15 +29,16 @@ pub const WARP_ROUNDS: u64 = 16;
 /// and a lost delivery.
 const REPORT_RESEND: u64 = 64;
 
-/// Venus: the nearest far station, first on the map.
-const VENUS: map::PoiId = 0;
+/// Saturn: the canonical far station for the voyage (the inner ring
+/// needs a transit chit, so the crate run charts outward).
+const SATURN: map::PoiId = 7;
 
 /// Seed for the canonical delivery voyage, found by search.
 ///
-/// Venus's first shelf offers a suspicious crate and the three starter
+/// Saturn's first shelf offers a suspicious crate and the three starter
 /// pieces cover its asking price, so [`delivery_voyage`] ends with a
 /// Guild delivery.
-pub const CONVOY_SEED: u64 = 176;
+pub const CONVOY_SEED: u64 = 0;
 
 // ------------------------------------------------------------------ link --
 
@@ -362,8 +363,8 @@ impl Script {
 /// The canonical scripted voyage for [`CONVOY_SEED`], spread across a
 /// crew of `crew` players (at least 3).
 ///
-/// Select Venus and launch, warp through the cruise, trade the starter
-/// cargo for Venus's suspicious crate with parallel drags, stow it, fly
+/// Select Saturn and launch, warp through the cruise, trade the starter
+/// cargo for Saturn's suspicious crate with parallel drags, stow it, fly
 /// home, and let the Guild seize it. Returns the script and the sealed
 /// tick by which the delivery is done.
 #[must_use]
@@ -375,20 +376,21 @@ pub fn delivery_voyage(crew: usize) -> (Script, u64) {
     // Roles are spread over the crew; parallel drags use role numbers that
     // stay distinct mod any allowed crew size.
     let role = |k: usize| (k % crew) as PlayerId;
-    let venus = map::POIS[usize::from(VENUS)].pos;
-    let guild = map::POIS[usize::from(map::GUILD)].pos;
     let launch = rect_center(layout::LAUNCH_LEVER);
     let accept = rect_center(layout::ACCEPT_LEVER);
-    let leg = map::leg_ticks(map::GUILD, VENUS);
 
     let mut script = Script::new();
-    // Outbound: pick Venus, pull the lever, warp most of the cruise.
+    // Outbound: pick Saturn, pull the lever, warp most of the cruise. The
+    // sky moves, so press coordinates and leg lengths are sampled at the
+    // exact sealed ticks the presses land on — sealed tick N is applied
+    // while the sim's clock reads N.
     let start = 10;
-    script.press(start, role(1), venus);
+    let leg = map::leg_ticks(map::GUILD, SATURN, start + 2);
+    script.press(start, role(1), map::poi_pos(SATURN, start));
     script.press(start + 2, role(0), launch);
     script.toggle_warp(start + 6, role(4));
     script.toggle_warp(start + 2 + leg - 8, role(4));
-    // Docked at Venus: crate to the take pad, the three starter pieces to
+    // Docked at Saturn: crate to the take pad, the three starter pieces to
     // the give pads (two players at a time), accept, stow the crate.
     let a = start + 2 + leg + 4;
     script.drag(
@@ -422,12 +424,14 @@ pub fn delivery_voyage(crew: usize) -> (Script, u64) {
         slot_center(&layout::RECEIVED_SLOTS, 0),
         cell_center(0, 2),
     );
-    // Home: pick the Guild, launch, warp the return leg.
-    script.press(a + 14, role(1), guild);
+    // Home: pick the Guild, launch, warp the return leg (its own length —
+    // both worlds moved while the crew was trading).
+    let leg_home = map::leg_ticks(SATURN, map::GUILD, a + 16);
+    script.press(a + 14, role(1), map::poi_pos(map::GUILD, a + 14));
     script.press(a + 16, role(0), launch);
     script.toggle_warp(a + 20, role(4));
-    script.toggle_warp(a + 16 + leg - 8, role(4));
-    let end = a + 16 + leg + 6;
+    script.toggle_warp(a + 16 + leg_home - 8, role(4));
+    let end = a + 16 + leg_home + 6;
     (script, end)
 }
 
@@ -1017,7 +1021,7 @@ mod tests {
     fn sealed_schedule_replay_equals_live_play() {
         let (script, _) = delivery_voyage(6);
         let mut convoy = Convoy::new(CONVOY_SEED, 0x4E91, 6, 1, &LinkProfile::hostile(), script);
-        let leg = map::leg_ticks(map::GUILD, VENUS);
+        let leg = map::leg_ticks(map::GUILD, SATURN, 12);
         let mut warp_bursts = 0_u64;
         while convoy.sealed() < 12 + leg {
             let before = convoy.sealed();

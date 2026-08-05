@@ -227,6 +227,21 @@ impl Aggregate {
                 // Not in the schema table, so not collected.
                 Cue::Select
                 | Cue::OmenEnd
+                | Cue::Harvest { .. }
+                | Cue::Exchange
+                | Cue::Shutter
+                | Cue::EncounterStart
+                | Cue::EncounterEnd
+                | Cue::GasBoost
+                | Cue::CasinoWin
+                | Cue::CasinoLoss
+                | Cue::WhaleSong { .. }
+                | Cue::AdStart
+                | Cue::AdSwat
+                | Cue::AdEnd
+                | Cue::FluffBirth
+                | Cue::Jettison
+                | Cue::ParadeStart
                 | Cue::Creak { .. }
                 | Cue::RatAboard
                 | Cue::RatSkitter { .. }
@@ -442,7 +457,7 @@ impl<'a> Reader<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sim::{InputFrame, POIS, Vec2, layout, splitmix};
+    use crate::sim::{InputFrame, Vec2, layout, splitmix};
 
     /// Seed whose first Guild trade is acceptable (the sim tests' odyssey
     /// seed), so the accept lever concludes a real trade.
@@ -652,7 +667,7 @@ mod tests {
         assert!(!at.traveling && !at.warp && !at.paused && !at.received_occupied);
 
         // Select Venus, launch, then toggle warp and pause.
-        sim.advance(0.0, &press_at(POIS[0].pos));
+        sim.advance(0.0, &press_at(sim.poi_pos(3)));
         sim.advance(0.0, &press_at(rect_center(layout::LAUNCH_LEVER)));
         sim.advance(
             0.0,

@@ -150,11 +150,29 @@ pub const POI_URANUS_RING: Color = hex(0xb8_d6_e6);
 /// Neptune: deep blue.
 pub const POI_NEPTUNE: Color = hex(0x42_66_d9);
 
-/// The Guild Station's hexagon fill.
+/// The Guild Station's heptagon fill.
 pub const POI_GUILD: Color = hex(0x6b_61_8c);
 
-/// The Guild Station's hexagon edge.
+/// The Guild Station's heptagon edge.
 pub const POI_GUILD_EDGE: Color = hex(0x9e_8f_c7);
+
+/// Saturn: bone-pale salvage gold.
+pub const POI_SATURN: Color = hex(0xd6_c2_8a);
+
+/// Saturn's ring of a thousand failed hauling companies.
+pub const POI_SATURN_RING: Color = hex(0xa8_93_6b);
+
+/// The Umbra Market: a sliver of moonlit slate, night trade only.
+pub const POI_UMBRA: Color = hex(0x8c_93_c9);
+
+/// The Hermitage: warm rock, one lit window.
+pub const POI_HERMITAGE: Color = hex(0xa6_8a_6b);
+
+/// The comet's icy head.
+pub const POI_COMET: Color = hex(0xcf_ea_f2);
+
+/// ???'s not-quite-there shimmer.
+pub const POI_WANDERER: Color = hex(0x7d_e0_c0);
 
 // -------------------------------------------------- cargo identity hues
 //
@@ -174,6 +192,13 @@ pub const fn kind_color(kind: Kind) -> Color {
         Kind::CryoCore => hex(0x6c_c4_d9),
         Kind::BrinePearls => hex(0x93_a8_cf),
         Kind::SuspiciousCrate => hex(0x16_13_1c),
+        Kind::MysteriousCrate => hex(0x5c_54_49),
+        Kind::VeryMysteriousCrate => hex(0x24_10_38),
+        Kind::CometIce => hex(0xbf_e4_ef),
+        Kind::BottledMidnight => hex(0x1c_25_4d),
+        Kind::Fluff => hex(0xe0_c9_a8),
+        Kind::TransitChit => hex(0xc9_d2_56),
+        Kind::CasinoChip => hex(0xd4_4f_6f),
     }
 }
 

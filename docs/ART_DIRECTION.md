@@ -110,7 +110,7 @@ Every animation is one of three things, and each must know which:
   finishes inside half a second (the catch-up dock pulse is the one
   sanctioned exception) and **always runs**.
 - **Decoration** loops while nothing changes: the sonar sweep and its
-  afterglow, star twinkle, Venus's orbiting sparkles, the Guild hexagon's
+  afterglow, star twinkle, Venus's glitter sparkles (the planets' own orbits are sim state, not decoration, and never freeze), the Guild hexagon's
   pulse, the lit-lamp shimmer, the crate's violet breathing, the invite
   glow's and go-glows' breathing, engine flicker, the rat's tail sway, the
   crew-ghost's breathing frame, the omen's screen flicker. Decoration

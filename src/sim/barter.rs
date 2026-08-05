@@ -7,7 +7,7 @@
 //! spent only on cosmetic variant rolls, per the determinism rules.
 
 use super::cargo::{KIND_COUNT, Kind, Loc, Piece, Tag, VARIANTS};
-use super::map::{GUILD, POI_COUNT, PoiId};
+use super::map::{GUILD, HERMITAGE, POI_COUNT, PoiId, UMBRA};
 use super::splitmix;
 
 /// One station visit's trading state. Regenerated per dock, rebuilt on load.
@@ -30,23 +30,42 @@ pub struct Barter {
     /// Whether pulling the accept lever would conclude the trade. Tracks the
     /// true ratio, not the eased dial, so accepting never races an animation.
     pub ready: bool,
+    /// How much of the composed trade is guesswork, `0..=1`: the fraction
+    /// of pad pieces whose kind the player has never traded at this
+    /// station. The renderer fogs the needle and withholds the go-lamp by
+    /// this — discovery has a cost, and the cost is finding out.
+    pub fog: f32,
+    /// Refused lever pulls the station will still tolerate this visit.
+    /// At zero the shutters come down (see `Sim::conclude`); a gift is
+    /// the one thing that reopens them.
+    pub patience: u8,
 }
 
 /// How much each station values each kind, `0..=6`.
 ///
 /// Rows follow map order (Venus, Earth, Mars, Jupiter, Uranus, Neptune,
-/// Guild), columns follow [`Kind::index`] order. A zero doubles as "local
-/// produce": stations shelve the kind they do not value. Every row must keep
-/// at least three kinds at 2 or above so the wants list survives the ±1
-/// jitter, and column 8 (the crate) is 4 everywhere but the Guild.
+/// Guild, Saturn, Umbra Market, Hermitage, comet, `???`), columns follow
+/// [`Kind::index`] order. A zero doubles as "local produce": stations
+/// shelve the kind they do not value (which is how the Guild comes to
+/// broker transit chits and the Umbra Market to bottle midnight). Every
+/// row must keep at least three kinds at 2 or above so the wants list
+/// survives the ±1 jitter, and both suspicious columns are 4 everywhere
+/// but the Guild, which seizes rather than pays. The comet and `???`
+/// never open a barter, so their rows are placeholders kept valid for
+/// the invariants above.
 pub const VALUE: [[u8; KIND_COUNT]; POI_COUNT] = [
-    [0, 1, 2, 1, 3, 2, 3, 5, 4], // Venus
-    [4, 3, 0, 2, 4, 1, 2, 3, 4], // Earth
-    [2, 1, 4, 0, 1, 3, 2, 2, 4], // Mars
-    [1, 2, 4, 3, 5, 0, 1, 2, 4], // Jupiter
-    [2, 3, 3, 2, 4, 4, 0, 1, 4], // Uranus
-    [3, 2, 4, 3, 3, 2, 1, 0, 4], // Neptune
-    [2, 2, 2, 2, 2, 2, 2, 2, 0], // Guild
+    [0, 1, 2, 1, 3, 2, 3, 5, 4, 1, 4, 3, 5, 4, 2, 1], // Venus
+    [4, 3, 0, 2, 4, 1, 2, 3, 4, 1, 4, 2, 5, 2, 2, 1], // Earth
+    [2, 1, 4, 0, 1, 3, 2, 2, 4, 1, 4, 2, 5, 1, 2, 1], // Mars
+    [1, 2, 4, 3, 5, 0, 1, 2, 4, 1, 4, 2, 5, 1, 1, 1], // Jupiter
+    [2, 3, 3, 2, 4, 4, 0, 1, 4, 1, 4, 2, 5, 1, 1, 1], // Uranus
+    [3, 2, 4, 3, 3, 2, 1, 0, 4, 1, 4, 2, 5, 2, 1, 1], // Neptune
+    [2, 2, 2, 2, 2, 2, 2, 2, 0, 1, 0, 2, 3, 1, 0, 1], // Guild
+    [1, 3, 2, 6, 1, 0, 2, 1, 4, 1, 4, 1, 5, 1, 1, 1], // Saturn
+    [3, 2, 1, 1, 2, 0, 5, 4, 4, 3, 4, 3, 0, 2, 2, 1], // Umbra Market
+    [1, 1, 3, 1, 4, 1, 1, 2, 4, 2, 4, 2, 3, 3, 1, 1], // Hermitage
+    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1], // comet (no barter)
+    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1], // ??? (no barter)
 ];
 
 /// Ceiling for jittered per-visit values.
@@ -60,6 +79,9 @@ const SHELF_MAX: usize = 4;
 
 /// Dial ceiling: the eased eagerness pegs here however lavish the offer.
 pub const EAGER_MAX: f32 = 2.0;
+
+/// Refused pulls a station tolerates per visit before shuttering.
+pub const PATIENCE: u8 = 3;
 
 /// Dial speed in eagerness units per second: the full sweep takes one.
 pub(crate) const EAGER_RATE: f32 = 2.0;
@@ -75,6 +97,7 @@ const CRATE_CHANCE: u64 = 5;
 const SALT_CRATE: u64 = 1;
 const SALT_COUNT: u64 = 2;
 const SALT_KIND: u64 = 0x100;
+const SALT_MYSTERY: u64 = 0x200;
 
 /// This visit's value table: the station row jittered by ±1 per kind,
 /// clamped to `0..=6`. Pure, so saves rebuild it instead of storing it.
@@ -86,7 +109,9 @@ pub(crate) fn visit_values(seed: u64, station: PoiId, visit: u32) -> [u8; KIND_C
     let mut values = [0_u8; KIND_COUNT];
     for (k, value) in values.iter_mut().enumerate() {
         let base = VALUE[usize::from(station)][k];
-        *value = if station == GUILD && k == Kind::SuspiciousCrate.index() {
+        *value = if station == GUILD
+            && (k == Kind::SuspiciousCrate.index() || k == Kind::VeryMysteriousCrate.index())
+        {
             0
         } else {
             match splitmix(h, k as u64) % 3 {
@@ -107,11 +132,16 @@ pub(crate) fn visit_values(seed: u64, station: PoiId, visit: u32) -> [u8; KIND_C
 /// one anywhere — and the Guild never offers one: crates flow outward from
 /// the frontier and home to the hangar. `rng` is the persistent run RNG,
 /// spent only on variant rolls.
+// A visit is genuinely this many ingredients; a params struct would just
+// rename the arguments.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn generate(
     seed: u64,
     station: PoiId,
     visit: u32,
     aboard: &[Piece],
+    karma: u32,
+    paraded: bool,
     rng: &mut fastrand::Rng,
     next_id: &mut u32,
 ) -> (Barter, Vec<Piece>) {
@@ -121,8 +151,11 @@ pub(crate) fn generate(
     let crate_aboard = aboard
         .iter()
         .any(|piece| matches!(piece.kind.tag(), Some(Tag::Suspicious)));
-    let offer_crate =
-        station != GUILD && !crate_aboard && splitmix(h, SALT_CRATE) % CRATE_CHANCE == 0;
+    // The Hermitage never deals in crates; its economy is the karma one.
+    let offer_crate = station != GUILD
+        && station != HERMITAGE
+        && !crate_aboard
+        && splitmix(h, SALT_CRATE) % CRATE_CHANCE == 0;
 
     let mut shelve = |kind: Kind, slot: usize| {
         let piece = Piece {
@@ -140,8 +173,23 @@ pub(crate) fn generate(
     if offer_crate {
         goods.push(shelve(Kind::SuspiciousCrate, 0));
     }
+    // After the Grand Parade, mysterious crates trickle onto ordinary
+    // shelves: whatever the hangar was counting, the counting continues.
+    if paraded && station != GUILD && splitmix(h, SALT_MYSTERY) % 4 == 0 {
+        let slot = goods.len();
+        if slot < SHELF_MAX {
+            goods.push(shelve(Kind::MysteriousCrate, slot));
+        }
+    }
     let span = (SHELF_MAX - SHELF_MIN) as u64 + 1;
-    let count = SHELF_MIN + (splitmix(h, SALT_COUNT) % span) as usize;
+    let count = if station == HERMITAGE {
+        // The gift economy: the hermits shelve nothing for strangers, and
+        // one good per two pieces ever gifted to them — generosity comes
+        // back, slowly, and never as a transaction.
+        (karma as usize / 2).min(SHELF_MAX)
+    } else {
+        SHELF_MIN + (splitmix(h, SALT_COUNT) % span) as usize
+    };
     // The crate takes a slot, so ordinary goods yield rather than overflow.
     let count = count.min(SHELF_MAX - goods.len());
     for i in 0..count {
@@ -157,6 +205,8 @@ pub(crate) fn generate(
         eagerness: 0.0,
         prev_eagerness: 0.0,
         ready: false,
+        fog: 0.0,
+        patience: PATIENCE,
     };
     (barter, goods)
 }
@@ -165,9 +215,15 @@ pub(crate) fn generate(
 /// produced, dial snapped to the trade the restored pieces compose. The
 /// loader then overwrites the dial with the save's eased value.
 #[must_use]
-pub(crate) fn rebuild(seed: u64, station: PoiId, visit: u32, pieces: &[Piece]) -> Barter {
+pub(crate) fn rebuild(
+    seed: u64,
+    station: PoiId,
+    visit: u32,
+    pieces: &[Piece],
+    familiar: u16,
+) -> Barter {
     let values = visit_values(seed, station, visit);
-    let (target, ready) = eagerness_of(pieces, &values);
+    let (target, ready) = eagerness_of(pieces, &values, gnaw_loved(station));
     let eagerness = target.clamp(0.0, EAGER_MAX);
     Barter {
         station,
@@ -176,6 +232,30 @@ pub(crate) fn rebuild(seed: u64, station: PoiId, visit: u32, pieces: &[Piece]) -
         eagerness,
         prev_eagerness: eagerness,
         ready,
+        fog: fog_of(pieces, familiar),
+        patience: PATIENCE,
+    }
+}
+
+/// The guesswork fraction of the composed trade: pad pieces whose kind is
+/// not in this station's `familiar` bitmask, over all pad pieces. Empty
+/// pads read zero — nothing composed, nothing foggy.
+#[must_use]
+pub(crate) fn fog_of(pieces: &[Piece], familiar: u16) -> f32 {
+    let mut on_pads = 0_u32;
+    let mut unknown = 0_u32;
+    for piece in pieces {
+        if matches!(piece.loc, Loc::GivePad { .. } | Loc::TakePad { .. }) {
+            on_pads += 1;
+            if familiar & (1 << piece.kind.index()) == 0 {
+                unknown += 1;
+            }
+        }
+    }
+    if on_pads == 0 {
+        0.0
+    } else {
+        unknown as f32 / on_pads as f32
     }
 }
 
@@ -188,28 +268,40 @@ const GIFT_WARMTH: f32 = 8.0;
 /// on the give pad, on the take pad, and back off the station's shelf.
 pub(crate) const GNAW_MALUS: u8 = 2;
 
+/// Whether `station` considers a rat's toothwork artisanal. The Umbra
+/// Market does: there, the malus flips into a premium of the same size,
+/// and a stowaway becomes a business partner.
+#[must_use]
+pub(crate) const fn gnaw_loved(station: PoiId) -> bool {
+    station == UMBRA
+}
+
 /// One piece's worth under this visit's table: its kind's jittered value,
-/// less [`GNAW_MALUS`] if a rat has been at it. The single per-piece
-/// pricing rule; both pad totals read it, so a gnawed piece is cheaper to
-/// buy exactly as it is poorer to sell.
-fn piece_value(piece: &Piece, values: &[u8; KIND_COUNT]) -> u32 {
+/// less [`GNAW_MALUS`] if a rat has been at it — or MORE by the same
+/// amount where the bite is loved (see [`gnaw_loved`]). The single
+/// per-piece pricing rule; both pad totals read it, so a gnawed piece is
+/// cheaper to buy exactly as it is poorer to sell.
+fn piece_value(piece: &Piece, values: &[u8; KIND_COUNT], gnaw_love: bool) -> u32 {
     let value = values[piece.kind.index()];
-    u32::from(if piece.gnawed {
-        value.saturating_sub(GNAW_MALUS)
+    if !piece.gnawed {
+        return u32::from(value);
+    }
+    if gnaw_love {
+        u32::from(value) + u32::from(GNAW_MALUS)
     } else {
-        value
-    })
+        u32::from(value.saturating_sub(GNAW_MALUS))
+    }
 }
 
 /// Value given, cost asked, and whether the give pad holds anything at all,
 /// priced by this visit's table via [`piece_value`]. The +1 markup per
 /// taken item keeps even worthless goods from being free.
-fn pad_totals(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> (u32, u32, bool) {
+fn pad_totals(pieces: &[Piece], values: &[u8; KIND_COUNT], gnaw_love: bool) -> (u32, u32, bool) {
     let mut give = 0_u32;
     let mut giving = false;
     let mut take = 0_u32;
     for piece in pieces {
-        let value = piece_value(piece, values);
+        let value = piece_value(piece, values, gnaw_love);
         match piece.loc {
             Loc::GivePad { .. } => {
                 give += value;
@@ -235,8 +327,12 @@ fn pad_totals(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> (u32, u32, bool) {
 /// scales that disagree at the boundary is how a needle jumps the wrong
 /// way when a piece crosses pads.
 #[must_use]
-pub(crate) fn eagerness_of(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> (f32, bool) {
-    let (give, take, giving) = pad_totals(pieces, values);
+pub(crate) fn eagerness_of(
+    pieces: &[Piece],
+    values: &[u8; KIND_COUNT],
+    gnaw_love: bool,
+) -> (f32, bool) {
+    let (give, take, giving) = pad_totals(pieces, values, gnaw_love);
     if take > 0 {
         let eagerness = give as f32 / take as f32;
         (eagerness, eagerness >= 1.0)
@@ -253,8 +349,8 @@ pub(crate) fn eagerness_of(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> (f32,
 /// the station take this?", the cue answers "how big a deal was that?", and
 /// a pegged needle must not make every token gift sound lavish.
 #[must_use]
-pub(crate) fn deal_value(pieces: &[Piece], values: &[u8; KIND_COUNT]) -> f32 {
-    let (give, take, _) = pad_totals(pieces, values);
+pub(crate) fn deal_value(pieces: &[Piece], values: &[u8; KIND_COUNT], gnaw_love: bool) -> f32 {
+    let (give, take, _) = pad_totals(pieces, values, gnaw_love);
     if take > 0 {
         (give as f32 / take as f32 - 1.0).clamp(0.0, 1.0)
     } else {
@@ -284,15 +380,22 @@ fn wants(values: &[u8; KIND_COUNT]) -> [(Kind, u8); 3] {
 /// which also empties the Guild's produce pool, making it shelve a uniform
 /// spread.
 fn shelf_kind(station: PoiId, roll: u64) -> Kind {
-    let produce = |kind: Kind| {
-        kind != Kind::SuspiciousCrate && VALUE[usize::from(station)][kind.index()] == 0
+    // Never on an ordinary shelf: suspicious crates enter through the far
+    // stations' special offer, very mysterious crates only through ???,
+    // and casino chips only through losing.
+    let shelvable = |kind: Kind| {
+        !matches!(
+            kind,
+            Kind::SuspiciousCrate | Kind::VeryMysteriousCrate | Kind::CasinoChip
+        )
     };
+    let produce = |kind: Kind| shelvable(kind) && VALUE[usize::from(station)][kind.index()] == 0;
     let has_produce = Kind::ALL.iter().any(|&kind| produce(kind));
     let from_produce = has_produce && roll % 10 < PRODUCE_CHANCE;
     let pool: Vec<Kind> = Kind::ALL
         .iter()
         .copied()
-        .filter(|&kind| kind != Kind::SuspiciousCrate && produce(kind) == from_produce)
+        .filter(|&kind| shelvable(kind) && produce(kind) == from_produce)
         .collect();
     pool[((roll / 10) % pool.len() as u64) as usize]
 }
@@ -330,7 +433,7 @@ mod tests {
     fn visit(seed: u64, station: PoiId, n: u32, aboard: &[Piece]) -> (Barter, Vec<Piece>) {
         let mut rng = fastrand::Rng::with_seed(0);
         let mut next_id = 0;
-        generate(seed, station, n, aboard, &mut rng, &mut next_id)
+        generate(seed, station, n, aboard, 0, false, &mut rng, &mut next_id)
     }
 
     #[test]
@@ -376,7 +479,7 @@ mod tests {
 
     #[test]
     fn wants_skip_zero_valued_kinds_and_break_ties_by_index() {
-        let values = [2, 4, 4, 0, 1, 0, 0, 0, 6];
+        let values = [2, 4, 4, 0, 1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0];
         assert_eq!(
             wants(&values),
             [
@@ -398,14 +501,14 @@ mod tests {
     #[test]
     fn empty_pads_are_zero_and_never_ready() {
         let values = visit_values(1, VENUS, 1);
-        assert_eq!(eagerness_of(&[], &values), (0.0, false));
+        assert_eq!(eagerness_of(&[], &values, false), (0.0, false));
     }
 
     #[test]
     fn a_pure_gift_pegs_the_dial_and_scales_the_celebration() {
         let values = visit_values(1, VENUS, 1);
         let pieces = [piece(Kind::BrinePearls, Loc::GivePad { slot: 0 })];
-        let (eagerness, ready) = eagerness_of(&pieces, &values);
+        let (eagerness, ready) = eagerness_of(&pieces, &values, false);
         assert!(ready, "a gift must always be accepted");
         assert!(
             eagerness >= EAGER_MAX,
@@ -414,11 +517,11 @@ mod tests {
         );
         // A worthless gift is still a gift: ready even at value zero.
         let zeroed = [0_u8; KIND_COUNT];
-        let (pegged, ready) = eagerness_of(&pieces, &zeroed);
+        let (pegged, ready) = eagerness_of(&pieces, &zeroed, false);
         assert!(ready);
         assert!(pegged >= EAGER_MAX);
         // The celebration, unlike the dial, scales with what was given.
-        assert!(deal_value(&pieces, &zeroed) < deal_value(&pieces, &values));
+        assert!(deal_value(&pieces, &zeroed, false) < deal_value(&pieces, &values, false));
     }
 
     /// The gauge's contract, held under fire: whatever already sits on the
@@ -430,7 +533,7 @@ mod tests {
     fn dial_reading_is_monotone_under_pad_changes() {
         let mut rng = fastrand::Rng::with_seed(0xD1A1);
         let dial = |pieces: &[Piece], values: &[u8; KIND_COUNT]| {
-            eagerness_of(pieces, values).0.clamp(0.0, EAGER_MAX)
+            eagerness_of(pieces, values, false).0.clamp(0.0, EAGER_MAX)
         };
         for _ in 0..500 {
             let mut values = [0_u8; KIND_COUNT];
@@ -487,13 +590,13 @@ mod tests {
             piece(Kind::PerfumeVial, Loc::GivePad { slot: 0 }),
             piece(Kind::Seedlings, Loc::TakePad { slot: 0 }),
         ];
-        assert_eq!(eagerness_of(&pieces, &values), (1.0, true));
+        assert_eq!(eagerness_of(&pieces, &values, false), (1.0, true));
         // A valued piece costs value + 1: give 1 against cost 3 is short.
         let pieces = [
             piece(Kind::PerfumeVial, Loc::GivePad { slot: 0 }),
             piece(Kind::CryoCore, Loc::TakePad { slot: 0 }),
         ];
-        let (eagerness, ready) = eagerness_of(&pieces, &values);
+        let (eagerness, ready) = eagerness_of(&pieces, &values, false);
         assert!((eagerness - 1.0 / 3.0).abs() < 1e-6);
         assert!(!ready);
     }
@@ -507,21 +610,24 @@ mod tests {
         let ask = piece(Kind::Seedlings, Loc::TakePad { slot: 0 });
         let fresh = [piece(Kind::BrinePearls, Loc::GivePad { slot: 0 }), ask];
         let bitten = [gnawed(Kind::BrinePearls, Loc::GivePad { slot: 0 }), ask];
-        assert_eq!(eagerness_of(&fresh, &values), (5.0, true));
-        assert_eq!(eagerness_of(&bitten, &values), (3.0, true));
+        assert_eq!(eagerness_of(&fresh, &values, false), (5.0, true));
+        assert_eq!(eagerness_of(&bitten, &values, false), (3.0, true));
         // The malus floors at zero rather than going negative: a bitten
         // vial (value 1) gives nothing, and the ratio simply reads short.
         let worthless = [gnawed(Kind::PerfumeVial, Loc::GivePad { slot: 0 }), ask];
-        assert_eq!(eagerness_of(&worthless, &values), (0.0, false));
+        assert_eq!(eagerness_of(&worthless, &values, false), (0.0, false));
         // The take side discounts identically — stations resell the bite —
         // while keeping the +1 markup: cost (5 - 2) + 1 = 4.
         let buying_bitten = [
             piece(Kind::BrinePearls, Loc::GivePad { slot: 0 }),
             gnawed(Kind::BrinePearls, Loc::TakePad { slot: 0 }),
         ];
-        assert_eq!(eagerness_of(&buying_bitten, &values), (5.0 / 4.0, true));
+        assert_eq!(
+            eagerness_of(&buying_bitten, &values, false),
+            (5.0 / 4.0, true)
+        );
         // The celebration reads the same totals: overshoot 5/4 - 1.
-        assert!((deal_value(&buying_bitten, &values) - 0.25).abs() < 1e-6);
+        assert!((deal_value(&buying_bitten, &values, false) - 0.25).abs() < 1e-6);
     }
 
     #[test]
@@ -536,7 +642,7 @@ mod tests {
         ];
         // Give 12 against cost 1: the raw ratio runs far past EAGER_MAX;
         // the dial cap and the accept-value clamp are applied by the sim.
-        assert_eq!(eagerness_of(&pieces, &values), (12.0, true));
+        assert_eq!(eagerness_of(&pieces, &values, false), (12.0, true));
     }
 
     #[test]
@@ -588,9 +694,14 @@ mod tests {
             "{offered}/600 crate offers is far from one in five"
         );
 
-        // Every far station rolls its own offers; none is crate-dry.
+        // Every far station rolls its own offers; none is crate-dry. The
+        // Guild never offers, the Hermitage's economy is karma, and the
+        // comet and ??? never open a barter at all.
         for station in 0..POI_COUNT as PoiId {
-            if station == GUILD {
+            if matches!(
+                station,
+                GUILD | HERMITAGE | super::super::map::COMET | super::super::map::WANDERER
+            ) {
                 continue;
             }
             let some = (1..=60).any(|n| {

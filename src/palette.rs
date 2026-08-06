@@ -199,13 +199,15 @@ pub const fn kind_color(kind: Kind) -> Color {
         Kind::Fluff => hex(0xe0_c9_a8),
         Kind::TransitChit => hex(0xc9_d2_56),
         Kind::CasinoChip => hex(0xd4_4f_6f),
-        // Placeholder fixture hues: lamp golds, upholstery, gilt frame.
-        // fixture glyph pass pending
-        Kind::CeilingLamp => hex(0xe6_c9_6e),
-        Kind::WallLamp => hex(0xdd_b8_5f),
-        Kind::FloorLamp => hex(0xd2_a8_52),
-        Kind::Couch => hex(0x8a_5a_6b),
-        Kind::Painting => hex(0xb0_8a_3e),
+        // Fixture hues (canon, mirrored into the cabin): three lamp golds
+        // stepping warmer and dimmer as they descend from ceiling to floor,
+        // the couch's worn plum upholstery, and the painting's gallery
+        // violet — a frame hue that flatters the amber lamplight next door.
+        Kind::CeilingLamp => hex(0xe8_d0_6f),
+        Kind::WallLamp => hex(0xd9_a9_4e),
+        Kind::FloorLamp => hex(0xc0_8d_5a),
+        Kind::Couch => hex(0x96_56_6a),
+        Kind::Painting => hex(0x8f_76_c0),
     }
 }
 

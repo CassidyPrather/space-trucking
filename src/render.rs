@@ -32,9 +32,9 @@ use macroquad::texture::{DrawTextureParams, RenderTarget, draw_texture_ex};
 use macroquad::window::clear_background;
 
 use space_trucking::sim::{
-    Barter, EAGER_MAX, EncounterKind, GUILD, Kind, Loc, POIS, Piece, PoiId, SUN, ShipState, Sim,
-    Track, Vec2, Violation, WORLD_H, WORLD_W, layout, leg_endpoints, placement_check, player_owned,
-    splitmix,
+    Barter, EAGER_MAX, EncounterKind, GUILD, Kind, Loc, Mount, POIS, Piece, PoiId, SUN, ShipState,
+    Sim, Track, Vec2, Violation, WORLD_H, WORLD_W, lamp_lit, layout, leg_endpoints, lit_adjacent,
+    placement_check, player_owned, splitmix,
 };
 
 use crate::View;
@@ -1664,7 +1664,26 @@ fn draw_hold(c: &Canvas, scene: &Scene) {
             socket_well(&cs, inflate(layout::cell_rect(x, y), -2.0));
         }
     }
+    draw_lamp_halo(&cs, scene);
     draw_drop_hints(&cs, scene);
+}
+
+/// The lamplight halo: every hold cell the sim reads as [`lit_adjacent`]
+/// wears a whisper of warm amber over its socket, under the cargo — the 2D
+/// analogue of the rack's point lights, and the same reading the rat's fear
+/// and the well-lit painting cue consult. The breath on top is decoration:
+/// it takes the idle clock and parks on the plain wash under reduced
+/// motion, where the lit cells still read from the wash alone. The art
+/// doc's wear-alpha discipline applies to light too, hence the whisper.
+fn draw_lamp_halo(c: &Canvas, scene: &Scene) {
+    let alpha = (scene.idle_clock() * 1.2).sin().mul_add(0.02, 0.07);
+    for y in 0..layout::GRID_ROWS {
+        for x in 0..layout::GRID_COLS {
+            if lit_adjacent(scene.sim.pieces(), x, y) {
+                c.fill(inflate(layout::cell_rect(x, y), -2.0), fade(AMBER, alpha));
+            }
+        }
+    }
 }
 
 /// Per-cell legality tint under a held player piece: green footprint where
@@ -1918,6 +1937,7 @@ fn draw_wants(c: &Canvas, scene: &Scene, barter: &Barter) {
             c,
             kind,
             0,
+            false,
             false,
             layout::Rect::new(x - 11.0, 500.0, 22.0, 22.0),
             t,
@@ -2174,10 +2194,19 @@ fn draw_pieces(c: &Canvas, scene: &Scene) {
         }
         let on_grid = matches!(piece.loc, Loc::Hold { .. });
         let canvas = if on_grid { &shaken } else { c };
+        let lit = piece_lit(sim.pieces(), piece);
         if held_by.is_some() {
-            crew_ghost(canvas, piece, rect, t);
+            crew_ghost(canvas, piece, lit, rect, t);
         } else {
-            piece_glyph(canvas, piece.kind, piece.variant, piece.gnawed, rect, t);
+            piece_glyph(
+                canvas,
+                piece.kind,
+                piece.variant,
+                piece.gnawed,
+                lit,
+                rect,
+                t,
+            );
             unfamiliar_veil(canvas, scene, piece, rect);
         }
     }
@@ -2188,8 +2217,8 @@ fn draw_pieces(c: &Canvas, scene: &Scene) {
 /// piece's home (the sim parks `loc` at the origin until the drop): the
 /// glyph sunk toward the socket under a faint slow-breathing frame —
 /// someone is holding this, and it is not you.
-fn crew_ghost(c: &Canvas, piece: &Piece, rect: layout::Rect, t: f32) {
-    piece_glyph(c, piece.kind, piece.variant, piece.gnawed, rect, t);
+fn crew_ghost(c: &Canvas, piece: &Piece, lit: bool, rect: layout::Rect, t: f32) {
+    piece_glyph(c, piece.kind, piece.variant, piece.gnawed, lit, rect, t);
     c.fill(rect, fade(SOCKET, 0.55));
     c.frame_thick(
         inflate(rect, -PX),
@@ -2219,11 +2248,15 @@ fn draw_held(c: &Canvas, scene: &Scene) {
         gh,
     );
     c.fill(shifted_rect(rect, 3.0, 4.0), fade(SHADOW, 0.5));
+    // The sim parks `loc` at the origin mid-drag, so a lamp lifted out of
+    // the hold keeps burning in the hand until the drop resolves — the
+    // same honest reading the halo and the rat act on.
     piece_glyph(
         c,
         piece.kind,
         piece.variant,
         piece.gnawed,
+        piece_lit(sim.pieces(), piece),
         rect,
         scene.idle_clock(),
     );
@@ -2247,7 +2280,20 @@ fn draw_held(c: &Canvas, scene: &Scene) {
 /// One silhouette per cargo kind, fitted into `rect` (a hold footprint or a
 /// slot). Variants shift the hue and scale the inner detail — same kind,
 /// sibling crates. A gnawed piece wears the rat's bite on top.
-fn piece_glyph(c: &Canvas, kind: Kind, variant: u8, gnawed: bool, rect: layout::Rect, t: f32) {
+///
+/// `lit` is the lamplight hint: the signature carries no [`Loc`], so call
+/// sites read the sim through [`piece_lit`] and pass the reading down — a
+/// lamp burning in the hold, or seedlings blooming in one's light. Kinds
+/// lamplight cannot touch ignore it.
+fn piece_glyph(
+    c: &Canvas,
+    kind: Kind,
+    variant: u8,
+    gnawed: bool,
+    lit: bool,
+    rect: layout::Rect,
+    t: f32,
+) {
     let b = glyph_box(kind, rect);
     let col = variant_tint(kind_color(kind), variant);
     let vs = variant_scale(variant);
@@ -2256,7 +2302,7 @@ fn piece_glyph(c: &Canvas, kind: Kind, variant: u8, gnawed: bool, rect: layout::
         Kind::GildedIdol => idol_glyph(c, b, col, vs),
         Kind::RationBricks => rations_glyph(c, b, col, vs),
         Kind::ScrapAlloy => scrap_glyph(c, b, col, vs),
-        Kind::Seedlings => seedlings_glyph(c, b, col, vs),
+        Kind::Seedlings => seedlings_glyph(c, b, col, vs, lit),
         Kind::GasCanister => canister_glyph(c, b, col, vs),
         Kind::CryoCore => cryo_glyph(c, b, col, vs),
         Kind::BrinePearls => pearls_glyph(c, b, col, vs),
@@ -2268,15 +2314,285 @@ fn piece_glyph(c: &Canvas, kind: Kind, variant: u8, gnawed: bool, rect: layout::
         Kind::Fluff => fluff_glyph(c, b, col, vs, t),
         Kind::TransitChit => chit_glyph(c, b, col, vs),
         Kind::CasinoChip => chip_glyph(c, b, col, vs),
-        // The five fixtures wear the plain rations slab until their real
-        // glyphs land. // fixture glyph pass pending
-        Kind::CeilingLamp | Kind::WallLamp | Kind::FloorLamp | Kind::Couch | Kind::Painting => {
-            rations_glyph(c, b, col, vs);
-        }
+        Kind::CeilingLamp => ceiling_lamp_glyph(c, b, col, vs, lit, t),
+        Kind::WallLamp => wall_lamp_glyph(c, b, col, vs, lit, t),
+        Kind::FloorLamp => floor_lamp_glyph(c, b, col, vs, lit, t),
+        Kind::Couch => couch_glyph(c, b, col, vs),
+        Kind::Painting => painting_glyph(c, b, col, vs, variant),
     }
     if gnawed {
         bite_mark(c, b);
     }
+}
+
+/// The lamplight hint [`piece_glyph`] cannot derive for itself: a lamp is
+/// lit exactly when the sim says it burns ([`lamp_lit`] — stowed in the
+/// hold, dark on shelves, pads, and nets), and seedlings bloom when any of
+/// their footprint cells sit in some lamp's light. Pure reading of
+/// placement, no state — the same contract as the placement hints.
+fn piece_lit(pieces: &[Piece], piece: &Piece) -> bool {
+    match piece.kind {
+        Kind::CeilingLamp | Kind::WallLamp | Kind::FloorLamp => lamp_lit(piece),
+        Kind::Seedlings => {
+            let Loc::Hold { x, y } = piece.loc else {
+                return false;
+            };
+            let (w, h) = piece.kind.cells();
+            (0..w).any(|dx| (0..h).any(|dy| lit_adjacent(pieces, x + dx, y + dy)))
+        }
+        _ => false,
+    }
+}
+
+/// A fixture lamp's burn level: a gentle shimmer on the idle clock (the
+/// art doc's lit-lamp shimmer is decoration), parking just below full and
+/// still plainly lit when frozen.
+fn lamp_burn(lit: bool, t: f32) -> f32 {
+    if lit {
+        (t * 1.6).sin().mul_add(0.06, 0.85)
+    } else {
+        0.0
+    }
+}
+
+/// The ceiling lamp: a stem dropping from the box top — the ceiling it
+/// mounts — into a wide flat-dome shade, lit slope toward the top-left,
+/// with the bulb hanging beneath: a true lamp, burning warm in the hold
+/// and dark glass everywhere else.
+fn ceiling_lamp_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, lit: bool, t: f32) {
+    let cx = b.w.mul_add(0.5, b.x);
+    c.seg(
+        Vec2::new(cx, b.y),
+        Vec2::new(cx, b.h.mul_add(0.20, b.y)),
+        1.0,
+        dim(col, 0.55),
+    );
+    let half = b.w * 0.36 * vs;
+    let apex = Vec2::new(cx, b.h.mul_add(0.16, b.y));
+    let rim_l = Vec2::new(cx - half, b.h.mul_add(0.52, b.y));
+    let rim_r = Vec2::new(cx + half, b.h.mul_add(0.52, b.y));
+    c.tri(apex, rim_l, rim_r, col);
+    c.seg(apex, rim_l, 1.0, fade(GLINT, 0.30));
+    c.seg(rim_l, rim_r, 1.0, dim(col, 0.55));
+    lamp(
+        c,
+        Vec2::new(cx, b.h.mul_add(0.68, b.y)),
+        b.w * 0.10,
+        AMBER,
+        lamp_burn(lit, t),
+    );
+}
+
+/// The wall sconce: a bracket reaching in from the box's left edge — the
+/// wall — to an upward-open cup, its bulb above the rim throwing a faint
+/// fan of light up the wall while stowed.
+fn wall_lamp_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, lit: bool, t: f32) {
+    let sx = b.w.mul_add(0.55, b.x);
+    let cy = b.h.mul_add(0.45, b.y);
+    let burn = lamp_burn(lit, t);
+    c.seg(Vec2::new(b.x, cy), Vec2::new(sx, cy), 1.4, dim(col, 0.55));
+    if lit {
+        // The upward throw: a whisper, same alpha discipline as the halo.
+        c.tri(
+            Vec2::new(sx, b.h.mul_add(-0.12, cy)),
+            Vec2::new(b.w.mul_add(-0.26, sx), b.h.mul_add(-0.42, cy)),
+            Vec2::new(b.w.mul_add(0.26, sx), b.h.mul_add(-0.42, cy)),
+            fade(AMBER, 0.09 * burn),
+        );
+    }
+    lamp(
+        c,
+        Vec2::new(sx, b.h.mul_add(-0.18, cy)),
+        b.w * 0.09,
+        AMBER,
+        burn,
+    );
+    // The cup, drawn over the bulb's lower halo so the light sits in it.
+    let lip_l = Vec2::new(b.w.mul_add(-0.20 * vs, sx), b.h.mul_add(-0.08, cy));
+    let lip_r = Vec2::new(b.w.mul_add(0.20 * vs, sx), b.h.mul_add(-0.08, cy));
+    c.tri(lip_l, lip_r, Vec2::new(sx, b.h.mul_add(0.12, cy)), col);
+    c.seg(lip_l, lip_r, 1.0, dim(col, 0.60));
+}
+
+/// The standing lamp, tall as its 1x2 footprint: base disc on the deck, a
+/// pole up the box, a truncated-cone shade near the top, and the bulb
+/// glowing beneath the shade while stowed.
+fn floor_lamp_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, lit: bool, t: f32) {
+    let cx = b.w.mul_add(0.5, b.x);
+    let deck = b.h.mul_add(0.93, b.y);
+    c.oval(
+        Vec2::new(cx, deck),
+        b.w * 0.30,
+        b.h * 0.035,
+        0.0,
+        dim(col, 0.60),
+    );
+    c.seg(
+        Vec2::new(cx, deck),
+        Vec2::new(cx, b.h.mul_add(0.16, b.y)),
+        1.2,
+        dim(col, 0.75),
+    );
+    let top_l = Vec2::new(b.w.mul_add(-0.14 * vs, cx), b.h.mul_add(0.06, b.y));
+    let top_r = Vec2::new(b.w.mul_add(0.14 * vs, cx), b.h.mul_add(0.06, b.y));
+    let bot_l = Vec2::new(b.w.mul_add(-0.32 * vs, cx), b.h.mul_add(0.22, b.y));
+    let bot_r = Vec2::new(b.w.mul_add(0.32 * vs, cx), b.h.mul_add(0.22, b.y));
+    c.tri(top_l, top_r, bot_l, col);
+    c.tri(top_r, bot_r, bot_l, col);
+    c.seg(top_l, bot_l, 1.0, fade(GLINT, 0.30));
+    c.seg(bot_l, bot_r, 1.0, dim(col, 0.55));
+    lamp(
+        c,
+        Vec2::new(cx, b.h.mul_add(0.30, b.y)),
+        b.w * 0.09,
+        AMBER,
+        lamp_burn(lit, t),
+    );
+}
+
+/// Somebody's living room, in transit: a low back band along the top, two
+/// cushion bumps, a seat seam, stubby feet — depth carried by [`dim`] steps
+/// away from the top-left light, the right cushion sitting a shade deeper.
+fn couch_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
+    let back = layout::Rect::new(
+        b.w.mul_add(0.05, b.x),
+        b.h.mul_add(0.14, b.y),
+        b.w * 0.90,
+        b.h * 0.32,
+    );
+    c.fill(back, dim(col, 0.72));
+    c.fill(
+        layout::Rect::new(back.x, back.y, back.w, PX),
+        fade(GLINT, 0.20),
+    );
+    let cushion_y = b.h.mul_add(0.58, b.y);
+    let rx = b.w * 0.20 * vs;
+    let ry = b.h * 0.18;
+    c.oval(
+        Vec2::new(b.w.mul_add(0.31, b.x), cushion_y),
+        rx,
+        ry,
+        0.0,
+        col,
+    );
+    c.oval(
+        Vec2::new(b.w.mul_add(0.69, b.x), cushion_y),
+        rx,
+        ry,
+        0.0,
+        dim(col, 0.88),
+    );
+    c.seg(
+        Vec2::new(b.w.mul_add(0.10, b.x), b.h.mul_add(0.76, b.y)),
+        Vec2::new(b.w.mul_add(0.90, b.x), b.h.mul_add(0.76, b.y)),
+        1.0,
+        dim(col, 0.45),
+    );
+    for foot in [0.13, 0.82] {
+        c.fill(
+            layout::Rect::new(
+                b.w.mul_add(foot, b.x),
+                b.h.mul_add(0.80, b.y),
+                b.w * 0.05,
+                b.h * 0.14,
+            ),
+            dim(col, 0.40),
+        );
+    }
+}
+
+/// Fixed render-side salt for the painting's art roll; cosmetic only.
+const ART_SEED: u64 = 0xA127_57A7;
+
+/// Gilt frame, subject debatable: the frame in the kind hue around a
+/// sunken canvas bearing 3-4 abstract strokes. The glyph signature carries
+/// no piece id, so the cosmetic variant is the whole seed: it picks one of
+/// four compositions and `splitmix` jitters the placement, so exactly four
+/// works circulate — accents in GLINT, AMBER, and POI enamel.
+fn painting_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, variant: u8) {
+    let art = inflate(b, -b.h * 0.20);
+    c.fill(art, dim(col, 0.22));
+    let h = splitmix(ART_SEED, u64::from(variant % 4));
+    let fx = (h & 0xFF) as f32 / 255.0;
+    let fy = ((h >> 8) & 0xFF) as f32 / 255.0;
+    match variant % 4 {
+        0 => {
+            // A sunset: horizon, sun, and its track on the water.
+            let horizon = art.h.mul_add(fy.mul_add(0.2, 0.50), art.y);
+            c.seg(
+                Vec2::new(art.x + PX, horizon),
+                Vec2::new(art.x + art.w - PX, horizon),
+                1.0,
+                AMBER,
+            );
+            let sun_x = art.w.mul_add(fx.mul_add(0.4, 0.25), art.x);
+            c.dot(
+                Vec2::new(sun_x, art.h.mul_add(0.30, art.y)),
+                art.h * 0.14 * vs,
+                GLINT,
+            );
+            c.seg(
+                Vec2::new(art.w.mul_add(-0.06, sun_x), art.h.mul_add(0.14, horizon)),
+                Vec2::new(art.w.mul_add(0.06, sun_x), art.h.mul_add(0.14, horizon)),
+                1.0,
+                fade(AMBER, 0.6),
+            );
+        }
+        1 => {
+            // Diagonals in three pigments. The gallery card says "Cargo".
+            for (i, tone) in [AMBER, GLINT, POI_VENUS].into_iter().enumerate() {
+                let x0 = art
+                    .w
+                    .mul_add((i as f32).mul_add(0.22, fx.mul_add(0.15, 0.10)), art.x);
+                c.seg(
+                    Vec2::new(x0, art.y + art.h - PX),
+                    Vec2::new(art.w.mul_add(0.18, x0), art.y + PX),
+                    1.2,
+                    tone,
+                );
+            }
+        }
+        2 => {
+            // A lone spiral-ish study: two nested arcs closing on a point.
+            let mid = rect_center(art) + Vec2::new(art.w * fx.mul_add(0.2, -0.1), 0.0);
+            let r = art.h * 0.38 * vs;
+            c.arc(mid, r, fy.mul_add(180.0, 0.0), 300.0, 1.0, GLINT);
+            c.arc(mid, r * 0.55, fy.mul_add(180.0, 120.0), 240.0, 1.0, AMBER);
+            c.dot(mid, 1.0, POI_VENUS);
+        }
+        _ => {
+            // A nocturne: moon, a blue streak crossing, one low star.
+            c.dot(
+                Vec2::new(
+                    art.w.mul_add(fx.mul_add(-0.2, 0.72), art.x),
+                    art.h.mul_add(0.30, art.y),
+                ),
+                art.h * 0.13 * vs,
+                GLINT,
+            );
+            c.seg(
+                Vec2::new(art.w.mul_add(0.12, art.x), art.h.mul_add(0.72, art.y)),
+                Vec2::new(
+                    art.w.mul_add(0.55, art.x),
+                    art.h.mul_add(fy.mul_add(0.2, 0.40), art.y),
+                ),
+                1.0,
+                POI_NEPTUNE,
+            );
+            c.dot(
+                Vec2::new(art.w.mul_add(0.25, art.x), art.h.mul_add(0.60, art.y)),
+                0.8,
+                fade(GLINT, 0.7),
+            );
+        }
+    }
+    // The frame over the canvas edge, lit along the top, shaded below.
+    c.frame_thick(inflate(b, -b.h * 0.04), b.h * 0.12, col);
+    c.fill(layout::Rect::new(b.x, b.y, b.w, PX), fade(GLINT, 0.22));
+    c.fill(
+        layout::Rect::new(b.x, b.y + b.h - PX, b.w, PX),
+        fade(SHADOW, 0.30),
+    );
 }
 
 /// A small parcel in dun paper, lashed with twine, addressed to no one.
@@ -2567,8 +2883,11 @@ fn scrap_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
     );
 }
 
-/// Seedlings: a pot-round base with a sprout on top.
-fn seedlings_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
+/// Seedlings: a pot-round base with a sprout on top. In lamplight (`lit`,
+/// the [`piece_lit`] reading) the sprout blooms: two vial-pink blossoms on
+/// its shoulders and a glint crown at the tip — presentation only, a pure
+/// reading of placement, exactly like the placement hints.
+fn seedlings_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32, lit: bool) {
     let cx = b.w.mul_add(0.5, b.x);
     c.dot(
         Vec2::new(cx, b.h.mul_add(0.64, b.y)),
@@ -2582,6 +2901,20 @@ fn seedlings_glyph(c: &Canvas, b: layout::Rect, col: Color, vs: f32) {
         Vec2::new(cx + spread, b.h.mul_add(0.46, b.y)),
         col,
     );
+    if lit {
+        let pink = kind_color(Kind::PerfumeVial);
+        c.dot(
+            Vec2::new(spread.mul_add(-0.7, cx), b.h.mul_add(0.34, b.y)),
+            1.3,
+            pink,
+        );
+        c.dot(
+            Vec2::new(spread.mul_add(0.55, cx), b.h.mul_add(0.28, b.y)),
+            1.3,
+            pink,
+        );
+        c.dot(Vec2::new(cx, b.h.mul_add(0.08, b.y)), 1.2, GLINT);
+    }
 }
 
 /// Gas canister: an orange capsule wearing hazard chevrons.
@@ -2673,12 +3006,30 @@ fn draw_rat(c: &Canvas, scene: &Scene) {
     let t = (age / RAT_HOP_TICKS).clamp(0.0, 1.0);
     let from = rat_perch(rat.prev_cell);
     let to = rat_perch(rat.cell);
+    // Settled on the couch (the hop tween done, its cell under couch
+    // upholstery): the nap — the sim's rat insurance made visible.
+    if t >= 1.0 && rat_on_couch(scene.sim.pieces(), rat.cell) {
+        rat_nap_glyph(&cs, to, to.x <= from.x);
+        return;
+    }
     let mut at = from.lerp(to, ease_out(t));
     // A shallow arc while mid-hop.
     at.y = (PI * t).sin().mul_add(-5.0, at.y);
     // The hop is sim-driven feedback and always runs; the tail sway inside
     // the glyph is decoration and takes the idle clock.
     rat_glyph(&cs, at, to.x <= from.x, scene.idle_clock());
+}
+
+/// Whether the rat's cell lies inside a stowed couch's footprint — the
+/// same covered-ground reading the sim naps on.
+fn rat_on_couch(pieces: &[Piece], cell: (u8, u8)) -> bool {
+    pieces.iter().any(|piece| {
+        let Loc::Hold { x, y } = piece.loc else {
+            return false;
+        };
+        let (w, h) = piece.kind.cells();
+        piece.kind == Kind::Couch && cell.0 >= x && cell.0 < x + w && cell.1 >= y && cell.1 < y + h
+    })
 }
 
 /// Where the rat sits in cell `(x, y)`: low and left of centre, out of the
@@ -2705,6 +3056,35 @@ fn rat_glyph(c: &Canvas, at: Vec2, facing_left: bool, t: f32) {
     c.dot(head + Vec2::new(1.3 * flip, -0.5), 0.7, SHADOW);
 }
 
+/// The couch nap: the same rat settled — body flattened wider and lower
+/// into the cushion, tail curled against the haunch (a short arc, not the
+/// sway seg), head down, eye shut under a one-pixel lid. Deliberately
+/// static: no idle clock at all, so it reads asleep even frozen — the
+/// decoration rule's freeze changes nothing here.
+fn rat_nap_glyph(c: &Canvas, at: Vec2, facing_left: bool) {
+    let flip = if facing_left { -1.0 } else { 1.0 };
+    let at = at + Vec2::new(0.0, 1.0);
+    c.arc(
+        at + Vec2::new(-3.5 * flip, 0.5),
+        3.2,
+        40.0,
+        250.0,
+        1.0,
+        dim(RIVET, 0.75),
+    );
+    c.oval(at, 6.0, 2.2, 0.0, RIVET);
+    let head = at + Vec2::new(5.2 * flip, -0.6);
+    c.dot(head, 2.2, RIVET);
+    c.dot(head + Vec2::new(-0.4 * flip, -1.8), 1.1, dim(RIVET, 0.85));
+    let eye = head + Vec2::new(1.2 * flip, -0.4);
+    c.seg(
+        eye + Vec2::new(-0.9, 0.0),
+        eye + Vec2::new(0.9, 0.0),
+        1.0,
+        SHADOW,
+    );
+}
+
 // ---------------------------------------------------------------- flashes --
 
 /// The rule glyph that flashes over the offending cells on a hard reject.
@@ -2714,11 +3094,16 @@ fn draw_violation_flash(c: &Canvas, scene: &Scene) {
     };
     let mid = rect_center(rect);
     match rule {
-        // Off the grid or onto another piece: a plain red edge flash. A
-        // fixture off its mount borrows it. // fixture glyph pass pending
-        Violation::Bounds | Violation::Overlap | Violation::Affix(_) => {
+        // Off the grid or onto another piece: a plain red edge flash.
+        Violation::Bounds | Violation::Overlap => {
             c.frame_thick(grid_rect(), 2.0, fade(LAMP_NO, heat));
             c.frame_thick(rect, 2.0, fade(LAMP_NO, heat * 0.9));
+        }
+        // A fixture off its mount: the bracket it failed to reach, GLINT
+        // hardware like the kettlebell, turned toward the missed surface.
+        Violation::Affix(mount) => {
+            c.fill(rect, fade(LAMP_NO, heat * 0.18));
+            bracket_glyph(c, mid, 12.0, mount, fade(GLINT, heat));
         }
         Violation::Heavy => {
             c.fill(rect, fade(LAMP_NO, heat * 0.18));
@@ -2737,6 +3122,31 @@ fn draw_violation_flash(c: &Canvas, scene: &Scene) {
             c.fill(rect, fade(EERIE, heat * 0.45));
             c.frame_thick(rect, 2.0, fade(EERIE_BRIGHT, heat));
         }
+    }
+}
+
+/// The affix rule's mounting bracket: a short stub of the surface the
+/// fixture must touch, with two bolt dots standing proud of it, rotated
+/// per mount — stub along the top edge for the ceiling, the bottom for
+/// the floor, upright at the nearer side for a wall.
+fn bracket_glyph(c: &Canvas, mid: Vec2, s: f32, mount: Mount, col: Color) {
+    // `along` runs the stub's length; `out` points off the surface into
+    // the room, so the bolts sit just inside of the stub.
+    let (along, out) = match mount {
+        Mount::Ceiling => (Vec2::new(1.0, 0.0), Vec2::new(0.0, 1.0)),
+        Mount::Floor => (Vec2::new(1.0, 0.0), Vec2::new(0.0, -1.0)),
+        Mount::Wall => {
+            let left = mid.x < rect_center(grid_rect()).x;
+            (
+                Vec2::new(0.0, 1.0),
+                Vec2::new(if left { 1.0 } else { -1.0 }, 0.0),
+            )
+        }
+    };
+    let base = mid - out * (s * 0.6);
+    c.seg(base - along * s, base + along * s, 2.5, col);
+    for bolt in [-0.5_f32, 0.5] {
+        c.dot(base + along * (s * bolt) + out * (s * 0.3), 1.8, col);
     }
 }
 

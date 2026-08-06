@@ -1,5 +1,9 @@
 # Fixtures: cargo that furnishes the ship
 
+> The conceit below went literal one slice later: the grid now unfolds
+> into a walkable bay, and the 2D console has retired — see
+> [BAY.md](BAY.md). The sim-side rules in this file are unchanged.
+
 The cargo experiment's first slice ("actuate the 3D space"): five new
 kinds that live in the room — lamps in three affixations, a couch, a
 painting — plus mechanics tying cargo to light, vermin, and value.

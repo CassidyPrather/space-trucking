@@ -12,11 +12,14 @@ different rule amends this file in the same change.
 
 The 2D console's regions are physical stations bolted into a cramped
 freighter cabin, arranged so muscle memory transfers: the star map is a
-recessed phosphor tank upper-left, the console face (destination screen,
-ETA gauge, launch lever, icon buttons) upper-right, the hold is a racked
-tray low-left, the barter counter low-right. DESIGN.md calls the first 3D
-pass "an enclosed box with flavor"; the flavor is ribs, pipes, and panel
-mass, not detail assets.
+recessed phosphor tank on the left wall, the console face (destination
+screen, ETA gauge, launch lever, icon buttons) front-right, the barter
+counter low-right, the transit window front and center — and the aft
+half of the cabin is the **walkable cargo bay**, where the hold grid
+unfolds onto the wall and deck at furniture scale (see
+[BAY.md](BAY.md)). DESIGN.md calls the first 3D pass "an enclosed box
+with flavor"; the flavor is ribs, pipes, and panel mass, not detail
+assets.
 
 Two camera postures, and the camera **never trails the cursor** — every
 move is deliberate, nothing to get seasick over:
@@ -36,11 +39,14 @@ retuned panel moves its viewpoint with it. Stations only need to look
 composed from their focus pose and presentable in passing — the focused
 view is the contract, the roam is atmosphere.
 
-The sim is the same one the 2D console runs — same save string, same
-flight-recorder tape. Every interactive panel is a `SimSurface`: an
-oriented quad bound to a rect of the sim's 800×600 logical world. The
-cursor ray maps through the panel into sim coordinates, so the sim keeps
-making every ruling, and hit-tests can never disagree with the rules.
+The sim is the same one the 2D console ran — same save string, same
+flight-recorder tape; the console itself retired once the bay work
+began (the decision is recorded in [BAY.md](BAY.md)). Every interactive
+panel is a `SimSurface`: an oriented quad bound to a rect of the sim's
+800×600 logical world. The cursor ray — or, in the bay, the roaming
+crosshair ray — maps through the surface into sim coordinates, so the
+sim keeps making every ruling, and hit-tests can never disagree with
+the rules.
 
 ## Two material families, again
 
@@ -209,10 +215,12 @@ The owner's actuating idea for the experiment, queued behind the
 smaller polish: new cargo kinds that *live in the room* — lamps (floor-,
 wall-, or ceiling-affixed), couches, paintings — plus mechanics that let
 cargo interact with light, atmosphere, and other cargo, tying the 3D
-space together. Every such mechanic keeps a 2D analogue (the console
-must still play the same game), which the discrete berth model makes
-natural: an affixed lamp is a piece whose berth class is "wall", and its
-light is presentation.
+space together. The fixture slice ([FIXTURES.md](FIXTURES.md)) landed
+that idea; the walkable bay ([BAY.md](BAY.md)) is the next slice —
+carry-style interaction at furniture scale, and the cabinet as the
+first berth-providing piece. With the 2D console retired, the "2D
+analogue" law became the logical-space law: every mechanic must remain
+expressible and testable through `InputFrame`s against `layout` rects.
 
 ## Open questions for the aesthetic experiment
 
@@ -231,10 +239,15 @@ Answered by iteration so far:
   calls. The distinction between a *screen showing a reading* and a
   *window showing space* is the material discipline, kept.
 
+- **The hold left the desk** ([BAY.md](BAY.md)): the grid unfolds onto
+  the cabin's aft wall and deck at furniture scale, carry replaces
+  drag, and the counter keeps desk scale as the broker's diorama until
+  the barter redesign lands.
+
 Deliberately unsettled, still:
 
 - Whether the crunch target should breathe with window size or stay
   fixed 16:9 letterboxed.
 - How far bloom can carry the CRT reading before it goes syrupy.
-- Whether the cargo experiment (see "The cargo question") moves the
-  hold off the desk into a walkable bay.
+- Where the barter counter's presentation goes when the economy design
+  work starts (the diorama conceit is a placeholder, not a promise).

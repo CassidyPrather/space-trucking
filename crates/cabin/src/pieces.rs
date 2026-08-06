@@ -10,20 +10,32 @@
 //! come from `layout::piece_rect`, legality from `placement_check`, invites
 //! from `drop_targets` — and no refusal rides on hue alone: illegality
 //! always carries a slash, gnawing carries a wedge, shapes over colors.
+//!
+//! The fixture kinds go further, per `docs/FIXTURES.md`: the hold rack
+//! grows a gantry frame (top rail, deck lip, side stiles) the fixtures
+//! visibly mount to, every lamp rig owns a real `PointLight` gated by the
+//! sim's `lamp_lit` and dimmed by the omen through `rig::Dimmable`,
+//! seedlings bloom in `lit_adjacent` lamplight, paintings carry one seeded
+//! artwork painted through the shared `canvas`, and a couch under the rat
+//! settles it into a nap pose.
 
 use std::collections::HashMap;
 use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI, TAU};
 
+use bevy::asset::RenderAssetUsages;
+use bevy::image::ImageSampler;
 use bevy::prelude::*;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 use space_trucking::sim::layout::{self, Rect};
 use space_trucking::sim::{
-    Cue, Kind, Loc, Piece, Vec2 as SimVec2, Violation, placement_check, player_owned, splitmix,
+    Cue, Kind, Loc, Piece, Vec2 as SimVec2, Violation, lamp_lit, lit_adjacent, placement_check,
+    player_owned, splitmix,
 };
 
-use crate::rig::Skin;
+use crate::rig::{Dimmable, Skin};
 use crate::surface::{SimSurface, Station, VirtualPointer};
-use crate::{Phase, Shell, glow, palette};
+use crate::{Phase, Shell, canvas, glow, palette};
 
 /// How long a piece takes to glide to a new berth, seconds.
 const EASE_LEN: f32 = 0.15;
@@ -49,6 +61,28 @@ const SALT_PULSE: u64 = 0x91EC_E501;
 /// Salt for the bite wedge's spin.
 const SALT_BITE: u64 = 0x91EC_B17E;
 
+/// Salt for the painting's one artwork roll.
+const SALT_ART: u64 = 0x91EC_0A27;
+
+/// A stowed lamp's honest brightness; the omen scales it via `Dimmable`.
+const LAMP_LUMENS: f32 = 9_000.0;
+
+/// A lamp's reach, metres: a pool over the neighbouring cells — the 3D
+/// reading of the sim's orthogonal halo — not a second room light.
+const LAMP_RANGE: f32 = 1.3;
+
+/// Lamp wake/sleep fade, seconds. Placement feedback, so it finishes
+/// well inside the half-second law.
+const LAMP_WAKE: f32 = 0.3;
+
+/// The painting's little canvas in sim units: 24×16 texels at the
+/// shared rasterizer's own density.
+const ART_W: f32 = 48.0;
+const ART_H: f32 = 32.0;
+
+/// The artwork's emissive multiplier: barely a glow. Paint, not a screen.
+const ART_GLOW: f32 = 0.5;
+
 pub struct PiecesPlugin;
 
 impl Plugin for PiecesPlugin {
@@ -65,6 +99,7 @@ impl Plugin for PiecesPlugin {
                 (
                     latch_cues,
                     sync_pieces,
+                    sync_fixtures,
                     carry_held,
                     placement_hints,
                     invite_glows,
@@ -191,6 +226,37 @@ struct RatTail {
     base: Quat,
 }
 
+/// A lamp rig's living parts: `level` eases lit/dark over [`LAMP_WAKE`]
+/// seconds and feeds both the point light's [`Dimmable`] base — fx.rs
+/// keeps the per-frame omen math — and the bulb glass, which is its own
+/// material instance per the shared-handle rule. Lamps burn only while
+/// the sim's `lamp_lit` says so: stowed in the hold, nowhere else.
+#[derive(Component)]
+struct LampGlow {
+    piece: u32,
+    color: Color,
+    mat: Handle<StandardMaterial>,
+    /// Eased lit level, `0..=1`.
+    level: f32,
+}
+
+/// The wall lamp's bracket sub-root. Built reaching +X (the right
+/// stile); when the piece's footprint sits on wall column 0 a π turn
+/// about Z mirrors it left — every part sits at local y = 0, so the
+/// turn is a clean side flip, not an upside-down sconce.
+#[derive(Component)]
+struct WallArm {
+    piece: u32,
+}
+
+/// One blossom on a Seedlings rig, visible only while some footprint
+/// cell sits in lamplight (`lit_adjacent`) — presentation only, the 3D
+/// reading of the 2D bloom.
+#[derive(Component)]
+struct Blossom {
+    piece: u32,
+}
+
 /// Handles shared by the overlay systems: the static refusal-slash phosphor
 /// and the one violation-flash material all four bars burn through.
 #[derive(Resource)]
@@ -263,6 +329,10 @@ fn spawn_overlays(
     let Some(barter) = surface_of(&surfaces, Station::Barter) else {
         return;
     };
+
+    // The gantry the fixtures mount to: the hold grid's edges are the
+    // room's surfaces, so the rack grows the matching furniture.
+    spawn_gantry(&mut commands, &skin, &hold);
 
     // Hold cell hints: a thin quad per cell, its refusal slash floating
     // just above it (shape channel — illegality never rides hue alone).
@@ -340,6 +410,61 @@ fn spawn_overlays(
     }
 }
 
+/// The gantry: the mounting frame the fixture conceit hangs on — a top
+/// rail above row 0 (the ceiling), a deck lip under row 3 (the floor),
+/// and a stile beside each wall column. Thin worn-metal bars lifted just
+/// off the rack, sized from the surface's own scale helpers; subtle
+/// furniture on purpose — the frame explains the fixtures, it does not
+/// compete with the cargo.
+fn spawn_gantry(commands: &mut Commands, skin: &Skin, hold: &SimSurface) {
+    let (su, sv) = (hold.scale_u(), hold.scale_v());
+    let rot = hold.orientation();
+    let normal = hold.normal();
+    let ox = layout::GRID_ORIGIN.x;
+    let oy = layout::GRID_ORIGIN.y;
+    let gw = f32::from(layout::GRID_COLS) * layout::CELL;
+    let gh = f32::from(layout::GRID_ROWS) * layout::CELL;
+    let bars = [
+        // The top rail the ceiling lamps hang from, a hair prouder than
+        // the rest so it reads load-bearing.
+        (
+            SimVec2::new(gw.mul_add(0.5, ox), oy - 5.0),
+            (gw + 20.0, 6.0),
+            0.012,
+            &skin.plate,
+        ),
+        // The deck lip under the floor row.
+        (
+            SimVec2::new(gw.mul_add(0.5, ox), oy + gh + 5.0),
+            (gw + 20.0, 6.0),
+            0.010,
+            &skin.plate,
+        ),
+        // A stile beside each wall column, in the shaded metal.
+        (
+            SimVec2::new(ox - 5.0, gh.mul_add(0.5, oy)),
+            (5.0, gh + 24.0),
+            0.010,
+            &skin.plate_shade,
+        ),
+        (
+            SimVec2::new(ox + gw + 5.0, gh.mul_add(0.5, oy)),
+            (5.0, gh + 24.0),
+            0.010,
+            &skin.plate_shade,
+        ),
+    ];
+    for (at, (w, h), lift, material) in bars {
+        commands.spawn((
+            Mesh3d(skin.cube.clone()),
+            MeshMaterial3d(material.clone()),
+            Transform::from_translation(hold.to_world(at) + normal * lift)
+                .with_rotation(rot)
+                .with_scale(Vec3::new(w * su, h * sv, 0.016)),
+        ));
+    }
+}
+
 // -------------------------------------------------------------------- cues --
 
 /// Latch what this frame's cues mean for cargo before the view systems run:
@@ -408,6 +533,7 @@ fn sync_pieces(
     mut settle: ResMut<PendingSettle>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
     mut rigs: Query<(&mut PieceRig, &mut Transform)>,
 ) {
     let sim = &shell.bridge.sim;
@@ -473,6 +599,7 @@ fn sync_pieces(
                 &mut commands,
                 &mut meshes,
                 &mut materials,
+                &mut images,
                 &skin,
                 &shared,
                 piece,
@@ -502,6 +629,69 @@ fn sync_pieces(
         transform.translation = rig.from.lerp(rig.goal, eased);
         transform.rotation = rig.rot_from.slerp(rig.rot_goal, eased);
         transform.scale = rig.scale_from.lerp(rig.scale_goal, eased) * settle_scale;
+    }
+}
+
+// ---------------------------------------------------------------- fixtures --
+
+/// The fixtures' live state, read fresh from the sim's own predicates
+/// each frame: lamp bulbs and their point lights ease between lit and
+/// dark glass over [`LAMP_WAKE`] seconds (`lamp_lit` — hold only; a lamp
+/// riding a shelf or pad is dark), wall-lamp arms reach for whichever
+/// stile their wall column touches, and seedlings blossom exactly where
+/// `lit_adjacent` says the lamplight falls.
+///
+/// The lights themselves are gated through [`Dimmable`]'s base intensity:
+/// fx.rs's `dim_cabin` overwrites `PointLight::intensity` from it every
+/// frame, so the omen keeps dimming fixture light with no special case.
+fn sync_fixtures(
+    time: Res<Time>,
+    shell: Res<Shell>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut lamps: Query<(&mut LampGlow, &mut Dimmable)>,
+    mut arms: Query<(&WallArm, &mut Transform)>,
+    mut blossoms: Query<(&Blossom, &mut Visibility)>,
+) {
+    let pieces = shell.bridge.sim.pieces();
+    let step = time.delta_secs() / LAMP_WAKE;
+    for (mut lamp, mut dimmable) in &mut lamps {
+        let lit = pieces
+            .iter()
+            .find(|piece| piece.id == lamp.piece)
+            .is_some_and(lamp_lit);
+        lamp.level = if lit {
+            (lamp.level + step).min(1.0)
+        } else {
+            (lamp.level - step).max(0.0)
+        };
+        dimmable.intensity = LAMP_LUMENS * lamp.level;
+        if let Some(mut mat) = materials.get_mut(&lamp.mat) {
+            glow::set_lamp(&mut mat, lamp.color, lamp.level);
+        }
+    }
+    for (arm, mut transform) in &mut arms {
+        let left = pieces
+            .iter()
+            .any(|piece| piece.id == arm.piece && matches!(piece.loc, Loc::Hold { x: 0, .. }));
+        transform.rotation = if left {
+            Quat::from_rotation_z(PI)
+        } else {
+            Quat::IDENTITY
+        };
+    }
+    for (blossom, mut visibility) in &mut blossoms {
+        let blooming = pieces.iter().any(|piece| {
+            piece.id == blossom.piece
+                && matches!(piece.loc, Loc::Hold { x, y } if {
+                    let (w, h) = piece.kind.cells();
+                    (0..w).any(|dx| (0..h).any(|dy| lit_adjacent(pieces, x + dx, y + dy)))
+                })
+        });
+        *visibility = if blooming {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
     }
 }
 
@@ -794,11 +984,38 @@ fn rat_watch(
         // Panel-up is sim -y, so the yaw flips the sim's vertical.
         state.yaw = (-dy).atan2(dx);
     }
+    // A couch under its paws is bedtime. The sim already stretches the
+    // hop cadence NAP_LAZE-wide; the pose says so too — flattened along
+    // the cushions, nothing fidgeting — so it reads asleep in a still.
+    let napping = t >= 1.0
+        && sim.pieces().iter().any(|piece| {
+            let Loc::Hold { x, y } = piece.loc else {
+                return false;
+            };
+            let (w, h) = piece.kind.cells();
+            piece.kind == Kind::Couch
+                && (x..x + w).contains(&rat.cell.0)
+                && (y..y + h).contains(&rat.cell.1)
+        });
     let unit = (hold.scale_u() + hold.scale_v()) * 0.5;
     let hop = (PI * t).sin() * 5.0 * unit;
-    let place = Transform::from_translation(hold.to_world(at) + hold.normal() * hop)
+    // Asleep it settles to its cell's centre and lies ON the cushions
+    // (seat-slab height, sim units off the rack) instead of hiding
+    // behind the couch silhouette.
+    let (at, scale, lift) = if napping {
+        let cell = layout::cell_rect(rat.cell.0, rat.cell.1);
+        (
+            rect_center(cell),
+            // Long and low: nose splayed out, belly in the upholstery.
+            Vec3::new(unit * 1.18, unit * 1.06, unit * 0.6),
+            11.0 * unit,
+        )
+    } else {
+        (at, Vec3::splat(unit), 0.0)
+    };
+    let place = Transform::from_translation(hold.to_world(at) + hold.normal() * (hop + lift))
         .with_rotation(hold.orientation() * Quat::from_rotation_z(state.yaw))
-        .with_scale(Vec3::splat(unit));
+        .with_scale(scale);
     if let Some(entity) = state.entity {
         if let Ok(mut transform) = roots.get_mut(entity) {
             *transform = place;
@@ -807,10 +1024,16 @@ fn rat_watch(
         state.entity = Some(spawn_rat(&mut commands, &mut meshes, &skin, place));
     }
 
-    // The tail sway is decoration, on the idle clock.
+    // The tail: idle-clock sway awake; curled tight and still asleep.
     let sway = (glow::breathe(time.elapsed_secs(), 3.0, 0.0) - 0.5) * 0.9;
     for (tail, mut transform) in &mut tails {
-        transform.rotation = Quat::from_rotation_z(sway) * tail.base;
+        if napping {
+            transform.rotation = Quat::from_rotation_z(1.2) * tail.base;
+            transform.scale = Vec3::new(1.0, 0.6, 1.0);
+        } else {
+            transform.rotation = Quat::from_rotation_z(sway) * tail.base;
+            transform.scale = Vec3::ONE;
+        }
     }
 }
 
@@ -886,6 +1109,7 @@ struct RigParts<'w, 's, 'a> {
     commands: &'a mut Commands<'w, 's>,
     meshes: &'a mut Assets<Mesh>,
     materials: &'a mut Assets<StandardMaterial>,
+    images: &'a mut Assets<Image>,
     skin: &'a Skin,
     root: Entity,
 }
@@ -928,10 +1152,12 @@ impl RigParts<'_, '_, '_> {
 /// Spawn one piece's whole rig at `place`: the kind's silhouette in local
 /// sim units (footprint `w*CELL × h*CELL` in X/Y, thickness up +Z off the
 /// panel), the hidden bite wedge, and the hidden carry-legality frame.
+#[allow(clippy::too_many_arguments)]
 fn spawn_rig(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
     skin: &Skin,
     shared: &SharedBits,
     piece: &Piece,
@@ -946,6 +1172,7 @@ fn spawn_rig(
         commands: &mut *commands,
         meshes: &mut *meshes,
         materials: &mut *materials,
+        images: &mut *images,
         skin,
         root,
     };
@@ -1083,7 +1310,10 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 Transform::from_xyz(fw * 0.02, fh * 0.14, 15.0),
             );
         }
-        // A pot with a sprout on top.
+        // A pot with a sprout on top. Under lamplight it blooms: three
+        // PerfumeVial-pink buds, hidden until `lit_adjacent` says the
+        // footprint sits in a lit lamp's halo (presentation only, the
+        // 2D bloom's reading).
         Kind::Seedlings => {
             let pot = rig.tint(palette::mix(color, palette::SHADOW, 0.35));
             rig.part(
@@ -1101,6 +1331,18 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 Transform::from_xyz(0.0, -fh * 0.1, 21.0)
                     .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
             );
+            let bud_mat = rig.tint(palette::kind_color(Kind::PerfumeVial));
+            let bud = rig.meshes.add(ico(2.4));
+            for (bx, by, bz) in [(-6.0, -3.5, 15.0), (5.5, -2.5, 17.0), (0.8, -4.5, 27.0)] {
+                rig.commands.spawn((
+                    Mesh3d(bud.clone()),
+                    MeshMaterial3d(bud_mat.clone()),
+                    Transform::from_xyz(bx, by, bz),
+                    Visibility::Hidden,
+                    Blossom { piece: piece.id },
+                    ChildOf(rig.root),
+                ));
+            }
         }
         // A horizontal capsule wearing hazard chevrons.
         Kind::GasCanister => {
@@ -1327,14 +1569,345 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 Transform::from_xyz(0.0, 0.0, 9.2).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
             );
         }
-        // The five fixtures ride a plain tinted slab until their real
-        // rigs land. // fixture pass pending
-        Kind::CeilingLamp | Kind::WallLamp | Kind::FloorLamp | Kind::Couch | Kind::Painting => {
+        // A hanging shade off the gantry's top rail: mount plate, stem,
+        // a flattened cone shade, and the warm bulb beneath — the bulb
+        // and its point light wake through `sync_fixtures`.
+        Kind::CeilingLamp => {
             rig.part(
-                Cuboid::new(fw * 0.62, fh * 0.62, 14.0),
+                Cuboid::new(9.0, 3.0, 5.0),
+                rig.skin.plate_shade.clone(),
+                Transform::from_xyz(0.0, fh * 0.44, 10.0),
+            );
+            rig.part(
+                Cylinder::new(1.3, fh * 0.26),
+                rig.skin.brass.clone(),
+                Transform::from_xyz(0.0, fh * 0.30, 10.0),
+            );
+            rig.part(
+                Cone {
+                    radius: fw * 0.28,
+                    height: 12.0,
+                },
                 body,
-                Transform::from_xyz(0.0, 0.0, 7.0),
+                Transform::from_xyz(0.0, fh * 0.04, 10.0),
+            );
+            let root = rig.root;
+            lamp_bulb(rig, piece, root, Vec3::new(0.0, -fh * 0.14, 10.0), 3.4);
+        }
+        // A sconce off a repossessed liner: bracket arm and mount pad
+        // reaching for the nearer stile (the `WallArm` sub-root flips
+        // sides with the piece's wall column), cup, bulb.
+        Kind::WallLamp => {
+            let arm_root = rig
+                .commands
+                .spawn((
+                    Transform::default(),
+                    Visibility::default(),
+                    WallArm { piece: piece.id },
+                    ChildOf(rig.root),
+                ))
+                .id();
+            let bracket = rig.meshes.add(Cuboid::new(fw * 0.34, 3.0, 3.0));
+            rig.commands.spawn((
+                Mesh3d(bracket),
+                MeshMaterial3d(rig.skin.plate_shade.clone()),
+                Transform::from_xyz(fw * 0.24, 0.0, 10.0),
+                ChildOf(arm_root),
+            ));
+            let pad = rig.meshes.add(Cuboid::new(3.4, 10.0, 6.0));
+            rig.commands.spawn((
+                Mesh3d(pad),
+                MeshMaterial3d(rig.skin.plate_shade.clone()),
+                Transform::from_xyz(fw * 0.42, 0.0, 10.0),
+                ChildOf(arm_root),
+            ));
+            let cup = rig.meshes.add(Mesh::from(Cone {
+                radius: fw * 0.20,
+                height: 11.0,
+            }));
+            rig.commands.spawn((
+                Mesh3d(cup),
+                MeshMaterial3d(body),
+                Transform::from_xyz(fw * 0.10, 0.0, 10.0)
+                    .with_rotation(Quat::from_rotation_z(-FRAC_PI_2)),
+                ChildOf(arm_root),
+            ));
+            lamp_bulb(rig, piece, arm_root, Vec3::new(-fw * 0.12, 0.0, 10.0), 3.2);
+        }
+        // A standing lamp bolted to the deck lip: base disc, pole, the
+        // shade up top with its bulb tucked under.
+        Kind::FloorLamp => {
+            rig.part(
+                Cylinder::new(fw * 0.26, 3.2),
+                rig.skin.plate_shade.clone(),
+                Transform::from_xyz(0.0, -fh * 0.41, 2.4)
+                    .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+            );
+            rig.part(
+                Cylinder::new(1.3, fh * 0.72),
+                rig.skin.brass.clone(),
+                Transform::from_xyz(0.0, -fh * 0.04, 6.0),
+            );
+            rig.part(
+                Cone {
+                    radius: fw * 0.30,
+                    height: 13.0,
+                },
+                body,
+                Transform::from_xyz(0.0, fh * 0.33, 11.0),
+            );
+            let root = rig.root;
+            lamp_bulb(rig, piece, root, Vec3::new(0.0, fh * 0.21, 11.0), 3.4);
+        }
+        // Somebody's living room, in transit: seat slab, back rest, arm
+        // cubes, cushion bumps, stubby feet — upholstery hue, dim shading.
+        Kind::Couch => {
+            let under = rig.tint(palette::mix(color, palette::SHADOW, 0.3));
+            rig.part(
+                Cuboid::new(fw * 0.74, fh * 0.34, 10.0),
+                under,
+                Transform::from_xyz(0.0, -fh * 0.08, 5.0),
+            );
+            rig.part(
+                Cuboid::new(fw * 0.74, fh * 0.30, 15.0),
+                body.clone(),
+                Transform::from_xyz(0.0, fh * 0.24, 7.5),
+            );
+            let arm = rig.meshes.add(Cuboid::new(fw * 0.10, fh * 0.52, 14.0));
+            for side in [-1.0, 1.0] {
+                rig.spawn(
+                    arm.clone(),
+                    body.clone(),
+                    Transform::from_xyz(fw * 0.42 * side, -fh * 0.02, 7.0),
+                );
+            }
+            let cushion = rig.meshes.add(ico(6.0));
+            for side in [-1.0, 1.0] {
+                rig.spawn(
+                    cushion.clone(),
+                    body.clone(),
+                    Transform::from_xyz(fw * 0.17 * side, -fh * 0.05, 10.0)
+                        .with_scale(Vec3::new(1.5, 1.05, 0.7)),
+                );
+            }
+            let foot = rig.meshes.add(Cuboid::new(4.0, 5.0, 4.0));
+            for side in [-1.0, 1.0] {
+                rig.spawn(
+                    foot.clone(),
+                    rig.skin.plate_shade.clone(),
+                    Transform::from_xyz(fw * 0.36 * side, -fh * 0.36, 2.0),
+                );
+            }
+        }
+        // Gilt frame, subject debatable: a backing slab, raised frame
+        // lips, and the canvas — one seeded artwork painted through the
+        // shared rasterizer, emissive so low it reads as paint.
+        Kind::Painting => {
+            let backing = rig.tint(palette::mix(color, palette::SHADOW, 0.35));
+            rig.part(
+                Cuboid::new(fw * 0.82, fh * 0.74, 5.0),
+                backing,
+                Transform::from_xyz(0.0, 0.0, 2.5),
+            );
+            let lip_h = rig.meshes.add(Cuboid::new(fw * 0.78, 3.2, 4.0));
+            let lip_v = rig.meshes.add(Cuboid::new(3.2, fh * 0.66, 4.0));
+            for (mesh, at) in [
+                (lip_h.clone(), Vec3::new(0.0, fh * 0.315, 5.4)),
+                (lip_h, Vec3::new(0.0, -fh * 0.315, 5.4)),
+                (lip_v.clone(), Vec3::new(fw * 0.35, 0.0, 5.4)),
+                (lip_v, Vec3::new(-fw * 0.35, 0.0, 5.4)),
+            ] {
+                rig.spawn(mesh, body.clone(), Transform::from_translation(at));
+            }
+            let art = paint_artwork(rig.images, rig.materials, piece.id);
+            rig.part(
+                Rectangle::new(1.0, 1.0),
+                art,
+                Transform::from_xyz(0.0, 0.0, 5.15).with_scale(Vec3::new(
+                    fw * 0.68,
+                    fh * 0.58,
+                    1.0,
+                )),
             );
         }
     }
+}
+
+/// A lamp's live bulb: dark glass that wakes warm, plus the real point
+/// light beneath it. The light spawns dark ([`Dimmable`] base 0) and
+/// [`sync_fixtures`] eases both toward `lamp_lit` — no shadow maps, per
+/// the art direction; the pool of light is the point.
+fn lamp_bulb(rig: &mut RigParts, piece: &Piece, parent: Entity, at: Vec3, radius: f32) {
+    let color = palette::mix(palette::kind_color(piece.kind), palette::GLINT, 0.35);
+    let mat = glow::phosphor(rig.materials, color, 0.0);
+    let bulb = rig.meshes.add(ico(radius));
+    rig.commands.spawn((
+        Mesh3d(bulb),
+        MeshMaterial3d(mat.clone()),
+        Transform::from_translation(at),
+        ChildOf(parent),
+    ));
+    rig.commands.spawn((
+        PointLight {
+            color,
+            intensity: 0.0,
+            range: LAMP_RANGE,
+            shadow_maps_enabled: false,
+            ..default()
+        },
+        Transform::from_translation(at),
+        Dimmable { intensity: 0.0 },
+        LampGlow {
+            piece: piece.id,
+            color,
+            mat,
+            level: 0.0,
+        },
+        ChildOf(parent),
+    ));
+}
+
+/// The artwork half of a `Painting`: a 24×16-texel canvas painted once
+/// through the shared [`canvas::Canvas`] at its own scale, then baked
+/// into an emissive texture. Seeded by the piece id over [`SALT_ART`] —
+/// the same picture every boot — choosing one of four archetypes, all
+/// palette-derived inks, at [`ART_GLOW`] so gallery light (the lamps)
+/// matters more than the paint's own faint glow.
+#[allow(clippy::too_many_lines)] // four archetypes, one gallery
+fn paint_artwork(
+    images: &mut Assets<Image>,
+    materials: &mut Assets<StandardMaterial>,
+    id: u32,
+) -> Handle<StandardMaterial> {
+    let field = Rect::new(0.0, 0.0, ART_W, ART_H);
+    let mut cv = canvas::Canvas::new(field);
+    let roll = splitmix(u64::from(id), SALT_ART);
+    let bits = |shift: u64, span: u64| ((roll >> shift) % span) as f32;
+    match roll % 4 {
+        // A horizon under a low sun.
+        0 => {
+            cv.fill(
+                field,
+                canvas::mix(
+                    canvas::ink(palette::POI_NEPTUNE),
+                    canvas::ink(palette::SHADOW),
+                    0.45,
+                ),
+            );
+            let horizon = bits(8, 5).mul_add(2.0, 16.0);
+            cv.fill(
+                Rect::new(0.0, horizon, ART_W, ART_H - horizon),
+                canvas::mix(
+                    canvas::ink(palette::POI_HERMITAGE),
+                    canvas::ink(palette::SHADOW),
+                    0.35,
+                ),
+            );
+            cv.fill(
+                Rect::new(0.0, horizon, ART_W, 2.0),
+                canvas::fade(canvas::ink(palette::AMBER), 0.4),
+            );
+            let sun = SimVec2::new(bits(16, 8).mul_add(3.0, 12.0), horizon - 6.0);
+            cv.dot(sun, 4.0, canvas::ink(palette::AMBER));
+            cv.dot(sun, 2.0, canvas::ink(palette::GLINT));
+        }
+        // Diagonal stripes, hues rolled per band.
+        1 => {
+            cv.fill(
+                field,
+                canvas::mix(
+                    canvas::ink(palette::TRIM_GIVE),
+                    canvas::ink(palette::SHADOW),
+                    0.4,
+                ),
+            );
+            let inks = [
+                palette::AMBER,
+                palette::EERIE,
+                palette::POI_MARS,
+                palette::GLINT,
+            ];
+            for i in 0..4_u64 {
+                let col = canvas::ink(inks[((roll >> (8 + i * 4)) % 4) as usize]);
+                let x = (i as f32).mul_add(12.0, bits(40, 4) - 6.0);
+                cv.seg(
+                    SimVec2::new(x, ART_H + 4.0),
+                    SimVec2::new(x + 18.0, -4.0),
+                    4.0,
+                    canvas::fade(col, 0.85),
+                );
+            }
+        }
+        // An orb over bands.
+        2 => {
+            for (i, tone) in [
+                palette::TRIM_TAKE,
+                palette::TRIM_SHELF,
+                palette::TRIM_RECEIVED,
+                palette::TRIM_GIVE,
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                cv.fill(
+                    Rect::new(0.0, i as f32 * 8.0, ART_W, 8.0),
+                    canvas::mix(canvas::ink(tone), canvas::ink(palette::SHADOW), 0.3),
+                );
+            }
+            let orb = SimVec2::new(bits(8, 10).mul_add(2.0, 14.0), 13.0);
+            cv.dot(orb, 7.0, canvas::ink(palette::POI_URANUS));
+            cv.ring(
+                orb,
+                9.0,
+                1.0,
+                canvas::fade(canvas::ink(palette::GLINT), 0.7),
+            );
+        }
+        // A lone heptagon. The officially published schematics show six.
+        _ => {
+            cv.fill(
+                field,
+                canvas::mix(
+                    canvas::ink(palette::EERIE),
+                    canvas::ink(palette::SHADOW),
+                    0.72,
+                ),
+            );
+            let at = SimVec2::new(24.0, 16.0);
+            let spin = bits(8, 90) * 4.0;
+            cv.poly(at, 7, 10.0, spin, canvas::ink(palette::POI_GUILD));
+            cv.poly_ring(
+                at,
+                7,
+                10.0,
+                spin,
+                1.0,
+                canvas::ink(palette::accent::GUILD_EDGE),
+            );
+            cv.dot(at, 1.5, canvas::fade(canvas::ink(palette::GLINT), 0.8));
+        }
+    }
+    let (w, h) = (cv.w, cv.h);
+    let mut image = Image::new(
+        Extent3d {
+            width: w,
+            height: h,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        cv.px,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    image.sampler = ImageSampler::nearest();
+    let image = images.add(image);
+    materials.add(StandardMaterial {
+        base_color: palette::GLINT,
+        base_color_texture: Some(image.clone()),
+        emissive: LinearRgba::WHITE * ART_GLOW,
+        emissive_texture: Some(image),
+        perceptual_roughness: 0.9,
+        metallic: 0.0,
+        ..default()
+    })
 }

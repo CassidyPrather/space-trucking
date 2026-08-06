@@ -777,7 +777,13 @@ pub fn steer(
                 }
                 return;
             }
-            if keys.just_pressed(KeyCode::Escape) {
+            // The Super/Windows key summons the OS — the overlay may not
+            // flip `window.focused`, so treat the key itself as a park:
+            // the cursor is the desktop's now, click to reclaim.
+            if keys.just_pressed(KeyCode::Escape)
+                || keys.just_pressed(KeyCode::SuperLeft)
+                || keys.just_pressed(KeyCode::SuperRight)
+            {
                 rig.parked = true;
                 return;
             }
@@ -890,8 +896,12 @@ pub fn present_mode(
         // frame instead. Look input reads raw deltas and never notices.
         if cfg!(target_os = "windows") {
             cursor.grab_mode = CursorGrabMode::Confined;
-            let center = window.size() * 0.5;
-            window.set_cursor_position(Some(center));
+            // Warp only while the cursor is actually ours (inside the
+            // window) — never wrestle an OS overlay for it.
+            if window.cursor_position().is_some() {
+                let center = window.size() * 0.5;
+                window.set_cursor_position(Some(center));
+            }
         } else {
             cursor.grab_mode = CursorGrabMode::Locked;
         }

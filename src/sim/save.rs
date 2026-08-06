@@ -400,17 +400,19 @@ fn parse_parade(reader: &mut Reader<'_>) -> Result<(Option<u64>, Option<u64>), S
     Ok((parade_at, comet_visit))
 }
 
-/// The `familiar` line: one 4-hex kind bitmask per POI, in map order.
-fn parse_familiar(reader: &mut Reader<'_>) -> Result<[u16; POI_COUNT], SaveError> {
+/// The `familiar` line: one hex kind bitmask per POI, in map order. Written
+/// four digits wide for the old 16-kind masks; reads any width, so saves
+/// from before the fixture kinds (bits 16..) still load.
+fn parse_familiar(reader: &mut Reader<'_>) -> Result<[u32; POI_COUNT], SaveError> {
     let line = reader.next_line()?;
     let mut tokens = line.split_whitespace();
     if tokens.next() != Some("familiar") {
         return Err(reader.err());
     }
-    let mut familiar = [0_u16; POI_COUNT];
+    let mut familiar = [0_u32; POI_COUNT];
     for mask in &mut familiar {
         let token = tokens.next().ok_or_else(|| reader.err())?;
-        *mask = u16::from_str_radix(token, 16).map_err(|_| reader.err())?;
+        *mask = u32::from_str_radix(token, 16).map_err(|_| reader.err())?;
     }
     Ok(familiar)
 }

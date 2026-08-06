@@ -38,8 +38,8 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Sub};
 
 pub use barter::{Barter, EAGER_MAX, PATIENCE, VALUE};
 pub use cargo::{
-    KIND_COUNT, Kind, Loc, Piece, Tag, Violation, first_fit, placement_check, placement_legal,
-    player_owned,
+    KIND_COUNT, Kind, Loc, Mount, Piece, Tag, Violation, first_fit, lamp, lamp_lit, lit_adjacent,
+    placement_check, placement_legal, player_owned,
 };
 pub use encounter::{AD_SWATS, Drone, Encounter, EncounterKind};
 use encounter::{Drones, Encounters};
@@ -99,11 +99,14 @@ const DRONE_ORBIT: f32 = 22.0;
 /// Click radius for swatting the drone.
 const DRONE_RADIUS: f32 = 10.0;
 
+/// Every kind's bit set in a discovery-ledger mask (see `Sim::familiar`).
+const KNOWN_ALL: u32 = (1 << KIND_COUNT) - 1;
+
 /// The discovery ledger a fresh contractor starts with: the Guild is home
 /// turf — every kind reads true there — and everywhere else is fog.
-fn home_familiar() -> [u16; POI_COUNT] {
-    let mut familiar = [0_u16; POI_COUNT];
-    familiar[usize::from(GUILD)] = u16::MAX;
+fn home_familiar() -> [u32; POI_COUNT] {
+    let mut familiar = [0_u32; POI_COUNT];
+    familiar[usize::from(GUILD)] = KNOWN_ALL;
     familiar
 }
 
@@ -436,7 +439,7 @@ pub struct Sim {
     /// Per-station bitmask of kinds the player has traded there — the
     /// discovery ledger the barter fog reads. Bit k set means kind k's
     /// value at that station reads true on the dial.
-    familiar: [u16; POI_COUNT],
+    familiar: [u32; POI_COUNT],
     /// Whether any crew member's wall clock reads deep night, refreshed
     /// from the frame every application round. Transient: consulted only
     /// by press handlers (Umbra selection), never by the tick, and never
@@ -3059,6 +3062,33 @@ mod tests {
         drag(&mut sim, cell_center(0, 0), cell_center(5, 3));
         assert_eq!(sim.cues(), [Cue::Place]);
         assert_eq!(sim.last_violation(), None);
+    }
+
+    #[test]
+    fn a_fixture_off_its_mount_hard_rejects_and_names_affix() {
+        let mut sim = Sim::new(5);
+        inject_hold(&mut sim, Kind::WallLamp, 5, 0);
+        // Dragged into the middle of the room: the wall refuses to follow.
+        drag(&mut sim, cell_center(5, 0), cell_center(3, 1));
+        assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
+        assert_eq!(sim.last_violation(), Some(Violation::Affix(Mount::Wall)));
+        // The lamp snapped home; the far wall accepts it.
+        drag(&mut sim, cell_center(5, 0), cell_center(0, 1));
+        assert_eq!(sim.cues(), [Cue::Place]);
+        assert_eq!(sim.last_violation(), None);
+    }
+
+    #[test]
+    fn fixtures_survive_the_save_round_trip() {
+        let mut sim = launched(1);
+        inject_hold(&mut sim, Kind::CeilingLamp, 3, 0);
+        inject_hold(&mut sim, Kind::Painting, 4, 0);
+        inject_hold(&mut sim, Kind::WallLamp, 5, 1);
+        inject_hold(&mut sim, Kind::FloorLamp, 4, 2);
+        inject_hold(&mut sim, Kind::Couch, 1, 3);
+        let restored = Sim::from_save(&sim.save_string()).expect("own save parses");
+        assert_eq!(restored.pieces(), sim.pieces());
+        assert_eq!(restored.save_string(), sim.save_string());
     }
 
     /// Crates of any location, aboard or shelved.

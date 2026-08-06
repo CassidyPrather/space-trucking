@@ -199,6 +199,13 @@ pub const fn kind_color(kind: Kind) -> Color {
         Kind::Fluff => hex(0xe0_c9_a8),
         Kind::TransitChit => hex(0xc9_d2_56),
         Kind::CasinoChip => hex(0xd4_4f_6f),
+        // Placeholder fixture hues: lamp golds, upholstery, gilt frame.
+        // fixture glyph pass pending
+        Kind::CeilingLamp => hex(0xe6_c9_6e),
+        Kind::WallLamp => hex(0xdd_b8_5f),
+        Kind::FloorLamp => hex(0xd2_a8_52),
+        Kind::Couch => hex(0x8a_5a_6b),
+        Kind::Painting => hex(0xb0_8a_3e),
     }
 }
 

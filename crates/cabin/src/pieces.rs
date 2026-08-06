@@ -1327,5 +1327,14 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 Transform::from_xyz(0.0, 0.0, 9.2).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
             );
         }
+        // The five fixtures ride a plain tinted slab until their real
+        // rigs land. // fixture pass pending
+        Kind::CeilingLamp | Kind::WallLamp | Kind::FloorLamp | Kind::Couch | Kind::Painting => {
+            rig.part(
+                Cuboid::new(fw * 0.62, fh * 0.62, 14.0),
+                body,
+                Transform::from_xyz(0.0, 0.0, 7.0),
+            );
+        }
     }
 }

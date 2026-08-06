@@ -6,7 +6,7 @@
 //! can rebuild the whole thing without storing it. The persistent run RNG is
 //! spent only on cosmetic variant rolls, per the determinism rules.
 
-use super::cargo::{KIND_COUNT, Kind, Loc, Piece, Tag, VARIANTS};
+use super::cargo::{KIND_COUNT, Kind, Loc, Piece, Tag, VARIANTS, lamp_lit, lit_adjacent};
 use super::map::{GUILD, HERMITAGE, POI_COUNT, PoiId, UMBRA};
 use super::splitmix;
 
@@ -47,25 +47,31 @@ pub struct Barter {
 /// Guild, Saturn, Umbra Market, Hermitage, comet, `???`), columns follow
 /// [`Kind::index`] order. A zero doubles as "local produce": stations
 /// shelve the kind they do not value (which is how the Guild comes to
-/// broker transit chits and the Umbra Market to bottle midnight). Every
-/// row must keep at least three kinds at 2 or above so the wants list
-/// survives the ±1 jitter, and both suspicious columns are 4 everywhere
-/// but the Guild, which seizes rather than pays. The comet and `???`
+/// broker transit chits, the Umbra Market to bottle midnight — and, since
+/// its lamp columns are zeros, to fence seized lamps cheap: light is a
+/// rival product there, sold only snuffed). Every row must keep at least
+/// three kinds at 2 or above so the wants list survives the ±1 jitter,
+/// and both suspicious columns are 4 everywhere but the Guild, which
+/// seizes rather than pays. The five fixture columns are lore-directed:
+/// Venus buys tack, Earth rations light, Saturn treasures working
+/// fixtures, the Hermitage pays best for the couch. The comet and `???`
 /// never open a barter, so their rows are placeholders kept valid for
 /// the invariants above.
+// Kept tabular by hand: one row per station is how this table is tuned.
+#[rustfmt::skip]
 pub const VALUE: [[u8; KIND_COUNT]; POI_COUNT] = [
-    [0, 1, 2, 1, 3, 2, 3, 5, 4, 1, 4, 3, 5, 4, 2, 1], // Venus
-    [4, 3, 0, 2, 4, 1, 2, 3, 4, 1, 4, 2, 5, 2, 2, 1], // Earth
-    [2, 1, 4, 0, 1, 3, 2, 2, 4, 1, 4, 2, 5, 1, 2, 1], // Mars
-    [1, 2, 4, 3, 5, 0, 1, 2, 4, 1, 4, 2, 5, 1, 1, 1], // Jupiter
-    [2, 3, 3, 2, 4, 4, 0, 1, 4, 1, 4, 2, 5, 1, 1, 1], // Uranus
-    [3, 2, 4, 3, 3, 2, 1, 0, 4, 1, 4, 2, 5, 2, 1, 1], // Neptune
-    [2, 2, 2, 2, 2, 2, 2, 2, 0, 1, 0, 2, 3, 1, 0, 1], // Guild
-    [1, 3, 2, 6, 1, 0, 2, 1, 4, 1, 4, 1, 5, 1, 1, 1], // Saturn
-    [3, 2, 1, 1, 2, 0, 5, 4, 4, 3, 4, 3, 0, 2, 2, 1], // Umbra Market
-    [1, 1, 3, 1, 4, 1, 1, 2, 4, 2, 4, 2, 3, 3, 1, 1], // Hermitage
-    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1], // comet (no barter)
-    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1], // ??? (no barter)
+    [0, 1, 2, 1, 3, 2, 3, 5, 4, 1, 4, 3, 5, 4, 2, 1, 5, 4, 4, 4, 6], // Venus
+    [4, 3, 0, 2, 4, 1, 2, 3, 4, 1, 4, 2, 5, 2, 2, 1, 2, 2, 2, 3, 1], // Earth
+    [2, 1, 4, 0, 1, 3, 2, 2, 4, 1, 4, 2, 5, 1, 2, 1, 2, 2, 3, 3, 2], // Mars
+    [1, 2, 4, 3, 5, 0, 1, 2, 4, 1, 4, 2, 5, 1, 1, 1, 3, 2, 2, 3, 2], // Jupiter
+    [2, 3, 3, 2, 4, 4, 0, 1, 4, 1, 4, 2, 5, 1, 1, 1, 2, 3, 2, 2, 3], // Uranus
+    [3, 2, 4, 3, 3, 2, 1, 0, 4, 1, 4, 2, 5, 2, 1, 1, 2, 2, 3, 2, 3], // Neptune
+    [2, 2, 2, 2, 2, 2, 2, 2, 0, 1, 0, 2, 3, 1, 0, 1, 1, 2, 1, 2, 1], // Guild
+    [1, 3, 2, 6, 1, 0, 2, 1, 4, 1, 4, 1, 5, 1, 1, 1, 4, 4, 3, 5, 3], // Saturn
+    [3, 2, 1, 1, 2, 0, 5, 4, 4, 3, 4, 3, 0, 2, 2, 1, 0, 0, 0, 3, 4], // Umbra Market
+    [1, 1, 3, 1, 4, 1, 1, 2, 4, 2, 4, 2, 3, 3, 1, 1, 2, 3, 2, 6, 3], // Hermitage
+    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 2], // comet (no barter)
+    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 3], // ??? (no barter)
 ];
 
 /// Ceiling for jittered per-visit values.
@@ -220,7 +226,7 @@ pub(crate) fn rebuild(
     station: PoiId,
     visit: u32,
     pieces: &[Piece],
-    familiar: u16,
+    familiar: u32,
 ) -> Barter {
     let values = visit_values(seed, station, visit);
     let (target, ready) = eagerness_of(pieces, &values, gnaw_loved(station));
@@ -241,7 +247,7 @@ pub(crate) fn rebuild(
 /// not in this station's `familiar` bitmask, over all pad pieces. Empty
 /// pads read zero — nothing composed, nothing foggy.
 #[must_use]
-pub(crate) fn fog_of(pieces: &[Piece], familiar: u16) -> f32 {
+pub(crate) fn fog_of(pieces: &[Piece], familiar: u32) -> f32 {
     let mut on_pads = 0_u32;
     let mut unknown = 0_u32;
     for piece in pieces {
@@ -276,20 +282,52 @@ pub(crate) const fn gnaw_loved(station: PoiId) -> bool {
     station == UMBRA
 }
 
+/// What lamplight adds to a well-lit painting's price. Only ever added,
+/// never subtracted, so the dial's monotone law survives it.
+pub(crate) const LIT_BONUS: u8 = 1;
+
+/// Whether `piece` is a painting shown in good light. In the hold that is
+/// literal: some cell of its footprint reads [`lit_adjacent`]. On the
+/// trade pads — the only places valuation actually prices — the piece is
+/// appraised under the hold's lamplight, so any lit lamp aboard counts.
+/// Lamp state always comes from the hold ([`lamp_lit`]): a lamp riding a
+/// pad or shelf lights nothing, which is exactly what keeps the dial
+/// monotone — composing a trade with a lamp never re-prices the art
+/// already on the pads.
+fn well_lit(piece: &Piece, pieces: &[Piece]) -> bool {
+    if piece.kind != Kind::Painting {
+        return false;
+    }
+    match piece.loc {
+        Loc::Hold { x, y } => {
+            let (w, h) = piece.kind.cells();
+            (0..w).any(|dx| (0..h).any(|dy| lit_adjacent(pieces, x + dx, y + dy)))
+        }
+        Loc::GivePad { .. } | Loc::TakePad { .. } => pieces.iter().any(lamp_lit),
+        _ => false,
+    }
+}
+
 /// One piece's worth under this visit's table: its kind's jittered value,
 /// less [`GNAW_MALUS`] if a rat has been at it — or MORE by the same
-/// amount where the bite is loved (see [`gnaw_loved`]). The single
-/// per-piece pricing rule; both pad totals read it, so a gnawed piece is
-/// cheaper to buy exactly as it is poorer to sell.
-fn piece_value(piece: &Piece, values: &[u8; KIND_COUNT], gnaw_love: bool) -> u32 {
+/// amount where the bite is loved (see [`gnaw_loved`]) — plus
+/// [`LIT_BONUS`] for a painting under lamplight (see [`well_lit`]). The
+/// single per-piece pricing rule; both pad totals read it, so a gnawed
+/// piece is cheaper to buy exactly as it is poorer to sell, and well-lit
+/// art is dearer to buy exactly as it is richer to sell.
+fn piece_value(piece: &Piece, pieces: &[Piece], values: &[u8; KIND_COUNT], gnaw_love: bool) -> u32 {
     let value = values[piece.kind.index()];
-    if !piece.gnawed {
-        return u32::from(value);
-    }
-    if gnaw_love {
+    let value = if !piece.gnawed {
+        u32::from(value)
+    } else if gnaw_love {
         u32::from(value) + u32::from(GNAW_MALUS)
     } else {
         u32::from(value.saturating_sub(GNAW_MALUS))
+    };
+    if well_lit(piece, pieces) {
+        value + u32::from(LIT_BONUS)
+    } else {
+        value
     }
 }
 
@@ -301,7 +339,7 @@ fn pad_totals(pieces: &[Piece], values: &[u8; KIND_COUNT], gnaw_love: bool) -> (
     let mut giving = false;
     let mut take = 0_u32;
     for piece in pieces {
-        let value = piece_value(piece, values, gnaw_love);
+        let value = piece_value(piece, pieces, values, gnaw_love);
         match piece.loc {
             Loc::GivePad { .. } => {
                 give += value;
@@ -479,7 +517,9 @@ mod tests {
 
     #[test]
     fn wants_skip_zero_valued_kinds_and_break_ties_by_index() {
-        let values = [2, 4, 4, 0, 1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0];
+        let values = [
+            2, 4, 4, 0, 1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
         assert_eq!(
             wants(&values),
             [
@@ -574,6 +614,125 @@ mod tests {
                 assert!(
                     after <= before + 1e-6,
                     "asking for {kind:?} raised the dial: {before} -> {after}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn every_new_fixture_is_wanted_somewhere_and_umbra_snubs_lamps() {
+        // The wants row must be able to ask for each fixture: for every new
+        // kind, some station's visit (base table plus jitter) ranks it
+        // top-three.
+        for kind in [
+            Kind::CeilingLamp,
+            Kind::WallLamp,
+            Kind::FloorLamp,
+            Kind::Couch,
+            Kind::Painting,
+        ] {
+            let asked = (0..POI_COUNT as PoiId).any(|station| {
+                (1..=300).any(|n| {
+                    wants(&visit_values(0xF1C5, station, n))
+                        .iter()
+                        .any(|&(want, _)| want == kind)
+                })
+            });
+            assert!(asked, "{kind:?} is never in any wants row");
+        }
+        // The Umbra Market pays zero for every lamp — light is a rival
+        // product — which also files lamps under its local produce.
+        for lamp in [Kind::CeilingLamp, Kind::WallLamp, Kind::FloorLamp] {
+            assert_eq!(VALUE[usize::from(UMBRA)][lamp.index()], 0);
+        }
+    }
+
+    #[test]
+    fn a_well_lit_painting_prices_one_higher_on_either_pad() {
+        let mut values = [0_u8; KIND_COUNT];
+        values[Kind::Painting.index()] = 3;
+        values[Kind::BrinePearls.index()] = 5;
+        let ask = piece(Kind::Seedlings, Loc::TakePad { slot: 0 });
+        // Sold in the dark: the base value.
+        let dark = [piece(Kind::Painting, Loc::GivePad { slot: 0 }), ask];
+        assert_eq!(eagerness_of(&dark, &values, false), (3.0, true));
+        // Sold under a lit lamp stowed in the hold: one more.
+        let lamp = piece(Kind::CeilingLamp, Loc::Hold { x: 2, y: 0 });
+        let lit = [piece(Kind::Painting, Loc::GivePad { slot: 0 }), ask, lamp];
+        assert_eq!(eagerness_of(&lit, &values, false), (4.0, true));
+        // A lamp riding the give pad is dark and lights nothing.
+        let dark_lamp = [
+            piece(Kind::Painting, Loc::GivePad { slot: 0 }),
+            ask,
+            piece(Kind::CeilingLamp, Loc::GivePad { slot: 1 }),
+        ];
+        assert_eq!(eagerness_of(&dark_lamp, &values, false), (3.0, true));
+        // Asked for under the same lamplight, the painting costs one more
+        // too: dearer to buy exactly as it is richer to sell.
+        let give = piece(Kind::BrinePearls, Loc::GivePad { slot: 0 });
+        let buy_dark = [give, piece(Kind::Painting, Loc::TakePad { slot: 0 })];
+        assert_eq!(eagerness_of(&buy_dark, &values, false), (5.0 / 4.0, true));
+        let buy_lit = [give, piece(Kind::Painting, Loc::TakePad { slot: 0 }), lamp];
+        assert_eq!(eagerness_of(&buy_lit, &values, false), (5.0 / 5.0, true));
+        // In the hold the rule is literal adjacency: a painting beside the
+        // lamp reads well lit, one across the room does not, and a shelf
+        // painting is never appraised at all.
+        let hung = piece(Kind::Painting, Loc::Hold { x: 0, y: 1 });
+        let far = piece(Kind::Painting, Loc::Hold { x: 4, y: 3 });
+        let lamp_low = piece(Kind::CeilingLamp, Loc::Hold { x: 0, y: 0 });
+        assert!(well_lit(&hung, &[hung, lamp_low]));
+        assert!(!well_lit(&far, &[far, lamp_low]));
+        let shelved = piece(Kind::Painting, Loc::StationShelf { slot: 0 });
+        assert!(!well_lit(&shelved, &[shelved, lamp_low]));
+    }
+
+    /// The monotone law under lamplight: with a lit lamp stowed in the
+    /// hold — every pad painting one dearer — adding to the give pad still
+    /// never lowers the dial and adding to the take pad never raises it.
+    #[test]
+    fn the_dial_stays_monotone_with_the_hold_lamplit() {
+        let mut rng = fastrand::Rng::with_seed(0x11A7);
+        let dial = |pieces: &[Piece], values: &[u8; KIND_COUNT]| {
+            eagerness_of(pieces, values, false).0.clamp(0.0, EAGER_MAX)
+        };
+        for _ in 0..500 {
+            let mut values = [0_u8; KIND_COUNT];
+            for v in &mut values {
+                *v = rng.u8(0..=6);
+            }
+            let mut pieces = vec![piece(Kind::WallLamp, Loc::Hold { x: 0, y: 0 })];
+            for slot in 0..3 {
+                if rng.bool() {
+                    pieces.push(piece(
+                        Kind::ALL[rng.usize(..KIND_COUNT)],
+                        Loc::GivePad { slot },
+                    ));
+                }
+                if rng.bool() {
+                    pieces.push(piece(
+                        Kind::ALL[rng.usize(..KIND_COUNT)],
+                        Loc::TakePad { slot },
+                    ));
+                }
+            }
+            let before = dial(&pieces, &values);
+            let kind = Kind::ALL[rng.usize(..KIND_COUNT)];
+            let (loc, raises) = if rng.bool() {
+                (Loc::GivePad { slot: 3 }, true)
+            } else {
+                (Loc::TakePad { slot: 3 }, false)
+            };
+            pieces.push(piece(kind, loc));
+            let after = dial(&pieces, &values);
+            if raises {
+                assert!(
+                    after >= before - 1e-6,
+                    "giving {kind:?} under lamplight lowered the dial: {before} -> {after}"
+                );
+            } else {
+                assert!(
+                    after <= before + 1e-6,
+                    "asking for {kind:?} under lamplight raised the dial: {before} -> {after}"
                 );
             }
         }

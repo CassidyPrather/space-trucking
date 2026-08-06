@@ -2268,6 +2268,11 @@ fn piece_glyph(c: &Canvas, kind: Kind, variant: u8, gnawed: bool, rect: layout::
         Kind::Fluff => fluff_glyph(c, b, col, vs, t),
         Kind::TransitChit => chit_glyph(c, b, col, vs),
         Kind::CasinoChip => chip_glyph(c, b, col, vs),
+        // The five fixtures wear the plain rations slab until their real
+        // glyphs land. // fixture glyph pass pending
+        Kind::CeilingLamp | Kind::WallLamp | Kind::FloorLamp | Kind::Couch | Kind::Painting => {
+            rations_glyph(c, b, col, vs);
+        }
     }
     if gnawed {
         bite_mark(c, b);
@@ -2709,8 +2714,9 @@ fn draw_violation_flash(c: &Canvas, scene: &Scene) {
     };
     let mid = rect_center(rect);
     match rule {
-        // Off the grid or onto another piece: a plain red edge flash.
-        Violation::Bounds | Violation::Overlap => {
+        // Off the grid or onto another piece: a plain red edge flash. A
+        // fixture off its mount borrows it. // fixture glyph pass pending
+        Violation::Bounds | Violation::Overlap | Violation::Affix(_) => {
             c.frame_thick(grid_rect(), 2.0, fade(LAMP_NO, heat));
             c.frame_thick(rect, 2.0, fade(LAMP_NO, heat * 0.9));
         }

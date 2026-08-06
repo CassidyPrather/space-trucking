@@ -151,6 +151,13 @@ pub const fn kind_color(kind: Kind) -> Color {
         Kind::Fluff => hex(0xe0c9a8),
         Kind::TransitChit => hex(0xc9d256),
         Kind::CasinoChip => hex(0xd44f6f),
+        // Placeholder fixture hues, matching src/palette.rs.
+        // fixture pass pending
+        Kind::CeilingLamp => hex(0xe6c96e),
+        Kind::WallLamp => hex(0xddb85f),
+        Kind::FloorLamp => hex(0xd2a852),
+        Kind::Couch => hex(0x8a5a6b),
+        Kind::Painting => hex(0xb08a3e),
     }
 }
 

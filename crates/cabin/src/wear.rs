@@ -82,7 +82,10 @@ const TILE: i32 = 96;
 const HAZARD: i32 = 32;
 /// Hazard stripe period along the 45° diagonal, texels. Divides
 /// [`HAZARD`], so the stripes wrap whole.
-const HAZARD_PERIOD: i32 = 8;
+// Fat stripes on purpose: the first bake's 8-texel period shimmered
+// into noise under minification ("flashing effect", the playtest said),
+// and chunky paint reads honest at every distance.
+const HAZARD_PERIOD: i32 = 16;
 
 /// The multiplier band, in 8-bit sRGB value units: every baked texel is
 /// clamped inside, so the worst overlap of features still whispers.
@@ -384,8 +387,61 @@ pub struct WearBook {
     pub hazard: Handle<Image>,
 }
 
-/// Finished bytes as a nearest-filtered, repeat-addressed GPU tile.
-fn tile_image(bytes: Vec<u8>, size: i32) -> Image {
+/// One mip level downsampled from the last: each texel averages the 2×2
+/// it covers (clamped at odd edges). Averaging sRGB bytes directly is
+/// technically gamma-space math; on low-contrast multiplier maps and a
+/// two-color stripe tile the error is invisible, and determinism is
+/// exact either way.
+fn downsample(src: &[u8], src_size: u32) -> (Vec<u8>, u32) {
+    let dst_size = (src_size / 2).max(1);
+    let mut dst = Vec::with_capacity((dst_size * dst_size * 4) as usize);
+    for y in 0..dst_size {
+        for x in 0..dst_size {
+            for channel in 0..4 {
+                let mut sum: u32 = 0;
+                for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+                    let sx = (x * 2 + dx).min(src_size - 1);
+                    let sy = (y * 2 + dy).min(src_size - 1);
+                    sum += u32::from(src[((sy * src_size + sx) * 4 + channel) as usize]);
+                }
+                dst.push((sum / 4) as u8);
+            }
+        }
+    }
+    (dst, dst_size)
+}
+
+/// The full mip chain, level 0 first, concatenated the way wgpu expects,
+/// plus the level count.
+fn mip_chain(base: Vec<u8>, size: u32) -> (Vec<u8>, u32) {
+    let mut data = base;
+    let mut levels = 1;
+    let mut cursor = 0usize;
+    let mut dim = size;
+    while dim > 1 {
+        let level_len = (dim * dim * 4) as usize;
+        let (next, next_dim) = downsample(&data[cursor..cursor + level_len], dim);
+        cursor += level_len;
+        data.extend_from_slice(&next);
+        dim = next_dim;
+        levels += 1;
+    }
+    (data, levels)
+}
+
+/// Finished bytes as a repeat-addressed GPU tile with a hand-baked mip
+/// chain: hard texels up close (`mag: Nearest` — the aesthetic), stable
+/// at distance (`min`/`mipmap: Linear` over real mips — no shimmer).
+/// The playtest's "flashing" hazard tape was exactly the missing mips.
+///
+/// `crisp` keeps nearest magnification (the multiplier tiles); the
+/// hazard tape passes `false` for full linear + anisotropic sampling —
+/// painted stripes seen at a grazing angle need anisotropy or they
+/// average into mud, and they are paint, not pixel art.
+fn tile_image(bytes: Vec<u8>, size: i32, crisp: bool) -> Image {
+    let (data, levels) = mip_chain(bytes, size as u32);
+    // `Image::new` asserts data length against level 0 alone, so the
+    // full chain and its level count are installed after construction.
     let mut image = Image::new(
         Extent3d {
             width: size as u32,
@@ -393,16 +449,24 @@ fn tile_image(bytes: Vec<u8>, size: i32) -> Image {
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
-        bytes,
+        vec![0; (size * size * 4) as usize],
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::RENDER_WORLD,
     );
+    image.data = Some(data);
+    image.texture_descriptor.mip_level_count = levels;
     image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
         address_mode_u: ImageAddressMode::Repeat,
         address_mode_v: ImageAddressMode::Repeat,
-        mag_filter: ImageFilterMode::Nearest,
-        min_filter: ImageFilterMode::Nearest,
-        mipmap_filter: ImageFilterMode::Nearest,
+        mag_filter: if crisp {
+            ImageFilterMode::Nearest
+        } else {
+            ImageFilterMode::Linear
+        },
+        min_filter: ImageFilterMode::Linear,
+        mipmap_filter: ImageFilterMode::Linear,
+        // wgpu requires all-linear filtering for anisotropy > 1.
+        anisotropy_clamp: if crisp { 1 } else { 8 },
         ..default()
     });
     image
@@ -411,10 +475,10 @@ fn tile_image(bytes: Vec<u8>, size: i32) -> Image {
 /// Bake every wear tile. Call once while building [`crate::rig::Skin`].
 pub fn bake(images: &mut Assets<Image>) -> WearBook {
     WearBook {
-        plate: images.add(tile_image(bake_plate_bytes(), TILE)),
-        hull: images.add(tile_image(bake_hull_bytes(), TILE)),
-        desk: images.add(tile_image(bake_desk_bytes(), TILE)),
-        hazard: images.add(tile_image(bake_hazard_bytes(), HAZARD)),
+        plate: images.add(tile_image(bake_plate_bytes(), TILE, true)),
+        hull: images.add(tile_image(bake_hull_bytes(), TILE, true)),
+        desk: images.add(tile_image(bake_desk_bytes(), TILE, true)),
+        hazard: images.add(tile_image(bake_hazard_bytes(), HAZARD, false)),
     }
 }
 
@@ -443,6 +507,48 @@ pub fn worn(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The mip chain has the exact level count and byte length wgpu
+    /// expects, and is itself deterministic.
+    #[test]
+    fn mip_chains_measure_out() {
+        // 96 → 48/24/12/6/3/1: seven levels.
+        let (data, levels) = mip_chain(bake_plate_bytes(), TILE as u32);
+        assert_eq!(levels, 7);
+        let expected: usize = [96u32, 48, 24, 12, 6, 3, 1]
+            .iter()
+            .map(|d| (d * d * 4) as usize)
+            .sum();
+        assert_eq!(data.len(), expected);
+        // 32 → 16/8/4/2/1: six levels.
+        let (data, levels) = mip_chain(bake_hazard_bytes(), HAZARD as u32);
+        assert_eq!(levels, 6);
+        let expected: usize = [32u32, 16, 8, 4, 2, 1]
+            .iter()
+            .map(|d| (d * d * 4) as usize)
+            .sum();
+        assert_eq!(data.len(), expected);
+        let (again, _) = mip_chain(bake_hazard_bytes(), HAZARD as u32);
+        assert_eq!(data, again);
+    }
+
+    /// Fat stripes survive one downsample: level 1 of the hazard tile
+    /// still carries both paint colors instead of averaging to mud.
+    #[test]
+    fn hazard_stripes_survive_the_first_mip() {
+        let (level1, dim) = downsample(&bake_hazard_bytes(), HAZARD as u32);
+        assert_eq!(dim, 16);
+        let mut lightest = 0u8;
+        let mut darkest = 255u8;
+        for texel in level1.chunks_exact(4) {
+            lightest = lightest.max(texel[0]);
+            darkest = darkest.min(texel[0]);
+        }
+        assert!(
+            i16::from(lightest) - i16::from(darkest) > 60,
+            "level 1 lost the stripes: {darkest}..{lightest}"
+        );
+    }
 
     /// Same bytes every bake: the whole point of splitmix wear.
     #[test]

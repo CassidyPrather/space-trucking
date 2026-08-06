@@ -396,7 +396,7 @@ impl Skin {
             hull: crate::wear::worn(materials, &book.hull, palette::HULL, 4.0, 0.92, 0.15),
             plate: crate::wear::worn(materials, &book.plate, palette::PLATE, 2.0, 0.92, 0.15),
             desk: crate::wear::worn(materials, &book.desk, palette::PLATE, 2.0, 0.9, 0.15),
-            hazard: crate::wear::worn(materials, &book.hazard, palette::GLINT, 4.0, 0.85, 0.0),
+            hazard: crate::wear::worn(materials, &book.hazard, palette::GLINT, 2.0, 0.85, 0.0),
             plate_lit: materials.add(metal(palette::PLATE_LIT)),
             plate_shade: materials.add(metal(palette::PLATE_SHADE)),
             socket: materials.add(StandardMaterial {

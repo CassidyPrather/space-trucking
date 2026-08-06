@@ -1,66 +1,38 @@
-# Its own workspace on purpose: Cargo permits one `links = "alsa"` package
-# per workspace graph, and Bevy's alsa-sys would collide with macroquad's
-# quad-alsa-sys next door. The path dependency below carries the whole game
-# library across the boundary; only the lockfiles stay separate.
-[workspace]
-
+# The game people play: Space Trucking's Bevy first-person cabin. A member
+# of the root workspace since the 2D console retired (docs/BAY.md) — the
+# ALSA links collision left with macroquad, and the lint table and build
+# profiles now live at the workspace root.
 [package]
 name = "cabin"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.95" # Bevy 0.19's floor; the root package still builds on 1.85
+rust-version = "1.95" # Bevy 0.19's floor; the root library still builds on 1.85
 authors = ["Cassidy Prather <pratherea@gmail.com>"]
-description = "Space Trucking's 3D cabin — the Bevy first-person frontend prototype"
+description = "Space Trucking's 3D cabin — the Bevy first-person frontend"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/CassidyPrather/space-trucking"
 keywords = ["game", "gamedev", "bevy", "3d", "space"]
 categories = ["games"]
 publish = false
 
+# The binary keeps the game's own name: releases ship `space-trucking`,
+# whatever the package that builds it is called.
+[[bin]]
+name = "space-trucking"
+path = "src/main.rs"
+
 [dependencies]
-# The whole game, headless: sim, net, replay, synth, telemetry. No default
-# features means no macroquad — the cabin brings its own window.
-space-trucking = { path = "../..", default-features = false }
+# The whole game, headless: sim, net, replay, synth, telemetry.
+space-trucking = { path = "../.." }
 # Default features are the known-coherent set; `wav` is added because the
 # soundscape arrives as synth.rs's WAV bytes, no audio assets anywhere.
 # Trimming features is a later, deliberate pass with measurements.
 bevy = { version = "0.19", features = ["wav"] }
-# The deep-night window for the Umbra Market, read the same way the 2D
-# native build reads it.
+# The deep-night window for the Umbra Market, read from the OS clock.
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
-# Reading the 2D console's quad-storage container (local.data is JSON) so
-# an existing run walks aboard on first boot. Already in Bevy's graph.
+# Reading the retired 2D console's quad-storage container (local.data is
+# JSON) so an old run walks aboard on first boot. Already in Bevy's graph.
 serde_json = "1"
 
-# Same lint posture as the root workspace, restated because workspaces
-# cannot share lint tables across their boundary.
-[lints.rust]
-unsafe_code = "forbid"
-
-[lints.clippy]
-all = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-nursery = { level = "warn", priority = -1 }
-cargo = { level = "warn", priority = -1 }
-multiple_crate_versions = "allow" # Transitive deps disagree; not actionable here
-missing_errors_doc = "allow" # Undocumented stuff is fine (the D10 of clippy)
-missing_panics_doc = "allow" # Ditto
-cast_precision_loss = "allow" # usize -> f32 in render math; the counts are tiny
-cast_possible_truncation = "allow" # f32 -> i32 for pixel/window sizes is the point
-
-[profile.release]
-# Smaller, faster binaries at the cost of compile time
-lto = "thin"
-strip = "symbols"
-
-# Dependencies get real optimization even in dev builds: Bevy at -O0 is
-# unplayably slow.
-[profile.dev.package."*"]
-opt-level = 2
-
-# The cabin's own code gets light optimization too: the CRT screens are a
-# CPU rasterizer repainting every frame, and -O0 made whole dev builds
-# feel "way worse than such a simple game should" (playtest verdict).
-# -O1 keeps edit-compile loops quick; `--release` is the way to *play*.
-[profile.dev]
-opt-level = 1
+[lints]
+workspace = true

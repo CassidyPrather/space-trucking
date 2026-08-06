@@ -10,7 +10,6 @@ tool for watching drift.
 
 | Budget | Ceiling | Measured | Enforced by |
 | --- | --- | --- | --- |
-| wasm payload (post-`wasm-opt`) | 1,500,000 bytes | ~638 KB | `ci-cd.yml` size step |
 | Offline catch-up, 1 sim-hour | 250 ms | ~2 ms | `tests/perf.rs` (release) |
 | 100k crew ticks × 6 players | 250 ms | ~13 ms | `tests/perf.rs` (release) |
 | Convoy delivery voyage (6 replicas, hostile links) | 5,000 ms | ~100 ms | `tests/perf.rs` (release) |
@@ -19,7 +18,8 @@ tool for watching drift.
 | Debug test suite wall time | keep under ~5 s | ~0.5 s | courtesy, not a gate |
 
 Not yet enforced, deliberately: frame time (needs a headless GPU story —
-revisit with the live-multiplayer slice) and load-to-first-frame (dominated
-by browser wasm compile; the size budget is its proxy).
+revisit with the live-multiplayer slice). The wasm payload budget retired
+with the 2D console's web build (docs/BAY.md); if a web target returns,
+so does the budget.
 
-Run locally: `cargo test --release --test perf -- --ignored`
+Run locally: `cargo test --release -p space-trucking --test perf -- --ignored`

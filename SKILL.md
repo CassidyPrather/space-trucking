@@ -1,35 +1,32 @@
 ---
 name: space-trucking
-description: Ambient space-freight bartering toy — macroquad, wasm, static deploy
+description: Ambient space-freight bartering toy — Bevy first-person cabin over a pure deterministic sim
 ---
 
 # space-trucking
 
 An ambient, background-playable game about hauling cargo across the solar
-system: Rust + macroquad, compiled to wasm, shipped as a static page. Native
-desktop builds also work. Crate `space-trucking`, lib `space_trucking`, bin
-`space-trucking`. Code is AGPL-3.0-or-later. Design intent lives in
+system: a Bevy first-person freighter cabin (`crates/cabin`, native) over a
+pure, engine-free game library (root package). Crate `space-trucking`, lib
+`space_trucking`; the cabin package is `cabin` and its `[[bin]]` keeps the
+`space-trucking` name. Code is AGPL-3.0-or-later. Design intent lives in
 `DESIGN.md`; the recurring checklist in `docs/DESIGN_REVIEW.md` runs at the
 end of every work stage.
 
-The repo is two cargo workspaces on purpose: the root package (library +
-2D console), and `crates/cabin` — the Bevy 3D first-person frontend, kept
-out of the root workspace because Cargo allows only one `links = "alsa"`
-package per graph (macroquad's quad-alsa-sys vs Bevy's alsa-sys). The
-cabin path-depends on the library with `default-features = false`; the
-`console` feature (default-on) carries the macroquad half. Both frontends
-run the same sim, read the same `STV4` saves, and record the same replay
-tapes. The cabin's art rules live in `docs/ART_DIRECTION_3D.md`; its
-surface trick (3D panels mapped onto `layout` rects so the sim keeps
-doing all hit-testing) lives in `crates/cabin/src/surface.rs`.
+One workspace, two packages. The original 2D macroquad console retired when
+the walkable-bay slice began — `docs/BAY.md` records the decision and the
+law that replaced the "2D analogue" rule: **every mechanic must remain
+expressible and testable through `InputFrame`s against `layout` rects.**
+The sim keeps its 800×600 logical world; the cabin maps 3D surfaces onto it
+(`crates/cabin/src/surface.rs`), so the sim does all hit-testing. The
+cabin's art rules live in `docs/ART_DIRECTION_3D.md`.
 
 ## Repo Map
 
-- `src/sim/` — the simulation. Pure, deterministic, no macroquad. Most work
+- `src/sim/` — the simulation. Pure, deterministic, engine-free. Most work
   belongs here.
   - `mod.rs` — `Sim`, `InputFrame`, `Cue`, `advance`, `fast_forward`.
-  - `layout.rs` — shared console geometry, used for both hit-tests and
-    rendering so they cannot disagree.
+  - `layout.rs` — logical-world geometry, the shared hit-test space.
   - `map.rs` — points of interest, their orbits, and intercept travel.
     Positions are pure functions of the tick; nothing is stored.
   - `cargo.rs` — cargo kinds, pieces, and placement rules.
@@ -39,56 +36,43 @@ doing all hit-testing) lives in `crates/cabin/src/surface.rs`.
     own save lines and cues); a new event should copy the shape, not
     invent a framework. `encounter.rs` holds both the travel encounters
     (derelict/gas station/casino/meteors/whale) and the ad drone.
-  - `save.rs` — `STV4` serialization.
+  - `save.rs` — versioned save serialization.
 - `src/net/` — deterministic lockstep multiplayer per `docs/NETWORKING.md`:
   protocol messages, helm/client session state machines, the guild server
   (idempotent max-merge delivery counters), and the seeded flaky-network
-  harness the tests run on. Pure and macroquad-free like `sim`; transports
-  are a later adapter. `examples/convoy.rs` runs six clients in one command.
+  harness the tests run on. Engine-free like `sim`; transports are a later
+  adapter. `examples/convoy.rs` runs six clients in one command.
 - `src/synth.rs` — procedural sound effects as WAV bytes. Also pure, also
   unit-tested; the game ships no audio assets.
-- `src/main.rs` — thin macroquad frontend. Window, draw calls, input gathering.
-- `src/audio.rs` — the other half of the frontend: turns `sim::Cue`s into
-  playback. Binary-crate module, not part of the library.
-- `src/storage.rs` — quad-storage wrapper: localStorage on the web, a
-  `local.data` file natively. Binary-crate module, both targets.
+- `src/replay.rs` — the flight-recorder tape format (`RPL2`).
+- `src/telemetry.rs` — the opt-in play-statistics contract; dormant (no
+  frontend collects today).
 - `build.rs` — embeds a `git describe` version string.
-- `web/index.html`, `web/gl.js`, `web/audio.js`, `web/sapp_jsutils.js`,
-  `web/quad-storage.js` — the static shell and the vendored miniquad
-  plugins (load order is load-bearing; index.html documents it). Zero
-  external requests; honors `prefers-color-scheme` and
-  `prefers-reduced-motion`, mirrors the local deep-night window, and owns
-  the `#pretty-please` developer-mode ceremony.
-- `scripts/build-web.sh` — wasm build → `dist/web/`.
-- `.github/workflows/ci-cd.yml` — lint, test, audit, size-budgeted web bundle,
-  Pages deploy, release artifacts.
+- `.github/workflows/ci-cd.yml` — lint, test, perf budgets, audit,
+  release artifacts.
 - `benches/` — criterion bench over the sim. Unit tests live in `src/sim/`.
-- `crates/cabin/` — the Bevy 3D cabin (its own workspace; see above).
-  `bridge.rs` owns the sim/save/tape (the 2D `main.rs`'s shell duties),
-  `surface.rs` maps panels onto sim rects, `rig.rs` builds the room and
-  the 480×270 pixel-crunch pipeline, `palette.rs` restates the palette
-  discipline (purity test included), and the view modules (`nav`, `console`,
-  `barter`, `pieces`, `fx`, `audio`) read sim accessors onto geometry.
-  Native-only for now; run with `cargo run --manifest-path
-  crates/cabin/Cargo.toml`.
+- `crates/cabin/` — the game people play. `bridge.rs` owns the sim/save/
+  tape (shell duties), `surface.rs` maps 3D quads onto sim rects, `rig.rs`
+  builds the room, camera (roam + focus), and the 480×270 pixel-crunch
+  pipeline with invariant/sightline tests, `gesture.rs` synthesizes
+  pointer frames (lever pulls, carry), `palette.rs` restates the palette
+  discipline (purity test included), `canvas.rs`+`crt.rs` are the software
+  rasterizer behind the phosphor screens, and the view modules
+  (`console`, `barter`, `pieces`, `viewport`, `fx`, `audio`) read sim
+  accessors onto geometry. Native-only for now.
 
 ## Commands
 
 ```bash
-cargo build                                                   # build
-cargo run                                                     # run natively
-cargo clippy --all-targets --all-features -- -D warnings      # lint
-cargo clippy --target wasm32-unknown-unknown -- -D warnings   # lint, wasm
-cargo fmt                                                     # format
-cargo test                                                    # test
-./scripts/build-web.sh                                        # wasm -> dist/web/
-python3 -m http.server --directory dist/web 8080              # serve it
-cargo bench --bench sim_bench -- --quick                      # bench
-cargo audit                                                   # audit
+cargo run --release -p cabin                         # play
+cargo build                                          # build
+cargo clippy --workspace --all-targets -- -D warnings # lint
+cargo fmt                                            # format
+cargo test --workspace                               # test
+cargo bench --bench sim_bench -- --quick             # bench
+cargo audit                                          # audit
+cargo run -p cabin -- --shot out.png --view desk     # headless screenshot
 ```
-
-The web build needs `rustup target add wasm32-unknown-unknown`, and uses
-`wasm-opt` from binaryen when it is on PATH.
 
 ## Solid vs. soft (change tolerance)
 
@@ -98,11 +82,13 @@ walls are load-bearing:
 - **Solid — change deliberately, with tests and a save-magic bump**:
   `src/sim/` (the game), `src/net/` (lockstep + guild), the save/tape
   formats, the `InputFrame` contract, and the cabin's bridge/surface
-  contract (panels map layout rects; the sim does all hit-testing).
+  contract (surfaces map layout rects; the sim does all hit-testing).
 - **Soft — expected to churn freely**: every cabin view module (`crt`,
   `console`, `barter`, `pieces`, `viewport`, `fx`), the rig's room
   layout (data-first geometry + invariant/sightline tests make
   rearrangement cheap), palette values, canvas paintings, audio gains.
+  The barter economy and its presentation are *expected* to be redesigned
+  until they click — playtest verdict — so avoid deep investment there.
 - **Amend-in-the-same-change**: the art direction docs and
   `docs/DESIGN_REVIEW.md`'s deferred list — divergence without amendment
   is the failure mode, not change itself.
@@ -116,7 +102,7 @@ given input sequence produces a bit-identical run — determinism is
 structural, via splitmix RNG streams derived from the seed, not incidental —
 and rendering interpolates between the last two states using an alpha.
 
-Do not read wall-clock time, macroquad state, or randomness from inside
+Do not read wall-clock time, engine state, or randomness from inside
 `src/sim/`. If the frontend needs to tell the sim something, it goes in
 `InputFrame`.
 
@@ -127,10 +113,9 @@ what it should sound like. Cues live for one `advance()` and are cleared by
 the next. `fast_forward` (used for warp and offline catch-up) suppresses
 cues, so six hours of catch-up does not arrive as six hours of clunks.
 
-The wider rule: any module that imports macroquad is untestable — macroquad's
-globals panic under `cargo test` (a thread assert), they do not fail politely.
-Logic you want tested must live macroquad-free like `sim` and `synth` do;
-frontend modules get verified by bot playouts or eyeballs.
+The wider rule: logic you want tested must live engine-free like `sim` and
+`synth` do; frontend modules get verified by the cabin's invariant and
+sightline tests, headless screenshots, or eyeballs.
 
 ## House Rules
 
@@ -144,51 +129,37 @@ Cargo is conserved: a piece the player owns never vanishes or changes hands
 except through four ceremonies — the accept lever, the Guild's hangar
 steal on docking (`Cue::Delivered`, per DESIGN.md's Central Server section),
 ???'s three-for-one exchange (`Cue::Exchange`), and the outboard net's
-sweep (`Cue::Jettison`): cargo dragged onto the net rides outside the hull,
+sweep (`Cue::Jettison`): cargo put on the net rides outside the hull,
 recoverable until the next dock, departure, or encounter close carries it
 off. The suspicious crate refuses the net. The casino only ever transmutes
 a wagered piece (`Cue::CasinoLoss`), never destroys it.
-No drag can destroy anything. The ownership rule lives in exactly one place
-(`cargo::player_owned`), the drop matrix consumes it in `Sim::resolve_drop`,
-and the renderer's affordances come from `Sim::drop_targets()` — never
-restate any of them. The drag-monkey tests in `src/sim/mod.rs` feed
-thousands of arbitrary input frames (solo and six-player) and fail the
-moment any interaction loses a piece outside those two doors, so new
-surfaces are guarded the moment they exist.
+No interaction can destroy anything. The ownership rule lives in exactly one
+place (`cargo::player_owned`), the drop matrix consumes it in
+`Sim::resolve_drop`, and the renderer's affordances come from
+`Sim::drop_targets()` — never restate any of them. The drag-monkey tests in
+`src/sim/mod.rs` feed thousands of arbitrary input frames (solo and
+six-player) and fail the moment any interaction loses a piece outside those
+doors, so new surfaces are guarded the moment they exist. The cabin's
+gesture monkey extends the same guarantee through the lever/carry
+synthesis layer.
 
-Aesthetics are directed, not defaulted: `docs/ART_DIRECTION.md` holds the
-conceit (a worn instrument panel; screens vs metal), and all frontend color
-lives in `src/palette.rs` — a purity test fails the build on any raw color
-constructor elsewhere in the frontend. Follow the file or amend it in the
-same change.
+Aesthetics are directed, not defaulted: `docs/ART_DIRECTION_3D.md` holds
+the conceit, and all frontend color lives in `crates/cabin/src/palette.rs`
+— a purity test fails the build on any raw color constructor elsewhere in
+the crate. Follow the file or amend it in the same change.
 
-The save string is versioned (magic `STV4`), hand-rolled in
-`src/sim/save.rs`, with no compatibility guarantees before 1.0. Bump the
-magic on any breaking change; an old or corrupt save fails safe into a fresh
-game, never a panic.
+The save string is versioned, hand-rolled in `src/sim/save.rs`, with no
+compatibility guarantees before 1.0. Bump the magic on any breaking change;
+an old or corrupt save fails safe into a fresh game, never a panic.
 
-Every asset gets a `CREDITS.md` line at intake — source, author, license, URL.
-CC0 first.
+Every asset gets a `CREDITS.md` line at intake — source, author, license,
+URL. CC0 first. (Today there are none: geometry, textures, and sound are
+all code.)
 
-CI enforces a hard wasm size budget (`MAX_WASM_BYTES`, ~1.5 MB by default);
-if a change blows it, shrink the change or retune the budget deliberately.
-
-Audio is on: macroquad's `audio` feature plus quad-snd's `audio.js` plugin in
-`web/`, which must load after `gl.js` and before `load()` runs. The
-soundscape is synthesised in `src/synth.rs` — four seamless loops (engine,
-warp engine, suspicious hum, station air) plus one-shots mapped from cues —
-so there are no audio assets and nothing to credit. Ambient only, no
-melodies. macroquad gives you volume and looping and no pitch control, so
-pitch variation means baking another buffer.
-
-Browsers keep the audio context suspended until a real gesture. `audio.js`
-handles the resume; the loops additionally wait for the first press so they
-never start mid-note. Anything long-lived and looping needs the same
-treatment.
-
-Two independent decoders read `synth`'s bytes — `audrey` natively and the
-browser's `decodeAudioData` on the web — and the web one reports failure by
-never calling back, which hangs macroquad's loader on a black screen. That is
-why `synth.rs` has header tests.
+The soundscape is synthesised in `src/synth.rs` — four seamless loops
+(engine, warp engine, suspicious hum, station air) plus one-shots mapped
+from cues — ambient only, no melodies. `synth.rs` keeps header tests
+because decoder failures on malformed WAV bytes are silent hangs, not
+errors.
 
 See `docs/GETTING_STARTED.md` for framework and asset-source links.

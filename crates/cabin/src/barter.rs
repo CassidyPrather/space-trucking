@@ -1326,19 +1326,23 @@ fn update_flashes(
 fn slide_accept_handle(
     grips: Res<crate::gesture::Grips>,
     frame: Option<Res<BarterFrame>>,
-    mut handle: Single<&mut Transform, With<AcceptHandle>>,
+    mut handle: Single<&mut Transform, (With<AcceptHandle>, Without<GoLamp>)>,
+    mut lamp: Single<&mut Transform, (With<GoLamp>, Without<AcceptHandle>)>,
 ) {
     let Some(frame) = frame else { return };
     let rect = layout::ACCEPT_LEVER;
     let mid_y = rect.h.mul_add(0.5, rect.y);
     let x = grips.accept.travel.mul_add(rect.w - 54.0, rect.x + 27.0);
     handle.translation = frame.local(x, mid_y, 0.01);
+    // The go-lamp rides its handle — light and hand travel together.
+    lamp.translation = frame.local(x, rect.y + 11.0, 0.022);
 }
 
 /// out, it says; dark glass otherwise.
 fn update_lever(
     time: Res<Time>,
     shell: Res<Shell>,
+    pointer: Res<crate::surface::VirtualPointer>,
     lamps: Query<&MeshMaterial3d<StandardMaterial>, With<GoLamp>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -1362,6 +1366,13 @@ fn update_lever(
                 (palette::LAMP_OK, 0.0)
             }
         });
+    // Hover wakes the lamp faintly even when a pull would refuse —
+    // interactable, not ready. Lamps are the affordance language.
+    let level = if layout::ACCEPT_LEVER.contains(pointer.sim) {
+        level.max(0.18)
+    } else {
+        level
+    };
     for handle in &lamps {
         if let Some(mut material) = materials.get_mut(&handle.0) {
             glow::set_lamp(&mut material, color, level);

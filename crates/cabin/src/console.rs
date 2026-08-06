@@ -543,6 +543,7 @@ fn lever_motion(
 fn lever_lamp(
     time: Res<Time>,
     shell: Res<Shell>,
+    pointer: Res<VirtualPointer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     lamp: Single<&MeshMaterial3d<StandardMaterial>, With<LeverLamp>>,
     halo: Single<&MeshMaterial3d<StandardMaterial>, With<LeverHalo>>,
@@ -558,13 +559,20 @@ fn lever_lamp(
             )
         });
     // Decoration: the go-glow breathes gently while a pull would work.
+    // Hover feedback: pointing at the lever wakes its lamp faintly even
+    // when the pull would refuse — "this is a thing", never "this is
+    // ready". The lamps are the cabin's affordance language.
+    let hovered = layout::LAUNCH_LEVER.contains(pointer.sim);
     let breath = glow::breathe(time.elapsed_secs(), 2.2, 0.0).mul_add(0.24, 0.66);
+    let level = if pullable {
+        if hovered { breath.max(0.95) } else { breath }
+    } else if hovered {
+        0.18
+    } else {
+        0.0
+    };
     if let Some(mut mat) = materials.get_mut(&lamp.0) {
-        glow::set_lamp(
-            &mut mat,
-            palette::LAMP_OK,
-            if pullable { breath } else { 0.0 },
-        );
+        glow::set_lamp(&mut mat, palette::LAMP_OK, level);
     }
     if let Some(mut mat) = materials.get_mut(&halo.0) {
         let strength = if pullable { breath * 0.55 } else { 0.0 };
@@ -582,6 +590,7 @@ fn set_stroke(mat: &mut StandardMaterial, live: Color, lit: bool, glow_up: f32) 
 /// The toggle buttons: icon strokes, state lamps, and the mute slash.
 fn buttons(
     shell: Res<Shell>,
+    pointer: Res<VirtualPointer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     icons: Query<(&Toggle, &MeshMaterial3d<StandardMaterial>), With<IconStroke>>,
     lamps: Query<(&Toggle, &MeshMaterial3d<StandardMaterial>), With<ButtonLamp>>,
@@ -591,6 +600,14 @@ fn buttons(
     let paused = sim.is_paused();
     let warping = sim.is_warp();
     let muted = shell.muted;
+    let hover = |which: &Toggle| {
+        match which {
+            Toggle::Pause => layout::PAUSE_BTN,
+            Toggle::Warp => layout::WARP_BTN,
+            Toggle::Speaker => layout::SPEAKER,
+        }
+        .contains(pointer.sim)
+    };
     for (which, material) in &icons {
         let Some(mut mat) = materials.get_mut(&material.0) else {
             continue;
@@ -607,11 +624,13 @@ fn buttons(
         let Some(mut mat) = materials.get_mut(&material.0) else {
             continue;
         };
-        let (color, level) = match which {
+        let (color, level): (Color, f32) = match which {
             Toggle::Pause => (palette::AMBER, if paused { 1.0 } else { 0.0 }),
             Toggle::Warp => (palette::AMBER, if warping { 1.0 } else { 0.0 }),
             Toggle::Speaker => (palette::LAMP_OK, if muted { 0.0 } else { 0.45 }),
         };
+        // Hover wakes a sleeping lamp faintly — interactable, not active.
+        let level = if hover(which) { level.max(0.18) } else { level };
         glow::set_lamp(&mut mat, color, level);
     }
     for mut visibility in &mut slashes {

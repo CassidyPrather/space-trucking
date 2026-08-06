@@ -94,6 +94,15 @@ palette instrument*:
 - The cabin is lit warm (`GLINT` overhead, `PLATE_LIT` fill) with a low
   green spill by the tank (`PHOSPHOR`), so the metal reads green-gray as
   the 2D plates did.
+- **No runtime shadow maps, on purpose.** DESIGN.md's lighting direction
+  is light *volumes* — authored, placed light, not simulated occlusion.
+  Depth comes from placement, wear, ambient fill, and atmosphere; a
+  shadow map that sneaks in is a default to be removed, not a feature.
+- **The air is visible.** A gentle `HULL`-toned distance fog softens the
+  far corners, and deterministic dust motes drift where the light pools
+  — denser under the lamps, violet-tinged when the omen swells,
+  dimming with the room. Particulate is decoration: slow, seeded,
+  the same air every boot.
 - **The omen dims the actual lights.** `sim.light()` scales every
   `Dimmable` source; a violet `EERIE` source swells with `sim.omen()`;
   the jump is a sub-half-second `EERIE_BRIGHT` flash. Screens and lamps
@@ -195,6 +204,15 @@ What must NOT happen: cargo positions as free 3D coordinates in sim
 state, physics on pieces, or any frontend-authoritative cargo movement.
 That would break saves, tapes, lockstep, and the conservation tests in
 one stroke.
+
+The owner's actuating idea for the experiment, queued behind the
+smaller polish: new cargo kinds that *live in the room* — lamps (floor-,
+wall-, or ceiling-affixed), couches, paintings — plus mechanics that let
+cargo interact with light, atmosphere, and other cargo, tying the 3D
+space together. Every such mechanic keeps a 2D analogue (the console
+must still play the same game), which the discrete berth model makes
+natural: an affixed lamp is a piece whose berth class is "wall", and its
+light is presentation.
 
 ## Open questions for the aesthetic experiment
 

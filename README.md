@@ -26,8 +26,11 @@ builds trade frame rate for compile speed.
 Cabin controls: mouse looks and `WASD` walks; aim at a station and click
 (or `E`) to focus it — the camera glides to a fitted viewpoint and the
 cursor frees for the usual clicking and dragging. `Esc`, right-click, or
-`E` steps back out. `Space`, `M`, `R` (and `F` in dev mode) match the 2D
-console. Dev tooling: `-- --shot out.png --view desk` renders one
+`E` steps back out of a station; `Esc` while roaming hands the cursor
+back to your desktop (click the game to reclaim it). The launch and
+accept levers are pulls: grab, drag to the end of the track, and the
+throw fires at the detent. `Space`, `M`, `R` (and `F` in dev mode) match
+the 2D console. Dev tooling: `-- --shot out.png --view desk` renders one
 screenshot and exits.
 
 Saves: the cabin keeps its own slot (`cabin.data` + `cabin.replay`

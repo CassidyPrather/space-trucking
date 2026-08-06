@@ -176,20 +176,25 @@ fn advance(
     mut shell: ResMut<Shell>,
 ) {
     let live = camera.interactive();
-    // The lever rects belong to the gesture layer while hands are empty:
-    // raw presses there are withheld, and a completed pull arrives as
-    // one synthesized press at the lever's center — the same frame the
-    // 2D console would have sent.
+    // The gesture layer merges with raw input in one place (`synthesize`,
+    // property-tested by the gesture monkey): lever rects are withheld
+    // while hands are empty, and a completed pull arrives as one plain
+    // press at the lever's center — what the 2D console would have sent.
     let holding = shell.bridge.sim.held(0).is_some();
-    let fired = grips.fired_press();
-    let masked = fired.is_none() && gesture::Grips::masks(pointer.sim, holding);
-    let at = fired.unwrap_or(pointer.sim);
-    let raw = live && !masked;
+    let (at, press, held, release) = gesture::synthesize(
+        &grips,
+        pointer.sim,
+        holding,
+        live,
+        buttons.just_pressed(MouseButton::Left),
+        buttons.pressed(MouseButton::Left),
+        buttons.just_released(MouseButton::Left),
+    );
     let input = FrameInput {
         pointer: at,
-        press: fired.is_some() || (raw && buttons.just_pressed(MouseButton::Left)),
-        held: raw && buttons.pressed(MouseButton::Left),
-        release: raw && buttons.just_released(MouseButton::Left),
+        press,
+        held,
+        release,
         shift: keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight),
         key_pause: keys.just_pressed(KeyCode::Space),
         key_warp: keys.just_pressed(KeyCode::KeyF),

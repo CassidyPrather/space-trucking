@@ -297,6 +297,9 @@ pub struct CameraRig {
     pub yaw: f32,
     pub pitch: f32,
     pub mode: Mode,
+    /// Roam-mode cursor parking: `Esc` frees the OS cursor (to reach
+    /// other windows); the next click on the game reclaims it.
+    pub parked: bool,
 }
 
 impl CameraRig {
@@ -308,6 +311,7 @@ impl CameraRig {
             yaw: 0.0,
             pitch: -0.12,
             mode: view.map_or(Mode::Roam, |focus| Mode::Focused { focus }),
+            parked: false,
         }
     }
 
@@ -484,6 +488,13 @@ pub fn spawn(
         RenderTarget::Image(target.clone().into()),
         Hdr,
         Bloom::NATURAL,
+        // A breath of particulate: gentle depth haze in hull tones. The
+        // far corners of the cabin soften; panels up close stay crisp.
+        DistanceFog {
+            color: palette::HULL.with_alpha(0.85),
+            falloff: FogFalloff::Exponential { density: 0.16 },
+            ..default()
+        },
         Msaa::Off,
         Transform::from_translation(pos).with_rotation(rot),
         CabinCamera,
@@ -672,12 +683,15 @@ pub fn spawn(
 
     // --- Light: one warm overhead, one floor fill, one phosphor spill
     // by the tank. The omen reaches all three through `Dimmable`.
+    // No shadow maps anywhere, on purpose: DESIGN.md's lighting direction
+    // is light *volumes* — authored, placed light, not simulated
+    // occlusion. Depth comes from placement, wear, fog, and the motes.
     commands.spawn((
         PointLight {
             color: palette::GLINT,
             intensity: 220_000.0,
             range: 7.0,
-            shadow_maps_enabled: true,
+            shadow_maps_enabled: false,
             ..default()
         },
         Transform::from_xyz(0.25, 2.1, 0.35),
@@ -713,6 +727,14 @@ pub fn spawn(
         },
     ));
 
+    // Volume-flavored ambient: with shadow maps gone, a slightly fuller
+    // ambient keeps the unlit corners legible instead of void-black.
+    commands.insert_resource(GlobalAmbientLight {
+        color: palette::PLATE_LIT,
+        brightness: 140.0,
+        ..default()
+    });
+
     commands.insert_resource(skin);
 }
 
@@ -747,6 +769,18 @@ pub fn steer(
     let toggle = keys.just_pressed(KeyCode::KeyE);
     match rig.mode {
         Mode::Roam => {
+            // A parked cursor belongs to the OS until the game is
+            // clicked; the click that reclaims it does nothing else.
+            if rig.parked {
+                if buttons.just_pressed(MouseButton::Left) {
+                    rig.parked = false;
+                }
+                return;
+            }
+            if keys.just_pressed(KeyCode::Escape) {
+                rig.parked = true;
+                return;
+            }
             // Look.
             rig.yaw = motion.delta.x.mul_add(-LOOK_SPEED, rig.yaw);
             rig.pitch = motion
@@ -849,7 +883,7 @@ pub fn present_mode(
     let (window, cursor) = &mut *window;
     let roaming = matches!(rig.mode, Mode::Roam);
     let focused = rig.interactive();
-    if roaming && window.focused {
+    if roaming && window.focused && !rig.parked {
         // Windows' winit cannot Lock the cursor, only Confine it — and a
         // confined, hidden cursor still wanders (to the taskbar, where a
         // click steals the window), so it gets pinned to center every

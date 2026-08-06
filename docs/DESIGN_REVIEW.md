@@ -23,7 +23,8 @@ deliberately below.
 - [ ] Cargo is conserved: nothing the player owns vanishes or changes hands
       except through the accept lever or the Guild's hangar steal, and the
       drag-monkey tests (solo and six-player) cover any new interactive
-      surface automatically.
+      surface automatically — the cabin's gesture and carry synthesis
+      included, via its own monkeys.
 - [ ] Netcode holds the lockstep contract: state never travels, only
       inputs; new protocol messages are idempotent under duplication and
       reordering, fuzz-parsed, and the six flaky-harness properties in
@@ -38,25 +39,26 @@ deliberately below.
       property test proves it (see `dial_reading_is_monotone_under_pad_changes`).
 - [ ] Pause, fast-forward, and save/load all still reachable and exercised
       this session.
-- [ ] `src/sim/` and `src/synth.rs` import no macroquad; cues say what
-      happened, never what it sounds like.
+- [ ] `src/sim/` and `src/synth.rs` import no engine crate (no bevy, no
+      windowing, no clocks); cues say what happened, never what it sounds
+      like.
 - [ ] Ambient soundscape only — no melodies; new loops pass the seam test.
-- [ ] Budgets green: wasm ≤ 1.5 MB (paste the byte count) and the release
-      perf gates pass (`cargo test --release --test perf -- --ignored`);
+- [ ] Budgets green: the release perf gates pass
+      (`cargo test --release -p space-trucking --test perf -- --ignored`);
       any retuned ceiling is amended in [BUDGETS.md](BUDGETS.md) with a why.
 - [ ] Every asset, including vendored JS, has a CREDITS.md row; CC0/MIT
       preferred.
 - [ ] Cargo tells the story: any new kind has a lore reason and a distinct
       silhouette.
-- [ ] Visuals follow [ART_DIRECTION.md](ART_DIRECTION.md) or amend it in the
-      same change: palette roles only (the purity test enforces it), correct
-      material family, top-left light, deterministic wear.
+- [ ] Visuals follow [ART_DIRECTION_3D.md](ART_DIRECTION_3D.md) (and its
+      parent [ART_DIRECTION.md](ART_DIRECTION.md)) or amend them in the
+      same change: palette roles only (the purity test enforces it),
+      correct material family, deterministic wear, no shadow maps.
 - [ ] Accessible by default: every new animation is filed as feedback,
-      decoration, or instruction per ART_DIRECTION.md's Motion section —
-      decoration gates on the reduced-motion flag and freezes to a state
-      that still reads — and no signal rides on hue alone (No hue alone
-      section); the bar is a walk of the renderer showing nothing loops
-      while reduced motion is on and nothing gated became unreadable.
+      decoration, or instruction per the art docs' Motion sections — the
+      split kept honest in code so the reduced-motion gate stays cheap to
+      add when a build target carries the flag — and no signal rides on
+      hue alone (No hue alone section).
 - [ ] Deferred-deliberately list is current.
 
 ## Deferred deliberately
@@ -72,11 +74,19 @@ changing; remove a line only by shipping it or striking it in review.
   the sim, protocol, and harness are in — see docs/NETWORKING.md)
 - Real transport adapter (WebSocket) behind `net`'s transport seam
 - Guild-server hosting + wiring global progress into the console
-- VRChat port (the 3D Bevy cabin in `crates/cabin` is the first step:
-  same sim, native-only, aesthetic experimentation underway — see
-  ART_DIRECTION_3D.md; still deferred from the cabin: the tutor ghost,
-  `--replay` playback, wasm/web build, telemetry consent surface, and
-  the 2D console's per-rule violation glyphs)
+- VRChat port (the Bevy cabin in `crates/cabin` is the first step: the
+  sim's one frontend since the 2D console retired — see BAY.md for that
+  decision and ART_DIRECTION_3D.md for direction; still deferred from
+  the cabin: the tutor ghost, `--replay` playback, a wasm/web build
+  (Bevy compiles to wasm when wanted), the telemetry consent surface,
+  and the retired console's per-rule violation glyphs)
+- Barter redesign: playtests call the trade minigame and economy
+  unengaging; both are expected to be redesigned until click-y, so no
+  deep investment lands on the counter meanwhile (the desk-scale
+  "broker's diorama" conceit is a placeholder, per BAY.md)
+- Bay coverings (rugs, wallpaper, paint): the owner's cargo direction
+  beyond furniture — a per-cell dressing layer parallel to occupancy,
+  sketched in BAY.md, deliberately not built this slice
 - Additional star systems
 - More events (mimics, ad bots, hull breaches, secret color-code objectives)
 - Rat-gnaw repair: DESIGN.md's "requiring repair" reading is deliberately

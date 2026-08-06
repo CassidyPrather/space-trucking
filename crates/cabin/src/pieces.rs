@@ -1,23 +1,25 @@
 //! Cargo pieces and the rat, made physical: every [`Piece`] the sim knows
-//! becomes a small low-poly rig standing proud of its panel like an object
-//! in a tray — hold pieces on the hold rack, everything else on the barter
-//! counter — plus the held piece glued to the pointer, per-cell placement
-//! hints, drop-target invitations, the hard-reject flash, and the stowaway.
+//! becomes a low-poly rig — hold pieces at furniture scale in the walkable
+//! bay (rows 0–2 hung on the aft wall band, row 3 standing on the deck,
+//! the fold-straddling 1×2 kinds rising across both), everything else a
+//! scale model on the barter counter: the broker's diorama, the deliberate
+//! scale conceit `docs/BAY.md` records. Plus the carried piece riding the
+//! crosshair, per-cell placement hints, drop-target invitations, the
+//! hard-reject flash with its rule glyphs, and the stowaway.
 //!
-//! Semantics mirror the 2D console's `render.rs` (`draw_pieces`,
-//! `piece_glyph`, `draw_held`, `draw_drop_hints`, `draw_rat`,
-//! `draw_violation_flash`): the sim stays the only arbiter — footprints
-//! come from `layout::piece_rect`, legality from `placement_check`, invites
-//! from `drop_targets` — and no refusal rides on hue alone: illegality
-//! always carries a slash, gnawing carries a wedge, shapes over colors.
+//! Semantics keep the retired 2D console's law: the sim stays the only
+//! arbiter — footprints come from `layout::piece_rect` and `cubby_rect`,
+//! legality from `placement_check`, invites from `drop_targets` — and no
+//! refusal rides on hue alone: illegality always carries a slash, gnawing
+//! carries a wedge, shapes over colors.
 //!
-//! The fixture kinds go further, per `docs/FIXTURES.md`: the hold rack
-//! grows a gantry frame (top rail, deck lip, side stiles) the fixtures
-//! visibly mount to, every lamp rig owns a real `PointLight` gated by the
-//! sim's `lamp_lit` and dimmed by the omen through `rig::Dimmable`,
-//! seedlings bloom in `lit_adjacent` lamplight, paintings carry one seeded
-//! artwork painted through the shared `canvas`, and a couch under the rat
-//! settles it into a nap pose.
+//! The fixture kinds go further, per `docs/FIXTURES.md`: every lamp rig
+//! owns a real `PointLight` gated by the sim's `lamp_lit` and dimmed by
+//! the omen through `rig::Dimmable`, seedlings bloom in `lit_adjacent`
+//! lamplight, paintings carry one seeded artwork painted through the
+//! shared `canvas`, a couch under the rat settles it into a nap pose, and
+//! the cabinet is furniture that stores: an open-fronted wardrobe whose
+//! 2×2 cubby rack renders its `Loc::Stow` cargo in miniature.
 
 use std::collections::HashMap;
 use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI, TAU};
@@ -27,10 +29,11 @@ use bevy::image::ImageSampler;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
+use space_trucking::sim::cargo::CABINET_SLOTS;
 use space_trucking::sim::layout::{self, Rect};
 use space_trucking::sim::{
-    Cue, Kind, Loc, Piece, Vec2 as SimVec2, Violation, lamp_lit, lit_adjacent, placement_check,
-    player_owned, splitmix,
+    Cue, Kind, Loc, Mount, Piece, Vec2 as SimVec2, Violation, lamp_lit, lit_adjacent,
+    placement_check, player_owned, splitmix,
 };
 
 use crate::rig::{Dimmable, Skin};
@@ -49,8 +52,28 @@ const FLASH_LEN: f32 = 0.45;
 /// How far a carried piece hovers off the struck surface, meters.
 const CARRY_LIFT: f32 = 0.05;
 
-/// Fraction of its rect a rig fills, so tray neighbours never touch.
+/// Where the carried piece floats while the crosshair aims at nothing
+/// placeable: ahead of and below the eye, low-center, like a box in both
+/// arms — carried, never dropped.
+const CARRY_AHEAD: f32 = 0.5;
+const CARRY_DOWN: f32 = 0.35;
+
+/// Fraction of its rect a desk rig fills, so tray neighbours never touch.
 const FIT: f32 = 0.88;
+
+/// Fraction of its cells a bay rig fills. Roomier than the desk's [`FIT`]:
+/// furniture nearly fills its berth — a couch reads ~1.06 world units
+/// wide over its two 0.55 cells.
+const BAY_FIT: f32 = 0.96;
+
+/// A stowed piece's scale relative to its host cabinet's: shrunk until
+/// the widest 1×1 rig (~34 sim units across) reads ~0.18 world units —
+/// small enough to sit visibly *inside* a cubby, doors or no doors.
+const STOW_FIT: f32 = 0.34;
+
+/// The rat's per-sim-unit scale relative to the bay's. Nose to tail the
+/// rig spans ~17 sim units, so this reads ~0.12 world units of ship rat.
+const RAT_FIT: f32 = 0.45;
 
 /// Rat hop tween length in ticks (0.35 s), same as the 2D renderer.
 const RAT_HOP_TICKS: f32 = 21.0;
@@ -64,12 +87,16 @@ const SALT_BITE: u64 = 0x91EC_B17E;
 /// Salt for the painting's one artwork roll.
 const SALT_ART: u64 = 0x91EC_0A27;
 
-/// A stowed lamp's honest brightness; the omen scales it via `Dimmable`.
-const LAMP_LUMENS: f32 = 9_000.0;
+/// A lit lamp's honest brightness at room scale; the omen scales it via
+/// `Dimmable`. Bright enough to pool light on the neighbouring bay cells
+/// and the deck plates, well under the overhead's key — lamplight is
+/// local color, not a second room light.
+const LAMP_LUMENS: f32 = 36_000.0;
 
-/// A lamp's reach, metres: a pool over the neighbouring cells — the 3D
-/// reading of the sim's orthogonal halo — not a second room light.
-const LAMP_RANGE: f32 = 1.3;
+/// A lamp's reach, metres: about one bay cell past its own — the 3D
+/// reading of the sim's orthogonal halo, tuned so a pool ends before it
+/// climbs the far furniture.
+const LAMP_RANGE: f32 = 1.9;
 
 /// Lamp wake/sleep fade, seconds. Placement feedback, so it finishes
 /// well inside the half-second law.
@@ -82,6 +109,16 @@ const ART_H: f32 = 32.0;
 
 /// The artwork's emissive multiplier: barely a glow. Paint, not a screen.
 const ART_GLOW: f32 = 0.5;
+
+/// The cabinet carcass's depth in sim units (~0.2 world at bay scale):
+/// slim enough to read wardrobe, deep enough to shelve a shrunken rig.
+const CABINET_DEPTH: f32 = 14.0;
+
+/// Violation glyph arm length, sim units — the 2D console's `s = 12`.
+const GLYPH_S: f32 = 12.0;
+
+/// Most bars any one violation glyph spends; the pool is this deep.
+const GLYPH_BARS: u8 = 5;
 
 pub struct PiecesPlugin;
 
@@ -137,13 +174,14 @@ struct CarryState {
     last: Option<(Vec3, Quat)>,
 }
 
-/// The hard-reject flash: the refused footprint in sim coordinates and how
-/// long the frame keeps burning.
+/// The hard-reject flash: the refused footprint in sim coordinates, the
+/// rule that refused it (for the glyph and the suspicious violet), and
+/// how long the frame keeps burning.
 #[derive(Resource, Default)]
 struct FlashState {
     left: f32,
     area: Option<Rect>,
-    eerie: bool,
+    rule: Option<Violation>,
 }
 
 /// The stowaway's entity and the way its nose points.
@@ -212,9 +250,26 @@ struct RowGlow {
     phase: f32,
 }
 
-/// One edge bar of the violation flash frame, `0..4`.
+/// One edge bar of the violation flash frame, `0..8`: bars 0–3 frame the
+/// footprint's share of the wall band, 4–7 its share of the deck strip —
+/// a refused footprint may straddle the fold.
 #[derive(Component)]
 struct VioBar(u8);
+
+/// One bar of the violation glyph pool, `0..GLYPH_BARS` — the 2D
+/// console's per-rule icons (weight, bracket, hazard, snowflake, and the
+/// cabinet's full box) restated as emissive hardware over the flash.
+#[derive(Component)]
+struct GlyphBar(u8);
+
+/// One inviting glow quad in a cabinet cubby's mouth, keyed by the host
+/// piece and its slot; wakes while the sim's drop matrix invites a stow.
+#[derive(Component)]
+struct CubbyGlow {
+    piece: u32,
+    slot: u8,
+    phase: f32,
+}
 
 /// The rat rig's root.
 #[derive(Component)]
@@ -230,7 +285,8 @@ struct RatTail {
 /// seconds and feeds both the point light's [`Dimmable`] base — fx.rs
 /// keeps the per-frame omen math — and the bulb glass, which is its own
 /// material instance per the shared-handle rule. Lamps burn only while
-/// the sim's `lamp_lit` says so: stowed in the hold, nowhere else.
+/// the sim's `lamp_lit` says so: berthed in the hold, nowhere else — a
+/// lamp on the counter or boxed in a cubby is dark glass.
 #[derive(Component)]
 struct LampGlow {
     piece: u32,
@@ -257,12 +313,14 @@ struct Blossom {
     piece: u32,
 }
 
-/// Handles shared by the overlay systems: the static refusal-slash phosphor
-/// and the one violation-flash material all four bars burn through.
+/// Handles shared by the overlay systems: the static refusal-slash
+/// phosphor, the one violation-flash material every frame bar burns
+/// through, and the glyph pool's ink.
 #[derive(Resource)]
 struct SharedBits {
-    slash_mat: Handle<StandardMaterial>,
-    flash_mat: Handle<StandardMaterial>,
+    slash: Handle<StandardMaterial>,
+    flash: Handle<StandardMaterial>,
+    glyph: Handle<StandardMaterial>,
 }
 
 // ------------------------------------------------------------------ helpers --
@@ -273,6 +331,103 @@ fn surface_of(surfaces: &Query<(&Station, &SimSurface)>, want: Station) -> Optio
         .iter()
         .find(|(station, _)| **station == want)
         .map(|(_, surface)| *surface)
+}
+
+/// The bay's two mapped surfaces — wall band, then deck strip.
+fn bay_of(surfaces: &Query<(&Station, &SimSurface)>) -> Option<(SimSurface, SimSurface)> {
+    Some((
+        surface_of(surfaces, Station::BayWall)?,
+        surface_of(surfaces, Station::BayFloor)?,
+    ))
+}
+
+/// Which bay surface a sim point reads through: the wall band above the
+/// fold seam, the deck strip below it. The fold is watertight (by rig
+/// test), so the handover never opens a gap.
+fn bay_surface<'a>(wall: &'a SimSurface, floor: &'a SimSurface, sim: SimVec2) -> &'a SimSurface {
+    if sim.y < floor.rect.y { wall } else { floor }
+}
+
+/// Where a hold footprint (its `layout::piece_rect`) sits in the bay, as
+/// the rig root's (translation, rotation, scale). A footprint wholly in
+/// the wall rows hangs flat on the band; anything touching the deck row
+/// stands upright on its floor cell instead, back to the wall — which is
+/// how the fold-straddling 1×2 kinds (floor lamp, cabinet, an anchored
+/// idol) rise across the seam through their wall cell. Sizes derive from
+/// the surface scales, so retuning `rig::BAY_CELL` re-scales every rig.
+fn bay_site(wall: &SimSurface, floor: &SimSurface, rect: Rect) -> (Vec3, Quat, Vec3) {
+    // Upright is the wall's frame either way: local +X runs sim +x, +Y up
+    // the room, +Z off the wall toward the player.
+    let rot = wall.orientation();
+    if rect.y + rect.h <= floor.rect.y + 0.5 {
+        let (su, sv) = (wall.scale_u(), wall.scale_v());
+        let scale = Vec3::new(su, sv, su.min(sv)) * BAY_FIT;
+        (wall.to_world(rect_center(rect)), rot, scale)
+    } else {
+        // Standing: anchored at the footprint's deck share, lifted half
+        // the rig's height so its feet meet the plates.
+        let (su, sv) = (floor.scale_u(), wall.scale_v());
+        let scale = Vec3::new(su, sv, su.min(sv)) * BAY_FIT;
+        let foot = Rect::new(rect.x, floor.rect.y, rect.w, floor.rect.h);
+        let base = floor.to_world(rect_center(foot));
+        (base + floor.normal() * (rect.h * 0.5 * scale.y), rot, scale)
+    }
+}
+
+/// Cubby anchor centres in the cabinet rig's local space, sim units.
+/// Slot order matches `layout::cubby_rect`: row-major from the top-left
+/// facing the open front — local +X is sim +x, local +Y is up, so slot 0
+/// sits up-left of the rig's centre. `z` recesses the cargo into the
+/// carcass so it reads shelved, not stuck on.
+fn cubby_anchor(slot: u8) -> Vec3 {
+    let sx = if slot.is_multiple_of(2) { -1.0 } else { 1.0 };
+    let sy = if slot / 2 == 0 { 1.0 } else { -1.0 };
+    Vec3::new(sx * layout::CELL * 0.22, sy * layout::CELL * 0.47, 3.4)
+}
+
+/// The berth transform for a piece: the bay for hold cargo, a cubby
+/// anchor inside the host's standing rig for stowed cargo, the desk
+/// mapping for everything on the counter. `None` only for a stow whose
+/// cabinet is missing — impossible by the sim's rules; the caller hides
+/// the rig rather than guess.
+fn berth_site(
+    pieces: &[Piece],
+    piece: &Piece,
+    wall: &SimSurface,
+    floor: &SimSurface,
+    barter: &SimSurface,
+) -> Option<(Vec3, Quat, Vec3)> {
+    match piece.loc {
+        Loc::Hold { .. } => Some(bay_site(wall, floor, layout::piece_rect(pieces, piece))),
+        Loc::Stow { cabinet, slot } => {
+            // An occupied cabinet cannot leave the hold, so the host is a
+            // standing bay rig whenever this berth exists at all.
+            let host = pieces
+                .iter()
+                .find(|other| other.id == cabinet && matches!(other.loc, Loc::Hold { .. }))?;
+            let (pos, rot, scale) = bay_site(wall, floor, layout::piece_rect(pieces, host));
+            Some((
+                pos + rot * (cubby_anchor(slot) * scale),
+                rot,
+                Vec3::splat(scale.min_element() * STOW_FIT),
+            ))
+        }
+        _ => {
+            let rect = layout::piece_rect(pieces, piece);
+            let (w, h) = piece.kind.cells();
+            let fw = f32::from(w) * layout::CELL;
+            let fh = f32::from(h) * layout::CELL;
+            // Slot rects are smaller than big footprints; fit like the 2D
+            // glyph box, aspect kept.
+            let fit = (rect.w / fw).min(rect.h / fh) * FIT;
+            let (su, sv) = (barter.scale_u(), barter.scale_v());
+            Some((
+                barter.to_world(rect_center(rect)),
+                barter.orientation(),
+                Vec3::new(su, sv, su.min(sv)) * fit,
+            ))
+        }
+    }
 }
 
 /// Cubic ease-out, the module's one easing curve.
@@ -308,9 +463,11 @@ fn ico(radius: f32) -> Mesh {
 
 // ----------------------------------------------------------------- overlays --
 
-/// Pre-spawn everything that waits dark for a sim state to light it: the
-/// 6×4 hold hint quads with their slashes, the barter row glow quads, and
-/// the four violation-flash bars.
+/// Pre-spawn everything that waits dark for a sim state to light it: a
+/// hint quad per bay cell (rows 0–2 on the wall band, row 3 on the deck
+/// strip) with its refusal slash, the barter row glow quads, the
+/// violation frame bars (four per bay surface — a refused footprint may
+/// straddle the fold), and the glyph bar pool.
 fn spawn_overlays(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -319,35 +476,36 @@ fn spawn_overlays(
 ) {
     let slash_mat = glow::phosphor(&mut materials, palette::LAMP_NO, 3.0);
     let flash_mat = glow::phosphor(&mut materials, palette::LAMP_NO, 0.0);
+    let glyph_mat = glow::phosphor(&mut materials, palette::GLINT, 0.0);
     commands.insert_resource(SharedBits {
-        slash_mat: slash_mat.clone(),
-        flash_mat: flash_mat.clone(),
+        slash: slash_mat.clone(),
+        flash: flash_mat.clone(),
+        glyph: glyph_mat.clone(),
     });
-    let Some(hold) = surface_of(&surfaces, Station::Hold) else {
+    let Some((wall, floor)) = bay_of(&surfaces) else {
         return;
     };
     let Some(barter) = surface_of(&surfaces, Station::Barter) else {
         return;
     };
 
-    // The gantry the fixtures mount to: the hold grid's edges are the
-    // room's surfaces, so the rack grows the matching furniture.
-    spawn_gantry(&mut commands, &skin, &hold);
-
-    // Hold cell hints: a thin quad per cell, its refusal slash floating
-    // just above it (shape channel — illegality never rides hue alone).
-    let (su, sv) = (hold.scale_u(), hold.scale_v());
-    let rot = hold.orientation();
-    let normal = hold.normal();
+    // Bay cell hints: a thin quad per cell on whichever surface the fold
+    // dealt it, its refusal slash floating just above (shape channel —
+    // illegality never rides hue alone). The socket plates themselves are
+    // rig furniture; these are the glow layer over them.
     for y in 0..layout::GRID_ROWS {
         for x in 0..layout::GRID_COLS {
             let cell = layout::cell_rect(x, y);
-            let center = hold.to_world(rect_center(cell));
+            let surface = bay_surface(&wall, &floor, rect_center(cell));
+            let (su, sv) = (surface.scale_u(), surface.scale_v());
+            let rot = surface.orientation();
+            let normal = surface.normal();
+            let center = surface.to_world(rect_center(cell));
             let slash = commands
                 .spawn((
                     Mesh3d(skin.cube.clone()),
                     MeshMaterial3d(slash_mat.clone()),
-                    Transform::from_translation(center + normal * 0.004)
+                    Transform::from_translation(center + normal * 0.006)
                         .with_rotation(rot * Quat::from_rotation_z((cell.h / cell.w).atan()))
                         .with_scale(Vec3::new(
                             cell.w.hypot(cell.h) * 0.82 * su,
@@ -361,7 +519,7 @@ fn spawn_overlays(
             commands.spawn((
                 Mesh3d(skin.cube.clone()),
                 MeshMaterial3d(mat),
-                Transform::from_translation(center + normal * 0.002)
+                Transform::from_translation(center + normal * 0.004)
                     .with_rotation(rot)
                     .with_scale(Vec3::new((cell.w - 4.0) * su, (cell.h - 4.0) * sv, 0.0015)),
                 Visibility::Hidden,
@@ -398,8 +556,11 @@ fn spawn_overlays(
         }
     }
 
-    // The violation flash's frame bars, aimed when a hard reject lands.
-    for i in 0..4_u8 {
+    // The violation flash's frame bars — four per bay surface — and the
+    // glyph pool, all aimed when a hard reject lands. The gantry that
+    // used to spawn here is `rig::spawn`'s furniture now: the bay owns
+    // its own frame.
+    for i in 0..8_u8 {
         commands.spawn((
             Mesh3d(skin.cube.clone()),
             MeshMaterial3d(flash_mat.clone()),
@@ -408,59 +569,13 @@ fn spawn_overlays(
             VioBar(i),
         ));
     }
-}
-
-/// The gantry: the mounting frame the fixture conceit hangs on — a top
-/// rail above row 0 (the ceiling), a deck lip under row 3 (the floor),
-/// and a stile beside each wall column. Thin worn-metal bars lifted just
-/// off the rack, sized from the surface's own scale helpers; subtle
-/// furniture on purpose — the frame explains the fixtures, it does not
-/// compete with the cargo.
-fn spawn_gantry(commands: &mut Commands, skin: &Skin, hold: &SimSurface) {
-    let (su, sv) = (hold.scale_u(), hold.scale_v());
-    let rot = hold.orientation();
-    let normal = hold.normal();
-    let ox = layout::GRID_ORIGIN.x;
-    let oy = layout::GRID_ORIGIN.y;
-    let gw = f32::from(layout::GRID_COLS) * layout::CELL;
-    let gh = f32::from(layout::GRID_ROWS) * layout::CELL;
-    let bars = [
-        // The top rail the ceiling lamps hang from, a hair prouder than
-        // the rest so it reads load-bearing.
-        (
-            SimVec2::new(gw.mul_add(0.5, ox), oy - 5.0),
-            (gw + 20.0, 6.0),
-            0.012,
-            &skin.plate,
-        ),
-        // The deck lip under the floor row.
-        (
-            SimVec2::new(gw.mul_add(0.5, ox), oy + gh + 5.0),
-            (gw + 20.0, 6.0),
-            0.010,
-            &skin.plate,
-        ),
-        // A stile beside each wall column, in the shaded metal.
-        (
-            SimVec2::new(ox - 5.0, gh.mul_add(0.5, oy)),
-            (5.0, gh + 24.0),
-            0.010,
-            &skin.plate_shade,
-        ),
-        (
-            SimVec2::new(ox + gw + 5.0, gh.mul_add(0.5, oy)),
-            (5.0, gh + 24.0),
-            0.010,
-            &skin.plate_shade,
-        ),
-    ];
-    for (at, (w, h), lift, material) in bars {
+    for i in 0..GLYPH_BARS {
         commands.spawn((
             Mesh3d(skin.cube.clone()),
-            MeshMaterial3d(material.clone()),
-            Transform::from_translation(hold.to_world(at) + normal * lift)
-                .with_rotation(rot)
-                .with_scale(Vec3::new(w * su, h * sv, 0.016)),
+            MeshMaterial3d(glyph_mat.clone()),
+            Transform::default(),
+            Visibility::Hidden,
+            GlyphBar(i),
         ));
     }
 }
@@ -484,6 +599,8 @@ fn latch_cues(
                 if let Some(rule) = sim.last_violation() {
                     // The footprint the drop would have covered, anchored at
                     // the pointer's cell this frame — the 2D juice's aim.
+                    // (An Occupied reject can fire from a bare grab, so an
+                    // empty memo means a one-cell flash under the hand.)
                     let (w, h) = memo.0.map_or((1, 1), |(_, kind)| kind.cells());
                     let (x, y) = layout::cell_at(pointer.sim).unwrap_or((0, 0));
                     let anchor = layout::cell_rect(x, y);
@@ -494,15 +611,14 @@ fn latch_cues(
                         f32::from(w) * layout::CELL,
                         f32::from(h) * layout::CELL,
                     ));
-                    // A second crate aboard: the hold objects in violet.
-                    flash.eerie = matches!(rule, Violation::Suspicious);
-                    // rule glyphs deferred — the 2D per-rule icons
-                    // (weight, hazard, snowflake) are not ported yet.
+                    // The rule picks the glyph, and Suspicious the violet.
+                    flash.rule = Some(rule);
                 }
             }
             Cue::Reseed => {
                 flash.left = 0.0;
                 flash.area = None;
+                flash.rule = None;
                 settle.0 = None;
             }
             _ => {}
@@ -520,7 +636,9 @@ fn latch_cues(
 
 /// Diff the sim's pieces against the spawned rigs: spawn the new, despawn
 /// the gone (everything on `Cue::Reseed`), re-aim each rig at its berth,
-/// and run the glide/settle tweens.
+/// and run the glide/settle tweens. The tween interpolates scale along
+/// with position, so a piece changing worlds — desk model to bay
+/// furniture or into a cubby — grows or shrinks across the same glide.
 #[allow(clippy::too_many_arguments)]
 fn sync_pieces(
     mut commands: Commands,
@@ -534,10 +652,10 @@ fn sync_pieces(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
-    mut rigs: Query<(&mut PieceRig, &mut Transform)>,
+    mut rigs: Query<(&mut PieceRig, &mut Transform, &mut Visibility)>,
 ) {
     let sim = &shell.bridge.sim;
-    let Some(hold) = surface_of(&surfaces, Station::Hold) else {
+    let Some((wall, floor)) = bay_of(&surfaces) else {
         return;
     };
     let Some(barter) = surface_of(&surfaces, Station::Barter) else {
@@ -552,28 +670,23 @@ fn sync_pieces(
     }
 
     for piece in sim.pieces() {
-        // Hold pieces live on the hold rack; every other Loc is barter
-        // furniture (all its rects sit inside BARTER_PANEL).
-        let surface = if matches!(piece.loc, Loc::Hold { .. }) {
-            &hold
-        } else {
-            &barter
+        let Some((goal, rot, scale)) = berth_site(sim.pieces(), piece, &wall, &floor, &barter)
+        else {
+            // A stow with no cabinet under it this frame: hide, never
+            // crash — the sim's rules say this cannot happen, and the
+            // view's job is to stay standing if it somehow does.
+            if let Some(&entity) = index.0.get(&piece.id)
+                && let Ok((_, _, mut vis)) = rigs.get_mut(entity)
+            {
+                vis.set_if_neq(Visibility::Hidden);
+            }
+            continue;
         };
-        let rect = layout::piece_rect(piece);
-        let (w, h) = piece.kind.cells();
-        let fw = f32::from(w) * layout::CELL;
-        let fh = f32::from(h) * layout::CELL;
-        // Slot rects are smaller than big footprints; fit like the 2D
-        // glyph box, aspect kept.
-        let fit = (rect.w / fw).min(rect.h / fh) * FIT;
-        let (su, sv) = (surface.scale_u(), surface.scale_v());
-        let scale = Vec3::new(su, sv, su.min(sv)) * fit;
-        let goal = surface.to_world(rect_center(rect));
-        let rot = surface.orientation();
         if let Some(&entity) = index.0.get(&piece.id) {
-            let Ok((mut rig, transform)) = rigs.get_mut(entity) else {
+            let Ok((mut rig, transform, mut vis)) = rigs.get_mut(entity) else {
                 continue;
             };
+            vis.set_if_neq(Visibility::Visible);
             if (goal - rig.goal).length_squared() > 1e-8 {
                 rig.from = transform.translation;
                 rig.rot_from = transform.rotation;
@@ -620,7 +733,7 @@ fn sync_pieces(
 
     // The tweens: glide to the berth, settle after a place.
     let dt = time.delta_secs();
-    for (mut rig, mut transform) in &mut rigs {
+    for (mut rig, mut transform, _) in &mut rigs {
         rig.ease = (rig.ease + dt).min(EASE_LEN);
         rig.settle = (rig.settle - dt).max(0.0);
         let eased = ease_out(rig.ease / EASE_LEN);
@@ -697,18 +810,27 @@ fn sync_fixtures(
 
 // ------------------------------------------------------------------- carry --
 
-/// The held piece rides the pointer: lifted off the struck surface, a
-/// tenth larger, wearing its legality frame — `LAMP_OK` glow for a drop
-/// that would land, `LAMP_NO` plus a diagonal slash for one that would not.
+/// The held piece rides the hand, wearing its legality frame — `LAMP_OK`
+/// glow for a drop that would land, `LAMP_NO` plus a diagonal slash for
+/// one that would not. Two grips, one carry:
+///
+/// - **Focused** (the desk): glued to the pointer exactly as the 2D drag
+///   was — lifted off the struck panel, a tenth larger.
+/// - **Roaming** (the bay): pinned upright at the crosshair's aim point
+///   on the bay surfaces; aimed at nothing — the pointer parks off the
+///   bay constantly mid-walk — it floats low-center ahead of the camera,
+///   carried in both arms rather than visually dropped.
 #[allow(clippy::too_many_arguments)]
 fn carry_held(
     shell: Res<Shell>,
     pointer: Res<VirtualPointer>,
+    camera_rig: Res<crate::rig::CameraRig>,
+    camera: Single<&Transform, With<crate::rig::CabinCamera>>,
     surfaces: Query<(&Station, &SimSurface)>,
     index: Res<PieceIndex>,
     mut carry: ResMut<CarryState>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rigs: Query<(&mut PieceRig, &mut Transform)>,
+    mut rigs: Query<(&mut PieceRig, &mut Transform), Without<crate::rig::CabinCamera>>,
     mut vis: Query<&mut Visibility, Without<PieceRig>>,
 ) {
     let sim = &shell.bridge.sim;
@@ -741,18 +863,43 @@ fn carry_held(
         return;
     };
 
-    // Where the hand is: the ray's hit lifted off that panel, or — parked
-    // pointer — simply wherever it last hovered.
-    if let Some(world) = pointer.world
-        && let Some(surface) = pointer.station.and_then(|s| surface_of(&surfaces, s))
-    {
-        carry.last = Some((world + surface.normal() * CARRY_LIFT, surface.orientation()));
-    }
-    let Some((pos, rot)) = carry.last.or_else(|| {
-        surface_of(&surfaces, Station::Hold)
-            .map(|hold| (hold.center + hold.normal() * 0.25, hold.orientation()))
-    }) else {
-        return;
+    let (pos, rot) = if camera_rig.roaming() {
+        if let (Some(world), Some(surface)) = (
+            pointer.world,
+            pointer.station.and_then(|s| surface_of(&surfaces, s)),
+        ) {
+            // Aimed at the bay: hover the piece at the hit, standing the
+            // way it would land — the wall band's frame is upright for
+            // the deck strip too, so it never lies down flat mid-carry.
+            let upright = surface_of(&surfaces, Station::BayWall)
+                .map_or_else(|| surface.orientation(), |band| band.orientation());
+            (world + surface.normal() * CARRY_LIFT, upright)
+        } else {
+            // Aimed at nothing: in both arms, low ahead of the eye, its
+            // open face turned back toward the carrier.
+            let forward = *camera.forward();
+            let level = Vec3::new(forward.x, 0.0, forward.z).normalize_or(Vec3::NEG_Z);
+            (
+                camera.translation + forward * CARRY_AHEAD - Vec3::Y * CARRY_DOWN,
+                Quat::from_rotation_y((-level.x).atan2(-level.z)),
+            )
+        }
+    } else {
+        // The focus drag: the ray's hit lifted off that panel, or —
+        // parked pointer — simply wherever it last hovered, falling back
+        // to floating over the counter the drag must have started from.
+        if let Some(world) = pointer.world
+            && let Some(surface) = pointer.station.and_then(|s| surface_of(&surfaces, s))
+        {
+            carry.last = Some((world + surface.normal() * CARRY_LIFT, surface.orientation()));
+        }
+        let Some((pos, rot)) = carry.last.or_else(|| {
+            surface_of(&surfaces, Station::Barter)
+                .map(|desk| (desk.center + desk.normal() * 0.25, desk.orientation()))
+        }) else {
+            return;
+        };
+        (pos, rot)
     };
     carry.last = Some((pos, rot));
 
@@ -847,14 +994,27 @@ fn placement_hints(
 
 // ------------------------------------------------------------ drop targets --
 
-/// Breathe amber over exactly the rows the sim's drop matrix invites. The
+/// Breathe amber over exactly what the sim's drop matrix invites. The
 /// rail quads answer for the shelf while a barter is open and for the
-/// outboard net while none is — the two lives of one row of sockets.
+/// outboard net while none is — the two lives of one row of sockets —
+/// and the `stow` flag wakes the cabinets: empty cubby mouths breathe a
+/// gentler amber while the carried piece could box up somewhere.
 fn invite_glows(
     time: Res<Time>,
     shell: Res<Shell>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut glows: Query<(&RowGlow, &MeshMaterial3d<StandardMaterial>, &mut Visibility)>,
+    mut glows: Query<
+        (&RowGlow, &MeshMaterial3d<StandardMaterial>, &mut Visibility),
+        Without<CubbyGlow>,
+    >,
+    mut cubbies: Query<
+        (
+            &CubbyGlow,
+            &MeshMaterial3d<StandardMaterial>,
+            &mut Visibility,
+        ),
+        Without<RowGlow>,
+    >,
 ) {
     let sim = &shell.bridge.sim;
     let targets = sim.drop_targets(0);
@@ -883,20 +1043,174 @@ fn invite_glows(
             *visibility = Visibility::Hidden;
         }
     }
+    // Which cubbies to light is sim *state*, never a re-derived rule: the
+    // invitation itself is `targets.stow`; a cubby answers it when its
+    // host stands in the hold (a shelved cabinet stores nothing) and no
+    // piece already rides that slot.
+    let inviting = targets.is_some_and(|targets| targets.stow);
+    for (cubby, material, mut visibility) in &mut cubbies {
+        let hosted = sim
+            .pieces()
+            .iter()
+            .any(|piece| piece.id == cubby.piece && matches!(piece.loc, Loc::Hold { .. }));
+        let empty = !sim.pieces().iter().any(|piece| {
+            matches!(
+                piece.loc,
+                Loc::Stow { cabinet, slot } if cabinet == cubby.piece && slot == cubby.slot
+            )
+        });
+        if inviting && hosted && empty {
+            *visibility = Visibility::Visible;
+            if let Some(mut mat) = materials.get_mut(&material.0) {
+                let level = glow::breathe(t, 2.0, cubby.phase).mul_add(0.2, 0.3);
+                glow::set_lamp(&mut mat, palette::AMBER, level);
+            }
+        } else {
+            *visibility = Visibility::Hidden;
+        }
+    }
 }
 
 // -------------------------------------------------------------------- flash --
 
-/// The hard-reject flash: a frame burning over the attempted footprint for
-/// just under half a second — `LAMP_NO`, or `EERIE` when the hold itself
-/// objected to a second suspicious crate.
+/// A glyph bar spanning `a` to `b` with `girth`, as the (centre, size,
+/// tilt) triple the flash system turns into a cube transform. Endpoints
+/// are panel-local sim units, +y up.
+fn bar_between(a: Vec2, b: Vec2, girth: f32) -> (Vec2, Vec2, f32) {
+    let d = b - a;
+    ((a + b) * 0.5, Vec2::new(girth, d.length()), -d.x.atan2(d.y))
+}
+
+/// The violation glyphs, one small bar-built icon per refused rule — the
+/// 2D console's hand-drawn set (the kettlebell, the mount bracket, the
+/// hazard triangle, the snowflake) carried over, plus the cabinet's full
+/// box. Bounds, overlap, and the suspicious objection stay glyphless:
+/// the frame — and its violet — already says everything those rules
+/// mean. Offsets are panel-local sim units, +y up; `rect` steers the
+/// affix bracket toward the surface the footprint missed.
+fn glyph_spec(rule: Option<Violation>, rect: Rect) -> Vec<(Vec2, Vec2, f32)> {
+    let s = GLYPH_S;
+    match rule {
+        // The kettlebell: a mass slab under an open handle.
+        Some(Violation::Heavy) => vec![
+            (Vec2::new(0.0, -s * 0.35), Vec2::new(s * 1.9, s * 0.9), 0.0),
+            bar_between(
+                Vec2::new(-s * 0.35, s * 0.1),
+                Vec2::new(-s * 0.35, s * 0.75),
+                s * 0.2,
+            ),
+            bar_between(
+                Vec2::new(s * 0.35, s * 0.1),
+                Vec2::new(s * 0.35, s * 0.75),
+                s * 0.2,
+            ),
+            (Vec2::new(0.0, s * 0.75), Vec2::new(s * 0.9, s * 0.2), 0.0),
+        ],
+        // The hazard triangle, chevron nosing down its middle.
+        Some(Violation::Volatile) => vec![
+            bar_between(
+                Vec2::new(-s * 0.9, -s * 0.7),
+                Vec2::new(s * 0.9, -s * 0.7),
+                s * 0.18,
+            ),
+            bar_between(Vec2::new(-s * 0.9, -s * 0.7), Vec2::new(0.0, s), s * 0.18),
+            bar_between(Vec2::new(s * 0.9, -s * 0.7), Vec2::new(0.0, s), s * 0.18),
+            bar_between(
+                Vec2::new(-s * 0.35, s * 0.35),
+                Vec2::new(0.0, -s * 0.1),
+                s * 0.16,
+            ),
+            bar_between(
+                Vec2::new(0.0, -s * 0.1),
+                Vec2::new(s * 0.35, s * 0.35),
+                s * 0.16,
+            ),
+        ],
+        // The snowflake: three arms through the centre.
+        Some(Violation::Cryo) => (0..3_u8)
+            .map(|i| {
+                let angle = f32::from(i).mul_add(PI / 3.0, FRAC_PI_2);
+                let tip = Vec2::new(angle.cos(), angle.sin()) * s;
+                bar_between(-tip, tip, s * 0.16)
+            })
+            .collect(),
+        // The bracket the fixture failed to reach, turned toward the
+        // missed surface, bolts just inside the stub.
+        Some(Violation::Affix(mount)) => {
+            let grid_mid_x =
+                f32::from(layout::GRID_COLS).mul_add(layout::CELL * 0.5, layout::GRID_ORIGIN.x);
+            // `out` points off the mount surface into the room.
+            let out = match mount {
+                Mount::Ceiling => Vec2::new(0.0, -1.0),
+                Mount::Floor => Vec2::new(0.0, 1.0),
+                Mount::Wall => {
+                    let left = rect.w.mul_add(0.5, rect.x) < grid_mid_x;
+                    Vec2::new(if left { 1.0 } else { -1.0 }, 0.0)
+                }
+            };
+            let along = out.perp();
+            let base = -out * (s * 0.6);
+            let mut bars = vec![bar_between(base - along * s, base + along * s, s * 0.22)];
+            for bolt in [-0.5_f32, 0.5] {
+                bars.push((
+                    base + along * (s * bolt) + out * (s * 0.3),
+                    Vec2::splat(s * 0.3),
+                    0.0,
+                ));
+            }
+            bars
+        }
+        // The full box: a crate packed past its rim, lid floating off.
+        Some(Violation::Occupied) => vec![
+            bar_between(
+                Vec2::new(-s * 0.7, -s * 0.75),
+                Vec2::new(-s * 0.7, s * 0.35),
+                s * 0.2,
+            ),
+            bar_between(
+                Vec2::new(s * 0.7, -s * 0.75),
+                Vec2::new(s * 0.7, s * 0.35),
+                s * 0.2,
+            ),
+            bar_between(
+                Vec2::new(-s * 0.8, -s * 0.75),
+                Vec2::new(s * 0.8, -s * 0.75),
+                s * 0.2,
+            ),
+            (Vec2::new(0.0, -s * 0.2), Vec2::new(s * 1.1, s * 0.55), 0.0),
+            (Vec2::new(0.0, s * 0.62), Vec2::new(s * 1.9, s * 0.22), 0.0),
+        ],
+        // Off the grid, onto a piece, or the violet objection: the frame
+        // alone, exactly as the 2D flash drew them.
+        Some(Violation::Bounds | Violation::Overlap | Violation::Suspicious) | None => vec![],
+    }
+}
+
+/// Glyph ink per rule, the 2D icons' own colors: GLINT hardware, AMBER
+/// hazard, frost in the cryo core's hue.
+const fn glyph_color(rule: Option<Violation>) -> Color {
+    match rule {
+        Some(Violation::Volatile) => palette::AMBER,
+        Some(Violation::Cryo) => palette::kind_color(Kind::CryoCore),
+        _ => palette::GLINT,
+    }
+}
+
+/// The hard-reject flash: a frame burning over the attempted footprint
+/// for just under half a second — `LAMP_NO`, or `EERIE` when the hold
+/// itself objected to a second suspicious crate — with the refused
+/// rule's glyph over its middle. A bay footprint may straddle the fold,
+/// so the frame draws per surface: bars 0–3 take the wall band's share,
+/// 4–7 the deck strip's, and at the seam the two frames kiss because the
+/// fold is watertight.
 fn violation_flash(
     time: Res<Time>,
     shared: Res<SharedBits>,
     surfaces: Query<(&Station, &SimSurface)>,
     mut flash: ResMut<FlashState>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut bars: Query<(&VioBar, &mut Transform, &mut Visibility)>,
+    mut bars: Query<(&VioBar, &mut Transform, &mut Visibility), Without<GlyphBar>>,
+    mut glyphs: Query<(&GlyphBar, &mut Transform, &mut Visibility), Without<VioBar>>,
 ) {
     flash.left = (flash.left - time.delta_secs()).max(0.0);
     let live = flash.left > 0.0;
@@ -904,50 +1218,106 @@ fn violation_flash(
         for (_, _, mut visibility) in &mut bars {
             *visibility = Visibility::Hidden;
         }
+        for (_, _, mut visibility) in &mut glyphs {
+            *visibility = Visibility::Hidden;
+        }
         return;
     };
-    let Some(hold) = surface_of(&surfaces, Station::Hold) else {
+    let Some((wall, floor)) = bay_of(&surfaces) else {
         return;
     };
     let heat = flash.left / FLASH_LEN;
-    let color = if flash.eerie {
+    let color = if matches!(flash.rule, Some(Violation::Suspicious)) {
         palette::EERIE
     } else {
         palette::LAMP_NO
     };
-    if let Some(mut mat) = materials.get_mut(&shared.flash_mat) {
+    if let Some(mut mat) = materials.get_mut(&shared.flash) {
         glow::set_lamp(&mut mat, color, heat);
     }
-    let (su, sv) = (hold.scale_u(), hold.scale_v());
-    let rot = hold.orientation();
-    let normal = hold.normal();
+
+    // The footprint's share of each surface, if any.
+    let seam = floor.rect.y;
+    let wall_part = (rect.y < seam)
+        .then(|| Rect::new(rect.x, rect.y, rect.w, (rect.y + rect.h).min(seam) - rect.y));
+    let floor_part = (rect.y + rect.h > seam).then(|| {
+        let top = rect.y.max(seam);
+        Rect::new(rect.x, top, rect.w, rect.y + rect.h - top)
+    });
     for (bar, mut transform, mut visibility) in &mut bars {
+        let (surface, part) = if bar.0 < 4 {
+            (&wall, wall_part)
+        } else {
+            (&floor, floor_part)
+        };
+        let Some(part) = part else {
+            *visibility = Visibility::Hidden;
+            continue;
+        };
         *visibility = Visibility::Visible;
-        let across = Vec3::new((rect.w + 6.0) * su, 3.0 * sv, 0.003);
-        let down = Vec3::new(3.0 * su, (rect.h + 6.0) * sv, 0.003);
-        let (mid, scale) = match bar.0 {
-            0 => (SimVec2::new(rect.w.mul_add(0.5, rect.x), rect.y), across),
+        let (su, sv) = (surface.scale_u(), surface.scale_v());
+        let across = Vec3::new((part.w + 6.0) * su, 3.0 * sv, 0.003);
+        let down = Vec3::new(3.0 * su, (part.h + 6.0) * sv, 0.003);
+        let (mid, scale) = match bar.0 % 4 {
+            0 => (SimVec2::new(part.w.mul_add(0.5, part.x), part.y), across),
             1 => (
-                SimVec2::new(rect.w.mul_add(0.5, rect.x), rect.y + rect.h),
+                SimVec2::new(part.w.mul_add(0.5, part.x), part.y + part.h),
                 across,
             ),
-            2 => (SimVec2::new(rect.x, rect.h.mul_add(0.5, rect.y)), down),
+            2 => (SimVec2::new(part.x, part.h.mul_add(0.5, part.y)), down),
             _ => (
-                SimVec2::new(rect.x + rect.w, rect.h.mul_add(0.5, rect.y)),
+                SimVec2::new(part.x + part.w, part.h.mul_add(0.5, part.y)),
                 down,
             ),
         };
-        transform.translation = hold.to_world(mid) + normal * 0.006;
-        transform.rotation = rot;
+        transform.translation = surface.to_world(mid) + surface.normal() * 0.006;
+        transform.rotation = surface.orientation();
         transform.scale = scale;
+    }
+
+    // The glyph, centred on whichever surface carries more of the
+    // refused footprint so it never bends over the fold.
+    let (surface, part) = match (wall_part, floor_part) {
+        (Some(wp), Some(fp)) if fp.h > wp.h => (&floor, fp),
+        (Some(wp), _) => (&wall, wp),
+        (None, Some(fp)) => (&floor, fp),
+        // Unreachable while `flash.area` has area, but hiding beats
+        // arithmetic on nothing.
+        (None, None) => {
+            for (_, _, mut visibility) in &mut glyphs {
+                *visibility = Visibility::Hidden;
+            }
+            return;
+        }
+    };
+    let spec = glyph_spec(flash.rule, rect);
+    if let Some(mut mat) = materials.get_mut(&shared.glyph) {
+        glow::set_lamp(&mut mat, glyph_color(flash.rule), heat);
+    }
+    let mid = rect_center(part);
+    let (su, sv) = (surface.scale_u(), surface.scale_v());
+    let rot = surface.orientation();
+    let anchor = surface.to_world(mid) + surface.normal() * 0.009;
+    for (bar, mut transform, mut visibility) in &mut glyphs {
+        let Some(&(offset, size, tilt)) = spec.get(usize::from(bar.0)) else {
+            *visibility = Visibility::Hidden;
+            continue;
+        };
+        *visibility = Visibility::Visible;
+        transform.translation = anchor + rot * Vec3::new(offset.x * su, offset.y * sv, 0.0);
+        transform.rotation = rot * Quat::from_rotation_z(tilt);
+        transform.scale = Vec3::new(size.x * su, size.y * sv, 0.003);
     }
 }
 
 // ---------------------------------------------------------------------- rat --
 
-/// The stowaway: spawned while `sim.rat()` says one is aboard, perched on
-/// the hold rack, hopping between cells on the sim's own tween (tick,
-/// `moved_at`, alpha — replays exactly), nose along its travel.
+/// The stowaway: spawned while `sim.rat()` says one is aboard, hopping
+/// between bay cells on the sim's own tween (tick, `moved_at`, alpha —
+/// replays exactly), nose along its travel. The wall rows are climbable
+/// — it is a ship rat, flat against the band with its nose where it is
+/// going — and the deck row is ordinary floor; the watertight fold hands
+/// one to the other mid-hop without a gap.
 #[allow(clippy::too_many_arguments)]
 fn rat_watch(
     mut commands: Commands,
@@ -968,7 +1338,7 @@ fn rat_watch(
         state.yaw = 0.0;
         return;
     };
-    let Some(hold) = surface_of(&surfaces, Station::Hold) else {
+    let Some((wall, floor)) = bay_of(&surfaces) else {
         return;
     };
 
@@ -997,24 +1367,26 @@ fn rat_watch(
                 && (x..x + w).contains(&rat.cell.0)
                 && (y..y + h).contains(&rat.cell.1)
         });
-    let unit = (hold.scale_u() + hold.scale_v()) * 0.5;
+    let unit = (floor.scale_u() + floor.scale_v()) * 0.5 * RAT_FIT;
     let hop = (PI * t).sin() * 5.0 * unit;
-    // Asleep it settles to its cell's centre and lies ON the cushions
-    // (seat-slab height, sim units off the rack) instead of hiding
-    // behind the couch silhouette.
+    // Asleep it settles to its cell's centre and lies ON the standing
+    // couch's seat — the slab's top edge sits 0.59 footprint-heights
+    // over the plates (centre lifted 0.5, slab top at +0.09; see the
+    // couch rig) — instead of hiding inside the upholstery.
     let (at, scale, lift) = if napping {
         let cell = layout::cell_rect(rat.cell.0, rat.cell.1);
         (
             rect_center(cell),
             // Long and low: nose splayed out, belly in the upholstery.
             Vec3::new(unit * 1.18, unit * 1.06, unit * 0.6),
-            11.0 * unit,
+            0.59 * layout::CELL * floor.scale_v() * BAY_FIT,
         )
     } else {
         (at, Vec3::splat(unit), 0.0)
     };
-    let place = Transform::from_translation(hold.to_world(at) + hold.normal() * (hop + lift))
-        .with_rotation(hold.orientation() * Quat::from_rotation_z(state.yaw))
+    let surface = bay_surface(&wall, &floor, at);
+    let place = Transform::from_translation(surface.to_world(at) + surface.normal() * (hop + lift))
+        .with_rotation(surface.orientation() * Quat::from_rotation_z(state.yaw))
         .with_scale(scale);
     if let Some(entity) = state.entity {
         if let Ok(mut transform) = roots.get_mut(entity) {
@@ -1220,7 +1592,7 @@ fn spawn_rig(
         .commands
         .spawn((
             Mesh3d(rig.meshes.add(Cuboid::new(fw.hypot(fh) + 4.0, 3.0, 3.0))),
-            MeshMaterial3d(shared.slash_mat.clone()),
+            MeshMaterial3d(shared.slash.clone()),
             Transform::from_xyz(0.0, 0.0, 34.0)
                 .with_rotation(Quat::from_rotation_z((fh / fw).atan())),
             Visibility::Hidden,
@@ -1730,6 +2102,93 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 )),
             );
         }
+        // Furniture that stores (docs/BAY.md): a slim wardrobe in oiled
+        // oak, brass where hands go, its front open so the cubby rack —
+        // and everything stowed in it — stays visible. The 2×2 rack's
+        // interiors are socket-dark so the shrunken cargo reads against
+        // them; a hidden amber quad in each mouth answers the sim's stow
+        // invitation through `invite_glows`. Stowed pieces themselves are
+        // ordinary rigs parked at [`cubby_anchor`]s by `sync_pieces`.
+        Kind::Cabinet => {
+            let deep = CABINET_DEPTH;
+            let rack = rig.tint(palette::mix(color, palette::SHADOW, 0.25));
+            // Carcass: sides, caps, back — no front.
+            let side = rig.meshes.add(Cuboid::new(2.6, fh * 0.94, deep));
+            for sx in [-1.0, 1.0] {
+                rig.spawn(
+                    side.clone(),
+                    body.clone(),
+                    Transform::from_xyz(fw * 0.44 * sx, 0.0, deep * 0.5),
+                );
+            }
+            let cap = rig.meshes.add(Cuboid::new(fw * 0.92, 2.6, deep));
+            for sy in [-1.0, 1.0] {
+                rig.spawn(
+                    cap.clone(),
+                    body.clone(),
+                    Transform::from_xyz(0.0, fh * 0.465 * sy, deep * 0.5),
+                );
+            }
+            rig.part(
+                Cuboid::new(fw * 0.92, fh * 0.94, 2.0),
+                body,
+                Transform::from_xyz(0.0, 0.0, 1.0),
+            );
+            // The rack: mid shelf and centre stile, a shade darker.
+            rig.part(
+                Cuboid::new(fw * 0.88, 2.2, deep * 0.9),
+                rack.clone(),
+                Transform::from_xyz(0.0, 0.0, deep * 0.45),
+            );
+            rig.part(
+                Cuboid::new(2.2, fh * 0.9, deep * 0.9),
+                rack,
+                Transform::from_xyz(0.0, 0.0, deep * 0.45),
+            );
+            // Brass fittings: a cornice over the opening, stubby feet.
+            rig.part(
+                Cuboid::new(fw * 0.96, 2.2, 2.2),
+                rig.skin.brass.clone(),
+                Transform::from_xyz(0.0, fh * 0.475, deep),
+            );
+            let foot = rig.meshes.add(Cuboid::new(3.0, 3.4, 3.0));
+            for (sx, fz) in [
+                (-1.0, 3.0),
+                (1.0, 3.0),
+                (-1.0, deep - 3.0),
+                (1.0, deep - 3.0),
+            ] {
+                rig.spawn(
+                    foot.clone(),
+                    rig.skin.brass.clone(),
+                    Transform::from_xyz(fw * 0.36 * sx, fh.mul_add(-0.5, 1.2), fz),
+                );
+            }
+            // The cubbies: dark interior backs, invite glows in front.
+            let lining = rig.meshes.add(Cuboid::new(fw * 0.36, fh * 0.4, 1.2));
+            let mouth = rig.meshes.add(Cuboid::new(fw * 0.33, fh * 0.37, 0.6));
+            for slot in 0..CABINET_SLOTS {
+                let at = cubby_anchor(slot);
+                rig.spawn(
+                    lining.clone(),
+                    rig.skin.socket.clone(),
+                    Transform::from_xyz(at.x, at.y, 2.2),
+                );
+                let invite = glow::phosphor(rig.materials, palette::AMBER, 0.0);
+                rig.commands.spawn((
+                    Mesh3d(mouth.clone()),
+                    MeshMaterial3d(invite),
+                    Transform::from_xyz(at.x, at.y, 3.0),
+                    Visibility::Hidden,
+                    CubbyGlow {
+                        piece: piece.id,
+                        slot,
+                        phase: f32::from(slot) * 1.3,
+                    },
+                    ChildOf(rig.root),
+                ));
+            }
+        }
     }
 }
 
@@ -1910,4 +2369,124 @@ fn paint_artwork(
         metallic: 0.0,
         ..default()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::rig;
+
+    fn bay() -> (SimSurface, SimSurface) {
+        let [(_, wall), (_, floor)] = rig::bay();
+        (wall, floor)
+    }
+
+    fn rect_of(x: u8, y: u8, kind: Kind) -> Rect {
+        let (w, h) = kind.cells();
+        let anchor = layout::cell_rect(x, y);
+        Rect::new(
+            anchor.x,
+            anchor.y,
+            f32::from(w) * layout::CELL,
+            f32::from(h) * layout::CELL,
+        )
+    }
+
+    /// The bay mapping's three regimes: wall rows hang flat on the band,
+    /// the deck row stands upright at furniture scale, and a
+    /// fold-straddler stands at its floor cell rising through its wall
+    /// cell.
+    #[test]
+    fn bay_sites_hang_stand_and_straddle() {
+        let (wall, floor) = bay();
+        // A painting on the wall band: flat against the aft wall plane.
+        let (pos, rot, _) = bay_site(&wall, &floor, rect_of(0, 1, Kind::Painting));
+        assert!(
+            (pos.z - wall.center.z).abs() < 1e-4,
+            "wall piece left the wall plane: {pos}"
+        );
+        assert_eq!(rot, wall.orientation());
+        // A couch on the deck row: upright (local +Y is world up), feet
+        // on the plates, spanning about its two 0.55 cells.
+        let couch = rect_of(2, 3, Kind::Couch);
+        let (pos, rot, scale) = bay_site(&wall, &floor, couch);
+        assert!(
+            (rot * Vec3::Y - Vec3::Y).length() < 1e-4,
+            "standing rigs must be upright"
+        );
+        let base = couch.h.mul_add(-0.5 * scale.y, pos.y);
+        assert!(base.abs() < 0.05, "the couch floats: base at {base}");
+        let width = couch.w * scale.x;
+        assert!((0.95..=1.15).contains(&width), "couch width {width}");
+        // A cabinet anchored at row 2 straddles the fold: standing at
+        // its floor cell, topping out around 1.1 up the wall band.
+        let cabinet = rect_of(0, 2, Kind::Cabinet);
+        let (pos, _, scale) = bay_site(&wall, &floor, cabinet);
+        let top = cabinet.h.mul_add(0.5 * scale.y, pos.y);
+        assert!((0.95..=1.2).contains(&top), "cabinet top at {top}");
+        // Plumb: its x is its floor cell's own mapping, so the standing
+        // half and the wall cell above line up in the same column.
+        let foot = floor.to_world(rect_center(layout::cell_rect(0, 3)));
+        assert!((pos.x - foot.x).abs() < 1e-4);
+    }
+
+    /// Cubby anchors follow `layout::cubby_rect`'s row-major order from
+    /// the top-left, seen facing the open front.
+    #[test]
+    fn cubby_anchors_match_the_sim_rack() {
+        // Slot 0 top-left … 3 bottom-right; local +X is sim +x, +Y up.
+        assert!(cubby_anchor(0).x < cubby_anchor(1).x);
+        assert!(cubby_anchor(2).x < cubby_anchor(3).x);
+        assert!(cubby_anchor(0).y > cubby_anchor(2).y);
+        assert!(cubby_anchor(1).y > cubby_anchor(3).y);
+        // And the sim agrees which sub-rect is which: cubby 0 sits
+        // up-left of cubby 3 in sim coordinates (sim +y runs down).
+        let body = Rect::new(0.0, 0.0, layout::CELL, 2.0 * layout::CELL);
+        let c0 = layout::cubby_rect(body, 0);
+        let c3 = layout::cubby_rect(body, 3);
+        assert!(c0.x < c3.x && c0.y < c3.y);
+    }
+
+    /// A stowed rig fits its cubby: the widest 1×1 footprint at stow
+    /// scale stays inside ~0.18 world units, without vanishing.
+    #[test]
+    fn stowed_pieces_shrink_to_the_cubby() {
+        let (wall, floor) = bay();
+        let (_, _, scale) = bay_site(&wall, &floor, rect_of(0, 2, Kind::Cabinet));
+        let extent = layout::CELL * scale.min_element() * STOW_FIT;
+        assert!(extent <= 0.19, "stowed extent {extent}");
+        assert!(extent >= 0.12, "stowed cargo should stay visible: {extent}");
+    }
+
+    /// Every violation names its presentation: a glyph, or (bounds,
+    /// overlap, the violet objection) the bare frame — and no glyph
+    /// outgrows the bar pool.
+    #[test]
+    fn glyphs_cover_the_violation_ladder() {
+        let rect = rect_of(2, 1, Kind::PerfumeVial);
+        for rule in [
+            Violation::Bounds,
+            Violation::Overlap,
+            Violation::Heavy,
+            Violation::Volatile,
+            Violation::Cryo,
+            Violation::Suspicious,
+            Violation::Affix(Mount::Ceiling),
+            Violation::Affix(Mount::Floor),
+            Violation::Affix(Mount::Wall),
+            Violation::Occupied,
+        ] {
+            let bars = glyph_spec(Some(rule), rect);
+            assert!(
+                bars.len() <= usize::from(GLYPH_BARS),
+                "{rule:?} overflows the pool"
+            );
+            let frame_only = matches!(
+                rule,
+                Violation::Bounds | Violation::Overlap | Violation::Suspicious
+            );
+            assert_eq!(bars.is_empty(), frame_only, "{rule:?}");
+        }
+        assert!(glyph_spec(None, rect).is_empty());
+    }
 }

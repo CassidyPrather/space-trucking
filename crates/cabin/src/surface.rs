@@ -1,9 +1,10 @@
 //! Sim surfaces: the trick that makes the 3D cabin the same game.
 //!
 //! The sim's whole interaction model is a pointer in its 800×600 console
-//! world (`sim::layout`). Each interactive panel in the cabin — the nav
-//! tank's glass, the console face, the hold rack, the barter counter — is
-//! a [`SimSurface`]: an oriented quad in 3D space bound to one sim rect.
+//! world (`sim::layout`). Each interactive surface in the cabin — the nav
+//! tank's glass, the console face, the barter counter, the bay's wall
+//! band and deck strip — is a [`SimSurface`]: an oriented quad in 3D
+//! space bound to one sim rect.
 //! Each frame the cursor ray is cast against every surface; the nearest
 //! hit maps to sim coordinates and becomes the virtual pointer the sim
 //! reads. The inverse mapping places sim things (POIs, crates, the rat)
@@ -14,17 +15,28 @@ use bevy::prelude::*;
 use space_trucking::sim::Vec2 as SimVec2;
 use space_trucking::sim::layout::Rect as SimRect;
 
-/// Which panel a surface (or a view system) is talking about.
+/// Which mapped surface (or view system) is being talked about.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Station {
     /// The star map tank — `layout::MAP_PANEL`.
     Map,
     /// The console face: preview, ETA, launch lever, icon buttons.
     Console,
-    /// The hold rack front — the 6×4 cargo grid.
-    Hold,
     /// The barter counter — slots, dial, accept lever, badge.
     Barter,
+    /// The bay's aft wall band — hold grid rows 0–2, unfolded upright.
+    BayWall,
+    /// The bay's deck strip — hold grid row 3, folded flat.
+    BayFloor,
+}
+
+impl Station {
+    /// Whether this surface is part of the walkable bay — worked from
+    /// roam with the crosshair rather than from a focus pose.
+    #[must_use]
+    pub const fn in_bay(self) -> bool {
+        matches!(self, Self::BayWall | Self::BayFloor)
+    }
 }
 
 /// An oriented quad bound to a sim rect. `half_u` spans sim +x (half the
@@ -156,8 +168,14 @@ impl Default for VirtualPointer {
     }
 }
 
-/// Cast the cursor through the crunch camera onto every surface; the
-/// nearest hit becomes this frame's virtual pointer.
+/// Cast this frame's pointer ray onto the mapped surfaces; the nearest
+/// hit becomes the virtual pointer. Two regimes, one mapping:
+///
+/// - **Focused**: the freed cursor ray, against every surface — precise
+///   panel work, exactly as in the 2D console.
+/// - **Roaming**: the crosshair ray straight out of the camera, against
+///   the bay surfaces only, and only within [`crate::rig::REACH`] — the
+///   carry's aim. Stations need focus; the bay needs proximity.
 #[allow(clippy::needless_pass_by_value)]
 pub fn track_pointer(
     window: Single<&Window, With<bevy::window::PrimaryWindow>>,
@@ -167,30 +185,45 @@ pub fn track_pointer(
     mut pointer: ResMut<VirtualPointer>,
 ) {
     *pointer = VirtualPointer::default();
-    // Roaming and gliding park the pointer: the cursor belongs to the
-    // camera until a station is focused.
-    if !rig.interactive() {
-        return;
-    }
-    let Some(cursor) = window.cursor_position() else {
-        return;
-    };
-    // The camera renders into the crunch target, so its viewport speaks
-    // crunch pixels; rescale the window cursor into that space.
-    let size = window.size();
-    if size.x <= 0.0 || size.y <= 0.0 {
-        return;
-    }
-    let scaled =
-        cursor / size * Vec2::new(crate::rig::CRUNCH_W as f32, crate::rig::CRUNCH_H as f32);
     let (camera, camera_tf) = *camera;
-    let Ok(ray) = camera.viewport_to_world(camera_tf, scaled) else {
+    let (ray, bay_only, reach) = if rig.interactive() {
+        let Some(cursor) = window.cursor_position() else {
+            return;
+        };
+        // The camera renders into the crunch target, so its viewport
+        // speaks crunch pixels; rescale the window cursor into that space.
+        let size = window.size();
+        if size.x <= 0.0 || size.y <= 0.0 {
+            return;
+        }
+        let scaled =
+            cursor / size * Vec2::new(crate::rig::CRUNCH_W as f32, crate::rig::CRUNCH_H as f32);
+        let Ok(ray) = camera.viewport_to_world(camera_tf, scaled) else {
+            return;
+        };
+        (ray, false, f32::INFINITY)
+    } else if rig.roaming() {
+        let forward = camera_tf.forward();
+        let Ok(dir) = Dir3::new(forward.into()) else {
+            return;
+        };
+        (
+            Ray3d::new(camera_tf.translation(), dir),
+            true,
+            crate::rig::REACH,
+        )
+    } else {
+        // Glides and parked cursors keep the pointer parked.
         return;
     };
     let mut nearest = f32::INFINITY;
     for (station, surface) in &surfaces {
+        if bay_only && !station.in_bay() {
+            continue;
+        }
         if let Some((t, sim, world)) = surface.project(ray)
             && t < nearest
+            && t <= reach
         {
             nearest = t;
             *pointer = VirtualPointer {

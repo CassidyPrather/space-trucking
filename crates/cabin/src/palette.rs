@@ -158,6 +158,8 @@ pub const fn kind_color(kind: Kind) -> Color {
         Kind::FloorLamp => hex(0xc08d5a),
         Kind::Couch => hex(0x96566a),
         Kind::Painting => hex(0x8f76c0),
+        // Oiled oak and brass fittings: furniture that means business.
+        Kind::Cabinet => hex(0x8a6f4d),
     }
 }
 

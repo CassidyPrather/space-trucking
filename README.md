@@ -31,10 +31,15 @@ Controls: mouse looks and `WASD` walks; aim at a station and click
 (or `E`) to focus it — the camera glides to a fitted viewpoint and the
 cursor frees for the usual clicking and dragging. `Esc`, right-click, or
 `E` steps back out of a station; `Esc` while roaming hands the cursor
-back to your desktop (click the game to reclaim it). The launch and
-accept levers are pulls: grab, drag to the end of the track, and the
-throw fires at the detent. `Space` pauses, `M` mutes, `R` starts a new
-run (`F` warps, in dev mode).
+back to your desktop (click the game to reclaim it). Cargo lives in the
+aft bay and is carried, not dragged: walk up, aim the crosshair at a
+piece and click to pick it up, walk it over, click a berth to set it
+down — clicking at nothing (or right-clicking) sends it back where it
+came from, and `Shift`+click quick-moves without carrying. Drop a small
+item onto a cabinet and it takes a cubby; a loaded cabinet won't budge
+until it's emptied. The launch and accept levers are pulls: grab, drag
+to the end of the track, and the throw fires at the detent. `Space`
+pauses, `M` mutes, `R` starts a new run (`F` warps, in dev mode).
 
 Saves: the cabin keeps its own slot (`cabin.data` + `cabin.replay`
 beside the working directory). On a boot with no slot of its own it
@@ -77,7 +82,9 @@ the same rail, and at stranger berths the counter shows stranger things.
 
 | Input           | Effect                                                     |
 | --------------- | ---------------------------------------------------------- |
-| Mouse           | look, focus stations, pull levers, move cargo              |
+| Mouse           | look, focus stations, pull levers                          |
+| Click (bay)     | pick up / set down the aimed cargo                         |
+| Right-click     | cancel a carry (the piece snaps home)                      |
 | `WASD`          | walk the cabin                                             |
 | `E`             | focus / unfocus the aimed station                          |
 | `Shift`+click   | quick-move a piece to its obvious destination              |

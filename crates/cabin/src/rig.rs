@@ -1,7 +1,9 @@
 //! The cabin itself: an enclosed box with flavor, per DESIGN.md's first
-//! pass. Four panels in a cramped wraparound, echoing the 2D console's
-//! layout so muscle memory transfers: star tank upper left, console upper
-//! right, hold tray low left, barter counter low right.
+//! pass. Three focusable panels forward — star tank on the left wall,
+//! console face front-right, barter counter low-right — and the walkable
+//! cargo bay aft: the sim's 6×4 hold grid unfolded onto the back wall and
+//! deck at furniture scale (docs/BAY.md), worked from roam with the
+//! crosshair instead of from a focus pose.
 //!
 //! Two camera postures. **Roaming**: a conventional first-person walk —
 //! pointer locked, mouse to look, WASD to move, a crosshair dot; aim at a
@@ -45,13 +47,34 @@ pub const CRUNCH_H: u32 = 270;
 const FOV: f32 = 0.9;
 
 /// Roaming eye height and walk envelope (an AABB the camera may occupy;
-/// clear of every slab by construction, asserted by test).
+/// clear of every slab by construction, asserted by test). The envelope
+/// stops short of the bay's floor plates: cargo is walked *up to*, never
+/// stood on.
 const EYE_HEIGHT: f32 = 1.5;
 const WALK_MIN: Vec3 = Vec3::new(-1.30, EYE_HEIGHT, -0.30);
-const WALK_MAX: Vec3 = Vec3::new(1.30, EYE_HEIGHT, 1.55);
+const WALK_MAX: Vec3 = Vec3::new(1.30, EYE_HEIGHT, 1.15);
 const WALK_SPEED: f32 = 1.3;
 const LOOK_SPEED: f32 = 0.0026;
 const PITCH_LIMIT: f32 = 1.35;
+
+// ---- The bay: the hold grid unfolded onto the aft of the cabin ----
+
+/// Bay cell edge, world units — square cells at furniture scale.
+pub const BAY_CELL: f32 = 0.55;
+/// Bay width: six columns flush toward the side walls (columns 0 and 5
+/// are the walls, exactly where the wall-affix rule points).
+const BAY_W: f32 = 6.0 * BAY_CELL;
+/// Wall band height: grid rows 0–2 stand on the aft wall.
+const BAY_WALL_H: f32 = 3.0 * BAY_CELL;
+/// The wall band's quad plane, just proud of the aft hull's inner face.
+const BAY_WALL_Z: f32 = 1.86;
+/// The deck strip's quad plane, just above the deck.
+const BAY_FLOOR_Y: f32 = 0.012;
+
+/// How far the roaming crosshair can grab or place, in world units —
+/// arm's length plus a step, so bay work happens near the body and the
+/// far half of the room stays a view, not a reach.
+pub const REACH: f32 = 2.0;
 
 /// Focus glide length, seconds. A camera move is feedback: it answers a
 /// click and finishes fast.
@@ -63,17 +86,11 @@ const FIT_MARGIN: f32 = 1.14;
 /// How far the physical panel plate extends past its mapped quad.
 const PLATE_MARGIN: f32 = 0.03;
 
-/// The four panels: where each sim region lives in the cabin.
+/// The three focusable panels: where each sim region lives in the cabin.
 /// Width/height keep each rect's aspect; scales differ per panel on
-/// purpose (the hold tray is generous — it is the main play surface).
+/// purpose. The hold is not here — it unfolded into the bay ([`bay`]).
 #[must_use]
-pub fn panels() -> [(Station, SimSurface); 4] {
-    let grid = layout::Rect::new(
-        layout::GRID_ORIGIN.x,
-        layout::GRID_ORIGIN.y,
-        f32::from(layout::GRID_COLS) * layout::CELL,
-        f32::from(layout::GRID_ROWS) * layout::CELL,
-    );
+pub fn panels() -> [(Station, SimSurface); 3] {
     [
         // The chart nook: the star tank reads from the left wall, so the
         // front wall can hold the window — stations spread around the
@@ -100,10 +117,6 @@ pub fn panels() -> [(Station, SimSurface); 4] {
             ),
         ),
         (
-            Station::Hold,
-            SimSurface::panel(Vec3::new(-0.64, 0.86, -0.94), 0.78, 0.52, 0.96, grid),
-        ),
-        (
             Station::Barter,
             SimSurface::panel(
                 Vec3::new(0.42, 0.88, -0.96),
@@ -112,6 +125,49 @@ pub fn panels() -> [(Station, SimSurface); 4] {
                 0.96,
                 layout::BARTER_PANEL,
             ),
+        ),
+    ]
+}
+
+/// The bay's two mapped surfaces: the hold grid unfolded like an opened
+/// box. Rows 0–2 stand on the aft wall (row 0 the top band — the
+/// "ceiling" the affix rule means), row 3 folds onto the deck as a strip
+/// of floor plates in front of it. Sim +x runs to the player's right
+/// when facing the wall; the seam between the two quads is watertight by
+/// test. Cursor rays from roam project through these exactly as focus
+/// cursors project through panels, so the sim keeps every ruling.
+#[must_use]
+pub fn bay() -> [(Station, SimSurface); 2] {
+    let wall_rect = layout::Rect::new(
+        layout::GRID_ORIGIN.x,
+        layout::GRID_ORIGIN.y,
+        f32::from(layout::GRID_COLS) * layout::CELL,
+        3.0 * layout::CELL,
+    );
+    let floor_rect = layout::Rect::new(
+        layout::GRID_ORIGIN.x,
+        3.0f32.mul_add(layout::CELL, layout::GRID_ORIGIN.y),
+        f32::from(layout::GRID_COLS) * layout::CELL,
+        layout::CELL,
+    );
+    [
+        (
+            Station::BayWall,
+            SimSurface {
+                center: Vec3::new(0.0, BAY_WALL_H * 0.5, BAY_WALL_Z),
+                half_u: Vec3::NEG_X * (BAY_W * 0.5),
+                half_v: Vec3::NEG_Y * (BAY_WALL_H * 0.5),
+                rect: wall_rect,
+            },
+        ),
+        (
+            Station::BayFloor,
+            SimSurface {
+                center: Vec3::new(0.0, BAY_FLOOR_Y, BAY_CELL.mul_add(-0.5, BAY_WALL_Z)),
+                half_u: Vec3::NEG_X * (BAY_W * 0.5),
+                half_v: Vec3::NEG_Z * (BAY_CELL * 0.5),
+                rect: floor_rect,
+            },
         ),
     ]
 }
@@ -157,7 +213,7 @@ impl Slab {
 /// panels are derived from the panel corners (plate margin included), so
 /// they can never swallow a panel's lower edge.
 #[must_use]
-pub fn structure(panels: &[(Station, SimSurface); 4]) -> Vec<Slab> {
+pub fn structure(panels: &[(Station, SimSurface); 3]) -> Vec<Slab> {
     let mut slabs = vec![
         // The box: floor, ceiling, four walls.
         Slab::new(
@@ -213,7 +269,7 @@ pub fn structure(panels: &[(Station, SimSurface); 4]) -> Vec<Slab> {
     // corner of the panel's *plate* (quad + margin), its front face just
     // shy of the plate's forward reach.
     for (station, surface) in panels {
-        if !matches!(station, Station::Hold | Station::Barter) {
+        if !matches!(station, Station::Barter) {
             continue;
         }
         let (lo, hi) = plate_bounds(surface);
@@ -251,8 +307,7 @@ fn plate_bounds(surface: &SimSurface) -> (Vec3, Vec3) {
 
 // ---- The camera rig ----
 
-/// A focused viewpoint. The two desk panels share one so cargo drags can
-/// cross between hold and counter without leaving focus.
+/// A focused viewpoint.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Focus {
     Tank,
@@ -261,13 +316,16 @@ pub enum Focus {
 }
 
 impl Focus {
-    /// Which focus a station belongs to.
+    /// Which focus a station belongs to. The bay surfaces have none:
+    /// cargo is worked from roam, crosshair-first, and the camera never
+    /// glides for it.
     #[must_use]
-    pub const fn of(station: Station) -> Self {
+    pub const fn of(station: Station) -> Option<Self> {
         match station {
-            Station::Map => Self::Tank,
-            Station::Console => Self::Console,
-            Station::Hold | Station::Barter => Self::Desk,
+            Station::Map => Some(Self::Tank),
+            Station::Console => Some(Self::Console),
+            Station::Barter => Some(Self::Desk),
+            Station::BayWall | Station::BayFloor => None,
         }
     }
 }
@@ -321,6 +379,13 @@ impl CameraRig {
         matches!(self.mode, Mode::Focused { .. })
     }
 
+    /// Whether the player is actively roaming: first-person, cursor
+    /// locked, crosshair live — the regime the bay is worked in.
+    #[must_use]
+    pub const fn roaming(&self) -> bool {
+        matches!(self.mode, Mode::Roam) && !self.parked
+    }
+
     fn roam_rotation(&self) -> Quat {
         Quat::from_euler(EulerRot::YXZ, self.yaw, self.pitch, 0.0)
     }
@@ -329,10 +394,10 @@ impl CameraRig {
 /// The pose a focus parks at: panel extents fitted to the camera FOV,
 /// eyed along the panel normal, up running up-panel.
 #[must_use]
-pub fn focus_pose(focus: Focus, panels: &[(Station, SimSurface); 4]) -> (Vec3, Quat) {
+pub fn focus_pose(focus: Focus, panels: &[(Station, SimSurface); 3]) -> (Vec3, Quat) {
     let group: Vec<&SimSurface> = panels
         .iter()
-        .filter(|(station, _)| Focus::of(*station) == focus)
+        .filter(|(station, _)| Focus::of(*station) == Some(focus))
         .map(|(_, s)| s)
         .collect();
     // Combined center and planar extents, measured in the first panel's
@@ -591,11 +656,11 @@ pub fn spawn(
             .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
     ));
 
-    // Hazard striping along each desk support's front lip — paint where
+    // Hazard striping along the desk support's front lip — paint where
     // knees and crates argue with furniture. Derived from the same panel
     // bounds as the supports, so it can never float free of them.
     for (station, surface) in &panels {
-        if !matches!(station, Station::Hold | Station::Barter) {
+        if !matches!(station, Station::Barter) {
             continue;
         }
         let (lo, hi) = plate_bounds(surface);
@@ -654,38 +719,117 @@ pub fn spawn(
                 }
             });
         commands.spawn((station, surface));
+    }
 
-        // The hold's 6×4 socket wells are structural furniture, not view
-        // state — they live here with the rest of the metal.
-        if matches!(station, Station::Hold) {
-            for y in 0..layout::GRID_ROWS {
-                for x in 0..layout::GRID_COLS {
-                    let cell = layout::cell_rect(x, y);
-                    let mid = space_trucking::sim::Vec2::new(
-                        cell.w.mul_add(0.5, cell.x),
-                        cell.h.mul_add(0.5, cell.y),
-                    );
-                    commands.spawn((
-                        Mesh3d(skin.cube.clone()),
-                        MeshMaterial3d(skin.socket.clone()),
-                        Transform::from_translation(surface.to_world(mid) + n * 0.0015)
-                            .with_rotation(surface.orientation())
-                            .with_scale(Vec3::new(
-                                (cell.w - 4.0) * surface.scale_u(),
-                                (cell.h - 4.0) * surface.scale_v(),
-                                0.003,
-                            )),
-                    ));
+    // --- The bay: the hold grid unfolded onto the aft wall and deck.
+    // Each surface entity carries its station tag so the roam crosshair
+    // projects through it exactly as focus cursors project through
+    // panels. The berth marking (socket plates per cell), the backer
+    // plates, the gantry frame, and the hazard lip are all derived from
+    // the same two surfaces, so a retuned bay moves as one thing.
+    for (station, surface) in bay() {
+        let n = surface.normal();
+        // Backer plate: a worn slab just behind the mapped quad.
+        let deep = 0.03;
+        commands.spawn((
+            Mesh3d(skin.cube.clone()),
+            MeshMaterial3d(match station {
+                Station::BayFloor => skin.desk.clone(),
+                _ => skin.plate.clone(),
+            }),
+            Transform::from_translation(surface.center - n * (deep * 0.5 + 0.004))
+                .with_rotation(surface.orientation())
+                .with_scale(Vec3::new(
+                    surface.half_u.length().mul_add(2.0, 0.08),
+                    surface.half_v.length().mul_add(2.0, 0.08),
+                    deep,
+                )),
+        ));
+        // Socket wells per cell, the berth marking — each surface takes
+        // exactly the grid rows its rect covers.
+        for y in 0..layout::GRID_ROWS {
+            for x in 0..layout::GRID_COLS {
+                let cell = layout::cell_rect(x, y);
+                let mid = space_trucking::sim::Vec2::new(
+                    cell.w.mul_add(0.5, cell.x),
+                    cell.h.mul_add(0.5, cell.y),
+                );
+                if !surface.rect.contains(mid) {
+                    continue;
                 }
+                commands.spawn((
+                    Mesh3d(skin.cube.clone()),
+                    MeshMaterial3d(skin.socket.clone()),
+                    Transform::from_translation(surface.to_world(mid) + n * 0.0015)
+                        .with_rotation(surface.orientation())
+                        .with_scale(Vec3::new(
+                            (cell.w - 4.0) * surface.scale_u(),
+                            (cell.h - 4.0) * surface.scale_v(),
+                            0.003,
+                        )),
+                ));
             }
         }
+        commands.spawn((station, surface));
+    }
+    {
+        let [(_, wall), (_, floor)] = bay();
+        let wall_top = wall.center.y + wall.half_v.length();
+        let strip_front = floor.center.z - floor.half_v.length();
+        // Gantry: a top rail above row 0 and stiles down the seams to the
+        // side walls — the rack the fixtures visibly mount to, grown to
+        // room scale.
+        commands.spawn((
+            Mesh3d(skin.cube.clone()),
+            MeshMaterial3d(skin.plate_shade.clone()),
+            Transform::from_translation(Vec3::new(0.0, wall_top + 0.04, BAY_WALL_Z - 0.02))
+                .with_scale(Vec3::new(BAY_W + 0.14, 0.07, 0.09)),
+        ));
+        for sx in [-1.0, 1.0] {
+            commands.spawn((
+                Mesh3d(skin.cube.clone()),
+                MeshMaterial3d(skin.plate_shade.clone()),
+                Transform::from_translation(Vec3::new(
+                    sx * BAY_W.mul_add(0.5, 0.035),
+                    (wall_top + 0.06) * 0.5,
+                    BAY_WALL_Z - 0.015,
+                ))
+                .with_scale(Vec3::new(0.06, wall_top + 0.06, 0.08)),
+            ));
+        }
+        // Hazard lip along the deck strip's front edge: the painted line
+        // between where you walk and where cargo lives.
+        commands.spawn((
+            Mesh3d(skin.cube.clone()),
+            MeshMaterial3d(skin.hazard.clone()),
+            Transform::from_translation(Vec3::new(0.0, 0.017, strip_front - 0.032))
+                .with_scale(Vec3::new(BAY_W + 0.14, 0.034, 0.05)),
+        ));
     }
 
     // --- Light: one warm overhead, one floor fill, one phosphor spill
-    // by the tank. The omen reaches all three through `Dimmable`.
+    // by the tank, and a pair of work lights over the bay. The omen
+    // reaches them all through `Dimmable`.
     // No shadow maps anywhere, on purpose: DESIGN.md's lighting direction
     // is light *volumes* — authored, placed light, not simulated
     // occlusion. Depth comes from placement, wear, fog, and the motes.
+    // The bay pair hangs forward of the gantry so the wall band and the
+    // deck strip both catch it; cargo lamps add their own pools on top.
+    for sx in [-0.8, 0.8] {
+        commands.spawn((
+            PointLight {
+                color: palette::GLINT,
+                intensity: 110_000.0,
+                range: 4.5,
+                shadow_maps_enabled: false,
+                ..default()
+            },
+            Transform::from_xyz(sx, 2.05, 1.25),
+            Dimmable {
+                intensity: 110_000.0,
+            },
+        ));
+    }
     commands.spawn((
         PointLight {
             color: palette::GLINT,
@@ -738,8 +882,11 @@ pub fn spawn(
     commands.insert_resource(skin);
 }
 
-/// The station the roaming crosshair rests on, if any: a ray straight
-/// out of the camera against the panel quads.
+/// The focusable station the roaming crosshair rests on, if any: a ray
+/// straight out of the camera against the panel quads. Bay surfaces are
+/// skipped — they are worked in roam, never focused — but they also
+/// never occlude a panel (they hang on the opposite wall), so skipping
+/// is a filter, not an occlusion cheat.
 fn aimed_station(
     camera: &Transform,
     surfaces: &Query<(&Station, &SimSurface), Without<CabinCamera>>,
@@ -747,6 +894,9 @@ fn aimed_station(
     let ray = Ray3d::new(camera.translation, Dir3::new(camera.forward().into()).ok()?);
     let mut best: Option<(f32, Station)> = None;
     for (station, surface) in surfaces {
+        if Focus::of(*station).is_none() {
+            continue;
+        }
         if let Some((t, _, _)) = surface.project(ray)
             && best.is_none_or(|(bt, _)| t < bt)
         {
@@ -757,6 +907,7 @@ fn aimed_station(
 }
 
 /// Mode transitions and roaming movement, from this frame's input.
+#[allow(clippy::too_many_arguments)]
 pub fn steer(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -765,8 +916,13 @@ pub fn steer(
     surfaces: Query<(&Station, &SimSurface), Without<CabinCamera>>,
     mut rig: ResMut<CameraRig>,
     camera: Single<&Transform, With<CabinCamera>>,
+    shell: Res<crate::Shell>,
 ) {
     let toggle = keys.just_pressed(KeyCode::KeyE);
+    // Full hands change what a click means: while the sim holds a carried
+    // piece, roam clicks belong to the carry (grab/place/cancel in
+    // `advance`) and never glide the camera into a station.
+    let carrying = shell.bridge.sim.held(0).is_some();
     match rig.mode {
         Mode::Roam => {
             // A parked cursor belongs to the OS until the game is
@@ -812,12 +968,14 @@ pub fn steer(
                 let pos = rig.pos + step.normalize() * WALK_SPEED * time.delta_secs();
                 rig.pos = pos.clamp(WALK_MIN, WALK_MAX);
             }
-            // Focus what the crosshair rests on.
-            if (buttons.just_pressed(MouseButton::Left) || toggle)
+            // Focus what the crosshair rests on — empty-handed only.
+            if !carrying
+                && (buttons.just_pressed(MouseButton::Left) || toggle)
                 && let Some(station) = aimed_station(&camera, &surfaces)
+                && let Some(focus) = Focus::of(station)
             {
                 rig.mode = Mode::ToFocus {
-                    focus: Focus::of(station),
+                    focus,
                     from: (camera.translation, camera.rotation),
                     t: 0.0,
                 };
@@ -925,12 +1083,12 @@ pub fn present_mode(
         Visibility::Hidden
     };
     let aimed = if roaming {
-        aimed_station(&camera, &surfaces).map(Focus::of)
+        aimed_station(&camera, &surfaces).and_then(Focus::of)
     } else {
         None
     };
     for (frame, mut visibility) in &mut frames {
-        *visibility = if aimed == Some(Focus::of(frame.0)) {
+        *visibility = if aimed.is_some() && aimed == Focus::of(frame.0) {
             Visibility::Visible
         } else {
             Visibility::Hidden
@@ -996,7 +1154,7 @@ mod tests {
         rot: Quat,
         point: Vec3,
         slabs: &[Slab],
-        panels: &[(Station, SimSurface); 4],
+        panels: &[(Station, SimSurface); 3],
     ) -> Result<(), String> {
         // Frustum containment, using the pinned FOV and crunch aspect.
         let local = rot.inverse() * (point - eye);
@@ -1062,11 +1220,7 @@ mod tests {
                 spots.push(mid(layout::DEST_PREVIEW));
                 spots.push(layout::ETA_ARC_CENTER);
             }
-            Station::Hold => {
-                for (x, y) in [(0, 0), (5, 0), (0, 3), (5, 3), (2, 1)] {
-                    spots.push(mid(layout::cell_rect(x, y)));
-                }
-            }
+            Station::BayWall | Station::BayFloor => {}
             Station::Barter => {
                 spots.push(mid(layout::ACCEPT_LEVER));
                 spots.push(layout::DIAL_CENTER);
@@ -1094,7 +1248,8 @@ mod tests {
         let panels = panels();
         let slabs = structure(&panels);
         for (station, surface) in &panels {
-            let (eye, rot) = focus_pose(Focus::of(*station), &panels);
+            let focus = Focus::of(*station).expect("every panel is focusable");
+            let (eye, rot) = focus_pose(focus, &panels);
             let mut points = corner_points(surface);
             points.extend(control_points(*station, surface));
             for point in points {
@@ -1164,7 +1319,7 @@ mod tests {
             // The view axis should pass close to every grouped panel
             // center: no panel of the group may sit behind the camera.
             for (station, surface) in &panels {
-                if Focus::of(*station) == focus {
+                if Focus::of(*station) == Some(focus) {
                     let to_panel = (surface.center - eye).normalize();
                     let forward = rot * Vec3::NEG_Z;
                     assert!(
@@ -1203,23 +1358,127 @@ mod tests {
     fn desk_supports_sit_under_their_panels() {
         let panels = panels();
         let slabs = structure(&panels);
-        // Two derived supports exist and their tops sit below both desk
-        // panels' lowest plate corners.
+        // One derived support (the barter counter's) whose top sits below
+        // the panel's lowest plate corner.
         let supports: Vec<&Slab> = slabs
             .iter()
             .filter(|s| matches!(s.finish, Finish::Plate))
             .collect();
-        assert_eq!(supports.len(), 2);
+        assert_eq!(supports.len(), 1);
         for (station, surface) in &panels {
-            if matches!(station, Station::Hold | Station::Barter) {
+            if matches!(station, Station::Barter) {
                 let (lo, _) = plate_bounds(surface);
                 let support = supports
                     .iter()
                     .find(|s| (s.center.x - surface.center.x).abs() < 0.2)
-                    .expect("a support under each desk panel");
+                    .expect("a support under the counter");
                 let top = support.size.y.mul_add(0.5, support.center.y);
                 assert!(top < lo.y, "{station:?} support top {top} reaches {}", lo.y);
             }
         }
+    }
+
+    /// The two bay surfaces tile the whole hold grid with no gap and no
+    /// overlap, and the fold between them is watertight: a sim point on
+    /// the seam lands on (nearly) the same world point through either.
+    #[test]
+    fn bay_surfaces_tile_the_grid_and_the_fold_is_watertight() {
+        let [(_, wall), (_, floor)] = bay();
+        assert!((wall.rect.x - floor.rect.x).abs() < f32::EPSILON);
+        assert!((wall.rect.w - floor.rect.w).abs() < f32::EPSILON);
+        assert!(
+            ((wall.rect.y + wall.rect.h) - floor.rect.y).abs() < f32::EPSILON,
+            "wall band and deck strip must meet at one sim row"
+        );
+        assert!(
+            ((floor.rect.y + floor.rect.h)
+                - f32::from(layout::GRID_ROWS).mul_add(layout::CELL, layout::GRID_ORIGIN.y))
+            .abs()
+                < f32::EPSILON,
+            "the deck strip must finish the grid"
+        );
+        let seam_y = floor.rect.y;
+        for i in 0..=6 {
+            let x = (i as f32 / 6.0).mul_add(wall.rect.w, wall.rect.x);
+            let on_wall = wall.to_world(SimVec2::new(x, seam_y));
+            let on_floor = floor.to_world(SimVec2::new(x, seam_y));
+            assert!(
+                (on_wall - on_floor).length() < 0.08,
+                "fold gapes at sim x {x}: wall {on_wall} vs floor {on_floor}"
+            );
+        }
+    }
+
+    /// Every bay cell can actually be worked: from some legal roaming
+    /// position, its center is within REACH, within the pitch the neck
+    /// allows, and no structure blocks the line. This is the roam-mode
+    /// analogue of the focus sightline contract.
+    #[test]
+    fn every_bay_cell_is_workable_from_the_walk_envelope() {
+        let panels = panels();
+        let slabs = structure(&panels);
+        let unobstructed = |eye: Vec3, point: Vec3| -> bool {
+            let dir = point - eye;
+            for slab in &slabs {
+                if let Some(t) = ray_slab_entry(eye, dir, slab)
+                    && t < 1.0 - 1e-3
+                {
+                    return false;
+                }
+            }
+            for (_, surface) in &panels {
+                if let Some(t) = ray_plate_entry(eye, dir, surface)
+                    && t < 1.0 - 1e-3
+                {
+                    return false;
+                }
+            }
+            true
+        };
+        for (station, surface) in bay() {
+            for y in 0..layout::GRID_ROWS {
+                for x in 0..layout::GRID_COLS {
+                    let cell = layout::cell_rect(x, y);
+                    let mid =
+                        SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
+                    if !surface.rect.contains(mid) {
+                        continue;
+                    }
+                    let probe = surface.to_world(mid) + surface.normal() * 0.004;
+                    let workable = (0..=12).any(|i| {
+                        (0..=12).any(|j| {
+                            let eye = Vec3::new(
+                                (i as f32 / 12.0).mul_add(WALK_MAX.x - WALK_MIN.x, WALK_MIN.x),
+                                EYE_HEIGHT,
+                                (j as f32 / 12.0).mul_add(WALK_MAX.z - WALK_MIN.z, WALK_MIN.z),
+                            );
+                            let dir = probe - eye;
+                            let horizontal = dir.xz().length();
+                            let pitch = (-dir.y).atan2(horizontal).abs();
+                            dir.length() <= REACH - 0.05
+                                && pitch <= PITCH_LIMIT - 0.02
+                                && unobstructed(eye, probe)
+                        })
+                    });
+                    assert!(
+                        workable,
+                        "{station:?} cell ({x}, {y}) at {probe} is out of reach from everywhere"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The walk envelope stays off the bay's deck strip: cargo is walked
+    /// up to, never stood on.
+    #[test]
+    fn walk_envelope_stays_off_the_deck_strip() {
+        let [(_, _), (_, floor)] = bay();
+        let strip_front = floor.center.z - floor.half_v.length();
+        assert!(
+            WALK_MAX.z + 0.10 <= strip_front,
+            "envelope reaches {} but the strip starts at {strip_front}",
+            WALK_MAX.z
+        );
     }
 }

@@ -111,7 +111,12 @@ Stowing is a drop: release a 1×1 piece over a hold cabinet's footprint
 and it takes the first free cubby. Lifting a cubby piece works like any
 grab — cubby sub-rects hit-test before the cabinet's own body, so the
 pointer never has to fight the furniture. Shift quick-move pops a
-stowed piece back to the first legal hold cell.
+stowed piece back to the first legal hold cell. One known seam of the
+fold: a standing cabinet straddles the wall band and the deck strip, so
+its upper cubbies are aimed on the rig itself while the lower two are
+aimed on the deck plate at its feet — the sim's flat-rect mapping is
+the law, and the hint glow shows where the aim actually is. Worth
+revisiting if playtests trip on it.
 
 Everything below **emerges** from `Loc::Stow` being its own berth class
 rather than a hold cell — none of it is special-cased:

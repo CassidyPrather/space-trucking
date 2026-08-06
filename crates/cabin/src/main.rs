@@ -1,12 +1,13 @@
 //! Space Trucking's 3D cabin: the Bevy first-person frontend.
 //!
 //! Everything that decides what happens lives in `space_trucking::sim` —
-//! the same deterministic library the 2D console runs, saves and all. This
-//! binary is a different window onto it: a cramped freighter cabin where
-//! the console's regions are physical panels. `surface` maps the cursor
-//! ray onto sim coordinates, `bridge` owns the sim/save/tape, and the view
-//! modules read sim state back onto cabin geometry. The sim never learns
-//! it grew a third dimension.
+//! the deterministic library the retired 2D console ran, saves and all.
+//! This binary is a window onto it: a cramped freighter cabin where the
+//! console's regions are physical stations and the hold is a walkable
+//! bay. `surface` maps cursor and crosshair rays onto sim coordinates,
+//! `bridge` owns the sim/save/tape, and the view modules read sim state
+//! back onto cabin geometry. The sim never learns it grew a third
+//! dimension.
 
 // Bevy systems take `Res`/`Query` by value; fighting pedantic over it
 // per-function is noise.
@@ -73,14 +74,22 @@ fn main() {
             .and_then(|at| args.get(at + 1).cloned())
     };
     let shot = flag_value("--shot");
-    // `--view tank|console|desk` boots parked at that focus viewpoint —
-    // mostly for screenshot runs, harmless interactively.
-    let view = flag_value("--view").and_then(|name| match name.as_str() {
+    // `--view tank|console|desk|bay` boots parked at that viewpoint —
+    // mostly for screenshot runs, harmless interactively. The bay has no
+    // focus pose; its view is a roam pose facing aft.
+    let view_name = flag_value("--view");
+    let view = view_name.as_deref().and_then(|name| match name {
         "tank" => Some(rig::Focus::Tank),
         "console" => Some(rig::Focus::Console),
         "desk" => Some(rig::Focus::Desk),
         _ => None,
     });
+    let mut boot_rig = rig::CameraRig::boot(view);
+    if view_name.as_deref() == Some("bay") {
+        boot_rig.pos.z = -0.30;
+        boot_rig.yaw = std::f32::consts::PI;
+        boot_rig.pitch = -0.30;
+    }
 
     let mut app = App::new();
     app.add_plugins(
@@ -103,7 +112,7 @@ fn main() {
         outcome: FrameOutcome::default(),
         muted: false,
     })
-    .insert_resource(rig::CameraRig::boot(view))
+    .insert_resource(boot_rig)
     .init_resource::<VirtualPointer>()
     .configure_sets(Update, (Phase::Input, Phase::Advance, Phase::View).chain())
     .add_plugins((
@@ -163,9 +172,9 @@ fn shoot(
 
 /// Gather this frame's input in sim terms and advance the world exactly
 /// once — the sim drains pointer edges per call, so once is the law.
-/// Pointer interaction reaches the sim only while a station is focused;
-/// roaming clicks steer the camera, not the cargo. Keys stay live in
-/// every mode.
+/// Focused stations get the freed cursor; roaming gets the crosshair
+/// carry over the bay (and clicks on stations glide the camera instead,
+/// empty-handed). Keys stay live in every mode.
 fn advance(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -176,20 +185,44 @@ fn advance(
     mut shell: ResMut<Shell>,
 ) {
     let live = camera.interactive();
-    // The gesture layer merges with raw input in one place (`synthesize`,
-    // property-tested by the gesture monkey): lever rects are withheld
-    // while hands are empty, and a completed pull arrives as one plain
-    // press at the lever's center — what the 2D console would have sent.
     let holding = shell.bridge.sim.held(0).is_some();
-    let (at, press, held, release) = gesture::synthesize(
-        &grips,
-        pointer.sim,
-        holding,
-        live,
-        buttons.just_pressed(MouseButton::Left),
-        buttons.pressed(MouseButton::Left),
-        buttons.just_released(MouseButton::Left),
-    );
+    let (at, press, held, release) = if camera.roaming() {
+        // The carry: a roam click grabs what the crosshair rests on; the
+        // drag then persists hands-free (`held` synthesized every frame,
+        // the pointer tracking the aim, parked off the bay); the next
+        // click places — or, aimed at nothing, snaps the piece home.
+        // Right-click is the explicit cancel. The sim sees ordinary drag
+        // frames; every rule, cue, and conservation test applies as-is.
+        let clicked = buttons.just_pressed(MouseButton::Left);
+        let cancel = holding && buttons.just_pressed(MouseButton::Right);
+        let place = holding && clicked;
+        let grab = !holding && clicked && pointer.station.is_some();
+        (
+            if cancel {
+                bridge::POINTER_PARKED
+            } else {
+                pointer.sim
+            },
+            grab,
+            grab || (holding && !place && !cancel),
+            place || cancel,
+        )
+    } else {
+        // The gesture layer merges with raw input in one place
+        // (`synthesize`, property-tested by the gesture monkey): lever
+        // rects are withheld while hands are empty, and a completed pull
+        // arrives as one plain press at the lever's center — what the 2D
+        // console would have sent.
+        gesture::synthesize(
+            &grips,
+            pointer.sim,
+            holding,
+            live,
+            buttons.just_pressed(MouseButton::Left),
+            buttons.pressed(MouseButton::Left),
+            buttons.just_released(MouseButton::Left),
+        )
+    };
     let input = FrameInput {
         pointer: at,
         press,

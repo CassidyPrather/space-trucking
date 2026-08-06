@@ -354,11 +354,17 @@ pub fn focus_pose(focus: Focus, panels: &[(Station, SimSurface); 4]) -> (Vec3, Q
 }
 
 /// Shared meshes and materials for the worn-metal family. Views make
-/// their own phosphors; the metal is communal.
+/// their own phosphors; the metal is communal. Nothing ships unweathered:
+/// the broad surfaces carry `wear`'s deterministic multiplier textures —
+/// the 2D console's scuffed panels, grown a dimension.
 #[derive(Resource)]
 pub struct Skin {
     pub hull: Handle<StandardMaterial>,
     pub plate: Handle<StandardMaterial>,
+    /// Desk-class metal: brushed, scuffed where hands and crates live.
+    pub desk: Handle<StandardMaterial>,
+    /// Painted hazard stripes for accent strips.
+    pub hazard: Handle<StandardMaterial>,
     pub plate_lit: Handle<StandardMaterial>,
     pub plate_shade: Handle<StandardMaterial>,
     pub socket: Handle<StandardMaterial>,
@@ -370,7 +376,12 @@ pub struct Skin {
 }
 
 impl Skin {
-    fn build(meshes: &mut Assets<Mesh>, materials: &mut Assets<StandardMaterial>) -> Self {
+    fn build(
+        meshes: &mut Assets<Mesh>,
+        materials: &mut Assets<StandardMaterial>,
+        images: &mut Assets<Image>,
+    ) -> Self {
+        let book = crate::wear::bake(images);
         let metal = |color: Color| StandardMaterial {
             base_color: color,
             perceptual_roughness: 0.92,
@@ -378,8 +389,10 @@ impl Skin {
             ..default()
         };
         Self {
-            hull: materials.add(metal(palette::HULL)),
-            plate: materials.add(metal(palette::PLATE)),
+            hull: crate::wear::worn(materials, &book.hull, palette::HULL, 4.0, 0.92, 0.15),
+            plate: crate::wear::worn(materials, &book.plate, palette::PLATE, 2.0, 0.92, 0.15),
+            desk: crate::wear::worn(materials, &book.desk, palette::PLATE, 2.0, 0.9, 0.15),
+            hazard: crate::wear::worn(materials, &book.hazard, palette::GLINT, 4.0, 0.85, 0.0),
             plate_lit: materials.add(metal(palette::PLATE_LIT)),
             plate_shade: materials.add(metal(palette::PLATE_SHADE)),
             socket: materials.add(StandardMaterial {
@@ -440,7 +453,7 @@ pub fn spawn(
     mut images: ResMut<Assets<Image>>,
     rig: Res<CameraRig>,
 ) {
-    let skin = Skin::build(&mut meshes, &mut materials);
+    let skin = Skin::build(&mut meshes, &mut materials, &mut images);
     let panels = panels();
 
     // --- The crunch: a small render target shown fullscreen, unsmoothed.
@@ -544,7 +557,7 @@ pub fn spawn(
     for slab in structure(&panels) {
         let material = match slab.finish {
             Finish::Hull => skin.hull.clone(),
-            Finish::Plate => skin.plate.clone(),
+            Finish::Plate => skin.desk.clone(),
         };
         commands.spawn((
             Mesh3d(skin.cube.clone()),
@@ -560,11 +573,28 @@ pub fn spawn(
             .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
     ));
     commands.spawn((
+        // Brass, because somebody salvaged this line from a nicer ship.
         Mesh3d(meshes.add(Cylinder::new(0.05, 3.2))),
-        MeshMaterial3d(skin.rivet.clone()),
+        MeshMaterial3d(skin.brass.clone()),
         Transform::from_xyz(1.42, 2.2, 0.2)
             .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
     ));
+
+    // Hazard striping along each desk support's front lip — paint where
+    // knees and crates argue with furniture. Derived from the same panel
+    // bounds as the supports, so it can never float free of them.
+    for (station, surface) in &panels {
+        if !matches!(station, Station::Hold | Station::Barter) {
+            continue;
+        }
+        let (lo, hi) = plate_bounds(surface);
+        commands.spawn((
+            Mesh3d(skin.cube.clone()),
+            MeshMaterial3d(skin.hazard.clone()),
+            Transform::from_translation(Vec3::new(surface.center.x, lo.y - 0.035, hi.z + 0.022))
+                .with_scale(Vec3::new(hi.x - lo.x + 0.06, 0.045, 0.006)),
+        ));
+    }
 
     // --- Panels: each SimSurface entity carries its station tag; a PLATE
     // slab sits just behind each mapped quad as the physical panel, and a
@@ -676,7 +706,8 @@ pub fn spawn(
             shadow_maps_enabled: false,
             ..default()
         },
-        Transform::from_xyz(-0.56, 1.5, -1.05),
+        // The phosphor spill follows its tank to the left wall.
+        Transform::from_xyz(-1.32, 1.45, -0.2),
         Dimmable {
             intensity: 12_000.0,
         },

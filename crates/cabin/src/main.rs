@@ -25,6 +25,8 @@ mod palette;
 mod pieces;
 mod rig;
 mod surface;
+mod viewport;
+mod wear;
 
 use bevy::prelude::*;
 use bevy::window::PresentMode;
@@ -112,6 +114,7 @@ fn main() {
         fx::FxPlugin,
         gesture::GesturePlugin,
         pieces::PiecesPlugin,
+        viewport::ViewportPlugin,
     ))
     .add_systems(Startup, rig::spawn)
     .add_systems(

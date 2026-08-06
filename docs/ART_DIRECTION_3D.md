@@ -198,12 +198,25 @@ one stroke.
 
 ## Open questions for the aesthetic experiment
 
-Deliberately unsettled, to be answered by iteration in this crate:
+Answered by iteration so far:
+
+- **Wear returned as procedural multiplier textures** (`wear.rs`):
+  splitmix-seeded 96×96 tiles — value-noise blotches, fourteen
+  scratches, scuffs, edge grime — multiplying the palette tint through
+  `base_color_texture`, never darker than ~3% net. The hull, plates,
+  and desk each get their own character; hazard striping paints the
+  desk lips. No unweathered surfaces, no asset files.
+- **The window earned the front wall** (`viewport.rs`): a painted
+  canvas, not a CRT — no scanlines, no phosphor; stars are glint-white.
+  Streaks stretch under warp, the destination grows on approach, the
+  berth hangs outside while docked, and the whale swims past when it
+  calls. The distinction between a *screen showing a reading* and a
+  *window showing space* is the material discipline, kept.
+
+Deliberately unsettled, still:
 
 - Whether the crunch target should breathe with window size or stay
   fixed 16:9 letterboxed.
-- Whether panel wear (the 2D deterministic scratches) returns as decals,
-  vertex-color grime, or stays implied by the low light.
-- Whether the porthole (travel feel) earns a place on the back wall or
-  stays a nav-tank-only fiction.
 - How far bloom can carry the CRT reading before it goes syrupy.
+- Whether the cargo experiment (see "The cargo question") moves the
+  hold off the desk into a walkable bay.

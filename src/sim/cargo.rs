@@ -52,10 +52,14 @@ pub enum Kind {
     Couch,
     /// Gilt frame, subject debatable. Shows best under lamplight.
     Painting,
+    /// A slim deck-bolted wardrobe with four cubbies: the first piece
+    /// of cargo that *provides* berths (see `Loc::Stow`). Small goods
+    /// ride inside — dry, dark, and beyond the reach of rats.
+    Cabinet,
 }
 
 /// Number of cargo kinds.
-pub const KIND_COUNT: usize = 21;
+pub const KIND_COUNT: usize = 22;
 
 /// Cosmetic variant rolls per kind, for the renderer to vary sprites with.
 /// The persistent run RNG is spent on these and nothing else.
@@ -111,6 +115,7 @@ impl Kind {
         Self::FloorLamp,
         Self::Couch,
         Self::Painting,
+        Self::Cabinet,
     ];
 
     /// Footprint in hold cells, `(w, h)`.
@@ -128,7 +133,7 @@ impl Kind {
             | Self::CasinoChip
             | Self::CeilingLamp
             | Self::WallLamp => (1, 1),
-            Self::GildedIdol | Self::BrinePearls | Self::FloorLamp => (1, 2),
+            Self::GildedIdol | Self::BrinePearls | Self::FloorLamp | Self::Cabinet => (1, 2),
             Self::RationBricks | Self::SuspiciousCrate | Self::VeryMysteriousCrate => (2, 2),
             Self::ScrapAlloy | Self::GasCanister | Self::Couch | Self::Painting => (2, 1),
         }
@@ -143,7 +148,7 @@ impl Kind {
             Self::CryoCore | Self::CometIce => Some(Tag::Cryo),
             Self::SuspiciousCrate | Self::VeryMysteriousCrate => Some(Tag::Suspicious),
             Self::CeilingLamp => Some(Tag::Affix(Mount::Ceiling)),
-            Self::FloorLamp | Self::Couch => Some(Tag::Affix(Mount::Floor)),
+            Self::FloorLamp | Self::Couch | Self::Cabinet => Some(Tag::Affix(Mount::Floor)),
             Self::WallLamp | Self::Painting => Some(Tag::Affix(Mount::Wall)),
             _ => None,
         }
@@ -173,6 +178,49 @@ pub enum Loc {
     /// Adrift beside the ship during a travel encounter. Not the player's
     /// until stowed; whatever is left drifts away when the encounter ends.
     Flotsam { slot: u8 },
+    /// Inside a cabinet's cubby. The berth exists only while that cabinet
+    /// piece does: an occupied cabinet cannot be lifted, so the cubby can
+    /// never find itself without a home.
+    Stow { cabinet: u32, slot: u8 },
+}
+
+/// Cubbies per cabinet: a 2×2 rack of them behind the doors.
+pub const CABINET_SLOTS: u8 = 4;
+
+/// Whether `kind` may ride inside a cabinet.
+///
+/// One cell, and neither the kinds that need the hull's cold (cryo) nor
+/// the ones nobody should box up (suspicious — none is 1×1 today, but the
+/// rule is written for the day one is). Everything else about a stowed
+/// piece is ordinary; what *emerges* from a cubby not being a hold cell —
+/// dark lamps, unbred fluff, rat-proof shelter, invisibility to ??? — is
+/// documented in docs/BAY.md, not special-cased anywhere.
+#[must_use]
+pub const fn stowable(kind: Kind) -> bool {
+    let (w, h) = kind.cells();
+    w == 1 && h == 1 && !matches!(kind.tag(), Some(Tag::Cryo | Tag::Suspicious))
+}
+
+/// Whether any piece rides in `cabinet`'s cubbies.
+///
+/// An occupied cabinet refuses to be lifted or quick-moved
+/// (`Violation::Occupied`): empty it first, piece by piece — which is
+/// also why cubby cargo can never reach a trade pad by accident.
+#[must_use]
+pub fn cabinet_occupied(pieces: &[Piece], cabinet: u32) -> bool {
+    pieces
+        .iter()
+        .any(|piece| matches!(piece.loc, Loc::Stow { cabinet: c, .. } if c == cabinet))
+}
+
+/// The first free cubby of `cabinet`, if any.
+#[must_use]
+pub fn free_cubby(pieces: &[Piece], cabinet: u32) -> Option<u8> {
+    (0..CABINET_SLOTS).find(|&slot| {
+        !pieces
+            .iter()
+            .any(|piece| piece.loc == Loc::Stow { cabinet, slot })
+    })
 }
 
 /// Whether a piece at `loc` belongs to the player rather than the station.
@@ -185,7 +233,7 @@ pub enum Loc {
 pub const fn player_owned(loc: Loc) -> bool {
     matches!(
         loc,
-        Loc::Hold { .. } | Loc::GivePad { .. } | Loc::ReceivedShelf { .. }
+        Loc::Hold { .. } | Loc::GivePad { .. } | Loc::ReceivedShelf { .. } | Loc::Stow { .. }
     )
 }
 
@@ -223,6 +271,9 @@ pub enum Violation {
     Suspicious,
     /// A fixture whose footprint misses its mount surface.
     Affix(Mount),
+    /// A cabinet with goods in its cubbies was asked to move (or to take
+    /// more than it has room for): empty it first.
+    Occupied,
 }
 
 /// Whether `kind` may be anchored at hold cell `(x, y)` given every other
@@ -343,7 +394,7 @@ pub const fn lamp(kind: Kind) -> bool {
 /// Whether `piece` is a lamp, burning.
 ///
 /// Lamps are lit while stowed in the hold and nowhere else: on a shelf, a
-/// pad, or the outboard net they are dark. Everything lighting touches —
+/// pad, the outboard net, or boxed in a cabinet cubby they are dark. Everything lighting touches —
 /// the rat's fear, the well-lit art bonus, any frontend halo — reads lamp
 /// state through this one predicate.
 #[must_use]
@@ -554,6 +605,60 @@ mod tests {
         assert!(!lit_adjacent(&[shelved], 0, 1));
         let art = board(&[(Kind::Painting, 0, 1)]);
         assert!(!lit_adjacent(&art, 2, 1));
+    }
+
+    #[test]
+    fn stowable_is_small_and_neither_cold_nor_suspect() {
+        // One cell and unencumbered: rides in a cabinet.
+        for kind in [
+            Kind::PerfumeVial,
+            Kind::Seedlings,
+            Kind::MysteriousCrate,
+            Kind::Fluff,
+            Kind::CeilingLamp,
+            Kind::WallLamp,
+        ] {
+            assert!(stowable(kind), "{kind:?} should stow");
+        }
+        // Too big, or a rule says no.
+        for kind in [
+            Kind::CryoCore,   // 1x1 but needs the hull
+            Kind::CometIce,   // ditto
+            Kind::GildedIdol, // 1x2
+            Kind::Couch,      // 2x1
+            Kind::Cabinet,    // no cabinets in cabinets
+            Kind::SuspiciousCrate,
+        ] {
+            assert!(!stowable(kind), "{kind:?} should refuse the cubby");
+        }
+    }
+
+    #[test]
+    fn cubbies_fill_first_free_and_report_occupancy() {
+        let cabinet = 7_u32;
+        let mut pieces = vec![Piece {
+            id: cabinet,
+            kind: Kind::Cabinet,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Hold { x: 0, y: 2 },
+        }];
+        assert!(!cabinet_occupied(&pieces, cabinet));
+        assert_eq!(free_cubby(&pieces, cabinet), Some(0));
+        for slot in 0..CABINET_SLOTS {
+            pieces.push(Piece {
+                id: 100 + u32::from(slot),
+                kind: Kind::PerfumeVial,
+                variant: 0,
+                gnawed: false,
+                loc: Loc::Stow { cabinet, slot },
+            });
+        }
+        assert!(cabinet_occupied(&pieces, cabinet));
+        assert_eq!(free_cubby(&pieces, cabinet), None);
+        // A different cabinet's cubbies are its own business.
+        assert!(!cabinet_occupied(&pieces, 8));
+        assert_eq!(free_cubby(&pieces, 8), Some(0));
     }
 
     #[test]

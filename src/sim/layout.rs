@@ -159,8 +159,14 @@ pub fn slot_at(slots: &[Rect; 4], p: Vec2) -> Option<u8> {
 
 /// World rect a piece occupies at its current [`Loc`]. Shared by hit-testing
 /// and the renderer, so pieces are grabbed exactly where they are drawn.
+///
+/// A stowed piece sits in a cubby sub-rect of its cabinet's own footprint,
+/// which is why the whole board is a parameter: the cabinet must be looked
+/// up. A stow whose cabinet is missing (impossible by the placement and
+/// save rules) resolves to a rect parked outside the world, so it can
+/// never be grabbed and never collide.
 #[must_use]
-pub fn piece_rect(piece: &Piece) -> Rect {
+pub fn piece_rect(pieces: &[Piece], piece: &Piece) -> Rect {
     match piece.loc {
         Loc::Hold { x, y } => {
             let (w, h) = piece.kind.cells();
@@ -172,7 +178,46 @@ pub fn piece_rect(piece: &Piece) -> Rect {
         Loc::TakePad { slot } => TAKE_SLOTS[usize::from(slot)],
         Loc::ReceivedShelf { slot } => RECEIVED_SLOTS[usize::from(slot)],
         Loc::Flotsam { slot } => FLOTSAM_SLOTS[usize::from(slot)],
+        Loc::Stow { cabinet, slot } => pieces
+            .iter()
+            .find(|other| other.id == cabinet)
+            .map_or(Rect::new(-1000.0, -1000.0, 0.0, 0.0), |host| {
+                cubby_rect(piece_rect(pieces, host), slot)
+            }),
     }
+}
+
+/// The cubby sub-rect for `slot` within a cabinet body rect: a 2×2 rack,
+/// row-major from the top-left. Shared by hit-testing and any renderer,
+/// so a cubby is grabbed exactly where its contents are drawn.
+#[must_use]
+pub fn cubby_rect(body: Rect, slot: u8) -> Rect {
+    let w = body.w / 2.0;
+    let h = body.h / 2.0;
+    Rect::new(
+        f32::from(slot % 2).mul_add(w, body.x),
+        f32::from(slot / 2).mul_add(h, body.y),
+        w,
+        h,
+    )
+}
+
+/// The piece under `p`, cubby contents first.
+///
+/// A stowed piece's rect lives inside its cabinet's, so scanning stows
+/// before everything else is what lets a click reach into an open cubby
+/// instead of always grabbing the furniture around it.
+#[must_use]
+pub fn piece_at(pieces: &[Piece], p: Vec2) -> Option<&Piece> {
+    let stowed = pieces
+        .iter()
+        .filter(|piece| matches!(piece.loc, Loc::Stow { .. }));
+    let rest = pieces
+        .iter()
+        .filter(|piece| !matches!(piece.loc, Loc::Stow { .. }));
+    stowed
+        .chain(rest)
+        .find(|piece| piece_rect(pieces, piece).contains(p))
 }
 
 #[cfg(test)]

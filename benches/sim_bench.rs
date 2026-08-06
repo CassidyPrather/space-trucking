@@ -93,7 +93,7 @@ fn bench_crew_tick(c: &mut Criterion) {
         .iter()
         .take(MAX_CREW)
         .map(|piece| {
-            let rect = layout::piece_rect(piece);
+            let rect = layout::piece_rect(base.pieces(), piece);
             Vec2::new(rect.w.mul_add(0.5, rect.x), rect.h.mul_add(0.5, rect.y))
         })
         .collect();

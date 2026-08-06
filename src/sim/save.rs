@@ -18,7 +18,7 @@ use std::fmt;
 use std::fmt::Write as _;
 use std::str::FromStr;
 
-use super::cargo::{Kind, Loc, Piece};
+use super::cargo::{self, Kind, Loc, Piece};
 use super::encounter::{Drone, Drones, Encounter, EncounterKind, Encounters};
 use super::event::{Omen, Phase};
 use super::layout::{FLOTSAM_SLOTS, GRID_COLS, GRID_ROWS, SHELF_SLOTS};
@@ -26,12 +26,19 @@ use super::map::{POI_COUNT, PoiId, Ship, ShipState};
 use super::rats::{CHASE_LIMIT, Rat, Rats};
 use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 
-/// Magic-plus-version header of every save this build writes. `STV4` widened
+/// Magic-plus-version header of every save this build writes. `STV5` added
+/// the `stow` piece location (cabinet cubbies; see docs/BAY.md) — and
+/// nothing else, so the reader accepts `STV4` too: a save with no stow
+/// lines is a valid save with no boxed goods. `STV4` widened
 /// the visits line for the orbital sky's new POIs (positions themselves are
 /// derived from the tick, so none are stored); `STV3` split the leg counter
 /// out of the omen line and added the rat state line plus the per-piece gnaw
 /// token. Older versions fail safe as unsupported.
-const MAGIC: &str = "STV4";
+const MAGIC: &str = "STV5";
+
+/// Older headers this build still reads. Every difference is additive, so
+/// one grammar parses them all.
+const READABLE: [&str; 2] = [MAGIC, "STV4"];
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -211,6 +218,9 @@ pub(crate) fn serialize(sim: &Sim) -> String {
             Loc::Flotsam { slot } => {
                 let _ = writeln!(out, " flot {slot}");
             }
+            Loc::Stow { cabinet, slot } => {
+                let _ = writeln!(out, " stow {cabinet} {slot}");
+            }
         }
     }
     let _ = writeln!(out, "next_piece {}", sim.next_piece);
@@ -221,7 +231,7 @@ pub(crate) fn serialize(sim: &Sim) -> String {
 pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let mut reader = Reader::new(s);
     match reader.next_line() {
-        Ok(MAGIC) => {}
+        Ok(header) if READABLE.contains(&header) => {}
         Ok(other) if other.starts_with("STV") => return Err(SaveError::UnsupportedVersion),
         _ => return Err(SaveError::BadMagic),
     }
@@ -586,11 +596,34 @@ fn parse_pieces(reader: &mut Reader<'_>) -> Result<(Vec<Piece>, u32), SaveError>
             }
             Some("next_piece") => {
                 let next_piece = reader.token(tokens.next())?;
+                validate_stows(reader, &pieces)?;
                 return Ok((pieces, next_piece));
             }
             _ => return Err(reader.err()),
         }
     }
+}
+
+/// Cross-piece stow validation, after the whole list is read (a cubby may
+/// reference a cabinet on a later line). Everything a stow line could lie
+/// about is checked here, so no later indexing or invariant trips: the
+/// host must be a cabinet in the hold, the cargo must be stowable, and no
+/// cubby holds two things.
+fn validate_stows(reader: &Reader<'_>, pieces: &[Piece]) -> Result<(), SaveError> {
+    let mut seen = Vec::new();
+    for piece in pieces {
+        let Loc::Stow { cabinet, slot } = piece.loc else {
+            continue;
+        };
+        let host_ok = pieces.iter().any(|host| {
+            host.id == cabinet && host.kind == Kind::Cabinet && matches!(host.loc, Loc::Hold { .. })
+        });
+        if !host_ok || !cargo::stowable(piece.kind) || seen.contains(&(cabinet, slot)) {
+            return Err(reader.err());
+        }
+        seen.push((cabinet, slot));
+    }
+    Ok(())
 }
 
 /// A piece's location tokens, bounds-checked so later indexing never panics.
@@ -627,6 +660,16 @@ fn parse_loc<'a>(
                 return Err(reader.err());
             }
             Ok(Loc::Flotsam { slot })
+        }
+        Some("stow") => {
+            let cabinet: u32 = reader.token(tokens.next())?;
+            let slot: u8 = reader.token(tokens.next())?;
+            if slot >= cargo::CABINET_SLOTS {
+                return Err(reader.err());
+            }
+            // The cabinet reference is checked in `validate_stows`, once
+            // the whole piece list exists.
+            Ok(Loc::Stow { cabinet, slot })
         }
         _ => Err(reader.err()),
     }
@@ -877,6 +920,95 @@ mod tests {
             "piece 0 0 0 gnawed hold 0 0",
         ] {
             let mangled = docked.replacen(&piece_line, bad, 1);
+            assert!(Sim::from_save(&mangled).is_err(), "{bad:?} parsed anyway");
+        }
+    }
+
+    /// A sim with a stocked cabinet, its cubby lines pinned: `(sim, save,
+    /// cabinet id, anchor)` with a vial in cubby 0 and fluff in cubby 1.
+    fn furnished() -> (Sim, String, u32, (u8, u8)) {
+        let mut sim = Sim::new(3);
+        let (x, y) =
+            cargo::first_fit(&sim.pieces, u32::MAX, Kind::Cabinet).expect("room for a cabinet");
+        let cabinet = sim.next_piece;
+        for (offset, kind, loc) in [
+            (0, Kind::Cabinet, Loc::Hold { x, y }),
+            (1, Kind::PerfumeVial, Loc::Stow { cabinet, slot: 0 }),
+            (2, Kind::Fluff, Loc::Stow { cabinet, slot: 1 }),
+        ] {
+            sim.pieces.push(Piece {
+                id: cabinet + offset,
+                kind,
+                variant: 0,
+                gnawed: false,
+                loc,
+            });
+        }
+        sim.next_piece += 3;
+        let save = sim.save_string();
+        (sim, save, cabinet, (x, y))
+    }
+
+    #[test]
+    fn stowed_pieces_round_trip() {
+        let (sim, save, cabinet, _) = furnished();
+        assert!(save.starts_with("STV5\n"), "the writer stamps STV5");
+        let restored = Sim::from_save(&save).expect("furnished save parses");
+        assert_eq!(restored.pieces, sim.pieces);
+        assert!(
+            restored
+                .pieces
+                .iter()
+                .any(|p| p.loc == Loc::Stow { cabinet, slot: 0 }),
+            "the cubby survives the trip"
+        );
+    }
+
+    #[test]
+    fn a_console_era_header_still_reads() {
+        // STV5 added only the stow line; a save without one is a valid
+        // STV4 document, and the retired console's runs keep walking
+        // aboard.
+        let plain = Sim::new(9).save_string();
+        let old = plain.replacen("STV5", "STV4", 1);
+        assert_ne!(old, plain);
+        assert!(Sim::from_save(&old).is_ok(), "STV4 must stay readable");
+    }
+
+    #[test]
+    fn lying_stow_lines_fail_safe() {
+        let (_, save, cabinet, (x, y)) = furnished();
+        let vial_line = format!("piece {} 0 0 0 stow {cabinet} 0", cabinet + 1);
+        assert!(save.contains(&vial_line), "vial line changed shape");
+        for (needle, bad) in [
+            // A cubby in a cabinet that does not exist.
+            (
+                vial_line.clone(),
+                format!("piece {} 0 0 0 stow 4242 0", cabinet + 1),
+            ),
+            // A slot past the rack.
+            (
+                vial_line.clone(),
+                format!("piece {} 0 0 0 stow {cabinet} 4", cabinet + 1),
+            ),
+            // Two pieces in one cubby.
+            (
+                format!("piece {} 13 0 0 stow {cabinet} 1", cabinet + 2),
+                format!("piece {} 13 0 0 stow {cabinet} 0", cabinet + 2),
+            ),
+            // An unstowable kind (the couch, index 19) in a cubby.
+            (
+                vial_line,
+                format!("piece {} 19 0 0 stow {cabinet} 0", cabinet + 1),
+            ),
+            // A host that is not in the hold.
+            (
+                format!("piece {cabinet} 21 0 0 hold {x} {y}"),
+                format!("piece {cabinet} 21 0 0 give 0"),
+            ),
+        ] {
+            let mangled = save.replacen(&needle, &bad, 1);
+            assert_ne!(mangled, save, "needle {needle:?} not found in save");
             assert!(Sim::from_save(&mangled).is_err(), "{bad:?} parsed anyway");
         }
     }

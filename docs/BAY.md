@@ -150,22 +150,66 @@ piece must be stowable — a save that lies fails safe into a fresh run,
 as ever. Replays stay `RPL2`: carry synthesizes ordinary pointer
 frames, so the tape format never heard about any of this.
 
-## Where placement rules go next
+## Coverings: the dressing layer (second slice)
 
-The bay is the proving ground for the owner's cargo direction: away
-from raw-materials cargo, toward rugs, furnishings, windows, wallpaper,
-paints. The berth architecture this slice establishes is meant to take
-that weight:
+The owner's cargo direction — away from raw materials, toward rugs,
+wallpaper, paints — lands as a **dressing layer parallel to
+occupancy**: `Loc::Laid { x, y }`, a berth class where the piece is
+applied *into* a surface rather than standing on it. A laid piece
+coexists with occupancy on the same cells (a couch stands on a laid
+rug), and no two dressings share a cell. Conservation never blinks: a
+laid rug is still the same piece, and peeling it up is an ordinary
+grab.
+
+Three kinds carry the slice, appended as indices 22..=24:
+
+| Kind | Cells | Covers | Story |
+| --- | --- | --- | --- |
+| `Rug` | 2×1 | deck cells only | somebody's heirloom, gnawably soft |
+| `PaintTin` | 1×1 | any one cell | ship enamel, color by the tin's roll |
+| `LuminousPaint` | 1×1 | any one cell | glows; the Umbra Market sells it snuffed, in blackout tins |
+
+Coverings have **no hold-occupancy form aboard**: dropped on the grid
+they lay (rolled/canned forms exist only on shelves, pads, the rail,
+and in cubbies — a paint tin rides a cabinet fine). The rules reuse
+the existing violation ladder whole: off-surface is `Affix(Floor)`,
+dressing-on-dressing is `Overlap`, and the pinned rule is `Occupied`,
+symmetric in both directions — you can neither lay a dressing under
+standing cargo nor lift one out from under it. Painting behind the
+sconce means moving the sconce; that shuffle *is* the interior-design
+game.
+
+Two mechanics ride along:
+
+- **Luminous coats join the light economy.** A laid `LuminousPaint`
+  footprint lights its orthogonal neighbours through the same
+  `lit_adjacent` read lamps use: the rat fears glow-painted corners,
+  seedlings bloom beside them, a hold painting catches their
+  spotlight. The pad-side well-lit-art price bonus stays lamp-only —
+  a coat is ambiance, not gallery lighting — and the omen dims coats
+  like everything else. The Umbra Market prices luminous paint at
+  zero, files it under local produce, and shelves it cheap: light
+  remains a rival product.
+- **Rugs are gnawable.** The rat's nibble reaches laid rugs exactly
+  as it reaches hold cargo; a gnawed rug keeps its notch and its
+  discount forever. Vermin control (lamps, glow paint, a couch to nap
+  on) is now genuinely part of decorating.
+
+The house refuses wagers on coverings — the casino badge simply does
+not take carpets — because a transmuted chip could not legally stay
+laid. Saves bump to `STV6` for the one new `laid x y` line form; the
+reader keeps accepting `STV5` and `STV4`.
+
+## Where placement rules go next
 
 - **Occupancy berths** (hold cells, cubbies, pads) hold exactly one
   piece; the cabinet shows berths can be *provided by pieces*, so
   shelving, crates-with-compartments, and display cases are the same
   shape with different numbers.
-- **Coverings** (rugs, wallpaper, paint) will not be occupancy at all
-  but a parallel per-cell layer — a surface *dressing* that coexists
-  with a piece standing on it. That layer does not exist yet; nothing
-  in this slice blocks it, because cells already have stable
-  identities for it to key on.
+- **Dressings** (`Loc::Laid`) cover cells without occupying them;
+  wallpaper is the same shape as paint with a bigger footprint, and a
+  future "finish" tier (deck plating, wall panelling) could stack
+  beneath dressings if the game ever wants it.
 - **Networking is unaffected** by any of it: lockstep ships input
   frames, berth transitions stay discrete, and the conservation
   monkeys keep proving no interleaving loses a piece.

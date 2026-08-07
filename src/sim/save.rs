@@ -26,19 +26,20 @@ use super::map::{POI_COUNT, PoiId, Ship, ShipState};
 use super::rats::{CHASE_LIMIT, Rat, Rats};
 use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 
-/// Magic-plus-version header of every save this build writes. `STV5` added
-/// the `stow` piece location (cabinet cubbies; see docs/BAY.md) — and
-/// nothing else, so the reader accepts `STV4` too: a save with no stow
-/// lines is a valid save with no boxed goods. `STV4` widened
+/// Magic-plus-version header of every save this build writes. `STV6`
+/// added the `laid` piece location (the dressing layer; docs/BAY.md);
+/// `STV5` added `stow` (cabinet cubbies). Each is one additive line
+/// form, so the reader accepts the older headers too: a save without
+/// those lines is a valid save without those berths. `STV4` widened
 /// the visits line for the orbital sky's new POIs (positions themselves are
 /// derived from the tick, so none are stored); `STV3` split the leg counter
 /// out of the omen line and added the rat state line plus the per-piece gnaw
 /// token. Older versions fail safe as unsupported.
-const MAGIC: &str = "STV5";
+const MAGIC: &str = "STV6";
 
 /// Older headers this build still reads. Every difference is additive, so
 /// one grammar parses them all.
-const READABLE: [&str; 2] = [MAGIC, "STV4"];
+const READABLE: [&str; 3] = [MAGIC, "STV5", "STV4"];
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -220,6 +221,9 @@ pub(crate) fn serialize(sim: &Sim) -> String {
             }
             Loc::Stow { cabinet, slot } => {
                 let _ = writeln!(out, " stow {cabinet} {slot}");
+            }
+            Loc::Laid { x, y } => {
+                let _ = writeln!(out, " laid {x} {y}");
             }
         }
     }
@@ -604,24 +608,40 @@ fn parse_pieces(reader: &mut Reader<'_>) -> Result<(Vec<Piece>, u32), SaveError>
     }
 }
 
-/// Cross-piece stow validation, after the whole list is read (a cubby may
-/// reference a cabinet on a later line). Everything a stow line could lie
-/// about is checked here, so no later indexing or invariant trips: the
-/// host must be a cabinet in the hold, the cargo must be stowable, and no
-/// cubby holds two things.
+/// Cross-piece stow and dressing validation, after the whole list is
+/// read (a cubby may reference a cabinet on a later line). Everything
+/// those lines could lie about is checked here, so no later indexing or
+/// invariant trips: a stow's host must be a cabinet in the hold, the
+/// cargo stowable, no cubby doubled; laid dressings must not overlap
+/// one another.
 fn validate_stows(reader: &Reader<'_>, pieces: &[Piece]) -> Result<(), SaveError> {
     let mut seen = Vec::new();
+    let mut laid: Vec<Piece> = Vec::new();
     for piece in pieces {
-        let Loc::Stow { cabinet, slot } = piece.loc else {
-            continue;
-        };
-        let host_ok = pieces.iter().any(|host| {
-            host.id == cabinet && host.kind == Kind::Cabinet && matches!(host.loc, Loc::Hold { .. })
-        });
-        if !host_ok || !cargo::stowable(piece.kind) || seen.contains(&(cabinet, slot)) {
-            return Err(reader.err());
+        match piece.loc {
+            Loc::Stow { cabinet, slot } => {
+                let host_ok = pieces.iter().any(|host| {
+                    host.id == cabinet
+                        && host.kind == Kind::Cabinet
+                        && matches!(host.loc, Loc::Hold { .. })
+                });
+                if !host_ok || !cargo::stowable(piece.kind) || seen.contains(&(cabinet, slot)) {
+                    return Err(reader.err());
+                }
+                seen.push((cabinet, slot));
+            }
+            Loc::Laid { x, y } => {
+                // Re-run the dressing rules against the other dressings
+                // only: bounds, surface, and one-per-cell. Occupancy is
+                // deliberately absent from the slice — a rug pinned
+                // under a couch is a LEGAL state and saves as such.
+                if cargo::dressing_check(&laid, piece.id, piece.kind, x, y).is_err() {
+                    return Err(reader.err());
+                }
+                laid.push(*piece);
+            }
+            _ => {}
         }
-        seen.push((cabinet, slot));
     }
     Ok(())
 }
@@ -670,6 +690,18 @@ fn parse_loc<'a>(
             // The cabinet reference is checked in `validate_stows`, once
             // the whole piece list exists.
             Ok(Loc::Stow { cabinet, slot })
+        }
+        Some("laid") => {
+            let x: u8 = reader.token(tokens.next())?;
+            let y: u8 = reader.token(tokens.next())?;
+            let (w, h) = kind.cells();
+            if !kind.covering() || x + w > GRID_COLS || y + h > GRID_ROWS {
+                return Err(reader.err());
+            }
+            // Laid-laid overlap is checked in `validate_stows` with the
+            // whole list; occupancy overlap is a LEGAL state (a rug
+            // pinned under a couch saves and loads pinned).
+            Ok(Loc::Laid { x, y })
         }
         _ => Err(reader.err()),
     }
@@ -935,6 +967,8 @@ mod tests {
             (0, Kind::Cabinet, Loc::Hold { x, y }),
             (1, Kind::PerfumeVial, Loc::Stow { cabinet, slot: 0 }),
             (2, Kind::Fluff, Loc::Stow { cabinet, slot: 1 }),
+            (3, Kind::Rug, Loc::Laid { x: 2, y: 3 }),
+            (4, Kind::LuminousPaint, Loc::Laid { x: 5, y: 0 }),
         ] {
             sim.pieces.push(Piece {
                 id: cabinet + offset,
@@ -944,7 +978,7 @@ mod tests {
                 loc,
             });
         }
-        sim.next_piece += 3;
+        sim.next_piece += 5;
         let save = sim.save_string();
         (sim, save, cabinet, (x, y))
     }
@@ -952,7 +986,7 @@ mod tests {
     #[test]
     fn stowed_pieces_round_trip() {
         let (sim, save, cabinet, _) = furnished();
-        assert!(save.starts_with("STV5\n"), "the writer stamps STV5");
+        assert!(save.starts_with("STV6\n"), "the writer stamps STV6");
         let restored = Sim::from_save(&save).expect("furnished save parses");
         assert_eq!(restored.pieces, sim.pieces);
         assert!(
@@ -965,14 +999,16 @@ mod tests {
     }
 
     #[test]
-    fn a_console_era_header_still_reads() {
-        // STV5 added only the stow line; a save without one is a valid
-        // STV4 document, and the retired console's runs keep walking
-        // aboard.
+    fn older_headers_still_read() {
+        // Each version since STV4 added only a line form; a save without
+        // those lines is a valid older document, and the retired
+        // console's runs keep walking aboard.
         let plain = Sim::new(9).save_string();
-        let old = plain.replacen("STV5", "STV4", 1);
-        assert_ne!(old, plain);
-        assert!(Sim::from_save(&old).is_ok(), "STV4 must stay readable");
+        for older in ["STV5", "STV4"] {
+            let old = plain.replacen("STV6", older, 1);
+            assert_ne!(old, plain);
+            assert!(Sim::from_save(&old).is_ok(), "{older} must stay readable");
+        }
     }
 
     #[test]
@@ -1005,6 +1041,26 @@ mod tests {
             (
                 format!("piece {cabinet} 21 0 0 hold {x} {y}"),
                 format!("piece {cabinet} 21 0 0 give 0"),
+            ),
+            // A laid non-covering (the couch, index 19).
+            (
+                format!("piece {} 22 0 0 laid 2 3", cabinet + 3),
+                format!("piece {} 19 0 0 laid 2 3", cabinet + 3),
+            ),
+            // A rug up the wall.
+            (
+                format!("piece {} 22 0 0 laid 2 3", cabinet + 3),
+                format!("piece {} 22 0 0 laid 2 1", cabinet + 3),
+            ),
+            // Two dressings on one cell.
+            (
+                format!("piece {} 24 0 0 laid 5 0", cabinet + 4),
+                format!("piece {} 24 0 0 laid 3 3", cabinet + 4),
+            ),
+            // A coat off the grid entirely.
+            (
+                format!("piece {} 24 0 0 laid 5 0", cabinet + 4),
+                format!("piece {} 24 0 0 laid 9 9", cabinet + 4),
             ),
         ] {
             let mangled = save.replacen(&needle, &bad, 1);

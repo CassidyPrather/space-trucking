@@ -168,7 +168,7 @@ pub fn slot_at(slots: &[Rect; 4], p: Vec2) -> Option<u8> {
 #[must_use]
 pub fn piece_rect(pieces: &[Piece], piece: &Piece) -> Rect {
     match piece.loc {
-        Loc::Hold { x, y } => {
+        Loc::Hold { x, y } | Loc::Laid { x, y } => {
             let (w, h) = piece.kind.cells();
             let anchor = cell_rect(x, y);
             Rect::new(anchor.x, anchor.y, f32::from(w) * CELL, f32::from(h) * CELL)
@@ -202,11 +202,14 @@ pub fn cubby_rect(body: Rect, slot: u8) -> Rect {
     )
 }
 
-/// The piece under `p`, cubby contents first.
+/// The piece under `p`, cubby contents first and dressings last.
 ///
 /// A stowed piece's rect lives inside its cabinet's, so scanning stows
 /// before everything else is what lets a click reach into an open cubby
-/// instead of always grabbing the furniture around it.
+/// instead of always grabbing the furniture around it. Laid dressings
+/// scan last for the mirror reason: a rug underlies whatever stands on
+/// it, so the couch takes the click and only a bare stretch of rug
+/// answers for the rug.
 #[must_use]
 pub fn piece_at(pieces: &[Piece], p: Vec2) -> Option<&Piece> {
     let stowed = pieces
@@ -214,9 +217,13 @@ pub fn piece_at(pieces: &[Piece], p: Vec2) -> Option<&Piece> {
         .filter(|piece| matches!(piece.loc, Loc::Stow { .. }));
     let rest = pieces
         .iter()
-        .filter(|piece| !matches!(piece.loc, Loc::Stow { .. }));
+        .filter(|piece| !matches!(piece.loc, Loc::Stow { .. } | Loc::Laid { .. }));
+    let laid = pieces
+        .iter()
+        .filter(|piece| matches!(piece.loc, Loc::Laid { .. }));
     stowed
         .chain(rest)
+        .chain(laid)
         .find(|piece| piece_rect(pieces, piece).contains(p))
 }
 

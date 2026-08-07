@@ -55,26 +55,31 @@ pub struct Barter {
 /// seizes rather than pays. The five fixture columns are lore-directed:
 /// Venus buys tack, Earth rations light, Saturn treasures working
 /// fixtures, the Hermitage pays best for the couch. The cabinet column
-/// (last) follows the same lore: Saturn prizes working furniture, Earth
+/// column follows the same lore: Saturn prizes working furniture, Earth
 /// and the Hermitage are practical people, and even the Umbra Market
-/// pays fair for a box that keeps light in its place. The comet and
-/// `???` never open a barter, so their rows are placeholders kept valid
-/// for the invariants above.
+/// pays fair for a box that keeps light in its place. The covering
+/// columns (rug, enamel, luminous — last three): Venus buys tack and
+/// the Hermitage warmth, Mars is rust country for enamel, and the
+/// Umbra Market prices luminous paint at zero — light is a rival
+/// product, so it bottles glow as local produce and shelves it snuffed
+/// in blackout tins, exactly as it fences lamps. The comet and `???`
+/// never open a barter, so their rows are placeholders kept valid for
+/// the invariants above.
 // Kept tabular by hand: one row per station is how this table is tuned.
 #[rustfmt::skip]
 pub const VALUE: [[u8; KIND_COUNT]; POI_COUNT] = [
-    [0, 1, 2, 1, 3, 2, 3, 5, 4, 1, 4, 3, 5, 4, 2, 1, 5, 4, 4, 4, 6, 3], // Venus
-    [4, 3, 0, 2, 4, 1, 2, 3, 4, 1, 4, 2, 5, 2, 2, 1, 2, 2, 2, 3, 1, 4], // Earth
-    [2, 1, 4, 0, 1, 3, 2, 2, 4, 1, 4, 2, 5, 1, 2, 1, 2, 2, 3, 3, 2, 3], // Mars
-    [1, 2, 4, 3, 5, 0, 1, 2, 4, 1, 4, 2, 5, 1, 1, 1, 3, 2, 2, 3, 2, 2], // Jupiter
-    [2, 3, 3, 2, 4, 4, 0, 1, 4, 1, 4, 2, 5, 1, 1, 1, 2, 3, 2, 2, 3, 2], // Uranus
-    [3, 2, 4, 3, 3, 2, 1, 0, 4, 1, 4, 2, 5, 2, 1, 1, 2, 2, 3, 2, 3, 2], // Neptune
-    [2, 2, 2, 2, 2, 2, 2, 2, 0, 1, 0, 2, 3, 1, 0, 1, 1, 2, 1, 2, 1, 1], // Guild
-    [1, 3, 2, 6, 1, 0, 2, 1, 4, 1, 4, 1, 5, 1, 1, 1, 4, 4, 3, 5, 3, 5], // Saturn
-    [3, 2, 1, 1, 2, 0, 5, 4, 4, 3, 4, 3, 0, 2, 2, 1, 0, 0, 0, 3, 4, 3], // Umbra Market
-    [1, 1, 3, 1, 4, 1, 1, 2, 4, 2, 4, 2, 3, 3, 1, 1, 2, 3, 2, 6, 3, 4], // Hermitage
-    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2], // comet (no barter)
-    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 3, 2], // ??? (no barter)
+    [0, 1, 2, 1, 3, 2, 3, 5, 4, 1, 4, 3, 5, 4, 2, 1, 5, 4, 4, 4, 6, 3, 5, 3, 4], // Venus
+    [4, 3, 0, 2, 4, 1, 2, 3, 4, 1, 4, 2, 5, 2, 2, 1, 2, 2, 2, 3, 1, 4, 2, 3, 2], // Earth
+    [2, 1, 4, 0, 1, 3, 2, 2, 4, 1, 4, 2, 5, 1, 2, 1, 2, 2, 3, 3, 2, 3, 3, 4, 2], // Mars
+    [1, 2, 4, 3, 5, 0, 1, 2, 4, 1, 4, 2, 5, 1, 1, 1, 3, 2, 2, 3, 2, 2, 2, 2, 3], // Jupiter
+    [2, 3, 3, 2, 4, 4, 0, 1, 4, 1, 4, 2, 5, 1, 1, 1, 2, 3, 2, 2, 3, 2, 2, 2, 3], // Uranus
+    [3, 2, 4, 3, 3, 2, 1, 0, 4, 1, 4, 2, 5, 2, 1, 1, 2, 2, 3, 2, 3, 2, 3, 2, 3], // Neptune
+    [2, 2, 2, 2, 2, 2, 2, 2, 0, 1, 0, 2, 3, 1, 0, 1, 1, 2, 1, 2, 1, 1, 1, 2, 1], // Guild
+    [1, 3, 2, 6, 1, 0, 2, 1, 4, 1, 4, 1, 5, 1, 1, 1, 4, 4, 3, 5, 3, 5, 3, 4, 3], // Saturn
+    [3, 2, 1, 1, 2, 0, 5, 4, 4, 3, 4, 3, 0, 2, 2, 1, 0, 0, 0, 3, 4, 3, 3, 2, 0], // Umbra Market
+    [1, 1, 3, 1, 4, 1, 1, 2, 4, 2, 4, 2, 3, 3, 1, 1, 2, 3, 2, 6, 3, 4, 5, 3, 4], // Hermitage
+    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2], // comet (no barter)
+    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 3, 2, 2, 2, 3], // ??? (no barter)
 ];
 
 /// Ceiling for jittered per-visit values.
@@ -521,7 +526,7 @@ mod tests {
     #[test]
     fn wants_skip_zero_valued_kinds_and_break_ties_by_index() {
         let values = [
-            2, 4, 4, 0, 1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            2, 4, 4, 0, 1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
         assert_eq!(
             wants(&values),
@@ -634,6 +639,9 @@ mod tests {
             Kind::Couch,
             Kind::Painting,
             Kind::Cabinet,
+            Kind::Rug,
+            Kind::PaintTin,
+            Kind::LuminousPaint,
         ] {
             let asked = (0..POI_COUNT as PoiId).any(|station| {
                 (1..=300).any(|n| {

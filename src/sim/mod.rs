@@ -1015,19 +1015,30 @@ impl Sim {
                 docked
                     || matches!(
                         piece.loc,
-                        Loc::Hold { .. } | Loc::Flotsam { .. } | Loc::Stow { .. }
+                        Loc::Hold { .. }
+                            | Loc::Flotsam { .. }
+                            | Loc::Stow { .. }
+                            | Loc::Laid { .. }
                     )
             })
-            .map(|piece| (piece.id, piece.kind, piece.loc));
-        if let Some((id, kind, origin)) = grabbed {
+            .map(|piece| {
+                (
+                    piece.id,
+                    piece.kind,
+                    piece.loc,
+                    cargo::laid_pinned(&self.pieces, piece),
+                )
+            });
+        if let Some((id, kind, origin, pinned)) = grabbed {
             if self.held_by_crew(id) {
                 // Someone else got there first — this tick (first in
                 // player order wins) or an earlier one. Losing a grab race
                 // is not an error, so it makes no noise at all.
                 return;
             }
-            if kind == Kind::Cabinet && cargo::cabinet_occupied(&self.pieces, id) {
-                // Furniture full of goods refuses to move: empty it first.
+            if (kind == Kind::Cabinet && cargo::cabinet_occupied(&self.pieces, id)) || pinned {
+                // Furniture full of goods, or a dressing with cargo
+                // standing on it: it stays put until cleared.
                 self.last_violation = Some(Violation::Occupied);
                 self.cues.push(Cue::Reject { hard: true });
                 return;
@@ -1099,7 +1110,10 @@ impl Sim {
                 docked
                     || matches!(
                         piece.loc,
-                        Loc::Hold { .. } | Loc::Flotsam { .. } | Loc::Stow { .. }
+                        Loc::Hold { .. }
+                            | Loc::Flotsam { .. }
+                            | Loc::Stow { .. }
+                            | Loc::Laid { .. }
                     )
             })
             .copied()
@@ -1110,23 +1124,34 @@ impl Sim {
             // Someone is dragging it; a modifier press cannot yank it away.
             return true;
         }
-        if piece.kind == Kind::Cabinet && cargo::cabinet_occupied(&self.pieces, piece.id) {
-            // Same refusal as the grab: full furniture stays put.
+        if (piece.kind == Kind::Cabinet && cargo::cabinet_occupied(&self.pieces, piece.id))
+            || cargo::laid_pinned(&self.pieces, &piece)
+        {
+            // Same refusal as the grab: full furniture and pinned
+            // dressings stay put.
             self.last_violation = Some(Violation::Occupied);
             self.cues.push(Cue::Reject { hard: true });
             return true;
         }
         let target = match piece.loc {
-            Loc::Hold { .. } if docked => self.free_slot(Loc::GivePad { slot: 0 }, 4),
+            Loc::Hold { .. } | Loc::Laid { .. } if docked => {
+                self.free_slot(Loc::GivePad { slot: 0 }, 4)
+            }
             Loc::StationShelf { .. } if docked => self.free_slot(Loc::TakePad { slot: 0 }, 4),
             Loc::TakePad { .. } if docked => self.free_slot(Loc::StationShelf { slot: 0 }, 4),
             Loc::GivePad { .. }
             | Loc::ReceivedShelf { .. }
             | Loc::Flotsam { .. }
             | Loc::Stow { .. } => {
-                // Received goods, flotsam, and cubby contents all pop to
-                // the first legal hold cell.
-                first_fit(&self.pieces, piece.id, piece.kind).map(|(x, y)| Loc::Hold { x, y })
+                // Received goods, flotsam, and cubby contents all pop
+                // aboard: occupancy to the first legal hold cell,
+                // coverings to the first legal laid anchor.
+                if piece.kind.covering() {
+                    cargo::dress_fit(&self.pieces, piece.id, piece.kind)
+                        .map(|(x, y)| Loc::Laid { x, y })
+                } else {
+                    first_fit(&self.pieces, piece.id, piece.kind).map(|(x, y)| Loc::Hold { x, y })
+                }
             }
             _ => None,
         };
@@ -1157,7 +1182,7 @@ impl Sim {
                 Loc::Flotsam { .. } => Loc::Flotsam { slot },
                 // Not slot rows: passed through untouched (and never
                 // actually asked for — see the call sites).
-                Loc::Hold { .. } | Loc::Stow { .. } => proto,
+                Loc::Hold { .. } | Loc::Stow { .. } | Loc::Laid { .. } => proto,
             })
             .find(|&loc| self.slot_free(loc, u32::MAX))
     }
@@ -1272,6 +1297,9 @@ impl Sim {
         if !open_casino
             || !layout::ENCOUNTER_BADGE.contains(p)
             || !player_owned(self.pieces[index].loc)
+            // The house does not take carpets or paint: a losing wager
+            // transmutes in place, and a chip cannot legally stay laid.
+            || self.pieces[index].kind.covering()
         {
             return false;
         }
@@ -1350,6 +1378,14 @@ impl Sim {
                         },
                     );
                 }
+            }
+            // Coverings lay into the room instead of occupying it: the
+            // dressing layer's own check, same violation ladder.
+            if piece.kind.covering() {
+                return match cargo::dressing_check(&self.pieces, piece.id, piece.kind, x, y) {
+                    Ok(()) => Ok(Loc::Laid { x, y }),
+                    Err(violation) => Err(Some(violation)),
+                };
             }
             return match placement_check(&self.pieces, piece.id, piece.kind, x, y) {
                 Ok(()) => Ok(Loc::Hold { x, y }),
@@ -1626,8 +1662,12 @@ impl Sim {
             .pieces
             .iter()
             .any(|piece| matches!(piece.loc, Loc::Flotsam { .. }));
-        self.pieces
-            .retain(|piece| matches!(piece.loc, Loc::Hold { .. } | Loc::Stow { .. }));
+        self.pieces.retain(|piece| {
+            matches!(
+                piece.loc,
+                Loc::Hold { .. } | Loc::Stow { .. } | Loc::Laid { .. }
+            )
+        });
         self.barter = None;
         self.legs += 1;
         let suspicious = self.suspicious_aboard();
@@ -3096,6 +3136,16 @@ mod tests {
             let (x, y) = first_fit(&sim.pieces, u32::MAX, kind).expect("room for small goods");
             stock(&mut sim, kind, Loc::Hold { x, y });
         }
+        // The dressing layer runs under the monkey too: a laid rug to
+        // pin/peel/gnaw and a boxed glow tin to unstow and lay.
+        let (rx, ry) =
+            cargo::dress_fit(&sim.pieces, u32::MAX, Kind::Rug).expect("deck room for a rug");
+        stock(&mut sim, Kind::Rug, Loc::Laid { x: rx, y: ry });
+        stock(
+            &mut sim,
+            Kind::LuminousPaint,
+            Loc::Stow { cabinet, slot: 3 },
+        );
         let mut rng = fastrand::Rng::with_seed(0xBEE5);
         let owned = |sim: &Sim| {
             sim.pieces()
@@ -3213,6 +3263,30 @@ mod tests {
                 );
                 let sharers = sim.pieces().iter().filter(|p| p.loc == piece.loc).count();
                 assert_eq!(sharers, 1, "frame {frame}: two pieces in one cubby");
+            }
+            for piece in sim.pieces() {
+                let Loc::Laid { x, y } = piece.loc else {
+                    continue;
+                };
+                assert!(
+                    piece.kind.covering(),
+                    "frame {frame}: non-covering {:?} in the dressing layer",
+                    piece.kind
+                );
+                // Re-run the dressing rules against the other dressings:
+                // bounds, surface, one-per-cell. Occupancy overlap is
+                // the legal pinned state, so it stays out of the slice.
+                let others: Vec<Piece> = sim
+                    .pieces()
+                    .iter()
+                    .filter(|p| p.id != piece.id && matches!(p.loc, Loc::Laid { .. }))
+                    .copied()
+                    .collect();
+                assert_eq!(
+                    cargo::dressing_check(&others, piece.id, piece.kind, x, y),
+                    Ok(()),
+                    "frame {frame}: dressing invariant broken at ({x}, {y})"
+                );
             }
             if !stowed_ever {
                 stowed_ever = sim
@@ -3372,6 +3446,96 @@ mod tests {
 
     fn loc_of_cabinet(sim: &Sim, id: u32) -> Loc {
         sim.pieces().iter().find(|p| p.id == id).unwrap().loc
+    }
+
+    /// The dressing layer's whole interaction loop: lay a rug off the
+    /// received shelf, stand a couch on it, get pinned, clear the couch,
+    /// peel the rug — and the coat's glow reads through `lit_adjacent`.
+    #[test]
+    fn dressings_lay_pin_and_peel() {
+        let mut sim = cleared(1);
+        let rug = stock(&mut sim, Kind::Rug, Loc::ReceivedShelf { slot: 0 });
+        let couch = stock(&mut sim, Kind::Couch, Loc::Hold { x: 4, y: 3 });
+        let loc_of = |sim: &Sim, id: u32| sim.pieces().iter().find(|p| p.id == id).unwrap().loc;
+
+        // Drag the rolled rug onto the deck: it lays.
+        let from = rect_center(layout::RECEIVED_SLOTS[0]);
+        drag(&mut sim, from, cell_center(0, 3));
+        assert_eq!(loc_of(&sim, rug), Loc::Laid { x: 0, y: 3 });
+
+        // A couch stands on the laid rug without complaint...
+        drag(&mut sim, cell_center(4, 3), cell_center(0, 3));
+        assert_eq!(loc_of(&sim, couch), Loc::Hold { x: 0, y: 3 });
+
+        // ...and now the rug is pinned: the exposed half refuses the
+        // grab by name.
+        sim.advance(0.0, &press_at(cell_center(1, 3).x, cell_center(1, 3).y));
+        assert_eq!(
+            sim.held(0).map(|h| h.piece),
+            Some(couch),
+            "couch takes the click"
+        );
+        sim.advance(0.0, &release_at(cell_center(1, 3).x, cell_center(1, 3).y));
+        // Park the couch off the rug, then pin check via quick-move on
+        // a fresh half-pinning couch position.
+        drag(&mut sim, cell_center(1, 3), cell_center(4, 3));
+        drag(&mut sim, cell_center(4, 3), cell_center(1, 3));
+        // Couch at (1,3) covers rug cell (1,3): rug pinned, cell (0,3)
+        // exposed.
+        sim.advance(0.0, &press_at(cell_center(0, 3).x, cell_center(0, 3).y));
+        assert_eq!(sim.held(0), None, "a pinned rug must not lift");
+        assert_eq!(sim.last_violation(), Some(Violation::Occupied));
+        sim.advance(0.0, &release_at(cell_center(0, 3).x, cell_center(0, 3).y));
+
+        // Clear the couch; the rug peels like any cargo.
+        drag(&mut sim, cell_center(1, 3), cell_center(3, 3));
+        drag(&mut sim, cell_center(0, 3), cell_center(0, 3));
+        assert_eq!(
+            loc_of(&sim, rug),
+            Loc::Laid { x: 0, y: 3 },
+            "re-laid in place"
+        );
+
+        // A luminous coat lights the neighbouring cells the moment it
+        // lays; enamel does not.
+        let glow = stock(
+            &mut sim,
+            Kind::LuminousPaint,
+            Loc::ReceivedShelf { slot: 1 },
+        );
+        drag(
+            &mut sim,
+            rect_center(layout::RECEIVED_SLOTS[1]),
+            cell_center(2, 0),
+        );
+        assert_eq!(loc_of(&sim, glow), Loc::Laid { x: 2, y: 0 });
+        assert!(cargo::lit_adjacent(sim.pieces(), 1, 0));
+        assert!(
+            !cargo::lit_adjacent(sim.pieces(), 2, 0),
+            "beside, never inside"
+        );
+    }
+
+    /// Laid dressings ride through departure with the hold and the
+    /// cubbies.
+    #[test]
+    fn dressings_travel_well() {
+        let mut sim = cleared(3);
+        stock(&mut sim, Kind::Rug, Loc::Laid { x: 0, y: 3 });
+        stock(&mut sim, Kind::PaintTin, Loc::Laid { x: 3, y: 1 });
+        let saturn = sim.poi_pos(SATURN);
+        sim.advance(0.0, &press_at(saturn.x, saturn.y));
+        let lever = rect_center(layout::LAUNCH_LEVER);
+        sim.advance(0.0, &press_at(lever.x, lever.y));
+        assert!(matches!(sim.ship().state, ShipState::Traveling { .. }));
+        assert_eq!(
+            sim.pieces()
+                .iter()
+                .filter(|p| matches!(p.loc, Loc::Laid { .. }))
+                .count(),
+            2,
+            "departure must not sweep the dressing layer"
+        );
     }
 
     /// The body rect of the piece with `id`.

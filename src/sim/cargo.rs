@@ -56,10 +56,21 @@ pub enum Kind {
     /// of cargo that *provides* berths (see `Loc::Stow`). Small goods
     /// ride inside — dry, dark, and beyond the reach of rats.
     Cabinet,
+    /// Somebody's heirloom, woven warm and gnawably soft. Lays on the
+    /// deck (see `Loc::Laid`) and cargo stands on it without complaint.
+    Rug,
+    /// Ship enamel in a battered tin, color by the tin's roll. Coats
+    /// one cell of the room; scrapes off mostly usable.
+    PaintTin,
+    /// Paint that glows — strained, the label implies, from something
+    /// that should not be strained. A laid coat lights its neighbours
+    /// like a weak lamp; the Umbra Market sells it snuffed, in
+    /// blackout tins.
+    LuminousPaint,
 }
 
 /// Number of cargo kinds.
-pub const KIND_COUNT: usize = 22;
+pub const KIND_COUNT: usize = 25;
 
 /// Cosmetic variant rolls per kind, for the renderer to vary sprites with.
 /// The persistent run RNG is spent on these and nothing else.
@@ -78,6 +89,10 @@ pub enum Tag {
     Suspicious,
     /// A fixture: its footprint must touch the named room surface.
     Affix(Mount),
+    /// A dressing: aboard, it lays *into* the room (`Loc::Laid`)
+    /// instead of occupying cells. `Some(mount)` restricts which
+    /// surface it covers; `None` coats anywhere.
+    Covering(Option<Mount>),
 }
 
 /// The room surface a fixture mounts to. The hold grid's edges are the
@@ -116,6 +131,9 @@ impl Kind {
         Self::Couch,
         Self::Painting,
         Self::Cabinet,
+        Self::Rug,
+        Self::PaintTin,
+        Self::LuminousPaint,
     ];
 
     /// Footprint in hold cells, `(w, h)`.
@@ -132,10 +150,14 @@ impl Kind {
             | Self::TransitChit
             | Self::CasinoChip
             | Self::CeilingLamp
-            | Self::WallLamp => (1, 1),
+            | Self::WallLamp
+            | Self::PaintTin
+            | Self::LuminousPaint => (1, 1),
             Self::GildedIdol | Self::BrinePearls | Self::FloorLamp | Self::Cabinet => (1, 2),
             Self::RationBricks | Self::SuspiciousCrate | Self::VeryMysteriousCrate => (2, 2),
-            Self::ScrapAlloy | Self::GasCanister | Self::Couch | Self::Painting => (2, 1),
+            Self::ScrapAlloy | Self::GasCanister | Self::Couch | Self::Painting | Self::Rug => {
+                (2, 1)
+            }
         }
     }
 
@@ -150,8 +172,17 @@ impl Kind {
             Self::CeilingLamp => Some(Tag::Affix(Mount::Ceiling)),
             Self::FloorLamp | Self::Couch | Self::Cabinet => Some(Tag::Affix(Mount::Floor)),
             Self::WallLamp | Self::Painting => Some(Tag::Affix(Mount::Wall)),
+            Self::Rug => Some(Tag::Covering(Some(Mount::Floor))),
+            Self::PaintTin | Self::LuminousPaint => Some(Tag::Covering(None)),
             _ => None,
         }
+    }
+
+    /// Whether this kind is a dressing — laid into the room rather than
+    /// stowed on it. Coverings have no hold-occupancy form aboard.
+    #[must_use]
+    pub const fn covering(self) -> bool {
+        matches!(self.tag(), Some(Tag::Covering(_)))
     }
 
     /// Stable column index into the barter value table.
@@ -182,6 +213,10 @@ pub enum Loc {
     /// piece does: an occupied cabinet cannot be lifted, so the cubby can
     /// never find itself without a home.
     Stow { cabinet: u32, slot: u8 },
+    /// Laid into the room at the anchor cell: the dressing layer.
+    /// Coexists with occupancy on the same cells (a couch stands on a
+    /// laid rug); no two dressings share a cell ([`dressing_check`]).
+    Laid { x: u8, y: u8 },
 }
 
 /// Cubbies per cabinet: a 2×2 rack of them behind the doors.
@@ -233,7 +268,11 @@ pub fn free_cubby(pieces: &[Piece], cabinet: u32) -> Option<u8> {
 pub const fn player_owned(loc: Loc) -> bool {
     matches!(
         loc,
-        Loc::Hold { .. } | Loc::GivePad { .. } | Loc::ReceivedShelf { .. } | Loc::Stow { .. }
+        Loc::Hold { .. }
+            | Loc::GivePad { .. }
+            | Loc::ReceivedShelf { .. }
+            | Loc::Stow { .. }
+            | Loc::Laid { .. }
     )
 }
 
@@ -362,9 +401,13 @@ const fn overlaps(a: (u8, u8, u8, u8), b: (u8, u8, u8, u8)) -> bool {
 ///
 /// Shared by the shift-click quick-stow, the comet harvest, and the
 /// ??? exchange — "first legal spot, even if that is a bad idea" is the
-/// contract, so all three agree on what "first" means.
+/// contract, so all three agree on what "first" means. Coverings have
+/// no hold berth at all ([`dress_fit`] is their scan).
 #[must_use]
 pub fn first_fit(pieces: &[Piece], id: u32, kind: Kind) -> Option<(u8, u8)> {
+    if kind.covering() {
+        return None;
+    }
     for y in 0..GRID_ROWS {
         for x in 0..GRID_COLS {
             if placement_legal(pieces, id, kind, x, y) {
@@ -373,6 +416,93 @@ pub fn first_fit(pieces: &[Piece], id: u32, kind: Kind) -> Option<(u8, u8)> {
         }
     }
     None
+}
+
+/// Whether covering `kind` may be laid at anchor `(x, y)`.
+///
+/// The dressing layer's own [`placement_check`], reusing the violation
+/// ladder whole and consulting every other piece. Checks run in a fixed
+/// order (bounds, surface, then per-piece dressing overlap /
+/// pinned-under-occupancy) so the reported violation is deterministic.
+pub fn dressing_check(
+    pieces: &[Piece],
+    id: u32,
+    kind: Kind,
+    x: u8,
+    y: u8,
+) -> Result<(), Violation> {
+    debug_assert!(kind.covering(), "dressing_check is for coverings only");
+    let (w, h) = kind.cells();
+    if x + w > GRID_COLS || y + h > GRID_ROWS {
+        return Err(Violation::Bounds);
+    }
+    if let Some(Tag::Covering(Some(mount))) = kind.tag() {
+        // A restricted covering must lie WHOLLY on its surface — a rug
+        // half up the wall is not a rug anyone respects. Wholly means
+        // every covered cell, not merely a touching edge (contrast the
+        // affix rule, which asks only for contact).
+        let whole = match mount {
+            Mount::Floor => h == 1 && y == GRID_ROWS - 1,
+            Mount::Ceiling => h == 1 && y == 0,
+            Mount::Wall => w == 1 && (x == 0 || x == GRID_COLS - 1),
+        };
+        if !whole {
+            return Err(Violation::Affix(mount));
+        }
+    }
+    for other in pieces {
+        if other.id == id {
+            continue;
+        }
+        let (ow, oh) = other.kind.cells();
+        match other.loc {
+            // One dressing per cell.
+            Loc::Laid { x: ox, y: oy } if overlaps((x, y, w, h), (ox, oy, ow, oh)) => {
+                return Err(Violation::Overlap);
+            }
+            // No sliding a dressing under standing cargo: the pinned
+            // rule, symmetric with the lift refusal in `laid_pinned`.
+            Loc::Hold { x: ox, y: oy } if overlaps((x, y, w, h), (ox, oy, ow, oh)) => {
+                return Err(Violation::Occupied);
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+/// The first anchor (row-major) where covering `kind` may be laid — the
+/// dressing layer's [`first_fit`], for quick-moves off the pads.
+#[must_use]
+pub fn dress_fit(pieces: &[Piece], id: u32, kind: Kind) -> Option<(u8, u8)> {
+    for y in 0..GRID_ROWS {
+        for x in 0..GRID_COLS {
+            if dressing_check(pieces, id, kind, x, y).is_ok() {
+                return Some((x, y));
+            }
+        }
+    }
+    None
+}
+
+/// Whether occupancy cargo stands on `piece`'s laid footprint.
+///
+/// A pinned dressing refuses to lift (`Violation::Occupied`) — move the
+/// couch, then roll the rug — mirroring [`dressing_check`]'s refusal to
+/// lay beneath one.
+#[must_use]
+pub fn laid_pinned(pieces: &[Piece], piece: &Piece) -> bool {
+    let Loc::Laid { x, y } = piece.loc else {
+        return false;
+    };
+    let (w, h) = piece.kind.cells();
+    pieces.iter().any(|other| {
+        let Loc::Hold { x: ox, y: oy } = other.loc else {
+            return false;
+        };
+        let (ow, oh) = other.kind.cells();
+        other.id != piece.id && overlaps((x, y, w, h), (ox, oy, ow, oh))
+    })
 }
 
 /// Whether two footprints share an orthogonal edge (corners do not count).
@@ -402,17 +532,26 @@ pub const fn lamp_lit(piece: &Piece) -> bool {
     lamp(piece.kind) && matches!(piece.loc, Loc::Hold { .. })
 }
 
-/// Whether hold cell `(x, y)` sits in lamplight: orthogonally adjacent to
-/// — never inside — some lit lamp's footprint, by the same [`adjacent`]
-/// rule the volatile check uses, so corners do not count.
+/// Whether hold cell `(x, y)` sits in light.
+///
+/// Lit means orthogonally adjacent to — never inside — some lit lamp's
+/// footprint OR some laid luminous coat's, by the same [`adjacent`]
+/// rule the volatile check uses, so corners do not count. Everything
+/// light touches — the rat's fear, the seedlings' bloom, the hold
+/// painting's spotlight — reads through
+/// this one predicate; the pad-side well-lit-art bonus deliberately
+/// does not (a coat is ambiance, not gallery lighting — see
+/// `barter::well_lit`).
 #[must_use]
 pub fn lit_adjacent(pieces: &[Piece], x: u8, y: u8) -> bool {
     pieces.iter().any(|piece| {
-        let Loc::Hold { x: lx, y: ly } = piece.loc else {
-            return false;
+        let (source, lx, ly) = match piece.loc {
+            Loc::Hold { x, y } => (lamp_lit(piece), x, y),
+            Loc::Laid { x, y } => (piece.kind == Kind::LuminousPaint, x, y),
+            _ => return false,
         };
         let (w, h) = piece.kind.cells();
-        lamp_lit(piece) && adjacent((x, y, 1, 1), (lx, ly, w, h))
+        source && adjacent((x, y, 1, 1), (lx, ly, w, h))
     })
 }
 
@@ -659,6 +798,102 @@ mod tests {
         // A different cabinet's cubbies are its own business.
         assert!(!cabinet_occupied(&pieces, 8));
         assert_eq!(free_cubby(&pieces, 8), Some(0));
+    }
+
+    #[test]
+    fn dressing_rules_cover_surface_overlap_and_pinning() {
+        // A rug lies wholly on the floor row and nowhere else.
+        assert_eq!(dressing_check(&[], 9, Kind::Rug, 2, 3), Ok(()));
+        assert_eq!(
+            dressing_check(&[], 9, Kind::Rug, 2, 2),
+            Err(Violation::Affix(Mount::Floor))
+        );
+        assert_eq!(
+            dressing_check(&[], 9, Kind::Rug, 5, 3),
+            Err(Violation::Bounds)
+        );
+        // Paint coats any cell.
+        assert_eq!(dressing_check(&[], 9, Kind::PaintTin, 0, 0), Ok(()));
+        assert_eq!(dressing_check(&[], 9, Kind::LuminousPaint, 3, 3), Ok(()));
+        // One dressing per cell: a coat may not land on a laid rug.
+        let mut pieces = vec![Piece {
+            id: 0,
+            kind: Kind::Rug,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Laid { x: 2, y: 3 },
+        }];
+        assert_eq!(
+            dressing_check(&pieces, 9, Kind::PaintTin, 3, 3),
+            Err(Violation::Overlap)
+        );
+        assert_eq!(dressing_check(&pieces, 9, Kind::PaintTin, 1, 3), Ok(()));
+        // No sliding a dressing under standing cargo...
+        pieces.push(Piece {
+            id: 1,
+            kind: Kind::Couch,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Hold { x: 0, y: 3 },
+        });
+        assert_eq!(
+            dressing_check(&pieces, 9, Kind::PaintTin, 1, 3),
+            Err(Violation::Occupied)
+        );
+        // ...and none lifts from under it: lay a rug, stand a couch on
+        // half of it, and the rug is pinned.
+        let rug = Piece {
+            id: 2,
+            kind: Kind::Rug,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Laid { x: 0, y: 3 },
+        };
+        let couch = Piece {
+            id: 3,
+            kind: Kind::Couch,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Hold { x: 1, y: 3 },
+        };
+        assert!(laid_pinned(&[rug, couch], &rug));
+        assert!(!laid_pinned(&[rug], &rug));
+        // Coverings have no hold berth for first_fit to find, and the
+        // dressing scan skips both the laid rug and the couch's cell.
+        assert_eq!(first_fit(&[], 9, Kind::Rug), None);
+        assert_eq!(dress_fit(&[rug, couch], 9, Kind::Rug), Some((3, 3)));
+    }
+
+    #[test]
+    fn luminous_coats_light_their_neighbours() {
+        let coat = Piece {
+            id: 0,
+            kind: Kind::LuminousPaint,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Laid { x: 2, y: 1 },
+        };
+        assert!(lit_adjacent(&[coat], 1, 1));
+        assert!(lit_adjacent(&[coat], 2, 0));
+        assert!(!lit_adjacent(&[coat], 2, 1), "never inside, only beside");
+        assert!(!lit_adjacent(&[coat], 1, 0), "corners do not count");
+        // Plain enamel sheds no light, and an unlaid tin is just a tin.
+        let tin = Piece {
+            id: 1,
+            kind: Kind::PaintTin,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Laid { x: 4, y: 1 },
+        };
+        assert!(!lit_adjacent(&[tin], 3, 1));
+        let canned = Piece {
+            id: 2,
+            kind: Kind::LuminousPaint,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::StationShelf { slot: 0 },
+        };
+        assert!(!lit_adjacent(&[canned], 1, 1));
     }
 
     #[test]

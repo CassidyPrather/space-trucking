@@ -373,17 +373,19 @@ fn couch_step(
     Some(pool[(h % pool.len() as u64) as usize])
 }
 
-/// THE nibble target rule: the stowed piece nearest the rat's cell by
-/// Manhattan distance to the closest cell of its footprint (zero when the
-/// rat perches on it), ties broken by the lower piece id. Returns an index
-/// into `pieces`; `None` when nothing is stowed at all (a bare hold at a
-/// dock), which skips the nibble.
+/// THE nibble target rule: the stowed or laid piece nearest the rat's
+/// cell by Manhattan distance to the closest cell of its footprint (zero
+/// when the rat perches on it), ties broken by the lower piece id. Laid
+/// dressings count — a rug is famously gnawable — but cubby cargo never
+/// does (`Loc::Stow` has no cell here at all). Returns an index into
+/// `pieces`; `None` when nothing is reachable (a bare hold at a dock),
+/// which skips the nibble.
 fn nearest_hold_piece(pieces: &[Piece], (cx, cy): (u8, u8)) -> Option<usize> {
     pieces
         .iter()
         .enumerate()
         .filter_map(|(index, piece)| {
-            let Loc::Hold { x, y } = piece.loc else {
+            let (Loc::Hold { x, y } | Loc::Laid { x, y }) = piece.loc else {
                 return None;
             };
             let (w, h) = piece.kind.cells();

@@ -160,6 +160,24 @@ pub const fn kind_color(kind: Kind) -> Color {
         Kind::Painting => hex(0x8f76c0),
         // Oiled oak and brass fittings: furniture that means business.
         Kind::Cabinet => hex(0x8a6f4d),
+        // Dressing hues, canon: madder weave, battered tin, and the
+        // pale luminous coat (docs/BAY.md's dressing layer).
+        Kind::Rug => hex(0x9c4a3a),
+        Kind::PaintTin => hex(0x7a7d82),
+        Kind::LuminousPaint => hex(0xd8f0c0),
+    }
+}
+
+/// Ship enamel by the paint tin's variant roll, canon: oxide red, teal,
+/// mustard, slate blue — the muted register, so a coated cell reads as
+/// paintwork on a working hull rather than a highlight.
+#[must_use]
+pub const fn enamel_color(variant: u8) -> Color {
+    match variant % 4 {
+        0 => hex(0x8c3f2e),
+        1 => hex(0x2e6b62),
+        2 => hex(0xb08a3c),
+        _ => hex(0x44586e),
     }
 }
 

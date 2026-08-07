@@ -37,7 +37,11 @@ piece and click to pick it up, walk it over, click a berth to set it
 down — clicking at nothing (or right-clicking) sends it back where it
 came from, and `Shift`+click quick-moves without carrying. Drop a small
 item onto a cabinet and it takes a cubby; a loaded cabinet won't budge
-until it's emptied. The launch and accept levers are pulls: grab, drag
+until it's emptied. Rugs and paint *lay into* the room instead of
+occupying it: a rug goes down on the deck (and cargo stands on it),
+paint coats a wall or floor cell, and neither comes back up while
+something stands on top. Luminous paint really glows — rats keep clear
+of it. The launch and accept levers are pulls: grab, drag
 to the end of the track, and the throw fires at the detent. `Space`
 pauses, `M` mutes, `R` starts a new run (`F` warps, in dev mode).
 

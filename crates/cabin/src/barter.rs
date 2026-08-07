@@ -1118,16 +1118,20 @@ fn latch(time: Res<Time>, shell: Res<Shell>, mut fx: ResMut<BarterFx>) {
             _ => {}
         }
     }
-    let down = shell
-        .bridge
-        .sim
-        .barter()
-        .is_some_and(|barter| barter.patience == 0);
+    // The broker's hand hovers over the shutter cord: the corrugated
+    // panel creeps a little with every spent pull, then drops fully at
+    // zero. State-reading presentation — patience itself is the sim's.
+    let target = match shell.bridge.sim.barter().map(|barter| barter.patience) {
+        Some(0) => 1.0,
+        Some(1) => 0.16,
+        Some(2) => 0.05,
+        _ => 0.0,
+    };
     let step = dt / SHUTTER_LEN;
-    fx.shutter = if down {
-        (fx.shutter + step).min(1.0)
+    fx.shutter = if fx.shutter < target {
+        (fx.shutter + step).min(target)
     } else {
-        (fx.shutter - step).max(0.0)
+        (fx.shutter - step).max(target)
     };
 }
 
@@ -1192,7 +1196,17 @@ fn update_needle(
     } else {
         0.0
     };
-    let angle = aim + wander;
+    // Near break-even on a clear reading, the needle carries a faint
+    // anticipatory tremor — zero-mean and far under a segment's width,
+    // so the reading stays the sim's verbatim; it just looks like the
+    // instrument is holding its breath.
+    let poise = ((0.12 - (dial_value(sim) - 1.0).abs()) / 0.12).clamp(0.0, 1.0);
+    let tremor = if fog <= 0.0 && sim.barter().is_some() {
+        (time.elapsed_secs() * 31.0).sin() * 0.009 * poise
+    } else {
+        0.0
+    };
+    let angle = aim + wander + tremor;
     for (mut transform, handle) in &mut needles {
         transform.translation = dial_dir(frame.su, angle, NEEDLE_MID_R, Z_NEEDLE);
         transform.rotation = Quat::from_rotation_z(-angle);
@@ -1234,38 +1248,58 @@ fn update_badge(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let Some(frame) = frame else { return };
-    let color = shell
-        .bridge
-        .sim
-        .barter()
-        .map_or(palette::GLASS, |barter| palette::poi_color(barter.station));
+    let barter = shell.bridge.sim.barter();
+    let color = barter.map_or(palette::GLASS, |barter| palette::poi_color(barter.station));
+    // A viable trade warms the broker's sigil and leans it a hair off
+    // the face — the counterparty perking up, in enamel.
+    let ready = barter.is_some_and(|barter| barter.ready);
     let shake = (fx.wobble / WOBBLE_LEN).clamp(0.0, 1.0);
     let t = time.elapsed_secs();
     for (mut transform, badge, handle) in &mut badges {
         if let Some(mut material) = materials.get_mut(&handle.0) {
             material.base_color = color;
+            material.emissive = if ready {
+                color.to_linear() * glow::breathe(t, 2.8, 0.0).mul_add(0.35, 0.85)
+            } else {
+                LinearRgba::BLACK
+            };
         }
+        let lean = if ready {
+            Vec3::Z * (1.1 * frame.su)
+        } else {
+            Vec3::ZERO
+        };
         let offset = if shake > 0.0 {
             Vec3::new((t * 67.0).sin() * 2.2, -(t * 51.0).sin() * 1.6, 0.0) * (shake * frame.su)
         } else {
             Vec3::ZERO
         };
-        transform.translation = badge.home + offset;
+        transform.translation = badge.home + lean + offset;
     }
 }
 
 /// Patience lamps: amber for pulls the station will still tolerate; the
 /// dead state reads as red glass, not just darkness.
 fn update_patience(
+    time: Res<Time>,
     shell: Res<Shell>,
     lamps: Query<(&PatienceLamp, &MeshMaterial3d<StandardMaterial>)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let patience = shell.bridge.sim.barter().map(|barter| barter.patience);
+    // The last tolerated pull gets a heartbeat: the lone lamp swells
+    // gently so "one refusal from shuttered" reads at a glance, in
+    // brightness, without a new signal color.
+    let pulse = glow::breathe(time.elapsed_secs(), 4.6, 0.0).mul_add(0.30, 0.62);
     for (lamp, handle) in &lamps {
         if let Some(mut material) = materials.get_mut(&handle.0) {
             match patience {
                 Some(0) => glow::set_lamp(&mut material, palette::LAMP_NO, 0.15),
+                Some(1) => glow::set_lamp(
+                    &mut material,
+                    palette::AMBER,
+                    if lamp.0 == 0 { pulse } else { 0.0 },
+                ),
                 Some(left) => glow::set_lamp(
                     &mut material,
                     palette::AMBER,

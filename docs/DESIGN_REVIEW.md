@@ -83,10 +83,12 @@ changing; remove a line only by shipping it or striking it in review.
 - Barter redesign: playtests call the trade minigame and economy
   unengaging; both are expected to be redesigned until click-y, so no
   deep investment lands on the counter meanwhile (the desk-scale
-  "broker's diorama" conceit is a placeholder, per BAY.md)
-- Bay coverings (rugs, wallpaper, paint): the owner's cargo direction
-  beyond furniture — a per-cell dressing layer parallel to occupancy,
-  sketched in BAY.md, deliberately not built this slice
+  "broker's diorama" conceit is a placeholder, per BAY.md; the
+  counter's tactile temperament pass — shutter creep, badge warmth,
+  recoil — is presentation-only and survives any redesign)
+- Wallpaper and larger coverings: rugs and paints shipped as the
+  dressing layer (BAY.md); wallpaper is the same shape with a bigger
+  footprint, waiting on a reason
 - Additional star systems
 - More events (mimics, ad bots, hull breaches, secret color-code objectives)
 - Rat-gnaw repair: DESIGN.md's "requiring repair" reading is deliberately

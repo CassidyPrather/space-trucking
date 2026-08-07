@@ -20,6 +20,12 @@
 //! shared `canvas`, a couch under the rat settles it into a nap pose, and
 //! the cabinet is furniture that stores: an open-fronted wardrobe whose
 //! 2×2 cubby rack renders its `Loc::Stow` cargo in miniature.
+//!
+//! The dressing layer (`docs/BAY.md`) adds a fourth regime: a covering
+//! rig owns two bodies — laid flat into the bay surface versus rolled or
+//! canned everywhere else — and the sim's berth class picks which one
+//! shows, with luminous coats waking and dimming exactly as lamp glass
+//! does.
 
 use std::collections::HashMap;
 use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI, TAU};
@@ -102,6 +108,33 @@ const LAMP_RANGE: f32 = 1.9;
 /// well inside the half-second law.
 const LAMP_WAKE: f32 = 0.3;
 
+/// How far a laid covering sits proud of its bay surface, metres: over
+/// the socket plates (which top out ~0.0045 off the quad), still well
+/// under anything standing on the same cells.
+const LAID_LIFT: f32 = 0.006;
+
+/// A laid rug's pile, metres — the one covering with real body; the
+/// paints are coats, millimetres of enamel.
+const RUG_THICK: f32 = 0.012;
+
+/// The glow overlays' lift off a bay surface, metres: hints, the
+/// violation frame, and the glyphs all ride above the dressing layer's
+/// thickest covering (a laid rug's pile), so a refusal over a rug still
+/// reads instead of burning underneath it.
+const OVERLAY_LIFT: f32 = 0.020;
+
+/// A laid luminous coat's honest brightness: a tinge on the neighbours
+/// the sim already counts lit, an order under [`LAMP_LUMENS`] — ambiance,
+/// not gallery lighting; bloom does the halo.
+const COAT_LUMENS: f32 = 6_000.0;
+
+/// The coat light's reach, metres: about one bay cell.
+const COAT_RANGE: f32 = 1.2;
+
+/// The coat quad's emissive ceiling as a `glow::set_lamp` level: paint
+/// that glows, never a lamp pretending to be flat.
+const COAT_GLOW: f32 = 0.45;
+
 /// The painting's little canvas in sim units: 24×16 texels at the
 /// shared rasterizer's own density.
 const ART_W: f32 = 48.0;
@@ -137,6 +170,7 @@ impl Plugin for PiecesPlugin {
                     latch_cues,
                     sync_pieces,
                     sync_fixtures,
+                    sync_dressings,
                     carry_held,
                     placement_hints,
                     invite_glows,
@@ -313,6 +347,31 @@ struct Blossom {
     piece: u32,
 }
 
+/// One of a covering rig's two bodies: the laid coat or rug versus the
+/// rolled/canned shelf form. [`sync_dressings`] shows exactly one, by
+/// the sim's berth class — laid only while the piece lies `Loc::Laid`
+/// with no hand on it; a carried covering rides packed, roll or tin.
+#[derive(Component)]
+struct DressForm {
+    piece: u32,
+    laid: bool,
+}
+
+/// A laid luminous coat's living glow: `level` eases with the berth
+/// class the way lamp bulbs ease with `lamp_lit`, feeding the same two
+/// sinks — the quad's own emissive (its own material instance, per the
+/// shared-handle rule) and a faint real point light whose [`Dimmable`]
+/// base the omen dims through fx.rs, no special case. Canned, the tin
+/// is blacked out and the level falls to dark.
+#[derive(Component)]
+struct CoatGlow {
+    piece: u32,
+    color: Color,
+    mat: Handle<StandardMaterial>,
+    /// Eased laid level, `0..=1`.
+    level: f32,
+}
+
 /// Handles shared by the overlay systems: the static refusal-slash
 /// phosphor, the one violation-flash material every frame bar burns
 /// through, and the glyph pool's ink.
@@ -374,6 +433,23 @@ fn bay_site(wall: &SimSurface, floor: &SimSurface, rect: Rect) -> (Vec3, Quat, V
     }
 }
 
+/// Where a laid footprint (the same cell rect a hold berth would take)
+/// lies in the bay: flat AGAINST whichever surface the fold dealt it,
+/// lifted [`LAID_LIFT`] proud of the quad so the coat clears the socket
+/// plates yet stays under everything standing on the same cells. No
+/// [`BAY_FIT`] margin — a covering covers; its own geometry insets where
+/// the berth edge should still read. Coverings never straddle the fold
+/// (the rug is deck-only, the coats 1×1), so no split handling.
+fn laid_site(wall: &SimSurface, floor: &SimSurface, rect: Rect) -> (Vec3, Quat, Vec3) {
+    let surface = bay_surface(wall, floor, rect_center(rect));
+    let (su, sv) = (surface.scale_u(), surface.scale_v());
+    (
+        surface.to_world(rect_center(rect)) + surface.normal() * LAID_LIFT,
+        surface.orientation(),
+        Vec3::new(su, sv, su.min(sv)),
+    )
+}
+
 /// Cubby anchor centres in the cabinet rig's local space, sim units.
 /// Slot order matches `layout::cubby_rect`: row-major from the top-left
 /// facing the open front — local +X is sim +x, local +Y is up, so slot 0
@@ -385,9 +461,10 @@ fn cubby_anchor(slot: u8) -> Vec3 {
     Vec3::new(sx * layout::CELL * 0.22, sy * layout::CELL * 0.47, 3.4)
 }
 
-/// The berth transform for a piece: the bay for hold cargo, a cubby
-/// anchor inside the host's standing rig for stowed cargo, the desk
-/// mapping for everything on the counter. `None` only for a stow whose
+/// The berth transform for a piece: the bay for hold cargo, flat into
+/// the bay surface for laid dressings, a cubby anchor inside the host's
+/// standing rig for stowed cargo, the desk mapping for everything on
+/// the counter. `None` only for a stow whose
 /// cabinet is missing — impossible by the sim's rules; the caller hides
 /// the rig rather than guess.
 fn berth_site(
@@ -399,6 +476,7 @@ fn berth_site(
 ) -> Option<(Vec3, Quat, Vec3)> {
     match piece.loc {
         Loc::Hold { .. } => Some(bay_site(wall, floor, layout::piece_rect(pieces, piece))),
+        Loc::Laid { .. } => Some(laid_site(wall, floor, layout::piece_rect(pieces, piece))),
         Loc::Stow { cabinet, slot } => {
             // An occupied cabinet cannot leave the hold, so the host is a
             // standing bay rig whenever this berth exists at all.
@@ -492,7 +570,9 @@ fn spawn_overlays(
     // Bay cell hints: a thin quad per cell on whichever surface the fold
     // dealt it, its refusal slash floating just above (shape channel —
     // illegality never rides hue alone). The socket plates themselves are
-    // rig furniture; these are the glow layer over them.
+    // rig furniture; these are the glow layer over them — lifted past
+    // [`OVERLAY_LIFT`] so a hint over a laid rug burns over the pile,
+    // not inside it.
     for y in 0..layout::GRID_ROWS {
         for x in 0..layout::GRID_COLS {
             let cell = layout::cell_rect(x, y);
@@ -505,7 +585,7 @@ fn spawn_overlays(
                 .spawn((
                     Mesh3d(skin.cube.clone()),
                     MeshMaterial3d(slash_mat.clone()),
-                    Transform::from_translation(center + normal * 0.006)
+                    Transform::from_translation(center + normal * (OVERLAY_LIFT + 0.002))
                         .with_rotation(rot * Quat::from_rotation_z((cell.h / cell.w).atan()))
                         .with_scale(Vec3::new(
                             cell.w.hypot(cell.h) * 0.82 * su,
@@ -519,7 +599,7 @@ fn spawn_overlays(
             commands.spawn((
                 Mesh3d(skin.cube.clone()),
                 MeshMaterial3d(mat),
-                Transform::from_translation(center + normal * 0.004)
+                Transform::from_translation(center + normal * OVERLAY_LIFT)
                     .with_rotation(rot)
                     .with_scale(Vec3::new((cell.w - 4.0) * su, (cell.h - 4.0) * sv, 0.0015)),
                 Visibility::Hidden,
@@ -805,6 +885,51 @@ fn sync_fixtures(
         } else {
             Visibility::Hidden
         };
+    }
+}
+
+/// Show each covering's berth-true body — laid flat versus rolled or
+/// canned — and ease every luminous coat between dark and burning. A
+/// carried covering rides packed even though the sim parks its `Loc` at
+/// the origin mid-drag, so the hand never holds a flattened coat. The
+/// glow feeds the same two sinks a lamp does: its own glass instance and
+/// the tinge light's [`Dimmable`] base (fx.rs owns the omen math).
+fn sync_dressings(
+    time: Res<Time>,
+    shell: Res<Shell>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut forms: Query<(&DressForm, &mut Visibility)>,
+    mut coats: Query<(&mut CoatGlow, &mut Dimmable)>,
+) {
+    let sim = &shell.bridge.sim;
+    let pieces = sim.pieces();
+    let in_hand = |id: u32| sim.held(0).is_some_and(|held| held.piece == id);
+    let lies = |id: u32| {
+        pieces
+            .iter()
+            .find(|piece| piece.id == id)
+            .is_some_and(|piece| matches!(piece.loc, Loc::Laid { .. }))
+            && !in_hand(id)
+    };
+    for (form, mut vis) in &mut forms {
+        vis.set_if_neq(if lies(form.piece) == form.laid {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        });
+    }
+    let step = time.delta_secs() / LAMP_WAKE;
+    for (mut coat, mut dimmable) in &mut coats {
+        let burning = lies(coat.piece);
+        coat.level = if burning {
+            (coat.level + step).min(1.0)
+        } else {
+            (coat.level - step).max(0.0)
+        };
+        dimmable.intensity = COAT_LUMENS * coat.level;
+        if let Some(mut mat) = materials.get_mut(&coat.mat) {
+            glow::set_lamp(&mut mat, coat.color, coat.level * COAT_GLOW);
+        }
     }
 }
 
@@ -2189,7 +2314,153 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 ));
             }
         }
+        // The dressing kinds own two bodies each — laid into the room
+        // versus rolled or canned for the counter — and
+        // [`sync_dressings`] shows exactly one, by the sim's berth class.
+        Kind::Rug => {
+            let border = rig.tint(palette::mix(color, palette::SHADOW, 0.3));
+            // [`RUG_THICK`] is a world measure; rigs build in sim units,
+            // so the pile converts through the bay's cell scale.
+            let pile = RUG_THICK / (crate::rig::BAY_CELL / layout::CELL);
+            let home = rig.root;
+            rig.root = dress_form(rig, piece, home, true);
+            // The pile over a darker binding: the border reads woven at
+            // a glance, and the fringe knots the short ends.
+            rig.part(
+                Cuboid::new(fw * 0.98, fh * 0.96, pile * 0.7),
+                border.clone(),
+                Transform::from_xyz(0.0, 0.0, pile * 0.35),
+            );
+            rig.part(
+                Cuboid::new(fw * 0.90, fh * 0.86, pile),
+                body.clone(),
+                Transform::from_xyz(0.0, 0.0, pile * 0.75),
+            );
+            let tassel = rig.meshes.add(Cuboid::new(2.4, 3.6, 0.5));
+            for sx in [-1.0f32, 1.0] {
+                for i in 0..5 {
+                    rig.spawn(
+                        tassel.clone(),
+                        border.clone(),
+                        Transform::from_xyz(sx * fw * 0.465, (i as f32 - 2.0) * 6.0, 0.4),
+                    );
+                }
+            }
+            rig.root = dress_form(rig, piece, home, false);
+            // Rolled for the counter: a tied bolt of weave, brass bands.
+            let across = Quat::from_rotation_z(FRAC_PI_2);
+            rig.part(
+                Cylinder::new(fh * 0.26, fw * 0.88),
+                body,
+                Transform::from_xyz(0.0, 0.0, fh * 0.26).with_rotation(across),
+            );
+            let band = rig.meshes.add(Cylinder::new(fh * 0.28, 2.2));
+            for sx in [-1.0f32, 1.0] {
+                rig.spawn(
+                    band.clone(),
+                    rig.skin.brass.clone(),
+                    Transform::from_xyz(sx * fw * 0.26, 0.0, fh * 0.26).with_rotation(across),
+                );
+            }
+            rig.root = home;
+        }
+        Kind::PaintTin => {
+            let coat = rig.tint(palette::enamel_color(piece.variant));
+            let home = rig.root;
+            rig.root = dress_form(rig, piece, home, true);
+            // The coat: enamel a hair inside the cell so the berth edge
+            // still reads, with one streak the painter didn't chase.
+            rig.part(
+                Cuboid::new(fw * 0.84, fh * 0.84, 0.4),
+                coat.clone(),
+                Transform::from_xyz(0.0, 0.0, 0.2),
+            );
+            let streak = rig.tint(palette::mix(
+                palette::enamel_color(piece.variant),
+                palette::GLINT,
+                0.14,
+            ));
+            rig.part(
+                Cuboid::new(fw * 0.6, 2.6, 0.3),
+                streak,
+                Transform::from_xyz(-1.5, 3.0, 0.45).with_rotation(Quat::from_rotation_z(0.16)),
+            );
+            rig.root = dress_form(rig, piece, home, false);
+            // Canned: a squat battered tin, the lid wearing its color.
+            tin(rig, body, coat);
+            rig.root = home;
+        }
+        Kind::LuminousPaint => {
+            let glow_hue = palette::mix(color, palette::PHOSPHOR, 0.35);
+            let mat = glow::phosphor(rig.materials, glow_hue, 0.0);
+            let home = rig.root;
+            rig.root = dress_form(rig, piece, home, true);
+            // The coat's glass, plus the real tinge beneath it — both fed
+            // by [`sync_dressings`] exactly as the lamps are fed.
+            rig.part(
+                Cuboid::new(fw * 0.84, fh * 0.84, 0.4),
+                mat.clone(),
+                Transform::from_xyz(0.0, 0.0, 0.2),
+            );
+            rig.commands.spawn((
+                PointLight {
+                    color: glow_hue,
+                    intensity: 0.0,
+                    range: COAT_RANGE,
+                    shadow_maps_enabled: false,
+                    ..default()
+                },
+                Transform::from_xyz(0.0, 0.0, 6.0),
+                Dimmable { intensity: 0.0 },
+                CoatGlow {
+                    piece: piece.id,
+                    color: glow_hue,
+                    mat: mat.clone(),
+                    level: 0.0,
+                },
+                ChildOf(rig.root),
+            ));
+            rig.root = dress_form(rig, piece, home, false);
+            // Canned: the blackout tin — dark body, the lid's glass dark
+            // until laid (it shares the coat's instance, and the level
+            // stays floored while packed).
+            let blackout = rig.tint(palette::mix(color, palette::SHADOW, 0.55));
+            tin(rig, blackout, mat);
+            rig.root = home;
+        }
     }
+}
+
+/// A sub-root for one of a covering's two bodies; [`sync_dressings`]
+/// shows exactly one per piece.
+fn dress_form(rig: &mut RigParts, piece: &Piece, home: Entity, laid: bool) -> Entity {
+    rig.commands
+        .spawn((
+            Transform::IDENTITY,
+            Visibility::Hidden,
+            DressForm {
+                piece: piece.id,
+                laid,
+            },
+            ChildOf(home),
+        ))
+        .id()
+}
+
+/// A squat paint tin under the current rig root: `shell` for the body,
+/// `lid` capping it — the one silhouette both paints share.
+fn tin(rig: &mut RigParts, shell: Handle<StandardMaterial>, lid: Handle<StandardMaterial>) {
+    let upright = Quat::from_rotation_x(FRAC_PI_2);
+    rig.part(
+        Cylinder::new(9.5, 11.0),
+        shell,
+        Transform::from_xyz(0.0, 0.0, 5.5).with_rotation(upright),
+    );
+    rig.part(
+        Cylinder::new(9.7, 1.6),
+        lid,
+        Transform::from_xyz(0.0, 0.0, 11.4).with_rotation(upright),
+    );
 }
 
 /// A lamp's live bulb: dark glass that wakes warm, plus the real point

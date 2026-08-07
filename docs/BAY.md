@@ -214,6 +214,69 @@ reader keeps accepting `STV5` and `STV4`.
   frames, berth transitions stay discrete, and the conservation
   monkeys keep proving no interleaving loses a piece.
 
+## The airlock: a door for the void
+
+Jettison grew a room. The sim's outboard rail — the same four
+`Flotsam` slots, the same sweep ceremonies, byte-identical saves — now
+presents as an **airlock annex off the starboard wall**: four
+hazard-bordered berth tiles, each bound to one rail slot through its
+own `SimSurface`, live exactly when the sim's rail rule holds (no
+barter open). Stage cargo on a tile, take it back any time; the next
+docking, cast-off, or encounter close *cycles the lock* — the beacon
+over the door strobes, and the goods are gone. A warning beacon
+breathes amber while anything waits in the chamber.
+
+The chamber and its doorway are sized so the largest footprint in the
+game fits — and only JUST, both bounds proven by test, because a roomy
+airlock is a second cargo bay. The tile grid crowds toward the door so
+every tile stays inside the carry's reach; the slack pools at the
+outer hatch, and a big crate on a near tile pokes into the doorway.
+The annex is deliberately reusable: anything that later wants a door
+to space (EVA, boarding, a second room) starts here.
+
+Two smaller reads landed with it: **berth tiles are contextual** — the
+bay's socket grid fades in only while a carry is live, so an idle bay
+reads as a furnished room, not a warehouse diagram — and the couch was
+recomposed with true depth (rigs began as desk-era bas-reliefs where
++Z meant relief height; standing rigs re-purpose +Z as room depth, so
+asymmetric furniture must put its back at the wall — the convention is
+now documented at the couch rig).
+
+## Next slice, specced: the instruments come off the wall
+
+Owner's direction: the nav screen, ETA gauge, launch lever — "and all
+that other stuff" — become cargo too, with a guarantee that the
+minimum operational set never leaves the ship. The architecture:
+
+- **New wall-affix kinds** (appended as ever): `ChartTank` (2×2), 
+  `EtaGauge` (1×1), `LaunchLever` (1×1). The barter counter staying
+  put is deliberate for now; it moves when its redesign does.
+- **The logical rects stay the law.** `layout::MAP_PANEL`,
+  `LAUNCH_LEVER` et al. never move; what moves is the *binding*: an
+  instrument piece mounted in the grid carries its station's
+  `SimSurface` at its own cells, so the sim keeps every ruling and the
+  tape format never hears about it. The fixed front-wall console
+  retires piece by piece as its functions migrate aft.
+- **Function follows presence**: charting needs a `ChartTank` aboard,
+  launching needs a `LaunchLever` aboard — small sim predicates in the
+  same shape as `transit_chit_aboard`. The ETA gauge is passive.
+- **The vital-minimum rule**: a `Tag::Vital` kind refuses every exit
+  while it is the last of its kind aboard — the give pad refuses it,
+  the airlock refuses it (as the suspicious crate refuses the net
+  today), the casino will not take it — one predicate
+  (`last_vital_aboard`), one violation name, enforced in
+  `resolve_drop` so hints and refusals stay derived, never restated.
+  A *spare* sells fine; stations occasionally stock used instruments,
+  which is its own little economy.
+- **Presentation**: instrument rigs carry their own faces — the CRT
+  rasterizer already paints into whatever surface it is handed — and
+  instruments are worked from roam like all bay cargo; whether any
+  focus pose survives the migration is an open question for the slice.
+
+Not built this window — it re-plumbs the stations and deserves a fresh
+verification pass; the spec is here so the next session starts moving
+instead of deciding.
+
 ## What stays out of this slice
 
 Free (non-grid) placement, physics, multiple rooms, new pad surfaces,

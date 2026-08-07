@@ -28,14 +28,18 @@ pub enum Station {
     BayWall,
     /// The bay's deck strip — hold grid row 3, folded flat.
     BayFloor,
+    /// One airlock berth tile — a single outboard-rail (Flotsam) slot.
+    /// Live only while no barter is open, exactly the sim's rail rule.
+    Airlock,
 }
 
 impl Station {
-    /// Whether this surface is part of the walkable bay — worked from
-    /// roam with the crosshair rather than from a focus pose.
+    /// Whether the roaming crosshair works this surface — the bay's two
+    /// unfolded quads and the airlock's berth tiles; the focusable
+    /// stations need a focus pose instead.
     #[must_use]
-    pub const fn in_bay(self) -> bool {
-        matches!(self, Self::BayWall | Self::BayFloor)
+    pub const fn roamable(self) -> bool {
+        matches!(self, Self::BayWall | Self::BayFloor | Self::Airlock)
     }
 }
 
@@ -182,11 +186,12 @@ pub fn track_pointer(
     camera: Single<(&Camera, &GlobalTransform), With<crate::rig::CabinCamera>>,
     surfaces: Query<(&Station, &SimSurface)>,
     rig: Res<crate::rig::CameraRig>,
+    shell: Res<crate::Shell>,
     mut pointer: ResMut<VirtualPointer>,
 ) {
     *pointer = VirtualPointer::default();
     let (camera, camera_tf) = *camera;
-    let (ray, bay_only, reach) = if rig.interactive() {
+    let (ray, roam_only, reach) = if rig.interactive() {
         let Some(cursor) = window.cursor_position() else {
             return;
         };
@@ -216,9 +221,16 @@ pub fn track_pointer(
         // Glides and parked cursors keep the pointer parked.
         return;
     };
+    // The airlock tiles share their sim rects with the station shelf
+    // (the rail IS the shelf row, contexts exclusive by construction),
+    // so they only project while the sim's rail rule holds: no barter.
+    let rail_live = shell.bridge.sim.barter().is_none();
     let mut nearest = f32::INFINITY;
     for (station, surface) in &surfaces {
-        if bay_only && !station.in_bay() {
+        if roam_only && !station.roamable() {
+            continue;
+        }
+        if matches!(station, Station::Airlock) && !rail_live {
             continue;
         }
         if let Some((t, sim, world)) = surface.project(ray)

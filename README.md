@@ -77,12 +77,14 @@ system refuses a gift. Cargo has opinions about stowage (heavy rides low,
 volatiles refuse adjacency, cryo hugs the hull, fixtures demand their
 surface), and one matte-black kind of crate hums, vanishes into a Guild
 hangar on delivery, and fills an unlabeled lamp plate with whatever is
-being counted. The barter counter moonlights when no trade is open:
-underway, its shelf row becomes the outboard rail — cargo put there rides
-outside the hull, recoverable until the next port call or cast-off sweeps
-it away (the humming crate refuses to go) — and its dial housing wears the
-badge of whatever pulls alongside mid-leg. Encounter salvage drifts into
-the same rail, and at stranger berths the counter shows stranger things.
+being counted. Jettison is a room: stage cargo on the airlock's
+hazard-bordered tiles (starboard annex, sized so the biggest crate only
+just fits) and the next port call or cast-off cycles the lock — the
+beacon strobes, the goods are gone; until then everything is
+recoverable, and the humming crate refuses to go at all. Encounter
+salvage drifts into the same berth, the dial housing wears the badge of
+whatever pulls alongside mid-leg, and at stranger berths the counter
+shows stranger things.
 
 | Input           | Effect                                                     |
 | --------------- | ---------------------------------------------------------- |

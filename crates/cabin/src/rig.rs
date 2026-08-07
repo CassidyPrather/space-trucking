@@ -76,6 +76,26 @@ const BAY_FLOOR_Y: f32 = 0.012;
 /// far half of the room stays a view, not a reach.
 pub const REACH: f32 = 2.0;
 
+// ---- The airlock: an annex off the starboard wall, the jettison berth ----
+//
+// Cargo bound for the void stages here (the sim's outboard rail — the
+// same four Flotsam slots, unchanged) and the next cast-off, docking, or
+// encounter close "cycles" the lock. Sized so the largest footprint in
+// the game JUST fits through the door and inside the chamber — proven by
+// test — and built as an annex so it can be reused later (boarding, EVA,
+// a second room) without moving a wall.
+
+/// Chamber interior width and depth: the biggest crate plus a squeeze.
+pub const AIR_INNER: f32 = 2.0 * BAY_CELL + 0.08;
+/// Doorway span along the wall (z) — the full chamber width opens.
+pub const AIR_DOOR_Z0: f32 = 0.50;
+pub const AIR_DOOR_Z1: f32 = AIR_DOOR_Z0 + AIR_INNER;
+/// Doorway clear height: a two-cell piece passes upright, barely.
+pub const AIR_DOOR_H: f32 = 2.0f32 * BAY_CELL + 0.18;
+/// The chamber floor's x extent: from the hull's outer face outboard.
+pub const AIR_X0: f32 = 1.77;
+pub const AIR_X1: f32 = AIR_X0 + AIR_INNER;
+
 /// Focus glide length, seconds. A camera move is feedback: it answers a
 /// click and finishes fast.
 const GLIDE: f32 = 0.38;
@@ -213,6 +233,9 @@ impl Slab {
 /// panels are derived from the panel corners (plate margin included), so
 /// they can never swallow a panel's lower edge.
 #[must_use]
+// One slab per line of the room's plan; splitting the list would
+// scatter the one place the whole hull is written down.
+#[allow(clippy::too_many_lines)]
 pub fn structure(panels: &[(Station, SimSurface); 3]) -> Vec<Slab> {
     let mut slabs = vec![
         // The box: floor, ceiling, four walls.
@@ -241,9 +264,59 @@ pub fn structure(panels: &[(Station, SimSurface); 3]) -> Vec<Slab> {
             Vec3::new(0.1, 2.5, 3.4),
             Finish::Hull,
         ),
+        // The starboard wall parts around the airlock doorway: a fore
+        // segment, a sliver aft of it, and the lintel over the opening.
         Slab::new(
-            Vec3::new(1.72, 1.15, 0.2),
-            Vec3::new(0.1, 2.5, 3.4),
+            Vec3::new(1.72, 1.15, f32::midpoint(-1.50, AIR_DOOR_Z0)),
+            Vec3::new(0.1, 2.5, AIR_DOOR_Z0 + 1.50),
+            Finish::Hull,
+        ),
+        Slab::new(
+            Vec3::new(1.72, 1.15, f32::midpoint(AIR_DOOR_Z1, 1.90)),
+            Vec3::new(0.1, 2.5, 1.90 - AIR_DOOR_Z1),
+            Finish::Hull,
+        ),
+        Slab::new(
+            Vec3::new(
+                1.72,
+                f32::midpoint(AIR_DOOR_H, 2.40),
+                f32::midpoint(AIR_DOOR_Z0, AIR_DOOR_Z1),
+            ),
+            Vec3::new(0.1, 2.40 - AIR_DOOR_H, AIR_INNER),
+            Finish::Hull,
+        ),
+        // The airlock annex: outer wall, two cheeks, floor and ceiling.
+        Slab::new(
+            Vec3::new(AIR_X1 + 0.05, 1.15, f32::midpoint(AIR_DOOR_Z0, AIR_DOOR_Z1)),
+            Vec3::new(0.1, 2.5, AIR_INNER + 0.2),
+            Finish::Hull,
+        ),
+        Slab::new(
+            Vec3::new(f32::midpoint(AIR_X0, AIR_X1), 1.15, AIR_DOOR_Z0 - 0.05),
+            Vec3::new(AIR_INNER, 2.5, 0.1),
+            Finish::Hull,
+        ),
+        Slab::new(
+            Vec3::new(f32::midpoint(AIR_X0, AIR_X1), 1.15, AIR_DOOR_Z1 + 0.05),
+            Vec3::new(AIR_INNER, 2.5, 0.1),
+            Finish::Hull,
+        ),
+        Slab::new(
+            Vec3::new(
+                f32::midpoint(AIR_X0, AIR_X1),
+                -0.05,
+                f32::midpoint(AIR_DOOR_Z0, AIR_DOOR_Z1),
+            ),
+            Vec3::new(AIR_INNER + 0.1, 0.1, AIR_INNER + 0.2),
+            Finish::Plate,
+        ),
+        Slab::new(
+            Vec3::new(
+                f32::midpoint(AIR_X0, AIR_X1),
+                2.32,
+                f32::midpoint(AIR_DOOR_Z0, AIR_DOOR_Z1),
+            ),
+            Vec3::new(AIR_INNER + 0.1, 0.1, AIR_INNER + 0.2),
             Finish::Hull,
         ),
     ];
@@ -259,11 +332,15 @@ pub fn structure(panels: &[(Station, SimSurface); 3]) -> Vec<Slab> {
                 Finish::Hull,
             ));
         }
-        slabs.push(Slab::new(
-            Vec3::new(1.66, 1.15, z),
-            Vec3::new(0.06, 2.3, 0.08),
-            Finish::Hull,
-        ));
+        // The starboard ribs skip the airlock doorway's span, exactly
+        // as the port ribs skip the chart tank's.
+        if !(AIR_DOOR_Z0 - 0.10..=AIR_DOOR_Z1 + 0.10).contains(&z) {
+            slabs.push(Slab::new(
+                Vec3::new(1.66, 1.15, z),
+                Vec3::new(0.06, 2.3, 0.08),
+                Finish::Hull,
+            ));
+        }
     }
     // Desk supports, derived: the slab's top stops just under the lowest
     // corner of the panel's *plate* (quad + margin), its front face just
@@ -325,7 +402,7 @@ impl Focus {
             Station::Map => Some(Self::Tank),
             Station::Console => Some(Self::Console),
             Station::Barter => Some(Self::Desk),
-            Station::BayWall | Station::BayFloor => None,
+            Station::BayWall | Station::BayFloor | Station::Airlock => None,
         }
     }
 }
@@ -507,6 +584,23 @@ pub struct Dimmable {
 /// The roaming crosshair dot (UI, hidden while focused).
 #[derive(Component)]
 pub struct Crosshair;
+
+/// One bay berth well. The grid is placement furniture, not wall decor:
+/// [`fade_tiles`] shows it only while a carry is live, so an idle bay
+/// reads as a furnished room instead of a warehouse diagram.
+#[derive(Component)]
+pub struct BerthTile;
+
+/// The berth wells' shared translucent ink and its eased level.
+#[derive(Resource)]
+pub struct TileFade {
+    mat: Handle<StandardMaterial>,
+    level: f32,
+}
+
+/// How fast the berth grid answers a grab, per second — feedback, so it
+/// finishes well inside the half-second law.
+const TILE_FADE_RATE: f32 = 6.0;
 
 /// The glint frame inviting a station's focus while aimed at in roam.
 #[derive(Component)]
@@ -727,6 +821,19 @@ pub fn spawn(
     // panels. The berth marking (socket plates per cell), the backer
     // plates, the gantry frame, and the hazard lip are all derived from
     // the same two surfaces, so a retuned bay moves as one thing.
+    // The berth wells' one translucent ink: contextual placement
+    // furniture, raised by [`fade_tiles`] only while a carry is live.
+    let tile_mat = materials.add(StandardMaterial {
+        base_color: palette::SOCKET.with_alpha(0.0),
+        perceptual_roughness: 1.0,
+        metallic: 0.0,
+        alpha_mode: AlphaMode::Blend,
+        ..default()
+    });
+    commands.insert_resource(TileFade {
+        mat: tile_mat.clone(),
+        level: 0.0,
+    });
     for (station, surface) in bay() {
         let n = surface.normal();
         // Backer plate: a worn slab just behind the mapped quad.
@@ -759,7 +866,7 @@ pub fn spawn(
                 }
                 commands.spawn((
                     Mesh3d(skin.cube.clone()),
-                    MeshMaterial3d(skin.socket.clone()),
+                    MeshMaterial3d(tile_mat.clone()),
                     Transform::from_translation(surface.to_world(mid) + n * 0.0015)
                         .with_rotation(surface.orientation())
                         .with_scale(Vec3::new(
@@ -767,6 +874,7 @@ pub fn spawn(
                             (cell.h - 4.0) * surface.scale_v(),
                             0.003,
                         )),
+                    BerthTile,
                 ));
             }
         }
@@ -1101,6 +1209,28 @@ fn smooth(t: f32) -> f32 {
     t * t * 2.0f32.mul_add(-t, 3.0)
 }
 
+/// Raise the berth wells while a carry is live and sink them after: the
+/// grid is an answer to "where can this go?", so it appears when the
+/// question does. One shared ink fades every tile as one.
+pub fn fade_tiles(
+    time: Res<Time>,
+    shell: Res<crate::Shell>,
+    fade: Option<ResMut<TileFade>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let Some(mut fade) = fade else { return };
+    let target = f32::from(u8::from(shell.bridge.sim.held(0).is_some()));
+    let step = time.delta_secs() * TILE_FADE_RATE;
+    fade.level = if fade.level < target {
+        (fade.level + step).min(target)
+    } else {
+        (fade.level - step).max(target)
+    };
+    if let Some(mut mat) = materials.get_mut(&fade.mat) {
+        mat.base_color = palette::SOCKET.with_alpha(smooth(fade.level));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1220,7 +1350,7 @@ mod tests {
                 spots.push(mid(layout::DEST_PREVIEW));
                 spots.push(layout::ETA_ARC_CENTER);
             }
-            Station::BayWall | Station::BayFloor => {}
+            Station::BayWall | Station::BayFloor | Station::Airlock => {}
             Station::Barter => {
                 spots.push(mid(layout::ACCEPT_LEVER));
                 spots.push(layout::DIAL_CENTER);
@@ -1359,10 +1489,11 @@ mod tests {
         let panels = panels();
         let slabs = structure(&panels);
         // One derived support (the barter counter's) whose top sits below
-        // the panel's lowest plate corner.
+        // the panel's lowest plate corner. Plate-finish slabs outside the
+        // main room (the airlock's deck) are not supports.
         let supports: Vec<&Slab> = slabs
             .iter()
-            .filter(|s| matches!(s.finish, Finish::Plate))
+            .filter(|s| matches!(s.finish, Finish::Plate) && s.center.x.abs() < 1.6)
             .collect();
         assert_eq!(supports.len(), 1);
         for (station, surface) in &panels {
@@ -1466,6 +1597,53 @@ mod tests {
                     );
                 }
             }
+        }
+    }
+
+    /// The airlock's whole point, mechanised: the biggest footprint in
+    /// the game fits through the door and inside the chamber — and only
+    /// JUST. Both bounds matter; a roomy airlock is a second cargo bay.
+    #[test]
+    fn the_biggest_crate_just_fits_the_airlock() {
+        let biggest = 2.0 * BAY_CELL;
+        assert!(AIR_INNER >= biggest + 0.04, "chamber too tight");
+        assert!(AIR_INNER <= biggest + 0.20, "chamber roomier than 'just'");
+        assert!((AIR_DOOR_Z1 - AIR_DOOR_Z0 - AIR_INNER).abs() < 1e-6);
+        assert!(AIR_DOOR_H >= biggest + 0.10, "door too low");
+        assert!(AIR_DOOR_H <= biggest + 0.30, "door taller than 'just'");
+        assert!((AIR_X1 - AIR_X0 - AIR_INNER).abs() < 1e-6);
+    }
+
+    /// Every airlock tile is workable from the walk envelope: within
+    /// REACH, within the neck's pitch, unoccluded — the doorway segments
+    /// must actually leave the doorway open.
+    #[test]
+    fn airlock_tiles_are_workable_from_the_envelope() {
+        let panels = panels();
+        let slabs = structure(&panels);
+        for slot in 0..4u8 {
+            let (probe, _) = crate::airlock::site(slot);
+            let probe = probe + Vec3::Y * 0.004;
+            let workable = (0..=12u8).any(|i| {
+                (0..=12u8).any(|j| {
+                    let eye = Vec3::new(
+                        (f32::from(i) / 12.0).mul_add(WALK_MAX.x - WALK_MIN.x, WALK_MIN.x),
+                        EYE_HEIGHT,
+                        (f32::from(j) / 12.0).mul_add(WALK_MAX.z - WALK_MIN.z, WALK_MIN.z),
+                    );
+                    let dir = probe - eye;
+                    let pitch = (-dir.y).atan2(dir.xz().length()).abs();
+                    dir.length() <= REACH - 0.05
+                        && pitch <= PITCH_LIMIT - 0.02
+                        && !slabs.iter().any(|slab| {
+                            ray_slab_entry(eye, dir, slab).is_some_and(|t| t < 1.0 - 1e-3)
+                        })
+                })
+            });
+            assert!(
+                workable,
+                "airlock tile {slot} is out of reach from everywhere"
+            );
         }
     }
 

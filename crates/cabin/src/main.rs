@@ -13,6 +13,7 @@
 // per-function is noise.
 #![allow(clippy::needless_pass_by_value)]
 
+mod airlock;
 mod audio;
 mod barter;
 mod bridge;
@@ -90,6 +91,11 @@ fn main() {
         boot_rig.yaw = std::f32::consts::PI;
         boot_rig.pitch = -0.30;
     }
+    if view_name.as_deref() == Some("airlock") {
+        boot_rig.pos = Vec3::new(0.30, 1.5, 1.05);
+        boot_rig.yaw = -std::f32::consts::FRAC_PI_2;
+        boot_rig.pitch = -0.30;
+    }
 
     let mut app = App::new();
     app.add_plugins(
@@ -116,6 +122,7 @@ fn main() {
     .init_resource::<VirtualPointer>()
     .configure_sets(Update, (Phase::Input, Phase::Advance, Phase::View).chain())
     .add_plugins((
+        airlock::AirlockPlugin,
         audio::AudioPlugin,
         barter::BarterPlugin,
         console::ConsolePlugin,
@@ -137,7 +144,8 @@ fn main() {
             .chain()
             .in_set(Phase::Input),
     )
-    .add_systems(Update, advance.in_set(Phase::Advance));
+    .add_systems(Update, advance.in_set(Phase::Advance))
+    .add_systems(Update, rig::fade_tiles.in_set(Phase::View));
     if let Some(path) = shot {
         app.insert_resource(ShotMode {
             path,

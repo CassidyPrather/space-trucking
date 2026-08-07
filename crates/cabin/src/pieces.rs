@@ -477,6 +477,16 @@ fn berth_site(
     match piece.loc {
         Loc::Hold { .. } => Some(bay_site(wall, floor, layout::piece_rect(pieces, piece))),
         Loc::Laid { .. } => Some(laid_site(wall, floor, layout::piece_rect(pieces, piece))),
+        Loc::Flotsam { slot } => {
+            // Rail cargo stands on its airlock tile at bay scale, facing
+            // the doorway — staged for the void, not shelved.
+            let (pos, rot) = crate::airlock::site(slot);
+            let s = wall.scale_u().min(wall.scale_v());
+            let scale = Vec3::splat(s) * BAY_FIT;
+            let (_, h) = piece.kind.cells();
+            let lift = f32::from(h) * layout::CELL * 0.5 * scale.y;
+            Some((pos + Vec3::Y * lift, rot, scale))
+        }
         Loc::Stow { cabinet, slot } => {
             // An occupied cabinet cannot leave the hold, so the host is a
             // standing bay rig whenever this berth exists at all.
@@ -1495,8 +1505,8 @@ fn rat_watch(
     let unit = (floor.scale_u() + floor.scale_v()) * 0.5 * RAT_FIT;
     let hop = (PI * t).sin() * 5.0 * unit;
     // Asleep it settles to its cell's centre and lies ON the standing
-    // couch's seat — the slab's top edge sits 0.59 footprint-heights
-    // over the plates (centre lifted 0.5, slab top at +0.09; see the
+    // couch's cushions — their crowns sit 0.60 footprint-heights over
+    // the plates (centre lifted 0.5, cushion tops at +0.10; see the
     // couch rig) — instead of hiding inside the upholstery.
     let (at, scale, lift) = if napping {
         let cell = layout::cell_rect(rat.cell.0, rat.cell.1);
@@ -1504,7 +1514,7 @@ fn rat_watch(
             rect_center(cell),
             // Long and low: nose splayed out, belly in the upholstery.
             Vec3::new(unit * 1.18, unit * 1.06, unit * 0.6),
-            0.59 * layout::CELL * floor.scale_v() * BAY_FIT,
+            0.60 * layout::CELL * floor.scale_v() * BAY_FIT,
         )
     } else {
         (at, Vec3::splat(unit), 0.0)
@@ -2158,41 +2168,51 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         }
         // Somebody's living room, in transit: seat slab, back rest, arm
         // cubes, cushion bumps, stubby feet — upholstery hue, dim shading.
+        // A NOTE ON DEPTH, learned from this couch: rigs began as
+        // desk-era bas-reliefs, +Z meaning relief height — biggest
+        // features closest to the viewer. Standing rigs re-purpose +Z
+        // as ROOM depth (bay_site keeps local +Z toward the player), so
+        // any furniture with an asymmetric depth story must be composed
+        // truly: backs near z = 0 against the wall, seats and open
+        // fronts reaching +Z. Symmetric rigs (lamps, tins, crates)
+        // never notice; a couch authored as relief faces backwards.
         Kind::Couch => {
             let under = rig.tint(palette::mix(color, palette::SHADOW, 0.3));
+            // The backrest stands at the wall side; the seat deck runs
+            // out into the room, cushions on top, arms full depth.
             rig.part(
-                Cuboid::new(fw * 0.74, fh * 0.34, 10.0),
-                under,
-                Transform::from_xyz(0.0, -fh * 0.08, 5.0),
-            );
-            rig.part(
-                Cuboid::new(fw * 0.74, fh * 0.30, 15.0),
+                Cuboid::new(fw * 0.74, fh * 0.56, 5.0),
                 body.clone(),
-                Transform::from_xyz(0.0, fh * 0.24, 7.5),
+                Transform::from_xyz(0.0, fh * 0.16, 2.5),
             );
-            let arm = rig.meshes.add(Cuboid::new(fw * 0.10, fh * 0.52, 14.0));
-            for side in [-1.0, 1.0] {
-                rig.spawn(
-                    arm.clone(),
-                    body.clone(),
-                    Transform::from_xyz(fw * 0.42 * side, -fh * 0.02, 7.0),
-                );
-            }
+            rig.part(
+                Cuboid::new(fw * 0.74, fh * 0.30, 18.0),
+                under,
+                Transform::from_xyz(0.0, -fh * 0.20, 10.0),
+            );
             let cushion = rig.meshes.add(ico(6.0));
             for side in [-1.0, 1.0] {
                 rig.spawn(
                     cushion.clone(),
                     body.clone(),
-                    Transform::from_xyz(fw * 0.17 * side, -fh * 0.05, 10.0)
-                        .with_scale(Vec3::new(1.5, 1.05, 0.7)),
+                    Transform::from_xyz(fw * 0.17 * side, -fh * 0.02, 10.0)
+                        .with_scale(Vec3::new(1.5, 0.7, 1.1)),
+                );
+            }
+            let arm = rig.meshes.add(Cuboid::new(fw * 0.10, fh * 0.54, 16.0));
+            for side in [-1.0, 1.0] {
+                rig.spawn(
+                    arm.clone(),
+                    body.clone(),
+                    Transform::from_xyz(fw * 0.42 * side, -fh * 0.04, 8.0),
                 );
             }
             let foot = rig.meshes.add(Cuboid::new(4.0, 5.0, 4.0));
-            for side in [-1.0, 1.0] {
+            for (side, fz) in [(-1.0, 3.0), (1.0, 3.0), (-1.0, 16.0), (1.0, 16.0)] {
                 rig.spawn(
                     foot.clone(),
                     rig.skin.plate_shade.clone(),
-                    Transform::from_xyz(fw * 0.36 * side, -fh * 0.36, 2.0),
+                    Transform::from_xyz(fw * 0.36 * side, -fh * 0.44, fz),
                 );
             }
         }

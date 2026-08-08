@@ -93,6 +93,16 @@ const FLUFF_WINDOW: u64 = 10_800;
 /// Most fluffs the hold will breed to. Mercy, not realism.
 const FLUFF_CAP: usize = 8;
 
+/// The stoker's beat, ticks: underway with the alongside quiet, one
+/// hopper piece goes into the fire this often. Twelve seconds — slow
+/// enough to snatch a mistake back off a tile.
+const STOKE_PERIOD: u64 = 720;
+
+/// Boost ticks per point of flammability: a couch (3) pushes the ship
+/// at double speed for forty-five seconds. Public so views can scale
+/// "how much fire is banked" against the same number the fire uses.
+pub const STOKE_PER_FLAM: u64 = 900;
+
 /// The drone hangs this far from the ship while advertising.
 const DRONE_ORBIT: f32 = 22.0;
 
@@ -308,9 +318,15 @@ pub enum Cue {
     AdEnd,
     /// A fluff became two fluffs. Nobody saw it happen.
     FluffBirth,
-    /// The outboard net was swept: jettisoned cargo drifted away for
-    /// good. Fires at the ceremonies that sweep it — docking, casting
-    /// off, an encounter falling astern — never on the reversible drop.
+    /// The burner took a piece from the hopper: it is gone, and the
+    /// fire pushes. `intensity` is the kind's flammability over the
+    /// scale's top — slag burns at zero and merely disposes.
+    Burn {
+        intensity: f32,
+    },
+    /// Docking banked the burner and the hopper overflowed: whatever
+    /// could not walk back aboard was tipped over the side. The one
+    /// ceremony that still discards, and it announces itself.
     Jettison,
     /// The hangar counter filled: the Grand Parade is leaving the dock.
     ParadeStart,
@@ -436,6 +452,10 @@ pub struct Sim {
     /// One haul of ice per pass: after that the comet is picked clean
     /// until it swings out and back again.
     comet_visit: Option<u64>,
+    /// Boost ticks left in the burner: while positive, each travel tick
+    /// spends one and gains one — double speed until the fire dies down.
+    /// Banked across docks; the stoker wastes nothing.
+    stoke: u64,
     /// Pieces ever gifted to the Hermitage; its shelf grows from this.
     karma: u32,
     /// Per-station bitmask of kinds the player has traded there — the
@@ -518,6 +538,7 @@ impl Sim {
             drones: Drones::new(),
             parade_at: None,
             comet_visit: None,
+            stoke: 0,
             karma: 0,
             familiar: home_familiar(),
             night: false,
@@ -720,6 +741,19 @@ impl Sim {
     #[must_use]
     pub fn held(&self, player: PlayerId) -> Option<&Held> {
         self.held.get(usize::from(player))?.as_ref()
+    }
+
+    /// Boost ticks left in the burner. Frontends scale roar, glow, and
+    /// streak-stretch from this; the push itself is in the travel tick.
+    #[must_use]
+    pub const fn stoke(&self) -> u64 {
+        self.stoke
+    }
+
+    /// Whether the fire is pushing right now.
+    #[must_use]
+    pub const fn stoked(&self) -> bool {
+        self.stoke > 0
     }
 
     /// Every drag in progress, in player order.
@@ -1656,16 +1690,13 @@ impl Sim {
         };
         debug_assert!(!self.pads_occupied(), "launch gate must clear the pads");
         let leg_ticks = map::leg_ticks(from, to, self.tick);
-        // Casting off tears the net clean: jettisoned cargo stays behind
-        // with the berth. Noted here, announced after the departure clunk.
-        let swept = self
-            .pieces
-            .iter()
-            .any(|piece| matches!(piece.loc, Loc::Flotsam { .. }));
+        // Casting off ignites the burner: hopper cargo RIDES — it is
+        // this leg's fuel, fed to the fire on the stoker's beat. Only
+        // the station's own furniture stays behind.
         self.pieces.retain(|piece| {
             matches!(
                 piece.loc,
-                Loc::Hold { .. } | Loc::Stow { .. } | Loc::Laid { .. }
+                Loc::Hold { .. } | Loc::Stow { .. } | Loc::Laid { .. } | Loc::Flotsam { .. }
             )
         });
         self.barter = None;
@@ -1682,9 +1713,6 @@ impl Sim {
             leg_ticks,
         };
         self.cues.push(Cue::Depart);
-        if swept {
-            self.cues.push(Cue::Jettison);
-        }
         // After the departure clunk: the stowaway slips in with the cargo.
         self.rats.on_depart(
             self.seed,
@@ -1709,6 +1737,13 @@ impl Sim {
         } = self.ship.state
         {
             progress += 1;
+            // The stoked fire pushes: one boost tick spent, one extra
+            // tick of way made good — double speed until it dies down.
+            if self.stoke > 0 {
+                self.stoke -= 1;
+                progress += 1;
+            }
+            self.feed_burner();
             self.omen
                 .travel_tick(&mut progress, leg_ticks, &mut self.cues);
             if let Some(cue) = event::creak(self.seed, self.tick) {
@@ -1717,11 +1752,6 @@ impl Sim {
             let seedlings = self.pieces.iter().any(|piece| {
                 matches!(piece.loc, Loc::Hold { .. }) && piece.kind == Kind::Seedlings
             });
-            let ending = self
-                .encounters
-                .current
-                .as_ref()
-                .is_some_and(encounter::Encounter::open);
             let spawn = self.encounters.travel_tick(
                 self.seed,
                 self.legs,
@@ -1730,11 +1760,9 @@ impl Sim {
                 seedlings,
                 &mut self.cues,
             );
-            if ending && self.cues.contains(&Cue::EncounterEnd) {
-                // It fell astern: loose flotsam drifts away with it. The
-                // meteor shower's souvenir spawns after, so it survives.
-                self.clear_flotsam();
-            }
+            // Nothing sweeps when an encounter falls astern any more:
+            // loose salvage stays in the hopper, and the stoker — who
+            // paused to watch whatever was alongside — resumes shoveling.
             for kind in spawn {
                 self.spawn_flotsam(kind);
             }
@@ -1801,7 +1829,7 @@ impl Sim {
         self.omen.on_dock(&mut self.cues);
         self.encounters.on_dock(&mut self.cues);
         self.drones.on_dock(&mut self.cues);
-        self.clear_flotsam();
+        self.bank_hopper();
         if poi == GUILD {
             self.steal_crate();
         }
@@ -1940,15 +1968,90 @@ impl Sim {
         self.next_piece += 1;
     }
 
-    /// Sweep every drifting piece over the side, announcing it when
-    /// anything actually went. Encounter loot out here was never the
-    /// player's; jettisoned cargo was, which is why the sweep is a named
-    /// ceremony (`Cue::Jettison`) rather than a silent tidy-up.
-    fn clear_flotsam(&mut self) {
-        let before = self.pieces.len();
-        self.pieces
-            .retain(|piece| !matches!(piece.loc, Loc::Flotsam { .. }));
-        if self.pieces.len() < before {
+    /// The stoker's beat: underway, on the metronome, with nothing
+    /// alongside to watch (an open encounter pauses the shovel — which
+    /// is also what keeps fresh salvage grabbable), the lowest-slot
+    /// hopper piece goes into the fire. Its flammability becomes boost;
+    /// slag pushes nothing and merely stops existing. This is a
+    /// conservation ceremony (`Cue::Burn`), one of the named doors.
+    fn feed_burner(&mut self) {
+        if self.tick % STOKE_PERIOD != 0 {
+            return;
+        }
+        let watching = self
+            .encounters
+            .current
+            .as_ref()
+            .is_some_and(encounter::Encounter::open);
+        if watching {
+            return;
+        }
+        let fed = self
+            .pieces
+            .iter()
+            .filter_map(|piece| match piece.loc {
+                Loc::Flotsam { slot } => Some((slot, piece.id)),
+                _ => None,
+            })
+            .min();
+        let Some((_, id)) = fed else { return };
+        let Some(kind) = self
+            .pieces
+            .iter()
+            .find(|piece| piece.id == id)
+            .map(|piece| piece.kind)
+        else {
+            return;
+        };
+        self.pieces.retain(|piece| piece.id != id);
+        for held in &mut self.held {
+            if matches!(held, Some(h) if h.piece == id) {
+                *held = None;
+            }
+        }
+        self.stoke += u64::from(kind.flammable()) * STOKE_PER_FLAM;
+        self.cues.push(Cue::Burn {
+            intensity: f32::from(kind.flammable()) / 3.0,
+        });
+    }
+
+    /// Bank the burner for a port call: whatever waits unburned in the
+    /// hopper walks back aboard — coverings to the first legal laid
+    /// anchor, everything else to the first legal hold cell — and only
+    /// the overflow that fits nowhere is tipped over the side, announced
+    /// (`Cue::Jettison`). The hopper must clear either way: docked at a
+    /// counterparty, its slots are the station's shelf row.
+    fn bank_hopper(&mut self) {
+        let hopper: Vec<(u8, u32)> = self
+            .pieces
+            .iter()
+            .filter_map(|piece| match piece.loc {
+                Loc::Flotsam { slot } => Some((slot, piece.id)),
+                _ => None,
+            })
+            .collect();
+        let mut swept = false;
+        let mut ordered = hopper;
+        ordered.sort_unstable();
+        for (_, id) in ordered {
+            let Some(index) = self.pieces.iter().position(|piece| piece.id == id) else {
+                continue;
+            };
+            let piece = self.pieces[index];
+            let berth = if piece.kind.covering() {
+                cargo::dress_fit(&self.pieces, piece.id, piece.kind)
+                    .map(|(x, y)| Loc::Laid { x, y })
+            } else {
+                first_fit(&self.pieces, piece.id, piece.kind).map(|(x, y)| Loc::Hold { x, y })
+            };
+            if let Some(loc) = berth {
+                self.pieces[index].loc = loc;
+            } else {
+                self.pieces.remove(index);
+                swept = true;
+            }
+        }
+        if swept {
             self.cues.push(Cue::Jettison);
         }
         for held in &mut self.held {
@@ -3092,7 +3195,11 @@ mod tests {
             let ceded = sim.cues().iter().any(|cue| {
                 matches!(
                     cue,
-                    Cue::Accept { .. } | Cue::Delivered | Cue::Exchange | Cue::Jettison
+                    Cue::Accept { .. }
+                        | Cue::Delivered
+                        | Cue::Exchange
+                        | Cue::Jettison
+                        | Cue::Burn { .. }
                 )
             });
             let after = owned(&sim);
@@ -3236,7 +3343,11 @@ mod tests {
             let ceded = sim.cues().iter().any(|cue| {
                 matches!(
                     cue,
-                    Cue::Accept { .. } | Cue::Delivered | Cue::Exchange | Cue::Jettison
+                    Cue::Accept { .. }
+                        | Cue::Delivered
+                        | Cue::Exchange
+                        | Cue::Jettison
+                        | Cue::Burn { .. }
                 )
             });
             let after = owned(&sim);
@@ -4244,7 +4355,11 @@ mod tests {
             let ceded = sim.cues().iter().any(|cue| {
                 matches!(
                     cue,
-                    Cue::Accept { .. } | Cue::Delivered | Cue::Exchange | Cue::Jettison
+                    Cue::Accept { .. }
+                        | Cue::Delivered
+                        | Cue::Exchange
+                        | Cue::Jettison
+                        | Cue::Burn { .. }
                 )
             });
             let after = owned(&sim);
@@ -5256,15 +5371,26 @@ mod tests {
                 .any(|p| p.id == drifting[0] && matches!(p.loc, Loc::Hold { .. })),
             "stowed flotsam becomes cargo"
         );
-        // Let the window close: the unstowed one drifts away.
-        sim.fast_forward(1300);
+        // The stoker pauses while something is alongside, so the other
+        // piece survives the whole open window — then the encounter
+        // falls astern, the shovel resumes, and the leftover salvage
+        // feeds the fire on the next beat instead of drifting away.
+        let mut burned = false;
+        for _ in 0..4000 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            burned |= sim.cues().iter().any(|cue| matches!(cue, Cue::Burn { .. }));
+            if burned {
+                break;
+            }
+        }
+        assert!(burned, "leftover salvage must feed the fire");
         assert!(
             sim.pieces().iter().any(|p| p.id == drifting[0]),
-            "stowed cargo must survive the closing"
+            "stowed cargo must survive"
         );
         assert!(
             !sim.pieces().iter().any(|p| p.id == drifting[1]),
-            "unstowed flotsam drifts away with the derelict"
+            "the unstowed piece went into the burner"
         );
     }
 
@@ -5449,68 +5575,151 @@ mod tests {
     }
 
     #[test]
-    fn jettison_is_reversible_until_the_departure_sweep() {
+    fn the_hopper_is_reversible_and_rides_into_the_fire() {
         let mut sim = Sim::new(15);
-        // The rail only exists where there is no counterparty; moor at
-        // the comet (barterless) and put the vial overboard there.
+        // The hopper only opens where there is no counterparty; moor at
+        // the comet (barterless) and stage the vial there.
         sim.dock(COMET);
         sim.advance(0.0, &InputFrame::default());
         let net0 = rect_center(layout::FLOTSAM_SLOTS[0]);
         drag(&mut sim, cell_center(0, 0), net0);
-        let netted = sim
+        let staged = sim
             .pieces()
             .iter()
             .find(|p| p.loc == Loc::Flotsam { slot: 0 })
-            .expect("the vial should ride the net")
+            .expect("the vial should sit in the hopper")
             .id;
         // Second thoughts: back into the hold, no harm done.
         drag(&mut sim, net0, cell_center(0, 0));
         assert!(
             sim.pieces()
                 .iter()
-                .any(|p| p.id == netted && matches!(p.loc, Loc::Hold { .. })),
-            "netted cargo must be recoverable before a sweep"
+                .any(|p| p.id == staged && matches!(p.loc, Loc::Hold { .. })),
+            "staged cargo must be recoverable before it burns"
         );
-        // Third thoughts: overboard again, and cast off. The sweep is the
-        // ceremony, and it announces itself.
+        // Third thoughts: staged again, and cast off. Casting off
+        // ignites the burner — the fuel RIDES, nothing is swept — and
+        // on the stoker's beat the vial burns for boost.
         drag(&mut sim, cell_center(0, 0), net0);
         launch(&mut sim, SATURN);
         assert!(
-            sim.cues().contains(&Cue::Jettison),
-            "the departure sweep must be announced"
+            !sim.cues().contains(&Cue::Jettison),
+            "cast-off must not sweep the fuel"
         );
         assert!(
-            !sim.pieces().iter().any(|p| p.id == netted),
-            "jettisoned cargo stays behind with the berth"
+            sim.pieces()
+                .iter()
+                .any(|p| p.id == staged && matches!(p.loc, Loc::Flotsam { .. })),
+            "the fuel rides through departure"
+        );
+        let mut burned = false;
+        for _ in 0..=STOKE_PERIOD + 60 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            burned |= sim.cues().iter().any(|cue| matches!(cue, Cue::Burn { .. }));
+            if burned {
+                break;
+            }
+        }
+        assert!(burned, "the stoker must feed the vial to the fire");
+        assert!(!sim.pieces().iter().any(|p| p.id == staged));
+        assert!(sim.stoked(), "perfume burns hot enough to push");
+    }
+
+    /// The push itself, measured: a burned couch doubles the ship's way
+    /// made good while the stoke lasts.
+    #[test]
+    fn the_fire_pushes_double_time() {
+        let mut sim = cleared(21);
+        launch(&mut sim, SATURN);
+        stock(&mut sim, Kind::Couch, Loc::Flotsam { slot: 0 });
+        let mut burned = false;
+        for _ in 0..=STOKE_PERIOD + 60 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            burned |= sim.cues().iter().any(|cue| matches!(cue, Cue::Burn { .. }));
+            if burned {
+                break;
+            }
+        }
+        assert!(burned, "the couch must burn");
+        assert_eq!(sim.stoke(), 3 * STOKE_PER_FLAM, "upholstery burns long");
+        let progress_of = |sim: &Sim| match sim.ship().state {
+            ShipState::Traveling { progress, .. } => progress,
+            ShipState::Docked(_) => unreachable!("Saturn is far"),
+        };
+        let before = progress_of(&sim);
+        for _ in 0..10 {
+            sim.advance(TICK_DT, &InputFrame::default());
+        }
+        assert_eq!(
+            progress_of(&sim) - before,
+            20,
+            "a stoked tick makes two ticks of way"
         );
     }
 
     #[test]
-    fn the_dock_sweep_takes_what_rides_the_net() {
-        let mut sim = launched(16);
-        // Mid-leg: the pearls go over the side, and stay grabbable...
-        drag(
-            &mut sim,
-            cell_center(2, 0),
-            rect_center(layout::FLOTSAM_SLOTS[1]),
-        );
-        let netted = sim
-            .pieces()
-            .iter()
-            .find(|p| p.loc == Loc::Flotsam { slot: 1 })
-            .expect("pearls on the net")
-            .id;
-        // ...until the dock. Walk in stepwise so the cue is observable.
+    fn docking_banks_the_hopper_back_aboard_or_tips_the_overflow() {
+        // Unburned fuel walks back aboard at the dock...
+        let mut sim = cleared(16);
+        launch(&mut sim, SATURN);
+        // Stage just inside the final stoker's beat so the piece is
+        // still waiting when the ship arrives.
+        let leg = leg_of(&sim);
+        // Stage only once the ship will dock before the stoker's next
+        // beat (the metronome runs on absolute ticks), so the pearls are
+        // still waiting when it arrives.
+        while leg - progress_now(&sim) >= STOKE_PERIOD - (sim.tick % STOKE_PERIOD) {
+            sim.advance(TICK_DT, &InputFrame::default());
+        }
+        let banked = stock(&mut sim, Kind::BrinePearls, Loc::Flotsam { slot: 0 });
         let mut saw_sweep = false;
-        for _ in 0..leg_of(&sim) + 10 {
+        for _ in 0..=STOKE_PERIOD + 60 {
             sim.advance(TICK_DT, &InputFrame::default());
             saw_sweep |= sim.cues().contains(&Cue::Jettison);
             if matches!(sim.ship().state, ShipState::Docked(_)) {
                 break;
             }
         }
-        assert!(saw_sweep, "the dock sweep must be announced");
-        assert!(!sim.pieces().iter().any(|p| p.id == netted));
+        assert!(matches!(sim.ship().state, ShipState::Docked(_)));
+        assert!(!saw_sweep, "a hopper that fits back aboard sweeps nothing");
+        assert!(
+            sim.pieces()
+                .iter()
+                .any(|p| p.id == banked && matches!(p.loc, Loc::Hold { .. })),
+            "the stoker wastes nothing that fits"
+        );
+
+        // ...and only true overflow is tipped over the side, announced.
+        let mut full = cleared(16);
+        launch(&mut full, SATURN);
+        let leg = leg_of(&full);
+        while leg - progress_now(&full) >= STOKE_PERIOD - (full.tick % STOKE_PERIOD) {
+            full.advance(TICK_DT, &InputFrame::default());
+        }
+        for y in 0..layout::GRID_ROWS {
+            for x in 0..layout::GRID_COLS {
+                stock(&mut full, Kind::PerfumeVial, Loc::Hold { x, y });
+            }
+        }
+        let doomed = stock(&mut full, Kind::BrinePearls, Loc::Flotsam { slot: 0 });
+        let mut saw_sweep = false;
+        for _ in 0..=STOKE_PERIOD + 60 {
+            full.advance(TICK_DT, &InputFrame::default());
+            saw_sweep |= full.cues().contains(&Cue::Jettison);
+            if matches!(full.ship().state, ShipState::Docked(_)) {
+                break;
+            }
+        }
+        assert!(saw_sweep, "overflow must be announced");
+        assert!(!full.pieces().iter().any(|p| p.id == doomed));
+    }
+
+    /// The traveling ship's progress, for tests that pace themselves.
+    fn progress_now(sim: &Sim) -> u64 {
+        match sim.ship().state {
+            ShipState::Traveling { progress, .. } => progress,
+            ShipState::Docked(_) => unreachable!("still underway"),
+        }
     }
 
     #[test]

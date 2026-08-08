@@ -76,14 +76,15 @@ const BAY_FLOOR_Y: f32 = 0.012;
 /// far half of the room stays a view, not a reach.
 pub const REACH: f32 = 2.0;
 
-// ---- The airlock: an annex off the starboard wall, the jettison berth ----
+// ---- The burner: an annex off the starboard wall, the fuel hopper ----
 //
-// Cargo bound for the void stages here (the sim's outboard rail — the
-// same four Flotsam slots, unchanged) and the next cast-off, docking, or
-// encounter close "cycles" the lock. Sized so the largest footprint in
-// the game JUST fits through the door and inside the chamber — proven by
-// test — and built as an annex so it can be reused later (boarding, EVA,
-// a second room) without moving a wall.
+// Cargo bound for the fire stages here (the sim's outboard rail — the
+// same four Flotsam slots, unchanged); underway the stoker's beat feeds
+// the lowest tile to the firebox in the far wall, and what burns pushes
+// the ship. Sized so the largest footprint in the game JUST fits through
+// the door and inside the chamber — proven by test. (The AIR_* names
+// survive from the annex's airlock past; renaming them is churn the
+// geometry doesn't need.)
 
 /// Chamber interior width and depth: the biggest crate plus a squeeze.
 pub const AIR_INNER: f32 = 2.0 * BAY_CELL + 0.08;

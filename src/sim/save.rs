@@ -26,20 +26,21 @@ use super::map::{POI_COUNT, PoiId, Ship, ShipState};
 use super::rats::{CHASE_LIMIT, Rat, Rats};
 use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 
-/// Magic-plus-version header of every save this build writes. `STV6`
+/// Magic-plus-version header of every save this build writes. `STV7`
+/// added the banked burner's stoke to the ship line's tail; `STV6`
 /// added the `laid` piece location (the dressing layer; docs/BAY.md);
-/// `STV5` added `stow` (cabinet cubbies). Each is one additive line
-/// form, so the reader accepts the older headers too: a save without
-/// those lines is a valid save without those berths. `STV4` widened
+/// `STV5` added `stow` (cabinet cubbies). Each is additive, so the
+/// reader accepts the older headers too: a save without those tokens
+/// is a valid save with a cold burner and those berths empty. `STV4` widened
 /// the visits line for the orbital sky's new POIs (positions themselves are
 /// derived from the tick, so none are stored); `STV3` split the leg counter
 /// out of the omen line and added the rat state line plus the per-piece gnaw
 /// token. Older versions fail safe as unsupported.
-const MAGIC: &str = "STV6";
+const MAGIC: &str = "STV7";
 
 /// Older headers this build still reads. Every difference is additive, so
 /// one grammar parses them all.
-const READABLE: [&str; 3] = [MAGIC, "STV5", "STV4"];
+const READABLE: [&str; 4] = [MAGIC, "STV6", "STV5", "STV4"];
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -103,7 +104,7 @@ pub(crate) fn serialize(sim: &Sim) -> String {
             let _ = write!(out, "ship travel {from} {to} {progress} {leg_ticks}");
         }
     }
-    let _ = writeln!(out, " {}", opt_token(sim.ship.selected));
+    let _ = writeln!(out, " {} {}", opt_token(sim.ship.selected), sim.stoke);
     let _ = writeln!(out, "legs {}", sim.legs);
     let omen = &sim.omen;
     let _ = write!(out, "omen {}", opt_token(omen.jump_at));
@@ -249,7 +250,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let karma = reader.kv("karma")?;
     let familiar = parse_familiar(&mut reader)?;
     let visits = parse_visits(&mut reader)?;
-    let ship = parse_ship(&mut reader, tick)?;
+    let (ship, stoke) = parse_ship(&mut reader, tick)?;
     let legs = reader.kv("legs")?;
     let omen = parse_omen(&mut reader)?;
     let encounters = parse_encounter(&mut reader)?;
@@ -303,6 +304,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         drones,
         parade_at,
         comet_visit,
+        stoke,
         karma,
         familiar,
         night: false,
@@ -465,7 +467,7 @@ fn parse_visits(reader: &mut Reader<'_>) -> Result<[u32; POI_COUNT], SaveError> 
 
 /// The `ship` line, with the selected destination as its last token. The
 /// sim's tick is needed to rebuild positions: the sky is a function of time.
-fn parse_ship(reader: &mut Reader<'_>, tick: u64) -> Result<Ship, SaveError> {
+fn parse_ship(reader: &mut Reader<'_>, tick: u64) -> Result<(Ship, u64), SaveError> {
     let line = reader.next_line()?;
     let mut tokens = line.split_whitespace();
     if tokens.next() != Some("ship") {
@@ -497,12 +499,21 @@ fn parse_ship(reader: &mut Reader<'_>, tick: u64) -> Result<Ship, SaveError> {
         _ => return Err(reader.err()),
     };
     let selected = reader.opt_poi(tokens.next())?;
-    Ok(Ship {
-        pos,
-        prev_pos: pos,
-        state,
-        selected,
-    })
+    // The banked burner rides at the line's tail; absent in saves older
+    // than `STV7`, and an unlit fire either way.
+    let stoke = match tokens.next() {
+        Some(token) => reader.token(Some(token))?,
+        None => 0,
+    };
+    Ok((
+        Ship {
+            pos,
+            prev_pos: pos,
+            state,
+            selected,
+        },
+        stoke,
+    ))
 }
 
 /// The `omen` line: jump schedule, phase, eased floats.
@@ -986,7 +997,7 @@ mod tests {
     #[test]
     fn stowed_pieces_round_trip() {
         let (sim, save, cabinet, _) = furnished();
-        assert!(save.starts_with("STV6\n"), "the writer stamps STV6");
+        assert!(save.starts_with("STV7\n"), "the writer stamps STV7");
         let restored = Sim::from_save(&save).expect("furnished save parses");
         assert_eq!(restored.pieces, sim.pieces);
         assert!(
@@ -1000,12 +1011,17 @@ mod tests {
 
     #[test]
     fn older_headers_still_read() {
-        // Each version since STV4 added only a line form; a save without
-        // those lines is a valid older document, and the retired
-        // console's runs keep walking aboard.
+        // Each version since STV4 added only a line form or token; a
+        // save without them is a valid older document, and the retired
+        // console's runs keep walking aboard. The stoke token is STV7's,
+        // so the older documents drop it from the ship line too.
         let plain = Sim::new(9).save_string();
-        for older in ["STV5", "STV4"] {
-            let old = plain.replacen("STV6", older, 1);
+        for older in ["STV6", "STV5", "STV4"] {
+            let old = plain.replacen("STV7", older, 1).replacen(
+                "ship docked 6 - 0",
+                "ship docked 6 -",
+                1,
+            );
             assert_ne!(old, plain);
             assert!(Sim::from_save(&old).is_ok(), "{older} must stay readable");
         }

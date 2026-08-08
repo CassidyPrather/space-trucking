@@ -185,6 +185,40 @@ impl Kind {
         matches!(self.tag(), Some(Tag::Covering(_)))
     }
 
+    /// How eagerly the burner takes this kind, `0..=3`: stoke earned per
+    /// piece fed to the fire. Upholstery, fur, and fuel go up gloriously;
+    /// wood and paper honestly; metal, stone, and ice are slag — the
+    /// stoker still shovels them through (disposal is disposal), they
+    /// just push nothing. The suspicious kinds never reach the hopper at
+    /// all (they refuse the rail), so their values here are moot.
+    #[must_use]
+    pub const fn flammable(self) -> u8 {
+        match self {
+            Self::Fluff | Self::Rug | Self::Couch | Self::GasCanister => 3,
+            Self::Seedlings
+            | Self::RationBricks
+            | Self::Painting
+            | Self::Cabinet
+            | Self::PerfumeVial
+            | Self::LuminousPaint => 2,
+            Self::TransitChit
+            | Self::CasinoChip
+            | Self::BottledMidnight
+            | Self::PaintTin
+            | Self::CeilingLamp
+            | Self::WallLamp
+            | Self::FloorLamp
+            | Self::MysteriousCrate => 1,
+            Self::GildedIdol
+            | Self::ScrapAlloy
+            | Self::CryoCore
+            | Self::BrinePearls
+            | Self::CometIce
+            | Self::SuspiciousCrate
+            | Self::VeryMysteriousCrate => 0,
+        }
+    }
+
     /// Stable column index into the barter value table.
     #[must_use]
     pub const fn index(self) -> usize {

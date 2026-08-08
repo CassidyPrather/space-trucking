@@ -50,6 +50,9 @@ pub const PHOSPHOR_DIM: Color = hex(0x2c4a2a);
 pub const PHOSPHOR_HOT: Color = hex(0xbdf29b);
 /// Invitation and warning lamps, ETA arc, want pips.
 pub const AMBER: Color = hex(0xe8a33d);
+/// The burner's firebox: banked fire behind the hatch glass, feeding
+/// flares. Hotter than [`AMBER`], redder than any lamp.
+pub const EMBER: Color = hex(0xe0662a);
 /// Lever handles and hardware accents.
 pub const BRASS: Color = hex(0xb08d57);
 /// Ready/go lamps.

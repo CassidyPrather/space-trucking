@@ -69,7 +69,9 @@ changing; remove a line only by shipping it or striking it in review.
 - Mid-flight retargeting (orbital POI motion shipped: intercept courses
   re-aim automatically when the arrival tick moves, but there is still no
   steering once underway)
-- Major modules
+- Major modules (the Engine's cargo-incinerate idea shipped early as
+  the burner — see BAY.md — so the engine no longer waits in this list;
+  what remains of a dedicated engine module is nothing)
 - Live multiplayer frontend (console ↔ lockstep session, remote pointers;
   the sim, protocol, and harness are in — see docs/NETWORKING.md)
 - Real transport adapter (WebSocket) behind `net`'s transport seam

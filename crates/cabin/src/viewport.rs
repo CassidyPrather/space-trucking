@@ -87,6 +87,10 @@ const STREAM: f32 = 22.0;
 const STREAK: f32 = 3.4;
 /// Seconds for the smoothed speed to close most of a gap (feedback fast).
 const SPEED_EASE: f32 = 0.22;
+/// Stream-speed multiplier while the burner is stoked. The sim makes two
+/// ticks of way per tick of fire — at cruise and under warp alike — so
+/// the glass doubles its streaks honestly rather than by vibes.
+const STOKED_FACTOR: f32 = 2.0;
 
 /// Where the berth hangs while docked: half-cropped off the left edge,
 /// filling a flank of the window.
@@ -152,10 +156,11 @@ impl SkyClock {
         self.jump = (self.jump - dt).max(0.0);
         let target = match sim.ship().state {
             ShipState::Traveling { .. } => {
-                if sim.is_warp() {
-                    WARP_FACTOR
+                let base = if sim.is_warp() { WARP_FACTOR } else { 1.0 };
+                if sim.stoked() {
+                    base * STOKED_FACTOR
                 } else {
-                    1.0
+                    base
                 }
             }
             ShipState::Docked(_) => 0.0,

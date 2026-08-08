@@ -132,7 +132,13 @@ const AD_SWAT_GAIN: f32 = 0.5;
 /// One fluff becoming two, barely audibly.
 const FLUFF_GAIN: f32 = 0.15;
 
-/// The outboard net sweeping clean.
+/// Peak gain for the burner taking a feeding, scaled by [`loudness`] of
+/// the flame it buys: slag goes down as a quiet swallow, upholstery
+/// lands like a furnace door. On the stoker's slow beat, so it may
+/// carry a little weight without nagging.
+const BURN_GAIN: f32 = 0.42;
+
+/// The hopper overflow tipped over the side at dock.
 const JETTISON_GAIN: f32 = 0.3;
 
 /// The Grand Parade's stinger — the biggest ceremony the game has.
@@ -410,7 +416,11 @@ fn play(commands: &mut Commands, bank: &mut SoundBank, cue: Cue) {
         Cue::AdEnd => (bank.blip_down.clone(), AD_GAIN),
         // A very soft pop, like a second yawn.
         Cue::FluffBirth => (bank.tick_pick.clone(), FLUFF_GAIN),
-        // The net sweeping clean: a low latch, cargo going its own way.
+        // The furnace door: iron takes the piece, the fire answers in
+        // the gain. Slag barely murmurs; a couch really goes.
+        Cue::Burn { intensity } => (bank.clunk.clone(), BURN_GAIN * loudness(intensity)),
+        // Dock overflow tipping over the side: a low latch, cargo going
+        // its own way.
         Cue::Jettison => (bank.latch.clone(), JETTISON_GAIN),
         // The hangar opens. Whatever it was for, it is happening.
         Cue::ParadeStart => (bank.stinger.clone(), PARADE_GAIN),

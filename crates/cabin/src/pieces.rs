@@ -478,8 +478,8 @@ fn berth_site(
         Loc::Hold { .. } => Some(bay_site(wall, floor, layout::piece_rect(pieces, piece))),
         Loc::Laid { .. } => Some(laid_site(wall, floor, layout::piece_rect(pieces, piece))),
         Loc::Flotsam { slot } => {
-            // Rail cargo stands on its airlock tile at bay scale, facing
-            // the doorway — staged for the void, not shelved.
+            // Rail cargo stands on its hopper tile at bay scale, facing
+            // the doorway — staged for the fire, not shelved.
             let (pos, rot) = crate::airlock::site(slot);
             let s = wall.scale_u().min(wall.scale_v());
             let scale = Vec3::splat(s) * BAY_FIT;

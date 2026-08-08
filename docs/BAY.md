@@ -214,25 +214,56 @@ reader keeps accepting `STV5` and `STV4`.
   frames, berth transitions stay discrete, and the conservation
   monkeys keep proving no interleaving loses a piece.
 
-## The airlock: a door for the void
+## The burner: jettison learns to push the ship
 
-Jettison grew a room. The sim's outboard rail — the same four
-`Flotsam` slots, the same sweep ceremonies, byte-identical saves — now
-presents as an **airlock annex off the starboard wall**: four
-hazard-bordered berth tiles, each bound to one rail slot through its
-own `SimSurface`, live exactly when the sim's rail rule holds (no
-barter open). Stage cargo on a tile, take it back any time; the next
-docking, cast-off, or encounter close *cycles the lock* — the beacon
-over the door strobes, and the goods are gone. A warning beacon
-breathes amber while anything waits in the chamber.
+Cor's merge (relayed by the owner): junk disposal and
+"incinerate cargo to go faster" are one mechanic. It solves what
+jettison was for, and it retires the engine as the odd module out of
+the far-future modules list — there was never a way to make a bare
+engine fun without stacking weirdness on it, and the fire is that fun
+now. The sim's outboard rail — the same four `Flotsam` slots, same
+rects, same tapes — is the **fuel hopper**, and the airlock annex off
+the starboard wall is the **burner room**, coal-train flavored: four
+hazard-bordered tiles, each bound to one rail slot through its own
+`SimSurface`, live exactly when the sim's rail rule holds (no barter
+open).
+
+The mechanics, all sim-side and replay-safe:
+
+- **Every kind knows how it burns** (`Kind::flammable`, 0–3):
+  upholstery, fur, and fuel roar (couch, rug, fluff, gas canister);
+  wood, organics, and finery burn honestly; chits, tins, and lamps
+  barely catch; metal, stone, and ice are slag — the stoker still
+  shovels them through, disposal is disposal, they just push nothing.
+  The suspicious kinds never reach the hopper at all; they refuse the
+  rail as ever.
+- **The stoker's beat**: underway, with nothing alongside to watch,
+  every twelve seconds the lowest-slot hopper piece goes into the fire
+  (`Cue::Burn`) — slow enough to snatch a mistake back off a tile.
+- **Fire is way**: each flammability point banks 900 boost ticks
+  (`stoke`, carried by STV7 saves); while any remain the ship makes
+  double progress, cruise and warp alike. A couch is forty-five
+  seconds of double time.
+- **Nothing is swept underway anymore.** Cast-off keeps the hopper
+  loaded — fuel rides. Encounter close leaves salvage on the tiles
+  (grabbable, because the stoker pauses while anything is alongside).
+  Docking *banks* the hopper: unburned pieces walk back aboard to the
+  first legal berth, and only true overflow is tipped over the side
+  (`Cue::Jettison`, the one ceremony that still discards).
+
+Presentation derives, never restates: the outer hatch is a firebox
+door whose glass flares on a feeding and breathes ember with the
+banked stoke (the same number the sim spends on way); the burn sounds
+as a furnace-clunk scaled by the flame it bought; the window's
+star-streaks stretch to double while the fire pushes. The beacon
+keeps its old jobs — amber breathe while fuel is staged, red strobe
+for a dock overflow.
 
 The chamber and its doorway are sized so the largest footprint in the
 game fits — and only JUST, both bounds proven by test, because a roomy
-airlock is a second cargo bay. The tile grid crowds toward the door so
-every tile stays inside the carry's reach; the slack pools at the
-outer hatch, and a big crate on a near tile pokes into the doorway.
-The annex is deliberately reusable: anything that later wants a door
-to space (EVA, boarding, a second room) starts here.
+burner room is a second cargo bay. The tile grid crowds toward the
+door so every tile stays inside the carry's reach; the slack pools at
+the firebox, and a big crate on a near tile pokes into the doorway.
 
 Two smaller reads landed with it: **berth tiles are contextual** — the
 bay's socket grid fades in only while a carry is live, so an idle bay
@@ -262,8 +293,8 @@ minimum operational set never leaves the ship. The architecture:
   same shape as `transit_chit_aboard`. The ETA gauge is passive.
 - **The vital-minimum rule**: a `Tag::Vital` kind refuses every exit
   while it is the last of its kind aboard — the give pad refuses it,
-  the airlock refuses it (as the suspicious crate refuses the net
-  today), the casino will not take it — one predicate
+  the burner's hopper refuses it (as the suspicious crate refuses the
+  rail today), the casino will not take it — one predicate
   (`last_vital_aboard`), one violation name, enforced in
   `resolve_drop` so hints and refusals stay derived, never restated.
   A *spare* sells fine; stations occasionally stock used instruments,

@@ -92,8 +92,10 @@ untouched at three orders of magnitude of headroom.
 All color lives in `crates/cabin/src/palette.rs`, and the roles and hex
 values are the 2D palette's, verbatim — retuning still happens in one
 place, and a purity test still fails the build on raw color constructors
-anywhere else in the crate. Cargo keeps its sixteen identity hues; POIs
-keep their enamel identities. What changed is interpretation: a role is
+anywhere else in the crate. (Rooms the 2D console never had may add
+roles there, documented at the constant — the burner's `EMBER` firebox
+glow is the first.) Cargo keeps its identity hues; POIs keep their
+enamel identities. What changed is interpretation: a role is
 now either a surface color or an emissive color, and *light itself is a
 palette instrument*:
 

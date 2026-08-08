@@ -1,25 +1,28 @@
-//! The airlock: where cargo waits for the void.
+//! The burner: where cargo goes to push the ship.
 //!
-//! The sim's outboard rail — four `Loc::Flotsam` slots, swept by the
-//! next docking, cast-off, or encounter close — gets a room of its own:
-//! an annex off the starboard wall (`rig`'s `AIR_*` constants carve the
-//! doorway and the chamber) with four hazard-bordered berth tiles, each
-//! bound to one rail slot through its own [`SimSurface`]. Drop cargo on
-//! a tile to stage it, take it back any time before the sweep; when the
-//! sweep fires (`Cue::Jettison`) the lock "cycles" — the beacon over
-//! the door strobes red for a breath, and the goods are gone.
+//! The sim's outboard rail — four `Loc::Flotsam` slots — is the fuel
+//! hopper: an annex off the starboard wall (`rig`'s `AIR_*` constants
+//! carve the doorway and the chamber) with four hazard-bordered berth
+//! tiles, each bound to one rail slot through its own [`SimSurface`].
+//! Drop cargo on a tile to stage it, snatch it back any time before
+//! the shovel; underway, on the stoker's slow beat, the lowest tile
+//! goes into the firebox behind the outer hatch (`Cue::Burn`) — the
+//! hatch glass flares with the feeding, the banked fire breathes ember
+//! behind it while the stoke lasts, and the window's star-streaks
+//! stretch to match the extra way. Docking banks the fire: whatever
+//! waits unburned walks back aboard, and only overflow is tipped over
+//! the side (`Cue::Jettison`, the beacon's red strobe).
 //!
 //! The tiles project only while the sim's rail rule holds (no barter
 //! open — the rail IS the shelf row, contexts exclusive by
 //! construction); `surface::track_pointer` owns that gate. The chamber
 //! is sized so the largest footprint in the game JUST fits, proven by
-//! `rig`'s tests, and the annex stands ready to be reused for whatever
-//! else wants a door to space.
+//! `rig`'s tests.
 
 use bevy::prelude::*;
 
 use space_trucking::sim::layout;
-use space_trucking::sim::{Cue, Loc};
+use space_trucking::sim::{Cue, Loc, STOKE_PER_FLAM};
 
 use crate::rig::{AIR_DOOR_H, AIR_DOOR_Z0, AIR_DOOR_Z1, AIR_X0, AIR_X1, Skin};
 use crate::surface::{SimSurface, Station};
@@ -33,9 +36,19 @@ const TILE: f32 = 0.44;
 /// Tile plane, just above the annex deck.
 const TILE_Y: f32 = 0.012;
 
-/// The beacon's answer to a sweep, seconds: feedback, inside the
-/// half-second law.
+/// The beacon's answer to a dock-overflow tip, seconds: feedback,
+/// inside the half-second law.
 const CYCLE_LEN: f32 = 0.45;
+
+/// The firebox's answer to a feeding, seconds: a flare that decays back
+/// into the banked-ember glow. A touch over the half-second law because
+/// its tail hides inside the standing glow rather than ending on black.
+const FLASH_LEN: f32 = 0.6;
+
+/// Banked boost that reads as a full firebox, in stoke ticks: one
+/// feeding at the flammability scale's top. More keeps burning longer,
+/// but the glass has nowhere brighter to go.
+const FIREBOX_FULL: u64 = 3 * STOKE_PER_FLAM;
 
 /// The four tile centres, slot-indexed like `layout::FLOTSAM_SLOTS`:
 /// near pair first, row-major from the doorway looking outboard. The
@@ -69,17 +82,30 @@ pub fn site(slot: u8) -> (Vec3, Quat) {
 }
 
 /// The warning beacon over the doorway (cabin side): dark glass while
-/// the chamber is empty, breathing amber while cargo is staged, a hard
-/// red strobe for the moment the lock cycles.
+/// the hopper is empty, breathing amber while fuel is staged, a hard
+/// red strobe for a dock-overflow tip.
 #[derive(Component)]
 struct Beacon {
     mat: Handle<StandardMaterial>,
 }
 
-/// The one latched clock: seconds left of the cycle strobe.
+/// The firebox glass in the outer hatch: dark while the fire is out,
+/// breathing ember in proportion to the banked stoke, flaring when the
+/// stoker feeds it.
+#[derive(Component)]
+struct Firebox {
+    mat: Handle<StandardMaterial>,
+}
+
+/// The latched clocks: the overflow strobe, and the feeding flare with
+/// the strength the last feeding bought.
 #[derive(Resource, Default)]
 struct AirlockFx {
     cycle: f32,
+    flash: f32,
+    /// Flare amplitude, from `Cue::Burn`'s intensity: slag flickers,
+    /// upholstery lights the room.
+    fed: f32,
 }
 
 pub struct AirlockPlugin;
@@ -149,8 +175,9 @@ fn spawn(
             f32::midpoint(AIR_DOOR_Z0, AIR_DOOR_Z1),
         )),
     ));
-    // The outer hatch on the far wall: a dark dogged disk with a hazard
-    // ring — the side of the door nobody opens from in here, yet.
+    // The firebox door on the far wall: a dark dogged disk with a
+    // hazard ring, its round glass the one place the fire shows. The
+    // sync system writes the banked stoke onto the glass every frame.
     let mid_z = f32::midpoint(AIR_DOOR_Z0, AIR_DOOR_Z1);
     commands.spawn((
         Mesh3d(meshes.add(Cylinder::new(0.34, 0.02))),
@@ -158,11 +185,13 @@ fn spawn(
         Transform::from_xyz(AIR_X1 - 0.008, 0.95, mid_z)
             .with_rotation(Quat::from_rotation_z(std::f32::consts::FRAC_PI_2)),
     ));
+    let fire = glow::phosphor(&mut materials, palette::EMBER, 0.0);
     commands.spawn((
         Mesh3d(meshes.add(Cylinder::new(0.30, 0.03))),
-        MeshMaterial3d(skin.glass.clone()),
+        MeshMaterial3d(fire.clone()),
         Transform::from_xyz(AIR_X1 - 0.012, 0.95, mid_z)
             .with_rotation(Quat::from_rotation_z(std::f32::consts::FRAC_PI_2)),
+        Firebox { mat: fire },
     ));
     // The beacon: housing on the cabin face over the door, its lamp an
     // own-instance glass the sync system drives.
@@ -182,25 +211,33 @@ fn spawn(
     ));
 }
 
-/// Drive the beacon from the sim: latch the sweep cue, then read the
-/// rail. Staged cargo breathes amber ("the next port call takes this");
-/// the cycle itself is a hard red strobe, done inside half a second.
+/// Drive the room from the sim: latch the cues, then read the rail and
+/// the banked stoke. Staged fuel breathes amber on the beacon ("the
+/// stoker's next beat takes this"); a feeding flares the firebox glass,
+/// whose standing ember tracks the banked fire; a dock-overflow tip is
+/// the beacon's hard red strobe, done inside half a second.
 fn sync(
     time: Res<Time>,
     shell: Res<Shell>,
     mut fx: ResMut<AirlockFx>,
     beacons: Query<&Beacon>,
+    fireboxes: Query<&Firebox>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    fx.cycle = (fx.cycle - time.delta_secs()).max(0.0);
-    if shell
-        .bridge
-        .sim
-        .cues()
-        .iter()
-        .any(|cue| matches!(cue, Cue::Jettison))
-    {
-        fx.cycle = CYCLE_LEN;
+    let dt = time.delta_secs();
+    fx.cycle = (fx.cycle - dt).max(0.0);
+    fx.flash = (fx.flash - dt).max(0.0);
+    for cue in shell.bridge.sim.cues() {
+        match cue {
+            Cue::Jettison => fx.cycle = CYCLE_LEN,
+            Cue::Burn { intensity } => {
+                fx.flash = FLASH_LEN;
+                // Even slag (intensity 0) shows its disposal; real fuel
+                // scales up from there.
+                fx.fed = intensity.mul_add(0.7, 0.3);
+            }
+            _ => {}
+        }
     }
     let staged = shell
         .bridge
@@ -225,6 +262,17 @@ fn sync(
             } else {
                 glow::set_lamp(&mut mat, palette::AMBER, 0.0);
             }
+        }
+    }
+    // The firebox glass: the banked stoke sets the standing ember — the
+    // same number the sim spends on extra way, normalized to one full
+    // feeding — and a feeding's flare decays squared over it, fire-like.
+    let heat = (shell.bridge.sim.stoke().min(FIREBOX_FULL) as f32) / (FIREBOX_FULL as f32);
+    let flare = (fx.flash / FLASH_LEN).powi(2) * fx.fed;
+    for firebox in &fireboxes {
+        if let Some(mut mat) = materials.get_mut(&firebox.mat) {
+            let ember = heat * glow::breathe(t, 3.4, 0.0).mul_add(0.30, 0.50);
+            glow::set_lamp(&mut mat, palette::EMBER, (ember + flare).min(1.0));
         }
     }
 }

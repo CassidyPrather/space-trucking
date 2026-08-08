@@ -59,10 +59,24 @@ const FLASH_LEN: f32 = 0.45;
 const CARRY_LIFT: f32 = 0.05;
 
 /// Where the carried piece floats while the crosshair aims at nothing
-/// placeable: ahead of and below the eye, low-center, like a box in both
-/// arms — carried, never dropped.
+/// placeable: ahead of and below the eye, nudged off center, like a box
+/// hitched on one arm — carried, never dropped, and never a blindfold.
+/// Compacted to a fraction of berth scale so the room stays visible
+/// through a couch-sized carry (the occlusion defect class, BAY.md);
+/// the aim-anchored hover keeps full scale because it stands at the
+/// *destination*, not at the face.
 const CARRY_AHEAD: f32 = 0.5;
-const CARRY_DOWN: f32 = 0.35;
+const CARRY_DOWN: f32 = 0.40;
+const CARRY_SIDE: f32 = 0.15;
+const CARRY_COMPACT: f32 = 0.45;
+
+/// Extra reach of the focus x-ray test past a piece's half-diagonal,
+/// metres: catches a rig's depth off its berth plane.
+const XRAY_MARGIN: f32 = 0.10;
+
+/// The x-ray outline's lamp level: present, legible, unmistakably not a
+/// legality ruling (those are the carry's green/red at full glow).
+const XRAY_GLOW: f32 = 0.35;
 
 /// Fraction of its rect a desk rig fills, so tray neighbours never touch.
 const FIT: f32 = 0.88;
@@ -171,6 +185,7 @@ impl Plugin for PiecesPlugin {
                     sync_pieces,
                     sync_fixtures,
                     sync_dressings,
+                    xray_focus,
                     carry_held,
                     placement_hints,
                     invite_glows,
@@ -241,10 +256,18 @@ struct PieceRig {
     settle: f32,
     gnawed_shown: bool,
     bite: Entity,
+    /// Every visible part of the piece itself lives under this child, so
+    /// the focus x-ray can drop the body wholesale while the frame stays.
+    body_root: Entity,
     frame_root: Entity,
     slash: Entity,
     frame_mat: Handle<StandardMaterial>,
 }
+
+/// Marker: this rig is ghosted by the focus x-ray — body hidden, its
+/// footprint frame lit dim as the "something stands here" outline.
+#[derive(Component)]
+struct XRayed;
 
 /// A decoration emissive that breathes on the idle clock (the suspicious
 /// hum, the very-mysterious chord). Own material instance, always.
@@ -998,7 +1021,7 @@ fn carry_held(
         return;
     };
 
-    let (pos, rot) = if camera_rig.roaming() {
+    let (pos, rot, fit) = if camera_rig.roaming() {
         if let (Some(world), Some(surface)) = (
             pointer.world,
             pointer.station.and_then(|s| surface_of(&surfaces, s)),
@@ -1008,15 +1031,18 @@ fn carry_held(
             // the deck strip too, so it never lies down flat mid-carry.
             let upright = surface_of(&surfaces, Station::BayWall)
                 .map_or_else(|| surface.orientation(), |band| band.orientation());
-            (world + surface.normal() * CARRY_LIFT, upright)
+            (world + surface.normal() * CARRY_LIFT, upright, 1.1)
         } else {
-            // Aimed at nothing: in both arms, low ahead of the eye, its
-            // open face turned back toward the carrier.
+            // Aimed at nothing: hitched low on one arm, off center and
+            // compact, its open face turned back toward the carrier —
+            // the carrier keeps their view (occlusion, BAY.md).
             let forward = *camera.forward();
             let level = Vec3::new(forward.x, 0.0, forward.z).normalize_or(Vec3::NEG_Z);
             (
-                camera.translation + forward * CARRY_AHEAD - Vec3::Y * CARRY_DOWN,
+                camera.translation + forward * CARRY_AHEAD + *camera.right() * CARRY_SIDE
+                    - Vec3::Y * CARRY_DOWN,
                 Quat::from_rotation_y((-level.x).atan2(-level.z)),
+                CARRY_COMPACT,
             )
         }
     } else {
@@ -1034,18 +1060,19 @@ fn carry_held(
         }) else {
             return;
         };
-        (pos, rot)
+        (pos, rot, 1.1)
     };
     carry.last = Some((pos, rot));
 
     transform.translation = pos;
     transform.rotation = rot;
-    transform.scale = rig.scale_goal * 1.1;
+    transform.scale = rig.scale_goal * fit;
     // Keep the tween anchored to the hand, so the eventual drop glides
-    // from here to the berth instead of teleporting.
+    // from here to the berth instead of teleporting — growing back to
+    // full size out of a compact carry.
     rig.from = pos;
     rig.rot_from = rot;
-    rig.scale_from = rig.scale_goal * 1.1;
+    rig.scale_from = rig.scale_goal * fit;
     rig.ease = 0.0;
 
     if let Some(mut mat) = materials.get_mut(&rig.frame_mat) {
@@ -1065,6 +1092,107 @@ fn carry_held(
         } else {
             Visibility::Visible
         };
+    }
+}
+
+// -------------------------------------------------------------------- x-ray --
+
+/// Distance from `p` to the segment `a..b`, metres.
+fn segment_distance(a: Vec3, b: Vec3, p: Vec3) -> f32 {
+    let ab = b - a;
+    let t = ((p - a).dot(ab) / ab.length_squared().max(1e-6)).clamp(0.0, 1.0);
+    (p - ab.mul_add(Vec3::splat(t), a)).length()
+}
+
+/// The focus x-ray (the occlusion defect class, BAY.md): while the
+/// camera glides to or parks at a focus, any room cargo standing
+/// between the eye and the focused panels goes see-through — body
+/// hidden, its footprint frame lit dim glint as the "something stands
+/// here" outline. Placement is never refused for camera reasons; the
+/// renderer copes, and the outline keeps the ghost honest.
+///
+/// Desk rows are exempt (they are the focused content), coverings lie
+/// flat and cannot blind, the held piece is the player's own hand, and
+/// a ghosted cabinet keeps its stowed minis visible — x-ray showing
+/// the contents is the point.
+#[allow(clippy::too_many_arguments)]
+fn xray_focus(
+    mut commands: Commands,
+    shell: Res<Shell>,
+    camera_rig: Res<crate::rig::CameraRig>,
+    camera: Single<&Transform, With<crate::rig::CabinCamera>>,
+    surfaces: Query<(&Station, &SimSurface)>,
+    index: Res<PieceIndex>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    rigs: Query<(&PieceRig, &Transform, Option<&XRayed>), Without<crate::rig::CabinCamera>>,
+    mut vis: Query<&mut Visibility, Without<PieceRig>>,
+) {
+    use crate::rig::{Focus, Mode};
+    let focus = match camera_rig.mode {
+        Mode::ToFocus { focus, .. } | Mode::Focused { focus } => Some(focus),
+        Mode::Roam | Mode::ToRoam { .. } => None,
+    };
+    // Sightline targets: the focused panel group's centers and corners.
+    let mut targets: Vec<Vec3> = Vec::new();
+    if let Some(focus) = focus {
+        for (station, surface) in &surfaces {
+            if Focus::of(*station) == Some(focus) {
+                targets.push(surface.center);
+                for (su, sv) in [(1.0, 1.0), (1.0, -1.0), (-1.0, 1.0), (-1.0, -1.0)] {
+                    targets.push(surface.center + surface.half_u * su + surface.half_v * sv);
+                }
+            }
+        }
+    }
+    let sim = &shell.bridge.sim;
+    let held = sim.held(0).map(|held| held.piece);
+    let eye = camera.translation;
+    for piece in sim.pieces() {
+        let Some(&entity) = index.0.get(&piece.id) else {
+            continue;
+        };
+        let Ok((rig, transform, xrayed)) = rigs.get(entity) else {
+            continue;
+        };
+        let candidate =
+            matches!(piece.loc, Loc::Hold { .. } | Loc::Flotsam { .. }) && held != Some(piece.id);
+        let occludes = candidate && !targets.is_empty() && {
+            let (w, h) = piece.kind.cells();
+            let radius = Vec2::new(
+                f32::from(w) * layout::CELL * transform.scale.x,
+                f32::from(h) * layout::CELL * transform.scale.y,
+            )
+            .length()
+            .mul_add(0.5, XRAY_MARGIN);
+            targets
+                .iter()
+                .any(|&target| segment_distance(eye, target, transform.translation) < radius)
+        };
+        if occludes {
+            // Asserted every ghosted frame, not just on the transition:
+            // `carry_held` may hide the frame the same frame a drop
+            // lands, and idempotent writes cost nothing.
+            if xrayed.is_none() {
+                commands.entity(entity).insert(XRayed);
+            }
+            if let Ok(mut v) = vis.get_mut(rig.body_root) {
+                *v = Visibility::Hidden;
+            }
+            if let Ok(mut v) = vis.get_mut(rig.frame_root) {
+                *v = Visibility::Visible;
+            }
+            if let Some(mut mat) = materials.get_mut(&rig.frame_mat) {
+                glow::set_lamp(&mut mat, palette::ICON_LIT, XRAY_GLOW);
+            }
+        } else if xrayed.is_some() {
+            commands.entity(entity).remove::<XRayed>();
+            if let Ok(mut v) = vis.get_mut(rig.body_root) {
+                *v = Visibility::Visible;
+            }
+            if let Ok(mut v) = vis.get_mut(rig.frame_root) {
+                *v = Visibility::Hidden;
+            }
+        }
     }
 }
 
@@ -1671,6 +1799,12 @@ fn spawn_rig(
     place: Transform,
 ) -> Entity {
     let root = commands.spawn((place, Visibility::default())).id();
+    // The body layer: everything that *is* the piece parents here, so
+    // the focus x-ray can hide the whole silhouette in one write while
+    // the frame (a sibling) stays showable.
+    let body_root = commands
+        .spawn((Transform::default(), Visibility::default(), ChildOf(root)))
+        .id();
     let color = palette::variant_tint(palette::kind_color(piece.kind), piece.variant);
     let (w, h) = piece.kind.cells();
     let fw = f32::from(w) * layout::CELL;
@@ -1681,7 +1815,7 @@ fn spawn_rig(
         materials: &mut *materials,
         images: &mut *images,
         skin,
-        root,
+        root: body_root,
     };
     build_kind(&mut rig, piece, color, fw, fh);
 
@@ -1746,6 +1880,7 @@ fn spawn_rig(
         settle: 0.0,
         gnawed_shown: piece.gnawed,
         bite,
+        body_root,
         frame_root,
         slash,
         frame_mat,

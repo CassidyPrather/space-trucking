@@ -400,12 +400,18 @@ of. Three guards, all sim-side and monkey-proven:
   the window piece wears the viewport's painted sky (sell your window,
   lose the view), the chart tank and destination preview wear the
   CRT's live textures, and the ETA gauge's needle reads the leg — the
-  console's arc and preview glass retired with them. Still fixed: the
-  Map panel's focus pose and the launch lever's pull, which bind to
-  the left-wall panel and console face until the click-vs-carry
-  question is answered — clicking a focusable or pullable piece and
-  grabbing it as cargo are the same gesture today, and that
-  disambiguation is the same design knot the barter redesign owns.
+  console's arc and preview glass retired with them.
+- **The handle rule** (the click-vs-carry answer, by decree): a
+  click-functional piece wears a physical AMBER carry handle, and the
+  handle IS the carry hitbox — hover the handle and a click means
+  "move this cargo"; hover anywhere else on the piece and a click is
+  the traditional focus interaction (glide in, freed cursor, work the
+  instrument, `Esc` out). The handle region is a declared sub-rect of
+  the piece's footprint and the rig draws the amber grab exactly
+  there, so hitbox and geometry cannot drift apart (the fixture
+  sweep's selection-mismatch lesson). Passive cargo (window, gauges,
+  crates, furniture) has no function to guard, so it needs no handle:
+  its whole body grabs.
 
 ### Occlusion: a defect class, named
 

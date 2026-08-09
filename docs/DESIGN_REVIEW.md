@@ -82,11 +82,6 @@ changing; remove a line only by shipping it or striking it in review.
   the cabin: the tutor ghost, `--replay` playback, a wasm/web build
   (Bevy compiles to wasm when wanted), the telemetry consent surface,
   and the retired console's per-rule violation glyphs)
-- Instrument controls riding their pieces (the chart tank's focus pose
-  and the launch lever's pull still bind to the fixed left-wall panel
-  and console face; the pieces carry the live readings meanwhile — the
-  click-vs-carry disambiguation the migration needs is the same
-  question the barter redesign owns, so it lands with that answer)
 - Barter redesign: playtests call the trade minigame and economy
   unengaging; both are expected to be redesigned until click-y, so no
   deep investment lands on the counter meanwhile (the desk-scale

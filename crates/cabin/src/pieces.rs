@@ -1332,8 +1332,25 @@ fn hover_glint(
         if let Ok(mut v) = vis.get_mut(rig.frame_root) {
             *v = Visibility::Visible;
         }
+        // The handle rule's hover half: over a click-functional piece
+        // the frame reads AMBER on the carry handle (a click moves the
+        // cargo) and the ordinary glint elsewhere (a click will be the
+        // focus interaction) — the split told before it is spent.
+        let on_handle = sim
+            .pieces()
+            .iter()
+            .find(|piece| piece.id == id)
+            .and_then(|piece| {
+                carry_handle_rect(piece.kind, layout::piece_rect(sim.pieces(), piece))
+            })
+            .is_some_and(|handle| handle.contains(pointer.sim));
         if let Some(mut mat) = materials.get_mut(&rig.frame_mat) {
-            glow::set_lamp(&mut mat, palette::ICON_LIT, HOVER_GLOW);
+            let hue = if on_handle {
+                palette::AMBER
+            } else {
+                palette::ICON_LIT
+            };
+            glow::set_lamp(&mut mat, hue, HOVER_GLOW);
         }
     }
 }
@@ -1956,6 +1973,61 @@ impl RigParts<'_, '_, '_> {
     /// An enamel (lit painted metal) material for an accent.
     fn tint(&mut self, color: Color) -> Handle<StandardMaterial> {
         glow::enamel(self.materials, color)
+    }
+}
+
+/// The carry-handle law (BAY.md, "The handle rule"): a click-functional
+/// kind declares the sub-rect of its footprint that grabs as cargo, as
+/// fractions of the piece rect in sim orientation (+y down). A press
+/// inside routes to carry; anywhere else on the piece, to focus. The
+/// rig draws the amber grab from THIS declaration ([`carry_grab`]), so
+/// hitbox and geometry cannot drift apart. `None` = passive cargo:
+/// nothing to guard, the whole body grabs.
+pub const fn carry_handle(kind: Kind) -> Option<Rect> {
+    match kind {
+        Kind::ChartTank | Kind::LaunchLever => Some(Rect::new(0.25, 0.80, 0.50, 0.16)),
+        _ => None,
+    }
+}
+
+/// [`carry_handle`] in sim units over a berthed piece's rect.
+pub fn carry_handle_rect(kind: Kind, rect: Rect) -> Option<Rect> {
+    carry_handle(kind).map(|frac| {
+        Rect::new(
+            frac.x.mul_add(rect.w, rect.x),
+            frac.y.mul_add(rect.h, rect.y),
+            frac.w * rect.w,
+            frac.h * rect.h,
+        )
+    })
+}
+
+/// Draw the amber carry grab exactly over the declared handle sub-rect:
+/// a glowing crossbar in two brass stanchions, the one shape every
+/// movable instrument shares — grab semantics read by form, not hue
+/// alone. `z` is the local depth the bar rides at.
+fn carry_grab(rig: &mut RigParts<'_, '_, '_>, kind: Kind, fw: f32, fh: f32, z: f32) {
+    let Some(frac) = carry_handle(kind) else {
+        return;
+    };
+    // Fractions (+y down) to rig-local (+y up), about the rig centre.
+    let cx = frac.w.mul_add(0.5, frac.x) - 0.5;
+    let cy = 0.5 - frac.h.mul_add(0.5, frac.y);
+    let (hx, hy) = (cx * fw, cy * fh);
+    let (hw, hh) = (frac.w * fw, frac.h * fh);
+    let bar = glow::phosphor(rig.materials, palette::AMBER, 1.2);
+    rig.part(
+        Cuboid::new(hw * 0.9, hh * 0.55, 2.6),
+        bar,
+        Transform::from_xyz(hx, hy, z),
+    );
+    let post = rig.meshes.add(Cuboid::new(hh * 0.4, hh * 0.4, z - 0.5));
+    for sx in [-1.0f32, 1.0] {
+        rig.spawn(
+            post.clone(),
+            rig.skin.brass.clone(),
+            Transform::from_xyz(sx.mul_add(hw * 0.45, hx), hy, (z - 0.5).mul_add(0.5, 0.5)),
+        );
     }
 }
 
@@ -2739,9 +2811,9 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         }
         // The chart tank: the star map's phosphor aquarium, off the
         // wall at last. Dark glass in a brass chassis over a plinth,
-        // the phosphor field glowing on its own (vital instruments
-        // must read lights-out), and the amber grab rail at its base —
-        // the click-functional tell (BAY.md, "yellow handles").
+        // the chart glowing on its own (vital instruments must read
+        // lights-out), and the amber carry grab at its base — the
+        // handle rule's move affordance (BAY.md, "The handle rule").
         Kind::ChartTank => {
             rig.part(
                 Cuboid::new(fw * 0.92, fh * 0.90, 3.0),
@@ -2791,12 +2863,7 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                     Transform::from_xyz(0.0, sy * fh * 0.43, 6.0),
                 );
             }
-            let rail = glow::phosphor(rig.materials, palette::AMBER, 0.8);
-            rig.part(
-                Cuboid::new(fw * 0.5, 2.6, 2.6),
-                rail,
-                Transform::from_xyz(0.0, -fh * 0.36, 12.0),
-            );
+            carry_grab(rig, piece.kind, fw, fh, 12.5);
         }
         // The ETA gauge: a brass drum with a dark dial, the phosphor
         // needle reading the live leg ([`eta_needles`] sweeps it).
@@ -2858,11 +2925,12 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 rig.part(ico(fw * 0.14), world, Transform::from_xyz(0.0, 0.0, 5.6));
             }
         }
-        // The launch handle: the archetype of the amber-handle rule —
-        // every click-functional piece wears this same amber. A shade
-        // plate, the brass quadrant slot, and the pull arm reaching
-        // into the room, knob glowing so the one lever that commits a
-        // course is findable in a dead-dark cabin.
+        // The launch handle: a shade plate, the brass quadrant slot,
+        // and the pull arm reaching into the room, its knob wearing the
+        // go-lamp green (the FUNCTION, like the console handle it will
+        // absorb) — while the amber carry grab below is the MOVE
+        // affordance, per the handle rule. Both glow enough that the
+        // one lever that commits a course is findable in the dark.
         Kind::LaunchLever => {
             rig.part(
                 Cuboid::new(fw * 0.72, fh * 0.88, 3.0),
@@ -2881,8 +2949,9 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 Transform::from_xyz(0.0, -fh * 0.06, 8.0)
                     .with_rotation(Quat::from_rotation_x(-0.5)),
             );
-            let knob = glow::phosphor(rig.materials, palette::AMBER, 1.8);
+            let knob = glow::phosphor(rig.materials, palette::LAMP_OK, 0.9);
             rig.part(ico(3.4), knob, Transform::from_xyz(0.0, fh * 0.16, 11.5));
+            carry_grab(rig, piece.kind, fw, fh, 6.0);
         }
         // The dressing kinds own two bodies each — laid into the room
         // versus rolled or canned for the counter — and

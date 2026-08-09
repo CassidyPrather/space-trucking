@@ -168,6 +168,14 @@ pub const fn kind_color(kind: Kind) -> Color {
         Kind::Rug => hex(0x9c4a3a),
         Kind::PaintTin => hex(0x7a7d82),
         Kind::LuminousPaint => hex(0xd8f0c0),
+        // Instrument hues: void-glass window, phosphor tank, brass
+        // gauge faces, preview glass, and the launch handle's alarm
+        // brass — the click-functional family leans amber on purpose.
+        Kind::Window => hex(0x2b3a55),
+        Kind::ChartTank => hex(0x54e0c8),
+        Kind::EtaGauge => hex(0xc9a86a),
+        Kind::DestPreview => hex(0x86b8d4),
+        Kind::LaunchLever => hex(0xe0a832),
     }
 }
 

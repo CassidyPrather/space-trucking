@@ -67,10 +67,27 @@ pub enum Kind {
     /// like a weak lamp; the Umbra Market sells it snuffed, in
     /// blackout tins.
     LuminousPaint,
+    /// The exterior window: hangs like a painting, shows space like a
+    /// window, asks no further questions. Rehang it on any wall and
+    /// the void follows — whimsy dictates the physics defers.
+    Window,
+    /// The chart tank: the star map in a phosphor aquarium, off the
+    /// wall at last. Vital — the last one aboard refuses every exit,
+    /// because a ship that cannot chart is a coffin with a rug.
+    ChartTank,
+    /// The ETA gauge: a passive arc that reads the current leg. Not
+    /// vital; flying without one is legal and merely nerve-wracking.
+    EtaGauge,
+    /// The destination preview: a small glass showing where the
+    /// selected course ends. Not vital; surprises build character.
+    DestPreview,
+    /// The launch handle: the lever that commits a charted course.
+    /// Vital — the last one aboard refuses every exit.
+    LaunchLever,
 }
 
 /// Number of cargo kinds.
-pub const KIND_COUNT: usize = 25;
+pub const KIND_COUNT: usize = 30;
 
 /// Cosmetic variant rolls per kind, for the renderer to vary sprites with.
 /// The persistent run RNG is spent on these and nothing else.
@@ -150,6 +167,11 @@ impl Kind {
         Self::Rug,
         Self::PaintTin,
         Self::LuminousPaint,
+        Self::Window,
+        Self::ChartTank,
+        Self::EtaGauge,
+        Self::DestPreview,
+        Self::LaunchLever,
     ];
 
     /// Footprint in hold cells, `(w, h)`.
@@ -168,12 +190,21 @@ impl Kind {
             | Self::CeilingLamp
             | Self::WallLamp
             | Self::PaintTin
-            | Self::LuminousPaint => (1, 1),
+            | Self::LuminousPaint
+            | Self::EtaGauge
+            | Self::DestPreview
+            | Self::LaunchLever => (1, 1),
             Self::GildedIdol | Self::BrinePearls | Self::FloorLamp | Self::Cabinet => (1, 2),
-            Self::RationBricks | Self::SuspiciousCrate | Self::VeryMysteriousCrate => (2, 2),
-            Self::ScrapAlloy | Self::GasCanister | Self::Couch | Self::Painting | Self::Rug => {
-                (2, 1)
-            }
+            Self::RationBricks
+            | Self::SuspiciousCrate
+            | Self::VeryMysteriousCrate
+            | Self::ChartTank => (2, 2),
+            Self::ScrapAlloy
+            | Self::GasCanister
+            | Self::Couch
+            | Self::Painting
+            | Self::Rug
+            | Self::Window => (2, 1),
         }
     }
 
@@ -187,7 +218,13 @@ impl Kind {
             Self::SuspiciousCrate | Self::VeryMysteriousCrate => Some(Tag::Suspicious),
             Self::CeilingLamp => Some(Tag::Affix(Mount::Ceiling)),
             Self::FloorLamp | Self::Couch | Self::Cabinet => Some(Tag::Affix(Mount::Floor)),
-            Self::WallLamp | Self::Painting => Some(Tag::Affix(Mount::Wall)),
+            Self::WallLamp
+            | Self::Painting
+            | Self::Window
+            | Self::ChartTank
+            | Self::EtaGauge
+            | Self::DestPreview
+            | Self::LaunchLever => Some(Tag::Affix(Mount::Wall)),
             Self::Rug => Some(Tag::Covering(Some(Mount::Floor))),
             Self::PaintTin | Self::LuminousPaint => Some(Tag::Covering(None)),
             _ => None,
@@ -214,6 +251,29 @@ impl Kind {
     #[must_use]
     pub const fn stature(self) -> u8 {
         self.cells().1
+    }
+
+    /// Whether this kind is an operational instrument the ship cannot
+    /// function without: the LAST one of a vital kind in the player's
+    /// possession refuses every exit ceremony (the give pads, the
+    /// burner hopper, the casino's wager) — `Violation::Vital`, checked
+    /// in `resolve_drop`. Spares trade freely; stations occasionally
+    /// stock used instruments, which is its own little economy.
+    #[must_use]
+    pub const fn vital(self) -> bool {
+        matches!(self, Self::ChartTank | Self::LaunchLever)
+    }
+
+    /// Whether this kind is one of the ship's instruments — the wall
+    /// fittings every hull launches with. Named so the save reader can
+    /// hang the missing ones when it loads a document from before they
+    /// were cargo.
+    #[must_use]
+    pub const fn instrument(self) -> bool {
+        matches!(
+            self,
+            Self::Window | Self::ChartTank | Self::EtaGauge | Self::DestPreview | Self::LaunchLever
+        )
     }
 
     /// Whether this kind is a dressing — laid into the room rather than
@@ -253,7 +313,12 @@ impl Kind {
             | Self::BrinePearls
             | Self::CometIce
             | Self::SuspiciousCrate
-            | Self::VeryMysteriousCrate => 0,
+            | Self::VeryMysteriousCrate
+            | Self::Window
+            | Self::ChartTank
+            | Self::EtaGauge
+            | Self::DestPreview
+            | Self::LaunchLever => 0,
         }
     }
 
@@ -394,6 +459,10 @@ pub enum Violation {
     /// boxing a player in is not a legal move (the no-soft-lock
     /// invariant, BAY.md).
     Sealed,
+    /// The last vital instrument aboard offered to an exit ceremony
+    /// (the rail, a give pad, the casino) — a ship that cannot chart or
+    /// launch is a soft-lock, so the last of each stays.
+    Vital,
 }
 
 /// Whether `kind` may be anchored at hold cell `(x, y)` given every other
@@ -710,6 +779,30 @@ pub fn laid_pinned(pieces: &[Piece], piece: &Piece) -> bool {
         let (ow, oh) = other.kind.cells();
         other.id != piece.id && overlaps((x, y, w, h), (ox, oy, ow, oh))
     })
+}
+
+/// Whether `piece` is the LAST vital instrument of its kind in the
+/// player's possession — the piece every exit ceremony must refuse.
+///
+/// Only berths that are STAYING count as possession: a spare already
+/// staged on a give pad or the rail is itself on its way out, and
+/// counting it would let both of a pair be staged and both be lost.
+/// (The received shelf counts — departure refuses while it holds
+/// goods, so nothing there is ever stranded.)
+#[must_use]
+pub fn last_vital_aboard(pieces: &[Piece], piece: &Piece) -> bool {
+    piece.kind.vital()
+        && !pieces.iter().any(|other| {
+            other.id != piece.id
+                && other.kind == piece.kind
+                && matches!(
+                    other.loc,
+                    Loc::Hold { .. }
+                        | Loc::Stow { .. }
+                        | Loc::Laid { .. }
+                        | Loc::ReceivedShelf { .. }
+                )
+        })
 }
 
 /// Whether two footprints share an orthogonal edge (corners do not count).

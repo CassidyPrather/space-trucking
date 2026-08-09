@@ -22,17 +22,18 @@
 //! Keep the board legal when editing: standing cargo shadows the wall
 //! cells behind it (the cabinet and floor lamp against the port seam
 //! own its baseboard rows, which is why the wall sconce hangs at the
-//! cornice), the gnawed rug lies PINNED under the couch, the free
-//! floor must stay one connected region, aisle included
-//! (`Violation::Sealed`), and the port-wall rows nearest the chart
-//! tank stay clear of tall furniture so nothing stands inside the
-//! tank's housing while it is still architecture — the test below
-//! re-checks the legality half of all of it.
+//! cornice AND why the chart tank hangs on the front wall here rather
+//! than at its traditional port berth), the gnawed rug lies PINNED
+//! under the couch, and the free floor must stay one connected region,
+//! aisle included (`Violation::Sealed`) — the test below re-checks the
+//! legality half of all of it. The five instruments cluster on the
+//! front wall: tank, then window at the old punch-out cornice, the
+//! gauges beside it, the launch handle under them.
 
-/// The fixture save, STV8, hand-authored — the timestamp line is added
+/// The fixture save, STV9, hand-authored — the timestamp line is added
 /// at boot so no catch-up elapses.
 pub const SAVE: &str = "\
-STV8
+STV9
 seed 7
 tick 12000
 rng 3c76e098a8f74c8a
@@ -74,7 +75,12 @@ piece 20 2 1 0 recv 1
 piece 21 5 0 0 shelf 2
 piece 22 3 3 1 shelf 3
 piece 23 15 2 0 give 2
-next_piece 24
+piece 24 26 0 0 hold 4 8
+piece 25 25 1 0 hold 4 10
+piece 26 27 2 0 hold 6 9
+piece 27 28 3 0 hold 6 10
+piece 28 29 0 0 hold 7 9
+next_piece 29
 ";
 
 #[cfg(test)]

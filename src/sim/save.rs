@@ -36,15 +36,19 @@ use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 /// derived from the tick, so none are stored); `STV3` split the leg counter
 /// out of the omen line and added the rat state line plus the per-piece gnaw
 /// token. Older versions fail safe as unsupported.
-const MAGIC: &str = "STV8";
+const MAGIC: &str = "STV9";
 
-/// Older headers this build still reads. `STV8` moved cargo onto the
-/// room net (docs/BAY.md, "The room grid"): berth coordinates from
-/// older headers are console-era 6×4 hold cells, which the net embeds
-/// at (+3, 0) — the reader translates them and re-berths whatever the
+/// Older headers this build still reads, each with its own migration.
+/// `STV9` made the ship's instruments cargo (the transit window, chart
+/// tank, ETA gauge, destination preview, and launch lever): older saves
+/// carry none, so the reader hangs the missing ones at their
+/// traditional berths on load. `STV8` moved cargo onto the room net
+/// (docs/BAY.md, "The room grid"): berth coordinates from pre-STV8
+/// headers are console-era 6×4 hold cells, which the net embeds at
+/// (+3, 0) — the reader translates them and re-berths whatever the
 /// room-grid rules no longer accept in place. Everything else stays one
 /// additive grammar.
-const READABLE: [&str; 5] = [MAGIC, "STV7", "STV6", "STV5", "STV4"];
+const READABLE: [&str; 6] = [MAGIC, "STV8", "STV7", "STV6", "STV5", "STV4"];
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -239,13 +243,17 @@ pub(crate) fn serialize(sim: &Sim) -> String {
 /// Rebuild a sim from [`serialize`] output.
 pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let mut reader = Reader::new(s);
-    // Pre-STV8 headers carry console-era 6×4 hold coordinates that the
-    // room net embeds at (+3, 0); their berths migrate after reading.
-    let legacy = match reader.next_line() {
-        Ok(header) if READABLE.contains(&header) => header != MAGIC,
+    let header = match reader.next_line() {
+        Ok(header) if READABLE.contains(&header) => header,
         Ok(other) if other.starts_with("STV") => return Err(SaveError::UnsupportedVersion),
         _ => return Err(SaveError::BadMagic),
     };
+    // Pre-STV8 headers carry console-era 6×4 hold coordinates that the
+    // room net embeds at (+3, 0); their berths migrate after reading.
+    let legacy = header != MAGIC && header != "STV8";
+    // Pre-STV9 headers predate the instruments being cargo; the missing
+    // ones are hung at their traditional berths after reading.
+    let uninstrumented = header != MAGIC;
 
     let seed = reader.kv("seed")?;
     let tick = reader.kv("tick")?;
@@ -268,7 +276,10 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         rat.prev_cell.0 += 3;
     }
     let (eagerness, patience) = parse_eager(&mut reader)?;
-    let (pieces, next_piece) = parse_pieces(&mut reader, legacy)?;
+    let (mut pieces, mut next_piece) = parse_pieces(&mut reader, legacy)?;
+    if uninstrumented {
+        inject_instruments(&reader, &mut pieces, &mut next_piece)?;
+    }
 
     let barter = match ship.state {
         // The comet and ??? dock without a counterparty: no barter opens.
@@ -690,6 +701,39 @@ fn migrate_console_grid(reader: &Reader<'_>, pieces: &mut [Piece]) -> Result<(),
     Ok(())
 }
 
+/// Hang the instruments a pre-STV9 save predates: each missing
+/// instrument kind goes to its traditional berth (the instrument tail
+/// of `STARTER_CARGO`), or to its first legal cell when the board has
+/// claimed that wall. A board with room for none fails the load whole —
+/// a ship without its chart tank or launch lever is the soft-lock the
+/// vital rule exists to prevent, so the reader will not construct one.
+fn inject_instruments(
+    reader: &Reader<'_>,
+    pieces: &mut Vec<Piece>,
+    next_piece: &mut u32,
+) -> Result<(), SaveError> {
+    for (kind, x, y) in super::STARTER_CARGO {
+        if !kind.instrument() || pieces.iter().any(|piece| piece.kind == kind) {
+            continue;
+        }
+        let id = *next_piece;
+        let (x, y) = if cargo::placement_check(pieces, id, kind, x, y).is_ok() {
+            (x, y)
+        } else {
+            cargo::first_fit(pieces, id, kind).ok_or_else(|| reader.err())?
+        };
+        pieces.push(Piece {
+            id,
+            kind,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Hold { x, y },
+        });
+        *next_piece += 1;
+    }
+    Ok(())
+}
+
 /// Cross-piece stow and dressing validation, after the whole list is
 /// read (a cubby may reference a cabinet on a later line). Everything
 /// those lines could lie about is checked here, so no later indexing or
@@ -1080,7 +1124,7 @@ mod tests {
     #[test]
     fn stowed_pieces_round_trip() {
         let (sim, save, cabinet, _) = furnished();
-        assert!(save.starts_with("STV8\n"), "the writer stamps STV8");
+        assert!(save.starts_with("STV9\n"), "the writer stamps STV9");
         let restored = Sim::from_save(&save).expect("furnished save parses");
         assert_eq!(restored.pieces, sim.pieces);
         assert!(
@@ -1092,32 +1136,49 @@ mod tests {
         );
     }
 
+    /// Whether a save line is an instrument piece — pre-STV9 documents
+    /// have none, so forging one starts by stripping them.
+    fn instrument_line(line: &str) -> bool {
+        line.starts_with("piece")
+            && line
+                .split_whitespace()
+                .nth(2)
+                .and_then(|token| token.parse::<usize>().ok())
+                .and_then(|index| Kind::ALL.get(index).copied())
+                .is_some_and(Kind::instrument)
+    }
+
     #[test]
     fn older_headers_still_read() {
         // Each version since STV4 added only a line form or token; a save
         // without them is a valid older document, and the retired console's
         // runs keep walking aboard. Those documents carry console-era 6×4
-        // hold coordinates, so the fixture rewrites the hold berths into the
-        // old grid — and the reader must migrate every one onto a valid net
-        // berth. The stoke token is STV7's, so the pre-STV7 documents drop
-        // it from the ship line too.
+        // hold coordinates and no instrument pieces, so the fixture strips
+        // the instruments and rewrites the hold berths into the old grid —
+        // and the reader must migrate every berth onto the net AND hang
+        // the five missing instruments. The stoke token is STV7's, so the
+        // pre-STV7 documents drop it from the ship line too.
         let plain = Sim::new(9).save_string();
         let mut old_cells = [(0_u8, 0_u8), (0, 2), (2, 0), (5, 0)].into_iter();
         let legacy_board: String = plain
             .lines()
+            .filter(|line| !instrument_line(line))
             .map(|line| {
                 if line.starts_with("piece") && line.contains(" hold ") {
                     let head = line.split(" hold ").next().expect("split has a head");
-                    let (x, y) = old_cells.next().expect("three starter berths");
+                    let (x, y) = old_cells.next().expect("four console-era berths");
                     format!("{head} hold {x} {y}\n")
                 } else {
                     format!("{line}\n")
                 }
             })
             .collect();
-        assert!(old_cells.next().is_none(), "starter cargo is four pieces");
+        assert!(
+            old_cells.next().is_none(),
+            "console-era cargo is four pieces"
+        );
         for older in ["STV7", "STV6", "STV5", "STV4"] {
-            let mut old = legacy_board.replacen("STV8", older, 1);
+            let mut old = legacy_board.replacen("STV9", older, 1);
             if older != "STV7" {
                 old = old.replacen("ship docked 6 - 0", "ship docked 6 -", 1);
             }
@@ -1125,15 +1186,20 @@ mod tests {
             let sim = Sim::from_save(&old).unwrap_or_else(|e| {
                 panic!("{older} must stay readable: {e}");
             });
-            // The migration really ran: every console-era berth landed on
-            // a legal net berth (translated, or re-fitted when the room
-            // grid refuses the translation).
+            // Both migrations really ran: every console-era berth landed
+            // on a legal net berth (translated, or re-fitted when the
+            // room grid refuses the translation), and the instruments
+            // hang where a new ship hangs them.
             let held: Vec<&Piece> = sim
                 .pieces
                 .iter()
                 .filter(|piece| matches!(piece.loc, Loc::Hold { .. }))
                 .collect();
-            assert_eq!(held.len(), 4, "{older}: the starter cargo walks aboard");
+            assert_eq!(
+                held.len(),
+                9,
+                "{older}: four migrated berths plus five hung instruments"
+            );
             for piece in held {
                 let Loc::Hold { x, y } = piece.loc else {
                     unreachable!()
@@ -1144,6 +1210,39 @@ mod tests {
                     piece.kind
                 );
             }
+            for kind in [Kind::ChartTank, Kind::LaunchLever] {
+                assert!(
+                    sim.pieces.iter().any(|piece| piece.kind == kind),
+                    "{older}: the vital {kind:?} must come aboard"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn stv8_boards_hang_the_missing_instruments() {
+        // An STV8 document knows the room net but predates the
+        // instruments: strip them from a fresh save, re-stamp it, and
+        // the reader must hang all five at their traditional berths
+        // (nothing else on a fresh board contests them).
+        let plain = Sim::new(11).save_string();
+        let stripped: String = plain
+            .lines()
+            .filter(|line| !instrument_line(line))
+            .fold(String::new(), |acc, line| acc + line + "\n");
+        assert_ne!(stripped, plain, "the fresh board carries instruments");
+        let old = stripped.replacen("STV9", "STV8", 1);
+        let sim = Sim::from_save(&old).expect("STV8 must stay readable");
+        for (kind, x, y) in super::super::STARTER_CARGO {
+            if !kind.instrument() {
+                continue;
+            }
+            assert!(
+                sim.pieces
+                    .iter()
+                    .any(|piece| piece.kind == kind && piece.loc == Loc::Hold { x, y }),
+                "{kind:?} must hang at its traditional berth ({x}, {y})"
+            );
         }
     }
 

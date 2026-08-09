@@ -111,18 +111,16 @@ pub enum Surf {
 
 /// Classify a net cell, or `None` where the cross has no cell.
 ///
-/// A hole is outside the charts, or one of the two architectural
-/// punch-outs: the burner doorway through the starboard chart, and the
-/// transit window through the front cornice. Holes are wall that is not
-/// there; nothing hangs on them.
+/// A hole is outside the charts, or the one architectural punch-out:
+/// the burner doorway through the starboard chart. Holes are wall that
+/// is not there; nothing hangs on them. (The transit window used to be
+/// a second punch-out; now it is a piece of wall cargo — [`Kind::Window`]
+/// in `cargo` — and hangs wherever a painting could.)
 #[must_use]
 pub const fn surface_of(x: u8, y: u8) -> Option<Surf> {
     // The doorway to the burner annex: starboard rows nearest the aft
     // corner, baseboard and middle heights.
-    let doorway = (x == 9 || x == 10) && (y == 3 || y == 4);
-    // The transit window: two front-cornice cells left of room center.
-    let window = (x == 4 || x == 5) && y == 10;
-    if doorway || window {
+    if (x == 9 || x == 10) && (y == 3 || y == 4) {
         return None;
     }
     match (x, y) {
@@ -425,10 +423,10 @@ mod tests {
         assert_eq!(counts[1], 15, "port 5x3");
         assert_eq!(counts[2], 30, "floor 6x5");
         assert_eq!(counts[3], 15 - 4, "starboard 5x3 minus the doorway");
-        assert_eq!(counts[4], 18 - 2, "front 6x3 minus the window");
+        assert_eq!(counts[4], 18, "front 6x3 — the window is cargo now");
         assert_eq!(counts[5], 30, "ceiling 6x5");
         // The architectural holes are not cells.
-        for (x, y) in [(9, 3), (10, 3), (9, 4), (10, 4), (4, 10), (5, 10)] {
+        for (x, y) in [(9, 3), (10, 3), (9, 4), (10, 4)] {
             assert_eq!(surface_of(x, y), None, "({x},{y}) should be a hole");
         }
         // The doormat is floor.

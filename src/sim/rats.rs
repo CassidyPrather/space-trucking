@@ -253,15 +253,19 @@ impl Rats {
     }
 }
 
-/// Hold cells covered by stowed pieces — the "cargo distribution" number
-/// both gates read.
+/// FLOOR cells covered by stowed pieces — the "cargo distribution"
+/// number both gates read. Wall and ceiling berths never count: food
+/// density is a floor phenomenon (see [`FLOOR_CELLS`]), and a ship
+/// whose walls fill with instruments is not thereby a buffet.
 pub fn occupied_cells(pieces: &[Piece]) -> u32 {
     pieces
         .iter()
         .filter_map(|piece| match piece.loc {
-            Loc::Hold { .. } => {
+            Loc::Hold { x, y } => {
                 let (w, h) = piece.kind.cells();
-                Some(u32::from(w) * u32::from(h))
+                let on_floor = layout::surface_of(x, y)
+                    .is_some_and(|surf| matches!(surf, layout::Surf::Floor));
+                on_floor.then_some(u32::from(w) * u32::from(h))
             }
             _ => None,
         })
@@ -431,12 +435,15 @@ mod tests {
     }
 
     #[test]
-    fn occupied_cells_sums_footprints_and_ignores_the_shelf() {
+    fn occupied_cells_sums_floor_footprints_and_ignores_the_rest() {
         let pieces = [
-            hold_piece(0, Kind::RationBricks, 0, 0), // 2x2 = 4 cells
-            hold_piece(1, Kind::PerfumeVial, 3, 3),  // 1 cell
+            hold_piece(0, Kind::RationBricks, 4, 4), // 2x2 = 4 floor cells
+            hold_piece(1, Kind::PerfumeVial, 3, 3),  // 1 floor cell
+            // Wall and ceiling berths are not food density.
+            hold_piece(2, Kind::ChartTank, 4, 0),
+            hold_piece(3, Kind::CeilingLamp, 14, 5),
             Piece {
-                id: 2,
+                id: 4,
                 kind: Kind::RationBricks,
                 variant: 0,
                 gnawed: false,
@@ -524,12 +531,11 @@ mod tests {
     fn a_hold_lit_wall_to_wall_pins_the_rat_and_boards_no_new_one() {
         // Lamps down every even column of the net: every odd-column cell
         // reads lit_adjacent from a horizontal neighbour, every lamp from
-        // its column-mates. (3, 10)'s even neighbours are the window hole
-        // and the void, so (3, 9) gets its own lamp to cover it.
+        // its column-mates.
         let mut pieces: Vec<Piece> = Vec::new();
         for y in 0..GRID_ROWS {
             for x in 0..GRID_COLS {
-                if layout::surface_of(x, y).is_some() && (x % 2 == 0 || (x, y) == (3, 9)) {
+                if layout::surface_of(x, y).is_some() && x % 2 == 0 {
                     pieces.push(hold_piece(pieces.len() as u32, Kind::CeilingLamp, x, y));
                 }
             }

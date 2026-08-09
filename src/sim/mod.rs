@@ -125,9 +125,10 @@ fn home_familiar() -> [u32; POI_COUNT] {
     familiar
 }
 
-/// Starter cargo and where it is stowed: three pieces, placed legally
-/// (the scrap is heavy, so it sits low).
-const STARTER_CARGO: [(Kind, u8, u8); 4] = [
+/// Starter cargo and where it is stowed: trade goods low in the hold,
+/// and the ship's fittings — light and instruments alike — hung at
+/// their traditional berths, every one a movable piece.
+const STARTER_CARGO: [(Kind, u8, u8); 9] = [
     (Kind::ScrapAlloy, 4, 5),
     (Kind::PerfumeVial, 3, 3),
     (Kind::BrinePearls, 6, 3),
@@ -136,6 +137,18 @@ const STARTER_CARGO: [(Kind, u8, u8); 4] = [
     // (docs/BAY.md, "Lights are cargo") — so the starter lamp hangs
     // over mid-floor where losing it is a choice, not an accident.
     (Kind::CeilingLamp, 14, 5),
+    // The instruments (BAY.md, "Instruments are cargo"): the window at
+    // its old cornice punch-out, the gauges and the lever clustered on
+    // the front wall beside it, and the chart tank on the starboard
+    // wall by the burner doorway — off the baseboard ring, and behind
+    // floor cells (the aisle apron and the doorway's flank) where tall
+    // furniture rarely stands, so cargo and the tank's housing seldom
+    // fight over the wall.
+    (Kind::Window, 4, 10),
+    (Kind::ChartTank, 10, 5),
+    (Kind::EtaGauge, 6, 9),
+    (Kind::DestPreview, 6, 10),
+    (Kind::LaunchLever, 7, 9),
 ];
 
 /// A 2D vector, kept deliberately tiny: the sim needs four operations and a
@@ -1347,6 +1360,14 @@ impl Sim {
         {
             return false;
         }
+        let staked = self.pieces[index];
+        if cargo::last_vital_aboard(&self.pieces, &staked) {
+            // A losing wager transmutes the stake, and the house pays out
+            // in idols, not instruments: the last vital piece stays home.
+            self.last_violation = Some(Violation::Vital);
+            self.cues.push(Cue::Reject { hard: true });
+            return true;
+        }
         if Encounters::casino_coin(self.seed, self.tick) {
             self.spawn_flotsam(Kind::GildedIdol);
             self.cues.push(Cue::CasinoWin);
@@ -1450,6 +1471,12 @@ impl Sim {
                 if ours && piece.kind == Kind::SuspiciousCrate {
                     return Err(Some(Violation::Suspicious));
                 }
+                if ours && cargo::last_vital_aboard(&self.pieces, piece) {
+                    // The rail is jettison and the hopper both — either
+                    // way the piece leaves the ship, and the last chart
+                    // tank or launch lever may not.
+                    return Err(Some(Violation::Vital));
+                }
                 let loc = Loc::Flotsam { slot };
                 return self.slot_free(loc, piece.id).then_some(loc).ok_or(None);
             }
@@ -1461,6 +1488,9 @@ impl Sim {
         }
         if self.barter.is_some() {
             if let Some(slot) = layout::slot_at(&layout::GIVE_SLOTS, p) {
+                if ours && cargo::last_vital_aboard(&self.pieces, piece) {
+                    return Err(Some(Violation::Vital));
+                }
                 let loc = Loc::GivePad { slot };
                 return (ours && self.slot_free(loc, piece.id))
                     .then_some(loc)
@@ -1504,9 +1534,12 @@ impl Sim {
         let ours = player_owned(piece.loc);
         let docked = self.barter.is_some();
         let stowworthy = ours || matches!(piece.loc, Loc::Flotsam { .. });
+        // The exits that would certainly hard-refuse this piece do not
+        // glow — the invitation and the arbiter must agree.
+        let departing =
+            piece.kind == Kind::SuspiciousCrate || cargo::last_vital_aboard(&self.pieces, piece);
         Some(DropTargets {
-            net: (!docked && ours && piece.kind != Kind::SuspiciousCrate)
-                || matches!(piece.loc, Loc::Flotsam { .. }),
+            net: (!docked && ours && !departing) || matches!(piece.loc, Loc::Flotsam { .. }),
             hold: stowworthy,
             stow: stowworthy
                 && cargo::stowable(piece.kind)
@@ -1516,7 +1549,7 @@ impl Sim {
                         && matches!(other.loc, Loc::Hold { .. })
                         && cargo::free_cubby(&self.pieces, other.id).is_some()
                 }),
-            give: ours && docked,
+            give: ours && docked && !cargo::last_vital_aboard(&self.pieces, piece),
             take: !ours && docked,
             shelf: !ours && docked,
             received: docked && matches!(piece.loc, Loc::ReceivedShelf { .. }),
@@ -2702,7 +2735,7 @@ mod tests {
         assert_eq!(Sim::from_save("").unwrap_err(), SaveError::BadMagic);
         assert_eq!(Sim::from_save("hello").unwrap_err(), SaveError::BadMagic);
         assert_eq!(
-            Sim::from_save("STV9\nseed 1").unwrap_err(),
+            Sim::from_save("STV10\nseed 1").unwrap_err(),
             SaveError::UnsupportedVersion
         );
         // STV1 predates the delivery tally: fail safe into a fresh game.
@@ -5784,6 +5817,94 @@ mod tests {
                 .iter()
                 .any(|p| p.kind == Kind::SuspiciousCrate && matches!(p.loc, Loc::Hold { .. })),
             "it prefers to stay, and it stays"
+        );
+    }
+
+    #[test]
+    fn the_last_vital_instrument_refuses_the_rail() {
+        // Underway, the rail is jettison and the burner hopper both;
+        // the starter board carries exactly one launch handle, and the
+        // last one may not leave the ship.
+        let mut sim = Sim::new(17);
+        launch(&mut sim, SATURN);
+        let lever = cell_center(7, 9);
+        let net0 = rect_center(layout::FLOTSAM_SLOTS[0]);
+        drag(&mut sim, lever, net0);
+        assert_eq!(sim.last_violation(), Some(Violation::Vital));
+        assert!(
+            sim.pieces()
+                .iter()
+                .any(|p| p.kind == Kind::LaunchLever && matches!(p.loc, Loc::Hold { .. })),
+            "the handle stays on its wall"
+        );
+        // And the rail must not have glowed for it in the first place.
+        sim.advance(0.0, &press_at(lever.x, lever.y));
+        let targets = sim.drop_targets(0).expect("holding the handle");
+        assert!(!targets.net, "an exit that will refuse must not invite");
+        sim.advance(0.0, &release_at(lever.x, lever.y));
+        // A spare aboard frees the first to go over the side.
+        inject_hold(&mut sim, Kind::LaunchLever, 3, 0);
+        drag(&mut sim, lever, net0);
+        assert!(
+            sim.pieces()
+                .iter()
+                .any(|p| p.kind == Kind::LaunchLever && matches!(p.loc, Loc::Flotsam { .. })),
+            "with a spare, the handle stages like any salvage"
+        );
+    }
+
+    #[test]
+    fn the_last_vital_instrument_refuses_the_give_pad() {
+        // Docked at the Guild from birth: the barter is open, and the
+        // starter chart tank is the only one aboard.
+        let mut sim = Sim::new(17);
+        let tank = cell_center(10, 5);
+        let give0 = rect_center(layout::GIVE_SLOTS[0]);
+        drag(&mut sim, tank, give0);
+        assert_eq!(sim.last_violation(), Some(Violation::Vital));
+        assert!(
+            sim.pieces()
+                .iter()
+                .any(|p| p.kind == Kind::ChartTank && matches!(p.loc, Loc::Hold { .. })),
+            "the tank stays on its wall"
+        );
+        // A spare aboard trades freely — the little used-instrument
+        // economy the vital rule leaves open.
+        inject_hold(&mut sim, Kind::ChartTank, 4, 0);
+        drag(&mut sim, tank, give0);
+        assert!(
+            sim.pieces()
+                .iter()
+                .any(|p| p.kind == Kind::ChartTank && matches!(p.loc, Loc::GivePad { .. })),
+            "with a spare, the tank goes to market"
+        );
+    }
+
+    #[test]
+    fn the_casino_refuses_the_last_vital_instrument() {
+        let mut sim = launched_with_encounter(None);
+        let ShipState::Traveling { progress, .. } = sim.ship().state else {
+            unreachable!()
+        };
+        sim.encounters.current = Some(Encounter {
+            kind: EncounterKind::Casino,
+            start: progress,
+            end: progress + 6000,
+            opened: false,
+            closed: false,
+            used: false,
+        });
+        sim.advance(TICK_DT, &InputFrame::default());
+        let badge = rect_center(layout::ENCOUNTER_BADGE);
+        let count_before = sim.pieces().len();
+        drag(&mut sim, cell_center(7, 9), badge);
+        assert_eq!(sim.last_violation(), Some(Violation::Vital));
+        assert_eq!(sim.pieces().len(), count_before, "no payout and no chip");
+        assert!(
+            sim.pieces()
+                .iter()
+                .any(|p| p.kind == Kind::LaunchLever && matches!(p.loc, Loc::Hold { .. })),
+            "the house does not get the handle"
         );
     }
 }

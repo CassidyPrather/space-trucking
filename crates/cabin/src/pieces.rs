@@ -1526,15 +1526,17 @@ fn glyph_spec(rule: Option<Violation>, rect: Rect) -> Vec<(Vec2, Vec2, f32)> {
             (Vec2::new(0.0, s * 0.62), Vec2::new(s * 1.9, s * 0.22), 0.0),
         ],
         // Off the net, onto a piece (or its standing shadow), the violet
-        // objection, the doormat, and the sealed floor: the frame alone.
-        // (Aisle and Sealed are new rules still owed their own glyphs —
-        // the frame and the buzz carry them meanwhile.)
+        // objection, the doormat, the sealed floor, and the last vital
+        // instrument refusing its exit: the frame alone. (Aisle, Sealed,
+        // and Vital are rules still owed their own glyphs — the frame
+        // and the buzz carry them meanwhile.)
         Some(
             Violation::Bounds
             | Violation::Overlap
             | Violation::Suspicious
             | Violation::Aisle
-            | Violation::Sealed,
+            | Violation::Sealed
+            | Violation::Vital,
         )
         | None => vec![],
     }
@@ -2575,6 +2577,163 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 ));
             }
         }
+        // The exterior window: brass frame, void-glass pane, and a
+        // scatter of phosphor stars that ride wherever it is rehung —
+        // the whimsy rule made physical. The pane glows faintly on its
+        // own; space is self-lighting, which is convenient lights-out.
+        Kind::Window => {
+            let pane = glow::phosphor(
+                rig.materials,
+                palette::mix(color, palette::PHOSPHOR, 0.12),
+                0.35,
+            );
+            rig.part(
+                Cuboid::new(fw * 0.88, fh * 0.78, 3.0),
+                pane,
+                Transform::from_xyz(0.0, 0.0, 1.5),
+            );
+            let lip_h = rig.meshes.add(Cuboid::new(fw * 0.96, fh * 0.10, 6.0));
+            let lip_v = rig.meshes.add(Cuboid::new(fw * 0.05, fh * 0.94, 6.0));
+            for (mesh, at) in [
+                (lip_h.clone(), Vec3::new(0.0, fh * 0.43, 3.0)),
+                (lip_h, Vec3::new(0.0, -fh * 0.43, 3.0)),
+                (lip_v.clone(), Vec3::new(fw * 0.455, 0.0, 3.0)),
+                (lip_v, Vec3::new(-fw * 0.455, 0.0, 3.0)),
+            ] {
+                rig.spawn(
+                    mesh,
+                    rig.skin.brass.clone(),
+                    Transform::from_translation(at),
+                );
+            }
+            // The stars: a golden-angle scatter seeded by the piece id,
+            // so every window ships its own patch of sky.
+            let star = glow::phosphor(rig.materials, palette::GLINT, 2.2);
+            let fleck = rig.meshes.add(ico(0.9));
+            for i in 0..7_u32 {
+                let n = (piece.id.wrapping_mul(7).wrapping_add(i)) as f32;
+                let angle = n * 2.399;
+                let reach = (n * 0.517).fract().mul_add(0.36, 0.08);
+                rig.spawn(
+                    fleck.clone(),
+                    star.clone(),
+                    Transform::from_xyz(angle.cos() * fw * reach, angle.sin() * fh * reach, 2.6),
+                );
+            }
+        }
+        // The chart tank: the star map's phosphor aquarium, off the
+        // wall at last. Dark glass in a brass chassis over a plinth,
+        // the phosphor field glowing on its own (vital instruments
+        // must read lights-out), and the amber grab rail at its base —
+        // the click-functional tell (BAY.md, "yellow handles").
+        Kind::ChartTank => {
+            rig.part(
+                Cuboid::new(fw * 0.92, fh * 0.90, 3.0),
+                rig.skin.plate_shade.clone(),
+                Transform::from_xyz(0.0, 0.0, 1.5),
+            );
+            let void = rig.tint(palette::mix(color, palette::SHADOW, 0.82));
+            rig.part(
+                Cuboid::new(fw * 0.86, fh * 0.82, 9.0),
+                void,
+                Transform::from_xyz(0.0, 0.0, 6.0),
+            );
+            let field = glow::phosphor(rig.materials, color, 1.4);
+            rig.part(
+                Cuboid::new(fw * 0.78, fh * 0.72, 5.0),
+                field,
+                Transform::from_xyz(0.0, 0.0, 7.0),
+            );
+            let post = rig.meshes.add(Cuboid::new(3.0, fh * 0.9, 11.0));
+            for sx in [-1.0f32, 1.0] {
+                rig.spawn(
+                    post.clone(),
+                    rig.skin.brass.clone(),
+                    Transform::from_xyz(sx * fw * 0.44, 0.0, 6.0),
+                );
+            }
+            let cap = rig.meshes.add(Cuboid::new(fw * 0.92, 3.0, 11.0));
+            for sy in [-1.0f32, 1.0] {
+                rig.spawn(
+                    cap.clone(),
+                    rig.skin.brass.clone(),
+                    Transform::from_xyz(0.0, sy * fh * 0.43, 6.0),
+                );
+            }
+            let rail = glow::phosphor(rig.materials, palette::AMBER, 0.8);
+            rig.part(
+                Cuboid::new(fw * 0.5, 2.6, 2.6),
+                rail,
+                Transform::from_xyz(0.0, -fh * 0.36, 12.0),
+            );
+        }
+        // The ETA gauge: a brass drum with a dark dial, the phosphor
+        // needle pinned mid-arc. Passive — it earns no amber handle.
+        Kind::EtaGauge => {
+            let flat = Quat::from_rotation_x(FRAC_PI_2);
+            rig.part(
+                Cylinder::new(fw * 0.42, 6.0),
+                rig.skin.brass.clone(),
+                Transform::from_xyz(0.0, 0.0, 3.0).with_rotation(flat),
+            );
+            let dial = rig.tint(palette::mix(color, palette::SHADOW, 0.7));
+            rig.part(
+                Cylinder::new(fw * 0.35, 3.0),
+                dial,
+                Transform::from_xyz(0.0, 0.0, 5.5).with_rotation(flat),
+            );
+            let needle = glow::phosphor(rig.materials, color, 1.6);
+            rig.part(
+                Cuboid::new(2.0, fh * 0.28, 1.6),
+                needle,
+                Transform::from_xyz(0.0, fh * 0.10, 7.2).with_rotation(Quat::from_rotation_z(-0.6)),
+            );
+            let hub = glow::etched(rig.materials, palette::GLINT);
+            rig.part(ico(1.8), hub, Transform::from_xyz(0.0, 0.0, 7.4));
+        }
+        // The destination preview: a square brass porthole showing the
+        // selected world as a lone phosphor disc. Passive glass.
+        Kind::DestPreview => {
+            rig.part(
+                Cuboid::new(fw * 0.84, fh * 0.84, 4.0),
+                rig.skin.brass.clone(),
+                Transform::from_xyz(0.0, 0.0, 2.0),
+            );
+            let glass = rig.tint(palette::mix(color, palette::SHADOW, 0.72));
+            rig.part(
+                Cuboid::new(fw * 0.68, fh * 0.68, 3.0),
+                glass,
+                Transform::from_xyz(0.0, 0.0, 3.5),
+            );
+            let world = glow::phosphor(rig.materials, color, 1.5);
+            rig.part(ico(fw * 0.14), world, Transform::from_xyz(0.0, 0.0, 5.6));
+        }
+        // The launch handle: the archetype of the amber-handle rule —
+        // every click-functional piece wears this same amber. A shade
+        // plate, the brass quadrant slot, and the pull arm reaching
+        // into the room, knob glowing so the one lever that commits a
+        // course is findable in a dead-dark cabin.
+        Kind::LaunchLever => {
+            rig.part(
+                Cuboid::new(fw * 0.72, fh * 0.88, 3.0),
+                rig.skin.plate_shade.clone(),
+                Transform::from_xyz(0.0, 0.0, 1.5),
+            );
+            rig.part(
+                Cuboid::new(fw * 0.14, fh * 0.72, 4.0),
+                rig.skin.brass.clone(),
+                Transform::from_xyz(0.0, 0.0, 3.2),
+            );
+            let arm = rig.tint(palette::mix(color, palette::SHADOW, 0.35));
+            rig.part(
+                Cuboid::new(3.2, fh * 0.52, 3.2),
+                arm,
+                Transform::from_xyz(0.0, -fh * 0.06, 8.0)
+                    .with_rotation(Quat::from_rotation_x(-0.5)),
+            );
+            let knob = glow::phosphor(rig.materials, palette::AMBER, 1.8);
+            rig.part(ico(3.4), knob, Transform::from_xyz(0.0, fh * 0.16, 11.5));
+        }
         // The dressing kinds own two bodies each — laid into the room
         // versus rolled or canned for the counter — and
         // [`sync_dressings`] shows exactly one, by the sim's berth class.
@@ -3028,6 +3187,7 @@ mod tests {
             Violation::Occupied,
             Violation::Aisle,
             Violation::Sealed,
+            Violation::Vital,
         ] {
             let bars = glyph_spec(Some(rule), rect);
             assert!(
@@ -3041,6 +3201,7 @@ mod tests {
                     | Violation::Suspicious
                     | Violation::Aisle
                     | Violation::Sealed
+                    | Violation::Vital
             );
             assert_eq!(bars.is_empty(), frame_only, "{rule:?}");
         }

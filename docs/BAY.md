@@ -353,21 +353,39 @@ of. Three guards, all sim-side and monkey-proven:
   connectivity covers both). Conservative on purpose: it never needs
   to know where the player stands, so it lives in `placement_check`
   with the other rules.
-- **The vital-minimum rule** (unchanged from the old spec): a
-  `Tag::Vital` kind refuses every exit ceremony while it is the last
-  of its kind aboard — give pad, burner hopper, casino wager — one
-  predicate (`last_vital_aboard`), one violation name. Spares sell
-  fine; stations occasionally stock used instruments.
+- **The vital-minimum rule** (landed with the instruments): a vital
+  kind (`Kind::vital()` — the chart tank and the launch handle)
+  refuses every exit ceremony while it is the last of its kind in the
+  player's keeping — the outboard rail (jettison and hopper both), the
+  give pads, the casino wager — one predicate (`last_vital_aboard`),
+  one violation name (`Violation::Vital`). Possession counts only
+  berths that are *staying* (hold, cubbies, laid, received shelf): a
+  spare already staged on a pad or the rail is on its way out, and
+  counting it would let both of a pair be staged and both be lost.
+  Spares sell fine; stations occasionally stock used instruments.
 - **The frontend refuses a drop into the cells the player occupies**
   (a reach-style gate, like the carry's REACH — the sim has no player
   position and must not grow one).
 
 ### Instruments as cargo
 
-- **New wall-mount kinds** (appended as ever): `ChartTank` (2×2),
-  `EtaGauge` (1×1), `LaunchLever` (1×1). The transit window is a hole
-  in the hull, not cargo. The barter counter stays put deliberately
-  until the barter redesign moves it.
+- **New wall-mount kinds** (appended as ever): `Window` (2×1),
+  `ChartTank` (2×2), `EtaGauge` (1×1), `DestPreview` (1×1),
+  `LaunchLever` (1×1). The transit window is cargo after all — whimsy
+  dictates it shares placement rules with paintings, and the void
+  follows it to any wall — so the front cornice punch-out healed into
+  ordinary cells (its old aperture is just the window's traditional
+  berth now). The barter counter stays put deliberately: the barter
+  interface is slated for removal, not migration.
+- **Yellow handles**: click-functional cargo wears the same AMBER
+  handle hardware — the launch handle's glowing pull is the archetype,
+  the chart tank's grab rail follows it. Passive glass (window, ETA
+  gauge, destination preview) earns no handle; the handle IS the
+  affordance.
+- **Saves bump to STV9**: a pre-STV9 document carries no instrument
+  pieces, so the reader hangs the missing ones at their traditional
+  berths on load (first legal cell when the board claims a berth),
+  chaining with the pre-STV8 console-grid translation.
 - **The logical rects stay the law**: `layout::MAP_PANEL` et al. never
   move; the *binding* moves — a mounted instrument carries its
   station's `SimSurface` at its own cells, so rulings and tape format

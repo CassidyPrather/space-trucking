@@ -429,24 +429,61 @@ meets the piece where the piece is, and whatever the sim hit-tests
 inside it — the cabinet's cubby sub-rects today — is read in the frame
 the rig drew it in. Consequences, all falling out of the one binding:
 selection, the hover glint, the carry's grab and its stow drop cannot
-disagree with each other or with the picture. Wall cargo needs no face
-— it hangs IN its chart's plane, where the chart already is the piece.
+disagree with each other or with the picture. Wall cargo the upright
+rule leaves level needs no face — it hangs IN its chart's plane, where
+the chart already is the piece — but wall cargo the rule ROLLS does,
+for the reason below.
 
 The sim never hears about any of it: the pointer it receives is still a
 point in its own rect space. Which surface produced that point is the
 cabin's business, and the cabin's whole job is that the answer be the
 one the player was looking at.
 
-One seam is left standing, deliberately, and named here so the next
-pass finds it: the net is the room unfolded as seen from OUTSIDE, so a
-chart's +x reads mirrored from inside — which is why a rig's own frame,
-not the chart, is the law over the rig's own body. Wall cargo reads
-through its chart, so a wall piece whose body the upright rule ROLLS
-(square footprints on the side walls) has its sub-rects still lying the
-chart's way rather than the rig's: the chart tank's amber handle band
-is a quarter turn off the bar the rig draws. Same defect class, other
-plane; it wants the same answer plus a standoff off the wall so the
-face outranks the chart it hangs on.
+The seam this section used to leave standing is closed, and the shape
+of the answer was the one it sketched. The net is the room unfolded as
+seen from OUTSIDE, so a chart's +x reads mirrored from inside — which
+is why a rig's own frame, not the chart, is the law over the rig's own
+body, and that law now reaches the walls as well. It took two turns.
+
+**The upright rule learned to count turns, not corners.** A HALF turn
+maps any footprint onto itself, so it is always affordable; only a
+QUARTER turn trades width for height and needs a square footprint to
+pay for it. That distinction is what the front wall was waiting for:
+the front chart unfolds DOWNWARD off the floor's front edge, so its
+rows climb the wall and everything on it inherits a half turn — the
+window hung its sky upside down there, and a painting its horizon.
+Now the whole front cluster stands up. Readable content that occupies
+no cells at all takes the roll unconditionally, since it has nothing to
+leave: the violation glyphs have a top like any other drawn thing, and
+a hazard triangle that points down is not a hazard triangle.
+
+**A rolled wall piece carries its own face**, a standoff proud of the
+chart so it outranks the coplanar plane behind it (an instrument
+answers on its own glass; everything else on a small standoff — a tie
+between two quads in the same plane is settled by query order, which is
+not an answer). A rolled rig's sub-rects lie the rig's way while the
+chart's y still lies the chart's, which is exactly how the tank's amber
+handle band came to sit a quarter turn off the bar drawn from those
+very numbers, and how the front wall's launch handle came to route its
+carry along the band above its own grab.
+
+What keeps it closed is a sweep rather than a case. Every kind, at
+every berth the sim's own arbiter allows, must hang its body ON its own
+cells, read up-is-up wherever the footprint can afford the turn, hand
+the carried ghost exactly the berth's own rotation (preview and berth
+share one derivation, and the test pins them so no refactor can split
+them again), and — where the kind wears amber — route every texel of
+the grab it DRAWS as a carry, with the body around it still answering
+for the instrument. Every defect in this class held on the wall it was
+written against and nowhere else, so only a table sweep can say "on
+every wall" and mean it.
+
+One thing stays crooked on purpose: a non-square footprint on a side
+wall still lies portrait with its cells, because the quarter turn it
+would need is one it cannot pay for. A window rehung on the port wall
+shows a portrait of the void, and the painting beside it hangs the same
+way. The cells are the law and the picture follows them — the same
+answer the standing rule gives everywhere else.
 
 ### Occlusion: a defect class, named
 

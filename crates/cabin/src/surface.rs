@@ -15,11 +15,12 @@
 //! cargo, so the chart tank and the launch handle carry their stations
 //! at their own cells ([`Riding`]) and the rest of the game never hears
 //! about it — the logical rects stay the law, only the binding moves
-//! (docs/BAY.md, "Instruments as cargo"). And a rig that STANDS in the
-//! room — floor cargo on the deck, a pendant under the ceiling, a crate
-//! on a hopper tile — carries its own face the same way
-//! ([`Station::Standing`]): its body is nowhere near the flat chart it
-//! berths on, so the aim has to meet it where it actually is.
+//! (docs/BAY.md, "Instruments as cargo"). And a rig whose own frame
+//! leaves its chart's carries its own face the same way
+//! ([`Station::Standing`]): floor cargo, a pendant, a crate on a hopper
+//! tile stand bodily where the chart is not, and wall cargo the upright
+//! rule rolls shares the plane but not the lie — so in both cases the
+//! aim has to meet the piece in the frame the rig was drawn in.
 
 use bevy::prelude::*;
 use space_trucking::sim::Vec2 as SimVec2;
@@ -57,16 +58,21 @@ pub enum Station {
     /// One burner berth tile — a single outboard-rail (Flotsam) slot.
     /// Live only while no barter is open, exactly the sim's rail rule.
     Airlock,
-    /// A standing rig's own face, bound to that piece's own rect and
-    /// riding the pose the rig actually took — the yaw the backing rule
-    /// spun it by, the roll the upright rule rolled it by, all of it.
-    /// The standing rule (docs/BAY.md): where a rig does not lie in the
-    /// plane of its chart, projecting the aim onto that chart answers
-    /// about a plate the player is not looking at. So the piece carries
-    /// the mapping on its own body instead, and where the aim lands on
-    /// it is where the sim reads it — several of these stand at once,
-    /// one per standing piece, which is why nothing looks a face up by
-    /// station: the pointer hands over the one it struck.
+    /// A rig's own face, bound to that piece's own rect and riding the
+    /// pose the rig actually took — the yaw the backing rule spun it
+    /// by, the roll the upright rule rolled it by, all of it. The
+    /// standing rule (docs/BAY.md): where a rig's frame leaves its
+    /// chart's, projecting the aim onto that chart answers about
+    /// something the player is not looking at. A piece that STANDS is
+    /// bodily somewhere the chart is not; a wall piece the upright rule
+    /// ROLLS shares the chart's plane but not its lie, so a sub-rect
+    /// read in chart coordinates lands a quarter turn off the hardware
+    /// drawn from the same numbers. Either way the piece carries the
+    /// mapping on its own body, a standoff proud of the wall so it
+    /// outranks the chart, and where the aim lands on it is where the
+    /// sim reads it — several of these stand at once, one per piece,
+    /// which is why nothing looks a face up by station: the pointer
+    /// hands over the one it struck.
     Standing,
 }
 

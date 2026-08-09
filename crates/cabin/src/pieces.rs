@@ -440,15 +440,54 @@ fn chart_of(
 
 /// Where a hold footprint (its `layout::piece_rect`) sits in the room,
 /// as the rig root's (translation, rotation, scale). On the floor chart
-/// a rig STANDS: feet on its plan rect, upright facing the front wall,
-/// keeping its bas-relief height (the re-authored 3D extents are
-/// deferred; BAY.md). On a wall or the ceiling it hangs flat against
-/// the chart. Sizes derive from the surface scales, so retuning
-/// `rig::BAY_CELL` re-scales every rig.
+/// a rig STANDS: feet on its plan rect, upright, turned by the backing
+/// rule ([`floor_facing`]) and keeping its bas-relief height (the
+/// re-authored 3D extents are deferred; BAY.md). On a wall or the
+/// ceiling it hangs flat against the chart. Sizes derive from the
+/// surface scales, so retuning `rig::BAY_CELL` re-scales every rig.
 fn net_site(surfaces: &Query<(&Station, &SimSurface)>, rect: Rect) -> Option<(Vec3, Quat, Vec3)> {
     let (station, surface) = chart_of(surfaces, rect_center(rect))?;
     let aft = surface_of(surfaces, Station::BayWall)?;
     Some(site_on(station, &surface, &aft, rect))
+}
+
+/// The backing rule (BAY.md): where a standing rig's orientation cannot
+/// be read off its cells, its footprint decides. A footprint against a
+/// wall seam turns its BACK to that wall (the couch against the wall);
+/// mid-floor it faces the front of the room, toward the user. Only the
+/// yaws that keep the visual plan on its logical cells are candidates:
+/// a half turn is always compatible, quarter turns only for one-column
+/// footprints (a 2-wide couch cannot lie along the port wall without
+/// leaving its cells). Seam priority aft, front, then the sides —
+/// stable, and the always-compatible flips first.
+fn floor_facing(surface: &SimSurface, aft: &SimSurface, rect: Rect) -> Quat {
+    let base = Station::BayWall.face(aft);
+    let (fx, fy, fw, fh) = layout::FLOOR;
+    // Clamped non-negative before the cast: rects live on the net.
+    #[allow(clippy::cast_sign_loss)]
+    let cell = |units: f32| (units / layout::CELL).round().max(0.0) as u8;
+    let cx = cell(rect.x - layout::GRID_ORIGIN.x);
+    let cy = cell(rect.y - layout::GRID_ORIGIN.y);
+    let cw = cell(rect.w).max(1);
+    let ch = cell(rect.h).max(1);
+    // Sim axes on the floor chart, in world: `u` port -> starboard,
+    // `v` aft -> front (the floor's y3 row lies at the aft seam).
+    let u = surface.half_u.normalize();
+    let v = surface.half_v.normalize();
+    let want = if cy == fy {
+        v
+    } else if cy + ch == fy + fh {
+        -v
+    } else if cx == fx && cw == 1 {
+        u
+    } else if cx + cw == fx + fw && cw == 1 {
+        -u
+    } else {
+        v
+    };
+    let ahead = base * Vec3::Z;
+    let yaw = ahead.cross(want).dot(Vec3::Y).atan2(ahead.dot(want));
+    Quat::from_rotation_y(yaw) * base
 }
 
 /// [`net_site`]'s pure core, for a known chart — shared with the unit
@@ -466,7 +505,7 @@ fn site_on(
             let base = surface.to_world(rect_center(rect));
             (
                 base + Vec3::Y * (rect.h * 0.5 * scale.y),
-                Station::BayWall.face(aft),
+                floor_facing(surface, aft, rect),
                 scale,
             )
         }
@@ -3132,6 +3171,47 @@ mod tests {
         assert!(
             (rot * Vec3::Z).x > 0.9,
             "port cargo must face into the room"
+        );
+    }
+
+    /// The backing rule: seam contact turns a standing rig's back to
+    /// the wall, quarter turns only where the plan allows them, and
+    /// mid-floor cargo faces the front of the room.
+    #[test]
+    fn the_backing_rule_turns_floor_rigs() {
+        let aft = chart(Station::BayWall);
+        let floor = chart(Station::BayFloor);
+        let facing = |x: u8, y: u8, kind: Kind| {
+            let (_, rot, _) = site_on(Station::BayFloor, &floor, &aft, rect_of(x, y, kind));
+            assert!(
+                (rot * Vec3::Y - Vec3::Y).length() < 1e-4,
+                "the backing rule must keep rigs upright"
+            );
+            rot * Vec3::Z
+        };
+        // Mid-floor: face the front of the room, toward the user.
+        assert!(facing(5, 4, Kind::Couch).z < -0.9, "mid-floor faces front");
+        // Against the front gutter: back to the front wall.
+        assert!(
+            facing(3, 7, Kind::Couch).z > 0.9,
+            "front-row cargo turns its back to the front wall"
+        );
+        // A one-column piece against the port seam backs onto it.
+        assert!(
+            facing(3, 4, Kind::FloorLamp).x > 0.9,
+            "a port-seam lamp faces starboard"
+        );
+        // A two-wide couch cannot lie along the port wall: the quarter
+        // turn would leave its cells, so the default stands.
+        assert!(
+            facing(3, 5, Kind::Couch).z < -0.9,
+            "an incompatible seam keeps the default facing"
+        );
+        // The aft seam wins the corner: back to the aft wall reads as
+        // the flush default (facing front).
+        assert!(
+            facing(3, 3, Kind::FloorLamp).z < -0.9,
+            "the aft corner backs onto the aft wall"
         );
     }
 

@@ -9,15 +9,15 @@
 //! pull down, banked burner stoke so the firebox glows), and every
 //! cargo kind aboard through every berth class — floor cargo, wall
 //! painting and sconce, ceiling lamp, an occupied cabinet (vial,
-//! fluff, chit, seedlings in the cubbies), a gnawed rug laid under
-//! open floor, enamel and luminous coats on the walls, give pads and
-//! received shelf dressed mid-trade, station stock on the shelf, and
-//! fuel staged on the burner tiles (gas, gnawed scrap, a casino chip).
-//! A rat rides at (4, 4). The one absentee is `VeryMysteriousCrate`:
-//! the at-most-one-suspicious-aboard rule genuinely forbids it beside
-//! the suspicious crate, and the fixture does not cheat the rules it
-//! exists to exercise — the test below re-checks every berth against
-//! the sim's own arbiters.
+//! fluff, chit, bottled midnight in the cubbies), a gnawed rug pinned
+//! under the couch, enamel and luminous coats on the walls, give pads
+//! and received shelf dressed mid-trade, station stock on the shelf
+//! (seedlings, gas, gnawed scrap). A rat rides at (4, 4). Two rules
+//! shape the roster: `VeryMysteriousCrate` stays ashore (at most one
+//! suspicious piece aboard), and the burner hopper arrives EMPTY —
+//! docking banks the hopper before any barter opens (the rail IS the
+//! shelf row; the save parser now refuses the combination outright),
+//! so fuel staging is tested by casting off and staging it yourself.
 //!
 //! Keep the board legal when editing: standing cargo shadows the wall
 //! cells behind it (the floor lamp and cabinet against the port seam
@@ -49,30 +49,29 @@ rat 4 4 4 4 11800 12300 12600 1
 eager 3f800000 2
 piece 0 21 0 0 hold 3 6
 piece 1 9 0 0 hold 7 5
-piece 2 8 0 0 hold 4 4
-piece 3 19 1 0 hold 7 7
-piece 4 18 2 0 hold 3 4
-piece 5 12 0 0 hold 4 3
-piece 6 6 1 0 hold 3 3
+piece 2 8 0 0 hold 4 3
+piece 3 19 1 0 hold 4 6
+piece 4 18 2 0 hold 3 3
+piece 5 12 0 0 stow 0 3
+piece 6 6 1 0 recv 2
 piece 7 20 3 0 hold 7 1
 piece 8 17 1 0 hold 0 5
 piece 9 16 2 0 hold 13 4
-piece 10 22 0 1 laid 7 7
-piece 11 23 1 0 laid 4 1
+piece 10 22 0 1 laid 4 6
+piece 11 23 1 0 laid 6 1
 piece 12 24 0 0 laid 2 6
 piece 13 0 1 0 stow 0 0
 piece 14 13 2 0 stow 0 1
 piece 15 14 0 0 stow 0 2
-piece 16 4 3 0 stow 0 3
+piece 16 4 3 0 shelf 1
 piece 17 7 1 0 give 0
 piece 18 1 2 0 give 1
 piece 19 11 0 0 recv 0
 piece 20 2 1 0 recv 1
-piece 21 5 0 0 flot 0
-piece 22 3 3 1 flot 1
-piece 23 15 2 0 flot 2
-piece 24 14 1 0 shelf 0
-next_piece 25
+piece 21 5 0 0 shelf 2
+piece 22 3 3 1 shelf 3
+piece 23 15 2 0 give 2
+next_piece 24
 ";
 
 #[cfg(test)]

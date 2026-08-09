@@ -291,6 +291,19 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         barter::visit_values(seed, b.station, b.visit)
     });
 
+    // The outboard rail IS the shelf row (`FLOTSAM_SLOTS == SHELF_SLOTS`),
+    // contexts exclusive by construction: docking banks the hopper before
+    // any barter opens, so a save claiming staged flotsam AND an open
+    // barter at once is lying — clicking "the shelf" would lift the fuel.
+    // Refuse it whole rather than let the two contexts share one rect.
+    if barter.is_some()
+        && pieces
+            .iter()
+            .any(|piece| matches!(piece.loc, Loc::Flotsam { .. }))
+    {
+        return Err(SaveError::Parse { line: 0 });
+    }
+
     Ok(Sim {
         seed,
         rng: fastrand::Rng::with_seed(rng_state),
@@ -1053,6 +1066,18 @@ mod tests {
     }
 
     #[test]
+    fn staged_flotsam_with_an_open_barter_refuses_to_load() {
+        // Docked at the Guild, the barter is open; smuggle a staged
+        // piece onto the rail and the exclusivity law (the rail IS the
+        // shelf row) must refuse the whole save — a fixture taught us
+        // what clicking "the shelf" does otherwise.
+        let save = Sim::new(7).save_string();
+        let forged = save.replace("next_piece", "piece 900 5 0 0 flot 0\nnext_piece");
+        assert!(Sim::from_save(&forged).is_err());
+        assert!(Sim::from_save(&save).is_ok());
+    }
+
+    #[test]
     fn stowed_pieces_round_trip() {
         let (sim, save, cabinet, _) = furnished();
         assert!(save.starts_with("STV8\n"), "the writer stamps STV8");
@@ -1077,7 +1102,7 @@ mod tests {
         // berth. The stoke token is STV7's, so the pre-STV7 documents drop
         // it from the ship line too.
         let plain = Sim::new(9).save_string();
-        let mut old_cells = [(0_u8, 0_u8), (0, 2), (2, 0)].into_iter();
+        let mut old_cells = [(0_u8, 0_u8), (0, 2), (2, 0), (5, 0)].into_iter();
         let legacy_board: String = plain
             .lines()
             .map(|line| {
@@ -1090,7 +1115,7 @@ mod tests {
                 }
             })
             .collect();
-        assert!(old_cells.next().is_none(), "starter cargo is three pieces");
+        assert!(old_cells.next().is_none(), "starter cargo is four pieces");
         for older in ["STV7", "STV6", "STV5", "STV4"] {
             let mut old = legacy_board.replacen("STV8", older, 1);
             if older != "STV7" {
@@ -1108,7 +1133,7 @@ mod tests {
                 .iter()
                 .filter(|piece| matches!(piece.loc, Loc::Hold { .. }))
                 .collect();
-            assert_eq!(held.len(), 3, "{older}: the starter cargo walks aboard");
+            assert_eq!(held.len(), 4, "{older}: the starter cargo walks aboard");
             for piece in held {
                 let Loc::Hold { x, y } = piece.loc else {
                     unreachable!()

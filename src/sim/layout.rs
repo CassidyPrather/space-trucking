@@ -140,10 +140,14 @@ pub const fn surface_of(x: u8, y: u8) -> Option<Surf> {
 /// sealed-floor invariant and the wall-shadow rule reason about.
 pub const FLOOR: (u8, u8, u8, u8) = (3, 3, 6, 5);
 
-/// Floor cells kept clear of standing cargo: the threshold in front of
-/// the burner doorway. A doorway needs a doormat, and the stoker needs
-/// to reach the hopper — coverings may lie here, nothing may stand.
-pub const AISLE: [(u8, u8); 2] = [(8, 3), (8, 4)];
+/// Floor cells kept clear of standing cargo (`Violation::Aisle`).
+///
+/// Two stretches: the threshold in front of the burner doorway (a
+/// doorway needs a doormat, and the stoker needs to reach the hopper),
+/// and the barter counter's apron (standing furniture there clips into
+/// the desk — the apron retires with the counter when the instruments
+/// migrate). Coverings may lie on any of them; nothing may stand.
+pub const AISLE: [(u8, u8); 5] = [(8, 3), (8, 4), (5, 7), (6, 7), (7, 7)];
 
 /// The barter surface, bottom-right: shelves, pads, dial, and accept lever.
 pub const BARTER_PANEL: Rect = Rect::new(260.0, 440.0, 530.0, 150.0);

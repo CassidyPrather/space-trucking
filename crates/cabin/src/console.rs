@@ -370,7 +370,7 @@ fn spawn_button_base(b: &mut Build<'_, '_, '_>, rect: layout::Rect, which: Toggl
 /// Pause: two upright bars.
 fn spawn_pause(b: &mut Build<'_, '_, '_>) {
     let mid = spawn_button_base(b, layout::PAUSE_BTN, Toggle::Pause);
-    let bars = glow::enamel(b.materials, palette::ICON);
+    let bars = glow::etched(b.materials, palette::ICON);
     for dx in [-4.5, 4.5] {
         let bar = b.slab((mid.0 + dx, mid.1), (5.0, 18.0), 0.004, 0.012, &bars);
         b.commands.entity(bar).insert((Toggle::Pause, IconStroke));
@@ -380,7 +380,7 @@ fn spawn_pause(b: &mut Build<'_, '_, '_>) {
 /// Warp: a double chevron pointing right. Dev-only.
 fn spawn_warp(b: &mut Build<'_, '_, '_>) {
     let mid = spawn_button_base(b, layout::WARP_BTN, Toggle::Warp);
-    let strokes = glow::enamel(b.materials, palette::ICON);
+    let strokes = glow::etched(b.materials, palette::ICON);
     for chevron in [-5.25, 3.85] {
         for (dy, angle) in [(3.5, -0.838), (-3.5, 0.838)] {
             let arm = b.stroke(mid, (chevron + 0.7, dy), (9.4, 2.2), angle, 0.012, &strokes);
@@ -393,7 +393,7 @@ fn spawn_warp(b: &mut Build<'_, '_, '_>) {
 /// slash that carries the refusal by shape.
 fn spawn_speaker(b: &mut Build<'_, '_, '_>) {
     let mid = spawn_button_base(b, layout::SPEAKER, Toggle::Speaker);
-    let icon = glow::enamel(b.materials, palette::ICON_LIT);
+    let icon = glow::etched(b.materials, palette::ICON_LIT);
     let body = b.slab((mid.0 - 6.5, mid.1), (7.0, 10.0), 0.004, 0.012, &icon);
     b.commands
         .entity(body)
@@ -584,7 +584,13 @@ fn lever_lamp(
 /// live color (optionally emissive) while it is awake.
 fn set_stroke(mat: &mut StandardMaterial, live: Color, lit: bool, glow_up: f32) {
     mat.base_color = if lit { live } else { palette::ICON };
-    mat.emissive = live.to_linear() * if lit { glow_up } else { 0.0 };
+    // Asleep, the stroke keeps the etched self-glow floor — the icons
+    // must survive a lampless cabin (glow::etched's contract).
+    mat.emissive = if lit {
+        live.to_linear() * glow_up
+    } else {
+        palette::ICON.to_linear() * 0.35
+    };
 }
 
 /// The toggle buttons: icon strokes, state lamps, and the mute slash.

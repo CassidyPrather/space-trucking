@@ -654,10 +654,15 @@ impl Skin {
                 metallic: 0.0,
                 ..default()
             }),
+            // Radium-painted hardware: the faint self-glow that keeps
+            // every lever and fitting findable with the lights out —
+            // the "playable on technicality" floor (BAY.md, "Lights
+            // are cargo"). Dim enough to vanish under any real lamp.
             brass: materials.add(StandardMaterial {
                 base_color: palette::BRASS,
                 perceptual_roughness: 0.45,
                 metallic: 0.8,
+                emissive: palette::BRASS.to_linear() * 0.22,
                 ..default()
             }),
             rivet: materials.add(metal(palette::RIVET)),
@@ -1047,75 +1052,22 @@ pub fn spawn(
         }
     }
 
-    // --- Light: one warm overhead, one floor fill, one phosphor spill
-    // by the tank, and a pair of work lights over the bay. The omen
-    // reaches them all through `Dimmable`.
-    // No shadow maps anywhere, on purpose: DESIGN.md's lighting direction
-    // is light *volumes* — authored, placed light, not simulated
-    // occlusion. Depth comes from placement, wear, fog, and the motes.
-    // The bay pair hangs forward of the gantry so the wall band and the
-    // deck strip both catch it; cargo lamps add their own pools on top.
-    for sx in [-0.8, 0.8] {
-        commands.spawn((
-            PointLight {
-                color: palette::GLINT,
-                intensity: 110_000.0,
-                range: 4.5,
-                shadow_maps_enabled: false,
-                ..default()
-            },
-            Transform::from_xyz(sx, 2.05, 1.25),
-            Dimmable {
-                intensity: 110_000.0,
-            },
-        ));
-    }
-    commands.spawn((
-        PointLight {
-            color: palette::GLINT,
-            intensity: 220_000.0,
-            range: 7.0,
-            shadow_maps_enabled: false,
-            ..default()
-        },
-        Transform::from_xyz(0.25, 2.1, 0.35),
-        Dimmable {
-            intensity: 220_000.0,
-        },
-    ));
-    commands.spawn((
-        PointLight {
-            color: palette::PLATE_LIT,
-            intensity: 40_000.0,
-            range: 5.0,
-            shadow_maps_enabled: false,
-            ..default()
-        },
-        Transform::from_xyz(-0.4, 0.4, 0.9),
-        Dimmable {
-            intensity: 40_000.0,
-        },
-    ));
-    commands.spawn((
-        PointLight {
-            color: palette::PHOSPHOR,
-            intensity: 12_000.0,
-            range: 2.4,
-            shadow_maps_enabled: false,
-            ..default()
-        },
-        // The phosphor spill follows its tank to the left wall.
-        Transform::from_xyz(-1.32, 1.45, -0.2),
-        Dimmable {
-            intensity: 12_000.0,
-        },
-    ));
+    // --- Light: NONE of the ship's own. Every lumen aboard is cargo —
+    // the starter ceiling lamp, sconces, floor lamps, luminous coats,
+    // the firebox — and the omen dims them all through `Dimmable`.
+    // Lights-out is therefore a legal, playable state: the instruments
+    // are emissive (screens, phosphor readings, icon etchings, the
+    // radium-painted brass) and carry the game on technicality while
+    // the room itself goes black. No shadow maps anywhere, on purpose:
+    // DESIGN.md's lighting direction is light *volumes* — authored,
+    // placed light, not simulated occlusion.
 
-    // Volume-flavored ambient: with shadow maps gone, a slightly fuller
-    // ambient keeps the unlit corners legible instead of void-black.
+    // Starlight through the pane: an ambient floor low enough that a
+    // lampless room reads as darkness, high enough that silhouettes
+    // survive it. The one light the player cannot trade away.
     commands.insert_resource(GlobalAmbientLight {
         color: palette::PLATE_LIT,
-        brightness: 140.0,
+        brightness: 16.0,
         ..default()
     });
 

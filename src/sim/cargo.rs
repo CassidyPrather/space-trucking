@@ -820,7 +820,7 @@ mod tests {
         // law already keeps it off the walls, which is what riding low
         // used to mean. The tag waits for the stacking rules.
         assert_eq!(check(&[], Kind::GildedIdol, 3, 3), Ok(()));
-        assert_eq!(check(&[], Kind::GildedIdol, 5, 6), Ok(()));
+        assert_eq!(check(&[], Kind::GildedIdol, 5, 5), Ok(()));
         // The old failure mode, restated: lifted onto a wall, the mount
         // law refuses (port chart, floor kind).
         assert_eq!(
@@ -851,7 +851,7 @@ mod tests {
     #[test]
     fn cryo_rule_accepts_edge_and_names_interior() {
         assert_eq!(check(&[], Kind::CryoCore, 3, 4), Ok(()));
-        assert_eq!(check(&[], Kind::CryoCore, 5, 7), Ok(()));
+        assert_eq!(check(&[], Kind::CryoCore, 4, 7), Ok(()));
         assert_eq!(check(&[], Kind::CryoCore, 5, 5), Err(Violation::Cryo));
     }
 
@@ -867,18 +867,21 @@ mod tests {
 
     #[test]
     fn the_aisle_stays_walkable_and_the_floor_never_seals() {
-        // Standing on the doormat: refused by name. Laying on it: fine.
+        // Standing on the doormat or the counter's apron: refused by
+        // name. Laying on either: fine.
         assert_eq!(check(&[], Kind::PerfumeVial, 8, 3), Err(Violation::Aisle));
+        assert_eq!(check(&[], Kind::PerfumeVial, 6, 7), Err(Violation::Aisle));
         assert_eq!(dressing_check(&[], 9, Kind::Rug, 7, 3), Ok(()));
+        assert_eq!(dressing_check(&[], 9, Kind::Rug, 5, 7), Ok(()));
         // Wall a corridor across the floor with a gap, then close the
-        // gap: the closing piece would cut the floor in two.
-        let wall: Vec<(Kind, u8, u8)> = (3..7).map(|y| (Kind::PerfumeVial, 5, y)).collect();
+        // gap: the closing piece would cut column three off the room.
+        let wall: Vec<(Kind, u8, u8)> = (3..7).map(|y| (Kind::PerfumeVial, 4, y)).collect();
         assert_eq!(
-            check(&wall, Kind::PerfumeVial, 5, 7),
+            check(&wall, Kind::PerfumeVial, 4, 7),
             Err(Violation::Sealed)
         );
         // Well clear of the gap instead: still one region, fine.
-        assert_eq!(check(&wall, Kind::PerfumeVial, 3, 6), Ok(()));
+        assert_eq!(check(&wall, Kind::PerfumeVial, 6, 5), Ok(()));
     }
 
     #[test]

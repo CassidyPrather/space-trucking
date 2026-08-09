@@ -127,10 +127,15 @@ fn home_familiar() -> [u32; POI_COUNT] {
 
 /// Starter cargo and where it is stowed: three pieces, placed legally
 /// (the scrap is heavy, so it sits low).
-const STARTER_CARGO: [(Kind, u8, u8); 3] = [
+const STARTER_CARGO: [(Kind, u8, u8); 4] = [
     (Kind::ScrapAlloy, 4, 5),
     (Kind::PerfumeVial, 3, 3),
     (Kind::BrinePearls, 6, 3),
+    // The ship's one light. Every other lumen aboard is cargo too —
+    // lights-out is a legal state and the emissive instruments carry it
+    // (docs/BAY.md, "Lights are cargo") — so the starter lamp hangs
+    // over mid-floor where losing it is a choice, not an accident.
+    (Kind::CeilingLamp, 14, 5),
 ];
 
 /// A 2D vector, kept deliberately tiny: the sim needs four operations and a

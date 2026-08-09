@@ -412,6 +412,19 @@ then the net in the sim, then the net's presentation, then the
 instruments, then `supports:top` hosts. Each lands green or not at
 all.
 
+## Lights are cargo
+
+The ship owns no light. Every lumen aboard is a piece — the starter
+ceiling lamp hanging over mid-floor, sconces, floor lamps, luminous
+coats, the firebox — all of it tradeable, jettisonable, burnable, and
+all of it dimmed by the omen. What remains when the last lamp goes is
+an ambient starlight floor (silhouettes survive; the room reads black)
+and the instruments' own glow: screens and phosphor readings were
+always emissive, the icon etchings and the brass hardware now carry a
+faint radium-paint self-glow — so a fully darkened ship stays playable
+on technicality, chart to lever. Selling your last lamp is a legal,
+foolish, extremely funny decision, and the game holds up its end.
+
 ## What stays out of this slice
 
 Free (non-grid) placement, physics, multiple rooms, new pad surfaces,

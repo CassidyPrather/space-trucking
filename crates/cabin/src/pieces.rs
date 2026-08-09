@@ -107,16 +107,20 @@ const SALT_BITE: u64 = 0x91EC_B17E;
 /// Salt for the painting's one artwork roll.
 const SALT_ART: u64 = 0x91EC_0A27;
 
-/// A lit lamp's honest brightness at room scale; the omen scales it via
-/// `Dimmable`. Bright enough to pool light on the neighbouring bay cells
-/// and the deck plates, well under the overhead's key — lamplight is
-/// local color, not a second room light.
+/// A lit wall or floor lamp's honest brightness; the omen scales it
+/// via `Dimmable`. Since the ship owns no light of its own (lights are
+/// cargo; BAY.md), lamplight is most of what a room ever gets.
 const LAMP_LUMENS: f32 = 36_000.0;
 
-/// A lamp's reach, metres: about one bay cell past its own — the 3D
-/// reading of the sim's orthogonal halo, tuned so a pool ends before it
-/// climbs the far furniture.
+/// A wall or floor lamp's reach, metres: a local pool, about one bay
+/// cell past its own.
 const LAMP_RANGE: f32 = 1.9;
+
+/// The ceiling lamp is the room's key light — the one the ship starts
+/// with — so it burns brighter and reaches the whole floor from its
+/// pendant height instead of pooling.
+const CEILING_LUMENS: f32 = 120_000.0;
+const CEILING_RANGE: f32 = 4.6;
 
 /// Lamp wake/sleep fade, seconds. Placement feedback, so it finishes
 /// well inside the half-second law.
@@ -185,6 +189,7 @@ impl Plugin for PiecesPlugin {
                     sync_fixtures,
                     sync_dressings,
                     xray_focus,
+                    hover_glint,
                     carry_held,
                     placement_hints,
                     invite_glows,
@@ -456,19 +461,32 @@ fn site_on(
 ) -> (Vec3, Quat, Vec3) {
     let (su, sv) = (surface.scale_u(), surface.scale_v());
     let scale = Vec3::new(su, sv, su.min(sv)) * BAY_FIT;
-    if matches!(station, Station::BayFloor) {
-        let base = surface.to_world(rect_center(rect));
-        (
-            base + Vec3::Y * (rect.h * 0.5 * scale.y),
-            Station::BayWall.face(aft),
-            scale,
-        )
-    } else {
-        (
+    match station {
+        Station::BayFloor => {
+            let base = surface.to_world(rect_center(rect));
+            (
+                base + Vec3::Y * (rect.h * 0.5 * scale.y),
+                Station::BayWall.face(aft),
+                scale,
+            )
+        }
+        // Ceiling cargo hangs PENDANT: upright like a floor rig, author
+        // up staying world up — the lamp's cord meets the ceiling and
+        // its shade swings below — rather than pasted flat against the
+        // plane, which is what the playtest called out.
+        Station::BayCeiling => {
+            let base = surface.to_world(rect_center(rect));
+            (
+                base - Vec3::Y * (rect.h * 0.5 * scale.y),
+                Station::BayWall.face(aft),
+                scale,
+            )
+        }
+        _ => (
             surface.to_world(rect_center(rect)),
             station.face(surface),
             scale,
-        )
+        ),
     }
 }
 
@@ -887,16 +905,19 @@ fn sync_fixtures(
     let pieces = shell.bridge.sim.pieces();
     let step = time.delta_secs() / LAMP_WAKE;
     for (mut lamp, mut dimmable) in &mut lamps {
-        let lit = pieces
-            .iter()
-            .find(|piece| piece.id == lamp.piece)
-            .is_some_and(lamp_lit);
+        let piece = pieces.iter().find(|piece| piece.id == lamp.piece);
+        let lit = piece.is_some_and(lamp_lit);
         lamp.level = if lit {
             (lamp.level + step).min(1.0)
         } else {
             (lamp.level - step).max(0.0)
         };
-        dimmable.intensity = LAMP_LUMENS * lamp.level;
+        let lumens = if piece.is_some_and(|piece| piece.kind == Kind::CeilingLamp) {
+            CEILING_LUMENS
+        } else {
+            LAMP_LUMENS
+        };
+        dimmable.intensity = lumens * lamp.level;
         if let Some(mut mat) = materials.get_mut(&lamp.mat) {
             glow::set_lamp(&mut mat, lamp.color, lamp.level);
         }
@@ -1189,10 +1210,19 @@ fn xray_focus(
             if let Ok(mut v) = vis.get_mut(rig.body_root) {
                 *v = Visibility::Hidden;
             }
+            // The outline shows only during the glide ("something
+            // stands here, you are flying through it"); parked at the
+            // focus, the ghost goes fully clear — nothing draws over
+            // the interface being worked (playtest call-out).
+            let outline = matches!(camera_rig.mode, Mode::ToFocus { .. });
             if let Ok(mut v) = vis.get_mut(rig.frame_root) {
-                *v = Visibility::Visible;
+                *v = if outline {
+                    Visibility::Visible
+                } else {
+                    Visibility::Hidden
+                };
             }
-            if let Some(mut mat) = materials.get_mut(&rig.frame_mat) {
+            if outline && let Some(mut mat) = materials.get_mut(&rig.frame_mat) {
                 glow::set_lamp(&mut mat, palette::ICON_LIT, XRAY_GLOW);
             }
         } else if xrayed.is_some() {
@@ -1203,6 +1233,52 @@ fn xray_focus(
             if let Ok(mut v) = vis.get_mut(rig.frame_root) {
                 *v = Visibility::Hidden;
             }
+        }
+    }
+}
+
+/// The hover frame's lamp level: an aim tell, dimmer than the carry's
+/// legality glow and warmer than the x-ray outline's duty.
+const HOVER_GLOW: f32 = 0.25;
+
+/// Roam-mode hover feedback: with empty hands, the piece the crosshair
+/// would grab wears a faint glint frame before any click — and where a
+/// rig's silhouette overflows its cells, the frame says honestly which
+/// cells ARE the hitbox (the playtest's mismatch, told instead of
+/// hidden).
+#[allow(clippy::too_many_arguments)]
+fn hover_glint(
+    shell: Res<Shell>,
+    pointer: Res<VirtualPointer>,
+    camera_rig: Res<crate::rig::CameraRig>,
+    index: Res<PieceIndex>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    rigs: Query<&PieceRig>,
+    mut vis: Query<&mut Visibility, Without<PieceRig>>,
+    mut prev: Local<Option<u32>>,
+) {
+    let sim = &shell.bridge.sim;
+    let hovered = (camera_rig.roaming() && sim.held(0).is_none())
+        .then(|| layout::piece_at(sim.pieces(), pointer.sim).map(|piece| piece.id))
+        .flatten();
+    if *prev != hovered
+        && let Some(old) = *prev
+        && let Some(&entity) = index.0.get(&old)
+        && let Ok(rig) = rigs.get(entity)
+        && let Ok(mut v) = vis.get_mut(rig.frame_root)
+    {
+        *v = Visibility::Hidden;
+    }
+    *prev = hovered;
+    if let Some(id) = hovered
+        && let Some(&entity) = index.0.get(&id)
+        && let Ok(rig) = rigs.get(entity)
+    {
+        if let Ok(mut v) = vis.get_mut(rig.frame_root) {
+            *v = Visibility::Visible;
+        }
+        if let Some(mut mat) = materials.get_mut(&rig.frame_mat) {
+            glow::set_lamp(&mut mat, palette::ICON_LIT, HOVER_GLOW);
         }
     }
 }
@@ -1232,7 +1308,17 @@ fn placement_hints(
         }
         let piece = sim.pieces().iter().find(|piece| piece.id == held.piece)?;
         let (ax, ay) = layout::cell_at(pointer.sim)?;
-        let legal = placement_check(sim.pieces(), piece.id, piece.kind, ax, ay).is_ok();
+        // The hint must consult the SAME arbiter the drop will: a
+        // covering answers to the dressing rules (a tin coats any
+        // chart), everything else to placement. The playtest's
+        // green-frame-over-red-hint contradiction was this line using
+        // one arbiter for both.
+        let legal = if piece.kind.covering() {
+            space_trucking::sim::cargo::dressing_check(sim.pieces(), piece.id, piece.kind, ax, ay)
+                .is_ok()
+        } else {
+            placement_check(sim.pieces(), piece.id, piece.kind, ax, ay).is_ok()
+        };
         let (w, h) = piece.kind.cells();
         Some((ax, ay, w, h, legal))
     });
@@ -2391,28 +2477,32 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         Kind::Cabinet => {
             let deep = CABINET_DEPTH;
             let rack = rig.tint(palette::mix(color, palette::SHADOW, 0.25));
-            // Carcass: sides, caps, back — no front.
-            let side = rig.meshes.add(Cuboid::new(2.6, fh * 0.94, deep));
+            // Carcass: back sheet, then sides and caps starting FORWARD
+            // of it — the back alone owns the rear plane, so no two
+            // faces share it (rig-internal z-fighting, seen from behind
+            // in playtest; the decal ladder guards chart paint, this
+            // convention guards the furniture).
+            rig.part(
+                Cuboid::new(fw * 0.96, fh * 0.97, 2.0),
+                body.clone(),
+                Transform::from_xyz(0.0, 0.0, 1.0),
+            );
+            let side = rig.meshes.add(Cuboid::new(2.6, fh * 0.94, deep - 2.0));
             for sx in [-1.0, 1.0] {
                 rig.spawn(
                     side.clone(),
                     body.clone(),
-                    Transform::from_xyz(fw * 0.44 * sx, 0.0, deep * 0.5),
+                    Transform::from_xyz(fw * 0.44 * sx, 0.0, (deep + 2.0) * 0.5),
                 );
             }
-            let cap = rig.meshes.add(Cuboid::new(fw * 0.92, 2.6, deep));
+            let cap = rig.meshes.add(Cuboid::new(fw * 0.92, 2.6, deep - 2.0));
             for sy in [-1.0, 1.0] {
                 rig.spawn(
                     cap.clone(),
                     body.clone(),
-                    Transform::from_xyz(0.0, fh * 0.465 * sy, deep * 0.5),
+                    Transform::from_xyz(0.0, fh * 0.465 * sy, (deep + 2.0) * 0.5),
                 );
             }
-            rig.part(
-                Cuboid::new(fw * 0.92, fh * 0.94, 2.0),
-                body,
-                Transform::from_xyz(0.0, 0.0, 1.0),
-            );
             // The rack: mid shelf and centre stile, a shade darker.
             rig.part(
                 Cuboid::new(fw * 0.88, 2.2, deep * 0.9),
@@ -2631,11 +2721,16 @@ fn lamp_bulb(rig: &mut RigParts, piece: &Piece, parent: Entity, at: Vec3, radius
         Transform::from_translation(at),
         ChildOf(parent),
     ));
+    let range = if piece.kind == Kind::CeilingLamp {
+        CEILING_RANGE
+    } else {
+        LAMP_RANGE
+    };
     rig.commands.spawn((
         PointLight {
             color,
             intensity: 0.0,
-            range: LAMP_RANGE,
+            range,
             shadow_maps_enabled: false,
             ..default()
         },

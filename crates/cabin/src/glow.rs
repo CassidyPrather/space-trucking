@@ -37,6 +37,20 @@ pub fn enamel(materials: &mut Assets<StandardMaterial>, color: Color) -> Handle<
     })
 }
 
+/// Etched hardware markings: enamel with a faint self-glow, the
+/// lights-out floor — icons and instrument markings must stay legible
+/// on technicality when every lamp aboard is gone (the lamps are
+/// cargo). Dim enough to vanish under any real light.
+pub fn etched(materials: &mut Assets<StandardMaterial>, color: Color) -> Handle<StandardMaterial> {
+    materials.add(StandardMaterial {
+        base_color: color,
+        perceptual_roughness: 0.7,
+        metallic: 0.05,
+        emissive: color.to_linear() * 0.35,
+        ..default()
+    })
+}
+
 /// The calm sine loop every decoration breathes with; returns `0..=1`.
 #[must_use]
 pub fn breathe(t: f32, freq: f32, phase: f32) -> f32 {

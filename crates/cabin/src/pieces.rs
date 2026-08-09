@@ -198,15 +198,14 @@ impl Plugin for PiecesPlugin {
             .init_resource::<RatState>()
             .init_resource::<LeverJuice>()
             .add_systems(PostStartup, spawn_overlays)
-            // The instruments' stations move with their cargo, so they
+            // The surfaces that ride cargo — instrument stations, the
+            // standing rigs' faces — move with their pieces, so they
             // are hung before anything reads a surface this frame: the
             // camera's aim, the focus poses, and the pointer all want a
-            // station that agrees with where the hardware actually is.
+            // surface that agrees with where the hardware actually is.
             .add_systems(
                 Update,
-                ride_instruments
-                    .in_set(Phase::Input)
-                    .before(crate::rig::steer),
+                ride_pieces.in_set(Phase::Input).before(crate::rig::steer),
             )
             .add_systems(
                 Update,
@@ -394,10 +393,11 @@ struct LeverJuice {
     shake: f32,
 }
 
-/// The surface entity an instrument piece carries, by piece id — the
-/// station rides the cargo (BAY.md, "Instruments as cargo"), so
-/// [`ride_instruments`] retires it the moment the piece leaves its
-/// berth and nothing downstream has to ask where the hardware went.
+/// A surface entity a piece carries, by piece id: an instrument's
+/// station on its own glass (BAY.md, "Instruments as cargo") and a
+/// standing rig's pick face on its own body. [`ride_pieces`] retires
+/// either the moment the piece leaves that berth, so nothing
+/// downstream has to ask where the hardware went.
 #[derive(Component)]
 pub struct Riding(pub u32);
 
@@ -645,6 +645,19 @@ fn net_laid(surfaces: &Query<(&Station, &SimSurface)>, rect: Rect) -> Option<(Ve
     ))
 }
 
+/// Where a rail piece stands: its hopper tile's centre at bay scale,
+/// facing the doorway, up on its own feet — staged for the fire, not
+/// shelved. One geometry, read by the berth and by the pick face, so a
+/// staged crate is grabbed exactly where it is drawn.
+fn rail_site(floor: &SimSurface, kind: Kind, slot: u8) -> (Vec3, Quat, Vec3) {
+    let (pos, rot) = crate::airlock::site(slot);
+    let s = floor.scale_u().min(floor.scale_v());
+    let scale = Vec3::splat(s) * BAY_FIT;
+    let (_, h) = kind.cells();
+    let lift = f32::from(h) * layout::CELL * 0.5 * scale.y;
+    (pos + Vec3::Y * lift, rot, scale)
+}
+
 /// Cubby anchor centres in the cabinet rig's local space, sim units.
 /// Slot order matches `layout::cubby_rect`: row-major from the top-left
 /// facing the open front — local +X is sim +x, local +Y is up, so slot 0
@@ -670,17 +683,11 @@ fn berth_site(
     match piece.loc {
         Loc::Hold { .. } => net_site(surfaces, layout::piece_rect(pieces, piece)),
         Loc::Laid { .. } => net_laid(surfaces, layout::piece_rect(pieces, piece)),
-        Loc::Flotsam { slot } => {
-            // Rail cargo stands on its hopper tile at bay scale, facing
-            // the doorway — staged for the fire, not shelved.
-            let (pos, rot) = crate::airlock::site(slot);
-            let chart = surface_of(surfaces, Station::BayFloor)?;
-            let s = chart.scale_u().min(chart.scale_v());
-            let scale = Vec3::splat(s) * BAY_FIT;
-            let (_, h) = piece.kind.cells();
-            let lift = f32::from(h) * layout::CELL * 0.5 * scale.y;
-            Some((pos + Vec3::Y * lift, rot, scale))
-        }
+        Loc::Flotsam { slot } => Some(rail_site(
+            &surface_of(surfaces, Station::BayFloor)?,
+            piece.kind,
+            slot,
+        )),
         Loc::Stow { cabinet, slot } => {
             // An occupied cabinet cannot leave the hold, so the host is a
             // standing floor rig whenever this berth exists at all.
@@ -749,26 +756,67 @@ fn hover_rot(
     Some(site_on(station, surface, aft?, rect).1)
 }
 
-// ------------------------------------------------------- riding stations --
+// -------------------------------------------------------- riding surfaces --
+
+/// A quad riding a rig's own berth pose, bound to a sim rect: the frame
+/// every rig is authored in — local +X is sim +x, local +Y is up-panel
+/// (so the sim's downward y maps to `NEG_Y`), local +Z the depth parts
+/// stand proud of the berth plane at. `extent` is the quad's own size
+/// in rig-local sim units, `plane` its depth. The mapping is built from
+/// the same transform and the same local units the rig's parts are
+/// placed with, so hitbox and geometry cannot drift apart — the fixture
+/// sweep's lesson, kept by construction rather than by care.
+#[must_use]
+fn riding_face(rect: Rect, extent: (f32, f32), plane: f32, site: (Vec3, Quat, Vec3)) -> SimSurface {
+    let (pos, rot, scale) = site;
+    SimSurface {
+        center: pos + rot * (Vec3::Z * (plane * scale.z)),
+        half_u: rot * (Vec3::X * (extent.0 * 0.5 * scale.x)),
+        half_v: rot * (Vec3::NEG_Y * (extent.1 * 0.5 * scale.y)),
+        rect,
+    }
+}
 
 /// The station surface an instrument carries at a berth pose: the face
-/// the rig draws its glass on, turned into a [`SimSurface`] bound to
-/// the instrument's logical rect. Local +X is sim +x and local +Y is
-/// up-panel, so the sim's downward y maps to `NEG_Y` — the same frame
-/// [`SimSurface::orientation`] hands out, and the normal comes out
-/// facing the room because the berth already turned the rig to face it.
+/// the rig draws its glass on, bound to the instrument's logical rect.
+/// The normal comes out facing the room because the berth already
+/// turned the rig to face it.
 #[must_use]
 fn ride_surface(mount: &Instrument, kind: Kind, site: (Vec3, Quat, Vec3)) -> SimSurface {
-    let (pos, rot, scale) = site;
     let (w, h) = kind.cells();
-    let half_u = f32::from(w) * layout::CELL * mount.face.0 * 0.5;
-    let half_v = f32::from(h) * layout::CELL * mount.face.1 * 0.5;
-    SimSurface {
-        center: pos + rot * (Vec3::Z * (mount.plane * scale.z)),
-        half_u: rot * (Vec3::X * (half_u * scale.x)),
-        half_v: rot * (Vec3::NEG_Y * (half_v * scale.y)),
-        rect: mount.rect,
-    }
+    riding_face(
+        mount.rect,
+        (
+            f32::from(w) * layout::CELL * mount.face.0,
+            f32::from(h) * layout::CELL * mount.face.1,
+        ),
+        mount.plane,
+        site,
+    )
+}
+
+/// The pick face a standing rig carries: its whole drawn body, bound to
+/// its OWN rect, on the berth plane its parts rise from. Whatever the
+/// sim hit-tests inside the piece — the cabinet's cubby sub-rects — is
+/// then read in the very frame the rig drew it in, so the aim lands on
+/// the cargo the player is looking at.
+#[must_use]
+fn standing_face(kind: Kind, rect: Rect, site: (Vec3, Quat, Vec3)) -> SimSurface {
+    let (w, h) = kind.cells();
+    riding_face(
+        rect,
+        (f32::from(w) * layout::CELL, f32::from(h) * layout::CELL),
+        0.0,
+        site,
+    )
+}
+
+/// The chart tagged `want` among a plain list of them.
+fn chart_in(charts: &[(Station, SimSurface)], want: Station) -> Option<SimSurface> {
+    charts
+        .iter()
+        .find(|(tag, _)| *tag == want)
+        .map(|(_, surface)| *surface)
 }
 
 /// Where a berthed instrument's station hangs, from its hold cells
@@ -784,30 +832,52 @@ pub fn instrument_surface(
 ) -> Option<(Station, SimSurface)> {
     let mount = instrument(kind)?;
     let station = chart_station(rect_center(rect))?;
-    let find = |want: Station| {
-        charts
-            .iter()
-            .find(|(tag, _)| *tag == want)
-            .map(|(_, surface)| *surface)
-    };
-    let surface = find(station)?;
-    let aft = find(Station::BayWall)?;
+    let surface = chart_in(charts, station)?;
+    let aft = chart_in(charts, Station::BayWall)?;
     Some((
         mount.station,
         ride_surface(&mount, kind, site_on(station, &surface, &aft, rect)),
     ))
 }
 
-/// Hang, move, and retire the instruments' station surfaces. Runs
-/// before the pointer so the ray meets a station that agrees with the
-/// hardware it is painted on; a jettisoned (or carried, or shelved)
-/// instrument simply has no station, and `aimed_station`, the focus
-/// poses, and the pointer all skip what is not there.
-fn ride_instruments(
+/// The pick face a hold berth carries, if the rig STANDS there: floor
+/// cargo stands upright on the deck and ceiling cargo hangs pendant
+/// under the slab, so in both cases the body is nowhere near the flat
+/// chart it berths on — aiming at the top of a wardrobe and projecting
+/// that ray onto the deck answers about a plate two steps behind it,
+/// and the answer arrives skewed and mirrored (the playtest's top-right
+/// cubby selecting the top-left one). Wall cargo hangs IN its chart's
+/// plane and needs no face: the chart is already the piece.
+#[must_use]
+fn standing_surface(
+    charts: &[(Station, SimSurface)],
+    kind: Kind,
+    rect: Rect,
+) -> Option<SimSurface> {
+    let station = chart_station(rect_center(rect))?;
+    if !matches!(station, Station::BayFloor | Station::BayCeiling) {
+        return None;
+    }
+    let surface = chart_in(charts, station)?;
+    let aft = chart_in(charts, Station::BayWall)?;
+    Some(standing_face(
+        kind,
+        rect,
+        site_on(station, &surface, &aft, rect),
+    ))
+}
+
+/// Hang, move, and retire the surfaces that ride the cargo: an
+/// instrument's station on its own glass, a standing rig's pick face on
+/// its own body. Runs before the pointer so the ray meets surfaces that
+/// agree with the hardware they are painted on; a jettisoned (or
+/// carried, or shelved) piece simply has none, and `aimed_station`, the
+/// focus poses, and the pointer all skip what is not there.
+fn ride_pieces(
     mut commands: Commands,
     shell: Res<Shell>,
     charts: Query<(&Station, &SimSurface), Without<Riding>>,
-    mut riders: Query<(Entity, &Riding, &mut SimSurface)>,
+    mut riders: Query<(Entity, &Riding, &Station, &mut SimSurface)>,
 ) {
     let charts: Vec<(Station, SimSurface)> = charts
         .iter()
@@ -815,19 +885,50 @@ fn ride_instruments(
         .collect();
     let sim = &shell.bridge.sim;
     let in_hand = sim.held(0).map(|held| held.piece);
+    // The rail's tiles are the barter shelf's own sockets, so rail cargo
+    // and an open counter are exclusive by construction; the gate says
+    // so out loud rather than trusting the sim to have swept.
+    let rail_live = sim.barter().is_none();
     let mut live: Vec<(u32, Station, SimSurface)> = Vec::new();
     for piece in sim.pieces() {
-        if !matches!(piece.loc, Loc::Hold { .. }) || in_hand == Some(piece.id) {
+        // A piece in hand rides the crosshair, not a berth: its surfaces
+        // come down until it lands, so the carry never aims at itself.
+        if in_hand == Some(piece.id) {
             continue;
         }
-        if let Some((station, surface)) =
-            instrument_surface(&charts, piece.kind, layout::piece_rect(sim.pieces(), piece))
-        {
-            live.push((piece.id, station, surface));
+        let rect = layout::piece_rect(sim.pieces(), piece);
+        match piece.loc {
+            Loc::Hold { .. } => {
+                if let Some((station, surface)) = instrument_surface(&charts, piece.kind, rect) {
+                    live.push((piece.id, station, surface));
+                }
+                if let Some(face) = standing_surface(&charts, piece.kind, rect) {
+                    live.push((piece.id, Station::Standing, face));
+                }
+            }
+            // Staged for the fire: a rail rig stands on its hopper tile
+            // exactly as floor cargo stands on the deck, and is grabbed
+            // by its body for the same reason.
+            Loc::Flotsam { slot } if rail_live => {
+                if let Some(floor) = chart_in(&charts, Station::BayFloor) {
+                    let site = rail_site(&floor, piece.kind, slot);
+                    live.push((
+                        piece.id,
+                        Station::Standing,
+                        standing_face(piece.kind, rect, site),
+                    ));
+                }
+            }
+            _ => {}
         }
     }
-    for (entity, riding, mut surface) in &mut riders {
-        if let Some(at) = live.iter().position(|(id, ..)| *id == riding.0) {
+    // Matched by piece AND station: one piece may carry both a station
+    // and a face, and neither may inherit the other's quad.
+    for (entity, riding, station, mut surface) in &mut riders {
+        if let Some(at) = live
+            .iter()
+            .position(|(id, tag, _)| *id == riding.0 && tag == station)
+        {
             *surface = live.swap_remove(at).2;
         } else {
             commands.entity(entity).despawn();
@@ -1328,8 +1429,8 @@ fn carry_held(
         .map(|piece| piece.kind);
 
     let (pos, rot, fit) = if camera_rig.roaming() {
-        if let (Some(world), Some(station), Some(kind)) = (pointer.world, pointer.station, kind)
-            && let Some(surface) = surface_of(&surfaces, station)
+        if let (Some(world), Some(station), Some(surface), Some(kind)) =
+            (pointer.world, pointer.station, pointer.surface, kind)
         {
             // Aimed at the room: hover the piece at the hit, standing
             // exactly the way it would land. The promise is kept by
@@ -1339,8 +1440,14 @@ fn carry_held(
             // quarter-turned starboard chart hovering upright, then
             // landing sideways, and the reverse once the upright rule
             // landed). Only the lift off the surface is the preview's.
+            //
+            // The berth is whatever chart the aimed CELL belongs to,
+            // which is not always the surface the ray struck: a
+            // crosshair resting on a standing rig's own face reads that
+            // piece's cells, and those cells are still the floor's.
             let aft = surface_of(&surfaces, Station::BayWall);
-            let rot = hover_rot(station, &surface, aft.as_ref(), kind, pointer.sim)
+            let (berth, plane) = chart_of(&surfaces, pointer.sim).unwrap_or((station, surface));
+            let rot = hover_rot(berth, &plane, aft.as_ref(), kind, pointer.sim)
                 .unwrap_or_else(|| station.face(&surface));
             (world + station.inward(&surface) * CARRY_LIFT, rot, 1.1)
         } else {
@@ -1360,9 +1467,7 @@ fn carry_held(
         // The focus drag: the ray's hit lifted off that panel, or —
         // parked pointer — simply wherever it last hovered, falling back
         // to floating over the counter the drag must have started from.
-        if let Some(world) = pointer.world
-            && let Some(surface) = pointer.station.and_then(|s| surface_of(&surfaces, s))
-        {
+        if let (Some(world), Some(surface)) = (pointer.world, pointer.surface) {
             carry.last = Some((world + surface.normal() * CARRY_LIFT, surface.orientation()));
         }
         let Some((pos, rot)) = carry.last.or_else(|| {
@@ -3874,6 +3979,149 @@ mod tests {
         let c0 = layout::cubby_rect(body, 0);
         let c3 = layout::cubby_rect(body, 3);
         assert!(c0.x < c3.x && c0.y < c3.y);
+    }
+
+    /// The standing rule: a rig that stands OFF its chart is picked on
+    /// its own face, so what the aim lands on is what the player is
+    /// looking at. The hard case is the cabinet the backing rule turns —
+    /// berthed against the port seam it yaws to face starboard, and the
+    /// deck chart behind it can only answer about a plate two steps
+    /// away, skewed and mirrored (the playtest's top-right cubby
+    /// selecting the top-left one).
+    #[test]
+    fn a_yawed_cabinets_cubbies_are_picked_on_its_face() {
+        let charts = rig::bay();
+        let aft = chart(Station::BayWall);
+        let floor = chart(Station::BayFloor);
+        // One column wide against the port seam: the backing rule spends
+        // its quarter turn and the cabinet faces starboard.
+        let rect = rect_of(3, 4, Kind::Cabinet);
+        let (pos, rot, scale) = site_on(Station::BayFloor, &floor, &aft, rect);
+        assert!(
+            (rot * Vec3::Z).x > 0.9,
+            "the backing rule must turn this cabinet to starboard: {:?}",
+            rot * Vec3::Z
+        );
+        let face =
+            standing_surface(&charts, Kind::Cabinet, rect).expect("a standing rig carries a face");
+        assert_eq!(face.rect, rect, "the face binds the piece's own cells");
+        assert!(
+            face.normal().dot(rot * Vec3::Z) > 0.99,
+            "the face must look the way the rig looks"
+        );
+        // Every cubby the rig DRAWS is the cubby the sim reads there.
+        for slot in 0..CABINET_SLOTS {
+            let drawn = pos + rot * (cubby_anchor(slot) * scale);
+            let n = face.normal();
+            let ray = Ray3d::new(drawn + n * 0.6, Dir3::new(-n).expect("a unit normal"));
+            let (_, sim, _) = face.project(ray).expect("the face takes the aim");
+            assert!(
+                layout::cubby_rect(rect, slot).contains(sim),
+                "cubby {slot} is drawn where the sim reads {sim:?}"
+            );
+        }
+        // And the report itself, put to the test: standing in front of
+        // the cabinet and aiming at the TOP-RIGHT of what is on show
+        // selects the top-right cubby, slot 1 — not its mirror.
+        let n = face.normal();
+        let eye = face.center + n * 0.9 + Vec3::Y * 0.25;
+        let right = (-n).cross(Vec3::Y).normalize();
+        let target = face.center
+            + right * (face.half_u.length() * 0.5)
+            + Vec3::Y * (face.half_v.length() * 0.5);
+        let ray = Ray3d::new(eye, Dir3::new(target - eye).expect("a look direction"));
+        let (_, sim, _) = face.project(ray).expect("the aim meets the face");
+        assert!(
+            layout::cubby_rect(rect, 1).contains(sim),
+            "the top-right quadrant read {sim:?}"
+        );
+        // The defect it retires: that same ray, read through the flat
+        // deck chart, cannot name the cubby the player is looking at.
+        let flat = floor.project(ray).map(|(_, sim, _)| sim);
+        assert!(
+            flat.is_none_or(|sim| !layout::cubby_rect(rect, 1).contains(sim)),
+            "the deck chart must not be able to answer for a standing rig: {flat:?}"
+        );
+    }
+
+    /// Which berths carry a face: the standing ones. Ceiling cargo
+    /// hangs pendant and stands off its chart exactly as floor cargo
+    /// does; wall cargo lies IN its chart's plane, where the chart is
+    /// already the piece and a second surface would only fight it.
+    #[test]
+    fn only_the_standing_berths_carry_a_face() {
+        let charts = rig::bay();
+        assert!(
+            standing_surface(
+                &charts,
+                Kind::CeilingLamp,
+                rect_of(14, 5, Kind::CeilingLamp)
+            )
+            .is_some(),
+            "a pendant hangs clear of the ceiling chart"
+        );
+        for (x, y, kind) in [
+            (4, 1, Kind::Painting),
+            (0, 4, Kind::WallLamp),
+            (10, 5, Kind::ChartTank),
+        ] {
+            assert!(
+                standing_surface(&charts, kind, rect_of(x, y, kind)).is_none(),
+                "{kind:?} hangs flat on its chart and needs no face"
+            );
+        }
+    }
+
+    /// Selection follows the drawing, end to end: with all four cubbies
+    /// of a yawed cabinet full, aiming at a boxed mini picks THAT mini
+    /// out of the sim's own hit test — the law the fixture sweep set,
+    /// now that a standing rig maps its own body.
+    #[test]
+    fn stowed_cargo_is_grabbed_where_it_is_drawn() {
+        let charts = rig::bay();
+        let aft = chart(Station::BayWall);
+        let floor = chart(Station::BayFloor);
+        let mut pieces = vec![Piece {
+            id: 1,
+            kind: Kind::Cabinet,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Hold { x: 3, y: 4 },
+        }];
+        // Three cubbies boxed, one left bare: the sim's rack tiles the
+        // whole body, so an empty mouth is the only place the furniture
+        // itself answers — which is exactly where it should.
+        let bare = 2;
+        pieces.extend(
+            (0..CABINET_SLOTS)
+                .filter(|slot| *slot != bare)
+                .map(|slot| Piece {
+                    id: 10 + u32::from(slot),
+                    kind: Kind::PerfumeVial,
+                    variant: 0,
+                    gnawed: false,
+                    loc: Loc::Stow { cabinet: 1, slot },
+                }),
+        );
+        let rect = layout::piece_rect(&pieces, &pieces[0]);
+        let (pos, rot, scale) = site_on(Station::BayFloor, &floor, &aft, rect);
+        let face = standing_surface(&charts, Kind::Cabinet, rect).expect("the cabinet stands");
+        for slot in 0..CABINET_SLOTS {
+            let drawn = pos + rot * (cubby_anchor(slot) * scale);
+            let n = face.normal();
+            let ray = Ray3d::new(drawn + n * 0.6, Dir3::new(-n).expect("a unit normal"));
+            let (_, sim, _) = face.project(ray).expect("the face takes the aim");
+            let want = if slot == bare {
+                1
+            } else {
+                10 + u32::from(slot)
+            };
+            assert_eq!(
+                layout::piece_at(&pieces, sim).map(|piece| piece.id),
+                Some(want),
+                "aiming at cubby {slot} must grab piece {want}"
+            );
+        }
     }
 
     /// A stowed rig fits its cubby: the widest 1×1 footprint at stow

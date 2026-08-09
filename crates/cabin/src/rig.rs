@@ -479,9 +479,10 @@ pub enum Focus {
 }
 
 impl Focus {
-    /// Which focus a station belongs to. The bay surfaces have none:
+    /// Which focus a station belongs to. The bay surfaces have none —
     /// cargo is worked from roam, crosshair-first, and the camera never
-    /// glides for it.
+    /// glides for it — and a standing rig's own face is bay surface
+    /// that happens to travel with its piece.
     #[must_use]
     pub const fn of(station: Station) -> Option<Self> {
         match station {
@@ -495,7 +496,8 @@ impl Focus {
             | Station::BayStarboard
             | Station::BayFront
             | Station::BayCeiling
-            | Station::Airlock => None,
+            | Station::Airlock
+            | Station::Standing => None,
         }
     }
 }
@@ -1512,7 +1514,8 @@ mod tests {
             | Station::BayStarboard
             | Station::BayFront
             | Station::BayCeiling
-            | Station::Airlock => {}
+            | Station::Airlock
+            | Station::Standing => {}
             Station::Barter => {
                 spots.push(mid(layout::ACCEPT_LEVER));
                 spots.push(layout::DIAL_CENTER);

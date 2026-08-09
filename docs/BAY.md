@@ -111,12 +111,10 @@ Stowing is a drop: release a 1×1 piece over a hold cabinet's footprint
 and it takes the first free cubby. Lifting a cubby piece works like any
 grab — cubby sub-rects hit-test before the cabinet's own body, so the
 pointer never has to fight the furniture. Shift quick-move pops a
-stowed piece back to the first legal hold cell. One known seam of the
-fold: a standing cabinet straddles the wall band and the deck strip, so
-its upper cubbies are aimed on the rig itself while the lower two are
-aimed on the deck plate at its feet — the sim's flat-rect mapping is
-the law, and the hint glow shows where the aim actually is. Worth
-revisiting if playtests trip on it.
+stowed piece back to the first legal hold cell. The seam this used to
+have — a standing cabinet's cubbies aimed on the flat chart behind it,
+so the aim arrived skewed and mirrored — is closed by the standing rule
+below; the cubby you look at is the cubby you get.
 
 Everything below **emerges** from `Loc::Stow` being its own berth class
 rather than a hold cell — none of it is special-cased:
@@ -412,6 +410,43 @@ of. Three guards, all sim-side and monkey-proven:
   sweep's selection-mismatch lesson). Passive cargo (window, gauges,
   crates, furniture) has no function to guard, so it needs no handle:
   its whole body grabs.
+
+### The standing rule: cargo that stands maps its own body
+
+Reported from playtest: aiming at the top-right of a standing cabinet
+highlighted the top-LEFT cubby. The room net's charts are flat; a rig
+that STANDS on one — floor cargo on the deck, a pendant under the
+ceiling, a crate on a hopper tile — has its whole body somewhere the
+chart is not, so projecting the crosshair onto the chart answers about
+a plate the player is not looking at. Screen-vertical came back as
+floor-depth, and the backing rule's yaw (the cabinet against the port
+seam turns to face starboard) mirrored what was left.
+
+The rule, the same shape as the instruments' stations: **a standing
+piece carries its own `SimSurface`, riding the pose the rig actually
+took — yaw, roll and all — bound to that piece's own rect.** The ray
+meets the piece where the piece is, and whatever the sim hit-tests
+inside it — the cabinet's cubby sub-rects today — is read in the frame
+the rig drew it in. Consequences, all falling out of the one binding:
+selection, the hover glint, the carry's grab and its stow drop cannot
+disagree with each other or with the picture. Wall cargo needs no face
+— it hangs IN its chart's plane, where the chart already is the piece.
+
+The sim never hears about any of it: the pointer it receives is still a
+point in its own rect space. Which surface produced that point is the
+cabin's business, and the cabin's whole job is that the answer be the
+one the player was looking at.
+
+One seam is left standing, deliberately, and named here so the next
+pass finds it: the net is the room unfolded as seen from OUTSIDE, so a
+chart's +x reads mirrored from inside — which is why a rig's own frame,
+not the chart, is the law over the rig's own body. Wall cargo reads
+through its chart, so a wall piece whose body the upright rule ROLLS
+(square footprints on the side walls) has its sub-rects still lying the
+chart's way rather than the rig's: the chart tank's amber handle band
+is a quarter turn off the bar the rig draws. Same defect class, other
+plane; it wants the same answer plus a standoff off the wall so the
+face outranks the chart it hangs on.
 
 ### Occlusion: a defect class, named
 

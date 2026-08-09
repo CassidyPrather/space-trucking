@@ -11,11 +11,15 @@
 //! back onto cabin geometry. Hit-testing thus stays where it always was:
 //! inside the sim, where the rules live.
 //!
-//! Two of them are not screwed to the hull at all: the instruments are
+//! Some of them are not screwed to the hull at all. The instruments are
 //! cargo, so the chart tank and the launch handle carry their stations
 //! at their own cells ([`Riding`]) and the rest of the game never hears
 //! about it — the logical rects stay the law, only the binding moves
-//! (docs/BAY.md, "Instruments as cargo").
+//! (docs/BAY.md, "Instruments as cargo"). And a rig that STANDS in the
+//! room — floor cargo on the deck, a pendant under the ceiling, a crate
+//! on a hopper tile — carries its own face the same way
+//! ([`Station::Standing`]): its body is nowhere near the flat chart it
+//! berths on, so the aim has to meet it where it actually is.
 
 use bevy::prelude::*;
 use space_trucking::sim::Vec2 as SimVec2;
@@ -53,12 +57,26 @@ pub enum Station {
     /// One burner berth tile — a single outboard-rail (Flotsam) slot.
     /// Live only while no barter is open, exactly the sim's rail rule.
     Airlock,
+    /// A standing rig's own face, bound to that piece's own rect and
+    /// riding the pose the rig actually took — the yaw the backing rule
+    /// spun it by, the roll the upright rule rolled it by, all of it.
+    /// The standing rule (docs/BAY.md): where a rig does not lie in the
+    /// plane of its chart, projecting the aim onto that chart answers
+    /// about a plate the player is not looking at. So the piece carries
+    /// the mapping on its own body instead, and where the aim lands on
+    /// it is where the sim reads it — several of these stand at once,
+    /// one per standing piece, which is why nothing looks a face up by
+    /// station: the pointer hands over the one it struck.
+    Standing,
 }
 
 impl Station {
     /// Whether the roaming crosshair works this surface — the net's six
-    /// charts and the burner's berth tiles; the focusable stations need
-    /// a focus pose instead.
+    /// charts, the burner's berth tiles, and the standing rigs' own
+    /// faces; the focusable stations need a focus pose instead. For a
+    /// piece-riding surface this is also *which regime it answers in*:
+    /// cargo is worked from roam, panels from focus, and neither wants
+    /// the other's ray (see [`track_pointer`]).
     #[must_use]
     pub const fn roamable(self) -> bool {
         matches!(
@@ -70,6 +88,7 @@ impl Station {
                 | Self::BayFront
                 | Self::BayCeiling
                 | Self::Airlock
+                | Self::Standing
         )
     }
 
@@ -233,6 +252,12 @@ pub struct VirtualPointer {
     pub world: Option<Vec3>,
     /// The station struck, for views that care where attention rests.
     pub station: Option<Station>,
+    /// The struck quad itself. Handed over rather than looked up again:
+    /// a station is no longer a unique surface — every standing piece
+    /// carries a [`Station::Standing`] face — and a consumer that
+    /// re-found "the" surface by station would answer about a different
+    /// piece than the ray hit.
+    pub surface: Option<SimSurface>,
 }
 
 impl Default for VirtualPointer {
@@ -241,6 +266,7 @@ impl Default for VirtualPointer {
             sim: crate::bridge::POINTER_PARKED,
             world: None,
             station: None,
+            surface: None,
         }
     }
 }
@@ -303,14 +329,22 @@ pub fn track_pointer(
         if matches!(station, Station::Airlock) && !rail_live {
             continue;
         }
-        // An instrument's station is glass ON a piece of cargo, and in
-        // roam the cargo comes first: the ray passes straight through
-        // to the cells the instrument hangs on, so the crosshair can
-        // hover it, the amber handle can be grabbed THROUGH its own
-        // panel, and a carry aimed at it reads the berth it would take.
-        // The focus interaction that the rest of the piece answers with
-        // is `rig::steer`'s business, not the pointer's.
-        if roam_only && riding.is_some() {
+        // A surface that rides a piece answers in exactly ONE regime,
+        // and `roamable` is which:
+        //
+        // - An instrument's station is glass ON cargo, and in roam the
+        //   cargo comes first — the ray passes straight through to the
+        //   cells the instrument hangs on, so the crosshair can hover
+        //   it, the amber handle can be grabbed THROUGH its own panel,
+        //   and a carry aimed at it reads the berth it would take. The
+        //   focus interaction the rest of the piece answers with is
+        //   `rig::steer`'s business, not the pointer's.
+        // - A standing rig's face is the mirror case: it exists to
+        //   answer the crosshair, and it must not stand in the way of
+        //   panel work — the x-ray already ghosts whatever the focus
+        //   flies through, and a ghost the cursor cannot reach through
+        //   would be a wall with the paint stripped off.
+        if riding.is_some() && roam_only != station.roamable() {
             continue;
         }
         if let Some((t, sim, world)) = surface.project(ray)
@@ -330,11 +364,7 @@ pub fn track_pointer(
             // a click there glides to focus instead (`rig::steer`).
             if roam_only && !station.roamable() {
                 nearest = t;
-                *pointer = VirtualPointer {
-                    sim: crate::bridge::POINTER_PARKED,
-                    world: None,
-                    station: None,
-                };
+                *pointer = VirtualPointer::default();
                 continue;
             }
             nearest = t;
@@ -342,6 +372,7 @@ pub fn track_pointer(
                 sim,
                 world: Some(world),
                 station: Some(*station),
+                surface: Some(*surface),
             };
         }
     }

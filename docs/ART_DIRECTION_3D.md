@@ -135,7 +135,9 @@ shake, lamps carry lit-versus-dark-glass, rows sit at fixed stations.
 ## Do / Don't
 
 - **Do** bind every interactive quad to its `layout` rect via
-  `SimSurface`; never restate a hit-test in 3D terms.
+  `SimSurface`; never restate a hit-test in 3D terms. A rig that stands
+  off its chart binds its own body (BAY.md, "The standing rule") — the
+  aim must meet cargo where the cargo is.
 - **Do** draw new furniture from `Skin` materials + palette roles; new
   glows through `glow::phosphor`/`glow::set_lamp`.
 - **Do** give any dynamic brightness its own material instance — shared

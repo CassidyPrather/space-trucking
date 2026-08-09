@@ -286,9 +286,6 @@ pub fn track_pointer(
     let rail_live = shell.bridge.sim.barter().is_none();
     let mut nearest = f32::INFINITY;
     for (station, surface) in &surfaces {
-        if roam_only && !station.roamable() {
-            continue;
-        }
         if matches!(station, Station::Airlock) && !rail_live {
             continue;
         }
@@ -301,6 +298,19 @@ pub fn track_pointer(
             // ray carries on to whatever lies beyond — the hopper tiles
             // through the doorway, space through the glass.
             if station.chart_flipped() && space_trucking::sim::layout::cell_at(sim).is_none() {
+                continue;
+            }
+            // While roaming, the focusable stations are opaque but not
+            // interactive: their panels stop the ray (nothing lands on
+            // the wall chart BEHIND the counter) without becoming aim —
+            // a click there glides to focus instead (`rig::steer`).
+            if roam_only && !station.roamable() {
+                nearest = t;
+                *pointer = VirtualPointer {
+                    sim: crate::bridge::POINTER_PARKED,
+                    world: None,
+                    station: None,
+                };
                 continue;
             }
             nearest = t;

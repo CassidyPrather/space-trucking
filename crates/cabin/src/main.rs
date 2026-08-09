@@ -20,6 +20,7 @@ mod bridge;
 mod canvas;
 mod console;
 mod crt;
+mod fixture;
 mod fx;
 mod gesture;
 mod glow;
@@ -69,6 +70,10 @@ struct ShotMode {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let dev = args.iter().any(|arg| arg == "--dev");
+    // `--fixture`: boot the developer showcase save (one of everything,
+    // actuated off defaults; see `fixture`) in a sandbox that never
+    // writes over the real save. For sweeping the attachment surface.
+    let fixture = args.iter().any(|arg| arg == "--fixture");
     let flag_value = |flag: &str| {
         args.iter()
             .position(|arg| arg == flag)
@@ -114,7 +119,11 @@ fn main() {
             .set(ImagePlugin::default_nearest()),
     )
     .insert_resource(Shell {
-        bridge: Bridge::boot(dev),
+        bridge: if fixture {
+            Bridge::boot_fixture(fixture::SAVE)
+        } else {
+            Bridge::boot(dev)
+        },
         outcome: FrameOutcome::default(),
         muted: false,
     })
@@ -215,6 +224,13 @@ fn advance(
             grab || (holding && !place && !cancel),
             place || cancel,
         )
+    } else if !live && holding {
+        // Mid-glide with cargo in hand — the player clicked a station
+        // while carrying, and the camera is on its way. A frame without
+        // a held signal would snap the piece home (the sim's phantom-
+        // pointer guard), so the grip keeps synthesizing until the
+        // focus arrives and the drag continues on the counter.
+        (bridge::POINTER_PARKED, false, true, false)
     } else {
         // The gesture layer merges with raw input in one place
         // (`synthesize`, property-tested by the gesture monkey): lever

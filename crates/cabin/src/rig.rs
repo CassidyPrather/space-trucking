@@ -92,6 +92,37 @@ const BAY_FRONT_Z: f32 = -1.36;
 /// band between the wall cornices (1.65) and here is headroom trim; the
 /// net's fold seam glues logically, not physically.
 const BAY_CEIL_Y: f32 = 2.26;
+
+/// The decal ladder: everything drawn flat over a chart quad sits at a
+/// named rung along the chart's inward normal, and the z-fight test
+/// (`pieces::tests::the_decal_ladder_never_z_fights`) keeps every rung
+/// a depth-safe step from its neighbours — the playtest's shimmering
+/// doormat is the defect class this retires. Flat paints on the ladder
+/// keep their meshes ≤ [`layer::SKIN`] thick so rungs, not luck, decide
+/// what draws over what.
+pub mod layer {
+    /// Berth socket wells — the contextual tiles.
+    pub const TILE: f32 = 0.002;
+    /// The aisle doormat's hazard paint.
+    pub const DOORMAT: f32 = 0.006;
+    /// Laid coverings' base; a rug's pile rises `RUG_THICK` above it.
+    pub const LAID: f32 = 0.010;
+    /// Placement hint quads.
+    pub const HINT: f32 = 0.026;
+    /// The hint's refusal slash.
+    pub const SLASH: f32 = 0.030;
+    /// The violation flash frame.
+    pub const FLASH: f32 = 0.034;
+    /// The violation glyph bars.
+    pub const GLYPH: f32 = 0.038;
+    /// Minimum step between occupied rungs that stays fight-free at
+    /// room distances in the depth buffer. Consumed by the ladder test
+    /// (`pieces::tests`), which is its whole job.
+    #[allow(dead_code)]
+    pub const STEP: f32 = 0.004;
+    /// Maximum mesh thickness for a flat paint riding a rung.
+    pub const SKIN: f32 = 0.0015;
+}
 /// The deck strip's quad plane, just above the deck.
 const BAY_FLOOR_Y: f32 = 0.012;
 
@@ -945,12 +976,12 @@ pub fn spawn(
                 commands.spawn((
                     Mesh3d(skin.cube.clone()),
                     MeshMaterial3d(tile_mat.clone()),
-                    Transform::from_translation(surface.to_world(mid) + n * 0.0015)
+                    Transform::from_translation(surface.to_world(mid) + n * layer::TILE)
                         .with_rotation(surface.orientation())
                         .with_scale(Vec3::new(
                             (cell.w - 4.0) * surface.scale_u(),
                             (cell.h - 4.0) * surface.scale_v(),
-                            0.003,
+                            layer::SKIN,
                         )),
                     BerthTile,
                 ));
@@ -1005,12 +1036,12 @@ pub fn spawn(
             commands.spawn((
                 Mesh3d(skin.cube.clone()),
                 MeshMaterial3d(skin.hazard.clone()),
-                Transform::from_translation(floor.to_world(mid) + Vec3::Y * 0.002)
+                Transform::from_translation(floor.to_world(mid) + Vec3::Y * layer::DOORMAT)
                     .with_rotation(floor.orientation())
                     .with_scale(Vec3::new(
                         (cell.w - 6.0) * floor.scale_u(),
                         (cell.h - 6.0) * floor.scale_v(),
-                        0.002,
+                        layer::SKIN,
                     )),
             ));
         }
@@ -1125,13 +1156,8 @@ pub fn steer(
     surfaces: Query<(&Station, &SimSurface), Without<CabinCamera>>,
     mut rig: ResMut<CameraRig>,
     camera: Single<&Transform, With<CabinCamera>>,
-    shell: Res<crate::Shell>,
 ) {
     let toggle = keys.just_pressed(KeyCode::KeyE);
-    // Full hands change what a click means: while the sim holds a carried
-    // piece, roam clicks belong to the carry (grab/place/cancel in
-    // `advance`) and never glide the camera into a station.
-    let carrying = shell.bridge.sim.held(0).is_some();
     match rig.mode {
         Mode::Roam => {
             // A parked cursor belongs to the OS until the game is
@@ -1177,9 +1203,12 @@ pub fn steer(
                 let pos = rig.pos + step.normalize() * WALK_SPEED * time.delta_secs();
                 rig.pos = pos.clamp(WALK_MIN, WALK_MAX);
             }
-            // Focus what the crosshair rests on — empty-handed only.
-            if !carrying
-                && (buttons.just_pressed(MouseButton::Left) || toggle)
+            // Focus what the crosshair rests on — cargo in hand included:
+            // the click carries the piece to the counter (the carry
+            // survives the glide; `advance` keeps the grip synthesized),
+            // and because this runs before `advance`, the same click
+            // never doubles as a placement.
+            if (buttons.just_pressed(MouseButton::Left) || toggle)
                 && let Some(station) = aimed_station(&camera, &surfaces)
                 && let Some(focus) = Focus::of(station)
             {

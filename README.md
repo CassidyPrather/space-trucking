@@ -25,7 +25,12 @@ cargo run --release -p cabin -- --dev # with the 16x warp unlocked
 ```
 
 Dev builds trade frame rate for compile speed; dev tooling:
-`-- --shot out.png --view desk` renders one screenshot and exits.
+`-- --shot out.png --view desk` renders one screenshot and exits, and
+`-- --fixture` boots the developer showcase save — one of every cargo
+kind across every berth class, mid-run and actuated off defaults — in
+a sandbox that never touches your real save. Sweep the whole
+attachment surface in one sitting; the fixture's own test keeps its
+board legal as rules grow.
 
 Controls: mouse looks and `WASD` walks; aim at a station and click
 (or `E`) to focus it — the camera glides to a fitted viewpoint and the

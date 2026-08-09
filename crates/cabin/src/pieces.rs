@@ -122,20 +122,19 @@ const LAMP_RANGE: f32 = 1.9;
 /// well inside the half-second law.
 const LAMP_WAKE: f32 = 0.3;
 
-/// How far a laid covering sits proud of its bay surface, metres: over
-/// the socket plates (which top out ~0.0045 off the quad), still well
-/// under anything standing on the same cells.
-const LAID_LIFT: f32 = 0.006;
+/// How far a laid covering sits proud of its chart, metres: a rung of
+/// the decal ladder (`rig::layer`), over the tiles and the doormat,
+/// still well under anything standing on the same cells.
+const LAID_LIFT: f32 = crate::rig::layer::LAID;
 
 /// A laid rug's pile, metres — the one covering with real body; the
 /// paints are coats, millimetres of enamel.
 const RUG_THICK: f32 = 0.012;
 
-/// The glow overlays' lift off a bay surface, metres: hints, the
-/// violation frame, and the glyphs all ride above the dressing layer's
-/// thickest covering (a laid rug's pile), so a refusal over a rug still
-/// reads instead of burning underneath it.
-const OVERLAY_LIFT: f32 = 0.020;
+/// The hint quads' rung on the decal ladder (`rig::layer`): above the
+/// dressing layer's thickest covering (a laid rug's pile), so a hint
+/// over a rug reads instead of burning underneath it.
+const OVERLAY_LIFT: f32 = crate::rig::layer::HINT;
 
 /// A laid luminous coat's honest brightness: a tinge on the neighbours
 /// the sim already counts lit, an order under [`LAMP_LUMENS`] — ambiance,
@@ -632,7 +631,7 @@ fn spawn_overlays(
                 .spawn((
                     Mesh3d(skin.cube.clone()),
                     MeshMaterial3d(slash_mat.clone()),
-                    Transform::from_translation(center + normal * (OVERLAY_LIFT + 0.002))
+                    Transform::from_translation(center + normal * crate::rig::layer::SLASH)
                         .with_rotation(rot * Quat::from_rotation_z((cell.h / cell.w).atan()))
                         .with_scale(Vec3::new(
                             cell.w.hypot(cell.h) * 0.82 * su,
@@ -1537,7 +1536,7 @@ fn violation_flash(
                 down,
             ),
         };
-        transform.translation = surface.to_world(mid) + inward * 0.006;
+        transform.translation = surface.to_world(mid) + inward * crate::rig::layer::FLASH;
         transform.rotation = face;
         transform.scale = scale;
     }
@@ -1549,7 +1548,7 @@ fn violation_flash(
     let mid = rect_center(rect);
     let (su, sv) = (surface.scale_u(), surface.scale_v());
     let rot = face;
-    let anchor = surface.to_world(mid) + inward * 0.009;
+    let anchor = surface.to_world(mid) + inward * crate::rig::layer::GLYPH;
     for (bar, mut transform, mut visibility) in &mut glyphs {
         let Some(&(offset, size, tilt)) = spec.get(usize::from(bar.0)) else {
             *visibility = Visibility::Hidden;
@@ -2934,5 +2933,42 @@ mod tests {
             assert_eq!(bars.is_empty(), frame_only, "{rule:?}");
         }
         assert!(glyph_spec(None, rect).is_empty());
+    }
+
+    /// The z-fight guard: every occupied rung of the decal ladder —
+    /// including the rug's pile top, which rides between LAID and HINT —
+    /// steps at least `layer::STEP` from its neighbours, and the step
+    /// itself clears two skins of mesh. A new decal gets a named rung
+    /// and a row here, or it shimmers like the playtest doormat did.
+    #[test]
+    fn the_decal_ladder_never_z_fights() {
+        use crate::rig::layer;
+        let rungs = [
+            // The nearest actual mesh under the ladder: the backer
+            // slab's face, 0.004 behind the chart's mapping plane.
+            ("backer face", -0.004),
+            ("tile", layer::TILE),
+            ("doormat", layer::DOORMAT),
+            ("laid", layer::LAID),
+            ("rug pile top", LAID_LIFT + RUG_THICK),
+            ("hint", layer::HINT),
+            ("slash", layer::SLASH),
+            ("flash", layer::FLASH),
+            ("glyph", layer::GLYPH),
+        ];
+        for pair in rungs.windows(2) {
+            let ((below, lo), (above, hi)) = (pair[0], pair[1]);
+            assert!(
+                hi - lo >= layer::STEP - 1e-6,
+                "{above} ({hi}) sits within a fight of {below} ({lo})"
+            );
+        }
+        #[allow(clippy::assertions_on_constants)]
+        {
+            assert!(
+                layer::STEP >= 2.0 * layer::SKIN,
+                "a ladder step must clear two skins of mesh"
+            );
+        }
     }
 }

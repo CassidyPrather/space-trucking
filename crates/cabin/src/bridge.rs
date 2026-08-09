@@ -87,6 +87,9 @@ pub struct FrameOutcome {
 }
 
 /// The shell: sim, tape, and the clocks that keep them honest.
+// Four independent yes/no facts about the shell are four bools; a state
+// machine here would be ceremony.
+#[allow(clippy::struct_excessive_bools)]
 pub struct Bridge {
     pub sim: Sim,
     recording: Recording,
@@ -100,6 +103,9 @@ pub struct Bridge {
     clock_check: f64,
     /// The ship docked somewhere during the boot catch-up.
     pub arrived_while_away: bool,
+    /// A `--fixture` boot: a throwaway world that must never write
+    /// over the player's real save or tape.
+    sandbox: bool,
 }
 
 impl Bridge {
@@ -131,6 +137,29 @@ impl Bridge {
             last_frame: now,
             clock_check: SAVE_EVERY,
             arrived_while_away,
+            sandbox: false,
+        }
+    }
+
+    /// Boot the developer fixture (`--fixture`): the given save, no
+    /// absence catch-up, dev unlocked, and sandboxed — this world never
+    /// persists, so the player's real `cabin.data` survives the sweep.
+    /// An unparseable fixture is a build error, not a fallback.
+    #[must_use]
+    pub fn boot_fixture(save: &str) -> Self {
+        let sim = Sim::from_save(save).expect("the developer fixture must parse");
+        let now = unix_now();
+        let recording = Recording::new(sim.save_string());
+        Self {
+            sim,
+            recording,
+            dev: true,
+            night: local_night(),
+            last_save: now,
+            last_frame: now,
+            clock_check: SAVE_EVERY,
+            arrived_while_away: false,
+            sandbox: true,
         }
     }
 
@@ -198,8 +227,13 @@ impl Bridge {
         }
     }
 
-    /// Write the save and the tape now.
+    /// Write the save and the tape now. A sandboxed (fixture) world
+    /// writes nothing, ever.
     fn persist(&mut self, wall_now: f64) {
+        if self.sandbox {
+            self.last_save = wall_now;
+            return;
+        }
         store_save(&self.sim.save_string(), wall_now);
         if self.recording.is_full() && self.sim.held(0).is_none() {
             // Roll the tape. Saves drop drags, so only cut between them.
@@ -327,6 +361,7 @@ mod tests {
             last_frame: 0.0,
             clock_check: SAVE_EVERY,
             arrived_while_away: false,
+            sandbox: false,
         };
         let frame = bridge.input_frame(&FrameInput {
             pointer: Vec2::new(4.0, 5.0),
@@ -407,6 +442,7 @@ mod tests {
             last_frame: unix_now(),
             clock_check: SAVE_EVERY,
             arrived_while_away: false,
+            sandbox: false,
         };
         let quiet = FrameInput {
             pointer: POINTER_PARKED,

@@ -1,9 +1,10 @@
 //! The two CRT screens, painted the 2D way: a near-1:1 port of
 //! `src/render.rs`'s star map (`draw_map`) and destination preview
 //! (`draw_preview`) rasterized in software into `Image` textures every
-//! frame, exactly as the 2D console painted its render target. The glass
-//! quads on the [`Station::Map`] and [`Station::Console`] panels show the
-//! textures as emissives, so the phosphor blooms in the room.
+//! frame, exactly as the 2D console painted its render target. Nothing
+//! here owns a surface any more: the instruments are cargo, so the
+//! chart tank and the destination preview wear these textures on their
+//! own rigs ([`Screens`]) and the phosphor blooms wherever they hang.
 //!
 //! The [`Canvas`] here is the 2D `Canvas` reborn as a scanline rasterizer:
 //! draw calls speak sim world units, texels sit on the 2D prototype's own
@@ -30,8 +31,7 @@ use space_trucking::sim::{
 use crate::canvas::{
     Canvas, PX, Rgba, dim, fade, inflate, ink, mix, phosphorize, polar, rect_center, snap,
 };
-use crate::rig::Skin;
-use crate::surface::{SimSurface, Station, VirtualPointer};
+use crate::surface::VirtualPointer;
 use crate::{Phase, Shell, palette};
 
 // ------------------------------------------------------------ crunch grid --
@@ -64,17 +64,6 @@ const PULSE_LEN: f32 = 3.5;
 /// Emissive multiplier on the glass material; the texture already carries
 /// the picture, this just pushes the phosphor into bloom.
 const GLOW: f32 = 2.0;
-
-/// Glass lift off the panel plane, metres.
-const LIFT_GLASS: f32 = 0.003;
-
-/// Bezel slab centre lift and thickness, metres.
-const LIFT_FRAME: f32 = 0.006;
-const FRAME_DEPTH: f32 = 0.016;
-
-/// Bezel width in sim units, straddling the panel rect's edge — half over
-/// the texture's outer ring (where the 2D drew its PLATE bezel), half out.
-const BEZEL: f32 = 16.0;
 
 // --------------------------------------------------------------- feedback --
 
@@ -156,8 +145,8 @@ pub struct Screens {
     preview_canvas: Canvas,
 }
 
-/// The CRT plugin: spawn the physical screens once the rig stands, then
-/// repaint both tubes from the sim every view frame.
+/// The CRT plugin: bake the two tubes' textures before anything asks
+/// for them, then repaint both from the sim every view frame.
 pub struct CrtPlugin;
 
 impl Plugin for CrtPlugin {
@@ -185,44 +174,18 @@ fn screen_image(canvas: &Canvas) -> Image {
     image
 }
 
-/// Spawn both physical screens: a glass quad showing the painted texture
-/// as an emissive over each mapped rect, inside a PLATE bezel frame.
-fn spawn(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
-    skin: Res<Skin>,
-    surfaces: Query<(&Station, &SimSurface)>,
-) {
-    let find = |want: Station| {
-        surfaces
-            .iter()
-            .find_map(|(station, surface)| (*station == want).then_some(*surface))
-    };
-    let Some(map) = find(Station::Map) else {
-        return;
-    };
-    let quad = meshes.add(Rectangle::new(1.0, 1.0));
+/// Prepare both tubes. Neither hangs on the architecture any more —
+/// the chart tank and the destination preview are CARGO, and each
+/// piece's rig wears the texture painted here (`pieces::build_kind`
+/// through `Screens`). This module kept the paint and lost the
+/// furniture; sell the tank and the map is still being drawn, with
+/// nothing aboard to show it.
+fn spawn(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     let map_canvas = Canvas::new(layout::MAP_PANEL);
     let preview_canvas = Canvas::new(layout::DEST_PREVIEW);
-    let map_image = images.add(screen_image(&map_canvas));
-    let preview_image = images.add(screen_image(&preview_canvas));
-    spawn_screen(
-        &mut commands,
-        &mut materials,
-        &skin,
-        &quad,
-        &map,
-        layout::MAP_PANEL,
-        &map_image,
-    );
-    // The destination preview no longer hangs on the console face: the
-    // DestPreview PIECE is its glass now (instruments are cargo), fed
-    // from the same painted texture through `Screens`.
     commands.insert_resource(Screens {
-        map: map_image,
-        preview: preview_image,
+        map: images.add(screen_image(&map_canvas)),
+        preview: images.add(screen_image(&preview_canvas)),
         map_canvas,
         preview_canvas,
     });
@@ -244,59 +207,6 @@ pub fn tube_glass(
         metallic: 0.0,
         ..default()
     })
-}
-
-/// One screen's furniture: the emissive glass quad sized to exactly cover
-/// `rect` on the panel plane, and four PLATE bezel slabs straddling its
-/// edges. The near-black base keeps the tube glass in the room; the
-/// texture supplies the phosphor and bloom does the halo.
-fn spawn_screen(
-    commands: &mut Commands,
-    materials: &mut Assets<StandardMaterial>,
-    skin: &Skin,
-    quad: &Handle<Mesh>,
-    surface: &SimSurface,
-    rect: Rect,
-    image: &Handle<Image>,
-) {
-    let normal = surface.normal();
-    let center = rect_center(rect);
-    let glass = tube_glass(materials, image);
-    commands.spawn((
-        Mesh3d(quad.clone()),
-        MeshMaterial3d(glass),
-        Transform::from_translation(surface.to_world(center) + normal * LIFT_GLASS)
-            .with_rotation(surface.orientation())
-            .with_scale(Vec3::new(
-                rect.w * surface.scale_u(),
-                rect.h * surface.scale_v(),
-                1.0,
-            )),
-    ));
-    for (at, size) in [
-        (SimVec2::new(center.x, rect.y), (rect.w + BEZEL, BEZEL)),
-        (
-            SimVec2::new(center.x, rect.y + rect.h),
-            (rect.w + BEZEL, BEZEL),
-        ),
-        (SimVec2::new(rect.x, center.y), (BEZEL, rect.h - BEZEL)),
-        (
-            SimVec2::new(rect.x + rect.w, center.y),
-            (BEZEL, rect.h - BEZEL),
-        ),
-    ] {
-        commands.spawn((
-            Mesh3d(skin.cube.clone()),
-            MeshMaterial3d(skin.plate.clone()),
-            Transform::from_translation(surface.to_world(at) + normal * LIFT_FRAME)
-                .with_rotation(surface.orientation())
-                .with_scale(Vec3::new(
-                    size.0 * surface.scale_u(),
-                    size.1 * surface.scale_v(),
-                    FRAME_DEPTH,
-                )),
-        ));
-    }
 }
 
 /// Repaint both tubes from the sim and push the texels to the GPU.

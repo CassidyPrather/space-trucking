@@ -1,28 +1,24 @@
-//! The console face: the 2D console's right-hand panel made physical.
-//! One `SimSurface` (`Station::Console`, sim rect `layout::CONSOLE`)
-//! carries five instruments — the destination preview CRT, the ETA gauge,
-//! the launch lever, the pause/warp/speaker toggle buttons, and the hangar
-//! tally plate. Semantics mirror `src/render.rs`'s `draw_console` family:
-//! the sim stays the only authority, this module only reads it back onto
-//! metal, glass, and phosphor.
+//! The console face: what is LEFT of the 2D console's right-hand panel
+//! once the instruments walked off it. One `SimSurface`
+//! (`Station::Console`, sim rect `layout::CONSOLE`) carrying the
+//! pause/warp/speaker toggle buttons and the hangar tally plate — the
+//! preview CRT, the ETA gauge, and the launch handle are cargo now,
+//! each wearing its own reading on its own rig (`pieces`). Semantics
+//! mirror `src/render.rs`'s `draw_console` family: the sim stays the
+//! only authority, this module only reads it back onto metal, glass,
+//! and phosphor.
 
 use std::f32::consts::{FRAC_PI_2, TAU};
 
 use bevy::prelude::*;
 
-use space_trucking::sim::{Cue, Loc, ShipState, Vec2 as SimVec2, layout};
+use space_trucking::sim::{Cue, Vec2 as SimVec2, layout};
 
 use crate::rig::Skin;
 use crate::surface::{SimSurface, Station, VirtualPointer};
 use crate::{Phase, Shell, glow, palette};
 
 // ---- Feedback lengths (all inside the half-second law) ----
-
-/// Launch-lever thunk travel time after a departure.
-const THUNK_LEN: f32 = 0.35;
-
-/// Launch-lever rattle after a refused pull.
-const SHAKE_LEN: f32 = 0.30;
 
 /// A hangar lamp blinking awake after a delivery crosses its threshold.
 const WAKE_LEN: f32 = 0.40;
@@ -40,27 +36,7 @@ const HANGAR_WELL: (f32, f32, f32, f32) = (690.0, 392.0, 84.0, 16.0);
 const HANGAR_LAMP_X0: f32 = 699.0;
 const HANGAR_LAMP_STEP: f32 = 13.2;
 
-/// How far off the panel plane the lever handle's centre rides, metres.
-const HANDLE_LIFT: f32 = 0.014;
-
 // ---- Markers, timers ----
-
-/// The console's `SimSurface`, copied at spawn so view systems can map sim
-/// coordinates back onto the cabin without re-querying.
-#[derive(Resource, Clone, Copy)]
-struct ConsolePanel(SimSurface);
-
-/// The brass launch handle (its children: go-lamp and glow halo).
-#[derive(Component)]
-struct LeverHandle;
-
-/// The go-lamp riding on the handle.
-#[derive(Component)]
-struct LeverLamp;
-
-/// The soft glow plate peeking around the handle while a pull would work.
-#[derive(Component)]
-struct LeverHalo;
 
 /// Which toggle button an icon stroke or lamp belongs to.
 #[derive(Component, Clone, Copy, Debug)]
@@ -87,13 +63,6 @@ struct MuteSlash;
 #[derive(Component)]
 struct HangarLamp(usize);
 
-/// The launch lever's two feedback clocks, wound by cues.
-#[derive(Resource, Default)]
-struct LeverJuice {
-    thunk: f32,
-    shake: f32,
-}
-
 /// The hangar lamp mid-blink after a threshold crossing.
 #[derive(Resource, Default)]
 struct HangarWake {
@@ -107,13 +76,9 @@ pub struct ConsolePlugin;
 
 impl Plugin for ConsolePlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<LeverJuice>()
-            .init_resource::<HangarWake>()
+        app.init_resource::<HangarWake>()
             .add_systems(PostStartup, spawn)
-            .add_systems(
-                Update,
-                (lever_motion, lever_lamp, buttons, hangar).in_set(Phase::View),
-            );
+            .add_systems(Update, (buttons, hangar).in_set(Phase::View));
     }
 }
 
@@ -230,7 +195,6 @@ fn spawn(
     else {
         return;
     };
-    commands.insert_resource(ConsolePanel(panel));
     let puck = meshes.add(Cylinder::new(1.0, 1.0));
     let mut build = Build {
         commands: &mut commands,
@@ -240,63 +204,16 @@ fn spawn(
         panel,
         puck,
     };
-    spawn_lever(&mut build);
     spawn_buttons(&mut build, shell.bridge.dev());
     spawn_hangar(&mut build);
 }
 
-// The ETA gauge and destination preview left the console face — they
-// are cargo now (`Kind::EtaGauge`, `Kind::DestPreview` in `pieces`),
-// wearing the same readings on their own rigs. The console keeps the
-// launch lever, the toggle buttons, and the hangar strip until their
-// own instruments absorb them.
-
-/// The launch lever: a SOCKET track slot and a brass handle resting left,
-/// carrying its own go-lamp and glow halo so feedback rides along.
-fn spawn_lever(b: &mut Build<'_, '_, '_>) {
-    let r = layout::LAUNCH_LEVER;
-    let mid_y = r.h.mul_add(0.5, r.y);
-    let socket = b.skin.socket.clone();
-    b.slab(
-        (r.w.mul_add(0.5, r.x), mid_y),
-        (r.w - 32.0, 8.0),
-        0.006,
-        0.003,
-        &socket,
-    );
-
-    let su = b.panel.scale_u();
-    let sv = b.panel.scale_v();
-    let handle_mesh = b.meshes.add(Cuboid::new(18.0 * su, 44.0 * sv, 0.026));
-    let halo_mesh = b.meshes.add(Cuboid::new(26.0 * su, 52.0 * sv, 0.002));
-    let halo_mat = glow::phosphor(b.materials, palette::LAMP_OK, 0.0);
-    let lamp_mat = glow::phosphor(b.materials, palette::LAMP_OK, 0.0);
-    let puck = b.puck.clone();
-    b.commands
-        .spawn((
-            Mesh3d(handle_mesh),
-            MeshMaterial3d(b.skin.brass.clone()),
-            Transform::from_translation(b.at(r.x + 34.0, mid_y, HANDLE_LIFT))
-                .with_rotation(b.panel.orientation()),
-            LeverHandle,
-        ))
-        .with_children(|kids| {
-            kids.spawn((
-                Mesh3d(halo_mesh),
-                MeshMaterial3d(halo_mat),
-                Transform::from_xyz(0.0, 0.0, -0.006),
-                LeverHalo,
-            ));
-            kids.spawn((
-                Mesh3d(puck),
-                MeshMaterial3d(lamp_mat),
-                Transform::from_xyz(0.0, 13.0 * sv, 0.015)
-                    .with_rotation(Quat::from_rotation_x(FRAC_PI_2))
-                    .with_scale(Vec3::new(4.4 * su, 0.003, 4.4 * sv)),
-                LeverLamp,
-            ));
-        });
-}
+// The ETA gauge, the destination preview, and the launch handle all
+// left the console face — they are cargo now (`Kind::EtaGauge`,
+// `Kind::DestPreview`, `Kind::LaunchLever` in `pieces`), wearing the
+// same readings and the same pull on their own rigs. The face keeps
+// the toggle buttons and the hangar strip until their own instruments
+// absorb them.
 
 /// The three toggle buttons: raised plate caps, icons built from strokes,
 /// a state lamp under each. Warp is dev-only furniture, same as 2D.
@@ -407,94 +324,6 @@ fn spawn_hangar(b: &mut Build<'_, '_, '_>) {
 }
 
 // ------------------------------------------------------------------- view --
-
-/// The launch handle's ride: the thunk throw on departure, the rattle on
-/// a refused pull, rest at the track's left end otherwise.
-fn lever_motion(
-    time: Res<Time>,
-    shell: Res<Shell>,
-    pointer: Res<VirtualPointer>,
-    panel: Option<Res<ConsolePanel>>,
-    grips: Res<crate::gesture::Grips>,
-    mut juice: ResMut<LeverJuice>,
-    mut handle: Single<&mut Transform, With<LeverHandle>>,
-) {
-    let Some(panel) = panel else {
-        return;
-    };
-    let sim = &shell.bridge.sim;
-    let dt = time.delta_secs();
-    juice.thunk = (juice.thunk - dt).max(0.0);
-    juice.shake = (juice.shake - dt).max(0.0);
-    for cue in sim.cues() {
-        match cue {
-            Cue::Depart => juice.thunk = THUNK_LEN,
-            Cue::Reject { hard: false } if layout::LAUNCH_LEVER.contains(pointer.sim) => {
-                juice.shake = SHAKE_LEN;
-            }
-            _ => {}
-        }
-    }
-
-    // The thunk throws the handle right fast, then eases it home; the
-    // rattle jitters it around its rest. Same envelope as the 2D lever.
-    // A live pull gesture overrides both: the handle is in the hand.
-    let heat = juice.thunk / THUNK_LEN;
-    let pull = if heat > 0.65 {
-        (1.0 - heat) / 0.35
-    } else {
-        heat / 0.65
-    }
-    .max(grips.launch.travel);
-    let shake = (time.elapsed_secs() * 70.0).sin() * 3.0 * (juice.shake / SHAKE_LEN);
-    let rect = layout::LAUNCH_LEVER;
-    let x = pull.mul_add(rect.w - 68.0, rect.x + 34.0) + shake;
-    let mid_y = rect.h.mul_add(0.5, rect.y);
-    let surface = panel.0;
-    handle.translation = surface.to_world(SimVec2::new(x, mid_y)) + surface.normal() * HANDLE_LIFT;
-}
-
-/// The go-lamp and its halo: lit and breathing while a pull would depart,
-/// dark glass while the sim would refuse one.
-fn lever_lamp(
-    time: Res<Time>,
-    shell: Res<Shell>,
-    pointer: Res<VirtualPointer>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    lamp: Single<&MeshMaterial3d<StandardMaterial>, With<LeverLamp>>,
-    halo: Single<&MeshMaterial3d<StandardMaterial>, With<LeverHalo>>,
-) {
-    let sim = &shell.bridge.sim;
-    let ship = sim.ship();
-    let pullable = matches!(ship.state, ShipState::Docked(_))
-        && ship.selected.is_some()
-        && !sim.pieces().iter().any(|piece| {
-            matches!(
-                piece.loc,
-                Loc::GivePad { .. } | Loc::TakePad { .. } | Loc::ReceivedShelf { .. }
-            )
-        });
-    // Decoration: the go-glow breathes gently while a pull would work.
-    // Hover feedback: pointing at the lever wakes its lamp faintly even
-    // when the pull would refuse — "this is a thing", never "this is
-    // ready". The lamps are the cabin's affordance language.
-    let hovered = layout::LAUNCH_LEVER.contains(pointer.sim);
-    let breath = glow::breathe(time.elapsed_secs(), 2.2, 0.0).mul_add(0.24, 0.66);
-    let level = if pullable {
-        if hovered { breath.max(0.95) } else { breath }
-    } else if hovered {
-        0.18
-    } else {
-        0.0
-    };
-    if let Some(mut mat) = materials.get_mut(&lamp.0) {
-        glow::set_lamp(&mut mat, palette::LAMP_OK, level);
-    }
-    if let Some(mut mat) = materials.get_mut(&halo.0) {
-        let strength = if pullable { breath * 0.55 } else { 0.0 };
-        mat.emissive = palette::LAMP_OK.to_linear() * strength;
-    }
-}
 
 /// Repaint an icon stroke: etched metal while the function sleeps, the
 /// live color (optionally emissive) while it is awake.

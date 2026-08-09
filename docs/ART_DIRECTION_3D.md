@@ -169,7 +169,7 @@ clips a wall, is handled structurally, not by eyeballing:
   refit pushes off-screen or behind furniture fails the build with the
   blocking geometry named.
 - The cabin has a **screenshot mode** (`--shot out.png`, optionally
-  `--view tank|console|desk`) that renders, saves one capture, and
+  `--view tank|lever|console|desk`) that renders, saves one capture, and
   exits. It runs headless under xvfb with llvmpipe, so visual review
   happens in CI-shaped environments too — geometry changes should come
   with fresh captures, looked at.

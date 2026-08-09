@@ -160,6 +160,22 @@ const ART_H: f32 = 32.0;
 /// The artwork's emissive multiplier: barely a glow. Paint, not a screen.
 const ART_GLOW: f32 = 0.5;
 
+/// The launch handle's throw, in the lever rig's own local frame: the
+/// pivot sits low in the brass slot, the arm reaches [`LEVER_ARM`] sim
+/// units up out of it, and travel tips the whole assembly toward the
+/// room about the pivot — a lever pulled, not a slider slid. Rest is a
+/// hair off vertical so the handle reads grabbable at a glance.
+const LEVER_PIVOT_Z: f32 = 5.0;
+const LEVER_ARM: f32 = 14.0;
+const LEVER_REST: f32 = 0.30;
+const LEVER_THROW: f32 = 0.80;
+
+/// Launch-lever thunk travel time after a departure, and the rattle
+/// after a refused pull — the 2D console's clocks, moved with the
+/// hardware. Both inside the half-second law.
+const THUNK_LEN: f32 = 0.35;
+const SHAKE_LEN: f32 = 0.30;
+
 /// The cabinet carcass's depth in sim units (~0.2 world at bay scale):
 /// slim enough to read wardrobe, deep enough to shelve a shrunken rig.
 const CABINET_DEPTH: f32 = 14.0;
@@ -180,7 +196,18 @@ impl Plugin for PiecesPlugin {
             .init_resource::<CarryState>()
             .init_resource::<FlashState>()
             .init_resource::<RatState>()
+            .init_resource::<LeverJuice>()
             .add_systems(PostStartup, spawn_overlays)
+            // The instruments' stations move with their cargo, so they
+            // are hung before anything reads a surface this frame: the
+            // camera's aim, the focus poses, and the pointer all want a
+            // station that agrees with where the hardware actually is.
+            .add_systems(
+                Update,
+                ride_instruments
+                    .in_set(Phase::Input)
+                    .before(crate::rig::steer),
+            )
             .add_systems(
                 Update,
                 (
@@ -197,6 +224,8 @@ impl Plugin for PiecesPlugin {
                     rat_watch,
                     breathe_pulses,
                     eta_needles,
+                    lever_motion,
+                    lever_lamp,
                 )
                     .chain()
                     .in_set(Phase::View),
@@ -267,6 +296,9 @@ struct PieceRig {
     frame_root: Entity,
     slash: Entity,
     frame_mat: Handle<StandardMaterial>,
+    /// The amber carry grab's own emissive on the click-functional
+    /// kinds, so the hover tell can flare the very bar it names.
+    grab_mat: Option<Handle<StandardMaterial>>,
 }
 
 /// Marker: this rig is ghosted by the focus x-ray — body hidden, its
@@ -339,6 +371,35 @@ struct CubbyGlow {
 struct EtaNeedle {
     reach: f32,
 }
+
+/// The launch handle's pivot on a `LaunchLever` rig: [`lever_motion`]
+/// throws it, the go-lamp and halo ride it.
+#[derive(Component)]
+struct LeverHandle;
+
+/// The go-lamp knob at the handle's tip.
+#[derive(Component)]
+struct LeverLamp;
+
+/// The soft glow plate behind the knob, awake while a pull would work.
+#[derive(Component)]
+struct LeverHalo;
+
+/// The launch handle's two feedback clocks, wound by cues. One set for
+/// every lever aboard: the ship's ceremonies are the ship's, not a
+/// particular piece of hardware's.
+#[derive(Resource, Default)]
+struct LeverJuice {
+    thunk: f32,
+    shake: f32,
+}
+
+/// The surface entity an instrument piece carries, by piece id — the
+/// station rides the cargo (BAY.md, "Instruments as cargo"), so
+/// [`ride_instruments`] retires it the moment the piece leaves its
+/// berth and nothing downstream has to ask where the hardware went.
+#[derive(Component)]
+pub struct Riding(pub u32);
 
 /// The rat rig's root.
 #[derive(Component)]
@@ -427,22 +488,27 @@ fn surface_of(surfaces: &Query<(&Station, &SimSurface)>, want: Station) -> Optio
         .map(|(_, surface)| *surface)
 }
 
-/// The net chart a sim point reads through, as its cabin station and
-/// mapped surface — the old wall-band/deck-strip pair generalized to
-/// the room net's six charts. `None` off the net or on a hole.
-fn chart_of(
-    surfaces: &Query<(&Station, &SimSurface)>,
-    sim: SimVec2,
-) -> Option<(Station, SimSurface)> {
+/// The net chart a sim point reads through, as a cabin station — the
+/// old wall-band/deck-strip pair generalized to the room net's six
+/// charts. `None` off the net or on a hole.
+fn chart_station(sim: SimVec2) -> Option<Station> {
     let (x, y) = layout::cell_at(sim)?;
-    let station = match layout::surface_of(x, y)? {
+    Some(match layout::surface_of(x, y)? {
         Surf::Aft => Station::BayWall,
         Surf::Floor => Station::BayFloor,
         Surf::Port => Station::BayPort,
         Surf::Starboard => Station::BayStarboard,
         Surf::Front => Station::BayFront,
         Surf::Ceiling => Station::BayCeiling,
-    };
+    })
+}
+
+/// [`chart_station`] with the mapped surface the rig spawned for it.
+fn chart_of(
+    surfaces: &Query<(&Station, &SimSurface)>,
+    sim: SimVec2,
+) -> Option<(Station, SimSurface)> {
+    let station = chart_station(sim)?;
     Some((station, surface_of(surfaces, station)?))
 }
 
@@ -644,6 +710,131 @@ fn berth_site(
                 Vec3::new(su, sv, su.min(sv)) * fit,
             ))
         }
+    }
+}
+
+/// The footprint a drop at `sim` would cover: the aimed cell as the
+/// anchor, the kind's own extent — the very plan [`placement_hints`]
+/// lights, so hint, ghost, and berth all read one geometry.
+fn aimed_rect(kind: Kind, sim: SimVec2) -> Option<Rect> {
+    let (ax, ay) = layout::cell_at(sim)?;
+    let (w, h) = kind.cells();
+    let anchor = layout::cell_rect(ax, ay);
+    Some(Rect::new(
+        anchor.x,
+        anchor.y,
+        f32::from(w) * layout::CELL,
+        f32::from(h) * layout::CELL,
+    ))
+}
+
+/// The rotation a drop at `sim` would settle the carried kind into:
+/// [`site_on`]'s answer for the berth it is aimed at, so the carried
+/// ghost promises the pose the piece will actually take — the upright
+/// rule on the side walls, the backing rule on the floor, the hopper
+/// tile's turn toward the doorway. `None` where the aim is off the net
+/// (the caller falls back to the chart's own facing).
+fn hover_rot(
+    station: Station,
+    surface: &SimSurface,
+    aft: Option<&SimSurface>,
+    kind: Kind,
+    sim: SimVec2,
+) -> Option<Quat> {
+    if matches!(station, Station::Airlock) {
+        return layout::slot_at(&layout::FLOTSAM_SLOTS, sim)
+            .map(|slot| crate::airlock::site(slot).1);
+    }
+    let rect = aimed_rect(kind, sim)?;
+    Some(site_on(station, surface, aft?, rect).1)
+}
+
+// ------------------------------------------------------- riding stations --
+
+/// The station surface an instrument carries at a berth pose: the face
+/// the rig draws its glass on, turned into a [`SimSurface`] bound to
+/// the instrument's logical rect. Local +X is sim +x and local +Y is
+/// up-panel, so the sim's downward y maps to `NEG_Y` — the same frame
+/// [`SimSurface::orientation`] hands out, and the normal comes out
+/// facing the room because the berth already turned the rig to face it.
+#[must_use]
+fn ride_surface(mount: &Instrument, kind: Kind, site: (Vec3, Quat, Vec3)) -> SimSurface {
+    let (pos, rot, scale) = site;
+    let (w, h) = kind.cells();
+    let half_u = f32::from(w) * layout::CELL * mount.face.0 * 0.5;
+    let half_v = f32::from(h) * layout::CELL * mount.face.1 * 0.5;
+    SimSurface {
+        center: pos + rot * (Vec3::Z * (mount.plane * scale.z)),
+        half_u: rot * (Vec3::X * (half_u * scale.x)),
+        half_v: rot * (Vec3::NEG_Y * (half_v * scale.y)),
+        rect: mount.rect,
+    }
+}
+
+/// Where a berthed instrument's station hangs, from its hold cells
+/// alone: the piece's BERTH pose — never the eased tween, since a
+/// station that lagged its own housing would hand the sim stale
+/// coordinates mid-glide — through the same [`site_on`] the rig lands
+/// with. `None` for passive cargo, or off the net.
+#[must_use]
+pub fn instrument_surface(
+    charts: &[(Station, SimSurface)],
+    kind: Kind,
+    rect: Rect,
+) -> Option<(Station, SimSurface)> {
+    let mount = instrument(kind)?;
+    let station = chart_station(rect_center(rect))?;
+    let find = |want: Station| {
+        charts
+            .iter()
+            .find(|(tag, _)| *tag == want)
+            .map(|(_, surface)| *surface)
+    };
+    let surface = find(station)?;
+    let aft = find(Station::BayWall)?;
+    Some((
+        mount.station,
+        ride_surface(&mount, kind, site_on(station, &surface, &aft, rect)),
+    ))
+}
+
+/// Hang, move, and retire the instruments' station surfaces. Runs
+/// before the pointer so the ray meets a station that agrees with the
+/// hardware it is painted on; a jettisoned (or carried, or shelved)
+/// instrument simply has no station, and `aimed_station`, the focus
+/// poses, and the pointer all skip what is not there.
+fn ride_instruments(
+    mut commands: Commands,
+    shell: Res<Shell>,
+    charts: Query<(&Station, &SimSurface), Without<Riding>>,
+    mut riders: Query<(Entity, &Riding, &mut SimSurface)>,
+) {
+    let charts: Vec<(Station, SimSurface)> = charts
+        .iter()
+        .map(|(station, surface)| (*station, *surface))
+        .collect();
+    let sim = &shell.bridge.sim;
+    let in_hand = sim.held(0).map(|held| held.piece);
+    let mut live: Vec<(u32, Station, SimSurface)> = Vec::new();
+    for piece in sim.pieces() {
+        if !matches!(piece.loc, Loc::Hold { .. }) || in_hand == Some(piece.id) {
+            continue;
+        }
+        if let Some((station, surface)) =
+            instrument_surface(&charts, piece.kind, layout::piece_rect(sim.pieces(), piece))
+        {
+            live.push((piece.id, station, surface));
+        }
+    }
+    for (entity, riding, mut surface) in &mut riders {
+        if let Some(at) = live.iter().position(|(id, ..)| *id == riding.0) {
+            *surface = live.swap_remove(at).2;
+        } else {
+            commands.entity(entity).despawn();
+        }
+    }
+    for (id, station, surface) in live {
+        commands.spawn((station, surface, Riding(id)));
     }
 }
 
@@ -1130,21 +1321,27 @@ fn carry_held(
         return;
     };
 
+    let kind = sim
+        .pieces()
+        .iter()
+        .find(|piece| piece.id == held.piece)
+        .map(|piece| piece.kind);
+
     let (pos, rot, fit) = if camera_rig.roaming() {
-        if let (Some(world), Some(station)) = (pointer.world, pointer.station)
+        if let (Some(world), Some(station), Some(kind)) = (pointer.world, pointer.station, kind)
             && let Some(surface) = surface_of(&surfaces, station)
         {
             // Aimed at the room: hover the piece at the hit, standing
-            // the way it would land — upright over the floor and the
-            // hopper tiles, flat against a wall or ceiling chart.
-            let rot = if matches!(station, Station::BayFloor | Station::Airlock) {
-                surface_of(&surfaces, Station::BayWall).map_or_else(
-                    || station.face(&surface),
-                    |band| Station::BayWall.face(&band),
-                )
-            } else {
-                station.face(&surface)
-            };
+            // exactly the way it would land. The promise is kept by
+            // deriving the rotation from the SAME berth maths the drop
+            // will use ([`hover_rot`]) — a preview that computed its
+            // own facing drifted from the berth (the playtest's
+            // quarter-turned starboard chart hovering upright, then
+            // landing sideways, and the reverse once the upright rule
+            // landed). Only the lift off the surface is the preview's.
+            let aft = surface_of(&surfaces, Station::BayWall);
+            let rot = hover_rot(station, &surface, aft.as_ref(), kind, pointer.sim)
+                .unwrap_or_else(|| station.face(&surface));
             (world + station.inward(&surface) * CARRY_LIFT, rot, 1.1)
         } else {
             // Aimed at nothing: hitched low on one arm, off center and
@@ -1268,8 +1465,14 @@ fn xray_focus(
         let Ok((rig, transform, xrayed)) = rigs.get(entity) else {
             continue;
         };
-        let candidate =
-            matches!(piece.loc, Loc::Hold { .. } | Loc::Flotsam { .. }) && held != Some(piece.id);
+        // The instrument the camera came to work is the focused
+        // CONTENT, never an occluder of itself — the desk rows'
+        // exemption, generalized now that a station can be cargo.
+        let is_the_focus = matches!(piece.loc, Loc::Hold { .. })
+            && instrument(piece.kind).is_some_and(|mount| Focus::of(mount.station) == focus);
+        let candidate = matches!(piece.loc, Loc::Hold { .. } | Loc::Flotsam { .. })
+            && held != Some(piece.id)
+            && !is_the_focus;
         let occludes = candidate && !targets.is_empty() && {
             let (w, h) = piece.kind.cells();
             let radius = Vec2::new(
@@ -1347,9 +1550,16 @@ fn hover_glint(
         && let Some(old) = *prev
         && let Some(&entity) = index.0.get(&old)
         && let Ok(rig) = rigs.get(entity)
-        && let Ok(mut v) = vis.get_mut(rig.frame_root)
     {
-        *v = Visibility::Hidden;
+        if let Ok(mut v) = vis.get_mut(rig.frame_root) {
+            *v = Visibility::Hidden;
+        }
+        // The aim left: the grab bar falls back to its resting amber.
+        if let Some(grab) = rig.grab_mat.as_ref()
+            && let Some(mut mat) = materials.get_mut(grab)
+        {
+            mat.emissive = palette::AMBER.to_linear() * GRAB_GLOW;
+        }
     }
     *prev = hovered;
     if let Some(id) = hovered
@@ -1378,6 +1588,15 @@ fn hover_glint(
                 palette::ICON_LIT
             };
             glow::set_lamp(&mut mat, hue, HOVER_GLOW);
+        }
+        // And the hardware itself answers: the amber bar the aim rests
+        // on flares to the grab brightness. The tell is on the piece,
+        // not only in the frame around it — brightness, not hue alone.
+        if let Some(grab) = rig.grab_mat.as_ref()
+            && let Some(mut mat) = materials.get_mut(grab)
+        {
+            let level = if on_handle { GRAB_FLARE } else { GRAB_GLOW };
+            mat.emissive = palette::AMBER.to_linear() * level;
         }
     }
 }
@@ -1950,6 +2169,94 @@ fn eta_needles(shell: Res<Shell>, mut needles: Query<(&EtaNeedle, &mut Transform
     }
 }
 
+/// Every launch handle's ride: the thunk throw on departure, the
+/// rattle on a refused pull, rest against the slot's stop otherwise —
+/// the console face's lever motion, carried by the instrument that
+/// owns it now. A live pull overrides both clocks: the handle is in
+/// the hand, and the travel is the gesture layer's own (`gesture.rs`
+/// never learned the lever moved; it still watches `LAUNCH_LEVER`).
+fn lever_motion(
+    time: Res<Time>,
+    shell: Res<Shell>,
+    pointer: Res<VirtualPointer>,
+    grips: Res<crate::gesture::Grips>,
+    mut juice: ResMut<LeverJuice>,
+    mut handles: Query<&mut Transform, With<LeverHandle>>,
+) {
+    let dt = time.delta_secs();
+    juice.thunk = (juice.thunk - dt).max(0.0);
+    juice.shake = (juice.shake - dt).max(0.0);
+    for cue in shell.bridge.sim.cues() {
+        match cue {
+            Cue::Depart => juice.thunk = THUNK_LEN,
+            Cue::Reject { hard: false } if layout::LAUNCH_LEVER.contains(pointer.sim) => {
+                juice.shake = SHAKE_LEN;
+            }
+            _ => {}
+        }
+    }
+    // The thunk throws the handle over fast, then eases it home; the
+    // rattle jitters it around its rest. The 2D lever's envelope.
+    let heat = juice.thunk / THUNK_LEN;
+    let pull = if heat > 0.65 {
+        (1.0 - heat) / 0.35
+    } else {
+        heat / 0.65
+    }
+    .max(grips.launch.travel);
+    let shake = (time.elapsed_secs() * 70.0).sin() * 0.05 * (juice.shake / SHAKE_LEN);
+    let angle = pull.mul_add(LEVER_THROW, LEVER_REST) + shake;
+    for mut handle in &mut handles {
+        handle.rotation = Quat::from_rotation_x(angle);
+    }
+}
+
+/// The go-lamps and their halos: lit and breathing while a pull would
+/// depart, dark glass while the sim would refuse one.
+fn lever_lamp(
+    time: Res<Time>,
+    shell: Res<Shell>,
+    pointer: Res<VirtualPointer>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    lamps: Query<&MeshMaterial3d<StandardMaterial>, With<LeverLamp>>,
+    halos: Query<&MeshMaterial3d<StandardMaterial>, With<LeverHalo>>,
+) {
+    let sim = &shell.bridge.sim;
+    let ship = sim.ship();
+    let pullable = matches!(ship.state, ShipState::Docked(_))
+        && ship.selected.is_some()
+        && !sim.pieces().iter().any(|piece| {
+            matches!(
+                piece.loc,
+                Loc::GivePad { .. } | Loc::TakePad { .. } | Loc::ReceivedShelf { .. }
+            )
+        });
+    // Decoration: the go-glow breathes gently while a pull would work.
+    // Hover feedback: pointing at the lever wakes its lamp faintly even
+    // when the pull would refuse — "this is a thing", never "this is
+    // ready". The lamps are the cabin's affordance language.
+    let hovered = layout::LAUNCH_LEVER.contains(pointer.sim);
+    let breath = glow::breathe(time.elapsed_secs(), 2.2, 0.0).mul_add(0.24, 0.66);
+    let level = if pullable {
+        if hovered { breath.max(0.95) } else { breath }
+    } else if hovered {
+        0.18
+    } else {
+        0.0
+    };
+    for lamp in &lamps {
+        if let Some(mut mat) = materials.get_mut(&lamp.0) {
+            glow::set_lamp(&mut mat, palette::LAMP_OK, level);
+        }
+    }
+    let strength = if pullable { breath * 0.55 } else { 0.0 };
+    for halo in &halos {
+        if let Some(mut mat) = materials.get_mut(&halo.0) {
+            mat.emissive = palette::LAMP_OK.to_linear() * strength;
+        }
+    }
+}
+
 // ------------------------------------------------------------------- rigs --
 
 /// Everything a kind builder needs in one grip.
@@ -1966,6 +2273,9 @@ struct RigParts<'w, 's, 'a> {
     preview_image: Option<Handle<Image>>,
     sky_image: Option<Handle<Image>>,
     root: Entity,
+    /// The amber grab's own emissive, filled in by [`carry_grab`] on
+    /// the kinds that wear one — [`hover_glint`] flares it.
+    grab: Option<Handle<StandardMaterial>>,
 }
 
 impl RigParts<'_, '_, '_> {
@@ -2017,6 +2327,60 @@ pub const fn carry_handle(kind: Kind) -> Option<Rect> {
     }
 }
 
+/// The launch handle's own panel: [`layout::LAUNCH_LEVER`] with a
+/// working margin around it, so the pull has room to start and the
+/// gesture layer — which only ever hears about the lever rect — needs
+/// no word of the move. The rect is the law; the binding travels.
+const LEVER_PANEL: Rect = Rect::new(
+    layout::LAUNCH_LEVER.x - LEVER_MARGIN,
+    layout::LAUNCH_LEVER.y - LEVER_MARGIN,
+    layout::LAUNCH_LEVER.w + 2.0 * LEVER_MARGIN,
+    layout::LAUNCH_LEVER.h + 2.0 * LEVER_MARGIN,
+);
+
+/// The margin above, in sim units.
+const LEVER_MARGIN: f32 = 20.0;
+
+/// How an instrument piece carries its station (BAY.md, "Instruments
+/// as cargo"): a mounted instrument hangs its `SimSurface` on its own
+/// cells, so rulings, tapes, and `layout`'s rects never hear that the
+/// hardware moved. The face fractions and the plane depth are the same
+/// numbers the rig builds its glass from, so — like the carry handle —
+/// the mapping and the geometry cannot drift apart.
+#[derive(Clone, Copy)]
+pub struct Instrument {
+    /// Which station this face answers as.
+    pub station: Station,
+    /// The sim rect the face is bound to.
+    pub rect: Rect,
+    /// Fractions of the footprint (w, h) the face covers.
+    pub face: (f32, f32),
+    /// The face's depth in rig-local sim units, off the berth plane.
+    pub plane: f32,
+}
+
+/// The instrument mount table: every click-functional kind and the
+/// station it carries. Passive glass (window, gauge, preview) reads
+/// without being worked, so it binds no station at all.
+#[must_use]
+pub const fn instrument(kind: Kind) -> Option<Instrument> {
+    match kind {
+        Kind::ChartTank => Some(Instrument {
+            station: Station::Map,
+            rect: layout::MAP_PANEL,
+            face: (0.78, 0.72),
+            plane: 11.0,
+        }),
+        Kind::LaunchLever => Some(Instrument {
+            station: Station::Lever,
+            rect: LEVER_PANEL,
+            face: (0.72, 0.88),
+            plane: 5.5,
+        }),
+        _ => None,
+    }
+}
+
 /// [`carry_handle`] in sim units over a berthed piece's rect.
 pub fn carry_handle_rect(kind: Kind, rect: Rect) -> Option<Rect> {
     carry_handle(kind).map(|frac| {
@@ -2028,6 +2392,13 @@ pub fn carry_handle_rect(kind: Kind, rect: Rect) -> Option<Rect> {
         )
     })
 }
+
+/// The amber grab's resting emissive, and the brightness it flares to
+/// while the crosshair actually rests on it. Two levels of the one
+/// lamp: the handle says "movable" always and "movable NOW" under the
+/// aim — a brightness signal, never hue alone.
+const GRAB_GLOW: f32 = 1.2;
+const GRAB_FLARE: f32 = 4.0;
 
 /// Draw the amber carry grab exactly over the declared handle sub-rect:
 /// a glowing crossbar in two brass stanchions, the one shape every
@@ -2042,7 +2413,8 @@ fn carry_grab(rig: &mut RigParts<'_, '_, '_>, kind: Kind, fw: f32, fh: f32, z: f
     let cy = 0.5 - frac.h.mul_add(0.5, frac.y);
     let (hx, hy) = (cx * fw, cy * fh);
     let (hw, hh) = (frac.w * fw, frac.h * fh);
-    let bar = glow::phosphor(rig.materials, palette::AMBER, 1.2);
+    let bar = glow::phosphor(rig.materials, palette::AMBER, GRAB_GLOW);
+    rig.grab = Some(bar.clone());
     rig.part(
         Cuboid::new(hw * 0.9, hh * 0.55, 2.6),
         bar,
@@ -2102,8 +2474,10 @@ fn spawn_rig(
         preview_image: glasses.preview.clone(),
         sky_image: glasses.sky.clone(),
         root: body_root,
+        grab: None,
     };
     build_kind(&mut rig, piece, color, fw, fh);
+    let grab_mat = rig.grab.clone();
 
     // The rat's mark: a socket-dark wedge biting past the right flank —
     // it changes the silhouette, so it reads in any palette.
@@ -2186,6 +2560,7 @@ fn spawn_rig(
         frame_root,
         slash,
         frame_mat,
+        grab_mat,
     });
     root
 }
@@ -2854,24 +3229,25 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 Transform::from_xyz(0.0, 0.0, 6.0),
             );
             // The chart itself: the CRT's painted map rides the tank's
-            // glass, proud of the void slab so it actually shows.
+            // glass, proud of the void slab so it actually shows. The
+            // pane's size and depth come from the mount table, which is
+            // also what the Map station's surface is derived from — the
+            // picture and the pointer cannot land on different glass.
+            let mount = instrument(piece.kind).expect("the tank mounts the map");
+            let (gw, gh, gz) = (fw * mount.face.0, fh * mount.face.1, mount.plane);
             if let Some(image) = rig.map_image.clone() {
                 let glass = crate::crt::tube_glass(rig.materials, &image);
                 rig.part(
                     Rectangle::new(1.0, 1.0),
                     glass,
-                    Transform::from_xyz(0.0, 0.0, 11.0).with_scale(Vec3::new(
-                        fw * 0.78,
-                        fh * 0.72,
-                        1.0,
-                    )),
+                    Transform::from_xyz(0.0, 0.0, gz).with_scale(Vec3::new(gw, gh, 1.0)),
                 );
             } else {
                 let field = glow::phosphor(rig.materials, color, 1.4);
                 rig.part(
-                    Cuboid::new(fw * 0.78, fh * 0.72, 1.6),
+                    Cuboid::new(gw, gh, 1.6),
                     field,
-                    Transform::from_xyz(0.0, 0.0, 11.0),
+                    Transform::from_xyz(0.0, 0.0, gz),
                 );
             }
             let post = rig.meshes.add(Cuboid::new(3.0, fh * 0.9, 11.0));
@@ -2954,13 +3330,16 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         }
         // The launch handle: a shade plate, the brass quadrant slot,
         // and the pull arm reaching into the room, its knob wearing the
-        // go-lamp green (the FUNCTION, like the console handle it will
-        // absorb) — while the amber carry grab below is the MOVE
+        // go-lamp green (the FUNCTION — the console face's handle moved
+        // in here whole) while the amber carry grab below is the MOVE
         // affordance, per the handle rule. Both glow enough that the
         // one lever that commits a course is findable in the dark.
+        // The arm hangs off a [`LeverHandle`] pivot so [`lever_motion`]
+        // can throw it with the gesture layer's own travel.
         Kind::LaunchLever => {
+            let mount = instrument(piece.kind).expect("the lever mounts its panel");
             rig.part(
-                Cuboid::new(fw * 0.72, fh * 0.88, 3.0),
+                Cuboid::new(fw * mount.face.0, fh * mount.face.1, 3.0),
                 rig.skin.plate_shade.clone(),
                 Transform::from_xyz(0.0, 0.0, 1.5),
             );
@@ -2969,15 +3348,38 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 rig.skin.brass.clone(),
                 Transform::from_xyz(0.0, 0.0, 3.2),
             );
+            let pivot = rig
+                .commands
+                .spawn((
+                    Transform::from_xyz(0.0, -fh * 0.26, LEVER_PIVOT_Z)
+                        .with_rotation(Quat::from_rotation_x(LEVER_REST)),
+                    Visibility::default(),
+                    ChildOf(rig.root),
+                    LeverHandle,
+                ))
+                .id();
+            let home = rig.root;
+            rig.root = pivot;
             let arm = rig.tint(palette::mix(color, palette::SHADOW, 0.35));
             rig.part(
-                Cuboid::new(3.2, fh * 0.52, 3.2),
+                Cuboid::new(3.2, LEVER_ARM, 3.2),
                 arm,
-                Transform::from_xyz(0.0, -fh * 0.06, 8.0)
-                    .with_rotation(Quat::from_rotation_x(-0.5)),
+                Transform::from_xyz(0.0, LEVER_ARM * 0.5, 0.0),
             );
+            // The halo sits behind the knob, a soft plate that wakes
+            // only while a pull would actually depart.
+            let halo = glow::phosphor(rig.materials, palette::LAMP_OK, 0.0);
+            let disc = rig.part(
+                Cylinder::new(5.4, 0.6),
+                halo,
+                Transform::from_xyz(0.0, LEVER_ARM, -1.2)
+                    .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+            );
+            rig.commands.entity(disc).insert(LeverHalo);
             let knob = glow::phosphor(rig.materials, palette::LAMP_OK, 0.9);
-            rig.part(ico(3.4), knob, Transform::from_xyz(0.0, fh * 0.16, 11.5));
+            let cap = rig.part(ico(3.4), knob, Transform::from_xyz(0.0, LEVER_ARM, 0.0));
+            rig.commands.entity(cap).insert(LeverLamp);
+            rig.root = home;
             carry_grab(rig, piece.kind, fw, fh, 6.0);
         }
         // The dressing kinds own two bodies each — laid into the room
@@ -3528,6 +3930,162 @@ mod tests {
             assert_eq!(bars.is_empty(), frame_only, "{rule:?}");
         }
         assert!(glyph_spec(None, rect).is_empty());
+    }
+
+    /// The instrument mount, mechanised: the chart tank's station lands
+    /// on the tank's OWN glass — the pane the rig draws at the mount's
+    /// plane — facing into the room, and a ray fired down that normal
+    /// reads `MAP_PANEL` coordinates back. Derived from the starter
+    /// berth through the same call the runtime hangs it with.
+    #[test]
+    fn the_map_rides_the_tanks_glass() {
+        let charts = rig::bay();
+        let rect = rect_of(10, 5, Kind::ChartTank);
+        let (station, surface) =
+            instrument_surface(&charts, Kind::ChartTank, rect).expect("the tank mounts the map");
+        assert_eq!(station, Station::Map);
+        assert_eq!(surface.rect, layout::MAP_PANEL);
+        // The berth the rig itself takes, and the glass depth it draws
+        // at: the surface must sit exactly there, not on the wall.
+        let starboard = chart(Station::BayStarboard);
+        let aft = chart(Station::BayWall);
+        let (pos, rot, scale) = site_on(Station::BayStarboard, &starboard, &aft, rect);
+        let mount = instrument(Kind::ChartTank).expect("mounted");
+        let want = pos + rot * (Vec3::Z * (mount.plane * scale.z));
+        assert!(
+            (surface.center - want).length() < 1e-5,
+            "the map sits at {} instead of the tank's glass at {want}",
+            surface.center
+        );
+        let inward = Station::BayStarboard.inward(&starboard);
+        let off = (surface.center - pos).dot(inward);
+        assert!(
+            off > 0.05,
+            "the glass must stand proud of the wall, not in it: {off}"
+        );
+        assert!(
+            surface.normal().dot(inward) > 0.99,
+            "the chart must read into the room"
+        );
+        // And the mapping round-trips: aim at the middle of the glass,
+        // land in the middle of the map.
+        let n = surface.normal();
+        let ray = Ray3d::new(
+            surface.center + n * 0.4,
+            Dir3::new(-n).expect("a unit normal"),
+        );
+        let (_, sim, _) = surface.project(ray).expect("the ray meets the glass");
+        let middle = rect_center(layout::MAP_PANEL);
+        assert!(
+            (sim.x - middle.x).abs() < 1.0 && (sim.y - middle.y).abs() < 1.0,
+            "the glass centre reads {sim:?}, not {middle:?}"
+        );
+        // The launch handle hangs the same way, on its own front-wall
+        // berth, bound to the rect the gesture layer still watches.
+        let (station, lever) =
+            instrument_surface(&charts, Kind::LaunchLever, rect_of(5, 8, Kind::LaunchLever))
+                .expect("the handle mounts its panel");
+        assert_eq!(station, Station::Lever);
+        assert!(
+            lever.rect.contains(rect_center(layout::LAUNCH_LEVER))
+                && lever.rect.w > layout::LAUNCH_LEVER.w,
+            "the lever panel must contain the lever rect with room to pull"
+        );
+    }
+
+    /// The handle rule's click routing, decided (BAY.md): amber handle
+    /// means carry, the rest of a click-functional piece means focus,
+    /// and passive cargo is all grab — plus the answer stops applying
+    /// the moment the instrument leaves its wall.
+    #[test]
+    fn the_handle_decides_carry_or_focus() {
+        let sim = space_trucking::sim::Sim::new(1);
+        let pieces = sim.pieces();
+        let of_kind = |kind: Kind| {
+            pieces
+                .iter()
+                .find(|piece| piece.kind == kind)
+                .expect("the starter board hangs it")
+        };
+        for (kind, focus) in [
+            (Kind::ChartTank, crate::rig::Focus::Tank),
+            (Kind::LaunchLever, crate::rig::Focus::Lever),
+        ] {
+            let piece = of_kind(kind);
+            let rect = layout::piece_rect(pieces, piece);
+            let handle = carry_handle_rect(kind, rect).expect("click-functional cargo wears one");
+            assert_eq!(
+                crate::rig::handle_route(pieces, rect_center(handle)),
+                None,
+                "{kind:?}: the grab must reach the sim untouched"
+            );
+            // A hair above the handle band is still the instrument.
+            let body = SimVec2::new(rect_center(rect).x, rect.h.mul_add(0.25, rect.y));
+            assert!(!handle.contains(body));
+            assert_eq!(
+                crate::rig::handle_route(pieces, body),
+                Some(focus),
+                "{kind:?}: the body must answer with its station"
+            );
+        }
+        // Passive cargo has no function to guard: every point grabs.
+        let lamp = of_kind(Kind::CeilingLamp);
+        let at = rect_center(layout::piece_rect(pieces, lamp));
+        assert_eq!(crate::rig::handle_route(pieces, at), None);
+        // Off the net entirely — a parked pointer — routes nowhere.
+        assert_eq!(
+            crate::rig::handle_route(pieces, crate::bridge::POINTER_PARKED),
+            None
+        );
+    }
+
+    /// The carried ghost promises the berth it would take: the preview
+    /// rotation is [`site_on`]'s, so a piece hovering over a starboard
+    /// cell stands upright (the side charts' quarter turn rolled out)
+    /// and one hovering over a front-row floor cell has already turned
+    /// its back to the wall it would stand against.
+    #[test]
+    fn the_carry_preview_promises_the_berth() {
+        let aft = chart(Station::BayWall);
+        let starboard = chart(Station::BayStarboard);
+        let floor = chart(Station::BayFloor);
+        let hover = |station: Station, surface: &SimSurface, kind: Kind, x: u8, y: u8| {
+            let cell = layout::cell_rect(x, y);
+            let at = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
+            hover_rot(station, surface, Some(&aft), kind, at).expect("the aim is on the net")
+        };
+        let up = hover(Station::BayStarboard, &starboard, Kind::ChartTank, 10, 5);
+        assert!(
+            (up * Vec3::Y).y > 0.9,
+            "a hovered tank must stand up, not lie on its side: {:?}",
+            up * Vec3::Y
+        );
+        assert!(
+            (up * Vec3::Z).dot(Station::BayStarboard.inward(&starboard)) > 0.9,
+            "and still face into the room"
+        );
+        // The placed transform is the same one, to the last bit.
+        let placed = site_on(
+            Station::BayStarboard,
+            &starboard,
+            &aft,
+            rect_of(10, 5, Kind::ChartTank),
+        )
+        .1;
+        for axis in [Vec3::X, Vec3::Y, Vec3::Z] {
+            assert!(
+                (up * axis - placed * axis).length() < 1e-5,
+                "the preview's {axis:?} ({:?}) drifted from the berth's ({:?})",
+                up * axis,
+                placed * axis
+            );
+        }
+        // The floor's backing rule applies to the ghost too.
+        let backed = hover(Station::BayFloor, &floor, Kind::Couch, 3, 7);
+        assert!(
+            (backed * Vec3::Z).z > 0.9,
+            "a couch hovered on the front row must already have its back to the wall"
+        );
     }
 
     /// The z-fight guard: every occupied rung of the decal ladder —

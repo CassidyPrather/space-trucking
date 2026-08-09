@@ -80,12 +80,15 @@ fn main() {
             .and_then(|at| args.get(at + 1).cloned())
     };
     let shot = flag_value("--shot");
-    // `--view tank|console|desk|bay` boots parked at that viewpoint —
-    // mostly for screenshot runs, harmless interactively. The bay has no
-    // focus pose; its view is a roam pose facing aft.
+    // `--view tank|lever|console|desk|bay` boots parked at that
+    // viewpoint — mostly for screenshot runs, harmless interactively.
+    // The bay has no focus pose; its view is a roam pose facing aft.
+    // The instrument viewpoints (tank, lever) find their pieces on the
+    // first frame, wherever the board hangs them.
     let view_name = flag_value("--view");
     let view = view_name.as_deref().and_then(|name| match name {
         "tank" => Some(rig::Focus::Tank),
+        "lever" => Some(rig::Focus::Lever),
         "console" => Some(rig::Focus::Console),
         "desk" => Some(rig::Focus::Desk),
         _ => None,

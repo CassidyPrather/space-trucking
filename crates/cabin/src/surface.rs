@@ -10,18 +10,32 @@
 //! reads. The inverse mapping places sim things (POIs, crates, the rat)
 //! back onto cabin geometry. Hit-testing thus stays where it always was:
 //! inside the sim, where the rules live.
+//!
+//! Two of them are not screwed to the hull at all: the instruments are
+//! cargo, so the chart tank and the launch handle carry their stations
+//! at their own cells ([`Riding`]) and the rest of the game never hears
+//! about it — the logical rects stay the law, only the binding moves
+//! (docs/BAY.md, "Instruments as cargo").
 
 use bevy::prelude::*;
 use space_trucking::sim::Vec2 as SimVec2;
 use space_trucking::sim::layout::Rect as SimRect;
 
+use crate::pieces::Riding;
+
 /// Which mapped surface (or view system) is being talked about.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Station {
-    /// The star map tank — `layout::MAP_PANEL`.
+    /// The star map tank — `layout::MAP_PANEL`. Carried by the
+    /// `ChartTank` piece: the logical rect never moves, the binding
+    /// does (docs/BAY.md, "Instruments as cargo").
     Map,
-    /// The console face: preview, ETA, launch lever, icon buttons.
+    /// The console face: the icon buttons and the hangar tally.
     Console,
+    /// The launch handle's own panel — a region around
+    /// `layout::LAUNCH_LEVER`, carried by the `LaunchLever` piece so
+    /// the pull gesture never learns the handle moved.
+    Lever,
     /// The barter counter — slots, dial, accept lever, badge.
     Barter,
     /// The room net's aft wall chart (docs/BAY.md, "The room grid").
@@ -243,7 +257,7 @@ impl Default for VirtualPointer {
 pub fn track_pointer(
     window: Single<&Window, With<bevy::window::PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<crate::rig::CabinCamera>>,
-    surfaces: Query<(&Station, &SimSurface)>,
+    surfaces: Query<(&Station, &SimSurface, Option<&Riding>)>,
     rig: Res<crate::rig::CameraRig>,
     shell: Res<crate::Shell>,
     mut pointer: ResMut<VirtualPointer>,
@@ -285,8 +299,18 @@ pub fn track_pointer(
     // so they only project while the sim's rail rule holds: no barter.
     let rail_live = shell.bridge.sim.barter().is_none();
     let mut nearest = f32::INFINITY;
-    for (station, surface) in &surfaces {
+    for (station, surface, riding) in &surfaces {
         if matches!(station, Station::Airlock) && !rail_live {
+            continue;
+        }
+        // An instrument's station is glass ON a piece of cargo, and in
+        // roam the cargo comes first: the ray passes straight through
+        // to the cells the instrument hangs on, so the crosshair can
+        // hover it, the amber handle can be grabbed THROUGH its own
+        // panel, and a carry aimed at it reads the berth it would take.
+        // The focus interaction that the rest of the piece answers with
+        // is `rig::steer`'s business, not the pointer's.
+        if roam_only && riding.is_some() {
             continue;
         }
         if let Some((t, sim, world)) = surface.project(ray)

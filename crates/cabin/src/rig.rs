@@ -32,7 +32,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
-use space_trucking::sim::layout;
+use space_trucking::sim::{Loc, Piece, Vec2 as SimVec2, layout};
 
 use crate::palette;
 use crate::surface::{SimSurface, Station};
@@ -162,26 +162,17 @@ const FIT_MARGIN: f32 = 1.14;
 /// How far the physical panel plate extends past its mapped quad.
 const PLATE_MARGIN: f32 = 0.03;
 
-/// The three focusable panels: where each sim region lives in the cabin.
-/// Width/height keep each rect's aspect; scales differ per panel on
-/// purpose. The hold is not here — it unfolded into the bay ([`bay`]).
+/// The panels still screwed to the hull: where each sim region lives in
+/// the cabin. Width/height keep each rect's aspect; scales differ per
+/// panel on purpose. The hold is not here — it unfolded into the bay
+/// ([`bay`]) — and neither is the star tank: the instruments are cargo,
+/// so `Station::Map` and `Station::Lever` ride their pieces' cells
+/// (`pieces::instrument_surface`) and this list keeps only what the
+/// ship itself owns. The console face is next; the counter goes when
+/// the barter redesign does.
 #[must_use]
-pub fn panels() -> [(Station, SimSurface); 3] {
+pub fn panels() -> [(Station, SimSurface); 2] {
     [
-        // The chart nook: the star tank reads from the left wall, so the
-        // front wall can hold the window — stations spread around the
-        // room instead of crowding one bulkhead.
-        (
-            Station::Map,
-            SimSurface::panel_yawed(
-                Vec3::new(-1.60, 1.45, -0.20),
-                1.00,
-                0.84,
-                0.10,
-                std::f32::consts::FRAC_PI_2,
-                layout::MAP_PANEL,
-            ),
-        ),
         (
             Station::Console,
             SimSurface::panel(
@@ -331,7 +322,7 @@ impl Slab {
 // One slab per line of the room's plan; splitting the list would
 // scatter the one place the whole hull is written down.
 #[allow(clippy::too_many_lines)]
-pub fn structure(panels: &[(Station, SimSurface); 3]) -> Vec<Slab> {
+pub fn structure(panels: &[(Station, SimSurface)]) -> Vec<Slab> {
     let mut slabs = vec![
         // The box: floor, ceiling, four walls.
         Slab::new(
@@ -416,19 +407,18 @@ pub fn structure(panels: &[(Station, SimSurface); 3]) -> Vec<Slab> {
         ),
     ];
     // Wall ribs: the junk that says somebody built this hull in a hurry.
-    // The left wall's ribs skip the chart tank's span — the invariant
-    // test below is what keeps this honest, not the comment.
+    // The port wall runs its full set again — the chart tank that used
+    // to be bolted through them is cargo now, hung in front of whatever
+    // wall it is carried to, so the hull has nothing to make room for.
     for i in 0..5 {
         let z = 0.7f32.mul_add(i as f32, -1.2);
-        if !(-0.90..=0.50).contains(&z) {
-            slabs.push(Slab::new(
-                Vec3::new(-1.66, 1.15, z),
-                Vec3::new(0.06, 2.3, 0.08),
-                Finish::Hull,
-            ));
-        }
-        // The starboard ribs skip the airlock doorway's span, exactly
-        // as the port ribs skip the chart tank's.
+        slabs.push(Slab::new(
+            Vec3::new(-1.66, 1.15, z),
+            Vec3::new(0.06, 2.3, 0.08),
+            Finish::Hull,
+        ));
+        // The starboard ribs still skip the airlock doorway's span:
+        // that hole is architecture, not furniture.
         if !(AIR_DOOR_Z0 - 0.10..=AIR_DOOR_Z1 + 0.10).contains(&z) {
             slabs.push(Slab::new(
                 Vec3::new(1.66, 1.15, z),
@@ -485,6 +475,7 @@ pub enum Focus {
     Tank,
     Console,
     Desk,
+    Lever,
 }
 
 impl Focus {
@@ -497,6 +488,7 @@ impl Focus {
             Station::Map => Some(Self::Tank),
             Station::Console => Some(Self::Console),
             Station::Barter => Some(Self::Desk),
+            Station::Lever => Some(Self::Lever),
             Station::BayWall
             | Station::BayFloor
             | Station::BayPort
@@ -571,8 +563,16 @@ impl CameraRig {
 
 /// The pose a focus parks at: panel extents fitted to the camera FOV,
 /// eyed along the panel normal, up running up-panel.
+///
+/// The surfaces are whatever is standing right now, not a fixed list:
+/// an instrument's station rides its cargo, so its pose is its berth's
+/// (BAY.md, "Focus poses become relative to the instrument's berth").
+/// `None` when nothing carries that station — jettisoned, shelved, or
+/// in the player's own hands — and the caller falls back to roam.
+/// Owning two chart tanks widens the fit to frame both: the station is
+/// the instrument, not the piece.
 #[must_use]
-pub fn focus_pose(focus: Focus, panels: &[(Station, SimSurface); 3]) -> (Vec3, Quat) {
+pub fn focus_pose(focus: Focus, panels: &[(Station, SimSurface)]) -> Option<(Vec3, Quat)> {
     let group: Vec<&SimSurface> = panels
         .iter()
         .filter(|(station, _)| Focus::of(*station) == Some(focus))
@@ -580,7 +580,7 @@ pub fn focus_pose(focus: Focus, panels: &[(Station, SimSurface); 3]) -> (Vec3, Q
         .collect();
     // Combined center and planar extents, measured in the first panel's
     // frame (desk panels share a tilt by construction).
-    let lead = group[0];
+    let lead = *group.first()?;
     let u = lead.half_u.normalize();
     let v = lead.half_v.normalize();
     let center = group.iter().fold(Vec3::ZERO, |acc, s| acc + s.center) / group.len() as f32;
@@ -597,7 +597,19 @@ pub fn focus_pose(focus: Focus, panels: &[(Station, SimSurface); 3]) -> (Vec3, Q
         (half_w * FIT_MARGIN / half_hfov.tan()).max(half_h * FIT_MARGIN / (FOV * 0.5).tan());
     let eye = center + lead.normal() * distance;
     let look = Transform::from_translation(eye).looking_at(center, -v);
-    (eye, look.rotation)
+    Some((eye, look.rotation))
+}
+
+/// Every live surface as a plain pair, for the pose maths — the
+/// instruments' stations move, so the fit reads the world instead of a
+/// constant.
+fn live_panels(
+    surfaces: &Query<(&Station, &SimSurface), Without<CabinCamera>>,
+) -> Vec<(Station, SimSurface)> {
+    surfaces
+        .iter()
+        .map(|(station, surface)| (*station, *surface))
+        .collect()
 }
 
 /// Shared meshes and materials for the worn-metal family. Views make
@@ -728,10 +740,14 @@ pub fn spawn(
     target.sampler = ImageSampler::nearest();
     let target = images.add(target);
 
+    // A booted focus (`--view`) has no instrument to aim at yet — the
+    // riding stations are hung on the first frame — so the camera opens
+    // on the roaming pose and `pose` snaps it home a frame later.
     let (pos, rot) = match rig.mode {
         Mode::Focused { focus } => focus_pose(focus, &panels),
-        _ => (rig.pos, rig.roam_rotation()),
-    };
+        _ => None,
+    }
+    .unwrap_or_else(|| (rig.pos, rig.roam_rotation()));
     commands.spawn((
         Camera3d::default(),
         Camera {
@@ -1091,6 +1107,26 @@ fn aimed_station(
     best.map(|(_, station)| station)
 }
 
+/// The handle rule's click routing (BAY.md, "The handle rule"), pure:
+/// where the crosshair rests on a click-functional piece, a press
+/// inside its declared amber handle is a CARRY and passes to the sim
+/// untouched; anywhere else on that piece it is the instrument's focus
+/// interaction and the camera takes the click instead. Passive cargo
+/// has no function to guard, so its whole body grabs and nothing is
+/// consumed.
+#[must_use]
+pub fn handle_route(pieces: &[Piece], at: SimVec2) -> Option<Focus> {
+    let piece = layout::piece_at(pieces, at)?;
+    let handle = crate::pieces::carry_handle_rect(piece.kind, layout::piece_rect(pieces, piece))?;
+    // Off its wall — staged on a hopper tile, boxed in a cubby, sat on
+    // the counter — an instrument is only cargo again: it carries no
+    // station, so its whole body grabs, handle or no handle.
+    if handle.contains(at) || !matches!(piece.loc, Loc::Hold { .. }) {
+        return None;
+    }
+    Focus::of(crate::pieces::instrument(piece.kind)?.station)
+}
+
 /// Mode transitions and roaming movement, from this frame's input.
 #[allow(clippy::too_many_arguments)]
 pub fn steer(
@@ -1099,6 +1135,8 @@ pub fn steer(
     buttons: Res<ButtonInput<MouseButton>>,
     motion: Res<AccumulatedMouseMotion>,
     surfaces: Query<(&Station, &SimSurface), Without<CabinCamera>>,
+    pointer: Res<crate::surface::VirtualPointer>,
+    shell: Res<crate::Shell>,
     mut rig: ResMut<CameraRig>,
     camera: Single<&Transform, With<CabinCamera>>,
 ) {
@@ -1153,15 +1191,27 @@ pub fn steer(
             // survives the glide; `advance` keeps the grip synthesized),
             // and because this runs before `advance`, the same click
             // never doubles as a placement.
-            if (buttons.just_pressed(MouseButton::Left) || toggle)
-                && let Some(station) = aimed_station(&camera, &surfaces)
-                && let Some(focus) = Focus::of(station)
-            {
-                rig.mode = Mode::ToFocus {
-                    focus,
-                    from: (camera.translation, camera.rotation),
-                    t: 0.0,
+            //
+            // An instrument in the room answers to the handle rule
+            // first. The pointer is last frame's, computed from exactly
+            // the camera transform this system is reading, so the
+            // routing and the hover tell that promised it can never
+            // disagree about which half of the piece the aim is on.
+            if buttons.just_pressed(MouseButton::Left) || toggle {
+                let holding = shell.bridge.sim.held(0).is_some();
+                let over = layout::piece_at(shell.bridge.sim.pieces(), pointer.sim);
+                let focus = if !holding && over.is_some() {
+                    handle_route(shell.bridge.sim.pieces(), pointer.sim)
+                } else {
+                    aimed_station(&camera, &surfaces).and_then(Focus::of)
                 };
+                if let Some(focus) = focus {
+                    rig.mode = Mode::ToFocus {
+                        focus,
+                        from: (camera.translation, camera.rotation),
+                        t: 0.0,
+                    };
+                }
             }
         }
         Mode::Focused { .. } => {
@@ -1181,21 +1231,42 @@ pub fn steer(
 }
 
 /// Advance glides and write the camera transform for the current mode.
+///
+/// The poses come from the surfaces standing in the room this frame,
+/// not from a constant: an instrument's station rides its cargo, so a
+/// tank carried off mid-glide simply has no pose left — the camera
+/// lets go and walks back (`Mode::ToRoam`) rather than aiming at a
+/// hole in the wall.
 pub fn pose(
     time: Res<Time>,
+    surfaces: Query<(&Station, &SimSurface), Without<CabinCamera>>,
     mut rig: ResMut<CameraRig>,
     mut camera: Single<&mut Transform, With<CabinCamera>>,
 ) {
-    let panels = panels();
+    let panels = live_panels(&surfaces);
     let dt = time.delta_secs();
     let (roam_pos, roam_rot) = (rig.pos, rig.roam_rotation());
+    // The instrument left with its cargo: let go of the focus here and
+    // walk back from wherever the glide had got to.
+    let orphaned = match rig.mode {
+        Mode::Focused { focus } | Mode::ToFocus { focus, .. } => {
+            focus_pose(focus, &panels).is_none()
+        }
+        Mode::Roam | Mode::ToRoam { .. } => false,
+    };
+    if orphaned {
+        rig.mode = Mode::ToRoam {
+            from: (camera.translation, camera.rotation),
+            t: 0.0,
+        };
+    }
     let (pos, rot) = match &mut rig.mode {
         Mode::Roam => (roam_pos, roam_rot),
-        Mode::Focused { focus } => focus_pose(*focus, &panels),
+        Mode::Focused { focus } => focus_pose(*focus, &panels).unwrap_or((roam_pos, roam_rot)),
         Mode::ToFocus { focus, from, t } => {
+            let (to_pos, to_rot) = focus_pose(*focus, &panels).unwrap_or((roam_pos, roam_rot));
             *t = (*t + dt / GLIDE).min(1.0);
             let s = smooth(*t);
-            let (to_pos, to_rot) = focus_pose(*focus, &panels);
             let out = (from.0.lerp(to_pos, s), from.1.slerp(to_rot, s));
             if *t >= 1.0 {
                 let focus = *focus;
@@ -1359,7 +1430,7 @@ mod tests {
         rot: Quat,
         point: Vec3,
         slabs: &[Slab],
-        panels: &[(Station, SimSurface); 3],
+        panels: &[(Station, SimSurface)],
     ) -> Result<(), String> {
         // Frustum containment, using the pinned FOV and crunch aspect.
         let local = rot.inverse() * (point - eye);
@@ -1417,13 +1488,23 @@ mod tests {
             Station::Map => {
                 spots.push(space_trucking::sim::map::SUN);
             }
+            // The pull is the whole panel's business, so its rect's
+            // ends matter as much as its middle: a grip that starts at
+            // the left stop must be reachable, and the detent at the
+            // right end is where the throw actually fires.
+            Station::Lever => {
+                let r = layout::LAUNCH_LEVER;
+                spots.push(mid(r));
+                spots.push(SimVec2::new(r.x + 1.0, r.h.mul_add(0.5, r.y)));
+                spots.push(SimVec2::new(r.x + r.w - 1.0, r.h.mul_add(0.5, r.y)));
+            }
+            // The face keeps only the toggles and the hangar strip; the
+            // readings and the pull are cargo, checked at their own
+            // stations above.
             Station::Console => {
-                spots.push(mid(layout::LAUNCH_LEVER));
                 spots.push(mid(layout::PAUSE_BTN));
                 spots.push(mid(layout::WARP_BTN));
                 spots.push(mid(layout::SPEAKER));
-                spots.push(mid(layout::DEST_PREVIEW));
-                spots.push(layout::ETA_ARC_CENTER);
             }
             Station::BayWall
             | Station::BayFloor
@@ -1450,24 +1531,66 @@ mod tests {
         spots.into_iter().map(|s| surface.to_world(s)).collect()
     }
 
+    /// Every station standing in the starter cabin: the hull's own
+    /// panels plus the instruments' riding stations, derived from the
+    /// sim's opening board through the very function the runtime rides
+    /// them with. Move a starter berth and these tests move with it —
+    /// which is the point, now that the poses belong to the cargo.
+    fn stations() -> Vec<(Station, SimSurface)> {
+        let sim = space_trucking::sim::Sim::new(1);
+        let charts = bay();
+        let mut all: Vec<(Station, SimSurface)> = panels().to_vec();
+        all.extend(sim.pieces().iter().filter_map(|piece| {
+            matches!(piece.loc, Loc::Hold { .. })
+                .then(|| {
+                    crate::pieces::instrument_surface(
+                        &charts,
+                        piece.kind,
+                        layout::piece_rect(sim.pieces(), piece),
+                    )
+                })
+                .flatten()
+        }));
+        all
+    }
+
     /// The sightline contract: from a station's own focus viewpoint,
     /// every panel corner and every control it carries must be visible —
     /// framed and unoccluded. This is the "corner must be visible from
     /// the perspective" rule, enforced at build time.
+    ///
+    /// The hull is what must never be in the way. Desk-class furniture
+    /// is the migrating kind of blocker — the barter counter still
+    /// shoulders in beside the front wall's baseboard, and it is on its
+    /// way out with the barter redesign (BAY.md) — so an instrument's
+    /// pose answers to the hull alone, exactly as the net's workability
+    /// budget already does. Cargo standing in a sightline is neither's
+    /// business: the focus x-ray ghosts it at runtime.
     #[test]
     fn every_control_is_visible_from_its_focus() {
         let panels = panels();
         let slabs = structure(&panels);
-        for (station, surface) in &panels {
-            let focus = Focus::of(*station).expect("every panel is focusable");
-            let (eye, rot) = focus_pose(focus, &panels);
-            let mut points = corner_points(surface);
-            points.extend(control_points(*station, surface));
+        let hull: Vec<Slab> = slabs
+            .iter()
+            .copied()
+            .filter(|slab| matches!(slab.finish, Finish::Hull))
+            .collect();
+        for (station, surface) in stations() {
+            let focus = Focus::of(station).expect("every station is focusable");
+            let (eye, rot) = focus_pose(focus, &stations()).expect("every station has a pose");
+            let mut points = corner_points(&surface);
+            points.extend(control_points(station, &surface));
+            let riding = panels.iter().all(|(tag, _)| *tag != station);
             for point in points {
                 // Lift each point a hair off the face so the ray test
                 // asks about the air in front of it, not the face itself.
                 let probe = point + surface.normal() * 0.004;
-                if let Err(reason) = visible_from(eye, rot, probe, &slabs, &panels) {
+                let broken = if riding {
+                    visible_from(eye, rot, probe, &hull, &[])
+                } else {
+                    visible_from(eye, rot, probe, &slabs, &panels)
+                };
+                if let Err(reason) = broken {
                     panic!("{station:?} sightline broken: {reason}");
                 }
             }
@@ -1509,13 +1632,14 @@ mod tests {
     }
 
     /// Focus viewpoints must be legal camera positions: inside the box,
-    /// inside no slab, looking at their panels.
+    /// inside no slab, looking at their stations — the instruments'
+    /// riding poses included, since those are wherever the cargo is.
     #[test]
     fn focus_poses_are_legal_camera_positions() {
-        let panels = panels();
-        let slabs = structure(&panels);
-        for focus in [Focus::Tank, Focus::Console, Focus::Desk] {
-            let (eye, rot) = focus_pose(focus, &panels);
+        let slabs = structure(&panels());
+        let stations = stations();
+        for focus in [Focus::Tank, Focus::Console, Focus::Desk, Focus::Lever] {
+            let (eye, rot) = focus_pose(focus, &stations).expect("the starter board hangs it");
             assert!(
                 eye.y > 0.2 && eye.y < 2.2 && eye.x.abs() < 1.6 && eye.z > -1.3 && eye.z < 1.8,
                 "{focus:?} eye {eye} left the cabin"
@@ -1529,7 +1653,7 @@ mod tests {
             }
             // The view axis should pass close to every grouped panel
             // center: no panel of the group may sit behind the camera.
-            for (station, surface) in &panels {
+            for (station, surface) in &stations {
                 if Focus::of(*station) == Some(focus) {
                     let to_panel = (surface.center - eye).normalize();
                     let forward = rot * Vec3::NEG_Z;
@@ -1540,6 +1664,18 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// A station with nothing carrying it has no pose at all, and the
+    /// camera falls back to roam rather than aiming at a bare wall: an
+    /// instrument is cargo, and cargo can be sold.
+    #[test]
+    fn a_jettisoned_instrument_leaves_no_pose() {
+        let hull = panels();
+        assert!(focus_pose(Focus::Tank, &hull).is_none());
+        assert!(focus_pose(Focus::Lever, &hull).is_none());
+        assert!(focus_pose(Focus::Console, &hull).is_some());
+        assert!(focus_pose(Focus::Desk, &hull).is_some());
     }
 
     /// The roaming envelope stays clear of every slab at eye height.
@@ -1725,9 +1861,12 @@ mod tests {
         }
         // The exemption stays an exception, not a loophole: the floor
         // and aft wall must be fully workable, so a regression that
-        // fronts half the net with panels cannot pass quietly.
+        // fronts half the net with panels cannot pass quietly. The
+        // budget tightened when the chart tank walked off the port
+        // wall — the counter's own shadow is all that is left of it,
+        // and that goes with the barter redesign.
         assert!(
-            station_fronted <= 20,
+            station_fronted <= 6,
             "{station_fronted} cells are station-fronted; the walls are vanishing"
         );
     }

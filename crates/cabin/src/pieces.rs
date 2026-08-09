@@ -531,10 +531,37 @@ fn site_on(
         }
         _ => (
             surface.to_world(rect_center(rect)),
-            station.face(surface),
+            wall_upright(station, surface, rect),
             scale,
         ),
     }
+}
+
+/// The upright rule for wall cargo: the side charts' columns run up the
+/// wall (the seam law pins them), so a rig hung there inherits a
+/// quarter turn — the playtest's sideways star chart. A SQUARE
+/// footprint rolls back upright about the wall normal (facing is
+/// untouched); a non-square footprint's cells genuinely lie that way
+/// — portrait on a side wall — so it keeps the chart's orientation
+/// rather than pull its body off its cells. Aft and front, whose
+/// columns already run level, compute a zero roll and pass through.
+fn wall_upright(station: Station, surface: &SimSurface, rect: Rect) -> Quat {
+    let base = station.face(surface);
+    if !station.chart_flipped() {
+        return base;
+    }
+    let square = ((rect.w - rect.h) / layout::CELL).abs() < 0.5;
+    if !square {
+        return base;
+    }
+    let n = station.inward(surface);
+    let up = base * Vec3::Y;
+    let want = (Vec3::Y - n * Vec3::Y.dot(n)).normalize_or_zero();
+    if want.length_squared() < 0.5 {
+        return base;
+    }
+    let roll = up.cross(want).dot(n).atan2(up.dot(want));
+    Quat::from_axis_angle(n, roll) * base
 }
 
 /// Where a laid footprint lies: flat AGAINST its chart, lifted
@@ -3392,6 +3419,41 @@ mod tests {
         assert!(
             facing(3, 3, Kind::FloorLamp).z < -0.9,
             "the aft corner backs onto the aft wall"
+        );
+    }
+
+    /// The upright rule: square wall cargo reads up-is-up on every
+    /// wall — the side charts' vertical columns must not turn the star
+    /// chart sideways — while facing stays into the room and portrait
+    /// footprints keep the chart's own lie.
+    #[test]
+    fn square_wall_cargo_hangs_upright() {
+        let aft = chart(Station::BayWall);
+        for (station, x, y) in [
+            (Station::BayWall, 4, 0),
+            (Station::BayPort, 0, 4),
+            (Station::BayStarboard, 9, 5),
+            (Station::BayFront, 4, 8),
+        ] {
+            let surface = chart(station);
+            let (_, rot, _) = site_on(station, &surface, &aft, rect_of(x, y, Kind::ChartTank));
+            assert!(
+                (rot * Vec3::Y).y > 0.9,
+                "{station:?}: the tank's up must be world up, got {:?}",
+                rot * Vec3::Y
+            );
+            let inward = station.inward(&surface);
+            assert!(
+                (rot * Vec3::Z).dot(inward) > 0.9,
+                "{station:?}: the tank must still face into the room"
+            );
+        }
+        // A portrait footprint on a side wall lies as its cells lie.
+        let port = chart(Station::BayPort);
+        let (_, rot, _) = site_on(Station::BayPort, &port, &aft, rect_of(0, 4, Kind::Painting));
+        assert!(
+            (rot * Vec3::Y).y.abs() < 0.1,
+            "a 2x1 painting on the port wall hangs portrait with its cells"
         );
     }
 

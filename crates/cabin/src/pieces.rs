@@ -1926,15 +1926,31 @@ fn spawn_rig(
         .commands
         .spawn((Transform::default(), Visibility::Hidden, ChildOf(root)))
         .id();
-    let (hx, hy) = (fw * 0.5, fh * 0.5);
-    let rail_h = rig.meshes.add(Cuboid::new(fw + 6.0, 2.6, 2.6));
-    let rail_v = rig.meshes.add(Cuboid::new(2.6, fh + 6.0, 2.6));
-    for (mesh, at) in [
-        (rail_h.clone(), Vec3::new(0.0, hy + 3.0, 12.0)),
-        (rail_h, Vec3::new(0.0, -(hy + 3.0), 12.0)),
-        (rail_v.clone(), Vec3::new(hx + 3.0, 0.0, 12.0)),
-        (rail_v, Vec3::new(-(hx + 3.0), 0.0, 12.0)),
-    ] {
+    // A wireframe BOX, not a flat rectangle: the tell wraps the body's
+    // volume (playtest: a fixed-plane rectangle around a 3D object read
+    // as UI debris). Twelve edges around the footprint and the rigs'
+    // common depth.
+    let (hx, hy) = (fw.mul_add(0.5, 3.0), fh.mul_add(0.5, 3.0));
+    let (z0, z1) = (-2.0, 30.0);
+    let rail_x = rig.meshes.add(Cuboid::new(hx.mul_add(2.0, 2.6), 2.6, 2.6));
+    let rail_y = rig.meshes.add(Cuboid::new(2.6, hy.mul_add(2.0, 2.6), 2.6));
+    let rail_z = rig.meshes.add(Cuboid::new(2.6, 2.6, z1 - z0 + 2.6));
+    let zm = f32::midpoint(z0, z1);
+    let mut edges: Vec<(Handle<Mesh>, Vec3)> = Vec::new();
+    for z in [z0, z1] {
+        for sy in [-1.0, 1.0] {
+            edges.push((rail_x.clone(), Vec3::new(0.0, sy * hy, z)));
+        }
+        for sx in [-1.0, 1.0] {
+            edges.push((rail_y.clone(), Vec3::new(sx * hx, 0.0, z)));
+        }
+    }
+    for sx in [-1.0, 1.0] {
+        for sy in [-1.0, 1.0] {
+            edges.push((rail_z.clone(), Vec3::new(sx * hx, sy * hy, zm)));
+        }
+    }
+    for (mesh, at) in edges {
         rig.commands.spawn((
             Mesh3d(mesh),
             MeshMaterial3d(frame_mat.clone()),
@@ -2477,42 +2493,43 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         Kind::Cabinet => {
             let deep = CABINET_DEPTH;
             let rack = rig.tint(palette::mix(color, palette::SHADOW, 0.25));
-            // Carcass: back sheet, then sides and caps starting FORWARD
-            // of it — the back alone owns the rear plane, so no two
-            // faces share it (rig-internal z-fighting, seen from behind
-            // in playtest; the decal ladder guards chart paint, this
-            // convention guards the furniture).
+            // Carcass: the back sheet alone owns the rear plane, and
+            // every part meeting it starts INSIDE it — joints between
+            // rig solids interpenetrate, never kiss, because two faces
+            // sharing a plane shimmer (the twice-caught cabinet: first
+            // its rear, then the plane its "fixed" parts abutted at).
             rig.part(
                 Cuboid::new(fw * 0.96, fh * 0.97, 2.0),
                 body.clone(),
                 Transform::from_xyz(0.0, 0.0, 1.0),
             );
-            let side = rig.meshes.add(Cuboid::new(2.6, fh * 0.94, deep - 2.0));
+            let side = rig.meshes.add(Cuboid::new(2.6, fh * 0.94, deep - 1.0));
             for sx in [-1.0, 1.0] {
                 rig.spawn(
                     side.clone(),
                     body.clone(),
-                    Transform::from_xyz(fw * 0.44 * sx, 0.0, (deep + 2.0) * 0.5),
+                    Transform::from_xyz(fw * 0.44 * sx, 0.0, (deep + 1.0) * 0.5),
                 );
             }
-            let cap = rig.meshes.add(Cuboid::new(fw * 0.92, 2.6, deep - 2.0));
+            let cap = rig.meshes.add(Cuboid::new(fw * 0.92, 2.6, deep - 1.0));
             for sy in [-1.0, 1.0] {
                 rig.spawn(
                     cap.clone(),
                     body.clone(),
-                    Transform::from_xyz(0.0, fh * 0.465 * sy, (deep + 2.0) * 0.5),
+                    Transform::from_xyz(0.0, fh * 0.465 * sy, (deep + 1.0) * 0.5),
                 );
             }
-            // The rack: mid shelf and centre stile, a shade darker.
+            // The rack: mid shelf and centre stile, a shade darker,
+            // rooted inside the back sheet like everything else.
             rig.part(
-                Cuboid::new(fw * 0.88, 2.2, deep * 0.9),
+                Cuboid::new(fw * 0.88, 2.2, deep * 0.85),
                 rack.clone(),
-                Transform::from_xyz(0.0, 0.0, deep * 0.45),
+                Transform::from_xyz(0.0, 0.0, (deep * 0.85).mul_add(0.5, 1.5)),
             );
             rig.part(
-                Cuboid::new(2.2, fh * 0.9, deep * 0.9),
+                Cuboid::new(2.2, fh * 0.9, deep * 0.85),
                 rack,
-                Transform::from_xyz(0.0, 0.0, deep * 0.45),
+                Transform::from_xyz(0.0, 0.0, (deep * 0.85).mul_add(0.5, 1.5)),
             );
             // Brass fittings: a cornice over the opening, stubby feet.
             rig.part(

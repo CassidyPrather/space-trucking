@@ -20,11 +20,14 @@
 //! so fuel staging is tested by casting off and staging it yourself.
 //!
 //! Keep the board legal when editing: standing cargo shadows the wall
-//! cells behind it (the floor lamp and cabinet against the port seam
+//! cells behind it (the cabinet and floor lamp against the port seam
 //! own its baseboard rows, which is why the wall sconce hangs at the
-//! cornice), the gnawed rug lies PINNED under the couch, and the free
+//! cornice), the gnawed rug lies PINNED under the couch, the free
 //! floor must stay one connected region, aisle included
-//! (`Violation::Sealed`) — the test below re-checks all of it.
+//! (`Violation::Sealed`), and the port-wall rows nearest the chart
+//! tank stay clear of tall furniture so nothing stands inside the
+//! tank's housing while it is still architecture — the test below
+//! re-checks the legality half of all of it.
 
 /// The fixture save, STV8, hand-authored — the timestamp line is added
 /// at boot so no catch-up elapses.
@@ -47,11 +50,11 @@ drone -
 parade - -
 rat 4 4 4 4 11800 12300 12600 1
 eager 3f800000 2
-piece 0 21 0 0 hold 3 6
+piece 0 21 0 0 hold 3 3
 piece 1 9 0 0 hold 7 5
 piece 2 8 0 0 hold 4 3
 piece 3 19 1 0 hold 4 6
-piece 4 18 2 0 hold 3 3
+piece 4 18 2 0 hold 3 6
 piece 5 12 0 0 stow 0 3
 piece 6 6 1 0 recv 2
 piece 7 20 3 0 hold 7 1

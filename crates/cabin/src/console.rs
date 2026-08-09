@@ -43,9 +43,6 @@ const HANGAR_LAMP_STEP: f32 = 13.2;
 /// How far off the panel plane the lever handle's centre rides, metres.
 const HANDLE_LIFT: f32 = 0.014;
 
-/// How far off the panel the ETA arc gizmo draws, metres.
-const ARC_LIFT: f32 = 0.012;
-
 // ---- Markers, timers ----
 
 /// The console's `SimSurface`, copied at spawn so view systems can map sim
@@ -115,7 +112,7 @@ impl Plugin for ConsolePlugin {
             .add_systems(PostStartup, spawn)
             .add_systems(
                 Update,
-                (eta, lever_motion, lever_lamp, buttons, hangar).in_set(Phase::View),
+                (lever_motion, lever_lamp, buttons, hangar).in_set(Phase::View),
             );
     }
 }
@@ -243,58 +240,16 @@ fn spawn(
         panel,
         puck,
     };
-    spawn_eta(&mut build);
     spawn_lever(&mut build);
     spawn_buttons(&mut build, shell.bridge.dev());
     spawn_hangar(&mut build);
 }
 
-// The destination preview surface itself is painted by `crt` — the
-// faithful software-rasterized port of the 2D tube. The console keeps
-// only the instruments around it.
-
-/// The ETA gauge: a physical metal instrument — plate housing, dark glass
-/// face, eight GLINT ticks, an amber standby ember. The draining arc
-/// itself is a per-frame gizmo in [`eta`].
-fn spawn_eta(b: &mut Build<'_, '_, '_>) {
-    let mid = layout::ETA_ARC_CENTER;
-    let plate = b.skin.plate.clone();
-    b.disc((mid.x, mid.y), 32.0, 0.006, 0.003, &plate);
-    let glass = b.skin.glass.clone();
-    b.disc(
-        (mid.x, mid.y),
-        layout::ETA_ARC_RADIUS + 3.0,
-        0.004,
-        0.007,
-        &glass,
-    );
-
-    // Ticks straddle the arc track; twelve o'clock, where the arc starts
-    // and ends, reads brightest — same hierarchy as the 2D gauge.
-    let tick = glow::enamel(
-        b.materials,
-        palette::mix(palette::GLINT, palette::PLATE, 0.45),
-    );
-    let tick_hot = glow::enamel(b.materials, palette::GLINT);
-    for i in 0..8_u8 {
-        let a = f32::from(i) * (TAU / 8.0);
-        let off = (24.0 * a.sin(), 24.0 * a.cos());
-        let material = if i == 0 { &tick_hot } else { &tick };
-        b.stroke(
-            (mid.x, mid.y),
-            off,
-            (5.0, 1.5),
-            FRAC_PI_2 - a,
-            0.010,
-            material,
-        );
-    }
-
-    // The standby ember: always faintly alive, so the gauge never reads
-    // as a hole in the panel. Static, but still its own instance.
-    let ember = glow::phosphor(b.materials, palette::AMBER, 1.3);
-    b.disc((mid.x, mid.y), 2.0, 0.003, 0.010, &ember);
-}
+// The ETA gauge and destination preview left the console face — they
+// are cargo now (`Kind::EtaGauge`, `Kind::DestPreview` in `pieces`),
+// wearing the same readings on their own rigs. The console keeps the
+// launch lever, the toggle buttons, and the hangar strip until their
+// own instruments absorb them.
 
 /// The launch lever: a SOCKET track slot and a brass handle resting left,
 /// carrying its own go-lamp and glow halo so feedback rides along.
@@ -452,45 +407,6 @@ fn spawn_hangar(b: &mut Build<'_, '_, '_>) {
 }
 
 // ------------------------------------------------------------------- view --
-
-/// The ETA arc: amber, from twelve o'clock, draining clockwise as the leg
-/// completes; a full dim ring while docked with a destination armed.
-fn eta(shell: Res<Shell>, panel: Option<Res<ConsolePanel>>, mut gizmos: Gizmos) {
-    let Some(panel) = panel else {
-        return;
-    };
-    let sim = &shell.bridge.sim;
-    let surface = panel.0;
-    let mid = layout::ETA_ARC_CENTER;
-    let center = surface.to_world(mid) + surface.normal() * ARC_LIFT;
-    let radius = (layout::ETA_ARC_RADIUS - 3.0) * surface.scale_u();
-    match sim.ship().state {
-        ShipState::Traveling {
-            progress,
-            leg_ticks,
-            ..
-        } => {
-            let frac = ((progress as f32 + sim.alpha()) / leg_ticks as f32).clamp(0.0, 1.0);
-            let sweep = (1.0 - frac) * TAU;
-            if sweep > 0.01 {
-                // Local X starts the arc at panel-up (twelve o'clock);
-                // local Y is the plane normal; negative angle sweeps
-                // clockwise as seen from the seat.
-                let rot = surface.orientation()
-                    * Quat::from_mat3(&Mat3::from_cols(Vec3::Y, Vec3::Z, Vec3::X));
-                gizmos.arc_3d(-sweep, radius, Isometry3d::new(center, rot), palette::AMBER);
-            }
-        }
-        ShipState::Docked(_) if sim.ship().selected.is_some() => {
-            gizmos.circle(
-                Isometry3d::new(center, surface.orientation()),
-                radius,
-                palette::AMBER.with_alpha(0.35),
-            );
-        }
-        ShipState::Docked(_) => {}
-    }
-}
 
 /// The launch handle's ride: the thunk throw on departure, the rattle on
 /// a refused pull, rest at the track's left end otherwise.

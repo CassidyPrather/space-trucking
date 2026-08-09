@@ -618,7 +618,6 @@ pub struct Skin {
     pub screen: Handle<StandardMaterial>,
     pub brass: Handle<StandardMaterial>,
     pub rivet: Handle<StandardMaterial>,
-    pub glass: Handle<StandardMaterial>,
     pub cube: Handle<Mesh>,
 }
 
@@ -666,12 +665,6 @@ impl Skin {
                 ..default()
             }),
             rivet: materials.add(metal(palette::RIVET)),
-            glass: materials.add(StandardMaterial {
-                base_color: palette::GLASS,
-                perceptual_roughness: 0.3,
-                metallic: 0.0,
-                ..default()
-            }),
             cube: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
         }
     }

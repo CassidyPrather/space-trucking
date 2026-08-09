@@ -101,6 +101,18 @@ fn main() {
         boot_rig.yaw = -std::f32::consts::FRAC_PI_2;
         boot_rig.pitch = -0.30;
     }
+    // The front wall, where the instrument cluster hangs.
+    if view_name.as_deref() == Some("front") {
+        boot_rig.pos = Vec3::new(0.10, 1.35, 0.55);
+        boot_rig.yaw = 0.0;
+        boot_rig.pitch = 0.12;
+    }
+    // The starboard wall by the doorway — the starter chart tank berth.
+    if view_name.as_deref() == Some("starboard") {
+        boot_rig.pos = Vec3::new(-0.40, 1.35, 0.20);
+        boot_rig.yaw = -std::f32::consts::FRAC_PI_2;
+        boot_rig.pitch = 0.05;
+    }
 
     let mut app = App::new();
     app.add_plugins(

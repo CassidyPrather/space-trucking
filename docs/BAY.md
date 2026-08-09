@@ -396,6 +396,16 @@ of. Three guards, all sim-side and monkey-proven:
 - **Focus poses become relative to the instrument's berth** (or retire
   where roam-scale reading suffices); occlusion of a pose is handled
   by rendering, never by placement bans — see below.
+- **The readings ride the pieces first, the controls follow.** Landed:
+  the window piece wears the viewport's painted sky (sell your window,
+  lose the view), the chart tank and destination preview wear the
+  CRT's live textures, and the ETA gauge's needle reads the leg — the
+  console's arc and preview glass retired with them. Still fixed: the
+  Map panel's focus pose and the launch lever's pull, which bind to
+  the left-wall panel and console face until the click-vs-carry
+  question is answered — clicking a focusable or pullable piece and
+  grabbing it as cargo are the same gesture today, and that
+  disambiguation is the same design knot the barter redesign owns.
 
 ### Occlusion: a defect class, named
 

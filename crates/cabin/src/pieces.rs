@@ -38,7 +38,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use space_trucking::sim::cargo::CABINET_SLOTS;
 use space_trucking::sim::layout::{self, Rect, Surf};
 use space_trucking::sim::{
-    Cue, Kind, Loc, Mount, Piece, Vec2 as SimVec2, Violation, lamp_lit, lit_adjacent,
+    Cue, Kind, Loc, Mount, Piece, ShipState, Vec2 as SimVec2, Violation, lamp_lit, lit_adjacent,
     placement_check, player_owned, splitmix,
 };
 
@@ -196,6 +196,7 @@ impl Plugin for PiecesPlugin {
                     violation_flash,
                     rat_watch,
                     breathe_pulses,
+                    eta_needles,
                 )
                     .chain()
                     .in_set(Phase::View),
@@ -330,6 +331,13 @@ struct CubbyGlow {
     piece: u32,
     slot: u8,
     phase: f32,
+}
+
+/// The ETA gauge piece's needle: `reach` is the pivot-to-centre arm in
+/// rig-local sim units; [`eta_needles`] sweeps it with the live leg.
+#[derive(Component)]
+struct EtaNeedle {
+    reach: f32,
 }
 
 /// The rat rig's root.
@@ -829,6 +837,8 @@ fn sync_pieces(
     shell: Res<Shell>,
     skin: Res<Skin>,
     shared: Res<SharedBits>,
+    screens: Option<Res<crate::crt::Screens>>,
+    pane: Option<Res<crate::viewport::Pane>>,
     surfaces: Query<(&Station, &SimSurface)>,
     mut index: ResMut<PieceIndex>,
     mut settle: ResMut<PendingSettle>,
@@ -884,6 +894,11 @@ fn sync_pieces(
             let place = Transform::from_translation(goal)
                 .with_rotation(rot)
                 .with_scale(scale);
+            let glasses = ScreenGlasses {
+                map: screens.as_ref().map(|s| s.map.clone()),
+                preview: screens.as_ref().map(|s| s.preview.clone()),
+                sky: pane.as_ref().map(|p| p.image.clone()),
+            };
             let entity = spawn_rig(
                 &mut commands,
                 &mut meshes,
@@ -891,6 +906,7 @@ fn sync_pieces(
                 &mut images,
                 &skin,
                 &shared,
+                &glasses,
                 piece,
                 place,
             );
@@ -1863,6 +1879,33 @@ fn breathe_pulses(
     }
 }
 
+/// Sweep from full (a leg just started) to empty across the ETA dial —
+/// ±this much rotation around twelve o'clock.
+const NEEDLE_SWEEP: f32 = 2.4;
+
+/// The ETA gauge pieces read the leg: needle at the top of its sweep
+/// when a course is armed at the dock, draining as the leg completes,
+/// resting at empty otherwise — the console arc's reading, carried by
+/// the instrument that owns it now.
+fn eta_needles(shell: Res<Shell>, mut needles: Query<(&EtaNeedle, &mut Transform)>) {
+    let sim = &shell.bridge.sim;
+    let remaining = match sim.ship().state {
+        ShipState::Traveling {
+            progress,
+            leg_ticks,
+            ..
+        } => 1.0 - ((progress as f32 + sim.alpha()) / leg_ticks as f32).clamp(0.0, 1.0),
+        ShipState::Docked(_) if sim.ship().selected.is_some() => 1.0,
+        ShipState::Docked(_) => 0.0,
+    };
+    let angle = remaining.mul_add(NEEDLE_SWEEP, -NEEDLE_SWEEP * 0.5);
+    for (needle, mut transform) in &mut needles {
+        let spin = Quat::from_rotation_z(angle);
+        transform.rotation = spin;
+        transform.translation = Vec3::new(0.0, 0.0, 7.2) + spin * Vec3::new(0.0, needle.reach, 0.0);
+    }
+}
+
 // ------------------------------------------------------------------- rigs --
 
 /// Everything a kind builder needs in one grip.
@@ -1872,6 +1915,12 @@ struct RigParts<'w, 's, 'a> {
     materials: &'a mut Assets<StandardMaterial>,
     images: &'a mut Assets<Image>,
     skin: &'a Skin,
+    /// The live screen textures the instrument pieces wear: the chart
+    /// tank's map, the destination preview's glass, the window's sky.
+    /// `None` in headless paths; the builders fall back to phosphor.
+    map_image: Option<Handle<Image>>,
+    preview_image: Option<Handle<Image>>,
+    sky_image: Option<Handle<Image>>,
     root: Entity,
 }
 
@@ -1910,6 +1959,14 @@ impl RigParts<'_, '_, '_> {
     }
 }
 
+/// The live screen textures handed down to the instrument builders.
+#[derive(Default)]
+struct ScreenGlasses {
+    map: Option<Handle<Image>>,
+    preview: Option<Handle<Image>>,
+    sky: Option<Handle<Image>>,
+}
+
 /// Spawn one piece's whole rig at `place`: the kind's silhouette in local
 /// sim units (footprint `w*CELL × h*CELL` in X/Y, thickness up +Z off the
 /// panel), the hidden bite wedge, and the hidden carry-legality frame.
@@ -1921,6 +1978,7 @@ fn spawn_rig(
     images: &mut Assets<Image>,
     skin: &Skin,
     shared: &SharedBits,
+    glasses: &ScreenGlasses,
     piece: &Piece,
     place: Transform,
 ) -> Entity {
@@ -1941,6 +1999,9 @@ fn spawn_rig(
         materials: &mut *materials,
         images: &mut *images,
         skin,
+        map_image: glasses.map.clone(),
+        preview_image: glasses.preview.clone(),
+        sky_image: glasses.sky.clone(),
         root: body_root,
     };
     build_kind(&mut rig, piece, color, fw, fh);
@@ -2616,21 +2677,51 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 ));
             }
         }
-        // The exterior window: brass frame, void-glass pane, and a
-        // scatter of phosphor stars that ride wherever it is rehung —
-        // the whimsy rule made physical. The pane glows faintly on its
-        // own; space is self-lighting, which is convenient lights-out.
+        // The exterior window: a brass frame around the ship's one real
+        // sky — the viewport's painted glass rides this piece wherever
+        // it is rehung (the whimsy rule made physical; the void
+        // follows). Headless paths fall back to a phosphor pane with a
+        // stand-in star scatter seeded by the piece id.
         Kind::Window => {
-            let pane = glow::phosphor(
-                rig.materials,
-                palette::mix(color, palette::PHOSPHOR, 0.12),
-                0.35,
-            );
-            rig.part(
-                Cuboid::new(fw * 0.88, fh * 0.78, 3.0),
-                pane,
-                Transform::from_xyz(0.0, 0.0, 1.5),
-            );
+            if let Some(image) = rig.sky_image.clone() {
+                let glass = crate::crt::tube_glass(rig.materials, &image);
+                rig.part(
+                    Rectangle::new(1.0, 1.0),
+                    glass,
+                    Transform::from_xyz(0.0, 0.0, 2.4).with_scale(Vec3::new(
+                        fw * 0.88,
+                        fh * 0.78,
+                        1.0,
+                    )),
+                );
+            } else {
+                let pane = glow::phosphor(
+                    rig.materials,
+                    palette::mix(color, palette::PHOSPHOR, 0.12),
+                    0.35,
+                );
+                rig.part(
+                    Cuboid::new(fw * 0.88, fh * 0.78, 3.0),
+                    pane,
+                    Transform::from_xyz(0.0, 0.0, 1.5),
+                );
+                let star = glow::phosphor(rig.materials, palette::GLINT, 2.2);
+                let fleck = rig.meshes.add(ico(0.9));
+                for i in 0..7_u32 {
+                    let n = (piece.id.wrapping_mul(7).wrapping_add(i)) as f32;
+                    let angle = n * 2.399;
+                    let reach = (n * 0.517).fract().mul_add(0.36, 0.08);
+                    rig.spawn(
+                        fleck.clone(),
+                        star.clone(),
+                        Transform::from_xyz(
+                            angle.cos() * fw * reach,
+                            angle.sin() * fh * reach,
+                            2.6,
+                        ),
+                    );
+                }
+            }
             let lip_h = rig.meshes.add(Cuboid::new(fw * 0.96, fh * 0.10, 6.0));
             let lip_v = rig.meshes.add(Cuboid::new(fw * 0.05, fh * 0.94, 6.0));
             for (mesh, at) in [
@@ -2643,20 +2734,6 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                     mesh,
                     rig.skin.brass.clone(),
                     Transform::from_translation(at),
-                );
-            }
-            // The stars: a golden-angle scatter seeded by the piece id,
-            // so every window ships its own patch of sky.
-            let star = glow::phosphor(rig.materials, palette::GLINT, 2.2);
-            let fleck = rig.meshes.add(ico(0.9));
-            for i in 0..7_u32 {
-                let n = (piece.id.wrapping_mul(7).wrapping_add(i)) as f32;
-                let angle = n * 2.399;
-                let reach = (n * 0.517).fract().mul_add(0.36, 0.08);
-                rig.spawn(
-                    fleck.clone(),
-                    star.clone(),
-                    Transform::from_xyz(angle.cos() * fw * reach, angle.sin() * fh * reach, 2.6),
                 );
             }
         }
@@ -2677,12 +2754,27 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 void,
                 Transform::from_xyz(0.0, 0.0, 6.0),
             );
-            let field = glow::phosphor(rig.materials, color, 1.4);
-            rig.part(
-                Cuboid::new(fw * 0.78, fh * 0.72, 5.0),
-                field,
-                Transform::from_xyz(0.0, 0.0, 7.0),
-            );
+            // The chart itself: the CRT's painted map rides the tank's
+            // glass, proud of the void slab so it actually shows.
+            if let Some(image) = rig.map_image.clone() {
+                let glass = crate::crt::tube_glass(rig.materials, &image);
+                rig.part(
+                    Rectangle::new(1.0, 1.0),
+                    glass,
+                    Transform::from_xyz(0.0, 0.0, 11.0).with_scale(Vec3::new(
+                        fw * 0.78,
+                        fh * 0.72,
+                        1.0,
+                    )),
+                );
+            } else {
+                let field = glow::phosphor(rig.materials, color, 1.4);
+                rig.part(
+                    Cuboid::new(fw * 0.78, fh * 0.72, 1.6),
+                    field,
+                    Transform::from_xyz(0.0, 0.0, 11.0),
+                );
+            }
             let post = rig.meshes.add(Cuboid::new(3.0, fh * 0.9, 11.0));
             for sx in [-1.0f32, 1.0] {
                 rig.spawn(
@@ -2707,7 +2799,8 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
             );
         }
         // The ETA gauge: a brass drum with a dark dial, the phosphor
-        // needle pinned mid-arc. Passive — it earns no amber handle.
+        // needle reading the live leg ([`eta_needles`] sweeps it).
+        // Passive — it earns no amber handle.
         Kind::EtaGauge => {
             let flat = Quat::from_rotation_x(FRAC_PI_2);
             rig.part(
@@ -2722,30 +2815,48 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 Transform::from_xyz(0.0, 0.0, 5.5).with_rotation(flat),
             );
             let needle = glow::phosphor(rig.materials, color, 1.6);
-            rig.part(
+            let arm = rig.part(
                 Cuboid::new(2.0, fh * 0.28, 1.6),
                 needle,
-                Transform::from_xyz(0.0, fh * 0.10, 7.2).with_rotation(Quat::from_rotation_z(-0.6)),
+                Transform::from_xyz(0.0, fh * 0.14, 7.2),
             );
+            rig.commands
+                .entity(arm)
+                .insert(EtaNeedle { reach: fh * 0.14 });
             let hub = glow::etched(rig.materials, palette::GLINT);
             rig.part(ico(1.8), hub, Transform::from_xyz(0.0, 0.0, 7.4));
         }
-        // The destination preview: a square brass porthole showing the
-        // selected world as a lone phosphor disc. Passive glass.
+        // The destination preview: a square brass porthole wearing the
+        // CRT's painted preview — the selected world's face rides the
+        // piece now, not the console. Passive glass; headless paths
+        // show a lone phosphor disc instead.
         Kind::DestPreview => {
             rig.part(
                 Cuboid::new(fw * 0.84, fh * 0.84, 4.0),
                 rig.skin.brass.clone(),
                 Transform::from_xyz(0.0, 0.0, 2.0),
             );
-            let glass = rig.tint(palette::mix(color, palette::SHADOW, 0.72));
-            rig.part(
-                Cuboid::new(fw * 0.68, fh * 0.68, 3.0),
-                glass,
-                Transform::from_xyz(0.0, 0.0, 3.5),
-            );
-            let world = glow::phosphor(rig.materials, color, 1.5);
-            rig.part(ico(fw * 0.14), world, Transform::from_xyz(0.0, 0.0, 5.6));
+            if let Some(image) = rig.preview_image.clone() {
+                let glass = crate::crt::tube_glass(rig.materials, &image);
+                rig.part(
+                    Rectangle::new(1.0, 1.0),
+                    glass,
+                    Transform::from_xyz(0.0, 0.0, 4.6).with_scale(Vec3::new(
+                        fw * 0.68,
+                        fh * 0.68,
+                        1.0,
+                    )),
+                );
+            } else {
+                let glass = rig.tint(palette::mix(color, palette::SHADOW, 0.72));
+                rig.part(
+                    Cuboid::new(fw * 0.68, fh * 0.68, 3.0),
+                    glass,
+                    Transform::from_xyz(0.0, 0.0, 3.5),
+                );
+                let world = glow::phosphor(rig.materials, color, 1.5);
+                rig.part(ico(fw * 0.14), world, Transform::from_xyz(0.0, 0.0, 5.6));
+            }
         }
         // The launch handle: the archetype of the amber-handle rule —
         // every click-functional piece wears this same amber. A shade

@@ -146,9 +146,9 @@ const STARTER_CARGO: [(Kind, u8, u8); 9] = [
     // fight over the wall.
     (Kind::Window, 4, 10),
     (Kind::ChartTank, 10, 5),
-    (Kind::EtaGauge, 6, 9),
-    (Kind::DestPreview, 6, 10),
-    (Kind::LaunchLever, 7, 9),
+    (Kind::EtaGauge, 5, 9),
+    (Kind::DestPreview, 3, 10),
+    (Kind::LaunchLever, 5, 8),
 ];
 
 /// A 2D vector, kept deliberately tiny: the sim needs four operations and a
@@ -5827,7 +5827,7 @@ mod tests {
         // last one may not leave the ship.
         let mut sim = Sim::new(17);
         launch(&mut sim, SATURN);
-        let lever = cell_center(7, 9);
+        let lever = cell_center(5, 8);
         let net0 = rect_center(layout::FLOTSAM_SLOTS[0]);
         drag(&mut sim, lever, net0);
         assert_eq!(sim.last_violation(), Some(Violation::Vital));
@@ -5897,7 +5897,7 @@ mod tests {
         sim.advance(TICK_DT, &InputFrame::default());
         let badge = rect_center(layout::ENCOUNTER_BADGE);
         let count_before = sim.pieces().len();
-        drag(&mut sim, cell_center(7, 9), badge);
+        drag(&mut sim, cell_center(5, 8), badge);
         assert_eq!(sim.last_violation(), Some(Violation::Vital));
         assert_eq!(sim.pieces().len(), count_before, "no payout and no chip");
         assert!(

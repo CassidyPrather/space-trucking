@@ -29,34 +29,12 @@ use space_trucking::sim::{
 
 use crate::canvas::{Canvas, PX, dim, fade, inflate, ink, lerp, mix, snap};
 use crate::palette;
-use crate::rig::Skin;
 use crate::{Phase, Shell};
 
 // -------------------------------------------------------------- placement --
-// The orchestrator may retune these after seeing the room.
-
-/// Window centre on the front wall — the star tank's old berth.
-const PANE_CENTER: Vec3 = Vec3::new(-0.56, 1.52, -1.295);
-/// Pane size, metres. Faces +Z, no tilt.
-const PANE_W: f32 = 1.00;
-const PANE_H: f32 = 0.84;
-/// Frame bar cross-section, metres (~4 cm of honest plate).
-const BAR: f32 = 0.04;
-/// Frame bar depth: from the wall face to a lip proud of the glass.
-const FRAME_DEPTH: f32 = 0.084;
-/// Frame bar centre, relative to the pane plane (negative = into the wall).
-const FRAME_LIFT: f32 = -0.030;
-/// How far each bar overlaps the pane edge — one canvas texel, so the
-/// painted inner shade line peeks out just inside the metal.
-const LAP: f32 = 0.004;
-/// Corner bolt radius, metres.
-const BOLT_R: f32 = 0.013;
-/// Bar centre offsets from the pane centre.
-const BAR_OUT_X: f32 = (PANE_W + BAR) * 0.5 - LAP;
-const BAR_OUT_Y: f32 = (PANE_H + BAR) * 0.5 - LAP;
-
-/// Emissive multiplier on the glass; space is dimmer than a phosphor tube.
-const GLOW: f32 = 1.6;
+// The window's furniture — pane quad, frame bars, rivets — lives on the
+// `Kind::Window` piece rig now (`pieces::build_kind`); this module owns
+// only the sky itself.
 
 // ----------------------------------------------------------------- canvas --
 
@@ -115,10 +93,13 @@ const JUMP_LEN: f32 = 0.45;
 
 // ----------------------------------------------------------------- plugin --
 
-/// The glass texture handle plus its reusable paint buffer.
+/// The glass texture handle plus its reusable paint buffer. The handle
+/// is crate-visible: the transit window is CARGO now, and its piece rig
+/// wears this sky on its glass wherever it is rehung — the paint stays
+/// here, the furniture rides the piece.
 #[derive(Resource)]
-struct Pane {
-    image: Handle<Image>,
+pub struct Pane {
+    pub image: Handle<Image>,
     canvas: Canvas,
 }
 
@@ -211,78 +192,14 @@ fn screen_image(canvas: &Canvas) -> Image {
     image
 }
 
-/// Hang the window: an emissive glass quad, four PLATE frame bars, and a
-/// rivet bolt in each corner. Worn metal outside, space inside.
-fn spawn(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
-    skin: Res<Skin>,
-) {
+/// Ready the sky glass: the painted texture and its canvas. No quad, no
+/// frame, no rivets — the window is CARGO (`Kind::Window`), and its
+/// piece rig hangs the glass wherever the player rehangs it. A ship
+/// whose window was sold has a painted sky and nothing to show it
+/// through, which is legal, foolish, and the crew's own doing.
+fn spawn(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     let canvas = Canvas::new(VIEW);
     let image = images.add(screen_image(&canvas));
-    let glass = materials.add(StandardMaterial {
-        base_color: palette::SHADOW,
-        emissive: LinearRgba::WHITE * GLOW,
-        emissive_texture: Some(image.clone()),
-        perceptual_roughness: 0.85,
-        metallic: 0.0,
-        ..default()
-    });
-    commands.spawn((
-        Mesh3d(meshes.add(Rectangle::new(1.0, 1.0))),
-        MeshMaterial3d(glass),
-        Transform::from_translation(PANE_CENTER).with_scale(Vec3::new(PANE_W, PANE_H, 1.0)),
-    ));
-    // Frame bars: top and bottom run the full width plus both corners;
-    // the uprights tuck between them. Each overlaps the pane by one texel
-    // so no hairline of wall shows behind the glass edge.
-    let across = 2.0f32.mul_add(BAR, PANE_W);
-    for (offset, size) in [
-        (
-            Vec3::new(0.0, BAR_OUT_Y, FRAME_LIFT),
-            Vec3::new(across, BAR, FRAME_DEPTH),
-        ),
-        (
-            Vec3::new(0.0, -BAR_OUT_Y, FRAME_LIFT),
-            Vec3::new(across, BAR, FRAME_DEPTH),
-        ),
-        (
-            Vec3::new(BAR_OUT_X, 0.0, FRAME_LIFT),
-            Vec3::new(BAR, PANE_H, FRAME_DEPTH),
-        ),
-        (
-            Vec3::new(-BAR_OUT_X, 0.0, FRAME_LIFT),
-            Vec3::new(BAR, PANE_H, FRAME_DEPTH),
-        ),
-    ] {
-        commands.spawn((
-            Mesh3d(skin.cube.clone()),
-            MeshMaterial3d(skin.plate.clone()),
-            Transform::from_translation(PANE_CENTER + offset).with_scale(size),
-        ));
-    }
-    // Corner bolts: half-proud rivet heads on the frame's face. Somebody
-    // torqued these by hand and meant it.
-    let bolt = meshes.add(
-        Sphere::new(BOLT_R)
-            .mesh()
-            .ico(2)
-            .expect("two subdivisions is a legal icosphere"),
-    );
-    let face = FRAME_DEPTH.mul_add(0.5, FRAME_LIFT);
-    for sx in [-1.0, 1.0] {
-        for sy in [-1.0, 1.0] {
-            commands.spawn((
-                Mesh3d(bolt.clone()),
-                MeshMaterial3d(skin.rivet.clone()),
-                Transform::from_translation(
-                    PANE_CENTER + Vec3::new(sx * BAR_OUT_X, sy * BAR_OUT_Y, face),
-                ),
-            ));
-        }
-    }
     commands.insert_resource(Pane { image, canvas });
 }
 

@@ -26,9 +26,10 @@
 //! than at its traditional port berth), the gnawed rug lies PINNED
 //! under the couch, and the free floor must stay one connected region,
 //! aisle included (`Violation::Sealed`) — the test below re-checks the
-//! legality half of all of it. The five instruments cluster on the
-//! front wall: tank, then window at the old punch-out cornice, the
-//! gauges beside it, the launch handle under them.
+//! legality half of all of it. The five instruments spread across the
+//! front wall: the tank and the window (at its old punch-out cornice)
+//! left of the console face, the gauges and launch handle stacked
+//! along the starboard edge, clear of the console's plate.
 
 /// The fixture save, STV9, hand-authored — the timestamp line is added
 /// at boot so no catch-up elapses.
@@ -77,9 +78,9 @@ piece 22 3 3 1 shelf 3
 piece 23 15 2 0 give 2
 piece 24 26 0 0 hold 4 8
 piece 25 25 1 0 hold 4 10
-piece 26 27 2 0 hold 6 9
-piece 27 28 3 0 hold 6 10
-piece 28 29 0 0 hold 7 9
+piece 26 27 2 0 hold 8 9
+piece 27 28 3 0 hold 8 10
+piece 28 29 0 0 hold 8 8
 next_piece 29
 ";
 

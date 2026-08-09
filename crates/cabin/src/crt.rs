@@ -144,11 +144,14 @@ impl Feedback {
 
 // ----------------------------------------------------------------- plugin --
 
-/// The map and preview handles plus their reusable paint buffers.
+/// The map and preview handles plus their reusable paint buffers. The
+/// handles are crate-visible: the chart tank and destination preview
+/// PIECES show these same textures on their glass (instruments are
+/// cargo; the paint stays here, the furniture rides the pieces).
 #[derive(Resource)]
-struct Screens {
-    map: Handle<Image>,
-    preview: Handle<Image>,
+pub struct Screens {
+    pub map: Handle<Image>,
+    pub preview: Handle<Image>,
     map_canvas: Canvas,
     preview_canvas: Canvas,
 }
@@ -197,7 +200,7 @@ fn spawn(
             .iter()
             .find_map(|(station, surface)| (*station == want).then_some(*surface))
     };
-    let (Some(map), Some(console)) = (find(Station::Map), find(Station::Console)) else {
+    let Some(map) = find(Station::Map) else {
         return;
     };
     let quad = meshes.add(Rectangle::new(1.0, 1.0));
@@ -214,21 +217,33 @@ fn spawn(
         layout::MAP_PANEL,
         &map_image,
     );
-    spawn_screen(
-        &mut commands,
-        &mut materials,
-        &skin,
-        &quad,
-        &console,
-        layout::DEST_PREVIEW,
-        &preview_image,
-    );
+    // The destination preview no longer hangs on the console face: the
+    // DestPreview PIECE is its glass now (instruments are cargo), fed
+    // from the same painted texture through `Screens`.
     commands.insert_resource(Screens {
         map: map_image,
         preview: preview_image,
         map_canvas,
         preview_canvas,
     });
+}
+
+/// The tube-glass material: a painted texture as emissive over
+/// near-black glass. The recipe is crate-visible because the instrument
+/// pieces (chart tank, destination preview, window) wear the same glass
+/// on their rigs.
+pub fn tube_glass(
+    materials: &mut Assets<StandardMaterial>,
+    image: &Handle<Image>,
+) -> Handle<StandardMaterial> {
+    materials.add(StandardMaterial {
+        base_color: palette::SHADOW,
+        emissive: LinearRgba::WHITE * GLOW,
+        emissive_texture: Some(image.clone()),
+        perceptual_roughness: 0.85,
+        metallic: 0.0,
+        ..default()
+    })
 }
 
 /// One screen's furniture: the emissive glass quad sized to exactly cover
@@ -246,14 +261,7 @@ fn spawn_screen(
 ) {
     let normal = surface.normal();
     let center = rect_center(rect);
-    let glass = materials.add(StandardMaterial {
-        base_color: palette::SHADOW,
-        emissive: LinearRgba::WHITE * GLOW,
-        emissive_texture: Some(image.clone()),
-        perceptual_roughness: 0.85,
-        metallic: 0.0,
-        ..default()
-    });
+    let glass = tube_glass(materials, image);
     commands.spawn((
         Mesh3d(quad.clone()),
         MeshMaterial3d(glass),

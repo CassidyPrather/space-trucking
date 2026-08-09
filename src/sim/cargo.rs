@@ -7,7 +7,7 @@
 //! there is exactly one opinion about what fits, and a failure names the
 //! [`Violation`] so the frontend can flash the right icon.
 
-use super::layout::{GRID_COLS, GRID_ROWS};
+use super::layout::{AISLE, FLOOR, GRID_COLS, GRID_ROWS, Surf, surface_of};
 
 /// Everything haulable. Declaration order is the stable [`Kind::index`]
 /// order that the barter value table is written in.
@@ -79,7 +79,10 @@ pub(crate) const VARIANTS: u8 = 4;
 /// Special handling a kind demands in the hold.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tag {
-    /// Must be stowed low: anchor row 2 or below.
+    /// Weighty. Dormant since the room grid put all standing cargo on
+    /// the floor (heavy-rides-low had nothing left to refuse); kept as
+    /// kind data for the stacking rules to consume (`supports:top`,
+    /// BAY.md) — nothing heavy will ride on top of anything.
     Heavy,
     /// No two volatile pieces may sit orthogonally adjacent.
     Volatile,
@@ -95,14 +98,27 @@ pub enum Tag {
     Covering(Option<Mount>),
 }
 
-/// The room surface a fixture mounts to. The hold grid's edges are the
-/// room: row 0 is the ceiling, the last row is the floor, and the outer
-/// columns are the walls.
+/// The plane class a kind stands on.
+///
+/// Under the room net (`layout::surface_of`), every placement lies wholly
+/// in one chart and that chart's class must match the kind's mount — the
+/// room-grid placement law (BAY.md): floor unless otherwise specified,
+/// walls for paintings and instruments, ceilings for hanging lamps.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mount {
     Ceiling,
     Floor,
     Wall,
+}
+
+/// Whether chart `surf` satisfies `mount`. Any of the four walls is
+/// "the wall"; nobody hangs a painting on a compass heading.
+const fn mount_accepts(mount: Mount, surf: Surf) -> bool {
+    match mount {
+        Mount::Floor => matches!(surf, Surf::Floor),
+        Mount::Ceiling => matches!(surf, Surf::Ceiling),
+        Mount::Wall => matches!(surf, Surf::Aft | Surf::Port | Surf::Starboard | Surf::Front),
+    }
 }
 
 impl Kind {
@@ -176,6 +192,28 @@ impl Kind {
             Self::PaintTin | Self::LuminousPaint => Some(Tag::Covering(None)),
             _ => None,
         }
+    }
+
+    /// Where this kind stands — its effective mount. The room-grid law:
+    /// unless otherwise specified, cargo goes on the floor; fixtures
+    /// keep their affixed surface. Coverings answer to
+    /// [`dressing_check`] instead and never consult this.
+    #[must_use]
+    pub const fn mount(self) -> Mount {
+        match self.tag() {
+            Some(Tag::Affix(mount)) => mount,
+            _ => Mount::Floor,
+        }
+    }
+
+    /// Standing height on the floor, in wall cells — how far up an
+    /// adjacent wall this kind shadows when it stands against one (no
+    /// painting behind the wardrobe). Fully re-authored 3D extents are
+    /// deferred (BAY.md); until then a kind stands as tall as its old
+    /// bas-relief silhouette was.
+    #[must_use]
+    pub const fn stature(self) -> u8 {
+        self.cells().1
     }
 
     /// Whether this kind is a dressing — laid into the room rather than
@@ -330,23 +368,32 @@ pub struct Piece {
 /// renderer can flash the matching icon on a hard reject.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Violation {
-    /// The footprint runs off the grid.
+    /// The footprint leaves the net, crosses a hole, or bends over a
+    /// fold — every placement lies wholly in one chart.
     Bounds,
-    /// The footprint overlaps another stowed piece.
+    /// The footprint overlaps another piece's cells — or its standing
+    /// volume: a tall floor piece shadows the wall behind it, and
+    /// wall cargo cannot share that space.
     Overlap,
-    /// A heavy piece anchored above row 2.
-    Heavy,
-    /// Two volatile pieces orthogonally adjacent.
+    /// Two volatile pieces orthogonally adjacent (fold seams count:
+    /// the baseboard is next to the floor in the room, so it is here).
     Volatile,
-    /// A cryo piece not touching the hold's outer edge.
+    /// A cryo piece not touching the floor's hull edge.
     Cryo,
     /// A second suspicious piece aboard.
     Suspicious,
-    /// A fixture whose footprint misses its mount surface.
+    /// A placement whose chart does not satisfy the kind's mount.
     Affix(Mount),
     /// A cabinet with goods in its cubbies was asked to move (or to take
     /// more than it has room for): empty it first.
     Occupied,
+    /// Standing cargo on the burner doorway's threshold — the aisle
+    /// stays walkable, so the hopper is always reachable.
+    Aisle,
+    /// A floor placement that would split the walkable floor in two —
+    /// boxing a player in is not a legal move (the no-soft-lock
+    /// invariant, BAY.md).
+    Sealed,
 }
 
 /// Whether `kind` may be anchored at hold cell `(x, y)` given every other
@@ -359,9 +406,9 @@ pub fn placement_legal(pieces: &[Piece], id: u32, kind: Kind, x: u8, y: u8) -> b
 
 /// [`placement_legal`], but naming the rule that refused.
 ///
-/// Checks run in a fixed order (bounds, heavy, cryo, affix, then per-piece
-/// overlap / volatile / suspicious in stowage order) so the reported
-/// violation is deterministic.
+/// Checks run in a fixed order (bounds/chart, mount, aisle, cryo, then
+/// per-piece overlap-and-shadow / volatile / suspicious in stowage
+/// order, sealed last) so the reported violation is deterministic.
 pub fn placement_check(
     pieces: &[Piece],
     id: u32,
@@ -373,17 +420,26 @@ pub fn placement_check(
     if x + w > GRID_COLS || y + h > GRID_ROWS {
         return Err(Violation::Bounds);
     }
-    if matches!(kind.tag(), Some(Tag::Heavy)) && y < 2 {
-        return Err(Violation::Heavy);
+    let Some(surf) = footprint_surface(x, y, w, h) else {
+        return Err(Violation::Bounds);
+    };
+    let mount = kind.mount();
+    if !mount_accepts(mount, surf) {
+        return Err(Violation::Affix(mount));
     }
-    if matches!(kind.tag(), Some(Tag::Cryo)) && !touches_edge(x, y, w, h) {
+    let standing = matches!(surf, Surf::Floor);
+    if standing && AISLE.iter().any(|&(ax, ay)| covers(x, y, w, h, ax, ay)) {
+        return Err(Violation::Aisle);
+    }
+    if matches!(kind.tag(), Some(Tag::Cryo)) && !touches_hull(x, y, w, h) {
         return Err(Violation::Cryo);
     }
-    if let Some(Tag::Affix(mount)) = kind.tag() {
-        if !touches_mount(mount, x, y, w, h) {
-            return Err(Violation::Affix(mount));
-        }
-    }
+    // A standing piece's volume: the wall cells it shadows behind it.
+    let my_shadow = if standing {
+        shadow_cells(x, y, w, h, kind.stature())
+    } else {
+        Vec::new()
+    };
     for other in pieces {
         if other.id == id {
             continue;
@@ -394,6 +450,21 @@ pub fn placement_check(
         let (ow, oh) = other.kind.cells();
         if overlaps((x, y, w, h), (ox, oy, ow, oh)) {
             return Err(Violation::Overlap);
+        }
+        // Cross-plane volume conflicts are overlaps too: my shadow over
+        // standing wall cargo, or — placing onto a wall — some floor
+        // piece's shadow over me. No painting behind the wardrobe.
+        if my_shadow
+            .iter()
+            .any(|&(sx, sy)| covers(ox, oy, ow, oh, sx, sy))
+        {
+            return Err(Violation::Overlap);
+        }
+        if !standing && matches!(surface_of(ox, oy), Some(Surf::Floor)) {
+            let theirs = shadow_cells(ox, oy, ow, oh, other.kind.stature());
+            if theirs.iter().any(|&(sx, sy)| covers(x, y, w, h, sx, sy)) {
+                return Err(Violation::Overlap);
+            }
         }
         if matches!(kind.tag(), Some(Tag::Volatile))
             && matches!(other.kind.tag(), Some(Tag::Volatile))
@@ -407,23 +478,127 @@ pub fn placement_check(
             return Err(Violation::Suspicious);
         }
     }
+    if standing && seals_the_floor(pieces, id, x, y, w, h) {
+        return Err(Violation::Sealed);
+    }
     Ok(())
 }
 
-/// Whether a footprint touches the hold's outer edge.
-const fn touches_edge(x: u8, y: u8, w: u8, h: u8) -> bool {
-    x == 0 || y == 0 || x + w == GRID_COLS || y + h == GRID_ROWS
+/// The one chart a footprint lies wholly inside, if any — a piece bent
+/// over a fold, crossing a hole, or leaving the net is nowhere.
+fn footprint_surface(x: u8, y: u8, w: u8, h: u8) -> Option<Surf> {
+    let anchor = surface_of(x, y)?;
+    for cy in y..y + h {
+        for cx in x..x + w {
+            if surface_of(cx, cy) != Some(anchor) {
+                return None;
+            }
+        }
+    }
+    Some(anchor)
 }
 
-/// Whether a footprint touches its required mount surface: some covered
-/// cell on row 0 (ceiling), the last row (floor), or an outer column
-/// (wall).
-const fn touches_mount(mount: Mount, x: u8, y: u8, w: u8, h: u8) -> bool {
-    match mount {
-        Mount::Ceiling => y == 0,
-        Mount::Floor => y + h == GRID_ROWS,
-        Mount::Wall => x == 0 || x + w == GRID_COLS,
+/// Whether footprint `(x, y, w, h)` covers cell `(cx, cy)`.
+const fn covers(x: u8, y: u8, w: u8, h: u8, cx: u8, cy: u8) -> bool {
+    cx >= x && cx < x + w && cy >= y && cy < y + h
+}
+
+/// Whether a floor footprint touches the floor's hull edge (any side of
+/// the floor chart — every side of this room is hull).
+const fn touches_hull(x: u8, y: u8, w: u8, h: u8) -> bool {
+    x == FLOOR.0 || y == FLOOR.1 || x + w == FLOOR.0 + FLOOR.2 || y + h == FLOOR.1 + FLOOR.3
+}
+
+/// The wall cells a standing floor footprint shadows: for each footprint
+/// edge lying along a baseboard seam, the wall cells directly behind it,
+/// baseboard upward through the piece's stature.
+fn shadow_cells(x: u8, y: u8, w: u8, h: u8, stature: u8) -> Vec<(u8, u8)> {
+    let (fx, fy, fw, fh) = FLOOR;
+    let mut cells = Vec::new();
+    for depth in 0..stature.min(3) {
+        for cx in x..x + w {
+            if y == fy {
+                // Aft baseboard row sits just above the floor's aft edge.
+                cells.push((cx, fy - 1 - depth));
+            }
+            if y + h == fy + fh {
+                cells.push((cx, fy + fh + depth));
+            }
+        }
+        for cy in y..y + h {
+            if x == fx {
+                cells.push((fx - 1 - depth, cy));
+            }
+            if x + w == fx + fw {
+                cells.push((fx + fw + depth, cy));
+            }
+        }
     }
+    cells
+}
+
+/// Whether the free floor would stop being one walkable region with this
+/// footprint standing at `(x, y)` — the no-soft-lock invariant. Never
+/// needs to know where a player stands: one region means nobody can be
+/// boxed in, which is the point.
+fn seals_the_floor(pieces: &[Piece], id: u32, x: u8, y: u8, w: u8, h: u8) -> bool {
+    let (fx, fy, fw, fh) = FLOOR;
+    let (cols, rows) = (fw as usize, fh as usize);
+    let mut blocked = vec![false; cols * rows];
+    let mark = |px: u8, py: u8, pw: u8, ph: u8, blocked: &mut Vec<bool>| {
+        for cy in py..py + ph {
+            for cx in px..px + pw {
+                if cx >= fx && cx < fx + fw && cy >= fy && cy < fy + fh {
+                    blocked[(cy - fy) as usize * cols + (cx - fx) as usize] = true;
+                }
+            }
+        }
+    };
+    mark(x, y, w, h, &mut blocked);
+    for other in pieces {
+        if other.id == id {
+            continue;
+        }
+        let Loc::Hold { x: ox, y: oy } = other.loc else {
+            continue;
+        };
+        if !matches!(surface_of(ox, oy), Some(Surf::Floor)) {
+            continue;
+        }
+        let (ow, oh) = other.kind.cells();
+        mark(ox, oy, ow, oh, &mut blocked);
+    }
+    // Flood from the first free cell; zero free cells is vacuously one
+    // region (and unreachable in play — someone is standing somewhere).
+    let mut seen = vec![false; cols * rows];
+    let mut stack = Vec::new();
+    if let Some(start) = blocked.iter().position(|&b| !b) {
+        seen[start] = true;
+        stack.push(start);
+    }
+    while let Some(at) = stack.pop() {
+        let (cx, cy) = (at % cols, at / cols);
+        let visit = |nx: usize, ny: usize, stack: &mut Vec<usize>, seen: &mut Vec<bool>| {
+            let next = ny * cols + nx;
+            if !blocked[next] && !seen[next] {
+                seen[next] = true;
+                stack.push(next);
+            }
+        };
+        if cx > 0 {
+            visit(cx - 1, cy, &mut stack, &mut seen);
+        }
+        if cx + 1 < cols {
+            visit(cx + 1, cy, &mut stack, &mut seen);
+        }
+        if cy > 0 {
+            visit(cx, cy - 1, &mut stack, &mut seen);
+        }
+        if cy + 1 < rows {
+            visit(cx, cy + 1, &mut stack, &mut seen);
+        }
+    }
+    blocked.iter().zip(&seen).any(|(&b, &s)| !b && !s)
 }
 
 /// Cell-rect intersection test.
@@ -470,17 +645,15 @@ pub fn dressing_check(
     if x + w > GRID_COLS || y + h > GRID_ROWS {
         return Err(Violation::Bounds);
     }
+    // Wholly on one chart — a rug bent over a fold is not a rug anyone
+    // respects, and a coat cannot paint across a hole.
+    let Some(surf) = footprint_surface(x, y, w, h) else {
+        return Err(Violation::Bounds);
+    };
     if let Some(Tag::Covering(Some(mount))) = kind.tag() {
-        // A restricted covering must lie WHOLLY on its surface — a rug
-        // half up the wall is not a rug anyone respects. Wholly means
-        // every covered cell, not merely a touching edge (contrast the
-        // affix rule, which asks only for contact).
-        let whole = match mount {
-            Mount::Floor => h == 1 && y == GRID_ROWS - 1,
-            Mount::Ceiling => h == 1 && y == 0,
-            Mount::Wall => w == 1 && (x == 0 || x == GRID_COLS - 1),
-        };
-        if !whole {
+        // A restricted covering names WHICH chart class it covers; the
+        // footprint-surface rule above already made it whole.
+        if !mount_accepts(mount, surf) {
             return Err(Violation::Affix(mount));
         }
     }
@@ -616,129 +789,177 @@ mod tests {
 
     #[test]
     fn bounds_rule_accepts_inside_and_names_offgrid() {
-        // RationBricks is 2x2: fits anchored at (4, 2), runs off at (5, 0).
-        assert_eq!(check(&[], Kind::RationBricks, 4, 2), Ok(()));
-        assert_eq!(check(&[], Kind::RationBricks, 5, 0), Err(Violation::Bounds));
-        assert_eq!(check(&[], Kind::RationBricks, 0, 3), Err(Violation::Bounds));
+        // RationBricks is 2x2: fits on the floor at (4, 3); bent over the
+        // starboard fold at (8, 4); off the net entirely at (17, 3).
+        assert_eq!(check(&[], Kind::RationBricks, 4, 3), Ok(()));
+        assert_eq!(check(&[], Kind::RationBricks, 8, 4), Err(Violation::Bounds));
+        assert_eq!(
+            check(&[], Kind::RationBricks, 17, 3),
+            Err(Violation::Bounds)
+        );
     }
 
     #[test]
     fn overlap_rule_accepts_beside_and_names_collision() {
-        let stowed = [(Kind::PerfumeVial, 2, 2)];
-        assert_eq!(check(&stowed, Kind::Seedlings, 3, 2), Ok(()));
+        let stowed = [(Kind::PerfumeVial, 5, 5)];
+        assert_eq!(check(&stowed, Kind::Seedlings, 6, 5), Ok(()));
         assert_eq!(
-            check(&stowed, Kind::Seedlings, 2, 2),
+            check(&stowed, Kind::Seedlings, 5, 5),
             Err(Violation::Overlap)
         );
-        // Multi-cell: ScrapAlloy anchored at (1, 2) covers (2, 2) too.
+        // Multi-cell: ScrapAlloy anchored at (4, 5) covers (5, 5) too.
         assert_eq!(
-            check(&stowed, Kind::ScrapAlloy, 1, 2),
+            check(&stowed, Kind::ScrapAlloy, 4, 5),
             Err(Violation::Overlap)
         );
     }
 
     #[test]
-    fn heavy_rule_accepts_low_and_names_high() {
-        assert_eq!(check(&[], Kind::GildedIdol, 0, 2), Ok(()));
-        assert_eq!(check(&[], Kind::GildedIdol, 0, 1), Err(Violation::Heavy));
-        assert_eq!(check(&[], Kind::ScrapAlloy, 3, 0), Err(Violation::Heavy));
-    }
-
-    #[test]
-    fn volatile_rule_accepts_gapped_and_names_adjacency() {
-        let stowed = [(Kind::GasCanister, 0, 3)];
-        // A full empty row between the two: fine.
-        assert_eq!(check(&stowed, Kind::GasCanister, 0, 1), Ok(()));
-        // Directly above: orthogonally adjacent.
+    fn heavy_lies_dormant_and_the_walls_refuse_plain_cargo() {
+        // Heavy cargo stands anywhere on the floor now — the room-grid
+        // law already keeps it off the walls, which is what riding low
+        // used to mean. The tag waits for the stacking rules.
+        assert_eq!(check(&[], Kind::GildedIdol, 3, 3), Ok(()));
+        assert_eq!(check(&[], Kind::GildedIdol, 5, 6), Ok(()));
+        // The old failure mode, restated: lifted onto a wall, the mount
+        // law refuses (port chart, floor kind).
         assert_eq!(
-            check(&stowed, Kind::GasCanister, 0, 2),
-            Err(Violation::Volatile)
-        );
-        // Offset anchors still touch through their non-anchor cells.
-        assert_eq!(
-            check(&stowed, Kind::GasCanister, 1, 2),
-            Err(Violation::Volatile)
-        );
-        // Corner contact only: not adjacent.
-        assert_eq!(check(&stowed, Kind::GasCanister, 2, 2), Ok(()));
-    }
-
-    #[test]
-    fn cryo_rule_accepts_edge_and_names_interior() {
-        assert_eq!(check(&[], Kind::CryoCore, 0, 1), Ok(()));
-        assert_eq!(check(&[], Kind::CryoCore, 2, 3), Ok(()));
-        assert_eq!(check(&[], Kind::CryoCore, 2, 1), Err(Violation::Cryo));
-    }
-
-    #[test]
-    fn suspicious_rule_accepts_one_and_names_a_second() {
-        assert_eq!(check(&[], Kind::SuspiciousCrate, 3, 0), Ok(()));
-        let stowed = [(Kind::SuspiciousCrate, 0, 2)];
-        assert_eq!(
-            check(&stowed, Kind::SuspiciousCrate, 3, 0),
-            Err(Violation::Suspicious)
-        );
-    }
-
-    #[test]
-    fn affix_rule_accepts_the_mount_surface_and_names_the_miss() {
-        // A ceiling lamp hangs from row 0 and nowhere lower.
-        assert_eq!(check(&[], Kind::CeilingLamp, 3, 0), Ok(()));
-        assert_eq!(
-            check(&[], Kind::CeilingLamp, 3, 1),
-            Err(Violation::Affix(Mount::Ceiling))
-        );
-        // A wall lamp takes either wall, never the middle of the room.
-        assert_eq!(check(&[], Kind::WallLamp, 0, 2), Ok(()));
-        assert_eq!(check(&[], Kind::WallLamp, 5, 1), Ok(()));
-        assert_eq!(
-            check(&[], Kind::WallLamp, 2, 2),
-            Err(Violation::Affix(Mount::Wall))
-        );
-        // The couch sits on the floor row, wherever along it.
-        assert_eq!(check(&[], Kind::Couch, 2, 3), Ok(()));
-        assert_eq!(
-            check(&[], Kind::Couch, 2, 2),
+            check(&[], Kind::GildedIdol, 0, 4),
             Err(Violation::Affix(Mount::Floor))
         );
     }
 
     #[test]
-    fn the_floor_lamp_fits_only_anchored_at_row_two() {
-        // 1x2 with a floor affix: only anchor row 2 reaches the deck.
-        for y in 0..GRID_ROWS {
-            let expect = match y {
-                2 => Ok(()),
-                3 => Err(Violation::Bounds),
-                _ => Err(Violation::Affix(Mount::Floor)),
-            };
-            assert_eq!(check(&[], Kind::FloorLamp, 1, y), expect, "anchor y={y}");
-        }
+    fn volatile_rule_accepts_gapped_and_names_adjacency() {
+        let stowed = [(Kind::GasCanister, 3, 7)];
+        // A full empty row between the two: fine.
+        assert_eq!(check(&stowed, Kind::GasCanister, 3, 5), Ok(()));
+        // Directly above: orthogonally adjacent.
+        assert_eq!(
+            check(&stowed, Kind::GasCanister, 3, 6),
+            Err(Violation::Volatile)
+        );
+        // Offset anchors still touch through their non-anchor cells.
+        assert_eq!(
+            check(&stowed, Kind::GasCanister, 4, 6),
+            Err(Violation::Volatile)
+        );
+        // Corner contact only: not adjacent.
+        assert_eq!(check(&stowed, Kind::GasCanister, 5, 6), Ok(()));
     }
 
     #[test]
-    fn the_painting_reaches_a_wall_from_either_end_but_not_the_middle() {
-        // 2x1 against the left wall, the right wall, and neither.
-        assert_eq!(check(&[], Kind::Painting, 0, 1), Ok(()));
-        assert_eq!(check(&[], Kind::Painting, 4, 1), Ok(()));
+    fn cryo_rule_accepts_edge_and_names_interior() {
+        assert_eq!(check(&[], Kind::CryoCore, 3, 4), Ok(()));
+        assert_eq!(check(&[], Kind::CryoCore, 5, 7), Ok(()));
+        assert_eq!(check(&[], Kind::CryoCore, 5, 5), Err(Violation::Cryo));
+    }
+
+    #[test]
+    fn suspicious_rule_accepts_one_and_names_a_second() {
+        assert_eq!(check(&[], Kind::SuspiciousCrate, 3, 3), Ok(()));
+        let stowed = [(Kind::SuspiciousCrate, 3, 3)];
         assert_eq!(
-            check(&[], Kind::Painting, 2, 1),
+            check(&stowed, Kind::SuspiciousCrate, 5, 5),
+            Err(Violation::Suspicious)
+        );
+    }
+
+    #[test]
+    fn the_aisle_stays_walkable_and_the_floor_never_seals() {
+        // Standing on the doormat: refused by name. Laying on it: fine.
+        assert_eq!(check(&[], Kind::PerfumeVial, 8, 3), Err(Violation::Aisle));
+        assert_eq!(dressing_check(&[], 9, Kind::Rug, 7, 3), Ok(()));
+        // Wall a corridor across the floor with a gap, then close the
+        // gap: the closing piece would cut the floor in two.
+        let wall: Vec<(Kind, u8, u8)> = (3..7).map(|y| (Kind::PerfumeVial, 5, y)).collect();
+        assert_eq!(
+            check(&wall, Kind::PerfumeVial, 5, 7),
+            Err(Violation::Sealed)
+        );
+        // Well clear of the gap instead: still one region, fine.
+        assert_eq!(check(&wall, Kind::PerfumeVial, 3, 6), Ok(()));
+    }
+
+    #[test]
+    fn tall_floor_cargo_shadows_the_wall_behind_it() {
+        // The cabinet (stature 2) against the aft baseboard blocks the
+        // two wall rows behind its cell; a painting may not hang there.
+        let stowed = [(Kind::Cabinet, 4, 3)];
+        assert_eq!(
+            check(&stowed, Kind::Painting, 4, 1),
+            Err(Violation::Overlap)
+        );
+        // One column over, the wall is clear.
+        assert_eq!(check(&stowed, Kind::Painting, 5, 1), Ok(()));
+        // And symmetrically: with the painting hung first, the cabinet
+        // may not stand in front of it.
+        let hung = [(Kind::Painting, 4, 1)];
+        assert_eq!(check(&hung, Kind::Cabinet, 4, 3), Err(Violation::Overlap));
+        assert_eq!(check(&hung, Kind::Cabinet, 6, 3), Ok(()));
+    }
+
+    #[test]
+    fn affix_rule_accepts_the_mount_surface_and_names_the_miss() {
+        // A ceiling lamp hangs from the ceiling chart and nowhere else.
+        assert_eq!(check(&[], Kind::CeilingLamp, 13, 4), Ok(()));
+        assert_eq!(
+            check(&[], Kind::CeilingLamp, 4, 1),
+            Err(Violation::Affix(Mount::Ceiling))
+        );
+        // A wall lamp takes any wall, never the middle of the room.
+        assert_eq!(check(&[], Kind::WallLamp, 3, 1), Ok(()));
+        assert_eq!(check(&[], Kind::WallLamp, 1, 4), Ok(()));
+        assert_eq!(
+            check(&[], Kind::WallLamp, 5, 5),
             Err(Violation::Affix(Mount::Wall))
         );
+        // The couch sits on the floor, wherever across it.
+        assert_eq!(check(&[], Kind::Couch, 4, 4), Ok(()));
+        assert_eq!(
+            check(&[], Kind::Couch, 4, 0),
+            Err(Violation::Affix(Mount::Floor))
+        );
+    }
+
+    #[test]
+    fn the_floor_lamp_stands_on_the_floor_and_never_across_a_fold() {
+        // 1x2 with a floor mount: fine mid-floor and against the south
+        // edge; refused on the aft wall; nowhere when bent over the fold.
+        assert_eq!(check(&[], Kind::FloorLamp, 4, 4), Ok(()));
+        assert_eq!(check(&[], Kind::FloorLamp, 4, 6), Ok(()));
+        assert_eq!(
+            check(&[], Kind::FloorLamp, 4, 0),
+            Err(Violation::Affix(Mount::Floor))
+        );
+        assert_eq!(check(&[], Kind::FloorLamp, 4, 2), Err(Violation::Bounds));
+    }
+
+    #[test]
+    fn the_painting_hangs_on_any_wall_but_never_a_hole() {
+        // 2x1 on the aft wall, on the port wall, off in the room, and
+        // across the burner doorway's punch-out.
+        assert_eq!(check(&[], Kind::Painting, 4, 1), Ok(()));
+        assert_eq!(check(&[], Kind::Painting, 0, 4), Ok(()));
+        assert_eq!(
+            check(&[], Kind::Painting, 4, 4),
+            Err(Violation::Affix(Mount::Wall))
+        );
+        assert_eq!(check(&[], Kind::Painting, 9, 3), Err(Violation::Bounds));
     }
 
     #[test]
     fn affix_is_checked_before_the_per_piece_scan() {
         // Off the mount AND overlapping: the affix rule answers first...
-        let stowed = [(Kind::RationBricks, 2, 1)];
+        let stowed = [(Kind::RationBricks, 4, 4)];
         assert_eq!(
-            check(&stowed, Kind::WallLamp, 2, 1),
+            check(&stowed, Kind::WallLamp, 4, 4),
             Err(Violation::Affix(Mount::Wall))
         );
         // ...while an on-mount collision still names the overlap.
-        let stowed = [(Kind::PerfumeVial, 0, 2)];
+        let stowed = [(Kind::Painting, 3, 1)];
         assert_eq!(
-            check(&stowed, Kind::WallLamp, 0, 2),
+            check(&stowed, Kind::WallLamp, 3, 1),
             Err(Violation::Overlap)
         );
     }
@@ -748,23 +969,23 @@ mod tests {
         assert!(lamp(Kind::CeilingLamp) && lamp(Kind::WallLamp) && lamp(Kind::FloorLamp));
         assert!(!lamp(Kind::Couch) && !lamp(Kind::Painting) && !lamp(Kind::PerfumeVial));
 
-        let pieces = board(&[(Kind::CeilingLamp, 2, 0)]);
+        let pieces = board(&[(Kind::CeilingLamp, 13, 4)]);
         assert!(lamp_lit(&pieces[0]));
         // Orthogonal neighbours read lit; the lamp's own cell and the
         // corners do not.
-        assert!(lit_adjacent(&pieces, 1, 0));
-        assert!(lit_adjacent(&pieces, 3, 0));
-        assert!(lit_adjacent(&pieces, 2, 1));
-        assert!(!lit_adjacent(&pieces, 2, 0));
-        assert!(!lit_adjacent(&pieces, 1, 1));
-        assert!(!lit_adjacent(&pieces, 4, 0));
+        assert!(lit_adjacent(&pieces, 12, 4));
+        assert!(lit_adjacent(&pieces, 14, 4));
+        assert!(lit_adjacent(&pieces, 13, 5));
+        assert!(!lit_adjacent(&pieces, 13, 4));
+        assert!(!lit_adjacent(&pieces, 12, 3));
+        assert!(!lit_adjacent(&pieces, 15, 4));
 
         // A floor lamp lights along its whole 1x2 footprint.
-        let tall = board(&[(Kind::FloorLamp, 0, 2)]);
-        assert!(lit_adjacent(&tall, 1, 2));
-        assert!(lit_adjacent(&tall, 1, 3));
-        assert!(lit_adjacent(&tall, 0, 1));
-        assert!(!lit_adjacent(&tall, 1, 1));
+        let tall = board(&[(Kind::FloorLamp, 3, 4)]);
+        assert!(lit_adjacent(&tall, 4, 4));
+        assert!(lit_adjacent(&tall, 4, 5));
+        assert!(lit_adjacent(&tall, 3, 3));
+        assert!(!lit_adjacent(&tall, 4, 3));
 
         // Off the hold a lamp is dark, and stowed non-lamps light nothing.
         let shelved = Piece {
@@ -775,9 +996,9 @@ mod tests {
             loc: Loc::StationShelf { slot: 0 },
         };
         assert!(!lamp_lit(&shelved));
-        assert!(!lit_adjacent(&[shelved], 0, 1));
-        let art = board(&[(Kind::Painting, 0, 1)]);
-        assert!(!lit_adjacent(&art, 2, 1));
+        assert!(!lit_adjacent(&[shelved], 4, 4));
+        let art = board(&[(Kind::Painting, 3, 1)]);
+        assert!(!lit_adjacent(&art, 5, 1));
     }
 
     #[test]
@@ -814,7 +1035,7 @@ mod tests {
             kind: Kind::Cabinet,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold { x: 0, y: 2 },
+            loc: Loc::Hold { x: 4, y: 4 },
         }];
         assert!(!cabinet_occupied(&pieces, cabinet));
         assert_eq!(free_cubby(&pieces, cabinet), Some(0));
@@ -836,42 +1057,43 @@ mod tests {
 
     #[test]
     fn dressing_rules_cover_surface_overlap_and_pinning() {
-        // A rug lies wholly on the floor row and nowhere else.
-        assert_eq!(dressing_check(&[], 9, Kind::Rug, 2, 3), Ok(()));
+        // A rug lies wholly on the floor and nowhere else — not on a
+        // wall, and never bent over a fold.
+        assert_eq!(dressing_check(&[], 9, Kind::Rug, 4, 7), Ok(()));
         assert_eq!(
-            dressing_check(&[], 9, Kind::Rug, 2, 2),
+            dressing_check(&[], 9, Kind::Rug, 4, 1),
             Err(Violation::Affix(Mount::Floor))
         );
         assert_eq!(
-            dressing_check(&[], 9, Kind::Rug, 5, 3),
+            dressing_check(&[], 9, Kind::Rug, 8, 7),
             Err(Violation::Bounds)
         );
-        // Paint coats any cell.
-        assert_eq!(dressing_check(&[], 9, Kind::PaintTin, 0, 0), Ok(()));
-        assert_eq!(dressing_check(&[], 9, Kind::LuminousPaint, 3, 3), Ok(()));
+        // Paint coats any chart's cells.
+        assert_eq!(dressing_check(&[], 9, Kind::PaintTin, 3, 0), Ok(()));
+        assert_eq!(dressing_check(&[], 9, Kind::LuminousPaint, 4, 4), Ok(()));
         // One dressing per cell: a coat may not land on a laid rug.
         let mut pieces = vec![Piece {
             id: 0,
             kind: Kind::Rug,
             variant: 0,
             gnawed: false,
-            loc: Loc::Laid { x: 2, y: 3 },
+            loc: Loc::Laid { x: 4, y: 7 },
         }];
         assert_eq!(
-            dressing_check(&pieces, 9, Kind::PaintTin, 3, 3),
+            dressing_check(&pieces, 9, Kind::PaintTin, 5, 7),
             Err(Violation::Overlap)
         );
-        assert_eq!(dressing_check(&pieces, 9, Kind::PaintTin, 1, 3), Ok(()));
+        assert_eq!(dressing_check(&pieces, 9, Kind::PaintTin, 3, 7), Ok(()));
         // No sliding a dressing under standing cargo...
         pieces.push(Piece {
             id: 1,
             kind: Kind::Couch,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold { x: 0, y: 3 },
+            loc: Loc::Hold { x: 3, y: 7 },
         });
         assert_eq!(
-            dressing_check(&pieces, 9, Kind::PaintTin, 1, 3),
+            dressing_check(&pieces, 9, Kind::PaintTin, 3, 7),
             Err(Violation::Occupied)
         );
         // ...and none lifts from under it: lay a rug, stand a couch on
@@ -881,19 +1103,19 @@ mod tests {
             kind: Kind::Rug,
             variant: 0,
             gnawed: false,
-            loc: Loc::Laid { x: 0, y: 3 },
+            loc: Loc::Laid { x: 4, y: 7 },
         };
         let couch = Piece {
             id: 3,
             kind: Kind::Couch,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold { x: 1, y: 3 },
+            loc: Loc::Hold { x: 5, y: 7 },
         };
         assert!(laid_pinned(&[rug, couch], &rug));
         assert!(!laid_pinned(&[rug], &rug));
         // Coverings have no hold berth for first_fit to find, and the
-        // dressing scan skips both the laid rug and the couch's cell.
+        // dressing scan starts clear of both the rug and the couch.
         assert_eq!(first_fit(&[], 9, Kind::Rug), None);
         assert_eq!(dress_fit(&[rug, couch], 9, Kind::Rug), Some((3, 3)));
     }
@@ -905,21 +1127,21 @@ mod tests {
             kind: Kind::LuminousPaint,
             variant: 0,
             gnawed: false,
-            loc: Loc::Laid { x: 2, y: 1 },
+            loc: Loc::Laid { x: 4, y: 1 },
         };
-        assert!(lit_adjacent(&[coat], 1, 1));
-        assert!(lit_adjacent(&[coat], 2, 0));
-        assert!(!lit_adjacent(&[coat], 2, 1), "never inside, only beside");
-        assert!(!lit_adjacent(&[coat], 1, 0), "corners do not count");
+        assert!(lit_adjacent(&[coat], 3, 1));
+        assert!(lit_adjacent(&[coat], 4, 0));
+        assert!(!lit_adjacent(&[coat], 4, 1), "never inside, only beside");
+        assert!(!lit_adjacent(&[coat], 3, 0), "corners do not count");
         // Plain enamel sheds no light, and an unlaid tin is just a tin.
         let tin = Piece {
             id: 1,
             kind: Kind::PaintTin,
             variant: 0,
             gnawed: false,
-            loc: Loc::Laid { x: 4, y: 1 },
+            loc: Loc::Laid { x: 6, y: 1 },
         };
-        assert!(!lit_adjacent(&[tin], 3, 1));
+        assert!(!lit_adjacent(&[tin], 5, 1));
         let canned = Piece {
             id: 2,
             kind: Kind::LuminousPaint,
@@ -932,14 +1154,14 @@ mod tests {
 
     #[test]
     fn held_piece_ignores_its_own_footprint() {
-        let pieces = board(&[(Kind::RationBricks, 2, 1)]);
+        let pieces = board(&[(Kind::RationBricks, 4, 4)]);
         // Re-dropping piece 0 onto (or near) itself must not self-collide.
         assert_eq!(
-            placement_check(&pieces, 0, Kind::RationBricks, 2, 1),
+            placement_check(&pieces, 0, Kind::RationBricks, 4, 4),
             Ok(())
         );
         assert_eq!(
-            placement_check(&pieces, 0, Kind::RationBricks, 3, 1),
+            placement_check(&pieces, 0, Kind::RationBricks, 5, 4),
             Ok(())
         );
     }

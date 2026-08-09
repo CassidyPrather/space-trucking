@@ -402,19 +402,19 @@ pub fn delivery_voyage(crew: usize) -> (Script, u64) {
     script.drag(
         a,
         role(2),
-        cell_center(0, 0),
+        cell_center(3, 3),
         slot_center(&layout::GIVE_SLOTS, 0),
     );
     script.drag(
         a + 4,
         role(3),
-        cell_center(0, 2),
+        cell_center(4, 5),
         slot_center(&layout::GIVE_SLOTS, 1),
     );
     script.drag(
         a + 4,
         role(4),
-        cell_center(2, 0),
+        cell_center(6, 3),
         slot_center(&layout::GIVE_SLOTS, 2),
     );
     script.press(a + 8, role(0), accept);
@@ -422,7 +422,7 @@ pub fn delivery_voyage(crew: usize) -> (Script, u64) {
         a + 10,
         role(5),
         slot_center(&layout::RECEIVED_SLOTS, 0),
-        cell_center(0, 2),
+        cell_center(3, 3),
     );
     // Home: pick the Guild, launch, warp the return leg (its own length —
     // both worlds moved while the crew was trading).
@@ -945,10 +945,10 @@ mod tests {
     #[test]
     fn a_pause_toggle_lands_on_one_canonical_tick_for_everyone() {
         let mut script = Script::new();
-        script.drag(20, 2, cell_center(2, 0), cell_center(4, 2));
+        script.drag(20, 2, cell_center(6, 3), cell_center(4, 3));
         script.toggle_pause(40, 3);
         script.toggle_pause(60, 1);
-        script.drag(70, 1, cell_center(4, 2), cell_center(2, 0));
+        script.drag(70, 1, cell_center(4, 3), cell_center(6, 3));
         let mut convoy = Convoy::new(7, 0x9A5E, 6, 1, &LinkProfile::hostile(), script);
         while convoy.sealed() < 120 {
             convoy.step();
@@ -987,10 +987,10 @@ mod tests {
     #[test]
     fn a_late_joiner_syncs_from_snapshot_and_converges() {
         let mut script = Script::new();
-        script.drag(20, 1, cell_center(0, 0), cell_center(5, 0));
-        script.drag(30, 2, cell_center(2, 0), cell_center(4, 2));
+        script.drag(20, 1, cell_center(3, 3), cell_center(5, 6));
+        script.drag(30, 2, cell_center(6, 3), cell_center(4, 3));
         // The joiner's own drag, well after it has synced.
-        script.drag(300, 4, cell_center(5, 0), cell_center(0, 0));
+        script.drag(300, 4, cell_center(5, 6), cell_center(3, 3));
         let mut convoy = Convoy::new(0xADD0, 0x70AD, 4, 1, &LinkProfile::hostile(), script);
         convoy.run_until_sealed(200);
         let joiner = convoy.add_joiner(4, &LinkProfile::hostile());
@@ -1003,13 +1003,13 @@ mod tests {
             "the joiner synced from a mid-session snapshot, not genesis"
         );
         assert_replicas_agree(&convoy);
-        // Its drag really happened: the vial is back at (0, 0).
+        // Its drag really happened: the vial is back at (3, 3).
         let sim = convoy.sim(0).expect("live");
         assert!(
             sim.pieces()
                 .iter()
                 .any(|p| p.kind == crate::sim::Kind::PerfumeVial
-                    && p.loc == Loc::Hold { x: 0, y: 0 }),
+                    && p.loc == Loc::Hold { x: 3, y: 3 }),
             "the joiner's drag must land"
         );
     }
@@ -1053,9 +1053,9 @@ mod tests {
     #[test]
     fn a_vanished_client_stalls_nobody_and_can_rejoin() {
         let mut script = Script::new();
-        script.press(20, 2, cell_center(2, 0));
+        script.press(20, 2, cell_center(6, 3));
         for tick in 21..=45 {
-            script.hold(tick, 2, cell_center(3, 1));
+            script.hold(tick, 2, cell_center(4, 4));
         }
         let mut convoy = Convoy::new(5, 0x0FF, 6, 1, &LinkProfile::mild(), script);
         convoy.run_until_sealed(32);
@@ -1088,7 +1088,7 @@ mod tests {
         assert!(
             sim.pieces()
                 .iter()
-                .any(|p| p.loc == (Loc::Hold { x: 2, y: 0 })),
+                .any(|p| p.loc == (Loc::Hold { x: 6, y: 3 })),
             "the held piece must snap home"
         );
         convoy.rejoin(2, &LinkProfile::mild());
@@ -1106,9 +1106,9 @@ mod tests {
     #[test]
     fn input_delay_covers_ambient_latency_without_stalls() {
         let mut script = Script::new();
-        script.drag(15, 1, cell_center(0, 0), cell_center(5, 0));
-        script.drag(40, 3, cell_center(2, 0), cell_center(4, 2));
-        script.drag(80, 5, cell_center(5, 0), cell_center(0, 0));
+        script.drag(15, 1, cell_center(3, 3), cell_center(5, 6));
+        script.drag(40, 3, cell_center(6, 3), cell_center(4, 3));
+        script.drag(80, 5, cell_center(5, 6), cell_center(3, 3));
         let profile = LinkProfile {
             latency_ticks: 0..INPUT_DELAY,
             drop_permille: 0,

@@ -605,9 +605,9 @@ mod tests {
     /// synthetic bools: a pure gift and the odyssey trade.
     #[test]
     fn a_real_gift_and_a_real_trade_split_by_the_received_shelf() {
-        let vial = rect_center(layout::cell_rect(0, 0));
-        let scrap = rect_center(layout::cell_rect(0, 2));
-        let pearls = rect_center(layout::cell_rect(2, 0));
+        let vial = rect_center(layout::cell_rect(3, 3));
+        let scrap = rect_center(layout::cell_rect(4, 5));
+        let pearls = rect_center(layout::cell_rect(6, 3));
         let accept = rect_center(layout::ACCEPT_LEVER);
 
         // A pure gift: one starter piece to the give pad, nothing taken.

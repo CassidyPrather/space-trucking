@@ -57,7 +57,12 @@ pub const TICK_DT: f32 = 1.0 / 60.0;
 
 /// Logical world width. The renderer scales this onto the window, so the sim
 /// never learns what a pixel is.
-pub const WORLD_W: f32 = 800.0;
+///
+/// Grown from the console-era 800 when the room net moved in east of the
+/// classic rects (`layout::GRID_ORIGIN`) — growing the world keeps the star
+/// map's distance space, and therefore every journey length, exactly as it
+/// was.
+pub const WORLD_W: f32 = 1440.0;
 
 /// Logical world height.
 pub const WORLD_H: f32 = 600.0;
@@ -123,9 +128,9 @@ fn home_familiar() -> [u32; POI_COUNT] {
 /// Starter cargo and where it is stowed: three pieces, placed legally
 /// (the scrap is heavy, so it sits low).
 const STARTER_CARGO: [(Kind, u8, u8); 3] = [
-    (Kind::ScrapAlloy, 0, 2),
-    (Kind::PerfumeVial, 0, 0),
-    (Kind::BrinePearls, 2, 0),
+    (Kind::ScrapAlloy, 4, 5),
+    (Kind::PerfumeVial, 3, 3),
+    (Kind::BrinePearls, 6, 3),
 ];
 
 /// A 2D vector, kept deliberately tiny: the sim needs four operations and a
@@ -2386,17 +2391,17 @@ mod tests {
         // Starter cargo to the give pads (vial, scrap, pearls).
         drag_frames(
             &mut s,
-            cell_center(0, 0),
+            cell_center(3, 3),
             slot_center(&layout::GIVE_SLOTS, 0),
         );
         drag_frames(
             &mut s,
-            cell_center(0, 2),
+            cell_center(4, 5),
             slot_center(&layout::GIVE_SLOTS, 1),
         );
         drag_frames(
             &mut s,
-            cell_center(2, 0),
+            cell_center(6, 3),
             slot_center(&layout::GIVE_SLOTS, 2),
         );
         // First shelf good to the take pad.
@@ -2418,12 +2423,12 @@ mod tests {
         s.push((0.0, press_at(mars.x, mars.y)));
         let launch = rect_center(layout::LAUNCH_LEVER);
         s.push((0.0, press_at(launch.x, launch.y)));
-        // Stow the received good — (0, 2) suits every kind on an empty
-        // board — and launch for real.
+        // Stow the received good — (3, 7) is a hull-edge floor cell, which
+        // suits every floor kind on an empty board — and launch for real.
         drag_frames(
             &mut s,
             slot_center(&layout::RECEIVED_SLOTS, 0),
-            cell_center(0, 2),
+            cell_center(3, 7),
         );
         s.push((0.0, press_at(launch.x, launch.y)));
         // Warp sixteen-fold through most of the leg — its length depends on
@@ -2648,14 +2653,14 @@ mod tests {
     #[test]
     fn drag_places_and_rejects() {
         let mut sim = Sim::new(5);
-        // The starter vial sits at (0, 0); lift it.
-        let vial = rect_center(layout::cell_rect(0, 0));
+        // The starter vial sits at (3, 3); lift it.
+        let vial = rect_center(layout::cell_rect(3, 3));
         sim.advance(0.0, &press_at(vial.x, vial.y));
         assert_eq!(sim.cues(), [Cue::Pickup]);
         assert!(sim.held(0).is_some());
 
-        // Drop onto the scrap at (0, 2): overlap, a hard reject.
-        let scrap = rect_center(layout::cell_rect(0, 2));
+        // Drop onto the scrap at (4, 5): overlap, a hard reject.
+        let scrap = rect_center(layout::cell_rect(4, 5));
         sim.advance(0.0, &release_at(scrap.x, scrap.y));
         assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
         assert!(sim.held(0).is_none());
@@ -2752,9 +2757,10 @@ mod tests {
         play(&mut sim, &odyssey_script());
         coast(&mut sim, 7000);
         // Compose but do not conclude, then save with the dial mid-swing.
+        // (3, 7) is where the odyssey stowed the received good.
         drag(
             &mut sim,
-            cell_center(0, 2),
+            cell_center(3, 7),
             slot_center(&layout::GIVE_SLOTS, 0),
         );
         drag(
@@ -2775,7 +2781,7 @@ mod tests {
     #[test]
     fn save_load_continues_mid_omen() {
         let mut sim = Sim::new(0xB00);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 3);
         launch(&mut sim, SATURN);
         // Walk to the omen's opening, then a beat further: light mid-dim,
         // hum mid-swell, jump still pending.
@@ -2798,7 +2804,7 @@ mod tests {
     #[test]
     fn save_load_continues_mid_drag_with_piece_at_origin() {
         let mut sim = Sim::new(11);
-        let vial = cell_center(0, 0);
+        let vial = cell_center(3, 3);
         sim.advance(0.0, &press_at(vial.x, vial.y));
         let held = sim.held(0).expect("lifted the vial").piece;
         let saved = sim.save_string();
@@ -2807,7 +2813,7 @@ mod tests {
         let loc_of = |s: &Sim| s.pieces().iter().find(|p| p.id == held).unwrap().loc;
         assert_eq!(
             loc_of(&restored),
-            Loc::Hold { x: 0, y: 0 },
+            Loc::Hold { x: 3, y: 3 },
             "held piece must serialize at its origin"
         );
         assert_eq!(loc_of(&restored), loc_of(&sim));
@@ -2842,7 +2848,7 @@ mod tests {
     #[test]
     fn fast_forward_matches_stepwise_across_an_omen_jump() {
         let mut base = Sim::new(0xD1CE);
-        inject_hold(&mut base, Kind::SuspiciousCrate, 3, 0);
+        inject_hold(&mut base, Kind::SuspiciousCrate, 4, 3);
         launch(&mut base, SATURN);
         // Past the latest possible jump, not necessarily past the dock.
         let n = leg_of(&base) * 3 / 4 + 200;
@@ -2890,9 +2896,9 @@ mod tests {
     /// Offer all three starters against the first shelf good, as zero-dt
     /// frames on a fresh sim.
     fn compose_starter_trade(sim: &mut Sim) {
-        drag(sim, cell_center(0, 0), slot_center(&layout::GIVE_SLOTS, 0));
-        drag(sim, cell_center(0, 2), slot_center(&layout::GIVE_SLOTS, 1));
-        drag(sim, cell_center(2, 0), slot_center(&layout::GIVE_SLOTS, 2));
+        drag(sim, cell_center(3, 3), slot_center(&layout::GIVE_SLOTS, 0));
+        drag(sim, cell_center(4, 5), slot_center(&layout::GIVE_SLOTS, 1));
+        drag(sim, cell_center(6, 3), slot_center(&layout::GIVE_SLOTS, 2));
         drag(
             sim,
             slot_center(&layout::SHELF_SLOTS, 0),
@@ -2997,7 +3003,7 @@ mod tests {
         drag(
             &mut sim,
             slot_center(&layout::RECEIVED_SLOTS, 0),
-            cell_center(0, 2),
+            cell_center(3, 7),
         );
         sim.advance(0.0, &press_at(accept.x, accept.y));
         assert!(
@@ -3056,14 +3062,14 @@ mod tests {
             slot_center(&layout::SHELF_SLOTS, usize::from(free_slot)),
             gap,
         ] {
-            drag(&mut sim, cell_center(0, 0), target);
+            drag(&mut sim, cell_center(3, 3), target);
             assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
             assert_eq!(sim.pieces(), before);
         }
         // From a give pad the shelf refuses all the same.
         drag(
             &mut sim,
-            cell_center(0, 0),
+            cell_center(3, 3),
             slot_center(&layout::GIVE_SLOTS, 0),
         );
         drag(
@@ -3082,7 +3088,7 @@ mod tests {
         // Vial to the give pad, take pad empty: the dial must arm.
         drag(
             &mut sim,
-            cell_center(0, 0),
+            cell_center(3, 3),
             slot_center(&layout::GIVE_SLOTS, 0),
         );
         let barter = sim.barter().unwrap();
@@ -3111,7 +3117,7 @@ mod tests {
         let mut sim = Sim::new(1);
         assert_eq!(sim.drop_targets(0), None, "nothing held, nothing invited");
         // Hold a player piece: hold and give invite; station rows never do.
-        let vial = cell_center(0, 0);
+        let vial = cell_center(3, 3);
         sim.advance(0.0, &press_at(vial.x, vial.y));
         assert_eq!(
             sim.drop_targets(0),
@@ -3416,31 +3422,31 @@ mod tests {
     #[test]
     fn cubby_flow_stows_grabs_back_and_quick_pops() {
         let mut sim = cleared(1);
-        let cabinet = stock(&mut sim, Kind::Cabinet, Loc::Hold { x: 0, y: 2 });
-        let vial = stock(&mut sim, Kind::PerfumeVial, Loc::Hold { x: 3, y: 0 });
-        let fluff = stock(&mut sim, Kind::Fluff, Loc::Hold { x: 4, y: 0 });
+        let cabinet = stock(&mut sim, Kind::Cabinet, Loc::Hold { x: 3, y: 3 });
+        let vial = stock(&mut sim, Kind::PerfumeVial, Loc::Hold { x: 5, y: 3 });
+        let fluff = stock(&mut sim, Kind::Fluff, Loc::Hold { x: 6, y: 3 });
         let body = body_of(&sim, cabinet);
 
         // Lifting a stowable piece invites the cubbies.
-        sim.advance(0.0, &press_at(cell_center(3, 0).x, cell_center(3, 0).y));
+        sim.advance(0.0, &press_at(cell_center(5, 3).x, cell_center(5, 3).y));
         assert!(sim.drop_targets(0).expect("holding the vial").stow);
-        sim.advance(0.0, &release_at(cell_center(3, 0).x, cell_center(3, 0).y));
+        sim.advance(0.0, &release_at(cell_center(5, 3).x, cell_center(5, 3).y));
 
         // Drop the vial on the cabinet body: first cubby.
         let at = rect_center(body);
-        drag(&mut sim, cell_center(3, 0), at);
+        drag(&mut sim, cell_center(5, 3), at);
         let loc_of = |sim: &Sim, id: u32| sim.pieces().iter().find(|p| p.id == id).unwrap().loc;
         assert_eq!(loc_of(&sim, vial), Loc::Stow { cabinet, slot: 0 });
 
         // The fluff takes the next cubby.
-        drag(&mut sim, cell_center(4, 0), at);
+        drag(&mut sim, cell_center(6, 3), at);
         assert_eq!(loc_of(&sim, fluff), Loc::Stow { cabinet, slot: 1 });
 
         // A press on an occupied cubby grabs its contents, not the
         // furniture around it, and the piece walks back to the grid.
         let cubby = rect_center(layout::cubby_rect(body, 0));
-        drag(&mut sim, cubby, cell_center(3, 0));
-        assert_eq!(loc_of(&sim, vial), Loc::Hold { x: 3, y: 0 });
+        drag(&mut sim, cubby, cell_center(5, 3));
+        assert_eq!(loc_of(&sim, vial), Loc::Hold { x: 5, y: 3 });
 
         // Shift-press pops the boxed fluff to the first legal hold cell.
         let cubby1 = rect_center(layout::cubby_rect(body, 1));
@@ -3454,7 +3460,7 @@ mod tests {
     #[test]
     fn occupied_cabinets_refuse_to_move_and_cubbies_refuse_the_cold() {
         let mut sim = cleared(1);
-        let cabinet = stock(&mut sim, Kind::Cabinet, Loc::Hold { x: 0, y: 2 });
+        let cabinet = stock(&mut sim, Kind::Cabinet, Loc::Hold { x: 3, y: 3 });
         stock(&mut sim, Kind::PerfumeVial, Loc::Stow { cabinet, slot: 0 });
         let body = body_of(&sim, cabinet);
 
@@ -3473,30 +3479,30 @@ mod tests {
         assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
         assert!(matches!(
             loc_of_cabinet(&sim, cabinet),
-            Loc::Hold { x: 0, y: 2 }
+            Loc::Hold { x: 3, y: 3 }
         ));
         sim.advance(0.0, &release_at(empty_corner.x, empty_corner.y));
 
         // Cryo needs the hull: the cubby refuses it by name and the ice
         // snaps home.
-        let ice = stock(&mut sim, Kind::CometIce, Loc::Hold { x: 5, y: 0 });
-        drag(&mut sim, cell_center(5, 0), rect_center(body));
+        let ice = stock(&mut sim, Kind::CometIce, Loc::Hold { x: 5, y: 7 });
+        drag(&mut sim, cell_center(5, 7), rect_center(body));
         assert_eq!(
             sim.pieces().iter().find(|p| p.id == ice).unwrap().loc,
-            Loc::Hold { x: 5, y: 0 }
+            Loc::Hold { x: 5, y: 7 }
         );
         assert_eq!(sim.last_violation(), Some(Violation::Cryo));
 
         // Emptied, the cabinet lifts like any furniture.
         let cubby = rect_center(layout::cubby_rect(body, 0));
-        drag(&mut sim, cubby, cell_center(3, 0));
+        drag(&mut sim, cubby, cell_center(5, 3));
         sim.advance(0.0, &press_at(empty_corner.x, empty_corner.y));
         assert_eq!(sim.held(0).map(|h| h.piece), Some(cabinet));
         sim.advance(0.0, &release_at(empty_corner.x, empty_corner.y));
 
         // A fifth small thing meets a full house: Occupied, by name.
         let mut full = cleared(2);
-        let host = stock(&mut full, Kind::Cabinet, Loc::Hold { x: 0, y: 2 });
+        let host = stock(&mut full, Kind::Cabinet, Loc::Hold { x: 3, y: 3 });
         for slot in 0..cargo::CABINET_SLOTS {
             stock(
                 &mut full,
@@ -3508,11 +3514,11 @@ mod tests {
             );
         }
         let body = body_of(&full, host);
-        let extra = stock(&mut full, Kind::Fluff, Loc::Hold { x: 4, y: 0 });
-        drag(&mut full, cell_center(4, 0), rect_center(body));
+        let extra = stock(&mut full, Kind::Fluff, Loc::Hold { x: 5, y: 3 });
+        drag(&mut full, cell_center(5, 3), rect_center(body));
         assert_eq!(
             full.pieces().iter().find(|p| p.id == extra).unwrap().loc,
-            Loc::Hold { x: 4, y: 0 }
+            Loc::Hold { x: 5, y: 3 }
         );
         assert_eq!(full.last_violation(), Some(Violation::Occupied));
     }
@@ -3523,7 +3529,7 @@ mod tests {
     #[test]
     fn boxed_goods_are_inert_protected_and_travel_well() {
         let mut sim = cleared(3);
-        let cabinet = stock(&mut sim, Kind::Cabinet, Loc::Hold { x: 0, y: 2 });
+        let cabinet = stock(&mut sim, Kind::Cabinet, Loc::Hold { x: 3, y: 3 });
         let lamp = stock(&mut sim, Kind::WallLamp, Loc::Stow { cabinet, slot: 0 });
         stock(
             &mut sim,
@@ -3566,44 +3572,44 @@ mod tests {
     fn dressings_lay_pin_and_peel() {
         let mut sim = cleared(1);
         let rug = stock(&mut sim, Kind::Rug, Loc::ReceivedShelf { slot: 0 });
-        let couch = stock(&mut sim, Kind::Couch, Loc::Hold { x: 4, y: 3 });
+        let couch = stock(&mut sim, Kind::Couch, Loc::Hold { x: 5, y: 4 });
         let loc_of = |sim: &Sim, id: u32| sim.pieces().iter().find(|p| p.id == id).unwrap().loc;
 
         // Drag the rolled rug onto the deck: it lays.
         let from = rect_center(layout::RECEIVED_SLOTS[0]);
-        drag(&mut sim, from, cell_center(0, 3));
-        assert_eq!(loc_of(&sim, rug), Loc::Laid { x: 0, y: 3 });
+        drag(&mut sim, from, cell_center(3, 6));
+        assert_eq!(loc_of(&sim, rug), Loc::Laid { x: 3, y: 6 });
 
         // A couch stands on the laid rug without complaint...
-        drag(&mut sim, cell_center(4, 3), cell_center(0, 3));
-        assert_eq!(loc_of(&sim, couch), Loc::Hold { x: 0, y: 3 });
+        drag(&mut sim, cell_center(5, 4), cell_center(3, 6));
+        assert_eq!(loc_of(&sim, couch), Loc::Hold { x: 3, y: 6 });
 
         // ...and now the rug is pinned: the exposed half refuses the
         // grab by name.
-        sim.advance(0.0, &press_at(cell_center(1, 3).x, cell_center(1, 3).y));
+        sim.advance(0.0, &press_at(cell_center(4, 6).x, cell_center(4, 6).y));
         assert_eq!(
             sim.held(0).map(|h| h.piece),
             Some(couch),
             "couch takes the click"
         );
-        sim.advance(0.0, &release_at(cell_center(1, 3).x, cell_center(1, 3).y));
+        sim.advance(0.0, &release_at(cell_center(4, 6).x, cell_center(4, 6).y));
         // Park the couch off the rug, then pin check via quick-move on
         // a fresh half-pinning couch position.
-        drag(&mut sim, cell_center(1, 3), cell_center(4, 3));
-        drag(&mut sim, cell_center(4, 3), cell_center(1, 3));
-        // Couch at (1,3) covers rug cell (1,3): rug pinned, cell (0,3)
+        drag(&mut sim, cell_center(4, 6), cell_center(5, 4));
+        drag(&mut sim, cell_center(5, 4), cell_center(4, 6));
+        // Couch at (4,6) covers rug cell (4,6): rug pinned, cell (3,6)
         // exposed.
-        sim.advance(0.0, &press_at(cell_center(0, 3).x, cell_center(0, 3).y));
+        sim.advance(0.0, &press_at(cell_center(3, 6).x, cell_center(3, 6).y));
         assert_eq!(sim.held(0), None, "a pinned rug must not lift");
         assert_eq!(sim.last_violation(), Some(Violation::Occupied));
-        sim.advance(0.0, &release_at(cell_center(0, 3).x, cell_center(0, 3).y));
+        sim.advance(0.0, &release_at(cell_center(3, 6).x, cell_center(3, 6).y));
 
         // Clear the couch; the rug peels like any cargo.
-        drag(&mut sim, cell_center(1, 3), cell_center(3, 3));
-        drag(&mut sim, cell_center(0, 3), cell_center(0, 3));
+        drag(&mut sim, cell_center(4, 6), cell_center(5, 4));
+        drag(&mut sim, cell_center(3, 6), cell_center(3, 6));
         assert_eq!(
             loc_of(&sim, rug),
-            Loc::Laid { x: 0, y: 3 },
+            Loc::Laid { x: 3, y: 6 },
             "re-laid in place"
         );
 
@@ -3617,12 +3623,12 @@ mod tests {
         drag(
             &mut sim,
             rect_center(layout::RECEIVED_SLOTS[1]),
-            cell_center(2, 0),
+            cell_center(4, 1),
         );
-        assert_eq!(loc_of(&sim, glow), Loc::Laid { x: 2, y: 0 });
-        assert!(cargo::lit_adjacent(sim.pieces(), 1, 0));
+        assert_eq!(loc_of(&sim, glow), Loc::Laid { x: 4, y: 1 });
+        assert!(cargo::lit_adjacent(sim.pieces(), 3, 1));
         assert!(
-            !cargo::lit_adjacent(sim.pieces(), 2, 0),
+            !cargo::lit_adjacent(sim.pieces(), 4, 1),
             "beside, never inside"
         );
     }
@@ -3632,7 +3638,7 @@ mod tests {
     #[test]
     fn dressings_travel_well() {
         let mut sim = cleared(3);
-        stock(&mut sim, Kind::Rug, Loc::Laid { x: 0, y: 3 });
+        stock(&mut sim, Kind::Rug, Loc::Laid { x: 3, y: 6 });
         stock(&mut sim, Kind::PaintTin, Loc::Laid { x: 3, y: 1 });
         let saturn = sim.poi_pos(SATURN);
         sim.advance(0.0, &press_at(saturn.x, saturn.y));
@@ -3664,7 +3670,7 @@ mod tests {
         // Give pad occupied: refused.
         drag(
             &mut sim,
-            cell_center(0, 0),
+            cell_center(3, 3),
             slot_center(&layout::GIVE_SLOTS, 0),
         );
         sim.advance(0.0, &press_at(lever.x, lever.y));
@@ -3674,7 +3680,7 @@ mod tests {
         drag(
             &mut sim,
             slot_center(&layout::GIVE_SLOTS, 0),
-            cell_center(0, 0),
+            cell_center(3, 3),
         );
         drag(
             &mut sim,
@@ -3714,19 +3720,19 @@ mod tests {
         let mut sim = Sim::new(5);
         assert_eq!(sim.last_violation(), None);
         // The vial dropped onto the scrap: overlap.
-        drag(&mut sim, cell_center(0, 0), cell_center(0, 2));
+        drag(&mut sim, cell_center(3, 3), cell_center(4, 5));
         assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
         assert_eq!(sim.last_violation(), Some(Violation::Overlap));
-        // The scrap lifted high into the rack: heavy.
-        drag(&mut sim, cell_center(0, 2), cell_center(3, 0));
+        // The scrap lifted onto the aft wall: plain cargo takes the floor.
+        drag(&mut sim, cell_center(4, 5), cell_center(4, 1));
         assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
-        assert_eq!(sim.last_violation(), Some(Violation::Heavy));
+        assert_eq!(sim.last_violation(), Some(Violation::Affix(Mount::Floor)));
         // A soft miss over dead space leaves the record alone...
-        drag(&mut sim, cell_center(0, 0), Vec2::new(255.0, 300.0));
+        drag(&mut sim, cell_center(3, 3), Vec2::new(255.0, 300.0));
         assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-        assert_eq!(sim.last_violation(), Some(Violation::Heavy));
+        assert_eq!(sim.last_violation(), Some(Violation::Affix(Mount::Floor)));
         // ...and a successful placement clears it.
-        drag(&mut sim, cell_center(0, 0), cell_center(5, 3));
+        drag(&mut sim, cell_center(3, 3), cell_center(6, 6));
         assert_eq!(sim.cues(), [Cue::Place]);
         assert_eq!(sim.last_violation(), None);
     }
@@ -3736,11 +3742,11 @@ mod tests {
         let mut sim = Sim::new(5);
         inject_hold(&mut sim, Kind::WallLamp, 5, 0);
         // Dragged into the middle of the room: the wall refuses to follow.
-        drag(&mut sim, cell_center(5, 0), cell_center(3, 1));
+        drag(&mut sim, cell_center(5, 0), cell_center(4, 4));
         assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
         assert_eq!(sim.last_violation(), Some(Violation::Affix(Mount::Wall)));
         // The lamp snapped home; the far wall accepts it.
-        drag(&mut sim, cell_center(5, 0), cell_center(0, 1));
+        drag(&mut sim, cell_center(5, 0), cell_center(1, 4));
         assert_eq!(sim.cues(), [Cue::Place]);
         assert_eq!(sim.last_violation(), None);
     }
@@ -3748,11 +3754,11 @@ mod tests {
     #[test]
     fn fixtures_survive_the_save_round_trip() {
         let mut sim = launched(1);
-        inject_hold(&mut sim, Kind::CeilingLamp, 3, 0);
-        inject_hold(&mut sim, Kind::Painting, 4, 0);
+        inject_hold(&mut sim, Kind::CeilingLamp, 13, 4);
+        inject_hold(&mut sim, Kind::Painting, 3, 0);
         inject_hold(&mut sim, Kind::WallLamp, 5, 1);
-        inject_hold(&mut sim, Kind::FloorLamp, 4, 2);
-        inject_hold(&mut sim, Kind::Couch, 1, 3);
+        inject_hold(&mut sim, Kind::FloorLamp, 7, 3);
+        inject_hold(&mut sim, Kind::Couch, 4, 6);
         let restored = Sim::from_save(&sim.save_string()).expect("own save parses");
         assert_eq!(restored.pieces(), sim.pieces());
         assert_eq!(restored.save_string(), sim.save_string());
@@ -3770,7 +3776,7 @@ mod tests {
     fn each_guild_docking_steals_the_crate_and_counts_it() {
         let mut sim = Sim::new(0x0051_C0DE);
         for round in 1..=3_u32 {
-            inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+            inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 3);
             travel_to(&mut sim, SATURN);
             // Venus neither steals the crate nor offers a second: the
             // singleton aboard suppresses the shelf offer.
@@ -3802,7 +3808,7 @@ mod tests {
     #[test]
     fn guild_steal_fires_delivered_beside_arrive() {
         let mut sim = Sim::new(0xDE11);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 3);
         travel_to(&mut sim, SATURN);
         launch(&mut sim, GUILD);
         // Walk to the dock live, so the arrival frame's cues are visible.
@@ -3850,7 +3856,7 @@ mod tests {
     #[test]
     fn a_crate_held_mid_drag_is_still_stolen_at_the_dock() {
         let mut sim = Sim::new(0xD00D);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 3);
         travel_to(&mut sim, SATURN);
         launch(&mut sim, GUILD);
         // Lift the crate mid-flight and keep dragging through the dock.
@@ -3879,7 +3885,7 @@ mod tests {
     #[test]
     fn deliveries_survive_the_save_round_trip() {
         let mut sim = Sim::new(0x5AFE);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 3);
         travel_to(&mut sim, SATURN);
         travel_to(&mut sim, GUILD);
         assert_eq!(sim.deliveries(), 1);
@@ -3892,7 +3898,7 @@ mod tests {
     fn omen_fires_exactly_once_at_the_derived_tick() {
         let seed = 0xE7E7;
         let mut sim = Sim::new(seed);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 3);
         launch(&mut sim, SATURN);
         let leg = leg_of(&sim);
         let lo = leg / 2;
@@ -4052,11 +4058,11 @@ mod tests {
     /// selected, the gift accepted, a departure, and the Venus leg coasted
     /// onto the dock.
     fn crew_schedule() -> Vec<CrewFrame> {
-        let vial = cell_center(0, 0);
-        let scrap = cell_center(0, 2);
-        let pearls = cell_center(2, 0);
+        let vial = cell_center(3, 3);
+        let scrap = cell_center(4, 5);
+        let pearls = cell_center(6, 3);
         let give0 = slot_center(&layout::GIVE_SLOTS, 0);
-        let restow = cell_center(4, 2);
+        let restow = cell_center(4, 6);
         let warp = InputFrame {
             toggle_warp: true,
             ..InputFrame::default()
@@ -4136,7 +4142,7 @@ mod tests {
             toggle_pause: true,
             ..InputFrame::default()
         };
-        let vial = cell_center(0, 0);
+        let vial = cell_center(3, 3);
         let give0 = slot_center(&layout::GIVE_SLOTS, 0);
         let mut s = vec![
             press_at(venus.x, venus.y),
@@ -4203,7 +4209,7 @@ mod tests {
     #[test]
     fn same_tick_grab_goes_to_the_lowest_player_in_silence() {
         let mut sim = Sim::new(5);
-        let vial = cell_center(0, 0);
+        let vial = cell_center(3, 3);
         let press = press_at(vial.x, vial.y);
         sim.crew_tick(&crew(&[(1, press), (4, press)]));
         let piece = sim.held(1).expect("player 1 wins the grab").piece;
@@ -4224,17 +4230,18 @@ mod tests {
     #[test]
     fn same_tick_release_contention_first_wins_second_snaps_back() {
         let mut sim = Sim::new(5);
-        let vial = cell_center(0, 0);
-        let pearls = cell_center(2, 0);
+        let vial = cell_center(3, 3);
+        let pearls = cell_center(6, 3);
         sim.crew_tick(&crew(&[
             (0, press_at(vial.x, vial.y)),
             (1, press_at(pearls.x, pearls.y)),
         ]));
         assert_eq!(sim.cues(), [Cue::Pickup, Cue::Pickup]);
-        // Both release onto hold cell (5, 2): the earlier player lands it;
-        // the later snaps home with a soft reject — losing a race is not a
-        // stowage violation, so no rule icon flashes either.
-        let target = cell_center(5, 2);
+        // Both release onto hold cell (7, 5) — legal for either piece
+        // alone: the earlier player lands it; the later snaps home with a
+        // soft reject — losing a race is not a stowage violation, so no
+        // rule icon flashes either.
+        let target = cell_center(7, 5);
         sim.crew_tick(&crew(&[
             (0, release_at(target.x, target.y)),
             (1, release_at(target.x, target.y)),
@@ -4242,8 +4249,8 @@ mod tests {
         assert_eq!(sim.cues(), [Cue::Place, Cue::Reject { hard: false }]);
         assert_eq!(sim.last_violation(), None);
         let loc = |id: u32| sim.pieces().iter().find(|p| p.id == id).unwrap().loc;
-        assert_eq!(loc(1), Loc::Hold { x: 5, y: 2 }, "the winner lands");
-        assert_eq!(loc(2), Loc::Hold { x: 2, y: 0 }, "the loser snaps home");
+        assert_eq!(loc(1), Loc::Hold { x: 7, y: 5 }, "the winner lands");
+        assert_eq!(loc(2), Loc::Hold { x: 6, y: 3 }, "the loser snaps home");
 
         // The same race over a barter slot: first fills it, second bounces.
         let shelf: Vec<Vec2> = sim
@@ -4287,7 +4294,7 @@ mod tests {
         assert_eq!(sim.tick(), 1, "a cancelled pause still ticks");
         // An odd toggle count lands paused, and later players' pointer
         // events are dropped from the moment the flag flips.
-        let vial = cell_center(0, 0);
+        let vial = cell_center(3, 3);
         sim.crew_tick(&crew(&[(1, toggle), (2, press_at(vial.x, vial.y))]));
         assert!(sim.is_paused());
         assert_eq!(sim.cues(), [Cue::Pause { paused: true }]);
@@ -4407,21 +4414,51 @@ mod tests {
     // -------------------------------------------------------------- rats --
 
     /// Stow enough extra cargo that the hold crosses the boarding gate:
-    /// starter cargo's 5 cells plus two ration bricks is 13 of 24.
+    /// starter cargo's 5 cells plus two ration bricks and a gilded idol
+    /// is 15 of the floor's 30 — exactly [`rats::CROWDED_CELLS`]. The
+    /// free floor stays one region (and keeps a 2x2 berth open at (3, 6)
+    /// for the tests that add a crate on top).
     fn crowd_hold(sim: &mut Sim) {
-        inject_hold(sim, Kind::RationBricks, 2, 2);
-        inject_hold(sim, Kind::RationBricks, 4, 2);
+        inject_hold(sim, Kind::RationBricks, 4, 3);
+        inject_hold(sim, Kind::GildedIdol, 3, 4);
+        inject_hold(sim, Kind::RationBricks, 6, 5);
     }
 
-    /// Fill the hold to all 24 cells, so a boarding rat must perch on a
-    /// piece. Laid out around the starter cargo with untagged kinds only.
+    /// Fill every floor berth and light the rest of the net, so a
+    /// boarding rat must perch on a piece: standing cargo covers every
+    /// non-aisle floor cell, and laid luminous coats keep every wall,
+    /// ceiling, and aisle cell lit — no bare, unlit cell anywhere.
     fn fill_hold(sim: &mut Sim) {
-        for (x, y) in [(1, 0), (5, 0), (0, 1), (1, 1), (5, 1), (0, 3), (1, 3)] {
-            inject_hold(sim, Kind::Seedlings, x, y);
+        let (fx, fy, fw, fh) = layout::FLOOR;
+        // Greedy: place a vial on the first free floor cell the placement
+        // law accepts, and repeat. The Sealed rule itself steers the fill
+        // around the starter cargo (a seal-inducing cell is skipped until
+        // its neighbours are stowed), so the pass ends with every floor
+        // cell covered except the aisle.
+        loop {
+            let mut berth = None;
+            'scan: for y in fy..fy + fh {
+                for x in fx..fx + fw {
+                    if !cell_covered(sim, (x, y))
+                        && placement_legal(&sim.pieces, sim.next_piece, Kind::PerfumeVial, x, y)
+                    {
+                        berth = Some((x, y));
+                        break 'scan;
+                    }
+                }
+            }
+            let Some((x, y)) = berth else { break };
+            inject_hold(sim, Kind::PerfumeVial, x, y);
         }
-        inject_hold(sim, Kind::RationBricks, 3, 0);
-        inject_hold(sim, Kind::RationBricks, 2, 2);
-        inject_hold(sim, Kind::RationBricks, 4, 2);
+        for y in 0..layout::GRID_ROWS {
+            for x in 0..layout::GRID_COLS {
+                let off_floor = layout::surface_of(x, y)
+                    .is_some_and(|surf| !matches!(surf, layout::Surf::Floor));
+                if off_floor || layout::AISLE.contains(&(x, y)) {
+                    stock(sim, Kind::LuminousPaint, Loc::Laid { x, y });
+                }
+            }
+        }
     }
 
     /// A seed whose first departure wins the boarding roll.
@@ -4473,7 +4510,7 @@ mod tests {
             (60..=140).contains(&boarded),
             "{boarded}/400 boardings is far from one in four"
         );
-        // A lean hold (starter cargo, 5 of 24 cells): never.
+        // A lean hold (starter cargo, 5 of 30 floor cells): never.
         for seed in 0..100_u64 {
             let mut sim = Sim::new(seed);
             launch(&mut sim, SATURN);
@@ -4486,7 +4523,7 @@ mod tests {
         // seed — the hum unnerves them at the gangway.
         let mut sim = Sim::new(rat_seed());
         crowd_hold(&mut sim);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 0);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 6);
         launch(&mut sim, SATURN);
         assert!(sim.rat().is_none(), "the hum should keep rats ashore");
         assert!(!sim.cues().contains(&Cue::RatAboard));
@@ -4511,7 +4548,7 @@ mod tests {
                         assert_ne!(rat.cell, rat.prev_cell, "a hop must move");
                         assert!(
                             !cell_covered(&sim, rat.cell),
-                            "11 empty cells: every hop lands on bare floor"
+                            "with bare net cells on offer every hop lands on one"
                         );
                         due_move = rat.next_move;
                         skitters += 1;
@@ -4525,7 +4562,7 @@ mod tests {
                 }
             }
         }
-        // 13 of 24 cells stowed keeps it fed through the Venus dock.
+        // 15 of 30 floor cells stowed keeps it fed through the Venus dock.
         assert!(sim.rat().is_some(), "the rat left a well-stocked hold");
         // ~10 s hops and ~45 s nibbles across 100 s of sim time.
         assert!((7..=13).contains(&skitters), "{skitters} skitters in 100 s");
@@ -4539,12 +4576,12 @@ mod tests {
     #[test]
     fn the_nibble_gnaws_the_nearest_piece_breaking_ties_low() {
         // Scripted: the rat placed by hand between the starter pieces —
-        // scrap (id 0) at (0,2)-(1,2), vial (id 1) at (0,0), pearls (id 2)
-        // at (2,0)-(2,1) — with the nibble due on the next tick.
+        // scrap (id 0) at (4,5)-(5,5), vial (id 1) at (3,3), pearls (id 2)
+        // at (6,3)-(6,4) — with the nibble due on the next tick.
         let mut sim = Sim::new(7);
         sim.rats.rat = Some(Rat {
-            cell: (1, 1),
-            prev_cell: (1, 1),
+            cell: (5, 4),
+            prev_cell: (5, 4),
             moved_at: 0,
             next_move: u64::MAX,
             next_nibble: 1,
@@ -4559,11 +4596,11 @@ mod tests {
                 .map(|p| p.id)
                 .collect()
         };
-        // From (1,1) both the scrap and the pearls are one cell away; the
-        // vial is two. The tie breaks to the lower id: the scrap.
+        // From (5,4) both the scrap and the pearls are one cell away; the
+        // vial is three. The tie breaks to the lower id: the scrap.
         assert_eq!(gnawed(&sim), [0], "nearest rule or tie-break broke");
         // Perched on the pearls, distance zero wins outright.
-        sim.rats.rat.as_mut().expect("still aboard").cell = (2, 1);
+        sim.rats.rat.as_mut().expect("still aboard").cell = (6, 4);
         sim.rats.rat.as_mut().expect("still aboard").next_nibble = 2;
         sim.advance(TICK_DT, &InputFrame::default());
         assert_eq!(sim.cues(), [Cue::RatNibble]);
@@ -4627,12 +4664,15 @@ mod tests {
         travel_to_dock(&mut sim);
         assert!(
             sim.rat().is_some(),
-            "13 of 24 cells is plenty to eat: it stays aboard"
+            "15 of 30 cells is plenty to eat: it stays aboard"
         );
-        // Test scaffolding: unload the injected bricks as if traded away,
-        // leaving the starter 5 of 24 cells — under the walk-off gate.
-        sim.pieces
-            .retain(|p| !(p.kind == Kind::RationBricks && matches!(p.loc, Loc::Hold { .. })));
+        // Test scaffolding: unload the injected crowding pieces as if
+        // traded away, leaving the starter 5 of 30 cells — under the
+        // walk-off gate.
+        sim.pieces.retain(|p| {
+            !(matches!(p.kind, Kind::RationBricks | Kind::GildedIdol)
+                && matches!(p.loc, Loc::Hold { .. }))
+        });
         launch(&mut sim, GUILD);
         let mut left_at = None;
         while matches!(sim.ship().state, ShipState::Traveling { .. }) {
@@ -4682,7 +4722,7 @@ mod tests {
         // Gift it through the lever: the one door out.
         drag(
             &mut sim,
-            cell_center(0, 0),
+            cell_center(3, 3),
             slot_center(&layout::GIVE_SLOTS, 0),
         );
         let accept = rect_center(layout::ACCEPT_LEVER);
@@ -4795,7 +4835,7 @@ mod tests {
     fn shift_press_moves_cargo_to_its_obvious_slot() {
         let mut sim = Sim::new(5);
         // Hold piece -> first free give slot.
-        let from = cell_center(0, 0);
+        let from = cell_center(3, 3);
         let mut press = press_at(from.x, from.y);
         press.shift = true;
         sim.advance(0.0, &press);
@@ -4870,7 +4910,7 @@ mod tests {
         // A gift through the shutters reopens them a crack.
         drag(
             &mut sim,
-            cell_center(0, 0),
+            cell_center(3, 3),
             slot_center(&layout::GIVE_SLOTS, 0),
         );
         sim.advance(0.0, &press_at(lever.x, lever.y));
@@ -4887,7 +4927,7 @@ mod tests {
         // Home turf: the Guild's ledger starts fully familiar.
         drag(
             &mut sim,
-            cell_center(0, 0),
+            cell_center(3, 3),
             slot_center(&layout::GIVE_SLOTS, 0),
         );
         assert!(
@@ -4897,14 +4937,14 @@ mod tests {
         drag(
             &mut sim,
             slot_center(&layout::GIVE_SLOTS, 0),
-            cell_center(0, 0),
+            cell_center(3, 3),
         );
 
         // Abroad, the same cargo reads foggy until it is traded once.
         travel_to(&mut sim, SATURN);
         drag(
             &mut sim,
-            cell_center(0, 0),
+            cell_center(3, 3),
             slot_center(&layout::GIVE_SLOTS, 0),
         );
         let foggy = sim.barter().expect("docked").fog;
@@ -4964,9 +5004,9 @@ mod tests {
     fn three_mysterious_crates_summon_and_feed_the_wanderer() {
         let mut sim = Sim::new(9);
         assert!(!sim.poi_visible(WANDERER), "??? showed up uninvited");
-        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 0);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 1);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 2);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 4, 3);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 3);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 4);
         assert!(sim.poi_visible(WANDERER), "three crates should call it");
 
         sim.dock(WANDERER);
@@ -4976,7 +5016,7 @@ mod tests {
         );
         assert!(sim.barter().is_none());
         // Lay the toll on the rail, parcel by parcel: the third completes.
-        for (i, cell) in [(5_u8, 0_u8), (5, 1), (5, 2)].iter().enumerate() {
+        for (i, cell) in [(4_u8, 3_u8), (5, 3), (5, 4)].iter().enumerate() {
             drag(
                 &mut sim,
                 cell_center(cell.0, cell.1),
@@ -5003,12 +5043,12 @@ mod tests {
     #[test]
     fn a_suspicious_crate_blocks_the_exchange_and_nothing_is_taken() {
         let mut sim = Sim::new(10);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 0);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 1, 0);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 3, 0);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 1, 1);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 6, 5);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 4, 3);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 3);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 4);
         sim.dock(WANDERER);
-        for (i, cell) in [(1_u8, 0_u8), (3, 0), (1, 1)].iter().enumerate() {
+        for (i, cell) in [(4_u8, 3_u8), (5, 3), (5, 4)].iter().enumerate() {
             drag(
                 &mut sim,
                 cell_center(cell.0, cell.1),
@@ -5039,12 +5079,12 @@ mod tests {
         // Gift two pieces.
         drag(
             &mut sim,
-            cell_center(0, 0),
+            cell_center(3, 3),
             slot_center(&layout::GIVE_SLOTS, 0),
         );
         drag(
             &mut sim,
-            cell_center(2, 0),
+            cell_center(6, 3),
             slot_center(&layout::GIVE_SLOTS, 1),
         );
         let lever = rect_center(layout::ACCEPT_LEVER);
@@ -5097,7 +5137,7 @@ mod tests {
         // pad, one shelf good asked for.
         drag(
             &mut sim,
-            cell_center(0, 0),
+            cell_center(3, 3),
             slot_center(&layout::GIVE_SLOTS, 0),
         );
         drag(
@@ -5168,7 +5208,7 @@ mod tests {
     #[test]
     fn an_omen_jump_can_skip_an_encounter_wholesale() {
         let mut sim = Sim::new(0xA11E);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 3);
         launch(&mut sim, URANUS);
         let jump_at = sim.omen.jump_at.expect("crate aboard means a jump");
         // Park the window just past the omen's lead-out: unreachable at
@@ -5206,7 +5246,7 @@ mod tests {
     #[test]
     fn an_omen_jump_slams_an_open_encounter_shut() {
         let mut sim = Sim::new(0xA11F);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 3);
         launch(&mut sim, URANUS);
         let jump_at = sim.omen.jump_at.expect("crate aboard means a jump");
         assert!(jump_at > 400, "window would not fit before the omen");
@@ -5307,7 +5347,7 @@ mod tests {
         });
         sim.advance(TICK_DT, &InputFrame::default());
         let badge = rect_center(layout::ENCOUNTER_BADGE);
-        let stake = cell_center(0, 0); // the perfume vial
+        let stake = cell_center(3, 3); // the perfume vial
         let count_before = sim.pieces().len();
         let win = Encounters::casino_coin(sim.seed(), sim.tick());
         drag(&mut sim, stake, badge);
@@ -5422,7 +5462,7 @@ mod tests {
     #[test]
     fn fluffs_multiply_in_transit_up_to_the_mercy_cap() {
         let mut sim = Sim::new(22);
-        inject_hold(&mut sim, Kind::Fluff, 4, 1);
+        inject_hold(&mut sim, Kind::Fluff, 7, 3);
         launch(&mut sim, URANUS);
         let fluffs = |sim: &Sim| {
             sim.pieces()
@@ -5441,7 +5481,7 @@ mod tests {
     fn a_full_counter_sets_the_parade_loose_and_it_persists() {
         let mut sim = Sim::new(23);
         sim.deliveries = PARADE_AT - 1;
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 3);
         travel_to(&mut sim, SATURN);
         travel_to(&mut sim, GUILD);
         // travel_to fast-forwards, which swallows cues; the state is the
@@ -5524,21 +5564,20 @@ mod tests {
     #[test]
     fn making_room_mid_visit_completes_the_wanderer_exchange() {
         let mut sim = Sim::new(10);
-        // Three crates along the top, their 2x2 shadow blocked by vials,
-        // and the low rows bricked solid with heavy scrap: no toll subset
-        // opens a berth for the big crate at dock time.
-        inject_hold(&mut sim, Kind::MysteriousCrate, 3, 0);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 4, 0);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 0);
-        let blocker = inject_hold(&mut sim, Kind::PerfumeVial, 4, 1);
-        inject_hold(&mut sim, Kind::PerfumeVial, 3, 1);
-        inject_hold(&mut sim, Kind::ScrapAlloy, 2, 2);
-        inject_hold(&mut sim, Kind::ScrapAlloy, 4, 2);
-        inject_hold(&mut sim, Kind::ScrapAlloy, 0, 3);
-        inject_hold(&mut sim, Kind::ScrapAlloy, 2, 3);
-        inject_hold(&mut sim, Kind::ScrapAlloy, 4, 3);
+        // Three crates in the floor's aft-port corner, their 2x2 window
+        // held shut by a blocking vial, and every other window bricked
+        // solid (or standing on the aisle, or a floor-sealing berth): no
+        // toll subset opens a berth for the big crate at dock time.
+        inject_hold(&mut sim, Kind::MysteriousCrate, 4, 3);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 3);
+        let blocker = inject_hold(&mut sim, Kind::PerfumeVial, 5, 4);
+        inject_hold(&mut sim, Kind::MysteriousCrate, 4, 4);
+        inject_hold(&mut sim, Kind::GildedIdol, 7, 3);
+        inject_hold(&mut sim, Kind::PerfumeVial, 7, 5);
+        inject_hold(&mut sim, Kind::ScrapAlloy, 4, 6);
+        inject_hold(&mut sim, Kind::PerfumeVial, 7, 6);
         sim.dock(WANDERER);
-        for (i, cell) in [(3_u8, 0_u8), (4, 0), (5, 0)].iter().enumerate() {
+        for (i, cell) in [(4_u8, 3_u8), (5, 3), (4, 4)].iter().enumerate() {
             drag(
                 &mut sim,
                 cell_center(cell.0, cell.1),
@@ -5551,7 +5590,7 @@ mod tests {
         );
         assert_eq!(sim.mysterious_aboard(), 3, "nothing may be half-taken");
 
-        // Slide one blocking vial out of the crates' shadow: the retry on
+        // Slide the blocking vial out of the crates' window: the retry on
         // that very placement completes the deal, no round trip needed.
         let vial_at = sim
             .pieces()
@@ -5559,7 +5598,7 @@ mod tests {
             .find(|p| p.id == blocker)
             .map(|p| rect_center(layout::piece_rect(sim.pieces(), p)))
             .unwrap();
-        drag(&mut sim, vial_at, cell_center(1, 1));
+        drag(&mut sim, vial_at, cell_center(6, 5));
         assert!(
             sim.cues().contains(&Cue::Exchange),
             "the freed 2x2 should close the exchange on the spot"
@@ -5582,7 +5621,7 @@ mod tests {
         sim.dock(COMET);
         sim.advance(0.0, &InputFrame::default());
         let net0 = rect_center(layout::FLOTSAM_SLOTS[0]);
-        drag(&mut sim, cell_center(0, 0), net0);
+        drag(&mut sim, cell_center(3, 3), net0);
         let staged = sim
             .pieces()
             .iter()
@@ -5590,7 +5629,7 @@ mod tests {
             .expect("the vial should sit in the hopper")
             .id;
         // Second thoughts: back into the hold, no harm done.
-        drag(&mut sim, net0, cell_center(0, 0));
+        drag(&mut sim, net0, cell_center(3, 3));
         assert!(
             sim.pieces()
                 .iter()
@@ -5600,7 +5639,7 @@ mod tests {
         // Third thoughts: staged again, and cast off. Casting off
         // ignites the burner — the fuel RIDES, nothing is swept — and
         // on the stoker's beat the vial burns for boost.
-        drag(&mut sim, cell_center(0, 0), net0);
+        drag(&mut sim, cell_center(3, 3), net0);
         launch(&mut sim, SATURN);
         assert!(
             !sim.cues().contains(&Cue::Jettison),
@@ -5725,9 +5764,9 @@ mod tests {
     #[test]
     fn the_humming_crate_refuses_the_net() {
         let mut sim = Sim::new(17);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 0);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 3);
         launch(&mut sim, SATURN);
-        let crate_at = cell_center(4, 0);
+        let crate_at = cell_center(4, 3);
         let net0 = rect_center(layout::FLOTSAM_SLOTS[0]);
         sim.advance(0.0, &press_at(crate_at.x, crate_at.y));
         assert!(sim.held(0).is_some());

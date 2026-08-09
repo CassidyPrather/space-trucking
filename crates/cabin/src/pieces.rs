@@ -36,7 +36,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 use space_trucking::sim::cargo::CABINET_SLOTS;
-use space_trucking::sim::layout::{self, Rect};
+use space_trucking::sim::layout::{self, Rect, Surf};
 use space_trucking::sim::{
     Cue, Kind, Loc, Mount, Piece, Vec2 as SimVec2, Violation, lamp_lit, lit_adjacent,
     placement_check, player_owned, splitmix,
@@ -415,62 +415,77 @@ fn surface_of(surfaces: &Query<(&Station, &SimSurface)>, want: Station) -> Optio
         .map(|(_, surface)| *surface)
 }
 
-/// The bay's two mapped surfaces — wall band, then deck strip.
-fn bay_of(surfaces: &Query<(&Station, &SimSurface)>) -> Option<(SimSurface, SimSurface)> {
-    Some((
-        surface_of(surfaces, Station::BayWall)?,
-        surface_of(surfaces, Station::BayFloor)?,
-    ))
+/// The net chart a sim point reads through, as its cabin station and
+/// mapped surface — the old wall-band/deck-strip pair generalized to
+/// the room net's six charts. `None` off the net or on a hole.
+fn chart_of(
+    surfaces: &Query<(&Station, &SimSurface)>,
+    sim: SimVec2,
+) -> Option<(Station, SimSurface)> {
+    let (x, y) = layout::cell_at(sim)?;
+    let station = match layout::surface_of(x, y)? {
+        Surf::Aft => Station::BayWall,
+        Surf::Floor => Station::BayFloor,
+        Surf::Port => Station::BayPort,
+        Surf::Starboard => Station::BayStarboard,
+        Surf::Front => Station::BayFront,
+        Surf::Ceiling => Station::BayCeiling,
+    };
+    Some((station, surface_of(surfaces, station)?))
 }
 
-/// Which bay surface a sim point reads through: the wall band above the
-/// fold seam, the deck strip below it. The fold is watertight (by rig
-/// test), so the handover never opens a gap.
-fn bay_surface<'a>(wall: &'a SimSurface, floor: &'a SimSurface, sim: SimVec2) -> &'a SimSurface {
-    if sim.y < floor.rect.y { wall } else { floor }
+/// Where a hold footprint (its `layout::piece_rect`) sits in the room,
+/// as the rig root's (translation, rotation, scale). On the floor chart
+/// a rig STANDS: feet on its plan rect, upright facing the front wall,
+/// keeping its bas-relief height (the re-authored 3D extents are
+/// deferred; BAY.md). On a wall or the ceiling it hangs flat against
+/// the chart. Sizes derive from the surface scales, so retuning
+/// `rig::BAY_CELL` re-scales every rig.
+fn net_site(surfaces: &Query<(&Station, &SimSurface)>, rect: Rect) -> Option<(Vec3, Quat, Vec3)> {
+    let (station, surface) = chart_of(surfaces, rect_center(rect))?;
+    let aft = surface_of(surfaces, Station::BayWall)?;
+    Some(site_on(station, &surface, &aft, rect))
 }
 
-/// Where a hold footprint (its `layout::piece_rect`) sits in the bay, as
-/// the rig root's (translation, rotation, scale). A footprint wholly in
-/// the wall rows hangs flat on the band; anything touching the deck row
-/// stands upright on its floor cell instead, back to the wall — which is
-/// how the fold-straddling 1×2 kinds (floor lamp, cabinet, an anchored
-/// idol) rise across the seam through their wall cell. Sizes derive from
-/// the surface scales, so retuning `rig::BAY_CELL` re-scales every rig.
-fn bay_site(wall: &SimSurface, floor: &SimSurface, rect: Rect) -> (Vec3, Quat, Vec3) {
-    // Upright is the wall's frame either way: local +X runs sim +x, +Y up
-    // the room, +Z off the wall toward the player.
-    let rot = wall.orientation();
-    if rect.y + rect.h <= floor.rect.y + 0.5 {
-        let (su, sv) = (wall.scale_u(), wall.scale_v());
-        let scale = Vec3::new(su, sv, su.min(sv)) * BAY_FIT;
-        (wall.to_world(rect_center(rect)), rot, scale)
+/// [`net_site`]'s pure core, for a known chart — shared with the unit
+/// tests, which build charts straight from `rig::bay()`.
+fn site_on(
+    station: Station,
+    surface: &SimSurface,
+    aft: &SimSurface,
+    rect: Rect,
+) -> (Vec3, Quat, Vec3) {
+    let (su, sv) = (surface.scale_u(), surface.scale_v());
+    let scale = Vec3::new(su, sv, su.min(sv)) * BAY_FIT;
+    if matches!(station, Station::BayFloor) {
+        let base = surface.to_world(rect_center(rect));
+        (
+            base + Vec3::Y * (rect.h * 0.5 * scale.y),
+            Station::BayWall.face(aft),
+            scale,
+        )
     } else {
-        // Standing: anchored at the footprint's deck share, lifted half
-        // the rig's height so its feet meet the plates.
-        let (su, sv) = (floor.scale_u(), wall.scale_v());
-        let scale = Vec3::new(su, sv, su.min(sv)) * BAY_FIT;
-        let foot = Rect::new(rect.x, floor.rect.y, rect.w, floor.rect.h);
-        let base = floor.to_world(rect_center(foot));
-        (base + floor.normal() * (rect.h * 0.5 * scale.y), rot, scale)
+        (
+            surface.to_world(rect_center(rect)),
+            station.face(surface),
+            scale,
+        )
     }
 }
 
-/// Where a laid footprint (the same cell rect a hold berth would take)
-/// lies in the bay: flat AGAINST whichever surface the fold dealt it,
-/// lifted [`LAID_LIFT`] proud of the quad so the coat clears the socket
-/// plates yet stays under everything standing on the same cells. No
-/// [`BAY_FIT`] margin — a covering covers; its own geometry insets where
-/// the berth edge should still read. Coverings never straddle the fold
-/// (the rug is deck-only, the coats 1×1), so no split handling.
-fn laid_site(wall: &SimSurface, floor: &SimSurface, rect: Rect) -> (Vec3, Quat, Vec3) {
-    let surface = bay_surface(wall, floor, rect_center(rect));
+/// Where a laid footprint lies: flat AGAINST its chart, lifted
+/// [`LAID_LIFT`] proud of the quad so the coat clears the socket plates
+/// yet stays under everything standing on the same cells. No
+/// [`BAY_FIT`] margin — a covering covers; its own geometry insets
+/// where the berth edge should still read.
+fn net_laid(surfaces: &Query<(&Station, &SimSurface)>, rect: Rect) -> Option<(Vec3, Quat, Vec3)> {
+    let (station, surface) = chart_of(surfaces, rect_center(rect))?;
     let (su, sv) = (surface.scale_u(), surface.scale_v());
-    (
-        surface.to_world(rect_center(rect)) + surface.normal() * LAID_LIFT,
-        surface.orientation(),
+    Some((
+        surface.to_world(rect_center(rect)) + station.inward(&surface) * LAID_LIFT,
+        station.face(&surface),
         Vec3::new(su, sv, su.min(sv)),
-    )
+    ))
 }
 
 /// Cubby anchor centres in the cabinet rig's local space, sim units.
@@ -493,18 +508,17 @@ fn cubby_anchor(slot: u8) -> Vec3 {
 fn berth_site(
     pieces: &[Piece],
     piece: &Piece,
-    wall: &SimSurface,
-    floor: &SimSurface,
-    barter: &SimSurface,
+    surfaces: &Query<(&Station, &SimSurface)>,
 ) -> Option<(Vec3, Quat, Vec3)> {
     match piece.loc {
-        Loc::Hold { .. } => Some(bay_site(wall, floor, layout::piece_rect(pieces, piece))),
-        Loc::Laid { .. } => Some(laid_site(wall, floor, layout::piece_rect(pieces, piece))),
+        Loc::Hold { .. } => net_site(surfaces, layout::piece_rect(pieces, piece)),
+        Loc::Laid { .. } => net_laid(surfaces, layout::piece_rect(pieces, piece)),
         Loc::Flotsam { slot } => {
             // Rail cargo stands on its hopper tile at bay scale, facing
             // the doorway — staged for the fire, not shelved.
             let (pos, rot) = crate::airlock::site(slot);
-            let s = wall.scale_u().min(wall.scale_v());
+            let chart = surface_of(surfaces, Station::BayFloor)?;
+            let s = chart.scale_u().min(chart.scale_v());
             let scale = Vec3::splat(s) * BAY_FIT;
             let (_, h) = piece.kind.cells();
             let lift = f32::from(h) * layout::CELL * 0.5 * scale.y;
@@ -512,11 +526,11 @@ fn berth_site(
         }
         Loc::Stow { cabinet, slot } => {
             // An occupied cabinet cannot leave the hold, so the host is a
-            // standing bay rig whenever this berth exists at all.
+            // standing floor rig whenever this berth exists at all.
             let host = pieces
                 .iter()
                 .find(|other| other.id == cabinet && matches!(other.loc, Loc::Hold { .. }))?;
-            let (pos, rot, scale) = bay_site(wall, floor, layout::piece_rect(pieces, host));
+            let (pos, rot, scale) = net_site(surfaces, layout::piece_rect(pieces, host))?;
             Some((
                 pos + rot * (cubby_anchor(slot) * scale),
                 rot,
@@ -524,6 +538,7 @@ fn berth_site(
             ))
         }
         _ => {
+            let barter = surface_of(surfaces, Station::Barter)?;
             let rect = layout::piece_rect(pieces, piece);
             let (w, h) = piece.kind.cells();
             let fw = f32::from(w) * layout::CELL;
@@ -593,26 +608,25 @@ fn spawn_overlays(
         flash: flash_mat.clone(),
         glyph: glyph_mat.clone(),
     });
-    let Some((wall, floor)) = bay_of(&surfaces) else {
-        return;
-    };
     let Some(barter) = surface_of(&surfaces, Station::Barter) else {
         return;
     };
 
-    // Bay cell hints: a thin quad per cell on whichever surface the fold
-    // dealt it, its refusal slash floating just above (shape channel —
-    // illegality never rides hue alone). The socket plates themselves are
-    // rig furniture; these are the glow layer over them — lifted past
+    // Net cell hints: a thin quad per cell on whichever chart holds it,
+    // its refusal slash floating just above (shape channel — illegality
+    // never rides hue alone). The socket plates themselves are rig
+    // furniture; these are the glow layer over them — lifted past
     // [`OVERLAY_LIFT`] so a hint over a laid rug burns over the pile,
-    // not inside it.
+    // not inside it. Holes get no hint; nothing can land there.
     for y in 0..layout::GRID_ROWS {
         for x in 0..layout::GRID_COLS {
             let cell = layout::cell_rect(x, y);
-            let surface = bay_surface(&wall, &floor, rect_center(cell));
+            let Some((station, surface)) = chart_of(&surfaces, rect_center(cell)) else {
+                continue;
+            };
             let (su, sv) = (surface.scale_u(), surface.scale_v());
-            let rot = surface.orientation();
-            let normal = surface.normal();
+            let rot = station.face(&surface);
+            let normal = station.inward(&surface);
             let center = surface.to_world(rect_center(cell));
             let slash = commands
                 .spawn((
@@ -768,12 +782,6 @@ fn sync_pieces(
     mut rigs: Query<(&mut PieceRig, &mut Transform, &mut Visibility)>,
 ) {
     let sim = &shell.bridge.sim;
-    let Some((wall, floor)) = bay_of(&surfaces) else {
-        return;
-    };
-    let Some(barter) = surface_of(&surfaces, Station::Barter) else {
-        return;
-    };
 
     // A new world means new cargo: clear everything and respawn below.
     if sim.cues().iter().any(|cue| matches!(cue, Cue::Reseed)) {
@@ -783,8 +791,7 @@ fn sync_pieces(
     }
 
     for piece in sim.pieces() {
-        let Some((goal, rot, scale)) = berth_site(sim.pieces(), piece, &wall, &floor, &barter)
-        else {
+        let Some((goal, rot, scale)) = berth_site(sim.pieces(), piece, &surfaces) else {
             // A stow with no cabinet under it this frame: hide, never
             // crash — the sim's rules say this cannot happen, and the
             // view's job is to stay standing if it somehow does.
@@ -1022,16 +1029,21 @@ fn carry_held(
     };
 
     let (pos, rot, fit) = if camera_rig.roaming() {
-        if let (Some(world), Some(surface)) = (
-            pointer.world,
-            pointer.station.and_then(|s| surface_of(&surfaces, s)),
-        ) {
-            // Aimed at the bay: hover the piece at the hit, standing the
-            // way it would land — the wall band's frame is upright for
-            // the deck strip too, so it never lies down flat mid-carry.
-            let upright = surface_of(&surfaces, Station::BayWall)
-                .map_or_else(|| surface.orientation(), |band| band.orientation());
-            (world + surface.normal() * CARRY_LIFT, upright, 1.1)
+        if let (Some(world), Some(station)) = (pointer.world, pointer.station)
+            && let Some(surface) = surface_of(&surfaces, station)
+        {
+            // Aimed at the room: hover the piece at the hit, standing
+            // the way it would land — upright over the floor and the
+            // hopper tiles, flat against a wall or ceiling chart.
+            let rot = if matches!(station, Station::BayFloor | Station::Airlock) {
+                surface_of(&surfaces, Station::BayWall).map_or_else(
+                    || station.face(&surface),
+                    |band| Station::BayWall.face(&band),
+                )
+            } else {
+                station.face(&surface)
+            };
+            (world + station.inward(&surface) * CARRY_LIFT, rot, 1.1)
         } else {
             // Aimed at nothing: hitched low on one arm, off center and
             // compact, its open face turned back toward the carrier —
@@ -1354,21 +1366,6 @@ fn bar_between(a: Vec2, b: Vec2, girth: f32) -> (Vec2, Vec2, f32) {
 fn glyph_spec(rule: Option<Violation>, rect: Rect) -> Vec<(Vec2, Vec2, f32)> {
     let s = GLYPH_S;
     match rule {
-        // The kettlebell: a mass slab under an open handle.
-        Some(Violation::Heavy) => vec![
-            (Vec2::new(0.0, -s * 0.35), Vec2::new(s * 1.9, s * 0.9), 0.0),
-            bar_between(
-                Vec2::new(-s * 0.35, s * 0.1),
-                Vec2::new(-s * 0.35, s * 0.75),
-                s * 0.2,
-            ),
-            bar_between(
-                Vec2::new(s * 0.35, s * 0.1),
-                Vec2::new(s * 0.35, s * 0.75),
-                s * 0.2,
-            ),
-            (Vec2::new(0.0, s * 0.75), Vec2::new(s * 0.9, s * 0.2), 0.0),
-        ],
         // The hazard triangle, chevron nosing down its middle.
         Some(Violation::Volatile) => vec![
             bar_between(
@@ -1443,9 +1440,18 @@ fn glyph_spec(rule: Option<Violation>, rect: Rect) -> Vec<(Vec2, Vec2, f32)> {
             (Vec2::new(0.0, -s * 0.2), Vec2::new(s * 1.1, s * 0.55), 0.0),
             (Vec2::new(0.0, s * 0.62), Vec2::new(s * 1.9, s * 0.22), 0.0),
         ],
-        // Off the grid, onto a piece, or the violet objection: the frame
-        // alone, exactly as the 2D flash drew them.
-        Some(Violation::Bounds | Violation::Overlap | Violation::Suspicious) | None => vec![],
+        // Off the net, onto a piece (or its standing shadow), the violet
+        // objection, the doormat, and the sealed floor: the frame alone.
+        // (Aisle and Sealed are new rules still owed their own glyphs —
+        // the frame and the buzz carry them meanwhile.)
+        Some(
+            Violation::Bounds
+            | Violation::Overlap
+            | Violation::Suspicious
+            | Violation::Aisle
+            | Violation::Sealed,
+        )
+        | None => vec![],
     }
 }
 
@@ -1486,7 +1492,17 @@ fn violation_flash(
         }
         return;
     };
-    let Some((wall, floor)) = bay_of(&surfaces) else {
+    // The room-grid law says a footprint lies wholly in one chart, so
+    // the frame no longer splits over the fold: four bars on the one
+    // chart, four spare bars idle. A refused drop with its anchor off
+    // the net (a hole, dead space) shows nothing — the buzz carries it.
+    let Some((station, surface)) = chart_of(&surfaces, rect_center(rect)) else {
+        for (_, _, mut visibility) in &mut bars {
+            *visibility = Visibility::Hidden;
+        }
+        for (_, _, mut visibility) in &mut glyphs {
+            *visibility = Visibility::Hidden;
+        }
         return;
     };
     let heat = flash.left / FLASH_LEN;
@@ -1498,69 +1514,42 @@ fn violation_flash(
     if let Some(mut mat) = materials.get_mut(&shared.flash) {
         glow::set_lamp(&mut mat, color, heat);
     }
-
-    // The footprint's share of each surface, if any.
-    let seam = floor.rect.y;
-    let wall_part = (rect.y < seam)
-        .then(|| Rect::new(rect.x, rect.y, rect.w, (rect.y + rect.h).min(seam) - rect.y));
-    let floor_part = (rect.y + rect.h > seam).then(|| {
-        let top = rect.y.max(seam);
-        Rect::new(rect.x, top, rect.w, rect.y + rect.h - top)
-    });
+    let inward = station.inward(&surface);
+    let face = station.face(&surface);
     for (bar, mut transform, mut visibility) in &mut bars {
-        let (surface, part) = if bar.0 < 4 {
-            (&wall, wall_part)
-        } else {
-            (&floor, floor_part)
-        };
-        let Some(part) = part else {
+        if bar.0 >= 4 {
             *visibility = Visibility::Hidden;
             continue;
-        };
+        }
         *visibility = Visibility::Visible;
         let (su, sv) = (surface.scale_u(), surface.scale_v());
-        let across = Vec3::new((part.w + 6.0) * su, 3.0 * sv, 0.003);
-        let down = Vec3::new(3.0 * su, (part.h + 6.0) * sv, 0.003);
+        let across = Vec3::new((rect.w + 6.0) * su, 3.0 * sv, 0.003);
+        let down = Vec3::new(3.0 * su, (rect.h + 6.0) * sv, 0.003);
         let (mid, scale) = match bar.0 % 4 {
-            0 => (SimVec2::new(part.w.mul_add(0.5, part.x), part.y), across),
+            0 => (SimVec2::new(rect.w.mul_add(0.5, rect.x), rect.y), across),
             1 => (
-                SimVec2::new(part.w.mul_add(0.5, part.x), part.y + part.h),
+                SimVec2::new(rect.w.mul_add(0.5, rect.x), rect.y + rect.h),
                 across,
             ),
-            2 => (SimVec2::new(part.x, part.h.mul_add(0.5, part.y)), down),
+            2 => (SimVec2::new(rect.x, rect.h.mul_add(0.5, rect.y)), down),
             _ => (
-                SimVec2::new(part.x + part.w, part.h.mul_add(0.5, part.y)),
+                SimVec2::new(rect.x + rect.w, rect.h.mul_add(0.5, rect.y)),
                 down,
             ),
         };
-        transform.translation = surface.to_world(mid) + surface.normal() * 0.006;
-        transform.rotation = surface.orientation();
+        transform.translation = surface.to_world(mid) + inward * 0.006;
+        transform.rotation = face;
         transform.scale = scale;
     }
 
-    // The glyph, centred on whichever surface carries more of the
-    // refused footprint so it never bends over the fold.
-    let (surface, part) = match (wall_part, floor_part) {
-        (Some(wp), Some(fp)) if fp.h > wp.h => (&floor, fp),
-        (Some(wp), _) => (&wall, wp),
-        (None, Some(fp)) => (&floor, fp),
-        // Unreachable while `flash.area` has area, but hiding beats
-        // arithmetic on nothing.
-        (None, None) => {
-            for (_, _, mut visibility) in &mut glyphs {
-                *visibility = Visibility::Hidden;
-            }
-            return;
-        }
-    };
     let spec = glyph_spec(flash.rule, rect);
     if let Some(mut mat) = materials.get_mut(&shared.glyph) {
         glow::set_lamp(&mut mat, glyph_color(flash.rule), heat);
     }
-    let mid = rect_center(part);
+    let mid = rect_center(rect);
     let (su, sv) = (surface.scale_u(), surface.scale_v());
-    let rot = surface.orientation();
-    let anchor = surface.to_world(mid) + surface.normal() * 0.009;
+    let rot = face;
+    let anchor = surface.to_world(mid) + inward * 0.009;
     for (bar, mut transform, mut visibility) in &mut glyphs {
         let Some(&(offset, size, tilt)) = spec.get(usize::from(bar.0)) else {
             *visibility = Visibility::Hidden;
@@ -1601,7 +1590,7 @@ fn rat_watch(
         state.yaw = 0.0;
         return;
     };
-    let Some((wall, floor)) = bay_of(&surfaces) else {
+    let Some(floor) = surface_of(&surfaces, Station::BayFloor) else {
         return;
     };
 
@@ -1647,9 +1636,20 @@ fn rat_watch(
     } else {
         (at, Vec3::splat(unit), 0.0)
     };
-    let surface = bay_surface(&wall, &floor, at);
-    let place = Transform::from_translation(surface.to_world(at) + surface.normal() * (hop + lift))
-        .with_rotation(surface.orientation() * Quat::from_rotation_z(state.yaw))
+    // A mid-hop position between two charts reads through whichever
+    // chart holds the interpolated point; the fold seams are watertight
+    // so the handover never opens a gap. Off-chart interpolants (a hop
+    // whose midpoint crosses a fold corner) fall back to the nearer
+    // perch's chart.
+    let Some((station, surface)) = chart_of(&surfaces, at)
+        .or_else(|| chart_of(&surfaces, to))
+        .or_else(|| chart_of(&surfaces, from))
+    else {
+        return;
+    };
+    let inward = station.inward(&surface);
+    let place = Transform::from_translation(surface.to_world(at) + inward * (hop + lift))
+        .with_rotation(station.face(&surface) * Quat::from_rotation_z(state.yaw))
         .with_scale(scale);
     if let Some(entity) = state.entity {
         if let Ok(mut transform) = roots.get_mut(entity) {
@@ -2802,9 +2802,12 @@ mod tests {
     use super::*;
     use crate::rig;
 
-    fn bay() -> (SimSurface, SimSurface) {
-        let [(_, wall), (_, floor)] = rig::bay();
-        (wall, floor)
+    fn chart(want: Station) -> SimSurface {
+        rig::bay()
+            .into_iter()
+            .find(|(station, _)| *station == want)
+            .map(|(_, surface)| surface)
+            .expect("chart spawned")
     }
 
     fn rect_of(x: u8, y: u8, kind: Kind) -> Rect {
@@ -2818,24 +2821,29 @@ mod tests {
         )
     }
 
-    /// The bay mapping's three regimes: wall rows hang flat on the band,
-    /// the deck row stands upright at furniture scale, and a
-    /// fold-straddler stands at its floor cell rising through its wall
-    /// cell.
+    /// The net mapping's regimes: wall cells hang flat on their chart's
+    /// plane, floor cargo stands upright at furniture scale keeping its
+    /// bas-relief height, and the side walls place at their own planes.
     #[test]
-    fn bay_sites_hang_stand_and_straddle() {
-        let (wall, floor) = bay();
-        // A painting on the wall band: flat against the aft wall plane.
-        let (pos, rot, _) = bay_site(&wall, &floor, rect_of(0, 1, Kind::Painting));
+    fn net_sites_hang_and_stand_per_chart() {
+        let aft = chart(Station::BayWall);
+        let floor = chart(Station::BayFloor);
+        let port = chart(Station::BayPort);
+        // A painting on the aft chart: flat against the aft wall plane,
+        // facing into the room.
+        let (pos, rot, _) = site_on(Station::BayWall, &aft, &aft, rect_of(4, 1, Kind::Painting));
         assert!(
-            (pos.z - wall.center.z).abs() < 1e-4,
+            (pos.z - aft.center.z).abs() < 1e-4,
             "wall piece left the wall plane: {pos}"
         );
-        assert_eq!(rot, wall.orientation());
-        // A couch on the deck row: upright (local +Y is world up), feet
-        // on the plates, spanning about its two 0.55 cells.
-        let couch = rect_of(2, 3, Kind::Couch);
-        let (pos, rot, scale) = bay_site(&wall, &floor, couch);
+        assert!(
+            (rot * Vec3::Z).z < -0.9,
+            "aft cargo must face into the room"
+        );
+        // A couch on the floor: upright (local +Y is world up), feet on
+        // the plates, spanning about its two 0.55 cells.
+        let couch = rect_of(4, 4, Kind::Couch);
+        let (pos, rot, scale) = site_on(Station::BayFloor, &floor, &aft, couch);
         assert!(
             (rot * Vec3::Y - Vec3::Y).length() < 1e-4,
             "standing rigs must be upright"
@@ -2844,16 +2852,17 @@ mod tests {
         assert!(base.abs() < 0.05, "the couch floats: base at {base}");
         let width = couch.w * scale.x;
         assert!((0.95..=1.15).contains(&width), "couch width {width}");
-        // A cabinet anchored at row 2 straddles the fold: standing at
-        // its floor cell, topping out around 1.1 up the wall band.
-        let cabinet = rect_of(0, 2, Kind::Cabinet);
-        let (pos, _, scale) = bay_site(&wall, &floor, cabinet);
-        let top = cabinet.h.mul_add(0.5 * scale.y, pos.y);
-        assert!((0.95..=1.2).contains(&top), "cabinet top at {top}");
-        // Plumb: its x is its floor cell's own mapping, so the standing
-        // half and the wall cell above line up in the same column.
-        let foot = floor.to_world(rect_center(layout::cell_rect(0, 3)));
-        assert!((pos.x - foot.x).abs() < 1e-4);
+        // A wall lamp on the port chart: at the port plane, facing
+        // starboard (+X is into the room from port).
+        let (pos, rot, _) = site_on(Station::BayPort, &port, &aft, rect_of(1, 4, Kind::WallLamp));
+        assert!(
+            (pos.x - port.center.x).abs() < 1e-4,
+            "port piece left its wall plane: {pos}"
+        );
+        assert!(
+            (rot * Vec3::Z).x > 0.9,
+            "port cargo must face into the room"
+        );
     }
 
     /// Cubby anchors follow `layout::cubby_rect`'s row-major order from
@@ -2877,8 +2886,14 @@ mod tests {
     /// scale stays inside ~0.18 world units, without vanishing.
     #[test]
     fn stowed_pieces_shrink_to_the_cubby() {
-        let (wall, floor) = bay();
-        let (_, _, scale) = bay_site(&wall, &floor, rect_of(0, 2, Kind::Cabinet));
+        let aft = chart(Station::BayWall);
+        let floor = chart(Station::BayFloor);
+        let (_, _, scale) = site_on(
+            Station::BayFloor,
+            &floor,
+            &aft,
+            rect_of(4, 4, Kind::Cabinet),
+        );
         let extent = layout::CELL * scale.min_element() * STOW_FIT;
         assert!(extent <= 0.19, "stowed extent {extent}");
         assert!(extent >= 0.12, "stowed cargo should stay visible: {extent}");
@@ -2889,11 +2904,10 @@ mod tests {
     /// outgrows the bar pool.
     #[test]
     fn glyphs_cover_the_violation_ladder() {
-        let rect = rect_of(2, 1, Kind::PerfumeVial);
+        let rect = rect_of(5, 4, Kind::PerfumeVial);
         for rule in [
             Violation::Bounds,
             Violation::Overlap,
-            Violation::Heavy,
             Violation::Volatile,
             Violation::Cryo,
             Violation::Suspicious,
@@ -2901,6 +2915,8 @@ mod tests {
             Violation::Affix(Mount::Floor),
             Violation::Affix(Mount::Wall),
             Violation::Occupied,
+            Violation::Aisle,
+            Violation::Sealed,
         ] {
             let bars = glyph_spec(Some(rule), rect);
             assert!(
@@ -2909,7 +2925,11 @@ mod tests {
             );
             let frame_only = matches!(
                 rule,
-                Violation::Bounds | Violation::Overlap | Violation::Suspicious
+                Violation::Bounds
+                    | Violation::Overlap
+                    | Violation::Suspicious
+                    | Violation::Aisle
+                    | Violation::Sealed
             );
             assert_eq!(bars.is_empty(), frame_only, "{rule:?}");
         }

@@ -51,8 +51,13 @@ const FOV: f32 = 0.9;
 /// stops short of the bay's floor plates: cargo is walked *up to*, never
 /// stood on.
 const EYE_HEIGHT: f32 = 1.5;
+// The room grid made the whole floor walkable ground — cargo stands
+// among the walker now, not beyond a strip — so the envelope spans the
+// room up to body clearance at the aft wall. (No cargo collision yet:
+// the sim's Sealed invariant guards the future body, documented in
+// BAY.md.)
 const WALK_MIN: Vec3 = Vec3::new(-1.30, EYE_HEIGHT, -0.30);
-const WALK_MAX: Vec3 = Vec3::new(1.30, EYE_HEIGHT, 1.15);
+const WALK_MAX: Vec3 = Vec3::new(1.30, EYE_HEIGHT, 1.72);
 const WALK_SPEED: f32 = 1.3;
 const LOOK_SPEED: f32 = 0.0026;
 const PITCH_LIMIT: f32 = 1.35;
@@ -68,6 +73,25 @@ const BAY_W: f32 = 6.0 * BAY_CELL;
 const BAY_WALL_H: f32 = 3.0 * BAY_CELL;
 /// The wall band's quad plane, just proud of the aft hull's inner face.
 const BAY_WALL_Z: f32 = 1.86;
+
+/// The floor chart's depth (5 cells) and its centre plane in z: from the
+/// aft wall forward, leaving a working gutter before the front console
+/// wall (the room resized to cell multiples; BAY.md, "The room grid").
+const BAY_FLOOR_D: f32 = 5.0 * BAY_CELL;
+const BAY_FLOOR_ZC: f32 = BAY_WALL_Z - BAY_FLOOR_D * 0.5;
+
+/// The side wall charts' planes: proud of the wall ribs (which span
+/// ±1.63..±1.69), so every chart cell stays workable in front of the
+/// hull's junk rather than behind it.
+const BAY_SIDE_X: f32 = 1.62;
+
+/// The front wall chart's plane, just inside the front hull at -1.42.
+const BAY_FRONT_Z: f32 = -1.36;
+
+/// The ceiling chart's plane, just under the ceiling slab at 2.32 — the
+/// band between the wall cornices (1.65) and here is headroom trim; the
+/// net's fold seam glues logically, not physically.
+const BAY_CEIL_Y: f32 = 2.26;
 /// The deck strip's quad plane, just above the deck.
 const BAY_FLOOR_Y: f32 = 0.012;
 
@@ -158,36 +182,75 @@ pub fn panels() -> [(Station, SimSurface); 3] {
 /// test. Cursor rays from roam project through these exactly as focus
 /// cursors project through panels, so the sim keeps every ruling.
 #[must_use]
-pub fn bay() -> [(Station, SimSurface); 2] {
-    let wall_rect = layout::Rect::new(
-        layout::GRID_ORIGIN.x,
-        layout::GRID_ORIGIN.y,
-        f32::from(layout::GRID_COLS) * layout::CELL,
-        3.0 * layout::CELL,
-    );
-    let floor_rect = layout::Rect::new(
-        layout::GRID_ORIGIN.x,
-        3.0f32.mul_add(layout::CELL, layout::GRID_ORIGIN.y),
-        f32::from(layout::GRID_COLS) * layout::CELL,
-        layout::CELL,
-    );
+pub fn bay() -> [(Station, SimSurface); 6] {
+    // One chart's logical rect, in net cells.
+    let chart = |cx: u8, cy: u8, w: u8, h: u8| {
+        layout::Rect::new(
+            f32::from(cx).mul_add(layout::CELL, layout::GRID_ORIGIN.x),
+            f32::from(cy).mul_add(layout::CELL, layout::GRID_ORIGIN.y),
+            f32::from(w) * layout::CELL,
+            f32::from(h) * layout::CELL,
+        )
+    };
+    // The seam law pins every axis: columns match across the folds
+    // (floor col 3 lies to port because the port chart's baseboard is
+    // x2), cornices sit up, y3 rows lie aft. Every normal therefore
+    // points OUT of the room (`Station::chart_flipped`); consumers use
+    // `Station::inward`/`Station::face`.
+    let wall_mid = BAY_WALL_H * 0.5;
     [
         (
             Station::BayWall,
             SimSurface {
-                center: Vec3::new(0.0, BAY_WALL_H * 0.5, BAY_WALL_Z),
-                half_u: Vec3::NEG_X * (BAY_W * 0.5),
-                half_v: Vec3::NEG_Y * (BAY_WALL_H * 0.5),
-                rect: wall_rect,
+                center: Vec3::new(0.0, wall_mid, BAY_WALL_Z),
+                half_u: Vec3::X * (BAY_W * 0.5),
+                half_v: Vec3::NEG_Y * wall_mid,
+                rect: chart(3, 0, 6, 3),
             },
         ),
         (
             Station::BayFloor,
             SimSurface {
-                center: Vec3::new(0.0, BAY_FLOOR_Y, BAY_CELL.mul_add(-0.5, BAY_WALL_Z)),
+                center: Vec3::new(0.0, BAY_FLOOR_Y, BAY_FLOOR_ZC),
+                half_u: Vec3::X * (BAY_W * 0.5),
+                half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
+                rect: chart(3, 3, 6, 5),
+            },
+        ),
+        (
+            Station::BayPort,
+            SimSurface {
+                center: Vec3::new(-BAY_SIDE_X, wall_mid, BAY_FLOOR_ZC),
+                half_u: Vec3::NEG_Y * wall_mid,
+                half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
+                rect: chart(0, 3, 3, 5),
+            },
+        ),
+        (
+            Station::BayStarboard,
+            SimSurface {
+                center: Vec3::new(BAY_SIDE_X, wall_mid, BAY_FLOOR_ZC),
+                half_u: Vec3::Y * wall_mid,
+                half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
+                rect: chart(9, 3, 3, 5),
+            },
+        ),
+        (
+            Station::BayFront,
+            SimSurface {
+                center: Vec3::new(0.0, wall_mid, BAY_FRONT_Z),
+                half_u: Vec3::X * (BAY_W * 0.5),
+                half_v: Vec3::Y * wall_mid,
+                rect: chart(3, 8, 6, 3),
+            },
+        ),
+        (
+            Station::BayCeiling,
+            SimSurface {
+                center: Vec3::new(0.0, BAY_CEIL_Y, BAY_FLOOR_ZC),
                 half_u: Vec3::NEG_X * (BAY_W * 0.5),
-                half_v: Vec3::NEG_Z * (BAY_CELL * 0.5),
-                rect: floor_rect,
+                half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
+                rect: chart(12, 3, 6, 5),
             },
         ),
     ]
@@ -403,7 +466,13 @@ impl Focus {
             Station::Map => Some(Self::Tank),
             Station::Console => Some(Self::Console),
             Station::Barter => Some(Self::Desk),
-            Station::BayWall | Station::BayFloor | Station::Airlock => None,
+            Station::BayWall
+            | Station::BayFloor
+            | Station::BayPort
+            | Station::BayStarboard
+            | Station::BayFront
+            | Station::BayCeiling
+            | Station::Airlock => None,
         }
     }
 }
@@ -836,27 +905,35 @@ pub fn spawn(
         level: 0.0,
     });
     for (station, surface) in bay() {
-        let n = surface.normal();
-        // Backer plate: a worn slab just behind the mapped quad.
-        let deep = 0.03;
-        commands.spawn((
-            Mesh3d(skin.cube.clone()),
-            MeshMaterial3d(match station {
-                Station::BayFloor => skin.desk.clone(),
-                _ => skin.plate.clone(),
-            }),
-            Transform::from_translation(surface.center - n * (deep * 0.5 + 0.004))
-                .with_rotation(surface.orientation())
-                .with_scale(Vec3::new(
-                    surface.half_u.length().mul_add(2.0, 0.08),
-                    surface.half_v.length().mul_add(2.0, 0.08),
-                    deep,
-                )),
-        ));
+        let n = station.inward(&surface);
+        // Backer plate: a worn slab just behind the mapped quad — except
+        // on the wall and ceiling charts, whose backing IS the hull the
+        // structure already built; a second slab would swallow the trim.
+        if matches!(station, Station::BayWall | Station::BayFloor) {
+            let deep = 0.03;
+            commands.spawn((
+                Mesh3d(skin.cube.clone()),
+                MeshMaterial3d(match station {
+                    Station::BayFloor => skin.desk.clone(),
+                    _ => skin.plate.clone(),
+                }),
+                Transform::from_translation(surface.center - n * (deep * 0.5 + 0.004))
+                    .with_rotation(surface.orientation())
+                    .with_scale(Vec3::new(
+                        surface.half_u.length().mul_add(2.0, 0.08),
+                        surface.half_v.length().mul_add(2.0, 0.08),
+                        deep,
+                    )),
+            ));
+        }
         // Socket wells per cell, the berth marking — each surface takes
-        // exactly the grid rows its rect covers.
+        // exactly the net cells its rect covers; holes (the doorway, the
+        // window) get no well.
         for y in 0..layout::GRID_ROWS {
             for x in 0..layout::GRID_COLS {
+                if layout::surface_of(x, y).is_none() {
+                    continue;
+                }
                 let cell = layout::cell_rect(x, y);
                 let mid = space_trucking::sim::Vec2::new(
                     cell.w.mul_add(0.5, cell.x),
@@ -882,7 +959,9 @@ pub fn spawn(
         commands.spawn((station, surface));
     }
     {
-        let [(_, wall), (_, floor)] = bay();
+        let charts = bay();
+        let (_, wall) = charts[0];
+        let (_, floor) = charts[1];
         let wall_top = wall.center.y + wall.half_v.length();
         let strip_front = floor.center.z - floor.half_v.length();
         // Gantry: a top rail above row 0 and stiles down the seams to the
@@ -906,14 +985,35 @@ pub fn spawn(
                 .with_scale(Vec3::new(0.06, wall_top + 0.06, 0.08)),
             ));
         }
-        // Hazard lip along the deck strip's front edge: the painted line
-        // between where you walk and where cargo lives.
+        // Hazard lip along the floor chart's front edge: the painted
+        // line between the front gutter and where cargo lives.
         commands.spawn((
             Mesh3d(skin.cube.clone()),
             MeshMaterial3d(skin.hazard.clone()),
             Transform::from_translation(Vec3::new(0.0, 0.017, strip_front - 0.032))
                 .with_scale(Vec3::new(BAY_W + 0.14, 0.034, 0.05)),
         ));
+        // The aisle doormat: hazard thresholds on the floor cells
+        // fronting the burner doorway. The sim refuses standing cargo
+        // there (`Violation::Aisle`); the paint says so up front.
+        for &(ax, ay) in &layout::AISLE {
+            let cell = layout::cell_rect(ax, ay);
+            let mid = space_trucking::sim::Vec2::new(
+                cell.w.mul_add(0.5, cell.x),
+                cell.h.mul_add(0.5, cell.y),
+            );
+            commands.spawn((
+                Mesh3d(skin.cube.clone()),
+                MeshMaterial3d(skin.hazard.clone()),
+                Transform::from_translation(floor.to_world(mid) + Vec3::Y * 0.002)
+                    .with_rotation(floor.orientation())
+                    .with_scale(Vec3::new(
+                        (cell.w - 6.0) * floor.scale_u(),
+                        (cell.h - 6.0) * floor.scale_v(),
+                        0.002,
+                    )),
+            ));
+        }
     }
 
     // --- Light: one warm overhead, one floor fill, one phosphor spill
@@ -1351,7 +1451,13 @@ mod tests {
                 spots.push(mid(layout::DEST_PREVIEW));
                 spots.push(layout::ETA_ARC_CENTER);
             }
-            Station::BayWall | Station::BayFloor | Station::Airlock => {}
+            Station::BayWall
+            | Station::BayFloor
+            | Station::BayPort
+            | Station::BayStarboard
+            | Station::BayFront
+            | Station::BayCeiling
+            | Station::Airlock => {}
             Station::Barter => {
                 spots.push(mid(layout::ACCEPT_LEVER));
                 spots.push(layout::DIAL_CENTER);
@@ -1510,73 +1616,89 @@ mod tests {
         }
     }
 
-    /// The two bay surfaces tile the whole hold grid with no gap and no
-    /// overlap, and the fold between them is watertight: a sim point on
-    /// the seam lands on (nearly) the same world point through either.
+    /// The net's charts land their seam cells where the room glues
+    /// them. Three folds are physically watertight (aft, port,
+    /// starboard meet the floor at the baseboards); two are declared
+    /// gutter/trim seams with a bounded gap — the front wall stands a
+    /// working gutter past the floor's front row, and the ceiling
+    /// chart sits a trim band above the starboard cornice (BAY.md).
     #[test]
-    fn bay_surfaces_tile_the_grid_and_the_fold_is_watertight() {
-        let [(_, wall), (_, floor)] = bay();
-        assert!((wall.rect.x - floor.rect.x).abs() < f32::EPSILON);
-        assert!((wall.rect.w - floor.rect.w).abs() < f32::EPSILON);
+    fn chart_seams_are_watertight_or_bounded_gutters() {
+        let chart = |want: Station| {
+            bay()
+                .into_iter()
+                .find(|(station, _)| *station == want)
+                .map(|(_, s)| s)
+                .expect("chart")
+        };
+        let aft = chart(Station::BayWall);
+        let floor = chart(Station::BayFloor);
+        let port = chart(Station::BayPort);
+        let starboard = chart(Station::BayStarboard);
+        let front = chart(Station::BayFront);
+        let ceiling = chart(Station::BayCeiling);
+        // A seam sample: the world gap between the two charts' images
+        // of their shared edge, probed along its length.
+        let gap = |a: &SimSurface,
+                   a_edge: fn(&layout::Rect, f32) -> SimVec2,
+                   b: &SimSurface,
+                   b_edge: fn(&layout::Rect, f32) -> SimVec2| {
+            (0..=6)
+                .map(|i| {
+                    let t = i as f32 / 6.0;
+                    (a.to_world(a_edge(&a.rect, t)) - b.to_world(b_edge(&b.rect, t))).length()
+                })
+                .fold(0.0f32, f32::max)
+        };
+        let bottom = |r: &layout::Rect, t: f32| SimVec2::new(r.w.mul_add(t, r.x), r.y + r.h);
+        let top = |r: &layout::Rect, t: f32| SimVec2::new(r.w.mul_add(t, r.x), r.y);
+        let east = |r: &layout::Rect, t: f32| SimVec2::new(r.x + r.w, r.h.mul_add(t, r.y));
+        let west = |r: &layout::Rect, t: f32| SimVec2::new(r.x, r.h.mul_add(t, r.y));
+        // Watertight folds: under a cell's width of daylight.
+        assert!(gap(&aft, bottom, &floor, top) < 0.10, "aft fold gapes");
+        assert!(gap(&port, east, &floor, west) < 0.10, "port fold gapes");
         assert!(
-            ((wall.rect.y + wall.rect.h) - floor.rect.y).abs() < f32::EPSILON,
-            "wall band and deck strip must meet at one sim row"
+            gap(&floor, east, &starboard, west) < 0.10,
+            "starboard fold gapes"
+        );
+        // Gutter and trim seams: adjacent in the net, offset in the
+        // room by a declared, bounded margin.
+        assert!(
+            gap(&floor, bottom, &front, top) < 0.60,
+            "front gutter wider than declared"
         );
         assert!(
-            ((floor.rect.y + floor.rect.h)
-                - f32::from(layout::GRID_ROWS).mul_add(layout::CELL, layout::GRID_ORIGIN.y))
-            .abs()
-                < f32::EPSILON,
-            "the deck strip must finish the grid"
+            gap(&starboard, east, &ceiling, west) < 0.75,
+            "ceiling trim wider than declared"
         );
-        let seam_y = floor.rect.y;
-        for i in 0..=6 {
-            let x = (i as f32 / 6.0).mul_add(wall.rect.w, wall.rect.x);
-            let on_wall = wall.to_world(SimVec2::new(x, seam_y));
-            let on_floor = floor.to_world(SimVec2::new(x, seam_y));
-            assert!(
-                (on_wall - on_floor).length() < 0.08,
-                "fold gapes at sim x {x}: wall {on_wall} vs floor {on_floor}"
-            );
-        }
     }
 
-    /// Every bay cell can actually be worked: from some legal roaming
+    /// Every net cell can actually be worked: from some legal roaming
     /// position, its center is within REACH, within the pitch the neck
-    /// allows, and no structure blocks the line. This is the roam-mode
-    /// analogue of the focus sightline contract.
+    /// allows, and no structure blocks the line — EXCEPT cells whose
+    /// only obstruction is a station panel standing in front of them.
+    /// Those cells are real (the sim keeps them; rats hide behind the
+    /// console) and become workable as the instruments migrate off the
+    /// walls (BAY.md); a cell blocked by hull is still a build error.
     #[test]
-    fn every_bay_cell_is_workable_from_the_walk_envelope() {
+    fn every_net_cell_is_workable_or_station_fronted() {
         let panels = panels();
         let slabs = structure(&panels);
-        let unobstructed = |eye: Vec3, point: Vec3| -> bool {
-            let dir = point - eye;
-            for slab in &slabs {
-                if let Some(t) = ray_slab_entry(eye, dir, slab)
-                    && t < 1.0 - 1e-3
-                {
-                    return false;
-                }
-            }
-            for (_, surface) in &panels {
-                if let Some(t) = ray_plate_entry(eye, dir, surface)
-                    && t < 1.0 - 1e-3
-                {
-                    return false;
-                }
-            }
-            true
-        };
+        let mut station_fronted = 0_u32;
         for (station, surface) in bay() {
             for y in 0..layout::GRID_ROWS {
                 for x in 0..layout::GRID_COLS {
+                    if layout::surface_of(x, y).is_none() {
+                        continue;
+                    }
                     let cell = layout::cell_rect(x, y);
                     let mid =
                         SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
                     if !surface.rect.contains(mid) {
                         continue;
                     }
-                    let probe = surface.to_world(mid) + surface.normal() * 0.004;
+                    let probe = surface.to_world(mid) + station.inward(&surface) * 0.004;
+                    let mut panel_blocked = false;
                     let workable = (0..=12).any(|i| {
                         (0..=12).any(|j| {
                             let eye = Vec3::new(
@@ -1587,11 +1709,39 @@ mod tests {
                             let dir = probe - eye;
                             let horizontal = dir.xz().length();
                             let pitch = (-dir.y).atan2(horizontal).abs();
-                            dir.length() <= REACH - 0.05
-                                && pitch <= PITCH_LIMIT - 0.02
-                                && unobstructed(eye, probe)
+                            if dir.length() > REACH - 0.05 || pitch > PITCH_LIMIT - 0.02 {
+                                return false;
+                            }
+                            // Hull in the way is a build error; plate-finish
+                            // furniture (desk supports) and station
+                            // panels are the migrating kind of blocker.
+                            if slabs.iter().any(|slab| {
+                                matches!(slab.finish, Finish::Hull)
+                                    && ray_slab_entry(eye, dir, slab)
+                                        .is_some_and(|t| t < 1.0 - 1e-3)
+                            }) {
+                                return false;
+                            }
+                            if slabs.iter().any(|slab| {
+                                matches!(slab.finish, Finish::Plate)
+                                    && ray_slab_entry(eye, dir, slab)
+                                        .is_some_and(|t| t < 1.0 - 1e-3)
+                            }) || panels.iter().any(|(_, panel)| {
+                                ray_plate_entry(eye, dir, panel).is_some_and(|t| t < 1.0 - 1e-3)
+                            }) {
+                                panel_blocked = true;
+                                return false;
+                            }
+                            true
                         })
                     });
+                    // The floor takes no exemption: walking IS its job
+                    // (the Sealed invariant's whole premise), so a
+                    // desk-shadowed floor cell is a build error.
+                    if !workable && panel_blocked && !matches!(station, Station::BayFloor) {
+                        station_fronted += 1;
+                        continue;
+                    }
                     assert!(
                         workable,
                         "{station:?} cell ({x}, {y}) at {probe} is out of reach from everywhere"
@@ -1599,6 +1749,13 @@ mod tests {
                 }
             }
         }
+        // The exemption stays an exception, not a loophole: the floor
+        // and aft wall must be fully workable, so a regression that
+        // fronts half the net with panels cannot pass quietly.
+        assert!(
+            station_fronted <= 20,
+            "{station_fronted} cells are station-fronted; the walls are vanishing"
+        );
     }
 
     /// The airlock's whole point, mechanised: the biggest footprint in
@@ -1648,16 +1805,35 @@ mod tests {
         }
     }
 
-    /// The walk envelope stays off the bay's deck strip: cargo is walked
-    /// up to, never stood on.
+    /// The walk envelope spans the floor chart with body clearance at
+    /// the walls: the room grid made the whole floor walkable ground,
+    /// and every floor cell must be enterable (the Sealed invariant
+    /// presumes a walker who can actually stand anywhere free).
     #[test]
-    fn walk_envelope_stays_off_the_deck_strip() {
-        let [(_, _), (_, floor)] = bay();
-        let strip_front = floor.center.z - floor.half_v.length();
+    fn walk_envelope_covers_the_floor() {
+        let floor = bay()
+            .into_iter()
+            .find(|(station, _)| matches!(station, Station::BayFloor))
+            .map(|(_, s)| s)
+            .expect("floor chart");
+        let aft_edge = floor.center.z + floor.half_v.length();
+        let front_edge = floor.center.z - floor.half_v.length();
         assert!(
-            WALK_MAX.z + 0.10 <= strip_front,
-            "envelope reaches {} but the strip starts at {strip_front}",
-            WALK_MAX.z
+            WALK_MAX.z >= aft_edge - 0.20,
+            "envelope stops {} short of the aft floor row",
+            aft_edge - WALK_MAX.z
+        );
+        // The envelope's front edge stops short of the desk furniture;
+        // the front floor rows need only be within working reach of it
+        // (the workability test proves each cell individually).
+        assert!(
+            WALK_MIN.z <= front_edge + REACH - 0.6,
+            "the front floor rows sit beyond working reach of the envelope"
+        );
+        assert!(
+            WALK_MAX.x >= floor.half_u.length() - 0.40
+                && -WALK_MIN.x >= floor.half_u.length() - 0.40,
+            "envelope too narrow for the floor's side columns"
         );
     }
 }

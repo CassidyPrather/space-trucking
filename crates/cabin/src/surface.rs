@@ -24,22 +24,81 @@ pub enum Station {
     Console,
     /// The barter counter — slots, dial, accept lever, badge.
     Barter,
-    /// The bay's aft wall band — hold grid rows 0–2, unfolded upright.
+    /// The room net's aft wall chart (docs/BAY.md, "The room grid").
     BayWall,
-    /// The bay's deck strip — hold grid row 3, folded flat.
+    /// The net's floor chart — the walkable 6×5 deck.
     BayFloor,
-    /// One airlock berth tile — a single outboard-rail (Flotsam) slot.
+    /// The net's port wall chart.
+    BayPort,
+    /// The net's starboard wall chart (the burner doorway punches it).
+    BayStarboard,
+    /// The net's front wall chart (the window punches it).
+    BayFront,
+    /// The net's ceiling chart.
+    BayCeiling,
+    /// One burner berth tile — a single outboard-rail (Flotsam) slot.
     /// Live only while no barter is open, exactly the sim's rail rule.
     Airlock,
 }
 
 impl Station {
-    /// Whether the roaming crosshair works this surface — the bay's two
-    /// unfolded quads and the airlock's berth tiles; the focusable
-    /// stations need a focus pose instead.
+    /// Whether the roaming crosshair works this surface — the net's six
+    /// charts and the burner's berth tiles; the focusable stations need
+    /// a focus pose instead.
     #[must_use]
     pub const fn roamable(self) -> bool {
-        matches!(self, Self::BayWall | Self::BayFloor | Self::Airlock)
+        matches!(
+            self,
+            Self::BayWall
+                | Self::BayFloor
+                | Self::BayPort
+                | Self::BayStarboard
+                | Self::BayFront
+                | Self::BayCeiling
+                | Self::Airlock
+        )
+    }
+
+    /// Whether this surface is one of the net's six charts, whose quad
+    /// math turns every normal *outward*: the seam law pins both axes
+    /// of every chart (columns match across folds, cornices up), and a
+    /// box's interior is orientable — pin the paper and all six cross
+    /// products point out of the room together. Rendering consumers
+    /// flip through the two helpers below; `SimSurface::project` never
+    /// cared which way a normal points.
+    #[must_use]
+    pub const fn chart_flipped(self) -> bool {
+        matches!(
+            self,
+            Self::BayWall
+                | Self::BayFloor
+                | Self::BayPort
+                | Self::BayStarboard
+                | Self::BayFront
+                | Self::BayCeiling
+        )
+    }
+
+    /// The into-the-room normal of this station's surface.
+    #[must_use]
+    pub fn inward(self, surface: &SimSurface) -> Vec3 {
+        if self.chart_flipped() {
+            -surface.normal()
+        } else {
+            surface.normal()
+        }
+    }
+
+    /// The orientation a rig standing ON this surface faces the room
+    /// with: [`SimSurface::orientation`], spun half a turn on the
+    /// flipped charts so local +Z looks into the room, not the hull.
+    #[must_use]
+    pub fn face(self, surface: &SimSurface) -> Quat {
+        if self.chart_flipped() {
+            surface.orientation() * Quat::from_rotation_y(std::f32::consts::PI)
+        } else {
+            surface.orientation()
+        }
     }
 }
 
@@ -237,6 +296,13 @@ pub fn track_pointer(
             && t < nearest
             && t <= reach
         {
+            // The net's holes are holes: a chart hit whose cell does not
+            // exist (the burner doorway, the window) is a miss, and the
+            // ray carries on to whatever lies beyond — the hopper tiles
+            // through the doorway, space through the glass.
+            if station.chart_flipped() && space_trucking::sim::layout::cell_at(sim).is_none() {
+                continue;
+            }
             nearest = t;
             *pointer = VirtualPointer {
                 sim,
@@ -297,15 +363,15 @@ mod tests {
                 f32::from(layout::GRID_ROWS) * layout::CELL,
             ),
         );
-        // The center of hold cell (2, 1) should round-trip through a ray
-        // fired along the panel normal.
-        let cell = layout::cell_rect(2, 1);
+        // The center of net cell (4, 1) — a real aft-chart cell — should
+        // round-trip through a ray fired along the panel normal.
+        let cell = layout::cell_rect(4, 1);
         let target = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
         let world = s.to_world(target);
         let n = s.normal();
         let ray = Ray3d::new(world + n * 0.5, Dir3::new(-n).expect("unit"));
         let (_, sim, _) = s.project(ray).expect("hit");
-        assert!(layout::cell_at(sim) == Some((2, 1)), "landed at {sim:?}");
+        assert!(layout::cell_at(sim) == Some((4, 1)), "landed at {sim:?}");
         // And the normal faces the +Z hemisphere (toward the seat).
         assert!(n.z > 0.3, "normal {n:?} should face the seat");
     }

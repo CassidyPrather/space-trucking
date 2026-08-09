@@ -36,11 +36,15 @@ use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 /// derived from the tick, so none are stored); `STV3` split the leg counter
 /// out of the omen line and added the rat state line plus the per-piece gnaw
 /// token. Older versions fail safe as unsupported.
-const MAGIC: &str = "STV7";
+const MAGIC: &str = "STV8";
 
-/// Older headers this build still reads. Every difference is additive, so
-/// one grammar parses them all.
-const READABLE: [&str; 4] = [MAGIC, "STV6", "STV5", "STV4"];
+/// Older headers this build still reads. `STV8` moved cargo onto the
+/// room net (docs/BAY.md, "The room grid"): berth coordinates from
+/// older headers are console-era 6×4 hold cells, which the net embeds
+/// at (+3, 0) — the reader translates them and re-berths whatever the
+/// room-grid rules no longer accept in place. Everything else stays one
+/// additive grammar.
+const READABLE: [&str; 5] = [MAGIC, "STV7", "STV6", "STV5", "STV4"];
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -235,11 +239,13 @@ pub(crate) fn serialize(sim: &Sim) -> String {
 /// Rebuild a sim from [`serialize`] output.
 pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let mut reader = Reader::new(s);
-    match reader.next_line() {
-        Ok(header) if READABLE.contains(&header) => {}
+    // Pre-STV8 headers carry console-era 6×4 hold coordinates that the
+    // room net embeds at (+3, 0); their berths migrate after reading.
+    let legacy = match reader.next_line() {
+        Ok(header) if READABLE.contains(&header) => header != MAGIC,
         Ok(other) if other.starts_with("STV") => return Err(SaveError::UnsupportedVersion),
         _ => return Err(SaveError::BadMagic),
-    }
+    };
 
     let seed = reader.kv("seed")?;
     let tick = reader.kv("tick")?;
@@ -256,9 +262,13 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let encounters = parse_encounter(&mut reader)?;
     let drones = parse_drone(&mut reader)?;
     let (parade_at, comet_visit) = parse_parade(&mut reader)?;
-    let rats = parse_rat(&mut reader)?;
+    let mut rats = parse_rat(&mut reader)?;
+    if legacy && let Some(rat) = &mut rats.rat {
+        rat.cell.0 += 3;
+        rat.prev_cell.0 += 3;
+    }
     let (eagerness, patience) = parse_eager(&mut reader)?;
-    let (pieces, next_piece) = parse_pieces(&mut reader)?;
+    let (pieces, next_piece) = parse_pieces(&mut reader, legacy)?;
 
     let barter = match ship.state {
         // The comet and ??? dock without a counterparty: no barter opens.
@@ -584,7 +594,7 @@ fn parse_rat(reader: &mut Reader<'_>) -> Result<Rats, SaveError> {
 }
 
 /// The `piece` lines, terminated by the `next_piece` line.
-fn parse_pieces(reader: &mut Reader<'_>) -> Result<(Vec<Piece>, u32), SaveError> {
+fn parse_pieces(reader: &mut Reader<'_>, legacy: bool) -> Result<(Vec<Piece>, u32), SaveError> {
     let mut pieces = Vec::new();
     loop {
         let line = reader.next_line()?;
@@ -611,12 +621,60 @@ fn parse_pieces(reader: &mut Reader<'_>) -> Result<(Vec<Piece>, u32), SaveError>
             }
             Some("next_piece") => {
                 let next_piece = reader.token(tokens.next())?;
+                if legacy {
+                    migrate_console_grid(reader, &mut pieces)?;
+                }
                 validate_stows(reader, &pieces)?;
                 return Ok((pieces, next_piece));
             }
             _ => return Err(reader.err()),
         }
     }
+}
+
+/// Carry a pre-STV8 board onto the room net. The old 6×4 hold embeds at
+/// (+3, 0) — its wall band is the aft chart's rows, its deck strip the
+/// floor's aft-most row — so every grid berth translates; then whatever
+/// the room-grid rules no longer accept where it stands (the bas-relief
+/// couch straddled the fold; the old "wall" was the side columns)
+/// re-berths at its first legal cell, coverings included. A piece that
+/// fits nowhere fails the load whole rather than vanishing quietly —
+/// conservation before convenience.
+fn migrate_console_grid(reader: &Reader<'_>, pieces: &mut [Piece]) -> Result<(), SaveError> {
+    for piece in pieces.iter_mut() {
+        if let Loc::Hold { x, .. } | Loc::Laid { x, .. } = &mut piece.loc {
+            *x += 3;
+        }
+    }
+    for at in 0..pieces.len() {
+        let (id, kind) = (pieces[at].id, pieces[at].kind);
+        match pieces[at].loc {
+            Loc::Hold { x, y } => {
+                if cargo::placement_check(pieces, id, kind, x, y).is_err() {
+                    let (nx, ny) =
+                        cargo::first_fit(pieces, id, kind).ok_or_else(|| reader.err())?;
+                    pieces[at].loc = Loc::Hold { x: nx, y: ny };
+                }
+            }
+            Loc::Laid { x, y } => {
+                // Check against the other dressings only: a rug pinned
+                // under standing cargo is a legal state and must not be
+                // shooed out from under its couch by the move.
+                let laid_only: Vec<Piece> = pieces
+                    .iter()
+                    .filter(|other| matches!(other.loc, Loc::Laid { .. }))
+                    .copied()
+                    .collect();
+                if cargo::dressing_check(&laid_only, id, kind, x, y).is_err() {
+                    let (nx, ny) =
+                        cargo::dress_fit(pieces, id, kind).ok_or_else(|| reader.err())?;
+                    pieces[at].loc = Loc::Laid { x: nx, y: ny };
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 /// Cross-piece stow and dressing validation, after the whole list is
@@ -935,10 +993,10 @@ mod tests {
             ("tick 90", "tick 99999999999999999999999"),
             // The rat must sit inside the grid, hop from inside the grid,
             // and stay under the chase limit.
-            (rat_line, "rat 6 1 2 3 30 700 2800 1"),
-            (rat_line, "rat 4 4 2 3 30 700 2800 1"),
-            (rat_line, "rat 4 1 9 3 30 700 2800 1"),
-            (rat_line, "rat 4 1 2 4 30 700 2800 1"),
+            (rat_line, "rat 18 1 2 3 30 700 2800 1"),
+            (rat_line, "rat 4 11 2 3 30 700 2800 1"),
+            (rat_line, "rat 4 1 18 3 30 700 2800 1"),
+            (rat_line, "rat 4 1 2 11 30 700 2800 1"),
             (rat_line, "rat 4 1 2 3 30 700 2800 3"),
             (rat_line, "rat 4 1 2 3 30 700 2800 -1"),
         ] {
@@ -956,7 +1014,7 @@ mod tests {
             .to_owned();
         for bad in [
             "piece 0 99 0 0 hold 0 0",
-            "piece 0 0 0 0 hold 9 9",
+            "piece 0 0 0 0 hold 18 11",
             "piece 0 0 0 0 shelf 7",
             "piece 0 0 0 0 nowhere 0",
             "piece 0 0 0 2 hold 0 0",
@@ -978,7 +1036,7 @@ mod tests {
             (0, Kind::Cabinet, Loc::Hold { x, y }),
             (1, Kind::PerfumeVial, Loc::Stow { cabinet, slot: 0 }),
             (2, Kind::Fluff, Loc::Stow { cabinet, slot: 1 }),
-            (3, Kind::Rug, Loc::Laid { x: 2, y: 3 }),
+            (3, Kind::Rug, Loc::Laid { x: 3, y: 6 }),
             (4, Kind::LuminousPaint, Loc::Laid { x: 5, y: 0 }),
         ] {
             sim.pieces.push(Piece {
@@ -997,7 +1055,7 @@ mod tests {
     #[test]
     fn stowed_pieces_round_trip() {
         let (sim, save, cabinet, _) = furnished();
-        assert!(save.starts_with("STV7\n"), "the writer stamps STV7");
+        assert!(save.starts_with("STV8\n"), "the writer stamps STV8");
         let restored = Sim::from_save(&save).expect("furnished save parses");
         assert_eq!(restored.pieces, sim.pieces);
         assert!(
@@ -1011,19 +1069,56 @@ mod tests {
 
     #[test]
     fn older_headers_still_read() {
-        // Each version since STV4 added only a line form or token; a
-        // save without them is a valid older document, and the retired
-        // console's runs keep walking aboard. The stoke token is STV7's,
-        // so the older documents drop it from the ship line too.
+        // Each version since STV4 added only a line form or token; a save
+        // without them is a valid older document, and the retired console's
+        // runs keep walking aboard. Those documents carry console-era 6×4
+        // hold coordinates, so the fixture rewrites the hold berths into the
+        // old grid — and the reader must migrate every one onto a valid net
+        // berth. The stoke token is STV7's, so the pre-STV7 documents drop
+        // it from the ship line too.
         let plain = Sim::new(9).save_string();
-        for older in ["STV6", "STV5", "STV4"] {
-            let old = plain.replacen("STV7", older, 1).replacen(
-                "ship docked 6 - 0",
-                "ship docked 6 -",
-                1,
-            );
+        let mut old_cells = [(0_u8, 0_u8), (0, 2), (2, 0)].into_iter();
+        let legacy_board: String = plain
+            .lines()
+            .map(|line| {
+                if line.starts_with("piece") && line.contains(" hold ") {
+                    let head = line.split(" hold ").next().expect("split has a head");
+                    let (x, y) = old_cells.next().expect("three starter berths");
+                    format!("{head} hold {x} {y}\n")
+                } else {
+                    format!("{line}\n")
+                }
+            })
+            .collect();
+        assert!(old_cells.next().is_none(), "starter cargo is three pieces");
+        for older in ["STV7", "STV6", "STV5", "STV4"] {
+            let mut old = legacy_board.replacen("STV8", older, 1);
+            if older != "STV7" {
+                old = old.replacen("ship docked 6 - 0", "ship docked 6 -", 1);
+            }
             assert_ne!(old, plain);
-            assert!(Sim::from_save(&old).is_ok(), "{older} must stay readable");
+            let sim = Sim::from_save(&old).unwrap_or_else(|e| {
+                panic!("{older} must stay readable: {e}");
+            });
+            // The migration really ran: every console-era berth landed on
+            // a legal net berth (translated, or re-fitted when the room
+            // grid refuses the translation).
+            let held: Vec<&Piece> = sim
+                .pieces
+                .iter()
+                .filter(|piece| matches!(piece.loc, Loc::Hold { .. }))
+                .collect();
+            assert_eq!(held.len(), 3, "{older}: the starter cargo walks aboard");
+            for piece in held {
+                let Loc::Hold { x, y } = piece.loc else {
+                    unreachable!()
+                };
+                assert!(
+                    cargo::placement_check(&sim.pieces, piece.id, piece.kind, x, y).is_ok(),
+                    "{older}: {:?} migrated to an illegal berth ({x}, {y})",
+                    piece.kind
+                );
+            }
         }
     }
 
@@ -1060,18 +1155,18 @@ mod tests {
             ),
             // A laid non-covering (the couch, index 19).
             (
-                format!("piece {} 22 0 0 laid 2 3", cabinet + 3),
-                format!("piece {} 19 0 0 laid 2 3", cabinet + 3),
+                format!("piece {} 22 0 0 laid 3 6", cabinet + 3),
+                format!("piece {} 19 0 0 laid 3 6", cabinet + 3),
             ),
             // A rug up the wall.
             (
-                format!("piece {} 22 0 0 laid 2 3", cabinet + 3),
-                format!("piece {} 22 0 0 laid 2 1", cabinet + 3),
+                format!("piece {} 22 0 0 laid 3 6", cabinet + 3),
+                format!("piece {} 22 0 0 laid 4 1", cabinet + 3),
             ),
             // Two dressings on one cell.
             (
                 format!("piece {} 24 0 0 laid 5 0", cabinet + 4),
-                format!("piece {} 24 0 0 laid 3 3", cabinet + 4),
+                format!("piece {} 24 0 0 laid 3 6", cabinet + 4),
             ),
             // A coat off the grid entirely.
             (

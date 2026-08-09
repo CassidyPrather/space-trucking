@@ -57,17 +57,93 @@ pub const WARP_BTN: Rect = Rect::new(580.0, 380.0, 40.0, 40.0);
 /// Speaker icon. Mute is frontend state; the sim never hears about it.
 pub const SPEAKER: Rect = Rect::new(630.0, 380.0, 40.0, 40.0);
 
-/// Hold grid width, in cells.
-pub const GRID_COLS: u8 = 6;
+/// The room net's bounding grid width, in cells (see [`surface_of`]).
+pub const GRID_COLS: u8 = 18;
 
-/// Hold grid height, in cells.
-pub const GRID_ROWS: u8 = 4;
+/// The room net's bounding grid height, in cells.
+pub const GRID_ROWS: u8 = 11;
 
-/// Hold cell size, in world units.
+/// Net cell size, in world units.
 pub const CELL: f32 = 34.0;
 
-/// Top-left corner of the hold grid.
-pub const GRID_ORIGIN: Vec2 = Vec2::new(30.0, 450.0);
+/// Top-left corner of the room net, east of the retired console space.
+///
+/// The world grew to hold it (`WORLD_W`); the map and barter rects kept
+/// their coordinates, so POI distances and desk muscle memory survive.
+pub const GRID_ORIGIN: Vec2 = Vec2::new(810.0, 16.0);
+
+// ---- The room net (docs/BAY.md, "The room grid") ----
+//
+// The entire room, unfolded into one 2D cross of six charts and laid
+// into the logical world — the walkable-bay fold generalized until it
+// closes. One unified (x, y) cell space with a validity mask; every
+// rule classifies cells through [`surface_of`] and never stores a
+// surface. The old 6×4 hold embeds at (+3, 0): its wall band is the
+// aft chart's rows, its deck strip is the floor's aft-most row, which
+// is what keeps save migration a translation.
+//
+// Chart bounds (x0..x1, y0..y1), half-open:
+//
+//         aft  (3..9, 0..3)   cornice y0, baseboard y2
+//   port (0..3, 3..8)         cornice x0, baseboard x2
+//   floor (3..9, 3..8)        row y3 lies along the aft baseboard
+//   starboard (9..12, 3..8)   baseboard x9, cornice x11
+//   front (3..9, 8..11)       baseboard y8, cornice y10
+//   ceiling (12..18, 3..8)    folded over the starboard cornice
+//
+// Fold seams that are adjacent in the net are adjacent in the room
+// (aft↔floor, port↔floor, starboard↔floor, front↔floor,
+// starboard↔ceiling), so plain orthogonal adjacency is 3D-honest
+// across them — a floor lamp lights the baseboard behind it. The cut
+// seams (wall↔wall corners, the ceiling's other three edges) are NOT
+// net-adjacent: light does not turn corners, and neither do rats.
+
+/// Which plane of the room a net cell lies in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Surf {
+    Aft,
+    Port,
+    Floor,
+    Starboard,
+    Front,
+    Ceiling,
+}
+
+/// Classify a net cell, or `None` where the cross has no cell.
+///
+/// A hole is outside the charts, or one of the two architectural
+/// punch-outs: the burner doorway through the starboard chart, and the
+/// transit window through the front cornice. Holes are wall that is not
+/// there; nothing hangs on them.
+#[must_use]
+pub const fn surface_of(x: u8, y: u8) -> Option<Surf> {
+    // The doorway to the burner annex: starboard rows nearest the aft
+    // corner, baseboard and middle heights.
+    let doorway = (x == 9 || x == 10) && (y == 3 || y == 4);
+    // The transit window: two front-cornice cells left of room center.
+    let window = (x == 4 || x == 5) && y == 10;
+    if doorway || window {
+        return None;
+    }
+    match (x, y) {
+        (3..=8, 0..=2) => Some(Surf::Aft),
+        (0..=2, 3..=7) => Some(Surf::Port),
+        (3..=8, 3..=7) => Some(Surf::Floor),
+        (9..=11, 3..=7) => Some(Surf::Starboard),
+        (3..=8, 8..=10) => Some(Surf::Front),
+        (12..=17, 3..=7) => Some(Surf::Ceiling),
+        _ => None,
+    }
+}
+
+/// The floor chart's bounds, `(x0, y0, w, h)` — the walkable plane the
+/// sealed-floor invariant and the wall-shadow rule reason about.
+pub const FLOOR: (u8, u8, u8, u8) = (3, 3, 6, 5);
+
+/// Floor cells kept clear of standing cargo: the threshold in front of
+/// the burner doorway. A doorway needs a doormat, and the stoker needs
+/// to reach the hopper — coverings may lie here, nothing may stand.
+pub const AISLE: [(u8, u8); 2] = [(8, 3), (8, 4)];
 
 /// The barter surface, bottom-right: shelves, pads, dial, and accept lever.
 pub const BARTER_PANEL: Rect = Rect::new(260.0, 440.0, 530.0, 150.0);
@@ -133,7 +209,8 @@ pub fn cell_rect(x: u8, y: u8) -> Rect {
     )
 }
 
-/// Hold cell under `p`, if any.
+/// Net cell under `p`, if any — a cell of the cross, never a hole or a
+/// margin of the bounding box.
 #[must_use]
 pub fn cell_at(p: Vec2) -> Option<(u8, u8)> {
     let dx = p.x - GRID_ORIGIN.x;
@@ -145,7 +222,7 @@ pub fn cell_at(p: Vec2) -> Option<(u8, u8)> {
     }
     let x = u8::try_from((dx / CELL) as i32).ok()?;
     let y = u8::try_from((dy / CELL) as i32).ok()?;
-    (x < GRID_COLS && y < GRID_ROWS).then_some((x, y))
+    (x < GRID_COLS && y < GRID_ROWS && surface_of(x, y).is_some()).then_some((x, y))
 }
 
 /// Slot index under `p` within a row of slots, if any.
@@ -317,6 +394,61 @@ mod tests {
                     && r.y + r.h <= crate::sim::WORLD_H,
                 "{name} leaves the world"
             );
+        }
+    }
+
+    /// The net's paper-craft audit: the cross's six charts cover exactly
+    /// the advertised cell counts, the holes are holes, and the aisle
+    /// lies on the floor.
+    #[test]
+    fn the_net_folds_from_six_charts() {
+        let mut counts = [0usize; 6];
+        for y in 0..GRID_ROWS {
+            for x in 0..GRID_COLS {
+                if let Some(surf) = surface_of(x, y) {
+                    counts[match surf {
+                        Surf::Aft => 0,
+                        Surf::Port => 1,
+                        Surf::Floor => 2,
+                        Surf::Starboard => 3,
+                        Surf::Front => 4,
+                        Surf::Ceiling => 5,
+                    }] += 1;
+                }
+            }
+        }
+        assert_eq!(counts[0], 18, "aft 6x3");
+        assert_eq!(counts[1], 15, "port 5x3");
+        assert_eq!(counts[2], 30, "floor 6x5");
+        assert_eq!(counts[3], 15 - 4, "starboard 5x3 minus the doorway");
+        assert_eq!(counts[4], 18 - 2, "front 6x3 minus the window");
+        assert_eq!(counts[5], 30, "ceiling 6x5");
+        // The architectural holes are not cells.
+        for (x, y) in [(9, 3), (10, 3), (9, 4), (10, 4), (4, 10), (5, 10)] {
+            assert_eq!(surface_of(x, y), None, "({x},{y}) should be a hole");
+        }
+        // The doormat is floor.
+        for (x, y) in AISLE {
+            assert_eq!(surface_of(x, y), Some(Surf::Floor));
+        }
+    }
+
+    /// The fold seams that are adjacent in the net are the ones that are
+    /// adjacent in the room; a sample from each glued edge.
+    #[test]
+    fn fold_seams_are_watertight() {
+        let pairs = [
+            ((5, 2), Surf::Aft, (5, 3), Surf::Floor),
+            ((2, 5), Surf::Port, (3, 5), Surf::Floor),
+            ((8, 5), Surf::Floor, (9, 5), Surf::Starboard),
+            ((5, 7), Surf::Floor, (5, 8), Surf::Front),
+            ((11, 5), Surf::Starboard, (12, 5), Surf::Ceiling),
+        ];
+        for ((ax, ay), a_surf, (bx, by), b_surf) in pairs {
+            assert_eq!(surface_of(ax, ay), Some(a_surf));
+            assert_eq!(surface_of(bx, by), Some(b_surf));
+            let adjacent = ax.abs_diff(bx) + ay.abs_diff(by) == 1;
+            assert!(adjacent, "seam pair ({ax},{ay})-({bx},{by}) must touch");
         }
     }
 }

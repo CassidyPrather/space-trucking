@@ -563,9 +563,9 @@ mod tests {
     /// spanned mid-warp. Returns the script and a coasting index where a
     /// re-base is safe (nothing held).
     fn thorough_script() -> (Vec<(f32, InputFrame)>, usize) {
-        let vial = cell_center(0, 0);
-        let scrap = cell_center(0, 2);
-        let pearls = cell_center(2, 0);
+        let vial = cell_center(3, 3);
+        let scrap = cell_center(4, 5);
+        let pearls = cell_center(6, 3);
         let accept = rect_center(layout::ACCEPT_LEVER);
         let launch = rect_center(layout::LAUNCH_LEVER);
         let mars = poi_pos(URANUS, 0);
@@ -626,7 +626,7 @@ mod tests {
         drag(
             &mut s,
             slot_center(&layout::RECEIVED_SLOTS, 0),
-            cell_center(0, 2),
+            cell_center(3, 7),
         );
         s.push((0.013, press_at(launch.x, launch.y)));
         // Traveling: a re-base-safe stretch, then a zero-dt burst of

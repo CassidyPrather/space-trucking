@@ -49,16 +49,18 @@ use super::cargo::{Kind, Loc, Piece, lit_adjacent};
 use super::layout::{self, GRID_COLS, GRID_ROWS};
 use super::{Cue, Vec2, splitmix};
 
-/// Total hold cells.
-const GRID_CELLS: u32 = GRID_COLS as u32 * GRID_ROWS as u32;
+/// The floor's cell count — the crowding gates' yardstick. The net has
+/// 126 cells but food density is a floor phenomenon; walls of paintings
+/// never fed anybody.
+const FLOOR_CELLS: u32 = layout::FLOOR.2 as u32 * layout::FLOOR.3 as u32;
 
-/// Boarding gate: a rat only stows away when at least this many hold cells
-/// are under cargo — half the grid.
-pub const CROWDED_CELLS: u32 = GRID_CELLS / 2;
+/// Boarding gate: a rat only stows away when at least this many cells
+/// are under cargo — half the floor.
+pub const CROWDED_CELLS: u32 = FLOOR_CELLS / 2;
 
-/// Walk-off gate: docking with at most this many hold cells under cargo —
-/// a third of the grid — sends the rat ashore. Nothing to eat.
-pub const SPARSE_CELLS: u32 = GRID_CELLS / 3;
+/// Walk-off gate: docking with at most this many cells under cargo —
+/// a third of the floor — sends the rat ashore. Nothing to eat.
+pub const SPARSE_CELLS: u32 = FLOOR_CELLS / 3;
 
 /// One crowded departure in this many rolls a stowaway.
 pub const BOARD_CHANCE: u64 = 4;
@@ -288,6 +290,11 @@ fn choose_cell(h: u64, pieces: &[Piece], avoid: Option<(u8, u8)>) -> Option<(u8,
     let mut any = Vec::new();
     for y in 0..GRID_ROWS {
         for x in 0..GRID_COLS {
+            // The whole net is rat country — floor, walls, ceiling; a
+            // rat does not care which way is down. Holes are holes.
+            if layout::surface_of(x, y).is_none() {
+                continue;
+            }
             if avoid == Some((x, y)) || lit_adjacent(pieces, x, y) {
                 continue;
             }
@@ -442,27 +449,26 @@ mod tests {
 
     #[test]
     fn cell_choice_prefers_empty_cells_and_avoids_the_current_one() {
-        // Everything covered except (0, 0).
-        let pieces = [
-            hold_piece(0, Kind::RationBricks, 2, 0),
-            hold_piece(1, Kind::RationBricks, 4, 0),
-            hold_piece(2, Kind::RationBricks, 0, 2),
-            hold_piece(3, Kind::RationBricks, 2, 2),
-            hold_piece(4, Kind::RationBricks, 4, 2),
-            hold_piece(5, Kind::PerfumeVial, 1, 0),
-            hold_piece(6, Kind::PerfumeVial, 0, 1),
-            hold_piece(7, Kind::PerfumeVial, 1, 1),
-        ];
+        // Every net cell covered except (5, 5): a vial on each of them.
+        let mut pieces = Vec::new();
+        for y in 0..GRID_ROWS {
+            for x in 0..GRID_COLS {
+                if layout::surface_of(x, y).is_none() || (x, y) == (5, 5) {
+                    continue;
+                }
+                pieces.push(hold_piece(pieces.len() as u32, Kind::PerfumeVial, x, y));
+            }
+        }
         // One free cell: every hash lands on it.
         for h in 0..50 {
-            assert_eq!(choose_cell(h, &pieces, None), Some((0, 0)));
+            assert_eq!(choose_cell(h, &pieces, None), Some((5, 5)));
         }
         // With that cell the one to avoid, the rat perches on cargo instead
         // of staying put, and the draw stays deterministic.
-        let perch = choose_cell(7, &pieces, Some((0, 0)));
-        assert_ne!(perch, Some((0, 0)));
+        let perch = choose_cell(7, &pieces, Some((5, 5)));
+        assert_ne!(perch, Some((5, 5)));
         assert!(perch.is_some(), "an unlit hold always has somewhere to go");
-        assert_eq!(perch, choose_cell(7, &pieces, Some((0, 0))));
+        assert_eq!(perch, choose_cell(7, &pieces, Some((5, 5))));
     }
 
     /// A rat mid-tenure with both schedules due almost immediately.
@@ -516,27 +522,34 @@ mod tests {
 
     #[test]
     fn a_hold_lit_wall_to_wall_pins_the_rat_and_boards_no_new_one() {
-        // Ceiling lamps across row 0 and floor lamps across rows 2-3:
-        // every one of the 24 cells reads lit_adjacent from some other
-        // lamp's footprint.
-        let mut pieces: Vec<Piece> = (0..GRID_COLS)
-            .map(|x| hold_piece(u32::from(x), Kind::CeilingLamp, x, 0))
-            .chain((0..GRID_COLS).map(|x| hold_piece(u32::from(x) + 8, Kind::FloorLamp, x, 2)))
-            .collect();
+        // Lamps down every even column of the net: every odd-column cell
+        // reads lit_adjacent from a horizontal neighbour, every lamp from
+        // its column-mates. (3, 10)'s even neighbours are the window hole
+        // and the void, so (3, 9) gets its own lamp to cover it.
+        let mut pieces: Vec<Piece> = Vec::new();
         for y in 0..GRID_ROWS {
             for x in 0..GRID_COLS {
-                assert!(lit_adjacent(&pieces, x, y), "({x}, {y}) reads dark");
+                if layout::surface_of(x, y).is_some() && (x % 2 == 0 || (x, y) == (3, 9)) {
+                    pieces.push(hold_piece(pieces.len() as u32, Kind::CeilingLamp, x, y));
+                }
+            }
+        }
+        for y in 0..GRID_ROWS {
+            for x in 0..GRID_COLS {
+                if layout::surface_of(x, y).is_some() {
+                    assert!(lit_adjacent(&pieces, x, y), "({x}, {y}) reads dark");
+                }
             }
         }
         // A rat already aboard (lamps stowed around it) skips every beat:
         // no hop, no nibble, schedules still re-armed.
-        let mut rats = wound_rat((2, 1));
+        let mut rats = wound_rat((5, 4));
         let mut cues = Vec::new();
         for tick in 1..30_000_u64 {
             rats.on_tick(7, tick, &mut pieces, &mut cues);
         }
         let rat = rats.rat.expect("light deters, it never evicts");
-        assert_eq!(rat.cell, (2, 1), "nowhere unlit to go");
+        assert_eq!(rat.cell, (5, 4), "nowhere unlit to go");
         assert!(rat.next_move > 29_999, "skipped beats must re-arm");
         assert!(cues.is_empty(), "a skipped beat makes no sound: {cues:?}");
         assert!(pieces.iter().all(|piece| !piece.gnawed));
@@ -554,12 +567,12 @@ mod tests {
     fn the_couch_tempts_the_rat_into_a_nap() {
         let mut pieces = vec![
             hold_piece(0, Kind::Couch, 4, 3),
-            hold_piece(1, Kind::Seedlings, 0, 0),
-            hold_piece(2, Kind::RationBricks, 2, 0),
+            hold_piece(1, Kind::Seedlings, 3, 7),
+            hold_piece(2, Kind::RationBricks, 6, 6),
         ];
         let couch = couch_cells(&pieces);
         assert_eq!(couch, [(4, 3), (5, 3)]);
-        let mut rats = wound_rat((0, 1));
+        let mut rats = wound_rat((0, 3));
         let mut cues = Vec::new();
         let mut napped_beats = 0_u32;
         let mut woke = false;

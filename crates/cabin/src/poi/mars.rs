@@ -38,7 +38,7 @@
 //! a torn ferrule with three strands hanging out of it. The length that
 //! used to reach the ground is simply not there.
 
-use bevy::prelude::Vec3;
+use bevy::prelude::{Color, Vec3};
 use space_trucking::sim::Kind;
 
 use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
@@ -69,13 +69,24 @@ pub const CHARACTER: Character = Character {
 /// of a different tin, which it was. The line round a proposal is struck
 /// in **luminous paint**, by hand, and the sill is the plain oxide red
 /// every hull in the game gets coated in.
+///
+/// The field is the chart's Mars hue taken toward [`palette::SOOT`],
+/// because raw it is a traffic cone: a fresh, even, arterial red, which
+/// is the one thing a scrappy republic's paint is not. Weathered, it
+/// also does the job the rim needs — the rim stays the **raw** patch
+/// tone, so the band where the paint stops reads as the harsher, newer
+/// tin it was actually repainted out of.
 const TILES: Tiles = Tiles {
-    stock: Coat::enamel(palette::POI_MARS),
+    stock: Coat::enamel(OXIDISED),
     rim: Coat::enamel(palette::accent::MARS_PATCH),
     chalk: Coat::etched(palette::kind_color(Kind::LuminousPaint)),
     stud: Coat::metal(Worn::Plate),
     sill: Coat::enamel(palette::enamel_color(0)),
 };
+
+/// Rust country: the chart's Mars red, weathered toward the scorch role
+/// until it stops looking freshly sprayed.
+const OXIDISED: Color = palette::blend(palette::POI_MARS, palette::SOOT, 0.35);
 
 /// **The welded valve.** A scavenged bonnet, painted in whichever tin
 /// was open, on a patch of raw plate somebody cut to fit. The bar across
@@ -437,7 +448,7 @@ const SPLICED_CABLE: [Fitting; 19] = [
 
 /// One length of the cable: centre `y`, half-span `span`, girth `girth`,
 /// painted out of whichever tin.
-const fn length(y: f32, span: f32, girth: f32, tin: bevy::prelude::Color) -> Fitting {
+const fn length(y: f32, span: f32, girth: f32, tin: Color) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::etched(tin),
@@ -495,7 +506,10 @@ mod tests {
             );
         }
         assert_eq!(CHARACTER.handshake.lamp, palette::LAMP_OK, "Mars says yes");
-        assert_eq!(CHARACTER.tiles.stock.color, palette::POI_MARS);
+        // Weathered, not raw: a republic that has been repainting the
+        // same wall for thirty years does not have arterial red on it.
+        assert_eq!(CHARACTER.tiles.stock.color, OXIDISED);
+        assert_ne!(OXIDISED, palette::POI_MARS, "the rust came up fresh again");
         // No brass. Venus pays one for a gilded idol because it is
         // drowning in gilt; Mars pays one because it has never had any.
         assert!(

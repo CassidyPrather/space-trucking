@@ -33,7 +33,7 @@
 //! like a shopfront. Nothing about the cable looks strong enough to
 //! lift anything, and nobody has ever raised the point.
 
-use bevy::prelude::Vec3;
+use bevy::prelude::{Color, Vec3};
 use space_trucking::sim::Kind;
 
 use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
@@ -64,13 +64,24 @@ pub const CHARACTER: Character = Character {
 /// is being framed while you watch, by a house that pays six for a
 /// frame. The threshold is gilded too, studs and sill, because the
 /// expensive part of this room is the part you walk on.
+///
+/// The field is [`palette::POI_VENUS`] taken **down** toward the shadow
+/// role rather than used at full strength, and the reason is the gilt:
+/// raw, the chart's peach sits at almost exactly brass's value, so every
+/// fitting in the room sank into the wall and read as shaded peach
+/// instead of as gold. A salon is deep rose with gold on it. It is not
+/// gold on peach, which is a corridor.
 const TILES: Tiles = Tiles {
-    stock: Coat::enamel(palette::POI_VENUS),
+    stock: Coat::enamel(SALON_ROSE),
     rim: Coat::metal(Worn::Brass),
     chalk: Coat::etched(palette::accent::VENUS_HALO),
     stud: Coat::metal(Worn::Brass),
     sill: Coat::etched(palette::accent::VENUS_HALO),
 };
+
+/// The house rose: the chart's own Venus hue, dropped toward
+/// [`palette::SHADOW`] until brass reads as metal against it.
+const SALON_ROSE: Color = palette::blend(palette::POI_VENUS, palette::SHADOW, 0.38);
 
 /// **The bell pull.** A brass ring on a cord under a plum-lacquer plate,
 /// with the bell it rings and the clapper above it, and a gilt bead
@@ -474,7 +485,11 @@ mod tests {
             super::super::NEUTRAL.handshake.knob,
             "a repainted plunger is not a bell pull"
         );
-        assert_eq!(CHARACTER.tiles.stock.color, palette::POI_VENUS);
+        // The field is the chart's Venus hue taken down, not the raw
+        // role: gold on peach is a corridor, gold on deep rose is a
+        // salon.
+        assert_eq!(CHARACTER.tiles.stock.color, SALON_ROSE);
+        assert_ne!(SALON_ROSE, palette::POI_VENUS, "the rose went raw again");
         const {
             assert!(
                 CHARACTER.light.burn > 0.99,

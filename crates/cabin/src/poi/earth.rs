@@ -34,7 +34,7 @@
 //! (`palette::accent::SMOG`) — which is the only way, from out there, to
 //! tell which end of the ribbon the world is on. No gold anywhere.
 
-use bevy::prelude::Vec3;
+use bevy::prelude::{Color, Vec3};
 use space_trucking::sim::Kind;
 
 use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
@@ -65,13 +65,26 @@ pub const CHARACTER: Character = Character {
 /// lit**, in the ochre a factory floor is marked in. Earth spends light
 /// on the meter, not on the floor. The studs are worn through to the
 /// socket by the queue that has stood on them.
+///
+/// Both painted surfaces are **blends toward the smog**, and that is the
+/// whole trick of the room: the wall is the chart's Earth blue with the
+/// sky's own stain in it, and the floor line is the ochre a factory
+/// marks a floor in after forty years of being walked on. Raw, the two
+/// roles read as a clean municipal building, which is a different and
+/// much less frightening dystopia.
 const TILES: Tiles = Tiles {
-    stock: Coat::enamel(palette::POI_EARTH),
+    stock: Coat::enamel(STAINED_SLATE),
     rim: Coat::metal(Worn::Rivet),
-    chalk: Coat::enamel(palette::AMBER),
+    chalk: Coat::enamel(WALKED_OCHRE),
     stud: Coat::metal(Worn::Socket),
     sill: Coat::metal(Worn::Rivet),
 };
+
+/// The municipal blue, with the sky it is under mixed into it.
+const STAINED_SLATE: Color = palette::blend(palette::POI_EARTH, palette::accent::SMOG, 0.28);
+
+/// The floor line: amber that nobody has repainted since it was issued.
+const WALKED_OCHRE: Color = palette::blend(palette::AMBER, palette::accent::SMOG, 0.42);
 
 /// **The meter.** A galvanised grip bar on a dark state plate, with the
 /// ratchet track it travels in, a readout behind a guard, and a token

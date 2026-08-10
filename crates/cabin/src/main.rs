@@ -35,6 +35,7 @@ mod wear;
 
 use bevy::prelude::*;
 use bevy::window::PresentMode;
+use space_trucking::sim::room::RoomKind;
 
 use bridge::{Bridge, FrameInput, FrameOutcome};
 use surface::VirtualPointer;
@@ -238,17 +239,35 @@ fn main() {
     // a per-station design agent has to do before it can judge anything
     // it wrote (`crate::poi`).
     let docked = flag_value("--docked").and_then(|n| n.parse::<u8>().ok());
+    // `--alongside wreck|parlor|pump`: a leg with that event room already
+    // attached. `--docked n` berths any of the twelve stations, but the
+    // three rooms nobody keeps are met in transit and gone by the next
+    // dock, so this is the only way to stand in one — or to photograph
+    // its shell with `--view berth` (`fixture::alongside`).
+    let met = flag_value("--alongside")
+        .and_then(|name| match name.as_str() {
+            "wreck" => Some(RoomKind::Wreck),
+            "parlor" => Some(RoomKind::Parlor),
+            "pump" => Some(RoomKind::Pump),
+            _ => None,
+        })
+        .and_then(fixture::alongside);
     let bridge = panes.map_or_else(
         || {
-            if underway {
-                Bridge::boot_fixture(&cast_off(7, 0.75))
-            } else if let Some(poi) = docked {
-                Bridge::boot_fixture(&fixture::docked_at(poi))
-            } else if fixture {
-                Bridge::boot_fixture(fixture::SAVE)
-            } else {
-                Bridge::boot(dev)
-            }
+            met.as_deref().map_or_else(
+                || {
+                    if underway {
+                        Bridge::boot_fixture(&cast_off(7, 0.75))
+                    } else if let Some(poi) = docked {
+                        Bridge::boot_fixture(&fixture::docked_at(poi))
+                    } else if fixture {
+                        Bridge::boot_fixture(fixture::SAVE)
+                    } else {
+                        Bridge::boot(dev)
+                    }
+                },
+                Bridge::boot_fixture,
+            )
         },
         |n| Bridge::boot_fixture(&fixture::panes_board(7, n)),
     );

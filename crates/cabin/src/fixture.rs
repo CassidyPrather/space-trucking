@@ -51,6 +51,8 @@
 //! now, and a showcase that parks a cabinet in the one place the trade
 //! room can be seen through is a showcase of a cabinet.
 
+use space_trucking::sim::room::RoomKind;
+
 /// The fixture save, STV11, hand-authored — the timestamp line is added
 /// at boot so no catch-up elapses.
 pub const SAVE: &str = "\
@@ -154,6 +156,90 @@ pub fn docked_at(poi: space_trucking::sim::map::PoiId) -> String {
     }
     out
 }
+
+/// A world with an event room already alongside (`--alongside
+/// wreck|parlor|pump`), as a save string.
+///
+/// **The tool the three event rooms need, for the reason `--docked n`
+/// was not enough.** A station's room is alongside whenever you are
+/// moored at it, so re-berthing the board shows any of the twelve. The
+/// event rooms are not anybody's: a derelict, a parlor, and a pump bay
+/// attach *mid-leg*, when an encounter's window opens, and they are gone
+/// by the next dock. Without this there is no way to stand in one, and
+/// "judge your own screenshots" would be advice nobody could take.
+///
+/// It cheats at nothing, exactly as `cast_off` does not: it searches
+/// seeds for a first leg whose encounter is the one asked for, charts
+/// and launches through the sim's own `InputFrame` interface the way a
+/// player would, and runs the leg on until the window opens and the sim
+/// itself attaches the room. What comes back is a board the sim built.
+/// `None` means no seed in range met that thing, which is a fact about
+/// the encounter roll and not a fallback worth inventing a board over.
+#[must_use]
+pub fn alongside(kind: RoomKind) -> Option<String> {
+    use space_trucking::sim::{EncounterKind, InputFrame, ShipState, Sim, TICK_DT, layout};
+
+    let want = match kind {
+        RoomKind::Wreck => EncounterKind::Derelict,
+        RoomKind::Parlor => EncounterKind::Casino,
+        RoomKind::Pump => EncounterKind::GasStation,
+        // The ship's own rooms and the trade room are not met; they are
+        // owned or docked at, and `--docked n` already berths those.
+        _ => return None,
+    };
+    let press = |at| InputFrame {
+        pointer: at,
+        press: true,
+        held: true,
+        ..InputFrame::default()
+    };
+    for seed in 0..SEED_SWEEP {
+        for there in 0..12_u8 {
+            let mut sim = Sim::new(seed);
+            let ShipState::Docked(here) = sim.ship().state else {
+                continue;
+            };
+            if there == here || !sim.poi_chartable(there) {
+                continue;
+            }
+            sim.advance(0.0, &press(sim.poi_pos(there)));
+            sim.advance(
+                0.0,
+                &press(crate::canvas::rect_center(layout::LAUNCH_LEVER)),
+            );
+            sim.advance(TICK_DT, &InputFrame::default());
+            let Some(window) = sim
+                .encounter()
+                .filter(|enc| enc.kind == want)
+                .map(|enc| enc.start)
+            else {
+                continue;
+            };
+            // Straight to the window's own edge, then one ordinary tick
+            // over it: the room is attached by the tick that opens the
+            // encounter, and no tick here is different from any other.
+            let ShipState::Traveling { progress, .. } = sim.ship().state else {
+                continue;
+            };
+            sim.fast_forward(window.saturating_sub(progress));
+            while sim.rooms().find(kind).is_none()
+                && matches!(sim.ship().state, ShipState::Traveling { .. })
+            {
+                sim.advance(TICK_DT, &InputFrame::default());
+            }
+            if sim.rooms().find(kind).is_some() {
+                return Some(sim.save_string());
+            }
+        }
+    }
+    None
+}
+
+/// How many seeds [`alongside`] will try before it admits defeat. One
+/// leg in three carries an encounter and one encounter in five is any
+/// given kind, so a handful of seeds is plenty and this is only a bound
+/// on a dev tool's patience.
+const SEED_SWEEP: u64 = 2000;
 
 /// A dev board carrying exactly `n` windows and nothing else unusual:
 /// the starter ship with every pane stripped off it, then `n` hung on
@@ -370,5 +456,31 @@ mod tests {
                 "POI {poi} lost the room the board came with"
             );
         }
+    }
+
+    /// **Every event room can be stood in.** The three rooms nobody
+    /// keeps only exist mid-leg, so `--alongside` is the only way to
+    /// look at one — and a design agent who cannot look at the room it
+    /// is dressing is writing numbers into the dark.
+    #[test]
+    fn every_event_room_can_be_berthed_for_a_look() {
+        use space_trucking::sim::ShipState;
+
+        for kind in [RoomKind::Wreck, RoomKind::Parlor, RoomKind::Pump] {
+            let save =
+                super::alongside(kind).unwrap_or_else(|| panic!("no seed in range met a {kind:?}"));
+            let sim = Sim::from_save(&save).unwrap_or_else(|_| panic!("{kind:?} board parses"));
+            assert!(
+                matches!(sim.ship().state, ShipState::Traveling { .. }),
+                "an event room is met underway or not at all"
+            );
+            assert!(
+                sim.rooms().find(kind).is_some(),
+                "{kind:?} did not come alongside"
+            );
+        }
+        // A room that is never *met* has no board here, which is how the
+        // tool says "use `--docked n` for that one" without guessing.
+        assert!(super::alongside(RoomKind::Trade).is_none());
     }
 }

@@ -1928,6 +1928,57 @@ mod tests {
         assert!(!envelope.holds(Vec3::new(6.0, EYE_HEIGHT, 0.0)));
     }
 
+    /// The same, for a room that came alongside at a yaw of its own: the
+    /// station's trade room mates the cabin's AFT door and lands turned
+    /// half around, and the walk into it is still continuous.
+    #[test]
+    fn the_walk_envelope_reaches_a_room_that_arrived_turned_around() {
+        let mut rooms = Rooms::new();
+        let trade = rooms
+            .spawn(RoomKind::Trade, CABIN)
+            .expect("the dock attaches its room");
+        let placed: Vec<Placed> = rooms.iter().map(|(id, room)| placed(id, room)).collect();
+        let envelope = walk_boxes(&placed);
+        let shop = placed
+            .iter()
+            .find(|room| room.id == trade)
+            .expect("the trade room is placed");
+        assert_ne!(shop.yaw, 0, "this test wants a turned room");
+        let inside = Vec3::new(
+            f32::midpoint(shop.lo.x, shop.hi.x),
+            EYE_HEIGHT,
+            f32::midpoint(shop.lo.z, shop.hi.z),
+        );
+        assert!(envelope.holds(inside), "the trade room at {inside}");
+        // Through the doorway, not across its corner: a mated aperture is
+        // two cells wide and a body is not thin, so the way in is the way
+        // a body actually walks it — up to the seam, then through.
+        let from = Vec3::new(-1.65, EYE_HEIGHT, 1.9);
+        let seam = Vec3::new(-1.65, EYE_HEIGHT, 2.41);
+        let plan = plan_of(&placed);
+        for (a, b) in [(from, seam), (seam, inside)] {
+            for step in 0..=40u8 {
+                let t = f32::from(step) / 40.0;
+                let p = a.lerp(b, t);
+                assert!(envelope.holds(p), "the walk breaks at {p}");
+                // And the body is either standing in a room or ducking
+                // through a doorway; there is no third place to be.
+                assert!(
+                    plan.room_at(p).is_some() || envelope.ducking(p),
+                    "at {p} the body is in no room and no doorway"
+                );
+            }
+        }
+    }
+
+    /// A plan wrapping a placed list, for the tests.
+    fn plan_of(rooms: &[Placed]) -> Plan {
+        Plan {
+            rooms: rooms.to_vec(),
+            signature: Vec::new(),
+        }
+    }
+
     /// The occupied-room field derives from the body's position and
     /// nothing else, and it answers with the room the body is actually in.
     #[test]

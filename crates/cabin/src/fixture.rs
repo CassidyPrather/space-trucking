@@ -31,6 +31,12 @@
 //! than at its traditional port berth), the gnawed rug lies PINNED
 //! under the couch, and no berth may sit on a doorway — the threshold
 //! rule keeps every aperture clear. The test below re-checks all of it.
+//!
+//! One more courtesy, which is not a rule: the deck cells a doorway
+//! stands on are kept clear. Nothing forbids berthing there — the aisle
+//! rule died with the collision it guarded — but the doorways are drawn
+//! now, and a showcase that parks a cabinet in the one place the trade
+//! room can be seen through is a showcase of a cabinet.
 
 /// The fixture save, STV11, hand-authored — the timestamp line is added
 /// at boot so no catch-up elapses.
@@ -57,9 +63,9 @@ room 0 0 - - -
 room 1 1 0 1 3
 room 2 2 0 0 0
 marks 1 16
-piece 0 21 0 0 hold 0 3 3
+piece 0 21 0 0 hold 0 6 4
 piece 1 9 0 0 hold 0 7 5
-piece 2 8 0 0 hold 0 4 3
+piece 2 8 0 0 hold 0 4 7
 piece 3 19 1 0 hold 0 4 6
 piece 4 18 2 0 hold 0 3 6
 piece 5 12 0 0 stow 0 3
@@ -76,7 +82,7 @@ piece 15 14 0 0 stow 0 2
 piece 16 4 3 0 hold 2 3 3
 piece 17 7 1 0 hold 2 3 6
 piece 18 1 2 0 hold 2 4 6
-piece 19 11 0 0 hold 0 10 3
+piece 19 11 0 0 hold 0 8 3
 piece 20 2 1 0 hold 0 7 7
 piece 21 5 0 0 hold 2 5 3
 piece 22 3 3 1 hold 2 7 3

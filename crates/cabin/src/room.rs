@@ -2529,6 +2529,42 @@ mod tests {
         }
     }
 
+    /// **The latch stands in the room that stays, and names the room
+    /// that goes.** It used to be drawn by the calling room — inside the
+    /// room it was meant to send away, asking to part the CABIN, which
+    /// is the one room the graph cannot lose. Now the lower id dresses
+    /// the seam, so the hand is aboard and the room named is the one
+    /// alongside.
+    #[test]
+    fn the_seams_latch_is_worked_from_the_room_that_stays() {
+        let plan = crowded_ship();
+        let mut latches = 0;
+        for room in &plan {
+            for site in &room.ports {
+                let Some(at) = latch_at(room, site) else {
+                    continue;
+                };
+                let (other, _) = site.mate.expect("a latch only hangs on a mated seam");
+                assert_ne!(other, room.id, "a room cannot part from itself");
+                assert!(
+                    room.id < other,
+                    "room {} hung the latch for room {other}, which outranks it",
+                    room.id
+                );
+                assert!(
+                    at.x >= room.lo.x - JAMB
+                        && at.x <= room.hi.x + JAMB
+                        && at.z >= room.lo.z - JAMB
+                        && at.z <= room.hi.z + JAMB,
+                    "the latch for room {other} hangs at {at}, outside room {}",
+                    room.id
+                );
+                latches += 1;
+            }
+        }
+        assert!(latches >= 2, "only {latches} seams grew a latch");
+    }
+
     /// The cabin's floor hatch reads as a hatch: nothing of its leaf
     /// stands proud of the deck, and what does stand proud is a rim thin
     /// enough to walk over. The playtest could not tell what the lump in

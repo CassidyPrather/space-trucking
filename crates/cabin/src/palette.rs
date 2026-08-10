@@ -126,6 +126,21 @@ pub mod accent {
 // constant, **appended at the end of the section** — this is the one
 // shared file a per-station design agent touches, and appending is what
 // keeps a dozen of them from landing on each other.
+//
+// **When to reach through [`kind_color`] instead.** A station may paint
+// itself in the hue of a cargo kind, and across the chart most of them
+// do: Saturn's rim is the bay window's own blue, Jupiter's fittings the
+// gas canister's orange, the Umbra's walls the midnight it bottles.
+// That is not indirection, it is the story — *a station's paint is the
+// colour of what it sells* — and it should stay coupled, so that
+// retuning a good's hue moves the room that deals in it.
+//
+// The test is what the surface IS, not what it resembles. Frost on a
+// dead hull is not comet ice and a fluorescent tube is not luminous
+// paint; they merely land on the same value. Those are materials, and a
+// material gets a role of its own down here — otherwise a cargo retune
+// silently repaints somebody's architecture for reasons that have
+// nothing to do with it.
 
 /// The Guild's bonded enamel: the paint on a floor whose contents are not
 /// yours yet. Deeper and colder than [`TRIM_SHELF`], which is the neutral
@@ -138,6 +153,25 @@ pub const GUILD_BOND: Color = hex(0x3d3357);
 /// violet is the game's one *something is wrong* signal, and a room lit
 /// in it would spend that signal on the place every run starts.
 pub const GUILD_HALL: Color = hex(0xcfc6e6);
+
+/// Frost: what an atmosphere leaves on the walls on its way out of a
+/// hull nobody closed. The derelict's one accent, and the one warm-ish
+/// thing about a room with no light in it.
+///
+/// Lands on the same value as comet ice and is *not* comet ice — the
+/// physics rhyme, the substances do not. A material, so it carries its
+/// own role rather than reaching through [`kind_color`]; see the note
+/// at the head of this section.
+pub const RIME: Color = hex(0xbfe4ef);
+
+/// The pale green-white of a cheap fluorescent tube — the palette's only
+/// cold high-value white, and the light a room gets when nobody chose
+/// its lighting.
+///
+/// Shares luminous paint's value and owes it nothing: one is a lamp a
+/// contractor bought by the crate, the other is paint strained from
+/// something that should not have been strained.
+pub const TUBE: Color = hex(0xd8f0c0);
 
 /// Identity hue per POI index, for the tank's readings and enamel badges.
 #[must_use]

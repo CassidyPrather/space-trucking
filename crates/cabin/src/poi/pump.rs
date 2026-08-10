@@ -86,7 +86,7 @@ const FUEL: Color = palette::kind_color(Kind::GasCanister);
 /// every other pendant in the game burns.
 ///
 /// [`GLINT`]: palette::GLINT
-const TUBE: Color = palette::kind_color(Kind::LuminousPaint);
+const TUBE: Color = palette::TUBE;
 
 /// Galvanised pipe.
 const PIPE: Coat = Coat::metal(Worn::Rivet);

@@ -63,7 +63,6 @@
 //! the atmosphere froze on its way out.
 
 use bevy::prelude::Vec3;
-use space_trucking::sim::Kind;
 
 use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
 use crate::palette;
@@ -86,9 +85,10 @@ pub const CHARACTER: Character = Character {
     dress: &WHAT_IS_LEFT,
 };
 
-/// Frost, in the hue the game paints ice: what the atmosphere turned
-/// into on its way out through whatever opened.
-const RIME: Coat = Coat::etched(palette::kind_color(Kind::CometIce));
+/// Frost: what the atmosphere turned into on its way out through
+/// whatever opened. [`palette::RIME`] is its own role — frost is not
+/// comet ice, however alike they land.
+const RIME: Coat = Coat::etched(palette::RIME);
 
 /// Cold structure — the role is *etched lines while the function
 /// sleeps*, and every function on this ship is asleep.

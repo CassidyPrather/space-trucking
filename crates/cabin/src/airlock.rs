@@ -4,18 +4,21 @@
 //! attached at the cabin's starboard door, its whole net hazard-class
 //! `Consume` tiles, riding with the ship. Stage two draws it as the room
 //! it is — `crate::room` folds its net onto its own lattice box, punches
-//! its doorway out of the cabin's wall, and paints its ember-edged deck —
-//! so the hand-measured annex, its four rail tiles, and the `AIR_*`
-//! constants that sized them all retired together. Cargo staged in the
-//! furnace stands on its floor exactly as cargo stands on the cabin's,
-//! through the same rigs, because it is the same rule one room over.
+//! its doorway out of the cabin's wall, and scorches its deck with hazard
+//! tape at the rim — so the hand-measured annex, its four rail tiles, and
+//! the `AIR_*` constants that sized them all retired together. Cargo
+//! staged in the furnace stands on its floor exactly as cargo stands on
+//! the cabin's, through the same rigs, because it is the same rule one
+//! room over.
 //!
 //! What is left here is the furnace's own **flavour**, and it hangs on
 //! the room's derived geometry rather than on numbers of its own: the
 //! firebox glass in the outer wall, whose banked ember tracks the stoke
 //! the sim spends on extra way and flares when the stoker feeds it
-//! (`Cue::Burn`), and the warning beacon over the doorway, which breathes
-//! amber while fuel is staged and strobes when a seam parts.
+//! (`Cue::Burn`); the light that same fire throws on the chamber's own
+//! deck, which is the only lamp the room will ever have; and the warning
+//! beacon over the doorway, which breathes amber while fuel is staged and
+//! strobes when a seam parts.
 //!
 //! Fuel simply stays staged: docking has no reason to bank it, so the
 //! `Cue::Jettison` strobe retired with the one ceremony that discarded.
@@ -43,6 +46,21 @@ const FLASH_LEN: f32 = 0.6;
 /// but the glass has nowhere brighter to go.
 const FIREBOX_FULL: u64 = 3 * STOKE_PER_FLAM;
 
+/// **The fire is the furnace's light, and it is the only one.**
+///
+/// The ship owns no lumen — every light aboard is cargo (docs/BAY.md) —
+/// and this does not break that law, it is the purest case of it: what
+/// is burning in there is cargo, carried in by hand and spent. Bank no
+/// stoke and the room is a black chamber with tape on its cornices;
+/// feed it and it lights its own deck. The reading answers to the same
+/// `Dimmable` every other light does, so the omen leans on the fire too.
+///
+/// The reach is deliberately shorter than the room is wide: the hearth
+/// sits in the outer wall, and the cabin is a room's width away on the
+/// other side of the doorway wall. Fire does not light the neighbours.
+const FIRE_LUMENS: f32 = 42_000.0;
+const FIRE_RANGE: f32 = 2.0;
+
 /// The warning beacon over the doorway (cabin side): dark glass while
 /// the hopper is empty, breathing amber while fuel is staged, a hard
 /// red strobe when a seam parts.
@@ -58,6 +76,12 @@ struct Beacon {
 struct Firebox {
     mat: Handle<StandardMaterial>,
 }
+
+/// The light the fire throws into its own chamber. Tagged rather than
+/// bundled with [`Firebox`] because the glass is a reading and this is a
+/// lumen: one is emissive paint, the other answers to the omen.
+#[derive(Component)]
+struct Hearth;
 
 /// The latched clocks: the parting strobe, and the feeding flare with
 /// the strength the last feeding bought.
@@ -120,6 +144,22 @@ pub fn fittings(
         Firebox { mat: fire },
         tag,
     ));
+    // What the fire actually does to the room. Spawned dark, like every
+    // lamp aboard: [`sync`] writes the banked stoke into its `Dimmable`
+    // base each frame, and `fx::dim_cabin` scales that by the omen.
+    commands.spawn((
+        PointLight {
+            color: palette::EMBER,
+            intensity: 0.0,
+            range: FIRE_RANGE,
+            shadow_maps_enabled: false,
+            ..default()
+        },
+        Transform::from_translation(hearth + inward * 0.30),
+        crate::rig::Dimmable { intensity: 0.0 },
+        Hearth,
+        tag,
+    ));
     // The beacon: a housing hung just under the doorway's lintel, INSIDE
     // the furnace — the room whose business it reports — and low enough
     // in the opening to be read from the cabin as well. It used to lean
@@ -160,6 +200,7 @@ fn sync(
     mut fx: ResMut<AirlockFx>,
     beacons: Query<&Beacon>,
     fireboxes: Query<&Firebox>,
+    mut hearths: Query<&mut crate::rig::Dimmable, With<Hearth>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let dt = time.delta_secs();
@@ -211,10 +252,17 @@ fn sync(
     // feeding — and a feeding's flare decays squared over it, fire-like.
     let heat = (sim.stoke().min(FIREBOX_FULL) as f32) / (FIREBOX_FULL as f32);
     let flare = (fx.flash / FLASH_LEN).powi(2) * fx.fed;
+    let level = heat
+        .mul_add(glow::breathe(t, 3.4, 0.0).mul_add(0.30, 0.50), flare)
+        .min(1.0);
     for firebox in &fireboxes {
         if let Some(mut mat) = materials.get_mut(&firebox.mat) {
-            let ember = heat * glow::breathe(t, 3.4, 0.0).mul_add(0.30, 0.50);
-            glow::set_lamp(&mut mat, palette::EMBER, (ember + flare).min(1.0));
+            glow::set_lamp(&mut mat, palette::EMBER, level);
         }
+    }
+    // And the same reading, as real light: the deck of a furnace is lit
+    // by what is burning on it, and by nothing else.
+    for mut dimmable in &mut hearths {
+        dimmable.intensity = FIRE_LUMENS * level;
     }
 }

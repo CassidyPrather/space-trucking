@@ -966,23 +966,14 @@ fn rebuild(
             shell_slabs(&mut commands, &cube, &skin, placed, &plan.rooms, tag);
         }
         if !placed.kind.riding() {
-            let mid = (placed.lo + placed.hi) * 0.5;
-            commands.spawn((
-                PointLight {
-                    color: palette::GLINT,
-                    intensity: CALLER_LUMENS,
-                    range: CALLER_RANGE,
-                    // No shadow maps anywhere, on purpose: the art
-                    // direction is light VOLUMES, not simulated occlusion.
-                    shadow_maps_enabled: false,
-                    ..default()
-                },
-                Transform::from_translation(Vec3::new(mid.x, placed.hi.y - 0.75, mid.z)),
-                crate::rig::Dimmable {
-                    intensity: CALLER_LUMENS,
-                },
+            caller_lamp(
+                &mut commands,
+                &cube,
+                &mut meshes,
+                &mut materials,
+                placed,
                 tag,
-            ));
+            );
         }
         tiles(
             &mut commands,
@@ -1008,7 +999,7 @@ fn rebuild(
     }
 }
 
-/// A **calling** room lights its own premises.
+/// A **calling** room lights its own premises, and only its own.
 ///
 /// The ship owns not one lumen — every light aboard is cargo, and
 /// lights-out is a legal state (docs/BAY.md) — but a room that came
@@ -1016,9 +1007,127 @@ fn rebuild(
 /// dark would be a station with something to hide. So the callers arrive
 /// lit and take their light with them when they part, while the cabin and
 /// the burner stay exactly as dark as the crew's own lamps leave them.
-/// It dims with everything else when the omen leans on the ship.
-const CALLER_LUMENS: f32 = 260_000.0;
-const CALLER_RANGE: f32 = 7.5;
+///
+/// Three clauses keep that exception honest, and all three are tested
+/// ([`tests::a_callers_lamp_lights_its_own_room_and_no_further`]):
+///
+/// 1. **It dims like everything else.** The lamp carries [`Dimmable`]
+///    with the very intensity it burns at, so `fx::dim_cabin`'s
+///    `intensity * sim.light()` is the omen leaning on a station exactly
+///    as it leans on a crew lamp. There is no opt-out and no second path.
+/// 2. **It is sized to its own room.** The reach is derived from the
+///    room's box — far floor corner and a step — never a constant. It
+///    used to be a flat 7.5 m at 260,000 lumens, which is twice the
+///    ship's own key light thrown right through the partition and across
+///    the whole cabin: the lights-out economy paid for a station's
+///    electricity bill. What crosses the seam now is the last of the
+///    falloff, which is what a doorway does, and no riding room's middle
+///    is ever reached.
+/// 3. **It hangs on something.** A room lit from an invisible point is a
+///    debug harness; this one wears a shade, and the shade is the
+///    neutral form every per-POI agent will differentiate from.
+const CALLER_LUMENS: f32 = 150_000.0;
+
+/// How far under a caller's ceiling its lamp hangs. A pendant, not a
+/// panel: low enough that its reach is the room's rather than the ship's,
+/// high enough that a standing body walks under it (`rig::EYE_HEIGHT`).
+const CALLER_DROP: f32 = 0.55;
+
+/// The pendant's shade radius and the glass under it.
+const SHADE_R: f32 = 0.24;
+const SHADE_H: f32 = 0.11;
+
+/// Where a caller's lamp hangs and how far it carries — derived from the
+/// room's own box, so a wider room gets a wider pool and a small one
+/// keeps its light to itself. The reach stops a quarter cell past the
+/// room's own far floor corner: far enough that the corners are lit, near
+/// enough that the neighbours are not.
+fn caller_reach(placed: &Placed) -> (Vec3, f32) {
+    let mid = (placed.lo + placed.hi) * 0.5;
+    let at = Vec3::new(mid.x, placed.hi.y - CALLER_DROP, mid.z);
+    let corner = Vec3::new(placed.lo.x, placed.lo.y, placed.lo.z);
+    (at, BAY_CELL.mul_add(0.25, (at - corner).length()))
+}
+
+/// The caller's pendant, as the components it spawns with — pure, so the
+/// three clauses above can be asserted against exactly what the room
+/// gets. The `Dimmable` base and the light's own intensity come from one
+/// value on purpose: a lamp that remembered a different honest brightness
+/// than it burns at would brighten or dim the first time the omen passed.
+fn caller_light(placed: &Placed) -> (PointLight, Transform, crate::rig::Dimmable) {
+    let (at, range) = caller_reach(placed);
+    (
+        PointLight {
+            color: palette::GLINT,
+            intensity: CALLER_LUMENS,
+            range,
+            // No shadow maps anywhere, on purpose: the art direction is
+            // light VOLUMES, not simulated occlusion. Which is precisely
+            // why the reach above has to do the partition's job.
+            shadow_maps_enabled: false,
+            ..default()
+        },
+        Transform::from_translation(at),
+        crate::rig::Dimmable {
+            intensity: CALLER_LUMENS,
+        },
+    )
+}
+
+/// The pendant itself: a stem off the ceiling, a pressed shade, the glass
+/// inside it, and the light. One honest industrial fitting — the same
+/// argument the handshake's brass makes, one storey up — because a
+/// trading floor that is lit by nothing at all reads as a test harness
+/// with cargo in it, and this room is the core form every per-POI agent
+/// starts from.
+fn caller_lamp(
+    commands: &mut Commands,
+    cube: &Handle<Mesh>,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    placed: &Placed,
+    tag: InRoom,
+) {
+    let (at, _) = caller_reach(placed);
+    let stem = (placed.hi.y - at.y) * 0.5;
+    commands.spawn((
+        Mesh3d(cube.clone()),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: palette::PLATE_SHADE,
+            perceptual_roughness: 0.9,
+            ..default()
+        })),
+        Transform::from_translation(Vec3::new(at.x, at.y + stem, at.z)).with_scale(Vec3::new(
+            0.05,
+            stem * 2.0,
+            0.05,
+        )),
+        tag,
+    ));
+    commands.spawn((
+        Mesh3d(meshes.add(ConicalFrustum {
+            radius_top: SHADE_R * 0.35,
+            radius_bottom: SHADE_R,
+            height: SHADE_H,
+        })),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: palette::PLATE,
+            perceptual_roughness: 0.85,
+            metallic: 0.2,
+            ..default()
+        })),
+        Transform::from_translation(Vec3::new(at.x, SHADE_H.mul_add(0.5, at.y), at.z)),
+        tag,
+    ));
+    commands.spawn((
+        Mesh3d(meshes.add(Cylinder::new(SHADE_R * 0.72, 0.02))),
+        MeshMaterial3d(glow::phosphor(materials, palette::GLINT, 1.4)),
+        Transform::from_translation(Vec3::new(at.x, at.y - 0.01, at.z)),
+        tag,
+    ));
+    let (light, transform, dimmable) = caller_light(placed);
+    commands.spawn((light, transform, dimmable, tag));
+}
 
 /// A room's hull: deck, ceiling, and four walls, each punched by whatever
 /// apertures its own ports declare and by whatever a lower-id room's box
@@ -2734,6 +2843,63 @@ mod tests {
                 "a rim that outstands its own recess is a lump"
             );
         }
+    }
+
+    /// **A caller's lamp lights its own room and no further.**
+    ///
+    /// The one exception to "the ship owns no lumen" (docs/BAY.md), held
+    /// to its three clauses: it burns the brightness it remembers, so the
+    /// omen dims it through `Dimmable` like every crew lamp; it reaches
+    /// every corner of its own floor; and it dies before the middle of
+    /// any room that RIDES. A station may light its own premises and may
+    /// not light the crew's — the playtest's flat 7.5 m at 260,000 lumens
+    /// lit the whole cabin through a solid partition, which is a
+    /// lights-out economy paid for by whoever docked.
+    #[test]
+    fn a_callers_lamp_lights_its_own_room_and_no_further() {
+        let plan = crowded_ship();
+        let mut lamps = 0;
+        for room in plan.iter().filter(|room| !room.kind.riding()) {
+            let (light, transform, dimmable) = caller_light(room);
+            let at = transform.translation;
+            assert!(
+                (light.intensity - dimmable.intensity).abs() < 1.0,
+                "{:?} burns {} but remembers {}: the omen would move it",
+                room.kind,
+                light.intensity,
+                dimmable.intensity
+            );
+            assert!(
+                light.intensity <= CALLER_LUMENS,
+                "{:?} outshines the caller budget",
+                room.kind
+            );
+            // Every corner of its own floor is inside the pool.
+            for x in [room.lo.x, room.hi.x] {
+                for z in [room.lo.z, room.hi.z] {
+                    let corner = Vec3::new(x, room.lo.y, z);
+                    assert!(
+                        (at - corner).length() <= light.range,
+                        "{:?} leaves its own corner {corner} unlit",
+                        room.kind
+                    );
+                }
+            }
+            // And no riding room's middle is.
+            for other in plan.iter().filter(|other| other.kind.riding()) {
+                let mid = (other.lo + other.hi) * 0.5;
+                assert!(
+                    (at - mid).length() > light.range,
+                    "{:?}'s lamp reaches the middle of the {:?} ({} m of a {} m reach)",
+                    room.kind,
+                    other.kind,
+                    (at - mid).length(),
+                    light.range
+                );
+            }
+            lamps += 1;
+        }
+        assert!(lamps >= 2, "only {lamps} callers came alongside");
     }
 
     /// **A class's mark rides its region's rim, and stays inside its own

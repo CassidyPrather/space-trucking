@@ -2879,6 +2879,167 @@ mod tests {
         );
     }
 
+    /// The whole pass, run headless, with the resource counts read off
+    /// the world afterwards.
+    ///
+    /// **This is the stress test the architecture exists to pass.** It
+    /// builds the real pool, hangs N panes on one wall in front of a
+    /// real eye with a real frustum, runs [`aim_skies`] itself, and then
+    /// counts what the frame actually costs: cameras, targets, and lit
+    /// glass. Nothing here is a stand-in — the only thing missing is the
+    /// GPU, and the GPU is not what scales badly.
+    fn stress(n: usize, how: Grouping) -> (usize, usize, usize) {
+        use bevy::ecs::system::RunSystemOnce as _;
+
+        let mut world = bevy::ecs::world::World::new();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let targets: [Handle<Image>; MAX_SKIES] =
+            std::array::from_fn(|_| images.add(void_target(UVec2::splat(PANE_MIN))));
+        let flood = materials.add(StandardMaterial::default());
+
+        // The eye: mid-cabin, looking at the wall the glass is on.
+        let eye = Vec3::new(0.0, 1.5, 0.9);
+        let view = Mat4::look_to_rh(eye, Vec3::NEG_Z, Vec3::Y);
+        let clip = Mat4::perspective_infinite_reverse_rh(1.0, 16.0 / 9.0, 0.1);
+        world.spawn((
+            GlobalTransform::from_translation(eye),
+            Frustum(bevy::math::primitives::ViewFrustum::from_clip_from_world(
+                &(clip * view),
+            )),
+            CabinCamera,
+        ));
+
+        // The pool, exactly as `spawn_void` lays it out.
+        for slot in 0..MAX_SKIES {
+            world.spawn((
+                Camera {
+                    is_active: false,
+                    ..default()
+                },
+                Projection::custom(Aperture {
+                    left: -1.0,
+                    right: 1.0,
+                    bottom: -1.0,
+                    top: 1.0,
+                    near: 0.1,
+                    far: VOID_FAR,
+                }),
+                Transform::default(),
+                Sky(slot),
+            ));
+            world.spawn((Transform::default(), Visibility::Hidden, Flood, Sky(slot)));
+        }
+
+        // The glass: a row of panes down the front wall, each with its
+        // own material exactly as a piece rig gives it one.
+        let glass: Vec<Handle<StandardMaterial>> = (0..n)
+            .map(|i| {
+                let x = (i as f32).mul_add(0.42, -1.4);
+                let handle = materials.add(StandardMaterial::default());
+                world.spawn((
+                    GlobalTransform::from(
+                        Transform::from_xyz(x, 1.4, -1.9).with_scale(Vec3::new(0.32, 0.30, 1.0)),
+                    ),
+                    MeshMaterial3d(handle.clone()),
+                    SkyPane,
+                ));
+                handle
+            })
+            .collect();
+
+        world.insert_resource(Skies {
+            images: targets,
+            sizes: [UVec2::splat(PANE_MIN); MAX_SKIES],
+            flood,
+            lit: 0,
+        });
+        world.insert_resource(how);
+        world.insert_resource(SkyClock::default());
+        world.insert_resource(images);
+        world.insert_resource(materials);
+        world.run_system_once(aim_skies).expect("the aim runs");
+
+        let drawing = world
+            .query::<(&Camera, &Sky)>()
+            .iter(&world)
+            .filter(|(camera, _)| camera.is_active)
+            .count();
+        let materials = world.resource::<Assets<StandardMaterial>>();
+        let lit = glass
+            .iter()
+            .filter(|handle| {
+                materials
+                    .get(*handle)
+                    .is_some_and(|mat| mat.emissive_texture.is_some())
+            })
+            .count();
+        (drawing, world.resource::<Skies>().images.len(), lit)
+    }
+
+    /// **Layer isolation, checked on the actual spawn.** One number
+    /// keeps the hull solid from inside and stops starlight leaking
+    /// through a wall ([`VOID_LAYER`]), and the way it fails is not
+    /// subtle reasoning — it is somebody adding a body out there and
+    /// forgetting `outside()`. So the void is built for real and every
+    /// last thing it spawned is asked which layer it is on.
+    #[test]
+    fn nothing_out_there_is_on_the_cabin_s_layer() {
+        use bevy::ecs::system::RunSystemOnce as _;
+
+        let mut world = bevy::ecs::world::World::new();
+        world.insert_resource(Assets::<Mesh>::default());
+        world.insert_resource(Assets::<StandardMaterial>::default());
+        world.insert_resource(Assets::<Image>::default());
+        world.run_system_once(spawn_void).expect("the void builds");
+
+        let void = outside();
+        let cabin = RenderLayers::default();
+        assert!(
+            !void.intersects(&cabin),
+            "the void's layer must not be the cabin's"
+        );
+        // Everything the void spawns is POSED — a body, a lamp, a
+        // camera. Bevy keeps its own bookkeeping in entities too, and
+        // those are not the void's.
+        let mut drawn = world.query_filtered::<(Entity, Option<&RenderLayers>), With<Transform>>();
+        let mut counted = 0;
+        for (entity, layers) in drawn.iter(&world) {
+            // The flood quads and the bodies alike: everything the void
+            // spawned wears the void's layer, or the cabin camera would
+            // draw a star through a wall.
+            let Some(layers) = layers else {
+                panic!("{entity} left the void with no layer at all");
+            };
+            assert!(
+                !layers.intersects(&cabin),
+                "{entity} is visible to the cabin camera"
+            );
+            counted += 1;
+        }
+        assert!(counted > MAX_SKIES, "the void is more than its cameras");
+        // The one deliberate exception, and it is dev tooling: the
+        // drydock view lets the cabin camera see BOTH (`rig`).
+        let drydock = RenderLayers::from_layers(&[0, VOID_LAYER]);
+        assert!(drydock.intersects(&void) && drydock.intersects(&cabin));
+    }
+
+    /// N panes, one wall: the cameras and the targets do not move, and
+    /// every pane is lit. The control arm pays a camera apiece, which is
+    /// the bill this pass was written to stop paying.
+    #[test]
+    fn the_frame_costs_the_same_however_many_windows_hang() {
+        for n in [1_usize, 2, 4, 8] {
+            let (cameras, targets, lit) = stress(n, Grouping::Wall);
+            assert_eq!(cameras, 1, "{n} panes on one wall lit {cameras} cameras");
+            assert_eq!(targets, MAX_SKIES, "the pool is allocated once, at boot");
+            assert_eq!(lit, n, "every pane must show the sky it shares");
+            let (control, _, control_lit) = stress(n, Grouping::Pane);
+            assert_eq!(control, n, "the control arm pays per pane");
+            assert_eq!(control_lit, n, "and lights the same glass, dearer");
+        }
+    }
+
     /// The gathering is STABLE: the same glass in any query order plans
     /// the same skies in the same slots. A slot that wandered would swap
     /// two windows' views for one frame every time the crew walked past,

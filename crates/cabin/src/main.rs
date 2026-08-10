@@ -77,6 +77,13 @@ struct ShotMode {
 /// numbers are meaningless in absolute terms wherever this runs (the
 /// container's GPU is llvmpipe, in software); the CURVE across
 /// `--panes 1 2 4 8` is the whole reading.
+///
+/// It reads `Time<Real>` and not the game clock, deliberately: the
+/// virtual clock CLAMPS a long frame (Bevy's `max_delta`, a quarter of
+/// a second) so that a stalled frame cannot throw the sim's catch-up.
+/// That is exactly right for the game and exactly wrong for a gauge —
+/// it silently floors every measurement worse than the clamp, which is
+/// to say every measurement the gauge exists to take.
 #[derive(Resource)]
 struct Gauge {
     want: u32,
@@ -327,7 +334,7 @@ fn main() {
 /// panes were hanging and how many skies the exterior actually drew for
 /// them. See [`Gauge`].
 fn gauge(
-    time: Res<Time>,
+    time: Res<Time<bevy::time::Real>>,
     skies: Option<Res<viewport::Skies>>,
     mut mode: ResMut<Gauge>,
     mut exit: MessageWriter<AppExit>,

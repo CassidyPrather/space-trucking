@@ -742,6 +742,10 @@ mod tests {
             Kind::Rug,
             Kind::PaintTin,
             Kind::LuminousPaint,
+            // The window family joins the same law: a kind nobody ever
+            // asks for is a kind with a column and no economy.
+            Kind::Porthole,
+            Kind::BayWindow,
         ] {
             let asked = (0..POI_COUNT as PoiId).any(|station| {
                 (1..=300).any(|n| {

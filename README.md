@@ -25,7 +25,8 @@ cargo run --release -p cabin -- --dev # with the 16x warp unlocked
 ```
 
 Dev builds trade frame rate for compile speed; dev tooling:
-`-- --shot out.png --view desk` renders one screenshot and exits, and
+`-- --shot out.png --view bay` renders one screenshot and exits
+(`--menu` raises the Esc menu for the shot), and
 `-- --fixture` boots the developer showcase save — one of every cargo
 kind across every berth class, mid-run and actuated off defaults — in
 a sandbox that never touches your real save. Sweep the whole
@@ -35,15 +36,18 @@ board legal as rules grow.
 Controls: mouse looks and `WASD` walks; aim at a station and click
 (or `E`) to focus it — the camera glides to a fitted viewpoint and the
 cursor frees for the usual clicking and dragging. `Esc`, right-click, or
-`E` steps back out of a station; `Esc` while roaming hands the cursor
-back to your desktop (click the game to reclaim it). Cargo lives in the
-aft bay and is carried, not dragged: walk up, aim the crosshair at a
-piece and click to pick it up, walk it over, click a berth to set it
-down — clicking at nothing (or right-clicking) sends it back where it
-came from, and `Shift`+click quick-moves without carrying. Drop a small
-item onto a cabinet and it takes a cubby; a loaded cabinet won't budge
-until it's emptied. Rugs and paint *lay into* the room instead of
-occupying it: a rug goes down on the deck (and cargo stands on it),
+`E` steps back out of a station; `Esc` while roaming raises the menu —
+pause, fast-forward, mute, and the delivery tally — and hands the cursor
+back, so you can reach your desktop too (`Esc` again puts it away).
+Space, `F`, and `M` throw the same three toggles from the keyboard.
+Cargo lives in the aft bay and is carried, not dragged: walk up, aim
+the crosshair at a piece and click to pick it up, walk it over, click a
+berth to set it down — clicking at nothing (or right-clicking) sends it
+back where it came from, and `Shift`+click quick-moves without
+carrying. Drop a small item onto a cabinet and it takes a cubby; a
+loaded cabinet won't budge until it's emptied. Rugs and paint *lay
+into* the room instead of occupying it: a rug goes down on the deck
+(and cargo stands on it),
 paint coats a wall or floor cell, and neither comes back up while
 something stands on top. Luminous paint really glows — rats keep clear
 of it. The launch lever is a pull: grab, drag
@@ -102,6 +106,7 @@ and at stranger berths the counter shows stranger things.
 | `WASD`          | walk the cabin                                             |
 | `E`             | focus / unfocus the aimed station                          |
 | `Shift`+click   | quick-move a piece to its obvious destination              |
+| `Esc`           | step out of a station, else raise/lower the menu           |
 | `Space`         | pause                                                      |
 | `M`             | mute                                                       |
 | `R`             | new run                                                    |

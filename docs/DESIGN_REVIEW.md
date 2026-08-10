@@ -90,6 +90,12 @@ changing; remove a line only by shipping it or striking it in review.
   the cabin: the tutor ghost, `--replay` playback, a wasm/web build
   (Bevy compiles to wasm when wanted), the telemetry consent surface,
   and the retired console's per-rule violation glyphs)
+- Anything else in the `Esc` menu. The meta-controls landed there when
+  the console face came off the wall — pause, fast-forward, mute, the
+  delivery tally, all icons and no words — and settings, keybinds, and
+  a save browser are all deferred on the same grounds the game defers
+  text: the moment a menu starts explaining itself, it has started
+  explaining the game
 - ~~Barter redesign~~ — struck in review, decided by decree: the barter
   interface is *removed*, not redesigned, and stations become attached
   rooms cargo is carried into (docs/ROOMS.md). The economy survives its

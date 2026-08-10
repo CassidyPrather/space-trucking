@@ -58,8 +58,9 @@ cabin's art rules live in `docs/ART_DIRECTION_3D.md`.
   pointer frames (lever pulls, carry), `palette.rs` restates the palette
   discipline (purity test included), `canvas.rs`+`crt.rs` are the software
   rasterizer behind the phosphor screens, and the view modules
-  (`console`, `barter`, `pieces`, `viewport`, `fx`, `audio`) read sim
-  accessors onto geometry. Native-only for now.
+  (`room`, `pieces`, `viewport`, `fx`, `audio`) read sim accessors onto
+  geometry. `menu` is the one surface that is not in the room: the Esc
+  overlay carrying the meta-controls. Native-only for now.
 
 ## Commands
 
@@ -71,7 +72,7 @@ cargo fmt                                            # format
 cargo test --workspace                               # test
 cargo bench --bench sim_bench -- --quick             # bench
 cargo audit                                          # audit
-cargo run -p cabin -- --shot out.png --view desk     # headless screenshot
+cargo run -p cabin -- --shot out.png --view bay      # headless screenshot
 ```
 
 ## Solid vs. soft (change tolerance)
@@ -84,11 +85,11 @@ walls are load-bearing:
   formats, the `InputFrame` contract, and the cabin's bridge/surface
   contract (surfaces map layout rects; the sim does all hit-testing).
 - **Soft — expected to churn freely**: every cabin view module (`crt`,
-  `console`, `barter`, `pieces`, `viewport`, `fx`), the rig's room
-  layout (data-first geometry + invariant/sightline tests make
-  rearrangement cheap), palette values, canvas paintings, audio gains.
-  The barter economy and its presentation are *expected* to be redesigned
-  until they click — playtest verdict — so avoid deep investment there.
+  `room`, `pieces`, `viewport`, `fx`, `menu`), the rig's room layout
+  (data-first geometry + invariant/sightline tests make rearrangement
+  cheap), palette values, canvas paintings, audio gains. The barter
+  economy and its presentation are *expected* to be redesigned until
+  they click — playtest verdict — so avoid deep investment there.
 - **Amend-in-the-same-change**: the art direction docs and
   `docs/DESIGN_REVIEW.md`'s deferred list — divergence without amendment
   is the failure mode, not change itself.

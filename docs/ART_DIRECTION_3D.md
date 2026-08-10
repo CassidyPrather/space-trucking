@@ -10,39 +10,53 @@ different rule amends this file in the same change.
 
 **You are aboard. The console became a room.**
 
-The 2D console's regions are physical stations bolted into a cramped
-freighter cabin, arranged so muscle memory transfers: the star map is a
-recessed phosphor tank on the left wall, the console face (destination
-screen, ETA gauge, launch lever, icon buttons) front-right, the barter
-counter low-right, the transit window front and center — and the aft
-half of the cabin is the **walkable cargo bay**, where the hold grid
-unfolds onto the wall and deck at furniture scale (see
-[BAY.md](BAY.md)). DESIGN.md calls the first 3D pass "an enclosed box
-with flavor"; the flavor is ribs, pipes, and panel mass, not detail
-assets.
+The 2D console's regions began as physical stations bolted into a
+cramped freighter cabin — tank on the left wall, console face
+front-right, barter counter low-right — and then, one at a time, they
+stopped being bolted to anything. **The hull owns no panels now.** The
+readings and the pulls are cargo you hang where you like (BAY.md,
+"Instruments are cargo"), the counter left with the barter interface
+(ROOMS.md), and the console face's last tenants — pause, warp, mute,
+the hangar tally — were never in the room to begin with: they are the
+`Esc` menu, an overlay that admits it is one. What the ship itself owns
+is architecture and the **walkable cargo bay**, where the room net
+unfolds onto wall and deck at furniture scale (see [BAY.md](BAY.md)).
+DESIGN.md calls the first 3D pass "an enclosed box with flavor"; the
+flavor is ribs, pipes, and hull mass, not detail assets.
 
 Two camera postures, and the camera **never trails the cursor** — every
 move is deliberate, nothing to get seasick over:
 
 - **Roaming**: conventional first person. Pointer locked, mouse looks,
   WASD walks a clamped envelope, a small glint crosshair marks aim. Aim
-  at a station and its frame invites with a glint outline.
+  at an instrument and its own rig invites with a glint outline — the
+  tell belongs to the piece, because the station does.
 - **Focused**: click (or `E`) glides the camera (~0.4 s, eased, no
-  overshoot) to that station's authored viewpoint; the cursor frees and
-  precise sim interaction works exactly as in 2D. `Esc`, right-click, or
-  `E` steps back out. The two desk panels share one viewpoint so cargo
-  drags can cross from hold to counter without leaving focus.
+  overshoot) to that station's viewpoint, wherever the cargo carrying it
+  hangs; the cursor frees and precise sim interaction works exactly as
+  in 2D. `Esc`, right-click, or `E` steps back out.
+- **The menu**: `Esc` while roaming raises the meta-controls — pause,
+  fast-forward (dev), mute, the delivery tally — as a screen overlay,
+  and frees the cursor exactly as `Esc` always did. It is deliberately
+  *not* diegetic: those four are things you do to the game, not things
+  aboard the ship, and the previous arrangement had the cabin claiming
+  to contain its own volume knob. Zero text like everything else: the
+  icons are stamped from bit rows into colored nodes, palette roles
+  only, with a lamp under each button and a slash that carries mute by
+  shape. The sim keeps ticking behind it — the only pause in the game is
+  the sim's own, folded in through the same `InputFrame` toggles the
+  keys throw.
 
 Focus viewpoints are *fitted*, not eyeballed: each is derived from its
-panel group's extents and the camera FOV, so panels fill the view and a
-retuned panel moves its viewpoint with it. Stations only need to look
-composed from their focus pose and presentable in passing — the focused
-view is the contract, the roam is atmosphere.
+surface group's extents and the camera FOV, so the station fills the
+view and moving the cargo moves the viewpoint with it. Stations only
+need to look composed from their focus pose and presentable in passing —
+the focused view is the contract, the roam is atmosphere.
 
 The sim is the same one the 2D console ran — same save string, same
 flight-recorder tape; the console itself retired once the bay work
 began (the decision is recorded in [BAY.md](BAY.md)). Every interactive
-panel is a `SimSurface`: an oriented quad bound to a rect of the sim's
+surface is a `SimSurface`: an oriented quad bound to a rect of the sim's
 800×600 logical world. The cursor ray — or, in the bay, the roaming
 crosshair ray — maps through the surface into sim coordinates, so the
 sim keeps making every ruling, and hit-tests can never disagree with
@@ -52,7 +66,7 @@ the rules.
 
 | Family | Elements | Treatment |
 | --- | --- | --- |
-| **Worn metal** | walls, panel slabs, wells, levers, buttons, dial housing | lit `StandardMaterial`, high roughness, palette roles; brass gets real metalness |
+| **Worn metal** | walls, hull slabs, wells, levers, handles, rig frames | lit `StandardMaterial`, high roughness, palette roles; brass gets real metalness |
 | **Phosphor & lamps** | tank readings, route lines, lamps, crate glow, dial fill | emissive materials on near-black bodies; bloom supplies the halo |
 
 The rule of thumb: if the 2D console drew it on a CRT or as a lamp, it is
@@ -152,27 +166,31 @@ shake, lamps carry lit-versus-dark-glass, rows sit at fixed stations.
 
 ## Keeping geometry honest
 
-The class of defect where furniture swallows a panel edge, or a viewpoint
+The class of defect where a mass swallows a face's edge, or a viewpoint
 clips a wall, is handled structurally, not by eyeballing:
 
 - Structural masses are **data before entities** (`rig::structure()`),
-  and anything that must relate to a panel — the desk supports, the
-  focus viewpoints — is **derived from the panel's own corners and
-  extents**, never authored twice.
-- Unit tests walk the invariants: no slab may contain any sample point
-  of any panel face, every focus pose must be a legal camera position
-  facing its panels, and the roaming envelope must be clear of every
-  slab. Break the layout and the build breaks.
+  and anything that must relate to a surface — the focus viewpoints, a
+  rig's own face — is **derived from that surface's corners and
+  extents**, never authored twice. Nothing is measured off a panel any
+  more, because there are no panels.
+- Unit tests walk the invariants: every focus pose must be a legal
+  camera position facing its station, the roaming envelope must be clear
+  of every slab, and **every cell of the net must be workable** — that
+  last one used to forgive cells a station panel stood in front of, and
+  the exemption retired with the panels. Break the layout and the build
+  breaks.
 - **Sightlines are tested, not eyeballed**: from each station's focus
-  viewpoint, every panel corner and every interactive control (levers,
-  dial, slots, buttons, grid cells) must sit inside the camera frustum
-  with an unoccluded line from the eye — checked by frustum math plus
-  occlusion rays against every slab and panel plate. A control that a
-  refit pushes off-screen or behind furniture fails the build with the
-  blocking geometry named.
+  viewpoint, every corner of its face and every interactive control
+  (levers, grid cells) must sit inside the camera frustum with an
+  unoccluded line from the eye — checked by frustum math plus occlusion
+  rays against every slab. Hull is the only thing that can be in the
+  way, and a control a refit pushes off-screen or behind it fails the
+  build with the blocking geometry named.
 - The cabin has a **screenshot mode** (`--shot out.png`, optionally
-  `--view tank|lever|console|desk`) that renders, saves one capture, and
-  exits. It runs headless under xvfb with llvmpipe, so visual review
+  `--view tank|lever|bay|front|starboard` or a room's name, and `--menu`
+  to raise the `Esc` menu for the shot) that renders, saves one capture,
+  and exits. It runs headless under xvfb with llvmpipe, so visual review
   happens in CI-shaped environments too — geometry changes should come
   with fresh captures, looked at.
 
@@ -234,8 +252,8 @@ Answered by iteration so far:
   splitmix-seeded 96×96 tiles — value-noise blotches, fourteen
   scratches, scuffs, edge grime — multiplying the palette tint through
   `base_color_texture`, never darker than ~3% net. The hull, plates,
-  and desk each get their own character; hazard striping paints the
-  desk lips. No unweathered surfaces, no asset files.
+  and deck each get their own character; hazard striping paints the
+  bay's front lip. No unweathered surfaces, no asset files.
 - **The window earned the front wall** (`viewport.rs`): a painted
   canvas, not a CRT — no scanlines, no phosphor; stars are glint-white.
   Streaks stretch under warp, the destination grows on approach, the
@@ -244,14 +262,18 @@ Answered by iteration so far:
   *window showing space* is the material discipline, kept.
 
 - **The hold left the desk** ([BAY.md](BAY.md)): the grid unfolds onto
-  the cabin's aft wall and deck at furniture scale, carry replaces
-  drag, and the counter keeps desk scale as the broker's diorama until
-  the barter redesign lands.
+  the cabin's walls and deck at furniture scale and carry replaces drag.
+  The counter that kept desk scale as the broker's diorama is gone —
+  stations are rooms you carry cargo into ([ROOMS.md](ROOMS.md)) — and
+  with the console face following it off the wall, the fixed UI is done:
+  every reading aboard rides a piece, and the four controls that were
+  never readings live in the `Esc` menu.
 
 Deliberately unsettled, still:
 
 - Whether the crunch target should breathe with window size or stay
   fixed 16:9 letterboxed.
 - How far bloom can carry the CRT reading before it goes syrupy.
-- Where the barter counter's presentation goes when the economy design
-  work starts (the diorama conceit is a placeholder, not a promise).
+- How much the `Esc` menu should eventually hold. It is four controls
+  and a tally today, deliberately: a menu is the easiest place in a
+  wordless game to start explaining things, and it must not.

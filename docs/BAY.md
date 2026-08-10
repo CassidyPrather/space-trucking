@@ -96,7 +96,10 @@ so no further investment lands there now.
 > Settled since, by decree: the counter is **removed**, not redesigned,
 > and the drag grammar goes with it — carry is the only gesture left.
 > Stations become attached rooms you carry cargo into. See
-> [ROOMS.md](ROOMS.md).
+> [ROOMS.md](ROOMS.md). The console face went the same way a slice
+> later: its readings had already left as cargo, and what remained —
+> pause, warp, mute, the hangar tally — moved to the `Esc` menu, which
+> is where controls that are *about* the game rather than in it belong.
 
 ## The cabinet: furniture that stores
 
@@ -406,7 +409,15 @@ of. Three guards, all sim-side and monkey-proven:
 - **The logical rects stay the law**: `layout::MAP_PANEL` et al. never
   move; the *binding* moves — a mounted instrument carries its
   station's `SimSurface` at its own cells, so rulings and tape format
-  never hear about it. The fixed console retires piece by piece.
+  never hear about it. The fixed console retired piece by piece, and
+  then entirely: **the hull owns no panels.** The face's last tenants
+  were the pause/warp/mute buttons and the hangar tally, which were
+  never readings at all — they are the `Esc` menu now (an overlay, not
+  a station), and their icon rects survive in `layout` only because the
+  sim still asks whether a press landed on one. Their hardware — the
+  stamped icons, the lamp feel, the tally strip's delivery blink —
+  waits compiled and unused in `console.rs`, written against a plain
+  `SimSurface`, for whoever makes it a `Kind`.
 - **Function follows presence**: charting needs a `ChartTank` aboard,
   launching needs a `LaunchLever` — predicates in the shape of
   `transit_chit_aboard`. The ETA gauge is passive.
@@ -417,7 +428,8 @@ of. Three guards, all sim-side and monkey-proven:
   the window piece wears the viewport's painted sky (sell your window,
   lose the view), the chart tank and destination preview wear the
   CRT's live textures, and the ETA gauge's needle reads the leg — the
-  console's arc and preview glass retired with them.
+  console's arc and preview glass retired with them, and the plate they
+  were screwed to followed.
 - **The handle rule** (the click-vs-carry answer, by decree): a
   click-functional piece wears a physical AMBER carry handle, and the
   handle IS the carry hitbox — hover the handle and a click means

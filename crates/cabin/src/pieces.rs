@@ -1175,7 +1175,7 @@ fn sync_pieces(
     skin: Res<Skin>,
     shared: Res<SharedBits>,
     screens: Option<Res<crate::crt::Screens>>,
-    pane: Option<Res<crate::viewport::Pane>>,
+    skies: Option<Res<crate::viewport::Skies>>,
     surfaces: Query<(&Station, &SimSurface)>,
     mut index: ResMut<PieceIndex>,
     mut settle: ResMut<PendingSettle>,
@@ -1234,7 +1234,7 @@ fn sync_pieces(
             let glasses = ScreenGlasses {
                 map: screens.as_ref().map(|s| s.map.clone()),
                 preview: screens.as_ref().map(|s| s.preview.clone()),
-                sky: pane.as_ref().map(|p| p.image.clone()),
+                sky: skies.is_some(),
             };
             let entity = spawn_rig(
                 &mut commands,
@@ -2389,11 +2389,15 @@ struct RigParts<'w, 's, 'a> {
     images: &'a mut Assets<Image>,
     skin: &'a Skin,
     /// The live screen textures the instrument pieces wear: the chart
-    /// tank's map, the destination preview's glass, the window's sky.
-    /// `None` in headless paths; the builders fall back to phosphor.
+    /// tank's map and the destination preview's glass. `None` in
+    /// headless paths; the builders fall back to phosphor.
     map_image: Option<Handle<Image>>,
     preview_image: Option<Handle<Image>>,
-    sky_image: Option<Handle<Image>>,
+    /// Whether the void is standing. A window's glass is hung DARK and
+    /// dressed by `viewport::aim_skies` every frame — which sky it reads
+    /// and which rectangle of it is its own are facts about where the
+    /// crew hung it, so the rig neither knows nor asks.
+    sky: bool,
     root: Entity,
     /// The amber grab's own emissive, filled in by [`carry_grab`] on
     /// the kinds that wear one — [`hover_glint`] flares it.
@@ -2581,7 +2585,7 @@ fn carry_grab(rig: &mut RigParts<'_, '_, '_>, kind: Kind, fw: f32, fh: f32, z: f
 struct ScreenGlasses {
     map: Option<Handle<Image>>,
     preview: Option<Handle<Image>>,
-    sky: Option<Handle<Image>>,
+    sky: bool,
 }
 
 /// Spawn one piece's whole rig at `place`: the kind's silhouette in local
@@ -2618,7 +2622,7 @@ fn spawn_rig(
         skin,
         map_image: glasses.map.clone(),
         preview_image: glasses.preview.clone(),
-        sky_image: glasses.sky.clone(),
+        sky: glasses.sky,
         root: body_root,
         grab: None,
     };
@@ -3298,16 +3302,18 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
             }
         }
         // The exterior window: a brass frame around a hole in the hull.
-        // The glass wears the porthole's own render of what is actually
-        // outside, and it carries `viewport::SkyPane` — which is the
-        // whole contract between this furniture and the view. The
-        // aperture the void is seen through IS this quad, wherever the
-        // crew rehang it (the whimsy rule made physical; the void
-        // follows). Headless paths fall back to a phosphor pane with a
-        // stand-in star scatter seeded by the piece id.
+        // The glass carries `viewport::SkyPane` — which is the whole
+        // contract between this furniture and the view — and it is hung
+        // DARK, because what is out there depends on where the crew put
+        // it and the furniture is in no position to know. `aim_skies`
+        // dresses it every frame: the aperture the void is seen through
+        // IS this quad, wherever the crew rehang it (the whimsy rule
+        // made physical; the void follows), and panes sharing a wall
+        // share one render of it. Headless paths fall back to a phosphor
+        // pane with a stand-in star scatter seeded by the piece id.
         Kind::Window => {
-            if let Some(image) = rig.sky_image.clone() {
-                let glass = crate::viewport::pane_glass(rig.materials, &image);
+            if rig.sky {
+                let glass = crate::viewport::pane_glass(rig.materials);
                 let pane = rig.part(
                     Rectangle::new(1.0, 1.0),
                     glass,

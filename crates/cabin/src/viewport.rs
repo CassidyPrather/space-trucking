@@ -6,20 +6,30 @@
 //! and a picture is exactly what a window is not. What lives here now is
 //! a **real exterior**, in world space, seen through a **real aperture**.
 //!
-//! Three ideas carry it:
+//! Four ideas carry it:
 //!
 //! - **The void is a place, not a texture.** Stars, the destination, the
 //!   berth alongside, the company that calls, and the ship's own hull all
 //!   stand in world coordinates on their own render layer
 //!   ([`VOID_LAYER`]). Nothing about them knows a window exists.
-//! - **The window is a hole, and a hole has a frustum.** [`aim_porthole`]
+//! - **The window is a hole, and a hole has a frustum.** [`aim_skies`]
 //!   reads the glass quad's live pose — the piece rig's, wherever the
 //!   crew rehung it — and builds the eye's **off-axis** projection
-//!   through it ([`Porthole`]): apex at the eye, near plane cut on the
+//!   through it ([`Aperture`]): apex at the eye, near plane cut on the
 //!   aperture. Move your head and the frustum shears; the same pane
 //!   frames different space. Look at it from the side and you see what is
 //!   out there in *that* direction. That is not a parallax effect, it is
 //!   the projection actually being right.
+//! - **Windows are cargo, so there are as many as the crew bought — and
+//!   one wall is one sky.** Panes bolted to the same plane share ONE
+//!   render: the sky is drawn once through the rectangle that bounds
+//!   them all, and each pane reads its own rectangle back out of it
+//!   ([`Sky`], [`sub_uv`]). That is not an approximation. Two co-planar
+//!   apertures from one eye differ only by which sub-rectangle of the
+//!   same near plane they cut, so the bigger render CONTAINS the smaller
+//!   one exactly, and the remap between them is affine — which is what a
+//!   material's `uv_transform` is. Eight windows on a wall cost one pass
+//!   over the exterior, not eight ([`MAX_SKIES`] bounds the whole thing).
 //! - **The ship's outside is the lattice's outside.** Every attached
 //!   room's shell ([`hull_outside`]) is grown from the very `room::Plan`
 //!   pose its interior is built from, so the trade room you walked out of
@@ -39,10 +49,11 @@
 
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
+use bevy::camera::primitives::{Frustum, Sphere as Bounds};
 use bevy::camera::visibility::RenderLayers;
 use bevy::camera::{CameraProjection, Hdr, RenderTarget, SubCameraView};
 use bevy::image::ImageSampler;
-use bevy::math::Vec3A;
+use bevy::math::{Affine2, Vec3A};
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::post_process::bloom::Bloom;
 use bevy::prelude::*;
@@ -51,8 +62,8 @@ use bevy::transform::TransformSystems;
 
 use space_trucking::sim::room::RoomKind;
 use space_trucking::sim::{
-    COMET, Cue, EncounterKind, GUILD, PoiId, SATURN, ShipState, Sim, WANDERER, WARP_FACTOR,
-    splitmix,
+    COMET, Cue, EncounterKind, GUILD, PoiId, SATURN, ShipState, Sim, Vec2 as SimVec2, WANDERER,
+    WARP_FACTOR, splitmix,
 };
 
 use crate::palette;
@@ -199,8 +210,31 @@ const HULL_REACH: f32 = 0.5;
 const PANE_DENSITY: f32 = 176.0;
 
 /// Texel bounds per axis: never a smear, never a second render budget.
+/// The ceiling is the graceful degradation the whole pass leans on — a
+/// sky wider than `PANE_MAX / PANE_DENSITY` metres crunches coarser
+/// rather than costing more, which is what stops a wall of glass from
+/// quietly becoming the frame budget.
 const PANE_MIN: u32 = 32;
 const PANE_MAX: u32 = 256;
+
+/// **The hard bound on the whole exterior pass**: how many skies the
+/// cabin will draw in one frame, whatever the crew has hung.
+///
+/// A sky is one render of the outside through one aperture. Panes on the
+/// same plane share one ([`Grouping::Wall`]), so this is a count of
+/// *walls with glass in them that the eye can actually see*, not of
+/// windows — a room has four walls, and a crew would have to be looking
+/// at eight window-bearing planes at once to reach it. Beyond it, the
+/// remaining panes go dark: honest black glass, never a stale sky or
+/// somebody else's. The cameras and their targets are allocated ONCE at
+/// boot and reused, so hanging a ninth window allocates nothing at all.
+pub const MAX_SKIES: usize = 8;
+
+/// How far apart two panes' planes may drift and still count as one
+/// wall, in millimetres of normal and of offset. Rigs bolted to the same
+/// chart land on the same plane to the last bit; the tolerance is for
+/// float noise, not for architecture.
+const PLANE_GRAIN: f32 = 1000.0;
 
 /// The porthole's far plane, metres — past the deep field.
 const VOID_FAR: f32 = 4000.0;
@@ -215,28 +249,60 @@ const STARLIGHT: f32 = 22_000.0;
 
 // ------------------------------------------------------------- the plumbing --
 
-/// The glass the sky is seen through, and the texture the porthole draws
-/// into. Crate-visible because the transit window is CARGO: its piece rig
-/// wears this image on its pane wherever it is rehung.
+/// The pool of exterior renders, allocated once at boot and reused
+/// forever. Crate-visible because the transit window is CARGO: a piece
+/// rig asks whether the void is available at all, and the glass it hangs
+/// is dressed from here every frame ([`aim_skies`]).
+///
+/// `sizes` is each target's live texel count, tracked so a rehung window
+/// re-cuts its sky to the new aperture instead of stretching the old one.
 #[derive(Resource)]
-pub struct Pane {
-    pub image: Handle<Image>,
-    /// The target's texel size, tracked so a rehung window re-cuts it to
-    /// its new aperture instead of stretching the old one.
-    size: UVec2,
+pub struct Skies {
+    images: [Handle<Image>; MAX_SKIES],
+    sizes: [UVec2; MAX_SKIES],
+    /// The jump's violet, shared by every flood in the pool: one flash,
+    /// however many windows it comes through.
+    flood: Handle<StandardMaterial>,
+    /// How many skies the last frame actually drew — the number the
+    /// stress test reads, and the number that must not track pane count.
+    lit: usize,
 }
 
-/// The window's own glass quad. `pieces::build_kind` tags it; the
-/// porthole aims through whatever wears this, so hitting the tag is the
-/// whole contract between the furniture and the view.
+impl Skies {
+    /// How many skies were drawn last frame.
+    #[must_use]
+    pub const fn lit(&self) -> usize {
+        self.lit
+    }
+}
+
+/// How panes are gathered into skies. Dev tooling in one respect only:
+/// [`Grouping::Pane`] exists so the shipped law can be MEASURED against
+/// the thing it replaced, on the same code path, in the same frame loop.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Grouping {
+    /// **The law.** One sky per wall plane: every co-planar pane reads
+    /// its own rectangle out of one render of the outside.
+    #[default]
+    Wall,
+    /// One sky per pane, which is what the first exterior pass did — a
+    /// camera and a target apiece. Kept reachable (`--grouping pane`)
+    /// because "it scales" is a claim, and a claim wants a control.
+    Pane,
+}
+
+/// The window's own glass quad. `pieces::build_kind` tags it; the skies
+/// aim through whatever wears this, so hitting the tag is the whole
+/// contract between the furniture and the view.
 #[derive(Component)]
 pub struct SkyPane;
 
-/// The camera that draws the void into the pane.
-#[derive(Component)]
-struct Porthole;
+/// One of the pooled cameras that draws the void, and which slot of
+/// [`Skies`] it paints.
+#[derive(Component, Clone, Copy)]
+struct Sky(usize);
 
-/// The flood quad, parented to the porthole and sized to its near plane.
+/// The flood quad, parented to a sky camera and sized to its near plane.
 #[derive(Component)]
 struct Flood;
 
@@ -343,28 +409,48 @@ type CallerQuery<'w, 's> = Query<
     (Without<Deep>, Without<Fleck>, Without<World>, Without<Mast>),
 >;
 
-/// The porthole camera, its aperture, and its pose.
-type PortholeQuery<'w, 's> = Query<
+/// The pooled sky cameras: which slot each paints, its aperture, and its
+/// pose.
+type SkyQuery<'w, 's> = Query<
     'w,
     's,
     (
+        &'static Sky,
         &'static mut Camera,
         &'static mut Projection,
         &'static mut Transform,
     ),
-    (With<Porthole>, Without<Flood>),
+    (Without<Flood>, Without<CabinCamera>),
 >;
 
-/// The flood quad riding the porthole's near plane.
+/// The flood quads riding each sky's near plane, tagged with the slot
+/// they belong to.
 type FloodQuery<'w, 's> = Query<
     'w,
     's,
     (
+        &'static Sky,
         &'static mut Transform,
-        &'static MeshMaterial3d<StandardMaterial>,
         &'static mut Visibility,
     ),
     With<Flood>,
+>;
+
+/// The crew's own eye: where it stands, and what it can see from there.
+type EyeQuery<'w, 's> =
+    Query<'w, 's, (&'static GlobalTransform, &'static Frustum), (With<CabinCamera>, Without<Sky>)>;
+
+/// Every pane standing this frame: its live pose and the glass material
+/// the sky is dressed onto.
+type GlassQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static GlobalTransform,
+        &'static MeshMaterial3d<StandardMaterial>,
+    ),
+    With<SkyPane>,
 >;
 
 /// Motion clocks the sim refuses to own: a held phase clock, a streaming
@@ -419,6 +505,7 @@ pub struct ViewportPlugin;
 impl Plugin for ViewportPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SkyClock>()
+            .init_resource::<Grouping>()
             .add_systems(PostStartup, spawn_void)
             .add_systems(
                 Update,
@@ -426,23 +513,33 @@ impl Plugin for ViewportPlugin {
             )
             // The aperture is the piece rig's own pose, and a rig's world
             // pose is only true once the propagation has run — so the aim
-            // waits for it rather than reading a frame-old window.
-            .add_systems(PostUpdate, aim_porthole.after(TransformSystems::Propagate));
+            // waits for it rather than reading a frame-old window. The
+            // eye's own frustum is settled by then too, which is what the
+            // "a pane nobody is looking at costs nothing" rule reads.
+            .add_systems(
+                PostUpdate,
+                aim_skies
+                    .after(TransformSystems::Propagate)
+                    .after(bevy::camera::visibility::VisibilitySystems::UpdateFrusta),
+            );
     }
 }
 
-/// The window's glass: the void's own texture, worn as emissive over a
-/// dark pane with a real specular finish. Deliberately NOT `crt::tube_glass`
-/// — that is a tube showing a rendering, and this is a hole showing space.
+/// The window's glass, hung DARK: a near-black pane with a real specular
+/// finish and no sky on it at all. [`aim_skies`] dresses it every frame —
+/// which sky it reads and which rectangle of that sky is its own is a
+/// fact about where the crew last hung it, so the rig cannot know it and
+/// does not try. Deliberately NOT `crt::tube_glass`: that is a tube
+/// showing a rendering, and this is a hole showing space.
+///
+/// Unlit is also the honest resting state. A pane nobody is looking at,
+/// a pane past [`MAX_SKIES`], and a pane facing away all read exactly
+/// like this, because in each case the truthful answer is "no view".
 #[must_use]
-pub fn pane_glass(
-    materials: &mut Assets<StandardMaterial>,
-    image: &Handle<Image>,
-) -> Handle<StandardMaterial> {
+pub fn pane_glass(materials: &mut Assets<StandardMaterial>) -> Handle<StandardMaterial> {
     materials.add(StandardMaterial {
         base_color: palette::GLASS,
-        emissive: LinearRgba::WHITE * PANE_GLOW,
-        emissive_texture: Some(image.clone()),
+        emissive: LinearRgba::BLACK,
         // Low roughness on purpose: the painted gleam that used to be
         // drawn into the canvas is a real reflection now, and the crew's
         // own lamps make it.
@@ -583,6 +680,194 @@ impl CameraProjection for Aperture {
     }
 }
 
+// ------------------------------------------------------------ one wall, one sky --
+
+/// A pane, reduced to the four facts a sky needs about it: where its
+/// glass is, how big, which way it faces, and whose material to dress.
+#[derive(Clone)]
+struct Pane {
+    glass: Handle<StandardMaterial>,
+    centre: Vec3,
+    /// World half-axes of the quad — the rig scaled a unit rectangle, so
+    /// the transform's own axes ARE the extents.
+    half_u: Vec3,
+    half_v: Vec3,
+    /// `half_u × half_v`, normalized: the way the glass looks, which for
+    /// the pane the rig hangs is into the room, where the crew is.
+    facing: Vec3,
+}
+
+impl Pane {
+    /// The quad's four world corners, for measuring a wall's glass.
+    fn corners(&self) -> [Vec3; 4] {
+        [
+            self.centre - self.half_u - self.half_v,
+            self.centre + self.half_u - self.half_v,
+            self.centre + self.half_u + self.half_v,
+            self.centre - self.half_u + self.half_v,
+        ]
+    }
+}
+
+/// Which wall a pane belongs to, quantized to [`PLANE_GRAIN`] so two
+/// panes bolted to the same chart key identically.
+///
+/// Ordered, and the grouping walk sorts on it: a stable order is what
+/// keeps a sky slot on the same wall from frame to frame, and a slot that
+/// wandered would swap two windows' skies for one frame every time the
+/// crew walked past. Nobody would report it as a bug; everybody would
+/// feel it.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+struct Wall([i32; 4], u64);
+
+impl Wall {
+    /// The wall a pane hangs on. `lone` splits every pane onto its own
+    /// key — the control arm ([`Grouping::Pane`]), and the only thing
+    /// that distinguishes it.
+    fn of(pane: &Pane, lone: Option<u64>) -> Self {
+        let grain = |v: f32| (v * PLANE_GRAIN).round() as i32;
+        Self(
+            [
+                grain(pane.facing.x),
+                grain(pane.facing.y),
+                grain(pane.facing.z),
+                grain(pane.centre.dot(pane.facing)),
+            ],
+            lone.unwrap_or(0),
+        )
+    }
+}
+
+/// A wall plane's own in-plane axes, derived from the plane and nothing
+/// else — never from a pane, because a pane's frame is a fact about
+/// which window happened to be first in a query and the sky must not be.
+///
+/// `u × v == facing` by construction, which is the handedness
+/// [`Aperture::through`] reads. On any upright wall this comes out as
+/// "`v` is up, `u` runs along the wall", which is also the least
+/// surprising thing for the texel density to be measured along.
+fn plane_axes(facing: Vec3) -> (Vec3, Vec3) {
+    let up = if facing.y.abs() < 0.9 {
+        Vec3::Y
+    } else {
+        Vec3::X
+    };
+    let u = up.cross(facing).normalize();
+    (u, facing.cross(u))
+}
+
+/// The affine remap from a pane's own texture coordinates into the sky
+/// its wall shares — **the one piece of arithmetic the whole pass rests
+/// on**, so it is written out rather than fitted.
+///
+/// Two co-planar apertures seen from one eye have the same near plane
+/// and the same view axis, so their projections differ by an affine map
+/// of the near plane, and the wall's render therefore CONTAINS each
+/// pane's render exactly. `(gu, gv)` are the wall rectangle's spans in
+/// the plane's own `(u, v)` frame and `(lo, hi)` its bounds there; the
+/// result takes a pane-local `uv` (Bevy's rectangle: `u` along local +X,
+/// `v` DOWN from local +Y) to the same point in the sky's image (`u`
+/// along the aperture's +u, `v` down from its +v, because a render
+/// target's first row is the top of the frame).
+fn sub_uv(pane: &Pane, u: Vec3, v: Vec3, lo: Vec2, hi: Vec2) -> Affine2 {
+    let span = (hi - lo).max(Vec2::splat(f32::EPSILON));
+    let (cu, cv) = (pane.centre.dot(u), pane.centre.dot(v));
+    let (uu, uv) = (pane.half_u.dot(u), pane.half_u.dot(v));
+    let (vu, vv) = (pane.half_v.dot(u), pane.half_v.dot(v));
+    // x(a, b) = (cu + (2a-1)·uu + (1-2b)·vu - lo.x) / span.x
+    // y(a, b) = (hi.y - cv - (2a-1)·uv - (1-2b)·vv) / span.y
+    Affine2::from_mat2_translation(
+        Mat2::from_cols(
+            Vec2::new(2.0 * uu / span.x, -2.0 * uv / span.y),
+            Vec2::new(-2.0 * vu / span.x, 2.0 * vv / span.y),
+        ),
+        Vec2::new(
+            (cu - uu + vu - lo.x) / span.x,
+            (hi.y - cv + uv - vv) / span.y,
+        ),
+    )
+}
+
+/// One wall's sky: the aperture the outside is drawn through, the camera
+/// pose that goes with it, the target's texel count, and the panes that
+/// will read their own rectangles back out of it.
+struct SkyPlan {
+    aperture: Aperture,
+    rot: Quat,
+    size: UVec2,
+    panes: Vec<(Handle<StandardMaterial>, Affine2)>,
+}
+
+/// Gather the standing panes into skies: one per wall, in wall order,
+/// each drawn through the rectangle that bounds its own glass.
+///
+/// Everything that cannot be served comes back in the second half of the
+/// pair, to be hung as dark glass — a pane the eye is behind, a pane
+/// whose wall has no slot left, a pane scaled to nothing by a sold
+/// window. There is no third state: a window either shows the actual
+/// outside or it shows nothing at all.
+fn plan_skies(panes: Vec<(u64, Pane)>, eye: Vec3, how: Grouping) -> (Vec<SkyPlan>, Vec<Pane>) {
+    let mut keyed: Vec<(Wall, Pane)> = panes
+        .into_iter()
+        .map(|(id, pane)| {
+            let lone = matches!(how, Grouping::Pane).then_some(id);
+            (Wall::of(&pane, lone), pane)
+        })
+        .collect();
+    keyed.sort_by_key(|(key, _)| *key);
+
+    let mut plans: Vec<SkyPlan> = Vec::new();
+    let mut dark: Vec<Pane> = Vec::new();
+    let mut rest = keyed.as_slice();
+    while let Some((key, _)) = rest.first() {
+        let key = *key;
+        let end = rest.partition_point(|(k, _)| *k <= key);
+        let (wall, tail) = rest.split_at(end);
+        rest = tail;
+        if plans.len() >= MAX_SKIES {
+            dark.extend(wall.iter().map(|(_, pane)| pane.clone()));
+            continue;
+        }
+        let facing = wall[0].1.facing;
+        let (u, v) = plane_axes(facing);
+        // The wall's glass, measured in its own plane: the rectangle that
+        // holds every pane on it. One window and this IS the window.
+        let mut lo = Vec2::splat(f32::INFINITY);
+        let mut hi = Vec2::splat(f32::NEG_INFINITY);
+        for (_, pane) in wall {
+            for corner in pane.corners() {
+                let at = Vec2::new(corner.dot(u), corner.dot(v));
+                lo = lo.min(at);
+                hi = hi.max(at);
+            }
+        }
+        let mid = (lo + hi) * 0.5;
+        let seed = wall[0].1.centre;
+        let centre = seed + u * (mid.x - seed.dot(u)) + v * (mid.y - seed.dot(v));
+        let half = (hi - lo) * 0.5;
+        let Some((aperture, rot)) = Aperture::through(eye, centre, u * half.x, v * half.y) else {
+            dark.extend(wall.iter().map(|(_, pane)| pane.clone()));
+            continue;
+        };
+        plans.push(SkyPlan {
+            aperture,
+            rot,
+            // Cut to the GLASS, not to the frustum: the void keeps one
+            // texel density whatever wall it ends up on, and a rehung
+            // window re-cuts its own texture instead of stretching it.
+            size: UVec2::new(
+                pane_texels(2.0 * half.x * PANE_DENSITY),
+                pane_texels(2.0 * half.y * PANE_DENSITY),
+            ),
+            panes: wall
+                .iter()
+                .map(|(_, pane)| (pane.glass.clone(), sub_uv(pane, u, v, lo, hi)))
+                .collect(),
+        });
+    }
+    (plans, dark)
+}
+
 // ---------------------------------------------------------------- the void --
 
 /// A blank porthole target: small, unsmoothed, the same recipe the crunch
@@ -602,66 +887,79 @@ fn void_target(size: UVec2) -> Image {
 /// the stream, the three world slots' rigs (empty until a leg needs
 /// them), the dock's mast, the company, the flood, and the one light out
 /// there. The ship's own shells arrive with the graph ([`hull_outside`]).
+#[allow(clippy::too_many_lines)] // one paragraph per body out there; splitting scatters the census
 fn spawn_void(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
 ) {
+    // The sky pool, allocated ONCE and never grown: [`MAX_SKIES`]
+    // cameras, [`MAX_SKIES`] targets, and that is the whole exterior
+    // budget however many windows the crew buys. Each draws BEFORE the
+    // cabin camera (order −2 against its −1) so the glass it feeds is
+    // this frame's, not last frame's, and each clears to the void because
+    // that is what is behind everything.
     let size = UVec2::new(PANE_MIN * 4, PANE_MIN * 2);
-    let image = images.add(void_target(size));
-    commands.insert_resource(Pane {
-        image: image.clone(),
-        size,
+    let targets: [Handle<Image>; MAX_SKIES] =
+        std::array::from_fn(|_| images.add(void_target(size)));
+    // One flood mesh and one flood material for the whole pool: the jump
+    // is the same violet in every window at once.
+    let sheet = meshes.add(Rectangle::new(1.0, 1.0));
+    let flood = materials.add(StandardMaterial {
+        base_color: palette::EERIE_BRIGHT.with_alpha(0.0),
+        emissive: LinearRgba::BLACK,
+        alpha_mode: AlphaMode::Blend,
+        ..default()
     });
+    commands.insert_resource(Skies {
+        images: targets.clone(),
+        sizes: [size; MAX_SKIES],
+        flood: flood.clone(),
+        lit: 0,
+    });
+    for (slot, image) in targets.into_iter().enumerate() {
+        let camera = commands
+            .spawn((
+                Camera3d::default(),
+                Camera {
+                    order: -2,
+                    clear_color: ClearColorConfig::Custom(palette::VOID),
+                    is_active: false,
+                    ..default()
+                },
+                Projection::custom(Aperture {
+                    left: -1.0,
+                    right: 1.0,
+                    bottom: -1.0,
+                    top: 1.0,
+                    near: 0.1,
+                    far: VOID_FAR,
+                }),
+                RenderTarget::Image(image.into()),
+                Hdr,
+                Bloom::NATURAL,
+                Msaa::Off,
+                Transform::default(),
+                outside(),
+                Sky(slot),
+            ))
+            .id();
 
-    // The porthole. It draws BEFORE the cabin camera (order −2 against
-    // its −1) so the pane it feeds is this frame's, not last frame's, and
-    // it clears to the void because that is what is behind everything.
-    let camera = commands
-        .spawn((
-            Camera3d::default(),
-            Camera {
-                order: -2,
-                clear_color: ClearColorConfig::Custom(palette::VOID),
-                is_active: false,
-                ..default()
-            },
-            Projection::custom(Aperture {
-                left: -1.0,
-                right: 1.0,
-                bottom: -1.0,
-                top: 1.0,
-                near: 0.1,
-                far: VOID_FAR,
-            }),
-            RenderTarget::Image(image.into()),
-            Hdr,
-            Bloom::NATURAL,
-            Msaa::Off,
+        // The jump flood: a quad riding this sky's own near plane, cut to
+        // the aperture every frame. It is the last thing between the eye
+        // and space, which is exactly what a jump feels like.
+        commands.spawn((
+            Mesh3d(sheet.clone()),
+            MeshMaterial3d(flood.clone()),
             Transform::default(),
+            Visibility::Hidden,
             outside(),
-            Porthole,
-        ))
-        .id();
-
-    // The jump flood: a quad riding the porthole's own near plane, cut to
-    // the aperture every frame. It is the last thing between the eye and
-    // space, which is exactly what a jump feels like.
-    commands.spawn((
-        Mesh3d(meshes.add(Rectangle::new(1.0, 1.0))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: palette::EERIE_BRIGHT.with_alpha(0.0),
-            emissive: LinearRgba::BLACK,
-            alpha_mode: AlphaMode::Blend,
-            ..default()
-        })),
-        Transform::default(),
-        Visibility::Hidden,
-        outside(),
-        Flood,
-        ChildOf(camera),
-    ));
+            Flood,
+            Sky(slot),
+            ChildOf(camera),
+        ));
+    }
 
     // The deep field: one mesh per tint bucket, pinned to the eye.
     let shell = commands
@@ -1459,7 +1757,7 @@ fn drive_void(
     mut clock: ResMut<SkyClock>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    porthole: Query<&GlobalTransform, With<Porthole>>,
+    eye: Query<&GlobalTransform, With<CabinCamera>>,
     mut deep: Query<&mut Transform, (With<Deep>, Without<Fleck>)>,
     mut flecks: Query<(&Fleck, &mut Transform), Without<Deep>>,
     mut worlds: WorldQuery,
@@ -1471,9 +1769,12 @@ fn drive_void(
     clock.update(time.delta_secs(), sim);
     let t = clock.t;
 
-    // The deep field rides the eye and turns on the ambient drift.
+    // The deep field rides the eye and turns on the ambient drift. It
+    // hangs on the CREW, not on a sky: every window aboard shares one
+    // field, because the stars are at infinity and a freighter is not
+    // wide enough to disagree with itself about where infinity is.
     if let Ok(mut shellt) = deep.single_mut() {
-        let eye = porthole.single().map_or(
+        let eye = eye.single().map_or(
             SHIP_MID,
             bevy::transform::components::GlobalTransform::translation,
         );
@@ -1663,85 +1964,190 @@ fn drone_pose(sim: &Sim, t: f32, transform: &mut Transform) -> bool {
 
 // ------------------------------------------------------------- the porthole --
 
-/// Aim the porthole through whatever glass is standing, and cut its
-/// target to that glass's own aperture.
+/// Aim every sky the standing glass calls for, and dress each pane with
+/// its own rectangle of the one its wall shares.
 ///
-/// This is the whole rendering contract in one system: read the pane's
-/// live world pose (its piece rig's — rehang the window and this follows
-/// it), build the eye's off-axis frustum through it, park the camera at
-/// the eye in the aperture's frame, and size the flood to the near plane.
-/// No window, or an eye behind the glass, and the camera simply stops
-/// drawing: the hull is solid and there is no view.
+/// This is the whole rendering contract in one system:
+///
+/// 1. **Read the glass.** Every `SkyPane`'s live world pose — its piece
+///    rig's, wherever the crew rehung it. A pane the eye stands behind,
+///    a pane scaled to nothing, and a pane outside the eye's own frustum
+///    are all set aside here: a window nobody can see is a window that
+///    costs nothing, which is the only reason the bound in
+///    [`MAX_SKIES`] is generous rather than tight.
+/// 2. **Gather by wall.** Co-planar panes share one sky ([`plan_skies`]).
+/// 3. **Aim.** Park each pooled camera at the eye in its aperture's
+///    frame, hand it the off-axis frustum, and re-cut its target to the
+///    wall's own glass at [`PANE_DENSITY`].
+/// 4. **Dress.** Each pane's material takes the sky as its emissive and
+///    the affine remap ([`sub_uv`]) that picks its rectangle out of it.
+///    A pane with no sky takes black: no window, no aperture, no camera,
+///    no view, and the hull is solid.
 #[allow(clippy::too_many_arguments)]
-fn aim_porthole(
-    mut pane: ResMut<Pane>,
+fn aim_skies(
+    mut skies: ResMut<Skies>,
+    how: Res<Grouping>,
     clock: Res<SkyClock>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    glass: Query<&GlobalTransform, With<SkyPane>>,
-    eye: Query<&GlobalTransform, With<CabinCamera>>,
-    mut porthole: PortholeQuery,
-    mut flood: FloodQuery,
+    glass: GlassQuery,
+    eye: EyeQuery,
+    mut cameras: SkyQuery,
+    mut floods: FloodQuery,
 ) {
-    let Ok((mut camera, mut projection, mut transform)) = porthole.single_mut() else {
+    let Ok((eye, seen)) = eye.single() else {
+        // No eye aboard: nothing to be a hole for.
+        skies.lit = 0;
+        for (_, mut camera, _, _) in &mut cameras {
+            camera.is_active = false;
+        }
+        for (_, _, glass) in &glass {
+            unlit(&mut materials, &glass.0);
+        }
         return;
     };
-    let Ok(eye) = eye.single() else {
-        camera.is_active = false;
-        return;
-    };
-    // The pane's own frame: the glass is a unit rectangle the rig scaled
-    // to its size, so the transform's own axes ARE its extents.
-    let aim = glass.iter().find_map(|pose| {
+    let at = eye.translation();
+
+    let mut standing: Vec<(u64, Pane)> = Vec::new();
+    for (entity, pose, glass) in &glass {
+        // The pane's own frame: the glass is a unit rectangle the rig
+        // scaled to its size, so the transform's own axes ARE its extents.
         let axes = pose.affine().matrix3;
-        let (half_u, half_v) = (Vec3::from(axes.x_axis) * 0.5, Vec3::from(axes.y_axis) * 0.5);
-        Aperture::through(eye.translation(), pose.translation(), half_u, half_v)
-            .map(|(aperture, rot)| (aperture, rot, half_u.length(), half_v.length()))
-    });
-    let Some((aperture, rot, half_w, half_h)) = aim else {
-        camera.is_active = false;
-        return;
-    };
-    camera.is_active = true;
-    transform.translation = eye.translation();
-    transform.rotation = rot;
-    if let Projection::Custom(custom) = &mut *projection
-        && let Some(slot) = custom.get_mut::<Aperture>()
-    {
-        *slot = aperture;
+        let half_u = Vec3::from(axes.x_axis) * 0.5;
+        let half_v = Vec3::from(axes.y_axis) * 0.5;
+        let centre = pose.translation();
+        // A window sold, scaled to nothing, is not a hole.
+        let (Some(u), Some(v)) = (half_u.try_normalize(), half_v.try_normalize()) else {
+            unlit(&mut materials, &glass.0);
+            continue;
+        };
+        let facing = u.cross(v);
+        // A window has a front, and the eye must be in front of it — and
+        // it must be somewhere the eye could actually look. A sphere
+        // around the glass is the conservative test: it never hides a
+        // pane that is really on screen, and it catches every pane on
+        // the wall behind the crew's back, which is where the saving is.
+        let showing = (at - centre).dot(facing) > 1e-3
+            && seen.intersects_sphere(
+                &Bounds {
+                    center: centre.into(),
+                    radius: (half_u + half_v).length(),
+                },
+                true,
+            );
+        if showing {
+            standing.push((
+                entity.to_bits(),
+                Pane {
+                    glass: glass.0.clone(),
+                    centre,
+                    half_u,
+                    half_v,
+                    facing,
+                },
+            ));
+        } else {
+            unlit(&mut materials, &glass.0);
+        }
     }
 
-    // Cut the target to the GLASS, not to the frustum: the void keeps one
-    // texel density whatever wall the window ends up on, and a rehung
-    // window re-cuts its own texture instead of stretching the old one.
-    let want = UVec2::new(
-        pane_texels(2.0 * half_w * PANE_DENSITY),
-        pane_texels(2.0 * half_h * PANE_DENSITY),
-    );
-    if want != pane.size {
-        pane.size = want;
-        // A dropped handle would mean a window that no longer exists,
-        // which is a frame the query above already declined to serve.
-        drop(images.insert(&pane.image, void_target(want)));
+    let (plans, dark) = plan_skies(standing, at, *how);
+    for pane in &dark {
+        unlit(&mut materials, &pane.glass);
+    }
+    skies.lit = plans.len();
+
+    for (sky, mut camera, mut projection, mut transform) in &mut cameras {
+        let Some(plan) = plans.get(sky.0) else {
+            camera.is_active = false;
+            continue;
+        };
+        camera.is_active = true;
+        transform.translation = at;
+        transform.rotation = plan.rot;
+        if let Projection::Custom(custom) = &mut *projection
+            && let Some(slot) = custom.get_mut::<Aperture>()
+        {
+            *slot = plan.aperture;
+        }
+        if plan.size != skies.sizes[sky.0] {
+            skies.sizes[sky.0] = plan.size;
+            // A dropped handle would mean a sky that no longer exists,
+            // which is a slot this loop has already declined to serve.
+            drop(images.insert(&skies.images[sky.0], void_target(plan.size)));
+        }
+        for (glass, uv) in &plan.panes {
+            lit(&mut materials, glass, &skies.images[sky.0], *uv);
+        }
     }
 
-    // The flood rides the near plane, cut to the aperture exactly.
-    if let Ok((mut quad, material, mut vis)) = flood.single_mut() {
-        let heat = clock.heat();
+    // The floods ride their own skies' near planes, cut to the aperture
+    // exactly. The jump floods every window at once — it is the space
+    // between them that lights up, not the glass.
+    let heat = clock.heat();
+    for (sky, mut quad, mut vis) in &mut floods {
+        let Some(plan) = plans.get(sky.0) else {
+            vis.set_if_neq(Visibility::Hidden);
+            continue;
+        };
         vis.set_if_neq(if heat > 0.0 {
             Visibility::Visible
         } else {
             Visibility::Hidden
         });
-        let mid = aperture.mid();
-        let span = aperture.span();
-        quad.translation = Vec3::new(mid.x, mid.y, -aperture.near * 1.001);
+        let mid = plan.aperture.mid();
+        let span = plan.aperture.span();
+        quad.translation = Vec3::new(mid.x, mid.y, -plan.aperture.near * 1.001);
         quad.scale = Vec3::new(span.x * 1.02, span.y * 1.02, 1.0);
-        if let Some(mut mat) = materials.get_mut(&material.0) {
-            let level = heat * heat;
-            mat.base_color = palette::EERIE_BRIGHT.with_alpha(level * 0.95);
-            mat.emissive = palette::EERIE_BRIGHT.to_linear() * (level * 3.0);
-        }
+    }
+    if let Some(mut flood) = materials.get_mut(&skies.flood) {
+        let level = heat * heat;
+        flood.base_color = palette::EERIE_BRIGHT.with_alpha(level * 0.95);
+        flood.emissive = palette::EERIE_BRIGHT.to_linear() * (level * 3.0);
+    }
+}
+
+/// Hang a sky on a pane: the shared render as emissive, and the affine
+/// remap that makes it this pane's rectangle of it.
+///
+/// The read-before-write is not fussiness — an `Assets` handle taken
+/// mutably re-uploads the material, and a window is a thing you stand
+/// still and look at, so most frames have nothing to say.
+fn lit(
+    materials: &mut Assets<StandardMaterial>,
+    glass: &Handle<StandardMaterial>,
+    sky: &Handle<Image>,
+    uv: Affine2,
+) {
+    let settled = materials.get(glass).is_some_and(|mat| {
+        mat.emissive_texture.as_ref() == Some(sky)
+            && mat.uv_transform == uv
+            && mat.emissive == LinearRgba::WHITE * PANE_GLOW
+    });
+    if settled {
+        return;
+    }
+    if let Some(mut mat) = materials.get_mut(glass) {
+        mat.emissive_texture = Some(sky.clone());
+        mat.emissive = LinearRgba::WHITE * PANE_GLOW;
+        mat.uv_transform = uv;
+    }
+}
+
+/// Put a pane out: dark glass, no sky at all. What a sold window, a
+/// window on the wall behind you, and a window past the bound all look
+/// like, because they are all the same fact.
+fn unlit(materials: &mut Assets<StandardMaterial>, glass: &Handle<StandardMaterial>) {
+    if materials
+        .get(glass)
+        .is_some_and(|mat| mat.emissive_texture.is_none())
+    {
+        return;
+    }
+    if let Some(mut mat) = materials.get_mut(glass) {
+        mat.emissive_texture = None;
+        mat.emissive = LinearRgba::BLACK;
+        mat.uv_transform = Affine2::IDENTITY;
     }
 }
 
@@ -1755,9 +2161,40 @@ fn pane_texels(raw: f32) -> u32 {
 
 // ----------------------------------------------------------------- presets --
 
+/// Every standing pane's chart and where on it the glass sits, cabin
+/// first and then by piece id. The presets read the BOARD rather than
+/// remembering where a window was last time, which is what makes a
+/// rehung window take its own screenshots with it.
+fn glass_charts(sim: &Sim) -> Vec<(crate::surface::Station, crate::surface::SimSurface, SimVec2)> {
+    use space_trucking::sim::room::CABIN;
+    let pieces = sim.pieces();
+    let mut glass: Vec<_> = pieces
+        .iter()
+        .filter(|piece| {
+            piece.kind == space_trucking::sim::Kind::Window
+                && matches!(piece.loc, space_trucking::sim::Loc::Hold { .. })
+        })
+        .collect();
+    glass.sort_by_key(|piece| (piece.loc.room(pieces) != Some(CABIN), piece.id));
+    glass
+        .into_iter()
+        .filter_map(|piece| {
+            let at =
+                crate::canvas::rect_center(space_trucking::sim::layout::piece_rect(pieces, piece));
+            sim.rooms().iter().find_map(|(id, room)| {
+                crate::room::charts(id, room)
+                    .into_iter()
+                    .find(|(_, surface)| surface.rect.contains(at))
+                    .map(|(station, surface)| (station, surface, at))
+            })
+        })
+        .collect()
+}
+
 /// A `--view` preset standing at whatever wall the window is actually
 /// hung on: `pane` square on to the glass, `pane-port` and `pane-stbd`
-/// a stride to either side of it.
+/// a stride to either side of it, and `panes` back far enough to hold
+/// every window aboard in one frame.
 ///
 /// Dev tooling, derived like every other preset in the game (`room::preset`):
 /// it asks the board where the glass is rather than remembering where it
@@ -1766,23 +2203,38 @@ fn pane_texels(raw: f32) -> u32 {
 /// eyes, two cones of space, which is the pass's whole claim.
 #[must_use]
 pub fn preset(sim: &Sim, name: &str) -> Option<(Vec3, f32, f32)> {
+    // `panes` is the multi-window view, and it is derived the same way
+    // the rest are: it stands back from the MEAN of the standing glass
+    // along the mean of the walls those panes are set in, so a ship with
+    // two windows on two walls gets the corner shot that shows both at
+    // once, and a ship with eight on one wall gets that wall square on.
+    // Which is the pass's whole claim, in one frame.
+    if name == "panes" {
+        let mut mid = Vec3::ZERO;
+        let mut out = Vec3::ZERO;
+        let mut count = 0.0_f32;
+        for (station, surface, at) in glass_charts(sim) {
+            mid += surface.to_world(at);
+            out += station.inward(&surface);
+            count += 1.0;
+        }
+        if count == 0.0 {
+            return None;
+        }
+        let mid = mid / count;
+        let out = out.normalize_or_zero();
+        let stand = mid + out * 2.15;
+        let eye = Vec3::new(stand.x, crate::rig::EYE_HEIGHT, stand.z);
+        let d = mid - eye;
+        return Some((eye, (-d.x).atan2(-d.z), d.y.atan2(d.xz().length())));
+    }
     let aside = match name {
         "pane" => 0.0,
         "pane-port" => -0.95,
         "pane-stbd" => 0.95,
         _ => return None,
     };
-    let pieces = sim.pieces();
-    let piece = pieces.iter().find(|piece| {
-        piece.kind == space_trucking::sim::Kind::Window
-            && matches!(piece.loc, space_trucking::sim::Loc::Hold { .. })
-    })?;
-    let at = crate::canvas::rect_center(space_trucking::sim::layout::piece_rect(pieces, piece));
-    let (station, surface) = sim.rooms().iter().find_map(|(id, room)| {
-        crate::room::charts(id, room)
-            .into_iter()
-            .find(|(_, surface)| surface.rect.contains(at))
-    })?;
+    let (station, surface, at) = glass_charts(sim).into_iter().next()?;
     let centre = surface.to_world(at);
     let along = surface.half_u.normalize_or_zero();
     let stand = centre + station.inward(&surface) * 1.75 + along * aside;
@@ -2150,5 +2602,318 @@ mod tests {
         assert_eq!(pane_texels(1e9), PANE_MAX);
         assert_eq!(pane_texels(100.0), 104, "quantized up to the step");
         assert!(pane_texels(163.0).is_multiple_of(8));
+    }
+
+    // ------------------------------------------------- one wall, one sky --
+
+    /// A pane of the given size, centred at `centre`, hung on a wall
+    /// facing `out` — with a real material handle, because the plan
+    /// hands one back per pane and the tests count them.
+    fn hung(
+        materials: &mut Assets<StandardMaterial>,
+        centre: Vec3,
+        out: Vec3,
+        (w, h): (f32, f32),
+    ) -> Pane {
+        let facing = -out.normalize();
+        let v = Vec3::Y;
+        let u = v.cross(facing);
+        Pane {
+            glass: materials.add(StandardMaterial::default()),
+            centre,
+            half_u: u * (w * 0.5),
+            half_v: v * (h * 0.5),
+            facing,
+        }
+    }
+
+    /// A row of `n` panes down one wall, evenly spaced.
+    fn row(materials: &mut Assets<StandardMaterial>, n: usize) -> Vec<(u64, Pane)> {
+        (0..n)
+            .map(|i| {
+                let x = (i as f32).mul_add(0.42, -1.4);
+                (
+                    i as u64,
+                    hung(
+                        materials,
+                        Vec3::new(x, 1.4, -1.9),
+                        Vec3::NEG_Z,
+                        (0.32, 0.30),
+                    ),
+                )
+            })
+            .collect()
+    }
+
+    /// Where a world point lands in a plan's own image, as texture uv.
+    fn sky_uv(plan: &SkyPlan, eye: Vec3, at: Vec3) -> Vec2 {
+        let n = ndc(plan.aperture, plan.rot, eye, at);
+        Vec2::new(n.x.mul_add(0.5, 0.5), 0.5f32.mul_add(-n.y, 0.5))
+    }
+
+    /// **The claim, as an assertion.** N panes on one wall cost ONE sky,
+    /// however many N is — and the control arm (one sky per pane, which
+    /// is what the first exterior pass did) costs N, which is the thing
+    /// being replaced. Measured cost lives in `--gauge`; what is checked
+    /// here is the shape of it, which is what the measurement is a
+    /// measurement OF.
+    #[test]
+    fn a_wall_of_windows_costs_one_sky() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let eye = Vec3::new(0.0, 1.5, 0.4);
+        for n in [1_usize, 2, 4, 8] {
+            let (plans, dark) = plan_skies(row(&mut materials, n), eye, Grouping::Wall);
+            assert_eq!(plans.len(), 1, "{n} panes on one wall must share one sky");
+            assert_eq!(plans[0].panes.len(), n, "and every one of them reads it");
+            assert!(dark.is_empty(), "none of them goes dark");
+            let (control, _) = plan_skies(row(&mut materials, n), eye, Grouping::Pane);
+            assert_eq!(control.len(), n, "the control arm pays per pane");
+        }
+    }
+
+    /// And the bound holds whatever the crew does: past [`MAX_SKIES`]
+    /// distinct walls the remaining panes go DARK rather than stale.
+    /// Black glass is a truthful answer; last frame's sky is not.
+    #[test]
+    fn the_sky_pool_is_a_hard_ceiling() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let eye = Vec3::new(0.0, 1.5, 0.4);
+        // Twenty panes, every one on its own plane (stepped away from
+        // the eye along the same normal, so no two share an offset).
+        let panes: Vec<(u64, Pane)> = (0..20_usize)
+            .map(|i| {
+                let z = (i as f32).mul_add(-0.31, -1.9);
+                (
+                    i as u64,
+                    hung(
+                        &mut materials,
+                        Vec3::new(0.0, 1.4, z),
+                        Vec3::NEG_Z,
+                        (0.30, 0.30),
+                    ),
+                )
+            })
+            .collect();
+        let (plans, dark) = plan_skies(panes, eye, Grouping::Wall);
+        assert_eq!(plans.len(), MAX_SKIES, "the pool is the pool");
+        assert_eq!(dark.len(), 20 - MAX_SKIES, "the rest are honestly black");
+    }
+
+    /// **The correctness of the sharing**, which is the whole reason it
+    /// is allowed to be this cheap: a pane reading its rectangle out of
+    /// its wall's sky lands on exactly the texel its OWN aperture would
+    /// have drawn there. Not close — the same affine map, checked
+    /// against the independent projection, for panes of different sizes
+    /// at different places on the wall, and for points all over the
+    /// void including behind the eye's shoulder.
+    #[test]
+    fn a_shared_sky_is_the_pane_s_own_sky() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let eye = Vec3::new(-0.35, 1.52, 0.6);
+        let panes = vec![
+            (
+                0,
+                hung(
+                    &mut materials,
+                    Vec3::new(-1.1, 1.35, -1.9),
+                    Vec3::NEG_Z,
+                    (0.6, 0.3),
+                ),
+            ),
+            (
+                1,
+                hung(
+                    &mut materials,
+                    Vec3::new(0.7, 1.6, -1.9),
+                    Vec3::NEG_Z,
+                    (0.3, 0.75),
+                ),
+            ),
+            (
+                2,
+                hung(
+                    &mut materials,
+                    Vec3::new(1.4, 1.1, -1.9),
+                    Vec3::NEG_Z,
+                    (0.25, 0.25),
+                ),
+            ),
+        ];
+        let alone: Vec<(Aperture, Quat)> = panes
+            .iter()
+            .map(|(_, pane)| {
+                Aperture::through(eye, pane.centre, pane.half_u, pane.half_v)
+                    .expect("each pane is a hole on its own")
+            })
+            .collect();
+        let (plans, dark) = plan_skies(panes, eye, Grouping::Wall);
+        assert!(dark.is_empty() && plans.len() == 1, "one wall, one sky");
+        let plan = &plans[0];
+        for (i, (_, uv)) in plan.panes.iter().enumerate() {
+            let (aperture, rot) = alone[i];
+            for at in [
+                Vec3::new(0.0, 1.4, -60.0),
+                Vec3::new(-40.0, 20.0, -90.0),
+                Vec3::new(55.0, -18.0, -140.0),
+                Vec3::new(-4.0, 1.0, -2.4),
+                Vec3::new(300.0, 300.0, -900.0),
+            ] {
+                let n = ndc(aperture, rot, eye, at);
+                let own = Vec2::new(n.x.mul_add(0.5, 0.5), 0.5f32.mul_add(-n.y, 0.5));
+                let shared = sky_uv(plan, eye, at);
+                let remapped = uv.transform_point2(own);
+                assert!(
+                    (remapped - shared).length() < 1e-4,
+                    "pane {i} reads {remapped} where its own sky is {shared} (point {at})"
+                );
+            }
+        }
+    }
+
+    /// The whimsy rule survives the sharing: two panes on DIFFERENT
+    /// walls get different skies, aimed different ways, because the
+    /// gathering is by plane and a plane is a fact about the wall. Hang
+    /// a window anywhere and it shows what is out THAT wall.
+    #[test]
+    fn two_walls_are_two_skies_pointed_two_ways() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let eye = Vec3::new(0.0, 1.5, 0.3);
+        let panes = vec![
+            (
+                0,
+                hung(
+                    &mut materials,
+                    Vec3::new(0.0, 1.4, -1.9),
+                    Vec3::NEG_Z,
+                    (0.6, 0.3),
+                ),
+            ),
+            (
+                1,
+                hung(
+                    &mut materials,
+                    Vec3::new(-2.1, 1.4, 0.3),
+                    Vec3::NEG_X,
+                    (0.6, 0.3),
+                ),
+            ),
+        ];
+        let (plans, _) = plan_skies(panes, eye, Grouping::Wall);
+        assert_eq!(plans.len(), 2, "two walls cannot share one hole");
+        let looks: Vec<Vec3> = plans.iter().map(|plan| plan.rot * Vec3::NEG_Z).collect();
+        assert!(looks[0].z < -0.9 || looks[1].z < -0.9, "one looks forward");
+        assert!(looks[0].x < -0.9 || looks[1].x < -0.9, "one looks to port");
+        assert!(
+            looks[0].dot(looks[1]) < 0.2,
+            "and they are not the same sky twice: {looks:?}"
+        );
+    }
+
+    /// A wall's sky is cut to that wall's GLASS and stays inside the
+    /// texel bounds — so a crew that hangs eight windows buys one target
+    /// no bigger than the one window bought, and the crunch stays the
+    /// crunch (`docs/ART_DIRECTION_3D.md`).
+    #[test]
+    fn the_sky_pool_never_becomes_a_second_render_budget() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let eye = Vec3::new(0.0, 1.5, 0.4);
+        let mut widest = 0;
+        for n in [1_usize, 8] {
+            let (plans, _) = plan_skies(row(&mut materials, n), eye, Grouping::Wall);
+            for plan in &plans {
+                assert!(
+                    plan.size.x >= PANE_MIN
+                        && plan.size.x <= PANE_MAX
+                        && plan.size.y >= PANE_MIN
+                        && plan.size.y <= PANE_MAX,
+                    "{n} panes cut a {} sky",
+                    plan.size
+                );
+                widest = widest.max(plan.size.x);
+            }
+        }
+        assert!(widest <= PANE_MAX, "the ceiling is the ceiling");
+    }
+
+    /// A sold window is not a hole, and neither is one hung with no
+    /// extent at all: the plan hands it back dark and the pool stays
+    /// unlit. Solid hull, no view — the property the whole feature is
+    /// allowed to have taken away.
+    #[test]
+    fn a_sold_window_lights_nothing() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let eye = Vec3::new(0.0, 1.5, 0.4);
+        let (plans, dark) = plan_skies(Vec::new(), eye, Grouping::Wall);
+        assert!(plans.is_empty() && dark.is_empty(), "no glass, no sky");
+        // And a pane the eye stands behind never reaches the plan at all
+        // — `aim_skies` sets it aside — which the aperture itself says:
+        let pane = hung(
+            &mut materials,
+            Vec3::new(0.0, 1.4, -1.9),
+            Vec3::NEG_Z,
+            (0.6, 0.3),
+        );
+        assert!(
+            Aperture::through(
+                Vec3::new(0.0, 1.4, -4.0),
+                pane.centre,
+                pane.half_u,
+                pane.half_v
+            )
+            .is_none(),
+            "there is no view from behind the glass"
+        );
+    }
+
+    /// The gathering is STABLE: the same glass in any query order plans
+    /// the same skies in the same slots. A slot that wandered would swap
+    /// two windows' views for one frame every time the crew walked past,
+    /// which nobody would file and everybody would feel.
+    #[test]
+    fn the_same_glass_plans_the_same_skies() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let eye = Vec3::new(0.1, 1.5, 0.4);
+        let panes = vec![
+            (
+                7,
+                hung(
+                    &mut materials,
+                    Vec3::new(0.0, 1.4, -1.9),
+                    Vec3::NEG_Z,
+                    (0.6, 0.3),
+                ),
+            ),
+            (
+                2,
+                hung(
+                    &mut materials,
+                    Vec3::new(-2.1, 1.4, 0.3),
+                    Vec3::NEG_X,
+                    (0.4, 0.4),
+                ),
+            ),
+            (
+                5,
+                hung(
+                    &mut materials,
+                    Vec3::new(-2.1, 1.4, 1.1),
+                    Vec3::NEG_X,
+                    (0.4, 0.4),
+                ),
+            ),
+        ];
+        let mut shuffled = panes.clone();
+        shuffled.reverse();
+        let (a, _) = plan_skies(panes, eye, Grouping::Wall);
+        let (b, _) = plan_skies(shuffled, eye, Grouping::Wall);
+        assert_eq!(a.len(), b.len());
+        for (x, y) in a.iter().zip(&b) {
+            assert!(
+                (x.rot.to_array()[0] - y.rot.to_array()[0]).abs() < 1e-6
+                    && (x.aperture.left - y.aperture.left).abs() < 1e-6
+                    && x.size == y.size,
+                "slot order must not depend on query order"
+            );
+        }
     }
 }

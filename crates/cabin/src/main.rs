@@ -67,6 +67,31 @@ struct ShotMode {
     fired: bool,
 }
 
+/// Dev tooling: `--gauge <frames>` lets the scene settle, times that many
+/// frames, prints one line, and exits.
+///
+/// It measures the thing the exterior pass actually claims — that the
+/// cost of a wall of windows does not track the number of windows — and
+/// it measures it the only way a claim like that can be honest, which is
+/// with a control arm on the same code path (`--grouping pane`). The
+/// numbers are meaningless in absolute terms wherever this runs (the
+/// container's GPU is llvmpipe, in software); the CURVE across
+/// `--panes 1 2 4 8` is the whole reading.
+#[derive(Resource)]
+struct Gauge {
+    want: u32,
+    frames: u32,
+    /// Seconds accumulated over the measured window.
+    took: f32,
+    panes: usize,
+    grouping: viewport::Grouping,
+}
+
+/// Frames burned before the gauge starts counting: the same settle the
+/// screenshot path takes, for the same reason — a cold pipeline is not
+/// what anybody is asking about.
+const GAUGE_SETTLE: u32 = 60;
+
 /// The cabin's own `--view` roam poses. Rooms derive theirs from the
 /// graph (`room::preset`); these three are the starter cabin's, and they
 /// stand back one cell further than they once did — the 8×7 floor put a
@@ -140,6 +165,9 @@ fn cast_off(seed: u64, along: f32) -> String {
     sim.save_string()
 }
 
+// One paragraph per dev flag, each argued where it stands; splitting the
+// boot in half would only put half the arguments somewhere else.
+#[allow(clippy::too_many_lines)]
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let dev = args.iter().any(|arg| arg == "--dev");
@@ -174,17 +202,35 @@ fn main() {
         cabin_preset(name, &mut boot_rig);
     }
 
+    // `--panes n`: the stress board — the starter ship with every window
+    // stripped and `n` hung on one wall (`fixture::panes_board`). The
+    // scaling measurement's own fixture, and at `n = 0` the sold-window
+    // case: no pane, no aperture, no view, solid hull.
+    let panes = flag_value("--panes").and_then(|n| n.parse::<usize>().ok());
+    // `--grouping wall|pane`: which law the exterior gathers panes by.
+    // `wall` is what ships; `pane` is the control arm the curve is read
+    // against (see `viewport::Grouping`).
+    let grouping = match flag_value("--grouping").as_deref() {
+        Some("pane") => viewport::Grouping::Pane,
+        _ => viewport::Grouping::Wall,
+    };
+
     // `--underway`: a world that has already cast off, so the transit sky
     // — star streaks, the destination growing off the bow — can be looked
     // at without waiting out a leg. Sandboxed exactly like `--fixture`.
     let underway = args.iter().any(|arg| arg == "--underway");
-    let bridge = if underway {
-        Bridge::boot_fixture(&cast_off(7, 0.75))
-    } else if fixture {
-        Bridge::boot_fixture(fixture::SAVE)
-    } else {
-        Bridge::boot(dev)
-    };
+    let bridge = panes.map_or_else(
+        || {
+            if underway {
+                Bridge::boot_fixture(&cast_off(7, 0.75))
+            } else if fixture {
+                Bridge::boot_fixture(fixture::SAVE)
+            } else {
+                Bridge::boot(dev)
+            }
+        },
+        |n| Bridge::boot_fixture(&fixture::panes_board(7, n)),
+    );
     // The room presets are DERIVED, like everything else about a room:
     // they ask the graph where the room is and stand in the middle of it
     // facing the wall the view is named for. Attach the trade room
@@ -226,6 +272,7 @@ fn main() {
     .init_resource::<VirtualPointer>()
     .configure_sets(Update, (Phase::Input, Phase::Advance, Phase::View).chain())
     .insert_resource(menu::Menu::boot(open_menu))
+    .insert_resource(grouping)
     .add_plugins((
         airlock::AirlockPlugin,
         audio::AudioPlugin,
@@ -262,7 +309,44 @@ fn main() {
         })
         .add_systems(Update, shoot.in_set(Phase::View));
     }
+    if let Some(want) = flag_value("--gauge").and_then(|n| n.parse::<u32>().ok()) {
+        app.insert_resource(Gauge {
+            want,
+            frames: 0,
+            took: 0.0,
+            panes: panes.unwrap_or(0),
+            grouping,
+        })
+        .add_systems(Update, gauge.in_set(Phase::View));
+    }
     app.run();
+}
+
+/// Time the settled frame loop and report once. One line, parseable,
+/// carrying the two facts that make the number mean anything: how many
+/// panes were hanging and how many skies the exterior actually drew for
+/// them. See [`Gauge`].
+fn gauge(
+    time: Res<Time>,
+    skies: Option<Res<viewport::Skies>>,
+    mut mode: ResMut<Gauge>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    mode.frames += 1;
+    if mode.frames <= GAUGE_SETTLE {
+        return;
+    }
+    mode.took += time.delta_secs();
+    if mode.frames < GAUGE_SETTLE + mode.want {
+        return;
+    }
+    let lit = skies.map_or(0, |skies| skies.lit());
+    let mean = mode.took * 1000.0 / mode.want as f32;
+    println!(
+        "gauge panes={} grouping={:?} skies={lit} frames={} mean_ms={mean:.2}",
+        mode.panes, mode.grouping, mode.want
+    );
+    exit.write(AppExit::Success);
 }
 
 /// Let the scene settle, capture the window once, exit when the write

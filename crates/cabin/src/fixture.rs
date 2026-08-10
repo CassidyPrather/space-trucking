@@ -95,6 +95,103 @@ piece 28 29 0 0 hold 0 9 10
 next_piece 29
 ";
 
+/// A dev board carrying exactly `n` windows and nothing else unusual:
+/// the starter ship with every pane stripped off it, then `n` hung on
+/// the cabin's aft wall at the first berths the sim's own arbiter will
+/// take (`--panes n`).
+///
+/// This exists to be MEASURED. The exterior's whole claim is that a
+/// wall of glass costs about what one window costs
+/// (`docs/ART_DIRECTION_3D.md`, "One wall, one sky"), and a claim about
+/// scaling is worth exactly the curve behind it — so the curve is
+/// something anyone can re-run: `--panes 1|2|4|8 --gauge 240`, with
+/// `--grouping pane` for the control arm. `--panes 0` is the other end
+/// of the same tool: a ship that sold its window, whose hull had better
+/// be solid.
+///
+/// It cheats at nothing. Every berth goes through `placement_check`, so
+/// a board this returns is a board a player could have built, and a
+/// refit that made these cells illegal would hand back a shorter board
+/// rather than a lie.
+#[must_use]
+pub fn panes_board(seed: u64, n: usize) -> String {
+    use std::fmt::Write as _;
+
+    use space_trucking::sim::cargo::{Loc, Piece, placement_check};
+    use space_trucking::sim::room::{CABIN, RoomKind, Surf};
+    use space_trucking::sim::{Kind, Sim};
+
+    let sim = Sim::new(seed);
+    let rooms = sim.rooms();
+    let mut aboard: Vec<Piece> = sim
+        .pieces()
+        .iter()
+        .copied()
+        .filter(|piece| piece.kind != Kind::Window)
+        .collect();
+    let mut next = aboard.iter().map(|piece| piece.id + 1).max().unwrap_or(0);
+
+    // Row-major over the cabin's aft chart: one wall, so one sky, which
+    // is the arrangement the measurement is actually about.
+    let (cols, rows) = RoomKind::Cabin.grid();
+    let mut hung: Vec<Piece> = Vec::new();
+    'search: for y in 0..rows {
+        for x in 0..cols {
+            if hung.len() >= n {
+                break 'search;
+            }
+            if RoomKind::Cabin.surface_of(x, y) != Some(Surf::Aft) {
+                continue;
+            }
+            let piece = Piece {
+                id: next,
+                kind: Kind::Window,
+                variant: 0,
+                gnawed: false,
+                loc: Loc::Hold { room: CABIN, x, y },
+            };
+            if placement_check(rooms, &aboard, piece.id, piece.kind, CABIN, x, y).is_ok() {
+                aboard.push(piece);
+                hung.push(piece);
+                next += 1;
+            }
+        }
+    }
+
+    let mut out = String::new();
+    for line in sim.save_string().lines() {
+        if line.starts_with("next_piece") {
+            for piece in &hung {
+                let Loc::Hold { room, x, y } = piece.loc else {
+                    unreachable!("the search only berths in holds");
+                };
+                // Writing into a String cannot fail, so the fmt
+                // plumbing is dropped — `save.rs`'s own convention.
+                let _ = writeln!(
+                    out,
+                    "piece {} {} 0 0 hold {room} {x} {y}",
+                    piece.id,
+                    piece.kind.index()
+                );
+            }
+            let _ = writeln!(out, "next_piece {next}");
+            continue;
+        }
+        // The stripped panes take their own lines with them.
+        if line.starts_with("piece ")
+            && line
+                .split_whitespace()
+                .nth(2)
+                .is_some_and(|token| token == Kind::Window.index().to_string())
+        {
+            continue;
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use space_trucking::sim::Sim;

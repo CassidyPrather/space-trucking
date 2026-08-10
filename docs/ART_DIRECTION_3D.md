@@ -118,6 +118,58 @@ What is there now:
   nearest-sampled target, cut to the glass at a fixed texel density
   (`PANE_DENSITY`) so the void reads about as chunky as the room around
   it. One knob, same discipline as `CRUNCH_W/H`.
+
+### One wall, one sky
+
+Windows are cargo, so a crew may own several — and the first exterior
+pass gave each one its own camera and its own render target, which is a
+bill that grows with the shopping. It does not any more.
+
+**Panes bolted to the same plane share one render of the outside.** The
+sky is drawn once through the rectangle that bounds all the glass on
+that wall, and each pane reads its own rectangle back out of it (a
+`uv_transform` on its material). This is exact, not an approximation:
+two co-planar apertures seen from one eye have the same near plane and
+the same view axis, so their projections differ by an affine map of that
+plane and the larger render *contains* the smaller one texel for texel.
+`viewport::sub_uv` is that map written out, and
+`a_shared_sky_is_the_pane_s_own_sky` checks it against each pane's own
+independently-built projection rather than against itself.
+
+What that buys, measured on the container's software renderer where the
+absolute numbers mean nothing and the shape means everything
+(`--panes n --gauge f`, with `--grouping pane` as the control arm — the
+first pass's cost model, on the same code path):
+
+| panes on one wall | 1 | 2 | 4 | 8 |
+| --- | --- | --- | --- | --- |
+| **one sky per wall** (ships) | 1 sky | 1 sky | 1 sky | 1 sky |
+| **one sky per pane** (control) | 1 sky | 2 skies | 4 skies | 8 skies |
+
+The exterior is ~6.2k triangles of star field, hull shells, and company;
+a "sky" is one pass over all of it. Windows cost draw calls in the cabin
+pass like any other furniture, and nothing else.
+
+Three bounds keep it honest, and all three are the same idea — *a
+window may be free, but glass is never unbounded*:
+
+1. **`viewport::MAX_SKIES`** is a hard ceiling on skies per frame, with
+   the cameras and targets allocated once at boot and reused. It counts
+   *walls with visible glass*, not windows, so eight is extravagant. Past
+   it, the remaining panes go **dark**: honest black glass, never a
+   stale sky and never somebody else's.
+2. **A pane the eye cannot see costs nothing.** Panes behind the crew,
+   or on the far side of their own glass, are dropped before any sky is
+   planned — which is why the ceiling can be generous.
+3. **`PANE_MAX` is degradation, not a budget.** A wall with glass spread
+   across it cuts one wider sky at the same texel ceiling, so it crunches
+   *coarser* rather than costing more. That clamp is the same one a single
+   oversized pane always met; sharing did not loosen it.
+
+The rehang rule is untouched by all of this, because the gathering is by
+**plane** and a plane is a fact about the wall: move a window to another
+wall and it joins that wall's sky, aimed that way, showing what is out
+there. `two_walls_are_two_skies_pointed_two_ways` is the assertion.
 - **The material distinction survives, inverted.** The old rule was "a
   tube shows a rendering, a window shows space", kept by painting the
   window differently from the CRTs. It is kept by *construction* now:
@@ -309,17 +361,29 @@ clips a wall, is handled structurally, not by eyeballing:
   and exits. It runs headless under xvfb with llvmpipe, so visual review
   happens in CI-shaped environments too — geometry changes should come
   with fresh captures, looked at.
-- Three `--view` names belong to the window and are *derived*, like
+- Four `--view` names belong to the window and are *derived*, like
   every other preset: `pane`, `pane-port` and `pane-stbd` stand square
   on to the glass and a stride to either side of it, wherever the board
   actually hangs it. They exist to be **compared** — same pane, two
   eyes, two skies is the exterior's whole claim, and a shot pair is how
-  it is checked. A fourth, `drydock`, is the one view that is not from
-  aboard: it lets the cabin camera see the void layer and parks it off
-  the bow, so a change to the room shells can be *looked* at instead of
-  inferred from a window. `--underway` boots a world that has already
+  it is checked. `panes` stands back from the mean of every window
+  aboard along the mean of the walls they are set in, which is the
+  corner shot that holds two *different* windows showing two different
+  skies in one frame. A fifth, `drydock`, is the one view that is not
+  from aboard: it lets the cabin camera see the void layer and parks it
+  off the bow, so a change to the room shells can be *looked* at instead
+  of inferred from a window. `--underway` boots a world that has already
   cast off (it charts and pulls the handle through the sim's own input
   frames), for the transit sky.
+- Three flags exist for the exterior's scaling claim and nothing else.
+  `--panes n` boots the starter ship with every window stripped and `n`
+  hung on one wall through the sim's own placement arbiter
+  (`fixture::panes_board`) — and `--panes 0` is the sold-window case, a
+  ship whose hull had better be solid. `--grouping wall|pane` picks the
+  law the exterior gathers panes by; `pane` is the control arm, the cost
+  model the first exterior pass had. `--gauge f` settles, times `f`
+  frames, prints one parseable line carrying the pane count and the sky
+  count, and exits.
 
 ## The cargo question
 

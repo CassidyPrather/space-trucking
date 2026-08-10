@@ -619,7 +619,12 @@ pub struct Outfit {
     pub plate: Color,
     /// What colour its running lights burn.
     pub lamp: Color,
-    /// How many running lights it carries (they ride the top corners).
+    /// How many running lights it carries, **0, 1 or 2** — they ride the
+    /// two top corners, so a third would stack on the first and burn
+    /// where a lamp already burns. Capped by test rather than by type
+    /// because the cap is a fact about where a shell has corners, not
+    /// about what a number may be; if a shell ever wants four, the
+    /// placement grows first and this doc follows it.
     pub lamps: u8,
 }
 
@@ -838,16 +843,24 @@ mod tests {
         assert_eq!(neutral.outfit.plate, palette::PLATE);
         assert_eq!(neutral.outfit.lamp, palette::AMBER);
         assert_eq!(neutral.outfit.lamps, 2);
-        // And every unfilled station still IS the neutral room, which is
-        // what makes a half-finished fleet shippable. Two are not blank:
-        // the Guild is the worked exemplar, and the derelict burns
-        // nothing at all, which it did before this directory existed.
+    }
+
+    /// **Every host has been designed.** This assertion began life the
+    /// other way up: while the fleet was half-finished it named the
+    /// stations that were filled and held the rest to the neutral room,
+    /// so a partly-designed chart still shipped. The whole fleet has
+    /// since sailed, and the useful reading inverted with it — what is
+    /// worth guarding now is that nobody adds a place to the chart and
+    /// leaves it wearing the default. A new host fails here until
+    /// somebody gives it a character, which is the note the old
+    /// enumerated list was really trying to leave.
+    #[test]
+    fn every_host_has_a_character_of_its_own() {
         for host in HOSTS {
-            let filled = matches!(host, Host::Guild | Host::Wreck);
-            assert_eq!(
-                character(host) == NEUTRAL,
-                !filled,
-                "{host:?} changed state without a note here"
+            assert_ne!(
+                character(host),
+                NEUTRAL,
+                "{host:?} is still the room we already had — give it one of its own"
             );
         }
     }

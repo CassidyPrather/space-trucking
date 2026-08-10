@@ -3297,15 +3297,18 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 ));
             }
         }
-        // The exterior window: a brass frame around the ship's one real
-        // sky — the viewport's painted glass rides this piece wherever
-        // it is rehung (the whimsy rule made physical; the void
+        // The exterior window: a brass frame around a hole in the hull.
+        // The glass wears the porthole's own render of what is actually
+        // outside, and it carries `viewport::SkyPane` — which is the
+        // whole contract between this furniture and the view. The
+        // aperture the void is seen through IS this quad, wherever the
+        // crew rehang it (the whimsy rule made physical; the void
         // follows). Headless paths fall back to a phosphor pane with a
         // stand-in star scatter seeded by the piece id.
         Kind::Window => {
             if let Some(image) = rig.sky_image.clone() {
-                let glass = crate::crt::tube_glass(rig.materials, &image);
-                rig.part(
+                let glass = crate::viewport::pane_glass(rig.materials, &image);
+                let pane = rig.part(
                     Rectangle::new(1.0, 1.0),
                     glass,
                     Transform::from_xyz(0.0, 0.0, 2.4).with_scale(Vec3::new(
@@ -3314,6 +3317,7 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                         1.0,
                     )),
                 );
+                rig.commands.entity(pane).insert(crate::viewport::SkyPane);
             } else {
                 let pane = glow::phosphor(
                     rig.materials,

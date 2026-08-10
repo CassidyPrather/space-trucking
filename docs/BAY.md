@@ -425,11 +425,22 @@ of. Three guards, all sim-side and monkey-proven:
   where roam-scale reading suffices); occlusion of a pose is handled
   by rendering, never by placement bans — see below.
 - **The readings ride the pieces first, the controls follow.** Landed:
-  the window piece wears the viewport's painted sky (sell your window,
-  lose the view), the chart tank and destination preview wear the
-  CRT's live textures, and the ETA gauge's needle reads the leg — the
-  console's arc and preview glass retired with them, and the plate they
-  were screwed to followed.
+  the chart tank and destination preview wear the CRT's live textures,
+  and the ETA gauge's needle reads the leg — the console's arc and
+  preview glass retired with them, and the plate they were screwed to
+  followed. **The window is not one of them.** It used to wear a
+  painted sky, which made it a picture of space rather than a way of
+  seeing it; its glass is a **hole in the hull** now
+  ([ART_DIRECTION_3D.md](ART_DIRECTION_3D.md), "The window is a hole").
+  The exterior is real geometry in world space and the pane is the
+  aperture an off-axis camera looks out through, so the void is
+  genuinely on the other side of it: step across the cabin and the same
+  pane frames different space; look at it from one side and you see
+  what is out the other. Sell your window and the hull is simply solid
+  — no pane, no aperture, no view. **Rehang it and the void follows**,
+  literally and by construction: the aperture is derived from wherever
+  the piece hangs, so the wall the glass ends up on is the direction it
+  looks.
 - **The handle rule** (the click-vs-carry answer, by decree): a
   click-functional piece wears a physical AMBER carry handle, and the
   handle IS the carry hitbox — hover the handle and a click means

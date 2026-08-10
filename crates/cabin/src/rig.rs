@@ -27,6 +27,7 @@
 //! "smoothing off" applied to the whole world) and the shared low-poly
 //! material [`Skin`].
 
+use bevy::camera::visibility::RenderLayers;
 use bevy::camera::{Hdr, RenderTarget};
 use bevy::image::ImageSampler;
 use bevy::input::mouse::AccumulatedMouseMotion;
@@ -466,6 +467,10 @@ pub struct CameraRig {
     /// Roam-mode cursor parking: `Esc` frees the OS cursor (to reach
     /// other windows); the next click on the game reclaims it.
     pub parked: bool,
+    /// Dev tooling only (`--view drydock`): let the cabin camera see the
+    /// void layer too, so the ship's own exterior shells can be looked
+    /// at from outside. Never set in play.
+    pub drydock: bool,
 }
 
 impl CameraRig {
@@ -478,6 +483,7 @@ impl CameraRig {
             pitch: -0.12,
             mode: view.map_or(Mode::Roam, |focus| Mode::Focused { focus }),
             parked: false,
+            drydock: false,
         }
     }
 
@@ -677,31 +683,47 @@ pub fn spawn(
     // first frame — so the camera opens on the roaming pose and `pose`
     // snaps it home a frame later.
     let (pos, rot) = (rig.pos, rig.roam_rotation());
-    commands.spawn((
-        Camera3d::default(),
-        Camera {
-            order: -1,
-            clear_color: ClearColorConfig::Custom(palette::VOID),
-            ..default()
-        },
-        Projection::Perspective(PerspectiveProjection {
-            fov: FOV,
-            ..default()
-        }),
-        RenderTarget::Image(target.clone().into()),
-        Hdr,
-        Bloom::NATURAL,
+    let camera = commands
+        .spawn((
+            Camera3d::default(),
+            Camera {
+                order: -1,
+                clear_color: ClearColorConfig::Custom(palette::VOID),
+                ..default()
+            },
+            Projection::Perspective(PerspectiveProjection {
+                fov: FOV,
+                ..default()
+            }),
+            RenderTarget::Image(target.clone().into()),
+            Hdr,
+            Bloom::NATURAL,
+            Msaa::Off,
+            Transform::from_translation(pos).with_rotation(rot),
+            CabinCamera,
+        ))
+        .id();
+    if rig.drydock {
+        // The drydock view (`--view drydock`): dev tooling that lets the
+        // cabin camera see the VOID layer as well as its own room, and
+        // parks it outside. The exterior is normally the porthole's
+        // alone; this is the one way to look at the ship's own shells
+        // without standing at a window, and it exists so a geometry
+        // change to `viewport::hull_outside` can be *looked* at. The
+        // cabin's fog stays off with it: hull-toned haze at twelve
+        // metres would grey out the very thing being inspected.
+        commands
+            .entity(camera)
+            .insert(RenderLayers::from_layers(&[0, crate::viewport::VOID_LAYER]));
+    } else {
         // A breath of particulate: gentle depth haze in hull tones. The
         // far corners of the cabin soften; panels up close stay crisp.
-        DistanceFog {
+        commands.entity(camera).insert(DistanceFog {
             color: palette::HULL.with_alpha(0.85),
             falloff: FogFalloff::Exponential { density: 0.16 },
             ..default()
-        },
-        Msaa::Off,
-        Transform::from_translation(pos).with_rotation(rot),
-        CabinCamera,
-    ));
+        });
+    }
     commands.spawn(Camera2d);
     commands.spawn((
         ImageNode::new(target),

@@ -86,6 +86,90 @@ consciously material: the tube shows a *rendering*, and the room shows
 the tube. The canvas paints headless, so screen content is unit-testable
 without a GPU.
 
+## The window is a hole
+
+**The transit window shows a real outside, not a picture of one.**
+`viewport.rs` used to paint the void into a texture: a hashed starfield,
+a berth disc, a growing destination, streak dashes. It was good ink and
+it was a lie — it looked identical from every angle, which is the one
+thing a window cannot do.
+
+What is there now:
+
+- **The void is a place.** Stars, the world ahead, the berth alongside,
+  whatever calls on the leg, and the ship's own hull all stand in world
+  coordinates on their own render layer (`viewport::VOID_LAYER`). The
+  cabin camera never sees that layer, so the hull stays solid from
+  inside and no light out there leaks through a wall.
+- **The pane is an aperture, and an aperture has a frustum.** A second
+  camera sits at the player's eye and looks out through the glass with
+  an **off-axis projection** whose near plane is cut on the window
+  itself (Kooima's generalized perspective). Move your head and the
+  frustum shears; the same pane frames different space. Stand to one
+  side of it and you see the space on the other side, which is what
+  holes do and what pictures do not. Nothing about it is a parallax
+  *effect*: the projection is simply correct.
+- **It is cargo, so the void follows it.** The aperture is derived from
+  the glass quad's live world pose — the piece rig's, wherever the crew
+  rehung it. A window on the front wall looks forward; carried to the
+  port wall it looks to port. No window aboard: no aperture, no camera,
+  no view, and the hull is solid.
+- **It obeys the crunch.** The porthole draws into its own small
+  nearest-sampled target, cut to the glass at a fixed texel density
+  (`PANE_DENSITY`) so the void reads about as chunky as the room around
+  it. One knob, same discipline as `CRUNCH_W/H`.
+- **The material distinction survives, inverted.** The old rule was "a
+  tube shows a rendering, a window shows space", kept by painting the
+  window differently from the CRTs. It is kept by *construction* now:
+  the CRTs still wear `crt.rs`'s software raster, and the window wears
+  `viewport::pane_glass` — dark glass, real specular, no scanlines and
+  no phosphor ramp, whose gleam is the crew's own lamps reflecting
+  rather than a highlight drawn into a canvas.
+
+The sim remains the authority for everything out there: `ShipState`
+decides which world grows off the bow and which shrinks astern,
+`is_warp`/`stoked` set how hard the near field streams past,
+`encounter`/`parade`/`advertising` bring the company, `Cue::Jump` floods
+the aperture violet, and `light`/`omen` lean on the void's one light
+exactly as they lean on the cabin's lamps.
+
+### Room exteriors, and how a design agent dresses one
+
+Every attached room wears a **shell** grown from the same `room::Plan`
+pose its interior is built from (`room::hull_box`), so the trade room
+you walked out of is bolted to your hull exactly where you left it. The
+shell you get today is deliberately plain — **hull plate, a seam belt,
+corner posts, a running light or two** — because an exterior with
+character already on it would fight whatever the station is eventually
+given.
+
+Two seams exist for the per-POI passes, and they are the only two:
+
+1. **`viewport::outfit(kind)`** returns the neutral kit: the plate
+   colour, the running lights' colour, and how many. A derelict burns
+   none — that is its whole tell — and the furnace wears its soot
+   outside as well as in.
+2. **`viewport::dress(kind, root, half)`** is where hardware goes. It
+   is exhaustive over `RoomKind` and every arm is empty on purpose; add
+   yours above the bare one and spawn into `root` (already at the
+   shell's centre, already on the void layer), measuring off `half`,
+   the shell's own half-extents. Planet-side POIs were the owner's
+   first idea for it — a space elevator's ribbon running off the shell
+   toward the world below — and a refinery's flare stack, a casino's
+   sign, a Guild mast are the same shape of change.
+
+Anything a design agent adds is dressing on a box the lattice placed.
+**The dressing may not move the room**, because the room's position is
+the sim's and the shell is derived from it; if a station needs to sit
+somewhere else, that is a `room::Plan` change, not an art change.
+
+One structural rule falls out and is worth stating: a room mated flush
+to the wall your window is on has its shell *inside your own hull's
+thickness*, so the plates are double-sided and the shell you are
+standing in is dropped each frame (`viewport::mind_the_hull`). A
+neighbour filling the window with plate is the honest reading of "there
+is a room bolted here"; a box drawn around your own eye is a blindfold.
+
 ## Pixel crunch, third dimension edition
 
 The whole cabin renders into a **480×270 target upscaled
@@ -225,6 +309,17 @@ clips a wall, is handled structurally, not by eyeballing:
   and exits. It runs headless under xvfb with llvmpipe, so visual review
   happens in CI-shaped environments too — geometry changes should come
   with fresh captures, looked at.
+- Three `--view` names belong to the window and are *derived*, like
+  every other preset: `pane`, `pane-port` and `pane-stbd` stand square
+  on to the glass and a stride to either side of it, wherever the board
+  actually hangs it. They exist to be **compared** — same pane, two
+  eyes, two skies is the exterior's whole claim, and a shot pair is how
+  it is checked. A fourth, `drydock`, is the one view that is not from
+  aboard: it lets the cabin camera see the void layer and parks it off
+  the bow, so a change to the room shells can be *looked* at instead of
+  inferred from a window. `--underway` boots a world that has already
+  cast off (it charts and pulls the handle through the sim's own input
+  frames), for the transit sky.
 
 ## The cargo question
 
@@ -286,12 +381,22 @@ Answered by iteration so far:
   `base_color_texture`, never darker than ~3% net. The hull, plates,
   and deck each get their own character; hazard striping paints the
   bay's front lip. No unweathered surfaces, no asset files.
-- **The window earned the front wall** (`viewport.rs`): a painted
-  canvas, not a CRT — no scanlines, no phosphor; stars are glint-white.
-  Streaks stretch under warp, the destination grows on approach, the
-  berth hangs outside while docked, and the whale swims past when it
-  calls. The distinction between a *screen showing a reading* and a
-  *window showing space* is the material discipline, kept.
+- **The window stopped being a picture** (`viewport.rs`): it was a
+  painted canvas for a slice — no scanlines, no phosphor, stars
+  glint-white — and the painting is gone, because a sky that looks the
+  same from every angle is a poster. It is a real exterior seen through
+  a real aperture now ("The window is a hole", above). Most of the
+  painted vocabulary survived the translation as geometry: the streaks
+  became a near field the ship actually passes, the destination a body
+  that grows off the bow, the berth a world and a dock alongside, the
+  jump a flood on the aperture's own near plane, and the whale, the
+  parade, the meteors and the ad drone real things out there. What did
+  not survive, and why: the **twinkle** (there is no air to twinkle
+  through, and it was standing in for the parallax the aperture now
+  supplies), the **parked dust motes and their sparkle** (a painted
+  substitute for near field, which the stream is), and the **drawn
+  gleam and inner shade line** on the glass (a real specular finish and
+  a real frame do that job).
 
 - **The hold left the desk** ([BAY.md](BAY.md)): the grid unfolds onto
   the cabin's walls and deck at furniture scale and carry replaces drag.

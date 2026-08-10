@@ -93,8 +93,51 @@ fn cabin_preset(name: &str, rig: &mut rig::CameraRig) {
             rig.yaw = -std::f32::consts::FRAC_PI_2;
             rig.pitch = -0.10;
         }
+        // Outside, in dry dock: the one view that is not from aboard.
+        // Dev tooling for the ship's own exterior shells (`viewport`),
+        // which are otherwise only ever seen through a window. It stands
+        // off the port bow, high enough to read the whole graph of rooms.
+        "drydock" => {
+            let eye = Vec3::new(7.6, 4.2, -8.2);
+            let at = Vec3::new(0.6, 1.1, 1.9);
+            let d = at - eye;
+            rig.pos = eye;
+            rig.yaw = (-d.x).atan2(-d.z);
+            rig.pitch = d.y.atan2(d.xz().length());
+            rig.drydock = true;
+        }
         _ => {}
     }
+}
+
+/// A fresh world, already `along` of the way through its first leg, as a
+/// save string (`--underway`).
+///
+/// Dev tooling, and it cheats at nothing: it charts a POI and pulls the
+/// launch handle through the sim's own `InputFrame` interface, exactly as
+/// a player would, then runs the leg on. Whatever the gates say, they say
+/// — a world that refuses to launch simply boots docked.
+#[allow(clippy::cast_sign_loss)] // the fraction is clamped non-negative below
+fn cast_off(seed: u64, along: f32) -> String {
+    use space_trucking::sim::{InputFrame, ShipState, Sim, TICK_DT, layout};
+    let mut sim = Sim::new(seed);
+    let press = |at| InputFrame {
+        pointer: at,
+        press: true,
+        held: true,
+        ..InputFrame::default()
+    };
+    if let ShipState::Docked(here) = sim.ship().state
+        && let Some(there) = (0..12_u8).find(|&id| id != here && sim.poi_chartable(id))
+    {
+        sim.advance(0.0, &press(sim.poi_pos(there)));
+        sim.advance(0.0, &press(canvas::rect_center(layout::LAUNCH_LEVER)));
+        sim.advance(TICK_DT, &InputFrame::default());
+    }
+    if let ShipState::Traveling { leg_ticks, .. } = sim.ship().state {
+        sim.fast_forward((leg_ticks as f32 * along.clamp(0.0, 1.0)) as u64);
+    }
+    sim.save_string()
 }
 
 fn main() {
@@ -131,7 +174,13 @@ fn main() {
         cabin_preset(name, &mut boot_rig);
     }
 
-    let bridge = if fixture {
+    // `--underway`: a world that has already cast off, so the transit sky
+    // — star streaks, the destination growing off the bow — can be looked
+    // at without waiting out a leg. Sandboxed exactly like `--fixture`.
+    let underway = args.iter().any(|arg| arg == "--underway");
+    let bridge = if underway {
+        Bridge::boot_fixture(&cast_off(7, 0.75))
+    } else if fixture {
         Bridge::boot_fixture(fixture::SAVE)
     } else {
         Bridge::boot(dev)
@@ -140,8 +189,12 @@ fn main() {
     // they ask the graph where the room is and stand in the middle of it
     // facing the wall the view is named for. Attach the trade room
     // somewhere else and `--view trade` follows it.
+    // The window's own presets are derived the same way, off the board
+    // rather than off the graph: `--view pane|pane-port|pane-stbd` stands
+    // at whatever wall the glass is actually hung on (`viewport::preset`).
     if let Some(name) = view_name.as_deref()
-        && let Some(pose) = room::preset(bridge.sim.rooms(), name)
+        && let Some(pose) =
+            room::preset(bridge.sim.rooms(), name).or_else(|| viewport::preset(&bridge.sim, name))
     {
         boot_rig.pos = pose.0;
         boot_rig.yaw = pose.1;

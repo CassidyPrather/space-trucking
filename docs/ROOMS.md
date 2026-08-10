@@ -254,6 +254,34 @@ epsilon, no tolerance, no "close enough to close" — a cycle that would
 need a half-cell of slack does not close, and the attach that would
 have made it is refused. **There is no rubber hallway.**
 
+### The other side of the plate
+
+A room has an outside, and the outside is the same room.
+
+> **One pose, two sides.** A room's exterior shell is derived from the
+> very `Plan` pose its interior is built from (`room::hull_box`), and
+> from nothing else. The exterior may not be authored, offset, or
+> "adjusted to look right": if a station needs to sit somewhere else,
+> that is a pose, and the sim owns poses.
+
+This is what makes the transit window honest. Look out of it at a wall
+a room is mated to and you are looking at that room's plate, ten
+centimetres away, because that is where the lattice put it; look along
+the hull and the rooms you have collected are strung out exactly as
+they are strung out inside. Nothing about the view is a second opinion
+about the ship's shape (see [ART_DIRECTION_3D.md](ART_DIRECTION_3D.md),
+"The window is a hole").
+
+The shell every room wears today is deliberately plain — plate, a seam
+belt, corner posts, a running light or two — and the per-POI design
+agents dress it through two named seams (`viewport::outfit` for the
+kit, `viewport::dress` for hardware), documented at the art direction.
+The cabin is the one room whose shell is not a lattice box: its hull
+was hand-built before the lattice and stands a working gutter forward
+of its floor box, so its outside is the union of the masses that ARE it
+(`rig::structure`) — the same exception, and the same declaration of
+it, that `chart_inset` already carries.
+
 ## Refusal semantics
 
 > **Overlap is prevented by law, never discovered as clipping.**

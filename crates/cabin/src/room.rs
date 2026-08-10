@@ -427,6 +427,37 @@ pub fn room_box(room: &Room) -> (Vec3, Vec3) {
     )
 }
 
+/// A room's OUTER box: the same room, seen from the void.
+///
+/// The interior box is the volume a body stands in; this is the volume
+/// the hull occupies around it — one wall thickness proud on all four
+/// sides and under the deck, capped by the room's own ceiling slab. The
+/// exterior (`crate::viewport`) grows every room's shell from exactly
+/// this, which is the whole reason the trade room you walked out of is
+/// bolted to your hull where you left it: one pose, two sides of the
+/// same plate.
+///
+/// The cabin is the one exception, and it is the exception it has always
+/// been: its hull was hand-built before the lattice and stands a working
+/// gutter forward of its floor box, so its outside is the union of the
+/// masses that ARE it (`rig::structure`) rather than a box derived from
+/// a pose it predates.
+#[must_use]
+pub fn hull_box(placed: &Placed) -> (Vec3, Vec3) {
+    if placed.id == CABIN {
+        return crate::rig::structure()
+            .iter()
+            .map(|slab| (slab.center - slab.size * 0.5, slab.center + slab.size * 0.5))
+            .reduce(union)
+            .unwrap_or((placed.lo, placed.hi));
+    }
+    let skirt = Vec3::new(WALL_T, 0.0, WALL_T);
+    (
+        placed.lo - skirt - Vec3::Y * WALL_T,
+        placed.hi + skirt + Vec3::Y * (WALL_T.mul_add(0.5, CEIL_SLAB_Y) - CEIL_Y),
+    )
+}
+
 /// The cabin as the graph always has it: the root, at the lattice origin.
 /// Lets the hull derive its own apertures without asking the sim, since
 /// the root's pose is fixed by `Rooms::root` and nothing can move it.

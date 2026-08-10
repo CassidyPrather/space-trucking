@@ -15,7 +15,6 @@
 
 mod airlock;
 mod audio;
-mod barter;
 mod bridge;
 mod canvas;
 mod console;
@@ -80,7 +79,7 @@ fn main() {
             .and_then(|at| args.get(at + 1).cloned())
     };
     let shot = flag_value("--shot");
-    // `--view tank|lever|console|desk|bay` boots parked at that
+    // `--view tank|lever|console|bay` boots parked at that
     // viewpoint — mostly for screenshot runs, harmless interactively.
     // The bay has no focus pose; its view is a roam pose facing aft.
     // The instrument viewpoints (tank, lever) find their pieces on the
@@ -90,7 +89,6 @@ fn main() {
         "tank" => Some(rig::Focus::Tank),
         "lever" => Some(rig::Focus::Lever),
         "console" => Some(rig::Focus::Console),
-        "desk" => Some(rig::Focus::Desk),
         _ => None,
     });
     // The roam poses stand back one cell further than they used to: the
@@ -152,7 +150,6 @@ fn main() {
     .add_plugins((
         airlock::AirlockPlugin,
         audio::AudioPlugin,
-        barter::BarterPlugin,
         console::ConsolePlugin,
         crt::CrtPlugin,
         fx::FxPlugin,

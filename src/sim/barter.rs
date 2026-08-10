@@ -1,44 +1,40 @@
-//! The no-currency barter minigame: shelves, pads, and an eagerness dial.
+//! The economy that survived its interface.
 //!
-//! Each dock generates a fresh visit — a shelf leaning toward what the
+//! The pads, the eagerness dial, patience, the fog, the accept lever and
+//! the whole desk-scale counter are gone (docs/ROOMS.md, "The decision").
+//! What is here is *economy*, not interface, and it keeps working
+//! unchanged behind the new flow: [`VALUE`], the per-visit ±1 jitter, the
+//! wants row, [`GNAW_MALUS`], the Umbra Market's gnaw premium, the
+//! well-lit-art bonus, and the arithmetic a room does when it answers a
+//! proposal with goods.
+//!
+//! Each dock generates a fresh visit — stock leaning toward what the
 //! station produces, a jittered copy of its value table, and a top-three
-//! wants list — all derived from `splitmix(seed, station, visit)`, so a save
-//! can rebuild the whole thing without storing it. The persistent run RNG is
-//! spent only on cosmetic variant rolls, per the determinism rules.
+//! wants list — all derived from `splitmix(seed, station, visit)`, so a
+//! save can rebuild the whole thing without storing it. The persistent
+//! run RNG is spent only on cosmetic variant rolls.
 
-use super::cargo::{KIND_COUNT, Kind, Loc, Piece, Tag, VARIANTS, lamp_lit, lit_adjacent};
+use super::cargo::{KIND_COUNT, Kind, Loc, Piece, Tag, lamp_lit};
 use super::map::{GUILD, HERMITAGE, POI_COUNT, PoiId, UMBRA};
+use super::room::{RoomId, Rooms, Tile};
 use super::splitmix;
 
-/// One station visit's trading state. Regenerated per dock, rebuilt on load.
+/// One station visit's trading state.
 ///
-/// Deliberately currency-free: nothing here (or anywhere in the public API)
-/// is a player-visible balance. `eagerness` is a ratio the dial displays,
-/// values stay internal, and trades settle piece-for-piece.
-#[derive(Clone, Debug, PartialEq)]
+/// Regenerated per dock, rebuilt on load — and now nothing but the
+/// derived facts, because the offer is goods on tiles rather than a
+/// needle with a state machine behind it.
+///
+/// Deliberately currency-free: nothing here (or anywhere in the public
+/// API) is a player-visible balance. Values stay internal and trades
+/// settle piece-for-piece.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Barter {
     pub station: PoiId,
     /// How many times this station has been visited, 1-based.
     pub visit: u32,
     /// Top-three kinds the station values this visit, with 1–3 want pips.
     pub wants: [(Kind, u8); 3],
-    /// The dial reading, `0..=EAGER_MAX`: eased toward the trade's true
-    /// give-over-take ratio a little every tick.
-    pub eagerness: f32,
-    /// Last tick's dial reading, for render interpolation.
-    pub prev_eagerness: f32,
-    /// Whether pulling the accept lever would conclude the trade. Tracks the
-    /// true ratio, not the eased dial, so accepting never races an animation.
-    pub ready: bool,
-    /// How much of the composed trade is guesswork, `0..=1`: the fraction
-    /// of pad pieces whose kind the player has never traded at this
-    /// station. The renderer fogs the needle and withholds the go-lamp by
-    /// this — discovery has a cost, and the cost is finding out.
-    pub fog: f32,
-    /// Refused lever pulls the station will still tolerate this visit.
-    /// At zero the shutters come down (see `Sim::conclude`); a gift is
-    /// the one thing that reopens them.
-    pub patience: u8,
 }
 
 /// How much each station values each kind, `0..=6`.
@@ -46,7 +42,7 @@ pub struct Barter {
 /// Rows follow map order (Venus, Earth, Mars, Jupiter, Uranus, Neptune,
 /// Guild, Saturn, Umbra Market, Hermitage, comet, `???`), columns follow
 /// [`Kind::index`] order. A zero doubles as "local produce": stations
-/// shelve the kind they do not value (which is how the Guild comes to
+/// stock the kind they do not value (which is how the Guild comes to
 /// broker transit chits, the Umbra Market to bottle midnight — and, since
 /// its lamp columns are zeros, to fence seized lamps cheap: light is a
 /// rival product there, sold only snuffed). Every row must keep at least
@@ -54,7 +50,7 @@ pub struct Barter {
 /// and both suspicious columns are 4 everywhere but the Guild, which
 /// seizes rather than pays. The five fixture columns are lore-directed:
 /// Venus buys tack, Earth rations light, Saturn treasures working
-/// fixtures, the Hermitage pays best for the couch. The cabinet column
+/// fixtures, the Hermitage pays best for the couch. The cabinet
 /// column follows the same lore: Saturn prizes working furniture, Earth
 /// and the Hermitage are practical people, and even the Umbra Market
 /// pays fair for a box that keeps light in its place. The covering
@@ -63,8 +59,8 @@ pub struct Barter {
 /// Umbra Market prices luminous paint at zero — light is a rival
 /// product, so it bottles glow as local produce and shelves it snuffed
 /// in blackout tins, exactly as it fences lamps. The comet and `???`
-/// never open a barter, so their rows are placeholders kept valid for
-/// the invariants above.
+/// never open a trade room, so their rows are placeholders kept valid
+/// for the invariants above.
 // Kept tabular by hand: one row per station is how this table is tuned.
 #[rustfmt::skip]
 pub const VALUE: [[u8; KIND_COUNT]; POI_COUNT] = [
@@ -78,36 +74,27 @@ pub const VALUE: [[u8; KIND_COUNT]; POI_COUNT] = [
     [1, 3, 2, 6, 1, 0, 2, 1, 4, 1, 4, 1, 5, 1, 1, 1, 4, 4, 3, 5, 3, 5, 3, 4, 3, 4, 3, 3, 3, 3], // Saturn
     [3, 2, 1, 1, 2, 0, 5, 4, 4, 3, 4, 3, 0, 2, 2, 1, 0, 0, 0, 3, 4, 3, 3, 2, 0, 5, 2, 1, 1, 2], // Umbra Market
     [1, 1, 3, 1, 4, 1, 1, 2, 4, 2, 4, 2, 3, 3, 1, 1, 2, 3, 2, 6, 3, 4, 5, 3, 4, 5, 2, 2, 2, 1], // Hermitage
-    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], // comet (no barter)
-    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 3, 2, 2, 2, 3, 2, 2, 2, 2, 2], // ??? (no barter)
+    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], // comet (no trade)
+    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 3, 2, 2, 2, 3, 2, 2, 2, 2, 2], // ??? (no trade)
 ];
 
 /// Ceiling for jittered per-visit values.
 const VALUE_MAX: u8 = 6;
 
-/// Fewest goods a station shelves.
-const SHELF_MIN: usize = 2;
+/// Fewest goods a station puts out.
+const STOCK_MIN: usize = 2;
 
-/// Most goods a station shelves; also the number of shelf slots.
-const SHELF_MAX: usize = 4;
+/// Most goods a station puts out in one visit.
+const STOCK_MAX: usize = 4;
 
-/// Dial ceiling: the eased eagerness pegs here however lavish the offer.
-pub const EAGER_MAX: f32 = 2.0;
-
-/// Refused pulls a station tolerates per visit before shuttering.
-pub const PATIENCE: u8 = 3;
-
-/// Dial speed in eagerness units per second: the full sweep takes one.
-pub(crate) const EAGER_RATE: f32 = 2.0;
-
-/// Chance a shelf roll picks from the station's produce, in tenths.
+/// Chance a stock roll picks from the station's produce, in tenths.
 const PRODUCE_CHANCE: u64 = 7;
 
 /// Chance denominator for a far station's crate offer: one visit in five.
 const CRATE_CHANCE: u64 = 5;
 
-/// Stream salts under the visit hash, so the crate roll, the shelf count,
-/// and each shelf kind draw independent values.
+/// Stream salts under the visit hash, so the crate roll, the stock count,
+/// and each stocked kind draw independent values.
 const SALT_CRATE: u64 = 1;
 const SALT_COUNT: u64 = 2;
 const SALT_KIND: u64 = 0x100;
@@ -138,29 +125,37 @@ pub(crate) fn visit_values(seed: u64, station: PoiId, visit: u32) -> [u8; KIND_C
     values
 }
 
-/// Generate one visit: the barter state plus the station's shelf pieces.
+/// This visit's derived state: the wants row, and nothing else.
+#[must_use]
+pub(crate) fn open(seed: u64, station: PoiId, visit: u32) -> Barter {
+    Barter {
+        station,
+        visit,
+        wants: wants(&visit_values(seed, station, visit)),
+    }
+}
+
+/// What a station puts on its `Stock` tiles this visit, in tile order.
 ///
-/// The shelf holds 2–4 goods, each 70% from the station's produce and 30%
-/// uniform over the rest; crates never come from those rolls. A far station
-/// shelves a crate one visit in five — never while `aboard` already carries
-/// one anywhere — and the Guild never offers one: crates flow outward from
-/// the frontier and home to the hangar. `rng` is the persistent run RNG,
-/// spent only on variant rolls.
-// A visit is genuinely this many ingredients; a params struct would just
-// rename the arguments.
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn generate(
+/// Two to four goods, each 70% from the station's produce and 30%
+/// uniform over the rest; crates never come from those rolls. A far
+/// station offers a crate one visit in five — never while `aboard`
+/// already carries one anywhere — and the Guild never offers one: crates
+/// flow outward from the frontier and home to the hangar. `cap` is the
+/// room's own tile count, so the slot count is the room's, not a fixed
+/// four.
+#[must_use]
+pub(crate) fn stock_kinds(
     seed: u64,
     station: PoiId,
     visit: u32,
     aboard: &[Piece],
     karma: u32,
     paraded: bool,
-    rng: &mut fastrand::Rng,
-    next_id: &mut u32,
-) -> (Barter, Vec<Piece>) {
-    let values = visit_values(seed, station, visit);
+    cap: usize,
+) -> Vec<Kind> {
     let h = visit_hash(seed, station, visit);
+    let room = cap.min(STOCK_MAX);
 
     let crate_aboard = aboard
         .iter()
@@ -171,115 +166,39 @@ pub(crate) fn generate(
         && !crate_aboard
         && splitmix(h, SALT_CRATE) % CRATE_CHANCE == 0;
 
-    let mut shelve = |kind: Kind, slot: usize| {
-        let piece = Piece {
-            id: *next_id,
-            kind,
-            variant: rng.u8(..VARIANTS),
-            gnawed: false,
-            loc: Loc::StationShelf { slot: slot as u8 },
-        };
-        *next_id += 1;
-        piece
-    };
-
     let mut goods = Vec::new();
-    if offer_crate {
-        goods.push(shelve(Kind::SuspiciousCrate, 0));
+    if offer_crate && goods.len() < room {
+        goods.push(Kind::SuspiciousCrate);
     }
     // After the Grand Parade, mysterious crates trickle onto ordinary
     // shelves: whatever the hangar was counting, the counting continues.
-    if paraded && station != GUILD && splitmix(h, SALT_MYSTERY) % 4 == 0 {
-        let slot = goods.len();
-        if slot < SHELF_MAX {
-            goods.push(shelve(Kind::MysteriousCrate, slot));
-        }
+    if paraded && station != GUILD && splitmix(h, SALT_MYSTERY) % 4 == 0 && goods.len() < room {
+        goods.push(Kind::MysteriousCrate);
     }
-    let span = (SHELF_MAX - SHELF_MIN) as u64 + 1;
+    let span = (STOCK_MAX - STOCK_MIN) as u64 + 1;
     let count = if station == HERMITAGE {
-        // The gift economy: the hermits shelve nothing for strangers, and
-        // one good per two pieces ever gifted to them — generosity comes
-        // back, slowly, and never as a transaction.
-        (karma as usize / 2).min(SHELF_MAX)
+        // The gift economy: the hermits put nothing out for strangers,
+        // and one good per two pieces ever gifted to them — generosity
+        // comes back, slowly, and never as a transaction.
+        (karma as usize / 2).min(STOCK_MAX)
     } else {
-        SHELF_MIN + (splitmix(h, SALT_COUNT) % span) as usize
+        STOCK_MIN + (splitmix(h, SALT_COUNT) % span) as usize
     };
-    // The crate takes a slot, so ordinary goods yield rather than overflow.
-    let count = count.min(SHELF_MAX - goods.len());
+    // The crate takes a tile, so ordinary goods yield rather than overflow.
+    let count = count.min(room.saturating_sub(goods.len()));
     for i in 0..count {
-        let slot = goods.len();
-        let kind = shelf_kind(station, splitmix(h, SALT_KIND + i as u64));
-        goods.push(shelve(kind, slot));
+        goods.push(stock_kind(station, splitmix(h, SALT_KIND + i as u64)));
     }
-
-    let barter = Barter {
-        station,
-        visit,
-        wants: wants(&values),
-        eagerness: 0.0,
-        prev_eagerness: 0.0,
-        ready: false,
-        fog: 0.0,
-        patience: PATIENCE,
-    };
-    (barter, goods)
+    goods
 }
 
-/// Rebuild a visit's barter state from a save: same wants as [`generate`]
-/// produced, dial snapped to the trade the restored pieces compose. The
-/// loader then overwrites the dial with the save's eased value.
-#[must_use]
-pub(crate) fn rebuild(
-    seed: u64,
-    station: PoiId,
-    visit: u32,
-    pieces: &[Piece],
-    familiar: u32,
-) -> Barter {
-    let values = visit_values(seed, station, visit);
-    let (target, ready) = eagerness_of(pieces, &values, gnaw_loved(station));
-    let eagerness = target.clamp(0.0, EAGER_MAX);
-    Barter {
-        station,
-        visit,
-        wants: wants(&values),
-        eagerness,
-        prev_eagerness: eagerness,
-        ready,
-        fog: fog_of(pieces, familiar),
-        patience: PATIENCE,
-    }
-}
-
-/// The guesswork fraction of the composed trade: pad pieces whose kind is
-/// not in this station's `familiar` bitmask, over all pad pieces. Empty
-/// pads read zero — nothing composed, nothing foggy.
-#[must_use]
-pub(crate) fn fog_of(pieces: &[Piece], familiar: u32) -> f32 {
-    let mut on_pads = 0_u32;
-    let mut unknown = 0_u32;
-    for piece in pieces {
-        if matches!(piece.loc, Loc::GivePad { .. } | Loc::TakePad { .. }) {
-            on_pads += 1;
-            if familiar & (1 << piece.kind.index()) == 0 {
-                unknown += 1;
-            }
-        }
-    }
-    if on_pads == 0 {
-        0.0
-    } else {
-        unknown as f32 / on_pads as f32
-    }
-}
-
-/// Gifted value that saturates the accept cue's celebration. The dial pegs
-/// for any gift; only the deal's *sound* scales with what was given.
+/// Gifted value that saturates the accept cue's celebration. The deal
+/// *sound* scales with what was given.
 const GIFT_WARMTH: f32 = 8.0;
 
 /// What a rat's bite knocks off a piece's value, floored at zero. The gnaw
 /// is permanent, so the discount follows the piece through the economy —
-/// on the give pad, on the take pad, and back off the station's shelf.
+/// on the offer area, on the room's own tiles, and back again.
 pub(crate) const GNAW_MALUS: u8 = 2;
 
 /// Whether `station` considers a rat's toothwork artisanal. The Umbra
@@ -290,40 +209,49 @@ pub(crate) const fn gnaw_loved(station: PoiId) -> bool {
     station == UMBRA
 }
 
-/// What lamplight adds to a well-lit painting's price. Only ever added,
-/// never subtracted, so the dial's monotone law survives it.
+/// What lamplight adds to a well-lit painting's price.
 pub(crate) const LIT_BONUS: u8 = 1;
 
-/// Whether `piece` is a painting shown in good light. In the hold that is
-/// literal: some cell of its footprint reads [`lit_adjacent`]. On the
-/// trade pads — the only places valuation actually prices — the piece is
-/// appraised under the hold's lamplight, so any lit lamp aboard counts.
-/// Lamp state always comes from the hold ([`lamp_lit`]): a lamp riding a
-/// pad or shelf lights nothing, which is exactly what keeps the dial
-/// monotone — composing a trade with a lamp never re-prices the art
-/// already on the pads.
-fn well_lit(piece: &Piece, pieces: &[Piece]) -> bool {
+/// The markup a room adds to each piece of its own stock, so even
+/// worthless goods are never free.
+pub(crate) const STOCK_MARKUP: u32 = 1;
+
+/// Whether `piece` is a painting shown in good light. On an ordinary
+/// berth that is literal: some cell of its footprint reads
+/// [`super::cargo::lit_adjacent`]. On a calling room's offer area — the
+/// only place valuation actually prices — the piece is appraised under
+/// the ship's own lamplight, so any lamp lit aboard counts.
+fn well_lit(rooms: &Rooms, piece: &Piece, pieces: &[Piece]) -> bool {
     if piece.kind != Kind::Painting {
         return false;
     }
-    match piece.loc {
-        Loc::Hold { x, y } => {
-            let (w, h) = piece.kind.cells();
-            (0..w).any(|dx| (0..h).any(|dy| lit_adjacent(pieces, x + dx, y + dy)))
-        }
-        Loc::GivePad { .. } | Loc::TakePad { .. } => pieces.iter().any(lamp_lit),
-        _ => false,
+    let Loc::Hold { room, x, y } = piece.loc else {
+        return false;
+    };
+    if rooms.tile(room, x, y) == Some(Tile::Offer) {
+        return pieces.iter().any(|other| {
+            lamp_lit(other) && matches!(other.loc, Loc::Hold { room, .. } if rooms.riding(room))
+        });
     }
+    let (w, h) = piece.kind.cells();
+    (0..w).any(|dx| (0..h).any(|dy| super::cargo::lit_adjacent(pieces, room, x + dx, y + dy)))
 }
 
 /// One piece's worth under this visit's table: its kind's jittered value,
 /// less [`GNAW_MALUS`] if a rat has been at it — or MORE by the same
 /// amount where the bite is loved (see [`gnaw_loved`]) — plus
-/// [`LIT_BONUS`] for a painting under lamplight (see [`well_lit`]). The
-/// single per-piece pricing rule; both pad totals read it, so a gnawed
-/// piece is cheaper to buy exactly as it is poorer to sell, and well-lit
-/// art is dearer to buy exactly as it is richer to sell.
-fn piece_value(piece: &Piece, pieces: &[Piece], values: &[u8; KIND_COUNT], gnaw_love: bool) -> u32 {
+/// [`LIT_BONUS`] for a painting under lamplight. The single per-piece
+/// pricing rule; both sides of a deal read it, so a gnawed piece is
+/// cheaper to buy exactly as it is poorer to sell, and well-lit art is
+/// dearer to buy exactly as it is richer to sell.
+#[must_use]
+pub(crate) fn piece_value(
+    rooms: &Rooms,
+    piece: &Piece,
+    pieces: &[Piece],
+    values: &[u8; KIND_COUNT],
+    gnaw_love: bool,
+) -> u32 {
     let value = values[piece.kind.index()];
     let value = if !piece.gnawed {
         u32::from(value)
@@ -332,75 +260,46 @@ fn piece_value(piece: &Piece, pieces: &[Piece], values: &[u8; KIND_COUNT], gnaw_
     } else {
         u32::from(value.saturating_sub(GNAW_MALUS))
     };
-    if well_lit(piece, pieces) {
+    if well_lit(rooms, piece, pieces) {
         value + u32::from(LIT_BONUS)
     } else {
         value
     }
 }
 
-/// Value given, cost asked, and whether the give pad holds anything at all,
-/// priced by this visit's table via [`piece_value`]. The +1 markup per
-/// taken item keeps even worthless goods from being free.
-fn pad_totals(pieces: &[Piece], values: &[u8; KIND_COUNT], gnaw_love: bool) -> (u32, u32, bool) {
-    let mut give = 0_u32;
-    let mut giving = false;
-    let mut take = 0_u32;
-    for piece in pieces {
-        let value = piece_value(piece, pieces, values, gnaw_love);
-        match piece.loc {
-            Loc::GivePad { .. } => {
-                give += value;
-                giving = true;
-            }
-            Loc::TakePad { .. } => take += value + 1,
-            _ => {}
+/// The pile a room composes in answer to a proposal.
+///
+/// Candidates are `(piece id, asking price, marked)`; the room takes the
+/// best pile its own stock offers that the proposal's value covers,
+/// **preferring marked kinds** and breaking ties deterministically (dearer
+/// first, then by piece id). Greedy on a handful of goods is the whole
+/// arithmetic; nothing here is a search.
+#[must_use]
+pub(crate) fn compose(budget: u32, candidates: &[(u32, u32, bool)]) -> Vec<u32> {
+    let mut order: Vec<(u32, u32, bool)> = candidates.to_vec();
+    order.sort_by_key(|&(id, cost, marked)| (!marked, std::cmp::Reverse(cost), id));
+    let mut spent = 0_u32;
+    let mut taken = Vec::new();
+    for (id, cost, _) in order {
+        if spent + cost <= budget {
+            spent += cost;
+            taken.push(id);
         }
     }
-    (give, take, giving)
+    taken.sort_unstable();
+    taken
 }
 
-/// Trade quality from the pads: value given over cost asked. Ready means
-/// the station at least breaks even — or the trade is a pure gift, which
-/// every station accepts. Gifting through the lever is the one way to shed
-/// cargo, so hold space can always be freed and nothing is ever lost to a
-/// stray drop.
-///
-/// A pure gift reads as the limiting case of "you ask for nothing": the
-/// ratio's limit is unbounded eagerness, so the dial pegs. That keeps the
-/// gauge monotone — loading the give pad never lowers it, loading the take
-/// pad never raises it — which the property test below holds it to. Two
-/// scales that disagree at the boundary is how a needle jumps the wrong
-/// way when a piece crosses pads.
+/// Generosity of the concluded deal in `0..=1`, for the accept cue's
+/// gain: the overshoot past what was taken, or the gifted value itself
+/// for a pure gift. A pegged offer must not make every token gift sound
+/// lavish, so the two scales stay separate.
 #[must_use]
-pub(crate) fn eagerness_of(
-    pieces: &[Piece],
-    values: &[u8; KIND_COUNT],
-    gnaw_love: bool,
-) -> (f32, bool) {
-    let (give, take, giving) = pad_totals(pieces, values, gnaw_love);
-    if take > 0 {
-        let eagerness = give as f32 / take as f32;
-        (eagerness, eagerness >= 1.0)
-    } else if giving {
-        (f32::INFINITY, true)
+pub(crate) fn deal_value(given: u32, taken: u32) -> f32 {
+    if taken > 0 {
+        (given as f32 / taken as f32 - 1.0).clamp(0.0, 1.0)
     } else {
-        (0.0, false)
-    }
-}
-
-/// Generosity of the concluded deal in `0..=1`, for the accept cue's gain:
-/// the overshoot past break-even for a trade, the gifted value itself for a
-/// pure gift. Separate from the dial on purpose — the gauge answers "would
-/// the station take this?", the cue answers "how big a deal was that?", and
-/// a pegged needle must not make every token gift sound lavish.
-#[must_use]
-pub(crate) fn deal_value(pieces: &[Piece], values: &[u8; KIND_COUNT], gnaw_love: bool) -> f32 {
-    let (give, take, _) = pad_totals(pieces, values, gnaw_love);
-    if take > 0 {
-        (give as f32 / take as f32 - 1.0).clamp(0.0, 1.0)
-    } else {
-        (give as f32 / GIFT_WARMTH).clamp(0.0, 1.0)
+        (given as f32 / GIFT_WARMTH).clamp(0.0, 1.0)
     }
 }
 
@@ -420,38 +319,68 @@ fn wants(values: &[u8; KIND_COUNT]) -> [(Kind, u8); 3] {
     [want(order[0]), want(order[1]), want(order[2])]
 }
 
-/// One shelf kind from one roll: 70% the station's produce (base value
-/// zero), 30% uniform over the others. Crates are excluded on both branches
-/// — they enter the world only through the far stations' special offer —
-/// which also empties the Guild's produce pool, making it shelve a uniform
-/// spread.
-fn shelf_kind(station: PoiId, roll: u64) -> Kind {
-    // Never on an ordinary shelf: suspicious crates enter through the far
+/// One stocked kind from one roll: 70% the station's produce (base value
+/// zero), 30% uniform over the others. Crates are excluded on both
+/// branches — they enter the world only through the far stations' special
+/// offer — which also empties the Guild's produce pool, making it stock a
+/// uniform spread.
+fn stock_kind(station: PoiId, roll: u64) -> Kind {
+    // Never on ordinary stock: suspicious crates enter through the far
     // stations' special offer, very mysterious crates only through ???,
     // and casino chips only through losing.
-    let shelvable = |kind: Kind| {
+    let stockable = |kind: Kind| {
         !matches!(
             kind,
             Kind::SuspiciousCrate | Kind::VeryMysteriousCrate | Kind::CasinoChip
         )
     };
-    let produce = |kind: Kind| shelvable(kind) && VALUE[usize::from(station)][kind.index()] == 0;
+    let produce = |kind: Kind| stockable(kind) && VALUE[usize::from(station)][kind.index()] == 0;
     let has_produce = Kind::ALL.iter().any(|&kind| produce(kind));
     let from_produce = has_produce && roll % 10 < PRODUCE_CHANCE;
     let pool: Vec<Kind> = Kind::ALL
         .iter()
         .copied()
-        .filter(|&kind| shelvable(kind) && produce(kind) == from_produce)
+        .filter(|&kind| stockable(kind) && produce(kind) == from_produce)
         .collect();
     pool[((roll / 10) % pool.len() as u64) as usize]
+}
+
+/// Every cell of `room` whose tile reads `class`, in row-major order —
+/// the order a room fills its own tiles, and the order the stoker reads
+/// the hopper in.
+#[must_use]
+pub fn tiles_of(rooms: &Rooms, room: RoomId, class: Tile) -> Vec<(u8, u8)> {
+    let Some(kind) = rooms.kind(room) else {
+        return Vec::new();
+    };
+    let (cols, rows) = kind.grid();
+    let mut cells = Vec::new();
+    for y in 0..rows {
+        for x in 0..cols {
+            if kind.tile_of(x, y) == Some(class) {
+                cells.push((x, y));
+            }
+        }
+    }
+    cells
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sim::room::{CABIN, RoomKind};
 
     /// Venus, whose produce is the perfume at kind index 0.
     const VENUS: PoiId = 0;
+
+    /// A ship with a trade room attached, and that room's id.
+    fn stall() -> (Rooms, RoomId) {
+        let mut rooms = Rooms::new();
+        let trade = rooms
+            .spawn(RoomKind::Trade, CABIN)
+            .expect("a trade room attaches");
+        (rooms, trade)
+    }
 
     /// A piece at `loc`, id and variant immaterial to valuation.
     const fn piece(kind: Kind, loc: Loc) -> Piece {
@@ -464,39 +393,14 @@ mod tests {
         }
     }
 
-    /// The same piece after a rat has been at it.
-    const fn gnawed(kind: Kind, loc: Loc) -> Piece {
-        Piece {
-            id: 0,
-            kind,
-            variant: 0,
-            gnawed: true,
-            loc,
-        }
-    }
-
-    /// Run [`generate`] with fixed cosmetics, returning barter and shelf.
-    fn visit(seed: u64, station: PoiId, n: u32, aboard: &[Piece]) -> (Barter, Vec<Piece>) {
-        let mut rng = fastrand::Rng::with_seed(0);
-        let mut next_id = 0;
-        generate(seed, station, n, aboard, 0, false, &mut rng, &mut next_id)
-    }
-
     #[test]
     fn same_visit_regenerates_identically_and_the_next_differs() {
-        let (a, shelf_a) = visit(42, VENUS, 3, &[]);
-        let (b, shelf_b) = visit(42, VENUS, 3, &[]);
-        assert_eq!(a, b);
-        assert_eq!(shelf_a, shelf_b);
+        let stock = |n| stock_kinds(42, VENUS, n, &[], 0, false, 5);
+        assert_eq!(stock(3), stock(3));
         assert_eq!(visit_values(42, VENUS, 3), visit_values(42, VENUS, 3));
-
-        // The next visit re-rolls: over a handful of visits the shelves and
-        // value tables cannot all repeat.
+        assert_eq!(open(42, VENUS, 3), open(42, VENUS, 3));
         let differs = (4..10).any(|n| {
-            let (_, shelf) = visit(42, VENUS, n, &[]);
-            let kinds = |s: &[Piece]| s.iter().map(|piece| piece.kind).collect::<Vec<_>>();
-            kinds(&shelf) != kinds(&shelf_a)
-                || visit_values(42, VENUS, n) != visit_values(42, VENUS, 3)
+            stock(n) != stock(3) || visit_values(42, VENUS, n) != visit_values(42, VENUS, 3)
         });
         assert!(differs, "six later visits identical to visit 3");
     }
@@ -537,7 +441,6 @@ mod tests {
                 (Kind::RationBricks, 2),    // value 4
             ]
         );
-        // Zeros never appear, so pips are always 1..=3.
         for station in 0..POI_COUNT as PoiId {
             for n in 1..30 {
                 for (_, pips) in wants(&visit_values(7, station, n)) {
@@ -547,92 +450,191 @@ mod tests {
         }
     }
 
+    /// The composition law: the room takes the best pile the proposal
+    /// covers, marked kinds first, ties broken deterministically.
     #[test]
-    fn empty_pads_are_zero_and_never_ready() {
-        let values = visit_values(1, VENUS, 1);
-        assert_eq!(eagerness_of(&[], &values, false), (0.0, false));
+    fn a_room_composes_the_best_pile_the_proposal_covers() {
+        // Budget 5 against three goods costing 4, 3, and 2.
+        let candidates = [(10, 4, false), (11, 3, false), (12, 2, false)];
+        assert_eq!(compose(5, &candidates), vec![10]);
+        assert_eq!(compose(9, &candidates), vec![10, 11, 12]);
+        assert_eq!(compose(0, &candidates), Vec::<u32>::new());
+        // A mark jumps the queue: with the cheap one marked, the budget
+        // buys it first and the dear one no longer fits.
+        let marked = [(10, 4, false), (11, 3, false), (12, 2, true)];
+        assert_eq!(compose(5, &marked), vec![11, 12]);
+        // Ties break by id, always the same way.
+        let tied = [(20, 3, false), (5, 3, false)];
+        assert_eq!(compose(3, &tied), vec![5]);
     }
 
     #[test]
-    fn a_pure_gift_pegs_the_dial_and_scales_the_celebration() {
-        let values = visit_values(1, VENUS, 1);
-        let pieces = [piece(Kind::BrinePearls, Loc::GivePad { slot: 0 })];
-        let (eagerness, ready) = eagerness_of(&pieces, &values, false);
-        assert!(ready, "a gift must always be accepted");
-        assert!(
-            eagerness >= EAGER_MAX,
-            "a gift is the limit of asking nothing: the dial pegs, never a \
-             lower reading a take item could jump above"
+    fn a_well_lit_painting_prices_one_higher_on_the_offer_area() {
+        let (rooms, trade) = stall();
+        let mut values = [0_u8; KIND_COUNT];
+        values[Kind::Painting.index()] = 3;
+        let offer = tiles_of(&rooms, trade, Tile::Offer)[0];
+        let art = piece(
+            Kind::Painting,
+            Loc::Hold {
+                room: trade,
+                x: offer.0,
+                y: offer.1,
+            },
         );
-        // A worthless gift is still a gift: ready even at value zero.
-        let zeroed = [0_u8; KIND_COUNT];
-        let (pegged, ready) = eagerness_of(&pieces, &zeroed, false);
-        assert!(ready);
-        assert!(pegged >= EAGER_MAX);
-        // The celebration, unlike the dial, scales with what was given.
-        assert!(deal_value(&pieces, &zeroed, false) < deal_value(&pieces, &values, false));
+        assert_eq!(piece_value(&rooms, &art, &[art], &values, false), 3);
+        // A lamp lit aboard appraises the proposal one dearer.
+        let lamp = piece(
+            Kind::CeilingLamp,
+            Loc::Hold {
+                room: CABIN,
+                x: 16,
+                y: 4,
+            },
+        );
+        assert_eq!(piece_value(&rooms, &art, &[art, lamp], &values, false), 4);
+        // Berthed aboard, the rule is literal adjacency instead: hung on
+        // the far aft wall, the same lamp lights nothing.
+        let hung = piece(
+            Kind::Painting,
+            Loc::Hold {
+                room: CABIN,
+                x: 5,
+                y: 1,
+            },
+        );
+        assert_eq!(piece_value(&rooms, &hung, &[hung, lamp], &values, false), 3);
     }
 
-    /// The gauge's contract, held under fire: whatever already sits on the
-    /// pads, adding to the give pad never lowers the reading and adding to
-    /// the take pad never raises it. This is the genre guard for "the
-    /// needle moved the wrong way" — any future pricing tweak that breaks
-    /// gauge monotonicity fails here, not in someone's hands.
     #[test]
-    fn dial_reading_is_monotone_under_pad_changes() {
-        let mut rng = fastrand::Rng::with_seed(0xD1A1);
-        let dial = |pieces: &[Piece], values: &[u8; KIND_COUNT]| {
-            eagerness_of(pieces, values, false).0.clamp(0.0, EAGER_MAX)
+    fn a_gnawed_piece_prices_two_lower_with_a_floor_at_zero() {
+        let (rooms, _) = stall();
+        let mut values = [0_u8; KIND_COUNT];
+        values[Kind::BrinePearls.index()] = 5;
+        values[Kind::PerfumeVial.index()] = 1;
+        let at = Loc::Hold {
+            room: CABIN,
+            x: 4,
+            y: 4,
         };
-        for _ in 0..500 {
-            let mut values = [0_u8; KIND_COUNT];
-            for v in &mut values {
-                *v = rng.u8(0..=6);
+        let fresh = piece(Kind::BrinePearls, at);
+        let bitten = Piece {
+            gnawed: true,
+            ..fresh
+        };
+        assert_eq!(piece_value(&rooms, &fresh, &[fresh], &values, false), 5);
+        assert_eq!(piece_value(&rooms, &bitten, &[bitten], &values, false), 3);
+        // The Umbra Market calls the bite artisanal and pays a premium.
+        assert_eq!(piece_value(&rooms, &bitten, &[bitten], &values, true), 7);
+        // The malus floors at zero rather than going negative.
+        let cheap = Piece {
+            kind: Kind::PerfumeVial,
+            gnawed: true,
+            ..fresh
+        };
+        assert_eq!(piece_value(&rooms, &cheap, &[cheap], &values, false), 0);
+    }
+
+    #[test]
+    fn generosity_scales_the_celebration_but_never_past_one() {
+        assert!((deal_value(4, 2) - 1.0).abs() < 1e-6);
+        assert!((deal_value(3, 2) - 0.5).abs() < 1e-6);
+        assert!(deal_value(2, 4) < 1e-6);
+        // A pure gift reads by what was given, not by a ratio.
+        assert!(deal_value(2, 0) < deal_value(6, 0));
+    }
+
+    #[test]
+    fn stock_leans_toward_produce_and_ordinary_rolls_never_yield_crates() {
+        let mut perfume = 0_usize;
+        let mut total = 0_usize;
+        let mut kinds_seen = std::collections::BTreeSet::new();
+        // A crate aboard suppresses the special offer, so every good
+        // here comes from the ordinary rolls under test.
+        let aboard = [piece(
+            Kind::SuspiciousCrate,
+            Loc::Hold {
+                room: CABIN,
+                x: 4,
+                y: 4,
+            },
+        )];
+        for n in 1..200 {
+            let stock = stock_kinds(0xFEED, VENUS, n, &aboard, 0, false, 5);
+            assert!((STOCK_MIN..=STOCK_MAX).contains(&stock.len()));
+            for kind in stock {
+                assert_ne!(kind, Kind::SuspiciousCrate);
+                kinds_seen.insert(kind.index());
+                perfume += usize::from(kind == Kind::PerfumeVial);
+                total += 1;
             }
-            // A random starting spread across both pads, possibly empty.
-            let mut pieces = Vec::new();
-            for slot in 0..3 {
-                if rng.bool() {
-                    pieces.push(piece(
-                        Kind::ALL[rng.usize(..KIND_COUNT)],
-                        Loc::GivePad { slot },
-                    ));
-                }
-                if rng.bool() {
-                    pieces.push(piece(
-                        Kind::ALL[rng.usize(..KIND_COUNT)],
-                        Loc::TakePad { slot },
-                    ));
-                }
+        }
+        assert!(
+            perfume * 10 > total * 5,
+            "only {perfume}/{total} goods were Venus produce"
+        );
+        assert!(perfume < total, "the 30% branch never fired");
+        assert!(kinds_seen.len() >= 3, "stock lacks variety: {kinds_seen:?}");
+    }
+
+    #[test]
+    fn far_stations_offer_crates_one_in_five_and_respect_the_singleton() {
+        let mut offered = 0_usize;
+        for n in 1..=600 {
+            let stock = stock_kinds(0xFEED, VENUS, n, &[], 0, false, 5);
+            let crates = stock
+                .iter()
+                .filter(|&&kind| kind == Kind::SuspiciousCrate)
+                .count();
+            assert!(crates <= 1, "visit {n} stocked {crates} crates");
+            offered += crates;
+        }
+        assert!(
+            (70..=180).contains(&offered),
+            "{offered}/600 crate offers is far from one in five"
+        );
+        for station in 0..POI_COUNT as PoiId {
+            if matches!(
+                station,
+                GUILD | HERMITAGE | super::super::map::COMET | super::super::map::WANDERER
+            ) {
+                continue;
             }
-            let before = dial(&pieces, &values);
-            let kind = Kind::ALL[rng.usize(..KIND_COUNT)];
-            let (loc, raises) = if rng.bool() {
-                (Loc::GivePad { slot: 3 }, true)
-            } else {
-                (Loc::TakePad { slot: 3 }, false)
-            };
-            pieces.push(piece(kind, loc));
-            let after = dial(&pieces, &values);
-            if raises {
-                assert!(
-                    after >= before - 1e-6,
-                    "giving {kind:?} lowered the dial: {before} -> {after}"
-                );
-            } else {
-                assert!(
-                    after <= before + 1e-6,
-                    "asking for {kind:?} raised the dial: {before} -> {after}"
-                );
-            }
+            let some = (1..=60).any(|n| {
+                stock_kinds(0xFEED, station, n, &[], 0, false, 5).contains(&Kind::SuspiciousCrate)
+            });
+            assert!(some, "station {station} never offered a crate");
+        }
+        // One aboard anywhere suppresses the offer.
+        let aboard = [piece(
+            Kind::SuspiciousCrate,
+            Loc::Hold {
+                room: CABIN,
+                x: 4,
+                y: 4,
+            },
+        )];
+        for n in 1..=100 {
+            assert!(
+                !stock_kinds(0xFEED, VENUS, n, &aboard, 0, false, 5)
+                    .contains(&Kind::SuspiciousCrate),
+                "visit {n} offered a second crate"
+            );
+        }
+    }
+
+    #[test]
+    fn the_guild_never_offers_crates() {
+        for n in 1..=200 {
+            assert!(
+                !stock_kinds(0xFEED, GUILD, n, &[], 0, false, 5).contains(&Kind::SuspiciousCrate),
+                "the Guild stocked a crate on visit {n}"
+            );
         }
     }
 
     #[test]
     fn every_new_fixture_is_wanted_somewhere_and_umbra_snubs_lamps() {
-        // The wants row must be able to ask for each fixture: for every new
-        // kind, some station's visit (base table plus jitter) ranks it
-        // top-three.
         for kind in [
             Kind::CeilingLamp,
             Kind::WallLamp,
@@ -653,263 +655,8 @@ mod tests {
             });
             assert!(asked, "{kind:?} is never in any wants row");
         }
-        // The Umbra Market pays zero for every lamp — light is a rival
-        // product — which also files lamps under its local produce.
         for lamp in [Kind::CeilingLamp, Kind::WallLamp, Kind::FloorLamp] {
             assert_eq!(VALUE[usize::from(UMBRA)][lamp.index()], 0);
-        }
-    }
-
-    #[test]
-    fn a_well_lit_painting_prices_one_higher_on_either_pad() {
-        let mut values = [0_u8; KIND_COUNT];
-        values[Kind::Painting.index()] = 3;
-        values[Kind::BrinePearls.index()] = 5;
-        let ask = piece(Kind::Seedlings, Loc::TakePad { slot: 0 });
-        // Sold in the dark: the base value.
-        let dark = [piece(Kind::Painting, Loc::GivePad { slot: 0 }), ask];
-        assert_eq!(eagerness_of(&dark, &values, false), (3.0, true));
-        // Sold under a lit lamp stowed in the hold: one more.
-        let lamp = piece(Kind::CeilingLamp, Loc::Hold { x: 2, y: 0 });
-        let lit = [piece(Kind::Painting, Loc::GivePad { slot: 0 }), ask, lamp];
-        assert_eq!(eagerness_of(&lit, &values, false), (4.0, true));
-        // A lamp riding the give pad is dark and lights nothing.
-        let dark_lamp = [
-            piece(Kind::Painting, Loc::GivePad { slot: 0 }),
-            ask,
-            piece(Kind::CeilingLamp, Loc::GivePad { slot: 1 }),
-        ];
-        assert_eq!(eagerness_of(&dark_lamp, &values, false), (3.0, true));
-        // Asked for under the same lamplight, the painting costs one more
-        // too: dearer to buy exactly as it is richer to sell.
-        let give = piece(Kind::BrinePearls, Loc::GivePad { slot: 0 });
-        let buy_dark = [give, piece(Kind::Painting, Loc::TakePad { slot: 0 })];
-        assert_eq!(eagerness_of(&buy_dark, &values, false), (5.0 / 4.0, true));
-        let buy_lit = [give, piece(Kind::Painting, Loc::TakePad { slot: 0 }), lamp];
-        assert_eq!(eagerness_of(&buy_lit, &values, false), (5.0 / 5.0, true));
-        // In the hold the rule is literal adjacency: a painting beside the
-        // lamp reads well lit, one across the room does not, and a shelf
-        // painting is never appraised at all.
-        let hung = piece(Kind::Painting, Loc::Hold { x: 0, y: 1 });
-        let far = piece(Kind::Painting, Loc::Hold { x: 4, y: 3 });
-        let lamp_low = piece(Kind::CeilingLamp, Loc::Hold { x: 0, y: 0 });
-        assert!(well_lit(&hung, &[hung, lamp_low]));
-        assert!(!well_lit(&far, &[far, lamp_low]));
-        let shelved = piece(Kind::Painting, Loc::StationShelf { slot: 0 });
-        assert!(!well_lit(&shelved, &[shelved, lamp_low]));
-    }
-
-    /// The monotone law under lamplight: with a lit lamp stowed in the
-    /// hold — every pad painting one dearer — adding to the give pad still
-    /// never lowers the dial and adding to the take pad never raises it.
-    #[test]
-    fn the_dial_stays_monotone_with_the_hold_lamplit() {
-        let mut rng = fastrand::Rng::with_seed(0x11A7);
-        let dial = |pieces: &[Piece], values: &[u8; KIND_COUNT]| {
-            eagerness_of(pieces, values, false).0.clamp(0.0, EAGER_MAX)
-        };
-        for _ in 0..500 {
-            let mut values = [0_u8; KIND_COUNT];
-            for v in &mut values {
-                *v = rng.u8(0..=6);
-            }
-            let mut pieces = vec![piece(Kind::WallLamp, Loc::Hold { x: 0, y: 0 })];
-            for slot in 0..3 {
-                if rng.bool() {
-                    pieces.push(piece(
-                        Kind::ALL[rng.usize(..KIND_COUNT)],
-                        Loc::GivePad { slot },
-                    ));
-                }
-                if rng.bool() {
-                    pieces.push(piece(
-                        Kind::ALL[rng.usize(..KIND_COUNT)],
-                        Loc::TakePad { slot },
-                    ));
-                }
-            }
-            let before = dial(&pieces, &values);
-            let kind = Kind::ALL[rng.usize(..KIND_COUNT)];
-            let (loc, raises) = if rng.bool() {
-                (Loc::GivePad { slot: 3 }, true)
-            } else {
-                (Loc::TakePad { slot: 3 }, false)
-            };
-            pieces.push(piece(kind, loc));
-            let after = dial(&pieces, &values);
-            if raises {
-                assert!(
-                    after >= before - 1e-6,
-                    "giving {kind:?} under lamplight lowered the dial: {before} -> {after}"
-                );
-            } else {
-                assert!(
-                    after <= before + 1e-6,
-                    "asking for {kind:?} under lamplight raised the dial: {before} -> {after}"
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn take_cost_marks_every_item_up_by_one() {
-        let mut values = [0_u8; KIND_COUNT];
-        values[Kind::PerfumeVial.index()] = 1;
-        values[Kind::Seedlings.index()] = 0;
-        values[Kind::CryoCore.index()] = 2;
-        // A worthless taken piece still costs 1: give 1 exactly breaks even.
-        let pieces = [
-            piece(Kind::PerfumeVial, Loc::GivePad { slot: 0 }),
-            piece(Kind::Seedlings, Loc::TakePad { slot: 0 }),
-        ];
-        assert_eq!(eagerness_of(&pieces, &values, false), (1.0, true));
-        // A valued piece costs value + 1: give 1 against cost 3 is short.
-        let pieces = [
-            piece(Kind::PerfumeVial, Loc::GivePad { slot: 0 }),
-            piece(Kind::CryoCore, Loc::TakePad { slot: 0 }),
-        ];
-        let (eagerness, ready) = eagerness_of(&pieces, &values, false);
-        assert!((eagerness - 1.0 / 3.0).abs() < 1e-6);
-        assert!(!ready);
-    }
-
-    #[test]
-    fn a_gnawed_piece_prices_two_lower_with_a_floor_at_zero() {
-        let mut values = [0_u8; KIND_COUNT];
-        values[Kind::BrinePearls.index()] = 5;
-        values[Kind::PerfumeVial.index()] = 1;
-        // On the give pad: 5 fresh, 3 bitten, against a cost-1 ask.
-        let ask = piece(Kind::Seedlings, Loc::TakePad { slot: 0 });
-        let fresh = [piece(Kind::BrinePearls, Loc::GivePad { slot: 0 }), ask];
-        let bitten = [gnawed(Kind::BrinePearls, Loc::GivePad { slot: 0 }), ask];
-        assert_eq!(eagerness_of(&fresh, &values, false), (5.0, true));
-        assert_eq!(eagerness_of(&bitten, &values, false), (3.0, true));
-        // The malus floors at zero rather than going negative: a bitten
-        // vial (value 1) gives nothing, and the ratio simply reads short.
-        let worthless = [gnawed(Kind::PerfumeVial, Loc::GivePad { slot: 0 }), ask];
-        assert_eq!(eagerness_of(&worthless, &values, false), (0.0, false));
-        // The take side discounts identically — stations resell the bite —
-        // while keeping the +1 markup: cost (5 - 2) + 1 = 4.
-        let buying_bitten = [
-            piece(Kind::BrinePearls, Loc::GivePad { slot: 0 }),
-            gnawed(Kind::BrinePearls, Loc::TakePad { slot: 0 }),
-        ];
-        assert_eq!(
-            eagerness_of(&buying_bitten, &values, false),
-            (5.0 / 4.0, true)
-        );
-        // The celebration reads the same totals: overshoot 5/4 - 1.
-        assert!((deal_value(&buying_bitten, &values, false) - 0.25).abs() < 1e-6);
-    }
-
-    #[test]
-    fn generosity_overshoots_past_the_dial() {
-        let mut values = [0_u8; KIND_COUNT];
-        values[Kind::BrinePearls.index()] = 6;
-        values[Kind::Seedlings.index()] = 0;
-        let pieces = [
-            piece(Kind::BrinePearls, Loc::GivePad { slot: 0 }),
-            piece(Kind::BrinePearls, Loc::GivePad { slot: 1 }),
-            piece(Kind::Seedlings, Loc::TakePad { slot: 0 }),
-        ];
-        // Give 12 against cost 1: the raw ratio runs far past EAGER_MAX;
-        // the dial cap and the accept-value clamp are applied by the sim.
-        assert_eq!(eagerness_of(&pieces, &values, false), (12.0, true));
-    }
-
-    #[test]
-    fn shelves_lean_toward_produce_and_ordinary_rolls_never_yield_crates() {
-        let mut perfume = 0_usize;
-        let mut total = 0_usize;
-        let mut kinds_seen = std::collections::BTreeSet::new();
-        // A crate aboard suppresses the special offer, so every shelf good
-        // here comes from the ordinary rolls under test.
-        let aboard = [piece(Kind::SuspiciousCrate, Loc::Hold { x: 0, y: 0 })];
-        for n in 1..200 {
-            let (_, shelf) = visit(0xFEED, VENUS, n, &aboard);
-            assert!((SHELF_MIN..=SHELF_MAX).contains(&shelf.len()));
-            for (slot, piece) in shelf.iter().enumerate() {
-                assert_eq!(piece.loc, Loc::StationShelf { slot: slot as u8 });
-                assert_ne!(piece.kind, Kind::SuspiciousCrate);
-                kinds_seen.insert(piece.kind.index());
-                perfume += usize::from(piece.kind == Kind::PerfumeVial);
-                total += 1;
-            }
-        }
-        // 70% produce with generous statistical slack.
-        assert!(
-            perfume * 10 > total * 5,
-            "only {perfume}/{total} shelf goods were Venus produce"
-        );
-        assert!(perfume < total, "the 30% branch never fired");
-        assert!(
-            kinds_seen.len() >= 3,
-            "shelves lack variety: {kinds_seen:?}"
-        );
-    }
-
-    #[test]
-    fn far_stations_offer_crates_one_in_five_and_respect_the_singleton() {
-        let mut offered = 0_usize;
-        for n in 1..=600 {
-            let (_, shelf) = visit(0xFEED, VENUS, n, &[]);
-            let crates = shelf
-                .iter()
-                .filter(|piece| piece.kind == Kind::SuspiciousCrate)
-                .count();
-            assert!(crates <= 1, "visit {n} shelved {crates} crates");
-            assert!((SHELF_MIN..=SHELF_MAX).contains(&shelf.len()));
-            offered += crates;
-        }
-        assert!(
-            (70..=180).contains(&offered),
-            "{offered}/600 crate offers is far from one in five"
-        );
-
-        // Every far station rolls its own offers; none is crate-dry. The
-        // Guild never offers, the Hermitage's economy is karma, and the
-        // comet and ??? never open a barter at all.
-        for station in 0..POI_COUNT as PoiId {
-            if matches!(
-                station,
-                GUILD | HERMITAGE | super::super::map::COMET | super::super::map::WANDERER
-            ) {
-                continue;
-            }
-            let some = (1..=60).any(|n| {
-                let (_, shelf) = visit(0xFEED, station, n, &[]);
-                shelf
-                    .iter()
-                    .any(|piece| piece.kind == Kind::SuspiciousCrate)
-            });
-            assert!(some, "station {station} never offered a crate");
-        }
-
-        // One aboard anywhere — hold or a pad — suppresses the offer.
-        for loc in [Loc::Hold { x: 0, y: 0 }, Loc::GivePad { slot: 0 }] {
-            let aboard = [piece(Kind::SuspiciousCrate, loc)];
-            for n in 1..=100 {
-                let (_, shelf) = visit(0xFEED, VENUS, n, &aboard);
-                assert!(
-                    shelf
-                        .iter()
-                        .all(|piece| piece.kind != Kind::SuspiciousCrate),
-                    "visit {n} offered a second crate"
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn the_guild_never_offers_crates() {
-        for n in 1..=200 {
-            let (_, shelf) = visit(0xFEED, GUILD, n, &[]);
-            assert!(
-                shelf
-                    .iter()
-                    .all(|piece| piece.kind != Kind::SuspiciousCrate),
-                "the Guild shelved a crate on visit {n}"
-            );
         }
     }
 }

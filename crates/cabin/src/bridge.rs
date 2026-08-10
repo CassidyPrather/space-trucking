@@ -226,6 +226,13 @@ impl Bridge {
             toggle_warp: self.dev && (input.key_warp || (input.press && input.icon_warp)),
             shift: input.shift,
             night: self.night,
+            // The sim learns rooms, not positions (docs/ROOMS.md). The
+            // cabin's body is always in the cabin until stage two lets
+            // it walk through a doorway; the gates read this and nothing
+            // else about where anybody stands.
+            occupied: space_trucking::sim::room::CABIN,
+            attach: None,
+            detach: None,
             reseed: input.key_reseed.then(fresh_seed),
         }
     }
@@ -393,7 +400,7 @@ mod tests {
     fn parked_pointer_touches_nothing() {
         use space_trucking::sim::layout;
         assert!(!layout::MAP_PANEL.contains(POINTER_PARKED));
-        assert!(!layout::BARTER_PANEL.contains(POINTER_PARKED));
+        assert!(!layout::CONSOLE.contains(POINTER_PARKED));
         assert!(layout::cell_at(POINTER_PARKED).is_none());
     }
 

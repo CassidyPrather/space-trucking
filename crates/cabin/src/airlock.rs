@@ -1,28 +1,32 @@
 //! The burner: where cargo goes to push the ship.
 //!
-//! The sim's outboard rail — four `Loc::Flotsam` slots — is the fuel
-//! hopper: an annex off the starboard wall (`rig`'s `AIR_*` constants
-//! carve the doorway and the chamber) with four hazard-bordered berth
-//! tiles, each bound to one rail slot through its own [`SimSurface`].
-//! Drop cargo on a tile to stage it, snatch it back any time before
-//! the shovel; underway, on the stoker's slow beat, the lowest tile
-//! goes into the firebox behind the outer hatch (`Cue::Burn`) — the
-//! hatch glass flares with the feeding, the banked fire breathes ember
-//! behind it while the stoke lasts, and the window's star-streaks
-//! stretch to match the extra way. Docking banks the fire: whatever
-//! waits unburned walks back aboard, and only overflow is tipped over
-//! the side (`Cue::Jettison`, the beacon's red strobe).
+//! The incinerator is a **room** now (docs/ROOMS.md): an ordinary room
+//! attached at the cabin's starboard door, its whole net hazard-class
+//! `Consume` tiles, riding with the ship. This annex (`rig`'s `AIR_*`
+//! constants carve the doorway and the chamber) is that room's stage-one
+//! presentation: four hazard-bordered berth tiles, each bound through its
+//! own [`SimSurface`] to one cell of the furnace room's own deck.
+//! Drop cargo on a tile to stage it, snatch it back any time before the
+//! shovel; underway, on the stoker's slow beat, the lowest occupied cell
+//! goes into the firebox behind the outer hatch (`Cue::Burn`) — the hatch
+//! glass flares with the feeding, the banked fire breathes ember behind
+//! it while the stoke lasts, and the window's star-streaks stretch to
+//! match the extra way.
 //!
-//! The tiles project only while the sim's rail rule holds (no barter
-//! open — the rail IS the shelf row, contexts exclusive by
-//! construction); `surface::track_pointer` owns that gate. The chamber
-//! is sized so the largest footprint in the game JUST fits, proven by
-//! `rig`'s tests.
+//! Fuel simply stays staged: docking has no reason to bank it, so the
+//! `Cue::Jettison` strobe retired with the one ceremony that discarded.
+//! The exclusivity hack retired with it — there is no shelf row to share,
+//! so the tiles are live always. The chamber is sized so the largest
+//! footprint in the game JUST fits, proven by `rig`'s tests.
+//!
+//! Stage two draws the furnace room as the room it is; until then only
+//! [`HOPPER_CELLS`] of its deck have a face, and cargo set anywhere else
+//! in it is legal, burnable, and invisible.
 
 use bevy::prelude::*;
 
-use space_trucking::sim::layout;
-use space_trucking::sim::{Cue, Loc, STOKE_PER_FLAM};
+use space_trucking::sim::room::RoomId;
+use space_trucking::sim::{Cue, Loc, STOKE_PER_FLAM, layout};
 
 use crate::rig::{AIR_DOOR_H, AIR_DOOR_Z0, AIR_DOOR_Z1, AIR_X0, AIR_X1, Skin};
 use crate::surface::{SimSurface, Station};
@@ -36,8 +40,8 @@ const TILE: f32 = 0.44;
 /// Tile plane, just above the annex deck.
 const TILE_Y: f32 = 0.012;
 
-/// The beacon's answer to a dock-overflow tip, seconds: feedback,
-/// inside the half-second law.
+/// The beacon's answer to a room parting, seconds: feedback, inside the
+/// half-second law.
 const CYCLE_LEN: f32 = 0.45;
 
 /// The firebox's answer to a feeding, seconds: a flare that decays back
@@ -50,7 +54,26 @@ const FLASH_LEN: f32 = 0.6;
 /// but the glass has nowhere brighter to go.
 const FIREBOX_FULL: u64 = 3 * STOKE_PER_FLAM;
 
-/// The four tile centres, slot-indexed like `layout::FLOTSAM_SLOTS`:
+/// The furnace room's dense id. It is attached at the yard and rides
+/// with the ship, so it holds room 1 for the life of a run — and if the
+/// crew ever sells the furnace, its tiles simply stop resolving.
+pub const BURNER_ROOM: RoomId = 1;
+
+/// The furnace-room cells this annex gives a face to, in tile order:
+/// the near pair of its deck, then the pair behind them. The room's own
+/// grid is larger; this is the stage-one window onto it.
+pub const HOPPER_CELLS: [(u8, u8); 4] = [(3, 3), (4, 3), (3, 4), (4, 4)];
+
+/// Which tile a furnace-room cell shows on, if any.
+#[must_use]
+pub fn hopper_slot(x: u8, y: u8) -> Option<u8> {
+    HOPPER_CELLS
+        .iter()
+        .position(|&cell| cell == (x, y))
+        .map(|slot| slot as u8)
+}
+
+/// The four tile centres, slot-indexed like [`HOPPER_CELLS`]:
 /// near pair first, row-major from the doorway looking outboard. The
 /// grid crowds toward the door — every tile must sit inside `REACH`
 /// from the walk envelope (rig's workability test holds it there), so
@@ -83,7 +106,7 @@ pub fn site(slot: u8) -> (Vec3, Quat) {
 
 /// The warning beacon over the doorway (cabin side): dark glass while
 /// the hopper is empty, breathing amber while fuel is staged, a hard
-/// red strobe for a dock-overflow tip.
+/// red strobe when a seam parts.
 #[derive(Component)]
 struct Beacon {
     mat: Handle<StandardMaterial>,
@@ -97,7 +120,7 @@ struct Firebox {
     mat: Handle<StandardMaterial>,
 }
 
-/// The latched clocks: the overflow strobe, and the feeding flare with
+/// The latched clocks: the parting strobe, and the feeding flare with
 /// the strength the last feeding bought.
 #[derive(Resource, Default)]
 struct AirlockFx {
@@ -131,7 +154,7 @@ fn spawn(
     // patterned floor that says "this square goes outside".
     let border = meshes.add(Cuboid::new(TILE, 0.006, TILE));
     let well = meshes.add(Cuboid::new(TILE - 0.09, 0.007, TILE - 0.09));
-    for slot in 0..layout::FLOTSAM_SLOTS.len() as u8 {
+    for slot in 0..HOPPER_CELLS.len() as u8 {
         let at = tile_center(slot);
         commands.spawn((
             Mesh3d(border.clone()),
@@ -143,10 +166,11 @@ fn spawn(
             MeshMaterial3d(skin.socket.clone()),
             Transform::from_translation(at + Vec3::Y * 0.002),
         ));
-        // One surface per tile, bound to its own rail slot's rect: the
+        // One surface per tile, bound to its own furnace-room cell: the
         // crosshair ray lands anywhere on the tile and the sim hears a
-        // pointer inside that slot. Berth transitions stay the sim's.
-        let rect = layout::FLOTSAM_SLOTS[usize::from(slot)];
+        // pointer inside that cell. Berth transitions stay the sim's.
+        let (cx, cy) = HOPPER_CELLS[usize::from(slot)];
+        let rect = layout::cell_rect(BURNER_ROOM, cx, cy);
         commands.spawn((
             Station::Airlock,
             SimSurface {
@@ -229,7 +253,7 @@ fn sync(
     fx.flash = (fx.flash - dt).max(0.0);
     for cue in shell.bridge.sim.cues() {
         match cue {
-            Cue::Jettison => fx.cycle = CYCLE_LEN,
+            Cue::Parted => fx.cycle = CYCLE_LEN,
             Cue::Burn { intensity } => {
                 fx.flash = FLASH_LEN;
                 // Even slag (intensity 0) shows its disposal; real fuel
@@ -244,7 +268,7 @@ fn sync(
         .sim
         .pieces()
         .iter()
-        .any(|piece| matches!(piece.loc, Loc::Flotsam { .. }));
+        .any(|piece| matches!(piece.loc, Loc::Hold { room, .. } if room == BURNER_ROOM));
     let t = time.elapsed_secs();
     for beacon in &beacons {
         if let Some(mut mat) = materials.get_mut(&beacon.mat) {

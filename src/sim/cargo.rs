@@ -1,13 +1,19 @@
 //! Cargo pieces: what they are, where they sit, and the stowage rules.
 //!
-//! A [`Piece`] is one draggable object. Its [`Loc`] says which surface it is
-//! on — the ship's hold grid or one of the barter panel's shelves and pads —
-//! and [`placement_check`] is the single arbiter of whether a piece may sit
-//! at a given hold cell. The renderer and the drag logic both defer to it, so
-//! there is exactly one opinion about what fits, and a failure names the
+//! A [`Piece`] is one draggable object. Its [`Loc`] says which room and
+//! which cell of that room's net it occupies — every berth in the game is
+//! now a room cell or a cubby inside a piece standing on one — and
+//! [`placement_check`] is the single arbiter of whether a piece may sit
+//! there. The renderer and the drag logic both defer to it, so there is
+//! exactly one opinion about what fits, and a failure names the
 //! [`Violation`] so the frontend can flash the right icon.
+//!
+//! Ownership is not a list. [`player_owned`] asks the berth's room and
+//! tile class and nothing else (docs/ROOMS.md, "The tile-class
+//! vocabulary"): the room's own goods sit on `Stock` tiles, and
+//! everything else aboard or alongside is the player's.
 
-use super::layout::{FLOOR, GRID_COLS, GRID_ROWS, Surf, surface_of};
+use super::room::{RoomId, RoomKind, Rooms, Surf, Tile};
 
 /// Everything haulable. Declaration order is the stable [`Kind::index`]
 /// order that the barter value table is written in.
@@ -41,7 +47,7 @@ pub enum Kind {
     /// What the space casino hands back when the house wins. The house
     /// says it is worth a fortune. Every station disagrees.
     CasinoChip,
-    /// A hanging shade for the hold's gantry. Lit while stowed, like
+    /// A hanging shade for the hold's gantry. Lit while berthed, like
     /// every lamp — cargo that casts light on its neighbours.
     CeilingLamp,
     /// A sconce off a repossessed liner, wall fittings included.
@@ -93,7 +99,7 @@ pub const KIND_COUNT: usize = 30;
 /// The persistent run RNG is spent on these and nothing else.
 pub(crate) const VARIANTS: u8 = 4;
 
-/// Special handling a kind demands in the hold.
+/// Special handling a kind demands in a room.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tag {
     /// Weighty. Dormant since the room grid put all standing cargo on
@@ -103,24 +109,25 @@ pub enum Tag {
     Heavy,
     /// No two volatile pieces may sit orthogonally adjacent.
     Volatile,
-    /// Must touch the hold's outer edge.
+    /// Must touch the room's outer edge.
     Cryo,
     /// At most one suspicious piece aboard, and hauling it has consequences.
     Suspicious,
     /// A fixture: its footprint must touch the named room surface.
     Affix(Mount),
-    /// A dressing: aboard, it lays *into* the room (`Loc::Laid`)
-    /// instead of occupying cells. `Some(mount)` restricts which
-    /// surface it covers; `None` coats anywhere.
+    /// A dressing: it lays *into* the room (`Loc::Laid`) instead of
+    /// occupying cells. `Some(mount)` restricts which surface it
+    /// covers; `None` coats anywhere.
     Covering(Option<Mount>),
 }
 
 /// The plane class a kind stands on.
 ///
-/// Under the room net (`layout::surface_of`), every placement lies wholly
-/// in one chart and that chart's class must match the kind's mount — the
-/// room-grid placement law (BAY.md): floor unless otherwise specified,
-/// walls for paintings and instruments, ceilings for hanging lamps.
+/// Under the room net (`room::RoomKind::surface_of`), every placement
+/// lies wholly in one chart and that chart's class must match the kind's
+/// mount — the room-grid placement law (BAY.md): floor unless otherwise
+/// specified, walls for paintings and instruments, ceilings for hanging
+/// lamps.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mount {
     Ceiling,
@@ -174,7 +181,7 @@ impl Kind {
         Self::LaunchLever,
     ];
 
-    /// Footprint in hold cells, `(w, h)`.
+    /// Footprint in net cells, `(w, h)`.
     #[must_use]
     pub const fn cells(self) -> (u8, u8) {
         match self {
@@ -255,10 +262,11 @@ impl Kind {
 
     /// Whether this kind is an operational instrument the ship cannot
     /// function without: the LAST one of a vital kind in the player's
-    /// possession refuses every exit ceremony (the give pads, the
-    /// burner hopper, the casino's wager) — `Violation::Vital`, checked
-    /// in `resolve_drop`. Spares trade freely; stations occasionally
-    /// stock used instruments, which is its own little economy.
+    /// possession refuses every exit ceremony — the offer area of a
+    /// calling room, the incinerator's hazard tiles, the casino's
+    /// wager — with `Violation::Vital`, checked in `resolve_drop`.
+    /// Spares trade freely; stations occasionally stock used
+    /// instruments, which is its own little economy.
     #[must_use]
     pub const fn vital(self) -> bool {
         matches!(self, Self::ChartTank | Self::LaunchLever)
@@ -277,7 +285,7 @@ impl Kind {
     }
 
     /// Whether this kind is a dressing — laid into the room rather than
-    /// stowed on it. Coverings have no hold-occupancy form aboard.
+    /// standing on it. Coverings have no occupancy form at all.
     #[must_use]
     pub const fn covering(self) -> bool {
         matches!(self.tag(), Some(Tag::Covering(_)))
@@ -288,7 +296,7 @@ impl Kind {
     /// wood and paper honestly; metal, stone, and ice are slag — the
     /// stoker still shovels them through (disposal is disposal), they
     /// just push nothing. The suspicious kinds never reach the hopper at
-    /// all (they refuse the rail), so their values here are moot.
+    /// all (they refuse the hazard tiles), so their values here are moot.
     #[must_use]
     pub const fn flammable(self) -> u8 {
         match self {
@@ -329,31 +337,37 @@ impl Kind {
     }
 }
 
-/// Which surface a piece sits on. Hold coordinates are grid cells; every
-/// other variant is a slot index into the matching layout rect array.
+/// Which berth a piece sits in.
+///
+/// Every berth in the game is a cell of some room's net, or a cubby
+/// inside a piece standing on one. Cubbies need no room qualifier — a
+/// cabinet knows what room it stands in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Loc {
-    /// Anchor cell in the ship's hold grid (top-left of the footprint).
-    Hold { x: u8, y: u8 },
-    /// The station's goods on offer.
-    StationShelf { slot: u8 },
-    /// What the player is offering.
-    GivePad { slot: u8 },
-    /// What the player is asking for.
-    TakePad { slot: u8 },
-    /// Goods just traded for, waiting to be stowed.
-    ReceivedShelf { slot: u8 },
-    /// Adrift beside the ship during a travel encounter. Not the player's
-    /// until stowed; whatever is left drifts away when the encounter ends.
-    Flotsam { slot: u8 },
+    /// Anchor cell in a room's net (top-left of the footprint).
+    Hold { room: RoomId, x: u8, y: u8 },
     /// Inside a cabinet's cubby. The berth exists only while that cabinet
     /// piece does: an occupied cabinet cannot be lifted, so the cubby can
     /// never find itself without a home.
     Stow { cabinet: u32, slot: u8 },
-    /// Laid into the room at the anchor cell: the dressing layer.
+    /// Laid into a room at the anchor cell: the dressing layer.
     /// Coexists with occupancy on the same cells (a couch stands on a
     /// laid rug); no two dressings share a cell ([`dressing_check`]).
-    Laid { x: u8, y: u8 },
+    Laid { room: RoomId, x: u8, y: u8 },
+}
+
+impl Loc {
+    /// Which room this berth is in, following a cubby to its cabinet.
+    #[must_use]
+    pub fn room(self, pieces: &[Piece]) -> Option<RoomId> {
+        match self {
+            Self::Hold { room, .. } | Self::Laid { room, .. } => Some(room),
+            Self::Stow { cabinet, .. } => pieces
+                .iter()
+                .find(|piece| piece.id == cabinet)
+                .and_then(|host| host.loc.room(pieces)),
+        }
+    }
 }
 
 /// Cubbies per cabinet: a 2×2 rack of them behind the doors.
@@ -364,7 +378,7 @@ pub const CABINET_SLOTS: u8 = 4;
 /// One cell, and neither the kinds that need the hull's cold (cryo) nor
 /// the ones nobody should box up (suspicious — none is 1×1 today, but the
 /// rule is written for the day one is). Everything else about a stowed
-/// piece is ordinary; what *emerges* from a cubby not being a hold cell —
+/// piece is ordinary; what *emerges* from a cubby not being a room cell —
 /// dark lamps, unbred fluff, rat-proof shelter, invisibility to ??? — is
 /// documented in docs/BAY.md, not special-cased anywhere.
 #[must_use]
@@ -377,7 +391,7 @@ pub const fn stowable(kind: Kind) -> bool {
 ///
 /// An occupied cabinet refuses to be lifted or quick-moved
 /// (`Violation::Occupied`): empty it first, piece by piece — which is
-/// also why cubby cargo can never reach a trade pad by accident.
+/// also why cubby cargo can never be proposed by accident.
 #[must_use]
 pub fn cabinet_occupied(pieces: &[Piece], cabinet: u32) -> bool {
     pieces
@@ -395,22 +409,28 @@ pub fn free_cubby(pieces: &[Piece], cabinet: u32) -> Option<u8> {
     })
 }
 
-/// Whether a piece at `loc` belongs to the player rather than the station.
+/// Whether a piece at `loc` belongs to the player rather than to the
+/// room it stands in.
 ///
-/// This is THE ownership rule: the drop matrix in `resolve_drop`, the
-/// [`crate::sim::Sim::drop_targets`] affordances, and any renderer hint all
-/// derive from this one predicate. Never restate it — a hand-mirrored copy
-/// is how a highlight ends up inviting a drop the rules refuse.
+/// **This is THE ownership rule** and it is a function of tile class, not
+/// of a hand-written list of berths (docs/ROOMS.md): a berth on a `Stock`
+/// tile is the room's own goods; every other berth is the player's — a
+/// proposal on an `Offer` tile stays the player's until a resolution says
+/// otherwise, and a piece staged on the incinerator's `Consume` tiles is
+/// still the player's right up until the stoker takes it. The drop
+/// matrix, the [`crate::sim::Sim::drop_targets`] affordances, and any
+/// renderer hint all derive from this one predicate. Never restate it.
 #[must_use]
-pub const fn player_owned(loc: Loc) -> bool {
-    matches!(
-        loc,
-        Loc::Hold { .. }
-            | Loc::GivePad { .. }
-            | Loc::ReceivedShelf { .. }
-            | Loc::Stow { .. }
-            | Loc::Laid { .. }
-    )
+pub fn player_owned(rooms: &Rooms, pieces: &[Piece], loc: Loc) -> bool {
+    match loc {
+        // A cubby is inside a piece; whoever owns the furniture owns the
+        // shelf, and no room ever stocks its goods inside your wardrobe.
+        Loc::Stow { .. } => true,
+        Loc::Hold { room, x, y } | Loc::Laid { room, x, y } => {
+            let _ = pieces;
+            rooms.tile(room, x, y) != Some(Tile::Stock)
+        }
+    }
 }
 
 /// One cargo piece.
@@ -429,7 +449,7 @@ pub struct Piece {
     pub loc: Loc,
 }
 
-/// Which stowage rule refused a hold placement. One variant per rule, so the
+/// Which stowage rule refused a placement. One variant per rule, so the
 /// renderer can flash the matching icon on a hard reject.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Violation {
@@ -452,63 +472,101 @@ pub enum Violation {
     /// A cabinet with goods in its cubbies was asked to move (or to take
     /// more than it has room for): empty it first.
     Occupied,
-    /// The last vital instrument aboard offered to an exit ceremony
-    /// (the rail, a give pad, the casino) — a ship that cannot chart or
-    /// launch is a soft-lock, so the last of each stays.
+    /// The last vital instrument aboard offered to an exit ceremony —
+    /// a calling room's offer area, the incinerator, the casino — a ship
+    /// that cannot chart or launch is a soft-lock, so the last of each
+    /// stays.
     Vital,
+    /// An aperture's footprint was asked to hold cargo. A threshold
+    /// belongs to two rooms at once, so nothing berths there: the
+    /// doorway stays clear because it is shared space.
+    Threshold,
 }
 
-/// Whether `kind` may be anchored at hold cell `(x, y)` given every other
+/// Whether `kind` may be anchored at `(room, x, y)` given every other
 /// piece in `pieces`. The piece with `id` is ignored, so a held piece never
 /// collides with its own old footprint.
 #[must_use]
-pub fn placement_legal(pieces: &[Piece], id: u32, kind: Kind, x: u8, y: u8) -> bool {
-    placement_check(pieces, id, kind, x, y).is_ok()
+pub fn placement_legal(
+    rooms: &Rooms,
+    pieces: &[Piece],
+    id: u32,
+    kind: Kind,
+    room: RoomId,
+    x: u8,
+    y: u8,
+) -> bool {
+    placement_check(rooms, pieces, id, kind, room, x, y).is_ok()
 }
 
 /// [`placement_legal`], but naming the rule that refused.
 ///
-/// Checks run in a fixed order (bounds/chart, mount, cryo, then
-/// per-piece overlap-and-shadow / volatile / suspicious in stowage
+/// Checks run in a fixed order (bounds/chart, threshold, mount, cryo,
+/// then per-piece overlap-and-shadow / volatile / suspicious in stowage
 /// order) so the reported violation is deterministic. Nothing here
 /// reasons about where a body may walk: the walker passes through
 /// cargo, so a berth is refused for what it collides with, never for
 /// what it fences off.
 pub fn placement_check(
+    rooms: &Rooms,
     pieces: &[Piece],
     id: u32,
     kind: Kind,
+    room: RoomId,
     x: u8,
     y: u8,
 ) -> Result<(), Violation> {
-    let (w, h) = kind.cells();
-    if x + w > GRID_COLS || y + h > GRID_ROWS {
-        return Err(Violation::Bounds);
-    }
-    let Some(surf) = footprint_surface(x, y, w, h) else {
+    let Some(host) = rooms.kind(room) else {
         return Err(Violation::Bounds);
     };
+    let (w, h) = kind.cells();
+    let (cols, rows) = host.grid();
+    if x + w > cols || y + h > rows {
+        return Err(Violation::Bounds);
+    }
+    let Some(surf) = footprint_surface(host, x, y, w, h) else {
+        return Err(Violation::Bounds);
+    };
+    if footprint_tiles(host, x, y, w, h).any(|tile| tile == Tile::Threshold) {
+        return Err(Violation::Threshold);
+    }
     let mount = kind.mount();
     if !mount_accepts(mount, surf) {
         return Err(Violation::Affix(mount));
     }
     let standing = matches!(surf, Surf::Floor);
-    if matches!(kind.tag(), Some(Tag::Cryo)) && !touches_hull(x, y, w, h) {
+    if matches!(kind.tag(), Some(Tag::Cryo)) && !touches_hull(host, x, y, w, h) {
         return Err(Violation::Cryo);
     }
     // A standing piece's volume: the wall cells it shadows behind it.
     let my_shadow = if standing {
-        shadow_cells(x, y, w, h, kind.stature())
+        shadow_cells(host, x, y, w, h, kind.stature())
     } else {
         Vec::new()
     };
+    let suspicious_here = matches!(kind.tag(), Some(Tag::Suspicious)) && rooms.riding(room);
     for other in pieces {
         if other.id == id {
             continue;
         }
-        let Loc::Hold { x: ox, y: oy } = other.loc else {
+        let Loc::Hold {
+            room: oroom,
+            x: ox,
+            y: oy,
+        } = other.loc
+        else {
             continue;
         };
+        // At most one suspicious piece rides the ship, wherever aboard.
+        if suspicious_here
+            && matches!(other.kind.tag(), Some(Tag::Suspicious))
+            && rooms.riding(oroom)
+        {
+            return Err(Violation::Suspicious);
+        }
+        if oroom != room {
+            continue;
+        }
         let (ow, oh) = other.kind.cells();
         if overlaps((x, y, w, h), (ox, oy, ow, oh)) {
             return Err(Violation::Overlap);
@@ -522,8 +580,8 @@ pub fn placement_check(
         {
             return Err(Violation::Overlap);
         }
-        if !standing && matches!(surface_of(ox, oy), Some(Surf::Floor)) {
-            let theirs = shadow_cells(ox, oy, ow, oh, other.kind.stature());
+        if !standing && matches!(host.surface_of(ox, oy), Some(Surf::Floor)) {
+            let theirs = shadow_cells(host, ox, oy, ow, oh, other.kind.stature());
             if theirs.iter().any(|&(sx, sy)| covers(x, y, w, h, sx, sy)) {
                 return Err(Violation::Overlap);
             }
@@ -534,27 +592,35 @@ pub fn placement_check(
         {
             return Err(Violation::Volatile);
         }
-        if matches!(kind.tag(), Some(Tag::Suspicious))
-            && matches!(other.kind.tag(), Some(Tag::Suspicious))
-        {
-            return Err(Violation::Suspicious);
-        }
     }
     Ok(())
 }
 
 /// The one chart a footprint lies wholly inside, if any — a piece bent
 /// over a fold, crossing a hole, or leaving the net is nowhere.
-fn footprint_surface(x: u8, y: u8, w: u8, h: u8) -> Option<Surf> {
-    let anchor = surface_of(x, y)?;
+fn footprint_surface(host: RoomKind, x: u8, y: u8, w: u8, h: u8) -> Option<Surf> {
+    let anchor = host.surface_of(x, y)?;
     for cy in y..y + h {
         for cx in x..x + w {
-            if surface_of(cx, cy) != Some(anchor) {
+            if host.surface_of(cx, cy) != Some(anchor) {
                 return None;
             }
         }
     }
     Some(anchor)
+}
+
+/// Every tile class a footprint covers.
+fn footprint_tiles(
+    host: RoomKind,
+    x: u8,
+    y: u8,
+    w: u8,
+    h: u8,
+) -> impl Iterator<Item = Tile> + use<> {
+    (y..y + h)
+        .flat_map(move |cy| (x..x + w).map(move |cx| (cx, cy)))
+        .filter_map(move |(cx, cy)| host.tile_of(cx, cy))
 }
 
 /// Whether footprint `(x, y, w, h)` covers cell `(cx, cy)`.
@@ -563,16 +629,17 @@ const fn covers(x: u8, y: u8, w: u8, h: u8, cx: u8, cy: u8) -> bool {
 }
 
 /// Whether a floor footprint touches the floor's hull edge (any side of
-/// the floor chart — every side of this room is hull).
-const fn touches_hull(x: u8, y: u8, w: u8, h: u8) -> bool {
-    x == FLOOR.0 || y == FLOOR.1 || x + w == FLOOR.0 + FLOOR.2 || y + h == FLOOR.1 + FLOOR.3
+/// the floor chart — every side of a room is hull).
+const fn touches_hull(host: RoomKind, x: u8, y: u8, w: u8, h: u8) -> bool {
+    let (fx, fy, fw, fh) = host.floor_rect();
+    x == fx || y == fy || x + w == fx + fw || y + h == fy + fh
 }
 
 /// The wall cells a standing floor footprint shadows: for each footprint
 /// edge lying along a baseboard seam, the wall cells directly behind it,
 /// baseboard upward through the piece's stature.
-fn shadow_cells(x: u8, y: u8, w: u8, h: u8, stature: u8) -> Vec<(u8, u8)> {
-    let (fx, fy, fw, fh) = FLOOR;
+fn shadow_cells(host: RoomKind, x: u8, y: u8, w: u8, h: u8, stature: u8) -> Vec<(u8, u8)> {
+    let (fx, fy, fw, fh) = host.floor_rect();
     let mut cells = Vec::new();
     for depth in 0..stature.min(3) {
         for cx in x..x + w {
@@ -601,50 +668,67 @@ const fn overlaps(a: (u8, u8, u8, u8), b: (u8, u8, u8, u8)) -> bool {
     a.0 < b.0 + b.2 && b.0 < a.0 + a.2 && a.1 < b.1 + b.3 && b.1 < a.1 + a.3
 }
 
-/// The first hold cell (row-major scan) where `kind` may legally sit.
+/// The first berth (rooms in id order, then row-major) where `kind` may
+/// legally sit aboard — riding rooms only, because "aboard" means the
+/// part of the ship that leaves with you.
 ///
 /// Shared by the shift-click quick-stow, the comet harvest, and the
 /// ??? exchange — "first legal spot, even if that is a bad idea" is the
 /// contract, so all three agree on what "first" means. Coverings have
-/// no hold berth at all ([`dress_fit`] is their scan).
+/// no occupancy berth at all ([`dress_fit`] is their scan).
 #[must_use]
-pub fn first_fit(pieces: &[Piece], id: u32, kind: Kind) -> Option<(u8, u8)> {
+pub fn first_fit(rooms: &Rooms, pieces: &[Piece], id: u32, kind: Kind) -> Option<(RoomId, u8, u8)> {
     if kind.covering() {
         return None;
     }
-    for y in 0..GRID_ROWS {
-        for x in 0..GRID_COLS {
-            if placement_legal(pieces, id, kind, x, y) {
-                return Some((x, y));
+    for (room, host) in rooms.iter() {
+        if !host.kind.riding() {
+            continue;
+        }
+        let (cols, rows) = host.kind.grid();
+        for y in 0..rows {
+            for x in 0..cols {
+                if placement_legal(rooms, pieces, id, kind, room, x, y) {
+                    return Some((room, x, y));
+                }
             }
         }
     }
     None
 }
 
-/// Whether covering `kind` may be laid at anchor `(x, y)`.
+/// Whether covering `kind` may be laid at anchor `(room, x, y)`.
 ///
 /// The dressing layer's own [`placement_check`], reusing the violation
 /// ladder whole and consulting every other piece. Checks run in a fixed
-/// order (bounds, surface, then per-piece dressing overlap /
+/// order (bounds, threshold, surface, then per-piece dressing overlap /
 /// pinned-under-occupancy) so the reported violation is deterministic.
 pub fn dressing_check(
+    rooms: &Rooms,
     pieces: &[Piece],
     id: u32,
     kind: Kind,
+    room: RoomId,
     x: u8,
     y: u8,
 ) -> Result<(), Violation> {
     debug_assert!(kind.covering(), "dressing_check is for coverings only");
+    let Some(host) = rooms.kind(room) else {
+        return Err(Violation::Bounds);
+    };
     let (w, h) = kind.cells();
-    if x + w > GRID_COLS || y + h > GRID_ROWS {
+    let (cols, rows) = host.grid();
+    if x + w > cols || y + h > rows {
         return Err(Violation::Bounds);
     }
     // Wholly on one chart — a rug bent over a fold is not a rug anyone
     // respects, and a coat cannot paint across a hole.
-    let Some(surf) = footprint_surface(x, y, w, h) else {
+    let Some(surf) = footprint_surface(host, x, y, w, h) else {
         return Err(Violation::Bounds);
     };
+    if footprint_tiles(host, x, y, w, h).any(|tile| tile == Tile::Threshold) {
+        return Err(Violation::Threshold);
+    }
     if let Some(Tag::Covering(Some(mount))) = kind.tag() {
         // A restricted covering names WHICH chart class it covers; the
         // footprint-surface rule above already made it whole.
@@ -659,12 +743,20 @@ pub fn dressing_check(
         let (ow, oh) = other.kind.cells();
         match other.loc {
             // One dressing per cell.
-            Loc::Laid { x: ox, y: oy } if overlaps((x, y, w, h), (ox, oy, ow, oh)) => {
+            Loc::Laid {
+                room: oroom,
+                x: ox,
+                y: oy,
+            } if oroom == room && overlaps((x, y, w, h), (ox, oy, ow, oh)) => {
                 return Err(Violation::Overlap);
             }
             // No sliding a dressing under standing cargo: the pinned
             // rule, symmetric with the lift refusal in `laid_pinned`.
-            Loc::Hold { x: ox, y: oy } if overlaps((x, y, w, h), (ox, oy, ow, oh)) => {
+            Loc::Hold {
+                room: oroom,
+                x: ox,
+                y: oy,
+            } if oroom == room && overlaps((x, y, w, h), (ox, oy, ow, oh)) => {
                 return Err(Violation::Occupied);
             }
             _ => {}
@@ -673,14 +765,20 @@ pub fn dressing_check(
     Ok(())
 }
 
-/// The first anchor (row-major) where covering `kind` may be laid — the
-/// dressing layer's [`first_fit`], for quick-moves off the pads.
+/// The first anchor (riding rooms in id order, then row-major) where
+/// covering `kind` may be laid — the dressing layer's [`first_fit`].
 #[must_use]
-pub fn dress_fit(pieces: &[Piece], id: u32, kind: Kind) -> Option<(u8, u8)> {
-    for y in 0..GRID_ROWS {
-        for x in 0..GRID_COLS {
-            if dressing_check(pieces, id, kind, x, y).is_ok() {
-                return Some((x, y));
+pub fn dress_fit(rooms: &Rooms, pieces: &[Piece], id: u32, kind: Kind) -> Option<(RoomId, u8, u8)> {
+    for (room, host) in rooms.iter() {
+        if !host.kind.riding() {
+            continue;
+        }
+        let (cols, rows) = host.kind.grid();
+        for y in 0..rows {
+            for x in 0..cols {
+                if dressing_check(rooms, pieces, id, kind, room, x, y).is_ok() {
+                    return Some((room, x, y));
+                }
             }
         }
     }
@@ -694,16 +792,21 @@ pub fn dress_fit(pieces: &[Piece], id: u32, kind: Kind) -> Option<(u8, u8)> {
 /// lay beneath one.
 #[must_use]
 pub fn laid_pinned(pieces: &[Piece], piece: &Piece) -> bool {
-    let Loc::Laid { x, y } = piece.loc else {
+    let Loc::Laid { room, x, y } = piece.loc else {
         return false;
     };
     let (w, h) = piece.kind.cells();
     pieces.iter().any(|other| {
-        let Loc::Hold { x: ox, y: oy } = other.loc else {
+        let Loc::Hold {
+            room: oroom,
+            x: ox,
+            y: oy,
+        } = other.loc
+        else {
             return false;
         };
         let (ow, oh) = other.kind.cells();
-        other.id != piece.id && overlaps((x, y, w, h), (ox, oy, ow, oh))
+        other.id != piece.id && oroom == room && overlaps((x, y, w, h), (ox, oy, ow, oh))
     })
 }
 
@@ -711,24 +814,31 @@ pub fn laid_pinned(pieces: &[Piece], piece: &Piece) -> bool {
 /// player's possession — the piece every exit ceremony must refuse.
 ///
 /// Only berths that are STAYING count as possession: a spare already
-/// staged on a give pad or the rail is itself on its way out, and
-/// counting it would let both of a pair be staged and both be lost.
-/// (The received shelf counts — departure refuses while it holds
-/// goods, so nothing there is ever stranded.)
+/// staged on a calling room's offer area or on the incinerator's tiles
+/// is itself on its way out, and counting it would let both of a pair be
+/// staged and both be lost.
 #[must_use]
-pub fn last_vital_aboard(pieces: &[Piece], piece: &Piece) -> bool {
+pub fn last_vital_aboard(rooms: &Rooms, pieces: &[Piece], piece: &Piece) -> bool {
     piece.kind.vital()
         && !pieces.iter().any(|other| {
-            other.id != piece.id
-                && other.kind == piece.kind
-                && matches!(
-                    other.loc,
-                    Loc::Hold { .. }
-                        | Loc::Stow { .. }
-                        | Loc::Laid { .. }
-                        | Loc::ReceivedShelf { .. }
-                )
+            other.id != piece.id && other.kind == piece.kind && staying(rooms, pieces, other)
         })
+}
+
+/// Whether a piece's berth is one it would still hold after a launch:
+/// the player's own, in a room that rides, and not scheduled for the
+/// fire. This is the possession half of the vital rule.
+#[must_use]
+pub fn staying(rooms: &Rooms, pieces: &[Piece], piece: &Piece) -> bool {
+    if !player_owned(rooms, pieces, piece.loc) {
+        return false;
+    }
+    match piece.loc {
+        Loc::Stow { .. } => true,
+        Loc::Hold { room, x, y } | Loc::Laid { room, x, y } => {
+            rooms.riding(room) && rooms.tile(room, x, y) != Some(Tile::Consume)
+        }
+    }
 }
 
 /// Whether two footprints share an orthogonal edge (corners do not count).
@@ -741,7 +851,7 @@ const fn adjacent(a: (u8, u8, u8, u8), b: (u8, u8, u8, u8)) -> bool {
 }
 
 /// Whether `kind` is a lamp — one of the three affixed fixtures that cast
-/// light while stowed.
+/// light while berthed.
 #[must_use]
 pub const fn lamp(kind: Kind) -> bool {
     matches!(kind, Kind::CeilingLamp | Kind::WallLamp | Kind::FloorLamp)
@@ -749,43 +859,66 @@ pub const fn lamp(kind: Kind) -> bool {
 
 /// Whether `piece` is a lamp, burning.
 ///
-/// Lamps are lit while stowed in the hold and nowhere else: on a shelf, a
-/// pad, the outboard net, or boxed in a cabinet cubby they are dark. Everything lighting touches —
-/// the rat's fear, the well-lit art bonus, any frontend halo — reads lamp
-/// state through this one predicate.
+/// Lamps are lit while they occupy a room cell and nowhere else: boxed in
+/// a cabinet cubby they are dark. Everything lighting touches — the rat's
+/// fear, the well-lit art bonus, any frontend halo — reads lamp state
+/// through this one predicate.
 #[must_use]
 pub const fn lamp_lit(piece: &Piece) -> bool {
     lamp(piece.kind) && matches!(piece.loc, Loc::Hold { .. })
 }
 
-/// Whether hold cell `(x, y)` sits in light.
+/// Which room a lit lamp lights, if it lights one.
+#[must_use]
+pub const fn lamp_room(piece: &Piece) -> Option<RoomId> {
+    match piece.loc {
+        Loc::Hold { room, .. } if lamp(piece.kind) => Some(room),
+        _ => None,
+    }
+}
+
+/// Whether cell `(room, x, y)` sits in light.
 ///
 /// Lit means orthogonally adjacent to — never inside — some lit lamp's
 /// footprint OR some laid luminous coat's, by the same [`adjacent`]
-/// rule the volatile check uses, so corners do not count. Everything
-/// light touches — the rat's fear, the seedlings' bloom, the hold
-/// painting's spotlight — reads through
-/// this one predicate; the pad-side well-lit-art bonus deliberately
-/// does not (a coat is ambiance, not gallery lighting — see
-/// `barter::well_lit`).
+/// rule the volatile check uses, so corners do not count. Light does not
+/// cross a seam: a lamp lights its own room. Everything light touches —
+/// the rat's fear, the seedlings' bloom, the hold painting's spotlight —
+/// reads through this one predicate; the well-lit-art price bonus
+/// deliberately does not (a coat is ambiance, not gallery lighting).
 #[must_use]
-pub fn lit_adjacent(pieces: &[Piece], x: u8, y: u8) -> bool {
+pub fn lit_adjacent(pieces: &[Piece], room: RoomId, x: u8, y: u8) -> bool {
     pieces.iter().any(|piece| {
-        let (source, lx, ly) = match piece.loc {
-            Loc::Hold { x, y } => (lamp_lit(piece), x, y),
-            Loc::Laid { x, y } => (piece.kind == Kind::LuminousPaint, x, y),
-            _ => return false,
+        let (source, lroom, lx, ly) = match piece.loc {
+            Loc::Hold {
+                room: r,
+                x: px,
+                y: py,
+            } => (lamp_lit(piece), r, px, py),
+            Loc::Laid {
+                room: r,
+                x: px,
+                y: py,
+            } => (piece.kind == Kind::LuminousPaint, r, px, py),
+            Loc::Stow { .. } => return false,
         };
         let (w, h) = piece.kind.cells();
-        source && adjacent((x, y, 1, 1), (lx, ly, w, h))
+        source && lroom == room && adjacent((x, y, 1, 1), (lx, ly, w, h))
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sim::room::CABIN;
 
-    /// A board of pieces stowed at the given cells, ids counting up from 0.
+    /// The ship as it leaves the yard, for the placement tests.
+    fn ship() -> Rooms {
+        Rooms::new()
+    }
+
+    /// A board of pieces berthed in the cabin at the given cells, ids
+    /// counting up from 0.
     fn board(stowed: &[(Kind, u8, u8)]) -> Vec<Piece> {
         stowed
             .iter()
@@ -795,15 +928,16 @@ mod tests {
                 kind,
                 variant: 0,
                 gnawed: false,
-                loc: Loc::Hold { x, y },
+                loc: Loc::Hold { room: CABIN, x, y },
             })
             .collect()
     }
 
     /// The next free id after [`board`], for the candidate piece.
     fn check(stowed: &[(Kind, u8, u8)], kind: Kind, x: u8, y: u8) -> Result<(), Violation> {
+        let rooms = ship();
         let pieces = board(stowed);
-        placement_check(&pieces, pieces.len() as u32, kind, x, y)
+        placement_check(&rooms, &pieces, pieces.len() as u32, kind, CABIN, x, y)
     }
 
     #[test]
@@ -836,15 +970,34 @@ mod tests {
         );
     }
 
+    /// Nothing berths on a threshold: an aperture's cells belong to two
+    /// rooms at once, and a detach would have to pick which grid kept
+    /// the cargo. The doorway stays clear for a reason that survives.
+    #[test]
+    fn the_threshold_rule_keeps_every_aperture_clear() {
+        // The cabin's starboard doorway, its aft doorway, its hatch.
+        assert_eq!(
+            check(&[], Kind::PerfumeVial, 11, 3),
+            Err(Violation::Threshold)
+        );
+        assert_eq!(check(&[], Kind::WallLamp, 3, 1), Err(Violation::Threshold));
+        assert_eq!(
+            check(&[], Kind::PerfumeVial, 9, 7),
+            Err(Violation::Threshold)
+        );
+        // And a dressing cannot be laid across one either.
+        let rooms = ship();
+        assert_eq!(
+            dressing_check(&rooms, &[], 9, Kind::PaintTin, CABIN, 9, 7),
+            Err(Violation::Threshold)
+        );
+    }
+
     #[test]
     fn heavy_lies_dormant_and_the_walls_refuse_plain_cargo() {
-        // Heavy cargo stands anywhere on the floor now — the room-grid
-        // law already keeps it off the walls, which is what riding low
-        // used to mean. The tag waits for the stacking rules.
         assert_eq!(check(&[], Kind::GildedIdol, 3, 3), Ok(()));
         assert_eq!(check(&[], Kind::GildedIdol, 5, 5), Ok(()));
-        // The old failure mode, restated: lifted onto a wall, the mount
-        // law refuses (port chart, floor kind).
+        // Lifted onto a wall, the mount law refuses (port chart).
         assert_eq!(
             check(&[], Kind::GildedIdol, 0, 4),
             Err(Violation::Affix(Mount::Floor))
@@ -854,19 +1007,15 @@ mod tests {
     #[test]
     fn volatile_rule_accepts_gapped_and_names_adjacency() {
         let stowed = [(Kind::GasCanister, 3, 7)];
-        // A full empty row between the two: fine.
         assert_eq!(check(&stowed, Kind::GasCanister, 3, 5), Ok(()));
-        // Directly above: orthogonally adjacent.
         assert_eq!(
             check(&stowed, Kind::GasCanister, 3, 6),
             Err(Violation::Volatile)
         );
-        // Offset anchors still touch through their non-anchor cells.
         assert_eq!(
             check(&stowed, Kind::GasCanister, 4, 6),
             Err(Violation::Volatile)
         );
-        // Corner contact only: not adjacent.
         assert_eq!(check(&stowed, Kind::GasCanister, 5, 6), Ok(()));
     }
 
@@ -889,9 +1038,8 @@ mod tests {
 
     #[test]
     fn the_floor_takes_cargo_anywhere_a_body_could_stand() {
-        // The walker passes through cargo now, so the floor keeps no
-        // reserved lanes: the burner threshold takes a berth like any
-        // other cell, and a wall of cargo may close across the room.
+        // The walker passes through cargo, so the floor keeps no
+        // reserved lanes: a wall of cargo may close across the room.
         assert_eq!(check(&[], Kind::PerfumeVial, 10, 3), Ok(()));
         assert_eq!(check(&[], Kind::PerfumeVial, 6, 7), Ok(()));
         let wall: Vec<(Kind, u8, u8)> = (3..9).map(|y| (Kind::PerfumeVial, 4, y)).collect();
@@ -903,36 +1051,32 @@ mod tests {
     fn tall_floor_cargo_shadows_the_wall_behind_it() {
         // The cabinet (stature 2) against the aft baseboard blocks the
         // two wall rows behind its cell; a painting may not hang there.
-        let stowed = [(Kind::Cabinet, 4, 3)];
+        let stowed = [(Kind::Cabinet, 6, 3)];
         assert_eq!(
-            check(&stowed, Kind::Painting, 4, 1),
+            check(&stowed, Kind::Painting, 5, 1),
             Err(Violation::Overlap)
         );
-        // One column over, the wall is clear.
-        assert_eq!(check(&stowed, Kind::Painting, 5, 1), Ok(()));
-        // And symmetrically: with the painting hung first, the cabinet
-        // may not stand in front of it.
-        let hung = [(Kind::Painting, 4, 1)];
-        assert_eq!(check(&hung, Kind::Cabinet, 4, 3), Err(Violation::Overlap));
-        assert_eq!(check(&hung, Kind::Cabinet, 6, 3), Ok(()));
+        // Two columns over, the wall is clear.
+        assert_eq!(check(&stowed, Kind::Painting, 7, 1), Ok(()));
+        // And symmetrically.
+        let hung = [(Kind::Painting, 7, 1)];
+        assert_eq!(check(&hung, Kind::Cabinet, 7, 3), Err(Violation::Overlap));
+        assert_eq!(check(&hung, Kind::Cabinet, 5, 3), Ok(()));
     }
 
     #[test]
     fn affix_rule_accepts_the_mount_surface_and_names_the_miss() {
-        // A ceiling lamp hangs from the ceiling chart and nowhere else.
         assert_eq!(check(&[], Kind::CeilingLamp, 16, 4), Ok(()));
         assert_eq!(
-            check(&[], Kind::CeilingLamp, 4, 1),
+            check(&[], Kind::CeilingLamp, 5, 1),
             Err(Violation::Affix(Mount::Ceiling))
         );
-        // A wall lamp takes any wall, never the middle of the room.
-        assert_eq!(check(&[], Kind::WallLamp, 3, 1), Ok(()));
-        assert_eq!(check(&[], Kind::WallLamp, 1, 4), Ok(()));
+        assert_eq!(check(&[], Kind::WallLamp, 5, 1), Ok(()));
+        assert_eq!(check(&[], Kind::WallLamp, 1, 6), Ok(()));
         assert_eq!(
             check(&[], Kind::WallLamp, 5, 5),
             Err(Violation::Affix(Mount::Wall))
         );
-        // The couch sits on the floor, wherever across it.
         assert_eq!(check(&[], Kind::Couch, 4, 4), Ok(()));
         assert_eq!(
             check(&[], Kind::Couch, 4, 0),
@@ -942,86 +1086,81 @@ mod tests {
 
     #[test]
     fn the_floor_lamp_stands_on_the_floor_and_never_across_a_fold() {
-        // 1x2 with a floor mount: fine mid-floor and against the front
-        // edge; refused on the aft wall; nowhere when bent over the fold.
         assert_eq!(check(&[], Kind::FloorLamp, 4, 4), Ok(()));
         assert_eq!(check(&[], Kind::FloorLamp, 4, 8), Ok(()));
         assert_eq!(
-            check(&[], Kind::FloorLamp, 4, 0),
+            check(&[], Kind::FloorLamp, 5, 0),
             Err(Violation::Affix(Mount::Floor))
         );
-        assert_eq!(check(&[], Kind::FloorLamp, 4, 2), Err(Violation::Bounds));
+        assert_eq!(check(&[], Kind::FloorLamp, 5, 2), Err(Violation::Bounds));
     }
 
     #[test]
     fn the_painting_hangs_on_any_wall_but_never_a_hole() {
-        // 2x1 on the aft wall, on the port wall, off in the room, and
-        // across the burner doorway's punch-out.
-        assert_eq!(check(&[], Kind::Painting, 4, 1), Ok(()));
-        assert_eq!(check(&[], Kind::Painting, 0, 4), Ok(()));
+        assert_eq!(check(&[], Kind::Painting, 5, 1), Ok(()));
+        assert_eq!(check(&[], Kind::Painting, 0, 6), Ok(()));
         assert_eq!(
             check(&[], Kind::Painting, 4, 4),
             Err(Violation::Affix(Mount::Wall))
         );
-        assert_eq!(check(&[], Kind::Painting, 11, 3), Err(Violation::Bounds));
+        assert_eq!(check(&[], Kind::Painting, 13, 9), Err(Violation::Bounds));
     }
 
     #[test]
     fn affix_is_checked_before_the_per_piece_scan() {
-        // Off the mount AND overlapping: the affix rule answers first...
         let stowed = [(Kind::RationBricks, 4, 4)];
         assert_eq!(
             check(&stowed, Kind::WallLamp, 4, 4),
             Err(Violation::Affix(Mount::Wall))
         );
-        // ...while an on-mount collision still names the overlap.
-        let stowed = [(Kind::Painting, 3, 1)];
+        let stowed = [(Kind::Painting, 5, 1)];
         assert_eq!(
-            check(&stowed, Kind::WallLamp, 3, 1),
+            check(&stowed, Kind::WallLamp, 5, 1),
             Err(Violation::Overlap)
         );
     }
 
     #[test]
-    fn lamps_are_lit_only_in_the_hold_and_light_their_neighbours() {
+    fn lamps_are_lit_only_in_a_room_and_light_their_neighbours() {
         assert!(lamp(Kind::CeilingLamp) && lamp(Kind::WallLamp) && lamp(Kind::FloorLamp));
         assert!(!lamp(Kind::Couch) && !lamp(Kind::Painting) && !lamp(Kind::PerfumeVial));
 
         let pieces = board(&[(Kind::CeilingLamp, 16, 4)]);
         assert!(lamp_lit(&pieces[0]));
-        // Orthogonal neighbours read lit; the lamp's own cell and the
-        // corners do not.
-        assert!(lit_adjacent(&pieces, 15, 4));
-        assert!(lit_adjacent(&pieces, 17, 4));
-        assert!(lit_adjacent(&pieces, 16, 5));
-        assert!(!lit_adjacent(&pieces, 16, 4));
-        assert!(!lit_adjacent(&pieces, 15, 3));
-        assert!(!lit_adjacent(&pieces, 18, 4));
+        assert!(lit_adjacent(&pieces, CABIN, 15, 4));
+        assert!(lit_adjacent(&pieces, CABIN, 17, 4));
+        assert!(lit_adjacent(&pieces, CABIN, 16, 5));
+        assert!(!lit_adjacent(&pieces, CABIN, 16, 4));
+        assert!(!lit_adjacent(&pieces, CABIN, 15, 3));
+        assert!(!lit_adjacent(&pieces, CABIN, 18, 4));
+        // Light does not cross a seam.
+        assert!(!lit_adjacent(&pieces, 1, 15, 4));
 
-        // A floor lamp lights along its whole 1x2 footprint.
         let tall = board(&[(Kind::FloorLamp, 3, 4)]);
-        assert!(lit_adjacent(&tall, 4, 4));
-        assert!(lit_adjacent(&tall, 4, 5));
-        assert!(lit_adjacent(&tall, 3, 3));
-        assert!(!lit_adjacent(&tall, 4, 3));
+        assert!(lit_adjacent(&tall, CABIN, 4, 4));
+        assert!(lit_adjacent(&tall, CABIN, 4, 5));
+        assert!(lit_adjacent(&tall, CABIN, 3, 3));
+        assert!(!lit_adjacent(&tall, CABIN, 4, 3));
 
-        // Off the hold a lamp is dark, and stowed non-lamps light nothing.
-        let shelved = Piece {
+        // Boxed in a cubby a lamp is dark, and non-lamps light nothing.
+        let boxed = Piece {
             id: 9,
             kind: Kind::FloorLamp,
             variant: 0,
             gnawed: false,
-            loc: Loc::StationShelf { slot: 0 },
+            loc: Loc::Stow {
+                cabinet: 0,
+                slot: 0,
+            },
         };
-        assert!(!lamp_lit(&shelved));
-        assert!(!lit_adjacent(&[shelved], 4, 4));
-        let art = board(&[(Kind::Painting, 3, 1)]);
-        assert!(!lit_adjacent(&art, 5, 1));
+        assert!(!lamp_lit(&boxed));
+        assert!(!lit_adjacent(&[boxed], CABIN, 4, 4));
+        let art = board(&[(Kind::Painting, 5, 1)]);
+        assert!(!lit_adjacent(&art, CABIN, 7, 1));
     }
 
     #[test]
     fn stowable_is_small_and_neither_cold_nor_suspect() {
-        // One cell and unencumbered: rides in a cabinet.
         for kind in [
             Kind::PerfumeVial,
             Kind::Seedlings,
@@ -1032,13 +1171,12 @@ mod tests {
         ] {
             assert!(stowable(kind), "{kind:?} should stow");
         }
-        // Too big, or a rule says no.
         for kind in [
-            Kind::CryoCore,   // 1x1 but needs the hull
-            Kind::CometIce,   // ditto
-            Kind::GildedIdol, // 1x2
-            Kind::Couch,      // 2x1
-            Kind::Cabinet,    // no cabinets in cabinets
+            Kind::CryoCore,
+            Kind::CometIce,
+            Kind::GildedIdol,
+            Kind::Couch,
+            Kind::Cabinet,
             Kind::SuspiciousCrate,
         ] {
             assert!(!stowable(kind), "{kind:?} should refuse the cubby");
@@ -1053,7 +1191,11 @@ mod tests {
             kind: Kind::Cabinet,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold { x: 4, y: 4 },
+            loc: Loc::Hold {
+                room: CABIN,
+                x: 4,
+                y: 4,
+            },
         }];
         assert!(!cabinet_occupied(&pieces, cabinet));
         assert_eq!(free_cubby(&pieces, cabinet), Some(0));
@@ -1068,74 +1210,80 @@ mod tests {
         }
         assert!(cabinet_occupied(&pieces, cabinet));
         assert_eq!(free_cubby(&pieces, cabinet), None);
-        // A different cabinet's cubbies are its own business.
         assert!(!cabinet_occupied(&pieces, 8));
         assert_eq!(free_cubby(&pieces, 8), Some(0));
     }
 
     #[test]
     fn dressing_rules_cover_surface_overlap_and_pinning() {
-        // A rug lies wholly on the floor and nowhere else — not on a
-        // wall, and never bent over a fold.
-        assert_eq!(dressing_check(&[], 9, Kind::Rug, 4, 7), Ok(()));
+        let rooms = ship();
+        let laid =
+            |pieces: &[Piece], kind, x, y| dressing_check(&rooms, pieces, 9, kind, CABIN, x, y);
+        assert_eq!(laid(&[], Kind::Rug, 4, 7), Ok(()));
         assert_eq!(
-            dressing_check(&[], 9, Kind::Rug, 4, 1),
+            laid(&[], Kind::Rug, 5, 1),
             Err(Violation::Affix(Mount::Floor))
         );
-        assert_eq!(
-            dressing_check(&[], 9, Kind::Rug, 10, 7),
-            Err(Violation::Bounds)
-        );
-        // Paint coats any chart's cells.
-        assert_eq!(dressing_check(&[], 9, Kind::PaintTin, 3, 0), Ok(()));
-        assert_eq!(dressing_check(&[], 9, Kind::LuminousPaint, 4, 4), Ok(()));
-        // One dressing per cell: a coat may not land on a laid rug.
+        assert_eq!(laid(&[], Kind::Rug, 10, 7), Err(Violation::Bounds));
+        assert_eq!(laid(&[], Kind::PaintTin, 5, 0), Ok(()));
+        assert_eq!(laid(&[], Kind::LuminousPaint, 4, 4), Ok(()));
         let mut pieces = vec![Piece {
             id: 0,
             kind: Kind::Rug,
             variant: 0,
             gnawed: false,
-            loc: Loc::Laid { x: 4, y: 7 },
+            loc: Loc::Laid {
+                room: CABIN,
+                x: 4,
+                y: 7,
+            },
         }];
-        assert_eq!(
-            dressing_check(&pieces, 9, Kind::PaintTin, 5, 7),
-            Err(Violation::Overlap)
-        );
-        assert_eq!(dressing_check(&pieces, 9, Kind::PaintTin, 3, 7), Ok(()));
-        // No sliding a dressing under standing cargo...
+        assert_eq!(laid(&pieces, Kind::PaintTin, 5, 7), Err(Violation::Overlap));
+        assert_eq!(laid(&pieces, Kind::PaintTin, 3, 7), Ok(()));
         pieces.push(Piece {
             id: 1,
             kind: Kind::Couch,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold { x: 3, y: 7 },
+            loc: Loc::Hold {
+                room: CABIN,
+                x: 3,
+                y: 7,
+            },
         });
         assert_eq!(
-            dressing_check(&pieces, 9, Kind::PaintTin, 3, 7),
+            laid(&pieces, Kind::PaintTin, 3, 7),
             Err(Violation::Occupied)
         );
-        // ...and none lifts from under it: lay a rug, stand a couch on
-        // half of it, and the rug is pinned.
         let rug = Piece {
             id: 2,
             kind: Kind::Rug,
             variant: 0,
             gnawed: false,
-            loc: Loc::Laid { x: 4, y: 7 },
+            loc: Loc::Laid {
+                room: CABIN,
+                x: 4,
+                y: 7,
+            },
         };
         let couch = Piece {
             id: 3,
             kind: Kind::Couch,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold { x: 5, y: 7 },
+            loc: Loc::Hold {
+                room: CABIN,
+                x: 5,
+                y: 7,
+            },
         };
         assert!(laid_pinned(&[rug, couch], &rug));
         assert!(!laid_pinned(&[rug], &rug));
-        // Coverings have no hold berth for first_fit to find, and the
-        // dressing scan starts clear of both the rug and the couch.
-        assert_eq!(first_fit(&[], 9, Kind::Rug), None);
-        assert_eq!(dress_fit(&[rug, couch], 9, Kind::Rug), Some((3, 3)));
+        assert_eq!(first_fit(&rooms, &[], 9, Kind::Rug), None);
+        assert_eq!(
+            dress_fit(&rooms, &[rug, couch], 9, Kind::Rug),
+            Some((CABIN, 3, 3))
+        );
     }
 
     #[test]
@@ -1145,41 +1293,65 @@ mod tests {
             kind: Kind::LuminousPaint,
             variant: 0,
             gnawed: false,
-            loc: Loc::Laid { x: 4, y: 1 },
+            loc: Loc::Laid {
+                room: CABIN,
+                x: 5,
+                y: 1,
+            },
         };
-        assert!(lit_adjacent(&[coat], 3, 1));
-        assert!(lit_adjacent(&[coat], 4, 0));
-        assert!(!lit_adjacent(&[coat], 4, 1), "never inside, only beside");
-        assert!(!lit_adjacent(&[coat], 3, 0), "corners do not count");
-        // Plain enamel sheds no light, and an unlaid tin is just a tin.
+        assert!(lit_adjacent(&[coat], CABIN, 6, 1));
+        assert!(lit_adjacent(&[coat], CABIN, 5, 0));
+        assert!(!lit_adjacent(&[coat], CABIN, 5, 1), "never inside");
+        assert!(!lit_adjacent(&[coat], CABIN, 6, 0), "corners do not count");
         let tin = Piece {
             id: 1,
             kind: Kind::PaintTin,
             variant: 0,
             gnawed: false,
-            loc: Loc::Laid { x: 6, y: 1 },
+            loc: Loc::Laid {
+                room: CABIN,
+                x: 7,
+                y: 1,
+            },
         };
-        assert!(!lit_adjacent(&[tin], 5, 1));
-        let canned = Piece {
-            id: 2,
-            kind: Kind::LuminousPaint,
-            variant: 0,
-            gnawed: false,
-            loc: Loc::StationShelf { slot: 0 },
-        };
-        assert!(!lit_adjacent(&[canned], 1, 1));
+        assert!(!lit_adjacent(&[tin], CABIN, 6, 1));
+    }
+
+    /// Ownership is a function of tile class, and nothing else.
+    #[test]
+    fn ownership_reads_the_tile_class() {
+        let mut rooms = Rooms::new();
+        let trade = rooms
+            .spawn(RoomKind::Trade, CABIN)
+            .expect("a trade room attaches");
+        let at = |x, y| Loc::Hold { room: trade, x, y };
+        // The trade room's aft floor row is its own stock; its front
+        // floor row is the chalked offer square; the deck between is
+        // ordinary, and so is everything aboard.
+        assert!(!player_owned(&rooms, &[], at(3, 3)));
+        assert!(player_owned(&rooms, &[], at(3, 6)));
+        assert!(player_owned(&rooms, &[], at(3, 4)));
+        assert!(player_owned(
+            &rooms,
+            &[],
+            Loc::Hold {
+                room: CABIN,
+                x: 4,
+                y: 4
+            }
+        ));
     }
 
     #[test]
     fn held_piece_ignores_its_own_footprint() {
+        let rooms = ship();
         let pieces = board(&[(Kind::RationBricks, 4, 4)]);
-        // Re-dropping piece 0 onto (or near) itself must not self-collide.
         assert_eq!(
-            placement_check(&pieces, 0, Kind::RationBricks, 4, 4),
+            placement_check(&rooms, &pieces, 0, Kind::RationBricks, CABIN, 4, 4),
             Ok(())
         );
         assert_eq!(
-            placement_check(&pieces, 0, Kind::RationBricks, 5, 4),
+            placement_check(&rooms, &pieces, 0, Kind::RationBricks, CABIN, 5, 4),
             Ok(())
         );
     }

@@ -1,5 +1,7 @@
-//! Tactile levers: the two ceremony controls — launch and accept — stop
-//! being buttons and become pulls. Press the handle, drag it along its
+//! Tactile levers: the ceremony control — the launch handle, the last
+//! lever in the game now that the counter's accept lever left with the
+//! counter (docs/ROOMS.md) — stops being a button and becomes a pull.
+//! Press the handle, drag it along its
 //! track, and the throw fires **the moment it reaches the end** — no
 //! release ceremony, the way a physical detent feels. Let go early and
 //! it springs back, nothing said. Once gripped, only the button ending
@@ -79,12 +81,11 @@ impl Grip {
     }
 }
 
-/// Both levers' grips, read by the view modules for handle positions and
-/// by [`synthesize`] for input synthesis.
+/// The lever grips, read by the view modules for handle positions and by
+/// [`synthesize`] for input synthesis.
 #[derive(Resource, Default)]
 pub struct Grips {
     pub launch: Grip,
-    pub accept: Grip,
 }
 
 impl Grips {
@@ -98,10 +99,7 @@ impl Grips {
         if holding {
             return false;
         }
-        self.launch.gripped()
-            || self.accept.gripped()
-            || layout::LAUNCH_LEVER.contains(at)
-            || layout::ACCEPT_LEVER.contains(at)
+        self.launch.gripped() || layout::LAUNCH_LEVER.contains(at)
     }
 
     /// The synthesized press for this frame, if a pull just completed:
@@ -110,13 +108,7 @@ impl Grips {
     #[must_use]
     pub fn fired_press(&self) -> Option<SimVec2> {
         let center = |r: SimRect| SimVec2::new(r.w.mul_add(0.5, r.x), r.h.mul_add(0.5, r.y));
-        if self.launch.fired {
-            Some(center(layout::LAUNCH_LEVER))
-        } else if self.accept.fired {
-            Some(center(layout::ACCEPT_LEVER))
-        } else {
-            None
-        }
+        self.launch.fired.then(|| center(layout::LAUNCH_LEVER))
     }
 }
 
@@ -159,9 +151,6 @@ pub fn grip(
     grips
         .launch
         .update(layout::LAUNCH_LEVER, pointer.sim, press, held, dt);
-    grips
-        .accept
-        .update(layout::ACCEPT_LEVER, pointer.sim, press, held, dt);
 }
 
 pub struct GesturePlugin;
@@ -203,7 +192,7 @@ mod tests {
 
     #[test]
     fn a_timid_pull_springs_back_silently() {
-        let r = layout::ACCEPT_LEVER;
+        let r = layout::LAUNCH_LEVER;
         let mut grip = Grip::default();
         let start = mid(r);
         grip.update(r, start, true, true, 0.016);
@@ -283,9 +272,6 @@ mod tests {
             grips
                 .launch
                 .update(layout::LAUNCH_LEVER, pointer, press, true, 1.0 / 60.0);
-            grips
-                .accept
-                .update(layout::ACCEPT_LEVER, pointer, press, true, 1.0 / 60.0);
             let (at, s_press, s_held, s_release) = synthesize(
                 &grips,
                 pointer,
@@ -337,18 +323,12 @@ mod tests {
             grips
                 .launch
                 .update(layout::LAUNCH_LEVER, pointer, press, held, 1.0 / 60.0);
-            grips
-                .accept
-                .update(layout::ACCEPT_LEVER, pointer, press, held, 1.0 / 60.0);
             let fired = grips.fired_press().is_some();
             let (at, s_press, s_held, s_release) =
                 synthesize(&grips, pointer, holding, true, press, held, release);
             // Mask integrity: any press the sim sees inside a lever rect
             // must be a completed pull's synthesized press.
-            if s_press
-                && !holding
-                && (layout::LAUNCH_LEVER.contains(at) || layout::ACCEPT_LEVER.contains(at))
-            {
+            if s_press && !holding && layout::LAUNCH_LEVER.contains(at) {
                 assert!(fired, "frame {i}: raw press leaked through a lever mask");
             }
             let frame = InputFrame {

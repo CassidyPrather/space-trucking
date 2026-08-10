@@ -33,6 +33,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
+use space_trucking::sim::room::{CABIN, RoomKind};
 use space_trucking::sim::{Loc, Piece, Vec2 as SimVec2, layout};
 
 use crate::palette;
@@ -180,32 +181,20 @@ const PLATE_MARGIN: f32 = 0.03;
 /// ([`bay`]) — and neither is the star tank: the instruments are cargo,
 /// so `Station::Map` and `Station::Lever` ride their pieces' cells
 /// (`pieces::instrument_surface`) and this list keeps only what the
-/// ship itself owns. The console face is next; the counter goes when
-/// the barter redesign does.
+/// ship itself owns. The barter counter left with the interface it
+/// belonged to (docs/ROOMS.md); the console face is next.
 #[must_use]
-pub fn panels() -> [(Station, SimSurface); 2] {
-    [
-        (
-            Station::Console,
-            SimSurface::panel(
-                Vec3::new(0.50, 1.52, -1.83),
-                0.54,
-                0.84,
-                0.10,
-                layout::CONSOLE,
-            ),
+pub fn panels() -> [(Station, SimSurface); 1] {
+    [(
+        Station::Console,
+        SimSurface::panel(
+            Vec3::new(0.50, 1.52, -1.83),
+            0.54,
+            0.84,
+            0.10,
+            layout::CONSOLE,
         ),
-        (
-            Station::Barter,
-            SimSurface::panel(
-                Vec3::new(0.42, 0.88, -1.51),
-                1.12,
-                0.32,
-                0.96,
-                layout::BARTER_PANEL,
-            ),
-        ),
-    ]
+    )]
 }
 
 /// The bay's six mapped surfaces: the room net unfolded like an opened
@@ -443,44 +432,10 @@ pub fn structure(panels: &[(Station, SimSurface)]) -> Vec<Slab> {
             ));
         }
     }
-    // Desk supports, derived: the slab's top stops just under the lowest
-    // corner of the panel's *plate* (quad + margin), its front face just
-    // shy of the plate's forward reach.
-    for (station, surface) in panels {
-        if !matches!(station, Station::Barter) {
-            continue;
-        }
-        let (lo, hi) = plate_bounds(surface);
-        let top = lo.y - 0.008;
-        let front = hi.z + 0.02;
-        let back = -1.92;
-        slabs.push(Slab::new(
-            Vec3::new(surface.center.x, top * 0.5, f32::midpoint(front, back)),
-            Vec3::new(hi.x - lo.x + 0.10, top, front - back),
-            Finish::Plate,
-        ));
-    }
+    // The counter's derived support came out with the counter it held
+    // up (docs/ROOMS.md): the last screen-shaped surface in the game.
+    let _ = panels;
     slabs
-}
-
-/// World-space AABB of a panel's physical plate: the mapped quad grown by
-/// the plate margin on both axes, plus its thickness behind the plane.
-fn plate_bounds(surface: &SimSurface) -> (Vec3, Vec3) {
-    let u = surface.half_u + surface.half_u.normalize() * PLATE_MARGIN;
-    let v = surface.half_v + surface.half_v.normalize() * PLATE_MARGIN;
-    let n = surface.normal();
-    let mut lo = Vec3::splat(f32::INFINITY);
-    let mut hi = Vec3::splat(f32::NEG_INFINITY);
-    for su in [-1.0, 1.0] {
-        for sv in [-1.0, 1.0] {
-            for d in [0.0, -0.055] {
-                let p = surface.center + u * su + v * sv + n * d;
-                lo = lo.min(p);
-                hi = hi.max(p);
-            }
-        }
-    }
-    (lo, hi)
 }
 
 // ---- The camera rig ----
@@ -490,7 +445,6 @@ fn plate_bounds(surface: &SimSurface) -> (Vec3, Vec3) {
 pub enum Focus {
     Tank,
     Console,
-    Desk,
     Lever,
 }
 
@@ -504,7 +458,6 @@ impl Focus {
         match station {
             Station::Map => Some(Self::Tank),
             Station::Console => Some(Self::Console),
-            Station::Barter => Some(Self::Desk),
             Station::Lever => Some(Self::Lever),
             Station::BayWall
             | Station::BayFloor
@@ -642,10 +595,8 @@ pub struct Skin {
     pub desk: Handle<StandardMaterial>,
     /// Painted hazard stripes for accent strips.
     pub hazard: Handle<StandardMaterial>,
-    pub plate_lit: Handle<StandardMaterial>,
     pub plate_shade: Handle<StandardMaterial>,
     pub socket: Handle<StandardMaterial>,
-    pub screen: Handle<StandardMaterial>,
     pub brass: Handle<StandardMaterial>,
     pub rivet: Handle<StandardMaterial>,
     pub cube: Handle<Mesh>,
@@ -669,17 +620,10 @@ impl Skin {
             plate: crate::wear::worn(materials, &book.plate, palette::PLATE, 2.0, 0.92, 0.15),
             desk: crate::wear::worn(materials, &book.desk, palette::PLATE, 2.0, 0.9, 0.15),
             hazard: crate::wear::worn(materials, &book.hazard, palette::GLINT, 2.0, 0.85, 0.0),
-            plate_lit: materials.add(metal(palette::PLATE_LIT)),
             plate_shade: materials.add(metal(palette::PLATE_SHADE)),
             socket: materials.add(StandardMaterial {
                 base_color: palette::SOCKET,
                 perceptual_roughness: 1.0,
-                metallic: 0.0,
-                ..default()
-            }),
-            screen: materials.add(StandardMaterial {
-                base_color: palette::SCREEN,
-                perceptual_roughness: 0.35,
                 metallic: 0.0,
                 ..default()
             }),
@@ -883,22 +827,6 @@ pub fn spawn(
             .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
     ));
 
-    // Hazard striping along the desk support's front lip — paint where
-    // knees and crates argue with furniture. Derived from the same panel
-    // bounds as the supports, so it can never float free of them.
-    for (station, surface) in &panels {
-        if !matches!(station, Station::Barter) {
-            continue;
-        }
-        let (lo, hi) = plate_bounds(surface);
-        commands.spawn((
-            Mesh3d(skin.cube.clone()),
-            MeshMaterial3d(skin.hazard.clone()),
-            Transform::from_translation(Vec3::new(surface.center.x, lo.y - 0.035, hi.z + 0.022))
-                .with_scale(Vec3::new(hi.x - lo.x + 0.06, 0.045, 0.006)),
-        ));
-    }
-
     // --- Panels: each SimSurface entity carries its station tag; a PLATE
     // slab sits just behind each mapped quad as the physical panel, and a
     // glint aim frame waits hidden for the roaming crosshair.
@@ -992,12 +920,13 @@ pub fn spawn(
         // Socket wells per cell, the berth marking — each surface takes
         // exactly the net cells its rect covers; holes (the doorway, the
         // window) get no well.
-        for y in 0..layout::GRID_ROWS {
-            for x in 0..layout::GRID_COLS {
-                if layout::surface_of(x, y).is_none() {
+        let (cols, rows) = RoomKind::Cabin.grid();
+        for y in 0..rows {
+            for x in 0..cols {
+                if RoomKind::Cabin.surface_of(x, y).is_none() {
                     continue;
                 }
-                let cell = layout::cell_rect(x, y);
+                let cell = layout::cell_rect(CABIN, x, y);
                 let mid = space_trucking::sim::Vec2::new(
                     cell.w.mul_add(0.5, cell.x),
                     cell.h.mul_add(0.5, cell.y),
@@ -1060,7 +989,7 @@ pub fn spawn(
         // fronting the doorway. Paint only — nothing refuses a berth
         // here — but the eye still reads the way out to the fire.
         for &(ax, ay) in &THRESHOLD {
-            let cell = layout::cell_rect(ax, ay);
+            let cell = layout::cell_rect(CABIN, ax, ay);
             let mid = space_trucking::sim::Vec2::new(
                 cell.w.mul_add(0.5, cell.x),
                 cell.h.mul_add(0.5, cell.y),
@@ -1532,20 +1461,6 @@ mod tests {
             | Station::BayCeiling
             | Station::Airlock
             | Station::Standing => {}
-            Station::Barter => {
-                spots.push(mid(layout::ACCEPT_LEVER));
-                spots.push(layout::DIAL_CENTER);
-                spots.push(mid(layout::ENCOUNTER_BADGE));
-                for row in [
-                    &layout::SHELF_SLOTS,
-                    &layout::RECEIVED_SLOTS,
-                    &layout::GIVE_SLOTS,
-                    &layout::TAKE_SLOTS,
-                ] {
-                    spots.push(mid(row[0]));
-                    spots.push(mid(row[3]));
-                }
-            }
         }
         spots.into_iter().map(|s| surface.to_world(s)).collect()
     }
@@ -1657,7 +1572,7 @@ mod tests {
     fn focus_poses_are_legal_camera_positions() {
         let slabs = structure(&panels());
         let stations = stations();
-        for focus in [Focus::Tank, Focus::Console, Focus::Desk, Focus::Lever] {
+        for focus in [Focus::Tank, Focus::Console, Focus::Lever] {
             let (eye, rot) = focus_pose(focus, &stations).expect("the starter board hangs it");
             assert!(
                 eye.y > 0.2 && eye.y < 2.2 && eye.x.abs() < 2.15 && eye.z > -1.85 && eye.z < 2.35,
@@ -1694,7 +1609,6 @@ mod tests {
         assert!(focus_pose(Focus::Tank, &hull).is_none());
         assert!(focus_pose(Focus::Lever, &hull).is_none());
         assert!(focus_pose(Focus::Console, &hull).is_some());
-        assert!(focus_pose(Focus::Desk, &hull).is_some());
     }
 
     /// The roaming envelope stays clear of every slab at eye height.
@@ -1716,31 +1630,6 @@ mod tests {
                         slab.center
                     );
                 }
-            }
-        }
-    }
-
-    #[test]
-    fn desk_supports_sit_under_their_panels() {
-        let panels = panels();
-        let slabs = structure(&panels);
-        // One derived support (the barter counter's) whose top sits below
-        // the panel's lowest plate corner. Plate-finish slabs outside the
-        // main room (the airlock's deck) are not supports.
-        let supports: Vec<&Slab> = slabs
-            .iter()
-            .filter(|s| matches!(s.finish, Finish::Plate) && s.center.x.abs() < 2.3)
-            .collect();
-        assert_eq!(supports.len(), 1);
-        for (station, surface) in &panels {
-            if matches!(station, Station::Barter) {
-                let (lo, _) = plate_bounds(surface);
-                let support = supports
-                    .iter()
-                    .find(|s| (s.center.x - surface.center.x).abs() < 0.2)
-                    .expect("a support under the counter");
-                let top = support.size.y.mul_add(0.5, support.center.y);
-                assert!(top < lo.y, "{station:?} support top {top} reaches {}", lo.y);
             }
         }
     }
@@ -1817,10 +1706,10 @@ mod tests {
         for (station, surface) in bay() {
             for y in 0..layout::GRID_ROWS {
                 for x in 0..layout::GRID_COLS {
-                    if layout::surface_of(x, y).is_none() {
+                    if RoomKind::Cabin.surface_of(x, y).is_none() {
                         continue;
                     }
-                    let cell = layout::cell_rect(x, y);
+                    let cell = layout::cell_rect(CABIN, x, y);
                     let mid =
                         SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
                     if !surface.rect.contains(mid) {

@@ -17,6 +17,7 @@ use std::ops::Range;
 use super::guild::{ClusterReporter, GuildServer};
 use super::protocol::Message;
 use super::session::{Client, Helm, INPUT_DELAY, Outbound};
+use crate::sim::room::{CABIN, RoomId, RoomKind};
 use crate::sim::{CrewFrame, InputFrame, MAX_CREW, PlayerId, Sim, Vec2, layout, map, splitmix};
 
 /// Sealed ticks per virtual step while the crew warps. Lockstep realises
@@ -251,16 +252,16 @@ pub fn rect_center(rect: layout::Rect) -> Vec2 {
     Vec2::new(rect.w.mul_add(0.5, rect.x), rect.h.mul_add(0.5, rect.y))
 }
 
-/// Centre of a hold grid cell.
+/// Centre of one room's net cell.
 #[must_use]
-pub fn cell_center(x: u8, y: u8) -> Vec2 {
-    rect_center(layout::cell_rect(x, y))
+pub fn cell_center(room: RoomId, x: u8, y: u8) -> Vec2 {
+    rect_center(layout::cell_rect(room, x, y))
 }
 
-/// Centre of a barter slot.
+/// Centre of a cabin cell — where most of the choreography happens.
 #[must_use]
-pub fn slot_center(slots: &[layout::Rect; 4], slot: usize) -> Vec2 {
-    rect_center(slots[slot])
+pub fn cabin_cell(x: u8, y: u8) -> Vec2 {
+    cell_center(CABIN, x, y)
 }
 
 /// Scripted player inputs: sealed tick → per-player frames.
@@ -300,6 +301,23 @@ impl Script {
         self.put(tick, player, press_at(from));
         self.put(tick + 1, player, held_at(to));
         self.put(tick + 2, player, release_at(to));
+    }
+
+    /// A quick-move press on `tick`: the piece under `p` goes straight to
+    /// its one obvious destination — out of a room alongside and back to
+    /// its first legal berth aboard.
+    pub fn quick_move(&mut self, tick: u64, player: PlayerId, p: Vec2) {
+        self.put(
+            tick,
+            player,
+            InputFrame {
+                pointer: p,
+                press: true,
+                held: true,
+                shift: true,
+                ..InputFrame::default()
+            },
+        );
     }
 
     /// A warp toggle on `tick`.
@@ -363,21 +381,41 @@ impl Script {
 /// The canonical scripted voyage for [`CONVOY_SEED`], spread across a
 /// crew of `crew` players (at least 3).
 ///
-/// Select Saturn and launch, warp through the cruise, trade the starter
-/// cargo for Saturn's suspicious crate with parallel drags, stow it, fly
+/// Select Saturn and launch, warp through the cruise, carry the starter
+/// cargo into Saturn's own room with parallel carries, mark the crate on
+/// its stock, shake hands, carry the crate aboard through the doorway, fly
 /// home, and let the Guild seize it. Returns the script and the sealed
 /// tick by which the delivery is done.
+///
+/// The room a counterparty brings alongside always takes id 2: the cabin
+/// and the burner hold 0 and 1, and every calling room parts at cast-off,
+/// so the dense id is free again by the next dock. That is what lets this
+/// choreography be written down at all.
 #[must_use]
 pub fn delivery_voyage(crew: usize) -> (Script, u64) {
+    /// The room the dock brings alongside.
+    const CALLER: RoomId = 2;
+
     assert!(
         (3..=MAX_CREW).contains(&crew),
         "the voyage choreography needs 3..=6 crew"
     );
-    // Roles are spread over the crew; parallel drags use role numbers that
-    // stay distinct mod any allowed crew size.
+    // Roles are spread over the crew; parallel carries use role numbers
+    // that stay distinct mod any allowed crew size.
     let role = |k: usize| (k % crew) as PlayerId;
     let launch = rect_center(layout::LAUNCH_LEVER);
-    let accept = rect_center(layout::ACCEPT_LEVER);
+    let stock_deck = |n: usize| {
+        let (x, y) = deck_of(RoomKind::Trade, crate::sim::Tile::Stock)[n];
+        cell_center(CALLER, x, y)
+    };
+    let offer = |n: usize| {
+        let (x, y) = tiles_of_kind(RoomKind::Trade, crate::sim::Tile::Offer)[n];
+        cell_center(CALLER, x, y)
+    };
+    let shake = {
+        let (x, y) = RoomKind::Trade.handshake().expect("a trade room shakes");
+        cell_center(CALLER, x, y)
+    };
 
     let mut script = Script::new();
     // Outbound: pick Saturn, pull the lever, warp most of the cruise. The
@@ -390,49 +428,56 @@ pub fn delivery_voyage(crew: usize) -> (Script, u64) {
     script.press(start + 2, role(0), launch);
     script.toggle_warp(start + 6, role(4));
     script.toggle_warp(start + 2 + leg - 8, role(4));
-    // Docked at Saturn: crate to the take pad, the three starter pieces to
-    // the give pads (two players at a time), accept, stow the crate.
+    // Alongside Saturn: mark the crate where the station stands it (a
+    // 2×2 crate cannot hang on the shop wall, so it takes the first tile
+    // of the stock band that is deck), carry the scrap onto the offer
+    // area, and shake hands.
     let a = start + 2 + leg + 4;
-    script.drag(
-        a,
-        role(1),
-        slot_center(&layout::SHELF_SLOTS, 0),
-        slot_center(&layout::TAKE_SLOTS, 0),
-    );
-    script.drag(
-        a,
-        role(2),
-        cell_center(3, 3),
-        slot_center(&layout::GIVE_SLOTS, 0),
-    );
-    script.drag(
-        a + 4,
-        role(3),
-        cell_center(4, 5),
-        slot_center(&layout::GIVE_SLOTS, 1),
-    );
-    script.drag(
-        a + 4,
-        role(4),
-        cell_center(6, 3),
-        slot_center(&layout::GIVE_SLOTS, 2),
-    );
-    script.press(a + 8, role(0), accept);
-    script.drag(
-        a + 10,
-        role(5),
-        slot_center(&layout::RECEIVED_SLOTS, 0),
-        cell_center(3, 3),
-    );
+    script.press(a, role(1), stock_deck(0));
+    script.drag(a + 2, role(2), cabin_cell(4, 5), offer(0));
+    script.press(a + 8, role(0), shake);
+    // Whatever the room composed is on its own deck now, and the launch
+    // gate will not let anything of ours ride out there. Sweep its deck
+    // with quick-moves: each pops one piece back to its first legal berth
+    // aboard, and a sweep over an empty tile costs nothing.
+    let deck = deck_of(RoomKind::Trade, crate::sim::Tile::Plain);
+    for (i, &(x, y)) in deck.iter().enumerate() {
+        script.quick_move(a + 10 + i as u64, role(5 + i), cell_center(CALLER, x, y));
+    }
+    let sweep = a + 10 + deck.len() as u64;
     // Home: pick the Guild, launch, warp the return leg (its own length —
     // both worlds moved while the crew was trading).
-    let leg_home = map::leg_ticks(SATURN, map::GUILD, a + 16);
-    script.press(a + 14, role(1), map::poi_pos(map::GUILD, a + 14));
-    script.press(a + 16, role(0), launch);
-    script.toggle_warp(a + 20, role(4));
-    script.toggle_warp(a + 16 + leg_home - 8, role(4));
-    let end = a + 16 + leg_home + 6;
+    let leg_home = map::leg_ticks(SATURN, map::GUILD, sweep + 4);
+    script.press(sweep + 2, role(1), map::poi_pos(map::GUILD, sweep + 2));
+    script.press(sweep + 4, role(0), launch);
+    script.toggle_warp(sweep + 8, role(4));
+    script.toggle_warp(sweep + 4 + leg_home - 8, role(4));
+    let end = sweep + 4 + leg_home + 6;
     (script, end)
+}
+
+/// The deck half of one room kind's band of `class` — the floor cells,
+/// where cargo that stands ends up.
+fn deck_of(kind: RoomKind, class: crate::sim::Tile) -> Vec<(u8, u8)> {
+    tiles_of_kind(kind, class)
+        .into_iter()
+        .filter(|&(x, y)| matches!(kind.surface_of(x, y), Some(crate::sim::room::Surf::Floor)))
+        .collect()
+}
+
+/// Every cell of one room kind's net that reads `class`, row-major — the
+/// same order the sim fills its own tiles in.
+fn tiles_of_kind(kind: RoomKind, class: crate::sim::Tile) -> Vec<(u8, u8)> {
+    let (cols, rows) = kind.grid();
+    let mut cells = Vec::new();
+    for y in 0..rows {
+        for x in 0..cols {
+            if kind.tile_of(x, y) == Some(class) {
+                cells.push((x, y));
+            }
+        }
+    }
+    cells
 }
 
 // ---------------------------------------------------------------- convoy --
@@ -945,10 +990,10 @@ mod tests {
     #[test]
     fn a_pause_toggle_lands_on_one_canonical_tick_for_everyone() {
         let mut script = Script::new();
-        script.drag(20, 2, cell_center(6, 3), cell_center(4, 3));
+        script.drag(20, 2, cabin_cell(6, 3), cabin_cell(4, 3));
         script.toggle_pause(40, 3);
         script.toggle_pause(60, 1);
-        script.drag(70, 1, cell_center(4, 3), cell_center(6, 3));
+        script.drag(70, 1, cabin_cell(4, 3), cabin_cell(6, 3));
         let mut convoy = Convoy::new(7, 0x9A5E, 6, 1, &LinkProfile::hostile(), script);
         while convoy.sealed() < 120 {
             convoy.step();
@@ -987,10 +1032,10 @@ mod tests {
     #[test]
     fn a_late_joiner_syncs_from_snapshot_and_converges() {
         let mut script = Script::new();
-        script.drag(20, 1, cell_center(3, 3), cell_center(5, 6));
-        script.drag(30, 2, cell_center(6, 3), cell_center(4, 3));
+        script.drag(20, 1, cabin_cell(3, 3), cabin_cell(5, 6));
+        script.drag(30, 2, cabin_cell(6, 3), cabin_cell(4, 3));
         // The joiner's own drag, well after it has synced.
-        script.drag(300, 4, cell_center(5, 6), cell_center(3, 3));
+        script.drag(300, 4, cabin_cell(5, 6), cabin_cell(3, 3));
         let mut convoy = Convoy::new(0xADD0, 0x70AD, 4, 1, &LinkProfile::hostile(), script);
         convoy.run_until_sealed(200);
         let joiner = convoy.add_joiner(4, &LinkProfile::hostile());
@@ -1009,7 +1054,12 @@ mod tests {
             sim.pieces()
                 .iter()
                 .any(|p| p.kind == crate::sim::Kind::PerfumeVial
-                    && p.loc == Loc::Hold { x: 3, y: 3 }),
+                    && p.loc
+                        == Loc::Hold {
+                            room: CABIN,
+                            x: 3,
+                            y: 3
+                        }),
             "the joiner's drag must land"
         );
     }
@@ -1053,9 +1103,9 @@ mod tests {
     #[test]
     fn a_vanished_client_stalls_nobody_and_can_rejoin() {
         let mut script = Script::new();
-        script.press(20, 2, cell_center(6, 3));
+        script.press(20, 2, cabin_cell(6, 3));
         for tick in 21..=45 {
-            script.hold(tick, 2, cell_center(4, 4));
+            script.hold(tick, 2, cabin_cell(4, 4));
         }
         let mut convoy = Convoy::new(5, 0x0FF, 6, 1, &LinkProfile::mild(), script);
         convoy.run_until_sealed(32);
@@ -1086,9 +1136,12 @@ mod tests {
         let sim = convoy.sim(0).expect("live");
         assert!(sim.all_held().next().is_none(), "the phantom drag lingers");
         assert!(
-            sim.pieces()
-                .iter()
-                .any(|p| p.loc == (Loc::Hold { x: 6, y: 3 })),
+            sim.pieces().iter().any(|p| p.loc
+                == (Loc::Hold {
+                    room: CABIN,
+                    x: 6,
+                    y: 3
+                })),
             "the held piece must snap home"
         );
         convoy.rejoin(2, &LinkProfile::mild());
@@ -1106,9 +1159,9 @@ mod tests {
     #[test]
     fn input_delay_covers_ambient_latency_without_stalls() {
         let mut script = Script::new();
-        script.drag(15, 1, cell_center(3, 3), cell_center(5, 6));
-        script.drag(40, 3, cell_center(6, 3), cell_center(4, 3));
-        script.drag(80, 5, cell_center(5, 6), cell_center(3, 3));
+        script.drag(15, 1, cabin_cell(3, 3), cabin_cell(5, 6));
+        script.drag(40, 3, cabin_cell(6, 3), cabin_cell(4, 3));
+        script.drag(80, 5, cabin_cell(5, 6), cabin_cell(3, 3));
         let profile = LinkProfile {
             latency_ticks: 0..INPUT_DELAY,
             drop_permille: 0,

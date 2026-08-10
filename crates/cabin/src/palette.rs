@@ -226,17 +226,6 @@ pub fn mix(a: Color, b: Color, t: f32) -> Color {
     )
 }
 
-/// The eagerness dial's color ramp: red short of break-even, amber at it,
-/// green into generosity. `value` is in dial units, `0..=EAGER_MAX`.
-#[must_use]
-pub fn dial_color(value: f32) -> Color {
-    if value <= 1.0 {
-        mix(LAMP_NO, AMBER, value)
-    } else {
-        mix(AMBER, LAMP_OK, (value - 1.0).clamp(0.0, 1.0))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -275,9 +264,9 @@ mod tests {
                 && (a.green - b.green).abs() < 1e-5
                 && (a.blue - b.blue).abs() < 1e-5
         };
-        assert!(close(dial_color(0.0), LAMP_NO));
-        assert!(close(dial_color(1.0), AMBER));
-        assert!(close(dial_color(2.0), LAMP_OK));
+        assert!(close(mix(LAMP_NO, AMBER, 0.0), LAMP_NO));
+        assert!(close(mix(LAMP_NO, AMBER, 1.0), AMBER));
+        assert!(close(mix(AMBER, LAMP_OK, 1.0), LAMP_OK));
     }
 
     #[test]

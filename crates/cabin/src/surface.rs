@@ -2,8 +2,8 @@
 //!
 //! The sim's whole interaction model is a pointer in its 800×600 console
 //! world (`sim::layout`). Each interactive surface in the cabin — the nav
-//! tank's glass, the console face, the barter counter, the bay's wall
-//! band and deck strip — is a [`SimSurface`]: an oriented quad in 3D
+//! tank's glass, the console face, the bay's wall band and deck strip —
+//! is a [`SimSurface`]: an oriented quad in 3D
 //! space bound to one sim rect.
 //! Each frame the cursor ray is cast against every surface; the nearest
 //! hit maps to sim coordinates and becomes the virtual pointer the sim
@@ -41,8 +41,6 @@ pub enum Station {
     /// `layout::LAUNCH_LEVER`, carried by the `LaunchLever` piece so
     /// the pull gesture never learns the handle moved.
     Lever,
-    /// The barter counter — slots, dial, accept lever, badge.
-    Barter,
     /// The room net's aft wall chart (docs/BAY.md, "The room grid").
     BayWall,
     /// The net's floor chart — the walkable 8×7 deck.
@@ -55,8 +53,8 @@ pub enum Station {
     BayFront,
     /// The net's ceiling chart.
     BayCeiling,
-    /// One burner berth tile — a single outboard-rail (Flotsam) slot.
-    /// Live only while no barter is open, exactly the sim's rail rule.
+    /// One burner berth tile — a single cell of the furnace room's own
+    /// deck. Always live: the room is a room, with nothing to share.
     Airlock,
     /// A rig's own face, bound to that piece's own rect and riding the
     /// pose the rig actually took — the yaw the backing rule spun it
@@ -291,7 +289,6 @@ pub fn track_pointer(
     camera: Single<(&Camera, &GlobalTransform), With<crate::rig::CabinCamera>>,
     surfaces: Query<(&Station, &SimSurface, Option<&Riding>)>,
     rig: Res<crate::rig::CameraRig>,
-    shell: Res<crate::Shell>,
     mut pointer: ResMut<VirtualPointer>,
 ) {
     *pointer = VirtualPointer::default();
@@ -326,15 +323,8 @@ pub fn track_pointer(
         // Glides and parked cursors keep the pointer parked.
         return;
     };
-    // The airlock tiles share their sim rects with the station shelf
-    // (the rail IS the shelf row, contexts exclusive by construction),
-    // so they only project while the sim's rail rule holds: no barter.
-    let rail_live = shell.bridge.sim.barter().is_none();
     let mut nearest = f32::INFINITY;
     for (station, surface, riding) in &surfaces {
-        if matches!(station, Station::Airlock) && !rail_live {
-            continue;
-        }
         // A surface that rides a piece answers in exactly ONE regime,
         // and `roamable` is which:
         //
@@ -357,11 +347,11 @@ pub fn track_pointer(
             && t < nearest
             && t <= reach
         {
-            // The net's holes are holes: a chart hit whose cell does not
-            // exist (the burner doorway, the window) is a miss, and the
+            // The net's holes are holes, and so are its doorways: a
+            // chart hit on a cell nothing can berth on is a miss, and the
             // ray carries on to whatever lies beyond — the hopper tiles
             // through the doorway, space through the glass.
-            if station.chart_flipped() && space_trucking::sim::layout::cell_at(sim).is_none() {
+            if station.chart_flipped() && !cabin_cell(sim) {
                 continue;
             }
             // While roaming, the focusable stations are opaque but not
@@ -382,6 +372,16 @@ pub fn track_pointer(
             };
         }
     }
+}
+
+/// Whether `sim` names a cabin cell a piece could actually berth on: a
+/// real cell of the cabin's net, and not a doorway's threshold (which
+/// belongs to two rooms and holds nothing).
+fn cabin_cell(sim: SimVec2) -> bool {
+    use space_trucking::sim::room::{CABIN, RoomKind, Tile};
+    space_trucking::sim::layout::cell_at(sim).is_some_and(|(room, x, y)| {
+        room == CABIN && !matches!(RoomKind::Cabin.tile_of(x, y), None | Some(Tile::Threshold))
+    })
 }
 
 #[cfg(test)]
@@ -436,13 +436,16 @@ mod tests {
         );
         // The center of net cell (4, 1) — a real aft-chart cell — should
         // round-trip through a ray fired along the panel normal.
-        let cell = layout::cell_rect(4, 1);
+        let cell = layout::cell_rect(space_trucking::sim::room::CABIN, 4, 1);
         let target = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
         let world = s.to_world(target);
         let n = s.normal();
         let ray = Ray3d::new(world + n * 0.5, Dir3::new(-n).expect("unit"));
         let (_, sim, _) = s.project(ray).expect("hit");
-        assert!(layout::cell_at(sim) == Some((4, 1)), "landed at {sim:?}");
+        assert!(
+            layout::cell_at(sim) == Some((space_trucking::sim::room::CABIN, 4, 1)),
+            "landed at {sim:?}"
+        );
         // And the normal faces the +Z hemisphere (toward the seat).
         assert!(n.z > 0.3, "normal {n:?} should face the seat");
     }

@@ -108,7 +108,7 @@ const HARVEST_GAIN: f32 = 0.5;
 const EXCHANGE_GAIN: f32 = 0.3;
 
 /// Shutters coming down on a station out of patience.
-const SHUTTER_GAIN: f32 = 0.6;
+const SEAM_GAIN: f32 = 0.6;
 
 /// Encounter window opening and closing blips.
 const ENCOUNTER_GAIN: f32 = 0.4;
@@ -139,7 +139,7 @@ const FLUFF_GAIN: f32 = 0.15;
 const BURN_GAIN: f32 = 0.42;
 
 /// The hopper overflow tipped over the side at dock.
-const JETTISON_GAIN: f32 = 0.3;
+const PART_GAIN: f32 = 0.3;
 
 /// The Grand Parade's stinger — the biggest ceremony the game has.
 const PARADE_GAIN: f32 = 0.6;
@@ -398,8 +398,10 @@ fn play(commands: &mut Commands, bank: &mut SoundBank, cue: Cue) {
         // No one-shot: the omen is the hum swelling, and marking its
         // edges with a sting would give the mystery away.
         Cue::OmenStart | Cue::OmenEnd => return,
-        // Shutters slamming: the latch, hard. The message lands.
-        Cue::Shutter => (bank.latch.clone(), SHUTTER_GAIN),
+        // A seam mating, and a seam parting: the latch either way, the
+        // parting lower — something just left with its own room.
+        Cue::Attached => (bank.latch.clone(), SEAM_GAIN),
+        Cue::Parted => (bank.latch.clone(), PART_GAIN),
         // Something pulled alongside; something fell astern.
         Cue::EncounterStart => (bank.blip_up.clone(), ENCOUNTER_GAIN),
         Cue::EncounterEnd => (bank.blip_down.clone(), ENCOUNTER_GAIN),
@@ -407,21 +409,22 @@ fn play(commands: &mut Commands, bank: &mut SoundBank, cue: Cue) {
         Cue::GasBoost => (bank.latch.clone(), GAS_GAIN),
         // The casino's two moods.
         Cue::CasinoWin => (bank.deal.clone(), CASINO_WIN_GAIN),
-        Cue::CasinoLoss => (bank.buzz.clone(), CASINO_LOSS_GAIN),
+        // A refit the laws refused sounds like the house winning: the
+        // same buzz, because it is the same "no".
+        Cue::CasinoLoss | Cue::Refit { .. } => (bank.buzz.clone(), CASINO_LOSS_GAIN),
         // The whale, through the hull. The creak bank at whale scale.
         Cue::WhaleSong { intensity } => (bank.creaks[0].clone(), WHALE_GAIN * loudness(intensity)),
         // Ads. Ads ads ads. Then, mercifully, not.
         Cue::AdStart => (bank.buzz.clone(), AD_GAIN),
         Cue::AdSwat => (bank.thock.clone(), AD_SWAT_GAIN),
         Cue::AdEnd => (bank.blip_down.clone(), AD_GAIN),
-        // A very soft pop, like a second yawn.
-        Cue::FluffBirth => (bank.tick_pick.clone(), FLUFF_GAIN),
+        // A very soft pop, like a second yawn — and the same tick for a
+        // mark taken or given back, because a mark is a small thing said
+        // quietly.
+        Cue::FluffBirth | Cue::Mark { .. } => (bank.tick_pick.clone(), FLUFF_GAIN),
         // The furnace door: iron takes the piece, the fire answers in
         // the gain. Slag barely murmurs; a couch really goes.
         Cue::Burn { intensity } => (bank.clunk.clone(), BURN_GAIN * loudness(intensity)),
-        // Dock overflow tipping over the side: a low latch, cargo going
-        // its own way.
-        Cue::Jettison => (bank.latch.clone(), JETTISON_GAIN),
         // The hangar opens. Whatever it was for, it is happening.
         Cue::ParadeStart => (bank.stinger.clone(), PARADE_GAIN),
         // Free cargo thunking into the hold, scaled by the haul.

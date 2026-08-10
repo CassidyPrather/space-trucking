@@ -46,13 +46,23 @@
 //! should copy the convention rather than grow a framework.
 
 use super::cargo::{Kind, Loc, Piece, lit_adjacent};
-use super::layout::{self, GRID_COLS, GRID_ROWS};
+use super::layout;
+use super::room::{CABIN, RoomKind, Surf};
 use super::{Cue, Vec2, splitmix};
 
+/// The rat is a cabin animal: it stows away in the room you live in and
+/// never crosses a seam. Every cell it reasons about is one of the
+/// cabin's, so its whole world is that room's net.
+const RATS_ROOM: RoomKind = RoomKind::Cabin;
+
+/// The cabin net's bounding grid, the rat's whole country.
+const GRID_COLS: u8 = RATS_ROOM.grid().0;
+const GRID_ROWS: u8 = RATS_ROOM.grid().1;
+
 /// The floor's cell count — the crowding gates' yardstick. The net has
-/// 198 cells but food density is a floor phenomenon; walls of paintings
-/// never fed anybody.
-const FLOOR_CELLS: u32 = layout::FLOOR.2 as u32 * layout::FLOOR.3 as u32;
+/// far more cells than that, but food density is a floor phenomenon;
+/// walls of paintings never fed anybody.
+const FLOOR_CELLS: u32 = RATS_ROOM.floor_rect().2 as u32 * RATS_ROOM.floor_rect().3 as u32;
 
 /// Boarding gate: a rat only stows away when at least this many cells
 /// are under cargo — half the floor.
@@ -204,7 +214,7 @@ impl Rats {
             let h = splitmix(seed ^ SALT_NIBBLE, tick);
             rat.next_nibble = tick + NIBBLE_BASE + h % NIBBLE_JITTER;
             let napping = couch_cells(pieces).contains(&rat.cell);
-            if !napping && !lit_adjacent(pieces, rat.cell.0, rat.cell.1) {
+            if !napping && !lit_adjacent(pieces, CABIN, rat.cell.0, rat.cell.1) {
                 if let Some(index) = nearest_hold_piece(pieces, rat.cell) {
                     pieces[index].gnawed = true;
                     cues.push(Cue::RatNibble);
@@ -229,7 +239,7 @@ impl Rats {
         let Some(rat) = &mut self.rat else {
             return false;
         };
-        if !layout::cell_rect(rat.cell.0, rat.cell.1).contains(p) {
+        if !layout::cell_rect(CABIN, rat.cell.0, rat.cell.1).contains(p) {
             return false;
         }
         rat.chases += 1;
@@ -261,10 +271,11 @@ pub fn occupied_cells(pieces: &[Piece]) -> u32 {
     pieces
         .iter()
         .filter_map(|piece| match piece.loc {
-            Loc::Hold { x, y } => {
+            Loc::Hold { room: CABIN, x, y } => {
                 let (w, h) = piece.kind.cells();
-                let on_floor = layout::surface_of(x, y)
-                    .is_some_and(|surf| matches!(surf, layout::Surf::Floor));
+                let on_floor = RATS_ROOM
+                    .surface_of(x, y)
+                    .is_some_and(|surf| matches!(surf, Surf::Floor));
                 on_floor.then_some(u32::from(w) * u32::from(h))
             }
             _ => None,
@@ -275,7 +286,7 @@ pub fn occupied_cells(pieces: &[Piece]) -> u32 {
 /// Whether hold cell `(cx, cy)` sits under a stowed piece's footprint.
 fn covered(pieces: &[Piece], cx: u8, cy: u8) -> bool {
     pieces.iter().any(|piece| {
-        let Loc::Hold { x, y } = piece.loc else {
+        let Loc::Hold { room: CABIN, x, y } = piece.loc else {
             return false;
         };
         let (w, h) = piece.kind.cells();
@@ -296,10 +307,10 @@ fn choose_cell(h: u64, pieces: &[Piece], avoid: Option<(u8, u8)>) -> Option<(u8,
         for x in 0..GRID_COLS {
             // The whole net is rat country — floor, walls, ceiling; a
             // rat does not care which way is down. Holes are holes.
-            if layout::surface_of(x, y).is_none() {
+            if RATS_ROOM.surface_of(x, y).is_none() {
                 continue;
             }
-            if avoid == Some((x, y)) || lit_adjacent(pieces, x, y) {
+            if avoid == Some((x, y)) || lit_adjacent(pieces, CABIN, x, y) {
                 continue;
             }
             any.push((x, y));
@@ -324,7 +335,7 @@ fn couch_cells(pieces: &[Piece]) -> Vec<(u8, u8)> {
         if piece.kind != Kind::Couch {
             continue;
         }
-        let Loc::Hold { x, y } = piece.loc else {
+        let Loc::Hold { room: CABIN, x, y } = piece.loc else {
             continue;
         };
         let (w, h) = piece.kind.cells();
@@ -362,7 +373,7 @@ fn couch_step(
     let here = couch_gap(couch, (cx, cy));
     let mut pool = Vec::new();
     let mut consider = |cell: (u8, u8)| {
-        if couch_gap(couch, cell) < here && !lit_adjacent(pieces, cell.0, cell.1) {
+        if couch_gap(couch, cell) < here && !lit_adjacent(pieces, CABIN, cell.0, cell.1) {
             pool.push(cell);
         }
     };
@@ -396,7 +407,8 @@ fn nearest_hold_piece(pieces: &[Piece], (cx, cy): (u8, u8)) -> Option<usize> {
         .iter()
         .enumerate()
         .filter_map(|(index, piece)| {
-            let (Loc::Hold { x, y } | Loc::Laid { x, y }) = piece.loc else {
+            let (Loc::Hold { room: CABIN, x, y } | Loc::Laid { room: CABIN, x, y }) = piece.loc
+            else {
                 return None;
             };
             let (w, h) = piece.kind.cells();
@@ -430,7 +442,7 @@ mod tests {
             kind,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold { x, y },
+            loc: Loc::Hold { room: CABIN, x, y },
         }
     }
 
@@ -447,7 +459,10 @@ mod tests {
                 kind: Kind::RationBricks,
                 variant: 0,
                 gnawed: false,
-                loc: Loc::StationShelf { slot: 0 },
+                loc: Loc::Stow {
+                    cabinet: 0,
+                    slot: 0,
+                },
             },
         ];
         assert_eq!(occupied_cells(&pieces), 5);
@@ -460,7 +475,7 @@ mod tests {
         let mut pieces = Vec::new();
         for y in 0..GRID_ROWS {
             for x in 0..GRID_COLS {
-                if layout::surface_of(x, y).is_none() || (x, y) == (5, 5) {
+                if RATS_ROOM.surface_of(x, y).is_none() || (x, y) == (5, 5) {
                     continue;
                 }
                 pieces.push(hold_piece(pieces.len() as u32, Kind::PerfumeVial, x, y));
@@ -511,7 +526,7 @@ mod tests {
             rats.on_tick(0xBEEF, tick, &mut pieces, &mut cues);
             let rat = rats.rat.expect("nothing evicts it here");
             assert!(
-                !lit_adjacent(&pieces, rat.cell.0, rat.cell.1),
+                !lit_adjacent(&pieces, CABIN, rat.cell.0, rat.cell.1),
                 "tick {tick}: the rat sat in lamplight at {:?}",
                 rat.cell
             );
@@ -535,15 +550,15 @@ mod tests {
         let mut pieces: Vec<Piece> = Vec::new();
         for y in 0..GRID_ROWS {
             for x in 0..GRID_COLS {
-                if layout::surface_of(x, y).is_some() && x % 2 == 0 {
+                if RATS_ROOM.surface_of(x, y).is_some() && x % 2 == 0 {
                     pieces.push(hold_piece(pieces.len() as u32, Kind::CeilingLamp, x, y));
                 }
             }
         }
         for y in 0..GRID_ROWS {
             for x in 0..GRID_COLS {
-                if layout::surface_of(x, y).is_some() {
-                    assert!(lit_adjacent(&pieces, x, y), "({x}, {y}) reads dark");
+                if RATS_ROOM.surface_of(x, y).is_some() {
+                    assert!(lit_adjacent(&pieces, CABIN, x, y), "({x}, {y}) reads dark");
                 }
             }
         }

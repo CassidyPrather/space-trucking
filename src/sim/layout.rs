@@ -3,9 +3,18 @@
 //! The sim hit-tests against these rects and the renderer draws inside them,
 //! so the two can never disagree about where a button is. Everything is a
 //! constant: the console does not rearrange itself.
+//!
+//! The room grid lives east of the classic rects, in **net lanes**: one
+//! reserved rect of logical space per attached room, indexed by its dense
+//! `RoomId` (`super::room`). Lanes are fixed by id, so a room's rects are a
+//! pure function of that id and no attach ever reflows another room's
+//! coordinates.
 
 use super::Vec2;
 use super::cargo::{Loc, Piece};
+use super::room::{self, RoomId};
+
+pub use super::room::{CELL, LANE_COLS as GRID_COLS, LANE_ROWS as GRID_ROWS, lane_origin};
 
 /// Axis-aligned rectangle in world coordinates.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -57,180 +66,31 @@ pub const WARP_BTN: Rect = Rect::new(580.0, 380.0, 40.0, 40.0);
 /// Speaker icon. Mute is frontend state; the sim never hears about it.
 pub const SPEAKER: Rect = Rect::new(630.0, 380.0, 40.0, 40.0);
 
-/// The room net's bounding grid width, in cells (see [`surface_of`]).
-pub const GRID_COLS: u8 = 22;
+/// Top-left corner of the cabin's lane — where the room grid used to
+/// begin, back when there was only one room.
+pub const GRID_ORIGIN: Vec2 = room::LANE_ORIGIN;
 
-/// The room net's bounding grid height, in cells.
-pub const GRID_ROWS: u8 = 13;
-
-/// Net cell size, in world units.
-pub const CELL: f32 = 34.0;
-
-/// Top-left corner of the room net, east of the retired console space.
-///
-/// The world grew to hold it (`WORLD_W`); the map and barter rects kept
-/// their coordinates, so POI distances and desk muscle memory survive.
-pub const GRID_ORIGIN: Vec2 = Vec2::new(810.0, 16.0);
-
-// ---- The room net (docs/BAY.md, "The room grid") ----
-//
-// The entire room, unfolded into one 2D cross of six charts and laid
-// into the logical world — the walkable-bay fold generalized until it
-// closes. One unified (x, y) cell space with a validity mask; every
-// rule classifies cells through [`surface_of`] and never stores a
-// surface. The old 6×4 hold embeds at (+3, 0): its wall band is the
-// aft chart's rows, its deck strip is the floor's aft-most row, which
-// is what keeps save migration a translation.
-//
-// The cabin widened from a 6×5 floor to an 8×7 one (the walls stayed
-// three courses tall): the floor's origin held, so floor and aft and
-// port cells kept their coordinates, and the charts downstream of the
-// growth slid — starboard and ceiling by +2 columns, front by +2 rows.
-// That, too, is what keeps save migration a translation (STV10).
-//
-// Chart bounds (x0..x1, y0..y1), half-open:
-//
-//         aft  (3..11, 0..3)   cornice y0, baseboard y2
-//   port (0..3, 3..10)         cornice x0, baseboard x2
-//   floor (3..11, 3..10)       row y3 lies along the aft baseboard
-//   starboard (11..14, 3..10)  baseboard x11, cornice x13
-//   front (3..11, 10..13)      baseboard y10, cornice y12
-//   ceiling (14..22, 3..10)    folded over the starboard cornice
-//
-// Fold seams that are adjacent in the net are adjacent in the room
-// (aft↔floor, port↔floor, starboard↔floor, front↔floor,
-// starboard↔ceiling), so plain orthogonal adjacency is 3D-honest
-// across them — a floor lamp lights the baseboard behind it. The cut
-// seams (wall↔wall corners, the ceiling's other three edges) are NOT
-// net-adjacent: light does not turn corners, and neither do rats.
-
-/// Which plane of the room a net cell lies in.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Surf {
-    Aft,
-    Port,
-    Floor,
-    Starboard,
-    Front,
-    Ceiling,
-}
-
-/// Classify a net cell, or `None` where the cross has no cell.
-///
-/// A hole is outside the charts, or the one architectural punch-out:
-/// the burner doorway through the starboard chart. Holes are wall that
-/// is not there; nothing hangs on them. (The transit window used to be
-/// a second punch-out; now it is a piece of wall cargo — [`Kind::Window`]
-/// in `cargo` — and hangs wherever a painting could.)
+/// World rect of net cell `(x, y)` in room `room`.
 #[must_use]
-pub const fn surface_of(x: u8, y: u8) -> Option<Surf> {
-    // The doorway to the burner annex: starboard rows nearest the aft
-    // corner, baseboard and middle heights.
-    if (x == 11 || x == 12) && (y == 3 || y == 4) {
-        return None;
-    }
-    match (x, y) {
-        (3..=10, 0..=2) => Some(Surf::Aft),
-        (0..=2, 3..=9) => Some(Surf::Port),
-        (3..=10, 3..=9) => Some(Surf::Floor),
-        (11..=13, 3..=9) => Some(Surf::Starboard),
-        (3..=10, 10..=12) => Some(Surf::Front),
-        (14..=21, 3..=9) => Some(Surf::Ceiling),
-        _ => None,
-    }
-}
-
-/// The floor chart's bounds, `(x0, y0, w, h)` — the walkable plane the
-/// cryo hull rule and the wall-shadow rule reason about.
-pub const FLOOR: (u8, u8, u8, u8) = (3, 3, 8, 7);
-
-/// The barter surface, bottom-right: shelves, pads, dial, and accept lever.
-pub const BARTER_PANEL: Rect = Rect::new(260.0, 440.0, 530.0, 150.0);
-
-/// The station's goods on offer, top-left of the barter panel.
-pub const SHELF_SLOTS: [Rect; 4] = slot_row(270.0, 448.0);
-
-/// Goods received in a concluded trade, below the shelf.
-pub const RECEIVED_SLOTS: [Rect; 4] = slot_row(270.0, 542.0);
-
-/// What the player is offering, top-middle of the barter panel.
-pub const GIVE_SLOTS: [Rect; 4] = slot_row(470.0, 448.0);
-
-/// What the player is asking for, below the give pads.
-pub const TAKE_SLOTS: [Rect; 4] = slot_row(470.0, 542.0);
-
-/// Pull to conclude the trade on the pads.
-pub const ACCEPT_LEVER: Rect = Rect::new(660.0, 530.0, 120.0, 40.0);
-
-/// Where travel-encounter flotsam drifts: the station shelf's own four
-/// sockets, doubling as the outboard rail.
-///
-/// The two meanings are mutually exclusive by construction — shelf goods
-/// exist only docked at a trading station (barter open), drift only
-/// underway or at barterless berths — so one row of wells serves both
-/// without a single ambiguous drop.
-pub const FLOTSAM_SLOTS: [Rect; 4] = SHELF_SLOTS;
-
-/// The encounter badge.
-///
-/// Whatever is alongside shows its sign in the dial housing's corner of
-/// the barter panel — which is dormant underway, when encounters happen —
-/// and pressing (or dropping cargo on) it is how the player engages.
-pub const ENCOUNTER_BADGE: Rect = Rect::new(666.0, 451.0, 68.0, 68.0);
-
-/// Centre of the eagerness dial, right of the pads.
-pub const DIAL_CENTER: Vec2 = Vec2::new(700.0, 485.0);
-
-/// Slot edge length. Slots are square.
-const SLOT: f32 = 40.0;
-
-/// Horizontal spacing between slot lefts in a row.
-const SLOT_STEP: f32 = 46.0;
-
-/// A row of four slots starting at `(x, y)`.
-const fn slot_row(x: f32, y: f32) -> [Rect; 4] {
-    [
-        Rect::new(x, y, SLOT, SLOT),
-        Rect::new(x + SLOT_STEP, y, SLOT, SLOT),
-        Rect::new(x + 2.0 * SLOT_STEP, y, SLOT, SLOT),
-        Rect::new(x + 3.0 * SLOT_STEP, y, SLOT, SLOT),
-    ]
-}
-
-/// World rect of hold cell `(x, y)`.
-#[must_use]
-pub fn cell_rect(x: u8, y: u8) -> Rect {
+pub fn cell_rect(room: RoomId, x: u8, y: u8) -> Rect {
+    let origin = lane_origin(room);
     Rect::new(
-        f32::from(x).mul_add(CELL, GRID_ORIGIN.x),
-        f32::from(y).mul_add(CELL, GRID_ORIGIN.y),
+        f32::from(x).mul_add(CELL, origin.x),
+        f32::from(y).mul_add(CELL, origin.y),
         CELL,
         CELL,
     )
 }
 
-/// Net cell under `p`, if any — a cell of the cross, never a hole or a
-/// margin of the bounding box.
+/// Which room and raw net cell `p` falls in, if any.
+///
+/// Raw: this answers about lanes, not about the room net's validity
+/// mask, because a lane's geometry is fixed and a room's charts are not.
+/// `Sim::cell_at` is the arbiter that also asks whether the room exists
+/// and whether the cell is a cell.
 #[must_use]
-pub fn cell_at(p: Vec2) -> Option<(u8, u8)> {
-    let dx = p.x - GRID_ORIGIN.x;
-    let dy = p.y - GRID_ORIGIN.y;
-    if dx < 0.0 || dy < 0.0 {
-        // Truncation rounds toward zero, so just-outside would land in the
-        // edge cells without this check.
-        return None;
-    }
-    let x = u8::try_from((dx / CELL) as i32).ok()?;
-    let y = u8::try_from((dy / CELL) as i32).ok()?;
-    (x < GRID_COLS && y < GRID_ROWS && surface_of(x, y).is_some()).then_some((x, y))
-}
-
-/// Slot index under `p` within a row of slots, if any.
-#[must_use]
-pub fn slot_at(slots: &[Rect; 4], p: Vec2) -> Option<u8> {
-    slots
-        .iter()
-        .position(|slot| slot.contains(p))
-        .map(|i| i as u8)
+pub fn cell_at(p: Vec2) -> Option<(RoomId, u8, u8)> {
+    room::lane_cell_at(p)
 }
 
 /// World rect a piece occupies at its current [`Loc`]. Shared by hit-testing
@@ -244,16 +104,11 @@ pub fn slot_at(slots: &[Rect; 4], p: Vec2) -> Option<u8> {
 #[must_use]
 pub fn piece_rect(pieces: &[Piece], piece: &Piece) -> Rect {
     match piece.loc {
-        Loc::Hold { x, y } | Loc::Laid { x, y } => {
+        Loc::Hold { room, x, y } | Loc::Laid { room, x, y } => {
             let (w, h) = piece.kind.cells();
-            let anchor = cell_rect(x, y);
+            let anchor = cell_rect(room, x, y);
             Rect::new(anchor.x, anchor.y, f32::from(w) * CELL, f32::from(h) * CELL)
         }
-        Loc::StationShelf { slot } => SHELF_SLOTS[usize::from(slot)],
-        Loc::GivePad { slot } => GIVE_SLOTS[usize::from(slot)],
-        Loc::TakePad { slot } => TAKE_SLOTS[usize::from(slot)],
-        Loc::ReceivedShelf { slot } => RECEIVED_SLOTS[usize::from(slot)],
-        Loc::Flotsam { slot } => FLOTSAM_SLOTS[usize::from(slot)],
         Loc::Stow { cabinet, slot } => pieces
             .iter()
             .find(|other| other.id == cabinet)
@@ -306,39 +161,27 @@ pub fn piece_at(pieces: &[Piece], p: Vec2) -> Option<&Piece> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sim::room::MAX_ROOMS;
 
     /// Every interactive rect, named, for the pairwise checks below.
     fn interactive() -> Vec<(&'static str, Rect)> {
         let mut rects = vec![
             ("launch", LAUNCH_LEVER),
-            ("accept", ACCEPT_LEVER),
             ("pause", PAUSE_BTN),
             ("warp", WARP_BTN),
             ("speaker", SPEAKER),
-            (
-                "grid",
+        ];
+        for id in 0..MAX_ROOMS as RoomId {
+            let origin = lane_origin(id);
+            rects.push((
+                Box::leak(format!("lane[{id}]").into_boxed_str()),
                 Rect::new(
-                    GRID_ORIGIN.x,
-                    GRID_ORIGIN.y,
+                    origin.x,
+                    origin.y,
                     f32::from(GRID_COLS) * CELL,
                     f32::from(GRID_ROWS) * CELL,
                 ),
-            ),
-        ];
-        // FLOTSAM_SLOTS are the shelf rects themselves (exclusive
-        // contexts), so listing them would self-collide by design.
-        rects.push(("encounter", ENCOUNTER_BADGE));
-        for (name, row) in [
-            ("shelf", &SHELF_SLOTS),
-            ("received", &RECEIVED_SLOTS),
-            ("give", &GIVE_SLOTS),
-            ("take", &TAKE_SLOTS),
-        ] {
-            for (i, &slot) in row.iter().enumerate() {
-                // The name survives the loop; leaking four tiny strings in a
-                // test beats losing which slot collided.
-                rects.push((&*format!("{name}[{i}]").leak(), slot));
-            }
+            ));
         }
         rects
     }
@@ -349,7 +192,8 @@ mod tests {
 
     /// A drop can only mean one thing: no two click/drop targets may share
     /// any area. This is the guard against a hit-test resolving somewhere
-    /// the player did not aim.
+    /// the player did not aim — and, since every room now has a lane, the
+    /// guard that two rooms never share a rect.
     #[test]
     fn interactive_rects_never_overlap() {
         let rects = interactive();
@@ -363,25 +207,6 @@ mod tests {
         }
     }
 
-    /// The barter furniture stays inside its panel, so hiding the panel
-    /// while traveling also hides every target that needs a station.
-    #[test]
-    fn barter_furniture_sits_inside_the_panel() {
-        let inside = |r: Rect| {
-            r.x >= BARTER_PANEL.x
-                && r.y >= BARTER_PANEL.y
-                && r.x + r.w <= BARTER_PANEL.x + BARTER_PANEL.w
-                && r.y + r.h <= BARTER_PANEL.y + BARTER_PANEL.h
-        };
-        for row in [&SHELF_SLOTS, &RECEIVED_SLOTS, &GIVE_SLOTS, &TAKE_SLOTS] {
-            for &slot in row {
-                assert!(inside(slot), "slot {slot:?} escapes the barter panel");
-            }
-        }
-        assert!(inside(ACCEPT_LEVER));
-        assert!(BARTER_PANEL.contains(DIAL_CENTER));
-    }
-
     /// Everything sits inside the logical world.
     #[test]
     fn everything_fits_the_world() {
@@ -393,56 +218,6 @@ mod tests {
                     && r.y + r.h <= crate::sim::WORLD_H,
                 "{name} leaves the world"
             );
-        }
-    }
-
-    /// The net's paper-craft audit: the cross's six charts cover exactly
-    /// the advertised cell counts and the holes are holes.
-    #[test]
-    fn the_net_folds_from_six_charts() {
-        let mut counts = [0usize; 6];
-        for y in 0..GRID_ROWS {
-            for x in 0..GRID_COLS {
-                if let Some(surf) = surface_of(x, y) {
-                    counts[match surf {
-                        Surf::Aft => 0,
-                        Surf::Port => 1,
-                        Surf::Floor => 2,
-                        Surf::Starboard => 3,
-                        Surf::Front => 4,
-                        Surf::Ceiling => 5,
-                    }] += 1;
-                }
-            }
-        }
-        assert_eq!(counts[0], 24, "aft 8x3");
-        assert_eq!(counts[1], 21, "port 7x3");
-        assert_eq!(counts[2], 56, "floor 8x7");
-        assert_eq!(counts[3], 21 - 4, "starboard 7x3 minus the doorway");
-        assert_eq!(counts[4], 24, "front 8x3 — the window is cargo now");
-        assert_eq!(counts[5], 56, "ceiling 8x7");
-        // The architectural holes are not cells.
-        for (x, y) in [(11, 3), (12, 3), (11, 4), (12, 4)] {
-            assert_eq!(surface_of(x, y), None, "({x},{y}) should be a hole");
-        }
-    }
-
-    /// The fold seams that are adjacent in the net are the ones that are
-    /// adjacent in the room; a sample from each glued edge.
-    #[test]
-    fn fold_seams_are_watertight() {
-        let pairs = [
-            ((5, 2), Surf::Aft, (5, 3), Surf::Floor),
-            ((2, 5), Surf::Port, (3, 5), Surf::Floor),
-            ((10, 5), Surf::Floor, (11, 5), Surf::Starboard),
-            ((5, 9), Surf::Floor, (5, 10), Surf::Front),
-            ((13, 5), Surf::Starboard, (14, 5), Surf::Ceiling),
-        ];
-        for ((ax, ay), a_surf, (bx, by), b_surf) in pairs {
-            assert_eq!(surface_of(ax, ay), Some(a_surf));
-            assert_eq!(surface_of(bx, by), Some(b_surf));
-            let adjacent = ax.abs_diff(bx) + ay.abs_diff(by) == 1;
-            assert!(adjacent, "seam pair ({ax},{ay})-({bx},{by}) must touch");
         }
     }
 }

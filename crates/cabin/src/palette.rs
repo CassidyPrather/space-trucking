@@ -272,9 +272,9 @@ pub fn mix(a: Color, b: Color, t: f32) -> Color {
 /// and falls back to `a` for anything else, since a role that is not
 /// sRGB is a role this palette did not write.
 #[must_use]
-pub const fn blend(a: Color, b: Color, t: f32) -> Color {
-    let (Color::Srgba(x), Color::Srgba(y)) = (a, b) else {
-        return a;
+pub const fn blend(from: Color, to: Color, t: f32) -> Color {
+    let (Color::Srgba(start), Color::Srgba(end)) = (from, to) else {
+        return from;
     };
     let t = if t < 0.0 {
         0.0
@@ -284,10 +284,10 @@ pub const fn blend(a: Color, b: Color, t: f32) -> Color {
         t
     };
     Color::srgba(
-        (y.red - x.red) * t + x.red,
-        (y.green - x.green) * t + x.green,
-        (y.blue - x.blue) * t + x.blue,
-        (y.alpha - x.alpha) * t + x.alpha,
+        (end.red - start.red) * t + start.red,
+        (end.green - start.green) * t + start.green,
+        (end.blue - start.blue) * t + start.blue,
+        (end.alpha - start.alpha) * t + start.alpha,
     )
 }
 

@@ -2026,18 +2026,10 @@ fn glyph_spec(rule: Option<Violation>, rect: Rect) -> Vec<(Vec2, Vec2, f32)> {
             (Vec2::new(0.0, s * 0.62), Vec2::new(s * 1.9, s * 0.22), 0.0),
         ],
         // Off the net, onto a piece (or its standing shadow), the violet
-        // objection, the doormat, the sealed floor, and the last vital
-        // instrument refusing its exit: the frame alone. (Aisle, Sealed,
-        // and Vital are rules still owed their own glyphs — the frame
-        // and the buzz carry them meanwhile.)
-        Some(
-            Violation::Bounds
-            | Violation::Overlap
-            | Violation::Suspicious
-            | Violation::Aisle
-            | Violation::Sealed
-            | Violation::Vital,
-        )
+        // objection, and the last vital instrument refusing its exit:
+        // the frame alone. (Vital is a rule still owed its own glyph —
+        // the frame and the buzz carry it meanwhile.)
+        Some(Violation::Bounds | Violation::Overlap | Violation::Suspicious | Violation::Vital)
         | None => vec![],
     }
 }
@@ -4300,8 +4292,6 @@ mod tests {
             Violation::Affix(Mount::Floor),
             Violation::Affix(Mount::Wall),
             Violation::Occupied,
-            Violation::Aisle,
-            Violation::Sealed,
             Violation::Vital,
         ] {
             let bars = glyph_spec(Some(rule), rect);
@@ -4311,12 +4301,7 @@ mod tests {
             );
             let frame_only = matches!(
                 rule,
-                Violation::Bounds
-                    | Violation::Overlap
-                    | Violation::Suspicious
-                    | Violation::Aisle
-                    | Violation::Sealed
-                    | Violation::Vital
+                Violation::Bounds | Violation::Overlap | Violation::Suspicious | Violation::Vital
             );
             assert_eq!(bars.is_empty(), frame_only, "{rule:?}");
         }

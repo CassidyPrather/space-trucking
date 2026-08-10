@@ -7,7 +7,7 @@
 //! there is exactly one opinion about what fits, and a failure names the
 //! [`Violation`] so the frontend can flash the right icon.
 
-use super::layout::{AISLE, FLOOR, GRID_COLS, GRID_ROWS, Surf, surface_of};
+use super::layout::{FLOOR, GRID_COLS, GRID_ROWS, Surf, surface_of};
 
 /// Everything haulable. Declaration order is the stable [`Kind::index`]
 /// order that the barter value table is written in.
@@ -452,13 +452,6 @@ pub enum Violation {
     /// A cabinet with goods in its cubbies was asked to move (or to take
     /// more than it has room for): empty it first.
     Occupied,
-    /// Standing cargo on the burner doorway's threshold — the aisle
-    /// stays walkable, so the hopper is always reachable.
-    Aisle,
-    /// A floor placement that would split the walkable floor in two —
-    /// boxing a player in is not a legal move (the no-soft-lock
-    /// invariant, BAY.md).
-    Sealed,
     /// The last vital instrument aboard offered to an exit ceremony
     /// (the rail, a give pad, the casino) — a ship that cannot chart or
     /// launch is a soft-lock, so the last of each stays.
@@ -475,9 +468,12 @@ pub fn placement_legal(pieces: &[Piece], id: u32, kind: Kind, x: u8, y: u8) -> b
 
 /// [`placement_legal`], but naming the rule that refused.
 ///
-/// Checks run in a fixed order (bounds/chart, mount, aisle, cryo, then
+/// Checks run in a fixed order (bounds/chart, mount, cryo, then
 /// per-piece overlap-and-shadow / volatile / suspicious in stowage
-/// order, sealed last) so the reported violation is deterministic.
+/// order) so the reported violation is deterministic. Nothing here
+/// reasons about where a body may walk: the walker passes through
+/// cargo, so a berth is refused for what it collides with, never for
+/// what it fences off.
 pub fn placement_check(
     pieces: &[Piece],
     id: u32,
@@ -497,9 +493,6 @@ pub fn placement_check(
         return Err(Violation::Affix(mount));
     }
     let standing = matches!(surf, Surf::Floor);
-    if standing && AISLE.iter().any(|&(ax, ay)| covers(x, y, w, h, ax, ay)) {
-        return Err(Violation::Aisle);
-    }
     if matches!(kind.tag(), Some(Tag::Cryo)) && !touches_hull(x, y, w, h) {
         return Err(Violation::Cryo);
     }
@@ -546,9 +539,6 @@ pub fn placement_check(
         {
             return Err(Violation::Suspicious);
         }
-    }
-    if standing && seals_the_floor(pieces, id, x, y, w, h) {
-        return Err(Violation::Sealed);
     }
     Ok(())
 }
@@ -604,70 +594,6 @@ fn shadow_cells(x: u8, y: u8, w: u8, h: u8, stature: u8) -> Vec<(u8, u8)> {
         }
     }
     cells
-}
-
-/// Whether the free floor would stop being one walkable region with this
-/// footprint standing at `(x, y)` — the no-soft-lock invariant. Never
-/// needs to know where a player stands: one region means nobody can be
-/// boxed in, which is the point.
-fn seals_the_floor(pieces: &[Piece], id: u32, x: u8, y: u8, w: u8, h: u8) -> bool {
-    let (fx, fy, fw, fh) = FLOOR;
-    let (cols, rows) = (fw as usize, fh as usize);
-    let mut blocked = vec![false; cols * rows];
-    let mark = |px: u8, py: u8, pw: u8, ph: u8, blocked: &mut Vec<bool>| {
-        for cy in py..py + ph {
-            for cx in px..px + pw {
-                if cx >= fx && cx < fx + fw && cy >= fy && cy < fy + fh {
-                    blocked[(cy - fy) as usize * cols + (cx - fx) as usize] = true;
-                }
-            }
-        }
-    };
-    mark(x, y, w, h, &mut blocked);
-    for other in pieces {
-        if other.id == id {
-            continue;
-        }
-        let Loc::Hold { x: ox, y: oy } = other.loc else {
-            continue;
-        };
-        if !matches!(surface_of(ox, oy), Some(Surf::Floor)) {
-            continue;
-        }
-        let (ow, oh) = other.kind.cells();
-        mark(ox, oy, ow, oh, &mut blocked);
-    }
-    // Flood from the first free cell; zero free cells is vacuously one
-    // region (and unreachable in play — someone is standing somewhere).
-    let mut seen = vec![false; cols * rows];
-    let mut stack = Vec::new();
-    if let Some(start) = blocked.iter().position(|&b| !b) {
-        seen[start] = true;
-        stack.push(start);
-    }
-    while let Some(at) = stack.pop() {
-        let (cx, cy) = (at % cols, at / cols);
-        let visit = |nx: usize, ny: usize, stack: &mut Vec<usize>, seen: &mut Vec<bool>| {
-            let next = ny * cols + nx;
-            if !blocked[next] && !seen[next] {
-                seen[next] = true;
-                stack.push(next);
-            }
-        };
-        if cx > 0 {
-            visit(cx - 1, cy, &mut stack, &mut seen);
-        }
-        if cx + 1 < cols {
-            visit(cx + 1, cy, &mut stack, &mut seen);
-        }
-        if cy > 0 {
-            visit(cx, cy - 1, &mut stack, &mut seen);
-        }
-        if cy + 1 < rows {
-            visit(cx, cy + 1, &mut stack, &mut seen);
-        }
-    }
-    blocked.iter().zip(&seen).any(|(&b, &s)| !b && !s)
 }
 
 /// Cell-rect intersection test.
@@ -959,21 +885,14 @@ mod tests {
     }
 
     #[test]
-    fn the_aisle_stays_walkable_and_the_floor_never_seals() {
-        // Standing on the doormat or the counter's apron: refused by
-        // name. Laying on either: fine.
-        assert_eq!(check(&[], Kind::PerfumeVial, 8, 3), Err(Violation::Aisle));
-        assert_eq!(check(&[], Kind::PerfumeVial, 6, 7), Err(Violation::Aisle));
-        assert_eq!(dressing_check(&[], 9, Kind::Rug, 7, 3), Ok(()));
-        assert_eq!(dressing_check(&[], 9, Kind::Rug, 5, 7), Ok(()));
-        // Wall a corridor across the floor with a gap, then close the
-        // gap: the closing piece would cut column three off the room.
+    fn the_floor_takes_cargo_anywhere_a_body_could_stand() {
+        // The walker passes through cargo now, so the floor keeps no
+        // reserved lanes: the burner threshold takes a berth like any
+        // other cell, and a wall of cargo may close across the room.
+        assert_eq!(check(&[], Kind::PerfumeVial, 8, 3), Ok(()));
+        assert_eq!(check(&[], Kind::PerfumeVial, 6, 7), Ok(()));
         let wall: Vec<(Kind, u8, u8)> = (3..7).map(|y| (Kind::PerfumeVial, 4, y)).collect();
-        assert_eq!(
-            check(&wall, Kind::PerfumeVial, 4, 7),
-            Err(Violation::Sealed)
-        );
-        // Well clear of the gap instead: still one region, fine.
+        assert_eq!(check(&wall, Kind::PerfumeVial, 4, 7), Ok(()));
         assert_eq!(check(&wall, Kind::PerfumeVial, 6, 5), Ok(()));
     }
 

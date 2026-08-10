@@ -23,10 +23,9 @@
 //! cells behind it (the cabinet and floor lamp against the port seam
 //! own its baseboard rows, which is why the wall sconce hangs at the
 //! cornice AND why the chart tank hangs on the front wall here rather
-//! than at its traditional port berth), the gnawed rug lies PINNED
-//! under the couch, and the free floor must stay one connected region,
-//! aisle included (`Violation::Sealed`) — the test below re-checks the
-//! legality half of all of it. The five instruments spread across the
+//! than at its traditional port berth) and the gnawed rug lies PINNED
+//! under the couch — the test below re-checks the legality half of all
+//! of it. The five instruments spread across the
 //! front wall: the tank and the window (at its old punch-out cornice)
 //! left of the console face, the gauges and launch handle stacked
 //! along the starboard edge, clear of the console's plate.

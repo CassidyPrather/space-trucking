@@ -141,9 +141,9 @@ const STARTER_CARGO: [(Kind, u8, u8); 9] = [
     // its old cornice punch-out, the gauges and the lever clustered on
     // the front wall beside it, and the chart tank on the starboard
     // wall by the burner doorway — off the baseboard ring, and behind
-    // floor cells (the aisle apron and the doorway's flank) where tall
-    // furniture rarely stands, so cargo and the tank's housing seldom
-    // fight over the wall.
+    // the floor cells flanking the doorway, where tall furniture
+    // rarely stands, so cargo and the tank's housing seldom fight over
+    // the wall.
     (Kind::Window, 4, 10),
     (Kind::ChartTank, 10, 5),
     (Kind::EtaGauge, 5, 9),
@@ -4453,9 +4453,9 @@ mod tests {
 
     /// Stow enough extra cargo that the hold crosses the boarding gate:
     /// starter cargo's 5 cells plus two ration bricks and a gilded idol
-    /// is 15 of the floor's 30 — exactly [`rats::CROWDED_CELLS`]. The
-    /// free floor stays one region (and keeps a 2x2 berth open at (3, 6)
-    /// for the tests that add a crate on top).
+    /// is 15 of the floor's 30 — exactly [`rats::CROWDED_CELLS`]. It
+    /// keeps a 2x2 berth open at (3, 6) for the tests that add a crate
+    /// on top.
     fn crowd_hold(sim: &mut Sim) {
         inject_hold(sim, Kind::RationBricks, 4, 3);
         inject_hold(sim, Kind::GildedIdol, 3, 4);
@@ -4464,15 +4464,13 @@ mod tests {
 
     /// Fill every floor berth and light the rest of the net, so a
     /// boarding rat must perch on a piece: standing cargo covers every
-    /// non-aisle floor cell, and laid luminous coats keep every wall,
-    /// ceiling, and aisle cell lit — no bare, unlit cell anywhere.
+    /// floor cell, and laid luminous coats keep every wall and ceiling
+    /// cell lit — no bare, unlit cell anywhere.
     fn fill_hold(sim: &mut Sim) {
         let (fx, fy, fw, fh) = layout::FLOOR;
         // Greedy: place a vial on the first free floor cell the placement
-        // law accepts, and repeat. The Sealed rule itself steers the fill
-        // around the starter cargo (a seal-inducing cell is skipped until
-        // its neighbours are stowed), so the pass ends with every floor
-        // cell covered except the aisle.
+        // law accepts, and repeat. Nothing fences the scan off any more,
+        // so the pass ends with the whole floor covered.
         loop {
             let mut berth = None;
             'scan: for y in fy..fy + fh {
@@ -4492,7 +4490,7 @@ mod tests {
             for x in 0..layout::GRID_COLS {
                 let off_floor = layout::surface_of(x, y)
                     .is_some_and(|surf| !matches!(surf, layout::Surf::Floor));
-                if off_floor || layout::AISLE.contains(&(x, y)) {
+                if off_floor {
                     stock(sim, Kind::LuminousPaint, Loc::Laid { x, y });
                 }
             }
@@ -5604,8 +5602,8 @@ mod tests {
         let mut sim = Sim::new(10);
         // Three crates in the floor's aft-port corner, their 2x2 window
         // held shut by a blocking vial, and every other window bricked
-        // solid (or standing on the aisle, or a floor-sealing berth): no
-        // toll subset opens a berth for the big crate at dock time.
+        // solid: no toll subset opens a berth for the big crate at dock
+        // time.
         inject_hold(&mut sim, Kind::MysteriousCrate, 4, 3);
         inject_hold(&mut sim, Kind::MysteriousCrate, 5, 3);
         let blocker = inject_hold(&mut sim, Kind::PerfumeVial, 5, 4);

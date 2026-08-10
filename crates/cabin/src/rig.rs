@@ -53,9 +53,9 @@ const FOV: f32 = 0.9;
 const EYE_HEIGHT: f32 = 1.5;
 // The room grid made the whole floor walkable ground — cargo stands
 // among the walker now, not beyond a strip — so the envelope spans the
-// room up to body clearance at the aft wall. (No cargo collision yet:
-// the sim's Sealed invariant guards the future body, documented in
-// BAY.md.)
+// room up to body clearance at the aft wall. The clamp is collision
+// with the HULL and nothing else: cargo has no body to bump, and the
+// placement law no longer reserves a lane for one either.
 const WALK_MIN: Vec3 = Vec3::new(-1.30, EYE_HEIGHT, -0.30);
 const WALK_MAX: Vec3 = Vec3::new(1.30, EYE_HEIGHT, 1.72);
 const WALK_SPEED: f32 = 1.3;
@@ -103,7 +103,7 @@ const BAY_CEIL_Y: f32 = 2.26;
 pub mod layer {
     /// Berth socket wells — the contextual tiles.
     pub const TILE: f32 = 0.002;
-    /// The aisle doormat's hazard paint.
+    /// The burner threshold's hazard paint.
     pub const DOORMAT: f32 = 0.006;
     /// Laid coverings' base; a rug's pile rises `RUG_THICK` above it.
     pub const LAID: f32 = 0.010;
@@ -151,6 +151,13 @@ pub const AIR_DOOR_H: f32 = 2.0f32 * BAY_CELL + 0.18;
 /// The chamber floor's x extent: from the hull's outer face outboard.
 pub const AIR_X0: f32 = 1.77;
 pub const AIR_X1: f32 = AIR_X0 + AIR_INNER;
+
+/// Floor cells painted as the burner's threshold: the doormat in front
+/// of the doorway. Pure decoration now — the placement law reserves
+/// nothing, and cargo may stand on the stripes like anywhere else —
+/// but a doorway that reads as a doorway is worth the paint, and the
+/// stoker's path is still where the stripes say it is.
+const THRESHOLD: [(u8, u8); 2] = [(8, 3), (8, 4)];
 
 /// Focus glide length, seconds. A camera move is feedback: it answers a
 /// click and finishes fast.
@@ -1040,10 +1047,10 @@ pub fn spawn(
             Transform::from_translation(Vec3::new(0.0, 0.017, strip_front - 0.032))
                 .with_scale(Vec3::new(BAY_W + 0.14, 0.034, 0.05)),
         ));
-        // The aisle doormat: hazard thresholds on the floor cells
-        // fronting the burner doorway. The sim refuses standing cargo
-        // there (`Violation::Aisle`); the paint says so up front.
-        for &(ax, ay) in &layout::AISLE {
+        // The burner doormat: hazard stripes on the floor cells
+        // fronting the doorway. Paint only — nothing refuses a berth
+        // here — but the eye still reads the way out to the fire.
+        for &(ax, ay) in &THRESHOLD {
             let cell = layout::cell_rect(ax, ay);
             let mid = space_trucking::sim::Vec2::new(
                 cell.w.mul_add(0.5, cell.x),
@@ -1848,9 +1855,8 @@ mod tests {
                             true
                         })
                     });
-                    // The floor takes no exemption: walking IS its job
-                    // (the Sealed invariant's whole premise), so a
-                    // desk-shadowed floor cell is a build error.
+                    // The floor takes no exemption: walking IS its job,
+                    // so a desk-shadowed floor cell is a build error.
                     if !workable && panel_blocked && !matches!(station, Station::BayFloor) {
                         station_fronted += 1;
                         continue;
@@ -1923,8 +1929,9 @@ mod tests {
 
     /// The walk envelope spans the floor chart with body clearance at
     /// the walls: the room grid made the whole floor walkable ground,
-    /// and every floor cell must be enterable (the Sealed invariant
-    /// presumes a walker who can actually stand anywhere free).
+    /// and every floor cell must be reachable on foot. The clamp
+    /// answers to the hull alone — cargo is walked through, so no
+    /// stack of crates can ever fence a corner off.
     #[test]
     fn walk_envelope_covers_the_floor() {
         let floor = bay()

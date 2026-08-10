@@ -494,6 +494,14 @@ fn click(
 
 // -------------------------------------------------------------------- view --
 
+/// The two nodes in the menu that come and go: the root (the whole
+/// overlay) and the mute slash. They share a query because two
+/// `&mut Visibility` params in one system are a conflict Bevy refuses at
+/// startup — and `Has` answers which is which more cheaply than proving
+/// two filters disjoint.
+type Shown<'w, 's> =
+    Query<'w, 's, (&'static mut Visibility, Has<MenuRoot>), Or<(With<MenuRoot>, With<Slash>)>>;
+
 /// The flat equivalent of `glow::set_lamp`: glass at zero, the lamp's
 /// own color at one. No emissive out here — the menu is not in the room,
 /// so it gets no bloom and wants none.
@@ -507,22 +515,27 @@ fn lamp_color(color: Color, level: f32) -> Color {
 fn paint(
     shell: Res<Shell>,
     menu: Res<Menu>,
-    mut root: Single<&mut Visibility, With<MenuRoot>>,
-    mut slashes: Query<&mut Visibility, (With<Slash>, Without<MenuRoot>)>,
+    mut shown: Shown,
     mut parts: Query<(&Paint, Option<&Interaction>, &mut BackgroundColor)>,
 ) {
-    **root = if menu.open {
-        Visibility::Visible
-    } else {
-        Visibility::Hidden
-    };
+    let muted = shell.muted;
+    for (mut visibility, is_root) in &mut shown {
+        // The root stands or does not; the slash rides mute. Both hide
+        // by the same word, and the slash's own answer only matters
+        // while the root is up to show it.
+        let up = if is_root { menu.open } else { muted };
+        *visibility = if up {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+    }
     if !menu.open {
         return;
     }
     let sim = &shell.bridge.sim;
     let paused = sim.is_paused();
     let warping = sim.is_warp();
-    let muted = shell.muted;
     let deliveries = sim.deliveries();
     let live = |control: Control| match control {
         Control::Pause => paused,
@@ -597,18 +610,12 @@ fn paint(
             }
         };
     }
-    for mut visibility in &mut slashes {
-        *visibility = if muted {
-            Visibility::Visible
-        } else {
-            Visibility::Hidden
-        };
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::rig::Focus;
 
     /// The edges drain exactly once: `advance` is the only consumer, and
     /// a toggle that survived its frame would fire the sim twice.
@@ -621,6 +628,98 @@ mod tests {
         assert!(first.pause && first.mute && !first.warp);
         let second = menu.take();
         assert!(!second.pause && !second.mute && !second.warp);
+    }
+
+    /// A bare app with the menu's input systems and nothing else — no
+    /// window, no renderer. The whole `Esc` contract is drivable this
+    /// way because it is only ever three things talking: the key state,
+    /// the menu, and the camera rig.
+    fn harness(open: bool, mode: Mode) -> App {
+        let mut app = App::new();
+        let mut rig = CameraRig::boot(None);
+        rig.mode = mode;
+        app.insert_resource(Menu::boot(open))
+            .insert_resource(rig)
+            .init_resource::<ButtonInput<KeyCode>>()
+            .add_systems(Update, (keys, click).chain());
+        app
+    }
+
+    /// Press `Esc`, run one frame, and let the key back up — a key held
+    /// down never presses twice, which is the whole reason this is a
+    /// helper and not two lines inlined.
+    fn escape(app: &mut App) {
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::Escape);
+        app.update();
+        let mut keys = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+        keys.release(KeyCode::Escape);
+        keys.clear();
+    }
+
+    /// **The `Esc` contract, whole.** Roaming, `Esc` raises the menu and
+    /// frees the cursor — the parking it always did. At a station it is
+    /// not ours at all: `rig::steer` steps out of the focus first, and
+    /// only the next `Esc`, now roaming, opens anything. And `Esc` on an
+    /// open menu puts it away and takes the cursor back.
+    #[test]
+    fn escape_steps_out_before_it_opens_anything() {
+        let mut app = harness(false, Mode::Roam);
+        escape(&mut app);
+        assert!(app.world().resource::<Menu>().open, "roam Esc opens it");
+        assert!(
+            app.world().resource::<CameraRig>().parked,
+            "an open menu must free the cursor, exactly as parking did"
+        );
+        escape(&mut app);
+        assert!(!app.world().resource::<Menu>().open, "Esc puts it away");
+        assert!(
+            !app.world().resource::<CameraRig>().parked,
+            "closing hands the cursor back to the room"
+        );
+
+        // Focused: the station's own Esc. The menu keeps its hands off.
+        let mut app = harness(false, Mode::Focused { focus: Focus::Tank });
+        escape(&mut app);
+        assert!(
+            !app.world().resource::<Menu>().open,
+            "Esc at a station belongs to the camera, not the menu"
+        );
+    }
+
+    /// A press on a control face throws exactly that control's edge, and
+    /// only while the menu stands: the sim must never hear from a menu
+    /// that is not on screen.
+    #[test]
+    fn a_pressed_face_throws_its_own_edge() {
+        let mut app = harness(true, Mode::Roam);
+        app.world_mut()
+            .spawn((Interaction::Pressed, Paint::Face(Control::Mute)));
+        app.update();
+        let worked = app.world_mut().resource_mut::<Menu>().take();
+        assert!(worked.mute && !worked.pause && !worked.warp);
+
+        let mut app = harness(false, Mode::Roam);
+        app.world_mut()
+            .spawn((Interaction::Pressed, Paint::Face(Control::Pause)));
+        app.update();
+        let worked = app.world_mut().resource_mut::<Menu>().take();
+        assert!(
+            !worked.pause,
+            "a closed menu threw a toggle at the sim anyway"
+        );
+    }
+
+    /// A press on the bare scrim — the room showing through around the
+    /// panel — dismisses, same as `Esc`.
+    #[test]
+    fn the_scrim_dismisses() {
+        let mut app = harness(true, Mode::Roam);
+        app.world_mut().spawn((Interaction::Pressed, Scrim));
+        app.update();
+        assert!(!app.world().resource::<Menu>().open);
+        assert!(!app.world().resource::<CameraRig>().parked);
     }
 
     /// Every glyph fits the width it declares — a stray bit past the

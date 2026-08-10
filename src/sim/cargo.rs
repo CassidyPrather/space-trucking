@@ -90,10 +90,25 @@ pub enum Kind {
     /// The launch handle: the lever that commits a charted course.
     /// Vital — the last one aboard refuses every exit.
     LaunchLever,
+    /// A hand's breadth of glass in a bolt ring — the cheapest hole
+    /// anybody ever cut in a hull, and the one every hull has. Fits a
+    /// wall no wider than itself, which is why the little rooms get
+    /// one and the big pane never reaches them.
+    Porthole,
+    /// Six cells of glass in a frame that arrives in two crates. Cut
+    /// at Saturn, where the yards have the ring for feedstock and the
+    /// patience for annealing; hung, it takes a whole flank of the
+    /// cabin and gives back a whole flank of sky. The freight on one
+    /// is the reason nobody hauls two.
+    BayWindow,
 }
 
 /// Number of cargo kinds.
-pub const KIND_COUNT: usize = 30;
+///
+/// The discovery ledger is a `u32` bitmask per station (`Sim::familiar`),
+/// so **32 is the ceiling** and this table is at it. The next kind widens
+/// that mask before it widens this number.
+pub const KIND_COUNT: usize = 32;
 
 /// Cosmetic variant rolls per kind, for the renderer to vary sprites with.
 /// The persistent run RNG is spent on these and nothing else.
@@ -179,6 +194,8 @@ impl Kind {
         Self::EtaGauge,
         Self::DestPreview,
         Self::LaunchLever,
+        Self::Porthole,
+        Self::BayWindow,
     ];
 
     /// Footprint in net cells, `(w, h)`.
@@ -200,7 +217,8 @@ impl Kind {
             | Self::LuminousPaint
             | Self::EtaGauge
             | Self::DestPreview
-            | Self::LaunchLever => (1, 1),
+            | Self::LaunchLever
+            | Self::Porthole => (1, 1),
             Self::GildedIdol | Self::BrinePearls | Self::FloorLamp | Self::Cabinet => (1, 2),
             Self::RationBricks
             | Self::SuspiciousCrate
@@ -212,6 +230,14 @@ impl Kind {
             | Self::Painting
             | Self::Rug
             | Self::Window => (2, 1),
+            // Three cells along the wall and two courses up it — the
+            // biggest rectangle every wall in the game can still take.
+            // The side charts are exactly three courses tall, so on a
+            // flank the bay window stands floor to cornice; on the aft
+            // and front walls it is a picture window three cells wide.
+            // A fourth cell would fit the cabin and nothing else, and a
+            // window that only fits the cabin is furniture, not cargo.
+            Self::BayWindow => (3, 2),
         }
     }
 
@@ -228,6 +254,8 @@ impl Kind {
             Self::WallLamp
             | Self::Painting
             | Self::Window
+            | Self::Porthole
+            | Self::BayWindow
             | Self::ChartTank
             | Self::EtaGauge
             | Self::DestPreview
@@ -276,12 +304,29 @@ impl Kind {
     /// fittings every hull launches with. Named so the save reader can
     /// hang the missing ones when it loads a document from before they
     /// were cargo.
+    ///
+    /// The porthole and the bay window are NOT here, and the distinction
+    /// is the point: a hull launches with one window, and everything
+    /// else with glass in it was bought.
     #[must_use]
     pub const fn instrument(self) -> bool {
         matches!(
             self,
             Self::Window | Self::ChartTank | Self::EtaGauge | Self::DestPreview | Self::LaunchLever
         )
+    }
+
+    /// Whether this kind is a **window**: a hole in the hull with glass
+    /// in it, whatever size the hole is.
+    ///
+    /// The family shares everything that matters — the wall mount, the
+    /// frame, the sky pane, the whimsy rule that the void follows
+    /// wherever it is rehung — and differs only in how much of the
+    /// outside it lets in. Anything that wants "a window" rather than
+    /// "the 2×1 one" asks here.
+    #[must_use]
+    pub const fn window(self) -> bool {
+        matches!(self, Self::Window | Self::Porthole | Self::BayWindow)
     }
 
     /// Whether this kind is a dressing — laid into the room rather than
@@ -323,6 +368,8 @@ impl Kind {
             | Self::SuspiciousCrate
             | Self::VeryMysteriousCrate
             | Self::Window
+            | Self::Porthole
+            | Self::BayWindow
             | Self::ChartTank
             | Self::EtaGauge
             | Self::DestPreview
@@ -377,14 +424,17 @@ pub const CABINET_SLOTS: u8 = 4;
 ///
 /// One cell, and neither the kinds that need the hull's cold (cryo) nor
 /// the ones nobody should box up (suspicious — none is 1×1 today, but the
-/// rule is written for the day one is). Everything else about a stowed
-/// piece is ordinary; what *emerges* from a cubby not being a room cell —
-/// dark lamps, unbred fluff, rat-proof shelter, invisibility to ??? — is
-/// documented in docs/BAY.md, not special-cased anywhere.
+/// rule is written for the day one is). Windows are out too, at every
+/// size: a hole in the hull is not a thing you put in a drawer, and a
+/// porthole that fit in one would be showing the inside of a wardrobe.
+/// Everything else about a stowed piece is ordinary; what *emerges* from
+/// a cubby not being a room cell — dark lamps, unbred fluff, rat-proof
+/// shelter, invisibility to ??? — is documented in docs/BAY.md, not
+/// special-cased anywhere.
 #[must_use]
 pub const fn stowable(kind: Kind) -> bool {
     let (w, h) = kind.cells();
-    w == 1 && h == 1 && !matches!(kind.tag(), Some(Tag::Cryo | Tag::Suspicious))
+    w == 1 && h == 1 && !kind.window() && !matches!(kind.tag(), Some(Tag::Cryo | Tag::Suspicious))
 }
 
 /// Whether any piece rides in `cabinet`'s cubbies.
@@ -1178,8 +1228,65 @@ mod tests {
             Kind::Couch,
             Kind::Cabinet,
             Kind::SuspiciousCrate,
+            // A hole in the hull is not a thing you put in a drawer,
+            // however small the hole is.
+            Kind::Porthole,
         ] {
             assert!(!stowable(kind), "{kind:?} should refuse the cubby");
+        }
+    }
+
+    /// The window family, and what makes it one: every size mounts on a
+    /// wall, none of it burns, none of it stows, and every size fits on
+    /// a wall of every room in the game. That last one is the aperture
+    /// math's whole contract with the cargo table — a window nobody can
+    /// hang anywhere is a window that would never show a sky.
+    #[test]
+    fn every_window_is_a_wall_fitting_that_fits_a_wall() {
+        let family: Vec<Kind> = Kind::ALL.into_iter().filter(|kind| kind.window()).collect();
+        assert_eq!(
+            family,
+            vec![Kind::Window, Kind::Porthole, Kind::BayWindow],
+            "the family is the family"
+        );
+        let mut sizes: Vec<(u8, u8)> = family.iter().map(|kind| kind.cells()).collect();
+        sizes.sort_unstable();
+        sizes.dedup();
+        assert_eq!(sizes.len(), family.len(), "no two windows are one window");
+        for kind in family {
+            assert_eq!(kind.mount(), Mount::Wall, "{kind:?} hangs on a wall");
+            assert_eq!(kind.flammable(), 0, "glass and brass do not burn");
+            assert!(!kind.vital(), "a ship flies blind, unhappily");
+            // A hull launches with ONE window and buys the rest, which
+            // is what keeps an old save from being handed a bay window
+            // it never paid the freight on.
+            assert_eq!(
+                kind.instrument(),
+                kind == Kind::Window,
+                "{kind:?} disagrees about what a hull comes with"
+            );
+            // Every room kind must be able to take it somewhere.
+            let (w, h) = kind.cells();
+            for host in super::super::room::ROOM_KINDS {
+                let (cols, rows) = host.grid();
+                let fits = (0..rows).any(|y| {
+                    (0..cols).any(|x| {
+                        x + w <= cols
+                            && y + h <= rows
+                            && (y..y + h).all(|cy| {
+                                (x..x + w).all(|cx| {
+                                    matches!(
+                                        host.surface_of(cx, cy),
+                                        Some(
+                                            Surf::Aft | Surf::Port | Surf::Starboard | Surf::Front
+                                        )
+                                    )
+                                })
+                            })
+                    })
+                });
+                assert!(fits, "{kind:?} fits no wall of a {host:?}");
+            }
         }
     }
 

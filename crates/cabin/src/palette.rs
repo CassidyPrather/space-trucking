@@ -179,6 +179,13 @@ pub const fn kind_color(kind: Kind) -> Color {
         // gauge faces, preview glass, and the launch handle's alarm
         // brass — the click-functional family leans amber on purpose.
         Kind::Window => hex(0x2b3a55),
+        // The rest of the window family, told apart by the metal round
+        // the glass rather than the glass: a porthole's bolt ring is
+        // scavenged steel gone slightly green, and a bay window's frame
+        // is the deep yard-blue Saturn paints everything it cuts. The
+        // void behind all three is the same void, which is the point.
+        Kind::Porthole => hex(0x36514f),
+        Kind::BayWindow => hex(0x24304f),
         Kind::ChartTank => hex(0x54e0c8),
         Kind::EtaGauge => hex(0xc9a86a),
         Kind::DestPreview => hex(0x86b8d4),

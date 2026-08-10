@@ -26,9 +26,17 @@ use super::event::{Omen, Phase};
 use super::map::{POI_COUNT, PoiId, Ship, ShipState};
 use super::rats::{CHASE_LIMIT, Rat, Rats};
 use super::room::{CABIN, MAX_ROOMS, PORTS, PortId, RoomId, RoomKind, Rooms, Tile};
-use super::{KIND_COUNT, MAX_CREW, Sim, barter};
+use super::{KIND_COUNT, KNOWN_ALL, MAX_CREW, Sim, barter};
 
 /// Magic-plus-version header of every save this build writes.
+///
+/// `STV13` is the window family (docs/BAY.md): the cargo table grew a
+/// porthole and a bay window on its end, so the discovery ledger's masks
+/// grew two bits. Nothing about the GRAMMAR moved — appended kinds keep
+/// every old token — but a document written before the family existed
+/// cannot say whether a station that knew "everything" knew about glass,
+/// and guessing wrong either way is a lie about what the crew has seen.
+/// The migration below answers it the one honest way (see [`READABLE`]).
 ///
 /// `STV12` is the port law's second reading (docs/ROOMS.md): a room kind
 /// declares only the ports it needs, so the incinerator, the market, the
@@ -47,10 +55,20 @@ use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 /// it belonged to. `STV10` widened the cabin from a 6×5 floor to an 8×7
 /// one; `STV7` added the banked burner's stoke to the ship line's tail;
 /// `STV6` added the `laid` piece location; `STV5` added `stow`.
-const MAGIC: &str = "STV12";
+const MAGIC: &str = "STV13";
 
 /// Older headers this build still reads, each with its own migration,
 /// applied oldest-first so a `STV4` document walks the whole chain.
+///
+/// `STV13` grew the window family. A pre-STV13 document's ledger masks
+/// are two bits short, and the reader widens exactly the ones that were
+/// FULL when they were written: a station a crew had seen every kind at
+/// is a station they have seen everything at, and the Guild — home turf,
+/// which boots knowing all of it — stays home turf. A partial mask keeps
+/// its bits and simply does not know about glass yet, which is true: a
+/// crew that has never been offered a porthole has never been offered
+/// one. Berth tokens, piece tokens, and the barter columns are all
+/// append-safe by construction, so nothing else in the document moves.
 ///
 /// `STV12` spared the leaf rooms their unused ports. A pre-STV12 document
 /// may therefore hang a room off a slot that is no longer there — a pump
@@ -74,8 +92,8 @@ const MAGIC: &str = "STV12";
 /// hold cells, which the net embeds at (+3, 0). Whatever the room-grid
 /// rules no longer accept once the translations have run re-berths at its
 /// first legal cell. Everything else stays one additive grammar.
-const READABLE: [&str; 9] = [
-    MAGIC, "STV11", "STV10", "STV9", "STV8", "STV7", "STV6", "STV5", "STV4",
+const READABLE: [&str; 10] = [
+    MAGIC, "STV12", "STV11", "STV10", "STV9", "STV8", "STV7", "STV6", "STV5", "STV4",
 ];
 
 /// Why a save string was refused.
@@ -302,18 +320,24 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     };
     // Pre-STV8 headers carry console-era 6×4 hold coordinates that the
     // room net embeds at (+3, 0); their berths migrate after reading.
-    let legacy = !matches!(header, MAGIC | "STV11" | "STV10" | "STV9" | "STV8");
+    let legacy = !matches!(
+        header,
+        MAGIC | "STV12" | "STV11" | "STV10" | "STV9" | "STV8"
+    );
     // Pre-STV9 headers predate the instruments being cargo; the missing
     // ones are hung at their traditional berths after reading.
-    let uninstrumented = !matches!(header, MAGIC | "STV11" | "STV10" | "STV9");
+    let uninstrumented = !matches!(header, MAGIC | "STV12" | "STV11" | "STV10" | "STV9");
     // Pre-STV10 headers carry narrow-net coordinates: the cabin was a
     // 6×5 floor then, and the charts past the growth have moved.
-    let narrow = !matches!(header, MAGIC | "STV11" | "STV10");
+    let narrow = !matches!(header, MAGIC | "STV12" | "STV11" | "STV10");
     // Pre-STV11 headers know one room and a barter counter.
-    let roomless = !matches!(header, MAGIC | "STV11");
+    let roomless = !matches!(header, MAGIC | "STV12" | "STV11");
     // Pre-STV12 headers were written when every room declared six ports;
     // an edge through a slot its kind no longer fills is re-seated.
-    let six_ported = header != MAGIC;
+    let six_ported = !matches!(header, MAGIC | "STV12");
+    // Pre-STV13 headers were written before the window family, so their
+    // ledger masks are narrower than the table is now.
+    let unglazed = header != MAGIC;
 
     let seed = reader.kv("seed")?;
     let tick = reader.kv("tick")?;
@@ -322,7 +346,10 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let paused = reader.kv::<u8>("paused")? != 0;
     let deliveries = reader.kv("deliveries")?;
     let karma = reader.kv("karma")?;
-    let familiar = parse_familiar(&mut reader)?;
+    let mut familiar = parse_familiar(&mut reader)?;
+    if unglazed {
+        widen_familiar(&mut familiar);
+    }
     let visits = parse_visits(&mut reader)?;
     let (ship, stoke) = parse_ship(&mut reader, tick)?;
     let legs = reader.kv("legs")?;
@@ -631,6 +658,33 @@ fn parse_familiar(reader: &mut Reader<'_>) -> Result<[u32; POI_COUNT], SaveError
         *mask = u32::from_str_radix(token, 16).map_err(|_| reader.err())?;
     }
     Ok(familiar)
+}
+
+/// The STV13 migration: a pre-window-family ledger, brought up to the
+/// table's current width.
+///
+/// A mask that was FULL for its era becomes full for this one — a crew
+/// who had seen every kind a station traded has seen everything it
+/// trades, and the Guild boots that way by definition. A partial mask is
+/// left alone: not knowing about glass yet is the truth about a crew
+/// nobody has offered any.
+fn widen_familiar(familiar: &mut [u32; POI_COUNT]) {
+    // What "all of them" meant when the document was written: every bit
+    // below the family, which appended on the table's end.
+    let was_all = KNOWN_ALL & !window_mask();
+    for mask in familiar.iter_mut() {
+        if *mask == was_all {
+            *mask = KNOWN_ALL;
+        }
+    }
+}
+
+/// The window family's own bits in a ledger mask.
+fn window_mask() -> u32 {
+    Kind::ALL
+        .iter()
+        .filter(|kind| kind.window())
+        .fold(0, |mask, kind| mask | (1 << kind.index()))
 }
 
 /// The retired `eager` line: the eased dial's bits plus the visit's
@@ -1488,7 +1542,10 @@ mod tests {
     #[test]
     fn stowed_pieces_round_trip() {
         let (sim, save, cabinet, _) = furnished();
-        assert!(save.starts_with("STV12\n"), "the writer stamps STV12");
+        assert!(
+            save.starts_with(&format!("{MAGIC}\n")),
+            "the writer stamps the current version"
+        );
         let restored = Sim::from_save(&save).expect("furnished save parses");
         assert_eq!(restored.pieces, sim.pieces);
         assert!(
@@ -1597,6 +1654,53 @@ mod tests {
         };
         assert_eq!(sim.rooms().kind(room), Some(RoomKind::Burner));
         assert_eq!(sim.rooms().tile(room, x, y), Some(Tile::Consume));
+    }
+
+    /// The window family's migration: a pre-STV13 document's discovery
+    /// ledger is two bits short of the table, and the widening is the
+    /// one that is TRUE. A station the crew had exhausted becomes a
+    /// station they know everything about — the Guild boots that way, so
+    /// a Guild that came back from an old document not knowing what a
+    /// porthole is would be a Guild that forgot its own shelves. A
+    /// partial ledger keeps its bits: nobody has offered that crew any
+    /// glass yet, which is what a missing bit means.
+    #[test]
+    fn pre_stv13_saves_widen_the_ledger_they_were_written_with() {
+        let plain = Sim::new(31).save_string();
+        let ledger = plain
+            .lines()
+            .find(|line| line.starts_with("familiar"))
+            .expect("every document carries a ledger");
+        // The same document, written before the family: the masks are
+        // as wide as the table was, and one station is part-explored.
+        let narrow = KNOWN_ALL & !window_mask();
+        let old = format!(
+            "familiar 0000 00ff {narrow:04x} 0000 0000 0000 {narrow:04x} 0000 0000 0000 0000 0000"
+        );
+        let forged = plain.replacen(MAGIC, "STV12", 1).replacen(ledger, &old, 1);
+        let sim = Sim::from_save(&forged).expect("an STV12 document must still load");
+        assert_eq!(
+            sim.familiar[usize::from(super::super::map::GUILD)],
+            KNOWN_ALL,
+            "home turf knows the whole table, glass included"
+        );
+        assert_eq!(sim.familiar[2], KNOWN_ALL, "so does an exhausted station");
+        assert_eq!(
+            sim.familiar[1], 0x00ff,
+            "a part-explored station has simply not been shown any glass"
+        );
+        // And every window kind now reads familiar at the Guild, which
+        // is the fact the widening exists to keep true.
+        for kind in Kind::ALL.iter().filter(|kind| kind.window()) {
+            assert!(
+                sim.familiar[usize::from(super::super::map::GUILD)] & (1 << kind.index()) != 0,
+                "{kind:?} must be home-turf familiar"
+            );
+        }
+        // A current document means what it says: no widening at all.
+        let honest = plain.replacen(ledger, &old, 1);
+        let sim = Sim::from_save(&honest).expect("a current document loads");
+        assert_eq!(sim.familiar[2], narrow, "an STV13 ledger is read verbatim");
     }
 
     /// The port law's migration: a pre-STV12 document may hang a room

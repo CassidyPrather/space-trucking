@@ -127,7 +127,12 @@ const DRONE_ORBIT: f32 = 22.0;
 const DRONE_RADIUS: f32 = 10.0;
 
 /// Every kind's bit set in a discovery-ledger mask (see `Sim::familiar`).
-const KNOWN_ALL: u32 = (1 << KIND_COUNT) - 1;
+///
+/// Written as a shift down rather than a shift up because the table has
+/// reached the mask's width: `1 << 32` is not a `u32`, and the day
+/// `KIND_COUNT` grows again the ledger widens with it (see
+/// `cargo::KIND_COUNT`).
+pub(crate) const KNOWN_ALL: u32 = u32::MAX >> (u32::BITS as usize - KIND_COUNT);
 
 /// The discovery ledger a fresh contractor starts with: the Guild is home
 /// turf — every kind reads true there — and everywhere else is fog.

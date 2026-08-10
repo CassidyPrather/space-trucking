@@ -19,6 +19,19 @@
 //! hopper arrives EMPTY, so staging is tested by casting off and
 //! staging it yourself.
 //!
+//! **Three windows, three sizes, three walls, two rooms**, because a
+//! crew that owns several is the case the exterior was rebuilt for
+//! (`docs/ART_DIRECTION_3D.md`, "One wall, one sky") and a showcase that
+//! only ever hangs one would sweep the easy half of it. The transit
+//! window keeps its traditional front-wall punch-out; the porthole
+//! hangs mid-course on the port flank; and Saturn's bay window stands
+//! floor-to-cornice on the trade room's port wall, which is both the
+//! only chart in the ship wide enough to want it and a reminder that a
+//! window in a room that is only ALONGSIDE is a window the gangway law
+//! will not let you leave with. Every screenshot run therefore sweeps a
+//! multi-window frame, a second sky on a second wall, and a pane in
+//! another room, without anybody remembering to.
+//!
 //! The board is deliberately mid-trade, which means the launch gate
 //! refuses: goods of the player's stand in a room that is only
 //! alongside, and the gangway law will not strand them. Carry them home
@@ -92,7 +105,9 @@ piece 25 25 1 0 hold 0 4 12
 piece 26 27 2 0 hold 0 9 11
 piece 27 28 3 0 hold 0 9 12
 piece 28 29 0 0 hold 0 9 10
-next_piece 29
+piece 29 30 0 0 hold 0 1 8
+piece 30 31 1 0 hold 2 0 4
+next_piece 31
 ";
 
 /// A dev board carrying exactly `n` windows and nothing else unusual:
@@ -127,7 +142,7 @@ pub fn panes_board(seed: u64, n: usize) -> String {
         .pieces()
         .iter()
         .copied()
-        .filter(|piece| piece.kind != Kind::Window)
+        .filter(|piece| !piece.kind.window())
         .collect();
     let mut next = aboard.iter().map(|piece| piece.id + 1).max().unwrap_or(0);
 
@@ -177,12 +192,15 @@ pub fn panes_board(seed: u64, n: usize) -> String {
             let _ = writeln!(out, "next_piece {next}");
             continue;
         }
-        // The stripped panes take their own lines with them.
+        // The stripped panes take their own lines with them, at every
+        // size the family has.
         if line.starts_with("piece ")
-            && line
-                .split_whitespace()
-                .nth(2)
-                .is_some_and(|token| token == Kind::Window.index().to_string())
+            && line.split_whitespace().nth(2).is_some_and(|token| {
+                Kind::ALL
+                    .iter()
+                    .filter(|kind| kind.window())
+                    .any(|kind| token == kind.index().to_string())
+            })
         {
             continue;
         }
@@ -244,6 +262,33 @@ mod tests {
         assert!(
             !kinds.contains(&Kind::VeryMysteriousCrate),
             "the fixture must not cheat the one-suspicious rule"
+        );
+        // Three windows, three sizes, and no two of them on one wall:
+        // the multi-sky path is swept by every screenshot run.
+        let glass: Vec<_> = pieces.iter().filter(|p| p.kind.window()).collect();
+        assert_eq!(glass.len(), 3, "the fixture flies three windows");
+        let mut sizes: Vec<(u8, u8)> = glass.iter().map(|p| p.kind.cells()).collect();
+        sizes.sort_unstable();
+        sizes.dedup();
+        assert_eq!(sizes.len(), 3, "three sizes, not three of one");
+        let mut walls: Vec<(Option<u8>, Option<space_trucking::sim::room::Surf>)> = glass
+            .iter()
+            .map(|p| match p.loc {
+                Loc::Hold { room, x, y } => (
+                    Some(room),
+                    rooms.kind(room).and_then(|kind| kind.surface_of(x, y)),
+                ),
+                _ => (None, None),
+            })
+            .collect();
+        walls.sort_by_key(|wall| format!("{wall:?}"));
+        walls.dedup();
+        assert_eq!(walls.len(), 3, "three walls, so three skies: {walls:?}");
+        assert!(
+            glass
+                .iter()
+                .any(|p| !matches!(p.loc, Loc::Hold { room: 0, .. })),
+            "one pane rides a room that is only alongside"
         );
         assert!(sim.rat().is_some(), "the stowaway rides the fixture");
         assert!(sim.stoked(), "the firebox arrives banked");

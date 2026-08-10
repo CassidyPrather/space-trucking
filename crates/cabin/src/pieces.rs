@@ -2715,6 +2715,149 @@ fn spawn_rig(
     root
 }
 
+/// How a window's glass is framed. It is the only thing that tells the
+/// family's sizes apart from a pace back — the void behind all three is
+/// the same void, and it had better be, because it is the same sky
+/// (`viewport`, "One wall, one sky").
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Bezel {
+    /// A bolt ring around a round bore. The porthole, and the reason the
+    /// aperture math never had to learn about circles: the glass behind
+    /// the ring is still a rectangle, so the sky is still projected
+    /// through a rectangle — the brass simply eats the corners. What the
+    /// crew sees through a round hole is exactly what is out there,
+    /// because occluding a correct picture leaves a correct picture.
+    Ring,
+    /// Four brass lips around a rectangle: the transit window, as it has
+    /// always been.
+    Lipped,
+    /// Lips, plus the mullion six cells of glass cannot arrive without.
+    /// Saturn ships the bay window in two crates and the frame says so.
+    Mullioned,
+}
+
+/// Which bezel a window wears. One arm per size, and adding a fourth
+/// size is an arm HERE rather than a second copy of the glass.
+const fn bezel(kind: Kind) -> Option<Bezel> {
+    match kind {
+        Kind::Porthole => Some(Bezel::Ring),
+        Kind::Window => Some(Bezel::Lipped),
+        Kind::BayWindow => Some(Bezel::Mullioned),
+        _ => None,
+    }
+}
+
+/// The whole window family's rig: a frame around a hole in the hull.
+///
+/// The glass carries `viewport::SkyPane` — the whole contract between
+/// this furniture and the view — and it is hung DARK, because what is
+/// out there depends on where the crew put it and the furniture is in no
+/// position to know. `viewport::aim_skies` dresses it every frame: the
+/// aperture the void is seen through IS this quad, wherever the crew
+/// rehang it (the whimsy rule made physical; the void follows), and
+/// panes sharing a wall share one render of it.
+///
+/// Headless paths, which have no void to look into, fall back to a
+/// phosphor pane with a stand-in star scatter seeded by the piece id.
+fn window_rig(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32) {
+    let Some(bezel) = bezel(piece.kind) else {
+        return;
+    };
+    // How much of the footprint is glass. A porthole's bore is round, so
+    // its pane is square and small enough for the ring to cover its
+    // corners; the rectangular bezels take almost the whole cell.
+    let (gw, gh) = match bezel {
+        Bezel::Ring => {
+            let m = fw.min(fh) * 0.60;
+            (m, m)
+        }
+        Bezel::Lipped => (fw * 0.88, fh * 0.78),
+        Bezel::Mullioned => (fw * 0.90, fh * 0.84),
+    };
+    if rig.sky {
+        let glass = crate::viewport::pane_glass(rig.materials);
+        let pane = rig.part(
+            Rectangle::new(1.0, 1.0),
+            glass,
+            Transform::from_xyz(0.0, 0.0, 2.4).with_scale(Vec3::new(gw, gh, 1.0)),
+        );
+        rig.commands.entity(pane).insert(crate::viewport::SkyPane);
+    } else {
+        let pane = glow::phosphor(
+            rig.materials,
+            palette::mix(color, palette::PHOSPHOR, 0.12),
+            0.35,
+        );
+        rig.part(
+            Cuboid::new(gw, gh, 3.0),
+            pane,
+            Transform::from_xyz(0.0, 0.0, 1.5),
+        );
+        let star = glow::phosphor(rig.materials, palette::GLINT, 2.2);
+        let fleck = rig.meshes.add(ico(0.9));
+        for i in 0..7_u32 {
+            let n = (piece.id.wrapping_mul(7).wrapping_add(i)) as f32;
+            let angle = n * 2.399;
+            let reach = (n * 0.517).fract().mul_add(0.36, 0.08);
+            rig.spawn(
+                fleck.clone(),
+                star.clone(),
+                Transform::from_xyz(angle.cos() * gw * reach, angle.sin() * gh * reach, 2.6),
+            );
+        }
+    }
+    match bezel {
+        // The bolt ring: a flat brass annulus whose bore is the visible
+        // glass, and the studs that say somebody torqued it down. Twelve
+        // facets, not a smooth circle — the crunch does not do smooth.
+        Bezel::Ring => {
+            let bore = gw * 0.5;
+            let brim = fw.min(fh) * 0.47;
+            rig.part(
+                Annulus::new(bore, brim).mesh().resolution(12).build(),
+                rig.skin.brass.clone(),
+                Transform::from_xyz(0.0, 0.0, 3.0),
+            );
+            let stud = rig.meshes.add(ico(1.5));
+            for i in 0..6_u32 {
+                let angle = (i as f32) * std::f32::consts::TAU / 6.0;
+                let reach = f32::midpoint(bore, brim);
+                rig.spawn(
+                    stud.clone(),
+                    rig.skin.brass.clone(),
+                    Transform::from_xyz(angle.cos() * reach, angle.sin() * reach, 3.6),
+                );
+            }
+        }
+        // Four lips around the rectangle, and — where the glass is too
+        // wide to have arrived in one sheet — the mullion between the
+        // two panes that did.
+        Bezel::Lipped | Bezel::Mullioned => {
+            let lip_h = rig.meshes.add(Cuboid::new(fw * 0.96, fh * 0.10, 6.0));
+            let lip_v = rig.meshes.add(Cuboid::new(fw * 0.05, fh * 0.94, 6.0));
+            for (mesh, at) in [
+                (lip_h.clone(), Vec3::new(0.0, fh * 0.43, 3.0)),
+                (lip_h, Vec3::new(0.0, -fh * 0.43, 3.0)),
+                (lip_v.clone(), Vec3::new(fw * 0.455, 0.0, 3.0)),
+                (lip_v, Vec3::new(-fw * 0.455, 0.0, 3.0)),
+            ] {
+                rig.spawn(
+                    mesh,
+                    rig.skin.brass.clone(),
+                    Transform::from_translation(at),
+                );
+            }
+            if bezel == Bezel::Mullioned {
+                rig.part(
+                    Cuboid::new(fw * 0.035, fh * 0.86, 6.0),
+                    rig.skin.brass.clone(),
+                    Transform::from_xyz(0.0, 0.0, 3.0),
+                );
+            }
+        }
+    }
+}
+
 /// One silhouette per cargo kind, the 2D glyph identities restated as
 /// primitives. Variants ride the tint; ids seed the decoration phases.
 #[allow(clippy::too_many_lines)]
@@ -3301,71 +3444,13 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 ));
             }
         }
-        // The exterior window: a brass frame around a hole in the hull.
-        // The glass carries `viewport::SkyPane` — which is the whole
-        // contract between this furniture and the view — and it is hung
-        // DARK, because what is out there depends on where the crew put
-        // it and the furniture is in no position to know. `aim_skies`
-        // dresses it every frame: the aperture the void is seen through
-        // IS this quad, wherever the crew rehang it (the whimsy rule
-        // made physical; the void follows), and panes sharing a wall
-        // share one render of it. Headless paths fall back to a phosphor
-        // pane with a stand-in star scatter seeded by the piece id.
-        Kind::Window => {
-            if rig.sky {
-                let glass = crate::viewport::pane_glass(rig.materials);
-                let pane = rig.part(
-                    Rectangle::new(1.0, 1.0),
-                    glass,
-                    Transform::from_xyz(0.0, 0.0, 2.4).with_scale(Vec3::new(
-                        fw * 0.88,
-                        fh * 0.78,
-                        1.0,
-                    )),
-                );
-                rig.commands.entity(pane).insert(crate::viewport::SkyPane);
-            } else {
-                let pane = glow::phosphor(
-                    rig.materials,
-                    palette::mix(color, palette::PHOSPHOR, 0.12),
-                    0.35,
-                );
-                rig.part(
-                    Cuboid::new(fw * 0.88, fh * 0.78, 3.0),
-                    pane,
-                    Transform::from_xyz(0.0, 0.0, 1.5),
-                );
-                let star = glow::phosphor(rig.materials, palette::GLINT, 2.2);
-                let fleck = rig.meshes.add(ico(0.9));
-                for i in 0..7_u32 {
-                    let n = (piece.id.wrapping_mul(7).wrapping_add(i)) as f32;
-                    let angle = n * 2.399;
-                    let reach = (n * 0.517).fract().mul_add(0.36, 0.08);
-                    rig.spawn(
-                        fleck.clone(),
-                        star.clone(),
-                        Transform::from_xyz(
-                            angle.cos() * fw * reach,
-                            angle.sin() * fh * reach,
-                            2.6,
-                        ),
-                    );
-                }
-            }
-            let lip_h = rig.meshes.add(Cuboid::new(fw * 0.96, fh * 0.10, 6.0));
-            let lip_v = rig.meshes.add(Cuboid::new(fw * 0.05, fh * 0.94, 6.0));
-            for (mesh, at) in [
-                (lip_h.clone(), Vec3::new(0.0, fh * 0.43, 3.0)),
-                (lip_h, Vec3::new(0.0, -fh * 0.43, 3.0)),
-                (lip_v.clone(), Vec3::new(fw * 0.455, 0.0, 3.0)),
-                (lip_v, Vec3::new(-fw * 0.455, 0.0, 3.0)),
-            ] {
-                rig.spawn(
-                    mesh,
-                    rig.skin.brass.clone(),
-                    Transform::from_translation(at),
-                );
-            }
+        // The whole window family, ONE construction: the porthole, the
+        // transit window, and Saturn's bay pane are the same hole in the
+        // hull at three sizes, so they are the same rig with three
+        // bezels ([`window_rig`]). Adding a fourth size is an arm in
+        // `bezel`, never a second copy of the glass.
+        Kind::Window | Kind::Porthole | Kind::BayWindow => {
+            window_rig(rig, piece, color, fw, fh);
         }
         // The chart tank: the star map's phosphor aquarium, off the
         // wall at last. Dark glass in a brass chassis over a plinth,

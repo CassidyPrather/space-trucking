@@ -800,6 +800,10 @@ pub fn preset(rooms: &Rooms, name: &str) -> Option<(Vec3, f32, f32)> {
         }
         "trade" => inside(RoomKind::Trade, 0, -0.30),
         "offer" => inside(RoomKind::Trade, 2, -0.18),
+        // The market's port flank — the one wall of a calling room that
+        // is neither its goods nor its counter, which is why anything a
+        // crew hangs in somebody else's room ends up on it.
+        "flank" => inside(RoomKind::Trade, 3, -0.06),
         "wreck" => inside(RoomKind::Wreck, 0, -0.10),
         "parlor" => inside(RoomKind::Parlor, 0, -0.10),
         "pump" => inside(RoomKind::Pump, 0, -0.10),

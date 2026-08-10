@@ -441,6 +441,23 @@ of. Three guards, all sim-side and monkey-proven:
   literally and by construction: the aperture is derived from wherever
   the piece hangs, so the wall the glass ends up on is the direction it
   looks.
+- **The window is a family, and a crew may own several.** The hull
+  launches with the one (`Window`, 2×1) and buys the rest: a
+  `Porthole` (1×1) — the cheapest hole anybody ever cut, and the only
+  size that fits a wall of every room in the game — and Saturn's
+  `BayWindow` (3×2), which takes three cells along a wall and both
+  courses of it, and on a flank chart stands floor to cornice. Three
+  sizes, one construction (`pieces::window_rig`, three bezels), one
+  set of rules: all wall-affixed, none flammable, none vital, and none
+  stowable, because a hole in the hull is not a thing you put in a
+  drawer. **Nobody launches with more than one**, so the second and
+  third are shopping: the bay window has one source (Saturn's yards,
+  where the ring is the feedstock) and the porthole has an odd one (the
+  Umbra Market fences them off ships, exactly as it fences lamps —
+  glass that lets starlight in is a rival product there, and prices
+  accordingly). Owning several is the *ordinary* case now, so the
+  exterior was rebuilt to serve it: panes on one plane share one sky
+  ([ART_DIRECTION_3D.md](ART_DIRECTION_3D.md), "One wall, one sky").
 - **The handle rule** (the click-vs-carry answer, by decree): a
   click-functional piece wears a physical AMBER carry handle, and the
   handle IS the carry hitbox — hover the handle and a click means

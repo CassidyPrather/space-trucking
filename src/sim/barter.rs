@@ -61,21 +61,41 @@ pub struct Barter {
 /// in blackout tins, exactly as it fences lamps. The comet and `???`
 /// never open a trade room, so their rows are placeholders kept valid
 /// for the invariants above.
+///
+/// The two window columns appended last (porthole, bay window) carry
+/// the family's economy, and both zeros in them are deliberate, because
+/// a zero is where a kind ENTERS the world:
+///
+/// - **Saturn produces the bay window.** The yards there have the ring
+///   for feedstock and the years for annealing; six cells of flawless
+///   glass is exactly the thing a station that already "treasures
+///   working fixtures" would be the one to cut. It is the only source,
+///   which is what makes the big pane a journey rather than a purchase.
+/// - **The Umbra Market produces portholes**, in the sense that a
+///   fence produces anything: they come off ships, and the Market's
+///   whole quarrel is with light, so glass that lets starlight in
+///   prices at nothing there and is shelved cheap beside the seized
+///   lamps. Buying your second window from the people who hate windows
+///   is the correct way to acquire one.
+///
+/// Everywhere else the porthole is common and the bay window is dear —
+/// Venus buys the big pane as tack (5), the Hermitage buys it as a view
+/// worth sitting with (5), and the Guild pays for neither, as usual.
 // Kept tabular by hand: one row per station is how this table is tuned.
 #[rustfmt::skip]
 pub const VALUE: [[u8; KIND_COUNT]; POI_COUNT] = [
-    [0, 1, 2, 1, 3, 2, 3, 5, 4, 1, 4, 3, 5, 4, 2, 1, 5, 4, 4, 4, 6, 3, 5, 3, 4, 3, 3, 2, 2, 2], // Venus
-    [4, 3, 0, 2, 4, 1, 2, 3, 4, 1, 4, 2, 5, 2, 2, 1, 2, 2, 2, 3, 1, 4, 2, 3, 2, 2, 4, 2, 2, 3], // Earth
-    [2, 1, 4, 0, 1, 3, 2, 2, 4, 1, 4, 2, 5, 1, 2, 1, 2, 2, 3, 3, 2, 3, 3, 4, 2, 2, 3, 2, 2, 3], // Mars
-    [1, 2, 4, 3, 5, 0, 1, 2, 4, 1, 4, 2, 5, 1, 1, 1, 3, 2, 2, 3, 2, 2, 2, 2, 3, 3, 3, 2, 2, 2], // Jupiter
-    [2, 3, 3, 2, 4, 4, 0, 1, 4, 1, 4, 2, 5, 1, 1, 1, 2, 3, 2, 2, 3, 2, 2, 2, 3, 3, 3, 2, 2, 2], // Uranus
-    [3, 2, 4, 3, 3, 2, 1, 0, 4, 1, 4, 2, 5, 2, 1, 1, 2, 2, 3, 2, 3, 2, 3, 2, 3, 3, 3, 2, 2, 2], // Neptune
-    [2, 2, 2, 2, 2, 2, 2, 2, 0, 1, 0, 2, 3, 1, 0, 1, 1, 2, 1, 2, 1, 1, 1, 2, 1, 1, 2, 1, 1, 2], // Guild
-    [1, 3, 2, 6, 1, 0, 2, 1, 4, 1, 4, 1, 5, 1, 1, 1, 4, 4, 3, 5, 3, 5, 3, 4, 3, 4, 3, 3, 3, 3], // Saturn
-    [3, 2, 1, 1, 2, 0, 5, 4, 4, 3, 4, 3, 0, 2, 2, 1, 0, 0, 0, 3, 4, 3, 3, 2, 0, 5, 2, 1, 1, 2], // Umbra Market
-    [1, 1, 3, 1, 4, 1, 1, 2, 4, 2, 4, 2, 3, 3, 1, 1, 2, 3, 2, 6, 3, 4, 5, 3, 4, 5, 2, 2, 2, 1], // Hermitage
-    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], // comet (no trade)
-    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 3, 2, 2, 2, 3, 2, 2, 2, 2, 2], // ??? (no trade)
+    [0, 1, 2, 1, 3, 2, 3, 5, 4, 1, 4, 3, 5, 4, 2, 1, 5, 4, 4, 4, 6, 3, 5, 3, 4, 3, 3, 2, 2, 2, 2, 5], // Venus
+    [4, 3, 0, 2, 4, 1, 2, 3, 4, 1, 4, 2, 5, 2, 2, 1, 2, 2, 2, 3, 1, 4, 2, 3, 2, 2, 4, 2, 2, 3, 3, 2], // Earth
+    [2, 1, 4, 0, 1, 3, 2, 2, 4, 1, 4, 2, 5, 1, 2, 1, 2, 2, 3, 3, 2, 3, 3, 4, 2, 2, 3, 2, 2, 3, 2, 3], // Mars
+    [1, 2, 4, 3, 5, 0, 1, 2, 4, 1, 4, 2, 5, 1, 1, 1, 3, 2, 2, 3, 2, 2, 2, 2, 3, 3, 3, 2, 2, 2, 3, 3], // Jupiter
+    [2, 3, 3, 2, 4, 4, 0, 1, 4, 1, 4, 2, 5, 1, 1, 1, 2, 3, 2, 2, 3, 2, 2, 2, 3, 3, 3, 2, 2, 2, 3, 4], // Uranus
+    [3, 2, 4, 3, 3, 2, 1, 0, 4, 1, 4, 2, 5, 2, 1, 1, 2, 2, 3, 2, 3, 2, 3, 2, 3, 3, 3, 2, 2, 2, 3, 4], // Neptune
+    [2, 2, 2, 2, 2, 2, 2, 2, 0, 1, 0, 2, 3, 1, 0, 1, 1, 2, 1, 2, 1, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1], // Guild
+    [1, 3, 2, 6, 1, 0, 2, 1, 4, 1, 4, 1, 5, 1, 1, 1, 4, 4, 3, 5, 3, 5, 3, 4, 3, 4, 3, 3, 3, 3, 4, 0], // Saturn
+    [3, 2, 1, 1, 2, 0, 5, 4, 4, 3, 4, 3, 0, 2, 2, 1, 0, 0, 0, 3, 4, 3, 3, 2, 0, 5, 2, 1, 1, 2, 0, 2], // Umbra Market
+    [1, 1, 3, 1, 4, 1, 1, 2, 4, 2, 4, 2, 3, 3, 1, 1, 2, 3, 2, 6, 3, 4, 5, 3, 4, 5, 2, 2, 2, 1, 3, 5], // Hermitage
+    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], // comet (no trade)
+    [2, 2, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 3, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 3], // ??? (no trade)
 ];
 
 /// Ceiling for jittered per-visit values.
@@ -429,10 +449,10 @@ mod tests {
 
     #[test]
     fn wants_skip_zero_valued_kinds_and_break_ties_by_index() {
-        let values = [
-            2, 4, 4, 0, 1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0,
-        ];
+        // Hand-authored head, zeros for the tail: the table appends, so
+        // this stays honest as kinds are added.
+        let mut values = [0_u8; KIND_COUNT];
+        values[..9].copy_from_slice(&[2, 4, 4, 0, 1, 0, 0, 0, 6]);
         assert_eq!(
             wants(&values),
             [

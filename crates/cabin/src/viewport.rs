@@ -2165,27 +2165,34 @@ fn pane_texels(raw: f32) -> u32 {
 /// first and then by piece id. The presets read the BOARD rather than
 /// remembering where a window was last time, which is what makes a
 /// rehung window take its own screenshots with it.
-fn glass_charts(sim: &Sim) -> Vec<(crate::surface::Station, crate::surface::SimSurface, SimVec2)> {
+type GlassChart = (
+    space_trucking::sim::room::RoomId,
+    crate::surface::Station,
+    crate::surface::SimSurface,
+    SimVec2,
+);
+
+fn glass_charts(sim: &Sim) -> Vec<GlassChart> {
     use space_trucking::sim::room::CABIN;
     let pieces = sim.pieces();
     let mut glass: Vec<_> = pieces
         .iter()
         .filter(|piece| {
-            piece.kind == space_trucking::sim::Kind::Window
-                && matches!(piece.loc, space_trucking::sim::Loc::Hold { .. })
+            piece.kind.window() && matches!(piece.loc, space_trucking::sim::Loc::Hold { .. })
         })
         .collect();
     glass.sort_by_key(|piece| (piece.loc.room(pieces) != Some(CABIN), piece.id));
     glass
         .into_iter()
         .filter_map(|piece| {
+            let home = piece.loc.room(pieces)?;
             let at =
                 crate::canvas::rect_center(space_trucking::sim::layout::piece_rect(pieces, piece));
             sim.rooms().iter().find_map(|(id, room)| {
                 crate::room::charts(id, room)
                     .into_iter()
                     .find(|(_, surface)| surface.rect.contains(at))
-                    .map(|(station, surface)| (station, surface, at))
+                    .map(|(station, surface)| (home, station, surface, at))
             })
         })
         .collect()
@@ -2204,16 +2211,23 @@ fn glass_charts(sim: &Sim) -> Vec<(crate::surface::Station, crate::surface::SimS
 #[must_use]
 pub fn preset(sim: &Sim, name: &str) -> Option<(Vec3, f32, f32)> {
     // `panes` is the multi-window view, and it is derived the same way
-    // the rest are: it stands back from the MEAN of the standing glass
-    // along the mean of the walls those panes are set in, so a ship with
-    // two windows on two walls gets the corner shot that shows both at
-    // once, and a ship with eight on one wall gets that wall square on.
-    // Which is the pass's whole claim, in one frame.
+    // the rest are: it stands back from the MEAN of one room's standing
+    // glass along the mean of the walls those panes are set in, so a
+    // ship with two windows on two walls gets the corner shot that shows
+    // both at once, and a ship with eight on one wall gets that wall
+    // square on. Which is the pass's whole claim, in one frame. One
+    // room, because the shot is a shot from somewhere and a crew cannot
+    // stand in two rooms at once.
     if name == "panes" {
+        let charts = glass_charts(sim);
+        let room = charts.first().map(|(room, ..)| *room)?;
         let mut mid = Vec3::ZERO;
         let mut out = Vec3::ZERO;
         let mut count = 0.0_f32;
-        for (station, surface, at) in glass_charts(sim) {
+        for (home, station, surface, at) in charts {
+            if home != room {
+                continue;
+            }
             mid += surface.to_world(at);
             out += station.inward(&surface);
             count += 1.0;
@@ -2234,7 +2248,7 @@ pub fn preset(sim: &Sim, name: &str) -> Option<(Vec3, f32, f32)> {
         "pane-stbd" => 0.95,
         _ => return None,
     };
-    let (station, surface, at) = glass_charts(sim).into_iter().next()?;
+    let (_, station, surface, at) = glass_charts(sim).into_iter().next()?;
     let centre = surface.to_world(at);
     let along = surface.half_u.normalize_or_zero();
     let stand = centre + station.inward(&surface) * 1.75 + along * aside;

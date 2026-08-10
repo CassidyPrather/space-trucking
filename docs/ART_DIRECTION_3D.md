@@ -101,10 +101,10 @@ What is there now:
   coordinates on their own render layer (`viewport::VOID_LAYER`). The
   cabin camera never sees that layer, so the hull stays solid from
   inside and no light out there leaks through a wall.
-- **The pane is an aperture, and an aperture has a frustum.** A second
-  camera sits at the player's eye and looks out through the glass with
-  an **off-axis projection** whose near plane is cut on the window
-  itself (Kooima's generalized perspective). Move your head and the
+- **The pane is an aperture, and an aperture has a frustum.** A camera
+  sits at the player's eye and looks out through the glass with an
+  **off-axis projection** whose near plane is cut on the window itself
+  (Kooima's generalized perspective). Move your head and the
   frustum shears; the same pane frames different space. Stand to one
   side of it and you see the space on the other side, which is what
   holes do and what pictures do not. Nothing about it is a parallax
@@ -113,7 +113,8 @@ What is there now:
   the glass quad's live world pose — the piece rig's, wherever the crew
   rehung it. A window on the front wall looks forward; carried to the
   port wall it looks to port. No window aboard: no aperture, no camera,
-  no view, and the hull is solid.
+  no view, and the hull is solid. Several windows aboard is the ordinary
+  case, and "One wall, one sky" below is how it is paid for.
 - **It obeys the crunch.** The porthole draws into its own small
   nearest-sampled target, cut to the glass at a fixed texel density
   (`PANE_DENSITY`) so the void reads about as chunky as the room around
@@ -136,19 +137,32 @@ plane and the larger render *contains* the smaller one texel for texel.
 `a_shared_sky_is_the_pane_s_own_sky` checks it against each pane's own
 independently-built projection rather than against itself.
 
-What that buys, measured on the container's software renderer where the
-absolute numbers mean nothing and the shape means everything
-(`--panes n --gauge f`, with `--grouping pane` as the control arm — the
-first pass's cost model, on the same code path):
+A "sky" is one pass over the whole outside — six thousand star quads,
+every attached room's shell, the stream, the dock, and whatever is
+calling this leg. That is the cost that was multiplying. Windows still
+cost draw calls in the CABIN pass, like any other furniture, and
+nothing else.
+
+Measured with `--panes n --grouping wall|pane --view bay --gauge 120`:
+one board, one camera pose, every pane in frame, and `--grouping pane`
+as the **control arm** — the first pass's cost model, reached through
+the same code. Absolute milliseconds are meaningless here (the
+container renders in software, on llvmpipe); the shape is the reading.
+Subtracting the `--panes 0` frame (72.9 ms, no exterior at all) leaves
+what the outside actually costs:
 
 | panes on one wall | 1 | 2 | 4 | 8 |
 | --- | --- | --- | --- | --- |
-| **one sky per wall** (ships) | 1 sky | 1 sky | 1 sky | 1 sky |
-| **one sky per pane** (control) | 1 sky | 2 skies | 4 skies | 8 skies |
+| **one sky per wall** (ships) | 1 sky, 41 ms | 1 sky, 49 | 1 sky, 53 | 1 sky, **26** |
+| **one sky per pane** (control) | 1 sky, 37 ms | 2 skies, 77 | 4 skies, 159 | 8 skies, **309** |
 
-The exterior is ~6.2k triangles of star field, hull shells, and company;
-a "sky" is one pass over all of it. Windows cost draw calls in the cabin
-pass like any other furniture, and nothing else.
+The control doubles with every doubling of the glass, which is the bill
+this replaced. The shipped law does not trend at all — and it comes
+*down* at eight, which is the `PANE_MAX` clamp visible in the data
+rather than in an argument: a wall's worth of glass cuts one wide sky
+at the texel ceiling, and a wide aperture on a fixed texel budget shades
+less than a narrow one filled edge to edge by a neighbour's hull plate.
+Coarser, not costlier, exactly as claimed.
 
 Three bounds keep it honest, and all three are the same idea — *a
 window may be free, but glass is never unbounded*:
@@ -170,6 +184,42 @@ The rehang rule is untouched by all of this, because the gathering is by
 **plane** and a plane is a fact about the wall: move a window to another
 wall and it joins that wall's sky, aimed that way, showing what is out
 there. `two_walls_are_two_skies_pointed_two_ways` is the assertion.
+
+#### Why not a stencil portal
+
+The obvious answer to "N windows" is the classic one: mask each pane
+into the stencil buffer, render the exterior **once** with the stencil
+test, oblique-clip the near plane on the portal so interior geometry
+cannot intrude. It was the leading candidate and it was not taken, for
+two reasons in that order:
+
+1. **It does not actually buy the thing.** A portal's projection is the
+   off-axis frustum *through that pane*. Two panes on different walls
+   want different projections, and one draw call has one projection —
+   so a stencil portal still re-transforms the exterior once per pane.
+   The stencil saves render *targets*, which were never the expensive
+   part; the geometry was. Plane-grouping saves the passes,
+   which is the part that scales. Where the two overlap — several panes
+   on one wall — grouping already collapses them to one pass, and a
+   stencil would collapse the same set to the same one.
+2. **It is the most upgrade-fragile code we could write.** Bevy 0.19's
+   standard PBR pipeline exposes no stencil ops (`StencilState`
+   defaults off, no per-material hook), so this means a specialized
+   pipeline and a render-graph node: engine-internal API, the surface
+   that moves most between releases, and it fails *silently* — a wrong
+   mask is a picture, not a compile error.
+
+What shipped uses **only component-level API** — `Camera`,
+`Projection::Custom`, `RenderTarget::Image`, `Frustum`,
+`StandardMaterial::uv_transform` — and no render graph, no custom
+pipeline, no shader. That is the isolation story: everything fragile is
+a type the compiler checks, so a Bevy upgrade breaks `viewport.rs` **at
+build time with a name in the error**, rather than shipping a window
+that quietly shows the wrong sky. The two seams worth naming if the
+engine does move are `Aperture`'s `CameraProjection` impl (Kooima's
+generalized perspective in the pipeline's reverse-Z convention) and
+`sub_uv` (the affine remap); both are pure functions with tests that
+check them against each other rather than against a golden image.
 - **The material distinction survives, inverted.** The old rule was "a
   tube shows a rendering, a window shows space", kept by painting the
   window differently from the CRTs. It is kept by *construction* now:

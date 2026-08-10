@@ -763,12 +763,12 @@ fn plane_axes(facing: Vec3) -> (Vec3, Vec3) {
 /// Two co-planar apertures seen from one eye have the same near plane
 /// and the same view axis, so their projections differ by an affine map
 /// of the near plane, and the wall's render therefore CONTAINS each
-/// pane's render exactly. `(gu, gv)` are the wall rectangle's spans in
-/// the plane's own `(u, v)` frame and `(lo, hi)` its bounds there; the
-/// result takes a pane-local `uv` (Bevy's rectangle: `u` along local +X,
-/// `v` DOWN from local +Y) to the same point in the sky's image (`u`
-/// along the aperture's +u, `v` down from its +v, because a render
-/// target's first row is the top of the frame).
+/// pane's render exactly. `(u, v)` are the plane's own axes and
+/// `(lo, hi)` the wall rectangle's bounds in them; the result takes a
+/// pane-local `uv` (Bevy's rectangle: `u` along local +X, `v` DOWN from
+/// local +Y) to the same point in the sky's image (`u` along the
+/// aperture's +u, `v` down from its +v, because a render target's first
+/// row is the top of the frame).
 fn sub_uv(pane: &Pane, u: Vec3, v: Vec3, lo: Vec2, hi: Vec2) -> Affine2 {
     let span = (hi - lo).max(Vec2::splat(f32::EPSILON));
     let (cu, cv) = (pane.centre.dot(u), pane.centre.dot(v));
@@ -2100,10 +2100,19 @@ fn aim_skies(
         quad.translation = Vec3::new(mid.x, mid.y, -plan.aperture.near * 1.001);
         quad.scale = Vec3::new(span.x * 1.02, span.y * 1.02, 1.0);
     }
-    if let Some(mut flood) = materials.get_mut(&skies.flood) {
-        let level = heat * heat;
-        flood.base_color = palette::EERIE_BRIGHT.with_alpha(level * 0.95);
-        flood.emissive = palette::EERIE_BRIGHT.to_linear() * (level * 3.0);
+    let level = heat * heat;
+    let (tint, burn) = (
+        palette::EERIE_BRIGHT.with_alpha(level * 0.95),
+        palette::EERIE_BRIGHT.to_linear() * (level * 3.0),
+    );
+    // Read before write, like the glass: a jump is a fifth of a second
+    // every few legs, and the other 99% of frames have nothing to say.
+    let settled = materials
+        .get(&skies.flood)
+        .is_some_and(|mat| mat.base_color == tint && mat.emissive == burn);
+    if !settled && let Some(mut flood) = materials.get_mut(&skies.flood) {
+        flood.base_color = tint;
+        flood.emissive = burn;
     }
 }
 

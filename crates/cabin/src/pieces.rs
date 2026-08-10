@@ -2731,8 +2731,9 @@ enum Bezel {
     /// Four brass lips around a rectangle: the transit window, as it has
     /// always been.
     Lipped,
-    /// Lips, plus the mullion six cells of glass cannot arrive without.
-    /// Saturn ships the bay window in two crates and the frame says so.
+    /// Lips, plus the mullion four cells of glass cannot arrive
+    /// without. Saturn ships the bay window in two crates, and the
+    /// frame says so.
     Mullioned,
 }
 

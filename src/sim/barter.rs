@@ -66,11 +66,13 @@ pub struct Barter {
 /// the family's economy, and both zeros in them are deliberate, because
 /// a zero is where a kind ENTERS the world:
 ///
-/// - **Saturn produces the bay window.** The yards there have the ring
-///   for feedstock and the years for annealing; six cells of flawless
-///   glass is exactly the thing a station that already "treasures
-///   working fixtures" would be the one to cut. It is the only source,
-///   which is what makes the big pane a journey rather than a purchase.
+/// - **Saturn produces the bay window.** Its ring is salvage all the
+///   way round (`map`), which is to say somebody else's hull, which is
+///   the only place four flawless cells of glass were ever going to
+///   come from — and Saturn already "treasures working fixtures", so
+///   cutting them is the same trade seen from the other end. It is the
+///   ONLY source, which is what makes the big pane a journey rather
+///   than a purchase.
 /// - **The Umbra Market produces portholes**, in the sense that a
 ///   fence produces anything: they come off ships, and the Market's
 ///   whole quarrel is with light, so glass that lets starlight in
@@ -388,6 +390,8 @@ pub fn tiles_of(rooms: &Rooms, room: RoomId, class: Tile) -> Vec<(u8, u8)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sim::cargo::placement_check;
+    use crate::sim::map::SATURN;
     use crate::sim::room::{CABIN, RoomKind};
 
     /// Venus, whose produce is the perfume at kind index 0.
@@ -445,6 +449,79 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// **Every kind a station can roll onto its shelf must fit on one.**
+    /// `Sim::stock_in` drops a good it cannot berth, so a kind whose
+    /// lore says a station sells it and whose footprint the shelf can
+    /// never hold is a kind that is quietly never sold — the worst
+    /// shape of bug, because the table reads fine.
+    #[test]
+    fn everything_a_station_can_stock_fits_a_shelf() {
+        let (rooms, trade) = stall();
+        let shelf = tiles_of(&rooms, trade, Tile::Stock);
+        let mut rollable: Vec<Kind> = Vec::new();
+        for station in 0..POI_COUNT as PoiId {
+            for roll in 0..4096_u64 {
+                let kind = stock_kind(station, roll);
+                if !rollable.contains(&kind) {
+                    rollable.push(kind);
+                }
+            }
+        }
+        for kind in rollable {
+            assert!(
+                shelf
+                    .iter()
+                    .any(|&(x, y)| placement_check(&rooms, &[], 0, kind, trade, x, y).is_ok()),
+                "{kind:?} can be rolled onto a shelf it can never stand on"
+            );
+        }
+    }
+
+    /// Where the window family enters the economy, checked rather than
+    /// asserted in prose: **Saturn's yards cut the bay window** and
+    /// **the Umbra Market fences portholes**, both because a zero in
+    /// the value table is what "local produce" means. A crew can
+    /// therefore buy a second window and a third, which is the whole
+    /// reason the exterior learned to draw several.
+    #[test]
+    fn the_yards_cut_glass_and_the_market_fences_it() {
+        let seen = |station: PoiId| -> Vec<Kind> {
+            let mut kinds = Vec::new();
+            for roll in 0..4096_u64 {
+                let kind = stock_kind(station, roll);
+                if !kinds.contains(&kind) {
+                    kinds.push(kind);
+                }
+            }
+            kinds
+        };
+        assert!(
+            seen(SATURN).contains(&Kind::BayWindow),
+            "Saturn is the only place that cuts the big pane"
+        );
+        assert!(
+            seen(UMBRA).contains(&Kind::Porthole),
+            "the Market fences glass exactly as it fences lamps"
+        );
+        // And nowhere else PRODUCES either one: a zero is a source, and
+        // a family with sources everywhere would have no journey in it.
+        for station in 0..POI_COUNT as PoiId {
+            for kind in [Kind::Porthole, Kind::BayWindow] {
+                let produce = VALUE[usize::from(station)][kind.index()] == 0;
+                let expected = (station == SATURN && kind == Kind::BayWindow)
+                    || (station == UMBRA && kind == Kind::Porthole);
+                assert_eq!(produce, expected, "{kind:?} at station {station}");
+            }
+        }
+        // The plain transit window has no source at all and turns up on
+        // the uniform roll anywhere — which is right: it is the one
+        // every hull already has, so nobody specialises in it.
+        assert!(
+            (0..POI_COUNT as PoiId).any(|station| seen(station).contains(&Kind::Window)),
+            "a spare window must reach a shelf somewhere"
+        );
     }
 
     #[test]

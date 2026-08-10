@@ -25,10 +25,10 @@
 //! only ever hangs one would sweep the easy half of it. The transit
 //! window keeps its traditional front-wall punch-out; the porthole
 //! hangs mid-course on the port flank; and Saturn's bay window stands
-//! floor-to-cornice on the trade room's port wall, which is both the
-//! only chart in the ship wide enough to want it and a reminder that a
-//! window in a room that is only ALONGSIDE is a window the gangway law
-//! will not let you leave with. Every screenshot run therefore sweeps a
+//! square on the trade room's port flank — the one wall of a calling
+//! room that is neither its goods nor its counter, and a reminder that
+//! a window in a room that is only ALONGSIDE is a window the gangway
+//! law will not let you leave with. Every screenshot run therefore sweeps a
 //! multi-window frame, a second sky on a second wall, and a pane in
 //! another room, without anybody remembering to.
 //!

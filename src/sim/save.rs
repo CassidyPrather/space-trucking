@@ -1559,14 +1559,27 @@ mod tests {
 
     /// Whether a save line is an instrument piece — pre-STV9 documents
     /// have none, so forging one starts by stripping them.
-    fn instrument_line(line: &str) -> bool {
+    /// Whether a save line is a window piece that is not an instrument
+    /// — a porthole or a bay pane, both of which a console-era document
+    /// predates and neither of which the reader hangs for free.
+    fn window_line(line: &str) -> bool {
+        line_kind(line).is_some_and(|kind| kind.window() && !kind.instrument())
+    }
+
+    /// The kind a `piece` line names, if it names one.
+    fn line_kind(line: &str) -> Option<Kind> {
         line.starts_with("piece")
-            && line
-                .split_whitespace()
-                .nth(2)
-                .and_then(|token| token.parse::<usize>().ok())
-                .and_then(|index| Kind::ALL.get(index).copied())
-                .is_some_and(Kind::instrument)
+            .then(|| {
+                line.split_whitespace()
+                    .nth(2)
+                    .and_then(|token| token.parse::<usize>().ok())
+                    .and_then(|index| Kind::ALL.get(index).copied())
+            })
+            .flatten()
+    }
+
+    fn instrument_line(line: &str) -> bool {
+        line_kind(line).is_some_and(Kind::instrument)
     }
 
     /// Turn a modern save into a pre-rooms one: strip the room and mark
@@ -1759,17 +1772,18 @@ mod tests {
         // Each version since STV4 added only a line form or token; a save
         // without them is a valid older document, and the retired
         // console's runs keep walking aboard. Those documents carry
-        // console-era 6×4 hold coordinates and no instrument pieces, so
-        // the fixture strips the instruments and rewrites the berths into
+        // console-era 6×4 hold coordinates, no instrument pieces, and no
+        // window that was not one (the porthole is bought, not launched
+        // with), so the fixture strips both and rewrites the berths into
         // the old grid — and the reader must walk the whole chain (the
         // console embed, then the widening, then the re-fit) AND hang the
-        // five missing instruments.
+        // five missing instruments, the porthole staying unbought.
         let plain = Sim::new(9).save_string();
         let deroomed = deroom(&plain, "STV10");
         let mut old_cells = [(0_u8, 0_u8), (0, 2), (2, 0), (5, 0)].into_iter();
         let legacy_board: String = deroomed
             .lines()
-            .filter(|line| !instrument_line(line))
+            .filter(|line| !instrument_line(line) && !window_line(line))
             .map(|line| {
                 if line.starts_with("piece") && line.contains(" hold ") {
                     let head = line.split(" hold ").next().expect("split has a head");

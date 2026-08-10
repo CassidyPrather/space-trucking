@@ -445,14 +445,20 @@ of. Three guards, all sim-side and monkey-proven:
   launches with the one (`Window`, 2×1) and buys the rest: a
   `Porthole` (1×1) — the cheapest hole anybody ever cut, and the only
   size that fits a wall of every room in the game — and Saturn's
-  `BayWindow` (3×2), which takes three cells along a wall and both
-  courses of it, and on a flank chart stands floor to cornice. Three
-  sizes, one construction (`pieces::window_rig`, three bezels), one
+  `BayWindow` (2×2), square, the same footprint as the chart tank
+  because that is the biggest thing this ship already knows how to hang
+  on a wall. Bigger was tried and the *arithmetic* refused it: a calling
+  room's shelf is its aft wall with a handshake in the middle and a
+  doorway through the corner, and nothing three cells wide and two
+  courses tall can stand anywhere on it — a window no station can put
+  out is a window nobody can buy, which `barter`'s shelf-fit test now
+  fails the build over. Three sizes, one construction (`pieces::window_rig`, three bezels), one
   set of rules: all wall-affixed, none flammable, none vital, and none
   stowable, because a hole in the hull is not a thing you put in a
   drawer. **Nobody launches with more than one**, so the second and
-  third are shopping: the bay window has one source (Saturn's yards,
-  where the ring is the feedstock) and the porthole has an odd one (the
+  third are shopping: the bay window has one source (Saturn, whose ring
+  is salvage all the way round — somebody else's hull is the only place
+  four flawless cells of glass were coming from) and the porthole has an odd one (the
   Umbra Market fences them off ships, exactly as it fences lamps —
   glass that lets starlight in is a rival product there, and prices
   accordingly). Owning several is the *ordinary* case now, so the

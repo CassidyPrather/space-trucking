@@ -782,10 +782,14 @@ Each stage lands green or not at all, in the project's usual way.
 3. **Per-POI agents.** Look and behavior per POI, from the lore that
    already exists: Venus unimaginably tacky, Earth rationing, Mars
    scrappy, the Guild seizing rather than paying, Saturn trading salvage
-   like treasure, the Umbra Market paying a premium for rat-gnawed goods
-   and pricing light at zero, the Hermitage remembering gifts forever
-   and showing one lit window, the comet's free ice, and whatever ???
-   is doing with three crates and its arithmetic.
+   like treasure — and, since the window became a family, cutting the
+   bay pane out of that ring, because somebody else's hull is the only
+   place four flawless cells of glass were coming from — the Umbra
+   Market paying a premium for rat-gnawed goods, pricing light at zero,
+   and fencing seized portholes beside the seized lamps for the same
+   reason, the Hermitage remembering gifts forever and showing one lit
+   window, the comet's free ice, and whatever ??? is doing with three
+   crates and its arithmetic.
 
 ## Non-goals
 

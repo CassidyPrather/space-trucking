@@ -145,7 +145,7 @@ fn home_familiar() -> [u32; POI_COUNT] {
 /// Starter cargo and where it is stowed in the cabin: trade goods low in
 /// the room, and the ship's fittings — light and instruments alike — hung
 /// at their traditional berths, every one a movable piece.
-const STARTER_CARGO: [(Kind, u8, u8); 9] = [
+const STARTER_CARGO: [(Kind, u8, u8); 10] = [
     (Kind::ScrapAlloy, 4, 5),
     (Kind::PerfumeVial, 3, 3),
     (Kind::BrinePearls, 6, 3),
@@ -166,6 +166,14 @@ const STARTER_CARGO: [(Kind, u8, u8); 9] = [
     // the wall. Every one of them clears the cabin's four doorways,
     // which the threshold rule keeps empty.
     (Kind::Window, 4, 12),
+    // And the porthole every hull of this class was launched with,
+    // mid-course on the port flank where a bunk would be. It is not an
+    // instrument — nobody hangs one to fly by — but a working ship has
+    // more than one hole in it, and a starter board with exactly one
+    // window is a starter board that never exercises the case the
+    // exterior was rebuilt for (docs/ART_DIRECTION_3D.md, "One wall,
+    // one sky"). Two windows, two walls, two skies, from the first boot.
+    (Kind::Porthole, 1, 8),
     (Kind::ChartTank, 12, 5),
     (Kind::EtaGauge, 5, 11),
     (Kind::DestPreview, 3, 12),

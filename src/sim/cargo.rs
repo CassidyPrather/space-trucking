@@ -95,11 +95,11 @@ pub enum Kind {
     /// wall no wider than itself, which is why the little rooms get
     /// one and the big pane never reaches them.
     Porthole,
-    /// Six cells of glass in a frame that arrives in two crates. Cut
-    /// at Saturn, where the yards have the ring for feedstock and the
-    /// patience for annealing; hung, it takes a whole flank of the
-    /// cabin and gives back a whole flank of sky. The freight on one
-    /// is the reason nobody hauls two.
+    /// Four cells of glass in a frame that arrives in two crates.
+    /// Saturn's, and only Saturn's: that ring is somebody else's hull
+    /// all the way round, and somebody else's hull is where big flat
+    /// glass comes from. Hung, it gives back twice the sky the ship
+    /// launched with. The freight on one is why nobody hauls two.
     BayWindow,
 }
 
@@ -223,6 +223,15 @@ impl Kind {
             Self::RationBricks
             | Self::SuspiciousCrate
             | Self::VeryMysteriousCrate
+            // Square, and the same square the chart tank is: the
+            // biggest thing this ship already knows how to hang on a
+            // wall. Bigger was tried and refused by the arithmetic —
+            // a calling room's shelf is its aft wall with a handshake
+            // in the middle of it and a doorway through the corner,
+            // and nothing three cells wide and two courses tall can
+            // stand anywhere on it. A window no station can put out is
+            // a window nobody can buy (`barter`, the shelf-fit test).
+            | Self::BayWindow
             | Self::ChartTank => (2, 2),
             Self::ScrapAlloy
             | Self::GasCanister
@@ -230,14 +239,6 @@ impl Kind {
             | Self::Painting
             | Self::Rug
             | Self::Window => (2, 1),
-            // Three cells along the wall and two courses up it — the
-            // biggest rectangle every wall in the game can still take.
-            // The side charts are exactly three courses tall, so on a
-            // flank the bay window stands floor to cornice; on the aft
-            // and front walls it is a picture window three cells wide.
-            // A fourth cell would fit the cabin and nothing else, and a
-            // window that only fits the cabin is furniture, not cargo.
-            Self::BayWindow => (3, 2),
         }
     }
 

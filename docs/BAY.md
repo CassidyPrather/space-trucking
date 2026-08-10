@@ -93,6 +93,11 @@ A piece glides between scales as it changes berth. The whole barter
 surface is due for its own redesign once the economy design settles,
 so no further investment lands there now.
 
+> Settled since, by decree: the counter is **removed**, not redesigned,
+> and the drag grammar goes with it — carry is the only gesture left.
+> Stations become attached rooms you carry cargo into. See
+> [ROOMS.md](ROOMS.md).
+
 ## The cabinet: furniture that stores
 
 `Kind::Cabinet`, the architecture stretch: a piece that *provides
@@ -226,6 +231,11 @@ hazard-bordered tiles, each bound to one rail slot through its own
 `SimSurface`, live exactly when the sim's rail rule holds (no barter
 open).
 
+> The annex becomes a room proper in [ROOMS.md](ROOMS.md): hopper
+> staging moves into that room's own grid as hazard-class tiles, and
+> the `FLOTSAM_SLOTS == SHELF_SLOTS` exclusivity below dies with the
+> barter it was sharing rects with. The fire's mechanics are unchanged.
+
 The mechanics, all sim-side and replay-safe:
 
 - **Every kind knows how it burns** (`Kind::flammable`, 0–3):
@@ -342,6 +352,14 @@ by `placement_check`, never restated in views:
 
 ### The no-soft-lock invariant
 
+> Superseded in part by [ROOMS.md](ROOMS.md): player-character collision
+> with cargo is removed, so `Violation::Sealed`, `Violation::Aisle`, and
+> the frontend's own-cells refusal all retire — with no collision there
+> is no box to be boxed into. The doorway threshold stays clear for a
+> reason that survives (an aperture belongs to two rooms), and the
+> **vital-minimum rule below is untouched**: it guards ability, not
+> mobility.
+
 The player must never be able to construct a state they cannot act out
 of. Three guards, all sim-side and monkey-proven:
 
@@ -374,7 +392,8 @@ of. Three guards, all sim-side and monkey-proven:
   follows it to any wall — so the front cornice punch-out healed into
   ordinary cells (its old aperture is just the window's traditional
   berth now). The barter counter stays put deliberately: the barter
-  interface is slated for removal, not migration.
+  interface is slated for removal, not migration — and the removal is
+  now specified in [ROOMS.md](ROOMS.md).
 - **Yellow handles**: click-functional cargo wears the same AMBER
   handle hardware — the launch handle's glowing pull is the archetype,
   the chart tank's grab rail follows it. Passive glass (window, ETA
@@ -537,3 +556,10 @@ Free (non-grid) placement, physics, multiple rooms, new pad surfaces,
 and any barter redesign. The counter-as-diorama conceit and the
 economy's shape are both expected to move once the barter design work
 starts; the grid deliberately does not pre-empt it.
+
+Two of those have since been taken up, and the grid's restraint paid:
+multiple rooms and the barter redesign are specified together in
+[ROOMS.md](ROOMS.md) — rooms attach to the cabin at declared ports and
+carry room nets of their own, and the barter interface is deleted
+rather than redesigned. Free placement and physics remain out, forever
+as far as anyone can tell.

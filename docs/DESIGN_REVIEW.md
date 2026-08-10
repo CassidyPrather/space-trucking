@@ -73,7 +73,9 @@ changing; remove a line only by shipping it or striking it in review.
   the burner — see BAY.md — so the engine no longer waits in this list;
   what remains of a dedicated engine module is nothing)
 - Live multiplayer frontend (console ↔ lockstep session, remote pointers;
-  the sim, protocol, and harness are in — see docs/NETWORKING.md)
+  the sim, protocol, and harness are in — see docs/NETWORKING.md; the
+  topology a joining crewmate's area attaches through is decided in
+  docs/ROOMS.md, and cabin-linking will reuse that same interface)
 - Real transport adapter (WebSocket) behind `net`'s transport seam
 - Guild-server hosting + wiring global progress into the console
 - VRChat port (the Bevy cabin in `crates/cabin` is the first step: the
@@ -82,12 +84,19 @@ changing; remove a line only by shipping it or striking it in review.
   the cabin: the tutor ghost, `--replay` playback, a wasm/web build
   (Bevy compiles to wasm when wanted), the telemetry consent surface,
   and the retired console's per-rule violation glyphs)
-- Barter redesign: playtests call the trade minigame and economy
-  unengaging; both are expected to be redesigned until click-y, so no
-  deep investment lands on the counter meanwhile (the desk-scale
-  "broker's diorama" conceit is a placeholder, per BAY.md; the
-  counter's tactile temperament pass — shutter creep, badge warmth,
-  recoil — is presentation-only and survives any redesign)
+- ~~Barter redesign~~ — struck in review, decided by decree: the barter
+  interface is *removed*, not redesigned, and stations become attached
+  rooms cargo is carried into (docs/ROOMS.md). The economy survives its
+  interface; the counter, pads, dial, patience, fog, and accept lever
+  do not.
+- Per-POI barter agents: the core slice runs one deterministic flow at
+  every station (docs/ROOMS.md); differentiating each POI's look and
+  behavior from the existing lore — temperament, discovery cost, the
+  handshake's form — is the slice after
+- Apertures as cargo: doors, ladders, and hatches as re-arrangeable
+  pieces with amber grab handles (docs/ROOMS.md's stretch goal, with
+  its packing hazards already analysed). The port law is written so
+  that day is not a rewrite
 - Wallpaper and larger coverings: rugs and paints shipped as the
   dressing layer (BAY.md); wallpaper is the same shape with a bigger
   footprint, waiting on a reason

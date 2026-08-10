@@ -1118,15 +1118,199 @@ fn shell_boxes(placed: &Placed, all: &[Placed]) -> Vec<(Vec3, Vec3, bool)> {
 
 // ---- Colored tiles ----
 
+/// How wide a class's rim band is, in fractions of a cell: wide enough
+/// to read from across a room and at a grazing angle, narrow enough to
+/// stay a border rather than become a second field.
+const BAND: f32 = 0.20;
+
+/// The offer bay's chalk line — a struck line, not a band. It is the
+/// only mark its class carries, so it is thin and bright.
+const CHALK: f32 = 0.09;
+
+/// The tread plate's studs: how far off a cell's centre the outer ones
+/// sit, and how big each stud is. Three by three, sparse enough to read
+/// as non-slip studs rather than as a pattern.
+const STUD_STEP: f32 = 0.27;
+const STUD: f32 = 0.085;
+
+/// The sill bar along a doorway's jamb line, in fractions of a cell.
+const SILL: f32 = 0.13;
+
+/// One cell of one chart, as the tile painter needs it: where its centre
+/// lands, which way the surface faces, and how big a cell is in world
+/// units — plus the one cube every flat paint is scaled from and the room
+/// tag they all carry. Every mark below is a fraction of this and nothing
+/// else, which is what lets one vocabulary paint a 3×3 pump bay and an
+/// 8×7 cabin without measuring either.
+#[derive(Clone, Copy)]
+struct Patch<'a> {
+    cube: &'a Handle<Mesh>,
+    tag: InRoom,
+    at: Vec3,
+    normal: Vec3,
+    rot: Quat,
+    w: f32,
+    h: f32,
+}
+
+/// One rim mark: what to draw it in, how wide it runs, and which rung of
+/// the decal ladder it rides.
+#[derive(Clone, Copy)]
+struct Mark<'a> {
+    mat: &'a Handle<StandardMaterial>,
+    width: f32,
+    lift: f32,
+}
+
+impl<'a> Patch<'a> {
+    /// Lay one flat paint on this cell. `offset` and `size` are fractions
+    /// of the cell in **net axes** (+x along the chart's own x, +y down
+    /// it — the axes the sim declares tiles in); the charts face into the
+    /// room, so the mirror is undone here, once, instead of in every
+    /// mark.
+    fn paint(
+        self,
+        commands: &mut Commands,
+        mat: &Handle<StandardMaterial>,
+        lift: f32,
+        offset: Vec2,
+        size: Vec2,
+    ) {
+        commands.spawn((
+            Mesh3d(self.cube.clone()),
+            MeshMaterial3d(mat.clone()),
+            Transform::from_translation(
+                self.at
+                    + self.normal * lift
+                    + self.rot * Vec3::new(-offset.x * self.w, -offset.y * self.h, 0.0),
+            )
+            .with_rotation(self.rot)
+            .with_scale(Vec3::new(
+                size.x * self.w,
+                size.y * self.h,
+                crate::rig::layer::SKIN,
+            )),
+            self.tag,
+        ));
+    }
+
+    /// A class's field: the whole cell, edge to edge. Neighbouring cells
+    /// of one class abut exactly, so a region paints as one continuous
+    /// surface instead of a grid of stamps with grout between them.
+    fn field(self, commands: &mut Commands, mat: &Handle<StandardMaterial>) {
+        self.paint(
+            commands,
+            mat,
+            crate::rig::layer::TILE,
+            Vec2::ZERO,
+            Vec2::ONE,
+        );
+    }
+
+    /// A band along one edge of this cell. `side` is a net direction
+    /// (0 up, 1 down, 2 left, 3 right) and `rim` says which of the four
+    /// sides the region actually ends on, so a side band stands aside
+    /// wherever a top or bottom band already owns the corner. **Two marks
+    /// never share a plane**, which is how a rung stays a rung.
+    fn band(self, commands: &mut Commands, mark: Mark<'a>, side: usize, ends: [bool; 4]) {
+        let (offset, span) = band_extent(side, ends, mark.width);
+        self.paint(commands, mark.mat, mark.lift, offset, span);
+    }
+
+    /// The whole rim mark: a band on every side where the region ends,
+    /// and nothing anywhere else. This is the line that keeps a class's
+    /// form on the boundary of its region instead of stamped into every
+    /// cell of it.
+    fn rim_mark(self, commands: &mut Commands, mark: Mark<'a>, rim: [bool; 4]) {
+        for (side, &ends) in rim.iter().enumerate() {
+            if ends {
+                self.band(commands, mark, side, rim);
+            }
+        }
+    }
+}
+
+/// A rim band's footprint inside its own cell, as `(offset, size)` in
+/// cell fractions — the pure half of [`Patch::band`], so "no mark leaves
+/// its cell" and "no two bands of one mark overlap" are laws a test
+/// holds rather than numbers an eye checks.
+fn band_extent(side: usize, rim: [bool; 4], width: f32) -> (Vec2, Vec2) {
+    let far = width.mul_add(-0.5, 0.5);
+    match side {
+        0 => (Vec2::new(0.0, -far), Vec2::new(1.0, width)),
+        1 => (Vec2::new(0.0, far), Vec2::new(1.0, width)),
+        // A side band stands aside wherever a top or bottom band already
+        // owns the corner: the horizontal runs full width, the vertical
+        // yields to it.
+        _ => {
+            let head = if rim[0] { width } else { 0.0 };
+            let tail = if rim[1] { width } else { 0.0 };
+            (
+                Vec2::new(if side == 2 { -far } else { far }, (head - tail) * 0.5),
+                Vec2::new(width, 1.0 - head - tail),
+            )
+        }
+    }
+}
+
+/// Which of a cell's four net neighbours fall OUTSIDE its own class —
+/// the region's own rim, as `[up, down, left, right]`. Off the net counts
+/// as outside: a region that runs into the edge of a room's skin has
+/// ended, and its mark belongs there.
+fn rim(kind: RoomKind, x: u8, y: u8, tile: Tile) -> [bool; 4] {
+    let (cols, rows) = kind.grid();
+    let mut rim = [false; 4];
+    for (slot, (dx, dy)) in [(0_i32, -1_i32), (0, 1), (-1, 0), (1, 0)]
+        .into_iter()
+        .enumerate()
+    {
+        let neighbour = u8::try_from(i32::from(x) + dx)
+            .ok()
+            .zip(u8::try_from(i32::from(y) + dy).ok())
+            .filter(|&(nx, ny)| nx < cols && ny < rows)
+            .and_then(|(nx, ny)| kind.tile_of(nx, ny));
+        rim[slot] = neighbour != Some(tile);
+    }
+    rim
+}
+
 /// The colored tiles, painted (docs/ROOMS.md, "The tile-class
 /// vocabulary"). The class is declared once by the room kind; the rules
 /// and the paint read the same declaration, so a tile that *looks* like an
 /// offer area and does not behave like one cannot exist.
 ///
-/// **No signal on hue alone.** Every class carries a border form as well
-/// as a hue: the offer's chalk outline and chevrons, the stock's hatched
-/// field, the burner's ember-edged hazard, the doorway's doormat stripes.
-#[allow(clippy::too_many_lines)]
+/// **A class is told by the KIND of mark it wears, never by stacking
+/// patterns.** The playtest found three striped things inside one square
+/// metre of the furnace — striped tape under striped tiles under ember
+/// edges — and read it, correctly, as noise. So the vocabulary is written
+/// down, and each class takes exactly one line of it:
+///
+/// | Class | Field | Mark | Reads as |
+/// | --- | --- | --- | --- |
+/// | `Plain` | none | none | ordinary deck — the ground the others are read against |
+/// | `Offer` | none: bare deck | a chalk line struck round the region | a bay taped out on the floor. Set yours inside the line; it is still yours |
+/// | `Stock` | the room's enamel, filled | a dark border band round the region | painted floor: what stands on the paint is the room's |
+/// | `Consume` | scorched plate | hazard tape round the region | a danger zone, taped at its edge the way tape is actually used |
+/// | `Threshold` | none: it IS the opening | the tread on the deck it stands on ([`treads`]) | traffic crosses here, and nothing berths |
+///
+/// Four rules hold it together:
+///
+/// - **Stripes belong to one class.** Hazard tape is `Consume`'s and
+///   nobody else's, because striped tape is the real-world idiom for
+///   *this will hurt you*, and a second claimant makes both meaningless.
+/// - **Marks ride a region's rim, not every cell.** A field is
+///   continuous across a whole region and the mark is drawn only where
+///   the region ends. Per-cell stamping is what turned the Guild's aft
+///   wall into bathroom tiling and the furnace into a striped box.
+/// - **Filled against hollow.** The two trading classes are told apart
+///   by whether the paint is there at all — the room's goods stand on
+///   the room's enamel, a proposal stands on bare deck inside a chalk
+///   line — so they read from any angle, at any distance, and under any
+///   lamp, which no pair of hues can promise.
+/// - **A mark never lands on a mark.** Field, mark, and tread are three
+///   rungs of the decal ladder (`rig::layer`), and within a rung nothing
+///   overlaps: a rim band shortens where a perpendicular one owns the
+///   corner.
 fn tiles(
     commands: &mut Commands,
     cube: &Handle<Mesh>,
@@ -1139,11 +1323,17 @@ fn tiles(
     let (cols, rows) = placed.kind.grid();
     // One material instance per class per room: paint is shared, and
     // nothing here changes brightness per frame.
-    let offer_field = glow::enamel(materials, palette::TRIM_GIVE);
+    //
+    // The fields are FLAT coats, and that is the one place this module
+    // steps outside "nothing ships unweathered" — deliberately. A field
+    // is drawn per cell, so a wear tile on it repeats once per cell and
+    // becomes exactly the stamped pattern this pass took out; the
+    // weathering lives on the slabs and backer plates behind the paint,
+    // where it can run across a whole wall without counting cells.
     let chalk = glow::etched(materials, palette::GLINT);
-    let stock_field = glow::enamel(materials, palette::TRIM_SHELF);
-    let hatch = glow::enamel(materials, palette::PLATE_SHADE);
-    let ember = glow::phosphor(materials, palette::EMBER, 0.9);
+    let border = glow::enamel(materials, palette::PLATE_SHADE);
+    let stock = glow::enamel(materials, palette::TRIM_SHELF);
+    let scorch = glow::enamel(materials, palette::SOOT);
     for (station, surface) in placed.charts {
         let normal = station.inward(&surface);
         let rot = station.face(&surface);
@@ -1161,32 +1351,20 @@ fn tiles(
                 let Some(tile) = placed.kind.tile_of(x, y) else {
                     continue;
                 };
-                let at = surface.to_world(mid);
-                let mut paint = |mat: &Handle<StandardMaterial>,
-                                 lift: f32,
-                                 offset: Vec2,
-                                 scale: Vec2,
-                                 spin: f32| {
-                    commands.spawn((
-                        Mesh3d(cube.clone()),
-                        MeshMaterial3d(mat.clone()),
-                        Transform::from_translation(
-                            at + normal * lift
-                                + rot
-                                    * Vec3::new(
-                                        offset.x * cell.w * su,
-                                        offset.y * cell.h * sv,
-                                        0.0,
-                                    ),
-                        )
-                        .with_rotation(rot * Quat::from_rotation_z(spin))
-                        .with_scale(Vec3::new(
-                            scale.x * cell.w * su,
-                            scale.y * cell.h * sv,
-                            crate::rig::layer::SKIN,
-                        )),
-                        tag,
-                    ));
+                let patch = Patch {
+                    cube,
+                    tag,
+                    at: surface.to_world(mid),
+                    normal,
+                    rot,
+                    w: cell.w * su,
+                    h: cell.h * sv,
+                };
+                let edges = rim(placed.kind, x, y, tile);
+                let mark = |mat, width| Mark {
+                    mat,
+                    width,
+                    lift: crate::rig::layer::MARK,
                 };
                 match tile {
                     // Ordinary deck: the contextual berth well, raised by
@@ -1196,128 +1374,70 @@ fn tiles(
                         commands.spawn((
                             Mesh3d(cube.clone()),
                             MeshMaterial3d(fade.mat.clone()),
-                            Transform::from_translation(at + normal * crate::rig::layer::TILE)
-                                .with_rotation(rot)
-                                .with_scale(Vec3::new(
-                                    (cell.w - 4.0) * su,
-                                    (cell.h - 4.0) * sv,
-                                    crate::rig::layer::SKIN,
-                                )),
+                            Transform::from_translation(
+                                patch.at + normal * crate::rig::layer::TILE,
+                            )
+                            .with_rotation(rot)
+                            .with_scale(Vec3::new(
+                                (cell.w - 4.0) * su,
+                                (cell.h - 4.0) * sv,
+                                crate::rig::layer::SKIN,
+                            )),
                             crate::rig::BerthTile,
                             tag,
                         ));
                     }
-                    // A chalked square in the room's own enamel, chevroned
-                    // the way a proposal travels: yours until a resolution
-                    // says otherwise.
-                    Tile::Offer => {
-                        paint(
-                            &offer_field,
-                            crate::rig::layer::TILE,
-                            Vec2::ZERO,
-                            Vec2::new(0.92, 0.92),
-                            0.0,
-                        );
-                        for edge in [-0.44_f32, 0.44] {
-                            paint(
-                                &chalk,
-                                crate::rig::layer::DOORMAT,
-                                Vec2::new(edge, 0.0),
-                                Vec2::new(0.07, 0.94),
-                                0.0,
-                            );
-                            paint(
-                                &chalk,
-                                crate::rig::layer::DOORMAT,
-                                Vec2::new(0.0, edge),
-                                Vec2::new(0.94, 0.07),
-                                0.0,
-                            );
-                        }
-                        for row in [-0.16_f32, 0.16] {
-                            for side in [-1.0_f32, 1.0] {
-                                paint(
-                                    &chalk,
-                                    crate::rig::layer::DOORMAT,
-                                    Vec2::new(side * 0.15, row),
-                                    Vec2::new(0.34, 0.08),
-                                    side * 0.6,
-                                );
-                            }
-                        }
-                    }
-                    // The room's enamel, filled and hatched like a ledger
-                    // column: these goods are the room's own.
+                    // Bare deck inside a chalk line: what stands here is
+                    // proposed, not surrendered, and the room has not
+                    // painted over it. The line is the whole mark.
+                    Tile::Offer => patch.rim_mark(commands, mark(&chalk, CHALK), edges),
+                    // The room's enamel, filled to the region's edge and
+                    // bordered there: these goods are the room's own.
                     Tile::Stock => {
-                        paint(
-                            &stock_field,
-                            crate::rig::layer::TILE,
-                            Vec2::ZERO,
-                            Vec2::new(0.96, 0.96),
-                            0.0,
-                        );
-                        for step in [-0.3_f32, 0.0, 0.3] {
-                            paint(
-                                &hatch,
-                                crate::rig::layer::DOORMAT,
-                                Vec2::new(step, 0.0),
-                                Vec2::new(0.10, 1.15),
-                                0.7,
-                            );
-                        }
+                        patch.field(commands, &stock);
+                        patch.rim_mark(commands, mark(&border, BAND), edges);
                     }
-                    // Hazard field, ember-edged: what lands here is
-                    // scheduled for destruction on the room's own beat.
+                    // Scorched plate, taped at the rim: what lands here
+                    // is scheduled for destruction on the room's own
+                    // beat, and the tape is where the danger begins —
+                    // which, in a room that is danger throughout, is its
+                    // cornices and its doorway.
                     Tile::Consume => {
-                        paint(
-                            &skin.hazard,
-                            crate::rig::layer::TILE,
-                            Vec2::ZERO,
-                            Vec2::new(0.94, 0.94),
-                            0.0,
-                        );
-                        for edge in [-0.42_f32, 0.42] {
-                            paint(
-                                &ember,
-                                crate::rig::layer::DOORMAT,
-                                Vec2::new(0.0, edge),
-                                Vec2::new(0.92, 0.09),
-                                0.0,
-                            );
-                        }
+                        patch.field(commands, &scorch);
+                        patch.rim_mark(commands, mark(&skin.hazard, BAND), edges);
                     }
                     // An aperture's own cells are the OPENING: a leaf
                     // hangs there when the port is shut and there is
                     // nothing but air when it is open, so painting them
                     // would stripe a doorway you can walk through. The
-                    // doormat that reads the threshold is laid on the
-                    // deck the door stands on instead ([`doormats`]) —
-                    // derived from the very same declaration.
+                    // reading that carries the threshold is the tread on
+                    // the deck the door stands on ([`treads`]) — derived
+                    // from the very same declaration.
                     Tile::Threshold => {}
                 }
             }
         }
     }
-    doormats(commands, cube, skin, placed, tag);
+    treads(commands, cube, skin, placed, tag);
 }
 
-/// The doormat: hazard stripes on the deck cells each of a room's doors
-/// stands on. The threshold rule's own reading, laid where a body can see
-/// it — the doorway stays clear because it is shared space, and the
-/// stripes say so from either side.
+/// The tread: what a doorway does to the deck it stands on.
 ///
-/// Paint only: those cells are ordinary berths, and cargo may stand on the
-/// stripes like anywhere else. But a doorway that reads as a doorway is
-/// worth the paint, and the way out to the fire is still where the
-/// stripes say it is. The cells come from the port declaration, so the
-/// mat can never be somewhere the door is not.
-fn doormats(
-    commands: &mut Commands,
-    cube: &Handle<Mesh>,
-    skin: &Skin,
-    placed: &Placed,
-    tag: InRoom,
-) {
+/// The threshold rule's own reading, laid where a body can see it. Every
+/// door gets a **studded plate** across its footprint and a **brass sill**
+/// along its jamb line, in both rooms, from the same port declaration the
+/// sim rules by — so the mat can never be somewhere the door is not.
+///
+/// It used to be hazard stripes, and that was the second thing in the
+/// game claiming the tape idiom while the burner claimed it too. A
+/// doorway is **traffic, not danger**: studded steel is what a freighter
+/// actually puts where feet cross, and the brass is the same radium
+/// paint every other fitting wears — so with the lights out the way
+/// through a room is still a line you can see.
+///
+/// Paint and plate only: those cells are ordinary berths, and cargo may
+/// stand on the tread like anywhere else.
+fn treads(commands: &mut Commands, cube: &Handle<Mesh>, skin: &Skin, placed: &Placed, tag: InRoom) {
     let Some(floor) = placed.chart(Station::BayFloor).copied() else {
         return;
     };
@@ -1328,29 +1448,51 @@ fn doormats(
         let Some(Port::Door { wall, offset }) = site.declared else {
             continue;
         };
+        // Which way the jamb lies from the cell, in net terms: a door on
+        // the aft wall is the deck's own -y edge, starboard its +x, and
+        // so on round the room. Read off the declaration, never assumed.
+        let jamb = match wall % 4 {
+            0 => 0,
+            1 => 3,
+            2 => 1,
+            _ => 2,
+        };
         for (i, j) in door_cells(placed.kind, wall, offset) {
             let cell = layout::cell_rect(placed.id, COURSES + i, COURSES + j);
             let mid = space_trucking::sim::Vec2::new(
                 cell.w.mul_add(0.5, cell.x),
                 cell.h.mul_add(0.5, cell.y),
             );
-            let at = floor.to_world(mid) + normal * crate::rig::layer::DOORMAT;
-            for stripe in [-0.28_f32, 0.0, 0.28] {
-                commands.spawn((
-                    Mesh3d(cube.clone()),
-                    MeshMaterial3d(skin.hazard.clone()),
-                    Transform::from_translation(
-                        at + rot * Vec3::new(0.0, stripe * cell.h * sv, 0.0),
-                    )
-                    .with_rotation(rot)
-                    .with_scale(Vec3::new(
-                        0.86 * cell.w * su,
-                        0.17 * cell.h * sv,
-                        crate::rig::layer::SKIN,
-                    )),
-                    tag,
-                ));
+            let patch = Patch {
+                cube,
+                tag,
+                at: floor.to_world(mid),
+                normal,
+                rot,
+                w: cell.w * su,
+                h: cell.h * sv,
+            };
+            for down in [-STUD_STEP, 0.0, STUD_STEP] {
+                for along in [-STUD_STEP, 0.0, STUD_STEP] {
+                    patch.paint(
+                        commands,
+                        &skin.rivet,
+                        crate::rig::layer::TREAD,
+                        Vec2::new(along, down),
+                        Vec2::splat(STUD),
+                    );
+                }
             }
+            patch.band(
+                commands,
+                Mark {
+                    mat: &skin.brass,
+                    width: SILL,
+                    lift: crate::rig::layer::TREAD,
+                },
+                jamb,
+                [false; 4],
+            );
         }
     }
 }
@@ -2591,6 +2733,88 @@ mod tests {
                 RIM_H < SINK,
                 "a rim that outstands its own recess is a lump"
             );
+        }
+    }
+
+    /// **A class's mark rides its region's rim, and stays inside its own
+    /// cell.** Both halves matter: the rim is what stops a class from
+    /// stamping itself into every cell (the Guild's aft wall, tiled like
+    /// a bathroom), and the containment is what stops one cell's mark
+    /// from lying across its neighbour's — the Stock hatching used to
+    /// overhang its cell by a fifth and land on the doorway's stripes at
+    /// the very same rung, which is the shimmer the owner reported.
+    #[test]
+    fn a_tile_mark_stays_on_its_own_rim_and_in_its_own_cell() {
+        for kind in space_trucking::sim::room::ROOM_KINDS {
+            let (cols, rows) = kind.grid();
+            for y in 0..rows {
+                for x in 0..cols {
+                    let Some(tile) = kind.tile_of(x, y) else {
+                        continue;
+                    };
+                    let edges = rim(kind, x, y, tile);
+                    for width in [BAND, CHALK, SILL] {
+                        for (side, &ends) in edges.iter().enumerate() {
+                            if !ends {
+                                continue;
+                            }
+                            let (offset, size) = band_extent(side, edges, width);
+                            for axis in 0..2 {
+                                let half = size[axis] * 0.5;
+                                assert!(
+                                    offset[axis].abs() + half <= 0.5 + 1e-6,
+                                    "{kind:?} ({x}, {y}) side {side} reaches \
+                                     {} past its own cell",
+                                    offset[axis].abs() + half - 0.5
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // **The rim is the whole economy**: a cell surrounded by its own
+        // class wears nothing at all. The furnace is the case that proves
+        // it — every cell of its net is `Consume`, so under the old
+        // per-cell stamping it wore a hazard tile and two ember bars a
+        // hundred and some times over, and now its middle is bare
+        // scorched plate with tape only at its cornices, its doorway, and
+        // the edges of its own skin.
+        let furnace = RoomKind::Burner;
+        let (cols, rows) = furnace.grid();
+        let bare = (0..rows)
+            .flat_map(|y| (0..cols).map(move |x| (x, y)))
+            .filter(|&(x, y)| {
+                furnace
+                    .tile_of(x, y)
+                    .is_some_and(|tile| !rim(furnace, x, y, tile).iter().any(|ends| *ends))
+            })
+            .count();
+        assert!(
+            bare >= 6,
+            "the furnace stamps its own middle: only {bare} cells go unmarked"
+        );
+    }
+
+    /// Two marks on one rung never share a plane: at a region's corner
+    /// the top and bottom bands run the full cell and the side bands
+    /// stand aside, so a corner is drawn once. Overlapping paint at one
+    /// rung is z-fighting with extra steps.
+    #[test]
+    fn two_bands_of_one_mark_never_overlap() {
+        for corner in [[true, false, true, false], [true, true, true, true]] {
+            let boxes: Vec<(Vec2, Vec2)> = (0..4)
+                .filter(|side| corner[*side])
+                .map(|side| band_extent(side, corner, BAND))
+                .collect();
+            for (i, a) in boxes.iter().enumerate() {
+                for b in &boxes[i + 1..] {
+                    let clear = (0..2).any(|axis| {
+                        (a.1[axis] + b.1[axis]).mul_add(-0.5, (a.0[axis] - b.0[axis]).abs()) > -1e-6
+                    });
+                    assert!(clear, "two bands of one mark overlap at {a:?} and {b:?}");
+                }
+            }
         }
     }
 

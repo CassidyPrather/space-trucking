@@ -438,13 +438,13 @@ in the same change:
 
 | Class | Reads as | Behavior |
 | --- | --- | --- |
-| `Plain` | ordinary deck, wall, ceiling | an ordinary berth; the default |
-| `Offer` | a chalked square in the room's own enamel | the fundamental colored tile. Player cargo berthed here is **proposed**, not surrendered: it stays the player's until a resolution says otherwise |
-| `Stock` | the room's enamel, filled | the room's own goods. Not player-owned; may not be carried out until a resolution grants them |
-| `Consume` | hazard chevrons | anything berthed here is scheduled for destruction on the room's own beat — the burner's hopper is the first and today's only instance |
-| `Threshold` | doormat striping | an aperture's footprint. Never a berth (see the threshold rule) |
+| `Plain` | bare deck, wall, ceiling — the ground the others are read against | an ordinary berth; the default |
+| `Offer` | bare deck inside a chalk line struck round the whole area | the fundamental colored tile. Player cargo berthed here is **proposed**, not surrendered: it stays the player's until a resolution says otherwise |
+| `Stock` | the room's enamel, filled, and bordered where the paint ends | the room's own goods. Not player-owned; may not be carried out until a resolution grants them |
+| `Consume` | scorched plate with hazard tape round its rim | anything berthed here is scheduled for destruction on the room's own beat — the burner's hopper is the first and today's only instance |
+| `Threshold` | a studded tread and a brass sill, on the deck the door stands on | an aperture's footprint. Never a berth (see the threshold rule) |
 
-Three laws over that table:
+Four laws over that table:
 
 - **The color is the behavior's own reading, never decoration.** The
   tile class is declared once by the room kind; the rules and the paint
@@ -456,9 +456,19 @@ Three laws over that table:
   berth's room and class. This is THE ownership rule and it must never
   be restated anywhere.
 - **No signal on hue alone** (ART_DIRECTION_3D.md): every class carries
-  a border form — chalk outline, filled field, chevrons, stripes — as
-  well as a hue. The per-POI agents vary the *look* of a class freely;
-  they may never vary its *behavior*.
+  a form as well as a hue. The per-POI agents vary the *look* of a class
+  freely; they may never vary its *behavior*.
+- **And no pattern on pattern.** The first cut of this table gave every
+  class a *stamp* and stacked them: hazard tiles on a hazard-striped
+  deck under ember edges, hatched enamel under a striped doormat. The
+  playtest read it as noise, correctly, and it is now forbidden — a
+  class is told by the **kind** of mark it wears (solid field, struck
+  line, edge banding, sparse studs), a mark is drawn on the **rim** of a
+  region rather than stamped into every cell of it, and **stripes belong
+  to `Consume` alone**, because hazard tape is the real-world idiom for
+  *this will hurt you* and a second claimant makes both meaningless. The
+  full vocabulary, and the three-rung decal ladder that keeps a field, a
+  mark, and a tread from sharing a plane, live at `cabin::room::tiles`.
 
 ### The threshold rule
 

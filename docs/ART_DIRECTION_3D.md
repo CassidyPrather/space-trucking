@@ -108,7 +108,7 @@ values are the 2D palette's, verbatim — retuning still happens in one
 place, and a purity test still fails the build on raw color constructors
 anywhere else in the crate. (Rooms the 2D console never had may add
 roles there, documented at the constant — the burner's `EMBER` firebox
-glow is the first.) Cargo keeps its identity hues; POIs keep their
+glow was the first, and its `SOOT` deck the second.) Cargo keeps its identity hues; POIs keep their
 enamel identities. What changed is interpretation: a role is
 now either a surface color or an emissive color, and *light itself is a
 palette instrument*:
@@ -130,6 +130,38 @@ palette instrument*:
   the jump is a sub-half-second `EERIE_BRIGHT` flash. Screens and lamps
   keep glowing in the dark — phosphor doesn't care about the room, which
   is exactly why a dimmed cabin feels wrong in the right way.
+- **A light is sized to the room that owns it.** There are no shadow
+  maps, so a lamp's `range` is the only wall it has: a source whose
+  reach exceeds its own room lights the neighbours *through the hull*,
+  and the lights-out economy (BAY.md — lamps are cargo, darkness is a
+  legal state) is then paid for by whoever happens to be docked. Two
+  sources are not the crew's own cargo, and both are held to it: a
+  **calling room's pendant** reaches its own far floor corner and a step
+  and dies before the middle of any riding room, and the **burner's
+  fire** — which is cargo, burning — reaches its own chamber and stops
+  at the doorway wall. Both carry `Dimmable` at the brightness they
+  actually burn, so neither can quietly opt out of the omen.
+
+## Colored tiles: form, not stacking
+
+The room grid's tile classes (ROOMS.md) are a signal system, and the
+rule that keeps them legible is the 2D "no hue alone" law with a second
+edge: **no pattern on pattern either.** A class is told by the *kind* of
+mark it wears — solid field, struck line, edge banding, sparse studs —
+at its own density and with its own edge treatment; **stripes belong to
+exactly one class** (hazard tape, `Consume`), because a striped mark on
+a striped ground on a striped deck is what the playtest called stripe
+soup; and a mark is drawn on a **region's rim**, never stamped into
+every cell, because per-cell stamping turns a painted bay into bathroom
+tiling. Each class must read against a bare deck and against a coated
+one, which is why the two trading classes are *filled against hollow*
+rather than two hues of the same fill.
+
+Anything flat drawn over a chart rides a **named rung** of the decal
+ladder (`rig::layer`), and one reading gets one rung: field, mark, and
+tread are three. A new reading adds a rung and a row in the ladder test,
+which fails the build; a new reading sharing a rung is a shimmer at
+every tile boundary, which fails only the eye.
 
 ## Motion
 

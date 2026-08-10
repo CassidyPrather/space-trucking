@@ -53,6 +53,13 @@ pub const AMBER: Color = hex(0xe8a33d);
 /// The burner's firebox: banked fire behind the hatch glass, feeding
 /// flares. Hotter than [`AMBER`], redder than any lamp.
 pub const EMBER: Color = hex(0xe0662a);
+/// Fire-blackened plate: the furnace's deck and walls, and any surface
+/// the game means as *scorched*. Warmer than [`PLATE`] on purpose — what
+/// blackened this was flame, not shadow — and near enough its value that
+/// a hazard field reads as burnt metal rather than as a hole in the
+/// floor. The furnace owns no lamp (its light is whatever the crew fed
+/// it), so this tone has to carry the room under starlight alone.
+pub const SOOT: Color = hex(0x36271d);
 /// Lever handles and hardware accents.
 pub const BRASS: Color = hex(0xb08d57);
 /// Ready/go lamps.

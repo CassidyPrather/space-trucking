@@ -4692,6 +4692,11 @@ mod tests {
     /// steps at least `layer::STEP` from its neighbours, and the step
     /// itself clears two skins of mesh. A new decal gets a named rung
     /// and a row here, or it shimmers like the playtest doormat did.
+    ///
+    /// **Every rung in `rig::layer` must appear below.** A rung declared
+    /// and left out of this list is a rung nobody is checking, so the
+    /// count is asserted too: adding one to the ladder without spacing
+    /// it fails the build rather than the eye.
     #[test]
     fn the_decal_ladder_never_z_fights() {
         use crate::rig::layer;
@@ -4701,13 +4706,16 @@ mod tests {
             // mapping plane. Its BACK is not a rung — it is the same
             // slab — and it answers to the hull check below instead.
             ("backer face", -layer::BACKER),
-            // The colored tiles' enamel fields ride TILE with the berth
-            // wells, and every class's border form rides DOORMAT with
-            // the threshold stripes: one rung per reading, room after
-            // room, because a room's tiles are the cabin's tiles one
-            // lane over.
+            // A colored tile carries up to three readings, and they get
+            // three rungs, room after room, because a room's tiles are
+            // the cabin's tiles one lane over: the class's FIELD under
+            // the berth wells, the class's own MARK on its region's rim,
+            // and the TREAD of any doorway crossing the same deck. All
+            // three landed on one square metre of the Guild's floor in
+            // the playtest, two of them sharing a rung, and shimmered.
             ("tile field / berth well", layer::TILE),
-            ("border form / doormat", layer::DOORMAT),
+            ("tile mark", layer::MARK),
+            ("threshold tread", layer::TREAD),
             ("laid", layer::LAID),
             ("rug pile top", LAID_LIFT + RUG_THICK),
             ("hint", layer::HINT),
@@ -4730,6 +4738,31 @@ mod tests {
                 "a ladder step must clear two skins of mesh"
             );
         }
+        // **Nothing is declared a rung and then left unchecked.** The
+        // ladder is read back out of its own source and counted against
+        // the list above, the way the palette reads the crate back for
+        // raw colors. The three constants that are not rungs — the
+        // backer's thickness, the step, and the skin limit — name
+        // themselves here, so a new rung has nowhere to hide.
+        let ladder = include_str!("rig.rs")
+            .split_once("pub mod layer {")
+            .and_then(|(_, rest)| rest.split_once("\n}"))
+            .expect("the decal ladder is a module in rig.rs")
+            .0;
+        let declared: Vec<&str> = ladder
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix("pub const "))
+            .filter_map(|line| line.split_once(':').map(|(name, _)| name))
+            .filter(|name| !matches!(*name, "BACKER_T" | "STEP" | "SKIN"))
+            .collect();
+        assert_eq!(
+            declared.len(),
+            // Every named rung, plus the rug's pile top, which is a
+            // height rather than a constant.
+            rungs.len() - 1,
+            "the ladder declares {declared:?} but only {} rungs are spaced",
+            rungs.len() - 1
+        );
         // **And the ladder stands clear of the hull it is painted on.**
         // A backer thick enough to reach the slab behind it is sliced at
         // that slab's own plane by the aperture punch, and the remainder

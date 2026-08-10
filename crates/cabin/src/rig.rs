@@ -98,6 +98,15 @@ pub const BAY_WALL_Z: f32 = 2.41;
 /// doormat is the defect class this retires. Flat paints on the ladder
 /// keep their meshes ≤ [`layer::SKIN`] thick so rungs, not luck, decide
 /// what draws over what.
+///
+/// **A reading gets a rung; a room does not get to share one.** The
+/// three readings a tile can carry — its class's field, its class's
+/// mark, and the tread of a doorway crossing it — are three rungs
+/// ([`layer::TILE`], [`layer::MARK`], [`layer::TREAD`]), because the
+/// playtest found all three landing on one square metre of the Guild's
+/// floor and shimmering there. Adding a fourth reading means adding a
+/// rung and naming it in the ladder test, which fails the build rather
+/// than the eye.
 pub mod layer {
     /// **The rung below the ladder: a backer plate's own face.**
     ///
@@ -114,26 +123,35 @@ pub mod layer {
     /// How thick a backer plate is. Kept under [`BACKER`] so the whole
     /// slab lives strictly between the chart and the hull.
     pub const BACKER_T: f32 = 0.002;
-    /// Berth socket wells, and the colored tiles' own enamel fields.
+    /// **The tile field**: berth socket wells, and the flat paint a
+    /// colored class lays over its whole region. A field is the ground
+    /// a mark is read against and never a pattern itself, which is why
+    /// it is the lowest rung a room paints on.
     pub const TILE: f32 = 0.002;
-    /// The pattern every colored tile carries over its field, because no
-    /// class may signal on hue alone: the doorway's doormat stripes, the
-    /// offer's chalk and chevrons, the stock's hatching, the burner's
-    /// ember edges.
-    pub const DOORMAT: f32 = 0.006;
+    /// **The tile mark**: the form a class carries so it never signals
+    /// on hue alone — the offer's chalk line, the stock's border band,
+    /// the burner's hazard tape. Marks are drawn on a region's own RIM,
+    /// not stamped per cell, so this rung stays sparse.
+    pub const MARK: f32 = 0.006;
+    /// **The threshold's tread**: the sill bar and stud plate laid on the
+    /// deck cells a doorway stands on. It rides over whatever field and
+    /// mark those cells already carry, because a doorway crosses a
+    /// room's paint rather than replacing it — the playtest's fighting
+    /// doormat was this reading sharing a rung with the stock's.
+    pub const TREAD: f32 = 0.010;
     /// Laid coverings' base; a rug's pile rises `RUG_THICK` above it.
-    pub const LAID: f32 = 0.010;
+    pub const LAID: f32 = 0.014;
     /// Placement hint quads.
-    pub const HINT: f32 = 0.026;
+    pub const HINT: f32 = 0.030;
     /// The hint's refusal slash.
-    pub const SLASH: f32 = 0.030;
+    pub const SLASH: f32 = 0.034;
     /// The violation flash frame.
-    pub const FLASH: f32 = 0.034;
+    pub const FLASH: f32 = 0.038;
     /// The violation glyph bars.
-    pub const GLYPH: f32 = 0.038;
+    pub const GLYPH: f32 = 0.042;
     /// The composed offer's claim frame — a standing reading rather than
     /// a flash, so it sits over everything else on its cell.
-    pub const CLAIM: f32 = 0.042;
+    pub const CLAIM: f32 = 0.046;
     /// Minimum step between occupied rungs that stays fight-free at
     /// room distances in the depth buffer. Consumed by the ladder test
     /// (`pieces::tests`), which is its whole job.
@@ -543,7 +561,8 @@ pub struct Skin {
     pub plate: Handle<StandardMaterial>,
     /// Desk-class metal: brushed, scuffed where hands and crates live.
     pub desk: Handle<StandardMaterial>,
-    /// Painted hazard stripes for accent strips.
+    /// Painted hazard stripes for accent strips — and, in the tile
+    /// vocabulary, the one class allowed to wear them (`room::tiles`).
     pub hazard: Handle<StandardMaterial>,
     pub plate_shade: Handle<StandardMaterial>,
     pub socket: Handle<StandardMaterial>,

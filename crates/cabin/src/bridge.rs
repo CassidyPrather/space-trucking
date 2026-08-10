@@ -16,6 +16,7 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use space_trucking::replay::Recording;
+use space_trucking::sim::room::{CABIN, RoomId};
 use space_trucking::sim::{Cue, InputFrame, Sim, Vec2};
 
 /// Seconds between wall-clock autosaves; cue-driven saves come sooner.
@@ -76,6 +77,34 @@ pub struct FrameInput {
     pub icon_pause: bool,
     pub icon_warp: bool,
     pub icon_mute: bool,
+    /// **Which room the body stands in**, derived from the camera by
+    /// `room::occupy` (docs/ROOMS.md, "The one new input field"). The
+    /// gates read this and nothing else about where anybody stands.
+    pub occupied: RoomId,
+    /// A detach asked for this frame — the door's own amber latch was
+    /// clicked. The sim's gangway gates answer; a refusal is a cue.
+    pub detach: Option<RoomId>,
+}
+
+impl Default for FrameInput {
+    fn default() -> Self {
+        Self {
+            pointer: POINTER_PARKED,
+            press: false,
+            held: false,
+            release: false,
+            shift: false,
+            key_pause: false,
+            key_warp: false,
+            key_mute: false,
+            key_reseed: false,
+            icon_pause: false,
+            icon_warp: false,
+            icon_mute: false,
+            occupied: CABIN,
+            detach: None,
+        }
+    }
 }
 
 /// What one shell frame concluded, for the systems downstream.
@@ -227,12 +256,16 @@ impl Bridge {
             shift: input.shift,
             night: self.night,
             // The sim learns rooms, not positions (docs/ROOMS.md). The
-            // cabin's body is always in the cabin until stage two lets
-            // it walk through a doorway; the gates read this and nothing
-            // else about where anybody stands.
-            occupied: space_trucking::sim::room::CABIN,
+            // body walks through doorways now, so this is the room whose
+            // box the eye stands in — `room::occupy`'s answer, and the
+            // only thing the gates learn about where anybody is.
+            occupied: input.occupied,
             attach: None,
-            detach: None,
+            // The detach gesture is the door's own amber latch, and it
+            // rides the input schedule exactly like a pointer press: the
+            // sim decides, and refuses with a cue if the seam would
+            // strand something.
+            detach: input.detach,
             reseed: input.key_reseed.then(fresh_seed),
         }
     }
@@ -386,6 +419,8 @@ mod tests {
             icon_pause: true,
             icon_warp: false,
             icon_mute: false,
+            occupied: CABIN,
+            detach: None,
         });
         assert!(frame.press && frame.held && !frame.release && frame.shift);
         // Icon press folds into the pause toggle, same as the 2D shell.
@@ -435,6 +470,133 @@ mod tests {
         assert!(parse_console_save("{\"local\":{}}").is_none());
     }
 
+    /// A bare shell around a sim, for the gate tests below.
+    fn shell(sim: Sim) -> Bridge {
+        Bridge {
+            recording: Recording::new(sim.save_string()),
+            sim,
+            dev: false,
+            night: false,
+            last_save: unix_now(),
+            last_frame: unix_now(),
+            clock_check: SAVE_EVERY,
+            arrived_while_away: false,
+            sandbox: false,
+        }
+    }
+
+    /// **The occupied-room field, end to end.** The cabin derives which
+    /// room the body stands in from the camera (`room::occupy`), hands it
+    /// over as one dense id, and the gangway law does the rest: standing
+    /// in the station's own trade room, the launch lever refuses, because
+    /// casting off would take the ship and leave the body behind. Walk
+    /// back aboard and the very same pull flies.
+    #[test]
+    fn the_launch_gate_reads_the_room_the_body_stands_in() {
+        use space_trucking::sim::room::RoomKind;
+        use space_trucking::sim::{ShipState, layout};
+
+        let sim = Sim::new(4);
+        let trade = sim
+            .rooms()
+            .find(RoomKind::Trade)
+            .expect("the Guild's room is alongside at the dock");
+        assert_ne!(trade, CABIN);
+        let mut bridge = shell(sim);
+        let quiet = FrameInput::default();
+        let lever = layout::LAUNCH_LEVER;
+        let pull = |occupied| FrameInput {
+            pointer: Vec2::new(lever.w.mul_add(0.5, lever.x), lever.h.mul_add(0.5, lever.y)),
+            press: true,
+            held: true,
+            occupied,
+            ..quiet
+        };
+
+        // Arm a course first, so the only thing left to refuse is us.
+        let jupiter: space_trucking::sim::map::PoiId = 3;
+        bridge.frame(
+            0.02,
+            &FrameInput {
+                pointer: bridge.sim.poi_pos(jupiter),
+                press: true,
+                held: true,
+                ..quiet
+            },
+        );
+        assert_eq!(bridge.sim.ship().selected, Some(jupiter));
+
+        // Standing in the trade room: refused, and nothing is lost to the
+        // lever — the course stays armed.
+        bridge.frame(0.02, &pull(trade));
+        assert!(
+            matches!(bridge.sim.ship().state, ShipState::Docked(_)),
+            "the lever cast off with the body still ashore"
+        );
+        assert_eq!(bridge.sim.ship().selected, Some(jupiter));
+
+        // Back aboard: the same pull flies.
+        bridge.frame(0.02, &pull(CABIN));
+        assert!(
+            matches!(bridge.sim.ship().state, ShipState::Traveling { .. }),
+            "the lever refused a legal launch: {:?}",
+            bridge.sim.ship().state
+        );
+    }
+
+    /// **The detach gesture, end to end.** The door's amber latch rides
+    /// the input schedule like any other input; the sim's gangway gates
+    /// answer it. Ask from inside the room and it refuses by name; ask
+    /// from the cabin, with nothing of yours in there, and the seam parts.
+    #[test]
+    fn the_latch_asks_and_the_gangway_law_answers() {
+        use space_trucking::sim::room::RoomKind;
+        use space_trucking::sim::{Cue, Refusal};
+
+        let sim = Sim::new(4);
+        let trade = sim.rooms().find(RoomKind::Trade).expect("alongside");
+        let mut bridge = shell(sim);
+
+        // From inside: a seam that could strand you refuses to part.
+        bridge.frame(
+            0.02,
+            &FrameInput {
+                occupied: trade,
+                detach: Some(trade),
+                ..FrameInput::default()
+            },
+        );
+        assert!(
+            bridge.sim.cues().iter().any(|cue| matches!(
+                cue,
+                Cue::Refit {
+                    refusal: Refusal::Aboard
+                }
+            )),
+            "the latch parted a room with a body in it"
+        );
+        assert!(bridge.sim.rooms().get(trade).is_some());
+
+        // From the cabin: the room goes, and its own goods go with it.
+        bridge.frame(
+            0.02,
+            &FrameInput {
+                occupied: CABIN,
+                detach: Some(trade),
+                ..FrameInput::default()
+            },
+        );
+        assert!(
+            bridge
+                .sim
+                .cues()
+                .iter()
+                .any(|cue| matches!(cue, Cue::Parted)),
+            "the latch failed to part a room it was allowed to"
+        );
+        assert!(bridge.sim.rooms().get(trade).is_none());
+    }
+
     /// The whole point of the cabin: a synthetic pointer, pressed where
     /// the surface mapper would put it, flies the ship exactly like a 2D
     /// mouse. Select Jupiter on the tank, pull the launch lever, travel.
@@ -467,6 +629,8 @@ mod tests {
             icon_pause: false,
             icon_warp: false,
             icon_mute: false,
+            occupied: CABIN,
+            detach: None,
         };
 
         // Press on Jupiter's live tank position: the sim arms the course.

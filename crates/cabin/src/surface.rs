@@ -27,6 +27,7 @@ use space_trucking::sim::Vec2 as SimVec2;
 use space_trucking::sim::layout::Rect as SimRect;
 
 use crate::pieces::Riding;
+use crate::room::InRoom;
 
 /// Which mapped surface (or view system) is being talked about.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -41,21 +42,28 @@ pub enum Station {
     /// `layout::LAUNCH_LEVER`, carried by the `LaunchLever` piece so
     /// the pull gesture never learns the handle moved.
     Lever,
-    /// The room net's aft wall chart (docs/BAY.md, "The room grid").
+    /// A room net's aft wall chart (docs/BAY.md, "The room grid").
+    ///
+    /// The six chart roles belong to the NET, not to the cabin: every
+    /// attached room folds its own box the same way (`crate::room`), so
+    /// several of each stand at once and each carries a `room::InRoom`
+    /// saying whose it is. Nothing looks a chart up by station alone.
     BayWall,
-    /// The net's floor chart — the walkable 8×7 deck.
+    /// The net's floor chart — the room's walkable deck.
     BayFloor,
     /// The net's port wall chart.
     BayPort,
-    /// The net's starboard wall chart (the burner doorway punches it).
+    /// The net's starboard wall chart.
     BayStarboard,
-    /// The net's front wall chart (the window punches it).
+    /// The net's front wall chart.
     BayFront,
     /// The net's ceiling chart.
     BayCeiling,
-    /// One burner berth tile — a single cell of the furnace room's own
-    /// deck. Always live: the room is a room, with nothing to share.
-    Airlock,
+    /// A room's handshake fixture: the one click-functional thing set
+    /// into a room's own fabric (docs/ROOMS.md, beat five). Its face is
+    /// bound to its declared cell and stands proud of the chart behind
+    /// it, so the crosshair meets the brass rather than the wall.
+    Handshake,
     /// A rig's own face, bound to that piece's own rect and riding the
     /// pose the rig actually took — the yaw the backing rule spun it
     /// by, the roll the upright rule rolled it by, all of it. The
@@ -75,8 +83,8 @@ pub enum Station {
 }
 
 impl Station {
-    /// Whether the roaming crosshair works this surface — the net's six
-    /// charts, the burner's berth tiles, and the standing rigs' own
+    /// Whether the roaming crosshair works this surface — every room's
+    /// six charts, the handshake fixtures, and the standing rigs' own
     /// faces; the focusable stations need a focus pose instead. For a
     /// piece-riding surface this is also *which regime it answers in*:
     /// cargo is worked from roam, panels from focus, and neither wants
@@ -91,7 +99,7 @@ impl Station {
                 | Self::BayStarboard
                 | Self::BayFront
                 | Self::BayCeiling
-                | Self::Airlock
+                | Self::Handshake
                 | Self::Standing
         )
     }
@@ -287,7 +295,7 @@ impl Default for VirtualPointer {
 pub fn track_pointer(
     window: Single<&Window, With<bevy::window::PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<crate::rig::CabinCamera>>,
-    surfaces: Query<(&Station, &SimSurface, Option<&Riding>)>,
+    surfaces: Query<(&Station, &SimSurface, Option<&Riding>, Option<&InRoom>)>,
     rig: Res<crate::rig::CameraRig>,
     mut pointer: ResMut<VirtualPointer>,
 ) {
@@ -324,7 +332,7 @@ pub fn track_pointer(
         return;
     };
     let mut nearest = f32::INFINITY;
-    for (station, surface, riding) in &surfaces {
+    for (station, surface, riding, in_room) in &surfaces {
         // A surface that rides a piece answers in exactly ONE regime,
         // and `roamable` is which:
         //
@@ -349,9 +357,10 @@ pub fn track_pointer(
         {
             // The net's holes are holes, and so are its doorways: a
             // chart hit on a cell nothing can berth on is a miss, and the
-            // ray carries on to whatever lies beyond — the hopper tiles
-            // through the doorway, space through the glass.
-            if station.chart_flipped() && !cabin_cell(sim) {
+            // ray carries on to whatever lies beyond — the room across
+            // the threshold, space through the glass. Which cells those
+            // are is the hit room's OWN net's answer, never the cabin's.
+            if station.chart_flipped() && !in_room.is_some_and(|room| chart_cell(*room, sim)) {
                 continue;
             }
             // While roaming, the focusable stations are opaque but not
@@ -374,14 +383,13 @@ pub fn track_pointer(
     }
 }
 
-/// Whether `sim` names a cabin cell a piece could actually berth on: a
-/// real cell of the cabin's net, and not a doorway's threshold (which
-/// belongs to two rooms and holds nothing).
-fn cabin_cell(sim: SimVec2) -> bool {
-    use space_trucking::sim::room::{CABIN, RoomKind, Tile};
-    space_trucking::sim::layout::cell_at(sim).is_some_and(|(room, x, y)| {
-        room == CABIN && !matches!(RoomKind::Cabin.tile_of(x, y), None | Some(Tile::Threshold))
-    })
+/// Whether `sim` names a cell of `chart`'s own room that a piece could
+/// actually berth on: a real cell of that room's net, in that room's own
+/// lane, and not a doorway's threshold (which belongs to two rooms and
+/// holds nothing).
+fn chart_cell(chart: InRoom, sim: SimVec2) -> bool {
+    space_trucking::sim::layout::cell_at(sim)
+        .is_some_and(|(room, x, y)| room == chart.room && chart.berthable(x, y))
 }
 
 #[cfg(test)]

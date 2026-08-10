@@ -37,8 +37,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 use space_trucking::sim::cargo::CABINET_SLOTS;
 use space_trucking::sim::layout::{self, Rect};
-use space_trucking::sim::room::Surf;
-use space_trucking::sim::room::{CABIN, RoomKind};
+use space_trucking::sim::room::{CABIN, RoomId};
 #[allow(unused_imports)]
 use space_trucking::sim::{};
 use space_trucking::sim::{
@@ -85,7 +84,7 @@ const XRAY_GLOW: f32 = 0.35;
 /// Fraction of its cells a bay rig fills. Roomier than the desk's [`FIT`]:
 /// furniture nearly fills its berth — a couch reads ~1.06 world units
 /// wide over its two 0.55 cells.
-const BAY_FIT: f32 = 0.96;
+pub const BAY_FIT: f32 = 0.96;
 
 /// A stowed piece's scale relative to its host cabinet's: shrunk until
 /// the widest 1×1 rig (~34 sim units across) reads ~0.18 world units —
@@ -317,9 +316,11 @@ struct Pulse {
     phase: f32,
 }
 
-/// One hold-cell hint quad, with its refusal slash alongside.
+/// One hold-cell hint quad, with its refusal slash alongside. Every
+/// attached room gets a set, spawned and retired with the room.
 #[derive(Component)]
 struct HintCell {
+    room: RoomId,
     x: u8,
     y: u8,
     slash: Entity,
@@ -454,8 +455,8 @@ struct CoatGlow {
 /// phosphor, the one violation-flash material every frame bar burns
 /// through, and the glyph pool's ink.
 #[derive(Resource)]
-struct SharedBits {
-    slash: Handle<StandardMaterial>,
+pub struct SharedBits {
+    pub slash: Handle<StandardMaterial>,
     flash: Handle<StandardMaterial>,
     glyph: Handle<StandardMaterial>,
 }
@@ -470,31 +471,50 @@ fn surface_of(surfaces: &Query<(&Station, &SimSurface)>, want: Station) -> Optio
         .map(|(_, surface)| *surface)
 }
 
-/// The net chart a sim point reads through, as a cabin station — the
-/// old wall-band/deck-strip pair generalized to the room net's six
-/// charts. `None` off the net or on a hole.
-fn chart_station(sim: SimVec2) -> Option<Station> {
-    let (room, x, y) = layout::cell_at(sim)?;
-    if room != CABIN {
-        return None;
-    }
-    Some(match RoomKind::Cabin.surface_of(x, y)? {
-        Surf::Aft => Station::BayWall,
-        Surf::Floor => Station::BayFloor,
-        Surf::Port => Station::BayPort,
-        Surf::Starboard => Station::BayStarboard,
-        Surf::Front => Station::BayFront,
-        Surf::Ceiling => Station::BayCeiling,
-    })
+/// Which room's lane a chart's rect lies in. Lanes are fixed by id and
+/// never overlap (docs/ROOMS.md, "Room grids and colored tiles"), so a
+/// chart's own rect says whose room it belongs to — which is why nothing
+/// in here has to be told, or to guess.
+fn chart_room(surface: &SimSurface) -> Option<RoomId> {
+    layout::cell_at(SimVec2::new(surface.rect.x + 1.0, surface.rect.y + 1.0))
+        .map(|(room, _, _)| room)
 }
 
-/// [`chart_station`] with the mapped surface the rig spawned for it.
+/// The net chart a sim point reads through, whichever room's it is. The
+/// old wall-band/deck-strip pair generalized first to the cabin's six
+/// charts and now to every attached room's: lanes are disjoint, so the
+/// rect that CONTAINS the point is the only possible answer. `None` off
+/// every net.
 fn chart_of(
     surfaces: &Query<(&Station, &SimSurface)>,
     sim: SimVec2,
 ) -> Option<(Station, SimSurface)> {
-    let station = chart_station(sim)?;
-    Some((station, surface_of(surfaces, station)?))
+    surfaces
+        .iter()
+        .find(|(station, surface)| station.chart_flipped() && surface.rect.contains(sim))
+        .map(|(station, surface)| (*station, *surface))
+}
+
+/// One named chart of one named room.
+fn room_chart(
+    surfaces: &Query<(&Station, &SimSurface)>,
+    room: RoomId,
+    want: Station,
+) -> Option<SimSurface> {
+    surfaces
+        .iter()
+        .find(|(station, surface)| {
+            let mine = chart_room(surface) == Some(room);
+            **station == want && mine
+        })
+        .map(|(_, surface)| *surface)
+}
+
+/// The aft chart of the same room as `surface` — the frame the backing
+/// rule reads "room-forward" from, and the one thing a rig needs beyond
+/// its own chart.
+fn aft_for(surfaces: &Query<(&Station, &SimSurface)>, surface: &SimSurface) -> Option<SimSurface> {
+    room_chart(surfaces, chart_room(surface)?, Station::BayWall)
 }
 
 /// Where a hold footprint (its `layout::piece_rect`) sits in the room,
@@ -506,7 +526,7 @@ fn chart_of(
 /// surface scales, so retuning `rig::BAY_CELL` re-scales every rig.
 fn net_site(surfaces: &Query<(&Station, &SimSurface)>, rect: Rect) -> Option<(Vec3, Quat, Vec3)> {
     let (station, surface) = chart_of(surfaces, rect_center(rect))?;
-    let aft = surface_of(surfaces, Station::BayWall)?;
+    let aft = aft_for(surfaces, &surface)?;
     Some(site_on(station, &surface, &aft, rect))
 }
 
@@ -521,25 +541,24 @@ fn net_site(surfaces: &Query<(&Station, &SimSurface)>, rect: Rect) -> Option<(Ve
 /// stable, and the always-compatible flips first.
 fn floor_facing(surface: &SimSurface, aft: &SimSurface, rect: Rect) -> Quat {
     let base = Station::BayWall.face(aft);
-    let (fx, fy, fw, fh) = RoomKind::Cabin.floor_rect();
-    // Clamped non-negative before the cast: rects live on the net.
-    #[allow(clippy::cast_sign_loss)]
-    let cell = |units: f32| (units / layout::CELL).round().max(0.0) as u8;
-    let cx = cell(rect.x - layout::GRID_ORIGIN.x);
-    let cy = cell(rect.y - layout::GRID_ORIGIN.y);
-    let cw = cell(rect.w).max(1);
-    let ch = cell(rect.h).max(1);
+    // The floor chart's OWN rect is the floor rect — of whichever room's
+    // deck this is. Reading the seams off it rather than off a named room
+    // is what lets the same rule stand a couch up in the cabin, in a
+    // derelict's hold, and in a station's trade room.
+    let plan = surface.rect;
+    let seam = layout::CELL * 0.5;
+    let one_column = (rect.w - layout::CELL).abs() < seam;
     // Sim axes on the floor chart, in world: `u` port -> starboard,
-    // `v` aft -> front (the floor's y3 row lies at the aft seam).
+    // `v` aft -> front (the floor's aft row lies at the aft seam).
     let u = surface.half_u.normalize();
     let v = surface.half_v.normalize();
-    let want = if cy == fy {
+    let want = if (rect.y - plan.y).abs() < seam {
         v
-    } else if cy + ch == fy + fh {
+    } else if ((rect.y + rect.h) - (plan.y + plan.h)).abs() < seam {
         -v
-    } else if cx == fx && cw == 1 {
+    } else if (rect.x - plan.x).abs() < seam && one_column {
         u
-    } else if cx + cw == fx + fw && cw == 1 {
+    } else if ((rect.x + rect.w) - (plan.x + plan.w)).abs() < seam && one_column {
         -u
     } else {
         v
@@ -664,6 +683,24 @@ fn net_laid(surfaces: &Query<(&Station, &SimSurface)>, rect: Rect) -> Option<(Ve
     Some(laid_on(station, &surface, rect))
 }
 
+/// The chart a sim point reads through, among a plain list of them —
+/// [`chart_of`] for callers holding a snapshot rather than a query.
+fn chart_at(charts: &[(Station, SimSurface)], sim: SimVec2) -> Option<(Station, SimSurface)> {
+    charts
+        .iter()
+        .copied()
+        .find(|(station, surface)| station.chart_flipped() && surface.rect.contains(sim))
+}
+
+/// The aft chart of `surface`'s own room, among a plain list.
+fn aft_in(charts: &[(Station, SimSurface)], surface: &SimSurface) -> Option<SimSurface> {
+    let room = chart_room(surface)?;
+    charts
+        .iter()
+        .find(|(station, other)| *station == Station::BayWall && chart_room(other) == Some(room))
+        .map(|(_, other)| *other)
+}
+
 /// [`net_laid`]'s pure core, for a known chart — shared with the unit
 /// tests. A coat takes the upright rule like any other thing drawn on a
 /// wall: paint has a top, and wallpaper will have a pattern. The floor
@@ -679,19 +716,6 @@ fn laid_on(station: Station, surface: &SimSurface, rect: Rect) -> (Vec3, Quat, V
     )
 }
 
-/// Where a rail piece stands: its hopper tile's centre at bay scale,
-/// facing the doorway, up on its own feet — staged for the fire, not
-/// shelved. One geometry, read by the berth and by the pick face, so a
-/// staged crate is grabbed exactly where it is drawn.
-fn rail_site(floor: &SimSurface, kind: Kind, slot: u8) -> (Vec3, Quat, Vec3) {
-    let (pos, rot) = crate::airlock::site(slot);
-    let s = floor.scale_u().min(floor.scale_v());
-    let scale = Vec3::splat(s) * BAY_FIT;
-    let (_, h) = kind.cells();
-    let lift = f32::from(h) * layout::CELL * 0.5 * scale.y;
-    (pos + Vec3::Y * lift, rot, scale)
-}
-
 /// Cubby anchor centres in the cabinet rig's local space, sim units.
 /// Slot order matches `layout::cubby_rect`: row-major from the top-left
 /// facing the open front — local +X is sim +x, local +Y is up, so slot 0
@@ -703,37 +727,30 @@ fn cubby_anchor(slot: u8) -> Vec3 {
     Vec3::new(sx * layout::CELL * 0.22, sy * layout::CELL * 0.47, 3.4)
 }
 
-/// The berth transform for a piece: the bay for hold cargo, flat into
-/// the bay surface for laid dressings, a cubby anchor inside the host's
-/// standing rig for stowed cargo, the desk mapping for everything on
-/// the counter. `None` only for a stow whose
-/// cabinet is missing — impossible by the sim's rules; the caller hides
-/// the rig rather than guess.
+/// The berth transform for a piece: its own room's net for hold cargo,
+/// flat into that net for laid dressings, a cubby anchor inside the
+/// host's standing rig for stowed cargo. `None` only where the room is
+/// not drawn — a stow whose cabinet is missing, or a lane no chart
+/// stands in yet; the caller hides the rig rather than guess.
+///
+/// Every attached room is drawn now, so a crate on a station's offer
+/// band, a couch in a derelict's hold, and fuel on the furnace's deck
+/// all come through this one path — the same rigs, the same rules, one
+/// room over.
 fn berth_site(
     pieces: &[Piece],
     piece: &Piece,
     surfaces: &Query<(&Station, &SimSurface)>,
 ) -> Option<(Vec3, Quat, Vec3)> {
     match piece.loc {
-        Loc::Hold { room: CABIN, .. } => net_site(surfaces, layout::piece_rect(pieces, piece)),
-        Loc::Laid { room: CABIN, .. } => net_laid(surfaces, layout::piece_rect(pieces, piece)),
-        // The furnace room's own deck, through the annex's window onto
-        // it. Everything else alongside is a room stage two draws.
-        Loc::Hold { room, x, y } if room == crate::airlock::BURNER_ROOM => {
-            let slot = crate::airlock::hopper_slot(x, y)?;
-            Some(rail_site(
-                &surface_of(surfaces, Station::BayFloor)?,
-                piece.kind,
-                slot,
-            ))
-        }
-        Loc::Hold { .. } | Loc::Laid { .. } => None,
+        Loc::Hold { .. } => net_site(surfaces, layout::piece_rect(pieces, piece)),
+        Loc::Laid { .. } => net_laid(surfaces, layout::piece_rect(pieces, piece)),
         Loc::Stow { cabinet, slot } => {
-            // An occupied cabinet cannot leave the hold, so the host is a
+            // An occupied cabinet cannot leave its room, so the host is a
             // standing floor rig whenever this berth exists at all.
-            let host = pieces.iter().find(|other| {
-                other.id == cabinet && matches!(other.loc, Loc::Hold { room: CABIN, .. })
-            })?;
+            let host = pieces
+                .iter()
+                .find(|other| other.id == cabinet && matches!(other.loc, Loc::Hold { .. }))?;
             let (pos, rot, scale) = net_site(surfaces, layout::piece_rect(pieces, host))?;
             Some((
                 pos + rot * (cubby_anchor(slot) * scale),
@@ -772,10 +789,6 @@ fn hover_rot(
     kind: Kind,
     sim: SimVec2,
 ) -> Option<Quat> {
-    if matches!(station, Station::Airlock) {
-        let (_, x, y) = layout::cell_at(sim)?;
-        return crate::airlock::hopper_slot(x, y).map(|slot| crate::airlock::site(slot).1);
-    }
     let rect = aimed_rect(kind, sim)?;
     Some(site_on(station, surface, aft?, rect).1)
 }
@@ -852,14 +865,6 @@ fn face_plane(kind: Kind) -> f32 {
     instrument(kind).map_or(WALL_FACE_PLANE, |mount| mount.plane)
 }
 
-/// The chart tagged `want` among a plain list of them.
-fn chart_in(charts: &[(Station, SimSurface)], want: Station) -> Option<SimSurface> {
-    charts
-        .iter()
-        .find(|(tag, _)| *tag == want)
-        .map(|(_, surface)| *surface)
-}
-
 /// Where a berthed instrument's station hangs, from its hold cells
 /// alone: the piece's BERTH pose — never the eased tween, since a
 /// station that lagged its own housing would hand the sim stale
@@ -872,9 +877,8 @@ pub fn instrument_surface(
     rect: Rect,
 ) -> Option<(Station, SimSurface)> {
     let mount = instrument(kind)?;
-    let station = chart_station(rect_center(rect))?;
-    let surface = chart_in(charts, station)?;
-    let aft = chart_in(charts, Station::BayWall)?;
+    let (station, surface) = chart_at(charts, rect_center(rect))?;
+    let aft = aft_in(charts, &surface)?;
     Some((
         mount.station,
         ride_surface(&mount, kind, site_on(station, &surface, &aft, rect)),
@@ -906,9 +910,8 @@ fn standing_surface(
     kind: Kind,
     rect: Rect,
 ) -> Option<SimSurface> {
-    let station = chart_station(rect_center(rect))?;
-    let surface = chart_in(charts, station)?;
-    let aft = chart_in(charts, Station::BayWall)?;
+    let (station, surface) = chart_at(charts, rect_center(rect))?;
+    let aft = aft_in(charts, &surface)?;
     let site = site_on(station, &surface, &aft, rect);
     match station {
         Station::BayFloor | Station::BayCeiling => Some(standing_face(kind, rect, 0.0, site)),
@@ -945,32 +948,18 @@ fn ride_pieces(
             continue;
         }
         let rect = layout::piece_rect(sim.pieces(), piece);
-        match piece.loc {
-            Loc::Hold { room: CABIN, .. } => {
-                if let Some((station, surface)) = instrument_surface(&charts, piece.kind, rect) {
-                    live.push((piece.id, station, surface));
-                }
-                if let Some(face) = standing_surface(&charts, piece.kind, rect) {
-                    live.push((piece.id, Station::Standing, face));
-                }
+        // Whichever room the berth is in: an instrument carries its
+        // station wherever it hangs, and a standing rig carries its own
+        // pick face wherever it stands. A crate staged on the furnace's
+        // deck is floor cargo one room over, and is grabbed by its body
+        // for exactly the reason floor cargo always was.
+        if matches!(piece.loc, Loc::Hold { .. }) {
+            if let Some((station, surface)) = instrument_surface(&charts, piece.kind, rect) {
+                live.push((piece.id, station, surface));
             }
-            // Staged for the fire: a hopper rig stands on its furnace-room
-            // tile exactly as floor cargo stands on the deck, and is
-            // grabbed by its body for the same reason.
-            Loc::Hold { room, x, y } if room == crate::airlock::BURNER_ROOM => {
-                if let (Some(slot), Some(floor)) = (
-                    crate::airlock::hopper_slot(x, y),
-                    chart_in(&charts, Station::BayFloor),
-                ) {
-                    let site = rail_site(&floor, piece.kind, slot);
-                    live.push((
-                        piece.id,
-                        Station::Standing,
-                        standing_face(piece.kind, rect, 0.0, site),
-                    ));
-                }
+            if let Some(face) = standing_surface(&charts, piece.kind, rect) {
+                live.push((piece.id, Station::Standing, face));
             }
-            _ => {}
         }
     }
     // Matched by piece AND station: one piece may carry both a station
@@ -1023,67 +1012,23 @@ fn ico(radius: f32) -> Mesh {
 
 // ----------------------------------------------------------------- overlays --
 
-/// Pre-spawn everything that waits dark for a sim state to light it: a
-/// hint quad per cabin cell with its refusal slash, the
+/// Pre-spawn everything that waits dark for a sim state to light it: the
 /// violation frame bars (four per bay surface — a refused footprint may
-/// straddle the fold), and the glyph bar pool.
+/// straddle the fold), and the glyph bar pool. The per-cell hints belong
+/// to their rooms and are spawned with them ([`hint_cells`]).
 fn spawn_overlays(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     skin: Res<Skin>,
-    surfaces: Query<(&Station, &SimSurface)>,
 ) {
     let slash_mat = glow::phosphor(&mut materials, palette::LAMP_NO, 3.0);
     let flash_mat = glow::phosphor(&mut materials, palette::LAMP_NO, 0.0);
     let glyph_mat = glow::phosphor(&mut materials, palette::GLINT, 0.0);
     commands.insert_resource(SharedBits {
-        slash: slash_mat.clone(),
+        slash: slash_mat,
         flash: flash_mat.clone(),
         glyph: glyph_mat.clone(),
     });
-    // Net cell hints: a thin quad per cell on whichever chart holds it,
-    // its refusal slash floating just above (shape channel — illegality
-    // never rides hue alone). The socket plates themselves are rig
-    // furniture; these are the glow layer over them — lifted past
-    // [`OVERLAY_LIFT`] so a hint over a laid rug burns over the pile,
-    // not inside it. Holes get no hint; nothing can land there.
-    let (cols, rows) = RoomKind::Cabin.grid();
-    for y in 0..rows {
-        for x in 0..cols {
-            let cell = layout::cell_rect(CABIN, x, y);
-            let Some((station, surface)) = chart_of(&surfaces, rect_center(cell)) else {
-                continue;
-            };
-            let (su, sv) = (surface.scale_u(), surface.scale_v());
-            let rot = station.face(&surface);
-            let normal = station.inward(&surface);
-            let center = surface.to_world(rect_center(cell));
-            let slash = commands
-                .spawn((
-                    Mesh3d(skin.cube.clone()),
-                    MeshMaterial3d(slash_mat.clone()),
-                    Transform::from_translation(center + normal * crate::rig::layer::SLASH)
-                        .with_rotation(rot * Quat::from_rotation_z((cell.h / cell.w).atan()))
-                        .with_scale(Vec3::new(
-                            cell.w.hypot(cell.h) * 0.82 * su,
-                            2.6 * sv,
-                            0.0015,
-                        )),
-                    Visibility::Hidden,
-                ))
-                .id();
-            let mat = glow::phosphor(&mut materials, palette::LAMP_OK, 0.0);
-            commands.spawn((
-                Mesh3d(skin.cube.clone()),
-                MeshMaterial3d(mat),
-                Transform::from_translation(center + normal * OVERLAY_LIFT)
-                    .with_rotation(rot)
-                    .with_scale(Vec3::new((cell.w - 4.0) * su, (cell.h - 4.0) * sv, 0.0015)),
-                Visibility::Hidden,
-                HintCell { x, y, slash },
-            ));
-        }
-    }
 
     // The violation flash's frame bars — four per bay surface — and the
     // glyph pool, all aimed when a hard reject lands. The gantry that
@@ -1106,6 +1051,68 @@ fn spawn_overlays(
             Visibility::Hidden,
             GlyphBar(i),
         ));
+    }
+}
+
+/// One room's net-cell hints: a thin quad per cell on whichever chart
+/// holds it, its refusal slash floating just above (shape channel —
+/// illegality never rides hue alone). The socket plates themselves are
+/// the room's own furniture; these are the glow layer over them, lifted
+/// past [`OVERLAY_LIFT`] so a hint over a laid rug burns over the pile
+/// rather than inside it. Holes get no hint; nothing can land there.
+///
+/// Spawned with the room and retired with it, because a hint that
+/// outlived its floor would light a cell in space.
+pub fn hint_cells(
+    commands: &mut Commands,
+    cube: &Handle<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    shared: &SharedBits,
+    placed: &crate::room::Placed,
+) {
+    let tag = crate::room::InRoom {
+        room: placed.id,
+        kind: placed.kind,
+    };
+    let room = placed.id;
+    let (cols, rows) = placed.kind.grid();
+    for y in 0..rows {
+        for x in 0..cols {
+            let cell = layout::cell_rect(room, x, y);
+            let Some((station, surface)) = chart_at(&placed.charts, rect_center(cell)) else {
+                continue;
+            };
+            let (su, sv) = (surface.scale_u(), surface.scale_v());
+            let rot = station.face(&surface);
+            let normal = station.inward(&surface);
+            let center = surface.to_world(rect_center(cell));
+            let slash = commands
+                .spawn((
+                    Mesh3d(cube.clone()),
+                    MeshMaterial3d(shared.slash.clone()),
+                    Transform::from_translation(center + normal * crate::rig::layer::SLASH)
+                        .with_rotation(rot * Quat::from_rotation_z((cell.h / cell.w).atan()))
+                        .with_scale(Vec3::new(
+                            cell.w.hypot(cell.h) * 0.82 * su,
+                            2.6 * sv,
+                            0.0015,
+                        )),
+                    Visibility::Hidden,
+                    tag,
+                ))
+                .id();
+            let mat = glow::phosphor(materials, palette::LAMP_OK, 0.0);
+            commands.spawn((
+                Mesh3d(cube.clone()),
+                MeshMaterial3d(mat),
+                Transform::from_translation(center + normal * OVERLAY_LIFT)
+                    .with_rotation(rot)
+                    .with_scale(Vec3::new((cell.w - 4.0) * su, (cell.h - 4.0) * sv, 0.0015)),
+                Visibility::Hidden,
+                HintCell { room, x, y, slash },
+                tag,
+            ));
+        }
     }
 }
 
@@ -1464,8 +1471,8 @@ fn carry_held(
             // which is not always the surface the ray struck: a
             // crosshair resting on a standing rig's own face reads that
             // piece's cells, and those cells are still the floor's.
-            let aft = surface_of(&surfaces, Station::BayWall);
             let (berth, plane) = chart_of(&surfaces, pointer.sim).unwrap_or((station, surface));
+            let aft = aft_for(&surfaces, &plane);
             let rot = hover_rot(berth, &plane, aft.as_ref(), kind, pointer.sim)
                 .unwrap_or_else(|| station.face(&surface));
             (world + station.inward(&surface) * CARRY_LIFT, rot, 1.1)
@@ -1782,7 +1789,7 @@ fn placement_hints(
     });
     for (cell, material, mut visibility) in &mut hints {
         let lit = plan.filter(|&(room, ax, ay, w, h, _)| {
-            room == CABIN && cell.x >= ax && cell.x < ax + w && cell.y >= ay && cell.y < ay + h
+            room == cell.room && cell.x >= ax && cell.x < ax + w && cell.y >= ay && cell.y < ay + h
         });
         if let Some((_, _, _, _, _, legal)) = lit {
             *visibility = Visibility::Visible;
@@ -2116,7 +2123,9 @@ fn rat_watch(
         state.yaw = 0.0;
         return;
     };
-    let Some(floor) = surface_of(&surfaces, Station::BayFloor) else {
+    // The stowaway is a cabin resident: `rats` only ever perches it on
+    // room-zero cells, so its chart is the cabin's own deck.
+    let Some(floor) = room_chart(&surfaces, CABIN, Station::BayFloor) else {
         return;
     };
 
@@ -4620,7 +4629,7 @@ mod tests {
         let mut handled = 0_u32;
         let mut walls_handled: Vec<Station> = Vec::new();
         for kind in Kind::ALL {
-            let (cols, rows) = RoomKind::Cabin.grid();
+            let (cols, rows) = space_trucking::sim::RoomKind::Cabin.grid();
             for y in 0..rows {
                 for x in 0..cols {
                     // The sim rules the board; the cabin only draws it.
@@ -4638,9 +4647,8 @@ mod tests {
                         continue;
                     }
                     let rect = rect_of(x, y, kind);
-                    let station =
-                        chart_station(rect_center(rect)).expect("a legal berth is on a chart");
-                    let surface = chart_in(&charts, station).expect("every chart stands");
+                    let (station, surface) =
+                        chart_at(&charts, rect_center(rect)).expect("a legal berth is on a chart");
                     let berth = Berth {
                         kind,
                         cell: (x, y),
@@ -4708,6 +4716,7 @@ mod tests {
             ("slash", layer::SLASH),
             ("flash", layer::FLASH),
             ("glyph", layer::GLYPH),
+            ("claim", layer::CLAIM),
         ];
         for pair in rungs.windows(2) {
             let ((below, lo), (above, hi)) = (pair[0], pair[1]);

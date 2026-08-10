@@ -26,6 +26,7 @@ mod glow;
 mod palette;
 mod pieces;
 mod rig;
+mod room;
 mod surface;
 mod viewport;
 mod wear;
@@ -101,11 +102,6 @@ fn main() {
         boot_rig.yaw = std::f32::consts::PI;
         boot_rig.pitch = -0.22;
     }
-    if view_name.as_deref() == Some("airlock") {
-        boot_rig.pos = Vec3::new(0.55, 1.5, 1.64);
-        boot_rig.yaw = -std::f32::consts::FRAC_PI_2;
-        boot_rig.pitch = -0.30;
-    }
     // The front wall, where the instrument cluster hangs.
     if view_name.as_deref() == Some("front") {
         boot_rig.pos = Vec3::new(0.0, 1.35, 0.85);
@@ -117,6 +113,23 @@ fn main() {
         boot_rig.pos = Vec3::new(-0.60, 1.40, 0.76);
         boot_rig.yaw = -std::f32::consts::FRAC_PI_2;
         boot_rig.pitch = -0.10;
+    }
+
+    let bridge = if fixture {
+        Bridge::boot_fixture(fixture::SAVE)
+    } else {
+        Bridge::boot(dev)
+    };
+    // The room presets are DERIVED, like everything else about a room:
+    // they ask the graph where the room is and stand in the middle of it
+    // facing the wall the view is named for. Attach the trade room
+    // somewhere else and `--view trade` follows it.
+    if let Some(name) = view_name.as_deref()
+        && let Some(pose) = room::preset(bridge.sim.rooms(), name)
+    {
+        boot_rig.pos = pose.0;
+        boot_rig.yaw = pose.1;
+        boot_rig.pitch = pose.2;
     }
 
     let mut app = App::new();
@@ -136,11 +149,7 @@ fn main() {
             .set(ImagePlugin::default_nearest()),
     )
     .insert_resource(Shell {
-        bridge: if fixture {
-            Bridge::boot_fixture(fixture::SAVE)
-        } else {
-            Bridge::boot(dev)
-        },
+        bridge,
         outcome: FrameOutcome::default(),
         muted: false,
     })
@@ -155,6 +164,7 @@ fn main() {
         fx::FxPlugin,
         gesture::GesturePlugin,
         pieces::PiecesPlugin,
+        room::RoomsPlugin,
         viewport::ViewportPlugin,
     ))
     .add_systems(Startup, rig::spawn)
@@ -208,6 +218,7 @@ fn shoot(
 /// Focused stations get the freed cursor; roaming gets the crosshair
 /// carry over the bay (and clicks on stations glide the camera instead,
 /// empty-handed). Keys stay live in every mode.
+#[allow(clippy::too_many_arguments)]
 fn advance(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -215,11 +226,22 @@ fn advance(
     pointer: Res<VirtualPointer>,
     camera: Res<rig::CameraRig>,
     grips: Res<gesture::Grips>,
+    occupancy: Res<room::Occupancy>,
+    latch: Res<room::AimedLatch>,
     mut shell: ResMut<Shell>,
 ) {
     let live = camera.interactive();
     let holding = shell.bridge.sim.held(0).is_some();
-    let (at, press, held, release) = if camera.roaming() {
+    // The detach gesture: a roam click on a door's amber latch asks the
+    // input schedule to part that seam, and consumes the click so it
+    // never doubles as a grab. Empty-handed only — a hand full of cargo
+    // is exactly the hand the gangway law refuses.
+    let parting = (!holding && camera.roaming() && buttons.just_pressed(MouseButton::Left))
+        .then_some(latch.0)
+        .flatten();
+    let (at, press, held, release) = if parting.is_some() {
+        (bridge::POINTER_PARKED, false, false, false)
+    } else if camera.roaming() {
         // The carry: a roam click grabs what the crosshair rests on; the
         // drag then persists hands-free (`held` synthesized every frame,
         // the pointer tracking the aim, parked off the bay); the next
@@ -277,6 +299,8 @@ fn advance(
         icon_pause: layout::PAUSE_BTN.contains(at),
         icon_warp: layout::WARP_BTN.contains(at),
         icon_mute: layout::SPEAKER.contains(at),
+        occupied: occupancy.0,
+        detach: parting,
     };
     let outcome = shell.bridge.frame(time.delta_secs(), &input);
     if outcome.toggle_mute {

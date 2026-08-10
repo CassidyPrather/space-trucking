@@ -33,7 +33,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
-use space_trucking::sim::room::{CABIN, RoomKind};
+use space_trucking::sim::room::CABIN;
 use space_trucking::sim::{Loc, Piece, Vec2 as SimVec2, layout};
 
 use crate::palette;
@@ -52,50 +52,42 @@ const FOV: f32 = 0.9;
 /// clear of every slab by construction, asserted by test). The envelope
 /// stops short of the bay's floor plates: cargo is walked *up to*, never
 /// stood on.
-const EYE_HEIGHT: f32 = 1.5;
+pub const EYE_HEIGHT: f32 = 1.5;
 // The room grid made the whole floor walkable ground — cargo stands
 // among the walker now, not beyond a strip — so the envelope spans the
 // room up to body clearance at the aft wall. The clamp is collision
 // with the HULL and nothing else: cargo has no body to bump, and the
 // placement law no longer reserves a lane for one either.
-const WALK_MIN: Vec3 = Vec3::new(-1.85, EYE_HEIGHT, -0.85);
-const WALK_MAX: Vec3 = Vec3::new(1.85, EYE_HEIGHT, 2.27);
+// The cabin's own box is AUTHORED, because its hull is: it stands a
+// working gutter of desk furniture forward of its lattice floor box that
+// the lattice knows nothing about (`room::chart_inset`). Every attached
+// room derives its own from its pose, and the doorways join them
+// (`room::walk_boxes`).
+pub const WALK_MIN: Vec3 = Vec3::new(-1.85, EYE_HEIGHT, -0.85);
+pub const WALK_MAX: Vec3 = Vec3::new(1.85, EYE_HEIGHT, 2.27);
 const WALK_SPEED: f32 = 1.3;
+
+/// Eye height while passing a doorway, and how fast the body bends into
+/// it. The stoop is a whole cell of clearance under the lintel, and it
+/// finishes inside the half-second law like every other camera move.
+pub const DUCK_HEIGHT: f32 = 0.82;
+const DUCK_RATE: f32 = 3.4;
 const LOOK_SPEED: f32 = 0.0026;
 const PITCH_LIMIT: f32 = 1.35;
 
 // ---- The bay: the hold grid unfolded onto the aft of the cabin ----
 
-/// Bay cell edge, world units — square cells at furniture scale.
+/// Bay cell edge, world units — square cells at furniture scale. One
+/// lattice cell, shared by every room because the lattice is shared
+/// (docs/ROOMS.md, "The lattice").
 pub const BAY_CELL: f32 = 0.55;
 /// Bay width: eight columns flush toward the side walls (the columns
 /// beyond them are the walls, exactly where the wall-affix rule points).
 const BAY_W: f32 = 8.0 * BAY_CELL;
-/// Wall band height: grid rows 0–2 stand on the aft wall.
-const BAY_WALL_H: f32 = 3.0 * BAY_CELL;
 /// The wall band's quad plane, just proud of the aft hull's inner face.
-const BAY_WALL_Z: f32 = 2.41;
-
-/// The floor chart's depth (7 cells) and its centre plane in z: from the
-/// aft wall forward, leaving a working gutter before the front console
-/// wall (the room resized to cell multiples; BAY.md, "The room grid").
-/// The widening pushed every hull plane out by exactly one cell per
-/// side, so the gutter, the trim band, and every seam kept their gaps.
-const BAY_FLOOR_D: f32 = 7.0 * BAY_CELL;
-const BAY_FLOOR_ZC: f32 = BAY_WALL_Z - BAY_FLOOR_D * 0.5;
-
-/// The side wall charts' planes: proud of the wall ribs (which span
-/// ±1.63..±1.69), so every chart cell stays workable in front of the
-/// hull's junk rather than behind it.
-const BAY_SIDE_X: f32 = 2.17;
-
-/// The front wall chart's plane, just inside the front hull at -1.97.
-const BAY_FRONT_Z: f32 = -1.91;
-
-/// The ceiling chart's plane, just under the ceiling slab at 2.32 — the
-/// band between the wall cornices (1.65) and here is headroom trim; the
-/// net's fold seam glues logically, not physically.
-const BAY_CEIL_Y: f32 = 2.26;
+/// This is where lattice y = 0 lands, and `room::ANCHOR` pins the whole
+/// ship to it.
+pub const BAY_WALL_Z: f32 = 2.41;
 
 /// The decal ladder: everything drawn flat over a chart quad sits at a
 /// named rung along the chart's inward normal, and the z-fight test
@@ -105,9 +97,12 @@ const BAY_CEIL_Y: f32 = 2.26;
 /// keep their meshes ≤ [`layer::SKIN`] thick so rungs, not luck, decide
 /// what draws over what.
 pub mod layer {
-    /// Berth socket wells — the contextual tiles.
+    /// Berth socket wells, and the colored tiles' own enamel fields.
     pub const TILE: f32 = 0.002;
-    /// The burner threshold's hazard paint.
+    /// The pattern every colored tile carries over its field, because no
+    /// class may signal on hue alone: the doorway's doormat stripes, the
+    /// offer's chalk and chevrons, the stock's hatching, the burner's
+    /// ember edges.
     pub const DOORMAT: f32 = 0.006;
     /// Laid coverings' base; a rug's pile rises `RUG_THICK` above it.
     pub const LAID: f32 = 0.010;
@@ -119,6 +114,9 @@ pub mod layer {
     pub const FLASH: f32 = 0.034;
     /// The violation glyph bars.
     pub const GLYPH: f32 = 0.038;
+    /// The composed offer's claim frame — a standing reading rather than
+    /// a flash, so it sits over everything else on its cell.
+    pub const CLAIM: f32 = 0.042;
     /// Minimum step between occupied rungs that stays fight-free at
     /// room distances in the depth buffer. Consumed by the ladder test
     /// (`pieces::tests`), which is its whole job.
@@ -127,43 +125,26 @@ pub mod layer {
     /// Maximum mesh thickness for a flat paint riding a rung.
     pub const SKIN: f32 = 0.0015;
 }
-/// The deck strip's quad plane, just above the deck.
-const BAY_FLOOR_Y: f32 = 0.012;
 
 /// How far the roaming crosshair can grab or place, in world units —
 /// arm's length plus a step, so bay work happens near the body and the
 /// far half of the room stays a view, not a reach.
 pub const REACH: f32 = 2.0;
 
-// ---- The burner: an annex off the starboard wall, the fuel hopper ----
+// ---- The burner is a room now ----
 //
-// Cargo bound for the fire stages here (the sim's outboard rail — the
-// same four Flotsam slots, unchanged); underway the stoker's beat feeds
-// the lowest tile to the firebox in the far wall, and what burns pushes
-// the ship. Sized so the largest footprint in the game JUST fits through
-// the door and inside the chamber — proven by test. (The AIR_* names
-// survive from the annex's airlock past; renaming them is churn the
-// geometry doesn't need.)
-
-/// Chamber interior width and depth: the biggest crate plus a squeeze.
-pub const AIR_INNER: f32 = 2.0 * BAY_CELL + 0.08;
-/// Doorway span along the wall (z) — the full chamber width opens.
-/// Anchored to the aft hull, so the widening slid it forward with the
-/// wall it is cut into and it still fronts the same net cells.
-pub const AIR_DOOR_Z0: f32 = 1.05;
-pub const AIR_DOOR_Z1: f32 = AIR_DOOR_Z0 + AIR_INNER;
-/// Doorway clear height: a two-cell piece passes upright, barely.
-pub const AIR_DOOR_H: f32 = 2.0f32 * BAY_CELL + 0.18;
-/// The chamber floor's x extent: from the hull's outer face outboard.
-pub const AIR_X0: f32 = 2.32;
-pub const AIR_X1: f32 = AIR_X0 + AIR_INNER;
-
-/// Floor cells painted as the burner's threshold: the doormat in front
-/// of the doorway. Pure decoration now — the placement law reserves
-/// nothing, and cargo may stand on the stripes like anywhere else —
-/// but a doorway that reads as a doorway is worth the paint, and the
-/// stoker's path is still where the stripes say it is.
-const THRESHOLD: [(u8, u8); 2] = [(10, 3), (10, 4)];
+// The incinerator used to be an annex carved off the starboard wall, with
+// its own hand-measured chamber, its own doorway constants, and four
+// hazard tiles bound to a rail. It is an ordinary room attached at an
+// ordinary port (docs/ROOMS.md, "The burner room"), so its box, its
+// doorway, and its Consume-tiled deck all come out of the lattice like
+// everybody else's, and the AIR_* constants retired with the annex they
+// measured. What is left of the airlock module is the furnace's own
+// flavour: the firebox glass and the doorway beacon.
+//
+// The cabin's doorway is likewise no longer written down: `structure`
+// punches every one of the cabin's six declared apertures out of its
+// hull, so no slab in this game says where a door is.
 
 /// Focus glide length, seconds. A camera move is feedback: it answers a
 /// click and finishes fast.
@@ -197,7 +178,7 @@ pub fn panels() -> [(Station, SimSurface); 1] {
     )]
 }
 
-/// The bay's six mapped surfaces: the room net unfolded like an opened
+/// The cabin's six mapped surfaces: the room net unfolded like an opened
 /// box. Rows 0–2 stand on the aft wall (row 0 the cornice), rows 3–9
 /// fold onto the deck and the two side walls, rows 10–12 stand on the
 /// front wall, and the ceiling chart folds on past the starboard
@@ -205,8 +186,40 @@ pub fn panels() -> [(Station, SimSurface); 1] {
 /// the seams are watertight (or declared gutters) by test. Cursor rays
 /// from roam project through these exactly as focus cursors project
 /// through panels, so the sim keeps every ruling.
+///
+/// Every room folds this way now ([`crate::room::charts`]); the cabin is
+/// simply the room you start in, at the lattice origin. This wrapper is
+/// what the geometry tests and the fittings measure against.
 #[must_use]
 pub fn bay() -> [(Station, SimSurface); 6] {
+    crate::room::charts(CABIN, &crate::room::cabin_room())
+}
+
+/// The bay as it was hand-authored, before the lattice derived it. Kept
+/// as the witness for [`crate::room`]'s own test: the generalization
+/// moved no cabin cell, and this is what proves it.
+#[must_use]
+#[cfg(test)]
+pub fn bay_authored() -> [(Station, SimSurface); 6] {
+    // The wall band's height, the centre plane of the floor chart, and
+    // the trims that were measured by eye before the lattice arrived: the
+    // side charts stand proud of the wall ribs (which span ±1.63..±1.69),
+    // the front chart sits just inside the front hull at -1.97, and the
+    // ceiling chart hangs just under the ceiling slab at 2.32.
+    //
+    // The seam law pins every axis: columns match across the folds (floor
+    // col 3 lies to port because the port chart's baseboard is x2),
+    // cornices sit up, y3 rows lie aft. Every normal therefore points OUT
+    // of the room (`Station::chart_flipped`); consumers use
+    // `Station::inward`/`Station::face`.
+    const BAY_WALL_H: f32 = 3.0 * BAY_CELL;
+    const BAY_FLOOR_D: f32 = 7.0 * BAY_CELL;
+    const BAY_FLOOR_ZC: f32 = BAY_WALL_Z - BAY_FLOOR_D * 0.5;
+    const BAY_SIDE_X: f32 = 2.17;
+    const BAY_FRONT_Z: f32 = -1.91;
+    const BAY_CEIL_Y: f32 = 2.26;
+    const BAY_FLOOR_Y: f32 = 0.012;
+
     // One chart's logical rect, in net cells.
     let chart = |cx: u8, cy: u8, w: u8, h: u8| {
         layout::Rect::new(
@@ -216,11 +229,6 @@ pub fn bay() -> [(Station, SimSurface); 6] {
             f32::from(h) * layout::CELL,
         )
     };
-    // The seam law pins every axis: columns match across the folds
-    // (floor col 3 lies to port because the port chart's baseboard is
-    // x2), cornices sit up, y3 rows lie aft. Every normal therefore
-    // points OUT of the room (`Station::chart_flipped`); consumers use
-    // `Station::inward`/`Station::face`.
     let wall_mid = BAY_WALL_H * 0.5;
     [
         (
@@ -282,28 +290,20 @@ pub fn bay() -> [(Station, SimSurface); 6] {
 
 // ---- Structural geometry as data ----
 
-/// Which shared material a slab wears.
-#[derive(Clone, Copy, Debug)]
-pub enum Finish {
-    Hull,
-    Plate,
-}
-
-/// An axis-aligned structural mass: walls, ribs, desk supports.
+/// An axis-aligned structural mass: walls, ribs, and whatever else the
+/// hull is made of. Every one of them is HULL now — the desk-class
+/// furniture that used to stand in the cabin's structure left with the
+/// barter counter and the burner annex, so the finish that told the two
+/// apart had nothing left to tell apart.
 #[derive(Clone, Copy, Debug)]
 pub struct Slab {
     pub center: Vec3,
     pub size: Vec3,
-    pub finish: Finish,
 }
 
 impl Slab {
-    const fn new(center: Vec3, size: Vec3, finish: Finish) -> Self {
-        Self {
-            center,
-            size,
-            finish,
-        }
+    const fn new(center: Vec3, size: Vec3) -> Self {
+        Self { center, size }
     }
 
     /// Whether a point sits inside this slab, shrunk by `eps` so flush
@@ -317,9 +317,16 @@ impl Slab {
     }
 }
 
-/// Every axis-aligned mass in the cabin. Supports under the tilted desk
-/// panels are derived from the panel corners (plate margin included), so
-/// they can never swallow a panel's lower edge.
+/// Every axis-aligned mass in the cabin: the box, and the ribs that say
+/// somebody built this hull in a hurry — with every one of the cabin's
+/// six declared apertures cut out of whatever it passes through.
+///
+/// **No slab here knows where a door is.** The holes come from
+/// `room::cabin_holes`, which reads `RoomKind::Cabin`'s own port
+/// declaration; move a door in the sim and the hull follows it, which is
+/// the port law's first clause held by construction rather than by care.
+/// What fills those holes — a plate drawn shut, a jamb standing open — is
+/// `room::doorways`' business, because that depends on the graph.
 #[must_use]
 // One slab per line of the room's plan; splitting the list would
 // scatter the one place the whole hull is written down.
@@ -330,111 +337,43 @@ pub fn structure(panels: &[(Station, SimSurface)]) -> Vec<Slab> {
         // (0.55) between each of these and where it used to stand: the
         // room grew outward on every side at once, so nothing inside it
         // had to be re-composed, only re-measured.
-        Slab::new(
-            Vec3::new(0.0, -0.05, 0.2),
-            Vec3::new(4.5, 0.1, 4.5),
-            Finish::Hull,
-        ),
-        Slab::new(
-            Vec3::new(0.0, 2.32, 0.2),
-            Vec3::new(4.5, 0.1, 4.5),
-            Finish::Hull,
-        ),
-        Slab::new(
-            Vec3::new(0.0, 1.15, -1.97),
-            Vec3::new(4.5, 2.5, 0.1),
-            Finish::Hull,
-        ),
-        Slab::new(
-            Vec3::new(0.0, 1.15, 2.47),
-            Vec3::new(4.5, 2.5, 0.1),
-            Finish::Hull,
-        ),
-        Slab::new(
-            Vec3::new(-2.27, 1.15, 0.2),
-            Vec3::new(0.1, 2.5, 4.5),
-            Finish::Hull,
-        ),
-        // The starboard wall parts around the airlock doorway: a fore
-        // segment, a sliver aft of it, and the lintel over the opening.
-        Slab::new(
-            Vec3::new(2.27, 1.15, f32::midpoint(-2.05, AIR_DOOR_Z0)),
-            Vec3::new(0.1, 2.5, AIR_DOOR_Z0 + 2.05),
-            Finish::Hull,
-        ),
-        Slab::new(
-            Vec3::new(2.27, 1.15, f32::midpoint(AIR_DOOR_Z1, 2.45)),
-            Vec3::new(0.1, 2.5, 2.45 - AIR_DOOR_Z1),
-            Finish::Hull,
-        ),
-        Slab::new(
-            Vec3::new(
-                2.27,
-                f32::midpoint(AIR_DOOR_H, 2.40),
-                f32::midpoint(AIR_DOOR_Z0, AIR_DOOR_Z1),
-            ),
-            Vec3::new(0.1, 2.40 - AIR_DOOR_H, AIR_INNER),
-            Finish::Hull,
-        ),
-        // The airlock annex: outer wall, two cheeks, floor and ceiling.
-        Slab::new(
-            Vec3::new(AIR_X1 + 0.05, 1.15, f32::midpoint(AIR_DOOR_Z0, AIR_DOOR_Z1)),
-            Vec3::new(0.1, 2.5, AIR_INNER + 0.2),
-            Finish::Hull,
-        ),
-        Slab::new(
-            Vec3::new(f32::midpoint(AIR_X0, AIR_X1), 1.15, AIR_DOOR_Z0 - 0.05),
-            Vec3::new(AIR_INNER, 2.5, 0.1),
-            Finish::Hull,
-        ),
-        Slab::new(
-            Vec3::new(f32::midpoint(AIR_X0, AIR_X1), 1.15, AIR_DOOR_Z1 + 0.05),
-            Vec3::new(AIR_INNER, 2.5, 0.1),
-            Finish::Hull,
-        ),
-        Slab::new(
-            Vec3::new(
-                f32::midpoint(AIR_X0, AIR_X1),
-                -0.05,
-                f32::midpoint(AIR_DOOR_Z0, AIR_DOOR_Z1),
-            ),
-            Vec3::new(AIR_INNER + 0.1, 0.1, AIR_INNER + 0.2),
-            Finish::Plate,
-        ),
-        Slab::new(
-            Vec3::new(
-                f32::midpoint(AIR_X0, AIR_X1),
-                2.32,
-                f32::midpoint(AIR_DOOR_Z0, AIR_DOOR_Z1),
-            ),
-            Vec3::new(AIR_INNER + 0.1, 0.1, AIR_INNER + 0.2),
-            Finish::Hull,
-        ),
+        Slab::new(Vec3::new(0.0, -0.05, 0.2), Vec3::new(4.5, 0.1, 4.5)),
+        Slab::new(Vec3::new(0.0, 2.32, 0.2), Vec3::new(4.5, 0.1, 4.5)),
+        Slab::new(Vec3::new(0.0, 1.15, -1.97), Vec3::new(4.5, 2.5, 0.1)),
+        Slab::new(Vec3::new(0.0, 1.15, 2.47), Vec3::new(4.5, 2.5, 0.1)),
+        Slab::new(Vec3::new(-2.27, 1.15, 0.2), Vec3::new(0.1, 2.5, 4.5)),
+        Slab::new(Vec3::new(2.27, 1.15, 0.2), Vec3::new(0.1, 2.5, 4.5)),
     ];
     // Wall ribs: the junk that says somebody built this hull in a hurry.
     // The port wall runs its full set again — the chart tank that used
     // to be bolted through them is cargo now, hung in front of whatever
     // wall it is carried to, so the hull has nothing to make room for.
+    // Neither wall dodges a doorway by hand any more; the punch below
+    // takes the ribs out of every aperture the cabin declares.
     for i in 0..6 {
         let z = 0.7f32.mul_add(i as f32, -1.55);
-        slabs.push(Slab::new(
-            Vec3::new(-2.21, 1.15, z),
-            Vec3::new(0.06, 2.3, 0.08),
-            Finish::Hull,
-        ));
-        // The starboard ribs still skip the airlock doorway's span:
-        // that hole is architecture, not furniture.
-        if !(AIR_DOOR_Z0 - 0.10..=AIR_DOOR_Z1 + 0.10).contains(&z) {
+        for sx in [-2.21f32, 2.21] {
             slabs.push(Slab::new(
-                Vec3::new(2.21, 1.15, z),
+                Vec3::new(sx, 1.15, z),
                 Vec3::new(0.06, 2.3, 0.08),
-                Finish::Hull,
             ));
         }
     }
     // The counter's derived support came out with the counter it held
     // up (docs/ROOMS.md): the last screen-shaped surface in the game.
     let _ = panels;
+    // Every declared aperture, cut. Doors, ladder, and hatch alike: the
+    // opening is architecture, and what stands in it is hardware.
+    for (lo, hi) in crate::room::cabin_holes() {
+        slabs = slabs
+            .into_iter()
+            .flat_map(|slab| {
+                crate::room::punch(slab.center, slab.size, lo, hi)
+                    .into_iter()
+                    .map(|(center, size)| Slab::new(center, size))
+            })
+            .collect();
+    }
     slabs
 }
 
@@ -465,7 +404,7 @@ impl Focus {
             | Station::BayStarboard
             | Station::BayFront
             | Station::BayCeiling
-            | Station::Airlock
+            | Station::Handshake
             | Station::Standing => None,
         }
     }
@@ -664,10 +603,11 @@ pub struct Crosshair;
 #[derive(Component)]
 pub struct BerthTile;
 
-/// The berth wells' shared translucent ink and its eased level.
+/// The berth wells' shared translucent ink and its eased level. One ink
+/// for every room aboard: the grid is one answer to one question.
 #[derive(Resource)]
 pub struct TileFade {
-    mat: Handle<StandardMaterial>,
+    pub mat: Handle<StandardMaterial>,
     level: f32,
 }
 
@@ -802,13 +742,9 @@ pub fn spawn(
 
     // --- Structure: every axis-aligned mass, from the one data source.
     for slab in structure(&panels) {
-        let material = match slab.finish {
-            Finish::Hull => skin.hull.clone(),
-            Finish::Plate => skin.desk.clone(),
-        };
         commands.spawn((
             Mesh3d(skin.cube.clone()),
-            MeshMaterial3d(material),
+            MeshMaterial3d(skin.hull.clone()),
             Transform::from_translation(slab.center).with_scale(slab.size),
         ));
     }
@@ -876,14 +812,17 @@ pub fn spawn(
         commands.spawn((station, surface));
     }
 
-    // --- The bay: the hold grid unfolded onto the aft wall and deck.
-    // Each surface entity carries its station tag so the roam crosshair
-    // projects through it exactly as focus cursors project through
-    // panels. The berth marking (socket plates per cell), the backer
-    // plates, the gantry frame, and the hazard lip are all derived from
-    // the same two surfaces, so a retuned bay moves as one thing.
-    // The berth wells' one translucent ink: contextual placement
-    // furniture, raised by [`fade_tiles`] only while a carry is live.
+    // --- The bay: the cabin's own share of the room net. The charts
+    // themselves, the berth wells, and every colored tile are `room`'s
+    // now — one code path for every room aboard, spawned and retired with
+    // the graph. What stays here is the cabin's own furniture: the backer
+    // plates behind its aft wall and deck, the gantry, and the hazard lip
+    // along the front gutter, all derived from the same charts so a
+    // retuned bay still moves as one thing.
+    //
+    // The berth wells' one translucent ink lives here because it is one
+    // ink for the whole ship: `fade_tiles` raises every room's grid
+    // together, since the grid answers one question and there is only one.
     let tile_mat = materials.add(StandardMaterial {
         base_color: palette::SOCKET.with_alpha(0.0),
         perceptual_roughness: 1.0,
@@ -892,63 +831,49 @@ pub fn spawn(
         ..default()
     });
     commands.insert_resource(TileFade {
-        mat: tile_mat.clone(),
+        mat: tile_mat,
         level: 0.0,
     });
     for (station, surface) in bay() {
-        let n = station.inward(&surface);
         // Backer plate: a worn slab just behind the mapped quad — except
         // on the wall and ceiling charts, whose backing IS the hull the
         // structure already built; a second slab would swallow the trim.
+        //
+        // It is punched by the cabin's own apertures for the same reason
+        // the hull is: a backer that spanned the whole aft wall would
+        // quietly board up every doorway cut through it, which is exactly
+        // the defect this pass found by looking through one.
         if matches!(station, Station::BayWall | Station::BayFloor) {
+            let n = station.inward(&surface);
             let deep = 0.03;
-            commands.spawn((
-                Mesh3d(skin.cube.clone()),
-                MeshMaterial3d(match station {
-                    Station::BayFloor => skin.desk.clone(),
-                    _ => skin.plate.clone(),
-                }),
-                Transform::from_translation(surface.center - n * (deep * 0.5 + 0.004))
-                    .with_rotation(surface.orientation())
-                    .with_scale(Vec3::new(
-                        surface.half_u.length().mul_add(2.0, 0.08),
-                        surface.half_v.length().mul_add(2.0, 0.08),
-                        deep,
-                    )),
-            ));
-        }
-        // Socket wells per cell, the berth marking — each surface takes
-        // exactly the net cells its rect covers; holes (the doorway, the
-        // window) get no well.
-        let (cols, rows) = RoomKind::Cabin.grid();
-        for y in 0..rows {
-            for x in 0..cols {
-                if RoomKind::Cabin.surface_of(x, y).is_none() {
-                    continue;
-                }
-                let cell = layout::cell_rect(CABIN, x, y);
-                let mid = space_trucking::sim::Vec2::new(
-                    cell.w.mul_add(0.5, cell.x),
-                    cell.h.mul_add(0.5, cell.y),
-                );
-                if !surface.rect.contains(mid) {
-                    continue;
-                }
+            let flat = Vec3::new(
+                surface.half_u.length().mul_add(2.0, 0.08),
+                surface.half_v.length().mul_add(2.0, 0.08),
+                deep,
+            );
+            // The charts are axis-aligned, so the plate's world extent is
+            // its own frame's, spun onto the world axes.
+            let size = (surface.orientation() * flat).abs();
+            let center = surface.center - n * (deep * 0.5 + 0.004);
+            let material = match station {
+                Station::BayFloor => skin.desk.clone(),
+                _ => skin.plate.clone(),
+            };
+            let mut parts = vec![(center, size)];
+            for (lo, hi) in crate::room::cabin_holes() {
+                parts = parts
+                    .into_iter()
+                    .flat_map(|(c, s)| crate::room::punch(c, s, lo, hi))
+                    .collect();
+            }
+            for (c, s) in parts {
                 commands.spawn((
                     Mesh3d(skin.cube.clone()),
-                    MeshMaterial3d(tile_mat.clone()),
-                    Transform::from_translation(surface.to_world(mid) + n * layer::TILE)
-                        .with_rotation(surface.orientation())
-                        .with_scale(Vec3::new(
-                            (cell.w - 4.0) * surface.scale_u(),
-                            (cell.h - 4.0) * surface.scale_v(),
-                            layer::SKIN,
-                        )),
-                    BerthTile,
+                    MeshMaterial3d(material.clone()),
+                    Transform::from_translation(c).with_scale(s),
                 ));
             }
         }
-        commands.spawn((station, surface));
     }
     {
         let charts = bay();
@@ -985,27 +910,9 @@ pub fn spawn(
             Transform::from_translation(Vec3::new(0.0, 0.017, strip_front - 0.032))
                 .with_scale(Vec3::new(BAY_W + 0.14, 0.034, 0.05)),
         ));
-        // The burner doormat: hazard stripes on the floor cells
-        // fronting the doorway. Paint only — nothing refuses a berth
-        // here — but the eye still reads the way out to the fire.
-        for &(ax, ay) in &THRESHOLD {
-            let cell = layout::cell_rect(CABIN, ax, ay);
-            let mid = space_trucking::sim::Vec2::new(
-                cell.w.mul_add(0.5, cell.x),
-                cell.h.mul_add(0.5, cell.y),
-            );
-            commands.spawn((
-                Mesh3d(skin.cube.clone()),
-                MeshMaterial3d(skin.hazard.clone()),
-                Transform::from_translation(floor.to_world(mid) + Vec3::Y * layer::DOORMAT)
-                    .with_rotation(floor.orientation())
-                    .with_scale(Vec3::new(
-                        (cell.w - 6.0) * floor.scale_u(),
-                        (cell.h - 6.0) * floor.scale_v(),
-                        layer::SKIN,
-                    )),
-            ));
-        }
+        // The doormat that used to be hand-listed here is the threshold
+        // TILE CLASS now: `room::tiles` stripes every aperture's own
+        // cells, in every room, straight off the sim's declaration.
     }
 
     // --- Light: NONE of the ship's own. Every lumen aboard is cargo —
@@ -1084,6 +991,7 @@ pub fn steer(
     surfaces: Query<(&Station, &SimSurface), Without<CabinCamera>>,
     pointer: Res<crate::surface::VirtualPointer>,
     shell: Res<crate::Shell>,
+    envelope: Res<crate::room::Envelope>,
     mut rig: ResMut<CameraRig>,
     camera: Single<&Transform, With<CabinCamera>>,
 ) {
@@ -1130,9 +1038,35 @@ pub fn steer(
                 }
             }
             if step != Vec3::ZERO {
-                let pos = rig.pos + step.normalize() * WALK_SPEED * time.delta_secs();
-                rig.pos = pos.clamp(WALK_MIN, WALK_MAX);
+                // The envelope is the ship's, not the cabin's: per-room
+                // boxes joined at every mated doorway, hull collision
+                // only. A step that leaves the union slides along it, so
+                // walking into a jamb glances off instead of stopping —
+                // and walking THROUGH one carries you into the next room.
+                let want = rig.pos + step.normalize() * WALK_SPEED * time.delta_secs();
+                rig.pos = if envelope.holds(want) {
+                    want
+                } else {
+                    let slid = [
+                        Vec3::new(want.x, want.y, rig.pos.z),
+                        Vec3::new(rig.pos.x, want.y, want.z),
+                    ];
+                    slid.into_iter()
+                        .find(|p| envelope.holds(*p))
+                        .unwrap_or_else(|| envelope.nearest(rig.pos))
+                };
             }
+            // The eye ducks through a doorway and stands up again in the
+            // room beyond: an aperture is two courses of the CARGO grid,
+            // which makes it a hatch rather than a hall, and the sim's
+            // declaration is not going to bend for a neck.
+            let stance = if envelope.ducking(rig.pos) {
+                DUCK_HEIGHT
+            } else {
+                EYE_HEIGHT
+            };
+            let bend = DUCK_RATE * time.delta_secs();
+            rig.pos.y += (stance - rig.pos.y).clamp(-bend, bend);
             // Focus what the crosshair rests on — cargo in hand included:
             // the click carries the piece to the counter (the carry
             // survives the glide; `advance` keeps the grip synthesized),
@@ -1364,7 +1298,6 @@ mod tests {
                 surface.half_v.length().mul_add(2.0, PLATE_MARGIN * 2.0),
                 0.05,
             ),
-            Finish::Plate,
         );
         ray_slab_entry(frame * (origin - center), frame * dir, &local)
     }
@@ -1459,7 +1392,7 @@ mod tests {
             | Station::BayStarboard
             | Station::BayFront
             | Station::BayCeiling
-            | Station::Airlock
+            | Station::Handshake
             | Station::Standing => {}
         }
         spots.into_iter().map(|s| surface.to_world(s)).collect()
@@ -1504,11 +1437,7 @@ mod tests {
     fn every_control_is_visible_from_its_focus() {
         let panels = panels();
         let slabs = structure(&panels);
-        let hull: Vec<Slab> = slabs
-            .iter()
-            .copied()
-            .filter(|slab| matches!(slab.finish, Finish::Hull))
-            .collect();
+        let hull: Vec<Slab> = slabs.clone();
         for (station, surface) in stations() {
             let focus = Focus::of(station).expect("every station is focusable");
             let (eye, rot) = focus_pose(focus, &stations()).expect("every station has a pose");
@@ -1706,7 +1635,10 @@ mod tests {
         for (station, surface) in bay() {
             for y in 0..layout::GRID_ROWS {
                 for x in 0..layout::GRID_COLS {
-                    if RoomKind::Cabin.surface_of(x, y).is_none() {
+                    if space_trucking::sim::RoomKind::Cabin
+                        .surface_of(x, y)
+                        .is_none()
+                    {
                         continue;
                     }
                     let cell = layout::cell_rect(CABIN, x, y);
@@ -1730,21 +1662,14 @@ mod tests {
                             if dir.length() > REACH - 0.05 || pitch > PITCH_LIMIT - 0.02 {
                                 return false;
                             }
-                            // Hull in the way is a build error; plate-finish
-                            // furniture (desk supports) and station
-                            // panels are the migrating kind of blocker.
+                            // Hull in the way is a build error; a station
+                            // panel is the migrating kind of blocker.
                             if slabs.iter().any(|slab| {
-                                matches!(slab.finish, Finish::Hull)
-                                    && ray_slab_entry(eye, dir, slab)
-                                        .is_some_and(|t| t < 1.0 - 1e-3)
+                                ray_slab_entry(eye, dir, slab).is_some_and(|t| t < 1.0 - 1e-3)
                             }) {
                                 return false;
                             }
-                            if slabs.iter().any(|slab| {
-                                matches!(slab.finish, Finish::Plate)
-                                    && ray_slab_entry(eye, dir, slab)
-                                        .is_some_and(|t| t < 1.0 - 1e-3)
-                            }) || panels.iter().any(|(_, panel)| {
+                            if panels.iter().any(|(_, panel)| {
                                 ray_plate_entry(eye, dir, panel).is_some_and(|t| t < 1.0 - 1e-3)
                             }) {
                                 panel_blocked = true;
@@ -1778,50 +1703,109 @@ mod tests {
         );
     }
 
-    /// The airlock's whole point, mechanised: the biggest footprint in
-    /// the game fits through the door and inside the chamber — and only
-    /// JUST. Both bounds matter; a roomy airlock is a second cargo bay.
+    /// Nothing stands in a doorway. Every one of the cabin's declared
+    /// apertures must be empty hull-wise: the punch is what makes a door
+    /// a door, and a slab left in one is the defect this catches.
     #[test]
-    fn the_biggest_crate_just_fits_the_airlock() {
-        let biggest = 2.0 * BAY_CELL;
-        assert!(AIR_INNER >= biggest + 0.04, "chamber too tight");
-        assert!(AIR_INNER <= biggest + 0.20, "chamber roomier than 'just'");
-        assert!((AIR_DOOR_Z1 - AIR_DOOR_Z0 - AIR_INNER).abs() < 1e-6);
-        assert!(AIR_DOOR_H >= biggest + 0.10, "door too low");
-        assert!(AIR_DOOR_H <= biggest + 0.30, "door taller than 'just'");
-        assert!((AIR_X1 - AIR_X0 - AIR_INNER).abs() < 1e-6);
+    fn no_slab_stands_in_a_declared_doorway() {
+        let slabs = structure(&panels());
+        for (port, (lo, hi)) in crate::room::cabin_holes().into_iter().enumerate() {
+            // Probe the middle of the opening, and a little in from each
+            // corner, so a partial cut cannot pass.
+            for sx in [0.25f32, 0.5, 0.75] {
+                for sy in [0.25f32, 0.5, 0.75] {
+                    for sz in [0.25f32, 0.5, 0.75] {
+                        let p = lo + (hi - lo) * Vec3::new(sx, sy, sz);
+                        for slab in &slabs {
+                            assert!(
+                                !slab.contains(p, 1e-4),
+                                "port {port}: hull at {} stands in the doorway at {p}",
+                                slab.center
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    /// Every airlock tile is workable from the walk envelope: within
-    /// REACH, within the neck's pitch, unoccluded — the doorway segments
-    /// must actually leave the doorway open.
+    /// The burner doorway's whole point, mechanised — and now derived:
+    /// the aperture is APERTURE cells wide and tall by the sim's own
+    /// declaration, and the biggest footprint in the game passes through
+    /// it at bay scale, JUST. The hand-measured chamber that used to
+    /// carry this promise retired with the annex.
     #[test]
-    fn airlock_tiles_are_workable_from_the_envelope() {
-        let panels = panels();
-        let slabs = structure(&panels);
-        for slot in 0..4u8 {
-            let (probe, _) = crate::airlock::site(slot);
-            let probe = probe + Vec3::Y * 0.004;
-            let workable = (0..=12u8).any(|i| {
-                (0..=12u8).any(|j| {
-                    let eye = Vec3::new(
-                        (f32::from(i) / 12.0).mul_add(WALK_MAX.x - WALK_MIN.x, WALK_MIN.x),
-                        EYE_HEIGHT,
-                        (f32::from(j) / 12.0).mul_add(WALK_MAX.z - WALK_MIN.z, WALK_MIN.z),
-                    );
-                    let dir = probe - eye;
-                    let pitch = (-dir.y).atan2(dir.xz().length()).abs();
-                    dir.length() <= REACH - 0.05
-                        && pitch <= PITCH_LIMIT - 0.02
-                        && !slabs.iter().any(|slab| {
-                            ray_slab_entry(eye, dir, slab).is_some_and(|t| t < 1.0 - 1e-3)
+    fn the_biggest_crate_just_fits_the_burner_doorway() {
+        use space_trucking::sim::room::APERTURE;
+        let biggest = 2.0 * BAY_CELL * crate::pieces::BAY_FIT;
+        // The cabin's starboard door: two cells along the wall, two up.
+        let (lo, hi) = crate::room::cabin_holes()[1];
+        let clear = f32::from(APERTURE) * BAY_CELL;
+        assert!(
+            (hi.z - lo.z - clear).abs() < 1e-3,
+            "the doorway is {} wide",
+            hi.z - lo.z
+        );
+        assert!(
+            (hi.y - lo.y - clear).abs() < 1e-3,
+            "the doorway is {} tall",
+            hi.y - lo.y
+        );
+        assert!(clear > biggest, "the biggest crate will not pass");
+        assert!(
+            clear < biggest + 0.10,
+            "the doorway is roomier than 'just': {clear} against {biggest}"
+        );
+    }
+
+    /// Every cell of the furnace room's own deck is workable from the
+    /// joined envelope: within REACH, within the neck's pitch, and with
+    /// no hull in the way — which is the doorway actually being open,
+    /// and the body actually being able to walk through it.
+    #[test]
+    fn the_burner_deck_is_workable_from_the_joined_envelope() {
+        use space_trucking::sim::room::{RoomKind, Rooms};
+        let slabs = structure(&panels());
+        let rooms = Rooms::new();
+        let placed: Vec<crate::room::Placed> = rooms
+            .iter()
+            .map(|(id, room)| crate::room::placed(id, room))
+            .collect();
+        let boxes = crate::room::walk_boxes(&placed);
+        let burner = placed
+            .iter()
+            .find(|room| room.kind == RoomKind::Burner)
+            .expect("the burner rides");
+        let floor = burner.chart(Station::BayFloor).expect("its deck");
+        let (w, h) = RoomKind::Burner.floor();
+        for j in 0..h {
+            for i in 0..w {
+                let cell = layout::cell_rect(burner.id, 3 + i, 3 + j);
+                let mid = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
+                let probe = floor.to_world(mid) + Vec3::Y * 0.004;
+                let workable = boxes.rooms.iter().any(|(lo, hi)| {
+                    (0..=6u8).any(|a| {
+                        (0..=6u8).any(|b| {
+                            let eye = Vec3::new(
+                                (f32::from(a) / 6.0).mul_add(hi.x - lo.x, lo.x),
+                                EYE_HEIGHT,
+                                (f32::from(b) / 6.0).mul_add(hi.z - lo.z, lo.z),
+                            );
+                            let dir = probe - eye;
+                            let pitch = (-dir.y).atan2(dir.xz().length()).abs();
+                            dir.length() <= REACH - 0.05
+                                && pitch <= PITCH_LIMIT - 0.02
+                                && !slabs.iter().any(|slab| {
+                                    ray_slab_entry(eye, dir, slab).is_some_and(|t| t < 1.0 - 1e-3)
+                                })
                         })
-                })
-            });
-            assert!(
-                workable,
-                "airlock tile {slot} is out of reach from everywhere"
-            );
+                    })
+                });
+                assert!(
+                    workable,
+                    "furnace cell ({i}, {j}) at {probe} is out of reach from everywhere"
+                );
+            }
         }
     }
 

@@ -44,8 +44,9 @@ const REJECT_SOFT_GAIN: f32 = 0.22;
 /// Louder than soft: the player tried something real and was told no.
 const REJECT_HARD_GAIN: f32 = 0.45;
 
-/// Gain for the station refusing a trade. Between the two rejects so it
-/// reads as its own kind of no; the voice itself already feels longer.
+/// Gain for a handshake worked with nothing to commit — the room's
+/// fixture thrown on an empty offer. Between the two rejects so it reads
+/// as its own kind of no; the voice itself already feels longer.
 const REFUSE_GAIN: f32 = 0.32;
 
 /// Peak gain for an accepted trade, scaled by [`loudness`] of the
@@ -107,7 +108,7 @@ const HARVEST_GAIN: f32 = 0.5;
 /// The ??? exchange's quiet stinger.
 const EXCHANGE_GAIN: f32 = 0.3;
 
-/// Shutters coming down on a station out of patience.
+/// A room coming alongside and mating: the seam taking hold.
 const SEAM_GAIN: f32 = 0.6;
 
 /// Encounter window opening and closing blips.
@@ -138,7 +139,7 @@ const FLUFF_GAIN: f32 = 0.15;
 /// carry a little weight without nagging.
 const BURN_GAIN: f32 = 0.42;
 
-/// The hopper overflow tipped over the side at dock.
+/// A seam letting go: the room parts and takes its own with it.
 const PART_GAIN: f32 = 0.3;
 
 /// The Grand Parade's stinger — the biggest ceremony the game has.
@@ -391,7 +392,14 @@ fn play(commands: &mut Commands, bank: &mut SoundBank, cue: Cue) {
         Cue::Place => (bank.thock.clone(), PLACE_GAIN),
         Cue::Reject { hard: false } => (bank.buzz.clone(), REJECT_SOFT_GAIN),
         Cue::Reject { hard: true } => (bank.buzz.clone(), REJECT_HARD_GAIN),
-        Cue::Refuse => (bank.buzz.clone(), REFUSE_GAIN),
+        // The handshake fixture's own throw, and the ONLY cue it makes:
+        // `Refuse` fires exactly when a handshake is worked with nothing
+        // to commit (docs/ROOMS.md's beat five), so the honest sound is
+        // the latch's dry mechanical clack — a brass plunger thrown, and
+        // nothing on the other end of it. A buzzer would be the fixture
+        // arguing; this is the fixture shrugging. A struck deal keeps the
+        // `deal` voice under `Accept`.
+        Cue::Refuse => (bank.latch.clone(), REFUSE_GAIN),
         Cue::Accept { value } => (bank.deal.clone(), ACCEPT_GAIN * loudness(value)),
         Cue::Jump => (bank.stinger.clone(), JUMP_GAIN),
         Cue::Delivered => (bank.stinger.clone(), DELIVERED_GAIN),

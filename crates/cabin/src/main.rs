@@ -294,7 +294,7 @@ fn advance(
         // while carrying, and the camera is on its way. A frame without
         // a held signal would snap the piece home (the sim's phantom-
         // pointer guard), so the grip keeps synthesizing until the
-        // focus arrives and the drag continues on the counter.
+        // focus arrives and the drag continues at the station.
         (bridge::POINTER_PARKED, false, true, false)
     } else {
         // The gesture layer merges with raw input in one place

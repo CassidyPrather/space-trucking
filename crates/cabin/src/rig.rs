@@ -299,10 +299,10 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
 // ---- Structural geometry as data ----
 
 /// An axis-aligned structural mass: walls, ribs, and whatever else the
-/// hull is made of. Every one of them is HULL now — the desk-class
-/// furniture that used to stand in the cabin's structure left with the
-/// barter counter and the burner annex, so the finish that told the two
-/// apart had nothing left to tell apart.
+/// hull is made of. Every one of them is HULL now — the furniture-class
+/// masses that used to stand in the cabin's structure left with the
+/// barter counter, the burner annex, and the console face, so the
+/// finish that told the two apart had nothing left to tell apart.
 #[derive(Clone, Copy, Debug)]
 pub struct Slab {
     pub center: Vec3,
@@ -498,8 +498,9 @@ pub fn focus_pose(focus: Focus, panels: &[(Station, SimSurface)]) -> Option<(Vec
         .filter(|(station, _)| Focus::of(*station) == Some(focus))
         .map(|(_, s)| s)
         .collect();
-    // Combined center and planar extents, measured in the first panel's
-    // frame (desk panels share a tilt by construction).
+    // Combined center and planar extents, measured in the lead
+    // surface's frame (a group's faces share a tilt by construction —
+    // two chart tanks on one wall, say).
     let lead = *group.first()?;
     let u = lead.half_u.normalize();
     let v = lead.half_v.normalize();
@@ -956,8 +957,8 @@ fn aimed_station(
 pub fn handle_route(pieces: &[Piece], at: SimVec2) -> Option<Focus> {
     let piece = layout::piece_at(pieces, at)?;
     let handle = crate::pieces::carry_handle_rect(piece.kind, layout::piece_rect(pieces, piece))?;
-    // Off its wall — staged on a hopper tile, boxed in a cubby, sat on
-    // the counter — an instrument is only cargo again: it carries no
+    // Off its wall — staged on a hopper tile, boxed in a cubby, laid
+    // on the deck — an instrument is only cargo again: it carries no
     // station, so its whole body grabs, handle or no handle.
     if handle.contains(at) || !matches!(piece.loc, Loc::Hold { .. }) {
         return None;
@@ -1058,8 +1059,8 @@ pub fn steer(
             };
             let bend = DUCK_RATE * time.delta_secs();
             rig.pos.y += (stance - rig.pos.y).clamp(-bend, bend);
-            // Focus what the crosshair rests on — cargo in hand included:
-            // the click carries the piece to the counter (the carry
+            // Focus what the crosshair rests on — cargo in hand
+            // included: the click carries the piece along (the carry
             // survives the glide; `advance` keeps the grip synthesized),
             // and because this runs before `advance`, the same click
             // never doubles as a placement.
@@ -1373,9 +1374,9 @@ mod tests {
     /// the perspective" rule, enforced at build time.
     ///
     /// **The hull is the only thing that may never be in the way**, and
-    /// now it is the only thing that could be: the desk-class furniture
-    /// that used to shoulder into sightlines is gone with the counter
-    /// and the console face. Cargo standing in a sightline is nobody's
+    /// now it is the only thing that could be: the furniture that used
+    /// to shoulder into sightlines is gone with the counter and the
+    /// console face. Cargo standing in a sightline is nobody's
     /// business here — the focus x-ray ghosts it at runtime.
     #[test]
     fn every_control_is_visible_from_its_focus() {
@@ -1714,7 +1715,7 @@ mod tests {
             "envelope stops {} short of the aft floor row",
             aft_edge - WALK_MAX.z
         );
-        // The envelope's front edge stops short of the desk furniture;
+        // The envelope's front edge stops short of the front gutter;
         // the front floor rows need only be within working reach of it
         // (the workability test proves each cell individually).
         assert!(

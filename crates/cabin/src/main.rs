@@ -23,6 +23,7 @@ mod fixture;
 mod fx;
 mod gesture;
 mod glow;
+mod menu;
 mod palette;
 mod pieces;
 mod rig;
@@ -35,7 +36,6 @@ use bevy::prelude::*;
 use bevy::window::PresentMode;
 
 use bridge::{Bridge, FrameInput, FrameOutcome};
-use space_trucking::sim::layout;
 use surface::VirtualPointer;
 
 /// The shell's one resource: the bridge (sim, save, tape) plus the two
@@ -67,6 +67,36 @@ struct ShotMode {
     fired: bool,
 }
 
+/// The cabin's own `--view` roam poses. Rooms derive theirs from the
+/// graph (`room::preset`); these three are the starter cabin's, and they
+/// stand back one cell further than they once did — the 8×7 floor put a
+/// cell of room between every hull plane and where it was, and a
+/// viewpoint that did not follow ends up nose-first on the wall it is
+/// meant to frame.
+fn cabin_preset(name: &str, rig: &mut rig::CameraRig) {
+    match name {
+        "bay" => {
+            rig.pos.z = -0.85;
+            rig.yaw = std::f32::consts::PI;
+            rig.pitch = -0.22;
+        }
+        // The front wall — bare metal since the console face came off,
+        // and worth a preset precisely so it can be checked.
+        "front" => {
+            rig.pos = Vec3::new(0.0, 1.35, 0.85);
+            rig.yaw = 0.0;
+            rig.pitch = -0.06;
+        }
+        // The starboard wall by the doorway — the starter chart tank berth.
+        "starboard" => {
+            rig.pos = Vec3::new(-0.60, 1.40, 0.76);
+            rig.yaw = -std::f32::consts::FRAC_PI_2;
+            rig.pitch = -0.10;
+        }
+        _ => {}
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let dev = args.iter().any(|arg| arg == "--dev");
@@ -80,39 +110,25 @@ fn main() {
             .and_then(|at| args.get(at + 1).cloned())
     };
     let shot = flag_value("--shot");
-    // `--view tank|lever|console|bay` boots parked at that
-    // viewpoint — mostly for screenshot runs, harmless interactively.
-    // The bay has no focus pose; its view is a roam pose facing aft.
-    // The instrument viewpoints (tank, lever) find their pieces on the
-    // first frame, wherever the board hangs them.
+    // `--menu`: boot with the `Esc` menu standing open. Dev tooling for
+    // screenshot runs (the menu is a click away otherwise), kept because
+    // a shot of the meta-controls is exactly the kind of thing that
+    // wants capturing without a hand on the keyboard.
+    let open_menu = args.iter().any(|arg| arg == "--menu");
+    // `--view tank|lever|bay` boots parked at that viewpoint — mostly
+    // for screenshot runs, harmless interactively. The bay has no focus
+    // pose; its view is a roam pose facing aft. Both instrument
+    // viewpoints find their pieces on the first frame, wherever the
+    // board hangs them: there is no fixed station left to name.
     let view_name = flag_value("--view");
     let view = view_name.as_deref().and_then(|name| match name {
         "tank" => Some(rig::Focus::Tank),
         "lever" => Some(rig::Focus::Lever),
-        "console" => Some(rig::Focus::Console),
         _ => None,
     });
-    // The roam poses stand back one cell further than they used to: the
-    // 8x7 cabin put a cell of room between every hull plane and where it
-    // was, and a viewpoint that did not follow ends up with its nose on
-    // the wall it is meant to frame.
     let mut boot_rig = rig::CameraRig::boot(view);
-    if view_name.as_deref() == Some("bay") {
-        boot_rig.pos.z = -0.85;
-        boot_rig.yaw = std::f32::consts::PI;
-        boot_rig.pitch = -0.22;
-    }
-    // The front wall, where the instrument cluster hangs.
-    if view_name.as_deref() == Some("front") {
-        boot_rig.pos = Vec3::new(0.0, 1.35, 0.85);
-        boot_rig.yaw = 0.0;
-        boot_rig.pitch = -0.06;
-    }
-    // The starboard wall by the doorway — the starter chart tank berth.
-    if view_name.as_deref() == Some("starboard") {
-        boot_rig.pos = Vec3::new(-0.60, 1.40, 0.76);
-        boot_rig.yaw = -std::f32::consts::FRAC_PI_2;
-        boot_rig.pitch = -0.10;
+    if let Some(name) = view_name.as_deref() {
+        cabin_preset(name, &mut boot_rig);
     }
 
     let bridge = if fixture {
@@ -156,13 +172,14 @@ fn main() {
     .insert_resource(boot_rig)
     .init_resource::<VirtualPointer>()
     .configure_sets(Update, (Phase::Input, Phase::Advance, Phase::View).chain())
+    .insert_resource(menu::Menu::boot(open_menu))
     .add_plugins((
         airlock::AirlockPlugin,
         audio::AudioPlugin,
-        console::ConsolePlugin,
         crt::CrtPlugin,
         fx::FxPlugin,
         gesture::GesturePlugin,
+        menu::MenuPlugin,
         pieces::PiecesPlugin,
         room::RoomsPlugin,
         viewport::ViewportPlugin,
@@ -171,6 +188,9 @@ fn main() {
     .add_systems(
         Update,
         (
+            // The menu takes the keyboard first: an `Esc` it answers is
+            // an `Esc` the camera must never also act on.
+            menu::keys,
             rig::steer,
             rig::pose,
             rig::present_mode,
@@ -218,6 +238,12 @@ fn shoot(
 /// Focused stations get the freed cursor; roaming gets the crosshair
 /// carry over the bay (and clicks on stations glide the camera instead,
 /// empty-handed). Keys stay live in every mode.
+///
+/// **The world keeps turning while the menu stands.** The menu parks the
+/// pointer (nothing of it reaches the sim as a click) but never freezes
+/// the frame: the only honest pause is the sim's own, folded below like
+/// any other toggle, so a paused game is paused because the sim says so
+/// and a menu left open overnight still arrives somewhere.
 #[allow(clippy::too_many_arguments)]
 fn advance(
     time: Res<Time>,
@@ -228,6 +254,7 @@ fn advance(
     grips: Res<gesture::Grips>,
     occupancy: Res<room::Occupancy>,
     latch: Res<room::AimedLatch>,
+    mut menu: ResMut<menu::Menu>,
     mut shell: ResMut<Shell>,
 ) {
     let live = camera.interactive();
@@ -285,6 +312,11 @@ fn advance(
             buttons.just_released(MouseButton::Left),
         )
     };
+    // The menu's controls are worked with the mouse, but they arrive
+    // here as plain edges — exactly where the console face's icon rects
+    // used to fold in. One toggle path, whatever threw it: the sim is
+    // still the only thing that decides what pausing means.
+    let worked = menu.take();
     let input = FrameInput {
         pointer: at,
         press,
@@ -295,10 +327,9 @@ fn advance(
         key_warp: keys.just_pressed(KeyCode::KeyF),
         key_mute: keys.just_pressed(KeyCode::KeyM),
         key_reseed: keys.just_pressed(KeyCode::KeyR),
-        // The console icons fold into shell toggles, same as 2D.
-        icon_pause: layout::PAUSE_BTN.contains(at),
-        icon_warp: layout::WARP_BTN.contains(at),
-        icon_mute: layout::SPEAKER.contains(at),
+        menu_pause: worked.pause,
+        menu_warp: worked.warp,
+        menu_mute: worked.mute,
         occupied: occupancy.0,
         detach: parting,
     };

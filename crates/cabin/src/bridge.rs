@@ -71,12 +71,16 @@ pub struct FrameInput {
     pub key_warp: bool,
     pub key_mute: bool,
     pub key_reseed: bool,
-    /// Pointer presses the surface mapper resolved onto the console's
-    /// pause / warp / mute icons this frame (the sim ignores those rects;
-    /// the shell folds them into toggles, same as the 2D frontend).
-    pub icon_pause: bool,
-    pub icon_warp: bool,
-    pub icon_mute: bool,
+    /// The `Esc` menu's pause / fast-forward / mute controls, worked this
+    /// frame. These arrive as plain edges rather than as pointer presses
+    /// on a rect: the console face that carried those icon rects came
+    /// off the wall (`crate::menu`), and a meta-control is not a place
+    /// in the room. The folding below is unchanged — the shell turns
+    /// them into the same toggles the keys throw, same as the 2D
+    /// frontend did with its icons.
+    pub menu_pause: bool,
+    pub menu_warp: bool,
+    pub menu_mute: bool,
     /// **Which room the body stands in**, derived from the camera by
     /// `room::occupy` (docs/ROOMS.md, "The one new input field"). The
     /// gates read this and nothing else about where anybody stands.
@@ -98,9 +102,9 @@ impl Default for FrameInput {
             key_warp: false,
             key_mute: false,
             key_reseed: false,
-            icon_pause: false,
-            icon_warp: false,
-            icon_mute: false,
+            menu_pause: false,
+            menu_warp: false,
+            menu_mute: false,
             occupied: CABIN,
             detach: None,
         }
@@ -228,7 +232,7 @@ impl Bridge {
 
         let frame = self.input_frame(input);
         // Mute is the shell's business; the sim never hears about it.
-        outcome.toggle_mute = input.key_mute || (input.press && input.icon_mute);
+        outcome.toggle_mute = input.key_mute || input.menu_mute;
         self.recording.record_frame(self.sim.tick(), &frame);
         self.sim.advance(dt, &frame);
 
@@ -251,8 +255,8 @@ impl Bridge {
             press: input.press,
             held: input.held,
             release: input.release,
-            toggle_pause: input.key_pause || (input.press && input.icon_pause),
-            toggle_warp: self.dev && (input.key_warp || (input.press && input.icon_warp)),
+            toggle_pause: input.key_pause || input.menu_pause,
+            toggle_warp: self.dev && (input.key_warp || input.menu_warp),
             shift: input.shift,
             night: self.night,
             // The sim learns rooms, not positions (docs/ROOMS.md). The
@@ -416,14 +420,15 @@ mod tests {
             key_warp: true,
             key_mute: false,
             key_reseed: false,
-            icon_pause: true,
-            icon_warp: false,
-            icon_mute: false,
+            menu_pause: true,
+            menu_warp: false,
+            menu_mute: false,
             occupied: CABIN,
             detach: None,
         });
         assert!(frame.press && frame.held && !frame.release && frame.shift);
-        // Icon press folds into the pause toggle, same as the 2D shell.
+        // A menu edge folds into the pause toggle, exactly where the
+        // console face's icon rect used to.
         assert!(frame.toggle_pause);
         // Warp stays locked without dev mode, key or no key.
         assert!(!frame.toggle_warp);
@@ -626,9 +631,9 @@ mod tests {
             key_warp: false,
             key_mute: false,
             key_reseed: false,
-            icon_pause: false,
-            icon_warp: false,
-            icon_mute: false,
+            menu_pause: false,
+            menu_warp: false,
+            menu_mute: false,
             occupied: CABIN,
             detach: None,
         };

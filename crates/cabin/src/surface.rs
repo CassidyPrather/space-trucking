@@ -2,7 +2,7 @@
 //!
 //! The sim's whole interaction model is a pointer in its 800×600 console
 //! world (`sim::layout`). Each interactive surface in the cabin — the nav
-//! tank's glass, the console face, the bay's wall band and deck strip —
+//! tank's glass, the launch handle's track, the bay's charts —
 //! is a [`SimSurface`]: an oriented quad in 3D
 //! space bound to one sim rect.
 //! Each frame the cursor ray is cast against every surface; the nearest
@@ -36,8 +36,12 @@ pub enum Station {
     /// `ChartTank` piece: the logical rect never moves, the binding
     /// does (docs/BAY.md, "Instruments as cargo").
     Map,
-    /// The console face: the icon buttons and the hangar tally.
-    Console,
+    // No `Console`. The face that carried the pause/warp/speaker plate
+    // and the hangar tally was the last station screwed to the hull, and
+    // meta-controls are not a place you walk up to: they are the `Esc`
+    // menu now (`crate::menu`), overlay rather than room. Its icon
+    // hardware waits on the shelf in `crate::console` for the day
+    // somebody makes it cargo.
     /// The launch handle's own panel — a region around
     /// `layout::LAUNCH_LEVER`, carried by the `LaunchLever` piece so
     /// the pull gesture never learns the handle moved.
@@ -162,6 +166,16 @@ impl SimSurface {
     /// A panel standing near-vertical, facing +Z (toward the seat), tilted
     /// `tilt` radians about X: positive tilt reclines the top away and
     /// raises the face toward the viewer — desk-like at large angles.
+    ///
+    /// **Nothing calls this at runtime any more** — the hull owns no
+    /// panels, and every surface aboard is a chart or a piece's own face,
+    /// each built from its room's or its rig's pose. The constructor
+    /// outlives them because it is the one place the tilt/yaw frame is
+    /// written down, and the mapping tests below drive the projection
+    /// math through it: the next thing that wants a tilted face (a bolt-
+    /// on instrument, a room's own fixture) should build it here rather
+    /// than derive the quaternion again by hand.
+    #[allow(dead_code)]
     #[must_use]
     pub fn panel(center: Vec3, width: f32, height: f32, tilt: f32, rect: SimRect) -> Self {
         Self::panel_yawed(center, width, height, tilt, 0.0, rect)
@@ -169,7 +183,9 @@ impl SimSurface {
 
     /// [`Self::panel`] rotated `yaw` radians about Y afterwards, for
     /// panels mounted on other walls: `FRAC_PI_2` faces +X (the left
-    /// wall's inward normal), `-FRAC_PI_2` faces -X.
+    /// wall's inward normal), `-FRAC_PI_2` faces -X. Dormant with its
+    /// sibling above, and for the same reason.
+    #[allow(dead_code)]
     #[must_use]
     pub fn panel_yawed(
         center: Vec3,
@@ -403,9 +419,10 @@ pub fn pick(
                 continue;
             }
             // While roaming, the focusable stations are opaque but not
-            // interactive: their panels stop the ray (nothing lands on
-            // the wall chart BEHIND the counter) without becoming aim —
-            // a click there glides to focus instead (`rig::steer`).
+            // interactive: an instrument's glass stops the ray (nothing
+            // lands on the wall chart BEHIND a chart tank) without
+            // becoming aim — a click there glides to focus instead
+            // (`rig::steer`).
             if roam_only && !station.roamable() {
                 nearest = t;
                 pointer = VirtualPointer::default();

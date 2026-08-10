@@ -1,12 +1,36 @@
-//! The console face: what is LEFT of the 2D console's right-hand panel
-//! once the instruments walked off it. One `SimSurface`
-//! (`Station::Console`, sim rect `layout::CONSOLE`) carrying the
-//! pause/warp/speaker toggle buttons and the hangar tally plate — the
-//! preview CRT, the ETA gauge, and the launch handle are cargo now,
-//! each wearing its own reading on its own rig (`pieces`). Semantics
-//! mirror `src/render.rs`'s `draw_console` family: the sim stays the
-//! only authority, this module only reads it back onto metal, glass,
-//! and phosphor.
+//! **The console face, retired — and kept on the shelf.**
+//!
+//! Nothing in this module is bolted to the ship any more. The face's
+//! readings walked off first (the preview CRT, the ETA gauge, the launch
+//! handle became cargo — `Kind::DestPreview`, `Kind::EtaGauge`,
+//! `Kind::LaunchLever` in `pieces`), and this pass took the rest: the
+//! pause/warp/speaker plate and the hangar tally strip were the last
+//! fixed UI screwed to a wall, and a wall panel that only carries
+//! meta-controls is furniture pretending to be a station. The controls
+//! themselves moved to the `Esc` menu (`crate::menu`), where the sim
+//! stays the authority and the room stays diegetic.
+//!
+//! What is left here is **recipes**, not furniture: the icon geometry,
+//! the lamp feel, and the hangar strip's delivery blink, each written
+//! against a plain [`SimSurface`] so any face can wear them. Every one
+//! of them **wants to come back as a cargo kind** — a toggle block you
+//! bolt to a wall, a tally plaque the Guild ships you when the hangar
+//! starts counting — and the whole point of leaving them compiled is
+//! that the day somebody appends that `Kind`, the hardware is already
+//! drawn and already breathes. Deleting them would have thrown away the
+//! tactile half of the work and kept only the boring half.
+//!
+//! Semantics still mirror what the 2D console's `draw_console` family
+//! did: the sim is the only authority, and this module only ever read
+//! it back onto metal, glass, and phosphor.
+
+// **The dormancy allow, argued.** Everything below is unreferenced on
+// purpose — see the module docs. Compiled-but-unused beats a comment
+// block full of code: the borrow checker keeps the recipes honest, a
+// palette or `glow` rename breaks the build here instead of rotting
+// quietly, and resurrection is a call site rather than an archaeology
+// dig. The lint would otherwise flag the whole file.
+#![allow(dead_code)]
 
 use std::f32::consts::{FRAC_PI_2, TAU};
 
@@ -15,19 +39,21 @@ use bevy::prelude::*;
 use space_trucking::sim::{Cue, Vec2 as SimVec2, layout};
 
 use crate::rig::Skin;
-use crate::surface::{SimSurface, Station, VirtualPointer};
-use crate::{Phase, Shell, glow, palette};
+use crate::surface::{SimSurface, VirtualPointer};
+use crate::{Shell, glow, palette};
 
 // ---- Feedback lengths (all inside the half-second law) ----
 
 /// A hangar lamp blinking awake after a delivery crosses its threshold.
 const WAKE_LEN: f32 = 0.40;
 
-/// Lifetime-delivery thresholds for the hangar plate's six lamps, matching
-/// the 2D console's `DELIVERY_LAMPS` ladder.
-const DELIVERY_LAMPS: [u32; 6] = [1, 2, 4, 8, 16, 32];
+/// Lifetime-delivery thresholds for the hangar plate's six lamps. The
+/// ladder itself did NOT retire with the plate — `crate::menu` counts
+/// the same rungs, because the ladder is the reading and the plate was
+/// only ever one way to wear it.
+pub const DELIVERY_LAMPS: [u32; 6] = [1, 2, 4, 8, 16, 32];
 
-// ---- Sim-unit furniture numbers, mirrored from `src/render.rs` ----
+// ---- Sim-unit furniture numbers, mirrored from the 2D console ----
 
 /// The hangar tally plaque and its recessed glass strip (display-only, so
 /// like the 2D renderer its rects are furniture, not `layout`'s business).
@@ -70,21 +96,9 @@ struct HangarWake {
     left: f32,
 }
 
-/// The console face's plugin: spawn the furniture after the rig stands,
-/// then read the sim back onto it every view frame.
-pub struct ConsolePlugin;
-
-impl Plugin for ConsolePlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<HangarWake>()
-            .add_systems(PostStartup, spawn)
-            .add_systems(Update, (buttons, hangar).in_set(Phase::View));
-    }
-}
-
 // ------------------------------------------------------------------ spawn --
 
-/// Everything a spawn helper needs to bolt furniture onto the panel.
+/// Everything a spawn helper needs to bolt furniture onto a face.
 struct Build<'a, 'w, 's> {
     commands: &'a mut Commands<'w, 's>,
     meshes: &'a mut Assets<Mesh>,
@@ -180,43 +194,37 @@ impl Build<'_, '_, '_> {
     }
 }
 
-/// Bolt the whole console face onto the `Station::Console` surface.
-fn spawn(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    skin: Res<Skin>,
-    shell: Res<Shell>,
-    surfaces: Query<(&Station, &SimSurface)>,
+/// **The resurrection entry point.** Bolt the whole toggle-and-tally
+/// face onto any surface — hand it the face a piece's rig is drawing on
+/// and the hardware grows there, exactly as it once grew on the wall.
+///
+/// Wants to come back as a cargo kind: a bolt-on toggle block, or the
+/// Guild's tally plaque. Nothing in here knows about `Station::Console`
+/// any more, which is the whole reason it survived the sweep.
+fn bolt_on(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    skin: &Skin,
+    panel: SimSurface,
+    dev: bool,
 ) {
-    let Some(panel) = surfaces
-        .iter()
-        .find_map(|(station, surface)| (*station == Station::Console).then_some(*surface))
-    else {
-        return;
-    };
     let puck = meshes.add(Cylinder::new(1.0, 1.0));
     let mut build = Build {
-        commands: &mut commands,
-        meshes: &mut meshes,
-        materials: &mut materials,
-        skin: &skin,
+        commands,
+        meshes,
+        materials,
+        skin,
         panel,
         puck,
     };
-    spawn_buttons(&mut build, shell.bridge.dev());
+    spawn_buttons(&mut build, dev);
     spawn_hangar(&mut build);
 }
 
-// The ETA gauge, the destination preview, and the launch handle all
-// left the console face — they are cargo now (`Kind::EtaGauge`,
-// `Kind::DestPreview`, `Kind::LaunchLever` in `pieces`), wearing the
-// same readings and the same pull on their own rigs. The face keeps
-// the toggle buttons and the hangar strip until their own instruments
-// absorb them.
-
 /// The three toggle buttons: raised plate caps, icons built from strokes,
-/// a state lamp under each. Warp is dev-only furniture, same as 2D.
+/// a state lamp under each. Warp is dev-only furniture, same as 2D — and
+/// the `Esc` menu inherited exactly that gate.
 fn spawn_buttons(b: &mut Build<'_, '_, '_>, dev: bool) {
     spawn_pause(b);
     if dev {
@@ -338,7 +346,12 @@ fn set_stroke(mat: &mut StandardMaterial, live: Color, lit: bool, glow_up: f32) 
     };
 }
 
-/// The toggle buttons: icon strokes, state lamps, and the mute slash.
+/// **The button feel.** Icon strokes, state lamps, and the mute slash,
+/// read off the sim every frame: a live function lights its own icon, a
+/// sleeping one keeps only the etched floor, and a hovered lamp wakes
+/// faintly — interactable, not active. That last touch is the tell that
+/// makes a metal button feel like hardware, and it is the reason this
+/// system is on the shelf instead of in the bin.
 fn buttons(
     shell: Res<Shell>,
     pointer: Res<VirtualPointer>,
@@ -393,9 +406,16 @@ fn buttons(
     }
 }
 
-/// The hangar tally: each lamp shimmers slightly out of phase once its
-/// threshold is passed; the lamp whose threshold a delivery just crossed
-/// blinks awake — a couple of stutters easing into the steady shimmer.
+/// **The delivery blink.** Each tally lamp shimmers slightly out of
+/// phase once its threshold is passed; the lamp whose threshold a
+/// delivery just crossed blinks awake — a couple of stutters easing into
+/// the steady shimmer, all inside the half-second law.
+///
+/// Wants to come back as a cargo kind: the Guild's tally plaque, hung
+/// wherever you like, counting the same ladder. The `Esc` menu carries
+/// the *reading* now ([`DELIVERY_LAMPS`]) but deliberately not this —
+/// a menu that stutters at you is a menu arguing, and the blink belongs
+/// to hardware in a room.
 fn hangar(
     time: Res<Time>,
     shell: Res<Shell>,

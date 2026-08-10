@@ -463,14 +463,6 @@ pub struct SharedBits {
 
 // ------------------------------------------------------------------ helpers --
 
-/// The panel with `want`'s station tag, if the rig spawned it.
-fn surface_of(surfaces: &Query<(&Station, &SimSurface)>, want: Station) -> Option<SimSurface> {
-    surfaces
-        .iter()
-        .find(|(station, _)| **station == want)
-        .map(|(_, surface)| *surface)
-}
-
 /// Which room's lane a chart's rect lies in. Lanes are fixed by id and
 /// never overlap (docs/ROOMS.md, "Room grids and colored tiles"), so a
 /// chart's own rect says whose room it belongs to — which is why nothing
@@ -1491,15 +1483,14 @@ fn carry_held(
         }
     } else {
         // The focus drag: the ray's hit lifted off that panel, or —
-        // parked pointer — simply wherever it last hovered, falling back
-        // to floating over the counter the drag must have started from.
+        // parked pointer — simply wherever it last hovered. There is no
+        // console face left to float over as a last resort (the hull
+        // owns no panels), so a drag with no history at all simply waits
+        // for the pointer to land somewhere real.
         if let (Some(world), Some(surface)) = (pointer.world, pointer.surface) {
             carry.last = Some((world + surface.normal() * CARRY_LIFT, surface.orientation()));
         }
-        let Some((pos, rot)) = carry.last.or_else(|| {
-            surface_of(&surfaces, Station::Console)
-                .map(|face| (face.center + face.normal() * 0.25, face.orientation()))
-        }) else {
+        let Some((pos, rot)) = carry.last else {
             return;
         };
         (pos, rot, 1.1)
@@ -4745,7 +4736,7 @@ mod tests {
         // and the hull then present two opaque faces on one plane — the
         // playtest's flickering deck, which the tiles ON it never showed
         // because they ride rungs and the deck did not.
-        let slabs = rig::structure(&rig::panels());
+        let slabs = rig::structure();
         for (station, surface) in rig::bay() {
             if !matches!(station, Station::BayWall | Station::BayFloor) {
                 continue;

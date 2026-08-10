@@ -2242,14 +2242,8 @@ mod tests {
                 });
             }
         }
-        for (station, surface) in crate::rig::panels() {
-            aims.push(Aimable {
-                station,
-                surface,
-                riding: false,
-                in_room: None,
-            });
-        }
+        // No hull panels to add: `rig::panels()` retired with the last
+        // fixed station, so the charts and the pieces are the whole list.
         aims
     }
 

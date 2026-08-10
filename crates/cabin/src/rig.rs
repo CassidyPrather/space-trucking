@@ -1,25 +1,27 @@
 //! The cabin itself: an enclosed box with flavor, per DESIGN.md's first
-//! pass. Three focusable panels forward — star tank on the left wall,
-//! console face front-right, barter counter low-right — and the walkable
-//! cargo bay aft: the sim's room net — an 8×7 floor inside three courses
-//! of wall — unfolded onto the whole hull at furniture scale
-//! (docs/BAY.md), worked from roam with the crosshair instead of from a
-//! focus pose.
+//! pass. **The hull owns no panels at all now** — the star tank, the
+//! launch handle, and the readings are cargo, and the last fixed panel
+//! (the console face, with its toggle plate and hangar strip) came off
+//! this pass; its meta-controls live in the `Esc` menu (`crate::menu`),
+//! which is overlay, not room. What the ship itself owns is the walkable
+//! cargo bay: the sim's room net — an 8×7 floor inside three courses of
+//! wall — unfolded onto the whole hull at furniture scale (docs/BAY.md),
+//! worked from roam with the crosshair instead of from a focus pose.
 //!
 //! Two camera postures. **Roaming**: a conventional first-person walk —
-//! pointer locked, mouse to look, WASD to move, a crosshair dot; aim at a
-//! station and it invites with a glint frame. **Focused**: click (or `E`)
-//! and the camera glides to that station's authored viewpoint, the cursor
-//! frees, and precise sim interaction happens exactly as in 2D. `Esc`,
-//! right-click, or `E` steps back out. The camera never trails the cursor
-//! — deliberate moves only, nothing to get seasick over.
+//! pointer locked, mouse to look, WASD to move, a crosshair dot; aim at
+//! an instrument and its own rig invites with a glint frame
+//! (`pieces::hover_glint`). **Focused**: click (or `E`) and the camera
+//! glides to that station's viewpoint — wherever the cargo carrying it
+//! happens to hang — the cursor frees, and precise sim interaction
+//! happens exactly as in 2D. `Esc`, right-click, or `E` steps back out.
+//! The camera never trails the cursor — deliberate moves only, nothing
+//! to get seasick over.
 //!
-//! Structural geometry is *data first* (`structure()`), and the desk
-//! masses under the tilted panels are **derived from the panel corners**
-//! rather than authored twice — the class of clipping bug where furniture
-//! swallows a panel's lower row cannot recur, and a unit test walks every
-//! panel face against every slab to keep it that way. Focus viewpoints
-//! are likewise fitted from the panel extents and the camera's FOV.
+//! Structural geometry is *data first* ([`structure`]): one list, no
+//! furniture derived twice, and a unit test walks the invariants. Focus
+//! viewpoints are fitted from the live surfaces' extents and the
+//! camera's FOV, so a station that rides a crate takes its pose with it.
 //!
 //! Also home to the pixel crunch (a 480×270 nearest-neighbour target —
 //! "smoothing off" applied to the whole world) and the shared low-poly
@@ -59,8 +61,8 @@ pub const EYE_HEIGHT: f32 = 1.5;
 // with the HULL and nothing else: cargo has no body to bump, and the
 // placement law no longer reserves a lane for one either.
 // The cabin's own box is AUTHORED, because its hull is: it stands a
-// working gutter of desk furniture forward of its lattice floor box that
-// the lattice knows nothing about (`room::chart_inset`). Every attached
+// working gutter forward of its lattice floor box that the lattice
+// knows nothing about (`room::chart_inset`). Every attached
 // room derives its own from its pose, and the doorways join them
 // (`room::walk_boxes`).
 pub const WALK_MIN: Vec3 = Vec3::new(-1.85, EYE_HEIGHT, -0.85);
@@ -168,30 +170,21 @@ const GLIDE: f32 = 0.38;
 /// Margin factor when fitting a panel into the focused view.
 const FIT_MARGIN: f32 = 1.14;
 
-/// How far the physical panel plate extends past its mapped quad.
+/// How far a physical panel plate extends past its mapped quad. Nothing
+/// on the hull wears one any more; the instruments' own rigs keep the
+/// margin, and [`focus_pose`] still frames by it.
 const PLATE_MARGIN: f32 = 0.03;
 
-/// The panels still screwed to the hull: where each sim region lives in
-/// the cabin. Width/height keep each rect's aspect; scales differ per
-/// panel on purpose. The hold is not here — it unfolded into the bay
-/// ([`bay`]) — and neither is the star tank: the instruments are cargo,
-/// so `Station::Map` and `Station::Lever` ride their pieces' cells
-/// (`pieces::instrument_surface`) and this list keeps only what the
-/// ship itself owns. The barter counter left with the interface it
-/// belonged to (docs/ROOMS.md); the console face is next.
-#[must_use]
-pub fn panels() -> [(Station, SimSurface); 1] {
-    [(
-        Station::Console,
-        SimSurface::panel(
-            Vec3::new(0.50, 1.52, -1.83),
-            0.54,
-            0.84,
-            0.10,
-            layout::CONSOLE,
-        ),
-    )]
-}
+// **No panel list.** There used to be one — `panels()` — naming the sim
+// regions screwed to the cabin's walls. It is gone, and the emptiness is
+// the point: the hold unfolded into the bay ([`bay`]), the instruments
+// became cargo (`Station::Map` and `Station::Lever` ride their pieces'
+// cells, `pieces::instrument_surface`), the barter counter left with the
+// interface it belonged to (docs/ROOMS.md), and the console face left
+// with the last controls that were only ever *about* the game rather
+// than in it (`crate::menu`). A hull that owns no screens is the ship
+// this game was always describing: everything you can read, you can
+// also carry, sell, or lose.
 
 /// The cabin's six mapped surfaces: the room net unfolded like an opened
 /// box. Rows 0–2 stand on the aft wall (row 0 the cornice), rows 3–9
@@ -346,7 +339,7 @@ impl Slab {
 // One slab per line of the room's plan; splitting the list would
 // scatter the one place the whole hull is written down.
 #[allow(clippy::too_many_lines)]
-pub fn structure(panels: &[(Station, SimSurface)]) -> Vec<Slab> {
+pub fn structure() -> Vec<Slab> {
     let mut slabs = vec![
         // The box: floor, ceiling, four walls. The 8x7 floor put a cell
         // (0.55) between each of these and where it used to stand: the
@@ -374,9 +367,10 @@ pub fn structure(panels: &[(Station, SimSurface)]) -> Vec<Slab> {
             ));
         }
     }
-    // The counter's derived support came out with the counter it held
-    // up (docs/ROOMS.md): the last screen-shaped surface in the game.
-    let _ = panels;
+    // No derived furniture: the counter's support came out with the
+    // counter (docs/ROOMS.md), and the console face's plate came out
+    // with the face. Nothing in the cabin is measured off a panel any
+    // more, because there are no panels.
     // Every declared aperture, cut. Doors, ladder, and hatch alike: the
     // opening is architecture, and what stands in it is hardware.
     for (lo, hi) in crate::room::cabin_holes() {
@@ -394,11 +388,13 @@ pub fn structure(panels: &[(Station, SimSurface)]) -> Vec<Slab> {
 
 // ---- The camera rig ----
 
-/// A focused viewpoint.
+/// A focused viewpoint. Two of them, and **both ride cargo**: the face
+/// that used to make a third came off the wall this pass, and its
+/// controls are overlay now (`crate::menu`). A focus is a thing you own,
+/// not a thing the ship came with.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Focus {
     Tank,
-    Console,
     Lever,
 }
 
@@ -411,7 +407,6 @@ impl Focus {
     pub const fn of(station: Station) -> Option<Self> {
         match station {
             Station::Map => Some(Self::Tank),
-            Station::Console => Some(Self::Console),
             Station::Lever => Some(Self::Lever),
             Station::BayWall
             | Station::BayFloor
@@ -630,12 +625,13 @@ pub struct TileFade {
 /// finishes well inside the half-second law.
 const TILE_FADE_RATE: f32 = 6.0;
 
-/// The glint frame inviting a station's focus while aimed at in roam.
-#[derive(Component)]
-pub struct AimFrame(pub Station);
+// The glint frame that used to invite a hull panel's focus retired with
+// the hull panels. The invitation itself did not: an instrument is cargo,
+// and `pieces::hover_glint` lights the piece's own footprint frame — the
+// tell now belongs to the thing you could also pick up.
 
 /// Spawn the whole static cabin: crunch pipeline, camera, structure,
-/// panels, sockets, lights, version text.
+/// bay furniture, lights, version text.
 #[allow(clippy::too_many_lines)]
 pub fn spawn(
     mut commands: Commands,
@@ -645,7 +641,6 @@ pub fn spawn(
     rig: Res<CameraRig>,
 ) {
     let skin = Skin::build(&mut meshes, &mut materials, &mut images);
-    let panels = panels();
 
     // --- The crunch: a small render target shown fullscreen, unsmoothed.
     let mut target = Image::new_target_texture(
@@ -657,14 +652,11 @@ pub fn spawn(
     target.sampler = ImageSampler::nearest();
     let target = images.add(target);
 
-    // A booted focus (`--view`) has no instrument to aim at yet — the
-    // riding stations are hung on the first frame — so the camera opens
-    // on the roaming pose and `pose` snaps it home a frame later.
-    let (pos, rot) = match rig.mode {
-        Mode::Focused { focus } => focus_pose(focus, &panels),
-        _ => None,
-    }
-    .unwrap_or_else(|| (rig.pos, rig.roam_rotation()));
+    // A booted focus (`--view`) has no instrument to aim at yet — every
+    // station rides a piece, and the riding surfaces are hung on the
+    // first frame — so the camera opens on the roaming pose and `pose`
+    // snaps it home a frame later.
+    let (pos, rot) = (rig.pos, rig.roam_rotation());
     commands.spawn((
         Camera3d::default(),
         Camera {
@@ -756,7 +748,7 @@ pub fn spawn(
     ));
 
     // --- Structure: every axis-aligned mass, from the one data source.
-    for slab in structure(&panels) {
+    for slab in structure() {
         commands.spawn((
             Mesh3d(skin.cube.clone()),
             MeshMaterial3d(skin.hull.clone()),
@@ -778,54 +770,11 @@ pub fn spawn(
             .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
     ));
 
-    // --- Panels: each SimSurface entity carries its station tag; a PLATE
-    // slab sits just behind each mapped quad as the physical panel, and a
-    // glint aim frame waits hidden for the roaming crosshair.
-    for (station, surface) in panels {
-        let n = surface.normal();
-        let size = Vec3::new(
-            surface.half_u.length().mul_add(2.0, PLATE_MARGIN * 2.0),
-            surface.half_v.length().mul_add(2.0, PLATE_MARGIN * 2.0),
-            0.05,
-        );
-        commands.spawn((
-            Mesh3d(skin.cube.clone()),
-            MeshMaterial3d(skin.plate.clone()),
-            Transform::from_translation(surface.center - n * 0.028)
-                .with_rotation(surface.orientation())
-                .with_scale(size),
-        ));
-        let frame = materials.add(StandardMaterial {
-            base_color: palette::SHADOW,
-            emissive: palette::GLINT.to_linear() * 1.4,
-            perceptual_roughness: 0.85,
-            ..default()
-        });
-        let w = size.x + 0.015;
-        let h = size.y + 0.015;
-        commands
-            .spawn((
-                Transform::from_translation(surface.center + n * 0.004)
-                    .with_rotation(surface.orientation()),
-                Visibility::Hidden,
-                AimFrame(station),
-            ))
-            .with_children(|parent| {
-                for (offset, bar) in [
-                    (Vec3::new(0.0, h * 0.5, 0.0), Vec3::new(w, 0.008, 0.006)),
-                    (Vec3::new(0.0, -h * 0.5, 0.0), Vec3::new(w, 0.008, 0.006)),
-                    (Vec3::new(w * 0.5, 0.0, 0.0), Vec3::new(0.008, h, 0.006)),
-                    (Vec3::new(-w * 0.5, 0.0, 0.0), Vec3::new(0.008, h, 0.006)),
-                ] {
-                    parent.spawn((
-                        Mesh3d(skin.cube.clone()),
-                        MeshMaterial3d(frame.clone()),
-                        Transform::from_translation(offset).with_scale(bar),
-                    ));
-                }
-            });
-        commands.spawn((station, surface));
-    }
+    // --- No panels. Nothing to spawn here: the plates, their glint aim
+    // frames, and the station tags that went with them all belonged to
+    // surfaces the hull owned, and the hull owns none. Every `SimSurface`
+    // entity in the game is hung by `room` (the charts) or by `pieces`
+    // (an instrument's own riding face).
 
     // --- The bay: the cabin's own share of the room net. The charts
     // themselves, the berth wells, and every colored tile are `room`'s
@@ -1027,9 +976,17 @@ pub fn steer(
     pointer: Res<crate::surface::VirtualPointer>,
     shell: Res<crate::Shell>,
     envelope: Res<crate::room::Envelope>,
+    menu: Res<crate::menu::Menu>,
     mut rig: ResMut<CameraRig>,
     camera: Single<&Transform, With<CabinCamera>>,
 ) {
+    // While the menu stands it owns the keyboard and the cursor: no look,
+    // no walk, no glide, and no click reclaiming the pointer out from
+    // under a control the player is aiming at. `menu::keys` runs ahead of
+    // this in `Phase::Input` and took the `Esc` that opened it.
+    if menu.open {
+        return;
+    }
     let toggle = keys.just_pressed(KeyCode::KeyE);
     match rig.mode {
         Mode::Roam => {
@@ -1043,11 +1000,10 @@ pub fn steer(
             }
             // The Super/Windows key summons the OS — the overlay may not
             // flip `window.focused`, so treat the key itself as a park:
-            // the cursor is the desktop's now, click to reclaim.
-            if keys.just_pressed(KeyCode::Escape)
-                || keys.just_pressed(KeyCode::SuperLeft)
-                || keys.just_pressed(KeyCode::SuperRight)
-            {
+            // the cursor is the desktop's now, click to reclaim. `Esc`
+            // parks too, but by way of the menu (`menu::keys`): the
+            // cursor still goes free, it just has something to click.
+            if keys.just_pressed(KeyCode::SuperLeft) || keys.just_pressed(KeyCode::SuperRight) {
                 rig.parked = true;
                 return;
             }
@@ -1204,14 +1160,11 @@ pub fn pose(
     camera.rotation = rot;
 }
 
-/// Cursor grab, crosshair, and aim frames follow the mode.
+/// Cursor grab and crosshair follow the mode.
 pub fn present_mode(
     rig: Res<CameraRig>,
     mut window: Single<(&mut Window, &mut CursorOptions), With<PrimaryWindow>>,
-    mut crosshair: Single<&mut Visibility, (With<Crosshair>, Without<AimFrame>)>,
-    camera: Single<&Transform, With<CabinCamera>>,
-    surfaces: Query<(&Station, &SimSurface), Without<CabinCamera>>,
-    mut frames: Query<(&AimFrame, &mut Visibility), Without<Crosshair>>,
+    mut crosshair: Single<&mut Visibility, With<Crosshair>>,
     mut was_focused: Local<bool>,
 ) {
     let (window, cursor) = &mut *window;
@@ -1247,23 +1200,15 @@ pub fn present_mode(
         window.set_cursor_position(Some(center));
     }
     *was_focused = focused;
-    **crosshair = if roaming {
+    // The crosshair marks a live aim, so it goes with the lock: a freed
+    // cursor (parked to the desktop, or standing in front of the menu)
+    // has a real pointer to aim with and does not want a second one
+    // painted at screen centre.
+    **crosshair = if rig.roaming() {
         Visibility::Visible
     } else {
         Visibility::Hidden
     };
-    let aimed = if roaming {
-        aimed_station(&camera, &surfaces).and_then(Focus::of)
-    } else {
-        None
-    };
-    for (frame, mut visibility) in &mut frames {
-        *visibility = if aimed.is_some() && aimed == Focus::of(frame.0) {
-            Visibility::Visible
-        } else {
-            Visibility::Hidden
-        };
-    }
 }
 
 /// The glide's easing: smoothstep, no overshoot.
@@ -1321,32 +1266,14 @@ mod tests {
         (t_max >= t_min && t_max > 0.0).then(|| t_min.max(0.0))
     }
 
-    /// Ray versus a panel's physical plate (the oriented slab behind the
-    /// mapped quad), in the panel's own frame.
-    fn ray_plate_entry(origin: Vec3, dir: Vec3, surface: &SimSurface) -> Option<f32> {
-        let frame = surface.orientation().inverse();
-        let center = surface.center + surface.normal() * -0.028;
-        let local = Slab::new(
-            Vec3::ZERO,
-            Vec3::new(
-                surface.half_u.length().mul_add(2.0, PLATE_MARGIN * 2.0),
-                surface.half_v.length().mul_add(2.0, PLATE_MARGIN * 2.0),
-                0.05,
-            ),
-        );
-        ray_slab_entry(frame * (origin - center), frame * dir, &local)
-    }
+    // The plate-ray helper retired with the plates: no surface in the
+    // cabin has a physical panel slab behind it any more, so there is
+    // nothing but hull left to occlude a sightline.
 
     /// The sightline rule the screenshots check by eye, made mechanical:
     /// `point` must sit inside the camera frustum AND nothing structural
     /// may stand between the eye and it.
-    fn visible_from(
-        eye: Vec3,
-        rot: Quat,
-        point: Vec3,
-        slabs: &[Slab],
-        panels: &[(Station, SimSurface)],
-    ) -> Result<(), String> {
+    fn visible_from(eye: Vec3, rot: Quat, point: Vec3, slabs: &[Slab]) -> Result<(), String> {
         // Frustum containment, using the pinned FOV and crunch aspect.
         let local = rot.inverse() * (point - eye);
         if local.z >= -0.01 {
@@ -1367,15 +1294,6 @@ mod tests {
                 return Err(format!(
                     "slab at {} blocks the line from {eye} to {point} (t={t:.3})",
                     slab.center
-                ));
-            }
-        }
-        for (station, surface) in panels {
-            if let Some(t) = ray_plate_entry(eye, dir, surface)
-                && t < 1.0 - 1e-3
-            {
-                return Err(format!(
-                    "{station:?}'s plate blocks the line from {eye} to {point} (t={t:.3})"
                 ));
             }
         }
@@ -1413,14 +1331,6 @@ mod tests {
                 spots.push(SimVec2::new(r.x + 1.0, r.h.mul_add(0.5, r.y)));
                 spots.push(SimVec2::new(r.x + r.w - 1.0, r.h.mul_add(0.5, r.y)));
             }
-            // The face keeps only the toggles and the hangar strip; the
-            // readings and the pull are cargo, checked at their own
-            // stations above.
-            Station::Console => {
-                spots.push(mid(layout::PAUSE_BTN));
-                spots.push(mid(layout::WARP_BTN));
-                spots.push(mid(layout::SPEAKER));
-            }
             Station::BayWall
             | Station::BayFloor
             | Station::BayPort
@@ -1433,27 +1343,28 @@ mod tests {
         spots.into_iter().map(|s| surface.to_world(s)).collect()
     }
 
-    /// Every station standing in the starter cabin: the hull's own
-    /// panels plus the instruments' riding stations, derived from the
-    /// sim's opening board through the very function the runtime rides
-    /// them with. Move a starter berth and these tests move with it —
-    /// which is the point, now that the poses belong to the cargo.
+    /// Every station standing in the starter cabin — **all of them
+    /// riding cargo**, since the hull owns no panel to carry one.
+    /// Derived from the sim's opening board through the very function
+    /// the runtime rides them with, so moving a starter berth moves
+    /// these tests with it.
     fn stations() -> Vec<(Station, SimSurface)> {
         let sim = space_trucking::sim::Sim::new(1);
         let charts = bay();
-        let mut all: Vec<(Station, SimSurface)> = panels().to_vec();
-        all.extend(sim.pieces().iter().filter_map(|piece| {
-            matches!(piece.loc, Loc::Hold { .. })
-                .then(|| {
-                    crate::pieces::instrument_surface(
-                        &charts,
-                        piece.kind,
-                        layout::piece_rect(sim.pieces(), piece),
-                    )
-                })
-                .flatten()
-        }));
-        all
+        sim.pieces()
+            .iter()
+            .filter_map(|piece| {
+                matches!(piece.loc, Loc::Hold { .. })
+                    .then(|| {
+                        crate::pieces::instrument_surface(
+                            &charts,
+                            piece.kind,
+                            layout::piece_rect(sim.pieces(), piece),
+                        )
+                    })
+                    .flatten()
+            })
+            .collect()
     }
 
     /// The sightline contract: from a station's own focus viewpoint,
@@ -1461,82 +1372,43 @@ mod tests {
     /// framed and unoccluded. This is the "corner must be visible from
     /// the perspective" rule, enforced at build time.
     ///
-    /// The hull is what must never be in the way. Desk-class furniture
-    /// is the migrating kind of blocker — the barter counter still
-    /// shoulders in beside the front wall's baseboard, and it is on its
-    /// way out with the barter redesign (BAY.md) — so an instrument's
-    /// pose answers to the hull alone, exactly as the net's workability
-    /// budget already does. Cargo standing in a sightline is neither's
-    /// business: the focus x-ray ghosts it at runtime.
+    /// **The hull is the only thing that may never be in the way**, and
+    /// now it is the only thing that could be: the desk-class furniture
+    /// that used to shoulder into sightlines is gone with the counter
+    /// and the console face. Cargo standing in a sightline is nobody's
+    /// business here — the focus x-ray ghosts it at runtime.
     #[test]
     fn every_control_is_visible_from_its_focus() {
-        let panels = panels();
-        let slabs = structure(&panels);
-        let hull: Vec<Slab> = slabs.clone();
+        let slabs = structure();
         for (station, surface) in stations() {
             let focus = Focus::of(station).expect("every station is focusable");
             let (eye, rot) = focus_pose(focus, &stations()).expect("every station has a pose");
             let mut points = corner_points(&surface);
             points.extend(control_points(station, &surface));
-            let riding = panels.iter().all(|(tag, _)| *tag != station);
             for point in points {
                 // Lift each point a hair off the face so the ray test
                 // asks about the air in front of it, not the face itself.
                 let probe = point + surface.normal() * 0.004;
-                let broken = if riding {
-                    visible_from(eye, rot, probe, &hull, &[])
-                } else {
-                    visible_from(eye, rot, probe, &slabs, &panels)
-                };
-                if let Err(reason) = broken {
+                if let Err(reason) = visible_from(eye, rot, probe, &slabs) {
                     panic!("{station:?} sightline broken: {reason}");
                 }
             }
         }
     }
 
-    /// Sample points across a panel's plate face (quad + margin).
-    fn plate_face_points(surface: &SimSurface) -> Vec<Vec3> {
-        let u = surface.half_u + surface.half_u.normalize() * PLATE_MARGIN;
-        let v = surface.half_v + surface.half_v.normalize() * PLATE_MARGIN;
-        let mut points = Vec::new();
-        for i in 0..=8 {
-            for j in 0..=8 {
-                let a = (i as f32 / 8.0).mul_add(2.0, -1.0);
-                let b = (j as f32 / 8.0).mul_add(2.0, -1.0);
-                points.push(surface.center + u * a + v * b);
-            }
-        }
-        points
-    }
-
-    /// The regression the screenshot caught: no structural slab may
-    /// swallow any part of any panel's visible face.
-    #[test]
-    fn structure_never_swallows_a_panel() {
-        let panels = panels();
-        let slabs = structure(&panels);
-        for (station, surface) in &panels {
-            for point in plate_face_points(surface) {
-                for slab in &slabs {
-                    assert!(
-                        !slab.contains(point, 1e-3),
-                        "{station:?} face point {point} sits inside slab at {}",
-                        slab.center
-                    );
-                }
-            }
-        }
-    }
+    // The "no slab swallows a panel face" regression retired with the
+    // panels: there is no hull-owned face left for a slab to eat, and a
+    // riding instrument's face moves with its cargo, which the placement
+    // rules (not the hull) answer for.
 
     /// Focus viewpoints must be legal camera positions: inside the box,
-    /// inside no slab, looking at their stations — the instruments'
-    /// riding poses included, since those are wherever the cargo is.
+    /// inside no slab, looking at their stations — every one of them a
+    /// riding pose, since every station is wherever its cargo is.
     #[test]
     fn focus_poses_are_legal_camera_positions() {
-        let slabs = structure(&panels());
+        let slabs = structure();
         let stations = stations();
-        for focus in [Focus::Tank, Focus::Console, Focus::Lever] {
+        for focus in [Focus::Tank, Focus::Lever] {
             let (eye, rot) = focus_pose(focus, &stations).expect("the starter board hangs it");
             assert!(
                 eye.y > 0.2 && eye.y < 2.2 && eye.x.abs() < 2.15 && eye.z > -1.85 && eye.z < 2.35,
@@ -1566,20 +1438,23 @@ mod tests {
 
     /// A station with nothing carrying it has no pose at all, and the
     /// camera falls back to roam rather than aiming at a bare wall: an
-    /// instrument is cargo, and cargo can be sold.
+    /// instrument is cargo, and cargo can be sold. **Every focus is
+    /// jettisonable now** — sell the lot and the cabin keeps not one
+    /// focusable surface, which is the ship this pass finished building.
     #[test]
     fn a_jettisoned_instrument_leaves_no_pose() {
-        let hull = panels();
-        assert!(focus_pose(Focus::Tank, &hull).is_none());
-        assert!(focus_pose(Focus::Lever, &hull).is_none());
-        assert!(focus_pose(Focus::Console, &hull).is_some());
+        for focus in [Focus::Tank, Focus::Lever] {
+            assert!(
+                focus_pose(focus, &[]).is_none(),
+                "{focus:?} found a pose on a hull that owns no panels"
+            );
+        }
     }
 
     /// The roaming envelope stays clear of every slab at eye height.
     #[test]
     fn walk_envelope_is_clear() {
-        let panels = panels();
-        let slabs = structure(&panels);
+        let slabs = structure();
         for i in 0..=10 {
             for j in 0..=10 {
                 let p = Vec3::new(
@@ -1657,16 +1532,18 @@ mod tests {
 
     /// Every net cell can actually be worked: from some legal roaming
     /// position, its center is within REACH, within the pitch the neck
-    /// allows, and no structure blocks the line — EXCEPT cells whose
-    /// only obstruction is a station panel standing in front of them.
-    /// Those cells are real (the sim keeps them; rats hide behind the
-    /// console) and become workable as the instruments migrate off the
-    /// walls (BAY.md); a cell blocked by hull is still a build error.
+    /// allows, and no structure blocks the line.
+    ///
+    /// **The exemption is gone.** This test used to forgive cells whose
+    /// only obstruction was a station panel standing in front of them —
+    /// real cells the sim kept and rats hid behind, promised back as the
+    /// instruments migrated off the walls (BAY.md). They migrated, the
+    /// counter left, the console face left, and the promise is kept: the
+    /// whole net is reachable, and any blocked cell is now a build error
+    /// with no clause to hide behind.
     #[test]
-    fn every_net_cell_is_workable_or_station_fronted() {
-        let panels = panels();
-        let slabs = structure(&panels);
-        let mut station_fronted = 0_u32;
+    fn every_net_cell_is_workable() {
+        let slabs = structure();
         for (station, surface) in bay() {
             for y in 0..layout::GRID_ROWS {
                 for x in 0..layout::GRID_COLS {
@@ -1683,7 +1560,6 @@ mod tests {
                         continue;
                     }
                     let probe = surface.to_world(mid) + station.inward(&surface) * 0.004;
-                    let mut panel_blocked = false;
                     let workable = (0..=12).any(|i| {
                         (0..=12).any(|j| {
                             let eye = Vec3::new(
@@ -1697,28 +1573,13 @@ mod tests {
                             if dir.length() > REACH - 0.05 || pitch > PITCH_LIMIT - 0.02 {
                                 return false;
                             }
-                            // Hull in the way is a build error; a station
-                            // panel is the migrating kind of blocker.
-                            if slabs.iter().any(|slab| {
+                            // Hull in the way is a build error, and hull
+                            // is all there is left to be in the way.
+                            !slabs.iter().any(|slab| {
                                 ray_slab_entry(eye, dir, slab).is_some_and(|t| t < 1.0 - 1e-3)
-                            }) {
-                                return false;
-                            }
-                            if panels.iter().any(|(_, panel)| {
-                                ray_plate_entry(eye, dir, panel).is_some_and(|t| t < 1.0 - 1e-3)
-                            }) {
-                                panel_blocked = true;
-                                return false;
-                            }
-                            true
+                            })
                         })
                     });
-                    // The floor takes no exemption: walking IS its job,
-                    // so a desk-shadowed floor cell is a build error.
-                    if !workable && panel_blocked && !matches!(station, Station::BayFloor) {
-                        station_fronted += 1;
-                        continue;
-                    }
                     assert!(
                         workable,
                         "{station:?} cell ({x}, {y}) at {probe} is out of reach from everywhere"
@@ -1726,16 +1587,6 @@ mod tests {
                 }
             }
         }
-        // The exemption stays an exception, not a loophole: the floor
-        // and aft wall must be fully workable, so a regression that
-        // fronts half the net with panels cannot pass quietly. The
-        // budget tightened when the chart tank walked off the port
-        // wall — the counter's own shadow is all that is left of it,
-        // and that goes with the barter redesign.
-        assert!(
-            station_fronted <= 6,
-            "{station_fronted} cells are station-fronted; the walls are vanishing"
-        );
     }
 
     /// Nothing stands in a doorway. Every one of the cabin's declared
@@ -1743,7 +1594,7 @@ mod tests {
     /// a door, and a slab left in one is the defect this catches.
     #[test]
     fn no_slab_stands_in_a_declared_doorway() {
-        let slabs = structure(&panels());
+        let slabs = structure();
         for (port, (lo, hi)) in crate::room::cabin_holes().into_iter().enumerate() {
             // Probe the middle of the opening, and a little in from each
             // corner, so a partial cut cannot pass.
@@ -1800,7 +1651,7 @@ mod tests {
     #[test]
     fn the_burner_deck_is_workable_from_the_joined_envelope() {
         use space_trucking::sim::room::{RoomKind, Rooms};
-        let slabs = structure(&panels());
+        let slabs = structure();
         let rooms = Rooms::new();
         let placed: Vec<crate::room::Placed> = rooms
             .iter()

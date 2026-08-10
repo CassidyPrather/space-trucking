@@ -67,15 +67,37 @@ What survives the demolition is stated once, as a law:
 
 ## The port law
 
-Every room, without exception, declares **six attachment points**:
+> **A room declares only the ports it needs.**
 
-| Point | Plane | Count |
+The owner's decree, which this law is, verbatim:
+
+> "The incinerator room and spacing-guild room do **not** need to have 4
+> doors and ladder/hatch (i.e. they can be dead-ends) - in fact, I think
+> it makes them look way too busy. It's only the player cabins which need
+> to be extensible - after all, they're going to be melded together in
+> huge whacky amalgamations like linkin' logs later on!"
+
+There are **six slots**, and the slot *is* the position:
+
+| Slot | Plane | May hold |
 | --- | --- | --- |
-| Door | each of the four walls | at most one per wall |
-| Ladder | ceiling | exactly one, mandatory |
-| Hatch | floor | exactly one, mandatory |
+| 0–3 | the wall of the same index (aft, starboard, front, port) | one door, or nothing |
+| 4 | ceiling | the ladder, or nothing |
+| 5 | floor | the hatch, or nothing |
 
-Three clauses, each doing work:
+Six is a **bound, not a quota**. What each kind fills is a design
+decision, argued at the declaration and pinned by a test:
+
+| Kind | Declares | Because |
+| --- | --- | --- |
+| **Cabin** | four doors, ladder, hatch | The extensible piece. Cabins are the linkin' logs the crew melds into amalgamations, so a cabin faces four ways and any cabin mates any cabin on any side — and the vertical pair is the frontier the whole ship's growth rests on (below). |
+| **Burner** | one door, port wall | The incinerator, named in the decree. It has hung off the cabin's starboard wall since the first slice and that is the seam it keeps. No hatch: a furnace mouth in the deck is a second way the fire can travel, and a hopper you can fall into is not a hopper. |
+| **Trade** | one door, aft | The Guild's room, also named in the decree. A market is a place you visit, not a corridor. A second door was considered — two cabins sharing one market — and rejected: the graph already lets both crews walk to it through their own ship, so the second door buys nothing but the clutter the decree objects to. |
+| **Wreck** | one door, aft | A derelict has exactly one seam worth trusting: the one you just mated. The rest of the hull is vacuum with edges. |
+| **Parlor** | one door, aft | The casino's parlor, whose whole conceit is that it has no visible doors. It gets the one it cannot do without. |
+| **Pump** | one door, aft | A forecourt: come alongside, top up, cast off. Fuel reaches the furnace in a crewman's arms, the way everything else in this game travels. |
+
+Four clauses, each doing work:
 
 1. **A port's position is data, never an assumption.** Which wall a
    door is on, and which cells of that wall it punches, are declared by
@@ -86,25 +108,48 @@ Three clauses, each doing work:
    re-arrangeable cargo with amber grab handles, and that day must not
    be a rewrite. Code that hard-codes "the door is on the starboard
    wall" is the defect this clause exists to forbid.
-2. **At most one door per wall.** A wall with two doors is a wall that
-   has stopped being a wall; more to the point, two apertures on one
-   plane make the closure arithmetic below ambiguous. One is enough:
-   the vertical pair covers the crowding case.
-3. **The ladder and the hatch are mandatory.** They are the escape
-   hatch in the literal and the engineering sense: when no horizontal
-   arrangement can host a spawned room, the vertical points always can
-   (see "The escape-hatch guarantee").
+2. **An undeclared slot is not a port; it is a wall.** Naming one is
+   `Absent` — the same refusal a door carried off its wall will give
+   when the stretch goal lands, which is not a coincidence: a room that
+   never had a door and a room that lost one are the same room to every
+   rule downstream. An undeclared slot punches no cells, opens no seam,
+   mates nothing, and is drawn as the plane it sits in. **Fewer plates,
+   because fewer ports** — the presentation derives its doorways from
+   this declaration and nothing else, so sparing a room its ports is
+   what makes it stop looking busy.
+3. **At most one door per wall**, which stopped being a rule anyone can
+   break and became arithmetic: the slot index *is* the wall. Two
+   apertures on one plane would make the closure arithmetic below
+   ambiguous, and now they cannot be expressed.
+4. **The vertical pair is the cabin's.** The ladder and the hatch are
+   the escape hatch in the literal and the engineering sense, and the
+   cabin is the room that carries them (see "The escape-hatch
+   guarantee"). Nothing else declares either, and a leaf room that did
+   would be claiming an extensibility it has no use for.
+
+Three invariants bind every declaration, whatever it declares: an
+aperture lands **wholly within** its own wall, floor, or ceiling; two of
+a room's ports **never share a cell**; and mating apertures are
+**identical** (the closure law below). Those are the geometry's, not the
+decree's, and they did not move.
 
 Ports are the **only** way a room connects to another room. There is no
 open floor plan, no shared volume, no seam that is not a declared port
 mated to a declared port. A room's box is otherwise sealed.
+
+Rejected, for the record: **a port count as tuning per instance** (this
+room got three doors from the seed). Rejected because a kind's ports are
+its architecture — the save's edge list names them by slot, the paint
+reads them, the spawn walk plans around them — and a number the seed
+picks is a number no law can rely on.
 
 ## The graph is general, and cycles are allowed
 
 The attachment graph is a **general graph**: rooms are nodes, mated port
 pairs are edges, and there is no acyclicity constraint. Two rooms may be
 joined by two different doors. A ring of four rooms may close on itself.
-A room may reach degree six.
+A cabin may reach degree six; a leaf room reaches degree one, and that
+is what "dead end" means in a graph.
 
 The owner chose this against the simpler options, and the reasons are
 worth keeping:
@@ -218,9 +263,15 @@ have made it is refused. **There is no rubber hallway.**
   no rollback path, because nothing was written.
 - **Refusals are named**, one variant per rule, in the same shape as
   `Violation` so the presentation can flash the matching tell:
-  `Absent` (no such port), `Mated` (port already in use), `Blocked`
+  `Absent` (no such port — no such room, no such slot, or a slot this
+  kind does not declare), `Mated` (port already in use), `Blocked`
   (the box intersects placed geometry), `Aperture` (a seam that will
   not close identical-or-disjoint), `Full` (the room budget).
+- **A walk reports the deepest refusal it reached**, not the last one
+  it happened to try. With most slots empty on most kinds, `Absent` is
+  the cheapest answer and the least true one: a ship with no space left
+  must say `Blocked`, and a ship whose seams will not close must say
+  `Aperture`.
 - **A refusal is a cue, not an error.** The sim pushes a refusal cue
   and nothing else happens. Same posture as `placement_check`: the
   arbiter answers, and every affordance the frontend draws derives from
@@ -231,28 +282,61 @@ have made it is refused. **There is no rubber hallway.**
 
 ## The escape-hatch guarantee
 
-The vertical pair exists so the spawn search cannot come back empty.
+The vertical pair exists so the ship can always grow. It used to be
+justified by every room carrying a ladder and a hatch; the port law
+spared the leaf rooms theirs, so the guarantee is restated on the
+structure that actually carries it — **the cabins** — rather than
+quietly weakened.
 
 **The spawn contract.** When the game must attach a room — docking at a
 POI, an event firing, later a crewmate joining — it walks candidate
-port pairs in a fixed deterministic order (the anchor's free doors by
-wall index, then its ladder, then its hatch, then outward through the
-graph in id order) and takes the first that validates.
+port pairs in a fixed deterministic order (the anchor's ports by slot:
+doors by wall index, then the ladder, then the hatch; then outward
+through the graph in id order) and takes the first that validates.
+Slots the kind does not declare are refused `Absent` in passing, which
+costs a lookup and keeps the order stated in one place.
 
-**The guarantee.** The walk terminates in success, because the ladder
-column's top and the hatch column's bottom are always free: a room can
-only enter the lattice through a port, so the cell beyond the outermost
-vertical port of the outermost vertical room has never been reachable
-by anything.
+**The guarantee, in two clauses.**
+
+1. **A cabin always finds a berth.** While the room budget holds, the
+   walk cannot come back empty for a cabin. Only cabins declare the
+   vertical pair, so a storey can only ever be reached by a hatch
+   mating a ladder — which means **every occupied storey holds a
+   cabin**, the topmost of them has an unmated ladder, and the storey
+   above it has never been reachable by anything. The mate that lands
+   there is clear by construction: same footprint, empty level,
+   nothing below it with an opening to argue about.
+2. **A caller always fits the cabin that just arrived.** A calling room
+   carries one door and mates a cabin's. A cabin arrives with four
+   unmated doors on a storey nothing else has reached, so a caller of
+   any kind fits one of them.
+
+**What this does *not* claim, said plainly.** Doors are finite. A ship
+whose doors are all spent refuses the next caller by name, and that
+refusal is honest rather than a bug: the yard-fresh ship seats **three**
+callers (the cabin's four doors, less the furnace's), which is more than
+the game asks for — a POI's room and one unresolved event — and when a
+crew wants more doorway, clause 1 is the answer. *The refusal is never
+permanent.* That is the whole promise, and it is the one the game needs:
+nothing can strand the ship in a shape it cannot grow out of.
 
 This is stated as an obligation, not a hope: **the implementation must
-carry a property test that spawns rooms in adversarial orders and never
-sees a refusal for want of space.** If the test can be made to fail,
-this guarantee is wrong and the spawn contract — not the test — gets
-fixed.
+carry a property test that builds ragged ships in adversarial spawn and
+part orders, and on every one of them attaches a cabin and then a caller
+of every kind against it.** It must also pin the honest half — that
+three callers fit the yard-fresh ship and the fourth is refused — so
+nobody mistakes the bound for a bug later. If clause 1 or 2 can be made
+to fail, the guarantee is wrong and the spawn contract — not the test —
+gets fixed.
+
+Clause 1 leans on one property of the graph the ship actually holds:
+**it is connected**. The gangway law sees to that — a room parts with
+everything standing behind it, so no orphan is ever left floating at a
+storey with no cabin on it.
 
 The vertical points are also why the movable-aperture stretch goal
-below must never let a ladder or hatch be carried away: see there.
+below must never let a cabin's ladder or hatch be carried away: see
+there.
 
 ## The attachment interface
 
@@ -261,7 +345,10 @@ later. DESIGN.md's "when a player connects to the instance, they attach
 their area to the ship somehow — I'm not sure topologically how that's
 going to work" is answered here: **a crewmate is a room, joining is an
 attach, leaving is a detach, and their door being shut is the sealed
-port from the closure law.**
+port from the closure law.** The room a crewmate brings is a **cabin**,
+which is why the cabin is the kind that keeps all six ports: the
+amalgamation the decree describes is cabins melded to cabins, and every
+face of one has to be able to take another.
 
 ### Lifecycle
 
@@ -581,6 +668,16 @@ mobility.
 - **Saves bump** for the room graph (edge list in attach order, plus the
   room qualifier on berths) and the tape bumps for the input frame's new
   room field. A save that lies fails safe into a fresh run, as ever.
+- **The port law bumped the save again** (`STV12`). The slot numbering
+  did not move — a door is still its wall's index, the ladder 4, the
+  hatch 5 — so the edge list's grammar is untouched and every edge
+  through a port its kind still declares replays exactly. What a
+  document written under the old law *can* now say is a slot nobody
+  fills: a pump bay under the cabin's ladder. Such a room is **re-seated
+  through the spawn walk**, keeping its id and everything berthed in it.
+  Conservation before convenience: the ship comes back a different
+  shape, never a shorter one. Only old documents get that mercy — a
+  current save that disagrees with the lattice is a save that lies.
 - The design-review **checklist** keeps its current wording until the
   removal actually lands: two lines will need re-pointing on that day
   (the "except through the accept lever" clause of the conservation
@@ -605,16 +702,18 @@ The packing hazards, named, with the rules that pay for them:
    "a cycle closed through a door the player later moved", for free.
 2. **Two doors on one wall.** Refused by the port law; `Aperture` is
    the name.
-3. **Carrying away the guarantee.** If a ladder or hatch could be
-   removed, the escape-hatch guarantee would be a lie. So **ladders and
-   hatches are vital** in the existing `Kind::vital()` sense: the last
-   of each in the player's keeping refuses every exit ceremony, with one
-   predicate and one violation name already written and tested. The
-   mandatory vertical pair is mandatory *because* it is vital cargo.
+3. **Carrying away the guarantee.** If a cabin's ladder or hatch could
+   be removed, the escape-hatch guarantee would be a lie. So **ladders
+   and hatches are vital** in the existing `Kind::vital()` sense: the
+   last of each in the player's keeping refuses every exit ceremony,
+   with one predicate and one violation name already written and
+   tested. A cabin's vertical pair is not optional *because* it is
+   vital cargo. (A leaf room declares neither, so there is nothing to
+   carry off one — which is the port law paying for itself here.)
 4. **Authoring an unhostable ship.** A player may re-site doors until
    the horizontal frontier is useless. Allowed — space is not owed to
-   you — because the spawn contract falls back to the vertical frontier,
-   which clause 3 keeps intact.
+   you — because a cabin still lands on the vertical frontier, which
+   clause 3 keeps intact, and it lands with four doors on it.
 5. **Re-arrangement is an attach.** A door move changes a room's port
    set, so it re-runs the full validation against every neighbouring
    room: new coincidences mate (this is how a crew hand-builds a ring),
@@ -636,8 +735,8 @@ Each stage lands green or not at all, in the project's usual way.
    surviving economy, the gangway gates. Barter machinery, `Sealed`, and
    `Aisle` come out in the same slice — a half-removed interface is
    worse than either end state. Save and tape bumps, migration, and the
-   property tests (no overlap ever, closure exact, spawn never starves,
-   conservation across seams).
+   property tests (no overlap ever, closure exact, the cabin frontier
+   never starves, conservation across seams).
 2. **Cabin presentation.** The widened cabin, rooms and their seams
    drawn, apertures, colored tiles, carry across doorways, the standing
    and upright rules re-swept over the new charts. The x-ray and ghost
@@ -674,8 +773,11 @@ accident:
 - **Aperture size.** The working shape is the burner doorway's: a door
   is 2 cells wide × 2 tall, and the ladder and hatch punch the same
   footprint in the ceiling and floor. Four floor cells and four ceiling
-  cells per room is a real tax on an 8×7 room, and the number is tuning,
-  not law — the law is only that mating apertures be identical.
+  cells is a real tax, and the port law halved the bill by handing it to
+  the one kind that can afford it: only the cabin's 8×7 floor pays it,
+  and a 3×3 pump bay now spends nothing on openings it never used. The
+  number is still tuning, not law — the law is only that mating
+  apertures be identical.
 - **Whether `RoomId` reuse is safe for the tape.** The spec says rooms
   carry no serial identity and ids are dense and reused. If a replay
   turns out to want stable ids for legibility, that is a save-format

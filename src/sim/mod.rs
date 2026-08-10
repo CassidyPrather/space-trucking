@@ -3364,7 +3364,23 @@ mod tests {
     #[test]
     fn attach_and_detach_ride_the_input_schedule() {
         let mut sim = Sim::new(54);
+        // The cabin's port-side door to the pump bay's one door: a
+        // forecourt declares a single seam and mates through it.
         let attach = InputFrame {
+            attach: Some(Attach {
+                anchor: CABIN,
+                anchor_port: 3,
+                kind: RoomKind::Pump,
+                port: 0,
+            }),
+            ..InputFrame::default()
+        };
+        sim.advance(0.0, &attach);
+        assert!(sim.cues().contains(&Cue::Attached));
+        let added = sim.rooms().find(RoomKind::Pump).expect("the pump attached");
+        // A slot the pump bay does not declare is refused by name, and
+        // the ladder it no longer carries is one of them.
+        let phantom = InputFrame {
             attach: Some(Attach {
                 anchor: CABIN,
                 anchor_port: room::LADDER,
@@ -3373,9 +3389,13 @@ mod tests {
             }),
             ..InputFrame::default()
         };
-        sim.advance(0.0, &attach);
-        assert!(sim.cues().contains(&Cue::Attached));
-        let added = sim.rooms().find(RoomKind::Pump).expect("the pump attached");
+        sim.advance(0.0, &phantom);
+        assert_eq!(
+            sim.cues(),
+            [Cue::Refit {
+                refusal: Refusal::Absent
+            }]
+        );
         // The same port twice is refused by name, and nothing changes.
         sim.advance(0.0, &attach);
         assert_eq!(

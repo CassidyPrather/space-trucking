@@ -30,6 +30,15 @@ use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 
 /// Magic-plus-version header of every save this build writes.
 ///
+/// `STV12` is the port law's second reading (docs/ROOMS.md): a room kind
+/// declares only the ports it needs, so the incinerator, the market, the
+/// hold, the parlor and the pump bay carry one door apiece and the cabin
+/// alone keeps the full complement. The slot numbering did not move — a
+/// door is still its wall's index, the ladder still 4, the hatch still
+/// 5 — so the edge list's grammar is untouched; what changed is that a
+/// document can name a slot its kind no longer fills, which is why the
+/// migration below re-seats rather than refuses.
+///
 /// `STV11` is the rooms slice (docs/ROOMS.md): the ship became a graph of
 /// rooms, so the document grew a `rooms` block (the edge list in attach
 /// order — poses are re-derived, never stored) and a `marks` line, every
@@ -38,10 +47,17 @@ use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 /// it belonged to. `STV10` widened the cabin from a 6×5 floor to an 8×7
 /// one; `STV7` added the banked burner's stoke to the ship line's tail;
 /// `STV6` added the `laid` piece location; `STV5` added `stow`.
-const MAGIC: &str = "STV11";
+const MAGIC: &str = "STV12";
 
 /// Older headers this build still reads, each with its own migration,
 /// applied oldest-first so a `STV4` document walks the whole chain.
+///
+/// `STV12` spared the leaf rooms their unused ports. A pre-STV12 document
+/// may therefore hang a room off a slot that is no longer there — a pump
+/// bay under the cabin's ladder, a market entered through its front wall
+/// — and such a room is **re-seated** through the spawn walk, keeping its
+/// id and everything berthed in it. Conservation before convenience: the
+/// ship comes out a different shape, never a shorter one.
 ///
 /// `STV11` put the cargo into rooms. A pre-STV11 document knows one room,
 /// so its berths become the cabin's; its mid-trade state resolves on load
@@ -58,8 +74,8 @@ const MAGIC: &str = "STV11";
 /// hold cells, which the net embeds at (+3, 0). Whatever the room-grid
 /// rules no longer accept once the translations have run re-berths at its
 /// first legal cell. Everything else stays one additive grammar.
-const READABLE: [&str; 8] = [
-    MAGIC, "STV10", "STV9", "STV8", "STV7", "STV6", "STV5", "STV4",
+const READABLE: [&str; 9] = [
+    MAGIC, "STV11", "STV10", "STV9", "STV8", "STV7", "STV6", "STV5", "STV4",
 ];
 
 /// Why a save string was refused.
@@ -286,15 +302,18 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     };
     // Pre-STV8 headers carry console-era 6×4 hold coordinates that the
     // room net embeds at (+3, 0); their berths migrate after reading.
-    let legacy = !matches!(header, MAGIC | "STV10" | "STV9" | "STV8");
+    let legacy = !matches!(header, MAGIC | "STV11" | "STV10" | "STV9" | "STV8");
     // Pre-STV9 headers predate the instruments being cargo; the missing
     // ones are hung at their traditional berths after reading.
-    let uninstrumented = !matches!(header, MAGIC | "STV10" | "STV9");
+    let uninstrumented = !matches!(header, MAGIC | "STV11" | "STV10" | "STV9");
     // Pre-STV10 headers carry narrow-net coordinates: the cabin was a
     // 6×5 floor then, and the charts past the growth have moved.
-    let narrow = !matches!(header, MAGIC | "STV10");
+    let narrow = !matches!(header, MAGIC | "STV11" | "STV10");
     // Pre-STV11 headers know one room and a barter counter.
-    let roomless = header != MAGIC;
+    let roomless = !matches!(header, MAGIC | "STV11");
+    // Pre-STV12 headers were written when every room declared six ports;
+    // an edge through a slot its kind no longer fills is re-seated.
+    let six_ported = header != MAGIC;
 
     let seed = reader.kv("seed")?;
     let tick = reader.kv("tick")?;
@@ -332,7 +351,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         parse_eager(&mut reader)?;
         (Rooms::new(), Vec::new())
     } else {
-        let rooms = parse_rooms(&mut reader)?;
+        let rooms = parse_rooms(&mut reader, six_ported)?;
         let marks = parse_marks(&mut reader)?;
         (rooms, marks)
     };
@@ -423,7 +442,14 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
 /// The `rooms` block: a count, then that many `room` lines in attach
 /// order. Each is replayed through the same validated attach the game
 /// uses, so a document that lies about its own graph fails safe.
-fn parse_rooms(reader: &mut Reader<'_>) -> Result<Rooms, SaveError> {
+///
+/// `six_ported` is the pre-STV12 migration: a document from when every
+/// kind declared all six slots may name one its kind has since given up,
+/// and rather than lose the room (and everything berthed in it) the
+/// reader re-seats it through the spawn walk. Only old documents get
+/// that mercy — a current save that disagrees with the lattice is a save
+/// that lies, and it fails safe as it always has.
+fn parse_rooms(reader: &mut Reader<'_>, six_ported: bool) -> Result<Rooms, SaveError> {
     let count: usize = reader.kv("rooms")?;
     if count == 0 || count > MAX_ROOMS {
         return Err(reader.err());
@@ -453,9 +479,12 @@ fn parse_rooms(reader: &mut Reader<'_>) -> Result<Rooms, SaveError> {
                 if usize::from(anchor_port) >= PORTS || usize::from(port) >= PORTS {
                     return Err(reader.err());
                 }
-                rooms
-                    .replay(id, anchor, anchor_port, kind, port)
-                    .map_err(|_| reader.err())?;
+                let replayed = rooms.replay(id, anchor, anchor_port, kind, port);
+                if replayed.is_err() && six_ported {
+                    rooms.reseat(id, kind, anchor).map_err(|_| reader.err())?;
+                } else {
+                    replayed.map_err(|_| reader.err())?;
+                }
             }
             _ => return Err(reader.err()),
         }
@@ -1459,7 +1488,7 @@ mod tests {
     #[test]
     fn stowed_pieces_round_trip() {
         let (sim, save, cabinet, _) = furnished();
-        assert!(save.starts_with("STV11\n"), "the writer stamps STV11");
+        assert!(save.starts_with("STV12\n"), "the writer stamps STV12");
         let restored = Sim::from_save(&save).expect("furnished save parses");
         assert_eq!(restored.pieces, sim.pieces);
         assert!(
@@ -1568,6 +1597,57 @@ mod tests {
         };
         assert_eq!(sim.rooms().kind(room), Some(RoomKind::Burner));
         assert_eq!(sim.rooms().tile(room, x, y), Some(Tile::Consume));
+    }
+
+    /// The port law's migration: a pre-STV12 document may hang a room
+    /// off a slot its kind has since given up — here the market under the
+    /// cabin's ladder, which no market has any more. The room is
+    /// re-seated through the spawn walk rather than lost, it keeps its
+    /// id, and everything berthed in it comes with it.
+    #[test]
+    fn pre_stv12_saves_reseat_rooms_that_lost_their_port() {
+        let plain = Sim::new(23).save_string();
+        let dock = plain
+            .lines()
+            .find(|line| line.starts_with("room 2 "))
+            .expect("the dock's room is alongside")
+            .to_owned();
+        assert_eq!(
+            dock, "room 2 2 0 0 0",
+            "the market mates the cabin's aft door"
+        );
+        let stocked = |sim: &Sim| {
+            sim.pieces()
+                .iter()
+                .filter(|piece| matches!(piece.loc, Loc::Hold { room: 2, .. }))
+                .count()
+        };
+        // The same document, written when a market carried a hatch.
+        let forged = plain
+            .replacen(MAGIC, "STV11", 1)
+            .replacen(&dock, "room 2 2 0 4 5", 1);
+        let sim = Sim::from_save(&forged).expect("an STV11 document must still load");
+        assert_eq!(
+            sim.rooms().kind(2),
+            Some(RoomKind::Trade),
+            "the dock survived"
+        );
+        assert_eq!(
+            sim.rooms().get(2).expect("room two is placed").pose.z,
+            0,
+            "re-seated through a door, not a hatch that is not there"
+        );
+        assert_eq!(
+            stocked(&sim),
+            stocked(&Sim::from_save(&plain).expect("the current document loads")),
+            "the market's goods came with it"
+        );
+        // A current document gets no such mercy: it must mean what it says.
+        let lying = plain.replacen(&dock, "room 2 2 0 4 5", 1);
+        assert!(
+            Sim::from_save(&lying).is_err(),
+            "a save that lies fails safe"
+        );
     }
 
     #[test]

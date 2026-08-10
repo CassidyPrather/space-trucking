@@ -4,9 +4,12 @@
 //! **graph of rooms** — nodes are rooms, edges are mated ports — laid on
 //! one shared integer lattice in units of the room grid's cell. Every
 //! room is an axis-aligned box at an integer origin with an integer yaw
-//! of 0/90/180/270, one storey tall, and every room declares the same six
-//! attachment points: a door on each of the four walls, one ladder in the
-//! ceiling, one hatch in the floor.
+//! of 0/90/180/270, one storey tall, and every room **declares the ports
+//! it needs** out of six slots: a door on each of the four walls, a
+//! ladder in the ceiling, a hatch in the floor. The cabin fills all six
+//! because the cabin is the extensible piece; a furnace or a market
+//! states its one seam and is a dead end, which is what a dead end
+//! should look like.
 //!
 //! Nothing here touches a float. Attachment is a *geometric* operation
 //! validated before it is a topological one: the mate fixes translation
@@ -30,7 +33,11 @@ use super::Vec2;
 /// identity, and the graph is the only truth about them.
 pub type RoomId = u8;
 
-/// Index of one of a room's six attachment points.
+/// Index of one of a room's six port slots.
+///
+/// The slot **is** the position: wall `w`'s door is port `w`, the ladder
+/// is [`LADDER`], the hatch is [`HATCH`]. A kind fills the slots it needs
+/// and leaves the rest empty; naming an empty one is [`Refusal::Absent`].
 pub type PortId = u8;
 
 /// The cabin: the room you start in, and the root of the graph.
@@ -40,14 +47,22 @@ pub const CABIN: RoomId = 0;
 /// plus six crew modules plus two callers, in the spec's arithmetic.
 pub const MAX_ROOMS: usize = 10;
 
-/// Attachment points per room: four doors, a ladder, a hatch.
+/// Port **slots** per room — the bound, not a quota.
+///
+/// One door per wall, one ladder, one hatch. Because the slot index is
+/// the position, "at most one door per wall" stopped being a rule anyone
+/// can break and became arithmetic, and a kind's declaration is just
+/// which slots it fills ([`RoomKind::ports`]).
 pub const PORTS: usize = 6;
 
-/// The ladder's port index. The vertical pair is mandatory on every
-/// room; it is the escape hatch in the literal and engineering senses.
+/// The ladder's port slot.
+///
+/// The vertical pair is the **cabin's** — it is the escape hatch in the
+/// literal and the engineering senses, and the cabin is the room that
+/// carries it (docs/ROOMS.md, "The escape-hatch guarantee").
 pub const LADDER: PortId = 4;
 
-/// The hatch's port index.
+/// The hatch's port slot.
 pub const HATCH: PortId = 5;
 
 /// How wide an aperture is, in cells. The law is only that mating
@@ -194,46 +209,93 @@ impl RoomKind {
         matches!(self, Self::Cabin | Self::Burner)
     }
 
-    /// This kind's six attachment points, in port order.
+    /// The ports this kind declares, by slot — `None` where the room has
+    /// no such opening.
+    ///
+    /// **A room declares only the ports it needs.** The owner's decree,
+    /// verbatim in docs/ROOMS.md: the incinerator and the Guild's room do
+    /// not need four doors and a vertical pair, they can be dead ends,
+    /// and six openings punched through a four-metre box read as busy
+    /// rather than built. Only the **cabin** has to be extensible —
+    /// cabins are the linkin' logs that meld into whacky amalgamations —
+    /// so the cabin keeps the full complement and every other kind states
+    /// its business and stops.
+    ///
+    /// Each declaration below is argued where it stands, because a port
+    /// is architecture: adding one is a promise that something may arrive
+    /// through it, and removing one is a promise that nothing will.
     #[must_use]
-    pub const fn ports(self) -> [Port; PORTS] {
-        let (doors, ladder, hatch) = match self {
-            // The cabin's starboard door is the burner's traditional
-            // one; the front door dodges the instrument cluster and the
-            // aft and port doors sit at the aft-port corner.
-            Self::Cabin => ([0, 0, 3, 0], (6, 4), (6, 4)),
-            Self::Burner => ([0, 0, 0, 0], (0, 1), (2, 1)),
-            Self::Trade => ([0, 0, 0, 0], (0, 1), (4, 1)),
-            Self::Wreck => ([0, 0, 0, 0], (0, 1), (3, 1)),
-            Self::Parlor => ([0, 0, 0, 0], (0, 2), (1, 0)),
-            Self::Pump => ([0, 0, 0, 0], (1, 1), (0, 1)),
-        };
-        [
-            Port::Door {
-                wall: 0,
-                offset: doors[0],
-            },
-            Port::Door {
-                wall: 1,
-                offset: doors[1],
-            },
-            Port::Door {
-                wall: 2,
-                offset: doors[2],
-            },
-            Port::Door {
-                wall: 3,
-                offset: doors[3],
-            },
-            Port::Ladder {
-                x: ladder.0,
-                y: ladder.1,
-            },
-            Port::Hatch {
-                x: hatch.0,
-                y: hatch.1,
-            },
-        ]
+    pub const fn ports(self) -> [Option<Port>; PORTS] {
+        const fn door(wall: u8, offset: u8) -> Port {
+            Port::Door { wall, offset }
+        }
+        match self {
+            // Six, and the only kind with six. The cabin is the piece the
+            // crew melds — four ways out so any cabin can mate any cabin
+            // on any side, and the vertical pair because the ladder
+            // column and the hatch column are the frontier the spawn
+            // walk falls back on and nothing else declares them. The
+            // starboard door is the burner's traditional one; the front
+            // door dodges the instrument cluster; the aft and port doors
+            // sit at the aft-port corner.
+            Self::Cabin => [
+                Some(door(0, 0)),
+                Some(door(1, 0)),
+                Some(door(2, 3)),
+                Some(door(3, 0)),
+                Some(Port::Ladder { x: 6, y: 4 }),
+                Some(Port::Hatch { x: 6, y: 4 }),
+            ],
+            // The incinerator, named in the decree. One door, on the wall
+            // it has hung from since the first slice — the cabin's
+            // starboard side — and nothing else. No hatch: a furnace
+            // mouth in the deck is a second way the fire can travel, and
+            // a hopper you can fall into is not a hopper. A furnace is a
+            // dead end, and now it looks like one.
+            Self::Burner => [None, None, None, Some(door(3, 0)), None, None],
+            // The leaf rooms are one shape, and it is the decree's shape:
+            // **one door, aft** — the wall a room presents to whatever it
+            // came alongside — and nothing else at all.
+            //
+            // - `Trade` is the Guild's room, named in the decree with the
+            //   furnace. A second door was considered, so two cabins
+            //   could share one market; it buys nothing, because the
+            //   graph already lets both crews walk to it through their
+            //   own ship, and it costs the exact clutter the decree
+            //   objects to. A market is a place you visit, not a
+            //   corridor.
+            // - `Wreck`: a derelict has exactly one seam worth trusting,
+            //   the one you just mated. The rest of the hull is vacuum
+            //   with edges.
+            // - `Parlor`: the casino's whole conceit is that it has no
+            //   visible doors. It gets the one it cannot do without.
+            // - `Pump`: a forecourt. Come alongside, top up, cast off —
+            //   and the fuel reaches the furnace in a crewman's arms,
+            //   the way everything else in this game travels.
+            Self::Trade | Self::Wreck | Self::Parlor | Self::Pump => {
+                [Some(door(0, 0)), None, None, None, None, None]
+            }
+        }
+    }
+
+    /// The port in slot `port`, if this kind declares one. Every rule
+    /// reads the declaration through here, so an absent port is absent
+    /// everywhere at once.
+    #[must_use]
+    pub const fn port(self, port: PortId) -> Option<Port> {
+        if (port as usize) < PORTS {
+            self.ports()[port as usize]
+        } else {
+            None
+        }
+    }
+
+    /// Every port this kind declares, in slot order.
+    pub fn declared(self) -> impl Iterator<Item = (PortId, Port)> {
+        self.ports()
+            .into_iter()
+            .enumerate()
+            .filter_map(|(slot, port)| port.map(|port| (slot as PortId, port)))
     }
 
     /// The room's one click-functional fixture, if it has one: the
@@ -295,12 +357,14 @@ impl RoomKind {
         (COURSES, COURSES, w, h)
     }
 
-    /// The net cells one port punches: two by two, always.
+    /// The net cells one port punches: two by two, always. `None` where
+    /// the kind declares no such port — an undeclared slot punches
+    /// nothing, so the wall stays a wall.
     #[must_use]
-    pub fn aperture_cells(self, port: PortId) -> [(u8, u8); 4] {
+    pub fn aperture_cells(self, port: PortId) -> Option<[(u8, u8); 4]> {
         let (w, h) = self.floor();
         let c = COURSES;
-        match self.ports()[usize::from(port)] {
+        Some(match self.port(port)? {
             Port::Door { wall, offset } => {
                 let mut cells = [(0, 0); 4];
                 for course in 0..APERTURE {
@@ -340,7 +404,7 @@ impl RoomKind {
                 }
                 cells
             }
-        }
+        })
     }
 
     /// What net cell `(x, y)` is, or `None` where there is no cell.
@@ -349,8 +413,11 @@ impl RoomKind {
     #[must_use]
     pub fn tile_of(self, x: u8, y: u8) -> Option<Tile> {
         let surf = self.surface_of(x, y)?;
-        for port in 0..PORTS as PortId {
-            if self.aperture_cells(port).contains(&(x, y)) {
+        for (port, _) in self.declared() {
+            if self
+                .aperture_cells(port)
+                .is_some_and(|cells| cells.contains(&(x, y)))
+            {
                 return Some(Tile::Threshold);
             }
         }
@@ -502,10 +569,15 @@ impl Room {
         (self.pose.x + rx, self.pose.y + ry, self.pose.z)
     }
 
-    /// The seams one port opens: the cell pairs its aperture joins.
+    /// The seams one port opens: the cell pairs its aperture joins. An
+    /// undeclared slot opens none, which is how a dead end reads to every
+    /// rule at once — nothing to mate, nothing to close, nothing to draw.
     fn seams(&self, port: PortId) -> Vec<Seam> {
         let (w, h) = self.kind.floor();
-        match self.kind.ports()[usize::from(port)] {
+        let Some(declared) = self.kind.port(port) else {
+            return Vec::new();
+        };
+        match declared {
             Port::Door { wall, offset } => {
                 let normal = rot_dir(wall_normal(wall), self.pose.yaw);
                 (0..APERTURE)
@@ -525,7 +597,7 @@ impl Room {
                     .collect()
             }
             Port::Ladder { x, y } | Port::Hatch { x, y } => {
-                let step = if matches!(self.kind.ports()[usize::from(port)], Port::Ladder { .. }) {
+                let step = if matches!(declared, Port::Ladder { .. }) {
                     1
                 } else {
                     -1
@@ -547,11 +619,13 @@ impl Room {
 
     /// Whether two ports' openings are the same opening, seen from
     /// either side. Exact, because the lattice is integer: there is no
-    /// epsilon and no "close enough to close".
+    /// epsilon and no "close enough to close". Two walls that declare
+    /// nothing are not an opening they share; they are two walls.
     fn ports_coincide(&self, port: PortId, other: &Self, other_port: PortId) -> bool {
         let mine = self.seams(port);
         let theirs = other.seams(other_port);
-        mine.len() == theirs.len()
+        !mine.is_empty()
+            && mine.len() == theirs.len()
             && mine.iter().all(|seam| {
                 theirs
                     .iter()
@@ -697,14 +771,16 @@ impl Rooms {
         let Some(host) = self.get(anchor) else {
             return Err(Refusal::Absent);
         };
-        if usize::from(anchor_port) >= PORTS || usize::from(port) >= PORTS {
+        // A slot the kind does not declare is not a port: the wall is a
+        // wall, and naming it is `Absent` — the same refusal a door
+        // carried off its wall will one day give (the stretch goal).
+        let (Some(host_port), Some(new_port)) = (host.kind.port(anchor_port), kind.port(port))
+        else {
             return Err(Refusal::Absent);
-        }
+        };
         if host.mates[usize::from(anchor_port)].is_some() {
             return Err(Refusal::Mated);
         }
-        let host_port = host.kind.ports()[usize::from(anchor_port)];
-        let new_port = kind.ports()[usize::from(port)];
         // Kinds mate: door↔door, ladder↔hatch, hatch↔ladder.
         let vertical = match (host_port, new_port) {
             (Port::Door { .. }, Port::Door { .. }) => None,
@@ -811,33 +887,83 @@ impl Rooms {
         Ok(mates)
     }
 
-    /// The spawn contract: walk candidate port pairs in a fixed
-    /// deterministic order and take the first that validates.
+    /// Whether one attach request would validate, without writing
+    /// anything. The walk asks this; `attach` asks it again on the way
+    /// in, because validation is cheap and a second opinion is free.
+    fn would_mate(
+        &self,
+        anchor: RoomId,
+        anchor_port: PortId,
+        kind: RoomKind,
+        port: PortId,
+    ) -> Result<(), Refusal> {
+        let candidate = self.mate_pose(anchor, anchor_port, kind, port)?;
+        self.seams_close(&candidate, None).map(|_| ())
+    }
+
+    /// The spawn contract's walk: candidate port pairs in a fixed
+    /// deterministic order, the first that validates.
     ///
     /// The order is the anchor's own ports (doors by wall index, then
     /// the ladder, then the hatch), then outward through the graph in id
-    /// order, each against the new room's ports in the same order. The
-    /// walk terminates in success because the outermost vertical port's
-    /// far side has never been reachable by anything (docs/ROOMS.md,
-    /// "The escape-hatch guarantee").
-    pub fn spawn(&mut self, kind: RoomKind, from: RoomId) -> Result<RoomId, Refusal> {
-        if self.count() >= MAX_ROOMS {
-            return Err(Refusal::Full);
-        }
+    /// order, each against the new room's ports in the same order. Slots
+    /// a kind does not declare are tried and refused `Absent`, which
+    /// costs one lookup and keeps the order stated in one place.
+    ///
+    /// For a **cabin** the walk cannot come back empty: every occupied
+    /// storey holds a cabin (a storey is only ever reached by a hatch
+    /// mating a ladder, and only cabins declare those), so the topmost
+    /// cabin's ladder is free and the storey above it has never been
+    /// reachable by anything. For everything else see docs/ROOMS.md,
+    /// "The escape-hatch guarantee" — a caller mates a door, and doors
+    /// are finite.
+    fn berth(&self, kind: RoomKind, from: RoomId) -> Result<(RoomId, PortId, PortId), Refusal> {
         let mut anchors: Vec<RoomId> = vec![from];
         anchors.extend(self.iter().map(|(id, _)| id).filter(|&id| id != from));
-        let mut last = Refusal::Aperture;
+        let mut deepest = Refusal::Absent;
         for anchor in anchors {
             for anchor_port in 0..PORTS as PortId {
                 for port in 0..PORTS as PortId {
-                    match self.attach(anchor, anchor_port, kind, port) {
-                        Ok(id) => return Ok(id),
-                        Err(why) => last = why,
+                    match self.would_mate(anchor, anchor_port, kind, port) {
+                        Ok(()) => return Ok((anchor, anchor_port, port)),
+                        // Report the deepest reason the walk reached, so
+                        // a ship with no room left says so instead of
+                        // blaming the last empty slot it happened to try.
+                        Err(why) if reached(why) > reached(deepest) => deepest = why,
+                        Err(_) => {}
                     }
                 }
             }
         }
-        Err(last)
+        Err(deepest)
+    }
+
+    /// Attach a room the game itself asked for, wherever it fits: the
+    /// spawn contract's walk, committed.
+    pub fn spawn(&mut self, kind: RoomKind, from: RoomId) -> Result<RoomId, Refusal> {
+        if self.count() >= MAX_ROOMS {
+            return Err(Refusal::Full);
+        }
+        let (anchor, anchor_port, port) = self.berth(kind, from)?;
+        self.attach(anchor, anchor_port, kind, port)
+    }
+
+    /// Re-seat a room whose recorded mate no longer exists, keeping its
+    /// id: the migration path for a document written when its kind
+    /// declared ports it no longer does (docs/ROOMS.md's port law, and
+    /// `save`'s pre-STV12 chain). Conservation before convenience — the
+    /// room's cargo is berthed by id, so the id is what must survive.
+    pub fn reseat(&mut self, id: RoomId, kind: RoomKind, from: RoomId) -> Result<(), Refusal> {
+        if usize::from(id) >= MAX_ROOMS || self.get(id).is_some() {
+            return Err(Refusal::Full);
+        }
+        let from = if self.get(from).is_some() {
+            from
+        } else {
+            CABIN
+        };
+        let (anchor, anchor_port, port) = self.berth(kind, from)?;
+        self.replay(id, anchor, anchor_port, kind, port)
     }
 
     /// Cut a room loose. The gates are the caller's (docs/ROOMS.md's
@@ -926,6 +1052,20 @@ impl Rooms {
 impl Default for Rooms {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// How far into validation a refusal got. The spawn walk keeps the
+/// deepest one it saw: "no space" is a truer answer than "no port" when
+/// the walk tried a hundred slots that were never there.
+const fn reached(refusal: Refusal) -> u8 {
+    match refusal {
+        Refusal::Absent => 0,
+        Refusal::Kinds => 1,
+        Refusal::Mated => 2,
+        Refusal::Blocked => 3,
+        Refusal::Aperture => 4,
+        _ => 5,
     }
 }
 
@@ -1067,15 +1207,27 @@ mod tests {
         }
     }
 
-    /// Every kind declares six ports, all of them inside its own net,
-    /// and no two ports share a cell.
+    /// The invariants that survived the six: whatever a kind declares
+    /// lands wholly inside its own net, no two ports share a cell, and a
+    /// door sits on the wall its slot is named for — which is how "at
+    /// most one door per wall" became arithmetic instead of a rule.
     #[test]
-    fn every_room_declares_six_ports_inside_its_own_net() {
+    fn declared_ports_land_in_their_own_net_and_never_overlap() {
         for kind in ROOM_KINDS {
             let (cols, rows) = kind.grid();
             let mut seen: Vec<(u8, u8)> = Vec::new();
-            for port in 0..PORTS as PortId {
-                for (x, y) in kind.aperture_cells(port) {
+            for (port, declared) in kind.declared() {
+                if let Port::Door { wall, .. } = declared {
+                    assert_eq!(wall, port, "{kind:?}'s door {port} hangs on wall {wall}");
+                }
+                assert!(
+                    matches!(declared, Port::Ladder { .. }) == (port == LADDER),
+                    "{kind:?} put a ladder in slot {port}"
+                );
+                let cells = kind
+                    .aperture_cells(port)
+                    .expect("a declared port punches cells");
+                for (x, y) in cells {
                     assert!(x < cols && y < rows, "{kind:?} port {port} leaves the net");
                     assert!(
                         kind.surface_of(x, y).is_some(),
@@ -1085,8 +1237,58 @@ mod tests {
                     seen.push((x, y));
                 }
             }
-            assert_eq!(seen.len(), PORTS * 4);
+            // An undeclared slot punches nothing: the wall stays a wall.
+            for port in 0..PORTS as PortId {
+                assert_eq!(
+                    kind.port(port).is_none(),
+                    kind.aperture_cells(port).is_none(),
+                    "{kind:?} slot {port} disagrees with itself"
+                );
+            }
+            assert!(kind.port(PORTS as PortId).is_none());
         }
+    }
+
+    /// The roster, kind by kind: the cabin is extensible and everything
+    /// else states its business (docs/ROOMS.md's port law, and the
+    /// owner's decree behind it). Changing a number here is a design
+    /// decision, so it costs an edit to a test that says why.
+    #[test]
+    fn only_the_cabin_is_extensible() {
+        for (kind, doors, vertical) in [
+            (RoomKind::Cabin, 4, true),
+            (RoomKind::Burner, 1, false),
+            (RoomKind::Trade, 1, false),
+            (RoomKind::Wreck, 1, false),
+            (RoomKind::Parlor, 1, false),
+            (RoomKind::Pump, 1, false),
+        ] {
+            let declared: Vec<(PortId, Port)> = kind.declared().collect();
+            assert_eq!(
+                declared
+                    .iter()
+                    .filter(|(_, port)| matches!(port, Port::Door { .. }))
+                    .count(),
+                doors,
+                "{kind:?} does not declare {doors} doors"
+            );
+            assert_eq!(
+                kind.port(LADDER).is_some() && kind.port(HATCH).is_some(),
+                vertical,
+                "{kind:?} disagrees with the decree about its vertical pair"
+            );
+            assert_eq!(
+                declared.len(),
+                doors + usize::from(vertical) * 2,
+                "{kind:?} declares a port nobody argued for"
+            );
+        }
+        // The furnace hangs off the cabin's starboard wall, as it has
+        // since the first slice, and that is the only seam it has.
+        assert!(matches!(
+            RoomKind::Burner.port(3),
+            Some(Port::Door { wall: 3, .. })
+        ));
     }
 
     /// Attachment has zero degrees of freedom, and the burner lands
@@ -1137,26 +1339,65 @@ mod tests {
         }
     }
 
-    /// The escape-hatch obligation, as an adversarial-order property:
-    /// spawn rooms in hostile orders and never see a refusal for want
-    /// of space. If this fails the spawn contract is wrong, not the
-    /// test (docs/ROOMS.md).
+    /// `Sim::part`'s graph surgery, which is the only detach the game
+    /// performs: a room parts with everything standing behind it, so the
+    /// graph the ship holds is never disconnected. The escape-hatch
+    /// guarantee leans on that, and this is where the test says so.
+    fn part(rooms: &mut Rooms, id: RoomId) {
+        let doomed: Vec<RoomId> = rooms
+            .iter()
+            .map(|(other, _)| other)
+            .filter(|&other| rooms.beyond(id, other))
+            .collect();
+        for room in doomed {
+            let _ = rooms.detach(room);
+        }
+    }
+
+    /// The escape-hatch obligation, restated for a ship whose leaf rooms
+    /// are dead ends, as an adversarial-order property (docs/ROOMS.md,
+    /// "The escape-hatch guarantee"):
+    ///
+    /// 1. **A cabin always finds a berth.** Only cabins declare the
+    ///    vertical pair, so only a cabin can reach a new storey — and
+    ///    therefore every occupied storey holds one, the topmost one's
+    ///    ladder is free, and the storey above it has never been
+    ///    reachable by anything.
+    /// 2. **A caller always fits the cabin that just arrived.** Four
+    ///    unmated doors come with it, which is how a ship whose doors
+    ///    are spent makes another one.
+    ///
+    /// If this fails the spawn contract is wrong, not the test.
     #[test]
-    fn the_spawn_walk_never_starves() {
+    fn the_cabin_frontier_never_starves() {
         let mut rng = fastrand::Rng::with_seed(0x00E5_CA9E);
         for _ in 0..300 {
             let mut rooms = Rooms::new();
-            // Detach and re-attach in adversarial orders, so the
-            // lattice is left as ragged as the game can leave it.
+            // Spawn and part in adversarial orders, so the lattice is
+            // left as ragged as the game can leave it.
             while rooms.count() < MAX_ROOMS {
-                let kind = ROOM_KINDS[rng.usize(..ROOM_KINDS.len())];
                 let anchors: Vec<RoomId> = rooms.iter().map(|(id, _)| id).collect();
                 let from = anchors[rng.usize(..anchors.len())];
-                let spawned = rooms.spawn(kind, from);
-                assert!(
-                    spawned.is_ok(),
-                    "the vertical frontier starved: {spawned:?}"
-                );
+                // Clause one, on every ship this walk can build.
+                let mut ahead = rooms.clone();
+                let berthed = ahead.spawn(RoomKind::Cabin, from);
+                assert!(berthed.is_ok(), "the cabin frontier starved: {berthed:?}");
+                // Clause two: whatever the trip has done to the ship, the
+                // cabin that just landed can host any caller there is.
+                if let Ok(fresh) = berthed {
+                    if ahead.count() < MAX_ROOMS {
+                        for kind in ROOM_KINDS {
+                            let mut alongside = ahead.clone();
+                            let called = alongside.spawn(kind, fresh);
+                            assert!(
+                                called.is_ok(),
+                                "{kind:?} starved on a fresh cabin: {called:?}"
+                            );
+                        }
+                    }
+                }
+                let kind = ROOM_KINDS[rng.usize(..ROOM_KINDS.len())];
+                let _ = rooms.spawn(kind, from);
                 if rng.u8(..4) == 0 {
                     let victims: Vec<RoomId> = rooms
                         .iter()
@@ -1164,32 +1405,84 @@ mod tests {
                         .filter(|&id| id != CABIN)
                         .collect();
                     if !victims.is_empty() {
-                        let _ = rooms.detach(victims[rng.usize(..victims.len())]);
+                        part(&mut rooms, victims[rng.usize(..victims.len())]);
                     }
+                }
+                if rooms.count() == 1 {
+                    // A ship parted back to its cabin still grows.
+                    assert!(rooms.spawn(RoomKind::Burner, CABIN).is_ok());
                 }
             }
             // Full is the only refusal a full ship may give.
-            assert_eq!(rooms.spawn(RoomKind::Trade, CABIN), Err(Refusal::Full));
+            assert_eq!(rooms.spawn(RoomKind::Cabin, CABIN), Err(Refusal::Full));
         }
     }
 
-    /// A half-overlapping aperture is a geometric contradiction, and
-    /// the attach that would make it is refused by name.
+    /// What the ship actually asks for: a dock's room and an unresolved
+    /// event alongside at once. The yard-fresh ship seats **three**
+    /// callers — the cabin's doors, less the furnace's — and the fourth
+    /// is refused by name, which is the honest half of the guarantee.
+    #[test]
+    fn the_yard_fresh_ship_seats_every_caller_the_game_asks_for() {
+        let callers = [
+            RoomKind::Trade,
+            RoomKind::Wreck,
+            RoomKind::Parlor,
+            RoomKind::Pump,
+        ];
+        for first in callers {
+            for second in callers {
+                for third in callers {
+                    let mut rooms = Rooms::new();
+                    for kind in [first, second, third] {
+                        let called = rooms.spawn(kind, CABIN);
+                        assert!(called.is_ok(), "{kind:?} found no door: {called:?}");
+                    }
+                    // Spent doors refuse, and the answer is another
+                    // cabin — which brings four of its own.
+                    assert!(rooms.spawn(RoomKind::Trade, CABIN).is_err());
+                    let crew = rooms.spawn(RoomKind::Cabin, CABIN);
+                    assert!(crew.is_ok(), "the crew cabin starved: {crew:?}");
+                    assert!(rooms.spawn(RoomKind::Trade, crew.unwrap()).is_ok());
+                }
+            }
+        }
+    }
+
+    /// Every refusal the attach contract can give, by name — including
+    /// the new one the port law leans on: a slot a kind does not declare
+    /// is `Absent`, exactly as a door carried off its wall will be.
     #[test]
     fn a_seam_that_will_not_close_is_refused_by_name() {
         let mut rooms = Rooms::root(RoomKind::Cabin);
-        // A trade room above through the ladder, then a second one that
-        // would have to share the same column: the box refuses first.
-        assert!(rooms.attach(CABIN, LADDER, RoomKind::Trade, HATCH).is_ok());
+        // A cabin above through the ladder, then a second one that would
+        // have to share the same column.
+        assert!(rooms.attach(CABIN, LADDER, RoomKind::Cabin, HATCH).is_ok());
         assert_eq!(
-            rooms.attach(CABIN, LADDER, RoomKind::Trade, HATCH),
+            rooms.attach(CABIN, LADDER, RoomKind::Cabin, HATCH),
             Err(Refusal::Mated)
         );
         // Ports that cannot mate are named too.
         assert_eq!(
-            rooms.attach(CABIN, HATCH, RoomKind::Trade, 0),
+            rooms.attach(CABIN, HATCH, RoomKind::Cabin, 0),
             Err(Refusal::Kinds)
         );
+        // The market declares one door, aft. Its other three walls and
+        // its ceiling are walls and a ceiling.
+        assert_eq!(
+            rooms.attach(CABIN, 0, RoomKind::Trade, 2),
+            Err(Refusal::Absent)
+        );
+        assert_eq!(
+            rooms.attach(CABIN, LADDER, RoomKind::Trade, HATCH),
+            Err(Refusal::Absent)
+        );
+        // And a furnace mates through the one wall it hangs from.
+        assert_eq!(
+            rooms.attach(CABIN, 3, RoomKind::Burner, 1),
+            Err(Refusal::Absent)
+        );
+        assert!(rooms.attach(CABIN, 3, RoomKind::Burner, 3).is_ok());
         assert_eq!(rooms.attach(9, 0, RoomKind::Trade, 0), Err(Refusal::Absent));
     }
 

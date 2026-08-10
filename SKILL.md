@@ -126,15 +126,18 @@ Anything genuinely unavoidable gets isolated in one place for future
 translation.
 
 Cargo is conserved: a piece the player owns never vanishes or changes hands
-except through five ceremonies — the accept lever, the Guild's hangar
-steal on docking (`Cue::Delivered`, per DESIGN.md's Central Server section),
-???'s three-for-one exchange (`Cue::Exchange`), the burner taking a
-feeding (`Cue::Burn`: cargo staged on the hopper tiles rides recoverable
-until the stoker's beat shovels it into the fire for boost), and the
-dock-overflow tip (`Cue::Jettison`: docking banks unburned fuel back
-aboard, and only what no longer fits goes over the side). The suspicious
-crate refuses the hopper. The casino only ever transmutes a wagered
-piece (`Cue::CasinoLoss`), never destroys it.
+except through four ceremonies — a room's handshake (`Cue::Accept`: the
+one physical act that commits a standing offer, and the only place
+ownership crosses), the Guild's hangar steal on docking
+(`Cue::Delivered`, per DESIGN.md's Central Server section), ???'s
+three-for-one exchange (`Cue::Exchange`), and the burner taking a
+feeding (`Cue::Burn`: cargo staged on the furnace room's hazard tiles
+rides recoverable until the stoker's beat shovels it into the fire for
+boost). Fuel simply stays staged, so nothing is ever tipped over the
+side and conservation is total. The suspicious crate refuses the fire.
+The casino only ever transmutes a wagered piece (`Cue::CasinoLoss`),
+never destroys it. A room that parts takes its OWN goods with it, and the
+gangway law makes sure nothing of the player's is aboard it.
 No interaction can destroy anything. The ownership rule lives in exactly one
 place (`cargo::player_owned`), the drop matrix consumes it in
 `Sim::resolve_drop`, and the renderer's affordances come from

@@ -21,10 +21,12 @@ deliberately below.
 - [ ] Determinism proven: bit-identical, save-round-trip, and
       catch-up-equivalence tests cover every new mechanic and pass.
 - [ ] Cargo is conserved: nothing the player owns vanishes or changes hands
-      except through the accept lever or the Guild's hangar steal, and the
-      drag-monkey tests (solo and six-player) cover any new interactive
-      surface automatically — the cabin's gesture and carry synthesis
-      included, via its own monkeys.
+      except through a named ceremony — a room's handshake, the burner's
+      fire, the Guild's hangar steal, ???'s exchange, or a room parting
+      with its own goods — and the carry-monkey tests (solo and
+      six-player) cover any new interactive surface automatically,
+      crossing seams as well as staying in one room; the cabin's gesture
+      and carry synthesis are included, via its own monkeys.
 - [ ] Netcode holds the lockstep contract: state never travels, only
       inputs; new protocol messages are idempotent under duplication and
       reordering, fuzz-parsed, and the six flaky-harness properties in
@@ -33,10 +35,14 @@ deliberately below.
       invitation comes from `Sim::drop_targets()`, `placement_check`, or the
       shared `layout` rects — never from re-derived geometry or a restated
       ownership rule.
-- [ ] Instruments read monotonically: an action that is better for a party
-      moves its gauge toward better, never the reverse — one scale per
-      gauge, no special-case formulas that disagree at a boundary, and the
-      property test proves it (see `dial_reading_is_monotone_under_pad_changes`).
+- [ ] Readings answer monotonically: an action that is better for a party
+      reads better, never the reverse — one scale per reading, no
+      special-case formulas that disagree at a boundary. The eagerness
+      dial that this line was written against is gone with the counter;
+      the reading it guards now is the composed offer, and the property
+      belongs to `barter::compose` (see
+      `a_room_composes_the_best_pile_the_proposal_covers`): more proposed
+      value never buys less.
 - [ ] Pause, fast-forward, and save/load all still reachable and exercised
       this session.
 - [ ] `src/sim/` and `src/synth.rs` import no engine crate (no bevy, no

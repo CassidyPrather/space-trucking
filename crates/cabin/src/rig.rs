@@ -97,6 +97,21 @@ pub const BAY_WALL_Z: f32 = 2.41;
 /// keep their meshes ≤ [`layer::SKIN`] thick so rungs, not luck, decide
 /// what draws over what.
 pub mod layer {
+    /// **The rung below the ladder: a backer plate's own face.**
+    ///
+    /// A backer is the worn slab a chart is painted on, and it is the
+    /// only thing on the ladder that stands *behind* the mapping plane —
+    /// so it carries two numbers, a depth and a thickness, and both are
+    /// law. The depth keeps its face a step under [`TILE`]; the
+    /// thickness keeps its BACK face off the hull plane it covers,
+    /// because an aperture punch cuts a plate wherever the opening
+    /// begins and a remainder that ends flush with the deck is two
+    /// opaque faces on one plane. That remainder is the playtest's
+    /// flickering floor, and this constant is why it cannot come back.
+    pub const BACKER: f32 = 0.003;
+    /// How thick a backer plate is. Kept under [`BACKER`] so the whole
+    /// slab lives strictly between the chart and the hull.
+    pub const BACKER_T: f32 = 0.002;
     /// Berth socket wells, and the colored tiles' own enamel fields.
     pub const TILE: f32 = 0.002;
     /// The pattern every colored tile carries over its field, because no
@@ -845,16 +860,26 @@ pub fn spawn(
         // the defect this pass found by looking through one.
         if matches!(station, Station::BayWall | Station::BayFloor) {
             let n = station.inward(&surface);
-            let deep = 0.03;
+            // The plate rides `layer::BACKER`, and it is thin on purpose:
+            // a slab thick enough to reach the hull behind it gets sliced
+            // at the hull's own plane by the aperture punch, and the
+            // remainder's face and the hull's face are then one plane —
+            // the deck's flicker. Face a step under the chart, back still
+            // clear of the hull, and the punch has nothing to slice.
+            let deep = layer::BACKER_T;
+            // Overlap along the chart's u only. Growing along v would
+            // hang the aft plate's skirt below the deck, where the
+            // doorway punch would cut it off flush with the floor and
+            // put two upward faces on one plane all over again.
             let flat = Vec3::new(
                 surface.half_u.length().mul_add(2.0, 0.08),
-                surface.half_v.length().mul_add(2.0, 0.08),
+                surface.half_v.length() * 2.0,
                 deep,
             );
             // The charts are axis-aligned, so the plate's world extent is
             // its own frame's, spun onto the world axes.
             let size = (surface.orientation() * flat).abs();
-            let center = surface.center - n * (deep * 0.5 + 0.004);
+            let center = surface.center - n * deep.mul_add(0.5, layer::BACKER);
             let material = match station {
                 Station::BayFloor => skin.desk.clone(),
                 _ => skin.plate.clone(),
@@ -942,6 +967,15 @@ pub fn spawn(
 /// skipped — they are worked in roam, never focused — but they also
 /// never occlude a panel (they hang on the opposite wall), so skipping
 /// is a filter, not an occlusion cheat.
+///
+/// **Within [`REACH`], like everything else the crosshair works.** A
+/// station is hardware you walk up to — the same law the berths and the
+/// detach latch already keep — and the arm's length matters twice: a
+/// glint frame that invited from across the room was a promise the
+/// camera made for the whole far wall, and a CLICK that resolved to a
+/// station four metres off was a click the camera ate. `steer` spends
+/// this answer before the carry sees the press, so an unbounded one is
+/// a grab quietly swallowed by a panel the player was not near.
 fn aimed_station(
     camera: &Transform,
     surfaces: &Query<(&Station, &SimSurface), Without<CabinCamera>>,
@@ -953,6 +987,7 @@ fn aimed_station(
             continue;
         }
         if let Some((t, _, _)) = surface.project(ray)
+            && t <= REACH
             && best.is_none_or(|(bt, _)| t < bt)
         {
             best = Some((t, *station));

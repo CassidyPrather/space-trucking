@@ -331,8 +331,47 @@ pub fn track_pointer(
         // Glides and parked cursors keep the pointer parked.
         return;
     };
+    *pointer = pick(
+        ray,
+        roam_only,
+        reach,
+        surfaces
+            .iter()
+            .map(|(station, surface, riding, in_room)| Aimable {
+                station: *station,
+                surface: *surface,
+                riding: riding.is_some(),
+                in_room: in_room.copied(),
+            }),
+    );
+}
+
+/// One mapped quad, as the pick sees it: what it answers as, where it
+/// is, whether it rides a piece, and (for a chart) whose room it is.
+#[derive(Clone, Copy, Debug)]
+pub struct Aimable {
+    pub station: Station,
+    pub surface: SimSurface,
+    pub riding: bool,
+    pub in_room: Option<InRoom>,
+}
+
+/// **The pick, whole.** The nearest mapped quad the ray reaches within
+/// `reach` becomes the virtual pointer — and this is a plain function
+/// over a plain list on purpose: the carry begins here, so the grab has
+/// to be drivable end to end without a window
+/// (`room::tests::a_press_on_a_berthed_piece_lifts_it`).
+#[must_use]
+pub fn pick(
+    ray: Ray3d,
+    roam_only: bool,
+    reach: f32,
+    surfaces: impl IntoIterator<Item = Aimable>,
+) -> VirtualPointer {
+    let mut pointer = VirtualPointer::default();
     let mut nearest = f32::INFINITY;
-    for (station, surface, riding, in_room) in &surfaces {
+    for aim in surfaces {
+        let (station, surface) = (aim.station, aim.surface);
         // A surface that rides a piece answers in exactly ONE regime,
         // and `roamable` is which:
         //
@@ -348,7 +387,7 @@ pub fn track_pointer(
         //   panel work — the x-ray already ghosts whatever the focus
         //   flies through, and a ghost the cursor cannot reach through
         //   would be a wall with the paint stripped off.
-        if riding.is_some() && roam_only != station.roamable() {
+        if aim.riding && roam_only != station.roamable() {
             continue;
         }
         if let Some((t, sim, world)) = surface.project(ray)
@@ -360,7 +399,7 @@ pub fn track_pointer(
             // ray carries on to whatever lies beyond — the room across
             // the threshold, space through the glass. Which cells those
             // are is the hit room's OWN net's answer, never the cabin's.
-            if station.chart_flipped() && !in_room.is_some_and(|room| chart_cell(*room, sim)) {
+            if station.chart_flipped() && !aim.in_room.is_some_and(|room| chart_cell(room, sim)) {
                 continue;
             }
             // While roaming, the focusable stations are opaque but not
@@ -369,18 +408,19 @@ pub fn track_pointer(
             // a click there glides to focus instead (`rig::steer`).
             if roam_only && !station.roamable() {
                 nearest = t;
-                *pointer = VirtualPointer::default();
+                pointer = VirtualPointer::default();
                 continue;
             }
             nearest = t;
-            *pointer = VirtualPointer {
+            pointer = VirtualPointer {
                 sim,
                 world: Some(world),
-                station: Some(*station),
-                surface: Some(*surface),
+                station: Some(station),
+                surface: Some(surface),
             };
         }
     }
+    pointer
 }
 
 /// Whether `sim` names a cell of `chart`'s own room that a piece could

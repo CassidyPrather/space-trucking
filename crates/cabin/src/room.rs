@@ -201,7 +201,9 @@ impl Placed {
 #[derive(Clone, Copy, Debug)]
 pub struct Site {
     pub port: PortId,
-    pub declared: Port,
+    /// What the room declares in this slot — `None` where the kind
+    /// declares nothing, and a wall that declares nothing is a wall.
+    pub declared: Option<Port>,
     /// Which room and port this one is mated to, if any.
     pub mate: Option<(RoomId, PortId)>,
     /// The hole this port punches through the hull, as a world box.
@@ -221,7 +223,7 @@ impl Site {
     /// this stage (see the module note on verticality).
     #[must_use]
     pub const fn is_door(&self) -> bool {
-        matches!(self.declared, Port::Door { .. })
+        matches!(self.declared, Some(Port::Door { .. }))
     }
 }
 
@@ -602,7 +604,7 @@ pub fn sites(room: &Room) -> [Site; PORTS] {
     let ports = kind.ports();
     let blank = Site {
         port: 0,
-        declared: ports[0],
+        declared: None,
         mate: None,
         lo: Vec3::ZERO,
         hi: Vec3::ZERO,
@@ -616,7 +618,12 @@ pub fn sites(room: &Room) -> [Site; PORTS] {
         site.port = index as PortId;
         site.declared = ports[index];
         site.mate = room.mates[index];
-        match ports[index] {
+        // A slot the kind does not declare is a wall: nothing punched,
+        // nothing hung, nothing drawn (docs/ROOMS.md, "The port law").
+        let Some(declared) = ports[index] else {
+            continue;
+        };
+        match declared {
             Port::Door { wall, offset } => {
                 let cells = door_cells(kind, wall, offset);
                 let clear = f32::from(APERTURE) * BAY_CELL;
@@ -646,7 +653,7 @@ pub fn sites(room: &Room) -> [Site; PORTS] {
                 site.leaf = Vec3::new(face.x, clear.mul_add(0.5, hole.0.y), face.z) - out * inset;
             }
             Port::Ladder { x, y } | Port::Hatch { x, y } => {
-                let up = matches!(ports[index], Port::Ladder { .. });
+                let up = matches!(declared, Port::Ladder { .. });
                 let (y0, y1) = if up {
                     (CEIL_SLAB_Y - WALL_T, CEIL_SLAB_Y + WALL_T)
                 } else {
@@ -748,6 +755,18 @@ pub fn preset(rooms: &Rooms, name: &str) -> Option<(Vec3, f32, f32)> {
         ))
     };
     match name {
+        // The cabin's own floor hatch, from a body's length away and
+        // looking down at it — the reading the playtest could not make.
+        "hatch" => {
+            let cabin = placed(CABIN, rooms.get(CABIN)?);
+            let site = cabin
+                .ports
+                .iter()
+                .find(|site| matches!(site.declared, Some(Port::Hatch { .. })))?;
+            let eye = Vec3::new(site.leaf.x, EYE_HEIGHT, site.leaf.z + 1.15);
+            let down = site.leaf - eye;
+            Some(look(eye, site.leaf, down.y.atan2(down.xz().length())))
+        }
         "trade" => inside(RoomKind::Trade, 0, -0.30),
         "offer" => inside(RoomKind::Trade, 2, -0.18),
         "wreck" => inside(RoomKind::Wreck, 0, -0.10),
@@ -1013,6 +1032,24 @@ fn shell_slabs(
     all: &[Placed],
     tag: InRoom,
 ) {
+    for (center, size, hull) in shell_boxes(placed, all) {
+        commands.spawn((
+            Mesh3d(cube.clone()),
+            MeshMaterial3d(if hull {
+                skin.hull.clone()
+            } else {
+                skin.desk.clone()
+            }),
+            Transform::from_translation(center).with_scale(size),
+            tag,
+        ));
+    }
+}
+
+/// [`shell_slabs`]' geometry, as `(centre, size, is_hull)`. Pure, so the
+/// no-clipping law can be asserted against exactly what gets drawn.
+#[must_use]
+fn shell_boxes(placed: &Placed, all: &[Placed]) -> Vec<(Vec3, Vec3, bool)> {
     let (lo, hi) = (placed.lo, placed.hi);
     let span = hi - lo;
     let plan_centre = Vec3::new(f32::midpoint(lo.x, hi.x), 0.0, f32::midpoint(lo.z, hi.z));
@@ -1045,6 +1082,7 @@ fn shell_slabs(
             true,
         ));
     }
+    let mut out = Vec::new();
     for (center, size, hull) in slabs {
         let mut parts = vec![(center, size)];
         for site in &placed.ports {
@@ -1053,9 +1091,13 @@ fn shell_slabs(
                 .flat_map(|(c, s)| punch(c, s, site.lo, site.hi))
                 .collect();
         }
-        // Whatever a lower-id room's box already fills is that room's to
+        // Whatever ANOTHER room's box already fills is that room's to
         // draw; grown by a wall so the two hulls meet rather than gape.
-        for other in all.iter().filter(|other| other.id < placed.id) {
+        // Every other room, not merely the older ones: a shell stands in
+        // the partition, and a partition has two sides — cutting only
+        // against the lower ids left the newer neighbour's half of it
+        // standing inside a room that never asked for it.
+        for other in all.iter().filter(|other| other.id != placed.id) {
             let grow = Vec3::new(WALL_T, 0.0, WALL_T);
             parts = parts
                 .into_iter()
@@ -1069,19 +1111,9 @@ fn shell_slabs(
                 })
                 .collect();
         }
-        for (c, s) in parts {
-            commands.spawn((
-                Mesh3d(cube.clone()),
-                MeshMaterial3d(if hull {
-                    skin.hull.clone()
-                } else {
-                    skin.desk.clone()
-                }),
-                Transform::from_translation(c).with_scale(s),
-                tag,
-            ));
-        }
+        out.extend(parts.into_iter().map(|(c, s)| (c, s, hull)));
     }
+    out
 }
 
 // ---- Colored tiles ----
@@ -1293,7 +1325,7 @@ fn doormats(
     let rot = Station::BayFloor.face(&floor);
     let (su, sv) = (floor.scale_u(), floor.scale_v());
     for site in &placed.ports {
-        let Port::Door { wall, offset } = site.declared else {
+        let Some(Port::Door { wall, offset }) = site.declared else {
             continue;
         };
         for (i, j) in door_cells(placed.kind, wall, offset) {
@@ -1325,12 +1357,127 @@ fn doormats(
 
 // ---- Doorways ----
 
+/// **The seam is drawn once, by the room with the lower id, and it is
+/// drawn in the seam.** Two rooms share a partition, and a partition is a
+/// boundary rather than a volume (docs/ROOMS.md) — so a mated aperture's
+/// hardware may not be built twice, once per side, at two planes a trim
+/// apart. That is what put a jamb of the furnace inside the cabin and a
+/// jamb of the cabin inside the furnace, interpenetrating, with the
+/// station's own hatching showing through the sliver between them.
+///
+/// Whether this room dresses this seam: only for a mated door, and only
+/// from the lower id. The other side gets the same frame, because there
+/// is only one frame and it stands on the boundary they share.
+const fn dresses(placed: &Placed, site: &Site) -> bool {
+    match site.mate {
+        Some((other, _)) => site.is_door() && placed.id <= other,
+        None => false,
+    }
+}
+
+/// The point at the middle of a door's opening ON THE SHARED PARTITION —
+/// the room's own box face, not the plane its chart was trimmed to. Seam
+/// hardware is centred here so one frame reads from both rooms.
+fn seam_centre(placed: &Placed, site: &Site) -> Vec3 {
+    let face = if site.out.x + site.out.z > 0.0 {
+        placed.hi
+    } else {
+        placed.lo
+    };
+    Vec3::new(
+        if site.out.x.abs() > 0.5 {
+            face.x
+        } else {
+            site.leaf.x
+        },
+        site.leaf.y,
+        if site.out.z.abs() > 0.5 {
+            face.z
+        } else {
+            site.leaf.z
+        },
+    )
+}
+
+/// Every box a mated door's frame occupies, as `(centre, size)`: two
+/// stiles, a lintel, the jamb lamp, and (where the room beyond can be
+/// sent away) the latch's plate and its amber. Pure, because the
+/// no-clipping law is asserted against exactly this list
+/// (`tests::no_rooms_geometry_reaches_into_another_room`).
+#[must_use]
+fn seam_boxes(placed: &Placed, site: &Site) -> Vec<(Vec3, Vec3)> {
+    let (a, b) = (site.half_a.length(), site.half_b.length());
+    let dir_a = site.half_a.normalize_or_zero().abs();
+    let dir_b = site.half_b.normalize_or_zero().abs();
+    let mid = seam_centre(placed, site);
+    // The frame stands in the partition and a jamb's girth either side of
+    // it, so both rooms see the same doorway and neither is reached into
+    // any further than the opening they share.
+    let girth = site.out.abs() * (JAMB * 2.0);
+    let mut boxes = vec![
+        (
+            mid + site.half_b.normalize_or_zero() * JAMB.mul_add(0.5, b),
+            girth + dir_a * JAMB.mul_add(2.0, a * 2.0) + dir_b * JAMB,
+        ),
+        (
+            mid + site.half_b.normalize_or_zero() * (b + JAMB),
+            girth * 0.4 + dir_a * (a * 0.5) + dir_b * 0.035,
+        ),
+    ];
+    for side in [-1.0_f32, 1.0] {
+        boxes.push((
+            mid + site.half_a.normalize_or_zero() * side * JAMB.mul_add(0.5, a),
+            girth + dir_a * JAMB + dir_b * JAMB.mul_add(2.0, b * 2.0),
+        ));
+    }
+    if latch_at(placed, site).is_some() {
+        let at = latch_at(placed, site).unwrap_or(mid);
+        boxes.push((
+            at,
+            dir_a * (LATCH_W * 1.6) + Vec3::Y * (LATCH_H * 1.3) + site.out.abs() * 0.02,
+        ));
+        boxes.push((
+            at - site.out * 0.02,
+            dir_a * LATCH_W + Vec3::Y * LATCH_H + site.out.abs() * 0.02,
+        ));
+    }
+    boxes
+}
+
+/// Where a seam's amber latch hangs, if this seam gets one: on the
+/// ANCHOR's side — the lower id, which is the room that stays — and on
+/// whichever flank of the jamb stands inside it. The hand that parts a
+/// room is never the hand standing in it, and the gangway law would
+/// refuse it if it were. The cabin does not part from itself, and a
+/// riding room's seam is not asked to.
+fn latch_at(placed: &Placed, site: &Site) -> Option<Vec3> {
+    let (other, _) = site.mate?;
+    if !site.is_door() || placed.id > other {
+        return None;
+    }
+    let (a, b) = (site.half_a.length(), site.half_b.length());
+    let mid = seam_centre(placed, site);
+    let flank = site.half_a.normalize_or_zero() * (a + JAMB + LATCH_W);
+    let toward = Vec3::new(
+        f32::midpoint(placed.lo.x, placed.hi.x),
+        0.0,
+        f32::midpoint(placed.lo.z, placed.hi.z),
+    ) - Vec3::new(mid.x, 0.0, mid.z);
+    let flank = if flank.dot(toward) < 0.0 {
+        -flank
+    } else {
+        flank
+    };
+    Some(mid - site.out * (JAMB + LATCH_W) + flank + Vec3::Y * (b * 0.25))
+}
+
 /// Every declared port, dressed. A mated door is an open aperture with a
 /// jamb, a lamp that answers the seam's cues, and — where the room beyond
 /// is one that can be sent away — the amber latch that asks it to part.
-/// An unmated port is a leaf, drawn shut: a door facing blank wall is a
-/// door that will not open, and the vertical pair stays shut this stage.
-#[allow(clippy::too_many_lines)]
+/// An unmated door is a leaf, drawn shut: a door facing blank wall is a
+/// door that will not open. The vertical pair is neither: it is a hatch
+/// in the deck and a ladder port overhead, and it is dressed to say so
+/// ([`port_plate`]).
 fn doorways(
     commands: &mut Commands,
     cube: &Handle<Mesh>,
@@ -1340,115 +1487,46 @@ fn doorways(
     tag: InRoom,
 ) {
     for site in &placed.ports {
-        let a = site.half_a.length();
-        let b = site.half_b.length();
+        let (a, b) = (site.half_a.length(), site.half_b.length());
         if a <= 0.0 || b <= 0.0 {
             continue;
         }
-        let leaf = site.out.abs() * PLATE_T + site.half_a.abs() * 2.0 + site.half_b.abs() * 2.0;
-        let Some((other, _)) = site.mate.filter(|_| site.is_door()) else {
-            // Sealed: a riveted plate where the opening is.
-            commands.spawn((
-                Mesh3d(cube.clone()),
-                MeshMaterial3d(skin.plate.clone()),
-                Transform::from_translation(site.leaf).with_scale(leaf.max(Vec3::splat(0.02))),
-                tag,
-            ));
-            for corner in [-0.66_f32, 0.66] {
-                for course in [-0.66_f32, 0.66] {
-                    commands.spawn((
-                        Mesh3d(cube.clone()),
-                        MeshMaterial3d(skin.rivet.clone()),
-                        Transform::from_translation(
-                            site.leaf
-                                + site.half_a * corner
-                                + site.half_b * course
-                                + site.out * PLATE_T,
-                        )
-                        .with_scale(Vec3::splat(0.045)),
-                        tag,
-                    ));
-                }
+        if !dresses(placed, site) {
+            if site.mate.is_none() {
+                port_plate(commands, cube, skin, site, tag);
             }
             continue;
-        };
-        // Open: a jamb around the hole and nothing in it.
-        let dir_a = site.half_a.normalize_or_zero().abs();
-        let dir_b = site.half_b.normalize_or_zero().abs();
-        for side in [-1.0_f32, 1.0] {
+        }
+        for (centre, size) in seam_boxes(placed, site) {
             commands.spawn((
                 Mesh3d(cube.clone()),
                 MeshMaterial3d(skin.plate_shade.clone()),
-                Transform::from_translation(
-                    site.leaf + site.half_a.normalize_or_zero() * side * JAMB.mul_add(0.5, a),
-                )
-                .with_scale(
-                    site.out.abs() * (PLATE_T * 2.0)
-                        + dir_a * JAMB
-                        + dir_b * JAMB.mul_add(2.0, b * 2.0),
-                ),
+                Transform::from_translation(centre).with_scale(size),
                 tag,
             ));
         }
-        commands.spawn((
-            Mesh3d(cube.clone()),
-            MeshMaterial3d(skin.plate_shade.clone()),
-            Transform::from_translation(
-                site.leaf + site.half_b.normalize_or_zero() * JAMB.mul_add(0.5, b),
-            )
-            .with_scale(
-                site.out.abs() * (PLATE_T * 2.0)
-                    + dir_a * JAMB.mul_add(2.0, a * 2.0)
-                    + dir_b * JAMB,
-            ),
-            tag,
-        ));
         // The jamb lamp: dark glass that answers a seam mating or parting.
+        let mid = seam_centre(placed, site);
         let lamp = glow::phosphor(materials, palette::LAMP_OK, 0.0);
         commands.spawn((
             Mesh3d(cube.clone()),
             MeshMaterial3d(lamp.clone()),
-            Transform::from_translation(
-                site.leaf + site.half_b.normalize_or_zero() * (b + JAMB) + site.out * PLATE_T,
-            )
-            .with_scale(dir_a * (a * 0.5) + dir_b * 0.035 + site.out.abs() * 0.02),
+            Transform::from_translation(mid + site.half_b.normalize_or_zero() * (b + JAMB))
+                .with_scale(
+                    site.out.abs() * (JAMB * 0.9)
+                        + site.half_a.normalize_or_zero().abs() * (a * 0.5)
+                        + site.half_b.normalize_or_zero().abs() * 0.035,
+                ),
             SeamLamp {
                 mat: lamp,
                 latch: false,
             },
             tag,
         ));
-        // The detach gesture: the door's own amber latch, hung on the
-        // ANCHOR side of the seam so the hand that works it is never
-        // standing in the room it sends away. Only a room that can be sent
-        // away gets one; the cabin does not part from itself.
-        if placed.id == CABIN || !site.is_door() {
+        let (Some(at), Some((other, _))) = (latch_at(placed, site), site.mate) else {
             continue;
-        }
-        // On the ANCHOR's side of the seam, and on whichever flank of
-        // the jamb is actually inside this room: the hand that parts a
-        // room is never the hand standing in it, and the gangway law
-        // would refuse it if it were.
-        let flank = site.half_a.normalize_or_zero() * (a + JAMB + LATCH_W);
-        let toward = Vec3::new(
-            f32::midpoint(placed.lo.x, placed.hi.x),
-            0.0,
-            f32::midpoint(placed.lo.z, placed.hi.z),
-        ) - Vec3::new(site.leaf.x, 0.0, site.leaf.z);
-        let flank = if flank.dot(toward) < 0.0 {
-            -flank
-        } else {
-            flank
         };
-        let at = site.leaf - site.out * (PLATE_T + LATCH_W) + flank + Vec3::Y * (b * 0.25);
-        commands.spawn((
-            Mesh3d(cube.clone()),
-            MeshMaterial3d(skin.plate_shade.clone()),
-            Transform::from_translation(at).with_scale(
-                dir_a * (LATCH_W * 1.6) + Vec3::Y * (LATCH_H * 1.3) + site.out.abs() * 0.02,
-            ),
-            tag,
-        ));
+        let dir_a = site.half_a.normalize_or_zero().abs();
         let grab = glow::phosphor(materials, palette::AMBER, 1.2);
         commands.spawn((
             Mesh3d(cube.clone()),
@@ -1471,6 +1549,134 @@ fn doorways(
             tag,
         ));
     }
+}
+
+/// How far a shut vertical port's leaf sits below the deck it is set
+/// into — a hatch is a thing you step ON, so it is recessed, never a
+/// block you trip over. The playtest could not tell what the lump in the
+/// bow-starboard corner was; this is the answer, and it is a shape
+/// rather than a label.
+const SINK: f32 = 0.022;
+
+/// The coaming's width and how far it stands proud of the deck: a rim
+/// you can see from across the room and still walk over.
+const RIM_W: f32 = 0.07;
+const RIM_H: f32 = 0.012;
+
+/// A shut port, dressed as the thing it is.
+///
+/// A **door** drawn shut is a riveted plate, as it always was. The
+/// **vertical pair** is not a door and must not read as one: a hatch in
+/// the deck and a ladder port in the ceiling get a recessed leaf, a
+/// coaming rim around the opening, a hinge barrel down one edge, and a
+/// recessed pull opposite it — so the eye reads *hinged, lifts that way*
+/// without a word of text.
+///
+/// The pull is BRASS, not amber. Amber is the handle rule's, and it
+/// promises a carry: the day apertures become cargo (docs/ROOMS.md's
+/// stretch goal) this hardware grows an amber grab and means it. Until
+/// then the radium brass says "hardware, findable in the dark", which is
+/// the truth.
+fn port_plate(commands: &mut Commands, cube: &Handle<Mesh>, skin: &Skin, site: &Site, tag: InRoom) {
+    let leaf = site.out.abs() * PLATE_T + site.half_a.abs() * 2.0 + site.half_b.abs() * 2.0;
+    if site.is_door() {
+        commands.spawn((
+            Mesh3d(cube.clone()),
+            MeshMaterial3d(skin.plate.clone()),
+            Transform::from_translation(site.leaf).with_scale(leaf.max(Vec3::splat(0.02))),
+            tag,
+        ));
+        for corner in [-0.66_f32, 0.66] {
+            for course in [-0.66_f32, 0.66] {
+                commands.spawn((
+                    Mesh3d(cube.clone()),
+                    MeshMaterial3d(skin.rivet.clone()),
+                    Transform::from_translation(
+                        site.leaf
+                            + site.half_a * corner
+                            + site.half_b * course
+                            + site.out * PLATE_T,
+                    )
+                    .with_scale(Vec3::splat(0.045)),
+                    tag,
+                ));
+            }
+        }
+        return;
+    }
+    // The vertical pair. `out` points out of the room (down through a
+    // hatch, up through a ladder port), so `-out` is always "into the
+    // room" and the whole fitting is written once for both.
+    let (a, b) = (site.half_a.length(), site.half_b.length());
+    let dir_a = site.half_a.normalize_or_zero().abs();
+    let dir_b = site.half_b.normalize_or_zero().abs();
+    let flat = site.out.abs();
+    // The leaf, sunk into the opening: nothing of it stands proud.
+    commands.spawn((
+        Mesh3d(cube.clone()),
+        MeshMaterial3d(skin.plate.clone()),
+        Transform::from_translation(site.leaf + site.out * PLATE_T.mul_add(0.5, SINK))
+            .with_scale(dir_a * (a * 2.0) + dir_b * (b * 2.0) + flat * PLATE_T),
+        tag,
+    ));
+    // The coaming: four bars around the opening, a rim's height proud.
+    for (along, across, half) in [
+        (dir_a, dir_b, b),
+        (dir_a, dir_b, -b),
+        (dir_b, dir_a, a),
+        (dir_b, dir_a, -a),
+    ] {
+        let axis = if along == dir_a {
+            site.half_b.normalize_or_zero()
+        } else {
+            site.half_a.normalize_or_zero()
+        };
+        commands.spawn((
+            Mesh3d(cube.clone()),
+            MeshMaterial3d(skin.plate_shade.clone()),
+            Transform::from_translation(
+                site.leaf + axis * (half.signum() * RIM_W.mul_add(0.5, half.abs()))
+                    - site.out * (RIM_H * 0.5),
+            )
+            .with_scale(
+                along * RIM_W.mul_add(2.0, if along == dir_a { a * 2.0 } else { b * 2.0 })
+                    + across * RIM_W
+                    + flat * RIM_H,
+            ),
+            tag,
+        ));
+    }
+    // The hinge: two brass barrels down one edge of the sunk leaf.
+    for step in [-0.45_f32, 0.45] {
+        commands.spawn((
+            Mesh3d(cube.clone()),
+            MeshMaterial3d(skin.brass.clone()),
+            Transform::from_translation(
+                site.leaf + site.half_a * -0.86 + site.half_b * step + site.out * (SINK * 0.5)
+                    - site.out * 0.002,
+            )
+            .with_scale(dir_a * (a * 0.18) + dir_b * (b * 0.34) + flat * (SINK * 0.7)),
+            tag,
+        ));
+    }
+    // And the pull, opposite the hinge: a brass bar lying in a shadowed
+    // well, which is what a flush deck fitting looks like — the well
+    // reaches the deck plane so the shadow reads, the bar sits inside it
+    // so the hand knows where to reach.
+    commands.spawn((
+        Mesh3d(cube.clone()),
+        MeshMaterial3d(skin.socket.clone()),
+        Transform::from_translation(site.leaf + site.half_a * 0.62 + site.out * (SINK * 0.5))
+            .with_scale(dir_a * (a * 0.5) + dir_b * (b * 0.42) + flat * SINK),
+        tag,
+    ));
+    commands.spawn((
+        Mesh3d(cube.clone()),
+        MeshMaterial3d(skin.brass.clone()),
+        Transform::from_translation(site.leaf + site.half_a * 0.62 + site.out * (SINK * 0.06))
+            .with_scale(dir_a * (a * 0.30) + dir_b * (b * 0.09) + flat * (SINK * 0.30)),
+        tag,
+    ));
 }
 
 // ---- The handshake ----
@@ -1976,6 +2182,385 @@ mod tests {
         Plan {
             rooms: rooms.to_vec(),
             signature: Vec::new(),
+        }
+    }
+
+    /// Every mapped quad the running game stands up, from a sim alone:
+    /// each room's six charts (tagged with whose they are), the
+    /// handshake faces, the stations and pick faces that ride the cargo
+    /// (`pieces::ride_pieces`), and the hull's own console panel. The
+    /// carry is driven through exactly this list, because the carry is
+    /// driven through exactly this list at runtime.
+    fn world_surfaces(sim: &space_trucking::sim::Sim) -> Vec<crate::surface::Aimable> {
+        use crate::surface::Aimable;
+        let plan: Vec<Placed> = sim
+            .rooms()
+            .iter()
+            .map(|(id, room)| placed(id, room))
+            .collect();
+        let mut aims: Vec<Aimable> = Vec::new();
+        for room in &plan {
+            let tag = InRoom {
+                room: room.id,
+                kind: room.kind,
+            };
+            for (station, surface) in room.charts {
+                aims.push(Aimable {
+                    station,
+                    surface,
+                    riding: false,
+                    in_room: Some(tag),
+                });
+            }
+        }
+        let charts: Vec<(Station, SimSurface)> =
+            aims.iter().map(|aim| (aim.station, aim.surface)).collect();
+        let in_hand = sim.held(0).map(|held| held.piece);
+        for piece in sim.pieces() {
+            // A piece in hand rides the crosshair, not a berth, so it
+            // carries no surface — `ride_pieces`' own rule.
+            if !matches!(piece.loc, Loc::Hold { .. }) || in_hand == Some(piece.id) {
+                continue;
+            }
+            let rect = layout::piece_rect(sim.pieces(), piece);
+            if let Some((station, surface)) =
+                crate::pieces::instrument_surface(&charts, piece.kind, rect)
+            {
+                aims.push(Aimable {
+                    station,
+                    surface,
+                    riding: true,
+                    in_room: None,
+                });
+            }
+            if let Some(surface) = crate::pieces::standing_surface(&charts, piece.kind, rect) {
+                aims.push(Aimable {
+                    station: Station::Standing,
+                    surface,
+                    riding: true,
+                    in_room: None,
+                });
+            }
+        }
+        for (station, surface) in crate::rig::panels() {
+            aims.push(Aimable {
+                station,
+                surface,
+                riding: false,
+                in_room: None,
+            });
+        }
+        aims
+    }
+
+    /// **The carry begins, end to end, without a window.** Walk up to
+    /// every piece berthed in the cabin, put the crosshair on it, press,
+    /// and the sim must report it in hand.
+    ///
+    /// This is the whole grab path and nothing else: the pointer is
+    /// [`crate::surface::pick`]'s (the same call `track_pointer` makes),
+    /// the click routing is [`crate::rig::handle_route`]'s (the same
+    /// call `steer` makes), and the frame is the one `advance`
+    /// synthesizes for a roam grab. A press that reaches the sim and
+    /// lifts nothing is the playtest's dead left click, and it fails
+    /// here first.
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn a_press_on_a_berthed_piece_lifts_it() {
+        use crate::bridge::{Bridge, FrameInput};
+        use space_trucking::sim::Sim;
+
+        let mut bridge = Bridge::boot_fixture(&Sim::new(4).save_string());
+        let berthed: Vec<(u32, space_trucking::sim::Kind)> = bridge
+            .sim
+            .pieces()
+            .iter()
+            .filter(|piece| matches!(piece.loc, Loc::Hold { room, .. } if room == CABIN))
+            .map(|piece| (piece.id, piece.kind))
+            .collect();
+        assert!(berthed.len() >= 4, "the starter cabin should be furnished");
+        let mut lifted = 0;
+        for (id, kind) in berthed {
+            let aims = world_surfaces(&bridge.sim);
+            let plan: Vec<Placed> = bridge
+                .sim
+                .rooms()
+                .iter()
+                .map(|(room, r)| placed(room, r))
+                .collect();
+            let envelope = walk_boxes(&plan);
+            let charts: Vec<(Station, SimSurface)> =
+                aims.iter().map(|aim| (aim.station, aim.surface)).collect();
+            let piece = bridge
+                .sim
+                .pieces()
+                .iter()
+                .find(|piece| piece.id == id)
+                .expect("the piece is still aboard");
+            let rect = layout::piece_rect(bridge.sim.pieces(), piece);
+            let mid = space_trucking::sim::Vec2::new(
+                rect.w.mul_add(0.5, rect.x),
+                rect.h.mul_add(0.5, rect.y),
+            );
+            let Some((station, surface)) = charts
+                .iter()
+                .find(|(station, surface)| station.chart_flipped() && surface.rect.contains(mid))
+                .copied()
+            else {
+                continue;
+            };
+            // Where the piece is drawn, and a body's step back from it.
+            let inward = station.inward(&surface);
+            let at = surface.to_world(mid) + inward * 0.20;
+            let flat = Vec3::new(inward.x, 0.0, inward.z).normalize_or(Vec3::Z);
+            let mut found = None;
+            for back in [0.75_f32, 0.9, 1.1, 0.55] {
+                let eye = envelope.nearest(Vec3::new(at.x, EYE_HEIGHT, at.z) + flat * back);
+                let Ok(dir) = Dir3::new(at - eye) else {
+                    continue;
+                };
+                let pointer = crate::surface::pick(
+                    Ray3d::new(eye, dir),
+                    true,
+                    crate::rig::REACH,
+                    aims.iter().copied(),
+                );
+                if layout::piece_at(bridge.sim.pieces(), pointer.sim).map(|hit| hit.id) == Some(id)
+                {
+                    found = Some(pointer);
+                    break;
+                }
+            }
+            // The aft-most row of the deck is reached from inside its own
+            // cell; the sweep does not insist on aiming at the player's
+            // feet, only that whatever the crosshair DOES rest on lifts.
+            let Some(pointer) = found else { continue };
+            assert!(
+                pointer.station.is_some(),
+                "{kind:?} resolves no station, so the carry never asks the sim"
+            );
+            // The handle rule must not eat this press: passive cargo has
+            // no function to guard.
+            if crate::rig::handle_route(bridge.sim.pieces(), pointer.sim).is_some() {
+                continue;
+            }
+            // `advance`'s roam grab, verbatim.
+            bridge.frame(
+                0.016,
+                &FrameInput {
+                    pointer: pointer.sim,
+                    press: true,
+                    held: true,
+                    occupied: CABIN,
+                    ..FrameInput::default()
+                },
+            );
+            assert_eq!(
+                bridge.sim.held(0).map(|held| held.piece),
+                Some(id),
+                "a press on {kind:?} at {:?} lifted nothing",
+                pointer.sim
+            );
+            lifted += 1;
+            // And set it down again, through the CHART this time: the
+            // piece is in hand, so its own pick face has come down and
+            // the ray meets the room's net where the berth is. That is
+            // the other half of the carry, and it is the half that
+            // proves the chart still answers for a cell a piece could
+            // berth on (`surface::chart_cell`).
+            let aims = world_surfaces(&bridge.sim);
+            let mut placed_back = None;
+            for back in [0.75_f32, 0.9, 1.1, 0.55] {
+                let eye = envelope.nearest(Vec3::new(at.x, EYE_HEIGHT, at.z) + flat * back);
+                let Ok(dir) = Dir3::new(surface.to_world(mid) - eye) else {
+                    continue;
+                };
+                let aim = crate::surface::pick(
+                    Ray3d::new(eye, dir),
+                    true,
+                    crate::rig::REACH,
+                    aims.iter().copied(),
+                );
+                if layout::cell_at(aim.sim).is_some() {
+                    placed_back = Some(aim);
+                    break;
+                }
+            }
+            let aim = placed_back.expect("the emptied berth still answers the crosshair");
+            bridge.frame(
+                0.016,
+                &FrameInput {
+                    pointer: aim.sim,
+                    release: true,
+                    occupied: CABIN,
+                    ..FrameInput::default()
+                },
+            );
+            assert!(
+                bridge.sim.held(0).is_none(),
+                "the hand never emptied over {:?}",
+                aim.sim
+            );
+        }
+        assert!(lifted >= 3, "only {lifted} pieces were actually carried");
+    }
+
+    /// A ship with a room on every wall of the cabin, for the geometry
+    /// laws below: the widest spread of seams the lattice can hand us.
+    fn crowded_ship() -> Vec<Placed> {
+        let mut rooms = Rooms::new();
+        for kind in [
+            RoomKind::Trade,
+            RoomKind::Wreck,
+            RoomKind::Parlor,
+            RoomKind::Pump,
+        ] {
+            let _ = rooms.spawn(kind, CABIN);
+        }
+        rooms.iter().map(|(id, room)| placed(id, room)).collect()
+    }
+
+    /// Whether two boxes share a volume worth seeing.
+    fn intersects((alo, ahi): (Vec3, Vec3), (blo, bhi): (Vec3, Vec3), slack: f32) -> bool {
+        (0..3).all(|axis| ahi[axis].min(bhi[axis]) - alo[axis].max(blo[axis]) > slack)
+    }
+
+    /// **No room reaches into another room.** The partition is a
+    /// boundary, not a volume: everything a room draws stands inside its
+    /// own box, and the only thing allowed across the line is the
+    /// hardware that dresses a mated aperture — one frame, drawn once,
+    /// standing in the opening the two rooms share.
+    ///
+    /// This is the playtest's sliver of another room's hatching, made
+    /// geometrically impossible instead of merely absent.
+    #[test]
+    fn no_rooms_geometry_reaches_into_another_room() {
+        let plan = crowded_ship();
+        assert!(plan.len() >= 3, "this law wants a ship with neighbours");
+        for room in &plan {
+            // The aperture columns this room is allowed to stand in: its
+            // own mated openings, a jamb's girth either side.
+            let seams: Vec<(Vec3, Vec3)> = room
+                .ports
+                .iter()
+                .filter(|site| site.mate.is_some() && site.is_door())
+                .map(|site| {
+                    let mid = seam_centre(room, site);
+                    let half = site.half_a.abs()
+                        + site.half_b.abs()
+                        + Vec3::splat(JAMB + PLATE_T)
+                        + site.out.abs() * JAMB;
+                    (mid - half, mid + half)
+                })
+                .collect();
+            let mut drawn: Vec<(Vec3, Vec3)> = shell_boxes(room, &plan)
+                .into_iter()
+                .map(|(c, s, _)| (c - s * 0.5, c + s * 0.5))
+                .collect();
+            for site in &room.ports {
+                if dresses(room, site) {
+                    drawn.extend(
+                        seam_boxes(room, site)
+                            .into_iter()
+                            .map(|(c, s)| (c - s * 0.5, c + s * 0.5)),
+                    );
+                }
+            }
+            for other in plan.iter().filter(|other| other.id != room.id) {
+                // The neighbour's interior, less a hair so a shared
+                // boundary plane is contact rather than trespass.
+                let inside = (other.lo + Vec3::splat(1e-3), other.hi - Vec3::splat(1e-3));
+                for box_ in &drawn {
+                    if !intersects(*box_, inside, 1e-3) {
+                        continue;
+                    }
+                    assert!(
+                        seams.iter().any(|seam| {
+                            (0..3).all(|axis| {
+                                box_.0[axis] >= seam.0[axis] - 1e-3
+                                    && box_.1[axis] <= seam.1[axis] + 1e-3
+                            })
+                        }),
+                        "room {} ({:?}) draws {:?}..{:?} inside room {} ({:?})",
+                        room.id,
+                        room.kind,
+                        box_.0,
+                        box_.1,
+                        other.id,
+                        other.kind
+                    );
+                }
+            }
+        }
+    }
+
+    /// Every chart a room paints on — and therefore every colored tile,
+    /// every doormat, and every decal that rides one — stays inside that
+    /// room's own box. The cabin is the one exception, and it is a
+    /// DECLARED one: its front wall stands an authored gutter beyond its
+    /// floor box (`chart_inset`), because its hull was built before the
+    /// lattice was.
+    #[test]
+    fn every_attached_rooms_paint_stays_in_its_own_box() {
+        for room in crowded_ship().iter().filter(|room| room.id != CABIN) {
+            for (station, surface) in room.charts {
+                // The deepest a decal ever rides, plus its own skin.
+                let lift =
+                    station.inward(&surface) * (crate::rig::layer::CLAIM + crate::rig::layer::SKIN);
+                for corner in [-1.0_f32, 1.0] {
+                    for course in [-1.0_f32, 1.0] {
+                        let at = surface.center
+                            + surface.half_u * corner
+                            + surface.half_v * course
+                            + lift;
+                        assert!(
+                            at.x >= room.lo.x - 1e-3
+                                && at.x <= room.hi.x + 1e-3
+                                && at.z >= room.lo.z - 1e-3
+                                && at.z <= room.hi.z + 1e-3,
+                            "room {} {station:?} paints at {at} outside {}..{}",
+                            room.id,
+                            room.lo,
+                            room.hi
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// The cabin's floor hatch reads as a hatch: nothing of its leaf
+    /// stands proud of the deck, and what does stand proud is a rim thin
+    /// enough to walk over. The playtest could not tell what the lump in
+    /// the bow-starboard corner was, and a lump is what it was.
+    #[test]
+    fn the_cabins_floor_hatch_is_flush_with_its_deck() {
+        let cabin = placed(CABIN, &cabin_room());
+        let hatch = cabin
+            .ports
+            .iter()
+            .find(|site| matches!(site.declared, Some(Port::Hatch { .. })))
+            .expect("the cabin declares a hatch");
+        assert!(hatch.mate.is_none(), "this test wants the hatch drawn shut");
+        // The leaf: sunk, its whole body below the deck plane.
+        let sink = PLATE_T.mul_add(0.5, SINK);
+        let leaf_top = PLATE_T.mul_add(0.5, hatch.out.y.mul_add(sink, hatch.leaf.y));
+        assert!(
+            leaf_top <= SINK.mul_add(-0.5, FLOOR_Y),
+            "the hatch leaf stands {leaf_top} proud of a deck at {FLOOR_Y}"
+        );
+        // The rim: proud, but no more than a rim.
+        let rim_top = RIM_H.mul_add(0.5, hatch.out.y.mul_add(-(RIM_H * 0.5), hatch.leaf.y));
+        assert!(
+            rim_top - FLOOR_Y <= RIM_H,
+            "the hatch coaming stands {} proud, which is a step not a rim",
+            rim_top - FLOOR_Y
+        );
+        const {
+            assert!(
+                RIM_H < SINK,
+                "a rim that outstands its own recess is a lump"
+            );
         }
     }
 

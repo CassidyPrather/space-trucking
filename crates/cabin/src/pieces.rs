@@ -905,7 +905,7 @@ pub fn instrument_surface(
 /// Wall cargo the rule leaves alone still needs no face: there the
 /// chart already IS the piece.
 #[must_use]
-fn standing_surface(
+pub fn standing_surface(
     charts: &[(Station, SimSurface)],
     kind: Kind,
     rect: Rect,
@@ -4705,11 +4705,18 @@ mod tests {
     fn the_decal_ladder_never_z_fights() {
         use crate::rig::layer;
         let rungs = [
-            // The nearest actual mesh under the ladder: the backer
-            // slab's face, 0.004 behind the chart's mapping plane.
-            ("backer face", -0.004),
-            ("tile", layer::TILE),
-            ("doormat", layer::DOORMAT),
+            // The ladder's own basement: the backer slab's face, which
+            // is the only thing on the ladder standing BEHIND the
+            // mapping plane. Its BACK is not a rung — it is the same
+            // slab — and it answers to the hull check below instead.
+            ("backer face", -layer::BACKER),
+            // The colored tiles' enamel fields ride TILE with the berth
+            // wells, and every class's border form rides DOORMAT with
+            // the threshold stripes: one rung per reading, room after
+            // room, because a room's tiles are the cabin's tiles one
+            // lane over.
+            ("tile field / berth well", layer::TILE),
+            ("border form / doormat", layer::DOORMAT),
             ("laid", layer::LAID),
             ("rug pile top", LAID_LIFT + RUG_THICK),
             ("hint", layer::HINT),
@@ -4731,6 +4738,50 @@ mod tests {
                 layer::STEP >= 2.0 * layer::SKIN,
                 "a ladder step must clear two skins of mesh"
             );
+        }
+        // **And the ladder stands clear of the hull it is painted on.**
+        // A backer thick enough to reach the slab behind it is sliced at
+        // that slab's own plane by the aperture punch, and the remainder
+        // and the hull then present two opaque faces on one plane — the
+        // playtest's flickering deck, which the tiles ON it never showed
+        // because they ride rungs and the deck did not.
+        let slabs = rig::structure(&rig::panels());
+        for (station, surface) in rig::bay() {
+            if !matches!(station, Station::BayWall | Station::BayFloor) {
+                continue;
+            }
+            let n = station.inward(&surface);
+            let axis = if n.y.abs() > 0.5 { 1 } else { 2 };
+            let plate = [
+                surface.center - n * layer::BACKER,
+                surface.center - n * (layer::BACKER + layer::BACKER_T),
+            ];
+            for slab in &slabs {
+                let lo = slab.center - slab.size * 0.5;
+                let hi = slab.center + slab.size * 0.5;
+                // Only slabs this plate actually covers can fight it.
+                let spans = (0..3).filter(|k| *k != axis).all(|k| {
+                    let half = (surface.orientation()
+                        * Vec3::new(surface.half_u.length(), surface.half_v.length(), 0.0))
+                    .abs()[k];
+                    hi[k].min(surface.center[k] + half) - lo[k].max(surface.center[k] - half) > 0.05
+                });
+                if !spans {
+                    continue;
+                }
+                let (near, far) = (
+                    plate[0][axis].min(plate[1][axis]),
+                    plate[0][axis].max(plate[1][axis]),
+                );
+                for face in [lo[axis], hi[axis]] {
+                    assert!(
+                        face <= near - layer::STEP + 1e-6 || face >= far + layer::STEP - 1e-6,
+                        "{station:?}'s backer spans {near}..{far} across a hull face at \
+                         {face}: the aperture punch will slice it there and leave two \
+                         opaque faces on one plane"
+                    );
+                }
+            }
         }
     }
 }

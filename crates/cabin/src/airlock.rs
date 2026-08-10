@@ -120,13 +120,16 @@ pub fn fittings(
         Firebox { mat: fire },
         tag,
     ));
-    // The beacon: a housing over the doorway on the CABIN side, where the
-    // hand that stages fuel can see it, with an own-instance glass the
-    // sync system drives.
+    // The beacon: a housing hung just under the doorway's lintel, INSIDE
+    // the furnace — the room whose business it reports — and low enough
+    // in the opening to be read from the cabin as well. It used to lean
+    // across the seam and sit above the lintel on the cabin's side,
+    // which is a room reaching into a room it does not own; the eye that
+    // stages fuel walks under it either way.
     let Some(door) = placed.ports.iter().find(|site| site.mate.is_some()) else {
         return;
     };
-    let over = door.leaf + door.out * 0.06 + Vec3::Y * (door.half_b.length() + 0.16);
+    let over = door.leaf - door.out * 0.03 + Vec3::Y * (door.half_b.length() - 0.08);
     let dir_a = door.half_a.normalize_or_zero().abs();
     commands.spawn((
         Mesh3d(cube.clone()),
@@ -139,7 +142,7 @@ pub fn fittings(
     commands.spawn((
         Mesh3d(cube.clone()),
         MeshMaterial3d(lamp.clone()),
-        Transform::from_translation(over + door.out * 0.025)
+        Transform::from_translation(over - door.out * 0.025)
             .with_scale(door.out.abs() * 0.02 + dir_a * 0.14 + Vec3::Y * 0.06),
         Beacon { mat: lamp },
         tag,

@@ -261,6 +261,36 @@ pub fn mix(a: Color, b: Color, t: f32) -> Color {
     )
 }
 
+/// [`mix`], usable where a `const` is demanded.
+///
+/// A station's whole character is one `const CHARACTER` item
+/// (`poi::Character`), and a `const` cannot call [`mix`] — `to_srgba` is
+/// not const, so a designer reaching for a blend between two roles finds
+/// the door shut and is tempted toward a raw colour, which the purity
+/// test rightly forbids. This is that door, opened: it destructures the
+/// sRGB variant directly (the form every role in this file is built in)
+/// and falls back to `a` for anything else, since a role that is not
+/// sRGB is a role this palette did not write.
+#[must_use]
+pub const fn blend(a: Color, b: Color, t: f32) -> Color {
+    let (Color::Srgba(x), Color::Srgba(y)) = (a, b) else {
+        return a;
+    };
+    let t = if t < 0.0 {
+        0.0
+    } else if t > 1.0 {
+        1.0
+    } else {
+        t
+    };
+    Color::srgba(
+        (y.red - x.red) * t + x.red,
+        (y.green - x.green) * t + x.green,
+        (y.blue - x.blue) * t + x.blue,
+        (y.alpha - x.alpha) * t + x.alpha,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

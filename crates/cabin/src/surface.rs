@@ -45,7 +45,7 @@ pub enum Station {
     Barter,
     /// The room net's aft wall chart (docs/BAY.md, "The room grid").
     BayWall,
-    /// The net's floor chart — the walkable 6×5 deck.
+    /// The net's floor chart — the walkable 8×7 deck.
     BayFloor,
     /// The net's port wall chart.
     BayPort,

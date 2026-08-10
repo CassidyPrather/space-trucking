@@ -28,12 +28,18 @@
 //! of it. The five instruments spread across the
 //! front wall: the tank and the window (at its old punch-out cornice)
 //! left of the console face, the gauges and launch handle stacked
-//! along the starboard edge, clear of the console's plate.
+//! along the starboard edge, clear of the console's plate. The 8x7
+//! widening carried the board across whole: every berth is its old one
+//! run through the STV10 chart translation, except the gauge stack,
+//! which steps one column further starboard so it lands where it
+//! always did in the ROOM — the front chart grew a column on each
+//! flank, so standing still in the net would have walked it portward
+//! into the console's shadow.
 
-/// The fixture save, STV9, hand-authored — the timestamp line is added
+/// The fixture save, STV10, hand-authored — the timestamp line is added
 /// at boot so no catch-up elapses.
 pub const SAVE: &str = "\
-STV9
+STV10
 seed 7
 tick 12000
 rng 3c76e098a8f74c8a
@@ -60,7 +66,7 @@ piece 5 12 0 0 stow 0 3
 piece 6 6 1 0 recv 2
 piece 7 20 3 0 hold 7 1
 piece 8 17 1 0 hold 0 5
-piece 9 16 2 0 hold 13 4
+piece 9 16 2 0 hold 15 4
 piece 10 22 0 1 laid 4 6
 piece 11 23 1 0 laid 6 1
 piece 12 24 0 0 laid 2 6
@@ -75,11 +81,11 @@ piece 20 2 1 0 recv 1
 piece 21 5 0 0 shelf 2
 piece 22 3 3 1 shelf 3
 piece 23 15 2 0 give 2
-piece 24 26 0 0 hold 4 8
-piece 25 25 1 0 hold 4 10
-piece 26 27 2 0 hold 8 9
-piece 27 28 3 0 hold 8 10
-piece 28 29 0 0 hold 8 8
+piece 24 26 0 0 hold 4 10
+piece 25 25 1 0 hold 4 12
+piece 26 27 2 0 hold 9 11
+piece 27 28 3 0 hold 9 12
+piece 28 29 0 0 hold 9 10
 next_piece 29
 ";
 

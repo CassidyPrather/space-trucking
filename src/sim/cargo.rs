@@ -809,11 +809,14 @@ mod tests {
     #[test]
     fn bounds_rule_accepts_inside_and_names_offgrid() {
         // RationBricks is 2x2: fits on the floor at (4, 3); bent over the
-        // starboard fold at (8, 4); off the net entirely at (17, 3).
+        // starboard fold at (10, 4); off the net entirely at (21, 3).
         assert_eq!(check(&[], Kind::RationBricks, 4, 3), Ok(()));
-        assert_eq!(check(&[], Kind::RationBricks, 8, 4), Err(Violation::Bounds));
         assert_eq!(
-            check(&[], Kind::RationBricks, 17, 3),
+            check(&[], Kind::RationBricks, 10, 4),
+            Err(Violation::Bounds)
+        );
+        assert_eq!(
+            check(&[], Kind::RationBricks, 21, 3),
             Err(Violation::Bounds)
         );
     }
@@ -870,7 +873,7 @@ mod tests {
     #[test]
     fn cryo_rule_accepts_edge_and_names_interior() {
         assert_eq!(check(&[], Kind::CryoCore, 3, 4), Ok(()));
-        assert_eq!(check(&[], Kind::CryoCore, 4, 7), Ok(()));
+        assert_eq!(check(&[], Kind::CryoCore, 4, 9), Ok(()));
         assert_eq!(check(&[], Kind::CryoCore, 5, 5), Err(Violation::Cryo));
     }
 
@@ -889,10 +892,10 @@ mod tests {
         // The walker passes through cargo now, so the floor keeps no
         // reserved lanes: the burner threshold takes a berth like any
         // other cell, and a wall of cargo may close across the room.
-        assert_eq!(check(&[], Kind::PerfumeVial, 8, 3), Ok(()));
+        assert_eq!(check(&[], Kind::PerfumeVial, 10, 3), Ok(()));
         assert_eq!(check(&[], Kind::PerfumeVial, 6, 7), Ok(()));
-        let wall: Vec<(Kind, u8, u8)> = (3..7).map(|y| (Kind::PerfumeVial, 4, y)).collect();
-        assert_eq!(check(&wall, Kind::PerfumeVial, 4, 7), Ok(()));
+        let wall: Vec<(Kind, u8, u8)> = (3..9).map(|y| (Kind::PerfumeVial, 4, y)).collect();
+        assert_eq!(check(&wall, Kind::PerfumeVial, 4, 9), Ok(()));
         assert_eq!(check(&wall, Kind::PerfumeVial, 6, 5), Ok(()));
     }
 
@@ -917,7 +920,7 @@ mod tests {
     #[test]
     fn affix_rule_accepts_the_mount_surface_and_names_the_miss() {
         // A ceiling lamp hangs from the ceiling chart and nowhere else.
-        assert_eq!(check(&[], Kind::CeilingLamp, 13, 4), Ok(()));
+        assert_eq!(check(&[], Kind::CeilingLamp, 16, 4), Ok(()));
         assert_eq!(
             check(&[], Kind::CeilingLamp, 4, 1),
             Err(Violation::Affix(Mount::Ceiling))
@@ -939,10 +942,10 @@ mod tests {
 
     #[test]
     fn the_floor_lamp_stands_on_the_floor_and_never_across_a_fold() {
-        // 1x2 with a floor mount: fine mid-floor and against the south
+        // 1x2 with a floor mount: fine mid-floor and against the front
         // edge; refused on the aft wall; nowhere when bent over the fold.
         assert_eq!(check(&[], Kind::FloorLamp, 4, 4), Ok(()));
-        assert_eq!(check(&[], Kind::FloorLamp, 4, 6), Ok(()));
+        assert_eq!(check(&[], Kind::FloorLamp, 4, 8), Ok(()));
         assert_eq!(
             check(&[], Kind::FloorLamp, 4, 0),
             Err(Violation::Affix(Mount::Floor))
@@ -960,7 +963,7 @@ mod tests {
             check(&[], Kind::Painting, 4, 4),
             Err(Violation::Affix(Mount::Wall))
         );
-        assert_eq!(check(&[], Kind::Painting, 9, 3), Err(Violation::Bounds));
+        assert_eq!(check(&[], Kind::Painting, 11, 3), Err(Violation::Bounds));
     }
 
     #[test]
@@ -984,16 +987,16 @@ mod tests {
         assert!(lamp(Kind::CeilingLamp) && lamp(Kind::WallLamp) && lamp(Kind::FloorLamp));
         assert!(!lamp(Kind::Couch) && !lamp(Kind::Painting) && !lamp(Kind::PerfumeVial));
 
-        let pieces = board(&[(Kind::CeilingLamp, 13, 4)]);
+        let pieces = board(&[(Kind::CeilingLamp, 16, 4)]);
         assert!(lamp_lit(&pieces[0]));
         // Orthogonal neighbours read lit; the lamp's own cell and the
         // corners do not.
-        assert!(lit_adjacent(&pieces, 12, 4));
-        assert!(lit_adjacent(&pieces, 14, 4));
-        assert!(lit_adjacent(&pieces, 13, 5));
-        assert!(!lit_adjacent(&pieces, 13, 4));
-        assert!(!lit_adjacent(&pieces, 12, 3));
-        assert!(!lit_adjacent(&pieces, 15, 4));
+        assert!(lit_adjacent(&pieces, 15, 4));
+        assert!(lit_adjacent(&pieces, 17, 4));
+        assert!(lit_adjacent(&pieces, 16, 5));
+        assert!(!lit_adjacent(&pieces, 16, 4));
+        assert!(!lit_adjacent(&pieces, 15, 3));
+        assert!(!lit_adjacent(&pieces, 18, 4));
 
         // A floor lamp lights along its whole 1x2 footprint.
         let tall = board(&[(Kind::FloorLamp, 3, 4)]);
@@ -1080,7 +1083,7 @@ mod tests {
             Err(Violation::Affix(Mount::Floor))
         );
         assert_eq!(
-            dressing_check(&[], 9, Kind::Rug, 8, 7),
+            dressing_check(&[], 9, Kind::Rug, 10, 7),
             Err(Violation::Bounds)
         );
         // Paint coats any chart's cells.

@@ -1,9 +1,10 @@
 //! The cabin itself: an enclosed box with flavor, per DESIGN.md's first
 //! pass. Three focusable panels forward — star tank on the left wall,
 //! console face front-right, barter counter low-right — and the walkable
-//! cargo bay aft: the sim's 6×4 hold grid unfolded onto the back wall and
-//! deck at furniture scale (docs/BAY.md), worked from roam with the
-//! crosshair instead of from a focus pose.
+//! cargo bay aft: the sim's room net — an 8×7 floor inside three courses
+//! of wall — unfolded onto the whole hull at furniture scale
+//! (docs/BAY.md), worked from roam with the crosshair instead of from a
+//! focus pose.
 //!
 //! Two camera postures. **Roaming**: a conventional first-person walk —
 //! pointer locked, mouse to look, WASD to move, a crosshair dot; aim at a
@@ -56,8 +57,8 @@ const EYE_HEIGHT: f32 = 1.5;
 // room up to body clearance at the aft wall. The clamp is collision
 // with the HULL and nothing else: cargo has no body to bump, and the
 // placement law no longer reserves a lane for one either.
-const WALK_MIN: Vec3 = Vec3::new(-1.30, EYE_HEIGHT, -0.30);
-const WALK_MAX: Vec3 = Vec3::new(1.30, EYE_HEIGHT, 1.72);
+const WALK_MIN: Vec3 = Vec3::new(-1.85, EYE_HEIGHT, -0.85);
+const WALK_MAX: Vec3 = Vec3::new(1.85, EYE_HEIGHT, 2.27);
 const WALK_SPEED: f32 = 1.3;
 const LOOK_SPEED: f32 = 0.0026;
 const PITCH_LIMIT: f32 = 1.35;
@@ -66,27 +67,29 @@ const PITCH_LIMIT: f32 = 1.35;
 
 /// Bay cell edge, world units — square cells at furniture scale.
 pub const BAY_CELL: f32 = 0.55;
-/// Bay width: six columns flush toward the side walls (columns 0 and 5
-/// are the walls, exactly where the wall-affix rule points).
-const BAY_W: f32 = 6.0 * BAY_CELL;
+/// Bay width: eight columns flush toward the side walls (the columns
+/// beyond them are the walls, exactly where the wall-affix rule points).
+const BAY_W: f32 = 8.0 * BAY_CELL;
 /// Wall band height: grid rows 0–2 stand on the aft wall.
 const BAY_WALL_H: f32 = 3.0 * BAY_CELL;
 /// The wall band's quad plane, just proud of the aft hull's inner face.
-const BAY_WALL_Z: f32 = 1.86;
+const BAY_WALL_Z: f32 = 2.41;
 
-/// The floor chart's depth (5 cells) and its centre plane in z: from the
+/// The floor chart's depth (7 cells) and its centre plane in z: from the
 /// aft wall forward, leaving a working gutter before the front console
 /// wall (the room resized to cell multiples; BAY.md, "The room grid").
-const BAY_FLOOR_D: f32 = 5.0 * BAY_CELL;
+/// The widening pushed every hull plane out by exactly one cell per
+/// side, so the gutter, the trim band, and every seam kept their gaps.
+const BAY_FLOOR_D: f32 = 7.0 * BAY_CELL;
 const BAY_FLOOR_ZC: f32 = BAY_WALL_Z - BAY_FLOOR_D * 0.5;
 
 /// The side wall charts' planes: proud of the wall ribs (which span
 /// ±1.63..±1.69), so every chart cell stays workable in front of the
 /// hull's junk rather than behind it.
-const BAY_SIDE_X: f32 = 1.62;
+const BAY_SIDE_X: f32 = 2.17;
 
-/// The front wall chart's plane, just inside the front hull at -1.42.
-const BAY_FRONT_Z: f32 = -1.36;
+/// The front wall chart's plane, just inside the front hull at -1.97.
+const BAY_FRONT_Z: f32 = -1.91;
 
 /// The ceiling chart's plane, just under the ceiling slab at 2.32 — the
 /// band between the wall cornices (1.65) and here is headroom trim; the
@@ -144,12 +147,14 @@ pub const REACH: f32 = 2.0;
 /// Chamber interior width and depth: the biggest crate plus a squeeze.
 pub const AIR_INNER: f32 = 2.0 * BAY_CELL + 0.08;
 /// Doorway span along the wall (z) — the full chamber width opens.
-pub const AIR_DOOR_Z0: f32 = 0.50;
+/// Anchored to the aft hull, so the widening slid it forward with the
+/// wall it is cut into and it still fronts the same net cells.
+pub const AIR_DOOR_Z0: f32 = 1.05;
 pub const AIR_DOOR_Z1: f32 = AIR_DOOR_Z0 + AIR_INNER;
 /// Doorway clear height: a two-cell piece passes upright, barely.
 pub const AIR_DOOR_H: f32 = 2.0f32 * BAY_CELL + 0.18;
 /// The chamber floor's x extent: from the hull's outer face outboard.
-pub const AIR_X0: f32 = 1.77;
+pub const AIR_X0: f32 = 2.32;
 pub const AIR_X1: f32 = AIR_X0 + AIR_INNER;
 
 /// Floor cells painted as the burner's threshold: the doormat in front
@@ -157,7 +162,7 @@ pub const AIR_X1: f32 = AIR_X0 + AIR_INNER;
 /// nothing, and cargo may stand on the stripes like anywhere else —
 /// but a doorway that reads as a doorway is worth the paint, and the
 /// stoker's path is still where the stripes say it is.
-const THRESHOLD: [(u8, u8); 2] = [(8, 3), (8, 4)];
+const THRESHOLD: [(u8, u8); 2] = [(10, 3), (10, 4)];
 
 /// Focus glide length, seconds. A camera move is feedback: it answers a
 /// click and finishes fast.
@@ -183,7 +188,7 @@ pub fn panels() -> [(Station, SimSurface); 2] {
         (
             Station::Console,
             SimSurface::panel(
-                Vec3::new(0.50, 1.52, -1.28),
+                Vec3::new(0.50, 1.52, -1.83),
                 0.54,
                 0.84,
                 0.10,
@@ -193,7 +198,7 @@ pub fn panels() -> [(Station, SimSurface); 2] {
         (
             Station::Barter,
             SimSurface::panel(
-                Vec3::new(0.42, 0.88, -0.96),
+                Vec3::new(0.42, 0.88, -1.51),
                 1.12,
                 0.32,
                 0.96,
@@ -203,13 +208,14 @@ pub fn panels() -> [(Station, SimSurface); 2] {
     ]
 }
 
-/// The bay's two mapped surfaces: the hold grid unfolded like an opened
-/// box. Rows 0–2 stand on the aft wall (row 0 the top band — the
-/// "ceiling" the affix rule means), row 3 folds onto the deck as a strip
-/// of floor plates in front of it. Sim +x runs to the player's right
-/// when facing the wall; the seam between the two quads is watertight by
-/// test. Cursor rays from roam project through these exactly as focus
-/// cursors project through panels, so the sim keeps every ruling.
+/// The bay's six mapped surfaces: the room net unfolded like an opened
+/// box. Rows 0–2 stand on the aft wall (row 0 the cornice), rows 3–9
+/// fold onto the deck and the two side walls, rows 10–12 stand on the
+/// front wall, and the ceiling chart folds on past the starboard
+/// cornice. Sim +x runs to the player's right when facing the aft wall;
+/// the seams are watertight (or declared gutters) by test. Cursor rays
+/// from roam project through these exactly as focus cursors project
+/// through panels, so the sim keeps every ruling.
 #[must_use]
 pub fn bay() -> [(Station, SimSurface); 6] {
     // One chart's logical rect, in net cells.
@@ -234,7 +240,7 @@ pub fn bay() -> [(Station, SimSurface); 6] {
                 center: Vec3::new(0.0, wall_mid, BAY_WALL_Z),
                 half_u: Vec3::X * (BAY_W * 0.5),
                 half_v: Vec3::NEG_Y * wall_mid,
-                rect: chart(3, 0, 6, 3),
+                rect: chart(3, 0, 8, 3),
             },
         ),
         (
@@ -243,7 +249,7 @@ pub fn bay() -> [(Station, SimSurface); 6] {
                 center: Vec3::new(0.0, BAY_FLOOR_Y, BAY_FLOOR_ZC),
                 half_u: Vec3::X * (BAY_W * 0.5),
                 half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
-                rect: chart(3, 3, 6, 5),
+                rect: chart(3, 3, 8, 7),
             },
         ),
         (
@@ -252,7 +258,7 @@ pub fn bay() -> [(Station, SimSurface); 6] {
                 center: Vec3::new(-BAY_SIDE_X, wall_mid, BAY_FLOOR_ZC),
                 half_u: Vec3::NEG_Y * wall_mid,
                 half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
-                rect: chart(0, 3, 3, 5),
+                rect: chart(0, 3, 3, 7),
             },
         ),
         (
@@ -261,7 +267,7 @@ pub fn bay() -> [(Station, SimSurface); 6] {
                 center: Vec3::new(BAY_SIDE_X, wall_mid, BAY_FLOOR_ZC),
                 half_u: Vec3::Y * wall_mid,
                 half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
-                rect: chart(9, 3, 3, 5),
+                rect: chart(11, 3, 3, 7),
             },
         ),
         (
@@ -270,7 +276,7 @@ pub fn bay() -> [(Station, SimSurface); 6] {
                 center: Vec3::new(0.0, wall_mid, BAY_FRONT_Z),
                 half_u: Vec3::X * (BAY_W * 0.5),
                 half_v: Vec3::Y * wall_mid,
-                rect: chart(3, 8, 6, 3),
+                rect: chart(3, 10, 8, 3),
             },
         ),
         (
@@ -279,7 +285,7 @@ pub fn bay() -> [(Station, SimSurface); 6] {
                 center: Vec3::new(0.0, BAY_CEIL_Y, BAY_FLOOR_ZC),
                 half_u: Vec3::NEG_X * (BAY_W * 0.5),
                 half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
-                rect: chart(12, 3, 6, 5),
+                rect: chart(14, 3, 8, 7),
             },
         ),
     ]
@@ -331,47 +337,50 @@ impl Slab {
 #[allow(clippy::too_many_lines)]
 pub fn structure(panels: &[(Station, SimSurface)]) -> Vec<Slab> {
     let mut slabs = vec![
-        // The box: floor, ceiling, four walls.
+        // The box: floor, ceiling, four walls. The 8x7 floor put a cell
+        // (0.55) between each of these and where it used to stand: the
+        // room grew outward on every side at once, so nothing inside it
+        // had to be re-composed, only re-measured.
         Slab::new(
             Vec3::new(0.0, -0.05, 0.2),
-            Vec3::new(3.4, 0.1, 3.4),
+            Vec3::new(4.5, 0.1, 4.5),
             Finish::Hull,
         ),
         Slab::new(
             Vec3::new(0.0, 2.32, 0.2),
-            Vec3::new(3.4, 0.1, 3.4),
+            Vec3::new(4.5, 0.1, 4.5),
             Finish::Hull,
         ),
         Slab::new(
-            Vec3::new(0.0, 1.15, -1.42),
-            Vec3::new(3.4, 2.5, 0.1),
+            Vec3::new(0.0, 1.15, -1.97),
+            Vec3::new(4.5, 2.5, 0.1),
             Finish::Hull,
         ),
         Slab::new(
-            Vec3::new(0.0, 1.15, 1.92),
-            Vec3::new(3.4, 2.5, 0.1),
+            Vec3::new(0.0, 1.15, 2.47),
+            Vec3::new(4.5, 2.5, 0.1),
             Finish::Hull,
         ),
         Slab::new(
-            Vec3::new(-1.72, 1.15, 0.2),
-            Vec3::new(0.1, 2.5, 3.4),
+            Vec3::new(-2.27, 1.15, 0.2),
+            Vec3::new(0.1, 2.5, 4.5),
             Finish::Hull,
         ),
         // The starboard wall parts around the airlock doorway: a fore
         // segment, a sliver aft of it, and the lintel over the opening.
         Slab::new(
-            Vec3::new(1.72, 1.15, f32::midpoint(-1.50, AIR_DOOR_Z0)),
-            Vec3::new(0.1, 2.5, AIR_DOOR_Z0 + 1.50),
+            Vec3::new(2.27, 1.15, f32::midpoint(-2.05, AIR_DOOR_Z0)),
+            Vec3::new(0.1, 2.5, AIR_DOOR_Z0 + 2.05),
             Finish::Hull,
         ),
         Slab::new(
-            Vec3::new(1.72, 1.15, f32::midpoint(AIR_DOOR_Z1, 1.90)),
-            Vec3::new(0.1, 2.5, 1.90 - AIR_DOOR_Z1),
+            Vec3::new(2.27, 1.15, f32::midpoint(AIR_DOOR_Z1, 2.45)),
+            Vec3::new(0.1, 2.5, 2.45 - AIR_DOOR_Z1),
             Finish::Hull,
         ),
         Slab::new(
             Vec3::new(
-                1.72,
+                2.27,
                 f32::midpoint(AIR_DOOR_H, 2.40),
                 f32::midpoint(AIR_DOOR_Z0, AIR_DOOR_Z1),
             ),
@@ -417,10 +426,10 @@ pub fn structure(panels: &[(Station, SimSurface)]) -> Vec<Slab> {
     // The port wall runs its full set again — the chart tank that used
     // to be bolted through them is cargo now, hung in front of whatever
     // wall it is carried to, so the hull has nothing to make room for.
-    for i in 0..5 {
-        let z = 0.7f32.mul_add(i as f32, -1.2);
+    for i in 0..6 {
+        let z = 0.7f32.mul_add(i as f32, -1.55);
         slabs.push(Slab::new(
-            Vec3::new(-1.66, 1.15, z),
+            Vec3::new(-2.21, 1.15, z),
             Vec3::new(0.06, 2.3, 0.08),
             Finish::Hull,
         ));
@@ -428,7 +437,7 @@ pub fn structure(panels: &[(Station, SimSurface)]) -> Vec<Slab> {
         // that hole is architecture, not furniture.
         if !(AIR_DOOR_Z0 - 0.10..=AIR_DOOR_Z1 + 0.10).contains(&z) {
             slabs.push(Slab::new(
-                Vec3::new(1.66, 1.15, z),
+                Vec3::new(2.21, 1.15, z),
                 Vec3::new(0.06, 2.3, 0.08),
                 Finish::Hull,
             ));
@@ -444,7 +453,7 @@ pub fn structure(panels: &[(Station, SimSurface)]) -> Vec<Slab> {
         let (lo, hi) = plate_bounds(surface);
         let top = lo.y - 0.008;
         let front = hi.z + 0.02;
-        let back = -1.37;
+        let back = -1.92;
         slabs.push(Slab::new(
             Vec3::new(surface.center.x, top * 0.5, f32::midpoint(front, back)),
             Vec3::new(hi.x - lo.x + 0.10, top, front - back),
@@ -861,16 +870,16 @@ pub fn spawn(
     }
     // Ceiling pipes: oriented decor, outside the slab list on purpose.
     commands.spawn((
-        Mesh3d(meshes.add(Cylinder::new(0.09, 3.2))),
+        Mesh3d(meshes.add(Cylinder::new(0.09, 4.3))),
         MeshMaterial3d(skin.plate_shade.clone()),
-        Transform::from_xyz(-1.35, 2.18, 0.2)
+        Transform::from_xyz(-1.90, 2.18, 0.2)
             .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
     ));
     commands.spawn((
         // Brass, because somebody salvaged this line from a nicer ship.
-        Mesh3d(meshes.add(Cylinder::new(0.05, 3.2))),
+        Mesh3d(meshes.add(Cylinder::new(0.05, 4.3))),
         MeshMaterial3d(skin.brass.clone()),
-        Transform::from_xyz(1.42, 2.2, 0.2)
+        Transform::from_xyz(1.97, 2.2, 0.2)
             .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
     ));
 
@@ -1651,7 +1660,7 @@ mod tests {
         for focus in [Focus::Tank, Focus::Console, Focus::Desk, Focus::Lever] {
             let (eye, rot) = focus_pose(focus, &stations).expect("the starter board hangs it");
             assert!(
-                eye.y > 0.2 && eye.y < 2.2 && eye.x.abs() < 1.6 && eye.z > -1.3 && eye.z < 1.8,
+                eye.y > 0.2 && eye.y < 2.2 && eye.x.abs() < 2.15 && eye.z > -1.85 && eye.z < 2.35,
                 "{focus:?} eye {eye} left the cabin"
             );
             for slab in &slabs {
@@ -1720,7 +1729,7 @@ mod tests {
         // main room (the airlock's deck) are not supports.
         let supports: Vec<&Slab> = slabs
             .iter()
-            .filter(|s| matches!(s.finish, Finish::Plate) && s.center.x.abs() < 1.6)
+            .filter(|s| matches!(s.finish, Finish::Plate) && s.center.x.abs() < 2.3)
             .collect();
         assert_eq!(supports.len(), 1);
         for (station, surface) in &panels {

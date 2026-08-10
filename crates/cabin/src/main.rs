@@ -93,28 +93,32 @@ fn main() {
         "desk" => Some(rig::Focus::Desk),
         _ => None,
     });
+    // The roam poses stand back one cell further than they used to: the
+    // 8x7 cabin put a cell of room between every hull plane and where it
+    // was, and a viewpoint that did not follow ends up with its nose on
+    // the wall it is meant to frame.
     let mut boot_rig = rig::CameraRig::boot(view);
     if view_name.as_deref() == Some("bay") {
-        boot_rig.pos.z = -0.30;
+        boot_rig.pos.z = -0.85;
         boot_rig.yaw = std::f32::consts::PI;
-        boot_rig.pitch = -0.30;
+        boot_rig.pitch = -0.22;
     }
     if view_name.as_deref() == Some("airlock") {
-        boot_rig.pos = Vec3::new(0.30, 1.5, 1.05);
+        boot_rig.pos = Vec3::new(0.55, 1.5, 1.64);
         boot_rig.yaw = -std::f32::consts::FRAC_PI_2;
         boot_rig.pitch = -0.30;
     }
     // The front wall, where the instrument cluster hangs.
     if view_name.as_deref() == Some("front") {
-        boot_rig.pos = Vec3::new(0.10, 1.35, 0.55);
+        boot_rig.pos = Vec3::new(0.0, 1.35, 0.85);
         boot_rig.yaw = 0.0;
-        boot_rig.pitch = 0.12;
+        boot_rig.pitch = -0.06;
     }
     // The starboard wall by the doorway — the starter chart tank berth.
     if view_name.as_deref() == Some("starboard") {
-        boot_rig.pos = Vec3::new(-0.40, 1.35, 0.20);
+        boot_rig.pos = Vec3::new(-0.60, 1.40, 0.76);
         boot_rig.yaw = -std::f32::consts::FRAC_PI_2;
-        boot_rig.pitch = 0.05;
+        boot_rig.pitch = -0.10;
     }
 
     let mut app = App::new();

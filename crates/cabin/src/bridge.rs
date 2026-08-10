@@ -6,9 +6,11 @@
 //!
 //! The contract survives the 2D console's retirement: the sim never reads
 //! the wall clock or the window; whatever the cabin wants to tell it goes
-//! in an `InputFrame`. The save reader accepts the console's `STV4` and
-//! writes `STV5`, so a console-era run still walks aboard, and the tape
-//! format is unchanged — one deterministic game, whatever the window.
+//! in an `InputFrame`. The save reader still accepts the console's
+//! `STV4` and writes whatever header the sim's own format is on, so a
+//! console-era run walks aboard through the migration chain, and the
+//! tape format is unchanged — one deterministic game, whatever the
+//! window.
 
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -32,8 +34,8 @@ const STALL_SECONDS: f64 = 1.0;
 
 /// The cabin's save file, beside the working directory like the 2D
 /// console's `local.data`. First line is the unix timestamp of the save;
-/// the rest is the sim's own save string — written as `STV5`, read back
-/// as `STV5` or the console era's `STV4`.
+/// the rest is the sim's own save string, written at the current header
+/// and read back at that or any older one the chain still carries.
 const SAVE_FILE: &str = "cabin.data";
 
 /// The flight recorder's black box, same cadence as the save. The tape
@@ -45,7 +47,8 @@ const REPLAY_FILE: &str = "cabin.replay";
 /// JSON object `{"local":{key:value,..}}`). When the cabin has no save
 /// of its own, an existing console run walks aboard from here — the
 /// reader accepts its `STV4`, the same catch-up runs, and the next save
-/// lands as `STV5` in the cabin's own slot. Adoption happens once.
+/// lands at the current header in the cabin's own slot. Adoption
+/// happens once.
 const CONSOLE_FILE: &str = "local.data";
 
 /// A virtual pointer position that no rect contains and no POI is near:

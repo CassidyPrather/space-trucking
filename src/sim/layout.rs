@@ -58,10 +58,10 @@ pub const WARP_BTN: Rect = Rect::new(580.0, 380.0, 40.0, 40.0);
 pub const SPEAKER: Rect = Rect::new(630.0, 380.0, 40.0, 40.0);
 
 /// The room net's bounding grid width, in cells (see [`surface_of`]).
-pub const GRID_COLS: u8 = 18;
+pub const GRID_COLS: u8 = 22;
 
 /// The room net's bounding grid height, in cells.
-pub const GRID_ROWS: u8 = 11;
+pub const GRID_ROWS: u8 = 13;
 
 /// Net cell size, in world units.
 pub const CELL: f32 = 34.0;
@@ -82,14 +82,20 @@ pub const GRID_ORIGIN: Vec2 = Vec2::new(810.0, 16.0);
 // aft chart's rows, its deck strip is the floor's aft-most row, which
 // is what keeps save migration a translation.
 //
+// The cabin widened from a 6×5 floor to an 8×7 one (the walls stayed
+// three courses tall): the floor's origin held, so floor and aft and
+// port cells kept their coordinates, and the charts downstream of the
+// growth slid — starboard and ceiling by +2 columns, front by +2 rows.
+// That, too, is what keeps save migration a translation (STV10).
+//
 // Chart bounds (x0..x1, y0..y1), half-open:
 //
-//         aft  (3..9, 0..3)   cornice y0, baseboard y2
-//   port (0..3, 3..8)         cornice x0, baseboard x2
-//   floor (3..9, 3..8)        row y3 lies along the aft baseboard
-//   starboard (9..12, 3..8)   baseboard x9, cornice x11
-//   front (3..9, 8..11)       baseboard y8, cornice y10
-//   ceiling (12..18, 3..8)    folded over the starboard cornice
+//         aft  (3..11, 0..3)   cornice y0, baseboard y2
+//   port (0..3, 3..10)         cornice x0, baseboard x2
+//   floor (3..11, 3..10)       row y3 lies along the aft baseboard
+//   starboard (11..14, 3..10)  baseboard x11, cornice x13
+//   front (3..11, 10..13)      baseboard y10, cornice y12
+//   ceiling (14..22, 3..10)    folded over the starboard cornice
 //
 // Fold seams that are adjacent in the net are adjacent in the room
 // (aft↔floor, port↔floor, starboard↔floor, front↔floor,
@@ -120,23 +126,23 @@ pub enum Surf {
 pub const fn surface_of(x: u8, y: u8) -> Option<Surf> {
     // The doorway to the burner annex: starboard rows nearest the aft
     // corner, baseboard and middle heights.
-    if (x == 9 || x == 10) && (y == 3 || y == 4) {
+    if (x == 11 || x == 12) && (y == 3 || y == 4) {
         return None;
     }
     match (x, y) {
-        (3..=8, 0..=2) => Some(Surf::Aft),
-        (0..=2, 3..=7) => Some(Surf::Port),
-        (3..=8, 3..=7) => Some(Surf::Floor),
-        (9..=11, 3..=7) => Some(Surf::Starboard),
-        (3..=8, 8..=10) => Some(Surf::Front),
-        (12..=17, 3..=7) => Some(Surf::Ceiling),
+        (3..=10, 0..=2) => Some(Surf::Aft),
+        (0..=2, 3..=9) => Some(Surf::Port),
+        (3..=10, 3..=9) => Some(Surf::Floor),
+        (11..=13, 3..=9) => Some(Surf::Starboard),
+        (3..=10, 10..=12) => Some(Surf::Front),
+        (14..=21, 3..=9) => Some(Surf::Ceiling),
         _ => None,
     }
 }
 
 /// The floor chart's bounds, `(x0, y0, w, h)` — the walkable plane the
 /// cryo hull rule and the wall-shadow rule reason about.
-pub const FLOOR: (u8, u8, u8, u8) = (3, 3, 6, 5);
+pub const FLOOR: (u8, u8, u8, u8) = (3, 3, 8, 7);
 
 /// The barter surface, bottom-right: shelves, pads, dial, and accept lever.
 pub const BARTER_PANEL: Rect = Rect::new(260.0, 440.0, 530.0, 150.0);
@@ -409,14 +415,14 @@ mod tests {
                 }
             }
         }
-        assert_eq!(counts[0], 18, "aft 6x3");
-        assert_eq!(counts[1], 15, "port 5x3");
-        assert_eq!(counts[2], 30, "floor 6x5");
-        assert_eq!(counts[3], 15 - 4, "starboard 5x3 minus the doorway");
-        assert_eq!(counts[4], 18, "front 6x3 — the window is cargo now");
-        assert_eq!(counts[5], 30, "ceiling 6x5");
+        assert_eq!(counts[0], 24, "aft 8x3");
+        assert_eq!(counts[1], 21, "port 7x3");
+        assert_eq!(counts[2], 56, "floor 8x7");
+        assert_eq!(counts[3], 21 - 4, "starboard 7x3 minus the doorway");
+        assert_eq!(counts[4], 24, "front 8x3 — the window is cargo now");
+        assert_eq!(counts[5], 56, "ceiling 8x7");
         // The architectural holes are not cells.
-        for (x, y) in [(9, 3), (10, 3), (9, 4), (10, 4)] {
+        for (x, y) in [(11, 3), (12, 3), (11, 4), (12, 4)] {
             assert_eq!(surface_of(x, y), None, "({x},{y}) should be a hole");
         }
     }
@@ -428,9 +434,9 @@ mod tests {
         let pairs = [
             ((5, 2), Surf::Aft, (5, 3), Surf::Floor),
             ((2, 5), Surf::Port, (3, 5), Surf::Floor),
-            ((8, 5), Surf::Floor, (9, 5), Surf::Starboard),
-            ((5, 7), Surf::Floor, (5, 8), Surf::Front),
-            ((11, 5), Surf::Starboard, (12, 5), Surf::Ceiling),
+            ((10, 5), Surf::Floor, (11, 5), Surf::Starboard),
+            ((5, 9), Surf::Floor, (5, 10), Surf::Front),
+            ((13, 5), Surf::Starboard, (14, 5), Surf::Ceiling),
         ];
         for ((ax, ay), a_surf, (bx, by), b_surf) in pairs {
             assert_eq!(surface_of(ax, ay), Some(a_surf));

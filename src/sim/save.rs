@@ -36,19 +36,26 @@ use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 /// derived from the tick, so none are stored); `STV3` split the leg counter
 /// out of the omen line and added the rat state line plus the per-piece gnaw
 /// token. Older versions fail safe as unsupported.
-const MAGIC: &str = "STV9";
+const MAGIC: &str = "STV10";
 
-/// Older headers this build still reads, each with its own migration.
-/// `STV9` made the ship's instruments cargo (the transit window, chart
-/// tank, ETA gauge, destination preview, and launch lever): older saves
-/// carry none, so the reader hangs the missing ones at their
-/// traditional berths on load. `STV8` moved cargo onto the room net
-/// (docs/BAY.md, "The room grid"): berth coordinates from pre-STV8
-/// headers are console-era 6×4 hold cells, which the net embeds at
-/// (+3, 0) — the reader translates them and re-berths whatever the
-/// room-grid rules no longer accept in place. Everything else stays one
-/// additive grammar.
-const READABLE: [&str; 6] = [MAGIC, "STV8", "STV7", "STV6", "STV5", "STV4"];
+/// Older headers this build still reads, each with its own migration,
+/// applied oldest-first so a `STV4` document walks the whole chain.
+///
+/// `STV10` widened the cabin from a 6×5 floor to an 8×7 one: the net's
+/// charts kept their shapes but not all of their coordinates, so a
+/// pre-STV10 berth is translated per chart (aft, port, and floor held
+/// still; starboard and the ceiling folded past it slid +2 columns,
+/// carrying the burner doorway's holes with them; the front wall slid
+/// +2 rows). `STV9` made the ship's instruments cargo (the transit
+/// window, chart tank, ETA gauge, destination preview, and launch
+/// lever): older saves carry none, so the reader hangs the missing
+/// ones at their traditional berths on load. `STV8` moved cargo onto
+/// the room net (docs/BAY.md, "The room grid"): berth coordinates from
+/// pre-STV8 headers are console-era 6×4 hold cells, which the net
+/// embeds at (+3, 0). Whatever the room-grid rules no longer accept
+/// once the translations have run re-berths at its first legal cell.
+/// Everything else stays one additive grammar.
+const READABLE: [&str; 7] = [MAGIC, "STV9", "STV8", "STV7", "STV6", "STV5", "STV4"];
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -250,10 +257,13 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     };
     // Pre-STV8 headers carry console-era 6×4 hold coordinates that the
     // room net embeds at (+3, 0); their berths migrate after reading.
-    let legacy = header != MAGIC && header != "STV8";
+    let legacy = !matches!(header, MAGIC | "STV9" | "STV8");
     // Pre-STV9 headers predate the instruments being cargo; the missing
     // ones are hung at their traditional berths after reading.
-    let uninstrumented = header != MAGIC;
+    let uninstrumented = !matches!(header, MAGIC | "STV9");
+    // Pre-STV10 headers carry narrow-net coordinates: the cabin was a
+    // 6×5 floor then, and the charts past the growth have moved.
+    let narrow = header != MAGIC;
 
     let seed = reader.kv("seed")?;
     let tick = reader.kv("tick")?;
@@ -271,12 +281,22 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let drones = parse_drone(&mut reader)?;
     let (parade_at, comet_visit) = parse_parade(&mut reader)?;
     let mut rats = parse_rat(&mut reader)?;
-    if legacy && let Some(rat) = &mut rats.rat {
-        rat.cell.0 += 3;
-        rat.prev_cell.0 += 3;
+    // The stowaway walks the same chain its floor does: the console-era
+    // embed first, then the widening. Both are chart-preserving, so a
+    // rat that was on the deck is still on the deck (and one squatting
+    // in the doorway's hole rides the hole across).
+    if let Some(rat) = &mut rats.rat {
+        if legacy {
+            rat.cell.0 += 3;
+            rat.prev_cell.0 += 3;
+        }
+        if narrow {
+            rat.cell = widen(rat.cell.0, rat.cell.1);
+            rat.prev_cell = widen(rat.prev_cell.0, rat.prev_cell.1);
+        }
     }
     let (eagerness, patience) = parse_eager(&mut reader)?;
-    let (mut pieces, mut next_piece) = parse_pieces(&mut reader, legacy)?;
+    let (mut pieces, mut next_piece) = parse_pieces(&mut reader, legacy, narrow)?;
     if uninstrumented {
         inject_instruments(&reader, &mut pieces, &mut next_piece)?;
     }
@@ -618,7 +638,11 @@ fn parse_rat(reader: &mut Reader<'_>) -> Result<Rats, SaveError> {
 }
 
 /// The `piece` lines, terminated by the `next_piece` line.
-fn parse_pieces(reader: &mut Reader<'_>, legacy: bool) -> Result<(Vec<Piece>, u32), SaveError> {
+fn parse_pieces(
+    reader: &mut Reader<'_>,
+    legacy: bool,
+    narrow: bool,
+) -> Result<(Vec<Piece>, u32), SaveError> {
     let mut pieces = Vec::new();
     loop {
         let line = reader.next_line()?;
@@ -645,8 +669,8 @@ fn parse_pieces(reader: &mut Reader<'_>, legacy: bool) -> Result<(Vec<Piece>, u3
             }
             Some("next_piece") => {
                 let next_piece = reader.token(tokens.next())?;
-                if legacy {
-                    migrate_console_grid(reader, &mut pieces)?;
+                if narrow {
+                    migrate_berths(reader, &mut pieces, legacy)?;
                 }
                 validate_stows(reader, &pieces)?;
                 return Ok((pieces, next_piece));
@@ -656,18 +680,54 @@ fn parse_pieces(reader: &mut Reader<'_>, legacy: bool) -> Result<(Vec<Piece>, u3
     }
 }
 
-/// Carry a pre-STV8 board onto the room net. The old 6×4 hold embeds at
+/// A narrow-net cell's berth on the widened net — the STV10 half of
+/// the chain, and a pure per-chart translation.
+///
+/// The cabin grew starboard and forward from a fixed aft-port corner,
+/// so the charts that corner anchors — aft, port, and the floor
+/// itself — kept every coordinate they had. What lay beyond the growth
+/// simply moved: the starboard wall (with the burner doorway's holes
+/// punched through it) and the ceiling folded past its cornice slid two
+/// columns out, and the front wall slid two rows down the net. A cell
+/// that was on no old chart is left where it is; the re-fit below is
+/// the one that answers for it.
+const fn widen(x: u8, y: u8) -> (u8, u8) {
+    match (x, y) {
+        // The starboard wall (columns 9–11, doorway holes included) and
+        // the ceiling folded past its cornice (12–17): two columns out.
+        (9..=17, 3..=7) => (x + 2, y),
+        // The front wall: two rows down the net.
+        (3..=8, 8..=10) => (x, y + 2),
+        // Aft (3–8, 0–2), port (0–2, 3–7), and the floor (3–8, 3–7)
+        // kept every coordinate they had. So does anything that was on
+        // no old chart at all — the re-fit below answers for that.
+        _ => (x, y),
+    }
+}
+
+/// Carry an older board onto the room net as it stands today, oldest
+/// migration first. A pre-STV8 document's 6×4 console hold embeds at
 /// (+3, 0) — its wall band is the aft chart's rows, its deck strip the
-/// floor's aft-most row — so every grid berth translates; then whatever
-/// the room-grid rules no longer accept where it stands (the bas-relief
-/// couch straddled the fold; the old "wall" was the side columns)
-/// re-berths at its first legal cell, coverings included. A piece that
-/// fits nowhere fails the load whole rather than vanishing quietly —
-/// conservation before convenience.
-fn migrate_console_grid(reader: &Reader<'_>, pieces: &mut [Piece]) -> Result<(), SaveError> {
+/// floor's aft-most row; then every pre-STV10 berth [`widen`]s onto the
+/// 8×7 room. Both steps are plain translations, which is the whole
+/// point of the format: a save is re-read, never re-solved.
+///
+/// After the arithmetic, whatever the room-grid rules no longer accept
+/// where it stands (the bas-relief couch straddled the fold; the old
+/// "wall" was the side columns) re-berths at its first legal cell,
+/// coverings included. A piece that fits nowhere fails the load whole
+/// rather than vanishing quietly — conservation before convenience.
+fn migrate_berths(
+    reader: &Reader<'_>,
+    pieces: &mut [Piece],
+    legacy: bool,
+) -> Result<(), SaveError> {
     for piece in pieces.iter_mut() {
-        if let Loc::Hold { x, .. } | Loc::Laid { x, .. } = &mut piece.loc {
-            *x += 3;
+        if let Loc::Hold { x, y } | Loc::Laid { x, y } = &mut piece.loc {
+            if legacy {
+                *x += 3;
+            }
+            (*x, *y) = widen(*x, *y);
         }
     }
     for at in 0..pieces.len() {
@@ -1050,10 +1110,10 @@ mod tests {
             ("tick 90", "tick 99999999999999999999999"),
             // The rat must sit inside the grid, hop from inside the grid,
             // and stay under the chase limit.
-            (rat_line, "rat 18 1 2 3 30 700 2800 1"),
-            (rat_line, "rat 4 11 2 3 30 700 2800 1"),
-            (rat_line, "rat 4 1 18 3 30 700 2800 1"),
-            (rat_line, "rat 4 1 2 11 30 700 2800 1"),
+            (rat_line, "rat 22 1 2 3 30 700 2800 1"),
+            (rat_line, "rat 4 13 2 3 30 700 2800 1"),
+            (rat_line, "rat 4 1 22 3 30 700 2800 1"),
+            (rat_line, "rat 4 1 2 13 30 700 2800 1"),
             (rat_line, "rat 4 1 2 3 30 700 2800 3"),
             (rat_line, "rat 4 1 2 3 30 700 2800 -1"),
         ] {
@@ -1071,7 +1131,7 @@ mod tests {
             .to_owned();
         for bad in [
             "piece 0 99 0 0 hold 0 0",
-            "piece 0 0 0 0 hold 18 11",
+            "piece 0 0 0 0 hold 22 13",
             "piece 0 0 0 0 shelf 7",
             "piece 0 0 0 0 nowhere 0",
             "piece 0 0 0 2 hold 0 0",
@@ -1124,7 +1184,7 @@ mod tests {
     #[test]
     fn stowed_pieces_round_trip() {
         let (sim, save, cabinet, _) = furnished();
-        assert!(save.starts_with("STV9\n"), "the writer stamps STV9");
+        assert!(save.starts_with("STV10\n"), "the writer stamps STV10");
         let restored = Sim::from_save(&save).expect("furnished save parses");
         assert_eq!(restored.pieces, sim.pieces);
         assert!(
@@ -1155,9 +1215,10 @@ mod tests {
         // runs keep walking aboard. Those documents carry console-era 6×4
         // hold coordinates and no instrument pieces, so the fixture strips
         // the instruments and rewrites the hold berths into the old grid —
-        // and the reader must migrate every berth onto the net AND hang
-        // the five missing instruments. The stoke token is STV7's, so the
-        // pre-STV7 documents drop it from the ship line too.
+        // and the reader must walk the whole chain (the console embed,
+        // then the widening, then the re-fit) AND hang the five missing
+        // instruments. The stoke token is STV7's, so the pre-STV7
+        // documents drop it from the ship line too.
         let plain = Sim::new(9).save_string();
         let mut old_cells = [(0_u8, 0_u8), (0, 2), (2, 0), (5, 0)].into_iter();
         let legacy_board: String = plain
@@ -1178,7 +1239,7 @@ mod tests {
             "console-era cargo is four pieces"
         );
         for older in ["STV7", "STV6", "STV5", "STV4"] {
-            let mut old = legacy_board.replacen("STV9", older, 1);
+            let mut old = legacy_board.replacen(MAGIC, older, 1);
             if older != "STV7" {
                 old = old.replacen("ship docked 6 - 0", "ship docked 6 -", 1);
             }
@@ -1221,17 +1282,22 @@ mod tests {
 
     #[test]
     fn stv8_boards_hang_the_missing_instruments() {
-        // An STV8 document knows the room net but predates the
-        // instruments: strip them from a fresh save, re-stamp it, and
-        // the reader must hang all five at their traditional berths
-        // (nothing else on a fresh board contests them).
+        // An STV8 document knows the room net but predates both the
+        // instruments and the widening: strip the instruments from a
+        // fresh save, put the ceiling lamp back on the narrow net's
+        // mid-ceiling cell, re-stamp it, and the reader must widen what
+        // is there and hang all five instruments at their traditional
+        // berths (nothing else on a fresh board contests them).
         let plain = Sim::new(11).save_string();
         let stripped: String = plain
             .lines()
             .filter(|line| !instrument_line(line))
             .fold(String::new(), |acc, line| acc + line + "\n");
         assert_ne!(stripped, plain, "the fresh board carries instruments");
-        let old = stripped.replacen("STV9", "STV8", 1);
+        let old = stripped
+            .replacen("hold 18 6", "hold 14 5", 1)
+            .replacen(MAGIC, "STV8", 1);
+        assert!(!old.contains("hold 18 6"), "the lamp's berth line moved");
         let sim = Sim::from_save(&old).expect("STV8 must stay readable");
         for (kind, x, y) in super::super::STARTER_CARGO {
             if !kind.instrument() {
@@ -1244,6 +1310,70 @@ mod tests {
                 "{kind:?} must hang at its traditional berth ({x}, {y})"
             );
         }
+        // And the narrow ceiling berth slid two columns out with its chart.
+        assert!(
+            sim.pieces
+                .iter()
+                .any(|piece| piece.kind == Kind::CeilingLamp
+                    && piece.loc == Loc::Hold { x: 16, y: 5 }),
+            "the lamp should widen from (14, 5) to (16, 5)"
+        );
+    }
+
+    /// The widening, chart by chart: a pre-STV10 board carries narrow-net
+    /// coordinates, and each of the six charts translates by its own
+    /// declared offset — nothing is re-solved, and the stowaway rides
+    /// the same arithmetic its floor does.
+    #[test]
+    fn pre_stv10_boards_widen_chart_by_chart() {
+        let plain = Sim::new(5).save_string();
+        // One legal narrow-net berth per chart, plus a laid rug and a
+        // rat perched on the old ceiling. Every one of these is legal on
+        // BOTH nets once translated, so a re-fit firing here would be a
+        // bug the assertions below catch.
+        let head = plain.split("piece ").next().expect("a save has a head");
+        let narrow = format!(
+            "{head}\
+piece 0 20 0 0 hold 3 1
+piece 1 17 0 0 hold 1 4
+piece 2 0 0 0 hold 7 6
+piece 3 26 0 0 hold 10 5
+piece 4 29 0 0 hold 5 8
+piece 5 16 0 0 hold 14 5
+piece 6 22 0 0 laid 3 7
+next_piece 7
+"
+        )
+        .replacen("rat -", "rat 14 4 9 3 0 60 120 0", 1)
+        .replacen(MAGIC, "STV9", 1);
+        let sim = Sim::from_save(&narrow).expect("STV9 must stay readable");
+        for (id, want) in [
+            (0, Loc::Hold { x: 3, y: 1 }),  // aft: held still
+            (1, Loc::Hold { x: 1, y: 4 }),  // port: held still
+            (2, Loc::Hold { x: 7, y: 6 }),  // floor: held still
+            (3, Loc::Hold { x: 12, y: 5 }), // starboard: +2 columns
+            (4, Loc::Hold { x: 5, y: 10 }), // front: +2 rows
+            (5, Loc::Hold { x: 16, y: 5 }), // ceiling: +2 columns
+            (6, Loc::Laid { x: 3, y: 7 }),  // the dressing layer too
+        ] {
+            let piece = sim
+                .pieces
+                .iter()
+                .find(|piece| piece.id == id)
+                .expect("every berth survives the trip");
+            assert_eq!(piece.loc, want, "piece {id} landed wrong");
+        }
+        // The rat rode its ceiling cell across, and the cell it hopped
+        // from rode the burner doorway's hole across with the starboard
+        // wall: both are still exactly what they were.
+        let rat = sim.rats.rat.expect("the stowaway survives the trip");
+        assert_eq!(rat.cell, (16, 4));
+        assert_eq!(rat.prev_cell, (11, 3));
+        assert_eq!(
+            super::super::layout::surface_of(rat.prev_cell.0, rat.prev_cell.1),
+            None,
+            "the doorway's hole is still a hole"
+        );
     }
 
     #[test]
@@ -1295,7 +1425,7 @@ mod tests {
             // A coat off the grid entirely.
             (
                 format!("piece {} 24 0 0 laid 5 0", cabinet + 4),
-                format!("piece {} 24 0 0 laid 9 9", cabinet + 4),
+                format!("piece {} 24 0 0 laid 21 12", cabinet + 4),
             ),
         ] {
             let mangled = save.replacen(&needle, &bad, 1);

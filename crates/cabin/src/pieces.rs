@@ -4005,7 +4005,7 @@ mod tests {
         assert!(facing(5, 4, Kind::Couch).z < -0.9, "mid-floor faces front");
         // Against the front gutter: back to the front wall.
         assert!(
-            facing(3, 7, Kind::Couch).z > 0.9,
+            facing(3, 9, Kind::Couch).z > 0.9,
             "front-row cargo turns its back to the front wall"
         );
         // A one-column piece against the port seam backs onto it.
@@ -4037,8 +4037,8 @@ mod tests {
         for (station, x, y) in [
             (Station::BayWall, 4, 0),
             (Station::BayPort, 0, 4),
-            (Station::BayStarboard, 9, 5),
-            (Station::BayFront, 4, 8),
+            (Station::BayStarboard, 11, 5),
+            (Station::BayFront, 4, 10),
         ] {
             let surface = chart(station);
             let (_, rot, _) = site_on(station, &surface, &aft, rect_of(x, y, Kind::ChartTank));
@@ -4157,10 +4157,10 @@ mod tests {
         // 2×1, spends the front chart's half turn — whose rows climb the
         // wall, so every footprint there can afford the roll.
         for (x, y, kind) in [
-            (14, 5, Kind::CeilingLamp),
+            (18, 6, Kind::CeilingLamp),
             (0, 4, Kind::WallLamp),
-            (10, 5, Kind::ChartTank),
-            (4, 10, Kind::Window),
+            (12, 5, Kind::ChartTank),
+            (4, 12, Kind::Window),
         ] {
             let rect = rect_of(x, y, kind);
             let face = standing_surface(&charts, kind, rect)
@@ -4190,7 +4190,7 @@ mod tests {
     fn a_wall_face_outranks_the_chart_it_hangs_on() {
         let charts = rig::bay();
         let starboard = chart(Station::BayStarboard);
-        let rect = rect_of(10, 5, Kind::ChartTank);
+        let rect = rect_of(12, 5, Kind::ChartTank);
         let face = standing_surface(&charts, Kind::ChartTank, rect).expect("the tank rolls");
         let inward = Station::BayStarboard.inward(&starboard);
         let off = (face.center - starboard.to_world(rect_center(rect))).dot(inward);
@@ -4316,7 +4316,7 @@ mod tests {
     #[test]
     fn the_map_rides_the_tanks_glass() {
         let charts = rig::bay();
-        let rect = rect_of(10, 5, Kind::ChartTank);
+        let rect = rect_of(12, 5, Kind::ChartTank);
         let (station, surface) =
             instrument_surface(&charts, Kind::ChartTank, rect).expect("the tank mounts the map");
         assert_eq!(station, Station::Map);
@@ -4358,9 +4358,12 @@ mod tests {
         );
         // The launch handle hangs the same way, on its own front-wall
         // berth, bound to the rect the gesture layer still watches.
-        let (station, lever) =
-            instrument_surface(&charts, Kind::LaunchLever, rect_of(5, 8, Kind::LaunchLever))
-                .expect("the handle mounts its panel");
+        let (station, lever) = instrument_surface(
+            &charts,
+            Kind::LaunchLever,
+            rect_of(5, 10, Kind::LaunchLever),
+        )
+        .expect("the handle mounts its panel");
         assert_eq!(station, Station::Lever);
         assert!(
             lever.rect.contains(rect_center(layout::LAUNCH_LEVER))
@@ -4430,7 +4433,7 @@ mod tests {
             let at = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
             hover_rot(station, surface, Some(&aft), kind, at).expect("the aim is on the net")
         };
-        let up = hover(Station::BayStarboard, &starboard, Kind::ChartTank, 10, 5);
+        let up = hover(Station::BayStarboard, &starboard, Kind::ChartTank, 12, 5);
         assert!(
             (up * Vec3::Y).y > 0.9,
             "a hovered tank must stand up, not lie on its side: {:?}",
@@ -4445,7 +4448,7 @@ mod tests {
             Station::BayStarboard,
             &starboard,
             &aft,
-            rect_of(10, 5, Kind::ChartTank),
+            rect_of(12, 5, Kind::ChartTank),
         )
         .1;
         for axis in [Vec3::X, Vec3::Y, Vec3::Z] {
@@ -4457,7 +4460,7 @@ mod tests {
             );
         }
         // The floor's backing rule applies to the ghost too.
-        let backed = hover(Station::BayFloor, &floor, Kind::Couch, 3, 7);
+        let backed = hover(Station::BayFloor, &floor, Kind::Couch, 3, 9);
         assert!(
             (backed * Vec3::Z).z > 0.9,
             "a couch hovered on the front row must already have its back to the wall"

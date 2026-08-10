@@ -50,7 +50,7 @@ use super::layout::{self, GRID_COLS, GRID_ROWS};
 use super::{Cue, Vec2, splitmix};
 
 /// The floor's cell count — the crowding gates' yardstick. The net has
-/// 126 cells but food density is a floor phenomenon; walls of paintings
+/// 198 cells but food density is a floor phenomenon; walls of paintings
 /// never fed anybody.
 const FLOOR_CELLS: u32 = layout::FLOOR.2 as u32 * layout::FLOOR.3 as u32;
 

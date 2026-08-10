@@ -61,8 +61,9 @@ pub const TICK_DT: f32 = 1.0 / 60.0;
 /// Grown from the console-era 800 when the room net moved in east of the
 /// classic rects (`layout::GRID_ORIGIN`) — growing the world keeps the star
 /// map's distance space, and therefore every journey length, exactly as it
-/// was.
-pub const WORLD_W: f32 = 1440.0;
+/// was. It grew again by four cells' worth (136) when the cabin widened
+/// to an 8×7 floor: the same trick, for the same reason.
+pub const WORLD_W: f32 = 1576.0;
 
 /// Logical world height.
 pub const WORLD_H: f32 = 600.0;
@@ -135,20 +136,25 @@ const STARTER_CARGO: [(Kind, u8, u8); 9] = [
     // The ship's one light. Every other lumen aboard is cargo too —
     // lights-out is a legal state and the emissive instruments carry it
     // (docs/BAY.md, "Lights are cargo") — so the starter lamp hangs
-    // over mid-floor where losing it is a choice, not an accident.
-    (Kind::CeilingLamp, 14, 5),
+    // over mid-floor where losing it is a choice, not an accident. The
+    // ceiling chart folds over the starboard cornice, so its columns
+    // run BACKWARDS against the floor's: (18, 6) is the pendant over
+    // floor cell (6, 6), the middle of the wider room.
+    (Kind::CeilingLamp, 18, 6),
     // The instruments (BAY.md, "Instruments are cargo"): the window at
     // its old cornice punch-out, the gauges and the lever clustered on
     // the front wall beside it, and the chart tank on the starboard
     // wall by the burner doorway — off the baseboard ring, and behind
     // the floor cells flanking the doorway, where tall furniture
     // rarely stands, so cargo and the tank's housing seldom fight over
-    // the wall.
-    (Kind::Window, 4, 10),
-    (Kind::ChartTank, 10, 5),
-    (Kind::EtaGauge, 5, 9),
-    (Kind::DestPreview, 3, 10),
-    (Kind::LaunchLever, 5, 8),
+    // the wall. The widening slid the front wall two rows down the net
+    // and the starboard wall two columns across it; the cluster rode
+    // along, so it still reads left of the console face.
+    (Kind::Window, 4, 12),
+    (Kind::ChartTank, 12, 5),
+    (Kind::EtaGauge, 5, 11),
+    (Kind::DestPreview, 3, 12),
+    (Kind::LaunchLever, 5, 10),
 ];
 
 /// A 2D vector, kept deliberately tiny: the sim needs four operations and a
@@ -2735,7 +2741,7 @@ mod tests {
         assert_eq!(Sim::from_save("").unwrap_err(), SaveError::BadMagic);
         assert_eq!(Sim::from_save("hello").unwrap_err(), SaveError::BadMagic);
         assert_eq!(
-            Sim::from_save("STV10\nseed 1").unwrap_err(),
+            Sim::from_save("STV11\nseed 1").unwrap_err(),
             SaveError::UnsupportedVersion
         );
         // STV1 predates the delivery tally: fail safe into a fresh game.
@@ -3792,7 +3798,7 @@ mod tests {
     #[test]
     fn fixtures_survive_the_save_round_trip() {
         let mut sim = launched(1);
-        inject_hold(&mut sim, Kind::CeilingLamp, 13, 4);
+        inject_hold(&mut sim, Kind::CeilingLamp, 16, 4);
         inject_hold(&mut sim, Kind::Painting, 3, 0);
         inject_hold(&mut sim, Kind::WallLamp, 5, 1);
         inject_hold(&mut sim, Kind::FloorLamp, 7, 3);
@@ -4452,14 +4458,20 @@ mod tests {
     // -------------------------------------------------------------- rats --
 
     /// Stow enough extra cargo that the hold crosses the boarding gate:
-    /// starter cargo's 5 cells plus two ration bricks and a gilded idol
-    /// is 15 of the floor's 30 — exactly [`rats::CROWDED_CELLS`]. It
-    /// keeps a 2x2 berth open at (3, 6) for the tests that add a crate
-    /// on top.
+    /// starter cargo's 5 cells plus five ration bricks and two gilded
+    /// idols is 29 of the floor's 56 — one over
+    /// [`rats::CROWDED_CELLS`]. It keeps a 2x2 berth open at (3, 6) for
+    /// the tests that add a crate on top, and every piece stands clear
+    /// of the front baseboard, so nothing shadows the instrument
+    /// cluster off its wall.
     fn crowd_hold(sim: &mut Sim) {
         inject_hold(sim, Kind::RationBricks, 4, 3);
+        inject_hold(sim, Kind::RationBricks, 7, 3);
+        inject_hold(sim, Kind::RationBricks, 7, 5);
+        inject_hold(sim, Kind::RationBricks, 5, 6);
+        inject_hold(sim, Kind::RationBricks, 7, 7);
         inject_hold(sim, Kind::GildedIdol, 3, 4);
-        inject_hold(sim, Kind::RationBricks, 6, 5);
+        inject_hold(sim, Kind::GildedIdol, 9, 3);
     }
 
     /// Fill every floor berth and light the rest of the net, so a
@@ -4546,7 +4558,7 @@ mod tests {
             (60..=140).contains(&boarded),
             "{boarded}/400 boardings is far from one in four"
         );
-        // A lean hold (starter cargo, 5 of 30 floor cells): never.
+        // A lean hold (starter cargo, 5 of 56 floor cells): never.
         for seed in 0..100_u64 {
             let mut sim = Sim::new(seed);
             launch(&mut sim, SATURN);
@@ -4598,7 +4610,7 @@ mod tests {
                 }
             }
         }
-        // 15 of 30 floor cells stowed keeps it fed through the Venus dock.
+        // 29 of 56 floor cells stowed keeps it fed through the Venus dock.
         assert!(sim.rat().is_some(), "the rat left a well-stocked hold");
         // ~10 s hops and ~45 s nibbles across 100 s of sim time.
         assert!((7..=13).contains(&skitters), "{skitters} skitters in 100 s");
@@ -4700,10 +4712,10 @@ mod tests {
         travel_to_dock(&mut sim);
         assert!(
             sim.rat().is_some(),
-            "15 of 30 cells is plenty to eat: it stays aboard"
+            "29 of 56 cells is plenty to eat: it stays aboard"
         );
         // Test scaffolding: unload the injected crowding pieces as if
-        // traded away, leaving the starter 5 of 30 cells — under the
+        // traded away, leaving the starter 5 of 56 cells — under the
         // walk-off gate.
         sim.pieces.retain(|p| {
             !(matches!(p.kind, Kind::RationBricks | Kind::GildedIdol)
@@ -5601,17 +5613,25 @@ mod tests {
     fn making_room_mid_visit_completes_the_wanderer_exchange() {
         let mut sim = Sim::new(10);
         // Three crates in the floor's aft-port corner, their 2x2 window
-        // held shut by a blocking vial, and every other window bricked
-        // solid: no toll subset opens a berth for the big crate at dock
-        // time.
+        // held shut by a blocking vial, and the rest of the deck bricked
+        // vial by vial: no toll subset opens a berth for the big crate
+        // at dock time.
         inject_hold(&mut sim, Kind::MysteriousCrate, 4, 3);
         inject_hold(&mut sim, Kind::MysteriousCrate, 5, 3);
         let blocker = inject_hold(&mut sim, Kind::PerfumeVial, 5, 4);
         inject_hold(&mut sim, Kind::MysteriousCrate, 4, 4);
-        inject_hold(&mut sim, Kind::GildedIdol, 7, 3);
-        inject_hold(&mut sim, Kind::PerfumeVial, 7, 5);
-        inject_hold(&mut sim, Kind::ScrapAlloy, 4, 6);
-        inject_hold(&mut sim, Kind::PerfumeVial, 7, 6);
+        // Two singles stay bare, neither touching the other or the
+        // crates' window: (10, 9) is the corner the blocking vial will
+        // slide to, and (5, 9) is left alone because a piece standing
+        // there would shadow the launch handle off its baseboard.
+        let (fx, fy, fw, fh) = layout::FLOOR;
+        for y in fy..fy + fh {
+            for x in fx..fx + fw {
+                if (x, y) != (10, 9) && (x, y) != (5, 9) && !cell_covered(&sim, (x, y)) {
+                    inject_hold(&mut sim, Kind::PerfumeVial, x, y);
+                }
+            }
+        }
         sim.dock(WANDERER);
         for (i, cell) in [(4_u8, 3_u8), (5, 3), (4, 4)].iter().enumerate() {
             drag(
@@ -5634,7 +5654,7 @@ mod tests {
             .find(|p| p.id == blocker)
             .map(|p| rect_center(layout::piece_rect(sim.pieces(), p)))
             .unwrap();
-        drag(&mut sim, vial_at, cell_center(6, 5));
+        drag(&mut sim, vial_at, cell_center(10, 9));
         assert!(
             sim.cues().contains(&Cue::Exchange),
             "the freed 2x2 should close the exchange on the spot"
@@ -5825,7 +5845,7 @@ mod tests {
         // last one may not leave the ship.
         let mut sim = Sim::new(17);
         launch(&mut sim, SATURN);
-        let lever = cell_center(5, 8);
+        let lever = cell_center(5, 10);
         let net0 = rect_center(layout::FLOTSAM_SLOTS[0]);
         drag(&mut sim, lever, net0);
         assert_eq!(sim.last_violation(), Some(Violation::Vital));
@@ -5856,7 +5876,7 @@ mod tests {
         // Docked at the Guild from birth: the barter is open, and the
         // starter chart tank is the only one aboard.
         let mut sim = Sim::new(17);
-        let tank = cell_center(10, 5);
+        let tank = cell_center(12, 5);
         let give0 = rect_center(layout::GIVE_SLOTS[0]);
         drag(&mut sim, tank, give0);
         assert_eq!(sim.last_violation(), Some(Violation::Vital));
@@ -5895,7 +5915,7 @@ mod tests {
         sim.advance(TICK_DT, &InputFrame::default());
         let badge = rect_center(layout::ENCOUNTER_BADGE);
         let count_before = sim.pieces().len();
-        drag(&mut sim, cell_center(5, 8), badge);
+        drag(&mut sim, cell_center(5, 10), badge);
         assert_eq!(sim.last_violation(), Some(Violation::Vital));
         assert_eq!(sim.pieces().len(), count_before, "no payout and no chip");
         assert!(

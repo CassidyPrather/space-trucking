@@ -160,9 +160,14 @@ pub struct ClaimBar(u8);
 pub struct HandshakeLamp {
     pub room: RoomId,
     pub mat: Handle<StandardMaterial>,
+    /// What this station lights it in. The lamp's *meaning* is fixed —
+    /// lit is "there is something to commit" — and only its hue is the
+    /// station's, which is why the colour rides the component rather than
+    /// being read back out of a registry every frame.
+    pub hue: Color,
 }
 
-/// The handshake's brass plunger, which visibly throws when it is worked.
+/// The handshake's knob, which visibly throws when it is worked.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct HandshakeThrow {
     pub rest: Vec3,
@@ -175,6 +180,18 @@ pub struct HandshakeThrow {
 pub struct Placed {
     pub id: RoomId,
     pub kind: RoomKind,
+    /// **Whose room this is** — the station it serves, or `None` for a
+    /// room of the ship's own.
+    ///
+    /// Room kind is not station identity: one `Trade` kind serves twelve
+    /// places. It is derived rather than stored (`poi::of`), from the
+    /// room's kind and the ship's state, which is the sim's own law about
+    /// counterparties read from this side of the wall. [`survey`] fills it
+    /// in, because that is the one place the graph and the ship's state are
+    /// read together; a [`placed`] built for geometry alone leaves it
+    /// `None` and gets the neutral room, which is what a room with no
+    /// nameable station should look like.
+    pub host: Option<crate::poi::Host>,
     /// Quarter turns clockwise, straight off the pose.
     pub yaw: u8,
     /// The room's interior box: deck corner to ceiling corner.
@@ -239,7 +256,15 @@ pub struct Plan {
 }
 
 /// The cheap fingerprint of one room's placement, for change detection.
-type Shape = (RoomId, u8, i32, i32, i32, u8, u32);
+///
+/// The host's token rides along with the pose, and it has to: a ship that
+/// departs one station and docks at the next re-attaches a trade room with
+/// the same id at the same pose, and a signature that only knew the graph
+/// would leave Venus's enamel standing in Earth's market. (It cannot
+/// happen a frame at a time — a leg passes in between — but a warp or a
+/// catch-up runs both docks inside one frame, and a change detector that
+/// is only *usually* right is the kind that fails in a save file.)
+type Shape = (RoomId, u8, i32, i32, i32, u8, u32, u8);
 
 impl Plan {
     /// The placed room with this id, if it is attached.
@@ -485,6 +510,7 @@ pub fn placed(id: RoomId, room: &Room) -> Placed {
     Placed {
         id,
         kind: room.kind,
+        host: None,
         yaw: room.pose.yaw,
         lo,
         hi,
@@ -800,6 +826,34 @@ pub fn preset(rooms: &Rooms, name: &str) -> Option<(Vec3, f32, f32)> {
         }
         "trade" => inside(RoomKind::Trade, 0, -0.30),
         "offer" => inside(RoomKind::Trade, 2, -0.18),
+        // **Outside, off a caller's outboard face**: the view a station's
+        // own shell is judged from. `drydock` stands off the CABIN's bow,
+        // which frames the ship and puts whatever came alongside at the
+        // far end of it — fine for the graph, useless for the hardware a
+        // station bolted to its own plate. This one stands square on the
+        // wall opposite the caller's one door, which is the wall facing
+        // the void and therefore the wall a design agent dressed.
+        "berth" => {
+            let id = rooms
+                .iter()
+                .filter(|(_, room)| !room.kind.riding())
+                .map(|(id, _)| id)
+                .max()?;
+            let placed = placed(id, rooms.get(id)?);
+            let (lo, hi) = hull_box(&placed);
+            let mid = (lo + hi) * 0.5;
+            // Wall 0 is the door; the outboard face is the other way.
+            let out = -wall_out(0, placed.yaw);
+            let flank = axis_i(placed.yaw);
+            let reach = (hi - lo).length();
+            let eye = mid + out * reach * 1.25 + flank * reach * 0.5 + Vec3::Y * reach * 0.5;
+            // Aimed above the box's middle, because what a station bolts
+            // to its shell stands PROUD of it — a frame centred on the
+            // plate crops the mast off the top of every shot.
+            let at = mid + Vec3::Y * reach * 0.28;
+            let down = at - eye;
+            Some(look(eye, at, down.y.atan2(down.xz().length())))
+        }
         // The market's port flank — the one wall of a calling room that
         // is neither its goods nor its counter, which is why anything a
         // crew hangs in somebody else's room ends up on it.
@@ -855,6 +909,13 @@ pub fn preset(rooms: &Rooms, name: &str) -> Option<(Vec3, f32, f32)> {
 /// and the walk envelope. Runs before anything that reads either.
 pub fn survey(shell: Res<Shell>, mut plan: ResMut<Plan>, mut envelope: ResMut<Envelope>) {
     let rooms = shell.bridge.sim.rooms();
+    // **The one place a room learns whose it is.** The graph says what
+    // kind of room it is; the ship's state says where the ship is; the
+    // pair names the counterparty, exactly as the save's own
+    // reconstruction of a trade does (`sim::save`). Nothing is stored,
+    // so nothing can disagree.
+    let state = shell.bridge.sim.ship().state;
+    let host = |kind| crate::poi::of(kind, state);
     let signature: Vec<Shape> = rooms
         .iter()
         .map(|(id, room)| {
@@ -873,6 +934,7 @@ pub fn survey(shell: Res<Shell>, mut plan: ResMut<Plan>, mut envelope: ResMut<En
                 room.pose.z,
                 room.pose.yaw,
                 mates,
+                host(room.kind).map_or(u8::MAX, crate::poi::Host::token),
             )
         })
         .collect();
@@ -880,7 +942,13 @@ pub fn survey(shell: Res<Shell>, mut plan: ResMut<Plan>, mut envelope: ResMut<En
         return;
     }
     plan.signature = signature;
-    plan.rooms = rooms.iter().map(|(id, room)| placed(id, room)).collect();
+    plan.rooms = rooms
+        .iter()
+        .map(|(id, room)| Placed {
+            host: host(room.kind),
+            ..placed(id, room)
+        })
+        .collect();
     *envelope = walk_boxes(&plan.rooms);
 }
 
@@ -986,11 +1054,16 @@ fn rebuild(
         commands.entity(entity).despawn();
     }
     let cube = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+    let shapes = crate::poi::Shapes::new(&mut meshes);
     for placed in &plan.rooms {
         let tag = InRoom {
             room: placed.id,
             kind: placed.kind,
         };
+        // **Whose room this is.** A station nobody has filled in yet, and
+        // every room of the ship's own, gets the neutral character —
+        // which is exactly the room this module used to build inline.
+        let character = crate::poi::character_of(placed.host);
         for (station, surface) in placed.charts {
             commands.spawn((station, surface, tag));
         }
@@ -1003,9 +1076,10 @@ fn rebuild(
         if !placed.kind.riding() {
             caller_lamp(
                 &mut commands,
-                &cube,
-                &mut meshes,
+                &shapes,
                 &mut materials,
+                &skin,
+                &character.light,
                 placed,
                 tag,
             );
@@ -1016,11 +1090,30 @@ fn rebuild(
             &mut materials,
             &skin,
             &fade,
+            &character.tiles,
             placed,
             tag,
         );
         doorways(&mut commands, &cube, &mut materials, &skin, placed, tag);
-        handshake(&mut commands, &cube, &mut materials, &skin, placed, tag);
+        handshake(
+            &mut commands,
+            &cube,
+            &shapes,
+            &mut materials,
+            &skin,
+            &character.handshake,
+            placed,
+            tag,
+        );
+        furnish(
+            &mut commands,
+            &shapes,
+            &mut materials,
+            &skin,
+            character.decor,
+            placed,
+            tag,
+        );
         crate::pieces::hint_cells(&mut commands, &cube, &mut materials, &shared, placed);
         crate::airlock::fittings(
             &mut commands,
@@ -1072,6 +1165,12 @@ const CALLER_DROP: f32 = 0.55;
 const SHADE_R: f32 = 0.24;
 const SHADE_H: f32 = 0.11;
 
+/// The stem's girth, and the glass disc's radius as a fraction of the
+/// shade. Fixed, not a station's: a pendant that could be any size would
+/// be a station reaching for the ceiling height, which is the room's.
+const STEM_T: f32 = 0.05;
+const GLASS_R: f32 = 0.72;
+
 /// Where a caller's lamp hangs and how far it carries — derived from the
 /// room's own box, so a wider room gets a wider pool and a small one
 /// keeps its light to itself. The reach stops a quarter cell past the
@@ -1089,12 +1188,20 @@ fn caller_reach(placed: &Placed) -> (Vec3, f32) {
 /// gets. The `Dimmable` base and the light's own intensity come from one
 /// value on purpose: a lamp that remembered a different honest brightness
 /// than it burns at would brighten or dim the first time the omen passed.
-fn caller_light(placed: &Placed) -> (PointLight, Transform, crate::rig::Dimmable) {
+fn caller_light(
+    placed: &Placed,
+    light: &crate::poi::Light,
+) -> (PointLight, Transform, crate::rig::Dimmable) {
     let (at, range) = caller_reach(placed);
+    // A station picks what it burns and how hard, out of the caller
+    // budget; it does not pick the REACH, which is derived from its own
+    // box. That is the containment rule surviving every character that
+    // will ever be written (docs/ART_DIRECTION_3D.md).
+    let intensity = CALLER_LUMENS * light.burn.clamp(0.0, 1.0);
     (
         PointLight {
-            color: palette::GLINT,
-            intensity: CALLER_LUMENS,
+            color: light.color,
+            intensity,
             range,
             // No shadow maps anywhere, on purpose: the art direction is
             // light VOLUMES, not simulated occlusion. Which is precisely
@@ -1103,65 +1210,113 @@ fn caller_light(placed: &Placed) -> (PointLight, Transform, crate::rig::Dimmable
             ..default()
         },
         Transform::from_translation(at),
-        crate::rig::Dimmable {
-            intensity: CALLER_LUMENS,
-        },
+        crate::rig::Dimmable { intensity },
     )
 }
 
-/// The pendant itself: a stem off the ceiling, a pressed shade, the glass
-/// inside it, and the light. One honest industrial fitting — the same
-/// argument the handshake's brass makes, one storey up — because a
-/// trading floor that is lit by nothing at all reads as a test harness
-/// with cargo in it, and this room is the core form every per-POI agent
-/// starts from.
+/// The pendant itself: a stem off the ceiling, a shade, the glass inside
+/// it, whatever cage the station hangs round it, and the light. One honest
+/// industrial fitting — the same argument the handshake's brass makes, one
+/// storey up — because a trading floor that is lit by nothing at all reads
+/// as a test harness with cargo in it.
+///
+/// **What is the station's and what is the room's** is the whole shape of
+/// this function: the station picks the colour, the burn, the shade's
+/// silhouette and coats, and the cage; the room keeps where the lamp hangs
+/// and how far it reaches, because both of those are its box's business
+/// and a station billing the crew for its electricity is the defect the
+/// containment rule exists to forbid.
 fn caller_lamp(
     commands: &mut Commands,
-    cube: &Handle<Mesh>,
-    meshes: &mut Assets<Mesh>,
+    shapes: &crate::poi::Shapes,
     materials: &mut Assets<StandardMaterial>,
+    skin: &Skin,
+    light: &crate::poi::Light,
     placed: &Placed,
     tag: InRoom,
 ) {
     let (at, _) = caller_reach(placed);
     let stem = (placed.hi.y - at.y) * 0.5;
     commands.spawn((
-        Mesh3d(cube.clone()),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: palette::PLATE_SHADE,
-            perceptual_roughness: 0.9,
-            ..default()
-        })),
+        Mesh3d(shapes.of(crate::poi::Shape::Slab)),
+        MeshMaterial3d(crate::poi::Coat::enamel(palette::PLATE_SHADE).material(materials, None)),
         Transform::from_translation(Vec3::new(at.x, at.y + stem, at.z)).with_scale(Vec3::new(
-            0.05,
+            STEM_T,
             stem * 2.0,
-            0.05,
+            STEM_T,
         )),
         tag,
     ));
     commands.spawn((
-        Mesh3d(meshes.add(ConicalFrustum {
-            radius_top: SHADE_R * 0.35,
-            radius_bottom: SHADE_R,
-            height: SHADE_H,
-        })),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: palette::PLATE,
-            perceptual_roughness: 0.85,
-            metallic: 0.2,
-            ..default()
-        })),
-        Transform::from_translation(Vec3::new(at.x, SHADE_H.mul_add(0.5, at.y), at.z)),
+        Mesh3d(shapes.of(light.shade)),
+        MeshMaterial3d(light.shade_coat.material(materials, Some(skin))),
+        Transform::from_translation(Vec3::new(at.x, SHADE_H.mul_add(0.5, at.y), at.z))
+            .with_scale(Vec3::new(SHADE_R * 2.0, SHADE_H, SHADE_R * 2.0)),
         tag,
     ));
     commands.spawn((
-        Mesh3d(meshes.add(Cylinder::new(SHADE_R * 0.72, 0.02))),
-        MeshMaterial3d(glow::phosphor(materials, palette::GLINT, 1.4)),
-        Transform::from_translation(Vec3::new(at.x, at.y - 0.01, at.z)),
+        Mesh3d(shapes.of(crate::poi::Shape::Post)),
+        MeshMaterial3d(light.glass.material(materials, Some(skin))),
+        Transform::from_translation(Vec3::new(at.x, at.y - 0.01, at.z)).with_scale(Vec3::new(
+            SHADE_R * GLASS_R * 2.0,
+            0.02,
+            SHADE_R * GLASS_R * 2.0,
+        )),
         tag,
     ));
-    let (light, transform, dimmable) = caller_light(placed);
-    commands.spawn((light, transform, dimmable, tag));
+    // The station's own hardware round the fitting, measured off a box one
+    // shade across on every side of the lamp — never off the room, so a
+    // cage cannot become a beam across it.
+    let cage = crate::poi::Frame {
+        mid: at,
+        half: Vec3::splat(SHADE_R),
+        rot: Quat::IDENTITY,
+    };
+    for fitting in light.cage {
+        commands.spawn((
+            Mesh3d(shapes.of(fitting.shape)),
+            MeshMaterial3d(fitting.coat.material(materials, Some(skin))),
+            cage.place(fitting),
+            tag,
+        ));
+    }
+    // A station may go dark, and a dark station has no light source at
+    // all rather than a source burning nothing: the Umbra Market is a
+    // legal state, not a bug (docs/BAY.md, "lights-out is legal").
+    if light.burn > 0.0 {
+        let (lamp, transform, dimmable) = caller_light(placed, light);
+        commands.spawn((lamp, transform, dimmable, tag));
+    }
+}
+
+/// A station's own furniture, inside its own room.
+///
+/// The frame is the room's box and the fittings are fractions of it, so a
+/// character never learns how big a trade room is and cannot reach out of
+/// one ([`crate::poi`]'s containment law). Nothing here is click-
+/// functional and nothing here is a berth: it is dressing, and the sim
+/// does not hear about it.
+fn furnish(
+    commands: &mut Commands,
+    shapes: &crate::poi::Shapes,
+    materials: &mut Assets<StandardMaterial>,
+    skin: &Skin,
+    decor: &[crate::poi::Fitting],
+    placed: &Placed,
+    tag: InRoom,
+) {
+    if decor.is_empty() {
+        return;
+    }
+    let frame = crate::poi::Frame::of(placed.lo, placed.hi, placed.yaw);
+    for fitting in decor {
+        commands.spawn((
+            Mesh3d(shapes.of(fitting.shape)),
+            MeshMaterial3d(fitting.coat.material(materials, Some(skin))),
+            frame.place(fitting),
+            tag,
+        ));
+    }
 }
 
 /// A room's hull: deck, ceiling, and four walls, each punched by whatever
@@ -1455,12 +1610,14 @@ fn rim(kind: RoomKind, x: u8, y: u8, tile: Tile) -> [bool; 4] {
 ///   rungs of the decal ladder (`rig::layer`), and within a rung nothing
 ///   overlaps: a rim band shortens where a perpendicular one owns the
 ///   corner.
+#[allow(clippy::too_many_arguments)] // one argument per thing painted
 fn tiles(
     commands: &mut Commands,
     cube: &Handle<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     skin: &Skin,
     fade: &TileFade,
+    paint: &crate::poi::Tiles,
     placed: &Placed,
     tag: InRoom,
 ) {
@@ -1474,9 +1631,15 @@ fn tiles(
     // becomes exactly the stamped pattern this pass took out; the
     // weathering lives on the slabs and backer plates behind the paint,
     // where it can run across a whole wall without counting cells.
-    let chalk = glow::etched(materials, palette::GLINT);
-    let border = glow::enamel(materials, palette::PLATE_SHADE);
-    let stock = glow::enamel(materials, palette::TRIM_SHELF);
+    // The station's own paint, where it has one. The FORMS below are not
+    // its to change — a field is a field and a rim mark is a rim mark at
+    // every station in the game — which is the no-hue-alone law made
+    // structural rather than remembered (`crate::poi`).
+    let chalk = paint.chalk.material(materials, Some(skin));
+    let border = paint.rim.material(materials, Some(skin));
+    let stock = paint.stock.material(materials, Some(skin));
+    // The furnace's scorch is nobody's character: `Consume` belongs to a
+    // riding room, and hazard stripes belong to `Consume` alone.
     let scorch = glow::enamel(materials, palette::SOOT);
     for (station, surface) in placed.charts {
         let normal = station.inward(&surface);
@@ -1562,7 +1725,7 @@ fn tiles(
             }
         }
     }
-    treads(commands, cube, skin, placed, tag);
+    treads(commands, cube, materials, skin, paint, placed, tag);
 }
 
 /// The tread: what a doorway does to the deck it stands on.
@@ -1581,10 +1744,20 @@ fn tiles(
 ///
 /// Paint and plate only: those cells are ordinary berths, and cargo may
 /// stand on the tread like anywhere else.
-fn treads(commands: &mut Commands, cube: &Handle<Mesh>, skin: &Skin, placed: &Placed, tag: InRoom) {
+fn treads(
+    commands: &mut Commands,
+    cube: &Handle<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    skin: &Skin,
+    paint: &crate::poi::Tiles,
+    placed: &Placed,
+    tag: InRoom,
+) {
     let Some(floor) = placed.chart(Station::BayFloor).copied() else {
         return;
     };
+    let stud = paint.stud.material(materials, Some(skin));
+    let sill = paint.sill.material(materials, Some(skin));
     let normal = Station::BayFloor.inward(&floor);
     let rot = Station::BayFloor.face(&floor);
     let (su, sv) = (floor.scale_u(), floor.scale_v());
@@ -1620,7 +1793,7 @@ fn treads(commands: &mut Commands, cube: &Handle<Mesh>, skin: &Skin, placed: &Pl
                 for along in [-STUD_STEP, 0.0, STUD_STEP] {
                     patch.paint(
                         commands,
-                        &skin.rivet,
+                        &stud,
                         crate::rig::layer::TREAD,
                         Vec2::new(along, down),
                         Vec2::splat(STUD),
@@ -1630,7 +1803,7 @@ fn treads(commands: &mut Commands, cube: &Handle<Mesh>, skin: &Skin, placed: &Pl
             patch.band(
                 commands,
                 Mark {
-                    mat: &skin.brass,
+                    mat: &sill,
                     width: SILL,
                     lift: crate::rig::layer::TREAD,
                 },
@@ -1968,22 +2141,31 @@ fn port_plate(commands: &mut Commands, cube: &Handle<Mesh>, skin: &Skin, site: &
 // ---- The handshake ----
 
 /// The room's one click-functional fixture: the handshake where a deal is
-/// struck (docs/ROOMS.md, "The new barter: six beats", step five). One
-/// honest core form for every room that has one — brass plate, brass
-/// plunger, one lamp — because per-POI differentiation is a later stage.
-/// The handle rule reads a body click as *function* (BAY.md), and on a
-/// fixture set into the room's fabric the whole body IS the function: it
-/// wears no grab, because it is not cargo and cannot be carried.
+/// struck (docs/ROOMS.md, "The new barter: six beats", step five). The
+/// handle rule reads a body click as *function* (BAY.md), and on a fixture
+/// set into the room's fabric the whole body IS the function: it wears no
+/// grab, because it is not cargo and cannot be carried.
 ///
-/// The fixture's own face is a mapped surface bound to its declared cell,
-/// standing proud of the wall so the crosshair meets the brass rather than
-/// the chart behind it. The sim does the rest: `Sim::handshake_at` reads
-/// the cell, `work_handshake` commits, and the cue says how it went.
+/// **The form is the station's; everything that means something is not.**
+/// A chit press at the Guild, a bell at the Hermitage, whatever Venus
+/// thinks is tasteful — the plate, the knob, its throw and its brasswork
+/// all come out of [`crate::poi::Handshake`]. What does not: the cell,
+/// which the sim declares; the lamp, because *lit means there is something
+/// to commit* and a station that could delete it would be a station
+/// hiding the one moment that matters; and the pick face, which is bound
+/// to the whole declared cell so the crosshair meets the fixture the
+/// player is looking at.
+///
+/// The sim does the rest: `Sim::handshake_at` reads the cell,
+/// `work_handshake` commits, and the cue says how it went.
+#[allow(clippy::too_many_arguments)] // the fixture, and what it is made of
 fn handshake(
     commands: &mut Commands,
     cube: &Handle<Mesh>,
+    shapes: &crate::poi::Shapes,
     materials: &mut Assets<StandardMaterial>,
     skin: &Skin,
+    form: &crate::poi::Handshake,
     placed: &Placed,
     tag: InRoom,
 ) {
@@ -2004,31 +2186,51 @@ fn handshake(
     let rot = station.face(surface);
     let at = surface.to_world(mid);
     let (su, sv) = (surface.scale_u(), surface.scale_v());
-    let plate = Vec3::new(cell.w * su * 0.82, cell.h * sv * 0.82, 0.03);
+    let span = crate::poi::PLATE_SPAN;
+    let plate = Vec3::new(cell.w * su * span, cell.h * sv * span, 0.03);
     commands.spawn((
         Mesh3d(cube.clone()),
-        MeshMaterial3d(skin.brass.clone()),
+        MeshMaterial3d(form.plate.material(materials, Some(skin))),
         Transform::from_translation(at + normal * 0.015)
             .with_rotation(rot)
             .with_scale(plate),
         tag,
     ));
-    // The plunger: a brass slug that visibly throws when it is worked.
-    let rest = at + normal * 0.075;
+    // The fixture's own frame, so a station's brasswork is measured off
+    // the cell the sim declared and off nothing else: x and y are cell
+    // fractions, z is metres out of the wall (`crate::poi::Fitting`).
+    let cell_frame = crate::poi::Frame {
+        mid: at,
+        half: Vec3::new(cell.w * su * 0.5, cell.h * sv * 0.5, 1.0),
+        rot,
+    };
+    for fitting in form.trim {
+        commands.spawn((
+            Mesh3d(shapes.of(fitting.shape)),
+            MeshMaterial3d(fitting.coat.material(materials, Some(skin))),
+            cell_frame.place(fitting),
+            tag,
+        ));
+    }
+    // The knob: the part a hand actually works, and the part that visibly
+    // throws when it is. Its silhouette and its travel are the station's;
+    // that it throws at all is the fixture's, because a commit the player
+    // cannot see happen is the thing step five exists to prevent.
+    let knob = crate::poi::Fitting::new(form.knob, form.knob_coat, form.knob_at, form.knob_half);
+    let placement = cell_frame.place(&knob);
+    let rest = placement.translation;
     commands.spawn((
-        Mesh3d(cube.clone()),
-        MeshMaterial3d(skin.brass.clone()),
-        Transform::from_translation(rest)
-            .with_rotation(rot)
-            .with_scale(Vec3::new(plate.x * 0.42, plate.y * 0.42, 0.09)),
+        Mesh3d(shapes.of(form.knob)),
+        MeshMaterial3d(form.knob_coat.material(materials, Some(skin))),
+        placement,
         HandshakeThrow {
             rest,
-            travel: -normal * 0.045,
+            travel: -normal * form.throw,
         },
         tag,
     ));
     // Its one lamp: lit while there is something to commit.
-    let lamp = glow::phosphor(materials, palette::AMBER, 0.0);
+    let lamp = glow::phosphor(materials, form.lamp, 0.0);
     commands.spawn((
         Mesh3d(cube.clone()),
         MeshMaterial3d(lamp.clone()),
@@ -2040,6 +2242,7 @@ fn handshake(
         HandshakeLamp {
             room: placed.id,
             mat: lamp,
+            hue: form.lamp,
         },
         tag,
     ));
@@ -2166,7 +2369,7 @@ fn seam_fx(
         } else {
             0.08
         };
-        glow::set_lamp(&mut mat, palette::AMBER, level);
+        glow::set_lamp(&mut mat, hand.hue, level);
     }
     for (throw, mut transform) in &mut throws {
         let press = (fx.throw / (SEAM_LEN * 0.5)).clamp(0.0, 1.0);
@@ -2890,47 +3093,55 @@ mod tests {
     /// not light the crew's — the playtest's flat 7.5 m at 260,000 lumens
     /// lit the whole cabin through a solid partition, which is a
     /// lights-out economy paid for by whoever docked.
+    ///
+    /// It now runs over **every station in the registry**, not just the
+    /// neutral lamp: a character may pick a colour and a fraction of the
+    /// budget, and the three clauses have to survive all fifteen of them
+    /// — which they do structurally, because the reach is derived from
+    /// the room and is not a knob a station has.
     #[test]
     fn a_callers_lamp_lights_its_own_room_and_no_further() {
         let plan = crowded_ship();
         let mut lamps = 0;
         for room in plan.iter().filter(|room| !room.kind.riding()) {
-            let (light, transform, dimmable) = caller_light(room);
-            let at = transform.translation;
-            assert!(
-                (light.intensity - dimmable.intensity).abs() < 1.0,
-                "{:?} burns {} but remembers {}: the omen would move it",
-                room.kind,
-                light.intensity,
-                dimmable.intensity
-            );
-            assert!(
-                light.intensity <= CALLER_LUMENS,
-                "{:?} outshines the caller budget",
-                room.kind
-            );
-            // Every corner of its own floor is inside the pool.
-            for x in [room.lo.x, room.hi.x] {
-                for z in [room.lo.z, room.hi.z] {
-                    let corner = Vec3::new(x, room.lo.y, z);
+            for host in crate::poi::HOSTS {
+                let station = crate::poi::character(host).light;
+                let (light, transform, dimmable) = caller_light(room, &station);
+                let at = transform.translation;
+                assert!(
+                    (light.intensity - dimmable.intensity).abs() < 1.0,
+                    "{host:?} in a {:?} burns {} but remembers {}: the omen would move it",
+                    room.kind,
+                    light.intensity,
+                    dimmable.intensity
+                );
+                assert!(
+                    light.intensity <= CALLER_LUMENS,
+                    "{host:?} outshines the caller budget"
+                );
+                // Every corner of its own floor is inside the pool.
+                for x in [room.lo.x, room.hi.x] {
+                    for z in [room.lo.z, room.hi.z] {
+                        let corner = Vec3::new(x, room.lo.y, z);
+                        assert!(
+                            (at - corner).length() <= light.range,
+                            "{:?} leaves its own corner {corner} unlit",
+                            room.kind
+                        );
+                    }
+                }
+                // And no riding room's middle is.
+                for other in plan.iter().filter(|other| other.kind.riding()) {
+                    let mid = (other.lo + other.hi) * 0.5;
                     assert!(
-                        (at - corner).length() <= light.range,
-                        "{:?} leaves its own corner {corner} unlit",
-                        room.kind
+                        (at - mid).length() > light.range,
+                        "{host:?}'s lamp reaches the middle of the {:?} \
+                         ({} m of a {} m reach)",
+                        other.kind,
+                        (at - mid).length(),
+                        light.range
                     );
                 }
-            }
-            // And no riding room's middle is.
-            for other in plan.iter().filter(|other| other.kind.riding()) {
-                let mid = (other.lo + other.hi) * 0.5;
-                assert!(
-                    (at - mid).length() > light.range,
-                    "{:?}'s lamp reaches the middle of the {:?} ({} m of a {} m reach)",
-                    room.kind,
-                    other.kind,
-                    (at - mid).length(),
-                    light.range
-                );
             }
             lamps += 1;
         }

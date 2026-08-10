@@ -26,6 +26,7 @@ mod glow;
 mod menu;
 mod palette;
 mod pieces;
+mod poi;
 mod rig;
 mod room;
 mod surface;
@@ -125,6 +126,11 @@ fn cabin_preset(name: &str, rig: &mut rig::CameraRig) {
             rig.yaw = -std::f32::consts::FRAC_PI_2;
             rig.pitch = -0.10;
         }
+        // Outside, off a caller's own outboard face. The pose is derived
+        // from the graph (`room::preset`); all this arm does is let the
+        // cabin camera see the void layer, which is the half of `drydock`
+        // that is not a position.
+        "berth" => rig.drydock = true,
         // Outside, in dry dock: the one view that is not from aboard.
         // Dev tooling for the ship's own exterior shells (`viewport`),
         // which are otherwise only ever seen through a window. It stands
@@ -226,10 +232,18 @@ fn main() {
     // — star streaks, the destination growing off the bow — can be looked
     // at without waiting out a leg. Sandboxed exactly like `--fixture`.
     let underway = args.iter().any(|arg| arg == "--underway");
+    // `--docked n`: the fixture board, moored at POI `n` instead of the
+    // Guild. Every run starts at the Guild, so this is the only way to
+    // *look* at the other eleven stations' rooms — which is exactly what
+    // a per-station design agent has to do before it can judge anything
+    // it wrote (`crate::poi`).
+    let docked = flag_value("--docked").and_then(|n| n.parse::<u8>().ok());
     let bridge = panes.map_or_else(
         || {
             if underway {
                 Bridge::boot_fixture(&cast_off(7, 0.75))
+            } else if let Some(poi) = docked {
+                Bridge::boot_fixture(&fixture::docked_at(poi))
             } else if fixture {
                 Bridge::boot_fixture(fixture::SAVE)
             } else {

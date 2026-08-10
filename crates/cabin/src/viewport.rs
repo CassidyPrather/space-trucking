@@ -1295,84 +1295,54 @@ fn callers(
 
 // ------------------------------------------------------- the ship, outside --
 
-/// What a room's outside is made of, before anybody dresses it.
+/// The exterior kit for one room: the plate its shell wears and the
+/// running lights it burns.
 ///
-/// **This is the seam a per-POI design agent works through.** The neutral
-/// form below is every room's today — plate, seams, a running light or
-/// two — and it is deliberately dull: an exterior that already had
-/// character would fight whatever the station is eventually given. To
-/// give a room kind its own outside, add an arm here for the plate and
-/// the lamps, and an arm in [`dress`] for the hardware (a planet-side
-/// POI's space-elevator ribbon, a refinery's flare stack, a casino's
-/// sign). Nothing else in the game has to hear about it: the shell's box
-/// still comes from the lattice, so the dressing cannot move the room.
-#[derive(Clone, Copy, Debug)]
-pub struct Outfit {
-    /// The plate the shell wears.
-    pub plate: Color,
-    /// What colour its running lights burn.
-    pub lamp: Color,
-    /// How many running lights it carries (they ride the top corners).
-    pub lamps: u8,
-}
-
-/// The neutral exterior kit, by room kind.
+/// **This is one of the two seams a per-station design agent works
+/// through**, and it is no longer keyed by room kind — one `Trade` kind
+/// serves twelve stations, and twelve identical shells was the defect
+/// this pass exists to fix. The ship's own two rooms keep their kind's
+/// kit; everything alongside wears its station's
+/// ([`crate::poi::Character::outfit`]). The other seam is [`dress`].
 #[must_use]
-pub const fn outfit(kind: RoomKind) -> Outfit {
-    match kind {
-        // The ship's own: working hull, and the two lamps every hull in
-        // this game is legally required to burn.
-        RoomKind::Cabin => Outfit {
-            plate: palette::HULL,
-            lamp: palette::LAMP_OK,
-            lamps: 2,
-        },
-        // The furnace wears its soot on the outside too.
-        RoomKind::Burner => Outfit {
-            plate: palette::SOOT,
-            lamp: palette::EMBER,
-            lamps: 1,
-        },
-        // Callers: somebody else's plate, and an amber lamp because a
-        // station that let you dock in the dark would be a station with
-        // something to hide (docs/ROOMS.md).
-        RoomKind::Trade | RoomKind::Parlor | RoomKind::Pump => Outfit {
-            plate: palette::PLATE,
-            lamp: palette::AMBER,
-            lamps: 2,
-        },
-        // A derelict burns nothing at all. That is the whole tell.
-        RoomKind::Wreck => Outfit {
-            plate: palette::PLATE_SHADE,
-            lamp: palette::SHADOW,
-            lamps: 0,
-        },
-    }
+pub const fn outfit(kind: RoomKind, host: Option<crate::poi::Host>) -> crate::poi::Outfit {
+    crate::poi::outfit(kind, host)
 }
 
-/// A design agent's hook: whatever a room kind wears BEYOND the neutral
-/// shell. Every kind is bare today, on purpose — the shells landed with
-/// this pass and the character lands with the per-POI passes. Spawn into
-/// `root` (already at the shell's own centre, already on [`VOID_LAYER`])
-/// and measure off `half`, the shell's half-extents, so a retuned lattice
-/// carries the dressing with it.
-#[allow(clippy::missing_const_for_fn)] // a design agent's arm will spawn
+/// The second seam: whatever a station bolts to its shell BEYOND the
+/// neutral plate — a mast, a hangar maw, a refinery's flare stack, a
+/// planet-side POI's space-elevator ribbon.
+///
+/// The hardware is **data** ([`crate::poi::Character::dress`]) rather than
+/// a spawn callback, which is what lets the containment laws be arithmetic
+/// a test can run instead of a habit a reviewer has to notice. It is
+/// measured off the shell's own half-extents in the room's own axes, so a
+/// retuned lattice carries the dressing with it — and **the dressing may
+/// not move the room**, because the shell's box is derived from the pose
+/// and the pose is the sim's.
 fn dress(
-    _commands: &mut Commands,
-    _meshes: &mut Assets<Mesh>,
-    _materials: &mut Assets<StandardMaterial>,
-    kind: RoomKind,
-    _root: Entity,
-    _half: Vec3,
+    commands: &mut Commands,
+    shapes: &crate::poi::Shapes,
+    materials: &mut Assets<StandardMaterial>,
+    fittings: &[crate::poi::Fitting],
+    root: Entity,
+    frame: crate::poi::Frame,
 ) {
-    match kind {
-        // Bare, all six. Add your arm above this one.
-        RoomKind::Cabin
-        | RoomKind::Burner
-        | RoomKind::Trade
-        | RoomKind::Wreck
-        | RoomKind::Parlor
-        | RoomKind::Pump => {}
+    for fitting in fittings {
+        commands.spawn((
+            Mesh3d(shapes.of(fitting.shape)),
+            MeshMaterial3d(fitting.coat.material(materials, None)),
+            // The root already stands at the shell's centre, so the
+            // fitting's placement is taken relative to a frame at the
+            // origin and inherited from there.
+            crate::poi::Frame {
+                mid: Vec3::ZERO,
+                ..frame
+            }
+            .place(fitting),
+            outside(),
+            ChildOf(root),
+        ));
     }
 }
 
@@ -1396,11 +1366,12 @@ fn hull_outside(
     }
     let cube = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let bulb = meshes.add(Sphere::new(LAMP_R).mesh().ico(1).expect("ico in range"));
+    let shapes = crate::poi::Shapes::new(&mut meshes);
     for placed in &plan.rooms {
         let (lo, hi) = crate::room::hull_box(placed);
         let mid = (lo + hi) * 0.5;
         let span = hi - lo;
-        let kit = outfit(placed.kind);
+        let kit = outfit(placed.kind, placed.host);
         let root = commands
             .spawn((
                 Transform::from_translation(mid),
@@ -1479,11 +1450,11 @@ fn hull_outside(
         }
         dress(
             &mut commands,
-            &mut meshes,
+            &shapes,
             &mut materials,
-            placed.kind,
+            crate::poi::character_of(placed.host).dress,
             root,
-            span * 0.5,
+            crate::poi::Frame::of(lo, hi, placed.yaw),
         );
     }
 }
@@ -2447,16 +2418,25 @@ mod tests {
         );
     }
 
-    /// Every room kind has an exterior kit, and the derelict is the one
-    /// that burns nothing — the tell a design agent must not delete by
-    /// accident.
+    /// Every room kind has an exterior kit **at every station that could
+    /// wear it**, and the derelict is the one that burns nothing — the
+    /// tell a design agent must not delete by accident.
     #[test]
     fn every_room_kind_is_dressed_for_the_void() {
         for kind in space_trucking::sim::room::ROOM_KINDS {
-            let kit = outfit(kind);
-            assert!(kit.lamps <= 2, "{kind:?} carries a lighting rig");
+            for host in std::iter::once(None).chain(crate::poi::HOSTS.map(Some)) {
+                let kit = outfit(kind, host);
+                assert!(
+                    kit.lamps <= 2,
+                    "{kind:?} at {host:?} carries a lighting rig"
+                );
+            }
             if kind == RoomKind::Wreck {
-                assert_eq!(kit.lamps, 0, "a derelict burns nothing");
+                assert_eq!(
+                    outfit(kind, Some(crate::poi::Host::Wreck)).lamps,
+                    0,
+                    "a derelict burns nothing"
+                );
             }
         }
     }

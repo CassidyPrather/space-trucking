@@ -272,10 +272,10 @@ they are strung out inside. Nothing about the view is a second opinion
 about the ship's shape (see [ART_DIRECTION_3D.md](ART_DIRECTION_3D.md),
 "The window is a hole").
 
-The shell every room wears today is deliberately plain — plate, a seam
+The shell a room wears by default is deliberately plain — plate, a seam
 belt, corner posts, a running light or two — and the per-POI design
-agents dress it through two named seams (`viewport::outfit` for the
-kit, `viewport::dress` for hardware), documented at the art direction.
+agents dress it through two named seams (`poi::Character`'s `outfit` for
+the kit and `dress` for hardware), documented at the art direction.
 The cabin is the one room whose shell is not a lattice box: its hull
 was hand-built before the lattice and stands a working gutter forward
 of its floor box, so its outside is the union of the masses that ARE it
@@ -780,7 +780,17 @@ Each stage lands green or not at all, in the project's usual way.
    and upright rules re-swept over the new charts. The x-ray and ghost
    rules are unchanged and should stay unchanged.
 3. **Per-POI agents.** Look and behavior per POI, from the lore that
-   already exists: Venus unimaginably tacky, Earth rationing, Mars
+   already exists. The **seam for the look half landed**: a station's
+   character is one `const CHARACTER` in one file under
+   `crates/cabin/src/poi/`, keyed by a `Host` a room *derives* rather
+   than stores (kind plus `ShipState` — the same law the save's own
+   reconstruction of a trade runs on), with a `NEUTRAL` default that is
+   the room this document already described. A character may change
+   look, light, form and flavor and may not touch the grid, the tile
+   classes, the ports, or the box; the contract is the doc comment at
+   `poi/mod.rs` and a section of ART_DIRECTION_3D.md, and the Guild is
+   the worked example. The **behavior** half is still ahead, and it is
+   the interesting one: Venus unimaginably tacky, Earth rationing, Mars
    scrappy, the Guild seizing rather than paying, Saturn trading salvage
    like treasure — and, since the window became a family, cutting the
    bay pane out of that ring, because somebody else's hull is the only

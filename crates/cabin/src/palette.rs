@@ -118,6 +118,16 @@ pub mod accent {
     pub const SATURN_RING: Color = hex(0xa8936b);
 }
 
+// ---- Station character roles (crates/cabin/src/poi/) ----
+//
+// A station's character (`poi::Character`) composes from the roles above
+// wherever it can, and most stations can. Where one genuinely needs a
+// tone the palette does not carry, it lands HERE, documented at the
+// constant, **appended at the end of the section** — this is the one
+// shared file a per-station design agent touches, and appending is what
+// keeps a dozen of them from landing on each other. Nothing here yet:
+// the twelve stations still wear the neutral room.
+
 /// Identity hue per POI index, for the tank's readings and enamel badges.
 #[must_use]
 pub const fn poi_color(id: u8) -> Color {
@@ -246,28 +256,39 @@ mod tests {
 
     /// The purity rule, restated for the cabin: no raw color constructors
     /// outside this file. Same enforcement style as the 2D palette.
+    ///
+    /// It walks **subdirectories too**, which it did not have to before
+    /// `poi/` existed — a rule that stopped at the top level would be a
+    /// rule that stopped exactly where a dozen design agents were about
+    /// to start writing colors.
     #[test]
     fn palette_purity() {
-        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-        for entry in std::fs::read_dir(&dir).expect("src dir readable") {
-            let path = entry.expect("entry").path();
-            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            if name == "palette.rs" || path.extension().is_none_or(|ext| ext != "rs") {
-                continue;
-            }
-            let text = std::fs::read_to_string(&path).expect("source readable");
-            for banned in [
-                "Color::srgb",
-                "Color::linear_rgb",
-                "Color::hsl",
-                "Color::oklab",
-            ] {
-                assert!(
-                    !text.contains(banned),
-                    "{name} constructs a raw color ({banned}); use a palette role"
-                );
+        fn sweep(dir: &std::path::Path) {
+            for entry in std::fs::read_dir(dir).expect("src dir readable") {
+                let path = entry.expect("entry").path();
+                if path.is_dir() {
+                    sweep(&path);
+                    continue;
+                }
+                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if name == "palette.rs" || path.extension().is_none_or(|ext| ext != "rs") {
+                    continue;
+                }
+                let text = std::fs::read_to_string(&path).expect("source readable");
+                for banned in [
+                    "Color::srgb",
+                    "Color::linear_rgb",
+                    "Color::hsl",
+                    "Color::oklab",
+                ] {
+                    assert!(
+                        !text.contains(banned),
+                        "{name} constructs a raw color ({banned}); use a palette role"
+                    );
+                }
             }
         }
+        sweep(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"));
     }
 
     #[test]

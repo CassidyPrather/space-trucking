@@ -240,30 +240,73 @@ exactly as they lean on the cabin's lamps.
 Every attached room wears a **shell** grown from the same `room::Plan`
 pose its interior is built from (`room::hull_box`), so the trade room
 you walked out of is bolted to your hull exactly where you left it. The
-shell you get today is deliberately plain — **hull plate, a seam belt,
-corner posts, a running light or two** — because an exterior with
-character already on it would fight whatever the station is eventually
-given.
+shell a room gets by default is deliberately plain — **hull plate, a
+seam belt, corner posts, a running light or two** — because an exterior
+with character already on it would fight whatever the station is
+eventually given.
 
-Two seams exist for the per-POI passes, and they are the only two:
+Two seams exist for the per-station passes, and they are the only two.
+Both are now **keyed by station rather than by room kind**, because one
+`Trade` kind serves twelve places and twelve identical shells was the
+defect the character pass exists to fix:
 
-1. **`viewport::outfit(kind)`** returns the neutral kit: the plate
-   colour, the running lights' colour, and how many. A derelict burns
-   none — that is its whole tell — and the furnace wears its soot
-   outside as well as in.
-2. **`viewport::dress(kind, root, half)`** is where hardware goes. It
-   is exhaustive over `RoomKind` and every arm is empty on purpose; add
-   yours above the bare one and spawn into `root` (already at the
-   shell's centre, already on the void layer), measuring off `half`,
-   the shell's own half-extents. Planet-side POIs were the owner's
-   first idea for it — a space elevator's ribbon running off the shell
-   toward the world below — and a refinery's flare stack, a casino's
-   sign, a Guild mast are the same shape of change.
+1. **`poi::Character::outfit`** is the kit: the plate colour, the
+   running lights' colour, and how many. A derelict burns none — that
+   is its whole tell — and the furnace wears its soot outside as well
+   as in. `viewport::outfit(kind, host)` is the lookup; the ship's own
+   two rooms keep their kind's kit, everything alongside wears its
+   station's.
+2. **`poi::Character::dress`** is where hardware goes: a Guild mast, a
+   refinery's flare stack, a casino's sign, and the owner's first idea
+   for it — a planet-side POI's space-elevator ribbon running off the
+   shell toward the world below. It is **data**, not a spawn callback,
+   so the containment laws below are arithmetic a test runs rather than
+   a habit a reviewer has to notice.
 
 Anything a design agent adds is dressing on a box the lattice placed.
 **The dressing may not move the room**, because the room's position is
 the sim's and the shell is derived from it; if a station needs to sit
 somewhere else, that is a `room::Plan` change, not an art change.
+
+### Station character: one module per place
+
+The full brief is the doc comment at **`crates/cabin/src/poi/mod.rs`**,
+which a per-station design agent reads as its entire assignment. The
+shape of it, for everyone else:
+
+- **A room learns whose it is by derivation, not by storage.** `poi::of`
+  reads the room's kind and `ShipState`: a `Trade` room is alongside
+  exactly while the ship is docked, so the docked POI names it. Event
+  rooms are one of a kind, so their kind is their identity. Riding rooms
+  have no station. Nothing is written to the save, so nothing can
+  disagree with it.
+- **One file per station.** `poi/guild.rs`, `poi/venus.rs`, … each hold
+  one `const CHARACTER`. Unfilled stations return `poi::NEUTRAL`, which
+  reproduces the room this document described before the pass — so a
+  half-finished fleet ships, and a station nobody has touched cannot
+  regress.
+- **What a character owns**: tile enamel and treatment per class, the
+  handshake's form and its placement inside its declared cell, the
+  pendant's colour/burn/shade/cage, interior decor, and the exterior kit
+  and hardware.
+- **What it cannot own**: the room's grid, its tile *classes*, its port
+  declarations, and its box. There is no field on `Character` that names
+  a cell, a class, a slot, or a pose — that is structural — and what is
+  left is reach, which is asserted: interior fittings stay inside their
+  own room, exterior fittings stay outside every room and inside
+  `poi::DRESS_REACH`, nothing stands in a doorway, and the pendant's
+  *range* is derived from the room rather than picked, so **a station
+  still lights its own floor and never a riding room's**.
+- **The art laws survive it structurally.** `Tiles` carries colours and
+  no forms, so `Offer` stays hollow and `Stock` stays filled at every
+  station (no signal on hue alone); `poi::Worn` does not offer the
+  hazard material, so stripes stay `Consume`'s alone; every colour is a
+  palette role and the purity test walks `poi/` too; geometry is the
+  same five code-built primitives everything else uses.
+- **Looking at your own work.** `--docked n` re-berths the developer
+  fixture at any place on the chart, and `--view berth` stands outside,
+  square on a caller's outboard face. Before those, eleven of the twelve
+  rooms could not be photographed at all.
 
 One structural rule falls out and is worth stating: a room mated flush
 to the wall your window is on has its shell *inside your own hull's

@@ -110,6 +110,51 @@ piece 30 31 1 0 hold 2 0 4
 next_piece 31
 ";
 
+/// The same board, re-berthed at another station (`--docked n`).
+///
+/// **The tool the per-station design agents work with.** Every run boots
+/// docked at the Guild, so before this there was no way to *look* at
+/// eleven of the twelve rooms a character can be written for — which
+/// would have made "judge your screenshots" advice nobody could take.
+///
+/// It cheats at nothing it does not have to: the graph, the cargo, and
+/// every berth are the fixture's own, and only the mooring moves. The
+/// destination is cleared (a station cannot be charted from itself, and
+/// the inner ring wants a transit chit aboard before it will let you
+/// plot a neighbour), and the visit counter is nudged to at least one,
+/// because a station whose room is alongside has been called on.
+#[must_use]
+pub fn docked_at(poi: space_trucking::sim::map::PoiId) -> String {
+    use std::fmt::Write as _;
+
+    let mut out = String::new();
+    for line in SAVE.lines() {
+        if line.starts_with("ship docked ") {
+            let stoke = line.split_whitespace().nth(4).unwrap_or("0");
+            let _ = writeln!(out, "ship docked {poi} - {stoke}");
+            continue;
+        }
+        if let Some(counts) = line.strip_prefix("visits ") {
+            let mut visits: Vec<u32> = counts
+                .split_whitespace()
+                .map(|token| token.parse().unwrap_or(0))
+                .collect();
+            if let Some(count) = visits.get_mut(usize::from(poi)) {
+                *count = (*count).max(1);
+            }
+            let _ = write!(out, "visits");
+            for count in visits {
+                let _ = write!(out, " {count}");
+            }
+            let _ = writeln!(out);
+            continue;
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    out
+}
+
 /// A dev board carrying exactly `n` windows and nothing else unusual:
 /// the starter ship with every pane stripped off it, then `n` hung on
 /// the cabin's aft wall at the first berths the sim's own arbiter will
@@ -302,5 +347,28 @@ mod tests {
         assert!(pieces.iter().any(|p| tile(p) == Some(Tile::Offer)));
         assert_eq!(sim.marks().len(), 1, "one good is spoken for");
         assert!(!sim.composed().is_empty(), "the room answers the proposal");
+    }
+
+    /// **Every station's room can be looked at.** `--docked n` re-berths
+    /// the same legal board at any place on the chart, so a per-station
+    /// design agent can screenshot the room it is writing a character
+    /// for. A board that stopped parsing at station seven would be a
+    /// fleet that could not see its own work.
+    #[test]
+    fn the_board_moors_at_every_station() {
+        use space_trucking::sim::ShipState;
+        use space_trucking::sim::map::{POI_COUNT, PoiId};
+
+        for poi in 0..POI_COUNT as PoiId {
+            let sim = Sim::from_save(&super::docked_at(poi))
+                .unwrap_or_else(|_| panic!("the board must moor at POI {poi}"));
+            assert_eq!(sim.ship().state, ShipState::Docked(poi));
+            assert_eq!(sim.ship().selected, None, "a mooring charts nothing");
+            assert_eq!(
+                sim.rooms().find(RoomKind::Trade),
+                Some(2),
+                "POI {poi} lost the room the board came with"
+            );
+        }
     }
 }

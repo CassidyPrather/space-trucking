@@ -839,11 +839,11 @@ mod tests {
         assert_eq!(neutral.outfit.lamp, palette::AMBER);
         assert_eq!(neutral.outfit.lamps, 2);
         // And every unfilled station still IS the neutral room, which is
-        // what makes a half-finished fleet shippable. One is not blank:
-        // the derelict burns nothing at all, which it did before this
-        // directory existed.
+        // what makes a half-finished fleet shippable. Two are not blank:
+        // the Guild is the worked exemplar, and the derelict burns
+        // nothing at all, which it did before this directory existed.
         for host in HOSTS {
-            let filled = matches!(host, Host::Wreck);
+            let filled = matches!(host, Host::Guild | Host::Wreck);
             assert_eq!(
                 character(host) == NEUTRAL,
                 !filled,
@@ -980,5 +980,32 @@ mod tests {
             None
         );
         assert_eq!(character_of(None), NEUTRAL);
+    }
+
+    /// **The Guild is not a generic room.** The worked exemplar has to
+    /// differ from the default in more than one axis, or it is a recolour
+    /// and the seam has not been shown to work.
+    #[test]
+    fn the_guild_reads_as_the_guild() {
+        let guild = character(Host::Guild);
+        assert_ne!(guild, NEUTRAL);
+        let axes = [
+            ("tiles", guild.tiles != NEUTRAL.tiles),
+            ("handshake", guild.handshake != NEUTRAL.handshake),
+            ("light", guild.light != NEUTRAL.light),
+            ("decor", !guild.decor.is_empty()),
+            ("outfit", guild.outfit != NEUTRAL.outfit),
+            ("dress", !guild.dress.is_empty()),
+        ];
+        for (name, differs) in axes {
+            assert!(differs, "the Guild wears the neutral {name}");
+        }
+        // Form, not hue alone: the handshake is a different SHAPE, not a
+        // repainted plunger.
+        assert_ne!(guild.handshake.knob, NEUTRAL.handshake.knob);
+        assert!(!guild.handshake.trim.is_empty());
+        // And the filled-against-hollow reading survives the repaint,
+        // because there is no knob that could break it.
+        assert_eq!(guild.tiles.stock.finish, Finish::Enamel);
     }
 }

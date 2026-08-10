@@ -125,8 +125,19 @@ pub mod accent {
 // tone the palette does not carry, it lands HERE, documented at the
 // constant, **appended at the end of the section** — this is the one
 // shared file a per-station design agent touches, and appending is what
-// keeps a dozen of them from landing on each other. Nothing here yet:
-// the twelve stations still wear the neutral room.
+// keeps a dozen of them from landing on each other.
+
+/// The Guild's bonded enamel: the paint on a floor whose contents are not
+/// yours yet. Deeper and colder than [`TRIM_SHELF`], which is the neutral
+/// room's stock paint — a bonded store has to read as a *different place*
+/// from a market at a glance, and it does that by value before hue.
+pub const GUILD_BOND: Color = hex(0x3d3357);
+
+/// The Guild's hall light: the violet-white a customs house lights a
+/// floor in. Held well off [`EERIE`]'s saturation on purpose — the omen's
+/// violet is the game's one *something is wrong* signal, and a room lit
+/// in it would spend that signal on the place every run starts.
+pub const GUILD_HALL: Color = hex(0xcfc6e6);
 
 /// Identity hue per POI index, for the tank's readings and enamel badges.
 #[must_use]

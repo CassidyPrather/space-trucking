@@ -150,14 +150,14 @@ const PUMP_FACE: [Fitting; 6] = [
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::SOOT),
-        Vec3::new(-0.44, -0.34, 0.11),
-        Vec3::new(0.055, 0.30, 0.050),
+        Vec3::new(-0.44, -0.30, 0.11),
+        Vec3::new(0.055, 0.26, 0.050),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::SOOT),
-        Vec3::new(-0.62, -0.62, 0.11),
-        Vec3::new(0.24, 0.055, 0.050),
+        Vec3::new(-0.60, -0.615, 0.11),
+        Vec3::new(0.22, 0.055, 0.050),
     ),
     // Two bolts, because it is bolted to a wall and that is all.
     Fitting::new(

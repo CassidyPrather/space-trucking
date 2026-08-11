@@ -134,7 +134,7 @@ const FIELD_REPAIR: [Fitting; 8] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
-        Vec3::new(0.0, 0.18, 0.145),
+        Vec3::new(0.0, 0.20, 0.145),
         Vec3::new(0.44, 0.045, 0.030),
     ),
     // Three bolts, no two alike, and none of them brass.
@@ -153,15 +153,15 @@ const FIELD_REPAIR: [Fitting; 8] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(-0.60, -0.58, 0.045),
+        Vec3::new(-0.60, -0.55, 0.055),
         Vec3::new(0.070, 0.070, 0.028),
     ),
     // And a run of mustard down the plate where the brush got away.
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::enamel_color(2)),
-        Vec3::new(0.52, -0.30, 0.038),
-        Vec3::new(0.030, 0.30, 0.012),
+        Vec3::new(0.52, -0.33, 0.038),
+        Vec3::new(0.030, 0.33, 0.012),
     ),
 ];
 

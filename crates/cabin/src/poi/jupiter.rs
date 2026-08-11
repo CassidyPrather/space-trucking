@@ -106,8 +106,8 @@ const VALVE_WORKS: [Fitting; 8] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.0, -0.08, 0.075),
-        Vec3::new(0.07, 0.07, 0.075),
+        Vec3::new(0.0, -0.08, 0.100),
+        Vec3::new(0.07, 0.07, 0.050),
     ),
     Fitting::new(
         Shape::Slab,

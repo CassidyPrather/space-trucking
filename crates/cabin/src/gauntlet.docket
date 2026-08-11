@@ -154,7 +154,6 @@ Jupiter | berth-seen | decor[16] Slab
 Jupiter | berth-seen | decor[7] Post
 Jupiter | coplanar-faces | decor[10] Slab / decor[13] Slab
 Jupiter | coplanar-faces | decor[9] Slab / decor[13] Slab
-Jupiter | coplanar-faces | handshake trim[0] Slab / handshake trim[1] Slab
 
 # ---- Mars ----
 Mars | berth-clear | decor[0] Slab
@@ -183,10 +182,6 @@ Mars | berth-reached | decor[13] Slab
 Mars | berth-reached | decor[5] Slab
 Mars | berth-seen | decor[13] Slab
 Mars | coplanar-faces | decor[0] Slab / decor[1] Slab
-Mars | coplanar-faces | handshake knob Cone / handshake trim[3] Slab
-Mars | coplanar-faces | handshake trim[0] Slab / handshake trim[6] Slab
-Mars | coplanar-faces | handshake trim[0] Slab / handshake trim[7] Slab
-Mars | coplanar-faces | handshake trim[2] Slab / handshake trim[6] Slab
 
 # ---- Neptune ----
 Neptune | berth-clear | decor[0] Ring
@@ -271,11 +266,9 @@ Pump | berth-reached | decor[18] Slab
 Pump | berth-reached | decor[20] Ring
 Pump | berth-reached | decor[8] Post
 Pump | coplanar-faces | decor[13] Slab / decor[14] Slab
-Pump | coplanar-faces | decor[15] Slab / handshake trim[3] Slab
 Pump | coplanar-faces | decor[16] Slab / decor[17] Slab
 Pump | coplanar-faces | decor[3] Slab / decor[4] Slab
 Pump | coplanar-faces | decor[6] Slab / decor[15] Slab
-Pump | coplanar-faces | handshake trim[2] Slab / handshake trim[3] Slab
 
 # ---- Saturn ----
 Saturn | berth-clear | decor[0] Slab

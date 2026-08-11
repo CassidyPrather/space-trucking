@@ -25,10 +25,19 @@ use super::encounter::{Drone, Drones, Encounter, EncounterKind, Encounters};
 use super::event::{Omen, Phase};
 use super::map::{POI_COUNT, PoiId, Ship, ShipState};
 use super::rats::{CHASE_LIMIT, Rat, Rats};
-use super::room::{CABIN, MAX_ROOMS, PORTS, PortId, RoomId, RoomKind, Rooms, Tile};
+use super::room::{CABIN, COURSES, MAX_ROOMS, PORTS, PortId, RoomId, RoomKind, Rooms, Surf, Tile};
 use super::{KIND_COUNT, KNOWN_ALL, MAX_CREW, Sim, barter};
 
 /// Magic-plus-version header of every save this build writes.
+///
+/// `STV14` is the entry-path law (docs/ROOMS.md): an `Offer` band may
+/// not fall in a declared door's own lane, so the cells a body crosses
+/// walking into a station are ordinary deck and the chalk sits either
+/// side of them. Nothing about the GRAMMAR moved — a berth is still a
+/// room and two cells — but some of those cells stopped being a
+/// proposal and started being ordinary floor, which is a change in what
+/// a berth MEANS, and a document written before it is mid-trade in a
+/// shape this build would read as "nothing offered".
 ///
 /// `STV13` is the window family (docs/BAY.md): the cargo table grew a
 /// porthole and a bay window on its end, so the discovery ledger's masks
@@ -55,10 +64,19 @@ use super::{KIND_COUNT, KNOWN_ALL, MAX_CREW, Sim, barter};
 /// it belonged to. `STV10` widened the cabin from a 6×5 floor to an 8×7
 /// one; `STV7` added the banked burner's stoke to the ship line's tail;
 /// `STV6` added the `laid` piece location; `STV5` added `stow`.
-const MAGIC: &str = "STV13";
+const MAGIC: &str = "STV14";
 
 /// Older headers this build still reads, each with its own migration,
 /// applied oldest-first so a `STV4` document walks the whole chain.
+///
+/// `STV14` moved the offer areas out of the doorways. A pre-STV14
+/// document may hold a proposal on cells that are plain deck now, and a
+/// proposal that quietly became loose cargo is a trade the room would
+/// stop answering — so those pieces WALK, onto the same room's offer
+/// area, first free berth. Conservation before convenience again: the
+/// proposal comes out standing somewhere else, never withdrawn. If the
+/// room has no berth left for one it stays where it is, which is a legal
+/// berth and the player's either way.
 ///
 /// `STV13` grew the window family. A pre-STV13 document's ledger masks
 /// are two bits short, and the reader widens exactly the ones that were
@@ -92,8 +110,8 @@ const MAGIC: &str = "STV13";
 /// hold cells, which the net embeds at (+3, 0). Whatever the room-grid
 /// rules no longer accept once the translations have run re-berths at its
 /// first legal cell. Everything else stays one additive grammar.
-const READABLE: [&str; 10] = [
-    MAGIC, "STV12", "STV11", "STV10", "STV9", "STV8", "STV7", "STV6", "STV5", "STV4",
+const READABLE: [&str; 11] = [
+    MAGIC, "STV13", "STV12", "STV11", "STV10", "STV9", "STV8", "STV7", "STV6", "STV5", "STV4",
 ];
 
 /// Why a save string was refused.
@@ -322,22 +340,29 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     // room net embeds at (+3, 0); their berths migrate after reading.
     let legacy = !matches!(
         header,
-        MAGIC | "STV12" | "STV11" | "STV10" | "STV9" | "STV8"
+        MAGIC | "STV13" | "STV12" | "STV11" | "STV10" | "STV9" | "STV8"
     );
     // Pre-STV9 headers predate the instruments being cargo; the missing
     // ones are hung at their traditional berths after reading.
-    let uninstrumented = !matches!(header, MAGIC | "STV12" | "STV11" | "STV10" | "STV9");
+    let uninstrumented = !matches!(
+        header,
+        MAGIC | "STV13" | "STV12" | "STV11" | "STV10" | "STV9"
+    );
     // Pre-STV10 headers carry narrow-net coordinates: the cabin was a
     // 6×5 floor then, and the charts past the growth have moved.
-    let narrow = !matches!(header, MAGIC | "STV12" | "STV11" | "STV10");
+    let narrow = !matches!(header, MAGIC | "STV13" | "STV12" | "STV11" | "STV10");
     // Pre-STV11 headers know one room and a barter counter.
-    let roomless = !matches!(header, MAGIC | "STV12" | "STV11");
+    let roomless = !matches!(header, MAGIC | "STV13" | "STV12" | "STV11");
     // Pre-STV12 headers were written when every room declared six ports;
     // an edge through a slot its kind no longer fills is re-seated.
-    let six_ported = !matches!(header, MAGIC | "STV12");
+    let six_ported = !matches!(header, MAGIC | "STV13" | "STV12");
     // Pre-STV13 headers were written before the window family, so their
     // ledger masks are narrower than the table is now.
-    let unglazed = header != MAGIC;
+    let unglazed = !matches!(header, MAGIC | "STV13");
+    // Pre-STV14 headers were written when an offer band ran clean across
+    // the room, doorway and all; a proposal left on what is deck now
+    // walks onto the offer area this build actually has.
+    let doorway_offers = header != MAGIC;
 
     let seed = reader.kv("seed")?;
     let tick = reader.kv("tick")?;
@@ -391,6 +416,9 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         inject_instruments(&reader, &rooms, &mut pieces, &mut next_piece)?;
     }
     validate_stows(&reader, &rooms, &pieces)?;
+    if doorway_offers {
+        walk_proposals_off_the_doorway(&rooms, &mut pieces);
+    }
     let marks = marks
         .into_iter()
         .filter(|id| {
@@ -1055,6 +1083,61 @@ fn berth_aboard(
 /// Hang the instruments a pre-STV9 save predates: each missing
 /// instrument kind goes to its traditional berth (the instrument tail
 /// of `STARTER_CARGO`), or to its first legal cell when the board has
+/// The STV14 migration: a proposal left standing in a doorway's lane.
+///
+/// Before the entry-path law an offer band ran clean across the room,
+/// the door's own lane included, so a mid-trade document can carry a
+/// proposal on cells this build calls plain deck. Left alone those
+/// pieces are still the player's and still legal — but the room has
+/// stopped being offered them, which is a trade quietly withdrawn while
+/// nobody was looking. So they walk: same room, first free berth on its
+/// offer area, in the document's own piece order so the walk is as
+/// deterministic as everything else here. A room with no berth left for
+/// one leaves it where it stands, because a legal berth of the player's
+/// is never worse than the alternative.
+fn walk_proposals_off_the_doorway(rooms: &Rooms, pieces: &mut [Piece]) {
+    // The offer band as it stood before the law: right across the room's
+    // front, doorway and all. Written out here rather than reached for,
+    // because a migration is the one place a retired rule still has to
+    // be said out loud — and because the cells that changed are exactly
+    // the ones this covers and the living derivation no longer chalks.
+    let retired = |kind: RoomKind, x: u8, y: u8| {
+        if !matches!(kind, RoomKind::Trade | RoomKind::Parlor) {
+            return false;
+        }
+        let Some(surf) = kind.surface_of(x, y) else {
+            return false;
+        };
+        let (_, depth) = kind.floor();
+        (matches!(surf, Surf::Front)
+            || matches!(surf, Surf::Floor | Surf::Ceiling) && y + 2 >= COURSES + depth)
+            && kind.tile_of(x, y) != Some(Tile::Offer)
+    };
+    let stranded: Vec<usize> = pieces
+        .iter()
+        .enumerate()
+        .filter(|(_, piece)| match piece.loc {
+            Loc::Hold { room, x, y } => rooms.kind(room).is_some_and(|kind| retired(kind, x, y)),
+            _ => false,
+        })
+        .map(|(at, _)| at)
+        .collect();
+    for at in stranded {
+        let Loc::Hold { room, .. } = pieces[at].loc else {
+            continue;
+        };
+        let (id, kind) = (pieces[at].id, pieces[at].kind);
+        let settled: Vec<Piece> = pieces.to_vec();
+        let Some((x, y)) = barter::tiles_of(rooms, room, Tile::Offer)
+            .into_iter()
+            .find(|&(x, y)| super::placement_legal(rooms, &settled, id, kind, room, x, y))
+        else {
+            continue;
+        };
+        pieces[at].loc = Loc::Hold { room, x, y };
+    }
+}
+
 /// claimed that wall. A board with room for none fails the load whole —
 /// a ship without its chart tank or launch lever is the soft-lock the
 /// vital rule exists to prevent, so the reader will not construct one.
@@ -1667,6 +1750,59 @@ mod tests {
         };
         assert_eq!(sim.rooms().kind(room), Some(RoomKind::Burner));
         assert_eq!(sim.rooms().tile(room, x, y), Some(Tile::Consume));
+    }
+
+    /// The entry-path law's migration: a pre-STV14 document's proposal
+    /// may be standing on cells this build calls plain deck, and a trade
+    /// quietly withdrawn on load is a worse answer than a trade that
+    /// moved. So it moves — same room, onto the offer area the law
+    /// actually leaves.
+    #[test]
+    fn a_proposal_left_in_the_doorway_walks_onto_the_offer_area() {
+        use super::super::room::RoomKind;
+
+        let sim = Sim::new(19);
+        let trade = sim
+            .rooms()
+            .find(RoomKind::Trade)
+            .expect("docked, so a market is alongside");
+        // A cell the old band chalked and this one does not: the door's
+        // own lane, at the front of the room.
+        let (_, depth) = RoomKind::Trade.floor();
+        let (x, y) = (COURSES, COURSES + depth - 1);
+        assert!(RoomKind::Trade.entry_path(x, y), "that is the way in");
+        assert_eq!(RoomKind::Trade.tile_of(x, y), Some(Tile::Plain));
+        let forged = sim.save_string().replacen(MAGIC, "STV13", 1).replacen(
+            "next_piece",
+            &format!("piece 900 7 0 0 hold {trade} {x} {y}\nnext_piece"),
+            1,
+        );
+        let loaded = Sim::from_save(&forged).expect("an STV13 document must still load");
+        let piece = loaded
+            .pieces()
+            .iter()
+            .find(|piece| piece.id == 900)
+            .copied()
+            .expect("the proposal survives the load");
+        let Loc::Hold { room, x, y } = piece.loc else {
+            panic!("a proposal occupies a cell")
+        };
+        assert_eq!(
+            room, trade,
+            "the proposal stayed in the room it was made to"
+        );
+        assert_eq!(
+            loaded.rooms().tile(room, x, y),
+            Some(Tile::Offer),
+            "the proposal is standing on deck rather than on the offer area"
+        );
+        // And a document this build wrote is left exactly alone.
+        let fresh = Sim::from_save(&loaded.save_string()).expect("round trip");
+        assert_eq!(
+            fresh.pieces().iter().find(|p| p.id == 900).map(|p| p.loc),
+            Some(piece.loc),
+            "an STV14 document's berths are not migrated"
+        );
     }
 
     /// The window family's migration: a pre-STV13 document's discovery

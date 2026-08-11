@@ -13,7 +13,9 @@
 //! fluff, chit, bottled midnight in the cubbies), a gnawed rug pinned
 //! under the couch, enamel and luminous coats on the walls, the trade
 //! room's own goods on its stock band (seedlings, gas, gnawed scrap,
-//! one of them marked) and a proposal standing on its offer band. A rat
+//! one of them marked) and a three-piece proposal standing on its offer
+//! band — which sits clear of the door's own lane now, so the showcase
+//! also shows the entry-path law holding (docs/ROOMS.md). A rat
 //! rides at (4, 4). Two rules shape the roster: `VeryMysteriousCrate`
 //! stays ashore (at most one suspicious piece aboard), and the fuel
 //! hopper arrives EMPTY, so staging is tested by casting off and
@@ -95,8 +97,8 @@ piece 13 0 1 0 stow 0 0
 piece 14 13 2 0 stow 0 1
 piece 15 14 0 0 stow 0 2
 piece 16 4 3 0 hold 2 3 3
-piece 17 7 1 0 hold 2 3 6
-piece 18 1 2 0 hold 2 4 6
+piece 17 7 1 0 hold 2 6 6
+piece 18 1 2 0 hold 2 7 6
 piece 19 11 0 0 hold 0 8 3
 piece 20 2 1 0 hold 0 7 7
 piece 21 5 0 0 hold 2 5 3

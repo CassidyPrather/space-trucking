@@ -435,6 +435,51 @@ impl RoomKind {
         })
     }
 
+    /// **The entry path of a declared door**: the straight run in from
+    /// that doorway — the deck lane its aperture opens onto, carried
+    /// clean across the room, and the wall and ceiling cells standing
+    /// over that lane.
+    ///
+    /// A door on the aft or front wall opens a lane of COLUMNS and a
+    /// body crossing it walks fore-and-aft; a door on a side wall opens
+    /// a lane of ROWS and the body walks athwart. Either way the lane is
+    /// read off the port declaration and nothing else, so it moves when
+    /// a door moves and exists only where a door does.
+    #[must_use]
+    pub fn entry_path(self, x: u8, y: u8) -> bool {
+        let Some(surf) = self.surface_of(x, y) else {
+            return false;
+        };
+        let (width, _) = self.floor();
+        self.declared().any(|(_, port)| {
+            let Port::Door { wall, offset } = port else {
+                return false;
+            };
+            let lane = |n: u8| n >= offset && n < offset + APERTURE;
+            let across = wall % 2 == 0;
+            match surf {
+                Surf::Floor => {
+                    if across {
+                        lane(x - COURSES)
+                    } else {
+                        lane(y - COURSES)
+                    }
+                }
+                // The ceiling chart folds over the starboard cornice, so
+                // its columns run backwards.
+                Surf::Ceiling => {
+                    if across {
+                        lane(2 * COURSES + 2 * width - 1 - x)
+                    } else {
+                        lane(y - COURSES)
+                    }
+                }
+                Surf::Aft | Surf::Front => across && lane(x - COURSES),
+                Surf::Port | Surf::Starboard => !across && lane(y - COURSES),
+            }
+        })
+    }
+
     /// What net cell `(x, y)` is, or `None` where there is no cell.
     ///
     /// This is the single declaration the rules and the paint both read.
@@ -460,7 +505,7 @@ impl RoomKind {
             || matches!((surf, y), (Surf::Floor | Surf::Ceiling, _) if y == COURSES);
         let front = matches!(surf, Surf::Front)
             || matches!(surf, Surf::Floor | Surf::Ceiling) && y + 2 >= COURSES + h;
-        Some(match self {
+        let tile = match self {
             // The whole furnace room is hazard, deck to cornice: anything
             // carried in is fuel, and a wall instrument burns as readily
             // as a couch. Staging is an ordinary berth transition into an
@@ -469,6 +514,33 @@ impl RoomKind {
             Self::Trade | Self::Wreck if aft => Tile::Stock,
             Self::Trade | Self::Parlor if front => Tile::Offer,
             _ => Tile::Plain,
+        };
+        // **The entry-path law: an offer area may not sit in the way in.**
+        //
+        // The playtest walked through a station's chalk on the way to
+        // every wall it had, at every station, because a band across the
+        // room is a band across the door's own lane as well. Proposing is
+        // a thing you do deliberately, at a place you go to; ground you
+        // cross on your way in is not that place, and chalk you tread on
+        // without meaning to says the opposite of what the class means.
+        //
+        // Stated relative to the DOORS rather than to a wall, so it is
+        // one law and not twelve tunings: whatever a kind's bands would
+        // have said, a cell in a declared door's [`entry_path`] is
+        // ordinary deck. It therefore holds for every kind the game has
+        // and every kind it grows, it moves when a door moves, and a
+        // station cannot opt out of it, because a station never had a
+        // say in it — the room kind declares bands and ports, and this
+        // reads both.
+        //
+        // `Stock` is deliberately untouched. A shopfront either side of
+        // the door you came in by is a shopfront; goods are the room's
+        // to place where it likes, and the tell that they are not yours
+        // is that pressing one marks it instead of lifting it.
+        Some(if tile == Tile::Offer && self.entry_path(x, y) {
+            Tile::Plain
+        } else {
+            tile
         })
     }
 }
@@ -1512,6 +1584,74 @@ mod tests {
         );
         assert!(rooms.attach(CABIN, 3, RoomKind::Burner, 3).is_ok());
         assert_eq!(rooms.attach(9, 0, RoomKind::Trade, 0), Err(Refusal::Absent));
+    }
+
+    /// **The offer area is never in the way in.** The owner's rule
+    /// change, pinned over every room kind and every declared port —
+    /// which is the whole point of stating it against the doors instead
+    /// of against a wall: one law, twelve stations, and nothing for a
+    /// station to opt out of.
+    ///
+    /// The playtest walked through a station's chalk on the way in, at
+    /// every station, because a band across the room is a band across
+    /// the door's own lane as well. Now the lane is ordinary deck from
+    /// the sill to the far wall, and the chalk sits either side of it.
+    #[test]
+    fn no_offer_tile_ever_lies_in_a_doors_entry_path() {
+        for kind in ROOM_KINDS {
+            let (cols, rows) = kind.grid();
+            let mut offers = 0;
+            let mut lane = 0;
+            for y in 0..rows {
+                for x in 0..cols {
+                    if kind.entry_path(x, y) {
+                        lane += 1;
+                        assert_ne!(
+                            kind.tile_of(x, y),
+                            Some(Tile::Offer),
+                            "{kind:?} chalks ({x}, {y}), which is the way in"
+                        );
+                    }
+                    offers += usize::from(kind.tile_of(x, y) == Some(Tile::Offer));
+                }
+            }
+            // The law may not empty the thing it constrains: a kind that
+            // offers must still have somewhere to lay a proposal, on the
+            // deck AND off it (a painting is proposed too).
+            if matches!(kind, RoomKind::Trade | RoomKind::Parlor) {
+                assert!(offers > 0, "{kind:?} has no offer area left at all");
+                for want in [Surf::Floor, Surf::Front, Surf::Ceiling] {
+                    assert!(
+                        (0..rows).any(|y| (0..cols).any(|x| kind.surface_of(x, y) == Some(want)
+                            && kind.tile_of(x, y) == Some(Tile::Offer))),
+                        "{kind:?} lost its whole {want:?} offer band"
+                    );
+                }
+            }
+            // And a path exists wherever a door does, so the law is not
+            // quietly vacuous on some kind.
+            let doors = kind
+                .declared()
+                .filter(|(_, port)| matches!(port, Port::Door { .. }))
+                .count();
+            assert_eq!(lane > 0, doors > 0, "{kind:?} disagrees about its doors");
+            // Every cell of the lane traces back to a door, floor to
+            // ceiling: the run in is a volume, not a stripe of deck.
+            for (port, declared) in kind.declared() {
+                let Port::Door { .. } = declared else {
+                    continue;
+                };
+                let step = kind
+                    .aperture_cells(port)
+                    .expect("a declared port punches cells");
+                for (x, y) in step {
+                    assert!(
+                        kind.entry_path(x, y),
+                        "{kind:?} port {port} punches ({x}, {y}) outside its own entry path"
+                    );
+                }
+            }
+        }
     }
 
     /// **The doorstep is deck, and it is exactly the deck a door stands

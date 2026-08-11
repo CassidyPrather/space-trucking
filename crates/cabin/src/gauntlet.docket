@@ -491,6 +491,7 @@ Umbra | berth-reached | decor[11] Slab
 Umbra | berth-reached | decor[16] Ring
 Umbra | berth-reached | decor[1] Post
 Umbra | berth-reached | decor[5] Post
+Umbra | coplanar-faces | decor[22] Slab / Plain field (16, 6)
 Umbra | coplanar-faces | decor[28] Slab / Plain field (13, 4)
 Umbra | coplanar-faces | handshake trim[0] Ring / handshake trim[1] Ring
 

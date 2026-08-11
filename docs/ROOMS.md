@@ -507,6 +507,48 @@ is the refusal, and it is the *principled* replacement for the dying
 `Violation::Aisle` — the doorway stays clear because it is shared
 space, not because a walking body needs the room.
 
+### The entry-path law
+
+> **An `Offer` band may not fall in a declared door's own lane.**
+
+A colored region is a band across the room, which means it is also a
+band across the doorway's lane — so the playtest walked through a
+station's chalk on the way in, at every station, and read it as walking
+on somebody's counter. Proposing is deliberate: it is a thing you do at
+a place you go to, and ground you cross without meaning to is not that
+place.
+
+The fix is a law rather than twelve tunings, and it is stated against
+the **doors** rather than against a wall, so it moves when a door moves
+and holds for every room kind there is or ever will be:
+
+- A door's **entry path** is the straight run in from it — the deck lane
+  its aperture opens onto, carried clean across the room, and the wall
+  and ceiling cells standing over that lane. A door on the aft or front
+  wall opens a lane of columns; one on a side wall opens a lane of rows.
+- Whatever a kind's bands would have said, a cell in any declared door's
+  entry path is ordinary deck (`RoomKind::tile_of`). A station has no
+  say in it, because a station never had one: the room kind declares
+  bands and ports, and the law reads both.
+
+`Stock` is deliberately untouched. A shopfront either side of the door
+you came in by is a shopfront; the room's goods are the room's to place
+where it likes, and the tell that they are not yours is that pressing
+one marks it instead of lifting it. What a room may NOT do is put those
+goods on the deck its own door stands on (`RoomKind::doorstep`) — the
+shelf filled row-major from the aft wall and the first two floor cells
+of a calling room's stock band are exactly the two its doorway lands in,
+so every derelict stocked its own door shut and read, from the cabin, as
+an open seam with a gilded idol wedged in it. The studded tread stays
+what it says it is: the player may stand a crate on it, because a
+doorway is traffic and not danger. The room may not, because the room is
+putting things where the player has to walk.
+
+The tile layout changed what a berth means, so the save bumped: `STV14`,
+and a pre-STV14 proposal left standing in a lane walks onto the offer
+area the law actually leaves. Conservation before convenience — the
+proposal comes out standing somewhere else, never withdrawn.
+
 ## The new barter: six beats
 
 The core slice, one flow for every POI. Per-POI agents differentiate

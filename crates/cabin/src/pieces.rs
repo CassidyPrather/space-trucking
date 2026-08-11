@@ -761,15 +761,21 @@ pub fn berth_box(charts: &[(Station, SimSurface)], rect: Rect) -> Option<(Vec3, 
 /// whose cup opens along the wall and a floor lamp whose base plate
 /// stands on edge like a wheel both hang perfectly true by the first
 /// question and are both wrong, and a screenshot of a lit lamp shows
-/// neither. So the turn a claim-bearing part is given is written down
-/// once, here, and read twice: by the builder that spawns it and by the
-/// gauntlet that judges it (`crate::gauntlet`).
+/// neither.
+///
+/// **The turn is derived from the claim, never written beside it.** It
+/// used to be a hand-authored quaternion sitting next to the direction
+/// it was supposed to produce, which is a design that guarantees the
+/// bug it then detects: two of the four disagreed, and they are the two
+/// the playtest found by eye. A claim-bearing part is a body of
+/// revolution about its own axis — a cone, a cylinder, a torus — so any
+/// turn that carries [`Feature::axis`] onto [`Feature::want`] draws the
+/// same body, and the shortest one is as good as any. Nothing is left
+/// for a builder and a name to disagree about.
 #[derive(Clone, Copy, Debug)]
 pub struct Feature {
     /// What the part is called in its builder.
     pub name: &'static str,
-    /// The turn the rig gives it, in rig-local space.
-    pub turn: Quat,
     /// The part's own meaningful axis in ITS body's frame — see
     /// [`MOUTH`], [`AXLE`].
     pub axis: Vec3,
@@ -777,6 +783,15 @@ pub struct Feature {
     /// `+Z` is into the room on every berth the net has, local `+Y` is
     /// up off the deck.
     pub want: Vec3,
+}
+
+impl Feature {
+    /// The turn the rig gives the part: the shortest one that carries
+    /// its axis onto the direction its name claims.
+    #[must_use]
+    pub fn turn(&self) -> Quat {
+        Quat::from_rotation_arc(self.axis.normalize(), self.want.normalize())
+    }
 }
 
 /// A cone's open end: Bevy stands a `Cone` apex-up, so its mouth faces
@@ -802,7 +817,6 @@ pub fn features(kind: Kind) -> Vec<Feature> {
         // aimed along the wall lights the wall.
         Kind::WallLamp => vec![Feature {
             name: "sconce cup",
-            turn: Quat::from_rotation_z(-FRAC_PI_2),
             axis: MOUTH,
             want: Vec3::Z,
         }],
@@ -811,13 +825,11 @@ pub fn features(kind: Kind) -> Vec<Feature> {
         Kind::FloorLamp => vec![
             Feature {
                 name: "base plate",
-                turn: Quat::from_rotation_x(FRAC_PI_2),
                 axis: AXLE,
                 want: Vec3::Y,
             },
             Feature {
                 name: "shade",
-                turn: Quat::IDENTITY,
                 axis: MOUTH,
                 want: Vec3::NEG_Y,
             },
@@ -826,7 +838,6 @@ pub fn features(kind: Kind) -> Vec<Feature> {
         // lamp — one storey up, and the same promise.
         Kind::CeilingLamp => vec![Feature {
             name: "shade",
-            turn: Quat::IDENTITY,
             axis: MOUTH,
             want: Vec3::NEG_Y,
         }],
@@ -834,7 +845,6 @@ pub fn features(kind: Kind) -> Vec<Feature> {
         // berth at whoever is looking at it.
         Kind::CasinoChip => vec![Feature {
             name: "chip face",
-            turn: Quat::from_rotation_x(FRAC_PI_2),
             axis: AXLE,
             want: Vec3::Z,
         }],
@@ -848,7 +858,7 @@ fn feature(kind: Kind, name: &'static str) -> Quat {
     features(kind)
         .into_iter()
         .find(|feature| feature.name == name)
-        .map_or(Quat::IDENTITY, |feature| feature.turn)
+        .map_or(Quat::IDENTITY, |feature| feature.turn())
 }
 
 /// Cubby anchor centres in the cabinet rig's local space, sim units.

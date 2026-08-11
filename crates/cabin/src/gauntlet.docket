@@ -465,7 +465,3 @@ Wreck | berth-reached | decor[15] Slab
 Wreck | berth-reached | decor[16] Slab
 Wreck | berth-reached | decor[19] Slab
 Wreck | coplanar-faces | decor[8] Slab / decor[9] Slab
-
-# ---- rigs ----
-rigs | prop-points | FloorLamp base plate
-rigs | prop-points | WallLamp sconce cup

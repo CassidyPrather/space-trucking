@@ -1146,11 +1146,18 @@ fn coplanar(stage: &Stage) -> Vec<Finding> {
 /// its own parts are. Both bugs the playtest found in this class — a
 /// sconce lighting the wall it is bolted to, a floor lamp's base plate
 /// standing on edge — hang perfectly true by the first question.
+///
+/// It caught them by comparing a hand-authored turn against the claim
+/// written beside it, and the cure was to stop writing the turn down:
+/// [`crate::pieces::Feature::turn`] derives it from the claim, so the
+/// two cannot disagree. What is left for this to find is a claim that
+/// points nowhere — an axis or a want somebody left degenerate — and
+/// any part that goes back to being turned by hand.
 fn prop_points() -> Vec<Finding> {
     let mut out = Vec::new();
     for kind in Kind::ALL {
         for feature in crate::pieces::features(kind) {
-            let got = (feature.turn * feature.axis).normalize_or_zero();
+            let got = (feature.turn() * feature.axis).normalize_or_zero();
             let want = feature.want.normalize_or_zero();
             if got.dot(want) > 0.99 {
                 continue;

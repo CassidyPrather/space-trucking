@@ -76,7 +76,7 @@ const WALK_SPEED: f32 = 1.3;
 pub const DUCK_HEIGHT: f32 = 0.82;
 const DUCK_RATE: f32 = 3.4;
 const LOOK_SPEED: f32 = 0.0026;
-const PITCH_LIMIT: f32 = 1.35;
+pub const PITCH_LIMIT: f32 = 1.35;
 
 // ---- The bay: the hold grid unfolded onto the aft of the cabin ----
 
@@ -505,44 +505,67 @@ impl CameraRig {
     }
 }
 
-/// The pose a focus parks at: panel extents fitted to the camera FOV,
-/// eyed along the panel normal, up running up-panel.
+/// The pose a focus parks at: ONE panel's extents fitted to the camera
+/// FOV, eyed along that panel's normal, up running up-panel.
 ///
 /// The surfaces are whatever is standing right now, not a fixed list:
 /// an instrument's station rides its cargo, so its pose is its berth's
 /// (BAY.md, "Focus poses become relative to the instrument's berth").
 /// `None` when nothing carries that station — jettisoned, shelved, or
 /// in the player's own hands — and the caller falls back to roam.
-/// Owning two chart tanks widens the fit to frame both: the station is
-/// the instrument, not the piece.
+///
+/// **One instrument, never a group.** This used to widen the fit until
+/// it framed *every* face carrying the station at once, on the reading
+/// that "the station is the instrument, not the piece". That reading
+/// died with the singleton ship. A station rides cargo, cargo lives in
+/// rooms, and a room that came alongside can put a second one of your
+/// instruments a whole hull away — a market's shelf stocks a chart tank
+/// like it stocks anything else (`barter::stock_kind`), and the fit then
+/// centred itself between two rooms and parked the eye in the hull
+/// between them, looking at neither. So the fit takes the ONE face
+/// nearest `from` — the body's own standing position, which is the
+/// instrument the player walked up to and clicked — and frames that.
+/// Two tanks on one wall now focus the one you are in front of, which is
+/// the one you asked for either way.
 #[must_use]
-pub fn focus_pose(focus: Focus, panels: &[(Station, SimSurface)]) -> Option<(Vec3, Quat)> {
-    let group: Vec<&SimSurface> = panels
+pub fn focus_pose(
+    focus: Focus,
+    panels: &[(Station, SimSurface)],
+    from: Vec3,
+) -> Option<(Vec3, Quat)> {
+    let face = panels
         .iter()
         .filter(|(station, _)| Focus::of(*station) == Some(focus))
-        .map(|(_, s)| s)
-        .collect();
-    // Combined center and planar extents, measured in the lead
-    // surface's frame (a group's faces share a tilt by construction —
-    // two chart tanks on one wall, say).
-    let lead = *group.first()?;
-    let u = lead.half_u.normalize();
-    let v = lead.half_v.normalize();
-    let center = group.iter().fold(Vec3::ZERO, |acc, s| acc + s.center) / group.len() as f32;
-    let mut half_w: f32 = 0.0;
-    let mut half_h: f32 = 0.0;
-    for s in &group {
-        let offset = s.center - center;
-        half_w = half_w.max(offset.dot(u).abs() + s.half_u.length() + PLATE_MARGIN);
-        half_h = half_h.max(offset.dot(v).abs() + s.half_v.length() + PLATE_MARGIN);
-    }
+        .map(|(_, surface)| surface)
+        .min_by(|a, b| {
+            a.center
+                .distance_squared(from)
+                .total_cmp(&b.center.distance_squared(from))
+        })?;
+    let v = face.half_v.normalize();
+    let half_w = face.half_u.length() + PLATE_MARGIN;
+    let half_h = face.half_v.length() + PLATE_MARGIN;
     let aspect = CRUNCH_W as f32 / CRUNCH_H as f32;
     let half_hfov = ((FOV * 0.5).tan() * aspect).atan();
     let distance =
         (half_w * FIT_MARGIN / half_hfov.tan()).max(half_h * FIT_MARGIN / (FOV * 0.5).tan());
-    let eye = center + lead.normal() * distance;
-    let look = Transform::from_translation(eye).looking_at(center, -v);
+    let eye = face.center + face.normal() * distance;
+    let look = Transform::from_translation(eye).looking_at(face.center, -v);
     Some((eye, look.rotation))
+}
+
+/// **The camera stands where a body could stand.** A focus pose that
+/// lands outside every room is not a view, it is a wall — and a player
+/// looking at the inside of a hull plate has no way to know the state
+/// machine thinks everything is fine. Any pose this refuses is treated
+/// exactly like an instrument that was carried off: there is no focus,
+/// and [`pose`] walks back to roam.
+///
+/// The law is stated here rather than assumed by [`focus_pose`]'s
+/// arithmetic, because arithmetic is what put the camera in the wall.
+#[must_use]
+pub fn pose_is_aboard(plan: &crate::room::Plan, eye: Vec3) -> bool {
+    plan.room_at(eye).is_some()
 }
 
 /// Every live surface as a plain pair, for the pose maths — the
@@ -1128,7 +1151,14 @@ pub fn steer(
                 }
             }
         }
-        Mode::Focused { .. } => {
+        // **The way out is the same three keys from anywhere that is not
+        // roam, including mid-glide.** A glide is sub-half-second and
+        // used to swallow input on that argument, which is fine right up
+        // until the pose at the far end of it is somewhere the player
+        // cannot read — and then a swallowed `Esc` is the difference
+        // between a bad camera and a soft-lock. `Mode::ToRoam` is
+        // already on its way home and needs no second answer.
+        Mode::Focused { .. } | Mode::ToFocus { .. } => {
             if toggle
                 || keys.just_pressed(KeyCode::Escape)
                 || buttons.just_pressed(MouseButton::Right)
@@ -1139,8 +1169,7 @@ pub fn steer(
                 };
             }
         }
-        // Glides ignore input; they are sub-half-second.
-        Mode::ToFocus { .. } | Mode::ToRoam { .. } => {}
+        Mode::ToRoam { .. } => {}
     }
 }
 
@@ -1151,8 +1180,13 @@ pub fn steer(
 /// tank carried off mid-glide simply has no pose left — the camera
 /// lets go and walks back (`Mode::ToRoam`) rather than aiming at a
 /// hole in the wall.
+///
+/// A pose that would put the eye outside every room counts as no pose at
+/// all ([`pose_is_aboard`]), and takes the same way out. The camera is
+/// never anywhere the body could not be.
 pub fn pose(
     time: Res<Time>,
+    plan: Res<crate::room::Plan>,
     surfaces: Query<(&Station, &SimSurface), Without<CabinCamera>>,
     mut rig: ResMut<CameraRig>,
     mut camera: Single<&mut Transform, With<CabinCamera>>,
@@ -1160,12 +1194,17 @@ pub fn pose(
     let panels = live_panels(&surfaces);
     let dt = time.delta_secs();
     let (roam_pos, roam_rot) = (rig.pos, rig.roam_rotation());
-    // The instrument left with its cargo: let go of the focus here and
-    // walk back from wherever the glide had got to.
+    // The fit is measured from where the BODY stands, not from where the
+    // camera happens to have got to: mid-glide the camera is nowhere in
+    // particular, and a fit that chased it would pick a different
+    // instrument every frame.
+    let aim =
+        |focus| focus_pose(focus, &panels, roam_pos).filter(|(eye, _)| pose_is_aboard(&plan, *eye));
+    // The instrument left with its cargo, or the pose it wants is not a
+    // place to stand: let go of the focus here and walk back from
+    // wherever the glide had got to.
     let orphaned = match rig.mode {
-        Mode::Focused { focus } | Mode::ToFocus { focus, .. } => {
-            focus_pose(focus, &panels).is_none()
-        }
+        Mode::Focused { focus } | Mode::ToFocus { focus, .. } => aim(focus).is_none(),
         Mode::Roam | Mode::ToRoam { .. } => false,
     };
     if orphaned {
@@ -1176,9 +1215,9 @@ pub fn pose(
     }
     let (pos, rot) = match &mut rig.mode {
         Mode::Roam => (roam_pos, roam_rot),
-        Mode::Focused { focus } => focus_pose(*focus, &panels).unwrap_or((roam_pos, roam_rot)),
+        Mode::Focused { focus } => aim(*focus).unwrap_or((roam_pos, roam_rot)),
         Mode::ToFocus { focus, from, t } => {
-            let (to_pos, to_rot) = focus_pose(*focus, &panels).unwrap_or((roam_pos, roam_rot));
+            let (to_pos, to_rot) = aim(*focus).unwrap_or((roam_pos, roam_rot));
             *t = (*t + dt / GLIDE).min(1.0);
             let s = smooth(*t);
             let out = (from.0.lerp(to_pos, s), from.1.slerp(to_rot, s));
@@ -1424,7 +1463,8 @@ mod tests {
         let slabs = structure();
         for (station, surface) in stations() {
             let focus = Focus::of(station).expect("every station is focusable");
-            let (eye, rot) = focus_pose(focus, &stations()).expect("every station has a pose");
+            let (eye, rot) =
+                focus_pose(focus, &stations(), BOOT_EYE).expect("every station has a pose");
             let mut points = corner_points(&surface);
             points.extend(control_points(station, &surface));
             for point in points {
@@ -1451,7 +1491,8 @@ mod tests {
         let slabs = structure();
         let stations = stations();
         for focus in [Focus::Tank, Focus::Lever] {
-            let (eye, rot) = focus_pose(focus, &stations).expect("the starter board hangs it");
+            let (eye, rot) =
+                focus_pose(focus, &stations, BOOT_EYE).expect("the starter board hangs it");
             assert!(
                 eye.y > 0.2 && eye.y < 2.2 && eye.x.abs() < 2.15 && eye.z > -1.85 && eye.z < 2.35,
                 "{focus:?} eye {eye} left the cabin"
@@ -1463,18 +1504,25 @@ mod tests {
                     slab.center
                 );
             }
-            // The view axis should pass close to every grouped panel
-            // center: no panel of the group may sit behind the camera.
-            for (station, surface) in &stations {
-                if Focus::of(*station) == Some(focus) {
-                    let to_panel = (surface.center - eye).normalize();
-                    let forward = rot * Vec3::NEG_Z;
-                    assert!(
-                        forward.dot(to_panel) > 0.7,
-                        "{focus:?} does not face {station:?}"
-                    );
-                }
-            }
+            // The view axis must run into the instrument it framed: the
+            // nearest face carrying that station, which is the one the
+            // body is standing in front of.
+            let framed = stations
+                .iter()
+                .filter(|(station, _)| Focus::of(*station) == Some(focus))
+                .min_by(|(_, a), (_, b)| {
+                    a.center
+                        .distance_squared(BOOT_EYE)
+                        .total_cmp(&b.center.distance_squared(BOOT_EYE))
+                })
+                .expect("the starter board hangs it");
+            let to_panel = (framed.1.center - eye).normalize();
+            let forward = rot * Vec3::NEG_Z;
+            assert!(
+                forward.dot(to_panel) > 0.7,
+                "{focus:?} does not face {:?}",
+                framed.0
+            );
         }
     }
 
@@ -1487,8 +1535,101 @@ mod tests {
     fn a_jettisoned_instrument_leaves_no_pose() {
         for focus in [Focus::Tank, Focus::Lever] {
             assert!(
-                focus_pose(focus, &[]).is_none(),
+                focus_pose(focus, &[], BOOT_EYE).is_none(),
                 "{focus:?} found a pose on a hull that owns no panels"
+            );
+        }
+    }
+
+    /// Where the body stands when the fit is measured, for the tests
+    /// that do not walk: the boot pose, mid-cabin.
+    const BOOT_EYE: Vec3 = Vec3::new(0.0, EYE_HEIGHT, 0.9);
+
+    /// Every mapped surface a running ship would stand up, from a save
+    /// alone: each room's six charts, and the stations riding cargo in
+    /// whichever room the cargo is berthed in.
+    fn world_panels(sim: &space_trucking::sim::Sim) -> Vec<(Station, SimSurface)> {
+        let mut charts: Vec<(Station, SimSurface)> = Vec::new();
+        for (id, room) in sim.rooms().iter() {
+            charts.extend(crate::room::charts(id, room));
+        }
+        let mut panels = charts.clone();
+        for piece in sim.pieces() {
+            if !matches!(piece.loc, Loc::Hold { .. }) {
+                continue;
+            }
+            let rect = layout::piece_rect(sim.pieces(), piece);
+            if let Some(pair) = crate::pieces::instrument_surface(&charts, piece.kind, rect) {
+                panels.push(pair);
+            }
+        }
+        panels
+    }
+
+    /// The plan a running ship would hold, from a save alone.
+    fn world_plan(sim: &space_trucking::sim::Sim) -> crate::room::Plan {
+        let mut plan = crate::room::Plan::default();
+        plan.rooms = sim
+            .rooms()
+            .iter()
+            .map(|(id, room)| crate::room::placed(id, room))
+            .collect();
+        plan
+    }
+
+    /// **A focus lands in the room that holds the instrument.**
+    ///
+    /// The playtest's soft-lock, mechanised. A station rides cargo and
+    /// cargo lives in rooms, so the moment a room comes alongside the
+    /// game can hold two faces answering as one station — a market's
+    /// shelf stocks chart tanks and launch levers like it stocks
+    /// anything else. The old fit averaged them, and the average of a
+    /// face in your cabin and a face in somebody's market is a point in
+    /// the hull between the two: black screen, free cursor, no crosshair,
+    /// and nothing on screen to say the state machine is fine.
+    ///
+    /// Seed 25 is a real, unremarkable first dock that does exactly this.
+    #[test]
+    fn a_focus_lands_in_the_room_that_holds_the_instrument() {
+        use space_trucking::sim::Sim;
+
+        let sim = Sim::new(25);
+        let cabin = space_trucking::sim::room::CABIN;
+        assert!(
+            sim.pieces()
+                .iter()
+                .filter(|piece| !matches!(piece.loc, Loc::Hold { room: 0, .. }))
+                .any(|piece| crate::pieces::instrument(piece.kind).is_some()),
+            "seed 25 is supposed to put an instrument in a room that is not the cabin"
+        );
+        let panels = world_panels(&sim);
+        let plan = world_plan(&sim);
+        // The condition the old fit could not survive, stated: one
+        // station, two faces, two rooms.
+        let split = [Focus::Tank, Focus::Lever].into_iter().any(|focus| {
+            let rooms: Vec<Option<space_trucking::sim::room::RoomId>> = panels
+                .iter()
+                .filter(|(station, _)| Focus::of(*station) == Some(focus))
+                .map(|(_, surface)| plan.room_at(surface.center))
+                .collect();
+            rooms.len() > 1 && rooms.iter().any(|room| *room != rooms[0])
+        });
+        assert!(
+            split,
+            "seed 25 no longer splits a station across two rooms, so this guards nothing"
+        );
+        for focus in [Focus::Tank, Focus::Lever] {
+            let Some((eye, _)) = focus_pose(focus, &panels, BOOT_EYE) else {
+                continue;
+            };
+            assert!(
+                pose_is_aboard(&plan, eye),
+                "{focus:?} parks the eye at {eye} — inside no room at all"
+            );
+            assert_eq!(
+                plan.room_at(eye),
+                Some(cabin),
+                "{focus:?} left the cabin to frame somebody else's stock"
             );
         }
     }

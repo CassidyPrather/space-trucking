@@ -86,6 +86,16 @@ const XRAY_GLOW: f32 = 0.35;
 /// wide over its two 0.55 cells.
 pub const BAY_FIT: f32 = 0.96;
 
+/// **How deep every rig is drawn**, in rig-local sim units: the near
+/// face just behind the berth plane, the far face out at the relief
+/// height the kind builders compose against. Written down here because
+/// two things now read it — the carry tell's wireframe box, which wraps
+/// the body's volume, and the gauntlet, which asks how much air a berth
+/// actually spends so a station's furniture can be told it is standing
+/// in one (`crate::gauntlet`).
+pub const RIG_NEAR: f32 = -2.0;
+pub const RIG_FAR: f32 = 30.0;
+
 /// A stowed piece's scale relative to its host cabinet's: shrunk until
 /// the widest 1×1 rig (~34 sim units across) reads ~0.18 world units —
 /// small enough to sit visibly *inside* a cubby, doors or no doors.
@@ -203,9 +213,21 @@ impl Plugin for PiecesPlugin {
             // are hung before anything reads a surface this frame: the
             // camera's aim, the focus poses, and the pointer all want a
             // surface that agrees with where the hardware actually is.
+            //
+            // And they are hung AFTER the rooms are built, because a
+            // rider is derived from the chart its berth lies on: with
+            // the two merely both "before steer" and unordered against
+            // each other, the very first frame could run this one first,
+            // find no charts, and hang nothing — which reads downstream
+            // as "every instrument aboard was jettisoned" and drops a
+            // booted focus (`--view tank`) on the floor before it ever
+            // has a pose.
             .add_systems(
                 Update,
-                ride_pieces.in_set(Phase::Input).before(crate::rig::steer),
+                ride_pieces
+                    .in_set(Phase::Input)
+                    .after(crate::room::rebuild)
+                    .before(crate::rig::steer),
             )
             .add_systems(
                 Update,
@@ -706,6 +728,127 @@ fn laid_on(station: Station, surface: &SimSurface, rect: Rect) -> (Vec3, Quat, V
         wall_upright(station, surface, rect),
         Vec3::new(su, sv, su.min(sv)),
     )
+}
+
+/// **The world box a rig berthed on `rect` actually fills**, as an
+/// axis-aligned `(lo, hi)` — [`site_on`]'s pose plus the common rig
+/// depth ([`RIG_NEAR`], [`RIG_FAR`]), spun onto the world axes.
+///
+/// Pure, and it exists so the gauntlet can ask what a berth costs in air
+/// without spawning a thing (`crate::gauntlet`). It goes through the very
+/// function the runtime poses rigs with, so a retune of the berth pose
+/// moves the question and the answer together.
+#[must_use]
+pub fn berth_box(charts: &[(Station, SimSurface)], rect: Rect) -> Option<(Vec3, Vec3)> {
+    let (station, surface) = chart_at(charts, rect_center(rect))?;
+    let aft = aft_in(charts, &surface)?;
+    let (pos, rot, scale) = site_on(station, &surface, &aft, rect);
+    // The body, in rig-local sim units: its footprint across, its
+    // footprint deep (a standing rig keeps its bas-relief height), and
+    // the common rig depth along the local normal.
+    let half = Vec3::new(rect.w * 0.5, rect.h * 0.5, (RIG_FAR - RIG_NEAR) * 0.5) * scale;
+    let centre = pos + rot * (Vec3::Z * (f32::midpoint(RIG_NEAR, RIG_FAR) * scale.z));
+    let m = Mat3::from_quat(rot);
+    let reach = m.x_axis.abs() * half.x + m.y_axis.abs() * half.y + m.z_axis.abs() * half.z;
+    Some((centre - reach, centre + reach))
+}
+
+/// **What a named feature of a rig claims about the way it points.**
+///
+/// The kind×chart sweep ([`tests::every_kind_hangs_true_on_every_legal_berth`])
+/// asks whether a rig is turned the way its BERTH says; nothing asked
+/// whether the rig's own parts point where their names say. A sconce
+/// whose cup opens along the wall and a floor lamp whose base plate
+/// stands on edge like a wheel both hang perfectly true by the first
+/// question and are both wrong, and a screenshot of a lit lamp shows
+/// neither. So the turn a claim-bearing part is given is written down
+/// once, here, and read twice: by the builder that spawns it and by the
+/// gauntlet that judges it (`crate::gauntlet`).
+#[derive(Clone, Copy, Debug)]
+pub struct Feature {
+    /// What the part is called in its builder.
+    pub name: &'static str,
+    /// The turn the rig gives it, in rig-local space.
+    pub turn: Quat,
+    /// The part's own meaningful axis in ITS body's frame — see
+    /// [`MOUTH`], [`AXLE`].
+    pub axis: Vec3,
+    /// Where that axis has to end up, in the rig's local frame: local
+    /// `+Z` is into the room on every berth the net has, local `+Y` is
+    /// up off the deck.
+    pub want: Vec3,
+}
+
+/// A cone's open end: Bevy stands a `Cone` apex-up, so its mouth faces
+/// its own `-Y`. A shade, a cup, a horn — the direction the light or the
+/// hopper actually goes.
+pub const MOUTH: Vec3 = Vec3::NEG_Y;
+
+/// A cylinder's or a torus's axle: Bevy stands a `Cylinder` on its own
+/// `+Y`. For a disc — a base plate, a chip — this is the way its FACE
+/// looks.
+pub const AXLE: Vec3 = Vec3::Y;
+
+/// Every claim-bearing feature of one kind's rig.
+///
+/// Deliberately short and open: a part earns a row here when its
+/// orientation carries a promise a viewer would notice being broken. The
+/// rest of a rig is composition, and composition is what screenshots are
+/// actually good at.
+#[must_use]
+pub fn features(kind: Kind) -> Vec<Feature> {
+    match kind {
+        // A sconce throws its light INTO the room it is bolted to; a cup
+        // aimed along the wall lights the wall.
+        Kind::WallLamp => vec![Feature {
+            name: "sconce cup",
+            turn: Quat::from_rotation_z(-FRAC_PI_2),
+            axis: MOUTH,
+            want: Vec3::Z,
+        }],
+        // A standing lamp rests on a plate that LIES on the deck, and
+        // pours its light down out of the shade over the bulb.
+        Kind::FloorLamp => vec![
+            Feature {
+                name: "base plate",
+                turn: Quat::from_rotation_x(FRAC_PI_2),
+                axis: AXLE,
+                want: Vec3::Y,
+            },
+            Feature {
+                name: "shade",
+                turn: Quat::IDENTITY,
+                axis: MOUTH,
+                want: Vec3::NEG_Y,
+            },
+        ],
+        // The pendant hangs its shade over its bulb, same as the floor
+        // lamp — one storey up, and the same promise.
+        Kind::CeilingLamp => vec![Feature {
+            name: "shade",
+            turn: Quat::IDENTITY,
+            axis: MOUTH,
+            want: Vec3::NEG_Y,
+        }],
+        // A chip is read off its face, so its face looks out of the
+        // berth at whoever is looking at it.
+        Kind::CasinoChip => vec![Feature {
+            name: "chip face",
+            turn: Quat::from_rotation_x(FRAC_PI_2),
+            axis: AXLE,
+            want: Vec3::Z,
+        }],
+        _ => Vec::new(),
+    }
+}
+
+/// One kind's feature by name — the builders' way in, so a turn is
+/// spelled once and the gauntlet reads exactly what got spawned.
+fn feature(kind: Kind, name: &'static str) -> Quat {
+    features(kind)
+        .into_iter()
+        .find(|feature| feature.name == name)
+        .map_or(Quat::IDENTITY, |feature| feature.turn)
 }
 
 /// Cubby anchor centres in the cabinet rig's local space, sim units.
@@ -2656,7 +2799,7 @@ fn spawn_rig(
     // as UI debris). Twelve edges around the footprint and the rigs'
     // common depth.
     let (hx, hy) = (fw.mul_add(0.5, 3.0), fh.mul_add(0.5, 3.0));
-    let (z0, z1) = (-2.0, 30.0);
+    let (z0, z1) = (RIG_NEAR, RIG_FAR);
     let rail_x = rig.meshes.add(Cuboid::new(hx.mul_add(2.0, 2.6), 2.6, 2.6));
     let rail_y = rig.meshes.add(Cuboid::new(2.6, hy.mul_add(2.0, 2.6), 2.6));
     let rail_z = rig.meshes.add(Cuboid::new(2.6, 2.6, z1 - z0 + 2.6));
@@ -3167,7 +3310,8 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
             rig.part(
                 Cylinder::new(r, 9.0),
                 body,
-                Transform::from_xyz(0.0, 0.0, 4.5).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                Transform::from_xyz(0.0, 0.0, 4.5)
+                    .with_rotation(feature(Kind::CasinoChip, "chip face")),
             );
             let rim = rig.tint(palette::mix(color, palette::SHADOW, 0.3));
             rig.part(
@@ -3202,7 +3346,8 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                     height: 12.0,
                 },
                 body,
-                Transform::from_xyz(0.0, fh * 0.04, 10.0),
+                Transform::from_xyz(0.0, fh * 0.04, 10.0)
+                    .with_rotation(feature(Kind::CeilingLamp, "shade")),
             );
             let root = rig.root;
             lamp_bulb(rig, piece, root, Vec3::new(0.0, -fh * 0.14, 10.0), 3.4);
@@ -3242,7 +3387,7 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 Mesh3d(cup),
                 MeshMaterial3d(body),
                 Transform::from_xyz(fw * 0.10, 0.0, 10.0)
-                    .with_rotation(Quat::from_rotation_z(-FRAC_PI_2)),
+                    .with_rotation(feature(Kind::WallLamp, "sconce cup")),
                 ChildOf(arm_root),
             ));
             lamp_bulb(rig, piece, arm_root, Vec3::new(-fw * 0.12, 0.0, 10.0), 3.2);
@@ -3254,7 +3399,7 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                 Cylinder::new(fw * 0.26, 3.2),
                 rig.skin.plate_shade.clone(),
                 Transform::from_xyz(0.0, -fh * 0.41, 2.4)
-                    .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                    .with_rotation(feature(Kind::FloorLamp, "base plate")),
             );
             rig.part(
                 Cylinder::new(1.3, fh * 0.72),
@@ -3267,7 +3412,8 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
                     height: 13.0,
                 },
                 body,
-                Transform::from_xyz(0.0, fh * 0.33, 11.0),
+                Transform::from_xyz(0.0, fh * 0.33, 11.0)
+                    .with_rotation(feature(Kind::FloorLamp, "shade")),
             );
             let root = rig.root;
             lamp_bulb(rig, piece, root, Vec3::new(0.0, fh * 0.21, 11.0), 3.4);

@@ -71,7 +71,7 @@ pub const CEIL_Y: f32 = 2.26;
 const CEIL_SLAB_Y: f32 = 2.32;
 
 /// Structural thickness of every hull plane.
-const WALL_T: f32 = 0.1;
+pub const WALL_T: f32 = 0.1;
 
 /// One storey's pitch on the lattice: a room's ceiling slab plus a seam.
 /// A ladder's neighbour sits exactly one of these up.
@@ -91,7 +91,7 @@ const CABIN_TRIM: [f32; 4] = [0.0, CHART_INSET, -0.47, CHART_INSET];
 /// Half-width of a walking body, for the derived envelopes. The cabin's
 /// own envelope is authored (`rig::WALK_*`) because its hull is; every
 /// attached room insets its lattice box by this.
-const BODY: f32 = 0.30;
+pub const BODY: f32 = 0.30;
 
 /// A sealed leaf's thickness — a door drawn shut is a real plate.
 const PLATE_T: f32 = 0.05;
@@ -1003,7 +1003,7 @@ pub fn walk_boxes(rooms: &[Placed]) -> Envelope {
 
 /// What has been built, so a graph change rebuilds exactly what changed.
 #[derive(Resource, Default)]
-struct Built(Vec<Shape>);
+pub struct Built(Vec<Shape>);
 
 pub struct RoomsPlugin;
 
@@ -1032,7 +1032,7 @@ impl Plugin for RoomsPlugin {
 /// and a few dozen decals, and a diff finer than "this room" would be
 /// machinery guarding nothing.
 #[allow(clippy::too_many_arguments)]
-fn rebuild(
+pub fn rebuild(
     mut commands: Commands,
     plan: Res<Plan>,
     skin: Option<Res<Skin>>,
@@ -1162,21 +1162,21 @@ const CALLER_LUMENS: f32 = 150_000.0;
 const CALLER_DROP: f32 = 0.55;
 
 /// The pendant's shade radius and the glass under it.
-const SHADE_R: f32 = 0.24;
-const SHADE_H: f32 = 0.11;
+pub const SHADE_R: f32 = 0.24;
+pub const SHADE_H: f32 = 0.11;
 
 /// The stem's girth, and the glass disc's radius as a fraction of the
 /// shade. Fixed, not a station's: a pendant that could be any size would
 /// be a station reaching for the ceiling height, which is the room's.
-const STEM_T: f32 = 0.05;
-const GLASS_R: f32 = 0.72;
+pub const STEM_T: f32 = 0.05;
+pub const GLASS_R: f32 = 0.72;
 
 /// Where a caller's lamp hangs and how far it carries — derived from the
 /// room's own box, so a wider room gets a wider pool and a small one
 /// keeps its light to itself. The reach stops a quarter cell past the
 /// room's own far floor corner: far enough that the corners are lit, near
 /// enough that the neighbours are not.
-fn caller_reach(placed: &Placed) -> (Vec3, f32) {
+pub fn caller_reach(placed: &Placed) -> (Vec3, f32) {
     let mid = (placed.lo + placed.hi) * 0.5;
     let at = Vec3::new(mid.x, placed.hi.y - CALLER_DROP, mid.z);
     let corner = Vec3::new(placed.lo.x, placed.lo.y, placed.lo.z);
@@ -1348,7 +1348,7 @@ fn shell_slabs(
 /// [`shell_slabs`]' geometry, as `(centre, size, is_hull)`. Pure, so the
 /// no-clipping law can be asserted against exactly what gets drawn.
 #[must_use]
-fn shell_boxes(placed: &Placed, all: &[Placed]) -> Vec<(Vec3, Vec3, bool)> {
+pub fn shell_boxes(placed: &Placed, all: &[Placed]) -> Vec<(Vec3, Vec3, bool)> {
     let (lo, hi) = (placed.lo, placed.hi);
     let span = hi - lo;
     let plan_centre = Vec3::new(f32::midpoint(lo.x, hi.x), 0.0, f32::midpoint(lo.z, hi.z));

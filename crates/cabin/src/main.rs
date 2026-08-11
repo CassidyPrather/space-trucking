@@ -21,6 +21,7 @@ mod console;
 mod crt;
 mod fixture;
 mod fx;
+mod gauntlet;
 mod gesture;
 mod glow;
 mod menu;
@@ -100,6 +101,63 @@ struct Gauge {
 /// screenshot path takes, for the same reason — a cold pipeline is not
 /// what anybody is asking about.
 const GAUGE_SETTLE: u32 = 60;
+
+/// Dev tooling: `--gauntlet-walk <dir>` drives the scripted room walk
+/// (`gauntlet::walk`), captures a frame at every waypoint, holds still
+/// for [`gauntlet::FLICKER_FRAMES`] frames to see whether the picture
+/// does, then backs off along an approach sampling the room's own
+/// brightness. The three things a still cannot see, in one pass.
+///
+/// It reads the WINDOW, so it needs a rasteriser: run it under `xvfb`
+/// with the software Vulkan device (`gauntlet::tests::the_pixel_half_is_opt_in`
+/// carries the invocation). The pure half of the same walk runs in
+/// `cargo test` and needs none of that.
+#[derive(Resource, Default)]
+struct WalkMode {
+    /// Where the filmstrip is written.
+    dir: String,
+    /// Which room is being walked, for the file names and the report.
+    room: String,
+    /// The walk, filled in on the first frame from the live plan.
+    steps: Vec<gauntlet::Step>,
+    /// The stand-offs the light-pop pass samples from.
+    approach: Vec<(Vec3, Vec3)>,
+    /// Which waypoint is being shot, then which flicker frame, then
+    /// which approach sample.
+    at: usize,
+    /// How many shutters have fired in all — the film's own index.
+    shot: usize,
+    phase: WalkPhase,
+    /// Frames burned at the current pose before the shutter.
+    settle: u32,
+    /// Whether this pose's shutter is already in flight.
+    fired: bool,
+    /// Mean luminance per stand-off of the approach.
+    lit: Vec<f32>,
+    /// Whatever went wrong, for the exit code.
+    faults: Vec<String>,
+}
+
+/// Which of the three passes `--gauntlet-walk` is on.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum WalkPhase {
+    /// One frame per waypoint: the filmstrip.
+    #[default]
+    Strip,
+    /// The camera holds still and the frames are compared: the flicker.
+    Still,
+    /// The camera backs away along the approach: the light pop.
+    Approach,
+    Done,
+}
+
+/// The flag the pixel half is reached by. Named here so the doc comment
+/// that documents the invocation cannot drift from the argument that
+/// answers it.
+#[must_use]
+const fn gauntlet_walk_flag() -> &'static str {
+    "--gauntlet-walk"
+}
 
 /// The cabin's own `--view` roam poses. Rooms derive theirs from the
 /// graph (`room::preset`); these three are the starter cabin's, and they
@@ -184,6 +242,28 @@ fn cast_off(seed: u64, along: f32) -> String {
 #[allow(clippy::too_many_lines)]
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    // `--gauntlet`: the adversarial sweep's pure half, printed. Every
+    // room in the game against every geometric rule the harness has, with
+    // no window, no GPU, and no clock — which is why it can also run in
+    // `cargo test`, and does. It exits non-zero only on something the
+    // docket does not already carry, because a defect somebody has
+    // already written down is not news.
+    // `--gauntlet-docket`: the same sweep, printed as the docket's own
+    // `room | rule | offender` lines. How the work order is regenerated
+    // after a fixing pass, so nobody transcribes 600 lines by hand.
+    if args.iter().any(|arg| arg == "--gauntlet-docket") {
+        print!("{}", gauntlet::as_docket(&gauntlet::sweep()));
+        std::process::exit(0);
+    }
+    if args.iter().any(|arg| arg == "--gauntlet") {
+        let found = gauntlet::sweep();
+        print!("{}", gauntlet::report(&found));
+        let fresh = gauntlet::undocketed(&found);
+        if !fresh.is_empty() {
+            eprintln!("gauntlet: {} finding(s) off the docket", fresh.len());
+        }
+        std::process::exit(i32::from(!fresh.is_empty()));
+    }
     let dev = args.iter().any(|arg| arg == "--dev");
     // `--fixture`: boot the developer showcase save (one of everything,
     // actuated off defaults; see `fixture`) in a sandbox that never
@@ -271,6 +351,17 @@ fn main() {
         },
         |n| Bridge::boot_fixture(&fixture::panes_board(7, n)),
     );
+    // `--gauntlet-walk <dir>`: the pixel half. It boots whatever board
+    // the other flags asked for and then LOADS it — cargo in every legal
+    // berth of every room aboard — because a room photographed empty is
+    // exactly the hole this harness exists to close (`gauntlet::load`).
+    let walk_dir = flag_value(gauntlet_walk_flag());
+    let bridge = if walk_dir.is_some() {
+        gauntlet::loaded_save(&bridge.sim.save_string())
+            .map_or(bridge, |save| Bridge::boot_fixture(&save))
+    } else {
+        bridge
+    };
     // The room presets are DERIVED, like everything else about a room:
     // they ask the graph where the room is and stand in the middle of it
     // facing the wall the view is named for. Attach the trade room
@@ -359,7 +450,22 @@ fn main() {
         })
         .add_systems(Update, gauge.in_set(Phase::View));
     }
-    app.run();
+    if let Some(dir) = walk_dir {
+        std::fs::create_dir_all(&dir)
+            .unwrap_or_else(|why| panic!("the filmstrip needs somewhere to land: {dir} ({why})"));
+        app.insert_resource(WalkMode {
+            dir,
+            ..WalkMode::default()
+        })
+        .init_resource::<WalkFilm>()
+        .add_systems(Update, walk_drive.in_set(Phase::View));
+    }
+    // The dev tools that JUDGE — the gauntlet's walk today — answer with
+    // an exit code, and an exit code the process throws away is a check
+    // that always passes.
+    if let AppExit::Error(code) = app.run() {
+        std::process::exit(i32::from(code.get()));
+    }
 }
 
 /// Time the settled frame loop and report once. One line, parseable,
@@ -387,6 +493,242 @@ fn gauge(
         mode.panes, mode.grouping, mode.want
     );
     exit.write(AppExit::Success);
+}
+
+/// Frames burned at each pose before the shutter: enough for a glide to
+/// finish, a lamp to wake, and the pipeline to stop being cold.
+const WALK_SETTLE: u32 = 24;
+
+/// And between two flicker samples — one frame, because the whole point
+/// is to look at consecutive frames from one pose.
+const STILL_SETTLE: u32 = 1;
+
+/// One captured frame's readings: how bright it was, and how much of it
+/// moved since the last one.
+#[derive(Resource, Default)]
+struct WalkFilm {
+    /// Mean luminance of the last frame captured, 0..=1.
+    lum: Vec<f32>,
+    /// Fraction of pixels that moved since the previous capture.
+    moved: Vec<f32>,
+    /// The previous frame's bytes, for the difference.
+    last: Option<Vec<u8>>,
+    /// How many captures have landed.
+    landed: usize,
+}
+
+/// Read one captured frame: mean luminance, and the fraction of it that
+/// moved since the last capture. Raw bytes rather than a decode — the
+/// window target is 8-bit RGBA and the two numbers this pass is about
+/// are a sum and a count.
+fn read_film(frame: &Image, film: &mut WalkFilm) {
+    let Some(data) = frame.data.as_ref() else {
+        return;
+    };
+    let mut sum = 0.0f64;
+    let mut moved = 0usize;
+    let pixels = data.len() / 4;
+    for (i, texel) in data.chunks_exact(4).enumerate() {
+        // Rec. 601 luma, near enough for "did the room get brighter".
+        let lum = 0.299f64.mul_add(
+            f64::from(texel[0]),
+            0.587f64.mul_add(f64::from(texel[1]), 0.114 * f64::from(texel[2])),
+        );
+        sum += lum;
+        if let Some(last) = film.last.as_ref()
+            && last.len() == data.len()
+            && (0..3).any(|c| texel[c].abs_diff(last[i * 4 + c]) > gauntlet::FLICKER_STEP)
+        {
+            moved += 1;
+        }
+    }
+    let pixels = pixels.max(1);
+    film.lum
+        .push((sum / f64::from(255.0_f32) / pixels as f64) as f32);
+    film.moved.push(moved as f32 / pixels as f32);
+    film.last = Some(data.clone());
+    film.landed += 1;
+}
+
+/// Drive the scripted walk: pose, settle, shoot, advance. Three passes —
+/// the filmstrip, the still, and the approach — then the verdict.
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn walk_drive(
+    mut commands: Commands,
+    plan: Res<room::Plan>,
+    mut mode: ResMut<WalkMode>,
+    mut film: ResMut<WalkFilm>,
+    mut rig: ResMut<rig::CameraRig>,
+    capturing: Query<(), With<bevy::render::view::screenshot::Capturing>>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    // The room under judgement is whatever came alongside — a station's,
+    // an event's — falling back to the cabin on a ship with nothing
+    // attached. Read off the plan, so `--docked n` and `--alongside`
+    // aim this without it learning either flag.
+    if mode.steps.is_empty() {
+        let Some(placed) = plan
+            .rooms
+            .iter()
+            .find(|placed| !placed.kind.riding())
+            .or_else(|| plan.rooms.first())
+        else {
+            return;
+        };
+        mode.steps = gauntlet::walk(placed);
+        mode.approach = gauntlet::approach(placed);
+        mode.room = format!("{:?}", placed.kind);
+        if mode.steps.is_empty() {
+            exit.write(AppExit::Success);
+            return;
+        }
+    }
+    let (eye, at) = match mode.phase {
+        WalkPhase::Done => {
+            let code = u8::from(!mode.faults.is_empty());
+            for fault in &mode.faults {
+                eprintln!("gauntlet-walk: {fault}");
+            }
+            exit.write(if code == 0 {
+                AppExit::Success
+            } else {
+                AppExit::from_code(code)
+            });
+            return;
+        }
+        WalkPhase::Strip => {
+            let step = mode.steps[mode.at.min(mode.steps.len() - 1)];
+            let ahead = Quat::from_euler(EulerRot::YXZ, step.yaw, step.pitch, 0.0) * Vec3::NEG_Z;
+            (step.eye, step.eye + ahead)
+        }
+        // The still holds exactly the pose the filmstrip's middle shot
+        // used: a flicker is a thing the picture does while nothing else
+        // does anything.
+        WalkPhase::Still => {
+            let step = mode
+                .steps
+                .iter()
+                .find(|step| step.label == "middle")
+                .copied()
+                .unwrap_or(mode.steps[0]);
+            let ahead = Quat::from_euler(EulerRot::YXZ, step.yaw, step.pitch, 0.0) * Vec3::NEG_Z;
+            (step.eye, step.eye + ahead)
+        }
+        WalkPhase::Approach => mode.approach[mode.at.min(mode.approach.len() - 1)],
+    };
+    rig.pos = eye;
+    let d = at - eye;
+    rig.yaw = (-d.x).atan2(-d.z);
+    rig.pitch = d.y.atan2(d.xz().length().max(1e-4));
+    rig.parked = true;
+    let want = if mode.phase == WalkPhase::Still {
+        STILL_SETTLE
+    } else {
+        WALK_SETTLE
+    };
+    if mode.settle < want {
+        mode.settle += 1;
+        return;
+    }
+    if !capturing.is_empty() {
+        return;
+    }
+    if film.landed <= mode.shot {
+        if mode.fired {
+            return;
+        }
+        mode.fired = true;
+        let label = match mode.phase {
+            WalkPhase::Strip => mode.steps[mode.at].label.to_owned(),
+            WalkPhase::Still => format!("still-{:02}", mode.at),
+            WalkPhase::Approach | WalkPhase::Done => format!("approach-{:02}", mode.at),
+        };
+        let path = format!("{}/{}-{:02}-{label}.png", mode.dir, mode.room, mode.at);
+        commands
+            .spawn(bevy::render::view::screenshot::Screenshot::primary_window())
+            .observe(bevy::render::view::screenshot::save_to_disk(path))
+            .observe(
+                move |captured: On<bevy::render::view::screenshot::ScreenshotCaptured>,
+                      mut film: ResMut<WalkFilm>| {
+                    read_film(&captured.image, &mut film);
+                },
+            );
+        return;
+    }
+    // A sample landed. Read it, judge it, and step on.
+    mode.fired = false;
+    mode.shot += 1;
+    mode.settle = 0;
+    let lum = film.lum.last().copied().unwrap_or(0.0);
+    let moved = film.moved.last().copied().unwrap_or(0.0);
+    println!(
+        "gauntlet-walk room={} phase={:?} at={} eye=({:.2},{:.2},{:.2}) lum={lum:.5} moved={moved:.5}",
+        mode.room, mode.phase, mode.at, eye.x, eye.y, eye.z
+    );
+    match mode.phase {
+        WalkPhase::Strip => {
+            mode.at += 1;
+            if mode.at >= mode.steps.len() {
+                mode.at = 0;
+                mode.phase = WalkPhase::Still;
+                film.last = None;
+            }
+        }
+        WalkPhase::Still => {
+            // The first sample of the still has nothing to be compared
+            // with; every one after it does, and a lamp on an
+            // every-other-frame cycle cannot hide from a run of ten.
+            if mode.at > 0 && moved > gauntlet::FLICKER_TOL {
+                let fault = format!(
+                    "{}: {:.2}% of the picture moved between still frames {} and {} \
+                     from one pose — something is flickering",
+                    mode.room,
+                    moved * 100.0,
+                    mode.at - 1,
+                    mode.at
+                );
+                mode.faults.push(fault);
+            }
+            mode.at += 1;
+            if mode.at >= gauntlet::FLICKER_FRAMES {
+                mode.at = 0;
+                mode.phase = if mode.approach.is_empty() {
+                    WalkPhase::Done
+                } else {
+                    WalkPhase::Approach
+                };
+                film.last = None;
+            }
+        }
+        WalkPhase::Approach => {
+            mode.lit.push(lum);
+            mode.at += 1;
+            if mode.at >= mode.approach.len() {
+                let peak = mode.lit.iter().copied().fold(0.0f32, f32::max).max(1e-6);
+                let room = mode.room.clone();
+                let pops: Vec<String> = mode
+                    .lit
+                    .windows(2)
+                    .enumerate()
+                    .filter_map(|(i, step)| {
+                        let jump = (step[1] - step[0]).abs() / peak;
+                        (jump > gauntlet::POP_TOL).then(|| {
+                            format!(
+                                "{room}: the room's brightness jumped {:.0}% between \
+                                 stand-off {i} and {} — a light is switching with \
+                                 distance, not fading",
+                                jump * 100.0,
+                                i + 1
+                            )
+                        })
+                    })
+                    .collect();
+                mode.faults.extend(pops);
+                mode.phase = WalkPhase::Done;
+            }
+        }
+        WalkPhase::Done => {}
+    }
 }
 
 /// Let the scene settle, capture the window once, exit when the write

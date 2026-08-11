@@ -108,6 +108,11 @@ pub enum Tile {
     /// Doormat striping: an aperture's footprint, belonging to two rooms
     /// at once. Never a berth (`Violation::Threshold`).
     Threshold,
+    /// Bare fabric a room's **own** hardware already fills: the deck its
+    /// handshake is worked over, and the patch of ceiling its pendant
+    /// hangs from. Never a berth (`Violation::Fixture`) — see
+    /// [`RoomKind::fixture`].
+    Fixture,
 }
 
 /// Everything a room can be. An **appended table**, like `Kind`: new
@@ -480,6 +485,61 @@ impl RoomKind {
         })
     }
 
+    /// **The cells a room's own hardware already fills.**
+    ///
+    /// A room is not only a net: it is a room, and it carries two pieces
+    /// of hardware nobody chose to put there. The handshake is set into
+    /// the aft wall and juts over the deck in front of it; the pendant
+    /// hangs from the middle of the ceiling. Both are the ROOM's — the
+    /// kind declares them, a station only dresses them — and both stand
+    /// in air a rig would otherwise stand in.
+    ///
+    /// The socket the handshake is set into was already a hole
+    /// ([`RoomKind::surface_of`]); this is the rest of the same argument,
+    /// and it is stated in cells so the sim can rule on it without ever
+    /// learning what the hardware looks like.
+    ///
+    /// Riding rooms declare neither: a cabin has no handshake and lights
+    /// itself, so nothing here narrows the ship's own frontier.
+    #[must_use]
+    pub fn fixture(self, x: u8, y: u8) -> bool {
+        // Whichever of a run of `n` cells the middle of the room falls
+        // in: one where the count is odd, two where it is even and the
+        // middle lands on the seam between them.
+        const fn middle(n: u8, i: u8) -> bool {
+            i + 1 >= n.div_ceil(2) && i <= n / 2
+        }
+        let Some(surf) = self.surface_of(x, y) else {
+            return false;
+        };
+        let (w, h) = self.floor();
+        match surf {
+            // The counter's own deck: a wardrobe berthed here would
+            // swallow the fixture a deal is struck at.
+            Surf::Floor => self
+                .handshake()
+                .is_some_and(|(hx, _)| (x, y) == (hx, COURSES)),
+            // A counter set in a corner column turns onto the wall
+            // beside it, at its own course — which is the whole of a
+            // three-wide bay's problem: the pump's cell IS the corner,
+            // so its brass is the side wall's business too.
+            Surf::Port | Surf::Starboard => self.handshake().is_some_and(|(hx, hy)| {
+                // Aft courses count outward from the deck, so the
+                // handshake's row names the course its brass is on.
+                let course = COURSES - 1 - hy;
+                y == COURSES
+                    && ((hx == COURSES && x + 1 + course == COURSES)
+                        || (hx + 1 == COURSES + w && x == COURSES + w + course))
+            }),
+            // The pendant's patch. The ceiling chart folds over the
+            // starboard cornice, so its columns run backwards.
+            Surf::Ceiling => {
+                !self.riding() && middle(w, 2 * COURSES + 2 * w - 1 - x) && middle(h, y - COURSES)
+            }
+            _ => false,
+        }
+    }
+
     /// What net cell `(x, y)` is, or `None` where there is no cell.
     ///
     /// This is the single declaration the rules and the paint both read.
@@ -493,6 +553,11 @@ impl RoomKind {
             {
                 return Some(Tile::Threshold);
             }
+        }
+        // The room's own hardware before its own bands: a fixture stands
+        // where it stands, and no colour a kind paints moves it.
+        if self.fixture(x, y) {
+            return Some(Tile::Fixture);
         }
         let (_, h) = self.floor();
         // A colored region is a BAND across the room, not a strip of
@@ -1651,6 +1716,85 @@ mod tests {
                     );
                 }
             }
+        }
+    }
+
+    /// **A room keeps the cells its own hardware stands in.**
+    ///
+    /// The net used to say that every cell of every chart was a berth,
+    /// which meant a room's handshake stood in one and its pendant hung
+    /// in another and both were clipping cargo the moment anybody put
+    /// cargo there. The socket the handshake is set into was already a
+    /// hole; the deck it is worked over and the ceiling the lamp hangs
+    /// from are the rest of the same argument, and they are stated here
+    /// over every kind so a kind that grows a fixture cannot forget to
+    /// keep the room for it.
+    ///
+    /// What the law may NOT do is take the room away from the cargo: it
+    /// reserves the counter's own cell and the middle of a ceiling, and
+    /// it is checked to reserve nothing else.
+    #[test]
+    fn a_room_keeps_the_cells_its_own_hardware_stands_in() {
+        for kind in ROOM_KINDS {
+            let (cols, rows) = kind.grid();
+            let (w, h) = kind.floor();
+            let (mut counter, mut corner, mut pendant, mut berths) =
+                (0_usize, 0_usize, 0_usize, 0_usize);
+            for y in 0..rows {
+                for x in 0..cols {
+                    let Some(tile) = kind.tile_of(x, y) else {
+                        continue;
+                    };
+                    if tile != Tile::Fixture {
+                        berths += usize::from(tile != Tile::Threshold);
+                        continue;
+                    }
+                    assert!(kind.fixture(x, y), "{kind:?} paints ({x}, {y}) by accident");
+                    match kind.surface_of(x, y) {
+                        // A fixture on the DECK is furniture: a body has
+                        // to walk round it, so it may not stand in the
+                        // way in — the same argument the entry-path law
+                        // makes about chalk. A fixture on the ceiling is
+                        // hung over, and a lamp over the door's own lane
+                        // is a lamp lighting the door.
+                        Some(Surf::Floor) => {
+                            counter += 1;
+                            assert!(
+                                !kind.entry_path(x, y) && !kind.doorstep(x, y),
+                                "{kind:?} sets its counter at ({x}, {y}), the way in"
+                            );
+                        }
+                        Some(Surf::Port | Surf::Starboard) => corner += 1,
+                        Some(Surf::Ceiling) => pendant += 1,
+                        surf => panic!("{kind:?} reserves ({x}, {y}), which is {surf:?}"),
+                    }
+                }
+            }
+            assert_eq!(
+                counter,
+                usize::from(kind.handshake().is_some()),
+                "{kind:?} does not keep exactly the deck its counter is worked over"
+            );
+            // And the wall it turns onto, in a room narrow enough that
+            // its counter's cell is the corner. A market is six wide and
+            // has none; a pump bay is three and is all corner.
+            let cornered = kind
+                .handshake()
+                .is_some_and(|(hx, _)| hx == COURSES || hx + 1 == COURSES + w);
+            assert_eq!(
+                corner,
+                usize::from(cornered),
+                "{kind:?} does not keep the wall its counter turns onto"
+            );
+            // One ceiling cell where the room's middle lands mid-cell,
+            // two where it lands on a seam, four where both do.
+            let middles = usize::from(2 - w % 2) * usize::from(2 - h % 2);
+            assert_eq!(
+                pendant,
+                if kind.riding() { 0 } else { middles },
+                "{kind:?} does not keep the ceiling its own pendant hangs from"
+            );
+            assert!(berths > 0, "{kind:?} reserved its whole net");
         }
     }
 

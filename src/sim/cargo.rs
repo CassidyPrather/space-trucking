@@ -532,6 +532,10 @@ pub enum Violation {
     /// belongs to two rooms at once, so nothing berths there: the
     /// doorway stays clear because it is shared space.
     Threshold,
+    /// A cell the room's own hardware already fills was asked to hold
+    /// cargo. The counter's deck and the pendant's ceiling are the
+    /// room's, not the net's (`RoomKind::fixture`).
+    Fixture,
 }
 
 /// Whether `kind` may be anchored at `(room, x, y)` given every other
@@ -580,6 +584,9 @@ pub fn placement_check(
     };
     if footprint_tiles(host, x, y, w, h).any(|tile| tile == Tile::Threshold) {
         return Err(Violation::Threshold);
+    }
+    if footprint_tiles(host, x, y, w, h).any(|tile| tile == Tile::Fixture) {
+        return Err(Violation::Fixture);
     }
     let mount = kind.mount();
     if !mount_accepts(mount, surf) {
@@ -779,6 +786,9 @@ pub fn dressing_check(
     };
     if footprint_tiles(host, x, y, w, h).any(|tile| tile == Tile::Threshold) {
         return Err(Violation::Threshold);
+    }
+    if footprint_tiles(host, x, y, w, h).any(|tile| tile == Tile::Fixture) {
+        return Err(Violation::Fixture);
     }
     if let Some(Tag::Covering(Some(mount))) = kind.tag() {
         // A restricted covering names WHICH chart class it covers; the

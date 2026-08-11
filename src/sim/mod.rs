@@ -1948,6 +1948,9 @@ impl Sim {
         }
         match tile {
             Tile::Threshold => return Err(Some(Violation::Threshold)),
+            // The counter's deck and the pendant's ceiling: the room's
+            // own hardware is already standing there.
+            Tile::Fixture => return Err(Some(Violation::Fixture)),
             // Nothing of the player's is ever laid on a room's own shelf;
             // ownership crosses at the handshake, never through a drop.
             Tile::Stock => return Err(None),

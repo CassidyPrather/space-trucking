@@ -188,19 +188,19 @@ const BULB_GUARD: [Fitting; 5] = [
     Fitting::new(
         Shape::Ring,
         Coat::metal(Worn::Rivet),
-        Vec3::new(0.0, -1.05, 0.0),
+        Vec3::new(0.0, -0.86, 0.0),
         Vec3::new(0.62, 0.14, 0.62),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
-        Vec3::new(0.80, -0.70, 0.0),
+        Vec3::new(0.80, -0.40, 0.0),
         Vec3::new(0.04, 0.60, 0.04),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
-        Vec3::new(-0.80, -0.70, 0.0),
+        Vec3::new(-0.80, -0.40, 0.0),
         Vec3::new(0.04, 0.60, 0.04),
     ),
     Fitting::new(

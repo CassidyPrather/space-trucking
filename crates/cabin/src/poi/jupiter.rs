@@ -176,7 +176,7 @@ const LAMP_FLUE: [Fitting; 3] = [
     Fitting::new(
         Shape::Post,
         Coat::enamel(palette::SOOT),
-        Vec3::new(0.0, 1.5, 0.0),
+        Vec3::new(0.0, 0.86, 0.0),
         Vec3::new(0.34, 0.8, 0.34),
     ),
     Fitting::new(

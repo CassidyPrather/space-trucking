@@ -216,20 +216,20 @@ const TIN_LID: [Fitting; 3] = [
         Shape::Post,
         Coat::metal(Worn::Socket),
         Vec3::new(0.0, 0.62, 0.0),
-        Vec3::new(1.10, 0.16, 1.10),
+        Vec3::new(0.98, 0.16, 0.98),
     ),
     // Its clamp ring, and the hairline of green that got out under it.
     Fitting::new(
         Shape::Ring,
         Coat::metal(Worn::PlateShade),
         Vec3::new(0.0, 0.42, 0.0),
-        Vec3::new(1.12, 0.10, 1.12),
+        Vec3::new(0.97, 0.10, 0.97),
     ),
     Fitting::new(
         Shape::Ring,
         Coat::phosphor(palette::kind_color(Kind::LuminousPaint), 1.1),
         Vec3::new(0.0, 0.30, 0.0),
-        Vec3::new(1.06, 0.045, 1.06),
+        Vec3::new(0.95, 0.045, 0.95),
     ),
 ];
 

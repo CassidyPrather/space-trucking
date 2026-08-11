@@ -925,6 +925,78 @@ mod tests {
         }
     }
 
+    /// **A room's own fixtures stay in the boxes they are measured off.**
+    ///
+    /// The law above is about a character's furniture and the room's
+    /// box. This is the other two fittings — the ones the ROOM carries
+    /// and a station only dresses — and neither is measured off the room
+    /// at all: a handshake off its own declared cell, a cage off a box
+    /// one shade across on the lamp it hangs on. Both frames said so in
+    /// prose and neither was ever checked, and twelve of the fifteen
+    /// cages had become beams across the room while nobody was looking.
+    ///
+    /// Up is the one direction a cage may leave its box, because a
+    /// hanger reaching for the ceiling is what a pendant is — and it
+    /// stops at the ceiling ([`crate::room::CAGE_RISE`]).
+    #[test]
+    fn a_rooms_own_fixtures_stay_in_the_boxes_they_are_measured_off() {
+        for host in HOSTS {
+            let ch = character(host);
+            let knob = Fitting::new(
+                ch.handshake.knob,
+                ch.handshake.knob_coat,
+                ch.handshake.knob_at,
+                ch.handshake.knob_half,
+            );
+            for (what, fitting) in std::iter::once(("knob".to_owned(), &knob)).chain(
+                ch.handshake
+                    .trim
+                    .iter()
+                    .enumerate()
+                    .map(|(i, f)| (format!("trim[{i}]"), f)),
+            ) {
+                let (lo, hi) = fitting.span();
+                for axis in 0..2 {
+                    assert!(
+                        lo[axis] >= -1.0 - 1e-5 && hi[axis] <= 1.0 + 1e-5,
+                        "{host:?} handshake {what} reaches out of its own cell on \
+                         axis {axis}: {lo:?}..{hi:?}"
+                    );
+                }
+                // Depth is metres on this one frame, and the room keeps
+                // exactly one cell of deck for the counter to be worked
+                // over (`RoomKind::fixture`). Brass recessed INTO the
+                // wall is a fixture being set into fabric; brass past
+                // that cell would be standing over deck nobody kept.
+                assert!(
+                    hi.z <= crate::rig::BAY_CELL + 1e-5,
+                    "{host:?} handshake {what} reaches past the deck the room keeps \
+                     for it: {lo:?}..{hi:?}"
+                );
+            }
+            for (i, fitting) in ch.light.cage.iter().enumerate() {
+                let (lo, hi) = fitting.span();
+                for axis in 0..3 {
+                    let ceiling = if axis == 1 {
+                        crate::room::CAGE_RISE
+                    } else {
+                        1.0
+                    };
+                    assert!(
+                        lo[axis] >= -1.0 - 1e-5,
+                        "{host:?} cage[{i}] hangs below the shade it is measured off \
+                         on axis {axis}: {lo:?}..{hi:?}"
+                    );
+                    assert!(
+                        hi[axis] <= ceiling + 1e-5,
+                        "{host:?} cage[{i}] is a beam across the room on axis {axis}: \
+                         {lo:?}..{hi:?}, past {ceiling}"
+                    );
+                }
+            }
+        }
+    }
+
     /// Which room kind a host's character actually dresses.
     const fn serves(host: Host) -> RoomKind {
         match host {

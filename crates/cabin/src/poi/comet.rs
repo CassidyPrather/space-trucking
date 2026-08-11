@@ -177,7 +177,7 @@ const LAMP_HOOK: [Fitting; 2] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
-        Vec3::new(0.0, 1.10, 0.0),
+        Vec3::new(0.0, 0.91, 0.0),
         Vec3::new(0.06, 0.75, 0.06),
     ),
     Fitting::new(

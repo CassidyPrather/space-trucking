@@ -198,20 +198,20 @@ const LAMP_CORDS: [Fitting; 3] = [
     Fitting::new(
         Shape::Slab,
         Coat::etched(palette::TRIM_GIVE),
-        Vec3::new(-0.62, 0.90, -0.62),
+        Vec3::new(-0.62, 0.71, -0.62),
         Vec3::new(0.05, 0.95, 0.05),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::etched(palette::TRIM_GIVE),
-        Vec3::new(0.62, 0.90, 0.62),
+        Vec3::new(0.62, 0.71, 0.62),
         Vec3::new(0.05, 0.95, 0.05),
     ),
     Fitting::new(
         Shape::Ring,
         Coat::metal(Worn::Brass),
         Vec3::new(0.0, 0.30, 0.0),
-        Vec3::new(1.05, 0.08, 1.05),
+        Vec3::new(0.97, 0.08, 0.97),
     ),
 ];
 

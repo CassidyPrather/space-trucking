@@ -34,14 +34,6 @@ Comet | berth-clear | decor[6] Slab
 Comet | berth-clear | decor[7] Dome
 Comet | berth-clear | decor[8] Dome
 Comet | berth-clear | decor[9] Dome
-Comet | berth-clear | handshake knob Post
-Comet | berth-clear | handshake trim[0] Ring
-Comet | berth-clear | handshake trim[1] Slab
-Comet | berth-clear | handshake trim[2] Slab
-Comet | berth-clear | handshake trim[3] Dome
-Comet | berth-clear | handshake trim[4] Dome
-Comet | berth-clear | lamp cage[0] Slab
-Comet | berth-clear | lamp cage[1] Ring
 Comet | berth-reached | decor[0] Slab
 Comet | berth-reached | decor[1] Slab
 Comet | berth-reached | decor[2] Slab
@@ -68,26 +60,9 @@ Earth | berth-clear | decor[6] Post
 Earth | berth-clear | decor[7] Slab
 Earth | berth-clear | decor[8] Slab
 Earth | berth-clear | decor[9] Slab
-Earth | berth-clear | handshake knob Post
-Earth | berth-clear | handshake trim[0] Slab
-Earth | berth-clear | handshake trim[10] Dome
-Earth | berth-clear | handshake trim[1] Slab
-Earth | berth-clear | handshake trim[2] Slab
-Earth | berth-clear | handshake trim[3] Slab
-Earth | berth-clear | handshake trim[4] Slab
-Earth | berth-clear | handshake trim[5] Slab
-Earth | berth-clear | handshake trim[6] Slab
-Earth | berth-clear | handshake trim[7] Dome
-Earth | berth-clear | handshake trim[8] Dome
-Earth | berth-clear | handshake trim[9] Dome
-Earth | berth-clear | lamp cage[4] Slab
-Earth | berth-clear | lamp cage[5] Slab
 Earth | berth-reached | decor[0] Slab
 Earth | berth-reached | decor[7] Slab
 Earth | berth-seen | decor[0] Slab
-Earth | walk-clear | lamp cage[1] Slab
-Earth | walk-clear | lamp cage[2] Slab
-Earth | walk-clear | lamp cage[3] Slab
 
 # ---- Guild ----
 Guild | berth-clear | decor[0] Post
@@ -104,21 +79,9 @@ Guild | berth-clear | decor[6] Slab
 Guild | berth-clear | decor[7] Post
 Guild | berth-clear | decor[8] Ring
 Guild | berth-clear | decor[9] Post
-Guild | berth-clear | handshake knob Dome
-Guild | berth-clear | handshake trim[0] Slab
-Guild | berth-clear | handshake trim[1] Slab
-Guild | berth-clear | handshake trim[2] Slab
-Guild | berth-clear | handshake trim[3] Slab
-Guild | berth-clear | handshake trim[4] Dome
-Guild | berth-clear | handshake trim[5] Dome
-Guild | berth-clear | lamp cage[0] Slab
-Guild | berth-clear | lamp cage[1] Slab
-Guild | berth-clear | lamp cage[2] Slab
-Guild | berth-clear | lamp cage[3] Slab
 Guild | berth-reached | decor[12] Slab
 Guild | berth-reached | decor[7] Post
 Guild | berth-seen | decor[7] Post
-Guild | walk-clear | lamp cage[4] Ring
 
 # ---- Hermitage ----
 Hermitage | berth-clear | decor[0] Slab
@@ -147,16 +110,6 @@ Hermitage | berth-clear | decor[6] Slab
 Hermitage | berth-clear | decor[7] Slab
 Hermitage | berth-clear | decor[8] Slab
 Hermitage | berth-clear | decor[9] Slab
-Hermitage | berth-clear | handshake knob Cone
-Hermitage | berth-clear | handshake trim[0] Slab
-Hermitage | berth-clear | handshake trim[1] Slab
-Hermitage | berth-clear | handshake trim[2] Slab
-Hermitage | berth-clear | handshake trim[3] Post
-Hermitage | berth-clear | handshake trim[4] Slab
-Hermitage | berth-clear | handshake trim[5] Dome
-Hermitage | berth-clear | lamp cage[0] Slab
-Hermitage | berth-clear | lamp cage[1] Slab
-Hermitage | berth-clear | lamp cage[2] Ring
 Hermitage | berth-reached | decor[16] Slab
 Hermitage | berth-reached | decor[20] Slab
 Hermitage | berth-reached | decor[24] Dome
@@ -171,7 +124,6 @@ Hermitage | coplanar-faces | decor[18] Slab / decor[20] Slab
 Hermitage | coplanar-faces | decor[1] Slab / decor[4] Slab
 Hermitage | coplanar-faces | decor[22] Post / decor[23] Dome
 Hermitage | coplanar-faces | decor[24] Dome / Plain field (15, 4)
-Hermitage | coplanar-faces | decor[24] Dome / Plain field (15, 5)
 Hermitage | coplanar-faces | decor[24] Dome / Plain field (16, 4)
 Hermitage | coplanar-faces | decor[24] Dome / Plain field (16, 5)
 Hermitage | coplanar-faces | decor[24] Dome / Plain field (17, 4)
@@ -201,17 +153,6 @@ Jupiter | berth-clear | decor[6] Post
 Jupiter | berth-clear | decor[7] Post
 Jupiter | berth-clear | decor[8] Post
 Jupiter | berth-clear | decor[9] Slab
-Jupiter | berth-clear | handshake knob Ring
-Jupiter | berth-clear | handshake trim[0] Slab
-Jupiter | berth-clear | handshake trim[1] Slab
-Jupiter | berth-clear | handshake trim[2] Slab
-Jupiter | berth-clear | handshake trim[3] Slab
-Jupiter | berth-clear | handshake trim[4] Slab
-Jupiter | berth-clear | handshake trim[5] Dome
-Jupiter | berth-clear | handshake trim[6] Dome
-Jupiter | berth-clear | handshake trim[7] Dome
-Jupiter | berth-clear | lamp cage[0] Post
-Jupiter | berth-clear | lamp cage[1] Slab
 Jupiter | berth-reached | decor[0] Slab
 Jupiter | berth-reached | decor[16] Slab
 Jupiter | berth-reached | decor[18] Slab
@@ -224,7 +165,6 @@ Jupiter | coplanar-faces | decor[10] Slab / decor[13] Slab
 Jupiter | coplanar-faces | decor[9] Slab / decor[13] Slab
 Jupiter | coplanar-faces | handshake trim[0] Slab / handshake trim[1] Slab
 Jupiter | coplanar-faces | handshake trim[4] Slab / handshake trim[5] Dome
-Jupiter | walk-clear | lamp cage[2] Dome
 
 # ---- Mars ----
 Mars | berth-clear | decor[0] Slab
@@ -247,20 +187,6 @@ Mars | berth-clear | decor[6] Dome
 Mars | berth-clear | decor[7] Dome
 Mars | berth-clear | decor[8] Dome
 Mars | berth-clear | decor[9] Dome
-Mars | berth-clear | handshake knob Cone
-Mars | berth-clear | handshake trim[0] Slab
-Mars | berth-clear | handshake trim[1] Slab
-Mars | berth-clear | handshake trim[2] Slab
-Mars | berth-clear | handshake trim[3] Slab
-Mars | berth-clear | handshake trim[4] Dome
-Mars | berth-clear | handshake trim[5] Dome
-Mars | berth-clear | handshake trim[6] Slab
-Mars | berth-clear | handshake trim[7] Slab
-Mars | berth-clear | lamp cage[0] Slab
-Mars | berth-clear | lamp cage[1] Slab
-Mars | berth-clear | lamp cage[2] Ring
-Mars | berth-clear | lamp cage[3] Slab
-Mars | berth-clear | lamp cage[4] Dome
 Mars | berth-reached | decor[0] Slab
 Mars | berth-reached | decor[12] Slab
 Mars | berth-reached | decor[13] Slab
@@ -291,20 +217,9 @@ Neptune | berth-clear | decor[5] Slab
 Neptune | berth-clear | decor[6] Slab
 Neptune | berth-clear | decor[7] Dome
 Neptune | berth-clear | decor[9] Dome
-Neptune | berth-clear | handshake knob Dome
-Neptune | berth-clear | handshake trim[0] Slab
-Neptune | berth-clear | handshake trim[1] Dome
-Neptune | berth-clear | handshake trim[2] Dome
-Neptune | berth-clear | handshake trim[3] Dome
-Neptune | berth-clear | handshake trim[4] Dome
-Neptune | berth-clear | handshake trim[5] Dome
-Neptune | berth-clear | handshake trim[6] Dome
-Neptune | berth-clear | handshake trim[7] Slab
 Neptune | berth-reached | decor[0] Ring
 Neptune | berth-reached | decor[10] Slab
 Neptune | berth-reached | decor[11] Slab
-Neptune | walk-clear | lamp cage[0] Ring
-Neptune | walk-clear | lamp cage[3] Dome
 
 # ---- Parlor ----
 Parlor | berth-clear | decor[0] Slab
@@ -330,16 +245,6 @@ Parlor | berth-clear | decor[6] Dome
 Parlor | berth-clear | decor[7] Dome
 Parlor | berth-clear | decor[8] Dome
 Parlor | berth-clear | decor[9] Slab
-Parlor | berth-clear | handshake knob Dome
-Parlor | berth-clear | handshake trim[0] Dome
-Parlor | berth-clear | handshake trim[1] Dome
-Parlor | berth-clear | handshake trim[2] Dome
-Parlor | berth-clear | handshake trim[3] Dome
-Parlor | berth-clear | handshake trim[4] Dome
-Parlor | berth-clear | handshake trim[5] Dome
-Parlor | berth-clear | handshake trim[6] Dome
-Parlor | berth-clear | handshake trim[7] Slab
-Parlor | berth-clear | lamp cage[1] Dome
 Parlor | berth-reached | decor[0] Slab
 Parlor | berth-reached | decor[13] Slab
 Parlor | berth-reached | decor[15] Slab
@@ -389,21 +294,9 @@ Pump | berth-clear | decor[6] Slab
 Pump | berth-clear | decor[7] Slab
 Pump | berth-clear | decor[8] Post
 Pump | berth-clear | decor[9] Ring
-Pump | berth-clear | handshake knob Cone
-Pump | berth-clear | handshake trim[0] Slab
-Pump | berth-clear | handshake trim[1] Slab
-Pump | berth-clear | handshake trim[2] Slab
-Pump | berth-clear | handshake trim[3] Slab
-Pump | berth-clear | handshake trim[4] Dome
-Pump | berth-clear | handshake trim[5] Dome
-Pump | berth-clear | lamp cage[0] Slab
-Pump | berth-clear | lamp cage[1] Slab
-Pump | berth-clear | lamp cage[2] Slab
-Pump | berth-clear | lamp cage[3] Slab
 Pump | berth-reached | decor[18] Slab
 Pump | berth-reached | decor[20] Ring
 Pump | berth-reached | decor[8] Post
-Pump | berth-reached | lamp stem
 Pump | coplanar-faces | decor[13] Slab / decor[14] Slab
 Pump | coplanar-faces | decor[15] Slab / handshake trim[3] Slab
 Pump | coplanar-faces | decor[16] Slab / decor[17] Slab
@@ -427,16 +320,6 @@ Saturn | berth-clear | decor[6] Slab
 Saturn | berth-clear | decor[7] Slab
 Saturn | berth-clear | decor[8] Slab
 Saturn | berth-clear | decor[9] Dome
-Saturn | berth-clear | handshake knob Cone
-Saturn | berth-clear | handshake trim[0] Slab
-Saturn | berth-clear | handshake trim[1] Slab
-Saturn | berth-clear | handshake trim[2] Slab
-Saturn | berth-clear | handshake trim[3] Slab
-Saturn | berth-clear | handshake trim[4] Slab
-Saturn | berth-clear | handshake trim[5] Dome
-Saturn | berth-clear | handshake trim[6] Dome
-Saturn | berth-clear | handshake trim[7] Dome
-Saturn | berth-clear | lamp cage[4] Slab
 Saturn | berth-reached | decor[0] Slab
 Saturn | berth-reached | decor[14] Slab
 Saturn | berth-reached | decor[1] Slab
@@ -447,8 +330,6 @@ Saturn | berth-seen | decor[11] Post
 Saturn | coplanar-faces | decor[2] Slab / decor[4] Slab
 Saturn | coplanar-faces | decor[3] Slab / decor[4] Slab
 Saturn | coplanar-faces | lamp cage[4] Slab / lamp stem
-Saturn | walk-clear | lamp cage[0] Ring
-Saturn | walk-clear | lamp cage[1] Ring
 
 # ---- Umbra ----
 Umbra | berth-clear | decor[0] Slab
@@ -481,12 +362,6 @@ Umbra | berth-clear | decor[6] Post
 Umbra | berth-clear | decor[7] Post
 Umbra | berth-clear | decor[8] Post
 Umbra | berth-clear | decor[9] Post
-Umbra | berth-clear | handshake knob Cone
-Umbra | berth-clear | handshake trim[2] Slab
-Umbra | berth-clear | handshake trim[3] Post
-Umbra | berth-clear | handshake trim[4] Post
-Umbra | berth-clear | lamp cage[0] Post
-Umbra | berth-clear | lamp cage[1] Ring
 Umbra | berth-reached | decor[11] Slab
 Umbra | berth-reached | decor[16] Ring
 Umbra | berth-reached | decor[1] Post
@@ -511,18 +386,6 @@ Uranus | berth-clear | decor[6] Slab
 Uranus | berth-clear | decor[7] Ring
 Uranus | berth-clear | decor[8] Dome
 Uranus | berth-clear | decor[9] Slab
-Uranus | berth-clear | handshake knob Post
-Uranus | berth-clear | handshake trim[0] Slab
-Uranus | berth-clear | handshake trim[1] Slab
-Uranus | berth-clear | handshake trim[2] Slab
-Uranus | berth-clear | handshake trim[3] Slab
-Uranus | berth-clear | handshake trim[4] Dome
-Uranus | berth-clear | handshake trim[5] Dome
-Uranus | berth-clear | handshake trim[6] Slab
-Uranus | berth-clear | lamp cage[0] Slab
-Uranus | berth-clear | lamp cage[1] Slab
-Uranus | berth-clear | lamp cage[2] Slab
-Uranus | berth-clear | lamp cage[3] Slab
 Uranus | berth-reached | decor[10] Slab
 Uranus | berth-reached | decor[5] Slab
 Uranus | berth-reached | decor[6] Slab
@@ -547,23 +410,10 @@ Venus | berth-clear | decor[6] Slab
 Venus | berth-clear | decor[7] Slab
 Venus | berth-clear | decor[8] Dome
 Venus | berth-clear | decor[9] Dome
-Venus | berth-clear | handshake knob Ring
-Venus | berth-clear | handshake trim[0] Dome
-Venus | berth-clear | handshake trim[1] Slab
-Venus | berth-clear | handshake trim[2] Cone
-Venus | berth-clear | handshake trim[3] Dome
-Venus | berth-clear | handshake trim[4] Cone
-Venus | berth-clear | handshake trim[5] Cone
-Venus | berth-clear | handshake trim[6] Slab
-Venus | berth-clear | handshake trim[7] Slab
-Venus | berth-clear | lamp cage[0] Ring
-Venus | berth-clear | lamp cage[7] Dome
 Venus | berth-reached | decor[10] Slab
 Venus | berth-reached | decor[5] Slab
 Venus | berth-reached | decor[7] Slab
 Venus | berth-seen | decor[5] Slab
-Venus | walk-clear | lamp cage[1] Ring
-Venus | walk-clear | lamp cage[6] Dome
 
 # ---- Wanderer ----
 Wanderer | berth-clear | decor[0] Post
@@ -581,18 +431,6 @@ Wanderer | berth-clear | decor[6] Ring
 Wanderer | berth-clear | decor[7] Ring
 Wanderer | berth-clear | decor[8] Ring
 Wanderer | berth-clear | decor[9] Ring
-Wanderer | berth-clear | handshake knob Dome
-Wanderer | berth-clear | handshake trim[0] Slab
-Wanderer | berth-clear | handshake trim[1] Slab
-Wanderer | berth-clear | handshake trim[2] Slab
-Wanderer | berth-clear | handshake trim[3] Slab
-Wanderer | berth-clear | handshake trim[4] Slab
-Wanderer | berth-clear | handshake trim[5] Dome
-Wanderer | berth-clear | handshake trim[6] Dome
-Wanderer | berth-clear | handshake trim[7] Dome
-Wanderer | berth-clear | lamp cage[0] Ring
-Wanderer | berth-clear | lamp cage[1] Ring
-Wanderer | berth-clear | lamp cage[3] Ring
 Wanderer | berth-reached | decor[1] Post
 Wanderer | berth-seen | decor[0] Post
 Wanderer | berth-seen | decor[14] Slab
@@ -623,18 +461,9 @@ Wreck | berth-clear | decor[6] Slab
 Wreck | berth-clear | decor[7] Slab
 Wreck | berth-clear | decor[8] Slab
 Wreck | berth-clear | decor[9] Slab
-Wreck | berth-clear | handshake knob Ring
-Wreck | berth-clear | handshake trim[0] Slab
-Wreck | berth-clear | handshake trim[1] Slab
-Wreck | berth-clear | handshake trim[2] Slab
-Wreck | berth-clear | handshake trim[3] Slab
-Wreck | berth-clear | lamp cage[0] Slab
-Wreck | berth-clear | lamp cage[1] Slab
-Wreck | berth-clear | lamp cage[2] Ring
 Wreck | berth-reached | decor[15] Slab
 Wreck | berth-reached | decor[16] Slab
 Wreck | berth-reached | decor[19] Slab
-Wreck | berth-reached | lamp cage[2] Ring
 Wreck | coplanar-faces | decor[8] Slab / decor[9] Slab
 
 # ---- rigs ----

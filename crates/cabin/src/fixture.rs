@@ -101,7 +101,7 @@ piece 17 7 1 0 hold 2 6 6
 piece 18 1 2 0 hold 2 7 6
 piece 19 11 0 0 hold 0 8 3
 piece 20 2 1 0 hold 0 7 7
-piece 21 5 0 0 hold 2 5 3
+piece 21 5 0 0 hold 2 4 3
 piece 22 3 3 1 hold 2 7 3
 piece 23 15 2 0 hold 2 5 6
 piece 24 26 0 0 hold 0 4 10

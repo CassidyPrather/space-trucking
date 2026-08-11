@@ -56,6 +56,19 @@ const FOV: f32 = 0.9;
 /// stops short of the bay's floor plates: cargo is walked *up to*, never
 /// stood on.
 pub const EYE_HEIGHT: f32 = 1.5;
+
+/// Half the head a standing body swings at [`EYE_HEIGHT`] — the height
+/// a fitting has to clear to be a thing you walk under rather than a
+/// thing you walk into.
+///
+/// It is one number because it is read twice: the walk's own detector
+/// measures the eye's way with this box (`gauntlet::walk_clear`), and
+/// what hangs over a room's middle is sized against it
+/// (`room::CALLER_DROP`). A clearance designed to one figure and judged
+/// against another is how a lamp ends up three centimetres inside the
+/// player's forehead.
+pub const HEAD_R: f32 = 0.09;
+
 // The room grid made the whole floor walkable ground — cargo stands
 // among the walker now, not beyond a strip — so the envelope spans the
 // room up to body clearance at the walls. The clamp is collision

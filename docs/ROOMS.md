@@ -471,6 +471,7 @@ in the same change:
 | `Stock` | the room's enamel, filled, and bordered where the paint ends | the room's own goods. Not player-owned; may not be carried out until a resolution grants them |
 | `Consume` | scorched plate with hazard tape round its rim | anything berthed here is scheduled for destruction on the room's own beat — the burner's hopper is the first and today's only instance |
 | `Threshold` | a studded tread and a brass sill, on the deck the door stands on | an aperture's footprint. Never a berth (see the threshold rule) |
+| `Fixture` | bare fabric — the room's own hardware is standing on it | the cells a room's handshake and pendant already fill. Never a berth (see the fixture rule) |
 
 Four laws over that table:
 
@@ -506,6 +507,39 @@ keeps it. So: **nothing berths on a threshold.** `Violation::Threshold`
 is the refusal, and it is the *principled* replacement for the dying
 `Violation::Aisle` — the doorway stays clear because it is shared
 space, not because a walking body needs the room.
+
+### The fixture rule
+
+A room is not only a net. It carries two pieces of hardware nobody chose
+to put there — the **handshake** set into its aft wall, and the
+**pendant** hanging from the middle of its ceiling — and both stand in
+air a rig would otherwise stand in. The socket the handshake is set into
+was always a hole in the net; the rest of the same argument was not
+made, so every station's counter clipped the deck in front of it and
+every station's lamp clipped the ceiling it hung from, at every calling
+room in the game.
+
+So: **a room does not offer cargo the cells its own hardware fills.**
+`RoomKind::fixture` names them and `Violation::Fixture` is the refusal.
+Three cells, all derived from declarations the kind already makes:
+
+- the **deck the counter is worked over** — the floor cell in front of
+  the handshake's own socket;
+- the **wall it turns onto**, where the handshake's column is the corner
+  one, at the handshake's own course. A market is six cells wide and has
+  no such cell; a pump bay is three and is all corner;
+- the **patch of ceiling the pendant hangs in** — whichever ceiling
+  cells the middle of the room falls in: one where the count is odd, two
+  where the middle lands on the seam between them, four where both do.
+
+Riding rooms declare neither fixture, so the ship's own frontier is
+untouched. The presentation side answers with the same split: what a
+station may hang on the room's hardware is bounded by the boxes those
+frames are measured off — a handshake inside its declared cell and no
+deeper into the room than the deck kept for it, a cage inside the
+shade's own box and reaching up no further than the ceiling. Twelve of
+the fifteen cages had quietly become beams across the room before
+anything checked.
 
 ### The entry-path law
 

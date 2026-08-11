@@ -165,25 +165,25 @@ const DRUM_FINS: [Fitting; 4] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(1.05, -0.10, 0.0),
+        Vec3::new(0.65, -0.10, 0.0),
         Vec3::new(0.30, 0.45, 0.05),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(-1.05, -0.10, 0.0),
+        Vec3::new(-0.65, -0.10, 0.0),
         Vec3::new(0.30, 0.45, 0.05),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.0, -0.10, 1.05),
+        Vec3::new(0.0, -0.10, 0.65),
         Vec3::new(0.05, 0.45, 0.30),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.0, -0.10, -1.05),
+        Vec3::new(0.0, -0.10, -0.65),
         Vec3::new(0.05, 0.45, 0.30),
     ),
 ];

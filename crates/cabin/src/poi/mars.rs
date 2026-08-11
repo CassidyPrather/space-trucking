@@ -188,13 +188,13 @@ const JURY_RIG: [Fitting; 5] = [
         Shape::Slab,
         Coat::metal(Worn::Rivet),
         Vec3::new(0.0, 0.55, 0.0),
-        Vec3::new(1.25, 0.060, 0.070),
+        Vec3::new(0.97, 0.060, 0.070),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
         Vec3::new(0.0, 0.72, 0.0),
-        Vec3::new(0.070, 0.060, 1.25),
+        Vec3::new(0.070, 0.060, 0.93),
     ),
     // A wrap of mustard enamel round the stem, over whatever is under
     // it. Nobody has asked.
@@ -208,13 +208,13 @@ const JURY_RIG: [Fitting; 5] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(1.55, 0.55, 0.35),
-        Vec3::new(0.030, 0.55, 0.030),
+        Vec3::new(0.72, 0.62, 0.35),
+        Vec3::new(0.030, 0.53, 0.030),
     ),
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(palette::AMBER, 3.2),
-        Vec3::new(1.55, -0.10, 0.35),
+        Vec3::new(0.72, -0.10, 0.35),
         Vec3::new(0.22, 0.22, 0.22),
     ),
 ];

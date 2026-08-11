@@ -191,7 +191,7 @@ const SUPPLY: [Fitting; 6] = [
         Shape::Ring,
         Coat::metal(Worn::Rivet),
         Vec3::new(0.0, -0.30, 0.0),
-        Vec3::new(1.05, 0.35, 1.05),
+        Vec3::new(0.97, 0.35, 0.97),
     ),
     bar(-0.55),
     bar(0.0),
@@ -200,13 +200,13 @@ const SUPPLY: [Fitting; 6] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.0, 1.55, 0.0),
+        Vec3::new(0.0, 1.17, 0.0),
         Vec3::new(0.38, 0.45, 0.38),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::AMBER, 2.6),
-        Vec3::new(0.0, 1.55, 0.42),
+        Vec3::new(0.0, 1.17, 0.42),
         Vec3::new(0.24, 0.24, 0.030),
     ),
 ];
@@ -217,7 +217,7 @@ const fn bar(z: f32) -> Fitting {
         Shape::Slab,
         Coat::metal(Worn::Socket),
         Vec3::new(0.0, -0.62, z),
-        Vec3::new(1.05, 0.05, 0.05),
+        Vec3::new(0.93, 0.05, 0.05),
     )
 }
 

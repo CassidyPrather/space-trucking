@@ -166,7 +166,7 @@ const HALO_RIG: [Fitting; 4] = [
     Fitting::new(
         Shape::Dome,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.0, -1.10, 0.0),
+        Vec3::new(0.0, -0.84, 0.0),
         Vec3::new(0.16, 0.16, 0.16),
     ),
 ];

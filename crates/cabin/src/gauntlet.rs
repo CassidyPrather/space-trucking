@@ -811,11 +811,12 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
             let Some((station, surface)) = chart_of(placed, (x, y)) else {
                 continue;
             };
-            // A threshold IS the opening and a struck line is a rim
-            // mark: neither lays a field over its own cell, so neither
-            // has a face for anything to fight.
+            // A threshold IS the opening, a struck line is a rim mark,
+            // and a fixture's cell is left bare for the room's own
+            // hardware: none of the three lays a field over its own
+            // cell, so none has a face for anything to fight.
             let lift = match tile {
-                Tile::Threshold | Tile::Offer => continue,
+                Tile::Threshold | Tile::Offer | Tile::Fixture => continue,
                 Tile::Plain | Tile::Stock | Tile::Consume => crate::rig::layer::TILE,
             };
             let inward = station.inward(&surface);

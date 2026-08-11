@@ -190,10 +190,10 @@ const NOT_A_LAMP: Light = Light {
 /// every side of the lamp, so the odd one out is still the lamp's and not
 /// a beam across the room.
 const THREE_AND_ONE: [Fitting; 4] = [
-    ring(0.0, 0.55, 0.0, 1.16),
-    ring(0.0, 0.10, 0.0, 1.16),
-    ring(0.0, -0.35, 0.0, 1.16),
-    ring(2.40, 0.10, 0.0, 0.86),
+    ring(0.0, 0.55, 0.0, 0.97),
+    ring(0.0, 0.10, 0.0, 0.97),
+    ring(0.0, -0.35, 0.0, 0.97),
+    ring(0.45, -0.14, 0.0, 0.52),
 ];
 
 /// One ring round the fitting.

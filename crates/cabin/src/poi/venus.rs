@@ -191,20 +191,20 @@ const LUSTRE: [Fitting; 8] = [
     Fitting::new(
         Shape::Ring,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.0, -0.62, 0.0),
-        Vec3::new(1.05, 0.42, 1.05),
+        Vec3::new(0.0, -0.56, 0.0),
+        Vec3::new(0.97, 0.42, 0.97),
     ),
     // Four drops between the tiers.
-    crystal(-0.86, 0.0),
-    crystal(0.86, 0.0),
-    crystal(0.0, -0.86),
-    crystal(0.0, 0.86),
+    crystal(-0.78, 0.0),
+    crystal(0.78, 0.0),
+    crystal(0.0, -0.78),
+    crystal(0.0, 0.78),
     // A gilt ball where the drops meet, and a small one on top of the
     // crown: the fixture has two finials and needs none.
     Fitting::new(
         Shape::Dome,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.0, -1.00, 0.0),
+        Vec3::new(0.0, -0.76, 0.0),
         Vec3::new(0.17, 0.17, 0.17),
     ),
     Fitting::new(

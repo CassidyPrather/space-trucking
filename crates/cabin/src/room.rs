@@ -1171,14 +1171,39 @@ pub fn rebuild(
 ///    neutral form every per-POI agent will differentiate from.
 const CALLER_LUMENS: f32 = 150_000.0;
 
-/// How far under a caller's ceiling its lamp hangs. A pendant, not a
-/// panel: low enough that its reach is the room's rather than the ship's,
-/// high enough that a standing body walks under it (`rig::EYE_HEIGHT`).
-const CALLER_DROP: f32 = 0.55;
+/// A hand's breadth of daylight between a standing head and whatever
+/// hangs over it. Zero clears by arithmetic and gives everybody aboard
+/// a haircut.
+const HEADROOM: f32 = 0.03;
+
+/// How far under a caller's ceiling its lamp hangs.
+///
+/// **Derived, not chosen.** A pendant, not a panel: low enough that its
+/// reach is the room's rather than the ship's, high enough that a
+/// standing body walks under it — and "it" is the whole fitting, not
+/// the lamp point. The shade's own box is as low as a station's cage
+/// may reach (`poi`'s containment law), so the drop is whatever leaves
+/// a standing head under that box.
+///
+/// It used to be a round 0.55, which hung the cages at 1.47 against an
+/// eye at 1.50: eleven of them, at seven stations, and the playtest
+/// walked face-first into every one.
+pub const CALLER_DROP: f32 = CEIL_Y - (EYE_HEIGHT + crate::rig::HEAD_R + HEADROOM + SHADE_R);
 
 /// The pendant's shade radius and the glass under it.
 pub const SHADE_R: f32 = 0.24;
 pub const SHADE_H: f32 = 0.11;
+
+/// How far above the lamp a station's cage may reach, in shades: to the
+/// ceiling the pendant hangs from and not past it. A hanger is part of a
+/// pendant and a spike through the deckhead is not, so up is the one
+/// direction a cage is allowed out of the shade's own box.
+///
+/// Read by the containment law and nothing else, exactly as
+/// [`crate::rig::layer::STEP`] is: a bound is a thing you check, not a
+/// thing you compute with.
+#[allow(dead_code)]
+pub const CAGE_RISE: f32 = CALLER_DROP / SHADE_R;
 
 /// The stem's girth, and the glass disc's radius as a fraction of the
 /// shade. Fixed, not a station's: a pendant that could be any size would
@@ -1728,14 +1753,23 @@ fn tiles(
                         patch.field(commands, &scorch);
                         patch.rim_mark(commands, mark(&skin.hazard, BAND), edges);
                     }
-                    // An aperture's own cells are the OPENING: a leaf
+                    // The two classes that paint nothing, for the same
+                    // reason from opposite directions: something else is
+                    // already there.
+                    //
+                    // An aperture's own cells are the OPENING — a leaf
                     // hangs there when the port is shut and there is
                     // nothing but air when it is open, so painting them
-                    // would stripe a doorway you can walk through. The
+                    // would stripe a doorway you can walk through; the
                     // reading that carries the threshold is the tread on
-                    // the deck the door stands on ([`treads`]) — derived
-                    // from the very same declaration.
-                    Tile::Threshold => {}
+                    // the deck the door stands on ([`treads`]), derived
+                    // from the very same declaration. A fixture's cells
+                    // are the room's own hardware — the counter stands
+                    // on that deck and the pendant hangs from that
+                    // ceiling — so the fabric under them stays bare, and
+                    // a berth well above all, because a well is an
+                    // invitation and nothing may berth here.
+                    Tile::Threshold | Tile::Fixture => {}
                 }
             }
         }

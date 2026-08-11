@@ -2109,10 +2109,17 @@ fn glyph_spec(rule: Option<Violation>, rect: Rect) -> Vec<(Vec2, Vec2, f32)> {
             ),
         ],
         // Off the net, onto a piece (or its standing shadow), the violet
-        // objection, and the last vital instrument refusing its exit:
-        // the frame alone. (Vital is a rule still owed its own glyph —
-        // the frame and the buzz carry it meanwhile.)
-        Some(Violation::Bounds | Violation::Overlap | Violation::Suspicious | Violation::Vital)
+        // objection, the last vital instrument refusing its exit, and a
+        // cell the room's own hardware already fills: the frame alone.
+        // (Vital and Fixture are rules still owed their own glyphs — the
+        // frame and the buzz carry them meanwhile.)
+        Some(
+            Violation::Bounds
+            | Violation::Overlap
+            | Violation::Suspicious
+            | Violation::Vital
+            | Violation::Fixture,
+        )
         | None => vec![],
     }
 }

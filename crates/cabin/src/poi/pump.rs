@@ -193,27 +193,27 @@ const TUBES: [Fitting; 4] = [
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(TUBE, 1.6),
-        Vec3::new(-1.55, 0.10, 0.0),
-        Vec3::new(0.22, 0.16, 1.30),
+        Vec3::new(-0.72, 0.10, 0.0),
+        Vec3::new(0.22, 0.16, 0.97),
     ),
     // The dead one. Glass that is dark and still visibly a lamp.
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::GLASS),
-        Vec3::new(1.55, 0.10, 0.0),
-        Vec3::new(0.22, 0.16, 1.30),
+        Vec3::new(0.72, 0.10, 0.0),
+        Vec3::new(0.22, 0.16, 0.97),
     ),
     Fitting::new(
         Shape::Slab,
         PIPE,
-        Vec3::new(0.0, 0.34, -1.16),
-        Vec3::new(1.90, 0.14, 0.16),
+        Vec3::new(0.0, 0.34, -0.76),
+        Vec3::new(0.90, 0.14, 0.16),
     ),
     Fitting::new(
         Shape::Slab,
         PIPE,
-        Vec3::new(0.0, 0.34, 1.16),
-        Vec3::new(1.90, 0.14, 0.16),
+        Vec3::new(0.0, 0.34, 0.76),
+        Vec3::new(0.90, 0.14, 0.16),
     ),
 ];
 

@@ -3291,6 +3291,116 @@ mod tests {
         assert!(swept > 200, "only {swept} of a room's own goods were seen");
     }
 
+    /// **You cannot walk off with a station's windows.** The half-joke,
+    /// answered: ownership is a function of tile class (`player_owned`
+    /// is "the berth's tile is not `Stock`"), so the question is whether
+    /// anything a station keeps ever stands on a tile that is not
+    /// `Stock`. Three clauses close it, and this pins all three:
+    ///
+    /// 1. **A station's fittings are not cargo.** Its windows, brass,
+    ///    counters and shelves are `cabin::poi::Fitting` decor — meshes
+    ///    measured in fractions of the room's own box, with no `Piece`
+    ///    anywhere in them and no `Loc` to be berthed at. There is
+    ///    nothing to pick up, which is why this test can only speak
+    ///    about goods.
+    /// 2. **A room's own goods only ever land on `Stock`.** The one
+    ///    function that berths them is `stock_in`, and it asks for that
+    ///    class by name. Everything else the sim ever puts down in a
+    ///    calling room has already crossed to the player by a
+    ///    resolution — a handshake's pile, the parlor's winnings — and
+    ///    is meant to be carried home.
+    /// 3. **A press on stock marks; it never lifts.** The handle rule
+    ///    reserves the body-click for function, and on a room's own
+    ///    goods that function is *I want that one*.
+    ///
+    /// So the joke is safe, and the mechanism that keeps it safe is one
+    /// predicate rather than a list of exceptions. Nothing here invents
+    /// a guard; it only refuses to let the three clauses drift apart.
+    #[test]
+    fn a_stations_goods_are_never_the_players_to_carry() {
+        let mut swept = 0;
+        for seed in 0..40_u64 {
+            let mut sim = Sim::new(seed);
+            let callers: Vec<(RoomId, RoomKind)> = sim
+                .rooms()
+                .iter()
+                .map(|(id, room)| (id, room.kind))
+                .filter(|(_, kind)| !kind.riding())
+                .collect();
+            for (id, room) in callers {
+                let goods: Vec<(u32, u8, u8)> = sim
+                    .pieces
+                    .iter()
+                    .filter_map(|piece| match piece.loc {
+                        Loc::Hold { room: at, x, y } if at == id => Some((piece.id, x, y)),
+                        _ => None,
+                    })
+                    .collect();
+                for (piece, x, y) in goods {
+                    // Clause two: a freshly opened room holds only its
+                    // own goods, and they are all on `Stock`.
+                    assert_eq!(
+                        sim.rooms.tile(id, x, y),
+                        Some(Tile::Stock),
+                        "{room:?} put a good of its own on a tile the player owns"
+                    );
+                    assert!(
+                        !player_owned(&sim.rooms, &sim.pieces, Loc::Hold { room: id, x, y }),
+                        "{room:?}'s goods at ({x}, {y}) read as the player's"
+                    );
+                    // Clause three: pressing it marks, and marking is
+                    // not carrying.
+                    sim.advance(
+                        0.0,
+                        &press_at(cell_center(id, x, y).x, cell_center(id, x, y).y),
+                    );
+                    assert!(
+                        sim.held(0).is_none(),
+                        "{room:?}'s goods at ({x}, {y}) came away in the hand"
+                    );
+                    assert!(sim.marks().contains(&piece), "the press did not even mark");
+                    // And a shift-press does not smuggle it out either.
+                    let at = cell_center(id, x, y);
+                    sim.advance(
+                        0.0,
+                        &InputFrame {
+                            pointer: at,
+                            press: true,
+                            held: true,
+                            shift: true,
+                            ..InputFrame::default()
+                        },
+                    );
+                    assert!(
+                        matches!(
+                            sim.pieces.iter().find(|p| p.id == piece).map(|p| p.loc),
+                            Some(Loc::Hold { room: at, .. }) if at == id
+                        ),
+                        "{room:?}'s goods quick-moved out of the room"
+                    );
+                    swept += 1;
+                }
+            }
+        }
+        assert!(swept > 60, "only {swept} of a room's own goods were seen");
+        // The converse, so the predicate cannot be quietly widened: a
+        // `Stock` tile is the ONLY thing that makes a berth not yours.
+        let sim = Sim::new(7);
+        for (id, _) in sim.rooms().iter() {
+            let (cols, rows) = sim.rooms.kind(id).expect("attached").grid();
+            for y in 0..rows {
+                for x in 0..cols {
+                    let loc = Loc::Hold { room: id, x, y };
+                    assert_eq!(
+                        player_owned(&sim.rooms, &sim.pieces, loc),
+                        sim.rooms.tile(id, x, y) != Some(Tile::Stock),
+                        "ownership at room {id} ({x}, {y}) stopped being tile class"
+                    );
+                }
+            }
+        }
+    }
+
     // ---- The new barter: six beats ----
 
     #[test]

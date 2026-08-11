@@ -407,6 +407,34 @@ impl RoomKind {
         })
     }
 
+    /// Whether net cell `(x, y)` is **deck a declared door stands on** —
+    /// the two floor cells a body's first step lands in, in this room's
+    /// own net.
+    ///
+    /// Not a tile class: those cells are ordinary berths and the player
+    /// may stand cargo on them exactly as `cabin::room::treads` says
+    /// (the studded plate is a reading of traffic, not a refusal). It is
+    /// a rule about who may CHOOSE them, and the answer is nobody but
+    /// the player — see [`super::Sim::free_berth_in`].
+    #[must_use]
+    pub fn doorstep(self, x: u8, y: u8) -> bool {
+        let (width, depth) = self.floor();
+        self.declared().any(|(_, port)| {
+            let Port::Door { wall, offset } = port else {
+                return false;
+            };
+            (0..APERTURE).any(|along| {
+                let step = match wall % 4 {
+                    0 => (offset + along, 0),
+                    1 => (width - 1, offset + along),
+                    2 => (offset + along, depth - 1),
+                    _ => (0, offset + along),
+                };
+                (COURSES + step.0, COURSES + step.1) == (x, y)
+            })
+        })
+    }
+
     /// What net cell `(x, y)` is, or `None` where there is no cell.
     ///
     /// This is the single declaration the rules and the paint both read.
@@ -1484,6 +1512,71 @@ mod tests {
         );
         assert!(rooms.attach(CABIN, 3, RoomKind::Burner, 3).is_ok());
         assert_eq!(rooms.attach(9, 0, RoomKind::Trade, 0), Err(Refusal::Absent));
+    }
+
+    /// **The doorstep is deck, and it is exactly the deck a door stands
+    /// on.** One cell per aperture course along the wall, in the room's
+    /// own net, on the floor chart and never on a wall — a rule that
+    /// named a wall cell would be a rule about the aperture, which is
+    /// what `Tile::Threshold` already is.
+    #[test]
+    fn every_declared_door_has_a_doorstep_on_its_own_deck() {
+        for kind in ROOM_KINDS {
+            let (cols, rows) = kind.grid();
+            let mut steps = 0;
+            for y in 0..rows {
+                for x in 0..cols {
+                    if !kind.doorstep(x, y) {
+                        continue;
+                    }
+                    steps += 1;
+                    assert_eq!(
+                        kind.surface_of(x, y),
+                        Some(Surf::Floor),
+                        "{kind:?}'s doorstep at ({x}, {y}) is not deck"
+                    );
+                    assert_ne!(
+                        kind.tile_of(x, y),
+                        Some(Tile::Threshold),
+                        "{kind:?}'s doorstep at ({x}, {y}) is the aperture, not the deck"
+                    );
+                }
+            }
+            // One per aperture course per door, less whatever two doors
+            // share: the cabin's aft and port doors both stand on the
+            // aft-port corner cell, and a corner is one cell.
+            let (w, h) = kind.floor();
+            let mut want: Vec<(u8, u8)> = Vec::new();
+            for (_, port) in kind.declared() {
+                let Port::Door { wall, offset } = port else {
+                    continue;
+                };
+                for along in 0..APERTURE {
+                    let cell = match wall % 4 {
+                        0 => (offset + along, 0),
+                        1 => (w - 1, offset + along),
+                        2 => (offset + along, h - 1),
+                        _ => (0, offset + along),
+                    };
+                    if !want.contains(&cell) {
+                        want.push(cell);
+                    }
+                }
+            }
+            assert_eq!(
+                steps,
+                want.len(),
+                "{kind:?} has {steps} doorstep cells for {} the declaration names",
+                want.len()
+            );
+        }
+        // And a room with no door has no doorstep anywhere.
+        assert!(!(0..RoomKind::Cabin.grid().0).any(|x| {
+            (0..RoomKind::Cabin.grid().1).any(|y| {
+                RoomKind::Cabin.doorstep(x, y)
+                    && RoomKind::Cabin.surface_of(x, y) != Some(Surf::Floor)
+            })
+        }),);
     }
 
     /// Lanes are fixed by id: a room's logical rects never move because

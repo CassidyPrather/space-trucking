@@ -1588,19 +1588,19 @@ mod tests {
     /// the hull between the two: black screen, free cursor, no crosshair,
     /// and nothing on screen to say the state machine is fine.
     ///
-    /// Seed 25 is a real, unremarkable first dock that does exactly this.
+    /// Seed 40 is a real, unremarkable first dock that does exactly this.
     #[test]
     fn a_focus_lands_in_the_room_that_holds_the_instrument() {
         use space_trucking::sim::Sim;
 
-        let sim = Sim::new(25);
+        let sim = Sim::new(40);
         let cabin = space_trucking::sim::room::CABIN;
         assert!(
             sim.pieces()
                 .iter()
                 .filter(|piece| !matches!(piece.loc, Loc::Hold { room: 0, .. }))
                 .any(|piece| crate::pieces::instrument(piece.kind).is_some()),
-            "seed 25 is supposed to put an instrument in a room that is not the cabin"
+            "seed 40 is supposed to put an instrument in a room that is not the cabin"
         );
         let panels = world_panels(&sim);
         let plan = world_plan(&sim);
@@ -1616,7 +1616,7 @@ mod tests {
         });
         assert!(
             split,
-            "seed 25 no longer splits a station across two rooms, so this guards nothing"
+            "seed 40 no longer splits a station across two rooms, so this guards nothing"
         );
         for focus in [Focus::Tank, Focus::Lever] {
             let Some((eye, _)) = focus_pose(focus, &panels, BOOT_EYE) else {

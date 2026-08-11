@@ -1713,6 +1713,20 @@ impl Sim {
     }
 
     /// The first free berth of class `class` in `room` for `kind`.
+    ///
+    /// **A room never berths anything on its own doorstep.** Every berth
+    /// the game picks for you comes through here — a shelf putting its
+    /// goods out, a derelict's salvage, the parlor's winnings, a
+    /// quick-move's landing — and the deck a door stands on is the one
+    /// place none of them may go. The shelf order is row-major from the
+    /// aft wall, and the first two floor cells of a calling room's stock
+    /// band are *exactly* the two its own doorway lands in: every
+    /// derelict stocked its own door shut, and from the cabin the room
+    /// beyond was an open seam with a gilded idol wedged in it. The
+    /// studded tread stays what it says it is — traffic, not danger, and
+    /// the PLAYER may still stand a crate on it (`cabin::room::treads`).
+    /// The room may not, because the room is putting things where the
+    /// player has to walk.
     fn free_berth_in(
         &self,
         room: RoomId,
@@ -1721,8 +1735,10 @@ impl Sim {
         class: Tile,
     ) -> Option<Loc> {
         let id = ignore.unwrap_or(u32::MAX);
+        let doorstep = self.rooms.kind(room)?;
         barter::tiles_of(&self.rooms, room, class)
             .into_iter()
+            .filter(|&(x, y)| !doorstep.doorstep(x, y))
             .find(|&(x, y)| placement_legal(&self.rooms, &self.pieces, id, kind, room, x, y))
             .map(|(x, y)| Loc::Hold { room, x, y })
     }
@@ -3174,6 +3190,77 @@ mod tests {
         let catch = sim.fast_forward(600);
         assert_eq!(catch.ticks, 0);
         assert_eq!(sim.save_string(), before);
+    }
+
+    /// **No room puts its own goods in its own doorway.**
+    ///
+    /// The playtest's derelict: from the cabin you looked through an open
+    /// seam at a gilded idol wedged in it, and could not read the room
+    /// beyond at all. The shelf fills row-major from the aft wall, and
+    /// the first two floor cells of a calling room's stock band are
+    /// exactly the two its own doorway lands in — so every derelict, and
+    /// every station, stocked its own door shut first.
+    ///
+    /// Swept over every station and every event room the game opens,
+    /// because the rule lives in the one function that picks a berth on
+    /// the player's behalf and must therefore hold for all of them.
+    #[test]
+    fn a_room_never_puts_its_goods_in_its_own_doorway() {
+        let mut swept = 0;
+        for seed in 0..80_u64 {
+            let mut sim = Sim::new(seed);
+            // Every event room the leg can bring alongside, and the
+            // station rooms of a dozen docks.
+            for _ in 0..6 {
+                for (id, room) in sim.rooms().iter() {
+                    let kind = room.kind;
+                    for piece in sim.pieces() {
+                        let Loc::Hold { room: at, x, y } = piece.loc else {
+                            continue;
+                        };
+                        if at != id || player_owned(&sim.rooms, &sim.pieces, piece.loc) {
+                            continue;
+                        }
+                        assert!(
+                            !kind.doorstep(x, y),
+                            "{kind:?} stocked {:?} on its own doorstep at ({x}, {y})",
+                            piece.kind
+                        );
+                        swept += 1;
+                    }
+                }
+                let ShipState::Docked(here) = sim.ship().state else {
+                    // Underway: run the leg on so the encounter rooms
+                    // that carry goods (the derelict) actually open.
+                    sim.fast_forward(600);
+                    continue;
+                };
+                let Some(there) = (0..12_u8).find(|&id| id != here && sim.poi_chartable(id)) else {
+                    break;
+                };
+                let at = sim.poi_pos(there);
+                sim.advance(0.0, &press_at(at.x, at.y));
+                let callers: Vec<RoomId> = sim
+                    .rooms()
+                    .iter()
+                    .filter(|(_, room)| !room.kind.riding())
+                    .map(|(id, _)| id)
+                    .collect();
+                for id in callers {
+                    sim.advance(
+                        0.0,
+                        &InputFrame {
+                            detach: Some(id),
+                            ..InputFrame::default()
+                        },
+                    );
+                }
+                let pull = rect_center(layout::LAUNCH_LEVER);
+                sim.advance(0.0, &press_at(pull.x, pull.y));
+                sim.advance(TICK_DT, &InputFrame::default());
+            }
+        }
+        assert!(swept > 200, "only {swept} of a room's own goods were seen");
     }
 
     // ---- The new barter: six beats ----

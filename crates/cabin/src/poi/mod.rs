@@ -1093,4 +1093,44 @@ mod tests {
         // because there is no knob that could break it.
         assert_eq!(guild.tiles.stock.finish, Finish::Enamel);
     }
+
+    /// **A cage passes the stem clear, or through it, never along it.**
+    /// A hanger may clasp the pendant's stem and a strap may run through
+    /// it, but a flank cut to within a hair of the stem's own is four
+    /// faces of brass fighting four of grey for the depth buffer, all the
+    /// way up. Saturn's hook was cut a millimetre inside the stem, which
+    /// is how the gauntlet found it.
+    ///
+    /// A cage is measured off a box one shade across on every side of the
+    /// lamp (`room::caller_lamp`), so all three numbers are the room's:
+    /// [`crate::room::SHADE_R`] scales the fraction,
+    /// [`crate::room::STEM_T`] is the flank it has to miss, and
+    /// [`crate::rig::layer::SKIN`] is how far missing it takes.
+    #[test]
+    fn a_cage_passes_the_stem_clear_or_through_it() {
+        use crate::rig::layer::SKIN;
+        use crate::room::{SHADE_R, STEM_T};
+
+        let stem = STEM_T * 0.5;
+        for host in HOSTS {
+            for (i, fitting) in character(host).light.cage.iter().enumerate() {
+                let (lo, hi) = fitting.span();
+                let (lo, hi) = (lo * SHADE_R, hi * SHADE_R);
+                // The stem runs UP from the lamp point, so a hoop slung
+                // under the shade has no stem to run along.
+                if hi.y <= 0.0 {
+                    continue;
+                }
+                for axis in [0, 2] {
+                    for face in [lo[axis], hi[axis]] {
+                        assert!(
+                            (face.abs() - stem).abs() > SKIN,
+                            "{host:?}: cage[{i}] has a flank at {face:.4} on axis \
+                             {axis}, which is the stem's own {stem:.4}"
+                        );
+                    }
+                }
+            }
+        }
+    }
 }

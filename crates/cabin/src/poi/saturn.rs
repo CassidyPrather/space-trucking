@@ -203,11 +203,15 @@ const BULB_GUARD: [Fitting; 5] = [
         Vec3::new(-0.80, -0.40, 0.0),
         Vec3::new(0.04, 0.60, 0.04),
     ),
+    // The hook it all hangs off, clasped round the stem above the
+    // reflector. It has to be WIDER than the stem to be a hook: it was
+    // cut two millimetres narrower, which put it inside the stem, where
+    // a brass band is nothing but four faces fighting a grey one.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
         Vec3::new(0.0, 1.10, 0.0),
-        Vec3::new(0.10, 0.45, 0.10),
+        Vec3::new(0.16, 0.45, 0.16),
     ),
 ];
 

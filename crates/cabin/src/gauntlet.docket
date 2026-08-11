@@ -275,7 +275,6 @@ Saturn | berth-reached | decor[4] Slab
 Saturn | berth-reached | decor[5] Slab
 Saturn | berth-reached | decor[8] Slab
 Saturn | berth-seen | decor[11] Post
-Saturn | coplanar-faces | lamp cage[4] Slab / lamp stem
 
 # ---- Umbra ----
 Umbra | berth-clear | decor[0] Slab

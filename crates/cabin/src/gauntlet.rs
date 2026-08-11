@@ -1803,6 +1803,29 @@ mod tests {
         assert!(!pairs_fight(&a, &stacked), "a stack is not a fight");
     }
 
+    /// **No room draws two faces on one plane.** The docket is a work
+    /// order and it shrinks; a law is a thing that does not. This family
+    /// is empty now, and the sentence it closes is worth keeping said
+    /// after the last line of its own comes off the list.
+    #[test]
+    fn no_room_draws_two_faces_on_one_plane() {
+        let found = sweep();
+        let fights: Vec<&Finding> = found
+            .iter()
+            .filter(|finding| finding.rule == NO_COPLANAR)
+            .collect();
+        assert!(
+            fights.is_empty(),
+            "{} pair(s) of faces share a plane and a facing:\n{}",
+            fights.len(),
+            fights
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+    }
+
     /// **Only a box has six faces.** A cylinder meets each of the four
     /// planes round its flank along a single line, a sphere meets all six
     /// at a point, and a torus at a curve — so a boss cut round a post

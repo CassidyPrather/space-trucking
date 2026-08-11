@@ -26,10 +26,14 @@
 //!   plate, drawn shut.
 //!
 //! The cabin keeps one privilege, and it is declared rather than assumed:
-//! its hull was hand-built before the lattice existed and stands a working
-//! gutter forward of its own floor box, so [`chart_inset`] carries that
-//! authored trim as data. Its floor, its aft wall, its walk envelope, and
-//! every one of its apertures derive like everybody else's.
+//! its hull was hand-built before the lattice existed, so [`chart_inset`]
+//! carries its authored trim as data and `rig::structure` is the one
+//! slab list not derived from a pose. What that privilege no longer buys
+//! it is a different SIZE: the front gutter it used to stand forward of
+//! its own floor box was dead deck nothing could reach, and the cabin is
+//! its declared 8×7 box on every side now. Its floor, its aft wall, its
+//! walk envelope, and every one of its apertures derive like everybody
+//! else's.
 
 use bevy::prelude::*;
 
@@ -83,10 +87,21 @@ const STOREY: f32 = CEIL_SLAB_Y + WALL_T;
 const CHART_INSET: f32 = 0.03;
 
 /// The cabin's authored trim, by wall (aft, starboard, front, port). Its
-/// aft wall IS its box face; its side walls take the ordinary inset; and
-/// its front wall stands a declared working gutter BEYOND the floor box —
-/// the hull was built before the lattice and the instruments hang on it.
-const CABIN_TRIM: [f32; 4] = [0.0, CHART_INSET, -0.47, CHART_INSET];
+/// aft wall IS its box face; every other wall takes the ordinary inset.
+///
+/// **The front gutter is gone.** It was half a metre of deck standing
+/// forward of the cabin's own floor box, left over from the era when the
+/// front wall carried the console face and needed a working strip in
+/// front of it. The console retired into a room and the strip stopped
+/// holding anything — but it was still there, and it was dead deck in
+/// the literal sense: no net cell reaches it, so nothing can be berthed
+/// on it, and the walk envelope had to stop short of a wall half a metre
+/// further forward than the room, so nobody could stand on it either.
+/// The playtest found it by walking into it. The floor is floor now: the
+/// front wall stands on the box face like the other three, the hull
+/// follows it (`crate::rig::structure`), and the envelope reaches the
+/// front row.
+const CABIN_TRIM: [f32; 4] = [0.0, CHART_INSET, CHART_INSET, CHART_INSET];
 
 /// Half-width of a walking body, for the derived envelopes. The cabin's
 /// own envelope is authored (`rig::WALK_*`) because its hull is; every
@@ -463,10 +478,10 @@ pub fn room_box(room: &Room) -> (Vec3, Vec3) {
 /// same plate.
 ///
 /// The cabin is the one exception, and it is the exception it has always
-/// been: its hull was hand-built before the lattice and stands a working
-/// gutter forward of its floor box, so its outside is the union of the
-/// masses that ARE it (`rig::structure`) rather than a box derived from
-/// a pose it predates.
+/// been: its hull was hand-built before the lattice, so its outside is
+/// the union of the masses that ARE it (`rig::structure`) rather than a
+/// box derived from a pose it predates. Those masses now stand on its
+/// own floor box on all four sides, so the two agree about its size.
 #[must_use]
 pub fn hull_box(placed: &Placed) -> (Vec3, Vec3) {
     if placed.id == CABIN {

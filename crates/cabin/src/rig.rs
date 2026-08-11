@@ -58,15 +58,20 @@ const FOV: f32 = 0.9;
 pub const EYE_HEIGHT: f32 = 1.5;
 // The room grid made the whole floor walkable ground — cargo stands
 // among the walker now, not beyond a strip — so the envelope spans the
-// room up to body clearance at the aft wall. The clamp is collision
+// room up to body clearance at the walls. The clamp is collision
 // with the HULL and nothing else: cargo has no body to bump, and the
 // placement law no longer reserves a lane for one either.
-// The cabin's own box is AUTHORED, because its hull is: it stands a
-// working gutter forward of its lattice floor box that the lattice
-// knows nothing about (`room::chart_inset`). Every attached
+// The cabin's own box is AUTHORED, because its hull is; every attached
 // room derives its own from its pose, and the doorways join them
 // (`room::walk_boxes`).
-pub const WALK_MIN: Vec3 = Vec3::new(-1.85, EYE_HEIGHT, -0.85);
+// The front edge used to stop 0.59 short of the front floor row, on the
+// old front wall's account — the wall stood half a metre forward of the
+// cabin's floor box across a gutter nothing could reach, and the
+// envelope had to clear the wall rather than the room. The gutter went
+// (`room::CABIN_TRIM`), so this reaches the front row with the same
+// clearance the aft row gets, and `walk_envelope_covers_the_floor` now
+// asserts the whole deck is standable rather than merely near.
+pub const WALK_MIN: Vec3 = Vec3::new(-1.85, EYE_HEIGHT, -1.30);
 pub const WALK_MAX: Vec3 = Vec3::new(1.85, EYE_HEIGHT, 2.27);
 const WALK_SPEED: f32 = 1.3;
 
@@ -239,11 +244,14 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
     // cornices sit up, y3 rows lie aft. Every normal therefore points OUT
     // of the room (`Station::chart_flipped`); consumers use
     // `Station::inward`/`Station::face`.
+    //
+    // The front chart's plane moved when the front gutter went: it sits
+    // just inside the cabin's own floor box now, like the side charts.
     const BAY_WALL_H: f32 = 3.0 * BAY_CELL;
     const BAY_FLOOR_D: f32 = 7.0 * BAY_CELL;
     const BAY_FLOOR_ZC: f32 = BAY_WALL_Z - BAY_FLOOR_D * 0.5;
     const BAY_SIDE_X: f32 = 2.17;
-    const BAY_FRONT_Z: f32 = -1.91;
+    const BAY_FRONT_Z: f32 = -1.41;
     const BAY_CEIL_Y: f32 = 2.26;
     const BAY_FLOOR_Y: f32 = 0.012;
 
@@ -364,12 +372,19 @@ pub fn structure() -> Vec<Slab> {
         // (0.55) between each of these and where it used to stand: the
         // room grew outward on every side at once, so nothing inside it
         // had to be re-composed, only re-measured.
-        Slab::new(Vec3::new(0.0, -0.05, 0.2), Vec3::new(4.5, 0.1, 4.5)),
-        Slab::new(Vec3::new(0.0, 2.32, 0.2), Vec3::new(4.5, 0.1, 4.5)),
-        Slab::new(Vec3::new(0.0, 1.15, -1.97), Vec3::new(4.5, 2.5, 0.1)),
+        Slab::new(Vec3::new(0.0, -0.05, 0.45), Vec3::new(4.5, 0.1, 4.0)),
+        Slab::new(Vec3::new(0.0, 2.32, 0.45), Vec3::new(4.5, 0.1, 4.0)),
+        // The front wall stands on the cabin's own floor-box face, like
+        // the other three. It used to stand at -1.97, half a metre
+        // forward of it, with dead deck in between: no net cell reached
+        // the gutter, so nothing could be berthed there, and the walk
+        // envelope had to clear the wall rather than the room, so
+        // nobody could stand there either. The console face it was built
+        // around left two passes ago and the strip held nothing.
+        Slab::new(Vec3::new(0.0, 1.15, -1.49), Vec3::new(4.5, 2.5, 0.1)),
         Slab::new(Vec3::new(0.0, 1.15, 2.47), Vec3::new(4.5, 2.5, 0.1)),
-        Slab::new(Vec3::new(-2.27, 1.15, 0.2), Vec3::new(0.1, 2.5, 4.5)),
-        Slab::new(Vec3::new(2.27, 1.15, 0.2), Vec3::new(0.1, 2.5, 4.5)),
+        Slab::new(Vec3::new(-2.27, 1.15, 0.45), Vec3::new(0.1, 2.5, 4.0)),
+        Slab::new(Vec3::new(2.27, 1.15, 0.45), Vec3::new(0.1, 2.5, 4.0)),
     ];
     // Wall ribs: the junk that says somebody built this hull in a hurry.
     // The port wall runs its full set again — the chart tank that used
@@ -378,7 +393,7 @@ pub fn structure() -> Vec<Slab> {
     // Neither wall dodges a doorway by hand any more; the punch below
     // takes the ribs out of every aperture the cabin declares.
     for i in 0..6 {
-        let z = 0.7f32.mul_add(i as f32, -1.55);
+        let z = 0.7f32.mul_add(i as f32, -1.20);
         for sx in [-2.21f32, 2.21] {
             slabs.push(Slab::new(
                 Vec3::new(sx, 1.15, z),
@@ -917,9 +932,7 @@ pub fn spawn(
     {
         let charts = bay();
         let (_, wall) = charts[0];
-        let (_, floor) = charts[1];
         let wall_top = wall.center.y + wall.half_v.length();
-        let strip_front = floor.center.z - floor.half_v.length();
         // Gantry: a top rail above row 0 and stiles down the seams to the
         // side walls — the rack the fixtures visibly mount to, grown to
         // room scale.
@@ -941,14 +954,13 @@ pub fn spawn(
                 .with_scale(Vec3::new(0.06, wall_top + 0.06, 0.08)),
             ));
         }
-        // Hazard lip along the floor chart's front edge: the painted
-        // line between the front gutter and where cargo lives.
-        commands.spawn((
-            Mesh3d(skin.cube.clone()),
-            MeshMaterial3d(skin.hazard.clone()),
-            Transform::from_translation(Vec3::new(0.0, 0.017, strip_front - 0.032))
-                .with_scale(Vec3::new(BAY_W + 0.14, 0.034, 0.05)),
-        ));
+        // No hazard lip. There was one along the floor chart's front
+        // edge — "the painted line between the front gutter and where
+        // cargo lives" — and it retired with the gutter it was drawing
+        // the edge of. Hazard tape means *this will hurt you*
+        // (`docs/ART_DIRECTION_3D.md`, and `Consume` is its one
+        // claimant); across the front of a deck the player is now meant
+        // to walk on and berth cargo on, it was a warning about nothing.
         // The doormat that used to be hand-listed here is the threshold
         // TILE CLASS now: `room::tiles` stripes every aperture's own
         // cells, in every room, straight off the sim's declaration.
@@ -1657,11 +1669,11 @@ mod tests {
     }
 
     /// The net's charts land their seam cells where the room glues
-    /// them. Three folds are physically watertight (aft, port,
-    /// starboard meet the floor at the baseboards); two are declared
-    /// gutter/trim seams with a bounded gap — the front wall stands a
-    /// working gutter past the floor's front row, and the ceiling
-    /// chart sits a trim band above the starboard cornice (BAY.md).
+    /// them. FOUR folds are physically watertight now — aft, port,
+    /// starboard and front all meet the floor at their baseboards,
+    /// because the front gutter that used to hold that seam open is
+    /// gone. One declared trim seam is left: the ceiling chart sits a
+    /// trim band above the starboard cornice (BAY.md).
     #[test]
     fn chart_seams_are_watertight_or_bounded_gutters() {
         let chart = |want: Station| {
@@ -1701,12 +1713,9 @@ mod tests {
             gap(&floor, east, &starboard, west) < 0.10,
             "starboard fold gapes"
         );
-        // Gutter and trim seams: adjacent in the net, offset in the
+        assert!(gap(&floor, bottom, &front, top) < 0.10, "front fold gapes");
+        // The one trim seam left: adjacent in the net, offset in the
         // room by a declared, bounded margin.
-        assert!(
-            gap(&floor, bottom, &front, top) < 0.60,
-            "front gutter wider than declared"
-        );
         assert!(
             gap(&starboard, east, &ceiling, west) < 0.75,
             "ceiling trim wider than declared"
@@ -1878,11 +1887,22 @@ mod tests {
         }
     }
 
-    /// The walk envelope spans the floor chart with body clearance at
-    /// the walls: the room grid made the whole floor walkable ground,
-    /// and every floor cell must be reachable on foot. The clamp
-    /// answers to the hull alone — cargo is walked through, so no
-    /// stack of crates can ever fence a corner off.
+    /// **The floor is floor**: a body can stand over the middle of every
+    /// deck row, front row included.
+    ///
+    /// The playtest's dead strip, mechanised. The envelope used to stop
+    /// 0.59 short of the front floor row because the cabin's front wall
+    /// stood half a metre forward of its own floor box, across a gutter
+    /// no net cell reached — so the front of the deck was ground you
+    /// could neither walk on nor berth on. It is deck like the rest now,
+    /// and this test is what stops the gutter coming back: it asks about
+    /// rows rather than about margins, because a margin is a number
+    /// somebody can retune and a row is a place a body stands.
+    ///
+    /// Columns are still stated as a margin: the outermost deck columns
+    /// run under the side walls' baseboards, where a body's shoulders do
+    /// not fit and never did (the workability test proves each of those
+    /// cells is within working reach).
     #[test]
     fn walk_envelope_covers_the_floor() {
         let floor = bay()
@@ -1890,24 +1910,59 @@ mod tests {
             .find(|(station, _)| matches!(station, Station::BayFloor))
             .map(|(_, s)| s)
             .expect("floor chart");
-        let aft_edge = floor.center.z + floor.half_v.length();
-        let front_edge = floor.center.z - floor.half_v.length();
-        assert!(
-            WALK_MAX.z >= aft_edge - 0.20,
-            "envelope stops {} short of the aft floor row",
-            aft_edge - WALK_MAX.z
-        );
-        // The envelope's front edge stops short of the front gutter;
-        // the front floor rows need only be within working reach of it
-        // (the workability test proves each cell individually).
-        assert!(
-            WALK_MIN.z <= front_edge + REACH - 0.6,
-            "the front floor rows sit beyond working reach of the envelope"
-        );
+        let (_, depth) = space_trucking::sim::RoomKind::Cabin.floor();
+        for row in 0..depth {
+            let cell = layout::cell_rect(CABIN, 3, space_trucking::sim::room::COURSES + row);
+            let mid = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
+            let over = floor.to_world(mid).z;
+            assert!(
+                (WALK_MIN.z..=WALK_MAX.z).contains(&over),
+                "deck row {row} at z={over} is outside the walk envelope                  ({}..{}) — ground the player cannot stand on",
+                WALK_MIN.z,
+                WALK_MAX.z
+            );
+        }
         assert!(
             WALK_MAX.x >= floor.half_u.length() - 0.40
                 && -WALK_MIN.x >= floor.half_u.length() - 0.40,
             "envelope too narrow for the floor's side columns"
+        );
+    }
+
+    /// **Every cell of the cabin's deck is a berth.** The other half of
+    /// the dead strip: the gutter carried no net cell at all, so the
+    /// ground in front of the front row was not merely unstandable but
+    /// unusable — and a floor with a strip of nothing along one edge is
+    /// exactly what the playtest reported. The net says 8×7; the hull
+    /// now agrees, so every cell of it lies inside the room.
+    #[test]
+    fn the_hull_holds_the_whole_deck_and_no_more() {
+        let floor = bay()
+            .into_iter()
+            .find(|(station, _)| matches!(station, Station::BayFloor))
+            .map(|(_, s)| s)
+            .expect("floor chart");
+        let slabs = structure();
+        let front = floor.center.z - floor.half_v.length();
+        let aft = floor.center.z + floor.half_v.length();
+        // The hull stops within a wall's thickness of the deck's own
+        // edges fore and aft: no gutter, and no missing floor either.
+        let (lo, hi) = slabs
+            .iter()
+            .map(|slab| (slab.center - slab.size * 0.5, slab.center + slab.size * 0.5))
+            .fold(
+                (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN)),
+                |(a, b), (c, d)| (a.min(c), b.max(d)),
+            );
+        assert!(
+            (front - lo.z).abs() < 0.16,
+            "the hull stands {} forward of the deck's front row",
+            front - lo.z
+        );
+        assert!(
+            (hi.z - aft).abs() < 0.16,
+            "the hull stands {} aft of the deck's aft row",
+            hi.z - aft
         );
     }
 }

@@ -1421,7 +1421,7 @@ pub fn approach(placed: &Placed) -> Vec<(Vec3, Vec3)> {
     let inset = Vec3::new(room::BODY, 0.0, room::BODY);
     let (lo, hi) = (placed.lo + inset, placed.hi - inset);
     let span = (hi - lo).max(Vec3::ZERO).length();
-    (0..APPROACH_STEPS)
+    let mut stands: Vec<(Vec3, Vec3)> = (0..APPROACH_STEPS)
         .map(|i| {
             let reach = (i as f32) / (APPROACH_STEPS - 1) as f32 * span;
             let eye = anchor.eye + back * reach;
@@ -1434,7 +1434,12 @@ pub fn approach(placed: &Placed) -> Vec<(Vec3, Vec3)> {
                 at,
             )
         })
-        .collect()
+        .collect();
+    // The clamp piles the tail of a short room's approach against its
+    // own wall; a stand-off sampled twice is a frame rendered twice and
+    // a step of exactly zero, so the duplicates come off.
+    stands.dedup_by(|a, b| a.0.distance(b.0) < 1e-3);
+    stands
 }
 
 // ------------------------------------------------------------ the docket --

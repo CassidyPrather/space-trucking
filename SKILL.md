@@ -73,6 +73,7 @@ cargo test --workspace                               # test
 cargo bench --bench sim_bench -- --quick             # bench
 cargo audit                                          # audit
 cargo run -p cabin -- --shot out.png --view bay      # headless screenshot
+cargo run -p cabin -- --gauntlet                    # adversarial geometry sweep
 ```
 
 ## Solid vs. soft (change tolerance)

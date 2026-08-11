@@ -425,6 +425,43 @@ shake, lamps carry lit-versus-dark-glass, rows sit at fixed stations.
   at 60fps into a 480×270 buffer. Prefer emissives to lights; keep
   shadow-casting lights to one.
 
+## The gauntlet: what a screenshot structurally cannot see
+
+A human playtest of the station wave found some fifteen defects that
+fifteen design agents and their screenshots had all signed off on, and
+the post-mortem blamed the *shape* of the checking rather than anybody's
+care: a still cannot see time, agents shot the framing they designed for
+rather than the path a player walks, rooms were photographed empty, and
+designers graded their own work. `crates/cabin/src/gauntlet.rs` is the
+adversarial pass that closes those, and it splits in two:
+
+- **Pure geometry, always on.** `cargo test -p cabin` sweeps every room
+  in the game — the twelve stations, the three event rooms, the cabin
+  and the burner — against a **loaded** board (`gauntlet::load` fills
+  every legal berth through the sim's own arbiter, so decor has cargo to
+  clip through). Six rule families: no fitting stands in a berth cargo
+  may take at the height a rig occupies; nothing occludes a wall berth
+  from its room; every berth stays workable from the walk envelope; no
+  two drawn faces share a plane and a facing (the general z-fight
+  detector); a rig's named features point where their names say
+  (`pieces::features` — a sconce's cup INTO the room, a floor lamp's
+  base plate FLAT on the deck); and the walked path stands in air.
+  `--gauntlet` prints the whole report; `--gauntlet-docket` reprints the
+  work order.
+- **Pixels, opt-in.** `--gauntlet-walk <dir>` drives the scripted room
+  walk — in through the door, round the room, up to the counter — and
+  writes one PNG per waypoint, then holds the camera still for ten
+  frames and compares them (the flicker detector: the only mechanism
+  that would ever have caught the every-other-frame lamp), then backs
+  off along an approach sampling the room's own brightness (the
+  light-pop detector). It needs a rasteriser, so it runs under `xvfb`,
+  and `cargo test -p cabin -- --ignored` is the door to it.
+
+`crates/cabin/src/gauntlet.docket` is the itemised list of what the
+sweep catches **today**. It is a work order, not a baseline: the sweep is
+asserted equal to it, so a new defect fails the build and a fixed one
+fails it too until the line is struck.
+
 ## Keeping geometry honest
 
 The class of defect where a mass swallows a face's edge, or a viewpoint

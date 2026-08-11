@@ -3308,6 +3308,11 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
             );
         }
         // Inner-ring transit papers: a flat card with the Guild's stripe.
+        // The stripe stands proud of the card on every edge it has — a
+        // hair deeper and a hair short of the card's own top and bottom.
+        // Cut to the card's full height it shared both those planes with
+        // it, which is two faces at one depth along the whole of a stripe
+        // somebody is holding up to their eye.
         Kind::TransitChit => {
             rig.part(
                 Cuboid::new(fw * 0.74, fh * 0.52, 5.0),
@@ -3316,7 +3321,7 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
             );
             let stripe = rig.tint(palette::POI_GUILD);
             rig.part(
-                Cuboid::new(fw * 0.12, fh * 0.52, 5.6),
+                Cuboid::new(fw * 0.12, fh * 0.46, 5.6),
                 stripe,
                 Transform::from_xyz(-fw * 0.2, 0.0, 2.8),
             );

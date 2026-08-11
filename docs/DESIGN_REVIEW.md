@@ -72,26 +72,6 @@ deliberately below.
 Out of scope on purpose, not forgotten. Revisit when the core loop stops
 changing; remove a line only by shipping it or striking it in review.
 
-- Calling-room sizes (a Trade room is 6×5, a Pump 3×3; playtest calls
-  them cramped to read once a station's character is standing in them).
-  Deferred on the owner's call while the target is technical
-  correctness rather than aesthetic quality — but deliberately, not
-  forgotten: enlarging them moves `RoomKind`'s extents, the tile bands,
-  the save, and every station's placed decor, so it wants to land after
-  the geometry sweep settles rather than during it.
-
-  **Now measured.** The gauntlet's `berth-clear` family is the size
-  question wearing a rule's clothes, and 290 of its findings are decor
-  that no reservation can clear. A station's furniture covers 15-46% of
-  its room's net (18-56 cells of 121 in a market), and the union over
-  the fifteen characters covers 56-87% of a kind's — so there is no
-  band a room can keep for it. Reserving every `Plain` cell of a calling
-  room would still leave 241 of the 290, because the trade bands the
-  decor bites are 58% of a market's net on their own; and the sim
-  cannot reserve them anyway, since `deck_berth` and `spawn_in` put a
-  room's hand-over goods and a pump's fuel on exactly those cells. The
-  room's OWN hardware reserved cleanly and did (the fixture rule,
-  docs/ROOMS.md); the rest is floor area, and floor area is this line.
 - Mid-flight retargeting (orbital POI motion shipped: intercept courses
   re-aim automatically when the arrival tick moves, but there is still no
   steering once underway)

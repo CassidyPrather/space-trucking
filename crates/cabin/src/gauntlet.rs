@@ -627,9 +627,77 @@ fn cell_face(id: RoomId, (x, y): (u8, u8), surface: &SimSurface) -> Box3 {
 pub struct Drawn {
     pub what: String,
     pub body: Box3,
+    /// Which of the box's six sides are faces the renderer draws.
+    pub faces: Faces,
     /// Whether a character authored it. The rules that are about a
     /// station's furniture ask only about these; the rest is fabric.
     pub character: bool,
+}
+
+/// **Which sides of a body's box are faces**, per world axis and end.
+///
+/// Everything the gauntlet measures is a box, and for a box that is the
+/// body. For everything else the box is a wrapper: a cylinder meets each
+/// of the four planes round its flank along a single LINE, a sphere meets
+/// all six at a point, and a torus at a curve. A line is not a face and
+/// cannot fight one — which is why two bodies cut from one centre, a
+/// collar round a pipe or a boss on a post, share a box and nothing else.
+/// A detector that could not be told so is a detector somebody loosens
+/// the threshold on, and a loosened threshold stops finding the thing it
+/// was built for.
+///
+/// A flat paint is the other case: it is a face on a chart, and its mesh
+/// is a box only because the renderer draws boxes. What the decal ladder
+/// puts on a rung is the side it shows the room; the other five are the
+/// wrapper's, and the one behind it lies inside the ladder's own band,
+/// hard against the surface the paint is painted on.
+#[derive(Clone, Copy, Debug)]
+pub struct Faces {
+    /// Whether the low side of each world axis is a face.
+    lo: BVec3,
+    /// Whether the high side of each world axis is a face.
+    hi: BVec3,
+}
+
+impl Faces {
+    /// Six of them: what a box has.
+    const ALL: Self = Self {
+        lo: BVec3::TRUE,
+        hi: BVec3::TRUE,
+    };
+
+    /// The faces one silhouette actually presents, in world axes.
+    ///
+    /// A cylinder and a tapered drum are capped at both ends of their own
+    /// `+y` and round everywhere else; a sphere and a torus are round
+    /// everywhere. `rot` carries the body's own axes onto the world's,
+    /// which is a quarter turn every time the lattice or a chart is
+    /// involved, so a cap lands squarely on one world axis.
+    fn of(shape: Shape, rot: Quat) -> Self {
+        let own = match shape {
+            Shape::Slab => Vec3::ONE,
+            Shape::Post | Shape::Cone => Vec3::Y,
+            Shape::Dome | Shape::Ring => Vec3::ZERO,
+        };
+        let m = Mat3::from_quat(rot);
+        let world = m.x_axis.abs() * own.x + m.y_axis.abs() * own.y + m.z_axis.abs() * own.z;
+        let flat = world.cmpgt(Vec3::splat(0.5));
+        Self { lo: flat, hi: flat }
+    }
+
+    /// The one face a flat paint shows: the way it looks off its chart.
+    fn showing(dir: Vec3) -> Self {
+        let axis = dir.abs().cmpgt(Vec3::splat(0.5));
+        Self {
+            lo: axis & dir.cmplt(Vec3::ZERO),
+            hi: axis & dir.cmpgt(Vec3::ZERO),
+        }
+    }
+
+    /// Whether one end of one world axis is a drawn face.
+    fn has(self, axis: usize, up: bool) -> bool {
+        if up { self.hi } else { self.lo }.test(axis)
+    }
 }
 
 /// The world half-extents of one unit body, per silhouette. Everything
@@ -639,6 +707,17 @@ const fn unit_half(shape: Shape) -> Vec3 {
     match shape {
         Shape::Ring => Vec3::new(0.5, 0.09, 0.5),
         Shape::Slab | Shape::Post | Shape::Dome | Shape::Cone => Vec3::splat(0.5),
+    }
+}
+
+/// One posed fitting, as the sweep measures it: its box, and the sides of
+/// that box its own silhouette actually draws.
+fn drawn(what: String, frame: &Frame, fitting: &Fitting) -> Drawn {
+    Drawn {
+        what,
+        body: Box3::of(&frame.place(fitting), unit_half(fitting.shape)),
+        faces: Faces::of(fitting.shape, frame.rot),
+        character: true,
     }
 }
 
@@ -655,11 +734,11 @@ pub fn fittings(placed: &Placed) -> Vec<Drawn> {
     let mut out = Vec::new();
     let frame = Frame::of(placed.lo, placed.hi, placed.yaw);
     for (i, fitting) in character.decor.iter().enumerate() {
-        out.push(Drawn {
-            what: format!("decor[{i}] {:?}", fitting.shape),
-            body: Box3::of(&frame.place(fitting), unit_half(fitting.shape)),
-            character: true,
-        });
+        out.push(drawn(
+            format!("decor[{i}] {:?}", fitting.shape),
+            &frame,
+            fitting,
+        ));
     }
     if let Some(cell_frame) = handshake_frame(placed) {
         let knob = Fitting::new(
@@ -668,17 +747,17 @@ pub fn fittings(placed: &Placed) -> Vec<Drawn> {
             character.handshake.knob_at,
             character.handshake.knob_half,
         );
-        out.push(Drawn {
-            what: format!("handshake knob {:?}", knob.shape),
-            body: Box3::of(&cell_frame.place(&knob), unit_half(knob.shape)),
-            character: true,
-        });
+        out.push(drawn(
+            format!("handshake knob {:?}", knob.shape),
+            &cell_frame,
+            &knob,
+        ));
         for (i, fitting) in character.handshake.trim.iter().enumerate() {
-            out.push(Drawn {
-                what: format!("handshake trim[{i}] {:?}", fitting.shape),
-                body: Box3::of(&cell_frame.place(fitting), unit_half(fitting.shape)),
-                character: true,
-            });
+            out.push(drawn(
+                format!("handshake trim[{i}] {:?}", fitting.shape),
+                &cell_frame,
+                fitting,
+            ));
         }
     }
     if !placed.kind.riding() {
@@ -689,11 +768,11 @@ pub fn fittings(placed: &Placed) -> Vec<Drawn> {
             rot: Quat::IDENTITY,
         };
         for (i, fitting) in character.light.cage.iter().enumerate() {
-            out.push(Drawn {
-                what: format!("lamp cage[{i}] {:?}", fitting.shape),
-                body: Box3::of(&cage.place(fitting), unit_half(fitting.shape)),
-                character: true,
-            });
+            out.push(drawn(
+                format!("lamp cage[{i}] {:?}", fitting.shape),
+                &cage,
+                fitting,
+            ));
         }
     }
     out
@@ -737,11 +816,13 @@ fn chart_of_raw(placed: &Placed, (x, y): (u8, u8)) -> Option<(Station, SimSurfac
 ///
 /// The fabric half — shells, and the flat field a colored class lays over
 /// its own cells — is here because the coplanar detector is about what
-/// the depth buffer sees, and a fitting laid flush against a painted wall
-/// fights it exactly as hard as two fittings fight each other. What is
-/// deliberately left out is the rim MARKS: their spacing is the decal
-/// ladder's own law and `pieces::tests::the_decal_ladder_never_z_fights`
-/// already holds every rung of it.
+/// the depth buffer sees, and a fitting standing on the face a painted
+/// wall shows the room fights it exactly as hard as two fittings fight
+/// each other. A field carries the one face it shows ([`Faces`]); the
+/// other five are its mesh's. What is deliberately left out is the rim
+/// MARKS: their spacing is the decal ladder's own law and
+/// `pieces::tests::the_decal_ladder_never_z_fights` already holds every
+/// rung of it.
 #[must_use]
 pub fn scene(stage: &Stage) -> Vec<Drawn> {
     let placed = &stage.placed;
@@ -751,6 +832,7 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
             out.push(Drawn {
                 what: format!("hull slab[{i}]"),
                 body: Box3::spanning(slab.center - slab.size * 0.5, slab.center + slab.size * 0.5),
+                faces: Faces::ALL,
                 character: false,
             });
         }
@@ -762,6 +844,7 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
             out.push(Drawn {
                 what: format!("shell slab[{i}]"),
                 body: Box3::spanning(center - size * 0.5, center + size * 0.5),
+                faces: Faces::ALL,
                 character: false,
             });
         }
@@ -772,19 +855,22 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
     if !placed.kind.riding() {
         let (at, _) = room::caller_reach(placed);
         let stem = (placed.hi.y - at.y) * 0.5;
-        for (what, centre, size) in [
+        for (what, shape, centre, size) in [
             (
                 "lamp stem",
+                Shape::Slab,
                 Vec3::new(at.x, at.y + stem, at.z),
                 Vec3::new(room::STEM_T, stem * 2.0, room::STEM_T),
             ),
             (
                 "lamp shade",
+                poi::character_of(placed.host).light.shade,
                 Vec3::new(at.x, room::SHADE_H.mul_add(0.5, at.y), at.z),
                 Vec3::new(room::SHADE_R * 2.0, room::SHADE_H, room::SHADE_R * 2.0),
             ),
             (
                 "lamp glass",
+                Shape::Post,
                 Vec3::new(at.x, at.y - 0.01, at.z),
                 Vec3::new(
                     room::SHADE_R * room::GLASS_R * 2.0,
@@ -796,6 +882,7 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
             out.push(Drawn {
                 what: what.to_owned(),
                 body: Box3::spanning(centre - size * 0.5, centre + size * 0.5),
+                faces: Faces::of(shape, Quat::IDENTITY),
                 character: false,
             });
         }
@@ -825,6 +912,7 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
             out.push(Drawn {
                 what: format!("{tile:?} field ({x}, {y})"),
                 body: face.reaching(inward, skin.mul_add(-0.5, lift), skin.mul_add(0.5, lift)),
+                faces: Faces::showing(inward),
                 character: false,
             });
         }
@@ -1109,6 +1197,9 @@ fn coplanar(stage: &Stage) -> Vec<Finding> {
                     (false, (a.body.lo[axis], b.body.lo[axis])),
                     (true, (a.body.hi[axis], b.body.hi[axis])),
                 ] {
+                    if !a.faces.has(axis, up) || !b.faces.has(axis, up) {
+                        continue;
+                    }
                     if (pa - pb).abs() >= FIGHT_EPS {
                         continue;
                     }
@@ -1490,17 +1581,18 @@ pub fn docket() -> Vec<(String, String, String)> {
 /// **Where the coplanar detector is wrong**, pair by pair, with the
 /// reason it is wrong — `(room, pair, why)`.
 ///
-/// Concentric bodies are the honest case the owner named: a firebox
+/// Concentric bodies were the honest case the owner named: a firebox
 /// glass inside a firebox drum, two cylinders cut from one centre, a
-/// collar round a pipe. A detector that could not be told so is a
-/// detector somebody loosens the threshold on instead, and a loosened
-/// threshold stops finding the thing it was built for.
+/// collar round a pipe. They are not on this list either, because the
+/// answer to them was a truer detector rather than a forgiven pair —
+/// [`Faces`] knows which sides of a body's box are faces, and a round
+/// body has none round its flank.
 ///
 /// **It is empty today, and that is a finding of its own**: the tighter
-/// [`FIGHT_EPS`] answered every case the loose one produced, so nothing
-/// has yet needed forgiving. A pair added here needs its reason written
-/// beside it, and the reason has to be about the geometry rather than
-/// about the number.
+/// [`FIGHT_EPS`], and then [`Faces`], answered every case the loose
+/// detector produced, so nothing has yet needed forgiving. A pair added
+/// here needs its reason written beside it, and the reason has to be
+/// about the geometry rather than about the number.
 pub const ALLOWED: &[(&str, &str, &str)] = &[];
 
 #[cfg(test)]
@@ -1690,22 +1782,122 @@ mod tests {
         let a = Drawn {
             what: "a".to_owned(),
             body: Box3::spanning(Vec3::ZERO, Vec3::new(1.0, 1.0, 0.1)),
+            faces: Faces::ALL,
             character: true,
         };
         // Same top, overlapping footprint: a fight.
         let fighting = Drawn {
             what: "b".to_owned(),
             body: Box3::spanning(Vec3::new(0.2, 0.2, 0.0), Vec3::new(0.8, 1.0, 0.2)),
+            faces: Faces::ALL,
             character: true,
         };
         // Stacked: its floor is the other's ceiling, and that is fine.
         let stacked = Drawn {
             what: "c".to_owned(),
             body: Box3::spanning(Vec3::new(0.2, 1.0, 0.0), Vec3::new(0.8, 2.0, 0.2)),
+            faces: Faces::ALL,
             character: true,
         };
         assert!(pairs_fight(&a, &fighting), "coplanar tops must be caught");
         assert!(!pairs_fight(&a, &stacked), "a stack is not a fight");
+    }
+
+    /// **Only a box has six faces.** A cylinder meets each of the four
+    /// planes round its flank along a single line, a sphere meets all six
+    /// at a point, and a torus at a curve — so a boss cut round a post
+    /// from one centre shares a box with it and shares no face at all,
+    /// and the detector must not report the box as the body.
+    #[test]
+    fn only_a_box_has_six_faces() {
+        use std::f32::consts::FRAC_PI_2;
+
+        let sides = |faces: Faces| -> usize {
+            (0..3)
+                .map(|axis| {
+                    usize::from(faces.has(axis, false)) + usize::from(faces.has(axis, true))
+                })
+                .sum()
+        };
+        // Every turn the lattice and the charts ever apply is a quarter
+        // turn, so a cap lands on one world axis whichever way it faces.
+        for rot in [
+            Quat::IDENTITY,
+            Quat::from_rotation_y(FRAC_PI_2),
+            Quat::from_rotation_x(FRAC_PI_2),
+            Quat::from_rotation_z(-FRAC_PI_2),
+        ] {
+            for (shape, want) in [
+                (Shape::Slab, 6),
+                (Shape::Post, 2),
+                (Shape::Cone, 2),
+                (Shape::Dome, 0),
+                (Shape::Ring, 0),
+            ] {
+                let got = sides(Faces::of(shape, rot));
+                assert_eq!(got, want, "a {shape:?} draws {got} flat sides, not {want}");
+            }
+        }
+        // And the rule that follows: one centre, two radii, no fight —
+        // where two plates on the same plane are one.
+        let body = Box3::spanning(Vec3::splat(-0.5), Vec3::splat(0.5));
+        let round = |shape| Drawn {
+            what: format!("{shape:?}"),
+            body,
+            faces: Faces::of(shape, Quat::IDENTITY),
+            character: true,
+        };
+        assert!(
+            !pairs_fight(&round(Shape::Post), &round(Shape::Dome)),
+            "a boss round a post shares a box, not a face"
+        );
+        assert!(
+            pairs_fight(&round(Shape::Slab), &round(Shape::Slab)),
+            "two plates on one plane are still a fight"
+        );
+    }
+
+    /// **A flat paint shows one side.** A class's field is a face on a
+    /// chart: the mesh it is drawn from is a box because the renderer
+    /// draws boxes, and the side behind it lies inside the decal ladder's
+    /// own band, hard against the surface the paint is painted on. Only
+    /// the side it turns to the room can be seen, so only that side can
+    /// fight.
+    #[test]
+    fn a_flat_paint_shows_only_the_side_it_turns_to_the_room() {
+        for stage in roster() {
+            let mid = (stage.placed.lo + stage.placed.hi) * 0.5;
+            for drawn in scene(&stage) {
+                if !drawn.what.contains(" field (") {
+                    continue;
+                }
+                let mut shown = 0;
+                for axis in 0..3 {
+                    for up in [false, true] {
+                        if !drawn.faces.has(axis, up) {
+                            continue;
+                        }
+                        shown += 1;
+                        let (face, back) = if up {
+                            (drawn.body.hi[axis], drawn.body.lo[axis])
+                        } else {
+                            (drawn.body.lo[axis], drawn.body.hi[axis])
+                        };
+                        assert!(
+                            (face - mid[axis]).abs() <= (back - mid[axis]).abs(),
+                            "{}: {} shows the side away from the room",
+                            stage.name,
+                            drawn.what
+                        );
+                    }
+                }
+                assert_eq!(
+                    shown, 1,
+                    "{}: {} shows {shown} sides, and a paint has one",
+                    stage.name, drawn.what
+                );
+            }
+        }
     }
 
     /// Whether the detector's own rule fires on one pair — the test
@@ -1714,11 +1906,14 @@ mod tests {
     fn pairs_fight(a: &Drawn, b: &Drawn) -> bool {
         (0..3).any(|axis| {
             [
-                (a.body.lo[axis], b.body.lo[axis]),
-                (a.body.hi[axis], b.body.hi[axis]),
+                (false, (a.body.lo[axis], b.body.lo[axis])),
+                (true, (a.body.hi[axis], b.body.hi[axis])),
             ]
             .into_iter()
-            .any(|(pa, pb)| {
+            .any(|(up, (pa, pb))| {
+                if !a.faces.has(axis, up) || !b.faces.has(axis, up) {
+                    return false;
+                }
                 if (pa - pb).abs() >= FIGHT_EPS {
                     return false;
                 }

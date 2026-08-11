@@ -122,15 +122,6 @@ Hermitage | coplanar-faces | decor[17] Slab / decor[20] Slab
 Hermitage | coplanar-faces | decor[18] Slab / decor[19] Slab
 Hermitage | coplanar-faces | decor[18] Slab / decor[20] Slab
 Hermitage | coplanar-faces | decor[1] Slab / decor[4] Slab
-Hermitage | coplanar-faces | decor[22] Post / decor[23] Dome
-Hermitage | coplanar-faces | decor[24] Dome / Plain field (15, 4)
-Hermitage | coplanar-faces | decor[24] Dome / Plain field (16, 4)
-Hermitage | coplanar-faces | decor[24] Dome / Plain field (16, 5)
-Hermitage | coplanar-faces | decor[24] Dome / Plain field (17, 4)
-Hermitage | coplanar-faces | decor[24] Dome / Plain field (17, 5)
-Hermitage | coplanar-faces | decor[24] Dome / Stock field (15, 3)
-Hermitage | coplanar-faces | decor[24] Dome / Stock field (16, 3)
-Hermitage | coplanar-faces | decor[24] Dome / Stock field (17, 3)
 
 # ---- Jupiter ----
 Jupiter | berth-clear | decor[0] Slab
@@ -164,7 +155,6 @@ Jupiter | berth-seen | decor[7] Post
 Jupiter | coplanar-faces | decor[10] Slab / decor[13] Slab
 Jupiter | coplanar-faces | decor[9] Slab / decor[13] Slab
 Jupiter | coplanar-faces | handshake trim[0] Slab / handshake trim[1] Slab
-Jupiter | coplanar-faces | handshake trim[4] Slab / handshake trim[5] Dome
 
 # ---- Mars ----
 Mars | berth-clear | decor[0] Slab
@@ -194,8 +184,6 @@ Mars | berth-reached | decor[5] Slab
 Mars | berth-seen | decor[13] Slab
 Mars | coplanar-faces | decor[0] Slab / decor[1] Slab
 Mars | coplanar-faces | handshake knob Cone / handshake trim[3] Slab
-Mars | coplanar-faces | handshake trim[0] Slab / handshake trim[4] Dome
-Mars | coplanar-faces | handshake trim[0] Slab / handshake trim[5] Dome
 Mars | coplanar-faces | handshake trim[0] Slab / handshake trim[6] Slab
 Mars | coplanar-faces | handshake trim[0] Slab / handshake trim[7] Slab
 Mars | coplanar-faces | handshake trim[2] Slab / handshake trim[6] Slab
@@ -251,21 +239,6 @@ Parlor | berth-reached | decor[15] Slab
 Parlor | berth-reached | decor[17] Slab
 Parlor | coplanar-faces | decor[10] Slab / decor[11] Slab
 Parlor | coplanar-faces | decor[10] Slab / decor[12] Slab
-Parlor | coplanar-faces | decor[14] Slab / Plain field (0, 4)
-Parlor | coplanar-faces | decor[14] Slab / Plain field (0, 5)
-Parlor | coplanar-faces | decor[14] Slab / Plain field (0, 6)
-Parlor | coplanar-faces | decor[14] Slab / Plain field (1, 4)
-Parlor | coplanar-faces | decor[14] Slab / Plain field (1, 5)
-Parlor | coplanar-faces | decor[14] Slab / Plain field (1, 6)
-Parlor | coplanar-faces | decor[14] Slab / Plain field (2, 4)
-Parlor | coplanar-faces | decor[14] Slab / Plain field (2, 5)
-Parlor | coplanar-faces | decor[14] Slab / Plain field (2, 6)
-Parlor | coplanar-faces | decor[16] Slab / Plain field (7, 3)
-Parlor | coplanar-faces | decor[16] Slab / Plain field (7, 4)
-Parlor | coplanar-faces | decor[16] Slab / Plain field (7, 5)
-Parlor | coplanar-faces | decor[16] Slab / Plain field (8, 3)
-Parlor | coplanar-faces | decor[16] Slab / Plain field (8, 4)
-Parlor | coplanar-faces | decor[16] Slab / Plain field (8, 5)
 Parlor | coplanar-faces | decor[9] Slab / decor[11] Slab
 Parlor | coplanar-faces | decor[9] Slab / decor[12] Slab
 
@@ -366,9 +339,6 @@ Umbra | berth-reached | decor[11] Slab
 Umbra | berth-reached | decor[16] Ring
 Umbra | berth-reached | decor[1] Post
 Umbra | berth-reached | decor[5] Post
-Umbra | coplanar-faces | decor[22] Slab / Plain field (16, 6)
-Umbra | coplanar-faces | decor[28] Slab / Plain field (13, 4)
-Umbra | coplanar-faces | handshake trim[0] Ring / handshake trim[1] Ring
 
 # ---- Uranus ----
 Uranus | berth-clear | decor[0] Post

@@ -1437,6 +1437,34 @@ impl Sim {
         (kind.handshake() == Some((x, y))).then_some(room)
     }
 
+    /// **Whether working `room`'s handshake right now would commit
+    /// anything** — the reading its one lamp is lit by.
+    ///
+    /// The lamp used to be the frontend's guess ("something of the
+    /// player's on an offer tile, or anything marked"), which is the
+    /// right answer for a market and the wrong answer for everywhere
+    /// else. The pump bay has no offer area and nothing to mark, so its
+    /// coupling read *dead* every second it was live: the one room whose
+    /// whole business is one press had a fixture that never lit and never
+    /// moved, and the playtest read the bay as scenery. So the sim
+    /// answers it, per kind, in exactly the shape [`Sim::work_handshake`]
+    /// commits — the two cannot disagree, because they are one question.
+    #[must_use]
+    pub fn handshake_ready(&self, room: RoomId) -> bool {
+        match self.rooms.kind(room) {
+            Some(RoomKind::Trade | RoomKind::Parlor) => !self.proposal(room).is_empty(),
+            Some(RoomKind::Wreck) => self
+                .stock_of(room)
+                .into_iter()
+                .any(|id| self.marks.contains(&id)),
+            // Fuel, once, while the forecourt is still alongside.
+            Some(RoomKind::Pump) => self.encounters.current.is_some_and(|enc| {
+                enc.kind == EncounterKind::GasStation && enc.open() && !enc.used
+            }),
+            _ => false,
+        }
+    }
+
     /// Work a room's handshake: the one physical act that commits.
     fn work_handshake(&mut self, room: RoomId) {
         match self.rooms.kind(room) {

@@ -33,11 +33,11 @@
 
 use bevy::prelude::*;
 
+use space_trucking::sim::Cue;
 use space_trucking::sim::layout;
 use space_trucking::sim::room::{
     APERTURE, CABIN, COURSES, PORTS, Port, PortId, Pose, Room, RoomId, RoomKind, Rooms, Tile,
 };
-use space_trucking::sim::{Cue, Loc};
 
 use crate::rig::{BAY_CELL, BAY_WALL_Z, EYE_HEIGHT, REACH, Skin, TileFade, WALK_MAX, WALK_MIN};
 use crate::surface::{SimSurface, Station};
@@ -2169,21 +2169,14 @@ fn handshake(
     placed: &Placed,
     tag: InRoom,
 ) {
-    let Some((hx, hy)) = placed.kind.handshake() else {
+    let Some(((hx, hy), station, surface)) = handshake_site(placed) else {
         return;
     };
     let cell = layout::cell_rect(placed.id, hx, hy);
     let mid =
         space_trucking::sim::Vec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
-    let Some((station, surface)) = placed
-        .charts
-        .iter()
-        .find(|(_, surface)| surface.rect.contains(mid))
-    else {
-        return;
-    };
-    let normal = station.inward(surface);
-    let rot = station.face(surface);
+    let normal = station.inward(&surface);
+    let rot = station.face(&surface);
     let at = surface.to_world(mid);
     let (su, sv) = (surface.scale_u(), surface.scale_v());
     let span = crate::poi::PLATE_SPAN;
@@ -2249,16 +2242,48 @@ fn handshake(
     // The pick face: the fixture's own body, bound to its own cell and
     // standing proud of the chart it is set into, so the aim meets the
     // brass the player is looking at.
-    commands.spawn((
-        Station::Handshake,
-        SimSurface {
-            center: at + normal * 0.10,
-            half_u: rot * (Vec3::X * (cell.w * su * 0.5)),
-            half_v: rot * (Vec3::NEG_Y * (cell.h * sv * 0.5)),
-            rect: cell,
-        },
-        tag,
-    ));
+    if let Some(face) = handshake_face(placed) {
+        commands.spawn((Station::Handshake, face, tag));
+    }
+}
+
+/// How far the handshake's pick face stands off the chart it is set
+/// into: proud enough that the ray settles on the brass and never on the
+/// wall behind it, shallow enough that the aim reads where the fixture is.
+const HANDSHAKE_FACE: f32 = 0.10;
+
+/// Where a room's handshake is set: its declared cell, and the chart
+/// that cell reads through. `None` for a room that shakes no hands.
+fn handshake_site(placed: &Placed) -> Option<((u8, u8), Station, SimSurface)> {
+    let (hx, hy) = placed.kind.handshake()?;
+    let cell = layout::cell_rect(placed.id, hx, hy);
+    let mid =
+        space_trucking::sim::Vec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
+    placed
+        .charts
+        .iter()
+        .find(|(_, surface)| surface.rect.contains(mid))
+        .map(|(station, surface)| ((hx, hy), *station, *surface))
+}
+
+/// **The quad the crosshair meets a handshake on**, derived rather than
+/// spawned, so a test can aim at a room's fixture without a window — and
+/// so the surface the pick answers through is the one the fixture is
+/// actually drawn on.
+#[must_use]
+pub fn handshake_face(placed: &Placed) -> Option<SimSurface> {
+    let ((hx, hy), station, surface) = handshake_site(placed)?;
+    let cell = layout::cell_rect(placed.id, hx, hy);
+    let mid =
+        space_trucking::sim::Vec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
+    let rot = station.face(&surface);
+    let (su, sv) = (surface.scale_u(), surface.scale_v());
+    Some(SimSurface {
+        center: surface.to_world(mid) + station.inward(&surface) * HANDSHAKE_FACE,
+        half_u: rot * (Vec3::X * (cell.w * su * 0.5)),
+        half_v: rot * (Vec3::NEG_Y * (cell.h * sv * 0.5)),
+        rect: cell,
+    })
 }
 
 // ---- The body, and the cues ----
@@ -2329,7 +2354,15 @@ fn seam_fx(
         match cue {
             Cue::Attached | Cue::Parted => fx.seam = SEAM_LEN,
             Cue::Refit { .. } => fx.refit = SEAM_LEN,
-            Cue::Accept { .. } | Cue::Refuse => fx.throw = SEAM_LEN * 0.5,
+            // **Every answer a handshake can give throws the plunger.**
+            // The list used to be the market's two, so the pump bay's
+            // coupling and the parlor's wheel were worked and did not
+            // move — a commit the player cannot see happen is the thing
+            // the fixture exists to prevent, and it was exactly the
+            // rooms with no other feedback that had none.
+            Cue::Accept { .. } | Cue::Refuse | Cue::GasBoost | Cue::CasinoWin | Cue::CasinoLoss => {
+                fx.throw = SEAM_LEN * 0.5;
+            }
             _ => {}
         }
     }
@@ -2354,16 +2387,17 @@ fn seam_fx(
         }
     }
     // The handshake's lamp reads the sim's own answer: something to
-    // commit, or a throw that would find nothing.
+    // commit, or a throw that would find nothing. It IS the sim's answer
+    // now (`Sim::handshake_ready`) rather than a guess shaped like a
+    // market's — the guess counted offer tiles and marks, and a pump bay
+    // has neither, so the one room whose whole business is one press
+    // wore a lamp that could never light.
     let sim = &shell.bridge.sim;
     for hand in &hands {
         let Some(mut mat) = materials.get_mut(&hand.mat) else {
             continue;
         };
-        let ready = sim.pieces().iter().any(|piece| {
-            matches!(piece.loc, Loc::Hold { room, x, y }
-                if room == hand.room && sim.rooms().tile(room, x, y) == Some(Tile::Offer))
-        }) || !sim.marks().is_empty();
+        let ready = sim.handshake_ready(hand.room);
         let level = if ready {
             glow::breathe(t, 1.8, 0.0).mul_add(0.25, 0.6)
         } else {
@@ -2463,6 +2497,8 @@ fn claim_frames(
 
 #[cfg(test)]
 mod tests {
+    use space_trucking::sim::Loc;
+
     use super::*;
 
     /// The anchor is honest: the cabin's own lattice box maps onto the
@@ -2676,10 +2712,10 @@ mod tests {
 
     /// Every mapped quad the running game stands up, from a sim alone:
     /// each room's six charts (tagged with whose they are), the
-    /// handshake faces, the stations and pick faces that ride the cargo
-    /// (`pieces::ride_pieces`), and the hull's own console panel. The
-    /// carry is driven through exactly this list, because the carry is
-    /// driven through exactly this list at runtime.
+    /// handshake faces, and the stations and pick faces that ride the
+    /// cargo (`pieces::ride_pieces`). The carry is driven through exactly
+    /// this list, because the carry is driven through exactly this list
+    /// at runtime.
     fn world_surfaces(sim: &space_trucking::sim::Sim) -> Vec<crate::surface::Aimable> {
         use crate::surface::Aimable;
         let plan: Vec<Placed> = sim
@@ -2696,6 +2732,17 @@ mod tests {
             for (station, surface) in room.charts {
                 aims.push(Aimable {
                     station,
+                    surface,
+                    riding: false,
+                    in_room: Some(tag),
+                });
+            }
+            // The one click-functional thing set into a room's fabric.
+            // This list claimed to carry them long before it did, which
+            // is how the pump bay's coupling went unswept.
+            if let Some(surface) = handshake_face(room) {
+                aims.push(Aimable {
+                    station: Station::Handshake,
                     surface,
                     riding: false,
                     in_room: Some(tag),
@@ -2886,6 +2933,94 @@ mod tests {
             );
         }
         assert!(lifted >= 3, "only {lifted} pieces were actually carried");
+    }
+
+    /// **The pump bay's coupling works, from a body standing in it.**
+    ///
+    /// Driven the way the game drives it: the pointer is
+    /// [`crate::surface::pick`]'s, the frame is the one `advance`
+    /// synthesizes for a roam click, and the eye stands somewhere the
+    /// walk envelope actually allows. `gas_top_up` is the mechanic, and
+    /// what it does is skip a sliver of the remaining leg — so the test
+    /// asks the ship, not the cue.
+    #[test]
+    fn the_pump_bay_s_coupling_tops_the_tanks_up() {
+        use crate::bridge::{Bridge, FrameInput};
+        use space_trucking::sim::ShipState;
+
+        let save = crate::fixture::alongside(RoomKind::Pump).expect("a leg meets a pump bay");
+        let mut bridge = Bridge::boot_fixture(&save);
+        let pump = bridge.sim.rooms().find(RoomKind::Pump).expect("alongside");
+        let plan: Vec<Placed> = bridge
+            .sim
+            .rooms()
+            .iter()
+            .map(|(id, room)| placed(id, room))
+            .collect();
+        let envelope = walk_boxes(&plan);
+        let room = plan.iter().find(|room| room.id == pump).expect("placed");
+        let face = handshake_face(room).expect("the pump bay shakes hands");
+        let aims = world_surfaces(&bridge.sim);
+        // Stand in the bay and look at the coupling. Anywhere legal will
+        // do; the sweep is over the room's own floor.
+        let mut aimed = None;
+        for a in 0..=8u8 {
+            for b in 0..=8u8 {
+                let eye = Vec3::new(
+                    (f32::from(a) / 8.0).mul_add(room.hi.x - room.lo.x, room.lo.x),
+                    EYE_HEIGHT,
+                    (f32::from(b) / 8.0).mul_add(room.hi.z - room.lo.z, room.lo.z),
+                );
+                if !envelope.holds(eye) {
+                    continue;
+                }
+                let Ok(dir) = Dir3::new(face.center - eye) else {
+                    continue;
+                };
+                let pointer = crate::surface::pick(
+                    Ray3d::new(eye, dir),
+                    true,
+                    crate::rig::REACH,
+                    aims.iter().copied(),
+                );
+                if pointer.station == Some(Station::Handshake) {
+                    aimed = Some(pointer);
+                    break;
+                }
+            }
+        }
+        let pointer = aimed.expect("the coupling is out of reach from the whole bay");
+        let ShipState::Traveling { progress, .. } = bridge.sim.ship().state else {
+            panic!("a pump bay is met underway or not at all");
+        };
+        assert!(
+            bridge.sim.handshake_ready(pump),
+            "the coupling reads dead while there is a top-up standing"
+        );
+        bridge.frame(
+            0.016,
+            &FrameInput {
+                pointer: pointer.sim,
+                press: true,
+                held: true,
+                occupied: pump,
+                ..FrameInput::default()
+            },
+        );
+        let ShipState::Traveling {
+            progress: after, ..
+        } = bridge.sim.ship().state
+        else {
+            panic!("the top-up took the ship off its leg");
+        };
+        assert!(
+            after > progress,
+            "the coupling was worked and the tanks did not fill: {progress} -> {after}"
+        );
+        assert!(
+            !bridge.sim.handshake_ready(pump),
+            "the coupling still reads live after its one top-up"
+        );
     }
 
     /// A ship with a room on every wall of the cabin, for the geometry

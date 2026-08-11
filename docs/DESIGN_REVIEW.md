@@ -72,6 +72,13 @@ deliberately below.
 Out of scope on purpose, not forgotten. Revisit when the core loop stops
 changing; remove a line only by shipping it or striking it in review.
 
+- Calling-room sizes (a Trade room is 6×5, a Pump 3×3; playtest calls
+  them cramped to read once a station's character is standing in them).
+  Deferred on the owner's call while the target is technical
+  correctness rather than aesthetic quality — but deliberately, not
+  forgotten: enlarging them moves `RoomKind`'s extents, the tile bands,
+  the save, and every station's placed decor, so it wants to land after
+  the geometry sweep settles rather than during it.
 - Mid-flight retargeting (orbital POI motion shipped: intercept courses
   re-aim automatically when the arrival tick moves, but there is still no
   steering once underway)

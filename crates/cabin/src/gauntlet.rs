@@ -673,6 +673,11 @@ impl Faces {
     /// everywhere. `rot` carries the body's own axes onto the world's,
     /// which is a quarter turn every time the lattice or a chart is
     /// involved, so a cap lands squarely on one world axis.
+    ///
+    /// The drum's narrow cap is the one place this reads wide: the top of
+    /// a `Cone` is a disc a third of its box across, and the box is what
+    /// the footprint is measured over. That errs toward reporting, which
+    /// is the direction a detector is allowed to err in.
     fn of(shape: Shape, rot: Quat) -> Self {
         let own = match shape {
             Shape::Slab => Vec3::ONE,

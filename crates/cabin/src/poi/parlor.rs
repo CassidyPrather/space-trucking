@@ -234,25 +234,25 @@ const THE_HOUSE: [Fitting; 23] = [
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(CHIP, 1.8),
-        Vec3::new(0.0, 0.62, 0.955),
+        Vec3::new(0.0, 0.50, 0.955),
         Vec3::new(0.98, 0.035, 0.030),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(CHIP, 1.8),
-        Vec3::new(0.0, 0.62, -0.955),
+        Vec3::new(0.0, 0.50, -0.955),
         Vec3::new(0.98, 0.035, 0.030),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(CHIP, 1.8),
-        Vec3::new(-0.955, 0.62, 0.0),
+        Vec3::new(-0.955, 0.50, 0.0),
         Vec3::new(0.030, 0.035, 0.925),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(CHIP, 1.8),
-        Vec3::new(0.955, 0.62, 0.0),
+        Vec3::new(0.955, 0.50, 0.0),
         Vec3::new(0.030, 0.035, 0.925),
     ),
     // Plush on both flanks, in a gold reveal: what a room is lined with

@@ -298,7 +298,7 @@ const FIELD_SHOP: [Fitting; 20] = [
         Shape::Slab,
         Coat::metal(Worn::Socket),
         Vec3::new(-0.10, 0.90, -0.20),
-        Vec3::new(0.055, 0.055, 0.70),
+        Vec3::new(0.055, 0.025, 0.70),
     ),
     pipe_clamp(-0.70),
     pipe_clamp(0.22),

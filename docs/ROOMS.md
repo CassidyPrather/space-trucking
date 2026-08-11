@@ -541,6 +541,88 @@ shade's own box and reaching up no further than the ceiling. Twelve of
 the fifteen cages had quietly become beams across the room before
 anything checked.
 
+### The dressing law
+
+> **A station dresses the band a room keeps over the crew's heads. A
+> berth's air is cargo's, and a station's furniture stands in what is
+> left.**
+
+The fixture rule kept a room the three cells its own handshake and
+pendant stand in. It left the harder half unsaid: a station hangs
+**furniture** too, and furniture was measured off the room's whole box,
+and a room's whole box is cargo's. Every cell of every chart is a berth
+and a berth spends real air — the deck to the top of the tallest thing
+that may stand on it, the deckhead to the bottom of the deepest thing
+that may hang from it, each wall to the depth a rig is drawn within. Swept
+against a loaded board, **82% of a market's air is inside some berth's**,
+and the fifteen characters had 290 fittings standing in it, 241 of them
+on the trade bands themselves.
+
+No band of *cells* answers that: a station's furniture covers 15–46% of
+its room's net, 56–87% across a kind's hosts, and the sim puts a room's
+hand-over goods and a pump's fuel on exactly the `Plain` cells a
+reservation would need. So the law is stated in **air** rather than in
+cells, and the air it names is the one band nothing berths in:
+
+- its **floor** is the top of the walls' last course. Below that every
+  wall cell is a berth; above it a wall is fabric.
+- its **ceiling** is as low as a ceiling rig hangs.
+- its **plan** is the room's own, edge to edge, because no wall berth
+  reaches above the walls.
+
+The band is 82 mm tall and it is the ship's storey that makes it so, not
+a room: three courses of wall, a cell of ceiling cargo, and a room two
+and a quarter metres high leave that much and no more. It clears a
+standing body by three centimetres, which is checked rather than relied
+on — and it is the same clearance `room::CALLER_DROP` already hangs the
+pendant at, so a station's furniture and the room's own lamp start at one
+height and a crew member walks under all of it or none of it.
+
+**The frame is the law.** A character's fittings are fractions of the box
+they hang in (`cabin::poi::Fitting`), so the presentation measures decor
+off the dressing band instead of off the room, and the containment
+arithmetic those fittings were always held to — `|at| + |half| <= 1` —
+stops meaning "inside the room" and starts meaning *clear of every berth
+in it*. A station cannot stand a post in a crate's air for the same
+structural reason it cannot name a cell. Three whole families of the
+geometry sweep — furniture in a berth, furniture in front of one,
+furniture fencing one off — went to zero without a station's numbers
+moving sideways.
+
+What it costs is honest and worth writing down: **a station's presence is
+a plan now, not an elevation.** A metre-tall cabinet is a metre-wide one.
+The fittings keep the arrangement their agents gave them — a plaque on
+the port flank is still on the port flank — and lose their height.
+
+### The calling rooms grow
+
+Because the band's height is the ship's and its plan is the room's, plan
+is the only room a station has, and that is what the growth buys. Each
+calling kind is **the smallest extent — grown a cell at a time, the
+shorter axis first — whose band holds the bulk its hosts' furniture had
+before the law**: a Trade must hold the comet's 1.31 m³ of quarried ice,
+a Parlor the casino's 0.41, a Pump the forecourt's 0.29.
+
+| Kind | Was | Is | Because |
+| --- | --- | --- | --- |
+| **Trade** | 6×5 | **8×7** | Twelve hosts, and the worst of them wants 16 m² of band. A market ends up the size of a cabin, which is the right size for a market. |
+| **Wreck** | 5×3 | **5×3** | A derelict's twenty-three fittings are the smallest bulk in the fleet, 0.17 m³, and its band already holds twice that. Measured, not assumed. |
+| **Parlor** | 4×4 | **5×4** | One cell short: 0.397 m³ of band against 0.407 of house. |
+| **Pump** | 3×3 | **4×3** | A forecourt's plumbing wants 3.5 m² and a three-square bay keeps 2.7. Its counter moves into the starboard corner it was already in, so the fixture rule's corner clause keeps the case it exists for. |
+
+The cabin and the burner are out of it: the cabin is the crew's own and
+the burner's whole net is `Consume`, so neither hosts a station and
+neither has a band to fill.
+
+Nothing else in this document moves. Extents live on the shared lattice,
+so attach geometry follows them and overlap stays prevented by law; the
+tile bands are derived from the extent and follow it; the escape-hatch
+guarantee is about ports rather than sizes. The save bumped, because the
+cell two numbers name is on a wider net now: `STV16`, and a pre-STV16
+berth in a room that grew is translated chart by chart exactly as the
+cabin's own widening was, with whatever the arbiter then refuses walking
+to the first berth its room still has.
+
 ### The entry-path law
 
 > **An `Offer` band may not fall in a declared door's own lane.**
@@ -903,7 +985,7 @@ accident:
   footprint in the ceiling and floor. Four floor cells and four ceiling
   cells is a real tax, and the port law halved the bill by handing it to
   the one kind that can afford it: only the cabin's 8×7 floor pays it,
-  and a 3×3 pump bay now spends nothing on openings it never used. The
+  and a pump bay now spends nothing on openings it never used. The
   number is still tuning, not law — the law is only that mating
   apertures be identical.
 - **Whether `RoomId` reuse is safe for the tape.** The spec says rooms

@@ -206,7 +206,7 @@ const CUT_FACE: [Fitting; 19] = [
     // Ice cut back in steps, the way a face is actually worked: big
     // blocks low, small ones high, and the crust left on above them.
     block(0.86, -0.62, -0.42, 0.26, 0.34),
-    block(0.88, -0.60, 0.16, 0.22, 0.30),
+    block(0.88, -0.63, 0.16, 0.19, 0.30),
     block(0.90, -0.06, -0.30, 0.18, 0.24),
     block(0.90, 0.02, 0.30, 0.14, 0.20),
     block(0.90, 0.44, -0.10, 0.12, 0.26),
@@ -282,7 +282,7 @@ const CUT_FACE: [Fitting; 19] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
-        Vec3::new(-0.86, -0.10, -0.62),
+        Vec3::new(-0.86, -0.04, -0.62),
         Vec3::new(0.13, 0.020, 0.030),
     ),
     // Shards, on the deck, where they fell.

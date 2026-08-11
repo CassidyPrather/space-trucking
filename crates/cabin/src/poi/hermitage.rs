@@ -273,8 +273,8 @@ const CELL: [Fitting; 26] = [
     ),
     reveal(0.24, 0.40, 0.28, 0.045),
     reveal(0.24, -0.08, 0.28, 0.045),
-    reveal(-0.02, 0.16, 0.045, 0.195),
-    reveal(0.50, 0.16, 0.045, 0.195),
+    reveal(-0.02, 0.16, 0.045, 0.145),
+    reveal(0.50, 0.16, 0.045, 0.145),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::POI_HERMITAGE),
@@ -284,7 +284,7 @@ const CELL: [Fitting; 26] = [
     Fitting::new(
         Shape::Post,
         Coat::enamel(palette::GLINT),
-        Vec3::new(0.24, -0.06, -0.90),
+        Vec3::new(0.24, 0.00, -0.90),
         Vec3::new(0.035, 0.060, 0.035),
     ),
     Fitting::new(

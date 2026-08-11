@@ -55,10 +55,19 @@
 
 use space_trucking::sim::room::RoomKind;
 
-/// The fixture save, STV11, hand-authored — the timestamp line is added
-/// at boot so no catch-up elapses.
+/// The fixture save, hand-authored at the version this build writes —
+/// the timestamp line is added at boot so no catch-up elapses.
+///
+/// It used to be authored at STV11 and walk the migration chain on every
+/// boot, which read as free coverage and was not: the chain's job is to
+/// carry a board from a net that no longer exists onto one that does,
+/// and a showcase whose proposal ends up wherever the arithmetic leaves
+/// it is a showcase of the arithmetic. The market grew to 8×7 with the
+/// dressing law and the front rows it gained are rows no older document
+/// can name, so the board is written in the net it is meant to show.
+/// Every migration keeps its own test in `sim::save`.
 pub const SAVE: &str = "\
-STV11
+STV16
 seed 7
 tick 12000
 rng 3c76e098a8f74c8a
@@ -97,13 +106,13 @@ piece 13 0 1 0 stow 0 0
 piece 14 13 2 0 stow 0 1
 piece 15 14 0 0 stow 0 2
 piece 16 4 3 0 hold 2 3 3
-piece 17 7 1 0 hold 2 6 6
-piece 18 1 2 0 hold 2 7 6
+piece 17 7 1 0 hold 2 6 8
+piece 18 1 2 0 hold 2 7 8
 piece 19 11 0 0 hold 0 8 3
 piece 20 2 1 0 hold 0 7 7
 piece 21 5 0 0 hold 2 4 3
 piece 22 3 3 1 hold 2 7 3
-piece 23 15 2 0 hold 2 5 6
+piece 23 15 2 0 hold 2 5 8
 piece 24 26 0 0 hold 0 4 10
 piece 25 25 1 0 hold 0 4 12
 piece 26 27 2 0 hold 0 9 11

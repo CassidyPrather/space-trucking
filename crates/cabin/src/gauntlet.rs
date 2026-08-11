@@ -737,7 +737,8 @@ fn drawn(what: String, frame: &Frame, fitting: &Fitting) -> Drawn {
 pub fn fittings(placed: &Placed) -> Vec<Drawn> {
     let character = poi::character_of(placed.host);
     let mut out = Vec::new();
-    let frame = Frame::of(placed.lo, placed.hi, placed.yaw);
+    let (lo, hi) = room::dressing_box(placed);
+    let frame = Frame::of(lo, hi, placed.yaw);
     for (i, fitting) in character.decor.iter().enumerate() {
         out.push(drawn(
             format!("decor[{i}] {:?}", fitting.shape),
@@ -1806,6 +1807,41 @@ mod tests {
         };
         assert!(pairs_fight(&a, &fighting), "coplanar tops must be caught");
         assert!(!pairs_fight(&a, &stacked), "a stack is not a fight");
+    }
+
+    /// **Nothing a station hangs stands in a berth.**
+    ///
+    /// Three families and one cause: [`BERTH_CLEAR`] found furniture in
+    /// the air a rig fills, [`BERTH_SEEN`] found it standing between the
+    /// room and a wall berth, and [`BERTH_REACHED`] found it fencing off
+    /// the berths behind it. All 362 lines of it came of measuring a
+    /// character's fittings off the room's whole box, and a room's whole
+    /// box is cargo's: 82% of a market's air is inside some berth's, and
+    /// the floor alone is claimed to a metre.
+    ///
+    /// Furniture is measured off `room::dressing_box` now — the band
+    /// between a room's own walls and its own ceiling's cargo — so all
+    /// three families answer to arithmetic a character cannot express
+    /// its way out of. The docket is a work order and it shrinks; a law
+    /// is a thing that does not, so the sentence is kept said here after
+    /// the last of those lines came off the list.
+    #[test]
+    fn nothing_a_station_hangs_stands_in_a_berth() {
+        let found = sweep();
+        let standing: Vec<&Finding> = found
+            .iter()
+            .filter(|finding| matches!(finding.rule, BERTH_CLEAR | BERTH_SEEN | BERTH_REACHED))
+            .collect();
+        assert!(
+            standing.is_empty(),
+            "{} thing(s) a station hangs stand in cargo's way:\n{}",
+            standing.len(),
+            standing
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
     }
 
     /// **No room draws two faces on one plane.** The docket is a work

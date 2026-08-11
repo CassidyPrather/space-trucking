@@ -268,7 +268,7 @@ const SALON: [Fitting; 17] = [
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::accent::VENUS_HALO, 0.9),
-        Vec3::new(0.945, -0.32, -0.42),
+        Vec3::new(0.945, -0.28, -0.42),
         Vec3::new(0.020, 0.14, 0.18),
     ),
     vial(-0.52),
@@ -296,7 +296,7 @@ const SALON: [Fitting; 17] = [
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::accent::VENUS_HALO, 3.2),
-        Vec3::new(-0.828, 0.48, -0.60),
+        Vec3::new(-0.828, 0.43, -0.60),
         Vec3::new(0.020, 0.018, 0.090),
     ),
     // Gilt along the aft cornice, with two bosses on it. Lit, because a

@@ -260,7 +260,7 @@ const NIGHT_SHOP: [Fitting; 30] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::PlateShade),
-        Vec3::new(0.36, 0.300, 0.90),
+        Vec3::new(0.36, 0.360, 0.90),
         Vec3::new(0.60, 0.014, 0.012),
     ),
     tin(-0.16),
@@ -330,7 +330,7 @@ const NIGHT_SHOP: [Fitting; 30] = [
     Fitting::new(
         Shape::Post,
         Coat::phosphor(palette::kind_color(Kind::LuminousPaint), 0.9),
-        Vec3::new(0.30, 0.725, -0.70),
+        Vec3::new(0.30, 0.670, -0.70),
         Vec3::new(0.070, 0.008, 0.070),
     ),
     stem(0.30, -0.70),
@@ -364,7 +364,7 @@ const fn seam(x: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::phosphor(palette::kind_color(Kind::LuminousPaint), 1.8),
-        Vec3::new(x, 0.085, 0.90),
+        Vec3::new(x, 0.045, 0.90),
         Vec3::new(0.058, 0.008, 0.070),
     )
 }
@@ -394,7 +394,7 @@ const fn glass(x: f32, y: f32, z: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::enamel(palette::GLASS),
-        Vec3::new(x, y - 0.075, z),
+        Vec3::new(x, y - 0.130, z),
         Vec3::new(0.070, 0.008, 0.070),
     )
 }
@@ -404,8 +404,8 @@ const fn stem(x: f32, z: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::PlateShade),
-        Vec3::new(x, 0.88, z),
-        Vec3::new(0.008, 0.120, 0.008),
+        Vec3::new(x, 0.90, z),
+        Vec3::new(0.008, 0.100, 0.008),
     )
 }
 

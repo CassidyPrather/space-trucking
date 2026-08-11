@@ -30,6 +30,15 @@ use super::{KIND_COUNT, KNOWN_ALL, MAX_CREW, Sim, barter};
 
 /// Magic-plus-version header of every save this build writes.
 ///
+/// `STV16` is the dressing law (docs/ROOMS.md): a station's furniture
+/// stands in the band a room keeps over the crew's heads, and three of
+/// the four calling rooms grew to make that band worth having — a market
+/// to 8×7, a parlor to 5×4, a pump bay to 4×3, with the pump's counter
+/// moving into its own starboard corner. Nothing about the GRAMMAR moved
+/// — a berth is still a room and two cells — but the cell those two
+/// numbers name is on a wider net now, so the starboard and ceiling
+/// charts start further along and the front wall starts further down.
+///
 /// `STV15` is the fixture law (docs/ROOMS.md): a room's own hardware
 /// stands in cells, so the deck its handshake is worked over and the
 /// patch of ceiling its pendant hangs from stopped being berths and
@@ -72,10 +81,20 @@ use super::{KIND_COUNT, KNOWN_ALL, MAX_CREW, Sim, barter};
 /// it belonged to. `STV10` widened the cabin from a 6×5 floor to an 8×7
 /// one; `STV7` added the banked burner's stoke to the ship line's tail;
 /// `STV6` added the `laid` piece location; `STV5` added `stow`.
-const MAGIC: &str = "STV15";
+const MAGIC: &str = "STV16";
 
 /// Older headers this build still reads, each with its own migration,
 /// applied oldest-first so a `STV4` document walks the whole chain.
+///
+/// `STV16` grew three of the calling rooms. A pre-STV16 berth in one of
+/// them names a cell of a narrower net, so it is **translated per chart**
+/// exactly as the cabin's own widening was: the aft wall, the port wall
+/// and the floor held still, the starboard wall and the ceiling start
+/// one or two columns further along, and the front wall as many rows
+/// further down. Whatever the arbiter no longer accepts once that has
+/// run walks to the first berth its own room still has. Conservation
+/// before convenience: a piece comes out standing somewhere else, never
+/// gone.
 ///
 /// `STV15` gave a room's own hardware its cells. A pre-STV15 document
 /// may stand cargo on the counter's deck or under the pendant, and both
@@ -126,9 +145,9 @@ const MAGIC: &str = "STV15";
 /// hold cells, which the net embeds at (+3, 0). Whatever the room-grid
 /// rules no longer accept once the translations have run re-berths at its
 /// first legal cell. Everything else stays one additive grammar.
-const READABLE: [&str; 12] = [
-    MAGIC, "STV14", "STV13", "STV12", "STV11", "STV10", "STV9", "STV8", "STV7", "STV6", "STV5",
-    "STV4",
+const READABLE: [&str; 13] = [
+    MAGIC, "STV15", "STV14", "STV13", "STV12", "STV11", "STV10", "STV9", "STV8", "STV7", "STV6",
+    "STV5", "STV4",
 ];
 
 /// Why a save string was refused.
@@ -357,36 +376,42 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     // room net embeds at (+3, 0); their berths migrate after reading.
     let legacy = !matches!(
         header,
-        MAGIC | "STV14" | "STV13" | "STV12" | "STV11" | "STV10" | "STV9" | "STV8"
+        MAGIC | "STV15" | "STV14" | "STV13" | "STV12" | "STV11" | "STV10" | "STV9" | "STV8"
     );
     // Pre-STV9 headers predate the instruments being cargo; the missing
     // ones are hung at their traditional berths after reading.
     let uninstrumented = !matches!(
         header,
-        MAGIC | "STV14" | "STV13" | "STV12" | "STV11" | "STV10" | "STV9"
+        MAGIC | "STV15" | "STV14" | "STV13" | "STV12" | "STV11" | "STV10" | "STV9"
     );
     // Pre-STV10 headers carry narrow-net coordinates: the cabin was a
     // 6×5 floor then, and the charts past the growth have moved.
     let narrow = !matches!(
         header,
-        MAGIC | "STV14" | "STV13" | "STV12" | "STV11" | "STV10"
+        MAGIC | "STV15" | "STV14" | "STV13" | "STV12" | "STV11" | "STV10"
     );
     // Pre-STV11 headers know one room and a barter counter.
-    let roomless = !matches!(header, MAGIC | "STV14" | "STV13" | "STV12" | "STV11");
+    let roomless = !matches!(
+        header,
+        MAGIC | "STV15" | "STV14" | "STV13" | "STV12" | "STV11"
+    );
     // Pre-STV12 headers were written when every room declared six ports;
     // an edge through a slot its kind no longer fills is re-seated.
-    let six_ported = !matches!(header, MAGIC | "STV14" | "STV13" | "STV12");
+    let six_ported = !matches!(header, MAGIC | "STV15" | "STV14" | "STV13" | "STV12");
     // Pre-STV13 headers were written before the window family, so their
     // ledger masks are narrower than the table is now.
-    let unglazed = !matches!(header, MAGIC | "STV14" | "STV13");
+    let unglazed = !matches!(header, MAGIC | "STV15" | "STV14" | "STV13");
     // Pre-STV14 headers were written when an offer band ran clean across
     // the room, doorway and all; a proposal left on what is deck now
     // walks onto the offer area this build actually has.
-    let doorway_offers = !matches!(header, MAGIC | "STV14");
+    let doorway_offers = !matches!(header, MAGIC | "STV15" | "STV14");
     // Pre-STV15 headers were written when a room's own hardware stood in
     // cells anybody could berth in; cargo left inside the counter or the
     // pendant walks off them.
-    let open_fixtures = header != MAGIC;
+    let open_fixtures = !matches!(header, MAGIC | "STV15");
+    // Pre-STV16 headers were written when three of the calling rooms
+    // were narrower, so a berth in one names a cell of a smaller net.
+    let cramped_callers = header != MAGIC;
 
     let seed = reader.kv("seed")?;
     let tick = reader.kv("tick")?;
@@ -440,6 +465,12 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         inject_instruments(&reader, &rooms, &mut pieces, &mut next_piece)?;
     }
     validate_stows(&reader, &rooms, &pieces)?;
+    // Coordinates before classes: a translation puts a berth on the
+    // chart the document meant, and only then can a rule about what a
+    // cell MEANS be asked of it.
+    if cramped_callers {
+        regrow_the_calling_rooms(&rooms, &mut pieces);
+    }
     if doorway_offers {
         walk_proposals_off_the_doorway(&rooms, &mut pieces);
     }
@@ -1194,7 +1225,107 @@ fn walk_cargo_out_from_under_the_fixtures(rooms: &Rooms, pieces: &mut [Piece]) {
         .filter(|(_, piece)| refused(piece))
         .map(|(at, _)| at)
         .collect();
-    for at in stranded {
+    walk_the_refused(rooms, pieces, &stranded);
+}
+
+/// The STV16 migration: a calling room grew under the cargo standing in
+/// it.
+///
+/// The market, the parlor and the pump bay each took another cell or two
+/// so that the band a station dresses in would be worth dressing
+/// (docs/ROOMS.md, "The dressing law"). A room net is a cross of six
+/// charts laid flat, so a wider floor pushes the starboard wall and the
+/// ceiling along it and a deeper one pushes the front wall down — which
+/// means a berth written against the old extent names a cell on a
+/// different chart now. Every one of them is **translated per chart**,
+/// exactly as the cabin's own widening was ([`widen`]): the aft wall,
+/// the port wall and the floor held still.
+///
+/// A translation can only be wrong about where a cell is, never about
+/// what it is for, so whatever the arbiter refuses once it has run — the
+/// counter's own deck in a bay whose counter moved into the corner, a
+/// footprint that now straddles a fold — walks to the first berth its
+/// own room still has. Conservation before convenience: a piece comes
+/// out standing somewhere else, never gone.
+fn regrow_the_calling_rooms(rooms: &Rooms, pieces: &mut [Piece]) {
+    for piece in pieces.iter_mut() {
+        let (room, x, y) = match piece.loc {
+            Loc::Hold { room, x, y } | Loc::Laid { room, x, y } => (room, x, y),
+            Loc::Stow { .. } => continue,
+        };
+        let Some(host) = rooms.kind(room) else {
+            continue;
+        };
+        let (x, y) = regrown(host, x, y);
+        piece.loc = match piece.loc {
+            Loc::Laid { .. } => Loc::Laid { room, x, y },
+            _ => Loc::Hold { room, x, y },
+        };
+    }
+    // Only the rooms that actually grew are asked to walk anything: a
+    // berth this migration did not touch is a berth some other rule's
+    // business, and a migration that tidied those would be answering a
+    // question nobody asked it.
+    let stranded: Vec<usize> = pieces
+        .iter()
+        .enumerate()
+        .filter(|(_, piece)| match piece.loc {
+            Loc::Hold { room, x, y } => {
+                regrew(rooms.kind(room))
+                    && cargo::placement_check(rooms, &[], piece.id, piece.kind, room, x, y).is_err()
+            }
+            Loc::Laid { room, x, y } => {
+                regrew(rooms.kind(room))
+                    && cargo::dressing_check(rooms, &[], piece.id, piece.kind, room, x, y).is_err()
+            }
+            Loc::Stow { .. } => false,
+        })
+        .map(|(at, _)| at)
+        .collect();
+    walk_the_refused(rooms, pieces, &stranded);
+}
+
+/// Whether a room kind's floor is wider or deeper than it was before
+/// STV16.
+const fn regrew(kind: Option<RoomKind>) -> bool {
+    matches!(
+        kind,
+        Some(RoomKind::Trade | RoomKind::Parlor | RoomKind::Pump)
+    )
+}
+
+/// Where a cell of a pre-STV16 net lands on the net its kind has now.
+///
+/// The three that grew are written out here rather than reached for,
+/// because a migration is the one place a retired number still has to be
+/// said out loud.
+const fn regrown(kind: RoomKind, x: u8, y: u8) -> (u8, u8) {
+    let (was_w, was_h) = match kind {
+        RoomKind::Trade => (6, 5),
+        RoomKind::Parlor => (4, 4),
+        RoomKind::Pump => (3, 3),
+        _ => return (x, y),
+    };
+    let (w, h) = kind.floor();
+    // The starboard wall and the ceiling both begin a floor's width
+    // along the net, so both slide by exactly what the floor gained.
+    if x >= COURSES + was_w {
+        return (x + w - was_w, y);
+    }
+    // And the front wall begins a floor's depth down it.
+    if y >= COURSES + was_h {
+        return (x, y + h - was_h);
+    }
+    (x, y)
+}
+
+/// Walk each named piece to the first berth of its own room the arbiter
+/// still accepts, in the document's own piece order so the walk is as
+/// deterministic as everything else here. A room with nowhere left for
+/// one leaves it standing, because a piece kept is worth more than a
+/// rule tidied.
+fn walk_the_refused(rooms: &Rooms, pieces: &mut [Piece], stranded: &[usize]) {
+    for &at in stranded {
         let (id, kind) = (pieces[at].id, pieces[at].kind);
         let (room, laid) = match pieces[at].loc {
             Loc::Hold { room, .. } => (room, false),
@@ -1210,7 +1341,7 @@ fn walk_cargo_out_from_under_the_fixtures(rooms: &Rooms, pieces: &mut [Piece]) {
             .flat_map(|y| (0..cols).map(move |x| (x, y)))
             .find(|&(x, y)| {
                 if laid {
-                    super::cargo::dressing_check(rooms, &settled, id, kind, room, x, y).is_ok()
+                    cargo::dressing_check(rooms, &settled, id, kind, room, x, y).is_ok()
                 } else {
                     super::placement_legal(rooms, &settled, id, kind, room, x, y)
                 }
@@ -1856,14 +1987,18 @@ mod tests {
             .find(RoomKind::Trade)
             .expect("docked, so a market is alongside");
         // A cell the old band chalked and this one does not: the door's
-        // own lane, at the front of the room.
+        // own lane, on the front wall. A document this old was written
+        // when a market measured six by five, so it names the cell in
+        // the net of the day and the growth translates it into this one.
+        let (x, y) = (COURSES, COURSES + 5);
         let (_, depth) = RoomKind::Trade.floor();
-        let (x, y) = (COURSES, COURSES + depth - 1);
-        assert!(RoomKind::Trade.entry_path(x, y), "that is the way in");
-        assert_eq!(RoomKind::Trade.tile_of(x, y), Some(Tile::Plain));
+        let (nx, ny) = (COURSES, COURSES + depth);
+        assert!(RoomKind::Trade.entry_path(nx, ny), "that is the way in");
+        assert_eq!(RoomKind::Trade.tile_of(nx, ny), Some(Tile::Plain));
+        let lamp = Kind::WallLamp.index();
         let forged = sim.save_string().replacen(MAGIC, "STV13", 1).replacen(
             "next_piece",
-            &format!("piece 900 7 0 0 hold {trade} {x} {y}\nnext_piece"),
+            &format!("piece 900 {lamp} 0 0 hold {trade} {x} {y}\nnext_piece"),
             1,
         );
         let loaded = Sim::from_save(&forged).expect("an STV13 document must still load");
@@ -1945,6 +2080,66 @@ mod tests {
             Some(piece.loc),
             "an STV15 document's berths are not migrated"
         );
+    }
+
+    /// The dressing law's migration: three of the calling rooms grew, so
+    /// a berth in one names a cell of a narrower net. The translation is
+    /// **chart-preserving** — a lamp left on the starboard wall comes
+    /// back on the starboard wall and one left on the front wall comes
+    /// back on the front wall — and conservation is total: a document
+    /// that went in with two lamps comes out with two lamps.
+    #[test]
+    fn cargo_in_a_room_that_grew_comes_back_on_the_chart_it_was_left_on() {
+        use super::super::room::RoomKind;
+
+        let sim = Sim::new(23);
+        let trade = sim
+            .rooms()
+            .find(RoomKind::Trade)
+            .expect("docked, so a market is alongside");
+        // The market measured six by five when a document like this was
+        // written: its starboard wall began at column nine and its front
+        // wall at row eight.
+        let (was_w, was_h) = (6_u8, 5_u8);
+        let (starboard, front) = (
+            (COURSES + was_w, COURSES + 1),
+            (COURSES + 1, COURSES + was_h + 1),
+        );
+        let lamp = Kind::WallLamp.index();
+        let forged = sim.save_string().replacen(MAGIC, "STV15", 1).replacen(
+            "next_piece",
+            &format!(
+                "piece 910 {lamp} 0 0 hold {trade} {} {}\n\
+                 piece 911 {lamp} 0 0 hold {trade} {} {}\nnext_piece",
+                starboard.0, starboard.1, front.0, front.1
+            ),
+            1,
+        );
+        let loaded = Sim::from_save(&forged).expect("an STV15 document must still load");
+        let charted = |id: u32| {
+            let piece = loaded
+                .pieces()
+                .iter()
+                .find(|piece| piece.id == id)
+                .unwrap_or_else(|| panic!("piece {id} survives the load"));
+            let Loc::Hold { room, x, y } = piece.loc else {
+                panic!("a lamp occupies a cell")
+            };
+            assert_eq!(room, trade, "piece {id} left the room it was hung in");
+            RoomKind::Trade.surface_of(x, y)
+        };
+        assert_eq!(charted(910), Some(Surf::Starboard));
+        assert_eq!(charted(911), Some(Surf::Front));
+        // And a document this build wrote is left exactly alone.
+        let written = loaded.save_string();
+        let fresh = Sim::from_save(&written).expect("round trip");
+        for id in [910, 911] {
+            assert_eq!(
+                fresh.pieces().iter().find(|p| p.id == id).map(|p| p.loc),
+                loaded.pieces().iter().find(|p| p.id == id).map(|p| p.loc),
+                "an STV16 document's berths are not migrated"
+            );
+        }
     }
 
     /// The window family's migration: a pre-STV13 document's discovery

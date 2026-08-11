@@ -252,7 +252,7 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         PIPE,
-        Vec3::new(-0.20, 0.68, 0.920),
+        Vec3::new(-0.20, 0.63, 0.920),
         Vec3::new(0.032, 0.30, 0.032),
     ),
     // Two thin conduits under it, clipped on at whatever height the last
@@ -261,7 +261,7 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         IRON,
-        Vec3::new(-0.06, 0.39, 0.888),
+        Vec3::new(-0.06, 0.22, 0.888),
         Vec3::new(0.84, 0.026, 0.026),
     ),
     Fitting::new(
@@ -292,8 +292,8 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Post,
         PIPE,
-        Vec3::new(0.78, -0.04, -0.76),
-        Vec3::new(0.115, 0.94, 0.115),
+        Vec3::new(0.78, 0.03, -0.76),
+        Vec3::new(0.115, 0.87, 0.115),
     ),
     collar(0.78, -0.62, -0.76),
     collar(0.78, 0.04, -0.76),
@@ -312,13 +312,13 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         PIPE,
-        Vec3::new(0.0, 0.86, -0.82),
+        Vec3::new(0.0, 0.78, -0.82),
         Vec3::new(0.92, 0.075, 0.075),
     ),
     Fitting::new(
         Shape::Slab,
         PIPE,
-        Vec3::new(0.86, 0.86, -0.01),
+        Vec3::new(0.86, 0.78, -0.01),
         Vec3::new(0.075, 0.075, 0.735),
     ),
     // The branch that feeds the pump, dropping down the aft-starboard
@@ -334,7 +334,7 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         IRON,
-        Vec3::new(0.72, -0.956, -0.72),
+        Vec3::new(0.72, -0.926, -0.72),
         Vec3::new(0.22, 0.018, 0.18),
     ),
     Fitting::new(

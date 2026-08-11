@@ -186,15 +186,32 @@ impl RoomKind {
     }
 
     /// The room's floor extent in cells, `(width, depth)`.
+    ///
+    /// The ship's own two are what they have always been. The four that
+    /// come alongside were measured against **the band a room keeps for
+    /// its own furniture** (docs/ROOMS.md, "The dressing law"): a berth's
+    /// air belongs to cargo, floor to the top of the tallest thing that
+    /// may stand on it and ceiling to the bottom of the deepest thing
+    /// that may hang from it, and what is left over is one band eighty-
+    /// two millimetres tall between a room's walls and its ceiling's
+    /// cargo. That height is the ship's storey and no room's to change,
+    /// so the only room a station has is **plan**, and each of these is
+    /// the smallest extent — grown a cell at a time, shorter axis first —
+    /// whose band holds the bulk its hosts' furniture had before the law.
+    /// A hold was already big enough and did not move.
+    // A kind's extent is its own declaration, argued where it stands.
+    // Two kinds that happen to measure the same are still two kinds, and
+    // merging their arms would hide the next one that moves.
+    #[allow(clippy::match_same_arms)]
     #[must_use]
     pub const fn floor(self) -> (u8, u8) {
         match self {
             Self::Cabin => (8, 7),
             Self::Burner => (4, 3),
-            Self::Trade => (6, 5),
+            Self::Trade => (8, 7),
             Self::Wreck => (5, 3),
-            Self::Parlor => (4, 4),
-            Self::Pump => (3, 3),
+            Self::Parlor => (5, 4),
+            Self::Pump => (4, 3),
         }
     }
 
@@ -311,8 +328,13 @@ impl RoomKind {
     pub const fn handshake(self) -> Option<(u8, u8)> {
         match self {
             Self::Cabin | Self::Burner => None,
-            Self::Trade | Self::Wreck => Some((6, 1)),
-            Self::Parlor | Self::Pump => Some((5, 1)),
+            // A pump bay's counter is set in its own starboard corner,
+            // which is the case the fixture rule's corner clause exists
+            // for: the brass turns onto the side wall beside it. The
+            // other three set theirs clear of both walls and clear of
+            // the doorway's own lane.
+            Self::Trade | Self::Wreck | Self::Pump => Some((6, 1)),
+            Self::Parlor => Some((5, 1)),
         }
     }
 
@@ -520,9 +542,9 @@ impl RoomKind {
                 .handshake()
                 .is_some_and(|(hx, _)| (x, y) == (hx, COURSES)),
             // A counter set in a corner column turns onto the wall
-            // beside it, at its own course — which is the whole of a
-            // three-wide bay's problem: the pump's cell IS the corner,
-            // so its brass is the side wall's business too.
+            // beside it, at its own course — which is the pump bay's
+            // case: its counter stands in the starboard corner, so its
+            // brass is the side wall's business too.
             Surf::Port | Surf::Starboard => self.handshake().is_some_and(|(hx, hy)| {
                 // Aft courses count outward from the deck, so the
                 // handshake's row names the course its brass is on.

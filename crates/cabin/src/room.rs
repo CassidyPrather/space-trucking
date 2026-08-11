@@ -38,9 +38,10 @@
 use bevy::prelude::*;
 
 use space_trucking::sim::Cue;
+use space_trucking::sim::cargo::{Kind, placement_check};
 use space_trucking::sim::layout;
 use space_trucking::sim::room::{
-    APERTURE, CABIN, COURSES, PORTS, Port, PortId, Pose, Room, RoomId, RoomKind, Rooms, Tile,
+    APERTURE, CABIN, COURSES, PORTS, Port, PortId, Pose, Room, RoomId, RoomKind, Rooms, Surf, Tile,
 };
 
 use crate::rig::{BAY_CELL, BAY_WALL_Z, EYE_HEIGHT, REACH, Skin, TileFade, WALK_MAX, WALK_MIN};
@@ -1176,6 +1177,14 @@ const CALLER_LUMENS: f32 = 150_000.0;
 /// a haircut.
 const HEADROOM: f32 = 0.03;
 
+/// **How high a standing body reaches**: the eye, the head it swings, and
+/// a hand's breadth of daylight over it. Everything a room hangs is
+/// measured off this and nothing below it is a room's to hang in — the
+/// pendant's drop ([`CALLER_DROP`]) and the band a station dresses in
+/// ([`dressing_box`]) are both derived from it, so a crew member walks
+/// under the whole of a room's own hardware or under none of it.
+pub const HEAD_CLEAR: f32 = EYE_HEIGHT + crate::rig::HEAD_R + HEADROOM;
+
 /// How far under a caller's ceiling its lamp hangs.
 ///
 /// **Derived, not chosen.** A pendant, not a panel: low enough that its
@@ -1188,7 +1197,7 @@ const HEADROOM: f32 = 0.03;
 /// It used to be a round 0.55, which hung the cages at 1.47 against an
 /// eye at 1.50: eleven of them, at seven stations, and the playtest
 /// walked face-first into every one.
-pub const CALLER_DROP: f32 = CEIL_Y - (EYE_HEIGHT + crate::rig::HEAD_R + HEADROOM + SHADE_R);
+pub const CALLER_DROP: f32 = CEIL_Y - (HEAD_CLEAR + SHADE_R);
 
 /// The pendant's shade radius and the glass under it.
 pub const SHADE_R: f32 = 0.24;
@@ -1210,6 +1219,80 @@ pub const CAGE_RISE: f32 = CALLER_DROP / SHADE_R;
 /// be a station reaching for the ceiling height, which is the room's.
 pub const STEM_T: f32 = 0.05;
 pub const GLASS_R: f32 = 0.72;
+
+/// **The dressing box: the band a room keeps for its own furniture.**
+///
+/// A room's every net cell is a berth, and a berth's air belongs to
+/// cargo — floor to the top of the tallest thing that may stand on it,
+/// ceiling to the bottom of the deepest thing that may hang from it, and
+/// each wall to the depth a rig is drawn within. What is left over is
+/// **one band**, and it is the band between a room's own walls and its
+/// own ceiling's cargo:
+///
+/// - its **floor** is [`WALL_H`], the top of the last course a wall
+///   charts. Below that every wall cell is a berth; above it a wall is
+///   fabric and nothing berths on it. It is also over a standing head
+///   ([`HEAD_CLEAR`]), which is not a coincidence to rely on but a fact
+///   to check — see the guard in [`tests`].
+/// - its **ceiling** is as low as a ceiling rig hangs ([`ceiling_hang`]),
+///   derived through the very function the runtime poses one with.
+/// - its **plan** is the room's own, edge to edge: no wall berth reaches
+///   above the walls' last course, so the band runs right out to the
+///   plate on all four sides.
+///
+/// Stations measure their furniture off this and not off the room
+/// (`crate::poi`), which is what makes the containment law they were
+/// already held to — `|at| + |half| <= 1` — mean *clear of every berth in
+/// the room*. A character cannot express furniture in cargo's air, in the
+/// same way it cannot express a cell, a class, or a port.
+#[must_use]
+pub fn dressing_box(placed: &Placed) -> (Vec3, Vec3) {
+    let floor = placed.lo.y + WALL_H;
+    let ceiling = (placed.hi.y - ceiling_hang(placed)).max(floor);
+    (
+        Vec3::new(placed.lo.x, floor, placed.lo.z),
+        Vec3::new(placed.hi.x, ceiling, placed.hi.z),
+    )
+}
+
+/// How far below its own ceiling the deepest rig a room may hang there
+/// reaches.
+///
+/// Derived, never stated: the sim's arbiter says which kinds may hang on
+/// which cell, and [`crate::pieces::berth_box`] poses the body through
+/// the function the runtime poses it with. A retune of either moves the
+/// band a station dresses in with it.
+fn ceiling_hang(placed: &Placed) -> f32 {
+    let alone = Rooms::root(placed.kind);
+    let (cols, rows) = placed.kind.grid();
+    let mut deepest = 0.0_f32;
+    for kind in Kind::ALL {
+        if kind.covering() {
+            continue;
+        }
+        let (w, h) = kind.cells();
+        for y in 0..rows {
+            for x in 0..cols {
+                if placed.kind.surface_of(x, y) != Some(Surf::Ceiling)
+                    || placement_check(&alone, &[], u32::MAX, kind, CABIN, x, y).is_err()
+                {
+                    continue;
+                }
+                let anchor = layout::cell_rect(placed.id, x, y);
+                let rect = layout::Rect::new(
+                    anchor.x,
+                    anchor.y,
+                    f32::from(w) * layout::CELL,
+                    f32::from(h) * layout::CELL,
+                );
+                if let Some((lo, hi)) = crate::pieces::berth_box(&placed.charts, rect) {
+                    deepest = deepest.max(hi.y - lo.y);
+                }
+            }
+        }
+    }
+    deepest
+}
 
 /// Where a caller's lamp hangs and how far it carries — derived from the
 /// room's own box, so a wider room gets a wider pool and a small one
@@ -1331,9 +1414,10 @@ fn caller_lamp(
 
 /// A station's own furniture, inside its own room.
 ///
-/// The frame is the room's box and the fittings are fractions of it, so a
-/// character never learns how big a trade room is and cannot reach out of
-/// one ([`crate::poi`]'s containment law). Nothing here is click-
+/// The frame is the room's [`dressing_box`] and the fittings are
+/// fractions of it, so a character never learns how big a trade room is,
+/// cannot reach out of one, and cannot stand furniture in air a berth
+/// spends ([`crate::poi`]'s containment law). Nothing here is click-
 /// functional and nothing here is a berth: it is dressing, and the sim
 /// does not hear about it.
 fn furnish(
@@ -1348,7 +1432,8 @@ fn furnish(
     if decor.is_empty() {
         return;
     }
-    let frame = crate::poi::Frame::of(placed.lo, placed.hi, placed.yaw);
+    let (lo, hi) = dressing_box(placed);
+    let frame = crate::poi::Frame::of(lo, hi, placed.yaw);
     for fitting in decor {
         commands.spawn((
             Mesh3d(shapes.of(fitting.shape)),
@@ -3330,6 +3415,66 @@ mod tests {
             lamps += 1;
         }
         assert!(lamps >= 2, "only {lamps} callers came alongside");
+    }
+
+    /// **A room dresses over the crew's heads and under its own cargo.**
+    ///
+    /// The dressing law's two edges, stated over every room the game has
+    /// so that a kind cannot grow, shrink, or change its ports into a
+    /// band that is somebody else's:
+    ///
+    /// - the band stands clear of a walking body ([`HEAD_CLEAR`]), which
+    ///   is a fact about the ship's storey rather than a number this
+    ///   derivation chose — [`WALL_H`] happens to sit three centimetres
+    ///   over a standing head, and the day it does not, a station's
+    ///   furniture becomes something the crew walks face-first into;
+    /// - it stops as low as a ceiling rig hangs, so the deepest thing a
+    ///   room's own ceiling may carry passes clean under nothing.
+    ///
+    /// And it is a band and not a seam: a room with no room in it to
+    /// dress would leave fifteen characters nowhere to be.
+    #[test]
+    fn a_room_dresses_over_the_crews_heads_and_under_its_own_cargo() {
+        let plan = crowded_ship();
+        let mut dressed = 0;
+        for room in &plan {
+            let (lo, hi) = dressing_box(room);
+            assert!(
+                lo.y >= room.lo.y + HEAD_CLEAR - 1e-4,
+                "a {:?}'s dressing band starts at {:.4}, under a standing head",
+                room.kind,
+                lo.y - room.lo.y
+            );
+            assert!(
+                hi.y <= room.hi.y - ceiling_hang(room) + 1e-4,
+                "a {:?} dresses into the air its own ceiling's cargo hangs in",
+                room.kind
+            );
+            // The plan is the room's own, edge to edge: no wall cell is
+            // a berth above the walls' last course, so the band runs out
+            // to the plate on all four sides.
+            assert!(
+                (lo.x - room.lo.x).abs() < 1e-4
+                    && (hi.x - room.hi.x).abs() < 1e-4
+                    && (lo.z - room.lo.z).abs() < 1e-4
+                    && (hi.z - room.hi.z).abs() < 1e-4,
+                "a {:?}'s dressing band is inset from its own walls",
+                room.kind
+            );
+            if room.kind.riding() {
+                // A riding room is nobody's station and hangs nothing,
+                // so its band is measured and never used.
+                continue;
+            }
+            assert!(
+                hi.y - lo.y > 0.05,
+                "a {:?} keeps {:.4} m to dress in, which is a seam and not a band",
+                room.kind,
+                hi.y - lo.y
+            );
+            dressed += 1;
+        }
+        assert!(dressed >= 2, "only {dressed} callers came alongside");
     }
 
     /// **A class's mark rides its region's rim, and stays inside its own

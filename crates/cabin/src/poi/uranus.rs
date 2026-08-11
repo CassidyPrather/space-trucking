@@ -293,7 +293,7 @@ const fn vent(x: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::accent::URANUS_RING, 1.0),
-        Vec3::new(x, 0.86, -0.20),
+        Vec3::new(x, 0.80, -0.20),
         Vec3::new(0.09, 0.02, 0.50),
     )
 }

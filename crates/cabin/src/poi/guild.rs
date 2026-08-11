@@ -249,7 +249,7 @@ const BONDED_STORE: [Fitting; 14] = [
     Fitting::new(
         Shape::Post,
         Coat::phosphor(palette::EERIE, 2.0),
-        Vec3::new(0.85, 0.40, 0.10),
+        Vec3::new(0.85, 0.33, 0.10),
         Vec3::new(0.10, 0.015, 0.12),
     ),
     // The seizure beacon, over the doorway: the light that comes on when
@@ -279,7 +279,7 @@ const BONDED_STORE: [Fitting; 14] = [
         Shape::Slab,
         Coat::enamel(palette::POI_GUILD),
         Vec3::new(-0.96, 0.30, -0.20),
-        Vec3::new(0.015, 0.20, 0.26),
+        Vec3::new(0.015, 0.155, 0.26),
     ),
 ];
 

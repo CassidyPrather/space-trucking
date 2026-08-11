@@ -277,7 +277,7 @@ const RATION_COUNTER: [Fitting; 14] = [
         Shape::Slab,
         Coat::metal(Worn::Plate),
         Vec3::new(0.10, 0.90, -0.20),
-        Vec3::new(0.09, 0.055, 0.72),
+        Vec3::new(0.09, 0.025, 0.72),
     ),
     clamp(-0.70),
     clamp(0.24),

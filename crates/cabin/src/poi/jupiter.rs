@@ -287,7 +287,7 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.86, -0.95, 0.0),
+        Vec3::new(0.86, -0.90, 0.0),
         Vec3::new(0.10, 0.04, 0.55),
     ),
     Fitting::new(
@@ -336,7 +336,7 @@ const fn collar(z: f32) -> Fitting {
         Shape::Slab,
         Coat::metal(Worn::Rivet),
         Vec3::new(0.86, 0.60, z),
-        Vec3::new(0.085, 0.085, 0.05),
+        Vec3::new(0.085, 0.135, 0.05),
     )
 }
 

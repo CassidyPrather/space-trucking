@@ -261,7 +261,7 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         IRON,
-        Vec3::new(-0.06, 0.39, 0.925),
+        Vec3::new(-0.06, 0.39, 0.888),
         Vec3::new(0.84, 0.026, 0.026),
     ),
     Fitting::new(
@@ -318,15 +318,15 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         PIPE,
-        Vec3::new(0.86, 0.86, -0.06),
-        Vec3::new(0.075, 0.075, 0.78),
+        Vec3::new(0.86, 0.86, -0.01),
+        Vec3::new(0.075, 0.075, 0.735),
     ),
     // The branch that feeds the pump, dropping down the aft-starboard
     // corner behind the machine.
     Fitting::new(
         Shape::Slab,
         PIPE,
-        Vec3::new(0.90, 0.16, 0.880),
+        Vec3::new(0.90, 0.16, 0.895),
         Vec3::new(0.055, 0.68, 0.055),
     ),
     // The drip tray, and the stain that says how long the tray has been
@@ -334,14 +334,14 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         IRON,
-        Vec3::new(0.72, -0.968, -0.72),
+        Vec3::new(0.72, -0.956, -0.72),
         Vec3::new(0.22, 0.018, 0.18),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::SOOT),
-        Vec3::new(0.40, -0.974, -0.50),
-        Vec3::new(0.30, 0.012, 0.26),
+        Vec3::new(0.53, -0.974, -0.60),
+        Vec3::new(0.44, 0.012, 0.36),
     ),
     // The one gauge, on the starboard wall: a dial in a steel surround,
     // reading something for nobody.

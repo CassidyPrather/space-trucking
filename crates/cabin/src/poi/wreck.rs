@@ -268,8 +268,8 @@ const THE_HOLD: [Fitting; 23] = [
     Fitting::new(
         Shape::Slab,
         STRUCTURE,
-        Vec3::new(0.11, -0.965, -0.40),
-        Vec3::new(0.022, 0.02, 0.30),
+        Vec3::new(0.11, -0.965, -0.42),
+        Vec3::new(0.022, 0.02, 0.28),
     ),
     // The starboard grab rail, whole: a run and its two stanchions, in
     // the radium the yard painted it with when the ship was new.

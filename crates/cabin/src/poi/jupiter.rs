@@ -233,8 +233,8 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
-        Vec3::new(0.90, -0.10, 0.45),
-        Vec3::new(0.03, 0.03, 0.50),
+        Vec3::new(0.90, -0.10, 0.365),
+        Vec3::new(0.03, 0.03, 0.415),
     ),
     // The manifold, high along the starboard cornice, with its collars.
     Fitting::new(
@@ -249,8 +249,8 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.86, 0.16, 0.90),
-        Vec3::new(0.05, 0.50, 0.05),
+        Vec3::new(0.86, 0.13, 0.90),
+        Vec3::new(0.05, 0.47, 0.05),
     ),
     // The pilot, over the aft cornice: the stack outside is lit, and this
     // is that same fire seen from indoors through a slit in the cornice.

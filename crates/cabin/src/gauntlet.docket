@@ -43,7 +43,6 @@ Comet | berth-reached | decor[9] Dome
 Comet | berth-seen | decor[0] Slab
 Comet | berth-seen | decor[1] Slab
 Comet | berth-seen | decor[6] Slab
-Comet | coplanar-faces | decor[13] Slab / decor[14] Slab
 
 # ---- Earth ----
 Earth | berth-clear | decor[0] Slab
@@ -116,12 +115,6 @@ Hermitage | berth-reached | decor[24] Dome
 Hermitage | berth-reached | decor[25] Dome
 Hermitage | berth-reached | decor[2] Slab
 Hermitage | berth-reached | decor[7] Slab
-Hermitage | coplanar-faces | decor[0] Slab / decor[3] Slab
-Hermitage | coplanar-faces | decor[17] Slab / decor[19] Slab
-Hermitage | coplanar-faces | decor[17] Slab / decor[20] Slab
-Hermitage | coplanar-faces | decor[18] Slab / decor[19] Slab
-Hermitage | coplanar-faces | decor[18] Slab / decor[20] Slab
-Hermitage | coplanar-faces | decor[1] Slab / decor[4] Slab
 
 # ---- Jupiter ----
 Jupiter | berth-clear | decor[0] Slab
@@ -152,8 +145,6 @@ Jupiter | berth-reached | decor[5] Ring
 Jupiter | berth-reached | decor[7] Post
 Jupiter | berth-seen | decor[16] Slab
 Jupiter | berth-seen | decor[7] Post
-Jupiter | coplanar-faces | decor[10] Slab / decor[13] Slab
-Jupiter | coplanar-faces | decor[9] Slab / decor[13] Slab
 
 # ---- Mars ----
 Mars | berth-clear | decor[0] Slab
@@ -181,7 +172,6 @@ Mars | berth-reached | decor[12] Slab
 Mars | berth-reached | decor[13] Slab
 Mars | berth-reached | decor[5] Slab
 Mars | berth-seen | decor[13] Slab
-Mars | coplanar-faces | decor[0] Slab / decor[1] Slab
 
 # ---- Neptune ----
 Neptune | berth-clear | decor[0] Ring
@@ -232,10 +222,6 @@ Parlor | berth-reached | decor[0] Slab
 Parlor | berth-reached | decor[13] Slab
 Parlor | berth-reached | decor[15] Slab
 Parlor | berth-reached | decor[17] Slab
-Parlor | coplanar-faces | decor[10] Slab / decor[11] Slab
-Parlor | coplanar-faces | decor[10] Slab / decor[12] Slab
-Parlor | coplanar-faces | decor[9] Slab / decor[11] Slab
-Parlor | coplanar-faces | decor[9] Slab / decor[12] Slab
 
 # ---- Pump ----
 Pump | berth-clear | decor[0] Slab
@@ -265,10 +251,6 @@ Pump | berth-clear | decor[9] Ring
 Pump | berth-reached | decor[18] Slab
 Pump | berth-reached | decor[20] Ring
 Pump | berth-reached | decor[8] Post
-Pump | coplanar-faces | decor[13] Slab / decor[14] Slab
-Pump | coplanar-faces | decor[16] Slab / decor[17] Slab
-Pump | coplanar-faces | decor[3] Slab / decor[4] Slab
-Pump | coplanar-faces | decor[6] Slab / decor[15] Slab
 
 # ---- Saturn ----
 Saturn | berth-clear | decor[0] Slab
@@ -293,8 +275,6 @@ Saturn | berth-reached | decor[4] Slab
 Saturn | berth-reached | decor[5] Slab
 Saturn | berth-reached | decor[8] Slab
 Saturn | berth-seen | decor[11] Post
-Saturn | coplanar-faces | decor[2] Slab / decor[4] Slab
-Saturn | coplanar-faces | decor[3] Slab / decor[4] Slab
 Saturn | coplanar-faces | lamp cage[4] Slab / lamp stem
 
 # ---- Umbra ----
@@ -398,7 +378,6 @@ Wanderer | berth-reached | decor[1] Post
 Wanderer | berth-seen | decor[0] Post
 Wanderer | berth-seen | decor[14] Slab
 Wanderer | berth-seen | decor[2] Post
-Wanderer | coplanar-faces | decor[11] Slab / decor[12] Slab
 
 # ---- Wreck ----
 Wreck | berth-clear | decor[0] Slab
@@ -427,4 +406,3 @@ Wreck | berth-clear | decor[9] Slab
 Wreck | berth-reached | decor[15] Slab
 Wreck | berth-reached | decor[16] Slab
 Wreck | berth-reached | decor[19] Slab
-Wreck | coplanar-faces | decor[8] Slab / decor[9] Slab

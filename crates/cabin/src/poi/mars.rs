@@ -238,8 +238,8 @@ const FIELD_SHOP: [Fitting; 20] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.86, -0.24, -0.18),
-        Vec3::new(0.12, 0.055, 0.20),
+        Vec3::new(0.86, -0.24, -0.19),
+        Vec3::new(0.12, 0.055, 0.19),
     ),
     Fitting::new(
         Shape::Slab,

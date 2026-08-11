@@ -237,8 +237,8 @@ const CELL: [Fitting; 26] = [
     ledge(-0.10, 0.20, 0.90, 0.17),
     ledge(0.34, 0.20, 0.90, 0.17),
     ledge(0.78, 0.20, 0.90, 0.17),
-    corbel(-0.22, 0.13, 0.90),
-    corbel(0.46, 0.13, 0.90),
+    corbel(-0.20, 0.13, 0.90),
+    corbel(0.44, 0.13, 0.90),
     // Two more down the starboard wall, for a body that walks round.
     ledge(0.90, 0.02, -0.30, 0.075),
     ledge(0.90, 0.02, 0.16, 0.075),
@@ -273,8 +273,8 @@ const CELL: [Fitting; 26] = [
     ),
     reveal(0.24, 0.40, 0.28, 0.045),
     reveal(0.24, -0.08, 0.28, 0.045),
-    reveal(-0.02, 0.16, 0.045, 0.24),
-    reveal(0.50, 0.16, 0.045, 0.24),
+    reveal(-0.02, 0.16, 0.045, 0.195),
+    reveal(0.50, 0.16, 0.045, 0.195),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::POI_HERMITAGE),

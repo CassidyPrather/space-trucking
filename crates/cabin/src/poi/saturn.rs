@@ -231,8 +231,8 @@ const THE_YARD: [Fitting; 15] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
-        Vec3::new(0.86, 0.30, 0.11),
-        Vec3::new(0.05, 0.04, 0.72),
+        Vec3::new(0.855, 0.30, 0.11),
+        Vec3::new(0.045, 0.04, 0.72),
     ),
     // A stack of cut plate on the deck, three pieces off three hulls,
     // squared up by somebody with a strong opinion about stacking.

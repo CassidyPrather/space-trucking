@@ -249,7 +249,7 @@ const NOT_A_ROOM: [Fitting; 15] = [
     // sense of scale, and the reason a black box reads as an interior at
     // all.
     deck(-0.965, -0.20, 0.025, 0.74),
-    deck(0.965, 0.0, 0.025, 0.96),
+    deck(0.965, 0.01, 0.025, 0.95),
     front_deck(0.0, -0.965),
     // ---- and the fourth line ----
     // The same seam again, out in the middle of the floor, where there is

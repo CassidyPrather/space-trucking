@@ -45,6 +45,7 @@ use space_trucking::sim::{
     placement_check, player_owned, splitmix,
 };
 
+use crate::poi::{Coat, Worn};
 use crate::rig::{Dimmable, Skin};
 use crate::surface::{SimSurface, Station, VirtualPointer};
 use crate::{Phase, Shell, canvas, glow, palette};
@@ -772,7 +773,7 @@ pub fn berth_box(charts: &[(Station, SimSurface)], rect: Rect) -> Option<(Vec3, 
 /// turn that carries [`Feature::axis`] onto [`Feature::want`] draws the
 /// same body, and the shortest one is as good as any. Nothing is left
 /// for a builder and a name to disagree about.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Feature {
     /// What the part is called in its builder.
     pub name: &'static str,
@@ -804,61 +805,35 @@ pub const MOUTH: Vec3 = Vec3::NEG_Y;
 /// looks.
 pub const AXLE: Vec3 = Vec3::Y;
 
-/// Every claim-bearing feature of one kind's rig.
+/// Every claim-bearing feature of one kind's rig, read back off the rig
+/// itself.
 ///
-/// Deliberately short and open: a part earns a row here when its
+/// Deliberately short and open: a part earns a claim when its
 /// orientation carries a promise a viewer would notice being broken. The
 /// rest of a rig is composition, and composition is what screenshots are
 /// actually good at.
+///
+/// It is a **derivation**, not a second table. A claim used to be
+/// written here and the turn taken from it by name; now the claim rides
+/// the part that makes it ([`Part::pointing`]), so what a rig points and
+/// what its list of promises says are one reading of one source.
 #[must_use]
 pub fn features(kind: Kind) -> Vec<Feature> {
-    match kind {
-        // A sconce throws its light INTO the room it is bolted to; a cup
-        // aimed along the wall lights the wall.
-        Kind::WallLamp => vec![Feature {
-            name: "sconce cup",
-            axis: MOUTH,
-            want: Vec3::Z,
-        }],
-        // A standing lamp rests on a plate that LIES on the deck, and
-        // pours its light down out of the shade over the bulb.
-        Kind::FloorLamp => vec![
-            Feature {
-                name: "base plate",
-                axis: AXLE,
-                want: Vec3::Y,
-            },
-            Feature {
-                name: "shade",
-                axis: MOUTH,
-                want: Vec3::NEG_Y,
-            },
-        ],
-        // The pendant hangs its shade over its bulb, same as the floor
-        // lamp — one storey up, and the same promise.
-        Kind::CeilingLamp => vec![Feature {
-            name: "shade",
-            axis: MOUTH,
-            want: Vec3::NEG_Y,
-        }],
-        // A chip is read off its face, so its face looks out of the
-        // berth at whoever is looking at it.
-        Kind::CasinoChip => vec![Feature {
-            name: "chip face",
-            axis: AXLE,
-            want: Vec3::Z,
-        }],
-        _ => Vec::new(),
-    }
-}
-
-/// One kind's feature by name — the builders' way in, so a turn is
-/// spelled once and the gauntlet reads exactly what got spawned.
-fn feature(kind: Kind, name: &'static str) -> Quat {
-    features(kind)
+    let piece = Piece {
+        id: 0,
+        kind,
+        variant: 0,
+        gnawed: false,
+        loc: Loc::Hold {
+            room: CABIN,
+            x: 0,
+            y: 0,
+        },
+    };
+    parts(&piece, Screens::LIVE)
         .into_iter()
-        .find(|feature| feature.name == name)
-        .map_or(Quat::IDENTITY, |feature| feature.turn())
+        .filter_map(|part| part.claim)
+        .collect()
 }
 
 /// Cubby anchor centres in the cabinet rig's local space, sim units.
@@ -2592,18 +2567,13 @@ impl RigParts<'_, '_, '_> {
             ))
             .id()
     }
-
-    /// An enamel (lit painted metal) material for an accent.
-    fn tint(&mut self, color: Color) -> Handle<StandardMaterial> {
-        glow::enamel(self.materials, color)
-    }
 }
 
 /// The carry-handle law (BAY.md, "The handle rule"): a click-functional
 /// kind declares the sub-rect of its footprint that grabs as cargo, as
 /// fractions of the piece rect in sim orientation (+y down). A press
 /// inside routes to carry; anywhere else on the piece, to focus. The
-/// rig draws the amber grab from THIS declaration ([`carry_grab`]), so
+/// rig draws the amber grab from THIS declaration ([`grab_parts`]), so
 /// hitbox and geometry cannot drift apart. `None` = passive cargo:
 /// nothing to guard, the whole body grabs.
 pub const fn carry_handle(kind: Kind) -> Option<Rect> {
@@ -2709,37 +2679,6 @@ fn grab_bar(kind: Kind, fw: f32, fh: f32) -> Option<(Vec2, Vec2)> {
     ))
 }
 
-/// Draw the amber carry grab exactly over the declared handle sub-rect:
-/// a glowing crossbar in two brass stanchions, the one shape every
-/// movable instrument shares — grab semantics read by form, not hue
-/// alone. `z` is the local depth the bar rides at.
-fn carry_grab(rig: &mut RigParts<'_, '_, '_>, kind: Kind, fw: f32, fh: f32, z: f32) {
-    let Some((at, size)) = grab_bar(kind, fw, fh) else {
-        return;
-    };
-    let (hx, hy) = (at.x, at.y);
-    let (hw, hh) = (size.x, size.y);
-    let bar = glow::phosphor(rig.materials, palette::AMBER, GRAB_GLOW);
-    rig.grab = Some(bar.clone());
-    rig.part(
-        Cuboid::new(hw * GRAB_BAR_W, hh * GRAB_BAR_H, 2.6),
-        bar,
-        Transform::from_xyz(hx, hy, z),
-    );
-    let post = rig.meshes.add(Cuboid::new(hh * 0.4, hh * 0.4, z - 0.5));
-    for sx in [-1.0f32, 1.0] {
-        rig.spawn(
-            post.clone(),
-            rig.skin.brass.clone(),
-            Transform::from_xyz(
-                sx.mul_add(hw * GRAB_BAR_W * 0.5, hx),
-                hy,
-                (z - 0.5).mul_add(0.5, 0.5),
-            ),
-        );
-    }
-}
-
 /// The live screen textures handed down to the instrument builders.
 #[derive(Default)]
 struct ScreenGlasses {
@@ -2770,7 +2709,6 @@ fn spawn_rig(
     let body_root = commands
         .spawn((Transform::default(), Visibility::default(), ChildOf(root)))
         .id();
-    let color = palette::variant_tint(palette::kind_color(piece.kind), piece.variant);
     let (w, h) = piece.kind.cells();
     let fw = f32::from(w) * layout::CELL;
     let fh = f32::from(h) * layout::CELL;
@@ -2786,7 +2724,7 @@ fn spawn_rig(
         root: body_root,
         grab: None,
     };
-    build_kind(&mut rig, piece, color, fw, fh);
+    build_kind(&mut rig, piece);
     let grab_mat = rig.grab.clone();
 
     // The rat's mark: a socket-dark wedge biting past the right flank —
@@ -2908,7 +2846,376 @@ const fn bezel(kind: Kind) -> Option<Bezel> {
     }
 }
 
-/// The whole window family's rig: a frame around a hole in the hull.
+// -------------------------------------------------------------- the parts --
+
+/// **The primitive bodies a rig is cut from**, in rig-local sim units.
+///
+/// A short list, and the same argument the stations' own
+/// [`Shape`](crate::poi::Shape) list makes: cargo is told apart by
+/// arrangement, not by modelling. What is here is what thirty-two kinds
+/// actually spend.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Body {
+    /// A box, `x × y × z`.
+    Box(Vec3),
+    /// A cylinder standing on its own `+y`, `facets` sides round it —
+    /// `None` where the mesher's own smooth default is wanted.
+    Drum { r: f32, h: f32, facets: Option<u32> },
+    /// A true cone: a disc at the bottom of its own `+y`, a point at the
+    /// top.
+    Horn { r: f32, h: f32 },
+    /// A torus lying in its own `x/z` plane.
+    Hoop { inner: f32, outer: f32 },
+    /// A capsule standing on its own `+y`: `len` of barrel between two
+    /// round caps. Nothing about it is flat.
+    Pill { r: f32, len: f32 },
+    /// A chunky low-poly sphere.
+    Ball { r: f32 },
+    /// A flat annulus in its own `x/y` plane, showing its own `+z`.
+    Washer { bore: f32, brim: f32, facets: u32 },
+    /// A single-sided unit quad in its own `x/y` plane, showing its own
+    /// `+z`. Its size rides the transform's scale rather than its mesh,
+    /// because a pane wearing a live texture is re-scaled, never re-cut.
+    Pane,
+}
+
+impl Body {
+    /// The mesh, cut once per distinct body per rig.
+    fn mesh(self) -> Mesh {
+        match self {
+            Self::Box(size) => Cuboid::new(size.x, size.y, size.z).into(),
+            Self::Drum {
+                r,
+                h,
+                facets: Some(sides),
+            } => Cylinder::new(r, h).mesh().resolution(sides).build(),
+            Self::Drum { r, h, facets: None } => Cylinder::new(r, h).into(),
+            Self::Horn { r, h } => Cone {
+                radius: r,
+                height: h,
+            }
+            .into(),
+            Self::Hoop { inner, outer } => Torus::new(inner, outer).into(),
+            Self::Pill { r, len } => Capsule3d::new(r, len).into(),
+            Self::Ball { r } => ico(r),
+            Self::Washer { bore, brim, facets } => {
+                Annulus::new(bore, brim).mesh().resolution(facets).build()
+            }
+            Self::Pane => Rectangle::new(1.0, 1.0).into(),
+        }
+    }
+}
+
+/// Which of a rig's live screens have a picture to wear.
+///
+/// A headless build has no void to look into and no rasteriser running,
+/// and the rigs that would wear one fall back to phosphor — with
+/// different geometry, not merely a different coat. So the description
+/// has to be told which of the two worlds it is describing, rather than
+/// guess and be right in one of them.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Screens {
+    pub sky: bool,
+    pub map: bool,
+    pub preview: bool,
+}
+
+impl Screens {
+    /// Every screen lit: the game as it is played.
+    pub const LIVE: Self = Self {
+        sky: true,
+        map: true,
+        preview: true,
+    };
+}
+
+/// How a part is finished.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Cut {
+    /// One of the shared coats — enamel, etched, phosphor, or a worn
+    /// metal off the ship's own [`Skin`].
+    Coat(Coat),
+    /// The chart tank's live map, painted by the CRT rasteriser.
+    Map,
+    /// The destination preview's live glass.
+    Preview,
+    /// The void, seen through a window's pane. Hung dark; `viewport`
+    /// dresses it every frame.
+    Sky,
+    /// One seeded artwork, painted through the shared canvas.
+    Art,
+}
+
+/// The turned sub-frames a rig hangs parts in, and what moves each one.
+///
+/// Most of a rig hangs straight off its own body. What does not hangs
+/// off a sub-root some system owns: the runtime swings the sconce's arm,
+/// throws the launch handle's pivot, and shows exactly one of a
+/// covering's two bodies.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Under {
+    /// The rig's own body.
+    Rig,
+    /// The sconce's bracket arm, which `sync_fixtures` swings to
+    /// whichever stile the piece's wall column touches.
+    Arm,
+    /// The launch handle's pivot, at the pose it rests in;
+    /// `lever_motion` throws it with the gesture layer's travel.
+    Pivot(Transform),
+    /// A covering's laid body, shown while it lies on its chart.
+    Laid,
+    /// A covering's packed body, shown while it stands on a counter.
+    Packed,
+}
+
+impl Under {
+    /// Whether two parts hang in the same sub-frame. A pose is not an
+    /// identity — the pivot is one frame whatever it rests at.
+    fn same(self, other: Self) -> bool {
+        std::mem::discriminant(&self) == std::mem::discriminant(&other)
+    }
+
+    /// The pose the sub-frame rests at.
+    const fn rest(self) -> Transform {
+        match self {
+            Self::Pivot(at) => at,
+            _ => Transform::IDENTITY,
+        }
+    }
+}
+
+/// What the runtime does with a part beyond drawing it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Role {
+    /// Geometry, and nothing else.
+    Plain,
+    /// A breathing emissive. Whatever else wears the same coat breathes
+    /// with it, which is how the eerie crates beat as one frame off one
+    /// marked bar.
+    Pulse {
+        color: Color,
+        base: f32,
+        amp: f32,
+        freq: f32,
+        phase: f32,
+    },
+    /// A seedling's bud, hidden until the berth stands in lamplight.
+    Bud,
+    /// A cubby's amber invitation, hidden until the sim offers the slot.
+    /// It breathes on a phase of its own, so it is the one role that
+    /// insists on a material instance of its own.
+    Cubby {
+        slot: u8,
+    },
+    /// The ETA gauge's needle, swept by the live leg.
+    Needle {
+        reach: f32,
+    },
+    /// The launch handle's go-lamp, and the halo behind it.
+    Knob,
+    Halo,
+    /// A lamp's glass, with the room light under it at this reach.
+    Bulb {
+        range: f32,
+    },
+    /// A luminous coat's own tinge: a light, and no body at all.
+    Tinge,
+    /// The amber carry grab, which the aim flares.
+    Grab,
+}
+
+impl Role {
+    /// Whether the part must own its material outright rather than share
+    /// the rig's instance of its coat. Only the cubby does: four mouths
+    /// wearing one amber would breathe as one, and they are meant to
+    /// breathe out of step (`invite_glows`).
+    const fn alone(self) -> bool {
+        matches!(self, Self::Cubby { .. })
+    }
+
+    /// Whether the part is hung hidden for a system to show later.
+    const fn dark(self) -> bool {
+        matches!(self, Self::Bud | Self::Cubby { .. })
+    }
+}
+
+/// **One part of one rig, described and not yet built**: what it is cut
+/// from, how it is finished, where it stands in its own frame, and
+/// whatever claim it makes about the way it points.
+///
+/// The reason it is data. `build_kind` used to compose a rig straight
+/// into a live Bevy world, which meant nothing pure could enumerate a
+/// rig's parts and no sweep could ask a question about one — the Guild's
+/// chit cut its card and its stripe to the same height and the same
+/// centre, so top edges shared a plane and bottoms shared another, along
+/// the whole of a stripe held at arm's length, and the gauntlet could not
+/// have caught it. The rooms went this way first (`room::charts`,
+/// `room::sites`, `room::tiles`): a describer says what is there, and the
+/// presentation layer stamps what it returns.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Part {
+    /// What the part is called in its own rig.
+    pub what: &'static str,
+    /// Which of a repeated part this is, where a rig draws several.
+    pub nth: Option<u8>,
+    /// The silhouette — `None` for a part that lights and draws nothing.
+    pub body: Option<Body>,
+    /// How it is finished.
+    pub cut: Cut,
+    /// Where it stands in its frame.
+    pub at: Transform,
+    /// Which frame that is.
+    pub under: Under,
+    /// What the runtime does with it beyond drawing it.
+    pub role: Role,
+    /// What it claims about the way it points, if it claims anything.
+    pub claim: Option<Feature>,
+}
+
+impl Part {
+    /// One part, spelled out.
+    const fn new(what: &'static str, body: Body, coat: Coat, at: Transform) -> Self {
+        Self {
+            what,
+            nth: None,
+            body: Some(body),
+            cut: Cut::Coat(coat),
+            at,
+            under: Under::Rig,
+            role: Role::Plain,
+            claim: None,
+        }
+    }
+
+    /// A light with no body of its own.
+    const fn lamp(what: &'static str, coat: Coat, at: Transform, role: Role) -> Self {
+        Self {
+            what,
+            nth: None,
+            body: None,
+            cut: Cut::Coat(coat),
+            at,
+            under: Under::Rig,
+            role,
+            claim: None,
+        }
+    }
+
+    /// Which of a repeated part this is.
+    const fn nth(mut self, nth: u8) -> Self {
+        self.nth = Some(nth);
+        self
+    }
+
+    /// Finished by something other than a coat — a live screen, the
+    /// void, or a painted canvas.
+    const fn cut(mut self, cut: Cut) -> Self {
+        self.cut = cut;
+        self
+    }
+
+    /// Hung in a sub-frame rather than off the rig's own body.
+    const fn under(mut self, under: Under) -> Self {
+        self.under = under;
+        self
+    }
+
+    /// Given a job beyond being drawn.
+    const fn role(mut self, role: Role) -> Self {
+        self.role = role;
+        self
+    }
+
+    /// Scaled — the one thing a pane's size rides, and the couch
+    /// cushions' squash.
+    const fn scaled(mut self, scale: Vec3) -> Self {
+        self.at.scale = scale;
+        self
+    }
+
+    /// **Turned by the claim its own name makes.** The turn is derived
+    /// here and nowhere else: a claim-bearing part is a body of
+    /// revolution about `axis`, so any turn carrying `axis` onto `want`
+    /// draws the same body and the shortest one is as good as any. A
+    /// builder and a name have nothing left to disagree about.
+    fn pointing(mut self, axis: Vec3, want: Vec3) -> Self {
+        let claim = Feature {
+            name: self.what,
+            axis,
+            want,
+        };
+        self.at.rotation = claim.turn();
+        self.claim = Some(claim);
+        self
+    }
+}
+
+/// The amber carry grab: a glowing crossbar in two brass stanchions,
+/// drawn exactly over the declared handle sub-rect ([`grab_bar`]) so the
+/// hitbox and the geometry cannot drift apart. `z` is the local depth
+/// the bar rides at. Empty for a passive kind, which declares no handle.
+fn grab_parts(kind: Kind, fw: f32, fh: f32, z: f32) -> Vec<Part> {
+    let Some((at, size)) = grab_bar(kind, fw, fh) else {
+        return Vec::new();
+    };
+    let (hx, hy) = (at.x, at.y);
+    let (hw, hh) = (size.x, size.y);
+    let mut out = vec![
+        Part::new(
+            "carry grab",
+            Body::Box(Vec3::new(hw * GRAB_BAR_W, hh * GRAB_BAR_H, 2.6)),
+            Coat::phosphor(palette::AMBER, GRAB_GLOW),
+            Transform::from_xyz(hx, hy, z),
+        )
+        .role(Role::Grab),
+    ];
+    for (i, sx) in [-1.0f32, 1.0].into_iter().enumerate() {
+        out.push(
+            Part::new(
+                "grab stanchion",
+                Body::Box(Vec3::new(hh * 0.4, hh * 0.4, z - 0.5)),
+                Coat::metal(Worn::Brass),
+                Transform::from_xyz(
+                    sx.mul_add(hw * GRAB_BAR_W * 0.5, hx),
+                    hy,
+                    (z - 0.5).mul_add(0.5, 0.5),
+                ),
+            )
+            .nth(u8::try_from(i).unwrap_or(0)),
+        );
+    }
+    out
+}
+
+/// A squat paint tin: `shell` for the body, `lid` capping it — the one
+/// silhouette both paints share.
+fn tin_parts(shell: Coat, lid: Coat) -> Vec<Part> {
+    let upright = Quat::from_rotation_x(FRAC_PI_2);
+    vec![
+        Part::new(
+            "tin shell",
+            Body::Drum {
+                r: 9.5,
+                h: 11.0,
+                facets: None,
+            },
+            shell,
+            Transform::from_xyz(0.0, 0.0, 5.5).with_rotation(upright),
+        ),
+        Part::new(
+            "tin lid",
+            Body::Drum {
+                r: 9.7,
+                h: 1.6,
+                facets: None,
+            },
+            lid,
+            Transform::from_xyz(0.0, 0.0, 11.4).with_rotation(upright),
+        ),
+    ]
+}
+
+/// The whole window family, described: a frame around a hole in the hull.
 ///
 /// The glass carries `viewport::SkyPane` — the whole contract between
 /// this furniture and the view — and it is hung DARK, because what is
@@ -2920,10 +3227,12 @@ const fn bezel(kind: Kind) -> Option<Bezel> {
 ///
 /// Headless paths, which have no void to look into, fall back to a
 /// phosphor pane with a stand-in star scatter seeded by the piece id.
-fn window_rig(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32) {
+#[allow(clippy::too_many_lines)]
+fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens) -> Vec<Part> {
     let Some(bezel) = bezel(piece.kind) else {
-        return;
+        return Vec::new();
     };
+    let brass = Coat::metal(Worn::Brass);
     // How much of the footprint is glass. A porthole's bore is round, so
     // its pane is square and small enough for the ring to cover its
     // corners; the rectangular bezels take almost the whole cell.
@@ -2935,35 +3244,38 @@ fn window_rig(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         Bezel::Lipped => (fw * 0.88, fh * 0.78),
         Bezel::Mullioned => (fw * 0.90, fh * 0.84),
     };
-    if rig.sky {
-        let glass = crate::viewport::pane_glass(rig.materials);
-        let pane = rig.part(
-            Rectangle::new(1.0, 1.0),
-            glass,
-            Transform::from_xyz(0.0, 0.0, 2.4).with_scale(Vec3::new(gw, gh, 1.0)),
+    let mut out = Vec::new();
+    if screens.sky {
+        out.push(
+            Part::new(
+                "sky pane",
+                Body::Pane,
+                Coat::phosphor(palette::SHADOW, 0.0),
+                Transform::from_xyz(0.0, 0.0, 2.4),
+            )
+            .cut(Cut::Sky)
+            .scaled(Vec3::new(gw, gh, 1.0)),
         );
-        rig.commands.entity(pane).insert(crate::viewport::SkyPane);
     } else {
-        let pane = glow::phosphor(
-            rig.materials,
-            palette::mix(color, palette::PHOSPHOR, 0.12),
-            0.35,
-        );
-        rig.part(
-            Cuboid::new(gw, gh, 3.0),
-            pane,
+        out.push(Part::new(
+            "sky pane",
+            Body::Box(Vec3::new(gw, gh, 3.0)),
+            Coat::phosphor(palette::mix(color, palette::PHOSPHOR, 0.12), 0.35),
             Transform::from_xyz(0.0, 0.0, 1.5),
-        );
-        let star = glow::phosphor(rig.materials, palette::GLINT, 2.2);
-        let fleck = rig.meshes.add(ico(0.9));
+        ));
+        let star = Coat::phosphor(palette::GLINT, 2.2);
         for i in 0..7_u32 {
             let n = (piece.id.wrapping_mul(7).wrapping_add(i)) as f32;
             let angle = n * 2.399;
             let reach = (n * 0.517).fract().mul_add(0.36, 0.08);
-            rig.spawn(
-                fleck.clone(),
-                star.clone(),
-                Transform::from_xyz(angle.cos() * gw * reach, angle.sin() * gh * reach, 2.6),
+            out.push(
+                Part::new(
+                    "star",
+                    Body::Ball { r: 0.9 },
+                    star,
+                    Transform::from_xyz(angle.cos() * gw * reach, angle.sin() * gh * reach, 2.6),
+                )
+                .nth(u8::try_from(i).unwrap_or(0)),
             );
         }
     }
@@ -2974,19 +3286,27 @@ fn window_rig(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         Bezel::Ring => {
             let bore = gw * 0.5;
             let brim = fw.min(fh) * 0.47;
-            rig.part(
-                Annulus::new(bore, brim).mesh().resolution(12).build(),
-                rig.skin.brass.clone(),
+            out.push(Part::new(
+                "bolt ring",
+                Body::Washer {
+                    bore,
+                    brim,
+                    facets: 12,
+                },
+                brass,
                 Transform::from_xyz(0.0, 0.0, 3.0),
-            );
-            let stud = rig.meshes.add(ico(1.5));
+            ));
             for i in 0..6_u32 {
                 let angle = (i as f32) * std::f32::consts::TAU / 6.0;
                 let reach = f32::midpoint(bore, brim);
-                rig.spawn(
-                    stud.clone(),
-                    rig.skin.brass.clone(),
-                    Transform::from_xyz(angle.cos() * reach, angle.sin() * reach, 3.6),
+                out.push(
+                    Part::new(
+                        "stud",
+                        Body::Ball { r: 1.5 },
+                        brass,
+                        Transform::from_xyz(angle.cos() * reach, angle.sin() * reach, 3.6),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
         }
@@ -2994,318 +3314,428 @@ fn window_rig(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         // wide to have arrived in one sheet — the mullion between the
         // two panes that did.
         Bezel::Lipped | Bezel::Mullioned => {
-            let lip_h = rig.meshes.add(Cuboid::new(fw * 0.96, fh * 0.10, 6.0));
-            let lip_v = rig.meshes.add(Cuboid::new(fw * 0.05, fh * 0.94, 6.0));
-            for (mesh, at) in [
-                (lip_h.clone(), Vec3::new(0.0, fh * 0.43, 3.0)),
+            let lip_h = Body::Box(Vec3::new(fw * 0.96, fh * 0.10, 6.0));
+            let lip_v = Body::Box(Vec3::new(fw * 0.05, fh * 0.94, 6.0));
+            for (i, (body, at)) in [
+                (lip_h, Vec3::new(0.0, fh * 0.43, 3.0)),
                 (lip_h, Vec3::new(0.0, -fh * 0.43, 3.0)),
-                (lip_v.clone(), Vec3::new(fw * 0.455, 0.0, 3.0)),
+                (lip_v, Vec3::new(fw * 0.455, 0.0, 3.0)),
                 (lip_v, Vec3::new(-fw * 0.455, 0.0, 3.0)),
-            ] {
-                rig.spawn(
-                    mesh,
-                    rig.skin.brass.clone(),
-                    Transform::from_translation(at),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                out.push(
+                    Part::new("lip", body, brass, Transform::from_translation(at))
+                        .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
             if bezel == Bezel::Mullioned {
-                rig.part(
-                    Cuboid::new(fw * 0.035, fh * 0.86, 6.0),
-                    rig.skin.brass.clone(),
+                out.push(Part::new(
+                    "mullion",
+                    Body::Box(Vec3::new(fw * 0.035, fh * 0.86, 6.0)),
+                    brass,
                     Transform::from_xyz(0.0, 0.0, 3.0),
-                );
+                ));
             }
         }
     }
+    out
 }
 
-/// One silhouette per cargo kind, the 2D glyph identities restated as
-/// primitives. Variants ride the tint; ids seed the decoration phases.
+/// **One silhouette per cargo kind**, the 2D glyph identities restated
+/// as primitives and described rather than built. Variants ride the
+/// tint; ids seed the decoration phases.
+///
+/// Pure: it spawns nothing, reads no world, and answers off a `Piece`
+/// and which screens are lit. [`build_kind`] stamps exactly what it
+/// returns, and `crate::gauntlet` measures exactly what it returns, so
+/// the sweep and the room see one geometry.
+#[must_use]
 #[allow(clippy::too_many_lines)]
-fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32) {
-    let body = rig.tint(color);
+pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
+    let color = palette::variant_tint(palette::kind_color(piece.kind), piece.variant);
+    let (w, h) = piece.kind.cells();
+    let fw = f32::from(w) * layout::CELL;
+    let fh = f32::from(h) * layout::CELL;
+    let body = Coat::enamel(color);
+    let brass = Coat::metal(Worn::Brass);
+    let plate = Coat::metal(Worn::PlateShade);
+    let socket = Coat::metal(Worn::Socket);
+    let shaded = |mix: f32| Coat::enamel(palette::mix(color, palette::SHADOW, mix));
+    let flat = Quat::from_rotation_x(FRAC_PI_2);
+    let mut out: Vec<Part> = Vec::new();
     match piece.kind {
         // A pink rhombus with a sparkle: a cube on its corner, one glint.
         Kind::PerfumeVial => {
-            rig.part(
-                Cuboid::new(fw * 0.52, fh * 0.52, 15.0),
+            out.push(Part::new(
+                "flask",
+                Body::Box(Vec3::new(fw * 0.52, fh * 0.52, 15.0)),
                 body,
                 Transform::from_xyz(0.0, 0.0, 9.0).with_rotation(Quat::from_rotation_z(FRAC_PI_4)),
-            );
-            let sparkle = glow::phosphor(rig.materials, palette::GLINT, 2.5);
-            rig.part(
-                ico(2.2),
-                sparkle,
+            ));
+            out.push(Part::new(
+                "sparkle",
+                Body::Ball { r: 2.2 },
+                Coat::phosphor(palette::GLINT, 2.5),
                 Transform::from_xyz(fw * 0.3, fh * 0.3, 16.0),
-            );
+            ));
         }
         // A gold slab, a darker belt, a sphere head. Unimaginably tacky.
         Kind::GildedIdol => {
-            let belt = rig.tint(palette::mix(color, palette::SHADOW, 0.45));
-            rig.part(
-                Cuboid::new(fw * 0.58, fh * 0.52, 18.0),
-                body.clone(),
+            out.push(Part::new(
+                "torso",
+                Body::Box(Vec3::new(fw * 0.58, fh * 0.52, 18.0)),
+                body,
                 Transform::from_xyz(0.0, -fh * 0.1, 9.0),
-            );
-            rig.part(
-                Cuboid::new(fw * 0.62, fh * 0.07, 19.0),
-                belt,
+            ));
+            out.push(Part::new(
+                "belt",
+                Body::Box(Vec3::new(fw * 0.62, fh * 0.07, 19.0)),
+                shaded(0.45),
                 Transform::from_xyz(0.0, -fh * 0.02, 9.5),
-            );
-            rig.part(
-                ico(fw * 0.26),
+            ));
+            out.push(Part::new(
+                "head",
+                Body::Ball { r: fw * 0.26 },
                 body,
                 Transform::from_xyz(0.0, fh * 0.28, 12.0),
-            );
+            ));
         }
         // A 2×2 sub-grid of identical government flavour.
         Kind::RationBricks => {
-            let brick = rig.meshes.add(Cuboid::new(26.0, 26.0, 16.0));
-            for (ix, iy) in [(-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)] {
-                rig.spawn(
-                    brick.clone(),
-                    body.clone(),
-                    Transform::from_xyz(15.5 * ix, 15.5 * iy, 8.0),
+            for (i, (ix, iy)) in [(-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)]
+                .into_iter()
+                .enumerate()
+            {
+                out.push(
+                    Part::new(
+                        "brick",
+                        Body::Box(Vec3::new(26.0, 26.0, 16.0)),
+                        body,
+                        Transform::from_xyz(15.5 * ix, 15.5 * iy, 8.0),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
         }
         // Two rust bars, stacked askew.
         Kind::ScrapAlloy => {
-            let under = rig.tint(palette::mix(color, palette::SHADOW, 0.25));
-            rig.part(
-                Cuboid::new(fw * 0.92, fh * 0.36, 10.0),
-                under,
+            out.push(Part::new(
+                "under bar",
+                Body::Box(Vec3::new(fw * 0.92, fh * 0.36, 10.0)),
+                shaded(0.25),
                 Transform::from_xyz(-fw * 0.02, -fh * 0.16, 5.0),
-            );
-            rig.part(
-                Cuboid::new(fw * 0.88, fh * 0.34, 10.0),
+            ));
+            out.push(Part::new(
+                "top bar",
+                Body::Box(Vec3::new(fw * 0.88, fh * 0.34, 10.0)),
                 body,
                 Transform::from_xyz(fw * 0.02, fh * 0.14, 15.0),
-            );
+            ));
         }
         // A pot with a sprout on top. Under lamplight it blooms: three
         // PerfumeVial-pink buds, hidden until `lit_adjacent` says the
         // footprint sits in a lit lamp's halo (presentation only, the
         // 2D bloom's reading).
         Kind::Seedlings => {
-            let pot = rig.tint(palette::mix(color, palette::SHADOW, 0.35));
-            rig.part(
-                Cylinder::new(fw * 0.3, 12.0),
-                pot,
-                Transform::from_xyz(0.0, -fh * 0.1, 6.0)
-                    .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            );
-            rig.part(
-                Cone {
-                    radius: fw * 0.2,
-                    height: 18.0,
+            out.push(Part::new(
+                "pot",
+                Body::Drum {
+                    r: fw * 0.3,
+                    h: 12.0,
+                    facets: None,
+                },
+                shaded(0.35),
+                Transform::from_xyz(0.0, -fh * 0.1, 6.0).with_rotation(flat),
+            ));
+            out.push(Part::new(
+                "sprout",
+                Body::Horn {
+                    r: fw * 0.2,
+                    h: 18.0,
                 },
                 body,
-                Transform::from_xyz(0.0, -fh * 0.1, 21.0)
-                    .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            );
-            let bud_mat = rig.tint(palette::kind_color(Kind::PerfumeVial));
-            let bud = rig.meshes.add(ico(2.4));
-            for (bx, by, bz) in [(-6.0, -3.5, 15.0), (5.5, -2.5, 17.0), (0.8, -4.5, 27.0)] {
-                rig.commands.spawn((
-                    Mesh3d(bud.clone()),
-                    MeshMaterial3d(bud_mat.clone()),
-                    Transform::from_xyz(bx, by, bz),
-                    Visibility::Hidden,
-                    Blossom { piece: piece.id },
-                    ChildOf(rig.root),
-                ));
+                Transform::from_xyz(0.0, -fh * 0.1, 21.0).with_rotation(flat),
+            ));
+            let bud = Coat::enamel(palette::kind_color(Kind::PerfumeVial));
+            for (i, (bx, by, bz)) in [(-6.0, -3.5, 15.0), (5.5, -2.5, 17.0), (0.8, -4.5, 27.0)]
+                .into_iter()
+                .enumerate()
+            {
+                out.push(
+                    Part::new(
+                        "bud",
+                        Body::Ball { r: 2.4 },
+                        bud,
+                        Transform::from_xyz(bx, by, bz),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0))
+                    .role(Role::Bud),
+                );
             }
         }
         // A horizontal capsule wearing hazard chevrons.
         Kind::GasCanister => {
-            rig.part(
-                Capsule3d::new(10.0, 34.0),
+            out.push(Part::new(
+                "tank",
+                Body::Pill { r: 10.0, len: 34.0 },
                 body,
                 Transform::from_xyz(0.0, 0.0, 10.0).with_rotation(Quat::from_rotation_z(FRAC_PI_2)),
-            );
-            let warn = rig.tint(palette::mix(color, palette::SHADOW, 0.5));
-            let leg = rig.meshes.add(Cuboid::new(9.0, 3.0, 3.0));
-            for cx in [-8.0, 8.0] {
-                rig.spawn(
-                    leg.clone(),
-                    warn.clone(),
-                    Transform::from_xyz(cx - 2.5, 3.2, 19.0)
-                        .with_rotation(Quat::from_rotation_z(-FRAC_PI_4)),
-                );
-                rig.spawn(
-                    leg.clone(),
-                    warn.clone(),
-                    Transform::from_xyz(cx - 2.5, -3.2, 19.0)
-                        .with_rotation(Quat::from_rotation_z(FRAC_PI_4)),
-                );
+            ));
+            let warn = shaded(0.5);
+            let leg = Body::Box(Vec3::new(9.0, 3.0, 3.0));
+            let mut nth = 0_u8;
+            for cx in [-8.0f32, 8.0] {
+                for (sy, turn) in [(3.2f32, -FRAC_PI_4), (-3.2, FRAC_PI_4)] {
+                    out.push(
+                        Part::new(
+                            "chevron",
+                            leg,
+                            warn,
+                            Transform::from_xyz(cx - 2.5, sy, 19.0)
+                                .with_rotation(Quat::from_rotation_z(turn)),
+                        )
+                        .nth(nth),
+                    );
+                    nth += 1;
+                }
             }
         }
         // A hexagonal prism in a frost ring.
         Kind::CryoCore => {
-            rig.part(
-                Cylinder::new(fw * 0.36, 18.0).mesh().resolution(6).build(),
+            out.push(Part::new(
+                "core",
+                Body::Drum {
+                    r: fw * 0.36,
+                    h: 18.0,
+                    facets: Some(6),
+                },
                 body,
-                Transform::from_xyz(0.0, 0.0, 9.0).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            );
-            let frost = rig.tint(palette::mix(palette::GLINT, color, 0.4));
+                Transform::from_xyz(0.0, 0.0, 9.0).with_rotation(flat),
+            ));
             let r = fw * 0.44;
-            rig.part(
-                Torus::new(r - 1.4, r + 1.4),
-                frost,
-                Transform::from_xyz(0.0, 0.0, 9.0).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            );
+            out.push(Part::new(
+                "frost ring",
+                Body::Hoop {
+                    inner: r - 1.4,
+                    outer: r + 1.4,
+                },
+                Coat::enamel(palette::mix(palette::GLINT, color, 0.4)),
+                Transform::from_xyz(0.0, 0.0, 9.0).with_rotation(flat),
+            ));
         }
         // Three stacked pearls, the middle a shade wetter.
         Kind::BrinePearls => {
-            let mid = rig.tint(palette::mix(color, palette::SHADOW, 0.15));
-            let pearl = rig.meshes.add(ico(10.5));
-            rig.spawn(
-                pearl.clone(),
-                body.clone(),
-                Transform::from_xyz(0.0, 21.0, 10.0),
-            );
-            rig.spawn(pearl.clone(), mid, Transform::from_xyz(0.0, 0.0, 10.0));
-            rig.spawn(pearl, body, Transform::from_xyz(0.0, -21.0, 10.0));
+            for (i, (coat, y)) in [(body, 21.0), (shaded(0.15), 0.0), (body, -21.0)]
+                .into_iter()
+                .enumerate()
+            {
+                out.push(
+                    Part::new(
+                        "pearl",
+                        Body::Ball { r: 10.5 },
+                        coat,
+                        Transform::from_xyz(0.0, y, 10.0),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
+                );
+            }
         }
         // Matte near-black, breathing an eerie edge frame at the audio
         // hum's ~1 Hz beat.
         Kind::SuspiciousCrate => {
-            rig.part(
-                Cuboid::new(fw * 0.84, fh * 0.84, 24.0),
+            out.push(Part::new(
+                "crate",
+                Body::Box(Vec3::new(fw * 0.84, fh * 0.84, 24.0)),
                 body,
                 Transform::from_xyz(0.0, 0.0, 12.0),
-            );
-            let hum = glow::phosphor(rig.materials, palette::EERIE, 0.5);
-            let along = rig.meshes.add(Cuboid::new(fw * 0.86, 2.6, 2.6));
-            let across = rig.meshes.add(Cuboid::new(2.6, fh * 0.86, 2.6));
-            let first = rig.spawn(
-                along.clone(),
-                hum.clone(),
-                Transform::from_xyz(0.0, fh * 0.42, 24.0),
-            );
-            rig.commands.entity(first).insert(Pulse {
-                color: palette::EERIE,
-                base: 0.6,
-                amp: 2.4,
-                freq: TAU,
-                phase: phase_of(piece.id, SALT_PULSE),
-            });
-            rig.spawn(
-                along,
-                hum.clone(),
-                Transform::from_xyz(0.0, -fh * 0.42, 24.0),
-            );
-            rig.spawn(
-                across.clone(),
-                hum.clone(),
-                Transform::from_xyz(fw * 0.42, 0.0, 24.0),
-            );
-            rig.spawn(across, hum, Transform::from_xyz(-fw * 0.42, 0.0, 24.0));
+            ));
+            let hum = Coat::phosphor(palette::EERIE, 0.5);
+            let along = Body::Box(Vec3::new(fw * 0.86, 2.6, 2.6));
+            let across = Body::Box(Vec3::new(2.6, fh * 0.86, 2.6));
+            for (i, (edge, at)) in [
+                (along, Vec3::new(0.0, fh * 0.42, 24.0)),
+                (along, Vec3::new(0.0, -fh * 0.42, 24.0)),
+                (across, Vec3::new(fw * 0.42, 0.0, 24.0)),
+                (across, Vec3::new(-fw * 0.42, 0.0, 24.0)),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                let mut part = Part::new("hum edge", edge, hum, Transform::from_translation(at))
+                    .nth(u8::try_from(i).unwrap_or(0));
+                if i == 0 {
+                    part = part.role(Role::Pulse {
+                        color: palette::EERIE,
+                        base: 0.6,
+                        amp: 2.4,
+                        freq: TAU,
+                        phase: phase_of(piece.id, SALT_PULSE),
+                    });
+                }
+                out.push(part);
+            }
         }
         // A dun parcel lashed with twine, knot hand-tied off centre.
         Kind::MysteriousCrate => {
-            rig.part(
-                Cuboid::new(fw * 0.8, fh * 0.8, 18.0),
+            out.push(Part::new(
+                "parcel",
+                Body::Box(Vec3::new(fw * 0.8, fh * 0.8, 18.0)),
                 body,
                 Transform::from_xyz(0.0, 0.0, 9.0),
+            ));
+            let twine = shaded(0.4);
+            out.push(
+                Part::new(
+                    "twine",
+                    Body::Box(Vec3::new(fw * 0.84, 2.4, 2.0)),
+                    twine,
+                    Transform::from_xyz(0.0, 0.0, 18.4),
+                )
+                .nth(0),
             );
-            let twine = rig.tint(palette::mix(color, palette::SHADOW, 0.4));
-            rig.part(
-                Cuboid::new(fw * 0.84, 2.4, 2.0),
-                twine.clone(),
-                Transform::from_xyz(0.0, 0.0, 18.4),
+            out.push(
+                Part::new(
+                    "twine",
+                    Body::Box(Vec3::new(2.4, fh * 0.84, 2.0)),
+                    twine,
+                    Transform::from_xyz(-fw * 0.06, 0.0, 18.4),
+                )
+                .nth(1),
             );
-            rig.part(
-                Cuboid::new(2.4, fh * 0.84, 2.0),
-                twine.clone(),
-                Transform::from_xyz(-fw * 0.06, 0.0, 18.4),
-            );
-            rig.part(ico(1.8), twine, Transform::from_xyz(-fw * 0.06, 0.0, 19.4));
+            out.push(Part::new(
+                "knot",
+                Body::Ball { r: 1.8 },
+                twine,
+                Transform::from_xyz(-fw * 0.06, 0.0, 19.4),
+            ));
         }
         // The big one. It hums a chord: a bright ring and core.
         Kind::VeryMysteriousCrate => {
-            rig.part(
-                Cuboid::new(fw * 0.88, fh * 0.88, 28.0),
+            out.push(Part::new(
+                "crate",
+                Body::Box(Vec3::new(fw * 0.88, fh * 0.88, 28.0)),
                 body,
                 Transform::from_xyz(0.0, 0.0, 14.0),
-            );
-            let hum = glow::phosphor(rig.materials, palette::EERIE_BRIGHT, 0.8);
+            ));
+            let hum = Coat::phosphor(palette::EERIE_BRIGHT, 0.8);
             let r = fw * 0.26;
-            let halo = rig.part(
-                Torus::new(r - 1.6, r + 1.6),
-                hum.clone(),
-                Transform::from_xyz(0.0, 0.0, 28.6).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+            out.push(
+                Part::new(
+                    "halo",
+                    Body::Hoop {
+                        inner: r - 1.6,
+                        outer: r + 1.6,
+                    },
+                    hum,
+                    Transform::from_xyz(0.0, 0.0, 28.6).with_rotation(flat),
+                )
+                .role(Role::Pulse {
+                    color: palette::EERIE_BRIGHT,
+                    base: 0.8,
+                    amp: 1.6,
+                    freq: 2.2,
+                    phase: phase_of(piece.id, SALT_PULSE),
+                }),
             );
-            rig.commands.entity(halo).insert(Pulse {
-                color: palette::EERIE_BRIGHT,
-                base: 0.8,
-                amp: 1.6,
-                freq: 2.2,
-                phase: phase_of(piece.id, SALT_PULSE),
-            });
-            rig.part(ico(fw * 0.09), hum, Transform::from_xyz(0.0, 0.0, 28.6));
+            out.push(Part::new(
+                "core",
+                Body::Ball { r: fw * 0.09 },
+                hum,
+                Transform::from_xyz(0.0, 0.0, 28.6),
+            ));
         }
         // A shard chipped off the comet, one glint down its flank.
         Kind::CometIce => {
-            rig.part(
-                Cone {
-                    radius: fw * 0.32,
-                    height: 28.0,
+            out.push(Part::new(
+                "shard",
+                Body::Horn {
+                    r: fw * 0.32,
+                    h: 28.0,
                 },
                 body,
-                Transform::from_xyz(0.0, 0.0, 14.0).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            );
-            let shine = rig.tint(palette::GLINT);
-            rig.part(
-                Cuboid::new(1.6, 1.6, 12.0),
-                shine,
+                Transform::from_xyz(0.0, 0.0, 14.0).with_rotation(flat),
+            ));
+            out.push(Part::new(
+                "glint",
+                Body::Box(Vec3::new(1.6, 1.6, 12.0)),
+                Coat::enamel(palette::GLINT),
                 Transform::from_xyz(-fw * 0.12, fw * 0.06, 12.0),
-            );
+            ));
         }
         // A bottle of the dark between stars, corked, one star inside.
         Kind::BottledMidnight => {
-            rig.part(
-                Cylinder::new(fw * 0.24, 16.0),
-                body.clone(),
-                Transform::from_xyz(0.0, 0.0, 8.0).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            );
-            rig.part(
-                Cylinder::new(fw * 0.1, 7.0),
+            out.push(Part::new(
+                "bottle",
+                Body::Drum {
+                    r: fw * 0.24,
+                    h: 16.0,
+                    facets: None,
+                },
                 body,
-                Transform::from_xyz(0.0, 0.0, 19.5).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            );
-            rig.part(
-                Cylinder::new(fw * 0.13, 4.0),
-                rig.skin.brass.clone(),
-                Transform::from_xyz(0.0, 0.0, 25.0).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            );
-            let star = glow::phosphor(rig.materials, palette::GLINT, 4.0);
+                Transform::from_xyz(0.0, 0.0, 8.0).with_rotation(flat),
+            ));
+            out.push(Part::new(
+                "neck",
+                Body::Drum {
+                    r: fw * 0.1,
+                    h: 7.0,
+                    facets: None,
+                },
+                body,
+                Transform::from_xyz(0.0, 0.0, 19.5).with_rotation(flat),
+            ));
+            out.push(Part::new(
+                "cork",
+                Body::Drum {
+                    r: fw * 0.13,
+                    h: 4.0,
+                    facets: None,
+                },
+                brass,
+                Transform::from_xyz(0.0, 0.0, 25.0).with_rotation(flat),
+            ));
             let sx = (f32::from(piece.variant % 4) - 1.5) * 2.5;
-            rig.part(ico(1.4), star, Transform::from_xyz(sx, 0.0, 9.0));
+            out.push(Part::new(
+                "star",
+                Body::Ball { r: 1.4 },
+                Coat::phosphor(palette::GLINT, 4.0),
+                Transform::from_xyz(sx, 0.0, 9.0),
+            ));
         }
         // Three overlapping cream spheres. It is looking at you.
         Kind::Fluff => {
-            let shade = rig.tint(palette::mix(color, palette::SHADOW, 0.08));
             let r = fw * 0.28;
-            rig.part(ico(r * 0.85), shade, Transform::from_xyz(-4.0, -2.0, 7.0));
-            rig.part(
-                ico(r * 0.75),
-                body.clone(),
-                Transform::from_xyz(4.5, -2.5, 6.5),
-            );
-            rig.part(ico(r), body, Transform::from_xyz(0.0, 1.5, 9.5));
-            let eye = rig.meshes.add(ico(1.1));
-            rig.spawn(
-                eye.clone(),
-                rig.skin.socket.clone(),
-                Transform::from_xyz(-2.6, 5.0, 17.0),
-            );
-            rig.spawn(
-                eye,
-                rig.skin.socket.clone(),
-                Transform::from_xyz(2.6, 5.0, 17.0),
-            );
+            for (i, (coat, ball, at)) in [
+                (shaded(0.08), r * 0.85, Vec3::new(-4.0, -2.0, 7.0)),
+                (body, r * 0.75, Vec3::new(4.5, -2.5, 6.5)),
+                (body, r, Vec3::new(0.0, 1.5, 9.5)),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                out.push(
+                    Part::new(
+                        "tuft",
+                        Body::Ball { r: ball },
+                        coat,
+                        Transform::from_translation(at),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
+                );
+            }
+            for (i, ex) in [-2.6f32, 2.6].into_iter().enumerate() {
+                out.push(
+                    Part::new(
+                        "eye",
+                        Body::Ball { r: 1.1 },
+                        socket,
+                        Transform::from_xyz(ex, 5.0, 17.0),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
+                );
+            }
         }
         // Inner-ring transit papers: a flat card with the Guild's stripe.
         // The stripe stands proud of the card on every edge it has — a
@@ -3314,131 +3744,166 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         // it, which is two faces at one depth along the whole of a stripe
         // somebody is holding up to their eye.
         Kind::TransitChit => {
-            rig.part(
-                Cuboid::new(fw * 0.74, fh * 0.52, 5.0),
+            out.push(Part::new(
+                "card",
+                Body::Box(Vec3::new(fw * 0.74, fh * 0.52, 5.0)),
                 body,
                 Transform::from_xyz(0.0, 0.0, 2.5),
-            );
-            let stripe = rig.tint(palette::POI_GUILD);
-            rig.part(
-                Cuboid::new(fw * 0.12, fh * 0.46, 5.6),
-                stripe,
+            ));
+            out.push(Part::new(
+                "stripe",
+                Body::Box(Vec3::new(fw * 0.12, fh * 0.46, 5.6)),
+                Coat::enamel(palette::POI_GUILD),
                 Transform::from_xyz(-fw * 0.2, 0.0, 2.8),
-            );
+            ));
         }
         // One priceless chip: a low cylinder, a rim, an inner ring.
         Kind::CasinoChip => {
             let r = fw * 0.36;
-            rig.part(
-                Cylinder::new(r, 9.0),
-                body,
-                Transform::from_xyz(0.0, 0.0, 4.5)
-                    .with_rotation(feature(Kind::CasinoChip, "chip face")),
+            out.push(
+                Part::new(
+                    "chip face",
+                    Body::Drum {
+                        r,
+                        h: 9.0,
+                        facets: None,
+                    },
+                    body,
+                    Transform::from_xyz(0.0, 0.0, 4.5),
+                )
+                .pointing(AXLE, Vec3::Z),
             );
-            let rim = rig.tint(palette::mix(color, palette::SHADOW, 0.3));
-            rig.part(
-                Torus::new(r.mul_add(0.94, -1.3), r.mul_add(0.94, 1.3)),
-                rim,
-                Transform::from_xyz(0.0, 0.0, 9.0).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            );
-            let inner = rig.tint(palette::mix(palette::GLINT, color, 0.2));
-            rig.part(
-                Torus::new(r.mul_add(0.52, -1.0), r.mul_add(0.52, 1.0)),
-                inner,
-                Transform::from_xyz(0.0, 0.0, 9.2).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            );
+            out.push(Part::new(
+                "rim",
+                Body::Hoop {
+                    inner: r.mul_add(0.94, -1.3),
+                    outer: r.mul_add(0.94, 1.3),
+                },
+                shaded(0.3),
+                Transform::from_xyz(0.0, 0.0, 9.0).with_rotation(flat),
+            ));
+            out.push(Part::new(
+                "inner ring",
+                Body::Hoop {
+                    inner: r.mul_add(0.52, -1.0),
+                    outer: r.mul_add(0.52, 1.0),
+                },
+                Coat::enamel(palette::mix(palette::GLINT, color, 0.2)),
+                Transform::from_xyz(0.0, 0.0, 9.2).with_rotation(flat),
+            ));
         }
         // A hanging shade off the gantry's top rail: mount plate, stem,
         // a flattened cone shade, and the warm bulb beneath — the bulb
         // and its point light wake through `sync_fixtures`.
         Kind::CeilingLamp => {
-            rig.part(
-                Cuboid::new(9.0, 3.0, 5.0),
-                rig.skin.plate_shade.clone(),
+            out.push(Part::new(
+                "mount plate",
+                Body::Box(Vec3::new(9.0, 3.0, 5.0)),
+                plate,
                 Transform::from_xyz(0.0, fh * 0.44, 10.0),
-            );
-            rig.part(
-                Cylinder::new(1.3, fh * 0.26),
-                rig.skin.brass.clone(),
-                Transform::from_xyz(0.0, fh * 0.30, 10.0),
-            );
-            rig.part(
-                Cone {
-                    radius: fw * 0.28,
-                    height: 12.0,
+            ));
+            out.push(Part::new(
+                "stem",
+                Body::Drum {
+                    r: 1.3,
+                    h: fh * 0.26,
+                    facets: None,
                 },
-                body,
-                Transform::from_xyz(0.0, fh * 0.04, 10.0)
-                    .with_rotation(feature(Kind::CeilingLamp, "shade")),
+                brass,
+                Transform::from_xyz(0.0, fh * 0.30, 10.0),
+            ));
+            out.push(
+                Part::new(
+                    "shade",
+                    Body::Horn {
+                        r: fw * 0.28,
+                        h: 12.0,
+                    },
+                    body,
+                    Transform::from_xyz(0.0, fh * 0.04, 10.0),
+                )
+                .pointing(MOUTH, Vec3::NEG_Y),
             );
-            let root = rig.root;
-            lamp_bulb(rig, piece, root, Vec3::new(0.0, -fh * 0.14, 10.0), 3.4);
+            out.push(bulb_part(piece.kind, Vec3::new(0.0, -fh * 0.14, 10.0), 3.4));
         }
         // A sconce off a repossessed liner: bracket arm and mount pad
         // reaching for the nearer stile (the `WallArm` sub-root flips
         // sides with the piece's wall column), cup, bulb.
         Kind::WallLamp => {
-            let arm_root = rig
-                .commands
-                .spawn((
-                    Transform::default(),
-                    Visibility::default(),
-                    WallArm { piece: piece.id },
-                    ChildOf(rig.root),
-                ))
-                .id();
-            let bracket = rig.meshes.add(Cuboid::new(fw * 0.34, 3.0, 3.0));
-            rig.commands.spawn((
-                Mesh3d(bracket),
-                MeshMaterial3d(rig.skin.plate_shade.clone()),
-                Transform::from_xyz(fw * 0.24, 0.0, 10.0),
-                ChildOf(arm_root),
-            ));
-            let pad = rig.meshes.add(Cuboid::new(3.4, 10.0, 6.0));
-            rig.commands.spawn((
-                Mesh3d(pad),
-                MeshMaterial3d(rig.skin.plate_shade.clone()),
-                Transform::from_xyz(fw * 0.42, 0.0, 10.0),
-                ChildOf(arm_root),
-            ));
-            let cup = rig.meshes.add(Mesh::from(Cone {
-                radius: fw * 0.20,
-                height: 11.0,
-            }));
-            rig.commands.spawn((
-                Mesh3d(cup),
-                MeshMaterial3d(body),
-                Transform::from_xyz(fw * 0.10, 0.0, 10.0)
-                    .with_rotation(feature(Kind::WallLamp, "sconce cup")),
-                ChildOf(arm_root),
-            ));
-            lamp_bulb(rig, piece, arm_root, Vec3::new(-fw * 0.12, 0.0, 10.0), 3.2);
+            out.push(
+                Part::new(
+                    "bracket",
+                    Body::Box(Vec3::new(fw * 0.34, 3.0, 3.0)),
+                    plate,
+                    Transform::from_xyz(fw * 0.24, 0.0, 10.0),
+                )
+                .under(Under::Arm),
+            );
+            out.push(
+                Part::new(
+                    "mount pad",
+                    Body::Box(Vec3::new(3.4, 10.0, 6.0)),
+                    plate,
+                    Transform::from_xyz(fw * 0.42, 0.0, 10.0),
+                )
+                .under(Under::Arm),
+            );
+            out.push(
+                Part::new(
+                    "sconce cup",
+                    Body::Horn {
+                        r: fw * 0.20,
+                        h: 11.0,
+                    },
+                    body,
+                    Transform::from_xyz(fw * 0.10, 0.0, 10.0),
+                )
+                .under(Under::Arm)
+                .pointing(MOUTH, Vec3::Z),
+            );
+            out.push(
+                bulb_part(piece.kind, Vec3::new(-fw * 0.12, 0.0, 10.0), 3.2).under(Under::Arm),
+            );
         }
         // A standing lamp bolted to the deck lip: base disc, pole, the
         // shade up top with its bulb tucked under.
         Kind::FloorLamp => {
-            rig.part(
-                Cylinder::new(fw * 0.26, 3.2),
-                rig.skin.plate_shade.clone(),
-                Transform::from_xyz(0.0, -fh * 0.41, 2.4)
-                    .with_rotation(feature(Kind::FloorLamp, "base plate")),
+            out.push(
+                Part::new(
+                    "base plate",
+                    Body::Drum {
+                        r: fw * 0.26,
+                        h: 3.2,
+                        facets: None,
+                    },
+                    plate,
+                    Transform::from_xyz(0.0, -fh * 0.41, 2.4),
+                )
+                .pointing(AXLE, Vec3::Y),
             );
-            rig.part(
-                Cylinder::new(1.3, fh * 0.72),
-                rig.skin.brass.clone(),
-                Transform::from_xyz(0.0, -fh * 0.04, 6.0),
-            );
-            rig.part(
-                Cone {
-                    radius: fw * 0.30,
-                    height: 13.0,
+            out.push(Part::new(
+                "pole",
+                Body::Drum {
+                    r: 1.3,
+                    h: fh * 0.72,
+                    facets: None,
                 },
-                body,
-                Transform::from_xyz(0.0, fh * 0.33, 11.0)
-                    .with_rotation(feature(Kind::FloorLamp, "shade")),
+                brass,
+                Transform::from_xyz(0.0, -fh * 0.04, 6.0),
+            ));
+            out.push(
+                Part::new(
+                    "shade",
+                    Body::Horn {
+                        r: fw * 0.30,
+                        h: 13.0,
+                    },
+                    body,
+                    Transform::from_xyz(0.0, fh * 0.33, 11.0),
+                )
+                .pointing(MOUTH, Vec3::NEG_Y),
             );
-            let root = rig.root;
-            lamp_bulb(rig, piece, root, Vec3::new(0.0, fh * 0.21, 11.0), 3.4);
+            out.push(bulb_part(piece.kind, Vec3::new(0.0, fh * 0.21, 11.0), 3.4));
         }
         // Somebody's living room, in transit: seat slab, back rest, arm
         // cubes, cushion bumps, stubby feet — upholstery hue, dim shading.
@@ -3451,42 +3916,55 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         // fronts reaching +Z. Symmetric rigs (lamps, tins, crates)
         // never notice; a couch authored as relief faces backwards.
         Kind::Couch => {
-            let under = rig.tint(palette::mix(color, palette::SHADOW, 0.3));
             // The backrest stands at the wall side; the seat deck runs
             // out into the room, cushions on top, arms full depth.
-            rig.part(
-                Cuboid::new(fw * 0.74, fh * 0.56, 5.0),
-                body.clone(),
+            out.push(Part::new(
+                "backrest",
+                Body::Box(Vec3::new(fw * 0.74, fh * 0.56, 5.0)),
+                body,
                 Transform::from_xyz(0.0, fh * 0.16, 2.5),
-            );
-            rig.part(
-                Cuboid::new(fw * 0.74, fh * 0.30, 18.0),
-                under,
+            ));
+            out.push(Part::new(
+                "seat",
+                Body::Box(Vec3::new(fw * 0.74, fh * 0.30, 18.0)),
+                shaded(0.3),
                 Transform::from_xyz(0.0, -fh * 0.20, 10.0),
-            );
-            let cushion = rig.meshes.add(ico(6.0));
-            for side in [-1.0, 1.0] {
-                rig.spawn(
-                    cushion.clone(),
-                    body.clone(),
-                    Transform::from_xyz(fw * 0.17 * side, -fh * 0.02, 10.0)
-                        .with_scale(Vec3::new(1.5, 0.7, 1.1)),
+            ));
+            for (i, side) in [-1.0f32, 1.0].into_iter().enumerate() {
+                out.push(
+                    Part::new(
+                        "cushion",
+                        Body::Ball { r: 6.0 },
+                        body,
+                        Transform::from_xyz(fw * 0.17 * side, -fh * 0.02, 10.0),
+                    )
+                    .scaled(Vec3::new(1.5, 0.7, 1.1))
+                    .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
-            let arm = rig.meshes.add(Cuboid::new(fw * 0.10, fh * 0.54, 16.0));
-            for side in [-1.0, 1.0] {
-                rig.spawn(
-                    arm.clone(),
-                    body.clone(),
-                    Transform::from_xyz(fw * 0.42 * side, -fh * 0.04, 8.0),
+            for (i, side) in [-1.0f32, 1.0].into_iter().enumerate() {
+                out.push(
+                    Part::new(
+                        "arm",
+                        Body::Box(Vec3::new(fw * 0.10, fh * 0.54, 16.0)),
+                        body,
+                        Transform::from_xyz(fw * 0.42 * side, -fh * 0.04, 8.0),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
-            let foot = rig.meshes.add(Cuboid::new(4.0, 5.0, 4.0));
-            for (side, fz) in [(-1.0, 3.0), (1.0, 3.0), (-1.0, 16.0), (1.0, 16.0)] {
-                rig.spawn(
-                    foot.clone(),
-                    rig.skin.plate_shade.clone(),
-                    Transform::from_xyz(fw * 0.36 * side, -fh * 0.44, fz),
+            for (i, (side, fz)) in [(-1.0f32, 3.0), (1.0, 3.0), (-1.0, 16.0), (1.0, 16.0)]
+                .into_iter()
+                .enumerate()
+            {
+                out.push(
+                    Part::new(
+                        "foot",
+                        Body::Box(Vec3::new(4.0, 5.0, 4.0)),
+                        plate,
+                        Transform::from_xyz(fw * 0.36 * side, -fh * 0.44, fz),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
         }
@@ -3494,31 +3972,37 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         // lips, and the canvas — one seeded artwork painted through the
         // shared rasterizer, emissive so low it reads as paint.
         Kind::Painting => {
-            let backing = rig.tint(palette::mix(color, palette::SHADOW, 0.35));
-            rig.part(
-                Cuboid::new(fw * 0.82, fh * 0.74, 5.0),
-                backing,
+            out.push(Part::new(
+                "backing",
+                Body::Box(Vec3::new(fw * 0.82, fh * 0.74, 5.0)),
+                shaded(0.35),
                 Transform::from_xyz(0.0, 0.0, 2.5),
-            );
-            let lip_h = rig.meshes.add(Cuboid::new(fw * 0.78, 3.2, 4.0));
-            let lip_v = rig.meshes.add(Cuboid::new(3.2, fh * 0.66, 4.0));
-            for (mesh, at) in [
-                (lip_h.clone(), Vec3::new(0.0, fh * 0.315, 5.4)),
+            ));
+            let lip_h = Body::Box(Vec3::new(fw * 0.78, 3.2, 4.0));
+            let lip_v = Body::Box(Vec3::new(3.2, fh * 0.66, 4.0));
+            for (i, (lip, at)) in [
+                (lip_h, Vec3::new(0.0, fh * 0.315, 5.4)),
                 (lip_h, Vec3::new(0.0, -fh * 0.315, 5.4)),
-                (lip_v.clone(), Vec3::new(fw * 0.35, 0.0, 5.4)),
+                (lip_v, Vec3::new(fw * 0.35, 0.0, 5.4)),
                 (lip_v, Vec3::new(-fw * 0.35, 0.0, 5.4)),
-            ] {
-                rig.spawn(mesh, body.clone(), Transform::from_translation(at));
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                out.push(
+                    Part::new("frame lip", lip, body, Transform::from_translation(at))
+                        .nth(u8::try_from(i).unwrap_or(0)),
+                );
             }
-            let art = paint_artwork(rig.images, rig.materials, piece.id);
-            rig.part(
-                Rectangle::new(1.0, 1.0),
-                art,
-                Transform::from_xyz(0.0, 0.0, 5.15).with_scale(Vec3::new(
-                    fw * 0.68,
-                    fh * 0.58,
-                    1.0,
-                )),
+            out.push(
+                Part::new(
+                    "artwork",
+                    Body::Pane,
+                    Coat::enamel(palette::GLINT),
+                    Transform::from_xyz(0.0, 0.0, 5.15),
+                )
+                .cut(Cut::Art)
+                .scaled(Vec3::new(fw * 0.68, fh * 0.58, 1.0)),
             );
         }
         // Furniture that stores (docs/BAY.md): a slim wardrobe in oiled
@@ -3530,96 +4014,111 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         // ordinary rigs parked at [`cubby_anchor`]s by `sync_pieces`.
         Kind::Cabinet => {
             let deep = CABINET_DEPTH;
-            let rack = rig.tint(palette::mix(color, palette::SHADOW, 0.25));
+            let rack = shaded(0.25);
             // Carcass: the back sheet alone owns the rear plane, and
             // every part meeting it starts INSIDE it — joints between
             // rig solids interpenetrate, never kiss, because two faces
             // sharing a plane shimmer (the twice-caught cabinet: first
             // its rear, then the plane its "fixed" parts abutted at).
-            rig.part(
-                Cuboid::new(fw * 0.96, fh * 0.97, 2.0),
-                body.clone(),
+            out.push(Part::new(
+                "back sheet",
+                Body::Box(Vec3::new(fw * 0.96, fh * 0.97, 2.0)),
+                body,
                 Transform::from_xyz(0.0, 0.0, 1.0),
-            );
-            let side = rig.meshes.add(Cuboid::new(2.6, fh * 0.94, deep - 1.0));
-            for sx in [-1.0, 1.0] {
-                rig.spawn(
-                    side.clone(),
-                    body.clone(),
-                    Transform::from_xyz(fw * 0.44 * sx, 0.0, (deep + 1.0) * 0.5),
+            ));
+            for (i, sx) in [-1.0f32, 1.0].into_iter().enumerate() {
+                out.push(
+                    Part::new(
+                        "side",
+                        Body::Box(Vec3::new(2.6, fh * 0.94, deep - 1.0)),
+                        body,
+                        Transform::from_xyz(fw * 0.44 * sx, 0.0, (deep + 1.0) * 0.5),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
-            let cap = rig.meshes.add(Cuboid::new(fw * 0.92, 2.6, deep - 1.0));
-            for sy in [-1.0, 1.0] {
-                rig.spawn(
-                    cap.clone(),
-                    body.clone(),
-                    Transform::from_xyz(0.0, fh * 0.465 * sy, (deep + 1.0) * 0.5),
+            for (i, sy) in [-1.0f32, 1.0].into_iter().enumerate() {
+                out.push(
+                    Part::new(
+                        "cap",
+                        Body::Box(Vec3::new(fw * 0.92, 2.6, deep - 1.0)),
+                        body,
+                        Transform::from_xyz(0.0, fh * 0.465 * sy, (deep + 1.0) * 0.5),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
             // The rack: mid shelf and centre stile, a shade darker,
             // rooted inside the back sheet like everything else.
-            rig.part(
-                Cuboid::new(fw * 0.88, 2.2, deep * 0.85),
-                rack.clone(),
-                Transform::from_xyz(0.0, 0.0, (deep * 0.85).mul_add(0.5, 1.5)),
-            );
-            rig.part(
-                Cuboid::new(2.2, fh * 0.9, deep * 0.85),
+            out.push(Part::new(
+                "shelf",
+                Body::Box(Vec3::new(fw * 0.88, 2.2, deep * 0.85)),
                 rack,
                 Transform::from_xyz(0.0, 0.0, (deep * 0.85).mul_add(0.5, 1.5)),
-            );
+            ));
+            out.push(Part::new(
+                "stile",
+                Body::Box(Vec3::new(2.2, fh * 0.9, deep * 0.85)),
+                rack,
+                Transform::from_xyz(0.0, 0.0, (deep * 0.85).mul_add(0.5, 1.5)),
+            ));
             // Brass fittings: a cornice over the opening, stubby feet.
-            rig.part(
-                Cuboid::new(fw * 0.96, 2.2, 2.2),
-                rig.skin.brass.clone(),
+            out.push(Part::new(
+                "cornice",
+                Body::Box(Vec3::new(fw * 0.96, 2.2, 2.2)),
+                brass,
                 Transform::from_xyz(0.0, fh * 0.475, deep),
-            );
-            let foot = rig.meshes.add(Cuboid::new(3.0, 3.4, 3.0));
-            for (sx, fz) in [
-                (-1.0, 3.0),
+            ));
+            for (i, (sx, fz)) in [
+                (-1.0f32, 3.0),
                 (1.0, 3.0),
                 (-1.0, deep - 3.0),
                 (1.0, deep - 3.0),
-            ] {
-                rig.spawn(
-                    foot.clone(),
-                    rig.skin.brass.clone(),
-                    Transform::from_xyz(fw * 0.36 * sx, fh.mul_add(-0.5, 1.2), fz),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                out.push(
+                    Part::new(
+                        "foot",
+                        Body::Box(Vec3::new(3.0, 3.4, 3.0)),
+                        brass,
+                        Transform::from_xyz(fw * 0.36 * sx, fh.mul_add(-0.5, 1.2), fz),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
             // The cubbies: dark interior backs, invite glows in front.
-            let lining = rig.meshes.add(Cuboid::new(fw * 0.36, fh * 0.4, 1.2));
-            let mouth = rig.meshes.add(Cuboid::new(fw * 0.33, fh * 0.37, 0.6));
             for slot in 0..CABINET_SLOTS {
-                let at = cubby_anchor(slot);
-                rig.spawn(
-                    lining.clone(),
-                    rig.skin.socket.clone(),
-                    Transform::from_xyz(at.x, at.y, 2.2),
+                let anchor = cubby_anchor(slot);
+                out.push(
+                    Part::new(
+                        "cubby lining",
+                        Body::Box(Vec3::new(fw * 0.36, fh * 0.4, 1.2)),
+                        socket,
+                        Transform::from_xyz(anchor.x, anchor.y, 2.2),
+                    )
+                    .nth(slot),
                 );
-                let invite = glow::phosphor(rig.materials, palette::AMBER, 0.0);
-                rig.commands.spawn((
-                    Mesh3d(mouth.clone()),
-                    MeshMaterial3d(invite),
-                    Transform::from_xyz(at.x, at.y, 3.0),
-                    Visibility::Hidden,
-                    CubbyGlow {
-                        piece: piece.id,
-                        slot,
-                        phase: f32::from(slot) * 1.3,
-                    },
-                    ChildOf(rig.root),
-                ));
+                out.push(
+                    Part::new(
+                        "cubby mouth",
+                        Body::Box(Vec3::new(fw * 0.33, fh * 0.37, 0.6)),
+                        Coat::phosphor(palette::AMBER, 0.0),
+                        Transform::from_xyz(anchor.x, anchor.y, 3.0),
+                    )
+                    .nth(slot)
+                    .role(Role::Cubby { slot }),
+                );
             }
         }
         // The whole window family, ONE construction: the porthole, the
         // transit window, and Saturn's bay pane are the same hole in the
         // hull at three sizes, so they are the same rig with three
-        // bezels ([`window_rig`]). Adding a fourth size is an arm in
+        // bezels ([`window_parts`]). Adding a fourth size is an arm in
         // `bezel`, never a second copy of the glass.
         Kind::Window | Kind::Porthole | Kind::BayWindow => {
-            window_rig(rig, piece, color, fw, fh);
+            out.extend(window_parts(piece, color, fw, fh, screens));
         }
         // The chart tank: the star map's phosphor aquarium, off the
         // wall at last. Dark glass in a brass chassis over a plinth,
@@ -3627,17 +4126,18 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         // lights-out), and the amber carry grab at its base — the
         // handle rule's move affordance (BAY.md, "The handle rule").
         Kind::ChartTank => {
-            rig.part(
-                Cuboid::new(fw * 0.92, fh * 0.90, 3.0),
-                rig.skin.plate_shade.clone(),
+            out.push(Part::new(
+                "plinth",
+                Body::Box(Vec3::new(fw * 0.92, fh * 0.90, 3.0)),
+                plate,
                 Transform::from_xyz(0.0, 0.0, 1.5),
-            );
-            let void = rig.tint(palette::mix(color, palette::SHADOW, 0.82));
-            rig.part(
-                Cuboid::new(fw * 0.86, fh * 0.82, 9.0),
-                void,
+            ));
+            out.push(Part::new(
+                "void slab",
+                Body::Box(Vec3::new(fw * 0.86, fh * 0.82, 9.0)),
+                shaded(0.82),
                 Transform::from_xyz(0.0, 0.0, 6.0),
-            );
+            ));
             // The chart itself: the CRT's painted map rides the tank's
             // glass, proud of the void slab so it actually shows. The
             // pane's size and depth come from the mount table, which is
@@ -3645,97 +4145,124 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
             // picture and the pointer cannot land on different glass.
             let mount = instrument(piece.kind).expect("the tank mounts the map");
             let (gw, gh, gz) = (fw * mount.face.0, fh * mount.face.1, mount.plane);
-            if let Some(image) = rig.map_image.clone() {
-                let glass = crate::crt::tube_glass(rig.materials, &image);
-                rig.part(
-                    Rectangle::new(1.0, 1.0),
-                    glass,
-                    Transform::from_xyz(0.0, 0.0, gz).with_scale(Vec3::new(gw, gh, 1.0)),
+            if screens.map {
+                out.push(
+                    Part::new(
+                        "chart glass",
+                        Body::Pane,
+                        Coat::phosphor(color, 1.4),
+                        Transform::from_xyz(0.0, 0.0, gz),
+                    )
+                    .cut(Cut::Map)
+                    .scaled(Vec3::new(gw, gh, 1.0)),
                 );
             } else {
-                let field = glow::phosphor(rig.materials, color, 1.4);
-                rig.part(
-                    Cuboid::new(gw, gh, 1.6),
-                    field,
+                out.push(Part::new(
+                    "chart glass",
+                    Body::Box(Vec3::new(gw, gh, 1.6)),
+                    Coat::phosphor(color, 1.4),
                     Transform::from_xyz(0.0, 0.0, gz),
+                ));
+            }
+            for (i, sx) in [-1.0f32, 1.0].into_iter().enumerate() {
+                out.push(
+                    Part::new(
+                        "post",
+                        Body::Box(Vec3::new(3.0, fh * 0.9, 11.0)),
+                        brass,
+                        Transform::from_xyz(sx * fw * 0.44, 0.0, 6.0),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
-            let post = rig.meshes.add(Cuboid::new(3.0, fh * 0.9, 11.0));
-            for sx in [-1.0f32, 1.0] {
-                rig.spawn(
-                    post.clone(),
-                    rig.skin.brass.clone(),
-                    Transform::from_xyz(sx * fw * 0.44, 0.0, 6.0),
+            for (i, sy) in [-1.0f32, 1.0].into_iter().enumerate() {
+                out.push(
+                    Part::new(
+                        "cap",
+                        Body::Box(Vec3::new(fw * 0.92, 3.0, 11.0)),
+                        brass,
+                        Transform::from_xyz(0.0, sy * fh * 0.43, 6.0),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
-            let cap = rig.meshes.add(Cuboid::new(fw * 0.92, 3.0, 11.0));
-            for sy in [-1.0f32, 1.0] {
-                rig.spawn(
-                    cap.clone(),
-                    rig.skin.brass.clone(),
-                    Transform::from_xyz(0.0, sy * fh * 0.43, 6.0),
-                );
-            }
-            carry_grab(rig, piece.kind, fw, fh, 12.5);
+            out.extend(grab_parts(piece.kind, fw, fh, 12.5));
         }
         // The ETA gauge: a brass drum with a dark dial, the phosphor
         // needle reading the live leg ([`eta_needles`] sweeps it).
         // Passive — it earns no amber handle.
         Kind::EtaGauge => {
-            let flat = Quat::from_rotation_x(FRAC_PI_2);
-            rig.part(
-                Cylinder::new(fw * 0.42, 6.0),
-                rig.skin.brass.clone(),
+            out.push(Part::new(
+                "drum",
+                Body::Drum {
+                    r: fw * 0.42,
+                    h: 6.0,
+                    facets: None,
+                },
+                brass,
                 Transform::from_xyz(0.0, 0.0, 3.0).with_rotation(flat),
-            );
-            let dial = rig.tint(palette::mix(color, palette::SHADOW, 0.7));
-            rig.part(
-                Cylinder::new(fw * 0.35, 3.0),
-                dial,
+            ));
+            out.push(Part::new(
+                "dial",
+                Body::Drum {
+                    r: fw * 0.35,
+                    h: 3.0,
+                    facets: None,
+                },
+                shaded(0.7),
                 Transform::from_xyz(0.0, 0.0, 5.5).with_rotation(flat),
+            ));
+            out.push(
+                Part::new(
+                    "needle",
+                    Body::Box(Vec3::new(2.0, fh * 0.28, 1.6)),
+                    Coat::phosphor(color, 1.6),
+                    Transform::from_xyz(0.0, fh * 0.14, 7.2),
+                )
+                .role(Role::Needle { reach: fh * 0.14 }),
             );
-            let needle = glow::phosphor(rig.materials, color, 1.6);
-            let arm = rig.part(
-                Cuboid::new(2.0, fh * 0.28, 1.6),
-                needle,
-                Transform::from_xyz(0.0, fh * 0.14, 7.2),
-            );
-            rig.commands
-                .entity(arm)
-                .insert(EtaNeedle { reach: fh * 0.14 });
-            let hub = glow::etched(rig.materials, palette::GLINT);
-            rig.part(ico(1.8), hub, Transform::from_xyz(0.0, 0.0, 7.4));
+            out.push(Part::new(
+                "hub",
+                Body::Ball { r: 1.8 },
+                Coat::etched(palette::GLINT),
+                Transform::from_xyz(0.0, 0.0, 7.4),
+            ));
         }
         // The destination preview: a square brass porthole wearing the
         // CRT's painted preview — the selected world's face rides the
         // piece now, not the console. Passive glass; headless paths
         // show a lone phosphor disc instead.
         Kind::DestPreview => {
-            rig.part(
-                Cuboid::new(fw * 0.84, fh * 0.84, 4.0),
-                rig.skin.brass.clone(),
+            out.push(Part::new(
+                "bezel",
+                Body::Box(Vec3::new(fw * 0.84, fh * 0.84, 4.0)),
+                brass,
                 Transform::from_xyz(0.0, 0.0, 2.0),
-            );
-            if let Some(image) = rig.preview_image.clone() {
-                let glass = crate::crt::tube_glass(rig.materials, &image);
-                rig.part(
-                    Rectangle::new(1.0, 1.0),
-                    glass,
-                    Transform::from_xyz(0.0, 0.0, 4.6).with_scale(Vec3::new(
-                        fw * 0.68,
-                        fh * 0.68,
-                        1.0,
-                    )),
+            ));
+            if screens.preview {
+                out.push(
+                    Part::new(
+                        "preview glass",
+                        Body::Pane,
+                        shaded(0.72),
+                        Transform::from_xyz(0.0, 0.0, 4.6),
+                    )
+                    .cut(Cut::Preview)
+                    .scaled(Vec3::new(fw * 0.68, fh * 0.68, 1.0)),
                 );
             } else {
-                let glass = rig.tint(palette::mix(color, palette::SHADOW, 0.72));
-                rig.part(
-                    Cuboid::new(fw * 0.68, fh * 0.68, 3.0),
-                    glass,
+                out.push(Part::new(
+                    "preview glass",
+                    Body::Box(Vec3::new(fw * 0.68, fh * 0.68, 3.0)),
+                    shaded(0.72),
                     Transform::from_xyz(0.0, 0.0, 3.5),
-                );
-                let world = glow::phosphor(rig.materials, color, 1.5);
-                rig.part(ico(fw * 0.14), world, Transform::from_xyz(0.0, 0.0, 5.6));
+                ));
+                out.push(Part::new(
+                    "world",
+                    Body::Ball { r: fw * 0.14 },
+                    Coat::phosphor(color, 1.5),
+                    Transform::from_xyz(0.0, 0.0, 5.6),
+                ));
             }
         }
         // The launch handle: a shade plate, the brass quadrant slot,
@@ -3748,166 +4275,445 @@ fn build_kind(rig: &mut RigParts, piece: &Piece, color: Color, fw: f32, fh: f32)
         // can throw it with the gesture layer's own travel.
         Kind::LaunchLever => {
             let mount = instrument(piece.kind).expect("the lever mounts its panel");
-            rig.part(
-                Cuboid::new(fw * mount.face.0, fh * mount.face.1, 3.0),
-                rig.skin.plate_shade.clone(),
+            out.push(Part::new(
+                "panel",
+                Body::Box(Vec3::new(fw * mount.face.0, fh * mount.face.1, 3.0)),
+                plate,
                 Transform::from_xyz(0.0, 0.0, 1.5),
-            );
-            rig.part(
-                Cuboid::new(fw * 0.14, fh * 0.72, 4.0),
-                rig.skin.brass.clone(),
+            ));
+            out.push(Part::new(
+                "quadrant slot",
+                Body::Box(Vec3::new(fw * 0.14, fh * 0.72, 4.0)),
+                brass,
                 Transform::from_xyz(0.0, 0.0, 3.2),
+            ));
+            let pivot = Under::Pivot(
+                Transform::from_xyz(0.0, -fh * 0.26, LEVER_PIVOT_Z)
+                    .with_rotation(Quat::from_rotation_x(LEVER_REST)),
             );
-            let pivot = rig
-                .commands
-                .spawn((
-                    Transform::from_xyz(0.0, -fh * 0.26, LEVER_PIVOT_Z)
-                        .with_rotation(Quat::from_rotation_x(LEVER_REST)),
-                    Visibility::default(),
-                    ChildOf(rig.root),
-                    LeverHandle,
-                ))
-                .id();
-            let home = rig.root;
-            rig.root = pivot;
-            let arm = rig.tint(palette::mix(color, palette::SHADOW, 0.35));
-            rig.part(
-                Cuboid::new(3.2, LEVER_ARM, 3.2),
-                arm,
-                Transform::from_xyz(0.0, LEVER_ARM * 0.5, 0.0),
+            out.push(
+                Part::new(
+                    "pull arm",
+                    Body::Box(Vec3::new(3.2, LEVER_ARM, 3.2)),
+                    shaded(0.35),
+                    Transform::from_xyz(0.0, LEVER_ARM * 0.5, 0.0),
+                )
+                .under(pivot),
             );
             // The halo sits behind the knob, a soft plate that wakes
             // only while a pull would actually depart.
-            let halo = glow::phosphor(rig.materials, palette::LAMP_OK, 0.0);
-            let disc = rig.part(
-                Cylinder::new(5.4, 0.6),
-                halo,
-                Transform::from_xyz(0.0, LEVER_ARM, -1.2)
-                    .with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+            out.push(
+                Part::new(
+                    "halo",
+                    Body::Drum {
+                        r: 5.4,
+                        h: 0.6,
+                        facets: None,
+                    },
+                    Coat::phosphor(palette::LAMP_OK, 0.0),
+                    Transform::from_xyz(0.0, LEVER_ARM, -1.2).with_rotation(flat),
+                )
+                .under(pivot)
+                .role(Role::Halo),
             );
-            rig.commands.entity(disc).insert(LeverHalo);
-            let knob = glow::phosphor(rig.materials, palette::LAMP_OK, 0.9);
-            let cap = rig.part(ico(3.4), knob, Transform::from_xyz(0.0, LEVER_ARM, 0.0));
-            rig.commands.entity(cap).insert(LeverLamp);
-            rig.root = home;
-            carry_grab(rig, piece.kind, fw, fh, 6.0);
+            out.push(
+                Part::new(
+                    "knob",
+                    Body::Ball { r: 3.4 },
+                    Coat::phosphor(palette::LAMP_OK, 0.9),
+                    Transform::from_xyz(0.0, LEVER_ARM, 0.0),
+                )
+                .under(pivot)
+                .role(Role::Knob),
+            );
+            out.extend(grab_parts(piece.kind, fw, fh, 6.0));
         }
         // The dressing kinds own two bodies each — laid into the room
         // versus rolled or canned for the counter — and
         // [`sync_dressings`] shows exactly one, by the sim's berth class.
         Kind::Rug => {
-            let border = rig.tint(palette::mix(color, palette::SHADOW, 0.3));
+            let border = shaded(0.3);
             // [`RUG_THICK`] is a world measure; rigs build in sim units,
             // so the pile converts through the bay's cell scale.
             let pile = RUG_THICK / (crate::rig::BAY_CELL / layout::CELL);
-            let home = rig.root;
-            rig.root = dress_form(rig, piece, home, true);
             // The pile over a darker binding: the border reads woven at
             // a glance, and the fringe knots the short ends.
-            rig.part(
-                Cuboid::new(fw * 0.98, fh * 0.96, pile * 0.7),
-                border.clone(),
-                Transform::from_xyz(0.0, 0.0, pile * 0.35),
+            out.push(
+                Part::new(
+                    "binding",
+                    Body::Box(Vec3::new(fw * 0.98, fh * 0.96, pile * 0.7)),
+                    border,
+                    Transform::from_xyz(0.0, 0.0, pile * 0.35),
+                )
+                .under(Under::Laid),
             );
-            rig.part(
-                Cuboid::new(fw * 0.90, fh * 0.86, pile),
-                body.clone(),
-                Transform::from_xyz(0.0, 0.0, pile * 0.75),
+            out.push(
+                Part::new(
+                    "pile",
+                    Body::Box(Vec3::new(fw * 0.90, fh * 0.86, pile)),
+                    body,
+                    Transform::from_xyz(0.0, 0.0, pile * 0.75),
+                )
+                .under(Under::Laid),
             );
-            let tassel = rig.meshes.add(Cuboid::new(2.4, 3.6, 0.5));
+            let mut nth = 0_u8;
             for sx in [-1.0f32, 1.0] {
-                for i in 0..5 {
-                    rig.spawn(
-                        tassel.clone(),
-                        border.clone(),
-                        Transform::from_xyz(sx * fw * 0.465, (i as f32 - 2.0) * 6.0, 0.4),
+                for i in 0..5_u8 {
+                    out.push(
+                        Part::new(
+                            "tassel",
+                            Body::Box(Vec3::new(2.4, 3.6, 0.5)),
+                            border,
+                            Transform::from_xyz(sx * fw * 0.465, (f32::from(i) - 2.0) * 6.0, 0.4),
+                        )
+                        .under(Under::Laid)
+                        .nth(nth),
                     );
+                    nth += 1;
                 }
             }
-            rig.root = dress_form(rig, piece, home, false);
             // Rolled for the counter: a tied bolt of weave, brass bands.
             let across = Quat::from_rotation_z(FRAC_PI_2);
-            rig.part(
-                Cylinder::new(fh * 0.26, fw * 0.88),
-                body,
-                Transform::from_xyz(0.0, 0.0, fh * 0.26).with_rotation(across),
+            out.push(
+                Part::new(
+                    "bolt",
+                    Body::Drum {
+                        r: fh * 0.26,
+                        h: fw * 0.88,
+                        facets: None,
+                    },
+                    body,
+                    Transform::from_xyz(0.0, 0.0, fh * 0.26).with_rotation(across),
+                )
+                .under(Under::Packed),
             );
-            let band = rig.meshes.add(Cylinder::new(fh * 0.28, 2.2));
-            for sx in [-1.0f32, 1.0] {
-                rig.spawn(
-                    band.clone(),
-                    rig.skin.brass.clone(),
-                    Transform::from_xyz(sx * fw * 0.26, 0.0, fh * 0.26).with_rotation(across),
+            for (i, sx) in [-1.0f32, 1.0].into_iter().enumerate() {
+                out.push(
+                    Part::new(
+                        "band",
+                        Body::Drum {
+                            r: fh * 0.28,
+                            h: 2.2,
+                            facets: None,
+                        },
+                        brass,
+                        Transform::from_xyz(sx * fw * 0.26, 0.0, fh * 0.26).with_rotation(across),
+                    )
+                    .under(Under::Packed)
+                    .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
-            rig.root = home;
         }
         Kind::PaintTin => {
-            let coat = rig.tint(palette::enamel_color(piece.variant));
-            let home = rig.root;
-            rig.root = dress_form(rig, piece, home, true);
+            let coat = Coat::enamel(palette::enamel_color(piece.variant));
             // The coat: enamel a hair inside the cell so the berth edge
             // still reads, with one streak the painter didn't chase.
-            rig.part(
-                Cuboid::new(fw * 0.84, fh * 0.84, 0.4),
-                coat.clone(),
-                Transform::from_xyz(0.0, 0.0, 0.2),
+            out.push(
+                Part::new(
+                    "coat",
+                    Body::Box(Vec3::new(fw * 0.84, fh * 0.84, 0.4)),
+                    coat,
+                    Transform::from_xyz(0.0, 0.0, 0.2),
+                )
+                .under(Under::Laid),
             );
-            let streak = rig.tint(palette::mix(
-                palette::enamel_color(piece.variant),
-                palette::GLINT,
-                0.14,
-            ));
-            rig.part(
-                Cuboid::new(fw * 0.6, 2.6, 0.3),
-                streak,
-                Transform::from_xyz(-1.5, 3.0, 0.45).with_rotation(Quat::from_rotation_z(0.16)),
+            out.push(
+                Part::new(
+                    "streak",
+                    Body::Box(Vec3::new(fw * 0.6, 2.6, 0.3)),
+                    Coat::enamel(palette::mix(
+                        palette::enamel_color(piece.variant),
+                        palette::GLINT,
+                        0.14,
+                    )),
+                    Transform::from_xyz(-1.5, 3.0, 0.45).with_rotation(Quat::from_rotation_z(0.16)),
+                )
+                .under(Under::Laid),
             );
-            rig.root = dress_form(rig, piece, home, false);
             // Canned: a squat battered tin, the lid wearing its color.
-            tin(rig, body, coat);
-            rig.root = home;
+            out.extend(
+                tin_parts(body, coat)
+                    .into_iter()
+                    .map(|part| part.under(Under::Packed)),
+            );
         }
         Kind::LuminousPaint => {
             let glow_hue = palette::mix(color, palette::PHOSPHOR, 0.35);
-            let mat = glow::phosphor(rig.materials, glow_hue, 0.0);
-            let home = rig.root;
-            rig.root = dress_form(rig, piece, home, true);
+            let glass = Coat::phosphor(glow_hue, 0.0);
             // The coat's glass, plus the real tinge beneath it — both fed
             // by [`sync_dressings`] exactly as the lamps are fed.
-            rig.part(
-                Cuboid::new(fw * 0.84, fh * 0.84, 0.4),
-                mat.clone(),
-                Transform::from_xyz(0.0, 0.0, 0.2),
+            out.push(
+                Part::new(
+                    "coat",
+                    Body::Box(Vec3::new(fw * 0.84, fh * 0.84, 0.4)),
+                    glass,
+                    Transform::from_xyz(0.0, 0.0, 0.2),
+                )
+                .under(Under::Laid),
             );
+            out.push(
+                Part::lamp(
+                    "tinge",
+                    glass,
+                    Transform::from_xyz(0.0, 0.0, 6.0),
+                    Role::Tinge,
+                )
+                .under(Under::Laid),
+            );
+            // Canned: the blackout tin — dark body, the lid's glass dark
+            // until laid (it shares the coat's instance, and the level
+            // stays floored while packed).
+            out.extend(
+                tin_parts(shaded(0.55), glass)
+                    .into_iter()
+                    .map(|part| part.under(Under::Packed)),
+            );
+        }
+    }
+    out
+}
+
+/// A lamp's live bulb: dark glass that wakes warm, with the real point
+/// light under it. The light rests dark ([`Dimmable`] base 0) and
+/// `sync_fixtures` eases both toward `lamp_lit` — no shadow maps, per
+/// the art direction; the pool of light is the point.
+fn bulb_part(kind: Kind, at: Vec3, radius: f32) -> Part {
+    let color = palette::mix(palette::kind_color(kind), palette::GLINT, 0.35);
+    let range = if kind == Kind::CeilingLamp {
+        CEILING_RANGE
+    } else {
+        LAMP_RANGE
+    };
+    Part::new(
+        "bulb",
+        Body::Ball { r: radius },
+        Coat::phosphor(color, 0.0),
+        Transform::from_translation(at),
+    )
+    .role(Role::Bulb { range })
+}
+
+// ------------------------------------------------------------ the stamping --
+
+/// **Stamp one piece's rig into the world**: every part [`parts`]
+/// describes, spawned in the frame it names, in the order it is
+/// described.
+///
+/// Meshes and coats are cut once each per rig and handed round, which is
+/// what the hand-written builders did by hoisting a shared handle above
+/// a loop — the same drawing, one place to get it right. A part whose
+/// role writes its own material is the exception and says so
+/// ([`Role::alone`]).
+fn build_kind(rig: &mut RigParts, piece: &Piece) {
+    let screens = Screens {
+        sky: rig.sky,
+        map: rig.map_image.is_some(),
+        preview: rig.preview_image.is_some(),
+    };
+    let home = rig.root;
+    let mut bodies: Vec<(Body, Handle<Mesh>)> = Vec::new();
+    let mut coats: Vec<(Coat, Handle<StandardMaterial>)> = Vec::new();
+    let mut frames: Vec<(Under, Entity)> = Vec::new();
+    for part in parts(piece, screens) {
+        rig.root = frame_of(rig, piece, home, &mut frames, part.under);
+        stamp(rig, piece, &part, &mut bodies, &mut coats);
+    }
+    rig.root = home;
+}
+
+/// The entity a part's frame hangs on, spawned the first time that frame
+/// is asked for — so the sub-roots appear exactly where the description
+/// first needs them.
+fn frame_of(
+    rig: &mut RigParts<'_, '_, '_>,
+    piece: &Piece,
+    home: Entity,
+    frames: &mut Vec<(Under, Entity)>,
+    under: Under,
+) -> Entity {
+    if matches!(under, Under::Rig) {
+        return home;
+    }
+    if let Some((_, entity)) = frames.iter().find(|(seen, _)| seen.same(under)) {
+        return *entity;
+    }
+    let entity = match under {
+        Under::Rig => home,
+        Under::Arm => rig
+            .commands
+            .spawn((
+                under.rest(),
+                Visibility::default(),
+                WallArm { piece: piece.id },
+                ChildOf(home),
+            ))
+            .id(),
+        Under::Pivot(_) => rig
+            .commands
+            .spawn((
+                under.rest(),
+                Visibility::default(),
+                ChildOf(home),
+                LeverHandle,
+            ))
+            .id(),
+        Under::Laid => dress_form(rig, piece, home, true),
+        Under::Packed => dress_form(rig, piece, home, false),
+    };
+    frames.push((under, entity));
+    entity
+}
+
+/// One described part, made real.
+#[allow(clippy::too_many_lines)]
+fn stamp(
+    rig: &mut RigParts<'_, '_, '_>,
+    piece: &Piece,
+    part: &Part,
+    bodies: &mut Vec<(Body, Handle<Mesh>)>,
+    coats: &mut Vec<(Coat, Handle<StandardMaterial>)>,
+) {
+    let material = match part.cut {
+        Cut::Coat(coat) => {
+            if let Some((_, handle)) = coats.iter().find(|(seen, _)| *seen == coat)
+                && !part.role.alone()
+            {
+                handle.clone()
+            } else {
+                let handle = coat.material(rig.materials, Some(rig.skin));
+                if !part.role.alone() {
+                    coats.push((coat, handle.clone()));
+                }
+                handle
+            }
+        }
+        Cut::Map => rig
+            .map_image
+            .clone()
+            .map(|image| crate::crt::tube_glass(rig.materials, &image))
+            .expect("a mapped screen has its picture"),
+        Cut::Preview => rig
+            .preview_image
+            .clone()
+            .map(|image| crate::crt::tube_glass(rig.materials, &image))
+            .expect("a mapped screen has its picture"),
+        Cut::Sky => crate::viewport::pane_glass(rig.materials),
+        Cut::Art => paint_artwork(rig.images, rig.materials, piece.id),
+    };
+    let Some(body) = part.body else {
+        // A light and no body at all: the luminous coat's own tinge.
+        if let Cut::Coat(coat) = part.cut {
             rig.commands.spawn((
                 PointLight {
-                    color: glow_hue,
+                    color: coat.color,
                     intensity: 0.0,
                     range: COAT_RANGE,
                     shadow_maps_enabled: false,
                     ..default()
                 },
-                Transform::from_xyz(0.0, 0.0, 6.0),
+                part.at,
                 Dimmable { intensity: 0.0 },
                 CoatGlow {
                     piece: piece.id,
-                    color: glow_hue,
-                    mat: mat.clone(),
+                    color: coat.color,
+                    mat: material,
                     level: 0.0,
                 },
                 ChildOf(rig.root),
             ));
-            rig.root = dress_form(rig, piece, home, false);
-            // Canned: the blackout tin — dark body, the lid's glass dark
-            // until laid (it shares the coat's instance, and the level
-            // stays floored while packed).
-            let blackout = rig.tint(palette::mix(color, palette::SHADOW, 0.55));
-            tin(rig, blackout, mat);
-            rig.root = home;
+        }
+        return;
+    };
+    let mesh = if let Some((_, handle)) = bodies.iter().find(|(seen, _)| *seen == body) {
+        handle.clone()
+    } else {
+        let handle = rig.meshes.add(body.mesh());
+        bodies.push((body, handle.clone()));
+        handle
+    };
+    let entity = rig
+        .commands
+        .spawn((
+            Mesh3d(mesh),
+            MeshMaterial3d(material.clone()),
+            part.at,
+            ChildOf(rig.root),
+        ))
+        .id();
+    if part.role.dark() {
+        rig.commands.entity(entity).insert(Visibility::Hidden);
+    }
+    if matches!(part.cut, Cut::Sky) {
+        rig.commands.entity(entity).insert(crate::viewport::SkyPane);
+    }
+    match part.role {
+        Role::Plain | Role::Tinge => {}
+        Role::Bud => {
+            rig.commands
+                .entity(entity)
+                .insert(Blossom { piece: piece.id });
+        }
+        Role::Pulse {
+            color,
+            base,
+            amp,
+            freq,
+            phase,
+        } => {
+            rig.commands.entity(entity).insert(Pulse {
+                color,
+                base,
+                amp,
+                freq,
+                phase,
+            });
+        }
+        Role::Cubby { slot } => {
+            rig.commands.entity(entity).insert(CubbyGlow {
+                piece: piece.id,
+                slot,
+                phase: f32::from(slot) * 1.3,
+            });
+        }
+        Role::Needle { reach } => {
+            rig.commands.entity(entity).insert(EtaNeedle { reach });
+        }
+        Role::Knob => {
+            rig.commands.entity(entity).insert(LeverLamp);
+        }
+        Role::Halo => {
+            rig.commands.entity(entity).insert(LeverHalo);
+        }
+        Role::Grab => rig.grab = Some(material),
+        Role::Bulb { range } => {
+            let color = match part.cut {
+                Cut::Coat(coat) => coat.color,
+                _ => palette::GLINT,
+            };
+            rig.commands.spawn((
+                PointLight {
+                    color,
+                    intensity: 0.0,
+                    range,
+                    shadow_maps_enabled: false,
+                    ..default()
+                },
+                Transform::from_translation(part.at.translation),
+                Dimmable { intensity: 0.0 },
+                LampGlow {
+                    piece: piece.id,
+                    color,
+                    mat: material,
+                    level: 0.0,
+                },
+                ChildOf(rig.root),
+            ));
         }
     }
 }
+
+// The rat's mark, and everything else that is not a kind's own body,
+// stays with `spawn_rig`: it belongs to every rig alike.
 
 /// A sub-root for one of a covering's two bodies; [`sync_dressings`]
 /// shows exactly one per piece.
@@ -3923,61 +4729,6 @@ fn dress_form(rig: &mut RigParts, piece: &Piece, home: Entity, laid: bool) -> En
             ChildOf(home),
         ))
         .id()
-}
-
-/// A squat paint tin under the current rig root: `shell` for the body,
-/// `lid` capping it — the one silhouette both paints share.
-fn tin(rig: &mut RigParts, shell: Handle<StandardMaterial>, lid: Handle<StandardMaterial>) {
-    let upright = Quat::from_rotation_x(FRAC_PI_2);
-    rig.part(
-        Cylinder::new(9.5, 11.0),
-        shell,
-        Transform::from_xyz(0.0, 0.0, 5.5).with_rotation(upright),
-    );
-    rig.part(
-        Cylinder::new(9.7, 1.6),
-        lid,
-        Transform::from_xyz(0.0, 0.0, 11.4).with_rotation(upright),
-    );
-}
-
-/// A lamp's live bulb: dark glass that wakes warm, plus the real point
-/// light beneath it. The light spawns dark ([`Dimmable`] base 0) and
-/// [`sync_fixtures`] eases both toward `lamp_lit` — no shadow maps, per
-/// the art direction; the pool of light is the point.
-fn lamp_bulb(rig: &mut RigParts, piece: &Piece, parent: Entity, at: Vec3, radius: f32) {
-    let color = palette::mix(palette::kind_color(piece.kind), palette::GLINT, 0.35);
-    let mat = glow::phosphor(rig.materials, color, 0.0);
-    let bulb = rig.meshes.add(ico(radius));
-    rig.commands.spawn((
-        Mesh3d(bulb),
-        MeshMaterial3d(mat.clone()),
-        Transform::from_translation(at),
-        ChildOf(parent),
-    ));
-    let range = if piece.kind == Kind::CeilingLamp {
-        CEILING_RANGE
-    } else {
-        LAMP_RANGE
-    };
-    rig.commands.spawn((
-        PointLight {
-            color,
-            intensity: 0.0,
-            range,
-            shadow_maps_enabled: false,
-            ..default()
-        },
-        Transform::from_translation(at),
-        Dimmable { intensity: 0.0 },
-        LampGlow {
-            piece: piece.id,
-            color,
-            mat,
-            level: 0.0,
-        },
-        ChildOf(parent),
-    ));
 }
 
 /// The artwork half of a `Painting`: a 24×16-texel canvas painted once
@@ -4947,6 +5698,151 @@ mod tests {
             assert!(
                 walls_handled.contains(&wall),
                 "no handled kind was swept on {wall:?} ({handled} berths in all)"
+            );
+        }
+    }
+
+    /// One kind's rig, described.
+    fn rig_of(kind: Kind, screens: Screens) -> Vec<Part> {
+        parts(
+            &Piece {
+                id: 0,
+                kind,
+                variant: 0,
+                gnawed: false,
+                loc: Loc::Hold {
+                    room: CABIN,
+                    x: 0,
+                    y: 0,
+                },
+            },
+            screens,
+        )
+    }
+
+    /// **Every cargo kind describes a body.** The describer is the only
+    /// account of what a rig is now, so a kind that says nothing is a
+    /// kind that draws nothing — the empty-room defect, one crate down.
+    #[test]
+    fn every_kind_describes_a_body() {
+        for kind in Kind::ALL {
+            let rig = rig_of(kind, Screens::LIVE);
+            assert!(!rig.is_empty(), "{kind:?} describes no parts at all");
+            assert!(
+                rig.iter().any(|part| part.body.is_some()),
+                "{kind:?} describes only lights, and lights are not a silhouette"
+            );
+        }
+    }
+
+    /// **The promise a part makes is the turn the rig gives it.** A
+    /// claim used to be written in one table and the turn taken from it
+    /// by name, which is a design that guarantees the bug it detects:
+    /// two of four disagreed, and they are the two the playtest found by
+    /// eye. The claim rides the part now, and the part's own rotation is
+    /// derived from it, so this asserts a thing that cannot come apart —
+    /// which is the point of asserting it, because the shape that COULD
+    /// come apart is what a later hand would reach for.
+    #[test]
+    fn the_promise_a_part_makes_is_the_turn_the_rig_gives_it() {
+        let mut claimed = 0_u32;
+        for kind in Kind::ALL {
+            for part in rig_of(kind, Screens::LIVE) {
+                let Some(claim) = part.claim else { continue };
+                claimed += 1;
+                assert_eq!(claim.name, part.what, "{kind:?}: a claim under two names");
+                let got = (part.at.rotation * claim.axis).normalize_or_zero();
+                assert!(
+                    got.dot(claim.want.normalize_or_zero()) > 0.999,
+                    "{kind:?}'s {} points {got} and its name says {}",
+                    part.what,
+                    claim.want
+                );
+            }
+            // And the list of promises is that same reading, not a
+            // second table beside it.
+            let named: Vec<Feature> = rig_of(kind, Screens::LIVE)
+                .into_iter()
+                .filter_map(|part| part.claim)
+                .collect();
+            assert_eq!(named, features(kind), "{kind:?}'s promises are restated");
+        }
+        assert!(claimed >= 4, "the claim-bearing parts went missing");
+    }
+
+    /// **A part hangs in a frame its own kind is entitled to.** The
+    /// sub-roots are not decoration: something moves each of them, and a
+    /// part in the wrong one is a part some system will swing, throw, or
+    /// hide for reasons that have nothing to do with it.
+    #[test]
+    fn a_part_hangs_in_a_frame_its_kind_is_entitled_to() {
+        for kind in Kind::ALL {
+            for part in rig_of(kind, Screens::LIVE) {
+                let allowed = match part.under {
+                    Under::Rig => true,
+                    Under::Arm => kind == Kind::WallLamp,
+                    Under::Pivot(_) => kind == Kind::LaunchLever,
+                    Under::Laid | Under::Packed => kind.covering(),
+                };
+                assert!(
+                    allowed,
+                    "{kind:?}'s {} hangs in {:?}, which nothing on it owns",
+                    part.what, part.under
+                );
+            }
+        }
+    }
+
+    /// **A covering owns two bodies and nothing else owns any.** The
+    /// dressing regime's whole shape: laid into the room versus rolled
+    /// or canned on a counter, with `sync_dressings` showing exactly one.
+    #[test]
+    fn a_covering_owns_two_bodies_and_nothing_else_owns_either() {
+        for kind in Kind::ALL {
+            let rig = rig_of(kind, Screens::LIVE);
+            let laid = rig
+                .iter()
+                .filter(|part| part.under == Under::Laid && part.body.is_some())
+                .count();
+            let packed = rig
+                .iter()
+                .filter(|part| part.under == Under::Packed && part.body.is_some())
+                .count();
+            if kind.covering() {
+                assert!(laid > 0 && packed > 0, "{kind:?} is missing a body");
+            } else {
+                assert_eq!(
+                    (laid, packed),
+                    (0, 0),
+                    "{kind:?} is not a covering and keeps two bodies"
+                );
+            }
+        }
+    }
+
+    /// **Only glass reads differently in the dark.** A headless boot has
+    /// no void and no rasteriser, so the kinds that wear a live screen
+    /// fall back to phosphor with geometry of their own — and every
+    /// other kind must describe the identical rig either way, or the
+    /// sweep would be judging a game nobody plays.
+    #[test]
+    fn only_glass_reads_differently_in_a_headless_boot() {
+        for kind in Kind::ALL {
+            let lit = rig_of(kind, Screens::LIVE);
+            let dark = rig_of(kind, Screens::default());
+            let glazed = matches!(
+                kind,
+                Kind::Window
+                    | Kind::Porthole
+                    | Kind::BayWindow
+                    | Kind::ChartTank
+                    | Kind::DestPreview
+            );
+            assert_eq!(
+                lit != dark,
+                glazed,
+                "{kind:?} wears live glass: {glazed}, and reads differently dark: {}",
+                lit != dark
             );
         }
     }

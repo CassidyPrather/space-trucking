@@ -14,22 +14,45 @@
 #
 # Blank lines and `#` comments are ignored.
 #
-# **It is empty, and the work order is worked through.**
+# **The rooms are clear. The rigs have just been swept for the first
+# time, and these two are what is left of it.**
 #
-# The lines it carried were three families and one cause: every cell of
-# every chart was a berth cargo could stay in, so a room owned no volume
-# of its own and a station's furniture was a defect wherever it stood.
-# A calling room keeps its own deck now — `Tile::Staging`, which cargo
-# may be set down on and nothing stays on (docs/ROOMS.md, "The staging
-# law") — and the three rules ask about the berths that are left: the
-# room's goods, a proposal's chalk, a doorway, the counter's own cell,
-# and the plain deck of the rooms that ride.
+# The rooms' own lines were three families and one cause, and they came
+# off when a calling room got a deck of its own to lend (`Tile::Staging`,
+# docs/ROOMS.md); that history is in the git log and the sentences it
+# closed are kept said as tests in `gauntlet.rs`.
 #
-# Narrowing them retired 289 findings of 447, and none of the 289 was
-# ever a defect: each was a station's fitting standing in air the room
-# had no other use for. The remaining 158 were the honest half, and they
-# were fixed by moving furniture — every station's hardware came off its
-# own shopfront and off the chalk, onto its flanks and the middle of its
-# own deck, which is where a shop keeps its fittings anyway.
+# What is new is the cargo. Thirty-two kinds had never been swept at all,
+# because a rig was built straight into a live world and there was nothing
+# to measure; there is a description now (`pieces::parts`), and the sweep
+# found sixty-one things in it. Fifty-nine were fixed where they stood
+# and were all three idioms:
 #
-# What a defect looks like from here is a line appearing in this file.
+#   - two members of one fitting cut to one depth, so they share a plane
+#     wherever they cross — the window family's four lips and its
+#     mullion, the painting's frame, the suspicious crate's hum edges,
+#     the mysterious crate's twine, the cabinet's rack and carcass, the
+#     chart tank's chassis, and both legs of the gas canister's chevrons;
+#   - a part run out flush with its parent's own edge — the cabinet's
+#     sides and caps against its back sheet, the chart tank's posts and
+#     caps against its plinth, the couch's seat against its backrest;
+#   - a part begun on the plane its neighbour begins on — the Guild
+#     chit's stripe and the gilded idol's belt, both on their own backs.
+#
+# The chit is the one the owner found by eye. Its top and bottom edges
+# were cured in an earlier pass and its BACK was not, which is the whole
+# argument for a harness: an eye finds the fight it is looking at.
+#
+# The two below are the ones a fix would have to re-draw a kind for, and
+# they are the same question asked twice: `pieces::RIG_NEAR..RIG_FAR` is
+# the depth every rig is composed within and the depth a berth's air is
+# measured over, and these two parts are outside it. The floor lamp's
+# base disc is a hand's breadth wider than the pole it carries and lies
+# behind the berth plane; the very mysterious crate's core hangs proud of
+# a crate that already fills the band. Either the parts move or the band
+# is two numbers too tight — and while it stands, every berth those two
+# kinds take is measured shallower than the thing standing in it.
+
+# ---- rigs ----
+rigs | berth-clear | FloorLamp base plate
+rigs | berth-clear | VeryMysteriousCrate core

@@ -45,7 +45,7 @@ use space_trucking::sim::{
     placement_check, player_owned, splitmix,
 };
 
-use crate::poi::{Coat, Worn};
+use crate::poi::{Coat, Shape, Worn};
 use crate::rig::{Dimmable, Skin};
 use crate::surface::{SimSurface, Station, VirtualPointer};
 use crate::{Phase, Shell, canvas, glow, palette};
@@ -96,6 +96,21 @@ pub const BAY_FIT: f32 = 0.96;
 /// in one (`crate::gauntlet`).
 pub const RIG_NEAR: f32 = -2.0;
 pub const RIG_FAR: f32 = 30.0;
+
+/// **How much of the world one rig-local sim unit spends**, in metres.
+///
+/// A rig is composed in sim units and berthed at [`site_on`]'s scale,
+/// which is a property of the chart it hangs on and not of the cell it
+/// takes: every chart of every room is laid at `rig::BAY_CELL` to the
+/// cell, so there is one number and it is derived rather than restated —
+/// a retune of the bay's cell moves the rigs and this together
+/// (`tests::a_rig_spends_the_same_metre_on_every_chart`).
+///
+/// [`BAY_FIT`] is in it because a standing or hanging rig wears it. A
+/// laid covering does not, so it is drawn a twenty-fifth bigger than
+/// this says; a measure that reads a shade small errs toward reporting,
+/// which is the direction a detector is allowed to err in.
+pub const RIG_UNIT: f32 = crate::rig::BAY_CELL / layout::CELL * BAY_FIT;
 
 /// A stowed piece's scale relative to its host cabinet's: shrunk until
 /// the widest 1×1 rig (~34 sim units across) reads ~0.18 world units —
@@ -2880,6 +2895,49 @@ pub enum Body {
 }
 
 impl Body {
+    /// The body's half-extents in its own frame, before the transform's
+    /// own scale. A sheet's is zero on the axis it has no thickness in,
+    /// which is the truth about it: a sheet IS a face.
+    #[must_use]
+    pub fn half(self) -> Vec3 {
+        match self {
+            Self::Box(size) => size.abs() * 0.5,
+            Self::Drum { r, h, .. } | Self::Horn { r, h } => Vec3::new(r, h * 0.5, r),
+            Self::Hoop { inner, outer } => Vec3::new(outer, (outer - inner) * 0.5, outer),
+            Self::Pill { r, len } => Vec3::new(r, len.mul_add(0.5, r), r),
+            Self::Ball { r } => Vec3::splat(r),
+            Self::Washer { brim, .. } => Vec3::new(brim, brim, 0.0),
+            Self::Pane => Vec3::new(0.5, 0.5, 0.0),
+        }
+    }
+
+    /// Whether the body is a single-sided sheet: one face, no volume,
+    /// and the face it shows is its own `+z`.
+    #[must_use]
+    pub const fn sheet(self) -> bool {
+        matches!(self, Self::Washer { .. } | Self::Pane)
+    }
+
+    /// Which of the shared silhouettes the body reads as, for a caller
+    /// asking which of its box's sides the renderer actually draws.
+    /// Solids only — a sheet answers [`Self::sheet`] instead, because a
+    /// sheet's one face is not a side of any box.
+    ///
+    /// The drum's narrow cap reads wide here, the same way it does for a
+    /// station's fittings: a true cone's top is a POINT and `Shape::Cone`
+    /// is a frustum with a real disc up there, so a cone is described
+    /// with one more flat side than it has. That errs toward reporting,
+    /// which is the direction a detector is allowed to err in.
+    #[must_use]
+    pub const fn shape(self) -> Shape {
+        match self {
+            Self::Box(_) | Self::Washer { .. } | Self::Pane => Shape::Slab,
+            Self::Drum { .. } => Shape::Post,
+            Self::Horn { .. } => Shape::Cone,
+            Self::Hoop { .. } | Self::Pill { .. } | Self::Ball { .. } => Shape::Dome,
+        }
+    }
+
     /// The mesh, cut once per distinct body per rig.
     fn mesh(self) -> Mesh {
         match self {
@@ -2927,6 +2985,14 @@ impl Screens {
         map: true,
         preview: true,
     };
+    /// None of them: a headless boot, and the fallbacks it draws.
+    pub const DARK: Self = Self {
+        sky: false,
+        map: false,
+        preview: false,
+    };
+    /// Both worlds, for a sweep that has to judge each of them.
+    pub const BOTH: [Self; 2] = [Self::LIVE, Self::DARK];
 }
 
 /// How a part is finished.
@@ -2976,7 +3042,8 @@ impl Under {
     }
 
     /// The pose the sub-frame rests at.
-    const fn rest(self) -> Transform {
+    #[must_use]
+    pub const fn rest(self) -> Transform {
         match self {
             Self::Pivot(at) => at,
             _ => Transform::IDENTITY,
@@ -3148,6 +3215,13 @@ impl Part {
         self.claim = Some(claim);
         self
     }
+
+    /// The name a finding files the part under.
+    #[must_use]
+    pub fn label(&self) -> String {
+        self.nth
+            .map_or_else(|| self.what.to_owned(), |n| format!("{}[{n}]", self.what))
+    }
 }
 
 /// The amber carry grab: a glowing crossbar in two brass stanchions,
@@ -3257,9 +3331,12 @@ fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens)
             .scaled(Vec3::new(gw, gh, 1.0)),
         );
     } else {
+        // Inside the bezel's own depth at both ends: cut to 0..3 it
+        // shared the lips' back plane and the bolt ring's front one, so
+        // a headless boot drew the frame and the glass at one depth.
         out.push(Part::new(
             "sky pane",
-            Body::Box(Vec3::new(gw, gh, 3.0)),
+            Body::Box(Vec3::new(gw, gh, 2.2)),
             Coat::phosphor(palette::mix(color, palette::PHOSPHOR, 0.12), 0.35),
             Transform::from_xyz(0.0, 0.0, 1.5),
         ));
@@ -3314,13 +3391,17 @@ fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens)
         // wide to have arrived in one sheet — the mullion between the
         // two panes that did.
         Bezel::Lipped | Bezel::Mullioned => {
+            // The uprights sit inside the rails on both counts: a hair
+            // in of the rails' outer edge and a hair shallower than
+            // their depth, because four lips cut to one rectangle share
+            // a plane at every corner they cross.
             let lip_h = Body::Box(Vec3::new(fw * 0.96, fh * 0.10, 6.0));
-            let lip_v = Body::Box(Vec3::new(fw * 0.05, fh * 0.94, 6.0));
+            let lip_v = Body::Box(Vec3::new(fw * 0.05, fh * 0.94, 5.4));
             for (i, (body, at)) in [
                 (lip_h, Vec3::new(0.0, fh * 0.43, 3.0)),
                 (lip_h, Vec3::new(0.0, -fh * 0.43, 3.0)),
-                (lip_v, Vec3::new(fw * 0.455, 0.0, 3.0)),
-                (lip_v, Vec3::new(-fw * 0.455, 0.0, 3.0)),
+                (lip_v, Vec3::new(fw * 0.45, 0.0, 3.0)),
+                (lip_v, Vec3::new(-fw * 0.45, 0.0, 3.0)),
             ]
             .into_iter()
             .enumerate()
@@ -3333,7 +3414,7 @@ fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens)
             if bezel == Bezel::Mullioned {
                 out.push(Part::new(
                     "mullion",
-                    Body::Box(Vec3::new(fw * 0.035, fh * 0.86, 6.0)),
+                    Body::Box(Vec3::new(fw * 0.035, fh * 0.86, 5.0)),
                     brass,
                     Transform::from_xyz(0.0, 0.0, 3.0),
                 ));
@@ -3393,7 +3474,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 "belt",
                 Body::Box(Vec3::new(fw * 0.62, fh * 0.07, 19.0)),
                 shaded(0.45),
-                Transform::from_xyz(0.0, -fh * 0.02, 9.5),
+                Transform::from_xyz(0.0, -fh * 0.02, 10.0),
             ));
             out.push(Part::new(
                 "head",
@@ -3484,10 +3565,19 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 Transform::from_xyz(0.0, 0.0, 10.0).with_rotation(Quat::from_rotation_z(FRAC_PI_2)),
             ));
             let warn = shaded(0.5);
-            let leg = Body::Box(Vec3::new(9.0, 3.0, 3.0));
+            // The lower leg is the shallower one: two legs cut to one
+            // depth meet along a plane where they cross, and a chevron
+            // is two legs that cross.
+            let legs = [
+                Body::Box(Vec3::new(9.0, 3.0, 3.0)),
+                Body::Box(Vec3::new(9.0, 3.0, 2.2)),
+            ];
             let mut nth = 0_u8;
             for cx in [-8.0f32, 8.0] {
-                for (sy, turn) in [(3.2f32, -FRAC_PI_4), (-3.2, FRAC_PI_4)] {
+                for (leg, (sy, turn)) in legs
+                    .into_iter()
+                    .zip([(3.2f32, -FRAC_PI_4), (-3.2, FRAC_PI_4)])
+                {
                     out.push(
                         Part::new(
                             "chevron",
@@ -3553,7 +3643,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
             ));
             let hum = Coat::phosphor(palette::EERIE, 0.5);
             let along = Body::Box(Vec3::new(fw * 0.86, 2.6, 2.6));
-            let across = Body::Box(Vec3::new(2.6, fh * 0.86, 2.6));
+            let across = Body::Box(Vec3::new(2.6, fh * 0.86, 1.8));
             for (i, (edge, at)) in [
                 (along, Vec3::new(0.0, fh * 0.42, 24.0)),
                 (along, Vec3::new(0.0, -fh * 0.42, 24.0)),
@@ -3598,7 +3688,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
             out.push(
                 Part::new(
                     "twine",
-                    Body::Box(Vec3::new(2.4, fh * 0.84, 2.0)),
+                    Body::Box(Vec3::new(2.4, fh * 0.84, 1.4)),
                     twine,
                     Transform::from_xyz(-fw * 0.06, 0.0, 18.4),
                 )
@@ -3754,7 +3844,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 "stripe",
                 Body::Box(Vec3::new(fw * 0.12, fh * 0.46, 5.6)),
                 Coat::enamel(palette::POI_GUILD),
-                Transform::from_xyz(-fw * 0.2, 0.0, 2.8),
+                Transform::from_xyz(-fw * 0.2, 0.0, 3.0),
             ));
         }
         // One priceless chip: a low cylinder, a rim, an inner ring.
@@ -3926,7 +4016,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
             ));
             out.push(Part::new(
                 "seat",
-                Body::Box(Vec3::new(fw * 0.74, fh * 0.30, 18.0)),
+                Body::Box(Vec3::new(fw * 0.76, fh * 0.30, 18.0)),
                 shaded(0.3),
                 Transform::from_xyz(0.0, -fh * 0.20, 10.0),
             ));
@@ -3979,7 +4069,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 Transform::from_xyz(0.0, 0.0, 2.5),
             ));
             let lip_h = Body::Box(Vec3::new(fw * 0.78, 3.2, 4.0));
-            let lip_v = Body::Box(Vec3::new(3.2, fh * 0.66, 4.0));
+            let lip_v = Body::Box(Vec3::new(3.2, fh * 0.66, 3.2));
             for (i, (lip, at)) in [
                 (lip_h, Vec3::new(0.0, fh * 0.315, 5.4)),
                 (lip_h, Vec3::new(0.0, -fh * 0.315, 5.4)),
@@ -4032,7 +4122,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                         "side",
                         Body::Box(Vec3::new(2.6, fh * 0.94, deep - 1.0)),
                         body,
-                        Transform::from_xyz(fw * 0.44 * sx, 0.0, (deep + 1.0) * 0.5),
+                        Transform::from_xyz(fw * 0.43 * sx, 0.0, (deep + 1.0) * 0.5),
                     )
                     .nth(u8::try_from(i).unwrap_or(0)),
                 );
@@ -4041,9 +4131,9 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 out.push(
                     Part::new(
                         "cap",
-                        Body::Box(Vec3::new(fw * 0.92, 2.6, deep - 1.0)),
+                        Body::Box(Vec3::new(fw * 0.92, 2.6, deep - 1.8)),
                         body,
-                        Transform::from_xyz(0.0, fh * 0.465 * sy, (deep + 1.0) * 0.5),
+                        Transform::from_xyz(0.0, fh * 0.455 * sy, (deep + 1.0) * 0.5),
                     )
                     .nth(u8::try_from(i).unwrap_or(0)),
                 );
@@ -4058,7 +4148,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
             ));
             out.push(Part::new(
                 "stile",
-                Body::Box(Vec3::new(2.2, fh * 0.9, deep * 0.85)),
+                Body::Box(Vec3::new(2.2, fh * 0.9, deep * 0.79)),
                 rack,
                 Transform::from_xyz(0.0, 0.0, (deep * 0.85).mul_add(0.5, 1.5)),
             ));
@@ -4168,7 +4258,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 out.push(
                     Part::new(
                         "post",
-                        Body::Box(Vec3::new(3.0, fh * 0.9, 11.0)),
+                        Body::Box(Vec3::new(3.0, fh * 0.86, 11.0)),
                         brass,
                         Transform::from_xyz(sx * fw * 0.44, 0.0, 6.0),
                     )
@@ -4179,7 +4269,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 out.push(
                     Part::new(
                         "cap",
-                        Body::Box(Vec3::new(fw * 0.92, 3.0, 11.0)),
+                        Body::Box(Vec3::new(fw * 0.88, 3.0, 10.2)),
                         brass,
                         Transform::from_xyz(0.0, sy * fh * 0.43, 6.0),
                     )
@@ -5718,6 +5808,34 @@ mod tests {
             },
             screens,
         )
+    }
+
+    /// **A rig spends the same metre on every chart.** [`RIG_UNIT`] is
+    /// one number because every chart of every room is laid at
+    /// `rig::BAY_CELL` to the cell — and the gauntlet measures a rig's
+    /// own parts against world thresholds through it, so a chart that
+    /// scaled differently would have the sweep judging one rig by
+    /// another's ruler. Derived from [`site_on`] rather than compared to
+    /// a written-down number, so a retune of the bay moves both.
+    #[test]
+    fn a_rig_spends_the_same_metre_on_every_chart() {
+        let charts = rig::bay();
+        let aft = chart(Station::BayWall);
+        let mut seen = 0_u32;
+        for (station, surface) in charts {
+            if !station.chart_flipped() {
+                continue;
+            }
+            let (_, _, scale) = site_on(station, &surface, &aft, rect_of(4, 1, Kind::Painting));
+            for spent in [scale.x, scale.y, scale.z] {
+                assert!(
+                    (spent - RIG_UNIT).abs() < 1e-6,
+                    "{station:?} spends {spent} m of world on a sim unit, not {RIG_UNIT}"
+                );
+            }
+            seen += 1;
+        }
+        assert!(seen >= 6, "the cabin's six charts went missing: {seen}");
     }
 
     /// **Every cargo kind describes a body.** The describer is the only

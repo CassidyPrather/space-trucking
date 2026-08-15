@@ -448,6 +448,18 @@ adversarial pass that closes those, and it splits in two:
   base plate FLAT on the deck); and the walked path stands in air.
   `--gauntlet` prints the whole report; `--gauntlet-docket` reprints the
   work order.
+- **And every cargo kind, the same way.** A rig used to be built
+  straight into a live world, so nothing pure could enumerate one; a
+  kind describes its parts now (`pieces::parts`) and the presentation
+  layer stamps what it returns. Two of the six families reach the
+  thirty-two kinds through that description: **no two faces of one rig
+  share a plane and a facing** — a rig is berthed by a quarter turn, so
+  the question is settled in the rig's own frame and the kind is swept
+  once rather than once per berth — and **no part reaches out of
+  `RIG_NEAR..RIG_FAR`**, the depth band the kind builders compose within
+  and a berth's air is measured over. The other three are about a
+  station's furniture standing in cargo's way, and cargo standing in its
+  own berth is what a berth is for.
 - **Pixels, opt-in.** `--gauntlet-walk <dir>` drives the scripted room
   walk — in through the door, round the room, up to the counter — and
   writes one PNG per waypoint, then holds the camera still for ten

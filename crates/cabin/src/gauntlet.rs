@@ -42,12 +42,34 @@
 //!
 //! | Rule | What it asserts | What it retires |
 //! | --- | --- | --- |
-//! | [`BERTH_CLEAR`] | no fitting stands in a cell cargo may take, at the height a rig occupies | decor clipping through functional cargo |
+//! | [`BERTH_CLEAR`] | no fitting stands in a cell cargo may take, at the height a rig occupies, and no rig is deeper than the band that height is measured over | decor clipping through functional cargo |
 //! | [`BERTH_SEEN`] | nothing stands between a wall berth and the room | "the wall plate occludes the window" |
 //! | [`BERTH_REACHED`] | every berth is workable from the walk envelope | furniture fencing off a corner of the net |
-//! | [`NO_COPLANAR`] | no two drawn faces share a plane and a facing | z-fighting, generally |
+//! | [`NO_COPLANAR`] | no two drawn faces share a plane and a facing, in a room or in a rig | z-fighting, generally |
 //! | [`PROP_POINTS`] | a rig's named features point where their names say | the sconce lighting the wall, the base plate on edge |
 //! | [`WALK_CLEAR`] | the walked path stands in air, room to room | furniture in the doorway you enter by |
+//!
+//! # And the cargo
+//!
+//! The rooms were the whole sweep for as long as a rig could only be
+//! built. `pieces::build_kind` composed a cargo kind straight into a
+//! live Bevy world, so nothing pure could enumerate a rig's parts and no
+//! rule could be asked about one — which is how the Guild's transit chit
+//! came to cut its card and its stripe to one height and one centre, top
+//! edges on one plane and bottoms on another, along the whole of a stripe
+//! held at arm's length, and be found by an owner's eye instead.
+//!
+//! A kind describes its parts now ([`crate::pieces::parts`]), and two of
+//! the six families reach the thirty-two of them through that
+//! description. [`NO_COPLANAR`] asks whether a rig fights itself — in the
+//! rig's OWN frame, because a berth is a quarter turn and a quarter turn
+//! carries a shared plane onto a shared plane, so a kind is swept once
+//! rather than once per berth. [`BERTH_CLEAR`] asks whether any part
+//! reaches out of `RIG_NEAR..RIG_FAR`, the band a berth's air is measured
+//! over: a rig deeper than that is a berth the room sweep measures too
+//! shallow. The other three are about a station's furniture standing in
+//! cargo's way, and cargo standing in its own berth is what a berth is
+//! for.
 //!
 //! # The docket
 //!
@@ -66,6 +88,7 @@ use space_trucking::sim::cargo::{Kind, Loc, Piece, placement_check};
 use space_trucking::sim::layout;
 use space_trucking::sim::room::{CABIN, RoomId, RoomKind, Rooms, Tile};
 
+use crate::pieces::{Screens, Under};
 use crate::poi::{self, Fitting, Frame, Host, Shape};
 use crate::rig::{EYE_HEIGHT, PITCH_LIMIT, REACH};
 use crate::room::{self, Placed};
@@ -85,6 +108,12 @@ pub const NO_COPLANAR: &str = "coplanar-faces";
 pub const PROP_POINTS: &str = "prop-points";
 /// The walked path must stand in air.
 pub const WALK_CLEAR: &str = "walk-clear";
+
+/// The name a finding about cargo is filed under. A rig is not in any
+/// one room — the same crate stands in every room the game has — so the
+/// thirty-two kinds answer as their own place, the way the twelve
+/// stations and the ship's two rooms answer as theirs.
+pub const RIGS: &str = "rigs";
 
 /// Every rule, for the report's own headings.
 pub const RULES: [&str; 6] = [
@@ -664,6 +693,14 @@ pub struct Faces {
     hi: BVec3,
 }
 
+/// Which world axis a direction lies squarely along, if any. A hair off
+/// is not along it: a plane tilted by a degree is a plane the depth
+/// buffer can tell apart, and calling it axis-aligned is how a detector
+/// invents a fight nobody can see.
+fn square(dir: Vec3) -> BVec3 {
+    dir.abs().cmpgt(Vec3::splat(0.999))
+}
+
 impl Faces {
     /// Six of them: what a box has.
     const ALL: Self = Self {
@@ -675,14 +712,23 @@ impl Faces {
     ///
     /// A cylinder and a tapered drum are capped at both ends of their own
     /// `+y` and round everywhere else; a sphere and a torus are round
-    /// everywhere. `rot` carries the body's own axes onto the world's,
-    /// which is a quarter turn every time the lattice or a chart is
-    /// involved, so a cap lands squarely on one world axis.
+    /// everywhere.
+    ///
+    /// **A flat side is a flat side of the BOX only where the body's own
+    /// axis lands squarely on a world one.** The lattice and the charts
+    /// only ever turn by quarter turns, so for a room every side either
+    /// lands or is not there. A rig's own parts do not: the perfume
+    /// vial's flask stands on its corner and the gas canister's chevrons
+    /// lean, and a leaning box's box has six sides that the box itself
+    /// does not draw. Whichever axis a body IS square on — a chevron
+    /// leaning about `z` keeps its two `z` ends — is a face; the rest is
+    /// wrapper.
     ///
     /// The drum's narrow cap is the one place this reads wide: the top of
-    /// a `Cone` is a disc a third of its box across, and the box is what
-    /// the footprint is measured over. That errs toward reporting, which
-    /// is the direction a detector is allowed to err in.
+    /// a `Cone` is a disc a third of its box across (and a cargo rig's
+    /// cone tapers all the way to a point), and the box is what the
+    /// footprint is measured over. That errs toward reporting, which is
+    /// the direction a detector is allowed to err in.
     fn of(shape: Shape, rot: Quat) -> Self {
         let own = match shape {
             Shape::Slab => Vec3::ONE,
@@ -690,14 +736,18 @@ impl Faces {
             Shape::Dome | Shape::Ring => Vec3::ZERO,
         };
         let m = Mat3::from_quat(rot);
-        let world = m.x_axis.abs() * own.x + m.y_axis.abs() * own.y + m.z_axis.abs() * own.z;
-        let flat = world.cmpgt(Vec3::splat(0.5));
+        let mut flat = BVec3::FALSE;
+        for (axis, mine) in [(m.x_axis, own.x), (m.y_axis, own.y), (m.z_axis, own.z)] {
+            if mine > 0.5 {
+                flat |= square(axis);
+            }
+        }
         Self { lo: flat, hi: flat }
     }
 
     /// The one face a flat paint shows: the way it looks off its chart.
     fn showing(dir: Vec3) -> Self {
-        let axis = dir.abs().cmpgt(Vec3::splat(0.5));
+        let axis = square(dir);
         Self {
             lo: axis & dir.cmplt(Vec3::ZERO),
             hi: axis & dir.cmpgt(Vec3::ZERO),
@@ -934,7 +984,8 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
 
 // -------------------------------------------------------------- the sweep --
 
-/// **The whole gauntlet's pure half**, room by room, rule by rule.
+/// **The whole gauntlet's pure half**: room by room, then kind by kind,
+/// rule by rule.
 #[must_use]
 pub fn sweep() -> Vec<Finding> {
     let mut out = Vec::new();
@@ -946,6 +997,8 @@ pub fn sweep() -> Vec<Finding> {
         out.extend(walk_clear(&stage));
     }
     out.extend(prop_points());
+    out.extend(rig_coplanar());
+    out.extend(rig_fits());
     out.sort();
     out.dedup();
     out
@@ -1236,15 +1289,50 @@ fn berth_reached(stage: &Stage) -> Vec<Finding> {
         .collect()
 }
 
-/// **No two coplanar same-facing surfaces.** The general form of the
-/// detector a previous pass built by hand out of a scene dump: for every
-/// pair of drawn bodies, every pair of faces that share an axis, a
-/// coordinate, and a direction, and whose footprints genuinely overlap.
+/// **Every plane two bodies share and both look out of**, described the
+/// way a fixer needs it — the detector's one arithmetic, spent by the
+/// rooms and by the rigs alike.
 ///
 /// Same-facing is the whole subtlety. Two boxes stacked touch at a plane
 /// too, and that plane carries one face UP and one face DOWN — which the
 /// depth buffer settles correctly every time. It is two faces looking the
 /// same way from the same place that has no answer.
+fn shared_faces(a: &Drawn, b: &Drawn) -> Vec<String> {
+    let mut out = Vec::new();
+    for axis in 0..3 {
+        for (up, (pa, pb)) in [
+            (false, (a.body.lo[axis], b.body.lo[axis])),
+            (true, (a.body.hi[axis], b.body.hi[axis])),
+        ] {
+            if !a.faces.has(axis, up) || !b.faces.has(axis, up) {
+                continue;
+            }
+            if (pa - pb).abs() >= FIGHT_EPS {
+                continue;
+            }
+            let meet = a.body.meet(b.body).span();
+            let flat: Vec<f32> = (0..3).filter(|k| *k != axis).map(|k| meet[k]).collect();
+            if flat.iter().any(|span| *span <= FIGHT_FOOT) {
+                continue;
+            }
+            let facing = if up {
+                ["+x", "+y", "+z"][axis]
+            } else {
+                ["-x", "-y", "-z"][axis]
+            };
+            out.push(format!(
+                "a {facing} face at {pa:.4} over {:.3}x{:.3} m",
+                flat[0], flat[1]
+            ));
+        }
+    }
+    out
+}
+
+/// **No two coplanar same-facing surfaces.** The general form of the
+/// detector a previous pass built by hand out of a scene dump: for every
+/// pair of drawn bodies, every pair of faces that share an axis, a
+/// coordinate, and a direction, and whose footprints genuinely overlap.
 fn coplanar(stage: &Stage) -> Vec<Finding> {
     let scene = scene(stage);
     let mut shared: BTreeMap<String, Vec<String>> = BTreeMap::new();
@@ -1263,32 +1351,9 @@ fn coplanar(stage: &Stage) -> Vec<Finding> {
             {
                 continue;
             }
-            for axis in 0..3 {
-                for (up, (pa, pb)) in [
-                    (false, (a.body.lo[axis], b.body.lo[axis])),
-                    (true, (a.body.hi[axis], b.body.hi[axis])),
-                ] {
-                    if !a.faces.has(axis, up) || !b.faces.has(axis, up) {
-                        continue;
-                    }
-                    if (pa - pb).abs() >= FIGHT_EPS {
-                        continue;
-                    }
-                    let meet = a.body.meet(b.body).span();
-                    let flat: Vec<f32> = (0..3).filter(|k| *k != axis).map(|k| meet[k]).collect();
-                    if flat.iter().any(|span| *span <= FIGHT_FOOT) {
-                        continue;
-                    }
-                    let facing = if up {
-                        ["+x", "+y", "+z"][axis]
-                    } else {
-                        ["-x", "-y", "-z"][axis]
-                    };
-                    shared.entry(pair.clone()).or_default().push(format!(
-                        "a {facing} face at {pa:.4} over {:.3}x{:.3} m",
-                        flat[0], flat[1]
-                    ));
-                }
+            let faces = shared_faces(a, b);
+            if !faces.is_empty() {
+                shared.entry(pair).or_default().extend(faces);
             }
         }
     }
@@ -1325,12 +1390,177 @@ fn prop_points() -> Vec<Finding> {
                 continue;
             }
             out.push(Finding {
-                room: "rigs".to_owned(),
+                room: RIGS.to_owned(),
                 rule: PROP_POINTS,
                 offender: format!("{kind:?} {}", feature.name),
                 detail: format!("points {got} in its own rig; its name says {want}"),
             });
         }
+    }
+    out
+}
+
+// --------------------------------------------------------------- the rigs --
+
+/// **What one cargo kind draws**, in metres, as the sweep measures it.
+///
+/// A rig is composed in its own local frame and berthed by a quarter
+/// turn, and a quarter turn carries an axis-aligned body onto an
+/// axis-aligned body — so a pair of faces that share a plane and a
+/// facing in the rig's own frame share one in the room too, and a pair
+/// that does not, does not. **The kind is therefore swept once**, not
+/// once per berth: what changes with the berth is where the rig stands,
+/// and no rule here is about that. What does not survive the change of
+/// frame is the *lengths*, so the local sim units are carried into
+/// metres through [`crate::pieces::RIG_UNIT`] before anything is
+/// compared to a threshold.
+///
+/// `showing` is which of a covering's two bodies is up. The laid one and
+/// the packed one are never drawn together (`pieces::sync_dressings`
+/// shows exactly one), so a plane they happen to share is not a plane
+/// anybody sees.
+fn rig_scene(kind: Kind, screens: Screens, showing: Under) -> Vec<Drawn> {
+    let piece = Piece {
+        id: 0,
+        kind,
+        variant: 0,
+        gnawed: false,
+        loc: Loc::Hold {
+            room: CABIN,
+            x: 0,
+            y: 0,
+        },
+    };
+    crate::pieces::parts(&piece, screens)
+        .into_iter()
+        .filter(|part| match part.under {
+            Under::Laid | Under::Packed => part.under == showing,
+            Under::Rig | Under::Arm | Under::Pivot(_) => true,
+        })
+        .filter_map(|part| {
+            let body = part.body?;
+            // The sub-frames' own poses, at rest: the sconce's arm hangs
+            // level until a wall column swings it, and the launch
+            // handle's pivot sits in its slot until somebody pulls it.
+            // A THROWN lever is an animation rather than a defect, and
+            // it is measured where it lives.
+            let mut at = part.under.rest() * part.at;
+            at.translation *= crate::pieces::RIG_UNIT;
+            let faces = if body.sheet() {
+                Faces::showing(at.rotation * Vec3::Z)
+            } else {
+                Faces::of(body.shape(), at.rotation)
+            };
+            Some(Drawn {
+                what: part.label(),
+                body: Box3::of(&at, body.half() * crate::pieces::RIG_UNIT),
+                faces,
+                character: true,
+            })
+        })
+        .collect()
+}
+
+/// Which bodies of a kind are ever drawn at once: one scene for most
+/// kinds, and for a covering the two its berth class picks between.
+fn rig_forms(kind: Kind) -> Vec<Under> {
+    if kind.covering() {
+        vec![Under::Laid, Under::Packed]
+    } else {
+        vec![Under::Rig]
+    }
+}
+
+/// **No rig draws two faces on one plane.** [`NO_COPLANAR`] again, one
+/// crate down: the same detector, the same thresholds, asked of a cargo
+/// kind's own parts instead of a room's furniture.
+///
+/// This is the family the Guild's chit belonged to. Its card and its
+/// stripe were cut to the same height and set on the same centre, so the
+/// tops were one plane and the bottoms another, along the whole of a
+/// stripe somebody holds up to their eye — and nothing could ask, because
+/// `build_kind` composed straight into a live world and there was no
+/// description to measure. There is one now.
+fn rig_coplanar() -> Vec<Finding> {
+    let mut out = Vec::new();
+    for kind in Kind::ALL {
+        let mut shared: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        for screens in Screens::BOTH {
+            for showing in rig_forms(kind) {
+                let scene = rig_scene(kind, screens, showing);
+                for (i, a) in scene.iter().enumerate() {
+                    for b in &scene[i + 1..] {
+                        let faces = shared_faces(a, b);
+                        if faces.is_empty() {
+                            continue;
+                        }
+                        shared
+                            .entry(format!("{} / {}", a.what, b.what))
+                            .or_insert(faces);
+                    }
+                }
+            }
+        }
+        out.extend(shared.into_iter().map(|(pair, faces)| Finding {
+            room: RIGS.to_owned(),
+            rule: NO_COPLANAR,
+            offender: format!("{kind:?} {pair}"),
+            detail: format!("share {}", faces.join(" and ")),
+        }));
+    }
+    out
+}
+
+/// **A rig is no deeper than the berth it is measured at.**
+/// [`BERTH_CLEAR`] from the cargo's side.
+///
+/// The room sweep asks whether a station's furniture stands in a cell
+/// cargo may take, and the air it asks about is `pieces::berth_box`: the
+/// footprint across, and `RIG_NEAR..RIG_FAR` along the chart's own
+/// normal. That band is a promise the kind builders compose against, and
+/// a part outside it is two defects at once — a body in air the berth
+/// does not own, and a berth the whole room sweep is measuring too
+/// shallow, so a fitting could stand in the part and nothing would say
+/// so.
+///
+/// **It asks about the depth and not about the footprint**, and that is
+/// measured rather than assumed. Sweeping the footprint too found eight
+/// things, all one idiom: the cabinet's four feet and the couch's four
+/// sink a third of a centimetre below their own bottom edge, which for a
+/// rig that STANDS is the deck it stands on. A sole flush with the deck
+/// is a plane shared with the deck, and a sole above it is furniture
+/// floating; burying it is how a foot meets a floor. What a rig covers
+/// across is its plan, and its plan already has a rule —
+/// `pieces::tests::every_kind_hangs_true_on_every_legal_berth` asks
+/// whether the body a rig draws lands on the four corners its rect owns.
+fn rig_fits() -> Vec<Finding> {
+    let unit = crate::pieces::RIG_UNIT;
+    let (near, far) = (
+        crate::pieces::RIG_NEAR * unit,
+        crate::pieces::RIG_FAR * unit,
+    );
+    let mut out = Vec::new();
+    for kind in Kind::ALL {
+        let mut over: BTreeMap<String, f32> = BTreeMap::new();
+        for screens in Screens::BOTH {
+            for showing in rig_forms(kind) {
+                for drawn in rig_scene(kind, screens, showing) {
+                    let spill = (near - drawn.body.lo.z).max(drawn.body.hi.z - far);
+                    if spill > CLIP_SLACK {
+                        over.insert(drawn.what, spill);
+                    }
+                }
+            }
+        }
+        out.extend(over.into_iter().map(|(what, spill)| Finding {
+            room: RIGS.to_owned(),
+            rule: BERTH_CLEAR,
+            offender: format!("{kind:?} {what}"),
+            detail: format!(
+                "reaches {spill:.4} m out of the {near:.3}..{far:.3} m band a berth \
+                 measures a rig over, so the air that berth spends is wrong"
+            ),
+        }));
     }
     out
 }
@@ -1888,11 +2118,18 @@ mod tests {
     /// berths cargo stays in. The docket is a work order and it shrinks;
     /// a law is a thing that does not, so the sentence is kept said here
     /// after the last of its lines comes off the list.
+    ///
+    /// **A station hangs it**, so it is the rooms this asks about.
+    /// [`BERTH_CLEAR`] is spent on the cargo too — a rig deeper than the
+    /// band a berth is measured over is a berth whose air is wrong — and
+    /// that half is a work order with two lines still on it, not a law
+    /// anybody has closed.
     #[test]
     fn nothing_a_station_hangs_stands_in_a_berth() {
         let found = sweep();
         let standing: Vec<&Finding> = found
             .iter()
+            .filter(|finding| finding.room != RIGS)
             .filter(|finding| matches!(finding.rule, BERTH_CLEAR | BERTH_SEEN | BERTH_REACHED))
             .collect();
         assert!(
@@ -1966,10 +2203,13 @@ mod tests {
         }
     }
 
-    /// **No room draws two faces on one plane.** The docket is a work
-    /// order and it shrinks; a law is a thing that does not. This family
-    /// is empty now, and the sentence it closes is worth keeping said
-    /// after the last line of its own comes off the list.
+    /// **No room and no rig draws two faces on one plane.** The docket is
+    /// a work order and it shrinks; a law is a thing that does not. This
+    /// family is empty now — the rooms' half since the staging law, and
+    /// the rigs' half since thirty-two kinds were swept for the first
+    /// time and fifty-one pairs of them came off — and the sentence it
+    /// closes is worth keeping said after the last line of its own comes
+    /// off the list.
     #[test]
     fn no_room_draws_two_faces_on_one_plane() {
         let found = sweep();
@@ -1989,14 +2229,23 @@ mod tests {
         );
     }
 
-    /// **Only a box has six faces.** A cylinder meets each of the four
-    /// planes round its flank along a single line, a sphere meets all six
-    /// at a point, and a torus at a curve — so a boss cut round a post
-    /// from one centre shares a box with it and shares no face at all,
-    /// and the detector must not report the box as the body.
+    /// **Only a box has six faces, and only a square box has any.** A
+    /// cylinder meets each of the four planes round its flank along a
+    /// single line, a sphere meets all six at a point, and a torus at a
+    /// curve — so a boss cut round a post from one centre shares a box
+    /// with it and shares no face at all, and the detector must not
+    /// report the box as the body.
+    ///
+    /// A LEANING box is the same argument turned the other way. The
+    /// lattice and the charts only ever turn by quarter turns, so a
+    /// room's every side either lands squarely on a world axis or is not
+    /// there; a rig's own parts lean — the perfume vial's flask stands on
+    /// its corner, the gas canister's chevrons are two legs at forty-five
+    /// degrees — and a leaning box's box has six sides the box itself
+    /// does not draw. It keeps only the axis it leans about.
     #[test]
     fn only_a_box_has_six_faces() {
-        use std::f32::consts::FRAC_PI_2;
+        use std::f32::consts::{FRAC_PI_2, FRAC_PI_4};
 
         let sides = |faces: Faces| -> usize {
             (0..3)
@@ -2024,6 +2273,26 @@ mod tests {
                 assert_eq!(got, want, "a {shape:?} draws {got} flat sides, not {want}");
             }
         }
+        // And a body turned off the axes keeps only what it is still
+        // square on: a box leaning about `z` shows its two `z` ends and
+        // nothing else, and a drum tilted off its own axle shows no cap.
+        let lean = Quat::from_rotation_z(FRAC_PI_4);
+        assert_eq!(
+            sides(Faces::of(Shape::Slab, lean)),
+            2,
+            "a box on its corner draws two flat sides, not six"
+        );
+        assert!(
+            Faces::of(Shape::Slab, lean).has(2, true) && !Faces::of(Shape::Slab, lean).has(0, true),
+            "the two it keeps are the ends of the axis it leans about"
+        );
+        for shape in [Shape::Post, Shape::Cone] {
+            assert_eq!(
+                sides(Faces::of(shape, lean)),
+                0,
+                "a tilted {shape:?} presents no cap to any world axis"
+            );
+        }
         // And the rule that follows: one centre, two radii, no fight —
         // where two plates on the same plane are one.
         let body = Box3::spanning(Vec3::splat(-0.5), Vec3::splat(0.5));
@@ -2041,6 +2310,60 @@ mod tests {
             pairs_fight(&round(Shape::Slab), &round(Shape::Slab)),
             "two plates on one plane are still a fight"
         );
+    }
+
+    /// **Every cargo kind is swept, and swept with a body.** The pass
+    /// this closes existed because twelve rooms had never been walked;
+    /// thirty-two kinds had never been measured at all, and a kind
+    /// nobody sweeps is a kind nobody checks. The count is asserted so
+    /// that a thirty-third arrives on the list rather than beside it.
+    #[test]
+    fn the_sweep_reaches_every_cargo_kind() {
+        assert_eq!(
+            Kind::ALL.len(),
+            32,
+            "a kind joined the manifest; it joins the sweep with it"
+        );
+        for kind in Kind::ALL {
+            let seen: usize = rig_forms(kind)
+                .into_iter()
+                .map(|showing| rig_scene(kind, Screens::LIVE, showing).len())
+                .sum();
+            assert!(seen > 0, "{kind:?} is swept with no body at all");
+        }
+    }
+
+    /// **A covering's two bodies are never judged against each other.**
+    /// `pieces::sync_dressings` shows exactly one — laid into the room,
+    /// or rolled and canned on a counter — so a plane the rolled bolt
+    /// happens to share with the laid pile is a plane nobody can see, and
+    /// a detector that reported it would be finding its own footprints.
+    #[test]
+    fn a_coverings_two_bodies_are_never_judged_against_each_other() {
+        for kind in Kind::ALL {
+            let forms = rig_forms(kind);
+            assert_eq!(
+                forms.len(),
+                if kind.covering() { 2 } else { 1 },
+                "{kind:?} is swept in the wrong number of forms"
+            );
+            if !kind.covering() {
+                continue;
+            }
+            let named = |showing| -> Vec<String> {
+                rig_scene(kind, Screens::LIVE, showing)
+                    .into_iter()
+                    .map(|drawn| drawn.what)
+                    .collect()
+            };
+            let laid = named(Under::Laid);
+            let packed = named(Under::Packed);
+            assert!(!laid.is_empty() && !packed.is_empty());
+            assert!(
+                laid.iter().all(|what| !packed.contains(what)),
+                "{kind:?} draws one part in both of its bodies"
+            );
+        }
     }
 
     /// **A flat paint shows one side.** A class's field is a face on a
@@ -2087,26 +2410,12 @@ mod tests {
     }
 
     /// Whether the detector's own rule fires on one pair — the test
-    /// harness's harness, so the rule above can be stated on two boxes
-    /// instead of on a whole room.
+    /// harness's harness, so the rules above can be stated on two boxes
+    /// instead of on a whole room. It asks the detector rather than
+    /// restating it, because a restated rule is a rule with a second
+    /// place to be wrong.
     fn pairs_fight(a: &Drawn, b: &Drawn) -> bool {
-        (0..3).any(|axis| {
-            [
-                (false, (a.body.lo[axis], b.body.lo[axis])),
-                (true, (a.body.hi[axis], b.body.hi[axis])),
-            ]
-            .into_iter()
-            .any(|(up, (pa, pb))| {
-                if !a.faces.has(axis, up) || !b.faces.has(axis, up) {
-                    return false;
-                }
-                if (pa - pb).abs() >= FIGHT_EPS {
-                    return false;
-                }
-                let meet = a.body.meet(b.body).span();
-                (0..3).filter(|k| *k != axis).all(|k| meet[k] > FIGHT_FOOT)
-            })
-        })
+        !shared_faces(a, b).is_empty()
     }
 
     /// **The pixel half is opt-in, and here is how to run it.**

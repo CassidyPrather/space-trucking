@@ -196,19 +196,20 @@ const DRUM_FINS: [Fitting; 4] = [
 /// The frame is the room's own box — `+x` starboard, `+y` up, `+z` aft —
 /// and every number is a fraction of its half-extents.
 const THE_COLD_STORE: [Fitting; 15] = [
-    // The bank: three cores hung off a rail over the counter, lit from
-    // inside. Cold is the produce, and the produce is glowing — over the
-    // one wall anybody standing in the doorway is looking at.
-    core(-0.25),
-    core(0.58),
-    core(0.90),
+    // The bank: three cores hung off a rail down the starboard half of
+    // the room, lit from inside, high enough that a body walks under the
+    // rail on its way to the counter. Cold is the produce, and the
+    // produce is glowing.
+    core(0.10),
+    core(0.48),
+    core(0.86),
     // The rail they hang from, and the chill main down the port wall
     // that charged them.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
-        Vec3::new(0.32, 0.32, 0.62),
-        Vec3::new(0.62, 0.03, 0.03),
+        Vec3::new(0.47, 0.50, 0.38),
+        Vec3::new(0.47, 0.03, 0.03),
     ),
     Fitting::new(
         Shape::Slab,
@@ -226,13 +227,13 @@ const THE_COLD_STORE: [Fitting; 15] = [
     Fitting::new(
         Shape::Ring,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.68, -0.92, 0.50),
+        Vec3::new(0.68, -0.92, 0.28),
         Vec3::new(0.17, 0.08, 0.20),
     ),
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(palette::kind_color(Kind::CometIce), 1.6),
-        Vec3::new(0.68, -0.86, 0.50),
+        Vec3::new(0.68, -0.86, 0.28),
         Vec3::new(0.11, 0.12, 0.13),
     ),
     // Two chill ducts down the ceiling, each with its vent lit pale.
@@ -240,21 +241,22 @@ const THE_COLD_STORE: [Fitting; 15] = [
     duct(0.52),
     vent(-0.52),
     vent(0.52),
-    // The frost line where the aft wall meets the cornice: the coldest
-    // seam in the room, and the only mark on it.
+    // The frost line across the deckhead a cell in off the aft cornice:
+    // the coldest seam in the room, and the only mark on it.
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::accent::URANUS_RING),
-        Vec3::new(0.25, 0.90, 0.955),
+        Vec3::new(0.25, 0.90, 0.660),
         Vec3::new(0.68, 0.035, 0.014),
     ),
-    // And the door seal on the aft wall's own jamb side: a white gasket
-    // strip, because a cold store's door is the expensive part.
+    // And the spare door seal, stood up against the port wall beside the
+    // way in: a white gasket strip, because a cold store's door is the
+    // expensive part and this one keeps a second.
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::accent::URANUS_RING),
-        Vec3::new(-0.26, -0.30, 0.955),
-        Vec3::new(0.025, 0.66, 0.014),
+        Vec3::new(-0.955, -0.30, 0.620),
+        Vec3::new(0.014, 0.66, 0.025),
     ),
 ];
 
@@ -263,7 +265,7 @@ const fn core(x: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::phosphor(palette::kind_color(Kind::CryoCore), 1.5),
-        Vec3::new(x, 0.02, 0.62),
+        Vec3::new(x, 0.20, 0.38),
         Vec3::new(0.05, 0.22, 0.06),
     )
 }
@@ -273,8 +275,8 @@ const fn rime(x: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::accent::URANUS_RING),
-        Vec3::new(x, -0.82, -0.20),
-        Vec3::new(0.03, 0.09, 0.72),
+        Vec3::new(x, -0.82, 0.140),
+        Vec3::new(0.03, 0.09, 0.55),
     )
 }
 
@@ -283,8 +285,8 @@ const fn duct(x: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(x, 0.93, -0.20),
-        Vec3::new(0.13, 0.06, 0.62),
+        Vec3::new(x, 0.93, 0.140),
+        Vec3::new(0.13, 0.06, 0.55),
     )
 }
 
@@ -293,8 +295,8 @@ const fn vent(x: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::accent::URANUS_RING, 1.0),
-        Vec3::new(x, 0.80, -0.20),
-        Vec3::new(0.09, 0.02, 0.50),
+        Vec3::new(x, 0.80, 0.140),
+        Vec3::new(0.09, 0.02, 0.45),
     )
 }
 

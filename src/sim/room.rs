@@ -95,6 +95,17 @@ pub enum Surf {
 pub enum Tile {
     /// Ordinary deck, wall, or ceiling: an ordinary berth.
     Plain,
+    /// A calling room's own ordinary deck, wall, or ceiling. It berths
+    /// exactly as [`Tile::Plain`] does — same arbiter, same grid, same
+    /// carry — and it is the one class **nothing stays on**: a room that
+    /// came alongside leaves, and what you left standing in it does not
+    /// ride out with you (docs/ROOMS.md, "The staging law").
+    ///
+    /// It is a class rather than an absence because two rules need to
+    /// name it: the launch gate, which refuses while one is occupied,
+    /// and the station's own furniture, which stands here and nowhere
+    /// else a berth is.
+    Staging,
     /// A chalked square in the room's own enamel. Cargo berthed here is
     /// *proposed*, not surrendered — it stays the player's until a
     /// resolution says otherwise.
@@ -188,17 +199,14 @@ impl RoomKind {
     /// The room's floor extent in cells, `(width, depth)`.
     ///
     /// The ship's own two are what they have always been. The four that
-    /// come alongside were measured against **the band a room keeps for
-    /// its own furniture** (docs/ROOMS.md, "The dressing law"): a berth's
-    /// air belongs to cargo, floor to the top of the tallest thing that
-    /// may stand on it and ceiling to the bottom of the deepest thing
-    /// that may hang from it, and what is left over is one band eighty-
-    /// two millimetres tall between a room's walls and its ceiling's
-    /// cargo. That height is the ship's storey and no room's to change,
-    /// so the only room a station has is **plan**, and each of these is
-    /// the smallest extent — grown a cell at a time, shorter axis first —
-    /// whose band holds the bulk its hosts' furniture had before the law.
-    /// A hold was already big enough and did not move.
+    /// come alongside grew a cell at a time, shorter axis first, until
+    /// each held the bulk of its hosts' own furniture with deck left
+    /// over — and under the staging law (docs/ROOMS.md) that leftover
+    /// deck is what the growth is for: a station's furniture and the
+    /// crew's staged cargo share the same fabric, so a bigger room is a
+    /// room that is easier to read and has somewhere to put a crate down.
+    /// A derelict's hold is the smallest bulk in the fleet and was
+    /// already big enough, so it did not move.
     // A kind's extent is its own declaration, argued where it stands.
     // Two kinds that happen to measure the same are still two kinds, and
     // merging their arms would hide the next one that moves.
@@ -229,6 +237,23 @@ impl RoomKind {
     #[must_use]
     pub const fn riding(self) -> bool {
         matches!(self, Self::Cabin | Self::Burner)
+    }
+
+    /// What a cell of this kind reads as when no band of the kind's own
+    /// claims it: **its ordinary deck**.
+    ///
+    /// A riding room's is [`Tile::Plain`], the ground every other class
+    /// is read against. A calling room's is [`Tile::Staging`], because a
+    /// room that leaves cannot offer a berth anything stays in. One
+    /// declaration, so the class a room's own goods land on and the class
+    /// the launch gate counts can never come apart.
+    #[must_use]
+    pub const fn ordinary(self) -> Tile {
+        if self.riding() {
+            Tile::Plain
+        } else {
+            Tile::Staging
+        }
     }
 
     /// The ports this kind declares, by slot — `None` where the room has
@@ -600,7 +625,7 @@ impl RoomKind {
             Self::Burner => Tile::Consume,
             Self::Trade | Self::Wreck if aft => Tile::Stock,
             Self::Trade | Self::Parlor if front => Tile::Offer,
-            _ => Tile::Plain,
+            kind => kind.ordinary(),
         };
         // **The entry-path law: an offer area may not sit in the way in.**
         //
@@ -625,7 +650,7 @@ impl RoomKind {
         // to place where it likes, and the tell that they are not yours
         // is that pressing one marks it instead of lifting it.
         Some(if tile == Tile::Offer && self.entry_path(x, y) {
-            Tile::Plain
+            self.ordinary()
         } else {
             tile
         })
@@ -680,7 +705,11 @@ pub enum Refusal {
     Root,
     /// A crew body is in the detaching room, or beyond it.
     Aboard,
-    /// Cargo of the player's rests in the detaching room, or beyond it.
+    /// Cargo of the player's rests in the detaching room, or beyond it —
+    /// and, at the lever, in any room the launch would leave behind. A
+    /// staging cell is the everyday case: set something down on a
+    /// station's deck and this is the law that will not fly until you
+    /// pick it back up.
     Cargo,
     /// The room's business is unfinished: a proposal still on its offer
     /// area.
@@ -1736,6 +1765,64 @@ mod tests {
                         kind.entry_path(x, y),
                         "{kind:?} port {port} punches ({x}, {y}) outside its own entry path"
                     );
+                }
+            }
+        }
+    }
+
+    /// **A room the ship leaves behind has no ordinary deck, only
+    /// staging.**
+    ///
+    /// The staging law's first half, swept over every kind × cell: a
+    /// riding room's unclaimed fabric is [`Tile::Plain`] and a calling
+    /// room's is [`Tile::Staging`], with no kind holding both and no
+    /// cell of a calling room falling through to `Plain` by accident —
+    /// including the cells the entry-path law hands back from a chalked
+    /// band, which is the one place a class is rewritten after the fact.
+    ///
+    /// The clause that matters is the second one. `Plain` in a room that
+    /// parts would be a berth whose cargo the launch gate refuses on
+    /// while the paint and the gauntlet both read it as the cabin's own
+    /// deck — which is exactly the confusion this class ends.
+    #[test]
+    fn a_room_that_leaves_has_no_ordinary_deck() {
+        for kind in ROOM_KINDS {
+            let (cols, rows) = kind.grid();
+            let (mut plain, mut staging) = (0_usize, 0_usize);
+            for y in 0..rows {
+                for x in 0..cols {
+                    match kind.tile_of(x, y) {
+                        Some(Tile::Plain) => plain += 1,
+                        Some(Tile::Staging) => staging += 1,
+                        _ => {}
+                    }
+                }
+            }
+            assert_eq!(
+                kind.ordinary(),
+                if kind.riding() {
+                    Tile::Plain
+                } else {
+                    Tile::Staging
+                },
+                "{kind:?} disagrees with its own ordinary deck"
+            );
+            if kind.riding() {
+                assert_eq!(staging, 0, "{kind:?} rides, and stages {staging} cell(s)");
+            } else {
+                assert_eq!(plain, 0, "{kind:?} leaves, and keeps {plain} plain cell(s)");
+                assert!(staging > 0, "{kind:?} has nowhere to stage anything");
+            }
+            // And the entry-path law hands its cells back to the room's
+            // own class, never to some other room's.
+            for y in 0..rows {
+                for x in 0..cols {
+                    if kind.entry_path(x, y) && kind.tile_of(x, y) == Some(Tile::Plain) {
+                        assert!(
+                            kind.riding(),
+                            "{kind:?} hands ({x}, {y}) back as plain deck"
+                        );
+                    }
                 }
             }
         }

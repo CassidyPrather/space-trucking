@@ -224,23 +224,25 @@ const fn ring(x: f32, y: f32, z: f32, r: f32) -> Fitting {
 const NOT_A_ROOM: [Fitting; 15] = [
     // ---- three pillars, starboard ----
     // Evenly spaced, identical, floor to deckhead, each with a collar at
-    // its head. They hold nothing up: the ceiling is the lattice's.
-    pillar(-0.52),
-    pillar(0.06),
-    pillar(0.64),
-    collar(0.86, -0.52),
-    collar(0.86, 0.06),
-    collar(0.86, 0.64),
+    // its head. They hold nothing up: the ceiling is the lattice's. They
+    // stand down the middle of the flank, clear of the goods aft and the
+    // chalk forward, because the room lends its deck and keeps its trade.
+    pillar(-0.28),
+    pillar(0.0),
+    pillar(0.28),
+    collar(0.86, -0.28),
+    collar(0.86, 0.0),
+    collar(0.86, 0.28),
     // ---- and the fourth ----
     // A collar at the same height, on the port side, with nothing under
     // it and nothing through it. Three crates went in and four
     // deliveries came out; this is the fourth, and it is the shape of an
     // absence with a rim round it.
-    collar(-0.86, 0.06),
+    collar(-0.86, 0.0),
     // ---- the hum ----
-    // Three rings stacked over the offer bay, at the pitch three crates
-    // sound at when they are in a hold together. They hang on nothing
-    // either.
+    // Three rings stacked over the middle of the deck, at the pitch three
+    // crates sound at when they are in a hold together. They hang on
+    // nothing either.
     hum(0.42, 0.60),
     hum(0.58, 0.42),
     hum(0.74, 0.26),
@@ -248,14 +250,14 @@ const NOT_A_ROOM: [Fitting; 15] = [
     // A lit seam where the deck meets each wall. It is the room's whole
     // sense of scale, and the reason a black box reads as an interior at
     // all.
-    deck(-0.965, -0.20, 0.025, 0.74),
-    deck(0.965, 0.01, 0.025, 0.95),
-    front_deck(0.0, -0.965),
+    deck(-0.965, 0.17, 0.025, 0.53),
+    deck(0.965, 0.25, 0.025, 0.45),
+    front_deck(0.0, -0.400),
     // ---- and the fourth line ----
     // The same seam again, out in the middle of the floor, where there is
     // no wall for it to be the foot of. Three of these say "this is where
     // the room ends"; the fourth says it somewhere the room does not.
-    deck(-0.10, -0.10, 0.025, 0.62),
+    deck(-0.10, 0.10, 0.025, 0.40),
     // ---- the panel ----
     // A slab of the room's own lining standing free, a good half-metre
     // off the starboard wall, parallel to it, holding nothing and held by
@@ -264,8 +266,8 @@ const NOT_A_ROOM: [Fitting; 15] = [
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::kind_color(Kind::VeryMysteriousCrate)),
-        Vec3::new(0.42, -0.12, -0.10),
-        Vec3::new(0.020, 0.60, 0.42),
+        Vec3::new(0.42, -0.12, 0.140),
+        Vec3::new(0.020, 0.60, 0.40),
     ),
 ];
 
@@ -294,7 +296,7 @@ const fn hum(y: f32, glow: f32) -> Fitting {
     Fitting::new(
         Shape::Ring,
         Coat::phosphor(palette::POI_WANDERER, glow),
-        Vec3::new(-0.16, y, -0.62),
+        Vec3::new(-0.16, y, -0.20),
         Vec3::new(0.20, 0.045, 0.20),
     )
 }
@@ -309,7 +311,7 @@ const fn deck(x: f32, z: f32, hx: f32, hz: f32) -> Fitting {
     )
 }
 
-/// The seam across the front of the deck.
+/// The seam across the deck where the chalk begins.
 const fn front_deck(x: f32, z: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,

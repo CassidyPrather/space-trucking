@@ -204,19 +204,22 @@ const LAMP_HOOK: [Fitting; 2] = [
 const CUT_FACE: [Fitting; 19] = [
     // ---- the quarried face, to starboard ----
     // Ice cut back in steps, the way a face is actually worked: big
-    // blocks low, small ones high, and the crust left on above them.
-    block(0.86, -0.62, -0.42, 0.26, 0.34),
-    block(0.88, -0.63, 0.16, 0.19, 0.30),
-    block(0.90, -0.06, -0.30, 0.18, 0.24),
-    block(0.90, 0.02, 0.30, 0.14, 0.20),
-    block(0.90, 0.44, -0.10, 0.12, 0.26),
+    // blocks low, small ones high, and the crust left on above them. The
+    // whole cut is worked in the middle of the flank and not out to its
+    // ends, because a market's goods stand along its aft wall and a
+    // proposal is laid against its front one.
+    block(0.86, -0.62, -0.244, 0.26, 0.197),
+    block(0.88, -0.63, 0.093, 0.19, 0.174),
+    block(0.90, -0.06, -0.174, 0.18, 0.139),
+    block(0.90, 0.02, 0.174, 0.14, 0.116),
+    block(0.90, 0.44, -0.058, 0.12, 0.151),
     // The crust over the cut: what the whole rock looks like from
     // outside, seen here in section, one course of black over the ice.
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::SOOT),
         Vec3::new(0.95, 0.82, 0.0),
-        Vec3::new(0.05, 0.16, 0.86),
+        Vec3::new(0.05, 0.16, 0.42),
     ),
     // ---- something else in the ice ----
     // A block with a dark lump frozen in the middle of it. No glow, no
@@ -227,13 +230,13 @@ const CUT_FACE: [Fitting; 19] = [
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::POI_COMET),
-        Vec3::new(0.80, -0.20, 0.62),
+        Vec3::new(0.80, -0.20, 0.22),
         Vec3::new(0.20, 0.24, 0.22),
     ),
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::SHADOW),
-        Vec3::new(0.74, -0.20, 0.62),
+        Vec3::new(0.74, -0.20, 0.22),
         Vec3::new(0.10, 0.11, 0.10),
     ),
     // ---- the crust overhead ----
@@ -242,13 +245,13 @@ const CUT_FACE: [Fitting; 19] = [
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::SOOT),
-        Vec3::new(-0.44, 0.88, -0.30),
+        Vec3::new(-0.44, 0.88, -0.08),
         Vec3::new(0.34, 0.11, 0.34),
     ),
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::SOOT),
-        Vec3::new(0.24, 0.90, 0.44),
+        Vec3::new(0.24, 0.90, 0.42),
         Vec3::new(0.28, 0.09, 0.28),
     ),
     // ---- what the last crew left ----
@@ -289,7 +292,7 @@ const CUT_FACE: [Fitting; 19] = [
     shard(0.42, -0.923, 0.28, 0.11),
     shard(0.10, -0.944, -0.10, 0.08),
     shard(-0.30, -0.951, 0.34, 0.07),
-    shard(0.62, -0.937, -0.36, 0.09),
+    shard(0.62, -0.937, -0.30, 0.09),
 ];
 
 /// One block of the cut face, standing off the starboard wall.

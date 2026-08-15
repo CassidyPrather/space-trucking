@@ -206,11 +206,12 @@ const LAMP_CAGE: [Fitting; 5] = [
 /// and every number below is a fraction of its half-extents, which is why
 /// none of this had to know how big a trade room is.
 const BONDED_STORE: [Fitting; 14] = [
-    // The register bars: brass uprights standing a hand off the aft wall,
-    // in front of the goods. You can see the Guild's stock; you cannot
-    // reach it until the press says so. They stand clear of the doorway
-    // and clear of the press's own column, because a bar across either
-    // would be a station taking something the sim owns.
+    // The register bars: brass uprights standing a cell clear of the
+    // shopfront, in front of the goods. You can see the Guild's stock;
+    // you cannot reach it until the press says so. They stand off the
+    // `Stock` band entirely, because the goods' own air is the goods',
+    // and clear of the doorway and of the press's own column, because a
+    // bar across either would be a station taking something the sim owns.
     bar(-0.28),
     bar(-0.05),
     bar(0.45),
@@ -220,7 +221,7 @@ const BONDED_STORE: [Fitting; 14] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.32, 0.40, 0.955),
+        Vec3::new(0.32, 0.40, 0.690),
         Vec3::new(0.62, 0.022, 0.014),
     ),
     // The hangar's light, over the aft cornice. Whatever is on the other
@@ -228,7 +229,7 @@ const BONDED_STORE: [Fitting; 14] = [
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::EERIE, 1.6),
-        Vec3::new(0.0, 0.94, 0.90),
+        Vec3::new(0.0, 0.94, 0.660),
         Vec3::new(0.92, 0.030, 0.040),
     ),
     // The seizure chute, in the starboard wall: a drum, a brass collar,
@@ -257,13 +258,13 @@ const BONDED_STORE: [Fitting; 14] = [
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(palette::EERIE_BRIGHT, 3.0),
-        Vec3::new(-0.67, 0.52, 0.90),
+        Vec3::new(-0.67, 0.52, 0.650),
         Vec3::new(0.07, 0.07, 0.05),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(-0.67, 0.60, 0.90),
+        Vec3::new(-0.67, 0.60, 0.640),
         Vec3::new(0.11, 0.015, 0.06),
     ),
     // And the plaque on the port flank: the Guild's own enamel, framed in
@@ -288,7 +289,7 @@ const fn bar(x: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::metal(Worn::Brass),
-        Vec3::new(x, -0.34, 0.955),
+        Vec3::new(x, -0.34, 0.690),
         Vec3::new(0.014, 0.66, 0.014),
     )
 }

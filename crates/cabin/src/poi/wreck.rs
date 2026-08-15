@@ -220,7 +220,9 @@ const BROKEN_HANGER: [Fitting; 3] = [
 /// had to learn that a wreck is five cells by three.
 const THE_HOLD: [Fitting; 23] = [
     // The yard's egress marking: a radium line round the edge of the
-    // deck and one stripe up the jamb, painted when the ship was built
+    // deck and one stripe up the port wall where the run to the door
+    // begins, both stopping short of the salvage's own band, painted when
+    // the ship was built
     // so a crew could find the way out with the power off. It is doing
     // its job. There is nobody left to do it for, and in a hold with no
     // lamp in it, it is most of what the room has left to say about its
@@ -228,8 +230,8 @@ const THE_HOLD: [Fitting; 23] = [
     Fitting::new(
         Shape::Slab,
         RADIUM,
-        Vec3::new(0.930, -0.965, -0.10),
-        Vec3::new(0.035, 0.018, 0.85),
+        Vec3::new(0.930, -0.965, -0.30),
+        Vec3::new(0.035, 0.018, 0.63),
     ),
     Fitting::new(
         Shape::Slab,
@@ -247,15 +249,15 @@ const THE_HOLD: [Fitting; 23] = [
     Fitting::new(
         Shape::Slab,
         RADIUM,
-        Vec3::new(-0.140, -0.30, 0.950),
-        Vec3::new(0.035, 0.66, 0.030),
+        Vec3::new(-0.955, -0.30, 0.280),
+        Vec3::new(0.030, 0.66, 0.035),
     ),
     // Overhead frames, unevenly spaced, with the plating gone off them.
     // The gap between the second and third is where a plate used to be.
     rib(-0.78),
     rib(-0.44),
     rib(0.14),
-    rib(0.62),
+    rib(0.30),
     // The deck, torn open along two edges: the plate is simply not
     // there, and in a room with no light a hole needs no body — only a
     // lit edge to be a hole against.
@@ -276,11 +278,11 @@ const THE_HOLD: [Fitting; 23] = [
     Fitting::new(
         Shape::Slab,
         RADIUM,
-        Vec3::new(0.945, -0.06, -0.20),
-        Vec3::new(0.022, 0.028, 0.70),
+        Vec3::new(0.945, -0.06, -0.30),
+        Vec3::new(0.022, 0.028, 0.60),
     ),
     stanchion(0.945, -0.86),
-    stanchion(0.945, 0.46),
+    stanchion(0.945, 0.24),
     // The port rail, broken: a short piece, and a stub of the rest of it
     // further aft with nothing between them.
     Fitting::new(

@@ -30,11 +30,11 @@ use super::{KIND_COUNT, KNOWN_ALL, MAX_CREW, Sim, barter};
 
 /// Magic-plus-version header of every save this build writes.
 ///
-/// `STV16` is the dressing law (docs/ROOMS.md): a station's furniture
-/// stands in the band a room keeps over the crew's heads, and three of
-/// the four calling rooms grew to make that band worth having — a market
-/// to 8×7, a parlor to 5×4, a pump bay to 4×3, with the pump's counter
-/// moving into its own starboard corner. Nothing about the GRAMMAR moved
+/// `STV16` is the calling rooms' growth (docs/ROOMS.md): three of the
+/// four grew so a station's own furniture and the crew's staged cargo
+/// would both fit on one deck — a market to 8×7, a parlor to 5×4, a pump
+/// bay to 4×3, with the pump's counter moving into its own starboard
+/// corner. Nothing about the GRAMMAR moved
 /// — a berth is still a room and two cells — but the cell those two
 /// numbers name is on a wider net now, so the starboard and ceiling
 /// charts start further along and the front wall starts further down.
@@ -1232,8 +1232,8 @@ fn walk_cargo_out_from_under_the_fixtures(rooms: &Rooms, pieces: &mut [Piece]) {
 /// it.
 ///
 /// The market, the parlor and the pump bay each took another cell or two
-/// so that the band a station dresses in would be worth dressing
-/// (docs/ROOMS.md, "The dressing law"). A room net is a cross of six
+/// so a station's furniture and the crew's staged cargo would both fit
+/// on one deck (docs/ROOMS.md). A room net is a cross of six
 /// charts laid flat, so a wider floor pushes the starboard wall and the
 /// ceiling along it and a deeper one pushes the front wall down — which
 /// means a berth written against the old extent names a cell on a
@@ -1994,7 +1994,7 @@ mod tests {
         let (_, depth) = RoomKind::Trade.floor();
         let (nx, ny) = (COURSES, COURSES + depth);
         assert!(RoomKind::Trade.entry_path(nx, ny), "that is the way in");
-        assert_eq!(RoomKind::Trade.tile_of(nx, ny), Some(Tile::Plain));
+        assert_eq!(RoomKind::Trade.tile_of(nx, ny), Some(Tile::Staging));
         let lamp = Kind::WallLamp.index();
         let forged = sim.save_string().replacen(MAGIC, "STV13", 1).replacen(
             "next_piece",
@@ -2082,7 +2082,7 @@ mod tests {
         );
     }
 
-    /// The dressing law's migration: three of the calling rooms grew, so
+    /// The growth's migration: three of the calling rooms grew, so
     /// a berth in one names a cell of a narrower net. The translation is
     /// **chart-preserving** — a lamp left on the starboard wall comes
     /// back on the starboard wall and one left on the front wall comes

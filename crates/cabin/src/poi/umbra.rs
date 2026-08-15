@@ -251,8 +251,9 @@ const TIN_LID: [Fitting; 3] = [
 /// own stock, so this is a rail with gaps — you see the market's goods
 /// between the market's tins, which is exactly the relationship.
 const NIGHT_SHOP: [Fitting; 30] = [
-    // ---- the tin rail, over the goods ----
-    // Five blackout tins strung up like lanterns, every one of them shut,
+    // ---- the tin rail, a cell in front of the goods ----
+    // Five blackout tins strung up like lanterns over the aisle, high
+    // enough that a crew member walks under them, every one of them shut,
     // every one of them leaking a hairline at the rim. THIS is the
     // market's light: everything else in the room is seen by what its
     // goods let out, and what they let out is the glow it buys at zero
@@ -260,7 +261,7 @@ const NIGHT_SHOP: [Fitting; 30] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::PlateShade),
-        Vec3::new(0.36, 0.360, 0.90),
+        Vec3::new(0.36, 0.765, 0.640),
         Vec3::new(0.60, 0.014, 0.012),
     ),
     tin(-0.16),
@@ -323,28 +324,29 @@ const NIGHT_SHOP: [Fitting; 30] = [
     // Three pendants that came off ships, hung up where a shopkeeper
     // would hang stock. Two are dead glass. The third still has a little
     // light in it, and the market has not noticed yet.
-    lamp(-0.55, 0.72, -0.55),
-    glass(-0.55, 0.72, -0.55),
-    stem(-0.55, -0.55),
-    lamp(0.30, 0.80, -0.70),
+    lamp(-0.55, 0.72, -0.30),
+    glass(-0.55, 0.72, -0.30),
+    stem(-0.55, -0.30),
+    lamp(0.30, 0.80, -0.30),
     Fitting::new(
         Shape::Post,
         Coat::phosphor(palette::kind_color(Kind::LuminousPaint), 0.9),
-        Vec3::new(0.30, 0.670, -0.70),
+        Vec3::new(0.30, 0.670, -0.30),
         Vec3::new(0.070, 0.008, 0.070),
     ),
-    stem(0.30, -0.70),
+    stem(0.30, -0.30),
     lamp(0.62, 0.66, 0.30),
     glass(0.62, 0.66, 0.30),
     stem(0.62, 0.30),
     // ---- the one line on the floor ----
-    // Luminous paint along the foot of the goods wall, struck starboard
-    // of the doorway and stopping well short of it. The market has more
-    // of this than it can sell and no reason at all to be tidy with it.
+    // Luminous paint struck across the deck under the tin rail, starboard
+    // of the doorway and stopping well short of it — off the goods' own
+    // band, like everything else the market owns. The market has more of
+    // this than it can sell and no reason at all to be tidy with it.
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::kind_color(Kind::LuminousPaint), 0.5),
-        Vec3::new(0.33, -0.965, 0.93),
+        Vec3::new(0.33, -0.965, 0.640),
         Vec3::new(0.62, 0.008, 0.020),
     ),
 ];
@@ -354,7 +356,7 @@ const fn tin(x: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::metal(Worn::Socket),
-        Vec3::new(x, 0.195, 0.90),
+        Vec3::new(x, 0.600, 0.640),
         Vec3::new(0.052, 0.100, 0.062),
     )
 }
@@ -364,7 +366,7 @@ const fn seam(x: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::phosphor(palette::kind_color(Kind::LuminousPaint), 1.8),
-        Vec3::new(x, 0.045, 0.90),
+        Vec3::new(x, 0.450, 0.640),
         Vec3::new(0.058, 0.008, 0.070),
     )
 }

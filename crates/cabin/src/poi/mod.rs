@@ -51,43 +51,46 @@
 //! here that names a cell, a class, a slot, or a pose, and the builders
 //! never consult one. That is the structural half.
 //!
-//! ## The dressing law, and the frame that is it
+//! ## Where a station's furniture may stand
 //!
-//! > **A station dresses the band a room keeps over the crew's heads. A
-//! > berth's air is cargo's, and furniture stands in what is left.**
+//! > **A room that leaves owns no volume of its own, so it lends its
+//! > deck. A station's furniture stands on that deck, and so may a
+//! > crate.**
 //!
-//! [`Character::decor`] is measured off `room::dressing_box` — the band
-//! between a room's own walls and its own ceiling's cargo — and not off
-//! the room. That is the law made structural rather than asserted, and
-//! it is the same trick as everything else here: `at` and `half` are
-//! fractions of the frame, so `|at| + |half| <= 1` stops meaning "inside
-//! the room" and starts meaning **"clear of every berth in it"**. A
-//! station cannot stand a post in a crate's air, in the same way it
-//! cannot name a cell.
+//! [`Character::decor`] is measured off the room's own box, floor to
+//! deckhead, and `|at| + |half| <= 1` means what it has always meant:
+//! *inside this room*. The room a station is given is stated in **cells**
+//! — `Tile::Staging`, the class a calling room's unclaimed fabric reads
+//! as — and the cargo law rather than the geometry is what keeps it
+//! honest: nothing stays on a staging cell, and the launch will not leave
+//! while one is occupied (docs/ROOMS.md, "The staging law").
 //!
-//! It cost the fleet the same thing it cost every station: the band is
-//! the ship's storey less the floor's cargo, the ceiling's cargo, and a
-//! standing head, which is 82 mm — so a station's furniture is a plan
-//! and no longer an elevation, and what was a metre-tall cabinet is a
-//! metre-wide one. Nothing moved sideways: the fractions are the ones
-//! their agents wrote, so a plaque on the port flank is still on the
-//! port flank.
+//! It was briefly measured off a band left over above every berth's air.
+//! That was technically clear of all cargo and eighty-two millimetres
+//! tall, which is the ship's storey less the floor's cargo, the ceiling's
+//! cargo and a standing head — every station was flattened by ×0.036 and
+//! the pump bay read as an empty box. The owner's ruling retired it: if a
+//! crate and a bollard clip, that is a clipping incident and not a
+//! defect.
 //!
 //! The asserted half, in [`tests`]:
 //!
-//! - every interior [`Fitting`] lies **wholly inside its own room's
-//!   dressing box**, so a character can never reach into cargo's air or
-//!   into the room next door;
+//! - every interior [`Fitting`] lies **wholly inside its own room**, so a
+//!   character can never reach into the room next door;
 //! - every exterior fitting stands **wholly outside** every room's
 //!   interior, so dressing hangs in the void and never inside somebody;
 //! - no fitting stands in a **doorway**, because a threshold belongs to
-//!   two rooms and a character owns neither of them — which the dressing
-//!   band settles by arithmetic, standing a whole course over a
-//!   doorway's own head;
+//!   two rooms and a character owns neither of them;
 //! - [`Light::burn`] is a fraction of the caller budget and the pendant's
 //!   *reach* is not a knob at all, so **a station lights its own floor and
 //!   never a riding room's** — the containment rule survives every
 //!   character that will ever be written.
+//!
+//! What is NOT a station's to take is a berth cargo *stays* in and the
+//! trade surface — the room's own goods, a proposal's chalk, a doorway,
+//! the counter's own cell — and no berth may be fenced off from every
+//! place a body can stand, staging included. Both are swept
+//! (`cabin::gauntlet`), because neither is a thing a frame can prevent.
 //!
 //! Four art laws ride along, and they are laws rather than taste:
 //!
@@ -476,19 +479,14 @@ impl Coat {
 /// so `at: ZERO, half: ONE` fills the box and `|at| + |half| <= 1` on every
 /// axis is "inside it". That is not a convention, it is the containment
 /// law: a fitting is checked against exactly that arithmetic, so a
-/// character physically cannot reach into the room next door — or, since
-/// the host box for furniture is the room's **dressing box**, into the
-/// air a berth spends.
+/// character physically cannot reach into the room next door.
 ///
 /// The frames, all right-handed and all derived:
 ///
 /// - **inside a room**: `+x` to starboard, `+y` up, `+z` **aft** — the
 ///   wall a calling room's one door is on, where its goods stand and its
-///   handshake is set. The box is the room's dressing band
-///   (`room::dressing_box`), which is the room's own plan and the height
-///   between its walls and its ceiling's cargo — so `y: -1` is the top
-///   of the last wall course and `y: 1` is as low as a ceiling rig
-///   hangs, not the deck and the deckhead.
+///   handshake is set. The box is the room's own, floor to deckhead:
+///   `y: -1` is the deck and `y: 1` is the deckhead.
 /// - **on the shell, outside**: the same axes, one wall thickness out.
 /// - **on a handshake's cell**: `+x` along the chart's own u axis, `+y` up
 ///   the wall, `+z` out of the wall into the room — and on that one frame
@@ -811,7 +809,7 @@ pub const fn outfit(kind: RoomKind, host: Option<Host>) -> Outfit {
 #[cfg(test)]
 mod tests {
     use space_trucking::sim::map::POI_COUNT;
-    use space_trucking::sim::room::{APERTURE, CABIN, Port, ROOM_KINDS, Rooms};
+    use space_trucking::sim::room::{APERTURE, CABIN, COURSES, Port, ROOM_KINDS, Rooms};
 
     use super::*;
 
@@ -902,10 +900,11 @@ mod tests {
     /// a pose. What is left to assert is reach, and it is asserted in
     /// fractions of the host box, which is the only frame a fitting has:
     ///
-    /// - inside, a fitting stays wholly within the band its room keeps
-    ///   for dressing (`room::dressing_box`), so no character reaches
-    ///   through a partition **or into a berth's air** — the dressing
-    ///   law, and the reason the same arithmetic now says both;
+    /// - inside, a fitting stays wholly within its own room, so no
+    ///   character reaches through a partition. Not within some band
+    ///   above cargo's air: a station's furniture stands on the deck it
+    ///   belongs on, and the room it is given is stated in cells
+    ///   (`Tile::Staging`) rather than in millimetres of headroom;
     /// - outside, dressing stands wholly OUT of the interior — a mast is
     ///   a mast and never a beam through somebody's ceiling — and no
     ///   further out than [`DRESS_REACH`], because dressing is furniture
@@ -946,40 +945,53 @@ mod tests {
         }
     }
 
-    /// **A station's dressing band stands over the head of its own
-    /// doorway.**
+    /// **Nothing a character owns stands in its own doorway.**
     ///
-    /// Nothing a character owns may stand in a doorway, because a
-    /// threshold belongs to two rooms and a character owns neither. That
-    /// used to be checked fitting by fitting; it is arithmetic now, and
-    /// the arithmetic is worth saying out loud because it is the reason
-    /// the check went away. A door is two courses tall
-    /// ([`APERTURE`]) and the band a station dresses in begins at the
-    /// top of the third ([`crate::room::WALL_H`]), so a doorway's head
-    /// and a station's lowest possible fitting are a whole course apart
-    /// — for every kind that calls, at every port it declares.
+    /// A threshold belongs to two rooms at once and a character owns
+    /// neither of them, so a station may not hang so much as a sign in
+    /// the opening its own room declares. The doorway is read off the
+    /// port declaration and never assumed, exactly as the port law
+    /// requires of everything that reads one.
+    ///
+    /// This was briefly arithmetic instead of a check — a station dressed
+    /// a band that started a whole course over any doorway's head, so no
+    /// fitting could reach one. That band is gone with the soffit it was,
+    /// and the check comes back, because the reason it existed never did.
     #[test]
-    fn a_stations_dressing_band_stands_over_the_head_of_its_own_doorway() {
+    fn nothing_a_character_owns_stands_in_its_own_doorway() {
         for host in HOSTS {
             let kind = serves(host);
-            let mut rooms = Rooms::new();
-            let id = rooms
-                .spawn(kind, CABIN)
-                .unwrap_or_else(|why| panic!("a {kind:?} comes alongside: {why:?}"));
-            let room = rooms.get(id).expect("the room it just attached");
-            let placed = crate::room::placed(id, room);
-            let (band, _) = crate::room::dressing_box(&placed);
-            for (_, port) in kind.declared() {
-                let Port::Door { .. } = port else { continue };
-                let head = f32::from(APERTURE).mul_add(crate::rig::BAY_CELL, placed.lo.y);
+            let (dlo, dhi) = doorway(kind);
+            for (i, fitting) in character(host).decor.iter().enumerate() {
+                let (lo, hi) = fitting.span();
+                let clash =
+                    (0..3).all(|axis| hi[axis].min(dhi[axis]) - lo[axis].max(dlo[axis]) > 1e-4);
                 assert!(
-                    band.y >= head,
-                    "{host:?} dresses a {kind:?} from {:.3} m, and its doorway's \
-                     head is at {head:.3} m",
-                    band.y - placed.lo.y
+                    !clash,
+                    "{host:?} decor[{i}] stands in the {kind:?}'s doorway: {lo:?}..{hi:?}"
                 );
             }
         }
+    }
+
+    /// A calling room's one doorway, as a box in host fractions. Derived
+    /// from the sim's port declaration — never assumed, exactly as the
+    /// port law requires of everything that reads one.
+    fn doorway(kind: RoomKind) -> (Vec3, Vec3) {
+        let (w, h) = kind.floor();
+        let Some(Port::Door { wall, offset }) = kind.port(0) else {
+            // No aft door: nothing to stand in.
+            return (Vec3::splat(2.0), Vec3::splat(3.0));
+        };
+        assert_eq!(wall, 0, "a caller's door is its aft one");
+        let (w, h) = (f32::from(w), f32::from(h));
+        let x0 = f32::from(offset).mul_add(2.0 / w, -1.0);
+        let x1 = f32::from(offset + APERTURE).mul_add(2.0 / w, -1.0);
+        // The aft face is +z, and the opening is two courses of three
+        // tall, standing on the deck.
+        let z0 = (h - 1.0).mul_add(2.0 / h, -1.0);
+        let y1 = f32::from(APERTURE).mul_add(2.0 / f32::from(COURSES), -1.0);
+        (Vec3::new(x0, -1.0, z0), Vec3::new(x1, y1, 1.0))
     }
 
     /// **A room's own fixtures stay in the boxes they are measured off.**

@@ -232,23 +232,23 @@ const FIELD_SHOP: [Fitting; 20] = [
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::enamel_color(0)),
-        Vec3::new(0.86, -0.30, 0.30),
-        Vec3::new(0.12, 0.055, 0.30),
+        Vec3::new(0.86, -0.30, 0.48),
+        Vec3::new(0.12, 0.055, 0.22),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.86, -0.24, -0.19),
-        Vec3::new(0.12, 0.055, 0.19),
+        Vec3::new(0.86, -0.24, 0.12),
+        Vec3::new(0.12, 0.055, 0.14),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::enamel_color(3)),
-        Vec3::new(0.86, -0.34, -0.66),
-        Vec3::new(0.12, 0.055, 0.28),
+        Vec3::new(0.86, -0.34, -0.22),
+        Vec3::new(0.12, 0.055, 0.20),
     ),
-    leg(0.45, 0.32),
-    leg(-0.80, 0.30),
+    leg(0.48, 0.32),
+    leg(-0.30, 0.30),
     // The patch on the port wall: newer plate over a hole nobody talks
     // about, and four rivets that went in by hand.
     Fitting::new(
@@ -266,41 +266,41 @@ const FIELD_SHOP: [Fitting; 20] = [
     Fitting::new(
         Shape::Post,
         Coat::enamel(palette::enamel_color(1)),
-        Vec3::new(-0.70, -0.88, -0.80),
+        Vec3::new(-0.70, -0.88, -0.36),
         Vec3::new(0.050, 0.100, 0.050),
     ),
     Fitting::new(
         Shape::Post,
         Coat::enamel(palette::enamel_color(2)),
-        Vec3::new(-0.53, -0.90, -0.70),
+        Vec3::new(-0.53, -0.90, -0.30),
         Vec3::new(0.045, 0.085, 0.045),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::enamel_color(1)),
-        Vec3::new(-0.965, -0.48, -0.80),
+        Vec3::new(-0.965, -0.48, -0.36),
         Vec3::new(0.020, 0.42, 0.045),
     ),
     // The offcut bin: the republic's whole export, standing loose in a
-    // box by the goods where anybody could take one, because anybody
-    // could cut another.
+    // box on the deck a step off the goods' own band, where anybody could
+    // take one, because anybody could cut another.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.46, -0.82, 0.82),
+        Vec3::new(0.46, -0.82, 0.30),
         Vec3::new(0.19, 0.15, 0.14),
     ),
-    offcut(0.38, -0.56, 0.82, 0.16),
-    offcut(0.47, -0.50, 0.86, 0.20),
-    offcut(0.55, -0.60, 0.78, 0.13),
+    offcut(0.38, -0.56, 0.30, 0.16),
+    offcut(0.47, -0.50, 0.34, 0.20),
+    offcut(0.55, -0.60, 0.26, 0.13),
     // The conduit along the ceiling, clamped up in the mustard tin.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(-0.10, 0.90, -0.20),
-        Vec3::new(0.055, 0.025, 0.70),
+        Vec3::new(-0.10, 0.90, 0.140),
+        Vec3::new(0.055, 0.025, 0.55),
     ),
-    pipe_clamp(-0.70),
+    pipe_clamp(-0.30),
     pipe_clamp(0.22),
 ];
 

@@ -237,9 +237,9 @@ const THE_DIVE_LOCK: [Fitting; 17] = [
         Vec3::new(-0.88, -0.20, 0.34),
         Vec3::new(0.03, 0.06, 0.036),
     ),
-    // The depth lamps over the aft cornice: a string of three off a bell
-    // that is not coming back, still burning, because the bulbs were the
-    // expensive part.
+    // The depth lamps: a string of three off a bell that is not coming
+    // back, still burning, because the bulbs were the expensive part.
+    // They hang a cell in from the aft cornice, off the goods' band.
     depth_lamp(-0.10),
     depth_lamp(0.32),
     depth_lamp(0.74),
@@ -277,12 +277,13 @@ const fn tray(z: f32) -> Fitting {
     )
 }
 
-/// One depth lamp on the aft cornice, at `x` across it.
+/// One depth lamp on the deckhead, at `x` across it — a cell in off the
+/// aft cornice, so the string hangs clear of the goods' own air.
 const fn depth_lamp(x: f32) -> Fitting {
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(palette::POI_NEPTUNE, 2.6),
-        Vec3::new(x, 0.84, 0.93),
+        Vec3::new(x, 0.84, 0.650),
         Vec3::new(0.04, 0.055, 0.045),
     )
 }

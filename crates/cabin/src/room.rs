@@ -38,10 +38,9 @@
 use bevy::prelude::*;
 
 use space_trucking::sim::Cue;
-use space_trucking::sim::cargo::{Kind, placement_check};
 use space_trucking::sim::layout;
 use space_trucking::sim::room::{
-    APERTURE, CABIN, COURSES, PORTS, Port, PortId, Pose, Room, RoomId, RoomKind, Rooms, Surf, Tile,
+    APERTURE, CABIN, COURSES, PORTS, Port, PortId, Pose, Room, RoomId, RoomKind, Rooms, Tile,
 };
 
 use crate::rig::{BAY_CELL, BAY_WALL_Z, EYE_HEIGHT, REACH, Skin, TileFade, WALK_MAX, WALK_MIN};
@@ -1178,11 +1177,13 @@ const CALLER_LUMENS: f32 = 150_000.0;
 const HEADROOM: f32 = 0.03;
 
 /// **How high a standing body reaches**: the eye, the head it swings, and
-/// a hand's breadth of daylight over it. Everything a room hangs is
-/// measured off this and nothing below it is a room's to hang in — the
-/// pendant's drop ([`CALLER_DROP`]) and the band a station dresses in
-/// ([`dressing_box`]) are both derived from it, so a crew member walks
-/// under the whole of a room's own hardware or under none of it.
+/// a hand's breadth of daylight over it.
+///
+/// What a room hangs from its own ceiling is measured off this — the
+/// pendant's drop ([`CALLER_DROP`]) is derived from it and nothing else —
+/// so a crew member walks under the room's own hardware. A station's
+/// floor furniture is not held to it and should not be: a crate stands on
+/// a deck and so does a bollard, and you walk round both.
 pub const HEAD_CLEAR: f32 = EYE_HEIGHT + crate::rig::HEAD_R + HEADROOM;
 
 /// How far under a caller's ceiling its lamp hangs.
@@ -1219,80 +1220,6 @@ pub const CAGE_RISE: f32 = CALLER_DROP / SHADE_R;
 /// be a station reaching for the ceiling height, which is the room's.
 pub const STEM_T: f32 = 0.05;
 pub const GLASS_R: f32 = 0.72;
-
-/// **The dressing box: the band a room keeps for its own furniture.**
-///
-/// A room's every net cell is a berth, and a berth's air belongs to
-/// cargo — floor to the top of the tallest thing that may stand on it,
-/// ceiling to the bottom of the deepest thing that may hang from it, and
-/// each wall to the depth a rig is drawn within. What is left over is
-/// **one band**, and it is the band between a room's own walls and its
-/// own ceiling's cargo:
-///
-/// - its **floor** is [`WALL_H`], the top of the last course a wall
-///   charts. Below that every wall cell is a berth; above it a wall is
-///   fabric and nothing berths on it. It is also over a standing head
-///   ([`HEAD_CLEAR`]), which is not a coincidence to rely on but a fact
-///   to check — see the guard in [`tests`].
-/// - its **ceiling** is as low as a ceiling rig hangs ([`ceiling_hang`]),
-///   derived through the very function the runtime poses one with.
-/// - its **plan** is the room's own, edge to edge: no wall berth reaches
-///   above the walls' last course, so the band runs right out to the
-///   plate on all four sides.
-///
-/// Stations measure their furniture off this and not off the room
-/// (`crate::poi`), which is what makes the containment law they were
-/// already held to — `|at| + |half| <= 1` — mean *clear of every berth in
-/// the room*. A character cannot express furniture in cargo's air, in the
-/// same way it cannot express a cell, a class, or a port.
-#[must_use]
-pub fn dressing_box(placed: &Placed) -> (Vec3, Vec3) {
-    let floor = placed.lo.y + WALL_H;
-    let ceiling = (placed.hi.y - ceiling_hang(placed)).max(floor);
-    (
-        Vec3::new(placed.lo.x, floor, placed.lo.z),
-        Vec3::new(placed.hi.x, ceiling, placed.hi.z),
-    )
-}
-
-/// How far below its own ceiling the deepest rig a room may hang there
-/// reaches.
-///
-/// Derived, never stated: the sim's arbiter says which kinds may hang on
-/// which cell, and [`crate::pieces::berth_box`] poses the body through
-/// the function the runtime poses it with. A retune of either moves the
-/// band a station dresses in with it.
-fn ceiling_hang(placed: &Placed) -> f32 {
-    let alone = Rooms::root(placed.kind);
-    let (cols, rows) = placed.kind.grid();
-    let mut deepest = 0.0_f32;
-    for kind in Kind::ALL {
-        if kind.covering() {
-            continue;
-        }
-        let (w, h) = kind.cells();
-        for y in 0..rows {
-            for x in 0..cols {
-                if placed.kind.surface_of(x, y) != Some(Surf::Ceiling)
-                    || placement_check(&alone, &[], u32::MAX, kind, CABIN, x, y).is_err()
-                {
-                    continue;
-                }
-                let anchor = layout::cell_rect(placed.id, x, y);
-                let rect = layout::Rect::new(
-                    anchor.x,
-                    anchor.y,
-                    f32::from(w) * layout::CELL,
-                    f32::from(h) * layout::CELL,
-                );
-                if let Some((lo, hi)) = crate::pieces::berth_box(&placed.charts, rect) {
-                    deepest = deepest.max(hi.y - lo.y);
-                }
-            }
-        }
-    }
-    deepest
-}
 
 /// Where a caller's lamp hangs and how far it carries — derived from the
 /// room's own box, so a wider room gets a wider pool and a small one
@@ -1414,12 +1341,20 @@ fn caller_lamp(
 
 /// A station's own furniture, inside its own room.
 ///
-/// The frame is the room's [`dressing_box`] and the fittings are
-/// fractions of it, so a character never learns how big a trade room is,
-/// cannot reach out of one, and cannot stand furniture in air a berth
-/// spends ([`crate::poi`]'s containment law). Nothing here is click-
-/// functional and nothing here is a berth: it is dressing, and the sim
-/// does not hear about it.
+/// The frame is **the room's own box**, floor to deckhead, and the
+/// fittings are fractions of it — so a character never learns how big a
+/// trade room is and cannot reach out of one ([`crate::poi`]'s
+/// containment law). Nothing here is click-functional and nothing here is
+/// a berth: it is dressing, and the sim does not hear about it.
+///
+/// It was briefly the band left over above cargo's air, which was
+/// technically clear of every berth and eighty-two millimetres tall: a
+/// pump bay dressed in it read as an empty box. A station's furniture
+/// stands on the deck it belongs on now, and the room a station keeps for
+/// it is stated in **cells** instead of in air — [`Tile::Staging`], which
+/// a fitting may stand in and cargo may be set down in, because a room
+/// that leaves owns no volume it needs to defend (docs/ROOMS.md, "The
+/// staging law").
 fn furnish(
     commands: &mut Commands,
     shapes: &crate::poi::Shapes,
@@ -1432,8 +1367,7 @@ fn furnish(
     if decor.is_empty() {
         return;
     }
-    let (lo, hi) = dressing_box(placed);
-    let frame = crate::poi::Frame::of(lo, hi, placed.yaw);
+    let frame = crate::poi::Frame::of(placed.lo, placed.hi, placed.yaw);
     for fitting in decor {
         commands.spawn((
             Mesh3d(shapes.of(fitting.shape)),
@@ -1712,6 +1646,7 @@ fn rim(kind: RoomKind, x: u8, y: u8, tile: Tile) -> [bool; 4] {
 /// | Class | Field | Mark | Reads as |
 /// | --- | --- | --- | --- |
 /// | `Plain` | none | none | ordinary deck — the ground the others are read against |
+/// | `Staging` | none | none, until something stands there: then the amber frame that says it is not coming with you ([`claim_frames`]) | a station's own deck. Set yours down; take it back before you leave |
 /// | `Offer` | none: bare deck | a chalk line struck round the region | a bay taped out on the floor. Set yours inside the line; it is still yours |
 /// | `Stock` | the room's enamel, filled | a dark border band round the region | painted floor: what stands on the paint is the room's |
 /// | `Consume` | scorched plate | hazard tape round the region | a danger zone, taped at its edge the way tape is actually used |
@@ -1799,10 +1734,24 @@ fn tiles(
                     lift: crate::rig::layer::MARK,
                 };
                 match tile {
-                    // Ordinary deck: the contextual berth well, raised by
-                    // `rig::fade_tiles` only while a carry asks "where can
-                    // this go?".
-                    Tile::Plain => {
+                    // Ordinary deck, and a station's own deck, which
+                    // berths identically: the contextual berth well,
+                    // raised by `rig::fade_tiles` only while a carry asks
+                    // "where can this go?".
+                    //
+                    // **`Staging` paints exactly what `Plain` paints, and
+                    // that is the class saying what it means.** The owner
+                    // asked that the whole room stay one grid with one
+                    // set of pickup and placement mechanics; a second
+                    // well, a second hue, or a hatched field would be the
+                    // paint quietly claiming a second mechanic that the
+                    // arbiter does not have. What is different about a
+                    // station's deck is not where you may set a crate
+                    // down — it is that the room leaves — and that is a
+                    // fact about a crate rather than about a cell, so it
+                    // is read on the crate: `Sim::detained_cargo` names
+                    // it and the amber frame goes round it.
+                    Tile::Plain | Tile::Staging => {
                         commands.spawn((
                             Mesh3d(cube.clone()),
                             MeshMaterial3d(fade.mat.clone()),
@@ -2547,12 +2496,38 @@ fn seam_fx(
 
 // ---- The composed offer, lit ----
 
-/// How many claim bars stand ready: four per piece, for a pile of eight.
-const CLAIM_BARS: usize = 32;
+/// How many claim bars stand ready: four per piece, for sixteen pieces —
+/// a composed pile of eight and a station's deck under it.
+///
+/// The pool is sized to be **read**, not to be exhaustive, and that is a
+/// deliberate limit rather than an unchecked one. A frame is a work order
+/// the player clears one piece at a time, and the set is re-derived every
+/// frame, so a seventeenth crate simply gets its frame when the sixteenth
+/// is carried aboard. What the pool must never do is show *nothing* while
+/// something is detained, and it cannot: it fills from the front.
+const CLAIM_BARS: usize = 64;
 
 /// The claim frame's rung on the decal ladder — over everything else on
 /// the cell, because it is a standing reading rather than a flash.
 const CLAIM_LIFT: f32 = crate::rig::layer::CLAIM;
+
+/// **The claim frame reads through a station's furniture.**
+///
+/// A depth bias, which is the one place in this module where a thing is
+/// drawn out of depth order, and it is the staging law that pays for it.
+/// A station's dressing may stand in a staging cell and cargo may be set
+/// down inside it — the owner ruled that a clipping incident there is
+/// nobody's defect — so the frame that says *this is what the launch is
+/// waiting on* would otherwise be the one reading a bollard could hide.
+/// A refusal you cannot see is a refusal you cannot obey, and a lever
+/// that will not fly for a reason standing behind a cabinet is the
+/// soft-lock this whole class was written to avoid.
+///
+/// Nothing else is biased. The decal ladder settles the fabric, the
+/// fields, the marks and the treads by lift, in millimetres, exactly as
+/// before; this is the ship's own business drawn over a station's scenery
+/// because the scenery is scenery.
+const CLAIM_BIAS: f32 = 1_000.0;
 
 /// Pre-spawn the claim bars, dark. The composed offer is derived by the
 /// sim every frame and never stored, so the presentation keeps a pool and
@@ -2564,6 +2539,9 @@ fn spawn_claim_pool(
 ) {
     let cube = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let mat = glow::phosphor(&mut materials, palette::AMBER, 2.0);
+    if let Some(mut mat) = materials.get_mut(&mat) {
+        mat.depth_bias = CLAIM_BIAS;
+    }
     for i in 0..CLAIM_BARS {
         commands.spawn((
             Mesh3d(cube.clone()),
@@ -2575,21 +2553,45 @@ fn spawn_claim_pool(
     }
 }
 
-/// **The composed offer is LIT, not moved.** `Sim::composed` names the
-/// pile the room would hand over if the handshake were worked right now;
-/// this frames each of those pieces where it already stands on the room's
-/// stock, so the reading is "this pile is what's on offer for yours"
-/// without a single piece changing berth.
+/// **The claim frame: what a room's business is about, lit where it
+/// stands.** Two sentences, one form, because they are the same sentence
+/// from either side of a seam:
+///
+/// - `Sim::composed` names the pile the room would hand over if the
+///   handshake were worked right now, framed on the room's own stock —
+///   *this is what's on offer for yours*;
+/// - `Sim::detained_cargo` names every piece of the player's standing in
+///   a room that will not ride out, framed where the player set it down —
+///   *this is what the launch is waiting on*.
+///
+/// The second is **the whole reading of the staging law**, and it is why
+/// a station's deck needs no paint of its own: an empty staging cell is
+/// deck, and an occupied one wears the frame. Pull the lever with one
+/// standing and the sim answers `Cue::Refit`, which strobes every jamb
+/// red ([`seam_fx`]) — the same refusal the door's own latch gives, at
+/// the other end of the same law. Not a word anywhere.
+///
+/// Nothing moves either way: the frames are aimed at pieces where they
+/// already stand.
 fn claim_frames(
     shell: Res<Shell>,
     plan: Res<Plan>,
     mut bars: Query<(&ClaimBar, &mut Transform, &mut Visibility)>,
 ) {
     let sim = &shell.bridge.sim;
-    let composed = sim.composed();
+    // Detained first: it is the reading with no second channel. A
+    // composed pile has the handshake's own lamp saying there is
+    // something to commit; a crate holding the launch has nothing but
+    // this frame and a strobe that fires only when the lever is pulled.
+    let mut claimed = sim.detained_cargo();
+    for id in sim.composed() {
+        if !claimed.contains(&id) {
+            claimed.push(id);
+        }
+    }
     // Each piece's footprint, on the chart it stands on.
     let mut frames: Vec<(Vec3, Quat, f32, f32)> = Vec::new();
-    for id in composed {
+    for id in claimed {
         let Some(piece) = sim.pieces().iter().find(|piece| piece.id == id) else {
             continue;
         };
@@ -3415,66 +3417,6 @@ mod tests {
             lamps += 1;
         }
         assert!(lamps >= 2, "only {lamps} callers came alongside");
-    }
-
-    /// **A room dresses over the crew's heads and under its own cargo.**
-    ///
-    /// The dressing law's two edges, stated over every room the game has
-    /// so that a kind cannot grow, shrink, or change its ports into a
-    /// band that is somebody else's:
-    ///
-    /// - the band stands clear of a walking body ([`HEAD_CLEAR`]), which
-    ///   is a fact about the ship's storey rather than a number this
-    ///   derivation chose — [`WALL_H`] happens to sit three centimetres
-    ///   over a standing head, and the day it does not, a station's
-    ///   furniture becomes something the crew walks face-first into;
-    /// - it stops as low as a ceiling rig hangs, so the deepest thing a
-    ///   room's own ceiling may carry passes clean under nothing.
-    ///
-    /// And it is a band and not a seam: a room with no room in it to
-    /// dress would leave fifteen characters nowhere to be.
-    #[test]
-    fn a_room_dresses_over_the_crews_heads_and_under_its_own_cargo() {
-        let plan = crowded_ship();
-        let mut dressed = 0;
-        for room in &plan {
-            let (lo, hi) = dressing_box(room);
-            assert!(
-                lo.y >= room.lo.y + HEAD_CLEAR - 1e-4,
-                "a {:?}'s dressing band starts at {:.4}, under a standing head",
-                room.kind,
-                lo.y - room.lo.y
-            );
-            assert!(
-                hi.y <= room.hi.y - ceiling_hang(room) + 1e-4,
-                "a {:?} dresses into the air its own ceiling's cargo hangs in",
-                room.kind
-            );
-            // The plan is the room's own, edge to edge: no wall cell is
-            // a berth above the walls' last course, so the band runs out
-            // to the plate on all four sides.
-            assert!(
-                (lo.x - room.lo.x).abs() < 1e-4
-                    && (hi.x - room.hi.x).abs() < 1e-4
-                    && (lo.z - room.lo.z).abs() < 1e-4
-                    && (hi.z - room.hi.z).abs() < 1e-4,
-                "a {:?}'s dressing band is inset from its own walls",
-                room.kind
-            );
-            if room.kind.riding() {
-                // A riding room is nobody's station and hangs nothing,
-                // so its band is measured and never used.
-                continue;
-            }
-            assert!(
-                hi.y - lo.y > 0.05,
-                "a {:?} keeps {:.4} m to dress in, which is a seam and not a band",
-                room.kind,
-                hi.y - lo.y
-            );
-            dressed += 1;
-        }
-        assert!(dressed >= 2, "only {dressed} callers came alongside");
     }
 
     /// **A class's mark rides its region's rim, and stays inside its own

@@ -105,6 +105,16 @@ changing; remove a line only by shipping it or striking it in review.
   every station (docs/ROOMS.md); differentiating each POI's look and
   behavior from the existing lore — temperament, discovery cost, the
   handshake's form — is the slice after
+- Dead space inside the **trade surface**. The staging law gives a
+  calling room its own ordinary deck (docs/ROOMS.md) and stops there: the
+  `Stock` and `Offer` bands are still berths wall to wall, and a market
+  eight cells wide paints forty `Stock` cells to put six goods on. That
+  is why every station's hardware had to come off its own shopfront in
+  the same change — a shop's fittings and a shop's goods want the same
+  wall. Sizing those bands to the goods rather than to the room would
+  hand the difference back as staging; it is a second change to
+  `RoomKind::tile_of`, it needs a rule for how many cells a band keeps,
+  and it is deferred rather than guessed at
 - Apertures as cargo: doors, ladders, and hatches as re-arrangeable
   pieces with amber grab handles (docs/ROOMS.md's stretch goal, with
   its packing hazards already analysed). The port law is written so

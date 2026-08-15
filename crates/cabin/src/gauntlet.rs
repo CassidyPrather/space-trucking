@@ -508,6 +508,10 @@ pub fn loaded_save(base: &str) -> Option<String> {
 pub struct Berth {
     pub cell: (u8, u8),
     pub station: Station,
+    /// What the cell reads as. Carried on the berth rather than looked up
+    /// again, because two rules turn on it and a rule that re-derived a
+    /// class could rule about a different cell than the one it measured.
+    pub class: Tile,
     /// The cell's own face on its chart.
     pub face: Box3,
     /// The face plus the air a rig fills, out into the room.
@@ -582,6 +586,7 @@ pub fn berths(rooms: &Rooms, placed: &Placed) -> Vec<Berth> {
             Some(Berth {
                 cell,
                 station,
+                class: placed.kind.tile_of(cell.0, cell.1)?,
                 face,
                 air: face.reaching(inward, 0.0, air),
                 inward,
@@ -737,8 +742,7 @@ fn drawn(what: String, frame: &Frame, fitting: &Fitting) -> Drawn {
 pub fn fittings(placed: &Placed) -> Vec<Drawn> {
     let character = poi::character_of(placed.host);
     let mut out = Vec::new();
-    let (lo, hi) = room::dressing_box(placed);
-    let frame = Frame::of(lo, hi, placed.yaw);
+    let frame = Frame::of(placed.lo, placed.hi, placed.yaw);
     for (i, fitting) in character.decor.iter().enumerate() {
         out.push(drawn(
             format!("decor[{i}] {:?}", fitting.shape),
@@ -910,7 +914,9 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
             // cell, so none has a face for anything to fight.
             let lift = match tile {
                 Tile::Threshold | Tile::Offer | Tile::Fixture => continue,
-                Tile::Plain | Tile::Stock | Tile::Consume => crate::rig::layer::TILE,
+                Tile::Plain | Tile::Staging | Tile::Stock | Tile::Consume => {
+                    crate::rig::layer::TILE
+                }
             };
             let inward = station.inward(&surface);
             let face = cell_face(placed.id, (x, y), &surface);
@@ -962,6 +968,24 @@ fn some_cells(cells: &[(u8, u8)]) -> String {
     }
 }
 
+/// **Which berths a room owes cargo air in**: everything but staging.
+///
+/// The line the owner drew. A staging cell is the room's own deck lent
+/// to the player between one launch and the next — nothing stays there,
+/// the launch gate empties it, and a crate that clips a station's bollard
+/// while it waits is a clipping incident nobody minds. Every other class
+/// is a promise about where cargo *lives*: the cabin's and the burner's
+/// plain deck (cargo stays there), a room's `Stock` (its goods stand
+/// there), a chalked `Offer` (a proposal stands there and must be read as
+/// a proposal), and the hopper's `Consume`.
+///
+/// `Threshold` and `Fixture` are not berths at all — the arbiter refuses
+/// them, so [`berths`] never produces one — and they stay defended by the
+/// rule that already defends them.
+fn kept(berth: &Berth) -> bool {
+    berth.class != Tile::Staging
+}
+
 /// What stands in a berth on the loaded board, if anything — so a finding
 /// can name the crate a fitting is standing inside of, not merely the
 /// cell it could stand in.
@@ -976,11 +1000,25 @@ fn standing(stage: &Stage, cell: (u8, u8)) -> Option<String> {
         .map(|piece| format!("{:?} #{}", piece.kind, piece.id))
 }
 
-/// **No decor stands where cargo stands.** The assertion the containment
+/// **No decor stands where cargo stays.** The assertion the containment
 /// test never made: a fitting inside the room's box is not the same claim
 /// as a fitting outside every berth in it.
+///
+/// **It asks about staying berths and the trade surface, and not about
+/// staging** ([`kept`]). A room that leaves owns no volume of its own,
+/// which is why every station's furniture used to be a defect somewhere:
+/// a trading console clipped the cell it stood on, and there was no cell
+/// in the game it could have stood on instead. Now there is a class for
+/// the deck a room keeps — cargo may be set down in it, a bollard may
+/// stand in it, and if the two clip, the owner's ruling is that this is
+/// not a defect. What is left on the list is the honest half: a fitting
+/// biting the room's own goods, a proposal's chalk, a doorway, or the
+/// counter's own cell still has to move.
 fn berth_clear(stage: &Stage) -> Vec<Finding> {
-    let berths = berths(&stage.rooms, &stage.placed);
+    let berths: Vec<Berth> = berths(&stage.rooms, &stage.placed)
+        .into_iter()
+        .filter(kept)
+        .collect();
     let mut out = Vec::new();
     for fitting in fittings(&stage.placed) {
         // One line per offender, not one per cell: a bar standing across
@@ -1022,12 +1060,21 @@ fn berth_clear(stage: &Stage) -> Vec<Finding> {
     out
 }
 
-/// **Nothing occludes a wall berth from its room.** A fitting standing in
-/// front of a wall cell hides whatever hangs there, which is a defect the
-/// containment law cannot express and a screenshot taken from the side
-/// cannot show.
+/// **Nothing occludes a wall berth that keeps its cargo.** A fitting
+/// standing in front of a wall cell hides whatever hangs there, which is
+/// a defect the containment law cannot express and a screenshot taken
+/// from the side cannot show.
+///
+/// Narrowed with [`BERTH_CLEAR`] and for the same reason, which on a wall
+/// is the *identical* reason: a fitting inside a wall berth's air is by
+/// construction standing between that wall and the room, so a rule that
+/// allowed the clip and forbade the occlusion would forbid nothing and
+/// merely say so twice.
 fn berth_seen(stage: &Stage) -> Vec<Finding> {
-    let berths = berths(&stage.rooms, &stage.placed);
+    let berths: Vec<Berth> = berths(&stage.rooms, &stage.placed)
+        .into_iter()
+        .filter(kept)
+        .collect();
     let mut out = Vec::new();
     for fitting in fittings(&stage.placed) {
         let mut hidden: Vec<((u8, u8), Station, f32)> = Vec::new();
@@ -1113,16 +1160,34 @@ fn stances(stage: &Stage) -> Vec<Vec3> {
     out
 }
 
-/// **Every berth stays reachable.** `rig::tests::every_net_cell_is_workable`
-/// is the precedent and the hull was the only thing it could ask about;
-/// this asks the same question of every room in the game, with a
-/// station's own furniture added to the list of things that may be in the
-/// way.
+/// **Every berth that keeps its cargo stays reachable.**
+/// `rig::tests::every_net_cell_is_workable` is the precedent and the hull
+/// was the only thing it could ask about; this asks the same question of
+/// every room in the game, with a station's own furniture added to the
+/// list of things that may be in the way.
+///
+/// Narrowed with the other two, and measurement is why. A rule that let a
+/// fitting stand in a staging cell and forbade it to hide one forbids
+/// standing there at all: a fitting inside a berth's air is between that
+/// berth's face and every stance by construction, on a wall and on a
+/// deck alike. Dead space that furniture may not be seen to occupy is not
+/// dead space.
+///
+/// **What that would have cost, had it been a soft-lock, is nothing**,
+/// and that is measured rather than hoped. The runtime's pointer is cast
+/// at mapped surfaces only — the room's charts and standing pieces — and
+/// a station's dressing carries none, so a fitting cannot make a berth
+/// unpickable, only unlovely (`crate::surface::pick`, and the guard
+/// `tests::a_stations_dressing_is_not_in_the_aiming_path`). The other
+/// half, that a refusal you cannot see is a refusal you cannot obey, is
+/// answered where it arises: the amber frame round detained cargo is
+/// drawn with a depth bias and reads through a station's furniture
+/// (`room::CLAIM_BIAS`).
 fn berth_reached(stage: &Stage) -> Vec<Finding> {
     let scene = scene(stage);
     let stances = stances(stage);
     let mut blamed: BTreeMap<String, Vec<(u8, u8)>> = BTreeMap::new();
-    for berth in berths(&stage.rooms, &stage.placed) {
+    for berth in berths(&stage.rooms, &stage.placed).into_iter().filter(kept) {
         let probe = (berth.face.lo + berth.face.hi) * 0.5 + berth.inward * 0.02;
         let worked = stances.iter().any(|eye| {
             let dir = probe - *eye;
@@ -1809,22 +1874,20 @@ mod tests {
         assert!(!pairs_fight(&a, &stacked), "a stack is not a fight");
     }
 
-    /// **Nothing a station hangs stands in a berth.**
+    /// **Nothing a station hangs stands in a berth that keeps cargo.**
     ///
-    /// Three families and one cause: [`BERTH_CLEAR`] found furniture in
-    /// the air a rig fills, [`BERTH_SEEN`] found it standing between the
-    /// room and a wall berth, and [`BERTH_REACHED`] found it fencing off
-    /// the berths behind it. All 362 lines of it came of measuring a
-    /// character's fittings off the room's whole box, and a room's whole
-    /// box is cargo's: 82% of a market's air is inside some berth's, and
-    /// the floor alone is claimed to a metre.
+    /// Three families and one cause: [`BERTH_CLEAR`] finds furniture in
+    /// the air a rig fills, [`BERTH_SEEN`] finds it standing between the
+    /// room and a wall berth, and [`BERTH_REACHED`] finds it fencing off
+    /// the berths behind it. All three used to ask about every cell of
+    /// every chart, which no arrangement of furniture could ever satisfy,
+    /// because a room owned no volume of its own.
     ///
-    /// Furniture is measured off `room::dressing_box` now — the band
-    /// between a room's own walls and its own ceiling's cargo — so all
-    /// three families answer to arithmetic a character cannot express
-    /// its way out of. The docket is a work order and it shrinks; a law
-    /// is a thing that does not, so the sentence is kept said here after
-    /// the last of those lines came off the list.
+    /// A room owns its staging now, and lends it out; the three ask about
+    /// what is left, which is the surface a trade happens on and the
+    /// berths cargo stays in. The docket is a work order and it shrinks;
+    /// a law is a thing that does not, so the sentence is kept said here
+    /// after the last of its lines comes off the list.
     #[test]
     fn nothing_a_station_hangs_stands_in_a_berth() {
         let found = sweep();
@@ -1842,6 +1905,65 @@ mod tests {
                 .collect::<Vec<_>>()
                 .join("\n")
         );
+    }
+
+    /// **Nothing a station hangs can strand a crate on its own deck.**
+    ///
+    /// The soft-lock the staging law could have reintroduced, refused in
+    /// two clauses that between them leave it nowhere to happen.
+    ///
+    /// The first is structural and not asserted here because it cannot
+    /// be: `room::furnish` spawns a fitting as a mesh, a material and a
+    /// transform, and the pointer is cast at entities carrying a
+    /// `SimSurface` (`crate::surface::track_pointer`). A station's
+    /// dressing is therefore not in the aiming path at all — it cannot
+    /// make a berth unpickable, only unlovely, which is exactly the
+    /// trade the owner asked for when he ruled a clipping incident
+    /// nobody's defect.
+    ///
+    /// The second is this one: **a room may not fence off its own
+    /// staging.** The hull, the shell slabs, the counter and the pendant
+    /// are all in the aiming path, and a staging cell no body could work
+    /// past *them* would be a crate the launch gate holds forever. Swept
+    /// over every room in the game, with a station's own dressing lifted
+    /// out of the scene — the one thing that is allowed to be in the way.
+    #[test]
+    fn a_stations_dressing_is_not_in_the_aiming_path() {
+        for stage in roster() {
+            let hull: Vec<Drawn> = scene(&stage)
+                .into_iter()
+                .filter(|drawn| !drawn.character)
+                .collect();
+            let stances = stances(&stage);
+            let mut stranded: Vec<(u8, u8)> = Vec::new();
+            for berth in berths(&stage.rooms, &stage.placed) {
+                if berth.class != Tile::Staging {
+                    continue;
+                }
+                let probe = (berth.face.lo + berth.face.hi) * 0.5 + berth.inward * 0.02;
+                let worked = stances.iter().any(|eye| {
+                    let dir = probe - *eye;
+                    let pitch = (-dir.y).atan2(dir.xz().length()).abs();
+                    if dir.length() > REACH - 0.05 || pitch > PITCH_LIMIT - 0.02 {
+                        return false;
+                    }
+                    !hull
+                        .iter()
+                        .any(|drawn| ray_box(*eye, dir, drawn.body).is_some_and(|t| t < 1.0 - 1e-3))
+                });
+                if !worked {
+                    stranded.push(berth.cell);
+                }
+            }
+            assert!(
+                stranded.is_empty(),
+                "{}: {} staging cell(s) its own room fences off, so a crate set \
+                 down there would hold the launch forever: {}",
+                stage.name,
+                stranded.len(),
+                some_cells(&stranded)
+            );
+        }
     }
 
     /// **No room draws two faces on one plane.** The docket is a work

@@ -229,28 +229,29 @@ const fn bar(z: f32) -> Fitting {
 /// every number is a fraction of its half-extents, so none of this had
 /// to know how big a trade room is.
 const RATION_COUNTER: [Fitting; 14] = [
-    // The hopper, starboard aft: bin, chute, tray, and two bricks that
-    // came out of it while you were looking at something else.
+    // The hopper, down the starboard flank clear of the goods' own band:
+    // bin, chute, tray, and two bricks that came out of it while you were
+    // looking at something else.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.70, 0.42, 0.66),
+        Vec3::new(0.70, 0.42, 0.200),
         Vec3::new(0.26, 0.28, 0.22),
     ),
     Fitting::new(
         Shape::Post,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.70, -0.05, 0.66),
+        Vec3::new(0.70, -0.05, 0.200),
         Vec3::new(0.085, 0.22, 0.085),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
-        Vec3::new(0.70, -0.34, 0.66),
+        Vec3::new(0.70, -0.34, 0.200),
         Vec3::new(0.24, 0.025, 0.19),
     ),
-    brick(0.60, -0.280, 0.60),
-    brick(0.79, -0.285, 0.71),
+    brick(0.60, -0.280, 0.14),
+    brick(0.79, -0.285, 0.25),
     // The grow rack, port flank: two uprights, two shelves, a strip
     // still burning over the top one, and one empty tray. Earth pays
     // four for seedlings and this is why.
@@ -276,10 +277,10 @@ const RATION_COUNTER: [Fitting; 14] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.10, 0.90, -0.20),
-        Vec3::new(0.09, 0.025, 0.72),
+        Vec3::new(0.10, 0.90, 0.140),
+        Vec3::new(0.09, 0.025, 0.55),
     ),
-    clamp(-0.70),
+    clamp(-0.30),
     clamp(0.24),
 ];
 

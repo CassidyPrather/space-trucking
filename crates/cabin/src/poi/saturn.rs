@@ -227,42 +227,43 @@ const THE_YARD: [Fitting; 15] = [
     // Two bay panes in the rack. Four cells of glass in a yard-blue frame
     // is the thing this station exists to cut, and it is standing in the
     // room whether or not it is on the shelf today.
-    pane(-0.20),
+    pane(-0.14),
     pane(0.42),
-    glass(-0.20),
+    glass(-0.14),
     glass(0.42),
     // The rack rail they lean on.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
-        Vec3::new(0.855, 0.30, 0.11),
-        Vec3::new(0.045, 0.04, 0.72),
+        Vec3::new(0.855, 0.30, 0.14),
+        Vec3::new(0.045, 0.04, 0.55),
     ),
     // A stack of cut plate on the deck, three pieces off three hulls,
     // squared up by somebody with a strong opinion about stacking.
     plate(0, -0.86, 0.16),
     plate(3, -0.78, 0.12),
     plate(2, -0.70, 0.08),
-    // The patch on the aft wall: a slate-blue rectangle riveted over the
-    // yard's own sand, with four heads showing. The wall did not come
-    // from here either.
+    // The patch on the starboard wall over the rack: a slate-blue
+    // rectangle riveted over the yard's own sand, with two heads showing.
+    // The wall did not come from here either. It is off the aft face
+    // because the aft face is where the yard stands its goods.
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::enamel_color(3)),
-        Vec3::new(0.58, 0.46, 0.955),
-        Vec3::new(0.30, 0.34, 0.014),
+        Vec3::new(0.955, 0.66, 0.10),
+        Vec3::new(0.014, 0.24, 0.30),
     ),
     Fitting::new(
         Shape::Dome,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.32, 0.72, 0.94),
-        Vec3::new(0.022, 0.045, 0.018),
+        Vec3::new(0.940, 0.84, -0.10),
+        Vec3::new(0.018, 0.045, 0.022),
     ),
     Fitting::new(
         Shape::Dome,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.84, 0.20, 0.94),
-        Vec3::new(0.022, 0.045, 0.018),
+        Vec3::new(0.940, 0.48, 0.28),
+        Vec3::new(0.018, 0.045, 0.022),
     ),
     // The torch: a bottle in the port-forward corner, its hose coiled on
     // the deck, and the cutting head laid on top still glowing. Whatever
@@ -276,7 +277,7 @@ const THE_YARD: [Fitting; 15] = [
     Fitting::new(
         Shape::Ring,
         Coat::metal(Worn::Socket),
-        Vec3::new(-0.62, -0.90, -0.60),
+        Vec3::new(-0.70, -0.90, -0.24),
         Vec3::new(0.14, 0.10, 0.17),
     ),
     Fitting::new(

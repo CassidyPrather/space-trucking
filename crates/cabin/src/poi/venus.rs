@@ -256,23 +256,23 @@ const SALON: [Fitting; 17] = [
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::POI_VENUS),
-        Vec3::new(0.88, -0.74, -0.42),
+        Vec3::new(0.88, -0.74, -0.20),
         Vec3::new(0.10, 0.26, 0.20),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.88, -0.46, -0.42),
+        Vec3::new(0.88, -0.46, -0.20),
         Vec3::new(0.10, 0.020, 0.19),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::accent::VENUS_HALO, 0.9),
-        Vec3::new(0.945, -0.28, -0.42),
+        Vec3::new(0.945, -0.28, -0.20),
         Vec3::new(0.020, 0.14, 0.18),
     ),
-    vial(-0.52),
-    vial(-0.32),
+    vial(-0.30),
+    vial(-0.10),
     // The house painting, port flank, in a brass frame under a hooded
     // picture light. The subject is gold. The subject is always gold.
     Fitting::new(
@@ -299,12 +299,14 @@ const SALON: [Fitting; 17] = [
         Vec3::new(-0.828, 0.43, -0.60),
         Vec3::new(0.020, 0.018, 0.090),
     ),
-    // Gilt along the aft cornice, with two bosses on it. Lit, because a
-    // house that gilds a cornice is not going to let the dark have it.
+    // Gilt across the deckhead a cell in off the aft cornice, with two
+    // bosses on it. Lit, because a house that gilds is not going to let
+    // the dark have it — and off the goods' own band, because a house
+    // this careful does not gild over its own stock.
     Fitting::new(
         Shape::Slab,
         Coat::etched(palette::accent::VENUS_HALO),
-        Vec3::new(0.24, 0.88, 0.945),
+        Vec3::new(0.24, 0.88, 0.660),
         Vec3::new(0.72, 0.025, 0.020),
     ),
     boss(-0.20),
@@ -346,7 +348,7 @@ const fn boss(x: f32) -> Fitting {
     Fitting::new(
         Shape::Dome,
         Coat::metal(Worn::Brass),
-        Vec3::new(x, 0.88, 0.92),
+        Vec3::new(x, 0.88, 0.660),
         Vec3::new(0.050, 0.09, 0.035),
     )
 }

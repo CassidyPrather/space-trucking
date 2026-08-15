@@ -440,7 +440,7 @@ pub fn delivery_voyage(crew: usize) -> (Script, u64) {
     // gate will not let anything of ours ride out there. Sweep its deck
     // with quick-moves: each pops one piece back to its first legal berth
     // aboard, and a sweep over an empty tile costs nothing.
-    let deck = deck_of(RoomKind::Trade, crate::sim::Tile::Plain);
+    let deck = deck_of(RoomKind::Trade, crate::sim::Tile::Staging);
     for (i, &(x, y)) in deck.iter().enumerate() {
         script.quick_move(a + 10 + i as u64, role(5 + i), cell_center(CALLER, x, y));
     }

@@ -466,7 +466,8 @@ in the same change:
 
 | Class | Reads as | Behavior |
 | --- | --- | --- |
-| `Plain` | bare deck, wall, ceiling — the ground the others are read against | an ordinary berth; the default |
+| `Plain` | bare deck, wall, ceiling — the ground the others are read against | an ordinary berth; the default, and a **riding** room's only unclaimed class |
+| `Staging` | bare deck, wall, ceiling — exactly what `Plain` looks like, until a piece stands there and wears the amber frame that says it is not coming | a calling room's own unclaimed fabric. Berths identically to `Plain`; **nothing stays on one**, and the launch refuses while one is occupied (see the staging law) |
 | `Offer` | bare deck inside a chalk line struck round the whole area | the fundamental colored tile. Player cargo berthed here is **proposed**, not surrendered: it stays the player's until a resolution says otherwise |
 | `Stock` | the room's enamel, filled, and bordered where the paint ends | the room's own goods. Not player-owned; may not be carried out until a resolution grants them |
 | `Consume` | scorched plate with hazard tape round its rim | anything berthed here is scheduled for destruction on the room's own beat — the burner's hopper is the first and today's only instance |
@@ -541,87 +542,119 @@ shade's own box and reaching up no further than the ceiling. Twelve of
 the fifteen cages had quietly become beams across the room before
 anything checked.
 
-### The dressing law
+### The staging law
 
-> **A station dresses the band a room keeps over the crew's heads. A
-> berth's air is cargo's, and a station's furniture stands in what is
-> left.**
+> **A room that leaves owns no volume of its own. It lends its deck
+> instead: cargo may be set down on a calling room's fabric, a station's
+> own furniture may stand there, and nothing stays.**
 
-The fixture rule kept a room the three cells its own handshake and
-pendant stand in. It left the harder half unsaid: a station hangs
-**furniture** too, and furniture was measured off the room's whole box,
-and a room's whole box is cargo's. Every cell of every chart is a berth
-and a berth spends real air — the deck to the top of the tallest thing
-that may stand on it, the deckhead to the bottom of the deepest thing
-that may hang from it, each wall to the depth a rig is drawn within. Swept
-against a loaded board, **82% of a market's air is inside some berth's**,
-and the fifteen characters had 290 fittings standing in it, 241 of them
-on the trade bands themselves.
+The owner's ruling, verbatim:
 
-No band of *cells* answers that: a station's furniture covers 15–46% of
-its room's net, 56–87% across a kind's hosts, and the sim puts a room's
-hand-over goods and a pump's fuel on exactly the `Plain` cells a
-reservation would need. So the law is stated in **air** rather than in
-cells, and the air it names is the one band nothing berths in:
+> "There should definitely be dead space in the non-player owned areas.
+> If you *want*, you could allow the *player* to stage cargo there (if
+> the player causes a clipping incident I don't care), and prevent
+> takeoff until all staging areas are empty. That could help with, say,
+> making sure the entire room remains a grid with the same
+> pickup/placement mechanics everywhere, which could help with making
+> measurements and consistency."
 
-- its **floor** is the top of the walls' last course. Below that every
-  wall cell is a berth; above it a wall is fabric.
-- its **ceiling** is as low as a ceiling rig hangs.
-- its **plan** is the room's own, edge to edge, because no wall berth
-  reaches above the walls.
+It settles a fight three passes lost. Every cell of every chart was a
+berth and a berth spends real air, so a station's own furniture had
+nowhere in its own room to stand: the geometry sweep found 447 places
+where a fitting stood in cargo's air, and 157 of them were a trading
+console clipping the cell it sits on. There was no arrangement that
+fixed it, because the room owned nothing.
 
-The band is 82 mm tall and it is the ship's storey that makes it so, not
-a room: three courses of wall, a cell of ceiling cargo, and a room two
-and a quarter metres high leave that much and no more. It clears a
-standing body by three centimetres, which is checked rather than relied
-on — and it is the same clearance `room::CALLER_DROP` already hangs the
-pendant at, so a station's furniture and the room's own lamp start at one
-height and a crew member walks under all of it or none of it.
+**`Tile::Staging` is the room the room keeps.** It is what a calling
+room's unclaimed fabric reads as, exactly where a riding room's reads
+`Plain`, and it is one declaration — `RoomKind::ordinary` — so the class
+a room's hand-over goods land on and the class the launch gate counts can
+never come apart. Four clauses, each doing work:
 
-**The frame is the law.** A character's fittings are fractions of the box
-they hang in (`cabin::poi::Fitting`), so the presentation measures decor
-off the dressing band instead of off the room, and the containment
-arithmetic those fittings were always held to — `|at| + |half| <= 1` —
-stops meaning "inside the room" and starts meaning *clear of every berth
-in it*. A station cannot stand a post in a crate's air for the same
-structural reason it cannot name a cell. Three whole families of the
-geometry sweep — furniture in a berth, furniture in front of one,
-furniture fencing one off — went to zero without a station's numbers
-moving sideways.
+1. **Placement is unchanged.** Staging goes through `placement_check`
+   like everything else, takes the same berth well, answers the same
+   carry, and refuses nothing `Plain` accepts. That uniformity is the
+   point of the class and not a convenience: one grid, one set of
+   mechanics, everywhere in the room.
+2. **Nothing stays.** `cargo::staying` already asks whether a berth is
+   one a piece would still hold after a launch, and a calling room's
+   never is. So a spare instrument staged on a station's deck does not
+   count as one aboard, and both of a pair can never be staged and lost.
+3. **The launch refuses while a staging cell is occupied.** Which is the
+   gangway law's `Refusal::Cargo`, unchanged and now saying the thing it
+   was always going to have to say about a station's whole deck rather
+   than about its offer area alone. `Sim::detained_cargo` derives the
+   pieces holding it from the very predicate the gate refuses on.
+4. **A fitting standing in a staging cell is not a defect.** The
+   geometry sweep's `berth-clear` and `berth-seen` ask about the berths
+   cargo *stays* in and about the trade surface, and they ask nothing
+   about staging. A crate set down inside a station's bollard is the
+   clipping incident the owner said not to care about.
 
-What it costs is honest and worth writing down: **a station's presence is
-a plan now, not an elevation.** A metre-tall cabinet is a metre-wide one.
-The fittings keep the arrangement their agents gave them — a plaque on
-the port flank is still on the port flank — and lose their height.
+What the law does **not** relax is `berth-reached`, which still holds
+over every berth in the game, staging included. A clip is a clipping
+incident; a berth no body can work is a soft-lock — a crate set down
+behind a bollard would hold the launch forever — and it is also the
+refusal's own legibility, because the amber frame that says *this is what
+the launch is waiting on* is drawn on the cell's own face. One rule
+carries both, and it is deliberately stricter than the engine: the
+runtime's pointer ray is cast at mapped surfaces only and station decor
+carries none, so a fitting never actually blocks a pick, it only hides
+one.
+
+**The refusal reads without a word.** Pull the lever with something of
+yours ashore and the sim answers `Cue::Refit` with the law that refused —
+the same cue the door's own latch answers with — which strobes every jamb
+lamp red. What is holding it wears the amber claim frame, the form that
+already means *this is what this room's business is about*, standing on
+the piece where the player set it down. Nothing is rendered, nothing is
+read.
+
+### The soffit that came before it, and why it went
+
+The staging law replaces a **dressing law**, which said that a station
+dressed the band left over above every berth's air: floor at the top of
+the walls' last course, ceiling as low as a ceiling rig hangs, the room's
+own plan edge to edge. It was correct — three whole families of the
+sweep went to zero and the work order emptied — and the band was **82
+mm**. A character's fittings are fractions of the box they hang in, so
+every station in the fleet was flattened by ×0.036: a metre-tall cabinet
+became a metre-wide one, and the pump bay read as an empty box.
+
+It is undone rather than reverted. Decor is measured off the room's own
+box again, floor to deckhead, and the containment law goes back to
+meaning "inside this room" — with the doorway check that the band used to
+give by arithmetic restored as a check. `room::HEAD_CLEAR` stays, because
+`CALLER_DROP` is derived from it and a pendant a crew member walks into
+is a real defect; nothing else of the band survives.
 
 ### The calling rooms grow
 
-Because the band's height is the ship's and its plan is the room's, plan
-is the only room a station has, and that is what the growth buys. Each
-calling kind is **the smallest extent — grown a cell at a time, the
-shorter axis first — whose band holds the bulk its hosts' furniture had
-before the law**: a Trade must hold the comet's 1.31 m³ of quarried ice,
-a Parlor the casino's 0.41, a Pump the forecourt's 0.29.
+The extents the dressing law bought stay, and under the staging law they
+buy something better: a room that is easier to read and has deck to
+spare for the crew to stack on.
 
 | Kind | Was | Is | Because |
 | --- | --- | --- | --- |
-| **Trade** | 6×5 | **8×7** | Twelve hosts, and the worst of them wants 16 m² of band. A market ends up the size of a cabin, which is the right size for a market. |
-| **Wreck** | 5×3 | **5×3** | A derelict's twenty-three fittings are the smallest bulk in the fleet, 0.17 m³, and its band already holds twice that. Measured, not assumed. |
-| **Parlor** | 4×4 | **5×4** | One cell short: 0.397 m³ of band against 0.407 of house. |
-| **Pump** | 3×3 | **4×3** | A forecourt's plumbing wants 3.5 m² and a three-square bay keeps 2.7. Its counter moves into the starboard corner it was already in, so the fixture rule's corner clause keeps the case it exists for. |
+| **Trade** | 6×5 | **8×7** | Twelve hosts, the busiest furniture in the fleet, and the most staging: a market ends up the size of a cabin, which is the right size for a market. |
+| **Wreck** | 5×3 | **5×3** | A derelict's twenty-three fittings are the smallest bulk in the fleet and it was already big enough. Measured, not assumed. |
+| **Parlor** | 4×4 | **5×4** | One cell short of housing the casino's own furniture with deck left over. |
+| **Pump** | 3×3 | **4×3** | A forecourt's plumbing is the densest thing any room hangs. Its counter moves into the starboard corner it was already in, so the fixture rule's corner clause keeps the case it exists for. |
 
 The cabin and the burner are out of it: the cabin is the crew's own and
 the burner's whole net is `Consume`, so neither hosts a station and
-neither has a band to fill.
+neither stages anything.
 
 Nothing else in this document moves. Extents live on the shared lattice,
 so attach geometry follows them and overlap stays prevented by law; the
 tile bands are derived from the extent and follow it; the escape-hatch
-guarantee is about ports rather than sizes. The save bumped, because the
-cell two numbers name is on a wider net now: `STV16`, and a pre-STV16
-berth in a room that grew is translated chart by chart exactly as the
-cabin's own widening was, with whatever the arbiter then refuses walking
-to the first berth its room still has.
+guarantee is about ports rather than sizes. The save bumped once for the
+growth — `STV16`, translating a pre-growth berth chart by chart and
+walking whatever the arbiter then refuses to the first berth its room
+still has — and **the staging class did not bump it again**: no document
+has ever stored a tile class, `tile_of` is pure in `(kind, x, y)`, and
+the cells `Staging` names are the identical cells `Plain` named in those
+rooms the day before.
 
 ### The entry-path law
 

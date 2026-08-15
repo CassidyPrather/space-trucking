@@ -207,29 +207,31 @@ const THE_GILT: [Fitting; 2] = [
 /// at a height the doorway cannot reach, so it can cross the aft wall
 /// unbroken: the room has no corner where it stops being the room.
 const THE_HOUSE: [Fitting; 23] = [
-    // **The seven**, on the front wall, over the betting floor: a plum
-    // board in a gold frame with seven rose lamps set round it. It hangs
-    // on the wall you face coming through the seam and the wall you face
-    // laying a stake down, which is the whole job of a sign.
+    // **The seven**, on the front wall, straight down the doorway's own
+    // lane: a plum board in a gold frame with seven rose lamps set round
+    // it. It hangs on the wall you face coming through the seam, in the
+    // one column of that wall the chalk does not take (the entry-path
+    // law) — so the stake goes down either side of it and the sign never
+    // stands in the air a proposal is laid in.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.06, 0.10, -0.962),
-        Vec3::new(0.56, 0.56, 0.016),
+        Vec3::new(-0.60, 0.10, -0.962),
+        Vec3::new(0.37, 0.37, 0.016),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(PLUSH),
-        Vec3::new(0.06, 0.10, -0.945),
-        Vec3::new(0.50, 0.50, 0.018),
+        Vec3::new(-0.60, 0.10, -0.945),
+        Vec3::new(0.33, 0.33, 0.018),
     ),
-    lamp(0.060, 0.500),
-    lamp(-0.253, 0.349),
-    lamp(-0.330, 0.011),
-    lamp(-0.114, -0.260),
-    lamp(0.234, -0.260),
-    lamp(0.450, 0.011),
-    lamp(0.373, 0.349),
+    lamp(-0.600, 0.364),
+    lamp(-0.807, 0.264),
+    lamp(-0.857, 0.041),
+    lamp(-0.715, -0.138),
+    lamp(-0.485, -0.138),
+    lamp(-0.343, 0.041),
+    lamp(-0.393, 0.264),
     // The coving, all the way round, over the top of the one door.
     Fitting::new(
         Shape::Slab,
@@ -272,34 +274,34 @@ const THE_HOUSE: [Fitting; 23] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.965, -0.52, 0.22),
-        Vec3::new(0.020, 0.40, 0.56),
+        Vec3::new(0.965, -0.52, 0.42),
+        Vec3::new(0.020, 0.40, 0.40),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(PLUSH),
-        Vec3::new(0.950, -0.52, 0.22),
-        Vec3::new(0.022, 0.36, 0.52),
+        Vec3::new(0.950, -0.52, 0.42),
+        Vec3::new(0.022, 0.36, 0.36),
     ),
-    // **The rack.** Five commemorative chips, mounted like medals on a
-    // lit gold board on the starboard wall, with the rail they sit on
-    // under them. Every one of them is a stake somebody laid on the
+    // **The rack.** Four commemorative chips, mounted like medals on a
+    // lit gold board on the starboard wall aft of the chalk, with the
+    // rail they sit on under them. Every one of them is a stake somebody laid on the
     // floor you are standing on, and the house kept all of them.
     Fitting::new(
         Shape::Slab,
         Coat::enamel(IDOL),
-        Vec3::new(0.965, 0.24, -0.40),
-        Vec3::new(0.018, 0.20, 0.60),
+        Vec3::new(0.965, 0.24, 0.450),
+        Vec3::new(0.018, 0.20, 0.45),
     ),
-    chip(-0.86),
-    chip(-0.63),
-    chip(-0.40),
-    chip(-0.17),
+    chip(0.10),
+    chip(0.33),
+    chip(0.56),
+    chip(0.79),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.945, 0.02, -0.40),
-        Vec3::new(0.030, 0.022, 0.60),
+        Vec3::new(0.945, 0.02, 0.450),
+        Vec3::new(0.030, 0.022, 0.45),
     ),
 ];
 
@@ -419,9 +421,11 @@ mod tests {
             CHARACTER.tiles.chalk.color, CHIP,
             "the betting line is neon"
         );
-        // Seven pins on the wheel, seven bulbs on the chandelier, seven
-        // lamps on the halo: the heptagram, three times, drawn the one
-        // way axis-aligned bodies can draw it.
+        // Seven pins on the wheel, seven bulbs on the sign, seven lamps
+        // on the halo: the heptagram, three times, drawn the one way
+        // axis-aligned bodies can draw it. The sign's seven are told by
+        // the wall they hang on and the rack's by its own, because both
+        // moved off the chalk when the staging law landed.
         let sevens = [
             CHARACTER
                 .handshake
@@ -432,7 +436,7 @@ mod tests {
             CHARACTER
                 .decor
                 .iter()
-                .filter(|f| f.shape == Shape::Dome && f.at.x.abs() < 0.6)
+                .filter(|f| f.shape == Shape::Dome && f.at.z < -0.5)
                 .count(),
             CHARACTER
                 .dress
@@ -448,7 +452,7 @@ mod tests {
         let rack = CHARACTER
             .decor
             .iter()
-            .filter(|f| f.shape == Shape::Dome && f.at.x.abs() > 0.6)
+            .filter(|f| f.shape == Shape::Dome && f.at.x > 0.6)
             .collect::<Vec<_>>();
         assert!(rack.len() >= 4, "the rack has stopped being furniture");
         for chip in rack {

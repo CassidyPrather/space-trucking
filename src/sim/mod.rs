@@ -911,6 +911,24 @@ impl Sim {
             .unwrap_or_default()
     }
 
+    /// **What the launch is waiting on** — piece ids, ascending: every
+    /// piece of the player's standing in a room that will not ride out
+    /// (docs/ROOMS.md, "The staging law"). Empty means the gangway law
+    /// has nothing left to say about cargo.
+    ///
+    /// The refusal is a thing you can see rather than a thing you are
+    /// told: the frontend frames exactly these pieces where they stand,
+    /// with no string anywhere. Derived, never stored, and read from the
+    /// very predicate [`Sim::launch_gate`] refuses on.
+    #[must_use]
+    pub fn detained_cargo(&self) -> Vec<u32> {
+        self.pieces
+            .iter()
+            .filter(|piece| self.detained(piece))
+            .map(|piece| piece.id)
+            .collect()
+    }
+
     /// The stowage rule behind the most recent hard `Cue::Reject`, for the
     /// renderer's icon flash. Set when that cue fires and cleared by the
     /// next successful placement, so read it in the cue's frame.
@@ -1736,7 +1754,8 @@ impl Sim {
     /// its own ordinary deck first, then its offer area, so a cramped
     /// room still hands over what it agreed to.
     fn deck_berth(&self, room: RoomId, id: u32, kind: Kind) -> Option<Loc> {
-        self.free_berth_in(room, Some(id), kind, Tile::Plain)
+        let ordinary = self.rooms.kind(room)?.ordinary();
+        self.free_berth_in(room, Some(id), kind, ordinary)
             .or_else(|| self.free_berth_in(room, Some(id), kind, Tile::Offer))
     }
 
@@ -1864,13 +1883,20 @@ impl Sim {
             if self.ship.selected.is_some() && !armed_valid {
                 self.ship.selected = None;
             }
-            if armed_valid && self.launch_gate().is_ok() {
-                self.depart();
-            } else {
-                // No destination, or the gangway law says somebody or
-                // something would be left behind: nothing is ever lost to
-                // the lever.
+            if !armed_valid {
+                // Nothing chosen, or the choice lapsed: there is no law
+                // to name, so the lever simply does not take.
                 self.cues.push(Cue::Reject { hard: false });
+            } else if let Err(refusal) = self.launch_gate() {
+                // **The gangway law refuses by name at the lever, the way
+                // it already does at a latch.** Somebody or something
+                // would be left behind, and the frontend says which:
+                // `Cue::Refit` strobes the jambs, and the pieces
+                // [`Sim::detained_cargo`] names wear the frame that says
+                // they are not coming. Nothing is ever lost to the lever.
+                self.cues.push(Cue::Refit { refusal });
+            } else {
+                self.depart();
             }
         } else if !icon_press(p) {
             self.cues.push(Cue::Reject { hard: false });
@@ -1966,7 +1992,14 @@ impl Sim {
                     return Err(Some(Violation::Suspicious));
                 }
             }
-            Tile::Plain => {}
+            // **Staging berths exactly as ordinary deck does**, and that
+            // uniformity is the whole point of the class: one grid, one
+            // arbiter, one carry everywhere in the room. It is not an
+            // exit, so the vital rule has no business here — the launch
+            // gate refuses while anything of yours stands on one, so the
+            // last chart tank left on a station's deck is not lost, it is
+            // simply not going anywhere yet.
+            Tile::Plain | Tile::Staging => {}
         }
         // A drop over a cabinet's body reaches for its cubbies first — but
         // only with something cubby-sized. Anything bigger falls through to
@@ -2050,6 +2083,23 @@ impl Sim {
         })
     }
 
+    /// **What the launch would leave behind**: a piece of the player's
+    /// resting in a room that does not ride.
+    ///
+    /// A staging cell is the ordinary case and the reason the predicate
+    /// is worth a name — a station's deck takes cargo through the same
+    /// arbiter its own goods do, and the station leaves. The offer area
+    /// and a shelf's spare deck are the same fact from other angles, so
+    /// this asks the question once: *is it yours, and is it standing in
+    /// a room the ship is about to cast off?*
+    ///
+    /// [`Sim::launch_gate`] refuses on it and [`Sim::detained`] lights
+    /// it, so the law and its reading cannot come apart.
+    fn detained(&self, piece: &Piece) -> bool {
+        self.room_of(piece).is_some_and(|at| !self.rooms.riding(at))
+            && player_owned(&self.rooms, &self.pieces, piece.loc)
+    }
+
     /// The gangway law's launch gate. The lever refuses unless every crew
     /// body is in a riding room, nothing of the player's rests in a
     /// calling room, every attached trade room's offer is resolved, and no
@@ -2060,13 +2110,8 @@ impl Sim {
         if self.occupied.iter().any(|&at| !self.rooms.riding(at)) {
             return Err(Refusal::Aboard);
         }
-        for piece in &self.pieces {
-            let Some(at) = self.room_of(piece) else {
-                continue;
-            };
-            if !self.rooms.riding(at) && player_owned(&self.rooms, &self.pieces, piece.loc) {
-                return Err(Refusal::Cargo);
-            }
+        if self.pieces.iter().any(|piece| self.detained(piece)) {
+            return Err(Refusal::Cargo);
         }
         for (id, room) in self.rooms.iter() {
             match room.kind {
@@ -2306,7 +2351,10 @@ impl Sim {
 
     /// Drop a fresh piece onto a room's ordinary deck, if there is room.
     fn spawn_in(&mut self, room: RoomId, kind: Kind) {
-        let Some(loc) = self.free_berth_in(room, None, kind, Tile::Plain) else {
+        let Some(ordinary) = self.rooms.kind(room).map(RoomKind::ordinary) else {
+            return;
+        };
+        let Some(loc) = self.free_berth_in(room, None, kind, ordinary) else {
             return;
         };
         self.pieces.push(Piece {
@@ -3520,6 +3568,162 @@ mod tests {
         let shake = handshake(&sim, TRADE);
         sim.advance(0.0, &press_at(shake.x, shake.y));
         assert!(sim.kind_familiar(Kind::BrinePearls));
+    }
+
+    // ---- The staging law ----
+
+    /// **Nothing stays on a staging cell.**
+    ///
+    /// The possession half of the vital rule asks whether a berth is one
+    /// the piece would still hold after a launch, and a staging cell
+    /// never is — the room it is in leaves. Stated over every calling
+    /// kind and every one of its staging cells, with a real board and
+    /// the real predicate, so a kind that grows a class or a class that
+    /// grows a kind cannot quietly turn a station's deck into a hold.
+    ///
+    /// The consequence is the one that matters: staging a spare chart tank
+    /// on a station's deck does not make it the last one aboard, so both
+    /// of a pair can never be staged and lost.
+    #[test]
+    fn nothing_stays_on_a_staging_cell() {
+        let mut swept = 0;
+        for (poi, kind) in [(SATURN, RoomKind::Trade), (URANUS, RoomKind::Trade)] {
+            let mut sim = cleared(7);
+            travel_to(&mut sim, poi);
+            let Some(room) = sim.rooms().find(kind) else {
+                continue;
+            };
+            for (x, y) in tiles(&sim, room, Tile::Staging) {
+                if !placement_legal(
+                    &sim.rooms,
+                    &sim.pieces,
+                    u32::MAX,
+                    Kind::ChartTank,
+                    room,
+                    x,
+                    y,
+                ) {
+                    continue;
+                }
+                let id = inject_at(&mut sim, Kind::ChartTank, Loc::Hold { room, x, y });
+                let piece = *sim.pieces().iter().find(|p| p.id == id).unwrap();
+                assert!(
+                    player_owned(&sim.rooms, &sim.pieces, piece.loc),
+                    "{kind:?} claimed the crate on its staging cell ({x}, {y})"
+                );
+                assert!(
+                    !cargo::staying(&sim.rooms, &sim.pieces, &piece),
+                    "{kind:?} keeps a staying berth at ({x}, {y}), which it leaves with"
+                );
+                sim.pieces.retain(|p| p.id != id);
+                swept += 1;
+            }
+        }
+        assert!(swept > 0, "no staging cell was swept at all");
+    }
+
+    /// **Nothing launches while a staging cell holds yours.**
+    ///
+    /// The gangway law, said at the lever about a station's own deck:
+    /// set a crate down anywhere in a room that came alongside and the
+    /// ship will not leave without it. Swept over every staging cell a
+    /// crate fits, in a real market, because the refusal has to be the
+    /// whole class and not the offer area it started as.
+    ///
+    /// Both halves are asserted: the gate refuses by name, and
+    /// [`Sim::detained_cargo`] — the frontend's whole reading of that
+    /// refusal — names exactly the piece holding it. A law whose reading
+    /// can disagree with it is a law nobody can obey.
+    #[test]
+    fn nothing_launches_while_a_staging_cell_holds_yours() {
+        let mut sim = cleared(19);
+        travel_to(&mut sim, SATURN);
+        let room = sim.rooms().find(RoomKind::Trade).expect("alongside");
+        assert_eq!(sim.launch_gate(), Ok(()), "an empty caller holds nothing");
+        assert!(sim.detained_cargo().is_empty());
+        let mut swept = 0;
+        for (x, y) in tiles(&sim, room, Tile::Staging) {
+            if !placement_legal(
+                &sim.rooms,
+                &sim.pieces,
+                u32::MAX,
+                Kind::RationBricks,
+                room,
+                x,
+                y,
+            ) {
+                continue;
+            }
+            let id = inject_at(&mut sim, Kind::RationBricks, Loc::Hold { room, x, y });
+            assert_eq!(
+                sim.launch_gate(),
+                Err(Refusal::Cargo),
+                "the lever flew with a crate on staging ({x}, {y})"
+            );
+            assert_eq!(
+                sim.detained_cargo(),
+                vec![id],
+                "the frame does not point at what holds the launch at ({x}, {y})"
+            );
+            sim.pieces.retain(|p| p.id != id);
+            swept += 1;
+        }
+        assert!(swept > 0, "a market with no staging cell is not a market");
+        assert_eq!(
+            sim.launch_gate(),
+            Ok(()),
+            "the deck cleared and it still refuses"
+        );
+    }
+
+    /// **The refusal names something the player can pick back up.**
+    ///
+    /// The soft-lock this class could have reintroduced, refused in
+    /// advance: a staging cell that took cargo and would not give it
+    /// back is a launch refusal nobody can satisfy. Every staging berth
+    /// a piece may take is one the same arbiter will lift it out of, and
+    /// there is a berth aboard to carry it to — so the sentence "clear
+    /// the deck and go" is always a thing the player can actually do.
+    ///
+    /// The geometric half of the same guarantee — that no station's
+    /// furniture fences a staging cell off from every place a body may
+    /// stand — is the gauntlet's `berth-reached`, which is deliberately
+    /// **not** narrowed for staging (`cabin::gauntlet`).
+    #[test]
+    fn every_staging_cell_gives_back_what_it_took() {
+        let mut swept = 0;
+        // Every calling kind the game has, on the ship's own starting
+        // board — the loaded cabin, not an empty one, so "there is a
+        // berth aboard" is a claim about a real ship.
+        for host in room::ROOM_KINDS.into_iter().filter(|kind| !kind.riding()) {
+            for kind in [Kind::RationBricks, Kind::PerfumeVial, Kind::WallLamp] {
+                let mut sim = Sim::new(23);
+                let room = sim
+                    .rooms
+                    .spawn(host, CABIN)
+                    .unwrap_or_else(|why| panic!("a {host:?} comes alongside: {why:?}"));
+                for (x, y) in tiles(&sim, room, Tile::Staging) {
+                    if !placement_legal(&sim.rooms, &sim.pieces, u32::MAX, kind, room, x, y) {
+                        continue;
+                    }
+                    let id = inject_at(&mut sim, kind, Loc::Hold { room, x, y });
+                    let piece = *sim.pieces().iter().find(|p| p.id == id).unwrap();
+                    // Liftable: nothing pins a crate to a station's deck.
+                    assert!(
+                        !cargo::laid_pinned(&sim.pieces, &piece),
+                        "{host:?}: a {kind:?} on staging ({x}, {y}) is pinned where it stands"
+                    );
+                    // And somewhere aboard to carry it to.
+                    assert!(
+                        first_fit(&sim.rooms, &sim.pieces, id, kind).is_some(),
+                        "{host:?}: staging ({x}, {y}) took a {kind:?} the ship has no berth for"
+                    );
+                    sim.pieces.retain(|p| p.id != id);
+                    swept += 1;
+                }
+            }
+        }
+        assert!(swept > 0, "nothing was staged anywhere");
     }
 
     // ---- The gangway law ----

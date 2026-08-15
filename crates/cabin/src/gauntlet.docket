@@ -14,11 +14,22 @@
 #
 # Blank lines and `#` comments are ignored.
 #
-# **It is empty, and the work order is worked through.** The 362 lines it
-# carried were three families and one cause: a station's furniture was
-# measured off the room's whole box, and a room's whole box is cargo's.
-# Furniture is measured off the band a room keeps over the crew's heads
-# now (docs/ROOMS.md, "The dressing law"), so a fitting in a berth's air
-# is a thing a character cannot express rather than a thing to find.
+# **It is empty, and the work order is worked through.**
+#
+# The lines it carried were three families and one cause: every cell of
+# every chart was a berth cargo could stay in, so a room owned no volume
+# of its own and a station's furniture was a defect wherever it stood.
+# A calling room keeps its own deck now — `Tile::Staging`, which cargo
+# may be set down on and nothing stays on (docs/ROOMS.md, "The staging
+# law") — and the three rules ask about the berths that are left: the
+# room's goods, a proposal's chalk, a doorway, the counter's own cell,
+# and the plain deck of the rooms that ride.
+#
+# Narrowing them retired 289 findings of 447, and none of the 289 was
+# ever a defect: each was a station's fitting standing in air the room
+# had no other use for. The remaining 158 were the honest half, and they
+# were fixed by moving furniture — every station's hardware came off its
+# own shopfront and off the chalk, onto its flanks and the middle of its
+# own deck, which is where a shop keeps its fittings anyway.
 #
 # What a defect looks like from here is a line appearing in this file.

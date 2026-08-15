@@ -231,14 +231,16 @@ const LAMP_CORDS: [Fitting; 3] = [
 /// have to go and find it.
 const CELL: [Fitting; 26] = [
     // ---- the empty shelves ----
-    // Nothing is on any of them, because `barter::stock_kinds` puts
+    // A cell clear of the goods' own band, so the hermits' shelving and
+    // the hermits' goods do not stand in one another's air. Nothing is on
+    // any of them, because `barter::stock_kinds` puts
     // `karma / 2` goods out and a stranger's karma is zero. The hermits
     // are not out of stock: they have not decided about you.
-    ledge(-0.10, 0.20, 0.90, 0.17),
-    ledge(0.34, 0.20, 0.90, 0.17),
-    ledge(0.78, 0.20, 0.90, 0.17),
-    corbel(-0.20, 0.13, 0.90),
-    corbel(0.44, 0.13, 0.90),
+    ledge(-0.10, 0.20, 0.600, 0.17),
+    ledge(0.34, 0.20, 0.600, 0.17),
+    ledge(0.78, 0.20, 0.600, 0.17),
+    corbel(-0.20, 0.13, 0.600),
+    corbel(0.44, 0.13, 0.600),
     // Two more down the starboard wall, for a body that walks round.
     ledge(0.90, 0.02, -0.30, 0.075),
     ledge(0.90, 0.02, 0.16, 0.075),
@@ -261,36 +263,39 @@ const CELL: [Fitting; 26] = [
     votive(0.27),
     votive(0.50),
     // ---- the one window, from the inside ----
-    // A splayed stone reveal on the front wall with dark glass in it, and
-    // the candle that makes it the lit one standing on its own sill. From
-    // out there this is the window nobody has seen a second of; from in
-    // here it is a candle on a stone shelf, which is all it ever was.
+    // A splayed stone reveal with dark glass in it, and the candle that
+    // makes it the lit one standing on its own sill. It stands at the end
+    // of the doorway's own lane, which is the one column of the front
+    // wall the chalk does not take (the entry-path law): come through the
+    // door and it is straight ahead of you. From out there this is the
+    // window nobody has seen a second of; from in here it is a candle on
+    // a stone shelf, which is all it ever was.
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::GLASS),
-        Vec3::new(0.24, 0.16, -0.96),
-        Vec3::new(0.22, 0.20, 0.020),
+        Vec3::new(-0.75, 0.16, -0.96),
+        Vec3::new(0.21, 0.20, 0.020),
     ),
-    reveal(0.24, 0.40, 0.28, 0.045),
-    reveal(0.24, -0.08, 0.28, 0.045),
-    reveal(-0.02, 0.16, 0.045, 0.145),
-    reveal(0.50, 0.16, 0.045, 0.145),
+    reveal(-0.75, 0.40, 0.22, 0.045),
+    reveal(-0.75, -0.08, 0.22, 0.045),
+    reveal(-0.955, 0.16, 0.045, 0.145),
+    reveal(-0.545, 0.16, 0.045, 0.145),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::POI_HERMITAGE),
-        Vec3::new(0.24, -0.15, -0.90),
-        Vec3::new(0.30, 0.035, 0.075),
+        Vec3::new(-0.75, -0.15, -0.90),
+        Vec3::new(0.24, 0.035, 0.075),
     ),
     Fitting::new(
         Shape::Post,
         Coat::enamel(palette::GLINT),
-        Vec3::new(0.24, 0.00, -0.90),
+        Vec3::new(-0.75, 0.00, -0.90),
         Vec3::new(0.035, 0.060, 0.035),
     ),
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(palette::EMBER, 3.0),
-        Vec3::new(0.24, 0.02, -0.90),
+        Vec3::new(-0.75, 0.02, -0.90),
         Vec3::new(0.035, 0.045, 0.035),
     ),
     // ---- the rock itself ----
@@ -300,13 +305,13 @@ const CELL: [Fitting; 26] = [
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::SOOT),
-        Vec3::new(-0.62, 0.86, 0.42),
+        Vec3::new(-0.62, 0.86, 0.400),
         Vec3::new(0.30, 0.14, 0.30),
     ),
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::POI_HERMITAGE),
-        Vec3::new(0.58, 0.88, -0.48),
+        Vec3::new(0.58, 0.88, -0.100),
         Vec3::new(0.26, 0.12, 0.26),
     ),
 ];

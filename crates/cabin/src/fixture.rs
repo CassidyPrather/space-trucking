@@ -62,9 +62,9 @@ use space_trucking::sim::room::RoomKind;
 /// boot, which read as free coverage and was not: the chain's job is to
 /// carry a board from a net that no longer exists onto one that does,
 /// and a showcase whose proposal ends up wherever the arithmetic leaves
-/// it is a showcase of the arithmetic. The market grew to 8×7 with the
-/// dressing law and the front rows it gained are rows no older document
-/// can name, so the board is written in the net it is meant to show.
+/// it is a showcase of the arithmetic. The market grew to 8×7 at STV16
+/// and the front rows it gained are rows no older document can name, so
+/// the board is written in the net it is meant to show.
 /// Every migration keeps its own test in `sim::save`.
 pub const SAVE: &str = "\
 STV16

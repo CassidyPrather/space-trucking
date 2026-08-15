@@ -252,7 +252,7 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         PIPE,
-        Vec3::new(-0.20, 0.63, 0.920),
+        Vec3::new(-0.20, 0.68, 0.920),
         Vec3::new(0.032, 0.30, 0.032),
     ),
     // Two thin conduits under it, clipped on at whatever height the last
@@ -261,7 +261,7 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         IRON,
-        Vec3::new(-0.06, 0.22, 0.888),
+        Vec3::new(-0.06, 0.39, 0.888),
         Vec3::new(0.84, 0.026, 0.026),
     ),
     Fitting::new(
@@ -326,8 +326,8 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         PIPE,
-        Vec3::new(0.90, 0.16, 0.895),
-        Vec3::new(0.055, 0.68, 0.055),
+        Vec3::new(0.895, 0.16, 0.895),
+        Vec3::new(0.052, 0.68, 0.055),
     ),
     // The drip tray, and the stain that says how long the tray has been
     // losing the argument.

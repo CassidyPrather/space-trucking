@@ -573,7 +573,7 @@ mod tests {
         let mut cells = Vec::new();
         for y in 0..rows {
             for x in 0..cols {
-                if kind.tile_of(x, y) == Some(crate::sim::Tile::Plain)
+                if kind.tile_of(x, y) == Some(kind.ordinary())
                     && matches!(kind.surface_of(x, y), Some(crate::sim::room::Surf::Floor))
                 {
                     cells.push((x, y));

@@ -202,21 +202,21 @@ const LAMP_FLUE: [Fitting; 3] = [
 /// and every number is a fraction of its half-extents, which is why none
 /// of this had to know how big a trade room is.
 const DISPATCH_FLOOR: [Fitting; 20] = [
-    // The line across the counter: a pipe standing a hand off the aft
-    // wall in front of the goods, with two stub valves on it. The
+    // The line across the counter: a pipe standing a cell clear of the
+    // goods' own band, with two stub valves on it. The
     // handshake is one more of these, which is the argument the whole
     // station makes — you are not at a shop, you are at a tap, and the
     // tap you are allowed to turn is the one with the lamp under it.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.66, -0.10, 0.86),
+        Vec3::new(0.66, -0.10, 0.600),
         Vec3::new(0.28, 0.05, 0.05),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(-0.16, -0.10, 0.86),
+        Vec3::new(-0.16, -0.10, 0.600),
         Vec3::new(0.14, 0.05, 0.05),
     ),
     stem(-0.16),
@@ -226,44 +226,46 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
     // Three bottles racked against the starboard wall, in the produce's
     // own colour code. This is the stock room of a works: what it sells
     // is standing in the room, whether or not it is for sale today.
-    bottle(0.10),
-    bottle(0.45),
-    bottle(0.80),
+    bottle(-0.20),
+    bottle(0.05),
+    bottle(0.30),
     // The strap across them, because a loose bottle is a torpedo.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
-        Vec3::new(0.90, -0.10, 0.365),
-        Vec3::new(0.03, 0.03, 0.415),
+        Vec3::new(0.90, -0.10, 0.050),
+        Vec3::new(0.03, 0.03, 0.350),
     ),
     // The manifold, high along the starboard cornice, with its collars.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.86, 0.60, 0.0),
-        Vec3::new(0.06, 0.06, 0.92),
+        Vec3::new(0.86, 0.60, 0.143),
+        Vec3::new(0.06, 0.06, 0.570),
     ),
-    collar(-0.55),
-    collar(0.55),
-    // The riser off it, dropping to the aft wall where the meter is.
+    collar(-0.16),
+    collar(0.44),
+    // The riser off it, dropping at the aft end of the run, where the
+    // meter is.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.86, 0.13, 0.90),
+        Vec3::new(0.86, 0.13, 0.380),
         Vec3::new(0.05, 0.47, 0.05),
     ),
-    // The pilot, over the aft cornice: the stack outside is lit, and this
-    // is that same fire seen from indoors through a slit in the cornice.
+    // The pilot: the stack outside is lit, and this is that same fire
+    // seen from indoors through a slit in the deckhead, struck just
+    // inboard of the cornice so the goods keep their own air.
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::EMBER, 1.8),
-        Vec3::new(0.28, 0.92, 0.93),
+        Vec3::new(0.28, 0.92, 0.640),
         Vec3::new(0.62, 0.028, 0.035),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.28, 0.968, 0.93),
+        Vec3::new(0.28, 0.968, 0.630),
         Vec3::new(0.66, 0.028, 0.06),
     ),
     // The furnace port in the port wall: a hooded slit with the cracking
@@ -287,8 +289,8 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.86, -0.90, 0.0),
-        Vec3::new(0.10, 0.04, 0.55),
+        Vec3::new(0.86, -0.90, 0.143),
+        Vec3::new(0.10, 0.04, 0.400),
     ),
     Fitting::new(
         Shape::Ring,
@@ -303,7 +305,7 @@ const fn stem(x: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::metal(Worn::Plate),
-        Vec3::new(x, 0.02, 0.86),
+        Vec3::new(x, 0.02, 0.600),
         Vec3::new(0.022, 0.12, 0.026),
     )
 }
@@ -315,7 +317,7 @@ const fn wheel(x: f32) -> Fitting {
     Fitting::new(
         Shape::Ring,
         Coat::enamel(palette::kind_color(Kind::GasCanister)),
-        Vec3::new(x, 0.15, 0.86),
+        Vec3::new(x, 0.15, 0.600),
         Vec3::new(0.085, 0.09, 0.102),
     )
 }

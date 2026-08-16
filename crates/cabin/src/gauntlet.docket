@@ -36,13 +36,20 @@
 # `pieces::RIG_NEAR..RIG_FAR`, and the parts moved rather than the band:
 # the lamp's plate, pole, shade and bulb stand on one axle now instead of
 # three, and the crate's core is sunk to its own radius so its crown is
-# the band's own face. Widening the band would have cost every wall berth
-# in the game 15% more air to cure two floor-mounted kinds, which is a
-# systemic price for a local defect — and the measurement that settled it
-# is that neither kind can be berthed on a wall at all, so neither was
-# ever the berth-measured-too-shallow defect the line was written up as.
-# Both were a body hanging out of the box the carry tell wraps it in,
-# which is defect enough and is what the finding says now.
+# the band's own face.
+#
+# Widening the band was the other cure, and it prices worse than it looks:
+# the two spill at OPPOSITE ends — the lamp 0.069 m behind the near face,
+# the crate 0.073 m past the far one — so a band that cured either costs
+# about 15% more air on every wall berth in the game, and a band that
+# cured both costs 29% (0.497 m becomes 0.639 m). That is a systemic
+# price for a local defect. The measurement that settled it for good is
+# that neither kind can be berthed on a wall at all — every kind's mount
+# is Floor unless it is tagged otherwise, and a deck berth's air is its
+# own cell's column — so neither was ever the berth-measured-too-shallow
+# defect the line was written up as. Both were a body hanging out of the
+# box the carry tell wraps a carried rig in, which is defect enough and
+# is what the finding says now.
 #
 # The doorways were the third. Every piece of hardware in a seam was
 # built straight into the world, so the sweep walked through a dozen

@@ -503,6 +503,20 @@ clips a wall, is handled structurally, not by eyeballing:
   and exits. It runs headless under xvfb with llvmpipe, so visual review
   happens in CI-shaped environments too — geometry changes should come
   with fresh captures, looked at.
+- **The same view shot twice is the same file.** A screenshot run counts
+  its clock instead of measuring it: the game clock is paused and
+  stepped by exactly one sim tick per frame, so frame 46 lands at the
+  same instant on every run and every breathing lamp, sweeping tube and
+  drifting star is sampled at the same phase. Its world stops
+  reading the wall clock with it, and its shaders are compiled in the
+  frame that needs them rather than whenever they are ready. So a
+  refactor that was meant to change nothing can be proved to have
+  changed nothing by shooting the same view before and after and
+  comparing the bytes — which is what
+  `the_same_view_shot_twice_is_the_same_bytes` does on every view it
+  covers. `--gauge` is deliberately not on that clock: it measures a
+  duration, and a counted clock would only give it back the number it
+  was told.
 - Four `--view` names belong to the window and are *derived*, like
   every other preset: `pane`, `pane-port` and `pane-stbd` stand square
   on to the glass and a stride to either side of it, wherever the board

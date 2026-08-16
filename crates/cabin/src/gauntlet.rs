@@ -2418,6 +2418,39 @@ mod tests {
         !shared_faces(a, b).is_empty()
     }
 
+    /// **One rasteriser at a time.** Both pixel harnesses drive a whole
+    /// copy of the game, and the test harness would gladly run them at
+    /// once: two software rasterisers on one machine is a machine under
+    /// load, and a picture taken on a busy machine is measurably not the
+    /// picture taken on a quiet one. They take turns.
+    static RASTERISER: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// The turn, held for as long as the returned guard lives. A panic
+    /// in one harness poisons nothing that matters here — the lock
+    /// guards a machine, not a value.
+    fn one_at_a_time() -> std::sync::MutexGuard<'static, ()> {
+        RASTERISER
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// The built game and the workspace it was built in. Both pixel
+    /// harnesses drive the binary itself, because what they are checking
+    /// is what the binary does with a window.
+    fn built_game() -> (std::path::PathBuf, std::path::PathBuf) {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .canonicalize()
+            .expect("the workspace root is above the crate");
+        let game = root.join("target/debug/space-trucking");
+        assert!(
+            game.is_file(),
+            "build the game first: cargo build -p cabin (looked in {})",
+            game.display()
+        );
+        (game, root)
+    }
+
     /// **The pixel half is opt-in, and here is how to run it.**
     ///
     /// A screenshot needs a rasteriser, and CI has one only under `xvfb`
@@ -2452,22 +2485,30 @@ mod tests {
     /// that the path enters by the door and reaches the counter, and
     /// that nothing is standing in any of them — runs in the ordinary
     /// suite, and needs none of the above.
+    ///
+    /// **It stays opt-in, and the reason has changed.** It was opt-in
+    /// because the readings moved. They do not any more: on the counted
+    /// clock (`crate::FRAME_STEP`) two walks of one room print the same
+    /// twenty-seven lines to the last digit and write twenty-seven
+    /// identical PNGs. What keeps it out of the ordinary suite now is
+    /// that the ordinary suite has no window.
+    ///
+    /// The two detectors are not equally ready for one either. Over
+    /// seven walks of three room kinds the flicker samples came in at
+    /// 0.00017 of a picture at their worst against a [`FLICKER_TOL`] of
+    /// 0.02 — a hundredfold of room — while the light-pop pass reached
+    /// 0.155 of its [`POP_TOL`] of 0.18 in a station room, which is a
+    /// red build one re-hung lamp away. Steady is not the same as safe:
+    /// the flicker family is the half with the margin to be asked for on
+    /// every commit, and the light-pop family wants either more headroom
+    /// or a tolerance argued from a room rather than from a sample.
     #[test]
     #[ignore = "needs a rasteriser: run it under xvfb, see the doc comment"]
     fn the_filmstrip_holds_still_and_the_light_does_not_pop() {
-        use std::path::PathBuf;
         use std::process::Command;
 
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../..")
-            .canonicalize()
-            .expect("the workspace root is above the crate");
-        let game = root.join("target/debug/space-trucking");
-        assert!(
-            game.is_file(),
-            "build the game first: cargo build -p cabin (looked in {})",
-            game.display()
-        );
+        let _turn = one_at_a_time();
+        let (game, root) = built_game();
         let shots = root.join("target/gauntlet-walk");
         std::fs::create_dir_all(&shots).expect("somewhere for the filmstrip to land");
         let ran = Command::new(&game)
@@ -2482,6 +2523,89 @@ mod tests {
              gauntlet-walk lines above, and the filmstrip in {}",
             shots.display()
         );
+    }
+
+    /// **One view shot twice is one file twice.**
+    ///
+    /// A screenshot is only evidence if it reproduces, and these did not:
+    /// two runs of the same `--shot` command disagreed over anywhere from
+    /// 1% of the picture to 57% of it. Not because the art moves —
+    /// because the shutter fired at a frame NUMBER while everything in
+    /// the frame read the wall clock, so frame 46 landed wherever the
+    /// container's shader build happened to leave it. A refactor that
+    /// changed nothing therefore had to be proved with a listing of every
+    /// entity in the world, because the two pictures were never going to
+    /// agree.
+    ///
+    /// The shot path runs on the counted clock now (`crate::FRAME_STEP`),
+    /// in a world that has stopped reading the wall (`Bridge::steady`),
+    /// and this is the guard that keeps it there. It shoots one view from
+    /// inside the ship and one from outside it: the cabin carries the
+    /// breathing emissives, the drifting motes and the tube, and the void
+    /// carries the star field and the sky clock, which have the furthest
+    /// to drift.
+    ///
+    /// **Two views are deliberately not on the list.** `--view starboard`
+    /// and `--view parlor` still come out two ways, and it is not the
+    /// clock: the world is identical at the shutter (same seam timers,
+    /// same aim, same lamps) and one emissive plate is lit in some runs
+    /// and gone in others. A seam's amber latch is set flush against the
+    /// wall it hangs on, so the two faces fight for the depth buffer and
+    /// the winner is whatever order the frame was batched in. Standing
+    /// the plate off the wall settles it — six runs, one file — which
+    /// makes it a `coplanar-faces` finding on a piece of the room the
+    /// sweep does not reach, rather than anything a clock can fix.
+    ///
+    /// It needs a rasteriser, like everything else in the pixel half:
+    ///
+    /// ```text
+    /// cargo build -p cabin
+    /// VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
+    ///   WGPU_BACKEND=vulkan xvfb-run -a \
+    ///   cargo test -p cabin -- --ignored the_same_view
+    /// ```
+    #[test]
+    #[ignore = "needs a rasteriser: run it under xvfb, see the doc comment"]
+    fn the_same_view_shot_twice_is_the_same_bytes() {
+        use std::process::Command;
+
+        let _turn = one_at_a_time();
+        let (game, root) = built_game();
+        let shots = root.join("target/shot-twice");
+        std::fs::create_dir_all(&shots).expect("somewhere for the pair to land");
+        for view in ["bay", "drydock"] {
+            let pair: Vec<std::path::PathBuf> = (1..=2)
+                .map(|take| {
+                    let path = shots.join(format!("{view}-{take}.png"));
+                    let ran = Command::new(&game)
+                        .args(["--fixture", "--view", view, "--shot"])
+                        .arg(&path)
+                        .status()
+                        .expect("the game runs");
+                    assert!(ran.success(), "the {view} shot did not land");
+                    path
+                })
+                .collect();
+            let [first, second] = [&pair[0], &pair[1]].map(|path| {
+                std::fs::read(path).unwrap_or_else(|why| {
+                    panic!("the shot must be on disk: {} ({why})", path.display())
+                })
+            });
+            assert_eq!(
+                first.len(),
+                second.len(),
+                "two shots of {view} are not even the same size"
+            );
+            let moved = first.iter().zip(&second).filter(|(a, b)| a != b).count();
+            assert_eq!(
+                moved,
+                0,
+                "{moved} bytes of {view} moved between two runs of one command: \
+                 something in that view is still reading a clock nobody counts \
+                 (the pair is in {})",
+                shots.display()
+            );
+        }
     }
 
     /// The documented entry point still exists to be invoked. Cheap, and

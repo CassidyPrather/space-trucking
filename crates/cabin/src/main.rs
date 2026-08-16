@@ -34,7 +34,11 @@ mod surface;
 mod viewport;
 mod wear;
 
+use std::time::Duration;
+
 use bevy::prelude::*;
+use bevy::render::RenderPlugin;
+use bevy::time::{TimeSystems, Virtual};
 use bevy::window::PresentMode;
 use space_trucking::sim::room::RoomKind;
 
@@ -61,14 +65,67 @@ pub enum Phase {
     View,
 }
 
+/// **A judged run counts its clock instead of measuring it.**
+///
+/// Everything that moves in the cabin reads `Time::elapsed_secs` — the
+/// breathing emissives, the CRT sweep, the console sway, the refusal
+/// strobe, the drifting motes, the stars — and the dev modes that judge a
+/// picture shoot at a frame NUMBER. Those two facts disagree: on a
+/// machine whose startup, shader build and pipeline warm-up vary by
+/// seconds (this one rasterises in software), frame 46 lands at a
+/// different instant every run, every effect is sampled at a different
+/// phase, and one view shot twice is two different pictures.
+///
+/// So a judged run takes the wall clock away from the game. The game
+/// clock is paused and advanced by exactly one [`FRAME_STEP`] per frame,
+/// which puts frame N at N × step whatever the machine did to get there.
+/// No animation has to change: they all read the clock they always read,
+/// and it now says the same thing at the same frame on every run.
+///
+/// `Time<Real>` is left alone, because the gauge measures with it — see
+/// [`Gauge`], which is the one dev mode this is deliberately not applied
+/// to.
+///
+/// The step is the sim's own tick, `TICK_DT`, to the last bit an `f32`
+/// has (`tests::a_pinned_frame_is_one_tick_of_the_sim`). One rendered
+/// frame is then exactly one simulated tick — the sim's accumulator
+/// never drops a tick nor doubles one — and the settle counts below read
+/// in world seconds as well as in frames.
+const FRAME_STEP: Duration = Duration::from_nanos(16_666_667);
+
+/// Pin the clock for a run that has to reproduce. Called by `--shot` and
+/// `--gauntlet-walk`, and by nothing else.
+fn pin_clock(app: &mut App) {
+    app.world_mut().resource_mut::<Time<Virtual>>().pause();
+    app.add_systems(First, step_clock.after(TimeSystems));
+}
+
+/// One frame of the pinned clock. The generic `Time` every view reads is
+/// a copy of the game clock, so it is stepped in the same breath — Bevy
+/// took its copy while the clock was still paused.
+fn step_clock(mut game: ResMut<Time<Virtual>>, mut time: ResMut<Time>) {
+    game.advance_by(FRAME_STEP);
+    *time = game.as_generic();
+}
+
 /// Dev tooling: `--shot <path>` renders a settling period, saves one
 /// screenshot of the window, and exits — the visual-verification loop.
+///
+/// It runs on the pinned clock ([`FRAME_STEP`]), so the same view shot
+/// twice is the same file, byte for byte — which is the guard
+/// `gauntlet::tests::the_same_view_shot_twice_is_the_same_bytes` holds
+/// it to.
 #[derive(Resource)]
 struct ShotMode {
     path: String,
     frames: u32,
     fired: bool,
 }
+
+/// Frames burned before the shutter: long enough for a glide to finish
+/// and the room to be lit, and on the pinned clock exactly three quarters
+/// of a world second, every run.
+const SHOT_SETTLE: u32 = 45;
 
 /// Dev tooling: `--gauge <frames>` lets the scene settle, times that many
 /// frames, prints one line, and exits.
@@ -87,6 +144,12 @@ struct ShotMode {
 /// That is exactly right for the game and exactly wrong for a gauge —
 /// it silently floors every measurement worse than the clamp, which is
 /// to say every measurement the gauge exists to take.
+///
+/// The counted clock the judged modes run on ([`FRAME_STEP`]) is the
+/// same argument a second time, and louder: it would hand the gauge
+/// back the step it was given. So the gauge is not on it — and because
+/// the pin stops at the game clock, it could not reach this measurement
+/// even if some future flag put the two modes in one process.
 #[derive(Resource)]
 struct Gauge {
     want: u32,
@@ -356,12 +419,20 @@ fn main() {
     // berth of every room aboard — because a room photographed empty is
     // exactly the hole this harness exists to close (`gauntlet::load`).
     let walk_dir = flag_value(gauntlet_walk_flag());
-    let bridge = if walk_dir.is_some() {
+    let mut bridge = if walk_dir.is_some() {
         gauntlet::loaded_save(&bridge.sim.save_string())
             .map_or(bridge, |save| Bridge::boot_fixture(&save))
     } else {
         bridge
     };
+    // A run that judges a picture — the screenshot, the walk — must give
+    // the same answer twice, so it counts its clock instead of measuring
+    // it: the frames come off a fixed step ([`FRAME_STEP`]) and the world
+    // stops reading the wall (`Bridge::steady`).
+    let judged = shot.is_some() || walk_dir.is_some();
+    if judged {
+        bridge.steady();
+    }
     // The room presets are DERIVED, like everything else about a room:
     // they ask the graph where the room is and stand in the middle of it
     // facing the wall the view is named for. Attach the trade room
@@ -392,7 +463,19 @@ fn main() {
                 ..default()
             })
             // Nearest sampling everywhere: small textures, hard edges.
-            .set(ImagePlugin::default_nearest()),
+            .set(ImagePlugin::default_nearest())
+            // **A judged run waits for its shaders.** Bevy builds
+            // pipelines off the frame loop and DRAWS WITHOUT THE MESHES
+            // whose pipelines are not built yet, which is the right
+            // trade for a game — a stutter beats a freeze — and the
+            // wrong one for a shutter: on a busy machine the settle runs
+            // out first and the picture is the clear colour with the
+            // scene missing. Compiling in the frame that needs it costs
+            // a judged run a slower start and nothing else.
+            .set(RenderPlugin {
+                synchronous_pipeline_compilation: judged,
+                ..default()
+            }),
     )
     .insert_resource(Shell {
         bridge,
@@ -432,6 +515,9 @@ fn main() {
     )
     .add_systems(Update, advance.in_set(Phase::Advance))
     .add_systems(Update, rig::fade_tiles.in_set(Phase::View));
+    if judged {
+        pin_clock(&mut app);
+    }
     if let Some(path) = shot {
         app.insert_resource(ShotMode {
             path,
@@ -740,14 +826,14 @@ fn shoot(
     mut exit: MessageWriter<AppExit>,
 ) {
     mode.frames += 1;
-    if !mode.fired && mode.frames > 45 {
+    if !mode.fired && mode.frames > SHOT_SETTLE {
         mode.fired = true;
         commands
             .spawn(bevy::render::view::screenshot::Screenshot::primary_window())
             .observe(bevy::render::view::screenshot::save_to_disk(
                 mode.path.clone(),
             ));
-    } else if mode.fired && mode.frames > 50 && capturing.is_empty() {
+    } else if mode.fired && mode.frames > SHOT_SETTLE + 5 && capturing.is_empty() {
         exit.write(AppExit::Success);
     }
 }
@@ -857,4 +943,70 @@ fn advance(
         shell.muted = !shell.muted;
     }
     shell.outcome = outcome;
+}
+
+#[cfg(test)]
+mod tests {
+    use space_trucking::sim::TICK_DT;
+
+    use super::*;
+
+    /// An app with nothing in it but a clock, pinned. Enough to state
+    /// what the pin promises without a window anywhere near it.
+    fn pinned() -> App {
+        let mut app = App::new();
+        app.add_plugins(bevy::time::TimePlugin);
+        pin_clock(&mut app);
+        app
+    }
+
+    /// **Frame N of a pinned run is N steps old, and one step is one
+    /// tick.** The first half is why a screenshot reproduces: every
+    /// animation in the cabin reads this clock, so a shot fired at a
+    /// frame number is a shot fired at an instant. The second half is
+    /// why nothing downstream stutters: the sim accumulates the same
+    /// `f32` it spends, so one frame buys exactly one tick.
+    #[test]
+    fn a_pinned_frame_is_one_tick_of_the_sim() {
+        let mut app = pinned();
+        for frame in 1..=10u32 {
+            app.update();
+            let time = app.world().resource::<Time>();
+            assert_eq!(time.delta(), FRAME_STEP);
+            assert_eq!(time.elapsed(), FRAME_STEP * frame);
+            // To the last bit: the sim spends an `f32`, and the step
+            // and the tick are the same `f32`, so the accumulator that
+            // buys ticks with frames comes out even.
+            assert_eq!(time.delta_secs().to_bits(), TICK_DT.to_bits());
+        }
+    }
+
+    /// **The pin never reaches the clock the gauge reads.** `--gauge`
+    /// measures with `Time<Real>` on purpose ([`Gauge`]), and a
+    /// measurement taken off a counted clock would only ever return the
+    /// number it was told to. Bevy's own manual real-time strategy
+    /// stands in for a machine here, so the two clocks can be watched
+    /// disagreeing on purpose.
+    #[test]
+    fn a_pinned_run_leaves_the_measured_clock_alone() {
+        use bevy::time::{Real, TimeUpdateStrategy};
+
+        const MACHINE: Duration = Duration::from_millis(100);
+        let mut app = pinned();
+        app.insert_resource(TimeUpdateStrategy::ManualDuration(MACHINE));
+        for frame in 1..=4u32 {
+            app.update();
+            // The real clock spends its first update learning where it
+            // is, so it is one frame behind the count — which is the
+            // point: it is measured, not counted.
+            assert_eq!(
+                app.world().resource::<Time<Real>>().elapsed(),
+                MACHINE * (frame - 1)
+            );
+            assert_eq!(
+                app.world().resource::<Time<Virtual>>().elapsed(),
+                FRAME_STEP * frame
+            );
+        }
+    }
 }

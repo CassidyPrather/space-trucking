@@ -142,6 +142,9 @@ pub struct Bridge {
     /// A `--fixture` boot: a throwaway world that must never write
     /// over the player's real save or tape.
     sandbox: bool,
+    /// A world whose frames arrive on a fixed step, so the wall clock is
+    /// not its clock. See [`Bridge::steady`].
+    steady: bool,
 }
 
 impl Bridge {
@@ -174,6 +177,7 @@ impl Bridge {
             clock_check: SAVE_EVERY,
             arrived_while_away,
             sandbox: false,
+            steady: false,
         }
     }
 
@@ -196,6 +200,7 @@ impl Bridge {
             clock_check: SAVE_EVERY,
             arrived_while_away: false,
             sandbox: true,
+            steady: false,
         }
     }
 
@@ -205,16 +210,29 @@ impl Bridge {
         self.dev
     }
 
+    /// **Take this world off the wall clock.** Its frames arrive on a
+    /// fixed step, so the seconds between two of them are the machine
+    /// being slow and not the player being away, and the absence replay
+    /// below must not fire: a world that fast-forwards by however long
+    /// the shaders took to build is a different world every run.
+    ///
+    /// The dev modes that judge a picture ask for this. A played session
+    /// never does — a frozen window there really is time the player lost.
+    pub const fn steady(&mut self) {
+        self.steady = true;
+    }
+
     /// One shell frame: stall catch-up, input synthesis, record, advance,
     /// save when worthy. Call exactly once per rendered frame — the sim
     /// drains pointer edges once per `advance`.
     pub fn frame(&mut self, dt: f32, input: &FrameInput) -> FrameOutcome {
         let mut outcome = FrameOutcome::default();
 
-        // A frozen window does not pause the world: replay the gap.
+        // A frozen window does not pause the world: replay the gap. A
+        // steady world has no gaps to replay — its clock is counted.
         let wall_now = unix_now();
         let wall_gap = wall_now - self.last_frame;
-        if wall_gap > STALL_SECONDS {
+        if !self.steady && wall_gap > STALL_SECONDS {
             let missed = (wall_gap - f64::from(dt)).clamp(0.0, MAX_CATCH_UP);
             let caught_up = self.sim.fast_forward(ticks_of(missed));
             outcome.stalled_ticks = caught_up.ticks;
@@ -409,6 +427,7 @@ mod tests {
             clock_check: SAVE_EVERY,
             arrived_while_away: false,
             sandbox: false,
+            steady: false,
         };
         let frame = bridge.input_frame(&FrameInput {
             pointer: Vec2::new(4.0, 5.0),
@@ -434,6 +453,37 @@ mod tests {
         assert!(!frame.toggle_warp);
         assert!(frame.night);
         assert!(frame.reseed.is_none());
+    }
+
+    /// The stall replay is the wall clock reaching into the sim, and a
+    /// run that has to reproduce cannot have one. A busy machine takes
+    /// well over a second to reach its first frame and drops whole
+    /// seconds mid-run: a played session owes the player those, and
+    /// pays them as sixty to a hundred and twenty ticks of world — a
+    /// different number every run, which is not a thing a screenshot
+    /// may be built out of.
+    #[test]
+    fn a_steady_world_replays_no_absence() {
+        let hour_ago = unix_now() - 3600.0;
+        let played = {
+            let mut bridge = Bridge::boot_fixture(&Sim::new(7).save_string());
+            bridge.last_frame = hour_ago;
+            bridge.frame(1.0 / 60.0, &FrameInput::default())
+        };
+        let judged = {
+            let mut bridge = Bridge::boot_fixture(&Sim::new(7).save_string());
+            bridge.steady();
+            bridge.last_frame = hour_ago;
+            bridge.frame(1.0 / 60.0, &FrameInput::default())
+        };
+        assert!(
+            played.stalled_ticks > 0,
+            "a played session owes the player the hour the window was frozen"
+        );
+        assert_eq!(
+            judged.stalled_ticks, 0,
+            "a judged run owes nobody anything: its clock is counted"
+        );
     }
 
     #[test]
@@ -487,6 +537,7 @@ mod tests {
             clock_check: SAVE_EVERY,
             arrived_while_away: false,
             sandbox: false,
+            steady: false,
         }
     }
 
@@ -620,6 +671,7 @@ mod tests {
             clock_check: SAVE_EVERY,
             arrived_while_away: false,
             sandbox: false,
+            steady: false,
         };
         let quiet = FrameInput {
             pointer: POINTER_PARKED,

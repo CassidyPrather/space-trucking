@@ -439,40 +439,34 @@ adversarial pass that closes those, and it splits in two:
   in the game — the twelve stations, the three event rooms, the cabin
   and the burner — against a **loaded** board (`gauntlet::load` fills
   every legal berth through the sim's own arbiter, so decor has cargo to
-  clip through). Six rule families: no fitting stands in a berth cargo
-  may take at the height a rig occupies; nothing occludes a wall berth
-  from its room; every berth stays workable from the walk envelope; no
-  two drawn faces share a plane and a facing (the general z-fight
-  detector); a rig's named features point where their names say
-  (`pieces::features` — a sconce's cup INTO the room, a floor lamp's
-  base plate FLAT on the deck); and the walked path stands in air.
-  `--gauntlet` prints the whole report; `--gauntlet-docket` reprints the
-  work order.
-- **And every cargo kind, the same way.** A rig used to be built
-  straight into a live world, so nothing pure could enumerate one; a
-  kind describes its parts now (`pieces::parts`) and the presentation
-  layer stamps what it returns. Two of the six families reach the
-  thirty-two kinds through that description: **no two faces of one rig
-  share a plane and a facing** — a rig is berthed by a quarter turn, so
-  the question is settled in the rig's own frame and the kind is swept
-  once rather than once per berth — and **no part reaches out of
-  `RIG_NEAR..RIG_FAR`**, the depth band the kind builders compose within
-  and a berth's air is measured over. The other three are about a
-  station's furniture standing in cargo's way, and cargo standing in its
-  own berth is what a berth is for.
+  clip through), every cargo kind, and every doorway. Six rule families:
+  no fitting stands in a berth cargo may take at the height a rig
+  occupies; nothing occludes a wall berth from its room; every berth
+  stays workable from the walk envelope; no two drawn faces share a plane
+  and a facing (the general z-fight detector); a rig's named features
+  point where their names say (`pieces::features` — a sconce's cup INTO
+  the room, a floor lamp's base plate FLAT on the deck); and the walked
+  path stands in air.
 - **Pixels, opt-in.** `--gauntlet-walk <dir>` drives the scripted room
   walk — in through the door, round the room, up to the counter — and
   writes one PNG per waypoint, then holds the camera still for ten
   frames and compares them (the flicker detector: the only mechanism
   that would ever have caught the every-other-frame lamp), then backs
   off along an approach sampling the room's own brightness (the
-  light-pop detector). It needs a rasteriser, so it runs under `xvfb`,
-  and `cargo test -p cabin -- --ignored` is the door to it.
+  light-pop detector). It needs a rasteriser, so it runs under `xvfb`.
 
-`crates/cabin/src/gauntlet.docket` is the itemised list of what the
-sweep catches **today**. It is a work order, not a baseline: the sweep is
-asserted equal to it, so a new defect fails the build and a fixed one
-fails it too until the line is struck.
+**It measures descriptions, not the world**, and that is the rule this
+file cares about: anything drawn from something other than a pure
+description of it — `poi::character_of`, `room::shell_boxes`,
+`pieces::parts`, `room::seam_parts` — is invisible to every rule in the
+sweep, however loud it is on screen. Twice now a whole layer of the art
+was built straight into the world and went unchecked for that reason: the
+cargo rigs, and then the hardware in every doorway. **A new family of
+thing gets a description before it gets a mesh.**
+
+[GAUNTLET.md](GAUNTLET.md) is the operator's side — how to run it, how to
+read a docket line, what each family looks like in the world when it
+fires, and what the harness still cannot see.
 
 ## Keeping geometry honest
 

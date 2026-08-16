@@ -33,10 +33,11 @@
 //! arithmetic.
 //!
 //! **Pixels** ([`walk`] and the `--gauntlet-walk` entry point) need a
-//! rasteriser, so they live behind an opt-in run under `xvfb` and are
-//! documented at [`tests::the_pixel_half_is_opt_in`]. What *is* pure about
-//! them — the path itself, and every geometric assertion made at each
-//! waypoint — runs always.
+//! rasteriser, so they live behind an opt-in run under `xvfb`
+//! ([`tests::the_filmstrip_holds_still_and_the_light_does_not_pop`], and
+//! docs/GAUNTLET.md for the invocation). What *is* pure about them — the
+//! path itself, and every geometric assertion made at each waypoint —
+//! runs always.
 //!
 //! # The families, and the defect class each closes
 //!
@@ -49,50 +50,32 @@
 //! | [`PROP_POINTS`] | a rig's named features point where their names say | the sconce lighting the wall, the base plate on edge |
 //! | [`WALK_CLEAR`] | the walked path stands in air, room to room | furniture in the doorway you enter by |
 //!
-//! # And the cargo
+//! # The three layers, and the one that is not described yet
 //!
-//! The rooms were the whole sweep for as long as a rig could only be
-//! built. `pieces::build_kind` composed a cargo kind straight into a
-//! live Bevy world, so nothing pure could enumerate a rig's parts and no
-//! rule could be asked about one — which is how the Guild's transit chit
-//! came to cut its card and its stripe to one height and one centre, top
-//! edges on one plane and bottoms on another, along the whole of a stripe
-//! held at arm's length, and be found by an owner's eye instead.
+//! The rooms were the whole sweep for as long as everything else could
+//! only be BUILT. `pieces::build_kind` composed a cargo kind straight
+//! into a live Bevy world and `room::doorways` did the same for a seam's
+//! hardware, so nothing pure could enumerate a rig's parts or a
+//! doorway's, and no rule could be asked about either — which is how the
+//! Guild's transit chit came to cut its card and its stripe to one
+//! height and one centre along the whole of a stripe held at arm's
+//! length, and how a seam's amber latch came to be entered twice at one
+//! transform and photograph two ways.
 //!
-//! A kind describes its parts now ([`crate::pieces::parts`]), and two of
-//! the six families reach the thirty-two of them through that
-//! description. [`NO_COPLANAR`] asks whether a rig fights itself — in the
-//! rig's OWN frame, because a berth is a quarter turn and a quarter turn
-//! carries a shared plane onto a shared plane, so a kind is swept once
-//! rather than once per berth. [`BERTH_CLEAR`] asks whether any part
-//! reaches out of `RIG_NEAR..RIG_FAR`, the band a berth's air is measured
-//! over: a rig deeper than that is a berth the room sweep measures too
-//! shallow. The other three are about a station's furniture standing in
-//! cargo's way, and cargo standing in its own berth is what a berth is
-//! for.
+//! A kind describes its parts now ([`crate::pieces::parts`]) and so does
+//! a doorway ([`room::seam_parts`]), and [`scene`] and the rig sweep read
+//! those descriptions. **A doorway is read from both of its sides**: a
+//! seam's frame is drawn once, by the room with the lower id, and stands
+//! on the boundary the two rooms share, so the room that did not draw it
+//! is swept with it anyway.
 //!
-//! # And the doorways
-//!
-//! The third layer, and it went the same way as the second. A room's
-//! fabric was described and a station's fittings were described, but the
-//! hardware between them — the stiles and lintel of a mated seam, the
-//! jamb lamp, the amber latch, a shut port's leaf and rivets, a hatch's
-//! coaming and hinge and pull, and the studded tread each doorway lays on
-//! the deck — was composed straight into the world by `room::doorways`,
-//! so the sweep walked through a dozen doorways a room without being able
-//! to name one thing in any of them. That is how a seam's latch came to
-//! be drawn twice at one transform, and to come out lit in some runs of a
-//! screenshot command and gone in others.
-//!
-//! A doorway describes itself now ([`room::seam_parts`]), and [`scene`]
-//! reads it. **Both sides of it**: a seam's frame is drawn once, by the
-//! room with the lower id, and it stands on the boundary the two rooms
-//! share — so the room that did not draw it is swept with it anyway, and
-//! a calling room is not walked past its own doorway without it being
-//! looked at. Fifty-three fights came out of that first pass, and they
-//! were three idioms and no new ones: a body written down twice, two
-//! members of one fitting cut to one length so they cross, and a part run
-//! out flush with the very edge its parent was cut at.
+//! Sixty-one findings came out of the cargo and fifty-three out of the
+//! doorways, and in both cases the layer was invisible not because a rule
+//! was loose but because there was nothing for a rule to be asked about.
+//! **The next defect is in the layer nobody has thought to describe
+//! yet.** docs/GAUNTLET.md carries that history, what the harness can and
+//! cannot see, and everything else an operator needs when a check goes
+//! red.
 //!
 //! # The docket
 //!
@@ -173,13 +156,9 @@ const OCCLUDE_BITE: f32 = 0.25;
 /// buffer is concerned. It is [`crate::rig::layer::SKIN`], the thickest a
 /// flat paint riding a rung of the decal ladder may be: two faces inside
 /// one skin of each other cannot be told apart by depth, and which one
-/// draws is then a question of query order, which is not an answer.
-///
-/// The ladder's own `STEP` (0.004) was the other candidate and it is the
-/// wrong one here — it is the minimum step the ladder GUARANTEES to be
-/// safe, deliberately conservative because a dozen rungs share five
-/// centimetres. Using a safety margin as a detection threshold is how a
-/// detector ends up reporting four millimetres of daylight as a fight.
+/// draws is then a question of query order, which is not an answer. The
+/// ladder's own `STEP` was the other candidate and docs/GAUNTLET.md says
+/// why it is the wrong one.
 const FIGHT_EPS: f32 = crate::rig::layer::SKIN;
 
 /// How much two coplanar faces must actually overlap before they can
@@ -1988,18 +1967,15 @@ pub fn docket() -> Vec<(String, String, String)> {
 /// **Where the coplanar detector is wrong**, pair by pair, with the
 /// reason it is wrong — `(room, pair, why)`.
 ///
-/// Concentric bodies were the honest case the owner named: a firebox
-/// glass inside a firebox drum, two cylinders cut from one centre, a
-/// collar round a pipe. They are not on this list either, because the
-/// answer to them was a truer detector rather than a forgiven pair —
-/// [`Faces`] knows which sides of a body's box are faces, and a round
-/// body has none round its flank.
+/// **It is empty today, and that is a finding of its own.** Every case
+/// that has come up has been answered by a truer detector rather than a
+/// forgiven pair — the tighter [`FIGHT_EPS`], and then [`Faces`], which
+/// knows that a round body has no face round its flank and that a body
+/// has to land squarely on a world axis before its box has six.
+/// docs/GAUNTLET.md has that argument at length.
 ///
-/// **It is empty today, and that is a finding of its own**: the tighter
-/// [`FIGHT_EPS`], and then [`Faces`], answered every case the loose
-/// detector produced, so nothing has yet needed forgiving. A pair added
-/// here needs its reason written beside it, and the reason has to be
-/// about the geometry rather than about the number.
+/// A pair added here needs its reason written beside it, and the reason
+/// has to be about the geometry rather than about the number.
 pub const ALLOWED: &[(&str, &str, &str)] = &[];
 
 #[cfg(test)]
@@ -2608,59 +2584,28 @@ mod tests {
         (game, root)
     }
 
-    /// **The pixel half is opt-in, and here is how to run it.**
+    /// **The pixel half is opt-in, and this is the door to it.**
     ///
-    /// A screenshot needs a rasteriser, and CI has one only under `xvfb`
-    /// with a software Vulkan device. So the flicker detector, the
-    /// light-pop detector, and the filmstrip live in the binary's own
-    /// `--gauntlet-walk` mode, and this test is the door to them:
-    ///
-    /// ```text
-    /// cargo build -p cabin
-    /// VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
-    ///   WGPU_BACKEND=vulkan xvfb-run -a \
-    ///   cargo test -p cabin -- --ignored the_filmstrip
-    /// ```
-    ///
-    /// or, for one named room and the PNGs kept where you want them:
-    ///
-    /// ```text
-    /// VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
-    ///   WGPU_BACKEND=vulkan xvfb-run -a \
-    ///   ./target/debug/space-trucking --gauntlet-walk <dir> --docked 7
-    /// ```
-    ///
-    /// `--docked n` picks a station's room and `--alongside wreck|parlor|pump`
-    /// an event room, exactly as they do for a screenshot run. It writes
-    /// one PNG per waypoint plus the still and approach strips, prints a
-    /// `gauntlet-walk` line per sample carrying the pose, the mean
-    /// luminance, and the fraction of the picture that moved, and exits
-    /// non-zero if a frame moved while the camera did not or the room's
-    /// brightness stepped along the approach.
+    /// A screenshot needs a rasteriser, and the ordinary suite has no
+    /// window: `.github/workflows/ci-cd.yml` installs neither `xvfb` nor
+    /// a Vulkan ICD. So the flicker detector, the light-pop detector and
+    /// the filmstrip live in the binary's own `--gauntlet-walk` mode, and
+    /// this test runs one room of it. The invocation, what the walk
+    /// writes, and where the two detectors' margins actually stand are in
+    /// docs/GAUNTLET.md.
     ///
     /// The PURE half of the same walk — that the waypoints are legal,
-    /// that the path enters by the door and reaches the counter, and
-    /// that nothing is standing in any of them — runs in the ordinary
-    /// suite, and needs none of the above.
+    /// that the path enters by the door and reaches the counter, and that
+    /// nothing is standing in any of them — runs in the ordinary suite
+    /// and needs none of that.
     ///
-    /// **It stays opt-in, and the reason has changed.** It was opt-in
-    /// because the readings moved. They do not any more: on the counted
-    /// clock (`crate::FRAME_STEP`) two walks of one room print the same
+    /// **What keeps it opt-in is the window and nothing else now.** It
+    /// used to be that the readings moved; on the counted clock
+    /// (`crate::FRAME_STEP`) two walks of one room print the same
     /// twenty-seven lines to the last digit and write twenty-seven
-    /// identical PNGs. What keeps it out of the ordinary suite now is
-    /// that the ordinary suite has no window.
-    ///
-    /// The two detectors are not equally ready for one either. Over
-    /// seven walks of three room kinds the flicker samples came in at
-    /// 0.00017 of a picture at their worst against a [`FLICKER_TOL`] of
-    /// 0.02 — a hundredfold of room — while the light-pop pass reached
-    /// 0.155 of its [`POP_TOL`] of 0.18 in a station room, which is a
-    /// red build one re-hung lamp away. Steady is not the same as safe:
-    /// the flicker family is the half with the margin to be asked for on
-    /// every commit, and the light-pop family wants either more headroom
-    /// or a tolerance argued from a room rather than from a sample.
+    /// identical PNGs.
     #[test]
-    #[ignore = "needs a rasteriser: run it under xvfb, see the doc comment"]
+    #[ignore = "needs a rasteriser: run it under xvfb, see docs/GAUNTLET.md"]
     fn the_filmstrip_holds_still_and_the_light_does_not_pop() {
         use std::process::Command;
 
@@ -2685,34 +2630,20 @@ mod tests {
     /// **One view shot twice is one file twice.**
     ///
     /// A screenshot is only evidence if it reproduces, and these did not:
-    /// two runs of the same `--shot` command disagreed over anywhere from
-    /// 1% of the picture to 57% of it. Not because the art moves —
-    /// because the shutter fired at a frame NUMBER while everything in
-    /// the frame read the wall clock, so frame 46 landed wherever the
-    /// container's shader build happened to leave it. A refactor that
-    /// changed nothing therefore had to be proved with a listing of every
-    /// entity in the world, because the two pictures were never going to
-    /// agree.
+    /// two runs of one `--shot` command disagreed over anywhere from 1%
+    /// of the picture to 57% of it. The shot path runs on the counted
+    /// clock now (`crate::FRAME_STEP`), in a world that has stopped
+    /// reading the wall (`Bridge::steady`), and this is the guard that
+    /// keeps it there. What broke, what a loose clock costs, and the one
+    /// thing that still reads the OS clock at boot are in
+    /// docs/GAUNTLET.md.
     ///
-    /// The shot path runs on the counted clock now (`crate::FRAME_STEP`),
-    /// in a world that has stopped reading the wall (`Bridge::steady`),
-    /// and this is the guard that keeps it there. It shoots one view from
-    /// inside the ship and one from outside it: the cabin carries the
-    /// breathing emissives, the drifting motes and the tube, and the void
-    /// carries the star field and the sky clock, which have the furthest
-    /// to drift.
-    ///
-    /// **The two views that used to be off this list are on it.**
-    /// `--view starboard` and `--view parlor` came out two ways, and it
-    /// was never the clock: the world was identical at the shutter — same
-    /// seam timers, same aim, same lamps — and one emissive plate was
-    /// fully lit in some runs and gone in others. A seam's amber latch
-    /// was drawn twice at one transform, once in its amber and once in
-    /// the frame's shade, so six faces were coplanar with no separation
-    /// to settle them by and the winner was whatever order the frame was
-    /// batched in. A doorway describes itself now and each body in it is
-    /// drawn once ([`room::seam_parts`]); six runs of each of the two
-    /// commands are one file.
+    /// Four views: one from inside the ship, which carries the breathing
+    /// emissives, the drifting motes and the tube; one from outside it,
+    /// where the star field and the sky clock have the furthest to drift;
+    /// and the two that used to come out two ways, whose seam latch was
+    /// drawn twice at one transform and is drawn once now
+    /// ([`room::seam_parts`]).
     ///
     /// It needs a rasteriser, like everything else in the pixel half:
     ///
@@ -2723,7 +2654,7 @@ mod tests {
     ///   cargo test -p cabin -- --ignored the_same_view
     /// ```
     #[test]
-    #[ignore = "needs a rasteriser: run it under xvfb, see the doc comment"]
+    #[ignore = "needs a rasteriser: run it under xvfb, see docs/GAUNTLET.md"]
     fn the_same_view_shot_twice_is_the_same_bytes() {
         use std::process::Command;
 

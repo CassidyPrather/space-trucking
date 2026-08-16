@@ -76,6 +76,10 @@ cargo run -p cabin -- --shot out.png --view bay      # headless screenshot
 cargo run -p cabin -- --gauntlet                    # adversarial geometry sweep
 ```
 
+The last one is the harness that grades the cabin's geometry; when it
+turns the build red, `docs/GAUNTLET.md` says what the line means and how
+to find the millimetres behind it.
+
 ## Solid vs. soft (change tolerance)
 
 DESIGN.md work is ongoing and requirements will keep moving. Know which
@@ -117,7 +121,12 @@ cues, so six hours of catch-up does not arrive as six hours of clunks.
 
 The wider rule: logic you want tested must live engine-free like `sim` and
 `synth` do; frontend modules get verified by the cabin's invariant and
-sightline tests, headless screenshots, or eyeballs.
+sightline tests, headless screenshots, or eyeballs — and by the gauntlet
+(`docs/GAUNTLET.md`), which grades geometry adversarially and can only
+see what something has been described by. A new family of thing in the
+cabin gets a pure description before it gets a mesh; twice now a whole
+layer of the art has been built straight into the world and gone
+unchecked for want of one.
 
 ## House Rules
 

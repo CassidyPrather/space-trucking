@@ -41,6 +41,16 @@ the moment a toy wants real sound design.
 
 - [Google Fonts](https://fonts.google.com/) — OFL
 
+## Verification
+
+- [GAUNTLET.md](GAUNTLET.md) — this project's own answer to "how do you
+  check a 3D scene without a human looking at it". Worth reading for the
+  shape of the idea before the specifics: describe the geometry purely,
+  sweep the descriptions for defect classes a screenshot cannot show, and
+  keep the findings in a file the build asserts equality against. The
+  timestep link below is the other half of it: a picture only reproduces
+  if the clock does.
+
 ## Shaders and Techniques
 
 - [Shadertoy](https://www.shadertoy.com/) — the ideal zero-setup shader-fidget environment

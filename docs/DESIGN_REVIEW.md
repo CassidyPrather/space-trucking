@@ -52,6 +52,13 @@ deliberately below.
 - [ ] Budgets green: the release perf gates pass
       (`cargo test --release -p space-trucking --test perf -- --ignored`);
       any retuned ceiling is amended in [BUDGETS.md](BUDGETS.md) with a why.
+- [ ] The gauntlet's work order is honest: `cargo test -p cabin` is green,
+      and anything the sweep newly catches is either fixed or written into
+      `crates/cabin/src/gauntlet.docket` with its numbers — never left to
+      a loosened threshold or a line in `ALLOWED`. If this change draws a
+      new *family* of thing, it has a pure description the sweep can read
+      before it has a mesh; a layer nobody described is a layer nobody
+      checks. See [GAUNTLET.md](GAUNTLET.md).
 - [ ] Every asset, including vendored JS, has a CREDITS.md row; CC0/MIT
       preferred.
 - [ ] Cargo tells the story: any new kind has a lore reason and a distinct

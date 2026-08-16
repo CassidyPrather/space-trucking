@@ -30,6 +30,17 @@ use super::{KIND_COUNT, KNOWN_ALL, MAX_CREW, Sim, barter};
 
 /// Magic-plus-version header of every save this build writes.
 ///
+/// `STV17` is the athwart rule (docs/BAY.md): the net is one sheet
+/// folded into a box and its side flaps fold out sideways, so the two
+/// cells that lie level on the aft wall stand one above the other on a
+/// flank. A `2×1` footprint hung there therefore turned a quarter turn
+/// on being carried one wall over, cells and body together, and a
+/// non-square footprint keeps to the walls whose courses run level now
+/// (`cargo::Violation::Athwart`). Nothing about the GRAMMAR moved — a
+/// berth is still a room and two cells — but a document written before
+/// it may hang a window or a painting down a flank, which is a berth
+/// this build refuses.
+///
 /// `STV16` is the calling rooms' growth (docs/ROOMS.md): three of the
 /// four grew so a station's own furniture and the crew's staged cargo
 /// would both fit on one deck — a market to 8×7, a parlor to 5×4, a pump
@@ -81,10 +92,18 @@ use super::{KIND_COUNT, KNOWN_ALL, MAX_CREW, Sim, barter};
 /// it belonged to. `STV10` widened the cabin from a 6×5 floor to an 8×7
 /// one; `STV7` added the banked burner's stoke to the ship line's tail;
 /// `STV6` added the `laid` piece location; `STV5` added `stow`.
-const MAGIC: &str = "STV16";
+const MAGIC: &str = "STV17";
 
 /// Older headers this build still reads, each with its own migration,
 /// applied oldest-first so a `STV4` document walks the whole chain.
+///
+/// `STV17` sent the turned footprints back to a level wall. A pre-STV17
+/// document may hang a window or a painting down a flank, where its two
+/// cells stand one above the other instead of side by side — so those
+/// pieces WALK, to the first berth of their own room the arbiter still
+/// accepts. Conservation before convenience, as ever: the window comes
+/// out hanging somewhere else, never gone, and a room with nowhere left
+/// for it leaves it where the player put it.
 ///
 /// `STV16` grew three of the calling rooms. A pre-STV16 berth in one of
 /// them names a cell of a narrower net, so it is **translated per chart**
@@ -145,9 +164,9 @@ const MAGIC: &str = "STV16";
 /// hold cells, which the net embeds at (+3, 0). Whatever the room-grid
 /// rules no longer accept once the translations have run re-berths at its
 /// first legal cell. Everything else stays one additive grammar.
-const READABLE: [&str; 13] = [
-    MAGIC, "STV15", "STV14", "STV13", "STV12", "STV11", "STV10", "STV9", "STV8", "STV7", "STV6",
-    "STV5", "STV4",
+const READABLE: [&str; 14] = [
+    MAGIC, "STV16", "STV15", "STV14", "STV13", "STV12", "STV11", "STV10", "STV9", "STV8", "STV7",
+    "STV6", "STV5", "STV4",
 ];
 
 /// Why a save string was refused.
@@ -376,42 +395,58 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     // room net embeds at (+3, 0); their berths migrate after reading.
     let legacy = !matches!(
         header,
-        MAGIC | "STV15" | "STV14" | "STV13" | "STV12" | "STV11" | "STV10" | "STV9" | "STV8"
+        MAGIC
+            | "STV16"
+            | "STV15"
+            | "STV14"
+            | "STV13"
+            | "STV12"
+            | "STV11"
+            | "STV10"
+            | "STV9"
+            | "STV8"
     );
     // Pre-STV9 headers predate the instruments being cargo; the missing
     // ones are hung at their traditional berths after reading.
     let uninstrumented = !matches!(
         header,
-        MAGIC | "STV15" | "STV14" | "STV13" | "STV12" | "STV11" | "STV10" | "STV9"
+        MAGIC | "STV16" | "STV15" | "STV14" | "STV13" | "STV12" | "STV11" | "STV10" | "STV9"
     );
     // Pre-STV10 headers carry narrow-net coordinates: the cabin was a
     // 6×5 floor then, and the charts past the growth have moved.
     let narrow = !matches!(
         header,
-        MAGIC | "STV15" | "STV14" | "STV13" | "STV12" | "STV11" | "STV10"
+        MAGIC | "STV16" | "STV15" | "STV14" | "STV13" | "STV12" | "STV11" | "STV10"
     );
     // Pre-STV11 headers know one room and a barter counter.
     let roomless = !matches!(
         header,
-        MAGIC | "STV15" | "STV14" | "STV13" | "STV12" | "STV11"
+        MAGIC | "STV16" | "STV15" | "STV14" | "STV13" | "STV12" | "STV11"
     );
     // Pre-STV12 headers were written when every room declared six ports;
     // an edge through a slot its kind no longer fills is re-seated.
-    let six_ported = !matches!(header, MAGIC | "STV15" | "STV14" | "STV13" | "STV12");
+    let six_ported = !matches!(
+        header,
+        MAGIC | "STV16" | "STV15" | "STV14" | "STV13" | "STV12"
+    );
     // Pre-STV13 headers were written before the window family, so their
     // ledger masks are narrower than the table is now.
-    let unglazed = !matches!(header, MAGIC | "STV15" | "STV14" | "STV13");
+    let unglazed = !matches!(header, MAGIC | "STV16" | "STV15" | "STV14" | "STV13");
     // Pre-STV14 headers were written when an offer band ran clean across
     // the room, doorway and all; a proposal left on what is deck now
     // walks onto the offer area this build actually has.
-    let doorway_offers = !matches!(header, MAGIC | "STV15" | "STV14");
+    let doorway_offers = !matches!(header, MAGIC | "STV16" | "STV15" | "STV14");
     // Pre-STV15 headers were written when a room's own hardware stood in
     // cells anybody could berth in; cargo left inside the counter or the
     // pendant walks off them.
-    let open_fixtures = !matches!(header, MAGIC | "STV15");
+    let open_fixtures = !matches!(header, MAGIC | "STV16" | "STV15");
     // Pre-STV16 headers were written when three of the calling rooms
     // were narrower, so a berth in one names a cell of a smaller net.
-    let cramped_callers = header != MAGIC;
+    let cramped_callers = !matches!(header, MAGIC | "STV16");
+    // Pre-STV17 headers were written when a non-square footprint could
+    // hang down a flank, where its cells stand one above the other
+    // instead of side by side.
+    let turned_footprints = header != MAGIC;
 
     let seed = reader.kv("seed")?;
     let tick = reader.kv("tick")?;
@@ -476,6 +511,9 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     }
     if open_fixtures {
         walk_cargo_out_from_under_the_fixtures(&rooms, &mut pieces);
+    }
+    if turned_footprints {
+        walk_the_turned_footprints_back_level(&rooms, &mut pieces);
     }
     let marks = marks
         .into_iter()
@@ -1223,6 +1261,44 @@ fn walk_cargo_out_from_under_the_fixtures(rooms: &Rooms, pieces: &mut [Piece]) {
         .iter()
         .enumerate()
         .filter(|(_, piece)| refused(piece))
+        .map(|(at, _)| at)
+        .collect();
+    walk_the_refused(rooms, pieces, &stranded);
+}
+
+/// The STV17 migration: a footprint that turned a corner comes back to a
+/// level wall.
+///
+/// The net's side flaps fold out sideways, so a `2×1` footprint hung on
+/// a flank stands its two cells one above the other rather than side by
+/// side — the same window a quarter turn from the one that left the aft
+/// wall. This build refuses that berth
+/// (`cargo::Violation::Athwart`), and a document written before it may
+/// carry one, so the pieces standing in them walk: same room, first cell
+/// of its net the arbiter still accepts, in the document's own piece
+/// order so the walk is as deterministic as everything else here.
+///
+/// Only the refusal this migration is about sends a piece walking. A
+/// berth some other rule refuses is some other rule's business, and a
+/// migration that tidied those would be answering a question nobody
+/// asked it.
+fn walk_the_turned_footprints_back_level(rooms: &Rooms, pieces: &mut [Piece]) {
+    let turned = |piece: &Piece| {
+        let refusal = match piece.loc {
+            Loc::Hold { room, x, y } => {
+                cargo::placement_check(rooms, &[], piece.id, piece.kind, room, x, y)
+            }
+            Loc::Laid { room, x, y } => {
+                cargo::dressing_check(rooms, &[], piece.id, piece.kind, room, x, y)
+            }
+            Loc::Stow { .. } => Ok(()),
+        };
+        refusal == Err(cargo::Violation::Athwart)
+    };
+    let stranded: Vec<usize> = pieces
+        .iter()
+        .enumerate()
+        .filter(|(_, piece)| turned(piece))
         .map(|(at, _)| at)
         .collect();
     walk_the_refused(rooms, pieces, &stranded);
@@ -2408,6 +2484,42 @@ next_piece 7
         let rat = sim.rats.rat.expect("the stowaway survives the trip");
         assert_eq!(rat.cell, (16, 4));
         assert_eq!(rat.prev_cell, (11, 3));
+    }
+
+    /// **A berth a new rule stopped allowing walks; it never sinks.**
+    ///
+    /// The athwart rule (`cargo::Violation::Athwart`) arrived after these
+    /// documents were written, so a saved board may carry a window or a
+    /// painting hung down a flank. Nothing about the *format* moved, so
+    /// neither did `MAGIC`: what answers is the load path's own standing
+    /// law — whatever the arbiter refuses re-berths at the first legal
+    /// cell of its own room. Conservation before convenience, and this
+    /// is the test that says a rule change gets that for free.
+    #[test]
+    fn a_window_hung_athwart_walks_rather_than_sinks() {
+        let plain = Sim::new(4).save_string();
+        // The starter window hangs at the front wall's old cornice
+        // punch-out; hang it down the port flank instead, in a document
+        // from the build before the rule.
+        let athwart = plain
+            .replacen(" hold 0 4 12", " hold 0 0 5", 1)
+            .replacen(MAGIC, "STV16", 1);
+        assert_ne!(athwart, plain, "the starter window's berth line moved");
+        let sim = Sim::from_save(&athwart).expect("an older board still reads");
+        let window = sim
+            .pieces
+            .iter()
+            .find(|piece| piece.kind == Kind::Window)
+            .expect("the window is still aboard");
+        let Loc::Hold { room, x, y } = window.loc else {
+            panic!("the window must come out hanging, not nowhere");
+        };
+        assert!(
+            cargo::placement_check(sim.rooms(), &sim.pieces, window.id, window.kind, room, x, y)
+                .is_ok(),
+            "the window walked to an illegal berth at ({x}, {y})"
+        );
+        assert_ne!((x, y), (0, 5), "it must not stay athwart the courses");
     }
 
     #[test]

@@ -543,12 +543,34 @@ for the instrument. Every defect in this class held on the wall it was
 written against and nowhere else, so only a table sweep can say "on
 every wall" and mean it.
 
-One thing stays crooked on purpose: a non-square footprint on a side
-wall still lies portrait with its cells, because the quarter turn it
-would need is one it cannot pay for. A window rehung on the port wall
-shows a portrait of the void, and the painting beside it hangs the same
-way. The cells are the law and the picture follows them — the same
-answer the standing rule gives everywhere else.
+**A footprint keeps its shape on every wall it may take**, and the rule
+that says so is the arbiter's, not the drawing's. A non-square
+footprint on a side wall used to lie portrait with its cells, because
+the quarter turn it would need is one it cannot pay for — written up
+here as crooked on purpose, and reported by the next playtest as the
+starting window rotating ninety degrees the moment it was carried one
+wall over. It was never the roll: the CELLS turn. The net's side flaps
+fold out sideways, so the two cells that lie level on the aft wall
+stand one above the other on a flank, and the body lies on its cells
+like everything else.
+
+The cells are still the law and the picture still follows them; what
+moved is which cells a footprint may have. A `2×1` hangs on the walls
+whose courses run level — the aft wall and the front — and a flank
+refuses it by name (`cargo::Violation::Athwart`), with the same
+conservation the other rule changes get: a saved board carrying one
+walks it back to a level berth rather than losing it (`STV17`). Square
+footprints cannot tell a flank from an end and hang anywhere, which is
+every window in the family but the `2×1`.
+
+The sweep learned the same sentence. It used to assert the crooked
+ruling — up on the aft and front charts, sideways on the flanks — which
+is a test restating the branch it is testing, and it passed on every
+one of its two thousand berths while the window turned its corner. It
+asks the player's question now: **a hung body reads up-is-up on every
+wall it may take.** The day a footprint can be stated in the wall's own
+frame rather than the sheet's, the refusal comes off and that sentence
+is still the one to keep.
 
 ### Occlusion: a defect class, named
 

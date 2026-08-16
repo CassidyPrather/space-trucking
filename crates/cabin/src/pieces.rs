@@ -682,9 +682,20 @@ fn upright_face(station: Station, surface: &SimSurface) -> Quat {
 /// footprint onto itself and is therefore always compatible — which is
 /// what stands the front wall's whole cluster up, the window's sky and
 /// the launch handle's grab with it. A QUARTER turn trades width for
-/// height, so only a SQUARE footprint may spend one; a portrait
-/// painting on a side wall genuinely lies that way and keeps the
-/// chart's orientation rather than pull its body off its cells.
+/// height, so only a SQUARE footprint may spend one: a body follows its
+/// cells, and a body that spent a turn its cells cannot afford would be
+/// drawn across a neighbour's berth.
+///
+/// **No berth reaches the refusal any more.** A non-square footprint on
+/// a side flank was the starting window's quarter turn, and what turned
+/// was the CELLS — the flaps fold out sideways, so two cells level on
+/// the aft wall stand one above the other on a flank. The arbiter keeps
+/// a non-square footprint off the flanks now
+/// (`cargo::Violation::Athwart`), so the branch below answers only the
+/// carried ghost's aim at a berth the drop would refuse anyway. It stays
+/// because it is the drawing's own law: the day a footprint can be
+/// stated in the wall's frame, the roll it may spend still has to be one
+/// its cells can pay for.
 fn wall_upright(station: Station, surface: &SimSurface, rect: Rect) -> Quat {
     let base = station.face(surface);
     let Some(roll) = upright_roll(station, surface) else {
@@ -2114,16 +2125,18 @@ fn glyph_spec(rule: Option<Violation>, rect: Rect) -> Vec<(Vec2, Vec2, f32)> {
             ),
         ],
         // Off the net, onto a piece (or its standing shadow), the violet
-        // objection, the last vital instrument refusing its exit, and a
-        // cell the room's own hardware already fills: the frame alone.
-        // (Vital and Fixture are rules still owed their own glyphs — the
-        // frame and the buzz carry them meanwhile.)
+        // objection, the last vital instrument refusing its exit, a cell
+        // the room's own hardware already fills, and a footprint that
+        // would lie athwart a flank's courses: the frame alone. (Vital,
+        // Fixture and Athwart are rules still owed their own glyphs —
+        // the frame and the buzz carry them meanwhile.)
         Some(
             Violation::Bounds
             | Violation::Overlap
             | Violation::Suspicious
             | Violation::Vital
-            | Violation::Fixture,
+            | Violation::Fixture
+            | Violation::Athwart,
         )
         | None => vec![],
     }
@@ -5612,20 +5625,28 @@ mod tests {
         if flat {
             return;
         }
-        let square = b.kind.cells().0 == b.kind.cells().1;
-        let quarter = matches!(station, Station::BayPort | Station::BayStarboard);
-        if square || !quarter {
-            assert!(
-                (rot * Vec3::Y).y > 0.999,
-                "{name}: this footprint can stand up and must, got {:?}",
-                rot * Vec3::Y
-            );
-        } else {
-            assert!(
-                (rot * Vec3::Y).y.abs() < 1e-3,
-                "{name}: a portrait footprint lies with its cells"
-            );
-        }
+        // **Up is up on every wall a body may hang on**, and this is the
+        // sentence the sweep used to be missing.
+        //
+        // It used to read the other way round: up on the aft and front
+        // charts, *sideways* on the flanks, because that is what
+        // [`wall_upright`] does with a non-square footprint. A test that
+        // restates the branch it is testing can only fail when the
+        // implementation contradicts itself, so this one passed on every
+        // one of its two thousand berths while the starting window came
+        // out a quarter turn from where it went in. The defect was never
+        // in the roll: the CELLS turn, because the net's side flaps fold
+        // out sideways, and the body lies on its cells.
+        //
+        // The arbiter keeps a non-square footprint off the flanks now
+        // (`cargo::Violation::Athwart`), so no berth this sweep is
+        // handed can reach the refusal, and the claim can be the
+        // player's rather than the rule's.
+        assert!(
+            (rot * Vec3::Y).y > 0.999,
+            "{name}: a hung body reads up-is-up on every wall it may take, got {:?}",
+            rot * Vec3::Y
+        );
     }
 
     /// Claim two: the carried ghost promises the berth it would take, to

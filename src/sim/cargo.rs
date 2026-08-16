@@ -520,6 +520,23 @@ pub enum Violation {
     Suspicious,
     /// A placement whose chart does not satisfy the kind's mount.
     Affix(Mount),
+    /// A footprint that would lie athwart its wall's own courses.
+    ///
+    /// The net is one sheet folded into a box, and the two side flaps
+    /// fold out sideways: their courses climb the sheet's **x** where
+    /// the aft and front walls' climb its **y**. A square footprint
+    /// cannot tell the difference. A `2×1` one can — the same two cells
+    /// that lie level on the aft wall stand one above the other on a
+    /// flank, so a window carried one wall over came out a quarter turn
+    /// from the window that left. The body is not turned by the drawing:
+    /// the *cells* turn, and the body lies on its cells.
+    ///
+    /// So until a footprint can be stated in the wall's own frame rather
+    /// than the sheet's, a non-square one hangs only where the courses
+    /// run level. A porthole and a bay window are square and hang
+    /// anywhere; the 2×1 window and the painting keep to the aft and
+    /// front walls.
+    Athwart,
     /// A cabinet with goods in its cubbies was asked to move (or to take
     /// more than it has room for): empty it first.
     Occupied,
@@ -556,9 +573,9 @@ pub fn placement_legal(
 
 /// [`placement_legal`], but naming the rule that refused.
 ///
-/// Checks run in a fixed order (bounds/chart, threshold, mount, cryo,
-/// then per-piece overlap-and-shadow / volatile / suspicious in stowage
-/// order) so the reported violation is deterministic. Nothing here
+/// Checks run in a fixed order (bounds/chart, threshold, mount, athwart,
+/// cryo, then per-piece overlap-and-shadow / volatile / suspicious in
+/// stowage order) so the reported violation is deterministic. Nothing here
 /// reasons about where a body may walk: the walker passes through
 /// cargo, so a berth is refused for what it collides with, never for
 /// what it fences off.
@@ -591,6 +608,9 @@ pub fn placement_check(
     let mount = kind.mount();
     if !mount_accepts(mount, surf) {
         return Err(Violation::Affix(mount));
+    }
+    if turns_a_corner(surf, w, h) {
+        return Err(Violation::Athwart);
     }
     let standing = matches!(surf, Surf::Floor);
     if matches!(kind.tag(), Some(Tag::Cryo)) && !touches_hull(host, x, y, w, h) {
@@ -652,6 +672,16 @@ pub fn placement_check(
         }
     }
     Ok(())
+}
+
+/// Whether a `w × h` footprint on `surf` would lie athwart the wall's
+/// own courses — see [`Violation::Athwart`].
+///
+/// **It is asked of the surface, not of the kind.** What turns is the
+/// pair of cells, so anything non-square answers the same way, whatever
+/// hangs there and whichever arbiter is asking.
+const fn turns_a_corner(surf: Surf, w: u8, h: u8) -> bool {
+    w != h && matches!(surf, Surf::Port | Surf::Starboard)
 }
 
 /// The one chart a footprint lies wholly inside, if any — a piece bent
@@ -759,8 +789,9 @@ pub fn first_fit(rooms: &Rooms, pieces: &[Piece], id: u32, kind: Kind) -> Option
 ///
 /// The dressing layer's own [`placement_check`], reusing the violation
 /// ladder whole and consulting every other piece. Checks run in a fixed
-/// order (bounds, threshold, surface, then per-piece dressing overlap /
-/// pinned-under-occupancy) so the reported violation is deterministic.
+/// order (bounds, threshold, surface, athwart, then per-piece dressing
+/// overlap / pinned-under-occupancy) so the reported violation is
+/// deterministic.
 pub fn dressing_check(
     rooms: &Rooms,
     pieces: &[Piece],
@@ -796,6 +827,13 @@ pub fn dressing_check(
         if !mount_accepts(mount, surf) {
             return Err(Violation::Affix(mount));
         }
+    }
+    // Paint lies on a wall the same way a window hangs on it, so it
+    // answers the same rule. Every covering aboard today is either
+    // square or floor-only, so nothing is refused by this yet; the day
+    // somebody hangs wallpaper two cells wide, it is already answered.
+    if turns_a_corner(surf, w, h) {
+        return Err(Violation::Athwart);
     }
     for other in pieces {
         if other.id == id {
@@ -1157,14 +1195,75 @@ mod tests {
     }
 
     #[test]
-    fn the_painting_hangs_on_any_wall_but_never_a_hole() {
+    fn the_painting_hangs_on_a_level_wall_but_never_a_hole() {
         assert_eq!(check(&[], Kind::Painting, 5, 1), Ok(()));
-        assert_eq!(check(&[], Kind::Painting, 0, 6), Ok(()));
+        assert_eq!(check(&[], Kind::Painting, 0, 6), Err(Violation::Athwart));
         assert_eq!(
             check(&[], Kind::Painting, 4, 4),
             Err(Violation::Affix(Mount::Wall))
         );
         assert_eq!(check(&[], Kind::Painting, 13, 9), Err(Violation::Bounds));
+    }
+
+    /// **A footprint keeps its shape on every wall it may take.**
+    ///
+    /// The net is one sheet folded into a box and the side flaps fold
+    /// out sideways, so the two cells that lie level on the aft wall
+    /// stand one above the other on a flank. Nothing in the drawing does
+    /// that — the cells turn and the body lies on its cells — which is
+    /// why it read to a player as the starting window rotating a quarter
+    /// turn when it was carried one wall over.
+    ///
+    /// Swept rather than sampled: the claim is about every kind on every
+    /// cell, and the pair of anchors below is only here so a sweep that
+    /// went vacuous would say so.
+    #[test]
+    fn a_footprint_keeps_its_shape_on_every_wall_it_may_take() {
+        let ship = ship();
+        let (cols, rows) = RoomKind::Cabin.grid();
+        let mut turned = 0_u32;
+        let mut level = 0_u32;
+        for kind in Kind::ALL {
+            let (w, h) = kind.cells();
+            for y in 0..rows {
+                for x in 0..cols {
+                    let flank = matches!(
+                        RoomKind::Cabin.surface_of(x, y),
+                        Some(Surf::Port | Surf::Starboard)
+                    );
+                    let ruling = if kind.covering() {
+                        dressing_check(&ship, &[], 0, kind, CABIN, x, y)
+                    } else {
+                        placement_check(&ship, &[], 0, kind, CABIN, x, y)
+                    };
+                    if ruling.is_ok() {
+                        assert!(
+                            !flank || w == h,
+                            "{kind:?} may hang athwart the courses at ({x}, {y})"
+                        );
+                        level += u32::from(!flank && w != h);
+                    } else if ruling == Err(Violation::Athwart) {
+                        assert!(flank && w != h, "{kind:?} refused level at ({x}, {y})");
+                        turned += 1;
+                    }
+                }
+            }
+        }
+        assert!(turned > 0, "no footprint was ever refused for turning");
+        assert!(level > 0, "no non-square footprint hangs anywhere at all");
+        // And the two that carry the rule today still hang, and still
+        // hang only where the courses run level.
+        for kind in [Kind::Window, Kind::Painting] {
+            assert_eq!(check(&[], kind, 5, 1), Ok(()), "{kind:?} on the aft wall");
+            assert_eq!(
+                check(&[], kind, 0, 5),
+                Err(Violation::Athwart),
+                "{kind:?} on the port wall"
+            );
+        }
+        // A square footprint cannot tell the flanks from the ends.
+        assert_eq!(check(&[], Kind::Porthole, 1, 8), Ok(()));
+        assert_eq!(check(&[], Kind::ChartTank, 11, 5), Ok(()));
     }
 
     #[test]
@@ -1276,7 +1375,10 @@ mod tests {
                 kind == Kind::Window,
                 "{kind:?} disagrees about what a hull comes with"
             );
-            // Every room kind must be able to take it somewhere.
+            // Every room kind must be able to take it somewhere — and
+            // "somewhere" is a wall whose courses its footprint can lie
+            // level along, since a non-square one is refused on the
+            // flanks (`Violation::Athwart`).
             let (w, h) = kind.cells();
             for host in super::super::room::ROOM_KINDS {
                 let (cols, rows) = host.grid();
@@ -1291,12 +1393,16 @@ mod tests {
                                         Some(
                                             Surf::Aft | Surf::Port | Surf::Starboard | Surf::Front
                                         )
+                                    ) && !turns_a_corner(
+                                        host.surface_of(cx, cy).expect("just matched"),
+                                        w,
+                                        h,
                                     )
                                 })
                             })
                     })
                 });
-                assert!(fits, "{kind:?} fits no wall of a {host:?}");
+                assert!(fits, "{kind:?} fits no level wall of a {host:?}");
             }
         }
     }

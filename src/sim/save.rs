@@ -2329,14 +2329,14 @@ mod tests {
         // five missing instruments, the porthole staying unbought.
         let plain = Sim::new(9).save_string();
         let deroomed = deroom(&plain, "STV10");
-        let mut old_cells = [(0_u8, 0_u8), (0, 2), (2, 0), (5, 0)].into_iter();
+        let mut old_cells = [(0_u8, 0_u8), (0, 2), (2, 0), (5, 0), (3, 2)].into_iter();
         let legacy_board: String = deroomed
             .lines()
             .filter(|line| !instrument_line(line) && !window_line(line))
             .map(|line| {
                 if line.starts_with("piece") && line.contains(" hold ") {
                     let head = line.split(" hold ").next().expect("split has a head");
-                    let (x, y) = old_cells.next().expect("four console-era berths");
+                    let (x, y) = old_cells.next().expect("five console-era berths");
                     format!("{head} hold {x} {y}\n")
                 } else {
                     format!("{line}\n")
@@ -2345,7 +2345,7 @@ mod tests {
             .collect();
         assert!(
             old_cells.next().is_none(),
-            "console-era cargo is four pieces"
+            "console-era cargo is five pieces"
         );
         for older in ["STV7", "STV6", "STV5", "STV4"] {
             let mut old = legacy_board.replacen("STV10", older, 1);
@@ -2363,8 +2363,8 @@ mod tests {
                 .collect();
             assert_eq!(
                 held.len(),
-                9,
-                "{older}: four migrated berths plus five hung instruments"
+                10,
+                "{older}: five migrated berths plus five hung instruments"
             );
             for piece in held {
                 let Loc::Hold { room, x, y } = piece.loc else {

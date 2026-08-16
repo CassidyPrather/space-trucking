@@ -145,18 +145,28 @@ fn home_familiar() -> [u32; POI_COUNT] {
 /// Starter cargo and where it is stowed in the cabin: trade goods low in
 /// the room, and the ship's fittings — light and instruments alike — hung
 /// at their traditional berths, every one a movable piece.
-const STARTER_CARGO: [(Kind, u8, u8); 10] = [
+const STARTER_CARGO: [(Kind, u8, u8); 11] = [
     (Kind::ScrapAlloy, 4, 5),
     (Kind::PerfumeVial, 3, 3),
     (Kind::BrinePearls, 6, 3),
-    // The ship's one light. Every other lumen aboard is cargo too —
-    // lights-out is a legal state and the emissive instruments carry it
-    // (docs/BAY.md, "Lights are cargo") — so the starter lamp hangs
-    // over mid-floor where losing it is a choice, not an accident. The
-    // ceiling chart folds over the starboard cornice, so its columns
-    // run BACKWARDS against the floor's: (18, 6) is the pendant over
-    // floor cell (6, 6), the middle of the wider room.
+    // The ship's two lights. Every lumen aboard is cargo — lights-out is
+    // a legal state and the emissive fittings carry it (docs/BAY.md,
+    // "Lights are cargo") — so both hang where losing them is a choice
+    // and not an accident. The ceiling chart folds over the starboard
+    // cornice, so its columns run BACKWARDS against the floor's:
+    // (18, 6) is the pendant over floor cell (6, 6), the middle of the
+    // wider room.
     (Kind::CeilingLamp, 18, 6),
+    // And a sconce at the port cornice, over the porthole. A hull that
+    // launched with one lamp launched with one *kind* of lamp, and a
+    // crew that never saw a second one has no reason to believe a wall
+    // takes light at all; the pendant lights the middle of the deck and
+    // leaves the flanks to the starlight floor, which is where the
+    // playtest read black. Column 0 of the port chart is the cornice —
+    // that wall's courses run outward from the deck — so the arm hangs
+    // high, clear of the doorway two cells aft and clear of the
+    // baseboard that standing floor cargo shadows.
+    (Kind::WallLamp, 0, 8),
     // The instruments (BAY.md, "Instruments are cargo"): the window at
     // its old cornice punch-out, the gauges and the lever clustered on
     // the front wall beside it, and the chart tank on the starboard
@@ -2911,6 +2921,44 @@ mod tests {
         for id in stock {
             let piece = sim.pieces().iter().find(|p| p.id == id).unwrap();
             assert!(!player_owned(sim.rooms(), sim.pieces(), piece.loc));
+        }
+    }
+
+    /// **A new ship burns one lamp overhead and one on a wall.**
+    ///
+    /// Not "the table holds two lamp kinds": what the player gets is
+    /// light, so the sweep asks the two predicates light is read
+    /// through — [`lamp_lit`], which is false for a lamp boxed in a
+    /// cabinet, and the chart the berth lies on — and it asks them of
+    /// the board the ship actually leaves the yard with, at every seed,
+    /// because the variant roll is the only thing a seed moves and a
+    /// lamp's berth had better not be one of them.
+    #[test]
+    fn a_new_ship_burns_a_lamp_overhead_and_a_lamp_on_a_wall() {
+        for seed in 0..64 {
+            let sim = Sim::new(seed);
+            let planes: Vec<room::Surf> = sim
+                .pieces()
+                .iter()
+                .filter(|piece| lamp_lit(piece))
+                .filter_map(|piece| match piece.loc {
+                    Loc::Hold {
+                        room: CABIN, x, y, ..
+                    } => RoomKind::Cabin.surface_of(x, y),
+                    _ => None,
+                })
+                .collect();
+            assert!(
+                planes.contains(&room::Surf::Ceiling),
+                "seed {seed}: nothing burning under the ceiling ({planes:?})"
+            );
+            assert!(
+                planes.iter().any(|surf| matches!(
+                    surf,
+                    room::Surf::Aft | room::Surf::Port | room::Surf::Starboard | room::Surf::Front
+                )),
+                "seed {seed}: nothing burning on a wall ({planes:?})"
+            );
         }
     }
 

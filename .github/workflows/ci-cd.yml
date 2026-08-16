@@ -24,13 +24,14 @@ jobs:
           fetch-depth: 0  # Fetch all history and tags for version detection
 
       - name: Install native dependencies
-        # Bevy's cpal links ALSA, gilrs wants libudev for gamepad
-        # enumeration, and winit needs wayland/xkbcommon headers. The
-        # runner image ships runtime .so.2 libraries but not the dev
-        # symlinks and .pc files the build scripts need.
+        # Bevy's cpal links ALSA and winit needs wayland/xkbcommon
+        # headers. The runner image ships runtime .so.2 libraries but not
+        # the dev symlinks and .pc files the build scripts need. libudev
+        # was here for gilrs, and gilrs left with the gamepad feature —
+        # nothing in the cabin ever read a pad.
         run: >
           sudo apt-get update && sudo apt-get install -y
-          libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+          libasound2-dev libwayland-dev libxkbcommon-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -88,7 +89,7 @@ jobs:
         if: runner.os == 'Linux'
         run: >
           sudo apt-get update && sudo apt-get install -y
-          libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+          libasound2-dev libwayland-dev libxkbcommon-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

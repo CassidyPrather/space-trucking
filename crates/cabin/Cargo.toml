@@ -24,10 +24,38 @@ path = "src/main.rs"
 [dependencies]
 # The whole game, headless: sim, net, replay, synth, telemetry.
 space-trucking = { path = "../.." }
-# Default features are the known-coherent set; `wav` is added because the
-# soundscape arrives as synth.rs's WAV bytes, no audio assets anywhere.
-# Trimming features is a later, deliberate pass with measurements.
-bevy = { version = "0.19", features = ["wav"] }
+# The engine, cut to what the cabin actually draws. The default set is
+# four umbrella features — 2d, 3d, ui, audio — and they carry passengers
+# this game never boards: there is no `AssetServer` anywhere, every mesh
+# and texture being cut in code, so no glTF, no image decoders, no
+# animation, no scene files, no sprites, and the only sound is synth.rs's
+# WAV bytes. Each line below answers to something on screen.
+bevy = { version = "0.19", default-features = false, features = [
+    # App and platform: what DefaultPlugins is assembled out of.
+    "std", "async_executor", "multi_threaded", "bevy_asset", "bevy_log",
+    "bevy_state", "reflect_auto_register", "bevy_winit", "x11", "wayland",
+    # The 3D pass: PBR materials, point lights (no shadow maps), and the
+    # bloom the lamps and the CRTs are lit with.
+    "bevy_render", "bevy_core_pipeline", "bevy_pbr", "bevy_light",
+    "bevy_post_process", "bevy_camera", "bevy_mesh", "bevy_material",
+    "bevy_shader", "bevy_color", "bevy_image", "bevy_window",
+    # A Camera3d tonemaps through TonyMcMapface unless told otherwise, and
+    # the LUT it reads is a zstd-compressed ktx2. Drop these three and
+    # every frame in the game comes out a different colour.
+    "tonemapping_luts", "ktx2", "zstd_rust",
+    # `png` is here to WRITE, not to read: nothing in the game loads an
+    # image, but `--shot` saves through the same format registry, and
+    # without this every screenshot run exits 0 having written a
+    # zero-byte file ("The image format `Png` is not supported").
+    "png",
+    # The Esc menu: text nodes, and the picking backend that drives the
+    # `Interaction` they are clicked through.
+    "bevy_ui", "bevy_ui_render", "bevy_text", "default_font",
+    "bevy_input_focus", "bevy_picking", "ui_picking",
+    # The soundscape arrives as synth.rs's WAV bytes, so wav and nothing
+    # else: no vorbis, no audio files.
+    "bevy_audio", "wav",
+] }
 # The deep-night window for the Umbra Market, read from the OS clock.
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 # Reading the retired 2D console's quad-storage container (local.data is

@@ -51,7 +51,8 @@ into* the room instead of occupying it: a rug goes down on the deck
 paint coats a wall or floor cell, and neither comes back up while
 something stands on top. Luminous paint really glows — rats keep clear
 of it. The launch lever is a pull: grab, drag
-to the end of the track, and the throw fires at the detent. `Space`
+down to the end of the track — the way the handle itself
+swings — and the throw fires at the detent. `Space`
 pauses, `M` mutes, `R` starts a new run (`F` warps, in dev mode).
 
 Saves: the cabin keeps its own slot (`cabin.data` + `cabin.replay`

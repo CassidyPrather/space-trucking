@@ -194,7 +194,12 @@ const ART_GLOW: f32 = 0.5;
 const LEVER_PIVOT_Z: f32 = 5.0;
 const LEVER_ARM: f32 = 14.0;
 const LEVER_REST: f32 = 0.30;
-const LEVER_THROW: f32 = 0.80;
+
+/// How far the throw tips the arm past its rest, in radians. Public
+/// because the gesture layer's axis is DERIVED from this swing rather
+/// than written down beside it (`crate::gesture`): a handle that falls
+/// through its slot is pulled by a drag that falls down the panel.
+pub const LEVER_THROW: f32 = 0.80;
 
 /// Launch-lever thunk travel time after a departure, and the rattle
 /// after a refused pull — the 2D console's clocks, moved with the

@@ -426,9 +426,15 @@ of. Three guards, all sim-side and monkey-proven:
   by rendering, never by placement bans — see below.
 - **The readings ride the pieces first, the controls follow.** Landed:
   the chart tank and destination preview wear the CRT's live textures,
-  and the ETA gauge's needle reads the leg — the console's arc and
-  preview glass retired with them, and the plate they were screwed to
-  followed. **The window is not one of them.** It used to wear a
+  and the ETA gauge's needle reads the leg against a scale — the
+  console's arc and preview glass retired with them, and the plate they
+  were screwed to followed. The scale is the gauge's second pass and it
+  came out of a playtest: a hand sweeping a bare face says a leg is
+  running and never says how much of one is left, so the sweep is
+  pipped at each quarter and its empty end wears a mark of its own,
+  wider and longer than a pip, which burns up as the hand closes on it.
+  Nothing to read — a notch, a size, a colour and a motion, and the
+  reading survives any three of them. **The window is not one of them.** It used to wear a
   painted sky, which made it a picture of space rather than a way of
   seeing it; its glass is a **hole in the hull** now
   ([ART_DIRECTION_3D.md](ART_DIRECTION_3D.md), "The window is a hole").

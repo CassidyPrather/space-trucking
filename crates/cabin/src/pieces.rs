@@ -397,6 +397,11 @@ struct EtaNeedle {
     reach: f32,
 }
 
+/// The mark at the empty end of an ETA gauge's sweep — where the needle
+/// is going. [`eta_needles`] burns it up as the leg closes.
+#[derive(Component)]
+struct EtaArrival;
+
 /// The launch handle's pivot on a `LaunchLever` rig: [`lever_motion`]
 /// throws it, the go-lamp and halo ride it.
 #[derive(Component)]
@@ -2511,11 +2516,56 @@ fn breathe_pulses(
 /// ±this much rotation around twelve o'clock.
 const NEEDLE_SWEEP: f32 = 2.4;
 
+/// **Where the needle stands with `remaining` of the leg left.**
+///
+/// The one place the sweep becomes a bearing. The hand is turned by it
+/// and so is every mark it is read against ([`parts`]), so a retune of
+/// [`NEEDLE_SWEEP`] moves the scale and the hand together — a graduation
+/// pointing at a reading the needle never reaches is a dial that lies,
+/// and there is now no arithmetic left for the two to disagree in.
+fn eta_bearing(remaining: f32) -> Quat {
+    Quat::from_rotation_z(remaining.mul_add(NEEDLE_SWEEP, -NEEDLE_SWEEP * 0.5))
+}
+
+/// The graduated fractions of the leg the dial is pipped at. Arrival is
+/// not among them: it carries a mark of its own, because the whole
+/// question the scale exists to answer is which end it is.
+const ETA_PIPS: [f32; 4] = [0.25, 0.5, 0.75, 1.0];
+
+/// The chapter ring the marks stand on, as a fraction of the gauge's own
+/// cell. Outside the reach of the hand and inside the bezel's rim: a
+/// scale the needle sweeps across is a scale you cannot read while it is
+/// being read, and a mark past the bezel is a mark off the instrument.
+const ETA_RING: f32 = 0.345;
+
+/// The arrival mark's emissive with a whole leg still to run, and with
+/// none of it left. It rests under the needle's own 1.6 — the hand is
+/// the brightest thing on a face that is not being arrived at — and
+/// wakes over it, because a gauge that has run out is the one thing on
+/// the wall worth looking at.
+const ARRIVAL_REST: f32 = 0.9;
+const ARRIVAL_WAKE: f32 = 3.4;
+
+/// How sharply the arrival mark wakes as the leg closes. Cubed: nearly
+/// all of it in the last quarter and nearly none of it before, which is
+/// what "nearly there" ought to look like on a leg whose middle is
+/// uneventful.
+const ARRIVAL_CURVE: i32 = 3;
+
 /// The ETA gauge pieces read the leg: needle at the top of its sweep
 /// when a course is armed at the dock, draining as the leg completes,
 /// resting at empty otherwise — the console arc's reading, carried by
 /// the instrument that owns it now.
-fn eta_needles(shell: Res<Shell>, mut needles: Query<(&EtaNeedle, &mut Transform)>) {
+///
+/// And the arrival mark burns up as the hand closes on it, so the end of
+/// the sweep says which end it is from across the room, before the
+/// needle is near enough to read against a graduation.
+fn eta_needles(
+    shell: Res<Shell>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut needles: Query<(&EtaNeedle, &mut Transform)>,
+    marks: Query<&MeshMaterial3d<StandardMaterial>, With<EtaArrival>>,
+) {
     let sim = &shell.bridge.sim;
     let remaining = match sim.ship().state {
         ShipState::Traveling {
@@ -2526,11 +2576,18 @@ fn eta_needles(shell: Res<Shell>, mut needles: Query<(&EtaNeedle, &mut Transform
         ShipState::Docked(_) if sim.ship().selected.is_some() => 1.0,
         ShipState::Docked(_) => 0.0,
     };
-    let angle = remaining.mul_add(NEEDLE_SWEEP, -NEEDLE_SWEEP * 0.5);
+    let spin = eta_bearing(remaining);
     for (needle, mut transform) in &mut needles {
-        let spin = Quat::from_rotation_z(angle);
         transform.rotation = spin;
         transform.translation = Vec3::new(0.0, 0.0, 7.2) + spin * Vec3::new(0.0, needle.reach, 0.0);
+    }
+    let level = (1.0 - remaining)
+        .powi(ARRIVAL_CURVE)
+        .mul_add(ARRIVAL_WAKE - ARRIVAL_REST, ARRIVAL_REST);
+    for mark in &marks {
+        if let Some(mut mat) = materials.get_mut(&mark.0) {
+            mat.emissive = palette::AMBER.to_linear() * level;
+        }
     }
 }
 
@@ -3195,6 +3252,11 @@ pub enum Role {
     Needle {
         reach: f32,
     },
+    /// The empty end of the ETA gauge's sweep: the mark the needle
+    /// arrives at, which burns up as it closes. Its own material, like
+    /// the cubby's, because two gauges aboard read two different legs
+    /// only if they are not sharing one amber.
+    Arrival,
     /// The launch handle's go-lamp, and the halo behind it.
     Knob,
     Halo,
@@ -3214,7 +3276,7 @@ impl Role {
     /// wearing one amber would breathe as one, and they are meant to
     /// breathe out of step (`invite_glows`).
     const fn alone(self) -> bool {
-        matches!(self, Self::Cubby { .. })
+        matches!(self, Self::Cubby { .. } | Self::Arrival)
     }
 
     /// Whether the part is hung hidden for a system to show later.
@@ -4415,8 +4477,24 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
             out.extend(grab_parts(piece.kind, fw, fh, 12.5));
         }
         // The ETA gauge: a brass drum with a dark dial, the phosphor
-        // needle reading the live leg ([`eta_needles`] sweeps it).
-        // Passive — it earns no amber handle.
+        // needle reading the live leg ([`eta_needles`] sweeps it), and
+        // the scale it is read against. Passive — it earns no amber
+        // handle.
+        //
+        // **A hand with no dial under it is not a reading.** The gauge
+        // shipped as a bare face and a needle that wandered across it,
+        // and the playtest asked the only question left to ask: when is
+        // arrival? So the sweep is graduated — a pip at each quarter of
+        // the leg — and its empty end carries a mark of its own, longer
+        // and wider than a pip and reaching in far enough for the
+        // needle to seat against it, which lights as the leg closes
+        // ([`eta_needles`] again). Not a word and not a number: a
+        // notch, a size, a colour and a motion, three of them still
+        // there with the hue taken away.
+        //
+        // Every mark is turned by [`eta_bearing`], the same function
+        // that turns the needle, so the scale cannot come to mean a
+        // sweep the hand does not walk.
         Kind::EtaGauge => {
             out.push(Part::new(
                 "drum",
@@ -4438,6 +4516,37 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 shaded(0.7),
                 Transform::from_xyz(0.0, 0.0, 5.5).with_rotation(flat),
             ));
+            // The graduations, on a chapter ring outboard of where the
+            // needle's tip reaches — a hand that draws over the scale
+            // it is read against hides the reading at the moment the
+            // reading is being taken.
+            let ring = fw * ETA_RING;
+            for (i, left) in ETA_PIPS.into_iter().enumerate() {
+                out.push(
+                    Part::new(
+                        "pip",
+                        Body::Box(Vec3::new(2.0, 2.2, 1.6)),
+                        Coat::etched(palette::ICON),
+                        Transform::from_translation(
+                            eta_bearing(left) * Vec3::new(0.0, ring, 0.0) + Vec3::Z * 7.4,
+                        )
+                        .with_rotation(eta_bearing(left)),
+                    )
+                    .nth(u8::try_from(i).unwrap_or(0)),
+                );
+            }
+            out.push(
+                Part::new(
+                    "arrival mark",
+                    Body::Box(Vec3::new(3.6, 3.4, 1.6)),
+                    Coat::phosphor(palette::AMBER, ARRIVAL_REST),
+                    Transform::from_translation(
+                        eta_bearing(0.0) * Vec3::new(0.0, ring, 0.0) + Vec3::Z * 7.4,
+                    )
+                    .with_rotation(eta_bearing(0.0)),
+                )
+                .role(Role::Arrival),
+            );
             out.push(
                 Part::new(
                     "needle",
@@ -4903,6 +5012,9 @@ fn stamp(
         }
         Role::Needle { reach } => {
             rig.commands.entity(entity).insert(EtaNeedle { reach });
+        }
+        Role::Arrival => {
+            rig.commands.entity(entity).insert(EtaArrival);
         }
         Role::Knob => {
             rig.commands.entity(entity).insert(LeverLamp);
@@ -5577,6 +5689,99 @@ mod tests {
                 && lever.rect.w > layout::LAUNCH_LEVER.w,
             "the lever panel must contain the lever rect with room to pull"
         );
+    }
+
+    /// **The ETA dial marks the end the needle arrives at.**
+    ///
+    /// The gauge shipped as a bare face with a hand wandering over it,
+    /// and the playtest asked the question a bare face leaves open:
+    /// which end is arrival? So this is the player's question and not
+    /// the drawing's — four things have to hold for a scale to answer
+    /// it, and each of them was breakable by a retune of a number in
+    /// another paragraph:
+    ///
+    /// 1. **The hand never draws over the scale.** Every mark stands
+    ///    outboard of the radius the needle's tip reaches, which settles
+    ///    it for every reading at once, because the hand is radial.
+    /// 2. **Every mark is on the instrument** — inside the bezel's own
+    ///    rim, since a mark past the rim is a mark on the wall.
+    /// 3. **The arrival mark is where the hand ends up.** Its bearing is
+    ///    the one [`eta_needles`] turns the needle to with none of the
+    ///    leg left, and no graduation shares that bearing.
+    /// 4. **It is told from a graduation without hue**: bigger across
+    ///    and bigger along, so the end of the scale reads as the end in
+    ///    a picture with the colour taken out.
+    #[test]
+    fn the_eta_dial_marks_the_end_the_needle_arrives_at() {
+        let rig = rig_of(Kind::EtaGauge, Screens::LIVE);
+        let solid = |what: &str| {
+            rig.iter()
+                .filter(|part| part.what == what)
+                .map(|part| match part.body {
+                    Some(Body::Box(size)) => (part, size),
+                    other => panic!("{what} is cut from {other:?}, not a bar"),
+                })
+                .collect::<Vec<_>>()
+        };
+        let (needle, hand) = solid("needle")[0];
+        let Role::Needle { reach } = needle.role else {
+            panic!("the needle must carry the role the sweep drives it by")
+        };
+        // How far the tip gets, and how far the face goes.
+        let tip = hand.y.mul_add(0.5, reach);
+        let rim = rig
+            .iter()
+            .find(|part| part.what == "drum")
+            .and_then(|part| match part.body {
+                Some(Body::Drum { r, .. }) => Some(r),
+                _ => None,
+            })
+            .expect("the gauge wears a bezel");
+        let pips = solid("pip");
+        let arrival = solid("arrival mark");
+        assert_eq!(pips.len(), ETA_PIPS.len(), "one pip per graduation");
+        assert_eq!(arrival.len(), 1, "one end is the end");
+        for (mark, size) in pips.iter().chain(&arrival) {
+            let (at, along) = (mark.at.translation.truncate().length(), size.y * 0.5);
+            assert!(
+                at - along > tip,
+                "{} reaches in to {:.2}, inside the {tip:.2} the hand sweeps: \
+                 the scale is hidden by the reading",
+                mark.label(),
+                at - along
+            );
+            assert!(
+                at + along <= rim,
+                "{} reaches out to {:.2}, past the {rim:.2} bezel: it is a mark \
+                 on the wall, not on the gauge",
+                mark.label(),
+                at + along
+            );
+        }
+        // Where the hand comes to rest with the leg run out.
+        let done = (eta_bearing(0.0) * Vec3::Y).truncate();
+        let bearing = |part: &Part| part.at.translation.truncate().normalize_or_zero().dot(done);
+        assert!(
+            bearing(arrival[0].0) > 0.9999,
+            "the arrival mark stands off the bearing the needle ends on"
+        );
+        for (pip, _) in &pips {
+            assert!(
+                bearing(pip) < 0.999,
+                "{} sits on top of arrival: a graduation there says the \
+                 sweep has two ends",
+                pip.label()
+            );
+        }
+        let (_, big) = arrival[0];
+        for (pip, size) in &pips {
+            assert!(
+                big.x > size.x && big.y > size.y,
+                "{} is as large as the arrival mark, so the two ends of the \
+                 sweep are told apart by hue alone",
+                pip.label()
+            );
+        }
     }
 
     /// The handle rule's click routing, decided (BAY.md): amber handle

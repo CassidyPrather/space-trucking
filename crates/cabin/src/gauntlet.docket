@@ -14,19 +14,37 @@
 #
 # Blank lines and `#` comments are ignored.
 #
-# **The rooms are clear. The rigs have just been swept for the first
-# time, and these two are what is left of it.**
+# **The rooms are clear, the doorways are clear, and these two are what
+# is left of the cargo.**
 #
 # The rooms' own lines were three families and one cause, and they came
 # off when a calling room got a deck of its own to lend (`Tile::Staging`,
 # docs/ROOMS.md); that history is in the git log and the sentences it
 # closed are kept said as tests in `gauntlet.rs`.
 #
-# What is new is the cargo. Thirty-two kinds had never been swept at all,
-# because a rig was built straight into a live world and there was nothing
-# to measure; there is a description now (`pieces::parts`), and the sweep
-# found sixty-one things in it. Fifty-nine were fixed where they stood
-# and were all three idioms:
+# The doorways were the third layer, and they went the way the cargo did.
+# Every piece of hardware in a seam was built straight into the world, so
+# the sweep walked through a dozen doorways a room without being able to
+# name one thing in any of them — which is how a latch came to be drawn
+# twice at one transform and to photograph two ways. A doorway describes
+# itself now (`room::seam_parts`) and is swept from both of its sides,
+# because a seam is drawn once by the room with the lower id and stands
+# on the boundary both of them own. Fifty-three fights came out of that
+# first pass and all fifty-three were cured, in the same three idioms the
+# cargo's were: a body written down twice (the latch, the jamb lamp, and
+# a corner cell's tread laid once per doorway instead of once per cell);
+# two members of one fitting cut to one length so they cross (the lintel
+# against both stiles, the hatch coaming against itself at four corners);
+# and a part run out flush with the edge its parent was cut at (the frame
+# and the coaming against the very plane the aperture was punched on,
+# cured by straddling it — half a jamb over the line, which is what a
+# lining is for).
+#
+# The cargo was the second layer. Thirty-two kinds had never been swept
+# at all, because a rig was built straight into a live world and there was
+# nothing to measure; there is a description now (`pieces::parts`), and
+# the sweep found sixty-one things in it. Fifty-nine were fixed where they
+# stood and were all three idioms:
 #
 #   - two members of one fitting cut to one depth, so they share a plane
 #     wherever they cross — the window family's four lips and its

@@ -1897,6 +1897,7 @@ fn treads(placed: &Placed, out: &mut Vec<SeamPart>) {
                     crate::rig::layer::SKIN,
                 )),
                 dress,
+                across: None,
             });
         };
         for (row, down) in [-STUD_STEP, 0.0, STUD_STEP].into_iter().enumerate() {
@@ -2000,6 +2001,17 @@ pub enum Dress {
     Grab(RoomId, SimSurface),
 }
 
+impl Dress {
+    /// Whether this is a **flat paint riding the decal ladder** rather
+    /// than a body standing in the room. A paint shows the one side it
+    /// turns to the room, and its mesh is a box only because the renderer
+    /// draws boxes; a body shows all six.
+    #[must_use]
+    pub const fn paint(self) -> bool {
+        matches!(self, Self::Stud | Self::Sill)
+    }
+}
+
 /// **One body a port's dressing draws**: what it is called, where it
 /// stands, and what it is finished in.
 ///
@@ -2018,6 +2030,14 @@ pub struct SeamPart {
     pub at: Transform,
     /// How it is finished.
     pub dress: Dress,
+    /// **The room on the far side of the seam this dresses**, where it
+    /// dresses one. A mated doorway's frame is drawn once, by the room
+    /// with the lower id, and it stands on the boundary the two rooms
+    /// share — so the room that did not draw it still has it standing in
+    /// its own doorway, and anything asking what a room draws has to be
+    /// able to find it. `None` for a shut port and for a tread, which
+    /// belong to the room they stand in and to nobody else.
+    pub across: Option<RoomId>,
 }
 
 /// **Everything the ports of one room draw.** A mated door's frame where
@@ -2038,7 +2058,7 @@ pub fn seam_parts(placed: &Placed) -> Vec<SeamPart> {
         if dresses(placed, site) {
             seam_frame(placed, site, &mut out);
         } else if site.mate.is_none() {
-            shut_port(site, &mut out);
+            shut_port(placed, site, &mut out);
         }
     }
     treads(placed, &mut out);
@@ -2059,17 +2079,37 @@ fn seam_frame(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
     let mid = seam_centre(placed, site);
     let girth = site.out.abs() * (JAMB * 2.0);
     let port = site.port;
+    let across = site.mate.map(|(other, _)| other);
     let mut body = |what: String, at: Vec3, size: Vec3, dress| {
         out.push(SeamPart {
             what,
             at: Transform::from_translation(at).with_scale(size),
             dress,
+            across,
         });
     };
+    // **A frame straddles the edge it dresses, and the stiles own the
+    // corners.**
+    //
+    // It used to stand entirely beside the opening, filling the margin
+    // between the clear width and the punch, which put two faces on one
+    // plane twice over. Once against the hull: a stile ran out flush with
+    // the very edge the aperture was punched at, and so did the lintel,
+    // so the wall's own cut face and the frame's outer face were the same
+    // plane looking the same way — three of them, on every doorway a
+    // calling room ever mates. And once against itself: the lintel ran
+    // the full outer width, so it crossed both stiles and shared a top
+    // face and two girth faces with each.
+    //
+    // Half a jamb over the line cures both. The hull's cut edge is then
+    // inside the frame rather than beside it, which is what a lining is
+    // for, and the head spans the clear opening between the stiles, which
+    // is how a door frame is built. Nothing is measured off the drawing:
+    // the aperture stays the sim's, and the walk still ducks by it.
     body(
         format!("seam[{port}] lintel"),
-        mid + up * JAMB.mul_add(0.5, b),
-        girth + dir_a * JAMB.mul_add(2.0, a * 2.0) + dir_b * JAMB,
+        mid + up * b,
+        girth + dir_a * a.mul_add(2.0, -JAMB) + dir_b * JAMB,
         Dress::Frame,
     );
     body(
@@ -2081,8 +2121,8 @@ fn seam_frame(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
     for (nth, side) in [-1.0_f32, 1.0].into_iter().enumerate() {
         body(
             format!("seam[{port}] stile[{nth}]"),
-            mid + site.half_a.normalize_or_zero() * side * JAMB.mul_add(0.5, a),
-            girth + dir_a * JAMB + dir_b * JAMB.mul_add(2.0, b * 2.0),
+            mid + site.half_a.normalize_or_zero() * side * a,
+            girth + dir_a * JAMB + dir_b * b.mul_add(2.0, JAMB),
             Dress::Frame,
         );
     }
@@ -2213,6 +2253,14 @@ const SINK: f32 = 0.022;
 const RIM_W: f32 = 0.07;
 const RIM_H: f32 = 0.012;
 
+/// The plate a door drawn shut hangs in its own opening, as
+/// `(centre, size)`. Named because two of them can cross, and the one
+/// that laps has to be able to ask where the other stands.
+fn shut_leaf(site: &Site) -> (Vec3, Vec3) {
+    let leaf = site.out.abs() * PLATE_T + site.half_a.abs() * 2.0 + site.half_b.abs() * 2.0;
+    (site.leaf, leaf.max(Vec3::splat(0.02)))
+}
+
 /// A shut port, dressed as the thing it is.
 ///
 /// A **door** drawn shut is a riveted plate, as it always was. The
@@ -2227,23 +2275,39 @@ const RIM_H: f32 = 0.012;
 /// stretch goal) this hardware grows an amber grab and means it. Until
 /// then the radium brass says "hardware, findable in the dark", which is
 /// the truth.
-fn shut_port(site: &Site, out: &mut Vec<SeamPart>) {
+fn shut_port(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
     let port = site.port;
     let mut body = |what: String, at: Vec3, size: Vec3, dress| {
         out.push(SeamPart {
             what,
             at: Transform::from_translation(at).with_scale(size),
             dress,
+            across: None,
         });
     };
-    let leaf = site.out.abs() * PLATE_T + site.half_a.abs() * 2.0 + site.half_b.abs() * 2.0;
     if site.is_door() {
-        body(
-            format!("shut[{port}] leaf"),
-            site.leaf,
-            leaf.max(Vec3::splat(0.02)),
-            Dress::Leaf,
-        );
+        // **Where two shut leaves cross, the later one laps.** The cabin
+        // declares its aft and its port door at one corner, and two
+        // riveted plates stood through each other there for the whole
+        // height of the doorway, tops on one plane and bottoms on
+        // another. The tie-break is the seam's own — the lower id draws
+        // it — so a leaf is cut round every leaf declared before it, by
+        // the same [`punch`] that cuts an aperture out of a wall.
+        let mut parts = vec![shut_leaf(site)];
+        for prior in placed.ports.iter().take(site.port as usize) {
+            if !prior.is_door() || prior.mate.is_some() {
+                continue;
+            }
+            let (centre, span) = shut_leaf(prior);
+            let (lo, hi) = (centre - span * 0.5, centre + span * 0.5);
+            parts = parts
+                .into_iter()
+                .flat_map(|(at, size)| punch(at, size, lo, hi))
+                .collect();
+        }
+        for (nth, (at, size)) in parts.into_iter().enumerate() {
+            body(format!("shut[{port}] leaf[{nth}]"), at, size, Dress::Leaf);
+        }
         for (nth, (corner, course)) in [
             (-0.66_f32, -0.66_f32),
             (-0.66, 0.66),
@@ -2276,26 +2340,35 @@ fn shut_port(site: &Site, out: &mut Vec<SeamPart>) {
         dir_a * (a * 2.0) + dir_b * (b * 2.0) + flat * PLATE_T,
         Dress::Leaf,
     );
-    // The coaming: four bars around the opening, a rim's height proud.
-    for (nth, (along, across, half)) in [
-        (dir_a, dir_b, b),
-        (dir_a, dir_b, -b),
-        (dir_b, dir_a, a),
-        (dir_b, dir_a, -a),
+    // The coaming: four bars round the opening, a rim's height proud —
+    // straddling the lip, and yielding at the corners.
+    //
+    // A rim that stopped at the lip ended flush with the very face the
+    // opening was punched in, on the deck and against the starboard wall
+    // the cabin's hatch column runs down; and four bars each run out to
+    // the full outer size crossed at all four corners, which is two
+    // members of one fitting cut to one length. So the bar sits on the
+    // edge it protects, and the pair running the long way owns the
+    // corners while the other pair stands aside — the rim rule
+    // [`band_extent`] gives every other mark in this room.
+    for (nth, (along, across, edge, long)) in [
+        (dir_a, dir_b, site.half_b, true),
+        (dir_a, dir_b, -site.half_b, true),
+        (dir_b, dir_a, site.half_a, false),
+        (dir_b, dir_a, -site.half_a, false),
     ]
     .into_iter()
     .enumerate()
     {
-        let axis = if along == dir_a {
-            site.half_b.normalize_or_zero()
-        } else {
-            site.half_a.normalize_or_zero()
-        };
         body(
             format!("hatch[{port}] coaming[{nth}]"),
-            site.leaf + axis * (half.signum() * RIM_W.mul_add(0.5, half.abs()))
-                - site.out * (RIM_H * 0.5),
-            along * RIM_W.mul_add(2.0, if along == dir_a { a * 2.0 } else { b * 2.0 })
+            site.leaf + edge - site.out * (RIM_H * 0.5),
+            along
+                * if long {
+                    a.mul_add(2.0, RIM_W)
+                } else {
+                    b.mul_add(2.0, -RIM_W)
+                }
                 + across * RIM_W
                 + flat * RIM_H,
             Dress::Frame,

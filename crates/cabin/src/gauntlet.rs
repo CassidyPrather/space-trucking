@@ -71,6 +71,29 @@
 //! cargo's way, and cargo standing in its own berth is what a berth is
 //! for.
 //!
+//! # And the doorways
+//!
+//! The third layer, and it went the same way as the second. A room's
+//! fabric was described and a station's fittings were described, but the
+//! hardware between them — the stiles and lintel of a mated seam, the
+//! jamb lamp, the amber latch, a shut port's leaf and rivets, a hatch's
+//! coaming and hinge and pull, and the studded tread each doorway lays on
+//! the deck — was composed straight into the world by `room::doorways`,
+//! so the sweep walked through a dozen doorways a room without being able
+//! to name one thing in any of them. That is how a seam's latch came to
+//! be drawn twice at one transform, and to come out lit in some runs of a
+//! screenshot command and gone in others.
+//!
+//! A doorway describes itself now ([`room::seam_parts`]), and [`scene`]
+//! reads it. **Both sides of it**: a seam's frame is drawn once, by the
+//! room with the lower id, and it stands on the boundary the two rooms
+//! share — so the room that did not draw it is swept with it anyway, and
+//! a calling room is not walked past its own doorway without it being
+//! looked at. Fifty-three fights came out of that first pass, and they
+//! were three idioms and no new ones: a body written down twice, two
+//! members of one fitting cut to one length so they cross, and a part run
+//! out flush with the very edge its parent was cut at.
+//!
 //! # The docket
 //!
 //! [`docket`] is the itemised list of what the gauntlet catches **today**:
@@ -663,8 +686,10 @@ pub struct Drawn {
     pub body: Box3,
     /// Which of the box's six sides are faces the renderer draws.
     pub faces: Faces,
-    /// Whether a character authored it. The rules that are about a
-    /// station's furniture ask only about these; the rest is fabric.
+    /// **Whether somebody hung it** — a station's fitting, or a room's
+    /// own doorway hardware — as against the fabric it hangs on. The
+    /// rules that are about furniture ask only about these; the rest is
+    /// shells and paint, and paint is the decal ladder's business.
     pub character: bool,
 }
 
@@ -872,6 +897,37 @@ fn chart_of_raw(placed: &Placed, (x, y): (u8, u8)) -> Option<(Station, SimSurfac
         .map(|(station, surface)| (*station, *surface))
 }
 
+/// **Everything a doorway is made of**, as the sweep measures it, with
+/// the room on the far side of each part's seam where it dresses one.
+///
+/// The bodies come out of [`room::seam_parts`] — the description the
+/// runtime builds a doorway from — so the harness and the world cannot
+/// disagree about what a doorway has in it.
+fn seam_furniture(placed: &Placed) -> Vec<(Option<RoomId>, Drawn)> {
+    room::seam_parts(placed)
+        .into_iter()
+        .map(|part| {
+            (
+                part.across,
+                Drawn {
+                    what: part.what,
+                    body: Box3::of(&part.at, unit_half(Shape::Slab)),
+                    // A tread is paint on a rung of the decal ladder and
+                    // shows the one side it turns to the room. Everything
+                    // else in a doorway is hardware, and hardware has six
+                    // sides.
+                    faces: if part.dress.paint() {
+                        Faces::showing(part.at.rotation * Vec3::Z)
+                    } else {
+                        Faces::of(Shape::Slab, part.at.rotation)
+                    },
+                    character: true,
+                },
+            )
+        })
+        .collect()
+}
+
 /// **The scene**: everything one room draws that has a body, as boxes.
 ///
 /// The fabric half — shells, and the flat field a colored class lays over
@@ -908,6 +964,32 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
                 character: false,
             });
         }
+    }
+    // **The seam furniture**: the stiles and lintel of a mated doorway,
+    // its jamb lamp and its amber latch, the leaf and rivets of a port
+    // drawn shut, a hatch's coaming, hinge and pull, and the studded
+    // tread each of them lays on the deck it stands on. Posed through the
+    // very description the runtime spawns them from
+    // ([`room::seam_parts`]), so a doorway cannot be built out of
+    // hardware this cannot be asked about.
+    //
+    // **A doorway is judged from both of its sides.** A seam's frame is
+    // drawn once, by the room with the lower id, and it stands on the
+    // boundary the two rooms share — so the room that did not draw it
+    // still has a jamb standing in its own wall, and a sweep that only
+    // asked what a room DREW would have swept every calling room in the
+    // game past its own doorway without looking at it.
+    out.extend(seam_furniture(placed).into_iter().map(|(_, drawn)| drawn));
+    for other in &stage.all {
+        if other.id == placed.id {
+            continue;
+        }
+        out.extend(
+            seam_furniture(other)
+                .into_iter()
+                .filter(|(across, _)| *across == Some(placed.id))
+                .map(|(_, drawn)| drawn),
+        );
     }
     // The pendant, which every calling room hangs and no station may
     // move: stem, shade, glass. Its cage is a character's and came in
@@ -2203,13 +2285,14 @@ mod tests {
         }
     }
 
-    /// **No room and no rig draws two faces on one plane.** The docket is
-    /// a work order and it shrinks; a law is a thing that does not. This
-    /// family is empty now — the rooms' half since the staging law, and
-    /// the rigs' half since thirty-two kinds were swept for the first
-    /// time and fifty-one pairs of them came off — and the sentence it
-    /// closes is worth keeping said after the last line of its own comes
-    /// off the list.
+    /// **No room, no rig and no doorway draws two faces on one plane.**
+    /// The docket is a work order and it shrinks; a law is a thing that
+    /// does not. This family is empty now — the rooms' half since the
+    /// staging law, the rigs' half since thirty-two kinds were swept for
+    /// the first time and fifty-one pairs of them came off, and the
+    /// doorways' since the seams were described and fifty-three more
+    /// came off — and the sentence it closes is worth keeping said after
+    /// the last line of its own comes off the list.
     #[test]
     fn no_room_draws_two_faces_on_one_plane() {
         let found = sweep();
@@ -2310,6 +2393,54 @@ mod tests {
             pairs_fight(&round(Shape::Slab), &round(Shape::Slab)),
             "two plates on one plane are still a fight"
         );
+    }
+
+    /// **Every doorway is swept, and swept from both of its sides.**
+    ///
+    /// The blind spot this closes: a room's fabric was described and a
+    /// station's fittings were described, and the hardware in between
+    /// was built straight into the world, so nothing in a doorway could
+    /// be asked about. A kind that grows a new port, or a doorway that
+    /// grows a new piece of hardware, arrives on the list rather than
+    /// beside it.
+    ///
+    /// The second clause is the one the arithmetic hides. A seam is
+    /// drawn ONCE, by the room with the lower id, and it stands on the
+    /// boundary the two share — so a calling room draws no frame at all,
+    /// and a sweep that asked each room only what it drew would walk
+    /// every station in the game past its own doorway.
+    #[test]
+    fn every_doorway_is_swept_from_both_sides() {
+        for stage in roster() {
+            let named: Vec<String> = scene(&stage).into_iter().map(|drawn| drawn.what).collect();
+            let has = |mark: &str| named.iter().any(|what| what.contains(mark));
+            for site in &stage.placed.ports {
+                if site.half_a.length() <= 0.0 {
+                    continue;
+                }
+                // A frame is named for the port of the room that DREW
+                // it, and that is this room's port only where this room
+                // is the anchor. Either way it stands in this doorway.
+                let marks = match site.mate {
+                    Some((_, theirs)) => {
+                        vec![format!("seam[{}]", site.port), format!("seam[{theirs}]")]
+                    }
+                    None if site.is_door() => vec![format!("shut[{}]", site.port)],
+                    None => vec![format!("hatch[{}]", site.port)],
+                };
+                assert!(
+                    marks.iter().any(|mark| has(mark)),
+                    "{}: port {} is dressed and nothing in the sweep can see it",
+                    stage.name,
+                    site.port
+                );
+            }
+            assert!(
+                has("tread ("),
+                "{}: a doorway lays a tread and the sweep never measures one",
+                stage.name
+            );
+        }
     }
 
     /// **Every cargo kind is swept, and swept with a body.** The pass
@@ -2545,16 +2676,17 @@ mod tests {
     /// carries the star field and the sky clock, which have the furthest
     /// to drift.
     ///
-    /// **Two views are deliberately not on the list.** `--view starboard`
-    /// and `--view parlor` still come out two ways, and it is not the
-    /// clock: the world is identical at the shutter (same seam timers,
-    /// same aim, same lamps) and one emissive plate is lit in some runs
-    /// and gone in others. A seam's amber latch is set flush against the
-    /// wall it hangs on, so the two faces fight for the depth buffer and
-    /// the winner is whatever order the frame was batched in. Standing
-    /// the plate off the wall settles it — six runs, one file — which
-    /// makes it a `coplanar-faces` finding on a piece of the room the
-    /// sweep does not reach, rather than anything a clock can fix.
+    /// **The two views that used to be off this list are on it.**
+    /// `--view starboard` and `--view parlor` came out two ways, and it
+    /// was never the clock: the world was identical at the shutter — same
+    /// seam timers, same aim, same lamps — and one emissive plate was
+    /// fully lit in some runs and gone in others. A seam's amber latch
+    /// was drawn twice at one transform, once in its amber and once in
+    /// the frame's shade, so six faces were coplanar with no separation
+    /// to settle them by and the winner was whatever order the frame was
+    /// batched in. A doorway describes itself now and each body in it is
+    /// drawn once ([`room::seam_parts`]); six runs of each of the two
+    /// commands are one file.
     ///
     /// It needs a rasteriser, like everything else in the pixel half:
     ///
@@ -2573,13 +2705,22 @@ mod tests {
         let (game, root) = built_game();
         let shots = root.join("target/shot-twice");
         std::fs::create_dir_all(&shots).expect("somewhere for the pair to land");
-        for view in ["bay", "drydock"] {
+        // The board each view wants, past the fixture: `parlor` is a
+        // room nobody keeps, so it has to be brought alongside before
+        // there is a room to stand in.
+        for (view, board) in [
+            ("bay", &[][..]),
+            ("drydock", &[]),
+            ("starboard", &[]),
+            ("parlor", &["--alongside", "parlor"]),
+        ] {
             let pair: Vec<std::path::PathBuf> = (1..=2)
                 .map(|take| {
                     let path = shots.join(format!("{view}-{take}.png"));
                     let ran = Command::new(&game)
                         .args(["--fixture", "--view", view, "--shot"])
                         .arg(&path)
+                        .args(board)
                         .status()
                         .expect("the game runs");
                     assert!(ran.success(), "the {view} shot did not land");

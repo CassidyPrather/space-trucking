@@ -439,14 +439,15 @@ adversarial pass that closes those, and it splits in two:
   in the game — the twelve stations, the three event rooms, the cabin
   and the burner — against a **loaded** board (`gauntlet::load` fills
   every legal berth through the sim's own arbiter, so decor has cargo to
-  clip through), every cargo kind, and every doorway. Six rule families:
-  no fitting stands in a berth cargo may take at the height a rig
-  occupies; nothing occludes a wall berth from its room; every berth
+  clip through), every cargo kind, and every doorway. Seven rule
+  families: no fitting stands in a berth cargo may take at the height a
+  rig occupies; nothing occludes a wall berth from its room; every berth
   stays workable from the walk envelope; no two drawn faces share a plane
   and a facing (the general z-fight detector); a rig's named features
   point where their names say (`pieces::features` — a sconce's cup INTO
-  the room, a floor lamp's base plate FLAT on the deck); and the walked
-  path stands in air.
+  the room, a floor lamp's base plate FLAT on the deck); a rig draws
+  inside the cells the sim gave it, so its pick face can be cut from its
+  picture rather than its plan; and the walked path stands in air.
 - **Pixels, opt-in.** `--gauntlet-walk <dir>` drives the scripted room
   walk — in through the door, round the room, up to the counter — and
   writes one PNG per waypoint, then holds the camera still for ten

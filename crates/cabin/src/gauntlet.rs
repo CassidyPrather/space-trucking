@@ -48,6 +48,7 @@
 //! | [`BERTH_REACHED`] | every berth is workable from the walk envelope | furniture fencing off a corner of the net |
 //! | [`NO_COPLANAR`] | no two drawn faces share a plane and a facing, in a room or in a rig | z-fighting, generally |
 //! | [`PROP_POINTS`] | a rig's named features point where their names say | the sconce lighting the wall, the base plate on edge |
+//! | [`FACE_FITS`] | a rig draws inside the cells the sim gave it, so its pick face can be its picture | a visible edge that does not answer the crosshair |
 //! | [`WALK_CLEAR`] | the walked path stands in air, room to room | furniture in the doorway you enter by |
 //!
 //! # The three layers, and the one that is not described yet
@@ -112,6 +113,8 @@ pub const BERTH_REACHED: &str = "berth-reached";
 pub const NO_COPLANAR: &str = "coplanar-faces";
 /// A rig's named features must point where their names say.
 pub const PROP_POINTS: &str = "prop-points";
+/// A rig must draw inside the cells the sim gave it.
+pub const FACE_FITS: &str = "face-fits";
 /// The walked path must stand in air.
 pub const WALK_CLEAR: &str = "walk-clear";
 
@@ -122,12 +125,13 @@ pub const WALK_CLEAR: &str = "walk-clear";
 pub const RIGS: &str = "rigs";
 
 /// Every rule, for the report's own headings.
-pub const RULES: [&str; 6] = [
+pub const RULES: [&str; 7] = [
     BERTH_CLEAR,
     BERTH_SEEN,
     BERTH_REACHED,
     NO_COPLANAR,
     PROP_POINTS,
+    FACE_FITS,
     WALK_CLEAR,
 ];
 
@@ -138,6 +142,18 @@ pub const RULES: [&str; 6] = [
 /// a sphere's or a torus's AABB has corners the body does not, so a
 /// hair of overlap is not evidence of anything.
 const CLIP_SLACK: f32 = 0.004;
+
+/// How far a standing rig's sole may sink into the deck it stands on,
+/// in metres — the one direction a body is allowed past its own plan.
+///
+/// A sole flush with the deck shares a plane with it, and a sole above
+/// it is furniture floating; burying it is how a foot meets a floor.
+/// That argument was made when [`rig_fits`] measured the footprint too
+/// and found the cabinet's four feet and the couch's four a third of a
+/// centimetre under their own bottom edge, so it is written down here as
+/// a number rather than re-argued per family. Deeper than this is a body
+/// through the deck, which is not a foot.
+const SOLE_SINK: f32 = 0.010;
 
 /// And how much of the smaller body the overlap must eat. Same argument
 /// from the other side: an AABB corner graze is a thin sliver of a round
@@ -1060,6 +1076,7 @@ pub fn sweep() -> Vec<Finding> {
     out.extend(prop_points());
     out.extend(rig_coplanar());
     out.extend(rig_fits());
+    out.extend(rig_faces());
     out.sort();
     out.dedup();
     out
@@ -1638,6 +1655,78 @@ fn rig_fits() -> Vec<Finding> {
                 } else {
                     ""
                 }
+            ),
+        }));
+    }
+    out
+}
+
+/// **A rig draws inside the cells the sim gave it.** [`FACE_FITS`].
+///
+/// A footprint the sim states and a body the rig draws are two claims
+/// about one object, and the footprint is the law: it is what placement
+/// is checked against, and it is what the sim answers "which piece is at
+/// this point" with. The *picture* is what a player aims at, so the pick
+/// face is cut from the picture (`pieces::silhouette`) — and held to the
+/// cells, because a face reaching past them would read a neighbour's
+/// berth.
+///
+/// This family is the price of that holding. A part drawn outside its
+/// own cells is paint the aim cannot follow: the body is out there and
+/// the pick stops at the cell edge, so the piece has a visible edge that
+/// does not answer. In the world it is a crate you can see the corner of
+/// and cannot click, or a lamp whose shade overhangs the berth beside
+/// it and grabs the wrong thing when the neighbour is picked.
+///
+/// **It asks about the plan and not the depth.** The depth is
+/// [`rig_fits`]'s question, measured against the band every rig is
+/// composed within; this one is measured against the kind's own `w × h`,
+/// which is the only extent the sim ever states.
+fn rig_faces() -> Vec<Finding> {
+    let unit = crate::pieces::RIG_UNIT;
+    let mut out = Vec::new();
+    for kind in Kind::ALL {
+        let (w, h) = kind.cells();
+        let cells = Vec2::new(f32::from(w) * layout::CELL, f32::from(h) * layout::CELL) * 0.5;
+        let mut over: BTreeMap<String, f32> = BTreeMap::new();
+        for screens in Screens::BOTH {
+            for showing in rig_forms(kind) {
+                for drawn in rig_scene(kind, screens, showing) {
+                    // `rig_scene` already measures in metres, so the
+                    // cells are carried across rather than the bodies.
+                    let (lo, hi) = (drawn.body.lo, drawn.body.hi);
+                    let sink = if matches!(kind.mount(), Mount::Floor) {
+                        SOLE_SINK
+                    } else {
+                        CLIP_SLACK
+                    };
+                    let plan = cells * unit;
+                    let worst = [
+                        (-plan.x - lo.x, CLIP_SLACK),
+                        (hi.x - plan.x, CLIP_SLACK),
+                        (-plan.y - lo.y, sink),
+                        (hi.y - plan.y, CLIP_SLACK),
+                    ]
+                    .into_iter()
+                    .filter(|&(spill, tol)| spill > tol)
+                    .map(|(spill, _)| spill)
+                    .fold(f32::NEG_INFINITY, f32::max);
+                    if worst.is_finite() {
+                        over.insert(drawn.what, worst);
+                    }
+                }
+            }
+        }
+        out.extend(over.into_iter().map(|(what, spill)| Finding {
+            room: RIGS.to_owned(),
+            rule: FACE_FITS,
+            offender: format!("{kind:?} {what}"),
+            detail: format!(
+                "reaches {spill:.4} m outside the {:.3} × {:.3} m plan the sim gives \
+                 a {w}×{h} kind, so the pick face stops at the cell edge and the \
+                 paint does not",
+                cells.x * 2.0 * unit,
+                cells.y * 2.0 * unit
             ),
         }));
     }

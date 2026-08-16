@@ -86,7 +86,7 @@ rigs: FloorLamp base plate reaches 0.0690 m out of the -0.031..0.466 m band
 So the loop when a line appears is: read it in the docket to know what
 moved, then run `--gauntlet` to get the millimetres.
 
-## The six families
+## The seven families
 
 Each one names a class of defect that a screenshot could not have caught.
 What matters when you are diagnosing is the third column: what the
@@ -171,6 +171,32 @@ the base plate standing on edge. Both of those were real. The turn is
 derived from the claim now (`pieces::Feature::turn`), so what is left for
 this to catch is a claim that points nowhere — a degenerate axis or want
 — and any part that goes back to being turned by hand.
+
+### `face-fits` — a rig draws inside the cells the sim gave it
+
+A footprint the sim states and a body the rig draws are two claims
+about one object. The footprint is the law: it is what placement is
+checked against, and it is what the sim answers "which piece is at this
+point" with. The picture is what a player aims at, so the pick face a
+standing rig carries is cut from the picture (`pieces::silhouette`) and
+held to the cells — a face reaching past them would read a neighbour's
+berth.
+
+This family is the price of that holding. In the world: a piece with a
+visible edge that does not answer — a crate you can see the corner of
+and cannot click, a shade overhanging the berth beside it. The finding
+names the part and how far outside its own `w × h` plan it reaches.
+
+One direction is allowed and the number is written down (`SOLE_SINK`,
+1 cm): a standing rig's soles are BURIED. A sole flush with the deck
+shares a plane with it and a sole above it is furniture floating, so
+the cabinet's four feet and the couch's four sit about seven
+millimetres under their own bottom edge on purpose. Deeper than a
+centimetre is a body through the deck, which is not a foot.
+
+It asks about the plan and not the depth. The depth is `berth-clear`'s
+question, measured against the band every rig is composed within; this
+one is measured against the only extent the sim ever states.
 
 ### `walk-clear` — the walked path stands in air
 

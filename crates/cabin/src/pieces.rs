@@ -949,16 +949,23 @@ fn hover_rot(
 /// A quad riding a rig's own berth pose, bound to a sim rect: the frame
 /// every rig is authored in — local +X is sim +x, local +Y is up-panel
 /// (so the sim's downward y maps to `NEG_Y`), local +Z the depth parts
-/// stand proud of the berth plane at. `extent` is the quad's own size
-/// in rig-local sim units, `plane` its depth. The mapping is built from
-/// the same transform and the same local units the rig's parts are
-/// placed with, so hitbox and geometry cannot drift apart — the fixture
-/// sweep's lesson, kept by construction rather than by care.
+/// stand proud of the berth plane at. `at` is where the quad's centre
+/// sits in that frame and `extent` its size, both in rig-local sim
+/// units; `plane` is its depth. The mapping is built from the same
+/// transform and the same local units the rig's parts are placed with,
+/// so hitbox and geometry cannot drift apart — the fixture sweep's
+/// lesson, kept by construction rather than by care.
 #[must_use]
-fn riding_face(rect: Rect, extent: (f32, f32), plane: f32, site: (Vec3, Quat, Vec3)) -> SimSurface {
+fn riding_face(
+    rect: Rect,
+    at: Vec2,
+    extent: (f32, f32),
+    plane: f32,
+    site: (Vec3, Quat, Vec3),
+) -> SimSurface {
     let (pos, rot, scale) = site;
     SimSurface {
-        center: pos + rot * (Vec3::Z * (plane * scale.z)),
+        center: pos + rot * (Vec3::new(at.x, at.y, plane) * scale),
         half_u: rot * (Vec3::X * (extent.0 * 0.5 * scale.x)),
         half_v: rot * (Vec3::NEG_Y * (extent.1 * 0.5 * scale.y)),
         rect,
@@ -974,6 +981,7 @@ fn ride_surface(mount: &Instrument, kind: Kind, site: (Vec3, Quat, Vec3)) -> Sim
     let (w, h) = kind.cells();
     riding_face(
         mount.rect,
+        Vec2::ZERO,
         (
             f32::from(w) * layout::CELL * mount.face.0,
             f32::from(h) * layout::CELL * mount.face.1,
@@ -983,21 +991,88 @@ fn ride_surface(mount: &Instrument, kind: Kind, site: (Vec3, Quat, Vec3)) -> Sim
     )
 }
 
+/// **What a rig actually draws**, as an axis-aligned `(centre, half)` in
+/// the rig's own local sim units: the union of every body [`parts`]
+/// describes — both of a covering's forms, both screen states, each
+/// sub-frame at rest — held to the cells the sim gave the kind.
+///
+/// A footprint and a silhouette are two claims about one object. The
+/// footprint is the law, because it is what placement is checked
+/// against; the silhouette is what a player can see and therefore what
+/// they aim at, and it is derived here rather than declared so the two
+/// cannot be authored apart. Held to the cells because a face that
+/// reached past them would read a neighbour's berth: the sim answers
+/// "which piece is at this point", and a point outside the rect is
+/// somebody else's.
+#[must_use]
+pub fn silhouette(kind: Kind) -> (Vec2, Vec2) {
+    let piece = Piece {
+        id: 0,
+        kind,
+        variant: 0,
+        gnawed: false,
+        loc: Loc::Hold {
+            room: CABIN,
+            x: 0,
+            y: 0,
+        },
+    };
+    let (w, h) = kind.cells();
+    let cells = Vec2::new(f32::from(w) * layout::CELL, f32::from(h) * layout::CELL) * 0.5;
+    let mut lo = Vec2::splat(f32::INFINITY);
+    let mut hi = Vec2::splat(f32::NEG_INFINITY);
+    for screens in Screens::BOTH {
+        for part in parts(&piece, screens) {
+            let Some(body) = part.body else { continue };
+            let at = part.under.rest() * part.at;
+            let half = body.half() * at.scale;
+            let m = Mat3::from_quat(at.rotation);
+            let reach = m.x_axis.abs() * half.x + m.y_axis.abs() * half.y + m.z_axis.abs() * half.z;
+            let (near, far) = (at.translation - reach, at.translation + reach);
+            lo = lo.min(Vec2::new(near.x, near.y));
+            hi = hi.max(Vec2::new(far.x, far.y));
+        }
+    }
+    // A rig that draws nothing answers for its cells; there is no such
+    // kind today, and a face of no size would be a piece nothing could
+    // aim at.
+    if !(lo.x < hi.x && lo.y < hi.y) {
+        return (Vec2::ZERO, cells);
+    }
+    let (lo, hi) = (lo.max(-cells), hi.min(cells));
+    ((lo + hi) * 0.5, (hi - lo) * 0.5)
+}
+
 /// The pick face a rig carries over its OWN body: its whole drawn
-/// silhouette, bound to its OWN rect, `plane` rig-local units off the
-/// berth plane. Whatever the sim hit-tests inside the piece — the
-/// cabinet's cubby sub-rects, an instrument's amber handle band — is
-/// then read in the very frame the rig drew it in, so the aim lands on
-/// the cargo the player is looking at.
+/// [`silhouette`], bound to the sub-rect of its OWN rect that silhouette
+/// covers, `plane` rig-local units off the berth plane. Whatever the sim
+/// hit-tests inside the piece — the cabinet's cubby sub-rects, an
+/// instrument's amber handle band — is then read in the very frame the
+/// rig drew it in, so the aim lands on the cargo the player is looking
+/// at.
+///
+/// **The quad is the body, not the footprint**, and the two are not the
+/// same shape. It used to be the footprint, which meant the region that
+/// answered for a piece was its plan rather than its picture: the brine
+/// pearls are a thin column of three spheres filling 62% of their cells
+/// across, and a third of a cell of air on either flank of them picked
+/// them up. Binding the sub-rect the silhouette covers rather than the
+/// whole rect keeps the mapping one-to-one in rig-local units, which is
+/// what the handle band and the cubbies are declared in — the face gets
+/// smaller, and nothing declared inside it moves.
 #[must_use]
 fn standing_face(kind: Kind, rect: Rect, plane: f32, site: (Vec3, Quat, Vec3)) -> SimSurface {
-    let (w, h) = kind.cells();
-    riding_face(
-        rect,
-        (f32::from(w) * layout::CELL, f32::from(h) * layout::CELL),
-        plane,
-        site,
-    )
+    let (at, half) = silhouette(kind);
+    let mid = rect_center(rect);
+    // The rig's +Y is up-panel and the sim's +y runs down, so the box
+    // reads back onto the piece's rect with its vertical flipped.
+    let bound = Rect::new(
+        mid.x + at.x - half.x,
+        mid.y - at.y - half.y,
+        half.x * 2.0,
+        half.y * 2.0,
+    );
+    riding_face(bound, at, (half.x * 2.0, half.y * 2.0), plane, site)
 }
 
 /// How far a rolled wall piece's pick face stands off its chart, in
@@ -1807,10 +1882,11 @@ fn xray_focus(
 const HOVER_GLOW: f32 = 0.25;
 
 /// Roam-mode hover feedback: with empty hands, the piece the crosshair
-/// would grab wears a faint glint frame before any click — and where a
-/// rig's silhouette overflows its cells, the frame says honestly which
-/// cells ARE the hitbox (the playtest's mismatch, told instead of
-/// hidden).
+/// would grab wears a faint glint frame before any click. The frame is
+/// cut from the rig's [`silhouette`], which is where its pick face is
+/// cut from too, so what lights up is what answers: the tell used to
+/// wrap the footprint and say honestly that the plan was the hitbox,
+/// and the plan is no longer the hitbox.
 #[allow(clippy::too_many_arguments)]
 fn hover_glint(
     shell: Res<Shell>,
@@ -2721,6 +2797,76 @@ struct ScreenGlasses {
 }
 
 /// Spawn one piece's whole rig at `place`: the kind's silhouette in local
+/// **The carry tell**: the emissive wireframe the carry and the hover
+/// light, plus the refusal slash across it. Returns
+/// `(frame root, frame material, slash)`, all dark and hidden until
+/// something wakes them.
+///
+/// A wireframe BOX, not a flat rectangle: the tell wraps the body's
+/// volume (playtest: a fixed-plane rectangle around a 3D object read as
+/// UI debris). Twelve edges around the [`silhouette`] and the rigs'
+/// common depth — the same box the pick face is cut from
+/// ([`standing_face`]), so what lights up is what answers.
+fn carry_tell(
+    rig: &mut RigParts<'_, '_, '_>,
+    piece: &Piece,
+    root: Entity,
+    shared: &SharedBits,
+) -> (Entity, Handle<StandardMaterial>, Entity) {
+    let frame_mat = glow::phosphor(rig.materials, palette::LAMP_OK, 0.0);
+    let frame_root = rig
+        .commands
+        .spawn((Transform::default(), Visibility::Hidden, ChildOf(root)))
+        .id();
+    let (mid, reach) = silhouette(piece.kind);
+    let (hx, hy) = (reach.x + 3.0, reach.y + 3.0);
+    let (z0, z1) = (RIG_NEAR, RIG_FAR);
+    let rail_x = rig.meshes.add(Cuboid::new(hx.mul_add(2.0, 2.6), 2.6, 2.6));
+    let rail_y = rig.meshes.add(Cuboid::new(2.6, hy.mul_add(2.0, 2.6), 2.6));
+    let rail_z = rig.meshes.add(Cuboid::new(2.6, 2.6, z1 - z0 + 2.6));
+    let zm = f32::midpoint(z0, z1);
+    let mut edges: Vec<(Handle<Mesh>, Vec3)> = Vec::new();
+    for z in [z0, z1] {
+        for sy in [-1.0_f32, 1.0] {
+            edges.push((rail_x.clone(), Vec3::new(mid.x, sy.mul_add(hy, mid.y), z)));
+        }
+        for sx in [-1.0_f32, 1.0] {
+            edges.push((rail_y.clone(), Vec3::new(sx.mul_add(hx, mid.x), mid.y, z)));
+        }
+    }
+    for sx in [-1.0_f32, 1.0] {
+        for sy in [-1.0_f32, 1.0] {
+            edges.push((
+                rail_z.clone(),
+                Vec3::new(sx.mul_add(hx, mid.x), sy.mul_add(hy, mid.y), zm),
+            ));
+        }
+    }
+    for (mesh, at) in edges {
+        rig.commands.spawn((
+            Mesh3d(mesh),
+            MeshMaterial3d(frame_mat.clone()),
+            Transform::from_translation(at),
+            ChildOf(frame_root),
+        ));
+    }
+    let slash = rig
+        .commands
+        .spawn((
+            Mesh3d(
+                rig.meshes
+                    .add(Cuboid::new((hx * 2.0).hypot(hy * 2.0), 3.0, 3.0)),
+            ),
+            MeshMaterial3d(shared.slash.clone()),
+            Transform::from_xyz(mid.x, mid.y, 34.0)
+                .with_rotation(Quat::from_rotation_z((hy / hx).atan())),
+            Visibility::Hidden,
+            ChildOf(frame_root),
+        ))
+        .id();
+    (frame_root, frame_mat, slash)
+}
+
 /// sim units (footprint `w*CELL × h*CELL` in X/Y, thickness up +Z off the
 /// panel), the hidden bite wedge, and the hidden carry-legality frame.
 #[allow(clippy::too_many_arguments)]
@@ -2777,54 +2923,7 @@ fn spawn_rig(
 
     // The carry tell: an emissive frame around the footprint plus a slash
     // bar, both dark until the carry system wakes them.
-    let frame_mat = glow::phosphor(rig.materials, palette::LAMP_OK, 0.0);
-    let frame_root = rig
-        .commands
-        .spawn((Transform::default(), Visibility::Hidden, ChildOf(root)))
-        .id();
-    // A wireframe BOX, not a flat rectangle: the tell wraps the body's
-    // volume (playtest: a fixed-plane rectangle around a 3D object read
-    // as UI debris). Twelve edges around the footprint and the rigs'
-    // common depth.
-    let (hx, hy) = (fw.mul_add(0.5, 3.0), fh.mul_add(0.5, 3.0));
-    let (z0, z1) = (RIG_NEAR, RIG_FAR);
-    let rail_x = rig.meshes.add(Cuboid::new(hx.mul_add(2.0, 2.6), 2.6, 2.6));
-    let rail_y = rig.meshes.add(Cuboid::new(2.6, hy.mul_add(2.0, 2.6), 2.6));
-    let rail_z = rig.meshes.add(Cuboid::new(2.6, 2.6, z1 - z0 + 2.6));
-    let zm = f32::midpoint(z0, z1);
-    let mut edges: Vec<(Handle<Mesh>, Vec3)> = Vec::new();
-    for z in [z0, z1] {
-        for sy in [-1.0, 1.0] {
-            edges.push((rail_x.clone(), Vec3::new(0.0, sy * hy, z)));
-        }
-        for sx in [-1.0, 1.0] {
-            edges.push((rail_y.clone(), Vec3::new(sx * hx, 0.0, z)));
-        }
-    }
-    for sx in [-1.0, 1.0] {
-        for sy in [-1.0, 1.0] {
-            edges.push((rail_z.clone(), Vec3::new(sx * hx, sy * hy, zm)));
-        }
-    }
-    for (mesh, at) in edges {
-        rig.commands.spawn((
-            Mesh3d(mesh),
-            MeshMaterial3d(frame_mat.clone()),
-            Transform::from_translation(at),
-            ChildOf(frame_root),
-        ));
-    }
-    let slash = rig
-        .commands
-        .spawn((
-            Mesh3d(rig.meshes.add(Cuboid::new(fw.hypot(fh) + 4.0, 3.0, 3.0))),
-            MeshMaterial3d(shared.slash.clone()),
-            Transform::from_xyz(0.0, 0.0, 34.0)
-                .with_rotation(Quat::from_rotation_z((fh / fw).atan())),
-            Visibility::Hidden,
-            ChildOf(frame_root),
-        ))
-        .id();
+    let (frame_root, frame_mat, slash) = carry_tell(&mut rig, piece, root, shared);
 
     commands.entity(root).insert(PieceRig {
         from: place.translation,
@@ -5016,6 +5115,16 @@ mod tests {
             .expect("chart spawned")
     }
 
+    /// Whether `sub` lies wholly inside `whole` — the claim a pick face
+    /// makes about the cells it may answer for.
+    fn within(sub: Rect, whole: Rect) -> bool {
+        const SLACK: f32 = 1e-3;
+        sub.x >= whole.x - SLACK
+            && sub.y >= whole.y - SLACK
+            && sub.x + sub.w <= whole.x + whole.w + SLACK
+            && sub.y + sub.h <= whole.y + whole.h + SLACK
+    }
+
     fn rect_of(x: u8, y: u8, kind: Kind) -> Rect {
         let (w, h) = kind.cells();
         let anchor = layout::cell_rect(CABIN, x, y);
@@ -5187,7 +5296,11 @@ mod tests {
         );
         let face =
             standing_surface(&charts, Kind::Cabinet, rect).expect("a standing rig carries a face");
-        assert_eq!(face.rect, rect, "the face binds the piece's own cells");
+        assert!(
+            within(face.rect, rect),
+            "the face binds the silhouette's own cells, {:?} inside {rect:?}",
+            face.rect
+        );
         assert!(
             face.normal().dot(rot * Vec3::Z) > 0.99,
             "the face must look the way the rig looks"
@@ -5250,11 +5363,16 @@ mod tests {
             let rect = rect_of(x, y, kind);
             let face = standing_surface(&charts, kind, rect)
                 .unwrap_or_else(|| panic!("{kind:?} at ({x}, {y}) leaves its chart's lie"));
-            assert_eq!(face.rect, rect, "{kind:?}: a face binds its own cells");
+            assert!(
+                within(face.rect, rect),
+                "{kind:?}: a face binds a sub-rect of its own cells, got {:?}",
+                face.rect
+            );
         }
         // The aft chart already stands level, so nothing hung there is
-        // turned at all — and a portrait painting on a side wall keeps
-        // the chart's own lie, which is the chart's to answer for.
+        // turned at all — and a 2×1 painting keeps the chart's own lie
+        // wherever the upright rule cannot roll it, which is a berth the
+        // arbiter no longer offers but a carried ghost may still aim at.
         for (x, y, kind) in [
             (4, 1, Kind::Painting),
             (4, 1, Kind::ChartTank),
@@ -5751,8 +5869,75 @@ mod tests {
         true
     }
 
+    /// **Claim four: the face a berth carries is the body it draws.**
+    ///
+    /// A footprint and a silhouette are two claims about one object, and
+    /// the pick face used to be cut from the first: a piece answered
+    /// over its whole plan, air included. The brine pearls are three
+    /// spheres in a column filling 62% of their cells across, so a third
+    /// of a cell of nothing on either flank of them picked them up —
+    /// which is the playtest's "the hitbox is horizontal and the item is
+    /// vertical", the plan being the shape that lies flat.
+    ///
+    /// So the face is measured against [`silhouette`] here, and the
+    /// corners of the drawn body are aimed at through it: what a player
+    /// can see is what answers, and what answers stays inside the cells
+    /// the sim ruled on. `false` where the berth carries no face at all.
+    fn the_face_is_the_body_it_draws(b: &Berth, charts: &[(Station, SimSurface)]) -> bool {
+        // A covering has no hold form aboard, so no berth of one ever
+        // carries a face: it lies INTO its chart, and the chart is the
+        // piece there as surely as it is for level wall cargo.
+        if b.laid {
+            return false;
+        }
+        let Some(face) = standing_surface(charts, b.kind, b.rect) else {
+            return false;
+        };
+        let (mid, half) = silhouette(b.kind);
+        let (pos, rot, scale) = b.site;
+        let name = &b.name;
+        for (axis, quad, drawn, unit) in [
+            ("across", face.half_u.length(), half.x, scale.x),
+            ("up", face.half_v.length(), half.y, scale.y),
+        ] {
+            let want = drawn * unit;
+            assert!(
+                (quad - want).abs() < 1e-4,
+                "{name}: the face measures {quad} {axis}, the body {want}"
+            );
+        }
+        // Every corner of the drawn body reads a point of the piece's
+        // own cells, and the aim a hand's breadth beyond it reads
+        // nothing at all: the face is the picture, edge included.
+        let n = face.normal();
+        let aim = |local: Vec2| {
+            let at = pos + rot * (Vec3::new(local.x, local.y, 0.0) * scale);
+            face.project(Ray3d::new(
+                at + n * 0.6,
+                Dir3::new(-n).expect("a unit normal"),
+            ))
+        };
+        for (a, b_) in [(-1.0_f32, -1.0_f32), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)] {
+            let corner = Vec2::new(a.mul_add(half.x, mid.x), b_.mul_add(half.y, mid.y));
+            let sim = aim(corner * 0.999).expect("the aim meets the body").1;
+            assert!(
+                b.rect.contains(sim),
+                "{name}: the body's corner {corner:?} reads {sim:?}, off its own cells"
+            );
+            let past = Vec2::new(
+                a.mul_add(half.x + 4.0, mid.x),
+                b_.mul_add(half.y + 4.0, mid.y),
+            );
+            assert!(
+                aim(past).is_none(),
+                "{name}: the face answers {past:?}, which is air beside the body"
+            );
+        }
+        true
+    }
+
     /// The orientation defect class, closed by sweep: every kind, at
-    /// every placement the sim's own arbiter allows, put to all three
+    /// every placement the sim's own arbiter allows, put to all four
     /// claims above. Each of them held on the wall it was written
     /// against and nowhere else at some point in this class's history —
     /// the sideways star chart, the front wall's upside-down sky, the
@@ -5768,6 +5953,7 @@ mod tests {
         let aft = chart(Station::BayWall);
         let mut swept = 0_u32;
         let mut handled = 0_u32;
+        let mut faced = 0_u32;
         let mut walls_handled: Vec<Station> = Vec::new();
         for kind in Kind::ALL {
             let (cols, rows) = space_trucking::sim::RoomKind::Cabin.grid();
@@ -5808,6 +5994,7 @@ mod tests {
                     swept += 1;
                     the_body_hangs_true(&berth);
                     the_ghost_promises_the_berth(&berth);
+                    faced += u32::from(the_face_is_the_body_it_draws(&berth, &charts));
                     if the_amber_is_the_routing_region(&berth, &charts) {
                         handled += 1;
                         if !walls_handled.contains(&station) {
@@ -5821,6 +6008,7 @@ mod tests {
             swept > 1000,
             "the sweep should cover the whole net: {swept}"
         );
+        assert!(faced > 500, "the faces went unswept: {faced} of {swept}");
         // "On every wall" is the claim, so the sweep proves it reached
         // every wall: a handle checked on the aft chart alone is the
         // very mistake this test exists to catch.

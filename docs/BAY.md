@@ -499,6 +499,28 @@ rule leaves level needs no face — it hangs IN its chart's plane, where
 the chart already is the piece — but wall cargo the rule ROLLS does,
 for the reason below.
 
+**The face is cut from the picture, not from the plan.** It was bound
+to the whole footprint at first, which made the region that answered
+for a piece its plan rather than its body: the brine pearls are three
+spheres in a column filling 62% of their cells across, so a third of a
+cell of air on either flank picked them up, and the playtest reported
+the hitbox as horizontal while the item was plainly vertical. A rig
+describes its own bodies (`pieces::parts`), so the silhouette they add
+up to is derivable — `pieces::silhouette` — and the face is that box,
+held to the cells so it can never read a neighbour's berth. Binding the
+sub-rect the silhouette covers rather than the whole rect keeps the
+mapping one-to-one in the rig's own local units, so the handle band and
+the cubbies, which are declared in those units, do not move when the
+face shrinks. The hover glint is cut from the same box: what lights up
+is what answers.
+
+Every one of the thirty-two kinds had a face wider or taller than its
+body, from the rug at 98% × 96% of its cells to the bottled midnight at
+48% × 48%, and the wall sconce's sat a third of a cell off centre as
+well. The gauntlet's `face-fits` family holds the other side of it: a
+body that reached OUTSIDE its cells would be paint the aim cannot
+follow, since the face has to stop at the cell edge.
+
 The sim never hears about any of it: the pointer it receives is still a
 point in its own rect space. Which surface produced that point is the
 cabin's business, and the cabin's whole job is that the answer be the

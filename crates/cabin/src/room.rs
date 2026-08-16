@@ -35,6 +35,8 @@
 //! walk envelope, and every one of its apertures derive like everybody
 //! else's.
 
+use std::collections::BTreeMap;
+
 use bevy::prelude::*;
 
 use space_trucking::sim::Cue;
@@ -1109,7 +1111,15 @@ pub fn rebuild(
             placed,
             tag,
         );
-        doorways(&mut commands, &cube, &mut materials, &skin, placed, tag);
+        dress_ports(
+            &mut commands,
+            &cube,
+            &mut materials,
+            &skin,
+            &character.tiles,
+            placed,
+            tag,
+        );
         handshake(
             &mut commands,
             &cube,
@@ -1808,7 +1818,6 @@ fn tiles(
             }
         }
     }
-    treads(commands, cube, materials, skin, paint, placed, tag);
 }
 
 /// The tread: what a doorway does to the deck it stands on.
@@ -1827,30 +1836,29 @@ fn tiles(
 ///
 /// Paint and plate only: those cells are ordinary berths, and cargo may
 /// stand on the tread like anywhere else.
-fn treads(
-    commands: &mut Commands,
-    cube: &Handle<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    skin: &Skin,
-    paint: &crate::poi::Tiles,
-    placed: &Placed,
-    tag: InRoom,
-) {
+///
+/// **One tread per cell, not one per doorway.** The cabin declares its
+/// aft door and its port door at the same corner (`RoomKind::ports` says
+/// so in as many words), so that corner belongs to two doorways — and it
+/// was studded twice, nine plates over nine identical plates on one rung
+/// of the decal ladder, with two sill bars crossing each other over the
+/// top. A cell is laid once and wears every jamb line that reaches it,
+/// which is also what stops the corner being drawn twice: the bands take
+/// the rim rule ([`band_extent`]), so the bar running down a cell stands
+/// aside where the bar running across it already owns the corner.
+fn treads(placed: &Placed, out: &mut Vec<SeamPart>) {
     let Some(floor) = placed.chart(Station::BayFloor).copied() else {
         return;
     };
-    let stud = paint.stud.material(materials, Some(skin));
-    let sill = paint.sill.material(materials, Some(skin));
-    let normal = Station::BayFloor.inward(&floor);
-    let rot = Station::BayFloor.face(&floor);
-    let (su, sv) = (floor.scale_u(), floor.scale_v());
+    // Which jamb lines cross each deck cell a doorway stands on. In net
+    // terms: a door on the aft wall is the deck's own -y edge, starboard
+    // its +x, and so on round the room. Read off the declaration, never
+    // assumed.
+    let mut laid: BTreeMap<(u8, u8), [bool; 4]> = BTreeMap::new();
     for site in &placed.ports {
         let Some(Port::Door { wall, offset }) = site.declared else {
             continue;
         };
-        // Which way the jamb lies from the cell, in net terms: a door on
-        // the aft wall is the deck's own -y edge, starboard its +x, and
-        // so on round the room. Read off the declaration, never assumed.
         let jamb = match wall % 4 {
             0 => 0,
             1 => 3,
@@ -1858,40 +1866,59 @@ fn treads(
             _ => 2,
         };
         for (i, j) in door_cells(placed.kind, wall, offset) {
-            let cell = layout::cell_rect(placed.id, COURSES + i, COURSES + j);
-            let mid = space_trucking::sim::Vec2::new(
-                cell.w.mul_add(0.5, cell.x),
-                cell.h.mul_add(0.5, cell.y),
-            );
-            let patch = Patch {
-                cube,
-                tag,
-                at: floor.to_world(mid),
-                normal,
-                rot,
-                w: cell.w * su,
-                h: cell.h * sv,
-            };
-            for down in [-STUD_STEP, 0.0, STUD_STEP] {
-                for along in [-STUD_STEP, 0.0, STUD_STEP] {
-                    patch.paint(
-                        commands,
-                        &stud,
-                        crate::rig::layer::TREAD,
-                        Vec2::new(along, down),
-                        Vec2::splat(STUD),
-                    );
-                }
+            laid.entry((i, j)).or_default()[jamb] = true;
+        }
+    }
+    let normal = Station::BayFloor.inward(&floor);
+    let rot = Station::BayFloor.face(&floor);
+    let (su, sv) = (floor.scale_u(), floor.scale_v());
+    for ((i, j), jambs) in laid {
+        let cell = layout::cell_rect(placed.id, COURSES + i, COURSES + j);
+        let mid = space_trucking::sim::Vec2::new(
+            cell.w.mul_add(0.5, cell.x),
+            cell.h.mul_add(0.5, cell.y),
+        );
+        let at = floor.to_world(mid);
+        let (w, h) = (cell.w * su, cell.h * sv);
+        // The same axes every other mark is laid in ([`Patch::paint`]):
+        // fractions of the cell in net terms, with the chart's own mirror
+        // undone once.
+        let mut lay = |what: String, dress, offset: Vec2, size: Vec2| {
+            out.push(SeamPart {
+                what,
+                at: Transform::from_translation(
+                    at + normal * crate::rig::layer::TREAD
+                        + rot * Vec3::new(-offset.x * w, -offset.y * h, 0.0),
+                )
+                .with_rotation(rot)
+                .with_scale(Vec3::new(
+                    size.x * w,
+                    size.y * h,
+                    crate::rig::layer::SKIN,
+                )),
+                dress,
+            });
+        };
+        for (row, down) in [-STUD_STEP, 0.0, STUD_STEP].into_iter().enumerate() {
+            for (col, along) in [-STUD_STEP, 0.0, STUD_STEP].into_iter().enumerate() {
+                lay(
+                    format!("tread ({i}, {j}) stud[{row}{col}]"),
+                    Dress::Stud,
+                    Vec2::new(along, down),
+                    Vec2::splat(STUD),
+                );
             }
-            patch.band(
-                commands,
-                Mark {
-                    mat: &sill,
-                    width: SILL,
-                    lift: crate::rig::layer::TREAD,
-                },
-                jamb,
-                [false; 4],
+        }
+        for (side, &ends) in jambs.iter().enumerate() {
+            if !ends {
+                continue;
+            }
+            let (offset, span) = band_extent(side, jambs, SILL);
+            lay(
+                format!("tread ({i}, {j}) sill[{side}]"),
+                Dress::Sill,
+                offset,
+                span,
             );
         }
     }
@@ -1941,49 +1968,147 @@ fn seam_centre(placed: &Placed, site: &Site) -> Vec3 {
     )
 }
 
-/// Every box a mated door's frame occupies, as `(centre, size)`: two
-/// stiles, a lintel, the jamb lamp, and (where the room beyond can be
-/// sent away) the latch's plate and its amber. Pure, because the
-/// no-clipping law is asserted against exactly this list
-/// (`tests::no_rooms_geometry_reaches_into_another_room`).
+/// **How one part of a port's dressing is finished**, and what the
+/// runtime does with it beyond drawing it.
+///
+/// A doorway is hardware, so most of this is the room's own metal. The
+/// two that are not are the tread's: a doorway crosses a room's paint
+/// rather than replacing it, so its studs and its sill are the station's
+/// own ([`crate::poi::Tiles`]).
+#[derive(Clone, Copy, Debug)]
+pub enum Dress {
+    /// A riveted leaf: a door drawn shut, and the plate sunk into a
+    /// hatch.
+    Leaf,
+    /// The rivets round a shut door.
+    Rivet,
+    /// The frame's shade — stiles, lintel, coaming, and the plate the
+    /// latch's amber stands on.
+    Frame,
+    /// Radium brass: a hatch's hinge barrels and its pull.
+    Brass,
+    /// The shadowed well a flush pull lies in.
+    Well,
+    /// The tread's studs, in the station's own paint.
+    Stud,
+    /// The sill bar along the jamb line, likewise.
+    Sill,
+    /// The jamb lamp: dark glass that answers a seam mating or parting.
+    Jamb,
+    /// The amber latch that asks the room beyond to part — which room
+    /// that is, and the quad the crosshair must land on.
+    Grab(RoomId, SimSurface),
+}
+
+/// **One body a port's dressing draws**: what it is called, where it
+/// stands, and what it is finished in.
+///
+/// The description is what gets built — [`dress_ports`] spawns exactly
+/// this list and nothing else — which is the bargain `pieces::parts`
+/// struck for a cargo rig, made a second time for a doorway and for the
+/// same reason: a harness can only measure what something can be asked
+/// about, and a doorway that was composed straight into a live world
+/// could not be asked anything at all.
+#[derive(Clone, Debug)]
+pub struct SeamPart {
+    /// What it is called in its own port.
+    pub what: String,
+    /// Where it stands, turned how it is turned, with the box's own size
+    /// as the scale — the very transform the cube is posed by.
+    pub at: Transform,
+    /// How it is finished.
+    pub dress: Dress,
+}
+
+/// **Everything the ports of one room draw.** A mated door's frame where
+/// this room dresses the seam, a shut port's leaf where it does not, and
+/// the tread every declared door lays on the deck it stands on.
+///
+/// Pure: the no-clipping law is asserted against exactly this list
+/// (`tests::no_rooms_geometry_reaches_into_another_room`), and so is the
+/// gauntlet's seam sweep (`crate::gauntlet::scene`).
 #[must_use]
-fn seam_boxes(placed: &Placed, site: &Site) -> Vec<(Vec3, Vec3)> {
+pub fn seam_parts(placed: &Placed) -> Vec<SeamPart> {
+    let mut out = Vec::new();
+    for site in &placed.ports {
+        let (a, b) = (site.half_a.length(), site.half_b.length());
+        if a <= 0.0 || b <= 0.0 {
+            continue;
+        }
+        if dresses(placed, site) {
+            seam_frame(placed, site, &mut out);
+        } else if site.mate.is_none() {
+            shut_port(site, &mut out);
+        }
+    }
+    treads(placed, &mut out);
+    out
+}
+
+/// A mated door's frame: two stiles, a lintel, the jamb lamp, and (where
+/// the room beyond can be sent away) the latch's plate and its amber.
+///
+/// The frame stands in the partition and a jamb's girth either side of
+/// it, so both rooms see the same doorway and neither is reached into any
+/// further than the opening they share.
+fn seam_frame(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
     let (a, b) = (site.half_a.length(), site.half_b.length());
     let dir_a = site.half_a.normalize_or_zero().abs();
     let dir_b = site.half_b.normalize_or_zero().abs();
+    let up = site.half_b.normalize_or_zero();
     let mid = seam_centre(placed, site);
-    // The frame stands in the partition and a jamb's girth either side of
-    // it, so both rooms see the same doorway and neither is reached into
-    // any further than the opening they share.
     let girth = site.out.abs() * (JAMB * 2.0);
-    let mut boxes = vec![
-        (
-            mid + site.half_b.normalize_or_zero() * JAMB.mul_add(0.5, b),
-            girth + dir_a * JAMB.mul_add(2.0, a * 2.0) + dir_b * JAMB,
-        ),
-        (
-            mid + site.half_b.normalize_or_zero() * (b + JAMB),
-            girth * 0.4 + dir_a * (a * 0.5) + dir_b * 0.035,
-        ),
-    ];
-    for side in [-1.0_f32, 1.0] {
-        boxes.push((
+    let port = site.port;
+    let mut body = |what: String, at: Vec3, size: Vec3, dress| {
+        out.push(SeamPart {
+            what,
+            at: Transform::from_translation(at).with_scale(size),
+            dress,
+        });
+    };
+    body(
+        format!("seam[{port}] lintel"),
+        mid + up * JAMB.mul_add(0.5, b),
+        girth + dir_a * JAMB.mul_add(2.0, a * 2.0) + dir_b * JAMB,
+        Dress::Frame,
+    );
+    body(
+        format!("seam[{port}] jamb lamp"),
+        mid + up * (b + JAMB),
+        site.out.abs() * (JAMB * 0.9) + dir_a * (a * 0.5) + dir_b * 0.035,
+        Dress::Jamb,
+    );
+    for (nth, side) in [-1.0_f32, 1.0].into_iter().enumerate() {
+        body(
+            format!("seam[{port}] stile[{nth}]"),
             mid + site.half_a.normalize_or_zero() * side * JAMB.mul_add(0.5, a),
             girth + dir_a * JAMB + dir_b * JAMB.mul_add(2.0, b * 2.0),
-        ));
+            Dress::Frame,
+        );
     }
-    if latch_at(placed, site).is_some() {
-        let at = latch_at(placed, site).unwrap_or(mid);
-        boxes.push((
-            at,
-            dir_a * (LATCH_W * 1.6) + Vec3::Y * (LATCH_H * 1.3) + site.out.abs() * 0.02,
-        ));
-        boxes.push((
-            at - site.out * 0.02,
-            dir_a * LATCH_W + Vec3::Y * LATCH_H + site.out.abs() * 0.02,
-        ));
-    }
-    boxes
+    let (Some(at), Some((other, _))) = (latch_at(placed, site), site.mate) else {
+        return;
+    };
+    body(
+        format!("seam[{port}] latch plate"),
+        at,
+        dir_a * (LATCH_W * 1.6) + Vec3::Y * (LATCH_H * 1.3) + site.out.abs() * 0.02,
+        Dress::Frame,
+    );
+    body(
+        format!("seam[{port}] latch grab"),
+        at - site.out * 0.02,
+        dir_a * LATCH_W + Vec3::Y * LATCH_H + site.out.abs() * 0.02,
+        Dress::Grab(
+            other,
+            SimSurface {
+                center: at - site.out * 0.04,
+                half_u: site.half_a.normalize_or_zero() * (LATCH_W * 1.2),
+                half_v: Vec3::NEG_Y * (LATCH_H * 1.2),
+                rect: layout::cell_rect(placed.id, 0, 0),
+            },
+        ),
+    );
 }
 
 /// Where a seam's amber latch hangs, if this seam gets one: on the
@@ -2013,83 +2138,66 @@ fn latch_at(placed: &Placed, site: &Site) -> Option<Vec3> {
     Some(mid - site.out * (JAMB + LATCH_W) + flank + Vec3::Y * (b * 0.25))
 }
 
-/// Every declared port, dressed. A mated door is an open aperture with a
-/// jamb, a lamp that answers the seam's cues, and — where the room beyond
-/// is one that can be sent away — the amber latch that asks it to part.
-/// An unmated door is a leaf, drawn shut: a door facing blank wall is a
-/// door that will not open. The vertical pair is neither: it is a hatch
-/// in the deck and a ladder port overhead, and it is dressed to say so
-/// ([`port_plate`]).
-fn doorways(
+/// **Every declared port, dressed** — [`seam_parts`] spawned, one entity
+/// per part and no entity that is not a part.
+///
+/// **A body is drawn once.** This used to build the frame off one list
+/// and then build the jamb lamp and the amber latch again beside it, at
+/// the same transforms, in the room's shade. Two coincident boxes have
+/// six coplanar faces and no separation at all, so which one the depth
+/// buffer kept was whatever order the frame happened to be batched in —
+/// and the latch, the one amber thing in a doorway, came out fully lit in
+/// some runs of a screenshot command and gone in others. It is not a
+/// number that fixes that and there is no rung of the decal ladder it
+/// belongs on: a ladder separates a paint from the surface it is painted
+/// on, and these were one body entered twice.
+fn dress_ports(
     commands: &mut Commands,
     cube: &Handle<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     skin: &Skin,
+    paint: &crate::poi::Tiles,
     placed: &Placed,
     tag: InRoom,
 ) {
-    for site in &placed.ports {
-        let (a, b) = (site.half_a.length(), site.half_b.length());
-        if a <= 0.0 || b <= 0.0 {
-            continue;
-        }
-        if !dresses(placed, site) {
-            if site.mate.is_none() {
-                port_plate(commands, cube, skin, site, tag);
+    let stud = paint.stud.material(materials, Some(skin));
+    let sill = paint.sill.material(materials, Some(skin));
+    for part in seam_parts(placed) {
+        let mut entity = commands.spawn((Mesh3d(cube.clone()), part.at, tag));
+        // The name the description gave it, carried into the world, so
+        // the thing a finding blames and the entity a debugger picks are
+        // the same thing said once.
+        entity.insert(Name::new(part.what));
+        match part.dress {
+            Dress::Leaf => entity.insert(MeshMaterial3d(skin.plate.clone())),
+            Dress::Rivet => entity.insert(MeshMaterial3d(skin.rivet.clone())),
+            Dress::Frame => entity.insert(MeshMaterial3d(skin.plate_shade.clone())),
+            Dress::Brass => entity.insert(MeshMaterial3d(skin.brass.clone())),
+            Dress::Well => entity.insert(MeshMaterial3d(skin.socket.clone())),
+            Dress::Stud => entity.insert(MeshMaterial3d(stud.clone())),
+            Dress::Sill => entity.insert(MeshMaterial3d(sill.clone())),
+            Dress::Jamb => {
+                let lamp = glow::phosphor(materials, palette::LAMP_OK, 0.0);
+                entity.insert((
+                    MeshMaterial3d(lamp.clone()),
+                    SeamLamp {
+                        mat: lamp,
+                        latch: false,
+                    },
+                ))
             }
-            continue;
-        }
-        for (centre, size) in seam_boxes(placed, site) {
-            commands.spawn((
-                Mesh3d(cube.clone()),
-                MeshMaterial3d(skin.plate_shade.clone()),
-                Transform::from_translation(centre).with_scale(size),
-                tag,
-            ));
-        }
-        // The jamb lamp: dark glass that answers a seam mating or parting.
-        let mid = seam_centre(placed, site);
-        let lamp = glow::phosphor(materials, palette::LAMP_OK, 0.0);
-        commands.spawn((
-            Mesh3d(cube.clone()),
-            MeshMaterial3d(lamp.clone()),
-            Transform::from_translation(mid + site.half_b.normalize_or_zero() * (b + JAMB))
-                .with_scale(
-                    site.out.abs() * (JAMB * 0.9)
-                        + site.half_a.normalize_or_zero().abs() * (a * 0.5)
-                        + site.half_b.normalize_or_zero().abs() * 0.035,
-                ),
-            SeamLamp {
-                mat: lamp,
-                latch: false,
-            },
-            tag,
-        ));
-        let (Some(at), Some((other, _))) = (latch_at(placed, site), site.mate) else {
-            continue;
+            Dress::Grab(room, face) => {
+                let grab = glow::phosphor(materials, palette::AMBER, 1.2);
+                entity.insert((
+                    MeshMaterial3d(grab.clone()),
+                    SeamLamp {
+                        mat: grab,
+                        latch: true,
+                    },
+                    Latch { room, face },
+                ))
+            }
         };
-        let dir_a = site.half_a.normalize_or_zero().abs();
-        let grab = glow::phosphor(materials, palette::AMBER, 1.2);
-        commands.spawn((
-            Mesh3d(cube.clone()),
-            MeshMaterial3d(grab.clone()),
-            Transform::from_translation(at - site.out * 0.02)
-                .with_scale(dir_a * LATCH_W + Vec3::Y * LATCH_H + site.out.abs() * 0.02),
-            SeamLamp {
-                mat: grab,
-                latch: true,
-            },
-            Latch {
-                room: other,
-                face: SimSurface {
-                    center: at - site.out * 0.04,
-                    half_u: site.half_a.normalize_or_zero() * (LATCH_W * 1.2),
-                    half_v: Vec3::NEG_Y * (LATCH_H * 1.2),
-                    rect: layout::cell_rect(placed.id, 0, 0),
-                },
-            },
-            tag,
-        ));
     }
 }
 
@@ -2119,30 +2227,38 @@ const RIM_H: f32 = 0.012;
 /// stretch goal) this hardware grows an amber grab and means it. Until
 /// then the radium brass says "hardware, findable in the dark", which is
 /// the truth.
-fn port_plate(commands: &mut Commands, cube: &Handle<Mesh>, skin: &Skin, site: &Site, tag: InRoom) {
+fn shut_port(site: &Site, out: &mut Vec<SeamPart>) {
+    let port = site.port;
+    let mut body = |what: String, at: Vec3, size: Vec3, dress| {
+        out.push(SeamPart {
+            what,
+            at: Transform::from_translation(at).with_scale(size),
+            dress,
+        });
+    };
     let leaf = site.out.abs() * PLATE_T + site.half_a.abs() * 2.0 + site.half_b.abs() * 2.0;
     if site.is_door() {
-        commands.spawn((
-            Mesh3d(cube.clone()),
-            MeshMaterial3d(skin.plate.clone()),
-            Transform::from_translation(site.leaf).with_scale(leaf.max(Vec3::splat(0.02))),
-            tag,
-        ));
-        for corner in [-0.66_f32, 0.66] {
-            for course in [-0.66_f32, 0.66] {
-                commands.spawn((
-                    Mesh3d(cube.clone()),
-                    MeshMaterial3d(skin.rivet.clone()),
-                    Transform::from_translation(
-                        site.leaf
-                            + site.half_a * corner
-                            + site.half_b * course
-                            + site.out * PLATE_T,
-                    )
-                    .with_scale(Vec3::splat(0.045)),
-                    tag,
-                ));
-            }
+        body(
+            format!("shut[{port}] leaf"),
+            site.leaf,
+            leaf.max(Vec3::splat(0.02)),
+            Dress::Leaf,
+        );
+        for (nth, (corner, course)) in [
+            (-0.66_f32, -0.66_f32),
+            (-0.66, 0.66),
+            (0.66, -0.66),
+            (0.66, 0.66),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            body(
+                format!("shut[{port}] rivet[{nth}]"),
+                site.leaf + site.half_a * corner + site.half_b * course + site.out * PLATE_T,
+                Vec3::splat(0.045),
+                Dress::Rivet,
+            );
         }
         return;
     }
@@ -2154,71 +2270,63 @@ fn port_plate(commands: &mut Commands, cube: &Handle<Mesh>, skin: &Skin, site: &
     let dir_b = site.half_b.normalize_or_zero().abs();
     let flat = site.out.abs();
     // The leaf, sunk into the opening: nothing of it stands proud.
-    commands.spawn((
-        Mesh3d(cube.clone()),
-        MeshMaterial3d(skin.plate.clone()),
-        Transform::from_translation(site.leaf + site.out * PLATE_T.mul_add(0.5, SINK))
-            .with_scale(dir_a * (a * 2.0) + dir_b * (b * 2.0) + flat * PLATE_T),
-        tag,
-    ));
+    body(
+        format!("hatch[{port}] leaf"),
+        site.leaf + site.out * PLATE_T.mul_add(0.5, SINK),
+        dir_a * (a * 2.0) + dir_b * (b * 2.0) + flat * PLATE_T,
+        Dress::Leaf,
+    );
     // The coaming: four bars around the opening, a rim's height proud.
-    for (along, across, half) in [
+    for (nth, (along, across, half)) in [
         (dir_a, dir_b, b),
         (dir_a, dir_b, -b),
         (dir_b, dir_a, a),
         (dir_b, dir_a, -a),
-    ] {
+    ]
+    .into_iter()
+    .enumerate()
+    {
         let axis = if along == dir_a {
             site.half_b.normalize_or_zero()
         } else {
             site.half_a.normalize_or_zero()
         };
-        commands.spawn((
-            Mesh3d(cube.clone()),
-            MeshMaterial3d(skin.plate_shade.clone()),
-            Transform::from_translation(
-                site.leaf + axis * (half.signum() * RIM_W.mul_add(0.5, half.abs()))
-                    - site.out * (RIM_H * 0.5),
-            )
-            .with_scale(
-                along * RIM_W.mul_add(2.0, if along == dir_a { a * 2.0 } else { b * 2.0 })
-                    + across * RIM_W
-                    + flat * RIM_H,
-            ),
-            tag,
-        ));
+        body(
+            format!("hatch[{port}] coaming[{nth}]"),
+            site.leaf + axis * (half.signum() * RIM_W.mul_add(0.5, half.abs()))
+                - site.out * (RIM_H * 0.5),
+            along * RIM_W.mul_add(2.0, if along == dir_a { a * 2.0 } else { b * 2.0 })
+                + across * RIM_W
+                + flat * RIM_H,
+            Dress::Frame,
+        );
     }
     // The hinge: two brass barrels down one edge of the sunk leaf.
-    for step in [-0.45_f32, 0.45] {
-        commands.spawn((
-            Mesh3d(cube.clone()),
-            MeshMaterial3d(skin.brass.clone()),
-            Transform::from_translation(
-                site.leaf + site.half_a * -0.86 + site.half_b * step + site.out * (SINK * 0.5)
-                    - site.out * 0.002,
-            )
-            .with_scale(dir_a * (a * 0.18) + dir_b * (b * 0.34) + flat * (SINK * 0.7)),
-            tag,
-        ));
+    for (nth, step) in [-0.45_f32, 0.45].into_iter().enumerate() {
+        body(
+            format!("hatch[{port}] hinge[{nth}]"),
+            site.leaf + site.half_a * -0.86 + site.half_b * step + site.out * (SINK * 0.5)
+                - site.out * 0.002,
+            dir_a * (a * 0.18) + dir_b * (b * 0.34) + flat * (SINK * 0.7),
+            Dress::Brass,
+        );
     }
     // And the pull, opposite the hinge: a brass bar lying in a shadowed
     // well, which is what a flush deck fitting looks like — the well
     // reaches the deck plane so the shadow reads, the bar sits inside it
     // so the hand knows where to reach.
-    commands.spawn((
-        Mesh3d(cube.clone()),
-        MeshMaterial3d(skin.socket.clone()),
-        Transform::from_translation(site.leaf + site.half_a * 0.62 + site.out * (SINK * 0.5))
-            .with_scale(dir_a * (a * 0.5) + dir_b * (b * 0.42) + flat * SINK),
-        tag,
-    ));
-    commands.spawn((
-        Mesh3d(cube.clone()),
-        MeshMaterial3d(skin.brass.clone()),
-        Transform::from_translation(site.leaf + site.half_a * 0.62 + site.out * (SINK * 0.06))
-            .with_scale(dir_a * (a * 0.30) + dir_b * (b * 0.09) + flat * (SINK * 0.30)),
-        tag,
-    ));
+    body(
+        format!("hatch[{port}] pull well"),
+        site.leaf + site.half_a * 0.62 + site.out * (SINK * 0.5),
+        dir_a * (a * 0.5) + dir_b * (b * 0.42) + flat * SINK,
+        Dress::Well,
+    );
+    body(
+        format!("hatch[{port}] pull bar"),
+        site.leaf + site.half_a * 0.62 + site.out * (SINK * 0.06),
+        dir_a * (a * 0.30) + dir_b * (b * 0.09) + flat * (SINK * 0.30),
+        Dress::Brass,
+    );
 }
 
 // ---- The handshake ----
@@ -3174,6 +3282,42 @@ mod tests {
         rooms.iter().map(|(id, room)| placed(id, room)).collect()
     }
 
+    /// **A doorway draws each body once.**
+    ///
+    /// The seam's amber latch was entered twice — once in the frame's own
+    /// list of shaded boxes and once again beside it, at the same
+    /// transform, wearing its amber — and so was the jamb lamp. Two boxes
+    /// on one transform present six coplanar faces with no separation to
+    /// settle them by, so the depth buffer kept whichever the renderer
+    /// batched last, and `--view starboard` came out with a lit latch in
+    /// five runs of one command and no latch at all in the sixth.
+    ///
+    /// No number cures that and no rung of the decal ladder is where it
+    /// belongs: a rung separates a paint from the surface it is painted
+    /// on, and this was one body written down twice. So the law is a
+    /// count rather than a distance, and it is swept over every room a
+    /// crowded ship has.
+    #[test]
+    fn a_doorway_draws_each_body_once() {
+        for room in crowded_ship() {
+            let parts = seam_parts(&room);
+            for (i, part) in parts.iter().enumerate() {
+                for other in &parts[i + 1..] {
+                    let apart = (part.at.translation - other.at.translation).abs()
+                        + (part.at.scale.abs() - other.at.scale.abs()).abs();
+                    assert!(
+                        apart.max_element() > crate::rig::layer::SKIN,
+                        "room {} ({:?}) draws {} and {} on one transform",
+                        room.id,
+                        room.kind,
+                        part.what,
+                        other.what
+                    );
+                }
+            }
+        }
+    }
+
     /// Whether two boxes share a volume worth seeing.
     fn intersects((alo, ahi): (Vec3, Vec3), (blo, bhi): (Vec3, Vec3), slack: f32) -> bool {
         (0..3).all(|axis| ahi[axis].min(bhi[axis]) - alo[axis].max(blo[axis]) > slack)
@@ -3211,15 +3355,16 @@ mod tests {
                 .into_iter()
                 .map(|(c, s, _)| (c - s * 0.5, c + s * 0.5))
                 .collect();
-            for site in &room.ports {
-                if dresses(room, site) {
-                    drawn.extend(
-                        seam_boxes(room, site)
-                            .into_iter()
-                            .map(|(c, s)| (c - s * 0.5, c + s * 0.5)),
-                    );
-                }
-            }
+            drawn.extend(seam_parts(room).into_iter().map(|part| {
+                // A tread lies on the deck chart and is turned onto it,
+                // so the box is the turned one, not the scale.
+                let half = part.at.scale.abs() * 0.5;
+                let turn = Mat3::from_quat(part.at.rotation);
+                let reach = turn.x_axis.abs() * half.x
+                    + turn.y_axis.abs() * half.y
+                    + turn.z_axis.abs() * half.z;
+                (part.at.translation - reach, part.at.translation + reach)
+            }));
             for other in plan.iter().filter(|other| other.id != room.id) {
                 // The neighbour's interior, less a hair so a shared
                 // boundary plane is contact rather than trespass.

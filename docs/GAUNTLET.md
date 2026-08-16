@@ -356,6 +356,23 @@ on every commit, and the numbers are recorded rather than guessed:
   Steady is not the same as safe. This family wants either more headroom
   or a tolerance argued from a room rather than from a sample before it
   gates anything.
+- **A dark room** — the one reading that asks whether anything drew at
+  all. Every `--shot` now prints its frame's mean brightness and, beside
+  it, the fraction of the picture standing clear of the ground
+  (`gauntlet::READ_FLOOR`, a luma of 0.10):
+
+  ```text
+  shot path=out.png lum=0.04500 read=0.06889
+  ```
+
+  `lum` alone cannot answer the question — pure black is banned, so the
+  darkest frame the game can draw still means out around 0.037 and a
+  room going from unreadable to readable moves it by a fifth. `read`
+  answers it: the furnace with its fire out sat at 0.0016 before its
+  tape carried the lights-out floor and at 0.069 after, and the 0.0016
+  was the version corner and the crosshair. `ROOM_READS` (0.02) is the
+  alarm, and the guard that spends it is
+  `a_furnace_with_its_fire_out_is_still_a_room_you_can_find`.
 
 Being deterministic is no longer the obstacle: on the counted clock, two
 walks of one room print the same twenty-seven lines to the last digit and

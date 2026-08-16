@@ -630,15 +630,29 @@ all.
 ## Lights are cargo
 
 The ship owns no light. Every lumen aboard is a piece — the starter
-ceiling lamp hanging over mid-floor, sconces, floor lamps, luminous
-coats, the firebox — all of it tradeable, jettisonable, burnable, and
-all of it dimmed by the omen. What remains when the last lamp goes is
-an ambient starlight floor (silhouettes survive; the room reads black)
-and the instruments' own glow: screens and phosphor readings were
-always emissive, the icon etchings and the brass hardware now carry a
-faint radium-paint self-glow — so a fully darkened ship stays playable
-on technicality, chart to lever. Selling your last lamp is a legal,
-foolish, extremely funny decision, and the game holds up its end.
+ceiling lamp hanging over mid-floor, the starter sconce at the port
+cornice, floor lamps, luminous coats, the firebox — all of it
+tradeable, jettisonable, burnable, and all of it dimmed by the omen.
+What remains when the last lamp goes is an ambient starlight floor
+(silhouettes survive; the room reads black) and the ship's own glow:
+screens and phosphor readings were always emissive, the icon etchings
+and the brass hardware carry a faint radium-paint self-glow, and the
+furnace's hazard tape carries the same floor in ember, because it is
+warm iron — so a fully darkened ship stays playable on technicality,
+chart to lever. Selling your last lamp is a legal, foolish, extremely
+funny decision, and the game holds up its end.
+
+**The law is about lumens, and none of those is one.** A light source
+casts on its neighbours, so a source the ship owned would be a lumen
+nobody bought and the economy would leak; an emissive lights its own
+face and nothing else, which is why the floor has always been spelled
+that way. The furnace is the case that made the distinction worth
+writing down: it is the one riding room with no lamp of its own — its
+light is whatever the crew last fed it — and every cell of it destroys
+what stands there, so a ship that has not stoked its fire had a hazard
+room nobody could find. Warm iron answers that; a lamp in the furnace
+would not, because it would be a lamp the crew never bought and could
+never sell.
 
 ## What stays out of this slice
 

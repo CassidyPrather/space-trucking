@@ -603,24 +603,61 @@ struct WalkFilm {
     landed: usize,
 }
 
-/// Read one captured frame: mean luminance, and the fraction of it that
-/// moved since the last capture. Raw bytes rather than a decode — the
-/// window target is 8-bit RGBA and the two numbers this pass is about
-/// are a sum and a count.
+/// **What a captured frame amounts to**: how bright it is on average,
+/// and how much of it stands clear of the dark.
+///
+/// The second number is the one no other check in the game asks for. The
+/// gauntlet measures shapes, and a shape is exactly as present in a
+/// black frame as in a lit one; mean brightness will not stand in for it
+/// either, because pure black is banned and the darkest frame the game
+/// can draw already means out well above zero. What separates a room you
+/// can see from a room that drew nothing is the *fraction* of the
+/// picture over [`gauntlet::READ_FLOOR`].
+///
+/// Raw bytes rather than a decode — the window target is 8-bit RGBA and
+/// both numbers are one pass over it.
+struct FrameRead {
+    /// Rec. 601 luma, meaned over every texel, `0..=1`.
+    lum: f32,
+    /// Fraction of texels standing clear of the ground, `0..=1`.
+    read: f32,
+}
+
+fn frame_read(frame: &Image) -> FrameRead {
+    let Some(data) = frame.data.as_ref() else {
+        return FrameRead {
+            lum: 0.0,
+            read: 0.0,
+        };
+    };
+    let mut sum = 0.0f64;
+    let mut clear = 0usize;
+    for texel in data.chunks_exact(4) {
+        let luma = 0.299f64.mul_add(
+            f64::from(texel[0]),
+            0.587f64.mul_add(f64::from(texel[1]), 0.114 * f64::from(texel[2])),
+        ) / f64::from(255.0_f32);
+        sum += luma;
+        if luma >= f64::from(gauntlet::READ_FLOOR) {
+            clear += 1;
+        }
+    }
+    let pixels = (data.len() / 4).max(1);
+    FrameRead {
+        lum: (sum / pixels as f64) as f32,
+        read: (clear as f64 / pixels as f64) as f32,
+    }
+}
+
+/// Read one captured frame: [`frame_read`]'s brightness, and the fraction
+/// of it that moved since the last capture.
 fn read_film(frame: &Image, film: &mut WalkFilm) {
     let Some(data) = frame.data.as_ref() else {
         return;
     };
-    let mut sum = 0.0f64;
     let mut moved = 0usize;
-    let pixels = data.len() / 4;
+    let pixels = (data.len() / 4).max(1);
     for (i, texel) in data.chunks_exact(4).enumerate() {
-        // Rec. 601 luma, near enough for "did the room get brighter".
-        let lum = 0.299f64.mul_add(
-            f64::from(texel[0]),
-            0.587f64.mul_add(f64::from(texel[1]), 0.114 * f64::from(texel[2])),
-        );
-        sum += lum;
         if let Some(last) = film.last.as_ref()
             && last.len() == data.len()
             && (0..3).any(|c| texel[c].abs_diff(last[i * 4 + c]) > gauntlet::FLICKER_STEP)
@@ -628,9 +665,7 @@ fn read_film(frame: &Image, film: &mut WalkFilm) {
             moved += 1;
         }
     }
-    let pixels = pixels.max(1);
-    film.lum
-        .push((sum / f64::from(255.0_f32) / pixels as f64) as f32);
+    film.lum.push(frame_read(frame).lum);
     film.moved.push(moved as f32 / pixels as f32);
     film.last = Some(data.clone());
     film.landed += 1;
@@ -819,6 +854,12 @@ fn walk_drive(
 
 /// Let the scene settle, capture the window once, exit when the write
 /// lands. Drives the in-container visual verification loop.
+///
+/// **Every shot prints what it came out as** ([`frame_read`]), because
+/// the one thing a reviewer cannot get out of a PNG by looking at a
+/// thumbnail is whether the frame is dark on purpose or dark because
+/// nothing drew. A `shot` line is the number a legibility claim can be
+/// argued from, and the one an automated guard can read back.
 fn shoot(
     mut commands: Commands,
     mut mode: ResMut<ShotMode>,
@@ -828,11 +869,18 @@ fn shoot(
     mode.frames += 1;
     if !mode.fired && mode.frames > SHOT_SETTLE {
         mode.fired = true;
+        let path = mode.path.clone();
         commands
             .spawn(bevy::render::view::screenshot::Screenshot::primary_window())
             .observe(bevy::render::view::screenshot::save_to_disk(
                 mode.path.clone(),
-            ));
+            ))
+            .observe(
+                move |captured: On<bevy::render::view::screenshot::ScreenshotCaptured>| {
+                    let read = frame_read(&captured.image);
+                    println!("shot path={path} lum={:.5} read={:.5}", read.lum, read.read);
+                },
+            );
     } else if mode.fired && mode.frames > SHOT_SETTLE + 5 && capturing.is_empty() {
         exit.write(AppExit::Success);
     }

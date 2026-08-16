@@ -1966,6 +1966,35 @@ pub const APPROACH_STEPS: usize = 12;
 /// steps, and a step is what this is looking for.
 pub const POP_TOL: f32 = 0.18;
 
+/// The luma at which a texel counts as **read** rather than as ground,
+/// `0..=1`.
+///
+/// Mean brightness cannot answer "is anything visible here": pure black
+/// is banned, so the darkest frame the game can draw still means out at
+/// around 0.037 and a room going from unreadable to readable moves it by
+/// a fifth. The fraction of the picture standing clear of that ground
+/// does answer it, and this is where clear begins — comfortably over the
+/// starlight floor an unlit hull settles at, well under anything a lamp
+/// or an emissive puts on a surface.
+pub const READ_FLOOR: f32 = 0.10;
+
+/// How much of a frame must stand clear of the ground for the room in it
+/// to be **legible at all**, as a fraction of the picture.
+///
+/// The measurement it is argued from, on the furnace with its fire out
+/// (`--underway --view burner`): the room read 0.0016 before its tape
+/// carried the lights-out floor, and 0.069 after — and the 0.0016 was
+/// the version corner and the crosshair, which is to say the room itself
+/// contributed nothing. This sits between them nearer the floor than the
+/// finding, because it is a *nothing drew* alarm and not a brightness
+/// target: 12× of headroom over a black frame, 3× of margin under the
+/// dark furnace as it now stands.
+///
+/// Spent by the dark-room guard in `tests`, which is its whole job — the
+/// same arrangement `rig::layer::STEP` has with the ladder test.
+#[allow(dead_code)]
+pub const ROOM_READS: f32 = 0.02;
+
 /// The poses the flicker and light-pop passes are shot from: the walk's
 /// own middle for the still, and a straight line backing off its counter
 /// (or its middle, in a room with no fixture) for the approach.
@@ -2795,6 +2824,59 @@ mod tests {
         }
     }
 
+    /// **A room with no lamp of its own is still a room you can find.**
+    ///
+    /// The furnace is the only one there is: every lumen aboard is cargo
+    /// (docs/BAY.md), and the fire is the one light the chamber ever
+    /// gets — so a ship that has not fed it stands next door to a black
+    /// box. The playtest walked into it and reported the hopper, the
+    /// cornices and the fire door as *entirely illegible*, and they
+    /// were: 0.0016 of that frame stood clear of the ground, all of it
+    /// the version corner and the crosshair.
+    ///
+    /// This asks the picture, because that is the only thing that can be
+    /// asked. Nothing pure describes a room's paint, so no rule in this
+    /// file can see the tape at all (see docs/GAUNTLET.md, "What the
+    /// harness can see"), and a material carrying an emissive is a fact
+    /// about a struct rather than about a room. What is asserted is the
+    /// observable one: stand in the furnace of a ship whose fire is out
+    /// and some of the room comes back.
+    ///
+    /// `--underway` is the board with no stoke banked — a fresh ship,
+    /// cast off and part-way through its first leg — so the fire is
+    /// genuinely out rather than turned down.
+    #[test]
+    #[ignore = "needs a rasteriser: run it under xvfb, see docs/GAUNTLET.md"]
+    fn a_furnace_with_its_fire_out_is_still_a_room_you_can_find() {
+        use std::process::Command;
+
+        let _turn = one_at_a_time();
+        let (game, root) = built_game();
+        let shots = root.join("target/dark-room");
+        std::fs::create_dir_all(&shots).expect("somewhere for the shot to land");
+        let path = shots.join("burner.png");
+        let shot = Command::new(&game)
+            .args(["--underway", "--view", "burner", "--shot"])
+            .arg(&path)
+            .output()
+            .expect("the game runs");
+        assert!(shot.status.success(), "the burner shot did not land");
+        let out = String::from_utf8_lossy(&shot.stdout);
+        let read: f32 = out
+            .lines()
+            .find_map(|line| line.strip_prefix("shot ")?.split(" read=").nth(1))
+            .and_then(|token| token.trim().parse().ok())
+            .unwrap_or_else(|| panic!("the shot must report what it came out as:\n{out}"));
+        assert!(
+            read >= ROOM_READS,
+            "only {read:.5} of the furnace stands clear of the dark, under the \
+             {ROOM_READS} a room has to reach to be a room: the chamber owns no \
+             lamp, so whatever carries it with the fire out has stopped \
+             carrying it (the frame is in {})",
+            path.display()
+        );
+    }
+
     /// The documented entry point still exists to be invoked. Cheap, and
     /// it is the one part of the paragraph above a compiler can check.
     #[test]
@@ -2805,6 +2887,10 @@ mod tests {
             assert!(
                 APPROACH_STEPS > 2,
                 "a jump needs three samples to be a jump"
+            );
+            assert!(
+                READ_FLOOR > 0.0 && ROOM_READS > 0.0,
+                "a frame that reads at nothing reads at everything"
             );
         }
     }

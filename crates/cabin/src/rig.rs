@@ -608,6 +608,16 @@ fn live_panels(
         .collect()
 }
 
+/// The furnace's own lights-out floor, as a `wear::worn` glow level.
+///
+/// Read against the brass hardware's 0.22 of its own role: a hair
+/// brighter, because a room whose every cell will destroy what stands on
+/// it has to be findable from the doorway of a dark ship, and because
+/// [`palette::EMBER`] over the tape's dark stripes is half a stripe of
+/// glow rather than a whole face of it. Still under any real lamp: put
+/// one sconce in the chamber and the tape reads as tape again.
+const EMBER_FLOOR: f32 = 0.30;
+
 /// Shared meshes and materials for the worn-metal family. Views make
 /// their own phosphors; the metal is communal. Nothing ships unweathered:
 /// the broad surfaces carry `wear`'s deterministic multiplier textures —
@@ -620,6 +630,9 @@ pub struct Skin {
     pub desk: Handle<StandardMaterial>,
     /// Painted hazard stripes for accent strips — and, in the tile
     /// vocabulary, the one class allowed to wear them (`room::tiles`).
+    /// Stripes are `Consume`'s alone and `Consume` is the furnace's
+    /// alone, so this handle is the furnace's iron: see the ember floor
+    /// it is built with.
     pub hazard: Handle<StandardMaterial>,
     pub plate_shade: Handle<StandardMaterial>,
     pub socket: Handle<StandardMaterial>,
@@ -642,10 +655,42 @@ impl Skin {
             ..default()
         };
         Self {
-            hull: crate::wear::worn(materials, &book.hull, palette::HULL, 4.0, 0.92, 0.15),
-            plate: crate::wear::worn(materials, &book.plate, palette::PLATE, 2.0, 0.92, 0.15),
-            desk: crate::wear::worn(materials, &book.desk, palette::PLATE, 2.0, 0.9, 0.15),
-            hazard: crate::wear::worn(materials, &book.hazard, palette::GLINT, 2.0, 0.85, 0.0),
+            hull: crate::wear::worn(materials, &book.hull, palette::HULL, 4.0, 0.92, 0.15, None),
+            plate: crate::wear::worn(
+                materials,
+                &book.plate,
+                palette::PLATE,
+                2.0,
+                0.92,
+                0.15,
+                None,
+            ),
+            desk: crate::wear::worn(materials, &book.desk, palette::PLATE, 2.0, 0.9, 0.15, None),
+            // **Warm iron.** Hazard tape is the furnace's and nobody
+            // else's, and the furnace is the one riding room that owns
+            // no lamp at all — its light is whatever the crew last fed
+            // it. Bank no stoke and the chamber was a black frame: the
+            // hopper, the cornices and the fire door were all there and
+            // none of them was findable, which is a hazard room that
+            // cannot warn anybody. So its tape keeps the same
+            // lights-out floor the brass below keeps, in ember rather
+            // than brass, because what is banked in there is fire.
+            //
+            // This is emissive paint and not a lumen: it lights its own
+            // face and nothing else, so the lamps-are-cargo law stands
+            // exactly as written (docs/BAY.md — the clause that gives
+            // the etchings and the hardware a radium glow is this same
+            // clause). The fire's own `PointLight` is still the only
+            // light the room ever gets, and it is still cargo, burning.
+            hazard: crate::wear::worn(
+                materials,
+                &book.hazard,
+                palette::GLINT,
+                2.0,
+                0.85,
+                0.0,
+                Some((palette::EMBER, EMBER_FLOOR)),
+            ),
             plate_shade: materials.add(metal(palette::PLATE_SHADE)),
             socket: materials.add(StandardMaterial {
                 base_color: palette::SOCKET,

@@ -486,6 +486,20 @@ pub fn bake(images: &mut Assets<Image>) -> WearBook {
 /// multiplying it, `uv_scale` repeats across each face. The tile's
 /// sub-white average dims the role ≤ 2% (sRGB) — intended patina, see
 /// the module doc — so the color needs no compensating math.
+///
+/// `glow` is the **lights-out floor**: a role and a level for the faint
+/// self-glow a surface keeps when every lamp aboard has been sold
+/// (docs/BAY.md, "Lights are cargo" — the clause that gives the icon
+/// etchings and the brass hardware a radium-paint glow). `None` for a
+/// surface that is only ever seen by somebody else's light, which is
+/// most of them. A floor is dim enough to vanish under any real lamp.
+///
+/// **The floor rides the same wear tile the color does**, so the paint
+/// glows exactly where the paint is: a striped surface stays striped in
+/// the dark instead of flattening into one warm band, and the *kind* of
+/// mark a tile class wears survives the lights going out — which is the
+/// no-hue-alone law's own requirement, spent on the one case where hue
+/// is all that is left.
 pub fn worn(
     materials: &mut Assets<StandardMaterial>,
     texture: &Handle<Image>,
@@ -493,6 +507,7 @@ pub fn worn(
     uv_scale: f32,
     roughness: f32,
     metallic: f32,
+    glow: Option<(Color, f32)>,
 ) -> Handle<StandardMaterial> {
     materials.add(StandardMaterial {
         base_color: color,
@@ -500,6 +515,8 @@ pub fn worn(
         uv_transform: Affine2::from_scale(Vec2::splat(uv_scale)),
         perceptual_roughness: roughness,
         metallic,
+        emissive: glow.map_or(LinearRgba::BLACK, |(role, level)| role.to_linear() * level),
+        emissive_texture: glow.map(|_| texture.clone()),
         ..default()
     })
 }

@@ -282,6 +282,24 @@ repository and compared next week does not, and would fail for the one
 reason that is not a defect. So the reproducibility guard compares a pair
 taken now, and never a pair separated by a night.
 
+**The guard covers four views, and a fifth is known not to hold.** Shot
+twice each on an idle machine, thirteen of the fourteen named viewpoints
+come back byte-identical; `flank` does not. It disagrees with itself over
+about 213 pixels of 921,600 — two hundredths of one per cent of the
+frame, a couple of levels of grey apiece. Whatever drifts there is small,
+it is not the seam latch that made `starboard` and `parlor` bimodal, and
+nobody has chased it down. Until somebody does, a refactor proved by
+shooting the same view before and after should read a difference that
+size on `flank` as the noise it is, and a difference anywhere else as a
+finding.
+
+**The bottom-right corner changes with every commit.** The version text
+`rig::spawn` draws is `git describe` output, so two shots of one view
+taken either side of a commit — or with the tree merely dirty — differ in
+that overlay and nowhere else. A before-and-after comparison that spans a
+commit has to read the frame with that corner excluded, or it reports a
+change on every one of them.
+
 ## What the harness can see, and what it cannot
 
 This is the most useful section when the build is *green* and something

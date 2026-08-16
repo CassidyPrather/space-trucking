@@ -71,3 +71,10 @@ opt-level = 2
 # -O1 keeps edit-compile loops quick; `--release` is the way to *play*.
 [profile.dev]
 opt-level = 1
+# Line tables, not a full description of every type in the graph. A dev
+# build wrote DWARF for all five hundred-odd crates and handed the lot
+# to the linker again on every edit. A backtrace reads the line table,
+# so a panic still names a file and a line; what goes is stepping
+# through a dependency in a debugger, which `debug = true` buys back for
+# the one run that needs it.
+debug = "line-tables-only"

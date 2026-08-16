@@ -107,7 +107,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use bevy::prelude::*;
-use space_trucking::sim::cargo::{Kind, Loc, Piece, placement_check};
+use space_trucking::sim::cargo::{Kind, Loc, Mount, Piece, placement_check};
 use space_trucking::sim::layout;
 use space_trucking::sim::room::{CABIN, RoomId, RoomKind, Rooms, Tile};
 
@@ -1593,17 +1593,27 @@ fn rig_coplanar() -> Vec<Finding> {
     out
 }
 
-/// **A rig is no deeper than the berth it is measured at.**
+/// **A rig is no deeper than the band it is drawn in.**
 /// [`BERTH_CLEAR`] from the cargo's side.
 ///
-/// The room sweep asks whether a station's furniture stands in a cell
-/// cargo may take, and the air it asks about is `pieces::berth_box`: the
-/// footprint across, and `RIG_NEAR..RIG_FAR` along the chart's own
-/// normal. That band is a promise the kind builders compose against, and
-/// a part outside it is two defects at once — a body in air the berth
-/// does not own, and a berth the whole room sweep is measuring too
-/// shallow, so a fitting could stand in the part and nothing would say
-/// so.
+/// `pieces::RIG_NEAR..RIG_FAR` is the depth every kind is composed
+/// within, and two things read it: the carry tell's wireframe box, which
+/// wraps the body you are holding, and `pieces::berth_box`. A part
+/// outside it is a body hanging out of the box the tell draws round it,
+/// on every kind there is.
+///
+/// **On a wall it is also the air**, and that half is narrower than it
+/// was written. A wall berth's air IS the band along the chart's normal,
+/// so a wall kind deeper than the band is a berth the whole room sweep
+/// measures too shallow and a fitting could stand in the part with
+/// nothing to say so. A deck or ceiling berth's air is its own cell's
+/// column — the footprint across and the rig's height up — and the local
+/// `+z` the band is measured on lies flat into the room there, which is
+/// the aisle a standing rig is expressly allowed to reach into
+/// ([`Berth`]). Both of the two parts this family last carried were
+/// floor-mounted, so neither was ever a berth measured wrong; both were a
+/// body out of its own carry box, which is defect enough. The finding
+/// says which it is rather than claiming the worse one twice.
 ///
 /// **It asks about the depth and not about the footprint**, and that is
 /// measured rather than assumed. Sweeping the footprint too found eight
@@ -1639,8 +1649,16 @@ fn rig_fits() -> Vec<Finding> {
             rule: BERTH_CLEAR,
             offender: format!("{kind:?} {what}"),
             detail: format!(
-                "reaches {spill:.4} m out of the {near:.3}..{far:.3} m band a berth \
-                 measures a rig over, so the air that berth spends is wrong"
+                "reaches {spill:.4} m out of the {near:.3}..{far:.3} m band every rig \
+                 is composed within, so it hangs out of the box the carry tell wraps \
+                 it in{}",
+                if matches!(kind.mount(), Mount::Wall) {
+                    " — and this kind hangs on a wall, where that band is also the \
+                     air its berth spends, so every berth it may take is measured \
+                     too shallow"
+                } else {
+                    ""
+                }
             ),
         }));
     }
@@ -1939,8 +1957,14 @@ pub fn approach(placed: &Placed) -> Vec<(Vec3, Vec3)> {
 ///
 /// It is not an allowlist. The sweep is asserted EQUAL to it
 /// ([`tests::the_gauntlet_finds_exactly_the_docket`]), so a new defect
-/// fails the build and a fixed one fails it too. Emptying it is the next
-/// agent's whole job.
+/// fails the build and a fixed one fails it too.
+///
+/// **It is empty today, and an empty work order is not a finished
+/// harness.** Three layers of the world have been described and swept,
+/// and every one of them was invisible until somebody wrote the
+/// description down. What that says is that the next defect is in the
+/// layer nobody has thought to describe yet, and the file itself says so
+/// at more length.
 const DOCKET_TEXT: &str = include_str!("gauntlet.docket");
 
 /// The docket, parsed.
@@ -2202,10 +2226,12 @@ mod tests {
     /// after the last of its lines comes off the list.
     ///
     /// **A station hangs it**, so it is the rooms this asks about.
-    /// [`BERTH_CLEAR`] is spent on the cargo too — a rig deeper than the
-    /// band a berth is measured over is a berth whose air is wrong — and
-    /// that half is a work order with two lines still on it, not a law
-    /// anybody has closed.
+    /// [`BERTH_CLEAR`] is spent on the cargo too — a part outside the
+    /// band every rig is composed within hangs out of the box the carry
+    /// tell wraps it in, and on a wall kind it is a berth measured too
+    /// shallow as well — and that half is a work order, whose last two
+    /// lines came off when a floor lamp was stood on one axle and a
+    /// crate's core was sunk to its own radius.
     #[test]
     fn nothing_a_station_hangs_stands_in_a_berth() {
         let found = sweep();

@@ -14,23 +14,45 @@
 #
 # Blank lines and `#` comments are ignored.
 #
-# **The rooms are clear, the doorways are clear, and these two are what
-# is left of the cargo.**
+# **It is empty, and an empty work order is not a finished harness.**
 #
-# The rooms' own lines were three families and one cause, and they came
-# off when a calling room got a deck of its own to lend (`Tile::Staging`,
-# docs/ROOMS.md); that history is in the git log and the sentences it
-# closed are kept said as tests in `gauntlet.rs`.
+# Three layers of the world have been described and swept, and each of
+# them was invisible until somebody wrote the description. What that
+# history says is that the next defect is in the layer nobody has thought
+# to describe yet, not in the ones below — so the useful thing to do with
+# an empty file is to read docs/GAUNTLET.md's account of what the sweep
+# can and cannot see, and go and look at something it cannot.
 #
-# The doorways were the third layer, and they went the way the cargo did.
-# Every piece of hardware in a seam was built straight into the world, so
-# the sweep walked through a dozen doorways a room without being able to
-# name one thing in any of them — which is how a latch came to be drawn
-# twice at one transform and to photograph two ways. A doorway describes
-# itself now (`room::seam_parts`) and is swept from both of its sides,
-# because a seam is drawn once by the room with the lower id and stands
-# on the boundary both of them own. Fifty-three fights came out of that
-# first pass and all fifty-three were cured, in the same three idioms the
+# The rooms were the first layer. Their lines were three families and one
+# cause, and they came off when a calling room got a deck of its own to
+# lend (`Tile::Staging`, docs/ROOMS.md).
+#
+# The cargo was the second. Thirty-two kinds had never been swept at all,
+# because a rig was built straight into a live world and there was
+# nothing to measure; there is a description now (`pieces::parts`), and
+# the sweep found sixty-one things in it — fifty-nine cured on the spot
+# and two that took a kind re-drawn. Those two were the floor lamp's base
+# disc and the very mysterious crate's core, each hanging out of
+# `pieces::RIG_NEAR..RIG_FAR`, and the parts moved rather than the band:
+# the lamp's plate, pole, shade and bulb stand on one axle now instead of
+# three, and the crate's core is sunk to its own radius so its crown is
+# the band's own face. Widening the band would have cost every wall berth
+# in the game 15% more air to cure two floor-mounted kinds, which is a
+# systemic price for a local defect — and the measurement that settled it
+# is that neither kind can be berthed on a wall at all, so neither was
+# ever the berth-measured-too-shallow defect the line was written up as.
+# Both were a body hanging out of the box the carry tell wraps it in,
+# which is defect enough and is what the finding says now.
+#
+# The doorways were the third. Every piece of hardware in a seam was
+# built straight into the world, so the sweep walked through a dozen
+# doorways a room without being able to name one thing in any of them —
+# which is how a latch came to be drawn twice at one transform and to
+# photograph two ways. A doorway describes itself now
+# (`room::seam_parts`) and is swept from both of its sides, because a
+# seam is drawn once by the room with the lower id and stands on the
+# boundary both of them own. Fifty-three fights came out of that first
+# pass and all fifty-three were cured, in the same three idioms the
 # cargo's were: a body written down twice (the latch, the jamb lamp, and
 # a corner cell's tread laid once per doorway instead of once per cell);
 # two members of one fitting cut to one length so they cross (the lintel
@@ -40,37 +62,5 @@
 # cured by straddling it — half a jamb over the line, which is what a
 # lining is for).
 #
-# The cargo was the second layer. Thirty-two kinds had never been swept
-# at all, because a rig was built straight into a live world and there was
-# nothing to measure; there is a description now (`pieces::parts`), and
-# the sweep found sixty-one things in it. Fifty-nine were fixed where they
-# stood and were all three idioms:
-#
-#   - two members of one fitting cut to one depth, so they share a plane
-#     wherever they cross — the window family's four lips and its
-#     mullion, the painting's frame, the suspicious crate's hum edges,
-#     the mysterious crate's twine, the cabinet's rack and carcass, the
-#     chart tank's chassis, and both legs of the gas canister's chevrons;
-#   - a part run out flush with its parent's own edge — the cabinet's
-#     sides and caps against its back sheet, the chart tank's posts and
-#     caps against its plinth, the couch's seat against its backrest;
-#   - a part begun on the plane its neighbour begins on — the Guild
-#     chit's stripe and the gilded idol's belt, both on their own backs.
-#
-# The chit is the one the owner found by eye. Its top and bottom edges
-# were cured in an earlier pass and its BACK was not, which is the whole
-# argument for a harness: an eye finds the fight it is looking at.
-#
-# The two below are the ones a fix would have to re-draw a kind for, and
-# they are the same question asked twice: `pieces::RIG_NEAR..RIG_FAR` is
-# the depth every rig is composed within and the depth a berth's air is
-# measured over, and these two parts are outside it. The floor lamp's
-# base disc is a hand's breadth wider than the pole it carries and lies
-# behind the berth plane; the very mysterious crate's core hangs proud of
-# a crate that already fills the band. Either the parts move or the band
-# is two numbers too tight — and while it stands, every berth those two
-# kinds take is measured shallower than the thing standing in it.
-
-# ---- rigs ----
-rigs | berth-clear | FloorLamp base plate
-rigs | berth-clear | VeryMysteriousCrate core
+# The sentences all three closed are kept said as tests in `gauntlet.rs`,
+# because a docket shrinks and a law does not.

@@ -3729,11 +3729,18 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                     phase: phase_of(piece.id, SALT_PULSE),
                 }),
             );
+            // The core sits as deep as it is round: a crate 28 units
+            // thick already fills all but two of the band the kind
+            // builders compose in, and a ball six units across cannot
+            // stand proud of that face and stay inside it. Sunk to its
+            // own radius, its crown is the band's own front — a boss
+            // bulging through the halo, rather than an orb hanging past
+            // the box the carry tell wraps.
             out.push(Part::new(
                 "core",
                 Body::Ball { r: fw * 0.09 },
                 hum,
-                Transform::from_xyz(0.0, 0.0, 28.6),
+                Transform::from_xyz(0.0, 0.0, fw.mul_add(-0.09, RIG_FAR)),
             ));
         }
         // A shard chipped off the comet, one glint down its flank.
@@ -3957,7 +3964,19 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
         }
         // A standing lamp bolted to the deck lip: base disc, pole, the
         // shade up top with its bulb tucked under.
+        // **A floor lamp is one column, and it stands on one axle.** Its
+        // plate, its pole, its shade and its bulb stood on three, a
+        // relief's depth apart, because a rig's +Z began life as relief
+        // height and the biggest feature was composed nearest the eye.
+        // On a deck +Z is room depth, so that leant the lamp backwards —
+        // and the base disc, the widest thing on the column and the
+        // lowest, was the one composed furthest back: it reached a hand's
+        // breadth behind the plane [`RIG_NEAR`] begins at, out of the box
+        // the carry tell wraps a body in. The axle is where the shade and
+        // the bulb already stood, so the disc that carries the pole is
+        // under the pole, and the pole is under the shade.
         Kind::FloorLamp => {
+            let axle = 11.0;
             out.push(
                 Part::new(
                     "base plate",
@@ -3967,7 +3986,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                         facets: None,
                     },
                     plate,
-                    Transform::from_xyz(0.0, -fh * 0.41, 2.4),
+                    Transform::from_xyz(0.0, -fh * 0.41, axle),
                 )
                 .pointing(AXLE, Vec3::Y),
             );
@@ -3979,7 +3998,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                     facets: None,
                 },
                 brass,
-                Transform::from_xyz(0.0, -fh * 0.04, 6.0),
+                Transform::from_xyz(0.0, -fh * 0.04, axle),
             ));
             out.push(
                 Part::new(
@@ -3989,11 +4008,11 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                         h: 13.0,
                     },
                     body,
-                    Transform::from_xyz(0.0, fh * 0.33, 11.0),
+                    Transform::from_xyz(0.0, fh * 0.33, axle),
                 )
                 .pointing(MOUTH, Vec3::NEG_Y),
             );
-            out.push(bulb_part(piece.kind, Vec3::new(0.0, fh * 0.21, 11.0), 3.4));
+            out.push(bulb_part(piece.kind, Vec3::new(0.0, fh * 0.21, axle), 3.4));
         }
         // Somebody's living room, in transit: seat slab, back rest, arm
         // cubes, cushion bumps, stubby feet — upholstery hue, dim shading.

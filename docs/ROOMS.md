@@ -713,7 +713,14 @@ below is what they differentiate *from*.
 3. **Click stock to indicate interest.** The handle rule already
    reserved the body-click for function: on a piece of the room's
    `Stock`, that function is *I want that one*. Marks are a hint to the
-   offer, never a demand, and they clear on resolution.
+   offer, never a demand, and they clear on resolution. **A marked good
+   wears four amber ticks set inside its footprint** — the claim
+   frame's own bars, drawn short and drawn in. The playtest pressed a
+   good and read a dead click, because a hint the room is free to
+   ignore had changed nothing anybody could see; and the form is
+   ticks-inside rather than the frame itself because a mark is the
+   weaker claim and because a good may be marked and offered at once,
+   which is exactly the press a shared form would have swallowed.
 4. **The room answers with an offer.** Core slice: the existing
    deterministic economy does the arithmetic — the station's `VALUE`
    row, jittered ±1 for this visit, its wants row, the gnaw malus and

@@ -39,11 +39,11 @@ use std::collections::BTreeMap;
 
 use bevy::prelude::*;
 
-use space_trucking::sim::Cue;
 use space_trucking::sim::layout;
 use space_trucking::sim::room::{
     APERTURE, CABIN, COURSES, PORTS, Port, PortId, Pose, Room, RoomId, RoomKind, Rooms, Tile,
 };
+use space_trucking::sim::{Cue, Sim};
 
 use crate::rig::{BAY_CELL, BAY_WALL_Z, EYE_HEIGHT, REACH, Skin, TileFade, WALK_MAX, WALK_MIN};
 use crate::surface::{SimSurface, Station};
@@ -2677,16 +2677,24 @@ fn seam_fx(
 
 // ---- The composed offer, lit ----
 
-/// How many claim bars stand ready: four per piece, for sixteen pieces —
-/// a composed pile of eight and a station's deck under it.
+/// How many claim bars stand ready: four per footprint, for
+/// twenty-four — eight of each sentence the pool says, which is a
+/// composed pile, a station's deck under it, and every good on the shelf
+/// spoken for at once.
 ///
 /// The pool is sized to be **read**, not to be exhaustive, and that is a
 /// deliberate limit rather than an unchecked one. A frame is a work order
 /// the player clears one piece at a time, and the set is re-derived every
-/// frame, so a seventeenth crate simply gets its frame when the sixteenth
-/// is carried aboard. What the pool must never do is show *nothing* while
-/// something is detained, and it cannot: it fills from the front.
-const CLAIM_BARS: usize = 64;
+/// frame, so a twenty-fifth crate simply gets its frame when the
+/// twenty-fourth is carried aboard. What the pool must never do is show
+/// *nothing* while something is detained, and it cannot: it fills from
+/// the front.
+///
+/// It grew when marks joined it. A frame that never appears is a click
+/// that did nothing, which is the whole complaint the ticks answer, so
+/// the room's own goods needed room of their own rather than whatever
+/// the other two sentences left over.
+const CLAIM_BARS: usize = 96;
 
 /// The claim frame's rung on the decal ladder — over everything else on
 /// the cell, because it is a standing reading rather than a flash.
@@ -2709,6 +2717,56 @@ const CLAIM_LIFT: f32 = crate::rig::layer::CLAIM;
 /// before; this is the ship's own business drawn over a station's scenery
 /// because the scenery is scenery.
 const CLAIM_BIAS: f32 = 1_000.0;
+
+/// How far in from the footprint's rim a mark's ticks are set, and how
+/// much of an edge each one runs. Inset because the same piece may wear
+/// a frame as well ([`claim_frames`]), and two amber bars on one line at
+/// one lift is a shimmer; short because a stub reads as a *mark on* the
+/// footprint where a full edge reads as a *frame round* it, which is the
+/// difference between the room noting your interest and the room making
+/// an offer.
+const TICK_INSET: f32 = 0.62;
+const TICK_RUN: f32 = 0.4;
+
+/// One lit footprint and which of the three sentences it is saying.
+struct Frame {
+    at: Vec3,
+    rot: Quat,
+    w: f32,
+    h: f32,
+    /// Four ticks inside the footprint rather than four edges round it.
+    ticks: bool,
+}
+
+/// **Which pieces the claim pool lights, and in which of its two forms**
+/// — `true` for the ticked form a mark wears.
+///
+/// The pure half of [`claim_frames`], so what the room says can be asked
+/// about without a world to say it in. Every entry is the sim's own
+/// answer to a question the sim already asks itself; nothing here
+/// re-derives a rule, and a piece may appear twice because it may be
+/// answering two of them.
+fn lit_footprints(sim: &Sim) -> Vec<(u32, bool)> {
+    // Detained first: it is the reading with no second channel. A
+    // composed pile has the handshake's own lamp saying there is
+    // something to commit; a crate holding the launch has nothing but
+    // this frame and a strobe that fires only when the lever is pulled.
+    let mut lit: Vec<(u32, bool)> = sim
+        .detained_cargo()
+        .into_iter()
+        .map(|id| (id, false))
+        .collect();
+    for id in sim.composed() {
+        if !lit.contains(&(id, false)) {
+            lit.push((id, false));
+        }
+    }
+    // Then the marks, each in a frame of its own rather than sharing
+    // one, because a good may be both offered and asked for and the
+    // player asked for it second.
+    lit.extend(sim.marks().iter().map(|&id| (id, true)));
+    lit
+}
 
 /// Pre-spawn the claim bars, dark. The composed offer is derived by the
 /// sim every frame and never stored, so the presentation keeps a pool and
@@ -2743,7 +2801,20 @@ fn spawn_claim_pool(
 ///   *this is what's on offer for yours*;
 /// - `Sim::detained_cargo` names every piece of the player's standing in
 ///   a room that will not ride out, framed where the player set it down —
-///   *this is what the launch is waiting on*.
+///   *this is what the launch is waiting on*;
+/// - `Sim::marks` names the room's goods the player has pointed at —
+///   *I want that one* — and those wear the third form: **four ticks
+///   set inside the footprint** rather than four edges round it.
+///
+/// The third sentence is a weaker claim than the other two and its form
+/// says so. A mark is a hint the room may ignore; a frame is the room's
+/// own arithmetic, or the law's. They also **stack**: press a good the
+/// room was already offering and the ticks appear inside the frame that
+/// was already there, which is the reading a shared form could not
+/// give — a press that changed a set nobody could see was the whole
+/// defect, and marking something already framed was the half of it a
+/// shared form would have left in place. The ticks are inset so the two
+/// never share a plane.
 ///
 /// The second is **the whole reading of the staging law**, and it is why
 /// a station's deck needs no paint of its own: an empty staging cell is
@@ -2752,27 +2823,16 @@ fn spawn_claim_pool(
 /// red ([`seam_fx`]) — the same refusal the door's own latch gives, at
 /// the other end of the same law. Not a word anywhere.
 ///
-/// Nothing moves either way: the frames are aimed at pieces where they
-/// already stand.
+/// Nothing moves any of the three ways: the frames are aimed at pieces
+/// where they already stand.
 fn claim_frames(
     shell: Res<Shell>,
     plan: Res<Plan>,
     mut bars: Query<(&ClaimBar, &mut Transform, &mut Visibility)>,
 ) {
     let sim = &shell.bridge.sim;
-    // Detained first: it is the reading with no second channel. A
-    // composed pile has the handshake's own lamp saying there is
-    // something to commit; a crate holding the launch has nothing but
-    // this frame and a strobe that fires only when the lever is pulled.
-    let mut claimed = sim.detained_cargo();
-    for id in sim.composed() {
-        if !claimed.contains(&id) {
-            claimed.push(id);
-        }
-    }
-    // Each piece's footprint, on the chart it stands on.
-    let mut frames: Vec<(Vec3, Quat, f32, f32)> = Vec::new();
-    for id in claimed {
+    let mut frames: Vec<Frame> = Vec::new();
+    for (id, ticks) in lit_footprints(sim) {
         let Some(piece) = sim.pieces().iter().find(|piece| piece.id == id) else {
             continue;
         };
@@ -2784,27 +2844,53 @@ fn claim_frames(
         let Some((_, station, surface)) = plan.chart_at(centre) else {
             continue;
         };
-        let at = surface.to_world(centre) + station.inward(&surface) * CLAIM_LIFT;
-        frames.push((
-            at,
-            station.face(&surface),
-            rect.w * surface.scale_u(),
-            rect.h * surface.scale_v(),
-        ));
+        frames.push(Frame {
+            at: surface.to_world(centre) + station.inward(&surface) * CLAIM_LIFT,
+            rot: station.face(&surface),
+            w: rect.w * surface.scale_u(),
+            h: rect.h * surface.scale_v(),
+            ticks,
+        });
     }
     for (bar, mut transform, mut visibility) in &mut bars {
         let slot = usize::from(bar.0);
-        let Some(&(at, rot, w, h)) = frames.get(slot / 4) else {
+        let Some(&Frame {
+            at,
+            rot,
+            w,
+            h,
+            ticks,
+        }) = frames.get(slot / 4)
+        else {
             visibility.set_if_neq(Visibility::Hidden);
             continue;
         };
         visibility.set_if_neq(Visibility::Visible);
         let girth = 0.012_f32;
+        // A frame runs the whole edge at the footprint's own rim; a
+        // mark is a stub of the same bar, drawn in from it.
+        let (edge, run) = if ticks {
+            (TICK_INSET, TICK_RUN)
+        } else {
+            (1.0, 1.0)
+        };
         let (offset, scale) = match slot % 4 {
-            0 => (Vec3::new(0.0, h * 0.5, 0.0), Vec3::new(w, girth, girth)),
-            1 => (Vec3::new(0.0, -h * 0.5, 0.0), Vec3::new(w, girth, girth)),
-            2 => (Vec3::new(w * 0.5, 0.0, 0.0), Vec3::new(girth, h, girth)),
-            _ => (Vec3::new(-w * 0.5, 0.0, 0.0), Vec3::new(girth, h, girth)),
+            0 => (
+                Vec3::new(0.0, h * 0.5 * edge, 0.0),
+                Vec3::new(w * run, girth, girth),
+            ),
+            1 => (
+                Vec3::new(0.0, -h * 0.5 * edge, 0.0),
+                Vec3::new(w * run, girth, girth),
+            ),
+            2 => (
+                Vec3::new(w * 0.5 * edge, 0.0, 0.0),
+                Vec3::new(girth, h * run, girth),
+            ),
+            _ => (
+                Vec3::new(-w * 0.5 * edge, 0.0, 0.0),
+                Vec3::new(girth, h * run, girth),
+            ),
         };
         *transform = Transform::from_translation(at + rot * offset)
             .with_rotation(rot)
@@ -3250,6 +3336,82 @@ mod tests {
             );
         }
         assert!(lifted >= 3, "only {lifted} pieces were actually carried");
+    }
+
+    /// **Pressing a station's goods says so.**
+    ///
+    /// A press on `Stock` marks rather than lifts, which is right and
+    /// load-bearing — `a_stations_goods_are_never_the_players_to_carry`
+    /// pins it in the sim — and the playtest reported the consequence:
+    /// the press was silent, so it read as a dead click. Nothing on
+    /// screen changed unless the mark happened to move the room's
+    /// arithmetic, and a mark is *allowed* not to.
+    ///
+    /// So the assertion is the player's and not the sim's: press a
+    /// good, and the set of footprints the room lights gains that good,
+    /// in the form a mark wears. Press it again and the set loses it.
+    /// `sim.marks()` is deliberately not what is asked — a test that
+    /// read the ledger back would have passed on the day of the defect.
+    /// Every good of every calling room, over a sweep of seeds, because
+    /// the interesting cases are the ones the room's arithmetic ignores.
+    #[test]
+    fn a_press_on_a_stations_goods_lights_what_it_marked() {
+        use space_trucking::sim::{InputFrame, Sim};
+
+        let mut swept = 0;
+        for seed in 0..24_u64 {
+            let mut sim = Sim::new(seed);
+            let goods: Vec<u32> = sim
+                .pieces()
+                .iter()
+                .filter(|piece| {
+                    matches!(piece.loc, Loc::Hold { room, .. } if !sim.rooms().riding(room))
+                })
+                .map(|piece| piece.id)
+                .collect();
+            for id in goods {
+                let piece = *sim
+                    .pieces()
+                    .iter()
+                    .find(|piece| piece.id == id)
+                    .expect("the room still stocks it");
+                let rect = layout::piece_rect(sim.pieces(), &piece);
+                let at = space_trucking::sim::Vec2::new(
+                    rect.w.mul_add(0.5, rect.x),
+                    rect.h.mul_add(0.5, rect.y),
+                );
+                let press = InputFrame {
+                    pointer: at,
+                    press: true,
+                    held: true,
+                    ..InputFrame::default()
+                };
+                assert!(
+                    !lit_footprints(&sim).contains(&(id, true)),
+                    "seed {seed}: {:?} was already lit before anybody pressed it",
+                    piece.kind
+                );
+                sim.advance(0.0, &press);
+                assert!(
+                    sim.held(0).is_none(),
+                    "seed {seed}: {:?} came up in the hand",
+                    piece.kind
+                );
+                assert!(
+                    lit_footprints(&sim).contains(&(id, true)),
+                    "seed {seed}: pressing {:?} lit nothing — the click is dead",
+                    piece.kind
+                );
+                sim.advance(0.0, &press);
+                assert!(
+                    !lit_footprints(&sim).contains(&(id, true)),
+                    "seed {seed}: {:?} stayed lit after the mark came off",
+                    piece.kind
+                );
+                swept += 1;
+            }
+        }
+        assert!(swept > 40, "only {swept} of a room's goods were pressed");
     }
 
     /// **The pump bay's coupling works, from a body standing in it.**

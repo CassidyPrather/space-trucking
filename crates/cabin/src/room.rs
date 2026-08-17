@@ -95,8 +95,20 @@ pub const CEIL_Y: f32 = (COURSES + 1) as f32 * BAY_CELL;
 /// the room.
 const CEIL_SLAB_Y: f32 = CEIL_Y + WALL_T * 0.5;
 
-/// Structural thickness of every hull plane.
-pub const WALL_T: f32 = 0.1;
+/// Structural thickness of every hull plane: **a quarter of the padding
+/// cell**.
+///
+/// It was 0.1 m, which is 0.18 cells — a free parameter, and the last
+/// one in the fabric. What decides it now is the cube between two rooms:
+/// each of the two spends a wall of that cube on its own hull, so a
+/// quarter apiece leaves the passage between them **half a cell** of
+/// daylight. Quarter, half, quarter, and the whole of it is the grid's.
+///
+/// The bound the derivation has to respect is that two walls fit inside
+/// one pad with room to walk between them, which is what makes
+/// `no_two_rooms_hulls_ever_share_a_cubic_centimetre` a consequence of
+/// arithmetic rather than of care.
+pub const WALL_T: f32 = PAD_M * 0.25;
 
 /// **One cube of the cargo grid, in metres**: the padding that stands
 /// between any two rooms (`sim::room::PAD`).
@@ -117,10 +129,16 @@ pub const PAD_M: f32 = space_trucking::sim::room::PAD as f32 * BAY_CELL;
 /// are side by side or one above the other.
 const STOREY: f32 = CEIL_Y + PAD_M;
 
-/// How far a wall chart stands inside its own box face, by default: proud
-/// of the hull's junk, so every chart cell stays workable in front of the
-/// ribs rather than behind them.
-const CHART_INSET: f32 = 0.03;
+/// How far a wall chart stands inside its own box face: **a quarter of
+/// the wall it is hung on**, which is a quarter of a quarter of the
+/// padding cell.
+///
+/// It has to stand proud of the hull's junk, so that every chart cell
+/// stays workable in front of the ribs rather than behind them — the
+/// cabin's ribs straddle their wall face and stand 0.03 m into the room,
+/// and this is 0.034. It was 0.03 flat, which cleared them by nothing at
+/// all and was a second free parameter besides.
+const CHART_INSET: f32 = WALL_T * 0.25;
 
 /// Half-width of a walking body, for the derived envelopes. The cabin's
 /// own envelope is authored (`rig::WALK_*`) because its hull is; every
@@ -3829,6 +3847,50 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// **Every length the fabric is built from is a fraction of the
+    /// cargo grid**, and the fractions are the ones the padding cube can
+    /// actually pay for.
+    ///
+    /// A wall and a chart's trim were the last two free parameters in
+    /// this module — 0.1 m and 0.03 m, which are 0.18 and 0.055 cells and
+    /// were chosen by eye. What decides them now is the cube between two
+    /// rooms: the two hulls each spend a quarter of it, so the passage
+    /// between them keeps half a cell of daylight, and the trim is a
+    /// quarter of the wall again.
+    ///
+    /// The clauses below are the two things the derivation has to buy,
+    /// stated as the world rather than as the arithmetic: two hulls fit
+    /// inside one pad with a walkable gap left over, and a chart stands
+    /// clear of the junk bolted to the wall behind it.
+    #[test]
+    fn the_fabric_is_built_out_of_fractions_of_a_cargo_cell() {
+        for (name, length) in [("a wall", WALL_T), ("a chart's trim", CHART_INSET)] {
+            let sixteenths = length / (BAY_CELL / 16.0);
+            assert!(
+                (sixteenths - sixteenths.round()).abs() < 1e-4,
+                "{name} is {sixteenths} sixteenths of a cell"
+            );
+        }
+        let daylight = WALL_T.mul_add(-2.0, PAD_M);
+        assert!(
+            daylight >= BAY_CELL * 0.5,
+            "two hulls leave {daylight} m of passage between them"
+        );
+        // The junk on a cabin wall straddles its own face, so it stands
+        // half its girth into the room; a chart hung behind that is a
+        // chart you cannot work.
+        let face = f32::from(RoomKind::Cabin.floor().0) * BAY_CELL * 0.5;
+        let proud = crate::rig::structure()
+            .iter()
+            .filter(|slab| slab.center.x > 0.0 && slab.size.x < BAY_CELL)
+            .map(|slab| face - slab.size.x.mul_add(-0.5, slab.center.x))
+            .fold(0.0_f32, f32::max);
+        assert!(
+            CHART_INSET > proud,
+            "the ribs stand {proud} m proud and the chart insets {CHART_INSET} m"
+        );
     }
 
     /// **No two rooms' hulls ever share a cubic centimetre.**

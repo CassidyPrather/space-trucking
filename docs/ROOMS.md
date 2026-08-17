@@ -249,6 +249,16 @@ topological one.
   coplanar findings the seam sweep turned up existed precisely because
   two rooms drew on one.
 
+- **The fabric's own lengths come off the pad.** A hull plane is a
+  quarter of the padding cube (`room::WALL_T`, 0.1375 m) and a wall
+  chart's trim is a quarter of that again (`CHART_INSET`, 0.034375 m) —
+  a sixteenth of a cell. They were 0.1 and 0.03, which are 0.18 and
+  0.055 cells and were chosen by eye. Quarter, half, quarter: two hulls
+  spend half the cube between them and the passage keeps the other half
+  as daylight. The trim's own job is to stand clear of the junk bolted
+  to the wall behind it, and the cabin's ribs stand 0.03 m proud, which
+  the old 0.03 cleared by exactly nothing.
+
 - **The vertical pad is the storey.** A storey is the room's four
   courses plus one of padding — five cells — so the cube between two
   rooms is the same cube whether they are side by side or one above the

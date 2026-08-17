@@ -263,13 +263,18 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
     const BAY_WALL_H: f32 = 3.0 * BAY_CELL;
     const BAY_FLOOR_D: f32 = 7.0 * BAY_CELL;
     const BAY_FLOOR_ZC: f32 = BAY_WALL_Z - BAY_FLOOR_D * 0.5;
-    const BAY_SIDE_X: f32 = 2.17;
-    const BAY_FRONT_Z: f32 = -1.41;
-    // The aft chart stands the ordinary three centimetres inside its own
-    // box face now, like the other three. Its authored trim was zero,
-    // which put the decal ladder's backer inside the wall the moment the
-    // hull stopped being hand-measured.
-    const BAY_AFT_Z: f32 = BAY_WALL_Z - 0.03;
+    // Every wall chart stands one sixteenth of a cell inside its own box
+    // face — the ordinary trim, which is a quarter of a wall, which is a
+    // quarter of the padding cube. The cabin used to declare its own on
+    // all four walls: zero aft (which put the decal ladder's backer
+    // inside the wall the moment the hull stopped being hand-measured)
+    // and 0.03 elsewhere (which cleared the ribs by nothing at all,
+    // because a rib straddles its wall face and stands exactly 0.03 into
+    // the room).
+    const BAY_TRIM: f32 = 0.034_375;
+    const BAY_SIDE_X: f32 = 4.0 * BAY_CELL - BAY_TRIM;
+    const BAY_FRONT_Z: f32 = 7.0f32.mul_add(-BAY_CELL, BAY_WALL_Z) + BAY_TRIM;
+    const BAY_AFT_Z: f32 = BAY_WALL_Z - BAY_TRIM;
     // Four courses of the cargo grid, which is where the deckhead went
     // when the lattice took over the one axis it had never governed.
     const BAY_CEIL_Y: f32 = 4.0 * BAY_CELL;

@@ -210,7 +210,12 @@ const CUT_FACE: [Fitting; 19] = [
     // whole cut is worked in the middle of the flank and not out to its
     // ends, because a market's goods stand along its aft wall and a
     // proposal is laid against its front one.
-    block(0.86, -0.62, -0.244, 0.26, 0.197),
+    // The lowest block is cut a little shallower than the eye would
+    // draw it. It stands a metre off the front wall, which is the far
+    // edge of the air a wall berth is READ through — a rig's depth plus
+    // a body's stand-off — and a block at the far edge of that band is
+    // at the far edge of it either way, so it is the block that gives.
+    block(0.86, -0.62, -0.244, 0.26, 0.170),
     block(0.88, -0.63, 0.093, 0.19, 0.174),
     block(0.90, -0.06, -0.174, 0.18, 0.139),
     block(0.90, 0.02, 0.174, 0.14, 0.116),

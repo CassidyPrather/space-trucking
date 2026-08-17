@@ -4088,58 +4088,68 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 brass,
                 Transform::from_xyz(0.0, fh * 0.30, 10.0),
             ));
-            out.push(
-                Part::new(
-                    "shade",
-                    Body::Horn {
-                        r: fw * 0.28,
-                        h: 12.0,
-                    },
-                    body,
-                    Transform::from_xyz(0.0, fh * 0.04, 10.0),
-                )
-                .pointing(MOUTH, Vec3::NEG_Y),
-            );
-            out.push(bulb_part(piece.kind, Vec3::new(0.0, -fh * 0.14, 10.0), 3.4));
+            let shade = Part::new(
+                "shade",
+                Body::Horn {
+                    r: fw * 0.28,
+                    h: 12.0,
+                },
+                body,
+                Transform::from_xyz(0.0, fh * 0.04, 10.0),
+            )
+            .pointing(MOUTH, Vec3::NEG_Y);
+            let bulb = bulb_part(piece.kind, &shade, 3.4);
+            out.push(shade);
+            out.push(bulb);
         }
         // A sconce off a repossessed liner: bracket arm and mount pad
         // reaching for the nearer stile (the `WallArm` sub-root flips
         // sides with the piece's wall column), cup, bulb.
+        //
+        // **A sconce is bolted to a wall, so its pad begins at one.**
+        // The whole fitting used to be composed at z = 10 — the middle
+        // of the band a rig is composed in — which on a wall berth is a
+        // hand's breadth of daylight between the pad and the plane it
+        // is screwed to. Every other kind that hangs on a wall puts its
+        // backmost body at z = 0 and this one did not, so the arm read
+        // as a plank floating in the air. The pad owns the wall now and
+        // the bracket runs inside its depth at both ends, which is the
+        // same joint the cabinet's carcass makes: parts of one fitting
+        // interpenetrate rather than share a face.
         Kind::WallLamp => {
+            let pad = 6.0;
             out.push(
                 Part::new(
                     "bracket",
                     Body::Box(Vec3::new(fw * 0.34, 3.0, 3.0)),
                     plate,
-                    Transform::from_xyz(fw * 0.24, 0.0, 10.0),
+                    Transform::from_xyz(fw * 0.24, 0.0, pad - 2.0),
                 )
                 .under(Under::Arm),
             );
             out.push(
                 Part::new(
                     "mount pad",
-                    Body::Box(Vec3::new(3.4, 10.0, 6.0)),
+                    Body::Box(Vec3::new(3.4, 10.0, pad)),
                     plate,
-                    Transform::from_xyz(fw * 0.42, 0.0, 10.0),
+                    Transform::from_xyz(fw * 0.42, 0.0, pad * 0.5),
                 )
                 .under(Under::Arm),
             );
-            out.push(
-                Part::new(
-                    "sconce cup",
-                    Body::Horn {
-                        r: fw * 0.20,
-                        h: 11.0,
-                    },
-                    body,
-                    Transform::from_xyz(fw * 0.10, 0.0, 10.0),
-                )
-                .under(Under::Arm)
-                .pointing(MOUTH, Vec3::Z),
-            );
-            out.push(
-                bulb_part(piece.kind, Vec3::new(-fw * 0.12, 0.0, 10.0), 3.2).under(Under::Arm),
-            );
+            let cup = Part::new(
+                "sconce cup",
+                Body::Horn {
+                    r: fw * 0.20,
+                    h: 11.0,
+                },
+                body,
+                Transform::from_xyz(fw * 0.10, 0.0, 10.0),
+            )
+            .under(Under::Arm)
+            .pointing(MOUTH, Vec3::Z);
+            let bulb = bulb_part(piece.kind, &cup, 3.2).under(Under::Arm);
+            out.push(cup);
+            out.push(bulb);
         }
         // A standing lamp bolted to the deck lip: base disc, pole, the
         // shade up top with its bulb tucked under.
@@ -4179,19 +4189,19 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 brass,
                 Transform::from_xyz(0.0, -fh * 0.04, axle),
             ));
-            out.push(
-                Part::new(
-                    "shade",
-                    Body::Horn {
-                        r: fw * 0.30,
-                        h: 13.0,
-                    },
-                    body,
-                    Transform::from_xyz(0.0, fh * 0.33, axle),
-                )
-                .pointing(MOUTH, Vec3::NEG_Y),
-            );
-            out.push(bulb_part(piece.kind, Vec3::new(0.0, fh * 0.21, axle), 3.4));
+            let shade = Part::new(
+                "shade",
+                Body::Horn {
+                    r: fw * 0.30,
+                    h: 13.0,
+                },
+                body,
+                Transform::from_xyz(0.0, fh * 0.33, axle),
+            )
+            .pointing(MOUTH, Vec3::NEG_Y);
+            let bulb = bulb_part(piece.kind, &shade, 3.4);
+            out.push(shade);
+            out.push(bulb);
         }
         // Somebody's living room, in transit: seat slab, back rest, arm
         // cubes, cushion bumps, stubby feet — upholstery hue, dim shading.
@@ -4812,18 +4822,34 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
 /// light under it. The light rests dark ([`Dimmable`] base 0) and
 /// `sync_fixtures` eases both toward `lamp_lit` — no shadow maps, per
 /// the art direction; the pool of light is the point.
-fn bulb_part(kind: Kind, at: Vec3, radius: f32) -> Part {
+///
+/// **Seated in the mouth of the shade that shades it, and nowhere
+/// else.** Where the bulb stands used to be a literal written beside the
+/// shade, which meant the two agreed only for as long as nobody turned
+/// the shade — and the sconce is what happens when somebody does. Its
+/// cup was hand-turned to open along `-X`, its bulb was placed by hand
+/// in front of that opening, and when [`Part::pointing`] began deriving
+/// the turn from the claim the cup swung into the room and left the bulb
+/// where the old turn had put it: a bare glowing ball hanging off the
+/// end of a bracket, lighting nothing, with the cup it belonged in
+/// pointing the other way. A shade is a cone, its mouth is the disc at
+/// the low end of its own axis, and reading that mouth off the shade's
+/// own transform is what makes the two move together for good.
+fn bulb_part(kind: Kind, shade: &Part, radius: f32) -> Part {
     let color = palette::mix(palette::kind_color(kind), palette::GLINT, 0.35);
     let range = if kind == Kind::CeilingLamp {
         CEILING_RANGE
     } else {
         LAMP_RANGE
     };
+    let Some(Body::Horn { h, .. }) = shade.body else {
+        panic!("a lamp's bulb is seated in a shade, and a shade is a cone")
+    };
     Part::new(
         "bulb",
         Body::Ball { r: radius },
         Coat::phosphor(color, 0.0),
-        Transform::from_translation(at),
+        Transform::from_translation(shade.at.transform_point(Vec3::new(0.0, -h * 0.5, 0.0))),
     )
     .role(Role::Bulb { range })
 }
@@ -6523,5 +6549,70 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// **A lamp's bulb burns inside the shade that shades it.** Three
+    /// kinds hang a light and every one of them is a cone with a glass
+    /// in its mouth, which is a promise about two parts of one rig and
+    /// not about either part alone: a bulb outside its shade lights the
+    /// room from a bare ball hanging in the air, and the shade it left
+    /// behind reads as an empty dark cup.
+    ///
+    /// Nothing in the harness could ask this. The seven families all
+    /// measure a part against the WORLD — the band it is composed in,
+    /// the plane it fights, the cells it draws inside, the direction its
+    /// own name claims — and a stranded bulb satisfies all of them. It
+    /// is inside `RIG_NEAR..RIG_FAR`, it shares no plane with anything,
+    /// it draws well within its cells, and it makes no claim of its own
+    /// to break. The sconce carried one for a month with a green build.
+    ///
+    /// Stated as a band rather than a point on purpose. The builder
+    /// seats the bulb AT the mouth; what a viewer needs is only that it
+    /// is in the opening — within the mouth's own circle, and no further
+    /// out of it than its own glass — so a lamp may be retuned without
+    /// this becoming a copy of the arithmetic that placed it.
+    #[test]
+    fn a_lamps_bulb_burns_inside_the_shade_that_shades_it() {
+        let mut lit = 0_u32;
+        for kind in Kind::ALL {
+            for screens in Screens::BOTH {
+                let rig = rig_of(kind, screens);
+                for bulb in rig.iter().filter(|p| matches!(p.role, Role::Bulb { .. })) {
+                    let Some(Body::Ball { r }) = bulb.body else {
+                        panic!("{kind:?}'s bulb is not a glass")
+                    };
+                    // The shade it belongs to: the cone hung in the same
+                    // sub-frame, which is the only thing on any of these
+                    // rigs that has a mouth to seat a glass in.
+                    let shade = rig
+                        .iter()
+                        .find(|p| {
+                            p.under.same(bulb.under) && matches!(p.body, Some(Body::Horn { .. }))
+                        })
+                        .unwrap_or_else(|| panic!("{kind:?} lights a bulb under no shade"));
+                    let Some(Body::Horn { r: mouth, h }) = shade.body else {
+                        unreachable!("the shade was found by being a cone")
+                    };
+                    // The bulb's centre, in the shade's own frame, where
+                    // the mouth is the disc at -h/2 about the axis.
+                    let seat =
+                        shade.at.rotation.inverse() * (bulb.at.translation - shade.at.translation);
+                    let off = seat.x.hypot(seat.z);
+                    let past = h.mul_add(0.5, seat.y).abs();
+                    assert!(
+                        off <= mouth,
+                        "{kind:?}'s bulb stands {off:.2} off the axis of the shade whose \
+                         mouth is {mouth:.2} across: it burns beside the cup, not in it"
+                    );
+                    assert!(
+                        past <= r,
+                        "{kind:?}'s bulb sits {past:.2} from its shade's mouth, further \
+                         than the {r:.2} of its own glass"
+                    );
+                    lit += 1;
+                }
+            }
+        }
+        assert!(lit >= 6, "the lamps went dark: {lit} bulbs swept");
     }
 }

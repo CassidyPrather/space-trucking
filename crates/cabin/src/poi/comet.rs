@@ -49,7 +49,7 @@
 use bevy::prelude::Vec3;
 use space_trucking::sim::Kind;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{CAGE_TOP, Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
 use crate::palette;
 
 /// The comet's own room, for the day it has one.
@@ -174,11 +174,13 @@ const WORK_LIGHT: Light = Light {
 /// The hook and the wire it hangs by. Two fittings and a bent bit of
 /// steel: the whole installation.
 const LAMP_HOOK: [Fitting; 2] = [
-    Fitting::new(
+    // A hanger runs from the shade to the deckhead, so its top end is the
+    // room's own clearance and not a decimal ([`Fitting::spanning`]).
+    Fitting::spanning(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
-        Vec3::new(0.0, 0.91, 0.0),
-        Vec3::new(0.06, 0.75, 0.06),
+        Vec3::new(-0.06, 0.16, -0.06),
+        Vec3::new(0.06, CAGE_TOP, 0.06),
     ),
     Fitting::new(
         Shape::Ring,

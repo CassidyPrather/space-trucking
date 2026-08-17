@@ -41,7 +41,7 @@
 use bevy::prelude::Vec3;
 use space_trucking::sim::Kind;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{CAGE_TOP, Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
 use crate::palette;
 
 /// Jupiter's own room.
@@ -173,11 +173,13 @@ const FLARE_LAMP: Light = Light {
 /// The flue and the mantle, measured off a box one shade across on every
 /// side of the lamp — never off the room, so a hood cannot become a beam.
 const LAMP_FLUE: [Fitting; 3] = [
-    Fitting::new(
+    // A hanger runs from the shade to the deckhead, so its top end is the
+    // room's own clearance and not a decimal ([`Fitting::spanning`]).
+    Fitting::spanning(
         Shape::Post,
         Coat::enamel(palette::SOOT),
-        Vec3::new(0.0, 0.86, 0.0),
-        Vec3::new(0.34, 0.8, 0.34),
+        Vec3::new(-0.34, 0.06, -0.34),
+        Vec3::new(0.34, CAGE_TOP, 0.34),
     ),
     Fitting::new(
         Shape::Slab,

@@ -47,7 +47,7 @@
 use bevy::prelude::Vec3;
 use space_trucking::sim::Kind;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{CAGE_TOP, Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
 use crate::palette;
 
 /// Saturn's own room.
@@ -207,11 +207,11 @@ const BULB_GUARD: [Fitting; 5] = [
     // reflector. It has to be WIDER than the stem to be a hook: it was
     // cut two millimetres narrower, which put it inside the stem, where
     // a brass band is nothing but four faces fighting a grey one.
-    Fitting::new(
+    Fitting::spanning(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.0, 1.10, 0.0),
-        Vec3::new(0.16, 0.45, 0.16),
+        Vec3::new(-0.16, 0.65, -0.16),
+        Vec3::new(0.16, CAGE_TOP, 0.16),
     ),
 ];
 

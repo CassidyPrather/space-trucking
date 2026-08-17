@@ -186,12 +186,29 @@ topological one.
   rotation, no fractional offset, **no floating point anywhere in the
   attach contract**. Determinism is not a hope here; it is integer
   arithmetic on integers.
-- **One storey, everywhere.** Every room's walls are the cabin's height
-  (3 cells). Uniform height is what makes any door mate any door and
-  makes a ladder's neighbour sit exactly one storey up — the vertical
-  mate is exact for the same reason the horizontal one is. Rooms of
-  varying height were rejected: they need ramps or stairs, they break
-  vertical exactness, and DESIGN.md wants the space cramped.
+- **One storey, everywhere, and the storey is on the grid.** Every
+  room's walls are the cabin's height (3 cells) and every room's
+  deckhead stands **4 cells** over its deck, so the band above the
+  cornices is one cell and a room is a whole number of cells in all
+  three axes. It was 2.26 m — 4.109 cells — and the lattice governed a
+  room's plan while its section was a decimal somebody chose. Uniform
+  height is what makes any door mate any door and makes a ladder's
+  neighbour sit exactly one storey up; the vertical mate is exact for
+  the same reason the horizontal one is. Rooms of varying height were
+  rejected: they need ramps or stairs, they break vertical exactness,
+  and DESIGN.md wants the space cramped.
+
+  The pendant did not move when the deckhead did. Its height is a
+  standing head plus a shade (`room::CALLER_DROP`, derived from
+  `HEAD_CLEAR`), which is a measurement of a body and not of a ceiling,
+  so what shortened is the stem above it — from 0.40 m to 0.34 m. What
+  that cost is written down rather than absorbed: four stations had a
+  hanger whose top end restated the old clearance as a decimal, and all
+  four became spikes through the ceiling. They say `CAGE_TOP` now. The
+  parlor's coving cost more — the band a room has to spare between the
+  top of its wall courses and the air a ceiling rig hangs into is
+  **22 mm**, was 82 mm, and the coving ran at 77 mm, which is to say it
+  fitted by a quarter of a millimetre. It is a bead now.
 - **Walls have no thickness on the lattice.** A room occupies its
   interior; the partition between two attached rooms is a boundary, not
   a volume. Two rooms may share a plane and may never share a cell. The

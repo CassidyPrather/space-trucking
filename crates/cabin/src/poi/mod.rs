@@ -501,6 +501,19 @@ pub struct Fitting {
     pub half: Vec3,
 }
 
+/// Where a hanger clasped round the pendant's stem stops, in shades
+/// under the lamp's own centre.
+///
+/// The stem is FIXED to the deckhead and runs right up to it; a station's
+/// hanger is not, and one run out flush with the fixing shares the stem's
+/// own top face with it at the same plane and the same facing, which is
+/// the third of the coplanar idioms (docs/GAUNTLET.md). So a hanger stops
+/// a finger's breadth short of the ceiling it hangs from, which is also
+/// what a hanger looks like. The bound it is measured against stays
+/// [`crate::room::CAGE_RISE`] — a thing you check is not a thing you
+/// compute with — and this is the reach a station may actually take.
+pub const CAGE_TOP: f32 = crate::room::CAGE_RISE - 0.06;
+
 impl Fitting {
     /// One fitting, spelled out.
     #[must_use]
@@ -510,6 +523,36 @@ impl Fitting {
             coat,
             at,
             half,
+        }
+    }
+
+    /// One fitting given by the box it fills rather than by a centre and
+    /// a girth.
+    ///
+    /// The two forms are the same fitting; which one to write is decided
+    /// by what the piece is FOR. A hanger that runs from the shade up to
+    /// the deckhead is a thing with two ends, and one of those ends is a
+    /// bound the room states ([`crate::room::CAGE_RISE`]) rather than a
+    /// number a station chose. Written as a centre and a half it restates
+    /// that bound as a decimal, and the day the deckhead moved onto the
+    /// cargo grid four such hangers in four stations became spikes
+    /// through the ceiling — each of them still carrying the old
+    /// clearance, to two places, as a literal.
+    #[must_use]
+    pub const fn spanning(shape: Shape, coat: Coat, lo: Vec3, hi: Vec3) -> Self {
+        Self {
+            shape,
+            coat,
+            at: Vec3::new(
+                (lo.x + hi.x) * 0.5,
+                (lo.y + hi.y) * 0.5,
+                (lo.z + hi.z) * 0.5,
+            ),
+            half: Vec3::new(
+                (hi.x - lo.x) * 0.5,
+                (hi.y - lo.y) * 0.5,
+                (hi.z - lo.z) * 0.5,
+            ),
         }
     }
 

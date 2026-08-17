@@ -232,30 +232,38 @@ const THE_HOUSE: [Fitting; 23] = [
     lamp(-0.485, -0.138),
     lamp(-0.343, 0.041),
     lamp(-0.393, 0.264),
-    // The coving, all the way round, over the top of the one door.
+    // The cove light, all the way round, over the top of the one door.
+    //
+    // It is a bead rather than a coving, and the reason is worth writing
+    // down: the band a room has to spare between the top of its wall
+    // courses and the air a ceiling rig hangs into is **22 mm**. It was
+    // 82 mm when the deckhead stood at 2.26, and this ran at 77 mm — it
+    // fitted with a quarter of a millimetre to spare, which is not a
+    // clearance, it is a coincidence. Four courses put the deckhead on
+    // the grid and took the coincidence away.
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(CHIP, 1.8),
-        Vec3::new(0.0, 0.50, 0.955),
-        Vec3::new(0.98, 0.035, 0.030),
+        Vec3::new(0.0, 0.510, 0.955),
+        Vec3::new(0.98, 0.009, 0.030),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(CHIP, 1.8),
-        Vec3::new(0.0, 0.50, -0.955),
-        Vec3::new(0.98, 0.035, 0.030),
+        Vec3::new(0.0, 0.510, -0.955),
+        Vec3::new(0.98, 0.009, 0.030),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(CHIP, 1.8),
-        Vec3::new(-0.955, 0.50, 0.0),
-        Vec3::new(0.030, 0.035, 0.925),
+        Vec3::new(-0.955, 0.510, 0.0),
+        Vec3::new(0.030, 0.009, 0.925),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(CHIP, 1.8),
-        Vec3::new(0.955, 0.50, 0.0),
-        Vec3::new(0.030, 0.035, 0.925),
+        Vec3::new(0.955, 0.510, 0.0),
+        Vec3::new(0.030, 0.009, 0.925),
     ),
     // Plush on both flanks, in a gold reveal: what a room is lined with
     // when nobody in it is meant to notice the time.

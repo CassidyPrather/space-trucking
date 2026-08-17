@@ -265,7 +265,9 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
     const BAY_FLOOR_ZC: f32 = BAY_WALL_Z - BAY_FLOOR_D * 0.5;
     const BAY_SIDE_X: f32 = 2.17;
     const BAY_FRONT_Z: f32 = -1.41;
-    const BAY_CEIL_Y: f32 = 2.26;
+    // Four courses of the cargo grid, which is where the deckhead went
+    // when the lattice took over the one axis it had never governed.
+    const BAY_CEIL_Y: f32 = 4.0 * BAY_CELL;
     const BAY_FLOOR_Y: f32 = 0.012;
 
     // One chart's logical rect, in net cells.

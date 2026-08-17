@@ -69,12 +69,23 @@ pub const WALL_H: f32 = COURSES as f32 * BAY_CELL;
 /// The deck's decal plane, a hair above the floor slab.
 pub const FLOOR_Y: f32 = 0.012;
 
-/// The ceiling chart's plane. The band between the wall cornices and here
-/// is headroom trim; the net's fold seam glues logically, not physically.
-pub const CEIL_Y: f32 = 2.26;
+/// The ceiling chart's plane — **four courses of the cargo grid above the
+/// deck**, so a room is a whole number of cells tall exactly as it is a
+/// whole number of cells wide.
+///
+/// It was 2.26 m, which is 4.109 cells: sixty millimetres of nothing in
+/// particular above the fourth course, and the one axis of a room that
+/// the lattice did not govern. The walls are [`WALL_H`] — three courses,
+/// on the grid already — so the band between the cornices and the
+/// deckhead is now exactly one cell rather than 0.61 m of trim. The net's
+/// fold seam glues logically, not physically.
+pub const CEIL_Y: f32 = (COURSES + 1) as f32 * BAY_CELL;
 
-/// Centre height of a room's ceiling slab.
-const CEIL_SLAB_Y: f32 = 2.32;
+/// Centre height of a room's ceiling slab. **Derived**: the slab stands
+/// wholly outside the interior, on the ceiling plane, exactly as the deck
+/// slab hangs wholly under the deck. A room's fabric never eats a cell of
+/// the room.
+const CEIL_SLAB_Y: f32 = CEIL_Y + WALL_T * 0.5;
 
 /// Structural thickness of every hull plane.
 pub const WALL_T: f32 = 0.1;
@@ -1219,10 +1230,12 @@ pub const SHADE_H: f32 = 0.11;
 /// pendant and a spike through the deckhead is not, so up is the one
 /// direction a cage is allowed out of the shade's own box.
 ///
-/// Read by the containment law and nothing else, exactly as
-/// [`crate::rig::layer::STEP`] is: a bound is a thing you check, not a
-/// thing you compute with.
-#[allow(dead_code)]
+/// Read by the containment law and by the hangers themselves — a fitting
+/// that runs from the shade to the deckhead states its top end as this
+/// rather than as the decimal the clearance happened to be the day it was
+/// drawn (`poi::Fitting::spanning`). Four stations had four such
+/// decimals, and the day the deckhead came down onto the cargo grid all
+/// four became spikes through the ceiling.
 pub const CAGE_RISE: f32 = CALLER_DROP / SHADE_R;
 
 /// The stem's girth, and the glass disc's radius as a fraction of the
@@ -1433,8 +1446,15 @@ pub fn shell_boxes(placed: &Placed, all: &[Placed]) -> Vec<(Vec3, Vec3, bool)> {
             true,
         ),
     ];
-    let y0 = lo.y - WALL_T;
-    let y1 = WALL_T.mul_add(0.8, lo.y + CEIL_SLAB_Y);
+    // **A wall stands between the deck it rises off and the deckhead it
+    // carries**, floor slab to ceiling slab, and neither of those three
+    // is a millimetre longer than the plane it ends on. The wall used to
+    // run from a wall under the deck to four fifths of one above the
+    // ceiling slab, which put its top face 0.08 m past the only height
+    // anything else in the room is measured to — the "one of them ends
+    // where the other begins" cure, spent on the fabric.
+    let y0 = lo.y;
+    let y1 = lo.y + CEIL_Y;
     for wall in 0..4_u8 {
         let out = wall_out(wall, placed.yaw);
         let along = axis_along(out);
@@ -2901,6 +2921,7 @@ fn claim_frames(
 #[cfg(test)]
 mod tests {
     use space_trucking::sim::Loc;
+    use space_trucking::sim::room::ROOM_KINDS;
 
     use super::*;
 
@@ -2915,6 +2936,73 @@ mod tests {
         assert!((hi.x - 2.2).abs() < 1e-4, "starboard wall at {}", hi.x);
         assert!((hi.z - BAY_WALL_Z).abs() < 1e-4, "aft wall at {}", hi.z);
         assert!((lo.z - -1.44).abs() < 1e-3, "front floor edge at {}", lo.z);
+    }
+
+    /// **A room stands a whole number of cells from deck to deckhead**,
+    /// exactly as it is a whole number of cells wide and deep.
+    ///
+    /// The lattice governed x and z from the day it arrived and stopped
+    /// at y: the deckhead was 2.26 m, which is 4.109 cells, and the sixty
+    /// millimetres over four courses were nothing in particular. They are
+    /// gone. This is swept over every kind's own box rather than asserted
+    /// of the constant, because the constant is not what a room is built
+    /// from — `room_box` is, and a kind that grew its own ceiling would
+    /// pass a test on `CEIL_Y` and fail this one.
+    #[test]
+    fn a_room_stands_a_whole_number_of_courses_deck_to_deckhead() {
+        for kind in ROOM_KINDS {
+            let room = Room {
+                kind,
+                pose: Pose {
+                    x: 0,
+                    y: 0,
+                    z: 0,
+                    yaw: 0,
+                },
+                mates: [None; PORTS],
+                anchor: None,
+            };
+            let (lo, hi) = room_box(&room);
+            for (axis, name) in [(0, "width"), (1, "height"), (2, "depth")] {
+                let cells = (hi[axis] - lo[axis]) / BAY_CELL;
+                assert!(
+                    (cells - cells.round()).abs() < 1e-4,
+                    "{kind:?} is {cells} cells of {name}"
+                );
+            }
+            // And the band above the wall courses is one of those cells,
+            // rather than whatever was left over.
+            let band = (hi.y - lo.y) - WALL_H;
+            assert!(
+                (band - BAY_CELL).abs() < 1e-4,
+                "{kind:?} keeps {band} m over its cornices, not one cell"
+            );
+        }
+    }
+
+    /// **A standing body still walks under what a room hangs.** The
+    /// deckhead came down sixty millimetres and the pendant did not move
+    /// — its height is [`HEAD_CLEAR`] plus a shade, which is a body's
+    /// measurement and not a ceiling's — so what shortened is the stem
+    /// above it, and this is the guard that says by how much and that it
+    /// is still a positive number.
+    #[test]
+    fn the_pendant_hangs_off_a_head_and_not_off_a_ceiling() {
+        const { assert!(CALLER_DROP > 0.0, "the deckhead came down onto the lamp") };
+        let mut rooms = Rooms::new();
+        let trade = rooms.spawn(RoomKind::Trade, CABIN).expect("a market fits");
+        let placed = placed(trade, rooms.get(trade).expect("just attached"));
+        let (at, _) = caller_reach(&placed);
+        assert!(
+            (at.y - placed.lo.y - (HEAD_CLEAR + SHADE_R)).abs() < 1e-4,
+            "the lamp hangs at {} and a head reaches {}",
+            at.y - placed.lo.y,
+            HEAD_CLEAR + SHADE_R
+        );
+        assert!(
+            at.y + SHADE_R < placed.hi.y,
+            "the shade is through the deckhead"
+        );
     }
 
     /// The derived charts ARE the authored bay: the generalization moved

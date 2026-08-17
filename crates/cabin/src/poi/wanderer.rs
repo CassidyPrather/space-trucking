@@ -242,10 +242,13 @@ const NOT_A_ROOM: [Fitting; 15] = [
     // ---- the hum ----
     // Three rings stacked over the middle of the deck, at the pitch three
     // crates sound at when they are in a hold together. They hang on
-    // nothing either.
-    hum(0.42, 0.60),
-    hum(0.58, 0.42),
-    hum(0.74, 0.26),
+    // nothing either. The lowest of them clears a standing head, which is
+    // the only thing about them that is not arbitrary: the deckhead came
+    // down onto the cargo grid and the bottom ring came down with it,
+    // into the eye of anybody crossing the room.
+    hum(0.52, 0.60),
+    hum(0.66, 0.42),
+    hum(0.80, 0.26),
     // ---- the deck line ----
     // A lit seam where the deck meets each wall. It is the room's whole
     // sense of scale, and the reason a black box reads as an interior at

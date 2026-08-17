@@ -196,17 +196,21 @@ const SUPPLY: [Fitting; 6] = [
     bar(-0.55),
     bar(0.0),
     bar(0.55),
-    // The meter box on the stem, and its dial.
+    // The meter box on the stem, and its dial. They sit a fifth of a
+    // shade lower than they used to: the deckhead came down onto the
+    // cargo grid and the lamp did not move, so there is less stem above
+    // the glass and a meter reaching past it would be a spike through
+    // the ceiling.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.0, 1.17, 0.0),
+        Vec3::new(0.0, 0.96, 0.0),
         Vec3::new(0.38, 0.45, 0.38),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::AMBER, 2.6),
-        Vec3::new(0.0, 1.17, 0.42),
+        Vec3::new(0.0, 0.96, 0.42),
         Vec3::new(0.24, 0.24, 0.030),
     ),
 ];

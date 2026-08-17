@@ -47,7 +47,7 @@
 
 use bevy::prelude::Vec3;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{CAGE_TOP, Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
 use crate::palette;
 
 /// The Hermitage's own room.
@@ -195,17 +195,19 @@ const VIGIL_BURN: f32 = 0.28;
 /// What the lamp hangs on: two cords and a ring, measured off a box one
 /// shade across on every side of it. Nobody in this rock owns a chain.
 const LAMP_CORDS: [Fitting; 3] = [
-    Fitting::new(
+    // A hanger runs from the shade to the deckhead, so its top end is the
+    // room's own clearance and not a decimal ([`Fitting::spanning`]).
+    Fitting::spanning(
         Shape::Slab,
         Coat::etched(palette::TRIM_GIVE),
-        Vec3::new(-0.62, 0.71, -0.62),
-        Vec3::new(0.05, 0.95, 0.05),
+        Vec3::new(-0.67, -0.24, -0.67),
+        Vec3::new(-0.57, CAGE_TOP, -0.57),
     ),
-    Fitting::new(
+    Fitting::spanning(
         Shape::Slab,
         Coat::etched(palette::TRIM_GIVE),
-        Vec3::new(0.62, 0.71, 0.62),
-        Vec3::new(0.05, 0.95, 0.05),
+        Vec3::new(0.57, -0.24, 0.57),
+        Vec3::new(0.67, CAGE_TOP, 0.67),
     ),
     Fitting::new(
         Shape::Ring,

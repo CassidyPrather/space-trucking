@@ -30,6 +30,14 @@ use super::{KIND_COUNT, KNOWN_ALL, MAX_CREW, Sim, barter};
 
 /// Magic-plus-version header of every save this build writes.
 ///
+/// `STV18` is the padding cell (docs/ROOMS.md): one cube of the cargo
+/// grid stands between every pair of rooms, so a mated pair is joined by
+/// a passage rather than by a shared partition. Nothing about the
+/// GRAMMAR moved — the document has never carried a pose, only the edge
+/// list every pose is re-derived from — but the lattice a given edge
+/// list lands on is a roomier one, and an edge that fitted flush may not
+/// fit with its padding.
+///
 /// `STV17` is the athwart rule (docs/BAY.md): the net is one sheet
 /// folded into a box and its side flaps fold out sideways, so the two
 /// cells that lie level on the aft wall stand one above the other on a
@@ -92,10 +100,20 @@ use super::{KIND_COUNT, KNOWN_ALL, MAX_CREW, Sim, barter};
 /// it belonged to. `STV10` widened the cabin from a 6×5 floor to an 8×7
 /// one; `STV7` added the banked burner's stoke to the ship line's tail;
 /// `STV6` added the `laid` piece location; `STV5` added `stow`.
-const MAGIC: &str = "STV17";
+const MAGIC: &str = "STV18";
 
 /// Older headers this build still reads, each with its own migration,
 /// applied oldest-first so a `STV4` document walks the whole chain.
+///
+/// `STV18` put a cube of padding between every pair of rooms. A
+/// pre-STV18 document's edge list was written against a lattice where
+/// rooms mated flush, so an edge that fitted then may be `Blocked` now —
+/// the room is not lost with it. It is **re-seated** through the spawn
+/// walk, keeping its id and everything berthed in it, which is the same
+/// mercy the port law's own bump granted and for the same reason.
+/// Conservation before convenience: the ship comes out a different
+/// shape, never a shorter one. A room's own net did not move, so no
+/// berth in the document is touched.
 ///
 /// `STV17` sent the turned footprints back to a level wall. A pre-STV17
 /// document may hang a window or a painting down a flank, where its two
@@ -164,9 +182,9 @@ const MAGIC: &str = "STV17";
 /// hold cells, which the net embeds at (+3, 0). Whatever the room-grid
 /// rules no longer accept once the translations have run re-berths at its
 /// first legal cell. Everything else stays one additive grammar.
-const READABLE: [&str; 14] = [
-    MAGIC, "STV16", "STV15", "STV14", "STV13", "STV12", "STV11", "STV10", "STV9", "STV8", "STV7",
-    "STV6", "STV5", "STV4",
+const READABLE: [&str; 15] = [
+    MAGIC, "STV17", "STV16", "STV15", "STV14", "STV13", "STV12", "STV11", "STV10", "STV9", "STV8",
+    "STV7", "STV6", "STV5", "STV4",
 ];
 
 /// Why a save string was refused.
@@ -396,6 +414,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let legacy = !matches!(
         header,
         MAGIC
+            | "STV17"
             | "STV16"
             | "STV15"
             | "STV14"
@@ -410,43 +429,59 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     // ones are hung at their traditional berths after reading.
     let uninstrumented = !matches!(
         header,
-        MAGIC | "STV16" | "STV15" | "STV14" | "STV13" | "STV12" | "STV11" | "STV10" | "STV9"
+        MAGIC
+            | "STV17"
+            | "STV16"
+            | "STV15"
+            | "STV14"
+            | "STV13"
+            | "STV12"
+            | "STV11"
+            | "STV10"
+            | "STV9"
     );
     // Pre-STV10 headers carry narrow-net coordinates: the cabin was a
     // 6×5 floor then, and the charts past the growth have moved.
     let narrow = !matches!(
         header,
-        MAGIC | "STV16" | "STV15" | "STV14" | "STV13" | "STV12" | "STV11" | "STV10"
+        MAGIC | "STV17" | "STV16" | "STV15" | "STV14" | "STV13" | "STV12" | "STV11" | "STV10"
     );
     // Pre-STV11 headers know one room and a barter counter.
     let roomless = !matches!(
         header,
-        MAGIC | "STV16" | "STV15" | "STV14" | "STV13" | "STV12" | "STV11"
+        MAGIC | "STV17" | "STV16" | "STV15" | "STV14" | "STV13" | "STV12" | "STV11"
     );
     // Pre-STV12 headers were written when every room declared six ports;
     // an edge through a slot its kind no longer fills is re-seated.
     let six_ported = !matches!(
         header,
-        MAGIC | "STV16" | "STV15" | "STV14" | "STV13" | "STV12"
+        MAGIC | "STV17" | "STV16" | "STV15" | "STV14" | "STV13" | "STV12"
     );
     // Pre-STV13 headers were written before the window family, so their
     // ledger masks are narrower than the table is now.
-    let unglazed = !matches!(header, MAGIC | "STV16" | "STV15" | "STV14" | "STV13");
+    let unglazed = !matches!(
+        header,
+        MAGIC | "STV17" | "STV16" | "STV15" | "STV14" | "STV13"
+    );
     // Pre-STV14 headers were written when an offer band ran clean across
     // the room, doorway and all; a proposal left on what is deck now
     // walks onto the offer area this build actually has.
-    let doorway_offers = !matches!(header, MAGIC | "STV16" | "STV15" | "STV14");
+    let doorway_offers = !matches!(header, MAGIC | "STV17" | "STV16" | "STV15" | "STV14");
     // Pre-STV15 headers were written when a room's own hardware stood in
     // cells anybody could berth in; cargo left inside the counter or the
     // pendant walks off them.
-    let open_fixtures = !matches!(header, MAGIC | "STV16" | "STV15");
+    let open_fixtures = !matches!(header, MAGIC | "STV17" | "STV16" | "STV15");
     // Pre-STV16 headers were written when three of the calling rooms
     // were narrower, so a berth in one names a cell of a smaller net.
-    let cramped_callers = !matches!(header, MAGIC | "STV16");
+    let cramped_callers = !matches!(header, MAGIC | "STV17" | "STV16");
     // Pre-STV17 headers were written when a non-square footprint could
     // hang down a flank, where its cells stand one above the other
     // instead of side by side.
-    let turned_footprints = header != MAGIC;
+    let turned_footprints = !matches!(header, MAGIC | "STV17");
+    // Pre-STV18 headers were written when rooms mated flush, so an edge
+    // that fitted then may not fit with a cube of padding round it. Such
+    // a room is re-seated rather than lost.
+    let flush_mated = header != MAGIC;
 
     let seed = reader.kv("seed")?;
     let tick = reader.kv("tick")?;
@@ -487,7 +522,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         parse_eager(&mut reader)?;
         (Rooms::new(), Vec::new())
     } else {
-        let rooms = parse_rooms(&mut reader, six_ported)?;
+        let rooms = parse_rooms(&mut reader, six_ported || flush_mated)?;
         let marks = parse_marks(&mut reader)?;
         (rooms, marks)
     };
@@ -594,13 +629,16 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
 /// order. Each is replayed through the same validated attach the game
 /// uses, so a document that lies about its own graph fails safe.
 ///
-/// `six_ported` is the pre-STV12 migration: a document from when every
-/// kind declared all six slots may name one its kind has since given up,
-/// and rather than lose the room (and everything berthed in it) the
-/// reader re-seats it through the spawn walk. Only old documents get
-/// that mercy — a current save that disagrees with the lattice is a save
-/// that lies, and it fails safe as it always has.
-fn parse_rooms(reader: &mut Reader<'_>, six_ported: bool) -> Result<Rooms, SaveError> {
+/// `reseats` is the mercy two bumps have now needed, and it is one
+/// mercy because it answers one question: a document may name an edge
+/// this build cannot make. Pre-STV12 that was a slot the kind has since
+/// given up; pre-STV18 it is an edge that fitted flush and does not fit
+/// with a cube of padding round it. Either way the room, and everything
+/// berthed in it, is worth more than the seam it arrived by, so the
+/// reader re-seats it through the spawn walk and keeps its id. Only old
+/// documents get that mercy — a current save that disagrees with the
+/// lattice is a save that lies, and it fails safe as it always has.
+fn parse_rooms(reader: &mut Reader<'_>, reseats: bool) -> Result<Rooms, SaveError> {
     let count: usize = reader.kv("rooms")?;
     if count == 0 || count > MAX_ROOMS {
         return Err(reader.err());
@@ -631,7 +669,7 @@ fn parse_rooms(reader: &mut Reader<'_>, six_ported: bool) -> Result<Rooms, SaveE
                     return Err(reader.err());
                 }
                 let replayed = rooms.replay(id, anchor, anchor_port, kind, port);
-                if replayed.is_err() && six_ported {
+                if replayed.is_err() && reseats {
                     rooms.reseat(id, kind, anchor).map_err(|_| reader.err())?;
                 } else {
                     replayed.map_err(|_| reader.err())?;
@@ -2312,6 +2350,91 @@ mod tests {
         let lying = plain.replacen(&dock, "room 2 2 0 4 5", 1);
         assert!(
             Sim::from_save(&lying).is_err(),
+            "a save that lies fails safe"
+        );
+    }
+
+    /// **The padding cell's migration**: a pre-STV18 document may name an
+    /// edge list that fitted when rooms mated flush and does not fit with
+    /// a cube of padding round every room. The room is re-seated through
+    /// the spawn walk rather than lost, it keeps its id, and everything
+    /// berthed in it comes with it.
+    ///
+    /// The edge list below is a real one — it came out of four thousand
+    /// adversarially-spawned ships built under the flush rule, shrunk to
+    /// the three edges that carry the collision, and re-ordered so the
+    /// room that loses is the market, which is the one with goods in it.
+    /// A second cabin stands off the ship's bow and a derelict off that
+    /// cabin's port flank; under the old rule the market came alongside
+    /// the ship's own port wall and stood shoulder to shoulder with the
+    /// derelict. Shoulder to shoulder is the arrangement this build has
+    /// stopped being able to express. Two and a half per cent of those
+    /// four thousand ships carry one such edge.
+    #[test]
+    fn pre_stv18_saves_reseat_rooms_that_lost_their_padding() {
+        let plain = Sim::new(23).save_string();
+        let stocked = |sim: &Sim| {
+            sim.pieces()
+                .iter()
+                .filter(|piece| matches!(piece.loc, Loc::Hold { room: 2, .. }))
+                .count()
+        };
+        let was = stocked(&Sim::from_save(&plain).expect("the current document loads"));
+        assert!(was > 0, "the market has goods to conserve");
+        // The flush-era graph, in the order it was attached in.
+        let block = "rooms 5\n\
+                     room 0 0 - - -\n\
+                     room 1 1 0 1 3\n\
+                     room 3 0 0 2 0\n\
+                     room 4 3 3 3 0\n\
+                     room 2 2 0 3 0\n";
+        let old: String = {
+            let mut out = String::new();
+            let mut skip = 0;
+            for line in plain.lines() {
+                if let Some(rest) = line.strip_prefix("rooms ") {
+                    skip = rest.trim().parse::<usize>().expect("a room count");
+                    out.push_str(block);
+                    continue;
+                }
+                if skip > 0 && line.starts_with("room ") {
+                    skip -= 1;
+                    continue;
+                }
+                out.push_str(line);
+                out.push('\n');
+            }
+            out.replacen(MAGIC, "STV17", 1)
+        };
+        let sim = Sim::from_save(&old).expect("an STV17 document must still load");
+        assert_eq!(
+            sim.rooms().kind(2),
+            Some(RoomKind::Trade),
+            "the market survived, with its id"
+        );
+        assert_eq!(sim.rooms().kind(3), Some(RoomKind::Cabin));
+        assert_eq!(sim.rooms().kind(4), Some(RoomKind::Wreck));
+        assert_eq!(stocked(&sim), was, "the market's goods came with it");
+        // And what it was re-seated onto obeys the rule it was re-seated
+        // for: nothing in the loaded ship stands in anything else's pad.
+        let placed: Vec<_> = sim.rooms().iter().collect();
+        for (i, (ida, a)) in placed.iter().enumerate() {
+            for (idb, b) in &placed[i + 1..] {
+                if a.pose.z != b.pose.z {
+                    continue;
+                }
+                let (ax0, ay0, ax1, ay1) = a.box_rect();
+                let (bx0, by0, bx1, by1) = b.box_rect();
+                let gap = (bx0 - ax1).max(ax0 - bx1).max((by0 - ay1).max(ay0 - by1));
+                assert!(
+                    gap >= crate::sim::room::PAD,
+                    "rooms {ida} and {idb} stand {gap} cell(s) apart"
+                );
+            }
+        }
+        // A current document gets no such mercy: it must mean what it says.
+        assert!(
+            Sim::from_save(&old.replacen("STV17", MAGIC, 1)).is_err(),
             "a save that lies fails safe"
         );
     }

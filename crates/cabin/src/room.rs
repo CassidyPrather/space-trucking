@@ -25,15 +25,23 @@
 //!   room declares. A mated port is an open doorway; an unmated one is a
 //!   plate, drawn shut.
 //!
-//! The cabin keeps one privilege, and it is declared rather than assumed:
-//! its hull was hand-built before the lattice existed, so [`chart_inset`]
-//! carries its authored trim as data and `rig::structure` is the one
-//! slab list not derived from a pose. What that privilege no longer buys
-//! it is a different SIZE: the front gutter it used to stand forward of
-//! its own floor box was dead deck nothing could reach, and the cabin is
-//! its declared 8×7 box on every side now. Its floor, its aft wall, its
-//! walk envelope, and every one of its apertures derive like everybody
-//! else's.
+//! **The cabin's privileges are down to two, and both are declared.**
+//! Its walk envelope is authored (`rig::WALK_*`), because a body has to
+//! be able to stand over the middle of the outermost deck row and a
+//! body's half-width is wider than half a cell; and its hull wears ribs
+//! nobody derived. Everything else about it comes off its pose like
+//! every other room's — its box, its charts, its trim, its six
+//! apertures, and now its six structural slabs, which
+//! `rig::structure` takes from [`shell_boxes`] rather than from the
+//! numbers somebody measured by eye before the lattice existed.
+//!
+//! **And a fourth idea, which is the owner's:** the whole world is
+//! aligned to the cargo grid, and **one cube of it stands between any
+//! two rooms** (`sim::room::PAD`). A doorway is therefore not a shared
+//! plane with two owners but a [`passage`] a cell long with one, which
+//! is what stopped the incinerator standing inside the cabin: two rooms
+//! that mate flush put two hulls through each other by construction,
+//! and no care about placement can undo that.
 
 use std::collections::BTreeMap;
 
@@ -90,31 +98,29 @@ const CEIL_SLAB_Y: f32 = CEIL_Y + WALL_T * 0.5;
 /// Structural thickness of every hull plane.
 pub const WALL_T: f32 = 0.1;
 
-/// One storey's pitch on the lattice: a room's ceiling slab plus a seam.
-/// A ladder's neighbour sits exactly one of these up.
-const STOREY: f32 = CEIL_SLAB_Y + WALL_T;
+/// **One cube of the cargo grid, in metres**: the padding that stands
+/// between any two rooms (`sim::room::PAD`).
+///
+/// The sim states the pad in cells because the pad is a lattice law; this
+/// is the same quantity in the units a wall is drawn in, and every
+/// passage, connector and hull clearance in this module is measured off
+/// it rather than off a number of its own.
+pub const PAD_M: f32 = space_trucking::sim::room::PAD as f32 * BAY_CELL;
+
+/// One storey's pitch on the lattice: a room, and the pad over it. A
+/// ladder's neighbour sits exactly one of these up.
+///
+/// It used to be the ceiling slab plus a seam — 2.42 m, or 4.4 cells —
+/// which is the vertical axis doing by eye what the horizontal ones did
+/// by arithmetic. A storey is five cells now, four of room and one of
+/// padding, so the pad between two rooms is the same cube whether they
+/// are side by side or one above the other.
+const STOREY: f32 = CEIL_Y + PAD_M;
 
 /// How far a wall chart stands inside its own box face, by default: proud
 /// of the hull's junk, so every chart cell stays workable in front of the
 /// ribs rather than behind them.
 const CHART_INSET: f32 = 0.03;
-
-/// The cabin's authored trim, by wall (aft, starboard, front, port). Its
-/// aft wall IS its box face; every other wall takes the ordinary inset.
-///
-/// **The front gutter is gone.** It was half a metre of deck standing
-/// forward of the cabin's own floor box, left over from the era when the
-/// front wall carried the console face and needed a working strip in
-/// front of it. The console retired into a room and the strip stopped
-/// holding anything — but it was still there, and it was dead deck in
-/// the literal sense: no net cell reaches it, so nothing can be berthed
-/// on it, and the walk envelope had to stop short of a wall half a metre
-/// further forward than the room, so nobody could stand on it either.
-/// The playtest found it by walking into it. The floor is floor now: the
-/// front wall stands on the box face like the other three, the hull
-/// follows it (`crate::rig::structure`), and the envelope reaches the
-/// front row.
-const CABIN_TRIM: [f32; 4] = [0.0, CHART_INSET, CHART_INSET, CHART_INSET];
 
 /// Half-width of a walking body, for the derived envelopes. The cabin's
 /// own envelope is authored (`rig::WALK_*`) because its hull is; every
@@ -457,15 +463,28 @@ pub fn wall_out(wall: u8, yaw: u8) -> Vec3 {
     }
 }
 
-/// How far a room's wall chart stands inside its own box face. Data, not
-/// an assumption: the cabin declares an authored trim, everything else
-/// takes the ordinary inset.
+/// How far a room's wall chart stands inside its own box face — the same
+/// inset on every wall of every room.
+///
+/// **The cabin's authored trim is gone**, and with it the last thing in
+/// this module that was a number rather than a derivation. Three of its
+/// walls already took the ordinary inset and its aft wall took none,
+/// because the aft chart WAS the box face — which was survivable while
+/// the cabin's hull was hand-built and its aft wall happened to stand a
+/// centimetre behind that plane, and stopped being survivable the moment
+/// the hull was derived from the box like everybody else's: the decal
+/// ladder's backer, which rides behind the paint, was suddenly inside
+/// the wall rather than in the gap. It takes the same three centimetres
+/// as the other three now.
+///
+/// It stays a function of `(kind, wall)` rather than becoming a constant
+/// because the port law's first clause is that a room's geometry is read
+/// from its declaration, and a kind that one day needs its own trim
+/// should have somewhere to declare it.
 #[must_use]
-pub fn chart_inset(kind: RoomKind, wall: u8) -> f32 {
-    match kind {
-        RoomKind::Cabin => CABIN_TRIM[usize::from(wall % 4)],
-        _ => CHART_INSET,
-    }
+pub const fn chart_inset(kind: RoomKind, wall: u8) -> f32 {
+    let _ = (kind, wall);
+    CHART_INSET
 }
 
 /// A room's interior box in world units, from its pose alone.
@@ -490,11 +509,10 @@ pub fn room_box(room: &Room) -> (Vec3, Vec3) {
 /// bolted to your hull where you left it: one pose, two sides of the
 /// same plate.
 ///
-/// The cabin is the one exception, and it is the exception it has always
-/// been: its hull was hand-built before the lattice, so its outside is
-/// the union of the masses that ARE it (`rig::structure`) rather than a
-/// box derived from a pose it predates. Those masses now stand on its
-/// own floor box on all four sides, so the two agree about its size.
+/// The cabin is the one exception, and what is left of it is its RIBS:
+/// its six structural slabs are this box now (`rig::structure` derives
+/// them from [`shell_boxes`]), and the union is taken so the junk bolted
+/// to its flanks is inside its own outside.
 #[must_use]
 pub fn hull_box(placed: &Placed) -> (Vec3, Vec3) {
     if placed.id == CABIN {
@@ -1017,10 +1035,19 @@ pub fn walk_boxes(rooms: &[Placed]) -> Envelope {
                 // shared-partition convention, one scale up.
                 continue;
             }
-            let reach = BODY + WALL_T;
+            // The connector spans the PASSAGE, and a body's width and a
+            // wall past the mouth at either end of it. A doorway is a
+            // cell long now: it used to be a plane, and a connector
+            // reaching a wall's thickness either side of a plane was the
+            // whole of it. The extra wall is the cabin's: its envelope is
+            // authored rather than inset, and stands a little further off
+            // its own face than a derived one would, so a connector that
+            // reached exactly a body's width would leave five centimetres
+            // of nothing between the two.
             let along = site.half_a.abs() - site.half_a.normalize_or_zero().abs() * BODY;
-            let half = along.max(Vec3::ZERO) + site.out.abs() * reach;
-            let centre = Vec3::new(site.leaf.x, EYE_HEIGHT, site.leaf.z);
+            let half = along.max(Vec3::ZERO) + site.out.abs() * PAD_M.mul_add(0.5, BODY + WALL_T);
+            let mid = seam_centre(placed, site) + site.out * (PAD_M * 0.5);
+            let centre = Vec3::new(mid.x, EYE_HEIGHT, mid.z);
             envelope.seams.push((centre - half, centre + half));
         }
     }
@@ -1434,27 +1461,38 @@ pub fn shell_boxes(placed: &Placed, all: &[Placed]) -> Vec<(Vec3, Vec3, bool)> {
     let (lo, hi) = (placed.lo, placed.hi);
     let span = hi - lo;
     let plan_centre = Vec3::new(f32::midpoint(lo.x, hi.x), 0.0, f32::midpoint(lo.z, hi.z));
+    // The deck and the deckhead reach a full wall past the box on every
+    // side, which is exactly where the walls standing on them end. A
+    // room's whole fabric is therefore the interior grown by one wall —
+    // the box [`hull_box`] already claimed it was — and a passage can
+    // butt against it rather than lie over it.
+    let pan = Vec3::new(
+        WALL_T.mul_add(2.0, span.x),
+        WALL_T,
+        WALL_T.mul_add(2.0, span.z),
+    );
     let mut slabs: Vec<(Vec3, Vec3, bool)> = vec![
         (
             Vec3::new(plan_centre.x, WALL_T.mul_add(-0.5, lo.y), plan_centre.z),
-            Vec3::new(span.x + WALL_T, WALL_T, span.z + WALL_T),
+            pan,
             false,
         ),
         (
             Vec3::new(plan_centre.x, lo.y + CEIL_SLAB_Y, plan_centre.z),
-            Vec3::new(span.x + WALL_T, WALL_T, span.z + WALL_T),
+            pan,
             true,
         ),
     ];
-    // **A wall stands between the deck it rises off and the deckhead it
-    // carries**, floor slab to ceiling slab, and neither of those three
-    // is a millimetre longer than the plane it ends on. The wall used to
-    // run from a wall under the deck to four fifths of one above the
-    // ceiling slab, which put its top face 0.08 m past the only height
-    // anything else in the room is measured to — the "one of them ends
-    // where the other begins" cure, spent on the fabric.
-    let y0 = lo.y;
-    let y1 = lo.y + CEIL_Y;
+    // **A room's fabric is the shell of its own box, grown by one wall,
+    // and nothing else.** Every face of every slab therefore lands
+    // either on the interior box or on [`hull_box`], which is the same
+    // box and one named offset — there is no third plane, and no slab
+    // reaches a hand's breadth past anything for reasons nobody wrote
+    // down. The walls used to stop four fifths of a wall above the
+    // ceiling slab, which is a height nothing else in the game is
+    // measured to.
+    let y0 = lo.y - WALL_T;
+    let y1 = lo.y + CEIL_Y + WALL_T;
     for wall in 0..4_u8 {
         let out = wall_out(wall, placed.yaw);
         let along = axis_along(out);
@@ -1479,26 +1517,18 @@ pub fn shell_boxes(placed: &Placed, all: &[Placed]) -> Vec<(Vec3, Vec3, bool)> {
                 .flat_map(|(c, s)| punch(c, s, site.lo, site.hi))
                 .collect();
         }
-        // Whatever ANOTHER room's box already fills is that room's to
-        // draw; grown by a wall so the two hulls meet rather than gape.
-        // Every other room, not merely the older ones: a shell stands in
-        // the partition, and a partition has two sides — cutting only
-        // against the lower ids left the newer neighbour's half of it
-        // standing inside a room that never asked for it.
-        for other in all.iter().filter(|other| other.id != placed.id) {
-            let grow = Vec3::new(WALL_T, 0.0, WALL_T);
-            parts = parts
-                .into_iter()
-                .flat_map(|(c, s)| {
-                    punch(
-                        c,
-                        s,
-                        other.lo - grow - Vec3::Y * WALL_T,
-                        other.hi + grow + Vec3::Y * WALL_T,
-                    )
-                })
-                .collect();
-        }
+        // **Nothing is cut against a neighbour any more.** A shell used
+        // to be punched by every other room's box grown by a wall,
+        // because two rooms mated flush and their hulls therefore stood
+        // through each other — and that cut was the reason the cabin's
+        // aft wall vanished the moment a market came alongside, taking
+        // with it the plate the seam's amber latch was mounted on. The
+        // latch was the thing the playtest saw floating in the air; the
+        // wall behind it was the defect. A room is a cell clear of every
+        // other room now, so there is nothing of anybody else's in the
+        // way and a hull is simply its own (`all` is kept for the walk
+        // envelope and for whoever needs the neighbours next).
+        let _ = all;
         out.extend(parts.into_iter().map(|(c, s)| (c, s, hull)));
     }
     out
@@ -2075,8 +2105,16 @@ pub fn seam_parts(placed: &Placed) -> Vec<SeamPart> {
         if a <= 0.0 || b <= 0.0 {
             continue;
         }
-        if dresses(placed, site) {
+        if site.is_door() && site.mate.is_some() {
+            // **A doorway has two mouths and one passage.** Each room
+            // frames the opening in its own wall — there is no shared
+            // partition to draw once any more, because there is a cell
+            // of padding where the partition used to be — and the room
+            // with the lower id draws the tube that joins them.
             seam_frame(placed, site, &mut out);
+            if dresses(placed, site) {
+                passage(placed, site, &mut out);
+            }
         } else if site.mate.is_none() {
             shut_port(placed, site, &mut out);
         }
@@ -2169,6 +2207,62 @@ fn seam_frame(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
             },
         ),
     );
+}
+
+/// **The passage**: the tube of hull that carries a mated doorway across
+/// the cube of padding between two rooms.
+///
+/// This is what the padding cell buys, and it is worth saying plainly.
+/// A doorway used to be a *shared plane*: two rooms mated flush, both
+/// drew on the same partition, and the question of who owned which
+/// millimetre of it had no answer — which is where fifty-three coplanar
+/// findings came from, and where the incinerator's hazard tape came from
+/// standing inside the cabin. Now the two rooms are a cell apart and
+/// neither of them owns the cell. The passage does: four plates round the
+/// clear opening, drawn once by the room with the lower id, running from
+/// one room's box face to the other's.
+fn passage(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
+    let (a, b) = (site.half_a.length(), site.half_b.length());
+    let along = site.half_a.normalize_or_zero().abs();
+    let across = site.out.abs();
+    let mid = seam_centre(placed, site) + site.out * (PAD_M * 0.5);
+    // The pad is a cell; the two rooms each spend a wall of it on their
+    // own hull, so the tube is what is left between the two skins. Ending
+    // it on the skins rather than over them is the difference between a
+    // passage and eight coplanar faces.
+    let run = WALL_T.mul_add(-2.0, PAD_M);
+    let deck = site.leaf.y - b;
+    let head = site.leaf.y + b;
+    let port = site.port;
+    let mut plate = |what: String, at: Vec3, size: Vec3| {
+        out.push(SeamPart {
+            what,
+            at: Transform::from_translation(at).with_scale(size),
+            dress: Dress::Frame,
+            across: site.mate.map(|(other, _)| other),
+        });
+    };
+    // Deck and deckhead, each a wall thick and reaching a wall out to
+    // either side so the corners of the tube are filled once.
+    for (nth, y) in [
+        (0, WALL_T.mul_add(-0.5, deck)),
+        (1, WALL_T.mul_add(0.5, head)),
+    ] {
+        plate(
+            format!("seam[{port}] passage pan[{nth}]"),
+            Vec3::new(mid.x, y, mid.z),
+            across * run + along * WALL_T.mul_add(2.0, a * 2.0) + Vec3::Y * WALL_T,
+        );
+    }
+    // And the two flanks, standing between them.
+    for (nth, side) in [-1.0_f32, 1.0].into_iter().enumerate() {
+        let flank = site.half_a.normalize_or_zero() * side * WALL_T.mul_add(0.5, a);
+        plate(
+            format!("seam[{port}] passage flank[{nth}]"),
+            Vec3::new(mid.x + flank.x, f32::midpoint(deck, head), mid.z + flank.z),
+            across * run + along * WALL_T + Vec3::Y * (head - deck),
+        );
+    }
 }
 
 /// Where a seam's amber latch hangs, if this seam gets one: on the
@@ -3139,11 +3233,26 @@ mod tests {
         );
         assert!(envelope.holds(Vec3::new(0.0, EYE_HEIGHT, 0.5)), "the cabin");
         assert!(envelope.holds(inside), "the burner at {inside}");
-        let from = Vec3::new(1.5, EYE_HEIGHT, 1.9);
-        for step in 0..=40u8 {
-            let t = f32::from(step) / 40.0;
-            let p = from.lerp(inside, t);
-            assert!(envelope.holds(p), "the walk breaks at {p}");
+        // Up to the seam, through the passage, and on into the room. A
+        // doorway is a cell long now, so the way through it is square on
+        // — you no longer cut its corner, any more than you cut the
+        // corner of a real one.
+        let site = placed[0]
+            .ports
+            .iter()
+            .find(|site| site.is_door() && site.mate.is_some())
+            .expect("the furnace's seam");
+        let axis = Vec3::new(site.leaf.x, EYE_HEIGHT, site.leaf.z);
+        let legs = [
+            (axis - site.out, axis + site.out * (PAD_M + 1.0)),
+            (axis + site.out * (PAD_M + 1.0), inside),
+        ];
+        for (a, b) in legs {
+            for step in 0..=40u8 {
+                let t = f32::from(step) / 40.0;
+                let p = a.lerp(b, t);
+                assert!(envelope.holds(p), "the walk breaks at {p}");
+            }
         }
         // And nothing outside the hull is walkable.
         assert!(!envelope.holds(Vec3::new(0.0, EYE_HEIGHT, 6.0)));
@@ -3175,8 +3284,14 @@ mod tests {
         // Through the doorway, not across its corner: a mated aperture is
         // two cells wide and a body is not thin, so the way in is the way
         // a body actually walks it — up to the seam, then through.
-        let from = Vec3::new(-1.65, EYE_HEIGHT, 1.9);
-        let seam = Vec3::new(-1.65, EYE_HEIGHT, 2.41);
+        let site = placed[0]
+            .ports
+            .iter()
+            .find(|site| site.is_door() && site.mate == Some((trade, 0)))
+            .expect("the market's seam");
+        let axis = Vec3::new(site.leaf.x, EYE_HEIGHT, site.leaf.z);
+        let from = axis - site.out;
+        let seam = axis + site.out * (PAD_M + 1.0);
         let plan = plan_of(&placed);
         for (a, b) in [(from, seam), (seam, inside)] {
             for step in 0..=40u8 {
@@ -3710,6 +3825,49 @@ mod tests {
                         box_.1,
                         other.id,
                         other.kind
+                    );
+                }
+            }
+        }
+    }
+
+    /// **No two rooms' hulls ever share a cubic centimetre.**
+    ///
+    /// This is the law the padding cell exists for, and it is the one
+    /// the owner reported three times as the incinerator clipping into
+    /// the main cabin, hazard tape and all. It was never a placement
+    /// slip. Two rooms mated flush on the interior lattice — the port
+    /// law says the slot IS the position — and then each of them grew a
+    /// wall proud of that plane on all four sides and under the deck, so
+    /// the two hulls overlapped by two wall thicknesses **by
+    /// construction**, at every seam, on every ship. No amount of care
+    /// about where a room was put could have made it otherwise.
+    ///
+    /// So the assertion is not about the drawn slabs, which is where the
+    /// last four passes looked. It is about the boxes those slabs are
+    /// cut from: a room's hull is its interior grown by one wall, the
+    /// interiors stand a cell apart, and a cell is wider than two walls.
+    /// Swept over a crowded ship AND over the yard-fresh one, because
+    /// the furnace's seam is the one that was reported.
+    #[test]
+    fn no_two_rooms_hulls_ever_share_a_cubic_centimetre() {
+        for plan in [crowded_ship(), {
+            let rooms = Rooms::new();
+            rooms.iter().map(|(id, room)| placed(id, room)).collect()
+        }] {
+            assert!(plan.len() >= 2, "this law wants a ship with neighbours");
+            for (i, a) in plan.iter().enumerate() {
+                for b in &plan[i + 1..] {
+                    let (alo, ahi) = hull_box(a);
+                    let (blo, bhi) = hull_box(b);
+                    let meet = (ahi.min(bhi) - alo.max(blo)).max(Vec3::ZERO);
+                    assert!(
+                        meet.min_element() <= 0.0,
+                        "room {} ({:?}) and room {} ({:?}) share {meet} m of hull",
+                        a.id,
+                        a.kind,
+                        b.id,
+                        b.kind
                     );
                 }
             }

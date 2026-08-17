@@ -75,6 +75,22 @@ pub const APERTURE: u8 = 2;
 /// exactly one storey up.
 pub const COURSES: u8 = 3;
 
+/// **Cells of padding between any two rooms.**
+///
+/// The owner's rule (docs/ROOMS.md, "The padding cell"): one cube of the
+/// cargo grid stands between every pair of rooms, so no two rooms ever
+/// share a plane and a mated pair is joined by a **passage** a cell long
+/// rather than by a partition with two owners.
+///
+/// It is a lattice quantity and it belongs here rather than in the
+/// presentation, because it is the thing that makes overlap impossible
+/// by law: a room's fabric stands proud of its own interior, two flush
+/// interiors therefore put two hulls through each other, and no amount
+/// of care downstream can take that back. The pad is measured in
+/// **Chebyshev** cells — a corner is an adjacency too, and two rooms
+/// touching at one would have their corner posts in the same cube.
+pub const PAD: i32 = 1;
+
 /// Which plane of a room a net cell lies in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Surf {
@@ -720,6 +736,14 @@ pub enum Refusal {
 type Cell3 = (i32, i32, i32);
 
 /// One aperture edge: the pair of cells a port's opening joins.
+///
+/// The two are **not** neighbours. A door's opening crosses [`PAD`] cells
+/// of padding to reach the cell it mates, so `outside` is `PAD + 1` steps
+/// along the wall's normal and the cells between the two belong to the
+/// passage rather than to either room. The vertical pair carries its own
+/// padding in the storey pitch instead: a storey is the room's height
+/// plus the pad, so `outside` is one storey index away exactly as it
+/// always was.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Seam {
     inside: Cell3,
@@ -805,9 +829,14 @@ impl Room {
                             _ => (0, offset + along),
                         };
                         let inside = self.cell_of(i, j);
+                        let step = PAD + 1;
                         Seam {
                             inside,
-                            outside: (inside.0 + normal.0, inside.1 + normal.1, inside.2),
+                            outside: (
+                                inside.0 + normal.0 * step,
+                                inside.1 + normal.1 * step,
+                                inside.2,
+                            ),
                         }
                     })
                     .collect()
@@ -1030,15 +1059,18 @@ impl Rooms {
         let have = own_aperture(&room, port);
         room.pose.x += want.0 - have.0;
         room.pose.y += want.1 - have.1;
-        // The box must be clear: sharing boundary planes is expected,
-        // sharing one cell is refusal.
+        // The box must be clear **with its padding**: two rooms may not
+        // share a cell, and may not stand in each other's pad either.
+        // Sharing a boundary plane used to be expected and is now the
+        // commonest refusal there is — it is exactly the arrangement
+        // that put two hulls through each other.
         let (x0, y0, x1, y1) = room.box_rect();
         for (_, other) in self.iter() {
             if other.pose.z != room.pose.z {
                 continue;
             }
             let (ox0, oy0, ox1, oy1) = other.box_rect();
-            if x0 < ox1 && ox0 < x1 && y0 < oy1 && oy0 < y1 {
+            if x0 - PAD < ox1 && ox0 < x1 + PAD && y0 - PAD < oy1 && oy0 < y1 + PAD {
                 return Err(Refusal::Blocked);
             }
         }
@@ -1507,8 +1539,14 @@ mod tests {
         ));
     }
 
-    /// Attachment has zero degrees of freedom, and the burner lands
-    /// where the burner has always landed.
+    /// Attachment has zero degrees of freedom, and the burner lands one
+    /// cell of padding off the cabin's starboard wall.
+    ///
+    /// It used to land flush at x=8, which is the arrangement the
+    /// incinerator was reported clipping into the main cabin out of:
+    /// two interiors sharing a plane, and two hulls each standing a wall
+    /// proud of it, through each other. The pad is the fix, and this is
+    /// the one place in the game where it is a written-down number.
     #[test]
     fn the_burner_mates_the_cabins_starboard_door() {
         let rooms = Rooms::new();
@@ -1516,9 +1554,55 @@ mod tests {
         let cabin = rooms.get(CABIN).expect("the cabin is room zero");
         let burner = rooms.get(1).expect("the burner is room one");
         assert_eq!(cabin.box_rect(), (0, 0, 8, 7));
-        assert_eq!(burner.box_rect(), (8, 0, 12, 3));
+        assert_eq!(burner.box_rect(), (8 + PAD, 0, 12 + PAD, 3));
         assert_eq!(cabin.mates[1], Some((1, 3)));
         assert_eq!(burner.mates[3], Some((CABIN, 1)));
+    }
+
+    /// **One cube of padding stands between any two rooms.** Swept over
+    /// two hundred adversarially-built ships rather than asserted of the
+    /// one the yard ships, because the law is about every pair a trip can
+    /// make and not about the pair anybody drew.
+    ///
+    /// It is stated in Chebyshev cells: two rooms that touched only at a
+    /// corner would still put their corner posts in one cube, and a
+    /// corner is an adjacency.
+    #[test]
+    fn one_cube_of_padding_stands_between_any_two_rooms() {
+        let mut rng = fastrand::Rng::with_seed(0x9AD1);
+        for _ in 0..200 {
+            let mut rooms = Rooms::new();
+            for _ in 0..MAX_ROOMS {
+                let kind = ROOM_KINDS[rng.usize(..ROOM_KINDS.len())];
+                let from = rng.u8(..MAX_ROOMS as u8);
+                let from = if rooms.get(from).is_some() {
+                    from
+                } else {
+                    CABIN
+                };
+                let _ = rooms.spawn(kind, from);
+            }
+            let placed: Vec<(RoomId, &Room)> = rooms.iter().collect();
+            for (i, (ida, a)) in placed.iter().enumerate() {
+                for (idb, b) in &placed[i + 1..] {
+                    if a.pose.z != b.pose.z {
+                        continue;
+                    }
+                    let (ax0, ay0, ax1, ay1) = a.box_rect();
+                    let (bx0, by0, bx1, by1) = b.box_rect();
+                    // The gap on each axis, negative where they overlap.
+                    let gap_x = (bx0 - ax1).max(ax0 - bx1);
+                    let gap_y = (by0 - ay1).max(ay0 - by1);
+                    assert!(
+                        gap_x.max(gap_y) >= PAD,
+                        "rooms {ida} ({:?}) and {idb} ({:?}) stand {} cell(s) apart",
+                        a.kind,
+                        b.kind,
+                        gap_x.max(gap_y)
+                    );
+                }
+            }
+        }
     }
 
     /// Overlap is prevented by law, never discovered as clipping: no

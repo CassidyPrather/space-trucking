@@ -209,12 +209,51 @@ topological one.
   top of its wall courses and the air a ceiling rig hangs into is
   **22 mm**, was 82 mm, and the coving ran at 77 mm, which is to say it
   fitted by a quarter of a millimetre. It is a bead now.
-- **Walls have no thickness on the lattice.** A room occupies its
-  interior; the partition between two attached rooms is a boundary, not
-  a volume. Two rooms may share a plane and may never share a cell. The
-  shared partition is **drawn by the room with the lower id**, once, so
-  the seam cannot z-fight itself (the interpenetration convention at
-  the couch rig, one scale up).
+- **One cube of padding stands between any two rooms.** The owner's
+  rule, and the one that retired the paragraph that used to be here.
+
+  What used to be here said that walls have no thickness on the
+  lattice: a room occupied its interior, the partition between two
+  attached rooms was a boundary rather than a volume, two rooms could
+  share a plane and never a cell, and the shared partition was drawn
+  once by the room with the lower id. Every clause of that was true of
+  the lattice and false of the world. A room's fabric stands **proud of
+  its own interior** — it has to; the interior is the volume a body
+  stands in — so two interiors sharing a plane put two hulls through
+  each other by construction, at every seam, on every ship, by
+  `2 × WALL_T`. That is the incinerator clipping into the main cabin,
+  it was never a placement slip, and it is why four passes of fixing
+  instances never touched it.
+
+  So: `sim::room::PAD` is one cell, and no two rooms come within it of
+  each other. The measure is **Chebyshev** — a corner is an adjacency
+  too, and two rooms touching at one would have their corner posts in
+  the same cube. Every room's hull is its interior grown by one wall,
+  and a cell is wider than two walls, so **no two hulls can meet**
+  (`room::tests::no_two_rooms_hulls_ever_share_a_cubic_centimetre`,
+  which fails by exactly 0.20 m with the pad taken out).
+
+  The pad is a **lattice** quantity, declared in the sim beside the
+  ports it constrains, because it is the thing that makes overlap
+  impossible rather than merely unlikely. Refusal is `Blocked`, which
+  is now the commonest refusal there is: flush is the arrangement this
+  build has stopped being able to express.
+
+- **A doorway is a passage, not a plane.** This is what the pad buys,
+  and it is worth more than the clipping it fixed. A mated pair is a
+  cell apart, so the opening between them is a **tube** — four plates
+  round the clear aperture, running from one room's box face to the
+  other's, drawn once by the room with the lower id (`room::passage`).
+  Each room frames its own mouth. Nobody draws on anybody's plane,
+  because there is no shared plane left to draw on: the fifty-three
+  coplanar findings the seam sweep turned up existed precisely because
+  two rooms drew on one.
+
+- **The vertical pad is the storey.** A storey is the room's four
+  courses plus one of padding — five cells — so the cube between two
+  rooms is the same cube whether they are side by side or one above the
+  other. It used to be the ceiling slab plus a seam, which is 4.4
+  cells.
 - **The pose is derived, never authored.** Given the anchor room's
   pose and a port pair, the attaching room's pose is *determined*: the
   two apertures must be coincident and their planes opposed (a door
@@ -293,11 +332,18 @@ The shell a room wears by default is deliberately plain — plate, a seam
 belt, corner posts, a running light or two — and the per-POI design
 agents dress it through two named seams (`poi::Character`'s `outfit` for
 the kit and `dress` for hardware), documented at the art direction.
-The cabin is the one room whose shell is not a lattice box: its hull
-was hand-built before the lattice and stands a working gutter forward
-of its floor box, so its outside is the union of the masses that ARE it
-(`rig::structure`) — the same exception, and the same declaration of
-it, that `chart_inset` already carries.
+The cabin's shell is a lattice box like everybody else's now:
+`rig::structure` derives its six structural slabs from
+`room::shell_boxes` rather than from numbers measured by eye before the
+lattice existed. They were never quite it — the side walls' inner faces
+stood at 2.22 against a box face of 2.20, and the ceiling slab hung a
+centimetre clear of the ceiling it was the ceiling of — and two
+centimetres is invisible in a screenshot and perfectly visible to a
+passage that has to butt against it. What is left of the cabin's
+exception is its **ribs**, which nobody derived, and its **walk
+envelope**, which is authored because a body has to be able to stand
+over the middle of the outermost deck row and a body's half-width is
+wider than half a cell.
 
 ## Refusal semantics
 
@@ -921,6 +967,19 @@ mobility.
 - **Saves bump** for the room graph (edge list in attach order, plus the
   room qualifier on berths) and the tape bumps for the input frame's new
   room field. A save that lies fails safe into a fresh run, as ever.
+- **The padding cell bumped the save** (`STV18`). The document has
+  never carried a pose — only the edge list every pose is re-derived
+  from — so the grammar did not move at all. What moved is the lattice
+  those edges land on: a room mates a cell further out than it used to,
+  and an edge that fitted flush may now be `Blocked` by a room it used
+  to stand shoulder to shoulder with. Measured rather than guessed:
+  over four thousand adversarially-spawned flush-era ships, **103 —
+  2.6% — carry one such edge**, and each carries exactly one. Those
+  rooms are **re-seated** through the spawn walk, keeping their ids and
+  everything berthed in them, which is the same mercy `STV12` granted
+  and is now one mercy answering one question. A room's own net did not
+  move, so no berth in any document is touched.
+
 - **The port law bumped the save again** (`STV12`). The slot numbering
   did not move — a door is still its wall's index, the ladder 4, the
   hatch 5 — so the edge list's grammar is untouched and every edge

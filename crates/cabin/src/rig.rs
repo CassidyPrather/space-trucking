@@ -81,7 +81,7 @@ pub const HEAD_R: f32 = 0.09;
 // old front wall's account — the wall stood half a metre forward of the
 // cabin's floor box across a gutter nothing could reach, and the
 // envelope had to clear the wall rather than the room. The gutter went
-// (`room::CABIN_TRIM`), so this reaches the front row with the same
+// with the front wall, so this reaches the front row with the same
 // clearance the aft row gets, and `walk_envelope_covers_the_floor` now
 // asserts the whole deck is standable rather than merely near.
 pub const WALK_MIN: Vec3 = Vec3::new(-1.85, EYE_HEIGHT, -1.30);
@@ -265,6 +265,11 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
     const BAY_FLOOR_ZC: f32 = BAY_WALL_Z - BAY_FLOOR_D * 0.5;
     const BAY_SIDE_X: f32 = 2.17;
     const BAY_FRONT_Z: f32 = -1.41;
+    // The aft chart stands the ordinary three centimetres inside its own
+    // box face now, like the other three. Its authored trim was zero,
+    // which put the decal ladder's backer inside the wall the moment the
+    // hull stopped being hand-measured.
+    const BAY_AFT_Z: f32 = BAY_WALL_Z - 0.03;
     // Four courses of the cargo grid, which is where the deckhead went
     // when the lattice took over the one axis it had never governed.
     const BAY_CEIL_Y: f32 = 4.0 * BAY_CELL;
@@ -284,7 +289,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
         (
             Station::BayWall,
             SimSurface {
-                center: Vec3::new(0.0, wall_mid, BAY_WALL_Z),
+                center: Vec3::new(0.0, wall_mid, BAY_AFT_Z),
                 half_u: Vec3::X * (BAY_W * 0.5),
                 half_v: Vec3::NEG_Y * wall_mid,
                 rect: chart(3, 0, 8, 3),
@@ -382,37 +387,41 @@ impl Slab {
 // scatter the one place the whole hull is written down.
 #[allow(clippy::too_many_lines)]
 pub fn structure() -> Vec<Slab> {
-    let mut slabs = vec![
-        // The box: floor, ceiling, four walls. The 8x7 floor put a cell
-        // (0.55) between each of these and where it used to stand: the
-        // room grew outward on every side at once, so nothing inside it
-        // had to be re-composed, only re-measured.
-        Slab::new(Vec3::new(0.0, -0.05, 0.45), Vec3::new(4.5, 0.1, 4.0)),
-        Slab::new(Vec3::new(0.0, 2.32, 0.45), Vec3::new(4.5, 0.1, 4.0)),
-        // The front wall stands on the cabin's own floor-box face, like
-        // the other three. It used to stand at -1.97, half a metre
-        // forward of it, with dead deck in between: no net cell reached
-        // the gutter, so nothing could be berthed there, and the walk
-        // envelope had to clear the wall rather than the room, so
-        // nobody could stand there either. The console face it was built
-        // around left two passes ago and the strip held nothing.
-        Slab::new(Vec3::new(0.0, 1.15, -1.49), Vec3::new(4.5, 2.5, 0.1)),
-        Slab::new(Vec3::new(0.0, 1.15, 2.47), Vec3::new(4.5, 2.5, 0.1)),
-        Slab::new(Vec3::new(-2.27, 1.15, 0.45), Vec3::new(0.1, 2.5, 4.0)),
-        Slab::new(Vec3::new(2.27, 1.15, 0.45), Vec3::new(0.1, 2.5, 4.0)),
-    ];
+    // **The box: floor, ceiling, four walls — derived, like everybody
+    // else's.**
+    //
+    // These six were measured by hand before the lattice existed and
+    // they were never quite it: the side walls' inner faces stood at
+    // 2.22 against a box face of 2.20, the aft wall's at 2.42 against
+    // 2.41, and the ceiling slab hung a centimetre clear of the ceiling
+    // it was the ceiling of. Two centimetres is invisible in a
+    // screenshot and it is not invisible to a passage that has to butt
+    // against it, which is how the cabin came to be the only room in the
+    // game still drawing four coplanar faces once every other room had
+    // stopped. The cabin's exception is its RIBS now, and nothing else.
+    let cabin = crate::room::placed(CABIN, &crate::room::cabin_room());
+    let mut slabs: Vec<Slab> = crate::room::shell_boxes(&cabin, &[])
+        .into_iter()
+        .map(|(center, size, _)| Slab::new(center, size))
+        .collect();
     // Wall ribs: the junk that says somebody built this hull in a hurry.
     // The port wall runs its full set again — the chart tank that used
     // to be bolted through them is cargo now, hung in front of whatever
     // wall it is carried to, so the hull has nothing to make room for.
     // Neither wall dodges a doorway by hand any more; the punch below
     // takes the ribs out of every aperture the cabin declares.
+    //
+    // A rib straddles the wall face it is bolted to and runs the whole
+    // height of the fabric, ending inside the deck and the deckhead
+    // rather than on the one plane the ladder's coaming also ends on.
+    let flank = (cabin.hi.x - cabin.lo.x) * 0.5;
+    let rise = 2.0f32.mul_add(crate::room::WALL_T, crate::room::CEIL_Y);
     for i in 0..6 {
         let z = 0.7f32.mul_add(i as f32, -1.20);
-        for sx in [-2.21f32, 2.21] {
+        for sx in [-flank, flank] {
             slabs.push(Slab::new(
-                Vec3::new(sx, 1.15, z),
-                Vec3::new(0.06, 2.3, 0.08),
+                Vec3::new(sx, crate::room::CEIL_Y * 0.5, z),
+                Vec3::new(0.06, rise, 0.08),
             ));
         }
     }

@@ -50,6 +50,7 @@
 //! | [`PROP_POINTS`] | a rig's named features point where their names say | the sconce lighting the wall, the base plate on edge |
 //! | [`FACE_FITS`] | a rig draws inside the cells the sim gave it, so its pick face can be its picture | a visible edge that does not answer the crosshair |
 //! | [`WALK_CLEAR`] | the walked path stands in air, room to room | furniture in the doorway you enter by |
+//! | [`GRID_FITS`] | every shell body stands in its own room's cells and lands on the cargo grid | a wall two centimetres off its own box, and the room next door standing inside this one |
 //!
 //! # The three layers, and the one that is not described yet
 //!
@@ -117,6 +118,8 @@ pub const PROP_POINTS: &str = "prop-points";
 pub const FACE_FITS: &str = "face-fits";
 /// The walked path must stand in air.
 pub const WALK_CLEAR: &str = "walk-clear";
+/// The world is built of the cargo grid and aligned to it.
+pub const GRID_FITS: &str = "grid-fits";
 
 /// The name a finding about cargo is filed under. A rig is not in any
 /// one room — the same crate stands in every room the game has — so the
@@ -125,7 +128,7 @@ pub const WALK_CLEAR: &str = "walk-clear";
 pub const RIGS: &str = "rigs";
 
 /// Every rule, for the report's own headings.
-pub const RULES: [&str; 7] = [
+pub const RULES: [&str; 8] = [
     BERTH_CLEAR,
     BERTH_SEEN,
     BERTH_REACHED,
@@ -133,6 +136,7 @@ pub const RULES: [&str; 7] = [
     PROP_POINTS,
     FACE_FITS,
     WALK_CLEAR,
+    GRID_FITS,
 ];
 
 // ------------------------------------------------------------- the sizes --
@@ -184,6 +188,23 @@ const FIGHT_FOOT: f32 = 0.01;
 
 /// Grid resolution of the standing-point search, per envelope box.
 const STANCES: u8 = 8;
+
+/// **The finest the cargo grid is ever cut**, and the unit every length
+/// in the world's fabric has to be a whole number of.
+///
+/// A sixteenth of a cell, because that is what the fabric's own two
+/// derived lengths already are: a hull plane is a quarter of the padding
+/// cube (four of these) and a chart's trim is a quarter of that (one).
+/// Finer than this is not a fraction of the grid any more, it is a
+/// number somebody chose — which is the thing the owner's rule exists to
+/// stop, and the reason this is a sixteenth rather than whatever divides
+/// the offsets that happen to be in the tree today.
+const GRID_STEP: f32 = crate::rig::BAY_CELL / 16.0;
+
+/// How far off a grid line a face may land and still be called on it.
+/// A millimetre: below what any eye or any depth buffer can tell, and an
+/// order under the thinnest paint the decal ladder carries.
+const GRID_EPS: f32 = 0.001;
 
 // ------------------------------------------------------------ a finding --
 
@@ -1061,6 +1082,204 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
 
 // -------------------------------------------------------------- the sweep --
 
+/// **The fabric of one room**: the bodies that ARE the room, split into
+/// the two things a room is made of.
+///
+/// The **shell** is what the room is *constructed of* — its deck, its
+/// deckhead, its four walls, and the passages its doorways run through
+/// the padding to reach. The **hardware** is what is *bolted into* an
+/// opening: a frame, a jamb lamp, a latch, a leaf drawn shut and its
+/// rivets, a hatch's coaming, hinge and pull. `true` marks the shell.
+///
+/// A station's furniture, the cargo, and the pendant are none of it.
+/// They are measured off boxes rather than off cells and they are
+/// somebody's composition; the other seven families ask about those.
+fn fabric(stage: &Stage) -> Vec<(String, Box3, bool)> {
+    let placed = &stage.placed;
+    let mut out: Vec<(String, Box3, bool)> = if placed.id == CABIN {
+        crate::rig::structure()
+            .into_iter()
+            .enumerate()
+            .map(|(i, slab)| {
+                (
+                    format!("hull slab[{i}]"),
+                    Box3::spanning(slab.center - slab.size * 0.5, slab.center + slab.size * 0.5),
+                    true,
+                )
+            })
+            .collect()
+    } else {
+        room::shell_boxes(placed, &stage.all)
+            .into_iter()
+            .enumerate()
+            .map(|(i, (center, size, _))| {
+                (
+                    format!("shell slab[{i}]"),
+                    Box3::spanning(center - size * 0.5, center + size * 0.5),
+                    true,
+                )
+            })
+            .collect()
+    };
+    out.extend(
+        room::seam_parts(placed)
+            .into_iter()
+            // Paint rides the decal ladder, whose rungs are millimetres
+            // by law and are held by the ladder's own test. A tread is
+            // not architecture; it is a mark on architecture.
+            .filter(|part| !part.dress.paint())
+            .map(|part| {
+                let shell = part.what.contains("passage");
+                (
+                    part.what.clone(),
+                    Box3::of(&part.at, unit_half(Shape::Slab)),
+                    shell,
+                )
+            }),
+    );
+    out
+}
+
+/// The box each of a room's declared ports owns: the aperture's own
+/// cells, a couple of walls of slack round them for a frame to straddle
+/// the edge with, and — where the port is mated — the padding cube the
+/// passage runs through.
+fn seam_boxes(placed: &Placed) -> Vec<Box3> {
+    placed
+        .ports
+        .iter()
+        .filter(|site| site.half_a.length() > 0.0)
+        .map(|site| {
+            let across = if site.mate.is_some() && site.is_door() {
+                room::PAD_M * 0.5
+            } else {
+                0.0
+            };
+            let mid = site.leaf + site.out * across;
+            let half = site.half_a.abs()
+                + site.half_b.abs()
+                + Vec3::splat(room::WALL_T * 2.0)
+                + site.out.abs() * across;
+            Box3::spanning(mid - half, mid + half)
+        })
+        .collect()
+}
+
+/// **The world is built of the cargo grid and aligned to it.**
+///
+/// The owner's rule, swept. Four passes of this project fixed instances
+/// of bad placement and none of them touched the class, and the class
+/// was that the fabric was only *mostly* on the lattice: the grid
+/// governed a room's plan and stopped at its section, a wall's thickness
+/// and a chart's trim were numbers chosen by eye, and the cabin's own
+/// hull was measured by hand two centimetres off its own box. None of
+/// those is visible in a screenshot. Every one of them is visible to the
+/// next thing that has to line up against it, which is how a doorway
+/// comes to leave a sliver of daylight and a passage comes to butt
+/// against nothing.
+///
+/// Two clauses, and they are the two questions a player asks:
+///
+/// - **Does it stand where it belongs?** A shell body stands inside its
+///   own room's cells, grown by the one wall its fabric may be proud by;
+///   a doorway's hardware stands in a doorway. Nothing is anywhere else.
+///   This is the clause the incinerator failed for three reports.
+/// - **Does the shell land on the grid?** Every face of every shell body
+///   is a whole number of [`GRID_STEP`]s from the lattice — cells across
+///   the plan, cells up from the room's own deck.
+///
+/// **The second clause is spent on the shell and not on the hardware,
+/// and that is the exemption, named.** A room is constructed of its
+/// deck, its deckhead, its walls and its passages, and those are the
+/// bodies everything else has to line up against. A hinge barrel, a
+/// rivet head and a twelve-millimetre coaming rim are bolted to the
+/// construction rather than part of it; holding those to a thirty-four
+/// millimetre notch would be the grid deciding what things look like
+/// instead of where they are, which the decree does not ask for and the
+/// art direction forbids. They are held by the first clause, by
+/// `a_doorway_draws_each_body_once`, and by the coplanar detector.
+///
+/// The other named exemption is **paint** — treads, sills, tile fields,
+/// every rung of `rig::layer` — which is sub-cell by definition and has
+/// a law of its own (`pieces::tests::the_decal_ladder_never_z_fights`).
+fn grid_fits(stage: &Stage) -> Vec<Finding> {
+    let placed = &stage.placed;
+    let wall = Vec3::splat(room::WALL_T);
+    let own = Box3::spanning(placed.lo - wall, placed.hi + wall);
+    let seams = seam_boxes(placed);
+    let mut out = Vec::new();
+    for (what, body, shell) in fabric(stage) {
+        // A shell body may be anywhere in its own room or in one of its
+        // own doorways; a doorway's hardware may only be in a doorway.
+        let home = if shell { Some(own) } else { None };
+        if !home.is_some_and(|home| holds(home, body))
+            && !seams.iter().any(|seam| holds(*seam, body))
+        {
+            let outer = home.unwrap_or(own);
+            let outside = (outer.lo - body.lo).max(body.hi - outer.hi).max(Vec3::ZERO);
+            out.push(Finding {
+                room: stage.name.clone(),
+                rule: GRID_FITS,
+                offender: what.clone(),
+                detail: format!(
+                    "stands {:.4}x{:.4}x{:.4} m outside {}",
+                    outside.x,
+                    outside.y,
+                    outside.z,
+                    if shell {
+                        "the cells its own room was given, and in no doorway"
+                    } else {
+                        "every doorway this room declares"
+                    }
+                ),
+            });
+        }
+        if !shell {
+            continue;
+        }
+        // Cells run from the lattice across the plan and from the room's
+        // own deck upward, so the deck is the origin a height is counted
+        // from.
+        let origin = Vec3::new(room::ANCHOR.x, placed.lo.y, room::ANCHOR.z);
+        if let Some((axis, miss, face)) = off_grid(body, origin) {
+            out.push(Finding {
+                room: stage.name.clone(),
+                rule: GRID_FITS,
+                offender: what,
+                detail: format!(
+                    "has a face at {face:.4} m on the {} axis, {miss:.4} m off the nearest \
+                     sixteenth of a cell",
+                    ["x", "y", "z"][axis]
+                ),
+            });
+        }
+    }
+    out
+}
+
+/// Whether `body` lies wholly within `outer`.
+fn holds(outer: Box3, body: Box3) -> bool {
+    (0..3).all(|axis| {
+        body.lo[axis] >= outer.lo[axis] - GRID_EPS && body.hi[axis] <= outer.hi[axis] + GRID_EPS
+    })
+}
+
+/// The worst face of `body` that does not land on the grid measured from
+/// `origin`, as `(axis, miss in metres, where the face is)`.
+fn off_grid(body: Box3, origin: Vec3) -> Option<(usize, f32, f32)> {
+    let mut worst = (0_usize, 0.0_f32, 0.0_f32);
+    for axis in 0..3 {
+        for face in [body.lo[axis], body.hi[axis]] {
+            let steps = (face - origin[axis]) / GRID_STEP;
+            let miss = (steps - steps.round()).abs() * GRID_STEP;
+            if miss > worst.1 {
+                worst = (axis, miss, face);
+            }
+        }
+    }
+    (worst.1 > GRID_EPS).then_some(worst)
+}
+
 /// **The whole gauntlet's pure half**: room by room, then kind by kind,
 /// rule by rule.
 #[must_use]
@@ -1072,6 +1291,7 @@ pub fn sweep() -> Vec<Finding> {
         out.extend(berth_reached(&stage));
         out.extend(coplanar(&stage));
         out.extend(walk_clear(&stage));
+        out.extend(grid_fits(&stage));
     }
     out.extend(prop_points());
     out.extend(rig_coplanar());
@@ -2558,6 +2778,82 @@ mod tests {
             assert!(
                 has("tread ("),
                 "{}: a doorway lays a tread and the sweep never measures one",
+                stage.name
+            );
+        }
+    }
+
+    /// **The grid family measures something, and it fires when a body
+    /// moves.**
+    ///
+    /// A family that swept an empty list would be green forever, which
+    /// is the way every rule in this file could rot and the reason the
+    /// last four passes are worth a guard rather than a promise. So
+    /// three things are asserted, and none of them is the sweep's own
+    /// branch read back: every room has fabric, a mated doorway has a
+    /// passage in it, and a body nudged off the grid or into the next
+    /// room is caught.
+    #[test]
+    fn the_grid_family_is_asked_about_every_room_and_answers_when_a_body_moves() {
+        let notch = crate::rig::BAY_CELL / 16.0;
+        for stage in roster() {
+            let fabric = fabric(&stage);
+            let shell: Vec<&(String, Box3, bool)> =
+                fabric.iter().filter(|(_, _, shell)| *shell).collect();
+            assert!(
+                shell.len() >= 6,
+                "{}: {} shell bodies — a room has six sides",
+                stage.name,
+                shell.len()
+            );
+            if stage.placed.ports.iter().any(|site| {
+                site.mate.is_some()
+                    && site.is_door()
+                    && stage.placed.id <= site.mate.expect("mated").0
+            }) {
+                assert!(
+                    fabric.iter().any(|(what, _, _)| what.contains("passage")),
+                    "{}: a mated doorway and no passage in the sweep",
+                    stage.name
+                );
+            }
+            // The room's own fabric passes; the same fabric shifted by
+            // half a notch does not, and shifted by a whole cell into
+            // the void does not either.
+            let origin = Vec3::new(room::ANCHOR.x, stage.placed.lo.y, room::ANCHOR.z);
+            let wall = Vec3::splat(room::WALL_T);
+            let own = Box3::spanning(stage.placed.lo - wall, stage.placed.hi + wall);
+            for (what, body, _) in &shell {
+                assert!(
+                    off_grid(*body, origin).is_none(),
+                    "{}: {what} is off the grid and the sweep is green",
+                    stage.name
+                );
+                let nudged = Box3::spanning(body.lo + Vec3::X * notch * 0.5, body.hi);
+                assert!(
+                    off_grid(nudged, origin).is_some(),
+                    "{}: {what} moved half a notch and nothing noticed",
+                    stage.name
+                );
+            }
+            // And the containment half is not vacuous either: shove the
+            // shell a whole cell sideways and something has to leave the
+            // room. It is stated over the shell rather than over each
+            // slab because a slab is whatever the apertures left of it,
+            // and a punched remnant from the middle of a deck can be
+            // moved a cell and still be over the deck.
+            let shove = |body: Box3| {
+                Box3::spanning(
+                    body.lo + Vec3::X * crate::rig::BAY_CELL,
+                    body.hi + Vec3::X * crate::rig::BAY_CELL,
+                )
+            };
+            assert!(
+                shell
+                    .iter()
+                    .any(|(_, body, _)| holds(own, *body) && !holds(own, shove(*body))),
+                "{}: the whole shell moves a cell sideways and is still said to be \
+                 standing in its own room",
                 stage.name
             );
         }

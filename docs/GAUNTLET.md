@@ -86,7 +86,7 @@ rigs: FloorLamp base plate reaches 0.0690 m out of the -0.031..0.466 m band
 So the loop when a line appears is: read it in the docket to know what
 moved, then run `--gauntlet` to get the millimetres.
 
-## The seven families
+## The eight families
 
 Each one names a class of defect that a screenshot could not have caught.
 What matters when you are diagnosing is the third column: what the
@@ -197,6 +197,71 @@ centimetre is a body through the deck, which is not a foot.
 It asks about the plan and not the depth. The depth is `berth-clear`'s
 question, measured against the band every rig is composed within; this
 one is measured against the only extent the sim ever states.
+
+### `grid-fits` — the world is built of the cargo grid and aligned to it
+
+The owner's rule, swept. It is the newest family and it is the one that
+exists because of the *shape* of four previous passes rather than
+because of anything a playtest saw: each of those fixed instances of bad
+placement and none of them touched the class, and the class was that the
+fabric was only **mostly** on the lattice. The grid governed a room's
+plan and stopped at its section (a deckhead at 4.109 cells). A wall's
+thickness and a chart's trim were numbers chosen by eye (0.18 and 0.055
+cells). The cabin's own hull was measured by hand two centimetres off
+its own box. None of those is visible in a screenshot, and every one of
+them is visible to the next thing that has to line up against it.
+
+Two clauses:
+
+- **Does it stand where it belongs?** A **shell** body stands inside its
+  own room's cells, grown by the one wall its fabric may be proud by; a
+  doorway's **hardware** stands in a doorway. Nothing is anywhere else.
+  In the world this is the incinerator inside the cabin, which was
+  reported three times, and the seam latch floating in mid-air with the
+  wall it was bolted to punched away behind it.
+- **Does the shell land on the grid?** Every face of every shell body is
+  a whole number of `GRID_STEP`s — a sixteenth of a cell — from the
+  lattice: cells across the plan, cells up from the room's own deck.
+
+**The named exemptions**, which are the interesting half of any rule
+like this:
+
+1. **A doorway's hardware** — a frame, a jamb lamp, a latch, a leaf
+   drawn shut and its rivets, a hatch's coaming, hinge and pull. Held to
+   the first clause and not the second. A room is *constructed of* its
+   deck, its deckhead, its walls and its passages, and those are what
+   everything else lines up against; a hinge barrel and a twelve-
+   millimetre coaming rim are bolted to the construction rather than
+   part of it. Holding those to a thirty-four millimetre notch would be
+   the grid deciding what things look like instead of where they are,
+   which the decree does not ask for and the art direction forbids.
+2. **Paint** — treads, sills, tile fields, every rung of `rig::layer`.
+   Sub-cell by definition, with a law of its own
+   (`pieces::tests::the_decal_ladder_never_z_fights`).
+3. **Anything composed as a fraction of a box** — a station's fittings,
+   a cargo rig's parts, the pendant. Those are somebody's drawing rather
+   than the world's construction, and `face-fits` and `berth-clear`
+   already measure them against the cells.
+
+The family found 126 things on the day it was written. All 126 were
+cured rather than docketed, in three groups: the cabin's ribs (0.7 m
+apart off a start of −1.20, which is 1.27 cells off no line in
+particular), the doorway's own girths (a jamb at 0.06, a shut leaf at
+0.05, a latch at 0.07 × 0.16 — all now whole notches), and the punch
+plane a hatch cuts with. Two of the cures produced fresh coplanar
+findings, which is the grid's own hazard and worth knowing about: once
+everything lands on one lattice, things that never used to line up start
+to. The ribs moved onto the cell **centres** for it — an aperture's
+edges land on the cell lines and a frame straddles them, so a rib on a
+line is a rib sharing two faces with a stile — and the coaming's rim
+went from two notches to four, because two was exactly the depth a rib
+stands proud of its wall.
+
+`the_grid_family_is_asked_about_every_room_and_answers_when_a_body_moves`
+is the guard against the family going quietly toothless: it asserts that
+every room has fabric to measure, that a mated doorway has a passage in
+it, that a body nudged half a notch is caught, and that the whole shell
+shoved a cell sideways stops being at home.
 
 ### `walk-clear` — the walked path stands in air
 

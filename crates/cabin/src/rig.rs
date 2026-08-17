@@ -419,14 +419,26 @@ pub fn structure() -> Vec<Slab> {
     // A rib straddles the wall face it is bolted to and runs the whole
     // height of the fabric, ending inside the deck and the deckhead
     // rather than on the one plane the ladder's coaming also ends on.
+    // They stand on the cell lines, a cell apart, two notches of the
+    // grid in each direction: a rib is fabric, and fabric is built out
+    // of the grid. Their spacing was 0.7 m off a start of -1.20, which
+    // is 1.27 cells off no line in particular, and their girth 0.06 and
+    // 0.08 — the sort of numbers a hull gets when nothing is asking.
     let flank = (cabin.hi.x - cabin.lo.x) * 0.5;
     let rise = 2.0f32.mul_add(crate::room::WALL_T, crate::room::CEIL_Y);
+    let girth = 2.0 * crate::room::NOTCH;
     for i in 0..6 {
-        let z = 0.7f32.mul_add(i as f32, -1.20);
+        // On the cell CENTRES, not the cell lines. An aperture's edges
+        // land on the lines and a doorway's frame straddles them, so a
+        // rib standing on one is a rib sharing two faces with a stile —
+        // which is what happened the moment the ribs came onto the grid
+        // at all. Half a cell over is still the grid, and it is nowhere
+        // a doorway can be.
+        let z = BAY_CELL.mul_add(i as f32 + 1.5, cabin.lo.z);
         for sx in [-flank, flank] {
             slabs.push(Slab::new(
                 Vec3::new(sx, crate::room::CEIL_Y * 0.5, z),
-                Vec3::new(0.06, rise, 0.08),
+                Vec3::new(girth, rise, girth),
             ));
         }
     }

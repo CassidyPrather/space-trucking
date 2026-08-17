@@ -129,6 +129,16 @@ pub const PAD_M: f32 = space_trucking::sim::room::PAD as f32 * BAY_CELL;
 /// are side by side or one above the other.
 const STOREY: f32 = CEIL_Y + PAD_M;
 
+/// **The finest cut of the cargo grid**: a sixteenth of a cell, and the
+/// unit every length in a room's fabric is a whole number of.
+///
+/// It is a sixteenth because that is what the fabric's two derived
+/// lengths already are — a hull plane is four of these and a chart's
+/// trim is one — and because finer than this stops being a fraction of
+/// the grid and starts being a number somebody chose. The gauntlet's
+/// `grid-fits` family holds every face of every shell to it.
+pub const NOTCH: f32 = BAY_CELL / 16.0;
+
 /// How far a wall chart stands inside its own box face: **a quarter of
 /// the wall it is hung on**, which is a quarter of a quarter of the
 /// padding cell.
@@ -138,22 +148,23 @@ const STOREY: f32 = CEIL_Y + PAD_M;
 /// cabin's ribs straddle their wall face and stand 0.03 m into the room,
 /// and this is 0.034. It was 0.03 flat, which cleared them by nothing at
 /// all and was a second free parameter besides.
-const CHART_INSET: f32 = WALL_T * 0.25;
+const CHART_INSET: f32 = NOTCH;
 
 /// Half-width of a walking body, for the derived envelopes. The cabin's
 /// own envelope is authored (`rig::WALK_*`) because its hull is; every
 /// attached room insets its lattice box by this.
 pub const BODY: f32 = 0.30;
 
-/// A sealed leaf's thickness — a door drawn shut is a real plate.
-const PLATE_T: f32 = 0.05;
+/// A sealed leaf's thickness — a door drawn shut is a real plate. Two
+/// notches, like everything else a doorway is made of.
+const PLATE_T: f32 = 2.0 * NOTCH;
 
 /// Doorjamb girth.
-const JAMB: f32 = 0.06;
+const JAMB: f32 = 2.0 * NOTCH;
 
 /// The detach latch's plate: a hand-sized amber lever beside the jamb.
-const LATCH_W: f32 = 0.07;
-const LATCH_H: f32 = 0.16;
+const LATCH_W: f32 = 2.0 * NOTCH;
+const LATCH_H: f32 = 5.0 * NOTCH;
 
 /// How long a seam cue burns, seconds — feedback, inside the half-second
 /// law (`docs/ART_DIRECTION_3D.md`).
@@ -778,7 +789,7 @@ pub fn sites(room: &Room) -> [Site; PORTS] {
                 let (y0, y1) = if up {
                     (CEIL_SLAB_Y - WALL_T, CEIL_SLAB_Y + WALL_T)
                 } else {
-                    (-WALL_T * 1.5, WALL_T * 0.2)
+                    (-WALL_T * 1.5, WALL_T * 0.25)
                 };
                 let mut hole = cell_column(room, x, y, y0, y1);
                 for j in 0..APERTURE {
@@ -2382,7 +2393,13 @@ const SINK: f32 = 0.022;
 
 /// The coaming's width and how far it stands proud of the deck: a rim
 /// you can see from across the room and still walk over.
-const RIM_W: f32 = 0.07;
+///
+/// Four notches wide, which is two of overhang either side of the
+/// opening's own edge. Two notches was the near miss: the overhang was
+/// then exactly the depth a cabin rib stands proud of its wall, and a
+/// well cut hard against a wall put the rim's outer face and the rib's
+/// on one plane.
+const RIM_W: f32 = 4.0 * NOTCH;
 const RIM_H: f32 = 0.012;
 
 /// The plate a door drawn shut hangs in its own opening, as
@@ -3880,7 +3897,9 @@ mod tests {
         );
         // The junk on a cabin wall straddles its own face, so it stands
         // half its girth into the room; a chart hung behind that is a
-        // chart you cannot work.
+        // chart you cannot work. Level with it is the tightest this may
+        // be and still be true: a crate on the wall has its back against
+        // the ribs rather than inside them.
         let face = f32::from(RoomKind::Cabin.floor().0) * BAY_CELL * 0.5;
         let proud = crate::rig::structure()
             .iter()
@@ -3888,7 +3907,7 @@ mod tests {
             .map(|slab| face - slab.size.x.mul_add(-0.5, slab.center.x))
             .fold(0.0_f32, f32::max);
         assert!(
-            CHART_INSET > proud,
+            CHART_INSET >= proud - 1e-5,
             "the ribs stand {proud} m proud and the chart insets {CHART_INSET} m"
         );
     }

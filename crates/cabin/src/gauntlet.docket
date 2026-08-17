@@ -71,3 +71,23 @@
 #
 # The sentences all three closed are kept said as tests in `gauntlet.rs`,
 # because a docket shrinks and a law does not.
+#
+# The fourth layer was the LATTICE itself, and it is the first one that
+# was not invisible for want of a description — every room's box, every
+# wall and every doorway could always be enumerated. It was invisible for
+# want of a QUESTION. Nothing had ever asked whether the fabric was
+# actually on the grid it was supposed to be built out of, and it was
+# not: a deckhead at 4.109 cells, a wall thickness and a chart trim
+# chosen by eye, a hand-measured cabin hull two centimetres off its own
+# box, and two rooms mating flush so that their hulls stood through each
+# other by two wall thicknesses at every seam on every ship. That last
+# one is the defect the owner reported three times as the incinerator
+# clipping into the main cabin, and no pass that looked at placements
+# could have found it, because no placement was wrong.
+#
+# `grid-fits` is the question. It found 126 things and all 126 were
+# cured; docs/GAUNTLET.md carries what they were and what the two named
+# exemptions are. The lesson from the three layers below still stands and
+# now has a companion: the next defect is either in the layer nobody has
+# described yet, or in the question nobody has thought to ask about a
+# layer that is fully described.

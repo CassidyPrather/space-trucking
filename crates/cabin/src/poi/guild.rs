@@ -253,18 +253,37 @@ const BONDED_STORE: [Fitting; 14] = [
         Vec3::new(0.85, 0.33, 0.10),
         Vec3::new(0.10, 0.015, 0.12),
     ),
-    // The seizure beacon, over the doorway: the light that comes on when
+    // The seizure beacon, over the way in: the light that comes on when
     // the hangar has taken something, which at the Guild it usually has.
+    //
+    // **It hangs from the deckhead**, and it used to hang from nothing.
+    // Both bodies sat on the shopfront plane the register bars stand
+    // on — 0.58 m in front of the aft wall and 0.42 m under the
+    // ceiling — with the brass hood face down over the lamp and nothing
+    // at all holding either of them up. A player photographed it and
+    // read it exactly right: a canopy that had lost its ceiling.
+    //
+    // The wall is not where it can go back to. A trade room's whole aft
+    // face is the Guild's own `Stock` band, goods from deck to cornice,
+    // and so is the aft row of its deckhead — a station standing in its
+    // own goods' air is the defect `berth-clear` exists for, and the
+    // arithmetic leaves 53 mm of cornice between the top course and the
+    // ceiling berths for a fitting 182 mm tall. The deckhead a cell
+    // further in is the room's own staging, it is the surface a hood
+    // shaped like this one was always drawn for, and it is directly
+    // over the lane you walk in along. The hood's top face lands on it,
+    // and both bodies stand clear of the hangar light's own bar rather
+    // than through it.
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(palette::EERIE_BRIGHT, 3.0),
-        Vec3::new(-0.67, 0.52, 0.650),
+        Vec3::new(-0.67, 0.905, 0.520),
         Vec3::new(0.07, 0.07, 0.05),
     ),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(-0.67, 0.60, 0.640),
+        Vec3::new(-0.67, 0.985, 0.510),
         Vec3::new(0.11, 0.015, 0.06),
     ),
     // And the plaque on the port flank: the Guild's own enamel, framed in

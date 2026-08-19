@@ -520,12 +520,23 @@ fn paint(
 ) {
     let muted = shell.muted;
     for (mut visibility, is_root) in &mut shown {
-        // The root stands or does not; the slash rides mute. Both hide
-        // by the same word, and the slash's own answer only matters
-        // while the root is up to show it.
-        let up = if is_root { menu.open } else { muted };
-        *visibility = if up {
-            Visibility::Visible
+        // The root stands or does not; the slash rides mute. They hide
+        // by the same word but they show by different ones, and the
+        // difference is the whole of it: `Visible` means *drawn even
+        // though an ancestor is hidden*, which is the right answer for
+        // an overlay that answers to nothing and the wrong one for a
+        // mark inside it. Said of the slash it put a red bar across the
+        // played frame every time a player muted and shut the menu.
+        // Under the root, showing is `Inherited`: the slash says mute is
+        // on, the root says whether anyone is being told.
+        *visibility = if is_root {
+            if menu.open {
+                Visibility::Visible
+            } else {
+                Visibility::Hidden
+            }
+        } else if muted {
+            Visibility::Inherited
         } else {
             Visibility::Hidden
         };
@@ -614,7 +625,10 @@ fn paint(
 
 #[cfg(test)]
 mod tests {
+    use space_trucking::sim::InputFrame;
+
     use super::*;
+    use crate::bridge::{Bridge, FrameOutcome};
     use crate::rig::Focus;
 
     /// The edges drain exactly once: `advance` is the only consumer, and
@@ -755,6 +769,128 @@ mod tests {
         assert!(
             !source.contains(&text_node),
             "the menu grew a rendered string; icons only (DESIGN.md)"
+        );
+    }
+
+    /// The whole menu standing in a bare app: `spawn` builds it, `paint`
+    /// reads the sim back onto it, and nothing else in the world spawns
+    /// anything at all. Every entity here is therefore a piece of the
+    /// menu, which is the point — a piece spawned outside the root is
+    /// one of the ways the menu could leave something behind, and a
+    /// query that only walked the root's children would never see it.
+    // Four yes/no facts about one frame of the world, which is exactly
+    // what the cross product below is made of; enums per fact would make
+    // those loops harder to read and not one case safer.
+    #[allow(clippy::fn_params_excessive_bools)]
+    fn built(open: bool, muted: bool, paused: bool, warping: bool) -> App {
+        let mut bridge = Bridge::boot_fixture(crate::fixture::SAVE);
+        // Toggles, not settings: the sim owns pause and warp, so the
+        // only honest way to ask for a state is to work the control.
+        let input = InputFrame {
+            toggle_pause: bridge.sim.is_paused() != paused,
+            toggle_warp: bridge.sim.is_warp() != warping,
+            ..InputFrame::default()
+        };
+        bridge.sim.advance(0.0, &input);
+        assert_eq!(bridge.sim.is_paused(), paused, "the sim refused to pause");
+        assert_eq!(bridge.sim.is_warp(), warping, "the sim refused to warp");
+        let mut app = App::new();
+        app.insert_resource(Shell {
+            bridge,
+            outcome: FrameOutcome::default(),
+            muted,
+        })
+        .insert_resource(Menu::boot(open))
+        .add_systems(PostStartup, spawn)
+        .add_systems(Update, paint);
+        app.update();
+        app
+    }
+
+    /// Bevy's rule for whether a node reaches the screen, run over the
+    /// hierarchy the menu actually built: `Visible` draws even under a
+    /// hidden parent, `Hidden` stops there, `Inherited` asks its parent,
+    /// and an entity with no parent left to ask is up. What the renderer
+    /// would make of this menu, decided without one.
+    fn drawn(world: &World, entity: Entity) -> bool {
+        match world.get::<Visibility>(entity) {
+            None | Some(Visibility::Hidden) => false,
+            Some(Visibility::Visible) => true,
+            Some(Visibility::Inherited) => world
+                .get::<ChildOf>(entity)
+                .is_none_or(|child_of| drawn(world, child_of.parent())),
+        }
+    }
+
+    /// Everything the menu is putting on the screen this frame.
+    fn on_screen(app: &App) -> Vec<Entity> {
+        let world = app.world();
+        world
+            .iter_entities()
+            .map(|entity| entity.id())
+            .filter(|entity| drawn(world, *entity))
+            .collect()
+    }
+
+    /// How many runs of the refusal slash are on the screen.
+    fn slash_on_screen(app: &App) -> usize {
+        let world = app.world();
+        world
+            .iter_entities()
+            .filter(|entity| entity.contains::<Slash>() && drawn(world, entity.id()))
+            .count()
+    }
+
+    /// **A closed menu draws nothing.** Pause, fast-forward, mute and
+    /// the Guild's tally are things done *to* the game, and the overlay
+    /// is the only place any of them may appear: with it shut the player
+    /// is looking at the cabin and at nothing else.
+    ///
+    /// Mute broke this first. Its refusal slash asked for
+    /// `Visibility::Visible`, which in Bevy means *draw me even though
+    /// an ancestor is hidden*, so muting and then closing the menu left
+    /// a red bar hanging over the played frame. The law is not about
+    /// mute, though, which is why this asks it of every entity the menu
+    /// owns in every state the sim can hand it — a slash that can escape
+    /// is a lamp that can escape.
+    #[test]
+    fn a_closed_menu_draws_nothing() {
+        for muted in [false, true] {
+            for paused in [false, true] {
+                for warping in [false, true] {
+                    let app = built(false, muted, paused, warping);
+                    let escaped = on_screen(&app);
+                    assert!(
+                        escaped.is_empty(),
+                        "a closed menu put {} node(s) over the game \
+                         (muted {muted}, paused {paused}, warping {warping})",
+                        escaped.len()
+                    );
+                }
+            }
+        }
+    }
+
+    /// The other half of the same law, and the reason the first half is
+    /// not satisfied by a menu that never draws: standing, the menu is
+    /// on the screen, and the slash is on the speaker exactly when the
+    /// sound has stopped.
+    #[test]
+    fn an_open_menu_wears_its_slash_only_while_muted() {
+        let loud = built(true, false, false, false);
+        assert!(
+            !on_screen(&loud).is_empty(),
+            "an open menu must be on the screen"
+        );
+        assert_eq!(
+            slash_on_screen(&loud),
+            0,
+            "the ship can be heard; nothing refuses"
+        );
+        let muted = built(true, true, false, false);
+        assert!(
+            slash_on_screen(&muted) > 0,
+            "muted, the speaker must wear its slash"
         );
     }
 }

@@ -48,7 +48,7 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Sub};
 pub use barter::{Barter, VALUE};
 pub use cargo::{
     KIND_COUNT, Kind, Loc, Mount, Piece, Tag, Violation, first_fit, lamp, lamp_lit, lit_adjacent,
-    placement_check, placement_legal, player_owned,
+    mount_accepts, placement_check, placement_legal, player_owned,
 };
 pub use encounter::{AD_SWATS, Drone, Encounter, EncounterKind};
 use encounter::{Drones, Encounters};

@@ -102,6 +102,20 @@ pub enum Surf {
     Ceiling,
 }
 
+impl Surf {
+    /// Every plane a room has, for a caller that has to ask a question
+    /// of each of them. The net folds into six faces and this is all
+    /// six; nothing derives an order from it.
+    pub const ALL: [Self; 6] = [
+        Self::Aft,
+        Self::Port,
+        Self::Floor,
+        Self::Starboard,
+        Self::Front,
+        Self::Ceiling,
+    ];
+}
+
 /// What a cell's colour reads as, and therefore how it behaves.
 ///
 /// The class is declared once by the room kind; the rules and the paint

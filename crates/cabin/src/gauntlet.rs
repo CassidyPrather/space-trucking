@@ -52,6 +52,7 @@
 //! | [`WALK_CLEAR`] | the walked path stands in air, room to room | furniture in the doorway you enter by |
 //! | [`GRID_FITS`] | every shell body stands in its own room's cells and lands on the cargo grid | a wall two centimetres off its own box, and the room next door standing inside this one |
 //! | [`PART_SEATED`] | a part that names another part as what holds it up actually meets it | a couch on four stilts of air, a pane of glass floating off its own bezel |
+//! | [`RIG_SEATED`] | a rig reaches the chart it is berthed on, on every chart class it may be berthed on | a crate standing on nothing, a canopy that never gets to its own deckhead |
 //!
 //! # The three layers, and the one that is not described yet
 //!
@@ -81,9 +82,15 @@
 //! parts have been enumerable since `pieces::parts` landed, and for as
 //! long as they have been, every rule asked about a part and the WORLD.
 //! None asked whether a part meets the other part of the same rig its
-//! own name says holds it up, and three of them did not. docs/GAUNTLET.md carries that history, what the harness can and
-//! cannot see, and everything else an operator needs when a check goes
-//! red.
+//! own name says holds it up, and three of them did not.
+//!
+//! [`RIG_SEATED`] is the same question asked one body out, and it needed
+//! no new description either. Every family measured a rig against a
+//! number the world states — the band it is composed in, the cells it
+//! draws inside — and none against the one plane its own berth promises
+//! it. Twenty-two kinds did not reach theirs. docs/GAUNTLET.md carries
+//! that history, what the harness can and cannot see, and everything
+//! else an operator needs when a check goes red.
 //!
 //! # The docket
 //!
@@ -98,9 +105,9 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use bevy::prelude::*;
-use space_trucking::sim::cargo::{Kind, Loc, Mount, Piece, placement_check, plan};
+use space_trucking::sim::cargo::{Kind, Loc, Mount, Piece, mount_accepts, placement_check, plan};
 use space_trucking::sim::layout;
-use space_trucking::sim::room::{CABIN, RoomId, RoomKind, Rooms, Tile};
+use space_trucking::sim::room::{CABIN, RoomId, RoomKind, Rooms, Surf, Tile};
 
 use crate::pieces::{Screens, Under};
 use crate::poi::{self, Fitting, Frame, Host, Shape};
@@ -128,6 +135,8 @@ pub const WALK_CLEAR: &str = "walk-clear";
 pub const GRID_FITS: &str = "grid-fits";
 /// A part that names a seat must meet it.
 pub const PART_SEATED: &str = "part-seated";
+/// A rig must reach the chart it is berthed on.
+pub const RIG_SEATED: &str = "rig-seated";
 
 /// The name a finding about cargo is filed under. A rig is not in any
 /// one room — the same crate stands in every room the game has — so the
@@ -136,7 +145,7 @@ pub const PART_SEATED: &str = "part-seated";
 pub const RIGS: &str = "rigs";
 
 /// Every rule, for the report's own headings.
-pub const RULES: [&str; 9] = [
+pub const RULES: [&str; 10] = [
     BERTH_CLEAR,
     BERTH_SEEN,
     BERTH_REACHED,
@@ -146,6 +155,7 @@ pub const RULES: [&str; 9] = [
     WALK_CLEAR,
     GRID_FITS,
     PART_SEATED,
+    RIG_SEATED,
 ];
 
 // ------------------------------------------------------------- the sizes --
@@ -156,8 +166,8 @@ pub const RULES: [&str; 9] = [
 /// hair of overlap is not evidence of anything.
 const CLIP_SLACK: f32 = 0.004;
 
-/// How far a standing rig's sole may sink into the deck it stands on,
-/// in metres — the one direction a body is allowed past its own plan.
+/// How far a rig's sole may sink into the chart it is berthed on, in
+/// metres — the one direction a body is allowed past its own plan.
 ///
 /// A sole flush with the deck shares a plane with it, and a sole above
 /// it is furniture floating; burying it is how a foot meets a floor.
@@ -166,6 +176,15 @@ const CLIP_SLACK: f32 = 0.004;
 /// centimetre under their own bottom edge, so it is written down here as
 /// a number rather than re-argued per family. Deeper than this is a body
 /// through the deck, which is not a foot.
+///
+/// **"Sole" is whichever face meets the chart**, because the argument
+/// never mentioned gravity: a floor rig's sole is its underside and a
+/// ceiling rig's is its canopy, and a canopy flush with the deckhead
+/// shares a plane with it exactly as a foot flush with the deck does.
+/// Which face that is comes from the chart the kind may be berthed on
+/// ([`chart_joint`]), so the two families that spend this number — this
+/// one from above and [`rig_seated`] from below — are asking about one
+/// joint from its two sides.
 const SOLE_SINK: f32 = 0.010;
 
 /// And how much of the smaller body the overlap must eat. Same argument
@@ -1356,6 +1375,7 @@ pub fn sweep() -> Vec<Finding> {
     out.extend(rig_coplanar());
     out.extend(rig_fits());
     out.extend(rig_faces());
+    out.extend(rig_seated());
     out.sort();
     out.dedup();
     out
@@ -2082,17 +2102,13 @@ fn rig_faces() -> Vec<Finding> {
                     // `rig_scene` already measures in metres, so the
                     // cells are carried across rather than the bodies.
                     let (lo, hi) = (drawn.body.lo, drawn.body.hi);
-                    let sink = if matches!(kind.mount(), Mount::Floor) {
-                        SOLE_SINK
-                    } else {
-                        CLIP_SLACK
-                    };
+                    let (down, up) = plan_sink(kind);
                     let plan = cells * unit;
                     let worst = [
                         (-plan.x - lo.x, CLIP_SLACK),
                         (hi.x - plan.x, CLIP_SLACK),
-                        (-plan.y - lo.y, sink),
-                        (hi.y - plan.y, CLIP_SLACK),
+                        (-plan.y - lo.y, down),
+                        (hi.y - plan.y, up),
                     ]
                     .into_iter()
                     .filter(|&(spill, tol)| spill > tol)
@@ -2116,6 +2132,189 @@ fn rig_faces() -> Vec<Finding> {
                 cells.y * 2.0 * unit
             ),
         }));
+    }
+    out
+}
+
+/// **Where a rig meets the chart it is berthed on**, in its own frame: a
+/// point on that chart and the direction the rig reaches to get there.
+///
+/// A kind is composed once, in the upright frame no berth turns, and
+/// berthed by `pieces::site_on` — which puts a deck berth's
+/// rig half its own height above the chart, a deckhead berth's half its
+/// height below, and a wall berth's flat on it. So the chart is at a
+/// known plane of the rig's own frame, and which plane is a question
+/// about the chart's CLASS and nothing else.
+///
+/// `None` where the kind may not be berthed on that class at all, which
+/// is the arbiter's ruling and is asked of the arbiter
+/// (`cargo::mount_accepts`) rather than restated here.
+fn chart_joint(kind: Kind, surf: Surf) -> Option<Joint> {
+    if !mount_accepts(kind.mount(), surf) {
+        return None;
+    }
+    let tall = f32::from(kind.upright().1) * layout::CELL * 0.5 * crate::pieces::RIG_UNIT;
+    Some(match surf {
+        // A rig STANDS on a deck: its own frame's floor is half its
+        // height below the middle, and its sole is what reaches it.
+        Surf::Floor => Joint {
+            face: "sole",
+            chart: "deck",
+            at: Vec3::new(0.0, -tall, 0.0),
+            toward: Vec3::NEG_Y,
+        },
+        // A pendant hangs UNDER a deckhead: the same joint upside down,
+        // and its canopy is what reaches it.
+        Surf::Ceiling => Joint {
+            face: "canopy",
+            chart: "deckhead",
+            at: Vec3::new(0.0, tall, 0.0),
+            toward: Vec3::Y,
+        },
+        // A rig hung on a wall is composed straight onto the berth
+        // plane, so the wall is its own frame's `z = 0` and its back is
+        // what reaches it. All four walls are one answer, which is what
+        // the arbiter says too: nobody hangs a painting on a compass
+        // heading.
+        Surf::Aft | Surf::Port | Surf::Starboard | Surf::Front => Joint {
+            face: "back",
+            chart: "wall",
+            at: Vec3::ZERO,
+            toward: Vec3::NEG_Z,
+        },
+    })
+}
+
+/// One rig-to-chart joint: which face of the rig makes it, what the
+/// chart is called, and the plane the face has to reach stated as a
+/// point on it and the direction the rig reaches along.
+#[derive(Clone, Copy, Debug)]
+struct Joint {
+    face: &'static str,
+    chart: &'static str,
+    at: Vec3,
+    toward: Vec3,
+}
+
+impl Joint {
+    /// How far short of the chart a body stops, in metres: positive is
+    /// daylight, zero is flush, negative is buried.
+    fn short_of(self, body: Box3) -> f32 {
+        let centre = (body.lo + body.hi) * 0.5;
+        let half = (body.hi - body.lo) * 0.5;
+        self.at.dot(self.toward) - (centre.dot(self.toward) + half.dot(self.toward.abs()))
+    }
+}
+
+/// How far a kind's rig may sink past its own plan on the way down and
+/// on the way up, in metres — [`SOLE_SINK`] on whichever face meets a
+/// chart and [`CLIP_SLACK`] on the one that meets nothing.
+///
+/// Derived from the joints rather than from the mount, so the day a kind
+/// may take two chart classes it is allowed to meet both of them.
+fn plan_sink(kind: Kind) -> (f32, f32) {
+    let mut sink = (CLIP_SLACK, CLIP_SLACK);
+    for surf in Surf::ALL {
+        let Some(joint) = chart_joint(kind, surf) else {
+            continue;
+        };
+        if joint.toward.y < 0.0 {
+            sink.0 = SOLE_SINK;
+        }
+        if joint.toward.y > 0.0 {
+            sink.1 = SOLE_SINK;
+        }
+    }
+    sink
+}
+
+/// **A rig reaches the chart it is berthed on.** [`RIG_SEATED`].
+///
+/// [`PART_SEATED`]'s sibling, one plane down. That family measures a
+/// part against another part of the same rig; this one measures the
+/// whole rig against the one thing outside it that a berth actually
+/// promises — the deck it stands on, the deckhead it hangs from, the
+/// wall it is screwed to.
+///
+/// **No family caught it.** [`berth_clear`] measures the depth a rig is
+/// composed within and says nothing about where inside that depth a body
+/// stops. [`rig_faces`] catches a body reaching OUTSIDE its own plan and
+/// is deliberately blind to one that fails to reach the plan's own
+/// floor — it forgives a centimetre of burial there ([`SOLE_SINK`]) and
+/// asks nothing at all about a metre of air. [`part_seated`] is
+/// part-against-part. A crate that stops seven centimetres above its own
+/// deck cell satisfies every one of the nine and is a crate standing on
+/// nothing.
+///
+/// **It is asked on every chart class the kind may take**, which is the
+/// arbiter's list and not this file's ([`chart_joint`]). A kind takes one
+/// class today, so it is asked once; the sweep is written the other way
+/// round because which plane a body must reach is a property of the
+/// chart and never of the body.
+///
+/// **The tolerance is [`SEAT_GAP`], the same number the seat family
+/// spends**, because it is the same joint: a step of the decal ladder
+/// plus the thickest paint that could be riding on the seat's own face.
+/// A chart's face carries paint too — a tile field, a class's mark — and
+/// a rig meets it the way a pane meets a bezel, by going a step into it
+/// (`pieces::SOLE_BURY`), so the builder's number sits inside the rule
+/// with room to spare. What the rule refuses is the next order of
+/// magnitude: a gap you can see the deck through, which on these rigs
+/// starts at about a centimetre.
+///
+/// The other side of the same joint is [`rig_faces`]', which refuses
+/// more than [`SOLE_SINK`] of burial. Between them a rig's sole has a
+/// band it must land in, and that band is a hair either side of the
+/// chart.
+fn rig_seated() -> Vec<Finding> {
+    let mut out = Vec::new();
+    for kind in Kind::ALL {
+        for surf in Surf::ALL {
+            let Some(joint) = chart_joint(kind, surf) else {
+                continue;
+            };
+            // The worst the rig ever looks: a kind whose live and
+            // headless bodies differ reaches its chart in one of them
+            // and not the other, and the one that misses is the finding.
+            let mut worst: Option<(f32, String)> = None;
+            for screens in Screens::BOTH {
+                for showing in rig_forms(kind) {
+                    // A laid covering is not composed onto its chart at
+                    // all: `pieces::laid_on` lays it ON the plane and
+                    // lifts it a rung of the decal ladder, so its joint
+                    // is a derivation and there is nothing a builder
+                    // could have got wrong. Only what a berth STANDS is
+                    // asked.
+                    if showing == Under::Laid {
+                        continue;
+                    }
+                    let scene = rig_scene(kind, screens, showing);
+                    let closest = scene
+                        .into_iter()
+                        .map(|drawn| (joint.short_of(drawn.body), drawn.what))
+                        .min_by(|a, b| a.0.total_cmp(&b.0));
+                    if let Some(closest) = closest
+                        && worst.as_ref().is_none_or(|(gap, _)| closest.0 > *gap)
+                    {
+                        worst = Some(closest);
+                    }
+                }
+            }
+            let Some((gap, what)) = worst else { continue };
+            if gap <= SEAT_GAP {
+                continue;
+            }
+            out.push(Finding {
+                room: RIGS.to_owned(),
+                rule: RIG_SEATED,
+                offender: format!("{kind:?} {}", joint.face),
+                detail: format!(
+                    "stops {gap:.4} m short of the {} it is berthed on — the nearest \
+                     body to it is \"{what}\" — so the rig stands on nothing",
+                    joint.chart
+                ),
+            });
+        }
     }
     out
 }
@@ -2554,6 +2753,100 @@ mod tests {
         assert!(
             seat.apart(beside) > SEAT_GAP,
             "a body across the room is not a seat"
+        );
+    }
+
+    /// **The chart family is asked about every kind, on every chart it
+    /// may be berthed on, and it answers when a rig leaves its plane.**
+    ///
+    /// The guard against a family that is green because it never asked.
+    /// It counts the questions — every kind has a chart and no kind has
+    /// none — checks that the chart it is asked about is the arbiter's
+    /// answer and not a second copy of the table, and then moves a rig
+    /// off its own plane both ways and reads the finding back.
+    ///
+    /// The last clause is the one that matters. A reading built out of
+    /// the implementation's own branch would pass this whatever the
+    /// number said, so it is exercised against a body placed by hand at
+    /// each end of the tolerance: flush is seated, a builder's step of
+    /// burial is seated, and a centimetre of air is not.
+    #[test]
+    fn every_kind_is_asked_which_chart_it_stands_on_and_answers_when_it_leaves_one() {
+        let mut asked = 0_u32;
+        for kind in Kind::ALL {
+            let charts: Vec<Surf> = Surf::ALL
+                .into_iter()
+                .filter(|&surf| chart_joint(kind, surf).is_some())
+                .collect();
+            assert!(
+                !charts.is_empty(),
+                "{kind:?} is berthed on no chart at all, so nothing asks what it stands on"
+            );
+            for surf in Surf::ALL {
+                assert_eq!(
+                    chart_joint(kind, surf).is_some(),
+                    mount_accepts(kind.mount(), surf),
+                    "{kind:?} on {surf:?}: the family and the arbiter disagree about \
+                     whether the berth exists"
+                );
+            }
+            asked += u32::try_from(charts.len()).unwrap_or(0);
+        }
+        assert!(
+            asked >= u32::try_from(Kind::ALL.len()).unwrap_or(0),
+            "only {asked} kind-and-chart question(s) are asked of {} kinds",
+            Kind::ALL.len()
+        );
+        // Every mount class is actually represented, so a family that
+        // quietly answered `None` for the deckhead would be caught.
+        for want in [Mount::Floor, Mount::Ceiling, Mount::Wall] {
+            assert!(
+                Kind::ALL.into_iter().any(|kind| kind.mount() == want),
+                "no kind is berthed on a {want:?} chart, so that clause is vacuous"
+            );
+        }
+        // And the reading, at both ends of its own tolerance. A deck
+        // sits at the plane the joint names; a body is walked off it.
+        let joint = chart_joint(Kind::CometIce, Surf::Floor).expect("a crate stands on a deck");
+        let sole = |y: f32| Box3 {
+            lo: Vec3::new(-0.1, y, -0.1),
+            hi: Vec3::new(0.1, y + 0.2, 0.1),
+        };
+        let deck = joint.at.y;
+        let bury = crate::pieces::SOLE_BURY * crate::pieces::RIG_UNIT;
+        assert!(
+            joint.short_of(sole(deck)) <= 0.0,
+            "a sole on the plane is seated"
+        );
+        assert!(
+            joint.short_of(sole(deck - bury)) < 0.0,
+            "a sole a builder's step into the plane is seated"
+        );
+        assert!(
+            joint.short_of(sole(SEAT_GAP.mul_add(0.5, deck))) <= SEAT_GAP,
+            "a sole half a tolerance up is still seated"
+        );
+        assert!(
+            joint.short_of(sole(deck + 0.01)) > SEAT_GAP,
+            "a centimetre of daylight is not a joint"
+        );
+        // The whole family, on a rig walked off its plane: the ceiling
+        // lamp's canopy meets its deckhead today, and a millimetre is
+        // not what saves it.
+        let lamp = chart_joint(Kind::CeilingLamp, Surf::Ceiling).expect("a pendant hangs");
+        let canopy = rig_scene(Kind::CeilingLamp, Screens::LIVE, Under::Rig)
+            .into_iter()
+            .map(|drawn| lamp.short_of(drawn.body))
+            .fold(f32::INFINITY, f32::min);
+        assert!(
+            canopy <= 0.0,
+            "the ceiling lamp's canopy stops {canopy} m short of its own deckhead",
+        );
+        assert!(
+            !rig_seated()
+                .iter()
+                .any(|finding| finding.offender.starts_with("CeilingLamp")),
+            "the ceiling lamp is seated, so the family must not be reporting it"
         );
     }
 

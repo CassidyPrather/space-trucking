@@ -878,14 +878,20 @@ pub struct Seat {
 /// not.
 pub const GLAZE: f32 = crate::rig::layer::STEP / RIG_UNIT;
 
-/// **How far a standing rig's sole is buried in the deck it stands on**,
-/// in rig-local sim units — [`GLAZE`], because it is the same joint one
+/// **How far a rig's sole is buried in the chart it is berthed on**, in
+/// rig-local sim units — [`GLAZE`], because it is the same joint one
 /// plane down. A sole flush with the deck shares a plane with it and a
 /// sole above it is furniture floating, so a foot meets a floor by going
 /// a step into it, exactly as a pane meets the bezel it is glazed into.
-/// The gauntlet holds a rig to the other side of this: `SOLE_SINK`, a
-/// centimetre, past which a foot is a body through the deck.
-const SOLE_BURY: f32 = GLAZE;
+///
+/// **The sole is whichever face meets the chart**, and gravity is not in
+/// the argument: a pendant's canopy meets a deckhead by going a step up
+/// into it and a porthole's glass meets a wall by going a step back into
+/// it. The gauntlet holds a rig to both sides of this — `SOLE_SINK`, a
+/// centimetre, past which a foot is a body through the deck, and its
+/// `rig-seated` family, which refuses a rig that never gets to its chart
+/// at all.
+pub const SOLE_BURY: f32 = GLAZE;
 
 /// A cone's open end: Bevy stands a `Cone` apex-up, so its mouth faces
 /// its own `-Y`. A shade, a cup, a horn — the direction the light or the
@@ -3603,6 +3609,34 @@ fn tin_parts(shell: Coat, lid: Coat) -> Vec<Part> {
     ]
 }
 
+/// A porthole's bolt head, and how far it stands out of the brass it is
+/// torqued into. The ball's own radius less its proudness is how deep
+/// the bolt sinks behind the ring, and that depth is the whole stand-off
+/// the ring assembly hangs at ([`ring_z`]).
+const STUD_R: f32 = 1.5;
+const STUD_PROUD: f32 = 0.6;
+
+/// How far a headless pane's stand-in stars ride in front of the glass
+/// they are scattered on, in rig-local sim units. Stated off the glass
+/// rather than at a depth of their own, so a bezel that moves takes its
+/// own sky with it instead of leaving it hanging in front of the brass.
+const STAR_PROUD: f32 = 0.2;
+
+/// **Where a bolt ring's brass hangs**, in rig-local sim units: far
+/// enough off the berth plane that the bolts sunk behind it just reach
+/// it, and no further. A porthole is a bore cut in a hull with a ring
+/// torqued over it, so the bolts are what touch the ship and the ring is
+/// what they hold on.
+///
+/// Only the ring bezel has an answer to give: the lipped and mullioned
+/// bezels are boxes six units deep that already stand on the plane.
+const fn ring_z(bezel: Bezel) -> f32 {
+    match bezel {
+        Bezel::Ring => STUD_R - STUD_PROUD,
+        Bezel::Lipped | Bezel::Mullioned => 0.0,
+    }
+}
+
 /// The whole window family, described: a frame around a hole in the hull.
 ///
 /// The glass carries `viewport::SkyPane` — the whole contract between
@@ -3632,20 +3666,34 @@ fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens)
         Bezel::Lipped => (fw * 0.88, fh * 0.78),
         Bezel::Mullioned => (fw * 0.90, fh * 0.84),
     };
-    // Which member of this bezel the glass is glazed behind, and where
-    // that member's own back face is: a ring is a flat annulus at one
-    // plane, four lips are a box the pane sits inside. The pane meets
-    // it either way (`gauntlet`, `part-seated`) — the ring's used to
-    // stand nine millimetres clear of the brass it is supposedly bolted
-    // into, and only the played build drew it that way.
-    let (frame, glass_z) = match bezel {
-        Bezel::Ring => ("bolt ring", 3.0 - GLAZE),
-        Bezel::Lipped | Bezel::Mullioned => ("lip", 2.4),
+    // Which member of this bezel the glass is glazed behind, where the
+    // glass itself hangs, and where a headless slab's own back face
+    // sits: a ring is a flat annulus at one plane, four lips are a box
+    // the pane sits inside. The pane meets its frame either way
+    // (`gauntlet`, `part-seated`) — the ring's used to stand nine
+    // millimetres clear of the brass it is supposedly bolted into, and
+    // only the played build drew it that way.
+    //
+    // **A bore is cut in a hull, so a porthole begins at one.** The
+    // brass hung at the middle of the band every rig is composed in,
+    // which put the whole fitting — glass, ring and bolts — a good
+    // three centimetres out in the air in front of the wall it is
+    // torqued down to, with the room's own paint visible under the
+    // brim. Every other kind that hangs on a wall puts its backmost
+    // body on the plane and this one now does too (`gauntlet`,
+    // `rig-seated`): the assembly is carried back until the BOLTS reach
+    // the hull, and every member keeps the depth it was drawn at
+    // relative to them, so what moved is where the fitting begins and
+    // not how it is put together. The ring's own annulus clears the
+    // decal ladder's flat paint with room to spare, which a sheet of
+    // brass on a wall has to.
+    let (frame, glass_z, glass_back) = match bezel {
+        Bezel::Ring => ("bolt ring", ring_z(bezel) - GLAZE, 0.0),
+        // The deep bezels are boxes standing on the wall already; a
+        // headless slab keeps clear of the plane their backmost member
+        // begins at, since two opaque faces at one depth are a coin toss.
+        Bezel::Lipped | Bezel::Mullioned => ("lip", 2.4, 0.4),
     };
-    // Where a headless slab's own back face sits: clear of the plane
-    // every bezel's backmost member begins at, since two opaque faces
-    // at one depth are a coin toss.
-    let glass_back = 0.4;
     let mut out = Vec::new();
     if screens.sky {
         out.push(
@@ -3684,7 +3732,11 @@ fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens)
                     "star",
                     Body::Ball { r: 0.9 },
                     star,
-                    Transform::from_xyz(angle.cos() * gw * reach, angle.sin() * gh * reach, 2.6),
+                    Transform::from_xyz(
+                        angle.cos() * gw * reach,
+                        angle.sin() * gh * reach,
+                        glass_z + STAR_PROUD,
+                    ),
                 )
                 .nth(u8::try_from(i).unwrap_or(0)),
             );
@@ -3697,6 +3749,7 @@ fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens)
         Bezel::Ring => {
             let bore = gw * 0.5;
             let brim = fw.min(fh) * 0.47;
+            let ring_z = ring_z(bezel);
             out.push(Part::new(
                 "bolt ring",
                 Body::Washer {
@@ -3705,7 +3758,7 @@ fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens)
                     facets: 12,
                 },
                 brass,
-                Transform::from_xyz(0.0, 0.0, 3.0),
+                Transform::from_xyz(0.0, 0.0, ring_z),
             ));
             for i in 0..6_u32 {
                 let angle = (i as f32) * std::f32::consts::TAU / 6.0;
@@ -3713,9 +3766,13 @@ fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens)
                 out.push(
                     Part::new(
                         "stud",
-                        Body::Ball { r: 1.5 },
+                        Body::Ball { r: STUD_R },
                         brass,
-                        Transform::from_xyz(angle.cos() * reach, angle.sin() * reach, 3.6),
+                        Transform::from_xyz(
+                            angle.cos() * reach,
+                            angle.sin() * reach,
+                            ring_z + STUD_PROUD,
+                        ),
                     )
                     .nth(u8::try_from(i).unwrap_or(0))
                     .seated("bolt ring"),
@@ -4231,11 +4288,20 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
         // a flattened cone shade, and the warm bulb beneath — the bulb
         // and its point light wake through `sync_fixtures`.
         Kind::CeilingLamp => {
+            // **The canopy meets the deckhead.** A pendant's plate is
+            // the one part of it that touches the ship, and it used to
+            // stop eight millimetres under the plane it is screwed to —
+            // which is the same defect as a foot over a deck, upside
+            // down, and just as invisible in a photograph. Its top face
+            // is buried [`SOLE_BURY`] into the chart now, derived off
+            // the plate's own girth rather than set by a decimal, so a
+            // thicker plate stays screwed to the same ceiling.
+            let cap = Body::Box(Vec3::new(9.0, 3.0, 5.0));
             out.push(Part::new(
                 "mount plate",
-                Body::Box(Vec3::new(9.0, 3.0, 5.0)),
+                cap,
                 plate,
-                Transform::from_xyz(0.0, fh * 0.44, 10.0),
+                Transform::from_xyz(0.0, fh.mul_add(0.5, SOLE_BURY) - cap.half().y, 10.0),
             ));
             out.push(
                 Part::new(

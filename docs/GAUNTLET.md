@@ -86,7 +86,7 @@ rigs: FloorLamp base plate reaches 0.0690 m out of the -0.031..0.497 m band
 So the loop when a line appears is: read it in the docket to know what
 moved, then run `--gauntlet` to get the millimetres.
 
-## The nine families
+## The ten families
 
 Each one names a class of defect that a screenshot could not have caught.
 What matters when you are diagnosing is the third column: what the
@@ -196,22 +196,31 @@ and cannot click, a shade overhanging the berth beside it. The finding
 names the part and how far outside its own `w × h` plan it reaches.
 
 One direction is allowed and the number is written down (`SOLE_SINK`,
-1 cm): a standing rig's soles are BURIED. A sole flush with the deck
-shares a plane with it and a sole above it is furniture floating, so
-the cabinet's four feet and the couch's four sit a ladder step under
-their own bottom edge on purpose — `pieces::SOLE_BURY`, which is
+1 cm): a rig's sole is BURIED. A sole flush with the deck shares a
+plane with it and a sole above it is furniture floating, so the
+cabinet's four feet and the couch's four sit a ladder step under their
+own bottom edge on purpose — `pieces::SOLE_BURY`, which is
 `pieces::GLAZE` one plane down, because meeting a deck and meeting a
 bezel are the same joint. Deeper than a centimetre is a body through
 the deck, which is not a foot.
 
-It asks about the plan and not the depth. The depth is `berth-clear`'s
-question, measured against the band every rig is composed within; this
-one is measured against the only extent the sim ever states.
+**The sole is whichever face meets the chart**, and the allowance
+follows it rather than following gravity: a pendant's canopy is buried
+in its deckhead by the same step, so the ceiling lamp's mount plate
+spends the centimetre upward. Which face that is comes from the charts
+the kind may be berthed on, which is the arbiter's list
+(`cargo::mount_accepts`) and not this file's.
+
+It asks about the plan and not the depth, and it asks in only one
+direction. The depth is `berth-clear`'s question, measured against the
+band every rig is composed within; this one is measured against the
+only extent the sim ever states. Whether the sole gets to its chart at
+all is `rig-seated`'s, and the two are the same joint read from its two
+sides.
 
 ### `part-seated` — a part that names a seat meets it
 
-The newest family, and the first one that measures a rig against
-**itself**. Every other family asks about a part and the world: the band
+The first family that measures a rig against **itself**. Every other family asks about a part and the world: the band
 it is composed within, the plane it fights, the cells it draws inside,
 the direction its own name claims. A joint is not any of those. A
 couch's foot standing under a couch it does not touch is inside the
@@ -254,6 +263,64 @@ into — and only in the build people look at, because the headless
 fallback body is a slab that overlapped the brass. The porthole's sky
 pane missed its own bolt ring by the same 9.3 mm. All three are now
 drawn with the joint spent explicitly: a step in, or a step proud.
+
+### `rig-seated` — a rig reaches the chart it is berthed on
+
+The newest family, and `part-seated`'s closest sibling: the same joint,
+one plane down and one body out. That family asks whether a part meets
+another part of the same rig. This one asks whether the rig meets the
+one thing outside it that a berth actually promises — the deck it
+stands on, the deckhead it hangs from, the wall it is screwed to.
+
+Nothing caught it. `berth-clear` measures the depth a rig is composed
+within and never where inside that depth a body stops. `face-fits` is
+the nearest miss and looks the other way on purpose: it catches a body
+reaching *outside* its own plan, forgives a centimetre of a sole buried
+in its own deck, and asks nothing at all about a sole a hand's breadth
+above one. `part-seated` is part-against-part. So a crate that stops
+seven centimetres above its own deck cell satisfies all nine of the
+others and is a crate standing on nothing.
+
+**Which plane is a question about the chart and never about the body.**
+A kind is composed once, in the upright frame no berth turns, and
+`pieces::site_on` berths it: a deck berth stands the rig half its own
+height above the chart, a deckhead berth hangs it half its height
+below, and a wall berth lays it flat on the plane. So the chart is at a
+known plane of the rig's own frame — `-tall/2` for a deck, `+tall/2`
+for a deckhead, `z = 0` for any of the four walls — and the face that
+has to reach it is the sole, the canopy and the back respectively. The
+sweep is written per chart class rather than per mount for that reason,
+and which classes a kind may take is asked of the arbiter
+(`cargo::mount_accepts`) rather than restated here.
+
+The tolerance is `SEAT_GAP`, the same number `part-seated` spends,
+because it is the same joint: one fight-free step of the decal ladder
+plus the thickest paint that could be riding on the seat's own face. A
+chart's face carries paint too — a tile field, a class's mark — and a
+rig meets it the way a pane meets a bezel, by going a step into it
+(`pieces::SOLE_BURY`), so a builder spending exactly that sits inside
+the rule with room to spare. `SOLE_SINK` holds the other side. Between
+them a rig's sole has a band to land in, and the band is a hair either
+side of the chart.
+
+A laid covering is not asked. `pieces::laid_on` lays it ON its chart
+and lifts it one rung of the decal ladder, so its joint is a derivation
+rather than a composition and there is nothing a builder could have got
+wrong. What a berth STANDS is what is asked.
+
+Its first pass found twenty-two. Two came off at once, and both were
+the same shape as the wall lamp's pad: a fitting composed at the middle
+of the band instead of at the plane it is bolted to. The ceiling lamp's
+canopy stopped 8.4 mm under the deckhead it is screwed to. The
+porthole's whole assembly — glass, bolt ring and six studs — hung
+32.6 mm out in front of its wall, with the room's own paint visible
+under the brim, which was the last of the nine wall kinds to put its
+backmost body anywhere but on the plane. The other twenty are on the
+docket and they are one class: the 2D console's glyphs, given depth and
+never given a floor, standing between one and fifteen centimetres above
+their own deck cells. That re-authoring is what docs/BAY.md has been
+carrying as deferred work since the net landed, and the couch and the
+cabinet are the two kinds that have had it done.
 
 ### `grid-fits` — the world is built of the cargo grid and aligned to it
 

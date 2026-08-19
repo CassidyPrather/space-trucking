@@ -152,7 +152,14 @@ pub enum Mount {
 
 /// Whether chart `surf` satisfies `mount`. Any of the four walls is
 /// "the wall"; nobody hangs a painting on a compass heading.
-const fn mount_accepts(mount: Mount, surf: Surf) -> bool {
+///
+/// The arbiter's own clause, and public because the drawing has to ask
+/// it too: which charts a kind may be berthed on decides which plane
+/// its body has to reach, and a frontend that answered that from the
+/// mount itself would be a second copy of this table
+/// (`cabin::gauntlet`, `rig-seated`).
+#[must_use]
+pub const fn mount_accepts(mount: Mount, surf: Surf) -> bool {
     match mount {
         Mount::Floor => matches!(surf, Surf::Floor),
         Mount::Ceiling => matches!(surf, Surf::Ceiling),

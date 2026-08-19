@@ -14,14 +14,27 @@
 #
 # Blank lines and `#` comments are ignored.
 #
-# **It is empty, and an empty work order is not a finished harness.**
+# **It carries one class, and that class is a re-authoring.** Twenty
+# cargo kinds are drawn as bas-reliefs centred in their own cell face —
+# the 2D console's glyphs, given depth and never given a floor — so each
+# of them stands somewhere between one and fifteen centimetres above the
+# deck it is berthed on, with nothing under it. `rig-seated` is the
+# question that found them; docs/BAY.md has been carrying the answer as
+# deferred work since the net landed ("every kind re-authors its extent
+# for the plane it mounts"), and the couch and the cabinet are the two
+# that have had it done. The lines come off one kind at a time, and a
+# kind comes off by being drawn standing rather than by being shoved
+# down: a chit translated onto the deck is a playing card balanced on
+# its edge, which is a worse picture than the one it replaces.
 #
-# Three layers of the world have been described and swept, and each of
-# them was invisible until somebody wrote the description. What that
-# history says is that the next defect is in the layer nobody has thought
-# to describe yet, not in the ones below — so the useful thing to do with
-# an empty file is to read docs/GAUNTLET.md's account of what the sweep
-# can and cannot see, and go and look at something it cannot.
+# The rest of this note is the history of how the file got emptied, and
+# it is worth keeping while there is anything on it at all. Three layers
+# of the world have been described and swept, and each of them was
+# invisible until somebody wrote the description. What that history says
+# is that the next defect is in the layer nobody has thought to describe
+# yet, not in the ones below — so the useful thing to do with a short
+# file is to read docs/GAUNTLET.md's account of what the sweep can and
+# cannot see, and go and look at something it cannot.
 #
 # The rooms were the first layer. Their lines were three families and one
 # cause, and they came off when a calling room got a deck of its own to
@@ -113,3 +126,52 @@
 # the one that showed it), and the porthole's sky pane missed its own
 # bolt ring by 9.3 mm. All three were cured; a joint is spent explicitly
 # now, one ladder step in or one step proud (`pieces::GLAZE`).
+#
+# `rig-seated` is the third of that second kind, and the closest sibling
+# `part-seated` has: the same joint, one plane down and outside the rig.
+# Every family before it measured a part against the world's numbers —
+# the band a rig is composed in, the plane it fights, the cells it draws
+# inside — or against another part of the same rig. None measured the rig
+# against the one thing its berth actually promises: the deck it stands
+# on, the deckhead it hangs from, the wall it is screwed to. `face-fits`
+# comes nearest and looks the other way by design, forgiving a centimetre
+# of a sole BURIED in its own deck and asking nothing at all about a
+# sole a hand's breadth above it.
+#
+# Two of the twenty-two it found were cured on the spot and both were the
+# same shape as the wall lamp's pad, which is the defect this class keeps
+# producing: a fitting composed at the middle of the band instead of at
+# the plane it is bolted to. The ceiling lamp's canopy stopped 8.4 mm
+# under the deckhead it is screwed to, and the porthole's whole
+# assembly — glass, bolt ring and six studs — hung 32.6 mm out in the air
+# in front of its wall, with the room's own paint visible under the brim.
+# Both are drawn from their own plane now, buried one ladder step into it
+# (`pieces::SOLE_BURY`), which is the same step a pane spends on a bezel.
+#
+# What the family does NOT ask about is a station's own furniture. A rig
+# declares the chart it is berthed on because the sim berths it; a
+# fitting is a fraction of a room's box and declares nothing, so a
+# station's beacon bolted to thin air is invisible to every rule in the
+# file. One was, and a player found it by eye.
+
+# ---- rigs ----
+rigs | rig-seated | BottledMidnight sole
+rigs | rig-seated | BrinePearls sole
+rigs | rig-seated | CasinoChip sole
+rigs | rig-seated | CometIce sole
+rigs | rig-seated | CryoCore sole
+rigs | rig-seated | FloorLamp sole
+rigs | rig-seated | Fluff sole
+rigs | rig-seated | GasCanister sole
+rigs | rig-seated | GildedIdol sole
+rigs | rig-seated | LuminousPaint sole
+rigs | rig-seated | MysteriousCrate sole
+rigs | rig-seated | PaintTin sole
+rigs | rig-seated | PerfumeVial sole
+rigs | rig-seated | RationBricks sole
+rigs | rig-seated | Rug sole
+rigs | rig-seated | ScrapAlloy sole
+rigs | rig-seated | Seedlings sole
+rigs | rig-seated | SuspiciousCrate sole
+rigs | rig-seated | TransitChit sole
+rigs | rig-seated | VeryMysteriousCrate sole

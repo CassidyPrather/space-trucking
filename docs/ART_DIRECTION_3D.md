@@ -439,7 +439,7 @@ adversarial pass that closes those, and it splits in two:
   in the game — the twelve stations, the three event rooms, the cabin
   and the burner — against a **loaded** board (`gauntlet::load` fills
   every legal berth through the sim's own arbiter, so decor has cargo to
-  clip through), every cargo kind, and every doorway. Seven rule
+  clip through), every cargo kind, and every doorway. Eleven rule
   families: no fitting stands in a berth cargo may take at the height a
   rig occupies; nothing occludes a wall berth from its room; every berth
   stays workable from the walk envelope; no two drawn faces share a plane
@@ -447,7 +447,10 @@ adversarial pass that closes those, and it splits in two:
   point where their names say (`pieces::features` — a sconce's cup INTO
   the room, a floor lamp's base plate FLAT on the deck); a rig draws
   inside the cells the sim gave it, so its pick face can be cut from its
-  picture rather than its plan; and the walked path stands in air.
+  picture rather than its plan; the walked path stands in air; every body
+  lands on the cargo grid; a part that names a seat meets it; a rig
+  reaches the chart it is berthed on; and a hung body says what holds it
+  up.
 - **Pixels, opt-in.** `--gauntlet-walk <dir>` drives the scripted room
   walk — in through the door, round the room, up to the counter — and
   writes one PNG per waypoint, then holds the camera still for ten
@@ -456,14 +459,29 @@ adversarial pass that closes those, and it splits in two:
   off along an approach sampling the room's own brightness (the
   light-pop detector). It needs a rasteriser, so it runs under `xvfb`.
 
-**It measures descriptions, not the world**, and that is the rule this
-file cares about: anything drawn from something other than a pure
+**It measures descriptions, not the world**, and that is the first rule
+this file cares about: anything drawn from something other than a pure
 description of it — `poi::character_of`, `room::shell_boxes`,
 `pieces::parts`, `room::seam_parts` — is invisible to every rule in the
-sweep, however loud it is on screen. Twice now a whole layer of the art
-was built straight into the world and went unchecked for that reason: the
+sweep, however loud it is on screen. Twice a whole layer of the art was
+built straight into the world and went unchecked for that reason: the
 cargo rigs, and then the hardware in every doorway. **A new family of
 thing gets a description before it gets a mesh.**
+
+The second rule was learned the harder way, after four defects the owner
+found by eye in bodies that had been described all along: a wall lamp's
+mount pad, a station's beacon, a porthole, and a doorway's latch, each
+hanging in the air off the surface it is bolted to. **A description says
+where a body is; it takes a declaration to say what a body means.** A
+fitting's `at` is a position, and a position is not a promise — nothing
+could ask whether the beacon reached its wall until the beacon said it
+had one. So the sweep asks bodies to declare: `Part::pointing` for the
+way a part faces, `Part::seated` for the joint it makes, `Fitting::seated`
+and `SeamPart`'s own seat for what holds a piece of furniture up. Where a
+body genuinely hangs on nothing — the Wanderer's collar, its hum rings —
+it declares nothing, and that stays legal. **When a rule cannot be
+written, ask what the description leaves unsaid, not only what it fails
+to enumerate.**
 
 [GAUNTLET.md](GAUNTLET.md) is the operator's side — how to run it, how to
 read a docket line, what each family looks like in the world when it

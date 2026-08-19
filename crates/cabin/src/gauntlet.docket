@@ -42,14 +42,22 @@
 # the two spill at OPPOSITE ends — the lamp 0.069 m behind the near face,
 # the crate 0.073 m past the far one — so a band that cured either costs
 # about 15% more air on every wall berth in the game, and a band that
-# cured both costs 29% (0.497 m becomes 0.639 m). That is a systemic
-# price for a local defect. The measurement that settled it for good is
-# that neither kind can be berthed on a wall at all — every kind's mount
-# is Floor unless it is tagged otherwise, and a deck berth's air is its
-# own cell's column — so neither was ever the berth-measured-too-shallow
-# defect the line was written up as. Both were a body hanging out of the
-# box the carry tell wraps a carried rig in, which is defect enough and
-# is what the finding says now.
+# cured both costs 29%. That is a systemic price for a local defect. The
+# measurement that settled it for good is that neither kind can be
+# berthed on a wall at all — every kind's mount is Floor unless it is
+# tagged otherwise, and a deck berth's air is its own cell's column — so
+# neither was ever the berth-measured-too-shallow defect the line was
+# written up as. Both were a body hanging out of the box the carry tell
+# wraps a carried rig in, which is defect enough and is what the finding
+# says now.
+#
+# The band did move later, and for a reason of its own rather than to
+# swallow a part: the world is built of the cargo grid and the band was
+# nine tenths of a cell. It is one cell now, wearing the same `BAY_FIT`
+# the width and the height wear. It cost a wall berth 31 mm of room
+# (0.466 m of reach becomes 0.497 m) and cost this file nothing, because
+# the reading it feeds was measuring the band's thickness where the
+# reach was what mattered.
 #
 # The doorways were the third. Every piece of hardware in a seam was
 # built straight into the world, so the sweep walked through a dozen

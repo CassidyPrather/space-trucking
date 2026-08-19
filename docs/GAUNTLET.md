@@ -78,7 +78,7 @@ does not read as a new one. The numbers are in `--gauntlet`'s report,
 which prints the same finding with the measurement attached:
 
 ```
-rigs: FloorLamp base plate reaches 0.0690 m out of the -0.031..0.466 m band
+rigs: FloorLamp base plate reaches 0.0690 m out of the -0.031..0.497 m band
       every rig is composed within, so it hangs out of the box the carry
       tell wraps it in [berth-clear]
 ```
@@ -95,15 +95,23 @@ violation actually looks like if you go and stand in front of it.
 ### `berth-clear` — no fitting stands where cargo stands
 
 A station's furniture occupies a cell cargo may legally take, at the
-height a rig occupies there. In the world: a crate drawn inside a
+height a rig occupies there. What a berth owns is measured as how far a
+rig **reaches** off its own chart, not how thick its box is: the band
+begins just behind the berth plane, so a wall rig's box straddles the
+chart it hangs on, and laying that thickness off the cell face put every
+wall berth's air — and the occlusion window measured past it — a near
+face too far into the room. In the world: a crate drawn inside a
 bollard, or a console growing through a chart tank. The finding names the
 worst cell, the piece standing in it on the loaded board, and the
 overlap in metres on all three axes.
 
 Spent on cargo too, where it means something related but not the same: a
 part reaching outside `pieces::RIG_NEAR..RIG_FAR`, the depth every kind
-is composed within. In the world that is a body hanging out of the
-wireframe box the carry tell draws round the rig you are holding. On a
+is composed within — one cell of the cargo grid, wearing the same
+`BAY_FIT` the width and the height wear, so a rig fills the same
+fraction of its berth on all three axes. In the world that is a body
+hanging out of the wireframe box the carry tell draws round the rig you
+are holding. On a
 **wall** kind it is also the air its berth spends, so every berth it may
 take is measured too shallow and a fitting could stand in the part with
 nothing to say so; on a floor or ceiling kind it is not, because a deck

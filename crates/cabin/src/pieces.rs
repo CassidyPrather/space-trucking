@@ -88,14 +88,24 @@ const XRAY_GLOW: f32 = 0.35;
 pub const BAY_FIT: f32 = 0.96;
 
 /// **How deep every rig is drawn**, in rig-local sim units: the near
-/// face just behind the berth plane, the far face out at the relief
-/// height the kind builders compose against. Written down here because
-/// two things now read it — the carry tell's wireframe box, which wraps
-/// the body's volume, and the gauntlet, which asks how much air a berth
-/// actually spends so a station's furniture can be told it is standing
-/// in one (`crate::gauntlet`).
+/// face just behind the berth plane, the far face one CELL out from it.
+/// Written down here because three things read it — the carry tell's
+/// wireframe box, which wraps the body's volume; the gauntlet, which
+/// asks how much air a berth actually spends so a station's furniture
+/// can be told it is standing in one (`crate::gauntlet`); and the sim's
+/// own `Kind::extent`, whose middle number is this said in cells.
+///
+/// **The band is one cell deep, and it is derived rather than chosen.**
+/// It used to be a round 32 units, which came out at 0.497 m — nine
+/// tenths of a cell, on a world built entirely of them (`BAY_CELL`,
+/// rooms four cells tall, a cell of padding between rooms). A rig is
+/// [`BAY_FIT`] of its cells across and [`BAY_FIT`] of them tall; it is
+/// [`BAY_FIT`] of one cell deep now too, which is the same sentence
+/// said on the third axis. The sim states the depth as one cell
+/// (`cargo::Kind::extent`) and the drawing spends exactly that, so a
+/// piece's plan on the deck and its body on the deck are one claim.
 pub const RIG_NEAR: f32 = -2.0;
-pub const RIG_FAR: f32 = 30.0;
+pub const RIG_FAR: f32 = RIG_NEAR + layout::CELL;
 
 /// **How much of the world one rig-local sim unit spends**, in metres.
 ///
@@ -6614,5 +6624,39 @@ mod tests {
             }
         }
         assert!(lit >= 6, "the lamps went dark: {lit} bulbs swept");
+    }
+}
+
+#[cfg(test)]
+mod band {
+    use super::*;
+
+    /// **A rig is drawn one cell deep.**
+    ///
+    /// The world is built of `rig::BAY_CELL` cubes — rooms four cells
+    /// tall, walls three courses, a cell of padding between rooms — and
+    /// the band every kind is composed within was the last length in it
+    /// that was not. It was 0.497 m, nine tenths of a cell, which is a
+    /// number off no line in particular; it is one cell wearing the same
+    /// [`BAY_FIT`] the width and the height wear, so a rig fills the same
+    /// fraction of its berth on all three axes.
+    ///
+    /// Asked of the metres rather than of the constant, because what has
+    /// to land on the grid is the depth a berth actually spends.
+    #[test]
+    fn a_rig_is_drawn_one_cell_deep() {
+        let (near, far) = (RIG_NEAR * RIG_UNIT, RIG_FAR * RIG_UNIT);
+        let depth = far - near;
+        let cell = crate::rig::BAY_CELL * BAY_FIT;
+        assert!(
+            (depth - cell).abs() < 1e-5,
+            "a rig is drawn {depth} m deep where a berth is {cell} m of cell",
+        );
+        // And the near face still stands just BEHIND the berth plane, so
+        // a body flush with its own chart is inside the box that wraps it.
+        assert!(
+            near < 0.0,
+            "the near face at {near} m has to clear the chart"
+        );
     }
 }

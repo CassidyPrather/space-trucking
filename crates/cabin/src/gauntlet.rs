@@ -591,17 +591,36 @@ pub struct Berth {
     pub by: Kind,
 }
 
-/// How much air one berthed rig spends off its own chart, in metres.
+/// How much air one berthed rig spends off its own chart, in metres —
+/// how far its body REACHES into the room, measured from the chart's own
+/// plane.
 ///
 /// Derived rather than restated: [`crate::pieces::berth_box`] poses the
 /// body through the very function the runtime poses it with, and this is
-/// that box measured along the chart's own normal. On a deck or under a
-/// ceiling it comes out as the rig's HEIGHT (a standing rig keeps its
-/// footprint's depth, the bas-relief inheritance from BAY.md); on a wall
-/// it comes out as the common rig depth every kind is drawn within.
-fn rig_air(charts: &[(Station, SimSurface)], rect: layout::Rect, inward: Vec3) -> Option<f32> {
+/// that box measured against the plane it is berthed on. On a deck or
+/// under a ceiling it comes out as the rig's HEIGHT (a standing rig
+/// keeps its footprint's depth, the bas-relief inheritance from BAY.md);
+/// on a wall it comes out as how far into the room the band every kind
+/// is drawn within reaches.
+///
+/// **A reach and not a thickness.** The band begins just BEHIND the
+/// berth plane (`pieces::RIG_NEAR`), so a wall rig's box straddles its
+/// own chart: the box's thickness laid off the cell face would be the
+/// right depth in the wrong place, claiming a rig's near face worth of
+/// room no body ever reaches into and forgetting the same depth of wall
+/// every body sinks into. A berth's air is what a rig fills OUT INTO THE
+/// ROOM ([`Berth::air`]), which is the far reach. On a deck or under a
+/// ceiling the two readings agree — a standing rig's box begins on the
+/// plane it stands on — which is why only the walls ever carried the
+/// error.
+fn rig_air(
+    charts: &[(Station, SimSurface)],
+    rect: layout::Rect,
+    plane: Vec3,
+    inward: Vec3,
+) -> Option<f32> {
     let (lo, hi) = crate::pieces::berth_box(charts, rect)?;
-    Some((hi - lo).dot(inward.abs()))
+    Some((lo - plane).dot(inward).max((hi - plane).dot(inward)))
 }
 
 /// Every berth of one placed room, with the air each one spends.
@@ -632,8 +651,12 @@ pub fn berths(rooms: &Rooms, placed: &Placed) -> Vec<Berth> {
                         let Some((station, surface)) = chart_of(placed, cell) else {
                             continue;
                         };
-                        let Some(air) = rig_air(&placed.charts, rect, station.inward(&surface))
-                        else {
+                        let Some(air) = rig_air(
+                            &placed.charts,
+                            rect,
+                            surface.center,
+                            station.inward(&surface),
+                        ) else {
                             continue;
                         };
                         let slot = deepest.entry(cell).or_insert((0.0, kind));
@@ -2319,6 +2342,45 @@ pub const ALLOWED: &[(&str, &str, &str)] = &[];
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **A wall berth's air is what a rig reaches into the room**, not
+    /// how thick its box is.
+    ///
+    /// The band every kind is composed within begins just behind the
+    /// berth plane, so a wall rig's box straddles its own chart. Reading
+    /// the box's THICKNESS off the cell face put the berth's air a near
+    /// face too far into the room — 31 mm of aisle claimed that no body
+    /// reaches into, and 31 mm of wall forgotten that every body sinks
+    /// into — and everything measured against that air, the occlusion
+    /// window most of all, sat that far out with it.
+    #[test]
+    fn a_wall_berths_air_is_what_a_rig_reaches_into_the_room() {
+        let unit = crate::pieces::RIG_UNIT;
+        let reach = crate::pieces::RIG_FAR * unit;
+        let thickness = (crate::pieces::RIG_FAR - crate::pieces::RIG_NEAR) * unit;
+        assert!(
+            (thickness - reach).abs() > 0.02,
+            "the band no longer straddles its chart, so this guard is vacuous",
+        );
+        let stage = roster()
+            .into_iter()
+            .find(|stage| stage.name == "cabin")
+            .expect("the cabin is on the roster");
+        let walls: Vec<Berth> = berths(&stage.rooms, &stage.placed)
+            .into_iter()
+            .filter(|berth| !matches!(berth.station, Station::BayFloor | Station::BayCeiling))
+            .collect();
+        assert!(!walls.is_empty(), "the cabin has walls to berth on");
+        for berth in walls {
+            let air = berth.air.span().dot(berth.inward.abs());
+            assert!(
+                (air - reach).abs() < 1e-4,
+                "berth {:?} on {:?} spends {air} m of air where a rig reaches {reach} m",
+                berth.cell,
+                berth.station,
+            );
+        }
+    }
 
     /// **The gauntlet finds exactly the docket.** New defect: fails.
     /// Fixed defect: fails, until the line comes out. That is the whole

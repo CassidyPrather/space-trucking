@@ -652,7 +652,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::BrinePearls)
             .expect("the gift");
-        let from = rect_center(layout::piece_rect(sim.pieces(), &piece));
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
         let to = offer_at(&sim, room);
         drag(&mut sim, &mut aggregate, from, to);
         let shake = handshake_at(&sim, room);
@@ -671,7 +671,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::BrinePearls)
             .expect("the starter pearls");
-        let from = rect_center(layout::piece_rect(sim.pieces(), &piece));
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
         let to = offer_at(&sim, room);
         drag(&mut sim, &mut aggregate, from, to);
         assert!(!sim.composed().is_empty(), "the room must answer");

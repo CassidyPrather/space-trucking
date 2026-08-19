@@ -11,8 +11,8 @@
 //! coordinates.
 
 use super::Vec2;
-use super::cargo::{Loc, Piece};
-use super::room::{self, RoomId};
+use super::cargo::{self, Loc, Piece};
+use super::room::{self, RoomId, Rooms};
 
 pub use super::room::{CELL, LANE_COLS as GRID_COLS, LANE_ROWS as GRID_ROWS, lane_origin};
 
@@ -93,27 +93,38 @@ pub fn cell_at(p: Vec2) -> Option<(RoomId, u8, u8)> {
     room::lane_cell_at(p)
 }
 
+/// A rect parked outside the world: what a berth nobody can name gets,
+/// so it is never grabbed and never collides.
+const NOWHERE: Rect = Rect::new(-1000.0, -1000.0, 0.0, 0.0);
+
 /// World rect a piece occupies at its current [`Loc`]. Shared by hit-testing
 /// and the renderer, so pieces are grabbed exactly where they are drawn.
 ///
+/// **The graph is a parameter because a footprint is** (`cargo::plan`):
+/// a berth's cells are the kind and the chart it lands on together, and
+/// the chart is the room's to say. Two berths of one wardrobe are two
+/// different rects, and neither of them is a property of the wardrobe.
+///
 /// A stowed piece sits in a cubby sub-rect of its cabinet's own footprint,
-/// which is why the whole board is a parameter: the cabinet must be looked
-/// up. A stow whose cabinet is missing (impossible by the placement and
-/// save rules) resolves to a rect parked outside the world, so it can
-/// never be grabbed and never collide.
+/// which is why the whole board is a parameter too: the cabinet must be
+/// looked up. A stow whose cabinet is missing (impossible by the placement
+/// and save rules), or a berth off its room's net, resolves to
+/// [`NOWHERE`].
 #[must_use]
-pub fn piece_rect(pieces: &[Piece], piece: &Piece) -> Rect {
+pub fn piece_rect(rooms: &Rooms, pieces: &[Piece], piece: &Piece) -> Rect {
     match piece.loc {
-        Loc::Hold { room, x, y } | Loc::Laid { room, x, y } => {
-            let (w, h) = piece.kind.cells();
-            let anchor = cell_rect(room, x, y);
-            Rect::new(anchor.x, anchor.y, f32::from(w) * CELL, f32::from(h) * CELL)
-        }
+        Loc::Hold { room, x, y } | Loc::Laid { room, x, y } => rooms
+            .kind(room)
+            .and_then(|host| cargo::plan(host, piece.kind, x, y))
+            .map_or(NOWHERE, |(w, h)| {
+                let anchor = cell_rect(room, x, y);
+                Rect::new(anchor.x, anchor.y, f32::from(w) * CELL, f32::from(h) * CELL)
+            }),
         Loc::Stow { cabinet, slot } => pieces
             .iter()
             .find(|other| other.id == cabinet)
-            .map_or(Rect::new(-1000.0, -1000.0, 0.0, 0.0), |host| {
-                cubby_rect(piece_rect(pieces, host), slot)
+            .map_or(NOWHERE, |host| {
+                cubby_rect(piece_rect(rooms, pieces, host), slot)
             }),
     }
 }
@@ -142,7 +153,7 @@ pub fn cubby_rect(body: Rect, slot: u8) -> Rect {
 /// it, so the couch takes the click and only a bare stretch of rug
 /// answers for the rug.
 #[must_use]
-pub fn piece_at(pieces: &[Piece], p: Vec2) -> Option<&Piece> {
+pub fn piece_at<'a>(rooms: &Rooms, pieces: &'a [Piece], p: Vec2) -> Option<&'a Piece> {
     let stowed = pieces
         .iter()
         .filter(|piece| matches!(piece.loc, Loc::Stow { .. }));
@@ -155,7 +166,7 @@ pub fn piece_at(pieces: &[Piece], p: Vec2) -> Option<&Piece> {
     stowed
         .chain(rest)
         .chain(laid)
-        .find(|piece| piece_rect(pieces, piece).contains(p))
+        .find(|piece| piece_rect(rooms, pieces, piece).contains(p))
 }
 
 #[cfg(test)]

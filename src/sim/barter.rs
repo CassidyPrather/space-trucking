@@ -255,8 +255,13 @@ fn well_lit(rooms: &Rooms, piece: &Piece, pieces: &[Piece]) -> bool {
             lamp_lit(other) && matches!(other.loc, Loc::Hold { room, .. } if rooms.riding(room))
         });
     }
-    let (w, h) = piece.kind.cells();
-    (0..w).any(|dx| (0..h).any(|dy| super::cargo::lit_adjacent(pieces, room, x + dx, y + dy)))
+    let Some(host) = rooms.kind(room) else {
+        return false;
+    };
+    let Some((w, h)) = super::cargo::plan(host, piece.kind, x, y) else {
+        return false;
+    };
+    (0..w).any(|dx| (0..h).any(|dy| super::cargo::lit_adjacent(host, pieces, room, x + dx, y + dy)))
 }
 
 /// One piece's worth under this visit's table: its kind's jittered value,

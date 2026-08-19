@@ -409,7 +409,7 @@ mod tests {
         // the multi-sky path is swept by every screenshot run.
         let glass: Vec<_> = pieces.iter().filter(|p| p.kind.window()).collect();
         assert_eq!(glass.len(), 3, "the fixture flies three windows");
-        let mut sizes: Vec<(u8, u8)> = glass.iter().map(|p| p.kind.cells()).collect();
+        let mut sizes: Vec<(u8, u8, u8)> = glass.iter().map(|p| p.kind.extent()).collect();
         sizes.sort_unstable();
         sizes.dedup();
         assert_eq!(sizes.len(), 3, "three sizes, not three of one");

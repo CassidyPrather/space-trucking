@@ -346,10 +346,13 @@ by `placement_check`, never restated in views:
 - **Paintings and UI instruments must be on the wall.**
 - **Lamps may hang from the ceiling** (the ceiling lamp finally means
   it); wall sconces stay wall, floor lamps stay floor.
-- Floor cargo has a 3D extent in cells (footprint × height): tall
-  cargo standing against a wall **shadows** the wall cells behind it —
-  no painting behind the wardrobe. This is the one genuinely 3D rule;
-  everything else is per-plane.
+- Cargo has a 3D extent in cells — across, deep, tall
+  (`cargo::Kind::extent`) — and a berth spends whichever two of the
+  three its own chart is for. Tall cargo standing against a wall
+  **shadows** the wall cells behind it, no painting behind the
+  wardrobe; and a deck berth spends the plan rather than the height,
+  which is what took the apron off the front of every standing piece
+  (see "A footprint is stated in the wall's own frame", below).
 - Coverings (`Loc::Laid`) extend to every plane the mount table allows
   — rugs stay floor; paint always coated any surface.
 
@@ -571,10 +574,12 @@ for the instrument. Every defect in this class held on the wall it was
 written against and nowhere else, so only a table sweep can say "on
 every wall" and mean it.
 
+### A footprint is stated in the wall's own frame
+
 **A footprint keeps its shape on every wall it may take**, and the rule
 that says so is the arbiter's, not the drawing's. A non-square
 footprint on a side wall used to lie portrait with its cells, because
-the quarter turn it would need is one it cannot pay for — written up
+the quarter turn it would need is one it could not pay for — written up
 here as crooked on purpose, and reported by the next playtest as the
 starting window rotating ninety degrees the moment it was carried one
 wall over. It was never the roll: the CELLS turn. The net's side flaps
@@ -582,23 +587,50 @@ fold out sideways, so the two cells that lie level on the aft wall
 stand one above the other on a flank, and the body lies on its cells
 like everything else.
 
-The cells are still the law and the picture still follows them; what
-moved is which cells a footprint may have. A `2×1` hangs on the walls
-whose courses run level — the aft wall and the front — and a flank
-refuses it by name (`cargo::Violation::Athwart`), with the same
-conservation the other rule changes get: a saved board carrying one
-walks it back to a level berth rather than losing it (`STV17`). Square
-footprints cannot tell a flank from an end and hang anywhere, which is
-every window in the family but the `2×1`.
+That was contained first and cured second. The containment refused a
+non-square footprint on a flank by name (`Violation::Athwart`), which
+made the game right about the shape of things by taking two of the four
+walls away from every window and every painting. The cure is the thing
+the containment said it was waiting for: **a kind states its extent in
+its own frame** — across, deep, tall (`cargo::Kind::extent`) — and a
+berth spends whichever two of the three its chart is for
+(`Kind::plan_on`):
+
+- A chart a body lies **on** — the deck, the deckhead — spends the
+  plan: across by deep.
+- A chart a body hangs **against** spends the elevation: across by
+  tall, and a flank takes that elevation **transposed**, because a
+  flank's courses climb the sheet's x where the aft and front walls'
+  climb its y.
+
+So the cells turn under the body and the body does not turn at all,
+which is what was true from the start. `Athwart` is gone with the wall
+it used to close; the upright rule lost its affordability clause with
+it (the roll a flank wants is now always the one its cells have paid
+for); and a saved board carrying a flank window comes out hanging level
+where the player left it (`STV19`).
+
+The same statement takes the **deck apron** off the front of every
+standing piece, and that is the half a playtest can point at. The
+retired console's glyph `(w, h)` was doing all three axes' work, and
+its second number was an elevation — so a deck berth read a wardrobe's
+HEIGHT as depth and claimed 1.06 m of deck for a body reaching 0.53 m
+into the room. Half a metre of bare deck in front of every wardrobe,
+crate and floor lamp answered for the piece: the sim answers "which
+piece is at this point", the point was inside its rect, and aiming at
+a cabinet reaches into its cubbies — so a click on the floor came back
+holding a transit chit. A deck berth spends across by deep now, one
+cell deep, which is the same sentence `pieces::RIG_NEAR..RIG_FAR` says
+in the frontend's units.
 
 The sweep learned the same sentence. It used to assert the crooked
 ruling — up on the aft and front charts, sideways on the flanks — which
 is a test restating the branch it is testing, and it passed on every
 one of its two thousand berths while the window turned its corner. It
 asks the player's question now: **a hung body reads up-is-up on every
-wall it may take.** The day a footprint can be stated in the wall's own
-frame rather than the sheet's, the refusal comes off and that sentence
-is still the one to keep.
+wall it may take**, and **a berth owns the ground its body stands on
+and not a cell more**, with the fold direction read off the net itself
+rather than off the arbiter's own table.
 
 ### Occlusion: a defect class, named
 
@@ -623,7 +655,9 @@ for camera reasons:
   the hold's 24). Scarcity is an economy lever and the economy is
   already queued for redesign; the grid does not pre-balance it.
 - Every kind re-authors its extent for the plane it mounts (the couch
-  is 2 wide × 1 deep on a real floor, not a 2×2 bas-relief).
+  is 2 wide × 1 deep on a real floor, not a 2×2 bas-relief). **Landed**
+  — `cargo::Kind::extent` states across, deep and tall, and
+  `Kind::plan_on` spends the pair the chart is for.
 - Save and replay formats bump (STV8 / RPL4) when the net lands; old
   saves migrate hold cells onto the aft-wall/floor charts they already
   present as.

@@ -2985,7 +2985,7 @@ fn claim_frames(
         let Some(piece) = sim.pieces().iter().find(|piece| piece.id == id) else {
             continue;
         };
-        let rect = layout::piece_rect(sim.pieces(), piece);
+        let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
         let centre = space_trucking::sim::Vec2::new(
             rect.w.mul_add(0.5, rect.x),
             rect.h.mul_add(0.5, rect.y),
@@ -3399,7 +3399,7 @@ mod tests {
             if !matches!(piece.loc, Loc::Hold { .. }) || in_hand == Some(piece.id) {
                 continue;
             }
-            let rect = layout::piece_rect(sim.pieces(), piece);
+            let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
             if let Some((station, surface)) =
                 crate::pieces::instrument_surface(&charts, piece.kind, rect)
             {
@@ -3468,7 +3468,7 @@ mod tests {
                 .iter()
                 .find(|piece| piece.id == id)
                 .expect("the piece is still aboard");
-            let rect = layout::piece_rect(bridge.sim.pieces(), piece);
+            let rect = layout::piece_rect(bridge.sim.rooms(), bridge.sim.pieces(), piece);
             let mid = space_trucking::sim::Vec2::new(
                 rect.w.mul_add(0.5, rect.x),
                 rect.h.mul_add(0.5, rect.y),
@@ -3496,7 +3496,9 @@ mod tests {
                     crate::rig::REACH,
                     aims.iter().copied(),
                 );
-                if layout::piece_at(bridge.sim.pieces(), pointer.sim).map(|hit| hit.id) == Some(id)
+                if layout::piece_at(bridge.sim.rooms(), bridge.sim.pieces(), pointer.sim)
+                    .map(|hit| hit.id)
+                    == Some(id)
                 {
                     found = Some(pointer);
                     break;
@@ -3512,7 +3514,9 @@ mod tests {
             );
             // The handle rule must not eat this press: passive cargo has
             // no function to guard.
-            if crate::rig::handle_route(bridge.sim.pieces(), pointer.sim).is_some() {
+            if crate::rig::handle_route(bridge.sim.rooms(), bridge.sim.pieces(), pointer.sim)
+                .is_some()
+            {
                 continue;
             }
             // `advance`'s roam grab, verbatim.
@@ -3613,7 +3617,7 @@ mod tests {
                     .iter()
                     .find(|piece| piece.id == id)
                     .expect("the room still stocks it");
-                let rect = layout::piece_rect(sim.pieces(), &piece);
+                let rect = layout::piece_rect(sim.rooms(), sim.pieces(), &piece);
                 let at = space_trucking::sim::Vec2::new(
                     rect.w.mul_add(0.5, rect.x),
                     rect.h.mul_add(0.5, rect.y),

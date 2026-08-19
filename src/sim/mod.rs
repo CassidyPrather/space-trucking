@@ -1400,13 +1400,13 @@ impl Sim {
         if shift && self.quick_move(p, placed) {
             return;
         }
-        let grabbed = layout::piece_at(&self.pieces, p).map(|piece| {
+        let grabbed = layout::piece_at(&self.rooms, &self.pieces, p).map(|piece| {
             (
                 piece.id,
                 piece.kind,
                 piece.loc,
                 self.tile_of(piece),
-                cargo::laid_pinned(&self.pieces, piece),
+                cargo::laid_pinned(&self.rooms, &self.pieces, piece),
             )
         });
         if let Some((id, kind, origin, tile, pinned)) = grabbed {
@@ -1807,7 +1807,7 @@ impl Sim {
     /// spot, even if that is a bad idea). Returns whether the press was
     /// consumed.
     fn quick_move(&mut self, p: Vec2, placed: &mut Vec<u32>) -> bool {
-        let Some(piece) = layout::piece_at(&self.pieces, p).copied() else {
+        let Some(piece) = layout::piece_at(&self.rooms, &self.pieces, p).copied() else {
             return false;
         };
         if self.tile_of(&piece) == Some(Tile::Stock) {
@@ -1819,7 +1819,7 @@ impl Sim {
             return true;
         }
         if (piece.kind == Kind::Cabinet && cargo::cabinet_occupied(&self.pieces, piece.id))
-            || cargo::laid_pinned(&self.pieces, &piece)
+            || cargo::laid_pinned(&self.rooms, &self.pieces, &piece)
         {
             // Same refusal as the grab: full furniture and pinned
             // dressings stay put.
@@ -2014,12 +2014,12 @@ impl Sim {
         // A drop over a cabinet's body reaches for its cubbies first — but
         // only with something cubby-sized. Anything bigger falls through to
         // the grid and collides like furniture does.
-        if piece.kind.cells() == (1, 1) {
+        if piece.kind.extent() == (1, 1, 1) {
             let host = self.pieces.iter().find(|other| {
                 other.id != piece.id
                     && other.kind == Kind::Cabinet
                     && matches!(other.loc, Loc::Hold { .. })
-                    && layout::piece_rect(&self.pieces, other).contains(p)
+                    && layout::piece_rect(&self.rooms, &self.pieces, other).contains(p)
             });
             if let Some(host) = host {
                 if !cargo::stowable(piece.kind) {
@@ -3170,7 +3170,7 @@ mod tests {
             .iter()
             .find(|p| p.id == stock[0])
             .expect("a stocked good");
-        let at = rect_center(layout::piece_rect(sim.pieces(), marked));
+        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), marked));
         s.push((0.0, press_at(at.x, at.y)));
         for _ in 0..30 {
             s.push((TICK_DT, InputFrame::default()));
@@ -3209,7 +3209,7 @@ mod tests {
         assert!(!ours.is_empty(), "the station answered with nothing");
         for id in ours {
             let piece = *sim.pieces().iter().find(|p| p.id == id).unwrap();
-            let from = rect_center(layout::piece_rect(sim.pieces(), &piece));
+            let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
             let (room, x, y) =
                 first_fit(sim.rooms(), sim.pieces(), id, piece.kind).expect("room aboard");
             drag(&mut sim, from, cell_center(room, x, y));
@@ -3545,7 +3545,7 @@ mod tests {
         assert!(stock.len() >= 2, "this test wants a choice");
         let last = *stock.last().unwrap();
         let piece = *sim.pieces().iter().find(|p| p.id == last).unwrap();
-        let at = rect_center(layout::piece_rect(sim.pieces(), &piece));
+        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
         sim.advance(0.0, &press_at(at.x, at.y));
         assert_eq!(sim.cues(), [Cue::Mark { on: true }]);
         assert_eq!(sim.marks(), [last]);
@@ -3566,7 +3566,7 @@ mod tests {
         let mut sim = Sim::new(33);
         let stock = stock_ids(&sim, TRADE);
         let piece = *sim.pieces().iter().find(|p| p.id == stock[0]).unwrap();
-        let at = rect_center(layout::piece_rect(sim.pieces(), &piece));
+        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
         sim.advance(0.0, &press_at(at.x, at.y));
         assert!(sim.held(0).is_none(), "stock marks, it does not lift");
         assert_eq!(
@@ -3590,7 +3590,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::BrinePearls)
             .unwrap();
-        let from = rect_center(layout::piece_rect(sim.pieces(), &piece));
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
         let to = offer(&sim, TRADE, 0);
         drag(&mut sim, from, to);
         let shake = handshake(&sim, TRADE);
@@ -3610,7 +3610,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::BrinePearls)
             .unwrap();
-        let from = rect_center(layout::piece_rect(sim.pieces(), &piece));
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
         let to = offer(&sim, TRADE, 0);
         drag(&mut sim, from, to);
         let shake = handshake(&sim, TRADE);
@@ -3758,7 +3758,7 @@ mod tests {
                     let piece = *sim.pieces().iter().find(|p| p.id == id).unwrap();
                     // Liftable: nothing pins a crate to a station's deck.
                     assert!(
-                        !cargo::laid_pinned(&sim.pieces, &piece),
+                        !cargo::laid_pinned(sim.rooms(), &sim.pieces, &piece),
                         "{host:?}: a {kind:?} on staging ({x}, {y}) is pinned where it stands"
                     );
                     // And somewhere aboard to carry it to.
@@ -3794,7 +3794,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::PerfumeVial)
             .unwrap();
-        let from = rect_center(layout::piece_rect(sim.pieces(), &piece));
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
         drag(&mut sim, from, cabin(3, 3));
         assert_eq!(sim.launch_gate(), Ok(()));
     }
@@ -3818,7 +3818,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::PerfumeVial)
             .unwrap();
-        let from = rect_center(layout::piece_rect(sim.pieces(), &piece));
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
         drag(&mut sim, from, cabin(3, 3));
         assert_eq!(sim.part_check(TRADE), Ok(()));
         let detach = InputFrame {
@@ -3953,7 +3953,7 @@ mod tests {
                             cabin(5, 5)
                         } else {
                             let piece = pieces[rng.usize(..pieces.len())];
-                            rect_center(layout::piece_rect(pieces, &piece))
+                            rect_center(layout::piece_rect(sim.rooms(), pieces, &piece))
                         }
                     }
                 };
@@ -3996,7 +3996,7 @@ mod tests {
                         _ => {
                             let pieces = sim.pieces();
                             let piece = pieces[rng.usize(..pieces.len())];
-                            rect_center(layout::piece_rect(pieces, &piece))
+                            rect_center(layout::piece_rect(sim.rooms(), pieces, &piece))
                         }
                     };
                     *frame = InputFrame {
@@ -4024,6 +4024,7 @@ mod tests {
         let cabinet = inject_hold(&mut sim, Kind::Cabinet, 5, 5);
         let vial = inject_hold(&mut sim, Kind::PerfumeVial, 3, 3);
         let body = layout::piece_rect(
+            sim.rooms(),
             sim.pieces(),
             sim.pieces().iter().find(|p| p.id == cabinet).unwrap(),
         );
@@ -4069,6 +4070,7 @@ mod tests {
         );
         let couch = inject_hold(&mut sim, Kind::Couch, 4, 7);
         assert!(cargo::laid_pinned(
+            sim.rooms(),
             sim.pieces(),
             sim.pieces().iter().find(|p| p.id == rug).unwrap()
         ));
@@ -4197,7 +4199,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::ChartTank)
             .unwrap();
-        let from = rect_center(layout::piece_rect(sim.pieces(), &tank));
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &tank));
         let to = offer(&sim, TRADE, 0);
         drag(&mut sim, from, to);
         assert_eq!(sim.last_violation(), Some(Violation::Vital));
@@ -4271,7 +4273,7 @@ mod tests {
         }
         // Mark one and work the handshake: it is yours, on the floor.
         let piece = *sim.pieces().iter().find(|p| p.id == salvage[0]).unwrap();
-        let at = rect_center(layout::piece_rect(sim.pieces(), &piece));
+        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
         sim.advance(0.0, &press_at(at.x, at.y));
         assert_eq!(sim.cues(), [Cue::Mark { on: true }]);
         let shake = handshake(&sim, wreck);
@@ -4283,7 +4285,7 @@ mod tests {
         // is free and always available — after the claim comes aboard.
         let (room, x, y) =
             first_fit(sim.rooms(), sim.pieces(), salvage[0], claimed.kind).expect("a berth");
-        let from = rect_center(layout::piece_rect(sim.pieces(), claimed));
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), claimed));
         drag(&mut sim, from, cell_center(room, x, y));
         assert_eq!(sim.part_check(wreck), Ok(()));
     }
@@ -4321,7 +4323,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::BrinePearls)
             .unwrap();
-        let from = rect_center(layout::piece_rect(sim.pieces(), &wager));
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &wager));
         let to = offer(&sim, parlor, 0);
         drag(&mut sim, from, to);
         let before = sim.pieces().len();

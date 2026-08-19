@@ -92,7 +92,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use bevy::prelude::*;
-use space_trucking::sim::cargo::{Kind, Loc, Mount, Piece, placement_check};
+use space_trucking::sim::cargo::{Kind, Loc, Mount, Piece, placement_check, plan};
 use space_trucking::sim::layout;
 use space_trucking::sim::room::{CABIN, RoomId, RoomKind, Rooms, Tile};
 
@@ -615,11 +615,12 @@ pub struct Berth {
 /// error.
 fn rig_air(
     charts: &[(Station, SimSurface)],
+    kind: Kind,
     rect: layout::Rect,
     plane: Vec3,
     inward: Vec3,
 ) -> Option<f32> {
-    let (lo, hi) = crate::pieces::berth_box(charts, rect)?;
+    let (lo, hi) = crate::pieces::berth_box(charts, kind, rect)?;
     Some((lo - plane).dot(inward).max((hi - plane).dot(inward)))
 }
 
@@ -632,12 +633,14 @@ pub fn berths(rooms: &Rooms, placed: &Placed) -> Vec<Berth> {
         if kind.covering() {
             continue;
         }
-        let (w, h) = kind.cells();
         for y in 0..rows {
             for x in 0..cols {
                 if placement_check(rooms, &[], u32::MAX, kind, placed.id, x, y).is_err() {
                     continue;
                 }
+                let Some((w, h)) = plan(placed.kind, kind, x, y) else {
+                    continue;
+                };
                 let anchor = layout::cell_rect(placed.id, x, y);
                 let rect = layout::Rect::new(
                     anchor.x,
@@ -653,6 +656,7 @@ pub fn berths(rooms: &Rooms, placed: &Placed) -> Vec<Berth> {
                         };
                         let Some(air) = rig_air(
                             &placed.charts,
+                            kind,
                             rect,
                             surface.center,
                             station.inward(&surface),
@@ -1929,7 +1933,7 @@ fn rig_faces() -> Vec<Finding> {
     let unit = crate::pieces::RIG_UNIT;
     let mut out = Vec::new();
     for kind in Kind::ALL {
-        let (w, h) = kind.cells();
+        let (w, h) = kind.upright();
         let cells = Vec2::new(f32::from(w) * layout::CELL, f32::from(h) * layout::CELL) * 0.5;
         let mut over: BTreeMap<String, f32> = BTreeMap::new();
         for screens in Screens::BOTH {

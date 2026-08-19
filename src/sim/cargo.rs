@@ -198,9 +198,30 @@ impl Kind {
         Self::BayWindow,
     ];
 
-    /// Footprint in net cells, `(w, h)`.
+    /// **What a kind takes up, in cells of its own frame**: `(across,
+    /// deep, tall)`.
+    ///
+    /// A body has one shape and this is it — across the face it shows
+    /// the room, deep away from whatever it sits against, tall up from
+    /// it. Which two of the three a berth spends is the BERTH's business
+    /// ([`Kind::plan_on`]) and never the kind's: a wardrobe is one cell
+    /// of deck and two courses tall, and it is that whichever chart it
+    /// finds itself on.
+    ///
+    /// **This is the re-authored 3D extent** (docs/BAY.md). The retired
+    /// console's glyph `(w, h)` was doing all three jobs before it, and
+    /// the second number was an ELEVATION: on a wall it meant courses,
+    /// on the deck the same number was read as depth, so a 1×2 wardrobe
+    /// claimed 1.06 m of deck for a body that reaches 0.53 m into the
+    /// room. Half a metre of bare deck in front of every standing piece
+    /// answered for the piece, which is the hitbox the playtest could
+    /// not line up with anything it could see.
+    ///
+    /// Everything is one cell deep, and that is the same sentence
+    /// `pieces::RIG_NEAR..RIG_FAR` says in the frontend's own units. The
+    /// day something wants two, the number is here to say so.
     #[must_use]
-    pub const fn cells(self) -> (u8, u8) {
+    pub const fn extent(self) -> (u8, u8, u8) {
         match self {
             Self::PerfumeVial
             | Self::Seedlings
@@ -218,13 +239,13 @@ impl Kind {
             | Self::EtaGauge
             | Self::DestPreview
             | Self::LaunchLever
-            | Self::Porthole => (1, 1),
-            Self::GildedIdol | Self::BrinePearls | Self::FloorLamp | Self::Cabinet => (1, 2),
+            | Self::Porthole => (1, 1, 1),
+            Self::GildedIdol | Self::BrinePearls | Self::FloorLamp | Self::Cabinet => (1, 1, 2),
             Self::RationBricks
             | Self::SuspiciousCrate
             | Self::VeryMysteriousCrate
-            // Square, and the same square the chart tank is: the
-            // biggest thing this ship already knows how to hang on a
+            // Square on its face, and the same square the chart tank is:
+            // the biggest thing this ship already knows how to hang on a
             // wall. Bigger was tried and refused by the arithmetic —
             // a calling room's shelf is its aft wall with a handshake
             // in the middle of it and a doorway through the corner,
@@ -232,13 +253,58 @@ impl Kind {
             // stand anywhere on it. A window no station can put out is
             // a window nobody can buy (`barter`, the shelf-fit test).
             | Self::BayWindow
-            | Self::ChartTank => (2, 2),
+            | Self::ChartTank => (2, 1, 2),
             Self::ScrapAlloy
             | Self::GasCanister
             | Self::Couch
             | Self::Painting
             | Self::Rug
-            | Self::Window => (2, 1),
+            | Self::Window => (2, 1, 1),
+        }
+    }
+
+    /// **The face a rig is drawn on**, `(across, tall)`: the kind's own
+    /// upright frame, which no berth turns. A drawing is composed here
+    /// and a berth spins it; the cells it lands on are
+    /// [`Kind::plan_on`]'s answer, and on a flank the two are transposes
+    /// of one another.
+    #[must_use]
+    pub const fn upright(self) -> (u8, u8) {
+        let (across, _, tall) = self.extent();
+        (across, tall)
+    }
+
+    /// **The net cells this kind covers on a chart of class `surf`** —
+    /// its footprint, stated in the SURFACE's own frame and read back
+    /// into the sheet's.
+    ///
+    /// Two readings, and the chart picks:
+    ///
+    /// - A chart a body lies **on** — the deck, the deckhead — spends
+    ///   the plan: across by deep. What is left over is the height, and
+    ///   the height is not the deck's to spend ([`Kind::stature`]).
+    /// - A chart a body hangs **against** spends the elevation: across
+    ///   by tall. Which way round those land on the sheet depends on
+    ///   the wall, because the net is one sheet of paper folded into a
+    ///   box and its two side flaps fold out SIDEWAYS: a flank's courses
+    ///   climb the sheet's **x** where the aft and front walls' climb
+    ///   its **y**. So a flank takes the elevation transposed.
+    ///
+    /// That transposition is the whole of the old athwart rule, done
+    /// properly. A footprint used to be declared in the sheet's frame,
+    /// which made the same two cells mean "side by side" on one wall
+    /// and "one above the other" on another — so a window carried one
+    /// wall over came out a quarter turn from the window that left, and
+    /// the arbiter's only answer was to refuse the wall. A body keeps
+    /// its shape now and the CELLS turn under it, which is what was
+    /// turning all along.
+    #[must_use]
+    pub const fn plan_on(self, surf: Surf) -> (u8, u8) {
+        let (across, deep, tall) = self.extent();
+        match surf {
+            Surf::Floor | Surf::Ceiling => (across, deep),
+            Surf::Aft | Surf::Front => (across, tall),
+            Surf::Port | Surf::Starboard => (tall, across),
         }
     }
 
@@ -281,12 +347,13 @@ impl Kind {
 
     /// Standing height on the floor, in wall cells — how far up an
     /// adjacent wall this kind shadows when it stands against one (no
-    /// painting behind the wardrobe). Fully re-authored 3D extents are
-    /// deferred (BAY.md); until then a kind stands as tall as its old
-    /// bas-relief silhouette was.
+    /// painting behind the wardrobe). The third number of the kind's
+    /// own [`Kind::extent`], which is where a height belongs: the deck
+    /// spends a plan, and the wall behind the deck is what a height is
+    /// spent on.
     #[must_use]
     pub const fn stature(self) -> u8 {
-        self.cells().1
+        self.extent().2
     }
 
     /// Whether this kind is an operational instrument the ship cannot
@@ -434,8 +501,30 @@ pub const CABINET_SLOTS: u8 = 4;
 /// special-cased anywhere.
 #[must_use]
 pub const fn stowable(kind: Kind) -> bool {
-    let (w, h) = kind.cells();
-    w == 1 && h == 1 && !kind.window() && !matches!(kind.tag(), Some(Tag::Cryo | Tag::Suspicious))
+    matches!(kind.extent(), (1, 1, 1))
+        && !kind.window()
+        && !matches!(kind.tag(), Some(Tag::Cryo | Tag::Suspicious))
+}
+
+/// **The net cells `kind` covers anchored at `(x, y)` of `host`'s net.**
+///
+/// The one place a berth turns into cells. A footprint is a property of
+/// the kind and the CHART it lands on together ([`Kind::plan_on`]) —
+/// a plan on the deck, an elevation on a wall, that elevation transposed
+/// down a flank — so nothing may answer "which cells" from the kind
+/// alone, and everything that used to (the arbiter, the rects the
+/// renderer grabs pieces by, the rat's idea of what is underfoot) comes
+/// through here.
+///
+/// `None` where `(x, y)` is not a cell of that net at all: a hole, a
+/// fold, a fixture's own socket. A berth nobody can name has no
+/// footprint, and the callers that can be handed one say so.
+#[must_use]
+pub const fn plan(host: RoomKind, kind: Kind, x: u8, y: u8) -> Option<(u8, u8)> {
+    match host.surface_of(x, y) {
+        Some(surf) => Some(kind.plan_on(surf)),
+        None => None,
+    }
 }
 
 /// Whether any piece rides in `cabinet`'s cubbies.
@@ -520,23 +609,6 @@ pub enum Violation {
     Suspicious,
     /// A placement whose chart does not satisfy the kind's mount.
     Affix(Mount),
-    /// A footprint that would lie athwart its wall's own courses.
-    ///
-    /// The net is one sheet folded into a box, and the two side flaps
-    /// fold out sideways: their courses climb the sheet's **x** where
-    /// the aft and front walls' climb its **y**. A square footprint
-    /// cannot tell the difference. A `2×1` one can — the same two cells
-    /// that lie level on the aft wall stand one above the other on a
-    /// flank, so a window carried one wall over came out a quarter turn
-    /// from the window that left. The body is not turned by the drawing:
-    /// the *cells* turn, and the body lies on its cells.
-    ///
-    /// So until a footprint can be stated in the wall's own frame rather
-    /// than the sheet's, a non-square one hangs only where the courses
-    /// run level. A porthole and a bay window are square and hang
-    /// anywhere; the 2×1 window and the painting keep to the aft and
-    /// front walls.
-    Athwart,
     /// A cabinet with goods in its cubbies was asked to move (or to take
     /// more than it has room for): empty it first.
     Occupied,
@@ -591,7 +663,12 @@ pub fn placement_check(
     let Some(host) = rooms.kind(room) else {
         return Err(Violation::Bounds);
     };
-    let (w, h) = kind.cells();
+    // The ANCHOR's chart first, because the footprint is a function of
+    // it: a wardrobe covers one cell of deck and two of wall, and which
+    // it is doing here is the chart's answer, not the kind's.
+    let Some((w, h)) = plan(host, kind, x, y) else {
+        return Err(Violation::Bounds);
+    };
     let (cols, rows) = host.grid();
     if x + w > cols || y + h > rows {
         return Err(Violation::Bounds);
@@ -608,9 +685,6 @@ pub fn placement_check(
     let mount = kind.mount();
     if !mount_accepts(mount, surf) {
         return Err(Violation::Affix(mount));
-    }
-    if turns_a_corner(surf, w, h) {
-        return Err(Violation::Athwart);
     }
     let standing = matches!(surf, Surf::Floor);
     if matches!(kind.tag(), Some(Tag::Cryo)) && !touches_hull(host, x, y, w, h) {
@@ -645,7 +719,9 @@ pub fn placement_check(
         if oroom != room {
             continue;
         }
-        let (ow, oh) = other.kind.cells();
+        let Some((ow, oh)) = plan(host, other.kind, ox, oy) else {
+            continue;
+        };
         if overlaps((x, y, w, h), (ox, oy, ow, oh)) {
             return Err(Violation::Overlap);
         }
@@ -672,16 +748,6 @@ pub fn placement_check(
         }
     }
     Ok(())
-}
-
-/// Whether a `w × h` footprint on `surf` would lie athwart the wall's
-/// own courses — see [`Violation::Athwart`].
-///
-/// **It is asked of the surface, not of the kind.** What turns is the
-/// pair of cells, so anything non-square answers the same way, whatever
-/// hangs there and whichever arbiter is asking.
-const fn turns_a_corner(surf: Surf, w: u8, h: u8) -> bool {
-    w != h && matches!(surf, Surf::Port | Surf::Starboard)
 }
 
 /// The one chart a footprint lies wholly inside, if any — a piece bent
@@ -751,6 +817,13 @@ fn shadow_cells(host: RoomKind, x: u8, y: u8, w: u8, h: u8, stature: u8) -> Vec<
     cells
 }
 
+/// Whether the piece `kind` anchored at `(ox, oy)` of `host`'s net
+/// shares any cell with the footprint `mine`. A berth off the net covers
+/// nothing.
+fn covers_same(host: RoomKind, kind: Kind, ox: u8, oy: u8, mine: (u8, u8, u8, u8)) -> bool {
+    plan(host, kind, ox, oy).is_some_and(|(ow, oh)| overlaps(mine, (ox, oy, ow, oh)))
+}
+
 /// Cell-rect intersection test.
 const fn overlaps(a: (u8, u8, u8, u8), b: (u8, u8, u8, u8)) -> bool {
     a.0 < b.0 + b.2 && b.0 < a.0 + a.2 && a.1 < b.1 + b.3 && b.1 < a.1 + a.3
@@ -805,7 +878,9 @@ pub fn dressing_check(
     let Some(host) = rooms.kind(room) else {
         return Err(Violation::Bounds);
     };
-    let (w, h) = kind.cells();
+    let Some((w, h)) = plan(host, kind, x, y) else {
+        return Err(Violation::Bounds);
+    };
     let (cols, rows) = host.grid();
     if x + w > cols || y + h > rows {
         return Err(Violation::Bounds);
@@ -828,25 +903,17 @@ pub fn dressing_check(
             return Err(Violation::Affix(mount));
         }
     }
-    // Paint lies on a wall the same way a window hangs on it, so it
-    // answers the same rule. Every covering aboard today is either
-    // square or floor-only, so nothing is refused by this yet; the day
-    // somebody hangs wallpaper two cells wide, it is already answered.
-    if turns_a_corner(surf, w, h) {
-        return Err(Violation::Athwart);
-    }
     for other in pieces {
         if other.id == id {
             continue;
         }
-        let (ow, oh) = other.kind.cells();
         match other.loc {
             // One dressing per cell.
             Loc::Laid {
                 room: oroom,
                 x: ox,
                 y: oy,
-            } if oroom == room && overlaps((x, y, w, h), (ox, oy, ow, oh)) => {
+            } if oroom == room && covers_same(host, other.kind, ox, oy, (x, y, w, h)) => {
                 return Err(Violation::Overlap);
             }
             // No sliding a dressing under standing cargo: the pinned
@@ -855,7 +922,7 @@ pub fn dressing_check(
                 room: oroom,
                 x: ox,
                 y: oy,
-            } if oroom == room && overlaps((x, y, w, h), (ox, oy, ow, oh)) => {
+            } if oroom == room && covers_same(host, other.kind, ox, oy, (x, y, w, h)) => {
                 return Err(Violation::Occupied);
             }
             _ => {}
@@ -890,11 +957,16 @@ pub fn dress_fit(rooms: &Rooms, pieces: &[Piece], id: u32, kind: Kind) -> Option
 /// couch, then roll the rug — mirroring [`dressing_check`]'s refusal to
 /// lay beneath one.
 #[must_use]
-pub fn laid_pinned(pieces: &[Piece], piece: &Piece) -> bool {
+pub fn laid_pinned(rooms: &Rooms, pieces: &[Piece], piece: &Piece) -> bool {
     let Loc::Laid { room, x, y } = piece.loc else {
         return false;
     };
-    let (w, h) = piece.kind.cells();
+    let Some(host) = rooms.kind(room) else {
+        return false;
+    };
+    let Some((w, h)) = plan(host, piece.kind, x, y) else {
+        return false;
+    };
     pieces.iter().any(|other| {
         let Loc::Hold {
             room: oroom,
@@ -904,8 +976,7 @@ pub fn laid_pinned(pieces: &[Piece], piece: &Piece) -> bool {
         else {
             return false;
         };
-        let (ow, oh) = other.kind.cells();
-        other.id != piece.id && oroom == room && overlaps((x, y, w, h), (ox, oy, ow, oh))
+        other.id != piece.id && oroom == room && covers_same(host, other.kind, ox, oy, (x, y, w, h))
     })
 }
 
@@ -985,8 +1056,12 @@ pub const fn lamp_room(piece: &Piece) -> Option<RoomId> {
 /// the rat's fear, the seedlings' bloom, the hold painting's spotlight —
 /// reads through this one predicate; the well-lit-art price bonus
 /// deliberately does not (a coat is ambiance, not gallery lighting).
+///
+/// `host` is the room's own kind, because a lamp's footprint is a
+/// question about the chart it stands on (`plan`) and the caller
+/// already knows whose room this is.
 #[must_use]
-pub fn lit_adjacent(pieces: &[Piece], room: RoomId, x: u8, y: u8) -> bool {
+pub fn lit_adjacent(host: RoomKind, pieces: &[Piece], room: RoomId, x: u8, y: u8) -> bool {
     pieces.iter().any(|piece| {
         let (source, lroom, lx, ly) = match piece.loc {
             Loc::Hold {
@@ -1001,8 +1076,10 @@ pub fn lit_adjacent(pieces: &[Piece], room: RoomId, x: u8, y: u8) -> bool {
             } => (piece.kind == Kind::LuminousPaint, r, px, py),
             Loc::Stow { .. } => return false,
         };
-        let (w, h) = piece.kind.cells();
-        source && lroom == room && adjacent((x, y, 1, 1), (lx, ly, w, h))
+        source
+            && lroom == room
+            && plan(host, piece.kind, lx, ly)
+                .is_some_and(|(w, h)| adjacent((x, y, 1, 1), (lx, ly, w, h)))
     })
 }
 
@@ -1096,9 +1173,10 @@ mod tests {
     fn heavy_lies_dormant_and_the_walls_refuse_plain_cargo() {
         assert_eq!(check(&[], Kind::GildedIdol, 3, 3), Ok(()));
         assert_eq!(check(&[], Kind::GildedIdol, 5, 5), Ok(()));
-        // Lifted onto a wall, the mount law refuses (port chart).
+        // Lifted onto a wall, the mount law refuses (port chart, clear
+        // of the doorway the aperture punches through it).
         assert_eq!(
-            check(&[], Kind::GildedIdol, 0, 4),
+            check(&[], Kind::GildedIdol, 0, 8),
             Err(Violation::Affix(Mount::Floor))
         );
     }
@@ -1195,9 +1273,11 @@ mod tests {
     }
 
     #[test]
-    fn the_painting_hangs_on_a_level_wall_but_never_a_hole() {
+    fn the_painting_hangs_on_any_wall_but_never_a_hole() {
         assert_eq!(check(&[], Kind::Painting, 5, 1), Ok(()));
-        assert_eq!(check(&[], Kind::Painting, 0, 6), Err(Violation::Athwart));
+        // A flank too, now that the footprint is stated in the wall's
+        // own frame: two cells along the port wall, one course tall.
+        assert_eq!(check(&[], Kind::Painting, 0, 6), Ok(()));
         assert_eq!(
             check(&[], Kind::Painting, 4, 4),
             Err(Violation::Affix(Mount::Wall))
@@ -1205,63 +1285,108 @@ mod tests {
         assert_eq!(check(&[], Kind::Painting, 13, 9), Err(Violation::Bounds));
     }
 
+    /// Whether `(x, y)` is a wall cell one step off the deck — the
+    /// baseboard course, where the fold is close enough to point at.
+    fn baseboard(host: RoomKind, x: u8, y: u8) -> bool {
+        [(0_i8, 1_i8), (0, -1), (1, 0), (-1, 0)]
+            .into_iter()
+            .any(|step| on_the_deck(host, x, y, step))
+    }
+
+    /// Whether one step from `(x, y)` lands on `host`'s deck.
+    fn on_the_deck(host: RoomKind, x: u8, y: u8, (dx, dy): (i8, i8)) -> bool {
+        let (fx, fy, fw, fh) = host.floor_rect();
+        let step = |c: u8, d: i8| u8::try_from(i16::from(c) + i16::from(d)).ok();
+        let (Some(cx), Some(cy)) = (step(x, dx), step(y, dy)) else {
+            return false;
+        };
+        (fx..fx + fw).contains(&cx) && (fy..fy + fh).contains(&cy)
+    }
+
+    /// **Which way a wall chart's courses climb the sheet**, read off
+    /// the net rather than assumed: the sheet direction a wall chart
+    /// approaches the floor chart in is DOWN that wall. The aft and
+    /// front walls fold off the deck's near and far rows, so their
+    /// courses climb the sheet's y; the two flanks fold out sideways, so
+    /// theirs climb its x. Derived here so the guard below asks the net
+    /// the same question a player asks the room, instead of reading the
+    /// arbiter's own table back at it.
+    fn courses_climb_the_sheets_x(host: RoomKind, x: u8, y: u8) -> bool {
+        // Step one cell each way and see which step lands on the deck:
+        // that is the way down this wall, whatever the wall is.
+        let vertical = on_the_deck(host, x, y, (0, 1)) || on_the_deck(host, x, y, (0, -1));
+        let sideways = on_the_deck(host, x, y, (1, 0)) || on_the_deck(host, x, y, (-1, 0));
+        assert!(
+            vertical != sideways,
+            "({x}, {y}) is not one cell off the deck of a {host:?}",
+        );
+        sideways
+    }
+
     /// **A footprint keeps its shape on every wall it may take.**
     ///
     /// The net is one sheet folded into a box and the side flaps fold
     /// out sideways, so the two cells that lie level on the aft wall
-    /// stand one above the other on a flank. Nothing in the drawing does
-    /// that — the cells turn and the body lies on its cells — which is
+    /// stood one above the other on a flank. Nothing in the drawing did
+    /// that — the cells turned and the body lay on its cells — which is
     /// why it read to a player as the starting window rotating a quarter
-    /// turn when it was carried one wall over.
+    /// turn when it was carried one wall over, and why the arbiter's
+    /// only answer used to be to refuse the wall.
     ///
-    /// Swept rather than sampled: the claim is about every kind on every
-    /// cell, and the pair of anchors below is only here so a sweep that
-    /// went vacuous would say so.
+    /// A footprint is stated in the wall's own frame now, so the claim
+    /// can be made positively: on EVERY wall of EVERY room, a kind
+    /// covers its own `across` along the wall and its own `tall` up it.
+    /// Which sheet axis is which comes off the net's own fold
+    /// ([`down_the_wall`]) and not off the arbiter's table, so the guard
+    /// is not the implementation read back.
     #[test]
     fn a_footprint_keeps_its_shape_on_every_wall_it_may_take() {
-        let ship = ship();
-        let (cols, rows) = RoomKind::Cabin.grid();
-        let mut turned = 0_u32;
-        let mut level = 0_u32;
-        for kind in Kind::ALL {
-            let (w, h) = kind.cells();
-            for y in 0..rows {
-                for x in 0..cols {
-                    let flank = matches!(
-                        RoomKind::Cabin.surface_of(x, y),
-                        Some(Surf::Port | Surf::Starboard)
-                    );
-                    let ruling = if kind.covering() {
-                        dressing_check(&ship, &[], 0, kind, CABIN, x, y)
-                    } else {
-                        placement_check(&ship, &[], 0, kind, CABIN, x, y)
-                    };
-                    if ruling.is_ok() {
-                        assert!(
-                            !flank || w == h,
-                            "{kind:?} may hang athwart the courses at ({x}, {y})"
+        let mut seen: Vec<(RoomKind, Surf)> = Vec::new();
+        for host in super::super::room::ROOM_KINDS {
+            let (cols, rows) = host.grid();
+            for kind in Kind::ALL {
+                let (across, _, tall) = kind.extent();
+                for y in 0..rows {
+                    for x in 0..cols {
+                        let Some(surf) = host.surface_of(x, y) else {
+                            continue;
+                        };
+                        if matches!(surf, Surf::Floor | Surf::Ceiling) {
+                            continue;
+                        }
+                        // The baseboard course, where the fold itself is
+                        // one step away and the sheet can be asked which
+                        // way that is.
+                        if !baseboard(host, x, y) {
+                            continue;
+                        }
+                        let (w, h) = plan(host, kind, x, y).expect("a wall cell has a plan");
+                        let sideways = courses_climb_the_sheets_x(host, x, y);
+                        let (along, up) = if sideways { (h, w) } else { (w, h) };
+                        assert_eq!(
+                            (along, up),
+                            (across, tall),
+                            "{kind:?} on the {surf:?} wall of a {host:?} at ({x}, {y}) \
+                             covers {along} along and {up} up",
                         );
-                        level += u32::from(!flank && w != h);
-                    } else if ruling == Err(Violation::Athwart) {
-                        assert!(flank && w != h, "{kind:?} refused level at ({x}, {y})");
-                        turned += 1;
+                        if !seen.contains(&(host, surf)) {
+                            seen.push((host, surf));
+                        }
                     }
                 }
             }
         }
-        assert!(turned > 0, "no footprint was ever refused for turning");
-        assert!(level > 0, "no non-square footprint hangs anywhere at all");
-        // And the two that carry the rule today still hang, and still
-        // hang only where the courses run level.
+        // Every wall of every room was actually asked, and both fold
+        // directions are in the sample — a sweep that only met the aft
+        // wall would pass this whatever the flanks did.
+        assert_eq!(seen.len(), super::super::room::ROOM_KINDS.len() * 4);
+        // And a non-square kind now hangs on a flank, which is the berth
+        // the retired athwart rule existed to refuse.
         for kind in [Kind::Window, Kind::Painting] {
             assert_eq!(check(&[], kind, 5, 1), Ok(()), "{kind:?} on the aft wall");
-            assert_eq!(
-                check(&[], kind, 0, 5),
-                Err(Violation::Athwart),
-                "{kind:?} on the port wall"
-            );
+            assert_eq!(check(&[], kind, 0, 5), Ok(()), "{kind:?} on the port wall");
         }
-        // A square footprint cannot tell the flanks from the ends.
+        // A square footprint still cannot tell the flanks from the ends.
         assert_eq!(check(&[], Kind::Porthole, 1, 8), Ok(()));
         assert_eq!(check(&[], Kind::ChartTank, 11, 5), Ok(()));
     }
@@ -1287,20 +1412,24 @@ mod tests {
 
         let pieces = board(&[(Kind::CeilingLamp, 16, 4)]);
         assert!(lamp_lit(&pieces[0]));
-        assert!(lit_adjacent(&pieces, CABIN, 15, 4));
-        assert!(lit_adjacent(&pieces, CABIN, 17, 4));
-        assert!(lit_adjacent(&pieces, CABIN, 16, 5));
-        assert!(!lit_adjacent(&pieces, CABIN, 16, 4));
-        assert!(!lit_adjacent(&pieces, CABIN, 15, 3));
-        assert!(!lit_adjacent(&pieces, CABIN, 18, 4));
+        assert!(lit_adjacent(RoomKind::Cabin, &pieces, CABIN, 15, 4));
+        assert!(lit_adjacent(RoomKind::Cabin, &pieces, CABIN, 17, 4));
+        assert!(lit_adjacent(RoomKind::Cabin, &pieces, CABIN, 16, 5));
+        assert!(!lit_adjacent(RoomKind::Cabin, &pieces, CABIN, 16, 4));
+        assert!(!lit_adjacent(RoomKind::Cabin, &pieces, CABIN, 15, 3));
+        assert!(!lit_adjacent(RoomKind::Cabin, &pieces, CABIN, 18, 4));
         // Light does not cross a seam.
-        assert!(!lit_adjacent(&pieces, 1, 15, 4));
+        assert!(!lit_adjacent(RoomKind::Cabin, &pieces, 1, 15, 4));
 
+        // A standing lamp lights from the ONE cell of deck it occupies,
+        // however tall it is: a height is spent up the wall behind it
+        // (`Kind::stature`) and never across the floor beside it.
         let tall = board(&[(Kind::FloorLamp, 3, 4)]);
-        assert!(lit_adjacent(&tall, CABIN, 4, 4));
-        assert!(lit_adjacent(&tall, CABIN, 4, 5));
-        assert!(lit_adjacent(&tall, CABIN, 3, 3));
-        assert!(!lit_adjacent(&tall, CABIN, 4, 3));
+        assert!(lit_adjacent(RoomKind::Cabin, &tall, CABIN, 4, 4));
+        assert!(lit_adjacent(RoomKind::Cabin, &tall, CABIN, 3, 3));
+        assert!(lit_adjacent(RoomKind::Cabin, &tall, CABIN, 3, 5));
+        assert!(!lit_adjacent(RoomKind::Cabin, &tall, CABIN, 4, 5), "corner");
+        assert!(!lit_adjacent(RoomKind::Cabin, &tall, CABIN, 4, 3), "corner");
 
         // Boxed in a cubby a lamp is dark, and non-lamps light nothing.
         let boxed = Piece {
@@ -1314,9 +1443,9 @@ mod tests {
             },
         };
         assert!(!lamp_lit(&boxed));
-        assert!(!lit_adjacent(&[boxed], CABIN, 4, 4));
+        assert!(!lit_adjacent(RoomKind::Cabin, &[boxed], CABIN, 4, 4));
         let art = board(&[(Kind::Painting, 5, 1)]);
-        assert!(!lit_adjacent(&art, CABIN, 7, 1));
+        assert!(!lit_adjacent(RoomKind::Cabin, &art, CABIN, 7, 1));
     }
 
     #[test]
@@ -1359,7 +1488,7 @@ mod tests {
             vec![Kind::Window, Kind::Porthole, Kind::BayWindow],
             "the family is the family"
         );
-        let mut sizes: Vec<(u8, u8)> = family.iter().map(|kind| kind.cells()).collect();
+        let mut sizes: Vec<(u8, u8, u8)> = family.iter().map(|kind| kind.extent()).collect();
         sizes.sort_unstable();
         sizes.dedup();
         assert_eq!(sizes.len(), family.len(), "no two windows are one window");
@@ -1375,34 +1504,22 @@ mod tests {
                 kind == Kind::Window,
                 "{kind:?} disagrees about what a hull comes with"
             );
-            // Every room kind must be able to take it somewhere — and
-            // "somewhere" is a wall whose courses its footprint can lie
-            // level along, since a non-square one is refused on the
-            // flanks (`Violation::Athwart`).
-            let (w, h) = kind.cells();
+            // Every room kind must be able to take it somewhere. Every
+            // wall is "somewhere" now — a footprint is stated in the
+            // wall's own frame, so the flanks take a non-square one the
+            // same way the ends do — and the arbiter is the one asked,
+            // because a hole punched through a wall is still a hole.
             for host in super::super::room::ROOM_KINDS {
                 let (cols, rows) = host.grid();
                 let fits = (0..rows).any(|y| {
                     (0..cols).any(|x| {
-                        x + w <= cols
-                            && y + h <= rows
-                            && (y..y + h).all(|cy| {
-                                (x..x + w).all(|cx| {
-                                    matches!(
-                                        host.surface_of(cx, cy),
-                                        Some(
-                                            Surf::Aft | Surf::Port | Surf::Starboard | Surf::Front
-                                        )
-                                    ) && !turns_a_corner(
-                                        host.surface_of(cx, cy).expect("just matched"),
-                                        w,
-                                        h,
-                                    )
-                                })
-                            })
+                        matches!(
+                            host.surface_of(x, y),
+                            Some(Surf::Aft | Surf::Port | Surf::Starboard | Surf::Front)
+                        ) && placement_check(&ship(), &[], 0, kind, CABIN, x, y).is_ok()
                     })
                 });
-                assert!(fits, "{kind:?} fits no level wall of a {host:?}");
+                assert!(fits, "{kind:?} fits no wall of a {host:?}");
             }
         }
     }
@@ -1501,8 +1618,8 @@ mod tests {
                 y: 7,
             },
         };
-        assert!(laid_pinned(&[rug, couch], &rug));
-        assert!(!laid_pinned(&[rug], &rug));
+        assert!(laid_pinned(&rooms, &[rug, couch], &rug));
+        assert!(!laid_pinned(&rooms, &[rug], &rug));
         assert_eq!(first_fit(&rooms, &[], 9, Kind::Rug), None);
         assert_eq!(
             dress_fit(&rooms, &[rug, couch], 9, Kind::Rug),
@@ -1523,10 +1640,16 @@ mod tests {
                 y: 1,
             },
         };
-        assert!(lit_adjacent(&[coat], CABIN, 6, 1));
-        assert!(lit_adjacent(&[coat], CABIN, 5, 0));
-        assert!(!lit_adjacent(&[coat], CABIN, 5, 1), "never inside");
-        assert!(!lit_adjacent(&[coat], CABIN, 6, 0), "corners do not count");
+        assert!(lit_adjacent(RoomKind::Cabin, &[coat], CABIN, 6, 1));
+        assert!(lit_adjacent(RoomKind::Cabin, &[coat], CABIN, 5, 0));
+        assert!(
+            !lit_adjacent(RoomKind::Cabin, &[coat], CABIN, 5, 1),
+            "never inside"
+        );
+        assert!(
+            !lit_adjacent(RoomKind::Cabin, &[coat], CABIN, 6, 0),
+            "corners do not count"
+        );
         let tin = Piece {
             id: 1,
             kind: Kind::PaintTin,
@@ -1538,7 +1661,7 @@ mod tests {
                 y: 1,
             },
         };
-        assert!(!lit_adjacent(&[tin], CABIN, 6, 1));
+        assert!(!lit_adjacent(RoomKind::Cabin, &[tin], CABIN, 6, 1));
     }
 
     /// Ownership is a function of tile class, and nothing else.

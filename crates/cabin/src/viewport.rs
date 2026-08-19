@@ -2166,8 +2166,11 @@ fn glass_charts(sim: &Sim) -> Vec<GlassChart> {
         .into_iter()
         .filter_map(|piece| {
             let home = piece.loc.room(pieces)?;
-            let at =
-                crate::canvas::rect_center(space_trucking::sim::layout::piece_rect(pieces, piece));
+            let at = crate::canvas::rect_center(space_trucking::sim::layout::piece_rect(
+                sim.rooms(),
+                pieces,
+                piece,
+            ));
             sim.rooms().iter().find_map(|(id, room)| {
                 crate::room::charts(id, room)
                     .into_iter()

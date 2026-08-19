@@ -36,7 +36,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
-use space_trucking::sim::room::CABIN;
+use space_trucking::sim::room::{CABIN, Rooms};
 use space_trucking::sim::{Loc, Piece, Vec2 as SimVec2, layout};
 
 use crate::palette;
@@ -1116,9 +1116,10 @@ fn aimed_station(
 /// has no function to guard, so its whole body grabs and nothing is
 /// consumed.
 #[must_use]
-pub fn handle_route(pieces: &[Piece], at: SimVec2) -> Option<Focus> {
-    let piece = layout::piece_at(pieces, at)?;
-    let handle = crate::pieces::carry_handle_rect(piece.kind, layout::piece_rect(pieces, piece))?;
+pub fn handle_route(rooms: &Rooms, pieces: &[Piece], at: SimVec2) -> Option<Focus> {
+    let piece = layout::piece_at(rooms, pieces, at)?;
+    let handle =
+        crate::pieces::carry_handle_rect(piece.kind, layout::piece_rect(rooms, pieces, piece))?;
     // Off its wall — staged on a hopper tile, boxed in a cubby, laid
     // on the deck — an instrument is only cargo again: it carries no
     // station, so its whole body grabs, handle or no handle.
@@ -1234,9 +1235,17 @@ pub fn steer(
             // disagree about which half of the piece the aim is on.
             if buttons.just_pressed(MouseButton::Left) || toggle {
                 let holding = shell.bridge.sim.held(0).is_some();
-                let over = layout::piece_at(shell.bridge.sim.pieces(), pointer.sim);
+                let over = layout::piece_at(
+                    shell.bridge.sim.rooms(),
+                    shell.bridge.sim.pieces(),
+                    pointer.sim,
+                );
                 let focus = if !holding && over.is_some() {
-                    handle_route(shell.bridge.sim.pieces(), pointer.sim)
+                    handle_route(
+                        shell.bridge.sim.rooms(),
+                        shell.bridge.sim.pieces(),
+                        pointer.sim,
+                    )
                 } else {
                     aimed_station(&camera, &surfaces).and_then(Focus::of)
                 };
@@ -1538,7 +1547,7 @@ mod tests {
                         crate::pieces::instrument_surface(
                             &charts,
                             piece.kind,
-                            layout::piece_rect(sim.pieces(), piece),
+                            layout::piece_rect(sim.rooms(), sim.pieces(), piece),
                         )
                     })
                     .flatten()
@@ -1656,7 +1665,7 @@ mod tests {
             if !matches!(piece.loc, Loc::Hold { .. }) {
                 continue;
             }
-            let rect = layout::piece_rect(sim.pieces(), piece);
+            let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
             if let Some(pair) = crate::pieces::instrument_surface(&charts, piece.kind, rect) {
                 panels.push(pair);
             }

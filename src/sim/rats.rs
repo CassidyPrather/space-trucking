@@ -45,7 +45,7 @@
 //! line, its own cues. `event::Omen` keeps the same shape; a third event
 //! should copy the convention rather than grow a framework.
 
-use super::cargo::{Kind, Loc, Piece, lit_adjacent};
+use super::cargo::{self, Kind, Loc, Piece, lit_adjacent};
 use super::layout;
 use super::room::{CABIN, RoomKind, Surf};
 use super::{Cue, Vec2, splitmix};
@@ -214,7 +214,7 @@ impl Rats {
             let h = splitmix(seed ^ SALT_NIBBLE, tick);
             rat.next_nibble = tick + NIBBLE_BASE + h % NIBBLE_JITTER;
             let napping = couch_cells(pieces).contains(&rat.cell);
-            if !napping && !lit_adjacent(pieces, CABIN, rat.cell.0, rat.cell.1) {
+            if !napping && !lit_adjacent(RATS_ROOM, pieces, CABIN, rat.cell.0, rat.cell.1) {
                 if let Some(index) = nearest_hold_piece(pieces, rat.cell) {
                     pieces[index].gnawed = true;
                     cues.push(Cue::RatNibble);
@@ -272,10 +272,10 @@ pub fn occupied_cells(pieces: &[Piece]) -> u32 {
         .iter()
         .filter_map(|piece| match piece.loc {
             Loc::Hold { room: CABIN, x, y } => {
-                let (w, h) = piece.kind.cells();
                 let on_floor = RATS_ROOM
                     .surface_of(x, y)
                     .is_some_and(|surf| matches!(surf, Surf::Floor));
+                let (w, h) = cargo::plan(RATS_ROOM, piece.kind, x, y)?;
                 on_floor.then_some(u32::from(w) * u32::from(h))
             }
             _ => None,
@@ -289,8 +289,8 @@ fn covered(pieces: &[Piece], cx: u8, cy: u8) -> bool {
         let Loc::Hold { room: CABIN, x, y } = piece.loc else {
             return false;
         };
-        let (w, h) = piece.kind.cells();
-        cx >= x && cx < x + w && cy >= y && cy < y + h
+        cargo::plan(RATS_ROOM, piece.kind, x, y)
+            .is_some_and(|(w, h)| cx >= x && cx < x + w && cy >= y && cy < y + h)
     })
 }
 
@@ -310,7 +310,7 @@ fn choose_cell(h: u64, pieces: &[Piece], avoid: Option<(u8, u8)>) -> Option<(u8,
             if RATS_ROOM.surface_of(x, y).is_none() {
                 continue;
             }
-            if avoid == Some((x, y)) || lit_adjacent(pieces, CABIN, x, y) {
+            if avoid == Some((x, y)) || lit_adjacent(RATS_ROOM, pieces, CABIN, x, y) {
                 continue;
             }
             any.push((x, y));
@@ -338,7 +338,9 @@ fn couch_cells(pieces: &[Piece]) -> Vec<(u8, u8)> {
         let Loc::Hold { room: CABIN, x, y } = piece.loc else {
             continue;
         };
-        let (w, h) = piece.kind.cells();
+        let Some((w, h)) = cargo::plan(RATS_ROOM, piece.kind, x, y) else {
+            continue;
+        };
         for dy in 0..h {
             for dx in 0..w {
                 cells.push((x + dx, y + dy));
@@ -373,7 +375,8 @@ fn couch_step(
     let here = couch_gap(couch, (cx, cy));
     let mut pool = Vec::new();
     let mut consider = |cell: (u8, u8)| {
-        if couch_gap(couch, cell) < here && !lit_adjacent(pieces, CABIN, cell.0, cell.1) {
+        if couch_gap(couch, cell) < here && !lit_adjacent(RATS_ROOM, pieces, CABIN, cell.0, cell.1)
+        {
             pool.push(cell);
         }
     };
@@ -411,7 +414,7 @@ fn nearest_hold_piece(pieces: &[Piece], (cx, cy): (u8, u8)) -> Option<usize> {
             else {
                 return None;
             };
-            let (w, h) = piece.kind.cells();
+            let (w, h) = cargo::plan(RATS_ROOM, piece.kind, x, y)?;
             let distance = u32::from(axis_gap(cx, x, w)) + u32::from(axis_gap(cy, y, h));
             Some((distance, piece.id, index))
         })
@@ -449,7 +452,7 @@ mod tests {
     #[test]
     fn occupied_cells_sums_floor_footprints_and_ignores_the_rest() {
         let pieces = [
-            hold_piece(0, Kind::RationBricks, 4, 4), // 2x2 = 4 floor cells
+            hold_piece(0, Kind::RationBricks, 4, 4), // 2 across, 1 deep
             hold_piece(1, Kind::PerfumeVial, 3, 3),  // 1 floor cell
             // Wall and ceiling berths are not food density.
             hold_piece(2, Kind::ChartTank, 4, 0),
@@ -465,7 +468,7 @@ mod tests {
                 },
             },
         ];
-        assert_eq!(occupied_cells(&pieces), 5);
+        assert_eq!(occupied_cells(&pieces), 3);
         assert_eq!(occupied_cells(&[]), 0);
     }
 
@@ -526,7 +529,7 @@ mod tests {
             rats.on_tick(0xBEEF, tick, &mut pieces, &mut cues);
             let rat = rats.rat.expect("nothing evicts it here");
             assert!(
-                !lit_adjacent(&pieces, CABIN, rat.cell.0, rat.cell.1),
+                !lit_adjacent(RATS_ROOM, &pieces, CABIN, rat.cell.0, rat.cell.1),
                 "tick {tick}: the rat sat in lamplight at {:?}",
                 rat.cell
             );
@@ -558,7 +561,10 @@ mod tests {
         for y in 0..GRID_ROWS {
             for x in 0..GRID_COLS {
                 if RATS_ROOM.surface_of(x, y).is_some() {
-                    assert!(lit_adjacent(&pieces, CABIN, x, y), "({x}, {y}) reads dark");
+                    assert!(
+                        lit_adjacent(RATS_ROOM, &pieces, CABIN, x, y),
+                        "({x}, {y}) reads dark"
+                    );
                 }
             }
         }
@@ -651,15 +657,15 @@ mod tests {
     #[test]
     fn the_nearest_piece_rule_measures_to_the_footprint_and_breaks_ties_low() {
         let pieces = [
-            hold_piece(4, Kind::RationBricks, 0, 0), // footprint out to (1, 1)
-            hold_piece(2, Kind::PerfumeVial, 5, 0),
+            hold_piece(4, Kind::RationBricks, 3, 3), // footprint out to (4, 3)
+            hold_piece(2, Kind::PerfumeVial, 8, 3),
         ];
-        // (2, 0): the bricks' edge is 1 away, the vial 3: bricks.
-        assert_eq!(nearest_hold_piece(&pieces, (2, 0)), Some(0));
-        // (3, 0): both 2 away — the lower id wins, which is the vial.
-        assert_eq!(nearest_hold_piece(&pieces, (3, 0)), Some(1));
+        // (5, 3): the bricks' edge is 1 away, the vial 3: bricks.
+        assert_eq!(nearest_hold_piece(&pieces, (5, 3)), Some(0));
+        // (6, 3): both 2 away — the lower id wins, which is the vial.
+        assert_eq!(nearest_hold_piece(&pieces, (6, 3)), Some(1));
         // Perched on a footprint is distance zero.
-        assert_eq!(nearest_hold_piece(&pieces, (1, 1)), Some(0));
+        assert_eq!(nearest_hold_piece(&pieces, (4, 3)), Some(0));
         // Nothing stowed, nothing to gnaw.
         assert_eq!(nearest_hold_piece(&[], (0, 0)), None);
     }

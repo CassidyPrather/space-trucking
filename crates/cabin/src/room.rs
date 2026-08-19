@@ -166,6 +166,22 @@ const JAMB: f32 = 2.0 * NOTCH;
 const LATCH_W: f32 = 2.0 * NOTCH;
 const LATCH_H: f32 = 5.0 * NOTCH;
 
+/// How thick the latch's plate is, and how far its amber stands proud of
+/// it: one girth, spent twice, so the lever reads as a lever from the
+/// side rather than as a decal on a plate.
+const LATCH_T: f32 = 0.02;
+
+/// **How far a body bolted to the fabric is buried in what holds it up.**
+///
+/// One fight-free step of the decal ladder, which is the same step a
+/// rig's sole spends on the deck it stands on (`pieces::SOLE_BURY`) and a
+/// pane spends on the bezel it is glazed into (`pieces::GLAZE`). Flush is
+/// a coin toss in the depth buffer and proud is furniture floating, so a
+/// joint that has to read as a joint goes one step in. The gauntlet's
+/// tolerance is this plus a paint's thickness (`gauntlet::SEAT_GAP`), so
+/// a body spending exactly this sits inside the rule with room to spare.
+const SEAT_BURY: f32 = crate::rig::layer::STEP;
+
 /// How long a seam cue burns, seconds — feedback, inside the half-second
 /// law (`docs/ART_DIRECTION_3D.md`).
 const SEAM_LEN: f32 = 0.45;
@@ -2219,17 +2235,17 @@ fn seam_frame(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
     body(
         format!("seam[{port}] latch plate"),
         at,
-        dir_a * (LATCH_W * 1.6) + Vec3::Y * (LATCH_H * 1.3) + site.out.abs() * 0.02,
+        dir_a * (LATCH_W * 1.6) + Vec3::Y * (LATCH_H * 1.3) + site.out.abs() * LATCH_T,
         Dress::Frame,
     );
     body(
         format!("seam[{port}] latch grab"),
-        at - site.out * 0.02,
-        dir_a * LATCH_W + Vec3::Y * LATCH_H + site.out.abs() * 0.02,
+        at - site.out * LATCH_T,
+        dir_a * LATCH_W + Vec3::Y * LATCH_H + site.out.abs() * LATCH_T,
         Dress::Grab(
             other,
             SimSurface {
-                center: at - site.out * 0.04,
+                center: at - site.out * (LATCH_T * 2.0),
                 half_u: site.half_a.normalize_or_zero() * (LATCH_W * 1.2),
                 half_v: Vec3::NEG_Y * (LATCH_H * 1.2),
                 rect: layout::cell_rect(placed.id, 0, 0),
@@ -2300,9 +2316,36 @@ fn passage(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
 /// room is never the hand standing in it, and the gangway law would
 /// refuse it if it were. The cabin does not part from itself, and a
 /// riding room's seam is not asked to.
+///
+/// **It is bolted to the wall, and it used to hang in front of it.** The
+/// sideways clearance is `JAMB + LATCH_W` — out past the jamb, then out
+/// past the latch's own width, which is what puts the plate on bare wall
+/// beside the frame — and that same length was being spent a second time
+/// along `site.out`, inward. Four notches is 0.1375 m into the room, so a
+/// plate 0.02 m thick stood with its back face 0.0931 m off the wall it
+/// screws to and the amber rode out in front of that: a small orange
+/// rectangle on a bigger metal one, floating in a doorway, which is
+/// exactly what the owner photographed. Sideways is the only axis that
+/// clearance belongs on. The depth is a joint, and a joint is one
+/// fight-free step into the thing that holds it ([`SEAT_BURY`]), so the
+/// plate's back face lands inside the wall and its own girth is what
+/// stands it off — the amber still rides [`LATCH_T`] proud of the plate.
+///
+/// **The wall is where the room's own face is, and that is the chart
+/// plane** ([`chart_inset`]) rather than the box face the frame straddles.
+/// A room's paint rides on the chart, a wall berth hangs its cargo on the
+/// chart, and the notch of cladding behind it is where the ribs and the
+/// decal ladder's backer live — so a plate screwed to the box face is a
+/// plate behind the wall's own paint, which the coplanar detector said in
+/// as many words the first time this was seated one notch too deep: the
+/// amber's face came out 1.1 mm off a `Plain` field's, on one plane and
+/// one facing, which is the flicker `coplanar-faces` exists to refuse.
 fn latch_at(placed: &Placed, site: &Site) -> Option<Vec3> {
     let (other, _) = site.mate?;
-    if !site.is_door() || placed.id > other {
+    let Some(Port::Door { wall, .. }) = site.declared else {
+        return None;
+    };
+    if placed.id > other {
         return None;
     }
     let (a, b) = (site.half_a.length(), site.half_b.length());
@@ -2318,7 +2361,8 @@ fn latch_at(placed: &Placed, site: &Site) -> Option<Vec3> {
     } else {
         flank
     };
-    Some(mid - site.out * (JAMB + LATCH_W) + flank + Vec3::Y * (b * 0.25))
+    let face = LATCH_T.mul_add(0.5, chart_inset(placed.kind, wall) - SEAT_BURY);
+    Some(mid - site.out * face + flank + Vec3::Y * (b * 0.25))
 }
 
 /// **Every declared port, dressed** — [`seam_parts`] spawned, one entity
@@ -4028,6 +4072,74 @@ mod tests {
             }
         }
         assert!(latches >= 2, "only {latches} seams grew a latch");
+    }
+
+    /// **The seam's amber latch is bolted to the wall it hangs on.**
+    ///
+    /// `JAMB + LATCH_W` is the sideways clearance that puts the plate on
+    /// bare wall beside the frame, and it was being spent a second time
+    /// along the wall's own normal — so the plate stood an eighth of a
+    /// metre out in the room with its back to nothing and the amber
+    /// rode further out still. The owner photographed it from the
+    /// burner doorway and described it exactly: a small orange
+    /// rectangle on a bigger metal one, floating in front of a door.
+    ///
+    /// The law is the joint every other body in this game meets a
+    /// surface with. The plate's back face reaches the face the room
+    /// shows — its chart plane, which is where its paint rides and
+    /// where a wall berth hangs a crate — and goes into it rather than
+    /// stopping in front of it, and the amber stays proud of the plate,
+    /// because a lever flush with its own plate is a decal.
+    #[test]
+    fn the_seams_latch_is_bolted_to_the_wall_it_hangs_on() {
+        let plan = crowded_ship();
+        let mut checked = 0;
+        for room in &plan {
+            let parts = seam_parts(room);
+            for site in &room.ports {
+                let Some(Port::Door { wall, .. }) = site.declared else {
+                    continue;
+                };
+                if latch_at(room, site).is_none() {
+                    continue;
+                }
+                let wall = seam_centre(room, site).dot(site.out) - chart_inset(room.kind, wall);
+                let face = |what: &str, sign: f32| {
+                    let part = parts
+                        .iter()
+                        .find(|part| part.what == format!("seam[{}] {what}", site.port))
+                        .expect("a sited latch draws both of its bodies");
+                    (sign * part.at.scale.abs().dot(site.out.abs()))
+                        .mul_add(0.5, part.at.translation.dot(site.out))
+                };
+                let (back, front) = (face("latch plate", 1.0), face("latch plate", -1.0));
+                assert!(
+                    back >= wall,
+                    "room {} port {} hangs its latch plate {:.4} m off the wall it \
+                     bolts to",
+                    room.id,
+                    site.port,
+                    wall - back
+                );
+                assert!(
+                    back - wall <= CHART_INSET,
+                    "room {} port {} drives its latch plate {:.4} m through the \
+                     {CHART_INSET:.4} m of cladding behind its own wall face",
+                    room.id,
+                    site.port,
+                    back - wall
+                );
+                assert!(
+                    face("latch grab", -1.0) < front,
+                    "room {} port {} draws its amber flush with the plate it is a \
+                     lever on",
+                    room.id,
+                    site.port
+                );
+                checked += 1;
+            }
+        }
+        assert!(checked >= 2, "only {checked} seams grew a latch");
     }
 
     /// The cabin's floor hatch reads as a hatch: nothing of its leaf

@@ -51,6 +51,7 @@
 //! | [`FACE_FITS`] | a rig draws inside the cells the sim gave it, so its pick face can be its picture | a visible edge that does not answer the crosshair |
 //! | [`WALK_CLEAR`] | the walked path stands in air, room to room | furniture in the doorway you enter by |
 //! | [`GRID_FITS`] | every shell body stands in its own room's cells and lands on the cargo grid | a wall two centimetres off its own box, and the room next door standing inside this one |
+//! | [`PART_SEATED`] | a part that names another part as what holds it up actually meets it | a couch on four stilts of air, a pane of glass floating off its own bezel |
 //!
 //! # The three layers, and the one that is not described yet
 //!
@@ -75,7 +76,12 @@
 //! doorways, and in both cases the layer was invisible not because a rule
 //! was loose but because there was nothing for a rule to be asked about.
 //! **The next defect is in the layer nobody has thought to describe
-//! yet.** docs/GAUNTLET.md carries that history, what the harness can and
+//! yet** — or in the question nobody has thought to ask about a layer
+//! that is fully described. [`PART_SEATED`] is the second kind: a rig's
+//! parts have been enumerable since `pieces::parts` landed, and for as
+//! long as they have been, every rule asked about a part and the WORLD.
+//! None asked whether a part meets the other part of the same rig its
+//! own name says holds it up, and three of them did not. docs/GAUNTLET.md carries that history, what the harness can and
 //! cannot see, and everything else an operator needs when a check goes
 //! red.
 //!
@@ -120,6 +126,8 @@ pub const FACE_FITS: &str = "face-fits";
 pub const WALK_CLEAR: &str = "walk-clear";
 /// The world is built of the cargo grid and aligned to it.
 pub const GRID_FITS: &str = "grid-fits";
+/// A part that names a seat must meet it.
+pub const PART_SEATED: &str = "part-seated";
 
 /// The name a finding about cargo is filed under. A rig is not in any
 /// one room — the same crate stands in every room the game has — so the
@@ -128,7 +136,7 @@ pub const GRID_FITS: &str = "grid-fits";
 pub const RIGS: &str = "rigs";
 
 /// Every rule, for the report's own headings.
-pub const RULES: [&str; 8] = [
+pub const RULES: [&str; 9] = [
     BERTH_CLEAR,
     BERTH_SEEN,
     BERTH_REACHED,
@@ -137,6 +145,7 @@ pub const RULES: [&str; 8] = [
     FACE_FITS,
     WALK_CLEAR,
     GRID_FITS,
+    PART_SEATED,
 ];
 
 // ------------------------------------------------------------- the sizes --
@@ -167,6 +176,21 @@ const CLIP_BITE: f32 = 0.05;
 /// The air a wall berth is READ through, past the rig's own depth: about
 /// a body's stand-off from the wall it is looking at.
 const SIGHT: f32 = 0.55;
+
+/// **How far a part may stand off the seat it names**, in metres: one
+/// fight-free step of the decal ladder (`rig::layer::STEP`, 4 mm) plus
+/// the thickest paint that could be riding on the seat's own face
+/// (`rig::layer::SKIN`, 1.5 mm).
+///
+/// The step is the floor rather than the ceiling of a joint, and that is
+/// the whole reason this is not simply zero: two bodies meeting on one
+/// plane is a coin toss in the depth buffer, so a joint that has to READ
+/// as a joint stands a step off instead of none (`pieces::GLAZE` spends
+/// exactly that). What the rule refuses is the next order of magnitude —
+/// a gap you can see daylight through, which on these rigs starts at
+/// about a centimetre and is where all three of the family's first
+/// findings sat.
+const SEAT_GAP: f32 = crate::rig::layer::STEP + crate::rig::layer::SKIN;
 
 /// How much of a wall cell's face a fitting must cover before it is
 /// hiding what hangs there rather than standing beside it.
@@ -290,6 +314,13 @@ impl Box3 {
     fn volume(self) -> f32 {
         let s = self.span();
         s.x * s.y * s.z
+    }
+
+    /// How far apart two boxes are: the widest gap on any one axis, and
+    /// zero or less where they touch or overlap on all three. A joint is
+    /// exactly this reading at zero.
+    fn apart(self, other: Self) -> f32 {
+        (self.lo - other.hi).max(other.lo - self.hi).max_element()
     }
 
     /// The shared volume of two boxes, empty where they only touch.
@@ -1321,6 +1352,7 @@ pub fn sweep() -> Vec<Finding> {
         out.extend(grid_fits(&stage));
     }
     out.extend(prop_points());
+    out.extend(part_seated());
     out.extend(rig_coplanar());
     out.extend(rig_fits());
     out.extend(rig_faces());
@@ -1745,6 +1777,31 @@ fn prop_points() -> Vec<Finding> {
 /// shows exactly one), so a plane they happen to share is not a plane
 /// anybody sees.
 fn rig_scene(kind: Kind, screens: Screens, showing: Under) -> Vec<Drawn> {
+    rig_parts(kind, screens, showing)
+        .into_iter()
+        .filter_map(|part| {
+            let body = part.body?;
+            let at = rig_pose(&part);
+            let faces = if body.sheet() {
+                Faces::showing(at.rotation * Vec3::Z)
+            } else {
+                Faces::of(body.shape(), at.rotation)
+            };
+            Some(Drawn {
+                what: part.label(),
+                body: Box3::of(&at, body.half() * crate::pieces::RIG_UNIT),
+                faces,
+                character: true,
+            })
+        })
+        .collect()
+}
+
+/// The parts one kind draws AT ONCE: everything that always draws, plus
+/// whichever of a covering's two bodies `showing` names. One place
+/// decides what is in a scene, so the families that measure a rig
+/// against itself all measure the same scene.
+fn rig_parts(kind: Kind, screens: Screens, showing: Under) -> Vec<crate::pieces::Part> {
     let piece = Piece {
         id: 0,
         kind,
@@ -1762,28 +1819,111 @@ fn rig_scene(kind: Kind, screens: Screens, showing: Under) -> Vec<Drawn> {
             Under::Laid | Under::Packed => part.under == showing,
             Under::Rig | Under::Arm | Under::Pivot(_) => true,
         })
-        .filter_map(|part| {
-            let body = part.body?;
-            // The sub-frames' own poses, at rest: the sconce's arm hangs
-            // level until a wall column swings it, and the launch
-            // handle's pivot sits in its slot until somebody pulls it.
-            // A THROWN lever is an animation rather than a defect, and
-            // it is measured where it lives.
-            let mut at = part.under.rest() * part.at;
-            at.translation *= crate::pieces::RIG_UNIT;
-            let faces = if body.sheet() {
-                Faces::showing(at.rotation * Vec3::Z)
-            } else {
-                Faces::of(body.shape(), at.rotation)
-            };
-            Some(Drawn {
-                what: part.label(),
-                body: Box3::of(&at, body.half() * crate::pieces::RIG_UNIT),
-                faces,
-                character: true,
-            })
-        })
         .collect()
+}
+
+/// Where one part stands in its rig's own frame, in METRES — the single
+/// place a `Part`'s local transform becomes a length.
+///
+/// The sub-frames' own poses, at rest: the sconce's arm hangs level
+/// until a wall column swings it, and the launch handle's pivot sits in
+/// its slot until somebody pulls it. A THROWN lever is an animation
+/// rather than a defect, and it is measured where it lives.
+fn rig_pose(part: &crate::pieces::Part) -> Transform {
+    let mut at = part.under.rest() * part.at;
+    at.translation *= crate::pieces::RIG_UNIT;
+    at
+}
+
+/// **A part that names a seat meets it.** [`PART_SEATED`].
+///
+/// The eight families before it all measure a part against the WORLD —
+/// the band it is composed within, the plane it fights, the cells it
+/// draws inside, the direction its own name claims. Not one of them
+/// measures a part against another part of the SAME rig, and a joint is
+/// exactly that: a couch's foot under a couch it does not touch is
+/// inside the band, shares no plane, draws well within its cells, and
+/// claims no direction to break. It is four stilts of air, and it went
+/// green for as long as the harness has existed.
+///
+/// The claim is declared on the part that makes it
+/// (`pieces::Part::seated`) and read back off the rig, exactly as
+/// `prop-points` reads a direction. A part that is composition declares
+/// no seat and is asked nothing — which is why [`ALLOWED`] needs no
+/// entry here: there is nothing to forgive, only things nobody claimed.
+///
+/// **Several parts may answer to one name.** A pane glazed behind four
+/// lips meets whichever lip it reaches, so the finding is the SMALLEST
+/// gap to any of them; a seat no part answers to at all is a finding of
+/// its own, because a promise about a body the rig does not draw is a
+/// promise nobody can keep.
+fn part_seated() -> Vec<Finding> {
+    let mut out = Vec::new();
+    for kind in Kind::ALL {
+        let mut worst: BTreeMap<String, String> = BTreeMap::new();
+        let scenes: Vec<Vec<crate::pieces::Part>> = Screens::BOTH
+            .into_iter()
+            .flat_map(|screens| {
+                rig_forms(kind)
+                    .into_iter()
+                    .map(move |showing| rig_parts(kind, screens, showing))
+            })
+            .collect();
+        // **A name nothing answers to**, asked of the claims the rig
+        // itself reports (`pieces::seats`) rather than of one scene: a
+        // promise about a body that is never drawn at all is broken in
+        // every scene at once, and saying so once is enough.
+        for seat in crate::pieces::seats(kind) {
+            if !scenes
+                .iter()
+                .any(|scene| scene.iter().any(|part| part.what == seat.on))
+            {
+                worst.insert(
+                    seat.name.to_owned(),
+                    format!(
+                        "names \"{}\" as the part that holds it, and this rig draws no \
+                         such part",
+                        seat.on
+                    ),
+                );
+            }
+        }
+        for scene in &scenes {
+            let boxed = |part: &crate::pieces::Part| {
+                part.body
+                    .map(|body| Box3::of(&rig_pose(part), body.half() * crate::pieces::RIG_UNIT))
+            };
+            for part in scene {
+                let (Some(seat), Some(body)) = (part.seat, boxed(part)) else {
+                    continue;
+                };
+                let gap = scene
+                    .iter()
+                    .filter(|other| other.what == seat.on)
+                    .filter_map(boxed)
+                    .map(|held| body.apart(held))
+                    .fold(f32::INFINITY, f32::min);
+                if gap.is_finite() && gap > SEAT_GAP {
+                    worst.insert(
+                        part.label(),
+                        format!(
+                            "stands {gap:.4} m clear of the \"{}\" that holds it, which \
+                             is daylight in a joint rather than the step a joint is \
+                             drawn with",
+                            seat.on
+                        ),
+                    );
+                }
+            }
+        }
+        out.extend(worst.into_iter().map(|(what, detail)| Finding {
+            room: RIGS.to_owned(),
+            rule: PART_SEATED,
+            offender: format!("{kind:?} {what}"),
+            detail,
+        }));
+    }
+    out
 }
 
 /// Which bodies of a kind are ever drawn at once: one scene for most
@@ -2346,6 +2486,76 @@ pub const ALLOWED: &[(&str, &str, &str)] = &[];
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **The seat family is asked about real joints, and it answers when
+    /// one opens.**
+    ///
+    /// The guard against a declared-claim family going quietly
+    /// toothless. A family nobody declares anything for is a green tick
+    /// that means nothing, so this counts the claims; a name pointing at
+    /// a body the rig does not draw is a promise nobody can keep, so
+    /// this refuses one; and the reading itself has to tell a joint from
+    /// daylight, so it is exercised at both ends of its own tolerance.
+    #[test]
+    fn the_seat_family_is_asked_about_real_joints_and_answers_when_one_opens() {
+        let mut claims = 0_u32;
+        let mut kinds = 0_u32;
+        for kind in Kind::ALL {
+            let seats = crate::pieces::seats(kind);
+            if seats.is_empty() {
+                continue;
+            }
+            kinds += 1;
+            for seat in &seats {
+                claims += 1;
+                let drawn = Screens::BOTH.into_iter().any(|screens| {
+                    rig_forms(kind).into_iter().any(|showing| {
+                        rig_parts(kind, screens, showing)
+                            .iter()
+                            .any(|part| part.what == seat.on)
+                    })
+                });
+                assert!(
+                    drawn,
+                    "{kind:?}: \"{}\" names \"{}\" as what holds it, and no such part \
+                     is drawn",
+                    seat.name, seat.on,
+                );
+            }
+        }
+        assert!(kinds >= 6, "only {kinds} kind(s) claim a joint at all");
+        assert!(claims >= 12, "only {claims} joint(s) are claimed at all");
+        // And the reading: touching is a joint, a step off is a joint,
+        // a body's width off is daylight.
+        let seat = Box3 {
+            lo: Vec3::ZERO,
+            hi: Vec3::splat(0.1),
+        };
+        let at = |z: f32| Box3 {
+            lo: Vec3::new(0.0, 0.0, z),
+            hi: Vec3::new(0.1, 0.1, z + 0.1),
+        };
+        assert!(seat.apart(at(0.05)) <= 0.0, "overlapping is meeting");
+        assert!(seat.apart(at(0.1)) <= 0.0, "touching is meeting");
+        assert!(
+            seat.apart(at(SEAT_GAP.mul_add(0.5, 0.1))) <= SEAT_GAP,
+            "a step is a joint"
+        );
+        assert!(
+            seat.apart(at(SEAT_GAP.mul_add(2.0, 0.1))) > SEAT_GAP,
+            "daylight is not a joint",
+        );
+        // Off to one side entirely is not a joint either, however close
+        // the two get on the axis they are stacked along.
+        let beside = Box3 {
+            lo: Vec3::new(1.0, 0.0, 0.1),
+            hi: Vec3::new(1.1, 0.1, 0.2),
+        };
+        assert!(
+            seat.apart(beside) > SEAT_GAP,
+            "a body across the room is not a seat"
+        );
+    }
 
     /// **A wall berth's air is what a rig reaches into the room**, not
     /// how thick its box is.

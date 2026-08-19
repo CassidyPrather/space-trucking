@@ -99,3 +99,17 @@
 # now has a companion: the next defect is either in the layer nobody has
 # described yet, or in the question nobody has thought to ask about a
 # layer that is fully described.
+#
+# `part-seated` was the second of the second kind, and it needed no new
+# description at all: a rig's parts have been enumerable since
+# `pieces::parts` landed. What was missing was that every rule asked
+# about a part and the WORLD — the band it is composed in, the plane it
+# fights, the cells it draws inside, the direction its own name claims —
+# and none asked whether a part meets the other part of the same rig its
+# own name says holds it up. Three did not: the couch's four feet stopped
+# 8.7 mm short of the seat they carry, the destination preview's glass
+# floated 9.3 mm off its bezel (in the played build only — the headless
+# fallback body overlapped the brass, so the one build people look at was
+# the one that showed it), and the porthole's sky pane missed its own
+# bolt ring by 9.3 mm. All three were cured; a joint is spent explicitly
+# now, one ladder step in or one step proud (`pieces::GLAZE`).

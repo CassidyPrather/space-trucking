@@ -835,6 +835,58 @@ impl Feature {
     }
 }
 
+/// **What a named part of a rig claims about what holds it up.**
+///
+/// [`Feature`]'s sibling, one question over. Every family the harness
+/// had measured a part against the WORLD — the band it is composed in,
+/// the plane it fights, the cells it draws inside, the direction its own
+/// name claims — and not one of them measured a part against another
+/// part of the same rig. A couch's foot standing under a couch it does
+/// not touch satisfies all of them: it is inside the band, it shares no
+/// plane, it draws well within its cells, and "foot" makes no claim
+/// about a direction. What it does claim is a JOINT, and a joint with
+/// daylight in it is furniture on stilts of air.
+///
+/// **The claim is declared and then checked, never guessed at.** A
+/// sweep that tried to infer joints — "these two are close, they
+/// probably meet" — would report every crate that happens to stand near
+/// its own lid, and would say nothing about the one part whose name is
+/// a promise. A part that is composition declares no seat and is asked
+/// nothing, which is why `gauntlet::ALLOWED` needs no entry for this
+/// family: there is nothing to forgive, only things nobody claimed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Seat {
+    /// What the part is called in its builder.
+    pub name: &'static str,
+    /// What holds it: another part of the SAME rig, by that part's own
+    /// name. Several may answer to it — a pane glazed behind four lips
+    /// meets whichever lip it reaches — and meeting any one of them is
+    /// meeting the seat.
+    pub on: &'static str,
+}
+
+/// **How far a part stands off the thing it is bolted to**, in rig-local
+/// sim units: one fight-free step of the decal ladder
+/// (`rig::layer::STEP`), said in the units a rig is composed in.
+///
+/// Two bodies meeting on one plane is a coin toss in the depth buffer,
+/// so a joint that has to READ as a joint — a pane glazed into a bezel,
+/// a stud proud of its ring — stands one step off instead of none. The
+/// gauntlet's own tolerance is this plus a paint's thickness
+/// (`gauntlet::SEAT_GAP`), so a builder spending exactly this is inside
+/// the rule with room to spare and anything spending a body's width is
+/// not.
+pub const GLAZE: f32 = crate::rig::layer::STEP / RIG_UNIT;
+
+/// **How far a standing rig's sole is buried in the deck it stands on**,
+/// in rig-local sim units — [`GLAZE`], because it is the same joint one
+/// plane down. A sole flush with the deck shares a plane with it and a
+/// sole above it is furniture floating, so a foot meets a floor by going
+/// a step into it, exactly as a pane meets the bezel it is glazed into.
+/// The gauntlet holds a rig to the other side of this: `SOLE_SINK`, a
+/// centimetre, past which a foot is a body through the deck.
+const SOLE_BURY: f32 = GLAZE;
+
 /// A cone's open end: Bevy stands a `Cone` apex-up, so its mouth faces
 /// its own `-Y`. A shade, a cup, a horn — the direction the light or the
 /// hopper actually goes.
@@ -873,6 +925,31 @@ pub fn features(kind: Kind) -> Vec<Feature> {
     parts(&piece, Screens::LIVE)
         .into_iter()
         .filter_map(|part| part.claim)
+        .collect()
+}
+
+/// Every seat claim of one kind's rig, read back off the rig itself —
+/// [`features`]'s sibling, and a derivation rather than a second table
+/// for the same reason. Both of a screen's states are read, because a
+/// pane that is glass in a played build and a phosphor slab in a
+/// headless one is two bodies making one promise.
+#[must_use]
+pub fn seats(kind: Kind) -> Vec<Seat> {
+    let piece = Piece {
+        id: 0,
+        kind,
+        variant: 0,
+        gnawed: false,
+        loc: Loc::Hold {
+            room: CABIN,
+            x: 0,
+            y: 0,
+        },
+    };
+    Screens::BOTH
+        .into_iter()
+        .flat_map(|screens| parts(&piece, screens))
+        .filter_map(|part| part.seat)
         .collect()
 }
 
@@ -3358,6 +3435,8 @@ pub struct Part {
     pub role: Role,
     /// What it claims about the way it points, if it claims anything.
     pub claim: Option<Feature>,
+    /// What it claims holds it up, if it claims anything.
+    pub seat: Option<Seat>,
 }
 
 impl Part {
@@ -3372,6 +3451,7 @@ impl Part {
             under: Under::Rig,
             role: Role::Plain,
             claim: None,
+            seat: None,
         }
     }
 
@@ -3386,6 +3466,7 @@ impl Part {
             under: Under::Rig,
             role,
             claim: None,
+            seat: None,
         }
     }
 
@@ -3434,6 +3515,18 @@ impl Part {
         };
         self.at.rotation = claim.turn();
         self.claim = Some(claim);
+        self
+    }
+
+    /// **Bolted to another part of the same rig**, named by that part's
+    /// own `what` — see [`Seat`]. Declared rather than derived, because
+    /// a joint is a promise the builder makes and not a distance the
+    /// sweep can guess at.
+    const fn seated(mut self, on: &'static str) -> Self {
+        self.seat = Some(Seat {
+            name: self.what,
+            on,
+        });
         self
     }
 
@@ -3539,6 +3632,20 @@ fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens)
         Bezel::Lipped => (fw * 0.88, fh * 0.78),
         Bezel::Mullioned => (fw * 0.90, fh * 0.84),
     };
+    // Which member of this bezel the glass is glazed behind, and where
+    // that member's own back face is: a ring is a flat annulus at one
+    // plane, four lips are a box the pane sits inside. The pane meets
+    // it either way (`gauntlet`, `part-seated`) — the ring's used to
+    // stand nine millimetres clear of the brass it is supposedly bolted
+    // into, and only the played build drew it that way.
+    let (frame, glass_z) = match bezel {
+        Bezel::Ring => ("bolt ring", 3.0 - GLAZE),
+        Bezel::Lipped | Bezel::Mullioned => ("lip", 2.4),
+    };
+    // Where a headless slab's own back face sits: clear of the plane
+    // every bezel's backmost member begins at, since two opaque faces
+    // at one depth are a coin toss.
+    let glass_back = 0.4;
     let mut out = Vec::new();
     if screens.sky {
         out.push(
@@ -3546,21 +3653,27 @@ fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens)
                 "sky pane",
                 Body::Pane,
                 Coat::phosphor(palette::SHADOW, 0.0),
-                Transform::from_xyz(0.0, 0.0, 2.4),
+                Transform::from_xyz(0.0, 0.0, glass_z),
             )
             .cut(Cut::Sky)
-            .scaled(Vec3::new(gw, gh, 1.0)),
+            .scaled(Vec3::new(gw, gh, 1.0))
+            .seated(frame),
         );
     } else {
         // Inside the bezel's own depth at both ends: cut to 0..3 it
         // shared the lips' back plane and the bolt ring's front one, so
-        // a headless boot drew the frame and the glass at one depth.
-        out.push(Part::new(
-            "sky pane",
-            Body::Box(Vec3::new(gw, gh, 2.2)),
-            Coat::phosphor(palette::mix(color, palette::PHOSPHOR, 0.12), 0.35),
-            Transform::from_xyz(0.0, 0.0, 1.5),
-        ));
+        // a headless boot drew the frame and the glass at one depth. It
+        // runs out to the same face the played pane hangs at, so the
+        // slab and the glass make the same joint with the same frame.
+        out.push(
+            Part::new(
+                "sky pane",
+                Body::Box(Vec3::new(gw, gh, glass_z - glass_back)),
+                Coat::phosphor(palette::mix(color, palette::PHOSPHOR, 0.12), 0.35),
+                Transform::from_xyz(0.0, 0.0, f32::midpoint(glass_back, glass_z)),
+            )
+            .seated(frame),
+        );
         let star = Coat::phosphor(palette::GLINT, 2.2);
         for i in 0..7_u32 {
             let n = (piece.id.wrapping_mul(7).wrapping_add(i)) as f32;
@@ -3604,7 +3717,8 @@ fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens)
                         brass,
                         Transform::from_xyz(angle.cos() * reach, angle.sin() * reach, 3.6),
                     )
-                    .nth(u8::try_from(i).unwrap_or(0)),
+                    .nth(u8::try_from(i).unwrap_or(0))
+                    .seated("bolt ring"),
                 );
             }
         }
@@ -3633,12 +3747,15 @@ fn window_parts(piece: &Piece, color: Color, fw: f32, fh: f32, screens: Screens)
                 );
             }
             if bezel == Bezel::Mullioned {
-                out.push(Part::new(
-                    "mullion",
-                    Body::Box(Vec3::new(fw * 0.035, fh * 0.86, 5.0)),
-                    brass,
-                    Transform::from_xyz(0.0, 0.0, 3.0),
-                ));
+                out.push(
+                    Part::new(
+                        "mullion",
+                        Body::Box(Vec3::new(fw * 0.035, fh * 0.86, 5.0)),
+                        brass,
+                        Transform::from_xyz(0.0, 0.0, 3.0),
+                    )
+                    .seated("lip"),
+                );
             }
         }
     }
@@ -4120,16 +4237,19 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 plate,
                 Transform::from_xyz(0.0, fh * 0.44, 10.0),
             ));
-            out.push(Part::new(
-                "stem",
-                Body::Drum {
-                    r: 1.3,
-                    h: fh * 0.26,
-                    facets: None,
-                },
-                brass,
-                Transform::from_xyz(0.0, fh * 0.30, 10.0),
-            ));
+            out.push(
+                Part::new(
+                    "stem",
+                    Body::Drum {
+                        r: 1.3,
+                        h: fh * 0.26,
+                        facets: None,
+                    },
+                    brass,
+                    Transform::from_xyz(0.0, fh * 0.30, 10.0),
+                )
+                .seated("mount plate"),
+            );
             let shade = Part::new(
                 "shade",
                 Body::Horn {
@@ -4139,7 +4259,8 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 body,
                 Transform::from_xyz(0.0, fh * 0.04, 10.0),
             )
-            .pointing(MOUTH, Vec3::NEG_Y);
+            .pointing(MOUTH, Vec3::NEG_Y)
+            .seated("stem");
             let bulb = bulb_part(piece.kind, &shade, 3.4);
             out.push(shade);
             out.push(bulb);
@@ -4167,7 +4288,8 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                     plate,
                     Transform::from_xyz(fw * 0.24, 0.0, pad - 2.0),
                 )
-                .under(Under::Arm),
+                .under(Under::Arm)
+                .seated("mount pad"),
             );
             out.push(
                 Part::new(
@@ -4188,7 +4310,8 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 Transform::from_xyz(fw * 0.10, 0.0, 10.0),
             )
             .under(Under::Arm)
-            .pointing(MOUTH, Vec3::Z);
+            .pointing(MOUTH, Vec3::Z)
+            .seated("bracket");
             let bulb = bulb_part(piece.kind, &cup, 3.2).under(Under::Arm);
             out.push(cup);
             out.push(bulb);
@@ -4221,16 +4344,19 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 )
                 .pointing(AXLE, Vec3::Y),
             );
-            out.push(Part::new(
-                "pole",
-                Body::Drum {
-                    r: 1.3,
-                    h: fh * 0.72,
-                    facets: None,
-                },
-                brass,
-                Transform::from_xyz(0.0, -fh * 0.04, axle),
-            ));
+            out.push(
+                Part::new(
+                    "pole",
+                    Body::Drum {
+                        r: 1.3,
+                        h: fh * 0.72,
+                        facets: None,
+                    },
+                    brass,
+                    Transform::from_xyz(0.0, -fh * 0.04, axle),
+                )
+                .seated("base plate"),
+            );
             let shade = Part::new(
                 "shade",
                 Body::Horn {
@@ -4240,7 +4366,8 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 body,
                 Transform::from_xyz(0.0, fh * 0.33, axle),
             )
-            .pointing(MOUTH, Vec3::NEG_Y);
+            .pointing(MOUTH, Vec3::NEG_Y)
+            .seated("pole");
             let bulb = bulb_part(piece.kind, &shade, 3.4);
             out.push(shade);
             out.push(bulb);
@@ -4264,11 +4391,13 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 body,
                 Transform::from_xyz(0.0, fh * 0.16, 2.5),
             ));
+            let seat_y = -fh * 0.20;
+            let seat_h = fh * 0.30;
             out.push(Part::new(
                 "seat",
-                Body::Box(Vec3::new(fw * 0.76, fh * 0.30, 18.0)),
+                Body::Box(Vec3::new(fw * 0.76, seat_h, 18.0)),
                 shaded(0.3),
-                Transform::from_xyz(0.0, -fh * 0.20, 10.0),
+                Transform::from_xyz(0.0, seat_y, 10.0),
             ));
             for (i, side) in [-1.0f32, 1.0].into_iter().enumerate() {
                 out.push(
@@ -4293,6 +4422,14 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                     .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
+            // **The feet run from the sole up INTO the seat they
+            // carry.** A sole flush with the deck shares a plane with
+            // it, so the bottom is buried a hair; the top used to stop
+            // nine millimetres short of the seat, which is a couch
+            // standing on four stilts of air (`gauntlet`, `part-seated`).
+            // Both ends are derived from the things they meet.
+            let sole = (-fh).mul_add(0.5, -SOLE_BURY);
+            let head = seat_h.mul_add(-0.5, seat_y) + GLAZE;
             for (i, (side, fz)) in [(-1.0f32, 3.0), (1.0, 3.0), (-1.0, 16.0), (1.0, 16.0)]
                 .into_iter()
                 .enumerate()
@@ -4300,11 +4437,12 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 out.push(
                     Part::new(
                         "foot",
-                        Body::Box(Vec3::new(4.0, 5.0, 4.0)),
+                        Body::Box(Vec3::new(4.0, head - sole, 4.0)),
                         plate,
-                        Transform::from_xyz(fw * 0.36 * side, -fh * 0.44, fz),
+                        Transform::from_xyz(fw * 0.36 * side, f32::midpoint(sole, head), fz),
                     )
-                    .nth(u8::try_from(i).unwrap_or(0)),
+                    .nth(u8::try_from(i).unwrap_or(0))
+                    .seated("seat"),
                 );
             }
         }
@@ -4409,6 +4547,10 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 brass,
                 Transform::from_xyz(0.0, fh * 0.475, deep),
             ));
+            // The feet stand a step INTO the deck, like every other
+            // sole (`SOLE_BURY`), and reach up inside the carcass sides
+            // they are screwed to.
+            let foot_y = (-fh).mul_add(0.5, 1.7 - SOLE_BURY);
             for (i, (sx, fz)) in [
                 (-1.0f32, 3.0),
                 (1.0, 3.0),
@@ -4423,9 +4565,10 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                         "foot",
                         Body::Box(Vec3::new(3.0, 3.4, 3.0)),
                         brass,
-                        Transform::from_xyz(fw * 0.36 * sx, fh.mul_add(-0.5, 1.2), fz),
+                        Transform::from_xyz(fw * 0.36 * sx, foot_y, fz),
                     )
-                    .nth(u8::try_from(i).unwrap_or(0)),
+                    .nth(u8::try_from(i).unwrap_or(0))
+                    .seated("side"),
                 );
             }
             // The cubbies: dark interior backs, invite glows in front.
@@ -4620,11 +4763,17 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
         // piece now, not the console. Passive glass; headless paths
         // show a lone phosphor disc instead.
         Kind::DestPreview => {
+            // The glass is GLAZED into the bezel, so it sits on the
+            // bezel's own face and not a finger's breadth in front of
+            // it. The headless slab always overlapped the brass and the
+            // played pane never touched it, so only the build people
+            // look at showed the gap.
+            let bezel_face = 4.0;
             out.push(Part::new(
                 "bezel",
-                Body::Box(Vec3::new(fw * 0.84, fh * 0.84, 4.0)),
+                Body::Box(Vec3::new(fw * 0.84, fh * 0.84, bezel_face)),
                 brass,
-                Transform::from_xyz(0.0, 0.0, 2.0),
+                Transform::from_xyz(0.0, 0.0, bezel_face * 0.5),
             ));
             if screens.preview {
                 out.push(
@@ -4632,18 +4781,22 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                         "preview glass",
                         Body::Pane,
                         shaded(0.72),
-                        Transform::from_xyz(0.0, 0.0, 4.6),
+                        Transform::from_xyz(0.0, 0.0, bezel_face + GLAZE),
                     )
                     .cut(Cut::Preview)
-                    .scaled(Vec3::new(fw * 0.68, fh * 0.68, 1.0)),
+                    .scaled(Vec3::new(fw * 0.68, fh * 0.68, 1.0))
+                    .seated("bezel"),
                 );
             } else {
-                out.push(Part::new(
-                    "preview glass",
-                    Body::Box(Vec3::new(fw * 0.68, fh * 0.68, 3.0)),
-                    shaded(0.72),
-                    Transform::from_xyz(0.0, 0.0, 3.5),
-                ));
+                out.push(
+                    Part::new(
+                        "preview glass",
+                        Body::Box(Vec3::new(fw * 0.68, fh * 0.68, 3.0)),
+                        shaded(0.72),
+                        Transform::from_xyz(0.0, 0.0, 3.5),
+                    )
+                    .seated("bezel"),
+                );
                 out.push(Part::new(
                     "world",
                     Body::Ball { r: fw * 0.14 },

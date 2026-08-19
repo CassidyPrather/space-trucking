@@ -86,7 +86,7 @@ rigs: FloorLamp base plate reaches 0.0690 m out of the -0.031..0.497 m band
 So the loop when a line appears is: read it in the docket to know what
 moved, then run `--gauntlet` to get the millimetres.
 
-## The eight families
+## The nine families
 
 Each one names a class of defect that a screenshot could not have caught.
 What matters when you are diagnosing is the third column: what the
@@ -198,13 +198,62 @@ names the part and how far outside its own `w × h` plan it reaches.
 One direction is allowed and the number is written down (`SOLE_SINK`,
 1 cm): a standing rig's soles are BURIED. A sole flush with the deck
 shares a plane with it and a sole above it is furniture floating, so
-the cabinet's four feet and the couch's four sit about seven
-millimetres under their own bottom edge on purpose. Deeper than a
-centimetre is a body through the deck, which is not a foot.
+the cabinet's four feet and the couch's four sit a ladder step under
+their own bottom edge on purpose — `pieces::SOLE_BURY`, which is
+`pieces::GLAZE` one plane down, because meeting a deck and meeting a
+bezel are the same joint. Deeper than a centimetre is a body through
+the deck, which is not a foot.
 
 It asks about the plan and not the depth. The depth is `berth-clear`'s
 question, measured against the band every rig is composed within; this
 one is measured against the only extent the sim ever states.
+
+### `part-seated` — a part that names a seat meets it
+
+The newest family, and the first one that measures a rig against
+**itself**. Every other family asks about a part and the world: the band
+it is composed within, the plane it fights, the cells it draws inside,
+the direction its own name claims. A joint is not any of those. A
+couch's foot standing under a couch it does not touch is inside the
+band, shares no plane, draws well within its cells and claims no
+direction — it satisfies all eight of the others and it is four stilts
+of air.
+
+The claim is **declared** on the part that makes it
+(`pieces::Part::seated`) and read back off the rig, exactly as
+`prop-points` reads a direction. A sweep that tried to infer joints
+instead — "these two are close, they probably meet" — would report every
+crate standing near its own lid and would say nothing about the one part
+whose name is a promise. A part that is composition declares no seat and
+is asked nothing, which is why `ALLOWED` needs no entry here: there is
+nothing to forgive, only things nobody claimed.
+
+Two readings, one tolerance:
+
+- **Daylight.** The gap between a part's box and its seat's, on the
+  widest axis. `SEAT_GAP` is one fight-free step of the decal ladder
+  (`rig::layer::STEP`, 4 mm) plus the thickest paint that could be
+  riding on the seat's own face (`SKIN`, 1.5 mm). The step is the FLOOR
+  of a joint rather than its ceiling — two bodies meeting on one plane
+  is a coin toss in the depth buffer, so a joint that has to read as a
+  joint stands a step off instead of none, and `pieces::GLAZE` is that
+  step said in the units a rig is composed in.
+- **A name nothing answers to.** A seat naming a body the rig does not
+  draw is reported as its own finding.
+
+Several parts may answer to one name: a pane glazed behind four lips
+meets whichever lip it reaches, so the reading is the smallest gap to
+any of them.
+
+Its first pass found three joints, all of them a shade under a
+centimetre and all of them invisible to a screenshot because a
+centimetre at furniture scale is a hairline you read as shadow. The
+couch's four feet stopped 8.7 mm short of the seat they carry. The
+destination preview's glass floated 9.3 mm off the bezel it is glazed
+into — and only in the build people look at, because the headless
+fallback body is a slab that overlapped the brass. The porthole's sky
+pane missed its own bolt ring by the same 9.3 mm. All three are now
+drawn with the joint spent explicitly: a step in, or a step proud.
 
 ### `grid-fits` — the world is built of the cargo grid and aligned to it
 

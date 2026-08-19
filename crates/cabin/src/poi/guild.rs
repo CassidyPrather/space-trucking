@@ -44,7 +44,7 @@
 
 use bevy::prelude::Vec3;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn};
 use crate::palette;
 
 /// The Guild's own room.
@@ -246,7 +246,8 @@ const BONDED_STORE: [Fitting; 14] = [
         Coat::metal(Worn::Brass),
         Vec3::new(0.85, 0.42, 0.10),
         Vec3::new(0.15, 0.05, 0.18),
-    ),
+    )
+    .seated(Seat::Face(Face::Starboard)),
     Fitting::new(
         Shape::Post,
         Coat::phosphor(palette::EERIE, 2.0),
@@ -279,28 +280,38 @@ const BONDED_STORE: [Fitting; 14] = [
         Coat::phosphor(palette::EERIE_BRIGHT, 3.0),
         Vec3::new(-0.67, 0.905, 0.520),
         Vec3::new(0.07, 0.07, 0.05),
-    ),
+    )
+    .seated(Seat::On("beacon hood")),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
         Vec3::new(-0.67, 0.985, 0.510),
         Vec3::new(0.11, 0.015, 0.06),
-    ),
+    )
+    .called("beacon hood")
+    .seated(Seat::Face(Face::Deckhead)),
     // And the plaque on the port flank: the Guild's own enamel, framed in
     // brass, saying nothing at all — this game has no text, and an
     // organization this size does not need any.
+    // **The plaque's frame is against the wall now.** It stood 17.6 mm
+    // off the port flank with its enamel on it and nothing behind
+    // either, which is the same shape of defect as the beacon two
+    // fittings up and was invisible for the same reason.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(-0.98, 0.30, -0.20),
+        Vec3::new(-0.988, 0.30, -0.20),
         Vec3::new(0.012, 0.23, 0.29),
-    ),
+    )
+    .called("plaque frame")
+    .seated(Seat::Face(Face::Port)),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::POI_GUILD),
         Vec3::new(-0.96, 0.30, -0.20),
         Vec3::new(0.015, 0.155, 0.26),
-    ),
+    )
+    .seated(Seat::On("plaque frame")),
 ];
 
 /// One register bar, at `x` across the aft wall.
@@ -311,6 +322,7 @@ const fn bar(x: f32) -> Fitting {
         Vec3::new(x, -0.34, 0.690),
         Vec3::new(0.014, 0.66, 0.014),
     )
+    .seated(Seat::Face(Face::Deck))
 }
 
 /// **The hangar face**, outside: the maw on the outboard wall, the mast

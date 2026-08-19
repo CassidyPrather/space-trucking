@@ -47,7 +47,9 @@
 
 use bevy::prelude::Vec3;
 
-use super::{CAGE_TOP, Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{
+    CAGE_TOP, Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn,
+};
 use crate::palette;
 
 /// The Hermitage's own room.
@@ -231,21 +233,24 @@ const LAMP_CORDS: [Fitting; 3] = [
 /// straight at them, and what they are looking at is a row of shelves
 /// with nothing on any of them. The room's argument does not work if you
 /// have to go and find it.
-const CELL: [Fitting; 26] = [
+const CELL: [Fitting; 27] = [
     // ---- the empty shelves ----
     // A cell clear of the goods' own band, so the hermits' shelving and
     // the hermits' goods do not stand in one another's air. Nothing is on
     // any of them, because `barter::stock_kinds` puts
     // `karma / 2` goods out and a stranger's karma is zero. The hermits
     // are not out of stock: they have not decided about you.
-    ledge(-0.10, 0.20, 0.600, 0.17),
-    ledge(0.34, 0.20, 0.600, 0.17),
-    ledge(0.78, 0.20, 0.600, 0.17),
+    ledge(-0.10, 0.20, 0.600, 0.17).seated(Seat::On("corbel")),
+    ledge(0.34, 0.20, 0.600, 0.17).seated(Seat::On("corbel")),
+    ledge(0.78, 0.20, 0.600, 0.17).seated(Seat::On("corbel")),
     corbel(-0.20, 0.13, 0.600),
     corbel(0.44, 0.13, 0.600),
+    // The third ledge had no corbel: two brackets under three shelves,
+    // and the outboard one carried on nothing for 0.264 m of its span.
+    corbel(0.88, 0.13, 0.600),
     // Two more down the starboard wall, for a body that walks round.
-    ledge(0.90, 0.02, -0.30, 0.075),
-    ledge(0.90, 0.02, 0.16, 0.075),
+    ledge(0.925, 0.02, -0.30, 0.075).seated(Seat::Face(Face::Starboard)),
+    ledge(0.925, 0.02, 0.16, 0.075).seated(Seat::Face(Face::Starboard)),
     // ---- the votive rack, to port ----
     // The gifts they remember. Five niches cut in the rock aft of the
     // crew's own window, three of them still alight — and the dark ones
@@ -253,9 +258,10 @@ const CELL: [Fitting; 26] = [
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::POI_HERMITAGE),
-        Vec3::new(-0.93, -0.19, 0.26),
+        Vec3::new(-0.95, -0.19, 0.26),
         Vec3::new(0.05, 0.030, 0.27),
-    ),
+    )
+    .seated(Seat::Face(Face::Port)),
     niche(0.03),
     niche(0.15),
     niche(0.27),
@@ -277,7 +283,8 @@ const CELL: [Fitting; 26] = [
         Coat::enamel(palette::GLASS),
         Vec3::new(-0.75, 0.16, -0.96),
         Vec3::new(0.21, 0.20, 0.020),
-    ),
+    )
+    .seated(Seat::On("window reveal")),
     reveal(-0.75, 0.40, 0.22, 0.045),
     reveal(-0.75, -0.08, 0.22, 0.045),
     reveal(-0.955, 0.16, 0.045, 0.145),
@@ -287,19 +294,26 @@ const CELL: [Fitting; 26] = [
         Coat::enamel(palette::POI_HERMITAGE),
         Vec3::new(-0.75, -0.15, -0.90),
         Vec3::new(0.24, 0.035, 0.075),
-    ),
+    )
+    .called("window sill"),
+    // **The candle stands on the sill.** It floated 60 mm over it, which
+    // is a hand's breadth of nothing under the one lit thing in the
+    // room, and the flame came with it.
     Fitting::new(
         Shape::Post,
         Coat::enamel(palette::GLINT),
-        Vec3::new(-0.75, 0.00, -0.90),
+        Vec3::new(-0.75, -0.055, -0.90),
         Vec3::new(0.035, 0.060, 0.035),
-    ),
+    )
+    .called("candle")
+    .seated(Seat::On("window sill")),
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(palette::EMBER, 3.0),
-        Vec3::new(-0.75, 0.02, -0.90),
+        Vec3::new(-0.75, -0.035, -0.90),
         Vec3::new(0.035, 0.045, 0.035),
-    ),
+    )
+    .seated(Seat::On("candle")),
     // ---- the rock itself ----
     // Two lumps left in the ceiling where whoever hollowed this out
     // stopped hollowing. A room cut from an asteroid does not have flat
@@ -309,13 +323,15 @@ const CELL: [Fitting; 26] = [
         Coat::enamel(palette::SOOT),
         Vec3::new(-0.62, 0.86, 0.400),
         Vec3::new(0.30, 0.14, 0.30),
-    ),
+    )
+    .seated(Seat::Face(Face::Deckhead)),
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::POI_HERMITAGE),
         Vec3::new(0.58, 0.88, -0.100),
         Vec3::new(0.26, 0.12, 0.26),
-    ),
+    )
+    .seated(Seat::Face(Face::Deckhead)),
 ];
 
 /// One empty ledge, `hx` half-wide, cut into the wall at `(x, y, z)`. The
@@ -338,6 +354,7 @@ const fn corbel(x: f32, y: f32, z: f32) -> Fitting {
         Vec3::new(x, y, z),
         Vec3::new(0.05, 0.055, 0.045),
     )
+    .called("corbel")
 }
 
 /// One niche cut in the port wall, at `z` along the rack.
@@ -345,9 +362,11 @@ const fn niche(z: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::SHADOW),
-        Vec3::new(-0.95, -0.01, z),
+        Vec3::new(-0.965, -0.01, z),
         Vec3::new(0.035, 0.105, 0.048),
     )
+    .called("niche")
+    .seated(Seat::Face(Face::Port))
 }
 
 /// A votive still burning in one of them.
@@ -358,6 +377,7 @@ const fn votive(z: f32) -> Fitting {
         Vec3::new(-0.90, -0.05, z),
         Vec3::new(0.030, 0.030, 0.030),
     )
+    .seated(Seat::On("niche"))
 }
 
 /// One side of the window's splayed stone reveal.
@@ -365,9 +385,11 @@ const fn reveal(x: f32, y: f32, hx: f32, hy: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::POI_HERMITAGE),
-        Vec3::new(x, y, -0.94),
+        Vec3::new(x, y, -0.945),
         Vec3::new(hx, hy, 0.055),
     )
+    .called("window reveal")
+    .seated(Seat::Face(Face::Fore))
 }
 
 /// **The hollowed rock**, outside — and the whole of it is one sentence
@@ -502,7 +524,8 @@ mod tests {
             .decor
             .iter()
             .filter(|fitting| {
-                **fitting == ledge(fitting.at.x, fitting.at.y, fitting.at.z, fitting.half.x)
+                fitting.bare()
+                    == ledge(fitting.at.x, fitting.at.y, fitting.at.z, fitting.half.x).bare()
             })
             .count();
         assert!(ledges >= 4, "the hermits have run out of shelves");

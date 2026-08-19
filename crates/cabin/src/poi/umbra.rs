@@ -54,7 +54,7 @@
 use bevy::prelude::Vec3;
 use space_trucking::sim::Kind;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn};
 use crate::palette;
 
 /// The Umbra Market's own room.
@@ -263,7 +263,8 @@ const NIGHT_SHOP: [Fitting; 30] = [
         Coat::metal(Worn::PlateShade),
         Vec3::new(0.36, 0.765, 0.640),
         Vec3::new(0.60, 0.014, 0.012),
-    ),
+    )
+    .called("tin rail"),
     tin(-0.16),
     tin(0.10),
     tin(0.36),
@@ -284,9 +285,11 @@ const NIGHT_SHOP: [Fitting; 30] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::PlateShade),
-        Vec3::new(-0.72, -0.975, 0.12),
+        Vec3::new(-0.72, -0.980, 0.12),
         Vec3::new(0.16, 0.020, 0.40),
-    ),
+    )
+    .called("midnight case")
+    .seated(Seat::Face(Face::Deck)),
     bottle(-0.20),
     bottle(0.06),
     bottle(0.32),
@@ -301,43 +304,50 @@ const NIGHT_SHOP: [Fitting; 30] = [
         Coat::enamel(palette::kind_color(Kind::Porthole)),
         Vec3::new(0.76, -0.955, 0.30),
         Vec3::new(0.15, 0.030, 0.15),
-    ),
+    )
+    .called("fenced porthole")
+    .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
         Vec3::new(0.76, -0.955, 0.30),
         Vec3::new(0.11, 0.014, 0.11),
-    ),
+    )
+    .seated(Seat::On("fenced porthole")),
     Fitting::new(
         Shape::Ring,
         Coat::enamel(palette::kind_color(Kind::Porthole)),
-        Vec3::new(0.72, -0.895, 0.26),
+        Vec3::new(0.72, -0.944, 0.26),
         Vec3::new(0.15, 0.030, 0.15),
-    ),
+    )
+    .called("fenced porthole")
+    .seated(Seat::On("fenced porthole")),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.72, -0.895, 0.26),
+        Vec3::new(0.72, -0.944, 0.26),
         Vec3::new(0.11, 0.014, 0.11),
-    ),
+    )
+    .seated(Seat::On("fenced porthole")),
     // ---- the seized lamps, hanging ----
     // Three pendants that came off ships, hung up where a shopkeeper
     // would hang stock. Two are dead glass. The third still has a little
     // light in it, and the market has not noticed yet.
     lamp(-0.55, 0.72, -0.30),
     glass(-0.55, 0.72, -0.30),
-    stem(-0.55, -0.30),
+    stem(-0.55, 0.72, -0.30),
     lamp(0.30, 0.80, -0.30),
     Fitting::new(
         Shape::Post,
         Coat::phosphor(palette::kind_color(Kind::LuminousPaint), 0.9),
-        Vec3::new(0.30, 0.670, -0.30),
+        Vec3::new(0.30, 0.730, -0.30),
         Vec3::new(0.070, 0.008, 0.070),
-    ),
-    stem(0.30, -0.30),
+    )
+    .seated(Seat::On("pendant shade")),
+    stem(0.30, 0.80, -0.30),
     lamp(0.62, 0.66, 0.30),
     glass(0.62, 0.66, 0.30),
-    stem(0.62, 0.30),
+    stem(0.62, 0.66, 0.30),
     // ---- the one line on the floor ----
     // Luminous paint struck across the deck under the tin rail, starboard
     // of the doorway and stopping well short of it — off the goods' own
@@ -352,13 +362,19 @@ const NIGHT_SHOP: [Fitting; 30] = [
 ];
 
 /// One blackout tin hanging off the rail, at `x` along it.
+///
+/// **A tin hanging off a rail reaches the rail.** The five of them hung
+/// 56 mm under it with nothing between, and the hairline of glow that
+/// gets out under each rim sat 46 mm below the rim it gets out of.
 const fn tin(x: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::metal(Worn::Socket),
-        Vec3::new(x, 0.600, 0.640),
+        Vec3::new(x, 0.651, 0.640),
         Vec3::new(0.052, 0.100, 0.062),
     )
+    .called("blackout tin")
+    .seated(Seat::On("tin rail"))
 }
 
 /// The hairline of snuffed glow that got out under a tin's rim.
@@ -366,9 +382,10 @@ const fn seam(x: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::phosphor(palette::kind_color(Kind::LuminousPaint), 1.8),
-        Vec3::new(x, 0.450, 0.640),
+        Vec3::new(x, 0.543, 0.640),
         Vec3::new(0.058, 0.008, 0.070),
     )
+    .seated(Seat::On("blackout tin"))
 }
 
 /// One bottle of midnight standing in the case, at `z` along it.
@@ -376,9 +393,10 @@ const fn bottle(z: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::enamel(palette::kind_color(Kind::BottledMidnight)),
-        Vec3::new(-0.72, -0.80, z),
+        Vec3::new(-0.72, -0.82, z),
         Vec3::new(0.045, 0.155, 0.045),
     )
+    .seated(Seat::On("midnight case"))
 }
 
 /// A seized pendant's shade, hanging where the market put it.
@@ -389,6 +407,8 @@ const fn lamp(x: f32, y: f32, z: f32) -> Fitting {
         Vec3::new(x, y, z),
         Vec3::new(0.10, 0.070, 0.10),
     )
+    .called("pendant shade")
+    .seated(Seat::On("pendant stem"))
 }
 
 /// Its glass, dead. The market sells lamps; it does not run them.
@@ -396,19 +416,28 @@ const fn glass(x: f32, y: f32, z: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::enamel(palette::GLASS),
-        Vec3::new(x, y - 0.130, z),
+        Vec3::new(x, y - 0.070, z),
         Vec3::new(0.070, 0.008, 0.070),
     )
+    .seated(Seat::On("pendant shade"))
 }
 
-/// The stem a seized pendant hangs from, up to the deckhead.
-const fn stem(x: f32, z: f32) -> Fitting {
-    Fitting::new(
+/// The stem a seized pendant hangs from: from the shade at `y`, up to
+/// the deckhead.
+///
+/// **It used to be one length for three lamps hung at three heights**,
+/// so the two lower ones hung off 11 mm and 77 mm of air. A stem is the
+/// thing between a shade and a ceiling, which means its length is the
+/// distance between them and not a number.
+const fn stem(x: f32, y: f32, z: f32) -> Fitting {
+    Fitting::spanning(
         Shape::Slab,
         Coat::metal(Worn::PlateShade),
-        Vec3::new(x, 0.90, z),
-        Vec3::new(0.008, 0.100, 0.008),
+        Vec3::new(x - 0.008, y, z - 0.008),
+        Vec3::new(x + 0.008, 1.0, z + 0.008),
     )
+    .called("pendant stem")
+    .seated(Seat::Face(Face::Deckhead))
 }
 
 /// **The shuttered front**, outside: the one face the void sees, drawn as

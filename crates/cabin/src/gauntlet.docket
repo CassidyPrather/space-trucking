@@ -14,8 +14,30 @@
 #
 # Blank lines and `#` comments are ignored.
 #
-# **It carries one class, and that class is a re-authoring.** Twenty
-# cargo kinds are drawn as bas-reliefs centred in their own cell face —
+# **It carries three classes, and two of them are re-authorings.**
+#
+# The first is `furniture-seated`'s ten, and they arrived with the family
+# that can see them. Five are the comet's quarried face: blocks of ice
+# that say the starboard wall is what they are cut from and stop between
+# 22 and 110 mm in front of it. The one-line cure is wrong and the source
+# says so — the frozen block already stands hard against that wall with
+# one of these inside it, and five slabs run out to one plane share their
+# back face wherever they cross — so a quarried face wants re-composing
+# as one body rather than five stretched onto a plane.
+#
+# The other five are one vocabulary defect wearing five station badges: a
+# `Shape::Ring` laid flat "on the deck" — a moon pool's collar, a core
+# cradle, three coiled hoses. A torus's drawn tube is 18% of the box
+# `Fitting::half` declares, and the containment law measures the declared
+# box, so a hoop whose tube meets the deck has a box a tenth of a room
+# deep in the floor and `a_character_stays_inside_the_room_it_dresses`
+# refuses it. Nothing a station author can write cures these. What wants
+# fixing is `poi::Fitting::span` — the containment reading — so a body's
+# claim on space is the body's and not its wrapper's, and then all five
+# come off at once.
+#
+# **The third class is a re-authoring.** Twenty cargo kinds are drawn as
+# bas-reliefs centred in their own cell face —
 # the 2D console's glyphs, given depth and never given a floor — so each
 # of them stands somewhere between one and fifteen centimetres above the
 # deck it is berthed on, with nothing under it. `rig-seated` is the
@@ -148,11 +170,56 @@
 # Both are drawn from their own plane now, buried one ladder step into it
 # (`pieces::SOLE_BURY`), which is the same step a pane spends on a bezel.
 #
-# What the family does NOT ask about is a station's own furniture. A rig
-# declares the chart it is berthed on because the sim berths it; a
-# fitting is a fraction of a room's box and declares nothing, so a
-# station's beacon bolted to thin air is invisible to every rule in the
-# file. One was, and a player found it by eye.
+# `furniture-seated` closed that, and it is the fourth of the second
+# kind. What the family before it could not ask about was a station's own
+# furniture and a doorway's own hardware: a rig declares the chart it is
+# berthed on because the sim berths it, and a `Fitting` is a fraction of
+# a room's box and a seam part is world units off a site, and neither of
+# them declared anything at all. So a beacon bolted to thin air and a
+# latch floating in front of a wall were invisible to every rule in the
+# file, and both were found by a player looking at the screen.
+#
+# The description is a `Seat` on `poi::Fitting` and on `room::SeamPart` —
+# a face of the room's own box, or another body by the name it declares —
+# and the family reads the claim back exactly as `part-seated` does.
+# Two hundred and sixty-four claims are declared across fifteen stations
+# and every doorway in the game, and curing what they found moved 133 of
+# the 292 fittings those rooms hang, every rivet on every shut door, and
+# one bracket that was not there at all — the Hermitage's third ledge had
+# no corbel under it. The shapes repeat, and they are worth naming: four
+# rivets on each of three shut leaves, drawn a plate thickness out past
+# the BACK of the plate they fasten and squarely behind it from every
+# stance in the room; three seized pendants sharing one stem length at
+# three heights, two of them hanging off nothing; a candle 60 mm over the
+# sill it stands on; three cryo cores 55 mm under their rail and five
+# blackout tins 56 mm under theirs; a stack of hull plate 105 mm off the
+# deck; a main riser that ran "deck to cornice" from 176 mm above the
+# deck; three pillars "floor to deckhead" that reached neither; and a
+# dozen plates, patches, plaques and boards standing between 12 and 77 mm
+# off the walls they are bolted to. The ten that are left are the two
+# classes above.
+
+# ---- Comet ----
+Comet | furniture-seated | decor[0] Slab
+Comet | furniture-seated | decor[1] Slab
+Comet | furniture-seated | decor[2] Slab
+Comet | furniture-seated | decor[3] Slab
+Comet | furniture-seated | decor[4] Slab
+
+# ---- Neptune ----
+Neptune | furniture-seated | decor[0] Ring
+
+# ---- Pump ----
+Pump | furniture-seated | decor[20] Ring
+
+# ---- Saturn ----
+Saturn | furniture-seated | decor[12] Ring
+
+# ---- Umbra ----
+Umbra | furniture-seated | decor[16] Ring
+
+# ---- Uranus ----
+Uranus | furniture-seated | decor[7] Ring
 
 # ---- rigs ----
 rigs | rig-seated | BottledMidnight sole

@@ -41,7 +41,7 @@
 use bevy::prelude::{Color, Vec3};
 use space_trucking::sim::Kind;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn};
 use crate::palette;
 
 /// Mars's own room.
@@ -254,9 +254,11 @@ const FIELD_SHOP: [Fitting; 20] = [
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::accent::MARS_PATCH),
-        Vec3::new(-0.955, 0.18, -0.12),
+        Vec3::new(-0.975, 0.18, -0.12),
         Vec3::new(0.025, 0.34, 0.40),
-    ),
+    )
+    .called("wall patch")
+    .seated(Seat::Face(Face::Port)),
     rivet(0.44, 0.21),
     rivet(0.44, -0.45),
     rivet(-0.08, 0.21),
@@ -266,15 +268,17 @@ const FIELD_SHOP: [Fitting; 20] = [
     Fitting::new(
         Shape::Post,
         Coat::enamel(palette::enamel_color(1)),
-        Vec3::new(-0.70, -0.88, -0.36),
+        Vec3::new(-0.70, -0.90, -0.36),
         Vec3::new(0.050, 0.100, 0.050),
-    ),
+    )
+    .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Post,
         Coat::enamel(palette::enamel_color(2)),
-        Vec3::new(-0.53, -0.90, -0.30),
+        Vec3::new(-0.53, -0.915, -0.30),
         Vec3::new(0.045, 0.085, 0.045),
-    ),
+    )
+    .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::enamel_color(1)),
@@ -287,9 +291,11 @@ const FIELD_SHOP: [Fitting; 20] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.46, -0.82, 0.30),
+        Vec3::new(0.46, -0.85, 0.30),
         Vec3::new(0.19, 0.15, 0.14),
-    ),
+    )
+    .called("offcut bin")
+    .seated(Seat::Face(Face::Deck)),
     offcut(0.38, -0.56, 0.30, 0.16),
     offcut(0.47, -0.50, 0.34, 0.20),
     offcut(0.55, -0.60, 0.26, 0.13),
@@ -299,7 +305,8 @@ const FIELD_SHOP: [Fitting; 20] = [
         Coat::metal(Worn::Socket),
         Vec3::new(-0.10, 0.90, 0.140),
         Vec3::new(0.055, 0.025, 0.55),
-    ),
+    )
+    .seated(Seat::On("conduit clamp")),
     pipe_clamp(-0.30),
     pipe_clamp(0.22),
 ];
@@ -312,6 +319,7 @@ const fn leg(z: f32, high: f32) -> Fitting {
         Vec3::new(0.86, high - 1.0, z),
         Vec3::new(0.025, high, 0.025),
     )
+    .seated(Seat::Face(Face::Deck))
 }
 
 /// One hand-driven rivet in the port wall's patch.
@@ -319,9 +327,10 @@ const fn rivet(y: f32, z: f32) -> Fitting {
     Fitting::new(
         Shape::Dome,
         Coat::metal(Worn::Rivet),
-        Vec3::new(-0.920, y, z),
+        Vec3::new(-0.935, y, z),
         Vec3::new(0.025, 0.045, 0.030),
     )
+    .seated(Seat::On("wall patch"))
 }
 
 /// One offcut of scrap alloy standing in the bin.
@@ -332,16 +341,23 @@ const fn offcut(x: f32, y: f32, z: f32, high: f32) -> Fitting {
         Vec3::new(x, y, z),
         Vec3::new(0.020, high, 0.020),
     )
+    .seated(Seat::On("offcut bin"))
 }
 
 /// One clamp holding the ceiling conduit up, at `z`.
+///
+/// **A clamp holding a conduit up reaches the thing it holds it up to.**
+/// Both of these stopped 27.5 mm under the deckhead with the conduit
+/// hanging off them.
 const fn pipe_clamp(z: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::enamel_color(2)),
-        Vec3::new(-0.10, 0.90, z),
+        Vec3::new(-0.10, 0.925, z),
         Vec3::new(0.090, 0.075, 0.035),
     )
+    .called("conduit clamp")
+    .seated(Seat::Face(Face::Deckhead))
 }
 
 /// **The spliced cable**, outside: the owner's space elevator, cut in the

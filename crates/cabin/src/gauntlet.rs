@@ -137,6 +137,8 @@ pub const GRID_FITS: &str = "grid-fits";
 pub const PART_SEATED: &str = "part-seated";
 /// A rig must reach the chart it is berthed on.
 pub const RIG_SEATED: &str = "rig-seated";
+/// A hung body must meet whatever it says holds it up.
+pub const FURNITURE_SEATED: &str = "furniture-seated";
 
 /// The name a finding about cargo is filed under. A rig is not in any
 /// one room — the same crate stands in every room the game has — so the
@@ -145,7 +147,7 @@ pub const RIG_SEATED: &str = "rig-seated";
 pub const RIGS: &str = "rigs";
 
 /// Every rule, for the report's own headings.
-pub const RULES: [&str; 10] = [
+pub const RULES: [&str; 11] = [
     BERTH_CLEAR,
     BERTH_SEEN,
     BERTH_REACHED,
@@ -156,6 +158,7 @@ pub const RULES: [&str; 10] = [
     GRID_FITS,
     PART_SEATED,
     RIG_SEATED,
+    FURNITURE_SEATED,
 ];
 
 // ------------------------------------------------------------- the sizes --
@@ -784,6 +787,30 @@ pub struct Drawn {
     /// rules that are about furniture ask only about these; the rest is
     /// shells and paint, and paint is the decal ladder's business.
     pub character: bool,
+    /// What this body is called where something else is bolted to it —
+    /// a station's `Fitting::called`, a doorway part's own `what`.
+    /// `None` for the great majority, which nothing hangs off.
+    pub name: Option<String>,
+    /// **What it claims holds it up**, resolved into the world.
+    pub seat: Option<Claim>,
+}
+
+/// **One hung body's claim about what holds it up**, in world terms.
+///
+/// A station writes it as a side of the room's box (`poi::Seat`) and a
+/// doorway writes it as a world plane (`room::Seat`), because those are
+/// the frames the two are composed in; by the time the sweep sees them
+/// they are one thing. What matters is that both were *declared* — the
+/// sweep never decides that two bodies near each other were probably
+/// meant to touch.
+#[derive(Clone, Debug)]
+pub enum Claim {
+    /// A plane the body has to reach: what the surface is called, a
+    /// point on it, and the way the body reaches along to meet it.
+    Plane(&'static str, Vec3, Vec3),
+    /// Another hung body in the same room, by the name it declares.
+    /// Several may answer, and meeting any of them is meeting the seat.
+    On(String),
 }
 
 /// **Which sides of a body's box are faces**, per world axis and end.
@@ -896,6 +923,17 @@ fn drawn(what: String, frame: &Frame, fitting: &Fitting) -> Drawn {
         body: Box3::of(&frame.place(fitting), unit_half(fitting.shape)),
         faces: Faces::of(fitting.shape, frame.rot),
         character: true,
+        name: fitting.name.map(str::to_owned),
+        // A face of the host box is resolved through the very frame the
+        // runtime poses the fitting with, so a claim and a body cannot
+        // be measured off two different rooms.
+        seat: fitting.seat.map(|seat| match seat {
+            poi::Seat::Face(face) => {
+                let (at, toward) = frame.plane(face);
+                Claim::Plane(face.name(), at, toward)
+            }
+            poi::Seat::On(name) => Claim::On(name.to_owned()),
+        }),
     }
 }
 
@@ -1003,7 +1041,6 @@ fn seam_furniture(placed: &Placed) -> Vec<(Option<RoomId>, Drawn)> {
             (
                 part.across,
                 Drawn {
-                    what: part.what,
                     body: Box3::of(&part.at, unit_half(Shape::Slab)),
                     // A tread is paint on a rung of the decal ladder and
                     // shows the one side it turns to the room. Everything
@@ -1015,6 +1052,15 @@ fn seam_furniture(placed: &Placed) -> Vec<(Option<RoomId>, Drawn)> {
                         Faces::of(Shape::Slab, part.at.rotation)
                     },
                     character: true,
+                    // A doorway's parts answer to their own names, and a
+                    // body drawn several times over answers to the name
+                    // it shares (`room::Seat::On`).
+                    name: Some(part.what.clone()),
+                    seat: part.seat.map(|seat| match seat {
+                        room::Seat::Plane(what, at, toward) => Claim::Plane(what, at, toward),
+                        room::Seat::On(name) => Claim::On(name),
+                    }),
+                    what: part.what,
                 },
             )
         })
@@ -1043,6 +1089,8 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
                 body: Box3::spanning(slab.center - slab.size * 0.5, slab.center + slab.size * 0.5),
                 faces: Faces::ALL,
                 character: false,
+                name: None,
+                seat: None,
             });
         }
     } else {
@@ -1055,6 +1103,8 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
                 body: Box3::spanning(center - size * 0.5, center + size * 0.5),
                 faces: Faces::ALL,
                 character: false,
+                name: None,
+                seat: None,
             });
         }
     }
@@ -1119,11 +1169,20 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
                 body: Box3::spanning(centre - size * 0.5, centre + size * 0.5),
                 faces: Faces::of(shape, Quat::IDENTITY),
                 character: false,
+                name: None,
+                seat: None,
             });
         }
     }
-    // The colored classes' flat fields and the berth wells, one per cell,
-    // exactly where `room::tiles` lays them.
+    out.extend(tile_fields(placed));
+    out
+}
+
+/// **The colored classes' flat fields**, one per cell, exactly where
+/// `room::tiles` lays them — the paint a fitting standing on it fights
+/// exactly as hard as it fights another fitting.
+fn tile_fields(placed: &Placed) -> Vec<Drawn> {
+    let mut out = Vec::new();
     let (cols, rows) = placed.kind.grid();
     for y in 0..rows {
         for x in 0..cols {
@@ -1151,6 +1210,8 @@ pub fn scene(stage: &Stage) -> Vec<Drawn> {
                 body: face.reaching(inward, skin.mul_add(-0.5, lift), skin.mul_add(0.5, lift)),
                 faces: Faces::showing(inward),
                 character: false,
+                name: None,
+                seat: None,
             });
         }
     }
@@ -1369,6 +1430,7 @@ pub fn sweep() -> Vec<Finding> {
         out.extend(coplanar(&stage));
         out.extend(walk_clear(&stage));
         out.extend(grid_fits(&stage));
+        out.extend(furniture_seated(&stage));
     }
     out.extend(prop_points());
     out.extend(part_seated());
@@ -1812,6 +1874,11 @@ fn rig_scene(kind: Kind, screens: Screens, showing: Under) -> Vec<Drawn> {
                 body: Box3::of(&at, body.half() * crate::pieces::RIG_UNIT),
                 faces,
                 character: true,
+                // A rig's joints are `part-seated`'s, declared on the
+                // part and read straight off it; this pair is for the
+                // things a room hangs.
+                name: None,
+                seat: None,
             })
         })
         .collect()
@@ -2200,10 +2267,23 @@ impl Joint {
     /// How far short of the chart a body stops, in metres: positive is
     /// daylight, zero is flush, negative is buried.
     fn short_of(self, body: Box3) -> f32 {
-        let centre = (body.lo + body.hi) * 0.5;
-        let half = (body.hi - body.lo) * 0.5;
-        self.at.dot(self.toward) - (centre.dot(self.toward) + half.dot(self.toward.abs()))
+        short_of(self.at, self.toward, body)
     }
+}
+
+/// **How far a body stops short of a world plane**, in metres: positive
+/// is daylight, zero is flush, negative is buried. The plane is a point
+/// on it and the direction the body reaches along to meet it, so the
+/// reading is the body's furthest extent that way against the plane's
+/// own.
+///
+/// The one arithmetic three families spend — a rig against the chart it
+/// is berthed on, and a station's furniture and a doorway's hardware
+/// against whatever they say holds them up. A joint is a joint.
+fn short_of(at: Vec3, toward: Vec3, body: Box3) -> f32 {
+    let centre = (body.lo + body.hi) * 0.5;
+    let half = (body.hi - body.lo) * 0.5;
+    at.dot(toward) - (centre.dot(toward) + half.dot(toward.abs()))
 }
 
 /// How far a kind's rig may sink past its own plan on the way down and
@@ -2243,7 +2323,7 @@ fn plan_sink(kind: Kind) -> (f32, f32) {
 /// floor — it forgives a centimetre of burial there ([`SOLE_SINK`]) and
 /// asks nothing at all about a metre of air. [`part_seated`] is
 /// part-against-part. A crate that stops seven centimetres above its own
-/// deck cell satisfies every one of the nine and is a crate standing on
+/// deck cell satisfies every one of the ten and is a crate standing on
 /// nothing.
 ///
 /// **It is asked on every chart class the kind may take**, which is the
@@ -2315,6 +2395,124 @@ fn rig_seated() -> Vec<Finding> {
                 ),
             });
         }
+    }
+    out
+}
+
+/// **Everything one room hangs**, with whatever each body says holds it
+/// up: the station's own furniture and the hardware bolted into its
+/// doorways, posed through the very describers the runtime builds them
+/// from.
+///
+/// A seam's frame is drawn once, by the room with the lower id, and it
+/// is asked about there — the joint is a world plane and reads the same
+/// from either side, so asking twice would report one defect twice.
+fn hung(placed: &Placed) -> Vec<Drawn> {
+    let mut out = fittings(placed);
+    out.extend(seam_furniture(placed).into_iter().map(|(_, drawn)| drawn));
+    out
+}
+
+/// **A hung body meets whatever it says holds it up.** [`FURNITURE_SEATED`].
+///
+/// [`part_seated`]'s question and [`rig_seated`]'s tolerance, asked of
+/// the one layer of the world that could not answer it. A rig declares
+/// the chart it is berthed on because the sim berths it; a station's
+/// `Fitting` is a fraction of a room's box and a doorway's hardware is
+/// world units off a site, and neither of them declared anything at all
+/// — so a beacon bolted to thin air and a latch floating in front of a
+/// wall were invisible to every rule in this file, and the two of them
+/// were found by a player looking at the screen.
+///
+/// **Four defects of one shape have now been found and three of them by
+/// eye**, which is the whole argument for this family: the wall lamp's
+/// mount pad spanning a band that began where no other wall kind's
+/// began, the porthole's whole assembly 32.6 mm out in front of its
+/// wall, the Guild's seizure beacon 0.58 m off the aft wall with its
+/// hood face down over it, and the seam's detach latch 0.0931 m off the
+/// wall it screws to. Only the porthole was catchable, and only because
+/// a rig has a chart to be measured against.
+///
+/// **The claim is declared and then checked, never guessed at**, which
+/// is the same reason [`ALLOWED`] needs no entry for [`part_seated`]:
+/// there is nothing here to forgive, only things nobody claimed. A sweep
+/// that inferred joints would report every bollard that happens to stand
+/// near a wall, and it would be *wrong* about the things that are meant
+/// to hang on nothing — the Wanderer's fourth collar and its three hum
+/// rings say so in their own source, and they stay legal by saying
+/// nothing.
+///
+/// Two readings, one tolerance ([`SEAT_GAP`], because it is the same
+/// joint):
+///
+/// - **Daylight.** How far the body stops short of the plane it names,
+///   or of the nearest body answering to the name it names. A claim on a
+///   surface is one-sided on purpose: a fitting is held inside its own
+///   room's box by the containment law, so it can be flush with a face
+///   and never through one, and burial is not a thing it can express.
+/// - **A name nothing answers to.** A seat naming a body the room does
+///   not draw is its own finding, because a promise about something that
+///   is not there is a promise nobody can keep.
+fn furniture_seated(stage: &Stage) -> Vec<Finding> {
+    let placed = &stage.placed;
+    let hung = hung(placed);
+    let mut out = Vec::new();
+    for (nth, body) in hung.iter().enumerate() {
+        let Some(claim) = &body.seat else { continue };
+        let (gap, seat) = match claim {
+            Claim::Plane(what, at, toward) => {
+                (short_of(*at, *toward, body.body), (*what).to_owned())
+            }
+            Claim::On(name) => {
+                // Several bodies may answer to one name — a rivet round
+                // a leaf cut in two by the leaf beside it meets whichever
+                // half it reaches — so the reading is the smallest gap to
+                // any of them.
+                let gap = hung
+                    .iter()
+                    .enumerate()
+                    // **Nothing holds itself up.** Several bodies share
+                    // one name where a thing is drawn several times over
+                    // — a stack of cut plate, a pair of fenced portholes
+                    // — and each of them is then looking for the nearest
+                    // OTHER one.
+                    .filter(|&(i, other)| {
+                        i != nth
+                            && other
+                                .name
+                                .as_deref()
+                                .is_some_and(|had| had.starts_with(name.as_str()))
+                    })
+                    .map(|(_, held)| held)
+                    .map(|held| body.body.apart(held.body))
+                    .fold(f32::INFINITY, f32::min);
+                if gap.is_infinite() {
+                    out.push(Finding {
+                        room: stage.name.clone(),
+                        rule: FURNITURE_SEATED,
+                        offender: body.what.clone(),
+                        detail: format!(
+                            "names \"{name}\" as what holds it up, and this room draws no \
+                             such body"
+                        ),
+                    });
+                    continue;
+                }
+                (gap, format!("\"{name}\""))
+            }
+        };
+        if gap <= SEAT_GAP {
+            continue;
+        }
+        out.push(Finding {
+            room: stage.name.clone(),
+            rule: FURNITURE_SEATED,
+            offender: body.what.clone(),
+            detail: format!(
+                "stands {gap:.4} m clear of the {seat} it says holds it up, which is \
+                 daylight in a joint rather than the step a joint is drawn with"
+            ),
+        });
     }
     out
 }
@@ -2756,6 +2954,133 @@ mod tests {
         );
     }
 
+    /// **The furniture family is asked about every room, and it answers
+    /// when a body lifts off its seat.**
+    ///
+    /// The same guard the seat and chart families carry, on the layer
+    /// that had no claims at all until now. Three clauses:
+    ///
+    /// - **It is asked.** Every room in the roster declares seats, and
+    ///   both kinds of claim are spent across the game — a face of the
+    ///   room's own box, and a body beside it by name. A family nobody
+    ///   declares anything for is a green tick that means nothing.
+    /// - **Every name answers.** A claim naming a body its room does not
+    ///   draw is a promise nobody can keep, and there are none in the
+    ///   tree.
+    /// - **The reading is live.** This is the clause that matters, and
+    ///   it is the one a test written out of the implementation's own
+    ///   branch would pass whatever the number said. Every seated body
+    ///   in the game is lifted a hand's breadth off the thing it names,
+    ///   in the direction its own claim points, and the reading has to
+    ///   turn from a joint into daylight — counted, so a family that
+    ///   quietly stopped measuring would fail here rather than go green.
+    #[test]
+    fn the_furniture_family_is_asked_about_every_room_and_answers_when_a_body_lifts_off() {
+        /// A hand's breadth: an order over [`SEAT_GAP`], and the size of
+        /// gap every defect this family was written for turned out to be.
+        const LIFT: f32 = 0.1;
+        let (mut planes, mut siblings, mut rooms, mut caught) = (0_u32, 0_u32, 0_u32, 0_u32);
+        for stage in roster() {
+            let bodies = hung(&stage.placed);
+            let mut here = 0_u32;
+            for (nth, body) in bodies.iter().enumerate() {
+                let Some(claim) = &body.seat else { continue };
+                here += 1;
+                let lift = |by: Vec3| Box3 {
+                    lo: body.body.lo + by,
+                    hi: body.body.hi + by,
+                };
+                match claim {
+                    Claim::Plane(_, at, toward) => {
+                        planes += 1;
+                        let held = short_of(*at, *toward, body.body);
+                        let off = short_of(*at, *toward, lift(-*toward * LIFT));
+                        assert!(
+                            off > LIFT.mul_add(0.9, held),
+                            "{}: {} reads the same after being lifted off its own plane",
+                            stage.name,
+                            body.what
+                        );
+                        if held <= SEAT_GAP && off > SEAT_GAP {
+                            caught += 1;
+                        }
+                    }
+                    Claim::On(name) => {
+                        siblings += 1;
+                        let seats: Vec<Box3> = bodies
+                            .iter()
+                            .enumerate()
+                            .filter(|&(i, other)| {
+                                i != nth
+                                    && other
+                                        .name
+                                        .as_deref()
+                                        .is_some_and(|had| had.starts_with(name.as_str()))
+                            })
+                            .map(|(_, other)| other.body)
+                            .collect();
+                        assert!(
+                            !seats.is_empty(),
+                            "{}: {} names \"{name}\" as what holds it up and this room \
+                             draws no such body",
+                            stage.name,
+                            body.what
+                        );
+                        let gap = |box_: Box3| {
+                            seats
+                                .iter()
+                                .map(|seat| box_.apart(*seat))
+                                .fold(f32::INFINITY, f32::min)
+                        };
+                        let held = gap(body.body);
+                        let off = gap(lift(Vec3::Y * LIFT + Vec3::X * LIFT));
+                        if held <= SEAT_GAP && off > SEAT_GAP {
+                            caught += 1;
+                        }
+                    }
+                }
+            }
+            if here > 0 {
+                rooms += 1;
+            }
+        }
+        assert!(rooms >= 15, "only {rooms} room(s) declare a seat at all");
+        assert!(planes >= 100, "only {planes} claim(s) name a surface");
+        assert!(
+            siblings >= 120,
+            "only {siblings} claim(s) name a body beside them"
+        );
+        assert!(
+            caught >= 140,
+            "only {caught} seated bodies read as unseated after being lifted a hand's \
+             breadth off what holds them"
+        );
+        // And the reading itself, at both ends of its own tolerance and
+        // in both directions, because a joint may be spent by going INTO
+        // the thing that holds it.
+        let plane = (Vec3::new(0.0, 1.0, 0.0), Vec3::Y);
+        let at = |top: f32| Box3 {
+            lo: Vec3::new(0.0, top - 0.1, 0.0),
+            hi: Vec3::new(0.1, top, 0.1),
+        };
+        assert!(
+            short_of(plane.0, plane.1, at(1.0)) <= SEAT_GAP,
+            "flush is seated"
+        );
+        assert!(
+            short_of(plane.0, plane.1, at(1.0 + LIFT)) < 0.0,
+            "buried is seated, and reads as buried"
+        );
+        assert!(
+            short_of(plane.0, plane.1, at(SEAT_GAP.mul_add(-0.5, 1.0))) <= SEAT_GAP,
+            "a builder's step off is seated"
+        );
+        assert!(
+            short_of(plane.0, plane.1, at(1.0 - LIFT)) > SEAT_GAP,
+            "a hand's breadth of daylight is not a joint"
+        );
+    }
+
     /// **The chart family is asked about every kind, on every chart it
     /// may be berthed on, and it answers when a rig leaves its plane.**
     ///
@@ -3074,6 +3399,8 @@ mod tests {
             body: Box3::spanning(Vec3::ZERO, Vec3::new(1.0, 1.0, 0.1)),
             faces: Faces::ALL,
             character: true,
+            name: None,
+            seat: None,
         };
         // Same top, overlapping footprint: a fight.
         let fighting = Drawn {
@@ -3081,6 +3408,8 @@ mod tests {
             body: Box3::spanning(Vec3::new(0.2, 0.2, 0.0), Vec3::new(0.8, 1.0, 0.2)),
             faces: Faces::ALL,
             character: true,
+            name: None,
+            seat: None,
         };
         // Stacked: its floor is the other's ceiling, and that is fine.
         let stacked = Drawn {
@@ -3088,6 +3417,8 @@ mod tests {
             body: Box3::spanning(Vec3::new(0.2, 1.0, 0.0), Vec3::new(0.8, 2.0, 0.2)),
             faces: Faces::ALL,
             character: true,
+            name: None,
+            seat: None,
         };
         assert!(pairs_fight(&a, &fighting), "coplanar tops must be caught");
         assert!(!pairs_fight(&a, &stacked), "a stack is not a fight");
@@ -3293,6 +3624,8 @@ mod tests {
             body,
             faces: Faces::of(shape, Quat::IDENTITY),
             character: true,
+            name: None,
+            seat: None,
         };
         assert!(
             !pairs_fight(&round(Shape::Post), &round(Shape::Dome)),

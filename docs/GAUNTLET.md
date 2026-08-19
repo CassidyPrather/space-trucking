@@ -86,7 +86,7 @@ rigs: FloorLamp base plate reaches 0.0690 m out of the -0.031..0.497 m band
 So the loop when a line appears is: read it in the docket to know what
 moved, then run `--gauntlet` to get the millimetres.
 
-## The ten families
+## The eleven families
 
 Each one names a class of defect that a screenshot could not have caught.
 What matters when you are diagnosing is the third column: what the
@@ -278,7 +278,7 @@ the nearest miss and looks the other way on purpose: it catches a body
 reaching *outside* its own plan, forgives a centimetre of a sole buried
 in its own deck, and asks nothing at all about a sole a hand's breadth
 above one. `part-seated` is part-against-part. So a crate that stops
-seven centimetres above its own deck cell satisfies all nine of the
+seven centimetres above its own deck cell satisfies all ten of the
 others and is a crate standing on nothing.
 
 **Which plane is a question about the chart and never about the body.**
@@ -321,6 +321,100 @@ never given a floor, standing between one and fifteen centimetres above
 their own deck cells. That re-authoring is what docs/BAY.md has been
 carrying as deferred work since the net landed, and the couch and the
 cabinet are the two kinds that have had it done.
+
+### `furniture-seated` — a hung body meets what it says holds it up
+
+`part-seated`'s question and `rig-seated`'s tolerance, asked of the one
+layer of the world that had no way to answer it. A rig declares the chart
+it is berthed on because the sim berths it. A station's `Fitting` is a
+fraction of a room's box and a doorway's hardware is world units off a
+site, and until this family neither of them declared **anything at all**
+— so a beacon bolted to thin air and a latch floating in front of a wall
+were invisible to every rule in this file, and both were found by a
+player looking at the screen.
+
+Four defects of one shape had been found by the time it was written, and
+three of the four by eye rather than by the harness:
+
+| what | how far off its surface | how it was found |
+| --- | --- | --- |
+| the wall lamp's mount pad | spanned a band no other wall kind's began in | the owner |
+| the porthole's back | 32.6 mm in front of its wall | `rig-seated` — a rig, so it was catchable |
+| the Guild's seizure beacon | 0.58 m off the aft wall, 0.42 m under the ceiling | the owner |
+| the seam's detach latch | 0.0931 m off the wall it screws to | the owner |
+
+**The claim is declared and then checked, never guessed at**, which is
+the same reason `ALLOWED` needs no entry for `part-seated`: there is
+nothing here to forgive, only things nobody claimed. A sweep that
+inferred joints would report every bollard that happens to stand near a
+wall — and it would be *wrong* about the things that are meant to hang on
+nothing. The Wanderer's fourth collar has nothing under it and nothing
+through it, and its three hum rings "hang on nothing either"; they stay
+legal by saying nothing, and a rule that forced everything to touch
+something would have to be lied to about them.
+
+Two vocabularies, because the two layers are composed in different
+frames, and one reading:
+
+- A station writes `poi::Seat` — `Face(..)`, one of the six sides of the
+  box the fitting is measured off (for `Character::decor` that is the
+  room's own, floor to deckhead), or `On(..)`, another fitting by the
+  name it declares with `Fitting::called`.
+- A doorway writes `room::Seat` — `Plane(..)`, the surface a piece of
+  hardware bolts to as a point on it and the way the part reaches, or
+  `On(..)`, another part of the same doorway by its own `what`. Any part
+  whose name *begins* with the claim answers to it, so a body drawn
+  several times over (`leaf[0]`, `leaf[1]`) is named once.
+
+Several bodies may answer to one name and the reading is the smallest
+gap to any of them; nothing holds itself up, so a body sharing a name
+with its seat is looking for the nearest *other* one. A name nothing
+answers to is its own finding.
+
+**The face a fitting names is the room's own box**, which is the same
+box the containment law means by "inside this room" — so a fitting can
+be flush with a face and never through one, and the family only ever
+reads daylight. A doorway's hardware is measured in world units and is
+held to the plane the room actually *shows*, which is its chart
+(`room::chart_inset`, a notch inside the box face) and not the box face
+the frame straddles. The two differ by that notch, and the difference is
+why: a 20 mm latch plate screwed to the box face is a plate behind the
+wall's own paint, and the coplanar detector said so the first time it
+was seated there.
+
+Two hundred and sixty-four claims are declared on its first pass, across
+fifteen stations and every doorway in the game, and curing what they
+found moved 133 of the 292 fittings those rooms hang, every rivet on
+every shut door, and one bracket that was not there at all — the
+Hermitage's third ledge had no corbel under it. The shapes repeat: four
+rivets on each of three shut leaves drawn a plate thickness out past the
+**back** of the plate they fasten, where nobody in the room could see
+them; three seized pendants sharing one stem length at three heights,
+two of them hanging off nothing; a candle 60 mm over the sill it stands
+on; three cryo cores 55 mm under their rail and five blackout tins 56 mm
+under theirs; a stack of hull plate 105 mm off the deck; a main riser
+that runs "deck to cornice" starting 176 mm above the deck; three
+pillars "floor to deckhead" that reached neither; and a dozen plates,
+patches, plaques and boards standing between 12 and 77 mm off the walls
+they are bolted to. The ten that are left are on the docket with their
+numbers and their reasons.
+
+**One of those ten is a finding about the vocabulary rather than about a
+station.** Five hoops laid flat "on the deck" — a moon pool's collar, a
+core cradle, three coiled hoses — cannot reach it and cannot be made to.
+A `Shape::Ring`'s drawn tube is 18% of the box `Fitting::half` declares,
+and the containment law measures the declared box, so a hoop whose tube
+meets the deck has a box a tenth of a room deep in the floor. No number a
+station's author can write cures that; what wants fixing is the
+containment reading, so that a body's claim on space is the body's and
+not its wrapper's.
+
+`the_furniture_family_is_asked_about_every_room_and_answers_when_a_body_lifts_off`
+is the guard. It counts the claims (every room declares some, and both
+kinds are spent), refuses a name nothing answers to, and then lifts every
+seated body in the game a hand's breadth off the thing it names, in the
+direction its own claim points, and requires the reading to turn from a
+joint into daylight.
 
 ### `grid-fits` — the world is built of the cargo grid and aligned to it
 
@@ -515,6 +609,24 @@ thought to describe yet.** Each of these was invisible not because a rule
 was too loose but because there was nothing for a rule to be asked about.
 Before trusting a green sweep, ask what is on screen that nothing in the
 list above enumerates.
+
+**And there is a second shape, which is what a described layer does not
+DECLARE.** Everything above is about a body nothing could enumerate.
+Three of the four defects `furniture-seated` was written for were in
+layers the harness had enumerated for a long time: `poi::character_of`
+has always handed over every fitting a station hangs, and
+`room::seam_parts` has handed over every body in a doorway since the
+doorway layer was described. What none of them said was **what holds it
+up**. A rig had that all along because the sim berths it and the berth
+names a chart; a fitting had a shape, a coat and a position, and a
+position is not a promise. So the analogue of "what is on screen that
+nothing enumerates" is "what does a description leave unsaid that a
+player can see is wrong" — and the answer that took four defects to find
+was a joint.
+
+| Layer | Was invisible because | Closed by | Found |
+| --- | --- | --- | --- |
+| Furniture and doorway hardware | enumerated all along, and declaring nothing about what carried it | `poi::Seat` and `room::Seat`, read back by `furniture-seated` | 264 claims over 15 stations and every doorway; 133 fittings and every shut door's rivets moved onto what holds them, 10 docketed |
 
 Other things it deliberately does not see, each for a stated reason:
 

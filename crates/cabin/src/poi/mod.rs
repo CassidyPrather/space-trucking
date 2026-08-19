@@ -84,7 +84,30 @@
 //! - [`Light::burn`] is a fraction of the caller budget and the pendant's
 //!   *reach* is not a knob at all, so **a station lights its own floor and
 //!   never a riding room's** — the containment rule survives every
-//!   character that will ever be written.
+//!   character that will ever be written;
+//! - every [`Seat`] a fitting declares is **met**: a fitting that says
+//!   the deckhead holds it up reaches the deckhead, and one that names a
+//!   fitting beside it meets that one (`cabin::gauntlet`,
+//!   `furniture-seated`).
+//!
+//! ## Saying what holds a fitting up
+//!
+//! > **A position is not a promise.** `at` says where a fitting is;
+//! > [`Fitting::seated`] says what carries it, and only the second is
+//! > checked.
+//!
+//! A station's beacon hung 0.42 m under the ceiling with its hood face
+//! down over it, and no rule in the harness could ask about that, because
+//! a `Fitting` declared a shape, a coat and a place and nothing else. It
+//! declares a [`Seat`] now where it has one — a [`Face`] of the room's
+//! own box, or another fitting by the name it takes with
+//! [`Fitting::called`] — and the sweep reads the claim back.
+//!
+//! **Declare one where the piece you are drawing genuinely rests on
+//! something, and declare nothing where it does not.** Things that hang
+//! on nothing are legal and some of them are the point: the Wanderer's
+//! fourth collar has nothing under it and nothing through it, and it says
+//! so by saying nothing at all.
 //!
 //! What is NOT a station's to take is a berth cargo *stays* in and the
 //! trade surface — the room's own goods, a proposal's chalk, a doorway,
@@ -499,6 +522,91 @@ pub struct Fitting {
     pub at: Vec3,
     /// Half-extents, in fractions of the host box's half-extents.
     pub half: Vec3,
+    /// What this fitting is called, where something else in the same
+    /// list is bolted to it ([`Fitting::called`]). `None` for the great
+    /// majority, which nothing hangs off.
+    pub name: Option<&'static str>,
+    /// **What it claims holds it up**, if it claims anything — see
+    /// [`Seat`]. A fitting that is composition claims nothing and is
+    /// asked nothing.
+    pub seat: Option<Seat>,
+}
+
+/// **One side of the box a fitting is measured off.**
+///
+/// For a station's [`Character::decor`] that box is the room's own,
+/// floor to deckhead, so these are the room's own six surfaces named the
+/// way a room names them. For the other two frames a character writes in
+/// — a handshake's cell and the cage round the pendant — the box is a
+/// fixture's, not a room's, and naming a face of one means nothing a
+/// player could check; those hang off each other instead
+/// ([`Seat::On`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Face {
+    Deck,
+    Deckhead,
+    Port,
+    Starboard,
+    Fore,
+    Aft,
+}
+
+impl Face {
+    /// What a finding calls it.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Deck => "deck",
+            Self::Deckhead => "deckhead",
+            Self::Port => "port wall",
+            Self::Starboard => "starboard wall",
+            Self::Fore => "front wall",
+            Self::Aft => "aft wall",
+        }
+    }
+
+    /// Which axis of the host box, and which end of it: `+x` starboard,
+    /// `+y` up, `+z` aft ([`Fitting`]).
+    const fn along(self) -> (Vec3, f32) {
+        match self {
+            Self::Starboard => (Vec3::X, 1.0),
+            Self::Port => (Vec3::X, -1.0),
+            Self::Deckhead => (Vec3::Y, 1.0),
+            Self::Deck => (Vec3::Y, -1.0),
+            Self::Aft => (Vec3::Z, 1.0),
+            Self::Fore => (Vec3::Z, -1.0),
+        }
+    }
+}
+
+/// **What a fitting claims holds it up** — `pieces::Seat` one layer out,
+/// and the thing a station's furniture had no way to say.
+///
+/// A cargo rig declares the chart it is berthed on because the sim
+/// berths it, and the gauntlet's `rig-seated` family reads that claim
+/// back. A fitting is a fraction of a room's box and declared nothing at
+/// all, so a beacon bolted to thin air was invisible to every rule in
+/// the harness — one was, and a player found it by eye, hood face down
+/// over a lamp 0.42 m under the ceiling it had lost.
+///
+/// **The claim is declared and then checked, never guessed at.** A sweep
+/// that inferred joints — "this is near the deck, it probably stands on
+/// it" — would report every crate that happens to be near a wall and
+/// would say nothing about the one fitting whose comment is a promise.
+/// So a fitting that is composition declares nothing and is asked
+/// nothing, and the things that are *meant* to hang on nothing stay
+/// legal by saying nothing: the Wanderer's fourth collar and its three
+/// hum rings hang on nothing on purpose, and a rule that forced
+/// everything to touch something would be wrong about them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Seat {
+    /// A side of the box this fitting is measured off — for a station's
+    /// decor, one of the room's own six surfaces.
+    Face(Face),
+    /// Another fitting in the same list, by the name it declares
+    /// ([`Fitting::called`]). Several may answer to one name, and
+    /// meeting any of them is meeting the seat.
+    On(&'static str),
 }
 
 /// Where a hanger clasped round the pendant's stem stops, in shades
@@ -523,7 +631,27 @@ impl Fitting {
             coat,
             at,
             half,
+            name: None,
+            seat: None,
         }
+    }
+
+    /// **Named, so something else may say it is what holds it up.** Only
+    /// a fitting somebody hangs off needs one.
+    #[must_use]
+    pub const fn called(mut self, name: &'static str) -> Self {
+        self.name = Some(name);
+        self
+    }
+
+    /// **Bolted to something**, and which thing — a side of the room's
+    /// own box, or a named fitting beside it. Declared rather than
+    /// derived, because a joint is a promise the author makes and not a
+    /// distance a sweep can guess at ([`Seat`]).
+    #[must_use]
+    pub const fn seated(mut self, on: Seat) -> Self {
+        self.seat = Some(on);
+        self
     }
 
     /// One fitting given by the box it fills rather than by a centre and
@@ -553,6 +681,27 @@ impl Fitting {
                 (hi.y - lo.y) * 0.5,
                 (hi.z - lo.z) * 0.5,
             ),
+            name: None,
+            seat: None,
+        }
+    }
+
+    /// **The same fitting with its claims struck** — what it DRAWS,
+    /// with nothing about what holds it up or what hangs off it.
+    ///
+    /// A station's own test counts bodies by rebuilding one from its
+    /// helper and comparing, and a claim is not part of the body: two
+    /// collars of one form, one of which names a pillar and one of which
+    /// deliberately names nothing, are still two collars.
+    #[must_use]
+    pub const fn bare(self) -> Self {
+        Self {
+            shape: self.shape,
+            coat: self.coat,
+            at: self.at,
+            half: self.half,
+            name: None,
+            seat: None,
         }
     }
 
@@ -593,6 +742,16 @@ impl Frame {
             ),
             rot: Quat::from_rotation_y(f32::from(yaw % 4) * FRAC_PI_2),
         }
+    }
+
+    /// **The world plane one side of this box is**, as a point on it and
+    /// the direction a body reaches along to meet it — the same pair the
+    /// gauntlet measures a rig's sole against its own chart with.
+    #[must_use]
+    pub fn plane(&self, face: Face) -> (Vec3, Vec3) {
+        let (axis, sign) = face.along();
+        let local = axis * sign;
+        (self.mid + self.rot * (local * self.half), self.rot * local)
     }
 
     /// Where one fitting stands, in the world.

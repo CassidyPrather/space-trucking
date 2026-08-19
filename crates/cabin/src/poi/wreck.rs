@@ -64,7 +64,7 @@
 
 use bevy::prelude::Vec3;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn};
 use crate::palette;
 
 /// The derelict's own room.
@@ -280,9 +280,10 @@ const THE_HOLD: [Fitting; 23] = [
         RADIUM,
         Vec3::new(0.945, -0.06, -0.30),
         Vec3::new(0.022, 0.028, 0.60),
-    ),
-    stanchion(0.945, -0.86),
-    stanchion(0.945, 0.24),
+    )
+    .seated(Seat::On("rail stanchion")),
+    stanchion(0.978, -0.86),
+    stanchion(0.978, 0.24),
     // The port rail, broken: a short piece, and a stub of the rest of it
     // further aft with nothing between them.
     Fitting::new(
@@ -302,38 +303,45 @@ const THE_HOLD: [Fitting; 23] = [
     Fitting::new(
         Shape::Slab,
         RIME,
-        Vec3::new(0.10, -0.74, -0.955),
+        Vec3::new(0.10, -0.74, -0.970),
         Vec3::new(0.74, 0.11, 0.03),
-    ),
+    )
+    .seated(Seat::Face(Face::Fore)),
     Fitting::new(
         Shape::Slab,
         RIME,
-        Vec3::new(0.52, -0.962, -0.70),
+        Vec3::new(0.52, -0.984, -0.70),
         Vec3::new(0.28, 0.016, 0.20),
-    ),
+    )
+    .seated(Seat::Face(Face::Deck)),
     // A wall sconce on the port flank with its bulb gone: the bracket
     // still glows and there is a hole where the light was.
     Fitting::new(
         Shape::Slab,
         STRUCTURE,
-        Vec3::new(-0.945, 0.30, -0.46),
+        Vec3::new(-0.978, 0.30, -0.46),
         Vec3::new(0.022, 0.055, 0.11),
-    ),
+    )
+    .called("sconce bracket")
+    .seated(Seat::Face(Face::Port)),
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::GLASS),
-        Vec3::new(-0.86, 0.22, -0.46),
+        Vec3::new(-0.92, 0.22, -0.46),
         Vec3::new(0.045, 0.055, 0.075),
-    ),
+    )
+    .seated(Seat::On("sconce bracket")),
     // The hatch to the rest of the hull, on the front wall, dogged shut
     // — three dogs and an empty hole where the fourth was. Whoever
     // closed this was the last one to touch it.
     Fitting::new(
         Shape::Slab,
         STRUCTURE,
-        Vec3::new(-0.52, -0.14, -0.955),
+        Vec3::new(-0.52, -0.14, -0.972),
         Vec3::new(0.30, 0.44, 0.028),
-    ),
+    )
+    .called("hull hatch")
+    .seated(Seat::Face(Face::Fore)),
     dog(-0.78, 0.26),
     dog(-0.26, 0.26),
     dog(-0.78, -0.54),
@@ -344,9 +352,10 @@ const fn rib(z: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         STRUCTURE,
-        Vec3::new(0.0, 0.945, z),
+        Vec3::new(0.0, 0.955, z),
         Vec3::new(0.985, 0.045, 0.032),
     )
+    .seated(Seat::Face(Face::Deckhead))
 }
 
 /// One grab-rail stanchion, on the wall at `x`, at `z` along it.
@@ -357,6 +366,8 @@ const fn stanchion(x: f32, z: f32) -> Fitting {
         Vec3::new(x, -0.42, z),
         Vec3::new(0.020, 0.34, 0.030),
     )
+    .called("rail stanchion")
+    .seated(Seat::Face(Face::Starboard))
 }
 
 /// One dog on the sealed hatch, at `(x, y)` on the front wall.
@@ -367,6 +378,7 @@ const fn dog(x: f32, y: f32) -> Fitting {
         Vec3::new(x, y, -0.92),
         Vec3::new(0.045, 0.055, 0.04),
     )
+    .seated(Seat::On("hull hatch"))
 }
 
 /// **What is left**, outside: a hull with no lamp on it, the frames

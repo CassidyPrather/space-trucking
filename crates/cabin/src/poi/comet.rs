@@ -49,7 +49,9 @@
 use bevy::prelude::Vec3;
 use space_trucking::sim::Kind;
 
-use super::{CAGE_TOP, Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{
+    CAGE_TOP, Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn,
+};
 use crate::palette;
 
 /// The comet's own room, for the day it has one.
@@ -227,7 +229,8 @@ const CUT_FACE: [Fitting; 19] = [
         Coat::enamel(palette::SOOT),
         Vec3::new(0.95, 0.82, 0.0),
         Vec3::new(0.05, 0.16, 0.42),
-    ),
+    )
+    .seated(Seat::Face(Face::Starboard)),
     // ---- something else in the ice ----
     // A block with a dark lump frozen in the middle of it. No glow, no
     // violet, no beacon: the game's *something is wrong* colour is the
@@ -239,28 +242,32 @@ const CUT_FACE: [Fitting; 19] = [
         Coat::enamel(palette::POI_COMET),
         Vec3::new(0.80, -0.20, 0.22),
         Vec3::new(0.20, 0.24, 0.22),
-    ),
+    )
+    .called("frozen block"),
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::SHADOW),
         Vec3::new(0.74, -0.20, 0.22),
         Vec3::new(0.10, 0.11, 0.10),
-    ),
+    )
+    .seated(Seat::On("frozen block")),
     // ---- the crust overhead ----
     // The ceiling is the inside of the rind: black, lumpy, and much
     // closer than you would like.
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::SOOT),
-        Vec3::new(-0.44, 0.88, -0.08),
+        Vec3::new(-0.44, 0.89, -0.08),
         Vec3::new(0.34, 0.11, 0.34),
-    ),
+    )
+    .seated(Seat::Face(Face::Deckhead)),
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::SOOT),
-        Vec3::new(0.24, 0.90, 0.42),
+        Vec3::new(0.24, 0.91, 0.42),
         Vec3::new(0.28, 0.09, 0.28),
-    ),
+    )
+    .seated(Seat::Face(Face::Deckhead)),
     // ---- what the last crew left ----
     // A line strung the width of the room at chest height, because the
     // comet is moving and you are not tied to it. Two eyes and a rope.
@@ -303,6 +310,17 @@ const CUT_FACE: [Fitting; 19] = [
 ];
 
 /// One block of the cut face, standing off the starboard wall.
+///
+/// **A block of a quarried face is part of the rock**, so it says the
+/// wall is what holds it — and the five of them stop between 22 and
+/// 110 mm short of it, which from any stance down the flank is five
+/// slabs of ice hanging in air. Running each of them back to the plane
+/// is one line and it is the wrong line: the frozen block already
+/// stands hard against that wall with one of these inside it, and five
+/// slabs cut to one length share their back plane wherever they cross,
+/// which is the second coplanar idiom. A quarried face is one
+/// composition and wants re-composing as one, not five bodies stretched
+/// onto a plane. It is on `gauntlet.docket` with its numbers.
 const fn block(x: f32, y: f32, z: f32, hy: f32, hz: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
@@ -310,6 +328,7 @@ const fn block(x: f32, y: f32, z: f32, hy: f32, hz: f32) -> Fitting {
         Vec3::new(x, y, z),
         Vec3::new(0.09, hy, hz),
     )
+    .seated(Seat::Face(Face::Starboard))
 }
 
 /// One shard of ice on the deck, `r` across.
@@ -320,6 +339,7 @@ const fn shard(x: f32, y: f32, z: f32, r: f32) -> Fitting {
         Vec3::new(x, y, z),
         Vec3::new(r, r * 0.7, r),
     )
+    .seated(Seat::Face(Face::Deck))
 }
 
 /// **The coma and the tail**, outside — and this is the point of the

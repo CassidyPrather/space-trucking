@@ -41,7 +41,7 @@
 use bevy::prelude::Vec3;
 use space_trucking::sim::Kind;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn};
 use crate::palette;
 
 /// Uranus's own room.
@@ -210,17 +210,19 @@ const THE_COLD_STORE: [Fitting; 15] = [
         Coat::metal(Worn::Rivet),
         Vec3::new(0.47, 0.50, 0.38),
         Vec3::new(0.47, 0.03, 0.03),
-    ),
+    )
+    .called("chill rail"),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(-0.93, 0.30, -0.30),
+        Vec3::new(-0.95, 0.30, -0.30),
         Vec3::new(0.05, 0.05, 0.62),
-    ),
+    )
+    .seated(Seat::Face(Face::Port)),
     // Rime along the foot of both side walls: the low edges are where a
     // hull this cold sweats, and the sweat has been there for years.
-    rime(-0.955),
-    rime(0.955),
+    rime(-0.97).seated(Seat::Face(Face::Port)),
+    rime(0.97).seated(Seat::Face(Face::Starboard)),
     // A core out of the bank, sitting in its cradle on the deck where
     // somebody left it. The cradle is a hoop; the core is a bulb of
     // very cold nothing.
@@ -229,13 +231,16 @@ const THE_COLD_STORE: [Fitting; 15] = [
         Coat::metal(Worn::Plate),
         Vec3::new(0.68, -0.92, 0.28),
         Vec3::new(0.17, 0.08, 0.20),
-    ),
+    )
+    .called("core cradle")
+    .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(palette::kind_color(Kind::CometIce), 1.6),
         Vec3::new(0.68, -0.86, 0.28),
         Vec3::new(0.11, 0.12, 0.13),
-    ),
+    )
+    .seated(Seat::On("core cradle")),
     // Two chill ducts down the ceiling, each with its vent lit pale.
     duct(-0.52),
     duct(0.52),
@@ -255,19 +260,24 @@ const THE_COLD_STORE: [Fitting; 15] = [
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::accent::URANUS_RING),
-        Vec3::new(-0.955, -0.30, 0.620),
+        Vec3::new(-0.955, -0.34, 0.620),
         Vec3::new(0.014, 0.66, 0.025),
-    ),
+    )
+    .seated(Seat::Face(Face::Deck)),
 ];
 
 /// One cryo core hanging off the rail, at `x` across the room.
+///
+/// **A core hanging off a rail reaches the rail.** All three hung 55 mm
+/// under it, which is the market's whole produce dangling off nothing.
 const fn core(x: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::phosphor(palette::kind_color(Kind::CryoCore), 1.5),
-        Vec3::new(x, 0.20, 0.38),
+        Vec3::new(x, 0.25, 0.38),
         Vec3::new(0.05, 0.22, 0.06),
     )
+    .seated(Seat::On("chill rail"))
 }
 
 /// One rime line along the foot of a side wall, at `x`.
@@ -285,9 +295,11 @@ const fn duct(x: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(x, 0.93, 0.140),
+        Vec3::new(x, 0.94, 0.140),
         Vec3::new(0.13, 0.06, 0.55),
     )
+    .called("chill duct")
+    .seated(Seat::Face(Face::Deckhead))
 }
 
 /// One duct's vent, lit the pale blue everything cold is lit here.
@@ -295,9 +307,10 @@ const fn vent(x: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::accent::URANUS_RING, 1.0),
-        Vec3::new(x, 0.80, 0.140),
+        Vec3::new(x, 0.86, 0.140),
         Vec3::new(0.09, 0.02, 0.45),
     )
+    .seated(Seat::On("chill duct"))
 }
 
 /// **The cold works**, outside: the radiator comb standing off the crown,

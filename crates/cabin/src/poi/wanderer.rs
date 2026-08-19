@@ -47,7 +47,7 @@
 use bevy::prelude::Vec3;
 use space_trucking::sim::Kind;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles};
+use super::{Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles};
 use crate::palette;
 
 /// `???`'s own room.
@@ -230,9 +230,9 @@ const NOT_A_ROOM: [Fitting; 15] = [
     pillar(-0.28),
     pillar(0.0),
     pillar(0.28),
-    collar(0.86, -0.28),
-    collar(0.86, 0.0),
-    collar(0.86, 0.28),
+    collar(0.86, -0.28).seated(Seat::On("pillar")),
+    collar(0.86, 0.0).seated(Seat::On("pillar")),
+    collar(0.86, 0.28).seated(Seat::On("pillar")),
     // ---- and the fourth ----
     // A collar at the same height, on the port side, with nothing under
     // it and nothing through it. Three crates went in and four
@@ -275,13 +275,19 @@ const NOT_A_ROOM: [Fitting; 15] = [
 ];
 
 /// One pillar down the starboard side, at `z`.
+///
+/// **Floor to deckhead means floor to deckhead.** All three stopped
+/// 44 mm short at each end, which in a room that is otherwise a black
+/// box is the only thing in it with a top and a bottom you can see.
 const fn pillar(z: f32) -> Fitting {
-    Fitting::new(
+    Fitting::spanning(
         Shape::Post,
         Coat::enamel(palette::kind_color(Kind::VeryMysteriousCrate)),
-        Vec3::new(0.86, 0.0, z),
-        Vec3::new(0.075, 0.96, 0.075),
+        Vec3::new(0.785, -1.0, z - 0.075),
+        Vec3::new(0.935, 1.0, z + 0.075),
     )
+    .called("pillar")
+    .seated(Seat::Face(Face::Deck))
 }
 
 /// One collar at a pillar's head — or where a pillar would be.
@@ -453,12 +459,12 @@ mod tests {
         let collars = CHARACTER
             .decor
             .iter()
-            .filter(|fitting| **fitting == collar(fitting.at.x, fitting.at.z))
+            .filter(|fitting| fitting.bare() == collar(fitting.at.x, fitting.at.z).bare())
             .count();
         let pillars = CHARACTER
             .decor
             .iter()
-            .filter(|fitting| **fitting == pillar(fitting.at.z))
+            .filter(|fitting| fitting.bare() == pillar(fitting.at.z).bare())
             .count();
         assert_eq!((collars, pillars), (4, 3), "the arithmetic has been fixed");
         assert_eq!(CHARACTER.light.cage.len(), 4, "and so has the lamp's");

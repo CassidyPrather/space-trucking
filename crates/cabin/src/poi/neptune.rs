@@ -40,7 +40,7 @@
 use bevy::prelude::Vec3;
 use space_trucking::sim::Kind;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn};
 use crate::palette;
 
 /// Neptune's own room.
@@ -185,18 +185,28 @@ const THE_DIVE_LOCK: [Fitting; 17] = [
     // The pool: a collar hoop set into the deck, and the water in it —
     // which out here is the same near-black as everything else that goes
     // down a long way, with a shimmer on it.
+    // **The hoop says the deck holds it and it does not reach.** It
+    // stands 63 mm above the deck it is "set into" and it cannot be
+    // dropped onto it: a `Ring`'s drawn tube is 18% of the box the
+    // containment law measures, so a hoop whose tube meets the deck has
+    // a declared box a tenth of a room deep in the floor. The vocabulary
+    // is what wants fixing, not the number, so it is on
+    // `gauntlet.docket` with its measurement.
     Fitting::new(
         Shape::Ring,
         Coat::metal(Worn::Plate),
         Vec3::new(0.34, -0.93, 0.20),
         Vec3::new(0.28, 0.07, 0.33),
-    ),
+    )
+    .called("pool collar")
+    .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Post,
         Coat::phosphor(palette::kind_color(Kind::BottledMidnight), 1.6),
         Vec3::new(0.34, -0.96, 0.20),
         Vec3::new(0.23, 0.035, 0.28),
-    ),
+    )
+    .seated(Seat::On("pool collar")),
     // Three lamps round its rim, aimed in. Nobody works a hole in a
     // floor without lighting the hole.
     rim_lamp(0.07, 0.20),
@@ -211,13 +221,17 @@ const THE_DIVE_LOCK: [Fitting; 17] = [
         Coat::metal(Worn::Rivet),
         Vec3::new(0.34, 0.0, 0.20),
         Vec3::new(0.018, 0.90, 0.018),
-    ),
+    )
+    .called("dive wire")
+    .seated(Seat::On("ceiling block")),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.34, 0.90, 0.20),
+        Vec3::new(0.34, 0.91, 0.20),
         Vec3::new(0.12, 0.09, 0.14),
-    ),
+    )
+    .called("ceiling block")
+    .seated(Seat::Face(Face::Deckhead)),
     inboard_bead(-0.42),
     inboard_bead(0.10),
     inboard_bead(0.62),
@@ -230,13 +244,15 @@ const THE_DIVE_LOCK: [Fitting; 17] = [
         Coat::enamel(palette::kind_color(Kind::BrinePearls)),
         Vec3::new(-0.88, -0.20, -0.30),
         Vec3::new(0.035, 0.07, 0.042),
-    ),
+    )
+    .seated(Seat::On("catch tray")),
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::kind_color(Kind::BrinePearls)),
         Vec3::new(-0.88, -0.20, 0.34),
         Vec3::new(0.03, 0.06, 0.036),
-    ),
+    )
+    .seated(Seat::On("catch tray")),
     // The depth lamps: a string of three off a bell that is not coming
     // back, still burning, because the bulbs were the expensive part.
     // They hang a cell in from the aft cornice, off the goods' band.
@@ -253,6 +269,7 @@ const fn rim_lamp(x: f32, z: f32) -> Fitting {
         Vec3::new(x, -0.88, z),
         Vec3::new(0.035, 0.05, 0.042),
     )
+    .seated(Seat::On("pool collar"))
 }
 
 /// One lamp bead on the inboard length of wire, at height `y`. The same
@@ -265,6 +282,7 @@ const fn inboard_bead(y: f32) -> Fitting {
         Vec3::new(0.34, y, 0.20),
         Vec3::new(0.03, 0.042, 0.036),
     )
+    .seated(Seat::On("dive wire"))
 }
 
 /// One tray of the catch on the port wall, at `z` along it.
@@ -272,9 +290,11 @@ const fn tray(z: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
-        Vec3::new(-0.92, -0.28, z),
+        Vec3::new(-0.955, -0.28, z),
         Vec3::new(0.045, 0.03, 0.28),
     )
+    .called("catch tray")
+    .seated(Seat::Face(Face::Port))
 }
 
 /// One depth lamp on the deckhead, at `x` across it — a cell in off the
@@ -283,9 +303,10 @@ const fn depth_lamp(x: f32) -> Fitting {
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(palette::POI_NEPTUNE, 2.6),
-        Vec3::new(x, 0.84, 0.650),
+        Vec3::new(x, 0.945, 0.650),
         Vec3::new(0.04, 0.055, 0.045),
     )
+    .seated(Seat::Face(Face::Deckhead))
 }
 
 /// **The dredge**, outside: the bell parked in its gallows on the crown,

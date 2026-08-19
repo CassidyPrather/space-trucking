@@ -41,7 +41,9 @@
 use bevy::prelude::Vec3;
 use space_trucking::sim::Kind;
 
-use super::{CAGE_TOP, Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{
+    CAGE_TOP, Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn,
+};
 use crate::palette;
 
 /// Jupiter's own room.
@@ -214,13 +216,15 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
         Coat::metal(Worn::Plate),
         Vec3::new(0.66, -0.10, 0.600),
         Vec3::new(0.28, 0.05, 0.05),
-    ),
+    )
+    .called("counter pipe"),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
         Vec3::new(-0.16, -0.10, 0.600),
         Vec3::new(0.14, 0.05, 0.05),
-    ),
+    )
+    .called("counter pipe"),
     stem(-0.16),
     stem(0.78),
     wheel(-0.16),
@@ -237,14 +241,16 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
         Coat::metal(Worn::Rivet),
         Vec3::new(0.90, -0.10, 0.050),
         Vec3::new(0.03, 0.03, 0.350),
-    ),
+    )
+    .seated(Seat::On("bottle")),
     // The manifold, high along the starboard cornice, with its collars.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
         Vec3::new(0.86, 0.60, 0.143),
         Vec3::new(0.06, 0.06, 0.570),
-    ),
+    )
+    .called("manifold"),
     collar(-0.16),
     collar(0.44),
     // The riser off it, dropping at the aft end of the run, where the
@@ -254,7 +260,8 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
         Coat::metal(Worn::Socket),
         Vec3::new(0.86, 0.13, 0.380),
         Vec3::new(0.05, 0.47, 0.05),
-    ),
+    )
+    .seated(Seat::On("manifold")),
     // The pilot: the stack outside is lit, and this is that same fire
     // seen from indoors through a slit in the deckhead, struck just
     // inboard of the cornice so the goods keep their own air.
@@ -263,37 +270,45 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
         Coat::phosphor(palette::EMBER, 1.8),
         Vec3::new(0.28, 0.92, 0.640),
         Vec3::new(0.62, 0.028, 0.035),
-    ),
+    )
+    .seated(Seat::On("pilot slit")),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
         Vec3::new(0.28, 0.968, 0.630),
         Vec3::new(0.66, 0.028, 0.06),
-    ),
+    )
+    .called("pilot slit")
+    .seated(Seat::Face(Face::Deckhead)),
     // The furnace port in the port wall: a hooded slit with the cracking
     // plant on the other side of it. Nothing in this room is a wall with
     // nothing behind it.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(-0.94, -0.15, -0.35),
+        Vec3::new(-0.95, -0.15, -0.35),
         Vec3::new(0.05, 0.35, 0.42),
-    ),
+    )
+    .called("furnace port")
+    .seated(Seat::Face(Face::Port)),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::EMBER, 1.2),
         Vec3::new(-0.90, -0.15, -0.35),
         Vec3::new(0.02, 0.24, 0.30),
-    ),
+    )
+    .seated(Seat::On("furnace port")),
     // A drip pan under the manifold, and a hose coiled on the deck. Both
     // are the same argument: this is a floor people work on, and people
     // who work on floors leave things on them.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.86, -0.90, 0.143),
+        Vec3::new(0.86, -0.96, 0.143),
         Vec3::new(0.10, 0.04, 0.400),
-    ),
+    )
+    .called("drip pan")
+    .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Ring,
         Coat::enamel(palette::SOOT),
@@ -310,6 +325,8 @@ const fn stem(x: f32) -> Fitting {
         Vec3::new(x, 0.02, 0.600),
         Vec3::new(0.022, 0.12, 0.026),
     )
+    .called("valve stem")
+    .seated(Seat::On("counter pipe"))
 }
 
 /// One valve handwheel on a stem, at `x`. It lies flat on top of the
@@ -322,16 +339,26 @@ const fn wheel(x: f32) -> Fitting {
         Vec3::new(x, 0.15, 0.600),
         Vec3::new(0.085, 0.09, 0.102),
     )
+    .seated(Seat::On("valve stem"))
 }
 
 /// One racked bottle, at `z` along the starboard wall.
+///
+/// **It stands in the drip pan**, which is what is actually under it —
+/// the three of them used to stop 22 mm above the deck, and standing
+/// them on the deck instead put three round bottoms on one plane with
+/// the pan's, which is a fight nobody would ever see and a lie about
+/// what a works looks like. A bottle in a drip tray is a bottle in a
+/// drip tray.
 const fn bottle(z: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::enamel(palette::kind_color(Kind::GasCanister)),
-        Vec3::new(0.88, -0.42, z),
+        Vec3::new(0.88, -0.36, z),
         Vec3::new(0.055, 0.56, 0.066),
     )
+    .called("bottle")
+    .seated(Seat::On("drip pan"))
 }
 
 /// One manifold collar, at `z` along the pipe run.
@@ -342,6 +369,7 @@ const fn collar(z: f32) -> Fitting {
         Vec3::new(0.86, 0.60, z),
         Vec3::new(0.085, 0.135, 0.05),
     )
+    .seated(Seat::On("manifold"))
 }
 
 /// **The works**, outside: the flare stack on the crown, the cracking

@@ -47,7 +47,9 @@
 use bevy::prelude::Vec3;
 use space_trucking::sim::Kind;
 
-use super::{CAGE_TOP, Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{
+    CAGE_TOP, Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn,
+};
 use crate::palette;
 
 /// Saturn's own room.
@@ -237,12 +239,16 @@ const THE_YARD: [Fitting; 15] = [
         Coat::metal(Worn::Rivet),
         Vec3::new(0.855, 0.30, 0.14),
         Vec3::new(0.045, 0.04, 0.55),
-    ),
+    )
+    .called("rack rail"),
     // A stack of cut plate on the deck, three pieces off three hulls,
     // squared up by somebody with a strong opinion about stacking.
-    plate(0, -0.86, 0.16),
-    plate(3, -0.78, 0.12),
-    plate(2, -0.70, 0.08),
+    // The stack stood 0.105 m off the deck it is "on", all three
+    // pieces of it, which from a stance down the flank is a pile of
+    // hull plate hovering.
+    plate(0, -0.955, 0.16).seated(Seat::Face(Face::Deck)),
+    plate(3, -0.875, 0.12).seated(Seat::On("cut plate")),
+    plate(2, -0.795, 0.08).seated(Seat::On("cut plate")),
     // The patch on the starboard wall over the rack: a slate-blue
     // rectangle riveted over the yard's own sand, with two heads showing.
     // The wall did not come from here either. It is off the aft face
@@ -250,21 +256,25 @@ const THE_YARD: [Fitting; 15] = [
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::enamel_color(3)),
-        Vec3::new(0.955, 0.66, 0.10),
+        Vec3::new(0.986, 0.66, 0.10),
         Vec3::new(0.014, 0.24, 0.30),
-    ),
+    )
+    .called("hull patch")
+    .seated(Seat::Face(Face::Starboard)),
     Fitting::new(
         Shape::Dome,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.940, 0.84, -0.10),
+        Vec3::new(0.960, 0.84, -0.10),
         Vec3::new(0.018, 0.045, 0.022),
-    ),
+    )
+    .seated(Seat::On("hull patch")),
     Fitting::new(
         Shape::Dome,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.940, 0.48, 0.28),
+        Vec3::new(0.960, 0.48, 0.28),
         Vec3::new(0.018, 0.045, 0.022),
-    ),
+    )
+    .seated(Seat::On("hull patch")),
     // The torch: a bottle in the port-forward corner, its hose coiled on
     // the deck, and the cutting head laid on top still glowing. Whatever
     // is on the racks was on a ship this morning.
@@ -273,28 +283,33 @@ const THE_YARD: [Fitting; 15] = [
         Coat::metal(Worn::Socket),
         Vec3::new(-0.88, -0.60, -0.62),
         Vec3::new(0.055, 0.40, 0.066),
-    ),
+    )
+    .called("torch bottle")
+    .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Ring,
         Coat::metal(Worn::Socket),
         Vec3::new(-0.70, -0.90, -0.24),
         Vec3::new(0.14, 0.10, 0.17),
-    ),
+    )
+    .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(palette::EMBER, 2.4),
         Vec3::new(-0.88, -0.16, -0.62),
         Vec3::new(0.045, 0.045, 0.055),
-    ),
+    )
+    .seated(Seat::On("torch bottle")),
     // And the tally board on the port wall: a yard-blue slate with
     // nothing written on it, because this game has no text and a yard
     // this size keeps its books in somebody's head anyway.
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::kind_color(Kind::BayWindow)),
-        Vec3::new(-0.96, 0.34, -0.10),
+        Vec3::new(-0.984, 0.34, -0.10),
         Vec3::new(0.016, 0.26, 0.34),
-    ),
+    )
+    .seated(Seat::Face(Face::Port)),
 ];
 
 /// One racked bay pane, at `z` along the starboard wall: the frame.
@@ -305,6 +320,8 @@ const fn pane(z: f32) -> Fitting {
         Vec3::new(0.93, -0.16, z),
         Vec3::new(0.03, 0.52, 0.26),
     )
+    .called("bay pane")
+    .seated(Seat::On("rack rail"))
 }
 
 /// One racked bay pane's glass, a hair inboard of its frame.
@@ -315,6 +332,7 @@ const fn glass(z: f32) -> Fitting {
         Vec3::new(0.89, -0.16, z),
         Vec3::new(0.02, 0.45, 0.21),
     )
+    .seated(Seat::On("bay pane"))
 }
 
 /// One sheet of cut plate on the stack: which ship's paint, how high it
@@ -326,6 +344,7 @@ const fn plate(paint: u8, y: f32, over: f32) -> Fitting {
         Vec3::new(-0.52 + over, y, -0.10 + over),
         Vec3::new(0.26, 0.045, 0.30),
     )
+    .called("cut plate")
 }
 
 /// **The breaking line**, outside: a shell wearing four other people's

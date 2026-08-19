@@ -57,7 +57,7 @@
 use bevy::prelude::{Color, Vec3};
 use space_trucking::sim::Kind;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn};
 use crate::palette;
 
 /// The parlor's own room.
@@ -216,15 +216,19 @@ const THE_HOUSE: [Fitting; 23] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(-0.60, 0.10, -0.962),
+        Vec3::new(-0.60, 0.10, -0.984),
         Vec3::new(0.37, 0.37, 0.016),
-    ),
+    )
+    .called("sign frame")
+    .seated(Seat::Face(Face::Fore)),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(PLUSH),
         Vec3::new(-0.60, 0.10, -0.945),
         Vec3::new(0.33, 0.33, 0.018),
-    ),
+    )
+    .called("sign board")
+    .seated(Seat::On("sign frame")),
     lamp(-0.600, 0.364),
     lamp(-0.807, 0.264),
     lamp(-0.857, 0.041),
@@ -244,53 +248,63 @@ const THE_HOUSE: [Fitting; 23] = [
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(CHIP, 1.8),
-        Vec3::new(0.0, 0.510, 0.955),
+        Vec3::new(0.0, 0.510, 0.970),
         Vec3::new(0.98, 0.009, 0.030),
-    ),
+    )
+    .seated(Seat::Face(Face::Aft)),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(CHIP, 1.8),
-        Vec3::new(0.0, 0.510, -0.955),
+        Vec3::new(0.0, 0.510, -0.970),
         Vec3::new(0.98, 0.009, 0.030),
-    ),
+    )
+    .seated(Seat::Face(Face::Fore)),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(CHIP, 1.8),
-        Vec3::new(-0.955, 0.510, 0.0),
+        Vec3::new(-0.970, 0.510, 0.0),
         Vec3::new(0.030, 0.009, 0.925),
-    ),
+    )
+    .seated(Seat::Face(Face::Port)),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(CHIP, 1.8),
-        Vec3::new(0.955, 0.510, 0.0),
+        Vec3::new(0.970, 0.510, 0.0),
         Vec3::new(0.030, 0.009, 0.925),
-    ),
+    )
+    .seated(Seat::Face(Face::Starboard)),
     // Plush on both flanks, in a gold reveal: what a room is lined with
     // when nobody in it is meant to notice the time.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(-0.965, -0.18, -0.28),
+        Vec3::new(-0.980, -0.18, -0.28),
         Vec3::new(0.020, 0.44, 0.62),
-    ),
+    )
+    .called("plush reveal")
+    .seated(Seat::Face(Face::Port)),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(PLUSH),
         Vec3::new(-0.950, -0.18, -0.28),
         Vec3::new(0.022, 0.40, 0.58),
-    ),
+    )
+    .seated(Seat::On("plush reveal")),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.965, -0.52, 0.42),
+        Vec3::new(0.980, -0.52, 0.42),
         Vec3::new(0.020, 0.40, 0.40),
-    ),
+    )
+    .called("plush reveal")
+    .seated(Seat::Face(Face::Starboard)),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(PLUSH),
         Vec3::new(0.950, -0.52, 0.42),
         Vec3::new(0.022, 0.36, 0.36),
-    ),
+    )
+    .seated(Seat::On("plush reveal")),
     // **The rack.** Four commemorative chips, mounted like medals on a
     // lit gold board on the starboard wall aft of the chalk, with the
     // rail they sit on under them. Every one of them is a stake somebody laid on the
@@ -298,9 +312,11 @@ const THE_HOUSE: [Fitting; 23] = [
     Fitting::new(
         Shape::Slab,
         Coat::enamel(IDOL),
-        Vec3::new(0.965, 0.24, 0.450),
+        Vec3::new(0.982, 0.24, 0.450),
         Vec3::new(0.018, 0.20, 0.45),
-    ),
+    )
+    .called("chip rack")
+    .seated(Seat::Face(Face::Starboard)),
     chip(0.10),
     chip(0.33),
     chip(0.56),
@@ -308,9 +324,10 @@ const THE_HOUSE: [Fitting; 23] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(0.945, 0.02, 0.450),
+        Vec3::new(0.962, 0.02, 0.450),
         Vec3::new(0.030, 0.022, 0.45),
-    ),
+    )
+    .seated(Seat::On("chip rack")),
 ];
 
 /// One lamp of the sign's seven, at `(x, y)` on the front wall.
@@ -321,6 +338,7 @@ const fn lamp(x: f32, y: f32) -> Fitting {
         Vec3::new(x, y, -0.905),
         Vec3::new(0.058, 0.058, 0.038),
     )
+    .seated(Seat::On("sign board"))
 }
 
 /// One commemorative chip on the rack, at `z` along the starboard wall.
@@ -330,9 +348,10 @@ const fn chip(z: f32) -> Fitting {
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(CHIP, 2.0),
-        Vec3::new(0.940, 0.24, z),
+        Vec3::new(0.957, 0.24, z),
         Vec3::new(0.022, 0.13, 0.095),
     )
+    .seated(Seat::On("chip rack"))
 }
 
 /// **The sign**, outside: a neon halo standing over the roof on two

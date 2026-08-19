@@ -37,7 +37,7 @@
 use bevy::prelude::{Color, Vec3};
 use space_trucking::sim::Kind;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn};
 use crate::palette;
 
 /// Earth's own room.
@@ -283,7 +283,8 @@ const RATION_COUNTER: [Fitting; 14] = [
         Coat::metal(Worn::Plate),
         Vec3::new(0.10, 0.90, 0.140),
         Vec3::new(0.09, 0.025, 0.55),
-    ),
+    )
+    .seated(Seat::On("duct clamp")),
     clamp(-0.30),
     clamp(0.24),
 ];
@@ -303,9 +304,11 @@ const fn upright(z: f32) -> Fitting {
     Fitting::new(
         Shape::Post,
         Coat::metal(Worn::Plate),
-        Vec3::new(-0.82, -0.42, z),
+        Vec3::new(-0.82, -0.44, z),
         Vec3::new(0.022, 0.56, 0.022),
     )
+    .called("grow rack upright")
+    .seated(Seat::Face(Face::Deck))
 }
 
 /// One shelf of the grow rack, at height `y`.
@@ -316,16 +319,23 @@ const fn shelf(y: f32) -> Fitting {
         Vec3::new(-0.82, y, -0.36),
         Vec3::new(0.145, 0.020, 0.34),
     )
+    .seated(Seat::On("grow rack upright"))
 }
 
 /// One duct clamp, at `z` along the ceiling.
+///
+/// **A clamp holding a duct to a ceiling reaches the ceiling.** These
+/// stopped 27.5 mm under it with the duct hanging off them, and nothing
+/// over either of them.
 const fn clamp(z: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.10, 0.90, z),
+        Vec3::new(0.10, 0.925, z),
         Vec3::new(0.12, 0.075, 0.035),
     )
+    .called("duct clamp")
+    .seated(Seat::Face(Face::Deckhead))
 }
 
 /// **The ribbon**, outside: the owner's space elevator with the romance

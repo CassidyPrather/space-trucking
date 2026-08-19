@@ -56,7 +56,7 @@
 use bevy::prelude::{Color, Vec3};
 use space_trucking::sim::Kind;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn};
 use crate::palette;
 
 /// The pump bay's own room.
@@ -234,30 +234,41 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         IRON,
-        Vec3::new(0.10, 0.80, 0.955),
+        Vec3::new(0.10, 0.80, 0.970),
         Vec3::new(0.30, 0.17, 0.030),
-    ),
+    )
+    .called("manifold plate")
+    .seated(Seat::Face(Face::Aft)),
     Fitting::new(
         Shape::Dome,
         Coat::enamel(FUEL),
         Vec3::new(-0.02, 0.80, 0.885),
         Vec3::new(0.145, 0.115, 0.060),
-    ),
+    )
+    .seated(Seat::On("manifold plate")),
     Fitting::new(
         Shape::Slab,
         PIPE,
         Vec3::new(0.50, 0.62, 0.920),
         Vec3::new(0.040, 0.36, 0.040),
-    ),
+    )
+    .seated(Seat::On("aft duct")),
     Fitting::new(
         Shape::Slab,
         PIPE,
         Vec3::new(-0.20, 0.68, 0.920),
         Vec3::new(0.032, 0.30, 0.032),
-    ),
+    )
+    .seated(Seat::On("aft duct")),
     // Two thin conduits under it, clipped on at whatever height the last
     // pair of hands found convenient — and both stopping clear of the
     // doorway, which is a threshold and belongs to two rooms.
+    // These two claim nothing, and the word in their own note is why:
+    // a conduit CLIPPED on stands off the wall on its clips, and there
+    // are no clips drawn. Running them back to the plane put the thinner
+    // one's inboard face 0.7 mm off the wall's own paint, on one plane
+    // and one facing, which is a flicker bought with a promise nobody
+    // made.
     Fitting::new(
         Shape::Slab,
         IRON,
@@ -276,37 +287,46 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         PIPE,
-        Vec3::new(0.0, 0.56, 0.900),
+        Vec3::new(0.0, 0.56, 0.925),
         Vec3::new(0.90, 0.075, 0.075),
-    ),
+    )
+    .called("aft duct")
+    .seated(Seat::Face(Face::Aft)),
     // A junction box on it, hung crooked, with nothing to say.
     Fitting::new(
         Shape::Slab,
         IRON,
         Vec3::new(-0.46, 0.70, 0.900),
         Vec3::new(0.16, 0.13, 0.085),
-    ),
+    )
+    .seated(Seat::On("aft duct")),
     // The main riser, deck to cornice in the starboard-forward corner,
     // with three flange collars up it. A `Ring` lies flat in the room's
     // own plane, which is what a flange round a standing pipe does.
-    Fitting::new(
+    // **Deck to cornice means deck to cornice.** It stopped 0.176 m
+    // above the deck it runs from, so the one thing in the room that
+    // says where the fuel comes from started in mid-air.
+    Fitting::spanning(
         Shape::Post,
         PIPE,
-        Vec3::new(0.78, 0.03, -0.76),
-        Vec3::new(0.115, 0.87, 0.115),
-    ),
+        Vec3::new(0.665, -0.964, -0.875),
+        Vec3::new(0.895, 0.90, -0.645),
+    )
+    .called("main riser")
+    .seated(Seat::On("drip tray")),
     collar(0.78, -0.62, -0.76),
     collar(0.78, 0.04, -0.76),
     collar(0.78, 0.66, -0.76),
     // A second, thinner riser in the port-forward corner. It goes into
     // the deck and it does not come back, and nothing in this room says
     // where either of them go.
-    Fitting::new(
+    Fitting::spanning(
         Shape::Post,
         PIPE,
-        Vec3::new(-0.80, 0.08, -0.78),
-        Vec3::new(0.070, 0.86, 0.070),
-    ),
+        Vec3::new(-0.870, -1.0, -0.850),
+        Vec3::new(-0.730, 0.94, -0.710),
+    )
+    .seated(Seat::Face(Face::Deck)),
     // The ducts that join them, square-section, along the cornice —
     // where a duct goes, at the height a duct goes.
     Fitting::new(
@@ -314,13 +334,15 @@ const PLUMBING: [Fitting; 24] = [
         PIPE,
         Vec3::new(0.0, 0.78, -0.82),
         Vec3::new(0.92, 0.075, 0.075),
-    ),
+    )
+    .seated(Seat::On("main riser")),
     Fitting::new(
         Shape::Slab,
         PIPE,
         Vec3::new(0.86, 0.78, -0.01),
         Vec3::new(0.075, 0.075, 0.735),
-    ),
+    )
+    .seated(Seat::On("main riser")),
     // The branch that feeds the pump, dropping down the aft-starboard
     // corner behind the machine.
     Fitting::new(
@@ -328,15 +350,18 @@ const PLUMBING: [Fitting; 24] = [
         PIPE,
         Vec3::new(0.895, 0.16, 0.895),
         Vec3::new(0.052, 0.68, 0.055),
-    ),
+    )
+    .seated(Seat::On("aft duct")),
     // The drip tray, and the stain that says how long the tray has been
     // losing the argument.
     Fitting::new(
         Shape::Slab,
         IRON,
-        Vec3::new(0.72, -0.926, -0.72),
+        Vec3::new(0.72, -0.982, -0.72),
         Vec3::new(0.22, 0.018, 0.18),
-    ),
+    )
+    .called("drip tray")
+    .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::SOOT),
@@ -348,42 +373,50 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Slab,
         IRON,
-        Vec3::new(0.955, 0.16, -0.12),
+        Vec3::new(0.970, 0.16, -0.12),
         Vec3::new(0.030, 0.16, 0.16),
-    ),
+    )
+    .called("gauge surround")
+    .seated(Seat::Face(Face::Starboard)),
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(FUEL, 1.5),
         Vec3::new(0.905, 0.16, -0.12),
         Vec3::new(0.040, 0.115, 0.115),
-    ),
+    )
+    .seated(Seat::On("gauge surround")),
     // A hose coiled on the deck, perished, not put away by anybody.
     Fitting::new(
         Shape::Ring,
         Coat::enamel(palette::SOOT),
         Vec3::new(-0.42, -0.930, -0.50),
         Vec3::new(0.30, 0.060, 0.30),
-    ),
+    )
+    .seated(Seat::Face(Face::Deck)),
     // Snacks. The case is the second thing on these premises anybody
     // chose, it is lit from behind, and there is one thing left in it.
     Fitting::new(
         Shape::Slab,
         IRON,
-        Vec3::new(-0.955, 0.12, -0.28),
+        Vec3::new(-0.970, 0.12, -0.28),
         Vec3::new(0.030, 0.24, 0.19),
-    ),
+    )
+    .called("snack case")
+    .seated(Seat::Face(Face::Port)),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(TUBE, 0.7),
-        Vec3::new(-0.918, 0.12, -0.28),
+        Vec3::new(-0.958, 0.12, -0.28),
         Vec3::new(0.012, 0.20, 0.155),
-    ),
+    )
+    .seated(Seat::On("snack case")),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::kind_color(Kind::RationBricks)),
-        Vec3::new(-0.895, -0.02, -0.24),
+        Vec3::new(-0.925, -0.02, -0.24),
         Vec3::new(0.020, 0.055, 0.05),
-    ),
+    )
+    .seated(Seat::On("snack case")),
 ];
 
 /// One flange collar round a riser, at `(x, y, z)`.
@@ -394,6 +427,7 @@ const fn collar(x: f32, y: f32, z: f32) -> Fitting {
         Vec3::new(x, y, z),
         Vec3::new(0.165, 0.045, 0.165),
     )
+    .seated(Seat::On("main riser"))
 }
 
 /// **The forecourt rig**, outside: a canopy on four legs with a strip

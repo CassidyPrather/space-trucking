@@ -36,7 +36,7 @@
 use bevy::prelude::{Color, Vec3};
 use space_trucking::sim::Kind;
 
-use super::{Character, Coat, Fitting, Handshake, Light, Outfit, Shape, Tiles, Worn};
+use super::{Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn};
 use crate::palette;
 
 /// Venus's own room.
@@ -249,7 +249,8 @@ const SALON: [Fitting; 17] = [
         Coat::enamel(palette::kind_color(Kind::Couch)),
         Vec3::new(0.39, -0.55, 0.52),
         Vec3::new(0.53, 0.026, 0.026),
-    ),
+    )
+    .seated(Seat::On("stanchion")),
     // The vitrine on the starboard flank: a rose plinth, a shelf, a lit
     // back panel, and the house produce standing on it. Two vials, both
     // out of reach, both worth nothing here and a fortune anywhere else.
@@ -258,19 +259,24 @@ const SALON: [Fitting; 17] = [
         Coat::enamel(palette::POI_VENUS),
         Vec3::new(0.88, -0.74, -0.20),
         Vec3::new(0.10, 0.26, 0.20),
-    ),
+    )
+    .called("vitrine plinth")
+    .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
         Vec3::new(0.88, -0.46, -0.20),
         Vec3::new(0.10, 0.020, 0.19),
-    ),
+    )
+    .called("vitrine shelf")
+    .seated(Seat::On("vitrine plinth")),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::accent::VENUS_HALO, 0.9),
-        Vec3::new(0.945, -0.28, -0.20),
+        Vec3::new(0.980, -0.28, -0.20),
         Vec3::new(0.020, 0.14, 0.18),
-    ),
+    )
+    .seated(Seat::Face(Face::Starboard)),
     vial(-0.30),
     vial(-0.10),
     // The house painting, port flank, in a brass frame under a hooded
@@ -278,27 +284,32 @@ const SALON: [Fitting; 17] = [
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Brass),
-        Vec3::new(-0.965, 0.12, -0.60),
+        Vec3::new(-0.980, 0.12, -0.60),
         Vec3::new(0.020, 0.32, 0.34),
-    ),
+    )
+    .called("picture frame")
+    .seated(Seat::Face(Face::Port)),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::accent::VENUS_HALO),
-        Vec3::new(-0.935, 0.12, -0.60),
+        Vec3::new(-0.950, 0.12, -0.60),
         Vec3::new(0.014, 0.27, 0.29),
-    ),
+    )
+    .seated(Seat::On("picture frame")),
     Fitting::new(
         Shape::Cone,
         Coat::metal(Worn::Brass),
         Vec3::new(-0.86, 0.58, -0.60),
         Vec3::new(0.065, 0.10, 0.11),
-    ),
+    )
+    .called("picture light"),
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::accent::VENUS_HALO, 3.2),
-        Vec3::new(-0.828, 0.43, -0.60),
+        Vec3::new(-0.828, 0.462, -0.60),
         Vec3::new(0.020, 0.018, 0.090),
-    ),
+    )
+    .seated(Seat::On("picture light")),
     // Gilt across the deckhead a cell in off the aft cornice, with two
     // bosses on it. Lit, because a house that gilds is not going to let
     // the dark have it — and off the goods' own band, because a house
@@ -306,9 +317,11 @@ const SALON: [Fitting; 17] = [
     Fitting::new(
         Shape::Slab,
         Coat::etched(palette::accent::VENUS_HALO),
-        Vec3::new(0.24, 0.88, 0.660),
+        Vec3::new(0.24, 0.975, 0.660),
         Vec3::new(0.72, 0.025, 0.020),
-    ),
+    )
+    .called("cornice gilt")
+    .seated(Seat::Face(Face::Deckhead)),
     boss(-0.20),
     boss(0.68),
 ];
@@ -321,6 +334,8 @@ const fn stanchion(x: f32) -> Fitting {
         Vec3::new(x, -0.74, 0.52),
         Vec3::new(0.030, 0.26, 0.030),
     )
+    .called("stanchion")
+    .seated(Seat::Face(Face::Deck))
 }
 
 /// The ball on top of one stanchion.
@@ -331,6 +346,7 @@ const fn finial(x: f32) -> Fitting {
         Vec3::new(x, -0.43, 0.52),
         Vec3::new(0.048, 0.09, 0.048),
     )
+    .seated(Seat::On("stanchion"))
 }
 
 /// One vial of the house perfume, standing on the vitrine shelf at `z`.
@@ -338,9 +354,10 @@ const fn vial(z: f32) -> Fitting {
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(palette::kind_color(Kind::PerfumeVial), 2.4),
-        Vec3::new(0.86, -0.36, z),
+        Vec3::new(0.86, -0.37, z),
         Vec3::new(0.026, 0.070, 0.034),
     )
+    .seated(Seat::On("vitrine shelf"))
 }
 
 /// One gilt boss on the cornice, at `x`.
@@ -351,6 +368,7 @@ const fn boss(x: f32) -> Fitting {
         Vec3::new(x, 0.88, 0.660),
         Vec3::new(0.050, 0.09, 0.035),
     )
+    .seated(Seat::On("cornice gilt"))
 }
 
 /// **The gilt face**, outside: three lit windows along the outboard

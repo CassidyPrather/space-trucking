@@ -1993,6 +1993,7 @@ fn treads(placed: &Placed, out: &mut Vec<SeamPart>) {
                 )),
                 dress,
                 across: None,
+                seat: None,
             });
         };
         for (row, down) in [-STUD_STEP, 0.0, STUD_STEP].into_iter().enumerate() {
@@ -2133,6 +2134,32 @@ pub struct SeamPart {
     /// able to find it. `None` for a shut port and for a tread, which
     /// belong to the room they stand in and to nobody else.
     pub across: Option<RoomId>,
+    /// **What holds it up**, where it claims anything — see [`Seat`].
+    pub seat: Option<Seat>,
+}
+
+/// **What a doorway's hardware claims holds it up** — `poi::Seat` and
+/// `pieces::Seat` again, in the one frame a seam is written in.
+///
+/// A station's fitting is a fraction of a room's box and a rig's part is
+/// a fraction of its own; a doorway is built straight in world units off
+/// the site the sim declares, so the surface a piece of hardware bolts to
+/// is a world plane rather than a side of anybody's box. The claim is
+/// still declared and then checked and never guessed at: a part that is
+/// construction — a lining straddling the edge it dresses, a passage
+/// plate spanning the pad between two rooms — says nothing and is asked
+/// nothing.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Seat {
+    /// The plane it is bolted to: what that surface is called, a point
+    /// on it, and the way the part reaches along to meet it.
+    Plane(&'static str, Vec3, Vec3),
+    /// Another part of the same room's dressing, by its own
+    /// [`what`](SeamPart::what) — and any part whose name BEGINS with
+    /// the claim answers to it, so a body drawn several times over
+    /// (`leaf[0]`, `leaf[1]`) is named once and meeting any of them is
+    /// meeting the seat.
+    On(String),
 }
 
 /// **Everything the ports of one room draw.** A mated door's frame where
@@ -2183,12 +2210,13 @@ fn seam_frame(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
     let girth = site.out.abs() * (JAMB * 2.0);
     let port = site.port;
     let across = site.mate.map(|(other, _)| other);
-    let mut body = |what: String, at: Vec3, size: Vec3, dress| {
+    let mut body = |what: String, at: Vec3, size: Vec3, dress, seat| {
         out.push(SeamPart {
             what,
             at: Transform::from_translation(at).with_scale(size),
             dress,
             across,
+            seat,
         });
     };
     // **A frame straddles the edge it dresses, and the stiles own the
@@ -2209,17 +2237,25 @@ fn seam_frame(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
     // for, and the head spans the clear opening between the stiles, which
     // is how a door frame is built. Nothing is measured off the drawing:
     // the aperture stays the sim's, and the walk still ducks by it.
+    //
+    // **The lining and the lamp set into it claim nothing.** A frame
+    // straddles the edge it dresses — half a jamb either side of the
+    // plane the aperture was punched on — so it is not bolted TO a
+    // surface, it is what the room is cut with. Declaring a seat for it
+    // would be inventing a promise nobody made.
     body(
         format!("seam[{port}] lintel"),
         mid + up * b,
         girth + dir_a * a.mul_add(2.0, -JAMB) + dir_b * JAMB,
         Dress::Frame,
+        None,
     );
     body(
         format!("seam[{port}] jamb lamp"),
         mid + up * (b + JAMB),
         site.out.abs() * (JAMB * 0.9) + dir_a * (a * 0.5) + dir_b * 0.035,
         Dress::Jamb,
+        None,
     );
     for (nth, side) in [-1.0_f32, 1.0].into_iter().enumerate() {
         body(
@@ -2227,16 +2263,24 @@ fn seam_frame(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
             mid + site.half_a.normalize_or_zero() * side * a,
             girth + dir_a * JAMB + dir_b * b.mul_add(2.0, JAMB),
             Dress::Frame,
+            None,
         );
     }
     let (Some(at), Some((other, _))) = (latch_at(placed, site), site.mate) else {
         return;
     };
+    // **The plate is screwed to the wall and the amber is screwed to the
+    // plate**, and both of those are said out loud now. The plate spent
+    // its sideways clearance along the wall's own normal as well and
+    // stood an eighth of a metre out in the room with its back to
+    // nothing; there was nothing in the harness that could ask, because a
+    // doorway declared where its hardware WAS and never what held it.
     body(
         format!("seam[{port}] latch plate"),
         at,
         dir_a * (LATCH_W * 1.6) + Vec3::Y * (LATCH_H * 1.3) + site.out.abs() * LATCH_T,
         Dress::Frame,
+        seam_wall(placed, site).map(|(on, toward)| Seat::Plane("wall", on, toward)),
     );
     body(
         format!("seam[{port}] latch grab"),
@@ -2251,7 +2295,25 @@ fn seam_frame(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
                 rect: layout::cell_rect(placed.id, 0, 0),
             },
         ),
+        Some(Seat::On(format!("seam[{port}] latch plate"))),
     );
+}
+
+/// **The face the wall shows at a doorway**, as a point on it and the
+/// way a body reaches along to meet it: the chart plane, a notch inside
+/// the room's own box face ([`chart_inset`]).
+///
+/// The box face is where the hull's inner skin is and where the frame
+/// straddles; the chart is where the room's paint rides and where a wall
+/// berth hangs a crate. A plate bolted to the skin is a plate behind the
+/// wall's own paint, so this is the plane a doorway's hardware is held
+/// to, and it is one derivation rather than a number in two places.
+fn seam_wall(placed: &Placed, site: &Site) -> Option<(Vec3, Vec3)> {
+    let Some(Port::Door { wall, .. }) = site.declared else {
+        return None;
+    };
+    let inset = chart_inset(placed.kind, wall);
+    Some((seam_centre(placed, site) - site.out * inset, site.out))
 }
 
 /// **The passage**: the tube of hull that carries a mated doorway across
@@ -2285,6 +2347,10 @@ fn passage(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
             at: Transform::from_translation(at).with_scale(size),
             dress: Dress::Frame,
             across: site.mate.map(|(other, _)| other),
+            // The tube is what the padding cell is FOR — construction,
+            // not hardware, and it stands between two rooms rather than
+            // on either of them. Nothing holds it up but its own ends.
+            seat: None,
         });
     };
     // Deck and deckhead, each a wall thick and reaching a wall out to
@@ -2342,27 +2408,24 @@ fn passage(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
 /// one facing, which is the flicker `coplanar-faces` exists to refuse.
 fn latch_at(placed: &Placed, site: &Site) -> Option<Vec3> {
     let (other, _) = site.mate?;
-    let Some(Port::Door { wall, .. }) = site.declared else {
-        return None;
-    };
+    let (on, toward) = seam_wall(placed, site)?;
     if placed.id > other {
         return None;
     }
     let (a, b) = (site.half_a.length(), site.half_b.length());
     let mid = seam_centre(placed, site);
     let flank = site.half_a.normalize_or_zero() * (a + JAMB + LATCH_W);
-    let toward = Vec3::new(
+    let inward = Vec3::new(
         f32::midpoint(placed.lo.x, placed.hi.x),
         0.0,
         f32::midpoint(placed.lo.z, placed.hi.z),
     ) - Vec3::new(mid.x, 0.0, mid.z);
-    let flank = if flank.dot(toward) < 0.0 {
+    let flank = if flank.dot(inward) < 0.0 {
         -flank
     } else {
         flank
     };
-    let face = LATCH_T.mul_add(0.5, chart_inset(placed.kind, wall) - SEAT_BURY);
-    Some(mid - site.out * face + flank + Vec3::Y * (b * 0.25))
+    Some(on - toward * LATCH_T.mul_add(0.5, -SEAT_BURY) + flank + Vec3::Y * (b * 0.25))
 }
 
 /// **Every declared port, dressed** — [`seam_parts`] spawned, one entity
@@ -2470,12 +2533,13 @@ fn shut_leaf(site: &Site) -> (Vec3, Vec3) {
 /// the truth.
 fn shut_port(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
     let port = site.port;
-    let mut body = |what: String, at: Vec3, size: Vec3, dress| {
+    let mut body = |what: String, at: Vec3, size: Vec3, dress, seat| {
         out.push(SeamPart {
             what,
             at: Transform::from_translation(at).with_scale(size),
             dress,
             across: None,
+            seat,
         });
     };
     if site.is_door() {
@@ -2499,7 +2563,16 @@ fn shut_port(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
                 .collect();
         }
         for (nth, (at, size)) in parts.into_iter().enumerate() {
-            body(format!("shut[{port}] leaf[{nth}]"), at, size, Dress::Leaf);
+            // A leaf drawn shut FILLS the opening it hangs in; the
+            // aperture's own edge is what carries it, and there is no
+            // surface it stands off. Nothing claimed.
+            body(
+                format!("shut[{port}] leaf[{nth}]"),
+                at,
+                size,
+                Dress::Leaf,
+                None,
+            );
         }
         for (nth, (corner, course)) in [
             (-0.66_f32, -0.66_f32),
@@ -2510,18 +2583,48 @@ fn shut_port(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
         .into_iter()
         .enumerate()
         {
+            // **A rivet head is on the side of the plate you can see.**
+            // These stood a whole plate thickness the OTHER way — out
+            // past the leaf's back face, in the punched-out depth of the
+            // aperture, 11.9 mm clear of the plate they fasten and
+            // squarely behind it from every stance in the room. Nothing
+            // could ask until a leaf said what held its rivets up. A head
+            // straddles the face it fastens, so half of it is in the
+            // plate and half of it is proud, which is also what a rivet
+            // looks like.
             body(
                 format!("shut[{port}] rivet[{nth}]"),
-                site.leaf + site.half_a * corner + site.half_b * course + site.out * PLATE_T,
+                site.leaf + site.half_a * corner + site.half_b * course
+                    - site.out * (PLATE_T * 0.5),
                 Vec3::splat(0.045),
                 Dress::Rivet,
+                Some(Seat::On(format!("shut[{port}] leaf"))),
             );
         }
         return;
     }
-    // The vertical pair. `out` points out of the room (down through a
-    // hatch, up through a ladder port), so `-out` is always "into the
-    // room" and the whole fitting is written once for both.
+    shut_hatch(site, out);
+}
+
+/// A hatch or a ladder port, dressed: a leaf sunk into the opening, a
+/// coaming rim round it, a hinge barrel down one edge and a recessed
+/// pull opposite, so the eye reads *hinged, lifts that way* without a
+/// word of text.
+///
+/// `out` points out of the room (down through a hatch, up through a
+/// ladder port), so `-out` is always "into the room" and the whole
+/// fitting is written once for both.
+fn shut_hatch(site: &Site, out: &mut Vec<SeamPart>) {
+    let port = site.port;
+    let mut body = |what: String, at: Vec3, size: Vec3, dress, seat| {
+        out.push(SeamPart {
+            what,
+            at: Transform::from_translation(at).with_scale(size),
+            dress,
+            across: None,
+            seat,
+        });
+    };
     let (a, b) = (site.half_a.length(), site.half_b.length());
     let dir_a = site.half_a.normalize_or_zero().abs();
     let dir_b = site.half_b.normalize_or_zero().abs();
@@ -2532,6 +2635,7 @@ fn shut_port(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
         site.leaf + site.out * PLATE_T.mul_add(0.5, SINK),
         dir_a * (a * 2.0) + dir_b * (b * 2.0) + flat * PLATE_T,
         Dress::Leaf,
+        None,
     );
     // The coaming: four bars round the opening, a rim's height proud —
     // straddling the lip, and yielding at the corners.
@@ -2565,6 +2669,10 @@ fn shut_port(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
                 + across * RIM_W
                 + flat * RIM_H,
             Dress::Frame,
+            // The rim stands ON the plane the opening is punched in —
+            // `site.leaf` is that plane, the deck's own chart — and
+            // straddles the lip from there.
+            Some(Seat::Plane("deck", site.leaf, site.out)),
         );
     }
     // The hinge: two brass barrels down one edge of the sunk leaf.
@@ -2575,6 +2683,10 @@ fn shut_port(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
                 - site.out * 0.002,
             dir_a * (a * 0.18) + dir_b * (b * 0.34) + flat * (SINK * 0.7),
             Dress::Brass,
+            // A hinge is carried by the coaming on one side and the leaf
+            // on the other, and its own comment says only where it runs.
+            // Nothing is promised, so nothing is asked.
+            None,
         );
     }
     // And the pull, opposite the hinge: a brass bar lying in a shadowed
@@ -2586,12 +2698,17 @@ fn shut_port(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
         site.leaf + site.half_a * 0.62 + site.out * (SINK * 0.5),
         dir_a * (a * 0.5) + dir_b * (b * 0.42) + flat * SINK,
         Dress::Well,
+        // "The well reaches the deck plane so the shadow reads" — that
+        // is a promise about a surface, so it is written down.
+        Some(Seat::Plane("deck", site.leaf, site.out)),
     );
     body(
         format!("hatch[{port}] pull bar"),
         site.leaf + site.half_a * 0.62 + site.out * (SINK * 0.06),
         dir_a * (a * 0.30) + dir_b * (b * 0.09) + flat * (SINK * 0.30),
         Dress::Brass,
+        // "The bar sits inside it", which is a joint with the well.
+        Some(Seat::On(format!("hatch[{port}] pull well"))),
     );
 }
 

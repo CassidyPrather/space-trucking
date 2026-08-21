@@ -135,3 +135,41 @@ changing; remove a line only by shipping it or striking it in review.
   deferred — `gnawed` is permanent this pass, a scar the cargo carries
   through the economy. When repair lands it belongs in `src/sim/rats.rs`,
   next to the teeth.
+
+## Decided without asking
+
+The companion to the list above. Where a choice had a defensible answer
+and no taste in it, it was made rather than escalated — but made in the
+open, so catching up is a scan of this list and not a feat of memory.
+Every line is reversible; strike one by overruling it.
+
+- **A room is four cells tall** (`CEIL_Y` 2.20, `COURSES` still 3), not
+  five. Five scales every station's decor by 1.22 vertically and leaves
+  1.10 m of blank band over 1.65 m of wall, and DESIGN.md wants the
+  space cramped. The cost is real and worth knowing: the band above the
+  cornices went from 82 mm to 22 mm, and the parlor's coving had to
+  become a 20 mm bead.
+- **A riding room refuses to part.** `latch_at`'s doc always said a
+  riding room's seam is not asked to part; `the_burner_parts_like_any_
+  other_room` pinned the opposite and called selling your furnace
+  "legal, foolish, and supported". One click destroying owned equipment
+  with no gesture and no recovery is a missing safeguard rather than a
+  stance, so the doc won and the test was inverted. A seam that cannot
+  part is now drawn without a latch at all.
+- **A rig is drawn one cell deep** (`RIG_FAR = RIG_NEAR + CELL`), which
+  was the last length in the world off the cargo grid. It costs 31 mm —
+  6.7% more air per wall berth.
+- **Two spilling rig parts moved rather than the depth band widening.**
+  They spill at opposite ends, so a band curing both costs 29% more air
+  on *every* wall berth in the game to cure two kinds.
+- **A hoop's claim on space is its tube, not the frame it lies in.**
+  The other direction — scaling every `Shape::Ring`'s tube up to fill
+  its declared box — was measured first and costs 20 new findings to
+  cure 5: every frame in the game was authored against today's wafer.
+- **`Violation::Athwart` was deleted rather than kept.** Once a
+  footprint is stated in the frame of the wall it hangs on, there is
+  nothing left for it to refuse.
+- **Twenty cargo kinds were re-posed, not translated down.** A flat kind
+  lies on a deck; it does not stand on one. Eleven sank, seven stood up
+  (a glyph reads a cylinder end-on as a circle), and two — the transit
+  chit and the casino chip — were laid on their backs.

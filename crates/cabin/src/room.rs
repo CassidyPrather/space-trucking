@@ -302,6 +302,14 @@ pub struct Site {
     pub declared: Option<Port>,
     /// Which room and port this one is mated to, if any.
     pub mate: Option<(RoomId, PortId)>,
+    /// **What kind of room is on the far side**, where anything is.
+    ///
+    /// A seam is a fact about two rooms and every other field here is a
+    /// fact about one, which is why this had to be read off the graph
+    /// rather than off the room. The hardware a doorway hangs asks it:
+    /// a latch parts the room beyond, and a room that rides is not one
+    /// the sim will ever let go ([`latch_at`]).
+    pub beyond: Option<RoomKind>,
     /// The hole this port punches through the hull, as a world box.
     pub lo: Vec3,
     pub hi: Vec3,
@@ -596,7 +604,7 @@ pub const fn cabin_room() -> Room {
 /// consumer builds its `Placed` through here, so nothing can derive a
 /// room's geometry two different ways.
 #[must_use]
-pub fn placed(id: RoomId, room: &Room) -> Placed {
+pub fn placed(rooms: &Rooms, id: RoomId, room: &Room) -> Placed {
     let (lo, hi) = room_box(room);
     Placed {
         id,
@@ -606,7 +614,7 @@ pub fn placed(id: RoomId, room: &Room) -> Placed {
         lo,
         hi,
         charts: charts(id, room),
-        ports: sites(room),
+        ports: sites(rooms, room),
     }
 }
 
@@ -746,7 +754,7 @@ fn axis_along(out: Vec3) -> Vec3 {
 /// Every attachment point of a placed room, sited: the hole it punches,
 /// the plane its leaf hangs in, and who (if anyone) is on the far side.
 #[must_use]
-pub fn sites(room: &Room) -> [Site; PORTS] {
+pub fn sites(rooms: &Rooms, room: &Room) -> [Site; PORTS] {
     let kind = room.kind;
     let yaw = room.pose.yaw;
     let ports = kind.ports();
@@ -754,6 +762,7 @@ pub fn sites(room: &Room) -> [Site; PORTS] {
         port: 0,
         declared: None,
         mate: None,
+        beyond: None,
         lo: Vec3::ZERO,
         hi: Vec3::ZERO,
         out: Vec3::Y,
@@ -766,6 +775,7 @@ pub fn sites(room: &Room) -> [Site; PORTS] {
         site.port = index as PortId;
         site.declared = ports[index];
         site.mate = room.mates[index];
+        site.beyond = site.mate.and_then(|(other, _)| rooms.kind(other));
         // A slot the kind does not declare is a wall: nothing punched,
         // nothing hung, nothing drawn (docs/ROOMS.md, "The port law").
         let Some(declared) = ports[index] else {
@@ -832,8 +842,20 @@ pub fn sites(room: &Room) -> [Site; PORTS] {
 /// which is why no slab in this game says where a door is.
 #[must_use]
 pub fn cabin_holes() -> [(Vec3, Vec3); PORTS] {
-    let room = cabin_room();
-    sites(&room).map(|site| (site.lo, site.hi))
+    lone_cabin().ports.map(|site| (site.lo, site.hi))
+}
+
+/// **The cabin on its own, placed** — the hull's own geometry, with no
+/// graph around it.
+///
+/// `rig::structure` builds the ship's shell once, before there is a sim
+/// to ask, and a lone cabin mates nothing: what lies beyond each of its
+/// ports is nothing, whichever graph the question is put to. So the
+/// root graph is the honest one to ask, and this is where saying so
+/// lives instead of at each caller.
+#[must_use]
+pub fn lone_cabin() -> Placed {
+    placed(&Rooms::root(RoomKind::Cabin), CABIN, &cabin_room())
 }
 
 /// Subtract a box from a slab, as up to six axis-aligned remainders. A
@@ -892,7 +914,7 @@ pub fn preset(rooms: &Rooms, name: &str) -> Option<(Vec3, f32, f32)> {
     let inside = |kind: RoomKind, wall: u8, pitch: f32| {
         let id = rooms.find(kind)?;
         let room = rooms.get(id)?;
-        let placed = placed(id, room);
+        let placed = placed(rooms, id, room);
         let mid = (placed.lo + placed.hi) * 0.5;
         let eye = Vec3::new(mid.x, EYE_HEIGHT, mid.z);
         let face = wall_out(wall, placed.yaw);
@@ -906,7 +928,7 @@ pub fn preset(rooms: &Rooms, name: &str) -> Option<(Vec3, f32, f32)> {
         // The cabin's own floor hatch, from a body's length away and
         // looking down at it — the reading the playtest could not make.
         "hatch" => {
-            let cabin = placed(CABIN, rooms.get(CABIN)?);
+            let cabin = placed(rooms, CABIN, rooms.get(CABIN)?);
             let site = cabin
                 .ports
                 .iter()
@@ -930,7 +952,7 @@ pub fn preset(rooms: &Rooms, name: &str) -> Option<(Vec3, f32, f32)> {
                 .filter(|(_, room)| !room.kind.riding())
                 .map(|(id, _)| id)
                 .max()?;
-            let placed = placed(id, rooms.get(id)?);
+            let placed = placed(rooms, id, rooms.get(id)?);
             let (lo, hi) = hull_box(&placed);
             let mid = (lo + hi) * 0.5;
             // Wall 0 is the door; the outboard face is the other way.
@@ -962,7 +984,7 @@ pub fn preset(rooms: &Rooms, name: &str) -> Option<(Vec3, f32, f32)> {
         // passes through: an aperture is two courses of the cargo grid,
         // which is a hatch, not a hall.
         "seam" | "door" => {
-            let cabin = placed(CABIN, rooms.get(CABIN)?);
+            let cabin = placed(rooms, CABIN, rooms.get(CABIN)?);
             let site = cabin
                 .ports
                 .iter()
@@ -1037,7 +1059,7 @@ pub fn survey(shell: Res<Shell>, mut plan: ResMut<Plan>, mut envelope: ResMut<En
         .iter()
         .map(|(id, room)| Placed {
             host: host(room.kind),
-            ..placed(id, room)
+            ..placed(rooms, id, room)
         })
         .collect();
     *envelope = walk_boxes(&plan.rooms);
@@ -2383,6 +2405,18 @@ fn passage(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
 /// refuse it if it were. The cabin does not part from itself, and a
 /// riding room's seam is not asked to.
 ///
+/// **That last sentence is now the code and not just the comment.** A
+/// latch was drawn on the furnace's doorway and it worked: one press
+/// took the room away, with the fire and the hopper and whatever was
+/// staged in it, and nothing anywhere gave it back. The sim refuses it
+/// now (`Refusal::Riding`), which is where a rule belongs — and a
+/// control that can only ever refuse is a control that should not be
+/// drawn, so the seam of a room that rides carries no latch at all.
+/// Which room that is comes off the graph
+/// (`Site::beyond`, `RoomKind::riding`) rather than off the burner's
+/// name, so the crew module attached tomorrow is safe on the day it is
+/// written.
+///
 /// **It is bolted to the wall, and it used to hang in front of it.** The
 /// sideways clearance is `JAMB + LATCH_W` — out past the jamb, then out
 /// past the latch's own width, which is what puts the plate on bare wall
@@ -2409,7 +2443,7 @@ fn passage(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
 fn latch_at(placed: &Placed, site: &Site) -> Option<Vec3> {
     let (other, _) = site.mate?;
     let (on, toward) = seam_wall(placed, site)?;
-    if placed.id > other {
+    if placed.id > other || site.beyond.is_some_and(RoomKind::riding) {
         return None;
     }
     let (a, b) = (site.half_a.length(), site.half_b.length());
@@ -3281,7 +3315,7 @@ mod tests {
         const { assert!(CALLER_DROP > 0.0, "the deckhead came down onto the lamp") };
         let mut rooms = Rooms::new();
         let trade = rooms.spawn(RoomKind::Trade, CABIN).expect("a market fits");
-        let placed = placed(trade, rooms.get(trade).expect("just attached"));
+        let placed = placed(&rooms, trade, rooms.get(trade).expect("just attached"));
         let (at, _) = caller_reach(&placed);
         assert!(
             (at.y - placed.lo.y - (HEAD_CLEAR + SHADE_R)).abs() < 1e-4,
@@ -3417,7 +3451,10 @@ mod tests {
     #[test]
     fn the_walk_envelope_reaches_through_a_mated_door() {
         let rooms = Rooms::new();
-        let placed: Vec<Placed> = rooms.iter().map(|(id, room)| placed(id, room)).collect();
+        let placed: Vec<Placed> = rooms
+            .iter()
+            .map(|(id, room)| placed(&rooms, id, room))
+            .collect();
         let envelope = walk_boxes(&placed);
         // Mid-cabin, mid-doorway, and mid-burner are all legal, and the
         // walk from one to the other never leaves the envelope.
@@ -3464,7 +3501,10 @@ mod tests {
         let trade = rooms
             .spawn(RoomKind::Trade, CABIN)
             .expect("the dock attaches its room");
-        let placed: Vec<Placed> = rooms.iter().map(|(id, room)| placed(id, room)).collect();
+        let placed: Vec<Placed> = rooms
+            .iter()
+            .map(|(id, room)| placed(&rooms, id, room))
+            .collect();
         let envelope = walk_boxes(&placed);
         let shop = placed
             .iter()
@@ -3520,10 +3560,10 @@ mod tests {
     /// at runtime.
     fn world_surfaces(sim: &space_trucking::sim::Sim) -> Vec<crate::surface::Aimable> {
         use crate::surface::Aimable;
-        let plan: Vec<Placed> = sim
-            .rooms()
+        let rooms = sim.rooms();
+        let plan: Vec<Placed> = rooms
             .iter()
-            .map(|(id, room)| placed(id, room))
+            .map(|(id, room)| placed(rooms, id, room))
             .collect();
         let mut aims: Vec<Aimable> = Vec::new();
         for room in &plan {
@@ -3614,11 +3654,10 @@ mod tests {
         let mut lifted = 0;
         for (id, kind) in berthed {
             let aims = world_surfaces(&bridge.sim);
-            let plan: Vec<Placed> = bridge
-                .sim
-                .rooms()
+            let rooms = bridge.sim.rooms();
+            let plan: Vec<Placed> = rooms
                 .iter()
-                .map(|(room, r)| placed(room, r))
+                .map(|(room, r)| placed(rooms, room, r))
                 .collect();
             let envelope = walk_boxes(&plan);
             let charts: Vec<(Station, SimSurface)> =
@@ -3833,11 +3872,10 @@ mod tests {
         let save = crate::fixture::alongside(RoomKind::Pump).expect("a leg meets a pump bay");
         let mut bridge = Bridge::boot_fixture(&save);
         let pump = bridge.sim.rooms().find(RoomKind::Pump).expect("alongside");
-        let plan: Vec<Placed> = bridge
-            .sim
-            .rooms()
+        let rooms = bridge.sim.rooms();
+        let plan: Vec<Placed> = rooms
             .iter()
-            .map(|(id, room)| placed(id, room))
+            .map(|(id, room)| placed(rooms, id, room))
             .collect();
         let envelope = walk_boxes(&plan);
         let room = plan.iter().find(|room| room.id == pump).expect("placed");
@@ -3917,7 +3955,10 @@ mod tests {
         ] {
             let _ = rooms.spawn(kind, CABIN);
         }
-        rooms.iter().map(|(id, room)| placed(id, room)).collect()
+        rooms
+            .iter()
+            .map(|(id, room)| placed(&rooms, id, room))
+            .collect()
     }
 
     /// **A doorway draws each body once.**
@@ -4099,7 +4140,10 @@ mod tests {
     fn no_two_rooms_hulls_ever_share_a_cubic_centimetre() {
         for plan in [crowded_ship(), {
             let rooms = Rooms::new();
-            rooms.iter().map(|(id, room)| placed(id, room)).collect()
+            rooms
+                .iter()
+                .map(|(id, room)| placed(&rooms, id, room))
+                .collect()
         }] {
             assert!(plan.len() >= 2, "this law wants a ship with neighbours");
             for (i, a) in plan.iter().enumerate() {
@@ -4191,6 +4235,65 @@ mod tests {
         assert!(latches >= 2, "only {latches} seams grew a latch");
     }
 
+    /// **A seam that cannot part is drawn without a latch.**
+    ///
+    /// The furnace's doorway wore one, and it worked: the sim let a
+    /// riding room go, so one press took the room away with the fire
+    /// and the hopper inside it and nothing anywhere gave it back. The
+    /// sim refuses it now (`Refusal::Riding`) and this is the other
+    /// half — a control whose only possible answer is a refusal is a
+    /// control that should not be drawn, and the amber that means *this
+    /// seam can be worked* must never be hung where it cannot.
+    ///
+    /// It is asked of every seam of every room rather than of the
+    /// burner: what a latch may name is `RoomKind::riding`, the sim's
+    /// own predicate, so the rule holds for the crew module nobody has
+    /// written yet. The counts are in it because a rule about which
+    /// latches exist passes trivially on a ship with none.
+    #[test]
+    fn a_riding_rooms_seam_is_drawn_without_a_latch() {
+        let ship = Rooms::new();
+        let yard: Vec<Placed> = ship
+            .iter()
+            .map(|(id, room)| placed(&ship, id, room))
+            .collect();
+        for room in &yard {
+            for site in &room.ports {
+                assert!(
+                    latch_at(room, site).is_none(),
+                    "room {} port {} hung a latch on the furnace seam",
+                    room.id,
+                    site.port
+                );
+            }
+        }
+        // And the ordinary seams still grow one each. A calling room is
+        // reached through exactly one seam and that seam is what
+        // dismisses it, so the tally is the callers themselves.
+        let plan = crowded_ship();
+        let mut latches = 0;
+        for room in &plan {
+            for site in &room.ports {
+                if latch_at(room, site).is_none() {
+                    continue;
+                }
+                let beyond = site.beyond.expect("a latch only hangs on a mated seam");
+                assert!(
+                    !beyond.riding(),
+                    "room {} hung a latch on a {beyond:?}, which rides",
+                    room.id
+                );
+                latches += 1;
+            }
+        }
+        let callers = plan.iter().filter(|room| !room.kind.riding()).count();
+        assert!(callers >= 3, "only {callers} rooms came alongside");
+        assert_eq!(
+            latches, callers,
+            "a caller was left with no way to send it away"
+        );
+    }
+
     /// **The seam's amber latch is bolted to the wall it hangs on.**
     ///
     /// `JAMB + LATCH_W` is the sideways clearance that puts the plate on
@@ -4265,7 +4368,7 @@ mod tests {
     /// the bow-starboard corner was, and a lump is what it was.
     #[test]
     fn the_cabins_floor_hatch_is_flush_with_its_deck() {
-        let cabin = placed(CABIN, &cabin_room());
+        let cabin = lone_cabin();
         let hatch = cabin
             .ports
             .iter()
@@ -4447,7 +4550,10 @@ mod tests {
     fn the_occupied_room_is_the_box_the_body_stands_in() {
         let rooms = Rooms::new();
         let plan = Plan {
-            rooms: rooms.iter().map(|(id, room)| placed(id, room)).collect(),
+            rooms: rooms
+                .iter()
+                .map(|(id, room)| placed(&rooms, id, room))
+                .collect(),
             signature: Vec::new(),
         };
         assert_eq!(plan.room_at(Vec3::new(0.0, EYE_HEIGHT, 0.5)), Some(CABIN));

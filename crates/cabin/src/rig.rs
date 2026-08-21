@@ -404,7 +404,7 @@ pub fn structure() -> Vec<Slab> {
     // against it, which is how the cabin came to be the only room in the
     // game still drawing four coplanar faces once every other room had
     // stopped. The cabin's exception is its RIBS now, and nothing else.
-    let cabin = crate::room::placed(CABIN, &crate::room::cabin_room());
+    let cabin = crate::room::lone_cabin();
     let mut slabs: Vec<Slab> = crate::room::shell_boxes(&cabin, &[])
         .into_iter()
         .map(|(center, size, _)| Slab::new(center, size))
@@ -1676,10 +1676,10 @@ mod tests {
     /// The plan a running ship would hold, from a save alone.
     fn world_plan(sim: &space_trucking::sim::Sim) -> crate::room::Plan {
         let mut plan = crate::room::Plan::default();
-        plan.rooms = sim
-            .rooms()
+        let rooms = sim.rooms();
+        plan.rooms = rooms
             .iter()
-            .map(|(id, room)| crate::room::placed(id, room))
+            .map(|(id, room)| crate::room::placed(rooms, id, room))
             .collect();
         plan
     }
@@ -1942,7 +1942,7 @@ mod tests {
         let rooms = Rooms::new();
         let placed: Vec<crate::room::Placed> = rooms
             .iter()
-            .map(|(id, room)| crate::room::placed(id, room))
+            .map(|(id, room)| crate::room::placed(&rooms, id, room))
             .collect();
         let boxes = crate::room::walk_boxes(&placed);
         let burner = placed

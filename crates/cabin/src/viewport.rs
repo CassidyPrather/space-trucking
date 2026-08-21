@@ -2368,7 +2368,7 @@ mod tests {
         let rooms = sim.rooms();
         let placed: Vec<_> = rooms
             .iter()
-            .map(|(id, room)| crate::room::placed(id, room))
+            .map(|(id, room)| crate::room::placed(rooms, id, room))
             .collect();
         assert!(placed.len() >= 3, "the fixture flies three rooms");
         for room in &placed {
@@ -2405,7 +2405,7 @@ mod tests {
         let plates: Vec<Plate> = rooms
             .iter()
             .map(|(id, room)| {
-                let (lo, hi) = crate::room::hull_box(&crate::room::placed(id, room));
+                let (lo, hi) = crate::room::hull_box(&crate::room::placed(rooms, id, room));
                 Plate { lo, hi }
             })
             .collect();

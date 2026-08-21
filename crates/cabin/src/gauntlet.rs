@@ -435,7 +435,7 @@ pub fn roster() -> Vec<Stage> {
     let cargo = load(&ship);
     let all: Vec<Placed> = ship
         .iter()
-        .map(|(id, room)| room::placed(id, room))
+        .map(|(id, room)| room::placed(&ship, id, room))
         .collect();
     for (id, kind, name) in [
         (CABIN, RoomKind::Cabin, "cabin"),
@@ -445,7 +445,7 @@ pub fn roster() -> Vec<Stage> {
         debug_assert!(room.kind == kind, "the yard-fresh ship changed shape");
         stages.push(Stage {
             name: name.to_owned(),
-            placed: room::placed(id, room),
+            placed: room::placed(&ship, id, room),
             all: all.clone(),
             rooms: ship.clone(),
             cargo: cargo.clone(),
@@ -460,14 +460,14 @@ pub fn roster() -> Vec<Stage> {
         let cargo = load(&rooms);
         let all: Vec<Placed> = rooms
             .iter()
-            .map(|(other, room)| room::placed(other, room))
+            .map(|(other, room)| room::placed(&rooms, other, room))
             .collect();
         let Some(room) = rooms.get(id) else { continue };
         stages.push(Stage {
             name: name_of(host).to_owned(),
             placed: Placed {
                 host: Some(host),
-                ..room::placed(id, room)
+                ..room::placed(&rooms, id, room)
             },
             all,
             rooms,

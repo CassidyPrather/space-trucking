@@ -62,6 +62,12 @@ const FLASH_LEN: f32 = 0.45;
 /// How far a carried piece hovers off the struck surface, meters.
 const CARRY_LIFT: f32 = 0.05;
 
+/// How much bigger than its berth the aim-anchored hover draws a carried
+/// piece: it stands at the DESTINATION rather than at the face, so it
+/// wears full scale and a shade over, which is what says "this is the
+/// thing, and it is not landed yet".
+const HOVER_FIT: f32 = 1.1;
+
 /// Where the carried piece floats while the crosshair aims at nothing
 /// placeable: ahead of and below the eye, nudged off center, like a box
 /// hitched on one arm — carried, never dropped, and never a blindfold.
@@ -893,6 +899,21 @@ pub const GLAZE: f32 = crate::rig::layer::STEP / RIG_UNIT;
 /// at all.
 pub const SOLE_BURY: f32 = GLAZE;
 
+/// **Where a deck-berthed kind's sole lands, in its own frame** — the
+/// chart plane its berth stands it on, [`SOLE_BURY`] into it.
+///
+/// [`site_on`] stands a deck berth's rig half its own height above the
+/// chart, so the chart is at `-tall/2` of the rig's own upright frame
+/// and a foot meets it by going a step past it. Every kind that stands
+/// on a deck is composed off this rather than off a decimal, and that is
+/// the whole difference between a kind DRAWN STANDING and a kind drawn
+/// centred in its cell that happens to be near the floor — which is what
+/// twenty of them were, because they began as glyphs on a flat console
+/// and were given depth without ever being given a floor (docs/BAY.md).
+fn sole_of(fh: f32) -> f32 {
+    (-fh).mul_add(0.5, -SOLE_BURY)
+}
+
 /// A cone's open end: Bevy stands a `Cone` apex-up, so its mouth faces
 /// its own `-Y`. A shade, a cup, a horn — the direction the light or the
 /// hopper actually goes.
@@ -1026,22 +1047,36 @@ fn aimed_rect(rooms: &Rooms, kind: Kind, sim: SimVec2) -> Option<Rect> {
     ))
 }
 
-/// The rotation a drop at `sim` would settle the carried kind into:
-/// [`site_on`]'s answer for the berth it is aimed at, so the carried
-/// ghost promises the pose the piece will actually take — the upright
-/// rule on the side walls, the backing rule on the floor, the hopper
-/// tile's turn toward the doorway. `None` where the aim is off the net
-/// (the caller falls back to the chart's own facing).
-fn hover_rot(
+/// **The pose a drop at `sim` would settle the carried kind into**: the
+/// turn [`site_on`] would give it, and how far off the chart the same
+/// berth would stand its origin, in metres along the chart's inward
+/// normal. `None` where the aim is off the net (the caller falls back to
+/// the chart's own facing and no stand-off at all).
+///
+/// So the carried ghost promises the pose the piece will actually take —
+/// the upright rule on the side walls, the backing rule on the floor,
+/// the hopper tile's turn toward the doorway.
+///
+/// **The stand-off is the half the ghost used to get wrong**, and it did
+/// not show while every kind was composed centred in its own cell: the
+/// ghost hung its ORIGIN at the struck point, and a body centred on its
+/// origin then sat half in the deck, which reads as a piece resting on
+/// the floor if you do not look hard. A kind drawn STANDING has its body
+/// wholly above its origin, so the same hover puts the whole of it under
+/// the deck. Both numbers are read off `site_on` here rather than
+/// restated, so the ghost and the berth move together.
+fn hover_pose(
     rooms: &Rooms,
     station: Station,
     surface: &SimSurface,
     aft: Option<&SimSurface>,
     kind: Kind,
     sim: SimVec2,
-) -> Option<Quat> {
+) -> Option<(Quat, f32)> {
     let rect = aimed_rect(rooms, kind, sim)?;
-    Some(site_on(station, surface, aft?, kind, rect).1)
+    let (pos, rot, _) = site_on(station, surface, aft?, kind, rect);
+    let chart = surface.to_world(rect_center(rect));
+    Some((rot, (pos - chart).dot(station.inward(surface))))
 }
 
 // -------------------------------------------------------- riding surfaces --
@@ -1810,7 +1845,7 @@ fn carry_held(
             // Aimed at the room: hover the piece at the hit, standing
             // exactly the way it would land. The promise is kept by
             // deriving the rotation from the SAME berth maths the drop
-            // will use ([`hover_rot`]) — a preview that computed its
+            // will use ([`hover_pose`]) — a preview that computed its
             // own facing drifted from the berth (the playtest's
             // quarter-turned starboard chart hovering upright, then
             // landing sideways, and the reverse once the upright rule
@@ -1822,9 +1857,16 @@ fn carry_held(
             // piece's cells, and those cells are still the floor's.
             let (berth, plane) = chart_of(&surfaces, pointer.sim).unwrap_or((station, surface));
             let aft = aft_for(&surfaces, &plane);
-            let rot = hover_rot(sim.rooms(), berth, &plane, aft.as_ref(), kind, pointer.sim)
-                .unwrap_or_else(|| station.face(&surface));
-            (world + station.inward(&surface) * CARRY_LIFT, rot, 1.1)
+            let (rot, stand) =
+                hover_pose(sim.rooms(), berth, &plane, aft.as_ref(), kind, pointer.sim)
+                    .unwrap_or_else(|| (station.face(&surface), 0.0));
+            (
+                world
+                    + station.inward(&surface) * CARRY_LIFT
+                    + berth.inward(&plane) * (stand * HOVER_FIT),
+                rot,
+                HOVER_FIT,
+            )
         } else {
             // Aimed at nothing: hitched low on one arm, off center and
             // compact, its open face turned back toward the carrier —
@@ -1850,7 +1892,7 @@ fn carry_held(
         let Some((pos, rot)) = carry.last else {
             return;
         };
-        (pos, rot, 1.1)
+        (pos, rot, HOVER_FIT)
     };
     carry.last = Some((pos, rot));
 
@@ -3581,21 +3623,30 @@ fn grab_parts(kind: Kind, fw: f32, fh: f32, z: f32) -> Vec<Part> {
     out
 }
 
-/// A squat paint tin: `shell` for the body, `lid` capping it — the one
-/// silhouette both paints share.
-fn tin_parts(shell: Coat, lid: Coat) -> Vec<Part> {
-    let upright = Quat::from_rotation_x(FRAC_PI_2);
+/// A squat paint tin standing on its base at `sole`, `deep` into its
+/// cell: `shell` for the body, `lid` capping it — the one silhouette
+/// both paints share.
+///
+/// **It used to be drawn end-on**, a disc of lid in front of a disc of
+/// shell, which is what a tin looks like as a glyph on a flat console
+/// and is a tin lying on its side once there is a deck under it. Both
+/// paints ride this, so both of them fell over together and both of them
+/// stand up together.
+fn tin_parts(shell: Coat, lid: Coat, sole: f32, deep: f32) -> Vec<Part> {
+    let drum = 11.0;
     vec![
         Part::new(
             "tin shell",
             Body::Drum {
                 r: 9.5,
-                h: 11.0,
+                h: drum,
                 facets: None,
             },
             shell,
-            Transform::from_xyz(0.0, 0.0, 5.5).with_rotation(upright),
+            Transform::from_xyz(0.0, sole + drum * 0.5, deep),
         ),
+        // Proud of the shell and straddling its rim, which is what a lid
+        // pressed onto a tin looks like and keeps the two off one plane.
         Part::new(
             "tin lid",
             Body::Drum {
@@ -3604,7 +3655,7 @@ fn tin_parts(shell: Coat, lid: Coat) -> Vec<Part> {
                 facets: None,
             },
             lid,
-            Transform::from_xyz(0.0, 0.0, 11.4).with_rotation(upright),
+            Transform::from_xyz(0.0, sole + drum + 0.4, deep),
         ),
     ]
 }
@@ -3840,104 +3891,147 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
     let socket = Coat::metal(Worn::Socket);
     let shaded = |mix: f32| Coat::enamel(palette::mix(color, palette::SHADOW, mix));
     let flat = Quat::from_rotation_x(FRAC_PI_2);
+    // Where a standing kind's sole meets its deck, and the middle of the
+    // depth a rig is composed within: the two numbers a body that stands
+    // on a floor is placed off, rather than the middle of a cell face a
+    // bas-relief was centred on.
+    let sole = sole_of(fh);
+    let deep = f32::midpoint(RIG_NEAR, RIG_FAR);
     let mut out: Vec<Part> = Vec::new();
     match piece.kind {
-        // A pink rhombus with a sparkle: a cube on its corner, one glint.
+        // A pink rhombus with a sparkle: cut crystal, corner-on, one
+        // glint down the near arris.
+        // **The corner it stands on is the one facing the room.** The
+        // glyph turned the cube about its depth, which read as a diamond
+        // on a flat console and reads as a flask balanced on a point the
+        // moment it has a deck under it. The same quarter turn taken
+        // about the UPRIGHT keeps the faceted silhouette and puts the
+        // thing on its base.
         Kind::PerfumeVial => {
+            let flask = Vec3::new(fw * 0.52, fh * 0.52, 15.0);
             out.push(Part::new(
                 "flask",
-                Body::Box(Vec3::new(fw * 0.52, fh * 0.52, 15.0)),
+                Body::Box(flask),
                 body,
-                Transform::from_xyz(0.0, 0.0, 9.0).with_rotation(Quat::from_rotation_z(FRAC_PI_4)),
+                Transform::from_xyz(0.0, flask.y.mul_add(0.5, sole), deep)
+                    .with_rotation(Quat::from_rotation_y(FRAC_PI_4)),
             ));
+            // On the near arris, which the turn brings to the middle of
+            // the face: the corner's own reach out of the flask's centre.
             out.push(Part::new(
                 "sparkle",
                 Body::Ball { r: 2.2 },
                 Coat::phosphor(palette::GLINT, 2.5),
-                Transform::from_xyz(fw * 0.3, fh * 0.3, 16.0),
+                Transform::from_xyz(
+                    0.0,
+                    fh.mul_add(0.38, sole),
+                    flask.x.mul_add(0.5 * core::f32::consts::SQRT_2, deep),
+                ),
             ));
         }
         // A gold slab, a darker belt, a sphere head. Unimaginably tacky.
+        // **An idol stands on its own base**, so the torso's foot is the
+        // sole and the belt and the head are measured off the torso.
         Kind::GildedIdol => {
+            let torso = Vec3::new(fw * 0.58, fh * 0.52, 18.0);
+            let stand = torso.y.mul_add(0.5, sole);
             out.push(Part::new(
                 "torso",
-                Body::Box(Vec3::new(fw * 0.58, fh * 0.52, 18.0)),
+                Body::Box(torso),
                 body,
-                Transform::from_xyz(0.0, -fh * 0.1, 9.0),
+                Transform::from_xyz(0.0, stand, 9.0),
             ));
             out.push(Part::new(
                 "belt",
                 Body::Box(Vec3::new(fw * 0.62, fh * 0.07, 19.0)),
                 shaded(0.45),
-                Transform::from_xyz(0.0, -fh * 0.02, 10.0),
+                Transform::from_xyz(0.0, fh.mul_add(0.08, stand), 10.0),
             ));
             out.push(Part::new(
                 "head",
                 Body::Ball { r: fw * 0.26 },
                 body,
-                Transform::from_xyz(0.0, fh * 0.28, 12.0),
+                Transform::from_xyz(0.0, fh.mul_add(0.38, stand), 12.0),
             ));
         }
-        // A 2×2 sub-grid of identical government flavour.
+        // A 2×2 sub-grid of identical government flavour, the bottom
+        // course standing on the deck.
         Kind::RationBricks => {
-            for (i, (ix, iy)) in [(-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)]
+            let brick = Vec3::new(26.0, 26.0, 16.0);
+            let course = brick.y.mul_add(0.5, sole);
+            for (i, (ix, iy)) in [(-1.0, 0.0), (1.0, 0.0), (-1.0, 1.0), (1.0, 1.0)]
                 .into_iter()
                 .enumerate()
             {
                 out.push(
                     Part::new(
                         "brick",
-                        Body::Box(Vec3::new(26.0, 26.0, 16.0)),
+                        Body::Box(brick),
                         body,
-                        Transform::from_xyz(15.5 * ix, 15.5 * iy, 8.0),
+                        Transform::from_xyz(15.5 * ix, 31.0f32.mul_add(iy, course), 8.0),
                     )
                     .nth(u8::try_from(i).unwrap_or(0)),
                 );
             }
         }
-        // Two rust bars, stacked askew.
+        // Two rust bars, stacked askew on the deck.
         Kind::ScrapAlloy => {
+            let under = fh.mul_add(0.18, sole);
             out.push(Part::new(
                 "under bar",
                 Body::Box(Vec3::new(fw * 0.92, fh * 0.36, 10.0)),
                 shaded(0.25),
-                Transform::from_xyz(-fw * 0.02, -fh * 0.16, 5.0),
+                Transform::from_xyz(-fw * 0.02, under, 5.0),
             ));
             out.push(Part::new(
                 "top bar",
                 Body::Box(Vec3::new(fw * 0.88, fh * 0.34, 10.0)),
                 body,
-                Transform::from_xyz(fw * 0.02, fh * 0.14, 15.0),
+                Transform::from_xyz(fw * 0.02, fh.mul_add(0.30, under), 15.0),
             ));
         }
         // A pot with a sprout on top. Under lamplight it blooms: three
         // PerfumeVial-pink buds, hidden until `lit_adjacent` says the
         // footprint sits in a lit lamp's halo (presentation only, the
         // 2D bloom's reading).
+        // **A pot stands on the deck and a sprout grows up out of it.**
+        // Both were laid on their sides — the glyph drew a drum and a
+        // cone end-on, which is a circle and a disc on a flat console
+        // and is a plant pot on its side once there is a floor.
         Kind::Seedlings => {
+            let pot = 12.0;
+            let pot_top = sole + pot;
+            let sprout = 18.0_f32;
             out.push(Part::new(
                 "pot",
                 Body::Drum {
                     r: fw * 0.3,
-                    h: 12.0,
+                    h: pot,
                     facets: None,
                 },
                 shaded(0.35),
-                Transform::from_xyz(0.0, -fh * 0.1, 6.0).with_rotation(flat),
+                Transform::from_xyz(0.0, sole + pot * 0.5, deep),
             ));
+            // Rooted a finger inside the pot rather than balanced on its
+            // rim, which is the joint every other body in this file makes.
+            let stem = sprout.mul_add(0.5, pot_top - 2.0);
             out.push(Part::new(
                 "sprout",
                 Body::Horn {
                     r: fw * 0.2,
-                    h: 18.0,
+                    h: sprout,
                 },
                 body,
-                Transform::from_xyz(0.0, -fh * 0.1, 21.0).with_rotation(flat),
+                Transform::from_xyz(0.0, stem, deep),
             ));
             let bud = Coat::enamel(palette::kind_color(Kind::PerfumeVial));
-            for (i, (bx, by, bz)) in [(-6.0, -3.5, 15.0), (5.5, -2.5, 17.0), (0.8, -4.5, 27.0)]
-                .into_iter()
-                .enumerate()
+            for (i, (bx, by, bz)) in [
+                (-4.2, stem - 2.0, deep + 1.5),
+                (4.0, stem + 0.5, deep - 1.2),
+                (0.5, stem + 5.0, deep + 2.6),
+            ]
+            .into_iter()
+            .enumerate()
             {
                 out.push(
                     Part::new(
@@ -3951,13 +4045,19 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 );
             }
         }
-        // A horizontal capsule wearing hazard chevrons.
+        // A horizontal capsule wearing hazard chevrons, lying on the
+        // deck. It lies rather than stands because it is two cells
+        // across and one course tall: a bottle that long, stood up, is
+        // a bottle through the deckhead.
         Kind::GasCanister => {
+            let r = 10.0;
+            let lying = sole + r;
             out.push(Part::new(
                 "tank",
-                Body::Pill { r: 10.0, len: 34.0 },
+                Body::Pill { r, len: 34.0 },
                 body,
-                Transform::from_xyz(0.0, 0.0, 10.0).with_rotation(Quat::from_rotation_z(FRAC_PI_2)),
+                Transform::from_xyz(0.0, lying, 10.0)
+                    .with_rotation(Quat::from_rotation_z(FRAC_PI_2)),
             ));
             let warn = shaded(0.5);
             // The lower leg is the shallower one: two legs cut to one
@@ -3978,7 +4078,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                             "chevron",
                             leg,
                             warn,
-                            Transform::from_xyz(cx - 2.5, sy, 19.0)
+                            Transform::from_xyz(cx - 2.5, lying + sy, 19.0)
                                 .with_rotation(Quat::from_rotation_z(turn)),
                         )
                         .nth(nth),
@@ -3988,16 +4088,23 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
             }
         }
         // A hexagonal prism in a frost ring.
+        // **A core is a canister and a canister stands.** Both bodies
+        // were drawn end-on — a hexagon inside a circle, which is the
+        // glyph — so the prism lay on its side and the ring stood on its
+        // rim. Upright, the ring is a collar round the core's waist,
+        // which is what a frost ring on a cryogenic flask is.
         Kind::CryoCore => {
+            let core = 18.0;
+            let waist = sole + core * 0.5;
             out.push(Part::new(
                 "core",
                 Body::Drum {
                     r: fw * 0.36,
-                    h: 18.0,
+                    h: core,
                     facets: Some(6),
                 },
                 body,
-                Transform::from_xyz(0.0, 0.0, 9.0).with_rotation(flat),
+                Transform::from_xyz(0.0, waist, deep),
             ));
             let r = fw * 0.44;
             out.push(Part::new(
@@ -4007,19 +4114,22 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                     outer: r + 1.4,
                 },
                 Coat::enamel(palette::mix(palette::GLINT, color, 0.4)),
-                Transform::from_xyz(0.0, 0.0, 9.0).with_rotation(flat),
+                Transform::from_xyz(0.0, waist, deep),
             ));
         }
-        // Three stacked pearls, the middle a shade wetter.
+        // Three stacked pearls, the middle a shade wetter, the lowest
+        // resting on the deck.
         Kind::BrinePearls => {
-            for (i, (coat, y)) in [(body, 21.0), (shaded(0.15), 0.0), (body, -21.0)]
+            let r = 10.5;
+            let low = sole + r;
+            for (i, (coat, y)) in [(body, low + 42.0), (shaded(0.15), low + 21.0), (body, low)]
                 .into_iter()
                 .enumerate()
             {
                 out.push(
                     Part::new(
                         "pearl",
-                        Body::Ball { r: 10.5 },
+                        Body::Ball { r },
                         coat,
                         Transform::from_xyz(0.0, y, 10.0),
                     )
@@ -4030,20 +4140,29 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
         // Matte near-black, breathing an eerie edge frame at the audio
         // hum's ~1 Hz beat.
         Kind::SuspiciousCrate => {
+            let crate_body = Vec3::new(fw * 0.84, fh * 0.84, 24.0);
+            let stand = crate_body.y.mul_add(0.5, sole);
             out.push(Part::new(
                 "crate",
-                Body::Box(Vec3::new(fw * 0.84, fh * 0.84, 24.0)),
+                Body::Box(crate_body),
                 body,
-                Transform::from_xyz(0.0, 0.0, 12.0),
+                Transform::from_xyz(0.0, stand, 12.0),
             ));
             let hum = Coat::phosphor(palette::EERIE, 0.5);
-            let along = Body::Box(Vec3::new(fw * 0.86, 2.6, 2.6));
-            let across = Body::Box(Vec3::new(2.6, fh * 0.86, 1.8));
+            // **The frame is painted on the crate's face**, so it runs
+            // INSIDE the edge it traces rather than straddling it. It
+            // used to be centred on the crate's own top and bottom, and
+            // a crate that stands on its deck then stands on a strip of
+            // light with the box floating over it.
+            let rail = 2.6;
+            let along = Body::Box(Vec3::new(fw * 0.86, rail, rail));
+            let across = Body::Box(Vec3::new(rail, fh * 0.82, 1.8));
+            let up = crate_body.y.mul_add(0.5, -rail);
             for (i, (edge, at)) in [
-                (along, Vec3::new(0.0, fh * 0.42, 24.0)),
-                (along, Vec3::new(0.0, -fh * 0.42, 24.0)),
-                (across, Vec3::new(fw * 0.42, 0.0, 24.0)),
-                (across, Vec3::new(-fw * 0.42, 0.0, 24.0)),
+                (along, Vec3::new(0.0, stand + up, 24.0)),
+                (along, Vec3::new(0.0, stand - up, 24.0)),
+                (across, Vec3::new(fw * 0.42, stand, 24.0)),
+                (across, Vec3::new(-fw * 0.42, stand, 24.0)),
             ]
             .into_iter()
             .enumerate()
@@ -4064,11 +4183,13 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
         }
         // A dun parcel lashed with twine, knot hand-tied off centre.
         Kind::MysteriousCrate => {
+            let parcel = Vec3::new(fw * 0.8, fh * 0.8, 18.0);
+            let stand = parcel.y.mul_add(0.5, sole);
             out.push(Part::new(
                 "parcel",
-                Body::Box(Vec3::new(fw * 0.8, fh * 0.8, 18.0)),
+                Body::Box(parcel),
                 body,
-                Transform::from_xyz(0.0, 0.0, 9.0),
+                Transform::from_xyz(0.0, stand, 9.0),
             ));
             let twine = shaded(0.4);
             out.push(
@@ -4076,16 +4197,19 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                     "twine",
                     Body::Box(Vec3::new(fw * 0.84, 2.4, 2.0)),
                     twine,
-                    Transform::from_xyz(0.0, 0.0, 18.4),
+                    Transform::from_xyz(0.0, stand, 18.4),
                 )
                 .nth(0),
             );
+            // The upright lashing stops a hair short of the parcel's own
+            // ends: run out past them it is what meets the deck, and a
+            // parcel standing on its string is a parcel standing on air.
             out.push(
                 Part::new(
                     "twine",
-                    Body::Box(Vec3::new(2.4, fh * 0.84, 1.4)),
+                    Body::Box(Vec3::new(2.4, fh * 0.78, 1.4)),
                     twine,
-                    Transform::from_xyz(-fw * 0.06, 0.0, 18.4),
+                    Transform::from_xyz(-fw * 0.06, stand, 18.4),
                 )
                 .nth(1),
             );
@@ -4093,16 +4217,18 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 "knot",
                 Body::Ball { r: 1.8 },
                 twine,
-                Transform::from_xyz(-fw * 0.06, 0.0, 19.4),
+                Transform::from_xyz(-fw * 0.06, stand, 19.4),
             ));
         }
         // The big one. It hums a chord: a bright ring and core.
         Kind::VeryMysteriousCrate => {
+            let crate_body = Vec3::new(fw * 0.88, fh * 0.88, 28.0);
+            let stand = crate_body.y.mul_add(0.5, sole);
             out.push(Part::new(
                 "crate",
-                Body::Box(Vec3::new(fw * 0.88, fh * 0.88, 28.0)),
+                Body::Box(crate_body),
                 body,
-                Transform::from_xyz(0.0, 0.0, 14.0),
+                Transform::from_xyz(0.0, stand, 14.0),
             ));
             let hum = Coat::phosphor(palette::EERIE_BRIGHT, 0.8);
             let r = fw * 0.26;
@@ -4114,7 +4240,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                         outer: r + 1.6,
                     },
                     hum,
-                    Transform::from_xyz(0.0, 0.0, 28.6).with_rotation(flat),
+                    Transform::from_xyz(0.0, stand, 28.6).with_rotation(flat),
                 )
                 .role(Role::Pulse {
                     color: palette::EERIE_BRIGHT,
@@ -4135,74 +4261,91 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 "core",
                 Body::Ball { r: fw * 0.09 },
                 hum,
-                Transform::from_xyz(0.0, 0.0, fw.mul_add(-0.09, RIG_FAR)),
+                Transform::from_xyz(0.0, stand, fw.mul_add(-0.09, RIG_FAR)),
             ));
         }
         // A shard chipped off the comet, one glint down its flank.
+        // **A shard stands on its broken base.** Point-first at the eye
+        // is the glyph's reading of a cone; on a deck it is a spike
+        // lying down, and the flank the glint runs down is vertical.
         Kind::CometIce => {
+            let shard = 28.0;
             out.push(Part::new(
                 "shard",
                 Body::Horn {
                     r: fw * 0.32,
-                    h: 28.0,
+                    h: shard,
                 },
                 body,
-                Transform::from_xyz(0.0, 0.0, 14.0).with_rotation(flat),
+                Transform::from_xyz(0.0, sole + shard * 0.5, deep),
             ));
             out.push(Part::new(
                 "glint",
-                Body::Box(Vec3::new(1.6, 1.6, 12.0)),
+                Body::Box(Vec3::new(1.6, 12.0, 1.6)),
                 Coat::enamel(palette::GLINT),
-                Transform::from_xyz(-fw * 0.12, fw * 0.06, 12.0),
+                Transform::from_xyz(-4.5, fh.mul_add(0.33, sole), deep + 4.7),
             ));
         }
         // A bottle of the dark between stars, corked, one star inside.
+        // **A corked bottle stands on its base.** Body, neck and cork
+        // were three drums drawn end-on and stacked in DEPTH, which is
+        // the glyph's concentric circles; on a deck that is a bottle
+        // lying down with its cork pointing at whoever walks in. The
+        // stack is the same stack, stood up, each length rooted a finger
+        // in the one below it.
         Kind::BottledMidnight => {
+            let (barrel, neck, cork) = (16.0_f32, 7.0_f32, 4.0_f32);
+            let barrel_y = barrel.mul_add(0.5, sole);
+            let neck_y = neck.mul_add(0.5, sole + barrel - 1.5);
+            let cork_y = cork.mul_add(0.5, neck.mul_add(0.5, neck_y) - 1.0);
             out.push(Part::new(
                 "bottle",
                 Body::Drum {
                     r: fw * 0.24,
-                    h: 16.0,
+                    h: barrel,
                     facets: None,
                 },
                 body,
-                Transform::from_xyz(0.0, 0.0, 8.0).with_rotation(flat),
+                Transform::from_xyz(0.0, barrel_y, deep),
             ));
             out.push(Part::new(
                 "neck",
                 Body::Drum {
                     r: fw * 0.1,
-                    h: 7.0,
+                    h: neck,
                     facets: None,
                 },
                 body,
-                Transform::from_xyz(0.0, 0.0, 19.5).with_rotation(flat),
+                Transform::from_xyz(0.0, neck_y, deep),
             ));
             out.push(Part::new(
                 "cork",
                 Body::Drum {
                     r: fw * 0.13,
-                    h: 4.0,
+                    h: cork,
                     facets: None,
                 },
                 brass,
-                Transform::from_xyz(0.0, 0.0, 25.0).with_rotation(flat),
+                Transform::from_xyz(0.0, cork_y, deep),
             ));
             let sx = (f32::from(piece.variant % 4) - 1.5) * 2.5;
             out.push(Part::new(
                 "star",
                 Body::Ball { r: 1.4 },
                 Coat::phosphor(palette::GLINT, 4.0),
-                Transform::from_xyz(sx, 0.0, 9.0),
+                Transform::from_xyz(sx, barrel_y, deep),
             ));
         }
         // Three overlapping cream spheres. It is looking at you.
         Kind::Fluff => {
             let r = fw * 0.28;
+            // It sits on the deck on the widest of its three tufts;
+            // the other two and the eyes are measured off that one.
+            let sit = sole + r * 0.85;
             for (i, (coat, ball, at)) in [
-                (shaded(0.08), r * 0.85, Vec3::new(-4.0, -2.0, 7.0)),
-                (body, r * 0.75, Vec3::new(4.5, -2.5, 6.5)),
-                (body, r, Vec3::new(0.0, 1.5, 9.5)),
+                (shaded(0.08), r * 0.85, Vec3::new(-4.0, sit, 7.0)),
+                (body, r * 0.75, Vec3::new(4.5, sit - 0.5, 6.5)),
+                (body, r, Vec3::new(0.0, sit + 3.5, 9.5)),
             ]
             .into_iter()
             .enumerate()
@@ -4223,7 +4366,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                         "eye",
                         Body::Ball { r: 1.1 },
                         socket,
-                        Transform::from_xyz(ex, 5.0, 17.0),
+                        Transform::from_xyz(ex, sit + 7.0, 17.0),
                     )
                     .nth(u8::try_from(i).unwrap_or(0)),
                 );
@@ -4235,35 +4378,51 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
         // Cut to the card's full height it shared both those planes with
         // it, which is two faces at one depth along the whole of a stripe
         // somebody is holding up to their eye.
+        //
+        // **A card lies down.** It is a card: five units thick and two
+        // thirds of a cell tall, and the only way to settle a thing like
+        // that onto a deck standing is to balance it on its edge, which
+        // is a worse picture than the one it replaces. So the whole
+        // composition takes a quarter turn onto its back — same card,
+        // same stripe, same proudness, printed side up — and the card's
+        // own face is the sole.
         Kind::TransitChit => {
+            let laid = Quat::from_rotation_x(-FRAC_PI_2);
             out.push(Part::new(
                 "card",
                 Body::Box(Vec3::new(fw * 0.74, fh * 0.52, 5.0)),
                 body,
-                Transform::from_xyz(0.0, 0.0, 2.5),
+                Transform::from_xyz(0.0, sole + 2.5, deep).with_rotation(laid),
             ));
             out.push(Part::new(
                 "stripe",
                 Body::Box(Vec3::new(fw * 0.12, fh * 0.46, 5.6)),
                 Coat::enamel(palette::POI_GUILD),
-                Transform::from_xyz(-fw * 0.2, 0.0, 3.0),
+                Transform::from_xyz(-fw * 0.2, sole + 3.0, deep).with_rotation(laid),
             ));
         }
         // One priceless chip: a low cylinder, a rim, an inner ring.
+        // **A chip lies face up.** Nine units thick and three quarters
+        // of a cell across, stood on a deck it is a coin balanced on its
+        // edge; the same three bodies about an upright axle are a chip
+        // on a table, which is where a chip is. The face's own claim
+        // turns with it, so what says "this side looks at you" and what
+        // draws it are still one reading.
         Kind::CasinoChip => {
             let r = fw * 0.36;
+            let chip = 9.0;
             out.push(
                 Part::new(
                     "chip face",
                     Body::Drum {
                         r,
-                        h: 9.0,
+                        h: chip,
                         facets: None,
                     },
                     body,
-                    Transform::from_xyz(0.0, 0.0, 4.5),
+                    Transform::from_xyz(0.0, sole + chip * 0.5, deep),
                 )
-                .pointing(AXLE, Vec3::Z),
+                .pointing(AXLE, Vec3::Y),
             );
             out.push(Part::new(
                 "rim",
@@ -4272,7 +4431,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                     outer: r.mul_add(0.94, 1.3),
                 },
                 shaded(0.3),
-                Transform::from_xyz(0.0, 0.0, 9.0).with_rotation(flat),
+                Transform::from_xyz(0.0, sole + chip, deep),
             ));
             out.push(Part::new(
                 "inner ring",
@@ -4281,7 +4440,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                     outer: r.mul_add(0.52, 1.0),
                 },
                 Coat::enamel(palette::mix(palette::GLINT, color, 0.2)),
-                Transform::from_xyz(0.0, 0.0, 9.2).with_rotation(flat),
+                Transform::from_xyz(0.0, sole + chip + 0.2, deep),
             ));
         }
         // A hanging shade off the gantry's top rail: mount plate, stem,
@@ -4397,16 +4556,23 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
         // under the pole, and the pole is under the shade.
         Kind::FloorLamp => {
             let axle = 11.0;
+            // **The plate stands on the deck and the pole stands in the
+            // plate.** Both ends of the pole are derived from what they
+            // meet, so settling the plate onto the floor cannot leave
+            // the column above it hanging.
+            let disc = 3.2_f32;
+            let plate_y = disc.mul_add(0.5, sole);
+            let pole_top = fh * 0.32;
             out.push(
                 Part::new(
                     "base plate",
                     Body::Drum {
                         r: fw * 0.26,
-                        h: 3.2,
+                        h: disc,
                         facets: None,
                     },
                     plate,
-                    Transform::from_xyz(0.0, -fh * 0.41, axle),
+                    Transform::from_xyz(0.0, plate_y, axle),
                 )
                 .pointing(AXLE, Vec3::Y),
             );
@@ -4415,11 +4581,11 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                     "pole",
                     Body::Drum {
                         r: 1.3,
-                        h: fh * 0.72,
+                        h: pole_top - plate_y,
                         facets: None,
                     },
                     brass,
-                    Transform::from_xyz(0.0, -fh * 0.04, axle),
+                    Transform::from_xyz(0.0, f32::midpoint(plate_y, pole_top), axle),
                 )
                 .seated("base plate"),
             );
@@ -4494,7 +4660,6 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
             // nine millimetres short of the seat, which is a couch
             // standing on four stilts of air (`gauntlet`, `part-seated`).
             // Both ends are derived from the things they meet.
-            let sole = (-fh).mul_add(0.5, -SOLE_BURY);
             let head = seat_h.mul_add(-0.5, seat_y) + GLAZE;
             for (i, (side, fz)) in [(-1.0f32, 3.0), (1.0, 3.0), (-1.0, 16.0), (1.0, 16.0)]
                 .into_iter()
@@ -4616,7 +4781,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
             // The feet stand a step INTO the deck, like every other
             // sole (`SOLE_BURY`), and reach up inside the carcass sides
             // they are screwed to.
-            let foot_y = (-fh).mul_add(0.5, 1.7 - SOLE_BURY);
+            let foot_y = sole + 1.7;
             for (i, (sx, fz)) in [
                 (-1.0f32, 3.0),
                 (1.0, 3.0),
@@ -4979,7 +5144,11 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 }
             }
             // Rolled for the counter: a tied bolt of weave, brass bands.
+            // A rolled rug lies on the deck on the bands that tie it,
+            // because the bands stand proud of the weave — so the axle
+            // the whole roll turns about is a band's own radius up.
             let across = Quat::from_rotation_z(FRAC_PI_2);
+            let axle = fh.mul_add(0.28, sole);
             out.push(
                 Part::new(
                     "bolt",
@@ -4989,7 +5158,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                         facets: None,
                     },
                     body,
-                    Transform::from_xyz(0.0, 0.0, fh * 0.26).with_rotation(across),
+                    Transform::from_xyz(0.0, axle, fh * 0.26).with_rotation(across),
                 )
                 .under(Under::Packed),
             );
@@ -5003,7 +5172,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                             facets: None,
                         },
                         brass,
-                        Transform::from_xyz(sx * fw * 0.26, 0.0, fh * 0.26).with_rotation(across),
+                        Transform::from_xyz(sx * fw * 0.26, axle, fh * 0.26).with_rotation(across),
                     )
                     .under(Under::Packed)
                     .nth(u8::try_from(i).unwrap_or(0)),
@@ -5038,7 +5207,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
             );
             // Canned: a squat battered tin, the lid wearing its color.
             out.extend(
-                tin_parts(body, coat)
+                tin_parts(body, coat, sole, deep)
                     .into_iter()
                     .map(|part| part.under(Under::Packed)),
             );
@@ -5070,7 +5239,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
             // until laid (it shares the coat's instance, and the level
             // stays floored while packed).
             out.extend(
-                tin_parts(shaded(0.55), glass)
+                tin_parts(shaded(0.55), glass, sole, deep)
                     .into_iter()
                     .map(|part| part.under(Under::Packed)),
             );
@@ -6290,8 +6459,9 @@ mod tests {
         let hover = |station: Station, surface: &SimSurface, kind: Kind, x: u8, y: u8| {
             let cell = layout::cell_rect(CABIN, x, y);
             let at = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
-            hover_rot(&rooms, station, surface, Some(&aft), kind, at)
+            hover_pose(&rooms, station, surface, Some(&aft), kind, at)
                 .expect("the aim is on the net")
+                .0
         };
         let up = hover(Station::BayStarboard, &starboard, Kind::ChartTank, 12, 5);
         assert!(
@@ -6434,8 +6604,17 @@ mod tests {
     }
 
     /// Claim two: the carried ghost promises the berth it would take, to
-    /// the last bit. Preview and berth share [`site_on`] today; the
-    /// claim is here so no refactor can quietly split them again.
+    /// the last bit — the turn AND the stand-off. Preview and berth
+    /// share [`site_on`] today; the claim is here so no refactor can
+    /// quietly split them again.
+    ///
+    /// **The stand-off half of it is the half that was missing**, and it
+    /// was invisible while every kind was drawn centred in its own cell:
+    /// the ghost hung a rig's ORIGIN at the point the crosshair struck,
+    /// so a body centred on its origin sat half in the deck and read as
+    /// a piece more or less resting on it. Every kind that stands is
+    /// drawn wholly above its origin now, and the same hover would have
+    /// put the whole of it under the floor.
     ///
     /// Coverings are the one exemption, and honestly so: a carried rug
     /// is ROLLED UP — a different body of the same rig — and its ghost
@@ -6448,8 +6627,9 @@ mod tests {
         // cell under the crosshair, so that is the aim this berth would
         // ever be reached by.
         let aim = rect_center(layout::cell_rect(CABIN, b.cell.0, b.cell.1));
-        let preview = hover_rot(&b.rooms, b.station, &b.surface, Some(&b.aft), b.kind, aim)
-            .expect("the aim is on the net");
+        let (preview, stand) =
+            hover_pose(&b.rooms, b.station, &b.surface, Some(&b.aft), b.kind, aim)
+                .expect("the aim is on the net");
         let (name, rot) = (&b.name, b.site.1);
         for axis in [Vec3::X, Vec3::Y, Vec3::Z] {
             assert!(
@@ -6459,6 +6639,17 @@ mod tests {
                 rot * axis
             );
         }
+        // And the hover the runtime builds out of that stand-off stands
+        // the piece exactly where the berth will, one lift proud of it.
+        let inward = b.station.inward(&b.surface);
+        let hovered = b.surface.to_world(aim) + inward * (CARRY_LIFT + stand);
+        let promised = b.site.0 + inward * CARRY_LIFT;
+        assert!(
+            ((hovered - promised).dot(inward)).abs() < 1e-4,
+            "{name}: the ghost hovers {} off the chart, the berth stands it {}",
+            (hovered - b.surface.to_world(aim)).dot(inward),
+            (b.site.0 - b.surface.to_world(aim)).dot(inward)
+        );
     }
 
     /// Claim three, for a kind that wears one: every texel of amber the
@@ -6585,7 +6776,13 @@ mod tests {
         };
         for (a, b_) in [(-1.0_f32, -1.0_f32), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)] {
             let corner = Vec2::new(a.mul_add(half.x, mid.x), b_.mul_add(half.y, mid.y));
-            let sim = aim(corner * 0.999).expect("the aim meets the body").1;
+            // A hair inside the corner, drawn back toward the body's own
+            // middle. It used to be drawn back toward the rig's ORIGIN,
+            // which is the same point only while every kind is composed
+            // centred in its cell — and none of the ones that stand on a
+            // deck is, now that they are drawn standing on it.
+            let inside = mid + (corner - mid) * 0.999;
+            let sim = aim(inside).expect("the aim meets the body").1;
             assert!(
                 b.rect.contains(sim),
                 "{name}: the body's corner {corner:?} reads {sim:?}, off its own cells"

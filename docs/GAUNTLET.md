@@ -315,12 +315,37 @@ canopy stopped 8.4 mm under the deckhead it is screwed to. The
 porthole's whole assembly — glass, bolt ring and six studs — hung
 32.6 mm out in front of its wall, with the room's own paint visible
 under the brim, which was the last of the nine wall kinds to put its
-backmost body anywhere but on the plane. The other twenty are on the
-docket and they are one class: the 2D console's glyphs, given depth and
-never given a floor, standing between one and fifteen centimetres above
-their own deck cells. That re-authoring is what docs/BAY.md has been
-carrying as deferred work since the net landed, and the couch and the
-cabinet are the two kinds that have had it done.
+backmost body anywhere but on the plane. The other twenty were one
+class: the 2D console's glyphs, given depth and never given a floor,
+standing between one and fifteen centimetres above their own deck cells
+— the re-authoring docs/BAY.md had been carrying since the net landed.
+They are all drawn standing now, and what it took is worth knowing
+because the obvious cure was the wrong one.
+
+**A flat kind lies on a deck; it does not stand on one.** Translating
+twenty bodies down cures twenty findings and makes two of the pictures
+worse: a transit chit or a casino chip settled onto the deck standing is
+a playing card balanced on its edge. The height a glyph had was a
+drawing on a flat console, and reading it as a standing pose is the
+defect — so the question per kind is what pose the object takes on a
+floor, not how far down it goes. Eleven were posed right already and
+wanted settling. Seven were LYING DOWN, because a glyph reads a cylinder
+end-on as a circle and a cone end-on as a disc, and stood up: a vial, a
+plant pot, a cryo core, a shard of comet, a bottle of midnight, and both
+paints' tins. Two lay down. Where a sole lands is one function now
+(`pieces::sole_of`), read off the plane `pieces::site_on` stands a deck
+berth on.
+
+Two things the settle dragged along, and both were invisible while every
+kind was composed centred in its own cell. The carried ghost hung a
+rig's ORIGIN at the point the crosshair struck: a body centred on its
+origin sat half in the deck and read as roughly resting on it, and a
+body drawn wholly above its origin sits wholly under it. The hover reads
+the berth's own stand-off now (`pieces::hover_pose`), so the ghost
+promises the berth's position as well as its turn. And the sweep that
+aims at each corner of a drawn body drew the aim back toward the rig's
+origin, which is the body's own middle only while the body is centred
+there.
 
 ### `furniture-seated` — a hung body meets what it says holds it up
 
@@ -396,18 +421,35 @@ under theirs; a stack of hull plate 105 mm off the deck; a main riser
 that runs "deck to cornice" starting 176 mm above the deck; three
 pillars "floor to deckhead" that reached neither; and a dozen plates,
 patches, plaques and boards standing between 12 and 77 mm off the walls
-they are bolted to. The ten that are left are on the docket with their
-numbers and their reasons.
+they are bolted to. The ten that were left are gone too: five were the
+comet's quarried face, re-composed as one body with steps left standing
+on it, and five were the vocabulary defect below.
 
-**One of those ten is a finding about the vocabulary rather than about a
-station.** Five hoops laid flat "on the deck" — a moon pool's collar, a
-core cradle, three coiled hoses — cannot reach it and cannot be made to.
-A `Shape::Ring`'s drawn tube is 18% of the box `Fitting::half` declares,
-and the containment law measures the declared box, so a hoop whose tube
-meets the deck has a box a tenth of a room deep in the floor. No number a
-station's author can write cures that; what wants fixing is the
-containment reading, so that a body's claim on space is the body's and
-not its wrapper's.
+**Five of those ten were a finding about the vocabulary rather than
+about a station**, and they are the most useful thing this family has
+found. Five hoops laid flat "on the deck" — a moon pool's collar, a core
+cradle, three coiled hoses — could not reach it and could not be made
+to. A `Shape::Ring`'s drawn tube is 18% of the frame `Fitting::half`
+declares, and the containment law was measuring the frame, so a hoop
+whose tube met the deck had a frame a tenth of a room deep in the floor
+and no number a station's author could write cured it.
+
+The fraction is stated once now (`poi::Shape::fill`), `Fitting::span`
+reads the body through it — a claim on space belongs to the thing that
+occupies it — and the sweep cuts its own boxes from the same fraction
+instead of carrying a second table. `Fitting::meeting` is the other
+half: a hoop is placed by naming the face it lands on rather than by a
+decimal its author worked out from the fraction.
+
+**The other direction was tried and measured, and it prices worse.**
+Scaling a torus up until its tube filled its frame would make `half` the
+body's half-extents outright and need no new reading at all — but every
+frame in the game was authored against today's wafer, so every hoop
+became five and a half times thicker: eleven waypoints of the scripted
+walk ended up inside a lamp cage, six wall berths went behind a hoop and
+three more were stood in. Twenty new findings to cure five, and it is
+recorded here because "make the body match the claim" is the tidier
+sentence and the wrong one.
 
 `the_furniture_family_is_asked_about_every_room_and_answers_when_a_body_lifts_off`
 is the guard. It counts the claims (every room declares some, and both
@@ -501,6 +543,12 @@ a list that only grows, and the fixing pass is the thing this exists to
 provoke. The working loop is: strike a line, run `cargo test -p cabin`,
 and let the sweep tell you whether the thing is actually gone.
 
+**The file is empty today**, so the equality it asserts is against a
+sweep that finds nothing and the next line to appear is a defect that
+arrived after this was written. An empty docket is not a finished
+harness — read "What the harness can see, and what it cannot" below,
+and go and look at something it cannot.
+
 `ALLOWED` is the other mechanism entirely — pairs the coplanar detector
 is *wrong* about, each with the reason. **It is empty, and its emptiness
 is a finding.** Every case that has come up so far has been answered by
@@ -512,8 +560,10 @@ planes round its flank along a single line and a sphere meets all six at
 a point — so `Faces` learned which sides of a body's box are really
 faces, and the pairs stopped being reported. The same argument later
 taught it that a body has to land *squarely* on a world axis before its
-box has six faces, which is what a leaning chevron and a vial standing on
-its corner need.
+box has six faces, which is what a leaning chevron and a perfume vial
+turned corner-on to the room need — the vial is square on the axis it
+stands on and on neither of the other two, so two of its box's sides are
+faces and four are wrapper.
 
 If you are about to add a line to `ALLOWED`, the reason has to be about
 the geometry and not about the number. A loosened threshold stops finding

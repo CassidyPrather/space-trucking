@@ -483,6 +483,19 @@ it declares nothing, and that stays legal. **When a rule cannot be
 written, ask what the description leaves unsaid, not only what it fails
 to enumerate.**
 
+The third rule came off five hoops that five different stations had each
+declared "set into the deck" and each drew hovering over it. Nobody had
+mis-declared anything: a `Fitting`'s `half` is the box the unit body is
+scaled into, and four of the five silhouettes fill that box exactly
+while a torus's tube fills 18% of it. The declaration meant one thing
+for a slab and another for a ring, and every author of a ring had been
+quietly wrong about which. **A vocabulary term that means one thing for
+most of its bodies and another for one of them will be read the common
+way by everybody, so the odd body is what needs saying out loud** —
+`poi::Shape::fill`, one statement of the fraction, read by the
+containment law and by the sweep alike. It is worth looking for: the
+suspicious shape is the one whose mesh does not fill its own box.
+
 [GAUNTLET.md](GAUNTLET.md) is the operator's side — how to run it, how to
 read a docket line, what each family looks like in the world when it
 fires, and what the harness still cannot see.

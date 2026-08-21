@@ -284,6 +284,25 @@ recomposed with true depth (rigs began as desk-era bas-reliefs where
 asymmetric furniture must put its back at the wall — the convention is
 now documented at the couch rig).
 
+**The other twenty kinds have since had the same done to them**, and it
+took a rule rather than a pass of the eye. A glyph's height is a drawing
+on a flat console; given depth and a deck it becomes a standing pose,
+and for two thirds of the kinds that pose was wrong — so twenty of them
+stood between one and fifteen centimetres above their own deck cells
+with nothing under them, which nothing could see until the gauntlet grew
+a family for it (`rig-seated`, docs/GAUNTLET.md).
+
+The rule is **a flat kind lies on a deck; it does not stand on one.**
+Settling all twenty downward cures the arithmetic and makes two of the
+pictures worse: a transit chit or a casino chip translated onto the deck
+is a playing card balanced on its edge. So the question per kind is what
+pose the object takes on a floor. Eleven were posed right and wanted
+settling; seven were lying down because a glyph reads a cylinder end-on
+as a circle, and stood up; two lay down. Where a sole lands is one
+function (`pieces::sole_of`), read off the plane a deck berth stands a
+rig on, so a kind is composed against the floor it will stand on rather
+than against the middle of a cell.
+
 ## The room grid (spec): everything is cargo, everywhere is grid
 
 Owner's requirements, spelled out after the burner round — this

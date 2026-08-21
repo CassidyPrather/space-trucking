@@ -113,6 +113,28 @@ pub const BAY_FIT: f32 = 0.96;
 pub const RIG_NEAR: f32 = -2.0;
 pub const RIG_FAR: f32 = RIG_NEAR + layout::CELL;
 
+/// **The middle of the depth every rig is composed within**, in
+/// rig-local sim units — where a rig's body sits along its own `+Z`,
+/// whatever the kind.
+///
+/// Zero in a rig's own frame is the **berth plane**, and the band runs
+/// from just behind it to one cell out into the room. On a wall that
+/// plane is a real thing: the chart the rig is screwed to, with the
+/// room in front of it, so the band lands where it belongs and this is
+/// simply where the body's middle falls.
+///
+/// **A chart a body stands ON has no such plane**, and that is what this
+/// exists to say. The rect a deck or deckhead berth is given spends the
+/// DEPTH (`cargo::Kind::plan_on`), so the cells own the ground on both
+/// sides of their own middle and there is nothing for a band hung off a
+/// plane to hang from. [`site_on`] draws a standing rig back by exactly
+/// this, which lands the band on the cells; without it every standing
+/// body was composed this far out into the aisle, which is most of half
+/// a cell and reads as cargo half a berth off the grid.
+const fn rig_mid() -> f32 {
+    f32::midpoint(RIG_NEAR, RIG_FAR)
+}
+
 /// **How much of the world one rig-local sim unit spends**, in metres.
 ///
 /// A rig is composed in sim units and berthed at [`site_on`]'s scale,
@@ -630,6 +652,16 @@ fn floor_facing(surface: &SimSurface, aft: &SimSurface, rect: Rect) -> Quat {
 
 /// [`net_site`]'s pure core, for a known chart — shared with the unit
 /// tests, which build charts straight from `rig::bay()`.
+///
+/// **A flat chart's berth spends two axes and the chart fixes the
+/// third**, and getting that backwards on one of them is what stood
+/// every crate half a berth out into the aisle. A deck berth's rect is a
+/// plan — across by deep — so the deck fixes the HEIGHT (the rig rises
+/// half its own off the plane) and the cells own the depth. A wall
+/// berth's rect is an elevation — across by tall — so the wall fixes the
+/// DEPTH, and that is the one case where the band every rig is composed
+/// within ([`RIG_NEAR`], [`RIG_FAR`]) already begins where it should.
+/// Everywhere else it has to be drawn back onto the cells ([`rig_mid`]).
 fn site_on(
     station: Station,
     surface: &SimSurface,
@@ -643,12 +675,17 @@ fn site_on(
     // PLAN — across by deep — so the height a rig rises through is the
     // kind's own and never the rect's (`cargo::Kind::extent`).
     let tall = f32::from(kind.upright().1) * layout::CELL;
+    // Back onto the plan: the depth band's middle, laid off along the
+    // way the rig is turned to look, so the band covers the cells the
+    // rect spent on it instead of reaching out of them.
+    let onto_plan = |rot: Quat| rot * (Vec3::Z * (rig_mid() * scale.z));
     match station {
         Station::BayFloor => {
             let base = surface.to_world(rect_center(rect));
+            let rot = floor_facing(surface, aft, rect);
             (
-                base + Vec3::Y * (tall * 0.5 * scale.y),
-                floor_facing(surface, aft, rect),
+                base + Vec3::Y * (tall * 0.5 * scale.y) - onto_plan(rot),
+                rot,
                 scale,
             )
         }
@@ -658,9 +695,10 @@ fn site_on(
         // plane, which is what the playtest called out.
         Station::BayCeiling => {
             let base = surface.to_world(rect_center(rect));
+            let rot = Station::BayWall.face(aft);
             (
-                base - Vec3::Y * (tall * 0.5 * scale.y),
-                Station::BayWall.face(aft),
+                base - Vec3::Y * (tall * 0.5 * scale.y) - onto_plan(rot),
+                rot,
                 scale,
             )
         }
@@ -794,7 +832,7 @@ pub fn berth_box(charts: &[(Station, SimSurface)], kind: Kind, rect: Rect) -> Op
         f32::from(t) * layout::CELL * 0.5,
         (RIG_FAR - RIG_NEAR) * 0.5,
     ) * scale;
-    let centre = pos + rot * (Vec3::Z * (f32::midpoint(RIG_NEAR, RIG_FAR) * scale.z));
+    let centre = pos + rot * (Vec3::Z * (rig_mid() * scale.z));
     let m = Mat3::from_quat(rot);
     let reach = m.x_axis.abs() * half.x + m.y_axis.abs() * half.y + m.z_axis.abs() * half.z;
     Some((centre - reach, centre + reach))
@@ -1048,14 +1086,20 @@ fn aimed_rect(rooms: &Rooms, kind: Kind, sim: SimVec2) -> Option<Rect> {
 }
 
 /// **The pose a drop at `sim` would settle the carried kind into**: the
-/// turn [`site_on`] would give it, and how far off the chart the same
-/// berth would stand its origin, in metres along the chart's inward
-/// normal. `None` where the aim is off the net (the caller falls back to
-/// the chart's own facing and no stand-off at all).
+/// turn [`site_on`] would give it, and where the same berth would stand
+/// its origin relative to the middle of the cells it takes, in metres.
+/// `None` where the aim is off the net (the caller falls back to the
+/// chart's own facing and no stand-off at all).
 ///
 /// So the carried ghost promises the pose the piece will actually take —
 /// the upright rule on the side walls, the backing rule on the floor,
 /// the hopper tile's turn toward the doorway.
+///
+/// **The stand-off is a whole offset and not a height**, because a
+/// standing berth spends one ([`site_on`] draws a deck rig back onto its
+/// own cells). A ghost that carried only the reach off the chart hovered
+/// square over the cell and landed most of half a cell into the aisle,
+/// which is the very defect the berth pose was cured of.
 ///
 /// **The stand-off is the half the ghost used to get wrong**, and it did
 /// not show while every kind was composed centred in its own cell: the
@@ -1072,11 +1116,11 @@ fn hover_pose(
     aft: Option<&SimSurface>,
     kind: Kind,
     sim: SimVec2,
-) -> Option<(Quat, f32)> {
+) -> Option<(Quat, Vec3)> {
     let rect = aimed_rect(rooms, kind, sim)?;
     let (pos, rot, _) = site_on(station, surface, aft?, kind, rect);
     let chart = surface.to_world(rect_center(rect));
-    Some((rot, (pos - chart).dot(station.inward(surface))))
+    Some((rot, pos - chart))
 }
 
 // -------------------------------------------------------- riding surfaces --
@@ -1859,11 +1903,9 @@ fn carry_held(
             let aft = aft_for(&surfaces, &plane);
             let (rot, stand) =
                 hover_pose(sim.rooms(), berth, &plane, aft.as_ref(), kind, pointer.sim)
-                    .unwrap_or_else(|| (station.face(&surface), 0.0));
+                    .unwrap_or_else(|| (station.face(&surface), Vec3::ZERO));
             (
-                world
-                    + station.inward(&surface) * CARRY_LIFT
-                    + berth.inward(&plane) * (stand * HOVER_FIT),
+                world + station.inward(&surface) * CARRY_LIFT + stand * HOVER_FIT,
                 rot,
                 HOVER_FIT,
             )
@@ -6643,14 +6685,24 @@ mod tests {
         }
         // And the hover the runtime builds out of that stand-off stands
         // the piece exactly where the berth will, one lift proud of it.
+        //
+        // **The whole offset, not merely the reach off the chart.** A
+        // standing berth draws its rig back onto its own cells
+        // ([`site_on`]), so a ghost carrying only the height hovered
+        // square over the cell and promised a landing most of half a
+        // cell out into the aisle. What the crosshair is allowed to move
+        // is where the ghost hangs, not how the berth is composed: the
+        // aim is the ANCHOR cell and a footprint hangs off it, so the
+        // ghost and the berth differ by exactly that cell's own offset
+        // from the middle of the rect, and by nothing else.
         let inward = b.station.inward(&b.surface);
-        let hovered = b.surface.to_world(aim) + inward * (CARRY_LIFT + stand);
+        let hovered = b.surface.to_world(aim) + inward * CARRY_LIFT + stand;
         let promised = b.site.0 + inward * CARRY_LIFT;
+        let anchored = b.surface.to_world(aim) - b.surface.to_world(rect_center(b.rect));
         assert!(
-            ((hovered - promised).dot(inward)).abs() < 1e-4,
-            "{name}: the ghost hovers {} off the chart, the berth stands it {}",
-            (hovered - b.surface.to_world(aim)).dot(inward),
-            (b.site.0 - b.surface.to_world(aim)).dot(inward)
+            (hovered - promised - anchored).length() < 1e-4,
+            "{name}: the ghost hovers at {hovered:?}, the berth stands it at {promised:?}, \
+             and the aimed cell is only {anchored:?} off the plan's own middle"
         );
     }
 

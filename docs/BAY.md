@@ -642,6 +642,24 @@ holding a transit chit. A deck berth spends across by deep now, one
 cell deep, which is the same sentence `pieces::RIG_NEAR..RIG_FAR` says
 in the frontend's units.
 
+**The two sentences were the same length and not in the same place**,
+which is the last of the apron and took four reports to find. A rig's
+own `z = 0` is its BERTH PLANE, and `RIG_NEAR..RIG_FAR` runs from just
+behind that plane to one cell out into the room — right on a wall,
+where the plane is the chart the rig is screwed to. A deck berth has no
+plane: the rect it is given spends the depth, so the cells own the
+ground on both sides of their own middle and there is nothing for the
+band to hang off. It hung off the middle of the cell anyway, and every
+deck and deckhead berth in the game spent its air 0.2329 m out into the
+aisle — 0.42 of a cell, on the one axis the plan spends its depth on,
+with the other exact to the last bit, which is why the report was always
+"half-way between cells on ONE axis". The bodies drawn inside that band
+stood 0.117 m to 0.250 m off, kind by kind. `pieces::site_on` draws a deck or deckhead berth
+back onto its cells now (`pieces::rig_mid`), and the carried ghost
+promises the whole offset rather than the height alone. The harness
+grew a family for it, because eleven of them had only ever asked
+whether a body stayed INSIDE something (`berth-filled`, GAUNTLET.md).
+
 The sweep learned the same sentence. It used to assert the crooked
 ruling — up on the aft and front charts, sideways on the flanks — which
 is a test restating the branch it is testing, and it passed on every

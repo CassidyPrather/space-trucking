@@ -3916,16 +3916,18 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 Transform::from_xyz(0.0, flask.y.mul_add(0.5, sole), deep)
                     .with_rotation(Quat::from_rotation_y(FRAC_PI_4)),
             ));
-            // On the near arris, which the turn brings to the middle of
-            // the face: the corner's own reach out of the flask's centre.
+            // Straddling the near arris, which the turn brings round to
+            // face the room: a corner's reach out of the flask's own
+            // centre is half its two girths on the diagonal.
+            let reach = core::f32::consts::SQRT_2 * 0.25;
             out.push(Part::new(
                 "sparkle",
                 Body::Ball { r: 2.2 },
                 Coat::phosphor(palette::GLINT, 2.5),
                 Transform::from_xyz(
-                    0.0,
+                    (flask.x - flask.z) * reach,
                     fh.mul_add(0.38, sole),
-                    flask.x.mul_add(0.5 * core::f32::consts::SQRT_2, deep),
+                    (flask.x + flask.z).mul_add(reach, deep),
                 ),
             ));
         }

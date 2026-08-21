@@ -721,9 +721,9 @@ impl Fitting {
             shape,
             coat,
             at: Vec3::new(
-                (lo.x + hi.x) * 0.5,
-                (lo.y + hi.y) * 0.5,
-                (lo.z + hi.z) * 0.5,
+                f32::midpoint(lo.x, hi.x),
+                f32::midpoint(lo.y, hi.y),
+                f32::midpoint(lo.z, hi.z),
             ),
             half: Vec3::new(
                 (hi.x - lo.x) * 0.5,

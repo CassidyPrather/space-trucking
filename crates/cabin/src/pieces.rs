@@ -2561,7 +2561,7 @@ fn rat_watch(
                 && (x..x + w).contains(&rat.cell.0)
                 && (y..y + h).contains(&rat.cell.1)
         });
-    let unit = (floor.scale_u() + floor.scale_v()) * 0.5 * RAT_FIT;
+    let unit = f32::midpoint(floor.scale_u(), floor.scale_v()) * RAT_FIT;
     let hop = (PI * t).sin() * 5.0 * unit;
     // Asleep it settles to its cell's centre and lies ON the standing
     // couch's cushions — their crowns sit 0.60 footprint-heights over
@@ -4743,7 +4743,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                         "side",
                         Body::Box(Vec3::new(2.6, fh * 0.94, deep - 1.0)),
                         body,
-                        Transform::from_xyz(fw * 0.43 * sx, 0.0, (deep + 1.0) * 0.5),
+                        Transform::from_xyz(fw * 0.43 * sx, 0.0, f32::midpoint(deep, 1.0)),
                     )
                     .nth(u8::try_from(i).unwrap_or(0)),
                 );
@@ -4754,7 +4754,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                         "cap",
                         Body::Box(Vec3::new(fw * 0.92, 2.6, deep - 1.8)),
                         body,
-                        Transform::from_xyz(0.0, fh * 0.455 * sy, (deep + 1.0) * 0.5),
+                        Transform::from_xyz(0.0, fh * 0.455 * sy, f32::midpoint(deep, 1.0)),
                     )
                     .nth(u8::try_from(i).unwrap_or(0)),
                 );

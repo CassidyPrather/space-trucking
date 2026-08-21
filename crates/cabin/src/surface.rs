@@ -241,8 +241,8 @@ impl SimSurface {
             return None;
         }
         let sim = SimVec2::new(
-            ((a + 1.0) * 0.5).mul_add(self.rect.w, self.rect.x),
-            ((b + 1.0) * 0.5).mul_add(self.rect.h, self.rect.y),
+            f32::midpoint(a, 1.0).mul_add(self.rect.w, self.rect.x),
+            f32::midpoint(b, 1.0).mul_add(self.rect.h, self.rect.y),
         );
         Some((t, sim, world))
     }

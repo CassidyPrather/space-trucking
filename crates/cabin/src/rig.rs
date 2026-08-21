@@ -1034,7 +1034,7 @@ pub fn spawn(
                 MeshMaterial3d(skin.plate_shade.clone()),
                 Transform::from_translation(Vec3::new(
                     sx * BAY_W.mul_add(0.5, 0.035),
-                    (wall_top + 0.06) * 0.5,
+                    f32::midpoint(wall_top, 0.06),
                     BAY_WALL_Z - 0.015,
                 ))
                 .with_scale(Vec3::new(0.06, wall_top + 0.06, 0.08)),

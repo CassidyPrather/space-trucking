@@ -557,7 +557,7 @@ mod tests {
         assert_eq!(dim, 16);
         let mut lightest = 0u8;
         let mut darkest = 255u8;
-        for texel in level1.chunks_exact(4) {
+        for texel in level1.as_chunks::<4>().0 {
             lightest = lightest.max(texel[0]);
             darkest = darkest.min(texel[0]);
         }
@@ -591,7 +591,7 @@ mod tests {
         for (name, bytes) in multiplier_maps() {
             assert_eq!(bytes.len(), (TILE * TILE * 4) as usize);
             let mut sum: u64 = 0;
-            for texel in bytes.chunks_exact(4) {
+            for texel in bytes.as_chunks::<4>().0 {
                 assert!(
                     texel[0] == texel[1] && texel[1] == texel[2],
                     "{name} texel is not neutral gray: {texel:?}"
@@ -646,10 +646,10 @@ mod tests {
         let amber = texel(palette::AMBER);
         let shadow = texel(palette::SHADOW);
         let (mut lit, mut dark) = (0u32, 0u32);
-        for texel in bytes.chunks_exact(4) {
-            if texel == amber.as_slice() {
+        for texel in bytes.as_chunks::<4>().0 {
+            if *texel == amber {
                 lit += 1;
-            } else if texel == shadow.as_slice() {
+            } else if *texel == shadow {
                 dark += 1;
             } else {
                 panic!("hazard texel is neither AMBER nor SHADOW: {texel:?}");

@@ -632,7 +632,7 @@ fn frame_read(frame: &Image) -> FrameRead {
     };
     let mut sum = 0.0f64;
     let mut clear = 0usize;
-    for texel in data.chunks_exact(4) {
+    for texel in data.as_chunks::<4>().0 {
         let luma = 0.299f64.mul_add(
             f64::from(texel[0]),
             0.587f64.mul_add(f64::from(texel[1]), 0.114 * f64::from(texel[2])),
@@ -657,7 +657,7 @@ fn read_film(frame: &Image, film: &mut WalkFilm) {
     };
     let mut moved = 0usize;
     let pixels = (data.len() / 4).max(1);
-    for (i, texel) in data.chunks_exact(4).enumerate() {
+    for (i, texel) in data.as_chunks::<4>().0.iter().enumerate() {
         if let Some(last) = film.last.as_ref()
             && last.len() == data.len()
             && (0..3).any(|c| texel[c].abs_diff(last[i * 4 + c]) > gauntlet::FLICKER_STEP)

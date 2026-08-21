@@ -184,28 +184,26 @@ const HALO_RIG: [Fitting; 4] = [
 const THE_DIVE_LOCK: [Fitting; 17] = [
     // The pool: a collar hoop set into the deck, and the water in it —
     // which out here is the same near-black as everything else that goes
-    // down a long way, with a shimmer on it.
-    // **The hoop says the deck holds it and it does not reach.** It
-    // stands 63 mm above the deck it is "set into" and it cannot be
-    // dropped onto it: a `Ring`'s drawn tube is 18% of the box the
-    // containment law measures, so a hoop whose tube meets the deck has
-    // a declared box a tenth of a room deep in the floor. The vocabulary
-    // is what wants fixing, not the number, so it is on
-    // `gauntlet.docket` with its measurement.
+    // down a long way, with a shimmer on it. The collar's tube reaches
+    // the deck and the water is as deep as that tube is thick, so the
+    // surface and the rim are one line and the whole thing is a hole in
+    // a floor rather than a tub standing on one.
     Fitting::new(
         Shape::Ring,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.34, -0.93, 0.20),
-        Vec3::new(0.28, 0.07, 0.33),
+        Vec3::new(0.34, -1.0, 0.20),
+        POOL_HALF,
     )
+    .meeting(Face::Deck)
     .called("pool collar")
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Post,
         Coat::phosphor(palette::kind_color(Kind::BottledMidnight), 1.6),
-        Vec3::new(0.34, -0.96, 0.20),
-        Vec3::new(0.23, 0.035, 0.28),
+        Vec3::new(0.34, -1.0, 0.20),
+        Vec3::new(0.23, POOL_TUBE, 0.28),
     )
+    .meeting(Face::Deck)
     .seated(Seat::On("pool collar")),
     // Three lamps round its rim, aimed in. Nobody works a hole in a
     // floor without lighting the hole.
@@ -261,13 +259,27 @@ const THE_DIVE_LOCK: [Fitting; 17] = [
     depth_lamp(0.74),
 ];
 
-/// One lamp on the moon pool's rim, at `(x, z)` on the deck.
+/// **The moon pool's collar**, and the two lengths everything round it
+/// is measured off: the frame the hoop is drawn in, the half-thickness
+/// of the tube that frame actually carries ([`Shape::fill`]), and the
+/// height that tube reaches above the deck it is set into.
+///
+/// Written down because three things stand on it. The tube is a fifth of
+/// the frame, so a lamp placed off the frame is a lamp four centimetres
+/// over the rim it is bolted to, and that is exactly what happened when
+/// the collar came down onto the deck.
+const POOL_HALF: Vec3 = Vec3::new(0.28, 0.07, 0.33);
+const POOL_TUBE: f32 = Shape::Ring.fill().y * POOL_HALF.y;
+const POOL_TOP: f32 = 2.0 * POOL_TUBE - 1.0;
+
+/// One lamp on the moon pool's rim, at `(x, z)`, standing on the rim.
 const fn rim_lamp(x: f32, z: f32) -> Fitting {
+    const HALF: Vec3 = Vec3::new(0.035, 0.05, 0.042);
     Fitting::new(
         Shape::Dome,
         Coat::phosphor(palette::kind_color(Kind::BrinePearls), 2.4),
-        Vec3::new(x, -0.88, z),
-        Vec3::new(0.035, 0.05, 0.042),
+        Vec3::new(x, POOL_TOP + HALF.y, z),
+        HALF,
     )
     .seated(Seat::On("pool collar"))
 }

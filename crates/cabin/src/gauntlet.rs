@@ -905,22 +905,18 @@ impl Faces {
     }
 }
 
-/// The world half-extents of one unit body, per silhouette. Everything
-/// but the ring is one unit across in all three axes; a torus lies flat,
-/// and its tube is what it is thick.
-const fn unit_half(shape: Shape) -> Vec3 {
-    match shape {
-        Shape::Ring => Vec3::new(0.5, 0.09, 0.5),
-        Shape::Slab | Shape::Post | Shape::Dome | Shape::Cone => Vec3::splat(0.5),
-    }
-}
-
 /// One posed fitting, as the sweep measures it: its box, and the sides of
 /// that box its own silhouette actually draws.
 fn drawn(what: String, frame: &Frame, fitting: &Fitting) -> Drawn {
     Drawn {
         what,
-        body: Box3::of(&frame.place(fitting), unit_half(fitting.shape)),
+        // What the unit body fills of the frame it is scaled into —
+        // half a unit on each axis it fills whole, and the torus's tube
+        // on the one it does not. This used to carry that exception as
+        // a table of its own, which is half of why five hoops could not
+        // be set into a deck: the sweep knew about the tube and the
+        // containment law was reading the frame.
+        body: Box3::of(&frame.place(fitting), fitting.shape.fill() * 0.5),
         faces: Faces::of(fitting.shape, frame.rot),
         character: true,
         name: fitting.name.map(str::to_owned),
@@ -1041,7 +1037,7 @@ fn seam_furniture(placed: &Placed) -> Vec<(Option<RoomId>, Drawn)> {
             (
                 part.across,
                 Drawn {
-                    body: Box3::of(&part.at, unit_half(Shape::Slab)),
+                    body: Box3::of(&part.at, Vec3::splat(0.5)),
                     // A tread is paint on a rung of the decal ladder and
                     // shows the one side it turns to the room. Everything
                     // else in a doorway is hardware, and hardware has six
@@ -1270,7 +1266,7 @@ fn fabric(stage: &Stage) -> Vec<(String, Box3, bool)> {
                 let shell = part.what.contains("passage");
                 (
                     part.what.clone(),
-                    Box3::of(&part.at, unit_half(Shape::Slab)),
+                    Box3::of(&part.at, Vec3::splat(0.5)),
                     shell,
                 )
             }),

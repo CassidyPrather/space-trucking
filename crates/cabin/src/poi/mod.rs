@@ -326,6 +326,52 @@ pub enum Shape {
     Cone,
 }
 
+/// **The unit ring, in its own box**: the inner radius its bore leaves and
+/// the outer radius its rim reaches, both in the unit body's own half-
+/// units. The tube between them is `RING_BRIM - RING_BORE` thick, which
+/// is the one number on this list that is not a whole unit and the reason
+/// [`Shape::fill`] exists.
+const RING_BORE: f32 = 0.32;
+const RING_BRIM: f32 = 0.5;
+
+impl Shape {
+    /// **How much of its own drawing frame the body actually fills**, per
+    /// axis — the one number that tells a fitting's frame apart from its
+    /// body.
+    ///
+    /// Four of the five fill it whole: a cuboid is its box, and a
+    /// cylinder, a sphere and a frustum each touch all six sides of
+    /// theirs. A torus does not. Its rim reaches the four sides round its
+    /// flank and its TUBE is what it is thick, so a unit torus fills
+    /// `RING_BRIM - RING_BORE` of its own frame on the axis it lies
+    /// about, and 82% of that frame is the hole and the air over it.
+    ///
+    /// **This is what a claim on space is measured through**
+    /// ([`Fitting::span`]). It was not, and five stations paid for it:
+    /// each wrote a hoop "set into the deck" as a frame resting on the
+    /// deck, drew a wafer floating in the middle of that frame, and
+    /// could not write any number that cured it — a frame pushed down
+    /// until the tube landed is a frame through the floor, and the
+    /// containment law was reading the frame. The reading follows the
+    /// body now, so a hoop may be dropped until its tube meets the deck
+    /// and stay inside the room while it does ([`Fitting::meeting`]).
+    ///
+    /// **The other direction was tried and it costs more than it cures.**
+    /// Scaling the tube up to fill the frame would make `half` the body's
+    /// half-extents outright — but the frames were all authored against
+    /// today's wafer, so every hoop in the game grew five and a half
+    /// times thicker: eleven waypoints of the scripted walk ended up
+    /// inside a lamp cage, six wall berths went behind a hoop and three
+    /// more were stood in. Twenty new findings to cure five.
+    #[must_use]
+    pub const fn fill(self) -> Vec3 {
+        match self {
+            Self::Ring => Vec3::new(RING_BRIM * 2.0, RING_BRIM - RING_BORE, RING_BRIM * 2.0),
+            Self::Slab | Self::Post | Self::Dome | Self::Cone => Vec3::ONE,
+        }
+    }
+}
+
 /// The shared unit-sized bodies, built once per rebuild and handed round.
 pub struct Shapes {
     slab: Handle<Mesh>,
@@ -343,7 +389,7 @@ impl Shapes {
             slab: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
             post: meshes.add(Cylinder::new(0.5, 1.0)),
             dome: meshes.add(Sphere::new(0.5).mesh().ico(2).expect("ico in range")),
-            ring: meshes.add(Torus::new(0.32, 0.5)),
+            ring: meshes.add(Torus::new(RING_BORE, RING_BRIM)),
             cone: meshes.add(ConicalFrustum {
                 radius_top: 0.18,
                 radius_bottom: 0.5,
@@ -705,11 +751,47 @@ impl Fitting {
         }
     }
 
-    /// The fitting's own box in host fractions, `(lo, hi)` — the pure form
-    /// every containment law is stated against.
+    /// **The fitting's own body in host fractions**, `(lo, hi)` — the
+    /// pure form every containment law is stated against.
+    ///
+    /// The BODY and not the frame it is drawn in. `half` is what the
+    /// unit shape is scaled by, and what that shape then fills of it is
+    /// [`Shape::fill`]'s answer: for a slab, a post, a dome and a cone
+    /// the two are the same box, and for a ring the body is the tube and
+    /// the rest of the frame is the hole. A claim on space belongs to
+    /// the thing that occupies it.
     #[must_use]
     pub fn span(&self) -> (Vec3, Vec3) {
-        (self.at - self.half.abs(), self.at + self.half.abs())
+        let half = self.half.abs() * self.shape.fill();
+        (self.at - half, self.at + half)
+    }
+
+    /// **The same fitting, dropped until its own body meets one side of
+    /// the box it is measured off** — the placement half of the joint a
+    /// [`Seat::Face`] claim promises, said as the joint instead of as a
+    /// decimal.
+    ///
+    /// For four of the five silhouettes this is what putting the frame's
+    /// edge on the face already does, and a station could write the
+    /// number. The torus is the fifth and it cannot: its tube is a
+    /// fraction of its frame ([`Shape::fill`]), so a hoop wants a
+    /// centre its author would have to work out from that fraction, and
+    /// five of them wrote the frame's edge instead and hovered.
+    #[must_use]
+    pub const fn meeting(mut self, face: Face) -> Self {
+        let fill = self.shape.fill();
+        // Written as `1 - reach` off the far end so the near end reads
+        // the same way: the body's own half-extent, backed off the face
+        // it lands on.
+        match face {
+            Face::Deck => self.at.y = self.half.y * fill.y - 1.0,
+            Face::Deckhead => self.at.y = 1.0 - self.half.y * fill.y,
+            Face::Port => self.at.x = self.half.x * fill.x - 1.0,
+            Face::Starboard => self.at.x = 1.0 - self.half.x * fill.x,
+            Face::Fore => self.at.z = self.half.z * fill.z - 1.0,
+            Face::Aft => self.at.z = 1.0 - self.half.z * fill.z,
+        }
+        self
     }
 }
 
@@ -754,7 +836,12 @@ impl Frame {
         (self.mid + self.rot * (local * self.half), self.rot * local)
     }
 
-    /// Where one fitting stands, in the world.
+    /// Where one fitting stands, in the world: the unit body scaled into
+    /// the drawing frame [`Fitting::half`] declares.
+    ///
+    /// What the body then FILLS of that frame is [`Shape::fill`]'s
+    /// answer, and it is not always the whole of it — which is why the
+    /// claim a fitting makes on space is [`Fitting::span`] and not this.
     #[must_use]
     pub fn place(&self, fitting: &Fitting) -> Transform {
         Transform::from_translation(self.mid + self.rot * (fitting.at * self.half))
@@ -1010,6 +1097,63 @@ pub const fn outfit(kind: RoomKind, host: Option<Host>) -> Outfit {
 
 #[cfg(test)]
 mod tests {
+    /// **What a body claims of its own drawing frame is the box its mesh
+    /// actually fills.**
+    ///
+    /// [`Shape::fill`] is the one place the two are allowed to differ,
+    /// and it exists because a torus's tube is 18% of the frame it lies
+    /// in. Everything downstream reads it: `Fitting::span` is what the
+    /// containment law holds a station to, and the gauntlet cuts its own
+    /// boxes from it. So it is measured against the vertices the mesher
+    /// hands back rather than checked against a number written twice —
+    /// a claim written by hand and a body cut by a primitive are two
+    /// statements about one thing, and this is the joint between them.
+    ///
+    /// Two directions and they are not symmetric. A claim SHORT of the
+    /// body is a body reaching outside the room the containment law
+    /// keeps it in, so nothing is forgiven there. A claim over it is
+    /// only ever the chord of one low-poly facet — the icosphere's
+    /// widest ring of vertices stops 2% inside its own radius — so a
+    /// facet's worth is allowed and a silhouette's worth is not. Set
+    /// the ring's fill back to a whole unit and this fails by 0.82.
+    #[test]
+    fn a_bodys_claim_on_its_frame_is_the_box_its_mesh_fills() {
+        /// The chord a low-poly body cuts off its own circumscribed box.
+        const FACET: f32 = 0.05;
+        let mut meshes = Assets::<Mesh>::default();
+        let shapes = Shapes::new(&mut meshes);
+        for shape in [
+            Shape::Slab,
+            Shape::Post,
+            Shape::Dome,
+            Shape::Ring,
+            Shape::Cone,
+        ] {
+            let mesh = meshes.get(&shapes.of(shape)).expect("every body is built");
+            let Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) =
+                mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+            else {
+                panic!("{shape:?} has no vertices")
+            };
+            let mut lo = Vec3::splat(f32::INFINITY);
+            let mut hi = Vec3::splat(f32::NEG_INFINITY);
+            for point in pos {
+                let point = Vec3::from(*point);
+                lo = lo.min(point);
+                hi = hi.max(point);
+            }
+            let (drawn, claim) = (hi - lo, shape.fill());
+            assert!(
+                (drawn - claim).max_element() < 1e-4,
+                "{shape:?} draws {drawn:?} and claims only {claim:?}"
+            );
+            assert!(
+                (claim - drawn).max_element() < FACET,
+                "{shape:?} claims {claim:?} for a body that fills {drawn:?}"
+            );
+        }
+    }
+
     use space_trucking::sim::map::POI_COUNT;
     use space_trucking::sim::room::{APERTURE, CABIN, COURSES, Port, ROOM_KINDS, Rooms};
 

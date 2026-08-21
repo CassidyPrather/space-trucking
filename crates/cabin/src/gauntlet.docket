@@ -14,29 +14,27 @@
 #
 # Blank lines and `#` comments are ignored.
 #
-# **It carries three classes, and two of them are re-authorings.**
+# **It carries two classes, and both of them are re-authorings.**
 #
-# The first is `furniture-seated`'s ten, and they arrived with the family
-# that can see them. Five are the comet's quarried face: blocks of ice
-# that say the starboard wall is what they are cut from and stop between
-# 22 and 110 mm in front of it. The one-line cure is wrong and the source
-# says so — the frozen block already stands hard against that wall with
-# one of these inside it, and five slabs run out to one plane share their
-# back face wherever they cross — so a quarried face wants re-composing
-# as one body rather than five stretched onto a plane.
+# The first is `furniture-seated`'s five: the comet's quarried face,
+# blocks of ice that say the starboard wall is what they are cut from and
+# stop between 22 and 110 mm in front of it. The one-line cure is wrong
+# and the source says so — the frozen block already stands hard against
+# that wall with one of these inside it, and five slabs run out to one
+# plane share their back face wherever they cross — so a quarried face
+# wants re-composing as one body rather than five stretched onto a plane.
 #
-# The other five are one vocabulary defect wearing five station badges: a
-# `Shape::Ring` laid flat "on the deck" — a moon pool's collar, a core
-# cradle, three coiled hoses. A torus's drawn tube is 18% of the box
-# `Fitting::half` declares, and the containment law measures the declared
-# box, so a hoop whose tube meets the deck has a box a tenth of a room
-# deep in the floor and `a_character_stays_inside_the_room_it_dresses`
-# refuses it. Nothing a station author can write cures these. What wants
-# fixing is `poi::Fitting::span` — the containment reading — so a body's
-# claim on space is the body's and not its wrapper's, and then all five
-# come off at once.
+# Five hoops came off this family before them, and they were one
+# vocabulary defect wearing five station badges: a `Shape::Ring` laid
+# flat "on the deck" — a moon pool's collar, a core cradle, three coiled
+# hoses. A torus's drawn tube is 18% of the frame `Fitting::half`
+# declares and the containment law was reading the frame, so a hoop whose
+# tube met the deck had a frame through the floor. `poi::Shape::fill`
+# says the fraction once now; `Fitting::span` reads the body through it,
+# so a claim on space belongs to the thing that occupies it; and
+# `Fitting::meeting` writes the joint instead of the decimal.
 #
-# **The third class is a re-authoring.** Twenty cargo kinds are drawn as
+# **The second class is the bigger re-authoring.** Twenty cargo kinds are drawn as
 # bas-reliefs centred in their own cell face —
 # the 2D console's glyphs, given depth and never given a floor — so each
 # of them stands somewhere between one and fifteen centimetres above the
@@ -206,20 +204,10 @@ Comet | furniture-seated | decor[2] Slab
 Comet | furniture-seated | decor[3] Slab
 Comet | furniture-seated | decor[4] Slab
 
-# ---- Neptune ----
-Neptune | furniture-seated | decor[0] Ring
 
-# ---- Pump ----
-Pump | furniture-seated | decor[20] Ring
 
-# ---- Saturn ----
-Saturn | furniture-seated | decor[12] Ring
 
-# ---- Umbra ----
-Umbra | furniture-seated | decor[16] Ring
 
-# ---- Uranus ----
-Uranus | furniture-seated | decor[7] Ring
 
 # ---- rigs ----
 rigs | rig-seated | BottledMidnight sole

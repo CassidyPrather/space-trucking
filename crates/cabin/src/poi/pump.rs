@@ -389,9 +389,10 @@ const PLUMBING: [Fitting; 24] = [
     Fitting::new(
         Shape::Ring,
         Coat::enamel(palette::SOOT),
-        Vec3::new(-0.42, -0.930, -0.50),
+        Vec3::new(-0.42, -1.0, -0.50),
         Vec3::new(0.30, 0.060, 0.30),
     )
+    .meeting(Face::Deck)
     .seated(Seat::Face(Face::Deck)),
     // Snacks. The case is the second thing on these premises anybody
     // chose, it is lit from behind, and there is one thing left in it.

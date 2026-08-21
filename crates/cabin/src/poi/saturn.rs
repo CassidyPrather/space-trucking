@@ -289,9 +289,10 @@ const THE_YARD: [Fitting; 15] = [
     Fitting::new(
         Shape::Ring,
         Coat::metal(Worn::Socket),
-        Vec3::new(-0.70, -0.90, -0.24),
+        Vec3::new(-0.70, -1.0, -0.24),
         Vec3::new(0.14, 0.10, 0.17),
     )
+    .meeting(Face::Deck)
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Dome,

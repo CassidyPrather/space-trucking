@@ -233,6 +233,19 @@ const TIN_LID: [Fitting; 3] = [
     ),
 ];
 
+/// **How thick a fenced porthole lies**, in shades of the room's own
+/// half-height: its blanked pane, and the rim round it cut to the same
+/// thickness so the two lie flat together on the deck.
+///
+/// The rim is written through [`Shape::fill`] because a hoop's frame is
+/// not its tube — 18% of it is — and a rim thinner than the pane it
+/// fences would be a pane resting on the deck with a wire floating in
+/// its middle. The second porthole lies on the first, so its centre is
+/// the first one's whole thickness plus its own.
+const FENCE_PANE: f32 = 0.014;
+const FENCE_RIM: f32 = FENCE_PANE / Shape::Ring.fill().y;
+const FENCE_TWO: f32 = 3.0 * FENCE_PANE - 1.0;
+
 /// **The night shop**, inside the room: the tin shelf over the goods, a
 /// case of midnight open on the deck, a stack of blanked portholes, three
 /// seized pendants hanging dead overhead, and one luminous line along the
@@ -302,31 +315,33 @@ const NIGHT_SHOP: [Fitting; 30] = [
     Fitting::new(
         Shape::Ring,
         Coat::enamel(palette::kind_color(Kind::Porthole)),
-        Vec3::new(0.76, -0.955, 0.30),
-        Vec3::new(0.15, 0.030, 0.15),
+        Vec3::new(0.76, -1.0, 0.30),
+        Vec3::new(0.15, FENCE_RIM, 0.15),
     )
+    .meeting(Face::Deck)
     .called("fenced porthole")
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.76, -0.955, 0.30),
-        Vec3::new(0.11, 0.014, 0.11),
+        Vec3::new(0.76, -1.0, 0.30),
+        Vec3::new(0.11, FENCE_PANE, 0.11),
     )
+    .meeting(Face::Deck)
     .seated(Seat::On("fenced porthole")),
     Fitting::new(
         Shape::Ring,
         Coat::enamel(palette::kind_color(Kind::Porthole)),
-        Vec3::new(0.72, -0.944, 0.26),
-        Vec3::new(0.15, 0.030, 0.15),
+        Vec3::new(0.72, FENCE_TWO, 0.26),
+        Vec3::new(0.15, FENCE_RIM, 0.15),
     )
     .called("fenced porthole")
     .seated(Seat::On("fenced porthole")),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
-        Vec3::new(0.72, -0.944, 0.26),
-        Vec3::new(0.11, 0.014, 0.11),
+        Vec3::new(0.72, FENCE_TWO, 0.26),
+        Vec3::new(0.11, FENCE_PANE, 0.11),
     )
     .seated(Seat::On("fenced porthole")),
     // ---- the seized lamps, hanging ----

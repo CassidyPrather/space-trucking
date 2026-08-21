@@ -229,9 +229,10 @@ const THE_COLD_STORE: [Fitting; 15] = [
     Fitting::new(
         Shape::Ring,
         Coat::metal(Worn::Plate),
-        Vec3::new(0.68, -0.92, 0.28),
+        Vec3::new(0.68, -1.0, 0.28),
         Vec3::new(0.17, 0.08, 0.20),
     )
+    .meeting(Face::Deck)
     .called("core cradle")
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(

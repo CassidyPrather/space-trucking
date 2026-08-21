@@ -205,13 +205,27 @@ const LAMP_HOOK: [Fitting; 2] = [
 /// half-empty room with a work light and somebody's rope in it is the
 /// reading. Furnishing this place properly would be the one mistake this
 /// file can make.
-const CUT_FACE: [Fitting; 19] = [
+const CUT_FACE: [Fitting; 20] = [
     // ---- the quarried face, to starboard ----
     // Ice cut back in steps, the way a face is actually worked: big
     // blocks low, small ones high, and the crust left on above them. The
     // whole cut is worked in the middle of the flank and not out to its
     // ends, because a market's goods stand along its aft wall and a
     // proposal is laid against its front one.
+    //
+    // **The rock is one body and the steps are what was left standing.**
+    // This is the back of the cut: hard against the starboard wall,
+    // across the whole worked area, and the only thing here that says
+    // the wall holds it up. Every block is rooted in it.
+    Fitting::new(
+        Shape::Slab,
+        Coat::enamel(palette::POI_COMET),
+        Vec3::new(1.0, -0.16, -0.06),
+        Vec3::new(FACE_MASS, 0.76, 0.39),
+    )
+    .meeting(Face::Starboard)
+    .called("cut face")
+    .seated(Seat::Face(Face::Starboard)),
     // The lowest block is cut a little shallower than the eye would
     // draw it. It stands a metre off the front wall, which is the far
     // edge of the air a wall berth is READ through — a rig's depth plus
@@ -240,10 +254,11 @@ const CUT_FACE: [Fitting; 19] = [
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::POI_COMET),
-        Vec3::new(0.80, -0.20, 0.22),
-        Vec3::new(0.20, 0.24, 0.22),
+        Vec3::new(0.775, -0.20, 0.22),
+        Vec3::new(0.175, 0.24, 0.22),
     )
-    .called("frozen block"),
+    .called("frozen block")
+    .seated(Seat::On("cut face")),
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::SHADOW),
@@ -309,18 +324,31 @@ const CUT_FACE: [Fitting; 19] = [
     shard(0.62, -0.937, -0.30, 0.09),
 ];
 
-/// One block of the cut face, standing off the starboard wall.
+/// **How far the cut is worked back from the starboard wall**, which is
+/// how thick the one body behind the whole face is.
 ///
-/// **A block of a quarried face is part of the rock**, so it says the
-/// wall is what holds it — and the five of them stop between 22 and
-/// 110 mm short of it, which from any stance down the flank is five
-/// slabs of ice hanging in air. Running each of them back to the plane
-/// is one line and it is the wrong line: the frozen block already
-/// stands hard against that wall with one of these inside it, and five
-/// slabs cut to one length share their back plane wherever they cross,
-/// which is the second coplanar idiom. A quarried face is one
-/// composition and wants re-composing as one, not five bodies stretched
-/// onto a plane. It is on `gauntlet.docket` with its numbers.
+/// Thin, and it has to be: the back of a cut is not a wall a station
+/// builds, it is where the ice stopped coming out, and a body run any
+/// deeper than this stands between the room and the berths on the front
+/// wall beside it. Every step's own back reaches into it, so it is what
+/// the face is composed on and none of the five has to find the wall by
+/// itself.
+const FACE_MASS: f32 = 0.028;
+
+/// One step of the cut face, cut out of the rock and standing into the
+/// room off it.
+///
+/// **A quarried face is one body.** These five used to say the starboard
+/// wall held them up and to stop between 22 and 110 mm short of it,
+/// which from any stance down the flank is five slabs of ice hanging in
+/// air. Running each of them back to the plane was the one-line cure and
+/// it was the wrong one: the frozen block already stood hard against
+/// that wall with one of these inside it, and five slabs cut to one
+/// length share their back plane wherever they cross, which is the
+/// second coplanar idiom. So the rock is composed once, the rock is what
+/// meets the wall, and a step is rooted in it — which is also what a
+/// worked face looks like, because a step is what is LEFT when the ice
+/// in front of it comes out.
 const fn block(x: f32, y: f32, z: f32, hy: f32, hz: f32) -> Fitting {
     Fitting::new(
         Shape::Slab,
@@ -328,7 +356,7 @@ const fn block(x: f32, y: f32, z: f32, hy: f32, hz: f32) -> Fitting {
         Vec3::new(x, y, z),
         Vec3::new(0.09, hy, hz),
     )
-    .seated(Seat::Face(Face::Starboard))
+    .seated(Seat::On("cut face"))
 }
 
 /// One shard of ice on the deck, `r` across.

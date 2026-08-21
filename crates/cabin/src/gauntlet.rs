@@ -139,6 +139,8 @@ pub const PART_SEATED: &str = "part-seated";
 pub const RIG_SEATED: &str = "rig-seated";
 /// A hung body must meet whatever it says holds it up.
 pub const FURNITURE_SEATED: &str = "furniture-seated";
+/// A rig must fill the cells its berth spends.
+pub const BERTH_FILLED: &str = "berth-filled";
 
 /// The name a finding about cargo is filed under. A rig is not in any
 /// one room — the same crate stands in every room the game has — so the
@@ -147,7 +149,7 @@ pub const FURNITURE_SEATED: &str = "furniture-seated";
 pub const RIGS: &str = "rigs";
 
 /// Every rule, for the report's own headings.
-pub const RULES: [&str; 11] = [
+pub const RULES: [&str; 12] = [
     BERTH_CLEAR,
     BERTH_SEEN,
     BERTH_REACHED,
@@ -159,6 +161,7 @@ pub const RULES: [&str; 11] = [
     PART_SEATED,
     RIG_SEATED,
     FURNITURE_SEATED,
+    BERTH_FILLED,
 ];
 
 // ------------------------------------------------------------- the sizes --
@@ -763,11 +766,18 @@ fn chart_of(placed: &Placed, (x, y): (u8, u8)) -> Option<(Station, SimSurface)> 
 
 /// One net cell's own face on its chart, in the world.
 fn cell_face(id: RoomId, (x, y): (u8, u8), surface: &SimSurface) -> Box3 {
-    let cell = layout::cell_rect(id, x, y);
-    let a = surface.to_world(space_trucking::sim::Vec2::new(cell.x, cell.y));
+    plan_face(surface, layout::cell_rect(id, x, y))
+}
+
+/// **The ground a footprint owns**, in the world: the sim rect a berth
+/// spends, read onto the chart it spends it on. A cell's own face is the
+/// one-cell case ([`cell_face`]); a two-across kind's is the same box
+/// twice as wide, and it is the box the drawing has to land on.
+fn plan_face(surface: &SimSurface, rect: layout::Rect) -> Box3 {
+    let a = surface.to_world(space_trucking::sim::Vec2::new(rect.x, rect.y));
     let b = surface.to_world(space_trucking::sim::Vec2::new(
-        cell.x + cell.w,
-        cell.y + cell.h,
+        rect.x + rect.w,
+        rect.y + rect.h,
     ));
     Box3::spanning(a, b)
 }
@@ -1419,14 +1429,19 @@ fn off_grid(body: Box3, origin: Vec3) -> Option<(usize, f32, f32)> {
 #[must_use]
 pub fn sweep() -> Vec<Finding> {
     let mut out = Vec::new();
-    for stage in roster() {
-        out.extend(berth_clear(&stage));
-        out.extend(berth_seen(&stage));
-        out.extend(berth_reached(&stage));
-        out.extend(coplanar(&stage));
-        out.extend(walk_clear(&stage));
-        out.extend(grid_fits(&stage));
-        out.extend(furniture_seated(&stage));
+    // The roster is held rather than consumed: `berth_filled` answers
+    // about a kind and a chart class rather than about a room, so it
+    // reads every room's charts at once and files one finding for a
+    // defect all fifteen of them share.
+    let stages = roster();
+    for stage in &stages {
+        out.extend(berth_clear(stage));
+        out.extend(berth_seen(stage));
+        out.extend(berth_reached(stage));
+        out.extend(coplanar(stage));
+        out.extend(walk_clear(stage));
+        out.extend(grid_fits(stage));
+        out.extend(furniture_seated(stage));
     }
     out.extend(prop_points());
     out.extend(part_seated());
@@ -1434,6 +1449,7 @@ pub fn sweep() -> Vec<Finding> {
     out.extend(rig_fits());
     out.extend(rig_faces());
     out.extend(rig_seated());
+    out.extend(berth_filled(&stages));
     out.sort();
     out.dedup();
     out
@@ -2388,6 +2404,219 @@ fn rig_seated() -> Vec<Finding> {
                     "stops {gap:.4} m short of the {} it is berthed on — the nearest \
                      body to it is \"{what}\" — so the rig stands on nothing",
                     joint.chart
+                ),
+            });
+        }
+    }
+    out
+}
+
+/// **How far a berthed body sits off the middle of the ground its plan
+/// owns, and how much of that ground it fills**, on one axis of one
+/// chart, in metres.
+///
+/// The one arithmetic [`berth_filled`] spends, factored out for the same
+/// reason [`short_of`] is: a family whose reading is buried inside its
+/// own loop cannot be shown to answer, and a rule nobody can catch out
+/// is a green tick that means nothing.
+fn off_plan(spent: Box3, owned: Box3, dir: Vec3) -> (f32, f32) {
+    let mid = |body: Box3| (body.lo + body.hi).dot(dir) * 0.5;
+    (mid(spent) - mid(owned), spent.span().dot(dir.abs()))
+}
+
+/// Which world axis a chart direction runs along. Every chart is square
+/// on the world axes — the lattice only ever turns a room by quarter
+/// turns — so one of the three always answers.
+fn axis_of(dir: Vec3) -> usize {
+    let d = dir.abs();
+    if d.x >= d.y && d.x >= d.z {
+        0
+    } else if d.y >= d.z {
+        1
+    } else {
+        2
+    }
+}
+
+/// One berth, as the two claims [`berth_filled`] compares: the ground
+/// the sim's plan owns and the box the drawing spends standing on it.
+struct Plan {
+    kind: Kind,
+    /// The chart class it stands on, which is what a berth's rect means.
+    surf: Surf,
+    /// The chart itself, for its own two axes.
+    chart: SimSurface,
+    owned: Box3,
+    spent: Box3,
+}
+
+/// **Every berth in the game, with both claims about it.** The sim's
+/// arbiter rules which cells a kind may take, `cargo::plan` says how many
+/// it then owns, and `pieces::berth_box` poses the body through the very
+/// function the runtime poses it with — so a retune of the berth pose
+/// moves the question and the answer together.
+///
+/// Held as a list rather than swept in place because the family and its
+/// guard both walk it: a rule that cannot be handed a moved body is a
+/// rule nobody can catch out.
+fn plans(stages: &[Stage]) -> Vec<Plan> {
+    let mut out = Vec::new();
+    for stage in stages {
+        let (cols, rows) = stage.placed.kind.grid();
+        for kind in Kind::ALL {
+            // A covering does not stand on its cells, it LIES into them
+            // (`pieces::laid_on`), so the ground it owns is the chart
+            // itself and there is no band to land anywhere.
+            if kind.covering() {
+                continue;
+            }
+            for y in 0..rows {
+                for x in 0..cols {
+                    if placement_check(&stage.rooms, &[], u32::MAX, kind, stage.placed.id, x, y)
+                        .is_err()
+                    {
+                        continue;
+                    }
+                    let (Some((w, h)), Some(surf), Some((_, chart))) = (
+                        plan(stage.placed.kind, kind, x, y),
+                        stage.placed.kind.surface_of(x, y),
+                        chart_of(&stage.placed, (x, y)),
+                    ) else {
+                        continue;
+                    };
+                    let anchor = layout::cell_rect(stage.placed.id, x, y);
+                    let rect = layout::Rect::new(
+                        anchor.x,
+                        anchor.y,
+                        f32::from(w) * layout::CELL,
+                        f32::from(h) * layout::CELL,
+                    );
+                    let Some((lo, hi)) = crate::pieces::berth_box(&stage.placed.charts, kind, rect)
+                    else {
+                        continue;
+                    };
+                    out.push(Plan {
+                        kind,
+                        surf,
+                        chart,
+                        owned: plan_face(&chart, rect),
+                        spent: Box3 { lo, hi },
+                    });
+                }
+            }
+        }
+    }
+    out
+}
+
+/// **A rig fills the cells its berth spends.** [`BERTH_FILLED`].
+///
+/// The twelfth family, and the one that closes the last gap between the
+/// two claims a berthed piece makes. The sim states a footprint and the
+/// cabin draws a body, and every rule before this asked whether the body
+/// stayed INSIDE something: [`rig_faces`] holds a rig to its own `w × h`
+/// plan and forgives everything short of it, [`rig_fits`] holds it to
+/// the depth every rig is composed within and forgives everything short
+/// of that, and [`rig_seated`] asks only about the one face that has to
+/// touch a chart. **Not one of them asks where inside its berth the body
+/// actually is** — so a body could sit hard against one edge of the cells
+/// it was given, or half out of them on the axis nothing measured, and
+/// stay green in all eleven.
+///
+/// That is what it did. A rig's own `z = 0` is the BERTH PLANE and its
+/// body is composed from just behind it to one cell out into the room —
+/// which is the truth on a wall, where the plane is the chart the rig is
+/// screwed to. A deck berth has no such plane: its rect is a plan, the
+/// cells own the ground on both sides of their own middle, and the band
+/// laid off a plane that is not there stood every deck and deckhead
+/// berth in the game 0.2329 m out into the aisle. That is 0.42 of a
+/// cell, on the one axis the plan spends its depth on and never on the
+/// other — which is the shape of the thing the owner reported four times
+/// and the harness passed four times. (The bodies inside the band came
+/// out 0.117 m to 0.250 m off, kind by kind; the band is where they were
+/// composed and the band is what a berth costs.)
+///
+/// **It asks about the two axes the RECT pays for and not the third.**
+/// A berth's rect spends two of a kind's three extents and the chart
+/// fixes the other (`cargo::Kind::plan_on`): a deck berth spends across
+/// and deep and the deck fixes the height, a wall berth spends across
+/// and tall and the wall fixes the depth. What the chart fixes is
+/// [`rig_seated`]'s question from one side and [`rig_fits`]'s from the
+/// other, and on a wall it is deliberately off centre — the band begins
+/// a hair BEHIND the plane, so a rig's back sinks into the paint it is
+/// screwed over. What the cells pay for is nobody else's question, and
+/// on those axes a body is centred or it is misplaced.
+///
+/// Two clauses, one reading ([`off_plan`]):
+///
+/// - **Where.** The box a berth spends is centred on the ground its plan
+///   owns, to within [`GRID_EPS`] — the same millimetre `grid-fits`
+///   calls a face on its line, because this is the same question one
+///   layer up.
+/// - **How much.** And it is [`crate::pieces::BAY_FIT`] of that ground,
+///   which is the margin a rig wears across and up, said on the axes a
+///   plan spends. A body claiming ground it does not fill is a berth
+///   measured in the wrong place, which is what `berth-clear` then tells
+///   a station's furniture about.
+///
+/// Filed under [`RIGS`] and keyed by kind and chart class, because the
+/// same crate stands in every room in the game and a defect in how a
+/// deck berths it is not fifteen defects.
+fn berth_filled(stages: &[Stage]) -> Vec<Finding> {
+    // Per kind and chart class, on each world axis: the worst offset off
+    // the middle, the worst span, the margin that span should have been,
+    // and the ground the plan owns there.
+    let mut worst: BTreeMap<(String, usize), (f32, f32, f32, f32)> = BTreeMap::new();
+    for berth in plans(stages) {
+        for dir in [
+            berth.chart.half_u.normalize(),
+            berth.chart.half_v.normalize(),
+        ] {
+            let (off, got) = off_plan(berth.spent, berth.owned, dir);
+            let ground = berth.owned.span().dot(dir.abs());
+            let want = ground * crate::pieces::BAY_FIT;
+            let kind = berth.kind;
+            let surf = berth.surf;
+            let key = (format!("{kind:?} on a {surf:?} berth"), axis_of(dir));
+            // The worst berth of the class speaks for it: the same crate
+            // on the same chart is one thing to move, and one line that
+            // says so is a work order rather than a transcript.
+            let seen = worst.entry(key).or_insert((0.0, want, want, ground));
+            if off.abs() > seen.0.abs() {
+                seen.0 = off;
+            }
+            if (got - want).abs() > (seen.1 - seen.2).abs() {
+                seen.1 = got;
+                seen.2 = want;
+                seen.3 = ground;
+            }
+        }
+    }
+    let mut out = Vec::new();
+    for ((offender, axis), (off, got, want, ground)) in worst {
+        let name = ["x", "y", "z"][axis];
+        if off.abs() > GRID_EPS {
+            out.push(Finding {
+                room: RIGS.to_owned(),
+                rule: BERTH_FILLED,
+                offender: offender.clone(),
+                detail: format!(
+                    "is composed {:.4} m off the middle of the {ground:.3} m of chart its \
+                     plan owns on the {name} axis, so the body a berth stands is not on \
+                     the lattice that chart is drawn in",
+                    off.abs()
+                ),
+            });
+        }
+        if (got - want).abs() > GRID_EPS {
+            out.push(Finding {
+                room: RIGS.to_owned(),
+                rule: BERTH_FILLED,
+                offender,
+                detail: format!(
+                    "fills {got:.4} m of the {ground:.3} m of chart its plan owns on the \
+                     {name} axis, where a rig wears {want:.4} m, so it does not wear one \
+                     margin on all three axes"
                 ),
             });
         }
@@ -3754,6 +3983,69 @@ mod tests {
                  standing in its own room",
                 stage.name
             );
+        }
+    }
+
+    /// **The fill family is asked about every berth, and it answers when
+    /// a body slides off its cells.**
+    ///
+    /// Three things, and none of them is the family's own branch read
+    /// back. Every chart class a kind may be berthed on is actually
+    /// measured, so the sweep cannot go quietly empty. Every berth in the
+    /// game reads centred on the ground its plan owns and filling
+    /// [`crate::pieces::BAY_FIT`] of it — which is the claim itself, and
+    /// which was false on every deck and every deckhead berth until the
+    /// band was drawn back onto the cells. And the reading is put to a
+    /// body that has moved: the same box slid half a notch along the
+    /// chart, and the same box shrunk to half the ground it claims, both
+    /// have to stop reading as a berth filled.
+    #[test]
+    fn the_fill_family_is_asked_about_every_berth_and_answers_when_a_body_slides() {
+        let seen = plans(&roster());
+        let mut classes: BTreeMap<String, u32> = BTreeMap::new();
+        for berth in &seen {
+            *classes.entry(format!("{:?}", berth.surf)).or_default() += 1;
+        }
+        assert_eq!(
+            classes.len(),
+            Surf::ALL.len(),
+            "a chart class went unmeasured: {classes:?}"
+        );
+        assert!(
+            seen.len() > 1000,
+            "the sweep should cover every berth in the game: {}",
+            seen.len()
+        );
+        for berth in &seen {
+            let (kind, surf) = (berth.kind, berth.surf);
+            for dir in [
+                berth.chart.half_u.normalize(),
+                berth.chart.half_v.normalize(),
+            ] {
+                let (off, got) = off_plan(berth.spent, berth.owned, dir);
+                let want = berth.owned.span().dot(dir.abs()) * crate::pieces::BAY_FIT;
+                assert!(
+                    off.abs() <= GRID_EPS,
+                    "{kind:?} on a {surf:?} berth is composed {off} m off the middle of \
+                     the cells its plan spends"
+                );
+                assert!(
+                    (got - want).abs() <= GRID_EPS,
+                    "{kind:?} on a {surf:?} berth fills {got} m of the {want} m its plan \
+                     spends"
+                );
+                let step = dir * (GRID_STEP * 0.5);
+                let slid = Box3::spanning(berth.spent.lo + step, berth.spent.hi + step);
+                assert!(
+                    off_plan(slid, berth.owned, dir).0.abs() > GRID_EPS,
+                    "{kind:?} on a {surf:?} berth slid half a notch and nothing noticed"
+                );
+                let shrunk = Box3::spanning(berth.spent.lo, berth.spent.hi - dir.abs() * got * 0.5);
+                assert!(
+                    (off_plan(shrunk, berth.owned, dir).1 - want).abs() > GRID_EPS,
+                    "{kind:?} on a {surf:?} berth halved its body and nothing noticed"
+                );
+            }
         }
     }
 

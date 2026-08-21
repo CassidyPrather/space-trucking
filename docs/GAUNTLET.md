@@ -86,7 +86,7 @@ rigs: FloorLamp base plate reaches 0.0690 m out of the -0.031..0.497 m band
 So the loop when a line appears is: read it in the docket to know what
 moved, then run `--gauntlet` to get the millimetres.
 
-## The eleven families
+## The twelve families
 
 Each one names a class of defect that a screenshot could not have caught.
 What matters when you are diagnosing is the third column: what the
@@ -523,6 +523,70 @@ every room has fabric to measure, that a mated doorway has a passage in
 it, that a body nudged half a notch is caught, and that the whole shell
 shoved a cell sideways stops being at home.
 
+### `berth-filled` — a rig fills the cells its berth spends
+
+The twelfth family, and the one that closes the gap between the two
+claims a berthed piece makes. The sim states a footprint and the cabin
+draws a body, and every rule before this one asked whether the body
+stayed **inside** something. `face-fits` holds a rig to its own `w × h`
+plan and forgives everything short of it; `berth-clear` holds it to the
+depth every rig is composed within and forgives everything short of
+that; `rig-seated` asks about the one face that has to touch a chart and
+nothing about the other five. **Not one of them asks where inside its
+berth the body actually is** — so a rig could sit hard against one edge
+of the cells it was given, or half out of them on the axis nothing
+measured, and stay green in all eleven.
+
+That is what it did, on every deck and every deckhead berth in the game.
+A rig's own `z = 0` is the **berth plane** and its body is composed from
+just behind it to one cell out into the room (`pieces::RIG_NEAR`,
+`RIG_FAR`) — which is the truth on a wall, where the plane is the chart
+the rig is screwed to and the room is in front of it. A deck berth has
+no such plane. Its rect is a **plan**, the cells own the ground on both
+sides of their own middle, and the band laid off a plane that is not
+there stood every deck and deckhead berth 0.2329 m out into the aisle —
+0.42 of a cell, on the one axis the plan spends its depth on and never
+on the other. (The bodies composed inside that band came out 0.117 m to
+0.250 m off, kind by kind; the band is what a berth costs and the band
+is what this measures.) That is the shape the owner reported four times
+— "it's like, half-way between cells on one axis" — and it is why the
+axis was the load-bearing half of the report.
+
+**It asks about the two axes the rect pays for and not the third.** A
+berth's rect spends two of a kind's three extents and the chart fixes
+the other (`cargo::Kind::plan_on`): a deck berth spends across by deep
+and the deck fixes the height, a wall berth spends across by tall and
+the wall fixes the depth. What the chart fixes is `rig-seated`'s
+question from one side and `berth-clear`'s from the other, and on a wall
+it is deliberately off centre — the band begins a hair *behind* the
+plane, so a rig's back sinks into the paint it is screwed over. What the
+cells pay for is nobody else's question, and on those axes a body is
+centred or it is misplaced.
+
+Two clauses and one reading:
+
+- **Where.** The box a berth spends is centred on the ground its plan
+  owns, to within `GRID_EPS` — the same millimetre `grid-fits` calls a
+  face on its line, because this is the same question one layer up. In
+  the world: the berth wells light under a carry and the crate is not
+  in one.
+- **How much.** And it is `pieces::BAY_FIT` of that ground, which is the
+  one margin a rig wears, said on the axes a plan spends. A body
+  claiming ground it does not fill is a berth measured in the wrong
+  place, which is then what `berth-clear` tells a station's furniture
+  about.
+
+The finding is filed under `rigs` and keyed by kind and chart class,
+because the same crate stands in every room in the game and a defect in
+how a deck berths it is not fifteen defects.
+
+`the_fill_family_is_asked_about_every_berth_and_answers_when_a_body_slides`
+is the guard: every chart class is actually measured, every berth in the
+game reads centred and full, and the reading itself is put to a body
+that has moved — the same box slid half a notch along its chart, and the
+same box shrunk to half the ground it claims, both have to stop reading
+as a berth filled.
+
 ### `walk-clear` — the walked path stands in air
 
 Every waypoint of the scripted walk is inside the walk envelope, and
@@ -677,6 +741,24 @@ was a joint.
 | Layer | Was invisible because | Closed by | Found |
 | --- | --- | --- | --- |
 | Furniture and doorway hardware | enumerated all along, and declaring nothing about what carried it | `poi::Seat` and `room::Seat`, read back by `furniture-seated` | 264 claims over 15 stations and every doorway; 133 fittings and every shut door's rivets moved onto what holds them, 10 docketed |
+
+**And there is a third shape, which is what every rule happens to ASK.**
+Cargo was described and cargo declared its chart, so neither of the two
+above covers it — and a crate still stood half a cell off its berth
+through four passes of somebody looking for it. Eleven families all
+asked one kind of question: is the body *inside* its plan, inside its
+band, inside the room, touching its chart. Every one of those is
+satisfied by a body shoved hard against one edge of the ground it was
+given. Nothing asked where inside.
+
+| Layer | Was invisible because | Closed by | Found |
+| --- | --- | --- | --- |
+| A berthed rig's position within its own cells | described and declared, and asked only ever whether it stayed inside something | `berth-filled`, which measures the box a berth spends against the ground its plan owns | 33: every deck and deckhead berth in the game, 0.2329 m out into the aisle on the axis the rect pays for |
+
+So the third thing to ask of a green sweep, after "what is on screen that
+nothing enumerates" and "what does a description leave unsaid", is
+**"where a claim fixes two axes, what fixes the third"** — and then
+whether any rule in the file actually asks it.
 
 Other things it deliberately does not see, each for a stated reason:
 

@@ -439,7 +439,7 @@ adversarial pass that closes those, and it splits in two:
   in the game — the twelve stations, the three event rooms, the cabin
   and the burner — against a **loaded** board (`gauntlet::load` fills
   every legal berth through the sim's own arbiter, so decor has cargo to
-  clip through), every cargo kind, and every doorway. Eleven rule
+  clip through), every cargo kind, and every doorway. Twelve rule
   families: no fitting stands in a berth cargo may take at the height a
   rig occupies; nothing occludes a wall berth from its room; every berth
   stays workable from the walk envelope; no two drawn faces share a plane
@@ -449,8 +449,9 @@ adversarial pass that closes those, and it splits in two:
   inside the cells the sim gave it, so its pick face can be cut from its
   picture rather than its plan; the walked path stands in air; every body
   lands on the cargo grid; a part that names a seat meets it; a rig
-  reaches the chart it is berthed on; and a hung body says what holds it
-  up.
+  reaches the chart it is berthed on; a hung body says what holds it up;
+  and a rig fills the cells its berth spends rather than merely staying
+  inside them.
 - **Pixels, opt-in.** `--gauntlet-walk <dir>` drives the scripted room
   walk — in through the door, round the room, up to the counter — and
   writes one PNG per waypoint, then holds the camera still for ten
@@ -495,6 +496,19 @@ way by everybody, so the odd body is what needs saying out loud** —
 `poi::Shape::fill`, one statement of the fraction, read by the
 containment law and by the sweep alike. It is worth looking for: the
 suspicious shape is the one whose mesh does not fill its own box.
+
+The fourth rule came off a crate the owner reported four times and the
+harness passed every time. Eleven families all asked the same *kind* of
+question — is the body inside its plan, inside its band, inside the
+room, touching its chart — and every one of them is satisfied by a body
+shoved hard against one edge of the ground it was given. On a deck that
+is exactly what happened: the depth band is measured off the berth
+plane, a wall has one and a deck does not, and every standing rig in the
+game was composed half a cell out into the aisle on the one axis nobody
+had a rule for. **A rule that only ever asks whether a body is inside
+something cannot see a body that is inside it and in the wrong place, so
+where a claim fixes two axes, ask what fixes the third.** `berth-filled`
+is that question asked of the two axes a berth's rect pays for.
 
 [GAUNTLET.md](GAUNTLET.md) is the operator's side — how to run it, how to
 read a docket line, what each family looks like in the world when it

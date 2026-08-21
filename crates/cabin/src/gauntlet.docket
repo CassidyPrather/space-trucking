@@ -225,3 +225,31 @@
 # deck; three pillars "floor to deckhead" that reached neither; and a
 # dozen plates, patches, plaques and boards standing between 12 and 77 mm
 # off the walls they are bolted to.
+#
+# `berth-filled` is the fifth of the second kind, and it is the one the
+# owner had to report four times. Cargo was described and cargo declared
+# its chart, so neither of the two shapes above covers it. What was
+# missing was the DIRECTION every rule happened to ask in: eleven
+# families all asked whether a body stayed INSIDE something — its plan,
+# its band, its room, its chart — and every one of those is satisfied by
+# a body shoved hard against one edge of the ground it was given. Nothing
+# asked where inside.
+#
+# It was not centred, on every deck and deckhead berth in the game. A
+# rig's own `z = 0` is its BERTH PLANE and the band it is composed in
+# runs from just behind that plane to one cell out into the room, which
+# is right on a wall and meaningless on a deck: a deck berth's rect
+# spends the depth, so the cells own the ground on both sides of their
+# own middle and there is no plane to hang a band off. It hung off the
+# middle of the cell anyway. Thirty-three findings, all one cause, all
+# 0.2329 m — 0.42 of a cell — out into the aisle, on the one axis a plan
+# spends its depth on and never on the other, which is exactly the shape
+# of the report: half-way between cells, on ONE axis, with the other
+# exact.
+#
+# The cure is in `pieces::site_on`, which draws a deck or a deckhead
+# berth back onto its own cells by the band's own middle
+# (`pieces::rig_mid`), and in the carried ghost, which promises the whole
+# offset now rather than the reach off the chart alone. Nothing about a
+# wall berth moved: a wall really does have a plane, and the band really
+# does begin a hair behind it.

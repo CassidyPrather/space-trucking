@@ -695,12 +695,29 @@ Other things it deliberately does not see, each for a stated reason:
   What is still checked is that a room cannot *fence off* its own
   staging, which would strand a crate and hold the launch forever
   (`a_stations_dressing_is_not_in_the_aiming_path`).
+- **A doorway's hardware standing in a berth.** `berth-clear` asks about
+  a station's own furniture and not about a seam's: a frame dresses the
+  aperture and the cells beside an aperture are berths, so a jamb stands
+  in one by construction — which is the same exemption `grid-fits`
+  spends on hardware, for the same reason. Asked of doorways it reports
+  seventy-one lintels and stiles doing their job.
 - **Anything about colour, taste, or composition.** It measures shapes.
   A room can pass every rule here and look like nothing.
 
-And two structural blind spots that are worth knowing about because they
-are not closed, only bounded:
+And three structural blind spots that are worth knowing about because
+they are not closed, only bounded:
 
+- **`berth-seen` only looks one way.** It asks whether a fitting stands
+  between the room and a *berth*; nothing asks whether a berth's cargo
+  stands between the room and a piece of *hardware*. That is the class
+  the owner's "the latch spawns occluded by the solar system map"
+  belonged to: on the starting board the chart tank hangs on the
+  starboard wall at cell (12, 5), a door's width from the burner's seam,
+  and its body reaches into the room in front of the latch beside that
+  seam. The latch is gone from that seam for its own reason — a seam
+  that cannot part carries none — so the instance is closed and the
+  class is not. A latch and a wall berth can still want the same piece
+  of wall.
 - **A pose is one pose.** The roster mates every station at the first
   door the spawn walk takes, deterministically, because a sweep that took
   a minute would not be run. The rules are all measured in a room's own

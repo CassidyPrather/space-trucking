@@ -326,12 +326,15 @@ pub enum Shape {
     Cone,
 }
 
-/// **The unit ring, in its own box**: the inner radius its bore leaves and
-/// the outer radius its rim reaches, both in the unit body's own half-
-/// units. The tube between them is `RING_BRIM - RING_BORE` thick, which
-/// is the one number on this list that is not a whole unit and the reason
+/// **What the unit ring's bore leaves**, in the unit body's own half-
+/// units. The tube between this and [`RING_BRIM`] is what a torus
+/// actually fills of the box it lies in, which is the one number on the
+/// silhouette list that is not a whole unit and the reason
 /// [`Shape::fill`] exists.
 const RING_BORE: f32 = 0.32;
+
+/// **What its rim reaches** — half a unit, like every other body's
+/// widest reach, so a ring fills its box across and only its tube deep.
 const RING_BRIM: f32 = 0.5;
 
 impl Shape {

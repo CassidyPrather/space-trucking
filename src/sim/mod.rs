@@ -1201,12 +1201,25 @@ impl Sim {
     /// The gangway law's detach gates: **a seam that could strand anything
     /// refuses to part.** Nothing detaches while it holds something of
     /// yours; nothing of yours detaches while it holds you.
+    ///
+    /// **And a room that rides is not a room you leave.** Detaching is
+    /// how you walk out of somewhere you called at: the seam shuts and
+    /// the place goes on without you. A riding room came with the ship
+    /// and travels in it, so there is nothing on the far side of its
+    /// seam to be left behind — parting one is not leaving it, it is
+    /// throwing it away, and the fire, the hopper and the stoke go with
+    /// it in one press that nothing undoes. The rest of this file's
+    /// gates refuse what a detach would *strand*; this one refuses what
+    /// it would *destroy*.
     fn part_check(&self, room: RoomId) -> Result<(), Refusal> {
         if room == CABIN {
             return Err(Refusal::Root);
         }
         if self.rooms.get(room).is_none() {
             return Err(Refusal::Absent);
+        }
+        if self.rooms.riding(room) {
+            return Err(Refusal::Riding);
         }
         if self.occupied.iter().any(|&at| self.rooms.beyond(room, at)) {
             return Err(Refusal::Aboard);
@@ -3837,21 +3850,62 @@ mod tests {
         );
     }
 
-    /// Selling your furnace is legal, foolish, and supported.
+    /// **A room that rides refuses to part**, and every other room still
+    /// does.
+    ///
+    /// Detach is how you leave a room you called at: the seam shuts and
+    /// the place goes on without you. A riding room is equipment the
+    /// ship owns, so there is nothing on the far side of its seam to be
+    /// left behind — the press that parted the furnace destroyed it,
+    /// with the fire and the hopper and the banked stoke inside, and
+    /// nothing anywhere gave it back. The law is asked of the KIND
+    /// (`RoomKind::riding`, which the launch gate already turns on) and
+    /// not of the burner by name, so a crew module added tomorrow is
+    /// safe on the day it is written.
     #[test]
-    fn the_burner_parts_like_any_other_room() {
+    fn a_riding_room_refuses_to_part() {
         let mut sim = Sim::new(53);
-        assert_eq!(sim.part_check(BURNER), Ok(()));
+        for kind in [RoomKind::Trade, RoomKind::Wreck, RoomKind::Parlor] {
+            let _ = sim.rooms.spawn(kind, CABIN);
+        }
+        let mut riding = 0;
+        let mut calling = 0;
+        for (id, room) in sim.rooms().iter() {
+            let refusal = sim.part_check(id);
+            if room.kind.riding() {
+                riding += 1;
+                assert_eq!(
+                    refusal,
+                    if id == CABIN {
+                        Err(Refusal::Root)
+                    } else {
+                        Err(Refusal::Riding)
+                    },
+                    "room {id} rides and was let go"
+                );
+            } else {
+                calling += 1;
+                assert_ne!(refusal, Err(Refusal::Riding), "room {id} does not ride");
+            }
+        }
+        assert!(
+            riding >= 2 && calling >= 3,
+            "{riding} riding, {calling} not"
+        );
+        // The furnace stays, the press is answered, and nothing in it is
+        // lost: a refusal is a cue, so the room is still there after it.
+        let fuel = sim.pieces().len();
         let detach = InputFrame {
             detach: Some(BURNER),
             ..InputFrame::default()
         };
         sim.advance(0.0, &detach);
-        assert_eq!(sim.rooms().kind(BURNER), None);
-        // And staged fuel refuses to let it go.
-        let mut sim = Sim::new(53);
-        drag(&mut sim, cabin(3, 3), cell_center(BURNER, 3, 3));
-        assert_eq!(sim.part_check(BURNER), Err(Refusal::Cargo));
+        assert_eq!(sim.rooms().kind(BURNER), Some(RoomKind::Burner));
+        assert_eq!(sim.pieces().len(), fuel, "a refused detach ate something");
+        assert!(sim.cues().contains(&Cue::Refit {
+            refusal: Refusal::Riding
+        }));
+        assert!(!sim.cues().contains(&Cue::Parted));
     }
 
     #[test]

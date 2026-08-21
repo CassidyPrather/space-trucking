@@ -831,14 +831,26 @@ Two gates, sharing one predicate family.
 
 **Detach gates** — a detach is refused unless:
 
-1. **Aboard**: no player's occupied room is the detaching room, or any
+1. **Riding**: the room came alongside. A riding room is not a room you
+   leave — it travels with you, so there is nothing on the far side of
+   its seam to be left behind, and parting one destroys it rather than
+   dismissing it. `Refusal::Riding`.
+2. **Aboard**: no player's occupied room is the detaching room, or any
    room reachable only through it.
-2. **Cargo aboard**: no player-owned piece rests in the detaching room
+3. **Cargo aboard**: no player-owned piece rests in the detaching room
    (or in anything reachable only through it), and no piece is held in
    hand across the seam — a held piece snaps home first, exactly as it
    does for a vanished pointer (NETWORKING.md's leave rule).
-3. **Resolved**: the room's business is finished — no pending offer on
+4. **Resolved**: the room's business is finished — no pending offer on
    an `Offer` tile, no unresolved event.
+
+The first gate is a different sort of clause from the other three. They
+refuse what a detach would **strand**; it refuses what a detach would
+**destroy**. It is also the one gate no cargo can clear: the other three
+name something the player can go and move, and this one names the room
+itself, which is why the seam it guards is drawn without a latch at all
+(a control that can only ever refuse is a control that should not be
+there).
 
 **The launch gate** — the launch handle refuses unless:
 
@@ -902,9 +914,15 @@ no barter is open. It becomes an ordinary room, attached through the
 ordinary interface, and every one of those special cases dissolves:
 
 - It is a **riding room**, attached at a port and travelling with the
-  ship. It is detachable, with the gates — selling your furnace is
-  legal, foolish, and supported, in the tradition of selling your last
-  lamp.
+  ship. It does not part. Selling your furnace was legal, foolish and
+  supported for a while, in the tradition of selling your last lamp,
+  and the tradition does not hold here: a lamp is cargo you carry to a
+  counter and hand over, and the furnace went in one press of a latch,
+  with the fire and the hopper and the banked stoke inside it and
+  nothing anywhere that gave it back. The two are not the same act.
+  Selling the ship's own rooms can come back the day it is a *sale* —
+  a counterparty, a price, and a gesture that says what is about to
+  happen.
 - **Hopper staging moves into its grid** as `Consume` tiles. Staging is
   an ordinary berth transition into an ordinary room; snatching a piece
   back out is an ordinary carry.

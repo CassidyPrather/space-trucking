@@ -733,6 +733,12 @@ pub enum Refusal {
     Full,
     /// The cabin is the root; it does not part from itself.
     Root,
+    /// The room rides. A riding room is equipment the ship owns rather
+    /// than a place it called at, so its seam is not a way out of it:
+    /// detach exists to leave the rooms you visited, and one press that
+    /// took the furnace away with no gesture and no way back was a
+    /// missing safeguard rather than a supported sale.
+    Riding,
     /// A crew body is in the detaching room, or beyond it.
     Aboard,
     /// Cargo of the player's rests in the detaching room, or beyond it —

@@ -451,24 +451,29 @@ The numbers, measured with `--gauge` at 480×270 on this container's
 software rasteriser, where absolute times mean nothing and the deltas
 mean everything:
 
-| | mean ms/frame | delta |
-| --- | --- | --- |
-| no composite pass at all | 134.95 | — |
-| the pass, drawing nothing | 141.18 | +6.2 |
-| the pass, one tap per texel | 145.76 | +10.8 |
-| the pass, the 29-tap disc it ships with | 153.40 | **+18.4** |
+| | mean of 3, ms/frame | spread | delta |
+| --- | --- | --- | --- |
+| no composite pass at all | 134.95 | 0.8 | — |
+| the pass, drawing nothing | 141.18 | 2.3 | +6.2 |
+| the pass, one tap per texel | 145.76 | 5.7 | +10.8 |
+| the pass, the 29-tap disc it ships with | 152.81 | 8.0 | **+17.9** |
 
-The mask is 0.4 ms of that — the same scene measured 152.97 with the
-kernel and before every part carried a proxy — because it is a handful
-of extra draws inside a pass that was already running, and only on the
-frames something is said about. Everything else the table prices is the
-full-screen edge detect, and llvmpipe is doing 3.6 M texel fetches a
-frame in software to produce it. The same work is a fraction of a
-millisecond on the integrated graphics this is aimed at, and if it ever
-bites, the pass can be cut down to the screen rects of the outlined
-pieces instead of the whole picture: at one tap it is 10.8 ms and at
-twenty-nine it is 18.4, so the kernel is the half that scales with area
-and the area is the knob.
+**The mask itself does not show up.** The same scene with the copies cut
+for every part read 152.97 and with them cut only on demand 152.81,
+which is well inside the spread of either — it is a handful of extra
+draws inside a pass that was already running, and only on the frames
+something is said about. It costs nothing at all until then: a part is
+only MARKED as maskable when its rig is built, and the copy is cut the
+first time the outline pass has something to say about that piece, so a
+cabin nobody is pointing at carries no mask and no extra body.
+
+What the table prices is the full-screen edge detect, and llvmpipe is
+doing 3.6 M texel fetches a frame in software to produce it. The same
+work is a fraction of a millisecond on the integrated graphics this is
+aimed at, and if it ever bites, the pass can be cut down to the screen
+rects of the outlined pieces instead of the whole picture: the pass with
+no kernel at all is +10.8 and with this one +17.9, so the kernel is the
+half that scales with area and the area is the knob.
 
 **What was measured and not built.** An inverted hull per part is +5.4
 draw calls mean and +20 worst with no batching, and it outlines an
@@ -518,9 +523,10 @@ height of the third cubby reads the third cubby. The same ring answers
 **Level wall cargo still reads through its chart, and that is a measured
 trade rather than an omission.** There the chart lies in the rig's very
 plane and answers for the rig's very cells, so the reading is right for
-anything but a glancing aim at a deep body — a sconce read from 20° off
-the wall lands a fraction of a cell over, 4 stances of 16 in the same
-sweep. Curing it costs a seam: a wall berth's cells are where a doorway's
+anything but a glancing aim at a deep body — a sconce reaching half a
+cell off its wall lands a fraction of a cell over on 3 or 4 of the 15
+stances the room allows in the same sweep, all of them at the grazing
+ends of the arc. Curing it costs a seam: a wall berth's cells are where a doorway's
 amber latch is bolted too, the latch stands two millimetres proud of the
 plane, and the fixture's own bay window is berthed **across** the cabin's
 aft latch. Give that window a pick body and it outranks the latch from

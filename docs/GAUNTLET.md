@@ -1234,3 +1234,22 @@ walks of one room print the same twenty-seven lines to the last digit and
 write twenty-seven identical PNGs. What keeps the pixel half out of the
 ordinary suite is that the ordinary suite has no window, and adding one
 to CI is a decision about CI rather than about the harness.
+
+**One view is not byte-stable, and it is measured rather than suspected.**
+`the_same_view_shot_twice_is_the_same_bytes` shoots four views twice and
+asks for zero differing bytes; `drydock` does not always give them.
+Eight shots of `--fixture --view drydock` from one binary came out as
+three distinct pictures, six of one and one each of two others, and two
+that differ do so by **24 to 175 pixels of ±1 in a single channel**, all
+of them in the bloom halo round the hull's own lamps. Nothing about the
+cabin's own frame moves: `bay`, `starboard` and `front` are identical
+across every sample taken.
+
+It is the one view rendered from OUTSIDE the ship, where the exterior's
+blended bodies — the deep field, the stream, the flood — stand at depths
+the sort has to break ties in, and a tie broken the other way lands one
+step of an eight-bit channel away. The test's own message says a frame
+that moves is "reading a clock nobody counts", and this one is not: it is
+reading a draw order nobody pinned. Until that order is pinned, a red
+from this test on `drydock` alone and by a handful of ±1 pixels is the
+known one; a red on any other view, or by more than a hairline, is news.

@@ -157,9 +157,30 @@ const REACH: i32 = 3;
 /// not stipple.
 const DASH: i32 = 3;
 
+/// **A part of a rig that would be masked if anything were said about
+/// its piece**, and whose piece that is. Every body a kind draws wears
+/// one (`pieces::RigParts::mask`); none of them costs anything until
+/// [`paint`] cuts the copy.
+#[derive(Component, Clone, Copy)]
+pub struct MaskBody {
+    piece: u32,
+    /// Whether the copy has been cut yet. **Cut once and kept**: a
+    /// player looks at the same crate again, and a rig respawns with
+    /// its piece anyway, so there is nothing to reclaim and a spawn per
+    /// frame would be churn for its own sake.
+    cut: bool,
+}
+
+impl MaskBody {
+    /// A part of `piece`, not yet copied.
+    #[must_use]
+    pub const fn of(piece: u32) -> Self {
+        Self { piece, cut: false }
+    }
+}
+
 /// A body drawn a second time into the mask: whose piece it is, and
-/// which part of that piece it is a copy of. One rides every part of
-/// every rig, dark until something is said about the piece.
+/// which part of that piece it is a copy of.
 ///
 /// It names its part because it must answer to that part's own hiding
 /// and to nothing above it. A rat's bite wedge that is not shown is not
@@ -511,13 +532,16 @@ const GHOST_DUTY: f32 = 0.45;
 /// proxies with the ink that carries the code. Derived every frame from
 /// the sim, the pointer and the carry, and never stored — exactly as the
 /// bars this replaces were.
+#[allow(clippy::too_many_arguments)]
 fn paint(
+    mut commands: Commands,
     shell: Res<Shell>,
     pointer: Res<crate::surface::VirtualPointer>,
     rig: Res<crate::rig::CameraRig>,
     ghosts: Res<Ghosts>,
     inks: Res<MaskInks>,
     parts: Query<&Visibility, Without<MaskProxy>>,
+    mut bodies: Query<(Entity, &Mesh3d, &mut MaskBody)>,
     mut proxies: Query<(&MaskProxy, &mut Visibility, &mut MeshMaterial3d<MaskInk>)>,
 ) {
     let sim = &shell.bridge.sim;
@@ -565,6 +589,29 @@ fn paint(
     // the crosshair can rest on and a thing that has to answer when it
     // does. A code naming a piece that is not drawn simply finds no
     // proxy wearing that number.
+    // **Cut the copies the moment there is anything to say**, and not
+    // before: a cabin nobody is pointing at carries no mask at all, and
+    // the difference is some hundreds of bodies that would otherwise
+    // stand hidden in every frame of the game forever.
+    for (part, mesh, mut body) in &mut bodies {
+        if body.cut || !codes.iter().any(|(id, _)| *id == body.piece) {
+            continue;
+        }
+        body.cut = true;
+        commands.spawn((
+            Mesh3d(mesh.0.clone()),
+            MeshMaterial3d(inks.ink(HOVER)),
+            Transform::default(),
+            Visibility::Hidden,
+            MaskProxy {
+                piece: body.piece,
+                part,
+            },
+            // A CHILD of the part, so it rides every transform the part
+            // rides and needs no copy of any of them.
+            ChildOf(part),
+        ));
+    }
     for (proxy, mut visibility, mut ink) in &mut proxies {
         let shown = codes
             .iter()

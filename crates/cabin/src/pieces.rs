@@ -542,10 +542,6 @@ pub struct SharedBits {
     pub slash: Handle<StandardMaterial>,
     flash: Handle<StandardMaterial>,
     glyph: Handle<StandardMaterial>,
-    /// The ink every part's mask proxy is spawned wearing
-    /// (`crate::outline`). Which one it ends up wearing is said afresh
-    /// every frame; this is only what it is born in.
-    mask: Handle<crate::outline::MaskInk>,
 }
 
 // ------------------------------------------------------------------ helpers --
@@ -1522,7 +1518,6 @@ fn ico(radius: f32) -> Mesh {
 fn spawn_overlays(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    inks: Res<crate::outline::MaskInks>,
     skin: Res<Skin>,
 ) {
     let slash_mat = glow::phosphor(&mut materials, palette::LAMP_NO, 3.0);
@@ -1532,7 +1527,6 @@ fn spawn_overlays(
         slash: slash_mat,
         flash: flash_mat.clone(),
         glyph: glyph_mat.clone(),
-        mask: inks.ink(1),
     });
 
     // The violation flash's frame bars — four per bay surface — and the
@@ -2951,12 +2945,10 @@ struct RigParts<'w, 's, 'a> {
     /// crew hung it, so the rig neither knows nor asks.
     sky: bool,
     root: Entity,
-    /// Whose rig this is, and the ink its parts' mask proxies wear:
-    /// every body a kind draws is drawn a second time into the outline
-    /// pass's mask, and the copy has to be able to say which piece it
-    /// is a copy of (`crate::outline`).
+    /// Whose rig this is. Every body a kind draws is marked with it, so
+    /// that the outline pass can find the parts of one piece when it has
+    /// something to say about that piece (`crate::outline`).
     piece: u32,
-    mask: Handle<crate::outline::MaskInk>,
     /// The amber grab's own emissive, filled in by [`carry_grab`] on
     /// the kinds that wear one — [`hover_glint`] flares it.
     grab: Option<Handle<StandardMaterial>>,
@@ -2984,34 +2976,25 @@ impl RigParts<'_, '_, '_> {
         let part = self
             .commands
             .spawn((
-                Mesh3d(mesh.clone()),
+                Mesh3d(mesh),
                 MeshMaterial3d(material),
                 transform,
                 ChildOf(self.root),
             ))
             .id();
-        self.mask(mesh, part);
+        self.mask(part);
         part
     }
 
-    /// **The same body again, in the mask.** Every part of every rig
-    /// carries one, dark, and the outline pass finds the silhouette of
-    /// whichever of them are lit this frame (`crate::outline`).
-    ///
-    /// A CHILD of the part rather than a sibling, so it rides every
-    /// transform the part rides and needs no copy of any of them.
-    fn mask(&mut self, mesh: Handle<Mesh>, part: Entity) {
-        self.commands.spawn((
-            Mesh3d(mesh),
-            MeshMaterial3d(self.mask.clone()),
-            Transform::default(),
-            Visibility::Hidden,
-            crate::outline::MaskProxy {
-                piece: self.piece,
-                part,
-            },
-            ChildOf(part),
-        ));
+    /// **Say that this part is part of a body worth outlining.** No
+    /// second copy is drawn here and none exists until something is
+    /// said about the piece: the outline pass cuts one when it needs
+    /// one and leaves it (`crate::outline`), so a cabin nobody is
+    /// pointing at carries no mask at all.
+    fn mask(&mut self, part: Entity) {
+        self.commands
+            .entity(part)
+            .insert(crate::outline::MaskBody::of(self.piece));
     }
 }
 
@@ -3208,7 +3191,6 @@ fn spawn_rig(
         sky: glasses.sky,
         root: body_root,
         piece: piece.id,
-        mask: shared.mask.clone(),
         grab: None,
     };
     build_kind(&mut rig, piece);
@@ -5509,13 +5491,13 @@ fn stamp(
     let entity = rig
         .commands
         .spawn((
-            Mesh3d(mesh.clone()),
+            Mesh3d(mesh),
             MeshMaterial3d(material.clone()),
             part.at,
             ChildOf(rig.root),
         ))
         .id();
-    rig.mask(mesh, entity);
+    rig.mask(entity);
     if part.role.dark() {
         rig.commands.entity(entity).insert(Visibility::Hidden);
     }

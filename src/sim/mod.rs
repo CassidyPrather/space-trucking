@@ -1995,14 +1995,25 @@ impl Sim {
             // A room's own goods do not move: they cross at the handshake.
             return Err(None);
         }
+        // **Which classes refuse a drop outright is
+        // [`Tile::takes_your_cargo`]'s answer**, and it is asked here
+        // rather than restated here, because a second law about where a
+        // body may WALK to set a crate down reads the same predicate
+        // (`RoomKind::marooned`). What is left in this match is only WHY
+        // each refusal is refused, which is a message and not a rule.
+        if !tile.takes_your_cargo() {
+            return Err(match tile {
+                Tile::Threshold => Some(Violation::Threshold),
+                // The counter's deck and the pendant's ceiling: the
+                // room's own hardware is already standing there.
+                Tile::Fixture => Some(Violation::Fixture),
+                // Nothing of the player's is ever laid on a room's own
+                // shelf; ownership crosses at the handshake, never
+                // through a drop.
+                _ => None,
+            });
+        }
         match tile {
-            Tile::Threshold => return Err(Some(Violation::Threshold)),
-            // The counter's deck and the pendant's ceiling: the room's
-            // own hardware is already standing there.
-            Tile::Fixture => return Err(Some(Violation::Fixture)),
-            // Nothing of the player's is ever laid on a room's own shelf;
-            // ownership crosses at the handshake, never through a drop.
-            Tile::Stock => return Err(None),
             Tile::Offer | Tile::Consume => {
                 // Both are exits — the piece is leaving the ship, one way
                 // or another — so the vital rule stands at both doors.
@@ -2022,7 +2033,7 @@ impl Sim {
             // gate refuses while anything of yours stands on one, so the
             // last chart tank left on a station's deck is not lost, it is
             // simply not going anywhere yet.
-            Tile::Plain | Tile::Staging => {}
+            _ => {}
         }
         // A drop over a cabinet's body reaches for its cubbies first — but
         // only with something cubby-sized. Anything bigger falls through to

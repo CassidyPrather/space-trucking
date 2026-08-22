@@ -1682,9 +1682,15 @@ mod tests {
         // The trade room's aft floor row is its own stock; its front
         // floor row is the chalked offer square; the deck between is
         // ordinary, and so is everything aboard.
-        assert!(!player_owned(&rooms, &[], at(3, 3)));
+        assert!(!player_owned(&rooms, &[], at(5, 3)));
         assert!(player_owned(&rooms, &[], at(3, 6)));
         assert!(player_owned(&rooms, &[], at(3, 4)));
+        // **Except the two cells its own door stands on**, which the
+        // doorstep law hands back to the room's ordinary class: a body
+        // walking in lands on deck it may use, and the shopfront starts
+        // beside the door rather than under it.
+        assert!(player_owned(&rooms, &[], at(3, 3)));
+        assert!(player_owned(&rooms, &[], at(4, 3)));
         assert!(player_owned(
             &rooms,
             &[],

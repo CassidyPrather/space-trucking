@@ -156,6 +156,34 @@ pub enum Tile {
     Fixture,
 }
 
+impl Tile {
+    /// **Whether the player may set their own cargo on a cell of this
+    /// class** — the class half of the placement ladder, said once so a
+    /// rule about where a body may WALK and the rule about where a crate
+    /// may STAND cannot come apart.
+    ///
+    /// Three classes refuse and each refuses for its own reason: the
+    /// room's own goods are the room's, an aperture's footprint is a
+    /// doorway, and a fixture's cell is already full of the room's
+    /// hardware. Chalk and hazard both accept — a proposal and a fuel
+    /// load are things you do deliberately, not places you are shut out
+    /// of — and the two ordinary classes accept because that is what
+    /// ordinary means.
+    ///
+    /// `Sim::placement_check` is the arbiter and this is not a second
+    /// one: it says which classes refuse and never why, and
+    /// `the_class_that_takes_your_cargo_is_the_one_the_arbiter_allows`
+    /// holds the two together over every cell of every room the game
+    /// has.
+    #[must_use]
+    pub const fn takes_your_cargo(self) -> bool {
+        match self {
+            Self::Plain | Self::Staging | Self::Offer | Self::Consume => true,
+            Self::Stock | Self::Threshold | Self::Fixture => false,
+        }
+    }
+}
+
 /// Everything a room can be. An **appended table**, like `Kind`: new
 /// kinds go on the end and old saves keep parsing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -500,21 +528,40 @@ impl RoomKind {
     /// the player — see [`super::Sim::free_berth_in`].
     #[must_use]
     pub fn doorstep(self, x: u8, y: u8) -> bool {
+        self.declared()
+            .filter_map(|(slot, _)| self.doorsteps(slot))
+            .any(|cells| cells.contains(&(x, y)))
+    }
+
+    /// **The deck one declared door stands on**, in this room's own net —
+    /// the cells [`RoomKind::doorstep`] answers for, named by the port
+    /// that owns them. `None` where the slot declares no door: a ladder
+    /// and a hatch punch the deck rather than stand on it, so neither
+    /// has a step.
+    ///
+    /// Split out because two laws want it from opposite ends. The one
+    /// above asks "is this cell somebody's doorstep" of a cell; the
+    /// approach law ([`RoomKind::marooned`]) asks "where does a body
+    /// standing in THIS door start from" of a port, and a rule that
+    /// seeded a walk from every door in the room would call a marooned
+    /// corner reachable because some other doorway reaches it.
+    #[must_use]
+    pub fn doorsteps(self, port: PortId) -> Option<[(u8, u8); APERTURE as usize]> {
+        let Port::Door { wall, offset } = self.port(port)? else {
+            return None;
+        };
         let (width, depth) = self.floor();
-        self.declared().any(|(_, port)| {
-            let Port::Door { wall, offset } = port else {
-                return false;
+        let mut cells = [(0, 0); APERTURE as usize];
+        for along in 0..APERTURE {
+            let step = match wall % 4 {
+                0 => (offset + along, 0),
+                1 => (width - 1, offset + along),
+                2 => (offset + along, depth - 1),
+                _ => (0, offset + along),
             };
-            (0..APERTURE).any(|along| {
-                let step = match wall % 4 {
-                    0 => (offset + along, 0),
-                    1 => (width - 1, offset + along),
-                    2 => (offset + along, depth - 1),
-                    _ => (0, offset + along),
-                };
-                (COURSES + step.0, COURSES + step.1) == (x, y)
-            })
-        })
+            cells[usize::from(along)] = (COURSES + step.0, COURSES + step.1);
+        }
+        Some(cells)
     }
 
     /// **The entry path of a declared door**: the straight run in from
@@ -675,15 +722,118 @@ impl RoomKind {
         // say in it — the room kind declares bands and ports, and this
         // reads both.
         //
-        // `Stock` is deliberately untouched. A shopfront either side of
-        // the door you came in by is a shopfront; goods are the room's
-        // to place where it likes, and the tell that they are not yours
-        // is that pressing one marks it instead of lifting it.
-        Some(if tile == Tile::Offer && self.entry_path(x, y) {
-            self.ordinary()
-        } else {
-            tile
+        // **The doorstep law: a room's own goods do not run under its
+        // own door.**
+        //
+        // The entry-path law above is about the LANE and it left `Stock`
+        // alone on purpose — a shopfront either side of the door you
+        // came in by is a shopfront, and the tell that the goods are not
+        // yours is that pressing one marks it instead of lifting it.
+        // What it could not leave alone is the two cells the door itself
+        // stands on, because those are the ones a body lands in, and on
+        // a room whose goods band runs along the wall it presents to
+        // whatever it came alongside — which is every room the arbiter
+        // stocks — the door is punched straight through the band.
+        //
+        // The cell was already dead: [`super::Sim::free_berth_in`]
+        // refuses to lay anything of the room's on a doorstep, and
+        // `Tile::Stock` refuses to let the player lay anything of theirs
+        // anywhere. So the class was painting filled enamel over deck
+        // that nobody in the game could ever use, and the first thing a
+        // player did on walking in was stand on the shop's counter. This
+        // is the same declaration `free_berth_in` was already making,
+        // said in the one place the paint reads too — a tile that looks
+        // like a shopfront and cannot behave like one cannot exist.
+        //
+        // `Consume` is untouched by it, and the distinction is the word
+        // GOODS: a hazard field is what the room IS rather than what the
+        // room has put out, and a furnace with two safe cells inside its
+        // own door is a furnace you can park a crate in.
+        Some(match tile {
+            Tile::Offer if self.entry_path(x, y) => self.ordinary(),
+            Tile::Stock if self.doorstep(x, y) => self.ordinary(),
+            tile => tile,
         })
+    }
+
+    /// **Every cell of this room's deck the player may set cargo on that
+    /// no path from `port`'s own doorstep reaches**, across such cells
+    /// alone — empty where the room is whole.
+    ///
+    /// The approach law's one reading. A room's tile classes say what
+    /// each cell IS; nothing said whether the ones the player is invited
+    /// to use can be *got to* from the way in, and the owner walked the
+    /// difference: the deck a station's door stands on was its shopfront,
+    /// so every arrival began by standing on the goods and the nearest
+    /// cell a crate could be set down on was a step further in.
+    ///
+    /// **The blocked classes are the refused ones and nothing else**
+    /// ([`Tile::takes_your_cargo`]): the room's own goods, the deck its own
+    /// hardware fills, and an aperture's footprint. Chalk is crossable
+    /// because chalk is deck the player may use — whether a lane crosses
+    /// it *unmeaning* is [`RoomKind::entry_path`]'s law and not this
+    /// one — and a hazard field is crossable for the same reason, which
+    /// is what makes the furnace answer this rather than be exempted
+    /// from it.
+    ///
+    /// A doorstep that is itself refused seeds nothing, so the whole
+    /// room answers as marooned. That is the honest reading: a door you
+    /// cannot step through onto ground you may use is worse than a
+    /// corner you cannot reach, not better.
+    ///
+    /// `None` where the kind declares no such door — a ladder and a
+    /// hatch stand on no deck, so neither has a doorstep to start from.
+    #[must_use]
+    pub fn marooned(self, port: PortId) -> Option<Vec<(u8, u8)>> {
+        self.doorsteps(port)?;
+        let steps = self.doorsteps(port)?;
+        Some(self.walled_off(&steps, |x, y| {
+            self.surface_of(x, y) == Some(Surf::Floor)
+                && self.tile_of(x, y).is_some_and(Tile::takes_your_cargo)
+        }))
+    }
+
+    /// **Which cells `open` calls open that a step from `seeds` never
+    /// reaches**, walking the deck four ways.
+    ///
+    /// [`RoomKind::marooned`]'s one arithmetic, factored out for the
+    /// reason the gauntlet factors its own readings out: a rule whose
+    /// reading is buried inside its own loop cannot be handed a fenced
+    /// room, and a rule nobody can catch out is a green tick that means
+    /// nothing. The law is which cells count as open and where a body
+    /// starts; this is only the walk.
+    fn walled_off<F: Fn(u8, u8) -> bool>(self, seeds: &[(u8, u8)], open: F) -> Vec<(u8, u8)> {
+        let (w, h) = self.floor();
+        let mut seen: Vec<(u8, u8)> = Vec::new();
+        let mut edge: Vec<(u8, u8)> = Vec::new();
+        for &(x, y) in seeds {
+            if open(x, y) && !seen.contains(&(x, y)) {
+                seen.push((x, y));
+                edge.push((x, y));
+            }
+        }
+        while let Some((x, y)) = edge.pop() {
+            for (nx, ny) in [
+                (x.wrapping_sub(1), y),
+                (x + 1, y),
+                (x, y.wrapping_sub(1)),
+                (x, y + 1),
+            ] {
+                if open(nx, ny) && !seen.contains(&(nx, ny)) {
+                    seen.push((nx, ny));
+                    edge.push((nx, ny));
+                }
+            }
+        }
+        let mut out = Vec::new();
+        for y in COURSES..COURSES + h {
+            for x in COURSES..COURSES + w {
+                if open(x, y) && !seen.contains(&(x, y)) {
+                    out.push((x, y));
+                }
+            }
+        }
+        out
     }
 }
 
@@ -1872,6 +2022,96 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// **A room's own goods do not stand between its door and its
+    /// deck.**
+    ///
+    /// The approach law, swept over every room kind and every declared
+    /// door. The entry-path law above is about a LANE and this one is
+    /// about a JOURNEY: from the deck a door stands on, every cell of
+    /// that room's deck the player may set a crate down on has to be
+    /// walkable to across such cells alone.
+    ///
+    /// It was written because the lane law read green while the owner
+    /// walked the defect. `Trade` and `Wreck` hang their goods on the
+    /// wall they present to whatever they came alongside, and that is
+    /// the wall their one door is punched through — so the two cells a
+    /// body landed in on the way in were the shopfront, the player stood
+    /// on the counter to arrive, and the nearest deck a crate of theirs
+    /// could go on was a step further in. Nothing said so, because every
+    /// rule this file had asked what a cell IS and none asked what a cell
+    /// is FOR.
+    ///
+    /// Three clauses, and the last two are what keep it from going
+    /// quietly toothless:
+    ///
+    /// - every declared door leaves nothing marooned;
+    /// - the sweep actually reaches doors, and rooms with deck in them;
+    /// - the reading answers when a room is fenced — the walk is handed
+    ///   a room whose middle course is walled off, and it has to say so.
+    #[test]
+    fn a_rooms_own_goods_do_not_stand_between_its_door_and_its_deck() {
+        let mut doors = 0;
+        for kind in ROOM_KINDS {
+            let (w, h) = kind.floor();
+            for (slot, port) in kind.declared() {
+                let Port::Door { .. } = port else {
+                    assert_eq!(
+                        kind.marooned(slot),
+                        None,
+                        "{kind:?} port {slot} stands on deck it has no door for"
+                    );
+                    continue;
+                };
+                doors += 1;
+                let steps = kind.doorsteps(slot).expect("a declared door has a step");
+                for (x, y) in steps {
+                    assert!(
+                        kind.doorstep(x, y),
+                        "{kind:?} port {slot} disagrees with itself about ({x}, {y})"
+                    );
+                    assert!(
+                        kind.tile_of(x, y).is_some_and(Tile::takes_your_cargo),
+                        "{kind:?} port {slot} stands on ({x}, {y}), which is {:?} — a body \
+                         walks in and lands on ground the room has spoken for",
+                        kind.tile_of(x, y)
+                    );
+                }
+                assert_eq!(
+                    kind.marooned(slot),
+                    Some(Vec::new()),
+                    "{kind:?} port {slot} leaves deck the player may use out of reach"
+                );
+            }
+            // The sweep is not vacuous: every kind has deck a crate of
+            // the player's may stand on, and the walk covers it.
+            let usable = (COURSES..COURSES + h)
+                .flat_map(|y| (COURSES..COURSES + w).map(move |x| (x, y)))
+                .filter(|&(x, y)| kind.tile_of(x, y).is_some_and(Tile::takes_your_cargo))
+                .count();
+            assert!(usable > 0, "{kind:?} has no deck the player may use");
+            // And the reading answers when a room really is cut in two:
+            // fence the course behind the door and the deck beyond it
+            // has to come back marooned.
+            let fenced = kind.walled_off(&[(COURSES, COURSES)], |x, y| {
+                kind.surface_of(x, y) == Some(Surf::Floor) && y < COURSES + 1
+            });
+            assert_eq!(
+                fenced.len(),
+                0,
+                "{kind:?}: a walk fenced to one course should reach all of it"
+            );
+            let cut = kind.walled_off(&[(COURSES, COURSES)], |x, y| {
+                kind.surface_of(x, y) == Some(Surf::Floor) && y != COURSES + 1
+            });
+            assert_eq!(
+                cut.len(),
+                usize::from(w) * usize::from(h.saturating_sub(2)),
+                "{kind:?}: walling off a course did not maroon what is behind it"
+            );
+        }
+        assert!(doors >= 9, "the sweep missed the game's doors: {doors}");
     }
 
     /// **A room the ship leaves behind has no ordinary deck, only

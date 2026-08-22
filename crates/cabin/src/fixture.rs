@@ -52,6 +52,13 @@
 //! rule died with the collision it guarded — but the doorways are drawn
 //! now, and a showcase that parks a cabinet in the one place the trade
 //! room can be seen through is a showcase of a cabinet.
+//!
+//! It was a courtesy the board did not keep, and the doorstep law is
+//! what found it out. Two of the trade room's three goods stood on the
+//! two cells its own door lands in, because the stock band ran under the
+//! doorway and nothing said it should not. They stand along the band
+//! now, and the way in is deck a body may walk onto and set a crate
+//! down on.
 
 use space_trucking::sim::room::RoomKind;
 
@@ -105,12 +112,12 @@ piece 12 24 0 0 laid 0 2 6
 piece 13 0 1 0 stow 0 0
 piece 14 13 2 0 stow 0 1
 piece 15 14 0 0 stow 0 2
-piece 16 4 3 0 hold 2 3 3
+piece 16 4 3 0 hold 2 5 3
 piece 17 7 1 0 hold 2 6 8
 piece 18 1 2 0 hold 2 7 8
 piece 19 11 0 0 hold 0 8 3
 piece 20 2 1 0 hold 0 7 7
-piece 21 5 0 0 hold 2 4 3
+piece 21 5 0 0 hold 2 9 3
 piece 22 3 3 1 hold 2 7 3
 piece 23 15 2 0 hold 2 5 8
 piece 24 26 0 0 hold 0 4 10

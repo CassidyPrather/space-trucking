@@ -693,9 +693,20 @@ fn site_on(
         // up staying world up — the lamp's cord meets the ceiling and
         // its shade swings below — rather than pasted flat against the
         // plane, which is what the playtest called out.
+        //
+        // **And it takes the backing rule, exactly as a floor rig does.**
+        // It used to take one fixed turn, facing the front of the room
+        // from every cell of the deckhead, which is the couch-facing-the-
+        // wall defect stood on its head: a pendant hung on the front row
+        // looked into the front wall a hand's breadth in front of it. A
+        // deckhead is a chart a body stands on with gravity the other way
+        // round, its seams are the same four seams, and there was never a
+        // reason for it to be the one chart whose bodies do not turn. Mid-
+        // room the rule's own default is the turn this used to hardcode,
+        // so nothing away from a seam moves.
         Station::BayCeiling => {
             let base = surface.to_world(rect_center(rect));
-            let rot = Station::BayWall.face(aft);
+            let rot = floor_facing(surface, aft, rect);
             (
                 base - Vec3::Y * (tall * 0.5 * scale.y) - onto_plan(rot),
                 rot,
@@ -808,6 +819,29 @@ fn laid_on(station: Station, surface: &SimSurface, rect: Rect) -> (Vec3, Quat, V
     )
 }
 
+/// **The pose a rig berthed on `rect` actually takes**, with the chart it
+/// takes it on: [`site_on`]'s own answer, for a caller holding a
+/// snapshot of the charts rather than a live world.
+///
+/// Pure, and it exists so the gauntlet can ask which way a berth turns a
+/// body without spawning one (`crate::gauntlet`). A berth's TURN is the
+/// half of its pose no box can carry: an axis-aligned box is the same
+/// box after a half turn, and it is the same box after a quarter turn
+/// whenever the footprint is square — so a rule handed only
+/// [`berth_box`]'s corners cannot ask which way a couch is looking, and
+/// for as long as that was all there was, nothing did.
+#[must_use]
+pub fn berth_pose(
+    charts: &[(Station, SimSurface)],
+    kind: Kind,
+    rect: Rect,
+) -> Option<(Station, SimSurface, Vec3, Quat, Vec3)> {
+    let (station, surface) = chart_at(charts, rect_center(rect))?;
+    let aft = aft_in(charts, &surface)?;
+    let (pos, rot, scale) = site_on(station, &surface, &aft, kind, rect);
+    Some((station, surface, pos, rot, scale))
+}
+
 /// **The world box a rig berthed on `rect` actually fills**, as an
 /// axis-aligned `(lo, hi)` — [`site_on`]'s pose plus the common rig
 /// depth ([`RIG_NEAR`], [`RIG_FAR`]), spun onto the world axes.
@@ -818,9 +852,7 @@ fn laid_on(station: Station, surface: &SimSurface, rect: Rect) -> (Vec3, Quat, V
 /// moves the question and the answer together.
 #[must_use]
 pub fn berth_box(charts: &[(Station, SimSurface)], kind: Kind, rect: Rect) -> Option<(Vec3, Vec3)> {
-    let (station, surface) = chart_at(charts, rect_center(rect))?;
-    let aft = aft_in(charts, &surface)?;
-    let (pos, rot, scale) = site_on(station, &surface, &aft, kind, rect);
+    let (_, _, pos, rot, scale) = berth_pose(charts, kind, rect)?;
     // The body, in rig-local sim units: the kind's OWN frame across and
     // up (`cargo::Kind::upright`, which no berth turns) and the common
     // rig depth along the local normal. Read off the kind rather than
@@ -5844,6 +5876,36 @@ mod tests {
             facing(3, 3, Kind::FloorLamp).z < -0.9,
             "the aft corner backs onto the aft wall"
         );
+        // **And a deckhead takes the same rule.** It used to take one
+        // fixed turn from every cell of every ceiling in the game, so a
+        // pendant hung on the front row looked into the front wall a
+        // hand's breadth in front of it — the couch-facing-the-wall
+        // defect stood on its head, and invisible to every family in the
+        // gauntlet until one of them learned to ask which way a berth
+        // turns a body.
+        let ceiling = chart(Station::BayCeiling);
+        let hung = |x: u8, y: u8, kind: Kind| {
+            let (_, rot, _) = site_on(
+                Station::BayCeiling,
+                &ceiling,
+                &aft,
+                kind,
+                rect_of(x, y, kind),
+            );
+            assert!(
+                (rot * Vec3::Y - Vec3::Y).length() < 1e-4,
+                "a pendant hangs the author's up world up"
+            );
+            rot * Vec3::Z
+        };
+        assert!(
+            hung(16, 6, Kind::CeilingLamp).z < -0.9,
+            "mid-ceiling faces front, exactly as the deck under it does"
+        );
+        assert!(
+            hung(16, 9, Kind::CeilingLamp).z > 0.9,
+            "a pendant on the front row turns its back to the front wall"
+        );
     }
 
     /// **A berth owns the ground its body stands on, and not a cell
@@ -6596,6 +6658,15 @@ mod tests {
     /// footprint can afford the turn — the side charts' columns run up
     /// the wall, so their quarter turn would cost a non-square its cells
     /// and it keeps the chart's own lie instead.
+    ///
+    /// **Which way a body on a FLAT chart is looking is asked next door**,
+    /// and it is asked there because it cannot be asked here: this sweep
+    /// walks the cabin's own six charts, and a deck rig's turn is a
+    /// question about the seams of whatever room it is standing in.
+    /// `gauntlet::berth_turned` asks it of every room the game has —
+    /// whether the deck a standing rig faces is deck of the same room —
+    /// and it found the deckhead taking one fixed turn from every cell of
+    /// every ceiling in the game.
     fn the_body_hangs_true(b: &Berth) {
         let (_, rot, scale) = b.site;
         let (name, station) = (&b.name, b.station);

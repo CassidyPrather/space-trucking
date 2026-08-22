@@ -84,10 +84,6 @@ const CARRY_COMPACT: f32 = 0.45;
 /// metres: catches a rig's depth off its berth plane.
 const XRAY_MARGIN: f32 = 0.10;
 
-/// The x-ray outline's lamp level: present, legible, unmistakably not a
-/// legality ruling (those are the carry's green/red at full glow).
-const XRAY_GLOW: f32 = 0.35;
-
 /// Fraction of its cells a bay rig fills. Roomier than the desk's [`FIT`]:
 /// furniture nearly fills its berth — a couch reads ~1.06 world units
 /// wide over its two 0.55 cells.
@@ -297,7 +293,6 @@ impl Plugin for PiecesPlugin {
                     sync_dressings,
                     xray_focus,
                     hover_glint,
-                    claim_outlines,
                     carry_held,
                     placement_hints,
                     invite_glows,
@@ -372,18 +367,19 @@ struct PieceRig {
     gnawed_shown: bool,
     bite: Entity,
     /// Every visible part of the piece itself lives under this child, so
-    /// the focus x-ray can drop the body wholesale while the frame stays.
+    /// the focus x-ray can drop the body wholesale while its outline
+    /// and its slash stay.
     body_root: Entity,
-    frame_root: Entity,
+    /// The refusal bar struck across a carried piece ([`carry_slash`]).
     slash: Entity,
-    frame_mat: Handle<StandardMaterial>,
     /// The amber carry grab's own emissive on the click-functional
     /// kinds, so the hover tell can flare the very bar it names.
     grab_mat: Option<Handle<StandardMaterial>>,
 }
 
-/// Marker: this rig is ghosted by the focus x-ray — body hidden, its
-/// footprint frame lit dim as the "something stands here" outline.
+/// Marker: this rig is ghosted by the focus x-ray — body hidden, and
+/// its own outline lit dim as the "something stands here" reading
+/// (`crate::outline`).
 #[derive(Component)]
 struct XRayed;
 
@@ -546,6 +542,10 @@ pub struct SharedBits {
     pub slash: Handle<StandardMaterial>,
     flash: Handle<StandardMaterial>,
     glyph: Handle<StandardMaterial>,
+    /// The ink every part's mask proxy is spawned wearing
+    /// (`crate::outline`). Which one it ends up wearing is said afresh
+    /// every frame; this is only what it is born in.
+    mask: Handle<crate::outline::MaskInk>,
 }
 
 // ------------------------------------------------------------------ helpers --
@@ -1294,130 +1294,6 @@ pub fn drawn_box(kind: Kind) -> (Vec3, Vec3) {
     ((lo + hi) * 0.5, (hi - lo) * 0.5)
 }
 
-// ---------------------------------------------------------------- the tells --
-
-/// **Which sentence a tell says about a piece.** Three readings, three
-/// FORMS — and the forms are the whole of it, because a tell may not
-/// signal on hue alone and a cabin with the lamps sold reads in one
-/// colour anyway.
-///
-/// - [`Tell::Aim`] — *the crosshair is on this, or your hands are*: a
-///   **bracket at every corner** of the body, at the body's own rim. The
-///   lightest form for the reading that comes and goes with where you
-///   are looking.
-/// - [`Tell::Offered`] — *this pile is what the room is waiting on*: a
-///   **closed ring**, one continuous line all the way round. The
-///   strongest claim gets the most complete form, and it is the form the
-///   claim has always had — it has only come off the floor.
-/// - [`Tell::Marked`] — *I want that one*: a **dash across the middle of
-///   every edge**, on the body's own rim inside the ring. A stub reads
-///   as a mark ON a thing where a ring reads as a claim ROUND it, which
-///   is the difference between the room noting your interest and the
-///   room making an offer.
-///
-/// All three may be worn at once — the crosshair resting on a good the
-/// room has offered and you have asked for — and
-/// [`tests::no_two_tells_draw_one_bar_over_another`] holds them apart.
-/// A dashed body inside a closed ring is the reading the old inset ticks
-/// were reaching for, and the one a wall could hide.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Tell {
-    Aim,
-    Offered,
-    Marked,
-}
-
-/// One bar of a tell, in the rig's own local frame and sim units: `at`
-/// its centre and `size` its full extent, axis-aligned like everything
-/// else a rig is composed of.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Bar {
-    pub at: Vec3,
-    pub size: Vec3,
-}
-
-/// **How far off the body each form stands, and how thick its bar is**,
-/// in rig sim units — a unit is about a centimetre and a half of world.
-///
-/// The aim and the mark share the body's own rim, which they can because
-/// their forms are complementary: brackets take the ends of every edge
-/// and dashes take the middles, and the runs below are cut so the two
-/// can never meet. The offer's ring stands off outside both, because a
-/// closed line covers every edge end to end and has nowhere to hide.
-///
-/// Tight on purpose. A tell is an outline of a body and not a crate
-/// around it: at these numbers the whole of a claimed one-cell good's
-/// outline still stands inside the cell the sim gave it.
-const AIM_OUT: f32 = 2.0;
-const AIM_GIRTH: f32 = 2.0;
-const MARK_OUT: f32 = 2.0;
-const MARK_GIRTH: f32 = 1.6;
-const OFFER_OUT: f32 = 5.5;
-const OFFER_GIRTH: f32 = 2.4;
-
-/// The longest a corner bracket runs, and the most of one edge it may
-/// take. The cap is what keeps a bracket a bracket on a big body; the
-/// fraction is what keeps two of them from meeting in the middle of a
-/// small one, which would draw the offer's own closed ring by accident.
-const BRACKET: f32 = 7.0;
-const BRACKET_RUN: f32 = 0.3;
-
-/// The same pair for a mark's dash: a quarter of an edge at most, so it
-/// reads as one stub on a side and never as a ring with the corners
-/// rubbed off.
-const DASH: f32 = 8.0;
-const DASH_RUN: f32 = 0.28;
-
-/// **The bars one tell draws around a body**, in the body's own frame —
-/// `mid` and `half` as [`drawn_box`] hands them over, and out comes the
-/// outline, one axis-aligned bar at a time.
-///
-/// This is the whole of the change the tells needed for a purchased
-/// asset to arrive: nothing here reads a mesh, a `Cuboid`, or a chart.
-/// It reads a BOX, and the box is derived from whatever [`parts`]
-/// describes — so a kind re-cut from bought geometry gets its outline
-/// re-cut with it, and a tell drawn round a picture hanging flat on a
-/// wall stands off that wall instead of being painted onto it.
-#[must_use]
-pub fn tell_bars(mid: Vec3, half: Vec3, tell: Tell) -> Vec<Bar> {
-    let (out, girth) = match tell {
-        Tell::Aim => (AIM_OUT, AIM_GIRTH),
-        Tell::Offered => (OFFER_OUT, OFFER_GIRTH),
-        Tell::Marked => (MARK_OUT, MARK_GIRTH),
-    };
-    let reach = half + Vec3::splat(out);
-    let mut bars = Vec::new();
-    for axis in 0..3 {
-        let (b, c) = ((axis + 1) % 3, (axis + 2) % 3);
-        // The bar runs the whole inflated edge plus one girth, so the
-        // twelve of a closed ring meet at the corners rather than
-        // leaving eight square holes in it.
-        let len = reach[axis].mul_add(2.0, girth);
-        let runs: [(f32, f32); 2] = match tell {
-            Tell::Offered => [(0.0, len), (0.0, 0.0)],
-            Tell::Aim => {
-                let run = BRACKET.min(len * BRACKET_RUN);
-                [(-(len - run) * 0.5, run), ((len - run) * 0.5, run)]
-            }
-            Tell::Marked => [(0.0, DASH.min(len * DASH_RUN)), (0.0, 0.0)],
-        };
-        for sb in [-1.0_f32, 1.0] {
-            for sc in [-1.0_f32, 1.0] {
-                for (off, run) in runs.iter().filter(|(_, run)| *run > 0.0) {
-                    let mut at = mid;
-                    at[b] = sb.mul_add(reach[b], at[b]);
-                    at[c] = sc.mul_add(reach[c], at[c]);
-                    at[axis] += off;
-                    let mut size = Vec3::splat(girth);
-                    size[axis] = *run;
-                    bars.push(Bar { at, size });
-                }
-            }
-        }
-    }
-    bars
-}
-
 /// The pick body a rig carries over its OWN: [`drawn_box`], bound to the
 /// sub-rect of its OWN rect that box's silhouette covers, cut through
 /// the middle of its depth. Whatever the sim hit-tests inside the piece
@@ -1646,6 +1522,7 @@ fn ico(radius: f32) -> Mesh {
 fn spawn_overlays(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    inks: Res<crate::outline::MaskInks>,
     skin: Res<Skin>,
 ) {
     let slash_mat = glow::phosphor(&mut materials, palette::LAMP_NO, 3.0);
@@ -1655,6 +1532,7 @@ fn spawn_overlays(
         slash: slash_mat,
         flash: flash_mat.clone(),
         glyph: glyph_mat.clone(),
+        mask: inks.ink(1),
     });
 
     // The violation flash's frame bars — four per bay surface — and the
@@ -1677,19 +1555,6 @@ fn spawn_overlays(
             Transform::default(),
             Visibility::Hidden,
             GlyphBar(i),
-        ));
-    }
-    // And the standing tells' own pool, dark. What they say is derived
-    // by the sim every frame and never stored, so the presentation keeps
-    // a pool and aims it.
-    let tell_mat = glow::phosphor(&mut materials, palette::AMBER, 2.0);
-    for i in 0..TELL_BARS {
-        commands.spawn((
-            Mesh3d(skin.cube.clone()),
-            MeshMaterial3d(tell_mat.clone()),
-            Transform::default(),
-            Visibility::Hidden,
-            TellBar(i as u16),
         ));
     }
 }
@@ -2063,25 +1928,20 @@ fn carry_held(
     surfaces: Query<(&Station, &SimSurface)>,
     index: Res<PieceIndex>,
     mut carry: ResMut<CarryState>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut rigs: Query<(&mut PieceRig, &mut Transform), Without<crate::rig::CabinCamera>>,
     mut vis: Query<&mut Visibility, Without<PieceRig>>,
 ) {
     let sim = &shell.bridge.sim;
     let held = sim.held(0);
 
-    // The previous carry ended (or swapped): put its tell away.
+    // The previous carry ended (or swapped): put its refusal away.
     if let Some(prev) = carry.carrying
         && held.map(|held| held.piece) != Some(prev)
         && let Some(&entity) = index.0.get(&prev)
         && let Ok((rig, _)) = rigs.get_mut(entity)
+        && let Ok(mut shown) = vis.get_mut(rig.slash)
     {
-        if let Ok(mut v) = vis.get_mut(rig.frame_root) {
-            *v = Visibility::Hidden;
-        }
-        if let Ok(mut v) = vis.get_mut(rig.slash) {
-            *v = Visibility::Hidden;
-        }
+        *shown = Visibility::Hidden;
     }
 
     let Some(held) = held else {
@@ -2170,17 +2030,10 @@ fn carry_held(
     rig.scale_from = rig.scale_goal * fit;
     rig.ease = 0.0;
 
-    if let Some(mut mat) = materials.get_mut(&rig.frame_mat) {
-        let col = if held.legal {
-            palette::LAMP_OK
-        } else {
-            palette::LAMP_NO
-        };
-        glow::set_lamp(&mut mat, col, 1.0);
-    }
-    if let Ok(mut v) = vis.get_mut(rig.frame_root) {
-        *v = Visibility::Visible;
-    }
+    // The ruling itself is the outline's ([`crate::outline`]): a
+    // refused carry wears the red line and a legal one the green. What
+    // stays here is the SHAPE half of it, because a ruling that rode
+    // hue alone would be a ruling half the room could not read.
     if let Ok(mut v) = vis.get_mut(rig.slash) {
         *v = if held.legal {
             Visibility::Hidden
@@ -2218,11 +2071,12 @@ fn xray_focus(
     camera: Single<&Transform, With<crate::rig::CabinCamera>>,
     surfaces: Query<(&Station, &SimSurface)>,
     index: Res<PieceIndex>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut ghosts: ResMut<crate::outline::Ghosts>,
     rigs: Query<(&PieceRig, &Transform, Option<&XRayed>), Without<crate::rig::CabinCamera>>,
     mut vis: Query<&mut Visibility, Without<PieceRig>>,
 ) {
     use crate::rig::{Focus, Mode};
+    ghosts.0.clear();
     let focus = match camera_rig.mode {
         Mode::ToFocus { focus, .. } | Mode::Focused { focus } => Some(focus),
         Mode::Roam | Mode::ToRoam { .. } => None,
@@ -2282,40 +2136,24 @@ fn xray_focus(
             // stands here, you are flying through it"); parked at the
             // focus, the ghost goes fully clear — nothing draws over
             // the interface being worked (playtest call-out).
-            let outline = matches!(camera_rig.mode, Mode::ToFocus { .. });
-            if let Ok(mut v) = vis.get_mut(rig.frame_root) {
-                *v = if outline {
-                    Visibility::Visible
-                } else {
-                    Visibility::Hidden
-                };
-            }
-            if outline && let Some(mut mat) = materials.get_mut(&rig.frame_mat) {
-                glow::set_lamp(&mut mat, palette::ICON_LIT, XRAY_GLOW);
+            if matches!(camera_rig.mode, Mode::ToFocus { .. }) {
+                ghosts.0.push(piece.id);
             }
         } else if xrayed.is_some() {
             commands.entity(entity).remove::<XRayed>();
             if let Ok(mut v) = vis.get_mut(rig.body_root) {
                 *v = Visibility::Visible;
             }
-            if let Ok(mut v) = vis.get_mut(rig.frame_root) {
-                *v = Visibility::Hidden;
-            }
         }
     }
 }
 
-/// The hover frame's lamp level: an aim tell, dimmer than the carry's
-/// legality glow and warmer than the x-ray outline's duty.
-const HOVER_GLOW: f32 = 0.25;
-
-/// Roam-mode hover feedback: with empty hands, the piece the crosshair
-/// would grab wears a faint glint frame before any click. The frame is
-/// cut from the rig's [`silhouette`], which is where its pick face is
-/// cut from too, so what lights up is what answers: the tell used to
-/// wrap the footprint and say honestly that the plan was the hitbox,
-/// and the plan is no longer the hitbox.
-#[allow(clippy::too_many_arguments)]
+/// **The hover's answer ON the hardware.** The line round the piece the
+/// crosshair would grab is the outline pass's (`crate::outline`); what
+/// is left here is the half of the reading that is not a line at all —
+/// the amber bar a click-functional kind is carried by flares to the
+/// grab brightness while the aim rests on it. The tell is on the piece
+/// and not only round it, and it is brightness rather than hue.
 fn hover_glint(
     shell: Res<Shell>,
     pointer: Res<VirtualPointer>,
@@ -2323,7 +2161,6 @@ fn hover_glint(
     index: Res<PieceIndex>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     rigs: Query<&PieceRig>,
-    mut vis: Query<&mut Visibility, Without<PieceRig>>,
     mut prev: Local<Option<u32>>,
 ) {
     let sim = &shell.bridge.sim;
@@ -2335,9 +2172,6 @@ fn hover_glint(
         && let Some(&entity) = index.0.get(&old)
         && let Ok(rig) = rigs.get(entity)
     {
-        if let Ok(mut v) = vis.get_mut(rig.frame_root) {
-            *v = Visibility::Hidden;
-        }
         // The aim left: the grab bar falls back to its resting amber.
         if let Some(grab) = rig.grab_mat.as_ref()
             && let Some(mut mat) = materials.get_mut(grab)
@@ -2350,13 +2184,6 @@ fn hover_glint(
         && let Some(&entity) = index.0.get(&id)
         && let Ok(rig) = rigs.get(entity)
     {
-        if let Ok(mut v) = vis.get_mut(rig.frame_root) {
-            *v = Visibility::Visible;
-        }
-        // The handle rule's hover half: over a click-functional piece
-        // the frame reads AMBER on the carry handle (a click moves the
-        // cargo) and the ordinary glint elsewhere (a click will be the
-        // focus interaction) — the split told before it is spent.
         let on_handle = sim
             .pieces()
             .iter()
@@ -2368,136 +2195,17 @@ fn hover_glint(
                 )
             })
             .is_some_and(|handle| handle.contains(pointer.sim));
-        if let Some(mut mat) = materials.get_mut(&rig.frame_mat) {
-            let hue = if on_handle {
-                palette::AMBER
-            } else {
-                palette::ICON_LIT
-            };
-            glow::set_lamp(&mut mat, hue, HOVER_GLOW);
-        }
-        // And the hardware itself answers: the amber bar the aim rests
-        // on flares to the grab brightness. The tell is on the piece,
-        // not only in the frame around it — brightness, not hue alone.
+        // The hardware itself answers: the amber bar the aim rests on
+        // flares to the grab brightness. The tell is on the piece and
+        // not only in the line round it — brightness, not hue alone.
+        // Which of the two the outline draws is `crate::outline`'s, off
+        // the same declaration.
         if let Some(grab) = rig.grab_mat.as_ref()
             && let Some(mut mat) = materials.get_mut(grab)
         {
             let level = if on_handle { GRAB_FLARE } else { GRAB_GLOW };
             mat.emissive = palette::AMBER.to_linear() * level;
         }
-    }
-}
-
-// ------------------------------------------------------ the standing tells --
-
-/// One bar of the standing tells' pool, and which bar of the frame it is
-/// this frame — the pool is aimed afresh every frame and the pieces
-/// themselves never move.
-#[derive(Component, Clone, Copy, Debug)]
-struct TellBar(u16);
-
-/// How many bars the pool shares out. A bracketed sentence spends
-/// twenty-four and a dashed one twelve, so this is two dozen goods
-/// claimed at once, or four dozen merely asked for.
-///
-/// The pool is sized to be **read**, not to be exhaustive, and that is a
-/// deliberate limit rather than an unchecked one. A frame is a work
-/// order the player clears one piece at a time, and the set is
-/// re-derived every frame, so a twenty-fifth crate simply gets its
-/// outline when the twenty-fourth is carried aboard. What the pool must
-/// never do is show *nothing* while something is detained, and it
-/// cannot: it fills from the front.
-const TELL_BARS: usize = 576;
-
-/// **The standing tells: what a room's business is about, outlined where
-/// it stands.** Three sentences and two forms, aimed at the bodies
-/// themselves — [`room::lit_footprints`] says which pieces and which
-/// form, and this hangs [`tell_bars`] on each one's own [`drawn_box`],
-/// in the rig's own pose.
-///
-/// - `Sim::composed` names the pile the room would hand over if the
-///   handshake were worked right now, bracketed on the room's own stock —
-///   *this is what's on offer for yours*;
-/// - `Sim::detained_cargo` names every piece of the player's standing in
-///   a room that will not ride out, bracketed where the player set it
-///   down — *this is what the launch is waiting on*;
-/// - `Sim::marks` names the room's goods the player has pointed at —
-///   *I want that one* — and those wear the weaker form, a dash across
-///   the middle of every edge rather than a bracket at every corner.
-///
-/// The second is **the whole reading of the staging law**, and it is why
-/// a station's deck needs no paint of its own: an empty staging cell is
-/// deck, and an occupied one wears the outline. Pull the lever with one
-/// standing and the sim answers `Cue::Refit`, which strobes every jamb
-/// red (`room::seam_fx`) — the same refusal the door's own latch gives,
-/// at the other end of the same law. Not a word anywhere.
-///
-/// **The tell is on the body now, not on the chart under it.** It used
-/// to be four bars ringing the piece's footprint, painted on whichever
-/// chart the piece was berthed on and lifted a rung of the decal ladder
-/// off it, and a mark's bars were drawn short and INSET — inside the
-/// footprint, which on anything standing proud of its chart means inside
-/// the piece. A painting hangs flat on a wall and fills its own
-/// footprint exactly, so the mark on a picture for sale was drawn
-/// behind the picture and the press that set it read as a dead click.
-/// An outline round the body cannot be hidden by the body, and it needs
-/// to know nothing about the body but its box — which is the property
-/// the whole tell layer was moved for, with purchased geometry coming.
-///
-/// **Nothing draws it through what stands in FRONT of it, and the note
-/// that used to say otherwise was wrong.** The frame carried a
-/// `depth_bias` of a thousand, for the staging law's sake: a station's
-/// dressing may stand in a staging cell and cargo may be set down inside
-/// it, so the reading that says what the launch is waiting on had better
-/// not be the one a bollard can hide. But a material's depth bias only
-/// sorts this engine's transmissive and transparent phases — an opaque
-/// emissive never sees one — and the whole picture moves by fifteen
-/// pixels with it taken out. So it is out, and what keeps the reading
-/// instead is that an outline SURROUNDS its body: a bollard takes a bar
-/// or two out of a ring and leaves a ring.
-fn claim_outlines(
-    shell: Res<Shell>,
-    index: Res<PieceIndex>,
-    rigs: Query<&Transform, (With<PieceRig>, Without<TellBar>)>,
-    mut bars: Query<(&TellBar, &mut Transform, &mut Visibility), Without<PieceRig>>,
-) {
-    let sim = &shell.bridge.sim;
-    let mut aimed: Vec<(Vec3, Quat, Vec3)> = Vec::new();
-    for (id, marked) in crate::room::lit_footprints(sim) {
-        if aimed.len() >= TELL_BARS {
-            break;
-        }
-        let Some(piece) = sim.pieces().iter().find(|piece| piece.id == id) else {
-            continue;
-        };
-        let Some(&entity) = index.0.get(&id) else {
-            continue;
-        };
-        // The rig's LIVE pose, tween and all, so an outline rides the
-        // glide of the piece it is about instead of waiting at the berth
-        // for it.
-        let Ok(at) = rigs.get(entity) else {
-            continue;
-        };
-        let (mid, half) = drawn_box(piece.kind);
-        let tell = if marked { Tell::Marked } else { Tell::Offered };
-        for bar in tell_bars(mid, half, tell) {
-            aimed.push((
-                at.translation + at.rotation * (bar.at * at.scale),
-                at.rotation,
-                bar.size * at.scale,
-            ));
-        }
-    }
-    for (bar, mut transform, mut visibility) in &mut bars {
-        let Some(&(at, rot, size)) = aimed.get(usize::from(bar.0)) else {
-            visibility.set_if_neq(Visibility::Hidden);
-            continue;
-        };
-        visibility.set_if_neq(Visibility::Visible);
-        *transform = Transform::from_translation(at)
-            .with_rotation(rot)
-            .with_scale(size);
     }
 }
 
@@ -3243,6 +2951,12 @@ struct RigParts<'w, 's, 'a> {
     /// crew hung it, so the rig neither knows nor asks.
     sky: bool,
     root: Entity,
+    /// Whose rig this is, and the ink its parts' mask proxies wear:
+    /// every body a kind draws is drawn a second time into the outline
+    /// pass's mask, and the copy has to be able to say which piece it
+    /// is a copy of (`crate::outline`).
+    piece: u32,
+    mask: Handle<crate::outline::MaskInk>,
     /// The amber grab's own emissive, filled in by [`carry_grab`] on
     /// the kinds that wear one — [`hover_glint`] flares it.
     grab: Option<Handle<StandardMaterial>>,
@@ -3267,14 +2981,37 @@ impl RigParts<'_, '_, '_> {
         material: Handle<StandardMaterial>,
         transform: Transform,
     ) -> Entity {
-        self.commands
+        let part = self
+            .commands
             .spawn((
-                Mesh3d(mesh),
+                Mesh3d(mesh.clone()),
                 MeshMaterial3d(material),
                 transform,
                 ChildOf(self.root),
             ))
-            .id()
+            .id();
+        self.mask(mesh, part);
+        part
+    }
+
+    /// **The same body again, in the mask.** Every part of every rig
+    /// carries one, dark, and the outline pass finds the silhouette of
+    /// whichever of them are lit this frame (`crate::outline`).
+    ///
+    /// A CHILD of the part rather than a sibling, so it rides every
+    /// transform the part rides and needs no copy of any of them.
+    fn mask(&mut self, mesh: Handle<Mesh>, part: Entity) {
+        self.commands.spawn((
+            Mesh3d(mesh),
+            MeshMaterial3d(self.mask.clone()),
+            Transform::default(),
+            Visibility::Hidden,
+            crate::outline::MaskProxy {
+                piece: self.piece,
+                part,
+            },
+            ChildOf(part),
+        ));
     }
 }
 
@@ -3397,58 +3134,44 @@ struct ScreenGlasses {
 }
 
 /// Spawn one piece's whole rig at `place`: the kind's silhouette in local
-/// **The carry tell**: the emissive wireframe the carry and the hover
-/// light, plus the refusal slash across it. Returns
-/// `(frame root, frame material, slash)`, all dark and hidden until
-/// something wakes them.
+/// **The refusal slash**: one bar drawn corner to corner across the
+/// body of the piece in hand, hidden until the drop under the crosshair
+/// would be refused.
 ///
-/// A wireframe BOX, not a flat rectangle: the tell wraps the body's
-/// volume (playtest: a fixed-plane rectangle around a 3D object read as
-/// UI debris). It is [`Tell::Aim`]'s closed ring round the body
-/// [`drawn_box`] describes — the same box the pick face is cut from
-/// ([`standing_face`]), so what lights up is what answers.
+/// It is what is LEFT of the carry tell. The frame it used to be struck
+/// through — twelve emissive bars round [`drawn_box`] — is the outline
+/// pass's line now (`crate::outline`), which follows the body rather
+/// than the box round it and takes the ruling's hue with it. The slash
+/// stays because the ruling may not ride hue alone: red and green are
+/// one channel, and a bar across a thing is another.
 ///
-/// **It wraps the body's own depth and not the rig band it is composed
-/// in.** The band is a whole cell deep for every kind alike, so a ring
-/// cut from it stood half a metre out of the wall around a painting a
-/// finger thick — the same defect the standing tells had, one reading
-/// over.
-fn carry_tell(
+/// Cut from the body's own box so it reaches corner to corner of
+/// whatever is being carried, and stood a little proud of it so it
+/// reads as struck THROUGH the piece rather than painted on it.
+fn carry_slash(
     rig: &mut RigParts<'_, '_, '_>,
     piece: &Piece,
     root: Entity,
     shared: &SharedBits,
-) -> (Entity, Handle<StandardMaterial>, Entity) {
-    let frame_mat = glow::phosphor(rig.materials, palette::LAMP_OK, 0.0);
-    let frame_root = rig
-        .commands
-        .spawn((Transform::default(), Visibility::Hidden, ChildOf(root)))
-        .id();
+) -> Entity {
     let (mid, half) = drawn_box(piece.kind);
-    let cube = rig.skin.cube.clone();
-    for bar in tell_bars(mid, half, Tell::Aim) {
-        rig.commands.spawn((
-            Mesh3d(cube.clone()),
-            MeshMaterial3d(frame_mat.clone()),
-            Transform::from_translation(bar.at).with_scale(bar.size),
-            ChildOf(frame_root),
-        ));
-    }
-    let (hx, hy) = (half.x + AIM_OUT, half.y + AIM_OUT);
-    let slash = rig
-        .commands
+    let (hx, hy) = (half.x + SLASH_OUT, half.y + SLASH_OUT);
+    rig.commands
         .spawn((
-            Mesh3d(cube),
+            Mesh3d(rig.skin.cube.clone()),
             MeshMaterial3d(shared.slash.clone()),
             Transform::from_xyz(mid.x, mid.y, 34.0)
                 .with_rotation(Quat::from_rotation_z((hy / hx).atan()))
                 .with_scale(Vec3::new((hx * 2.0).hypot(hy * 2.0), 3.0, 3.0)),
             Visibility::Hidden,
-            ChildOf(frame_root),
+            ChildOf(root),
         ))
-        .id();
-    (frame_root, frame_mat, slash)
+        .id()
 }
+
+/// How far past the body's own rim the slash runs, in rig sim units, so
+/// its ends read as clear of the thing it strikes through.
+const SLASH_OUT: f32 = 2.0;
 
 /// sim units (footprint `w*CELL × h*CELL` in X/Y, thickness up +Z off the
 /// panel), the hidden bite wedge, and the hidden carry-legality frame.
@@ -3484,6 +3207,8 @@ fn spawn_rig(
         preview_image: glasses.preview.clone(),
         sky: glasses.sky,
         root: body_root,
+        piece: piece.id,
+        mask: shared.mask.clone(),
         grab: None,
     };
     build_kind(&mut rig, piece);
@@ -3506,7 +3231,7 @@ fn spawn_rig(
 
     // The carry tell: an emissive frame around the footprint plus a slash
     // bar, both dark until the carry system wakes them.
-    let (frame_root, frame_mat, slash) = carry_tell(&mut rig, piece, root, shared);
+    let slash = carry_slash(&mut rig, piece, root, shared);
 
     commands.entity(root).insert(PieceRig {
         from: place.translation,
@@ -3520,9 +3245,7 @@ fn spawn_rig(
         gnawed_shown: piece.gnawed,
         bite,
         body_root,
-        frame_root,
         slash,
-        frame_mat,
         grab_mat,
     });
     root
@@ -5786,12 +5509,13 @@ fn stamp(
     let entity = rig
         .commands
         .spawn((
-            Mesh3d(mesh),
+            Mesh3d(mesh.clone()),
             MeshMaterial3d(material.clone()),
             part.at,
             ChildOf(rig.root),
         ))
         .id();
+    rig.mask(mesh, entity);
     if part.role.dark() {
         rig.commands.entity(entity).insert(Visibility::Hidden);
     }
@@ -7615,78 +7339,6 @@ mod tests {
                 "{kind:?} wears live glass: {glazed}, and reads differently dark: {}",
                 lit != dark
             );
-        }
-    }
-
-    /// **A tell is never drawn inside the piece it is about.**
-    ///
-    /// The defect this whole layer was rebuilt for, stated as a law. A
-    /// mark used to be four short bars set 62% of the way in from its
-    /// footprint's rim, which is *inside the footprint* — and a painting
-    /// hangs flat on a wall and fills its footprint, so the mark on a
-    /// picture for sale was drawn behind the picture. Press a good, and
-    /// nothing on screen changed.
-    ///
-    /// The wall does not appear in this test and that is the point: a
-    /// berth is a rigid motion, so a bar that stands clear of the body
-    /// in the rig's own frame stands clear of it on every chart in the
-    /// game. Which is the property an outline has and a decal painted on
-    /// the ground under a thing does not.
-    #[test]
-    fn a_tell_never_draws_inside_the_body_it_is_about() {
-        for kind in Kind::ALL {
-            let (mid, half) = drawn_box(kind);
-            for tell in [Tell::Aim, Tell::Offered, Tell::Marked] {
-                for bar in tell_bars(mid, half, tell) {
-                    let gap = (bar.at - mid).abs() - (bar.size * 0.5 + half);
-                    assert!(
-                        gap.max_element() > 0.0,
-                        "{kind:?}: a {tell:?} bar at {:?} of {:?} is buried in a body of {half:?}",
-                        bar.at - mid,
-                        bar.size
-                    );
-                }
-            }
-        }
-    }
-
-    /// **No two tells draw one bar over another.**
-    ///
-    /// Three readings may be worn at once — the crosshair rests on a
-    /// good the room has offered and you have asked for — so the forms
-    /// have to be able to share a body. Each has a stand-off of its own,
-    /// and the girths are cut to leave daylight between them.
-    ///
-    /// It is the coplanar question asked where a tell can answer it. Two
-    /// amber bars meeting on one line at one depth is the shimmer the
-    /// old inset was bought to avoid, and the inset is what buried a
-    /// mark inside the picture it was about.
-    #[test]
-    fn no_two_tells_draw_one_bar_over_another() {
-        let overlap = |a: &Bar, b: &Bar| {
-            let gap = (a.at - b.at).abs() - (a.size + b.size) * 0.5;
-            gap.max_element() <= 0.0
-        };
-        for kind in Kind::ALL {
-            let (mid, half) = drawn_box(kind);
-            let forms =
-                [Tell::Aim, Tell::Offered, Tell::Marked].map(|tell| tell_bars(mid, half, tell));
-            for (i, one) in forms.iter().enumerate() {
-                for other in forms.iter().skip(i + 1) {
-                    for a in one {
-                        for b in other {
-                            assert!(
-                                !overlap(a, b),
-                                "{kind:?}: a bar at {:?} of {:?} lies over one at {:?} of {:?}",
-                                a.at,
-                                a.size,
-                                b.at,
-                                b.size
-                            );
-                        }
-                    }
-                }
-            }
         }
     }
 

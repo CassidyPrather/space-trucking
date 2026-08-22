@@ -392,46 +392,91 @@ tread are three. A new reading adds a rung and a row in the ladder test,
 which fails the build; a new reading sharing a rung is a shimmer at
 every tile boundary, which fails only the eye.
 
-## The three tells: outline, not paint
+## The three tells: an outline, drawn round the body's own edge
 
-A highlight is drawn **around a body, never on the ground under it**.
+A highlight is drawn **around a body, never on the ground under it**, and
+it is a real outline: the piece is drawn a second time into a mask and a
+full-screen pass finds that mask's edge (`crate::outline`). What comes
+out follows whatever geometry was actually there, which is the whole
+reason for the technique — the day a purchased mesh replaces a
+hand-rolled `Cuboid`, the outline is re-cut with it and nothing in the
+tell layer is told.
+
+It was a **box** before, and the owner said so twice: twelve emissive
+bars round `pieces::drawn_box`, cut into brackets, a ring or dashes. A
+box round a body is not an outline of a body, and on anything that is not
+a crate the difference is the whole of what you see.
+
 Three readings can be worn at once — the crosshair is on this, the room
-has claimed it, you have asked for it — so each is a different *form* of
-the same outline round the same box (`pieces::tell_bars`, cut from
-`pieces::drawn_box`):
+has claimed it, you have asked for it — so each is a different **form**
+of the one line, measured in crunch texels off the silhouette:
 
-- **the aim** — a closed ring at the body's own rim, one continuous line:
-  the carry and hover tell, which has been a wireframe box since the day
-  a flat rectangle around a solid object read as UI debris;
-- **the offer** — a bracket at every corner, the strong claim, drawn
-  where a shape is most itself. What the room is waiting on, and what
-  will not ride out with you;
-- **the mark** — a dash across the middle of every edge, the weak claim.
-  A stub reads as a mark *on* a thing where a frame reads as a claim
-  *round* it, which is the difference between the room noting your
-  interest and the room making an offer.
+- **the aim** — a thin line on the body's own rim, painted just *inside*
+  it. The lightest reading, and the one that comes and goes with where
+  you happen to be looking, sits ON the thing;
+- **the mark** — a **broken** line hugging the outside. A stub reads as a
+  mark *on* a thing, which is the room noting your interest;
+- **the offer** — a **thick whole** line standing off outside both, with
+  clear air between it and the body. The strongest claim gets the
+  heaviest and most complete form, and a band round a thing is not a
+  remark about it.
 
-The two standing forms share one stand-off and cannot meet: brackets take
-the ends of every edge, dashes take the middles, and a good that is both
-offered and marked wears them interleaved into the most complete outline
-in the room. Hue does none of that work, the same as everywhere else —
-a cabin whose lamps have been sold reads in one colour anyway.
+Hue does none of that work, the same as everywhere else — a cabin whose
+lamps have been sold reads in one colour anyway. What hue does carry is
+*which* aim: the carry's ruling is green or red and the crosshair's is
+pale, on top of a shape channel that says the same thing (the refusal
+slash, `pieces::carry_slash`).
 
-**The box is described, never measured off a mesh.** `drawn_box` is the
-union of what `pieces::parts` says a kind is made of, so a kind re-cut
-from purchased geometry gets its outline re-cut with it, and nothing in
-the tell layer knows a `Cuboid` from a bought one. That is the whole
-reason the tells were moved before the art was: an outline is the one
-highlight that does not have to know the shape underneath it.
+**Two things the bars could not do, and this does.** An outline of the
+mask is cut by whatever stands in front of the piece, so a good half
+behind a counter is outlined round the half you can see and closed along
+the counter's own edge — which is what a partly hidden thing looks like
+in Blender and in Unity, and what a wireframe box gets wrong twice over.
+And a rig ghosted by the focus x-ray keeps its outline with its body
+gone, which is the entire reading there: something stands here, you are
+flying through it.
 
-**And it is why they came off the chart.** The claim used to be four bars
-ringing a piece's *footprint*, painted on whichever chart the piece was
-berthed on, and a mark's bars were drawn short and INSET — inside the
-footprint, which for anything standing proud of its chart is inside the
-piece. A painting hangs flat on a wall and fills its own footprint, so
-the mark on a picture for sale was drawn behind the picture: you pressed
-it and nothing on screen changed. A thing cannot hide an outline drawn
-around it.
+**Where the mask lives is the cost decision.** It rides in the alpha
+channel of the crunch target, written by proxy meshes drawn in the cabin
+camera's own pass — so occlusion is the depth buffer's answer and there
+is no second scene pass, no second clear, and no third camera. Every
+opaque surface in this engine writes `a = 1` and every blend mode the
+cabin uses leaves a destination alpha of 1 alone; bloom's composite and
+the tonemapper hand it through untouched. So the scene arrives with alpha
+1 everywhere and anything below 1 is the outline layer's — one small
+number carrying which of five things the aim is doing, plus the room's
+two claims.
+
+The numbers, measured with `--gauge` at 480×270 on this container's
+software rasteriser, where absolute times mean nothing and the deltas
+mean everything:
+
+| | mean ms/frame | delta |
+| --- | --- | --- |
+| no composite pass at all | 134.95 | — |
+| the pass, drawing nothing | 141.18 | +6.2 |
+| the pass, one tap per texel | 145.76 | +10.8 |
+| the pass, the 29-tap disc it ships with | 153.40 | **+18.4** |
+
+The mask is 0.4 ms of that — the same scene measured 152.97 with the
+kernel and before every part carried a proxy — because it is a handful
+of extra draws inside a pass that was already running, and only on the
+frames something is said about. Everything else the table prices is the
+full-screen edge detect, and llvmpipe is doing 3.6 M texel fetches a
+frame in software to produce it. The same work is a fraction of a
+millisecond on the integrated graphics this is aimed at, and if it ever
+bites, the pass can be cut down to the screen rects of the outlined
+pieces instead of the whole picture: at one tap it is 10.8 ms and at
+twenty-nine it is 18.4, so the kernel is the half that scales with area
+and the area is the knob.
+
+**What was measured and not built.** An inverted hull per part is +5.4
+draw calls mean and +20 worst with no batching, and it outlines an
+assembly's internal seams — the couch's cushions get haloes where they
+meet the frame. An inverted hull on the whole rig's box draws a solid
+card, because a rig does not fill its own box. A stencil pass was priced
+and rejected earlier in this project's life. None of those three follows
+a purchased mesh; this one cannot do anything else.
 
 ## What you can click is what lights up
 
@@ -504,7 +549,9 @@ shake, lamps carry lit-versus-dark-glass, rows sit at fixed stations.
   glanceable-away-from for minutes at a time.
 - **Don't** let the GPU budget creep: the target is integrated graphics
   at 60fps into a 480×270 buffer. Prefer emissives to lights; keep
-  shadow-casting lights to one.
+  shadow-casting lights to one. There is exactly one full-screen pass
+  aboard (`crate::outline`) and its cost is written down with numbers; a
+  second one needs the same measurement before it lands.
 
 ## The gauntlet: what a screenshot structurally cannot see
 

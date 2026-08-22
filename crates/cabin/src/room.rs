@@ -1764,7 +1764,7 @@ fn rim(kind: RoomKind, x: u8, y: u8, tile: Tile) -> [bool; 4] {
 /// | Class | Field | Mark | Reads as |
 /// | --- | --- | --- | --- |
 /// | `Plain` | none | none | ordinary deck — the ground the others are read against |
-/// | `Staging` | none | none, until something stands there: then the amber frame that says it is not coming with you ([`crate::pieces::claim_outlines`]) | a station's own deck. Set yours down; take it back before you leave |
+/// | `Staging` | none | none, until something stands there: then the amber line that says it is not coming with you ([`crate::outline`]) | a station's own deck. Set yours down; take it back before you leave |
 /// | `Offer` | none: bare deck | a chalk line struck round the region | a bay taped out on the floor. Set yours inside the line; it is still yours |
 /// | `Stock` | the room's enamel, filled | a dark border band round the region | painted floor: what stands on the paint is the room's |
 /// | `Consume` | scorched plate | hazard tape round the region | a danger zone, taped at its edge the way tape is actually used |
@@ -3047,7 +3047,7 @@ fn seam_fx(
 /// **Which pieces the standing tells light, and in which of their two
 /// forms** — `true` for the dashed form a mark wears.
 ///
-/// The pure half of [`crate::pieces::claim_outlines`], so what the room
+/// The pure half of the standing tells (`crate::outline`), so what the room
 /// says can be asked about without a world to say it in. Every entry is
 /// the sim's own answer to a question the sim already asks itself;
 /// nothing here re-derives a rule, and a piece may appear twice because

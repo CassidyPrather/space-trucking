@@ -126,7 +126,7 @@ oldest lesson and it bounds the table before it starts.
 | a rig's part | `pieces::parts` (`Part::seated`, `Part::body`) | the cargo layer |
 | a rig's named feature | `pieces::features` (`Feature::axis`, `want`) | `prop-points` |
 | what a rig answers the aim with | `pieces::standing_surface`, off `drawn_box` | the tell layer, and read by no family — see below |
-| a highlight's outline | `pieces::tell_bars`, off `pieces::drawn_box` | the tell layer, and read by no family — see below |
+| a highlight's outline | the mask a rig's parts draw (`outline::MaskProxy`) and the bands `outline` paints off it | the tell layer, and read by no family — see below |
 | a room's shell | `room::shell_boxes`, `rig::structure` | the room layer |
 | a doorway's hardware | `room::seam_parts` (`room::Seat`, `Dress`) | the doorway layer |
 | a station's furniture | `poi::character_of` (`poi::Seat`, `Shape::fill`) | the room layer |
@@ -1171,23 +1171,31 @@ they are not closed, only bounded:
   runs them.
 
 **And there is one described layer no family reads, on purpose.** The
-tells — the aim's brackets, the offer's ring, the mark's dashes — are
-described now (`pieces::tell_bars`, cut from `pieces::drawn_box`),
-because this file's oldest lesson is that a new family of drawn thing
-gets a description before it gets a mesh. They are still outside
-`coplanar-faces` and outside every other family, and that is a ruling
-rather than an omission. A tell is not part of the world: it is drawn at
-a few centimetres' stand-off from a body on purpose, it is drawn through
-a station's furniture on a depth bias so that nothing can hide it, and
-it is hidden except in the moment it is answering a press. A sweep that
-read it would report the reading as the defect, once per bar, for every
-claimed crate in the game — and the only way to satisfy it would be to
-author a highlight that keeps clear of the thing it is about. What holds
-the layer instead is two rules of its own, asked in the layer's own
-frame: `pieces::tests::a_tell_never_draws_inside_the_body_it_is_about`
-is the containment question, and
-`pieces::tests::no_two_tells_draw_one_bar_over_another` is the coplanar
-question asked between the three readings that may be worn at once.
+tells — the aim's rim line, the mark's dashes, the offer's standing band
+— are not part of the world at all now, and cannot be. They are not
+geometry: a piece is drawn a second time into a mask and a full-screen
+pass paints the outline off that mask's edge (`crate::outline`), so
+there is no body in the room for a family measured in metres to measure.
+Every family here reads a description of something DRAWN AT a place, and
+a screen-space line is drawn at a place on the screen.
+
+That is a ruling rather than an omission, and it was one before the
+outline landed too: a tell is drawn at a stand-off from a body on
+purpose, and it is hidden except in the moment it is saying something. A
+sweep that read it would report the reading as the defect, for every
+claimed crate in the game.
+
+What holds the layer instead is three rules of its own, asked in the
+layer's own frame — the bands the forms are cut from are declared in
+Rust and written into the shader, precisely so that something can be
+said about them. `outline::tests::only_the_aim_is_drawn_on_the_body` is
+the containment question and it carries the one exemption the
+vocabulary allows; `outline::tests::no_two_readings_draw_one_line_over_another`
+is the coplanar question asked between the three readings that may be
+worn at once; and `outline::tests::an_outline_has_no_holes_in_it` is a
+question the bars never had to answer, because a screen-space distance
+is quantised and a band drawn between two of the values it can take
+comes out as a dotted arc.
 
 ## Where the pixel half stands
 

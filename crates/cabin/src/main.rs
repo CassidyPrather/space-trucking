@@ -25,6 +25,7 @@ mod gauntlet;
 mod gesture;
 mod glow;
 mod menu;
+mod outline;
 mod palette;
 mod pieces;
 mod poi;
@@ -494,6 +495,7 @@ fn main() {
         fx::FxPlugin,
         gesture::GesturePlugin,
         menu::MenuPlugin,
+        outline::OutlinePlugin,
         pieces::PiecesPlugin,
         room::RoomsPlugin,
         viewport::ViewportPlugin,

@@ -29,11 +29,9 @@
 
 use bevy::camera::visibility::RenderLayers;
 use bevy::camera::{Hdr, RenderTarget};
-use bevy::image::ImageSampler;
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::post_process::bloom::Bloom;
 use bevy::prelude::*;
-use bevy::render::render_resource::TextureFormat;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
 use space_trucking::sim::room::{CABIN, Rooms};
@@ -791,19 +789,16 @@ pub fn spawn(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
+    screen: Res<crate::outline::Screen>,
     rig: Res<CameraRig>,
 ) {
     let skin = Skin::build(&mut meshes, &mut materials, &mut images);
 
-    // --- The crunch: a small render target shown fullscreen, unsmoothed.
-    let mut target = Image::new_target_texture(
-        CRUNCH_W,
-        CRUNCH_H,
-        TextureFormat::Rgba8Unorm,
-        Some(TextureFormat::Rgba8UnormSrgb),
-    );
-    target.sampler = ImageSampler::nearest();
-    let target = images.add(target);
+    // --- The crunch: a small render target, unsmoothed. The cabin
+    // draws into it and the outline pass reads it and writes the one
+    // the window is shown (`crate::outline`), so the two are built
+    // together and the camera takes the first of them.
+    let target = screen.crunch.clone();
 
     // A booted focus (`--view`) has no instrument to aim at yet — every
     // station rides a piece, and the riding surfaces are hung on the
@@ -822,7 +817,7 @@ pub fn spawn(
                 fov: FOV,
                 ..default()
             }),
-            RenderTarget::Image(target.clone().into()),
+            RenderTarget::Image(target.into()),
             Hdr,
             Bloom::NATURAL,
             Msaa::Off,
@@ -851,9 +846,19 @@ pub fn spawn(
             ..default()
         });
     }
-    commands.spawn(Camera2d);
+    // The UI camera draws LAST of the three, and says so rather than
+    // tying with the outline pass at nought: what it shows is the
+    // picture that pass wrote this frame, and a tie is a coin toss for
+    // whether it gets this frame's or the last one's.
     commands.spawn((
-        ImageNode::new(target),
+        Camera2d,
+        Camera {
+            order: 1,
+            ..default()
+        },
+    ));
+    commands.spawn((
+        ImageNode::new(screen.shown.clone()),
         Node {
             position_type: PositionType::Absolute,
             left: px(0),

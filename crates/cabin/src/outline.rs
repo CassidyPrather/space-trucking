@@ -11,7 +11,7 @@
 //! So this is the thing the editors do. The piece is drawn a second time
 //! into a **mask** — the alpha channel of the crunch target, and nothing
 //! else — and a full-screen pass finds the mask's edge and paints the
-//! outline a fixed number of crunch texels outside it. What comes out
+//! outline a fixed number of crunch texels off it. What comes out
 //! follows the silhouette of whatever geometry was there, which is the
 //! whole reason for the technique: the day a purchased mesh replaces a
 //! hand-rolled `Cuboid`, the outline is re-cut with it and nothing here
@@ -28,6 +28,11 @@
 //! pipeline writes `ColorWrites::ALPHA` and no depth at all). Three
 //! things fall out of that and each one is load-bearing:
 //!
+//! - **It costs nothing until something is said.** A part of a rig is
+//!   only MARKED as maskable when its rig is built ([`MaskBody`]); the
+//!   copy is cut the first time [`paint`] has anything to say about that
+//!   piece. A cabin nobody is pointing at carries no mask and no extra
+//!   body at all.
 //! - **Occlusion is free and correct.** A proxy is depth-tested against
 //!   the very frame it rides in, so a bollard standing in front of a
 //!   crate takes a bite out of the crate's mask and the outline closes

@@ -6944,13 +6944,14 @@ mod tests {
     /// lands on whatever deck cell is beyond, and the piece the player
     /// is looking straight at answers nothing. Measured before the cure,
     /// on a ring of thirty-six stances round a berthed body at three
-    /// heights: the pearls' own top answered from eighty degrees of the
-    /// ring and from none of the other two hundred and eighty, and every
-    /// other standing kind swept — a wardrobe, a floor lamp, a crate —
-    /// did the same. Only the bottom band answered all the way round,
-    /// and that is not the piece answering: it is the DECK cell under it
-    /// answering, which is why a tall thin kind was the one that got
-    /// reported.
+    /// heights: an aim at the pearls' own top answered from eighteen of
+    /// the thirty-six, the floor lamp's from eighteen, the wardrobe's
+    /// from twenty-six and the suspicious crate's from thirteen — and
+    /// in every case those were two arcs square on to the body's front
+    /// and back with nothing at all in between. Only the bottom band
+    /// answered all the way round, and that is not the piece answering:
+    /// it is the DECK cell under it answering, which is why a tall thin
+    /// kind was the one that got reported.
     ///
     /// The tell wraps three axes ([`drawn_box`]) and the pick used two,
     /// so the shape that lights up was never the shape that answered.

@@ -489,21 +489,30 @@ A plane and a body are the same shape from exactly one direction. Walk a
 quarter turn and they stop being: a column of brine pearls seen from the
 side is a quad edge-on, so an aim at the top of it goes straight past and
 lands on whatever deck cell is beyond. Measured on a ring of thirty-six
-stances at three heights round a berthed body, before the cure: the
-pearls' top answered from **80° of the ring and from none of the other
-280°**, and so did every other standing kind swept — a wardrobe, a floor
-lamp, a suspicious crate. Only the bottom band answered all the way
-round, and that was never the piece answering; it was the deck cell under
-it, which is why a **tall thin** kind is the one that got reported and a
-crate did not.
+stances at three heights round a berthed body, before the cure — an aim
+at the **top** of the body answered from:
+
+| | of 36 stances |
+| --- | --- |
+| brine pearls | 18 |
+| floor lamp | 18 |
+| wardrobe | 26 |
+| suspicious crate | 13 |
+
+and in every case those were **two arcs square on to the body's front and
+back**, with nothing at all in between. Only the bottom band answered all
+the way round, and that was never the piece answering; it was the deck
+cell under it, which is why a **tall thin** kind is the one that got
+reported and a crate did not. After the cure every one of them answers
+from all 36, at every height.
 
 So a rig's face carries its body now (`SimSurface::deep`) and the aim
 meets the box the tell draws (`SimSurface::strike`). The quad stays the
 *reading* — wherever on the body the aim lands is laid back onto the
 elevation the rig was drawn in, so a cabinet met on its flank at the
-height of the third cubby reads the third cubby. After the cure the same
-ring answers 36 of 36 at every height, for every standing kind, and
-`pieces::tests::the_body_answers_from_all_round` sweeps 1,346 berths ×
+height of the third cubby reads the third cubby. The same ring answers
+36 of 36 at every height, and
+`pieces::tests::the_body_answers_from_all_round` sweeps 1,346 berths and
 111,617 aims to keep it that way.
 
 **Level wall cargo still reads through its chart, and that is a measured

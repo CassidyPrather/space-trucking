@@ -253,3 +253,41 @@
 # offset now rather than the reach off the chart alone. Nothing about a
 # wall berth moved: a wall really does have a plane, and the band really
 # does begin a hair behind it.
+#
+# The last four families are the first that were not written after
+# anybody saw anything. Twelve of them were: a defect was found by
+# playing, and a family was written that would have caught it, which is a
+# harness that is always exactly one round behind whoever is playing.
+# `berth-filled` was the exception and the clue — it came out of listing
+# eleven families, writing what each one asked in a column, and finding a
+# gap in the column.
+#
+# So the space was written down instead of the sightings. Every rule here
+# is a body, a relation between bodies, and the frame the relation is
+# read in; the three lists are short; crossing them and dismissing what
+# is meaningless leaves a table with three columns, and the third one —
+# the questions nothing in the tree can be put to — is the most valuable
+# of the three. docs/GAUNTLET.md, "The map", is that table.
+#
+# It found four cells that were meaningful and unasked, and two of them
+# had defects sitting in them. `berth-turned` asks which way a berth
+# turns a body, which no rule could ask while a rig was measured as an
+# axis-aligned box: every deckhead berth in the game took one fixed turn,
+# so a pendant hung against a wall looked into it. `deck-reached` asks
+# whether the deck a body may use can be walked to from the door it comes
+# in by, which no rule could ask while every rule measured metres and the
+# room's net was measured in cells: a trade room's shopfront ran under
+# its own doorway, so 48 cells of its deck stood behind ground the room
+# had spoken for. `fixture-reached` and `fixture-seen` ask about the two
+# things in a room that answer a press rather than a carry, neither of
+# which is a cell of the net and neither of which any rule about berths
+# was ever about.
+#
+# One clause of the fourth was written, measured, and taken back out, and
+# that is the finding worth keeping. Asked of every berth rather than of
+# the ones a room fills, it reports the cabin's own seam latch crossed by
+# three — the worst standing across the whole of the amber — and nothing
+# is wrong with the latch. Every wall cell beside an aperture is a berth
+# and every deck cell in front of one is a berth, so a control bolted
+# beside a doorway shares air with a berth by construction and there is
+# nowhere to move it to. The rule would have forbidden the latch.

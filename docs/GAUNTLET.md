@@ -86,7 +86,142 @@ rigs: FloorLamp base plate reaches 0.0690 m out of the -0.031..0.497 m band
 So the loop when a line appears is: read it in the docket to know what
 moved, then run `--gauntlet` to get the millimetres.
 
-## The twelve families
+## The map: what a rule can be about
+
+Twelve of the sixteen families below were written the same way. Somebody
+played the game, saw something wrong, and a family was written that would
+have caught it. That is a harness which is always exactly one round
+behind whoever is playing, and the owner said so:
+
+> "It's becoming increasingly clear that this strategy — try to patch a
+> class of defects, fail, catch a batch during user integration test,
+> repeat ad-nauseam — just isn't really the best."
+
+The eighth blind spot is the proof that something better is available.
+Eleven families asked whether a body **exceeded** something — its cells,
+its plan, its depth band. Not one compared a body against its own rect's
+*position*, so a depth band anchored to a wall's plane stood 0.42 of a
+cell forward of every deck berth in the game while all twelve stayed
+silent. Nobody had to find that by playing. It was a hole in a space
+that can be written down.
+
+So write the space down. Every rule in this file is a **triple**: a
+**body**, a **relation**, and the **frame** the relation is read in.
+Enumerate the three axes, dismiss the triples that mean nothing, and what
+is left is a list of questions — the ones that are asked, the ones that
+are not, and the ones that cannot be asked because a description does not
+exist yet. The last kind is the most valuable thing on the list, because
+an unaskable question is this codebase's first standing lesson said from
+the other side: *a new family of thing gets a description before it gets
+a mesh.*
+
+### The bodies
+
+Only what something **describes** can be measured — that is this file's
+oldest lesson and it bounds the table before it starts.
+
+| Body | Description | Since |
+| --- | --- | --- |
+| a cargo rig, whole | `pieces::berth_box`, `pieces::berth_pose` | the cargo layer |
+| a rig's part | `pieces::parts` (`Part::seated`, `Part::body`) | the cargo layer |
+| a rig's named feature | `pieces::features` (`Feature::axis`, `want`) | `prop-points` |
+| a room's shell | `room::shell_boxes`, `rig::structure` | the room layer |
+| a doorway's hardware | `room::seam_parts` (`room::Seat`, `Dress`) | the doorway layer |
+| a station's furniture | `poi::character_of` (`poi::Seat`, `Shape::fill`) | the room layer |
+| a room's own worked hardware | `room::handshake_face`, `Dress::Grab` | `fixture-reached` |
+| the painted fields | `gauntlet::tile_fields`, off `RoomKind::tile_of` | the room layer |
+| a berth | `gauntlet::berths`, off the sim's arbiter | the room layer |
+| the player | `rig::EYE_HEIGHT`, `REACH`, `PITCH_LIMIT`, `room::walk_boxes` | the room layer |
+
+### The frames
+
+| Frame | What it is |
+| --- | --- |
+| the rig's own upright | `cargo::Kind::upright`, which no berth turns |
+| the chart | a `SimSurface`'s `u`, `v` and inward normal |
+| the room's box | `poi::Frame`, `Placed::lo`/`hi` |
+| the lattice | `GRID_STEP`, a sixteenth of a cargo cell |
+| the world | metres, axis-aligned |
+| the eye | a stance, its reach and its pitch limit |
+| **the net** | the room in CELLS: tile classes, ports, doorsteps |
+
+The seventh was missing from the first cut of this list and it is where
+the second of the owner's two open items turned out to live. Every other
+frame is measured in metres; the net is measured in cells, it is the
+sim's own frame, and a rule read in it needs no geometry at all.
+
+### The relations, and what each one is worth asking of
+
+Twelve relations against ten bodies against seven frames is 840 triples,
+and almost all of them mean nothing. What follows is the whole space with
+the meaningless dismissed in a line, so that the short list at the end is
+the interesting one.
+
+| Relation | Asked as | Of what, in which frame |
+| --- | --- | --- |
+| **is contained by** | `berth-clear`, `face-fits`, `grid-fits`, `walk-clear`, `poi`'s containment test | a rig in its band; a rig in its plan; a shell in its room's cells; the player in the envelope; a fitting in the room's box |
+| **fills** | `berth-filled` | a rig against the ground its plan owns |
+| **is centred in** | `berth-filled` | the same, one clause up |
+| **rests on** | `rig-seated` | a rig against the chart its berth promises |
+| **meets** | `part-seated`, `furniture-seated` | a part against a part; a hung body against its declared seat |
+| **shares a plane with** | `coplanar-faces` | anything drawn, against anything drawn, in the world |
+| **is aligned to** | `grid-fits` | a shell body against the lattice |
+| **faces** | `prop-points`, **`berth-turned`** | a feature in its rig's frame; **a rig in its chart's and its room's** |
+| **occludes** | `berth-seen`, **`fixture-seen`** | a fitting against a wall berth; **a fitting or a stocked berth against a control** |
+| **is reachable from** | `berth-reached`, **`fixture-reached`**, **`deck-reached`** | a berth from a stance; **a control from a stance**; **the deck from a door, in the net** |
+| **is walkable past** | `walk-clear` | the scripted walk's waypoints against what is hung |
+| **is beside / is above** | nothing, and nothing should | composition, which is the art direction's and not a measurement |
+
+### The cells that were meaningful and unasked
+
+Four, and all four are now asked. Each was invisible for a different
+reason, and the reasons are worth more than the fixes.
+
+| Triple | Why nothing asked it | Now |
+| --- | --- | --- |
+| a rig **faces** its chart and its room | every family measured a rig as an axis-aligned BOX, and a box is the same box after a half turn — and after a quarter turn whenever the footprint is square. The turn is the half of a pose no box carries. | `berth-turned` |
+| the deck is **reachable from** a door, in the net | every rule in this file measures metres. The one frame with no geometry in it had no rule in it either. | `deck-reached` |
+| a control is **reachable from** a stance | a handshake is not a cell of the net — `RoomKind::surface_of` punches a hole where it stands — so `berths` never produced one and no rule about berths was ever about one. | `fixture-reached` |
+| a control is **occluded by** what a room hangs | `berth-seen` reads one way. Its subject is a berth and its culprit is a fitting, and nobody wrote the sentence with the nouns swapped. | `fixture-seen` |
+
+### The cells that are meaningful and cannot be asked yet
+
+These are the descriptions that do not exist. Each is a real question a
+player could answer by looking, and none of them can be put to anything
+in the tree today.
+
+| Triple | The description that is missing |
+| --- | --- |
+| a station's fitting **faces** the room | A `Fitting` declares a shape, a coat, a position and now a seat. It does not declare a **front**. So "the bench faces the wall" is unaskable, and the day a purchased asset replaces a `Cuboid` it will be the first thing anybody notices. The fix is a `poi::Fitting::front`, declared, and read back exactly as `prop-points` reads a `Feature`. |
+| a rig **has** a front at all | Same hole one layer down, and it is why `berth-turned` deliberately does not ask about the turn of a square-planned body in the middle of a deck. A `CeilingLamp`'s mount plate is 9 × 5 and the rest of it is a body of revolution; nothing says which parts of a kind have an orientation worth reading. |
+| a fitting **rests on** another fitting *it does not name* | `furniture-seated` reads a **declared** seat and refuses to guess, for the stated reason that guessing would report every bollard that happens to stand near a wall. The Wanderer's fourth collar hangs on nothing on purpose. What is unaskable is the inverse: nothing says a body was *supposed* to declare one, so a fitting that quietly hangs in mid-air with no `Seat` is legal and invisible. A `poi::Fitting::floats` — an explicit "this hangs on nothing" — would turn the silence into a claim. |
+| a body **is walkable past** | `walk-clear` asks about the waypoints of one scripted walk. Whether a room is *traversable* — whether a body can get from any stance to any other without passing through a fitting — has no description, because nothing describes a body's own width against a gap. `rig::HEAD` is half a head at eye height and it is spent on the walk's own samples. |
+| a shell body **meets** another shell body | Bounded rather than closed: `grid-fits` puts every face of every shell on a sixteenth of a cell, so a gap in the fabric is at least 34 mm and reads as a slot of void in every screenshot of that wall. It is a defect a still CAN see, which is this file's own dividing line. |
+| paint **fills** its own cells | Not missing — **derived**. `tile_fields` and the runtime's own painter both cut a field from `layout::cell_rect`, so there is no number a builder could get wrong, exactly as `pieces::laid_on` leaves a covering nothing to get wrong. |
+
+### The cell that was asked, measured, and taken back out
+
+Worth recording as loudly as the ones that stuck, because it is the only
+answer this method gave that was *no*.
+
+**A berth's air crossing a control.** `fixture-seen` was first written to
+ask it of every berth, not only of the ones a room fills, and it fired at
+once: the cabin's own seam latch is crossed by three — (5, 1) on the aft
+wall beside the jamb and (5, 3) and (5, 4) on the deck in front of it —
+the worst standing across **100%** of the amber. Nothing is wrong with
+the latch. Every wall cell beside an aperture is a berth and every deck
+cell in front of one is a berth, so a control bolted beside a doorway
+shares air with a berth *by construction*, and there is nowhere to move
+it to: the frame's own cells are the aperture and everything else is
+somebody's berth. The rule would have forbidden the latch.
+
+So it asks about what the room hangs and what the room **stocks**, and
+the residue — a player standing their own crate in front of their own
+latch — is in the bounded blind spots below. It is the same narrowing
+`berth-clear` spends on a jamb and `berth-reached` spends on furniture,
+and it is written down with the numbers rather than assumed.
+
+## The sixteen families
 
 Each one names a class of defect that a screenshot could not have caught.
 What matters when you are diagnosing is the third column: what the
@@ -587,6 +722,169 @@ that has moved — the same box slid half a notch along its chart, and the
 same box shrunk to half the ground it claims, both have to stop reading
 as a berth filled.
 
+### `berth-turned` — a rig stands up and shows the room its face
+
+The thirteenth family, and the first of four written from the map above
+rather than from a sighting. It closes the half of a berth's pose no box
+has ever carried.
+
+**Every rule before it measured a rig as an axis-aligned box.** A box is
+the same box after a half turn, and it is the same box after a quarter
+turn whenever the footprint is square — so the whole of "which way is it
+looking" fell through eleven families, and the twelfth caught only the
+quarter turns a non-square plan pays for. `prop-points` is the nearest
+thing there was and it looks one body in: it asks whether a sconce's cup
+points where the word "cup" says, **inside the rig's own frame**, and a
+rig hung backwards carries every one of its features faithfully backwards
+with it.
+
+Two claims, and between them they pin the turn on every chart the game
+has:
+
+- **It stands up.** A rig's own up is the room's up. On a wall that is
+  the upright rule's whole purpose (`pieces::wall_upright` rolls a
+  chart's lie back onto the room's); on a deck and under a deckhead it is
+  what "standing" and "hanging" mean. A quarter turn about the face
+  normal breaks it and so does an upside-down one, which makes this the
+  clause that catches a **square** footprint — the one case `berth-filled`
+  is blind to by construction, because a square plan's world box is the
+  same box either way round.
+- **It shows its face to the room.** On a wall, the face a rig turns to
+  the room is the wall's own inward normal. On a deck or under a deckhead
+  there is no such normal, so the claim is the player's instead: **the
+  deck a standing rig is looking at is deck of the same room.** A couch
+  with its face in the front wall is the defect, and it reads as one
+  without this file ever learning the backing rule's branches.
+
+That last point is the whole reason the family is worth trusting. A sweep
+that recomputed `pieces::floor_facing` and compared it with itself would
+pass two thousand berths and mean nothing — which is a mistake this file
+has already made once (see `the_body_hangs_true`, below).
+
+Its first pass found **every deckhead berth in the game**. A deck took
+the backing rule and a deckhead took one fixed turn, facing the front of
+the room from every cell of every ceiling whether or not the front of the
+room was a hand's breadth away — the couch-facing-the-wall defect stood
+on its head, and above eye level where nobody looks. A pendant takes the
+backing rule now. Mid-room the rule's own default *is* the turn that was
+hardcoded, so nothing away from a seam moved.
+
+**What it deliberately does not ask** is the turn of a square-planned
+body in the middle of a deck. A crate there may face any of four ways and
+every one of them is a room a player can walk round; which one is
+composition, and composition is the art direction's. That is a real hole
+and it is bounded by the missing description in the map above: nothing
+says which kinds have a front.
+
+### `deck-reached` — the deck you may use is walkable to from the door
+
+The fourteenth, and the first rule in this file that is about a room's
+**net** rather than about anything drawn in it. Every other rule measures
+metres; this one counts cells, and it counts them through the sim's own
+declaration (`RoomKind::marooned`) rather than through a second one of
+its own — the cabin may not restate a sim rule, and *which cells the
+player may use* is as sim a rule as there is.
+
+Two clauses:
+
+- **A door stands on deck a body may use.** Every cell of a declared
+  door's own step takes the player's cargo.
+- **And nothing is walled off behind it.** From that step, every cell of
+  the room's deck the player may use is reachable across such cells
+  alone.
+
+It exists because the owner walked a defect the entry-path law read green
+for. That law clears a chalked band out of the straight run in from a
+door, and it holds. What it is about is a **lane**; what the owner was
+doing was a **journey**, and the journey's first step landed on the
+shopfront:
+
+> "Users have to walk straight through the station's offer area to get to
+> the place to put their own items."
+
+`Trade` and `Wreck` hang their goods along the wall they present to
+whatever they came alongside, which is the wall their one door is punched
+through. So the two deck cells a body lands in on the way in were
+`Tile::Stock`, and with the class blocked, the family reports **every
+usable cell in the room** as marooned: 48 in a trade room, 10 in a wreck.
+The cure is in the sim (docs/ROOMS.md, "The doorstep law"): a doorstep
+reads as the room's ordinary deck, which is the declaration
+`Sim::free_berth_in` was already making, said in the one place the paint
+reads too.
+
+The law itself and its catch-out live in `sim::room`, where the tile
+classes are —
+`a_rooms_own_goods_do_not_stand_between_its_door_and_its_deck` walls a
+room off course by course and requires the walk to say so. What the
+gauntlet owns is the half the cabin owns: that the report reaches every
+room kind and every declared door.
+
+Findings are filed under the room **kind**, lower-cased, and not under a
+station. A net is folded the same way in every station that has one, so a
+defect in how `Trade` lays its deck out is one defect and not twelve —
+the same argument `rigs` makes one layer down.
+
+### `fixture-reached` — a room's own worked hardware can be worked
+
+The fifteenth, and `berth-reached`'s missing half. That family asks
+whether every **berth** is workable from somewhere a body may stand, and
+a berth is a cell of the net cargo may legally take. A handshake is not a
+cell of the net — `RoomKind::surface_of` punches a hole where it stands,
+so the arbiter never offers it and `berths` never produces it — and a
+latch hangs on bare wall beside a jamb. Between them they are the only
+two things in a room that answer a **press**, which is the only verb in
+this game that is not a carry, and until this family a station could hang
+a beacon in front of its own counter with the build green.
+
+The probe is the fixture's own pick face (`room::handshake_face`, and a
+latch's `Dress::Grab` quad), so the question is asked of the surface the
+runtime actually answers through. A fixture does not occlude itself, so
+its own brasswork comes off the list of things that could be in the way.
+
+Its guard is worth reading before writing another reachability rule,
+because two obvious catch-outs were **answered by the rule** rather than
+catching it:
+
+- A plate the size of the cell, a hand's breadth in front of the brass,
+  does not put it out of reach. A body inside two metres of the counter
+  can stand well to one side and lean in, and the ray goes round the
+  edge.
+- A partition across the whole room a hand's breadth out does not either.
+  The walk envelope reaches to within five centimetres of a wall, so a
+  body simply stands behind it.
+
+Neither is a hole. "Workable from anywhere a body may stand" is what the
+family asks, and standing beside a plate is somewhere. What does catch it
+is a body bolted **over** the brass — which is the shape the defect
+actually takes: the Guild's seizure beacon hung 0.58 m off its aft wall,
+and a beacon over a counter is the same fitting one cell along.
+
+### `fixture-seen` — nothing a room hangs or stocks stands across a control
+
+The sixteenth, and `berth-seen` with the nouns swapped. That family asks
+whether a station's furniture stands between a wall **berth** and the
+room; this asks whether anything stands between the room and a thing a
+hand has to find and work.
+
+- **What the room hangs.** A fitting or a piece of doorway hardware
+  standing across a control it did not draw. No argument needed: a beacon
+  over a counter is a beacon over a counter.
+- **What the room stocks.** A berth of `Tile::Stock` — the one class a
+  room puts its own goods on — spending its air across a control. The
+  doorstep law's sibling one layer out: a room does not lay its goods
+  where a body has to work.
+
+**It is asked of every room of the staged ship and not only of the staged
+room.** A latch is drawn by the room with the lower id and hangs on that
+room's side of the wall, so the only latches in the game hang in a cabin
+— and the roster's own cabin is a yard-fresh one with nothing alongside
+it, which has no seam to part and therefore no latch at all. Asked of the
+staged room alone, this family would have swept fifteen stations and
+never once looked at the control the owner reported.
+
+A third clause was written, measured, and taken out again; the map above
+carries the numbers and the argument.
+
 ### `walk-clear` — the walked path stands in air
 
 Every waypoint of the scripted walk is inside the walk envelope, and
@@ -760,6 +1058,33 @@ nothing enumerates" and "what does a description leave unsaid", is
 **"where a claim fixes two axes, what fixes the third"** — and then
 whether any rule in the file actually asks it.
 
+**And there is a fourth shape, which is the one that ends the list.**
+Each of the three above is a lesson learned from a defect somebody found,
+and each was written down *after* the finding. That is the pattern the
+owner called out, and the honest thing to say about the first three is
+that they are three points, not a method: knowing that a defect hid in an
+undescribed layer, in an undeclared joint, and in an unasked axis does
+not tell you where the fourth one is.
+
+What does is the map at the top of this file. The three shapes are all
+the same shape read at different depths — **a triple nobody wrote down**
+— and a triple has only three parts. So instead of asking "what have we
+been surprised by lately", enumerate the bodies, the relations and the
+frames, cross them, dismiss what is meaningless, and read off what is
+left. It found four, none of them by playing:
+
+| Layer | Was invisible because | Closed by | Found |
+| --- | --- | --- | --- |
+| A berthed rig's turn | every family measured it as an axis-aligned box, and a box carries no turn | `berth-turned` | every deckhead berth in the game, taking one fixed turn from every cell of every ceiling |
+| A room's net, as a place you walk | every rule in the file measured metres; the one frame with no geometry in it had no rule in it | `deck-reached` | `Trade` and `Wreck` standing their own doorways on their own shopfront: 48 and 10 usable cells behind it |
+| A room's own worked hardware | it is not a cell of the net, so no rule about berths was ever about it | `fixture-reached`, `fixture-seen` | nothing yet, and the reason is in the map: one clause of it had to come back out |
+
+The method's own cost is worth stating too, because it is not free: the
+enumeration is 840 triples, most of them meaningless, and the work is in
+dismissing them convincingly rather than in writing the four rules. What
+it buys is that the dismissals are **written down**, so the next pass
+argues with a list instead of with a memory.
+
 Other things it deliberately does not see, each for a stated reason:
 
 - **The exterior dressing.** It hangs in the void by law, and
@@ -789,22 +1114,40 @@ Other things it deliberately does not see, each for a stated reason:
 And three structural blind spots that are worth knowing about because
 they are not closed, only bounded:
 
-- **`berth-seen` only looks one way.** It asks whether a fitting stands
-  between the room and a *berth*; nothing asks whether a berth's cargo
-  stands between the room and a piece of *hardware*. That is the class
-  the owner's "the latch spawns occluded by the solar system map"
-  belonged to: on the starting board the chart tank hangs on the
-  starboard wall at cell (12, 5), a door's width from the burner's seam,
-  and its body reaches into the room in front of the latch beside that
-  seam. The latch is gone from that seam for its own reason — a seam
-  that cannot part carries none — so the instance is closed and the
-  class is not. A latch and a wall berth can still want the same piece
-  of wall.
+- **A latch and a berth want the same piece of wall, and always will.**
+  This used to read "`berth-seen` only looks one way", and the other way
+  is `fixture-seen` now — but only for what a room hangs and what a room
+  stocks. Asked of every berth it fires on the cabin's own seam latch:
+  three berths cross it, (5, 1) on the aft wall beside the jamb and
+  (5, 3) and (5, 4) on the deck in front of it, the worst standing across
+  **100%** of the amber. That is not a defect and it cannot be cured.
+  Every wall cell beside an aperture is a berth and every deck cell in
+  front of one is a berth, so a control bolted beside a doorway shares
+  air with a berth by construction, and the frame's own cells — the only
+  cells that are not berths — are the doorway you walk through. **What is
+  left of the class is a player standing their own crate in front of
+  their own latch**, which is a crate they can pick up again; the
+  runtime's pointer takes the nearest mapped surface, so while it stands
+  there the latch is not pickable. Nothing in the harness will tell you,
+  by design.
 - **A pose is one pose.** The roster mates every station at the first
   door the spawn walk takes, deterministically, because a sweep that took
   a minute would not be run. The rules are all measured in a room's own
   frame, so the pose is not what any of them is about — but a defect that
   needs a *particular* attachment order to appear would not show up.
+- **A stance may stand five centimetres from a wall.** `stances` samples
+  the walk envelope on an 8 × 8 grid per box, and the envelope reaches to
+  within about 0.05 m of a chart. So the two reachability families are
+  lenient by construction: anything on a wall is workable from a body
+  pressed against that wall, and only something that fills the air in
+  front of it can fail. That is measured rather than assumed — it is what
+  answered the second of `fixture-reached`'s two rejected catch-outs.
+- **A covering's turn is asked on the cabin's charts only.**
+  `berth-turned` skips coverings, because `pieces::laid_on` lays one flat
+  on its chart and its turn is a derivation rather than a composition;
+  what asks it is `pieces::tests::every_kind_hangs_true_on_every_legal_berth`,
+  which sweeps the cabin. A calling room whose charts lay differently
+  would not be asked.
 - **The pixel half is opt-in, and CI has no window at all.**
   `.github/workflows/ci-cd.yml` installs no `xvfb` and no Vulkan ICD, so
   the flicker and light-pop detectors run only when a human or an agent

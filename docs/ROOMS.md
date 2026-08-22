@@ -771,6 +771,97 @@ and a pre-STV14 proposal left standing in a lane walks onto the offer
 area the law actually leaves. Conservation before convenience — the
 proposal comes out standing somewhere else, never withdrawn.
 
+### The doorstep law
+
+> **A room's own goods do not run under its own door.**
+
+The entry-path law above is about a **lane**. The owner's journey is a
+**journey**, and its first step landed on the shopfront:
+
+> "Users have to walk straight through the station's offer area to get to
+> the place to put their own items."
+
+`Trade` and `Wreck` hang their goods along the wall they present to
+whatever they came alongside, which is the wall their one door is punched
+through. So the two deck cells a body lands in on the way in read
+`Tile::Stock`: the player stood on the counter to arrive, could set
+nothing down where they landed, and the nearest deck a crate of theirs
+could go on was a step further in. Moving the door does not help, because
+the band runs the whole width of the wall.
+
+The cell was already dead. `Sim::free_berth_in` has refused to lay
+anything of the room's on a doorstep since the day a derelict was found
+stocking its own door shut, and `Tile::Stock` refuses to let the player
+lay anything of theirs anywhere. So the class was painting filled enamel
+over deck that nobody in the game could ever use — a tile that looks like
+a shopfront and cannot behave like one, which is the exact thing the
+tile-class vocabulary exists to make impossible.
+
+**A doorstep reads as the room's own ordinary class**
+(`RoomKind::tile_of`). That is the declaration `free_berth_in` was
+already making, said in the one place the paint reads too. It costs the
+shelf nothing: the two cells were already filtered out of the shelf
+order, so the same goods land on the same cells and every seed rolls the
+same board.
+
+`Consume` is untouched by it, and the distinction is the word **goods**:
+a hazard field is what the room *is* rather than what the room has *put
+out*, and a furnace with two safe cells inside its own door is a furnace
+you can park a crate in.
+
+**No save bump.** The document's shape is unchanged, no berth in one
+moves, and a room's good can only stand on a doorstep in a document
+written before `free_berth_in` stopped putting one there — which was
+`STV13`, six versions back.
+
+### The approach law
+
+> **From the deck a declared door stands on, every cell of that room's
+> deck the player may set cargo on is reachable across such cells alone.**
+
+The doorstep law is an instance; this is the question it is an instance
+of, and it is stated as reachability so that the next room kind answers
+it without anybody remembering to check. It is swept over every room kind
+× every declared door
+(`a_rooms_own_goods_do_not_stand_between_its_door_and_its_deck`) and
+reported by the gauntlet as `deck-reached`.
+
+Which classes count is one declaration, `Tile::takes_your_cargo`, read by
+the arbiter that refuses a drop and by the walk alike — the room's own
+goods, an aperture's footprint and the deck its own hardware fills are
+refused, and chalk and hazard are not, because a proposal and a fuel load
+are things you do deliberately rather than places you are shut out of.
+The furnace therefore *answers* this law rather than being exempted from
+it: every cell of it is `Consume`, every cell of it is yours to use, and
+its door stands on one.
+
+**And the port offsets are not arbitrary, which is worth the
+measurement**, because the owner asked. Every leaf kind declares one
+door, aft, at offset 0. An aperture at offset `k` takes aft-wall cells
+`3+k` and `4+k`, and the doorstep takes the deck cells under them — so a
+door collides with its own room's counter (whose wall cell is
+`RoomKind::handshake` and whose deck cell is `RoomKind::fixture`)
+whenever the counter's column is one of those two. Per kind, the offsets
+that leave both clear:
+
+| Kind | Wall | Counter column | Offsets that clear it |
+| --- | --- | --- | --- |
+| `Trade` | 8 | 3 | 0, 1, 4, 5, 6 |
+| `Wreck` | 5 | 3 | 0, 1 |
+| `Parlor` | 5 | 2 | 0, 3 |
+| `Pump` | 4 | 3 | 0, 1 |
+
+**Zero is the only value all four share**, and it is also the one that
+puts the door as far from the counter as each wall allows — you walk in
+and the thing you came to work is across the room rather than beside you.
+A centred door is illegal on `Trade` and on `Parlor` outright: it would
+stand on the counter's own deck. So the port law does **not** need to
+change, and "a room's port placement must answer to its own bands" is
+already what it does — the counters are declared "clear of both walls and
+clear of the doorway's own lane", and the doors are declared where every
+counter can be cleared. What is genuinely free is which of the two gets
+to move first, and that has been spent on separation.
+
 ## The new barter: six beats
 
 The core slice, one flow for every POI. Per-POI agents differentiate

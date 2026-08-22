@@ -439,7 +439,7 @@ adversarial pass that closes those, and it splits in two:
   in the game — the twelve stations, the three event rooms, the cabin
   and the burner — against a **loaded** board (`gauntlet::load` fills
   every legal berth through the sim's own arbiter, so decor has cargo to
-  clip through), every cargo kind, and every doorway. Twelve rule
+  clip through), every cargo kind, and every doorway. Sixteen rule
   families: no fitting stands in a berth cargo may take at the height a
   rig occupies; nothing occludes a wall berth from its room; every berth
   stays workable from the walk envelope; no two drawn faces share a plane
@@ -450,8 +450,11 @@ adversarial pass that closes those, and it splits in two:
   picture rather than its plan; the walked path stands in air; every body
   lands on the cargo grid; a part that names a seat meets it; a rig
   reaches the chart it is berthed on; a hung body says what holds it up;
-  and a rig fills the cells its berth spends rather than merely staying
-  inside them.
+  a rig fills the cells its berth spends rather than merely staying
+  inside them; a rig stands up and shows the room its face; every cell of
+  deck a body may set cargo on is walkable to from the door it comes in
+  by; and a room's own worked hardware — the counter, the latch — can be
+  reached and is not stood across.
 - **Pixels, opt-in.** `--gauntlet-walk <dir>` drives the scripted room
   walk — in through the door, round the room, up to the counter — and
   writes one PNG per waypoint, then holds the camera still for ten
@@ -509,6 +512,32 @@ had a rule for. **A rule that only ever asks whether a body is inside
 something cannot see a body that is inside it and in the wrong place, so
 where a claim fixes two axes, ask what fixes the third.** `berth-filled`
 is that question asked of the two axes a berth's rect pays for.
+
+The fifth rule is about the other four. Each of them was learned from a
+defect somebody found by playing, written down afterwards, and each one
+is a point rather than a method: knowing that a defect once hid in an
+undescribed layer, in an undeclared joint, in a vocabulary term read two
+ways and in an unasked axis does not say where the next one is. The owner
+said as much — patch a class, fail, catch a batch at integration test,
+repeat — and the way out was already visible in the fourth, which was
+found by *reasoning* rather than by looking: eleven families were listed,
+what each one asked was written in a column, and the column had a gap in
+it.
+
+So the space itself gets written down. Every rule in the sweep is a
+**triple** — a body, a relation, and the frame the relation is read in —
+and the three lists are short and finite: what the game describes, what
+one body can be to another, and the half-dozen frames anything is
+measured in. Crossing them gives eight hundred triples, most of them
+meaningless, and the work is dismissing those convincingly. What is left
+is a list of questions with three columns: asked, unasked, and
+**unaskable**, the last being a question a player could answer by looking
+and nothing in the tree can be put to. **Enumerate the space a rule can
+be about and close it, rather than adding a family per sighting** — and
+an unaskable question is the first rule said from the other side, because
+what it names is a description that does not exist yet. The map, its
+dismissals, and the four families that came out of it are in
+[GAUNTLET.md](GAUNTLET.md).
 
 [GAUNTLET.md](GAUNTLET.md) is the operator's side — how to run it, how to
 read a docket line, what each family looks like in the world when it

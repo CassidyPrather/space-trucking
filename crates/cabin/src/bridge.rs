@@ -486,6 +486,275 @@ mod tests {
         );
     }
 
+    /// A frame of input that demonstrably moves a world which is allowed
+    /// to move: the pointer sweeping the star map, presses and releases
+    /// cycling, a detach asked for. The pause guards below are worth
+    /// nothing without it — a script that does nothing proves nothing —
+    /// so each of them runs it against a running world as a control and
+    /// checks that the world it is allowed to move actually moved.
+    fn busy_frame(n: u32) -> FrameInput {
+        use space_trucking::sim::layout;
+        let along = f32::from(u16::try_from(n % 600).unwrap_or(0)) / 600.0;
+        let phase = n % 6;
+        FrameInput {
+            pointer: Vec2::new(
+                layout::MAP_PANEL.w.mul_add(along, layout::MAP_PANEL.x),
+                layout::MAP_PANEL.h.mul_add(0.5, layout::MAP_PANEL.y),
+            ),
+            press: phase == 0,
+            held: phase == 1 || phase == 2,
+            release: phase == 3,
+            shift: phase == 4,
+            detach: (phase == 5).then_some(CABIN),
+            ..FrameInput::default()
+        }
+    }
+
+    /// A sandboxed world from one seed: writes nothing, dev unlocked.
+    fn world() -> Bridge {
+        Bridge::boot_fixture(&Sim::new(7).save_string())
+    }
+
+    /// **A paused world does not advance.**
+    ///
+    /// The pause mark under the crosshair (`crate::menu`) is only worth
+    /// drawing if the thing it names is real, and *real* is a stronger
+    /// claim than "the tick counter stopped": it is that nothing the
+    /// player can do reaches the world at all while pause stands, so a
+    /// paused game is a place where state cannot change. That is the
+    /// property the mark is a reading of, and this is where it is
+    /// pinned rather than assumed.
+    ///
+    /// Asked in the vocabulary the sim already proves itself in
+    /// (`same_seed_and_inputs_are_bit_identical`): the save string is
+    /// the whole of the world that survives, so ten seconds of busy
+    /// input must leave it byte for byte where it was, with no tick run
+    /// and nothing announced. The control arm is the other half — the
+    /// same script, unpaused, moves the world, emits cues and rewrites
+    /// the save, so what stopped it was the pause and not the script.
+    ///
+    /// One thing does still move while paused, and is entitled to: the
+    /// OS clock refreshes `night` on the save cadence. It is an input
+    /// the sim mirrors and never accumulates — no tick reads it, and it
+    /// is not in the save — which is why the byte comparison below holds
+    /// straight through a midnight.
+    #[test]
+    fn a_paused_world_does_not_advance() {
+        let dt = space_trucking::sim::TICK_DT;
+
+        let mut paused = world();
+        paused.frame(
+            dt,
+            &FrameInput {
+                key_pause: true,
+                ..FrameInput::default()
+            },
+        );
+        assert!(paused.sim.is_paused(), "the toggle must reach the sim");
+        let sealed = paused.sim.save_string();
+        let tick = paused.sim.tick();
+        let mut announced = 0;
+        for n in 0..600 {
+            let outcome = paused.frame(dt, &busy_frame(n));
+            announced += paused.sim.cues().len();
+            assert_eq!(outcome.stalled_ticks, 0, "a paused world caught up");
+        }
+        assert_eq!(paused.sim.tick(), tick, "a paused world ran a tick");
+        assert_eq!(announced, 0, "a paused world had something to announce");
+        assert!(
+            paused.sim.save_string() == sealed,
+            "ten seconds of input changed a paused world"
+        );
+
+        let mut running = world();
+        let before = running.sim.save_string();
+        let mut heard = 0;
+        for n in 0..600 {
+            running.frame(dt, &busy_frame(n));
+            heard += running.sim.cues().len();
+        }
+        assert!(running.sim.tick() > tick, "the control arm never ticked");
+        assert!(
+            heard > 0,
+            "the control arm said nothing; the script is inert"
+        );
+        assert!(
+            running.sim.save_string() != before,
+            "the control arm left the world untouched; the script is inert"
+        );
+    }
+
+    /// **An absence spent paused is not repaid.**
+    ///
+    /// This is the way pause is decorative rather than false. The shell
+    /// owes a played session the time its window was frozen and pays it
+    /// in ticks ([`STALL_SECONDS`], [`Bridge::frame`]), so a world left
+    /// paused for ten minutes has a bill sitting against it, and a debt
+    /// settled on the way out is a pause the player only thought they
+    /// had. The sim refuses the payment while it is paused, and the
+    /// gap is spent rather than banked — the frame clock is stamped
+    /// whether or not anything was replayed — so the minutes are gone
+    /// on both sides of the resume.
+    ///
+    /// The running arm is what makes this a finding rather than a
+    /// tautology: the very same ten minutes, on a world that is not
+    /// paused, arrive as ten minutes of world.
+    #[test]
+    fn an_absence_spent_paused_is_not_repaid() {
+        let dt = space_trucking::sim::TICK_DT;
+        let away = 600.0;
+
+        let mut paused = world();
+        paused.frame(
+            dt,
+            &FrameInput {
+                key_pause: true,
+                ..FrameInput::default()
+            },
+        );
+        let tick = paused.sim.tick();
+        paused.last_frame -= away;
+        let outcome = paused.frame(dt, &FrameInput::default());
+        assert_eq!(
+            outcome.stalled_ticks, 0,
+            "ten minutes of absence were paid into a paused world"
+        );
+        assert_eq!(paused.sim.tick(), tick, "a paused world caught up anyway");
+
+        // And they are not waiting on the other side of the resume: a
+        // second of frames buys a second of world, no more.
+        paused.frame(
+            dt,
+            &FrameInput {
+                key_pause: true,
+                ..FrameInput::default()
+            },
+        );
+        assert!(!paused.sim.is_paused(), "the toggle must reach the sim");
+        let resumed = paused.sim.tick();
+        for _ in 0..60 {
+            paused.frame(dt, &FrameInput::default());
+        }
+        assert_eq!(
+            paused.sim.tick() - resumed,
+            60,
+            "the minutes spent paused were repaid after the resume"
+        );
+
+        let mut running = world();
+        let ran = running.sim.tick();
+        running.last_frame -= away;
+        let outcome = running.frame(dt, &FrameInput::default());
+        assert!(
+            outcome.stalled_ticks > 0 && running.sim.tick() > ran,
+            "a frozen window owes the player its ticks; nothing was replayed"
+        );
+    }
+
+    /// **The one thing a paused world still answers is a new world.**
+    ///
+    /// A boundary is only clean if its doors are named. Every other
+    /// input the shell can send dies at the pause gate, and one does
+    /// not: a reseed is applied ahead of it (`Sim::apply_input`), on
+    /// purpose, because throwing the world away is not a move inside
+    /// the world. What comes back is a *replacement* and not an
+    /// advance — the tick counter is at nought rather than further on —
+    /// and the pause itself survives, so the player who was stopped is
+    /// still stopped in the world they now have.
+    ///
+    /// Two laws hold the door to one door wide, and this is only one of
+    /// them: `a_paused_world_does_not_advance` is the half that says
+    /// nothing else gets through, and this is the half that says what
+    /// the one thing does when it does.
+    #[test]
+    fn only_a_reseed_reaches_a_paused_world() {
+        let dt = space_trucking::sim::TICK_DT;
+        let mut paused = world();
+        paused.frame(
+            dt,
+            &FrameInput {
+                key_pause: true,
+                ..FrameInput::default()
+            },
+        );
+        for n in 0..120 {
+            paused.frame(dt, &busy_frame(n));
+        }
+        let unmoved = paused.sim.save_string();
+
+        paused.frame(
+            dt,
+            &FrameInput {
+                key_reseed: true,
+                ..FrameInput::default()
+            },
+        );
+        assert!(
+            paused.sim.save_string() != unmoved,
+            "a reseed is the one input that crosses the gate, and it did not"
+        );
+        assert_eq!(
+            paused.sim.tick(),
+            0,
+            "a reseed replaced the world; it must not have advanced one"
+        );
+        assert!(
+            paused.sim.is_paused(),
+            "the player who was stopped is still stopped in the new world"
+        );
+    }
+
+    /// **Fast-forward advances by exactly its multiplier.**
+    ///
+    /// The other half of the same boundary, opposite sign: the chevrons
+    /// under the crosshair say the world is running at
+    /// [`space_trucking::sim::WARP_FACTOR`] times speed, and that has to
+    /// be the number rather than "faster". A frame is worth one tick at
+    /// rest; the same frames warped are worth sixteen each, and neither
+    /// the accumulator's leftovers nor the frame clamp is allowed to
+    /// round the count.
+    #[test]
+    fn warp_advances_by_exactly_its_own_multiplier() {
+        let dt = space_trucking::sim::TICK_DT;
+        let frames = 120;
+
+        let mut rest = world();
+        let from = rest.sim.tick();
+        for _ in 0..frames {
+            rest.frame(dt, &FrameInput::default());
+        }
+        let plain = rest.sim.tick() - from;
+        assert_eq!(plain, frames, "a frame of the sim's own step is one tick");
+
+        let mut fast = world();
+        fast.frame(
+            dt,
+            &FrameInput {
+                key_warp: true,
+                ..FrameInput::default()
+            },
+        );
+        assert!(
+            fast.sim.is_warp(),
+            "a fixture world unlocks the warp toggle"
+        );
+        let from = fast.sim.tick();
+        for _ in 0..frames {
+            fast.frame(dt, &FrameInput::default());
+        }
+        assert!(
+            fast.sim.is_warp(),
+            "nothing was supposed to drop out of warp"
+        );
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let multiplier = space_trucking::sim::WARP_FACTOR as u64;
+        assert_eq!(
+            fast.sim.tick() - from,
+            plain * multiplier,
+            "warp ran the world at some other speed than its own"
+        );
+    }
+
     #[test]
     fn parked_pointer_touches_nothing() {
         use space_trucking::sim::layout;

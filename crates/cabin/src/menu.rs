@@ -23,6 +23,29 @@
 //! what pausing means. The world keeps turning while the menu stands —
 //! a menu left open is not a paused game unless the player says so.
 //!
+//! **A stopped world says so.** Every reading on the panel lives and
+//! dies with the panel, which was fair for three lamps nobody has to
+//! consult and wrong for the one state that changes what every click
+//! does. A paused game and a running one were the same picture: the
+//! cabin goes on breathing, the crosshair goes on finding things, the
+//! hover glow goes on answering, and the presses land nowhere. A player
+//! lost an evening to it and filed the bug against the click. So the
+//! pause bars leave the panel — stamped a second time under the
+//! crosshair, at the aim point, where a press that does nothing is
+//! noticed. The chevrons go with them: a world running at sixteen times
+//! speed is a world whose behaviour nobody can account for either.
+//!
+//! The mark is not a HUD. It is on the screen only while the state it
+//! names is on, and a world running as it should draws nothing at all.
+//! Which state it is, it says in shape — bars against chevrons, the
+//! panel's own two icons — so it is still read by a player who cannot
+//! tell amber from anything.
+//!
+//! Mute keeps no such mark and wants none. A muted ship is silent, and
+//! the silence is the whole reading: the state announces itself in the
+//! medium it acts on. Pause and fast-forward act on a medium that says
+//! nothing back.
+//!
 //! `Esc` semantics, preserved rather than replaced: focused at a
 //! station, `Esc` steps out first (the room before the meta); roaming,
 //! `Esc` opens this and frees the cursor — which is exactly the parking
@@ -53,6 +76,12 @@ const LAMP_H: f32 = 4.0;
 /// Tally pip size and the gap between pips.
 const PIP: f32 = 12.0;
 const PIP_GAP: f32 = 8.0;
+
+/// How far the mark hangs below the crosshair, window pixels. Clear of
+/// the aim dot, inside the same glance. The mark itself is stamped at
+/// [`CELL`] like everything else here: it is not a second drawing of
+/// the pause icon, it is the panel's own icon standing somewhere else.
+const TELL_DROP: f32 = 20.0;
 
 /// A hovered but sleeping lamp wakes this far — interactable, not
 /// active. The exact courtesy the console face's buttons paid.
@@ -173,6 +202,18 @@ enum Paint {
     Pip(usize),
 }
 
+/// A piece of the mark that says the world is not running as it should:
+/// the full-screen node that hangs it, the box it is stamped in, and
+/// every run of the glyph. All three wear one, because the closed-menu
+/// law has to tell the panel from the reading and ask each the question
+/// that belongs to it.
+#[derive(Component, Clone, Copy)]
+struct Telltale(Control);
+
+/// The mark's own root, whose visibility governs the whole of it.
+#[derive(Component)]
+struct MarkRoot;
+
 /// A run of the mute slash, shown only while muted. Not a [`Paint`]: its
 /// color never changes, only whether the refusal is there at all.
 #[derive(Component, Clone)]
@@ -234,9 +275,9 @@ pub struct MenuPlugin;
 
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostStartup, spawn)
+        app.add_systems(PostStartup, (spawn, mark))
             .add_systems(Update, click.in_set(Phase::Input).after(keys))
-            .add_systems(Update, paint.in_set(Phase::View));
+            .add_systems(Update, (paint, show_mark).in_set(Phase::View));
     }
 }
 
@@ -435,6 +476,67 @@ fn spawn(mut commands: Commands, shell: Res<Shell>) {
     }
 }
 
+/// **Hang the two marks, hidden.** They are not the panel and they are
+/// not the room: the panel is a thing you work and the room is a thing
+/// the sim describes, and this is neither — it is the game saying what
+/// it is doing with the world while nobody has the panel open.
+///
+/// Under the crosshair rather than in a corner, because the press that
+/// goes nowhere is an aimed press and the eye is already there when it
+/// fails. Fast-forward is dev furniture here for the same reason its
+/// button is: `Bridge` refuses a warp toggle outside a dev run, so
+/// outside one the state cannot happen and the mark for it would be a
+/// reading of nothing.
+fn mark(mut commands: Commands, shell: Res<Shell>) {
+    let mut hang = |control: Control, glyph: &Glyph| {
+        let root = commands
+            .spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: px(0),
+                    top: px(0),
+                    width: percent(100),
+                    height: percent(100),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                Pickable::IGNORE,
+                Visibility::Hidden,
+                // The crosshair's own plane: this hangs off it, and the
+                // panel (3) still covers both when it stands.
+                GlobalZIndex(1),
+                Telltale(control),
+                MarkRoot,
+            ))
+            .id();
+        let holder = commands
+            .spawn((
+                Node {
+                    top: px(TELL_DROP),
+                    width: px(f32::from(glyph.w) * CELL),
+                    height: px(glyph.rows.len() as f32 * CELL),
+                    ..default()
+                },
+                Pickable::IGNORE,
+                Telltale(control),
+                ChildOf(root),
+            ))
+            .id();
+        stamp(
+            &mut commands,
+            holder,
+            glyph,
+            palette::AMBER,
+            Telltale(control),
+        );
+    };
+    hang(Control::Pause, &PAUSE);
+    if shell.bridge.dev() {
+        hang(Control::Warp, &FAST);
+    }
+}
+
 // ------------------------------------------------------------------- input --
 
 /// `Esc`, and what it means where. Runs first in `Phase::Input`, ahead
@@ -623,6 +725,34 @@ fn paint(
     }
 }
 
+/// Hang whichever mark the world has earned this frame, panel open or
+/// shut. A separate pass from `paint` on purpose: `paint` returns the
+/// moment the menu is down, and being down is exactly when this has
+/// something to say.
+///
+/// Paused wins over warp when the sim reports both, because a world
+/// that is not advancing is not advancing fast — and the sim itself
+/// takes the same view, ignoring warp entirely while pause stands.
+fn show_mark(shell: Res<Shell>, mut marks: Query<(&Telltale, &mut Visibility), With<MarkRoot>>) {
+    let sim = &shell.bridge.sim;
+    let wanted = if sim.is_paused() {
+        Some(Control::Pause)
+    } else if sim.is_warp() {
+        Some(Control::Warp)
+    } else {
+        None
+    };
+    for (telltale, mut visibility) in &mut marks {
+        // `Visible` here means what it says and nothing more: a mark's
+        // root answers to no ancestor, so it is the plain word for up.
+        *visibility = if wanted == Some(telltale.0) {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use space_trucking::sim::InputFrame;
@@ -801,8 +931,8 @@ mod tests {
             muted,
         })
         .insert_resource(Menu::boot(open))
-        .add_systems(PostStartup, spawn)
-        .add_systems(Update, paint);
+        .add_systems(PostStartup, (spawn, mark))
+        .add_systems(Update, (paint, show_mark));
         app.update();
         app
     }
@@ -822,14 +952,38 @@ mod tests {
         }
     }
 
-    /// Everything the menu is putting on the screen this frame.
-    fn on_screen(app: &App) -> Vec<Entity> {
+    /// Everything the PANEL is putting on the screen this frame. The
+    /// mark under the crosshair is not the panel and is left out of
+    /// this deliberately — it answers to
+    /// `a_world_that_has_stopped_says_so_with_the_menu_shut`, which is
+    /// the law that wants it drawn.
+    fn panel_on_screen(app: &App) -> Vec<Entity> {
         let world = app.world();
         world
             .iter_entities()
             .map(|entity| entity.id())
-            .filter(|entity| drawn(world, *entity))
+            .filter(|entity| world.get::<Telltale>(*entity).is_none() && drawn(world, *entity))
             .collect()
+    }
+
+    /// The mark as a player would meet it: every piece of it that
+    /// reaches the screen, described by the rectangle it puts there.
+    /// Colour is not collected, because the reading may not rest on it.
+    fn mark_shape(app: &App) -> Vec<String> {
+        let world = app.world();
+        let mut cells: Vec<String> = world
+            .iter_entities()
+            .filter(|entity| entity.contains::<Telltale>() && drawn(world, entity.id()))
+            .filter_map(|entity| {
+                let node = entity.get::<Node>()?;
+                Some(format!(
+                    "{:?} {:?} {:?} {:?}",
+                    node.left, node.top, node.width, node.height
+                ))
+            })
+            .collect();
+        cells.sort();
+        cells
     }
 
     /// How many runs of the refusal slash are on the screen.
@@ -841,10 +995,21 @@ mod tests {
             .count()
     }
 
-    /// **A closed menu draws nothing.** Pause, fast-forward, mute and
-    /// the Guild's tally are things done *to* the game, and the overlay
-    /// is the only place any of them may appear: with it shut the player
-    /// is looking at the cabin and at nothing else.
+    /// **A closed menu draws nothing.** The controls are things done
+    /// *to* the game, and the overlay is the only place any of them may
+    /// be worked: with it shut the player is looking at the cabin and at
+    /// no button at all.
+    ///
+    /// The line this once drew was one step further out — nothing
+    /// whatever on the screen — and pause is why it moved. A control may
+    /// not leak, because a control off its panel is a HUD; a state the
+    /// player has no other way to perceive must, because a state nobody
+    /// can perceive is the defect that cost an evening. Mute sits on the
+    /// near side of that line and keeps nothing outside (it is audible),
+    /// and the mark that sits on the far side is asked about by name in
+    /// `a_world_that_has_stopped_says_so_with_the_menu_shut`. What is
+    /// asserted here is everything else: the faces, the lamps, the
+    /// slash, the tally, in every state the sim can hand them.
     ///
     /// Mute broke this first. Its refusal slash asked for
     /// `Visibility::Visible`, which in Bevy means *draw me even though
@@ -859,7 +1024,7 @@ mod tests {
             for paused in [false, true] {
                 for warping in [false, true] {
                     let app = built(false, muted, paused, warping);
-                    let escaped = on_screen(&app);
+                    let escaped = panel_on_screen(&app);
                     assert!(
                         escaped.is_empty(),
                         "a closed menu put {} node(s) over the game \
@@ -871,6 +1036,66 @@ mod tests {
         }
     }
 
+    /// **A world that has stopped says so, with the menu shut.**
+    ///
+    /// This is the defect, stated. Pause changes what every click in the
+    /// game does and changed nothing about the picture: the cabin keeps
+    /// breathing on the wall clock, the crosshair keeps finding things,
+    /// and the presses land nowhere. The only way to learn the world had
+    /// stopped was to open the panel that stopped it. Fast-forward had
+    /// the same hole with the panel's own excuse and none of the
+    /// harmlessness — a world at sixteen times speed does things nobody
+    /// watching can account for.
+    ///
+    /// The question asked is the player's: with the panel down, what
+    /// reaches the screen? Every node is resolved by Bevy's own
+    /// inheritance rule over the hierarchy the game really builds, and
+    /// the marks are compared as the rectangles they put on the glass —
+    /// never as the branch that chose them, and never by colour, which
+    /// is the one thing this reading is not allowed to rest on.
+    #[test]
+    fn a_world_that_has_stopped_says_so_with_the_menu_shut() {
+        let running = mark_shape(&built(false, false, false, false));
+        assert!(
+            running.is_empty(),
+            "a world running as it should marked itself anyway"
+        );
+
+        let paused = mark_shape(&built(false, false, true, false));
+        assert!(
+            !paused.is_empty(),
+            "the world stopped and the screen said nothing"
+        );
+
+        let warping = mark_shape(&built(false, false, false, true));
+        assert!(
+            !warping.is_empty(),
+            "the world ran at speed and the screen said nothing"
+        );
+
+        assert_ne!(
+            paused, warping,
+            "stopped and racing drew the same rectangles; \
+             only the colour told them apart"
+        );
+
+        // Both at once: nothing is advancing, which is the louder fact
+        // and the one the sim itself acts on.
+        assert_eq!(
+            mark_shape(&built(false, false, true, true)),
+            paused,
+            "a paused world that is also warped must read as stopped"
+        );
+
+        // The mark is the world's, not the panel's: what the speaker is
+        // doing has no bearing on it.
+        assert_eq!(
+            mark_shape(&built(false, true, true, false)),
+            paused,
+            "muting changed what a stopped world looks like"
+        );
+    }
+
     /// The other half of the same law, and the reason the first half is
     /// not satisfied by a menu that never draws: standing, the menu is
     /// on the screen, and the slash is on the speaker exactly when the
@@ -879,7 +1104,7 @@ mod tests {
     fn an_open_menu_wears_its_slash_only_while_muted() {
         let loud = built(true, false, false, false);
         assert!(
-            !on_screen(&loud).is_empty(),
+            !panel_on_screen(&loud).is_empty(),
             "an open menu must be on the screen"
         );
         assert_eq!(

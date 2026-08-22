@@ -125,6 +125,7 @@ oldest lesson and it bounds the table before it starts.
 | a cargo rig, whole | `pieces::berth_box`, `pieces::berth_pose` | the cargo layer |
 | a rig's part | `pieces::parts` (`Part::seated`, `Part::body`) | the cargo layer |
 | a rig's named feature | `pieces::features` (`Feature::axis`, `want`) | `prop-points` |
+| a highlight's outline | `pieces::tell_bars`, off `pieces::drawn_box` | the tell layer, and read by no family — see below |
 | a room's shell | `room::shell_boxes`, `rig::structure` | the room layer |
 | a doorway's hardware | `room::seam_parts` (`room::Seat`, `Dress`) | the doorway layer |
 | a station's furniture | `poi::character_of` (`poi::Seat`, `Shape::fill`) | the room layer |
@@ -1167,6 +1168,25 @@ they are not closed, only bounded:
   `.github/workflows/ci-cd.yml` installs no `xvfb` and no Vulkan ICD, so
   the flicker and light-pop detectors run only when a human or an agent
   runs them.
+
+**And there is one described layer no family reads, on purpose.** The
+tells — the aim's brackets, the offer's ring, the mark's dashes — are
+described now (`pieces::tell_bars`, cut from `pieces::drawn_box`),
+because this file's oldest lesson is that a new family of drawn thing
+gets a description before it gets a mesh. They are still outside
+`coplanar-faces` and outside every other family, and that is a ruling
+rather than an omission. A tell is not part of the world: it is drawn at
+a few centimetres' stand-off from a body on purpose, it is drawn through
+a station's furniture on a depth bias so that nothing can hide it, and
+it is hidden except in the moment it is answering a press. A sweep that
+read it would report the reading as the defect, once per bar, for every
+claimed crate in the game — and the only way to satisfy it would be to
+author a highlight that keeps clear of the thing it is about. What holds
+the layer instead is two rules of its own, asked in the layer's own
+frame: `pieces::tests::a_tell_never_draws_inside_the_body_it_is_about`
+is the containment question, and
+`pieces::tests::no_two_tells_draw_one_bar_over_another` is the coplanar
+question asked between the three readings that may be worn at once.
 
 ## Where the pixel half stands
 

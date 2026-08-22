@@ -392,6 +392,47 @@ tread are three. A new reading adds a rung and a row in the ladder test,
 which fails the build; a new reading sharing a rung is a shimmer at
 every tile boundary, which fails only the eye.
 
+## The three tells: outline, not paint
+
+A highlight is drawn **around a body, never on the ground under it**.
+Three readings can be worn at once — the crosshair is on this, the room
+has claimed it, you have asked for it — so each is a different *form* of
+the same outline round the same box (`pieces::tell_bars`, cut from
+`pieces::drawn_box`):
+
+- **the aim** — a closed ring at the body's own rim, one continuous line:
+  the carry and hover tell, which has been a wireframe box since the day
+  a flat rectangle around a solid object read as UI debris;
+- **the offer** — a bracket at every corner, the strong claim, drawn
+  where a shape is most itself. What the room is waiting on, and what
+  will not ride out with you;
+- **the mark** — a dash across the middle of every edge, the weak claim.
+  A stub reads as a mark *on* a thing where a frame reads as a claim
+  *round* it, which is the difference between the room noting your
+  interest and the room making an offer.
+
+The two standing forms share one stand-off and cannot meet: brackets take
+the ends of every edge, dashes take the middles, and a good that is both
+offered and marked wears them interleaved into the most complete outline
+in the room. Hue does none of that work, the same as everywhere else —
+a cabin whose lamps have been sold reads in one colour anyway.
+
+**The box is described, never measured off a mesh.** `drawn_box` is the
+union of what `pieces::parts` says a kind is made of, so a kind re-cut
+from purchased geometry gets its outline re-cut with it, and nothing in
+the tell layer knows a `Cuboid` from a bought one. That is the whole
+reason the tells were moved before the art was: an outline is the one
+highlight that does not have to know the shape underneath it.
+
+**And it is why they came off the chart.** The claim used to be four bars
+ringing a piece's *footprint*, painted on whichever chart the piece was
+berthed on, and a mark's bars were drawn short and INSET — inside the
+footprint, which for anything standing proud of its chart is inside the
+piece. A painting hangs flat on a wall and fills its own footprint, so
+the mark on a picture for sale was drawn behind the picture: you pressed
+it and nothing on screen changed. A thing cannot hide an outline drawn
+around it.
+
 ## Motion
 
 The 2D taxonomy holds: **feedback** (answers a sim event; finishes inside

@@ -502,6 +502,10 @@ fn main() {
     .add_systems(
         Update,
         (
+            // After the survey, so the body is put back aboard against
+            // the envelope this frame's graph actually has, and before
+            // anything walks, aims or glides from where it stands.
+            keep_aboard.after(room::survey),
             // The menu takes the keyboard first: an `Esc` it answers is
             // an `Esc` the camera must never also act on.
             menu::keys,
@@ -993,6 +997,56 @@ fn advance(
     shell.outcome = outcome;
 }
 
+/// **The body stands where a body can stand.**
+///
+/// `rig::pose_is_aboard` already says this about the camera, and it says
+/// it because a camera in the hull is a view the player cannot read
+/// their way out of. The body needs the same sentence, and for a
+/// stronger reason: the crosshair reaches [`rig::REACH`] and no further,
+/// so a body standing where the ship is not can work nothing at all —
+/// every left click in the cabin falls on empty space, which is what a
+/// lockup looks like from the seat.
+///
+/// A doorway is where it happens. The walk envelope joins two rooms with
+/// a connector across their shared seam, and that connector belongs to
+/// neither room's own box: a body in it is, to `room::occupy`, still in
+/// the room it came from (docs/ROOMS.md, "The one new input field"). So
+/// the gangway law's "nothing detaches while it holds you" gate passes
+/// for a body standing in the very gangway, the seam shuts, and the
+/// connector the body was standing in stops existing.
+///
+/// Nothing here refuses that detach — shutting the door behind you is
+/// the whole gesture. The body simply comes back inside with it, to the
+/// nearest place the ship still offers, which is the same answer
+/// `rig::steer` gives a walk that runs out of floor.
+///
+/// It is stated as a standing property rather than as a detach handler
+/// because the graph can change for reasons the cabin never asked for —
+/// a departure dismisses every calling room, an arrival brings one — and
+/// a law that only guarded the press would be a law with a back door.
+///
+/// **It is a transition, not a fence.** What is wrong is the ship moving
+/// out from under a body that was aboard; a camera that was never aboard
+/// in the first place is not a body at all. That is the two dev views
+/// that stand outside the hull on purpose (`--view drydock|berth`) and
+/// the gauntlet's walk, which poses the camera off a room's outboard
+/// face to judge it — none of them is somebody who has to be able to
+/// click something, and a fence would drag all three back inside.
+fn keep_aboard(
+    envelope: Res<room::Envelope>,
+    walk: Option<Res<WalkMode>>,
+    mut rig: ResMut<rig::CameraRig>,
+    mut was_aboard: Local<bool>,
+) {
+    if walk.is_some() || rig.drydock || envelope.rooms.is_empty() {
+        return;
+    }
+    if !envelope.holds(rig.pos) && *was_aboard {
+        rig.pos = envelope.nearest(rig.pos);
+    }
+    *was_aboard = envelope.holds(rig.pos);
+}
+
 #[cfg(test)]
 mod tests {
     use space_trucking::sim::TICK_DT;
@@ -1056,5 +1110,685 @@ mod tests {
                 FRAME_STEP * frame
             );
         }
+    }
+}
+
+/// **A cabin with no screen**, and the laws it exists to state.
+///
+/// Every lockup this module guards against is one shape — a left click
+/// that reaches nothing — and a click reaches nothing through the whole
+/// input schedule, never through one system in it. So the schedule runs
+/// here for real, in its real order, over a real [`Sim`]: `room::survey`
+/// reads the graph, the charts and the amber latches stand where the
+/// plan says, the instruments ride their cargo, `rig::steer` and
+/// `rig::pose` fly the camera, the pointer is `surface::pick`'s own
+/// answer, and [`advance`] routes the frame exactly as it does in the
+/// window. A whole scripted session runs in well under a second, which
+/// is why the monkey below can afford a hundred of them.
+///
+/// Three things stand in, and each is a window rather than a rule:
+///
+/// - **The meshes.** Nothing in the input path casts a ray at a mesh;
+///   the charts and the latches carry their own quads.
+/// - **The cursor pixel.** A focused cursor rests on a sim point, and
+///   working out which one is the whole of what the window's viewport
+///   arithmetic does. The script names the sim point instead.
+/// - **`pieces::ride_pieces` and `menu::click`**, both private, both
+///   re-said here through the public halves they are built from.
+#[cfg(test)]
+mod session {
+    use bevy::input::InputPlugin;
+    use bevy::time::TimeUpdateStrategy;
+    use space_trucking::sim::cargo::Loc;
+    use space_trucking::sim::room::{CABIN, RoomId, Tile};
+    use space_trucking::sim::{Cue, ShipState, TICK_DT, Vec2 as SimVec2, layout, splitmix};
+
+    use super::*;
+    use crate::pieces::Riding;
+    use crate::rig::{CabinCamera, CameraRig, EYE_HEIGHT, Focus, Mode, REACH};
+    use crate::room::{Dress, Envelope, InRoom, Latch, Occupancy, Plan};
+    use crate::surface::{Aimable, SimSurface, Station};
+
+    /// Where the freed cursor rests while a station is focused, in sim
+    /// coordinates. Roaming ignores it: there the crosshair is the
+    /// camera, and the camera is the body.
+    #[derive(Resource, Default)]
+    struct Cursor(Option<SimVec2>);
+
+    /// The buttons and keys the script is holding down. Edges are
+    /// derived from it rather than injected, so a press that is never
+    /// let go stays down exactly as a real one does.
+    #[derive(Resource, Default)]
+    struct Hands {
+        left: bool,
+        right: bool,
+        keys: Vec<KeyCode>,
+    }
+
+    /// Turn the script's hands into this frame's edges. Runs first, after
+    /// Bevy's own input pass has already cleared last frame's.
+    fn hands(
+        hands: Res<Hands>,
+        mut mouse: ResMut<ButtonInput<MouseButton>>,
+        mut keys: ResMut<ButtonInput<KeyCode>>,
+    ) {
+        for (want, button) in [
+            (hands.left, MouseButton::Left),
+            (hands.right, MouseButton::Right),
+        ] {
+            match (want, mouse.pressed(button)) {
+                (true, false) => mouse.press(button),
+                (false, true) => mouse.release(button),
+                _ => {}
+            }
+        }
+        let down: Vec<KeyCode> = keys.get_pressed().copied().collect();
+        for key in down {
+            if !hands.keys.contains(&key) {
+                keys.release(key);
+            }
+        }
+        for key in &hands.keys {
+            if !keys.pressed(*key) {
+                keys.press(*key);
+            }
+        }
+    }
+
+    /// What `room::rebuild` puts in the world that the input path reads:
+    /// every room's six charts, and every doorway's amber latch.
+    fn stage(mut commands: Commands, plan: Res<Plan>, standing: Query<Entity, With<InRoom>>) {
+        if !plan.is_changed() {
+            return;
+        }
+        for entity in &standing {
+            commands.entity(entity).despawn();
+        }
+        for placed in &plan.rooms {
+            let tag = InRoom {
+                room: placed.id,
+                kind: placed.kind,
+            };
+            for (station, surface) in placed.charts {
+                commands.spawn((station, surface, tag));
+            }
+            for part in crate::room::seam_parts(placed) {
+                if let Dress::Grab(room, face) = part.dress {
+                    commands.spawn((Latch { room, face }, tag));
+                }
+            }
+        }
+    }
+
+    /// The menu's scrim, which a screenless cabin grows no UI for: while
+    /// the menu stands it covers the window, so a click on it puts the
+    /// menu away and hands the cursor back (`menu::click`).
+    fn scrim(
+        mouse: Res<ButtonInput<MouseButton>>,
+        mut menu: ResMut<menu::Menu>,
+        mut rig: ResMut<CameraRig>,
+    ) {
+        if menu.open && mouse.just_pressed(MouseButton::Left) {
+            menu.open = false;
+            rig.parked = false;
+        }
+    }
+
+    /// `pieces::ride_pieces`, through its two public halves: hang, move
+    /// and retire the surfaces that ride the cargo.
+    fn ride(
+        mut commands: Commands,
+        shell: Res<Shell>,
+        charts: Query<(&Station, &SimSurface), Without<Riding>>,
+        mut riders: Query<(Entity, &Riding, &Station, &mut SimSurface)>,
+    ) {
+        let charts: Vec<(Station, SimSurface)> = charts.iter().map(|(s, q)| (*s, *q)).collect();
+        let sim = &shell.bridge.sim;
+        let in_hand = sim.held(0).map(|held| held.piece);
+        let mut live: Vec<(u32, Station, SimSurface)> = Vec::new();
+        for piece in sim.pieces() {
+            if in_hand == Some(piece.id) || !matches!(piece.loc, Loc::Hold { .. }) {
+                continue;
+            }
+            let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
+            if let Some((station, surface)) =
+                crate::pieces::instrument_surface(&charts, piece.kind, rect)
+            {
+                live.push((piece.id, station, surface));
+            }
+            if let Some(face) = crate::pieces::standing_surface(&charts, piece.kind, rect) {
+                live.push((piece.id, Station::Standing, face));
+            }
+        }
+        for (entity, riding, station, mut surface) in &mut riders {
+            if let Some(at) = live
+                .iter()
+                .position(|(id, tag, _)| *id == riding.0 && tag == station)
+            {
+                *surface = live.swap_remove(at).2;
+            } else {
+                commands.entity(entity).despawn();
+            }
+        }
+        for (id, station, surface) in live {
+            commands.spawn((station, surface, Riding(id)));
+        }
+    }
+
+    /// `surface::track_pointer` without a window: the same two regimes,
+    /// the same `pick`, aimed at a sim point instead of at a screen
+    /// pixel.
+    fn aim(
+        rig: Res<CameraRig>,
+        cursor: Res<Cursor>,
+        camera: Single<&Transform, With<CabinCamera>>,
+        surfaces: Query<(&Station, &SimSurface, Option<&Riding>, Option<&InRoom>)>,
+        mut pointer: ResMut<VirtualPointer>,
+    ) {
+        *pointer = VirtualPointer::default();
+        let aimables = || {
+            surfaces
+                .iter()
+                .map(|(station, surface, riding, in_room)| Aimable {
+                    station: *station,
+                    surface: *surface,
+                    riding: riding.is_some(),
+                    in_room: in_room.copied(),
+                })
+        };
+        let (ray, roam_only, reach) = if rig.interactive() {
+            let Some(at) = cursor.0 else { return };
+            let Some(world) = aimables()
+                .filter(|aim| !aim.riding || !aim.station.roamable())
+                .find(|aim| aim.surface.rect.contains(at))
+                .map(|aim| aim.surface.to_world(at))
+            else {
+                return;
+            };
+            let Ok(dir) = Dir3::new(world - camera.translation) else {
+                return;
+            };
+            (Ray3d::new(camera.translation, dir), false, f32::INFINITY)
+        } else if rig.roaming() {
+            let Ok(dir) = Dir3::new(camera.forward().into()) else {
+                return;
+            };
+            (Ray3d::new(camera.translation, dir), true, REACH)
+        } else {
+            return;
+        };
+        *pointer = crate::surface::pick(ray, roam_only, reach, aimables());
+    }
+
+    /// A cabin a test can play.
+    struct Cabin {
+        app: App,
+    }
+
+    impl Cabin {
+        fn new(save: &str) -> Self {
+            let mut bridge = Bridge::boot_fixture(save);
+            bridge.steady();
+            let mut app = App::new();
+            app.add_plugins((MinimalPlugins, InputPlugin))
+                .insert_resource(TimeUpdateStrategy::ManualDuration(FRAME_STEP))
+                .insert_resource(Shell {
+                    bridge,
+                    outcome: FrameOutcome::default(),
+                    muted: false,
+                })
+                .insert_resource(CameraRig::boot(None))
+                .insert_resource(menu::Menu::boot(false))
+                .init_resource::<VirtualPointer>()
+                .init_resource::<Cursor>()
+                .init_resource::<Hands>()
+                .init_resource::<gesture::Grips>()
+                .init_resource::<Plan>()
+                .init_resource::<Envelope>()
+                .init_resource::<Occupancy>()
+                .init_resource::<crate::room::AimedLatch>()
+                .configure_sets(Update, (Phase::Input, Phase::Advance).chain())
+                .add_systems(
+                    Update,
+                    (
+                        hands,
+                        crate::room::survey,
+                        stage,
+                        keep_aboard,
+                        crate::room::occupy,
+                        crate::room::aim_latch,
+                        ride,
+                        menu::keys,
+                        scrim,
+                        crate::rig::steer,
+                        crate::rig::pose,
+                        aim,
+                        gesture::grip,
+                    )
+                        .chain()
+                        .in_set(Phase::Input),
+                )
+                .add_systems(Update, advance.in_set(Phase::Advance));
+            app.world_mut().spawn((CabinCamera, Transform::default()));
+            let mut cabin = Self { app };
+            cabin.steps(3);
+            cabin
+        }
+
+        /// The developer fixture, moored at Venus, with the player's own
+        /// goods walked home out of the market — the board the gangway
+        /// law will actually let you part.
+        fn at_venus() -> Self {
+            let mut cabin = Self::new(&crate::fixture::docked_at(0));
+            let rooms: Vec<RoomId> = cabin.latches().iter().map(|(room, _)| *room).collect();
+            for room in rooms {
+                cabin.send_home(room);
+            }
+            cabin.steps(3);
+            cabin
+        }
+
+        fn step(&mut self) {
+            self.app.update();
+        }
+
+        fn steps(&mut self, n: u32) {
+            for _ in 0..n {
+                self.step();
+            }
+        }
+
+        fn sim(&self) -> &space_trucking::sim::Sim {
+            &self.app.world().resource::<Shell>().bridge.sim
+        }
+
+        fn rig(&mut self) -> Mut<'_, CameraRig> {
+            self.app.world_mut().resource_mut::<CameraRig>()
+        }
+
+        fn pos(&self) -> Vec3 {
+            self.app.world().resource::<CameraRig>().pos
+        }
+
+        fn roaming(&self) -> bool {
+            self.app.world().resource::<CameraRig>().roaming()
+        }
+
+        /// Stand the body somewhere, looking at a point.
+        fn stand(&mut self, at: Vec3, toward: Vec3) {
+            self.rig().pos = at;
+            self.look(toward);
+        }
+
+        /// Look toward a world point without moving. The mouse aims
+        /// anywhere; this is the only thing it does.
+        fn look(&mut self, toward: Vec3) {
+            let from = self.pos();
+            let d = toward - from;
+            let mut rig = self.rig();
+            rig.yaw = (-d.x).atan2(-d.z);
+            rig.pitch = d.y.atan2(d.xz().length()).clamp(-1.2, 1.2);
+        }
+
+        fn hold_left(&mut self, down: bool) {
+            self.app.world_mut().resource_mut::<Hands>().left = down;
+        }
+
+        fn hold_right(&mut self, down: bool) {
+            self.app.world_mut().resource_mut::<Hands>().right = down;
+        }
+
+        fn hold_keys(&mut self, keys: &[KeyCode]) {
+            self.app.world_mut().resource_mut::<Hands>().keys = keys.to_vec();
+        }
+
+        fn rest_cursor(&mut self, at: Option<SimVec2>) {
+            self.app.world_mut().resource_mut::<Cursor>().0 = at;
+        }
+
+        /// One click: down for a frame, up the next, with everything the
+        /// sim said across the two.
+        fn click(&mut self) -> Vec<Cue> {
+            let mut said = Vec::new();
+            self.hold_left(true);
+            self.step();
+            said.extend_from_slice(self.sim().cues());
+            self.hold_left(false);
+            self.step();
+            said.extend_from_slice(self.sim().cues());
+            said
+        }
+
+        /// Every amber latch standing this frame: the room it asks to
+        /// part, and where its face is.
+        fn latches(&mut self) -> Vec<(RoomId, Vec3)> {
+            self.app
+                .world_mut()
+                .query::<&Latch>()
+                .iter(self.app.world())
+                .map(|latch| (latch.room, latch.face.center))
+                .collect()
+        }
+
+        /// Whichever surface answers as `want` this frame.
+        fn face(&mut self, want: Station) -> Option<SimSurface> {
+            self.app
+                .world_mut()
+                .query::<(&Station, &SimSurface)>()
+                .iter(self.app.world())
+                .find(|(station, _)| **station == want)
+                .map(|(_, surface)| *surface)
+        }
+
+        /// Walk everything of the player's out of `room` the way a
+        /// shift-click quick-move does. Board setup, straight through
+        /// the bridge: not the path under test.
+        fn send_home(&mut self, room: RoomId) {
+            for _ in 0..40 {
+                let Some(at) = self.stray_in(room) else {
+                    return;
+                };
+                let mut shell = self.app.world_mut().resource_mut::<Shell>();
+                shell.bridge.frame(
+                    TICK_DT,
+                    &FrameInput {
+                        pointer: at,
+                        press: true,
+                        held: true,
+                        shift: true,
+                        ..FrameInput::default()
+                    },
+                );
+                shell.bridge.frame(TICK_DT, &FrameInput::default());
+            }
+        }
+
+        /// The middle of some piece in `room` that is not the room's own
+        /// stock, if one is left.
+        fn stray_in(&self, room: RoomId) -> Option<SimVec2> {
+            let sim = self.sim();
+            let rect = sim
+                .pieces()
+                .iter()
+                .find(|piece| {
+                    matches!(piece.loc, Loc::Hold { room: at, x, y }
+                        if at == room && sim.rooms().tile(at, x, y) != Some(Tile::Stock))
+                })
+                .map(|piece| layout::piece_rect(sim.rooms(), sim.pieces(), piece))?;
+            Some(SimVec2::new(
+                rect.w.mul_add(0.5, rect.x),
+                rect.h.mul_add(0.5, rect.y),
+            ))
+        }
+
+        /// **Can the player still act?** Let go of everything, step out
+        /// of whatever the camera is in, walk up to the chart tank,
+        /// focus it, and chart a course. Every step is something a
+        /// player does with the hardware they have; the mouse alone is
+        /// enough for all of it, which is why no key is pressed here.
+        fn can_still_chart(&mut self) -> Result<(), String> {
+            self.hold_left(false);
+            self.hold_right(false);
+            self.hold_keys(&[]);
+            self.rest_cursor(None);
+            self.steps(4);
+            for _ in 0..10 {
+                if self.roaming() {
+                    break;
+                }
+                // A left click reclaims a parked cursor and dismisses the
+                // menu; a right click steps out of a station.
+                self.click();
+                self.hold_right(true);
+                self.step();
+                self.hold_right(false);
+                self.steps(30);
+            }
+            if !self.roaming() {
+                return Err(format!(
+                    "the camera never came back: {:?}",
+                    self.app.world().resource::<CameraRig>().mode
+                ));
+            }
+            let Some(map) = self.face(Station::Map) else {
+                return Err("no chart tank aboard".into());
+            };
+            let stand = map.center + map.normal() * 0.75;
+            let goal = Vec3::new(stand.x, EYE_HEIGHT, stand.z);
+            for _ in 0..1200 {
+                let here = self.pos();
+                if here.with_y(0.0).distance(goal.with_y(0.0)) < 0.25 {
+                    break;
+                }
+                self.look(goal.with_y(here.y));
+                self.hold_keys(&[KeyCode::KeyW]);
+                self.step();
+            }
+            self.hold_keys(&[]);
+            self.look(map.center);
+            self.steps(3);
+            self.click();
+            self.steps(60);
+            if !matches!(
+                self.app.world().resource::<CameraRig>().mode,
+                Mode::Focused { focus: Focus::Tank }
+            ) {
+                return Err(format!(
+                    "a click on the tank did not focus it, from {:?}",
+                    self.pos()
+                ));
+            }
+            let ShipState::Docked(here) = self.sim().ship().state else {
+                return Err("the ship left the dock".into());
+            };
+            let Some(target) = (0..12u8).find(|&id| id != here && self.sim().poi_chartable(id))
+            else {
+                return Err("nothing is chartable".into());
+            };
+            let at = self.sim().poi_pos(target);
+            self.rest_cursor(Some(at));
+            self.steps(2);
+            self.click();
+            if self.sim().ship().selected == Some(target) {
+                Ok(())
+            } else {
+                Err(format!(
+                    "a press on the tank's glass selected {:?}, not {target}",
+                    self.sim().ship().selected
+                ))
+            }
+        }
+    }
+
+    /// **A seam never shuts on the body.**
+    ///
+    /// The gangway law refuses to part a room that holds you, and it
+    /// asks one question to find out: which room is the body in
+    /// (docs/ROOMS.md, "The one new input field"). A body in a doorway
+    /// is in neither room's box, so `room::occupy` answers with the room
+    /// it came from — and the seam it is standing in is not that room.
+    /// The gate passes, the connector stops existing, and the body is
+    /// left in the vacuum where the gangway was, out of
+    /// [`REACH`] of every surface in the ship: mouse look
+    /// still works, walking still works, and every left click in the
+    /// cabin lands on nothing at all.
+    ///
+    /// So the law is about where the body ENDS UP, not about which press
+    /// is allowed: whatever a seam does, the body is still standing
+    /// somewhere the ship offers ([`keep_aboard`]). This is asserted from
+    /// every threshold a body can click a latch from, because the one
+    /// that strands you is the one nobody thought to stand on.
+    #[test]
+    fn a_seam_never_shuts_on_the_body() {
+        let mut cabin = Cabin::at_venus();
+        let (room, latch) = cabin.latches()[0];
+        // Every point of the connector across that seam that lies in no
+        // room's own box, and is close enough to work the latch from.
+        let thresholds: Vec<Vec3> = {
+            let world = cabin.app.world();
+            let plan = world.resource::<Plan>();
+            let envelope = world.resource::<Envelope>();
+            envelope
+                .seams
+                .iter()
+                .flat_map(|(lo, hi)| {
+                    (0..=20u8).map(move |k| {
+                        let t = f32::from(k) / 20.0;
+                        Vec3::new(
+                            f32::midpoint(lo.x, hi.x),
+                            EYE_HEIGHT,
+                            (hi.z - lo.z).mul_add(t, lo.z),
+                        )
+                    })
+                })
+                .filter(|p| plan.room_at(*p).is_none() && p.distance(latch) < REACH - 0.4)
+                .collect()
+        };
+        assert!(
+            !thresholds.is_empty(),
+            "a doorway a body can work the latch from is the whole case"
+        );
+        let mut parted = 0;
+        for spot in thresholds {
+            let mut cabin = Cabin::at_venus();
+            cabin.stand(spot, latch);
+            // The eye ducks under a doorway's lintel, so aim again from
+            // wherever it settles rather than from where it started.
+            cabin.steps(8);
+            cabin.look(latch);
+            cabin.steps(2);
+            let said = cabin.click();
+            if !said.iter().any(|cue| matches!(cue, Cue::Parted)) {
+                continue;
+            }
+            parted += 1;
+            cabin.steps(2);
+            let inside = {
+                let world = cabin.app.world();
+                world
+                    .resource::<Envelope>()
+                    .holds(world.resource::<CameraRig>().pos)
+            };
+            assert!(
+                inside,
+                "parting {room} from {spot:?} left the body at {:?}, which is not aboard",
+                cabin.pos()
+            );
+            assert!(
+                cabin.can_still_chart().is_ok(),
+                "parting {room} from {spot:?} left the player unable to chart"
+            );
+        }
+        assert!(parted > 0, "no threshold click ever parted the seam");
+    }
+
+    /// **Nothing a pair of hands can do leaves the player unable to
+    /// act.**
+    ///
+    /// The cabin monkey, per the drag-monkey tradition the 2D prototype
+    /// started and `gesture::tests::gesture_monkey_mask_integrity` keeps:
+    /// seeded pseudo-random hands on the real hardware — look, walk,
+    /// click, right-click, `E`, `Esc`, and a standing bias toward
+    /// whatever amber latch is in the room, so seams really do part
+    /// under it. However the session ends, the player can still walk up
+    /// to the chart tank and chart a course with the mouse alone.
+    ///
+    /// The claim is deliberately end to end rather than per-system.
+    /// Every lockup this file has had was a state no single system was
+    /// wrong about: a grip nobody released, an aim that outlived its
+    /// room, a pose in a wall. What they share is the sentence below.
+    #[test]
+    fn no_pair_of_hands_leaves_the_player_unable_to_act() {
+        let mut parted = 0;
+        for run in 0..48u64 {
+            let seed = splitmix(0xBADD_C0DE, run);
+            let mut cabin = Cabin::at_venus();
+            for i in 0..400u64 {
+                let h = splitmix(seed, i);
+                let bit = |n: u32| (h >> n) & 1 == 1;
+                cabin.hold_left(bit(0) || bit(1));
+                cabin.hold_right(bit(2) && bit(3) && bit(4));
+                let mut keys = Vec::new();
+                for (n, key) in [
+                    (5, KeyCode::KeyW),
+                    (7, KeyCode::KeyA),
+                    (9, KeyCode::KeyS),
+                    (11, KeyCode::KeyD),
+                ] {
+                    if bit(n) && bit(n + 1) {
+                        keys.push(key);
+                    }
+                }
+                if bit(13) && bit(14) && bit(15) {
+                    keys.push(KeyCode::KeyE);
+                }
+                if bit(16) && bit(17) && bit(18) && bit(19) {
+                    keys.push(KeyCode::Escape);
+                }
+                cabin.hold_keys(&keys);
+                // Where the eyes go: mostly a wander, sometimes straight
+                // at a latch from arm's length, which is the only way a
+                // seam ever parts.
+                let latches = cabin.latches();
+                if !latches.is_empty() && bit(20) && bit(21) {
+                    let at = latches[(h >> 32) as usize % latches.len()].1;
+                    let step = (at - cabin.pos()).normalize_or_zero() * 0.6;
+                    cabin.stand(Vec3::new(at.x - step.x, EYE_HEIGHT, at.z - step.z), at);
+                } else {
+                    let mut rig = cabin.rig();
+                    rig.yaw = ((h >> 40) & 0xFF) as f32 / 255.0 * std::f32::consts::TAU;
+                    rig.pitch = (((h >> 48) & 0xFF) as f32 / 255.0 - 0.5) * 2.0;
+                }
+                cabin.rest_cursor(Some(SimVec2::new(
+                    ((h >> 24) & 0x3FF) as f32,
+                    ((h >> 34) & 0x1FF) as f32,
+                )));
+                cabin.step();
+                parted += u32::from(cabin.sim().cues().iter().any(|c| matches!(c, Cue::Parted)));
+            }
+            if let Err(why) = cabin.can_still_chart() {
+                panic!("run {run}: {why}");
+            }
+        }
+        assert!(
+            parted > 0,
+            "the monkey never parted a seam, so it never tested one"
+        );
+    }
+
+    /// **A detached room takes nothing of the cabin's with it.** The
+    /// owner's own report, scripted: docked at Venus, work the seam's
+    /// amber latch from inside the cabin, and then chart a course.
+    #[test]
+    fn the_map_still_charts_after_the_market_is_sent_away() {
+        let mut cabin = Cabin::at_venus();
+        let (room, latch) = cabin.latches()[0];
+        // Arm's length off the latch, on the cabin's side of it.
+        let inboard = {
+            let placed = cabin
+                .app
+                .world()
+                .resource::<Plan>()
+                .get(CABIN)
+                .expect("the cabin")
+                .clone();
+            let middle = (placed.lo + placed.hi) * 0.5;
+            let toward = (middle - latch).normalize_or_zero() * 0.9;
+            Vec3::new(latch.x + toward.x, EYE_HEIGHT, latch.z + toward.z)
+        };
+        cabin.stand(inboard, latch);
+        cabin.steps(3);
+        cabin.look(latch);
+        cabin.steps(2);
+        let said = cabin.click();
+        assert!(
+            said.iter().any(|cue| matches!(cue, Cue::Parted)),
+            "the latch did not part room {room}: {said:?}"
+        );
+        assert!(cabin.sim().rooms().get(room).is_none());
+        assert_eq!(cabin.app.world().resource::<Occupancy>().0, CABIN);
+        cabin
+            .can_still_chart()
+            .expect("the market left with the map");
     }
 }

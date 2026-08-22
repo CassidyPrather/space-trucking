@@ -508,15 +508,14 @@ and in every case those were **two arcs square on to the body's front and
 back**, with nothing at all in between. Only the bottom band answered all
 the way round, and that was never the piece answering; it was the deck
 cell under it, which is why a **tall thin** kind is the one that got
-reported and a crate did not. After the cure every one of them answers
-from all 36, at every height.
+reported and a crate did not.
 
 So a rig's face carries its body now (`SimSurface::deep`) and the aim
 meets the box the tell draws (`SimSurface::strike`). The quad stays the
 *reading* — wherever on the body the aim lands is laid back onto the
 elevation the rig was drawn in, so a cabinet met on its flank at the
-height of the third cubby reads the third cubby. The same ring answers
-36 of 36 at every height, and
+height of the third cubby reads the third cubby. After the cure every
+one of those kinds answers from all 36 stances at every height, and
 `pieces::tests::the_body_answers_from_all_round` sweeps 1,346 berths and
 111,617 aims to keep it that way.
 
@@ -526,10 +525,10 @@ plane and answers for the rig's very cells, so the reading is right for
 anything but a glancing aim at a deep body — a sconce reaching half a
 cell off its wall lands a fraction of a cell over on 3 or 4 of the 15
 stances the room allows in the same sweep, all of them at the grazing
-ends of the arc. Curing it costs a seam: a wall berth's cells are where a doorway's
-amber latch is bolted too, the latch stands two millimetres proud of the
-plane, and the fixture's own bay window is berthed **across** the cabin's
-aft latch. Give that window a pick body and it outranks the latch from
+ends of the arc. Curing it costs a seam: a wall berth's cells are where
+a doorway's amber latch is bolted too, the latch stands two millimetres
+proud of the plane, and the fixture's own bay window is berthed
+**across** the cabin's aft latch. Give that window a pick body and it outranks the latch from
 every stance in the room — with one, the input monkey could not part a
 seam in 19,200 frames. The glancing read is worth less than the seam.
 

@@ -582,13 +582,14 @@ fn paint(
             codes.push((id, claim));
         }
     }
-    // Nothing is filtered by where a piece is berthed, and that is
-    // deliberate: a proxy exists only where a rig does, `sync_pieces`
-    // retires a rig the sim no longer knows, and a good SHELVED in a
-    // cabinet is drawn as a mini behind its own doors — so it is a thing
-    // the crosshair can rest on and a thing that has to answer when it
-    // does. A code naming a piece that is not drawn simply finds no
-    // proxy wearing that number.
+    // **Nothing is filtered by where a piece is berthed**, and that is
+    // deliberate: a body is marked only where a rig draws one,
+    // `sync_pieces` retires a rig the sim no longer knows, and a good
+    // SHELVED in a cabinet is drawn as a mini behind its own doors — so
+    // it is a thing the crosshair can rest on and a thing that has to
+    // answer when it does. A code naming a piece nothing draws simply
+    // finds no body wearing that number.
+
     // **Cut the copies the moment there is anything to say**, and not
     // before: a cabin nobody is pointing at carries no mask at all, and
     // the difference is some hundreds of bodies that would otherwise

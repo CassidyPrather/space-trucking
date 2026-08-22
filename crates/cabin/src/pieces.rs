@@ -297,6 +297,7 @@ impl Plugin for PiecesPlugin {
                     sync_dressings,
                     xray_focus,
                     hover_glint,
+                    claim_outlines,
                     carry_held,
                     placement_hints,
                     invite_glows,
@@ -1217,6 +1218,29 @@ fn ride_surface(mount: &Instrument, kind: Kind, site: (Vec3, Quat, Vec3)) -> Sim
 /// somebody else's.
 #[must_use]
 pub fn silhouette(kind: Kind) -> (Vec2, Vec2) {
+    let (mid, half) = drawn_box(kind);
+    (mid.truncate(), half.truncate())
+}
+
+/// **The whole box a rig draws, depth and all** — [`silhouette`] with the
+/// third axis it leaves out, as an axis-aligned `(centre, half)` in the
+/// rig's own local sim units.
+///
+/// The silhouette is the two axes a chart is measured in, because it
+/// answers a question asked in a chart's frame: which piece is at this
+/// point. This answers the question a **tell** asks — what shape do I
+/// draw around — and that one has three axes. The depth is the union of
+/// what [`parts`] describes rather than the band a rig is composed in
+/// ([`RIG_NEAR`], [`RIG_FAR`]): a painting is a finger thick and hangs on
+/// a wall a whole cell deep, and a tell cut from the band would stand
+/// half a metre out of the wall around a picture.
+///
+/// Across and up are still held to the kind's own cells, exactly as the
+/// silhouette is and for the same reason. Depth is not: nothing else
+/// owns the air in front of a berth, and a rig that leans out of its
+/// band should be outlined where it actually is.
+#[must_use]
+pub fn drawn_box(kind: Kind) -> (Vec3, Vec3) {
     let piece = Piece {
         id: 0,
         kind,
@@ -1230,8 +1254,8 @@ pub fn silhouette(kind: Kind) -> (Vec2, Vec2) {
     };
     let (w, h) = kind.upright();
     let cells = Vec2::new(f32::from(w) * layout::CELL, f32::from(h) * layout::CELL) * 0.5;
-    let mut lo = Vec2::splat(f32::INFINITY);
-    let mut hi = Vec2::splat(f32::NEG_INFINITY);
+    let mut lo = Vec3::splat(f32::INFINITY);
+    let mut hi = Vec3::splat(f32::NEG_INFINITY);
     for screens in Screens::BOTH {
         for part in parts(&piece, screens) {
             let Some(body) = part.body else { continue };
@@ -1239,19 +1263,146 @@ pub fn silhouette(kind: Kind) -> (Vec2, Vec2) {
             let half = body.half() * at.scale;
             let m = Mat3::from_quat(at.rotation);
             let reach = m.x_axis.abs() * half.x + m.y_axis.abs() * half.y + m.z_axis.abs() * half.z;
-            let (near, far) = (at.translation - reach, at.translation + reach);
-            lo = lo.min(Vec2::new(near.x, near.y));
-            hi = hi.max(Vec2::new(far.x, far.y));
+            lo = lo.min(at.translation - reach);
+            hi = hi.max(at.translation + reach);
         }
     }
-    // A rig that draws nothing answers for its cells; there is no such
-    // kind today, and a face of no size would be a piece nothing could
-    // aim at.
+    // A rig that draws nothing answers for its cells and its band; there
+    // is no such kind today, and a face of no size would be a piece
+    // nothing could aim at.
     if !(lo.x < hi.x && lo.y < hi.y) {
-        return (Vec2::ZERO, cells);
+        return (
+            Vec3::new(0.0, 0.0, rig_mid()),
+            Vec3::new(cells.x, cells.y, (RIG_FAR - RIG_NEAR) * 0.5),
+        );
     }
-    let (lo, hi) = (lo.max(-cells), hi.min(cells));
+    let lo = lo.max(Vec3::new(-cells.x, -cells.y, lo.z));
+    let hi = hi.min(Vec3::new(cells.x, cells.y, hi.z));
     ((lo + hi) * 0.5, (hi - lo) * 0.5)
+}
+
+// ---------------------------------------------------------------- the tells --
+
+/// **Which sentence a tell says about a piece.** Three readings, three
+/// FORMS — and the forms are the whole of it, because a tell may not
+/// signal on hue alone and a cabin with the lamps sold reads in one
+/// colour anyway.
+///
+/// - [`Tell::Aim`] — *the crosshair is on this, or your hands are*: a
+///   **bracket at every corner** of the body, at the body's own rim. The
+///   lightest form for the reading that comes and goes with where you
+///   are looking.
+/// - [`Tell::Offered`] — *this pile is what the room is waiting on*: a
+///   **closed ring**, one continuous line all the way round. The
+///   strongest claim gets the most complete form, and it is the form the
+///   claim has always had — it has only come off the floor.
+/// - [`Tell::Marked`] — *I want that one*: a **dash across the middle of
+///   every edge**, on the body's own rim inside the ring. A stub reads
+///   as a mark ON a thing where a ring reads as a claim ROUND it, which
+///   is the difference between the room noting your interest and the
+///   room making an offer.
+///
+/// All three may be worn at once — the crosshair resting on a good the
+/// room has offered and you have asked for — and
+/// [`tests::no_two_tells_draw_one_bar_over_another`] holds them apart.
+/// A dashed body inside a closed ring is the reading the old inset ticks
+/// were reaching for, and the one a wall could hide.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Tell {
+    Aim,
+    Offered,
+    Marked,
+}
+
+/// One bar of a tell, in the rig's own local frame and sim units: `at`
+/// its centre and `size` its full extent, axis-aligned like everything
+/// else a rig is composed of.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Bar {
+    pub at: Vec3,
+    pub size: Vec3,
+}
+
+/// **How far off the body each form stands, and how thick its bar is**,
+/// in rig sim units — a unit is about a centimetre and a half of world.
+///
+/// The aim and the mark share the body's own rim, which they can because
+/// their forms are complementary: brackets take the ends of every edge
+/// and dashes take the middles, and the runs below are cut so the two
+/// can never meet. The offer's ring stands off outside both, because a
+/// closed line covers every edge end to end and has nowhere to hide.
+///
+/// Tight on purpose. A tell is an outline of a body and not a crate
+/// around it: at these numbers the whole of a claimed one-cell good's
+/// outline still stands inside the cell the sim gave it.
+const AIM_OUT: f32 = 2.0;
+const AIM_GIRTH: f32 = 2.0;
+const MARK_OUT: f32 = 2.0;
+const MARK_GIRTH: f32 = 1.6;
+const OFFER_OUT: f32 = 5.5;
+const OFFER_GIRTH: f32 = 2.4;
+
+/// The longest a corner bracket runs, and the most of one edge it may
+/// take. The cap is what keeps a bracket a bracket on a big body; the
+/// fraction is what keeps two of them from meeting in the middle of a
+/// small one, which would draw the offer's own closed ring by accident.
+const BRACKET: f32 = 7.0;
+const BRACKET_RUN: f32 = 0.3;
+
+/// The same pair for a mark's dash: a quarter of an edge at most, so it
+/// reads as one stub on a side and never as a ring with the corners
+/// rubbed off.
+const DASH: f32 = 8.0;
+const DASH_RUN: f32 = 0.28;
+
+/// **The bars one tell draws around a body**, in the body's own frame —
+/// `mid` and `half` as [`drawn_box`] hands them over, and out comes the
+/// outline, one axis-aligned bar at a time.
+///
+/// This is the whole of the change the tells needed for a purchased
+/// asset to arrive: nothing here reads a mesh, a `Cuboid`, or a chart.
+/// It reads a BOX, and the box is derived from whatever [`parts`]
+/// describes — so a kind re-cut from bought geometry gets its outline
+/// re-cut with it, and a tell drawn round a picture hanging flat on a
+/// wall stands off that wall instead of being painted onto it.
+#[must_use]
+pub fn tell_bars(mid: Vec3, half: Vec3, tell: Tell) -> Vec<Bar> {
+    let (out, girth) = match tell {
+        Tell::Aim => (AIM_OUT, AIM_GIRTH),
+        Tell::Offered => (OFFER_OUT, OFFER_GIRTH),
+        Tell::Marked => (MARK_OUT, MARK_GIRTH),
+    };
+    let reach = half + Vec3::splat(out);
+    let mut bars = Vec::new();
+    for axis in 0..3 {
+        let (b, c) = ((axis + 1) % 3, (axis + 2) % 3);
+        // The bar runs the whole inflated edge plus one girth, so the
+        // twelve of a closed ring meet at the corners rather than
+        // leaving eight square holes in it.
+        let len = reach[axis].mul_add(2.0, girth);
+        let runs: [(f32, f32); 2] = match tell {
+            Tell::Offered => [(0.0, len), (0.0, 0.0)],
+            Tell::Aim => {
+                let run = BRACKET.min(len * BRACKET_RUN);
+                [(-(len - run) * 0.5, run), ((len - run) * 0.5, run)]
+            }
+            Tell::Marked => [(0.0, DASH.min(len * DASH_RUN)), (0.0, 0.0)],
+        };
+        for sb in [-1.0_f32, 1.0] {
+            for sc in [-1.0_f32, 1.0] {
+                for (off, run) in runs.iter().filter(|(_, run)| *run > 0.0) {
+                    let mut at = mid;
+                    at[b] = sb.mul_add(reach[b], at[b]);
+                    at[c] = sc.mul_add(reach[c], at[c]);
+                    at[axis] += off;
+                    let mut size = Vec3::splat(girth);
+                    size[axis] = *run;
+                    bars.push(Bar { at, size });
+                }
+            }
+        }
+    }
+    bars
 }
 
 /// The pick face a rig carries over its OWN body: its whole drawn
@@ -1501,6 +1652,19 @@ fn spawn_overlays(
             Transform::default(),
             Visibility::Hidden,
             GlyphBar(i),
+        ));
+    }
+    // And the standing tells' own pool, dark. What they say is derived
+    // by the sim every frame and never stored, so the presentation keeps
+    // a pool and aims it.
+    let tell_mat = glow::phosphor(&mut materials, palette::AMBER, 2.0);
+    for i in 0..TELL_BARS {
+        commands.spawn((
+            Mesh3d(skin.cube.clone()),
+            MeshMaterial3d(tell_mat.clone()),
+            Transform::default(),
+            Visibility::Hidden,
+            TellBar(i as u16),
         ));
     }
 }
@@ -2196,6 +2360,119 @@ fn hover_glint(
             let level = if on_handle { GRAB_FLARE } else { GRAB_GLOW };
             mat.emissive = palette::AMBER.to_linear() * level;
         }
+    }
+}
+
+// ------------------------------------------------------ the standing tells --
+
+/// One bar of the standing tells' pool, and which bar of the frame it is
+/// this frame — the pool is aimed afresh every frame and the pieces
+/// themselves never move.
+#[derive(Component, Clone, Copy, Debug)]
+struct TellBar(u16);
+
+/// How many bars the pool shares out. A bracketed sentence spends
+/// twenty-four and a dashed one twelve, so this is two dozen goods
+/// claimed at once, or four dozen merely asked for.
+///
+/// The pool is sized to be **read**, not to be exhaustive, and that is a
+/// deliberate limit rather than an unchecked one. A frame is a work
+/// order the player clears one piece at a time, and the set is
+/// re-derived every frame, so a twenty-fifth crate simply gets its
+/// outline when the twenty-fourth is carried aboard. What the pool must
+/// never do is show *nothing* while something is detained, and it
+/// cannot: it fills from the front.
+const TELL_BARS: usize = 576;
+
+/// **The standing tells: what a room's business is about, outlined where
+/// it stands.** Three sentences and two forms, aimed at the bodies
+/// themselves — [`room::lit_footprints`] says which pieces and which
+/// form, and this hangs [`tell_bars`] on each one's own [`drawn_box`],
+/// in the rig's own pose.
+///
+/// - `Sim::composed` names the pile the room would hand over if the
+///   handshake were worked right now, bracketed on the room's own stock —
+///   *this is what's on offer for yours*;
+/// - `Sim::detained_cargo` names every piece of the player's standing in
+///   a room that will not ride out, bracketed where the player set it
+///   down — *this is what the launch is waiting on*;
+/// - `Sim::marks` names the room's goods the player has pointed at —
+///   *I want that one* — and those wear the weaker form, a dash across
+///   the middle of every edge rather than a bracket at every corner.
+///
+/// The second is **the whole reading of the staging law**, and it is why
+/// a station's deck needs no paint of its own: an empty staging cell is
+/// deck, and an occupied one wears the outline. Pull the lever with one
+/// standing and the sim answers `Cue::Refit`, which strobes every jamb
+/// red (`room::seam_fx`) — the same refusal the door's own latch gives,
+/// at the other end of the same law. Not a word anywhere.
+///
+/// **The tell is on the body now, not on the chart under it.** It used
+/// to be four bars ringing the piece's footprint, painted on whichever
+/// chart the piece was berthed on and lifted a rung of the decal ladder
+/// off it, and a mark's bars were drawn short and INSET — inside the
+/// footprint, which on anything standing proud of its chart means inside
+/// the piece. A painting hangs flat on a wall and fills its own
+/// footprint exactly, so the mark on a picture for sale was drawn
+/// behind the picture and the press that set it read as a dead click.
+/// An outline round the body cannot be hidden by the body, and it needs
+/// to know nothing about the body but its box — which is the property
+/// the whole tell layer was moved for, with purchased geometry coming.
+///
+/// **Nothing draws it through what stands in FRONT of it, and the note
+/// that used to say otherwise was wrong.** The frame carried a
+/// `depth_bias` of a thousand, for the staging law's sake: a station's
+/// dressing may stand in a staging cell and cargo may be set down inside
+/// it, so the reading that says what the launch is waiting on had better
+/// not be the one a bollard can hide. But a material's depth bias only
+/// sorts this engine's transmissive and transparent phases — an opaque
+/// emissive never sees one — and the whole picture moves by fifteen
+/// pixels with it taken out. So it is out, and what keeps the reading
+/// instead is that an outline SURROUNDS its body: a bollard takes a bar
+/// or two out of a ring and leaves a ring.
+fn claim_outlines(
+    shell: Res<Shell>,
+    index: Res<PieceIndex>,
+    rigs: Query<&Transform, (With<PieceRig>, Without<TellBar>)>,
+    mut bars: Query<(&TellBar, &mut Transform, &mut Visibility), Without<PieceRig>>,
+) {
+    let sim = &shell.bridge.sim;
+    let mut aimed: Vec<(Vec3, Quat, Vec3)> = Vec::new();
+    for (id, marked) in crate::room::lit_footprints(sim) {
+        if aimed.len() >= TELL_BARS {
+            break;
+        }
+        let Some(piece) = sim.pieces().iter().find(|piece| piece.id == id) else {
+            continue;
+        };
+        let Some(&entity) = index.0.get(&id) else {
+            continue;
+        };
+        // The rig's LIVE pose, tween and all, so an outline rides the
+        // glide of the piece it is about instead of waiting at the berth
+        // for it.
+        let Ok(at) = rigs.get(entity) else {
+            continue;
+        };
+        let (mid, half) = drawn_box(piece.kind);
+        let tell = if marked { Tell::Marked } else { Tell::Offered };
+        for bar in tell_bars(mid, half, tell) {
+            aimed.push((
+                at.translation + at.rotation * (bar.at * at.scale),
+                at.rotation,
+                bar.size * at.scale,
+            ));
+        }
+    }
+    for (bar, mut transform, mut visibility) in &mut bars {
+        let Some(&(at, rot, size)) = aimed.get(usize::from(bar.0)) else {
+            visibility.set_if_neq(Visibility::Hidden);
+            continue;
+        };
+        visibility.set_if_neq(Visibility::Visible);
+        *transform = Transform::from_translation(at)
+            .with_rotation(rot)
+            .with_scale(size);
     }
 }
 
@@ -3102,9 +3379,15 @@ struct ScreenGlasses {
 ///
 /// A wireframe BOX, not a flat rectangle: the tell wraps the body's
 /// volume (playtest: a fixed-plane rectangle around a 3D object read as
-/// UI debris). Twelve edges around the [`silhouette`] and the rigs'
-/// common depth — the same box the pick face is cut from
+/// UI debris). It is [`Tell::Aim`]'s closed ring round the body
+/// [`drawn_box`] describes — the same box the pick face is cut from
 /// ([`standing_face`]), so what lights up is what answers.
+///
+/// **It wraps the body's own depth and not the rig band it is composed
+/// in.** The band is a whole cell deep for every kind alike, so a ring
+/// cut from it stood half a metre out of the wall around a painting a
+/// finger thick — the same defect the standing tells had, one reading
+/// over.
 fn carry_tell(
     rig: &mut RigParts<'_, '_, '_>,
     piece: &Piece,
@@ -3116,48 +3399,25 @@ fn carry_tell(
         .commands
         .spawn((Transform::default(), Visibility::Hidden, ChildOf(root)))
         .id();
-    let (mid, reach) = silhouette(piece.kind);
-    let (hx, hy) = (reach.x + 3.0, reach.y + 3.0);
-    let (z0, z1) = (RIG_NEAR, RIG_FAR);
-    let rail_x = rig.meshes.add(Cuboid::new(hx.mul_add(2.0, 2.6), 2.6, 2.6));
-    let rail_y = rig.meshes.add(Cuboid::new(2.6, hy.mul_add(2.0, 2.6), 2.6));
-    let rail_z = rig.meshes.add(Cuboid::new(2.6, 2.6, z1 - z0 + 2.6));
-    let zm = f32::midpoint(z0, z1);
-    let mut edges: Vec<(Handle<Mesh>, Vec3)> = Vec::new();
-    for z in [z0, z1] {
-        for sy in [-1.0_f32, 1.0] {
-            edges.push((rail_x.clone(), Vec3::new(mid.x, sy.mul_add(hy, mid.y), z)));
-        }
-        for sx in [-1.0_f32, 1.0] {
-            edges.push((rail_y.clone(), Vec3::new(sx.mul_add(hx, mid.x), mid.y, z)));
-        }
-    }
-    for sx in [-1.0_f32, 1.0] {
-        for sy in [-1.0_f32, 1.0] {
-            edges.push((
-                rail_z.clone(),
-                Vec3::new(sx.mul_add(hx, mid.x), sy.mul_add(hy, mid.y), zm),
-            ));
-        }
-    }
-    for (mesh, at) in edges {
+    let (mid, half) = drawn_box(piece.kind);
+    let cube = rig.skin.cube.clone();
+    for bar in tell_bars(mid, half, Tell::Aim) {
         rig.commands.spawn((
-            Mesh3d(mesh),
+            Mesh3d(cube.clone()),
             MeshMaterial3d(frame_mat.clone()),
-            Transform::from_translation(at),
+            Transform::from_translation(bar.at).with_scale(bar.size),
             ChildOf(frame_root),
         ));
     }
+    let (hx, hy) = (half.x + AIM_OUT, half.y + AIM_OUT);
     let slash = rig
         .commands
         .spawn((
-            Mesh3d(
-                rig.meshes
-                    .add(Cuboid::new((hx * 2.0).hypot(hy * 2.0), 3.0, 3.0)),
-            ),
+            Mesh3d(cube),
             MeshMaterial3d(shared.slash.clone()),
             Transform::from_xyz(mid.x, mid.y, 34.0)
-                .with_rotation(Quat::from_rotation_z((hy / hx).atan())),
+                .with_rotation(Quat::from_rotation_z((hy / hx).atan()))
+                .with_scale(Vec3::new((hx * 2.0).hypot(hy * 2.0), 3.0, 3.0)),
             Visibility::Hidden,
             ChildOf(frame_root),
         ))
@@ -7193,6 +7453,78 @@ mod tests {
         }
     }
 
+    /// **A tell is never drawn inside the piece it is about.**
+    ///
+    /// The defect this whole layer was rebuilt for, stated as a law. A
+    /// mark used to be four short bars set 62% of the way in from its
+    /// footprint's rim, which is *inside the footprint* — and a painting
+    /// hangs flat on a wall and fills its footprint, so the mark on a
+    /// picture for sale was drawn behind the picture. Press a good, and
+    /// nothing on screen changed.
+    ///
+    /// The wall does not appear in this test and that is the point: a
+    /// berth is a rigid motion, so a bar that stands clear of the body
+    /// in the rig's own frame stands clear of it on every chart in the
+    /// game. Which is the property an outline has and a decal painted on
+    /// the ground under a thing does not.
+    #[test]
+    fn a_tell_never_draws_inside_the_body_it_is_about() {
+        for kind in Kind::ALL {
+            let (mid, half) = drawn_box(kind);
+            for tell in [Tell::Aim, Tell::Offered, Tell::Marked] {
+                for bar in tell_bars(mid, half, tell) {
+                    let gap = (bar.at - mid).abs() - (bar.size * 0.5 + half);
+                    assert!(
+                        gap.max_element() > 0.0,
+                        "{kind:?}: a {tell:?} bar at {:?} of {:?} is buried in a body of {half:?}",
+                        bar.at - mid,
+                        bar.size
+                    );
+                }
+            }
+        }
+    }
+
+    /// **No two tells draw one bar over another.**
+    ///
+    /// Three readings may be worn at once — the crosshair rests on a
+    /// good the room has offered and you have asked for — so the forms
+    /// have to be able to share a body. Each has a stand-off of its own,
+    /// and the girths are cut to leave daylight between them.
+    ///
+    /// It is the coplanar question asked where a tell can answer it. Two
+    /// amber bars meeting on one line at one depth is the shimmer the
+    /// old inset was bought to avoid, and the inset is what buried a
+    /// mark inside the picture it was about.
+    #[test]
+    fn no_two_tells_draw_one_bar_over_another() {
+        let overlap = |a: &Bar, b: &Bar| {
+            let gap = (a.at - b.at).abs() - (a.size + b.size) * 0.5;
+            gap.max_element() <= 0.0
+        };
+        for kind in Kind::ALL {
+            let (mid, half) = drawn_box(kind);
+            let forms =
+                [Tell::Aim, Tell::Offered, Tell::Marked].map(|tell| tell_bars(mid, half, tell));
+            for (i, one) in forms.iter().enumerate() {
+                for other in forms.iter().skip(i + 1) {
+                    for a in one {
+                        for b in other {
+                            assert!(
+                                !overlap(a, b),
+                                "{kind:?}: a bar at {:?} of {:?} lies over one at {:?} of {:?}",
+                                a.at,
+                                a.size,
+                                b.at,
+                                b.size
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /// The z-fight guard: every occupied rung of the decal ladder —
     /// including the rug's pile top, which rides between LAID and HINT —
     /// steps at least `layer::STEP` from its neighbours, and the step
@@ -7228,7 +7560,6 @@ mod tests {
             ("slash", layer::SLASH),
             ("flash", layer::FLASH),
             ("glyph", layer::GLYPH),
-            ("claim", layer::CLAIM),
         ];
         for pair in rungs.windows(2) {
             let ((below, lo), (above, hi)) = (pair[0], pair[1]);

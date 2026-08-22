@@ -168,9 +168,6 @@ pub mod layer {
     pub const FLASH: f32 = 0.038;
     /// The violation glyph bars.
     pub const GLYPH: f32 = 0.042;
-    /// The composed offer's claim frame — a standing reading rather than
-    /// a flash, so it sits over everything else on its cell.
-    pub const CLAIM: f32 = 0.046;
     /// Minimum step between occupied rungs that stays fight-free at
     /// room distances in the depth buffer. Consumed by the ladder test
     /// (`pieces::tests`), which is its whole job.

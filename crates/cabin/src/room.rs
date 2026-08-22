@@ -226,13 +226,6 @@ pub struct SeamLamp {
     pub latch: bool,
 }
 
-/// One bar of the composed offer's claim frame — the lit footprint that
-/// reads "this pile is what's on offer for yours". A pool, aimed each
-/// frame at whatever `Sim::composed` names; the pieces themselves never
-/// move, because stage one resolved the spec's tension that way.
-#[derive(Component, Clone, Copy, Debug)]
-pub struct ClaimBar(u8);
-
 /// The handshake fixture's lamp: lit while the room has something to
 /// commit, dark while the throw would find nothing.
 #[derive(Component, Clone, Debug)]
@@ -378,21 +371,6 @@ impl Plan {
                     && p.y <= room.hi.y + WALL_T
             })
             .map(|room| room.id)
-    }
-
-    /// The chart a sim point reads through, with the room it belongs to.
-    /// Lanes are disjoint by law, so the rect alone answers.
-    #[must_use]
-    pub fn chart_at(
-        &self,
-        sim: space_trucking::sim::Vec2,
-    ) -> Option<(RoomId, Station, SimSurface)> {
-        self.rooms.iter().find_map(|room| {
-            room.charts
-                .iter()
-                .find(|(_, surface)| surface.rect.contains(sim))
-                .map(|(station, surface)| (room.id, *station, *surface))
-        })
     }
 }
 
@@ -1137,7 +1115,6 @@ impl Plugin for RoomsPlugin {
             .init_resource::<AimedLatch>()
             .init_resource::<SeamFx>()
             .init_resource::<Built>()
-            .add_systems(PostStartup, spawn_claim_pool)
             .add_systems(
                 Update,
                 (survey, rebuild, occupy, aim_latch)
@@ -1145,7 +1122,7 @@ impl Plugin for RoomsPlugin {
                     .in_set(Phase::Input)
                     .before(crate::rig::steer),
             )
-            .add_systems(Update, (seam_fx, claim_frames).in_set(Phase::View));
+            .add_systems(Update, seam_fx.in_set(Phase::View));
     }
 }
 
@@ -1773,7 +1750,7 @@ fn rim(kind: RoomKind, x: u8, y: u8, tile: Tile) -> [bool; 4] {
 /// | Class | Field | Mark | Reads as |
 /// | --- | --- | --- | --- |
 /// | `Plain` | none | none | ordinary deck — the ground the others are read against |
-/// | `Staging` | none | none, until something stands there: then the amber frame that says it is not coming with you ([`claim_frames`]) | a station's own deck. Set yours down; take it back before you leave |
+/// | `Staging` | none | none, until something stands there: then the amber frame that says it is not coming with you ([`crate::pieces::claim_outlines`]) | a station's own deck. Set yours down; take it back before you leave |
 /// | `Offer` | none: bare deck | a chalk line struck round the region | a bay taped out on the floor. Set yours inside the line; it is still yours |
 /// | `Stock` | the room's enamel, filled | a dark border band round the region | painted floor: what stands on the paint is the room's |
 /// | `Consume` | scorched plate | hazard tape round the region | a danger zone, taped at its edge the way tape is actually used |
@@ -3021,80 +2998,24 @@ fn seam_fx(
 
 // ---- The composed offer, lit ----
 
-/// How many claim bars stand ready: four per footprint, for
-/// twenty-four — eight of each sentence the pool says, which is a
-/// composed pile, a station's deck under it, and every good on the shelf
-/// spoken for at once.
+/// **Which pieces the standing tells light, and in which of their two
+/// forms** — `true` for the dashed form a mark wears.
 ///
-/// The pool is sized to be **read**, not to be exhaustive, and that is a
-/// deliberate limit rather than an unchecked one. A frame is a work order
-/// the player clears one piece at a time, and the set is re-derived every
-/// frame, so a twenty-fifth crate simply gets its frame when the
-/// twenty-fourth is carried aboard. What the pool must never do is show
-/// *nothing* while something is detained, and it cannot: it fills from
-/// the front.
+/// The pure half of [`crate::pieces::claim_outlines`], so what the room
+/// says can be asked about without a world to say it in. Every entry is
+/// the sim's own answer to a question the sim already asks itself;
+/// nothing here re-derives a rule, and a piece may appear twice because
+/// it may be answering two of them.
 ///
-/// It grew when marks joined it. A frame that never appears is a click
-/// that did nothing, which is the whole complaint the ticks answer, so
-/// the room's own goods needed room of their own rather than whatever
-/// the other two sentences left over.
-const CLAIM_BARS: usize = 96;
-
-/// The claim frame's rung on the decal ladder — over everything else on
-/// the cell, because it is a standing reading rather than a flash.
-const CLAIM_LIFT: f32 = crate::rig::layer::CLAIM;
-
-/// **The claim frame reads through a station's furniture.**
-///
-/// A depth bias, which is the one place in this module where a thing is
-/// drawn out of depth order, and it is the staging law that pays for it.
-/// A station's dressing may stand in a staging cell and cargo may be set
-/// down inside it — the owner ruled that a clipping incident there is
-/// nobody's defect — so the frame that says *this is what the launch is
-/// waiting on* would otherwise be the one reading a bollard could hide.
-/// A refusal you cannot see is a refusal you cannot obey, and a lever
-/// that will not fly for a reason standing behind a cabinet is the
-/// soft-lock this whole class was written to avoid.
-///
-/// Nothing else is biased. The decal ladder settles the fabric, the
-/// fields, the marks and the treads by lift, in millimetres, exactly as
-/// before; this is the ship's own business drawn over a station's scenery
-/// because the scenery is scenery.
-const CLAIM_BIAS: f32 = 1_000.0;
-
-/// How far in from the footprint's rim a mark's ticks are set, and how
-/// much of an edge each one runs. Inset because the same piece may wear
-/// a frame as well ([`claim_frames`]), and two amber bars on one line at
-/// one lift is a shimmer; short because a stub reads as a *mark on* the
-/// footprint where a full edge reads as a *frame round* it, which is the
-/// difference between the room noting your interest and the room making
-/// an offer.
-const TICK_INSET: f32 = 0.62;
-const TICK_RUN: f32 = 0.4;
-
-/// One lit footprint and which of the three sentences it is saying.
-struct Frame {
-    at: Vec3,
-    rot: Quat,
-    w: f32,
-    h: f32,
-    /// Four ticks inside the footprint rather than four edges round it.
-    ticks: bool,
-}
-
-/// **Which pieces the claim pool lights, and in which of its two forms**
-/// — `true` for the ticked form a mark wears.
-///
-/// The pure half of [`claim_frames`], so what the room says can be asked
-/// about without a world to say it in. Every entry is the sim's own
-/// answer to a question the sim already asks itself; nothing here
-/// re-derives a rule, and a piece may appear twice because it may be
-/// answering two of them.
-fn lit_footprints(sim: &Sim) -> Vec<(u32, bool)> {
+/// It is the room's sentence and the cargo layer's outline, which is why
+/// the two halves live a module apart: what a room is waiting on is the
+/// room's business, and the body it is waiting on is a rig's.
+pub fn lit_footprints(sim: &Sim) -> Vec<(u32, bool)> {
     // Detained first: it is the reading with no second channel. A
     // composed pile has the handshake's own lamp saying there is
     // something to commit; a crate holding the launch has nothing but
-    // this frame and a strobe that fires only when the lever is pulled.
+    // this outline and a strobe that fires only when the lever is
+    // pulled.
     let mut lit: Vec<(u32, bool)> = sim
         .detained_cargo()
         .into_iter()
@@ -3105,141 +3026,11 @@ fn lit_footprints(sim: &Sim) -> Vec<(u32, bool)> {
             lit.push((id, false));
         }
     }
-    // Then the marks, each in a frame of its own rather than sharing
-    // one, because a good may be both offered and asked for and the
-    // player asked for it second.
+    // Then the marks, each an entry of its own rather than sharing one,
+    // because a good may be both offered and asked for and the player
+    // asked for it second.
     lit.extend(sim.marks().iter().map(|&id| (id, true)));
     lit
-}
-
-/// Pre-spawn the claim bars, dark. The composed offer is derived by the
-/// sim every frame and never stored, so the presentation keeps a pool and
-/// aims it — the pieces themselves never move.
-fn spawn_claim_pool(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    let cube = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
-    let mat = glow::phosphor(&mut materials, palette::AMBER, 2.0);
-    if let Some(mut mat) = materials.get_mut(&mat) {
-        mat.depth_bias = CLAIM_BIAS;
-    }
-    for i in 0..CLAIM_BARS {
-        commands.spawn((
-            Mesh3d(cube.clone()),
-            MeshMaterial3d(mat.clone()),
-            Transform::default(),
-            Visibility::Hidden,
-            ClaimBar(i as u8),
-        ));
-    }
-}
-
-/// **The claim frame: what a room's business is about, lit where it
-/// stands.** Two sentences, one form, because they are the same sentence
-/// from either side of a seam:
-///
-/// - `Sim::composed` names the pile the room would hand over if the
-///   handshake were worked right now, framed on the room's own stock —
-///   *this is what's on offer for yours*;
-/// - `Sim::detained_cargo` names every piece of the player's standing in
-///   a room that will not ride out, framed where the player set it down —
-///   *this is what the launch is waiting on*;
-/// - `Sim::marks` names the room's goods the player has pointed at —
-///   *I want that one* — and those wear the third form: **four ticks
-///   set inside the footprint** rather than four edges round it.
-///
-/// The third sentence is a weaker claim than the other two and its form
-/// says so. A mark is a hint the room may ignore; a frame is the room's
-/// own arithmetic, or the law's. They also **stack**: press a good the
-/// room was already offering and the ticks appear inside the frame that
-/// was already there, which is the reading a shared form could not
-/// give — a press that changed a set nobody could see was the whole
-/// defect, and marking something already framed was the half of it a
-/// shared form would have left in place. The ticks are inset so the two
-/// never share a plane.
-///
-/// The second is **the whole reading of the staging law**, and it is why
-/// a station's deck needs no paint of its own: an empty staging cell is
-/// deck, and an occupied one wears the frame. Pull the lever with one
-/// standing and the sim answers `Cue::Refit`, which strobes every jamb
-/// red ([`seam_fx`]) — the same refusal the door's own latch gives, at
-/// the other end of the same law. Not a word anywhere.
-///
-/// Nothing moves any of the three ways: the frames are aimed at pieces
-/// where they already stand.
-fn claim_frames(
-    shell: Res<Shell>,
-    plan: Res<Plan>,
-    mut bars: Query<(&ClaimBar, &mut Transform, &mut Visibility)>,
-) {
-    let sim = &shell.bridge.sim;
-    let mut frames: Vec<Frame> = Vec::new();
-    for (id, ticks) in lit_footprints(sim) {
-        let Some(piece) = sim.pieces().iter().find(|piece| piece.id == id) else {
-            continue;
-        };
-        let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
-        let centre = space_trucking::sim::Vec2::new(
-            rect.w.mul_add(0.5, rect.x),
-            rect.h.mul_add(0.5, rect.y),
-        );
-        let Some((_, station, surface)) = plan.chart_at(centre) else {
-            continue;
-        };
-        frames.push(Frame {
-            at: surface.to_world(centre) + station.inward(&surface) * CLAIM_LIFT,
-            rot: station.face(&surface),
-            w: rect.w * surface.scale_u(),
-            h: rect.h * surface.scale_v(),
-            ticks,
-        });
-    }
-    for (bar, mut transform, mut visibility) in &mut bars {
-        let slot = usize::from(bar.0);
-        let Some(&Frame {
-            at,
-            rot,
-            w,
-            h,
-            ticks,
-        }) = frames.get(slot / 4)
-        else {
-            visibility.set_if_neq(Visibility::Hidden);
-            continue;
-        };
-        visibility.set_if_neq(Visibility::Visible);
-        let girth = 0.012_f32;
-        // A frame runs the whole edge at the footprint's own rim; a
-        // mark is a stub of the same bar, drawn in from it.
-        let (edge, run) = if ticks {
-            (TICK_INSET, TICK_RUN)
-        } else {
-            (1.0, 1.0)
-        };
-        let (offset, scale) = match slot % 4 {
-            0 => (
-                Vec3::new(0.0, h * 0.5 * edge, 0.0),
-                Vec3::new(w * run, girth, girth),
-            ),
-            1 => (
-                Vec3::new(0.0, -h * 0.5 * edge, 0.0),
-                Vec3::new(w * run, girth, girth),
-            ),
-            2 => (
-                Vec3::new(w * 0.5 * edge, 0.0, 0.0),
-                Vec3::new(girth, h * run, girth),
-            ),
-            _ => (
-                Vec3::new(-w * 0.5 * edge, 0.0, 0.0),
-                Vec3::new(girth, h * run, girth),
-            ),
-        };
-        *transform = Transform::from_translation(at + rot * offset)
-            .with_rotation(rot)
-            .with_scale(scale);
-    }
 }
 
 #[cfg(test)]
@@ -4176,7 +3967,7 @@ mod tests {
             for (station, surface) in room.charts {
                 // The deepest a decal ever rides, plus its own skin.
                 let lift =
-                    station.inward(&surface) * (crate::rig::layer::CLAIM + crate::rig::layer::SKIN);
+                    station.inward(&surface) * (crate::rig::layer::GLYPH + crate::rig::layer::SKIN);
                 for corner in [-1.0_f32, 1.0] {
                     for course in [-1.0_f32, 1.0] {
                         let at = surface.center

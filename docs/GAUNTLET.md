@@ -125,6 +125,7 @@ oldest lesson and it bounds the table before it starts.
 | a cargo rig, whole | `pieces::berth_box`, `pieces::berth_pose` | the cargo layer |
 | a rig's part | `pieces::parts` (`Part::seated`, `Part::body`) | the cargo layer |
 | a rig's named feature | `pieces::features` (`Feature::axis`, `want`) | `prop-points` |
+| what a rig answers the aim with | `pieces::standing_surface`, off `drawn_box` | the tell layer, and read by no family — see below |
 | a highlight's outline | `pieces::tell_bars`, off `pieces::drawn_box` | the tell layer, and read by no family — see below |
 | a room's shell | `room::shell_boxes`, `rig::structure` | the room layer |
 | a doorway's hardware | `room::seam_parts` (`room::Seat`, `Dress`) | the doorway layer |
@@ -321,8 +322,8 @@ this to catch is a claim that points nowhere — a degenerate axis or want
 A footprint the sim states and a body the rig draws are two claims
 about one object. The footprint is the law: it is what placement is
 checked against, and it is what the sim answers "which piece is at this
-point" with. The picture is what a player aims at, so the pick face a
-standing rig carries is cut from the picture (`pieces::silhouette`) and
+point" with. The picture is what a player aims at, so the pick body a
+standing rig carries is cut from the picture (`pieces::drawn_box`) and
 held to the cells — a face reaching past them would read a neighbour's
 berth.
 

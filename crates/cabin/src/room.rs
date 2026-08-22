@@ -636,6 +636,7 @@ pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
                 half_u: i * half_i,
                 half_v: Vec3::NEG_Y * wall_mid,
                 rect: chart_rect(id, COURSES, 0, w, COURSES),
+                deep: 0.0,
             },
         ),
         (
@@ -645,6 +646,7 @@ pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
                 half_u: i * half_i,
                 half_v: j * half_j,
                 rect: chart_rect(id, COURSES, COURSES, w, h),
+                deep: 0.0,
             },
         ),
         (
@@ -654,6 +656,7 @@ pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
                 half_u: Vec3::NEG_Y * wall_mid,
                 half_v: j * half_j,
                 rect: chart_rect(id, 0, COURSES, COURSES, h),
+                deep: 0.0,
             },
         ),
         (
@@ -663,6 +666,7 @@ pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
                 half_u: Vec3::Y * wall_mid,
                 half_v: j * half_j,
                 rect: chart_rect(id, COURSES + w, COURSES, COURSES, h),
+                deep: 0.0,
             },
         ),
         (
@@ -672,6 +676,7 @@ pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
                 half_u: i * half_i,
                 half_v: Vec3::Y * wall_mid,
                 rect: chart_rect(id, COURSES, COURSES + h, w, COURSES),
+                deep: 0.0,
             },
         ),
         (
@@ -681,6 +686,7 @@ pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
                 half_u: -i * half_i,
                 half_v: j * half_j,
                 rect: chart_rect(id, 2 * COURSES + w, COURSES, w, h),
+                deep: 0.0,
             },
         ),
     ]
@@ -2300,6 +2306,7 @@ fn seam_frame(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
                 half_u: site.half_a.normalize_or_zero() * (LATCH_W * 1.2),
                 half_v: Vec3::NEG_Y * (LATCH_H * 1.2),
                 rect: layout::cell_rect(placed.id, 0, 0),
+                deep: 0.0,
             },
         ),
         Some(Seat::On(format!("seam[{port}] latch plate"))),
@@ -2876,6 +2883,7 @@ pub fn handshake_face(placed: &Placed) -> Option<SimSurface> {
         half_u: rot * (Vec3::X * (cell.w * su * 0.5)),
         half_v: rot * (Vec3::NEG_Y * (cell.h * sv * 0.5)),
         rect: cell,
+        deep: 0.0,
     })
 }
 

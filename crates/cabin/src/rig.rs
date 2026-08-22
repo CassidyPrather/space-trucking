@@ -295,6 +295,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
                 half_u: Vec3::X * (BAY_W * 0.5),
                 half_v: Vec3::NEG_Y * wall_mid,
                 rect: chart(3, 0, 8, 3),
+                deep: 0.0,
             },
         ),
         (
@@ -304,6 +305,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
                 half_u: Vec3::X * (BAY_W * 0.5),
                 half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
                 rect: chart(3, 3, 8, 7),
+                deep: 0.0,
             },
         ),
         (
@@ -313,6 +315,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
                 half_u: Vec3::NEG_Y * wall_mid,
                 half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
                 rect: chart(0, 3, 3, 7),
+                deep: 0.0,
             },
         ),
         (
@@ -322,6 +325,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
                 half_u: Vec3::Y * wall_mid,
                 half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
                 rect: chart(11, 3, 3, 7),
+                deep: 0.0,
             },
         ),
         (
@@ -331,6 +335,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
                 half_u: Vec3::X * (BAY_W * 0.5),
                 half_v: Vec3::Y * wall_mid,
                 rect: chart(3, 10, 8, 3),
+                deep: 0.0,
             },
         ),
         (
@@ -340,6 +345,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
                 half_u: Vec3::NEG_X * (BAY_W * 0.5),
                 half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
                 rect: chart(14, 3, 8, 7),
+                deep: 0.0,
             },
         ),
     ]

@@ -433,6 +433,46 @@ the mark on a picture for sale was drawn behind the picture: you pressed
 it and nothing on screen changed. A thing cannot hide an outline drawn
 around it.
 
+## What you can click is what lights up
+
+The tell wraps a body's three extents. For a long time what *answered*
+used two: a rig standing off its chart carried a flat quad cut on its
+silhouette, bound to the sub-rect of its own cells that silhouette
+covers, and the aim was read where the ray crossed that plane.
+
+A plane and a body are the same shape from exactly one direction. Walk a
+quarter turn and they stop being: a column of brine pearls seen from the
+side is a quad edge-on, so an aim at the top of it goes straight past and
+lands on whatever deck cell is beyond. Measured on a ring of thirty-six
+stances at three heights round a berthed body, before the cure: the
+pearls' top answered from **80° of the ring and from none of the other
+280°**, and so did every other standing kind swept — a wardrobe, a floor
+lamp, a suspicious crate. Only the bottom band answered all the way
+round, and that was never the piece answering; it was the deck cell under
+it, which is why a **tall thin** kind is the one that got reported and a
+crate did not.
+
+So a rig's face carries its body now (`SimSurface::deep`) and the aim
+meets the box the tell draws (`SimSurface::strike`). The quad stays the
+*reading* — wherever on the body the aim lands is laid back onto the
+elevation the rig was drawn in, so a cabinet met on its flank at the
+height of the third cubby reads the third cubby. After the cure the same
+ring answers 36 of 36 at every height, for every standing kind, and
+`pieces::tests::the_body_answers_from_all_round` sweeps 1,346 berths ×
+111,617 aims to keep it that way.
+
+**Level wall cargo still reads through its chart, and that is a measured
+trade rather than an omission.** There the chart lies in the rig's very
+plane and answers for the rig's very cells, so the reading is right for
+anything but a glancing aim at a deep body — a sconce read from 20° off
+the wall lands a fraction of a cell over, 4 stances of 16 in the same
+sweep. Curing it costs a seam: a wall berth's cells are where a doorway's
+amber latch is bolted too, the latch stands two millimetres proud of the
+plane, and the fixture's own bay window is berthed **across** the cabin's
+aft latch. Give that window a pick body and it outranks the latch from
+every stance in the room — with one, the input monkey could not part a
+seam in 19,200 frames. The glancing read is worth less than the seam.
+
 ## Motion
 
 The 2D taxonomy holds: **feedback** (answers a sim event; finishes inside

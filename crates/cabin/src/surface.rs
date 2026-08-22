@@ -16,11 +16,19 @@
 //! at their own cells ([`Riding`]) and the rest of the game never hears
 //! about it — the logical rects stay the law, only the binding moves
 //! (docs/BAY.md, "Instruments as cargo"). And a rig whose own frame
-//! leaves its chart's carries its own face the same way
+//! leaves its chart's carries its own reading the same way
 //! ([`Station::Standing`]): floor cargo, a pendant, a crate on a hopper
 //! tile stand bodily where the chart is not, and wall cargo the upright
 //! rule rolls shares the plane but not the lie — so in both cases the
 //! aim has to meet the piece in the frame the rig was drawn in.
+//!
+//! What a rig's is bound to is a BODY and not a quad. A chart is a
+//! surface because a wall is one; a crate is not, and a plane cut
+//! through a crate answers only from square on — walk a quarter turn
+//! round a column of pearls and the plane goes edge-on, so the aim
+//! passes through the thing the player is looking at and lands on the
+//! deck behind it. So the quad stays the READING, and
+//! [`SimSurface::deep`] carries the body the reading is taken off.
 
 use bevy::prelude::*;
 use space_trucking::sim::Vec2 as SimVec2;
@@ -78,9 +86,10 @@ pub enum Station {
     /// ROLLS shares the chart's plane but not its lie, so a sub-rect
     /// read in chart coordinates lands a quarter turn off the hardware
     /// drawn from the same numbers. Either way the piece carries the
-    /// mapping on its own body, a standoff proud of the wall so it
-    /// outranks the chart, and where the aim lands on it is where the
-    /// sim reads it — several of these stand at once, one per piece,
+    /// mapping on its own body — the whole of it, all three extents
+    /// ([`SimSurface::deep`]), so the aim meets it from wherever the
+    /// player is standing — and where the aim lands on it is where the
+    /// sim reads it. Several of these stand at once, one per piece,
     /// which is why nothing looks a face up by station: the pointer
     /// hands over the one it struck.
     Standing,
@@ -151,15 +160,40 @@ impl Station {
     }
 }
 
-/// An oriented quad bound to a sim rect. `half_u` spans sim +x (half the
-/// panel's width), `half_v` spans sim +y — which is *down* in the sim's
-/// world, so `half_v` points down-panel in 3D as well.
+/// How near a face's own rim a body's reading may be taken, as a
+/// fraction of the half-extent. A ray coming in through the side of a
+/// box lands exactly ON the rim, and the rim of a piece's sub-rect is
+/// the boundary between it and whatever is next door — so the reading is
+/// drawn this much in and the answer belongs to the piece that was
+/// actually struck.
+const RIM: f32 = 0.999;
+
+/// An oriented quad bound to a sim rect, and whatever body stands
+/// behind it. `half_u` spans sim +x (half the panel's width), `half_v`
+/// spans sim +y — which is *down* in the sim's world, so `half_v` points
+/// down-panel in 3D as well.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct SimSurface {
     pub center: Vec3,
     pub half_u: Vec3,
     pub half_v: Vec3,
     pub rect: SimRect,
+    /// **Half the depth of the body this face reads for**, along the
+    /// normal, in world units. Zero says the face IS the thing: a wall's
+    /// chart has nothing in front of it to aim at, and an instrument's
+    /// glass is a pane.
+    ///
+    /// A rig is not like that. It is a body with three extents and it is
+    /// looked at from all round, so a face cut through it answers only
+    /// from square on: aim at the top of a column of pearls from ninety
+    /// degrees off and the quad is edge-on, the ray goes past it, and
+    /// the piece the player is looking straight at answers nothing. What
+    /// a rig's face carries is therefore the box the tell draws
+    /// (`pieces::drawn_box`), and the aim meets the box
+    /// ([`SimSurface::strike`]) and is read on the quad through it — so
+    /// the thing you can click and the thing that lights up are one
+    /// shape, whichever way you walk round it.
+    pub deep: f32,
 }
 
 impl SimSurface {
@@ -201,6 +235,7 @@ impl SimSurface {
             half_u: rot * (Vec3::X * (width * 0.5)),
             half_v: rot * (Vec3::NEG_Y * (height * 0.5)),
             rect,
+            deep: 0.0,
         }
     }
 
@@ -245,6 +280,71 @@ impl SimSurface {
             f32::midpoint(b, 1.0).mul_add(self.rect.h, self.rect.y),
         );
         Some((t, sim, world))
+    }
+
+    /// **Ray → the body this face reads for**, as `(distance, sim
+    /// position, world position)`: [`Self::project`] where the face is a
+    /// plane ([`Self::deep`] zero), and the box it is cut through where
+    /// it is not.
+    ///
+    /// The reading stays the quad's. Whatever face of the body the ray
+    /// comes in by, where it lands is laid straight back onto the
+    /// elevation the rig was drawn in — so a cabinet met on its flank at
+    /// the height of the third cubby reads the third cubby, which is
+    /// what a player aiming at it means. An entry exactly on a rim would
+    /// read the very edge of the piece's own cells, where the sim has to
+    /// pick a side, so it is drawn a hair in.
+    #[must_use]
+    pub fn strike(&self, ray: Ray3d) -> Option<(f32, SimVec2, Vec3)> {
+        if self.deep <= 0.0 {
+            return self.project(ray);
+        }
+        let (across, down) = (self.half_u.length(), self.half_v.length());
+        if across <= 0.0 || down <= 0.0 {
+            return None;
+        }
+        // The slab test, in the box's own three directions.
+        let mut near = f32::NEG_INFINITY;
+        let mut far = f32::INFINITY;
+        for (axis, half) in [
+            (self.half_u / across, across),
+            (self.half_v / down, down),
+            (self.normal(), self.deep),
+        ] {
+            let along = ray.direction.dot(axis);
+            let from = (ray.origin - self.center).dot(axis);
+            if along.abs() < 1e-6 {
+                if from.abs() > half {
+                    return None;
+                }
+                continue;
+            }
+            let (enter, leave) = ((-half - from) / along, (half - from) / along);
+            near = near.max(enter.min(leave));
+            far = far.min(enter.max(leave));
+        }
+        // A body the eye is already inside answers at the eye: a stance
+        // that close is standing in the cargo, and the alternative is a
+        // piece that stops answering when you walk into it.
+        let reached = near.max(0.0);
+        if far < reached {
+            return None;
+        }
+        let world = ray.origin + ray.direction * reached;
+        let local = world - self.center;
+        let sim = SimVec2::new(
+            f32::midpoint(
+                (local.dot(self.half_u) / self.half_u.length_squared()).clamp(-RIM, RIM),
+                1.0,
+            )
+            .mul_add(self.rect.w, self.rect.x),
+            f32::midpoint(
+                (local.dot(self.half_v) / self.half_v.length_squared()).clamp(-RIM, RIM),
+                1.0,
+            )
+            .mul_add(self.rect.h, self.rect.y),
+        );
+        Some((reached, sim, world))
     }
 
     /// Sim position → world position on the quad's plane. Positions
@@ -421,7 +521,7 @@ pub fn pick(
         if aim.riding && roam_only != station.roamable() {
             continue;
         }
-        if let Some((t, sim, world)) = surface.project(ray)
+        if let Some((t, sim, world)) = surface.strike(ray)
             && t < nearest
             && t <= reach
         {

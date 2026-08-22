@@ -771,7 +771,8 @@ fn wall_upright(station: Station, surface: &SimSurface) -> Quat {
 /// Whether the upright rule turned a berth's rig off its chart's own
 /// lie. That is exactly when the rig's frame and the chart's frame stop
 /// agreeing about where a sub-rect of the footprint lies — and so
-/// exactly when the piece must carry its own face ([`standing_surface`]).
+/// exactly when the piece must carry its own reading
+/// ([`standing_surface`]).
 fn wall_rolled(station: Station, surface: &SimSurface) -> bool {
     let base = station.face(surface);
     (wall_upright(station, surface) * Vec3::Y).dot(base * Vec3::Y) < 0.999
@@ -1163,7 +1164,8 @@ fn hover_pose(
 /// (so the sim's downward y maps to `NEG_Y`), local +Z the depth parts
 /// stand proud of the berth plane at. `at` is where the quad's centre
 /// sits in that frame and `extent` its size, both in rig-local sim
-/// units; `plane` is its depth. The mapping is built from the same
+/// units; `plane` is its depth and `deep` half the body standing either
+/// side of it, zero for a pane. The mapping is built from the same
 /// transform and the same local units the rig's parts are placed with,
 /// so hitbox and geometry cannot drift apart — the fixture sweep's
 /// lesson, kept by construction rather than by care.
@@ -1173,6 +1175,7 @@ fn riding_face(
     at: Vec2,
     extent: (f32, f32),
     plane: f32,
+    deep: f32,
     site: (Vec3, Quat, Vec3),
 ) -> SimSurface {
     let (pos, rot, scale) = site;
@@ -1181,6 +1184,7 @@ fn riding_face(
         half_u: rot * (Vec3::X * (extent.0 * 0.5 * scale.x)),
         half_v: rot * (Vec3::NEG_Y * (extent.1 * 0.5 * scale.y)),
         rect,
+        deep: deep * scale.z,
     }
 }
 
@@ -1199,6 +1203,7 @@ fn ride_surface(mount: &Instrument, kind: Kind, site: (Vec3, Quat, Vec3)) -> Sim
             f32::from(h) * layout::CELL * mount.face.1,
         ),
         mount.plane,
+        0.0,
         site,
     )
 }
@@ -1216,6 +1221,14 @@ fn ride_surface(mount: &Instrument, kind: Kind, site: (Vec3, Quat, Vec3)) -> Sim
 /// reached past them would read a neighbour's berth: the sim answers
 /// "which piece is at this point", and a point outside the rect is
 /// somebody else's.
+///
+/// **Nothing calls this at runtime any more.** The pick body is cut from
+/// all three axes of [`drawn_box`] and reads its own two off it in the
+/// one pass ([`standing_face`]), so the sweep is the only caller left.
+/// The name outlives the call because it is the one the bay's own
+/// account uses for the reading (docs/BAY.md), and because a claim about
+/// two axes is worth being able to state on its own.
+#[allow(dead_code)]
 #[must_use]
 pub fn silhouette(kind: Kind) -> (Vec2, Vec2) {
     let (mid, half) = drawn_box(kind);
@@ -1405,26 +1418,39 @@ pub fn tell_bars(mid: Vec3, half: Vec3, tell: Tell) -> Vec<Bar> {
     bars
 }
 
-/// The pick face a rig carries over its OWN body: its whole drawn
-/// [`silhouette`], bound to the sub-rect of its OWN rect that silhouette
-/// covers, `plane` rig-local units off the berth plane. Whatever the sim
-/// hit-tests inside the piece — the cabinet's cubby sub-rects, an
-/// instrument's amber handle band — is then read in the very frame the
-/// rig drew it in, so the aim lands on the cargo the player is looking
-/// at.
+/// The pick body a rig carries over its OWN: [`drawn_box`], bound to the
+/// sub-rect of its OWN rect that box's silhouette covers, cut through
+/// the middle of its depth. Whatever the sim hit-tests inside the piece
+/// — the cabinet's cubby sub-rects, an instrument's amber handle band —
+/// is then read in the very frame the rig drew it in, so the aim lands
+/// on the cargo the player is looking at.
 ///
-/// **The quad is the body, not the footprint**, and the two are not the
-/// same shape. It used to be the footprint, which meant the region that
-/// answered for a piece was its plan rather than its picture: the brine
-/// pearls are a thin column of three spheres filling 62% of their cells
-/// across, and a third of a cell of air on either flank of them picked
-/// them up. Binding the sub-rect the silhouette covers rather than the
-/// whole rect keeps the mapping one-to-one in rig-local units, which is
-/// what the handle band and the cubbies are declared in — the face gets
-/// smaller, and nothing declared inside it moves.
+/// **The region is the body, not the footprint**, and the two are not
+/// the same shape. It used to be the footprint, which meant the region
+/// that answered for a piece was its plan rather than its picture: the
+/// brine pearls are a thin column of three spheres filling 62% of their
+/// cells across, and a third of a cell of air on either flank of them
+/// picked them up. Binding the sub-rect the silhouette covers rather
+/// than the whole rect keeps the mapping one-to-one in rig-local units,
+/// which is what the handle band and the cubbies are declared in — the
+/// face gets smaller, and nothing declared inside it moves.
+///
+/// **And it is not a plane, either.** A silhouette is two of a body's
+/// three extents, and a quad cut on those two answers only from square
+/// on: a column of pearls met from ninety degrees off is a quad seen
+/// edge-on, so a ray aimed at the top of it goes straight past and lands
+/// on whatever deck cell is behind — the piece the player is looking
+/// straight at answers nothing, and the deck answers instead. Which is
+/// exactly what the tell says it is not: the tell wraps [`drawn_box`],
+/// three axes of it, so the shape that lights up was never the shape
+/// that answered. It is one shape now. The quad stays the READING —
+/// where on the body the aim landed is still laid back onto the
+/// elevation the rig was drawn in — and the body is what the aim has to
+/// meet ([`SimSurface::strike`]).
 #[must_use]
-fn standing_face(kind: Kind, rect: Rect, plane: f32, site: (Vec3, Quat, Vec3)) -> SimSurface {
-    let (at, half) = silhouette(kind);
+fn standing_face(kind: Kind, rect: Rect, site: (Vec3, Quat, Vec3)) -> SimSurface {
+    let (box_mid, box_half) = drawn_box(kind);
+    let (at, half) = (box_mid.truncate(), box_half.truncate());
     let (a, t) = kind.upright();
     // **Sim units of rect per sim unit of rig, on each axis.** A rig is
     // composed in its own upright frame ([`Kind::upright`]) and a berth
@@ -1448,23 +1474,14 @@ fn standing_face(kind: Kind, rect: Rect, plane: f32, site: (Vec3, Quat, Vec3)) -
         half.x * 2.0 * per.x,
         half.y * 2.0 * per.y,
     );
-    riding_face(bound, at, (half.x * 2.0, half.y * 2.0), plane, site)
-}
-
-/// How far a rolled wall piece's pick face stands off its chart, in
-/// rig-local sim units, for a kind with no glass of its own: enough
-/// that the ray settles on the FACE and never on the chart it would
-/// otherwise share a plane with — coplanar quads answer by query order,
-/// which is no answer at all — and shallow enough that the aim still
-/// reads where the hardware is.
-const WALL_FACE_PLANE: f32 = 6.0;
-
-/// The depth a wall piece's pick face rides at: an instrument answers
-/// on its own glass — the same plane the mount table hands the rig — so
-/// the crosshair and the focused cursor read the same pane from either
-/// side of the handle rule. Everything else takes the standoff.
-fn face_plane(kind: Kind) -> f32 {
-    instrument(kind).map_or(WALL_FACE_PLANE, |mount| mount.plane)
+    riding_face(
+        bound,
+        at,
+        (half.x * 2.0, half.y * 2.0),
+        box_mid.z,
+        box_half.z,
+        site,
+    )
 }
 
 /// Where a berthed instrument's station hangs, from its hold cells
@@ -1487,7 +1504,7 @@ pub fn instrument_surface(
     ))
 }
 
-/// The pick face a hold berth carries, wherever the rig's own frame
+/// The pick body a hold berth carries, wherever the rig's own frame
 /// leaves its chart's. Two ways that happens, one answer.
 ///
 /// A rig that STANDS is nowhere near the flat chart it berths on: floor
@@ -1501,11 +1518,21 @@ pub fn instrument_surface(
 /// own y — the amber handle band — is nowhere near the bar the rig
 /// draws from those very numbers: the tank on a side wall wears its
 /// grab across the bottom and routes carry down one flank. Same defect
-/// class, other plane. The face stands the piece's own frame a standoff
-/// off the wall, where it outranks the chart it hangs on.
+/// class, other plane.
 ///
-/// Wall cargo the rule leaves alone still needs no face: there the
-/// chart already IS the piece.
+/// **Wall cargo the rule leaves alone still carries none, and the
+/// reason is the room's own hardware.** There the chart lies in the
+/// rig's very plane and answers for the rig's very cells, so the
+/// reading is right for anything but a glancing aim at a deep body —
+/// and it was measured what curing that costs. A wall berth's cells are
+/// where a doorway's amber latch is bolted too (docs/GAUNTLET.md, "The
+/// cell that was asked, measured, and taken back out"), and a latch
+/// stands two millimetres proud of the plane a body berthed over it
+/// reaches a hand's breadth out of. Give that body a pick region and it
+/// outranks the latch from every stance in the room: the fixture's own
+/// bay window is berthed across the cabin's aft latch, and with one the
+/// monkey could not part a seam in nineteen thousand frames. The
+/// glancing read is worth less than the seam.
 #[must_use]
 pub fn standing_surface(
     charts: &[(Station, SimSurface)],
@@ -1516,10 +1543,8 @@ pub fn standing_surface(
     let aft = aft_in(charts, &surface)?;
     let site = site_on(station, &surface, &aft, kind, rect);
     match station {
-        Station::BayFloor | Station::BayCeiling => Some(standing_face(kind, rect, 0.0, site)),
-        _ if wall_rolled(station, &surface) => {
-            Some(standing_face(kind, rect, face_plane(kind), site))
-        }
+        Station::BayFloor | Station::BayCeiling => Some(standing_face(kind, rect, site)),
+        _ if wall_rolled(station, &surface) => Some(standing_face(kind, rect, site)),
         _ => None,
     }
 }
@@ -7184,6 +7209,140 @@ mod tests {
         true
     }
 
+    /// **Claim five: what answers the aim is the body, not a plane cut
+    /// through it.**
+    ///
+    /// Claim four holds the face to the picture and aims at it SQUARE
+    /// ON, down the face's own normal, which is the one direction from
+    /// which a plane and a body are the same shape. Walk round and they
+    /// stop being: a column of brine pearls seen from ninety degrees off
+    /// is a quad edge-on, so a ray aimed at the top of it goes past and
+    /// lands on whatever deck cell is beyond, and the piece the player
+    /// is looking straight at answers nothing. Measured before the cure,
+    /// on a ring of thirty-six stances round a berthed body at three
+    /// heights: the pearls' own top answered from eighty degrees of the
+    /// ring and from none of the other two hundred and eighty, and every
+    /// other standing kind swept — a wardrobe, a floor lamp, a crate —
+    /// did the same. Only the bottom band answered all the way round,
+    /// and that is not the piece answering: it is the DECK cell under it
+    /// answering, which is why a tall thin kind was the one that got
+    /// reported.
+    ///
+    /// The tell wraps three axes ([`drawn_box`]) and the pick used two,
+    /// so the shape that lights up was never the shape that answered.
+    /// This is that sentence as a sweep: from every stance in the room a
+    /// body can be looked at from, an aim that enters the body reads the
+    /// body.
+    ///
+    /// Aimed at points strictly INSIDE the box rather than at its
+    /// surface, so the ray provably enters it without the test asking
+    /// the pick's own machinery whether it did. `false` where the berth
+    /// carries no reading of its own — there the chart lies in the rig's
+    /// very plane and answers for the rig's very cells
+    /// ([`standing_surface`]).
+    fn the_body_answers_from_all_round(b: &Berth, charts: &[(Station, SimSurface)]) -> bool {
+        /// How far inside each of the body's six faces the sweep aims.
+        /// Well in, so a ray reaching it has crossed the body's own skin
+        /// to get there and the claim needs no tolerance of its own.
+        const DEEP_IN: f32 = 0.85;
+
+        use crate::room::InRoom;
+        use crate::surface::{Aimable, pick};
+
+        if b.laid || standing_surface(charts, b.kind, b.rect).is_none() {
+            return false;
+        }
+        let board = vec![Piece {
+            id: 1,
+            kind: b.kind,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Hold {
+                room: CABIN,
+                x: b.cell.0,
+                y: b.cell.1,
+            },
+        }];
+        let mut aims: Vec<Aimable> = charts
+            .iter()
+            .map(|(station, surface)| Aimable {
+                station: *station,
+                surface: *surface,
+                riding: false,
+                in_room: Some(InRoom {
+                    room: CABIN,
+                    kind: space_trucking::sim::RoomKind::Cabin,
+                }),
+            })
+            .collect();
+        aims.push(Aimable {
+            station: Station::Standing,
+            surface: standing_surface(charts, b.kind, b.rect).expect("the berth carries one"),
+            riding: true,
+            in_room: None,
+        });
+        // Where a body may be stood in: the deck's own quad, a walk's
+        // clearance in off every wall.
+        let deck = chart(Station::BayFloor);
+        let (lo, hi) = (
+            deck.center - deck.half_u.abs() - deck.half_v.abs(),
+            deck.center + deck.half_u.abs() + deck.half_v.abs(),
+        );
+        let (pos, rot, scale) = b.site;
+        let (mid, half) = drawn_box(b.kind);
+        let name = &b.name;
+        let mut asked = 0_u32;
+        for face in 0..7 {
+            // The body's own middle, and a point well inside each of its
+            // six faces: any ray from outside reaching one of these has
+            // crossed the body to get there.
+            let mut inside = mid;
+            if face > 0 {
+                let axis = (face - 1) / 2;
+                let way = if face % 2 == 0 { -DEEP_IN } else { DEEP_IN };
+                inside[axis] = way.mul_add(half[axis], inside[axis]);
+            }
+            let target = pos + rot * (inside * scale);
+            for step in 0..12_u32 {
+                let turn = f32::from(step as u16) / 12.0 * TAU;
+                for stand in [0.7_f32, 1.15] {
+                    let eye = Vec3::new(
+                        turn.cos().mul_add(stand, target.x),
+                        crate::rig::EYE_HEIGHT,
+                        turn.sin().mul_add(stand, target.z),
+                    );
+                    if eye.x < lo.x + 0.35
+                        || eye.x > hi.x - 0.35
+                        || eye.z < lo.z + 0.35
+                        || eye.z > hi.z - 0.35
+                        || eye.distance(target) > crate::rig::REACH
+                    {
+                        continue;
+                    }
+                    let Ok(dir) = Dir3::new(target - eye) else {
+                        continue;
+                    };
+                    asked += 1;
+                    let hit = pick(
+                        Ray3d::new(eye, dir),
+                        true,
+                        crate::rig::REACH,
+                        aims.iter().copied(),
+                    );
+                    assert_eq!(
+                        layout::piece_at(&b.rooms, &board, hit.sim).map(|piece| piece.id),
+                        Some(1),
+                        "{name}: an aim from {eye:?} into the body at {target:?} read \
+                         {:?} on {:?}",
+                        hit.sim,
+                        hit.station
+                    );
+                }
+            }
+        }
+        asked > 0
+    }
+
     /// The orientation defect class, closed by sweep: every kind, at
     /// every placement the sim's own arbiter allows, put to all four
     /// claims above. Each of them held on the wall it was written
@@ -7202,6 +7361,7 @@ mod tests {
         let mut swept = 0_u32;
         let mut handled = 0_u32;
         let mut faced = 0_u32;
+        let mut seen = 0_u32;
         let mut walls_handled: Vec<Station> = Vec::new();
         for kind in Kind::ALL {
             let (cols, rows) = space_trucking::sim::RoomKind::Cabin.grid();
@@ -7244,6 +7404,7 @@ mod tests {
                     the_body_hangs_true(&berth);
                     the_ghost_promises_the_berth(&berth);
                     faced += u32::from(the_face_is_the_body_it_draws(&berth, &charts));
+                    seen += u32::from(the_body_answers_from_all_round(&berth, &charts));
                     if the_amber_is_the_routing_region(&berth, &charts) {
                         handled += 1;
                         if !walls_handled.contains(&station) {
@@ -7258,6 +7419,10 @@ mod tests {
             "the sweep should cover the whole net: {swept}"
         );
         assert!(faced > 500, "the faces went unswept: {faced} of {swept}");
+        // A berth whose ring of stances all fall outside the room asks
+        // nothing, and a claim nothing was asked of is a claim nobody
+        // made: the floor is what keeps the fifth one honest.
+        assert!(seen > 300, "the bodies went unwalked: {seen} of {swept}");
         // "On every wall" is the claim, so the sweep proves it reached
         // every wall: a handle checked on the aft chart alone is the
         // very mistake this test exists to catch.

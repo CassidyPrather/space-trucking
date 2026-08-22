@@ -53,6 +53,23 @@
 //! | [`GRID_FITS`] | every shell body stands in its own room's cells and lands on the cargo grid | a wall two centimetres off its own box, and the room next door standing inside this one |
 //! | [`PART_SEATED`] | a part that names another part as what holds it up actually meets it | a couch on four stilts of air, a pane of glass floating off its own bezel |
 //! | [`RIG_SEATED`] | a rig reaches the chart it is berthed on, on every chart class it may be berthed on | a crate standing on nothing, a canopy that never gets to its own deckhead |
+//! | [`FURNITURE_SEATED`] | a hung body meets whatever it says holds it up | a beacon bolted to thin air, a latch floating off its wall |
+//! | [`BERTH_FILLED`] | a rig is centred on the ground its plan owns and fills it | a crate half a cell out into the aisle on the one axis nothing measured |
+//! | [`BERTH_TURNED`] | a rig stands up and shows the room its face, on every chart class | a pendant looking into the wall it hangs beside |
+//! | [`DECK_REACHED`] | every cell of deck a body may set cargo on is walkable to from the door it comes in by | a shopfront running under its own doorway |
+//! | [`FIXTURE_REACHED`] | a room's own worked hardware is workable from somewhere a body may stand | a counter you can see and cannot reach |
+//! | [`FIXTURE_SEEN`] | nothing a room hangs or stocks stands across its own worked hardware | goods stacked in front of the counter they are sold over |
+//!
+//! # The four questions, and the map of the ones nobody had asked
+//!
+//! Twelve of those families were written the same way — a defect was
+//! seen, and a family was written that would have caught it — which is a
+//! harness that is always one round behind whoever is playing. The last
+//! four were written the other way round: the space of things a rule
+//! could be ABOUT was enumerated first (a body, a relation, a frame), and
+//! the cells of it nobody had asked were filled in. docs/GAUNTLET.md,
+//! "The map", is that enumeration, including the triples that are
+//! meaningful and cannot be asked yet and the reason for each.
 //!
 //! # The three layers, and the one that is not described yet
 //!
@@ -141,6 +158,17 @@ pub const RIG_SEATED: &str = "rig-seated";
 pub const FURNITURE_SEATED: &str = "furniture-seated";
 /// A rig must fill the cells its berth spends.
 pub const BERTH_FILLED: &str = "berth-filled";
+/// A rig must be turned the way its chart and its room say.
+pub const BERTH_TURNED: &str = "berth-turned";
+/// Every cell of deck a body may set cargo on must be walkable to from
+/// the door it comes in by.
+pub const DECK_REACHED: &str = "deck-reached";
+/// A room's own worked hardware must be reachable from somewhere a body
+/// may stand.
+pub const FIXTURE_REACHED: &str = "fixture-reached";
+/// Nothing a berth may stand may stand between a room's own worked
+/// hardware and the room that reads it.
+pub const FIXTURE_SEEN: &str = "fixture-seen";
 
 /// The name a finding about cargo is filed under. A rig is not in any
 /// one room — the same crate stands in every room the game has — so the
@@ -148,8 +176,16 @@ pub const BERTH_FILLED: &str = "berth-filled";
 /// stations and the ship's two rooms answer as theirs.
 pub const RIGS: &str = "rigs";
 
+/// The name a finding about a room's own net is filed under: the kind,
+/// lower-cased. Same argument as [`RIGS`] one layer up — a net is folded
+/// the same way in every station that has one, so a defect in how `Trade`
+/// lays its deck out is one defect and not twelve.
+fn kind_name(kind: RoomKind) -> String {
+    format!("{kind:?}").to_lowercase()
+}
+
 /// Every rule, for the report's own headings.
-pub const RULES: [&str; 12] = [
+pub const RULES: [&str; 16] = [
     BERTH_CLEAR,
     BERTH_SEEN,
     BERTH_REACHED,
@@ -162,6 +198,10 @@ pub const RULES: [&str; 12] = [
     RIG_SEATED,
     FURNITURE_SEATED,
     BERTH_FILLED,
+    BERTH_TURNED,
+    DECK_REACHED,
+    FIXTURE_REACHED,
+    FIXTURE_SEEN,
 ];
 
 // ------------------------------------------------------------- the sizes --
@@ -1442,6 +1482,8 @@ pub fn sweep() -> Vec<Finding> {
         out.extend(walk_clear(stage));
         out.extend(grid_fits(stage));
         out.extend(furniture_seated(stage));
+        out.extend(fixture_reached(stage));
+        out.extend(fixture_seen(stage));
     }
     out.extend(prop_points());
     out.extend(part_seated());
@@ -1450,6 +1492,8 @@ pub fn sweep() -> Vec<Finding> {
     out.extend(rig_faces());
     out.extend(rig_seated());
     out.extend(berth_filled(&stages));
+    out.extend(berth_turned(&stages));
+    out.extend(deck_reached());
     out.sort();
     out.dedup();
     out
@@ -1693,37 +1737,12 @@ fn berth_reached(stage: &Stage) -> Vec<Finding> {
     let mut blamed: BTreeMap<String, Vec<(u8, u8)>> = BTreeMap::new();
     for berth in berths(&stage.rooms, &stage.placed).into_iter().filter(kept) {
         let probe = (berth.face.lo + berth.face.hi) * 0.5 + berth.inward * 0.02;
-        let worked = stances.iter().any(|eye| {
-            let dir = probe - *eye;
-            let pitch = (-dir.y).atan2(dir.xz().length()).abs();
-            if dir.length() > REACH - 0.05 || pitch > PITCH_LIMIT - 0.02 {
-                return false;
-            }
-            !scene
-                .iter()
-                .any(|drawn| ray_box(*eye, dir, drawn.body).is_some_and(|t| t < 1.0 - 1e-3))
-        });
-        if worked {
-            continue;
+        // The reading is [`worked`]'s, shared with `fixture-reached`: a
+        // berth and a room's own counter are the same question asked of
+        // two things, and one arithmetic is what keeps them one question.
+        if let Err(blame) = worked(&scene, &stances, probe) {
+            blamed.entry(blame).or_default().push(berth.cell);
         }
-        // Name what is in the way from the nearest stance a body could
-        // take: an "unreachable" with no culprit is a puzzle, not a work
-        // order.
-        let blame = stances
-            .iter()
-            .min_by(|a, b| {
-                a.distance_squared(probe)
-                    .total_cmp(&b.distance_squared(probe))
-            })
-            .and_then(|eye| {
-                let dir = probe - *eye;
-                scene
-                    .iter()
-                    .find(|drawn| ray_box(*eye, dir, drawn.body).is_some_and(|t| t < 1.0 - 1e-3))
-                    .map(|drawn| drawn.what.clone())
-            })
-            .unwrap_or_else(|| "nothing — simply out of reach".to_owned());
-        blamed.entry(blame).or_default().push(berth.cell);
     }
     blamed
         .into_iter()
@@ -2444,8 +2463,15 @@ struct Plan {
     kind: Kind,
     /// The chart class it stands on, which is what a berth's rect means.
     surf: Surf,
+    /// Which of the net's six charts it is, so a rule can tell a plane a
+    /// body lies ON from one it hangs AGAINST.
+    station: Station,
     /// The chart itself, for its own two axes.
     chart: SimSurface,
+    /// The cells the sim gave it, in the chart's own frame.
+    rect: layout::Rect,
+    /// The turn the berth gave it — the half of a pose no box carries.
+    rot: Quat,
     owned: Box3,
     spent: Box3,
 }
@@ -2491,14 +2517,19 @@ fn plans(stages: &[Stage]) -> Vec<Plan> {
                         f32::from(w) * layout::CELL,
                         f32::from(h) * layout::CELL,
                     );
-                    let Some((lo, hi)) = crate::pieces::berth_box(&stage.placed.charts, kind, rect)
-                    else {
+                    let (Some((lo, hi)), Some((station, _, _, rot, _))) = (
+                        crate::pieces::berth_box(&stage.placed.charts, kind, rect),
+                        crate::pieces::berth_pose(&stage.placed.charts, kind, rect),
+                    ) else {
                         continue;
                     };
                     out.push(Plan {
                         kind,
                         surf,
+                        station,
                         chart,
+                        rect,
+                        rot,
                         owned: plan_face(&chart, rect),
                         spent: Box3 { lo, hi },
                     });
@@ -2620,6 +2651,491 @@ fn berth_filled(stages: &[Stage]) -> Vec<Finding> {
                 ),
             });
         }
+    }
+    out
+}
+
+/// **The ground a standing rig is looking at**, in its chart's own
+/// frame: the middle of the cell one step beyond its own footprint,
+/// along the way its face points.
+///
+/// [`berth_turned`]'s one arithmetic, factored out for the reason
+/// [`off_plan`] and [`short_of`] are: a family whose reading is buried
+/// inside its own loop cannot be handed a body that has been turned, and
+/// a rule nobody can catch out is a green tick that means nothing.
+///
+/// The look direction lies in the chart's plane for the two charts a rig
+/// stands ON, so it resolves to a unit step across the net; on a chart a
+/// rig hangs AGAINST it points out of the plane and this says nothing
+/// worth reading, which is why the family splits the two.
+fn looked_at(chart: &SimSurface, rect: layout::Rect, rot: Quat) -> space_trucking::sim::Vec2 {
+    let look = rot * Vec3::Z;
+    let du = look.dot(chart.half_u.normalize());
+    let dv = look.dot(chart.half_v.normalize());
+    let reach = layout::CELL.mul_add(0.5, du.abs().mul_add(rect.w, dv.abs() * rect.h) * 0.5);
+    space_trucking::sim::Vec2::new(
+        du.mul_add(reach, rect.w.mul_add(0.5, rect.x)),
+        dv.mul_add(reach, rect.h.mul_add(0.5, rect.y)),
+    )
+}
+
+/// **A rig is turned the way its chart and its room say.** [`BERTH_TURNED`].
+///
+/// The thirteenth family, and the one that closes the half of a berth's
+/// pose no box has ever carried. Every rule before it measured a rig as
+/// an axis-aligned BOX — the band it is composed within, the ground its
+/// plan owns, the plane its sole has to reach — and a box is the same box
+/// after a half turn, and the same box after a quarter turn whenever the
+/// footprint is square. So the whole of "which way is it looking" fell
+/// through eleven families, and the twelfth caught only the quarter turns
+/// a non-square plan pays for.
+///
+/// [`PROP_POINTS`] is the nearest thing there was and it looks one body
+/// in: it asks whether a sconce's cup points where the word "cup" says,
+/// **inside the rig's own frame**, and a rig hung backwards carries every
+/// one of its features faithfully backwards with it. Nothing asked what
+/// the rig's own frame was doing.
+///
+/// Two claims, and between them they pin the turn on every chart the game
+/// has:
+///
+/// - **It stands up.** A rig's own up is the room's up. On a wall that is
+///   the upright rule's whole purpose (`pieces::wall_upright` rolls a
+///   chart's lie back onto the room's); on a deck and under a deckhead it
+///   is what "standing" and "hanging" mean. A quarter turn about the face
+///   normal breaks it, and so does an upside-down one — which is what
+///   makes this the clause that catches a SQUARE footprint, the one case
+///   `berth-filled` is blind to by construction.
+/// - **It shows its face to the room.** On a wall, the face a rig turns
+///   to the room is the wall's own inward normal. On a deck or under a
+///   deckhead there is no such normal, so the claim is the player's
+///   instead: **the deck a standing rig is looking at is deck of the same
+///   room** ([`looked_at`]). A couch with its face in the front wall is
+///   the defect, and it reads as one here without this file ever learning
+///   the backing rule's branches — which matters, because a sweep that
+///   recomputed `pieces::floor_facing` and compared it with itself would
+///   pass every berth in the game and mean nothing.
+///
+/// What is deliberately NOT asked is the turn of a body whose plan is
+/// square and whose cell is nowhere near a wall: a crate in the middle of
+/// the deck may face any of four ways and every one of them is a room a
+/// player can walk round. Composition is the art direction's business and
+/// this file measures shapes.
+///
+/// Filed under [`RIGS`] and keyed by kind and chart class, for
+/// [`berth_filled`]'s reason: the same crate stands in every room in the
+/// game, and a defect in how a deck turns it is not fifteen defects.
+fn berth_turned(stages: &[Stage]) -> Vec<Finding> {
+    // Per kind, chart class and clause: the worst reading of the lot,
+    // with the cell it was read at.
+    let mut worst: BTreeMap<(String, u8), (f32, String)> = BTreeMap::new();
+    for berth in plans(stages) {
+        let key = |clause: u8| {
+            (
+                format!("{:?} on a {:?} berth", berth.kind, berth.surf),
+                clause,
+            )
+        };
+        let note = |worst: &mut BTreeMap<(String, u8), (f32, String)>, clause, read, what| {
+            let seen = worst
+                .entry(key(clause))
+                .or_insert((f32::INFINITY, String::new()));
+            if read < seen.0 {
+                *seen = (read, what);
+            }
+        };
+        let up = (berth.rot * Vec3::Y).dot(Vec3::Y);
+        note(
+            &mut worst,
+            0,
+            up,
+            format!("its own up points {:?}", berth.rot * Vec3::Y),
+        );
+        if matches!(berth.station, Station::BayFloor | Station::BayCeiling) {
+            let at = looked_at(&berth.chart, berth.rect, berth.rot);
+            note(
+                &mut worst,
+                1,
+                if berth.chart.rect.contains(at) {
+                    1.0
+                } else {
+                    0.0
+                },
+                format!(
+                    "it looks at ({:.1}, {:.1}), which is off its own room's {:?} chart",
+                    at.x, at.y, berth.surf
+                ),
+            );
+        } else {
+            let inward = berth.station.inward(&berth.chart);
+            note(
+                &mut worst,
+                1,
+                (berth.rot * Vec3::Z).dot(inward),
+                format!("it shows the room {:?}", berth.rot * Vec3::Z),
+            );
+        }
+    }
+    let mut out = Vec::new();
+    for ((offender, clause), (read, what)) in worst {
+        if read > 0.999 {
+            continue;
+        }
+        out.push(Finding {
+            room: RIGS.to_owned(),
+            rule: BERTH_TURNED,
+            offender,
+            detail: match clause {
+                0 => format!("{what}, not the room's up, so the berth hangs it a turn off true"),
+                _ => format!("{what}, so the berth turns its face away from the room"),
+            },
+        });
+    }
+    out
+}
+
+/// **Every cell of deck a body may set cargo on is walkable to from the
+/// door it comes in by.** [`DECK_REACHED`].
+///
+/// The fourteenth family, and the first one in this file that is about a
+/// room's NET rather than about anything drawn in it. Every other rule
+/// here measures metres; this one counts cells, and it counts them
+/// through the sim's own declaration (`RoomKind::marooned`) rather than
+/// through a second one of its own — the cabin may not restate a sim
+/// rule, and *which cells the player may use* is as sim a rule as there
+/// is.
+///
+/// It exists because the owner walked a defect the sim's own entry-path
+/// law read green. That law clears a chalked band out of the straight
+/// run in from a door, and it holds. What it is about is a LANE; what the
+/// owner was doing was a JOURNEY, and the journey's first step landed on
+/// the shopfront: `Trade` and `Wreck` hang their goods along the wall
+/// they present to whatever they came alongside, which is the wall their
+/// one door is punched through, so a body walked in and stood on the
+/// counter, and the nearest deck a crate of theirs could go on was a step
+/// further in.
+///
+/// Two clauses, and the first is the one that fired:
+///
+/// - **A door stands on deck a body may use.** Every cell of a declared
+///   door's own step takes the player's cargo.
+/// - **And nothing is walled off behind it.** From that step, every cell
+///   of the room's deck the player may use is reachable across such cells
+///   alone.
+///
+/// Filed under the room KIND ([`kind_name`]) rather than under a station,
+/// because a net is folded the same way in every station that has one and
+/// a defect in how `Trade` lays its deck out is one defect, not twelve.
+fn deck_reached() -> Vec<Finding> {
+    let mut out = Vec::new();
+    for kind in space_trucking::sim::room::ROOM_KINDS {
+        for (slot, _) in kind.declared() {
+            let Some(marooned) = kind.marooned(slot) else {
+                continue;
+            };
+            for (x, y) in kind.doorsteps(slot).into_iter().flatten() {
+                let tile = kind.tile_of(x, y);
+                if tile.is_some_and(Tile::takes_your_cargo) {
+                    continue;
+                }
+                out.push(Finding {
+                    room: kind_name(kind),
+                    rule: DECK_REACHED,
+                    offender: format!("port {slot} doorstep"),
+                    detail: format!(
+                        "stands on ({x}, {y}), which reads {tile:?} — a body walks in and \
+                         lands on ground the room has spoken for"
+                    ),
+                });
+            }
+            if marooned.is_empty() {
+                continue;
+            }
+            out.push(Finding {
+                room: kind_name(kind),
+                rule: DECK_REACHED,
+                offender: format!("port {slot}"),
+                detail: format!(
+                    "leaves {} cell(s) of deck the player may use walled off behind the \
+                     room's own: {}",
+                    marooned.len(),
+                    some_cells(&marooned)
+                ),
+            });
+        }
+    }
+    out
+}
+
+/// **Whether a point can be worked from anywhere a body may stand**, and
+/// what is in the way when it cannot.
+///
+/// [`berth_reached`]'s arithmetic, shared with [`fixture_reached`]: within
+/// arm's length, inside the pitch limit, and nothing drawn across the
+/// line. `Ok` where some stance works it; otherwise the body blocking the
+/// nearest stance a body could take, because an "unreachable" with no
+/// culprit is a puzzle rather than a work order.
+fn worked(scene: &[Drawn], stances: &[Vec3], probe: Vec3) -> Result<(), String> {
+    let clear = |eye: &Vec3, dir: Vec3| {
+        !scene
+            .iter()
+            .any(|drawn| ray_box(*eye, dir, drawn.body).is_some_and(|t| t < 1.0 - 1e-3))
+    };
+    if stances.iter().any(|eye| {
+        let dir = probe - *eye;
+        let pitch = (-dir.y).atan2(dir.xz().length()).abs();
+        dir.length() <= REACH - 0.05 && pitch <= PITCH_LIMIT - 0.02 && clear(eye, dir)
+    }) {
+        return Ok(());
+    }
+    Err(stances
+        .iter()
+        .min_by(|a, b| {
+            a.distance_squared(probe)
+                .total_cmp(&b.distance_squared(probe))
+        })
+        .and_then(|eye| {
+            let dir = probe - *eye;
+            scene
+                .iter()
+                .find(|drawn| ray_box(*eye, dir, drawn.body).is_some_and(|t| t < 1.0 - 1e-3))
+                .map(|drawn| drawn.what.clone())
+        })
+        .unwrap_or_else(|| "nothing — simply out of reach".to_owned()))
+}
+
+/// **A room's own worked hardware stays reachable.** [`FIXTURE_REACHED`].
+///
+/// The fifteenth family, and [`berth_reached`]'s missing half. That one
+/// asks whether every BERTH is workable from somewhere a body may stand,
+/// and a berth is a cell of the net cargo may take. The handshake is not
+/// a cell of the net — `RoomKind::surface_of` punches a hole where it
+/// stands, so the arbiter never offers it and [`berths`] never produces
+/// it — and it is the one thing in a calling room a player has to be able
+/// to work. A station could hang a beacon in front of its own counter and
+/// every rule in this file would agree it was a fine beacon.
+///
+/// A fixture does not occlude itself, so its own brasswork is taken off
+/// the list of things that could be in the way; everything else the room
+/// draws stays on it, which is the same scene [`berth_reached`] is asked
+/// against and for the same reason — a station's crates come and go, and
+/// its furniture does not.
+///
+/// The probe is the fixture's own pick face (`room::handshake_face`), the
+/// very quad the crosshair meets it on, so this asks about the surface the
+/// runtime actually answers through rather than about a plane beside it.
+fn fixture_reached(stage: &Stage) -> Vec<Finding> {
+    let Some(face) = room::handshake_face(&stage.placed) else {
+        return Vec::new();
+    };
+    let scene: Vec<Drawn> = scene(stage)
+        .into_iter()
+        .filter(|drawn| !drawn.what.starts_with("handshake"))
+        .collect();
+    match worked(&scene, &stances(stage), face.center) {
+        Ok(()) => Vec::new(),
+        Err(blame) => vec![Finding {
+            room: stage.name.clone(),
+            rule: FIXTURE_REACHED,
+            offender: blame,
+            detail: "stands between the room's handshake and every stance a body may take, \
+                     so the one fixture the room is for cannot be worked"
+                .to_owned(),
+        }],
+    }
+}
+
+/// What one room of a staged ship files its findings under: the stage's
+/// own name for the room it stages, and the ship's own two names for the
+/// two rooms every ship carries. So one cabin seen from fifteen ships is
+/// one place, and its findings collapse.
+fn room_name(stage: &Stage, placed: &Placed) -> String {
+    if placed.id == stage.placed.id {
+        return stage.name.clone();
+    }
+    match placed.kind {
+        RoomKind::Burner => "burner".to_owned(),
+        _ => "cabin".to_owned(),
+    }
+}
+
+/// **Every surface of a room's own that a hand actually works**, with the
+/// way the room is from it: the counter's brass, and the amber latch on
+/// every seam that can be parted.
+///
+/// These are the two things in a room that are neither fabric nor
+/// furniture nor cargo: they answer a press, and a press is the only
+/// thing in this game that is not a carry. A room's net does not contain
+/// them — `RoomKind::surface_of` punches a hole where the handshake
+/// stands and a latch hangs on bare wall beside a jamb — so [`berths`]
+/// has never produced one and no rule about berths has ever been about
+/// one.
+///
+/// Which way "into the room" is comes off the room's own middle rather
+/// than off a quad's winding, because the two are built by different
+/// hands: a handshake's face is spun by `Station::face` and a latch's by
+/// the seam's own axes.
+fn worked_faces(placed: &Placed) -> Vec<(String, Box3, Vec3)> {
+    let middle = (placed.lo + placed.hi) * 0.5;
+    let mut out = Vec::new();
+    let mut add = |what: String, face: &SimSurface| {
+        let half = face.half_u.abs() + face.half_v.abs();
+        let n = face.normal();
+        let inward = if n.dot(middle - face.center) > 0.0 {
+            n
+        } else {
+            -n
+        };
+        out.push((
+            what,
+            Box3::spanning(face.center - half, face.center + half),
+            inward,
+        ));
+    };
+    if let Some(face) = room::handshake_face(placed) {
+        add("handshake".to_owned(), &face);
+    }
+    for part in room::seam_parts(placed) {
+        if let room::Dress::Grab(_, face) = part.dress {
+            add(part.what.clone(), &face);
+        }
+    }
+    out
+}
+
+/// **How much of a worked face a body stands across**, seen from the room:
+/// zero where it is beside it or behind it, one where it covers it whole.
+///
+/// [`fixture_seen`]'s one reading, and [`berth_seen`]'s turned round: the
+/// face, the air out in front of it as far as a body's own stand-off
+/// ([`SIGHT`]), and the fraction of the face the body eats of it. It is
+/// factored out for the reason [`off_plan`] and [`short_of`] are: a rule
+/// whose reading is buried in its own loop cannot be handed a face that
+/// has moved behind something, and a rule nobody can catch out is a green
+/// tick that means nothing.
+fn across(face: Box3, inward: Vec3, body: Box3) -> f32 {
+    let span = body.meet(face.reaching(inward, 0.0, SIGHT)).span();
+    if span.min_element() <= CLIP_SLACK {
+        return 0.0;
+    }
+    let flat = Vec3::ONE - inward.abs();
+    let cover = (span * flat + inward.abs()) / (face.span() * flat + inward.abs());
+    cover.x * cover.y * cover.z
+}
+
+/// **Nothing a room hangs, and nothing a room stocks, stands between its
+/// own worked hardware and the room.** [`FIXTURE_SEEN`].
+///
+/// [`berth_seen`] read one way for as long as it existed: it asks whether
+/// a station's furniture stands between a wall BERTH and the room, and
+/// docs/GAUNTLET.md has carried the other direction as a named structural
+/// blind spot ever since the owner reported a latch spawning behind the
+/// solar system map. This is that direction, and the two clauses it comes
+/// out as are the interesting half.
+///
+/// - **What the room hangs.** A station's fitting or a doorway's hardware
+///   standing across a control it did not draw. This is [`berth_seen`]
+///   with the roles swapped and it needs no argument: a beacon over a
+///   counter is a beacon over a counter.
+/// - **What the room stocks.** A berth of a class the room's own arbiter
+///   fills — `Tile::Stock`, the one class a room puts its own goods on —
+///   spending its air across a control. The doorstep law's sibling one
+///   layer out: a room does not lay its goods where a body has to work.
+///
+/// **And a third clause was written, measured, and taken out again**,
+/// which is the finding worth keeping. Asked of EVERY berth rather than
+/// only of the ones a room fills, it reports the cabin's own seam latch
+/// crossed by three: (5, 1) on the aft wall beside the jamb, and (5, 3)
+/// and (5, 4) on the deck in front of it, the worst standing across 100%
+/// of the amber. Nothing is wrong with the latch. Every wall cell beside
+/// an aperture is a berth and every deck cell in front of one is a berth,
+/// so a control bolted beside a doorway shares air with a berth by
+/// construction — the rule would have forbidden the latch rather than
+/// moved it, and there is nowhere to move it to. It is the same
+/// narrowing [`berth_clear`] spends on a jamb standing in a berth and
+/// [`berth_reached`] spends on furniture, made for the same reason and
+/// with the numbers written down instead of assumed. What is left of the
+/// class — a player standing their own crate in front of their own latch
+/// — is a crate they can pick up again, and docs/GAUNTLET.md carries it
+/// as a bounded blind spot rather than as a rule nobody could obey.
+fn fixture_seen(stage: &Stage) -> Vec<Finding> {
+    let mut out = Vec::new();
+    for placed in &stage.all {
+        out.extend(fixture_seen_in(stage, placed));
+    }
+    out
+}
+
+/// One room of the staged ship, put to the worked-face question.
+///
+/// **It is asked of every room of the staged ship and not only of the
+/// staged room**, which is the same argument [`scene`] makes about a
+/// doorway and it has to be made again here. A latch is drawn by the room
+/// with the lower id and it hangs on THAT room's side of the wall, so the
+/// only latches in the game hang in a cabin — and the roster's own cabin
+/// is a yard-fresh one with nothing alongside it, which has no seam to
+/// part and therefore no latch at all. Asked of the staged room alone,
+/// this family would have swept fifteen stations and never once looked at
+/// the control the owner reported. The finding is filed under the room
+/// the face stands in, so the same cabin seen from fifteen ships answers
+/// once.
+fn fixture_seen_in(stage: &Stage, placed: &Placed) -> Vec<Finding> {
+    let faces = worked_faces(placed);
+    if faces.is_empty() {
+        return Vec::new();
+    }
+    let stocked: Vec<Berth> = berths(&stage.rooms, placed)
+        .into_iter()
+        .filter(|berth| berth.class == Tile::Stock)
+        .collect();
+    let mut out = Vec::new();
+    for (what, face, inward) in faces {
+        // Nothing holds itself up and nothing hides itself: a fixture's
+        // own brasswork and a latch's own plate come off the list.
+        let stem = what.split_whitespace().next().unwrap_or(&what).to_owned();
+        for hung in scene(stage)
+            .into_iter()
+            .filter(|drawn| drawn.character && !drawn.what.starts_with(&stem))
+        {
+            let cover = across(face, inward, hung.body);
+            if cover <= OCCLUDE_BITE {
+                continue;
+            }
+            out.push(Finding {
+                room: room_name(stage, placed),
+                rule: FIXTURE_SEEN,
+                offender: hung.what.clone(),
+                detail: format!(
+                    "stands across {:.0}% of {what}, which is a thing a hand has to \
+                     find and work",
+                    cover * 100.0
+                ),
+            });
+        }
+        let mut hidden: Vec<((u8, u8), Station, f32)> = stocked
+            .iter()
+            .map(|berth| (berth.cell, berth.station, across(face, inward, berth.air)))
+            .filter(|(_, _, cover)| *cover > OCCLUDE_BITE)
+            .collect();
+        if hidden.is_empty() {
+            continue;
+        }
+        hidden.sort_by(|a, b| b.2.total_cmp(&a.2));
+        let cells: Vec<(u8, u8)> = hidden.iter().map(|(cell, _, _)| *cell).collect();
+        let (worst, station, cover) = hidden[0];
+        let (x, y) = worst;
+        out.push(Finding {
+            room: room_name(stage, placed),
+            rule: FIXTURE_SEEN,
+            offender: what,
+            detail: format!(
+                "is read through the air {} of the room's own stock berth(s) spend: {}; \
+                 worst is ({x}, {y}) on {station:?}, standing across {:.0}% of it",
+                hidden.len(),
+                some_cells(&cells),
+                cover * 100.0
+            ),
+        });
     }
     out
 }
@@ -4047,6 +4563,266 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// **The turn family is asked about every berth, and it answers when
+    /// a body is spun.**
+    ///
+    /// Three things, and the last is the one that matters. Every chart
+    /// class is measured, so the sweep cannot go quietly empty. Every
+    /// berth in the game stands up and shows the room its face — which is
+    /// the claim itself, and which was false on every deckhead berth
+    /// against a seam until the pendant took the backing rule. And the
+    /// two readings are put to a body that has been turned: rolled a
+    /// quarter turn about the face it shows, a rig has to stop reading as
+    /// standing up; turned to look at the wall it is against, a rig on the
+    /// edge of its own chart has to stop reading as facing the room.
+    ///
+    /// The catch-out is deliberately built out of a direction rather than
+    /// out of [`crate::pieces::floor_facing`]'s branches. A sweep that
+    /// recomputed the backing rule and compared it with itself would pass
+    /// two thousand berths and mean nothing — which is the mistake this
+    /// file has already made once, and docs/GAUNTLET.md keeps the receipt.
+    #[test]
+    fn the_turn_family_is_asked_about_every_berth_and_answers_when_a_body_spins() {
+        let seen = plans(&roster());
+        let mut classes: BTreeMap<String, u32> = BTreeMap::new();
+        let mut flat = 0_u32;
+        let mut edges = 0_u32;
+        for berth in &seen {
+            *classes.entry(format!("{:?}", berth.surf)).or_default() += 1;
+            let (kind, surf) = (berth.kind, berth.surf);
+            let up = berth.rot * Vec3::Y;
+            assert!(
+                up.dot(Vec3::Y) > 0.999,
+                "{kind:?} on a {surf:?} berth rises {up:?}, not the room's up"
+            );
+            let spun =
+                Quat::from_axis_angle(berth.rot * Vec3::Z, std::f32::consts::FRAC_PI_2) * berth.rot;
+            assert!(
+                (spun * Vec3::Y).dot(Vec3::Y) <= 0.999,
+                "{kind:?} on a {surf:?} berth rolled a quarter turn and nothing noticed"
+            );
+            let (u, v) = (
+                berth.chart.half_u.normalize(),
+                berth.chart.half_v.normalize(),
+            );
+            if !matches!(berth.station, Station::BayFloor | Station::BayCeiling) {
+                let inward = berth.station.inward(&berth.chart);
+                assert!(
+                    (berth.rot * Vec3::Z).dot(inward) > 0.999,
+                    "{kind:?} on a {surf:?} berth shows the room {:?}, not the wall's own \
+                     way in",
+                    berth.rot * Vec3::Z
+                );
+                continue;
+            }
+            flat += 1;
+            let at = looked_at(&berth.chart, berth.rect, berth.rot);
+            assert!(
+                berth.chart.rect.contains(at),
+                "{kind:?} on a {surf:?} berth looks at ({}, {}), off its own chart",
+                at.x,
+                at.y
+            );
+            // A berth on the rim of its own chart, turned to look over
+            // that rim, has to read as looking off it.
+            let rim = berth.chart.rect;
+            for (touches, out) in [
+                (berth.rect.x <= rim.x + 1e-3, -u),
+                (berth.rect.x + berth.rect.w >= rim.x + rim.w - 1e-3, u),
+                (berth.rect.y <= rim.y + 1e-3, -v),
+                (berth.rect.y + berth.rect.h >= rim.y + rim.h - 1e-3, v),
+            ] {
+                if !touches {
+                    continue;
+                }
+                edges += 1;
+                let outward = Quat::from_rotation_arc(Vec3::Z, out);
+                let over = looked_at(&berth.chart, berth.rect, outward);
+                assert!(
+                    !rim.contains(over),
+                    "{kind:?} on a {surf:?} berth turned to face the wall it stands \
+                     against still reads as looking into the room"
+                );
+            }
+        }
+        assert_eq!(
+            classes.len(),
+            Surf::ALL.len(),
+            "a chart class went unmeasured: {classes:?}"
+        );
+        assert!(flat > 100, "the flat charts went unswept: {flat}");
+        assert!(
+            edges > 100,
+            "no berth on the rim of a chart was spun: {edges}"
+        );
+    }
+
+    /// **The approach family is asked about every door the game
+    /// declares.**
+    ///
+    /// The law itself lives in the sim, where the tile classes are, and
+    /// so does its catch-out:
+    /// `sim::room::tests::a_rooms_own_goods_do_not_stand_between_its_door_and_its_deck`
+    /// walls a room off course by course and requires the walk to say so.
+    /// The cabin may not restate a sim rule, so what is left here is the
+    /// half the cabin owns — that the report actually reaches every room
+    /// kind and every door, and that a kind with no door is asked
+    /// nothing rather than asked wrongly.
+    #[test]
+    fn the_approach_family_is_asked_about_every_door_the_game_has() {
+        let mut doors = 0_u32;
+        let mut kinds = 0_u32;
+        for kind in space_trucking::sim::room::ROOM_KINDS {
+            let mut mine = 0_u32;
+            for (slot, port) in kind.declared() {
+                match port {
+                    space_trucking::sim::room::Port::Door { .. } => {
+                        assert!(
+                            kind.marooned(slot).is_some(),
+                            "{kind:?} port {slot} is a door the family never asks about"
+                        );
+                        doors += 1;
+                        mine += 1;
+                    }
+                    _ => assert_eq!(
+                        kind.marooned(slot),
+                        None,
+                        "{kind:?} port {slot} punches the deck; it has no step to start from"
+                    ),
+                }
+            }
+            kinds += u32::from(mine > 0);
+        }
+        assert_eq!(doors, 9, "the game's declared doors: {doors}");
+        assert_eq!(
+            kinds,
+            space_trucking::sim::room::ROOM_KINDS.len() as u32,
+            "a room kind has no door at all: {kinds}"
+        );
+        assert!(deck_reached().is_empty(), "{:?}", deck_reached());
+    }
+
+    /// **The fixture family is asked about every counter in the game, and
+    /// it answers when one is walled in.**
+    ///
+    /// Every room that shakes hands is asked — which is every calling
+    /// room, and none of the two the ship carries — and every one of them
+    /// can be worked from somewhere a body may stand. Then a slab is hung
+    /// across one counter's face and the reading has to turn: a rule that
+    /// cannot be shown to refuse is a green tick that means nothing.
+    #[test]
+    fn the_fixture_family_is_asked_about_every_counter_and_answers_when_one_is_walled_in() {
+        let mut asked = 0_u32;
+        for stage in roster() {
+            let Some(face) = room::handshake_face(&stage.placed) else {
+                assert!(
+                    stage.placed.kind.riding(),
+                    "{}: a calling room with no counter",
+                    stage.name
+                );
+                continue;
+            };
+            asked += 1;
+            let found = fixture_reached(&stage);
+            assert!(found.is_empty(), "{}: {found:?}", stage.name);
+            // A body bolted over the brass: the cell's own face, standing
+            // out of the wall far enough to swallow the pick face. That
+            // is the shape the defect actually takes — the Guild's
+            // seizure beacon hung 0.58 m off its aft wall, and a beacon
+            // over a counter is the same fitting one cell along.
+            //
+            // Two weaker partitions were tried first and both were
+            // answered, honestly, by the rule: a plate the size of the
+            // cell a hand's breadth out is reached AROUND (a body inside
+            // two metres of the brass can stand well to one side and
+            // still lean in), and a partition across the whole room a
+            // hand's breadth out is stood BEHIND (the walk envelope
+            // reaches to within five centimetres of a wall). Neither is
+            // a hole in the family. "Workable from anywhere a body may
+            // stand" is what it asks, and standing beside a plate is
+            // somewhere.
+            //
+            // Which way "out of the wall" is comes off the room's own
+            // middle rather than off the quad's winding, because a guard
+            // that got the sign wrong would hang its body inside the wall
+            // and prove nothing.
+            let n = face.normal();
+            let into = (stage.placed.lo + stage.placed.hi) * 0.5 - face.center;
+            let normal = if n.dot(into) > 0.0 { n } else { -n };
+            let half = face.half_u.abs() + face.half_v.abs() + normal.abs() * 0.2;
+            let mut walled: Vec<Drawn> = scene(&stage)
+                .into_iter()
+                .filter(|drawn| !drawn.what.starts_with("handshake"))
+                .collect();
+            walled.push(Drawn {
+                what: "a beacon bolted over the counter".to_owned(),
+                body: Box3::spanning(face.center - half, face.center + half),
+                faces: Faces::ALL,
+                character: true,
+                name: None,
+                seat: None,
+            });
+            assert!(
+                worked(&walled, &stances(&stage), face.center).is_err(),
+                "{}: a beacon bolted over its counter and the family said nothing",
+                stage.name
+            );
+        }
+        assert_eq!(asked, 15, "every calling room shakes hands: {asked}");
+    }
+
+    /// **The worked-face family is asked about every control in the game,
+    /// and it answers when a body stands across one.**
+    ///
+    /// The counter of every calling room and the amber latch of every seam
+    /// that can be parted are enumerated — a family whose list of subjects
+    /// came out empty would be the most expensive kind of green tick — and
+    /// nothing the room hangs or stocks stands across one of them. Then the
+    /// reading is handed a body a hand's breadth in front of each face and
+    /// it has to say so, and handed the same body a hand's breadth BEHIND
+    /// it and it has to stay quiet: an occlusion rule that cannot tell
+    /// which side of a plate it is standing on is a rule that reports the
+    /// wall.
+    #[test]
+    fn the_worked_face_family_is_asked_about_every_control_and_answers_when_one_is_stood_across() {
+        let mut counters = 0_u32;
+        let mut latches = 0_u32;
+        for stage in roster() {
+            for placed in &stage.all {
+                let faces = worked_faces(placed);
+                for (what, face, inward) in &faces {
+                    if what == "handshake" {
+                        counters += 1;
+                    } else {
+                        latches += 1;
+                    }
+                    let half = face.span() * 0.5 + inward.abs() * 0.02;
+                    let mid = (face.lo + face.hi) * 0.5;
+                    let front = mid + *inward * 0.1;
+                    assert!(
+                        across(*face, *inward, Box3::spanning(front - half, front + half))
+                            > OCCLUDE_BITE,
+                        "{}: a plate over {what} and the family said nothing",
+                        room_name(&stage, placed)
+                    );
+                    let behind = mid - *inward * 0.1;
+                    assert!(
+                        across(*face, *inward, Box3::spanning(behind - half, behind + half)) <= 0.0,
+                        "{}: the wall behind {what} reads as standing across it",
+                        room_name(&stage, placed)
+                    );
+                }
+            }
+            let found = fixture_seen(&stage);
+            assert!(found.is_empty(), "{}: {found:?}", stage.name);
+        }
+        assert_eq!(counters, 15, "every calling room shakes hands: {counters}");
+        assert!(
+            latches >= 15,
+            "the game's seam latches went unswept: {latches}"
+        );
     }
 
     /// **Every cargo kind is swept, and swept with a body.** The pass

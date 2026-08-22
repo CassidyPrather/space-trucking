@@ -503,6 +503,17 @@ of. Three guards, all sim-side and monkey-proven:
   sweep's selection-mismatch lesson). Passive cargo (window, gauges,
   crates, furniture) has no function to guard, so it needs no handle:
   its whole body grabs.
+- **The nearest rule** (which affordance a press belongs to at all): a
+  press reaches the nearest thing the player is actually looking at,
+  and nothing standing behind something else answers for it. The
+  crosshair casts ONE ray, and every affordance a click could resolve
+  to is settled against that one cast and the depth it reached. A
+  doorway's amber detach latch used to cast a second ray of its own
+  and take the click from in front of it, so a latch behind a crate
+  ate every press aimed at the crate — the crate could then be neither
+  lifted nor focused, and the first such press sent a room away
+  instead. Two rays are two opinions, and the picture only ever
+  offered one.
 
 ### The standing rule: cargo that stands maps its own body
 

@@ -1117,10 +1117,18 @@ impl Plugin for RoomsPlugin {
             .init_resource::<Built>()
             .add_systems(
                 Update,
-                (survey, rebuild, occupy, aim_latch)
+                (survey, rebuild, occupy)
                     .chain()
                     .in_set(Phase::Input)
                     .before(crate::rig::steer),
+            )
+            // The latch is arbitrated against the pointer, so it runs
+            // where the pointer is: after the cast, not before the pose.
+            .add_systems(
+                Update,
+                aim_latch
+                    .in_set(Phase::Input)
+                    .after(crate::surface::track_pointer),
             )
             .add_systems(Update, seam_fx.in_set(Phase::View));
     }
@@ -2889,11 +2897,42 @@ pub fn occupy(
     }
 }
 
-/// Which detach latch the crosshair rests on. Roam only, within reach:
-/// the latch is hardware you walk up to, exactly like a berth.
+/// **Which detach latch the crosshair rests on — and only when the
+/// latch is the nearest thing the player is looking at.** Roam only,
+/// within reach: the latch is hardware you walk up to, exactly like a
+/// berth.
+///
+/// The latch used to cast a ray of its own and take the nearest latch
+/// in front of it, with nothing else in the comparison, and `advance`
+/// then spent the whole frame's pointer on the answer. So a latch
+/// standing behind a crate, a handshake's brass, or a piece's own body
+/// ate every press aimed at the thing in front of it: that piece could
+/// be neither lifted nor focused, and the first such click sent a room
+/// away instead. The arbitration is here rather than in `advance`
+/// because the amber tell reads this answer too (`seam_fx`), and a lamp
+/// that brightens for a latch the press can no longer reach is the
+/// promise the press just broke.
+///
+/// It settles it by *not casting a second ray*. The pointer already
+/// cast one and already knows how far it got before something stopped
+/// it ([`crate::surface::VirtualPointer::depth`]) — including a surface
+/// that blocks the crosshair without answering it — so the latch is
+/// tested against that same line and has to beat that same depth. Two
+/// rays could disagree; one cannot.
+///
+/// **Ordering, which is the other half of it.** This runs after
+/// `surface::track_pointer`, at the tail of `Phase::Input`, so it reads
+/// the pointer `advance` is about to spend it against and the
+/// `roaming()` `rig::steer` just settled. It used to run at the head of
+/// the phase, ahead of `rig::steer` and `rig::pose`, and so answered
+/// from last frame's camera and last frame's mode: a press that turned
+/// onto a crate and clicked in one frame was still eaten by the latch
+/// the crosshair had left behind. Whichever frame the pointer's own ray
+/// belongs to is now the frame this belongs to as well, which is the
+/// whole of the claim — the two can no longer disagree.
 pub fn aim_latch(
     rig: Res<crate::rig::CameraRig>,
-    camera: Single<&Transform, With<crate::rig::CabinCamera>>,
+    pointer: Res<crate::surface::VirtualPointer>,
     latches: Query<&Latch>,
     mut aimed: ResMut<AimedLatch>,
 ) {
@@ -2901,11 +2940,10 @@ pub fn aim_latch(
     if !rig.roaming() {
         return;
     }
-    let Ok(dir) = Dir3::new(camera.forward().into()) else {
+    let Some(ray) = pointer.ray else {
         return;
     };
-    let ray = Ray3d::new(camera.translation, dir);
-    let mut nearest = REACH;
+    let mut nearest = pointer.depth.min(REACH);
     for latch in &latches {
         if let Some((t, _, _)) = latch.face.project(ray)
             && t < nearest

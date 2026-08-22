@@ -919,7 +919,10 @@ fn advance(
     // The detach gesture: a roam click on a door's amber latch asks the
     // input schedule to part that seam, and consumes the click so it
     // never doubles as a grab. Empty-handed only — a hand full of cargo
-    // is exactly the hand the gangway law refuses.
+    // is exactly the hand the gangway law refuses. The latch has already
+    // lost to anything standing nearer along the same ray
+    // (`room::aim_latch`), so the click spent here is a click that was
+    // aimed at the latch and at nothing else.
     let parting = (!holding && camera.roaming() && buttons.just_pressed(MouseButton::Left))
         .then_some(latch.0)
         .flatten();
@@ -1320,6 +1323,17 @@ mod session {
         *pointer = crate::surface::pick(ray, roam_only, reach, aimables());
     }
 
+    /// Two places to stand and one latch: the spot where a piece
+    /// eclipses it, the piece doing the eclipsing, and a spot where the
+    /// same latch is clear.
+    #[derive(Clone, Copy)]
+    struct Eclipse {
+        clear: Vec3,
+        eye: Vec3,
+        latch: Latch,
+        piece: u32,
+    }
+
     /// A cabin a test can play.
     struct Cabin {
         app: App,
@@ -1356,13 +1370,13 @@ mod session {
                         stage,
                         keep_aboard,
                         crate::room::occupy,
-                        crate::room::aim_latch,
                         ride,
                         menu::keys,
                         scrim,
                         crate::rig::steer,
                         crate::rig::pose,
                         aim,
+                        crate::room::aim_latch,
                         gesture::grip,
                     )
                         .chain()
@@ -1468,6 +1482,105 @@ mod session {
                 .iter(self.app.world())
                 .map(|latch| (latch.room, latch.face.center))
                 .collect()
+        }
+
+        /// Every mapped quad standing this frame, as the pick sees them
+        /// — the same list `aim` hands [`crate::surface::pick`].
+        fn aimables(&mut self) -> Vec<Aimable> {
+            self.app
+                .world_mut()
+                .query::<(&Station, &SimSurface, Option<&Riding>, Option<&InRoom>)>()
+                .iter(self.app.world())
+                .map(|(station, surface, riding, in_room)| Aimable {
+                    station: *station,
+                    surface: *surface,
+                    riding: riding.is_some(),
+                    in_room: in_room.copied(),
+                })
+                .collect()
+        }
+
+        /// **Somewhere a body can stand where a piece eclipses a latch**,
+        /// and somewhere it can stand where the same latch is clear.
+        /// Both are eye positions in the cabin, inside the walk envelope,
+        /// with the latch within [`REACH`] straight ahead; at the
+        /// eclipsed one the crosshair rests on a piece's own body nearer
+        /// along that very line, at the clear one nothing is in the way.
+        ///
+        /// Searched over the board rather than written down as
+        /// coordinates: the fixture is re-dressed whenever the cargo
+        /// tables change, and spots spelled out here would quietly stop
+        /// being the spots.
+        fn eclipsed_latch(&mut self) -> Option<Eclipse> {
+            let aims = self.aimables();
+            let latches: Vec<Latch> = self
+                .app
+                .world_mut()
+                .query::<&Latch>()
+                .iter(self.app.world())
+                .copied()
+                .collect();
+            let spots: Vec<Vec3> = {
+                let world = self.app.world();
+                let envelope = world.resource::<Envelope>();
+                let plan = world.resource::<Plan>();
+                let placed = plan.get(CABIN)?;
+                let (lo, hi) = (placed.lo, placed.hi);
+                let step =
+                    |a: f32, b: f32, n: u8| (b - a - 0.7).mul_add(f32::from(n) / 32.0, a + 0.35);
+                (0..=32u8)
+                    .flat_map(|i| (0..=32u8).map(move |k| (i, k)))
+                    .map(|(i, k)| Vec3::new(step(lo.x, hi.x, i), EYE_HEIGHT, step(lo.z, hi.z, k)))
+                    .filter(|eye| envelope.holds(*eye) && plan.room_at(*eye) == Some(CABIN))
+                    .collect()
+            };
+            let sim = self.sim();
+            let mut eclipsed: Option<(Vec3, Latch, u32)> = None;
+            let mut clear: Option<Vec3> = None;
+            for eye in spots {
+                for latch in &latches {
+                    let d = latch.face.center - eye;
+                    // Inside the neck's own pitch, so the aim below is an
+                    // aim the body can actually take.
+                    if d.y.atan2(d.xz().length()).abs() > crate::rig::PITCH_LIMIT - 0.3 {
+                        continue;
+                    }
+                    let Ok(dir) = Dir3::new(d) else { continue };
+                    let ray = Ray3d::new(eye, dir);
+                    // The latch is in reach — so it is a latch this press
+                    // could have gone to.
+                    let Some((behind, _, _)) = latch.face.project(ray) else {
+                        continue;
+                    };
+                    if behind > REACH {
+                        continue;
+                    }
+                    let pointer = crate::surface::pick(ray, true, REACH, aims.iter().copied());
+                    let nearer = pointer.world.is_some_and(|at| at.distance(eye) < behind);
+                    if !nearer {
+                        clear.get_or_insert(eye);
+                        continue;
+                    }
+                    // The crosshair is resting on a piece's own body in
+                    // front of the latch.
+                    if eclipsed.is_none()
+                        && pointer.station == Some(Station::Standing)
+                        && let Some(piece) =
+                            layout::piece_at(sim.rooms(), sim.pieces(), pointer.sim)
+                    {
+                        eclipsed = Some((eye, *latch, piece.id));
+                    }
+                }
+                if let (Some((eye, latch, piece)), Some(clear)) = (eclipsed, clear) {
+                    return Some(Eclipse {
+                        clear,
+                        eye,
+                        latch,
+                        piece,
+                    });
+                }
+            }
+            None
         }
 
         /// Whichever surface answers as `want` this frame.
@@ -1753,6 +1866,68 @@ mod session {
         assert!(
             parted > 0,
             "the monkey never parted a seam, so it never tested one"
+        );
+    }
+
+    /// **A press reaches the nearest thing the player is actually looking
+    /// at.**
+    ///
+    /// A doorway's amber latch is hardware on a wall, and the room in
+    /// front of it is full of cargo. Stand so that a crate crosses the
+    /// line between the eye and the latch and the crosshair is on the
+    /// crate: the press belongs to the crate, and the seam is not the
+    /// player's answer to a click they aimed at something else.
+    ///
+    /// The latch used to answer anyway. It cast its own ray, took the
+    /// nearest latch within [`REACH`], and `advance` spent the whole
+    /// frame's pointer on it — so a latch behind a piece ate every click
+    /// on that piece, which can then be neither lifted nor focused, and
+    /// the click looks like it did nothing at all.
+    #[test]
+    fn a_piece_in_front_of_a_latch_takes_the_press() {
+        let mut cabin = Cabin::at_venus();
+        let spot = cabin
+            .eclipsed_latch()
+            .expect("a latch with cargo standing in front of it");
+        let Eclipse {
+            clear,
+            eye,
+            latch,
+            piece,
+        } = spot;
+        cabin.stand(eye, latch.face.center);
+        cabin.steps(8);
+        cabin.look(latch.face.center);
+        cabin.steps(2);
+        let said = cabin.click();
+        assert!(
+            !said.iter().any(|cue| matches!(cue, Cue::Parted)),
+            "a press aimed at piece {piece} parted room {}: {said:?}",
+            latch.room
+        );
+        assert_eq!(
+            cabin.sim().held(0).map(|held| held.piece),
+            Some(piece),
+            "a press on piece {piece} from {eye:?} lifted nothing"
+        );
+
+        // **And the answer is this frame's.** Stand where the latch is
+        // clear — where the press really does part the seam — then step
+        // across to the eclipsed spot and press on the frame the body
+        // arrives, which is what a flick of the mouse and a click is. A
+        // latch aimed from where the body USED to stand is a latch that
+        // eats a press aimed at something else.
+        let mut cabin = Cabin::at_venus();
+        cabin.stand(clear, latch.face.center);
+        cabin.steps(8);
+        cabin.look(latch.face.center);
+        cabin.steps(2);
+        cabin.stand(eye, latch.face.center);
+        let said = cabin.click();
+        assert!(
+            !said.iter().any(|cue| matches!(cue, Cue::Parted)),
+            "a press on the frame the eye reached piece {piece} parted room {}: {said:?}",
+            latch.room
         );
     }
 

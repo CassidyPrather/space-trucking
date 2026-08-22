@@ -286,6 +286,19 @@ pub struct VirtualPointer {
     /// re-found "the" surface by station would answer about a different
     /// piece than the ray hit.
     pub surface: Option<SimSurface>,
+    /// The ray this frame's pointer was cast along, so a consumer that
+    /// has its own hardware to test can test it against the same line
+    /// the crosshair used rather than casting a second one from a
+    /// camera transform of its own (`crate::room::aim_latch`). `None`
+    /// while the pointer is parked and nothing was cast at all.
+    pub ray: Option<Ray3d>,
+    /// **How far along `ray` the pointer got before something stopped
+    /// it**, [`f32::INFINITY`] when nothing did. Not the same as the
+    /// distance to `world`: a surface may block the crosshair without
+    /// answering it (an opaque station in roam), and what a rival
+    /// affordance has to beat is whatever is actually in the way, not
+    /// whatever happened to be worth reporting.
+    pub depth: f32,
 }
 
 impl Default for VirtualPointer {
@@ -295,6 +308,8 @@ impl Default for VirtualPointer {
             world: None,
             station: None,
             surface: None,
+            ray: None,
+            depth: f32::INFINITY,
         }
     }
 }
@@ -434,10 +449,18 @@ pub fn pick(
                 world: Some(world),
                 station: Some(station),
                 surface: Some(surface),
+                ..VirtualPointer::default()
             };
         }
     }
-    pointer
+    // The line and the depth belong to the cast, not to whatever it
+    // happened to land on: they are stamped on last so a hit that
+    // blocked without answering still says how far the ray got.
+    VirtualPointer {
+        ray: Some(ray),
+        depth: nearest,
+        ..pointer
+    }
 }
 
 /// Whether `sim` names a cell of `chart`'s own room that a piece could

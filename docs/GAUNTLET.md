@@ -1142,6 +1142,21 @@ they are not closed, only bounded:
   pressed against that wall, and only something that fills the air in
   front of it can fail. That is measured rather than assumed — it is what
   answered the second of `fixture-reached`'s two rejected catch-outs.
+- **Every ship the sweep stages is one storey.** The roster mates a
+  caller at the first door the spawn walk takes, so no ladder and no
+  hatch is ever mated in a swept scene: a hatch's coaming, hinge and pull
+  are only ever measured in the shut state, and a two-cabin amalgamation
+  — the shape the port law exists for — is never swept at all. This is
+  inherited rather than chosen. `room::walk_boxes` pins every envelope
+  box to `EYE_HEIGHT` in WORLD y and gives a non-door seam no connector,
+  so the body itself is single-storey today; the two reachability
+  families sample that envelope and can only stand on storey 0. Measured:
+  sweeping a cabin mated above another through the ladder reports six
+  findings, all of them the upper room being unreachable and its walk
+  standing outside the envelope, and none of them about its geometry.
+  When the vertical seam becomes something a player can walk, the
+  envelope is what has to learn about storeys, and this comes right with
+  it.
 - **A covering's turn is asked on the cabin's charts only.**
   `berth-turned` skips coverings, because `pieces::laid_on` lays one flat
   on its chart and its turn is a derivation rather than a composition;

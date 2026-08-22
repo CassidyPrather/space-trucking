@@ -878,13 +878,16 @@ below is what they differentiate *from*.
    reserved the body-click for function: on a piece of the room's
    `Stock`, that function is *I want that one*. Marks are a hint to the
    offer, never a demand, and they clear on resolution. **A marked good
-   wears four amber ticks set inside its footprint** — the claim
-   frame's own bars, drawn short and drawn in. The playtest pressed a
-   good and read a dead click, because a hint the room is free to
-   ignore had changed nothing anybody could see; and the form is
-   ticks-inside rather than the frame itself because a mark is the
-   weaker claim and because a good may be marked and offered at once,
-   which is exactly the press a shared form would have swallowed.
+   wears a dash across the middle of each edge of its own outline**,
+   inside the ring an offer draws. The playtest pressed a good and read
+   a dead click, because a hint the room is free to ignore had changed
+   nothing anybody could see. The form is dashes rather than the ring
+   itself because a mark is the weaker claim and because a good may be
+   marked and offered at once, which is exactly the press a shared form
+   would have swallowed. Ticks set *inside a footprint* were the first
+   answer and were wrong for a reason worth keeping: inside a footprint
+   is inside the body for anything standing proud of its chart, so a
+   painting hung flat on its wall covered its own mark exactly.
 4. **The room answers with an offer.** Core slice: the existing
    deterministic economy does the arithmetic — the station's `VALUE`
    row, jittered ±1 for this visit, its wants row, the gnaw malus and

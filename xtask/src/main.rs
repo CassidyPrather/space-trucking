@@ -30,6 +30,7 @@ mod sha256;
 mod store;
 mod unitypackage;
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use cache::Cache;
@@ -385,17 +386,31 @@ fn unpack(pack_id: &str) -> Result<(), String> {
 /// does not scale. So this looks inside the archives as well, and looking
 /// inside one costs a read of its table of contents rather than an
 /// unpacked pack.
+///
+/// **What it finds is grouped by the pack holding it, and the packs the
+/// manifest declares are printed first.** A library is a hundred packs
+/// and an ordinary word like `crate` is four hundred files in it, so the
+/// answer has to be cut somewhere. Cutting it in whatever order the packs
+/// were walked hid every match in the pack its owner was working in, and
+/// left that pack reading as though it held no crates at all. The
+/// manifest is this project's own statement of which packs it cares
+/// about, so its packs rank above everything else and are cut last.
+///
+/// **Every directory that matched says how many matches it has**, fitted
+/// or not. "This pack has thirty-eight crates in it" is most of what
+/// somebody browsing a hundred packs is after, and it is the part a cap
+/// throws away first.
 fn find(needle: &str) -> Result<(), String> {
     let manifest = read_manifest()?;
     let store = Store::open()?;
     let cache = Cache::open(&repo());
     let unpacked = cache.root.join("unpacked");
     let roots = vec![store.root.clone(), unpacked.clone()];
-    let (hits, trouble) = store::search(&roots, needle, &cache);
-    for complaint in &trouble {
+    let search = store::search(&roots, needle, &cache);
+    for complaint in &search.trouble {
         eprintln!("art: {complaint}");
     }
-    if hits.is_empty() {
+    if search.hits.is_empty() {
         println!(
             "art: nothing under {} or {} has `{needle}` in its name",
             store.root.display(),
@@ -403,91 +418,274 @@ fn find(needle: &str) -> Result<(), String> {
         );
         return Ok(());
     }
-    // Written out, then sorted and thinned. One file can be found twice
-    // — once inside the pack's archive and once in the copy of it the
-    // cache already holds — and the two are the same manifest line, so
-    // printing both is asking somebody to compare two identical
-    // paragraphs. Sorting the lines rather than the hits also groups them
-    // by pack, which is the order a person reads them in.
-    let mut lines: Vec<String> = hits
-        .iter()
-        .map(|hit| manifest_lines_for(&manifest, &store, &unpacked, hit))
-        .collect();
-    lines.sort();
-    lines.dedup();
-    let shown = lines.len().min(120);
-    for line in lines.iter().take(shown) {
-        println!("{line}");
+    // A set per group, because one file can be found twice — once inside
+    // the pack's archive and once in the copy of it the cache already
+    // holds — and the two are the same manifest line. Sorted, so the same
+    // search reads the same way twice running.
+    let mut grouped: BTreeMap<Where, BTreeSet<String>> = BTreeMap::new();
+    for hit in &search.hits {
+        let (place, line) = placed(&manifest, &store, &unpacked, hit);
+        grouped.entry(place).or_default().insert(line);
     }
-    if lines.len() > shown {
+    print_hits(&manifest, &store, needle, &grouped);
+    if search.unread > 0 {
         println!(
-            "art: {} more not shown; narrow the search",
-            lines.len() - shown
+            "\nart: {} sat beside a Source Files archive and {} not\n     \
+             read. That archive holds the same meshes and costs a table of contents\n     \
+             to read; a .unitypackage is a gzipped tar and costs the whole file.\n     \
+             `cargo xtask art unpack <pack>` rebuilds one into the cache, which this\n     \
+             searches.",
+            many(search.unread, ".unitypackage file", ".unitypackage files"),
+            if search.unread == 1 { "was" } else { "were" }
         );
     }
     Ok(())
 }
 
-/// One hit, written as the manifest lines that would name it.
-///
-/// Which key it prints is the difference between a line that resolves and
-/// a line that does not. A file inside a pack's raw archive is `source`,
-/// because that archive is the Source Files download and the resolver
-/// reads it in place. A file inside a `.unitypackage` is `unity`. A file
-/// in the cache is spelled after the archive it came out of, because the
-/// cache is not what a manifest points at.
-fn manifest_lines_for(manifest: &Manifest, store: &Store, unpacked: &Path, hit: &Hit) -> String {
-    match hit {
-        Hit::Loose(path) => loose_lines(manifest, store, unpacked, path),
-        Hit::Inside { archive, member } => {
-            let key = if is_unitypackage(archive) {
-                "unity"
-            } else {
-                "source"
-            };
-            manifest
-                .packs
-                .values()
-                .find(|pack| archive.starts_with(store.pack_dir(pack)))
-                .map_or_else(
-                    || format!("  {} :: {member}\n", archive.display()),
-                    |pack| format!("  pack = \"{}\"\n  {key} = \"{member}\"\n", pack.id),
-                )
-        }
+/// How many matches a search prints, spent in the order the groups are
+/// printed — so the packs the manifest declares have first claim on it.
+/// A hundred is about two screens: enough to read, and short enough that
+/// the per-directory counts under it are still on the screen.
+const SHOWN: usize = 100;
+
+/// How many matches one directory the manifest does not declare may
+/// show.
+/// Without it, one unrelated pack with four hundred crates in it spends
+/// the whole budget and the other hundred directories print counts alone.
+const PER_UNDECLARED: usize = 4;
+
+/// One group of matches: a pack the manifest declares, or a directory
+/// under the store that it does not.
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+struct Where {
+    /// 0 for a pack `art/manifest.toml` declares and 1 for everything
+    /// else. This is the whole of the ranking, and it is the manifest
+    /// being worth something: a search that buries the two packs this
+    /// project named under a store's worth of packs it did not is a
+    /// search answering somebody else's question.
+    tier: u8,
+    /// Which line declared the pack, so the declared ones read in the
+    /// order the manifest writes them rather than alphabetically.
+    rank: usize,
+    /// What stands above the group. For a pack the manifest declares it
+    /// is the `pack` line to paste; for a directory it does not, the
+    /// directory's own name, which is what a `dir` line would carry.
+    heading: String,
+}
+
+fn declared(pack: &manifest::Pack) -> Where {
+    Where {
+        tier: 0,
+        rank: pack.line,
+        heading: format!("pack = \"{}\"", pack.id),
     }
 }
 
-fn loose_lines(manifest: &Manifest, store: &Store, unpacked: &Path, hit: &Path) -> String {
+const fn elsewhere(heading: String) -> Where {
+    Where {
+        tier: 1,
+        rank: 0,
+        heading,
+    }
+}
+
+/// A word that does not take a plain `s`. [`store::count`] has the ones
+/// that do.
+fn many(count: usize, one: &str, more: &str) -> String {
+    if count == 1 {
+        format!("1 {one}")
+    } else {
+        format!("{count} {more}")
+    }
+}
+
+fn print_hits(
+    manifest: &Manifest,
+    store: &Store,
+    needle: &str,
+    grouped: &BTreeMap<Where, BTreeSet<String>>,
+) {
+    let total: usize = grouped.values().map(BTreeSet::len).sum();
+    let (mine, mut rest): (Vec<_>, Vec<_>) = grouped.iter().partition(|(place, _)| place.tier == 0);
+    // Most matches first among the packs nobody declared, because with
+    // nothing else to go on the biggest pile is the likeliest answer.
+    rest.sort_by(|(one, ones), (two, twos)| {
+        twos.len()
+            .cmp(&ones.len())
+            .then_with(|| one.heading.cmp(&two.heading))
+    });
+    println!(
+        "art: `{needle}` matches {}, in {} under {}",
+        many(total, "file", "files"),
+        many(grouped.len(), "pack directory", "pack directories"),
+        store.root.display()
+    );
+    println!();
+    let mut budget = SHOWN;
+    // Whether the last group left a blank line under itself. A run of
+    // groups with no room for a single match is a tight column of counts,
+    // which is the point of them, and the closing line needs its own gap.
+    let mut spaced = true;
+    if !mine.is_empty() {
+        println!(
+            "In the {} {} declares:\n",
+            many(mine.len(), "pack", "packs"),
+            manifest.path.display()
+        );
+        for (place, lines) in mine {
+            let shown = print_place(place, lines, budget);
+            budget -= shown;
+            spaced = shown > 0;
+        }
+    }
+    if !rest.is_empty() {
+        println!(
+            "In {} it does not:\n",
+            many(rest.len(), "directory", "directories")
+        );
+        for (place, lines) in rest {
+            let shown = print_place(place, lines, budget.min(PER_UNDECLARED));
+            budget -= shown;
+            spaced = shown > 0;
+        }
+    }
+    let hidden = total - (SHOWN - budget);
+    if hidden > 0 {
+        if !spaced {
+            println!();
+        }
+        println!(
+            "art: {hidden} of the {total} are not shown, and every directory above says how\n     \
+             many it has. A pack the manifest declares is printed first and cut last;\n     \
+             `dir` on its `[pack]` table is the directory name printed here."
+        );
+    }
+}
+
+/// One group: what to call it, how many matches it holds, and as many of
+/// them as the budget left. The count is printed whether or not a single
+/// match is, because a directory that goes unmentioned is a directory
+/// that reads as empty.
+fn print_place(place: &Where, lines: &BTreeSet<String>, budget: usize) -> usize {
+    let shown = lines.len().min(budget);
+    println!(
+        "{:<48} {}",
+        place.heading,
+        many(lines.len(), "match", "matches")
+    );
+    for line in lines.iter().take(shown) {
+        println!("  {line}");
+    }
+    if shown > 0 {
+        if shown < lines.len() {
+            println!("  ... and {} more here", lines.len() - shown);
+        }
+        println!();
+    }
+    shown
+}
+
+/// One hit, as the group it belongs to and the manifest line that would
+/// name it.
+///
+/// Which key that line uses is the difference between a line that
+/// resolves and a line that does not. A file inside a pack's raw archive
+/// is `source`, because that archive is the Source Files download and the
+/// resolver reads it in place. A file inside a `.unitypackage` is
+/// `unity`. A file in the cache is spelled after the archive it came out
+/// of, because the cache is not what a manifest points at.
+fn placed(manifest: &Manifest, store: &Store, unpacked: &Path, hit: &Hit) -> (Where, String) {
+    match hit {
+        Hit::Inside { archive, member } => (
+            place_of(manifest, store, unpacked, archive),
+            format!("{} = \"{member}\"", key_of(archive)),
+        ),
+        Hit::Loose(path) => loose(manifest, store, unpacked, path),
+    }
+}
+
+/// Which group something in the store belongs to: the pack the manifest
+/// declares that holds it, or the directory under `$SYNTY_STORE` that
+/// does. Something in the cache is filed under the pack it was rebuilt
+/// for, because the cache is a copy of a pack rather than a pack.
+fn place_of(manifest: &Manifest, store: &Store, unpacked: &Path, path: &Path) -> Where {
+    if let Some(pack) = manifest
+        .packs
+        .values()
+        .find(|pack| path.starts_with(store.pack_dir(pack)))
+    {
+        return declared(pack);
+    }
+    let relative = path
+        .strip_prefix(unpacked)
+        .or_else(|_| path.strip_prefix(&store.root));
+    if let Ok(relative) = relative
+        && relative.components().count() > 1
+        && let Some(first) = relative.components().next()
+    {
+        return by_name(manifest, &first.as_os_str().to_string_lossy());
+    }
+    elsewhere(path.parent().unwrap_or(path).display().to_string())
+}
+
+/// A directory name, as the group it stands for. The cache files a
+/// rebuilt tree under the pack's own id, so a name out of there can be a
+/// pack the manifest declares.
+fn by_name(manifest: &Manifest, name: &str) -> Where {
+    manifest
+        .packs
+        .get(name)
+        .map_or_else(|| elsewhere(name.to_owned()), declared)
+}
+
+fn loose(manifest: &Manifest, store: &Store, unpacked: &Path, path: &Path) -> (Where, String) {
     if let Some((pack, rest)) = manifest.packs.values().find_map(|pack| {
-        hit.strip_prefix(store.pack_dir(pack))
+        path.strip_prefix(store.pack_dir(pack))
             .ok()
             .map(|rest| (pack, rest))
     }) {
-        return format!(
-            "  pack = \"{}\"\n  source = \"{}\"\n",
-            pack.id,
-            slashed(rest)
-        );
+        return (declared(pack), format!("source = \"{}\"", slashed(rest)));
     }
-    if let Ok(rest) = hit.strip_prefix(unpacked) {
+    if let Ok(rest) = path.strip_prefix(unpacked) {
         let mut parts = rest.components();
-        // <pack>/<archive file name>/Assets/... — the first two are the
-        // cache's own filing, and the rest is the path the archive stored.
+        // <pack>/<archive file name>/... — the first two are the cache's
+        // own filing, and the rest is the path the archive stored.
         if let (Some(pack), Some(archive)) = (parts.next(), parts.next()) {
             let inside: PathBuf = parts.collect();
-            let key = if is_unitypackage(Path::new(archive.as_os_str())) {
-                "unity"
-            } else {
-                "source"
-            };
-            return format!(
-                "  pack = \"{}\"\n  {key} = \"{}\"\n",
-                pack.as_os_str().to_string_lossy(),
-                slashed(&inside)
+            return (
+                by_name(manifest, &pack.as_os_str().to_string_lossy()),
+                format!(
+                    "{} = \"{}\"",
+                    key_of(Path::new(archive.as_os_str())),
+                    slashed(&inside)
+                ),
             );
         }
     }
-    format!("  {}\n", hit.display())
+    if let Ok(rest) = path.strip_prefix(&store.root)
+        && rest.components().count() > 1
+    {
+        let mut parts = rest.components();
+        let first = parts.next().expect("more than one component");
+        let inside: PathBuf = parts.collect();
+        return (
+            by_name(manifest, &first.as_os_str().to_string_lossy()),
+            format!("source = \"{}\"", slashed(&inside)),
+        );
+    }
+    (
+        elsewhere(path.parent().unwrap_or(path).display().to_string()),
+        slashed(Path::new(path.file_name().unwrap_or(path.as_os_str()))),
+    )
+}
+
+/// Which manifest key names a file inside this archive.
+fn key_of(archive: &Path) -> &'static str {
+    if is_unitypackage(archive) {
+        "unity"
+    } else {
+        "source"
+    }
 }
 
 fn is_unitypackage(path: &Path) -> bool {

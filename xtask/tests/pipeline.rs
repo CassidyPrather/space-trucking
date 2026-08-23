@@ -920,3 +920,209 @@ fn a_machine_that_cannot_open_a_zip_is_told_which_program_to_install() {
         "the pack is here; it is the reader that is not:\n{said}"
     );
 }
+
+/// The shape a real library has, and the shape that made a search mislead
+/// its owner: one pack the manifest declares, and a store's worth of
+/// packs it does not, holding many times more matches for the same
+/// ordinary word.
+fn crowded_store(dir: &Path) -> PathBuf {
+    let store = dir.join("store");
+    zip_archive(
+        &store.join("POLYGON Sci-Fi Space/POLYGON Sci-Fi Space.zip"),
+        &[
+            (
+                "POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Prop_Crate_01.fbx",
+                "the crate",
+            ),
+            (
+                "POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Prop_Crate_02.fbx",
+                "a second crate",
+            ),
+            (
+                "POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Prop_Crate_03.fbx",
+                "a third crate",
+            ),
+            (
+                "POLYGON Sci-Fi Space/SourceFiles/Textures/atlas.png",
+                "the atlas the whole pack is painted from",
+            ),
+        ],
+    );
+    for pack in 1..=40 {
+        let name = format!("POLYGON Pack {pack:02}");
+        let members: Vec<(String, String)> = (1..=5)
+            .map(|one| {
+                (
+                    format!("{name}/SourceFiles/FBX/SM_Crate_{pack:02}_{one}.fbx"),
+                    format!("a crate nobody asked about, in {name}"),
+                )
+            })
+            .collect();
+        let entries: Vec<(&str, &str)> = members
+            .iter()
+            .map(|(name, contents)| (name.as_str(), contents.as_str()))
+            .collect();
+        zip_archive(&store.join(&name).join(format!("{name}.zip")), &entries);
+    }
+    store
+}
+
+/// **A match in a pack the manifest declares is printed before anything
+/// else, and is never what a cap cuts.**
+///
+/// This is what a hundred-pack library did to the old answer. `crate` is
+/// a word four hundred files in such a library are called, the answer was
+/// cut at a fixed number of lines in whatever order the packs happened to
+/// be walked, and every match in the pack the owner was working in landed
+/// in the hidden tail — so that pack read as though it held no crates at
+/// all. The manifest is this project's own statement of which packs it
+/// cares about, and this is that statement being worth something.
+#[test]
+fn matches_in_a_pack_the_manifest_declares_are_never_the_ones_cut() {
+    let dir = scratch("crowded-search");
+    let store = crowded_store(&dir);
+    let manifest = dir.join("manifest.toml");
+    write(&manifest, ZIPPED_PACK);
+    let (ok, said) = xtask(
+        &["art", "find", "crate"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &dir.join("cache")),
+        ],
+    );
+    assert!(ok, "{said}");
+    for crated in [
+        "SM_Prop_Crate_01.fbx",
+        "SM_Prop_Crate_02.fbx",
+        "SM_Prop_Crate_03.fbx",
+    ] {
+        assert!(
+            said.contains(crated),
+            "{crated} is in the one pack the manifest declares and was cut:\n{said}"
+        );
+    }
+    let declared = said
+        .find("pack = \"scifi\"")
+        .expect("the declared pack is named");
+    let rest = said
+        .find("POLYGON Pack ")
+        .expect("the undeclared packs are named");
+    assert!(
+        declared < rest,
+        "a pack the manifest declares was printed below one it does not:\n{said}"
+    );
+}
+
+/// **A directory whose matches are cut still says how many it has.**
+///
+/// A cap that hides four hundred files is a poor answer however it is
+/// ordered. "This pack has five crates in it" is most of what somebody
+/// browsing a hundred packs wanted from the search, and it is the part
+/// the old cap threw away first: a pack past the line simply was not
+/// mentioned. So every directory that matched prints its count whether or
+/// not any of its matches fit, and the line saying the answer was cut
+/// says how much of it was.
+#[test]
+fn a_pack_whose_matches_are_cut_still_says_how_many_it_has() {
+    let dir = scratch("crowded-counts");
+    let store = crowded_store(&dir);
+    let manifest = dir.join("manifest.toml");
+    write(&manifest, ZIPPED_PACK);
+    let (ok, said) = xtask(
+        &["art", "find", "crate"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &dir.join("cache")),
+        ],
+    );
+    assert!(ok, "{said}");
+    assert!(
+        !said.contains("SM_Crate_40_"),
+        "this guard needs a pack whose matches did not fit:\n{said}"
+    );
+    let counted = said
+        .lines()
+        .find(|line| line.starts_with("POLYGON Pack 40"))
+        .expect("a pack with no room for its matches is still named");
+    assert!(
+        counted.contains("5 matches"),
+        "a pack with no room for its matches does not say how many it has: {counted}"
+    );
+    assert!(
+        said.contains("not shown"),
+        "nothing said the answer had been cut:\n{said}"
+    );
+}
+
+/// **A search reads a pack's `.unitypackage` only when it is the only
+/// archive that pack has.**
+///
+/// That is the order `locate` already looks in, for the reason it already
+/// gives: the Source Files download holds the same meshes and holds them
+/// as files. Here it is also what makes searching a whole library
+/// finish. A zip keeps a table of its members at the end, so listing one
+/// is a seek however large it is; a `.unitypackage` is a gzipped tar and
+/// keeps no table at all, so the names inside it are only reachable by
+/// decompressing the whole file — a second per hundred megabytes, and a
+/// Synty library is a hundred packs of them. What is skipped is counted
+/// and said out loud, because a search that quietly left out part of the
+/// store is a search whose empty answer means two things.
+#[test]
+fn a_search_reads_a_packs_unitypackage_only_when_nothing_else_is_there() {
+    let dir = scratch("search-skips-unity");
+    let store = dir.join("store");
+    let both = store.join("POLYGON Sci-Fi Space");
+    zip_archive(
+        &both.join("POLYGON Sci-Fi Space.zip"),
+        &[(
+            "POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Zipped_Crate.fbx",
+            "the crate in the source files",
+        )],
+    );
+    unitypackage(
+        &both.join("POLYGON Sci-Fi Space.unitypackage"),
+        &[(
+            "1111",
+            "Assets/PolygonSciFi/SM_Unity_Crate.fbx",
+            Some("the same crate, through more machinery"),
+        )],
+    );
+    let alone = store.join("POLYGON Sci-Fi Horror");
+    unitypackage(
+        &alone.join("POLYGON Sci-Fi Horror.unitypackage"),
+        &[(
+            "2222",
+            "Assets/PolygonSciFiHorror/SM_Only_Crate.fbx",
+            Some("a pack that ships no source download"),
+        )],
+    );
+    let manifest = dir.join("manifest.toml");
+    write(&manifest, ZIPPED_PACK);
+    let (ok, said) = xtask(
+        &["art", "find", "crate"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &dir.join("cache")),
+        ],
+    );
+    assert!(ok, "{said}");
+    assert!(
+        said.contains("SM_Zipped_Crate.fbx"),
+        "the archive beside it was not read:\n{said}"
+    );
+    assert!(
+        !said.contains("SM_Unity_Crate.fbx"),
+        "a .unitypackage was decompressed with its own Source Files archive beside it:\n{said}"
+    );
+    assert!(
+        said.contains("SM_Only_Crate.fbx"),
+        "a pack that ships nothing but a .unitypackage went unsearched:\n{said}"
+    );
+    assert!(
+        said.contains("1 .unitypackage file"),
+        "nothing said which part of the store went unread:\n{said}"
+    );
+}

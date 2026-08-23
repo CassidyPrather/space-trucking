@@ -153,15 +153,47 @@ file.
 
 ```bash
 $ cargo xtask art find crate
-  pack = "scifi_space"
+art: `crate` matches 452 files, in 37 pack directories under /home/you/art/synty
+
+In the 2 packs art/manifest.toml declares:
+
+pack = "scifi_space"                             38 matches
   source = "POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Prop_Crate_01.fbx"
+  source = "POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Prop_Crate_02.fbx"
   ...
+
+In 35 directories it does not:
+
+POLYGON - Sci-Fi City                            41 matches
+  source = "POLYGON - Sci-Fi City/SourceFiles/FBX/SM_Crate_Stack.fbx"
+  ... and 37 more here
 ```
 
 A path out of an archive carries the folder the zip wraps everything in.
 Paste it as it comes; a shorter tail of it works too, as long as it is
 whole folders — `SourceFiles/FBX/SM_Prop_Crate_01.fbx` names the same
 file.
+
+A library is a hundred packs and `crate` is a word four hundred files in
+it are called, so the answer is grouped by the pack holding it and cut at
+a hundred lines. **The packs `art/manifest.toml` declares are printed
+first and cut last**, because that file is this project's own statement
+of which packs it cares about. And **every directory that matched says
+how many matches it has**, whether or not any of them fit — so a pack is
+never simply absent from the answer, which is what cutting a flat list in
+walk order did, and it made the pack being worked in read as though it
+held no crates at all.
+
+A pack's `.unitypackage` is read only when it is the only archive that
+pack has, which is the order [the resolver already looks
+in](#what-answers-first). Listing a zip is a seek to the table at its
+end, however large the zip is. A `.unitypackage` is a gzipped tar and
+keeps no table, so its names cost the whole file — about a second per
+hundred and fifty megabytes, which over a hundred and fifteen packs is
+two minutes rather than two seconds. The Source Files archive beside it
+holds the same meshes. `find` says how many it left unread, and `cargo
+xtask art unpack <pack>` rebuilds one into the cache, which `find`
+searches.
 
 Paste the two lines it prints into a new table in `art/manifest.toml`,
 give the table the stable id that code will use, and add the atlas the
@@ -325,7 +357,9 @@ the order the three places are looked in, the reconstruction of a tree
 out of a synthetic `.unitypackage`, reading names out of a zip without
 extracting it, taking only the named files out of one, refusing a member
 name that would climb out of the tree, content addressing, the digest
-check, and that a partial resolve indexes nothing. The zips those guards
+check, that a search ranks the packs the manifest declares above the rest
+and counts every directory it cut, that a `.unitypackage` beside a Source
+Files archive goes unread, and that a partial resolve indexes nothing. The zips those guards
 run against are written byte by byte in the guard file, so they depend on
 nothing this repository did not write.
 

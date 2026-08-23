@@ -14,7 +14,7 @@
 //! manifest decided that.
 
 use std::cell::RefCell;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -600,6 +600,17 @@ impl Hit {
     }
 }
 
+/// What one search turned up, and what it did not read to turn it up.
+pub struct Search {
+    pub hits: Vec<Hit>,
+    pub trouble: Vec<String>,
+    /// `.unitypackage` files left unread because the pack holding one
+    /// also holds a Source Files archive. Counted rather than silent: a
+    /// search that skipped part of the store and said nothing about it
+    /// is a search whose empty answer means two different things.
+    pub unread: usize,
+}
+
 /// **Everything called `needle`, including what is inside the archives.**
 ///
 /// A pack arrives zipped, so a search that only walked the filesystem
@@ -607,11 +618,24 @@ impl Hit {
 /// in before this tool exists. Listing an archive reads its table of
 /// contents and extracts nothing, so this stays a read.
 ///
+/// **A `.unitypackage` is read only when it is the only archive its pack
+/// has.** That is [`locate`]'s order, for [`locate`]'s reason — the
+/// Source Files download holds the same meshes and holds them as files —
+/// and here it is also what makes a search of a whole library finish. A
+/// zip keeps a table of its members at the end, so listing one costs a
+/// seek however large it is. A `.unitypackage` is a gzipped tar and keeps
+/// no table at all, so the names inside it are only reachable by
+/// decompressing the whole file: about a second per hundred megabytes,
+/// and a Synty library is a hundred packs of them. `unpack` is how a
+/// pack whose `.unitypackage` you do want searched gets rebuilt into the
+/// cache, which this walks.
+///
 /// The roots are the store and whatever the cache has already rebuilt.
-pub fn search(roots: &[PathBuf], needle: &str, cache: &Cache) -> (Vec<Hit>, Vec<String>) {
+pub fn search(roots: &[PathBuf], needle: &str, cache: &Cache) -> Search {
     let needle = needle.to_ascii_lowercase();
     let mut hits = Vec::new();
     let mut trouble = Vec::new();
+    let mut unread = 0;
     let mut archives = Vec::new();
     let mut packages = Vec::new();
     for root in roots {
@@ -639,6 +663,10 @@ pub fn search(roots: &[PathBuf], needle: &str, cache: &Cache) -> (Vec<Hit>, Vec<
     }
     archives.sort();
     packages.sort();
+    let with_an_archive: BTreeSet<PathBuf> = archives
+        .iter()
+        .filter_map(|archive| archive.parent().map(Path::to_path_buf))
+        .collect();
     for path in archives {
         match archive::list(&path) {
             Ok(members) => hits.extend(members.into_iter().filter_map(|member| {
@@ -658,6 +686,13 @@ pub fn search(roots: &[PathBuf], needle: &str, cache: &Cache) -> (Vec<Hit>, Vec<
         if rebuilt(cache, &path) {
             continue;
         }
+        if path
+            .parent()
+            .is_some_and(|dir| with_an_archive.contains(dir))
+        {
+            unread += 1;
+            continue;
+        }
         eprintln!(
             "art: reading the names inside {} (nothing is written)",
             path.display()
@@ -673,7 +708,11 @@ pub fn search(roots: &[PathBuf], needle: &str, cache: &Cache) -> (Vec<Hit>, Vec<
         }
     }
     hits.sort_by_key(Hit::key);
-    (hits, trouble)
+    Search {
+        hits,
+        trouble,
+        unread,
+    }
 }
 
 /// Whether an archive's tree has already been rebuilt into the cache,

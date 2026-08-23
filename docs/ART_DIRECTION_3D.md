@@ -565,10 +565,19 @@ cell off its wall lands a fraction of a cell over on 3 or 4 of the 15
 stances the room allows in the same sweep, all of them at the grazing
 ends of the arc. Curing it costs a seam: a wall berth's cells are where
 a doorway's amber latch is bolted too, the latch stands two millimetres
-proud of the plane, and the fixture's own bay window is berthed
-**across** the cabin's aft latch. Give that window a pick body and it outranks the latch from
-every stance in the room — with one, the input monkey could not part a
-seam in 19,200 frames. The glancing read is worth less than the seam.
+proud of the plane, and a pane hung on the aft wall beside a cabin's own
+doorway stands **across** that latch. Give that pane a pick body and it
+outranks the latch from every stance in the room — with one, the input
+monkey could not part a seam in 19,200 frames. The glancing read is
+worth less than the seam.
+
+The showcase used to supply that pane without meaning to: its bay window
+rode the market, and the one berth the arbiter will bring a 2×2 home to
+is that very cell. It berths aboard now and the porthole goes ashore in
+its place (`fixture::tests::the_showcase_leaves_every_seam_latch_workable`).
+That fixes a bad debug board and changes nothing above — the berth is
+still legal, still a berth a player may take, and a crate a player puts
+there is still their own business.
 
 ## Motion
 

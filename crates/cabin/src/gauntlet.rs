@@ -260,7 +260,7 @@ const SEAT_GAP: f32 = crate::rig::layer::STEP + crate::rig::layer::SKIN;
 
 /// How much of a wall cell's face a fitting must cover before it is
 /// hiding what hangs there rather than standing beside it.
-const OCCLUDE_BITE: f32 = 0.25;
+pub const OCCLUDE_BITE: f32 = 0.25;
 
 /// Two faces closer than this are the same plane as far as the depth
 /// buffer is concerned. It is [`crate::rig::layer::SKIN`], the thickest a
@@ -354,7 +354,8 @@ impl Box3 {
     }
 
     /// A box from two corners in any order.
-    const fn spanning(a: Vec3, b: Vec3) -> Self {
+    #[must_use]
+    pub const fn spanning(a: Vec3, b: Vec3) -> Self {
         Self {
             lo: Vec3::new(a.x.min(b.x), a.y.min(b.y), a.z.min(b.z)),
             hi: Vec3::new(a.x.max(b.x), a.y.max(b.y), a.z.max(b.z)),
@@ -3075,7 +3076,8 @@ fn room_name(stage: &Stage, placed: &Placed) -> String {
 /// than off a quad's winding, because the two are built by different
 /// hands: a handshake's face is spun by `Station::face` and a latch's by
 /// the seam's own axes.
-fn worked_faces(placed: &Placed) -> Vec<(String, Box3, Vec3)> {
+#[must_use]
+pub fn worked_faces(placed: &Placed) -> Vec<(String, Box3, Vec3)> {
     let middle = (placed.lo + placed.hi) * 0.5;
     let mut out = Vec::new();
     let mut add = |what: String, face: &SimSurface| {
@@ -3113,7 +3115,8 @@ fn worked_faces(placed: &Placed) -> Vec<(String, Box3, Vec3)> {
 /// whose reading is buried in its own loop cannot be handed a face that
 /// has moved behind something, and a rule nobody can catch out is a green
 /// tick that means nothing.
-fn across(face: Box3, inward: Vec3, body: Box3) -> f32 {
+#[must_use]
+pub fn across(face: Box3, inward: Vec3, body: Box3) -> f32 {
     let span = body.meet(face.reaching(inward, 0.0, SIGHT)).span();
     if span.min_element() <= CLIP_SLACK {
         return 0.0;

@@ -1206,7 +1206,12 @@ they are not closed, only bounded:
   their own latch**, which is a crate they can pick up again; the
   runtime's pointer takes the nearest mapped surface, so while it stands
   there the latch is not pickable. Nothing in the harness will tell you,
-  by design.
+  by design. What *is* checked is narrower and is not a rule about
+  berths: the boards this repository SHIPS may not do it, because a debug
+  board that boots into a cabin nobody can part a room from is a bad
+  debug board. `fixture::tests::the_showcase_leaves_every_seam_latch_workable`
+  holds `--fixture` to that, using this file's own `across` reading at
+  `OCCLUDE_BITE` so the two cannot drift apart.
 - **A pose is one pose.** The roster mates every station at the first
   door the spawn walk takes, deterministically, because a sweep that took
   a minute would not be run. The rules are all measured in a room's own

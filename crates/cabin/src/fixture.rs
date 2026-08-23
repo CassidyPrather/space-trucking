@@ -25,14 +25,30 @@
 //! crew that owns several is the case the exterior was rebuilt for
 //! (`docs/ART_DIRECTION_3D.md`, "One wall, one sky") and a showcase that
 //! only ever hangs one would sweep the easy half of it. The transit
-//! window keeps its traditional front-wall punch-out; the porthole
-//! hangs mid-course on the port flank; and Saturn's bay window stands
-//! square on the trade room's port flank — the one wall of a calling
-//! room that is neither its goods nor its counter, and a reminder that
-//! a window in a room that is only ALONGSIDE is a window the gangway
-//! law will not let you leave with. Every screenshot run therefore sweeps a
-//! multi-window frame, a second sky on a second wall, and a pane in
-//! another room, without anybody remembering to.
+//! window keeps its traditional front-wall punch-out; Saturn's bay
+//! window stands square on the cabin's own port flank — the one wall
+//! of the four with neither a doorway nor an instrument on it, the
+//! furnace being moored to starboard and the market aft; and the
+//! porthole rides the trade room's port flank — the one wall of a
+//! calling room that is neither its goods nor its counter, and a
+//! reminder that a window in a room that is only ALONGSIDE is a window
+//! the gangway law will not let you leave with. Every screenshot run
+//! therefore sweeps a multi-window frame, a second sky on a second
+//! wall, and a pane in another room, without anybody remembering to.
+//!
+//! **Which of the two rides ashore is not a coin toss.** The bay window
+//! is 2×2 and the porthole is one cell, and a pane left in the market
+//! has to come home before anything launches. The first wall berth the
+//! arbiter will take for a 2×2 is the cabin's aft wall beside its own
+//! doorway (`cargo::first_fit`, row-major), and that is the wall the
+//! seam's amber latch is bolted to: the bay window walked home stood
+//! across 78% of it, and one berth further on, 100%. Nothing was wrong
+//! with the latch and nothing was wrong with the berth — a player may
+//! hide their own latch with their own cargo and that stays legal
+//! (docs/GAUNTLET.md, "A latch and a berth want the same piece of
+//! wall") — but a debug board that boots you into a cabin you cannot
+//! part a room from is a bad debug board. So the small pane is the one
+//! that goes ashore, and the big one is already home.
 //!
 //! The board is deliberately mid-trade, which means the launch gate
 //! refuses: goods of the player's stand in a room that is only
@@ -45,7 +61,9 @@
 //! cornice AND why the chart tank hangs on the front wall here rather
 //! than at its traditional port berth), the gnawed rug lies PINNED
 //! under the couch, and no berth may sit on a doorway — the threshold
-//! rule keeps every aperture clear. The test below re-checks all of it.
+//! rule keeps every aperture clear. And nothing the board stands, here
+//! or once it has been carried home, may stand across a seam's amber
+//! latch. The tests below re-check all of it.
 //!
 //! One more courtesy, which is not a rule: the deck cells a doorway
 //! stands on are kept clear. Nothing forbids berthing there — the aisle
@@ -125,8 +143,8 @@ piece 25 25 1 0 hold 0 4 12
 piece 26 27 2 0 hold 0 9 11
 piece 27 28 3 0 hold 0 9 12
 piece 28 29 0 0 hold 0 9 10
-piece 29 30 0 0 hold 0 1 8
-piece 30 31 1 0 hold 2 0 4
+piece 29 30 0 0 hold 2 0 4
+piece 30 31 1 0 hold 0 1 7
 next_piece 31
 ";
 
@@ -451,6 +469,137 @@ mod tests {
         assert!(pieces.iter().any(|p| tile(p) == Some(Tile::Offer)));
         assert_eq!(sim.marks().len(), 1, "one good is spoken for");
         assert!(!sim.composed().is_empty(), "the room answers the proposal");
+    }
+
+    /// **Nothing the showcase stands hides a seam's amber latch.**
+    ///
+    /// The latch is the one control that sends a room away, and
+    /// `--fixture` is booted to poke at exactly that sort of thing. A
+    /// board that hands you a cabin whose seam control is behind glass
+    /// is not a board with a defect in the rules; it is a board that
+    /// chose a bad berth, which is this file's business to fix.
+    ///
+    /// **It is asked twice, and the second reading is the one that
+    /// caught it.** The board is mid-trade on purpose, so the gangway
+    /// law will not let anything launch until the goods standing in the
+    /// room that is only alongside have been carried aboard — and the
+    /// berth they land in is the sim's own, not this file's
+    /// ([`first_fit`], the very berth a shift-press picks). A 2×2 pane
+    /// left ashore comes home onto the cabin's aft wall beside its own
+    /// doorway, which is where the latch is bolted. Asked only of the
+    /// board as it boots, this would have been a green tick over a
+    /// cabin nobody could part a room from.
+    ///
+    /// The reading is the gauntlet's own — [`across`] over
+    /// [`worked_faces`], at [`OCCLUDE_BITE`] — so what counts as hiding
+    /// a worked face is tuned in one place and this moves with it,
+    /// rather than a second number growing up beside the first.
+    ///
+    /// **This is not a law about berths, and must not become one.**
+    /// Every wall cell beside an aperture is a berth and every deck cell
+    /// in front of one is a berth, so a player standing their own crate
+    /// in front of their own latch is legal by construction and stays
+    /// legal (docs/GAUNTLET.md, "A latch and a berth want the same piece
+    /// of wall"). What is asserted here is about the board this file
+    /// ships and nothing else.
+    #[test]
+    fn the_showcase_leaves_every_seam_latch_workable() {
+        use bevy::prelude::Vec3;
+        use space_trucking::sim::cargo::{Piece, first_fit, plan};
+        use space_trucking::sim::layout;
+
+        use crate::gauntlet::{Box3, OCCLUDE_BITE, across, worked_faces};
+        use crate::room::{self, Placed};
+
+        let sim = Sim::from_save(super::SAVE).expect("the fixture parses");
+        let rooms = sim.rooms();
+        let placed: Vec<Placed> = rooms
+            .iter()
+            .map(|(id, room)| room::placed(rooms, id, room))
+            .collect();
+
+        // Every amber latch the graph draws. `worked_faces` carries a
+        // calling room's handshake too; a latch is the half this is
+        // about, and it is named off the part rather than counted off
+        // the graph so a second seam arrives on the list by itself.
+        let latches: Vec<(String, Box3, Vec3)> = placed
+            .iter()
+            .flat_map(worked_faces)
+            .filter(|(what, _, _)| what.contains("latch"))
+            .collect();
+        assert!(
+            !latches.is_empty(),
+            "the showcase grew no seam latch, so this measured nothing at all"
+        );
+
+        // The world box one berthed piece fills, posed through the very
+        // function the runtime poses a rig with.
+        let filled = |piece: &Piece| {
+            let Loc::Hold { room, x, y } = piece.loc else {
+                return None;
+            };
+            let host = placed.iter().find(|host| host.id == room)?;
+            let (w, h) = plan(host.kind, piece.kind, x, y)?;
+            let anchor = layout::cell_rect(room, x, y);
+            let rect = layout::Rect::new(
+                anchor.x,
+                anchor.y,
+                f32::from(w) * layout::CELL,
+                f32::from(h) * layout::CELL,
+            );
+            let (lo, hi) = crate::pieces::berth_box(&host.charts, piece.kind, rect)?;
+            Some(Box3::spanning(lo, hi))
+        };
+
+        let judge = |board: &[Piece], when: &str| {
+            for (what, face, inward) in &latches {
+                for piece in board {
+                    let Some(body) = filled(piece) else { continue };
+                    let cover = across(*face, *inward, body);
+                    assert!(
+                        cover <= OCCLUDE_BITE,
+                        "{when}: {:?} #{} stands across {:.0}% of {what}, and a board \
+                         whose seam control cannot be worked is a board that cannot \
+                         part a room",
+                        piece.kind,
+                        piece.id,
+                        cover * 100.0
+                    );
+                }
+            }
+        };
+
+        let aboard: Vec<Piece> = sim.pieces().to_vec();
+        judge(&aboard, "as it boots");
+
+        // And once the gangway law has been obeyed, which on this board
+        // is not a hypothesis: nothing launches until every piece of the
+        // player's standing in the room alongside is carried aboard.
+        let mut carried = aboard;
+        let mut walked = 0_u32;
+        while let Some(nth) = carried.iter().position(|piece| match piece.loc {
+            Loc::Hold { room, x, y } => {
+                rooms.kind(room).is_some_and(|kind| !kind.riding())
+                    && rooms.tile(room, x, y) != Some(Tile::Stock)
+            }
+            _ => false,
+        }) {
+            let piece = carried[nth];
+            let (room, x, y) =
+                first_fit(rooms, &carried, piece.id, piece.kind).unwrap_or_else(|| {
+                    panic!(
+                        "{:?} #{} has no berth to come home to",
+                        piece.kind, piece.id
+                    )
+                });
+            carried[nth].loc = Loc::Hold { room, x, y };
+            walked += 1;
+        }
+        assert!(
+            walked > 0,
+            "the showcase left nothing ashore, so the carry home tested nothing"
+        );
+        judge(&carried, "carried home");
     }
 
     /// **Every station's room can be looked at.** `--docked n` re-berths

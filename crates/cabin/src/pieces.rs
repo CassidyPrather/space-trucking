@@ -1401,10 +1401,17 @@ pub fn instrument_surface(
 /// cell that was asked, measured, and taken back out"), and a latch
 /// stands two millimetres proud of the plane a body berthed over it
 /// reaches a hand's breadth out of. Give that body a pick region and it
-/// outranks the latch from every stance in the room: the fixture's own
-/// bay window is berthed across the cabin's aft latch, and with one the
-/// monkey could not part a seam in nineteen thousand frames. The
-/// glancing read is worth less than the seam.
+/// outranks the latch from every stance in the room: a pane hung on the
+/// aft wall beside a cabin's own doorway stands across that latch, and
+/// with one the monkey could not part a seam in nineteen thousand
+/// frames. The glancing read is worth less than the seam.
+///
+/// The showcase used to supply that pane without meaning to — its bay
+/// window rode the market and came home onto exactly that berth — and
+/// it berths aboard now
+/// (`crate::fixture::tests::the_showcase_leaves_every_seam_latch_workable`).
+/// That is a debug board fixed, not a rule: the cell is still a berth
+/// and a player may still take it.
 #[must_use]
 pub fn standing_surface(
     charts: &[(Station, SimSurface)],

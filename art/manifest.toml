@@ -98,28 +98,17 @@ download = "POLYGON Sci-Fi Horror, the Source Files download"
 # is exactly the box the description asks for — and it is the claim most
 # imported meshes turn out to break.
 #
-# Nothing is listed yet. To add the first one, with the packs under
-# $SYNTY_STORE — as downloaded, nothing unzipped:
+# To add one, with the packs under $SYNTY_STORE — as downloaded, nothing
+# unzipped:
 #
 #     cargo xtask art find crate      # what is actually in the packs
-#     # paste the pack and source lines it prints into a table here
+#     # paste the pack and source lines it prints into a table below
 #     cargo xtask art hash            # paste the sha256 line it prints
 #     cargo xtask art resolve
 #
-# and the shape of what you paste is this:
-#
-#     [asset.crate_small]
-#     pack = "scifi_space"
-#     source = "SourceFiles/FBX/SM_Prop_Crate_01.fbx"
-#     texture = "SourceFiles/Textures/PolygonSciFi_Texture_01_A.png"
-#     sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
-#     scale = [1.0, 1.0, 1.0]
-#     offset = [0.0, 0.0, 0.0]
-#     rotation = [0.0, 0.0, 0.0]
-#     fill = [1.0, 1.0, 1.0]
-#
-# — the paths in that example are a shape, not a claim about where
-# anything is. `find` is what knows.
+# The table below is one that has been through that, against real packs.
+# Copy its shape rather than an invented one: every path in it is a path
+# that exists, and `find` is what knew them.
 # ---------------------------------------------------------------------
 
 [asset.crate_small]

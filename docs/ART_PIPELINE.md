@@ -78,19 +78,22 @@ zip of raw assets — and leave it there:
 
 ```
 $SYNTY_STORE/
-  POLYGON Sci-Fi Space/            <- dir = "POLYGON Sci-Fi Space"
+  POLYGON - Sci-Fi Space Pack/       <- dir = "POLYGON - Sci-Fi Space Pack"
     icon.png
     POLYGON Sci-Fi Space.unitypackage
-    POLYGON Sci-Fi Space.zip       <- the raw assets, still zipped
-  POLYGON Sci-Fi Horror/           <- dir = "POLYGON Sci-Fi Horror"
+    POLYGON Sci-Fi Space.zip         <- the raw assets, still zipped
+  POLYGON - Sci-Fi Horror/           <- dir = "POLYGON - Sci-Fi Horror"
     ...
 ```
 
 The directory names are **yours**: `art/manifest.toml` records the name
 you chose on each pack's `dir` line, so nothing has to predict what a
 download unpacks to, and rearranging your downloads folder is an edit to
-that line. Spaces and capitals in the name are ordinary — the name the
-store gave the pack is a fine name for the directory.
+that line. Spaces, capitals and punctuation in the name are ordinary —
+the name the store gave the pack is a fine name for the directory, and
+the two above are the real ones this repository's manifest carries. The
+file names *inside* a pack directory are recorded nowhere: the archives
+are found by their extension, so a download keeps whatever it arrived as.
 
 The tool reads inside the archives and takes out only the files the
 manifest names. A manifest naming fifty props out of a five-thousand-file
@@ -182,14 +185,23 @@ pack = "scifi_space"                             38 matches
 In 35 directories it does not:
 
 POLYGON - Sci-Fi City                            41 matches
-  source = "POLYGON - Sci-Fi City/SourceFiles/FBX/SM_Crate_Stack.fbx"
+  source = "SourceFiles/FBX/SM_Crate_Stack.fbx"
   ... and 37 more here
 ```
 
-A path out of an archive carries the folder the zip wraps everything in.
-Paste it as it comes; a shorter tail of it works too, as long as it is
+The two forms there are the two places a file can be. A path found
+**loose** is printed from the pack directory down, so it has no leading
+folder. A path found **inside an archive** is printed as the archive
+stores it, which means it carries the folder the zip wraps everything in
+— and *that folder is the zip's own name for itself, not the directory
+you filed the pack under*. `POLYGON Sci-Fi Space` above is what is
+inside the zip; `POLYGON - Sci-Fi Space Pack` is what the directory is
+called, and `dir` is the only one of the two the manifest records.
+
+Paste either as it comes; a shorter tail works too, as long as it is
 whole folders — `SourceFiles/FBX/SM_Prop_Crate_01.fbx` names the same
-file.
+file whichever way it was found, which is why it is the spelling the
+manifest below carries.
 
 A library is a hundred packs and `crate` is a word four hundred files in
 it are called, so the answer is grouped by the pack holding it and cut at
@@ -220,7 +232,7 @@ mesh is painted from:
 [asset.crate_small]
 pack = "scifi_space"
 source = "SourceFiles/FBX/SM_Prop_Crate_01.fbx"
-texture = "SourceFiles/Textures/PolygonSciFi_Texture_01_A.png"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
 ```
 
 Then record the digest and resolve:
@@ -235,8 +247,8 @@ cargo xtask art resolve
 ```
 $ cargo xtask art resolve
 art: 1 asset over 2 packs, from /home/you/art/synty
-art: taking POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Prop_Crate_01.fbx out of
-     /home/you/art/synty/POLYGON Sci-Fi Space/POLYGON Sci-Fi Space.zip (the archive stays as it is)
+art: taking POLYGON - Sci-Fi Space Pack/SourceFiles/FBX/SM_Prop_Crate_01.fbx out of
+     /home/you/art/synty/POLYGON - Sci-Fi Space Pack/POLYGON Sci-Fi Space.zip (the archive stays as it is)
   crate_small              in POLYGON Sci-Fi Space.zip  9f2c1d4ab077  /home/you/space-trucking/art/cache/unpacked/...
 art: converting 1 of 1 with blender /usr/bin/blender
   converted crate_small              -> glb/9f2c1d4ab077...glb
@@ -261,16 +273,16 @@ crate_small is not on this machine.
 
   pack      POLYGON Sci-Fi Space
   download  POLYGON Sci-Fi Space, the Source Files download
-  declared  art/manifest.toml:47
-  wanted    /home/you/art/synty/POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Prop_Crate_01.fbx
-  found     nothing: /home/you/art/synty/POLYGON Sci-Fi Space does not exist
+  declared  art/manifest.toml:114
+  wanted    /home/you/art/synty/POLYGON - Sci-Fi Space Pack/SourceFiles/FBX/SM_Prop_Crate_01.fbx
+  found     nothing: /home/you/art/synty/POLYGON - Sci-Fi Space Pack does not exist
 
   fix       Download "POLYGON Sci-Fi Space, the Source Files download" from your Synty
             account's downloads and put it, exactly as it arrives, at
-            /home/you/art/synty/POLYGON Sci-Fi Space
+            /home/you/art/synty/POLYGON - Sci-Fi Space Pack
             Leave it zipped if it came zipped; the archives are read where they lie.
             The directory is $SYNTY_STORE (/home/you/art/synty) plus
-            `dir = "POLYGON Sci-Fi Space"` on art/manifest.toml:12.
+            `dir = "POLYGON - Sci-Fi Space Pack"` on art/manifest.toml:39.
 ```
 
 Every missing asset is reported in one run, not one per run. A pack that

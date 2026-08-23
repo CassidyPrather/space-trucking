@@ -15,15 +15,26 @@
 //! bsdtar that Windows 10 1803 and later ship as `tar.exe` — sniff the
 //! compression themselves, so this passes no `-z` and both cases work.
 //!
-//! Shelling out to `tar` rather than reading the archive here is the one
-//! place this tool leans on the machine it runs on. Inflating DEFLATE and
-//! parsing ustar headers is a few hundred lines that every operating
-//! system already has, and the failure — no `tar` on `PATH` — is loud,
-//! immediate, and has an obvious fix.
+//! Shelling out to `tar` rather than reading the archive here is one of
+//! the two places this tool leans on the machine it runs on; the other is
+//! [`crate::archive`]. Inflating DEFLATE and parsing ustar headers is a
+//! few hundred lines that every operating system already has, and the
+//! failure — no `tar` on `PATH` — is loud, immediate, and has an obvious
+//! fix.
+//!
+//! **This one rebuilds the whole tree, where a zip is read a file at a
+//! time, and the asymmetry is the format's rather than a shortcut.** A
+//! zip member carries the file's own name, so one named file can be
+//! found and taken out. A `.unitypackage` member carries a GUID, and the
+//! only thing that says which GUID holds `Assets/.../SM_Crate.fbx` is
+//! every `pathname` in the archive — so finding one file means reading
+//! all of them, and a tar is a stream, so reading any of it decompresses
+//! all of it. The tree is that reading, written down once and kept.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use crate::archive;
 use crate::fsx;
 
 pub struct Report {
@@ -119,33 +130,62 @@ fn collect_entry_dirs(root: &Path, into: &mut Vec<PathBuf>) -> Result<(), String
 /// some exporters add a second line that is not a path. Only the first
 /// line is the answer.
 ///
-/// The refusals are the whole point of this function existing separately
-/// from the loop that calls it. A `pathname` is a string chosen by
-/// whoever built the archive, this tool writes files at whatever it says,
-/// and `../../.ssh/authorized_keys` is a perfectly well-formed string.
+/// Whether the answer may be written at all is [`archive::inside`]'s
+/// question, not this one's: a `pathname` is a string chosen by whoever
+/// built the archive and a zip member is too, so the law that
+/// `../../.ssh/authorized_keys` is refused rather than obeyed is stated
+/// once, for every route into the cache.
 pub fn destination(pathname: &str) -> Result<PathBuf, String> {
-    let first = pathname.lines().next().unwrap_or("").trim();
-    let normalized = first.replace('\\', "/");
-    let mut parts = Vec::new();
-    for part in normalized.split('/') {
-        match part {
-            "" | "." => {}
-            ".." => return Err("a `..` in it would climb out of the tree".to_owned()),
-            other if other.contains(':') => {
-                return Err(
-                    "a `:` in it makes it a drive or a stream, not a relative path".to_owned(),
-                );
-            }
-            other => parts.push(other),
+    archive::inside(pathname.lines().next().unwrap_or("").trim())
+}
+
+/// **Every path a package would rebuild to, without rebuilding any of
+/// it.**
+///
+/// A zip names its members after the files, so listing one answers "what
+/// is in this pack?" directly. A `.unitypackage` names its members after
+/// Unity GUIDs, so listing one answers nothing; the file names are the
+/// *contents* of the `pathname` entries. `tar -xO` writes entry contents
+/// to standard output and nothing to disk, so asking it for the
+/// `pathname` entries alone reads the names out of a package that stays
+/// exactly as downloaded.
+///
+/// It is not as cheap as listing a zip and the difference is worth
+/// knowing: a zip's table is at the end of the file, while a tar is a
+/// stream, so this decompresses the whole archive to print a few
+/// kilobytes. It writes nothing, which is the property that matters.
+pub fn pathnames(package: &Path) -> Result<Vec<String>, String> {
+    check_tar()?;
+    // GNU tar treats a member name as a literal unless `--wildcards`
+    // says otherwise; bsdtar globs by default and rejects the option
+    // outright. So: ask the way GNU tar wants, and if the program would
+    // not take that, ask again the way bsdtar wants.
+    for wildcards in [true, false] {
+        let mut command = Command::new("tar");
+        command.arg("-xOf").arg(package);
+        if wildcards {
+            command.arg("--wildcards");
+        }
+        command.arg("*pathname");
+        let Ok(output) = command.stderr(std::process::Stdio::null()).output() else {
+            break;
+        };
+        if output.status.success() {
+            return Ok(String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .map(str::trim)
+                .filter(|line| !line.is_empty())
+                .map(str::to_owned)
+                .collect());
         }
     }
-    if normalized.starts_with('/') {
-        return Err("a leading `/` makes it absolute".to_owned());
-    }
-    if parts.is_empty() {
-        return Err("it is empty".to_owned());
-    }
-    Ok(parts.iter().collect())
+    Err(format!(
+        "tar could not read the names inside {}\n  \
+         A .unitypackage is a tar archive, usually gzipped. If tar refuses it, the \
+         download is truncated or is not a .unitypackage at all — check its size against \
+         the store page and download it again.",
+        package.display()
+    ))
 }
 
 fn check_tar() -> Result<(), String> {

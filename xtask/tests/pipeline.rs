@@ -2,19 +2,28 @@
 //!
 //! Every guard here runs the real binary against a store built for the
 //! occasion. There are no Synty assets in this repository and there never
-//! will be, so the packs below are synthetic: a Source Files tree of
-//! files this repository wrote, and a `.unitypackage` built here out of
-//! GUID directories, `pathname` files and `asset` files, which is what
-//! one is.
+//! will be, so the packs below are synthetic and built from nothing but
+//! what this repository wrote: a loose Source Files tree, a
+//! `.unitypackage` assembled here out of GUID directories, `pathname`
+//! files and `asset` files, and a zip written byte by byte — a header per
+//! member, a table at the end, and no compressor.
 //!
 //! What that proves and what it does not is worth being exact about.
 //! Proved here: the manifest dialect, the missing-asset message, the
-//! Source-Files-before-archive order, the reconstruction of a tree out of
-//! a `.unitypackage`, content addressing, the digest check, and that a
-//! partial resolve indexes nothing. Not proved here, and not provable
-//! without the owner's disk and a Blender install: that a real Synty FBX
-//! converts to a glTF that looks right. `docs/ART_PIPELINE.md` says which
-//! commands close that gap.
+//! order the three places are looked in, the reconstruction of a tree out
+//! of a `.unitypackage`, reading the names inside an archive without
+//! extracting it, taking only the files a manifest named out of one,
+//! refusing a member name that would climb out of the tree, a pack
+//! directory named and filled the way a store leaves it, content
+//! addressing, the digest check, and that a partial resolve indexes
+//! nothing.
+//!
+//! Not proved here, and not provable without the owner's disk: that a
+//! real Synty FBX converts to a glTF that looks right, that a real
+//! Synty zip is laid out the way these are, and that `tar` opens a zip
+//! where it is bsdtar rather than GNU tar — the Linux runner these guards
+//! meet has GNU tar, so what runs here is the fallback to `unzip`.
+//! `docs/ART_PIPELINE.md` says which commands close those gaps.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -77,6 +86,73 @@ fn unitypackage(at: &Path, entries: &[(&str, &str, Option<&str>)]) {
         .expect("tar builds the fixture");
     assert!(status.success(), "tar could not build {}", at.display());
     let _ = std::fs::remove_dir_all(&build);
+}
+
+/// A zip, written here byte by byte rather than shelled out to.
+///
+/// `zip` is not on every machine that runs these guards and the format's
+/// stored form needs no compressor at all: a header and the bytes for
+/// each member, a table of the same headers at the end, and a record
+/// saying where that table starts. That is the whole of what the
+/// resolver's readers are pointed at, and building it here means these
+/// guards depend on nothing this repository did not write.
+fn zip_archive(at: &Path, entries: &[(&str, &str)]) {
+    let mut body: Vec<u8> = Vec::new();
+    let mut table: Vec<u8> = Vec::new();
+    for (name, contents) in entries {
+        let offset = u32::try_from(body.len()).expect("a small fixture");
+        let crc = crc32(contents.as_bytes());
+        let size = u32::try_from(contents.len()).expect("a small member");
+        let name_len = u16::try_from(name.len()).expect("a short name");
+        // Local file header, then the bytes, stored (method 0).
+        body.extend_from_slice(&0x0403_4b50u32.to_le_bytes());
+        body.extend_from_slice(&[10, 0, 0, 0, 0, 0]); // version, flags, method
+        body.extend_from_slice(&[0, 0, 0x21, 0]); // 1980-01-01, 00:00
+        body.extend_from_slice(&crc.to_le_bytes());
+        body.extend_from_slice(&size.to_le_bytes());
+        body.extend_from_slice(&size.to_le_bytes());
+        body.extend_from_slice(&name_len.to_le_bytes());
+        body.extend_from_slice(&0u16.to_le_bytes()); // no extra field
+        body.extend_from_slice(name.as_bytes());
+        body.extend_from_slice(contents.as_bytes());
+        // The same header again in the central directory, plus where the
+        // local one is.
+        table.extend_from_slice(&0x0201_4b50u32.to_le_bytes());
+        table.extend_from_slice(&[20, 0, 10, 0, 0, 0, 0, 0]);
+        table.extend_from_slice(&[0, 0, 0x21, 0]);
+        table.extend_from_slice(&crc.to_le_bytes());
+        table.extend_from_slice(&size.to_le_bytes());
+        table.extend_from_slice(&size.to_le_bytes());
+        table.extend_from_slice(&name_len.to_le_bytes());
+        table.extend_from_slice(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        table.extend_from_slice(&offset.to_le_bytes());
+        table.extend_from_slice(name.as_bytes());
+    }
+    let count = u16::try_from(entries.len()).expect("a small fixture");
+    let start = u32::try_from(body.len()).expect("a small fixture");
+    let table_len = u32::try_from(table.len()).expect("a small fixture");
+    body.extend_from_slice(&table);
+    body.extend_from_slice(&0x0605_4b50u32.to_le_bytes());
+    body.extend_from_slice(&[0, 0, 0, 0]);
+    body.extend_from_slice(&count.to_le_bytes());
+    body.extend_from_slice(&count.to_le_bytes());
+    body.extend_from_slice(&table_len.to_le_bytes());
+    body.extend_from_slice(&start.to_le_bytes());
+    body.extend_from_slice(&0u16.to_le_bytes()); // no comment
+    std::fs::create_dir_all(at.parent().expect("a parent")).expect("a directory");
+    std::fs::write(at, &body).expect("a zip");
+}
+
+/// The checksum a zip records for each member, which every reader checks.
+fn crc32(bytes: &[u8]) -> u32 {
+    let mut crc = u32::MAX;
+    for byte in bytes {
+        crc ^= u32::from(*byte);
+        for _ in 0..8 {
+            crc = (crc >> 1) ^ (0xEDB8_8320 & 0u32.wrapping_sub(crc & 1));
+        }
+    }
+    !crc
 }
 
 const PACK: &str = "\
@@ -222,7 +298,7 @@ fn an_asset_that_only_exists_inside_an_archive_is_still_found() {
     );
     assert!(ok, "{said}");
     assert!(said.contains("Demo.unitypackage"), "{said}");
-    let rebuilt = cache.join("unpacked/demo/Demo/Assets/Demo/Meshes/SM_Crate.fbx");
+    let rebuilt = cache.join("unpacked/demo/Demo.unitypackage/Assets/Demo/Meshes/SM_Crate.fbx");
     assert_eq!(
         std::fs::read_to_string(&rebuilt).ok().as_deref(),
         Some("the archived mesh"),
@@ -231,7 +307,7 @@ fn an_asset_that_only_exists_inside_an_archive_is_still_found() {
     );
     assert!(
         !cache
-            .join("unpacked/demo/Demo/Assets/Demo/Meshes/Meshes")
+            .join("unpacked/demo/Demo.unitypackage/Assets/Demo/Meshes/Meshes")
             .exists(),
         "a folder entry was written as a file"
     );
@@ -486,5 +562,378 @@ fn a_search_prints_the_manifest_line_for_what_it_finds() {
     assert!(
         said.contains("source = \"SourceFiles/OBJ/unit_cube.obj\""),
         "{said}"
+    );
+}
+
+/// The pack directory the owner actually has: a name the store chose,
+/// with spaces and capitals in it, holding the icon, the `.unitypackage`
+/// and the raw assets still zipped.
+const ZIPPED_PACK: &str = "\
+[pack.scifi]
+title = \"POLYGON Sci-Fi Space\"
+dir = \"POLYGON Sci-Fi Space\"
+download = \"POLYGON Sci-Fi Space, the Source Files download\"
+";
+
+/// Build that pack under `store`, and hand back the pack directory.
+fn zipped_pack(store: &Path) -> PathBuf {
+    let pack = store.join("POLYGON Sci-Fi Space");
+    write(&pack.join("icon.png"), "not a mesh, and not an archive");
+    zip_archive(
+        &pack.join("POLYGON Sci-Fi Space.zip"),
+        &[
+            (
+                "POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Crate_01.fbx",
+                "the crate",
+            ),
+            (
+                "POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Crate_02.fbx",
+                "a second crate",
+            ),
+            (
+                "POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Lamp_01.fbx",
+                "a lamp",
+            ),
+            (
+                "POLYGON Sci-Fi Space/SourceFiles/Textures/atlas.png",
+                "the atlas the whole pack is painted from",
+            ),
+            ("POLYGON Sci-Fi Space/Prefabs/Crate.prefab", "assembly"),
+            ("POLYGON Sci-Fi Space/readme.txt", "terms"),
+        ],
+    );
+    pack
+}
+
+/// Every file under a directory, so a guard can say what a run did and
+/// did not put on disk.
+fn files_under(root: &Path) -> Vec<PathBuf> {
+    let mut found = Vec::new();
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
+            if entry.path().is_dir() {
+                stack.push(entry.path());
+            } else {
+                found.push(entry.path());
+            }
+        }
+    }
+    found.sort();
+    found
+}
+
+/// **An asset still inside the pack's archive resolves, and only the
+/// files the manifest named come out of it.**
+///
+/// This is the whole bargain. A Synty pack is thousands of files in one
+/// zip, a manifest names a few dozen of them, and unzipping the pack to
+/// reach those few is the cost the tool exists to avoid — on every
+/// machine, for ever, for art the game already has a whitebox for. So the
+/// store keeps the download exactly as it arrived and the cache holds the
+/// named files and nothing else.
+#[test]
+fn only_the_files_a_manifest_names_come_out_of_a_packs_archive() {
+    let dir = scratch("named-only");
+    let store = dir.join("store");
+    let pack = zipped_pack(&store);
+    let manifest = dir.join("manifest.toml");
+    write(
+        &manifest,
+        &format!(
+            "{ZIPPED_PACK}\n[asset.crate_small]\npack = \"scifi\"\n\
+             source = \"SourceFiles/FBX/SM_Crate_01.fbx\"\n\
+             texture = \"SourceFiles/Textures/atlas.png\"\n"
+        ),
+    );
+    let cache = dir.join("cache");
+    let (ok, said) = xtask(
+        &["art", "resolve"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+            ("ART_CONVERTER", Path::new("/bin/cp")),
+        ],
+    );
+    assert!(ok, "{said}");
+    assert!(said.contains("in POLYGON Sci-Fi Space.zip"), "{said}");
+
+    // Two files were named — the mesh and the atlas it is painted from —
+    // out of an archive holding six.
+    let taken = files_under(&cache.join("unpacked"));
+    assert_eq!(
+        taken.len(),
+        2,
+        "the archive holds six files and the manifest named two:\n{taken:#?}"
+    );
+    assert!(
+        taken.iter().all(|path| {
+            let name = path.file_name().expect("a name").to_string_lossy();
+            name == "SM_Crate_01.fbx" || name == "atlas.png"
+        }),
+        "{taken:#?}"
+    );
+
+    // And the store is exactly what it was: the icon and the archive.
+    assert_eq!(files_under(&pack).len(), 2, "the store was written to");
+}
+
+/// **A pack directory is read exactly as it arrived, furniture and
+/// all.** The owner's store holds, per pack, a name the store humanized
+/// — spaces and capitals in it — wrapped around an icon, a
+/// `.unitypackage` and a compressed archive of the raw assets. Nothing in
+/// that has been unzipped and nothing in it should have to be. `dir` is
+/// the owner's own directory name rather than a guess at Synty's naming
+/// precisely so this case is an ordinary one.
+#[test]
+fn a_pack_directory_named_and_filled_the_way_the_store_left_it_is_read() {
+    let dir = scratch("as-it-arrived");
+    let store = dir.join("store");
+    let pack = zipped_pack(&store);
+    unitypackage(
+        &pack.join("POLYGON Sci-Fi Space.unitypackage"),
+        &[(
+            "0123456789abcdef0123456789abcdef",
+            "Assets/Polygon/SM_Crate_01.fbx",
+            Some("the crate, through Unity"),
+        )],
+    );
+    let manifest = dir.join("manifest.toml");
+    write(
+        &manifest,
+        &format!(
+            "{ZIPPED_PACK}\n[asset.crate_small]\npack = \"scifi\"\n\
+             source = \"SourceFiles/FBX/SM_Crate_01.fbx\"\n"
+        ),
+    );
+    let cache = dir.join("cache");
+    let (ok, said) = xtask(
+        &["art", "check"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+        ],
+    );
+    assert!(ok, "{said}");
+    assert!(said.contains("in POLYGON Sci-Fi Space.zip"), "{said}");
+    assert!(
+        !said.contains("icon.png"),
+        "the icon was mistaken for something to open:\n{said}"
+    );
+    assert!(
+        !said.contains("rebuilding the tree"),
+        "the .unitypackage was unpacked to find a file the zip carries:\n{said}"
+    );
+}
+
+/// **The pack's own archive answers before its `.unitypackage` does.**
+///
+/// The order is the same one a loose Source Files tree already had, for
+/// the same reason: a `.unitypackage` is a Unity project fragment —
+/// prefabs and materials as well as meshes — and rebuilding the tree
+/// recovers the meshes while dropping the assembly. A prop is often a
+/// prefab assembling several meshes against a shared material, so the
+/// archive route is not the richer answer. It is the same answer through
+/// more machinery, and it is here for the packs that ship no source
+/// download. Zipping the source download changes none of that.
+#[test]
+fn the_packs_own_archive_answers_before_its_unitypackage_does() {
+    let dir = scratch("zip-before-unity");
+    let store = dir.join("store");
+    let pack = store.join("demo");
+    zip_archive(
+        &pack.join("Source Files.zip"),
+        &[("Demo/SourceFiles/FBX/SM_Crate.fbx", "the zipped mesh")],
+    );
+    unitypackage(
+        &pack.join("Demo.unitypackage"),
+        &[(
+            "0123456789abcdef0123456789abcdef",
+            "Assets/Demo/SM_Crate.fbx",
+            Some("the Unity mesh"),
+        )],
+    );
+    let manifest = dir.join("manifest.toml");
+    write(
+        &manifest,
+        &format!(
+            "{PACK}\n[asset.crate_small]\npack = \"demo\"\n\
+             source = \"SourceFiles/FBX/SM_Crate.fbx\"\n\
+             unity = \"Assets/Demo/SM_Crate.fbx\"\n"
+        ),
+    );
+    let cache = dir.join("cache");
+    let (ok, said) = xtask(
+        &["art", "check"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+        ],
+    );
+    assert!(ok, "{said}");
+    assert!(said.contains("in Source Files.zip"), "{said}");
+    assert!(
+        !said.contains("Demo.unitypackage"),
+        "the archive was opened even though the zip carried the mesh:\n{said}"
+    );
+    assert!(
+        !cache.join("unpacked/demo/Demo.unitypackage").exists(),
+        "a whole .unitypackage was rebuilt for a file the zip carries"
+    );
+}
+
+/// **A search reads the names inside an archive and extracts nothing.**
+///
+/// Before this, a store of zipped packs was unsearchable: the walk saw
+/// the icon and the archive and none of the thousands of names in it, and
+/// trawling a pack by hand is the problem the tool exists to solve. A zip
+/// keeps a table of its members at the end of the file, so the answer
+/// costs a read of that table however many gigabytes the members are —
+/// which is why `find` may do this for every pack and `resolve` may not.
+#[test]
+fn a_search_reads_the_names_inside_an_archive_and_extracts_nothing() {
+    let dir = scratch("search-inside");
+    let store = dir.join("store");
+    zipped_pack(&store);
+    let manifest = dir.join("manifest.toml");
+    write(&manifest, ZIPPED_PACK);
+    let cache = dir.join("cache");
+    let (ok, said) = xtask(
+        &["art", "find", "crate"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+        ],
+    );
+    assert!(ok, "{said}");
+    assert!(said.contains("pack = \"scifi\""), "{said}");
+    assert!(
+        said.contains("source = \"POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Crate_01.fbx\""),
+        "a manifest line for a file only the zip carries:\n{said}"
+    );
+    assert!(
+        said.contains("SM_Crate_02.fbx"),
+        "both crates are in there:\n{said}"
+    );
+    assert!(
+        !said.contains("SM_Lamp_01.fbx"),
+        "a search for crates answered with a lamp:\n{said}"
+    );
+    assert!(
+        files_under(&cache).is_empty(),
+        "a search wrote something: {:#?}",
+        files_under(&cache)
+    );
+}
+
+/// **A member whose name climbs out of the tree is never offered as a
+/// hit, and never taken out.** The archive is a file somebody
+/// downloaded, and `../../.ssh/authorized_keys` is a perfectly
+/// well-formed name for something inside it. `unzip` happens to strip
+/// the `..` and write the file somewhere else, which is not the same as
+/// refusing it and is not a promise every reader on every platform
+/// makes.
+#[test]
+fn a_member_that_climbs_out_of_the_tree_is_never_offered_as_a_hit() {
+    let dir = scratch("hostile-member");
+    let store = dir.join("store");
+    zip_archive(
+        &store.join("demo/Raw Assets.zip"),
+        &[
+            ("../evil.fbx", "outside"),
+            ("Demo/SourceFiles/FBX/evil.fbx", "inside"),
+        ],
+    );
+    let manifest = dir.join("manifest.toml");
+    write(&manifest, PACK);
+    let cache = dir.join("cache");
+    let (ok, said) = xtask(
+        &["art", "find", "evil"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+        ],
+    );
+    assert!(ok, "{said}");
+    assert!(
+        said.contains("source = \"Demo/SourceFiles/FBX/evil.fbx\""),
+        "{said}"
+    );
+    assert!(
+        !said.contains("../evil.fbx"),
+        "a name that may never be written was offered as a manifest line:\n{said}"
+    );
+
+    // And asking for it outright gets nothing, anywhere.
+    write(
+        &manifest,
+        &format!("{PACK}\n[asset.evil]\npack = \"demo\"\nsource = \"../evil.fbx\"\n"),
+    );
+    let (resolved, said) = xtask(
+        &["art", "resolve"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+            ("ART_CONVERTER", Path::new("/bin/cp")),
+        ],
+    );
+    assert!(!resolved, "{said}");
+    assert!(
+        !files_under(&dir)
+            .iter()
+            .any(|path| path.file_name().is_some_and(|name| name == "evil.fbx")),
+        "a member climbed out of the archive: {:#?}",
+        files_under(&dir)
+    );
+}
+
+/// **A machine that cannot open a zip is told which program to install,
+/// not that its art is missing.**
+///
+/// The two situations look identical from the outside and have nothing in
+/// common: one is a download, the other is a package manager. `tar`
+/// already reads zip on macOS and on Windows 10 build 1803 and later,
+/// where it is bsdtar; Linux ships GNU tar, which does not, and needs
+/// `unzip`. Saying "not on this machine" about a mesh that is sitting in
+/// the archive would send somebody looking through their downloads for a
+/// pack they already have.
+#[cfg(unix)]
+#[test]
+fn a_machine_that_cannot_open_a_zip_is_told_which_program_to_install() {
+    let dir = scratch("no-zip-reader");
+    let store = dir.join("store");
+    zipped_pack(&store);
+    let nothing = dir.join("empty-path");
+    std::fs::create_dir_all(&nothing).expect("a directory with no programs in it");
+    let manifest = dir.join("manifest.toml");
+    write(
+        &manifest,
+        &format!(
+            "{ZIPPED_PACK}\n[asset.crate_small]\npack = \"scifi\"\n\
+             source = \"SourceFiles/FBX/SM_Crate_01.fbx\"\n"
+        ),
+    );
+    let (ok, said) = xtask(
+        &["art", "check"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &dir.join("cache")),
+            ("PATH", &nothing),
+        ],
+    );
+    assert!(!ok, "{said}");
+    assert!(said.contains("can open"), "{said}");
+    assert!(said.contains("unzip"), "{said}");
+    assert!(said.contains("bsdtar"), "{said}");
+    assert!(
+        !said.contains("Download \""),
+        "the pack is here; it is the reader that is not:\n{said}"
     );
 }

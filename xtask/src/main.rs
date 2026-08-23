@@ -8,8 +8,8 @@
 //!
 //! ```text
 //! art/manifest.toml   ids, packs, paths, digests, per-asset overrides
-//! $SYNTY_STORE        the packs as downloaded, on the owner's disk
-//! art/cache/          rebuilt, converted, content-addressed, gitignored
+//! $SYNTY_STORE        the packs exactly as downloaded, on the owner's disk
+//! art/cache/          the few files a manifest named, converted, gitignored
 //! ```
 //!
 //! Continuous integration never runs any of this and never will: the
@@ -21,6 +21,7 @@
 //!
 //! See `docs/ART_PIPELINE.md`.
 
+mod archive;
 mod cache;
 mod convert;
 mod fsx;
@@ -33,7 +34,7 @@ use std::path::{Path, PathBuf};
 
 use cache::Cache;
 use manifest::{Asset, Manifest, Resolved};
-use store::{Found, Store};
+use store::{Found, Hit, Store, count, slashed};
 
 const USAGE: &str = "\
 cargo xtask art <command>
@@ -42,10 +43,10 @@ cargo xtask art <command>
   resolve          check, then convert anything not already in the cache, then write the index
   hash [id ...]    print the `sha256` lines to paste into the manifest
   unpack <pack>    rebuild the asset trees inside one pack's .unitypackage files
-  find <text>      search the packs for a file name, and print the manifest line for each hit
+  find <text>      search the packs — inside their archives too — and print the manifest lines
 
 Environment:
-  SYNTY_STORE      where the packs are, unzipped, one directory per pack (required)
+  SYNTY_STORE      where the packs are, one directory per pack, as downloaded (required)
   ART_MANIFEST     a manifest other than art/manifest.toml
   ART_CACHE        a cache other than art/cache
   BLENDER          the Blender executable, if it is not on PATH
@@ -362,8 +363,8 @@ fn unpack(pack_id: &str) -> Result<(), String> {
     for package in packages {
         let into = cache.unpacked(&pack.id).join(
             package
-                .file_stem()
-                .and_then(|stem| stem.to_str())
+                .file_name()
+                .and_then(|name| name.to_str())
                 .unwrap_or("package"),
         );
         let report = unitypackage::unpack(&package, &into)?;
@@ -380,14 +381,20 @@ fn unpack(pack_id: &str) -> Result<(), String> {
 
 /// Search the packs, and print each hit as the manifest line that would
 /// name it. A Synty pack is thousands of files with names nobody guesses,
-/// and reading them off a store page is the part that does not scale.
+/// it arrives zipped, and reading names off a store page is the part that
+/// does not scale. So this looks inside the archives as well, and looking
+/// inside one costs a read of its table of contents rather than an
+/// unpacked pack.
 fn find(needle: &str) -> Result<(), String> {
     let manifest = read_manifest()?;
     let store = Store::open()?;
     let cache = Cache::open(&repo());
     let unpacked = cache.root.join("unpacked");
     let roots = vec![store.root.clone(), unpacked.clone()];
-    let hits = store::search(&roots, needle);
+    let (hits, trouble) = store::search(&roots, needle, &cache);
+    for complaint in &trouble {
+        eprintln!("art: {complaint}");
+    }
     if hits.is_empty() {
         println!(
             "art: nothing under {} or {} has `{needle}` in its name",
@@ -396,33 +403,61 @@ fn find(needle: &str) -> Result<(), String> {
         );
         return Ok(());
     }
-    let shown = hits.len().min(120);
-    for hit in hits.iter().take(shown) {
-        println!("{}", manifest_lines_for(&manifest, &store, &unpacked, hit));
+    // Written out, then sorted and thinned. One file can be found twice
+    // — once inside the pack's archive and once in the copy of it the
+    // cache already holds — and the two are the same manifest line, so
+    // printing both is asking somebody to compare two identical
+    // paragraphs. Sorting the lines rather than the hits also groups them
+    // by pack, which is the order a person reads them in.
+    let mut lines: Vec<String> = hits
+        .iter()
+        .map(|hit| manifest_lines_for(&manifest, &store, &unpacked, hit))
+        .collect();
+    lines.sort();
+    lines.dedup();
+    let shown = lines.len().min(120);
+    for line in lines.iter().take(shown) {
+        println!("{line}");
     }
-    if hits.len() > shown {
+    if lines.len() > shown {
         println!(
             "art: {} more not shown; narrow the search",
-            hits.len() - shown
+            lines.len() - shown
         );
     }
     Ok(())
 }
 
-/// "1 asset", "2 assets". A report that says "1 assets" reads like a
-/// machine talking, and every other line this tool prints is a sentence.
-fn count(many: usize, thing: &str) -> String {
-    if many == 1 {
-        format!("1 {thing}")
-    } else {
-        format!("{many} {thing}s")
+/// One hit, written as the manifest lines that would name it.
+///
+/// Which key it prints is the difference between a line that resolves and
+/// a line that does not. A file inside a pack's raw archive is `source`,
+/// because that archive is the Source Files download and the resolver
+/// reads it in place. A file inside a `.unitypackage` is `unity`. A file
+/// in the cache is spelled after the archive it came out of, because the
+/// cache is not what a manifest points at.
+fn manifest_lines_for(manifest: &Manifest, store: &Store, unpacked: &Path, hit: &Hit) -> String {
+    match hit {
+        Hit::Loose(path) => loose_lines(manifest, store, unpacked, path),
+        Hit::Inside { archive, member } => {
+            let key = if is_unitypackage(archive) {
+                "unity"
+            } else {
+                "source"
+            };
+            manifest
+                .packs
+                .values()
+                .find(|pack| archive.starts_with(store.pack_dir(pack)))
+                .map_or_else(
+                    || format!("  {} :: {member}\n", archive.display()),
+                    |pack| format!("  pack = \"{}\"\n  {key} = \"{member}\"\n", pack.id),
+                )
+        }
     }
 }
 
-/// One hit, written as the manifest lines that would name it. A hit
-/// inside a rebuilt tree is spelled `unity`, not `source`: the file is in
-/// the cache, and the cache is not what a manifest points at.
-fn manifest_lines_for(manifest: &Manifest, store: &Store, unpacked: &Path, hit: &Path) -> String {
+fn loose_lines(manifest: &Manifest, store: &Store, unpacked: &Path, hit: &Path) -> String {
     if let Some((pack, rest)) = manifest.packs.values().find_map(|pack| {
         hit.strip_prefix(store.pack_dir(pack))
             .ok()
@@ -436,12 +471,17 @@ fn manifest_lines_for(manifest: &Manifest, store: &Store, unpacked: &Path, hit: 
     }
     if let Ok(rest) = hit.strip_prefix(unpacked) {
         let mut parts = rest.components();
-        // <pack>/<archive>/Assets/... — the first two are the cache's own
-        // filing and the rest is the path Unity stored.
-        if let (Some(pack), Some(_archive)) = (parts.next(), parts.next()) {
+        // <pack>/<archive file name>/Assets/... — the first two are the
+        // cache's own filing, and the rest is the path the archive stored.
+        if let (Some(pack), Some(archive)) = (parts.next(), parts.next()) {
             let inside: PathBuf = parts.collect();
+            let key = if is_unitypackage(Path::new(archive.as_os_str())) {
+                "unity"
+            } else {
+                "source"
+            };
             return format!(
-                "  pack = \"{}\"\n  unity = \"{}\"\n",
+                "  pack = \"{}\"\n  {key} = \"{}\"\n",
                 pack.as_os_str().to_string_lossy(),
                 slashed(&inside)
             );
@@ -450,10 +490,8 @@ fn manifest_lines_for(manifest: &Manifest, store: &Store, unpacked: &Path, hit: 
     format!("  {}\n", hit.display())
 }
 
-/// A relative path as the manifest spells it: `/` on every platform.
-fn slashed(path: &Path) -> String {
-    path.components()
-        .filter_map(|part| part.as_os_str().to_str())
-        .collect::<Vec<_>>()
-        .join("/")
+fn is_unitypackage(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("unitypackage"))
 }

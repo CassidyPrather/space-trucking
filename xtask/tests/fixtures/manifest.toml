@@ -22,3 +22,26 @@ scale = [1.0, 1.0, 1.0]
 offset = [0.0, 0.0, 0.0]
 rotation = [0.0, 0.0, 0.0]
 fill = [1.0, 1.0, 1.0]
+
+# The same pack, downloaded and not unzipped, which is how a pack
+# arrives: a directory the store named, holding an icon and a zip. `dir`
+# is that directory's name, spaces and capitals and all — the line is the
+# contract, so nothing here has to predict what a download unpacks to.
+[pack.zipped]
+title = "The fixture pack, still zipped"
+dir = "A Zipped Pack"
+download = "nothing — the fixture pack is in the repository, beside this file"
+
+[asset.unit_pyramid]
+pack = "zipped"
+# A tail of the member name, not the whole of it: the zip wraps its
+# contents in one folder named after the pack, the way Synty's do.
+source = "SourceFiles/OBJ/unit_pyramid.obj"
+texture = "SourceFiles/Textures/checker.png"
+# Recorded, like the cube's, so that editing the pyramid without
+# re-hashing it is a refusal with both digests in it.
+sha256 = "212c30505e6cb2a0198f14445ab29054bd8ed263688b38bcf6768f7a0ac1c5f2"
+scale = [1.0, 1.0, 1.0]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]

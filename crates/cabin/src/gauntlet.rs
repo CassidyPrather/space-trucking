@@ -126,6 +126,7 @@ use space_trucking::sim::cargo::{Kind, Loc, Mount, Piece, mount_accepts, placeme
 use space_trucking::sim::layout;
 use space_trucking::sim::room::{CABIN, RoomId, RoomKind, Rooms, Surf, Tile};
 
+use crate::art::Dressings;
 use crate::pieces::{Screens, Under};
 use crate::poi::{self, Fitting, Frame, Host, Shape};
 use crate::rig::{EYE_HEIGHT, PITCH_LIMIT, REACH};
@@ -1468,6 +1469,20 @@ fn off_grid(body: Box3, origin: Vec3) -> Option<(usize, f32, f32)> {
 /// rule by rule.
 #[must_use]
 pub fn sweep() -> Vec<Finding> {
+    sweep_dressed(crate::art::Dressings::shipped())
+}
+
+/// **The same sweep, told what is dressed in purchased art.**
+///
+/// [`sweep`] hands it `art/manifest.toml` as it stands in this
+/// repository, which today declares nothing, so the two are the same
+/// answer. The parameter exists because a family nobody can catch out is
+/// a green tick that means nothing: every reading here was factored out
+/// of its own loop for exactly that reason (see [`off_plan`] and
+/// [`looked_at`]), and a fill declaration is the newest thing the sweep
+/// takes at its word.
+#[must_use]
+pub fn sweep_dressed(declared: &Dressings) -> Vec<Finding> {
     let mut out = Vec::new();
     // The roster is held rather than consumed: `berth_filled` answers
     // about a kind and a chart class rather than about a room, so it
@@ -1485,12 +1500,12 @@ pub fn sweep() -> Vec<Finding> {
         out.extend(fixture_reached(stage));
         out.extend(fixture_seen(stage));
     }
-    out.extend(prop_points());
-    out.extend(part_seated());
-    out.extend(rig_coplanar());
-    out.extend(rig_fits());
-    out.extend(rig_faces());
-    out.extend(rig_seated());
+    out.extend(prop_points(declared));
+    out.extend(part_seated(declared));
+    out.extend(rig_coplanar(declared));
+    out.extend(rig_fits(declared));
+    out.extend(rig_faces(declared));
+    out.extend(rig_seated(declared));
     out.extend(berth_filled(&stages));
     out.extend(berth_turned(&stages));
     out.extend(deck_reached());
@@ -1850,9 +1865,15 @@ fn coplanar(stage: &Stage) -> Vec<Finding> {
 /// two cannot disagree. What is left for this to find is a claim that
 /// points nowhere — an axis or a want somebody left degenerate — and
 /// any part that goes back to being turned by hand.
-fn prop_points() -> Vec<Finding> {
+fn prop_points(declared: &Dressings) -> Vec<Finding> {
     let mut out = Vec::new();
     for kind in Kind::ALL {
+        // A bought mesh points its own features and declares none of
+        // them here; the whitebox's claims are about a body this kind no
+        // longer draws.
+        if dressed(declared, kind) {
+            continue;
+        }
         for feature in crate::pieces::features(kind) {
             let got = (feature.turn() * feature.axis).normalize_or_zero();
             let want = feature.want.normalize_or_zero();
@@ -1889,8 +1910,11 @@ fn prop_points() -> Vec<Finding> {
 /// the packed one are never drawn together (`pieces::sync_dressings`
 /// shows exactly one), so a plane they happen to share is not a plane
 /// anybody sees.
-fn rig_scene(kind: Kind, screens: Screens, showing: Under) -> Vec<Drawn> {
-    rig_parts(kind, screens, showing)
+fn rig_scene(declared: &Dressings, kind: Kind, screens: Screens, showing: Under) -> Vec<Drawn> {
+    if let Some(drawn) = dressed_scene(declared, kind) {
+        return drawn;
+    }
+    rig_parts(declared, kind, screens, showing)
         .into_iter()
         .filter_map(|part| {
             let body = part.body?;
@@ -1915,11 +1939,80 @@ fn rig_scene(kind: Kind, screens: Screens, showing: Under) -> Vec<Drawn> {
         .collect()
 }
 
+/// Whether a purchased mesh stands in for this kind's whitebox parts —
+/// the one question the three families that measure a rig against ITSELF
+/// have to ask before they ask anything else.
+const fn dressed(declared: &Dressings, kind: Kind) -> bool {
+    declared.of(kind).is_some()
+}
+
+/// **What a kind draws when a purchased mesh draws it**: one body, the
+/// size `art/manifest.toml` promises it is, or nothing at all for a kind
+/// nothing dresses.
+///
+/// This is the whole of how a bought asset enters the harness, and the
+/// framing is worth being exact about, because it decides what a green
+/// sweep means.
+///
+/// **The declaration is swept, not the mesh.** The mesh is not in this
+/// repository, is not on the continuous-integration runner, and never
+/// will be — the licence is why. So what CI can check is the *promise*:
+/// `fill` says what fraction of its berth box the body occupies, and
+/// every rule about where a cargo body stands can be asked of that box
+/// exactly as it is asked of the whitebox parts. `cargo xtask art
+/// resolve` is where the promise is checked against the mesh, on the
+/// machine that has one.
+///
+/// **It applies whether or not `--features art` is on**, and that is
+/// deliberate rather than an oversight. The build that can draw the mesh
+/// is the build CI cannot run; if the sweep only looked at declarations
+/// in a build nobody tests, the declarations would be swept nowhere. A
+/// `dresses` line is a statement about what this kind's body IS, and the
+/// harness takes it at its word.
+///
+/// **It stands in for the parts rather than joining them.** A purchased
+/// crate is not a whitebox crate with a mesh next to it; it is the same
+/// object drawn another way, and measuring both would report every kind
+/// as two bodies in one berth.
+fn dressed_scene(declared: &Dressings, kind: Kind) -> Option<Vec<Drawn>> {
+    let dressing = declared.of(kind)?;
+    let (mid, half) = dressing.fill_box(kind);
+    let unit = crate::pieces::RIG_UNIT;
+    Some(vec![Drawn {
+        what: format!("{} (purchased)", dressing.id),
+        body: Box3::spanning((mid - half) * unit, (mid + half) * unit),
+        // A box, and the sides of it are sides: `fill` is the tight box
+        // round the body, so unlike a `Shape::Ring`'s frame there is no
+        // air between the wrapper and the thing.
+        faces: Faces::ALL,
+        character: true,
+        // A bought mesh declares no joints and points no features. What
+        // it declares is its size, and that is what is measured.
+        name: None,
+        seat: None,
+    }])
+}
+
 /// The parts one kind draws AT ONCE: everything that always draws, plus
 /// whichever of a covering's two bodies `showing` names. One place
 /// decides what is in a scene, so the families that measure a rig
 /// against itself all measure the same scene.
-fn rig_parts(kind: Kind, screens: Screens, showing: Under) -> Vec<crate::pieces::Part> {
+///
+/// **A dressed kind draws no parts.** The whitebox description is still
+/// there and is still what a default build stamps, but it is not what
+/// the manifest says the body IS — see [`dressed_scene`] — so the
+/// families that measure a rig against ITSELF have nothing to ask. A
+/// bought mesh's own joints and its own named directions are inside a
+/// file this repository cannot open.
+fn rig_parts(
+    declared: &Dressings,
+    kind: Kind,
+    screens: Screens,
+    showing: Under,
+) -> Vec<crate::pieces::Part> {
+    if dressed(declared, kind) {
+        return Vec::new();
+    }
     let piece = Piece {
         id: 0,
         kind,
@@ -1975,16 +2068,23 @@ fn rig_pose(part: &crate::pieces::Part) -> Transform {
 /// gap to any of them; a seat no part answers to at all is a finding of
 /// its own, because a promise about a body the rig does not draw is a
 /// promise nobody can keep.
-fn part_seated() -> Vec<Finding> {
+fn part_seated(declared: &Dressings) -> Vec<Finding> {
     let mut out = Vec::new();
     for kind in Kind::ALL {
+        // A dressed kind draws one body and no joints, so every seat the
+        // whitebox declares names a part that is not in the scene — which
+        // would be thirty findings saying nothing but "this kind is
+        // dressed".
+        if dressed(declared, kind) {
+            continue;
+        }
         let mut worst: BTreeMap<String, String> = BTreeMap::new();
         let scenes: Vec<Vec<crate::pieces::Part>> = Screens::BOTH
             .into_iter()
             .flat_map(|screens| {
                 rig_forms(kind)
                     .into_iter()
-                    .map(move |showing| rig_parts(kind, screens, showing))
+                    .map(move |showing| rig_parts(declared, kind, screens, showing))
             })
             .collect();
         // **A name nothing answers to**, asked of the claims the rig
@@ -2064,13 +2164,13 @@ fn rig_forms(kind: Kind) -> Vec<Under> {
 /// stripe somebody holds up to their eye — and nothing could ask, because
 /// `build_kind` composed straight into a live world and there was no
 /// description to measure. There is one now.
-fn rig_coplanar() -> Vec<Finding> {
+fn rig_coplanar(declared: &Dressings) -> Vec<Finding> {
     let mut out = Vec::new();
     for kind in Kind::ALL {
         let mut shared: BTreeMap<String, Vec<String>> = BTreeMap::new();
         for screens in Screens::BOTH {
             for showing in rig_forms(kind) {
-                let scene = rig_scene(kind, screens, showing);
+                let scene = rig_scene(declared, kind, screens, showing);
                 for (i, a) in scene.iter().enumerate() {
                     for b in &scene[i + 1..] {
                         let faces = shared_faces(a, b);
@@ -2126,7 +2226,7 @@ fn rig_coplanar() -> Vec<Finding> {
 /// across is its plan, and its plan already has a rule —
 /// `pieces::tests::every_kind_hangs_true_on_every_legal_berth` asks
 /// whether the body a rig draws lands on the four corners its rect owns.
-fn rig_fits() -> Vec<Finding> {
+fn rig_fits(declared: &Dressings) -> Vec<Finding> {
     let unit = crate::pieces::RIG_UNIT;
     let (near, far) = (
         crate::pieces::RIG_NEAR * unit,
@@ -2137,7 +2237,7 @@ fn rig_fits() -> Vec<Finding> {
         let mut over: BTreeMap<String, f32> = BTreeMap::new();
         for screens in Screens::BOTH {
             for showing in rig_forms(kind) {
-                for drawn in rig_scene(kind, screens, showing) {
+                for drawn in rig_scene(declared, kind, screens, showing) {
                     let spill = (near - drawn.body.lo.z).max(drawn.body.hi.z - far);
                     if spill > CLIP_SLACK {
                         over.insert(drawn.what, spill);
@@ -2187,7 +2287,7 @@ fn rig_fits() -> Vec<Finding> {
 /// [`rig_fits`]'s question, measured against the band every rig is
 /// composed within; this one is measured against the kind's own `w × h`,
 /// which is the only extent the sim ever states.
-fn rig_faces() -> Vec<Finding> {
+fn rig_faces(declared: &Dressings) -> Vec<Finding> {
     let unit = crate::pieces::RIG_UNIT;
     let mut out = Vec::new();
     for kind in Kind::ALL {
@@ -2196,7 +2296,7 @@ fn rig_faces() -> Vec<Finding> {
         let mut over: BTreeMap<String, f32> = BTreeMap::new();
         for screens in Screens::BOTH {
             for showing in rig_forms(kind) {
-                for drawn in rig_scene(kind, screens, showing) {
+                for drawn in rig_scene(declared, kind, screens, showing) {
                     // `rig_scene` already measures in metres, so the
                     // cells are carried across rather than the bodies.
                     let (lo, hi) = (drawn.body.lo, drawn.body.hi);
@@ -2377,7 +2477,7 @@ fn plan_sink(kind: Kind) -> (f32, f32) {
 /// more than [`SOLE_SINK`] of burial. Between them a rig's sole has a
 /// band it must land in, and that band is a hair either side of the
 /// chart.
-fn rig_seated() -> Vec<Finding> {
+fn rig_seated(declared: &Dressings) -> Vec<Finding> {
     let mut out = Vec::new();
     for kind in Kind::ALL {
         for surf in Surf::ALL {
@@ -2399,7 +2499,7 @@ fn rig_seated() -> Vec<Finding> {
                     if showing == Under::Laid {
                         continue;
                     }
-                    let scene = rig_scene(kind, screens, showing);
+                    let scene = rig_scene(declared, kind, screens, showing);
                     let closest = scene
                         .into_iter()
                         .map(|drawn| (joint.short_of(drawn.body), drawn.what))
@@ -3648,7 +3748,7 @@ mod tests {
                 claims += 1;
                 let drawn = Screens::BOTH.into_iter().any(|screens| {
                     rig_forms(kind).into_iter().any(|showing| {
-                        rig_parts(kind, screens, showing)
+                        rig_parts(Dressings::shipped(), kind, screens, showing)
                             .iter()
                             .any(|part| part.what == seat.on)
                     })
@@ -3900,16 +4000,21 @@ mod tests {
         // lamp's canopy meets its deckhead today, and a millimetre is
         // not what saves it.
         let lamp = chart_joint(Kind::CeilingLamp, Surf::Ceiling).expect("a pendant hangs");
-        let canopy = rig_scene(Kind::CeilingLamp, Screens::LIVE, Under::Rig)
-            .into_iter()
-            .map(|drawn| lamp.short_of(drawn.body))
-            .fold(f32::INFINITY, f32::min);
+        let canopy = rig_scene(
+            Dressings::shipped(),
+            Kind::CeilingLamp,
+            Screens::LIVE,
+            Under::Rig,
+        )
+        .into_iter()
+        .map(|drawn| lamp.short_of(drawn.body))
+        .fold(f32::INFINITY, f32::min);
         assert!(
             canopy <= 0.0,
             "the ceiling lamp's canopy stops {canopy} m short of its own deckhead",
         );
         assert!(
-            !rig_seated()
+            !rig_seated(Dressings::shipped())
                 .iter()
                 .any(|finding| finding.offender.starts_with("CeilingLamp")),
             "the ceiling lamp is seated, so the family must not be reporting it"
@@ -3990,6 +4095,108 @@ mod tests {
             "the docket carries {} thing(s) the gauntlet no longer catches \
              — strike the lines from src/gauntlet.docket:\n{gone:#?}",
             gone.len()
+        );
+    }
+
+    /// **The manifest in this repository dresses nothing, so the sweep
+    /// is the whitebox's own.** The other half of the docket contract:
+    /// the docket is asserted equal to a sweep, and the sweep now reads a
+    /// file somebody edits by hand. A `dresses` line added to
+    /// `art/manifest.toml` moves the harness's reading of that kind off
+    /// the whitebox parts and onto the declared body, which is the point
+    /// — and it means "the docket is empty" is a claim about the manifest
+    /// as well as about the geometry. This says which.
+    #[test]
+    fn the_shipped_manifest_dresses_nothing_and_the_sweep_is_the_whiteboxs() {
+        let shipped = Dressings::shipped();
+        assert!(
+            !shipped.any(),
+            "art/manifest.toml now dresses {:?}. That is not a fault — it is the \
+             feature working — but the docket is asserted equal to a sweep that reads \
+             this file, so the lines the declaration produces belong on the docket or \
+             the numbers want fixing.",
+            Kind::ALL
+                .into_iter()
+                .filter(|kind| shipped.of(*kind).is_some())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            sweep().len(),
+            sweep_dressed(&Dressings::default()).len(),
+            "a manifest that dresses nothing swept differently from no manifest at all"
+        );
+    }
+
+    /// **A declared body that leaves its berth is a finding, and the
+    /// same one a whitebox part would be.** The non-vacuity of the
+    /// family above.
+    ///
+    /// The shipped manifest declares nothing, so the shipped sweep can
+    /// only ever be green about this — and a rule that can only pass is
+    /// not a rule. So a manifest is written here, with the two ways a
+    /// declaration can put a body somewhere it does not belong, and the
+    /// sweep has to say so: a `fill` bigger than the cells the sim gave
+    /// the kind (`face-fits`, the paint the aim cannot follow), and an
+    /// `offset` that shoves the body out of the one-cell band every rig
+    /// is composed within (`berth-clear`, which on a wall kind is the air
+    /// its berth spends).
+    ///
+    /// **And a truthful declaration is silent**, which is the other half:
+    /// a family that reports every dressed kind is a family nobody can
+    /// use.
+    #[test]
+    fn a_declared_body_that_leaves_its_berth_is_caught_like_any_other() {
+        let declared = |lines: &str| {
+            Dressings::read(&format!(
+                "[asset.crate_small]\ndresses = \"cargo/suspicious_crate\"\n{lines}"
+            ))
+            .expect("the dialect")
+        };
+        let rules = |found: &[Finding]| -> Vec<String> {
+            let mut out: Vec<String> = found
+                .iter()
+                .filter(|finding| finding.offender.contains("crate_small"))
+                .map(|finding| finding.rule.to_owned())
+                .collect();
+            out.sort();
+            out.dedup();
+            out
+        };
+
+        // A body that fills its berth exactly: the identity claim, and
+        // the one the manifest's own comment calls the claim most
+        // imported meshes turn out to break.
+        let honest = sweep_dressed(&declared("fill = [1.0, 1.0, 1.0]\n"));
+        assert!(
+            rules(&honest).is_empty(),
+            "a body that fills its own berth was reported: {:?}",
+            rules(&honest)
+        );
+
+        // Half again as wide as the cells the sim gave it.
+        let wide = sweep_dressed(&declared("fill = [1.5, 1.0, 1.0]\n"));
+        assert!(
+            rules(&wide).contains(&FACE_FITS.to_owned()),
+            "a body reaching outside its own cells went unreported: {:?}",
+            rules(&wide)
+        );
+
+        // The right size, shoved a whole berth deeper than the band.
+        let sunk = sweep_dressed(&declared("offset = [0.0, 0.0, 1.6]\n"));
+        assert!(
+            rules(&sunk).contains(&BERTH_CLEAR.to_owned()),
+            "a body shoved out of the band every rig is composed within went \
+             unreported: {:?}",
+            rules(&sunk)
+        );
+
+        // And the whitebox's own parts stop being measured for a kind
+        // something else now draws: the two are one object, not two.
+        assert!(
+            !honest
+                .iter()
+                .any(|finding| finding.offender.starts_with("SuspiciousCrate ")),
+            "a dressed kind was measured as a purchased body AND as its whitebox"
         );
     }
 
@@ -4840,7 +5047,7 @@ mod tests {
         for kind in Kind::ALL {
             let seen: usize = rig_forms(kind)
                 .into_iter()
-                .map(|showing| rig_scene(kind, Screens::LIVE, showing).len())
+                .map(|showing| rig_scene(Dressings::shipped(), kind, Screens::LIVE, showing).len())
                 .sum();
             assert!(seen > 0, "{kind:?} is swept with no body at all");
         }
@@ -4864,7 +5071,7 @@ mod tests {
                 continue;
             }
             let named = |showing| -> Vec<String> {
-                rig_scene(kind, Screens::LIVE, showing)
+                rig_scene(Dressings::shipped(), kind, Screens::LIVE, showing)
                     .into_iter()
                     .map(|drawn| drawn.what)
                     .collect()

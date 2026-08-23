@@ -32,16 +32,27 @@ path = "src/main.rs"
 # keeps testing the whitebox, which is where all sixteen gauntlet
 # families and the determinism guards live.
 #
-# Nothing reads the feature yet. It is declared now because the seam is
-# the expensive half: `cargo xtask art resolve` already writes
-# art/cache/index.toml, and the slice that consumes it has to re-enable
-# bevy_gltf, bevy_scene and the image decoders that were cut out of the
-# dependency list above — a measured 9m59s cold build going back towards
-# the 13m41s it was. That is the next slice's cost to pay, deliberately,
-# and not something to discover by accident.
+# The feature now carries what it always said it would: the ability to
+# read a converted mesh and spawn what is in it. That turned out to be
+# ONE Bevy feature and not two — `bevy_gltf` brings
+# `bevy_world_serialization` with it, and a loaded glTF scene is a
+# `WorldAsset` spawned through a `WorldAssetRoot`, which is where Bevy
+# 0.19's scene rework left it. `bevy_scene` is the BSN authoring language
+# and this game authors no scenes, so it is not here. Eight crates, off in
+# the default build, whose dependency graph is byte for byte what it was
+# before the seam grew teeth
+# (`the_cabin_ships_the_whitebox_unless_art_is_asked_for` in xtask).
+#
+# **No image decoder is added, and that is a measurement rather than an
+# oversight.** `png` is already on the list above — it was put there to
+# WRITE screenshots — and Bevy's `png` feature is `image/png`, which is
+# the same code either way. A Blender-exported .glb embeds its textures
+# as PNG unless the source was a JPEG, and Synty's atlases are PNG. If a
+# pack ever ships one that is not, `"jpeg"` on the art line is the fix,
+# and it costs the default build nothing.
 [features]
 default = []
-art = []
+art = ["bevy/bevy_gltf"]
 
 [dependencies]
 # The whole game, headless: sim, net, replay, synth, telemetry.

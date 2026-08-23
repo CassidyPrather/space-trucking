@@ -14,6 +14,7 @@
 #![allow(clippy::needless_pass_by_value)]
 
 mod airlock;
+mod art;
 mod audio;
 mod bridge;
 mod canvas;
@@ -476,6 +477,26 @@ fn main() {
             .set(RenderPlugin {
                 synchronous_pipeline_compilation: judged,
                 ..default()
+            })
+            // **The art cache is the asset root**, and only under the
+            // feature that has an asset to load. Nothing else in this
+            // game reads a file through the asset server — every mesh and
+            // texture is cut in code — so there is no `assets/` directory
+            // to share, and pointing the server straight at
+            // `cargo xtask art resolve`'s output means a path out of the
+            // index is a path the server takes verbatim.
+            .set({
+                #[cfg(feature = "art")]
+                {
+                    AssetPlugin {
+                        file_path: art::cache_root().display().to_string(),
+                        ..default()
+                    }
+                }
+                #[cfg(not(feature = "art"))]
+                {
+                    AssetPlugin::default()
+                }
             }),
     )
     .insert_resource(Shell {
@@ -521,6 +542,12 @@ fn main() {
     )
     .add_systems(Update, advance.in_set(Phase::Advance))
     .add_systems(Update, rig::fade_tiles.in_set(Phase::View));
+    // **The seam.** Off in the default build and not merely inert there:
+    // the half of `art` that reads a cache does not exist without the
+    // feature, so a whitebox build has no line of code that could open a
+    // file the licence keeps out of this repository.
+    #[cfg(feature = "art")]
+    art::plugin(&mut app);
     if judged {
         pin_clock(&mut app);
     }

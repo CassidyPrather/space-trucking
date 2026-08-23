@@ -127,7 +127,7 @@ pub const RIG_FAR: f32 = RIG_NEAR + layout::CELL;
 /// this, which lands the band on the cells; without it every standing
 /// body was composed this far out into the aisle, which is most of half
 /// a cell and reads as cargo half a berth off the grid.
-const fn rig_mid() -> f32 {
+pub const fn rig_mid() -> f32 {
     f32::midpoint(RIG_NEAR, RIG_FAR)
 }
 
@@ -1692,6 +1692,7 @@ fn sync_pieces(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
+    #[cfg(feature = "art")] dressed: Option<Res<crate::art::Dressed>>,
     mut rigs: Query<(&mut PieceRig, &mut Transform, &mut Visibility)>,
 ) {
     let sim = &shell.bridge.sim;
@@ -1755,6 +1756,8 @@ fn sync_pieces(
                 &skin,
                 &shared,
                 &glasses,
+                #[cfg(feature = "art")]
+                dressed.as_deref(),
                 piece,
                 place,
             );
@@ -2952,6 +2955,12 @@ struct RigParts<'w, 's, 'a> {
     /// The amber grab's own emissive, filled in by [`carry_grab`] on
     /// the kinds that wear one — [`hover_glint`] flares it.
     grab: Option<Handle<StandardMaterial>>,
+    /// **What a purchased mesh would draw instead**, where a build has
+    /// any. Absent in every build this repository can make on its own,
+    /// and absent under `--features art` until `cargo xtask art resolve`
+    /// has been run on a machine that holds the licence.
+    #[cfg(feature = "art")]
+    dressed: Option<&'a crate::art::Dressed>,
 }
 
 impl RigParts<'_, '_, '_> {
@@ -3167,6 +3176,7 @@ fn spawn_rig(
     skin: &Skin,
     shared: &SharedBits,
     glasses: &ScreenGlasses,
+    #[cfg(feature = "art")] dressed: Option<&crate::art::Dressed>,
     piece: &Piece,
     place: Transform,
 ) -> Entity {
@@ -3192,6 +3202,8 @@ fn spawn_rig(
         root: body_root,
         piece: piece.id,
         grab: None,
+        #[cfg(feature = "art")]
+        dressed,
     };
     build_kind(&mut rig, piece);
     let grab_mat = rig.grab.clone();
@@ -5362,6 +5374,20 @@ fn bulb_part(kind: Kind, shade: &Part, radius: f32) -> Part {
 /// role writes its own material is the exception and says so
 /// ([`Role::alone`]).
 fn build_kind(rig: &mut RigParts, piece: &Piece) {
+    // **A purchased mesh replaces the description; it does not join
+    // it.** Two graphical implementations of one object is the plan, and
+    // "two" means the player sees one of them.
+    #[cfg(feature = "art")]
+    if let Some(dressed) = rig.dressed
+        && let Some((scene, dressing)) = dressed.of(piece.kind)
+    {
+        rig.commands.spawn((
+            bevy::world_serialization::WorldAssetRoot(scene.clone()),
+            dressing.pose(piece.kind),
+            ChildOf(rig.root),
+        ));
+        return;
+    }
     let screens = Screens {
         sky: rig.sky,
         map: rig.map_image.is_some(),

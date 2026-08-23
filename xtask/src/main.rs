@@ -34,7 +34,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use cache::Cache;
-use manifest::{Asset, Manifest, Resolved};
+use convert::Converter;
+use manifest::{Asset, Bounds, Manifest, Resolved};
 use store::{Found, Hit, Store, count, slashed};
 
 const USAGE: &str = "\
@@ -262,26 +263,86 @@ fn convert_all(
             fsx::copy(&from, &stage.join(leaf))?;
             fsx::copy(&from, &stage.join("Textures").join(leaf))?;
         }
-        converter.run(cache, &staged, &cache.glb(&one.digest))?;
+        let measured = converter.run(cache, &staged, &cache.glb(&one.digest))?;
+        write_bounds(cache, &one.digest, measured)?;
         println!(
-            "  converted {:<24} -> {}",
+            "  converted {:<24} -> {}{}",
             asset.id,
-            Cache::glb_relative(&one.digest)
+            Cache::glb_relative(&one.digest),
+            measured.map_or_else(
+                || String::from("  (unmeasured)"),
+                |bounds| format!("  {} half-units", manifest::triple(bounds.half))
+            )
         );
     }
+    index_all(cache, sourced, converter.as_ref())
+}
 
-    let resolved: Vec<Resolved> = sourced
-        .iter()
-        .map(|(asset, one)| Resolved {
+/// **Where the promise meets the fact, and the index gets written.**
+///
+/// Split from the conversion above because it is a different job asked of
+/// the same list: conversion is about files this run had to make, and this
+/// is about every asset the manifest names, cached or converted a moment
+/// ago. A `fill` line has to be true on the run that converted nothing as
+/// much as on the one that converted everything.
+fn index_all(
+    cache: &Cache,
+    sourced: &[(&Asset, Sourced)],
+    converter: Option<&Converter>,
+) -> Result<(), String> {
+    // **Every promise is checked, and the ones that fail are reported
+    // together.** The same rule the missing-asset report follows: being
+    // told about one wrong `fill`, fixing it, and being told about the
+    // next is the trawl this tool exists to stop.
+    let mut resolved = Vec::new();
+    let mut broken: Vec<String> = Vec::new();
+    let mut unmeasured: Vec<&str> = Vec::new();
+    for (asset, one) in sourced {
+        let measured = read_bounds(cache, &one.digest);
+        if let Some(measured) = measured {
+            if let Some(trouble) = manifest::fill_trouble(asset, measured) {
+                broken.push(trouble);
+            }
+        } else if asset.dresses.is_some() {
+            unmeasured.push(asset.id.as_str());
+        }
+        resolved.push(Resolved {
             id: asset.id.clone(),
             glb: Cache::glb_relative(&one.digest),
             sha256: one.digest.clone(),
+            dresses: asset.dresses.clone(),
             scale: asset.scale,
             offset: asset.offset,
             rotation: asset.rotation,
             fill: asset.fill,
-        })
-        .collect();
+            measured,
+        });
+    }
+    if !unmeasured.is_empty() {
+        println!(
+            "art: {} said nothing about the size of {}, so their `fill` lines went\n     \
+             unchecked. The Blender script this package ships reports its bounds; a\n     \
+             converter of your own can print `aabb <min x y z> <max x y z>` and be checked\n     \
+             the same way.",
+            converter.map_or_else(|| "the converter".to_owned(), Converter::describe),
+            unmeasured.join(", ")
+        );
+    }
+    if !broken.is_empty() {
+        for trouble in &broken {
+            println!("\n{trouble}");
+        }
+        return Err(format!(
+            "{} {} the size the manifest says {} is",
+            count(broken.len(), "asset"),
+            if broken.len() == 1 {
+                "is not"
+            } else {
+                "are not"
+            },
+            if broken.len() == 1 { "it" } else { "they" },
+        ));
+    }
     let text = manifest::render_index(&resolved);
     fsx::write(&cache.index(), &text)?;
     // Read back what was just written. The index is the one file here
@@ -292,6 +353,39 @@ fn convert_all(
     })?;
     println!("art: wrote {}", cache.index().display());
     Ok(())
+}
+
+/// Keep what the converter measured, beside what it wrote. Six numbers
+/// in the order the converter prints them, because a file this small
+/// wants no dialect of its own.
+fn write_bounds(cache: &Cache, digest: &str, measured: Option<Bounds>) -> Result<(), String> {
+    let Some(measured) = measured else {
+        // A converter that measured nothing leaves no file, so a later
+        // run cannot mistake silence for a measurement of zero.
+        return Ok(());
+    };
+    let numbers: Vec<String> = (0..3)
+        .map(|axis| measured.mid[axis] - measured.half[axis])
+        .chain((0..3).map(|axis| measured.mid[axis] + measured.half[axis]))
+        .map(|value| format!("{value}"))
+        .collect();
+    fsx::write(&cache.bounds(digest), &numbers.join(" "))
+}
+
+/// What a previous run measured, if it measured anything. A file that
+/// cannot be read or does not hold six numbers is the same answer as no
+/// file: unmeasured, and said so.
+fn read_bounds(cache: &Cache, digest: &str) -> Option<Bounds> {
+    let text = std::fs::read_to_string(cache.bounds(digest)).ok()?;
+    let numbers: Vec<f32> = text
+        .split_whitespace()
+        .filter_map(|word| word.parse().ok())
+        .collect();
+    let box3 = <[f32; 6]>::try_from(numbers.as_slice()).ok()?;
+    Some(Bounds {
+        mid: [0, 1, 2].map(|axis| f32::midpoint(box3[axis], box3[axis + 3])),
+        half: [0, 1, 2].map(|axis| (box3[axis + 3] - box3[axis]) * 0.5),
+    })
 }
 
 /// The `sha256` lines, ready to paste. Printed rather than written into

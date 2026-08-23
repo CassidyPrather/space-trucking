@@ -1126,3 +1126,212 @@ fn a_search_reads_a_packs_unitypackage_only_when_nothing_else_is_there() {
         "nothing said which part of the store went unread:\n{said}"
     );
 }
+
+/// A converter that copies its source and reports a size for it, written
+/// into `dir` and handed back as a path.
+///
+/// The measurement is the only new thing in the contract and it is one
+/// line on standard output, so the whole of a conforming converter is
+/// still `cp` and a `printf` — which is the property the contract was
+/// shaped for. `$ART_CONVERTER` is documented as any program taking a
+/// source and a destination, and the day it has to be a program that
+/// links a glTF library is the day nobody can write one.
+#[cfg(unix)]
+fn measuring_converter(dir: &Path, aabb: &str) -> PathBuf {
+    use std::os::unix::fs::PermissionsExt as _;
+    let path = dir.join("convert.sh");
+    write(
+        &path,
+        &format!("#!/bin/sh\ncp \"$1\" \"$2\"\nprintf 'aabb {aabb}\\n'\n"),
+    );
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
+        .expect("a converter this test can run");
+    path
+}
+
+/// A one-asset store and manifest for the fill guards below, with
+/// whatever `dresses`, `scale` and `fill` lines the caller wants on it.
+#[cfg(unix)]
+fn dressed_store(dir: &Path, lines: &str) -> (PathBuf, PathBuf) {
+    let store = dir.join("store");
+    write(&store.join("demo/SourceFiles/FBX/SM_Crate.fbx"), "a crate");
+    let manifest = dir.join("manifest.toml");
+    write(
+        &manifest,
+        &format!(
+            "{PACK}\n[asset.crate_small]\npack = \"demo\"\n\
+             source = \"SourceFiles/FBX/SM_Crate.fbx\"\n{lines}"
+        ),
+    );
+    (store, manifest)
+}
+
+/// **A `dresses` line reaches the index, and so does the size the
+/// converter measured.**
+///
+/// The index is the one artefact the game's own build parses, and it is
+/// parsed by a reader in another crate that cannot call into this one. So
+/// every field the cabin needs has to make the crossing: which body draws
+/// the mesh, the four overrides that place it, and — new here — the box
+/// the converter actually found round it, which is what lets the cabin
+/// put the mesh in the middle of its berth instead of wherever the
+/// exporter happened to leave the origin.
+#[cfg(unix)]
+#[test]
+fn what_a_mesh_dresses_and_what_it_measures_reach_the_index() {
+    let dir = scratch("dresses");
+    let (store, manifest) = dressed_store(
+        &dir,
+        "dresses = \"cargo/suspicious_crate\"\n\
+         scale = [2.0, 2.0, 2.0]\nfill = [0.5, 0.5, 0.5]\n",
+    );
+    let cache = dir.join("cache");
+    let converter = measuring_converter(&dir, "-0.25 -0.25 -0.25 0.25 0.25 0.25");
+    let (ok, said) = xtask(
+        &["art", "resolve"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+            ("ART_CONVERTER", &converter),
+        ],
+    );
+    assert!(ok, "{said}");
+    let index = std::fs::read_to_string(cache.join("index.toml")).expect("an index");
+    assert!(
+        index.contains("dresses = \"cargo/suspicious_crate\""),
+        "the binding did not survive the crossing:\n{index}"
+    );
+    assert!(
+        index.contains("measured_half = [0.25, 0.25, 0.25]"),
+        "the measurement did not survive the crossing:\n{index}"
+    );
+    assert!(
+        index.contains("measured_mid = [0.0, 0.0, 0.0]"),
+        "the mesh's own middle did not survive the crossing:\n{index}"
+    );
+
+    // A second run converts nothing and still knows the size, because
+    // the measurement is filed under the same digest the glb is: a check
+    // that only ran on the run that happened to convert would be a check
+    // that stops running the moment the cache is warm.
+    let (again, said) = xtask(
+        &["art", "resolve"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+        ],
+    );
+    assert!(again, "{said}");
+    assert!(
+        std::fs::read_to_string(cache.join("index.toml"))
+            .expect("an index")
+            .contains("measured_half = [0.25, 0.25, 0.25]"),
+        "a warm cache forgot what the mesh measured:\n{said}"
+    );
+}
+
+/// **A mesh that is not the size its `fill` claims stops the run, and
+/// the run says which line to paste.**
+///
+/// This is the whole point of the measurement. `fill` is a promise about
+/// how much of its berth a purchased body occupies, and every containment
+/// rule in the game downstream reads it as a fact — so a promise nothing
+/// ever checks is exactly the shape of defect the field was invented to
+/// stop, moved one level up. The converter is the only program in the
+/// pipeline that can see a mesh, so this is the only moment the two can
+/// be made to meet.
+///
+/// Unix only, for the same reason the content-addressing guard is: the
+/// stand-in converter is a shell script.
+#[cfg(unix)]
+#[test]
+fn a_mesh_that_is_not_the_size_its_fill_claims_stops_the_run() {
+    let dir = scratch("fill-promise");
+    // Half a unit each way at unit scale: it occupies half its berth box
+    // on every axis, and the line below says it fills the whole thing.
+    let (store, manifest) = dressed_store(
+        &dir,
+        "dresses = \"cargo/suspicious_crate\"\nfill = [1.0, 1.0, 1.0]\n",
+    );
+    let cache = dir.join("cache");
+    let converter = measuring_converter(&dir, "-0.5 -0.5 -0.5 0.5 0.5 0.5");
+    let (ok, said) = xtask(
+        &["art", "resolve"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+            ("ART_CONVERTER", &converter),
+        ],
+    );
+    assert!(!ok, "a fill twice the mesh was accepted:\n{said}");
+    for wanted in [
+        "crate_small",
+        "cargo/suspicious_crate",
+        "fill = ",
+        "scale = ",
+    ] {
+        assert!(said.contains(wanted), "no `{wanted}` in:\n{said}");
+    }
+    assert!(
+        !cache.join("index.toml").exists(),
+        "a broken promise was indexed anyway"
+    );
+
+    // The same mesh, with the line the refusal printed. Nothing else
+    // changes, and the cache is warm — so this also proves the check
+    // reads the measurement back rather than re-measuring.
+    let (fixed, said) = {
+        let (store, manifest) = dressed_store(
+            &dir,
+            "dresses = \"cargo/suspicious_crate\"\nfill = [0.5, 0.5, 0.5]\n",
+        );
+        xtask(
+            &["art", "resolve"],
+            &[
+                ("ART_MANIFEST", &manifest),
+                ("SYNTY_STORE", &store),
+                ("ART_CACHE", &cache),
+            ],
+        )
+    };
+    assert!(
+        fixed,
+        "the fill the refusal printed was refused too:\n{said}"
+    );
+    assert!(cache.join("index.toml").is_file(), "{said}");
+}
+
+/// **A converter that measures nothing leaves the promise unchecked and
+/// says so.**
+///
+/// The contract is deliberately open: `$ART_CONVERTER` is any program
+/// taking a source and a destination, and `FBX2glTF` has never heard of
+/// this repository. Refusing every asset such a converter produces would
+/// make the escape hatch useless; indexing them silently would make the
+/// `fill` check look like it ran. So the run says which assets went
+/// unchecked and what a converter would have to print to be checked.
+#[cfg(unix)]
+#[test]
+fn a_converter_that_measures_nothing_says_which_promises_went_unchecked() {
+    let dir = scratch("unmeasured");
+    let (store, manifest) = dressed_store(
+        &dir,
+        "dresses = \"cargo/suspicious_crate\"\nfill = [1.0, 1.0, 1.0]\n",
+    );
+    let cache = dir.join("cache");
+    let (ok, said) = xtask(
+        &["art", "resolve"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+            ("ART_CONVERTER", Path::new("/bin/cp")),
+        ],
+    );
+    assert!(ok, "an unmeasured mesh was refused:\n{said}");
+    assert!(said.contains("crate_small"), "{said}");
+    assert!(said.contains("aabb"), "nothing said what to print:\n{said}");
+}

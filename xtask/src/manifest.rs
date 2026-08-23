@@ -111,6 +111,17 @@ pub struct Asset {
     /// The digest the line was written against. Empty means "not recorded
     /// yet"; see [`Asset::NO_DIGEST_YET`].
     pub sha256: String,
+    /// **What body of the game this mesh stands in for**, as
+    /// `<namespace>/<name>` — `cargo/brine_pearls` today. Absent means
+    /// the asset is resolved and indexed and nothing draws it yet, which
+    /// is a perfectly good state for a line somebody is still measuring.
+    ///
+    /// The namespace is here from the first line for the reason the
+    /// overrides were: cargo is not the only thing in this game with a
+    /// description a mesh could be swapped into, and a flat name would
+    /// have to be re-spelled everywhere the day a station fitting gets
+    /// one. See [`binding_trouble`] for which namespaces exist.
+    pub dresses: Option<String>,
     /// Multiplied onto the size the game's own description asks for.
     pub scale: [f32; 3],
     /// Shifted, in the description's frame, after scaling.
@@ -205,6 +216,7 @@ impl Manifest {
             let sha256 = draft
                 .take_optional_str("sha256", "asset", &id, path)?
                 .unwrap_or_default();
+            let dresses = draft.take_optional_str("dresses", "asset", &id, path)?;
             let scale = draft.take_triple("scale", "asset", &id, path, [1.0; 3])?;
             let offset = draft.take_triple("offset", "asset", &id, path, [0.0; 3])?;
             let rotation = draft.take_triple("rotation", "asset", &id, path, [0.0; 3])?;
@@ -230,6 +242,11 @@ impl Manifest {
                 {
                     return Err(complain(line, format!("`{part}` {reason}")));
                 }
+            }
+            if let Some(binding) = &dresses
+                && let Some(reason) = binding_trouble(binding)
+            {
+                return Err(complain(line, format!("`dresses` {reason}")));
             }
             if !sha256.is_empty() && !is_digest(&sha256) {
                 return Err(complain(
@@ -270,6 +287,7 @@ impl Manifest {
                     unity,
                     texture,
                     sha256,
+                    dresses,
                     scale,
                     offset,
                     rotation,
@@ -338,9 +356,21 @@ impl Draft {
         path: &Path,
         fallback: [f32; 3],
     ) -> Result<[f32; 3], Complaint> {
+        Ok(self
+            .take_optional_triple(key, table, id, path)?
+            .unwrap_or(fallback))
+    }
+
+    fn take_optional_triple(
+        &mut self,
+        key: &str,
+        table: &str,
+        id: &str,
+        path: &Path,
+    ) -> Result<Option<[f32; 3]>, Complaint> {
         match self.fields.remove(key) {
-            None => Ok(fallback),
-            Some((Value::Triple(value), _)) => Ok(value),
+            None => Ok(None),
+            Some((Value::Triple(value), _)) => Ok(Some(value)),
             Some((other, line)) => Err(Complaint {
                 file: path.to_path_buf(),
                 line,
@@ -381,6 +411,56 @@ fn unusable_path(value: &str) -> Option<String> {
     if value.starts_with('/') || value.split('/').any(|part| part == ".." || part == ".") {
         return Some(format!(
             "is `{value}`, and it has to be a plain relative path inside the pack"
+        ));
+    }
+    None
+}
+
+/// **Which namespaces a `dresses` line may name.** One today, and the
+/// list is here rather than the check being "anything with a slash in
+/// it", because this file's whole personality is that a typo is a
+/// refusal: `carg/brine_pearls` is a binding that would silently never
+/// apply, and a mesh that never applies looks exactly like a mesh that
+/// converted wrong.
+///
+/// `fitting` is the one everybody can see coming — a station's own
+/// hardware is described the same way cargo is (`poi::Fitting`) — and it
+/// is not here, because a namespace nothing reads is a promise this file
+/// cannot keep. Adding it is a word here and a match arm in the cabin.
+const NAMESPACES: [&str; 1] = ["cargo"];
+
+/// Why a `dresses` value cannot be used, or `None` if it can.
+///
+/// The name half is checked for SHAPE and not for meaning. What bodies
+/// exist is the game's question, not the resolver's — this package
+/// cannot see a `cargo::Kind` and should not learn to — so a name that
+/// is well-formed and names nothing is caught on the other side of the
+/// wall, by the cabin's own guard over this very file.
+fn binding_trouble(value: &str) -> Option<String> {
+    let mut parts = value.split('/');
+    let (Some(namespace), Some(name), None) = (parts.next(), parts.next(), parts.next()) else {
+        return Some(format!(
+            "is `{value}`, and a binding is `<namespace>/<name>`, like `cargo/crate_small`"
+        ));
+    };
+    if !NAMESPACES.contains(&namespace) {
+        return Some(format!(
+            "names `{namespace}`, and the namespaces this file has are {}",
+            NAMESPACES
+                .iter()
+                .map(|one| format!("`{one}`"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+    if name.is_empty()
+        || !name
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+    {
+        return Some(format!(
+            "is `{value}`, and `{name}` is not a name; names here are lowercase letters, \
+             digits and underscores"
         ));
     }
     None
@@ -608,10 +688,37 @@ pub struct Resolved {
     /// The digest of the SOURCE the converted file came from. The cache
     /// is addressed by it, so this is also where the file is.
     pub sha256: String,
+    /// Which body of the game draws this, carried through from the
+    /// manifest so the thing that reads the index never has to read the
+    /// manifest.
+    pub dresses: Option<String>,
     pub scale: [f32; 3],
     pub offset: [f32; 3],
     pub rotation: [f32; 3],
     pub fill: [f32; 3],
+    /// **What the converter actually measured**, in the converted file's
+    /// own units: the tight box round the mesh, as a middle and a half.
+    /// `None` where the converter did not say — see [`Bounds`].
+    pub measured: Option<Bounds>,
+}
+
+/// **The tight box round a converted mesh**, in that file's own units.
+///
+/// This is the FACT half of the fill declaration. `fill` in the manifest
+/// is a promise about how much of its berth a body occupies, and until
+/// something measured the mesh the promise was the only statement in the
+/// system — which is the whole shape of the defect the field exists to
+/// stop, one level up.
+///
+/// It is optional because the converter contract is deliberately open.
+/// `$ART_CONVERTER` is documented as any program taking a source and a
+/// destination, and `FBX2glTF` has never heard of this repository; the
+/// Blender script this package ships reports its bounds, and a converter
+/// that says nothing leaves the promise unchecked rather than refused.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Bounds {
+    pub mid: [f32; 3],
+    pub half: [f32; 3],
 }
 
 /// The index as text, ready to write.
@@ -624,23 +731,119 @@ pub fn render_index(resolved: &[Resolved]) -> String {
          #\n\
          # `glb` is relative to this file's own directory. `sha256` is the digest of\n\
          # the SOURCE mesh the glb was converted from, which is also what the cache is\n\
-         # addressed by, so a changed pack changes the path and nothing stale is read.\n",
+         # addressed by, so a changed pack changes the path and nothing stale is read.\n\
+         #\n\
+         # `dresses` is which body of the game draws this one. `measured_mid` and\n\
+         # `measured_half` are the tight box the converter reported round the mesh, in\n\
+         # the glb's own units — the fact the `fill` promise beside them was checked\n\
+         # against. Both are absent where the converter reported nothing.\n",
     );
     for entry in resolved {
         let _ = write!(
             text,
-            "\n[asset.{}]\nglb = \"{}\"\nsha256 = \"{}\"\nscale = {}\noffset = {}\n\
-             rotation = {}\nfill = {}\n",
-            entry.id,
-            entry.glb,
-            entry.sha256,
+            "\n[asset.{}]\nglb = \"{}\"\nsha256 = \"{}\"\n",
+            entry.id, entry.glb, entry.sha256,
+        );
+        if let Some(dresses) = &entry.dresses {
+            let _ = writeln!(text, "dresses = \"{dresses}\"");
+        }
+        let _ = write!(
+            text,
+            "scale = {}\noffset = {}\nrotation = {}\nfill = {}\n",
             triple(entry.scale),
             triple(entry.offset),
             triple(entry.rotation),
             triple(entry.fill),
         );
+        if let Some(measured) = entry.measured {
+            let _ = write!(
+                text,
+                "measured_mid = {}\nmeasured_half = {}\n",
+                triple(measured.mid),
+                triple(measured.half),
+            );
+        }
     }
     text
+}
+
+/// **How far a measured body may sit off the `fill` beside it**, in the
+/// berth box's own half-units.
+///
+/// A fiftieth of the half-box: about 5 mm on a one-cell cargo kind,
+/// which is the same order as the gauntlet's own clip slack and coarser
+/// than the two decimals a `fill` is written with by hand. Tighter than
+/// this and a correctly-rounded `0.18` is a refusal; looser and a mesh
+/// can be a centimetre bigger than the box every containment rule reads
+/// for it, which is the whole defect the field exists to stop.
+pub const FILL_SLACK: f32 = 0.02;
+
+/// **Where the fact meets the promise**: the converter measured the
+/// mesh, the manifest declared what fraction of its berth that mesh
+/// occupies, and this is the one place the two are made to agree.
+///
+/// The units. `scale` carries the converted file's own units into the
+/// berth box's half-units — the box is `[-1, 1]` on every axis there, the
+/// same normalised frame `poi::Fitting` states a station's hardware in —
+/// so the body's half-extent in that frame is its measured half times
+/// `scale`, and `fill` is the claim about exactly that number. Both are
+/// stated in the box's own axes, before `rotation` turns anything, so the
+/// comparison is exact rather than a bound.
+///
+/// **Only an asset that dresses something is asked.** A line somebody is
+/// still measuring carries the identity `fill = [1.0, 1.0, 1.0]` because
+/// that is the default, and refusing it before anything draws it would
+/// make the manifest impossible to write in the order people write it.
+/// The promise starts mattering the moment a `dresses` line makes
+/// something read it.
+#[must_use]
+pub fn fill_trouble(asset: &Asset, measured: Bounds) -> Option<String> {
+    asset.dresses.as_ref()?;
+    let occupied = [0, 1, 2].map(|axis| measured.half[axis] * asset.scale[axis]);
+    let off = [0, 1, 2].map(|axis| occupied[axis] - asset.fill[axis]);
+    let worst = (0..3).max_by(|&a, &b| {
+        off[a]
+            .abs()
+            .partial_cmp(&off[b].abs())
+            .unwrap_or(std::cmp::Ordering::Equal)
+    })?;
+    if !off[worst].abs().is_finite() || off[worst].abs() <= FILL_SLACK {
+        return None;
+    }
+    let fits = [0, 1, 2].map(|axis| {
+        if measured.half[axis].abs() > f32::EPSILON {
+            1.0 / measured.half[axis]
+        } else {
+            asset.scale[axis]
+        }
+    });
+    Some(format!(
+        "{} is not the size {} says it is.\n\n  \
+         axis      {}\n  \
+         declared  fill {}\n  \
+         measured  {} of its berth box, from a mesh {} half-units across at scale {}\n  \
+         over by   {:.4}, and {FILL_SLACK} is the slack\n\n  \
+         fix       Either the mesh moved under the line or the line was a guess. If the\n            \
+                   mesh is the one you want, paste this and the promise is true again:\n\n              \
+         fill = {}\n\n            \
+                   If it is the SIZE that is wrong rather than the claim, this scale puts\n            \
+                   the mesh exactly in its berth, and `fill = [1.0, 1.0, 1.0]` with it:\n\n              \
+         scale = {}\n",
+        asset.id,
+        asset
+            .dresses
+            .as_deref()
+            .unwrap_or("the body it dresses")
+            .to_owned(),
+        ["x", "y", "z"][worst],
+        triple(asset.fill),
+        triple(occupied),
+        triple(measured.half),
+        triple(asset.scale),
+        off[worst],
+        triple(occupied),
+        triple(fits),
+    ))
 }
 
 /// Read an index back. Only the guard below and a future art build need
@@ -650,13 +853,24 @@ pub fn read_index(path: &Path, text: &str) -> Result<Vec<Resolved>, Complaint> {
     let assets = grouped.remove("asset").unwrap_or_default();
     let mut resolved = Vec::new();
     for (id, mut draft) in assets {
+        let glb = draft.take_str("glb", "asset", &id, path)?;
+        let sha256 = draft.take_str("sha256", "asset", &id, path)?;
+        let dresses = draft.take_optional_str("dresses", "asset", &id, path)?;
+        let scale = draft.take_triple("scale", "asset", &id, path, [1.0; 3])?;
+        let offset = draft.take_triple("offset", "asset", &id, path, [0.0; 3])?;
+        let rotation = draft.take_triple("rotation", "asset", &id, path, [0.0; 3])?;
+        let fill = draft.take_triple("fill", "asset", &id, path, [1.0; 3])?;
+        let mid = draft.take_optional_triple("measured_mid", "asset", &id, path)?;
+        let half = draft.take_optional_triple("measured_half", "asset", &id, path)?;
         let entry = Resolved {
-            glb: draft.take_str("glb", "asset", &id, path)?,
-            sha256: draft.take_str("sha256", "asset", &id, path)?,
-            scale: draft.take_triple("scale", "asset", &id, path, [1.0; 3])?,
-            offset: draft.take_triple("offset", "asset", &id, path, [0.0; 3])?,
-            rotation: draft.take_triple("rotation", "asset", &id, path, [0.0; 3])?,
-            fill: draft.take_triple("fill", "asset", &id, path, [1.0; 3])?,
+            glb,
+            sha256,
+            dresses,
+            scale,
+            offset,
+            rotation,
+            fill,
+            measured: mid.zip(half).map(|(mid, half)| Bounds { mid, half }),
             id,
         };
         draft.refuse_leftovers("asset", &entry.id, path)?;
@@ -800,10 +1014,15 @@ mod tests {
             id: "crate_small".to_owned(),
             glb: "glb/abc.glb".to_owned(),
             sha256: "a".repeat(64),
+            dresses: Some("cargo/suspicious_crate".to_owned()),
             scale: [0.013_7, 1.0, 2.5],
             offset: [-0.25, 0.0, 0.125],
             rotation: [0.0, -90.0, 0.0],
             fill: [1.0, 0.18, 1.0],
+            measured: Some(Bounds {
+                mid: [0.0, 0.5, -0.125],
+                half: [36.5, 0.18, 0.4],
+            }),
         }];
         let text = render_index(&written);
         let read = read_index(Path::new("index.toml"), &text).expect("its own dialect");
@@ -811,10 +1030,137 @@ mod tests {
         assert_eq!(read[0].id, written[0].id);
         assert_eq!(read[0].glb, written[0].glb);
         assert_eq!(read[0].sha256, written[0].sha256);
+        assert_eq!(read[0].dresses, written[0].dresses);
         assert_eq!(read[0].scale, written[0].scale);
         assert_eq!(read[0].offset, written[0].offset);
         assert_eq!(read[0].rotation, written[0].rotation);
         assert_eq!(read[0].fill, written[0].fill);
+        assert_eq!(read[0].measured, written[0].measured);
+
+        // An asset nothing draws yet, and a converter that measured
+        // nothing: both absences survive the trip as absences, rather
+        // than coming back as an empty string or a box of zero size.
+        let bare = render_index(&[Resolved {
+            dresses: None,
+            measured: None,
+            ..written.into_iter().next().expect("the one written above")
+        }]);
+        // Asked of the lines and not of the file, because the file's own
+        // header explains both keys and would answer for them.
+        let keys = |text: &str| -> Vec<String> {
+            text.lines()
+                .filter_map(|line| line.split_once(" = "))
+                .map(|(key, _)| key.to_owned())
+                .collect()
+        };
+        assert!(!keys(&bare).iter().any(|key| key == "dresses"), "{bare}");
+        assert!(
+            !keys(&bare).iter().any(|key| key.starts_with("measured")),
+            "{bare}"
+        );
+        let read = read_index(Path::new("index.toml"), &bare).expect("its own dialect");
+        assert_eq!(read[0].dresses, None);
+        assert_eq!(read[0].measured, None);
+    }
+
+    /// **A binding names a namespace this file has and a name that could
+    /// be one.** The `dresses` key is the whole of how a mesh finds the
+    /// body it stands in for, and a binding that never applies is
+    /// indistinguishable, on screen, from a mesh that converted wrong:
+    /// the whitebox is what you see either way.
+    ///
+    /// What is NOT checked here is whether the name is a body the game
+    /// has. This package cannot see a `cargo::Kind` and should not learn
+    /// to; that half is the cabin's own guard over this very file.
+    #[test]
+    fn a_binding_that_names_nothing_this_file_has_is_refused() {
+        let one = |dresses: &str| {
+            parse(&format!(
+                "{PACK}\n[asset.crate]\npack = \"demo\"\nsource = \"a.fbx\"\n\
+                 dresses = \"{dresses}\"\n"
+            ))
+        };
+        for bad in ["carg/crate", "crate_small", "cargo/", "cargo/Crate", "/x"] {
+            assert!(one(bad).is_err(), "`{bad}` was accepted as a binding");
+        }
+        let complaint = one("carg/crate")
+            .err()
+            .expect("a namespace nobody has is not a namespace");
+        assert!(complaint.message.contains("cargo"), "{complaint}");
+        assert_eq!(
+            one("cargo/suspicious_crate").expect("a binding").assets["crate"].dresses,
+            Some("cargo/suspicious_crate".to_owned())
+        );
+    }
+
+    /// **A mesh that is not the size its `fill` says it is stops the
+    /// run.** The promise is the only thing in the system that says how
+    /// much of its berth a purchased body occupies; the converter is the
+    /// only thing that can see the mesh. If the two are never made to
+    /// meet, `fill` is a number somebody typed once and every containment
+    /// rule downstream reads it as a fact.
+    ///
+    /// **And a line nothing draws yet is not asked.** The identity
+    /// `fill = [1.0, 1.0, 1.0]` is the default, so refusing it before a
+    /// `dresses` line makes something read it would make the manifest
+    /// impossible to write in the order people write it — a path first, a
+    /// digest second, the numbers last.
+    #[test]
+    fn a_mesh_that_is_not_the_size_its_fill_claims_is_refused() {
+        let asset = |dresses: &str, scale: &str, fill: &str| {
+            let binding = if dresses.is_empty() {
+                String::new()
+            } else {
+                format!("dresses = \"{dresses}\"\n")
+            };
+            parse(&format!(
+                "{PACK}\n[asset.crate]\npack = \"demo\"\nsource = \"a.fbx\"\n\
+                 {binding}scale = {scale}\nfill = {fill}\n"
+            ))
+            .expect("a manifest")
+        };
+        // A mesh a quarter of a metre across each way, at unit scale: it
+        // occupies a quarter of its berth box and the line says so.
+        let measured = Bounds {
+            mid: [0.0; 3],
+            half: [0.25; 3],
+        };
+        let truthful = asset(
+            "cargo/suspicious_crate",
+            "[1.0, 1.0, 1.0]",
+            "[0.25, 0.25, 0.25]",
+        );
+        assert!(fill_trouble(&truthful.assets["crate"], measured).is_none());
+
+        let boastful = asset(
+            "cargo/suspicious_crate",
+            "[1.0, 1.0, 1.0]",
+            "[0.25, 1.0, 0.25]",
+        );
+        let trouble = fill_trouble(&boastful.assets["crate"], measured)
+            .expect("a body a quarter of the height it claims");
+        for wanted in [
+            "crate",
+            "cargo/suspicious_crate",
+            "fill = ",
+            "scale = ",
+            "y",
+        ] {
+            assert!(trouble.contains(wanted), "no `{wanted}` in:\n{trouble}");
+        }
+
+        // The same wrong numbers, on a line nothing draws yet.
+        let undrawn = asset("", "[1.0, 1.0, 1.0]", "[0.25, 1.0, 0.25]");
+        assert!(fill_trouble(&undrawn.assets["crate"], measured).is_none());
+
+        // Inside the slack, which is where a hand-written two-decimal
+        // fill against a measured mesh actually lands.
+        let rounded = asset(
+            "cargo/suspicious_crate",
+            "[1.0, 1.0, 1.0]",
+            "[0.26, 0.24, 0.25]",
+        );
+        assert!(fill_trouble(&rounded.assets["crate"], measured).is_none());
     }
 
     /// **A manifest is a commented file, so a comment is never part of a

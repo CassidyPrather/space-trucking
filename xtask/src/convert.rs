@@ -25,6 +25,7 @@ use std::process::Command;
 
 use crate::cache::Cache;
 use crate::fsx;
+use crate::manifest::Bounds;
 
 /// The script, carried in the binary. See `xtask/blender/fbx_to_gltf.py`.
 const SCRIPT: &str = include_str!("../blender/fbx_to_gltf.py");
@@ -45,7 +46,29 @@ impl Converter {
         }
     }
 
-    pub fn run(&self, cache: &Cache, source: &Path, destination: &Path) -> Result<(), String> {
+    /// Convert one file, and hand back whatever the converter said about
+    /// the size of what it wrote.
+    ///
+    /// **The measurement is one line on standard output**, and nothing
+    /// else about the contract changed:
+    ///
+    /// ```text
+    /// aabb <min x> <min y> <min z> <max x> <max y> <max z>
+    /// ```
+    ///
+    /// A line rather than a sidecar file because the contract has to stay
+    /// something a person can satisfy in a shell script — `$ART_CONVERTER`
+    /// is documented as any program taking a source and a destination, and
+    /// the cheapest possible fake of one is `cp` and a `printf`. A
+    /// converter that prints nothing is not in breach: `FBX2glTF` has never
+    /// heard of this repository, and the honest outcome there is a promise
+    /// left unchecked rather than a refusal nobody can act on.
+    pub fn run(
+        &self,
+        cache: &Cache,
+        source: &Path,
+        destination: &Path,
+    ) -> Result<Option<Bounds>, String> {
         if let Some(parent) = destination.parent() {
             fsx::create_dir_all(parent)?;
         }
@@ -91,8 +114,37 @@ impl Converter {
                 destination.display()
             ));
         }
-        Ok(())
+        Ok(measured(&String::from_utf8_lossy(&output.stdout)))
     }
+}
+
+/// The `aabb` line out of whatever a converter said, if it said one.
+///
+/// The last one wins, because Blender writes a banner of its own before
+/// our script runs and an add-on is free to print anything it likes; the
+/// line this cares about is the one our own script wrote last.
+fn measured(said: &str) -> Option<Bounds> {
+    let mut found = None;
+    for line in said.lines() {
+        let Some(rest) = line.trim().strip_prefix("aabb ") else {
+            continue;
+        };
+        let numbers: Vec<f32> = rest
+            .split_whitespace()
+            .filter_map(|word| word.parse().ok())
+            .collect();
+        let Ok(box3) = <[f32; 6]>::try_from(numbers.as_slice()) else {
+            continue;
+        };
+        if !box3.iter().all(|value| value.is_finite()) {
+            continue;
+        }
+        found = Some(Bounds {
+            mid: [0, 1, 2].map(|axis| f32::midpoint(box3[axis], box3[axis + 3])),
+            half: [0, 1, 2].map(|axis| (box3[axis + 3] - box3[axis]) * 0.5),
+        });
+    }
+    found
 }
 
 fn indent(text: &str) -> String {

@@ -14,6 +14,11 @@ Run as::
 exactly that command, so the copy in `xtask/blender/` is the readable
 original rather than a thing anybody has to keep on a path.
 
+It also measures what it wrote and prints one `aabb` line — see
+`report_bounds`. That is the fact the manifest's `fill` promise is
+checked against, and it is here rather than in the resolver because
+this is the only program in the pipeline that can see a mesh.
+
 Two things it deliberately does not do. It does not correct scale: a
 Synty FBX arrives at whatever unit its exporter chose, and guessing here
 would put the correction somewhere nobody can see it, while
@@ -28,6 +33,7 @@ import os
 import sys
 
 import bpy
+import mathutils
 
 
 def import_any(path):
@@ -90,6 +96,46 @@ def export_glb(path):
         bpy.ops.export_scene.gltf(filepath=path, export_format="GLB")
 
 
+def report_bounds():
+    """Print the tight box round everything in the scene, in the GLB's axes.
+
+    One line, `aabb minx miny minz maxx maxy maxz`. This is the FACT half
+    of the manifest's `fill` declaration: a description claims a box and a
+    purchased mesh occupies some part of it, and until something measured
+    the mesh, `fill` was the only statement in the system about which
+    part. `cargo xtask art resolve` reads this line, writes it into the
+    index, and refuses a `fill` that disagrees with it.
+
+    The corners of every object's own bounding box, carried through that
+    object's world matrix, which is tight for an axis-aligned body and a
+    hair loose for a rotated one — the same bound the game's own
+    `pieces::drawn_box` takes, for the same reason.
+
+    **In the exported file's axes and not Blender's.** `export_yup` turns
+    Blender's Z-up into glTF's Y-up on the way out, so a box measured in
+    the scene and a box measured in the file disagree about two of three
+    axes — and a number that names the wrong axis is worse than no number,
+    because it looks like a measurement.
+    """
+    lo = [float("inf")] * 3
+    hi = [float("-inf")] * 3
+    for obj in bpy.context.scene.objects:
+        if obj.type != "MESH":
+            continue
+        for corner in obj.bound_box:
+            point = obj.matrix_world @ mathutils.Vector(corner)
+            # Z-up to Y-up: (x, y, z) becomes (x, z, -y).
+            for axis, value in enumerate((point.x, point.z, -point.y)):
+                lo[axis] = min(lo[axis], value)
+                hi[axis] = max(hi[axis], value)
+    if lo[0] > hi[0]:
+        # Nothing with a mesh in it. The export already refused an empty
+        # scene, so this is a scene of lights and empties, and the honest
+        # answer is to say nothing rather than to print an infinity.
+        return
+    print("aabb " + " ".join(f"{value:.6f}" for value in lo + hi))
+
+
 def main():
     if "--" not in sys.argv:
         raise SystemExit(
@@ -107,6 +153,7 @@ def main():
     if not bpy.context.scene.objects:
         raise SystemExit(f"{source} imported without producing a single object")
     export_glb(destination)
+    report_bounds()
     print(f"fbx_to_gltf: wrote {destination}")
 
 

@@ -45,6 +45,19 @@ impl Cache {
         self.root.join("glb").join(format!("{digest}.glb"))
     }
 
+    /// **What the converter measured, kept beside what it wrote.**
+    ///
+    /// The measurement is the fact the manifest's `fill` promise is
+    /// checked against, and the check has to hold on every run rather
+    /// than on the run that happened to convert. Converting again to
+    /// re-measure would cost a Blender launch per asset to learn a number
+    /// that cannot have changed — the file it describes is addressed by
+    /// the digest of its own source — so the number is filed under that
+    /// same digest and read back.
+    pub fn bounds(&self, digest: &str) -> PathBuf {
+        self.root.join("glb").join(format!("{digest}.aabb"))
+    }
+
     /// The same path the index writes down, so the two cannot disagree.
     pub fn glb_relative(digest: &str) -> String {
         format!("glb/{digest}.glb")

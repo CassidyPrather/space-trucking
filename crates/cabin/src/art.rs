@@ -27,6 +27,17 @@
 //! boxes in it. What it never does is put a word on the screen; the
 //! zero-text law covers what is drawn, and a complaint belongs on stderr.
 //!
+//! **And there is a writer**, which is neither half and belongs to both:
+//! [`rewritten`] sets some keys in one asset's table and leaves every
+//! other byte of the manifest as it found it. It is here rather than
+//! with the thing that calls it (`crate::nudge`, the placement bench)
+//! because it is the reader above, backwards — one dialect, one file,
+//! one place to keep them in step, and one guard that reads back what it
+//! wrote through the reader itself. It is compiled in every build for
+//! the reason the declaration half is: what it is about is the file, and
+//! the file is in the repository whether or not a build can draw what it
+//! names.
+//!
 //! # The placement frame, which is an API
 //!
 //! A cargo kind's description claims a box — its `Kind::upright` cells
@@ -181,7 +192,14 @@ impl Dressing {
 /// An array rather than a map: there are thirty-two kinds, the sweep asks
 /// about each of them many times over, and `Kind::index` is already the
 /// stable number the save format is written in.
-#[derive(Debug, Default)]
+///
+/// It is a resource as well as a value, and under `--features art` the
+/// index's own copy is inserted at boot: it is **what this run believes
+/// the numbers are**, which is the manifest's numbers as `resolve` last
+/// carried them across. The bench (`crate::nudge`) moves that belief
+/// when it writes, so a body let go of after a save does not spring back
+/// to what the index said an hour ago.
+#[derive(Resource, Debug, Default)]
 pub struct Dressings {
     by_kind: [Option<Dressing>; KIND_COUNT],
     /// Bindings that named a body this game does not have, kept rather
@@ -195,6 +213,14 @@ impl Dressings {
     #[must_use]
     pub const fn of(&self, kind: Kind) -> Option<&Dressing> {
         self.by_kind[kind.index()].as_ref()
+    }
+
+    /// **Move what this run believes**, for the one caller that has
+    /// grounds to: the bench, which has just written the same numbers
+    /// into the file the belief came from.
+    #[cfg_attr(not(feature = "art"), allow(dead_code))]
+    pub fn dress(&mut self, kind: Kind, dressing: Dressing) {
+        self.by_kind[kind.index()] = Some(dressing);
     }
 
     /// Whether anything at all is dressed. The answer is no in every
@@ -392,10 +418,199 @@ fn read_value(text: &str) -> Result<Value, String> {
     Ok(Value::Triple(Vec3::from(triple)))
 }
 
+// -------------------------------------------------------- writing back --
+
+/// **Where the manifest is**: `$ART_MANIFEST` if it is set, and
+/// `art/manifest.toml` beside wherever the game was started otherwise.
+///
+/// The same two places `cargo xtask art` looks, said the same way — a
+/// bench that wrote numbers into one file while the resolver read
+/// another would be a bench that silently did nothing. The relative
+/// fallback is [`cache_root`]'s: a running game has no repository root
+/// to search from, only a working directory.
+#[must_use]
+#[cfg_attr(not(feature = "art"), allow(dead_code))]
+pub fn manifest_path() -> std::path::PathBuf {
+    std::env::var_os("ART_MANIFEST").map_or_else(
+        || std::path::PathBuf::from("art").join("manifest.toml"),
+        std::path::PathBuf::from,
+    )
+}
+
+/// **Set some keys in one asset's table, and change nothing else.**
+///
+/// The manifest is the owner's file. It is nine tenths prose — which
+/// pack, which path, why the number is what it is — and a writer that
+/// round-tripped it through a parser would hand back a file with the
+/// argument deleted and the tables in whatever order a map iterated.
+/// So this is a **line edit**: the table's own lines are found, the
+/// named keys' values are replaced where the line already exists and a
+/// line is added where it does not, and **every other byte of the file
+/// comes out the way it went in** — comments, blank lines, spacing
+/// round the `=`, the order tables stand in, even the line endings,
+/// which are carried through rather than normalised.
+///
+/// What is *not* preserved is the value that was asked to change, which
+/// is the whole point, and a trailing comment on such a line survives
+/// the change because the owner wrote it about the key rather than
+/// about the number.
+///
+/// # Errors
+/// An id the manifest does not carry, said plainly. Nothing is written
+/// in that case, which is why this hands back a string rather than
+/// touching the file itself.
+#[cfg_attr(not(feature = "art"), allow(dead_code))]
+pub fn rewritten(text: &str, id: &str, set: &[(&str, Vec3)]) -> Result<String, String> {
+    // Lines with their own terminators still attached, so a file that
+    // arrived with CRLF leaves with CRLF and a file with no newline at
+    // the end does not grow one.
+    let mut lines: Vec<String> = text.split_inclusive('\n').map(str::to_owned).collect();
+    if span(&lines, id).is_none() {
+        return Err(format!(
+            "no `[asset.{id}]` in the manifest — nothing was written"
+        ));
+    }
+    for (key, value) in set {
+        // Re-found per key, because adding a line moves every index
+        // after it and an index computed once would be a stale index.
+        let Some((head, end)) = span(&lines, id) else {
+            unreachable!("the table was there a moment ago")
+        };
+        let rendered = triple(*value);
+        if let Some(at) = (head + 1..end).find(|at| key_of(&lines[*at]) == Some(*key)) {
+            lines[at] = set_value(&lines[at], &rendered);
+            continue;
+        }
+        // A key the table never had joins the block of keys rather than
+        // landing after whatever prose stands between this table and
+        // the next: the last line that sets something is where the
+        // owner would have typed it.
+        let after = (head + 1..end)
+            .rev()
+            .find(|at| key_of(&lines[*at]).is_some())
+            .unwrap_or(head);
+        let ending = terminator(&lines[after]).to_owned();
+        if ending.is_empty() {
+            // The file ended without a newline. The new line needs one
+            // in front of it, and takes the ending nothing else has.
+            lines[after].push('\n');
+        }
+        lines.insert(after + 1, format!("{key} = {rendered}{ending}"));
+    }
+    Ok(lines.concat())
+}
+
+/// **Write one asset's numbers into a manifest on disk.** The read, the
+/// edit and the write, with the refusal in the middle: a manifest that
+/// does not carry the id is never opened for writing.
+///
+/// A save that would change nothing writes nothing, so a bench somebody
+/// leans on the save key in does not churn a file's timestamp.
+///
+/// # Errors
+/// A file that cannot be read or written, and every refusal
+/// [`rewritten`] makes.
+#[cfg_attr(not(feature = "art"), allow(dead_code))]
+pub fn save_into(path: &std::path::Path, id: &str, set: &[(&str, Vec3)]) -> Result<(), String> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|why| format!("{} cannot be read ({why})", path.display()))?;
+    let out = rewritten(&text, id, set)?;
+    if out == text {
+        return Ok(());
+    }
+    std::fs::write(path, out).map_err(|why| format!("{} cannot be written ({why})", path.display()))
+}
+
+/// Where one `[asset.<id>]` table's lines start and stop: the header's
+/// own index, and one past the last line before the next header.
+fn span(lines: &[String], id: &str) -> Option<(usize, usize)> {
+    let head = lines
+        .iter()
+        .position(|line| header_of(line) == Some(("asset", id)))?;
+    let end = lines[head + 1..]
+        .iter()
+        .position(|line| header_of(line).is_some())
+        .map_or(lines.len(), |at| head + 1 + at);
+    Some((head, end))
+}
+
+/// The `[table.id]` a line opens, if it opens one. Read the way
+/// [`tables`] reads it, so a header this cannot see is a header the
+/// game cannot see either.
+fn header_of(line: &str) -> Option<(&str, &str)> {
+    let inner = line.trim().strip_prefix('[')?.strip_suffix(']')?;
+    let (table, id) = inner.split_once('.')?;
+    Some((table.trim(), id.trim()))
+}
+
+/// The key a line sets, if it sets one.
+fn key_of(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with('[') {
+        return None;
+    }
+    Some(trimmed.split_once('=')?.0.trim())
+}
+
+/// Whatever ends a line, so an edited line ends the same way.
+fn terminator(line: &str) -> &str {
+    if line.ends_with("\r\n") {
+        "\r\n"
+    } else if line.ends_with('\n') {
+        "\n"
+    } else {
+        ""
+    }
+}
+
+/// One key line with a new value in it. Everything around the value is
+/// the owner's — the indentation, the key's own spelling, the spacing on
+/// both sides of the `=`, and whatever trails the closing bracket, which
+/// is where a comment about the line lives.
+fn set_value(line: &str, rendered: &str) -> String {
+    let (left, rest) = line.split_once('=').unwrap_or((line, ""));
+    let gap = rest.len() - rest.trim_start_matches([' ', '\t']).len();
+    let tail = rest.find(']').map_or_else(
+        || terminator(line).to_owned(),
+        |at| rest[at + 1..].to_owned(),
+    );
+    format!("{left}={}{rendered}{tail}", &rest[..gap])
+}
+
+/// Three numbers as the manifest writes them: `[1.0, 1.0, 1.0]`.
+fn triple(value: Vec3) -> String {
+    format!(
+        "[{}, {}, {}]",
+        number(value.x),
+        number(value.y),
+        number(value.z)
+    )
+}
+
+/// One number, in the style the file is already written in.
+///
+/// Rust's own `Display` writes `1` for `1.0`, and a per-axis value
+/// spelled `[1, 1, 1]` invites the reader to think it is an integer
+/// count of something. This is `xtask`'s own rule for the same reason,
+/// restated here rather than shared for the reason the reader above is
+/// restated: the two crates cannot see each other, and the dialect is
+/// cheaper to say twice than to depend on.
+fn number(value: f32) -> String {
+    // A minus sign in front of a zero somebody nudged back to the middle
+    // is a diff nobody wants to read.
+    let value = if value == 0.0 { 0.0 } else { value };
+    let text = format!("{value}");
+    if text.contains(['.', 'e', 'E']) {
+        text
+    } else {
+        format!("{text}.0")
+    }
+}
+
 // ------------------------------------------------------- the loading half --
 
 #[cfg(feature = "art")]
-pub use loading::{Dressed, cache_root, plugin};
+pub use loading::{Dressed, Worn, cache_root, plugin};
 
 #[cfg(feature = "art")]
 mod loading {
@@ -454,6 +669,14 @@ mod loading {
         }
     }
 
+    /// **A purchased body, as it stands in the world.** Put on the
+    /// entity `pieces::build_kind` spawns the scene under, which is the
+    /// only handle anything downstream has on a drawn mesh: a
+    /// `WorldAssetRoot` is otherwise indistinguishable from any other
+    /// child of a rig. The bench moves these and nothing else.
+    #[derive(Component, Clone, Copy, Debug)]
+    pub struct Worn(pub Kind);
+
     /// Read the index at boot and ask for every scene it names.
     ///
     /// **Every way this can go wrong ends in the whitebox.** No cache
@@ -466,6 +689,7 @@ mod loading {
     pub fn plugin(app: &mut App) {
         app.init_resource::<Cache>()
             .init_resource::<Dressed>()
+            .init_resource::<Dressings>()
             .add_systems(Startup, load_index);
     }
 
@@ -473,6 +697,7 @@ mod loading {
         cache: Res<Cache>,
         assets: Res<AssetServer>,
         mut dressed: ResMut<Dressed>,
+        mut declared: ResMut<Dressings>,
     ) {
         let index = cache.0.join("index.toml");
         let Ok(text) = std::fs::read_to_string(&index) else {
@@ -482,8 +707,8 @@ mod loading {
             );
             return;
         };
-        let declared = match Dressings::read(&text) {
-            Ok(declared) => declared,
+        let read = match Dressings::read(&text) {
+            Ok(read) => read,
             Err(why) => {
                 eprintln!(
                     "art: {} does not read ({why}) — drawing the whitebox. It is written \
@@ -493,14 +718,14 @@ mod loading {
                 return;
             }
         };
-        for stranger in &declared.strangers {
+        for stranger in &read.strangers {
             eprintln!(
                 "art: {} dresses `{stranger}`, which this build has no body for",
                 index.display()
             );
         }
         for kind in Kind::ALL {
-            let Some(dressing) = declared.of(kind) else {
+            let Some(dressing) = read.of(kind) else {
                 continue;
             };
             let Some(glb) = &dressing.glb else {
@@ -518,6 +743,11 @@ mod loading {
             dressed.scenes[kind.index()] =
                 Some((assets.load(format!("{glb}#Scene0")), dressing.clone()));
         }
+        // The numbers, kept where something with no asset server can
+        // read them: the bench reads this and never touches a handle,
+        // which is what lets a scripted session drive it with no window,
+        // no cache and no mesh.
+        *declared = read;
     }
 }
 
@@ -746,6 +976,216 @@ mod tests {
         }
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// **A manifest with prose and odd spacing in it**, for the writer to
+    /// be held to. Every shape in it is one the real file has: paragraphs
+    /// of argument between the tables, a key whose spacing nobody
+    /// normalised, a comment about a value on the value's own line, a
+    /// table missing one of the numbers, and a second table after it
+    /// whose lines have nothing to do with any of this.
+    const FIXTURE: &str = "\
+# The manifest is the owner's file, and nine tenths of it is the argument
+# for the numbers in it.
+
+[pack.tins]
+title = \"Tins\"
+dir = \"Tins Pack\"
+
+
+# ------------------------------------------------------------------
+# The crate. It came out of the pack a quarter of the size the berth
+# asks for, which is what the scale below is about.
+# ------------------------------------------------------------------
+
+[asset.crate_small]
+pack = \"tins\"
+source   =   \"FBX/SM_Crate.fbx\"
+dresses = \"cargo/suspicious_crate\"
+scale=[4,4,4]
+offset = [0.0, 0.0, 0.0]  # it sits on its own base, so this is a lie
+fill = [1.0, 1.0, 1.0]
+
+# And a second one, which no save about the first may touch.
+
+[asset.lamp]
+pack = \"tins\"
+offset = [0.25, 0.0, 0.0]
+";
+
+    /// **Rewriting one table's numbers leaves every other byte alone.**
+    ///
+    /// The defect this is written against is the obvious implementation:
+    /// parse the manifest, change three fields, print it back. That
+    /// hands the owner a file with the argument deleted, the tables in
+    /// whatever order a map iterated, and the spacing they chose
+    /// normalised — a diff nobody can read, over a change worth three
+    /// numbers. So the whole file is asserted, byte for byte, and the
+    /// only lines that may differ are the ones that were asked to.
+    #[test]
+    fn rewriting_a_table_leaves_every_other_byte_alone() {
+        let out = rewritten(
+            FIXTURE,
+            "crate_small",
+            &[
+                ("scale", Vec3::splat(2.0)),
+                ("offset", Vec3::new(0.0, -0.5, 0.125)),
+                ("rotation", Vec3::new(0.0, 90.0, 0.0)),
+            ],
+        )
+        .expect("the fixture carries the table");
+        let want = FIXTURE
+            // The spacing round the `=` is the owner's, so it stays; the
+            // number style is the manifest's own, so `[4,4,4]` comes back
+            // as a triple somebody would have typed.
+            .replace("scale=[4,4,4]", "scale=[2.0, 2.0, 2.0]")
+            // A comment about the value survives the value.
+            .replace(
+                "offset = [0.0, 0.0, 0.0]  # it sits",
+                "offset = [0.0, -0.5, 0.125]  # it sits",
+            )
+            // The key the table never had joins the block of keys rather
+            // than landing after the paragraph that introduces the next
+            // table.
+            .replace(
+                "fill = [1.0, 1.0, 1.0]\n",
+                "fill = [1.0, 1.0, 1.0]\nrotation = [0.0, 90.0, 0.0]\n",
+            );
+        assert_eq!(out, want);
+        // And the two tables are still two tables, with the second one's
+        // own numbers where they were.
+        let read = Dressings::read(&out).expect("the dialect it was written in");
+        let one = read.of(Kind::SuspiciousCrate).expect("the crate");
+        assert_eq!(one.scale, Vec3::splat(2.0));
+        assert_eq!(one.offset, Vec3::new(0.0, -0.5, 0.125));
+        assert_eq!(one.rotation, Vec3::new(0.0, 90.0, 0.0));
+        assert!(out.contains("offset = [0.25, 0.0, 0.0]"), "{out}");
+    }
+
+    /// **Writing back what was read changes not one byte**, over the
+    /// manifest this repository actually ships.
+    ///
+    /// The number style is not a taste; it is a claim about a file
+    /// somebody else wrote. A save that turned `[1.0, 1.0, 1.0]` into
+    /// `[1, 1, 1]`, or into `[1.000, 1.000, 1.000]`, would put a diff in
+    /// front of the owner every time the bench was opened and closed
+    /// without moving anything. This is that claim, asked of the real
+    /// file rather than of a fixture — and the real file is only read.
+    #[test]
+    fn writing_back_what_the_shipped_manifest_says_changes_nothing() {
+        let out = rewritten(
+            SHIPPED,
+            "crate_small",
+            &[
+                ("scale", Vec3::ONE),
+                ("offset", Vec3::ZERO),
+                ("rotation", Vec3::ZERO),
+            ],
+        )
+        .expect("the shipped manifest carries crate_small");
+        assert_eq!(out, SHIPPED, "a save that moved nothing moved the file");
+    }
+
+    /// **A key the table never had is added to the right table**, and the
+    /// tables round it are left alone.
+    ///
+    /// A manifest is written in the order people write one — a path
+    /// first, a digest second, the numbers last — so a table that has
+    /// never been nudged carries none of the three. The line has to land
+    /// among that table's own keys: after the paragraph above it, before
+    /// the paragraph below it, and inside the right pair of headers.
+    #[test]
+    fn a_key_the_table_never_had_is_added_among_its_own_neighbours() {
+        let text = "[asset.one]\npack = \"tins\"\n\n# why the lamp is where it is\n\
+                    [asset.two]\npack = \"tins\"\nfill = [1.0, 1.0, 1.0]\n\
+                    # and a word after it\n\n[asset.three]\npack = \"tins\"\n";
+        let out = rewritten(text, "two", &[("offset", Vec3::new(0.0, 0.25, 0.0))])
+            .expect("the table is there");
+        assert_eq!(
+            out,
+            "[asset.one]\npack = \"tins\"\n\n# why the lamp is where it is\n\
+             [asset.two]\npack = \"tins\"\nfill = [1.0, 1.0, 1.0]\noffset = [0.0, 0.25, 0.0]\n\
+             # and a word after it\n\n[asset.three]\npack = \"tins\"\n"
+        );
+        // A table whose keys are all missing gains them under its own
+        // header and nowhere else.
+        let bare = rewritten("[asset.one]\n[asset.two]\n", "one", &[("scale", Vec3::ONE)])
+            .expect("a table with nothing in it is still a table");
+        assert_eq!(bare, "[asset.one]\nscale = [1.0, 1.0, 1.0]\n[asset.two]\n");
+    }
+
+    /// **An id the manifest does not carry is refused, and nothing is
+    /// written.**
+    ///
+    /// The refusal is the whole of the safety here: the bench names a
+    /// table from an index that a resolve wrote, and an index that has
+    /// drifted from the manifest names ids the manifest does not have.
+    /// Appending a table nobody asked for would be worse than doing
+    /// nothing, and doing nothing has to mean not touching the file at
+    /// all — which is asserted against the bytes on disk, not against
+    /// the return value.
+    #[test]
+    fn an_id_the_manifest_has_no_table_for_is_refused_and_nothing_is_written() {
+        assert!(rewritten(FIXTURE, "crate_large", &[("scale", Vec3::ONE)]).is_err());
+        let dir = std::env::temp_dir().join("space-trucking-art-refuse");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("a scratch dir");
+        let path = dir.join("manifest.toml");
+        std::fs::write(&path, FIXTURE).expect("a fixture manifest");
+        let why = save_into(&path, "crate_large", &[("scale", Vec3::ONE)])
+            .expect_err("an id nothing carries");
+        assert!(why.contains("crate_large"), "{why}");
+        assert_eq!(
+            std::fs::read_to_string(&path).expect("still there"),
+            FIXTURE,
+            "a refused save wrote to the file anyway"
+        );
+        // And a save that changes nothing writes nothing either, so a
+        // bench somebody leans on the save key in does not churn a file.
+        // (What counts as nothing is the BYTES: rewriting `[4,4,4]` with
+        // the same numbers is still a change, because the line it lands
+        // on comes out in the style the file is written in.)
+        save_into(&path, "lamp", &[("offset", Vec3::new(0.25, 0.0, 0.0))])
+            .expect("the table is there");
+        assert_eq!(
+            std::fs::read_to_string(&path).expect("still there"),
+            FIXTURE
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// **A file that arrived with Windows line endings leaves with
+    /// them**, and one with no newline at the end does not grow one.
+    ///
+    /// Byte preservation is not only about the lines somebody can see.
+    /// A writer that reassembled a file with `\n` would rewrite every
+    /// line of a manifest edited on Windows, and a three-number change
+    /// would arrive as a whole-file diff.
+    #[test]
+    fn the_line_endings_a_manifest_arrived_with_are_the_ones_it_leaves_with() {
+        let text = "[asset.one]\r\npack = \"tins\"\r\nscale = [1.0, 1.0, 1.0]\r\n";
+        let out = rewritten(text, "one", &[("scale", Vec3::splat(2.0))]).expect("the table");
+        assert_eq!(
+            out,
+            "[asset.one]\r\npack = \"tins\"\r\nscale = [2.0, 2.0, 2.0]\r\n"
+        );
+        let added = rewritten(text, "one", &[("offset", Vec3::ZERO)]).expect("the table");
+        assert_eq!(
+            added,
+            "[asset.one]\r\npack = \"tins\"\r\nscale = [1.0, 1.0, 1.0]\r\noffset = [0.0, 0.0, 0.0]\r\n"
+        );
+        // A last line with no ending gains one so that what follows it
+        // is a line at all.
+        let ragged = rewritten(
+            "[asset.one]\npack = \"tins\"",
+            "one",
+            &[("scale", Vec3::ONE)],
+        )
+        .expect("the table");
+        assert_eq!(
+            ragged,
+            "[asset.one]\npack = \"tins\"\nscale = [1.0, 1.0, 1.0]"
+        );
     }
 
     /// **Every `dresses` line in the shipped manifest names a body this

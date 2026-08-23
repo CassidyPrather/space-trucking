@@ -1249,6 +1249,22 @@ they are not closed, only bounded:
   `.github/workflows/ci-cd.yml` installs no `xvfb` and no Vulkan ICD, so
   the flicker and light-pop detectors run only when a human or an agent
   runs them.
+- **The placement bench's overlay has never been looked at.** The sweep
+  stages rooms, and the bench (`crate::nudge`, `--nudge` under
+  `--features art`) is a dev mode that stages nothing: its rods, rings,
+  calipers and its whole-or-broken ring are spawned only while a hand
+  holds a purchased body, which is a state no swept scene is ever in.
+  Everything *behind* the picture is proven headless — the gesture
+  vocabulary, the transform arithmetic, the writer, the round trip
+  through the loader's own parse, and three scripted sessions that drive
+  the real systems with real key edges — and the description the picture
+  is stamped from is asserted to differ by shape between all three
+  handles and both states, with no colour in it to differ by. What is
+  **unproven** is whether any of that is legible: how the rings read
+  against a dark cabin, whether calipers are told from rods at a glance,
+  whether the plus tip is big enough to find from where a body is
+  nudged. That needs a window and an eye, and this machine has neither.
+  It is bounded to a mode a player cannot enter.
 
 **And there is one described layer no family reads, on purpose.** The
 tells — the aim's rim line, the mark's dashes, the offer's standing band

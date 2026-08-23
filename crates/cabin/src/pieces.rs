@@ -3362,8 +3362,10 @@ impl Body {
         }
     }
 
-    /// The mesh, cut once per distinct body per rig.
-    fn mesh(self) -> Mesh {
+    /// The mesh, cut once per distinct body per rig — and once per
+    /// distinct mark of the bench's overlay, which is described in this
+    /// same vocabulary so that the cabin cuts its shapes one way.
+    pub(crate) fn mesh(self) -> Mesh {
         match self {
             Self::Box(size) => Cuboid::new(size.x, size.y, size.z).into(),
             Self::Drum {
@@ -5391,6 +5393,10 @@ fn build_kind(rig: &mut RigParts, piece: &Piece) {
         rig.commands.spawn((
             bevy::world_serialization::WorldAssetRoot(scene.clone()),
             dressing.pose(piece.kind),
+            // The one handle anything downstream has on a drawn mesh:
+            // the bench re-poses these and touches nothing else
+            // (`crate::nudge`).
+            crate::art::Worn(piece.kind),
             ChildOf(rig.root),
         ));
         return;

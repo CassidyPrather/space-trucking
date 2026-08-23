@@ -26,6 +26,7 @@ mod gauntlet;
 mod gesture;
 mod glow;
 mod menu;
+mod nudge;
 mod outline;
 mod palette;
 mod pieces;
@@ -548,6 +549,25 @@ fn main() {
     // file the licence keeps out of this repository.
     #[cfg(feature = "art")]
     art::plugin(&mut app);
+    // `--nudge`: the placement bench. Stand in front of a purchased body,
+    // move it with six keys until it sits right in its berth, and write
+    // the numbers back into `art/manifest.toml` (`crate::nudge`).
+    //
+    // **Two gates, and the second is the one that matters.** The feature
+    // decides whether there is a bought mesh to nudge at all; the FLAG
+    // decides whether this process contains a system that can write to a
+    // tracked file. A chord would have left that system in every session
+    // anybody ever plays, and an ordinary player session must be
+    // incapable of editing the repository, not merely unlikely to.
+    if args.iter().any(|arg| arg == "--nudge") {
+        #[cfg(feature = "art")]
+        nudge::plugin(&mut app);
+        #[cfg(not(feature = "art"))]
+        eprintln!(
+            "nudge: this build draws the whitebox, which is cut in code and has no numbers \
+             to move. Build with `--features art`, and see docs/ART_PIPELINE.md."
+        );
+    }
     if judged {
         pin_clock(&mut app);
     }

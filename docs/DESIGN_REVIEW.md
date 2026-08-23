@@ -206,6 +206,43 @@ Every line is reversible; strike one by overruling it.
   because `pieces::drawn_box` is a pure function of `Kind` and a bought
   body's box is a fact about the run. The gap is bounded to the art build
   and written into docs/GAUNTLET.md's blind-spot history.
+- **The placement bench is a launch FLAG, not a key chord.** `--nudge`,
+  under `--features art`. Both gates are real but they are not equal: the
+  feature decides whether there is a bought mesh to nudge, and the flag
+  decides whether the process contains a system that can write to a
+  tracked file at all. A chord is a runtime branch — it would leave the
+  file-writing code live in every session anybody ever plays, one stuck
+  modifier from a silent edit to `art/manifest.toml`. The cost is a
+  relaunch to arm it, which is the same relaunch `--fixture` already
+  costs.
+- **The bench's arrows move the body in the BERTH's axes, not the
+  viewer's.** Standing behind a body on the aft wall, `→` moves it to
+  your left. The alternative reads better for a second and hides which of
+  three numbers is moving; this bench exists to author numbers, and the
+  overlay draws a tip on the plus end of every axis so which way is plus
+  is shown rather than remembered.
+- **One press is one step, and there is no key repeat.** A held arrow at
+  sixty frames a second crosses a whole berth in a third of a second, and
+  no hand stops it where it meant to. The coarse step is 0.05 of a berth
+  half-unit (14 mm on a one-cell kind) and 15°; the fine one is 0.005 and
+  1°, and a coarse step is a whole number of fine ones so a mixed nudge
+  cannot leave the grid.
+- **Every nudged number is snapped to a thousandth.** Without it the
+  fourth press of `↑` writes `0.20000002` into the owner's manifest and
+  every later diff carries it. A thousandth of a berth half-unit is a
+  third of a millimetre — finer than the finest step, and far finer than
+  the resolver's 0.02 slack.
+- **A save writes three numbers and never `fill`.** Deriving `fill` from
+  the measured mesh would make the promise unbreakable, which is the
+  decision two lines above this one, inverted. So nudging `scale` can
+  leave a `fill` that is no longer true; the save says so on stderr and
+  the next `resolve` refuses with the line to paste.
+- **A save writes the derived index as well as the manifest.** The
+  manifest is the authority and its refusal is the one that stops the
+  write; the index is best-effort, and it is written so that "survives a
+  restart" is true before the next `resolve` rather than after it. Both
+  go through the same surgical line editor, so the bench never learns to
+  do `resolve`'s job.
 - **The art seam is linted and tested in CI at `--features art`.** About
   25 s on a warm dependency cache (4 s clippy, 21 s tests); about 7 min
   the first time, which the cache then keeps. Code behind a feature

@@ -244,6 +244,11 @@ cargo xtask art hash crate_small   # paste the `sha256 = "..."` line it prints
 cargo xtask art resolve
 ```
 
+The numbers that put the mesh in its berth come last, and they do not
+have to be typed: add a `dresses` line, resolve, and then run the bench —
+`--nudge`, below — which writes them back into this very table from in
+front of the body.
+
 ## What a successful run looks like
 
 ```
@@ -424,7 +429,8 @@ that, or turn the mesh in Blender and leave `rotation` alone.
 **The game draws the index's numbers, not the manifest's.** An edit to
 `art/manifest.toml` reaches the game through `resolve`, which is also the
 only moment it is checked. The gauntlet is the other way round: it reads
-the manifest, because the manifest is what is in git.
+the manifest, because the manifest is what is in git. The bench writes
+both, for exactly this reason — see "The bench", below.
 
 ### `dresses`: which body a mesh stands in for
 
@@ -565,6 +571,129 @@ index that will not parse, an entry naming a file that is not there, a
 `dresses` naming a body this build has no kind for: each leaves the kind
 undressed, draws the whitebox, and puts a sentence on stderr. Nothing
 reaches the screen as text — the zero-text law covers what is drawn.
+
+## The bench: nudging a body into its berth
+
+The four numbers have to come from somewhere, and until now that
+somewhere was a text editor, a guess, `resolve`, a relaunch and a look —
+a minute-long loop for a change worth a thousandth of a berth. The bench
+is the same loop with the editor and the relaunch taken out.
+
+```sh
+cargo run -p cabin --features art -- --nudge --fixture
+```
+
+Stand in front of a purchased body, take it, move it until it sits
+right, and press `Enter`. The three numbers go back into that asset's
+table in `art/manifest.toml`, where they ride version control like every
+other promise this repository makes.
+
+**Two gates, and the second is the one that matters.** `--features art`
+decides whether there is a bought mesh to nudge at all. `--nudge` decides
+whether this process contains a system that can write to a tracked file —
+without the flag the bench's systems are never added to the schedule, so
+an ordinary player session is *incapable* of editing the repository
+rather than merely unlikely to. A key chord would have been fewer
+characters to type and would have left the file-writing code live in
+every session anybody ever plays.
+
+### What the hands do
+
+| | |
+| --- | --- |
+| `Tab` | take the dressed body under the crosshair, or let go |
+| `T` `R` `G` | what the six direction keys move: offset, rotation, scale |
+| `←` `→` | the berth's own x, minus and plus |
+| `↑` `↓` | its y, plus and minus |
+| `[` `]` | its z, minus and plus — into the wall and out of it |
+| `Shift` | the fine step |
+| `Backspace` | put the numbers back to what the file says |
+| `Enter` | write them into the manifest |
+
+One press is one step: a coarse move is 0.05 of a berth half-unit (about
+14 mm on a one-cell kind) and a fine one is 0.005; a coarse turn is 15°
+and a fine one 1°. There is no key repeat, because a held arrow at sixty
+steps a second crosses a whole berth in a third of a second. Every number
+lands on a thousandth, so the fourth press of `↑` writes `0.2` into the
+owner's file and not `0.20000002`.
+
+**The arrows move the body in the berth's own axes, not in yours.**
+Standing behind a body on the aft wall, `→` moves it to your left, and
+that is correct: what the key moves is the *number*, in the frame the
+number is written in ("The placement frame", above), so what you press is
+what the diff says. Which way is plus is not left to be remembered — the
+overlay draws a tip on the plus end of every axis.
+
+Every copy of that kind aboard moves together, because one declaration
+dresses them all.
+
+### What it draws
+
+Shapes, and only shapes — the zero-text law covers everything rendered.
+Rods along the axes for the offset, rings round them for the turn,
+calipers across them for the size, a tip on every plus end, and above the
+body **a ring that is whole while what you are looking at is what the
+file says, and broken into dashes while it is not**. Broken-means-
+provisional is the cabin's existing vocabulary, not a new one: it is what
+a room's mark on a good already says. The overlay's description carries
+no colour at all, which is the strongest form of the no-hue-alone rule
+available.
+
+Confirmations, refusals and file names go to **stderr**, which the law
+has never covered and where the rest of this pipeline already talks.
+
+### What a save does, and what it will not
+
+It writes `scale`, `offset` and `rotation` into `[asset.<id>]` — the id
+comes from the index, which is where the numbers being drawn came from —
+as a **surgical line edit**. The value on each line is replaced and
+nothing else in the file is touched: not the prose, not the blank lines,
+not the spacing round the `=`, not a comment on the value's own line, not
+the order tables stand in, not even the line endings. A key the table
+never had is added among that table's own keys. The number style is held
+to the real file by a guard that rewrites the shipped manifest's own
+table with the numbers already in it and requires the result to be the
+same bytes: saving what was already there is a diff of nothing.
+
+The manifest is found the way `xtask` finds it — `$ART_MANIFEST`, and
+`art/manifest.toml` otherwise — so a nudge and a resolve cannot end up
+reading different files. An id the manifest has no table for is a refusal
+that writes nothing at all, which is the case that matters when an index
+has drifted from the manifest.
+
+Then the same three lines are carried into `$ART_CACHE/index.toml`,
+best-effort, so the body is still where you put it after a restart rather
+than back where the last `resolve` left it. That file is derived and
+gitignored; the next `resolve` rewrites it from the manifest, which by
+then says the same thing.
+
+**It does not write `fill`.** `fill` is the promise the mesh is measured
+against, and a bench that derived it from the mesh would make it
+unbreakable — precisely the thing it exists not to be. So nudging `scale`
+can leave a `fill` that is no longer true. The save says so on stderr,
+and the next `cargo xtask art resolve` refuses with the line to paste.
+
+### What is proven, and what needs eyes
+
+The transform arithmetic, the gesture vocabulary, the state machine, the
+writer and the round trip are all proven headless, and the round trip
+goes out through the writer and back through **the loader's own parse** —
+what the owner was looking at when they pressed the key is asserted to be
+the pose the file describes, never a second reader written for the test.
+Three scripted sessions drive the real systems over a real sim with real
+key edges, the way `crate::session` drives the cabin's own input.
+
+What none of that can answer is whether the overlay is *legible* — how
+the rings read against a dark cabin, whether the calipers are told apart
+from the rods at a glance, whether the plus tip is big enough to find.
+That needs a window and an eye. It is recorded in
+[GAUNTLET.md](GAUNTLET.md) rather than assumed.
+
+One thing to know while using it: the crosshair still picks a dressed
+body by its **whitebox** box, because the pick face comes from
+`pieces::drawn_box`, which is a pure function of `Kind` (GAUNTLET.md's
+blind-spot list). A bought mesh much smaller than its berth is taken by
+aiming where the whitebox was.
 
 ## What continuous integration does, and does not
 

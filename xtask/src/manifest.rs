@@ -675,6 +675,38 @@ mod tests {
 
     const PACK: &str = "[pack.demo]\ntitle = \"A Pack\"\ndir = \"a-pack\"\n";
 
+    /// **The manifest that ships in this repository is one the resolver
+    /// can read.** Read, and nothing beyond read: this asks the parser
+    /// about the file and never asks a disk about the art. The art is
+    /// the one thing a machine running these guards cannot have — the
+    /// licence is why the payload is not in the repository, so continuous
+    /// integration is the place it is guaranteed absent — and a guard
+    /// here that went looking for it would go red on the day the manifest
+    /// first named something, which is the day the tool started being
+    /// used for its purpose.
+    ///
+    /// Reading is not the weak half of the claim. It is the whole of what
+    /// this file can get wrong on its own: a key nobody asked for, an
+    /// asset out of a pack nobody declared, a digest that is not a
+    /// digest, a path that leaves its pack or is spelled for one
+    /// platform, an override missing an axis. Whether the file it names
+    /// is on this machine is what `cargo xtask art check` answers, at the
+    /// keyboard of somebody who holds the licence.
+    #[test]
+    fn the_manifest_in_the_repository_is_one_the_resolver_can_read() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("xtask sits in the workspace root")
+            .join("art")
+            .join("manifest.toml");
+        let manifest = Manifest::read(&path).unwrap_or_else(|complaint| panic!("{complaint}"));
+        assert!(
+            !manifest.packs.is_empty(),
+            "{} declares no packs, and it is the file every reader copies a table out of",
+            path.display()
+        );
+    }
+
     /// **A key nobody asked for is a refusal, not a shrug.** The whole
     /// value of the override fields is that somebody can write one down
     /// and have it apply; a manifest that ignores `scal = [2,2,2]` is a

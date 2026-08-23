@@ -421,23 +421,6 @@ fn nothing_is_indexed_until_every_asset_resolves() {
     );
 }
 
-/// **The manifest that ships in this repository is one the resolver can
-/// read.** It names no assets yet and it is still the file every reader
-/// will copy a table out of, so a dialect error in its worked example
-/// would be discovered by the first person to try it.
-#[test]
-fn the_manifest_in_the_repository_is_one_the_resolver_can_read() {
-    let dir = scratch("shipped-manifest");
-    let store = dir.join("store");
-    std::fs::create_dir_all(&store).expect("an empty store");
-    let (ok, said) = xtask(
-        &["art", "check"],
-        &[("SYNTY_STORE", &store), ("ART_CACHE", &dir.join("cache"))],
-    );
-    assert!(ok, "{said}");
-    assert!(said.contains("names no assets yet"), "{said}");
-}
-
 /// **The cabin ships the whitebox unless art is asked for.**
 ///
 /// Continuous integration cannot build the art version and never will:

@@ -8,8 +8,8 @@
 # turns them into files on the machine of whoever holds the licence.
 #
 #     art/manifest.toml   this file: ids, packs, paths, digests, overrides
-#     $SYNTY_STORE        the packs as downloaded, unzipped, on your disk
-#     art/cache/          rebuilt and converted; gitignored, disposable
+#     $SYNTY_STORE        the packs exactly as downloaded, on your disk
+#     art/cache/          the few files this file names, converted; gitignored
 #
 # Nothing in continuous integration reads this file. CI builds the
 # whitebox — the geometry the game cuts in code — because that is the
@@ -27,7 +27,9 @@
 # One table per pack you have bought. `dir` is YOUR directory name under
 # $SYNTY_STORE, not a guess at what Synty's zip unpacks to: this line is
 # the contract, so nothing has to predict a download's naming, and moving
-# your packs around is an edit here rather than a code change.
+# your packs around is an edit here rather than a code change. Spaces and
+# capitals in it are ordinary; the name the store gave the pack is a fine
+# name for the directory you drop the download into.
 #
 # `title` and `download` are English, and they exist for exactly one
 # moment — the one where somebody clones this on a machine with no packs
@@ -96,8 +98,8 @@ download = "POLYGON Sci-Fi Horror, the Source Files download"
 # is exactly the box the description asks for — and it is the claim most
 # imported meshes turn out to break.
 #
-# Nothing is listed yet. To add the first one, with the packs unzipped
-# under $SYNTY_STORE:
+# Nothing is listed yet. To add the first one, with the packs under
+# $SYNTY_STORE — as downloaded, nothing unzipped:
 #
 #     cargo xtask art find crate      # what is actually in the packs
 #     # paste the pack and source lines it prints into a table here

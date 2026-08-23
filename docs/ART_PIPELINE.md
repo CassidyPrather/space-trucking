@@ -19,16 +19,25 @@ the first into the third:
 | | what it is | in git? |
 | --- | --- | --- |
 | `art/manifest.toml` | ids, packs, paths, digests, per-asset overrides | yes, and heavily commented |
-| `$SYNTY_STORE` | the packs as downloaded, unzipped, on your disk | no — it is your disk |
-| `art/cache/` | rebuilt and converted, addressed by content | no — gitignored |
+| `$SYNTY_STORE` | the packs exactly as downloaded, on your disk | no — it is your disk |
+| `art/cache/` | the few files a manifest named, converted, addressed by content | no — gitignored |
 
 `cargo xtask art resolve` reads the first, looks in the second, and fills
 the third.
 
 ## What to install
 
-**Nothing, for the half that finds and hashes your art.** `cargo xtask
-art check` works on a bare machine.
+**Almost nothing, for the half that finds and hashes your art.** `cargo
+xtask art check` needs one thing, and on macOS and Windows you already
+have it.
+
+**Something that opens a zip, because a pack arrives as one.** `tar` is
+enough on macOS and on Windows 10 build 1803 and later, whose `tar` is
+bsdtar and reads zip as well as tar. Linux ships GNU tar, which reads tar
+and not zip, so Linux also wants `unzip` — `apt install unzip`, `dnf
+install unzip`. `tar` alone is enough for a `.unitypackage`, which is a
+tar. If neither is there the tool says which one to install rather than
+reporting your art missing.
 
 **Blender, for the half that converts it.** Bevy loads glTF and Synty
 ships FBX, so something has to translate, and `blender --background
@@ -40,9 +49,6 @@ If you would rather not install 300 MB to convert a crate, `$ART_CONVERTER`
 takes any program run as `<program> <source> <destination.glb>`, which is
 what FBX2glTF and its forks already are.
 
-`tar` is used to open a `.unitypackage` and is already on Linux and
-macOS. Windows 10 build 1803 and later ship bsdtar as `tar.exe`.
-
 ## Where to put packs
 
 Pick a directory and export it:
@@ -51,21 +57,58 @@ Pick a directory and export it:
 export SYNTY_STORE="$HOME/art/synty"
 ```
 
-Under it, one directory per pack, unzipped. The directory names are
-**yours**: `art/manifest.toml` records the name you chose on each pack's
-`dir` line, so nothing has to predict what a download unpacks to, and
-rearranging your downloads folder is an edit to that line.
+Under it, one directory per pack. **Do not unzip anything.** Put the
+download in exactly as it arrived — the `.unitypackage`, the icon, the
+zip of raw assets — and leave it there:
 
 ```
 $SYNTY_STORE/
-  polygon-scifi-space/      <- dir = "polygon-scifi-space"
-  polygon-scifi-horror/     <- dir = "polygon-scifi-horror"
+  POLYGON Sci-Fi Space/            <- dir = "POLYGON Sci-Fi Space"
+    icon.png
+    POLYGON Sci-Fi Space.unitypackage
+    POLYGON Sci-Fi Space.zip       <- the raw assets, still zipped
+  POLYGON Sci-Fi Horror/           <- dir = "POLYGON Sci-Fi Horror"
+    ...
 ```
 
-**Prefer each pack's "Source Files" download.** It carries the FBX and
-the textures directly, so nothing has to be unpacked and nothing has to be
-reconstructed. Fall back to the Unity download only for a pack that ships
-no source files; see "The two claims, checked" below for what that costs.
+The directory names are **yours**: `art/manifest.toml` records the name
+you chose on each pack's `dir` line, so nothing has to predict what a
+download unpacks to, and rearranging your downloads folder is an edit to
+that line. Spaces and capitals in the name are ordinary — the name the
+store gave the pack is a fine name for the directory.
+
+The tool reads inside the archives and takes out only the files the
+manifest names. A manifest naming fifty props out of a five-thousand-file
+pack costs fifty files on disk, not an unzipped pack, and that is the
+whole reason the store is left alone.
+
+A tree you *have* unzipped still works, and answers first. So unzipping a
+pack is never wrong, only unnecessary.
+
+## What answers first
+
+A pack can carry the same mesh in three places, and the resolver looks in
+this order:
+
+1. **A loose Source Files tree** in the pack directory, if you unzipped
+   one. Nothing to open and nothing to reconstruct.
+2. **The pack's raw archive.** The same Source Files download, still
+   zipped. The file named is taken out into the cache and the archive is
+   left alone.
+3. **A `.unitypackage`**, rebuilt into the cache. This needs a `unity =
+   "Assets/..."` line in the manifest, and it is for the packs that ship
+   no source download at all.
+
+The first two are the same download and rank together. The third ranks
+last, and not because it is slower: a `.unitypackage` is a Unity project
+fragment — prefabs and materials as well as meshes — and rebuilding the
+tree recovers the meshes while dropping the assembly. A Synty prop is
+often a prefab combining several meshes against a shared material, so the
+archive route is not a richer answer than the FBX. It is the same answer
+through more machinery.
+
+**Prefer each pack's "Source Files" download** for that reason, zipped or
+not.
 
 ## The five commands
 
@@ -85,7 +128,10 @@ disposable:
 
 ```
 art/cache/
-  unpacked/<pack>/<archive>/   trees rebuilt out of a .unitypackage
+  unpacked/<pack>/<archive file name>/
+                               what came out of one of the pack's archives: the
+                               files a manifest named, out of a zip, or a whole
+                               tree rebuilt out of a .unitypackage
   stage/<digest>/              a mesh and its textures, as the converter saw them
   glb/<digest>.glb             the converted asset
   index.toml                   what resolved, and the overrides for each
@@ -99,14 +145,23 @@ wrong, that is the directory to open.
 ## Adding the first asset
 
 The packs are large and their file names are not guessable, so the flow
-starts with a search rather than with a store page.
+starts with a search rather than with a store page. `find` reads the
+names inside the archives too, which is the only way to search a store
+nothing has been unzipped in — and it reads them without extracting
+anything, because a zip keeps a table of its members at the end of the
+file.
 
 ```bash
 $ cargo xtask art find crate
   pack = "scifi_space"
-  source = "SourceFiles/FBX/SM_Prop_Crate_01.fbx"
+  source = "POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Prop_Crate_01.fbx"
   ...
 ```
+
+A path out of an archive carries the folder the zip wraps everything in.
+Paste it as it comes; a shorter tail of it works too, as long as it is
+whole folders — `SourceFiles/FBX/SM_Prop_Crate_01.fbx` names the same
+file.
 
 Paste the two lines it prints into a new table in `art/manifest.toml`,
 give the table the stable id that code will use, and add the atlas the
@@ -131,7 +186,9 @@ cargo xtask art resolve
 ```
 $ cargo xtask art resolve
 art: 1 asset over 2 packs, from /home/you/art/synty
-  crate_small              source files   9f2c1d4ab077  /home/you/art/synty/polygon-scifi-space/SourceFiles/FBX/SM_Prop_Crate_01.fbx
+art: taking POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Prop_Crate_01.fbx out of
+     /home/you/art/synty/POLYGON Sci-Fi Space/POLYGON Sci-Fi Space.zip (the archive stays as it is)
+  crate_small              in POLYGON Sci-Fi Space.zip  9f2c1d4ab077  /home/you/space-trucking/art/cache/unpacked/...
 art: converting 1 of 1 with blender /usr/bin/blender
   converted crate_small              -> glb/9f2c1d4ab077...glb
 art: wrote /home/you/space-trucking/art/cache/index.toml
@@ -139,10 +196,11 @@ art: wrote /home/you/space-trucking/art/cache/index.toml
 
 Exit status 0, and `art/cache/index.toml` holds one `[asset.<id>]` table
 per line of the manifest with the converted file and the four overrides.
-A second `resolve` prints the same first two lines, converts nothing, and
-needs no converter at all: the cache is addressed by the digest of the
-source, so "already converted" is a question about a path rather than
-about a timestamp.
+A second `resolve` converts nothing, takes nothing out of any archive,
+and needs no converter at all: the cache is addressed by the digest of
+the source, and the file an archive would be opened for is the file that
+is looked for first, so both "already converted" and "already taken out"
+are questions about a path rather than about a timestamp.
 
 ## What a failure looks like
 
@@ -155,23 +213,31 @@ crate_small is not on this machine.
   pack      POLYGON Sci-Fi Space
   download  POLYGON Sci-Fi Space, the Source Files download
   declared  art/manifest.toml:47
-  wanted    /home/you/art/synty/polygon-scifi-space/SourceFiles/FBX/SM_Prop_Crate_01.fbx
-  found     nothing: /home/you/art/synty/polygon-scifi-space does not exist
+  wanted    /home/you/art/synty/POLYGON Sci-Fi Space/SourceFiles/FBX/SM_Prop_Crate_01.fbx
+  found     nothing: /home/you/art/synty/POLYGON Sci-Fi Space does not exist
 
   fix       Download "POLYGON Sci-Fi Space, the Source Files download" from your Synty
-            account's downloads, unzip it, and put the result at
-            /home/you/art/synty/polygon-scifi-space
+            account's downloads and put it, exactly as it arrives, at
+            /home/you/art/synty/POLYGON Sci-Fi Space
+            Leave it zipped if it came zipped; the archives are read where they lie.
             The directory is $SYNTY_STORE (/home/you/art/synty) plus
-            `dir = "polygon-scifi-space"` on art/manifest.toml:12.
+            `dir = "POLYGON Sci-Fi Space"` on art/manifest.toml:12.
 ```
 
 Every missing asset is reported in one run, not one per run. A pack that
 is present and does not carry the path reads differently from one that
 was never downloaded — the first is a search and the second is a
-download, and they have nothing in common. A still-zipped archive sitting
-where the unzipped pack should be is named and the fix is "unzip this".
+download, and they have nothing in common. A download sitting loose in
+`$SYNTY_STORE` with no directory of its own is named, and the fix is to
+make the directory and move it in; it is not to unzip it.
 
-Two more refusals worth knowing:
+Three more refusals worth knowing:
+
+- **Nothing that opens a zip** names both programs that do, says which
+  platforms already have which, and does not report your art missing —
+  the pack is here and it is the reader that is not. That distinction is
+  the difference between a package manager and an afternoon in your
+  downloads folder.
 
 - **A digest that no longer matches** stops the run and prints both, with
   the command that rewrites the line. A pack updated in the store is
@@ -180,11 +246,14 @@ Two more refusals worth knowing:
 - **No converter** names Blender, its download page, both override
   variables, and the fact that `check` works without any of them.
 
-## Proving the converter, with no Synty art at all
+## Proving the pipeline, with no Synty art at all
 
-There is a fixture pack in the repository — a cube this project wrote,
-laid out exactly like a bought asset — so a Blender install can be proved
-before any pack is downloaded:
+There are two fixture packs in the repository, both of them geometry this
+project wrote, so the whole thing can be proved before any pack is
+downloaded. One is a loose Source Files tree. The other is shaped like a
+download nobody has touched: a directory the store named, spaces and
+capitals in it, holding an icon and a zip with the assets wrapped in a
+folder inside it.
 
 ```bash
 SYNTY_STORE=xtask/tests/fixtures/store \
@@ -193,9 +262,20 @@ ART_CACHE=/tmp/art-cache \
   cargo xtask art resolve
 ```
 
-Success is exit 0, one `converted unit_cube` line, and a non-empty
-`.glb` under `/tmp/art-cache/glb/`. If that works, the pipeline works and
-what is left is finding the right paths inside your packs.
+Success is exit 0, a `converted unit_cube` line and a `converted
+unit_pyramid` line, and two non-empty `.glb` files under
+`/tmp/art-cache/glb/`. The pyramid is the one that proves the interesting
+half: it came out of `A Zipped Pack/POLYGON Fixture Pack.zip`, which is
+still a zip afterwards, and `/tmp/art-cache/unpacked/` holds the two
+files the manifest named out of the five in it — the mesh and its
+texture — and nothing else.
+
+If that works, the pipeline works and what is left is finding the right
+paths inside your packs:
+
+```bash
+SYNTY_STORE="$HOME/art/synty" cargo xtask art find crate
+```
 
 ## The overrides, and why they are here before anything reads them
 
@@ -241,9 +321,13 @@ and the determinism guards live.
 
 What CI does run is `xtask`'s own guards, which are about the resolver's
 rules and need no art: the manifest dialect, the missing-asset message,
-Source-Files-before-archive, the reconstruction of a tree out of a
-synthetic `.unitypackage`, content addressing, the digest check, and that
-a partial resolve indexes nothing.
+the order the three places are looked in, the reconstruction of a tree
+out of a synthetic `.unitypackage`, reading names out of a zip without
+extracting it, taking only the named files out of one, refusing a member
+name that would climb out of the tree, content addressing, the digest
+check, and that a partial resolve indexes nothing. The zips those guards
+run against are written byte by byte in the guard file, so they depend on
+nothing this repository did not write.
 
 The cabin declares a cargo feature, `art`, defaulting off. Nothing reads
 it yet. It is declared now because the seam is the expensive half: the
@@ -253,7 +337,7 @@ dependency list, which is a cold build going back from 9m59s towards the
 13m41s it was before the trim. A guard holds `default = []` so that cost
 is paid deliberately.
 
-## The two claims, checked
+## The three claims, checked
 
 **"A `.unitypackage` is a gzipped tar of GUID-named directories, each
 containing `asset`, `asset.meta` and `pathname`."** This holds, with
@@ -286,6 +370,27 @@ answer than the FBX. It is the same answer through more machinery.
 The layout inside a Source Files download is not fixed either. That is
 why `art/manifest.toml` stores a **path you pasted** rather than a layout
 this tool assumes, and why `cargo xtask art find` exists.
+
+**"`tar` sniffs the format, so the call that opens a `.unitypackage` will
+open a zip too."** *False*, and it was run rather than assumed. GNU tar
+1.35 answers `tar: This does not look like a tar archive` and exits 2.
+The hope was reasonable — bsdtar is libarchive and libarchive reads zip
+— and bsdtar is indeed `tar` on macOS and `tar.exe` on Windows 10 build
+1803 and later, where the trick does extend. It is Linux, which ships GNU
+tar, where it does not.
+
+So a zip is offered to `tar` first, because where that works there is
+nothing to install, and to `unzip` second, which is what Linux has. The
+alternative was a vendored inflate, and it is the wrong trade here:
+DEFLATE, the central directory and Zip64 for the packs past four
+gigabytes are several hundred lines whose bugs are silently wrong bytes
+in a mesh, in a repository with no Synty pack to test any of it against.
+Shelling out keeps the same bargain `tar` already had — the failure is
+loud, immediate, and names the program to install.
+
+`.7z` and `.rar` are recognised and refused by name rather than ignored,
+because a pack reported missing when its archive is sitting right there
+is the worst answer available.
 
 One consequence of preferring source files is real and worth stating: a
 Synty pack paints itself from one shared atlas, and an FBX names its

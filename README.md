@@ -182,6 +182,10 @@ Benchmark: `cargo bench --bench sim_bench -- --quick`
 Performance budgets (CI-enforced ceilings, see
 [docs/BUDGETS.md](docs/BUDGETS.md)): `cargo test --release -p space-trucking --test perf -- --ignored`
 
+Purchased art (none is in this repository; see
+[docs/ART_PIPELINE.md](docs/ART_PIPELINE.md)):
+`cargo xtask art check`
+
 Security audit: `cargo audit` (requires `cargo install cargo-audit`)
 
 Pre-commit hook: `git config core.hooksPath .githooks` (runs `cargo fmt`)
@@ -192,5 +196,7 @@ Headless screenshots (works under xvfb + llvmpipe, for CI-shaped review):
 ## More
 
 See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for framework and
-asset-source links, and [docs/DEPLOYING.md](docs/DEPLOYING.md) for how
-releases are built and shipped.
+asset-source links, [docs/DEPLOYING.md](docs/DEPLOYING.md) for how
+releases are built and shipped, and
+[docs/ART_PIPELINE.md](docs/ART_PIPELINE.md) for how bought art reaches a
+build without ever entering the repository.

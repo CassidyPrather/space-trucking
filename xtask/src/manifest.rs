@@ -134,9 +134,13 @@ pub struct Asset {
     /// purchased mesh occupies some unknown part of it, and until that
     /// part is written down every rule that measures a body is measuring
     /// the frame instead. Five stations paid for learning that with the
-    /// whitebox torus. Nothing consumes this field yet and it is here
-    /// anyway, because the field arriving after the meshes is how the
-    /// torus happened.
+    /// whitebox torus.
+    ///
+    /// **It is a promise, and [`fill_trouble`] is where it is kept.** The
+    /// cabin's gauntlet sweeps it out of the manifest in continuous
+    /// integration, on a machine with no art on it; the converter
+    /// measures the mesh here, where there is one. Both readings are in
+    /// the box's own axes, before `rotation` turns anything.
     pub fill: [f32; 3],
     pub line: usize,
 }
@@ -801,12 +805,16 @@ pub fn fill_trouble(asset: &Asset, measured: Bounds) -> Option<String> {
     asset.dresses.as_ref()?;
     let occupied = [0, 1, 2].map(|axis| measured.half[axis] * asset.scale[axis]);
     let off = [0, 1, 2].map(|axis| occupied[axis] - asset.fill[axis]);
-    let worst = (0..3).max_by(|&a, &b| {
-        off[a]
-            .abs()
-            .partial_cmp(&off[b].abs())
-            .unwrap_or(std::cmp::Ordering::Equal)
-    })?;
+    // The first of the worst, not the last: three axes equally wrong is
+    // one mesh at the wrong size, and naming `z` for it reads like a
+    // fact about the depth.
+    let worst = (0..3).fold(0, |best: usize, axis| {
+        if off[axis].abs() > off[best].abs() {
+            axis
+        } else {
+            best
+        }
+    });
     if !off[worst].abs().is_finite() || off[worst].abs() <= FILL_SLACK {
         return None;
     }
@@ -821,8 +829,9 @@ pub fn fill_trouble(asset: &Asset, measured: Bounds) -> Option<String> {
         "{} is not the size {} says it is.\n\n  \
          axis      {}\n  \
          declared  fill {}\n  \
-         measured  {} of its berth box, from a mesh {} half-units across at scale {}\n  \
-         over by   {:.4}, and {FILL_SLACK} is the slack\n\n  \
+         measured  {} of its berth box\n  \
+         from      a mesh {} half-units across, at scale {}\n  \
+         off by    {:+.4}, and {FILL_SLACK} is the slack\n\n  \
          fix       Either the mesh moved under the line or the line was a guess. If the\n            \
                    mesh is the one you want, paste this and the promise is true again:\n\n              \
          fill = {}\n\n            \

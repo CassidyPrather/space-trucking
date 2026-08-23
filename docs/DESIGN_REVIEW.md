@@ -173,3 +173,40 @@ Every line is reversible; strike one by overruling it.
   lies on a deck; it does not stand on one. Eleven sank, seven stood up
   (a glyph reads a cylinder end-on as a circle), and two — the transit
   chit and the casino chip — were laid on their backs.
+- **A purchased body's placement frame is the berth box normalised to
+  `[-1, 1]`**, which makes `offset` and `fill` mean exactly what
+  `poi::Fitting`'s `at` and `half` mean. The alternative — `scale` in
+  metres and `fill` derived from the mesh — was rejected because it puts
+  the check out of `xtask`'s reach: the resolver cannot see a
+  `cargo::Kind` and must not learn to, and a promise nothing can check is
+  the defect `fill` exists to stop, one level up.
+- **`scale` and `fill` are redundant on purpose.** Auto-fitting a mesh to
+  its declared box would make `fill` unbreakable, and an unbreakable
+  promise is not one. The redundancy is the mechanism: the promise is in
+  git, the fact is in the mesh, and `resolve` is the one place both
+  exist.
+- **The fill slack is 0.02 of a berth half-extent** — 5 mm on a one-cell
+  kind. Tighter refuses a correctly-rounded `0.18`; looser lets a mesh be
+  a centimetre bigger than the box every containment rule reads for it.
+- **The gauntlet sweeps `dresses` declarations in every build**, not only
+  under `--features art`. The build that can draw a purchased mesh is the
+  build CI cannot run, so a sweep gated on the feature would sweep the
+  declarations nowhere.
+- **`bevy_scene` is not in the `art` feature.** In Bevy 0.19 a loaded
+  glTF scene is a `WorldAsset`, which `bevy_gltf` brings via
+  `bevy_world_serialization`; `bevy_scene` is now the BSN authoring
+  language and this game authors no scenes. One feature, 8 crates, and
+  the default tree unchanged at 338 packages.
+- **No image decoder was added either.** `png` was already on the list to
+  *write* screenshots and Bevy's `png` feature is `image/png`, which
+  decodes as well. A Blender `.glb` embeds PNG unless its source was a
+  JPEG; `"jpeg"` is a one-word addition the day a pack needs it.
+- **The dressed hitbox was deferred, not shipped silently.** Unifying it
+  needs the runtime's loaded set at 20-odd call sites across four files,
+  because `pieces::drawn_box` is a pure function of `Kind` and a bought
+  body's box is a fact about the run. The gap is bounded to the art build
+  and written into docs/GAUNTLET.md's blind-spot history.
+- **The art seam is linted and tested in CI at `--features art`.** About
+  25 s on a warm dependency cache (4 s clippy, 21 s tests); about 7 min
+  the first time, which the cache then keeps. Code behind a feature
+  nothing builds is code that rots.

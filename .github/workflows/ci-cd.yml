@@ -50,6 +50,28 @@ jobs:
       - name: Run tests
         run: cargo test --workspace
 
+      # The art seam, which nothing above touches. `--features art` is off
+      # by default and stays off everywhere else, so without these two
+      # steps the only code in the repository that loads a purchased mesh
+      # would compile nowhere and rot unlinted — and the first person to
+      # turn the feature on would find out how long it had been broken.
+      #
+      # This still resolves no art and proves nothing about a Synty mesh:
+      # the payload is not here. What it proves is that the seam compiles,
+      # that its guards pass, and that the cabin's own glTF path reads a
+      # binary glTF the test writes itself, byte by byte.
+      #
+      # Measured cost on a 4-core runner: about 25 s once the dependency
+      # cache holds both feature sets (4 s of clippy, 21 s of tests). The
+      # first run after this lands pays about 7 minutes, because the art
+      # feature is a second compilation of Bevy's upper crates plus the
+      # eight the glTF loader brings; Swatinem/rust-cache keeps that.
+      - name: Lint the art seam with clippy
+        run: cargo clippy -p cabin --features art --all-targets -- -D warnings
+
+      - name: Test the art seam
+        run: cargo test -p cabin --features art
+
       - name: Enforce performance budgets
         # Release-only ceilings with wide headroom; see docs/BUDGETS.md.
         # -p: don't release-build the whole Bevy cabin just to time the sim.

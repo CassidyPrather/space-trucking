@@ -371,6 +371,44 @@ palette instrument*:
   at the doorway wall. Both carry `Dimmable` at the brightness they
   actually burn, so neither can quietly opt out of the omen.
 
+### Two voices: the whitebox speaks the palette, a bought mesh speaks its atlas
+
+The plan is two graphical implementations of every object, and the second
+one arrives painted. A Synty pack paints a whole pack from one shared
+atlas; the mesh names it, the converter carries it, and the material that
+reaches the screen was authored by somebody who never read this file.
+
+**The rule, stated so nobody has to guess it later: the palette governs
+every material the cabin AUTHORS. A material that arrives inside a
+purchased scene is exempt, by declaration, and is exempt because it is
+not ours to author.** Repainting a bought mesh into the palette is not a
+smaller change than it sounds — it is throwing away the thing that was
+bought — and the honest position is that a dressed build looks like the
+pack it was dressed from.
+
+`palette_purity` needs no loosening for this, and the reason is a happy
+accident of how it was written. It is a **source sweep**, not a material
+sweep: it walks `crates/cabin/src/`, subdirectories and all, and fails
+the build on `Color::srgb` and its siblings outside `palette.rs`. That is
+already exactly "materials the cabin itself authors", in the strongest
+available sense — the cabin authors a colour only by writing one down.
+`art.rs` writes none: it hands the asset server a path and spawns what
+comes back. So the test covers the art module and passes, and it covers
+it in a **whitebox** build too, where the module is compiled but its
+loading half is not.
+
+Two consequences worth knowing.
+
+**A dressed build is not a graded build.** The two voices will not agree,
+and the lighting is the palette's — the cabin's lamps, fog and dust do
+not change when a crate does. Judging that is a job for the nudge tool
+and for eyes, not for a test.
+
+**The whitebox is still the design.** Every rule in this file is about
+geometry the repository cuts, because that is the version continuous
+integration builds and the version that has to stand on its own. Art is
+presentation over a description that does not change.
+
 ## Colored tiles: form, not stacking
 
 The room grid's tile classes (ROOMS.md) are a signal system, and the

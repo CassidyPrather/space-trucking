@@ -59,10 +59,13 @@ art = ["bevy/bevy_gltf"]
 space-trucking = { path = "../.." }
 # The engine, cut to what the cabin actually draws. The default set is
 # four umbrella features — 2d, 3d, ui, audio — and they carry passengers
-# this game never boards: there is no `AssetServer` anywhere, every mesh
-# and texture being cut in code, so no glTF, no image decoders, no
-# animation, no scene files, no sprites, and the only sound is synth.rs's
-# WAV bytes. Each line below answers to something on screen.
+# this game never boards: nothing in a default build asks the
+# `AssetServer` for a file, every mesh and texture being cut in code, so
+# no glTF, no image decoders, no animation, no scene files, no sprites,
+# and the only sound is synth.rs's WAV bytes. (The `art` feature above is
+# the one exception, and it is the exception it was declared to be: it
+# adds the glTF loader and points the asset server at the art cache.)
+# Each line below answers to something on screen.
 bevy = { version = "0.19", default-features = false, features = [
     # App and platform: what DefaultPlugins is assembled out of.
     "std", "async_executor", "multi_threaded", "bevy_asset", "bevy_log",

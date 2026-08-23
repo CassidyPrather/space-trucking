@@ -894,6 +894,58 @@ nothing hung is standing in the eye. In the world: you walk into a
 fitting, and a still shot from that pose renders as an interesting
 abstract.
 
+## The fill family: what a purchased body is measured as
+
+Sixteen families, and one more thing that changes what they are asked
+*about*. It is not a seventeenth rule. It is a swap in what a cargo kind's
+body IS.
+
+`art/manifest.toml` is in this repository — the licence keeps the meshes
+out and lets the references in — and an asset there may carry a `dresses`
+line naming the cargo kind its mesh stands in for, plus the `fill` saying
+what fraction of that kind's berth box the mesh occupies. For every kind
+so declared, the sweep measures **the berth box times `fill`, under the
+declared transforms, in place of that kind's whitebox parts**. See
+`docs/ART_PIPELINE.md`, "The placement frame", for what the four numbers
+mean; it is `poi::Fitting`'s frame one box down, so `offset` is `at` and
+`fill` is `half`.
+
+Everything else follows. `face-fits` asks whether the declared body stays
+inside the cells the sim gave the kind. `berth-clear` asks whether it
+stays inside the one-cell band every rig is composed within.
+`rig-seated` asks whether it reaches the chart its berth promises it.
+`coplanar-faces` has one body and nothing to fight. `part-seated` and
+`prop-points` ask nothing at all: a bought mesh's joints and its named
+directions are inside a file this repository cannot open, and the
+whitebox's claims are about parts that kind no longer draws.
+
+**Three things about this are worth being exact about**, because they
+decide what a green sweep means.
+
+**It is the declaration that is swept, not the mesh.** The mesh is not
+here, is not on the runner, and never will be. What continuous
+integration can check is the promise, and it does. Where the promise
+meets the mesh is `cargo xtask art resolve`, on the machine that has one:
+the converter reports the tight box it measured, and a `fill` that
+disagrees beyond a fiftieth of a half-box stops the run.
+
+**It applies whether or not `--features art` is on.** The build that can
+draw the mesh is the build CI cannot run; a sweep that only looked at
+declarations in a build nobody tests would be a sweep of nothing. A
+`dresses` line is a statement about what a kind's body *is*, and the
+harness takes it at its word.
+
+**So "the docket is empty" is a claim about the manifest too.** Adding a
+`dresses` line moves the harness's reading of that kind, and any findings
+that come out of it belong on the docket or the numbers want fixing.
+`the_shipped_manifest_dresses_nothing_and_the_sweep_is_the_whiteboxs`
+says which state the file is in;
+`a_declared_body_that_leaves_its_berth_is_caught_like_any_other` hands
+the sweep a fabricated manifest whose `fill` outgrows its cells and whose
+`offset` leaves the band, and requires both to be found — because a
+family the shipped manifest can only ever be green about is a family
+nobody can catch out.
+
 ## The ratchet, and why `ALLOWED` is empty
 
 The docket is a **work order**, not a baseline and not an allowlist.
@@ -1086,6 +1138,29 @@ enumeration is 840 triples, most of them meaningless, and the work is in
 dismissing them convincingly rather than in writing the four rules. What
 it buys is that the dismissals are **written down**, so the next pass
 argues with a list instead of with a memory.
+
+**And a fifth shape is on the board and NOT closed, which is why it is
+written here rather than in a commit message.** A purchased body is swept
+as the box its `fill` declares. It is *clicked* as the box its whitebox
+parts draw, because the pick face comes from `pieces::drawn_box`, which
+is a pure function of `Kind` — and a dressed body's box is not a pure
+function of `Kind`: it depends on whether this build has the feature,
+whether a cache is under it, and whether that particular scene loaded.
+
+| Layer | Is invisible because | Would be closed by | Costs |
+| --- | --- | --- | --- |
+| A dressed body's pick face | the aim's shape is derived from the kind alone, and a bought body's shape is a fact about the run | threading the runtime's loaded set through `standing_surface` and `instrument_surface` | 20-odd call sites across `pieces.rs`, `main.rs`, `room.rs` and `rig.rs`, and two public signatures that are pure today |
+
+The defect class it leaves open is the one this project has already paid
+for once: the brine pearls were a thin column of three spheres that
+picked up from a third of a cell of air on either flank, which is a
+visual and a hitbox disagreeing. In a **whitebox** build the two still
+agree, because the whitebox is both what is drawn and what
+`drawn_box` measures — the gap only opens where a mesh is actually
+drawn, which is a build continuous integration cannot make. That is
+what makes it worth deferring and not worth hiding: it is real, it is
+bounded to the art build, and the sweep still says the declared body is
+the right size and in the right place.
 
 Other things it deliberately does not see, each for a stated reason:
 

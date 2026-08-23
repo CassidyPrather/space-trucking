@@ -152,7 +152,9 @@ art/cache/
                                tree rebuilt out of a .unitypackage
   stage/<digest>/              a mesh and its textures, as the converter saw them
   glb/<digest>.glb             the converted asset
-  index.toml                   what resolved, and the overrides for each
+  glb/<digest>.aabb            the tight box the converter measured round it
+  index.toml                   what resolved, the overrides for each, and what
+                               each one dresses
   blender/fbx_to_gltf.py       the converter script, written out from the binary
   fixtures/                    the same layout again, written by the fixture run
                                in "Proving the pipeline" below
@@ -346,10 +348,9 @@ paths inside your packs:
 SYNTY_STORE="$HOME/art/synty" cargo xtask art find crate
 ```
 
-## The overrides, and why they are here before anything reads them
+## The four overrides, and the frame they are written in
 
-Every asset table carries four per-axis numbers, and nothing consumes any
-of them yet:
+Every asset table carries four per-axis numbers:
 
 ```toml
 scale = [1.0, 1.0, 1.0]
@@ -358,8 +359,9 @@ rotation = [0.0, 0.0, 0.0]
 fill = [1.0, 1.0, 1.0]
 ```
 
-They are here on the first day deliberately. Geometry in this game is a
-*pure description* — `pieces::parts`, `room::seam_parts`, `room::charts`,
+They were here from the first day, before anything read them, and the
+reason is worth keeping said. Geometry in this game is a *pure
+description* — `pieces::parts`, `room::seam_parts`, `room::charts`,
 `poi::character_of` — that something else stamps into the world, and
 [the gauntlet](GAUNTLET.md) measures the description. That is what makes
 swapping in a bought mesh a swap rather than a rewrite: the description
@@ -374,19 +376,202 @@ the frame and not the body. The fix was a field saying what fraction of
 its frame a body actually fills. The whole cost of that was **the field
 not existing when the descriptions were authored**.
 
-So `fill` here means what `Shape::fill` means, on the same axes, and it
-is present before anything reads it for exactly that reason. `scale` is
-the other one worth explaining: an FBX arrives at whatever unit its
-exporter chose, and the Blender script deliberately does not guess — a
-guess in the converter is a correction nobody can see, and a number in the
-manifest is a correction on a line with a comment beside it.
+### The placement frame
+
+Something reads them now, so the frame they are written in is an API, and
+this is it.
+
+A cargo kind's description claims a box: its `Kind::upright` cells across
+and up, and the one cell of depth every rig is composed within
+(`pieces::RIG_NEAR..RIG_FAR`). **That box is `[-1, 1]` on every axis of
+the placement frame** — the same normalised frame `poi::Fitting` states a
+station's hardware in, one box down, so the vocabulary is one vocabulary.
+
+| | what it means |
+| --- | --- |
+| `scale` | the converted file's own units, carried into berth half-units |
+| `rotation` | degrees about x, then y, then z, taken in the box's own axes |
+| `offset` | where the body's middle sits, in berth half-units — this is `poi::Fitting`'s `at` |
+| `fill` | what the body then occupies of the box, per axis — this is `Fitting`'s `half`, and `Shape::fill`'s meaning |
+
+In that order. The mesh is carried onto its own measured middle, scaled,
+turned, and set down at the offset:
+
+```text
+world = berth pose ∘ T(offset ⊙ berth half) ∘ R(rotation) ∘ S(scale ⊙ berth half) ∘ T(−measured middle)
+```
+
+`|offset| + fill ≤ 1` on an axis is exactly "the body stays inside its
+berth". It is **not enforced** at read time, deliberately: a body that
+leaves its berth is a finding, and the gauntlet's families already know
+how to say so — a `fill` past the cells is `face-fits`, an `offset` out
+of the band is `berth-clear`.
+
+Three consequences to know before writing numbers.
+
+**The mesh is centred on its own bounds, not on its origin.** A Synty
+prop often sits on its own base. `offset = [0, 0, 0]` has to mean
+"centred in its berth" for the arithmetic above it to mean anything, so
+the converter's measured middle is subtracted first. A converter that
+reports no bounds leaves the mesh on its own origin, which is the only
+honest thing to do with a body whose size nobody knows.
+
+**A berth box is a cube for a one-cell kind and 1:2:1 for a `1×2` one**,
+so the frame is anisotropic on the tall kinds. A rotation that is not a
+quarter turn shears a body there. A per-axis `scale` is how to answer
+that, or turn the mesh in Blender and leave `rotation` alone.
+
+**The game draws the index's numbers, not the manifest's.** An edit to
+`art/manifest.toml` reaches the game through `resolve`, which is also the
+only moment it is checked. The gauntlet is the other way round: it reads
+the manifest, because the manifest is what is in git.
+
+### `dresses`: which body a mesh stands in for
+
+One optional key per asset says what the mesh is *for*:
+
+```toml
+dresses = "cargo/suspicious_crate"
+```
+
+The namespace is there from the first line so that `fitting/...` can
+exist later without re-spelling anything; `cargo` is the only one today
+and anything else is a refusal naming what it knows. The name after the
+slash is the cargo kind's own spelling in snake case — `Kind::BayWindow`
+is `bay_window` — derived rather than tabled, so no second list can fall
+out of step with `Kind::ALL`.
+
+The resolver checks the *shape* of a binding and deliberately not its
+meaning: `xtask` cannot see a `cargo::Kind` and should not learn to. The
+other half is a guard in the cabin
+(`art::tests::every_dressed_name_in_the_manifest_is_a_body_this_game_has`)
+which reads this very file and refuses a name the game has no body for.
+
+The thirty-two names, in `Kind::index` order:
+
+```text
+perfume_vial        gilded_idol       ration_bricks    scrap_alloy
+seedlings           gas_canister      cryo_core        brine_pearls
+suspicious_crate    mysterious_crate  very_mysterious_crate
+comet_ice           bottled_midnight  fluff            transit_chit
+casino_chip         ceiling_lamp      wall_lamp        floor_lamp
+couch               painting          cabinet          rug
+paint_tin           luminous_paint    window           chart_tank
+eta_gauge           dest_preview      launch_lever     porthole
+bay_window
+```
+
+### The promise, and where it meets the fact
+
+`scale` and `fill` are **redundant on purpose**, and the redundancy is
+the mechanism. `fill` is a promise living in a public repository, which
+is what lets continuous integration sweep it with no art on the machine.
+`scale` times the mesh's own measured size is the fact, and it lives on
+the owner's disk. `cargo xtask art resolve` is the one place both exist
+at once, so it is where they are made to meet:
+
+```text
+crate_small is not the size cargo/suspicious_crate says it is.
+
+  axis      x
+  declared  fill [1.0, 1.0, 1.0]
+  measured  [0.5, 0.5, 0.5] of its berth box
+  from      a mesh [0.5, 0.5, 0.5] half-units across, at scale [1.0, 1.0, 1.0]
+  off by    -0.5000, and 0.02 is the slack
+
+  fix       Either the mesh moved under the line or the line was a guess. If the
+            mesh is the one you want, paste this and the promise is true again:
+
+              fill = [0.5, 0.5, 0.5]
+
+            If it is the SIZE that is wrong rather than the claim, this scale puts
+            the mesh exactly in its berth, and `fill = [1.0, 1.0, 1.0]` with it:
+
+              scale = [2.0, 2.0, 2.0]
+```
+
+The slack is **0.02 of a berth half-extent** — a fiftieth of the
+half-box, about 5 mm on a one-cell kind. That is the same order as the
+gauntlet's own clip slack and coarser than the two decimals a `fill` is
+written with by hand; tighter and a correctly-rounded `0.18` is a
+refusal, looser and a mesh can be a centimetre bigger than the box every
+containment rule reads for it.
+
+**Only an asset with a `dresses` line is asked.** The identity
+`fill = [1.0, 1.0, 1.0]` is the default, and it is the claim most
+imported meshes turn out to break; refusing it before anything reads it
+would make the manifest impossible to write in the order people write it
+— a path first, a digest second, the numbers last.
+
+### The converter contract, extended
+
+The measurement has to come from the only program in the pipeline that
+can see a mesh. So a converter may print one line on standard output:
+
+```text
+aabb <min x> <min y> <min z> <max x> <max y> <max z>
+```
+
+in the **converted file's** axes, not Blender's — `export_yup` turns
+Z-up into Y-up on the way out, and a number that names the wrong axis is
+worse than no number. The Blender script this repository ships does it
+(`report_bounds` in `xtask/blender/fbx_to_gltf.py`). The whole of a
+conforming converter is still `cp` and a `printf`, which is the property
+the contract was shaped for.
+
+A converter that prints nothing is **not in breach**: `$ART_CONVERTER` is
+documented as any program taking a source and a destination, and
+FBX2glTF has never heard of this repository. The run says which promises
+went unchecked and what to print to be checked, rather than refusing what
+it cannot see.
+
+The measurement is filed under the same digest the converted file is, as
+`glb/<digest>.aabb`, so a warm cache keeps the check running. A check
+that only ran on the run that happened to convert would be a check that
+stops running the moment the cache is warm.
+
+## The loading path: what `--features art` actually turns on
+
+The cabin's `art` feature was declared long before anything read it,
+because the seam is the expensive half. It reads it now.
+
+**One Bevy feature, not the three that were predicted.** `bevy_gltf`
+brings `bevy_world_serialization` with it, and in Bevy 0.19 a loaded
+glTF scene is a `WorldAsset` spawned through a `WorldAssetRoot` — so
+`bevy_scene`, which is now the BSN authoring language, stays out; this
+game authors no scenes. And no image decoder was added: `png` has been on
+the cabin's list since screenshots needed it to *write*, Bevy's `png`
+feature is `image/png`, and a Blender-exported `.glb` embeds its textures
+as PNG unless the source was a JPEG. If a pack ever ships one that is
+not, `"jpeg"` on the `art` line is the fix.
+
+Eight crates: `bevy_gltf`, `bevy_world_serialization`, `gltf`,
+`gltf-json`, `gltf-derive`, `base64`, `byteorder`, `inflections`.
+
+**The default build pays nothing**, and that is measured rather than
+asserted: 338 packages before and 338 after, the same 338.
+
+At boot, under the feature and only under it, the cabin reads
+`$ART_CACHE/index.toml` and asks the asset server for every `.glb` a
+`dresses` line names. The art cache is the asset root — nothing else in
+this game reads a file through the asset server, so there is no
+`assets/` directory to share and a path out of the index is a path the
+server takes verbatim. `pieces::build_kind` then spawns that scene in the
+rig's place **instead of** stamping the whitebox parts: two graphical
+implementations of one object means the player sees one of them.
+
+**Everything about it fails soft.** No cache directory, no index, an
+index that will not parse, an entry naming a file that is not there, a
+`dresses` naming a body this build has no kind for: each leaves the kind
+undressed, draws the whitebox, and puts a sentence on stderr. Nothing
+reaches the screen as text — the zero-text law covers what is drawn.
 
 ## What continuous integration does, and does not
 
-CI **never** builds the art version and never will: the payload is not in
-the repository, so there is nothing for CI to resolve. It keeps building
-and testing the whitebox, which is where all sixteen gauntlet families
-and the determinism guards live.
+CI **never** resolves art and never will: the payload is not in the
+repository, so there is nothing for it to resolve. It builds and tests
+the whitebox, which is where all sixteen gauntlet families and the
+determinism guards live.
 
 What CI does run is `xtask`'s own guards, which are about the resolver's
 rules and need no art: the manifest dialect, the missing-asset message,
@@ -396,17 +581,31 @@ extracting it, taking only the named files out of one, refusing a member
 name that would climb out of the tree, content addressing, the digest
 check, that a search ranks the packs the manifest declares above the rest
 and counts every directory it cut, that a `.unitypackage` beside a Source
-Files archive goes unread, and that a partial resolve indexes nothing. The zips those guards
-run against are written byte by byte in the guard file, so they depend on
-nothing this repository did not write.
+Files archive goes unread, that a partial resolve indexes nothing, that a
+`dresses` line and a measured size reach the index, and that a `fill`
+which disagrees with a measured mesh stops the run. The zips and the
+measuring converters those guards run against are written in the guard
+file, so they depend on nothing this repository did not write.
 
-The cabin declares a cargo feature, `art`, defaulting off. Nothing reads
-it yet. It is declared now because the seam is the expensive half: the
-slice that consumes `art/cache/index.toml` has to re-enable `bevy_gltf`,
-`bevy_scene` and the image decoders that were cut out of the cabin's
-dependency list, which is a cold build going back from 9m59s towards the
-13m41s it was before the trim. A guard holds `default = []` so that cost
-is paid deliberately.
+**It also builds and tests the art seam**, with `--features art`, and
+that is new. The feature is off everywhere else, so without those two
+steps the only code in the repository that loads a purchased mesh would
+compile nowhere and rot unlinted. They still resolve nothing and prove
+nothing about a Synty mesh. What they prove is that the seam compiles,
+that its guards pass, and that the cabin's own glTF path reads a binary
+glTF — because the test writes one, byte by byte: a unit cube, header,
+both chunks, accessors, a mesh, a node and a scene, with no new
+dependency. A fixture built by the library under test would only prove
+that the library agrees with itself.
+
+The cost, measured on a four-core runner: about **25 seconds** once the
+dependency cache holds both feature sets — 4 s of clippy and 21 s of
+tests — and about **7 minutes** on the first run after it lands, because
+the art feature is a second compilation of Bevy's upper crates plus the
+eight the glTF loader brings. `Swatinem/rust-cache` keeps that.
+
+`the_cabin_ships_the_whitebox_unless_art_is_asked_for` still holds
+`default = []`, so the whitebox stays the build everything else means.
 
 ## The three claims, checked
 

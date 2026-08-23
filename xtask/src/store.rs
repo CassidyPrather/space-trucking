@@ -96,6 +96,9 @@ $SYNTY_STORE is not set, and it is the one thing this tool cannot work out for i
 
       export SYNTY_STORE=$HOME/art/synty
 
+  On Windows the value is handed to a Windows program, which does not know Git Bash's
+  $HOME or its /c/... — write it as C:/Art/Synty. Forward slashes are fine.
+
   Then see docs/ART_PIPELINE.md.";
 
 /// "1 asset", "2 assets". A report that says "1 assets" reads like a

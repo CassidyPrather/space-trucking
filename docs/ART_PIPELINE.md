@@ -57,6 +57,21 @@ Pick a directory and export it:
 export SYNTY_STORE="$HOME/art/synty"
 ```
 
+**On Windows, a path in one of these variables has to be one Windows can
+open.** `cargo` and the resolver it builds are native programs, and a
+native program is handed the value verbatim: it does not know Git Bash's
+`$HOME`, its `/c/...` or its `/tmp`. That is true of every variable here
+— `$SYNTY_STORE`, `$ART_MANIFEST`, `$ART_CACHE`, `$BLENDER`,
+`$ART_CONVERTER` — and forward slashes are fine in a Windows path, so
+only the `/c/` prefix has to go:
+
+```bash
+export SYNTY_STORE="C:/Art/Synty"
+```
+
+A relative path sidesteps the question entirely, which is what the
+examples further down use.
+
 Under it, one directory per pack. **Do not unzip anything.** Put the
 download in exactly as it arrived — the `.unitypackage`, the icon, the
 zip of raw assets — and leave it there:
@@ -136,6 +151,8 @@ art/cache/
   glb/<digest>.glb             the converted asset
   index.toml                   what resolved, and the overrides for each
   blender/fbx_to_gltf.py       the converter script, written out from the binary
+  fixtures/                    the same layout again, written by the fixture run
+                               in "Proving the pipeline" below
 ```
 
 Deleting the whole directory costs one `resolve`. The staging directories
@@ -287,20 +304,28 @@ download nobody has touched: a directory the store named, spaces and
 capitals in it, holding an icon and a zip with the assets wrapped in a
 folder inside it.
 
+Run it from the repository root. Every path in it is relative to that
+root, so the block works as written on Windows, macOS and Linux:
+
 ```bash
 SYNTY_STORE=xtask/tests/fixtures/store \
 ART_MANIFEST=xtask/tests/fixtures/manifest.toml \
-ART_CACHE=/tmp/art-cache \
+ART_CACHE=art/cache/fixtures \
   cargo xtask art resolve
 ```
 
 Success is exit 0, a `converted unit_cube` line and a `converted
 unit_pyramid` line, and two non-empty `.glb` files under
-`/tmp/art-cache/glb/`. The pyramid is the one that proves the interesting
-half: it came out of `A Zipped Pack/POLYGON Fixture Pack.zip`, which is
-still a zip afterwards, and `/tmp/art-cache/unpacked/` holds the two
-files the manifest named out of the five in it — the mesh and its
-texture — and nothing else.
+`art/cache/fixtures/glb/`. The pyramid is the one that proves the
+interesting half: it came out of `A Zipped Pack/POLYGON Fixture
+Pack.zip`, which is still a zip afterwards, and
+`art/cache/fixtures/unpacked/` holds the two files the manifest named out
+of the five in it — the mesh and its texture — and nothing else.
+
+`ART_CACHE` is set only to keep the fixture run out of the cache a real
+`resolve` fills: without it the run would write its own two assets over
+`art/cache/index.toml`. Both are under `art/cache/`, which is gitignored
+and disposable.
 
 If that works, the pipeline works and what is left is finding the right
 paths inside your packs:

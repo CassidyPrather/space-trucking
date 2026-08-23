@@ -1,0 +1,6 @@
+# `cargo xtask` is the workspace's own errand runner. The alias is the only
+# thing in this file: it exists so the art resolver is spelled the same way
+# on every machine and in every doc, without anybody having to remember
+# which package holds it.
+[alias]
+xtask = "run --package xtask --"

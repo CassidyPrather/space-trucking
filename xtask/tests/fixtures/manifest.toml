@@ -1,0 +1,24 @@
+# A manifest over the fixture pack beside this file, not over anything
+# bought. `docs/ART_PIPELINE.md` runs the resolver against it to prove a
+# Blender install converts, on a machine with no Synty packs on it at
+# all, and the guards in xtask/tests/pipeline.rs run it too.
+#
+# Everything here is shaped exactly like the real one.
+
+[pack.demo]
+title = "The fixture pack"
+dir = "demo"
+download = "nothing — the fixture pack is in the repository, beside this file"
+
+[asset.unit_cube]
+pack = "demo"
+source = "SourceFiles/OBJ/unit_cube.obj"
+texture = "SourceFiles/Textures/checker.png"
+# Recorded, so that editing the cube without re-hashing it is a refusal
+# with both digests in it rather than a silently different mesh.
+sha256 = "200bd103547c00b871f1c90d2d00756415feceebd7db35edf20801744fb79b4c"
+# A cube is exactly the box it claims, which is what these four say.
+scale = [1.0, 1.0, 1.0]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]

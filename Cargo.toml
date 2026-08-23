@@ -1,11 +1,13 @@
-# One workspace, two packages: this root package is the pure game library
-# (sim, net, replay, synth, telemetry) that runs headless in tests and
-# benches, and crates/cabin is the Bevy first-person frontend — the game
-# people play. The workspaces merged when the 2D macroquad console retired
-# (see docs/BAY.md): the `links = "alsa"` collision between quad-alsa-sys
-# and Bevy's alsa-sys left with macroquad.
+# One workspace, three packages: this root package is the pure game
+# library (sim, net, replay, synth, telemetry) that runs headless in tests
+# and benches, crates/cabin is the Bevy first-person frontend — the game
+# people play — and xtask is the errand runner that resolves purchased art
+# out of a store the repository is not allowed to contain. The workspaces
+# merged when the 2D macroquad console retired (see docs/BAY.md): the
+# `links = "alsa"` collision between quad-alsa-sys and Bevy's alsa-sys
+# left with macroquad.
 [workspace]
-members = ["crates/cabin"]
+members = ["crates/cabin", "xtask"]
 resolver = "3"
 
 [workspace.lints.rust]

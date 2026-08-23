@@ -1,0 +1,121 @@
+# The art manifest: everything this repository is allowed to know about
+# art it is not allowed to carry.
+#
+# Synty's licence lets their meshes ship inside a BUILT GAME and forbids
+# redistributing them as SOURCE. A public repository is source. So the
+# meshes are not here, will not be here, and would not be here even in
+# LFS — what is here is a set of references, and `cargo xtask art resolve`
+# turns them into files on the machine of whoever holds the licence.
+#
+#     art/manifest.toml   this file: ids, packs, paths, digests, overrides
+#     $SYNTY_STORE        the packs as downloaded, unzipped, on your disk
+#     art/cache/          rebuilt and converted; gitignored, disposable
+#
+# Nothing in continuous integration reads this file. CI builds the
+# whitebox — the geometry the game cuts in code — because that is the
+# version whose payload is in the repository. See docs/ART_PIPELINE.md.
+#
+# The format is a strict subset of TOML: comments, `[table.id]` headers,
+# and `key = value` where a value is a quoted string or three numbers.
+# Anything else is an error naming the line, so a mistyped key is a
+# refusal rather than an override that silently never applied.
+
+
+# ---------------------------------------------------------------------
+# Packs
+#
+# One table per pack you have bought. `dir` is YOUR directory name under
+# $SYNTY_STORE, not a guess at what Synty's zip unpacks to: this line is
+# the contract, so nothing has to predict a download's naming, and moving
+# your packs around is an edit here rather than a code change.
+#
+# `title` and `download` are English, and they exist for exactly one
+# moment — the one where somebody clones this on a machine with no packs
+# on it and has to be told which thing to go and get.
+# ---------------------------------------------------------------------
+
+[pack.scifi_space]
+title = "POLYGON Sci-Fi Space"
+dir = "polygon-scifi-space"
+download = "POLYGON Sci-Fi Space, the Source Files download"
+
+[pack.scifi_horror]
+title = "POLYGON Sci-Fi Horror"
+dir = "polygon-scifi-horror"
+download = "POLYGON Sci-Fi Horror, the Source Files download"
+
+
+# ---------------------------------------------------------------------
+# Assets
+#
+# One table per referenced asset. The table name is the STABLE ID: it is
+# what code will name, so re-cutting a fitting out of a different pack
+# stays an edit to this file.
+#
+#   pack      which [pack.*] above it comes out of
+#   source    where it is in that pack, relative to the pack directory,
+#             written with `/` on every platform. Prefer the Source Files
+#             download: it holds the FBX and the textures directly, and
+#             the .unitypackage route below is for packs that ship no
+#             source download.
+#   unity     optional. The project-relative path (`Assets/...`) the same
+#             asset has INSIDE a .unitypackage, used only when `source`
+#             is not there. Rebuilding that archive is done for you.
+#   texture   optional, and usually needed. A Synty pack paints itself
+#             from one shared atlas, and an FBX names its texture by a
+#             path relative to the tree it was exported in. Copy the mesh
+#             out of that tree and the reference dangles, so the resolver
+#             stages the named atlas beside the mesh before converting.
+#   sha256    the digest of the bytes this line was written against.
+#             Leave it out until you have the pack; `cargo xtask art hash`
+#             prints the line to paste. Once it is set, a pack update
+#             that changes the file is a refusal with both digests in it
+#             rather than a mesh that quietly became a different mesh.
+#
+# Then the four overrides. They are here from the first day and nothing
+# consumes them yet, which is deliberate: `poi::Shape::fill` arrived
+# AFTER five stations had already written hoops that could not reach
+# their own deck, and the whole cost of that was the field not existing
+# when the descriptions were authored.
+#
+#   scale     multiplied onto the size the game's description asks for.
+#             An FBX arrives at whatever unit its exporter chose and the
+#             converter is deliberately not allowed to guess, so the
+#             correction lives here, on a line you can comment.
+#   offset    shifted in the description's own frame, after scaling.
+#   rotation  degrees about x, y, z.
+#   fill      what fraction of its drawing frame the mesh actually
+#             occupies, per axis — the same number, meaning the same
+#             thing, as `poi::Shape::fill`. A description claims a box; a
+#             purchased mesh occupies some part of it, and every rule
+#             that measures a body is measuring the frame until this says
+#             otherwise.
+#
+# All four default to the identity: scale [1,1,1], offset [0,0,0],
+# rotation [0,0,0], fill [1,1,1]. That default is a CLAIM — that the mesh
+# is exactly the box the description asks for — and it is the claim most
+# imported meshes turn out to break.
+#
+# Nothing is listed yet. To add the first one, with the packs unzipped
+# under $SYNTY_STORE:
+#
+#     cargo xtask art find crate      # what is actually in the packs
+#     # paste the pack and source lines it prints into a table here
+#     cargo xtask art hash            # paste the sha256 line it prints
+#     cargo xtask art resolve
+#
+# and the shape of what you paste is this:
+#
+#     [asset.crate_small]
+#     pack = "scifi_space"
+#     source = "SourceFiles/FBX/SM_Prop_Crate_01.fbx"
+#     texture = "SourceFiles/Textures/PolygonSciFi_Texture_01_A.png"
+#     sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+#     scale = [1.0, 1.0, 1.0]
+#     offset = [0.0, 0.0, 0.0]
+#     rotation = [0.0, 0.0, 0.0]
+#     fill = [1.0, 1.0, 1.0]
+#
+# — the paths in that example are a shape, not a claim about where
+# anything is. `find` is what knows.
+# ---------------------------------------------------------------------

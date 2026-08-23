@@ -21,6 +21,28 @@ publish = false
 name = "space-trucking"
 path = "src/main.rs"
 
+# The seam purchased art will arrive through.
+#
+# The game has two graphical implementations of every object planned: the
+# whitebox this repository cuts in code, and a bought asset. `art` is
+# which one a build carries, and it is OFF here and in CI on purpose,
+# because CI cannot build the other one — the payload is not in the
+# repository and never will be (Synty's licence lets their meshes ship
+# inside a built game and forbids redistributing them as source). So CI
+# keeps testing the whitebox, which is where all sixteen gauntlet
+# families and the determinism guards live.
+#
+# Nothing reads the feature yet. It is declared now because the seam is
+# the expensive half: `cargo xtask art resolve` already writes
+# art/cache/index.toml, and the slice that consumes it has to re-enable
+# bevy_gltf, bevy_scene and the image decoders that were cut out of the
+# dependency list above — a measured 9m59s cold build going back towards
+# the 13m41s it was. That is the next slice's cost to pay, deliberately,
+# and not something to discover by accident.
+[features]
+default = []
+art = []
+
 [dependencies]
 # The whole game, headless: sim, net, replay, synth, telemetry.
 space-trucking = { path = "../.." }

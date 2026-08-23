@@ -4165,13 +4165,25 @@ mod tests {
 
         // A body that fills its berth exactly: the identity claim, and
         // the one the manifest's own comment calls the claim most
-        // imported meshes turn out to break.
+        // imported meshes turn out to break. **Asked of every kind**,
+        // because the sentence this backs is one somebody will act on —
+        // that adding a `dresses` line to a truthful asset costs the
+        // docket nothing — and it has to be true of the tall kinds and
+        // the wall-hung ones as well as of a crate.
+        for kind in Kind::ALL {
+            let identity = Dressings::read(&format!(
+                "[asset.crate_small]\ndresses = \"cargo/{}\"\nfill = [1.0, 1.0, 1.0]\n",
+                crate::art::snake(kind)
+            ))
+            .expect("the dialect");
+            let found = sweep_dressed(&identity);
+            assert!(
+                rules(&found).is_empty(),
+                "{kind:?} dressed by a body that fills its own berth was reported: {:?}",
+                rules(&found)
+            );
+        }
         let honest = sweep_dressed(&declared("fill = [1.0, 1.0, 1.0]\n"));
-        assert!(
-            rules(&honest).is_empty(),
-            "a body that fills its own berth was reported: {:?}",
-            rules(&honest)
-        );
 
         // Half again as wide as the cells the sim gave it.
         let wide = sweep_dressed(&declared("fill = [1.5, 1.0, 1.0]\n"));

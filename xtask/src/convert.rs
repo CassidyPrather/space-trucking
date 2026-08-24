@@ -13,9 +13,10 @@
 //! so its absence is a first-class outcome here with a message that names
 //! the thing to install, and never a stack trace.
 //!
-//! `$ART_CONVERTER` overrides it with any program taking a source and a
-//! destination. That exists for a real reason and a test reason. The real
-//! one is `FBX2glTF` and its forks: a single binary that does this job and
+//! `$ART_CONVERTER` overrides it with any program taking a source, a
+//! destination, and — when the manifest declared one — the atlas to paint
+//! with. That exists for a real reason and a test reason. The real one is
+//! `FBX2glTF` and its forks: a single binary that does this job and
 //! nothing else, which somebody may reasonably prefer to a 300 MB
 //! install. The test one is that it is the seam that lets the pipeline be
 //! exercised end to end where no converter exists at all.
@@ -28,11 +29,17 @@ use crate::fsx;
 use crate::manifest::Bounds;
 
 /// The script, carried in the binary. See `xtask/blender/fbx_to_gltf.py`.
-const SCRIPT: &str = include_str!("../blender/fbx_to_gltf.py");
+///
+/// Public because it is half of what a converted file is addressed by:
+/// [`crate::cache::Converted`] hashes it, so editing this script is
+/// enough to make every cached conversion stale, which is the only way
+/// a fix to it can reach a machine whose cache is already warm.
+pub const SCRIPT: &str = include_str!("../blender/fbx_to_gltf.py");
 
 #[derive(Debug)]
 pub enum Converter {
-    /// `$ART_CONVERTER`, run as `<program> <source> <destination>`.
+    /// `$ART_CONVERTER`, run as
+    /// `<program> <source> <destination> [texture]`.
     Program(PathBuf),
     Blender(PathBuf),
 }
@@ -49,25 +56,41 @@ impl Converter {
     /// Convert one file, and hand back whatever the converter said about
     /// the size of what it wrote.
     ///
-    /// **The measurement is one line on standard output**, and nothing
-    /// else about the contract changed:
+    /// **The atlas is an argument, not a convention.** `texture` is the
+    /// staged copy of the file the manifest's `texture` line declared, and
+    /// it is passed as a third positional argument when there is one and
+    /// left off when there is not:
+    ///
+    /// ```text
+    /// <program> <source> <destination.glb> [texture]
+    /// ```
+    ///
+    /// Positional and optional, because the whole of a conforming
+    /// converter has to stay `cp` and a `printf` — `cp "$1" "$2"` ignores
+    /// a third argument and is exactly as conforming as it was before this
+    /// existed. What changed is that a converter which *can* paint is now
+    /// told what to paint with, rather than being left to hope the mesh
+    /// file names its own atlas. It resolves nothing for a converter that
+    /// ignores it, which is the honest outcome for a program that has
+    /// never heard of this repository.
+    ///
+    /// **The measurement is one line on standard output**, unchanged:
     ///
     /// ```text
     /// aabb <min x> <min y> <min z> <max x> <max y> <max z>
     /// ```
     ///
-    /// A line rather than a sidecar file because the contract has to stay
-    /// something a person can satisfy in a shell script — `$ART_CONVERTER`
-    /// is documented as any program taking a source and a destination, and
-    /// the cheapest possible fake of one is `cp` and a `printf`. A
-    /// converter that prints nothing is not in breach: `FBX2glTF` has never
-    /// heard of this repository, and the honest outcome there is a promise
-    /// left unchecked rather than a refusal nobody can act on.
+    /// A line rather than a sidecar file for the same reason the atlas is
+    /// a positional argument. A converter that prints nothing is not in
+    /// breach: `FBX2glTF` has never heard of this repository, and the
+    /// honest outcome there is a promise left unchecked rather than a
+    /// refusal nobody can act on.
     pub fn run(
         &self,
         cache: &Cache,
         source: &Path,
         destination: &Path,
+        texture: Option<&Path>,
     ) -> Result<Option<Bounds>, String> {
         if let Some(parent) = destination.parent() {
             fsx::create_dir_all(parent)?;
@@ -95,6 +118,9 @@ impl Converter {
                 command
             }
         };
+        if let Some(texture) = texture {
+            command.arg(texture);
+        }
         let output = command
             .output()
             .map_err(|err| format!("cannot run {}: {err}", self.describe()))?;
@@ -218,7 +244,9 @@ no converter: Blender is not on PATH, and $BLENDER and $ART_CONVERTER are not se
                      installed, `blender --version` should work in this shell; if it
                      is installed somewhere odd, set $BLENDER to the executable.
     $ART_CONVERTER   any program run as `<program> <source.fbx> <destination.glb>`,
-                     which is what FBX2glTF and its forks already are.
+                     which is what FBX2glTF and its forks already are. A third
+                     argument, the atlas to paint with, follows when the manifest
+                     declared one; a converter that ignores it still conforms.
 
   Everything up to conversion works without either of these:
   `cargo xtask art check` finds and hashes the sources, and says so.";

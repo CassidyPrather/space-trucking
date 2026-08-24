@@ -46,8 +46,11 @@ ships FBX, so something has to translate, and `blender --background
 search will not find it, set `$BLENDER` to the executable.
 
 If you would rather not install 300 MB to convert a crate, `$ART_CONVERTER`
-takes any program run as `<program> <source> <destination.glb>`, which is
-what FBX2glTF and its forks already are.
+takes any program run as `<program> <source> <destination.glb> [texture]`,
+which is very nearly what FBX2glTF and its forks already are — the third
+argument is the atlas the manifest declared, and a converter that ignores
+it still conforms. See [the converter
+contract](#the-converter-contract-extended).
 
 ## Where to put packs
 
@@ -151,8 +154,11 @@ art/cache/
                                files a manifest named, out of a zip, or a whole
                                tree rebuilt out of a .unitypackage
   stage/<digest>/              a mesh and its textures, as the converter saw them
-  glb/<digest>.glb             the converted asset
-  glb/<digest>.aabb            the tight box the converter measured round it
+  glb/<digest>-<recipe>.glb    the converted asset. <digest> is the source mesh's
+                               and <recipe> covers what else the conversion read:
+                               the declared atlas and the converter script. See
+                               "What the cache is addressed by" below
+  glb/<digest>-<recipe>.aabb   the tight box the converter measured round it
   index.toml                   what resolved, the overrides for each, and what
                                each one dresses
   blender/fbx_to_gltf.py       the converter script, written out from the binary
@@ -258,17 +264,17 @@ art: taking POLYGON - Sci-Fi Space Pack/SourceFiles/FBX/SM_Prop_Crate_01.fbx out
      /home/you/art/synty/POLYGON - Sci-Fi Space Pack/POLYGON Sci-Fi Space.zip (the archive stays as it is)
   crate_small              in POLYGON Sci-Fi Space.zip  9f2c1d4ab077  /home/you/space-trucking/art/cache/unpacked/...
 art: converting 1 of 1 with blender /usr/bin/blender
-  converted crate_small              -> glb/9f2c1d4ab077...glb
+  converted crate_small              -> glb/9f2c1d4ab077...-36488a626354.glb
 art: wrote /home/you/space-trucking/art/cache/index.toml
 ```
 
 Exit status 0, and `art/cache/index.toml` holds one `[asset.<id>]` table
 per line of the manifest with the converted file and the four overrides.
 A second `resolve` converts nothing, takes nothing out of any archive,
-and needs no converter at all: the cache is addressed by the digest of
-the source, and the file an archive would be opened for is the file that
-is looked for first, so both "already converted" and "already taken out"
-are questions about a path rather than about a timestamp.
+and needs no converter at all: the cache is addressed by everything the
+conversion read, and the file an archive would be opened for is the file
+that is looked for first, so both "already converted" and "already taken
+out" are questions about a path rather than about a timestamp.
 
 ## What a failure looks like
 
@@ -511,6 +517,43 @@ would make the manifest impossible to write in the order people write it
 
 ### The converter contract, extended
 
+A converter is run with the mesh, the file to write, and — when the
+manifest declared one — the atlas to paint with:
+
+```text
+<program> <source> <destination.glb> [texture]
+```
+
+**The `texture` line is a declaration, and this is where it is spoken.**
+It used to be a hint acted on by arrangement: the resolver copied the
+atlas beside the mesh and into a `Textures/` folder, and left it to the
+FBX's own relative texture reference to find one of them. That works for
+a mesh file that names its atlas, and Synty's commonly do not — they
+assign their materials in Unity, through the `.unitypackage`'s `.mat`
+files, so the FBX carries a bare material naming no image. A file that
+names nothing resolves nothing, and the crate renders grey.
+
+So the atlas is now an argument, and the Blender script this repository
+ships assigns it as the **Base Color of every material that has no image
+texture of its own**, creating a material where a mesh has none, before
+it exports. The staged copies stay exactly where they were, because **an
+FBX that names its own texture still wins**: it resolves against them
+during import, the material comes out of the importer already carrying an
+image, and `paint_with` leaves it alone. The declaration fills a silence;
+it never overrules a statement.
+
+A converter that ignores the third argument is **not in breach** — the
+atlas simply resolves nothing, which is the honest outcome for a program
+that has never heard of this repository. One thing to know if you wrote a
+converter against the older contract: `ART_CONVERTER=/bin/cp` no longer
+works, because `cp` means something specific by a third argument. A
+two-line shim does:
+
+```sh
+#!/bin/sh
+cp "$1" "$2"
+```
+
 The measurement has to come from the only program in the pipeline that
 can see a mesh. So a converter may print one line on standard output:
 
@@ -525,16 +568,46 @@ worse than no number. The Blender script this repository ships does it
 conforming converter is still `cp` and a `printf`, which is the property
 the contract was shaped for.
 
-A converter that prints nothing is **not in breach**: `$ART_CONVERTER` is
-documented as any program taking a source and a destination, and
-FBX2glTF has never heard of this repository. The run says which promises
-went unchecked and what to print to be checked, rather than refusing what
-it cannot see.
+A converter that prints nothing is **not in breach** either: FBX2glTF has
+never heard of this repository. The run says which promises went
+unchecked and what to print to be checked, rather than refusing what it
+cannot see.
 
-The measurement is filed under the same digest the converted file is, as
-`glb/<digest>.aabb`, so a warm cache keeps the check running. A check
-that only ran on the run that happened to convert would be a check that
-stops running the moment the cache is warm.
+The measurement is filed under the same name the converted file is, as
+`glb/<name>.aabb`, so a warm cache keeps the check running. A check that
+only ran on the run that happened to convert would be a check that stops
+running the moment the cache is warm.
+
+### What the cache is addressed by
+
+A converted file is named after **everything that conversion read**:
+
+```text
+glb/<source digest>-<recipe>.glb
+```
+
+The source digest is the front of it, because that is the number a person
+can check by hand — the manifest carries it, the index records it, and
+`sha256sum` prints it. The twelve hex digits after it are a digest of
+what else went in: the digest of the declared atlas, and the digest of
+the Blender script this binary carries.
+
+That second half is not decoration. Before it existed the cache was
+addressed by the source mesh alone, so the fix above would have reached
+nobody: the owner's crate is converted from a mesh that did not change,
+and the next `resolve` after pulling a fix to the *script* would have
+said "already converted" and left the grey crate where it was. Folding
+the script and the atlas into the name means **nothing has to be deleted
+by hand**. Old entries are not cleaned up either; they are simply at
+names nothing looks at any more, and `art/cache/` is gitignored and
+disposable in one command.
+
+What is deliberately *not* in the name is which program on your machine
+did the converting. Answering that would mean finding a converter on
+every run, including the runs with nothing to do — and "a second
+`resolve` needs no converter at all" is a property worth more than
+noticing that you swapped Blender for FBX2glTF. If you do swap, delete
+`art/cache/glb/`.
 
 ## The loading path: what `--features art` actually turns on
 
@@ -550,6 +623,14 @@ the cabin's list since screenshots needed it to *write*, Bevy's `png`
 feature is `image/png`, and a Blender-exported `.glb` embeds its textures
 as PNG unless the source was a JPEG. If a pack ever ships one that is
 not, `"jpeg"` on the `art` line is the fix.
+
+**That prediction was checked the day a `.glb` first carried a texture at
+all, and it held.** Nothing on the loading side changed for it: a glTF
+with an embedded image is read by the same loader as one without, the
+image chunk is decoded by the same registry `--shot` writes through, and
+the atlases the manifest names are PNG (`PolygonSciFiSpace_Texture_01_A`
+`.png`, on `art/manifest.toml`'s only asset line). `"jpeg"` remains one
+word away and is still not needed.
 
 Eight crates: `bevy_gltf`, `bevy_world_serialization`, `gltf`,
 `gltf-json`, `gltf-derive`, `base64`, `byteorder`, `inflections`.
@@ -711,10 +792,21 @@ name that would climb out of the tree, content addressing, the digest
 check, that a search ranks the packs the manifest declares above the rest
 and counts every directory it cut, that a `.unitypackage` beside a Source
 Files archive goes unread, that a partial resolve indexes nothing, that a
-`dresses` line and a measured size reach the index, and that a `fill`
-which disagrees with a measured mesh stops the run. The zips and the
-measuring converters those guards run against are written in the guard
-file, so they depend on nothing this repository did not write.
+`dresses` line and a measured size reach the index, that a `fill` which
+disagrees with a measured mesh stops the run, that a declared atlas is
+handed to the converter as an argument and a manifest declaring none
+hands it nothing, and that a conversion made before the atlas was
+declared — or under a name the older pipeline used — is made again. The
+zips and the recording, measuring and copying converters those guards run
+against are written in the guard file, so they depend on nothing this
+repository did not write.
+
+What those guards stop at is the argument. **There is no Blender in
+continuous integration or in the container this was written in**, so what
+`paint_with` does with the atlas once it has it — that a bare Synty
+material comes out of the importer with no image, that plugging one into
+Base Color survives `export_scene.gltf`, and that the resulting `.glb`
+renders in colour — is proved on the owner's machine and nowhere else.
 
 **It also builds and tests the art seam**, with `--features art`, and
 that is new. The feature is off everywhere else, so without those two
@@ -797,6 +889,16 @@ texture by a path relative to the tree it was exported in. Copy the mesh
 out of that tree and the reference dangles. Hence `texture` in the
 manifest, and hence the resolver staging the atlas beside the mesh before
 the converter sees either.
+
+**And a fourth claim, which was wrong: "an FBX names its own texture, so
+staging the atlas beside it is enough."** It is not, and the first real
+Synty mesh this pipeline converted proved it — the crate came out
+colourless. Synty assign their materials in **Unity**, through the
+`.unitypackage`'s `.mat` files, and the FBX commonly carries a bare
+material naming no image at all. A file that names nothing resolves
+nothing, however carefully the file beside it was staged. See
+[the converter contract](#the-converter-contract-extended) for what the
+`texture` line does now.
 
 ## Where it lives, and what that costs
 

@@ -247,3 +247,29 @@ Every line is reversible; strike one by overruling it.
   25 s on a warm dependency cache (4 s clippy, 21 s tests); about 7 min
   the first time, which the cache then keeps. Code behind a feature
   nothing builds is code that rots.
+- **The declared atlas is a positional third argument, not a flag or an
+  environment variable.** `<program> <source> <destination> [texture]`
+  keeps the whole of a conforming converter at `cp "$1" "$2"` and lets one
+  tell "no atlas declared" from "an empty path" by counting arguments. The
+  cost is small and real: `ART_CONVERTER=/bin/cp` no longer conforms,
+  because `cp` means "into that directory" by a third argument. A two-line
+  shim does, and the guards now use one.
+- **The declaration fills a silence and never overrules a statement.** A
+  material that already names an image is left as the importer built it,
+  and the atlas is still staged beside the mesh so an FBX that names its
+  own texture resolves against it exactly as before. The other direction —
+  the manifest's line winning outright — was rejected because it would
+  make `texture` a way to repaint art, which is a thing the pipeline has
+  no business being able to do quietly.
+- **A converted file is named `<source digest>-<recipe>`, where the recipe
+  covers the declared atlas and the converter script.** A cache addressed
+  by the source mesh alone is a cache in which a fix to the script reaches
+  nobody whose cache is warm — which is every machine that has ever
+  resolved. The alternative, telling the owner to delete `art/cache/`, is
+  a step nobody should have to be told about by a run that has both files
+  in front of it.
+- **Which converter program ran is deliberately NOT in that recipe.**
+  Fingerprinting `$ART_CONVERTER` or a Blender build means finding a
+  converter on every run, including the runs with nothing to do, and "a
+  second `resolve` needs no converter at all" is worth more. Swapping
+  converters is a `rm -r art/cache/glb/`, and it is written down.

@@ -153,10 +153,9 @@ pub fn of_file(path: &std::path::Path) -> std::io::Result<String> {
     }
 }
 
-/// The digest of a slice already in hand. Nothing at run time hashes
-/// something it has not already streamed off a disk; this is here for
-/// the published vectors below.
-#[cfg(test)]
+/// The digest of a slice already in hand: the recipe a cache entry is
+/// named after ([`crate::cache::Converted`]), the script that binary
+/// carries, and the published vectors below.
 pub fn of_bytes(bytes: &[u8]) -> String {
     let mut hasher = Hasher::new();
     hasher.update(bytes);

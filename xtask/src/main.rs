@@ -33,7 +33,7 @@ mod unitypackage;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use cache::Cache;
+use cache::{Cache, Converted};
 use convert::Converter;
 use manifest::{Asset, Bounds, Manifest, Resolved};
 use store::{Found, Hit, Store, count, slashed};
@@ -52,7 +52,8 @@ Environment:
   ART_MANIFEST     a manifest other than art/manifest.toml
   ART_CACHE        a cache other than art/cache
   BLENDER          the Blender executable, if it is not on PATH
-  ART_CONVERTER    a program run as `<program> <source> <destination.glb>`, instead of Blender
+  ART_CONVERTER    a program run as `<program> <source> <destination.glb> [texture]`,
+                   instead of Blender
 ";
 
 fn main() {
@@ -97,8 +98,24 @@ fn read_manifest() -> Result<Manifest, String> {
 struct Sourced {
     digest: String,
     found: Found,
+    /// The atlas the manifest declared for it, if it declared one.
+    atlas: Option<Atlas>,
+    /// How this asset's conversion is addressed in the cache: the mesh,
+    /// the atlas above, and the script that will read them.
+    converted: Converted,
     /// Set when the manifest carried no digest for it yet.
     unrecorded: bool,
+}
+
+/// **The atlas one asset declared, found on this machine and hashed.**
+///
+/// Hashed here rather than at conversion time because the digest is half
+/// of what the converted file is named after, and the name is what a run
+/// consults before it decides there is nothing to do. An atlas found only
+/// when a conversion happens is an atlas whose change nothing notices.
+struct Atlas {
+    from: PathBuf,
+    digest: String,
 }
 
 /// Find every asset, hash it, and — when `converting` — convert and index
@@ -166,10 +183,11 @@ fn report(converting: bool) -> Result<(), String> {
         println!("art: every asset found. `cargo xtask art resolve` converts them.");
         return Ok(());
     }
-    convert_all(&manifest, &store, &cache, &sourced)
+    convert_all(&cache, &sourced)
 }
 
-/// Find one asset's bytes and check them against the line that named it.
+/// Find one asset's bytes and its atlas, and check the bytes against the
+/// line that named them.
 fn source(
     store: &Store,
     cache: &Cache,
@@ -180,14 +198,7 @@ fn source(
         .map_err(|missing| missing.to_string())?;
     let digest = sha256::of_file(found.path())
         .map_err(|err| format!("cannot hash {}: {err}", found.path().display()))?;
-    if asset.sha256 == Asset::NO_DIGEST_YET {
-        return Ok(Sourced {
-            digest,
-            found,
-            unrecorded: true,
-        });
-    }
-    if asset.sha256 != digest {
+    if asset.sha256 != Asset::NO_DIGEST_YET && asset.sha256 != digest {
         return Err(format!(
             "{} is here and is not the file the manifest was written against.\n\n  \
              file      {}\n  \
@@ -206,22 +217,50 @@ fn source(
             asset.id,
         ));
     }
+    let atlas = atlas(store, cache, manifest, asset)?;
+    let converted = Converted::of(&digest, atlas.as_ref().map(|one| one.digest.as_str()));
     Ok(Sourced {
+        unrecorded: asset.sha256 == Asset::NO_DIGEST_YET,
         digest,
         found,
-        unrecorded: false,
+        atlas,
+        converted,
     })
 }
 
-fn convert_all(
-    manifest: &Manifest,
+/// **The atlas an asset's `texture` line declared, found and hashed.**
+///
+/// A declaration and not a hope: the file named here is the one the
+/// converter is handed, whatever the mesh file believes about where its
+/// own texture lives. Looked for on every run and not only on the runs
+/// that convert, because its digest is part of what the converted file is
+/// named after — see [`Atlas`].
+fn atlas(
     store: &Store,
     cache: &Cache,
-    sourced: &[(&Asset, Sourced)],
-) -> Result<(), String> {
+    manifest: &Manifest,
+    asset: &Asset,
+) -> Result<Option<Atlas>, String> {
+    let Some(texture) = &asset.texture else {
+        return Ok(None);
+    };
+    let pack = manifest.pack_of(asset);
+    let from = store::find_relative(store, cache, pack, texture).ok_or_else(|| {
+        format!(
+            "{} names texture `{texture}`, and it is not in {}",
+            asset.id,
+            store.pack_dir(pack).display()
+        )
+    })?;
+    let digest =
+        sha256::of_file(&from).map_err(|err| format!("cannot hash {}: {err}", from.display()))?;
+    Ok(Some(Atlas { from, digest }))
+}
+
+fn convert_all(cache: &Cache, sourced: &[(&Asset, Sourced)]) -> Result<(), String> {
     let wanted: Vec<&(&Asset, Sourced)> = sourced
         .iter()
-        .filter(|(_, one)| !cache.glb(&one.digest).is_file())
+        .filter(|(_, one)| !cache.glb(&one.converted).is_file())
         .collect();
     let converter = if wanted.is_empty() {
         None
@@ -247,28 +286,33 @@ fn convert_all(
             .ok_or_else(|| format!("{} resolved to something with no file name", asset.id))?;
         let staged = stage.join(name);
         fsx::copy(one.found.path(), &staged)?;
-        if let Some(texture) = &asset.texture {
-            let pack = manifest.pack_of(asset);
-            let from = store::find_relative(store, cache, pack, texture).ok_or_else(|| {
-                format!(
-                    "{} names texture `{texture}`, and it is not in {}",
-                    asset.id,
-                    store.pack_dir(pack).display()
-                )
-            })?;
-            let leaf = from.file_name().expect("a texture file has a name");
-            // Two copies, because an FBX names its texture by a relative
-            // path and the two spellings Synty's exporters use are the
-            // file beside the mesh and the file in a Textures folder.
-            fsx::copy(&from, &stage.join(leaf))?;
-            fsx::copy(&from, &stage.join("Textures").join(leaf))?;
-        }
-        let measured = converter.run(cache, &staged, &cache.glb(&one.digest))?;
-        write_bounds(cache, &one.digest, measured)?;
+        let painted = match &one.atlas {
+            None => None,
+            Some(atlas) => {
+                let leaf = atlas.from.file_name().expect("a texture file has a name");
+                // Two copies, because an FBX that names its own texture
+                // names it by a relative path, and the two spellings
+                // Synty's exporters use are the file beside the mesh and
+                // the file in a Textures folder. An FBX that names one
+                // still wins; the third argument below is for the FBX
+                // that names nothing, which is the common Synty case.
+                let beside = stage.join(leaf);
+                fsx::copy(&atlas.from, &beside)?;
+                fsx::copy(&atlas.from, &stage.join("Textures").join(leaf))?;
+                Some(beside)
+            }
+        };
+        let measured = converter.run(
+            cache,
+            &staged,
+            &cache.glb(&one.converted),
+            painted.as_deref(),
+        )?;
+        write_bounds(cache, &one.converted, measured)?;
         println!(
             "  converted {:<24} -> {}{}",
             asset.id,
-            Cache::glb_relative(&one.digest),
+            one.converted.relative(),
             measured.map_or_else(
                 || String::from("  (unmeasured)"),
                 |bounds| format!("  {} half-units", manifest::triple(bounds.half))
@@ -298,7 +342,7 @@ fn index_all(
     let mut broken: Vec<String> = Vec::new();
     let mut unmeasured: Vec<&str> = Vec::new();
     for (asset, one) in sourced {
-        let measured = read_bounds(cache, &one.digest);
+        let measured = read_bounds(cache, &one.converted);
         if let Some(measured) = measured {
             if let Some(trouble) = manifest::fill_trouble(asset, measured) {
                 broken.push(trouble);
@@ -308,7 +352,7 @@ fn index_all(
         }
         resolved.push(Resolved {
             id: asset.id.clone(),
-            glb: Cache::glb_relative(&one.digest),
+            glb: one.converted.relative(),
             sha256: one.digest.clone(),
             dresses: asset.dresses.clone(),
             scale: asset.scale,
@@ -358,7 +402,11 @@ fn index_all(
 /// Keep what the converter measured, beside what it wrote. Six numbers
 /// in the order the converter prints them, because a file this small
 /// wants no dialect of its own.
-fn write_bounds(cache: &Cache, digest: &str, measured: Option<Bounds>) -> Result<(), String> {
+fn write_bounds(
+    cache: &Cache,
+    converted: &Converted,
+    measured: Option<Bounds>,
+) -> Result<(), String> {
     let Some(measured) = measured else {
         // A converter that measured nothing leaves no file, so a later
         // run cannot mistake silence for a measurement of zero.
@@ -369,14 +417,14 @@ fn write_bounds(cache: &Cache, digest: &str, measured: Option<Bounds>) -> Result
         .chain((0..3).map(|axis| measured.mid[axis] + measured.half[axis]))
         .map(|value| format!("{value}"))
         .collect();
-    fsx::write(&cache.bounds(digest), &numbers.join(" "))
+    fsx::write(&cache.bounds(converted), &numbers.join(" "))
 }
 
 /// What a previous run measured, if it measured anything. A file that
 /// cannot be read or does not hold six numbers is the same answer as no
 /// file: unmeasured, and said so.
-fn read_bounds(cache: &Cache, digest: &str) -> Option<Bounds> {
-    let text = std::fs::read_to_string(cache.bounds(digest)).ok()?;
+fn read_bounds(cache: &Cache, converted: &Converted) -> Option<Bounds> {
+    let text = std::fs::read_to_string(cache.bounds(converted)).ok()?;
     let numbers: Vec<f32> = text
         .split_whitespace()
         .filter_map(|word| word.parse().ok())

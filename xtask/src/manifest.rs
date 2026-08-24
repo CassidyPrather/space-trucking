@@ -689,8 +689,10 @@ pub struct Resolved {
     /// The converted file, relative to the cache root, with `/`
     /// separators so the index reads the same on every platform.
     pub glb: String,
-    /// The digest of the SOURCE the converted file came from. The cache
-    /// is addressed by it, so this is also where the file is.
+    /// The digest of the SOURCE the converted file came from, and the
+    /// front of the name the cache files that file under — the rest of
+    /// that name is what else the conversion read, so `glb` above is the
+    /// path and this is the provenance.
     pub sha256: String,
     /// Which body of the game draws this, carried through from the
     /// manifest so the thing that reads the index never has to read the
@@ -734,8 +736,10 @@ pub fn render_index(resolved: &[Resolved]) -> String {
          # machine, and the next resolve overwrites the file.\n\
          #\n\
          # `glb` is relative to this file's own directory. `sha256` is the digest of\n\
-         # the SOURCE mesh the glb was converted from, which is also what the cache is\n\
-         # addressed by, so a changed pack changes the path and nothing stale is read.\n\
+         # the SOURCE mesh the glb was converted from, and the front of the name the\n\
+         # cache files it under; the rest of that name covers what else the conversion\n\
+         # read, so a changed pack OR a changed atlas changes the path and nothing\n\
+         # stale is read.\n\
          #\n\
          # `dresses` is which body of the game draws this one. `measured_mid` and\n\
          # `measured_half` are the tight box the converter reported round the mesh, in\n\

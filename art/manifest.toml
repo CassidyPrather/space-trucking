@@ -64,10 +64,14 @@ download = "POLYGON Sci-Fi Horror, the Source Files download"
 #             asset has INSIDE a .unitypackage, used only when `source`
 #             is not there. Rebuilding that archive is done for you.
 #   texture   optional, and usually needed. A Synty pack paints itself
-#             from one shared atlas, and an FBX names its texture by a
-#             path relative to the tree it was exported in. Copy the mesh
-#             out of that tree and the reference dangles, so the resolver
-#             stages the named atlas beside the mesh before converting.
+#             from one shared atlas, and this line DECLARES which one. It
+#             is handed to the converter, which paints every material
+#             that names no image of its own with it — because Synty
+#             assign their materials in Unity, so the FBX itself commonly
+#             names nothing and a mesh converted on its word comes out
+#             grey. An FBX that DOES name its own texture still wins: the
+#             atlas is also staged beside the mesh, where a relative
+#             reference out of the original tree resolves against it.
 #   sha256    the digest of the bytes this line was written against.
 #             Leave it out until you have the pack; `cargo xtask art hash`
 #             prints the line to paste. Once it is set, a pack update

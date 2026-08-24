@@ -8,7 +8,7 @@ importers.
 Run as::
 
     blender --background --factory-startup --python-exit-code 1 \
-        --python fbx_to_gltf.py -- <source> <destination.glb>
+        --python fbx_to_gltf.py -- <source> <destination.glb> [texture]
 
 `cargo xtask art resolve` writes this file out beside the cache and runs
 exactly that command, so the copy in `xtask/blender/` is the readable
@@ -19,14 +19,23 @@ It also measures what it wrote and prints one `aabb` line — see
 checked against, and it is here rather than in the resolver because
 this is the only program in the pipeline that can see a mesh.
 
-Two things it deliberately does not do. It does not correct scale: a
-Synty FBX arrives at whatever unit its exporter chose, and guessing here
-would put the correction somewhere nobody can see it, while
-`art/manifest.toml`'s per-asset `scale` puts it on a line with a comment.
-And it does not chase textures: the resolver stages the atlas beside the
-mesh before calling this, because that is the only arrangement in which a
-relative texture path inside an FBX resolves anywhere but its original
-tree.
+The third argument is the atlas the manifest DECLARED, and `paint_with`
+is what happens to it. This used not to exist, and the reason it does now
+is the first real Synty mesh the pipeline ever converted: it came out
+colourless. Synty assign their materials in Unity, through the
+`.unitypackage`'s `.mat` files, so the FBX commonly carries a bare
+material that names no image at all — and a file that names nothing
+resolves nothing, however carefully the resolver staged the atlas beside
+it. So the staged copies stay, because an FBX that DOES name its own
+texture still resolves against them and still wins, and the declaration
+fills the silence underneath: every material with no image of its own
+gets the declared atlas as its Base Color, and a mesh with no material at
+all gets one made for it.
+
+One thing it still deliberately does not do: correct scale. A Synty FBX
+arrives at whatever unit its exporter chose, and guessing here would put
+the correction somewhere nobody can see it, while `art/manifest.toml`'s
+per-asset `scale` puts it on a line with a comment.
 """
 
 import os
@@ -75,6 +84,71 @@ def import_any(path):
         except Exception as err:  # noqa: BLE001 - report every route that failed
             complaints.append(f"{name} said: {err}")
     raise SystemExit(f"could not import {path}\n  " + "\n  ".join(complaints))
+
+
+def paint_with(path):
+    """Give every material that names no image of its own this atlas.
+
+    The declaration filling a silence, never overruling a statement. A
+    material that already names an image is left exactly as the importer
+    built it — that FBX knew where its texture was, and the manifest's
+    `texture` line is a fallback for the ones that do not, not a
+    correction to the ones that do.
+
+    Small and defensive on purpose: it runs on somebody else's Blender,
+    against a file nothing in this repository has seen, and the worst
+    outcome available is a traceback where a grey crate would have done.
+    """
+    if not os.path.isfile(path):
+        # The resolver stages this file beside the mesh before running
+        # this script, so its absence here is a fault in the resolver and
+        # not something to work around. Say which file, the way every
+        # other refusal in this pipeline does.
+        raise SystemExit(
+            f"the declared texture is not where the resolver staged it: {path}\n"
+            "  `cargo xtask art resolve` copies it beside the mesh before running this,\n"
+            "  so a missing one is a fault in the resolver rather than in the pack."
+        )
+    image = bpy.data.images.load(path, check_existing=True)
+    for obj in bpy.context.scene.objects:
+        if obj.type != "MESH":
+            continue
+        materials = getattr(obj.data, "materials", None)
+        if materials is None:
+            continue
+        if not len(materials):
+            # A mesh with no material at all is the emptiest silence
+            # there is, and it exports as an untextured default.
+            materials.append(bpy.data.materials.new(name="declared_atlas"))
+        for material in materials:
+            if material is not None:
+                paint_material(material, image)
+
+
+def paint_material(material, image):
+    """Plug `image` into this material's Base Color, if nothing is there."""
+    if not material.use_nodes:
+        # Setting this builds the default Principled tree, which is what
+        # the branch below then wires the image into.
+        material.use_nodes = True
+    tree = material.node_tree
+    if tree is None:
+        return
+    if any(node.type == "TEX_IMAGE" and node.image is not None for node in tree.nodes):
+        return  # it named its own; the declaration has nothing to say here
+    shader = next((node for node in tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
+    if shader is None:
+        shader = tree.nodes.new("ShaderNodeBsdfPrincipled")
+        output = next(
+            (node for node in tree.nodes if node.type == "OUTPUT_MATERIAL"), None
+        ) or tree.nodes.new("ShaderNodeOutputMaterial")
+        tree.links.new(shader.outputs["BSDF"], output.inputs["Surface"])
+    base_color = shader.inputs.get("Base Color")
+    if base_color is None:
+        return
+    texture = tree.nodes.new("ShaderNodeTexImage")
+    texture.image = image
+    tree.links.new(texture.outputs["Color"], base_color)
 
 
 def export_glb(path):
@@ -139,12 +213,16 @@ def report_bounds():
 def main():
     if "--" not in sys.argv:
         raise SystemExit(
-            "expected: blender --background --python fbx_to_gltf.py -- <source> <destination>"
+            "expected: blender --background --python fbx_to_gltf.py -- "
+            "<source> <destination> [texture]"
         )
     arguments = sys.argv[sys.argv.index("--") + 1 :]
-    if len(arguments) != 2:
-        raise SystemExit(f"expected a source and a destination, got {arguments}")
-    source, destination = arguments
+    if len(arguments) not in (2, 3):
+        raise SystemExit(
+            f"expected a source, a destination and an optional texture, got {arguments}"
+        )
+    source, destination = arguments[0], arguments[1]
+    texture = arguments[2] if len(arguments) == 3 else None
     if not os.path.isfile(source):
         raise SystemExit(f"no such source file: {source}")
 
@@ -152,6 +230,8 @@ def main():
     import_any(source)
     if not bpy.context.scene.objects:
         raise SystemExit(f"{source} imported without producing a single object")
+    if texture is not None:
+        paint_with(texture)
     export_glb(destination)
     report_bounds()
     print(f"fbx_to_gltf: wrote {destination}")

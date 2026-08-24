@@ -15,14 +15,19 @@
 //! extracting it, taking only the files a manifest named out of one,
 //! refusing a member name that would climb out of the tree, a pack
 //! directory named and filled the way a store leaves it, content
-//! addressing, the digest check, and that a partial resolve indexes
-//! nothing.
+//! addressing, the digest check, that a declared texture is handed to the
+//! converter as an argument and that silence is handed to it as silence,
+//! that a conversion made before the texture was declared is made again,
+//! and that a partial resolve indexes nothing.
 //!
 //! Not proved here, and not provable without the owner's disk: that a
-//! real Synty FBX converts to a glTF that looks right, that a real
-//! Synty zip is laid out the way these are, and that `tar` opens a zip
-//! where it is bsdtar rather than GNU tar — the Linux runner these guards
-//! meet has GNU tar, so what runs here is the fallback to `unzip`.
+//! real Synty FBX converts to a glTF that looks right, that the Blender
+//! script's painting of a declared atlas produces a textured GLB — there
+//! is no Blender on the machine these guards run on, so what is proved
+//! about the atlas ends at the argument — that a real Synty zip is laid
+//! out the way these are, and that `tar` opens a zip where it is bsdtar
+//! rather than GNU tar — the Linux runner these guards meet has GNU tar,
+//! so what runs here is the fallback to `unzip`.
 //! `docs/ART_PIPELINE.md` says which commands close those gaps.
 
 use std::path::{Path, PathBuf};
@@ -161,6 +166,59 @@ title = \"POLYGON Demonstration\"
 dir = \"demo\"
 download = \"POLYGON Demonstration, the Source Files download\"
 ";
+
+/// The smallest conforming converter: it copies its source to its
+/// destination, measures nothing, and ignores anything else it is handed.
+///
+/// Two lines of shell rather than `/bin/cp` itself, and the difference is
+/// the whole of what the contract gained. A converter is now run as
+/// `<program> <source> <destination> [texture]`, and `cp` is a program
+/// that means something quite specific by a third argument — "copy both
+/// of those into that directory" — so the fake has to name the two
+/// arguments it wants. It is still cp; it just says which.
+#[cfg(unix)]
+fn copying_converter(dir: &Path) -> PathBuf {
+    use std::os::unix::fs::PermissionsExt as _;
+    let path = dir.join("copy.sh");
+    write(&path, "#!/bin/sh\ncp \"$1\" \"$2\"\n");
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
+        .expect("a converter this test can run");
+    path
+}
+
+/// A converter that copies, and writes down every argument it was handed,
+/// one per line, with a blank line after each run. The log is the second
+/// path handed back.
+#[cfg(unix)]
+fn recording_converter(dir: &Path) -> (PathBuf, PathBuf) {
+    use std::os::unix::fs::PermissionsExt as _;
+    let log = dir.join("arguments.txt");
+    let path = dir.join("record.sh");
+    write(
+        &path,
+        &format!(
+            "#!/bin/sh\ncp \"$1\" \"$2\"\n\
+             for arg in \"$@\"; do printf '%s\\n' \"$arg\" >> '{log}'; done\n\
+             printf '\\n' >> '{log}'\n",
+            log = log.display()
+        ),
+    );
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
+        .expect("a converter this test can run");
+    (path, log)
+}
+
+/// What one run of the recording converter above was handed, and nothing
+/// of any other run.
+#[cfg(unix)]
+fn handed(log: &Path) -> Vec<String> {
+    std::fs::read_to_string(log)
+        .expect("the converter wrote down what it was handed")
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(str::to_owned)
+        .collect()
+}
 
 /// **Every asset that is not on this machine is reported in one run.**
 /// The tool exists because trawling a pack by hand does not scale, and
@@ -466,6 +524,12 @@ fn the_cabin_ships_the_whitebox_unless_art_is_asked_for() {
 /// pack update changes the bytes, the bytes change the digest, the digest
 /// changes the path, and nothing stale is where anything looks.
 ///
+/// The name carries a second, shorter digest after that one, and the
+/// guards further down are about what is in it. The source digest is
+/// still the front of the name and still what the index records, because
+/// it is the number a person can check by hand — the manifest carries it
+/// and `sha256sum` prints it.
+///
 /// Unix only, because the stand-in converter is `cp`. What it stands in
 /// for is real: `$ART_CONVERTER` is any program taking a source and a
 /// destination, which is what `FBX2glTF` already is. What it cannot stand
@@ -477,13 +541,14 @@ fn a_resolved_asset_is_cached_under_the_digest_of_its_source() {
     let dir = scratch("content-addressed");
     let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
     let cache = dir.join("cache");
+    let converter = copying_converter(&dir);
     let (ok, said) = xtask(
         &["art", "resolve"],
         &[
             ("ART_MANIFEST", &fixtures.join("manifest.toml")),
             ("SYNTY_STORE", &fixtures.join("store")),
             ("ART_CACHE", &cache),
-            ("ART_CONVERTER", Path::new("/bin/cp")),
+            ("ART_CONVERTER", &converter),
         ],
     );
     assert!(ok, "{said}");
@@ -496,14 +561,22 @@ fn a_resolved_asset_is_cached_under_the_digest_of_its_source() {
         .expect("the index records a digest")
         .to_owned();
     assert_eq!(digest.len(), 64, "{index}");
+    let glb = index
+        .lines()
+        .find_map(|line| line.strip_prefix("glb = \""))
+        .and_then(|rest| rest.strip_suffix('"'))
+        .expect("the index records a converted file")
+        .to_owned();
     assert!(
-        index.contains(&format!("glb = \"glb/{digest}.glb\"")),
+        glb.starts_with(&format!("glb/{digest}-")),
         "the cache is not addressed by the digest the index records:\n{index}"
     );
-    assert!(cache.join(format!("glb/{digest}.glb")).is_file(), "{index}");
+    assert!(cache.join(&glb).is_file(), "{index}");
     // The texture the mesh names was staged beside it, which is the only
     // arrangement in which a relative texture path inside a mesh file
-    // resolves anywhere but the tree it was exported in.
+    // resolves anywhere but the tree it was exported in. Staging is
+    // filed under the source digest alone, because it is the INPUT to a
+    // conversion and a conversion clears it before it fills it.
     assert!(cache.join(format!("stage/{digest}/checker.png")).is_file());
     assert!(
         cache
@@ -630,13 +703,14 @@ fn only_the_files_a_manifest_names_come_out_of_a_packs_archive() {
         ),
     );
     let cache = dir.join("cache");
+    let converter = copying_converter(&dir);
     let (ok, said) = xtask(
         &["art", "resolve"],
         &[
             ("ART_MANIFEST", &manifest),
             ("SYNTY_STORE", &store),
             ("ART_CACHE", &cache),
-            ("ART_CONVERTER", Path::new("/bin/cp")),
+            ("ART_CONVERTER", &converter),
         ],
     );
     assert!(ok, "{said}");
@@ -1334,4 +1408,273 @@ fn a_converter_that_measures_nothing_says_which_promises_went_unchecked() {
     assert!(ok, "an unmeasured mesh was refused:\n{said}");
     assert!(said.contains("crate_small"), "{said}");
     assert!(said.contains("aabb"), "nothing said what to print:\n{said}");
+}
+
+/// A pack holding one mesh and one atlas, loose, and hand back the store.
+/// The mesh names nothing — which is the Synty case this whole texture
+/// argument exists for.
+#[cfg(unix)]
+fn painted_store(dir: &Path) -> PathBuf {
+    let store = dir.join("store");
+    write(
+        &store.join("demo/SourceFiles/FBX/SM_Crate.fbx"),
+        "a crate whose material names no image at all",
+    );
+    write(
+        &store.join("demo/SourceFiles/Textures/atlas.png"),
+        "the atlas the whole pack is painted from",
+    );
+    store
+}
+
+/// One asset over that pack, with or without the `texture` line.
+#[cfg(unix)]
+fn painted_manifest(dir: &Path, name: &str, texture: bool) -> PathBuf {
+    let declared = if texture {
+        "texture = \"SourceFiles/Textures/atlas.png\"\n"
+    } else {
+        ""
+    };
+    let manifest = dir.join(name);
+    write(
+        &manifest,
+        &format!(
+            "{PACK}\n[asset.crate_small]\npack = \"demo\"\n\
+             source = \"SourceFiles/FBX/SM_Crate.fbx\"\n{declared}"
+        ),
+    );
+    manifest
+}
+
+/// **A declared texture is handed to the converter, and a manifest that
+/// declares none hands it nothing.**
+///
+/// The defect this closes: the pipeline used to stage the atlas beside
+/// the mesh and say nothing about it, on the assumption that the FBX
+/// would name it. Synty assign their materials in Unity, through the
+/// `.unitypackage`'s `.mat` files, so a Synty FBX commonly carries a bare
+/// material naming no image — and a file that names nothing resolves
+/// nothing, however carefully the file beside it was staged. The
+/// manifest's `texture` line is a DECLARATION, and this is it being
+/// spoken out loud.
+///
+/// The staged copies stay, and are still asserted above, because an FBX
+/// that names its own texture still resolves against them and still wins.
+/// The declaration fills a silence; it does not overrule a statement.
+#[cfg(unix)]
+#[test]
+fn a_declared_texture_is_handed_to_the_converter_and_silence_is_handed_as_silence() {
+    let dir = scratch("texture-argument");
+    let store = painted_store(&dir);
+    let (converter, log) = recording_converter(&dir);
+
+    let declared = painted_manifest(&dir, "declared.toml", true);
+    let cache = dir.join("cache");
+    let (ok, said) = xtask(
+        &["art", "resolve"],
+        &[
+            ("ART_MANIFEST", &declared),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+            ("ART_CONVERTER", &converter),
+        ],
+    );
+    assert!(ok, "{said}");
+    let arguments = handed(&log);
+    assert_eq!(
+        arguments.len(),
+        3,
+        "a declared atlas is a third argument:\n{arguments:#?}"
+    );
+    let atlas = Path::new(&arguments[2]);
+    assert_eq!(
+        atlas
+            .file_name()
+            .map(|name| name.to_string_lossy().to_string()),
+        Some("atlas.png".to_owned()),
+        "{arguments:#?}"
+    );
+    // The STAGED copy, in the directory the converter was pointed at,
+    // and not the file in the pack: everything one conversion reads sits
+    // in one directory, which is also the directory to open when a
+    // conversion comes out wrong.
+    assert_eq!(
+        atlas.parent(),
+        Path::new(&arguments[0]).parent(),
+        "the atlas handed over is not the one staged beside the mesh:\n{arguments:#?}"
+    );
+    assert!(atlas.is_file(), "{arguments:#?}");
+
+    // The same mesh with no `texture` line: two arguments and no third.
+    // Absent rather than empty, so a converter can tell the difference
+    // without guessing what an empty path means.
+    std::fs::remove_file(&log).expect("the log this run wrote");
+    let silent = painted_manifest(&dir, "silent.toml", false);
+    let (ok, said) = xtask(
+        &["art", "resolve"],
+        &[
+            ("ART_MANIFEST", &silent),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+            ("ART_CONVERTER", &converter),
+        ],
+    );
+    assert!(ok, "{said}");
+    let arguments = handed(&log);
+    assert_eq!(
+        arguments.len(),
+        2,
+        "a manifest declaring no texture handed the converter one anyway:\n{arguments:#?}"
+    );
+}
+
+/// **A mesh converted before its atlas was declared is converted
+/// again.**
+///
+/// This is the half of the fix nobody sees and everybody would have been
+/// bitten by. The converted file used to be addressed by the digest of
+/// the source mesh alone, so the owner — whose cache already holds a
+/// colourless crate converted from that exact mesh — would have pulled
+/// the fix, run `resolve`, been told there was nothing to convert, and
+/// seen the same grey crate. The cache is derived and gitignored and
+/// deleting it costs one `resolve`; being told to delete it is still a
+/// step nobody should have to be told about, because the run that ought
+/// to know is the run that has both files in front of it.
+#[cfg(unix)]
+#[test]
+fn a_mesh_converted_before_its_atlas_was_declared_is_converted_again() {
+    let dir = scratch("atlas-declared-later");
+    let store = painted_store(&dir);
+    let cache = dir.join("cache");
+    let converter = copying_converter(&dir);
+
+    let silent = painted_manifest(&dir, "silent.toml", false);
+    let (ok, said) = xtask(
+        &["art", "resolve"],
+        &[
+            ("ART_MANIFEST", &silent),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+            ("ART_CONVERTER", &converter),
+        ],
+    );
+    assert!(ok, "{said}");
+    let colourless = indexed_glb(&cache);
+
+    // The `texture` line arrives. Nothing about the mesh changed, and
+    // everything about the conversion did.
+    let declared = painted_manifest(&dir, "declared.toml", true);
+    let (ok, said) = xtask(
+        &["art", "resolve"],
+        &[
+            ("ART_MANIFEST", &declared),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+            ("ART_CONVERTER", &converter),
+        ],
+    );
+    assert!(ok, "{said}");
+    assert!(
+        said.contains("converting 1 of 1"),
+        "a mesh whose atlas was declared after it converted was left alone:\n{said}"
+    );
+    let painted = indexed_glb(&cache);
+    assert_ne!(
+        painted, colourless,
+        "the index names the file converted before the atlas was declared"
+    );
+    assert!(cache.join(&painted).is_file(), "{painted}");
+
+    // And now that it is converted under the identity it has, a third
+    // run has nothing to do and needs no converter to find that out.
+    let (again, said) = xtask(
+        &["art", "resolve"],
+        &[
+            ("ART_MANIFEST", &declared),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+        ],
+    );
+    assert!(
+        again,
+        "a conversion made under the current identity was made again:\n{said}"
+    );
+    assert_eq!(indexed_glb(&cache), painted, "{said}");
+}
+
+/// **A converted file named after the source alone is not one this
+/// pipeline made.**
+///
+/// The shape of the owner's cache before this fix, exactly: `glb/<source
+/// digest>.glb`, holding a crate converted by a script that did not know
+/// how to paint. Nothing about the mesh, the manifest or the atlas
+/// changed, so every other question the resolver asks answers "the same
+/// as last time" — and the only thing that can tell the two files apart
+/// is the name carrying what made them. A file at the old name is
+/// therefore not found, not overwritten, and not counted: it is simply
+/// somewhere nothing looks, which is what the cache being derived means.
+#[cfg(unix)]
+#[test]
+fn a_converted_file_named_after_the_source_alone_is_not_one_this_pipeline_made() {
+    let dir = scratch("older-recipe");
+    let store = painted_store(&dir);
+    let cache = dir.join("cache");
+    let converter = copying_converter(&dir);
+    let manifest = painted_manifest(&dir, "manifest.toml", true);
+    let environment: [(&str, &Path); 4] = [
+        ("ART_MANIFEST", &manifest),
+        ("SYNTY_STORE", &store),
+        ("ART_CACHE", &cache),
+        ("ART_CONVERTER", &converter),
+    ];
+    let (ok, said) = xtask(&["art", "resolve"], &environment);
+    assert!(ok, "{said}");
+
+    let index = std::fs::read_to_string(cache.join("index.toml")).expect("an index");
+    let digest = index
+        .lines()
+        .find_map(|line| line.strip_prefix("sha256 = \""))
+        .and_then(|rest| rest.strip_suffix('"'))
+        .expect("the index records a digest")
+        .to_owned();
+    let glb = indexed_glb(&cache);
+    assert_ne!(
+        glb,
+        format!("glb/{digest}.glb"),
+        "the converted file is addressed by the source mesh and nothing else"
+    );
+
+    // Put the older pipeline's file where it used to go, take away the
+    // one this run made, and ask again.
+    std::fs::remove_file(cache.join(&glb)).expect("the file this run converted");
+    let stale = cache.join(format!("glb/{digest}.glb"));
+    write(&stale, "the colourless crate the old pipeline left");
+    let (again, said) = xtask(&["art", "resolve"], &environment);
+    assert!(again, "{said}");
+    assert!(
+        said.contains("converting 1 of 1"),
+        "a file named by the source alone was taken for this pipeline's work:\n{said}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(cache.join(&glb)).ok().as_deref(),
+        Some("a crate whose material names no image at all"),
+        "the run did not write the file the index names"
+    );
+    assert_eq!(
+        std::fs::read_to_string(&stale).ok().as_deref(),
+        Some("the colourless crate the old pipeline left"),
+        "the old file was written over rather than left where nothing looks"
+    );
+}
+
+/// The one `glb` line in the cache's index.
+#[cfg(unix)]
+fn indexed_glb(cache: &Path) -> String {
+    std::fs::read_to_string(cache.join("index.toml"))
+        .expect("an index")
+        .lines()
+        .find_map(|line| line.strip_prefix("glb = \""))
+        .and_then(|rest| rest.strip_suffix('"'))
+        .expect("the index names a converted file")
+        .to_owned()
 }

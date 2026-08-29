@@ -625,12 +625,19 @@ mod loading {
 
     /// **Where the resolved art is**: `$ART_CACHE` if it is set, and
     /// `art/cache` beside wherever the game was started otherwise —
-    /// exactly the two places `cargo xtask art resolve` writes to, said
-    /// the same way so the two cannot drift.
+    /// exactly the two places `cargo xtask art resolve` writes to.
+    ///
+    /// The answer comes back absolute, and has to: this path becomes the
+    /// asset server's root, and Bevy resolves a *relative* root against
+    /// `BEVY_ASSET_ROOT` or `CARGO_MANIFEST_DIR` — under `cargo run`,
+    /// this crate's directory — never the working directory. A relative
+    /// `art/cache` here and the resolver's `art/cache` beside the repo
+    /// root would name two different places while spelled identically.
     #[must_use]
     pub fn cache_root() -> PathBuf {
-        std::env::var_os("ART_CACHE")
-            .map_or_else(|| PathBuf::from("art").join("cache"), PathBuf::from)
+        let root = std::env::var_os("ART_CACHE")
+            .map_or_else(|| PathBuf::from("art").join("cache"), PathBuf::from);
+        std::path::absolute(&root).unwrap_or(root)
     }
 
     /// **Where this run's resolved art is.** A resource rather than a

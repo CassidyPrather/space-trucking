@@ -32,6 +32,27 @@ fills the silence underneath: every material with no image of its own
 gets the declared atlas as its Base Color, and a mesh with no material at
 all gets one made for it.
 
+**A reference is not knowledge.** The second colourless crate taught the
+rest of it. A Synty FBX often does name a texture — by the path of the
+tree it was exported from, sometimes a `.psd` nobody shipped — and
+Blender answers a reference it cannot resolve with a placeholder image
+datablock: a name, a filepath pointing nowhere, no pixels. A skip rule
+that asks "is there an image here?" reads that placeholder as a material
+that knows its own texture, leaves it alone, and exports grey. So the
+question `usable_image` asks is whether an image could be LOADED, and a
+material whose every image reference is broken counts as silence — the
+atlas is rebound onto the importer's own node, keeping the wiring the
+importer built.
+
+**And silence is refused rather than shipped.** When a texture is handed
+over, `refuse_unless_painted` checks before exporting that at least one
+material in the scene bears an image that can be loaded, and exits
+nonzero naming the atlas if none does. That is part of the contract, not
+a nicety: both colourless crates were conversions that succeeded, printed
+their measurement, wrote a plausible file, and were only found out by
+somebody looking at a grey box in the cabin. A conversion handed a
+texture and painting nothing is now a refusal.
+
 One thing it still deliberately does not do: correct scale. A Synty FBX
 arrives at whatever unit its exporter chose, and guessing here would put
 the correction somewhere nobody can see it, while `art/manifest.toml`'s
@@ -50,8 +71,10 @@ def import_any(path):
 
     The FBX importer moved. Blender through 4.x has it as the Python
     add-on operator `import_scene.fbx`; the rewritten importer is
-    `wm.fbx_import`. Both are tried because a script that only knows one
-    of them breaks on somebody's machine and not on ours.
+    `wm.fbx_import`, and by 5.0 the `io_scene_fbx` add-on that provided
+    the old one is gone entirely. Both are tried, newest first, because a
+    script that only knows one of them breaks on somebody's machine and
+    not on ours — and nothing here may assume which one answered.
     """
     extension = os.path.splitext(path)[1].lower()
     attempts = {
@@ -86,18 +109,72 @@ def import_any(path):
     raise SystemExit(f"could not import {path}\n  " + "\n  ".join(complaints))
 
 
-def paint_with(path):
-    """Give every material that names no image of its own this atlas.
+def mesh_objects():
+    """Every mesh in the scene: what gets painted, checked and measured.
 
-    The declaration filling a silence, never overruling a statement. A
-    material that already names an image is left exactly as the importer
-    built it — that FBX knew where its texture was, and the manifest's
-    `texture` line is a fallback for the ones that do not, not a
-    correction to the ones that do.
+    One definition, used by all three, so the set of materials the atlas
+    is offered to and the set the refusal below counts can never drift
+    apart.
+    """
+    return [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
+
+
+def usable_image(image):
+    """Whether this image datablock is one that anything could draw.
+
+    The whole of the second colourless crate is in this function. An
+    image node with a datablock hanging off it is not a material that
+    knows where its texture is: Synty FBX files name their textures by
+    the paths of the tree they were exported from — commonly a `.psd`
+    that was never part of the pack — and Blender answers a reference it
+    cannot resolve with a placeholder. The placeholder is a real
+    datablock with a real name, so `node.image is not None` is true of
+    it, which is exactly what the old skip rule asked and exactly why a
+    crate with a broken reference was left grey.
+
+    So the question is whether the pixels can be got at, by any of the
+    four routes Blender has: already decoded in memory, packed into the
+    file, generated rather than loaded, or a filepath that resolves to a
+    file that is actually there. Each is read defensively, because this
+    runs on a Blender version nothing in this repository has seen and a
+    missing attribute must mean "no" rather than a traceback.
+    """
+    if image is None:
+        return False
+    if getattr(image, "packed_file", None) is not None:
+        return True
+    if getattr(image, "source", "") == "GENERATED":
+        return True
+    if getattr(image, "has_data", False):
+        return True
+    filepath = getattr(image, "filepath", "") or ""
+    if not filepath:
+        return False
+    try:
+        # `//` means "beside the .blend" and only Blender can expand it.
+        filepath = bpy.path.abspath(filepath, library=getattr(image, "library", None))
+    except Exception:  # noqa: BLE001 - an unexpanded path is still worth testing
+        pass
+    return os.path.isfile(filepath)
+
+
+def paint_with(path):
+    """Give every material with no usable image of its own this atlas.
+
+    The declaration filling a silence, never overruling a statement — and
+    a broken reference is silence. A material that names an image which
+    LOADS is left exactly as the importer built it, because that FBX
+    knew where its texture was and the manifest's `texture` line is a
+    fallback for the ones that do not, not a correction to the ones that
+    do. A material whose every image reference is a placeholder knows
+    nothing, whatever it appears to name.
 
     Small and defensive on purpose: it runs on somebody else's Blender,
     against a file nothing in this repository has seen, and the worst
     outcome available is a traceback where a grey crate would have done.
+
+    Hands back the atlas datablock, which is what `refuse_unless_painted`
+    then looks for.
     """
     if not os.path.isfile(path):
         # The resolver stages this file beside the mesh before running
@@ -110,9 +187,7 @@ def paint_with(path):
             "  so a missing one is a fault in the resolver rather than in the pack."
         )
     image = bpy.data.images.load(path, check_existing=True)
-    for obj in bpy.context.scene.objects:
-        if obj.type != "MESH":
-            continue
+    for obj in mesh_objects():
         materials = getattr(obj.data, "materials", None)
         if materials is None:
             continue
@@ -123,10 +198,29 @@ def paint_with(path):
         for material in materials:
             if material is not None:
                 paint_material(material, image)
+    return image
 
 
 def paint_material(material, image):
-    """Plug `image` into this material's Base Color, if nothing is there."""
+    """Plug `image` into this material, unless it already has one that loads.
+
+    Three cases, and the middle one is the defect this was rewritten for.
+
+    A material with a usable image is a statement and is left alone. A
+    material with image nodes and not one usable image among them was
+    wired up by the importer against files that are not on this machine:
+    the nodes, their links and the UV coordinates feeding them are all
+    exactly right and only the pixels are missing, so the atlas is
+    rebound onto those nodes rather than a second node being built beside
+    them — two nodes claiming one Base Color is a worse answer than a
+    normal map wearing a colour atlas. A material with no image nodes at
+    all is the original bare-Synty case and gets one made for it.
+
+    The boundary is deliberate: one loadable image anywhere in a material
+    is enough to leave the whole of it alone, even if some other slot is
+    broken. Overruling half of what a file says is how a fallback turns
+    into a correction, and this is a fallback.
+    """
     if not material.use_nodes:
         # Setting this builds the default Principled tree, which is what
         # the branch below then wires the image into.
@@ -134,8 +228,13 @@ def paint_material(material, image):
     tree = material.node_tree
     if tree is None:
         return
-    if any(node.type == "TEX_IMAGE" and node.image is not None for node in tree.nodes):
-        return  # it named its own; the declaration has nothing to say here
+    textures = [node for node in tree.nodes if node.type == "TEX_IMAGE"]
+    if any(usable_image(node.image) for node in textures):
+        return  # it named its own, and the name resolved
+    if textures:
+        for node in textures:
+            node.image = image
+        return
     shader = next((node for node in tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
     if shader is None:
         shader = tree.nodes.new("ShaderNodeBsdfPrincipled")
@@ -149,6 +248,54 @@ def paint_material(material, image):
     texture = tree.nodes.new("ShaderNodeTexImage")
     texture.image = image
     tree.links.new(texture.outputs["Color"], base_color)
+
+
+def refuse_unless_painted(source, texture, atlas):
+    """Refuse to export a scene that was handed an atlas and used it nowhere.
+
+    Part of the contract and not a nicety. Both colourless crates this
+    pipeline has shipped were conversions that SUCCEEDED: they exited
+    zero, printed their measurement, wrote a file of an entirely
+    plausible size, and were found out days later by somebody looking at
+    a grey box in the cabin. Nothing between here and that moment can
+    tell the difference, because a `.glb` with no image in it is a
+    perfectly valid `.glb`.
+
+    So the one moment that can tell is this one, and it says so out loud.
+    A texture was declared, staged, and handed over; if not one material
+    in the scene about to be exported carries an image, the painting did
+    not happen and the file is not written.
+
+    An image counts if it IS the atlas — `paint_with` loaded that one
+    itself, from a path it had already checked was a file, so it is
+    loadable by construction and no spelling of a filepath can argue
+    otherwise — or if it is any other image that loads, which is the
+    material that named its own texture and was rightly left alone.
+    """
+    painted = 0
+    materials = []
+    for obj in mesh_objects():
+        for material in getattr(obj.data, "materials", None) or []:
+            if material is None or any(material is one for one in materials):
+                continue
+            materials.append(material)
+            tree = getattr(material, "node_tree", None) if material.use_nodes else None
+            if tree is not None and any(
+                node.type == "TEX_IMAGE"
+                and (node.image is atlas or usable_image(node.image))
+                for node in tree.nodes
+            ):
+                painted += 1
+    if painted:
+        return
+    raise SystemExit(
+        f"the declared atlas reached no material: {texture}\n"
+        f"  {source} exported {len(materials)} material(s), and not one of them bears\n"
+        "  an image that can be loaded — so this .glb would be grey wherever the\n"
+        "  atlas should be. A conversion handed a texture and painting nothing is\n"
+        "  the defect the texture argument exists to fix, and it is silent, so it\n"
+        "  is refused here rather than discovered in the cabin."
+    )
 
 
 def export_glb(path):
@@ -193,9 +340,7 @@ def report_bounds():
     """
     lo = [float("inf")] * 3
     hi = [float("-inf")] * 3
-    for obj in bpy.context.scene.objects:
-        if obj.type != "MESH":
-            continue
+    for obj in mesh_objects():
         for corner in obj.bound_box:
             point = obj.matrix_world @ mathutils.Vector(corner)
             # Z-up to Y-up: (x, y, z) becomes (x, z, -y).
@@ -231,7 +376,7 @@ def main():
     if not bpy.context.scene.objects:
         raise SystemExit(f"{source} imported without producing a single object")
     if texture is not None:
-        paint_with(texture)
+        refuse_unless_painted(source, texture, paint_with(texture))
     export_glb(destination)
     report_bounds()
     print(f"fbx_to_gltf: wrote {destination}")

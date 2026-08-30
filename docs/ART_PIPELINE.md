@@ -542,6 +542,50 @@ during import, the material comes out of the importer already carrying an
 image, and `paint_with` leaves it alone. The declaration fills a silence;
 it never overrules a statement.
 
+**A reference is not knowledge.** That distinction cost a second grey
+crate. Synty's FBX files often DO name a texture — by the path of the
+tree they were exported from, sometimes a `.psd` that was never in the
+pack — and Blender answers a reference it cannot resolve with a
+placeholder image datablock: a name, a filepath pointing nowhere, no
+pixels. The old rule asked "is there an image on this node?", the
+placeholder answered yes, and the material was skipped as one that knew
+its own texture. So what `usable_image` asks now is whether the pixels
+can be got at at all — decoded in memory, packed into the file,
+generated, or a filepath that resolves to a file that is there — and a
+material whose every image reference is a placeholder counts as silence.
+Such a material has the atlas **rebound onto the importer's own node**,
+because the nodes, links and UV coordinates around it are exactly what
+the FBX asked for and only the pixels are missing.
+
+The boundary is deliberate: **one loadable image anywhere in a material
+leaves the whole of it alone**, even if another slot is broken.
+Overruling half of what a file says is how a fallback turns into a
+correction.
+
+**And a conversion handed an atlas it painted nothing with is refused.**
+Before exporting, the script checks that at least one material in the
+scene bears an image that can be loaded, and if none does it exits
+nonzero, names the atlas, and writes no file:
+
+```text
+the declared atlas reached no material: <path to the staged atlas>
+  <source> exported N material(s), and not one of them bears
+  an image that can be loaded — so this .glb would be grey wherever the
+  atlas should be. A conversion handed a texture and painting nothing is
+  the defect the texture argument exists to fix, and it is silent, so it
+  is refused here rather than discovered in the cabin.
+```
+
+This is part of the converter contract and not a nicety. Both grey crates
+were conversions that **succeeded**: exit zero, a measurement printed, a
+file of an entirely plausible size — and a `.glb` with no image in it is
+a perfectly valid `.glb`, so nothing between the converter and the cabin
+could tell. The script is the only program in the pipeline that can see a
+material, so the check belongs there and nowhere else. It applies only
+when a texture was handed over: a manifest with no `texture` line has
+declared nothing, and a grey result there is an unfinished manifest
+rather than a failed conversion.
+
 A converter that ignores the third argument is **not in breach** — the
 atlas simply resolves nothing, which is the honest outcome for a program
 that has never heard of this repository. One thing to know if you wrote a
@@ -624,13 +668,19 @@ feature is `image/png`, and a Blender-exported `.glb` embeds its textures
 as PNG unless the source was a JPEG. If a pack ever ships one that is
 not, `"jpeg"` on the `art` line is the fix.
 
-**That prediction was checked the day a `.glb` first carried a texture at
-all, and it held.** Nothing on the loading side changed for it: a glTF
-with an embedded image is read by the same loader as one without, the
-image chunk is decoded by the same registry `--shot` writes through, and
-the atlases the manifest names are PNG (`PolygonSciFiSpace_Texture_01_A`
-`.png`, on `art/manifest.toml`'s only asset line). `"jpeg"` remains one
-word away and is still not needed.
+**That prediction is still a prediction.** It was written down as
+checked, on the day the atlas first became an argument — and it was not,
+because that conversion painted nothing: the `.glb` it produced was byte
+for byte the size of the colourless one before it, with no PNG signature
+anywhere inside. No file this pipeline has produced has yet carried a
+texture, so nothing on the loading side has been exercised by one. What
+holds up is the reasoning: a glTF with an embedded image is read by the
+same loader as one without, the image chunk is decoded by the same
+registry `--shot` writes through, and the atlases the manifest names are
+PNG (`PolygonSciFiSpace_Texture_01_A.png`, on `art/manifest.toml`'s only
+asset line), so `"jpeg"` stays one word away and unneeded. The first
+`resolve` that survives the converter's new refusal is what turns that
+back into a fact.
 
 Eight crates: `bevy_gltf`, `bevy_world_serialization`, `gltf`,
 `gltf-json`, `gltf-derive`, `base64`, `byteorder`, `inflections`.
@@ -801,12 +851,26 @@ zips and the recording, measuring and copying converters those guards run
 against are written in the guard file, so they depend on nothing this
 repository did not write.
 
-What those guards stop at is the argument. **There is no Blender in
-continuous integration or in the container this was written in**, so what
-`paint_with` does with the atlas once it has it — that a bare Synty
-material comes out of the importer with no image, that plugging one into
-Base Color survives `export_scene.gltf`, and that the resulting `.glb`
-renders in colour — is proved on the owner's machine and nowhere else.
+**There is no Blender in continuous integration or in the container this
+was written in**, and for a while that meant those guards stopped at the
+argument. They no longer do. Both grey crates were defects in the
+converter script's **control flow** rather than in anything Blender did,
+and control flow is a thing a fake `bpy` can execute:
+`xtask/tests/fixtures/blender/bpy.py` builds a scene, records every image
+binding and node the script makes, and `xtask/tests/converter_script.rs`
+runs the real `fbx_to_gltf.py` against it under `python3` and reads the
+decisions back. Proved there: that a broken texture reference is
+repainted rather than skipped, that the repaint reuses the importer's own
+node instead of building a second one beside it, that a reference which
+resolves is left alone, that a material naming nothing still gets a node
+built for it, that an atlas which reached no material is refused and no
+file written, and that a conversion handed no texture is unchanged. A
+machine with no Python says so and skips, rather than passing quietly.
+
+What that stops at is Blender itself. That a repainted material survives
+`export_scene.gltf`, that the resulting `.glb` carries the PNG, and that
+it renders in colour is proved on the owner's machine and nowhere else —
+`cargo xtask art resolve` and then a look at the crate in the cabin.
 
 **It also builds and tests the art seam**, with `--features art`, and
 that is new. The feature is off everywhere else, so without those two
@@ -899,6 +963,14 @@ material naming no image at all. A file that names nothing resolves
 nothing, however carefully the file beside it was staged. See
 [the converter contract](#the-converter-contract-extended) for what the
 `texture` line does now.
+
+**And a fifth, which was the same mistake one level in: "a material that
+names an image knows where its texture is."** It does not. The second
+real Synty mesh came out grey with the atlas declared, staged and handed
+over, because that FBX named a texture by a path from the machine it was
+exported on and Blender turned the unresolvable reference into an empty
+placeholder image — which the skip rule read as knowledge. A reference is
+not knowledge; only pixels are. Same section.
 
 ## Where it lives, and what that costs
 

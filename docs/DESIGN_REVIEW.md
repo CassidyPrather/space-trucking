@@ -255,7 +255,9 @@ Every line is reversible; strike one by overruling it.
   because `cp` means "into that directory" by a third argument. A two-line
   shim does, and the guards now use one.
 - **The declaration fills a silence and never overrules a statement.** A
-  material that already names an image is left as the importer built it,
+  material that already names an image *that loads* is left as the
+  importer built it — the qualifier was missing here and cost a second
+  grey crate; see the three lines below —
   and the atlas is still staged beside the mesh so an FBX that names its
   own texture resolves against it exactly as before. The other direction —
   the manifest's line winning outright — was rejected because it would
@@ -273,3 +275,31 @@ Every line is reversible; strike one by overruling it.
   converter on every run, including the runs with nothing to do, and "a
   second `resolve` needs no converter at all" is worth more. Swapping
   converters is a `rm -r art/cache/glb/`, and it is written down.
+- **An image reference that cannot be loaded is silence, not a
+  statement.** The skip rule asks whether the pixels can be got at —
+  decoded, packed, generated, or a filepath that resolves — rather than
+  whether a datablock is attached, because Blender answers an
+  unresolvable reference with an empty placeholder and the old question
+  said yes to it. This does widen what the declaration may overwrite;
+  the boundary that keeps it a fallback is the next line.
+- **One loadable image anywhere in a material leaves the whole of it
+  alone**, even when another slot is broken. Repainting the broken half
+  of a material that demonstrably knows about a real image is how a
+  fallback turns into a correction, and Synty's materials carry one
+  texture reference, so the case is hypothetical and the rule is not.
+- **A broken reference is rebound onto the importer's own node** rather
+  than painted with a second node beside it. The nodes, the links and the
+  UV coordinates are all exactly what the FBX asked for and only the
+  pixels are missing; two Image Texture nodes claiming one Base Color
+  input is a worse answer than a normal-map slot wearing a colour atlas.
+- **A conversion handed an atlas that reached no material refuses.** Both
+  grey crates were conversions that succeeded — exit zero, a measurement
+  printed, a plausible file — and a `.glb` with no image in it is a valid
+  `.glb`, so no later step can tell. Warning instead was rejected: a
+  warning in a run that also prints a conversion table is a warning
+  nobody reads until they are already looking at a grey box.
+- **The converter script gets guards, run against a fake `bpy`.** Both
+  defects were in its control flow rather than in Blender, so a stub
+  scene and a trace of what got bound to what catches the class without a
+  300 MB install. Python is not a dependency and does not become one: a
+  machine with no interpreter says the guards did not run.

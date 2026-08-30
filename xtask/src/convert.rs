@@ -95,32 +95,15 @@ impl Converter {
         if let Some(parent) = destination.parent() {
             fsx::create_dir_all(parent)?;
         }
-        let mut command = match self {
-            Self::Program(program) => {
-                let mut command = Command::new(program);
-                command.arg(source).arg(destination);
-                command
-            }
-            Self::Blender(blender) => {
+        let script = match self {
+            Self::Program(_) => PathBuf::new(),
+            Self::Blender(_) => {
                 let script = cache.blender_script();
                 fsx::write(&script, SCRIPT)?;
-                let mut command = Command::new(blender);
-                command
-                    .arg("--background")
-                    .arg("--factory-startup")
-                    .arg("--python-exit-code")
-                    .arg("1")
-                    .arg("--python")
-                    .arg(&script)
-                    .arg("--")
-                    .arg(source)
-                    .arg(destination);
-                command
+                script
             }
         };
-        if let Some(texture) = texture {
-            command.arg(texture);
-        }
+        let mut command = self.command(&script, source, destination, texture);
         let output = command
             .output()
             .map_err(|err| format!("cannot run {}: {err}", self.describe()))?;
@@ -141,6 +124,51 @@ impl Converter {
             ));
         }
         Ok(measured(&String::from_utf8_lossy(&output.stdout)))
+    }
+
+    /// The exact command line, built and not run.
+    ///
+    /// Split out of [`Self::run`] so that a guard can read the arguments
+    /// the real Blender invocation carries. Every other guard on the
+    /// atlas argument goes through `$ART_CONVERTER` and a stand-in
+    /// program, because that is the seam a test can watch — which means
+    /// the two branches below were proved by two different amounts, and
+    /// the one that runs on the owner's machine was the one proved less.
+    /// A trailing argument dropped from just this branch would look
+    /// exactly like an atlas that was declared, staged, handed over and
+    /// then ignored.
+    fn command(
+        &self,
+        script: &Path,
+        source: &Path,
+        destination: &Path,
+        texture: Option<&Path>,
+    ) -> Command {
+        let mut command = match self {
+            Self::Program(program) => {
+                let mut command = Command::new(program);
+                command.arg(source).arg(destination);
+                command
+            }
+            Self::Blender(blender) => {
+                let mut command = Command::new(blender);
+                command
+                    .arg("--background")
+                    .arg("--factory-startup")
+                    .arg("--python-exit-code")
+                    .arg("1")
+                    .arg("--python")
+                    .arg(script)
+                    .arg("--")
+                    .arg(source)
+                    .arg(destination);
+                command
+            }
+        };
+        if let Some(texture) = texture {
+            command.arg(texture);
+        }
+        command
     }
 }
 
@@ -345,6 +373,87 @@ mod tests {
         })
         .expect_err("$ART_CONVERTER points at nothing");
         assert!(by_converter.contains("$ART_CONVERTER"), "{by_converter}");
+    }
+
+    fn arguments(command: &Command) -> Vec<String> {
+        command
+            .get_args()
+            .map(|argument| argument.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    /// **The Blender command line carries the atlas it was handed.**
+    ///
+    /// The cheapest place this defect could have lived, and the one no
+    /// other guard covers. `tests/pipeline.rs` proves the resolver hands
+    /// a declared atlas to a converter, but it does so through
+    /// `$ART_CONVERTER` and a shell script, because a stand-in is the
+    /// only converter a test machine has. Blender is the branch every
+    /// real conversion takes and the branch no test can run, so the
+    /// argument list is asserted directly: a third argument dropped from
+    /// here alone would produce a resolve that succeeds, stages the
+    /// atlas, reports its measurement, and paints nothing — which is
+    /// indistinguishable from the outside from a script that ignored it.
+    #[test]
+    fn the_blender_command_line_carries_the_atlas_it_was_handed() {
+        let blender = Converter::Blender(PathBuf::from("blender"));
+        let script = Path::new("/cache/blender/fbx_to_gltf.py");
+        let source = Path::new("/cache/stage/SM_Prop_Crate_01.fbx");
+        let destination = Path::new("/cache/glb/crate.glb");
+        let atlas = Path::new("/cache/stage/PolygonSciFiSpace_Texture_01_A.png");
+
+        let painted = arguments(&blender.command(script, source, destination, Some(atlas)));
+        assert_eq!(
+            painted,
+            [
+                "--background",
+                "--factory-startup",
+                "--python-exit-code",
+                "1",
+                "--python",
+                "/cache/blender/fbx_to_gltf.py",
+                "--",
+                "/cache/stage/SM_Prop_Crate_01.fbx",
+                "/cache/glb/crate.glb",
+                "/cache/stage/PolygonSciFiSpace_Texture_01_A.png",
+            ],
+            "the atlas is not on the command line Blender is run with"
+        );
+
+        // And silence stays silence: absent rather than empty, so the
+        // script can tell the difference without guessing what an empty
+        // path means.
+        let silent = arguments(&blender.command(script, source, destination, None));
+        assert_eq!(silent, painted[..painted.len() - 1], "{silent:#?}");
+
+        // The same for the escape hatch, which is two positionals and
+        // then the atlas — the whole reason a conforming converter can
+        // stay `cp "$1" "$2"`.
+        let program = Converter::Program(PathBuf::from("fbx2gltf"));
+        assert_eq!(
+            arguments(&program.command(script, source, destination, Some(atlas))),
+            [
+                "/cache/stage/SM_Prop_Crate_01.fbx",
+                "/cache/glb/crate.glb",
+                "/cache/stage/PolygonSciFiSpace_Texture_01_A.png",
+            ]
+        );
+    }
+
+    /// **The script this binary carries is the one with the check in
+    /// it.** `SCRIPT` is `include_str!` of the file `tests/fixtures` runs
+    /// under a fake Blender, so the two cannot drift; what they can do is
+    /// have the refusal quietly removed from both at once. This is the
+    /// contract written down on the Rust side of the seam, where the
+    /// converter's promises are documented.
+    #[test]
+    fn the_script_this_binary_carries_refuses_an_atlas_it_painted_nothing_with() {
+        for wanted in ["def refuse_unless_painted", "reached no material"] {
+            assert!(
+                SCRIPT.contains(wanted),
+                "no `{wanted}` in the compiled-in converter script"
+            );
+        }
     }
 
     /// **`$ART_CONVERTER` wins over Blender, and Blender over the

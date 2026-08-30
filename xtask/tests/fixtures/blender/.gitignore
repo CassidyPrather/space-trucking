@@ -1,0 +1,5 @@
+# Running the converter script by hand leaves compiled modules here.
+# The guards in tests/converter_script.rs set PYTHONDONTWRITEBYTECODE so
+# that `cargo test` never does, but driving the script yourself is a
+# reasonable thing to want to do.
+__pycache__/

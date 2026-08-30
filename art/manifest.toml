@@ -10,6 +10,10 @@
 #     art/manifest.toml   this file: ids, packs, paths, digests, overrides
 #     $SYNTY_STORE        the packs exactly as downloaded, on your disk
 #     art/cache/          the few files this file names, converted; gitignored
+#     art/dex/            what the meshes in those packs look like, in English,
+#                         so a pack can be searched by more than its file names.
+#                         `cargo xtask art describe` writes it; it is in git,
+#                         because names, counts and English are not art.
 #
 # Nothing in continuous integration reads this file. CI builds the
 # whitebox — the geometry the game cuts in code — because that is the

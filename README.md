@@ -186,6 +186,10 @@ Purchased art (none is in this repository; see
 [docs/ART_PIPELINE.md](docs/ART_PIPELINE.md)):
 `cargo xtask art check`
 
+Search that art by what it looks like rather than by what it is called
+(`describe` renders each mesh, measures it, and files a sentence about it
+in `art/dex/`): `cargo xtask art dex "hazard stripe"`
+
 Security audit: `cargo audit` (requires `cargo install cargo-audit`)
 
 Pre-commit hook: `git config core.hooksPath .githooks` (runs `cargo fmt`)

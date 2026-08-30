@@ -1,0 +1,33 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_prop_crate_01]
+name = "SM_Prop_Crate_01"
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Crate_01.fbx"
+sha256 = "aae840d30cdda45baa5fa80367f754ed7ab92cc6c59c2beb4e8481a044f5f0cb"
+asset = "crate_small"
+atlas = "PolygonSciFiSpace_Texture_01_A.png"
+textures = "PolygonSciFiSpace_Texture_01_A.png"
+description = "A squat, blocky supply container with a chunky yellow lid, grey ribbed body, and a blue trim band. The top features a recessed grey panel, while the sides have inset rectangular handles. The clean, faceted surfaces and industrial palette suggest a durable, utilitarian storage unit for a sci-fi environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1188
+meshes = 2
+materials = 1
+size = [0.72751, 0.613194, 0.672727]

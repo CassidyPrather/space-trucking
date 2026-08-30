@@ -131,7 +131,7 @@ through more machinery.
 **Prefer each pack's "Source Files" download** for that reason, zipped or
 not.
 
-## The five commands
+## The seven commands
 
 `cargo xtask` is an alias defined in `.cargo/config.toml`; without it the
 long spelling is `cargo run -p xtask -- art check`.
@@ -142,10 +142,17 @@ cargo xtask art resolve        # check, then convert what is not cached, then wr
 cargo xtask art hash [id ...]  # print the `sha256` lines to paste into the manifest
 cargo xtask art find <text>    # search the packs by file name, print the manifest lines
 cargo xtask art unpack <pack>  # rebuild the trees inside one pack's .unitypackage files
+cargo xtask art describe [text]# render each mesh, measure it, write what it looks like
+cargo xtask art dex [text]     # read that catalogue back, searching what it says
 ```
 
-Everything they write goes under `art/cache/`, which is gitignored and
-disposable:
+The last two are [the catalogue](#the-catalogue-searching-art-by-what-it-looks-like),
+and they are the only ones that write outside the cache: `art/dex/` is in
+git, because what it holds is names, numbers and English rather than
+anything derived from a mesh.
+
+Everything else they write goes under `art/cache/`, which is gitignored
+and disposable:
 
 ```
 art/cache/
@@ -161,7 +168,11 @@ art/cache/
   glb/<digest>-<recipe>.aabb   the tight box the converter measured round it
   index.toml                   what resolved, the overrides for each, and what
                                each one dresses
+  dex/<digest>/preview.png     the four views of one mesh a describer was shown
+  dex/<digest>/prompt.txt      what it was asked, response.json what came back,
+                               and request.json only when the call went wrong
   blender/fbx_to_gltf.py       the converter script, written out from the binary
+  blender/fbx_to_preview.py    the preview script, which imports the converter's
   fixtures/                    the same layout again, written by the fixture run
                                in "Proving the pipeline" below
 ```
@@ -254,6 +265,148 @@ The numbers that put the mesh in its berth come last, and they do not
 have to be typed: add a `dresses` line, resolve, and then run the bench —
 `--nudge`, below — which writes them back into this very table from in
 front of the body.
+
+## The catalogue: searching art by what it looks like
+
+`find` answers the question a file name can answer. Ask it for a barrel
+across a hundred packs and it says there are a hundred and fifty-five of
+them, all called `SM_Prop_Barrel_01`, `SM_Prop_BarrelStack_01`,
+`SM_Prop_Barrel_02`. Which of those is one barrel, which is a stack of
+six on a pallet, and which is a tarpaulin thrown over a stack, is not in
+any of those names — and the only way to find out used to be opening
+Blender a hundred and fifty-five times.
+
+So there is a second index, filed beside the manifest:
+
+```bash
+cargo xtask art describe              # every asset art/manifest.toml names
+cargo xtask art describe barrel       # whatever is in the packs, up to --limit
+cargo xtask art dex "hazard stripe"   # search what was written, not what things are called
+```
+
+`describe` renders each mesh, measures it, shows the picture to a vision
+model, and writes one `[mesh.<id>]` table per mesh into
+`art/dex/<pack>.toml`:
+
+```toml
+[mesh.sm_prop_barrelstack_01_tarp]
+name = "SM_Prop_BarrelStack_01_Tarp"
+pack = "polygon_apocalypse"
+source = "Source_Files/FBX/SM_Prop_BarrelStack_01_Tarp.fbx"
+sha256 = "491aeefb52ea9e0432b96026206a793866996a626a82984939be2c607eaa8fa4"
+atlas = "PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A low, wide, roughly rectangular mound of heavy blue-grey tarp, draped with stiff, angular folds that hang down at the corners and edges. Dark, square patches are scattered across the top surface, suggesting wear or repairs, while the underside is shadowed and uneven, hinting at the stacked barrels hidden beneath."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 476
+meshes = 1
+materials = 1
+size = [6.5787573, 5.29675, 6.981569]
+```
+
+That is a real entry, written by the real command against a real pack.
+`source` is the line to paste into `art/manifest.toml`, and an entry for a
+mesh the manifest already names carries an `asset` line saying which.
+
+### It is hybrid, and the numbers are the half that is true
+
+A vision model shown a picture of a crate writes a confident sentence
+about a crate. It cannot tell you the crate is 476 triangles or 6.6 units
+across, and asked, it will guess. So the two halves come from two places
+and stay in separate fields: **Blender measures**, with the file open, and
+the model is asked only for what a picture can answer — shape, markings,
+colour, wear, and what the thing appears to be for. The measurements are
+also in the prompt, so the model has no reason to invent them.
+
+**And the model is told what it is looking at.** That is the difference
+between a catalogue worth searching and four hundred lines reading "a
+low-poly 3D model of a tree". The prompt carries the pack's own name for
+the asset — `SM_Tree_Pine_04`, and `Tree Pine 04` beside it — the pack it
+came from, and every measurement, and then asks for the sentence the name
+does *not* contain, with "do not begin with 'This is'" and "do not repeat
+the name" spelled out. There is a guard on it in
+`xtask/src/describe.rs` and another end to end in `xtask/tests/dex.rs`,
+because it is the single assumption the whole command is worth anything
+under.
+
+### What it needs, and what it costs
+
+| | |
+| --- | --- |
+| Blender | the same install `resolve` converts with. `$ART_PREVIEW` overrides it with any program run as `<program> <source> <destination.png> [texture]` |
+| `$OPENROUTER_API_KEY` | a hosted vision model, reached with `curl`. `--model` or `$ART_DESCRIBER_MODEL` picks another; the default is a cheap one that reads pictures |
+| `$ART_DESCRIBER` | instead of that: any program run as `<program> <prompt.txt> <picture.png>` that prints a description — a local model, or something of your own |
+| neither of those two | `--offline`, or simply no key: the entry is written from the measurements and `described_by` says `measurements alone` |
+
+A run over found meshes stops at **24** and says how many it left, because
+`describe crate` over a library is four hundred renders and four hundred
+model calls — a bill arriving because somebody typed a common word.
+`--limit` raises it. `--jobs` (four by default) is how many are looked at
+at once; nearly all of the wall clock is Blender starting and a network
+round trip. A mesh already described against the bytes on this machine is
+skipped, so a second run costs nothing and `--force` is how you overrule
+that.
+
+One thing worth knowing about the count: a Source Files download ships
+the same mesh as `FBX/X.fbx` **and** `OBJ/X.obj`, and describing both
+would spend two renders and two model calls writing the same sentence
+twice. The FBX wins. Two different meshes that merely share a name —
+`Props/SM_Crate.fbx` and `Buildings/SM_Crate.fbx` — are both kept, and
+the second gets `sm_crate_2`.
+
+### The picture
+
+Four views of the mesh in one square PNG, turned a quarter turn between
+them, on a plain grey ground, painted with the atlas: a model shown one
+three-quarter view of a crate can say nothing about the back of it, and
+four views cost one render because the copies share their mesh data. It
+is `art/cache/dex/<digest>/preview.png`, and it stays there — with the
+prompt, the request and the answer — for the same reason the staging
+directories do. **A description that reads wrong is usually a right
+description of a bad render**, and that directory is where you find out
+which.
+
+The atlas is the manifest's `texture` line for an asset that has one, and
+otherwise the pack's own shared atlas, picked by name. That guess is
+recorded as `atlas` in the entry, because a preview rendered untextured
+is a grey mesh that a model then describes, accurately and uselessly, as
+grey — and the entry should say when the colours it describes came from a
+guess. `textures` is what the scene actually bore.
+
+### What it is, and is not
+
+`art/dex/` is **in git**, and it holds the same kind of thing
+`art/manifest.toml` holds: file names, digests, counts and English. No
+geometry, no pixels, nothing that could be turned back into a mesh. It is
+tracked rather than cached because each line costs a Blender launch and a
+hosted model call, and a gitignored copy would be bought again on every
+clone.
+
+It is a **catalogue, not a manifest**. Every line of the manifest is a
+promise somebody typed and something checks; every `description` here is
+a sentence a language model wrote about a picture, and nothing in this
+repository can check it. Search it, read it, then look at the mesh —
+`described_by` says what saw it, and an entry nothing looked at says so
+in the description itself rather than reading like one that did.
+
+### What is proved, and what needs your disk
+
+`xtask/tests/dex.rs` runs the whole command against the fixture packs
+with stand-ins for the two things CI has not got: a previewer and a
+describer. The describer stand-in answers with the prompt it was handed,
+which is what lets a guard read the catalogue and prove the asset's own
+name and pack reached the model. Proved there: that a run writes a
+catalogue that reads back, that measured numbers reach it, that a pack
+the manifest never declared is still catalogued, that a described mesh is
+left alone until it changes or `--force` says otherwise, that the search
+answers a word from a description, that a describer answering nothing
+writes nothing, and that a mistyped option is a refusal.
+
+Not proved there, and only provable on a machine with the packs: that
+Blender renders four legible views of a Synty prop, and that a hosted
+model writes something true about the picture. Both were checked by hand
+against `POLYGON - Apocalypse` and `POLYGON Sci-Fi Space` on the owner's
+machine — the tarpaulin entry above is one of the answers.
 
 ## What a successful run looks like
 
@@ -872,6 +1025,15 @@ declared — or under a name the older pipeline used — is made again. The
 zips and the recording, measuring and copying converters those guards run
 against are written in the guard file, so they depend on nothing this
 repository did not write.
+
+It runs [the catalogue's](#the-catalogue-searching-art-by-what-it-looks-like)
+guards the same way, through the same kind of seam: `$ART_PREVIEW` stands
+in for Blender and `$ART_DESCRIBER` for a hosted model, and the describer
+stand-in answers with the prompt it was handed — which is what lets a
+guard read the written catalogue and prove the model was told the asset's
+own name. No key is ever needed, and every variable this command reads is
+cleared before each run, so a developer with `$OPENROUTER_API_KEY`
+exported does not have the suite spend money on a fixture cube.
 
 **There is no Blender in continuous integration or in the container this
 was written in**, and for a while that meant those guards stopped at the

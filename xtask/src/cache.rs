@@ -154,11 +154,36 @@ impl Cache {
         self.root.join("index.toml")
     }
 
+    /// **What one look at a mesh left behind**, filed under the digest of
+    /// the mesh it looked at: the rendered picture, the prompt the
+    /// describer was given, the answer that came back, and — only when
+    /// something went wrong with it — the request that went out.
+    ///
+    /// Kept after a run for the reason [`Self::stage`] is. A description
+    /// that reads like it is about a different asset is a thing to debug,
+    /// and the four files that produced it are the whole of the evidence
+    /// — the picture especially, since a wrong description is usually a
+    /// right description of a bad render.
+    ///
+    /// Filed under the source digest and not under the id, because two
+    /// packs can hold the same mesh and a pack update makes a different
+    /// one under the same name.
+    pub fn dex_file(&self, digest: &str, name: &str) -> PathBuf {
+        self.root.join("dex").join(digest).join(name)
+    }
+
     /// The converter script, written out beside the cache. It is carried
     /// in the binary rather than read from the source tree so that where
     /// the tool is run from stops mattering.
     pub fn blender_script(&self) -> PathBuf {
         self.root.join("blender").join("fbx_to_gltf.py")
+    }
+
+    /// The preview script, beside the converter's — beside, and not
+    /// anywhere else, because it imports it. See
+    /// [`crate::preview::Previewer::prepare`].
+    pub fn preview_script(&self) -> PathBuf {
+        self.root.join("blender").join("fbx_to_preview.py")
     }
 }
 

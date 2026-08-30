@@ -346,17 +346,11 @@ def export_glb(path):
         bpy.ops.export_scene.gltf(filepath=path, export_format="GLB")
 
 
-def report_bounds():
-    """Print the tight box round everything in the scene, in the GLB's axes.
+def bounds():
+    """The tight box round everything in the scene, in the GLB's axes.
 
-    One line, `aabb minx miny minz maxx maxy maxz`. This is the FACT half
-    of the manifest's `fill` declaration: a description claims a box and a
-    purchased mesh occupies some part of it, and until something measured
-    the mesh, `fill` was the only statement in the system about which
-    part. `cargo xtask art resolve` reads this line, writes it into the
-    index, and refuses a `fill` that disagrees with it.
-
-    The corners of every object's own bounding box, carried through that
+    Hands back `(lo, hi)`, or `None` for a scene with no mesh in it. The
+    corners of every object's own bounding box, carried through that
     object's world matrix, which is tight for an axis-aligned body and a
     hair loose for a rotated one — the same bound the game's own
     `pieces::drawn_box` takes, for the same reason.
@@ -366,6 +360,11 @@ def report_bounds():
     the scene and a box measured in the file disagree about two of three
     axes — and a number that names the wrong axis is worse than no number,
     because it looks like a measurement.
+
+    Split from `report_bounds` for `fbx_to_preview.py`, which measures the
+    same box for the catalogue and must measure it the same way: two
+    readings of one mesh that disagree about an axis is a `fill` refusal
+    on one side of the pipeline and a size in the catalogue on the other.
     """
     lo = [float("inf")] * 3
     hi = [float("-inf")] * 3
@@ -377,10 +376,27 @@ def report_bounds():
                 lo[axis] = min(lo[axis], value)
                 hi[axis] = max(hi[axis], value)
     if lo[0] > hi[0]:
+        return None
+    return lo, hi
+
+
+def report_bounds():
+    """Print the tight box round everything in the scene, in the GLB's axes.
+
+    One line, `aabb minx miny minz maxx maxy maxz`. This is the FACT half
+    of the manifest's `fill` declaration: a description claims a box and a
+    purchased mesh occupies some part of it, and until something measured
+    the mesh, `fill` was the only statement in the system about which
+    part. `cargo xtask art resolve` reads this line, writes it into the
+    index, and refuses a `fill` that disagrees with it.
+    """
+    measured = bounds()
+    if measured is None:
         # Nothing with a mesh in it. The export already refused an empty
         # scene, so this is a scene of lights and empties, and the honest
         # answer is to say nothing rather than to print an infinity.
         return
+    lo, hi = measured
     print("aabb " + " ".join(f"{value:.6f}" for value in lo + hi))
 
 
@@ -411,4 +427,9 @@ def main():
     print(f"fbx_to_gltf: wrote {destination}")
 
 
-main()
+# Guarded, so that `fbx_to_preview.py` beside this file can import it and
+# borrow `import_any`, `usable_image`, `paint_with` and `bounds` instead
+# of keeping a second copy of them. Blender runs a `--python` script as
+# `__main__`, so the conversion below still happens exactly as it did.
+if __name__ == "__main__":
+    main()

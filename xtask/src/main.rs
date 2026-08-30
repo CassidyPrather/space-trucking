@@ -10,7 +10,15 @@
 //! art/manifest.toml   ids, packs, paths, digests, per-asset overrides
 //! $SYNTY_STORE        the packs exactly as downloaded, on the owner's disk
 //! art/cache/          the few files a manifest named, converted, gitignored
+//! art/dex/            what the meshes in those packs look like, in English
 //! ```
+//!
+//! The last of those is the second errand, and it is about the other end
+//! of the same problem: a manifest line has to name a file, and a Synty
+//! library is five thousand files per pack called `SM_Prop_Crate_04`.
+//! `cargo xtask art describe` renders each mesh, measures it, shows the
+//! picture to a vision model and writes down what it looks like; `cargo
+//! xtask art dex` searches that. See [`dex`].
 //!
 //! Continuous integration never runs any of this and never will: the
 //! payload is not in the repository, so there is nothing for it to
@@ -24,21 +32,31 @@
 mod archive;
 mod cache;
 mod convert;
+mod describe;
+mod dex;
 mod fsx;
+mod json;
 mod manifest;
+mod preview;
 mod sha256;
 mod store;
 mod unitypackage;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use cache::{Cache, Converted};
 use convert::Converter;
-use manifest::{Asset, Bounds, Manifest, Resolved};
+use describe::{Describer, Subject};
+use manifest::{Asset, Bounds, Manifest, Pack, Resolved};
+use preview::Previewer;
 use store::{Found, Hit, Store, count, slashed};
 
-const USAGE: &str = "\
+fn usage() -> String {
+    format!(
+        "\
 cargo xtask art <command>
 
   check            find every asset the manifest names, hash it, and report; converts nothing
@@ -46,15 +64,38 @@ cargo xtask art <command>
   hash [id ...]    print the `sha256` lines to paste into the manifest
   unpack <pack>    rebuild the asset trees inside one pack's .unitypackage files
   find <text>      search the packs — inside their archives too — and print the manifest lines
+  describe [text]  render each mesh, measure it, and write down what it looks like
+  dex [text]       read that catalogue back, searching what it says as well as what things
+                   are called
+
+Options for `describe`:
+  --limit <n>      how many found meshes to describe (default {limit}); the manifest's own
+                   assets are never capped
+  --jobs <n>       how many to look at at once (default {jobs})
+  --model <slug>   a vision model other than {model}
+  --offline        render and measure, ask nothing, and say so in every entry
+  --force          describe again what has already been described
 
 Environment:
   SYNTY_STORE      where the packs are, one directory per pack, as downloaded (required)
   ART_MANIFEST     a manifest other than art/manifest.toml
   ART_CACHE        a cache other than art/cache
+  ART_DEX          a catalogue directory other than art/dex
   BLENDER          the Blender executable, if it is not on PATH
   ART_CONVERTER    a program run as `<program> <source> <destination.glb> [texture]`,
                    instead of Blender
-";
+  ART_PREVIEW      a program run as `<program> <source> <destination.png> [texture]`,
+                   instead of Blender, for the pictures `describe` renders
+  OPENROUTER_API_KEY  the key `describe` reaches a hosted vision model with
+  ART_DESCRIBER_MODEL the same thing `--model` says
+  ART_DESCRIBER    a program run as `<program> <prompt.txt> <picture.png>` printing a
+                   description, instead of a hosted model
+",
+        limit = DESCRIBE_LIMIT,
+        jobs = DESCRIBE_JOBS,
+        model = describe::MODEL,
+    )
+}
 
 fn main() {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
@@ -65,8 +106,10 @@ fn main() {
         ["art", "hash", ids @ ..] => hashes(ids),
         ["art", "unpack", pack] => unpack(pack),
         ["art", "find", needle @ ..] if !needle.is_empty() => find(&needle.join(" ")),
+        ["art", "describe", rest @ ..] => describe(rest),
+        ["art", "dex", rest @ ..] => catalogue(rest),
         _ => {
-            eprint!("{USAGE}");
+            eprint!("{}", usage());
             std::process::exit(2);
         }
     };
@@ -821,6 +864,752 @@ fn loose(manifest: &Manifest, store: &Store, unpacked: &Path, path: &Path) -> (W
     )
 }
 
+// ---------------------------------------------------------------------
+// The catalogue: `describe`, which writes it, and `dex`, which reads it
+// ---------------------------------------------------------------------
+
+/// How many found meshes one `describe` run looks at before it stops and
+/// says how many it left. A cap, because `describe crate` over a
+/// hundred-pack library is four hundred meshes, four hundred Blender
+/// launches and four hundred hosted model calls — a bill, arriving
+/// because somebody typed a common word. `--limit` raises it, and the
+/// manifest's own assets are never capped: that list is short,
+/// deliberate, and already in git.
+const DESCRIBE_LIMIT: usize = 24;
+
+/// How many meshes are looked at at once. Each one is a Blender launch
+/// and then a network round trip, so nearly all of the wall clock is
+/// waiting, and four keeps a laptop usable while a pack is catalogued.
+const DESCRIBE_JOBS: usize = 4;
+
+/// Where the catalogue lives. In the repository, beside the manifest,
+/// because it carries the same kind of thing the manifest does — names,
+/// digests, counts and English — and because a gitignored copy would be
+/// re-bought with Blender launches and model calls on every clone.
+fn dex_dir() -> PathBuf {
+    std::env::var_os("ART_DEX").map_or_else(|| repo().join("art").join("dex"), PathBuf::from)
+}
+
+/// What one `describe` run was asked for.
+struct Wanted {
+    /// What to search the packs for. Absent means the manifest's own
+    /// assets, which is the run somebody makes after adding a line.
+    needle: Option<String>,
+    limit: usize,
+    jobs: usize,
+    model: Option<String>,
+    offline: bool,
+    force: bool,
+}
+
+impl Wanted {
+    /// **Read the arguments, and refuse an option nobody has.** The same
+    /// rule the manifest dialect follows, for the same reason: a
+    /// misspelled `--limt 200` that was quietly ignored is a run that
+    /// describes twenty-four meshes and a person who thinks they asked
+    /// for two hundred.
+    fn parse(words: &[&str]) -> Result<Self, String> {
+        let mut wanted = Self {
+            needle: None,
+            limit: DESCRIBE_LIMIT,
+            jobs: DESCRIBE_JOBS,
+            model: None,
+            offline: false,
+            force: false,
+        };
+        let mut text: Vec<&str> = Vec::new();
+        let mut at = 0;
+        while at < words.len() {
+            let word = words[at];
+            at += 1;
+            match word {
+                "--force" => wanted.force = true,
+                "--offline" => wanted.offline = true,
+                "--limit" | "--jobs" | "--model" => {
+                    let value = *words.get(at).ok_or_else(|| {
+                        format!("`{word}` wants a value after it, and the arguments end there")
+                    })?;
+                    at += 1;
+                    match word {
+                        "--limit" => wanted.limit = whole(word, value)?.max(1),
+                        "--jobs" => wanted.jobs = whole(word, value)?.clamp(1, 16),
+                        _ => wanted.model = Some(value.to_owned()),
+                    }
+                }
+                other if other.starts_with('-') => {
+                    return Err(format!("no option called `{other}`\n\n{}", usage()));
+                }
+                other => text.push(other),
+            }
+        }
+        wanted.needle = (!text.is_empty()).then(|| text.join(" "));
+        Ok(wanted)
+    }
+}
+
+fn whole(option: &str, value: &str) -> Result<usize, String> {
+    value
+        .parse()
+        .map_err(|_| format!("`{option} {value}` wants a whole number"))
+}
+
+/// One mesh this run is going to look at.
+struct Candidate {
+    /// The pack id the catalogue files it under: the manifest's, or the
+    /// store directory's own name for a pack it does not declare.
+    pack: String,
+    /// What the pack is called, which is what the describer is told.
+    title: String,
+    /// Pack-relative, `/` separated: the spelling a manifest `source`
+    /// line carries, so an entry worth using can be pasted into one.
+    source: String,
+    name: String,
+    /// Where the bytes actually are on this machine.
+    path: PathBuf,
+    digest: String,
+    /// The atlas to paint the preview with: the manifest's `texture`
+    /// line, or the pack's own atlas, guessed.
+    atlas: Option<PathBuf>,
+    /// The manifest id already naming this file, if one does.
+    asset: Option<String>,
+}
+
+/// **Render, measure and describe, and write the catalogue.**
+fn describe(words: &[&str]) -> Result<(), String> {
+    let wanted = Wanted::parse(words)?;
+    let manifest = read_manifest()?;
+    let store = Store::open()?;
+    let cache = Cache::open(&repo());
+    let dir = dex_dir();
+
+    let candidates = match &wanted.needle {
+        Some(needle) => found_candidates(&store, &cache, &manifest, needle, wanted.limit),
+        None => declared_candidates(&store, &cache, &manifest),
+    };
+    if candidates.is_empty() {
+        return Err(nothing_to_describe(&wanted, &manifest, &store));
+    }
+
+    let mut books: BTreeMap<String, dex::Dex> = BTreeMap::new();
+    for candidate in &candidates {
+        if !books.contains_key(&candidate.pack) {
+            books.insert(
+                candidate.pack.clone(),
+                dex::Dex::open(&dir, &candidate.pack)?,
+            );
+        }
+    }
+    let (work, known): (Vec<Candidate>, Vec<Candidate>) =
+        candidates.into_iter().partition(|candidate| {
+            wanted.force
+                || books[&candidate.pack]
+                    .described(&candidate.source, &candidate.digest)
+                    .is_none()
+        });
+    if !known.is_empty() {
+        println!(
+            "art: {} already described against the bytes on this machine; `--force` \
+             describes {} again",
+            many(known.len(), "mesh", "meshes"),
+            if known.len() == 1 { "it" } else { "them" }
+        );
+    }
+    if work.is_empty() {
+        return Ok(());
+    }
+
+    let previewer = preview::find()?;
+    // `--offline` and "there is nothing to ask" produce the same
+    // catalogue and are not the same sentence: one is a choice and the
+    // other is a machine that has not been set up, and a person who
+    // typed the flag does not want to be told their key is missing.
+    let (describer, note) = if wanted.offline {
+        (
+            Describer::Measurements,
+            String::from(
+                "art: --offline, so every entry carries its measurements and says so. The\n     \
+                 pictures are still rendered and the counts are still true.",
+            ),
+        )
+    } else {
+        let describer = describe::find(wanted.model.clone());
+        let note = describer.announce();
+        (describer, note)
+    };
+    println!(
+        "art: looking at {} with {}",
+        many(work.len(), "mesh", "meshes"),
+        previewer.describe()
+    );
+    println!("{note}");
+    let script = previewer.prepare(&cache)?;
+    let outcomes = look_at_all(&cache, &script, &previewer, &describer, &work, wanted.jobs);
+
+    let mut written = 0;
+    let mut troubles = Vec::new();
+    // Only the catalogues this run actually changed are rewritten. A run
+    // where every description failed should leave the files it loaded
+    // exactly as it found them, rather than reporting that it wrote them.
+    let mut touched: BTreeSet<String> = BTreeSet::new();
+    for (candidate, outcome) in work.iter().zip(outcomes) {
+        match outcome {
+            Err(trouble) => troubles.push(trouble),
+            Ok((look, description)) => {
+                let book = books.get_mut(&candidate.pack).expect("its own pack");
+                book.insert(entry(candidate, &look, description, &describer));
+                touched.insert(candidate.pack.clone());
+                written += 1;
+            }
+        }
+    }
+    for (pack, book) in &books {
+        if !touched.contains(pack) {
+            continue;
+        }
+        book.write()?;
+        println!("art: wrote {}", book.path.display());
+    }
+    for trouble in &troubles {
+        println!("\n{trouble}");
+    }
+    if written == 0 {
+        return Err(format!(
+            "{} could not be described, and nothing was written",
+            many(troubles.len(), "mesh", "meshes")
+        ));
+    }
+    if !troubles.is_empty() {
+        println!(
+            "\nart: {} described, {} not",
+            many(written, "mesh", "meshes"),
+            troubles.len()
+        );
+    }
+    Ok(())
+}
+
+/// The message for a run that found nothing to do, which is a different
+/// sentence depending on what was asked for.
+fn nothing_to_describe(wanted: &Wanted, manifest: &Manifest, store: &Store) -> String {
+    wanted.needle.as_ref().map_or_else(
+        || {
+            if manifest.assets.is_empty() {
+                return format!(
+                    "{} names no assets yet, so there is nothing of its own to describe.\n\n  \
+                     `cargo xtask art describe <text>` catalogues what is in the packs \
+                     themselves,\n  which is the half of this that helps before a line is \
+                     written.",
+                    manifest.path.display()
+                );
+            }
+            // The assets are named and none of them is here, which the
+            // lines above have already said one by one. Saying "nothing
+            // to describe" without this would read as a manifest that
+            // holds nothing.
+            format!(
+                "not one of the {} {} names is on this machine, so there was nothing to \
+                 look at.\n\n  `cargo xtask art check` is the command that is about that.",
+                count(manifest.assets.len(), "asset"),
+                manifest.path.display()
+            )
+        },
+        |needle| {
+            format!(
+                "nothing under {} is a mesh called `{needle}`.\n\n  \
+                 `cargo xtask art find {needle}` shows everything of that name, meshes and\n  \
+                 textures and prefabs alike; this describes only what Blender can open.",
+                store.root.display()
+            )
+        },
+    )
+}
+
+/// The manifest's own assets, found on this machine and hashed. An asset
+/// that is not here is reported and skipped rather than stopping the run:
+/// a catalogue of the four assets that are present is worth more than a
+/// refusal about the fifth.
+fn declared_candidates(store: &Store, cache: &Cache, manifest: &Manifest) -> Vec<Candidate> {
+    let mut candidates = Vec::new();
+    for asset in manifest.assets.values() {
+        let found = match store::locate(store, cache, manifest, asset, true) {
+            Ok(found) => found,
+            Err(missing) => {
+                eprintln!("art: {missing}");
+                continue;
+            }
+        };
+        let digest = match sha256::of_file(found.path()) {
+            Ok(digest) => digest,
+            Err(err) => {
+                eprintln!("art: cannot hash {}: {err}", found.path().display());
+                continue;
+            }
+        };
+        let pack = manifest.pack_of(asset);
+        candidates.push(Candidate {
+            pack: pack.id.clone(),
+            title: pack.title.clone(),
+            source: asset.source.clone(),
+            name: stem(&asset.source),
+            path: found.path().clone(),
+            digest,
+            atlas: atlas(store, cache, manifest, asset)
+                .unwrap_or_else(|why| {
+                    eprintln!("art: {why}");
+                    None
+                })
+                .map(|atlas| atlas.from),
+            asset: Some(asset.id.clone()),
+        });
+    }
+    candidates
+}
+
+/// **Every mesh in the store whose name matches, up to the cap.**
+///
+/// The same search `find` runs, cut to the files something can actually
+/// open and resolved to bytes on this machine — which is what separates a
+/// catalogue from a listing. A hit that cannot be resolved is counted and
+/// mentioned rather than reported one by one: the usual reason is a
+/// `.unitypackage` nothing has rebuilt, and the answer to that is one
+/// command for the whole pack.
+fn found_candidates(
+    store: &Store,
+    cache: &Cache,
+    manifest: &Manifest,
+    needle: &str,
+    limit: usize,
+) -> Vec<Candidate> {
+    let unpacked = cache.root.join("unpacked");
+    let search = store::search(&[store.root.clone(), unpacked.clone()], needle, cache);
+    for complaint in &search.trouble {
+        eprintln!("art: {complaint}");
+    }
+    // One entry per pack-relative path: the same mesh is commonly found
+    // twice, once inside the pack's archive and once in the copy of it
+    // the cache already holds, and they are one catalogue line.
+    let mut wanted: BTreeMap<(String, String), Pack> = BTreeMap::new();
+    for hit in &search.hits {
+        let name = match hit {
+            Hit::Loose(path) => slashed(Path::new(path.file_name().unwrap_or(path.as_os_str()))),
+            Hit::Inside { member, .. } => member.clone(),
+        };
+        if !is_mesh(&name) {
+            continue;
+        }
+        if let Some((pack, source)) = seat(manifest, store, &unpacked, hit) {
+            wanted.entry((pack.id.clone(), source)).or_insert(pack);
+        }
+    }
+    let wanted = one_format_per_mesh(wanted);
+    let total = wanted.len();
+    let mut atlases: BTreeMap<String, Option<PathBuf>> = BTreeMap::new();
+    let mut candidates = Vec::new();
+    let mut unreachable = 0;
+    for ((pack_id, source), pack) in wanted {
+        if candidates.len() >= limit {
+            break;
+        }
+        let Some(path) = store::find_relative(store, cache, &pack, &source) else {
+            unreachable += 1;
+            continue;
+        };
+        let Ok(digest) = sha256::of_file(&path) else {
+            unreachable += 1;
+            continue;
+        };
+        let atlas = atlases
+            .entry(pack_id.clone())
+            .or_insert_with(|| pack_atlas(store, cache, &pack))
+            .clone();
+        candidates.push(Candidate {
+            asset: named_by(manifest, &pack_id, &source),
+            pack: pack_id,
+            title: pack.title.clone(),
+            name: stem(&source),
+            source,
+            path,
+            digest,
+            atlas,
+        });
+    }
+    if total > candidates.len() + unreachable {
+        println!(
+            "art: {total} meshes match `{needle}`, and this run takes the first {}. \
+             `--limit` raises it.",
+            candidates.len()
+        );
+    }
+    if unreachable > 0 {
+        println!(
+            "art: {} could not be taken out of the pack holding {}. A mesh that is only \
+             inside a\n     .unitypackage needs `cargo xtask art unpack <pack>` first.",
+            many(unreachable, "match", "matches"),
+            if unreachable == 1 { "it" } else { "them" }
+        );
+    }
+    candidates
+}
+
+/// **One entry per mesh, not one per format the pack shipped it in.**
+///
+/// A Source Files download carries `SourceFiles/FBX/SM_Prop_Barrel_01.fbx`
+/// and `SourceFiles/OBJ/SM_Prop_Barrel_01.obj`, which are the same barrel
+/// twice. Describing both costs two renders and two model calls to write
+/// the same sentence in two places, and a catalogue holding both asks a
+/// person to choose between a mesh and itself. That was measured rather
+/// than predicted: the first sweep over a real pack described four
+/// barrels and two of them were the other two.
+///
+/// The rule is the best format present for a name in a pack, FBX first —
+/// it is the one the resolver prefers and the one that carries materials.
+/// Two DIFFERENT meshes that happen to share a name, `Props/SM_Crate.fbx`
+/// and `Buildings/SM_Crate.fbx`, are both FBX and both survive; the only
+/// thing dropped is one name in a worse format.
+fn one_format_per_mesh(
+    found: BTreeMap<(String, String), Pack>,
+) -> BTreeMap<(String, String), Pack> {
+    let mut best: BTreeMap<(String, String), usize> = BTreeMap::new();
+    for (pack, source) in found.keys() {
+        let rank = format_rank(source);
+        best.entry((pack.clone(), stem(source)))
+            .and_modify(|had| *had = (*had).min(rank))
+            .or_insert(rank);
+    }
+    found
+        .into_iter()
+        .filter(|((pack, source), _)| {
+            best.get(&(pack.clone(), stem(source)))
+                .is_some_and(|best| *best == format_rank(source))
+        })
+        .collect()
+}
+
+/// Which format answers for a mesh when a pack ships several, in the
+/// order `fbx_to_gltf.py` lists them.
+fn format_rank(source: &str) -> usize {
+    ["fbx", "obj", "dae", "glb", "gltf", "blend"]
+        .iter()
+        .position(|extension| named(source, std::slice::from_ref(extension)))
+        .unwrap_or(usize::MAX)
+}
+
+/// The manifest id naming this exact file, if one does. It is what turns
+/// the catalogue into an answer to "have I used this already?".
+fn named_by(manifest: &Manifest, pack: &str, source: &str) -> Option<String> {
+    manifest
+        .assets
+        .values()
+        .find(|asset| asset.pack == pack && asset.source == source)
+        .map(|asset| asset.id.clone())
+}
+
+/// Which files in a pack are meshes something here can open — the same
+/// list `fbx_to_gltf.py` knows how to import, because a catalogue entry
+/// for a file Blender will refuse is an entry nobody can act on.
+fn is_mesh(name: &str) -> bool {
+    named(name, &["fbx", "obj", "dae", "glb", "gltf", "blend"])
+}
+
+/// Whether a file name ends in one of these extensions, whatever case
+/// the pack spelled it in. A Synty pack has `.FBX` and `.Fbx` in it.
+fn named(name: &str, extensions: &[&str]) -> bool {
+    Path::new(name).extension().is_some_and(|found| {
+        extensions
+            .iter()
+            .any(|extension| found.eq_ignore_ascii_case(extension))
+    })
+}
+
+/// A path's file name without its extension: what the pack calls the
+/// thing, which is the half of a description the picture cannot supply.
+fn stem(source: &str) -> String {
+    let leaf = source.rsplit('/').next().unwrap_or(source);
+    leaf.rsplit_once('.')
+        .map_or(leaf, |(stem, _)| stem)
+        .to_owned()
+}
+
+/// **Which pack a hit belongs to, and what the file is called inside
+/// it.**
+///
+/// A pack the manifest declares, or a stand-in made out of the store
+/// directory's own name for one it does not — because browsing a library
+/// is precisely the moment before a pack gets declared, and a catalogue
+/// that could only describe what was already in the manifest would be a
+/// catalogue of the things somebody had already chosen.
+fn seat(manifest: &Manifest, store: &Store, unpacked: &Path, hit: &Hit) -> Option<(Pack, String)> {
+    match hit {
+        Hit::Inside { archive, member } => {
+            Some((holder(manifest, store, unpacked, archive)?, member.clone()))
+        }
+        Hit::Loose(path) => {
+            for pack in manifest.packs.values() {
+                if let Ok(rest) = path.strip_prefix(store.pack_dir(pack)) {
+                    return Some((copy_of(pack), slashed(rest)));
+                }
+            }
+            // <cache>/unpacked/<pack>/<archive file name>/... — the first
+            // two components are the cache's own filing.
+            let (root, skip) = path.strip_prefix(unpacked).map_or_else(
+                |_| (path.strip_prefix(&store.root), 1),
+                |rest| (Ok(rest), 2),
+            );
+            let rest = root.ok()?;
+            let mut parts = rest.components();
+            let first = parts.next()?;
+            for _ in 1..skip {
+                parts.next()?;
+            }
+            let inside: PathBuf = parts.collect();
+            if inside.as_os_str().is_empty() {
+                return None;
+            }
+            Some((
+                by_directory(manifest, &first.as_os_str().to_string_lossy()),
+                slashed(&inside),
+            ))
+        }
+    }
+}
+
+/// Which pack directory holds a file, as a pack something can look in.
+fn holder(manifest: &Manifest, store: &Store, unpacked: &Path, path: &Path) -> Option<Pack> {
+    if let Some(pack) = manifest
+        .packs
+        .values()
+        .find(|pack| path.starts_with(store.pack_dir(pack)))
+    {
+        return Some(copy_of(pack));
+    }
+    let relative = path
+        .strip_prefix(unpacked)
+        .or_else(|_| path.strip_prefix(&store.root))
+        .ok()?;
+    let first = relative.components().next()?;
+    Some(by_directory(manifest, &first.as_os_str().to_string_lossy()))
+}
+
+/// A directory name as a pack. The cache files a rebuilt tree under the
+/// pack's own id, so a name out of there can be a pack the manifest
+/// declares; anything else becomes a pack that exists for the length of
+/// this run and whose `dir` is the name it was found under.
+fn by_directory(manifest: &Manifest, name: &str) -> Pack {
+    manifest.packs.get(name).map_or_else(
+        || Pack {
+            id: dex::id_of(name),
+            title: name.to_owned(),
+            dir: name.to_owned(),
+            download: name.to_owned(),
+            line: 0,
+        },
+        copy_of,
+    )
+}
+
+fn copy_of(pack: &Pack) -> Pack {
+    Pack {
+        id: pack.id.clone(),
+        title: pack.title.clone(),
+        dir: pack.dir.clone(),
+        download: pack.download.clone(),
+        line: pack.line,
+    }
+}
+
+/// **The atlas a pack paints itself with, guessed.**
+///
+/// An asset the manifest declares has a `texture` line and never reaches
+/// this. Everything else in a pack has nothing, and a preview rendered
+/// with nothing is a grey mesh — which a vision model then describes,
+/// accurately and uselessly, as grey. A Synty pack paints itself from one
+/// shared atlas with `Texture` in the name, so the guess is a good one;
+/// it goes into the catalogue's `atlas` field so a reader can see that a
+/// guess is what it was.
+fn pack_atlas(store: &Store, cache: &Cache, pack: &Pack) -> Option<PathBuf> {
+    let dir = store.pack_dir(pack);
+    let search = store::search(std::slice::from_ref(&dir), "texture", cache);
+    let mut names: Vec<String> = search
+        .hits
+        .iter()
+        .filter_map(|hit| match hit {
+            Hit::Loose(path) => path.strip_prefix(&dir).ok().map(slashed),
+            Hit::Inside { member, .. } => Some(member.clone()),
+        })
+        .filter(|name| named(name, &["png", "jpg", "jpeg", "tga"]))
+        .collect();
+    // Shortest first, then alphabetically: the pack's own atlas sits at
+    // the top of its Textures folder and the long names are the variants.
+    // Ties broken by name, so two machines guess the same file.
+    names.sort_by_key(|name| (name.len(), name.clone()));
+    names
+        .iter()
+        .find_map(|name| store::find_relative(store, cache, pack, name))
+}
+
+/// **Look at several meshes at once, and keep the answers in order.**
+///
+/// Each one is a Blender launch and then a network round trip, so a
+/// serial run of two dozen is minutes of a laptop doing nothing. The
+/// answers are collected against the index they came from rather than in
+/// the order they finish, because a catalogue that came out in a
+/// different order on every run would be a diff nobody can read.
+fn look_at_all(
+    cache: &Cache,
+    script: &Path,
+    previewer: &Previewer,
+    describer: &Describer,
+    work: &[Candidate],
+    jobs: usize,
+) -> Vec<Looked> {
+    let next = AtomicUsize::new(0);
+    let finished = AtomicUsize::new(0);
+    let done: Mutex<Vec<(usize, Looked)>> = Mutex::new(Vec::new());
+    std::thread::scope(|scope| {
+        for _ in 0..jobs.min(work.len()).max(1) {
+            scope.spawn(|| {
+                loop {
+                    let index = next.fetch_add(1, Ordering::Relaxed);
+                    let Some(candidate) = work.get(index) else {
+                        return;
+                    };
+                    let outcome = look_and_say(cache, script, previewer, describer, candidate);
+                    let sofar = finished.fetch_add(1, Ordering::Relaxed) + 1;
+                    println!(
+                        "  {sofar:>3}/{total}  {:<32} {}",
+                        candidate.name,
+                        match &outcome {
+                            Ok((_, said)) => said.clone(),
+                            Err(_) => String::from("(see below)"),
+                        },
+                        total = work.len()
+                    );
+                    done.lock()
+                        .expect("no worker panics while holding this")
+                        .push((index, outcome));
+                }
+            });
+        }
+    });
+    let mut answers = done.into_inner().expect("every worker is finished");
+    answers.sort_by_key(|(index, _)| *index);
+    answers.into_iter().map(|(_, outcome)| outcome).collect()
+}
+
+/// What looking at one mesh comes to: what was measured and what was
+/// said about it, or the one sentence saying why neither happened.
+type Looked = Result<(preview::Look, String), String>;
+
+/// One mesh: a picture and its numbers, then a sentence about it.
+fn look_and_say(
+    cache: &Cache,
+    script: &Path,
+    previewer: &Previewer,
+    describer: &Describer,
+    candidate: &Candidate,
+) -> Looked {
+    let picture = cache.dex_file(&candidate.digest, "preview.png");
+    let look = previewer.run(
+        script,
+        &candidate.path,
+        &picture,
+        candidate.atlas.as_deref(),
+    )?;
+    let subject = Subject {
+        name: &candidate.name,
+        pack: &candidate.title,
+    };
+    let said = describer.say(cache, &subject, &look, &picture, &candidate.digest)?;
+    Ok((look, said))
+}
+
+/// One catalogue entry, out of what was measured and what was said.
+fn entry(
+    candidate: &Candidate,
+    look: &preview::Look,
+    description: String,
+    describer: &Describer,
+) -> dex::Entry {
+    dex::Entry {
+        id: String::new(), // filled in by the book, which knows what is taken
+        name: candidate.name.clone(),
+        pack: candidate.pack.clone(),
+        source: candidate.source.clone(),
+        sha256: candidate.digest.clone(),
+        asset: candidate.asset.clone(),
+        atlas: candidate.atlas.as_ref().map(|path| {
+            path.file_name().map_or_else(
+                || path.display().to_string(),
+                |name| name.to_string_lossy().into_owned(),
+            )
+        }),
+        textures: look.images.join(", "),
+        description,
+        described_by: describer.describe(),
+        triangles: look.triangles,
+        meshes: look.meshes,
+        materials: look.materials,
+        size: look.size(),
+    }
+}
+
+/// **Read the catalogue back.**
+///
+/// The command the whole of the rest of this exists for: a search over
+/// what things look like rather than over what they are called. "hazard
+/// stripe" is a search somebody has; `SM_Prop_Crate_04` is not.
+fn catalogue(words: &[&str]) -> Result<(), String> {
+    let dir = dex_dir();
+    let needle = words.join(" ");
+    let (books, trouble) = dex::open_all(&dir);
+    for complaint in &trouble {
+        eprintln!("art: {complaint}");
+    }
+    if books.is_empty() {
+        return Err(format!(
+            "there is no catalogue in {} yet.\n\n  \
+             `cargo xtask art describe` writes one for the assets art/manifest.toml names,\n  \
+             and `cargo xtask art describe <text>` writes one for whatever is in the packs.",
+            dir.display()
+        ));
+    }
+    let mut shown = 0;
+    let mut held = 0;
+    for book in &books {
+        held += book.entries.len();
+        let matching: Vec<&dex::Entry> = book
+            .entries
+            .values()
+            .filter(|entry| needle.is_empty() || entry.matches(&needle))
+            .collect();
+        if matching.is_empty() {
+            continue;
+        }
+        println!(
+            "\n{} — {} of {}",
+            book.path.display(),
+            matching.len(),
+            many(book.entries.len(), "mesh", "meshes")
+        );
+        for entry in matching {
+            println!("  {}", entry.line());
+            shown += 1;
+        }
+    }
+    if shown == 0 {
+        println!(
+            "art: nothing among the {} described says `{needle}`",
+            many(held, "mesh", "meshes")
+        );
+        return Ok(());
+    }
+    println!(
+        "\nart: {shown} of the {} described. A `*` is a mesh art/manifest.toml already names.",
+        many(held, "mesh", "meshes")
+    );
+    Ok(())
+}
+
 /// Which manifest key names a file inside this archive.
 fn key_of(archive: &Path) -> &'static str {
     if is_unitypackage(archive) {
@@ -834,4 +1623,91 @@ fn is_unitypackage(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
         .is_some_and(|ext| ext.eq_ignore_ascii_case("unitypackage"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn pack(id: &str) -> Pack {
+        Pack {
+            id: id.to_owned(),
+            title: id.to_owned(),
+            dir: id.to_owned(),
+            download: id.to_owned(),
+            line: 0,
+        }
+    }
+
+    /// **A pack that ships one mesh in two formats is catalogued once.**
+    ///
+    /// Measured rather than predicted: the first sweep over a real pack
+    /// described four barrels, and two of them were the other two — Synty
+    /// ship `SourceFiles/FBX/X.fbx` and `SourceFiles/OBJ/X.obj`, so half
+    /// of every render and half of every model call went on writing the
+    /// same sentence twice.
+    ///
+    /// And the thing this must not do is fold two different meshes
+    /// together. A pack with `Props/SM_Crate.fbx` and
+    /// `Buildings/SM_Crate.fbx` has two crates, both of them FBX, and
+    /// both are still in the answer.
+    #[test]
+    fn one_mesh_shipped_in_two_formats_is_described_once() {
+        let sources = [
+            ("scifi", "SourceFiles/FBX/SM_Prop_Barrel_01.fbx"),
+            ("scifi", "SourceFiles/OBJ/SM_Prop_Barrel_01.obj"),
+            ("scifi", "SourceFiles/FBX/SM_Prop_Barrel_02.fbx"),
+            ("scifi", "SourceFiles/OBJ/SM_Prop_Barrel_02.obj"),
+            ("scifi", "Props/SM_Crate.fbx"),
+            ("scifi", "Buildings/SM_Crate.fbx"),
+            // Another pack's OBJ, with no FBX beside it: the only copy
+            // there is, so it stays.
+            ("nature", "SourceFiles/OBJ/SM_Tree.obj"),
+        ];
+        let found: BTreeMap<(String, String), Pack> = sources
+            .iter()
+            .map(|(id, source)| (((*id).to_owned(), (*source).to_owned()), pack(id)))
+            .collect();
+        let kept: Vec<String> = one_format_per_mesh(found)
+            .into_keys()
+            .map(|(_, source)| source)
+            .collect();
+        // In the order the answer is built in — by pack, then by path —
+        // because the catalogue a run writes has to be the same catalogue
+        // twice running.
+        assert_eq!(
+            kept,
+            [
+                "SourceFiles/OBJ/SM_Tree.obj",
+                "Buildings/SM_Crate.fbx",
+                "Props/SM_Crate.fbx",
+                "SourceFiles/FBX/SM_Prop_Barrel_01.fbx",
+                "SourceFiles/FBX/SM_Prop_Barrel_02.fbx",
+            ]
+        );
+    }
+
+    /// **What counts as a mesh is what the importer can open**, and what
+    /// a mesh is called is the file's own name without the extension —
+    /// which is the half of every description the picture cannot supply.
+    #[test]
+    fn a_mesh_is_a_file_something_here_can_open_and_is_called_what_the_pack_calls_it() {
+        for name in ["a/b/SM_Crate.fbx", "SM_Crate.FBX", "x.obj", "y.blend"] {
+            assert!(is_mesh(name), "`{name}` is a mesh");
+        }
+        for name in [
+            "SM_Crate.fbx.meta",
+            "atlas.png",
+            "readme.txt",
+            "SM_Crate.mat",
+            "SM_Crate",
+        ] {
+            assert!(!is_mesh(name), "`{name}` is not a mesh");
+        }
+        assert_eq!(
+            stem("SourceFiles/FBX/SM_Prop_Crate_01.fbx"),
+            "SM_Prop_Crate_01"
+        );
+        assert_eq!(stem("SM_Crate.fbx"), "SM_Crate");
+    }
 }

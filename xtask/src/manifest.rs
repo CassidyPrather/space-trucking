@@ -62,6 +62,17 @@ pub struct Entry {
 pub enum Value {
     Str(String),
     Triple([f32; 3]),
+    /// One number on its own. The manifest asks for this nowhere — its
+    /// values are paths, ids and per-axis triples — and it is in the
+    /// dialect for the file next door: `art/dex/*.toml` counts triangles
+    /// and meshes, and a count written `[412, 412, 412]` to fit a shape
+    /// that was never about counts is a worse file than one number.
+    ///
+    /// Adding it loosens nothing here. Every key in a manifest table asks
+    /// for a specific kind, so `scale = 2.0` is still the same refusal it
+    /// always was, now naming a number instead of naming nothing — see
+    /// the guard at the bottom of this file.
+    Number(f64),
 }
 
 impl Value {
@@ -69,6 +80,7 @@ impl Value {
         match self {
             Self::Str(_) => "a string",
             Self::Triple(_) => "three numbers",
+            Self::Number(_) => "one number",
         }
     }
 }
@@ -316,7 +328,7 @@ pub struct Draft {
 }
 
 impl Draft {
-    fn take_optional_str(
+    pub fn take_optional_str(
         &mut self,
         key: &str,
         table: &str,
@@ -337,7 +349,7 @@ impl Draft {
         }
     }
 
-    fn take_str(
+    pub fn take_str(
         &mut self,
         key: &str,
         table: &str,
@@ -352,7 +364,7 @@ impl Draft {
             })
     }
 
-    fn take_triple(
+    pub fn take_triple(
         &mut self,
         key: &str,
         table: &str,
@@ -365,7 +377,7 @@ impl Draft {
             .unwrap_or(fallback))
     }
 
-    fn take_optional_triple(
+    pub fn take_optional_triple(
         &mut self,
         key: &str,
         table: &str,
@@ -387,9 +399,51 @@ impl Draft {
         }
     }
 
+    /// One whole number, for the counts the dex carries. Read as a count
+    /// rather than as a number because every number in that file is one —
+    /// triangles, meshes, materials — and `412.5 triangles` is a file
+    /// somebody has edited into meaninglessness rather than a value to
+    /// round.
+    pub fn take_optional_count(
+        &mut self,
+        key: &str,
+        table: &str,
+        id: &str,
+        path: &Path,
+    ) -> Result<Option<u64>, Complaint> {
+        let complain = |line, message| Complaint {
+            file: path.to_path_buf(),
+            line,
+            message,
+        };
+        match self.fields.remove(key) {
+            None => Ok(None),
+            Some((Value::Number(value), line)) => {
+                if value < 0.0 || value.fract() != 0.0 || value > 2f64.powi(53) {
+                    return Err(complain(
+                        line,
+                        format!(
+                            "`{key}` in `[{table}.{id}]` is {value}, and it counts things, \
+                             so it has to be a whole number that is not negative"
+                        ),
+                    ));
+                }
+                #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+                Ok(Some(value as u64))
+            }
+            Some((other, line)) => Err(complain(
+                line,
+                format!(
+                    "`{key}` in `[{table}.{id}]` is {}, and it has to be one whole number",
+                    other.kind()
+                ),
+            )),
+        }
+    }
+
     /// A key nobody asked for is a typo, and a silently ignored typo in a
     /// manifest is a scale override that never applied.
-    fn refuse_leftovers(&self, table: &str, id: &str, path: &Path) -> Result<(), Complaint> {
+    pub fn refuse_leftovers(&self, table: &str, id: &str, path: &Path) -> Result<(), Complaint> {
         if let Some((key, (_, line))) = self.fields.iter().next() {
             return Err(Complaint {
                 file: path.to_path_buf(),
@@ -592,8 +646,17 @@ fn read_value(text: &str) -> Result<Value, String> {
         })?;
         return Ok(Value::Triple(triple));
     }
+    // A bare number, which only `art/dex/*.toml` writes: a count of
+    // triangles or meshes. Split at the comment the same way the two
+    // above are, so `triangles = 412 # after decimation` is 412.
+    let number = text.split('#').next().unwrap_or(text).trim();
+    if let Ok(value) = number.parse::<f64>()
+        && value.is_finite()
+    {
+        return Ok(Value::Number(value));
+    }
     Err(format!(
-        "`{text}` is neither a quoted string nor three numbers in brackets"
+        "`{text}` is not a quoted string, three numbers in brackets, or one number"
     ))
 }
 
@@ -1198,9 +1261,15 @@ mod tests {
     /// **A per-axis value has three axes.** Two numbers in a `scale`
     /// would otherwise silently become something, and the something
     /// would be wrong on whichever axis was left out.
+    ///
+    /// `2.0` is in the list because the dialect learned to read a bare
+    /// number for the dex next door, and a shared reader is only safe
+    /// while every key in a manifest table still asks for the kind it
+    /// wants: a scale written as one number is a mesh at the wrong size
+    /// on two axes, and it stays a refusal.
     #[test]
     fn a_per_axis_value_names_all_three_axes() {
-        for value in ["[1.0, 1.0]", "[1.0, 1.0, 1.0, 1.0]", "\"1.0\""] {
+        for value in ["[1.0, 1.0]", "[1.0, 1.0, 1.0, 1.0]", "\"1.0\"", "2.0"] {
             assert!(
                 parse(&format!(
                     "{PACK}\n[asset.crate]\npack = \"demo\"\nsource = \"a.fbx\"\nscale = {value}\n"

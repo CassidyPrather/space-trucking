@@ -1476,8 +1476,9 @@ pub fn sweep() -> Vec<Finding> {
 /// **The same sweep, told what is dressed in purchased art.**
 ///
 /// [`sweep`] hands it `art/manifest.toml` as it stands in this
-/// repository, which today declares nothing, so the two are the same
-/// answer. The parameter exists because a family nobody can catch out is
+/// repository, declared bindings and all — a dressed kind is swept as
+/// the body its declaration promises, in place of its whitebox parts.
+/// The parameter exists because a family nobody can catch out is
 /// a green tick that means nothing: every reading here was factored out
 /// of its own loop for exactly that reason (see [`off_plan`] and
 /// [`looked_at`]), and a fill declaration is the newest thing the sweep
@@ -4101,32 +4102,64 @@ mod tests {
         );
     }
 
-    /// **The manifest in this repository dresses nothing, so the sweep
-    /// is the whitebox's own.** The other half of the docket contract:
-    /// the docket is asserted equal to a sweep, and the sweep now reads a
-    /// file somebody edits by hand. A `dresses` line added to
-    /// `art/manifest.toml` moves the harness's reading of that kind off
-    /// the whitebox parts and onto the declared body, which is the point
-    /// — and it means "the docket is empty" is a claim about the manifest
-    /// as well as about the geometry. This says which.
+    /// **Whatever the manifest in this repository dresses is measured as
+    /// its declaration.** The other half of the docket contract: the
+    /// docket is asserted equal to a sweep, and the sweep reads a file
+    /// somebody edits by hand. This guard once pinned that file to
+    /// dressing nothing; the first real `dresses` line retired that
+    /// premise, and what is worth holding now is the opposite failure —
+    /// a declaration that parses, resolves to nothing, and falls back to
+    /// the whitebox without anyone noticing, so that "the docket is
+    /// empty" quietly stops being a claim about the declared body at all.
     #[test]
-    fn the_shipped_manifest_dresses_nothing_and_the_sweep_is_the_whiteboxs() {
+    fn every_kind_the_shipped_manifest_dresses_is_swept_as_its_declaration() {
         let shipped = Dressings::shipped();
+        for kind in Kind::ALL {
+            if shipped.of(kind).is_none() {
+                continue;
+            }
+            let drawn = dressed_scene(shipped, kind)
+                .expect("a kind the manifest dresses draws its declaration");
+            assert_eq!(
+                drawn.len(),
+                1,
+                "{kind:?} is dressed, so the sweep measures one declared body \
+                 in place of its whitebox parts, not {}",
+                drawn.len()
+            );
+        }
+    }
+
+    /// **The whitebox stays clean under the dress.** A dressed kind's
+    /// whitebox parts leave the shipped sweep — the manifest says the
+    /// declared body is what the kind IS — so a whitebox regression in a
+    /// dressed kind is a defect the ratchet can no longer see. This
+    /// sweeps with nothing dressed and refuses anything the docket does
+    /// not carry. One direction only, on purpose: a docket line that
+    /// exists only when dressed is legitimately absent from this sweep,
+    /// but a fresh finding here is a whitebox defect hiding behind a
+    /// purchased mesh.
+    #[test]
+    fn the_whitebox_stays_clean_under_the_dress() {
+        let found = sweep_dressed(&Dressings::default());
+        let mut keys: Vec<(String, String, String)> = found
+            .iter()
+            .map(|finding| {
+                let (room, rule, offender) = finding.key();
+                (room, rule.to_owned(), offender)
+            })
+            .collect();
+        keys.sort();
+        keys.dedup();
+        let want = docket();
+        let fresh: Vec<&(String, String, String)> =
+            keys.iter().filter(|key| !want.contains(key)).collect();
         assert!(
-            !shipped.any(),
-            "art/manifest.toml now dresses {:?}. That is not a fault — it is the \
-             feature working — but the docket is asserted equal to a sweep that reads \
-             this file, so the lines the declaration produces belong on the docket or \
-             the numbers want fixing.",
-            Kind::ALL
-                .into_iter()
-                .filter(|kind| shipped.of(*kind).is_some())
-                .collect::<Vec<_>>()
-        );
-        assert_eq!(
-            sweep().len(),
-            sweep_dressed(&Dressings::default()).len(),
-            "a manifest that dresses nothing swept differently from no manifest at all"
+            fresh.is_empty(),
+            "the undressed sweep caught {} thing(s) the docket does not carry — \
+             whitebox defects the dressed sweep cannot see:\n{}",
+            fresh.len(),
+            report(&found)
         );
     }
 
@@ -4134,9 +4167,10 @@ mod tests {
     /// same one a whitebox part would be.** The non-vacuity of the
     /// family above.
     ///
-    /// The shipped manifest declares nothing, so the shipped sweep can
-    /// only ever be green about this — and a rule that can only pass is
-    /// not a rule. So a manifest is written here, with the two ways a
+    /// The shipped manifest's own declarations are truthful, so the
+    /// shipped sweep can only ever be green about this — and a rule that
+    /// can only pass is not a rule. So a manifest is written here, with
+    /// the two ways a
     /// declaration can put a body somewhere it does not belong, and the
     /// sweep has to say so: a `fill` bigger than the cells the sim gave
     /// the kind (`face-fits`, the paint the aim cannot follow), and an

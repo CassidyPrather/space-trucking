@@ -1203,10 +1203,9 @@ offset = [0.25, 0.0, 0.0]
     /// learn to. So this is the other half of that check, and it lives
     /// here because here is where the bodies are.
     ///
-    /// **It passes vacuously today**, because the manifest declares no
-    /// bindings at all, and a guard that can only pass is not a guard.
-    /// What keeps it honest is the pair below it: the same reader, over a
-    /// manifest with a name nobody has, has to fail.
+    /// The shipped manifest's first binding made this guard live; what
+    /// keeps it honest either way is the pair below it: the same reader,
+    /// over a manifest with a name nobody has, has to fail.
     #[test]
     fn every_dressed_name_in_the_manifest_is_a_body_this_game_has() {
         let declared = Dressings::shipped();

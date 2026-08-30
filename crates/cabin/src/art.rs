@@ -1078,19 +1078,31 @@ offset = [0.25, 0.0, 0.0]
     /// front of the owner every time the bench was opened and closed
     /// without moving anything. This is that claim, asked of the real
     /// file rather than of a fixture — and the real file is only read.
+    ///
+    /// The numbers written are the numbers READ, not a constant: this
+    /// once wrote the identity because the identity was what the file
+    /// said, and the owner's first hand-tuned scale turned that constant
+    /// into a move. A manifest that dresses nothing asks nothing here;
+    /// the fixture round-trips below hold the writer either way.
     #[test]
     fn writing_back_what_the_shipped_manifest_says_changes_nothing() {
-        let out = rewritten(
-            SHIPPED,
-            "crate_small",
-            &[
-                ("scale", Vec3::ONE),
-                ("offset", Vec3::ZERO),
-                ("rotation", Vec3::ZERO),
-            ],
-        )
-        .expect("the shipped manifest carries crate_small");
-        assert_eq!(out, SHIPPED, "a save that moved nothing moved the file");
+        let declared = Dressings::read(SHIPPED).expect("the manifest this repository ships");
+        for kind in Kind::ALL {
+            let Some(dressing) = declared.of(kind) else {
+                continue;
+            };
+            let out = rewritten(
+                SHIPPED,
+                &dressing.id,
+                &[
+                    ("scale", dressing.scale),
+                    ("offset", dressing.offset),
+                    ("rotation", dressing.rotation),
+                ],
+            )
+            .expect("a table the manifest dresses can be rewritten");
+            assert_eq!(out, SHIPPED, "a save that moved nothing moved the file");
+        }
     }
 
     /// **A key the table never had is added to the right table**, and the

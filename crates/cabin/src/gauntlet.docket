@@ -14,13 +14,12 @@
 #
 # Blank lines and `#` comments are ignored.
 #
-# **The file is empty, and that is the whole of what it says today.**
+# **One line stands, and it is a tuning note rather than a code defect**
+# — see the end of this file.
 #
-# `the_gauntlet_finds_exactly_the_docket` asserts set equality against a
-# sweep that currently finds nothing, so the next line to appear here is
-# a defect that arrived after this was written. Adding one is not a
-# ratchet loosening: it is the work order for the pass that takes it off
-# again.
+# `the_gauntlet_finds_exactly_the_docket` asserts set equality against
+# the sweep, so a line appearing here is not a ratchet loosening: it is
+# the work order for the pass that takes it off again.
 #
 # The last thirty came off in three pieces and they are worth naming,
 # because each is a different shape of cure.
@@ -291,3 +290,19 @@
 # and every deck cell in front of one is a berth, so a control bolted
 # beside a doorway shares air with a berth by construction and there is
 # nowhere to move it to. The rule would have forbidden the latch.
+
+
+# ---------------------------------------------------------------------
+# Standing
+#
+# The first purchased binding, mid-tune. art/manifest.toml dresses
+# MysteriousCrate in crate_small at scale [2, 2, 2] with fill [1, 1, 1],
+# and that declaration promises a body reaching 0.264 m outside the
+# 0.528 m plan its cell grants — the pick face stops at the cell edge
+# and the paint does not. The sweep measures the promise, not the mesh,
+# so the cure is the owner's, on the machine that can see the crate:
+# declare the fill the scaled body actually has (a mesh that fills its
+# cell at that scale declares the matching fraction), or size it down.
+# Striking this line is how the reconciliation is proved.
+
+rigs | face-fits | MysteriousCrate crate_small (purchased)

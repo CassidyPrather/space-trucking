@@ -44,14 +44,25 @@ material whose every image reference is broken counts as silence — the
 atlas is rebound onto the importer's own node, keeping the wiring the
 importer built.
 
+**And a flag is not pixels.** The third colourless crate was the second
+one a level further in. Blender 5.0's importer answers the same
+unresolvable reference with a placeholder that reports `has_data` — and
+a size of nought by nought — so a rule that asked whether the pixels
+were in memory took the placeholder's word for it, left the material
+alone, and the refusal below, asking the same question, agreed.
+`usable_image` now asks for the image's size, which Blender can only
+answer by opening the file, and nought by nought is silence.
+
 **And silence is refused rather than shipped.** When a texture is handed
 over, `refuse_unless_painted` checks before exporting that at least one
 material in the scene bears an image that can be loaded, and exits
 nonzero naming the atlas if none does. That is part of the contract, not
-a nicety: both colourless crates were conversions that succeeded, printed
-their measurement, wrote a plausible file, and were only found out by
+a nicety: every colourless crate was a conversion that succeeded, printed
+its measurement, wrote a plausible file, and was only found out by
 somebody looking at a grey box in the cabin. A conversion handed a
-texture and painting nothing is now a refusal.
+texture and painting nothing is now a refusal — one that is exactly as
+good as the question `usable_image` asks, which is where the third crate
+got past it.
 
 One thing it still deliberately does not do: correct scale. A Synty FBX
 arrives at whatever unit its exporter chose, and guessing here would put
@@ -132,12 +143,20 @@ def usable_image(image):
     it, which is exactly what the old skip rule asked and exactly why a
     crate with a broken reference was left grey.
 
-    So the question is whether the pixels can be got at, by any of the
-    four routes Blender has: already decoded in memory, packed into the
-    file, generated rather than loaded, or a filepath that resolves to a
-    file that is actually there. Each is read defensively, because this
-    runs on a Blender version nothing in this repository has seen and a
-    missing attribute must mean "no" rather than a traceback.
+    And `has_data` is true of it too, on Blender 5.0, which is the whole
+    of the third colourless crate. The rule that replaced the first one
+    asked whether the pixels were already decoded in memory, and the new
+    importer's placeholder says they are — with a size of nought by
+    nought. A flag is not pixels. So the question is now the one only
+    the file can answer: how big is the image? Reading `size` makes
+    Blender open the file, a reference that resolves nowhere comes back
+    0×0, and 0×0 is silence whatever the flag beside it says. A packed
+    or generated image is still a yes, since both carry their pixels
+    with them by construction.
+
+    Read defensively, because this runs on a Blender version nothing in
+    this repository has seen and a missing attribute must mean "no"
+    rather than a traceback.
     """
     if image is None:
         return False
@@ -145,17 +164,11 @@ def usable_image(image):
         return True
     if getattr(image, "source", "") == "GENERATED":
         return True
-    if getattr(image, "has_data", False):
-        return True
-    filepath = getattr(image, "filepath", "") or ""
-    if not filepath:
-        return False
     try:
-        # `//` means "beside the .blend" and only Blender can expand it.
-        filepath = bpy.path.abspath(filepath, library=getattr(image, "library", None))
-    except Exception:  # noqa: BLE001 - an unexpanded path is still worth testing
-        pass
-    return os.path.isfile(filepath)
+        width, height = int(image.size[0]), int(image.size[1])
+    except Exception:  # noqa: BLE001 - a size nobody can read is no pixels
+        return False
+    return width > 0 and height > 0
 
 
 def paint_with(path):
@@ -253,18 +266,24 @@ def paint_material(material, image):
 def refuse_unless_painted(source, texture, atlas):
     """Refuse to export a scene that was handed an atlas and used it nowhere.
 
-    Part of the contract and not a nicety. Both colourless crates this
-    pipeline has shipped were conversions that SUCCEEDED: they exited
-    zero, printed their measurement, wrote a file of an entirely
-    plausible size, and were found out days later by somebody looking at
-    a grey box in the cabin. Nothing between here and that moment can
-    tell the difference, because a `.glb` with no image in it is a
-    perfectly valid `.glb`.
+    Part of the contract and not a nicety. Every colourless crate this
+    pipeline has shipped was a conversion that SUCCEEDED: it exited
+    zero, printed its measurement, wrote a file of an entirely plausible
+    size, and was found out later by somebody looking at a grey box in
+    the cabin. Nothing between here and that moment can tell the
+    difference, because a `.glb` with no image in it is a perfectly
+    valid `.glb`.
 
     So the one moment that can tell is this one, and it says so out loud.
     A texture was declared, staged, and handed over; if not one material
     in the scene about to be exported carries an image, the painting did
     not happen and the file is not written.
+
+    It is only as good as the question it asks. The third grey crate
+    walked straight through it, because `usable_image` took a
+    placeholder's `has_data` at its word and this asked `usable_image`;
+    the fix for that lives in that function and not in a second check
+    here, so that the two can never disagree about what counts.
 
     An image counts if it IS the atlas — `paint_with` loaded that one
     itself, from a path it had already checked was a file, so it is

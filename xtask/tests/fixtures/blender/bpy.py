@@ -2,12 +2,16 @@
 
 There is no Blender in continuous integration, in the container this was
 written in, or on any machine that has only ever built the whitebox — and
-the two defects the converter script has shipped were both defects in its
-CONTROL FLOW rather than in anything Blender did. The first crate came
-out grey because no atlas was ever handed over. The second came out grey
-because one was, and a skip rule read a broken texture reference as a
-material that knew its own texture. Neither needed a mesh, a renderer or
-a `.glb` to catch. Both needed somebody to run the script.
+the three defects the converter script has shipped were all defects in
+its CONTROL FLOW rather than in anything Blender did. The first crate
+came out grey because no atlas was ever handed over. The second came out
+grey because one was, and a skip rule read a broken texture reference as
+a material that knew its own texture. The third came out grey because
+the rewritten rule read Blender 5.0's placeholder for the same reference
+— `has_data` set, nought by nought — as pixels. None needed a mesh, a
+renderer or a `.glb` to catch. All three needed somebody to run the
+script against what Blender actually answers, which is why the `Image`
+below models the answer and not the assumption.
 
 So this is the smallest `bpy` the script can be run against: enough scene
 graph to import into, enough node graph to paint, and a trace on standard
@@ -44,13 +48,28 @@ def say(text):
 
 
 class Image:
-    def __init__(self, name, filepath, has_data=False, packed=None, source="FILE"):
+    def __init__(
+        self, name, filepath, has_data=False, packed=None, source="FILE", size=None
+    ):
         self.name = name
         self.filepath = filepath
         self.has_data = has_data
         self.packed_file = packed
         self.source = source
         self.library = None
+        self._size = size
+
+    @property
+    def size(self):
+        """What Blender answers by opening the file: the image's true
+        dimensions, or nought by nought for a path that resolves nowhere
+        — whatever `has_data` said. A scene may pin it, which is how the
+        Blender 5.0 placeholder is modelled: a flag that says yes over a
+        size that says nothing."""
+        if self._size is None:
+            self._size = (2048, 2048) if os.path.isfile(self.filepath) else (0, 0)
+        say(f"probed {self.name} size = {self._size[0]}x{self._size[1]}")
+        return self._size
 
 
 class Socket:
@@ -268,6 +287,23 @@ def build_scene():
                 "PolygonSciFiSpace_Texture_01_A.psd",
                 "C:/Synty/PolygonSciFiSpace/Textures/"
                 "PolygonSciFiSpace_Texture_01_A.psd",
+            )
+        )
+        return [Object("SM_Prop_Crate_01", MeshData([material]))]
+    if SCENE == "placeholder_claiming_data":
+        # The case that shipped the third grey crate: Blender 5.0's
+        # importer answers the same unresolvable reference with a
+        # placeholder that SAYS its pixels are in memory, and is nought
+        # by nought. The path is the one SM_Prop_Crate_01.fbx really
+        # carries — Synty's own Dropbox, and a City atlas at that.
+        material = Material("M_Crate")
+        material.wire_image(
+            Image(
+                "PolygonSciFiCity_Texture_01_A.psd",
+                "U:/Dropbox/SyntyStudios/PolygonSciFiSpace/Working/_Textures/"
+                "PolygonSciFiCity_Texture_01_A.psd",
+                has_data=True,
+                size=(0, 0),
             )
         )
         return [Object("SM_Prop_Crate_01", MeshData([material]))]

@@ -7,31 +7,37 @@
 //! nowhere, because there is no Blender in continuous integration or in
 //! the container this was written in.
 //!
-//! That gap shipped two grey crates. The first was an atlas nobody
+//! That gap shipped three grey crates. The first was an atlas nobody
 //! handed over. The second was an atlas handed over and thrown away: a
 //! Synty FBX names its texture by the path of the tree it was exported
 //! from, Blender answers a reference it cannot resolve with an empty
 //! placeholder image, and the script's skip rule — "leave alone any
 //! material that already names an image" — read that placeholder as a
-//! material that knew its own texture. The conversion succeeded, printed
-//! its measurement, wrote a file the same size as the colourless one it
+//! material that knew its own texture. The third was the second a level
+//! further in: the rewritten rule asked the placeholder whether its
+//! pixels were in memory, and Blender 5.0's placeholder says they are,
+//! at nought by nought. Each conversion succeeded, printed its
+//! measurement, wrote a file the same size as the colourless one it
 //! replaced, and was found out by somebody looking at a grey box.
 //!
-//! Neither defect was in Blender. Both were in the script's control
+//! None of the three was in Blender. All were in the script's control
 //! flow, which is a thing a fake `bpy` can execute — see
 //! `tests/fixtures/blender/bpy.py`, which builds a scene, records every
 //! image binding and node the script makes, and lets a guard read the
-//! decisions back.
+//! decisions back. The third is also the reason the fake answers `size`
+//! the way Blender does rather than the way the script hoped: a fake
+//! that encodes the assumption under test proves nothing about it.
 //!
 //! **What this proves and what it cannot.** Proved here: that a broken
-//! reference is repainted rather than skipped, that the repaint reuses
-//! the importer's own node instead of building a second one beside it,
-//! that a reference which resolves is left alone, that a conversion
-//! handed an atlas and painting nothing refuses and writes no file, and
-//! that a conversion handed no atlas is unchanged. Not proved here, and
-//! not provable without the owner's disk: that a repainted material
-//! exports as a textured glTF. `docs/ART_PIPELINE.md` names the command
-//! that asks that.
+//! reference is repainted rather than skipped, that a placeholder which
+//! claims data and measures nought by nought is repainted too, that the
+//! repaint reuses the importer's own node instead of building a second
+//! one beside it, that a reference which resolves is left alone, that a
+//! conversion handed an atlas and painting nothing refuses and writes no
+//! file, and that a conversion handed no atlas is unchanged. Not proved
+//! here, and not provable without the owner's disk: that a repainted
+//! material exports as a textured glTF. `docs/ART_PIPELINE.md` names the
+//! command that asks that.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -162,6 +168,35 @@ fn a_broken_texture_reference_is_repainted_on_the_node_the_importer_built() {
     assert!(ran.glb.is_file(), "{}", ran.said);
 }
 
+/// **A placeholder that says it holds data, and is nought by nought,
+/// counts as unpainted.**
+///
+/// The third grey crate, and the second one a level further in. With
+/// the atlas declared, staged and handed over, and the rebind above in
+/// place, the same crate came out grey again — because Blender 5.0's
+/// importer answers the same unresolvable `.psd` reference with a
+/// placeholder whose `has_data` is true and whose size is 0×0, and the
+/// skip rule took the flag at its word. The refusal, asking the same
+/// question, agreed with it. A flag is not pixels: the rule now asks
+/// the size, which only the file can answer.
+#[test]
+fn a_placeholder_that_claims_data_and_has_no_pixels_is_repainted() {
+    let ran = script!("claims-data", "placeholder_claiming_data", true);
+    assert!(ran.ok, "{}", ran.said);
+    assert!(
+        ran.said
+            .contains("M_Crate/imported_diffuse image = atlas.png"),
+        "a placeholder with `has_data` set and no pixels was taken for a texture that loaded:\n{}",
+        ran.said
+    );
+    assert!(
+        !ran.said.contains("made ShaderNodeTexImage"),
+        "a second image node was built beside the importer's wiring:\n{}",
+        ran.said
+    );
+    assert!(ran.glb.is_file(), "{}", ran.said);
+}
+
 /// **An image node holding no image at all is repainted the same way.**
 /// The other shape a broken reference takes, depending on which importer
 /// answered — and Blender 5.0 dropped the `io_scene_fbx` add-on that
@@ -232,12 +267,13 @@ fn a_material_naming_nothing_still_gets_the_atlas_built_for_it() {
 /// writes nothing.**
 ///
 /// Silence becoming refusal, which is the part of this that outlives the
-/// particular defect. Both grey crates were conversions that SUCCEEDED —
+/// particular defect. Every grey crate was a conversion that SUCCEEDED —
 /// exit zero, a measurement printed, a file of an entirely plausible
 /// size — and a `.glb` with no image in it is a perfectly valid `.glb`,
 /// so nothing between the converter and the cabin could tell. The script
 /// is the only program in the pipeline that can see a material, so the
-/// check belongs here and nowhere else.
+/// check belongs here and nowhere else — and it asks `usable_image`, so
+/// it is exactly as sharp as that question and no sharper.
 #[test]
 fn an_atlas_that_reached_no_material_is_refused_rather_than_exported() {
     let ran = script!("refusal", "withheld_node_tree", true);

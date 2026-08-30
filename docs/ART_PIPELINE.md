@@ -562,6 +562,17 @@ leaves the whole of it alone**, even if another slot is broken.
 Overruling half of what a file says is how a fallback turns into a
 correction.
 
+**And a flag is not pixels.** That cost a third. With the atlas declared,
+staged, handed over and the rebind in place, the same crate came out grey
+under Blender 5.0, whose importer answers the same unresolvable `.psd`
+reference with a placeholder that reports `has_data` — and a size of
+nought by nought. The rule that asked whether the pixels were already in
+memory took the flag at its word, and the refusal below, asking the same
+question, agreed with it. So `usable_image` now asks for the image's
+**size**, which Blender can only answer by opening the file: a reference
+that resolves nowhere comes back 0×0, and 0×0 is silence whatever the
+flag beside it says.
+
 **And a conversion handed an atlas it painted nothing with is refused.**
 Before exporting, the script checks that at least one material in the
 scene bears an image that can be loaded, and if none does it exits
@@ -576,15 +587,22 @@ the declared atlas reached no material: <path to the staged atlas>
   is refused here rather than discovered in the cabin.
 ```
 
-This is part of the converter contract and not a nicety. Both grey crates
-were conversions that **succeeded**: exit zero, a measurement printed, a
-file of an entirely plausible size — and a `.glb` with no image in it is
-a perfectly valid `.glb`, so nothing between the converter and the cabin
-could tell. The script is the only program in the pipeline that can see a
-material, so the check belongs there and nowhere else. It applies only
-when a texture was handed over: a manifest with no `texture` line has
-declared nothing, and a grey result there is an unfinished manifest
-rather than a failed conversion.
+This is part of the converter contract and not a nicety. All three grey
+crates were conversions that **succeeded**: exit zero, a measurement
+printed, a file of an entirely plausible size — and a `.glb` with no
+image in it is a perfectly valid `.glb`, so nothing between the converter
+and the cabin could tell. The script is the only program in the pipeline
+that can see a material, so the check belongs there and nowhere else. It
+applies only when a texture was handed over: a manifest with no `texture`
+line has declared nothing, and a grey result there is an unfinished
+manifest rather than a failed conversion.
+
+It is also exactly as sharp as the question it asks. The third crate
+walked through it, because the refusal counts an image by `usable_image`
+and `usable_image` was the thing that was wrong. That is deliberate and
+stays so: one predicate, used by the painter and the refusal alike, so
+the two can never disagree about what counts as painted — which means a
+fix to what counts is a fix to that one function.
 
 A converter that ignores the third argument is **not in breach** — the
 atlas simply resolves nothing, which is the honest outcome for a program
@@ -668,19 +686,23 @@ feature is `image/png`, and a Blender-exported `.glb` embeds its textures
 as PNG unless the source was a JPEG. If a pack ever ships one that is
 not, `"jpeg"` on the `art` line is the fix.
 
-**That prediction is still a prediction.** It was written down as
-checked, on the day the atlas first became an argument — and it was not,
-because that conversion painted nothing: the `.glb` it produced was byte
-for byte the size of the colourless one before it, with no PNG signature
-anywhere inside. No file this pipeline has produced has yet carried a
-texture, so nothing on the loading side has been exercised by one. What
-holds up is the reasoning: a glTF with an embedded image is read by the
-same loader as one without, the image chunk is decoded by the same
-registry `--shot` writes through, and the atlases the manifest names are
-PNG (`PolygonSciFiSpace_Texture_01_A.png`, on `art/manifest.toml`'s only
-asset line), so `"jpeg"` stays one word away and unneeded. The first
-`resolve` that survives the converter's new refusal is what turns that
-back into a fact.
+**That prediction stayed a prediction for two fixes longer than it
+should have.** It was written down as checked, on the day the atlas first
+became an argument — and it was not, because that conversion painted
+nothing, and neither did the one after it: each `.glb` was byte for byte
+the size of the colourless one before it, with no PNG signature anywhere
+inside. It is a fact now. The first `resolve` after the third fix ("a
+flag is not pixels", above) wrote a `.glb` eleven times the size of the
+grey ones, with the atlas embedded as `image/png` and bound as the one
+material's base colour; the cabin read it through the loader with no
+complaint on stderr and drew the crate in the atlas's colours — checked
+on the owner's machine with `--fixture --shot`, which is the only place
+it can be. The reasoning that held it up in the meantime still holds: a
+glTF with an embedded image is read by the same loader as one without,
+the image chunk is decoded by the same registry `--shot` writes through,
+and the atlases the manifest names are PNG
+(`PolygonSciFiSpace_Texture_01_A.png`, on `art/manifest.toml`'s only
+asset line), so `"jpeg"` stays one word away and unneeded.
 
 Eight crates: `bevy_gltf`, `bevy_world_serialization`, `gltf`,
 `gltf-json`, `gltf-derive`, `base64`, `byteorder`, `inflections`.
@@ -853,19 +875,28 @@ repository did not write.
 
 **There is no Blender in continuous integration or in the container this
 was written in**, and for a while that meant those guards stopped at the
-argument. They no longer do. Both grey crates were defects in the
+argument. They no longer do. All three grey crates were defects in the
 converter script's **control flow** rather than in anything Blender did,
 and control flow is a thing a fake `bpy` can execute:
 `xtask/tests/fixtures/blender/bpy.py` builds a scene, records every image
 binding and node the script makes, and `xtask/tests/converter_script.rs`
 runs the real `fbx_to_gltf.py` against it under `python3` and reads the
 decisions back. Proved there: that a broken texture reference is
-repainted rather than skipped, that the repaint reuses the importer's own
-node instead of building a second one beside it, that a reference which
-resolves is left alone, that a material naming nothing still gets a node
-built for it, that an atlas which reached no material is refused and no
-file written, and that a conversion handed no texture is unchanged. A
-machine with no Python says so and skips, rather than passing quietly.
+repainted rather than skipped, that a placeholder claiming data and
+measuring nought by nought is repainted too, that the repaint reuses the
+importer's own node instead of building a second one beside it, that a
+reference which resolves is left alone, that a material naming nothing
+still gets a node built for it, that an atlas which reached no material
+is refused and no file written, and that a conversion handed no texture
+is unchanged. A machine with no Python says so and skips, rather than
+passing quietly.
+
+One lesson of the third crate is about the fake itself. Its `Image`
+answered `has_data` the way the script hoped a placeholder would, so the
+guard for the second crate passed against a Blender that does not exist.
+The fake now answers `size` the way Blender does — by whether the file is
+there — and the scene for the third crate pins the flag high over a size
+of nothing, which is what Blender 5.0 actually hands back.
 
 What that stops at is Blender itself. That a repainted material survives
 `export_scene.gltf`, that the resulting `.glb` carries the PNG, and that
@@ -971,6 +1002,16 @@ over, because that FBX named a texture by a path from the machine it was
 exported on and Blender turned the unresolvable reference into an empty
 placeholder image — which the skip rule read as knowledge. A reference is
 not knowledge; only pixels are. Same section.
+
+**And a sixth, from Blender 5.0: "an image whose `has_data` is true has
+pixels."** It does not. The new FBX importer's placeholder for a
+reference it cannot resolve says `has_data` and measures nought by
+nought, while the atlas the script loads itself says the opposite — no
+data yet, two thousand and forty-eight square — because it has not been
+read into memory. The flag says whether Blender holds a buffer; the size
+says whether there is anything in it. That was the third grey crate, and
+the one the refusal did not catch, because the refusal asked the same
+flag. Same section.
 
 ## Where it lives, and what that costs
 

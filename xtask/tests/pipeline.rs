@@ -27,7 +27,8 @@
 //! about the atlas ends at the argument — that a real Synty zip is laid
 //! out the way these are, and that `tar` opens a zip where it is bsdtar
 //! rather than GNU tar — the Linux runner these guards meet has GNU tar,
-//! so what runs here is the fallback to `unzip`.
+//! so what runs there is the fallback to `unzip`, and a Windows checkout
+//! is where the bsdtar route gets exercised.
 //! `docs/ART_PIPELINE.md` says which commands close those gaps.
 
 use std::path::{Path, PathBuf};
@@ -170,47 +171,69 @@ download = \"POLYGON Demonstration, the Source Files download\"
 /// The smallest conforming converter: it copies its source to its
 /// destination, measures nothing, and ignores anything else it is handed.
 ///
-/// Two lines of shell rather than `/bin/cp` itself, and the difference is
-/// the whole of what the contract gained. A converter is now run as
+/// Two lines of script rather than `/bin/cp` itself, and the difference
+/// is the whole of what the contract gained. A converter is now run as
 /// `<program> <source> <destination> [texture]`, and `cp` is a program
 /// that means something quite specific by a third argument — "copy both
 /// of those into that directory" — so the fake has to name the two
 /// arguments it wants. It is still cp; it just says which.
-#[cfg(unix)]
 fn copying_converter(dir: &Path) -> PathBuf {
-    use std::os::unix::fs::PermissionsExt as _;
-    let path = dir.join("copy.sh");
-    write(&path, "#!/bin/sh\ncp \"$1\" \"$2\"\n");
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
-        .expect("a converter this test can run");
+    stand_in_converter(dir, "copy", "", "")
+}
+
+/// Write a stand-in converter the host can actually run — a shell script
+/// on unix, the same thoughts as a `.cmd` on Windows — which is what
+/// lets this suite compile and run on the owner's own machine and not
+/// only in the Linux container. Both dialects copy their first argument
+/// to their second; `also_sh` and `also_cmd` are whatever else the
+/// particular stand-in does, said once in each dialect.
+fn stand_in_converter(dir: &Path, name: &str, also_sh: &str, also_cmd: &str) -> PathBuf {
+    if cfg!(windows) {
+        let path = dir.join(format!("{name}.cmd"));
+        write(
+            &path,
+            &format!("@echo off\r\ncopy /y \"%~1\" \"%~2\" >nul\r\n{also_cmd}"),
+        );
+        return path;
+    }
+    let path = dir.join(format!("{name}.sh"));
+    write(&path, &format!("#!/bin/sh\ncp \"$1\" \"$2\"\n{also_sh}"));
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
+            .expect("a converter this test can run");
+    }
     path
 }
 
 /// A converter that copies, and writes down every argument it was handed,
 /// one per line, with a blank line after each run. The log is the second
 /// path handed back.
-#[cfg(unix)]
+///
+/// The `.cmd` dialect puts each redirection before its `echo`, and that
+/// is not decoration: `echo <text>>>log` hands cmd a text whose last
+/// character might be a digit, and `2>>` is a stream redirection.
 fn recording_converter(dir: &Path) -> (PathBuf, PathBuf) {
-    use std::os::unix::fs::PermissionsExt as _;
     let log = dir.join("arguments.txt");
-    let path = dir.join("record.sh");
-    write(
-        &path,
+    let path = stand_in_converter(
+        dir,
+        "record",
         &format!(
-            "#!/bin/sh\ncp \"$1\" \"$2\"\n\
-             for arg in \"$@\"; do printf '%s\\n' \"$arg\" >> '{log}'; done\n\
+            "for arg in \"$@\"; do printf '%s\\n' \"$arg\" >> '{log}'; done\n\
              printf '\\n' >> '{log}'\n",
             log = log.display()
         ),
+        &format!(
+            "for %%a in (%*) do >>\"{log}\" echo %%~a\r\n>>\"{log}\" echo.\r\n",
+            log = log.display()
+        ),
     );
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
-        .expect("a converter this test can run");
     (path, log)
 }
 
 /// What one run of the recording converter above was handed, and nothing
 /// of any other run.
-#[cfg(unix)]
 fn handed(log: &Path) -> Vec<String> {
     std::fs::read_to_string(log)
         .expect("the converter wrote down what it was handed")
@@ -530,12 +553,10 @@ fn the_cabin_ships_the_whitebox_unless_art_is_asked_for() {
 /// it is the number a person can check by hand — the manifest carries it
 /// and `sha256sum` prints it.
 ///
-/// Unix only, because the stand-in converter is `cp`. What it stands in
-/// for is real: `$ART_CONVERTER` is any program taking a source and a
-/// destination, which is what `FBX2glTF` already is. What it cannot stand
-/// in for is a real FBX becoming a real glTF, and this guard does not
-/// claim to.
-#[cfg(unix)]
+/// The stand-in converter stands in for something real: `$ART_CONVERTER`
+/// is any program taking a source and a destination, which is what
+/// `FBX2glTF` already is. What it cannot stand in for is a real FBX
+/// becoming a real glTF, and this guard does not claim to.
 #[test]
 fn a_resolved_asset_is_cached_under_the_digest_of_its_source() {
     let dir = scratch("content-addressed");
@@ -600,7 +621,6 @@ fn a_resolved_asset_is_cached_under_the_digest_of_its_source() {
 /// **A search over the packs prints the manifest lines to paste.** A
 /// Synty pack is thousands of files whose names nobody guesses, and the
 /// step this tool has to remove is reading them off a store page.
-#[cfg(unix)]
 #[test]
 fn a_search_prints_the_manifest_line_for_what_it_finds() {
     let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
@@ -931,13 +951,14 @@ fn a_member_that_climbs_out_of_the_tree_is_never_offered_as_a_hit() {
         &manifest,
         &format!("{PACK}\n[asset.evil]\npack = \"demo\"\nsource = \"../evil.fbx\"\n"),
     );
+    let converter = copying_converter(&dir);
     let (resolved, said) = xtask(
         &["art", "resolve"],
         &[
             ("ART_MANIFEST", &manifest),
             ("SYNTY_STORE", &store),
             ("ART_CACHE", &cache),
-            ("ART_CONVERTER", Path::new("/bin/cp")),
+            ("ART_CONVERTER", &converter),
         ],
     );
     assert!(!resolved, "{said}");
@@ -960,6 +981,13 @@ fn a_member_that_climbs_out_of_the_tree_is_never_offered_as_a_hit() {
 /// `unzip`. Saying "not on this machine" about a mesh that is sitting in
 /// the archive would send somebody looking through their downloads for a
 /// pack they already have.
+///
+/// Unix only, and it stays so: the premise — a machine with no zip
+/// reader — is staged by pointing `PATH` at an empty directory, and on
+/// Windows a program launch searches System32 as well, where `tar.exe`
+/// (bsdtar, which reads zip) has lived since Windows 10 build 1803. The
+/// premise cannot be constructed there, and the situation it guards is
+/// Linux's anyway: GNU tar refusing a zip, and `unzip` as the answer.
 #[cfg(unix)]
 #[test]
 fn a_machine_that_cannot_open_a_zip_is_told_which_program_to_install() {
@@ -1210,22 +1238,17 @@ fn a_search_reads_a_packs_unitypackage_only_when_nothing_else_is_there() {
 /// shaped for. `$ART_CONVERTER` is documented as any program taking a
 /// source and a destination, and the day it has to be a program that
 /// links a glTF library is the day nobody can write one.
-#[cfg(unix)]
 fn measuring_converter(dir: &Path, aabb: &str) -> PathBuf {
-    use std::os::unix::fs::PermissionsExt as _;
-    let path = dir.join("convert.sh");
-    write(
-        &path,
-        &format!("#!/bin/sh\ncp \"$1\" \"$2\"\nprintf 'aabb {aabb}\\n'\n"),
-    );
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
-        .expect("a converter this test can run");
-    path
+    stand_in_converter(
+        dir,
+        "convert",
+        &format!("printf 'aabb {aabb}\\n'\n"),
+        &format!("echo aabb {aabb}\r\n"),
+    )
 }
 
 /// A one-asset store and manifest for the fill guards below, with
 /// whatever `dresses`, `scale` and `fill` lines the caller wants on it.
-#[cfg(unix)]
 fn dressed_store(dir: &Path, lines: &str) -> (PathBuf, PathBuf) {
     let store = dir.join("store");
     write(&store.join("demo/SourceFiles/FBX/SM_Crate.fbx"), "a crate");
@@ -1250,7 +1273,6 @@ fn dressed_store(dir: &Path, lines: &str) -> (PathBuf, PathBuf) {
 /// the converter actually found round it, which is what lets the cabin
 /// put the mesh in the middle of its berth instead of wherever the
 /// exporter happened to leave the origin.
-#[cfg(unix)]
 #[test]
 fn what_a_mesh_dresses_and_what_it_measures_reach_the_index() {
     let dir = scratch("dresses");
@@ -1316,10 +1338,6 @@ fn what_a_mesh_dresses_and_what_it_measures_reach_the_index() {
 /// stop, moved one level up. The converter is the only program in the
 /// pipeline that can see a mesh, so this is the only moment the two can
 /// be made to meet.
-///
-/// Unix only, for the same reason the content-addressing guard is: the
-/// stand-in converter is a shell script.
-#[cfg(unix)]
 #[test]
 fn a_mesh_that_is_not_the_size_its_fill_claims_stops_the_run() {
     let dir = scratch("fill-promise");
@@ -1387,7 +1405,6 @@ fn a_mesh_that_is_not_the_size_its_fill_claims_stops_the_run() {
 /// make the escape hatch useless; indexing them silently would make the
 /// `fill` check look like it ran. So the run says which assets went
 /// unchecked and what a converter would have to print to be checked.
-#[cfg(unix)]
 #[test]
 fn a_converter_that_measures_nothing_says_which_promises_went_unchecked() {
     let dir = scratch("unmeasured");
@@ -1396,13 +1413,14 @@ fn a_converter_that_measures_nothing_says_which_promises_went_unchecked() {
         "dresses = \"cargo/suspicious_crate\"\nfill = [1.0, 1.0, 1.0]\n",
     );
     let cache = dir.join("cache");
+    let converter = copying_converter(&dir);
     let (ok, said) = xtask(
         &["art", "resolve"],
         &[
             ("ART_MANIFEST", &manifest),
             ("SYNTY_STORE", &store),
             ("ART_CACHE", &cache),
-            ("ART_CONVERTER", Path::new("/bin/cp")),
+            ("ART_CONVERTER", &converter),
         ],
     );
     assert!(ok, "an unmeasured mesh was refused:\n{said}");
@@ -1413,7 +1431,6 @@ fn a_converter_that_measures_nothing_says_which_promises_went_unchecked() {
 /// A pack holding one mesh and one atlas, loose, and hand back the store.
 /// The mesh names nothing — which is the Synty case this whole texture
 /// argument exists for.
-#[cfg(unix)]
 fn painted_store(dir: &Path) -> PathBuf {
     let store = dir.join("store");
     write(
@@ -1428,7 +1445,6 @@ fn painted_store(dir: &Path) -> PathBuf {
 }
 
 /// One asset over that pack, with or without the `texture` line.
-#[cfg(unix)]
 fn painted_manifest(dir: &Path, name: &str, texture: bool) -> PathBuf {
     let declared = if texture {
         "texture = \"SourceFiles/Textures/atlas.png\"\n"
@@ -1461,7 +1477,6 @@ fn painted_manifest(dir: &Path, name: &str, texture: bool) -> PathBuf {
 /// The staged copies stay, and are still asserted above, because an FBX
 /// that names its own texture still resolves against them and still wins.
 /// The declaration fills a silence; it does not overrule a statement.
-#[cfg(unix)]
 #[test]
 fn a_declared_texture_is_handed_to_the_converter_and_silence_is_handed_as_silence() {
     let dir = scratch("texture-argument");
@@ -1540,7 +1555,6 @@ fn a_declared_texture_is_handed_to_the_converter_and_silence_is_handed_as_silenc
 /// deleting it costs one `resolve`; being told to delete it is still a
 /// step nobody should have to be told about, because the run that ought
 /// to know is the run that has both files in front of it.
-#[cfg(unix)]
 #[test]
 fn a_mesh_converted_before_its_atlas_was_declared_is_converted_again() {
     let dir = scratch("atlas-declared-later");
@@ -1613,7 +1627,6 @@ fn a_mesh_converted_before_its_atlas_was_declared_is_converted_again() {
 /// is the name carrying what made them. A file at the old name is
 /// therefore not found, not overwritten, and not counted: it is simply
 /// somewhere nothing looks, which is what the cache being derived means.
-#[cfg(unix)]
 #[test]
 fn a_converted_file_named_after_the_source_alone_is_not_one_this_pipeline_made() {
     let dir = scratch("older-recipe");
@@ -1668,7 +1681,6 @@ fn a_converted_file_named_after_the_source_alone_is_not_one_this_pipeline_made()
 }
 
 /// The one `glb` line in the cache's index.
-#[cfg(unix)]
 fn indexed_glb(cache: &Path) -> String {
     std::fs::read_to_string(cache.join("index.toml"))
         .expect("an index")

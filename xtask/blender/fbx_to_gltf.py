@@ -234,7 +234,10 @@ def paint_material(material, image):
     broken. Overruling half of what a file says is how a fallback turns
     into a correction, and this is a fallback.
     """
-    if not material.use_nodes:
+    # Read through getattr: Blender 5.0 deprecates `Material.use_nodes`
+    # and expects 6.0 to remove it, and the removal will mean what a
+    # missing attribute means here — every material simply has its tree.
+    if not getattr(material, "use_nodes", True):
         # Setting this builds the default Principled tree, which is what
         # the branch below then wires the image into.
         material.use_nodes = True
@@ -298,7 +301,14 @@ def refuse_unless_painted(source, texture, atlas):
             if material is None or any(material is one for one in materials):
                 continue
             materials.append(material)
-            tree = getattr(material, "node_tree", None) if material.use_nodes else None
+            tree = (
+                getattr(material, "node_tree", None)
+                # getattr for the reason paint_material reads it so: a
+                # Blender that removed the flag is one where every
+                # material has its tree.
+                if getattr(material, "use_nodes", True)
+                else None
+            )
             if tree is not None and any(
                 node.type == "TEX_IMAGE"
                 and (node.image is atlas or usable_image(node.image))

@@ -177,16 +177,29 @@ class Material:
         self.name = name
         self.node_tree = None
         self.withholds_nodes = withholds_nodes
+        self._sheds = False
         self._use_nodes = False
         if use_nodes:
             self.use_nodes = True
 
+    def shed_use_nodes(self):
+        """Become a Blender 6 material: the node tree stays, and asking
+        after `use_nodes` — reading it or setting it — answers the way a
+        removed attribute answers. 5.0's deprecation warning names 6.0
+        as when this happens, so it is a scene worth being able to
+        stage before it happens to somebody's art machine."""
+        self._sheds = True
+
     @property
     def use_nodes(self):
+        if self._sheds:
+            raise AttributeError("'Material' object has no attribute 'use_nodes'")
         return self._use_nodes
 
     @use_nodes.setter
     def use_nodes(self, value):
+        if self._sheds:
+            raise AttributeError("'Material' object has no attribute 'use_nodes'")
         self._use_nodes = value
         if not value or self.node_tree is not None or self.withholds_nodes:
             return
@@ -310,6 +323,16 @@ def build_scene():
     if SCENE == "image_node_without_image":
         material = Material("M_Crate")
         material.wire_image(None)
+        return [Object("SM_Prop_Crate_01", MeshData([material]))]
+    if SCENE == "always_nodes":
+        # Blender 6.0, as 5.0's deprecation warning describes it: the
+        # node tree is simply there and `use_nodes` is not. The importer
+        # wired an image node that holds nothing — the file was missing —
+        # so the atlas must still be rebound, by a script that never
+        # reads the attribute bare.
+        material = Material("M_Crate")
+        material.wire_image(None)
+        material.shed_use_nodes()
         return [Object("SM_Prop_Crate_01", MeshData([material]))]
     if SCENE == "loaded_reference":
         # An FBX that knew where its texture was, and the texture is

@@ -197,6 +197,33 @@ fn a_placeholder_that_claims_data_and_has_no_pixels_is_repainted() {
     assert!(ran.glb.is_file(), "{}", ran.said);
 }
 
+/// **A Blender that has shed `use_nodes` is painted, not crashed.**
+///
+/// Blender 5.0 deprecates `Material.use_nodes` — "expected to be removed
+/// in Blender 6.0", when every material will simply have its node tree.
+/// The script reads the flag in two places, and a bare read on that
+/// Blender is an `AttributeError` where a conversion should be. So the
+/// fake models the future: a tree already built, an image node holding
+/// nothing, and no `use_nodes` to ask — and the script has to treat the
+/// absence as "always nodes", repaint the node in place, and export.
+#[test]
+fn a_blender_that_has_shed_use_nodes_is_painted_not_crashed() {
+    let ran = script!("shed-use-nodes", "always_nodes", true);
+    assert!(ran.ok, "{}", ran.said);
+    assert!(
+        ran.said
+            .contains("M_Crate/imported_diffuse image = atlas.png"),
+        "a material on a Blender without `use_nodes` was not repainted:\n{}",
+        ran.said
+    );
+    assert!(
+        !ran.said.contains("made ShaderNodeTexImage"),
+        "{}",
+        ran.said
+    );
+    assert!(ran.glb.is_file(), "{}", ran.said);
+}
+
 /// **An image node holding no image at all is repainted the same way.**
 /// The other shape a broken reference takes, depending on which importer
 /// answered — and Blender 5.0 dropped the `io_scene_fbx` add-on that

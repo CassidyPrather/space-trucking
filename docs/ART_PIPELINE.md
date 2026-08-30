@@ -887,9 +887,11 @@ measuring nought by nought is repainted too, that the repaint reuses the
 importer's own node instead of building a second one beside it, that a
 reference which resolves is left alone, that a material naming nothing
 still gets a node built for it, that an atlas which reached no material
-is refused and no file written, and that a conversion handed no texture
-is unchanged. A machine with no Python says so and skips, rather than
-passing quietly.
+is refused and no file written, that a conversion handed no texture is
+unchanged, and that a Blender which has shed `Material.use_nodes` — 5.0
+deprecates it and expects 6.0 to remove it — is painted rather than
+crashed. A machine with no Python says so and skips, rather than passing
+quietly.
 
 One lesson of the third crate is about the fake itself. Its `Image`
 answered `has_data` the way the script hoped a placeholder would, so the

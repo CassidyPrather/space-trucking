@@ -622,6 +622,8 @@ mod loading {
     use space_trucking::sim::cargo::KIND_COUNT;
 
     use super::{Dressing, Dressings};
+    use crate::Phase;
+    use crate::outline::{MaskBody, MaskProxy};
 
     /// **Where the resolved art is**: `$ART_CACHE` if it is set, and
     /// `art/cache` beside wherever the game was started otherwise —
@@ -674,7 +676,19 @@ mod loading {
                 .as_ref()
                 .map(|(scene, dressing)| (scene, dressing))
         }
+
+        /// **Put one kind's scene and numbers in.** [`load_index`] fills
+        /// the table this way as it reads, and so does a guard that
+        /// needs a dressed kind without a cache on the disk under it —
+        /// the same reason [`Cache`] is a resource rather than a call.
+        pub fn dress(&mut self, kind: Kind, scene: Handle<WorldAsset>, dressing: Dressing) {
+            self.scenes[kind.index()] = Some((scene, dressing));
+        }
     }
+
+    /// **A body of a purchased scene that has not been spoken for**: a
+    /// mesh, not already marked, and not one of the mask's own copies.
+    type Unmarked = (With<Mesh3d>, Without<MaskBody>, Without<MaskProxy>);
 
     /// **A purchased body, as it stands in the world.** Put on the
     /// entity `pieces::build_kind` spawns the scene under, which is the
@@ -697,7 +711,20 @@ mod loading {
         app.init_resource::<Cache>()
             .init_resource::<Dressed>()
             .init_resource::<Dressings>()
-            .add_systems(Startup, load_index);
+            .add_systems(Startup, load_index)
+            // **Before the pass that reads the mark, and that is a claim
+            // rather than a tidiness.** A body that appeared during this
+            // frame's `SpawnScene` is marked here and outlined by
+            // `paint` in the same frame; unordered, which of the two
+            // frames the line first showed up in would be the
+            // scheduler's to pick, and what the mask draws is not a
+            // thing this game lets a thread win a race over.
+            .add_systems(
+                Update,
+                mask_dressed
+                    .in_set(Phase::View)
+                    .before(crate::outline::paint),
+            );
     }
 
     pub(super) fn load_index(
@@ -747,14 +774,62 @@ mod loading {
             // path out of the index is a path the server can take
             // verbatim. `#Scene0` is `GltfAssetLabel::Scene(0)`, glTF's
             // first scene, which is the one a single-object export has.
-            dressed.scenes[kind.index()] =
-                Some((assets.load(format!("{glb}#Scene0")), dressing.clone()));
+            dressed.dress(kind, assets.load(format!("{glb}#Scene0")), dressing.clone());
         }
         // The numbers, kept where something with no asset server can
         // read them: the bench reads this and never touches a handle,
         // which is what lets a scripted session drive it with no window,
         // no cache and no mesh.
         *declared = read;
+    }
+
+    /// **Carry a rig's mask onto the bodies a purchased mesh arrives
+    /// as**, so the outline follows a bought silhouette the way it
+    /// follows a cut one.
+    ///
+    /// A whitebox part is marked in the breath it is spawned in
+    /// (`pieces::RigParts::mask`), because the part is right there. A
+    /// dressed kind has nothing to mark at that moment: `build_kind`
+    /// spawns a `WorldAssetRoot` and the meshes under it appear frames
+    /// later, when the loader has read the file and the spawner has
+    /// copied the scene into the world. So the root wears the mark and
+    /// this hands it down.
+    ///
+    /// **Only the identity travels, and that is the whole reason this is
+    /// four lines rather than a second selection system.** What a piece
+    /// is WEARING is on no component at all — `outline::paint` works the
+    /// code out afresh every frame from the sim, the pointer and the
+    /// carry, and paints the proxy with it — so a body carrying the
+    /// right piece number follows every reading of that piece for
+    /// nothing: the aim arriving, the room's claim lighting, the x-ray
+    /// ghosting, all of it, with nothing here to keep in step.
+    ///
+    /// It re-walks rather than waiting on an event, and cheaply: the
+    /// only roots it looks at are dressed ones, and a purchased prop is
+    /// a handful of nodes. What that buys is a mark that survives
+    /// everything the spawner does on its own — a scene that lands late,
+    /// a hot reload that despawns the bodies and copies fresh ones in,
+    /// a rig respawned by `sync_pieces` under a piece that had already
+    /// loaded.
+    ///
+    /// **The copies are not bodies**, and skipping them is load-bearing
+    /// rather than tidy: `outline::paint` cuts each mask proxy as a
+    /// CHILD of the body it copies, so a proxy is a `Mesh3d` descendant
+    /// of this root like any other. Mark one and it becomes a body with
+    /// a copy of its own, every frame, forever.
+    pub(super) fn mask_dressed(
+        mut commands: Commands,
+        dressed: Query<(Entity, &MaskBody), With<Worn>>,
+        kin: Query<&Children>,
+        bare: Query<(), Unmarked>,
+    ) {
+        for (root, mark) in &dressed {
+            for part in kin.iter_descendants(root) {
+                if bare.contains(part) {
+                    commands.entity(part).insert(MaskBody::of(mark.piece()));
+                }
+            }
+        }
     }
 }
 
@@ -850,6 +925,91 @@ mod tests {
         out
     }
 
+    /// **The smallest app that can read a glTF**, pointed at one cache.
+    ///
+    /// A task pool for the load to run on, the asset server, the two
+    /// asset kinds a mesh becomes, and the loader itself. `finish` is
+    /// not optional — `GltfPlugin` only registers its loader there, and
+    /// an app that never finishes waits for a loader that was never
+    /// installed.
+    #[cfg(feature = "art")]
+    fn stand(root: &std::path::Path) -> App {
+        use bevy::asset::AssetPlugin;
+        use bevy::world_serialization::WorldSerializationPlugin;
+
+        let mut app = App::new();
+        app.add_plugins((
+            bevy::app::TaskPoolPlugin::default(),
+            AssetPlugin {
+                file_path: root.display().to_string(),
+                ..default()
+            },
+            WorldSerializationPlugin,
+            bevy::mesh::MeshPlugin,
+            bevy::gltf::GltfPlugin::default(),
+        ))
+        .insert_resource(super::loading::Cache(root.to_path_buf()));
+        plugin(&mut app);
+        app.finish();
+        app.cleanup();
+        app
+    }
+
+    /// **A cache holding the cube above, dressing one kind**, written
+    /// into a scratch directory of its own. The index is the dialect
+    /// `cargo xtask art resolve` writes, because the loading path under
+    /// test is the one that reads what the resolver wrote.
+    #[cfg(feature = "art")]
+    fn a_cache(name: &str, kind: Kind) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(name);
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("glb")).expect("a scratch cache");
+        std::fs::write(dir.join("glb/cube.glb"), unit_cube_glb()).expect("a fixture mesh");
+        std::fs::write(
+            dir.join("index.toml"),
+            format!(
+                "[asset.bought]\nglb = \"glb/cube.glb\"\ndresses = \"cargo/{}\"\n\
+                 scale = [1.0, 1.0, 1.0]\noffset = [0.0, 0.0, 0.0]\n\
+                 fill = [1.0, 1.0, 1.0]\nmeasured_mid = [0.0, 0.0, 0.0]\n\
+                 measured_half = [0.5, 0.5, 0.5]\n",
+                snake(kind)
+            ),
+        )
+        .expect("a fixture index");
+        dir
+    }
+
+    /// Pump frames until the cache's one scene has loaded, and hand back
+    /// the handle `build_kind` would spawn. Asset loading is
+    /// asynchronous, so the frames are counted rather than assumed.
+    #[cfg(feature = "art")]
+    fn loaded(app: &mut App, kind: Kind) -> Handle<bevy::world_serialization::WorldAsset> {
+        use bevy::asset::LoadState;
+
+        app.update();
+        let handle = app
+            .world()
+            .resource::<Dressed>()
+            .of(kind)
+            .expect("the index dresses the kind it was written for")
+            .0
+            .clone();
+        for _ in 0..10_000 {
+            app.update();
+            let state = app
+                .world()
+                .resource::<AssetServer>()
+                .get_load_state(&handle)
+                .unwrap_or(LoadState::NotLoaded);
+            match state {
+                LoadState::Loaded => return handle,
+                LoadState::Failed(_) => panic!("the cabin could not load a glTF it wrote itself"),
+                _ => {}
+            }
+        }
+        panic!("the fixture glTF never finished loading");
+    }
+
     /// **A converted mesh in the cache is loaded, and the whitebox is
     /// what happens when it is not.**
     ///
@@ -867,8 +1027,8 @@ mod tests {
     #[cfg(feature = "art")]
     #[test]
     fn a_converted_mesh_in_the_cache_is_what_a_dressed_kind_draws() {
-        use bevy::asset::{AssetPlugin, LoadState};
-        use bevy::world_serialization::{WorldAsset, WorldSerializationPlugin};
+        use bevy::asset::LoadState;
+        use bevy::world_serialization::WorldAsset;
 
         let dir = std::env::temp_dir().join("space-trucking-art-cabin-load");
         let _ = std::fs::remove_dir_all(&dir);
@@ -884,30 +1044,6 @@ mod tests {
              measured_mid = [0.0, 0.0, 0.0]\nmeasured_half = [0.5, 0.5, 0.5]\n",
         )
         .expect("a fixture index");
-
-        // The smallest app that can read a glTF: a task pool for the
-        // load to run on, the asset server, the two asset kinds a mesh
-        // becomes, and the loader itself. `finish` is not optional —
-        // `GltfPlugin` only registers its loader there, and an app that
-        // never finishes waits for a loader that was never installed.
-        let stand = |root: &std::path::Path| {
-            let mut app = App::new();
-            app.add_plugins((
-                bevy::app::TaskPoolPlugin::default(),
-                AssetPlugin {
-                    file_path: root.display().to_string(),
-                    ..default()
-                },
-                WorldSerializationPlugin,
-                bevy::mesh::MeshPlugin,
-                bevy::gltf::GltfPlugin::default(),
-            ))
-            .insert_resource(super::loading::Cache(root.to_path_buf()));
-            plugin(&mut app);
-            app.finish();
-            app.cleanup();
-            app
-        };
 
         let mut app = stand(&dir);
         app.update();
@@ -983,6 +1119,377 @@ mod tests {
         }
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Every `Mesh3d` standing under one entity, however deep. The rig
+    /// root's own child is a scene root, whose child is a node, whose
+    /// child is the body — so nothing here may assume a depth.
+    ///
+    /// A mask copy is not a body, and skipping it is not tidiness:
+    /// `outline::paint` hangs each copy off the body it copies, so once
+    /// the outline has said anything about this piece the copies are
+    /// `Mesh3d` descendants of the same root. Count them as bodies and
+    /// this would agree with a propagation that masked them — which is
+    /// the propagation that gives every copy a copy of its own, one a
+    /// frame, forever.
+    #[cfg(feature = "art")]
+    fn bodies_under(app: &App, root: Entity) -> Vec<Entity> {
+        use crate::outline::MaskProxy;
+
+        let mut out = Vec::new();
+        let mut stack = vec![root];
+        while let Some(at) = stack.pop() {
+            let entity = app.world().entity(at);
+            if let Some(kids) = entity.get::<Children>() {
+                stack.extend(kids.iter());
+            }
+            if at != root && entity.contains::<Mesh3d>() && !entity.contains::<MaskProxy>() {
+                out.push(at);
+            }
+        }
+        out.sort_unstable();
+        out
+    }
+
+    /// **A purchased body wears the mask its whitebox parts would.**
+    ///
+    /// The defect this is written against was visible the first day a
+    /// real Synty mesh stood in the cabin: the crate could be aimed at,
+    /// picked up and put down, and no line was ever drawn round it. A
+    /// whitebox part is marked as it is spawned, because it IS spawned
+    /// there; a dressed kind hands `build_kind` a scene that has not
+    /// loaded, and the meshes it becomes turn up frames later with
+    /// nothing to tell them whose body they are.
+    ///
+    /// So: a real converted file, loaded through the real loader, spawned
+    /// through the real `WorldAssetRoot`, and the mark has to be on every
+    /// body that comes out of it — with the piece's own number, which is
+    /// the whole of what `outline` needs to draw everything it can say
+    /// about that piece.
+    ///
+    /// **Two rigs, two numbers, and a third that is nobody's**, because
+    /// the failure worth catching is not "no mark" but "the wrong one":
+    /// a mark copied from whichever dressed root the query reached first
+    /// would outline one crate when the crosshair rested on another.
+    #[cfg(feature = "art")]
+    #[test]
+    fn a_dressed_body_wears_the_mask_its_whitebox_parts_would() {
+        use crate::outline::MaskBody;
+
+        let dir = a_cache("space-trucking-art-mask-dressed", Kind::SuspiciousCrate);
+        let mut app = stand(&dir);
+        let scene = loaded(&mut app, Kind::SuspiciousCrate);
+
+        // Two dressed rigs, exactly as `build_kind` spawns one: the
+        // scene, the pose, the handle the bench moves, and the mark.
+        let dressed: Vec<(u32, Entity)> = [4_100_u32, 4_101]
+            .into_iter()
+            .map(|piece| {
+                let root = app
+                    .world_mut()
+                    .spawn((
+                        bevy::world_serialization::WorldAssetRoot(scene.clone()),
+                        Transform::default(),
+                        Visibility::default(),
+                        Worn(Kind::SuspiciousCrate),
+                        MaskBody::of(piece),
+                    ))
+                    .id();
+                (piece, root)
+            })
+            .collect();
+        // And a rig wearing no purchased body at all: a marked root with
+        // a bare mesh under it, which is what a kind the manifest does
+        // not dress looks like from here. Nothing may reach it.
+        let bare_root = app
+            .world_mut()
+            .spawn((Transform::default(), MaskBody::of(4_102)))
+            .id();
+        let bare_body = app
+            .world_mut()
+            .spawn((
+                Mesh3d(Handle::default()),
+                Transform::default(),
+                ChildOf(bare_root),
+            ))
+            .id();
+
+        // The scene spawner runs in `SpawnScene`, after this frame's
+        // `Update`, so the mark cannot land before the frame after the
+        // bodies do. Pumped rather than counted: what is asserted is
+        // that it lands, not which frame the engine chose.
+        for _ in 0..16 {
+            app.update();
+        }
+
+        for (piece, root) in dressed {
+            let bodies = bodies_under(&app, root);
+            assert!(
+                !bodies.is_empty(),
+                "the fixture scene put no body under piece {piece}, so this guard asks nothing"
+            );
+            for body in bodies {
+                let mark = app
+                    .world()
+                    .entity(body)
+                    .get::<MaskBody>()
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "a body of piece {piece} carries no mask — a dressed kind that \
+                             selects and never wears the line"
+                        )
+                    });
+                assert_eq!(
+                    mark.piece(),
+                    piece,
+                    "a body of piece {piece} is marked as somebody else's"
+                );
+            }
+        }
+        assert!(
+            app.world().entity(bare_body).get::<MaskBody>().is_none(),
+            "an undressed rig's body was marked by the dressing pass"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// What every mask copy in the world is wearing this frame, by the
+    /// body it is a copy of: whether it is drawn, and in which ink.
+    #[cfg(feature = "art")]
+    fn worn(app: &mut App) -> Vec<(Entity, Visibility, AssetId<crate::outline::MaskInk>)> {
+        use crate::outline::{MaskInk, MaskProxy};
+
+        let mut out: Vec<(Entity, Visibility, AssetId<MaskInk>)> = app
+            .world_mut()
+            .query::<(&MaskProxy, &Visibility, &MeshMaterial3d<MaskInk>)>()
+            .iter(app.world())
+            .map(|(proxy, shown, ink)| (proxy.part, *shown, ink.0.id()))
+            .collect();
+        out.sort_by_key(|(part, _, _)| *part);
+        out
+    }
+
+    /// What the piece's whitebox part is wearing, out of one frame's
+    /// copies: the answer every purchased body of that piece has to
+    /// match, and the reason nothing here has to name a code.
+    #[cfg(feature = "art")]
+    fn answer(
+        worn: &[(Entity, Visibility, AssetId<crate::outline::MaskInk>)],
+        whitebox: Entity,
+    ) -> (Entity, Visibility, AssetId<crate::outline::MaskInk>) {
+        worn.iter()
+            .find(|(part, _, _)| *part == whitebox)
+            .copied()
+            .expect("the whitebox part of the piece is copied like any other")
+    }
+
+    /// **A body on the fixture board the crosshair can rest on, and
+    /// that nothing else is saying anything about.**
+    ///
+    /// Searched rather than written down, for the reason the bench's own
+    /// harness searches for its spot: the fixture is re-dressed whenever
+    /// the cargo tables change, and a coordinate spelled out here would
+    /// quietly stop being the coordinate. The two filters are what make
+    /// the reading below exactly one thing — a piece the room has
+    /// claimed wears the claim as well, and a piece with a carry handle
+    /// answers the aim in two halves depending on where in it the
+    /// crosshair lands.
+    #[cfg(feature = "art")]
+    fn a_plain_body(
+        sim: &space_trucking::sim::Sim,
+    ) -> (space_trucking::sim::cargo::Piece, space_trucking::sim::Vec2) {
+        use space_trucking::sim::layout;
+
+        let lit = crate::room::lit_footprints(sim);
+        for piece in sim.pieces() {
+            if lit.iter().any(|(id, _)| *id == piece.id)
+                || crate::pieces::carry_handle(piece.kind).is_some()
+            {
+                continue;
+            }
+            let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
+            let at = space_trucking::sim::Vec2::new(
+                rect.w.mul_add(0.5, rect.x),
+                rect.h.mul_add(0.5, rect.y),
+            );
+            if layout::piece_at(sim.rooms(), sim.pieces(), at).map(|found| found.id)
+                == Some(piece.id)
+            {
+                return (*piece, at);
+            }
+        }
+        panic!("the fixture board has no plain body the crosshair can rest on");
+    }
+
+    /// **The line a purchased body wears is the line its whitebox would
+    /// have worn, and it follows the reading as the reading changes.**
+    ///
+    /// The other half of the mark, and the one that says why the mark is
+    /// all there is to carry. What a piece is WEARING lives on no
+    /// component: `outline::paint` works the code out afresh every frame
+    /// off the sim, the pointer and the carry, and hands it to the ink
+    /// each copy is painted with. So a dressed body that carries the
+    /// right piece number follows every reading of that piece for
+    /// nothing — and the way to prove it is not to name the codes, which
+    /// are that module's business, but to stand a whitebox part of the
+    /// SAME piece beside the purchased one and demand they wear the same
+    /// ink in every frame.
+    ///
+    /// Three readings, because a guard that only ever saw one would pass
+    /// on a mark that had been frozen at the first thing it was told:
+    /// the piece flown through, the piece under the crosshair, and the
+    /// piece nobody is saying anything about at all.
+    ///
+    /// And the count is asserted, which is the other law this frame can
+    /// break: a copy is a `Mesh3d` child of the body it copies, so a
+    /// propagation that marked one would hand every copy a copy of its
+    /// own, one a frame, until the world would not fit in memory. One
+    /// per body, and no more.
+    #[cfg(feature = "art")]
+    #[test]
+    fn the_line_on_a_dressed_body_is_the_line_its_whitebox_would_wear() {
+        use crate::bridge::{Bridge, FrameOutcome};
+        use crate::outline::{Ghosts, MaskBody, MaskInk, MaskInks};
+        use crate::rig::CameraRig;
+        use crate::surface::VirtualPointer;
+        use crate::{Phase, Shell};
+
+        let mut bridge = Bridge::boot_fixture(crate::fixture::SAVE);
+        bridge.steady();
+        let (piece, aimed) = a_plain_body(&bridge.sim);
+
+        let dir = a_cache("space-trucking-art-mask-reading", piece.kind);
+        let mut app = stand(&dir);
+        let scene = loaded(&mut app, piece.kind);
+        app.init_asset::<MaskInk>();
+        let inks = {
+            let mut assets = app.world_mut().resource_mut::<Assets<MaskInk>>();
+            MaskInks::new(&mut assets)
+        };
+        app.insert_resource(Shell {
+            bridge,
+            outcome: FrameOutcome::default(),
+            muted: false,
+        })
+        .insert_resource(CameraRig::boot(None))
+        .insert_resource(inks)
+        .init_resource::<VirtualPointer>()
+        .init_resource::<Ghosts>()
+        .configure_sets(Update, Phase::View)
+        .add_systems(Update, crate::outline::paint.in_set(Phase::View));
+
+        // One piece, drawn twice: the purchased body `build_kind` would
+        // spawn under the feature, and a whitebox part of the same piece
+        // standing beside it as the answer key.
+        let dressed = app
+            .world_mut()
+            .spawn((
+                bevy::world_serialization::WorldAssetRoot(scene),
+                Transform::default(),
+                Visibility::default(),
+                Worn(piece.kind),
+                MaskBody::of(piece.id),
+            ))
+            .id();
+        let whitebox = app
+            .world_mut()
+            .spawn((
+                Mesh3d(Handle::default()),
+                Transform::default(),
+                Visibility::default(),
+                MaskBody::of(piece.id),
+            ))
+            .id();
+
+        // **Flown through.** The x-ray names the piece, nothing else
+        // does, and the pointer is parked off the board.
+        app.world_mut().resource_mut::<Ghosts>().0 = vec![piece.id];
+        for _ in 0..16 {
+            app.update();
+        }
+        let bodies = bodies_under(&app, dressed);
+        assert!(
+            !bodies.is_empty(),
+            "the fixture scene put no body under the dressed rig"
+        );
+        let ghosting = worn(&mut app);
+        assert_eq!(
+            ghosting.len(),
+            bodies.len() + 1,
+            "one copy per body, and no more: {ghosting:?}"
+        );
+        let key = answer(&ghosting, whitebox);
+        assert_eq!(key.1, Visibility::Visible, "the answer key is not drawn");
+        for (part, shown, ink) in &ghosting {
+            assert_eq!(*shown, key.1, "a copy of {part} is not drawn with the rest");
+            assert_eq!(
+                *ink, key.2,
+                "a copy of {part} wears another piece's reading"
+            );
+        }
+
+        // **Under the crosshair.** A different reading of the same
+        // piece, and every copy has to move with it in the same frame.
+        app.world_mut().resource_mut::<Ghosts>().0.clear();
+        app.world_mut().resource_mut::<VirtualPointer>().sim = aimed;
+        app.update();
+        let aiming = worn(&mut app);
+        let hovered = answer(&aiming, whitebox);
+        assert_ne!(
+            hovered.2, key.2,
+            "the aim and the x-ray are two readings and must not be one ink"
+        );
+        for (part, shown, ink) in &aiming {
+            assert_eq!(*shown, Visibility::Visible, "a copy of {part} went dark");
+            assert_eq!(*ink, hovered.2, "a copy of {part} kept the reading it had");
+        }
+
+        // **Nothing said about it at all**, which is the reading the
+        // cabin spends most of its frames in: every copy goes away.
+        app.world_mut().resource_mut::<VirtualPointer>().sim = crate::bridge::POINTER_PARKED;
+        app.update();
+        for (part, shown, _) in worn(&mut app) {
+            assert_eq!(
+                shown,
+                Visibility::Hidden,
+                "a copy of {part} is still drawn with nothing said about its piece"
+            );
+        }
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// **The half that masks a purchased body is the gated one.**
+    ///
+    /// The whitebox build has no cache to read, no scene to spawn, and
+    /// therefore no mark to carry down onto one — and "therefore" is a
+    /// claim about where the code is, so it is held where the code is.
+    /// The declaration half above the gate is compiled into every build
+    /// this repository makes; it reads a file in git and answers
+    /// questions about promises. The moment a line of it reached the
+    /// outline, the whitebox path would have grown a passenger it does
+    /// not need and CI could not see.
+    ///
+    /// A source claim, like `xtask`'s own guard on the feature line, and
+    /// for the same reason: what is being asserted is the shape of the
+    /// seam, and a build cannot be asked about code it does not have.
+    #[test]
+    fn only_the_gated_half_of_this_module_reaches_the_outline() {
+        const SOURCE: &str = include_str!("art.rs");
+        const GATE: &str = "#[cfg(feature = \"art\")]\nmod loading {";
+
+        let (ungated, _) = SOURCE
+            .split_once(GATE)
+            .expect("the loading half is a module gated on the feature");
+        for word in ["outline", "MaskBody", "MaskProxy"] {
+            assert!(
+                !ungated.contains(word),
+                "`{word}` stands in this module OUTSIDE the `art` gate. Everything that \
+                 masks a purchased body belongs behind it — a whitebox build has no \
+                 purchased body and must have no line of code about one."
+            );
+        }
     }
 
     /// **A manifest with prose and odd spacing in it**, for the writer to

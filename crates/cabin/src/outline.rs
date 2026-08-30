@@ -166,6 +166,13 @@ const DASH: i32 = 3;
 /// its piece**, and whose piece that is. Every body a kind draws wears
 /// one (`pieces::RigParts::mask`); none of them costs anything until
 /// [`paint`] cuts the copy.
+///
+/// A part is marked in the breath it is spawned in, which works because
+/// a whitebox part IS spawned there. A purchased one is not: what
+/// `build_kind` has to hand under `--features art` is a scene that has
+/// not loaded yet, so the mark goes on the scene's root and `art`
+/// carries it down onto each body as it appears. Nothing in this module
+/// is told which of the two it is looking at, and that is the point.
 #[derive(Component, Clone, Copy)]
 pub struct MaskBody {
     piece: u32,
@@ -181,6 +188,22 @@ impl MaskBody {
     #[must_use]
     pub const fn of(piece: u32) -> Self {
         Self { piece, cut: false }
+    }
+
+    /// **Whose piece this part is.** The whole of what the component
+    /// says: what the piece is WEARING is nowhere on it, because
+    /// [`paint`] derives that afresh every frame off the sim, the
+    /// pointer and the carry. So a body that carries the right number
+    /// follows every reading of that piece for nothing.
+    ///
+    /// Read by the one thing that has a body it did not spawn itself:
+    /// `art`, carrying a rig's mark down onto the meshes a purchased
+    /// scene arrives as — which is the only caller, and why a whitebox
+    /// build has none.
+    #[must_use]
+    #[cfg_attr(not(feature = "art"), allow(dead_code))]
+    pub const fn piece(self) -> u32 {
+        self.piece
     }
 }
 
@@ -210,6 +233,18 @@ pub struct Ghosts(pub Vec<u32>);
 pub struct MaskInks([Handle<MaskInk>; CODES]);
 
 impl MaskInks {
+    /// **One ink per code, cut once.** Made in the plugin's own build so
+    /// that everything downstream can simply read it, and made here
+    /// rather than inline there so a guard can stand up the pool without
+    /// standing up a renderer.
+    pub fn new(inks: &mut Assets<MaskInk>) -> Self {
+        Self(std::array::from_fn(|i| {
+            inks.add(MaskInk {
+                code: Vec4::new((i + 1) as f32 / SCALE, 0.0, 0.0, 0.0),
+            })
+        }))
+    }
+
     /// The ink carrying one code. A proxy is spawned wearing the aim's
     /// and hidden; [`paint`] hands it whichever the frame calls for.
     #[must_use]
@@ -457,11 +492,7 @@ impl Plugin for OutlinePlugin {
         };
         let inks = {
             let mut masks = app.world_mut().resource_mut::<Assets<MaskInk>>();
-            MaskInks(std::array::from_fn(|i| {
-                masks.add(MaskInk {
-                    code: Vec4::new((i + 1) as f32 / SCALE, 0.0, 0.0, 0.0),
-                })
-            }))
+            MaskInks::new(&mut masks)
         };
         app.insert_resource(screen)
             .insert_resource(inks)
@@ -537,8 +568,14 @@ const GHOST_DUTY: f32 = 0.45;
 /// proxies with the ink that carries the code. Derived every frame from
 /// the sim, the pointer and the carry, and never stored — exactly as the
 /// bars this replaces were.
+///
+/// **Named outside this module for one reason and it is ordering.**
+/// Nothing elsewhere calls it; what a caller elsewhere needs is to be
+/// able to say `.before(paint)`, so that a mark laid down in the same
+/// frame is read in the same frame rather than in whichever one the
+/// scheduler felt like.
 #[allow(clippy::too_many_arguments)]
-fn paint(
+pub fn paint(
     mut commands: Commands,
     shell: Res<Shell>,
     pointer: Res<crate::surface::VirtualPointer>,

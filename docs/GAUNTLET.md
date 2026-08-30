@@ -1162,6 +1162,41 @@ what makes it worth deferring and not worth hiding: it is real, it is
 bounded to the art build, and the sweep still says the declared body is
 the right size and in the right place.
 
+**One member of that family HAS been closed, and it is worth saying which
+and why the rest are not.** The outline was drawn round a dressed body by
+nothing at all: a rig's parts are marked as maskable in the breath they
+are spawned in, and a purchased body's meshes turn up frames later, so
+the whole silhouette was unmarked and a bought crate could be aimed at,
+claimed and carried without a line ever appearing round it. The owner
+found that by eye, on the first real Synty mesh. It closed cheaply
+because the outline needs **only the piece's number** and derives the
+reading afresh every frame: `build_kind` marks the scene's root and an
+`art`-gated system hands the mark down to each body as it arrives
+(`art::mask_dressed`), so nothing in `outline` was told a purchased body
+exists. The pick face above is the expensive one for the opposite reason
+— it needs the body's SHAPE, which is a fact about the run.
+
+What is **still whitebox on a dressed rig**, found while closing that and
+left alone deliberately, because each is a shape question and not an
+identity one:
+
+- **The rat's bite.** `spawn_rig` cuts the notch wedge after the kind is
+  built, so a gnawed purchased crate wears a whitebox cylinder bitten out
+  of its flank at the whitebox's own coordinates.
+- **The refusal slash.** `pieces::carry_slash` is cut corner to corner of
+  `drawn_box`, which is the whitebox box — the same pure function the
+  pick face uses, and it comes right the same day that one does.
+- **The amber grab bar.** A click-functional kind draws its handle from
+  `carry_handle` as one of its own parts, and a dressed kind's parts are
+  not drawn at all, so `PieceRig::grab_mat` is `None` and `hover_glint`
+  has nothing to flare. No kind the shipped manifest dresses is
+  click-functional today, which is what bounds it.
+
+The **focus x-ray does not belong on that list**, and it was checked
+rather than assumed: `xray_focus` hides `PieceRig::body_root` and Bevy's
+visibility is inherited, so a purchased scene standing under it goes
+see-through with everything else. Nothing there walks meshes.
+
 Other things it deliberately does not see, each for a stated reason:
 
 - **The exterior dressing.** It hangs in the void by law, and

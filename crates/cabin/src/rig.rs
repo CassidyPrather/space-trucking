@@ -671,7 +671,11 @@ pub struct Skin {
 }
 
 impl Skin {
-    fn build(
+    /// Bake the whole skin. `pub(crate)` because a guard that stamps a
+    /// real rig has to hand the builders a real one: the parts a kind
+    /// draws are cut against these handles, and a stand-in skin would be
+    /// a stand-in rig.
+    pub(crate) fn build(
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<StandardMaterial>,
         images: &mut Assets<Image>,

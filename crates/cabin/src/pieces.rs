@@ -5390,15 +5390,25 @@ fn build_kind(rig: &mut RigParts, piece: &Piece) {
     if let Some(dressed) = rig.dressed
         && let Some((scene, dressing)) = dressed.of(piece.kind)
     {
-        rig.commands.spawn((
-            bevy::world_serialization::WorldAssetRoot(scene.clone()),
-            dressing.pose(piece.kind),
-            // The one handle anything downstream has on a drawn mesh:
-            // the bench re-poses these and touches nothing else
-            // (`crate::nudge`).
-            crate::art::Worn(piece.kind),
-            ChildOf(rig.root),
-        ));
+        let body = rig
+            .commands
+            .spawn((
+                bevy::world_serialization::WorldAssetRoot(scene.clone()),
+                dressing.pose(piece.kind),
+                // The one handle anything downstream has on a drawn mesh:
+                // the bench re-poses these and touches nothing else
+                // (`crate::nudge`).
+                crate::art::Worn(piece.kind),
+                ChildOf(rig.root),
+            ))
+            .id();
+        // **The same mark a whitebox part gets, on the only entity there
+        // is to put it on.** The scene's own meshes appear frames later,
+        // when the loader has read the file and the spawner has copied
+        // it in, so this marks the root and `art::mask_dressed` carries
+        // the mark down to each body as it arrives. Without it a bought
+        // mesh selects and never wears the line.
+        rig.mask(body);
         return;
     }
     let screens = Screens {
@@ -7582,5 +7592,194 @@ mod band {
             near < 0.0,
             "the near face at {near} m has to clear the chart"
         );
+    }
+
+    // ------------------------------------------------------ the mask --
+
+    /// Which piece the rig a guard is about belongs to. A resource
+    /// because [`stamp_one`] is a system, and a system takes its
+    /// arguments from the world.
+    #[derive(Resource, Clone, Copy)]
+    struct Stamping(Piece);
+
+    /// **Stamp one piece's rig for real**, the way `sync_pieces` does:
+    /// a baked skin, the shared bits, and whatever the build has to
+    /// dress the kind with. Nothing here stands in for anything —
+    /// what is being asked about is the marks the builders leave, and
+    /// builders handed a stand-in leave stand-in marks.
+    fn stamp_one(
+        mut commands: Commands,
+        what: Res<Stamping>,
+        mut meshes: ResMut<Assets<Mesh>>,
+        mut materials: ResMut<Assets<StandardMaterial>>,
+        mut images: ResMut<Assets<Image>>,
+        #[cfg(feature = "art")] dressed: Res<crate::art::Dressed>,
+    ) -> Entity {
+        let skin = Skin::build(&mut meshes, &mut materials, &mut images);
+        let shared = SharedBits {
+            slash: materials.add(StandardMaterial::default()),
+            flash: materials.add(StandardMaterial::default()),
+            glyph: materials.add(StandardMaterial::default()),
+        };
+        spawn_rig(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            &mut images,
+            &skin,
+            &shared,
+            &ScreenGlasses::default(),
+            #[cfg(feature = "art")]
+            Some(&dressed),
+            &what.0,
+            Transform::default(),
+        )
+    }
+
+    /// The world a stamped rig stands in, and its root.
+    fn stamped(
+        piece: Piece,
+        #[cfg(feature = "art")] dressed: crate::art::Dressed,
+    ) -> (bevy::ecs::world::World, Entity) {
+        use bevy::ecs::system::RunSystemOnce as _;
+
+        let mut world = bevy::ecs::world::World::new();
+        world.insert_resource(Assets::<Mesh>::default());
+        world.insert_resource(Assets::<StandardMaterial>::default());
+        world.insert_resource(Assets::<Image>::default());
+        world.insert_resource(Stamping(piece));
+        #[cfg(feature = "art")]
+        world.insert_resource(dressed);
+        let root = world.run_system_once(stamp_one).expect("a rig is stamped");
+        (world, root)
+    }
+
+    /// A crate on the cabin floor: one cell, no rat's bite, nothing
+    /// clever about where it is berthed.
+    fn a_crate() -> Piece {
+        Piece {
+            id: 4_242,
+            kind: Kind::SuspiciousCrate,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Hold {
+                room: CABIN,
+                x: 2,
+                y: 2,
+            },
+        }
+    }
+
+    /// Every entity under `root`, however deep.
+    fn under(world: &bevy::ecs::world::World, root: Entity) -> Vec<Entity> {
+        let mut out = Vec::new();
+        let mut stack = vec![root];
+        while let Some(at) = stack.pop() {
+            let entity = world.entity(at);
+            if let Some(kids) = entity.get::<Children>() {
+                stack.extend(kids.iter());
+            }
+            if at != root {
+                out.push(at);
+            }
+        }
+        out.sort_unstable();
+        out
+    }
+
+    /// **Every body a kind draws is marked with its own piece, and the
+    /// tells are not.**
+    ///
+    /// The outline pass finds the parts of a piece by this mark and by
+    /// nothing else (`crate::outline::MaskBody`), so a body spawned
+    /// without one is a body the line runs straight through. Asked of a
+    /// rig actually stamped, because the claim is about what the
+    /// builders do and not about what [`RigParts::spawn`] says it does.
+    ///
+    /// The body layer is where the question is put, and the refusal
+    /// slash — a sibling of it, struck THROUGH the piece rather than
+    /// part of its silhouette — has to answer the other way: an outline
+    /// cut round the slash as well would draw a bar sticking out of
+    /// every crate in the player's hands.
+    #[test]
+    fn every_body_a_kind_draws_is_marked_with_its_own_piece() {
+        let piece = a_crate();
+        let (world, root) = stamped(
+            piece,
+            #[cfg(feature = "art")]
+            crate::art::Dressed::default(),
+        );
+        let rig = world.entity(root).get::<PieceRig>().expect("a stamped rig");
+        let mut bodies = 0;
+        for entity in under(&world, rig.body_root) {
+            let at = world.entity(entity);
+            if !at.contains::<Mesh3d>() {
+                continue;
+            }
+            bodies += 1;
+            let mark = at
+                .get::<crate::outline::MaskBody>()
+                .unwrap_or_else(|| panic!("a body of {:?} carries no mask", piece.kind));
+            assert_eq!(mark.piece(), piece.id, "a body marked as somebody else's");
+        }
+        assert!(
+            bodies > 1,
+            "a crate draws {bodies} bodies, so this asks nothing"
+        );
+        assert!(
+            world
+                .entity(rig.slash)
+                .get::<crate::outline::MaskBody>()
+                .is_none(),
+            "the refusal slash is a tell, not a body: an outline round it would hang a bar \
+             off every crate in hand"
+        );
+    }
+
+    /// **A dressed kind hands its mark to the scene it spawns.**
+    ///
+    /// The purchased body has no meshes yet — the loader has not read
+    /// the file and the spawner has not copied it in — so the only
+    /// entity `build_kind` has to mark is the scene's root, and
+    /// `art::mask_dressed` carries the mark down from there as the
+    /// bodies appear. Leave the root bare and there is nothing for it to
+    /// carry: the crate selects, and the line is never drawn.
+    #[cfg(feature = "art")]
+    #[test]
+    fn a_dressed_kind_hands_its_mark_to_the_scene_it_spawns() {
+        let piece = a_crate();
+        let mut dressed = crate::art::Dressed::default();
+        dressed.dress(
+            piece.kind,
+            Handle::default(),
+            crate::art::Dressings::read(&format!(
+                "[asset.bought]\ndresses = \"cargo/{}\"\nglb = \"glb/abc.glb\"\n",
+                crate::art::snake(piece.kind)
+            ))
+            .expect("the dialect the resolver writes")
+            .of(piece.kind)
+            .expect("the fixture dresses the kind it names")
+            .clone(),
+        );
+
+        let (world, root) = stamped(piece, dressed);
+        let worn: Vec<Entity> = under(&world, root)
+            .into_iter()
+            .filter(|at| world.entity(*at).contains::<crate::art::Worn>())
+            .collect();
+        assert_eq!(
+            worn.len(),
+            1,
+            "a dressed kind stands one purchased body in place of its whitebox parts"
+        );
+        let mark = world
+            .entity(worn[0])
+            .get::<crate::outline::MaskBody>()
+            .expect(
+                "the purchased body's root carries no mask, so nothing can carry one down \
+                 to the meshes it becomes — a dressed kind that selects and never wears \
+                 the line",
+            );
+        assert_eq!(mark.piece(), piece.id);
     }
 }

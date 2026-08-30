@@ -206,6 +206,17 @@ Every line is reversible; strike one by overruling it.
   because `pieces::drawn_box` is a pure function of `Kind` and a bought
   body's box is a fact about the run. The gap is bounded to the art build
   and written into docs/GAUNTLET.md's blind-spot history.
+- **A purchased body's outline is carried down by `art`, not by
+  `outline`.** A rig's parts are marked as maskable in the breath they
+  are spawned in, and a dressed kind's meshes appear frames later, so
+  `build_kind` marks the scene's root and an `art`-gated system hands the
+  mark to each body as it arrives. The other direction — the outline pass
+  learning to walk a purchased scene — was refused on that module's own
+  law: the day a bought mesh replaces a hand-rolled `Cuboid`, nothing in
+  `outline` is told. Only the piece NUMBER travels, because what a piece
+  is *wearing* is on no component at all: `paint` derives it afresh every
+  frame, so a dressed body follows every reading of its piece — aim,
+  claim, ghost — for nothing.
 - **The placement bench is a launch FLAG, not a key chord.** `--nudge`,
   under `--features art`. Both gates are real but they are not equal: the
   feature decides whether there is a bought mesh to nudge, and the flag

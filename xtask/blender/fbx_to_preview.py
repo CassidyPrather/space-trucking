@@ -291,6 +291,86 @@ def settle_cycles(scene):
             pass
 
 
+def wants():
+    """Every image this mesh asked for and did not get, by file name.
+
+    **Asked before anything is painted, because painting destroys the
+    evidence.** `fbx_to_gltf.paint_with` rebinds a broken image reference
+    to the declared atlas — deliberately, that is the fix for a Synty FBX
+    that names nothing — and once it has, nothing can say what the mesh
+    had originally asked for.
+
+    What it asked for is worth knowing, because a pack's shared atlas is
+    not the only texture in a pack. Ivy, decals, screens and holograms
+    carry their own, and a mesh painted with the pack atlas instead has
+    its UVs land on whatever happens to lie at those coordinates — which
+    is how a sheet of ivy came to be catalogued as `a jagged, faceted
+    shard of near-black material`. The resolver takes the files named
+    here out of the pack and looks again, and the second look resolves
+    the mesh's own reference and leaves the material alone.
+
+    Only the file name: an FBX names its textures by the path of the tree
+    it was exported from, on a machine nobody here has ever seen.
+    """
+    asked = []
+    for material in bpy.data.materials:
+        tree = getattr(material, "node_tree", None)
+        if tree is None:
+            continue
+        for node in tree.nodes:
+            if node.type != "TEX_IMAGE" or node.image is None:
+                continue
+            if fbx_to_gltf.usable_image(node.image):
+                continue
+            named = getattr(node.image, "filepath", "") or node.image.name
+            leaf = os.path.basename(named.replace("\\", "/").rstrip("/"))
+            if leaf and leaf not in asked:
+                asked.append(leaf)
+    return asked
+
+
+def wire_alpha():
+    """Let a cutout texture cut out.
+
+    Synty draw ivy, cobwebs, fences and holograms as flat cards whose
+    shape lives in the atlas's alpha channel. A material that reads only
+    the colour renders the whole card, so a sheet of ivy comes out a
+    black rectangle — which is how one was catalogued as "a jagged,
+    faceted shard of near-black material", accurately describing the
+    picture and uselessly describing the asset.
+
+    Only where there is an alpha channel to read: `depth` is 32 for an
+    eight-bit RGBA image and 24 for RGB, and an atlas with no alpha is
+    left exactly as it was. And only the preview does this — what a built
+    game does about transparency is the game's business, and the
+    converter is deliberately not told about it.
+    """
+    for material in bpy.data.materials:
+        tree = getattr(material, "node_tree", None)
+        if tree is None:
+            continue
+        shader = next((node for node in tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
+        if shader is None:
+            continue
+        alpha = shader.inputs.get("Alpha")
+        if alpha is None or alpha.is_linked:
+            continue
+        painted = next(
+            (
+                node
+                for node in tree.nodes
+                if node.type == "TEX_IMAGE" and fbx_to_gltf.usable_image(node.image)
+            ),
+            None,
+        )
+        if painted is None or getattr(painted.image, "depth", 0) not in (32, 64):
+            continue
+        channel = painted.outputs.get("Alpha")
+        if channel is None:
+            continue
+        tree.links.new(channel, alpha)
+
+
 def image_file(image):
     """What to call an image in the catalogue: its file, not its datablock.
 
@@ -364,13 +444,21 @@ def look_at(number, source, destination, texture):
     fbx_to_gltf.import_any(source)
     if not fbx_to_gltf.mesh_objects():
         raise SystemExit(f"{source} imported without producing a single mesh")
+    # Before the atlas goes on, because painting is what makes a broken
+    # reference unreadable. See `wants`.
+    asked = wants()
     if texture:
         # Painted, and not refused when the painting reaches nothing: an
         # unpainted preview is a fact about the mesh worth recording.
         fbx_to_gltf.paint_with(texture)
+    # After painting, so that the atlas a material was just given is the
+    # one whose alpha is read.
+    wire_alpha()
 
     triangles, meshes, materials, images = count()
     print(f"look {number}")
+    for name in asked:
+        print(f"wants {name}")
     print(f"tris {triangles}")
     print(f"meshes {meshes}")
     print(f"materials {len(materials)}")
@@ -383,6 +471,15 @@ def look_at(number, source, destination, texture):
     # was: the first real crate through this went into the catalogue at
     # 1.84 units across, being 0.73.
     fbx_to_gltf.report_bounds()
+    # **Everything said about this job, out before the renderer speaks.**
+    # Blender writes its progress from C, straight to the handle, while
+    # Python's own prints sit in a buffer — so without this the last fact
+    # and the first `Fra:1 ... | Saved: '...'` land on one line, and the
+    # reader on the other side takes a render log for a texture's name.
+    # It did: an `image` value came back carrying a Windows path, the
+    # backslash in it is not a character this dialect's strings may hold,
+    # and the catalogue that run wrote was refused as unreadable.
+    sys.stdout.flush()
 
     measured = span()
     if measured is not None:

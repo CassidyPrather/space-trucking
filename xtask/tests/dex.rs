@@ -736,6 +736,256 @@ fn a_describer_that_answers_nothing_leaves_no_line_behind() {
     );
 }
 
+/// **A texture in another pack is fetched out of that pack.**
+///
+/// Synty build every pack in one project, so a pack's meshes name the
+/// other packs' atlases as readily as their own: the horror pack asks for
+/// `PolygonAncientEgypt_Texture_01.psd`, `PolygonShops_Texture_01.psd`
+/// and `city.psd`. There is nothing to guess at when the store has all
+/// of them — the file name says which pack it belongs to, so that pack is
+/// asked first and only then everything else, and only ever for a name it
+/// has exactly.
+#[test]
+fn a_texture_that_lives_in_another_pack_is_fetched_out_of_it() {
+    let dir = scratch("borrowing");
+    let dex = dir.join("dex");
+    let store = wanting_pack(&dir);
+    let answering = describer(&dir);
+    let launches = dir.join("launches.txt");
+    // A previewer whose mesh asks for the neighbouring pack's atlas by
+    // the name that pack's own file does not quite have — a `.psd`, the
+    // way Synty's exporters write it.
+    let previewer = stand_in(
+        &dir,
+        "borrowing",
+        &format!(
+            "printf 'x\\n' >> '{launches}'\n\
+             n=0\n\
+             while IFS='|' read -r src dst tex; do\n\
+             n=$((n+1))\n\
+             [ -n \"$src\" ] || continue\n\
+             mkdir -p \"$(dirname \"$dst\")\"\n\
+             cp \"$src\" \"$dst\"\n\
+             printf 'look %s\\n' \"$n\"\n\
+             printf 'wants PolygonDistantKingdom_Texture_01.psd\\n'\n\
+             printf 'tris 12\\nmeshes 1\\nmaterials 1\\n'\n\
+             done < \"$1\"\n",
+            launches = launches.display(),
+        ),
+        &format!(
+            "setlocal enabledelayedexpansion\r\n\
+             >>\"{launches}\" echo x\r\n\
+             set /a n=0\r\n\
+             for /f \"usebackq tokens=1,2,3 delims=|\" %%a in (\"%~1\") do (\r\n\
+             set /a n+=1\r\n\
+             copy /y \"%%~a\" \"%%~b\" >nul\r\n\
+             echo look !n!\r\n\
+             echo wants PolygonDistantKingdom_Texture_01.psd\r\n\
+             echo tris 12\r\n\
+             echo meshes 1\r\n\
+             echo materials 1\r\n\
+             )\r\n",
+            launches = launches.display(),
+        ),
+    );
+    let manifest = dir.join("empty.toml");
+    write(&manifest, "# A manifest that declares nothing at all.\n");
+    let (ok, said) = xtask(
+        &["art", "describe", "--pack", "A Wanting Pack"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &dir.join("cache")),
+            ("ART_DEX", &dex),
+            ("ART_PREVIEW", &previewer),
+            ("ART_DESCRIBER", &answering.program),
+        ],
+    );
+    assert!(ok, "{said}");
+    assert!(said.contains("out of another pack"), "{said}");
+
+    // **And it says whose texture it is.** A borrowed atlas recorded as
+    // a bare file name looks like any other; named with its lender, the
+    // line says both that the mesh asked for another pack's texture and
+    // which pack answered — which is a weaker answer than its own pack's
+    // and should read as one.
+    let written = catalogue(&dex, "a_wanting_pack");
+    assert!(
+        written.contains(
+            "atlas = \"POLYGON - Distant Kingdom/PolygonDistantKingdom_Texture_01_A.png\""
+        ),
+        "the neighbouring pack's atlas was not fetched, or does not name its pack:\n{written}"
+    );
+    // And nothing is flagged, because it got what it asked for — from
+    // the pack that had it.
+    assert!(
+        !written.contains("wanted = "),
+        "a mesh that was given its texture is flagged as missing it:\n{written}"
+    );
+}
+
+/// **A mesh that asks for a texture gets it, and is looked at again.**
+///
+/// A pack's shared atlas is not the only texture in a pack. Ivy, decals
+/// and screens carry their own, and only the mesh is taken out of the
+/// archive — so that reference dangles, the pack atlas is painted over
+/// the mesh instead, and its coordinates land on whatever happens to lie
+/// there. A sheet of ivy was catalogued as "a jagged, faceted shard of
+/// near-black material" that way: an accurate description of the picture
+/// and a useless one of the asset.
+///
+/// So a previewer may say `wants <file name>`, and a mesh that says it
+/// is not described yet. The file it named comes out of the pack, into
+/// the tree the mesh was exported from — where the mesh's own relative
+/// path finds it — and the mesh is looked at a second time.
+///
+/// The stand-in previewer here says it wants `checker.png` the first time
+/// it is run and not after, which is what a real one does once the file
+/// it asked for is on the disk beside the mesh.
+/// A store holding two packs. The first has a mesh, the atlas its own
+/// name says is its atlas, and one more texture the mesh will ask for by
+/// name. The second is a different pack entirely, holding a texture
+/// nothing in the first has ever heard of — which is the shape of the
+/// thing a Synty pack does constantly: its meshes name the atlases of
+/// the other packs in the project they were all built in.
+fn wanting_pack(dir: &Path) -> PathBuf {
+    let store = dir.join("store");
+    let art = store.join("A Wanting Pack/SourceFiles");
+    std::fs::create_dir_all(art.join("Textures")).expect("a scratch pack");
+    std::fs::copy(
+        fixtures().join("store/demo/SourceFiles/OBJ/unit_cube.obj"),
+        art.join("SM_Want_01.obj"),
+    )
+    .expect("a mesh");
+    for texture in ["Wanting_Atlas_01.png", "Special_Leaf_01.png"] {
+        std::fs::copy(
+            fixtures().join("store/demo/SourceFiles/Textures/checker.png"),
+            art.join("Textures").join(texture),
+        )
+        .expect("a texture");
+    }
+    let neighbour = store.join("POLYGON - Distant Kingdom/SourceFiles/Textures");
+    std::fs::create_dir_all(&neighbour).expect("a neighbouring pack");
+    std::fs::copy(
+        fixtures().join("store/demo/SourceFiles/Textures/checker.png"),
+        neighbour.join("PolygonDistantKingdom_Texture_01_A.png"),
+    )
+    .expect("somebody else's atlas");
+    store
+}
+
+#[test]
+fn a_mesh_that_asks_for_a_texture_is_given_it_and_looked_at_again() {
+    let dir = scratch("wanting");
+    let dex = dir.join("dex");
+    let cache = dir.join("cache");
+    let store = wanting_pack(&dir);
+    let answering = describer(&dir);
+    let launches = dir.join("launches.txt");
+    let asked_once = dir.join("asked-once.txt");
+    // A previewer that wants a file it has not got, until it has.
+    let previewer = stand_in(
+        &dir,
+        "wanting",
+        &format!(
+            "printf 'x\\n' >> '{launches}'\n\
+             n=0\n\
+             while IFS='|' read -r src dst tex; do\n\
+             n=$((n+1))\n\
+             [ -n \"$src\" ] || continue\n\
+             mkdir -p \"$(dirname \"$dst\")\"\n\
+             cp \"$src\" \"$dst\"\n\
+             printf 'look %s\\n' \"$n\"\n\
+             if [ ! -f '{once}' ]; then printf 'wants Special_Leaf_01.png\\n'; fi\n\
+             printf 'wants nowhere.psd\\n'\n\
+             printf 'tris 12\\nmeshes 1\\nmaterials 1\\n'\n\
+             done < \"$1\"\n\
+             printf 'x\\n' > '{once}'\n",
+            launches = launches.display(),
+            once = asked_once.display(),
+        ),
+        &format!(
+            "setlocal enabledelayedexpansion\r\n\
+             >>\"{launches}\" echo x\r\n\
+             set /a n=0\r\n\
+             for /f \"usebackq tokens=1,2,3 delims=|\" %%a in (\"%~1\") do (\r\n\
+             set /a n+=1\r\n\
+             copy /y \"%%~a\" \"%%~b\" >nul\r\n\
+             echo look !n!\r\n\
+             if not exist \"{once}\" echo wants Special_Leaf_01.png\r\n\
+             echo wants nowhere.psd\r\n\
+             echo tris 12\r\n\
+             echo meshes 1\r\n\
+             echo materials 1\r\n\
+             )\r\n\
+             >\"{once}\" echo x\r\n",
+            launches = launches.display(),
+            once = asked_once.display(),
+        ),
+    );
+    let manifest = dir.join("empty.toml");
+    write(&manifest, "# A manifest that declares nothing at all.\n");
+    let (ok, said) = xtask(
+        &["art", "describe", "--pack", "A Wanting Pack"],
+        &[
+            ("ART_MANIFEST", &manifest),
+            ("SYNTY_STORE", &store),
+            ("ART_CACHE", &cache),
+            ("ART_DEX", &dex),
+            ("ART_PREVIEW", &previewer),
+            ("ART_DESCRIBER", &answering.program),
+        ],
+    );
+    assert!(ok, "{said}");
+    assert!(said.contains("asked for a texture"), "{said}");
+
+    // Looked at twice and described once: the first look is the one that
+    // asked, and no model call was spent on it.
+    assert_eq!(asked(&launches), 2, "it was not looked at again:\n{said}");
+    assert_eq!(
+        asked(&answering.tally),
+        1,
+        "a model call was spent on the look that asked:\n{said}"
+    );
+    let written = catalogue(&dex, "a_wanting_pack");
+    assert!(written.contains("[mesh.sm_want_01]"), "{written}");
+
+    // **The second look was painted with the texture the mesh asked for**
+    // rather than with the pack's own atlas, which is the whole of what
+    // the second look is for.
+    assert!(
+        written.contains("atlas = \"Special_Leaf_01.png\""),
+        "the mesh was not given the texture it named:\n{written}"
+    );
+
+    // **And the one it never got is flagged on the line.** `nowhere.psd`
+    // is the shape of the thing this cannot fix: a Synty FBX naming the
+    // Photoshop file it was painted from, which no pack has ever
+    // carried. The description beside it is of a picture painted with
+    // something else, so the entry says which file was missing rather
+    // than reading as though nothing were wrong.
+    assert!(
+        written.contains("wanted = \"nowhere.psd\""),
+        "the missing texture is not flagged on the entry:\n{written}"
+    );
+    assert!(
+        !written.contains("checker.png\", \"nowhere"),
+        "the file it did get is flagged as missing:\n{written}"
+    );
+    assert!(
+        said.contains("the packs carry none of: nowhere.psd"),
+        "{said}"
+    );
+
+    // And a reader is told, before the description rather than after it.
+    let (ok, listed) = xtask(&["art", "dex"], &[("ART_DEX", &dex)]);
+    assert!(ok, "{listed}");
+    assert!(
+        listed.contains("asked for nowhere.psd, which the pack has not got"),
+        "{listed}"
+    );
+}
+
 /// **A named pack is catalogued whole, without a word to search for.**
 ///
 /// A pack is the unit somebody actually catalogues — a median one is 225

@@ -72,6 +72,22 @@ pub struct Entry {
     /// Empty means the mesh rendered untextured, which is worth knowing
     /// before believing anything the description says about colour.
     pub textures: String,
+    /// **What this mesh asked for and never got**, comma separated.
+    ///
+    /// The flag on a suspect line. A Synty FBX names its texture from the
+    /// tree it was exported in — a `.psd` nobody shipped, or the name a
+    /// pack's atlas had two versions ago — and no file this side can
+    /// satisfy that reference. The mesh is painted with the nearest thing
+    /// the pack carries instead, and its coordinates may land anywhere:
+    /// a sheet of ivy came out as "a jagged, faceted shard of near-black
+    /// material", which described the picture exactly and the asset not
+    /// at all.
+    ///
+    /// So the entry says which file was missing. Absent is the ordinary
+    /// case and means the mesh got what it asked for or asked for
+    /// nothing; present means **read the description with suspicion**,
+    /// and the picture beside it in the cache is the thing to look at.
+    pub wanted: Option<String>,
     /// One to three sentences. See [`sentence`] for what is done to it
     /// before it lands here.
     pub description: String,
@@ -133,15 +149,24 @@ impl Entry {
     /// anything the description says. Searching the description is the
     /// entire point of writing one: "the crate with the hazard stripes"
     /// is not a file name anybody has.
+    /// Whether this entry answers to `needle` — its name, its path,
+    /// anything either sentence about it says, or the texture it never
+    /// got. Searching the description is the entire point of writing one:
+    /// "the crate with the hazard stripes" is not a file name anybody
+    /// has. Searching what it wanted is how the flagged lines are found
+    /// at all, since a flag nobody can search for is half a flag.
     pub fn matches(&self, needle: &str) -> bool {
         let needle = needle.to_ascii_lowercase();
         [
-            self.name.as_str(),
-            self.source.as_str(),
-            self.description.as_str(),
-            self.textures.as_str(),
+            Some(self.name.as_str()),
+            Some(self.source.as_str()),
+            Some(self.description.as_str()),
+            Some(self.textures.as_str()),
+            self.differs.as_deref(),
+            self.wanted.as_deref(),
         ]
         .iter()
+        .flatten()
         .any(|field| field.to_ascii_lowercase().contains(&needle))
     }
 }
@@ -240,17 +265,24 @@ impl Dex {
         self.entries.insert(entry.id.clone(), entry);
     }
 
+    /// **Write it, having first read it.**
+    ///
+    /// The order is the whole of this. It used to write and then read
+    /// back, which caught a value that could not be in this file — and
+    /// left it in the file: the run refused, and every run after it
+    /// refused too, on the catalogue it had written itself. A check that
+    /// fires after the damage is a check that reports the damage.
+    ///
+    /// So the text is parsed before it goes anywhere near the disk, and a
+    /// catalogue that cannot be read back is never the catalogue on the
+    /// disk. What was there stays there, which is the older and better
+    /// answer than nothing.
     pub fn write(&self) -> Result<(), String> {
         let text = render(&self.entries.values().collect::<Vec<_>>());
-        crate::fsx::write(&self.path, &text)?;
-        // Read back what was just written, for the reason the index is
-        // read back: this is a file something else parses later, and a
-        // catalogue that will not load is a long way from the run that
-        // wrote it.
         read(&self.path, &text).map_err(|complaint| {
-            format!("the catalogue this run wrote cannot be read back: {complaint}")
+            format!("the catalogue this run would write cannot be read back: {complaint}")
         })?;
-        Ok(())
+        crate::fsx::write(&self.path, &text)
     }
 }
 
@@ -393,6 +425,33 @@ pub const LONGEST: usize = 320;
 /// this" is never mistaken for a mesh nobody could say anything about.
 pub const UNDESCRIBED: &str = "measurements alone";
 
+/// **One value, made safe for a file people read.**
+///
+/// This dialect's strings are one line and carry no escapes, so a `"` or
+/// a `\` in a value is not a wrong value — it is a catalogue that no
+/// longer parses, and every entry in it lost. That is not hypothetical:
+/// a texture's name came back with a Windows path in it, from a renderer
+/// writing over the top of the line that named it, and the write of a
+/// thousand entries was refused.
+///
+/// [`sentence`] does this and more to a description, which is prose from
+/// a model. This is for the rest — names, paths, the things a program
+/// said — where the value should already be safe and the file must
+/// survive it when it is not.
+fn field(value: &str) -> String {
+    value
+        .chars()
+        .map(|character| match character {
+            '"' => '\'',
+            '\\' => '/',
+            other if other.is_control() => ' ',
+            other => other,
+        })
+        .collect::<String>()
+        .trim()
+        .to_owned()
+}
+
 /// The catalogue as text, ready to write.
 pub fn render(entries: &[&Entry]) -> String {
     use std::fmt::Write as _;
@@ -414,6 +473,9 @@ pub fn render(entries: &[&Entry]) -> String {
          #   asset       the manifest id already naming this file, if one does\n\
          #   atlas       what the preview was painted with; a guess unless `asset`\n\
          #   textures    the images the preview scene actually bore\n\
+         #   wanted      a texture this mesh named and the pack does not carry. Its\n\
+         #               picture was painted with the nearest thing there was, so read\n\
+         #               the description beside it with suspicion\n\
          #   differs     what sets it apart from the others of its name, written\n\
          #               from a second look at the whole family side by side\n\
          #   size        how big it is across each axis, in the file's own units\n",
@@ -422,26 +484,30 @@ pub fn render(entries: &[&Entry]) -> String {
         let _ = write!(
             text,
             "\n[mesh.{}]\nname = \"{}\"\npack = \"{}\"\nsource = \"{}\"\nsha256 = \"{}\"\n",
-            entry.id, entry.name, entry.pack, entry.source, entry.sha256
+            field(&entry.id),
+            field(&entry.name),
+            field(&entry.pack),
+            field(&entry.source),
+            field(&entry.sha256)
         );
         if let Some(asset) = &entry.asset {
-            let _ = writeln!(text, "asset = \"{asset}\"");
+            let _ = writeln!(text, "asset = \"{}\"", field(asset));
         }
         if let Some(atlas) = &entry.atlas {
-            let _ = writeln!(text, "atlas = \"{atlas}\"");
+            let _ = writeln!(text, "atlas = \"{}\"", field(atlas));
         }
-        let _ = write!(
-            text,
-            "textures = \"{}\"\ndescription = \"{}\"\n",
-            entry.textures, entry.description,
-        );
+        let _ = writeln!(text, "textures = \"{}\"", field(&entry.textures));
+        if let Some(wanted) = &entry.wanted {
+            let _ = writeln!(text, "wanted = \"{}\"", field(wanted));
+        }
+        let _ = writeln!(text, "description = \"{}\"", sentence(&entry.description));
         if let Some(differs) = &entry.differs {
-            let _ = writeln!(text, "differs = \"{differs}\"");
+            let _ = writeln!(text, "differs = \"{}\"", sentence(differs));
         }
         let _ = write!(
             text,
             "described_by = \"{}\"\ntriangles = {}\nmeshes = {}\nmaterials = {}\nsize = {}\n",
-            entry.described_by,
+            field(&entry.described_by),
             entry.triangles,
             entry.meshes,
             entry.materials,
@@ -471,6 +537,7 @@ pub fn read(path: &Path, text: &str) -> Result<Vec<Entry>, Complaint> {
             textures: draft
                 .take_optional_str("textures", "mesh", &id, path)?
                 .unwrap_or_default(),
+            wanted: draft.take_optional_str("wanted", "mesh", &id, path)?,
             description: draft.take_str("description", "mesh", &id, path)?,
             differs: draft.take_optional_str("differs", "mesh", &id, path)?,
             described_by: draft
@@ -502,6 +569,7 @@ mod tests {
             asset: Some("crate_small".to_owned()),
             atlas: Some("PolygonSciFiSpace_Texture_01_A.png".to_owned()),
             textures: "PolygonSciFiSpace_Texture_01_A.png".to_owned(),
+            wanted: None,
             description: "A squat six-panel supply crate with recessed corner braces and a \
                           hazard stripe along one edge."
                 .to_owned(),
@@ -541,15 +609,98 @@ mod tests {
         assert_eq!(back.size, written.size);
 
         // An entry for a mesh no manifest names yet, which is most of
-        // what a catalogue holds: both absences survive as absences.
+        // what a catalogue holds: every absence survives as an absence.
         let bare = render(&[&Entry {
             asset: None,
             atlas: None,
+            differs: None,
             ..entry()
         }]);
         let entries = read(Path::new("dex.toml"), &bare).expect("its own dialect");
         assert_eq!(entries[0].asset, None);
         assert_eq!(entries[0].atlas, None);
+        assert_eq!(entries[0].differs, None);
+        assert_eq!(entries[0].wanted, None);
+
+        // And a flagged one, which is the line a reader must not take at
+        // face value: the description is of a picture painted with
+        // something other than what the mesh asked for.
+        let flagged = render(&[&Entry {
+            wanted: Some("PolygonGeneric_Texture_01_A.psd".to_owned()),
+            ..entry()
+        }]);
+        let entries = read(Path::new("dex.toml"), &flagged).expect("its own dialect");
+        assert_eq!(
+            entries[0].wanted.as_deref(),
+            Some("PolygonGeneric_Texture_01_A.psd")
+        );
+    }
+
+    /// **A catalogue that cannot be read back is never written.**
+    ///
+    /// This check used to run after the write, which caught the bad value
+    /// and left it on the disk — so the next run failed loading the file
+    /// the last one had written, and so did every run after that. The
+    /// order is the fix: parse it, then write it.
+    #[test]
+    fn a_catalogue_that_would_not_parse_never_reaches_the_disk() {
+        let dir = std::env::temp_dir().join(format!("space-trucking-dex-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let path = dir.join("pack.toml");
+        let mut book = Dex {
+            path: path.clone(),
+            entries: BTreeMap::new(),
+        };
+        book.insert(entry());
+        book.write().expect("an ordinary catalogue");
+        let good = std::fs::read_to_string(&path).expect("it was written");
+
+        // A value no amount of sanitising is asked to save: the id is the
+        // table's own name, and a name with a bracket in it is not a
+        // table header this dialect has.
+        book.entries.insert(
+            "broken".to_owned(),
+            Entry {
+                id: "not] a [name".to_owned(),
+                ..entry()
+            },
+        );
+        assert!(book.write().is_err(), "a broken catalogue was written");
+        assert_eq!(
+            std::fs::read_to_string(&path).expect("still there"),
+            good,
+            "the catalogue on the disk was replaced by one that will not load"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// **A value that could not go in this file cannot stop the file
+    /// being written.**
+    ///
+    /// The dialect's strings are one line with no escapes, so one `\` in
+    /// one texture's name is a catalogue that will not parse and a whole
+    /// run's work refused — which is what happened, when a renderer wrote
+    /// a Windows path over the top of the line naming a texture. The
+    /// reader that took it in has been taught better, and this is the
+    /// second lock: whatever reaches the writer, the file it writes can
+    /// be read back.
+    #[test]
+    fn nothing_a_value_carries_can_stop_the_catalogue_being_written() {
+        let text = render(&[&Entry {
+            name: "SM_Prop\\Crate".to_owned(),
+            textures: "Atlas.pngFra:1 | Saved: 'C:\\art\\preview.png'".to_owned(),
+            atlas: Some("a \"quoted\" name".to_owned()),
+            wanted: Some("lost\r\nnewline.psd".to_owned()),
+            described_by: "some/model\u{7}".to_owned(),
+            ..entry()
+        }]);
+        let entries =
+            read(Path::new("dex.toml"), &text).unwrap_or_else(|why| panic!("{why}\n{text}"));
+        assert_eq!(entries.len(), 1);
+        assert!(!text.contains('\\'), "{text}");
+        // And the value is still recognisably itself, rather than gone.
+        assert!(entries[0].textures.contains("Atlas.png"), "{text}");
+        assert_eq!(entries[0].name, "SM_Prop/Crate");
     }
 
     /// **A model's answer is made safe for the file before it goes in
@@ -717,10 +868,18 @@ mod tests {
     /// somebody actually has.
     #[test]
     fn an_entry_answers_to_a_word_from_its_description() {
-        let entry = entry();
+        let entry = Entry {
+            wanted: Some("Dungeons_Texture.psd".to_owned()),
+            ..entry()
+        };
         assert!(entry.matches("hazard"));
         assert!(entry.matches("HAZARD"));
         assert!(entry.matches("crate_01"));
+        // What tells it from its siblings, and what it never got: both
+        // are things somebody searches for, and the second is the only
+        // way to find the flagged lines at all.
+        assert!(entry.matches("hazard stripe"), "the comparison is searched");
+        assert!(entry.matches("Dungeons"), "the flag is searched");
         assert!(!entry.matches("pyramid"));
     }
 }

@@ -184,6 +184,22 @@ pub fn list(archive: &Path) -> Result<Vec<Member>, String> {
 /// what makes a second run free: the caller looks for the file before
 /// asking for it.
 pub fn extract(archive: &Path, members: &[&Member], into: &Path) -> Result<(), String> {
+    // Named members go on a command line, and a command line is 32 KB on
+    // Windows — about three hundred Synty paths. Cataloguing a pack asks
+    // for a thousand at once, so the ask is split into command lines that
+    // fit rather than into one per file.
+    for batch in members.chunks(AT_ONCE) {
+        extract_batch(archive, batch, into)?;
+    }
+    Ok(())
+}
+
+/// How many members are named on one command line. A hundred paths of a
+/// hundred characters is ten kilobytes, comfortably inside every shell's
+/// limit, and it turns a thousand launches into ten.
+const AT_ONCE: usize = 100;
+
+fn extract_batch(archive: &Path, members: &[&Member], into: &Path) -> Result<(), String> {
     if members.is_empty() {
         return Ok(());
     }

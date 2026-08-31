@@ -993,7 +993,13 @@ fn whole(option: &str, value: &str) -> Result<usize, String> {
 }
 
 /// One mesh this run is going to look at.
+#[derive(Clone)]
 struct Candidate {
+    /// The pack's directory under `$SYNTY_STORE`. Carried so that a mesh
+    /// can be traced back to the pack it came out of without the manifest
+    /// — which is what the second look at a mesh needs, to take the
+    /// texture that mesh asked for out of the same pack.
+    dir: String,
     /// The pack id the catalogue files it under: the manifest's, or the
     /// store directory's own name for a pack it does not declare.
     pack: String,
@@ -1011,6 +1017,27 @@ struct Candidate {
     atlas: Option<PathBuf>,
     /// The manifest id already naming this file, if one does.
     asset: Option<String>,
+    /// The pack a borrowed atlas came out of, when it came out of one
+    /// that is not this mesh's own. A weaker answer than its own pack's
+    /// texture, and the catalogue says so by naming the lender.
+    borrowed: Option<String>,
+    /// A texture this mesh named that nothing in its pack answers to.
+    /// The flag: its picture was painted with something else, so the
+    /// description written from that picture is a suspect line.
+    unresolved: Option<String>,
+}
+
+impl Candidate {
+    /// The pack it came out of, as something that can be looked in.
+    fn pack_of(&self) -> Pack {
+        Pack {
+            id: self.pack.clone(),
+            title: self.title.clone(),
+            dir: self.dir.clone(),
+            download: self.title.clone(),
+            line: 0,
+        }
+    }
 }
 
 /// **Render, measure and describe, and write the catalogue.**
@@ -1069,23 +1096,7 @@ fn describe(words: &[&str]) -> Result<(), String> {
     }
 
     let previewer = preview::find()?;
-    // `--offline` and "there is nothing to ask" produce the same
-    // catalogue and are not the same sentence: one is a choice and the
-    // other is a machine that has not been set up, and a person who
-    // typed the flag does not want to be told their key is missing.
-    let (describer, note) = if wanted.offline {
-        (
-            Describer::Measurements,
-            String::from(
-                "art: --offline, so every entry carries its measurements and says so. The\n     \
-                 pictures are still rendered and the counts are still true.",
-            ),
-        )
-    } else {
-        let describer = describe::find(wanted.model.clone());
-        let note = describer.announce();
-        (describer, note)
-    };
+    let (describer, note) = chosen(&wanted);
     let work = one_per_digest(work);
     let chunk = chunk_size(work.len(), wanted.jobs);
     println!(
@@ -1103,7 +1114,19 @@ fn describe(words: &[&str]) -> Result<(), String> {
         describer: &describer,
     };
     let books = Mutex::new(books);
-    let mut done = look_at_all(&run, &work, chunk, wanted.jobs, &books);
+    let mut done = look_at_all(&run, &work, chunk, wanted.jobs, &books, true);
+
+    // **What the deferred meshes asked for, and then another look.**
+    // A mesh whose own texture was not in the pack directory got a
+    // picture of the pack's atlas stretched over coordinates meant for
+    // something else. Taking the file it named out of the pack — into
+    // the tree it was exported from, where the mesh's own relative path
+    // finds it — is what makes the second look right.
+    if !done.deferred.is_empty() {
+        let again = fetch_wanted(&store, &cache, &manifest, &work, &done.deferred);
+        let over = chunk_size(again.len(), wanted.jobs);
+        done.absorb(look_at_all(&run, &again, over, wanted.jobs, &books, false));
+    }
 
     // Then the second look, at the families among what is now in the
     // catalogue. A mesh described on its own cannot be told from the four
@@ -1205,6 +1228,27 @@ fn one_per_digest(work: Vec<Candidate>) -> Vec<Vec<Candidate>> {
     groups
 }
 
+/// **Which describer this run uses, and the sentence saying so.**
+///
+/// `--offline` and "there is nothing to ask with" produce the same
+/// catalogue and are not the same sentence: one is a choice and the other
+/// is a machine that has not been set up, and somebody who typed the flag
+/// does not want to be told their key is missing.
+fn chosen(wanted: &Wanted) -> (Describer, String) {
+    if wanted.offline {
+        return (
+            Describer::Measurements,
+            String::from(
+                "art: --offline, so every entry carries its measurements and says so. The\n     \
+                 pictures are still rendered and the counts are still true.",
+            ),
+        );
+    }
+    let describer = describe::find(wanted.model.clone());
+    let note = describer.announce();
+    (describer, note)
+}
+
 /// The message for a run that found nothing to do, which is a different
 /// sentence depending on what was asked for.
 fn nothing_to_describe(wanted: &Wanted, manifest: &Manifest, store: &Store) -> String {
@@ -1266,6 +1310,9 @@ fn declared_candidates(store: &Store, cache: &Cache, manifest: &Manifest) -> Vec
         candidates.push(Candidate {
             pack: pack.id.clone(),
             title: pack.title.clone(),
+            dir: pack.dir.clone(),
+            unresolved: None,
+            borrowed: None,
             source: asset.source.clone(),
             name: stem(&asset.source),
             path: found.path().clone(),
@@ -1407,6 +1454,28 @@ fn gather(
     }
     let wanted = one_format_per_mesh(wanted);
     let total = wanted.len();
+    // **Out of the archives in one go.** One `tar` launch per file is
+    // about four tenths of a second each, which was half the wall clock
+    // of the first pack-wide sweep; the members of one archive come out
+    // together. Only what this run will actually look at, so the cap is
+    // applied before the extracting rather than after.
+    let taking: Vec<((String, String), &Pack)> = wanted
+        .iter()
+        .take(limit)
+        .map(|(key, pack)| (key.clone(), pack))
+        .collect();
+    let mut ready: BTreeMap<(String, String), PathBuf> = BTreeMap::new();
+    for (pack_id, pack) in packs_of(&taking) {
+        let paths: Vec<String> = taking
+            .iter()
+            .filter(|((id, _), _)| *id == pack_id)
+            .map(|((_, source), _)| source.clone())
+            .collect();
+        for (source, path) in store::take_out_all(store, cache, pack, &paths) {
+            ready.insert((pack_id.clone(), source), path);
+        }
+    }
+
     let mut atlases: BTreeMap<String, Option<PathBuf>> = BTreeMap::new();
     let mut candidates = Vec::new();
     let mut unreachable = 0;
@@ -1414,7 +1483,13 @@ fn gather(
         if candidates.len() >= limit {
             break;
         }
-        let Some(path) = store::find_relative(store, cache, &pack, &source) else {
+        // Whatever the batch above could not place — a mesh that is only
+        // inside a `.unitypackage`, say — is asked for on its own, which
+        // is the route that knows about those.
+        let Some(path) = ready
+            .remove(&(pack_id.clone(), source.clone()))
+            .or_else(|| store::find_relative(store, cache, &pack, &source))
+        else {
             unreachable += 1;
             continue;
         };
@@ -1439,8 +1514,11 @@ fn gather(
         });
         candidates.push(Candidate {
             asset,
+            unresolved: None,
+            borrowed: None,
             pack: pack_id,
             title: pack.title.clone(),
+            dir: pack.dir.clone(),
             name: stem(&source),
             source,
             path,
@@ -1468,6 +1546,160 @@ fn gather(
         );
     }
     candidates
+}
+
+/// **Take the textures the deferred meshes asked for out of their packs,
+/// and hand back the meshes to look at again.**
+///
+/// The file goes wherever the pack keeps it, which is the whole trick:
+/// the cache mirrors the archive's own tree, so a mesh at
+/// `SourceFiles/FBX/SM_Ivy.fbx` naming `../Textures/Leaf_01.png` finds it
+/// there on the second look — and then the material names an image that
+/// loads, so `paint_with` leaves it alone and the atlas is not forced
+/// over it.
+///
+/// A name that is nowhere in the pack is left alone: Synty FBX files name
+/// `.psd` files that were never shipped, and those will not resolve on
+/// any number of passes. The mesh is looked at again regardless, and this
+/// time described with whatever it has — one extra render is the whole
+/// price of asking.
+fn fetch_wanted(
+    store: &Store,
+    cache: &Cache,
+    manifest: &Manifest,
+    work: &[Vec<Candidate>],
+    deferred: &[(usize, Vec<String>)],
+) -> Vec<Vec<Candidate>> {
+    let mut asked: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let mut again = Vec::new();
+    for (at, wants) in deferred {
+        let Some(group) = work.get(*at) else { continue };
+        asked
+            .entry(group[0].pack.clone())
+            .or_default()
+            .extend(wants.iter().cloned());
+        again.push(group.clone());
+    }
+    let mut took = 0;
+    let mut borrowed = 0;
+    let mut missing: Vec<String> = Vec::new();
+    // What each wanted name turned out to be, so the meshes that asked
+    // for the same file resolve it once, and which pack it came out of
+    // when that was not this one.
+    let mut answers: BTreeMap<(String, String), PathBuf> = BTreeMap::new();
+    let mut lending: BTreeMap<(String, String), String> = BTreeMap::new();
+    for (pack_id, names) in asked {
+        let Some(pack) = again
+            .iter()
+            .find(|group| group[0].pack == pack_id)
+            .map(|group| group[0].pack_of())
+        else {
+            continue;
+        };
+        for name in names {
+            // The file itself, which is the answer that also makes the
+            // mesh's own reference resolve on the next look.
+            if let Some(path) = store::find_named(store, cache, &pack, &name) {
+                took += 1;
+                answers.insert((pack_id.clone(), name), path);
+                continue;
+            }
+            // Failing that, the file it MEANT. Synty's exporters name a
+            // `.psd` from their own machine, or the name a pack's atlas
+            // had two versions ago; the pack ships that texture under a
+            // name that is nearly the same. A near name cannot be made
+            // to resolve — a reference to a `.psd` is unsatisfiable by
+            // any file — so it is handed to the mesh as its atlas
+            // instead, which is the one thing that can still paint it.
+            if let Some(path) = find_like(store, cache, &pack, &name) {
+                answers.insert((pack_id.clone(), name), path);
+                continue;
+            }
+            // And failing THAT, the other packs. A Synty pack is built
+            // in a project holding all of them, so its meshes name each
+            // other's atlases as readily as their own —
+            // `PolygonAncientEgypt_Texture_01.psd` on a mesh in the
+            // horror pack. The store has Ancient Egypt in it.
+            if let Some((from, path)) = find_elsewhere(store, cache, manifest, &pack, &name) {
+                borrowed += 1;
+                // Where it came from travels with it. A texture out of
+                // another pack is a weaker answer than one out of this
+                // one — the name said which pack, not which file — and
+                // the catalogue should say so rather than record a file
+                // name that looks like any other.
+                lending.insert((pack_id.clone(), name.clone()), from);
+                answers.insert((pack_id.clone(), name), path);
+            } else {
+                missing.push(name);
+            }
+        }
+    }
+    // Each mesh takes the answer to what IT asked for, in preference to
+    // the pack-wide guess it was painted with the first time — and the
+    // names nothing answered are written onto it, as the flag saying its
+    // picture may be of some other texture entirely.
+    for group in &mut again {
+        let pack_id = group[0].pack.clone();
+        let Some((_, wants)) = deferred.iter().find(|(at, _)| {
+            work.get(*at)
+                .is_some_and(|had| had[0].source == group[0].source)
+        }) else {
+            continue;
+        };
+        let answered = wants
+            .iter()
+            .find(|name| answers.contains_key(&(pack_id.clone(), (*name).clone())));
+        let found = answered
+            .and_then(|name| answers.get(&(pack_id.clone(), name.clone())))
+            .cloned();
+        let from = answered.and_then(|name| lending.get(&(pack_id.clone(), name.clone())).cloned());
+        let lost: Vec<String> = wants
+            .iter()
+            .filter(|name| !answers.contains_key(&(pack_id.clone(), (*name).clone())))
+            .cloned()
+            .collect();
+        for candidate in group.iter_mut() {
+            if let Some(atlas) = &found {
+                candidate.atlas = Some(atlas.clone());
+                candidate.borrowed.clone_from(&from);
+            }
+            if !lost.is_empty() {
+                candidate.unresolved = Some(lost.join(", "));
+            }
+        }
+    }
+    println!(
+        "art: {} asked for a texture of {} own; took {} out of the packs{} and looked again",
+        many(again.len(), "mesh", "meshes"),
+        if again.len() == 1 { "its" } else { "their" },
+        took,
+        if borrowed > 0 {
+            format!(", {borrowed} of them out of another pack")
+        } else {
+            String::new()
+        }
+    );
+    if !missing.is_empty() {
+        // Named, because this is the one thing here that no amount of
+        // looking will fix: a Synty FBX often names a `.psd` from the
+        // machine it was exported on, and no pack has ever carried one.
+        // Knowing which file is what tells that apart from a pack that
+        // has not been unpacked.
+        println!("     the packs carry none of: {}", missing.join(", "));
+    }
+    again
+}
+
+/// The packs a batch of wanted meshes came out of, once each and in a
+/// settled order.
+fn packs_of<'a>(taking: &[((String, String), &'a Pack)]) -> Vec<(String, &'a Pack)> {
+    let mut packs: Vec<(String, &Pack)> = Vec::new();
+    for ((pack_id, _), pack) in taking {
+        if !packs.iter().any(|(id, _)| id == pack_id) {
+            packs.push((pack_id.clone(), *pack));
+        }
+    }
+    packs
 }
 
 /// **One entry per mesh, not one per format the pack shipped it in.**
@@ -1679,16 +1911,8 @@ fn copy_of(pack: &Pack) -> Pack {
 /// it goes into the catalogue's `atlas` field so a reader can see that a
 /// guess is what it was.
 fn pack_atlas(store: &Store, cache: &Cache, pack: &Pack) -> Option<PathBuf> {
-    let dir = store.pack_dir(pack);
-    let search = store::search(std::slice::from_ref(&dir), "", cache);
-    let mut names: Vec<String> = search
-        .hits
-        .iter()
-        .filter_map(|hit| match hit {
-            Hit::Loose(path) => path.strip_prefix(&dir).ok().map(slashed),
-            Hit::Inside { member, .. } => Some(member.clone()),
-        })
-        .filter(|name| named(name, &["png", "jpg", "jpeg", "tga"]))
+    let mut names: Vec<String> = pack_images(store, cache, pack)
+        .into_iter()
         .filter(|name| !is_other_map(name))
         .collect();
     let wanted = words(&pack.dir);
@@ -1696,6 +1920,202 @@ fn pack_atlas(store: &Store, cache: &Cache, pack: &Pack) -> Option<PathBuf> {
     names
         .iter()
         .find_map(|name| store::find_relative(store, cache, pack, name))
+}
+
+/// **Whether what a mesh asked for is near enough to what it was painted
+/// with.**
+///
+/// Almost every Synty FBX names the `.psd` it was painted from, and for
+/// almost all of them the pack's shared atlas IS that texture, shipped as
+/// a `.png` under the same name — `PolygonSciFiSpace_Texture_01_A.psd`
+/// asked for, `PolygonSciFiSpace_Texture_01_A.png` painted on. Those
+/// meshes have exactly what they asked for and there is nothing to look
+/// at again.
+///
+/// So the question is not "did the reference resolve" — for two meshes in
+/// three it never does, and treating that as a fault flagged 477 of 702
+/// entries in a pack whose pictures were nearly all correct. The question
+/// is whether the two names are about the same thing, which is a word
+/// they share that is not a number, a single letter, or one of the words
+/// every Synty texture has.
+fn answered(wants: &[String], atlas: Option<&Path>) -> bool {
+    if wants.is_empty() {
+        return true;
+    }
+    let Some(atlas) = atlas.and_then(|path| path.file_name()) else {
+        return false;
+    };
+    let painted = distinctive(&atlas.to_string_lossy());
+    wants.iter().any(|wanted| {
+        distinctive(wanted)
+            .iter()
+            .any(|word| painted.contains(word))
+    })
+}
+
+/// The words of a name that could tell one texture from another: not the
+/// ones every Synty texture carries, and not a number or a single letter,
+/// which two unrelated atlases share as readily as two related ones.
+fn distinctive(name: &str) -> Vec<String> {
+    telling(name)
+        .into_iter()
+        .filter(|word| word.len() > 1 && word.chars().any(char::is_alphabetic))
+        .collect()
+}
+
+/// **The texture in somebody else's pack.**
+///
+/// A Synty pack is built in a project that holds all of them, so its
+/// meshes name each other's atlases as readily as their own: the horror
+/// pack's screens ask for `PolygonAncientEgypt_Texture_01.psd`, and
+/// `city.psd` and `PolygonShops_Texture_01.psd` turn up in it too. The
+/// store on this machine has Ancient Egypt and Shops in it, so there is
+/// nothing here to guess at — the file name says which pack it belongs
+/// to.
+///
+/// So the name picks the pack: a directory sharing a telling word with
+/// the wanted file is asked first, and asked the same two questions its
+/// own pack was — the file itself, then the file it meant. Only when the
+/// name points nowhere is every other pack asked, and then only for an
+/// exact name, because a near match across a hundred packs is how a mesh
+/// would come to be painted with something out of a different game.
+fn find_elsewhere(
+    store: &Store,
+    cache: &Cache,
+    manifest: &Manifest,
+    own: &Pack,
+    name: &str,
+) -> Option<(String, PathBuf)> {
+    let wanted = distinctive(name);
+    let others: Vec<Pack> = std::fs::read_dir(&store.root)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|entry| entry.path().is_dir())
+        .map(|entry| by_directory(manifest, store, &entry.file_name().to_string_lossy()))
+        .filter(|pack| pack.dir != own.dir)
+        .collect();
+
+    let (hinted, rest): (Vec<&Pack>, Vec<&Pack>) = others.iter().partition(|pack| {
+        let named = distinctive(&pack.dir);
+        wanted.iter().any(|word| named.contains(word))
+    });
+    // Best-named first: `PolygonApocalypse_Texture_01.psd` names four
+    // packs with `apocalypse` in them, and `POLYGON - Apocalypse` is the
+    // one with nothing else in its name.
+    let mut hinted: Vec<&&Pack> = hinted.iter().collect();
+    hinted.sort_by_key(|pack| {
+        let named = distinctive(&pack.dir);
+        (
+            std::cmp::Reverse(wanted.iter().filter(|word| named.contains(word)).count()),
+            named.len(),
+            pack.dir.clone(),
+        )
+    });
+
+    for pack in &hinted {
+        if let Some(path) = store::find_named(store, cache, pack, name)
+            .or_else(|| find_like(store, cache, pack, name))
+        {
+            return Some((pack.dir.clone(), path));
+        }
+    }
+    // **The named pack's own atlas.** A pack's textures are not always
+    // named after it — the Vikings pack calls its atlas `Texture_01.png`
+    // — so a mesh asking for `PolygonVikings2_Texture_01.psd` names a
+    // pack this can find and a file it cannot. Knowing the pack is
+    // enough: its atlas is what a mesh of that pack is painted with.
+    // Only for the best-named pack, because this is the step that would
+    // otherwise reach into a pack that merely shares a word.
+    if let Some(pack) = hinted.first()
+        && let Some(path) = pack_atlas(store, cache, pack)
+    {
+        return Some((pack.dir.clone(), path));
+    }
+    // And failing every hint, the file itself in any pack at all —
+    // exactly named, never near, since a near match across a hundred
+    // packs is how a mesh gets painted with something from another game.
+    rest.iter().find_map(|pack| {
+        store::find_named(store, cache, pack, name).map(|path| (pack.dir.clone(), path))
+    })
+}
+
+/// Every image in a pack, by its path inside the pack.
+fn pack_images(store: &Store, cache: &Cache, pack: &Pack) -> Vec<String> {
+    let dir = store.pack_dir(pack);
+    store::search(std::slice::from_ref(&dir), "", cache)
+        .hits
+        .iter()
+        .filter_map(|hit| match hit {
+            Hit::Loose(path) => path.strip_prefix(&dir).ok().map(slashed),
+            Hit::Inside { member, .. } => Some(member.clone()),
+        })
+        .filter(|name| named(name, &["png", "jpg", "jpeg", "tga"]))
+        .collect()
+}
+
+/// **The file a mesh meant, when the file it named is not there.**
+///
+/// A Synty FBX names its texture from the tree it was exported in:
+/// `PolygonGeneric_Texture_01_A.psd`, where the pack ships
+/// `Generic_01_A.png`, or `PolygonHorrorSpace_Texture_01_A.png`, which is
+/// what that pack's atlas was called two versions ago. Neither can be
+/// made to resolve — no file can satisfy a reference to a `.psd` — so the
+/// nearest thing the pack does carry is handed to that mesh as its atlas.
+///
+/// Matched on the words the two names share, with the words every Synty
+/// texture has thrown away first: `polygon` and `texture` are in nearly
+/// all of them and so distinguish nothing. Two words of agreement are the
+/// least this will act on, because a wrong texture is how a pack came to
+/// be painted with water.
+fn find_like(store: &Store, cache: &Cache, pack: &Pack, name: &str) -> Option<PathBuf> {
+    let wanted = telling(name);
+    if wanted.len() < 2 {
+        return None;
+    }
+    let mut best: Option<(usize, usize, String)> = None;
+    for candidate in pack_images(store, cache, pack) {
+        if is_other_map(&candidate) {
+            continue;
+        }
+        let spelling = telling(&candidate);
+        let shared = wanted.iter().filter(|word| spelling.contains(word)).count();
+        if shared < 2 {
+            continue;
+        }
+        let rank = (shared, usize::MAX - spelling.len(), candidate);
+        if best.as_ref().is_none_or(|had| *had < rank) {
+            best = Some(rank);
+        }
+    }
+    let (_, _, found) = best?;
+    store::find_relative(store, cache, pack, &found)
+}
+
+/// The words of a name that tell one texture from another. `polygon` and
+/// `texture` are in nearly every Synty texture's name, and a file
+/// extension says nothing about what is in the file.
+fn telling(name: &str) -> Vec<String> {
+    words(name)
+        .into_iter()
+        .filter(|word| {
+            !matches!(
+                word.as_str(),
+                "polygon"
+                    | "poly"
+                    | "texture"
+                    | "textures"
+                    | "png"
+                    | "tga"
+                    | "psd"
+                    | "jpg"
+                    | "jpeg"
+                    | "sourcefiles"
+                    | "source"
+                    | "files"
+            )
+        })
+        .collect()
 }
 
 /// **How well an image answers for a pack's shared atlas**, smallest
@@ -1774,6 +2194,7 @@ fn words(name: &str) -> Vec<String> {
     let mut found = Vec::new();
     let mut word = String::new();
     let mut previous_lower = false;
+    let mut previous_alpha = false;
     for character in name.chars() {
         if !character.is_ascii_alphanumeric() {
             if !word.is_empty() {
@@ -1782,11 +2203,16 @@ fn words(name: &str) -> Vec<String> {
             continue;
         }
         // A capital after a lowercase starts a word, so `SciFiHorror` is
-        // three words and `PNG` stays one.
-        if previous_lower && character.is_ascii_uppercase() && !word.is_empty() {
+        // three words and `PNG` stays one. So does a digit after a
+        // letter: `PolygonVikings2` is the Vikings pack, and while that
+        // `2` stayed stuck to the name it was a pack nothing matched.
+        let turned = (previous_lower && character.is_ascii_uppercase())
+            || (previous_alpha && character.is_ascii_digit());
+        if turned && !word.is_empty() {
             found.push(std::mem::take(&mut word));
         }
         previous_lower = character.is_ascii_lowercase() || character.is_ascii_digit();
+        previous_alpha = character.is_ascii_alphabetic();
         word.push(character.to_ascii_lowercase());
     }
     if !word.is_empty() {
@@ -1813,6 +2239,22 @@ struct Done {
     /// The digests it described, which is how the family pass tells the
     /// families this run touched from the rest of the catalogue.
     described: BTreeSet<String>,
+    /// **The meshes it did not describe because they had asked for a
+    /// texture that was not there**, and what each asked for. Set only on
+    /// the patient pass; see [`describe`].
+    deferred: Vec<(usize, Vec<String>)>,
+}
+
+impl Done {
+    /// Take in what a second look came to. The deferred list is not
+    /// carried over: a mesh waits once, and is described on the next look
+    /// with whatever it has by then.
+    fn absorb(&mut self, more: Self) {
+        self.written += more.written;
+        self.troubles.extend(more.troubles);
+        self.files.extend(more.files);
+        self.described.extend(more.described);
+    }
 }
 
 /// **Look at the work, a chunk per launch, several launches at once.**
@@ -1835,8 +2277,10 @@ fn look_at_all(
     chunk: usize,
     jobs: usize,
     books: &Mutex<BTreeMap<String, dex::Dex>>,
+    patient: bool,
 ) -> Done {
     let chunks: Vec<&[Vec<Candidate>]> = work.chunks(chunk).collect();
+    let deferred: Mutex<Vec<(usize, Vec<String>)>> = Mutex::new(Vec::new());
     let next = AtomicUsize::new(0);
     let finished = AtomicUsize::new(0);
     let written = AtomicUsize::new(0);
@@ -1847,12 +2291,30 @@ fn look_at_all(
         for _ in 0..jobs.min(chunks.len()).max(1) {
             scope.spawn(|| {
                 loop {
-                    let Some(chunk) = chunks.get(next.fetch_add(1, Ordering::Relaxed)) else {
+                    let at = next.fetch_add(1, Ordering::Relaxed);
+                    let Some(batch) = chunks.get(at) else {
                         return;
                     };
                     let mut entries: Vec<dex::Entry> = Vec::new();
-                    for (group, look) in chunk.iter().zip(look_at(run, chunk)) {
+                    for (which, (group, look)) in batch.iter().zip(look_at(run, batch)).enumerate()
+                    {
                         let candidate = &group[0];
+                        // **A mesh that asked for a texture it did not
+                        // get waits.** Its picture is the pack atlas
+                        // stretched over coordinates meant for something
+                        // else, and describing that spends a model call
+                        // on a wrong answer. The run fetches what it
+                        // asked for and looks again — see `describe`.
+                        if patient
+                            && let Ok(look) = &look
+                            && !answered(&look.wants, candidate.atlas.as_deref())
+                        {
+                            deferred
+                                .lock()
+                                .expect("no worker panics holding this")
+                                .push((at * chunk + which, look.wants.clone()));
+                            continue;
+                        }
                         let outcome = look.and_then(|look| {
                             let said = run.describer.say(
                                 run.cache,
@@ -1914,11 +2376,16 @@ fn look_at_all(
             });
         }
     });
+    let mut deferred = deferred.into_inner().expect("every worker is finished");
+    // In the order the work was given, so a second pass reads like the
+    // first and two runs of one pack produce one catalogue.
+    deferred.sort_by_key(|(at, _)| *at);
     Done {
         written: written.load(Ordering::Relaxed),
         troubles: troubles.into_inner().expect("every worker is finished"),
         files: files.into_inner().expect("every worker is finished"),
         described: described.into_inner().expect("every worker is finished"),
+        deferred,
     }
 }
 
@@ -2209,13 +2676,26 @@ fn entry(
         // see a mesh's siblings. `Dex::insert` carries an existing one
         // over when the bytes have not changed.
         differs: None,
+        // A borrowed atlas names its lender. `Texture_01.png` says
+        // nothing about where a mesh's colours came from;
+        // `POLYGON - Vikings Pack/Texture_01.png` on a horror prop says
+        // both that the mesh asked for another pack's texture and that
+        // this is the pack it was given.
         atlas: candidate.atlas.as_ref().map(|path| {
-            path.file_name().map_or_else(
+            let leaf = path.file_name().map_or_else(
                 || path.display().to_string(),
                 |name| name.to_string_lossy().into_owned(),
-            )
+            );
+            candidate
+                .borrowed
+                .as_ref()
+                .map_or_else(|| leaf.clone(), |from| format!("{from}/{leaf}"))
         }),
         textures: look.images.join(", "),
+        // What it still could not load after being given what the pack
+        // had. A description of a picture painted with the wrong texture
+        // is worth reading, and worth reading with suspicion.
+        wanted: candidate.unresolved.clone(),
         description,
         described_by: describer.describe(),
         triangles: look.triangles,
@@ -2265,6 +2745,15 @@ fn catalogue(words: &[&str]) -> Result<(), String> {
         );
         for entry in matching {
             println!("  {}", entry.line());
+            if let Some(wanted) = &entry.wanted {
+                // Before the description rather than after it, because
+                // it is a caveat on the sentence below and a reader
+                // should meet it first.
+                println!(
+                    "  {:<32} asked for {wanted}, which the pack has not got",
+                    "!"
+                );
+            }
             if let Some(differs) = &entry.differs {
                 // Under the description rather than in it: one is what
                 // the thing is, the other is why you would take this one
@@ -2455,6 +2944,13 @@ mod tests {
         assert_eq!(
             words("POLYGON - Sci-Fi Horror"),
             ["polygon", "sci", "fi", "horror"]
+        );
+        // A digit stuck to the end of a name is its own word, or the
+        // pack `PolygonVikings2_Texture_01.psd` names is a pack called
+        // `vikings2`, which nobody has.
+        assert_eq!(
+            words("PolygonVikings2_Texture_01.psd"),
+            ["polygon", "vikings", "2", "texture", "01", "psd"]
         );
         assert_eq!(
             words("Generic_Water_Texture.png"),

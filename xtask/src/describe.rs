@@ -723,6 +723,7 @@ mod tests {
             meshes: 1,
             materials: 1,
             images: vec!["PolygonSciFiSpace_Texture_01_A.png".to_owned()],
+            wants: Vec::new(),
             bounds: Some(Bounds {
                 mid: [0.0, 0.3, 0.0],
                 half: [0.363, 0.306, 0.336],

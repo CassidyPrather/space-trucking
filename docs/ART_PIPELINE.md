@@ -464,6 +464,11 @@ to be faster again:
   to start before it has looked at anything, against about 5 seconds of
   work, so a third of a sweep went on starting up. Chunks of up to 32 took
   the per-mesh cost from 5.05 s to 0.82 s at the same `--jobs 4`.
+- **One extraction per archive, not per file.** Taking a mesh out of a
+  zip is a `tar` launch, about four tenths of a second, and the first
+  pack-wide sweep spent half its wall clock doing that one file at a
+  time. The members one archive has to give up now come out together, a
+  hundred to a command line — which is what a command line will hold.
 - **256 pixels square, not 1024.** Cycles time, PNG bytes and the tokens
   an image costs all scale with the pixel count, and the descriptions do
   not get better with more of them: on the one mesh where a 512 and a 256
@@ -516,6 +521,90 @@ recorded as `atlas` in the entry, because a preview rendered untextured
 is a grey mesh that a model then describes, accurately and uselessly, as
 grey — and the entry should say when the colours it describes came from a
 guess. `textures` is what the scene actually bore.
+
+**Picking that atlas is the guess that has been wrong most often**, and
+each way it was wrong is now a rule. It was "the shortest name with
+`texture` in it", which painted a thousand meshes of `POLYGON - Sci-Fi
+Horror` with `Generic_Water_Texture.png` — one entry says "a subtle,
+generic water texture" outright. It is now the file sharing the most
+words with the pack's own directory name, `texture` breaking ties, then
+the **fewest other words**, because the main atlas is the least qualified
+name in a pack: `..._Signs_Texture_01_A` is the atlas for the signs.
+Normal maps are excluded (they paint a mesh lavender) and so is the
+pack's own store icon, which is named exactly after the pack and sits at
+the top of its directory — both were found by their winning.
+
+### When a mesh asks for a texture of its own
+
+A pack's shared atlas is not the only texture in a pack, and only the
+mesh is taken out of the archive — so a mesh whose material names its own
+texture has a reference that dangles, gets the pack atlas painted over it
+instead, and has its coordinates land wherever they land.
+
+So the previewer says `wants <file name>` for every image reference it
+could not load, **and a mesh that says it is not described yet**. What it
+asked for comes out of the pack — into the tree it was exported from,
+where the mesh's own relative path finds it — and the mesh is looked at a
+second time. That costs one extra render for about one mesh in forty, and
+no model call at all for the look that asked.
+
+**A name the pack does not carry** is the ordinary case, not the odd one.
+Synty's exporters name the `.psd` they painted from
+(`PolygonGeneric_Texture_01_A.psd`), or the name a pack's atlas had two
+versions ago (`PolygonHorrorSpace_Texture_01_A.png` in a pack that now
+spells it `PolygonSciFiHorror_01_A.png`). No file placement can satisfy a
+reference to a `.psd`, so the nearest thing the pack does carry is handed
+to that mesh as *its* atlas instead — matched on the words the two names
+share, with `polygon` and `texture` thrown away first because nearly
+every Synty texture has them, and never on fewer than two words.
+
+### The pack next door
+
+**Synty build every pack in one project, so a pack's meshes name the
+other packs' atlases as readily as their own.** The horror pack asks for
+`PolygonVikings2_Texture_01.psd`, `PolygonShops_Texture_01.psd`,
+`PolygonAncientEgypt_Texture_01.psd` and `city.psd`; its brick pillars
+ask for `Brick_Small_01.png`, which lives in Dark Fantasy. On a machine
+holding the library there is nothing to guess at — **the file name says
+which pack it belongs to**, and that pack is on the disk.
+
+So the search widens, weakest assumption last:
+
+1. the file, exactly, in the mesh's own pack — this one also makes the
+   mesh's own reference resolve, so nothing has to be substituted
+2. the file it *meant* in its own pack, by shared words
+3. those same two questions in the pack the **name** points at, best-named
+   first: `PolygonApocalypse_Texture_01.psd` names four packs with
+   `apocalypse` in them, and `POLYGON - Apocalypse` is the one with
+   nothing else in its name
+4. **that pack's own atlas.** A pack's textures are not always named after
+   it — the Vikings pack calls its atlas `Texture_01.png` — so the name
+   can identify the pack and never the file. Knowing the pack is enough
+5. failing every hint, the exact file name in any pack at all, and never a
+   near match at that range: that is how a mesh comes to be painted with
+   something out of a different game
+
+A borrowed atlas **names its lender** —
+`atlas = "POLYGON - Vikings Pack/Texture_01.png"` — because
+`Texture_01.png` on its own says nothing about where a mesh's colours came
+from, and a texture out of another pack is a weaker answer than one out of
+this one.
+
+Over the two sci-fi packs this took the flagged lines from 35 to **2**,
+and it is not cosmetic: `SM_Bld_Base_Pillar_01` wanted `Brick_Small_01.png`,
+got it out of Dark Fantasy, and is now catalogued as "a tall, slender
+square column of grey brickwork, weathered and chipped" instead of
+whatever the sci-fi atlas made of it.
+
+**What is left is what nothing can answer**: `Image`, `skybox.tif` — names
+that point at no pack and match no file. Those stay flagged, which is what
+a flag is for.
+
+One thing none of this fixes: **coordinates that point somewhere dark.** A
+cutout card whose UVs address a region of an atlas it was not drawn
+against still renders black, and a describer will faithfully report a
+black shape. The run names the file that was missing; the catalogue line
+is the honest description of a wrong picture.
 
 ### What it is, and is not
 

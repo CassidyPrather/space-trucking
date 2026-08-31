@@ -299,6 +299,138 @@ fn take_out(
     Ok(landed.is_file().then_some(landed))
 }
 
+/// **Every one of these paths, out of one pack, in as few extractions as
+/// possible.**
+///
+/// [`find_relative`] answers one path at a time, and one path at a time
+/// is one `tar` launch at a time: about four tenths of a second each,
+/// which is nothing for the handful a manifest names and half of a
+/// pack-wide sweep. Cataloguing asks for every mesh in a pack at once, so
+/// the members that have to come out of one archive come out together.
+///
+/// What is already on disk is left alone, and a path this cannot place is
+/// simply absent from the answer — the caller falls back to
+/// [`find_relative`], which knows the other place a file can be.
+pub fn take_out_all(
+    store: &Store,
+    cache: &Cache,
+    pack: &Pack,
+    relatives: &[String],
+) -> BTreeMap<String, PathBuf> {
+    let mut found = BTreeMap::new();
+    let pack_dir = store.pack_dir(pack);
+    // The loose tree first, exactly where `find_relative` looks first.
+    let mut left: Vec<&String> = Vec::new();
+    for relative in relatives {
+        let direct = pack_dir.join(under(relative));
+        if direct.is_file() {
+            found.insert(relative.clone(), direct);
+        } else {
+            left.push(relative);
+        }
+    }
+    for archive_path in find_archives(&pack_dir) {
+        if left.is_empty() {
+            break;
+        }
+        let listing = store.listing(&archive_path);
+        let Ok(members) = listing.as_ref().as_ref() else {
+            continue;
+        };
+        let into = cache.unpacked(&pack.id).join(leaf(&archive_path));
+        let mut wanted: Vec<(&String, &Member, PathBuf)> = Vec::new();
+        let mut still: Vec<&String> = Vec::new();
+        for relative in std::mem::take(&mut left) {
+            let Some(member) = pick(members, relative) else {
+                still.push(relative);
+                continue;
+            };
+            let landed = into.join(&member.inside);
+            if landed.is_file() {
+                found.insert(relative.clone(), landed);
+            } else {
+                wanted.push((relative, member, landed));
+            }
+        }
+        if !wanted.is_empty() {
+            eprintln!(
+                "art: taking {} out of {} (the archive stays as it is)",
+                count(wanted.len(), "file"),
+                archive_path.display()
+            );
+            let members: Vec<&Member> = wanted.iter().map(|(_, member, _)| *member).collect();
+            if let Err(why) = archive::extract(&archive_path, &members, &into) {
+                eprintln!("art: {why}");
+            }
+            for (relative, _, landed) in wanted {
+                if landed.is_file() {
+                    found.insert(relative.clone(), landed);
+                } else {
+                    still.push(relative);
+                }
+            }
+        }
+        left = still;
+    }
+    found
+}
+
+/// **One file out of a pack, found by its name alone.**
+///
+/// For the textures a mesh asks for. An FBX names its atlas by the path
+/// of the tree it was exported from — a path that is not on this machine
+/// — so the only part of it worth matching is the file name, and the
+/// place to put the file is wherever the pack itself keeps it, because
+/// that is what the mesh's own relative path will resolve against.
+///
+/// The copy nearest the root of the archive wins, and ties go
+/// alphabetically, for [`pick`]'s reason: one machine must choose what
+/// another machine chooses.
+pub fn find_named(store: &Store, cache: &Cache, pack: &Pack, name: &str) -> Option<PathBuf> {
+    let wanted = name.to_ascii_lowercase();
+    let pack_dir = store.pack_dir(pack);
+    // A tree somebody unzipped answers first, the way it does everywhere
+    // else here — a pack that has been unpacked by hand is a pack whose
+    // files are simply there.
+    let mut loose: Option<PathBuf> = None;
+    let _ = fsx::walk(&pack_dir, &mut |path| {
+        if loose.is_none()
+            && path
+                .file_name()
+                .and_then(|leaf| leaf.to_str())
+                .is_some_and(|leaf| leaf.eq_ignore_ascii_case(&wanted))
+        {
+            loose = Some(path.to_path_buf());
+        }
+    });
+    if loose.is_some() {
+        return loose;
+    }
+    let mut best: Option<String> = None;
+    for archive_path in find_archives(&pack_dir) {
+        let listing = store.listing(&archive_path);
+        let Ok(members) = listing.as_ref().as_ref() else {
+            continue;
+        };
+        for member in members {
+            let inside = slashed(&member.inside);
+            let leaf = inside.rsplit('/').next().unwrap_or(&inside);
+            if !leaf.eq_ignore_ascii_case(&wanted) {
+                continue;
+            }
+            let rank = (inside.matches('/').count(), inside.clone());
+            if best
+                .as_ref()
+                .is_none_or(|had| (had.matches('/').count(), had.clone()) > rank)
+            {
+                best = Some(inside);
+            }
+        }
+    }
+    let inside = best?;
+    find_relative(store, cache, pack, &inside)
+}
+
 /// **Which member of an archive a pack-relative path names.**
 ///
 /// Exact first. Then a match on whole path components from the right,

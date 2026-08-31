@@ -89,6 +89,15 @@ pub struct Look {
     /// Empty is the mesh that rendered untextured, and it is the first
     /// thing to know before believing a description of its colours.
     pub images: Vec<String>,
+    /// **What the mesh asked for and did not get**, by file name.
+    ///
+    /// A pack's shared atlas is not the only texture in a pack: ivy,
+    /// decals and screens carry their own, and a mesh painted with the
+    /// atlas instead has its UVs land wherever those coordinates happen
+    /// to fall — which is how a sheet of ivy was catalogued as "a jagged,
+    /// faceted shard of near-black material". These are the names to take
+    /// out of the pack before looking again.
+    pub wants: Vec<String>,
     pub bounds: Option<Bounds>,
 }
 
@@ -365,8 +374,17 @@ fn read(said: &str, jobs: usize) -> Vec<Result<Look, String>> {
             "meshes" => look.meshes = rest.parse().unwrap_or(look.meshes),
             "materials" => look.materials = rest.parse().unwrap_or(look.materials),
             "image" => {
-                if !rest.is_empty() && !look.images.iter().any(|had| had == rest) {
-                    look.images.push(rest.to_owned());
+                if let Some(name) = a_file_name(rest)
+                    && !look.images.iter().any(|had| had == &name)
+                {
+                    look.images.push(name);
+                }
+            }
+            "wants" => {
+                if let Some(name) = a_file_name(rest)
+                    && !look.wants.iter().any(|had| had == &name)
+                {
+                    look.wants.push(name);
                 }
             }
             "aabb" => look.bounds = bounds(rest).or(look.bounds),
@@ -374,6 +392,28 @@ fn read(said: &str, jobs: usize) -> Vec<Result<Look, String>> {
         }
     }
     looks
+}
+
+/// **A file name, or nothing.**
+///
+/// The value on an `image` or `wants` line is supposed to be one file's
+/// name, and what arrived instead was
+/// `PolygonSciFiHorror_01_A.pngFra:1 Mem:2.4M | Saved: 'C:\...'` —
+/// Blender's renderer writing over the top of the script's own line. That
+/// went into the catalogue as a texture's name, and the backslash in it
+/// is a character this dialect's strings may not hold, so the whole file
+/// was refused and a run's worth of work stayed unwritten.
+///
+/// The script no longer lets that happen. This is the other half of not
+/// letting it happen: what the reader will accept is what a file name can
+/// be — one line, no separators, nothing enormous.
+fn a_file_name(rest: &str) -> Option<String> {
+    let name = rest.split(['\r', '\n']).next()?.trim();
+    let sound = !name.is_empty()
+        && name.len() <= 120
+        && !name.contains(['\\', '/', '\'', '"', '|'])
+        && !name.chars().any(char::is_control);
+    sound.then(|| name.to_owned())
 }
 
 /// The six numbers of an `aabb` line, as a middle and a half. The same

@@ -8,17 +8,32 @@ importers and whichever render engine answers first.
 Run as::
 
     blender --background --factory-startup --python-exit-code 1 \
-        --python fbx_to_preview.py -- <source> <destination.png> [texture]
+        --python fbx_to_preview.py -- <jobs file>
 
-The third argument is the atlas to paint with, and it means exactly what
-it means to `fbx_to_gltf.py` — which is not a coincidence, because this
-script imports that one and calls its `paint_with`. **The two must agree
-about what a texture is.** A preview painted by a rule that had drifted
-from the converter's would be a picture of a grey crate filed beside a
-conversion that came out in colour, and the catalogue would then carry a
-sentence describing the wrong object. So `usable_image`, `paint_with` and
-`import_any` are borrowed rather than copied, and `art/cache/blender/`
-holds both files for that reason.
+**One launch, many meshes**, and that is the whole reason the jobs arrive
+in a file. Blender takes about two and a quarter seconds to start and
+import its own Python before it has looked at anything, which was half
+the cost of describing a prop; over a library of fifty thousand it is
+thirty hours of starting up. So the file holds one job per line::
+
+    <source>|<destination.png>|<texture>
+
+`|` is the separator because Windows forbids it in a path and a shell
+stand-in can split on it in one line. The texture — the atlas to paint
+with — may be empty, and it means exactly what it means to
+`fbx_to_gltf.py`. That is not a coincidence: this script imports that one
+and calls its `paint_with`. **The two must agree about what a texture
+is.** A preview painted by a rule that had drifted from the converter's
+would be a picture of a grey crate filed beside a conversion that came
+out in colour, and the catalogue would carry a sentence describing the
+wrong object. So `usable_image`, `paint_with` and `import_any` are
+borrowed rather than copied, and `art/cache/blender/` holds both files
+for that reason.
+
+**One bad mesh does not take the rest of the launch with it.** Each job
+is run inside a try, and a job that raises prints `trouble <n> <why>` and
+the next one starts — because a chunk is up to thirty-two meshes and one
+unreadable FBX among them is not a reason to lose the other thirty-one.
 
 One thing it does NOT borrow is `refuse_unless_painted`. A conversion that
 painted nothing is a grey mesh shipped into a game and is refused; a
@@ -29,8 +44,10 @@ textures rather than pretending it did.
 
 ## What it prints
 
-One fact per line, read by `xtask/src/preview.rs`::
+One block per job, headed by the job's line number, read by
+`xtask/src/preview.rs`::
 
+    look 1
     tris 412
     meshes 1
     materials 1
@@ -54,6 +71,11 @@ so nothing can occlude anything else however deep the mesh is. The view
 transform is set to Standard where that exists: Synty's palettes are flat
 colour on a shared atlas, and a filmic curve over them is a description of
 the wrong colours.
+
+`$ART_PREVIEW_SIZE` is how many pixels square the whole sheet is, so a
+quarter of it across is one view. These are flat-shaded low-poly props
+against a plain ground, and the thing that loses a description is a bad
+angle rather than a missing pixel — see `SIZE` for what was measured.
 """
 
 import math
@@ -70,11 +92,25 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fbx_to_gltf  # noqa: E402 - the path above is what makes it importable
 
 
-#: How wide and tall the rendered contact sheet is, in pixels. Four views
-#: at 512, which is about what a hosted vision model reads before it
-#: downsamples anything, and small enough that the base64 of it is not the
-#: bulk of a request.
-SIZE = 1024
+#: How wide and tall the rendered contact sheet is, in pixels — four
+#: views, so a quarter of this across is one view.
+#:
+#: It was 1024, which is 512 to a view, and that was overkill twice over:
+#: a Synty prop is flat colour on a shared atlas, and Cycles time, PNG
+#: bytes and the tokens an image costs all scale with the pixel count.
+#:
+#: 256 was chosen by rendering the same sixteen barrels at both sizes and
+#: reading what came back. It halves the time per mesh (2.07 s to 1.12 s),
+#: takes a preview from 245 KB to 70 KB and a call from 680 prompt tokens
+#: to 450 — and the descriptions do not get worse. On the one mesh where
+#: the two runs disagreed, a crate of drums, the 256 answer was the more
+#: accurate of the two: it saw the olive drum that the 512 answer missed.
+#: What neither size fixes is counting — "three hoops" and "four hoops"
+#: came from the same barrel — because that is the model and not the
+#: pixels.
+#:
+#: `$ART_PREVIEW_SIZE` overrides it for a pack of something more detailed.
+SIZE = int(os.environ.get("ART_PREVIEW_SIZE") or 256)
 
 
 def span():
@@ -174,6 +210,12 @@ def frame(scene, centre, radius, spacing, right, up, towards):
 #: is not the owner's. The others are faster where they work.
 ENGINES = ("CYCLES", "BLENDER_EEVEE_NEXT", "BLENDER_EEVEE", "BLENDER_WORKBENCH")
 
+#: The engine that worked, once one has. A launch renders up to
+#: thirty-two meshes and the answer cannot change between them, so the
+#: search below runs once and every job after the first goes straight to
+#: the engine that answered.
+WORKING = []
+
 
 def render(destination):
     """Render the scene to `destination`, trying engines until one works.
@@ -199,7 +241,7 @@ def render(destination):
         pass
 
     complaints = []
-    for engine in ENGINES:
+    for engine in WORKING or ENGINES:
         try:
             scene.render.engine = engine
         except Exception as err:  # noqa: BLE001 - this build has not got it
@@ -212,12 +254,14 @@ def render(destination):
         except Exception as err:  # noqa: BLE001 - try the next engine
             complaints.append(f"{engine}: {err}")
             continue
-        if os.path.isfile(destination) and os.path.getsize(destination) > 0:
+        written = fbx_to_gltf.openable(destination)
+        if os.path.isfile(written) and os.path.getsize(written) > 0:
+            WORKING[:] = [engine]
             return engine
         complaints.append(f"{engine}: exited cleanly and wrote no file")
     raise SystemExit(
-        "could not render a preview with any engine this Blender has\n  "
-        + "\n  ".join(complaints)
+        "could not render a preview with any engine this Blender has: "
+        + "; ".join(complaints)
     )
 
 
@@ -299,32 +343,34 @@ def count():
     return triangles, meshes, materials, images
 
 
-def main():
-    if "--" not in sys.argv:
-        raise SystemExit(
-            "expected: blender --background --python fbx_to_preview.py -- "
-            "<source> <destination.png> [texture]"
-        )
-    arguments = sys.argv[sys.argv.index("--") + 1 :]
-    if len(arguments) not in (2, 3):
-        raise SystemExit(
-            f"expected a source, a destination and an optional texture, got {arguments}"
-        )
-    source, destination = arguments[0], arguments[1]
-    texture = arguments[2] if len(arguments) == 3 else None
+def look_at(number, source, destination, texture):
+    """One job: import, paint, count, measure, render, and say so.
+
+    The block is headed by the job's own line number, because that is what
+    tells a reader on the other side which mesh these facts are about
+    when the job before it failed.
+    """
+    # Spelled so this Blender can open it: a cache path goes past what
+    # Windows will answer about, and the resolver's own reads do not.
+    # See `fbx_to_gltf.openable`.
+    source = fbx_to_gltf.openable(source)
     if not os.path.isfile(source):
         raise SystemExit(f"no such source file: {source}")
 
+    # A fresh, empty file per job. This is also what keeps a launch of
+    # thirty-two meshes from being thirty-two meshes' worth of memory:
+    # reading a file frees every datablock the last one made.
     bpy.ops.wm.read_factory_settings(use_empty=True)
     fbx_to_gltf.import_any(source)
     if not fbx_to_gltf.mesh_objects():
         raise SystemExit(f"{source} imported without producing a single mesh")
-    if texture is not None:
+    if texture:
         # Painted, and not refused when the painting reaches nothing: an
         # unpainted preview is a fact about the mesh worth recording.
         fbx_to_gltf.paint_with(texture)
 
     triangles, meshes, materials, images = count()
+    print(f"look {number}")
     print(f"tris {triangles}")
     print(f"meshes {meshes}")
     print(f"materials {len(materials)}")
@@ -353,8 +399,50 @@ def main():
         light(bpy.context.scene)
         frame(bpy.context.scene, centre, radius, spacing, right, up, towards)
 
-    engine = render(destination)
-    print(f"fbx_to_preview: wrote {destination} with {engine}")
+    render(destination)
+
+
+def jobs_in(path):
+    """The jobs file: one `<source>|<destination>|<texture>` per line.
+
+    Numbered from one, blank lines kept in the count, so that the number
+    in a block is the line the job is on and stays that whatever a reader
+    on the other side skipped.
+    """
+    with open(path, encoding="utf-8") as handle:
+        for number, line in enumerate(handle.read().splitlines(), start=1):
+            if not line.strip():
+                continue
+            fields = line.split("|")
+            if len(fields) != 3:
+                print(f"trouble {number} not a `source|destination|texture` line")
+                continue
+            yield number, fields[0], fields[1], fields[2]
+
+
+def flat(text):
+    """One line, because a block is read line by line and a traceback's
+    worth of newlines in the middle of one would be read as facts."""
+    return " ".join(str(text).split())
+
+
+def main():
+    if "--" not in sys.argv:
+        raise SystemExit(
+            "expected: blender --background --python fbx_to_preview.py -- <jobs file>"
+        )
+    arguments = sys.argv[sys.argv.index("--") + 1 :]
+    if len(arguments) != 1:
+        raise SystemExit(f"expected one jobs file, got {arguments}")
+
+    for number, source, destination, texture in jobs_in(arguments[0]):
+        try:
+            look_at(number, source, destination, texture)
+        # BaseException and not Exception: `SystemExit` is how everything
+        # in these two scripts refuses, and one refusal is one mesh out of
+        # a chunk of thirty-two rather than the end of the launch.
+        except BaseException as err:  # noqa: BLE001 - one bad mesh, not the batch
+            print(f"trouble {number} {flat(err)}")
 
 
 if __name__ == "__main__":

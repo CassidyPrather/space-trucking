@@ -75,6 +75,21 @@ pub struct Entry {
     /// One to three sentences. See [`sentence`] for what is done to it
     /// before it lands here.
     pub description: String,
+    /// **What sets this one apart from the others with its name.**
+    ///
+    /// A description is written about one mesh, and a mesh in a family of
+    /// five numbered variants cannot be described in a way that tells it
+    /// from the other four — the model has not seen them. Five panels
+    /// come back as five sentences that all say "low, elongated, dark
+    /// grey housing with a recessed pale panel", differing in adjectives
+    /// rather than in fact, which is worse than saying nothing: a reader
+    /// cannot tell which of those differences are real.
+    ///
+    /// So this line comes from a second look, at the whole family at
+    /// once. Absent for a mesh with no siblings, and absent — rather than
+    /// guessed — whenever the comparison did not happen or could not be
+    /// matched back to this member by name.
+    pub differs: Option<String>,
     /// What wrote that sentence: a model slug, the program `$ART_DESCRIBER`
     /// named, or `measurements alone` for the entry nothing looked at.
     /// A description is only worth what the thing that wrote it saw, and
@@ -207,8 +222,21 @@ impl Dex {
     /// it already had one. The id is assigned here rather than by the
     /// caller so that the one rule about collisions lives in the one
     /// place that can see the whole catalogue.
+    ///
+    /// **A comparison outlives a re-description of the same bytes.**
+    /// `differs` is bought by a second look at a whole family, and a
+    /// `--force` over one member would otherwise throw it away for every
+    /// member of every family it touched. It is carried over only while
+    /// the mesh is the same mesh: a pack update changes the digest, and a
+    /// comparison of the old geometry is not a fact about the new.
     pub fn insert(&mut self, mut entry: Entry) {
         entry.id = self.free_id(&entry.name, &entry.source);
+        if entry.differs.is_none()
+            && let Some(had) = self.entries.get(&entry.id)
+            && had.sha256 == entry.sha256
+        {
+            entry.differs.clone_from(&had.differs);
+        }
         self.entries.insert(entry.id.clone(), entry);
     }
 
@@ -255,6 +283,32 @@ pub fn open_all(dir: &Path) -> (Vec<Dex>, Vec<String>) {
         }
     }
     (found, trouble)
+}
+
+/// **The family a mesh belongs to**: its name with the variant number
+/// taken off the end.
+///
+/// `SM_Prop_Light_Panel_01` and `SM_Prop_Light_Panel_05` are two of one
+/// thing and `SM_Prop_Light_Panel` is what that thing is called. A single
+/// trailing letter goes the same way, because `_A`/`_B` is the other
+/// spelling Synty use for the same idea.
+///
+/// Only the last one comes off. `SM_Bld_Wall_Corner_01` is not in a
+/// family with `SM_Bld_Wall_01` — a corner is a different piece, not a
+/// variant of a wall — and stripping twice would put them together.
+#[must_use]
+pub fn family_of(name: &str) -> &str {
+    let Some((stem, last)) = name.rsplit_once('_') else {
+        return name;
+    };
+    let variant = !last.is_empty()
+        && (last.bytes().all(|byte| byte.is_ascii_digit())
+            || (last.len() == 1 && last.as_bytes()[0].is_ascii_alphabetic()));
+    if variant && !stem.is_empty() {
+        stem
+    } else {
+        name
+    }
 }
 
 /// **A name as this dialect spells names**: lowercase letters, digits and
@@ -360,6 +414,8 @@ pub fn render(entries: &[&Entry]) -> String {
          #   asset       the manifest id already naming this file, if one does\n\
          #   atlas       what the preview was painted with; a guess unless `asset`\n\
          #   textures    the images the preview scene actually bore\n\
+         #   differs     what sets it apart from the others of its name, written\n\
+         #               from a second look at the whole family side by side\n\
          #   size        how big it is across each axis, in the file's own units\n",
     );
     for entry in entries {
@@ -376,10 +432,15 @@ pub fn render(entries: &[&Entry]) -> String {
         }
         let _ = write!(
             text,
-            "textures = \"{}\"\ndescription = \"{}\"\ndescribed_by = \"{}\"\n\
-             triangles = {}\nmeshes = {}\nmaterials = {}\nsize = {}\n",
-            entry.textures,
-            entry.description,
+            "textures = \"{}\"\ndescription = \"{}\"\n",
+            entry.textures, entry.description,
+        );
+        if let Some(differs) = &entry.differs {
+            let _ = writeln!(text, "differs = \"{differs}\"");
+        }
+        let _ = write!(
+            text,
+            "described_by = \"{}\"\ntriangles = {}\nmeshes = {}\nmaterials = {}\nsize = {}\n",
             entry.described_by,
             entry.triangles,
             entry.meshes,
@@ -411,6 +472,7 @@ pub fn read(path: &Path, text: &str) -> Result<Vec<Entry>, Complaint> {
                 .take_optional_str("textures", "mesh", &id, path)?
                 .unwrap_or_default(),
             description: draft.take_str("description", "mesh", &id, path)?,
+            differs: draft.take_optional_str("differs", "mesh", &id, path)?,
             described_by: draft
                 .take_optional_str("described_by", "mesh", &id, path)?
                 .unwrap_or_else(|| UNDESCRIBED.to_owned()),
@@ -443,6 +505,7 @@ mod tests {
             description: "A squat six-panel supply crate with recessed corner braces and a \
                           hazard stripe along one edge."
                 .to_owned(),
+            differs: Some("The only one of the five with a hazard stripe.".to_owned()),
             described_by: "deepseek/deepseek-v4-flash-vision-exp".to_owned(),
             triangles: 412,
             meshes: 1,
@@ -608,6 +671,44 @@ mod tests {
                 "`{id}` is not a name this dialect can hold"
             );
         }
+    }
+
+    /// **Numbered variants of one thing are one family, and pieces that
+    /// merely share a prefix are not.**
+    ///
+    /// Six tenths of a real library is in a family, so this rule decides
+    /// what most of the catalogue gets compared against. Both mistakes it
+    /// could make are bad in the same way — a family that swept in
+    /// unrelated meshes would have the comparison spend its line on
+    /// differences nobody was choosing between, and a family that split
+    /// would compare a panel against nothing.
+    #[test]
+    fn numbered_variants_of_one_thing_are_one_family() {
+        for (name, family) in [
+            ("SM_Prop_Light_Panel_01", "SM_Prop_Light_Panel"),
+            ("SM_Prop_Light_Panel_05", "SM_Prop_Light_Panel"),
+            ("SM_Prop_Crate_A", "SM_Prop_Crate"),
+            // Only the last one comes off: a corner is a different piece
+            // from a wall, not a variant of one.
+            ("SM_Bld_Wall_Corner_01", "SM_Bld_Wall_Corner"),
+            // Nothing to take off, so it is its own family of one.
+            ("SM_Prop_Barrel", "SM_Prop_Barrel"),
+            ("SM_Prop_BarrelStack_01", "SM_Prop_BarrelStack"),
+            // `cube` is not a variant number, so this is its own family:
+            // `unit_cube` and `unit_pyramid` are two things, not two of
+            // one thing.
+            ("unit_cube", "unit_cube"),
+            ("nounderscores", "nounderscores"),
+            ("_01", "_01"),
+        ] {
+            assert_eq!(family_of(name), family, "`{name}`");
+        }
+        // And the ones that must not land together.
+        assert_ne!(
+            family_of("SM_Prop_Barrel_01"),
+            family_of("SM_Prop_BarrelStack_01"),
+            "a barrel and a stack of barrels are not variants of each other"
+        );
     }
 
     /// **The catalogue is searched by what it says, not only by what

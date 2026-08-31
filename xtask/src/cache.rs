@@ -172,6 +172,13 @@ impl Cache {
         self.root.join("dex").join(digest).join(name)
     }
 
+    /// The list of meshes one launch of the previewer is to look at.
+    /// Named after the first mesh in the chunk, so that several chunks
+    /// being looked at at once cannot write over each other's list.
+    pub fn dex_jobs(&self, digest: &str) -> PathBuf {
+        self.root.join("dex").join(digest).join("jobs.txt")
+    }
+
     /// The converter script, written out beside the cache. It is carried
     /// in the binary rather than read from the source tree so that where
     /// the tool is run from stops mattering.

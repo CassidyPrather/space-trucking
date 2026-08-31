@@ -77,6 +77,32 @@ import bpy
 import mathutils
 
 
+def openable(path):
+    """The same file, spelled so that this Blender can open it.
+
+    Windows stops at 260 characters, and a path into the art cache is a
+    cache root, plus a pack, plus the name of the archive the file came
+    out of, plus the tree inside that archive — which goes past 260 on
+    ordinary packs with ordinary names. `POLYGON - Alpine Mountain`'s ice
+    axe does it at 268.
+
+    The half that makes it a trap: Rust's standard library reaches those
+    files without being asked, so the resolver finds the mesh, hashes it,
+    writes it into a jobs file and hands it over — and then Blender's own
+    Python answers `no such source file` about a file that is right
+    there. It was a quarter of a real sweep, and every one of them looked
+    like a broken pack rather than a spelling.
+
+    The `\\\\?\\` prefix is what turns a Windows path into one the long-path
+    APIs take. It is applied only when it is needed and only when it
+    resolves, so nothing else in the pipeline has to know about it.
+    """
+    if os.name != "nt" or not path or path.startswith("\\\\?\\") or len(path) < 240:
+        return path
+    extended = "\\\\?\\" + os.path.abspath(path)
+    return extended if os.path.exists(extended) else path
+
+
 def import_any(path):
     """Import `path` into the empty scene, whatever kind of file it is.
 
@@ -87,6 +113,7 @@ def import_any(path):
     script that only knows one of them breaks on somebody's machine and
     not on ours — and nothing here may assume which one answered.
     """
+    path = openable(path)
     extension = os.path.splitext(path)[1].lower()
     attempts = {
         ".fbx": ["wm.fbx_import", "import_scene.fbx"],
@@ -189,6 +216,7 @@ def paint_with(path):
     Hands back the atlas datablock, which is what `refuse_unless_painted`
     then looks for.
     """
+    path = openable(path)
     if not os.path.isfile(path):
         # The resolver stages this file beside the mesh before running
         # this script, so its absence here is a fault in the resolver and

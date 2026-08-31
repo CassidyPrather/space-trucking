@@ -23,7 +23,7 @@
 //!
 //! | | |
 //! | --- | --- |
-//! | `$ART_DESCRIBER` | any program run as `<program> <prompt.txt> <picture.png>`, printing the description on standard output |
+//! | `$ART_DESCRIBER` | any program run as `<program> <prompt.txt> <picture.png>...`, printing the answer on standard output. One picture for a mesh; one per member for a family comparison |
 //! | `$OPENROUTER_API_KEY` | a hosted vision model, reached with `curl`. The default, and the one that costs money |
 //! | neither | the measurements, written out as a sentence and labelled as such |
 //!
@@ -63,7 +63,8 @@ pub struct Subject<'a> {
 }
 
 pub enum Describer {
-    /// `$ART_DESCRIBER`, run as `<program> <prompt.txt> <picture.png>`.
+    /// `$ART_DESCRIBER`, run as `<program> <prompt.txt> <picture.png>...`
+    /// — one picture for a mesh, one per member for a family.
     Program(PathBuf),
     /// A hosted vision model, reached with `curl`.
     Hosted { model: String, key: String },
@@ -149,6 +150,175 @@ impl Describer {
         }
         Ok(sentence)
     }
+}
+
+/// One member of a family, as the comparison is told about it.
+pub struct Sibling<'a> {
+    pub name: &'a str,
+    pub triangles: u64,
+    pub size: [f32; 3],
+    /// What the individual pass said about it, so the comparison can
+    /// spend its line on the difference rather than repeating the
+    /// description next to it.
+    pub description: &'a str,
+    pub picture: &'a Path,
+}
+
+impl Describer {
+    /// **What sets each of these apart from the others.**
+    ///
+    /// One call for the whole family, with every member's picture in it —
+    /// which is the whole point, because a comparison is the one thing a
+    /// describer looking at a single mesh cannot make. Five light panels
+    /// described one at a time come back as five sentences that agree
+    /// about everything that matters and disagree about adjectives.
+    ///
+    /// Answers are matched back **by name**, never by position: the model
+    /// is told to begin each line with the asset's own name, and a line
+    /// that names nothing in this family is dropped. A differentiator
+    /// filed against the wrong sibling is worse than none at all — it
+    /// sends somebody to the wrong mesh, confidently — so a member with
+    /// no line of its own simply gets nothing.
+    ///
+    /// The answer is one entry per member, in the order they were given.
+    pub fn compare(
+        &self,
+        cache: &Cache,
+        pack: &str,
+        family: &[Sibling<'_>],
+        digest: &str,
+    ) -> Result<Vec<Option<String>>, String> {
+        let asked = compare_prompt(pack, family);
+        let said = match self {
+            // Nothing looked at these, so nothing can compare them. The
+            // measurements are already in the catalogue side by side.
+            Self::Measurements => return Ok(family.iter().map(|_| None).collect()),
+            Self::Program(program) => {
+                let path = cache.dex_file(digest, "family.txt");
+                fsx::write(&path, &asked)?;
+                let mut command = Command::new(program);
+                command.arg(&path);
+                for one in family {
+                    command.arg(one.picture);
+                }
+                let output = command
+                    .output()
+                    .map_err(|err| format!("cannot run {}: {err}", self.describe()))?;
+                if !output.status.success() {
+                    return Err(format!(
+                        "{} said nothing about the {} of {pack}\n{}",
+                        self.describe(),
+                        family_name(family),
+                        String::from_utf8_lossy(&output.stderr).trim()
+                    ));
+                }
+                String::from_utf8_lossy(&output.stdout).into_owned()
+            }
+            Self::Hosted { model, key } => {
+                let pictures: Vec<Vec<u8>> = family
+                    .iter()
+                    .map(|one| {
+                        std::fs::read(one.picture).map_err(|err| {
+                            format!("cannot read the picture {}: {err}", one.picture.display())
+                        })
+                    })
+                    .collect::<Result<_, _>>()?;
+                post(
+                    cache,
+                    model,
+                    key,
+                    digest,
+                    "family",
+                    &request(model, &asked, &pictures),
+                )?
+            }
+        };
+        Ok(matched(&said, family))
+    }
+}
+
+/// What to call a family in a complaint.
+fn family_name(family: &[Sibling<'_>]) -> String {
+    family.first().map_or_else(
+        || String::from("family"),
+        |one| dex::family_of(one.name).to_owned(),
+    )
+}
+
+/// **The comparison prompt.**
+///
+/// Each member is listed as `<name>: <facts>`, which is also the shape
+/// the answer is asked for — a model that has just read a list in that
+/// form writes one back in it, and the parser needs the name at the
+/// front of the line to file the answer against the right sibling.
+///
+/// The last instruction is the one that earns its place. Left to itself a
+/// model asked for differences will find some, and two variants of one
+/// panel that really do differ only in length will come back with an
+/// invented distinction each. Saying plainly that "the same but shorter"
+/// is an acceptable answer is what makes the honest answer available.
+fn compare_prompt(pack: &str, family: &[Sibling<'_>]) -> String {
+    let mut listed = String::new();
+    for one in family {
+        let _ = std::fmt::Write::write_fmt(
+            &mut listed,
+            format_args!(
+                "{}: {} triangles, {:.2} x {:.2} x {:.2} units. Described on its own as: {}\n",
+                one.name, one.triangles, one.size[0], one.size[1], one.size[2], one.description
+            ),
+        );
+    }
+    format!(
+        "These are the {count} assets named after \"{stem}\" in the game-art pack \"{pack}\", \
+         one picture each, in this order — each picture is four views of one asset, turned a \
+         quarter turn between views:\n\
+         \n\
+         {listed}\n\
+         Somebody choosing between these has all {count} in front of them and has to pick one. \
+         For each, write ONE line of at most 140 characters saying what sets it apart from its \
+         siblings: what it has that they do not, what it is missing, whether it is the largest, \
+         the plainest, the most damaged, the most detailed, and what it would be used for that \
+         the others would not.\n\
+         \n\
+         Begin every line with that asset's exact name and a colon, one line per asset, and \
+         write nothing else — no preamble, no markdown, no numbering. Do not repeat what the \
+         description beside its name already says. If two of them really are the same but for \
+         size or colour, say exactly that rather than inventing a difference.",
+        count = family.len(),
+        stem = family_name(family),
+        pack = pack,
+        listed = listed,
+    )
+}
+
+/// **The lines of an answer, filed against the member each one names.**
+///
+/// By name and never by position. A model that answers about four of five
+/// assets, or lists them in another order, or writes a line about
+/// something not in this family at all, must not have its answers shifted
+/// onto the wrong meshes — so a line is kept only when it starts with a
+/// name this family has, and a member nobody wrote a line for keeps
+/// nothing.
+fn matched(said: &str, family: &[Sibling<'_>]) -> Vec<Option<String>> {
+    let mut lines: Vec<Option<String>> = family.iter().map(|_| None).collect();
+    for line in said.lines() {
+        let line = line.trim().trim_start_matches(['-', '*', ' ']);
+        let Some((named, rest)) = line.split_once(':') else {
+            continue;
+        };
+        let named = named.trim().trim_matches(['*', '`', '"', ' ']);
+        let Some(index) = family
+            .iter()
+            .position(|one| one.name.eq_ignore_ascii_case(named))
+        else {
+            continue;
+        };
+        let cleaned = dex::sentence(rest);
+        if !cleaned.is_empty() && lines[index].is_none() {
+            lines[index] = Some(cleaned);
+        }
+    }
+    lines
 }
 
 /// **Find a describer.** Never an error: a machine with no key and no
@@ -300,19 +470,53 @@ fn ask(
     picture: &Path,
     digest: &str,
 ) -> Result<String, String> {
-    let curl = on_path("curl").ok_or_else(|| NO_CURL.to_owned())?;
     let bytes = std::fs::read(picture)
         .map_err(|err| format!("cannot read the picture {}: {err}", picture.display()))?;
-    let body = cache.dex_file(digest, "request.json");
-    let answer = cache.dex_file(digest, "response.json");
-    let config = cache.dex_file(digest, "curl.config");
     let asked = prompt(subject, look);
     // The prompt on its own, beside the request that carries it. The
-    // request is the same text with a megabyte of base64 picture wrapped
+    // request is the same text with a picture's worth of base64 wrapped
     // round it, and "what was this asked?" is a question somebody reads
     // the answer to rather than greps a data URI for.
     fsx::write(&cache.dex_file(digest, "prompt.txt"), &asked)?;
-    fsx::write(&body, &request(model, &asked, &bytes))?;
+    post(
+        cache,
+        model,
+        key,
+        digest,
+        "",
+        &request(model, &asked, std::slice::from_ref(&bytes)),
+    )
+}
+
+/// **One request, sent and read back.**
+///
+/// Shared by the two things this module asks a model: what one mesh looks
+/// like, and what tells a family of them apart. `kind` keeps their
+/// evidence apart in the cache, since both are filed under the same mesh.
+///
+/// `curl` rather than an HTTP client, for the reason `tar` opens the
+/// archives: this package has no dependencies, TLS is not a thing to
+/// hand-roll, and curl is already on macOS, on Windows 10 build 1803 and
+/// later, and on every Linux anybody runs this on.
+///
+/// The request goes in a file and the key goes in a config file, neither
+/// of them on the command line. The body because a base64 picture is
+/// half a megabyte and a command line is not; the key because a command
+/// line is readable by every process on the machine.
+fn post(
+    cache: &Cache,
+    model: &str,
+    key: &str,
+    digest: &str,
+    kind: &str,
+    asking: &str,
+) -> Result<String, String> {
+    let curl = on_path("curl").ok_or_else(|| NO_CURL.to_owned())?;
+    let named = |what: &str| cache.dex_file(digest, &format!("{kind}{what}"));
+    let body = named("request.json");
+    let answer = named("response.json");
+    let config = named("curl.config");
+    fsx::write(&body, asking)?;
     fsx::write(
         &config,
         &format!(
@@ -351,19 +555,19 @@ fn ask(
             refusal(&said).unwrap_or_else(|| said.trim().chars().take(200).collect())
         ));
     }
-    let description = content(&said).ok_or_else(|| {
+    let answered = content(&said).ok_or_else(|| {
         format!(
-            "{model} answered 200 and no description{}. The answer is at {}",
+            "{model} answered 200 and nothing to write down{}. The answer is at {}",
             stopped(&said).unwrap_or_default(),
             answer.display()
         )
     })?;
-    // The request body is the prompt with a megabyte of base64 picture
+    // The request body is the prompt with a picture's worth of base64
     // round it, and both halves are already on the disk beside it — the
     // prompt as text and the picture as a PNG. It is worth keeping only
     // while something is wrong, so it goes when nothing is.
     let _ = std::fs::remove_file(&body);
-    Ok(description)
+    Ok(answered)
 }
 
 /// **The body of the request: the prompt, and the picture as a data
@@ -378,18 +582,27 @@ fn ask(
 /// `reasoning.enabled` is false to ask the ones that can turn it off to
 /// turn it off. A model that ignores that spends more tokens; a model
 /// that honours it costs less than the old number did.
-fn request(model: &str, prompt: &str, picture: &[u8]) -> String {
+/// **And it carries as many pictures as it is given**, which is the whole
+/// of what the family comparison needed to exist: a message may hold
+/// several images, so comparing five variants costs one call and no new
+/// rendering at all — the five preview sheets are already on the disk.
+fn request(model: &str, prompt: &str, pictures: &[Vec<u8>]) -> String {
+    use std::fmt::Write as _;
+    let mut parts = format!("{{\"type\":\"text\",\"text\":{}}}", json::quoted(prompt));
+    for picture in pictures {
+        let _ = write!(
+            parts,
+            ",{{\"type\":\"image_url\",\"image_url\":{{\"url\":{}}}}}",
+            json::quoted(&format!("data:image/png;base64,{}", base64(picture)))
+        );
+    }
     format!(
         "{{\"model\":{model},\"max_tokens\":1200,\"temperature\":0.2,\
          \"reasoning\":{{\"enabled\":false}},\"messages\":[\
          {{\"role\":\"system\",\"content\":{system}}},\
-         {{\"role\":\"user\",\"content\":[\
-         {{\"type\":\"text\",\"text\":{prompt}}},\
-         {{\"type\":\"image_url\",\"image_url\":{{\"url\":{picture}}}}}]}}]}}",
+         {{\"role\":\"user\",\"content\":[{parts}]}}]}}",
         model = json::quoted(model),
         system = json::quoted(SYSTEM),
-        prompt = json::quoted(prompt),
-        picture = json::quoted(&format!("data:image/png;base64,{}", base64(picture))),
     )
 }
 
@@ -581,7 +794,7 @@ mod tests {
         let body = request(
             "some/model",
             "describe \"SM_Crate\"\nplease",
-            &[0xff, 0xd8, 0x00],
+            &[vec![0xff, 0xd8, 0x00]],
         );
         let parsed = json::parse(&body).unwrap_or_else(|why| panic!("{why}\n{body}"));
         assert_eq!(parsed.get("model").and_then(Json::text), Some("some/model"));
@@ -669,6 +882,111 @@ mod tests {
         let empty = r#"{"choices":[{"finish_reason":"stop","message":{"content":""}}]}"#;
         assert_eq!(content(empty).as_deref(), Some(""));
         assert_eq!(stopped(empty).as_deref(), Some(": it stopped for `stop`"));
+    }
+
+    fn family() -> Vec<(String, [f32; 3])> {
+        (1..=3)
+            .map(|n| (format!("SM_Prop_Light_Panel_0{n}"), [0.5, 0.1, 1.2]))
+            .collect()
+    }
+
+    fn siblings(held: &[(String, [f32; 3])]) -> Vec<Sibling<'_>> {
+        held.iter()
+            .map(|(name, size)| Sibling {
+                name,
+                triangles: 188,
+                size: *size,
+                description: "A low, elongated dark grey housing with a pale panel.",
+                picture: Path::new("preview.png"),
+            })
+            .collect()
+    }
+
+    /// **The comparison is told what it is comparing, and asked for the
+    /// difference rather than the description again.**
+    ///
+    /// The prompt this module's second pass exists for. Every member's
+    /// name, measurements and existing description go in — the last so
+    /// the answer does not come back as the sentence that is already
+    /// beside it — and the answer is asked for in the shape the parser
+    /// can file: the name, a colon, one line.
+    #[test]
+    fn the_comparison_prompt_names_every_member_and_asks_for_the_difference() {
+        let held = family();
+        let asked = compare_prompt("POLYGON Sci-Fi Space", &siblings(&held));
+        for wanted in [
+            "SM_Prop_Light_Panel_01",
+            "SM_Prop_Light_Panel_02",
+            "SM_Prop_Light_Panel_03",
+            "POLYGON Sci-Fi Space",
+            "188 triangles",
+            "0.50 x 0.10 x 1.20",
+            "sets it apart from its siblings",
+            "exact name and a colon",
+            // The licence to give the honest answer, without which a
+            // model asked for a difference will invent one.
+            "rather than inventing a difference",
+        ] {
+            assert!(asked.contains(wanted), "no `{wanted}` in:\n{asked}");
+        }
+        // The family's own name, which is what it is a family of.
+        assert!(asked.contains("SM_Prop_Light_Panel\""), "{asked}");
+    }
+
+    /// **An answer is filed against the sibling it names, and never
+    /// against the one in its position.**
+    ///
+    /// The guard that makes this pass safe to run over a whole library. A
+    /// model that answers about four of five, or reorders them, or writes
+    /// a line about something else entirely, must not have its answers
+    /// shifted onto the wrong meshes: a differentiator on the wrong
+    /// sibling sends somebody to the wrong mesh, confidently, and is
+    /// worse than the blank it replaced.
+    #[test]
+    fn a_comparison_is_filed_against_the_sibling_it_names() {
+        let held = family();
+        let group = siblings(&held);
+
+        // Out of order, one missing, one line about something that is not
+        // in this family at all, and a stray bullet and bold marker of
+        // the kind a model adds when it is being helpful.
+        let told = matched(
+            "- **SM_Prop_Light_Panel_03**: The narrowest, with a bare strip.\n\
+             SM_Prop_Light_Panel_01: The plainest of the three.\n\
+             SM_Prop_Something_Else_01: not in this family\n",
+            &group,
+        );
+        assert_eq!(told[0].as_deref(), Some("The plainest of the three."));
+        assert_eq!(
+            told[1], None,
+            "a member nobody wrote a line for keeps nothing"
+        );
+        assert_eq!(
+            told[2].as_deref(),
+            Some("The narrowest, with a bare strip.")
+        );
+
+        // An answer that names nobody leaves the whole family alone
+        // rather than being spread over it in order.
+        let none = matched(
+            "1. The narrowest one.\n2. The widest one.\n3. The heaviest one.\n",
+            &group,
+        );
+        assert!(none.iter().all(Option::is_none), "{none:?}");
+    }
+
+    /// **Nothing to look with is no comparison, not a made-up one.**
+    #[test]
+    fn a_describer_that_never_saw_them_compares_nothing() {
+        let held = family();
+        let cache = Cache {
+            root: PathBuf::from("/nowhere"),
+        };
+        let told = Describer::Measurements
+            .compare(&cache, "A Pack", &siblings(&held), "abc")
+            .expect("no comparison is not a failure");
+        assert_eq!(told.len(), 3);
+        assert!(told.iter().all(Option::is_none));
     }
 
     /// **A machine with no key still gets a catalogue, and the catalogue

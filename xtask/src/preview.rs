@@ -16,30 +16,52 @@
 //! "which of these forty crates is under a thousand triangles" is a
 //! question the catalogue can answer on its own.
 //!
-//! ## The contract
+//! ## The contract, and why it is a file of jobs
 //!
 //! ```text
-//! <program> <source> <destination.png> [texture]
+//! <program> <jobs file>
 //! ```
 //!
-//! The same shape as the converter's, deliberately, and the third
-//! argument means the same thing: the atlas to paint with. What it prints
-//! is one fact per line, and a program that prints none is not in breach —
-//! it has simply left the catalogue with an entry that has a picture and
-//! no numbers:
+//! where the file holds one job per line:
 //!
 //! ```text
+//! <source>|<destination.png>|<texture>
+//! ```
+//!
+//! **One launch, many meshes.** The contract was one mesh per call, the
+//! shape the converter's has, and it was measured to be the wrong one
+//! here: Blender takes about 2.2 seconds to start and import its own
+//! Python before looking at anything, against about 5 seconds of actual
+//! work, so nearly a third of describing a library went on starting up —
+//! thirty hours of it over fifty thousand meshes. A converter runs once
+//! per asset a manifest names, which is a handful; a previewer runs once
+//! per mesh in a pack, which is thousands. Same shape, different scale,
+//! different contract.
+//!
+//! `|` separates the fields because Windows forbids it in a path and a
+//! shell stand-in can split on it in one line — which matters, because
+//! `$ART_PREVIEW` is a seam a person is expected to write a program for.
+//! The texture may be empty, and it means what it means to the converter:
+//! the atlas to paint with.
+//!
+//! What comes back is one block per job, headed by the job's line number:
+//!
+//! ```text
+//! look 1
 //! tris 412
 //! meshes 1
 //! materials 1
 //! image PolygonSciFiSpace_Texture_01_A.png
 //! aabb <min x> <min y> <min z> <max x> <max y> <max z>
+//! trouble 2 SM_Broken.fbx imported without producing a single mesh
 //! ```
 //!
+//! A program that prints no facts for a job is not in breach — it has
+//! left the catalogue an entry with a picture and no numbers. A program
+//! that says nothing about a job at all has failed that job, and `trouble
+//! <n> <why>` is how it says which and why without ending the launch.
 //! `aabb` is the converter's own line, in the same axes, so one reader
-//! serves both. `$ART_PREVIEW` overrides the Blender route with any
-//! program of that shape, which is what lets the whole command be
-//! exercised on a machine with no Blender on it.
+//! serves both.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -58,7 +80,7 @@ pub const SCRIPT: &str = include_str!("../blender/fbx_to_preview.py");
 /// print none of them; a zero here means "nothing said so", which is why
 /// the catalogue prints the counts it was given rather than deriving
 /// anything from them.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Look {
     pub triangles: u64,
     pub meshes: u64,
@@ -83,7 +105,7 @@ impl Look {
 
 #[derive(Debug)]
 pub enum Previewer {
-    /// `$ART_PREVIEW`, run as `<program> <source> <destination> [texture]`.
+    /// `$ART_PREVIEW`, run as `<program> <jobs file>`.
     Program(PathBuf),
     Blender(PathBuf),
 }
@@ -96,42 +118,64 @@ impl Previewer {
         }
     }
 
-    /// Render one mesh and read back what the program said about it.
+    /// **Look at a chunk of meshes in one launch, and answer for every
+    /// one of them.**
     ///
-    /// A program that exits nonzero is a complaint naming the mesh, and
-    /// so is one that exits cleanly and writes no picture: a describer
-    /// handed a file that is not there would otherwise go and spend a
-    /// model call on nothing.
-    pub fn run(
+    /// The answer is one outcome per job, in the order the jobs were
+    /// given, so a caller can zip it against what it asked for. A job the
+    /// program said nothing about is an `Err` rather than an empty
+    /// `Look`: a describer handed a picture that is not there would spend
+    /// a model call on nothing.
+    ///
+    /// A program that exits nonzero fails the whole chunk — every job in
+    /// it gets the same complaint, because there is nothing to say which
+    /// of them was the reason. That is why the script this ships prints
+    /// `trouble <n>` and keeps going instead of exiting.
+    pub fn run(&self, script: &Path, cache: &Cache, jobs: &[Job<'_>]) -> Vec<Result<Look, String>> {
+        match self.attempt(script, cache, jobs) {
+            Ok(looks) => looks,
+            Err(complaint) => jobs.iter().map(|_| Err(complaint.clone())).collect(),
+        }
+    }
+
+    fn attempt(
         &self,
         script: &Path,
-        source: &Path,
-        destination: &Path,
-        texture: Option<&Path>,
-    ) -> Result<Look, String> {
-        if let Some(parent) = destination.parent() {
-            fsx::create_dir_all(parent)?;
+        cache: &Cache,
+        jobs: &[Job<'_>],
+    ) -> Result<Vec<Result<Look, String>>, String> {
+        for job in jobs {
+            if let Some(parent) = job.destination.parent() {
+                fsx::create_dir_all(parent)?;
+            }
         }
-        let mut command = self.command(script, source, destination, texture);
-        let output = command
+        let listing = cache.dex_jobs(jobs.first().map_or("empty", |job| job.digest));
+        fsx::write(&listing, &render_jobs(jobs))?;
+        let output = self
+            .command(script, &listing)
             .output()
             .map_err(|err| format!("cannot run {}: {err}", self.describe()))?;
         if !output.status.success() {
             return Err(format!(
-                "{} could not look at {}\n{}",
+                "{} could not look at this chunk of {} meshes\n{}",
                 self.describe(),
-                source.display(),
+                jobs.len(),
                 indent(&String::from_utf8_lossy(&output.stderr))
             ));
         }
-        if std::fs::metadata(destination).map_or(0, |meta| meta.len()) == 0 {
-            return Err(format!(
-                "{} exited cleanly and wrote no picture to {}",
-                self.describe(),
-                destination.display()
-            ));
+        let mut looks = read(&String::from_utf8_lossy(&output.stdout), jobs.len());
+        for (job, look) in jobs.iter().zip(&mut looks) {
+            if look.is_ok() && std::fs::metadata(job.destination).map_or(0, |meta| meta.len()) == 0
+            {
+                *look = Err(format!(
+                    "{} said it had looked at {} and wrote no picture to {}",
+                    self.describe(),
+                    job.source.display(),
+                    job.destination.display()
+                ));
+            }
         }
-        Ok(read(&String::from_utf8_lossy(&output.stdout)))
+        Ok(looks)
     }
 
     /// **Both Blender scripts, written out beside the cache, and the one
@@ -162,19 +206,12 @@ impl Previewer {
     /// The exact command line, built and not run — split out for the
     /// guard, for the reason [`crate::convert::Converter::command`] is:
     /// the Blender branch is the one every real run takes and the one no
-    /// test can execute, and an argument dropped from it alone looks
-    /// exactly like a texture that was staged and ignored.
-    fn command(
-        &self,
-        script: &Path,
-        source: &Path,
-        destination: &Path,
-        texture: Option<&Path>,
-    ) -> Command {
-        let mut command = match self {
+    /// test can execute.
+    fn command(&self, script: &Path, jobs: &Path) -> Command {
+        match self {
             Self::Program(program) => {
                 let mut command = Command::new(program);
-                command.arg(source).arg(destination);
+                command.arg(jobs);
                 command
             }
             Self::Blender(blender) => {
@@ -187,16 +224,39 @@ impl Previewer {
                     .arg("--python")
                     .arg(script)
                     .arg("--")
-                    .arg(source)
-                    .arg(destination);
+                    .arg(jobs);
                 command
             }
-        };
-        if let Some(texture) = texture {
-            command.arg(texture);
         }
-        command
     }
+}
+
+/// One mesh to look at: where it is, where its picture goes, and what to
+/// paint it with.
+pub struct Job<'a> {
+    pub source: &'a Path,
+    pub destination: &'a Path,
+    pub texture: Option<&'a Path>,
+    /// The source mesh's digest, which is what the jobs file for this
+    /// chunk is named after — so two chunks running at once cannot write
+    /// over each other's list.
+    pub digest: &'a str,
+}
+
+/// The jobs file: one `source|destination|texture` per line.
+fn render_jobs(jobs: &[Job<'_>]) -> String {
+    let mut text = String::new();
+    for job in jobs {
+        text.push_str(&job.source.display().to_string());
+        text.push('|');
+        text.push_str(&job.destination.display().to_string());
+        text.push('|');
+        if let Some(texture) = job.texture {
+            text.push_str(&texture.display().to_string());
+        }
+        text.push('\n');
+    }
+    text
 }
 
 /// **Find something that can look at a mesh, or say what to install.**
@@ -252,18 +312,54 @@ nothing here can look at a mesh: Blender is not on PATH and $BLENDER is not set.
   the state this command exists to get out of — so it refuses rather than writing
   one. `cargo xtask art find` searches those names meanwhile.";
 
-/// Read what a program said about a mesh. Unknown lines are ignored and
-/// the last of each kind wins, because Blender prints a banner of its own
-/// and an add-on may print anything it likes — the lines that matter are
-/// the ones our script wrote last.
-fn read(said: &str) -> Look {
-    let mut look = Look::default();
+/// **Read what a program said about a chunk of meshes**, as one outcome
+/// per job.
+///
+/// A `look <n>` line opens the block for job `n`; everything after it
+/// belongs to that job until the next `look` or `trouble`. Lines before
+/// any block, and lines nobody here has a meaning for, are dropped on the
+/// floor: Blender prints a banner of its own before the script runs and
+/// an add-on may print whatever it likes.
+///
+/// A job with no block at all comes back as an error rather than as an
+/// empty `Look`, because those are two quite different things — one is a
+/// mesh with no triangle count and the other is a mesh nothing looked at.
+fn read(said: &str, jobs: usize) -> Vec<Result<Look, String>> {
+    let mut looks: Vec<Result<Look, String>> = (0..jobs)
+        .map(|_| Err(String::from("the previewer said nothing about it")))
+        .collect();
+    let mut at: Option<usize> = None;
     for line in said.lines() {
         let line = line.trim();
         let Some((key, rest)) = line.split_once(' ') else {
             continue;
         };
         let rest = rest.trim();
+        // `look` and `trouble` are the two that move the reader on; the
+        // number is one-based, because it is the line of the jobs file.
+        if key == "look" || key == "trouble" {
+            let (number, why) = rest.split_once(' ').unwrap_or((rest, ""));
+            let Some(index) = number.parse::<usize>().ok().filter(|n| *n >= 1) else {
+                at = None;
+                continue;
+            };
+            at = looks.get(index - 1).map(|_| index - 1);
+            if let Some(index) = at {
+                looks[index] = if key == "look" {
+                    Ok(Look::default())
+                } else {
+                    Err(if why.is_empty() {
+                        String::from("the previewer refused it and did not say why")
+                    } else {
+                        why.to_owned()
+                    })
+                };
+            }
+            continue;
+        }
+        let Some(look) = at.and_then(|index| looks[index].as_mut().ok()) else {
+            continue;
+        };
         match key {
             "tris" => look.triangles = rest.parse().unwrap_or(look.triangles),
             "meshes" => look.meshes = rest.parse().unwrap_or(look.meshes),
@@ -277,7 +373,7 @@ fn read(said: &str) -> Look {
             _ => {}
         }
     }
-    look
+    looks
 }
 
 /// The six numbers of an `aabb` line, as a middle and a half. The same
@@ -351,51 +447,114 @@ mod tests {
         assert!(complaint.contains("$ART_PREVIEW"), "{complaint}");
     }
 
-    /// **What a program says about a mesh is read the way it is
+    /// **What a program says about a chunk is read the way it is
     /// written.** Blender prints a banner of its own before the script
     /// runs, an add-on may print anything, and a conforming program may
-    /// print nothing at all — none of which may become a triangle count.
+    /// print no facts at all — none of which may become a triangle count,
+    /// and none of which may be filed against the wrong mesh.
     // The size of a mesh nothing measured is exactly nothing, and that
     // is the claim: a zero here is what the catalogue prints, so it is
     // asked for exactly rather than approximately.
     #[allow(clippy::float_cmp)]
     #[test]
     fn the_facts_are_read_out_of_whatever_else_a_program_printed() {
-        let look = read(
+        let looks = read(
             "Blender 5.0.0 (hash 1a2b3c)\n\
              Read prefs: /home/you/.config/blender\n\
+             look 1\n\
              tris 412\n\
              meshes 2\n\
              materials 1\n\
              image PolygonSciFiSpace_Texture_01_A.png\n\
              image PolygonSciFiSpace_Texture_01_A.png\n\
              aabb -0.363 0.0 -0.336 0.363 0.613 0.336\n\
-             fbx_to_preview: wrote /cache/dex/preview/abc.png\n",
+             Fra:1 Mem:12.34M | Rendering 1 / 16 samples\n\
+             look 3\n\
+             tris 7\n",
+            3,
         );
-        assert_eq!(look.triangles, 412);
-        assert_eq!(look.meshes, 2);
-        assert_eq!(look.materials, 1);
+        let first = looks[0].as_ref().expect("the first block");
+        assert_eq!(first.triangles, 412);
+        assert_eq!(first.meshes, 2);
+        assert_eq!(first.materials, 1);
         assert_eq!(
-            look.images,
+            first.images,
             ["PolygonSciFiSpace_Texture_01_A.png"],
             "one image named twice is one image"
         );
-        let size = look.size();
-        assert!((size[1] - 0.613).abs() < 0.001, "{size:?}");
+        assert!(
+            (first.size()[1] - 0.613).abs() < 0.001,
+            "{:?}",
+            first.size()
+        );
 
-        let silent = read("some program that has never heard of this repository\n");
-        assert_eq!(silent.triangles, 0);
-        assert!(silent.images.is_empty());
-        assert!(silent.bounds.is_none());
-        assert_eq!(silent.size(), [0.0; 3]);
+        // The mesh in the middle, which the program never mentioned. It
+        // is an error and not an empty answer: nothing looked at it, and
+        // a describer handed its missing picture would spend a model
+        // call on nothing.
+        assert!(looks[1].is_err(), "a mesh nothing said anything about");
+
+        // And the facts after the second header belong to the mesh that
+        // header named, not to the one before it.
+        assert_eq!(looks[2].as_ref().expect("the third block").triangles, 7);
+
+        let silent = read("some program that has never heard of this repository\n", 2);
+        assert!(silent.iter().all(Result::is_err), "{silent:?}");
     }
 
-    /// **The Blender command line carries the atlas it was handed**, and
-    /// the picture it was asked for. Same reasoning as the converter's
-    /// guard: this branch is the one every real run takes and the one no
-    /// test can run, so the arguments are asserted directly.
+    /// **A mesh a launch refused is that mesh's complaint, not the
+    /// chunk's.** A chunk is up to thirty-two meshes through one Blender,
+    /// and one unreadable FBX among them must cost one line of the
+    /// catalogue rather than thirty-two.
     #[test]
-    fn the_blender_command_line_carries_the_picture_and_the_atlas() {
+    fn one_mesh_a_launch_refused_does_not_take_the_chunk_with_it() {
+        let looks = read(
+            "look 1\ntris 12\n\
+             trouble 2 SM_Broken.fbx imported without producing a single mesh\n\
+             look 3\ntris 9\n",
+            3,
+        );
+        assert!(looks[0].is_ok());
+        assert_eq!(
+            looks[1].as_ref().expect_err("the middle one was refused"),
+            "SM_Broken.fbx imported without producing a single mesh"
+        );
+        assert_eq!(looks[2].as_ref().expect("the last one").triangles, 9);
+    }
+
+    /// **The jobs file is one line per mesh, and an absent atlas is an
+    /// absent field.** It is read by a shell stand-in as well as by
+    /// Blender, so the shape has to stay something `IFS='|' read` and
+    /// `for /f "delims=|"` both handle.
+    #[test]
+    fn the_jobs_file_is_one_line_per_mesh() {
+        let text = render_jobs(&[
+            Job {
+                source: Path::new("/store/SM_Crate.fbx"),
+                destination: Path::new("/cache/dex/aa/preview.png"),
+                texture: Some(Path::new("/store/atlas.png")),
+                digest: "aa",
+            },
+            Job {
+                source: Path::new("/store/SM_Bare.fbx"),
+                destination: Path::new("/cache/dex/bb/preview.png"),
+                texture: None,
+                digest: "bb",
+            },
+        ]);
+        assert_eq!(
+            text,
+            "/store/SM_Crate.fbx|/cache/dex/aa/preview.png|/store/atlas.png\n\
+             /store/SM_Bare.fbx|/cache/dex/bb/preview.png|\n"
+        );
+    }
+
+    /// **The Blender command line carries the script and the jobs
+    /// file.** Same reasoning as the converter's guard: this branch is
+    /// the one every real run takes and the one no test can run, so the
+    /// arguments are asserted directly.
+    #[test]
+    fn the_blender_command_line_carries_the_script_and_the_jobs() {
         let blender = Previewer::Blender(PathBuf::from("blender"));
         let arguments = |command: &Command| -> Vec<String> {
             command
@@ -403,14 +562,11 @@ mod tests {
                 .map(|argument| argument.to_string_lossy().into_owned())
                 .collect()
         };
-        let painted = arguments(&blender.command(
-            Path::new("/cache/blender/fbx_to_preview.py"),
-            Path::new("/cache/stage/SM_Prop_Crate_01.fbx"),
-            Path::new("/cache/dex/preview/abc.png"),
-            Some(Path::new("/cache/stage/atlas.png")),
-        ));
         assert_eq!(
-            painted,
+            arguments(&blender.command(
+                Path::new("/cache/blender/fbx_to_preview.py"),
+                Path::new("/cache/dex/abc/jobs.txt"),
+            )),
             [
                 "--background",
                 "--factory-startup",
@@ -419,19 +575,18 @@ mod tests {
                 "--python",
                 "/cache/blender/fbx_to_preview.py",
                 "--",
-                "/cache/stage/SM_Prop_Crate_01.fbx",
-                "/cache/dex/preview/abc.png",
-                "/cache/stage/atlas.png",
-            ],
-            "the atlas is not on the command line the preview is rendered with"
+                "/cache/dex/abc/jobs.txt",
+            ]
         );
-        let silent = arguments(&blender.command(
-            Path::new("/cache/blender/fbx_to_preview.py"),
-            Path::new("/cache/stage/SM_Prop_Crate_01.fbx"),
-            Path::new("/cache/dex/preview/abc.png"),
-            None,
-        ));
-        assert_eq!(silent, painted[..painted.len() - 1], "{silent:#?}");
+        // And a program of somebody's own is handed the same one file,
+        // which is the whole of the contract it has to know.
+        assert_eq!(
+            arguments(
+                &Previewer::Program(PathBuf::from("render.sh"))
+                    .command(Path::new("unused"), Path::new("/cache/dex/abc/jobs.txt"),)
+            ),
+            ["/cache/dex/abc/jobs.txt"]
+        );
     }
 
     /// **The script this binary carries is the one that shares the
@@ -451,6 +606,37 @@ mod tests {
             convert::SCRIPT.contains("if __name__ ==") && convert::SCRIPT.contains("def bounds"),
             "the converter script is not importable, so the preview cannot borrow from it"
         );
+    }
+
+    /// **A path this side can read is one the other side can open.**
+    ///
+    /// Rust's standard library reaches past Windows' 260-character limit
+    /// without being asked and Blender's Python does not, so a mesh deep
+    /// in the cache is found, hashed, written into a jobs file and handed
+    /// over — and then answered for with `no such source file`. That was
+    /// a quarter of a real sweep, and every one of them read like a
+    /// broken pack rather than a spelling.
+    ///
+    /// Asked of the text because the rule only does anything on Windows
+    /// and only past 240 characters, which is a state no unit test on
+    /// another platform can put the script in. What it pins is that the
+    /// rule is in the shared script and that both readers of a path go
+    /// through it.
+    #[test]
+    fn a_path_too_long_for_windows_is_spelled_so_blender_can_open_it() {
+        assert!(
+            convert::SCRIPT.contains("def openable"),
+            "the shared script has no long-path rule"
+        );
+        for (script, what) in [
+            (convert::SCRIPT, "the converter"),
+            (SCRIPT, "the previewer"),
+        ] {
+            assert!(
+                script.contains("openable(path)") || script.contains("openable(source)"),
+                "{what} reads a path without going through the long-path rule"
+            );
+        }
     }
 
     /// **The mesh is measured before the turntable copies it.**

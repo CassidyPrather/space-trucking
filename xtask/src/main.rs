@@ -49,7 +49,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use cache::{Cache, Converted};
 use convert::Converter;
-use describe::{Describer, Subject};
+use describe::{Describer, Sibling, Subject};
 use manifest::{Asset, Bounds, Manifest, Pack, Resolved};
 use preview::Previewer;
 use store::{Found, Hit, Store, count, slashed};
@@ -84,12 +84,15 @@ Environment:
   BLENDER          the Blender executable, if it is not on PATH
   ART_CONVERTER    a program run as `<program> <source> <destination.glb> [texture]`,
                    instead of Blender
-  ART_PREVIEW      a program run as `<program> <source> <destination.png> [texture]`,
-                   instead of Blender, for the pictures `describe` renders
+  ART_PREVIEW      a program run as `<program> <jobs file>`, instead of Blender, for
+                   the pictures `describe` renders; one `source|picture.png|texture`
+                   per line in, one `look <n>` block per job out
+  ART_PREVIEW_SIZE how many pixels square one preview sheet of four views is (256)
   OPENROUTER_API_KEY  the key `describe` reaches a hosted vision model with
   ART_DESCRIBER_MODEL the same thing `--model` says
-  ART_DESCRIBER    a program run as `<program> <prompt.txt> <picture.png>` printing a
-                   description, instead of a hosted model
+  ART_DESCRIBER    a program run as `<program> <prompt.txt> <picture.png>...` printing
+                   the answer, instead of a hosted model — one picture for a mesh, one
+                   per member when a family is being told apart
 ",
         limit = DESCRIBE_LIMIT,
         jobs = DESCRIBE_JOBS,
@@ -877,10 +880,16 @@ fn loose(manifest: &Manifest, store: &Store, unpacked: &Path, path: &Path) -> (W
 /// deliberate, and already in git.
 const DESCRIBE_LIMIT: usize = 24;
 
-/// How many meshes are looked at at once. Each one is a Blender launch
-/// and then a network round trip, so nearly all of the wall clock is
-/// waiting, and four keeps a laptop usable while a pack is catalogued.
-const DESCRIBE_JOBS: usize = 4;
+/// **How many chunks are looked at at once.**
+///
+/// Eight, measured rather than picked. A chunk is one Blender launch and
+/// then a model call per mesh in it, and with the picture down to 256
+/// square the launch is no longer the expensive half — the network is, so
+/// the useful number is higher than the core count. Over 128 real meshes
+/// on a twelve-core machine: 0.82 s each at four, 0.54 s at eight, 0.46 s
+/// at twelve. Eight takes most of what there is to take and leaves the
+/// machine usable.
+const DESCRIBE_JOBS: usize = 8;
 
 /// Where the catalogue lives. In the repository, beside the manifest,
 /// because it carries the same kind of thing the manifest does — names,
@@ -1036,56 +1045,123 @@ fn describe(words: &[&str]) -> Result<(), String> {
         let note = describer.announce();
         (describer, note)
     };
+    let work = one_per_digest(work);
+    let chunk = chunk_size(work.len(), wanted.jobs);
     println!(
-        "art: looking at {} with {}",
+        "art: looking at {} with {}, {} at a time per launch",
         many(work.len(), "mesh", "meshes"),
-        previewer.describe()
+        previewer.describe(),
+        chunk
     );
     println!("{note}");
     let script = previewer.prepare(&cache)?;
-    let outcomes = look_at_all(&cache, &script, &previewer, &describer, &work, wanted.jobs);
+    let run = Run {
+        cache: &cache,
+        script: &script,
+        previewer: &previewer,
+        describer: &describer,
+    };
+    let books = Mutex::new(books);
+    let mut done = look_at_all(&run, &work, chunk, wanted.jobs, &books);
 
-    let mut written = 0;
-    let mut troubles = Vec::new();
-    // Only the catalogues this run actually changed are rewritten. A run
-    // where every description failed should leave the files it loaded
-    // exactly as it found them, rather than reporting that it wrote them.
-    let mut touched: BTreeSet<String> = BTreeSet::new();
-    for (candidate, outcome) in work.iter().zip(outcomes) {
-        match outcome {
-            Err(trouble) => troubles.push(trouble),
-            Ok((look, description)) => {
-                let book = books.get_mut(&candidate.pack).expect("its own pack");
-                book.insert(entry(candidate, &look, description, &describer));
-                touched.insert(candidate.pack.clone());
-                written += 1;
-            }
-        }
+    // Then the second look, at the families among what is now in the
+    // catalogue. A mesh described on its own cannot be told from the four
+    // others with its name — see `compare_all`.
+    let titles: BTreeMap<String, String> = work
+        .iter()
+        .flatten()
+        .map(|candidate| (candidate.pack.clone(), candidate.title.clone()))
+        .collect();
+    let (compared, complaints) = compare_all(
+        &run,
+        &books,
+        &done.described,
+        wanted.force,
+        wanted.jobs,
+        &titles,
+    );
+    if compared > 0 {
+        println!(
+            "art: {} told from its siblings",
+            many(compared, "mesh", "meshes")
+        );
     }
-    for (pack, book) in &books {
-        if !touched.contains(pack) {
-            continue;
-        }
-        book.write()?;
-        println!("art: wrote {}", book.path.display());
+    done.troubles.extend(complaints);
+    said(&done)
+}
+
+/// What a run says about itself when it is over: where the work went,
+/// what went wrong, and whether "wrong" was the whole of it.
+fn said(done: &Done) -> Result<(), String> {
+    for path in &done.files {
+        println!("art: wrote {}", path.display());
     }
-    for trouble in &troubles {
+    for trouble in &done.troubles {
         println!("\n{trouble}");
     }
-    if written == 0 {
+    if done.written == 0 {
         return Err(format!(
             "{} could not be described, and nothing was written",
-            many(troubles.len(), "mesh", "meshes")
+            many(done.troubles.len(), "mesh", "meshes")
         ));
     }
-    if !troubles.is_empty() {
+    if !done.troubles.is_empty() {
         println!(
             "\nart: {} described, {} not",
-            many(written, "mesh", "meshes"),
-            troubles.len()
+            many(done.written, "mesh", "meshes"),
+            done.troubles.len()
         );
     }
     Ok(())
+}
+
+/// **How many meshes go into one launch of the previewer.**
+///
+/// Blender costs about 2.2 seconds to start whatever it is then asked to
+/// do, so a launch per mesh spent a third of its life starting up. A
+/// chunk amortises that — and is capped, for two reasons that pull the
+/// same way: a chunk is the unit that is lost if a launch dies, and it is
+/// also the unit that gets written to the catalogue, so a long overnight
+/// run should be saving its work every minute or two rather than at the
+/// end.
+///
+/// The floor is the other half of it. With four workers and eight meshes,
+/// a chunk of thirty-two would put every mesh in one launch and leave
+/// three workers holding nothing.
+const CHUNK_MOST: usize = 32;
+
+fn chunk_size(work: usize, jobs: usize) -> usize {
+    work.div_ceil(jobs.max(1)).clamp(1, CHUNK_MOST)
+}
+
+/// **Identical bytes are one mesh, however many names a pack gives it.**
+///
+/// A pack ships the same geometry under two names about one time in a
+/// hundred, and everything about this command is addressed by the digest
+/// of that geometry — the picture it renders, the prompt it writes beside
+/// it, the answer it files. Two names racing over one set of those files
+/// is how a description ends up in the catalogue under a name it was not
+/// written about, which is exactly what happened: three copies of one
+/// mesh, and the third came back describing the second.
+///
+/// Looking once and giving every name the same answer fixes that, and it
+/// is also the truer answer. Describing one mesh twice produces two
+/// sentences that differ in adjectives and not in fact — the same defect
+/// the family pass exists to fix, arriving from the other direction.
+/// What tells the copies apart is their names, and that is the family
+/// pass's job.
+fn one_per_digest(work: Vec<Candidate>) -> Vec<Vec<Candidate>> {
+    let mut groups: Vec<Vec<Candidate>> = Vec::new();
+    let mut seen: BTreeMap<String, usize> = BTreeMap::new();
+    for candidate in work {
+        if let Some(&at) = seen.get(&candidate.digest) {
+            groups[at].push(candidate);
+        } else {
+            seen.insert(candidate.digest.clone(), groups.len());
+            groups.push(vec![candidate]);
+        }
+    }
+    groups
 }
 
 /// The message for a run that found nothing to do, which is a different
@@ -1366,7 +1442,7 @@ fn seat(manifest: &Manifest, store: &Store, unpacked: &Path, hit: &Hit) -> Optio
                 return None;
             }
             Some((
-                by_directory(manifest, &first.as_os_str().to_string_lossy()),
+                by_directory(manifest, store, &first.as_os_str().to_string_lossy()),
                 slashed(&inside),
             ))
         }
@@ -1387,24 +1463,57 @@ fn holder(manifest: &Manifest, store: &Store, unpacked: &Path, path: &Path) -> O
         .or_else(|_| path.strip_prefix(&store.root))
         .ok()?;
     let first = relative.components().next()?;
-    Some(by_directory(manifest, &first.as_os_str().to_string_lossy()))
+    Some(by_directory(
+        manifest,
+        store,
+        &first.as_os_str().to_string_lossy(),
+    ))
 }
 
-/// A directory name as a pack. The cache files a rebuilt tree under the
-/// pack's own id, so a name out of there can be a pack the manifest
-/// declares; anything else becomes a pack that exists for the length of
-/// this run and whose `dir` is the name it was found under.
-fn by_directory(manifest: &Manifest, name: &str) -> Pack {
-    manifest.packs.get(name).map_or_else(
-        || Pack {
-            id: dex::id_of(name),
-            title: name.to_owned(),
-            dir: name.to_owned(),
-            download: name.to_owned(),
-            line: 0,
-        },
-        copy_of,
-    )
+/// **A directory name as a pack**, whichever of the two directory names
+/// this is.
+///
+/// A pack is found under two different names, and the difference is a
+/// defect that only appears on the second run. In the store it is called
+/// what the shop called it — `POLYGON - Apocalypse`. In the cache, which
+/// is where the first run left the meshes it took out of that pack's zip,
+/// it is filed under the pack's id — `polygon_apocalypse` — and a cached
+/// copy sorts before the store's own archive, so the second run finds it
+/// first and names the pack after the cache.
+///
+/// A pack whose `dir` is a slug is a pack whose directory does not exist:
+/// nothing can be found in it, so the pack's shared atlas is not found
+/// either, and the run goes on to render a whole pack untextured and
+/// describe the colour of Blender's missing-texture magenta. That is
+/// exactly what happened, on the second sweep of a pack the first sweep
+/// had warmed the cache for.
+///
+/// So a name is resolved back to a directory: the manifest's, if it
+/// declares one; the store directory of that name, if there is one; and
+/// otherwise the store directory whose own name slugs to it.
+fn by_directory(manifest: &Manifest, store: &Store, name: &str) -> Pack {
+    if let Some(pack) = manifest.packs.get(name) {
+        return copy_of(pack);
+    }
+    let dir = if store.root.join(name).is_dir() {
+        name.to_owned()
+    } else {
+        std::fs::read_dir(&store.root)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter(|entry| entry.path().is_dir())
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .find(|directory| dex::id_of(directory) == name)
+            .unwrap_or_else(|| name.to_owned())
+    };
+    Pack {
+        id: dex::id_of(&dir),
+        title: dir.clone(),
+        download: dir.clone(),
+        dir,
+        line: 0,
+    }
 }
 
 fn copy_of(pack: &Pack) -> Pack {
@@ -1447,80 +1556,400 @@ fn pack_atlas(store: &Store, cache: &Cache, pack: &Pack) -> Option<PathBuf> {
         .find_map(|name| store::find_relative(store, cache, pack, name))
 }
 
-/// **Look at several meshes at once, and keep the answers in order.**
+/// The three programs and the cache one describe run works through,
+/// gathered so a worker can be handed one thing.
+struct Run<'a> {
+    cache: &'a Cache,
+    script: &'a Path,
+    previewer: &'a Previewer,
+    describer: &'a Describer,
+}
+
+/// What a whole run came to.
+struct Done {
+    written: usize,
+    troubles: Vec<String>,
+    /// The catalogues it changed, so the run can say where its work went.
+    files: BTreeSet<PathBuf>,
+    /// The digests it described, which is how the family pass tells the
+    /// families this run touched from the rest of the catalogue.
+    described: BTreeSet<String>,
+}
+
+/// **Look at the work, a chunk per launch, several launches at once.**
 ///
-/// Each one is a Blender launch and then a network round trip, so a
-/// serial run of two dozen is minutes of a laptop doing nothing. The
-/// answers are collected against the index they came from rather than in
-/// the order they finish, because a catalogue that came out in a
-/// different order on every run would be a diff nobody can read.
+/// A chunk is rendered in one launch of the previewer and then described
+/// one mesh at a time, and `jobs` workers do that concurrently — so the
+/// Blender startup is paid once per chunk rather than once per mesh, and
+/// the network round trips of one worker overlap the rendering of
+/// another.
+///
+/// **The catalogue is written as it goes**, at the end of each chunk.
+/// Cataloguing a large pack is hours, and a run that only wrote at the
+/// end would be a run where an interruption at hour three costs three
+/// hours. Writing per chunk means an interrupted run keeps everything it
+/// had described, and the next run skips exactly those — which is what
+/// makes a big sweep something you can chip away at.
 fn look_at_all(
-    cache: &Cache,
-    script: &Path,
-    previewer: &Previewer,
-    describer: &Describer,
-    work: &[Candidate],
+    run: &Run<'_>,
+    work: &[Vec<Candidate>],
+    chunk: usize,
     jobs: usize,
-) -> Vec<Looked> {
+    books: &Mutex<BTreeMap<String, dex::Dex>>,
+) -> Done {
+    let chunks: Vec<&[Vec<Candidate>]> = work.chunks(chunk).collect();
     let next = AtomicUsize::new(0);
     let finished = AtomicUsize::new(0);
-    let done: Mutex<Vec<(usize, Looked)>> = Mutex::new(Vec::new());
+    let written = AtomicUsize::new(0);
+    let troubles: Mutex<Vec<String>> = Mutex::new(Vec::new());
+    let files: Mutex<BTreeSet<PathBuf>> = Mutex::new(BTreeSet::new());
+    let described: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
     std::thread::scope(|scope| {
-        for _ in 0..jobs.min(work.len()).max(1) {
+        for _ in 0..jobs.min(chunks.len()).max(1) {
             scope.spawn(|| {
                 loop {
-                    let index = next.fetch_add(1, Ordering::Relaxed);
-                    let Some(candidate) = work.get(index) else {
+                    let Some(chunk) = chunks.get(next.fetch_add(1, Ordering::Relaxed)) else {
                         return;
                     };
-                    let outcome = look_and_say(cache, script, previewer, describer, candidate);
-                    let sofar = finished.fetch_add(1, Ordering::Relaxed) + 1;
-                    println!(
-                        "  {sofar:>3}/{total}  {:<32} {}",
-                        candidate.name,
-                        match &outcome {
-                            Ok((_, said)) => said.clone(),
-                            Err(_) => String::from("(see below)"),
-                        },
-                        total = work.len()
-                    );
-                    done.lock()
-                        .expect("no worker panics while holding this")
-                        .push((index, outcome));
+                    let mut entries: Vec<dex::Entry> = Vec::new();
+                    for (group, look) in chunk.iter().zip(look_at(run, chunk)) {
+                        let candidate = &group[0];
+                        let outcome = look.and_then(|look| {
+                            let said = run.describer.say(
+                                run.cache,
+                                &Subject {
+                                    name: &candidate.name,
+                                    pack: &candidate.title,
+                                },
+                                &look,
+                                &run.cache.dex_file(&candidate.digest, "preview.png"),
+                                &candidate.digest,
+                            )?;
+                            Ok((look, said))
+                        });
+                        let sofar = finished.fetch_add(1, Ordering::Relaxed) + 1;
+                        match outcome {
+                            Ok((look, said)) => {
+                                println!(
+                                    "  {sofar:>4}/{total}  {:<32} {said}",
+                                    candidate.name,
+                                    total = work.len()
+                                );
+                                described
+                                    .lock()
+                                    .expect("no worker panics holding this")
+                                    .insert(candidate.digest.clone());
+                                // Every name these bytes go by gets the
+                                // same answer; see `one_per_digest`.
+                                entries.extend(
+                                    group.iter().map(|also| {
+                                        entry(also, &look, said.clone(), run.describer)
+                                    }),
+                                );
+                            }
+                            Err(trouble) => {
+                                println!(
+                                    "  {sofar:>4}/{total}  {:<32} (see below)",
+                                    candidate.name,
+                                    total = work.len()
+                                );
+                                troubles
+                                    .lock()
+                                    .expect("no worker panics holding this")
+                                    .push(trouble);
+                            }
+                        }
+                    }
+                    written.fetch_add(entries.len(), Ordering::Relaxed);
+                    match file(books, entries) {
+                        Ok(paths) => files
+                            .lock()
+                            .expect("no worker panics holding this")
+                            .extend(paths),
+                        Err(trouble) => troubles
+                            .lock()
+                            .expect("no worker panics holding this")
+                            .push(trouble),
+                    }
                 }
             });
         }
     });
-    let mut answers = done.into_inner().expect("every worker is finished");
-    answers.sort_by_key(|(index, _)| *index);
-    answers.into_iter().map(|(_, outcome)| outcome).collect()
+    Done {
+        written: written.load(Ordering::Relaxed),
+        troubles: troubles.into_inner().expect("every worker is finished"),
+        files: files.into_inner().expect("every worker is finished"),
+        described: described.into_inner().expect("every worker is finished"),
+    }
 }
 
-/// What looking at one mesh comes to: what was measured and what was
-/// said about it, or the one sentence saying why neither happened.
-type Looked = Result<(preview::Look, String), String>;
+/// **How many of one family are compared in a single call.**
+///
+/// A family is usually three or four, and the largest in a real library
+/// is ninety-two modular pieces — which is not a message anybody can
+/// send, and would not be a comparison worth reading if it were. A family
+/// past this is compared in groups, so a member is told apart from the
+/// seven nearest it in name rather than from all ninety-one.
+const FAMILY_MOST: usize = 8;
 
-/// One mesh: a picture and its numbers, then a sentence about it.
-fn look_and_say(
-    cache: &Cache,
-    script: &Path,
-    previewer: &Previewer,
-    describer: &Describer,
-    candidate: &Candidate,
-) -> Looked {
-    let picture = cache.dex_file(&candidate.digest, "preview.png");
-    let look = previewer.run(
-        script,
-        &candidate.path,
-        &picture,
-        candidate.atlas.as_deref(),
-    )?;
-    let subject = Subject {
-        name: &candidate.name,
-        pack: &candidate.title,
+/// **The second look: what tells the variants of one thing apart.**
+///
+/// Everything above this describes one mesh at a time, which is the one
+/// thing that cannot produce a comparison — five light panels come back
+/// as five sentences agreeing about everything that matters. Six tenths
+/// of a real library is in a family of two or more, so this is most of
+/// the catalogue rather than a corner of it.
+///
+/// It costs one call per family and no rendering at all: the pictures are
+/// the ones the pass above already made, and a message can carry several.
+///
+/// Families are drawn from the whole catalogue rather than from this
+/// run's work, so a family whose members were described across two runs
+/// is still compared — but only families this run touched are asked
+/// about, or every run would re-buy every comparison in the file.
+fn compare_all(
+    run: &Run<'_>,
+    books: &Mutex<BTreeMap<String, dex::Dex>>,
+    described: &BTreeSet<String>,
+    force: bool,
+    jobs: usize,
+    titles: &BTreeMap<String, String>,
+) -> (usize, Vec<String>) {
+    let families = families(books, described, force);
+    if families.is_empty() {
+        return (0, Vec::new());
+    }
+    println!(
+        "art: comparing {} against {}",
+        many(families.len(), "family", "families"),
+        many(
+            families.iter().map(Vec::len).sum::<usize>(),
+            "sibling",
+            "siblings"
+        )
+    );
+    let next = AtomicUsize::new(0);
+    let done = AtomicUsize::new(0);
+    let troubles: Mutex<Vec<String>> = Mutex::new(Vec::new());
+    std::thread::scope(|scope| {
+        for _ in 0..jobs.min(families.len()).max(1) {
+            scope.spawn(|| {
+                loop {
+                    let Some(family) = families.get(next.fetch_add(1, Ordering::Relaxed)) else {
+                        return;
+                    };
+                    match compare(run, books, family, titles) {
+                        Ok(told) => {
+                            done.fetch_add(told, Ordering::Relaxed);
+                        }
+                        Err(trouble) => troubles
+                            .lock()
+                            .expect("no worker panics holding this")
+                            .push(trouble),
+                    }
+                }
+            });
+        }
+    });
+    (
+        done.load(Ordering::Relaxed),
+        troubles.into_inner().expect("every worker is finished"),
+    )
+}
+
+/// One family: which pack, and the ids of its members in name order.
+type Family = Vec<(String, String)>;
+
+/// **Which families are worth asking about.**
+///
+/// One this run described a member of, and one that has a member with
+/// nothing to say about its siblings yet — because a comparison already
+/// written is a comparison already paid for.
+fn families(
+    books: &Mutex<BTreeMap<String, dex::Dex>>,
+    described: &BTreeSet<String>,
+    force: bool,
+) -> Vec<Family> {
+    let books = books.lock().expect("nothing else holds this yet");
+    let mut families = Vec::new();
+    for (pack, book) in books.iter() {
+        let mut grouped: BTreeMap<&str, Family> = BTreeMap::new();
+        for entry in book.entries.values() {
+            grouped
+                .entry(dex::family_of(&entry.name))
+                .or_default()
+                .push((pack.clone(), entry.id.clone()));
+        }
+        for (_, members) in grouped {
+            if members.len() < 2 {
+                continue;
+            }
+            let touched = members.iter().any(|(_, id)| {
+                book.entries
+                    .get(id)
+                    .is_some_and(|entry| described.contains(&entry.sha256))
+            });
+            let wanting = members.iter().any(|(_, id)| {
+                book.entries
+                    .get(id)
+                    .is_some_and(|entry| entry.differs.is_none())
+            });
+            if !touched || !(wanting || force) {
+                continue;
+            }
+            // A family past the cap is compared in groups of its own,
+            // which is what a hundred modular wall pieces have to be.
+            for group in members.chunks(FAMILY_MOST) {
+                if group.len() >= 2 {
+                    families.push(group.to_vec());
+                }
+            }
+        }
+    }
+    drop(books);
+    families
+}
+
+/// Ask about one family, and write what comes back into the catalogue.
+fn compare(
+    run: &Run<'_>,
+    books: &Mutex<BTreeMap<String, dex::Dex>>,
+    family: &Family,
+    titles: &BTreeMap<String, String>,
+) -> Result<usize, String> {
+    // Everything the comparison needs, copied out from under the lock:
+    // the call is a network round trip and nothing else should wait on it.
+    struct Member {
+        id: String,
+        name: String,
+        triangles: u64,
+        size: [f32; 3],
+        description: String,
+        picture: PathBuf,
+    }
+    let pack = family
+        .first()
+        .map(|(pack, _)| pack.clone())
+        .unwrap_or_default();
+    let members: Vec<Member> = {
+        let books = books.lock().expect("no worker panics holding this");
+        let book = books.get(&pack).ok_or("a family out of no pack")?;
+        let members = family
+            .iter()
+            .filter_map(|(_, id)| book.entries.get(id))
+            .map(|entry| Member {
+                id: entry.id.clone(),
+                name: entry.name.clone(),
+                triangles: entry.triangles,
+                size: entry.size,
+                description: entry.description.clone(),
+                picture: run.cache.dex_file(&entry.sha256, "preview.png"),
+            })
+            // A member whose picture the cache no longer holds cannot be
+            // in a comparison, and its siblings still can.
+            .filter(|member| member.picture.is_file())
+            .collect();
+        drop(books);
+        members
     };
-    let said = describer.say(cache, &subject, &look, &picture, &candidate.digest)?;
-    Ok((look, said))
+    if members.len() < 2 {
+        return Ok(0);
+    }
+    let siblings: Vec<Sibling<'_>> = members
+        .iter()
+        .map(|member| Sibling {
+            name: &member.name,
+            triangles: member.triangles,
+            size: member.size,
+            description: &member.description,
+            picture: &member.picture,
+        })
+        .collect();
+    // Where this comparison's own evidence goes: the pack and the first
+    // member's id, which is unique across the catalogue where a digest
+    // would not be — a family of identical meshes is one digest.
+    let digest = members
+        .first()
+        .map_or_else(String::new, |member| format!("{pack}-{}", member.id));
+    // What the pack is called rather than what it is filed under. The
+    // catalogue records the id; the title is worth having in the prompt
+    // and comes from this run's own candidates, so a family whose members
+    // were all described by an earlier run is named by its id — which is
+    // the honest fallback rather than a wrong name.
+    let title = titles.get(&pack).map_or(pack.as_str(), String::as_str);
+    let told = run
+        .describer
+        .compare(run.cache, title, &siblings, &digest)?;
+
+    let mut written = 0;
+    {
+        let mut books = books.lock().expect("no worker panics holding this");
+        let book = books.get_mut(&pack).ok_or("a family out of no pack")?;
+        for (member, line) in members.iter().zip(told) {
+            let Some(line) = line else { continue };
+            if let Some(entry) = book.entries.get_mut(&member.id) {
+                entry.differs = Some(line);
+                written += 1;
+            }
+        }
+        if written > 0 {
+            book.write()?;
+        }
+        drop(books);
+    }
+    Ok(written)
+}
+
+/// One chunk's pictures and numbers, in one launch. One job per group of
+/// identical meshes, not one per name.
+fn look_at(run: &Run<'_>, chunk: &[Vec<Candidate>]) -> Vec<Result<preview::Look, String>> {
+    let pictures: Vec<PathBuf> = chunk
+        .iter()
+        .map(|group| run.cache.dex_file(&group[0].digest, "preview.png"))
+        .collect();
+    let jobs: Vec<preview::Job<'_>> = chunk
+        .iter()
+        .zip(&pictures)
+        .map(|(group, picture)| preview::Job {
+            source: &group[0].path,
+            destination: picture,
+            texture: group[0].atlas.as_deref(),
+            digest: &group[0].digest,
+        })
+        .collect();
+    run.previewer.run(run.script, run.cache, &jobs)
+}
+
+/// File a chunk's entries in their packs' catalogues, and write those
+/// catalogues out. Under one lock, because two workers finishing chunks
+/// out of the same pack at the same moment must not both write it.
+fn file(
+    books: &Mutex<BTreeMap<String, dex::Dex>>,
+    entries: Vec<dex::Entry>,
+) -> Result<Vec<PathBuf>, String> {
+    if entries.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut written = Vec::new();
+    // The lock is held across the write on purpose and let go the moment
+    // it is done: two workers finishing chunks out of the same pack at
+    // the same moment must not both be rendering that file.
+    {
+        let mut books = books.lock().expect("no worker panics holding this");
+        let mut touched: BTreeSet<String> = BTreeSet::new();
+        for entry in entries {
+            touched.insert(entry.pack.clone());
+            books
+                .get_mut(&entry.pack)
+                .expect("a candidate's own pack")
+                .insert(entry);
+        }
+        for pack in touched {
+            books[&pack].write()?;
+            written.push(books[&pack].path.clone());
+        }
+    }
+    Ok(written)
 }
 
 /// One catalogue entry, out of what was measured and what was said.
@@ -1537,6 +1966,10 @@ fn entry(
         source: candidate.source.clone(),
         sha256: candidate.digest.clone(),
         asset: candidate.asset.clone(),
+        // Filled in by the family pass, which is the only thing that can
+        // see a mesh's siblings. `Dex::insert` carries an existing one
+        // over when the bytes have not changed.
+        differs: None,
         atlas: candidate.atlas.as_ref().map(|path| {
             path.file_name().map_or_else(
                 || path.display().to_string(),
@@ -1593,6 +2026,12 @@ fn catalogue(words: &[&str]) -> Result<(), String> {
         );
         for entry in matching {
             println!("  {}", entry.line());
+            if let Some(differs) = &entry.differs {
+                // Under the description rather than in it: one is what
+                // the thing is, the other is why you would take this one
+                // rather than the four beside it.
+                println!("  {:<32} vs its siblings: {differs}", "");
+            }
             shown += 1;
         }
     }
@@ -1685,6 +2124,48 @@ mod tests {
                 "SourceFiles/FBX/SM_Prop_Barrel_02.fbx",
             ]
         );
+    }
+
+    /// **A pack found under its id resolves back to its directory.**
+    ///
+    /// The cache files what it took out of a pack under that pack's id,
+    /// so the second run of a sweep meets `polygon_apocalypse` where the
+    /// first met `POLYGON - Apocalypse`. A pack whose `dir` is a slug is
+    /// a pack whose directory does not exist, and the visible cost of
+    /// that is the pack's shared atlas going unfound: a whole pack
+    /// rendered untextured and catalogued as the colour of Blender's
+    /// missing-texture magenta, on the second sweep and never the first.
+    #[test]
+    fn a_pack_found_under_its_id_is_still_the_directory_it_came_from() {
+        let root = std::env::temp_dir().join(format!("space-trucking-dir-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        fsx::create_dir_all(&root.join("POLYGON - Apocalypse")).expect("a scratch store");
+        let store = Store::at(root.clone());
+        let manifest = Manifest::parse(
+            Path::new("manifest.toml"),
+            "[pack.demo]\ntitle = \"A Pack\"\ndir = \"a-pack\"\n",
+        )
+        .expect("a manifest");
+
+        let by_slug = by_directory(&manifest, &store, "polygon_apocalypse");
+        assert_eq!(by_slug.dir, "POLYGON - Apocalypse", "a slug is not a path");
+        assert_eq!(by_slug.title, "POLYGON - Apocalypse");
+        assert_eq!(by_slug.id, "polygon_apocalypse");
+
+        // The directory's own name still answers for itself, and a pack
+        // the manifest declares still beats both.
+        assert_eq!(
+            by_directory(&manifest, &store, "POLYGON - Apocalypse").dir,
+            "POLYGON - Apocalypse"
+        );
+        assert_eq!(by_directory(&manifest, &store, "demo").dir, "a-pack");
+        // And a name nothing in the store answers to stays itself rather
+        // than becoming some other pack.
+        assert_eq!(
+            by_directory(&manifest, &store, "nothing_here").dir,
+            "nothing_here"
+        );
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     /// **What counts as a mesh is what the importer can open**, and what

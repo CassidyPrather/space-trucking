@@ -171,6 +171,8 @@ art/cache/
   dex/<digest>/preview.png     the four views of one mesh a describer was shown
   dex/<digest>/prompt.txt      what it was asked, response.json what came back,
                                and request.json only when the call went wrong
+  dex/<digest>/jobs.txt        the chunk of meshes one previewer launch was given,
+                               filed under the first of them
   blender/fbx_to_gltf.py       the converter script, written out from the binary
   blender/fbx_to_preview.py    the preview script, which imports the converter's
   fixtures/                    the same layout again, written by the fixture run
@@ -329,23 +331,92 @@ the name" spelled out. There is a guard on it in
 because it is the single assumption the whole command is worth anything
 under.
 
+### The second look: what tells the variants apart
+
+A description is written about one mesh, and **six tenths of a real
+library is numbered variants of something** — 29,479 meshes in 8,158
+families, median size three. Describing those one at a time does not work,
+and it fails in a way that is worse than a blank. Five light panels,
+described in isolation:
+
+```text
+_01  A slim, elongated rectangular fixture with a dark grey, bevelled frame and a
+     recessed, pale grey translucent panel...
+_03  A low, elongated surface-mounted fixture with a dark grey housing and a bright,
+     recessed white strip, framed by a raised rim...
+```
+
+All five said the same thing. Worse, where they differ — "translucent
+panel" against "bright white strip" — a reader cannot tell whether that is
+a difference between the meshes or between two rolls of the same die. The
+model never saw the others; it had nothing to compare against.
+
+So a **second pass looks at a whole family at once** and writes one line
+per member into `differs`:
+
+```text
+_01  The only unlit, frosted panel; plainest and most minimal, for ambient wall mounting.
+_02  The only one with blocky feet and a single emissive strip, a floor-mounted utility light.
+_03  The only one with a bright white lens and lighter bezel; the most standard ceiling light.
+_04  The only one with an orange stripe and cylindrical nodes, a damaged or tech-accented look.
+_05  The only one with three parallel glowing tubes; the most detailed and largest.
+```
+
+Those are real, from the real command. Each one agrees with what the
+isolated pass independently noticed about that mesh, which is the reason
+to believe them.
+
+It costs **no new rendering at all**: a chat message may carry several
+images, so the pass sends the preview sheets already on the disk. One call
+per family, about $0.0008 for a family of five.
+
+Three rules it keeps:
+
+- **Answers are matched by name, never by position.** The model is told to
+  begin each line with the asset's own name; a line naming nothing in the
+  family is dropped, and a member nobody wrote a line for keeps nothing. A
+  differentiator filed against the wrong sibling sends somebody to the
+  wrong mesh, confidently, and is worse than the blank it replaced.
+- **A family is a shared name plus a trailing `_NN` or `_A`, in one
+  pack**, and only the last part comes off — `SM_Bld_Wall_Corner_01` is
+  not a variant of `SM_Bld_Wall_01`. A family past eight is compared in
+  groups, because ninety-two modular pieces is not a question anybody can
+  ask in one message.
+- **A comparison outlives a re-description of the same bytes.** It is
+  bought separately, so `--force` over one member does not throw away the
+  comparison for the family — unless the mesh itself changed, when a
+  comparison of the old geometry is not a fact about the new.
+
+**And identical bytes are one mesh, however many names a pack gives it.**
+A pack ships the same geometry under two names about one time in a
+hundred; those are looked at once and every name gets the same answer.
+That is cheaper, and it is the truer answer — describing one mesh twice
+produces two sentences differing in adjectives and not in fact, which is
+the same defect arriving from the other direction. It was found the hard
+way: three copies of one mesh, and the third came back describing the
+second, because the picture and the prompt beside it are addressed by the
+digest of the geometry.
+
 ### What it needs, and what it costs
 
 | | |
 | --- | --- |
-| Blender | the same install `resolve` converts with. `$ART_PREVIEW` overrides it with any program run as `<program> <source> <destination.png> [texture]` |
+| Blender | the same install `resolve` converts with. `$ART_PREVIEW` overrides it with any program run as `<program> <jobs file>` |
 | `$OPENROUTER_API_KEY` | a hosted vision model, reached with `curl`. `--model` or `$ART_DESCRIBER_MODEL` picks another; the default is a cheap one that reads pictures |
 | `$ART_DESCRIBER` | instead of that: any program run as `<program> <prompt.txt> <picture.png>` that prints a description — a local model, or something of your own |
 | neither of those two | `--offline`, or simply no key: the entry is written from the measurements and `described_by` says `measurements alone` |
 
 A run over found meshes stops at **24** and says how many it left, because
-`describe crate` over a library is four hundred renders and four hundred
+`describe crate` over a library is hundreds of renders and hundreds of
 model calls — a bill arriving because somebody typed a common word.
-`--limit` raises it. `--jobs` (four by default) is how many are looked at
-at once; nearly all of the wall clock is Blender starting and a network
-round trip. A mesh already described against the bytes on this machine is
-skipped, so a second run costs nothing and `--force` is how you overrule
-that.
+`--limit` raises it. `--jobs` (eight by default) is how many chunks are
+looked at at once. A mesh already described against the bytes on this
+machine is skipped, so a second run costs nothing and `--force` is how you
+overrule that.
+
+**The catalogue is written as it goes**, at the end of every chunk, so a
+sweep is something you can interrupt and pick up again: what was described
+stays described, and the next run skips exactly those.
 
 One thing worth knowing about the count: a Source Files download ships
 the same mesh as `FBX/X.fbx` **and** `OBJ/X.obj`, and describing both
@@ -354,17 +425,81 @@ twice. The FBX wins. Two different meshes that merely share a name —
 `Props/SM_Crate.fbx` and `Buildings/SM_Crate.fbx` — are both kept, and
 the second gets `sm_crate_2`.
 
+### What a whole library costs
+
+Measured on a twelve-core Windows machine against 115 packs holding
+**49,398** describable meshes — one entry per `(pack, name)`, FBX
+preferred over OBJ:
+
+| | per mesh | 49,398 meshes |
+| --- | --- | --- |
+| time, `--jobs 8` | 0.54 s | **7.4 hours** |
+| hosted model | $0.000085 | **$4.20** |
+| preview cache | 70 KB | **3.3 GB**, gitignored |
+| catalogue text | 786 bytes | **37 MB**, in git |
+
+The comparison pass is on top of that and needs no rendering: about
+8,158 calls for the families, roughly **$5 and half an hour** — call the
+whole thing **eight hours and under ten dollars**.
+
+A single pack is the practical unit: the median pack is 225 meshes — two
+minutes and two cents — and the largest is 2,593, about twenty-three
+minutes. Only 2.5% of the library is collision geometry and none of it is
+LOD copies, so there is little to be gained by filtering those out.
+
+Two of those numbers were four times worse before they were measured, and
+the fixes are worth knowing because they are the levers if this ever needs
+to be faster again:
+
+- **One launch per chunk, not per mesh.** Blender costs about 2.2 seconds
+  to start before it has looked at anything, against about 5 seconds of
+  work, so a third of a sweep went on starting up. Chunks of up to 32 took
+  the per-mesh cost from 5.05 s to 0.82 s at the same `--jobs 4`.
+- **256 pixels square, not 1024.** Cycles time, PNG bytes and the tokens
+  an image costs all scale with the pixel count, and the descriptions do
+  not get better with more of them: on the one mesh where a 512 and a 256
+  run disagreed — a crate of drums — the 256 answer was the more accurate,
+  having seen an olive drum the 512 answer missed. What neither size fixes
+  is counting: "three hoops" and "four hoops" came from the same barrel,
+  because that is the model rather than the pixels. `$ART_PREVIEW_SIZE`
+  raises it for a pack of something more detailed.
+
 ### The picture
 
-Four views of the mesh in one square PNG, turned a quarter turn between
-them, on a plain grey ground, painted with the atlas: a model shown one
-three-quarter view of a crate can say nothing about the back of it, and
-four views cost one render because the copies share their mesh data. It
-is `art/cache/dex/<digest>/preview.png`, and it stays there — with the
-prompt, the request and the answer — for the same reason the staging
+Four views of the mesh in one 256-pixel PNG, turned a quarter turn
+between them, on a plain grey ground, painted with the atlas: a model
+shown one three-quarter view of a crate can say nothing about the back of
+it, and four views cost one render because the copies share their mesh
+data. It is `art/cache/dex/<digest>/preview.png`, and it stays there —
+with the prompt and the answer — for the same reason the staging
 directories do. **A description that reads wrong is usually a right
 description of a bad render**, and that directory is where you find out
 which.
+
+The previewer is handed a **file of jobs** rather than one mesh, which is
+what lets one Blender launch cover a chunk of them:
+
+```text
+<program> <jobs file>          # one `source|picture.png|texture` per line
+```
+
+and it answers with a `look <n>` block per job, headed by the job's line
+number, carrying the same `tris`/`meshes`/`materials`/`image`/`aabb`
+lines. A job it cannot do prints `trouble <n> <why>` and the launch
+carries on, because one unreadable FBX in a chunk of thirty-two is not a
+reason to lose the other thirty-one. `|` is the separator because Windows
+forbids it in a path and a shell stand-in can split on it in one line.
+
+One Windows trap is worth knowing, because it looks like a broken pack.
+A path into the cache is a cache root plus a pack plus the archive's own
+name plus the tree inside it, which goes past Windows' 260-character
+limit on ordinary packs — `POLYGON - Alpine Mountain`'s ice axe does it at
+268. Rust's standard library reaches those files without being asked and
+Blender's Python does not, so the resolver found, hashed and handed over
+meshes that then came back as `no such source file`: a quarter of one
+sweep. Both scripts now spell a long path with the `\\?\` prefix
+(`openable` in `fbx_to_gltf.py`), so this is fixed rather than something
+to work around — but it is why a very deep `$ART_CACHE` is worth avoiding.
 
 The atlas is the manifest's `texture` line for an asset that has one, and
 otherwise the pack's own shared atlas, picked by name. That guess is

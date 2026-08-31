@@ -69,8 +69,10 @@ cargo xtask art <command>
                    are called
 
 Options for `describe`:
-  --limit <n>      how many found meshes to describe (default {limit}); the manifest's own
-                   assets are never capped
+  --pack <id>      one whole pack, by the id art/manifest.toml gives it or by its own
+                   directory name; reads that pack instead of searching the store
+  --limit <n>      how many found meshes to describe (default {limit}); a named pack
+                   and the manifest's own assets are not capped
   --jobs <n>       how many to look at at once (default {jobs})
   --model <slug>   a vision model other than {model}
   --offline        render and measure, ask nothing, and say so in every entry
@@ -902,13 +904,39 @@ fn dex_dir() -> PathBuf {
 /// What one `describe` run was asked for.
 struct Wanted {
     /// What to search the packs for. Absent means the manifest's own
-    /// assets, which is the run somebody makes after adding a line.
+    /// assets, which is the run somebody makes after adding a line —
+    /// unless `pack` names one, when it means the whole of that pack.
     needle: Option<String>,
-    limit: usize,
+    /// One pack, by the id `art/manifest.toml` gives it or by its own
+    /// directory name under `$SYNTY_STORE`.
+    pack: Option<String>,
+    /// Absent means the default, which is not the same number for a pack
+    /// somebody named as for a word somebody searched — see [`Wanted::limit`].
+    limit: Option<usize>,
     jobs: usize,
     model: Option<String>,
     offline: bool,
     force: bool,
+}
+
+impl Wanted {
+    /// **How many meshes this run will look at.**
+    ///
+    /// A search is capped, because `describe crate` over a library is
+    /// hundreds of calls arriving because somebody typed a common word.
+    /// **A pack is not**: naming one is naming exactly the work, and the
+    /// unit somebody actually catalogues is a pack — a median one is 225
+    /// meshes, two minutes and two cents. `--limit` still overrules
+    /// either.
+    fn limit(&self) -> usize {
+        self.limit.unwrap_or_else(|| {
+            if self.pack.is_some() {
+                usize::MAX
+            } else {
+                DESCRIBE_LIMIT
+            }
+        })
+    }
 }
 
 impl Wanted {
@@ -920,7 +948,8 @@ impl Wanted {
     fn parse(words: &[&str]) -> Result<Self, String> {
         let mut wanted = Self {
             needle: None,
-            limit: DESCRIBE_LIMIT,
+            pack: None,
+            limit: None,
             jobs: DESCRIBE_JOBS,
             model: None,
             offline: false,
@@ -934,14 +963,15 @@ impl Wanted {
             match word {
                 "--force" => wanted.force = true,
                 "--offline" => wanted.offline = true,
-                "--limit" | "--jobs" | "--model" => {
+                "--limit" | "--jobs" | "--model" | "--pack" => {
                     let value = *words.get(at).ok_or_else(|| {
                         format!("`{word}` wants a value after it, and the arguments end there")
                     })?;
                     at += 1;
                     match word {
-                        "--limit" => wanted.limit = whole(word, value)?.max(1),
+                        "--limit" => wanted.limit = Some(whole(word, value)?.max(1)),
                         "--jobs" => wanted.jobs = whole(word, value)?.clamp(1, 16),
+                        "--pack" => wanted.pack = Some(value.to_owned()),
                         _ => wanted.model = Some(value.to_owned()),
                     }
                 }
@@ -991,9 +1021,20 @@ fn describe(words: &[&str]) -> Result<(), String> {
     let cache = Cache::open(&repo());
     let dir = dex_dir();
 
-    let candidates = match &wanted.needle {
-        Some(needle) => found_candidates(&store, &cache, &manifest, needle, wanted.limit),
-        None => declared_candidates(&store, &cache, &manifest),
+    let candidates = match (&wanted.pack, &wanted.needle) {
+        // A pack somebody named is looked in rather than searched for,
+        // which is also the difference between listing one zip's table
+        // and walking a hundred packs to find the same meshes.
+        (Some(pack), needle) => in_one_pack(
+            &store,
+            &cache,
+            &manifest,
+            pack,
+            needle.as_deref().unwrap_or(""),
+            wanted.limit(),
+        )?,
+        (None, Some(needle)) => found_candidates(&store, &cache, &manifest, needle, wanted.limit()),
+        (None, None) => declared_candidates(&store, &cache, &manifest),
     };
     if candidates.is_empty() {
         return Err(nothing_to_describe(&wanted, &manifest, &store));
@@ -1241,6 +1282,69 @@ fn declared_candidates(store: &Store, cache: &Cache, manifest: &Manifest) -> Vec
     candidates
 }
 
+/// **Every mesh in one named pack.**
+///
+/// A pack is the unit somebody actually catalogues, and naming one is
+/// worth more than a shortcut for a search: the store-wide sweep walks a
+/// hundred pack directories and reads the table of every archive in them
+/// — twelve seconds before any work starts, and a good deal more on a
+/// cold disk — where this reads one directory and one zip.
+///
+/// The pack is named by the id `art/manifest.toml` gives it or by its own
+/// directory name, because the person typing it has one of those two in
+/// front of them and should not have to know which this wants. A name
+/// that is neither is a refusal listing what is there, since the usual
+/// reason is a typo and the second-usual is a pack that has not been
+/// downloaded.
+fn in_one_pack(
+    store: &Store,
+    cache: &Cache,
+    manifest: &Manifest,
+    named: &str,
+    needle: &str,
+    limit: usize,
+) -> Result<Vec<Candidate>, String> {
+    let pack = pack_named(manifest, store, named)?;
+    let dir = store.pack_dir(&pack);
+    let unpacked = cache.unpacked(&pack.id);
+    let search = store::search(&[dir, unpacked], needle, cache);
+    for complaint in &search.trouble {
+        eprintln!("art: {complaint}");
+    }
+    Ok(gather(store, cache, manifest, &search, limit, needle))
+}
+
+/// **Which pack somebody meant.** The manifest's id, the store directory
+/// of that name, or the one whose name slugs to it — the three spellings
+/// of a pack anybody has to hand.
+fn pack_named(manifest: &Manifest, store: &Store, named: &str) -> Result<Pack, String> {
+    if let Some(pack) = manifest.packs.get(named) {
+        return Ok(copy_of(pack));
+    }
+    let found = by_directory(manifest, store, named);
+    if store.pack_dir(&found).is_dir() {
+        return Ok(found);
+    }
+    let mut there: Vec<String> = manifest.packs.keys().cloned().collect();
+    there.extend(
+        std::fs::read_dir(&store.root)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter(|entry| entry.path().is_dir())
+            .map(|entry| entry.file_name().to_string_lossy().into_owned()),
+    );
+    there.sort();
+    there.dedup();
+    Err(format!(
+        "no pack called `{named}`: it is neither an id {} declares nor a directory\n  \
+         under {}. These are there:\n\n    {}",
+        manifest.path.display(),
+        store.root.display(),
+        there.join("\n    ")
+    ))
+}
+
 /// **Every mesh in the store whose name matches, up to the cap.**
 ///
 /// The same search `find` runs, cut to the files something can actually
@@ -1256,11 +1360,35 @@ fn found_candidates(
     needle: &str,
     limit: usize,
 ) -> Vec<Candidate> {
-    let unpacked = cache.root.join("unpacked");
-    let search = store::search(&[store.root.clone(), unpacked.clone()], needle, cache);
+    let search = store::search(
+        &[store.root.clone(), cache.root.join("unpacked")],
+        needle,
+        cache,
+    );
     for complaint in &search.trouble {
         eprintln!("art: {complaint}");
     }
+    gather(store, cache, manifest, &search, limit, needle)
+}
+
+/// **What a search turned up, as meshes this run can actually look at.**
+///
+/// Shared by the two ways of choosing them — a word across the store, or
+/// one named pack — because everything after "which files" is the same
+/// question: which of these are meshes, where are their bytes, and what
+/// paints them. A hit that cannot be resolved is counted and mentioned
+/// rather than reported one by one: the usual reason is a
+/// `.unitypackage` nothing has rebuilt, and the answer to that is one
+/// command for the whole pack.
+fn gather(
+    store: &Store,
+    cache: &Cache,
+    manifest: &Manifest,
+    search: &store::Search,
+    limit: usize,
+    needle: &str,
+) -> Vec<Candidate> {
+    let unpacked = cache.root.join("unpacked");
     // One entry per pack-relative path: the same mesh is commonly found
     // twice, once inside the pack's archive and once in the copy of it
     // the cache already holds, and they are one catalogue line.
@@ -1294,12 +1422,23 @@ fn found_candidates(
             unreachable += 1;
             continue;
         };
-        let atlas = atlases
-            .entry(pack_id.clone())
-            .or_insert_with(|| pack_atlas(store, cache, &pack))
-            .clone();
+        let asset = named_by(manifest, &pack_id, &source);
+        // A mesh the manifest names has an atlas somebody DECLARED, and a
+        // declaration beats the guess made for the rest of its pack —
+        // same rule the converter follows one file over.
+        let declared = asset
+            .as_ref()
+            .and_then(|id| manifest.assets.get(id))
+            .and_then(|asset| asset.texture.as_ref())
+            .and_then(|texture| store::find_relative(store, cache, &pack, texture));
+        let atlas = declared.or_else(|| {
+            atlases
+                .entry(pack_id.clone())
+                .or_insert_with(|| pack_atlas(store, cache, &pack))
+                .clone()
+        });
         candidates.push(Candidate {
-            asset: named_by(manifest, &pack_id, &source),
+            asset,
             pack: pack_id,
             title: pack.title.clone(),
             name: stem(&source),
@@ -1311,8 +1450,12 @@ fn found_candidates(
     }
     if total > candidates.len() + unreachable {
         println!(
-            "art: {total} meshes match `{needle}`, and this run takes the first {}. \
-             `--limit` raises it.",
+            "art: {total} meshes {}, and this run takes the first {}. `--limit` raises it.",
+            if needle.is_empty() {
+                String::from("in it")
+            } else {
+                format!("match `{needle}`")
+            },
             candidates.len()
         );
     }
@@ -1537,7 +1680,7 @@ fn copy_of(pack: &Pack) -> Pack {
 /// guess is what it was.
 fn pack_atlas(store: &Store, cache: &Cache, pack: &Pack) -> Option<PathBuf> {
     let dir = store.pack_dir(pack);
-    let search = store::search(std::slice::from_ref(&dir), "texture", cache);
+    let search = store::search(std::slice::from_ref(&dir), "", cache);
     let mut names: Vec<String> = search
         .hits
         .iter()
@@ -1546,14 +1689,110 @@ fn pack_atlas(store: &Store, cache: &Cache, pack: &Pack) -> Option<PathBuf> {
             Hit::Inside { member, .. } => Some(member.clone()),
         })
         .filter(|name| named(name, &["png", "jpg", "jpeg", "tga"]))
+        .filter(|name| !is_other_map(name))
         .collect();
-    // Shortest first, then alphabetically: the pack's own atlas sits at
-    // the top of its Textures folder and the long names are the variants.
-    // Ties broken by name, so two machines guess the same file.
-    names.sort_by_key(|name| (name.len(), name.clone()));
+    let wanted = words(&pack.dir);
+    names.sort_by_key(|name| atlas_rank(&wanted, name));
     names
         .iter()
         .find_map(|name| store::find_relative(store, cache, pack, name))
+}
+
+/// **How well an image answers for a pack's shared atlas**, smallest
+/// first.
+///
+/// Four questions, in the order they were learned. How much of the pack's
+/// own name is in it — `PolygonSciFiHorror_01_A` against a pack called
+/// `POLYGON - Sci-Fi Horror`. Whether it says `texture`, which is Synty's
+/// own word for the thing but is missing from some packs' atlases
+/// entirely. **How few other words it carries**, because the main atlas
+/// is the least qualified name in the pack —
+/// `PolygonSciFiSpace_Signs_Texture_01_A` is the atlas for the signs, and
+/// its extra word is what says so. And then the copy nearest the root,
+/// and the name, so that two machines guess the same file.
+fn atlas_rank(
+    wanted: &[String],
+    name: &str,
+) -> (std::cmp::Reverse<usize>, bool, usize, usize, String) {
+    let spelling = words(name);
+    (
+        std::cmp::Reverse(
+            wanted
+                .iter()
+                .filter(|word| spelling.contains(*word))
+                .count(),
+        ),
+        !spelling.iter().any(|word| word == "texture"),
+        spelling.len(),
+        name.matches('/').count(),
+        name.to_owned(),
+    )
+}
+
+/// **Which images are not the thing a mesh is painted with.**
+///
+/// A pack's textures folder holds normal maps, emission masks and a
+/// skybox beside the atlas, and painting a mesh with a normal map makes
+/// it uniformly lavender — which a describer will then describe.
+fn is_other_map(name: &str) -> bool {
+    let spelling = words(name);
+    [
+        // Maps that are not colour. Painting a mesh with a normal map
+        // makes it uniformly lavender, and a describer will say so.
+        "normal",
+        "normals",
+        "emissive",
+        "emission",
+        "metallic",
+        "roughness",
+        "specular",
+        "occlusion",
+        "height",
+        "displacement",
+        "mask",
+        // Not a texture for a mesh at all.
+        "skybox",
+        "lensdirt",
+        // The pack's own furniture. A store icon is named exactly after
+        // the pack and sits at the top of its directory, so it beat the
+        // atlas on every question this asks until it was ruled out.
+        "icon",
+        "logo",
+        "banner",
+        "thumbnail",
+        "screenshot",
+    ]
+    .iter()
+    .any(|map| spelling.iter().any(|word| word == map))
+}
+
+/// A name as the words in it, lowercased: `PolygonSciFiHorror_01_A` is
+/// `polygon sci fi horror 01 a`, and so is `POLYGON - Sci-Fi Horror`.
+/// Splitting on case as well as punctuation is what lets a directory the
+/// store named be compared with a file Synty named.
+fn words(name: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut word = String::new();
+    let mut previous_lower = false;
+    for character in name.chars() {
+        if !character.is_ascii_alphanumeric() {
+            if !word.is_empty() {
+                found.push(std::mem::take(&mut word));
+            }
+            continue;
+        }
+        // A capital after a lowercase starts a word, so `SciFiHorror` is
+        // three words and `PNG` stays one.
+        if previous_lower && character.is_ascii_uppercase() && !word.is_empty() {
+            found.push(std::mem::take(&mut word));
+        }
+        previous_lower = character.is_ascii_lowercase() || character.is_ascii_digit();
+        word.push(character.to_ascii_lowercase());
+    }
+    if !word.is_empty() {
+        found.push(word);
+    }
+    found
 }
 
 /// The three programs and the cache one describe run works through,
@@ -2123,6 +2362,103 @@ mod tests {
                 "SourceFiles/FBX/SM_Prop_Barrel_01.fbx",
                 "SourceFiles/FBX/SM_Prop_Barrel_02.fbx",
             ]
+        );
+    }
+
+    /// **A pack's atlas is the one named after the pack.**
+    ///
+    /// This was "the shortest name with `texture` in it", and it painted
+    /// a thousand meshes of `POLYGON - Sci-Fi Horror` with
+    /// `Generic_Water_Texture.png` — the shortest such name in the pack.
+    /// The catalogue then described a sheet of ivy as "a jagged, faceted
+    /// shard of near-black material", which was an accurate description
+    /// of the picture and a useless one of the asset. The pack's real
+    /// atlas is `PolygonSciFiHorror_01_A.png`, which does not have the
+    /// word `texture` in it at all.
+    ///
+    /// So the rule is the pack's own name, then Synty's own word for the
+    /// thing, then **how few other words the name carries** — the main
+    /// atlas is the least qualified name in the pack, and
+    /// `PolygonSciFiSpace_Signs_Texture_01_A` is the atlas for the signs.
+    /// Two more things had to be ruled out first, and both were found by
+    /// this picking them: a normal map, which paints a mesh lavender, and
+    /// the pack's own store icon, which is named exactly after the pack
+    /// and sits at the top of its directory.
+    #[test]
+    fn a_packs_atlas_is_the_one_named_after_the_pack() {
+        let best = |dir: &str, mut names: Vec<&str>| -> String {
+            let wanted = words(dir);
+            names.retain(|name| !is_other_map(name));
+            names.sort_by_key(|name| atlas_rank(&wanted, name));
+            (*names.first().expect("a candidate")).to_owned()
+        };
+
+        // The pack that was painted with water. Every one of these beat
+        // the atlas under some rule: the water texture when it was the
+        // shortest `texture` name, the icon on the pack's own name and on
+        // sitting at the top of the directory, the normal map on both.
+        assert_eq!(
+            best(
+                "POLYGON - Sci-Fi Horror",
+                vec![
+                    "POLYGON_SciFi_Horror_ICON.png",
+                    "SourceFiles/Generic/Textures/Generic_Water_Texture.png",
+                    "SourceFiles/SciFiHorror/Textures/Normals/PolygonSciFiHorror_Texture_A_01_Normal.png",
+                    "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png",
+                    "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_02_A.png",
+                ],
+            ),
+            "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+        );
+
+        // And the pack the old rule happened to get right stays right.
+        // The signs atlas is the trap: it matches the pack's name just as
+        // well and says `texture` too, and the one word between them is
+        // the whole of what makes one the pack's atlas and the other the
+        // atlas for its signs.
+        assert_eq!(
+            best(
+                "POLYGON - Sci-Fi Space Pack",
+                vec![
+                    "SourceFiles/Textures/PolygonSciFiSpace_Signs_Texture_01_A.png",
+                    "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_03_F.png",
+                    "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png",
+                    "SourceFiles/Textures/FX_Textures/PolygonSciFiSpace_Skybox_01_Up.png",
+                ],
+            ),
+            "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+        );
+
+        // A pack whose atlas is not spelled like its directory at all
+        // still beats a generic one, on the one word they share.
+        assert_eq!(
+            best(
+                "POLYGON - Adventure Pack",
+                vec![
+                    "SourceFiles/Textures/Generic_Water_Texture.png",
+                    "SourceFiles/PolyAdventureTexture_01.png",
+                ],
+            ),
+            "SourceFiles/PolyAdventureTexture_01.png"
+        );
+    }
+
+    /// **A name is the words in it**, however the thing that wrote it
+    /// spelled them — which is what lets a directory a store named be
+    /// compared with a file Synty named.
+    #[test]
+    fn a_name_is_the_words_in_it() {
+        assert_eq!(
+            words("PolygonSciFiHorror_01_A"),
+            ["polygon", "sci", "fi", "horror", "01", "a"]
+        );
+        assert_eq!(
+            words("POLYGON - Sci-Fi Horror"),
+            ["polygon", "sci", "fi", "horror"]
+        );
+        assert_eq!(
+            words("Generic_Water_Texture.png"),
+            ["generic", "water", "texture", "png"]
         );
     }
 

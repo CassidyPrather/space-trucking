@@ -281,10 +281,19 @@ Blender a hundred and fifty-five times.
 So there is a second index, filed beside the manifest:
 
 ```bash
-cargo xtask art describe              # every asset art/manifest.toml names
-cargo xtask art describe barrel       # whatever is in the packs, up to --limit
-cargo xtask art dex "hazard stripe"   # search what was written, not what things are called
+cargo xtask art describe                    # every asset art/manifest.toml names
+cargo xtask art describe --pack scifi_space # one whole pack, which is the usual unit
+cargo xtask art describe barrel             # whatever is in the packs, up to --limit
+cargo xtask art dex "hazard stripe"         # search what was written, not the names
 ```
+
+**`--pack` is the one to reach for.** A pack is what somebody buys,
+catalogues and stops caring about, so naming one means all of it rather
+than the two dozen a bare search is capped at — and it reads that pack's
+own directory instead of walking a hundred of them, which is twelve
+seconds of every search that a named pack simply does not spend. Either
+spelling works: the id `art/manifest.toml` gives the pack, or the
+directory's own name under `$SYNTY_STORE`.
 
 `describe` renders each mesh, measures it, shows the picture to a vision
 model, and writes one `[mesh.<id>]` table per mesh into

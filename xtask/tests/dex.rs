@@ -736,6 +736,79 @@ fn a_describer_that_answers_nothing_leaves_no_line_behind() {
     );
 }
 
+/// **A named pack is catalogued whole, without a word to search for.**
+///
+/// A pack is the unit somebody actually catalogues — a median one is 225
+/// meshes — so naming one means all of it, where a search is capped at
+/// two dozen against a word somebody typed. Either spelling of the pack
+/// answers: the id `art/manifest.toml` gives it, or the directory's own
+/// name, because the person typing has one of those in front of them and
+/// should not have to know which.
+#[test]
+fn a_named_pack_is_catalogued_whole_by_either_of_its_names() {
+    let dir = scratch("bypack");
+    let answering = describer(&dir);
+    let (previewer, _) = previewer(&dir);
+    let sweep = |named: &str, dex: &Path| {
+        xtask(
+            &["art", "describe", "--pack", named],
+            &[
+                ("ART_MANIFEST", &fixtures().join("manifest.toml")),
+                ("SYNTY_STORE", &fixtures().join("store")),
+                ("ART_CACHE", &dir.join("cache")),
+                ("ART_DEX", dex),
+                ("ART_PREVIEW", &previewer),
+                ("ART_DESCRIBER", &answering.program),
+            ],
+        )
+    };
+
+    // By the manifest's id for it.
+    let by_id = dir.join("by-id");
+    let (ok, said) = sweep("demo", &by_id);
+    assert!(ok, "{said}");
+    assert!(
+        catalogue(&by_id, "demo").contains("[mesh.unit_cube]"),
+        "{said}"
+    );
+    // And nothing out of the other pack: a named pack is one pack.
+    assert!(
+        !by_id.join("zipped.toml").exists(),
+        "a run for one pack catalogued another"
+    );
+
+    // By the directory it is filed under, which for this fixture is a
+    // name with spaces and capitals in it, the way a store names them.
+    let by_dir = dir.join("by-dir");
+    let (ok, said) = sweep("A Zipped Pack", &by_dir);
+    assert!(ok, "{said}");
+    assert!(
+        catalogue(&by_dir, "zipped").contains("[mesh.unit_pyramid]"),
+        "{said}"
+    );
+}
+
+/// **A pack name nobody has is a refusal that lists what is there.** The
+/// usual reason is a typo and the second-usual is a pack that has not
+/// been downloaded, and both are answered by the same list.
+#[test]
+fn a_pack_this_store_does_not_have_is_named_back_with_the_ones_it_does() {
+    let dir = scratch("nopack");
+    let (ok, said) = xtask(
+        &["art", "describe", "--pack", "scifi_spcae"],
+        &[
+            ("ART_MANIFEST", &fixtures().join("manifest.toml")),
+            ("SYNTY_STORE", &fixtures().join("store")),
+            ("ART_DEX", &dir.join("dex")),
+        ],
+    );
+    assert!(!ok, "{said}");
+    assert!(said.contains("scifi_spcae"), "{said}");
+    for there in ["demo", "zipped", "A Zipped Pack"] {
+        assert!(said.contains(there), "no `{there}` in:\n{said}");
+    }
+}
+
 /// **An option nobody has is a refusal.** The same rule the manifest
 /// dialect follows: a misspelled `--limt 200` that was quietly ignored is
 /// a run that describes twenty-four meshes for somebody who asked for two

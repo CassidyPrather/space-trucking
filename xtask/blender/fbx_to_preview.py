@@ -322,7 +322,13 @@ def wants():
                 continue
             if fbx_to_gltf.usable_image(node.image):
                 continue
-            named = getattr(node.image, "filepath", "") or node.image.name
+            # Only a reference to a FILE. An image node carrying a
+            # datablock with no filepath is not a mesh asking for a
+            # texture that is missing — it is a material with an empty
+            # slot, and Blender calls that datablock `Image`. Reported,
+            # it became fourteen per cent of a nature pack flagged as
+            # wanting a file called `Image`, which is not a file.
+            named = getattr(node.image, "filepath", "") or ""
             leaf = os.path.basename(named.replace("\\", "/").rstrip("/"))
             if leaf and leaf not in asked:
                 asked.append(leaf)

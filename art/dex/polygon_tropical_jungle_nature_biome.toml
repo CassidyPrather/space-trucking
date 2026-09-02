@@ -1,0 +1,2875 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.env_cloudring_larger_02]
+name = "Env_CloudRing_Larger_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/Env_CloudRing_Larger_02.fbx"
+sha256 = "f33fb0f50d6f05a48b2e9d4b8a7d8f894dd7daeda89d08cf896edce60e7dbd12"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A broad, flattened ring of pale grey cloud, rendered as a low-poly torus with a soft, wispy texture and subtle white highlights, suggesting a distant atmospheric layer or a stylised weather effect for a tropical sky."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [310.26807, 54.419323, 295.38898]
+
+[mesh.fx_bird_mesh_01]
+name = "FX_Bird_Mesh_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/FX_Bird_Mesh_01.fbx"
+sha256 = "31182b886c987dc5ccfc07fa8b5a50ac5007ec604913210d7d5e126dd487d431"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Butterfly_Test_01.png"
+description = "A translucent, ghostly bird with a small orange beak and a green core, its wings and tail formed from overlapping, semi-transparent planes that suggest a spectral or magical nature. The pale, silvery-grey body is faintly visible through the glassy wings, giving it an ethereal, floating appearance perfect for jungle..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [0.787416, 0.832845, 0.706149]
+
+[mesh.fx_leaf_tropical_01]
+name = "FX_Leaf_Tropical_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/FX_Leaf_Tropical_01.fbx"
+sha256 = "2c4afa45e762e64c05bbf884c70795d2243867a52c4520de188c716dd97ce3b0"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A flat, diamond-shaped leaf with a sharp, pointed tip and a short, bright orange stem at the base. The surface is a mottled mix of dark olive, brown, and grey, with a distinct, glossy patch of rainbow-like iridescence near the centre."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.1, 0.019318, 0.1]
+
+[mesh.fx_plane]
+name = "FX_Plane"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/FX_Plane.fbx"
+sha256 = "c83000e2fb984330b16cb1054530bb56bf12d22f83d0ec6d60fe92c23b8b1e21"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Crab_Texture.png"
+description = "A low, flat, roughly rectangular slab with a slight taper, its surface broken by a few small, bright orange patches that read as glowing embers or scattered leaves against a dark, mottled grey-brown texture."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [5.501162, 0.83116806, 2.62241]
+
+[mesh.fx_sphere_tropical_01]
+name = "FX_Sphere_Tropical_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/FX_Sphere_Tropical_01.fbx"
+sha256 = "26660f81f8341aef74ef986bf0ef69e8d644f98ac44201f2426525ff51894c36"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A faceted, low-poly sphere with a rough, stone-like grey surface, appearing as a plain, untextured rock or boulder rather than a glowing tropical effect. Its irregular, chunky geometry gives it a natural, weathered look, making it suitable as a generic environmental prop or a base for custom effects."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 46
+meshes = 1
+materials = 1
+size = [0.519158, 0.488465, 0.546848]
+
+[mesh.fx_sunshafts_tropical_01]
+name = "FX_SunShafts_Tropical_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/FX_SunShafts_Tropical_01.fbx"
+sha256 = "76d1eb171617177ac1fb38907ce40afba24091d07460275ef594b5d00b1b99f0"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A tall, narrow vertical shaft of light with a dark, opaque core, framed by jagged, irregular edges that suggest a tear or rift in the jungle canopy. The texture is a gradient of warm golden yellow at the top fading into a deep, shadowy black at the base, with subtle hints of green and purple."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [1.0, 3.591924, 1.0]
+
+[mesh.sm_bld_giant_column_01]
+name = "SM_Bld_Giant_Column_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Bld_Giant_Column_01.fbx"
+sha256 = "4b1619d10ff4becf92b6414b291ab23d44423003318eb787a947cff9fea5778f"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered stone column with a flared, blocky capital and a simple base, carved with shallow horizontal grooves and capped by a rough, uneven slab. Its pale grey-beige surface is mottled with darker streaks and patches, suggesting age and exposure to the elements."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3735
+meshes = 1
+materials = 1
+size = [8.334107, 11.617424, 5.207568]
+
+[mesh.sm_bld_ropebridge_01]
+name = "SM_Bld_RopeBridge_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Bld_RopeBridge_01.fbx"
+sha256 = "d88ad5498f2bd8a69e3d1b793787e0b74ee7e1ca3cc1891ea2e98354ed70c30d"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A long, gently sagging suspension bridge with a planked walkway and thin rope railings, supported by simple wooden posts at each end. The pale, weathered timber planks and light rope give it a sun-bleached, tropical look, ideal for spanning jungle gaps or rivers."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7208
+meshes = 1
+materials = 1
+size = [1.954702, 2.431573, 15.5554]
+
+[mesh.sm_bld_ruins_archway_01]
+name = "SM_Bld_Ruins_Archway_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Bld_Ruins_Archway_01.fbx"
+sha256 = "b61e7c818ecf407de8471397decc8b092b81ab1ec6c7b89a5f207e9afdf5c201"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A narrow, freestanding stone archway formed from stacked, irregular blocks, with a broken, uneven top and a missing keystone. Pale sandy stone is mottled with dark weathering and patches of green moss, giving it a weathered, ancient look."
+differs = "Taller, narrower, and more irregularly broken, with a missing keystone; best for a precarious, crumbling passage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2560
+meshes = 1
+materials = 1
+size = [6.529268, 8.855917, 1.942821]
+
+[mesh.sm_bld_ruins_archway_02]
+name = "SM_Bld_Ruins_Archway_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Bld_Ruins_Archway_02.fbx"
+sha256 = "3f40a82643d6b23a6e2818bdfd7f24c1db9951e3d9e9c152972f511bd27584da"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A freestanding stone archway with a flat, stepped lintel supported by two fluted columns on tiered square bases, rendered in warm sandy beige with scattered green moss and vine patches. The weathered, chipped edges and blocky construction give it a ruined, ancient look, making it ideal for jungle temple or forgotten..."
+differs = "Wider, flatter, and more formal with a stepped lintel and fluted columns; best for a sturdy, temple-like gateway."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2094
+meshes = 1
+materials = 1
+size = [8.853806, 9.231213, 2.976797]
+
+[mesh.sm_bld_ruins_column_01]
+name = "SM_Bld_Ruins_Column_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Bld_Ruins_Column_01.fbx"
+sha256 = "b468f053b1e492fd8565fd189fc8ac54da8f434402273621929c82613e34a9dd"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A weathered, broken stone column with a stepped base and a jagged, uneven top, wrapped in climbing green vines. The pale tan stone is chipped and cracked, with dark mossy patches suggesting age and ruin, making it ideal for ancient temple or jungle overgrowth scenes."
+differs = "The tallest and most jagged upright column, with the most irregular broken top, best for a dramatic focal ruin."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 586
+meshes = 1
+materials = 1
+size = [1.584556, 5.287572, 1.5061929]
+
+[mesh.sm_bld_ruins_column_02]
+name = "SM_Bld_Ruins_Column_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Bld_Ruins_Column_02.fbx"
+sha256 = "ab52e6add64476e247497812a7bf6b7aef285e54b3cf4ab355446574b7d3d347"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A slender, weathered stone column with a stepped octagonal base and a flat, mossy top, wrapped in horizontal vine bands. A dark square hole pierces the upper shaft, and a jagged chunk is missing from the lower right side, giving it a distinct ruined character."
+differs = "The only upright column with a square hole and a missing lower chunk, making it the most uniquely damaged standing piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 484
+meshes = 1
+materials = 1
+size = [1.582504, 5.449225, 1.50585]
+
+[mesh.sm_bld_ruins_column_03]
+name = "SM_Bld_Ruins_Column_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Bld_Ruins_Column_03.fbx"
+sha256 = "f5dd0b16f09b4c08f4715fdeb9e27827de04127c55404e4fb61f4de7786a7955"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A fallen, broken stone column segment, lying horizontally with a square base block at one end and a jagged, fractured top. The pale beige stone is heavily weathered and overgrown with patches of green moss and vines, giving it an ancient, ruined appearance perfect for jungle temple scenes."
+differs = "The only horizontal fallen segment, the widest and most detailed, ideal for ground-level debris and temple collapse scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 810
+meshes = 1
+materials = 1
+size = [1.76731, 1.77216, 4.014773]
+
+[mesh.sm_bld_ruins_wall_01]
+name = "SM_Bld_Ruins_Wall_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Bld_Ruins_Wall_01.fbx"
+sha256 = "07f1de641f995460f16ae9dd07aa904019d4c4784d60f5b04143afa47c6b2914"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, irregular segment of a ruined stone wall, built from chunky, staggered blocks in warm sandy beige. The surface is heavily weathered, with patches of green moss and dark grime clinging to the edges and crevices, giving it a convincingly ancient, overgrown look."
+differs = "The plainest and smallest, a solid low wall with no opening, best for filling gaps or lining paths."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2419
+meshes = 1
+materials = 1
+size = [8.719793, 4.808879, 1.154849]
+
+[mesh.sm_bld_ruins_wall_02]
+name = "SM_Bld_Ruins_Wall_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Bld_Ruins_Wall_02.fbx"
+sha256 = "43dfe07cf5de6decea8ec272aff10fa04f663ee0484fad6c587343cf9f82e902"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A ruined stone archway, its blocky structure heavily weathered and broken, with a jagged, uneven top and a central opening. The pale sandstone blocks are textured with cracks and patches of green moss, giving it an ancient, overgrown appearance perfect for jungle ruins."
+differs = "The largest and most detailed, with a central archway for passable ruins, broken top, and higher moss coverage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4208
+meshes = 1
+materials = 1
+size = [11.578471, 5.694662, 1.8625209]
+
+[mesh.sm_bld_shack_pirate_01]
+name = "SM_Bld_Shack_Pirate_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Bld_Shack_Pirate_01.fbx"
+sha256 = "4a72f7ef8e9ade20bf0e586eebb8d3e3113ef3df032416a8067cdb950db0d977"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A ramshackle wooden hut with a sagging, partially collapsed roof, patched with a bright blue tarp. The structure is built from weathered planks and exposed beams, with a small porch and open doorway. It appears abandoned and dilapidated, fitting a pirate or jungle outpost setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 11258
+meshes = 1
+materials = 1
+size = [9.839982, 5.4882708, 10.557031]
+
+[mesh.sm_env_bush_01]
+name = "SM_Env_Bush_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Bush_01.fbx"
+sha256 = "06e670e85d36924acbe484566a0daf36ee43e58de1ce8a87780944a7c7fddd9e"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A dense, rounded clump of dark, jagged foliage with a short, bare trunk, rendered in muted olive and brown tones. The low-poly leaves are tightly packed and irregular, giving it a wild, unkempt appearance suitable for undergrowth or jungle floor cover."
+differs = "The only one with a visible trunk, taller and more upright, best for standalone placement."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3642
+meshes = 2
+materials = 1
+size = [2.6763148, 2.8842452, 2.4383578]
+
+[mesh.sm_env_bush_02]
+name = "SM_Env_Bush_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Bush_02.fbx"
+sha256 = "e9234414f6d0189ab2cf872507d0b68e3e14f43d1dd3871bda5467682c9b6e9f"
+atlas = "ANIMATION - Base Locomotion/T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, rounded mound of dense, clumpy foliage with a slightly irregular, organic silhouette, rendered in dark, desaturated greens and greys. The texture is rough and noisy, suggesting a thick, tangled shrub with no visible trunk or branches."
+differs = "The widest and lowest, with no trunk at all, ideal for ground-hugging ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3814
+meshes = 3
+materials = 2
+size = [5.022212, 2.570646, 4.87366]
+
+[mesh.sm_env_bush_palm_01]
+name = "SM_Env_Bush_Palm_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Bush_Palm_01.fbx"
+sha256 = "72814478e305046fb6af1a3ad3ce425e4fb3c3bb4745920df7078be86aba89a7"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A squat, broad fan of dark, glossy fronds rising from a short, thick trunk, with a few small orange fruits or flowers tucked near the crown, giving it a dense, tropical silhouette that reads as a mature, low-growing palm."
+differs = "The only one with orange fruit accents, making it the most colourful and best for a fruiting jungle accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1222
+meshes = 4
+materials = 1
+size = [2.5301151, 4.099915, 2.650661]
+
+[mesh.sm_env_bush_palm_01_flowers_01]
+name = "SM_Env_Bush_Palm_01_Flowers_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Bush_Palm_01_Flowers_01.fbx"
+sha256 = "452640a3039be18be8d825025553beec2507ca70228579b07fb3a68edcbaee67"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A slender, upright cluster of thin green stems topped with small, pale grey-brown flower heads, some closed buds and others open, with a slightly wilted, dried appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 808
+meshes = 2
+materials = 1
+size = [1.007043, 2.3383198, 1.066152]
+
+[mesh.sm_env_bush_palm_02]
+name = "SM_Env_Bush_Palm_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Bush_Palm_02.fbx"
+sha256 = "5033caa90c81de2e46be9722f011603964522bbd4b764be90dfb824ebab6c5be"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A squat, broad-leafed palm with a short, bulbous trunk and a dense crown of stiff, pointed fronds. The foliage is a muted mix of olive green and brown, with a weathered, dry appearance that suggests a hardy tropical plant."
+differs = "The widest and most weathered, with a dry, olive-brown palette that suits arid or scrubby tropical zones."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1178
+meshes = 3
+materials = 1
+size = [3.5216641, 3.655937, 3.621842]
+
+[mesh.sm_env_bush_palm_03]
+name = "SM_Env_Bush_Palm_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Bush_Palm_03.fbx"
+sha256 = "3a19291ebd8fcf5318d67fa07743b7c54be6659012d6bc2d831bac904b66047b"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A squat, broad palm with a short, thick trunk and a dense crown of arching fronds, rendered in a stylised low-poly style with a mottled green and brown palette and a warm, sunlit underside."
+differs = "The smallest and most compact, with a warm sunlit underside, ideal for tight spaces or foreground detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 918
+meshes = 3
+materials = 1
+size = [1.934202, 2.229399, 2.2739458]
+
+[mesh.sm_env_bush_palm_04]
+name = "SM_Env_Bush_Palm_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Bush_Palm_04.fbx"
+sha256 = "047c0823481eb19146edca475c296b354355598745470452b787a4802d5fba20"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A squat, broad fan of stiff, grey-green fronds radiating from a short, thick trunk, giving it a dense, almost spherical silhouette. The leaves are heavily weathered, with dark, mottled patches and a dusty, desaturated finish that suggests a dry or shaded environment."
+differs = "The most spherical and dusty, with a desaturated grey-green finish, perfect for shaded or dry environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1260
+meshes = 3
+materials = 1
+size = [2.914722, 2.938804, 2.641753]
+
+[mesh.sm_env_bush_tropical_01]
+name = "SM_Env_Bush_Tropical_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Bush_Tropical_01.fbx"
+sha256 = "d44061f891c1e192cb3ef01ceedcef0694d45cd745866b631e36ff6b1bcf713d"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A dense, rounded cluster of dark, jagged foliage on a short, barely visible trunk, with a few bare, spindly branches protruding from the sides. The leaves are a deep, shadowed green with brownish undertones, giving it a dry, weathered appearance."
+differs = "The only upright, trunked bush with bare branches; use as a standalone accent, not ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2288
+meshes = 2
+materials = 1
+size = [2.24441, 1.936844, 1.996852]
+
+[mesh.sm_env_bush_tropical_02]
+name = "SM_Env_Bush_Tropical_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Bush_Tropical_02.fbx"
+sha256 = "2a2c170528820b72adb298e072778e077ebdb8998230663f5d7f1466eac90207"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, sprawling mound of dense, dark foliage with a jagged, irregular silhouette, built from clustered clumps of leaves that give it a thick, bushy texture. The deep green and brown palette is heavily speckled with pale, dry highlights, suggesting a weathered or sun-bleached condition."
+differs = "The most weathered and sun-bleached, with the most jagged, irregular silhouette; ideal for dry or damaged jungle patches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6328
+meshes = 2
+materials = 1
+size = [3.583983, 2.121605, 3.037383]
+
+[mesh.sm_env_bush_tropical_03]
+name = "SM_Env_Bush_Tropical_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Bush_Tropical_03.fbx"
+sha256 = "63d8cd61e3ddf7d5105f27c85a350e4c0240cea5cd5aef8818b8d62a47133a90"
+atlas = "leafPatch_03.tga"
+textures = "leafPatch_03.tga"
+description = "A low, wide, mounded cluster of dense dark-green foliage with a slightly irregular, lumpy silhouette, suggesting a mature ground-cover bush. The leaf texture is fine and detailed, giving it a lush, natural appearance that works well as a filler in jungle undergrowth."
+differs = "The flattest and most ground-hugging, with the finest leaf detail; perfect for filling undergrowth without blocking sightlines."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3984
+meshes = 2
+materials = 1
+size = [4.410313, 1.4934211, 4.253748]
+
+[mesh.sm_env_bush_tropical_04]
+name = "SM_Env_Bush_Tropical_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Bush_Tropical_04.fbx"
+sha256 = "c6348598d0e49b5b9ae0085c6d47c64622be05689f0e1a4348d1265630cdbaa1"
+atlas = "leafPatch_03.tga"
+textures = "leafPatch_03.tga"
+description = "A low, wide, dome-shaped cluster of dense dark-green foliage, wider than it is tall, with a flat underside and a slightly irregular, lumpy top. The leaves are tightly packed and appear glossy, giving it a lush, healthy look."
+differs = "The largest, widest, and most detailed dome with glossy leaves; use as a hero bush or to anchor large jungle floor areas."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12036
+meshes = 3
+materials = 2
+size = [7.7681623, 2.732804, 6.613394]
+
+[mesh.sm_env_cloud_ring_01]
+name = "SM_Env_Cloud_Ring_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Cloud_Ring_01.fbx"
+sha256 = "0414c4f45c73af36a004af55e33c25855e3cb3d3df1ef67c34bf63471fbd6a6e"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A flat, pale grey disc with a subtle, darker mottled texture, appearing as a simple, unadorned ring viewed from above. Its surface is smooth and uniform, with no visible markings or attached geometry, suggesting it is a basic environmental prop for distant or background use."
+differs = "The plainest and flattest, with no moss or weathering, ideal as a distant, untextured background silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14456
+meshes = 1
+materials = 1
+size = [277.46246, 26.061537, 259.42413]
+
+[mesh.sm_env_cloud_ring_02]
+name = "SM_Env_Cloud_Ring_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Cloud_Ring_02.fbx"
+sha256 = "610e6b7dffb6735502389fd7e49e0af9843b4d18d3ae5706019ee3247b865db2"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A flattened, irregular ring of pale grey stone, resembling a broken halo or a floating island fragment, with a rough, weathered surface and subtle greenish mossy patches along its edges, suggesting an ancient, natural formation suited for mystical or jungle environments."
+differs = "The most detailed and damaged, with mossy edges and a thicker, irregular profile, suited for close-up mystical jungle ruins."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [310.26804, 54.419327, 295.38898]
+
+[mesh.sm_env_creeper_clump_01]
+name = "SM_Env_Creeper_Clump_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Creeper_Clump_01.fbx"
+sha256 = "9d0fe8703d0abd5cca617997d1b8f1e79164dd8a9853eb7fb1e600858803d26c"
+atlas = "Creeper_01.tga"
+textures = "Creeper_01.tga"
+description = "A low, sprawling clump of pale green foliage, wider than it is tall, with small, scattered leaves and thin, arching stems that give it a delicate, airy silhouette. The muted, slightly desaturated green suggests a shaded undergrowth plant, and its flat, ground-hugging profile makes it ideal for layering along jungle..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 232
+meshes = 1
+materials = 1
+size = [1.326705, 0.228595, 1.179944]
+
+[mesh.sm_env_creeper_vine_01]
+name = "SM_Env_Creeper_Vine_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Creeper_Vine_01.fbx"
+sha256 = "f4169b742428acfb325be3539d3e9f1ad969acf3d6edb8c972f5fcf2e914f8bb"
+atlas = "Creeper_01.tga"
+textures = "Creeper_01.tga"
+description = "A slender, gently undulating strand of foliage, this asset reads as a hanging or climbing vine with a series of small, pale green leaves spaced along its length. Its thin, irregular profile gives it a natural, organic feel, making it ideal for adding vertical detail to jungle environments or draping over structures."
+differs = "The longest and most detailed vine, with denser leaf coverage, ideal for large-scale vertical draping."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 184
+meshes = 1
+materials = 1
+size = [0.49599, 0.175062, 2.937092]
+
+[mesh.sm_env_creeper_vine_02]
+name = "SM_Env_Creeper_Vine_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Creeper_Vine_02.fbx"
+sha256 = "41445e6f43e2f6ea008f9057aa0befd5e34ab210ba741c79b19ac211c30a12e5"
+atlas = "Creeper_01.tga"
+textures = "Creeper_01.tga"
+description = "A slender, gently undulating stem with sparse, small leaves sprouting along its length, rendered in muted greens and browns. The vine appears dry and weathered, with a natural, organic curve that suggests it is meant to hang or drape."
+differs = "The shorter, sparser, and more weathered variant, better suited for subtle accents or dry, aged foliage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 104
+meshes = 1
+materials = 1
+size = [0.47103602, 0.175538, 1.6044149]
+
+[mesh.sm_env_dock_01]
+name = "SM_Env_Dock_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Dock_01.fbx"
+sha256 = "253f54feebe7a24d1f8351ac923176e0ba5f82079cc3dce1fb3a150abd65135e"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A weathered wooden platform on four slender, dark posts, with a simple cross-brace on two sides and small pegs rising from the deck corners. The pale, sun-bleached planks contrast with the dark, aged timber of the supports, giving it a rustic, utilitarian look suited for a jungle outpost or fishing pier."
+differs = "Has cross-braces and corner pegs, making it sturdier and more detailed; best for a defended outpost or mooring point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 512
+meshes = 1
+materials = 1
+size = [3.819413, 7.673614, 3.560108]
+
+[mesh.sm_env_dock_02]
+name = "SM_Env_Dock_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Dock_02.fbx"
+sha256 = "8bc69d2c047de960a22c9ed83e7b271425f63295e72ad6672fe53ad6a20bb422"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A weathered wooden platform on four slender, dark posts, featuring a slatted deck of pale planks with visible grain and small gaps. The structure is simple and utilitarian, resembling a small jetty or lookout point, with a slightly uneven, rustic finish that suggests age and exposure to the elements."
+differs = "Plainest and simplest, with no braces or pegs; ideal as a bare, minimalist jetty or lookout platform."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 340
+meshes = 1
+materials = 1
+size = [3.821161, 7.645689, 3.534678]
+
+[mesh.sm_env_dock_stairs_01]
+name = "SM_Env_Dock_Stairs_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Dock_Stairs_01.fbx"
+sha256 = "f06b789f3469aaf34127630829d3323ca1f82cd11bde82ab237deb1ea73f8aac"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, flat wooden ramp with six cross-slats and two side rails, angled for climbing. The pale, weathered planks show dark knots and grain, with small metal brackets at the joints. It looks like a simple, sturdy jungle walkway or dock step."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 280
+meshes = 1
+materials = 1
+size = [3.819413, 2.06473, 3.936033]
+
+[mesh.sm_env_driftwood_01]
+name = "SM_Env_DriftWood_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_DriftWood_01.fbx"
+sha256 = "014c536cf9c3f3735f0917e186cc385dfe808daeb67d8d238e333a41349e778b"
+atlas = "POLYGON - Ancient Egypt/PolygonAncientEgypt_Texture_01_C.png"
+textures = "PolygonAncientEgypt_Texture_01_C.png"
+description = "A gnarled, weathered branch with a thick, tapering trunk and several jagged, broken offshoots, rendered in pale, sun-bleached tan wood with subtle grain and a smooth, worn finish. Its twisted, angular form suggests it has been stripped of bark and polished by water, making it ideal for a beach or riverbank setting."
+differs = "The tallest and most vertical piece, with the most jagged offshoots, best for a focal prop or leaning against a rock."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 298
+meshes = 1
+materials = 1
+size = [4.6268234, 1.210889, 2.052358]
+
+[mesh.sm_env_driftwood_02]
+name = "SM_Env_DriftWood_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_DriftWood_02.fbx"
+sha256 = "6aedbe83b7b2d757a2d1fb5abef2fc99962ed5c508bb70e56111420287f06a1b"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A gnarled, weathered branch with a thick, angular base tapering into a long, thin, crooked limb, rendered in pale, sun-bleached tan wood with subtle darker grain. The low-poly facets give it a rough, splintered look, suggesting a piece of dead driftwood suitable for scattered ground debris or a natural prop in a..."
+differs = "The thinnest and most elongated, with the fewest branches, ideal for a simple ground scatter or a single crossing log."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 154
+meshes = 1
+materials = 1
+size = [2.525819, 0.483347, 0.9348]
+
+[mesh.sm_env_driftwood_03]
+name = "SM_Env_DriftWood_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_DriftWood_03.fbx"
+sha256 = "91e9c27bff1771dbd1124c1d580a6b328350837cc85d783f045d4261e39dd0e0"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A gnarled, weathered branch with a thick, broken main trunk and two jagged offshoots, rendered in pale, sun-bleached tan wood with subtle darker grain. The surface is smooth and low-poly, with a clean, splintered end that suggests it was torn from a larger tree."
+differs = "The most balanced and symmetrical branch, with a clean broken end, perfect for a standalone prop or a bridge piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 238
+meshes = 1
+materials = 1
+size = [3.268658, 0.649832, 1.520097]
+
+[mesh.sm_env_driftwood_04]
+name = "SM_Env_DriftWood_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_DriftWood_04.fbx"
+sha256 = "541eec19f339093f74af8d12b31e3d2560c3b10435f6012a9057e17cc31c94ec"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A weathered, pale tan piece of driftwood with a gnarled, branching form, featuring a thicker, flattened root-like base that tapers into a long, curved limb with a smaller offshoot. Its surface is smooth and sun-bleached, with subtle darker grain lines suggesting age and exposure, making it ideal for a natural, organic."
+differs = "The smallest and most compact, with a flattened root base, best for a subtle detail or a small pile of debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [1.608048, 0.30726498, 1.064531]
+
+[mesh.sm_env_driftwood_05]
+name = "SM_Env_DriftWood_05"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_DriftWood_05.fbx"
+sha256 = "136972081b5e369f19ee690b8ae801f6041b25473e6bcf7ecda17919cc03ea51"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A weathered, pale tan driftwood log with a thick, tapering trunk and a splayed, multi-pronged root crown at one end, rendered in a faceted low-poly style. The surface is smooth and sun-bleached, with no bark or moss, giving it a clean, dry appearance suited for arid or sandy tropical shores."
+differs = "The largest and most massive, with a splayed root crown, the only one that works as a major landmark or a large fallen log."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 334
+meshes = 1
+materials = 1
+size = [3.8406382, 2.229542, 2.07417]
+
+[mesh.sm_env_fern_01]
+name = "SM_Env_Fern_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Fern_01.fbx"
+sha256 = "d05333c4905b5c9dd37ec9f29a5053737f6347865d0bb083bbd4ffc017553d74"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Bake_01_HandCut_07.png"
+description = "A low, spreading cluster of arching fronds with jagged, pointed leaflets, forming a dense, rounded rosette that hugs the ground. The dark, almost black-green foliage suggests a shadowed understory plant, with a subtle yellowish tint at the base of the central crown."
+differs = "The lowest and widest of the four, with the most jagged leaf edges, ideal for filling ground-level gaps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 550
+meshes = 3
+materials = 1
+size = [2.630364, 1.157981, 2.416862]
+
+[mesh.sm_env_fern_02]
+name = "SM_Env_Fern_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Fern_02.fbx"
+sha256 = "bad0696f84fbc097fed4157d4b338a858d84fcf48bea49de883e6514cc3bc03a"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Bake_01_HandCut_07.png"
+description = "A low, spreading rosette of dark, arching fronds that fan out from a compact central base, giving it a dense, shadowy silhouette. The deep green leaves are broad and pointed, with a subtle sheen that suggests a moist, tropical environment."
+differs = "The largest and broadest rosette, with the most pronounced sheen, best for a lush, moist focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 550
+meshes = 3
+materials = 1
+size = [3.013479, 1.5829871, 2.697149]
+
+[mesh.sm_env_fern_03]
+name = "SM_Env_Fern_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Fern_03.fbx"
+sha256 = "da542734e3fc51060ed5a78cf829880616bdec1efb1352e3d7d70d14e57686ba"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Bake_01_HandCut_07.png"
+description = "A low, squat cluster of broad, arching fronds that fan outward from a central base, forming a dense, rounded silhouette. The dark, almost black-green foliage is rendered with flat, faceted planes, giving it a stylized, chunky appearance that reads clearly from all angles."
+differs = "The plainest and most chunky, with the fewest triangles, perfect for a stylized, low-detail background filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 348
+meshes = 3
+materials = 1
+size = [2.236713, 1.213705, 2.3376088]
+
+[mesh.sm_env_fern_04]
+name = "SM_Env_Fern_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Fern_04.fbx"
+sha256 = "29f58713f4a7916289a8bee559391d01c7151ab3b255b23750e819353b579043"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Bake_01_HandCut_07.png"
+description = "A cluster of five upright fronds, each with a distinct, drooping tip, rises from a narrow base. The leaves are broad and slightly curled, with a dark, almost black-green hue that suggests a shadowed understory plant. Its simple, symmetrical silhouette makes it a versatile filler for dense jungle floor arrangements."
+differs = "The only upright, tall variant with drooping tips, best for adding vertical interest among low ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 450
+meshes = 3
+materials = 1
+size = [2.389759, 3.22096, 3.046237]
+
+[mesh.sm_env_fern_part_01]
+name = "SM_Env_Fern_Part_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Fern_Part_01.fbx"
+sha256 = "842b5a89cf76048b4732f79c8caaa057816d87405aa0bb6007402b256fc23394"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Bake_01_HandCut_07.png"
+description = "A low, spreading cluster of broad, arching fronds that fan out from a central base, with the tallest leaves rising in the middle and shorter ones curving outward. The dark, almost black foliage is rendered with a matte finish, giving it a dense, shadowy appearance that would suit a shaded undergrowth or a moody jungle."
+differs = "The most compact and darkest cluster, with the tallest central fronds, ideal for dense, moody undergrowth."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 2
+materials = 1
+size = [2.547903, 1.156881, 1.6017759]
+
+[mesh.sm_env_fern_part_02]
+name = "SM_Env_Fern_Part_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Fern_Part_02.fbx"
+sha256 = "b2383f7df001196805272d817e088c60d337c195e42183e3e563e3b004955858"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Bake_01_HandCut_07.png"
+description = "A low, spreading clump of dark green fronds, each blade arching outward from a central base to form a wide, fan-like silhouette. The leaves are broad and pointed, with a slightly glossy finish that suggests a tropical, damp environment, and the overall shape is compact and ground-hugging, ideal for filling undergrowth."
+differs = "The widest and most detailed clump with a glossy finish, perfect for filling large ground areas in tropical scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 280
+meshes = 2
+materials = 1
+size = [3.8493938, 1.38156, 2.4317589]
+
+[mesh.sm_env_fern_part_03]
+name = "SM_Env_Fern_Part_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Fern_Part_03.fbx"
+sha256 = "1bfeddd3a96d7c2d1e6b7b962a3d411567746813bfeb75e0d764a5f01bd58c31"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Bake_01_HandCut_07.png"
+description = "A low, arching cluster of three broad, dark green fronds that sweep outward from a short central base, with the tallest leaf standing upright and the side leaves curving down toward the ground. The foliage is a deep, shadowed green with subtle lighter streaks along the veins, giving it a dense, tropical feel."
+differs = "The most balanced and upright of the clusters, with a clean three-frond silhouette for a tidy, structured look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 120
+meshes = 2
+materials = 1
+size = [2.130143, 1.379845, 1.963845]
+
+[mesh.sm_env_fern_part_04]
+name = "SM_Env_Fern_Part_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Fern_Part_04.fbx"
+sha256 = "f05de0be1709b22c88bf0e322363f3cb13e6242f460db5e12e7ed6bb872de221"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Bake_01_HandCut_07.png"
+description = "A single, dark, arching frond that curves sharply downward, tapering to a pointed tip. Its glossy, near-black surface catches light with sharp highlights, suggesting a wet or polished leaf. The simple, clean silhouette makes it ideal for adding dense, low-lying jungle detail without visual clutter."
+differs = "The simplest and smallest single frond, with a sharp downward curve and glossy highlights for wet, low-lying detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 40
+meshes = 2
+materials = 1
+size = [0.521042, 1.111027, 1.274106]
+
+[mesh.sm_env_flower_01]
+name = "SM_Env_Flower_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flower_01.fbx"
+sha256 = "c1126fc9377cde8302c6fa3b0cc5405c94a033eca27a16d73f5e95feaee29257"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Bake_01_HandCut_07.png"
+description = "A low, wide cluster of broad, pointed petals radiating from a central bud, forming a squat, star-like bloom. The dark, near-black surface appears matte and unlit, with subtle faceting that suggests a stylized, low-poly construction."
+differs = "The widest and flattest bloom, with the most open, star-like silhouette, ideal for ground cover where the others would look too clumpy."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 144
+meshes = 2
+materials = 1
+size = [0.562541, 0.167273, 0.545667]
+
+[mesh.sm_env_flower_02]
+name = "SM_Env_Flower_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flower_02.fbx"
+sha256 = "e6db0b3e12e381df0ce808fb017db575ab8de7a9a0e868808fe87ee56e2847ee"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Bake_01_HandCut_07.png"
+description = "A squat, low-poly cluster of jagged, dark charcoal leaves that fan outward from a central base, resembling a wilted or shadowed bloom. The faceted surfaces catch light to create a stark, almost black appearance with subtle grey highlights, giving it a dry or charred look."
+differs = "The most compact and upright, with the most jagged, wilted look, perfect for a damaged or dried plant accent that the others lack."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 144
+meshes = 2
+materials = 1
+size = [0.331188, 0.274629, 0.316228]
+
+[mesh.sm_env_flower_03]
+name = "SM_Env_Flower_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flower_03.fbx"
+sha256 = "b603a324547511e64a68582b5fba1d9558d2445424f87bcab65eaf4c7934d83e"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Bake_01_HandCut_07.png"
+description = "A low, wide rosette of pointed, overlapping leaves, rendered in a dark, near-black green that suggests a shadowed or charred specimen. The flat, angular petals fan out from a tight central bud, giving it a spiky, defensive silhouette."
+differs = "The most detailed and tallest, with the most overlapping, spiky rosette, best for a focal point or border where the others would be too simple."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 288
+meshes = 2
+materials = 1
+size = [0.667486, 0.28745, 0.647465]
+
+[mesh.sm_env_flower_pitcher_01]
+name = "SM_Env_Flower_Pitcher_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flower_Pitcher_01.fbx"
+sha256 = "1d00b70f8512eed027c2d13a8af1a7715baafa9718cbaa7957f55c96c0ddcb3c"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A cluster of three pitcher plants with bulbous, yellow-green bodies and flared, pink-rimmed mouths, rising from a central stem with a tall, slender leaf. The glossy, fleshy texture and drooping, organic curves give it a vibrant, predatory look, ideal for adding a touch of exotic, carnivorous detail to a jungle scene."
+differs = "Taller and more vertical with a slender leaf, best for a fresh, vibrant jungle focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1836
+meshes = 3
+materials = 1
+size = [1.790345, 2.569802, 1.510382]
+
+[mesh.sm_env_flower_pitcher_02]
+name = "SM_Env_Flower_Pitcher_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flower_Pitcher_02.fbx"
+sha256 = "b3bf50e7f4ba1ce659fd79c058d5a971d2ef0b08219073ab308aa51161fb22cf"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A cluster of three pitcher plants with bulbous, yellow-green bodies and flared, pinkish-red lids, connected by a looping green stem. The low-poly faceting gives the surfaces a stylized, chunky look, with mottled brown speckles suggesting age or decay."
+differs = "More compact and horizontal with a looping stem, ideal for ground-level decayed or aged patches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1782
+meshes = 3
+materials = 1
+size = [1.79642, 1.555505, 1.511825]
+
+[mesh.sm_env_flowers_01]
+name = "SM_Env_Flowers_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flowers_01.fbx"
+sha256 = "a883317b18acf73238b19a6e030eaa00a182fe095dba685641c22a6f98f34e9e"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A cluster of four low-poly flowers with bright orange, cup-shaped blooms and slender green stems, angled outward in a natural, slightly irregular arrangement. The flat-shaded petals and simple geometry give it a clean, stylized look, ideal for adding a pop of warm color to jungle or tropical scenes."
+differs = "Smallest and simplest, with the fewest triangles; best for low-cost ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 820
+meshes = 3
+materials = 1
+size = [0.59857, 0.88728297, 0.576155]
+
+[mesh.sm_env_flowers_02]
+name = "SM_Env_Flowers_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flowers_02.fbx"
+sha256 = "0df11346532b6c5bd98439ddf6d48375a60b23fa162e0224198160b1b97a572f"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A cluster of white blossoms with yellow-orange centres, each with three to four petals, rising from a single green stem with a few leaves. The flowers are open and face outward in different directions, giving the asset a natural, lively appearance."
+differs = "Only white blooms, with the most open and outward-facing petals; ideal for bright, neutral accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1024
+meshes = 3
+materials = 1
+size = [0.719572, 1.1502299, 0.76990604]
+
+[mesh.sm_env_flowers_03]
+name = "SM_Env_Flowers_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flowers_03.fbx"
+sha256 = "46dbc819e4a6e447102bda636c0403e40a29b24f93546f2bec6dba3e9dcc40c4"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A cluster of slender, dark maroon stems that arch outward from a central base, each topped with a small, bright blue teardrop-shaped bud. The smooth, untextured surfaces give the plant a stylized, clean look, with the vivid blue contrasting sharply against the deep purple stalks."
+differs = "Only one with no green stems and blue buds; the most stylized and least realistic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 900
+meshes = 2
+materials = 1
+size = [1.196082, 1.287787, 1.226773]
+
+[mesh.sm_env_flowers_04]
+name = "SM_Env_Flowers_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flowers_04.fbx"
+sha256 = "7022a3590780bc557937d0d66a3a3dbb4eab1813a818cb162d5e6700ac9de050"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A cluster of five slender green stems, each topped with a spiky, star-shaped bloom in vivid orange with purple-blue tips, resembling a bird-of-paradise. The flowers are fully open and upright, with a slight natural lean, giving a lively, tropical feel perfect for jungle floor accents."
+differs = "Largest and most detailed, with the most complex star-shaped blooms; best as a hero focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1920
+meshes = 2
+materials = 1
+size = [1.2317669, 1.822513, 1.323069]
+
+[mesh.sm_env_flowers_05]
+name = "SM_Env_Flowers_05"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flowers_05.fbx"
+sha256 = "a8d19e363dc686d3779bb634cb78026a43adc8c61c8951ab2162e9acb922d3b1"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A cluster of three tall, slender green stalks, each topped with a dense, conical spike of small, overlapping orange and yellow blossoms, resembling a tropical torch ginger or similar flower. The blooms are vibrant and tightly packed, with a slight gradient from yellow at the base to deeper orange at the tips, giving a."
+differs = "Tallest and most vertical, with dense conical spikes; best for adding height and texture to a scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1904
+meshes = 3
+materials = 1
+size = [0.71331704, 1.781352, 0.850586]
+
+[mesh.sm_env_flowers_flat_01]
+name = "SM_Env_Flowers_Flat_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flowers_Flat_01.fbx"
+sha256 = "90e820c1faebe78fee59b9c352ba8d36b0d76d1da5de724c1689c23bc456661e"
+atlas = "FlowersFlat_01.tga"
+textures = "FlowersFlat_01.tga"
+description = "A low, flat cluster of tiny white blossoms scattered across a broad, nearly square patch of ground, with no visible stems or leaves. The flowers are sparse and delicate, forming a subtle, pale speckled pattern that reads as a natural, low-lying ground cover rather than a distinct plant."
+differs = "The only one with a visible ground patch, making it the most solid and grounded option for covering bare terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 1
+materials = 1
+size = [2.0657902, 0.1425, 2.021093]
+
+[mesh.sm_env_flowers_flat_02]
+name = "SM_Env_Flowers_Flat_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flowers_Flat_02.fbx"
+sha256 = "99974f3b80011b7738b65422681b8a6e07706819c131bd54934facefe2bb1674"
+atlas = "FlowersFlat_01.tga"
+textures = "FlowersFlat_01.tga"
+description = "A low, flat cluster of tiny white blossoms scattered across a broad, nearly invisible ground plane, forming four distinct patches of delicate, pale petals. The sparse, airy arrangement gives it a subtle, natural look, ideal for adding small floral details to a jungle floor without drawing attention away from larger..."
+differs = "The largest and most spread out, with four distinct patches, ideal for creating a wider, more scattered floral carpet."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 1
+materials = 1
+size = [2.157782, 0.145157, 2.06864]
+
+[mesh.sm_env_flowers_flat_03]
+name = "SM_Env_Flowers_Flat_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Flowers_Flat_03.fbx"
+sha256 = "8f577551abc996c0780f8e252a874e6918e816daa7e62a04b41cf6a346b21d67"
+atlas = "FlowersFlat_01.tga"
+textures = "FlowersFlat_01.tga"
+description = "A low, flat cluster of tiny white blossoms, each a simple four-petal star, scattered across a nearly invisible green stem network, forming a delicate ground-cover patch that reads as a subtle, natural detail for jungle floors rather than a showy focal point."
+differs = "The most detailed with visible green stems and four-petal stars, yet the lightest at 8 triangles, perfect for adding intricate ground detail at minimal cost."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8
+meshes = 1
+materials = 1
+size = [2.05432, 0.178868, 2.008644]
+
+[mesh.sm_env_fog_ring_01]
+name = "SM_Env_Fog_Ring_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Fog_Ring_01.fbx"
+sha256 = "af2f0f61402eeea2bc7b76c913c1ca11bde038d9b00e985239267ff96af704cc"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A flat, wide elliptical ring with a thin, translucent membrane stretched across its centre, resembling a shimmering pool of water or a magical portal. The rim is textured with mottled patches of earthy brown, green, and gold, giving it a weathered, organic appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [70.17066, 3.939841, 70.17065]
+
+[mesh.sm_env_grass_bush_01]
+name = "SM_Env_Grass_Bush_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Bush_01.fbx"
+sha256 = "75d8423ee6968559ffeb1bee2092ca55bbdc61457f75845a36da905dffc6bd3c"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, rounded clump of dark green foliage with jagged, spiky leaf tips, appearing dense and slightly irregular in silhouette. The texture is mottled with darker shadows and lighter highlights, giving it a natural, weathered look suitable for ground cover or undergrowth in a jungle setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 110
+meshes = 3
+materials = 2
+size = [2.275693, 1.205254, 2.306943]
+
+[mesh.sm_env_grass_med_clump_01]
+name = "SM_Env_Grass_Med_Clump_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Med_Clump_01.fbx"
+sha256 = "33443b962a86fbe430e9fb04b5e1ddd079c1a7800d2b53edeb77739729e2fdab"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A dense, rounded clump of thin, upright blades that fan outward from a narrow base, forming a low, bushy mound. The muted, pale green texture gives it a dry, sun-bleached appearance, making it ideal for filling ground cover in open, arid clearings."
+differs = "Smallest and most compact, with the fewest triangles, best for tight, low-poly ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10
+meshes = 2
+materials = 1
+size = [1.0, 0.5, 0.999999]
+
+[mesh.sm_env_grass_med_clump_02]
+name = "SM_Env_Grass_Med_Clump_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Med_Clump_02.fbx"
+sha256 = "f830d1a089cfbb178a00b44888344229c84dbc5719a697537eb22e9fbc767ff5"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide clump of pale green grass blades, broad and rounded in silhouette, with a soft, slightly translucent texture that suggests a light, airy tuft rather than a dense, solid bush. The blades fan outwards from the base, giving it a natural, unkempt appearance that works well as a subtle ground cover or filler in."
+differs = "Mid-sized and widest relative to height, with a softer, more translucent look for airy filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 2
+materials = 1
+size = [1.785118, 0.532862, 1.460731]
+
+[mesh.sm_env_grass_med_clump_03]
+name = "SM_Env_Grass_Med_Clump_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Med_Clump_03.fbx"
+sha256 = "7a87f2346fede3fbd3d9fb718dbae4db2d0a32dca07d03815b85ecd03ad7b450"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide clump of pale, desaturated green grass blades, forming a rounded, irregular mound with a few darker, vertical stems rising from the centre. The texture is flat and slightly mottled, giving it a dry, weathered look, and the silhouette is soft and feathery, making it ideal for filling ground-level gaps in a.."
+differs = "Largest and most detailed, with the most triangles and darker vertical stems for a weathered, irregular mound."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 50
+meshes = 3
+materials = 2
+size = [1.893297, 0.528209, 1.900116]
+
+[mesh.sm_env_grass_med_plane_01]
+name = "SM_Env_Grass_Med_Plane_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Med_Plane_01.fbx"
+sha256 = "bfb1079cc5e7369c52e99e673c843d9029497d95f9b45a16d955ae9cf7a6a869"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A flat, low-poly clump of broad grass blades, rendered in a pale, desaturated green that reads as a muted, almost greyish tone. The blades fan out from a central base, with a few taller stalks rising above the rest, giving it a natural, slightly unkempt silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2
+meshes = 1
+materials = 1
+size = [1.0, 0.5, 0.0]
+
+[mesh.sm_env_grass_short_clump_01]
+name = "SM_Env_Grass_Short_Clump_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Short_Clump_01.fbx"
+sha256 = "9b306cac4d8801cfa0b722d183a042c3f5c3aae262ef3bd2ab9c25d08c860c52"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide clump of pale green grass blades, broad and squat, with a slightly darker, denser core and lighter, wispy tips that fan outwards, giving it a soft, natural silhouette ideal for ground cover."
+differs = "The smallest and simplest, with the fewest triangles, best for tight, dense ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10
+meshes = 2
+materials = 1
+size = [1.0, 0.25, 0.999999]
+
+[mesh.sm_env_grass_short_clump_02]
+name = "SM_Env_Grass_Short_Clump_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Short_Clump_02.fbx"
+sha256 = "c8f7f7c32e0dc01677a155b2bd0c87f26f7ce63701bb3652befedd58cbd3fb60"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide clump of pale, desaturated green blades that fan outward from a central base, with a few thin stems rising slightly higher than the main mass. The texture is flat and muted, giving it a dry, weathered appearance that suits sparse or arid jungle floor details."
+differs = "The most sparse and dry, with the fewest blades, ideal for arid or weathered floor details."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 2
+materials = 1
+size = [1.785118, 0.266431, 1.460731]
+
+[mesh.sm_env_grass_short_clump_03]
+name = "SM_Env_Grass_Short_Clump_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Short_Clump_03.fbx"
+sha256 = "3b30ed62f9032aa5dd2875a1db994870399af0836b611a1c56cb35e5007ad961"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide, irregular clump of short grass, wider than it is tall, with a slightly ragged, uneven silhouette. The blades are a muted, pale green with subtle greyish-brown variation, giving it a dry, natural look. Its flat, sprawling form makes it ideal for ground cover or filling small gaps in a jungle floor."
+differs = "The largest and most detailed, with the most irregular silhouette, perfect for filling wide gaps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 50
+meshes = 3
+materials = 2
+size = [1.893297, 0.278209, 1.900116]
+
+[mesh.sm_env_grass_short_plane_01]
+name = "SM_Env_Grass_Short_Plane_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Short_Plane_01.fbx"
+sha256 = "3c2315a490dce1c876fa8d83ff920ae58b44fffe5d858f66076bf5483f4a4baf"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A flat, rectangular patch of low-poly grass blades, rendered in a muted, desaturated green with a subtle texture. The blades are sparse and jagged, giving it a wild, unkempt appearance that suggests a natural, untamed jungle floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2
+meshes = 1
+materials = 1
+size = [1.0, 0.25, 0.0]
+
+[mesh.sm_env_grass_tall_clump_01]
+name = "SM_Env_Grass_Tall_Clump_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Tall_Clump_01.fbx"
+sha256 = "6564726d036f5979018a97a06fb14ee162b7efb67eab0c13f4dc35d95d8b9f2a"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A dense, rounded clump of thin, upright blades that fan outward from a narrow base, forming a soft, hemispherical silhouette. The pale, desaturated green blades are slightly translucent and appear soft, with a subtle sheen suggesting a smooth, waxy surface."
+differs = "The smallest and simplest, with the most uniform, translucent pale blades and no dark stems or seed heads, best for subtle ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10
+meshes = 2
+materials = 1
+size = [1.0, 1.0, 0.999999]
+
+[mesh.sm_env_grass_tall_clump_02]
+name = "SM_Env_Grass_Tall_Clump_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Tall_Clump_02.fbx"
+sha256 = "4a13be3c0727a9347212558870195ad87b6c434f1e91b05a30292f04bfc4cd20"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, rounded clump of pale, desaturated green blades, fanning outward from a central base with a few darker, nearly black stems rising vertically. The texture is flat and slightly mottled, giving it a dry, weathered look. Its broad, squat silhouette makes it ideal for filling ground-level gaps in a jungle floor."
+differs = "The only one with a few dark, nearly black vertical stems, and the widest, flattest silhouette, ideal for filling low gaps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 2
+materials = 1
+size = [1.785118, 1.065725, 1.460731]
+
+[mesh.sm_env_grass_tall_clump_03]
+name = "SM_Env_Grass_Tall_Clump_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Tall_Clump_03.fbx"
+sha256 = "16d9a400756fdb1486d3c9764199589fc7b30598f420b2362708efa7463bbd21"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A dense, squat clump of dark green blades with a few pale, wispy seed heads rising above the main mass, giving it a slightly unkempt, natural look. The foliage is broad and chunky, with a mix of deep and mid-green tones that suggest a shaded, humid environment."
+differs = "The most detailed and largest, with the darkest, broadest foliage and pale seed heads, giving it the most unkempt, shaded look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 50
+meshes = 3
+materials = 2
+size = [1.893297, 1.028209, 1.900116]
+
+[mesh.sm_env_grass_tall_plane_01]
+name = "SM_Env_Grass_Tall_Plane_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Grass_Tall_Plane_01.fbx"
+sha256 = "8888c32a24c5ea81ebd3f9dedad0976cb47f1e7e8651a8ad86fd07cb2291f0bc"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A flat, cross-shaped cluster of tall, slender blades that fan outward from a central base, forming a dense, upright tuft. The blades are a muted, desaturated green with subtle darker striping along their length, giving a natural, slightly weathered appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2
+meshes = 1
+materials = 1
+size = [1.0, 1.0, 0.0]
+
+[mesh.sm_env_ground_cover_01]
+name = "SM_Env_Ground_Cover_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Ground_Cover_01.fbx"
+sha256 = "bbfae1a42defd0ff680216fedd2eeb95ae9c3b49fec16cf91d84e60263d3379c"
+atlas = "GroundCover_01.tga"
+textures = "GroundCover_01.tga"
+description = "A low, irregular clump of sparse, wispy grass blades, with a few thin stems arching outward and a small dark twig or stem rising from the centre. The muted, desaturated green and brown tones give it a dry, weathered look, making it ideal for adding natural, unkempt detail to jungle floors or forest edges."
+differs = "The only one with a central dark twig and dry, wispy grass; best for sparse, arid patches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 70
+meshes = 2
+materials = 1
+size = [2.888986, 1.594404, 1.638476]
+
+[mesh.sm_env_ground_cover_02]
+name = "SM_Env_Ground_Cover_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Ground_Cover_02.fbx"
+sha256 = "c7316146ba34cb80fc028505aab164f48fed8b03d2fe7f7e9c904f98cf9db32a"
+atlas = "GroundCover_01.tga"
+textures = "GroundCover_01.tga"
+description = "A low, sprawling clump of dark green foliage, appearing as a dense, irregular mound of small leaves and stems that hugs the ground. The texture is mottled with deep shadows and lighter green highlights, giving it a natural, slightly unkempt look suited for forest floors or jungle undergrowth."
+differs = "The lowest, most compact and plainest mound; ideal for dense, shadowed undergrowth without vertical interest."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 3
+materials = 1
+size = [1.911725, 0.57041705, 1.9124241]
+
+[mesh.sm_env_ground_cover_03]
+name = "SM_Env_Ground_Cover_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Ground_Cover_03.fbx"
+sha256 = "6fe158a9cd9e6af32a340ded26247ddd1b9715a524b014bce9484911cc0d6f99"
+atlas = "GroundCover_01.tga"
+textures = "GroundCover_01.tga"
+description = "A low, sprawling clump of dark green foliage, with a few thin, pale, wispy stalks rising above the dense, leafy base. The irregular, organic silhouette suggests a patch of ferns or ground-hugging weeds, ideal for adding natural detail to jungle floors without obscuring the view."
+differs = "The tallest and most detailed, with pale stalks rising above a leafy base; best for adding fern-like height."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 3
+materials = 1
+size = [2.1445441, 1.6041499, 1.611802]
+
+[mesh.sm_env_growth_plane_01]
+name = "SM_Env_Growth_Plane_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Growth_Plane_01.fbx"
+sha256 = "70bf07d6fed88f16a15054671e37dfe730de62a97a58d55d3db533215e2a4ccb"
+atlas = "CreeperMat_01.tga"
+textures = "CreeperMat_01.tga"
+description = "A flat, roughly square patch of ground cover with an irregular, organic outline, rendered in a pale, muted green with subtle mottled texture. It appears as a low, dense layer of creeping foliage or moss, designed to blend seamlessly into a jungle floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [3.053458, 0.20245701, 3.044403]
+
+[mesh.sm_env_monolith_01]
+name = "SM_Env_Monolith_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Monolith_01.fbx"
+sha256 = "d04d9a6eb5b040ee8458097a9f7487638faeca2591394c41f41766012bf8c3e1"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A tall, tapering stone spire with a flared, chunky base, carved with deep vertical grooves that give it a segmented, almost crystalline look. Pale sandy-beige rock is marked with thin, dark cracks and patches of green moss, suggesting a weathered, ancient ruin standing in a humid jungle."
+differs = "The most detailed and symmetrical, with a flared base and mossy cracks, ideal for a jungle ruin centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2654
+meshes = 1
+materials = 1
+size = [3.797218, 8.322753, 3.796536]
+
+[mesh.sm_env_monolith_02]
+name = "SM_Env_Monolith_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Monolith_02.fbx"
+sha256 = "c4d8210c457151ff57e54a7fbbdaa81d3277057955d17c18e09ced4e642b0677"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tall, narrow slab of dark grey stone, leaning slightly forward with a rough, chiselled surface and a hollowed, diamond-shaped opening near its base. The jagged, broken edges and weathered texture suggest an ancient, ruined monument, making it ideal for jungle ruins or forgotten temple scenes."
+differs = "The largest and most damaged, with a leaning slab and hollow diamond opening, perfect for a broken temple wall."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1510
+meshes = 1
+materials = 1
+size = [12.288214, 20.954111, 3.144893]
+
+[mesh.sm_env_pile_01]
+name = "SM_Env_Pile_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Pile_01.fbx"
+sha256 = "0fd22f5816e205ad871fec2fa0a4c3801cb43ddbf71c1ff29cbc4360a75ba2dc"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, irregular mound of dark, weathered earth and rock, scattered with small white pebbles and patches of vibrant green moss. A curved, tan wooden plank lies across the top, adding a rustic, man-made element to the natural debris."
+differs = "The smaller, more compact pile with a distinct wooden plank, ideal for adding a rustic man-made touch to natural debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 26
+meshes = 1
+materials = 1
+size = [1.053261, 0.22682899, 1.243202]
+
+[mesh.sm_env_pile_02]
+name = "SM_Env_Pile_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Pile_02.fbx"
+sha256 = "c0b142e2b263a0af981ff5d3af6b9c24f96c5dccfa00f398a495346042817ecd"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, flat mound of dark, damp earth and scattered stones, with a few thin, pale twigs and a small patch of green moss resting on top. The surface is textured with subtle streaks of brown and grey, giving it a weathered, natural look."
+differs = "The larger, flatter, and more elongated mound with only twigs and moss, perfect for a subtler, purely natural ground scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 49
+meshes = 1
+materials = 1
+size = [2.389085, 0.28013402, 1.8790799]
+
+[mesh.sm_env_rock_01]
+name = "SM_Env_Rock_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_01.fbx"
+sha256 = "d7805ab1eb0dae62f222ecd1082341c3bf7127ccd760e0d02d864c5dc79ed49b"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, broad, irregularly faceted boulder with a flattened top and a slight overhang on one side, rendered in a warm sandy beige with a darker, mossy patch on its upper surface. Its simple, angular silhouette and muted, earthy tones make it a versatile, unobtrusive ground cover piece for tropical or arid environments."
+differs = "The only one with a mossy patch, making it the most organic and jungle-specific choice."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 196
+meshes = 1
+materials = 1
+size = [2.256806, 1.0399489, 1.728173]
+
+[mesh.sm_env_rock_02]
+name = "SM_Env_Rock_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_02.fbx"
+sha256 = "df491baf841f9d0f28232dbfcedcf9c83a0b116fe9d83f92936d8df62af37e17"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, broad, roughly dome-shaped boulder with a flat base and a slightly angular, faceted surface. Its sandy beige colouring is uniform, with subtle shading that highlights the polygonal planes, giving it a clean, weathered look suitable for jungle ground cover or a subtle terrain accent."
+differs = "The plainest and most uniform, with no distinguishing features; a generic filler rock."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 214
+meshes = 1
+materials = 1
+size = [2.442832, 1.489063, 1.9987371]
+
+[mesh.sm_env_rock_03]
+name = "SM_Env_Rock_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_03.fbx"
+sha256 = "2e458aa935133670b66a342f93cc7a49a3cc87a026d1b0cdc645666bd05c5278"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, rounded boulder with a broad, flattened top and a slightly irregular, chunky silhouette. Its faceted surface is a warm, sandy beige with subtle, darker shading in the crevices, giving it a dry, sun-bleached look."
+differs = "The flattest and most slab-like, ideal for a stepping stone or low platform."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 162
+meshes = 1
+materials = 1
+size = [2.858901, 2.180579, 2.375249]
+
+[mesh.sm_env_rock_04]
+name = "SM_Env_Rock_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_04.fbx"
+sha256 = "6bd09f4e3bb53ff8419fd51640862a1c38c139518efcc7e60889b24fc0e0d633"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A chunky, low-poly boulder with a roughly cubic form and heavily faceted, irregular surfaces, rendered in a warm sandy beige. Its flat planes catch light to suggest a dry, sun-bleached stone, making it ideal for tropical ground cover or jungle floor scatter."
+differs = "The most cubic and angular, with the highest triangle count for its size, best for a blocky, geometric look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 538
+meshes = 1
+materials = 1
+size = [3.286572, 3.266804, 3.48228]
+
+[mesh.sm_env_rock_05]
+name = "SM_Env_Rock_05"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_05.fbx"
+sha256 = "2753e2cc312f6850fcc1bbe771668bb217c1b27c64daf1790e7d609ec15d0b93"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A chunky, low-poly boulder with a broad, irregular silhouette and a flat, stable base, rendered in a warm sandy beige with subtle darker mottling. Its faceted surface and rounded edges give it a weathered, natural look, making it ideal for scattered ground cover or a simple, unobtrusive landmark in a tropical setting."
+differs = "The widest and most irregular, with a stable base, perfect for a large, grounded landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 572
+meshes = 1
+materials = 1
+size = [3.551996, 2.534946, 3.734353]
+
+[mesh.sm_env_rock_06]
+name = "SM_Env_Rock_06"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_06.fbx"
+sha256 = "23e174699e4c5fad4b7204a9d6c7fa2055f13f77cc866769de37c7fc9deec460"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A chunky, faceted boulder with a broad, slightly flattened top and a narrower base, giving it a stable, grounded stance. Its surface is a warm, sandy beige with subtle darker shading in the crevices, suggesting a dry, sun-baked material."
+differs = "The tallest and most vertical, with a narrow base, making it the only one suited for a standing pillar or spire."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 616
+meshes = 1
+materials = 1
+size = [3.240649, 4.7776613, 3.190506]
+
+[mesh.sm_env_rock_arch_01]
+name = "SM_Env_Rock_Arch_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Arch_01.fbx"
+sha256 = "0995b7a3f75ae5d8c3f2af58d8bb332f9eeadc13a813c2aa7a642f72432d7906"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A chunky, low-poly stone arch with a thick, uneven span and blocky, faceted legs, rendered in a warm sandy beige with subtle darker crevices. The opening is small and irregular, giving it a weathered, natural look suited for jungle pathways or cave entrances."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1536
+meshes = 1
+materials = 1
+size = [28.80164, 13.223269, 14.643463]
+
+[mesh.sm_env_rock_cave_01]
+name = "SM_Env_Rock_Cave_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Cave_01.fbx"
+sha256 = "009b9b6c22bc9d3156bd76f99cc97462b5c7033b76ff2212a58da14794747e81"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, wide cluster of angular, faceted slabs forming a shallow, open-fronted shelter, with a pale sandy-beige tone and a smooth, unblemished surface. The irregular, jagged silhouette suggests a natural formation, while the hollowed interior and flat base make it ideal for use as a small hideout or cover in a tropical."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2152
+meshes = 1
+materials = 1
+size = [21.395458, 12.848138, 10.843508]
+
+[mesh.sm_env_rock_cliff_01]
+name = "SM_Env_Rock_Cliff_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Cliff_01.fbx"
+sha256 = "55fe72011bc926a2a7ca8822ee4083aa9bf8c6b6672081e68a6cdc088d4f6edb"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A tall, vertically oriented block of tan rock with a flat top and slightly tapering sides, marked by a few deep vertical fissures and a small dark patch near the base. Its clean, low-poly facets and neutral sandy colour make it a versatile, unobtrusive cliff or pillar for jungle terrain."
+differs = "The tallest and most vertical of the three, with the fewest triangles; ideal as a standalone pillar or narrow cliff face."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 460
+meshes = 1
+materials = 1
+size = [4.99543, 8.121996, 5.065711]
+
+[mesh.sm_env_rock_cliff_02]
+name = "SM_Env_Rock_Cliff_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Cliff_02.fbx"
+sha256 = "ec5f9769ed968d48b6f0f92abf5f93583ed05d24add8f4290c5533018151c8b8"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, broad, and irregularly rounded boulder with a flat top and sheer, vertically striated sides, rendered in warm sandy beige with subtle darker crevices. Its blocky, faceted silhouette suggests a weathered, stable rock suitable for ground cover or a natural stepping stone in a tropical environment."
+differs = "The smallest and most compact, a low, rounded boulder; best used as a single stepping stone or ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1262
+meshes = 1
+materials = 1
+size = [11.846748, 8.178359, 7.993634]
+
+[mesh.sm_env_rock_cliff_03]
+name = "SM_Env_Rock_Cliff_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Cliff_03.fbx"
+sha256 = "ecd0c804a5250f962bab8ab66386756871bccc61f13a509e46f9c312d5e8eccc"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, elongated cluster of blocky, faceted stone columns with flat tops and vertical striations, rendered in a uniform sandy tan. The formation is wider than it is tall, with a stepped, uneven profile that suggests a weathered, natural outcrop."
+differs = "The largest, widest, and most detailed, with a stepped, elongated profile; perfect for a broad, multi-columned outcrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3196
+meshes = 1
+materials = 1
+size = [22.274277, 10.22667, 9.141661]
+
+[mesh.sm_env_rock_flat_01]
+name = "SM_Env_Rock_Flat_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Flat_01.fbx"
+sha256 = "6d1bf22ca7da214604b8618719b68d1467e944043d3b43100b2973de0a11eb57"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, elongated slab of beige stone with a flat top and a faceted, irregular underside, resembling a weathered stepping stone or a natural ground tile. Its smooth, sandy surface is marked by subtle, darker crevices and a slight sheen, suggesting a dry, sun-baked finish."
+differs = "The flattest and widest, ideal as a ground stepping stone or floor tile, with the lowest profile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 588
+meshes = 1
+materials = 1
+size = [2.790866, 1.331011, 5.488059]
+
+[mesh.sm_env_rock_flat_02]
+name = "SM_Env_Rock_Flat_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Flat_02.fbx"
+sha256 = "d762287bc728023dc0fc9679c75b6e50b793397ae7df4a73ca33b9d67270c677"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A tall, chunky, low-poly rock with a broad base and a slightly tapered top, featuring a deep, angular crease running down one face. Its flat, beige-tan surfaces are unmarked and clean, giving it a dry, sun-bleached look suited to arid or sandy jungle clearings."
+differs = "The tallest and most vertical, with a deep crease, best as a standing boulder or obstacle in clearings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 556
+meshes = 1
+materials = 1
+size = [2.803471, 4.887896, 2.240787]
+
+[mesh.sm_env_rock_ground_01]
+name = "SM_Env_Rock_Ground_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Ground_01.fbx"
+sha256 = "f2ca089d33bbe1423a374ab82b8adf2e23131d78382adcc12f57024b81f1ea03"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, flat, irregular slab of weathered stone with a pale sandy-beige surface, marked by subtle darker crevices and a slightly rough, pitted texture. Its broad, rounded form suggests a natural stepping stone or a ground-level rock outcrop, ideal for blending into a jungle floor."
+differs = "The largest and most detailed, with 2219 triangles, best for a prominent jungle-floor centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2219
+meshes = 1
+materials = 1
+size = [21.211308, 4.020496, 20.345388]
+
+[mesh.sm_env_rock_ground_02]
+name = "SM_Env_Rock_Ground_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Ground_02.fbx"
+sha256 = "98d8e99bb3bb05a5c3956a9ea9e132ef3dc0c2a4c5ddd23f2622df1f253c718f"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, flat, irregularly shaped slab of pale sandy rock with a rough, faceted surface and a subtle darker patch on one side, appearing weathered and suitable as a natural ground-level stepping stone or terrain filler."
+differs = "The smallest and plainest, with only 392 triangles, ideal as a cheap, low-poly terrain filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 392
+meshes = 1
+materials = 1
+size = [12.020752, 1.780843, 6.271289]
+
+[mesh.sm_env_rock_pile_01]
+name = "SM_Env_Rock_Pile_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Pile_01.fbx"
+sha256 = "a251aac7737afac8616974ae9a6e52808a02bd106a76753ba54a7d3f4676b687"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, wide cluster of angular, faceted rocks in a pale sandy beige, forming a flat, irregular mound with a few distinct boulders and smaller stones scattered across the top. The surface is smooth and unblemished, with subtle shading that highlights the sharp, polygonal edges, giving it a clean, stylized look perfect.."
+differs = "The largest and widest of the set, with the most triangles, ideal as a major terrain anchor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2204
+meshes = 1
+materials = 1
+size = [13.380294, 3.3386931, 10.329046]
+
+[mesh.sm_env_rock_pile_02]
+name = "SM_Env_Rock_Pile_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Pile_02.fbx"
+sha256 = "774fc504cd7a8dbd95a07160b51406bbd2cafaacacc6c3cbe89f8130bc5688d5"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, wide cluster of angular, faceted boulders in a pale sandy beige, forming a flat-topped mound with a smaller stone jutting from one side. The uniform, untextured surface suggests clean, dry rock, ideal for a subtle ground-level scatter that reads clearly from a distance without visual clutter."
+differs = "The flattest and most uniform, with a single side stone, best for a subtle, low-profile scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 968
+meshes = 1
+materials = 1
+size = [8.777753, 2.6000228, 7.418051]
+
+[mesh.sm_env_rock_pile_03]
+name = "SM_Env_Rock_Pile_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Pile_03.fbx"
+sha256 = "77eb5628a5f20ef3c9955d4843af1a2ba24bd33e4819baf066384c31c1f4750a"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, wide cluster of angular, faceted boulders in a warm sandy beige, forming a flat-topped mound with a few smaller stones scattered at the base. The clean, unweathered surfaces and simple geometry make it ideal for a tidy, stylized jungle floor or a subtle terrain accent."
+differs = "The most balanced and tidy, with a clean flat top and base stones, for a neat jungle floor accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 932
+meshes = 1
+materials = 1
+size = [6.703891, 2.4673269, 5.713936]
+
+[mesh.sm_env_rock_pile_04]
+name = "SM_Env_Rock_Pile_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Pile_04.fbx"
+sha256 = "589e72d3401ccafd6f830418daa49da843e1a18cb171192a13d87530ef95e72b"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, wide cluster of angular, faceted stones in a warm sandy beige, with a smaller rock nestled against the main mass. The flat, weathered surfaces and soft, uniform colouring suggest a dry, sun-bleached look, making it ideal for arid or tropical ground cover."
+differs = "The smallest and lowest, with a nestled side rock, perfect for tight, low ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 638
+meshes = 1
+materials = 1
+size = [6.154902, 1.795323, 4.63459]
+
+[mesh.sm_env_rock_pile_05]
+name = "SM_Env_Rock_Pile_05"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Pile_05.fbx"
+sha256 = "cd6f0b47ed46227c080167b202fc13ec1c1d4f21e03ee485299b469de135041f"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, broad cluster of angular boulders, with a large central mass flanked by smaller, blocky stones. The flat-shaded faces are a uniform sandy tan, with a dark grey patch on the upper left suggesting shadow or moss. Its wide, stable footprint makes it ideal for grounding a jungle floor or framing a path."
+differs = "The only one with a dark grey patch, suggesting shadow or moss, for a slightly weathered look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 622
+meshes = 1
+materials = 1
+size = [4.802739, 2.931703, 3.6374369]
+
+[mesh.sm_env_rock_pile_06]
+name = "SM_Env_Rock_Pile_06"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Pile_06.fbx"
+sha256 = "2e2c42c682ccbe99d32a0d7104624a0ccee7fbb35519bc369f1c014ae635e8b4"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, wide cluster of angular, faceted boulders in a warm sandy beige, forming a flat-topped mound with a dark, hollowed recess visible on one side. The rock surfaces are smooth and unblemished, with subtle shading that highlights the sharp, polygonal edges."
+differs = "The only one with a dark hollowed recess, adding a cave-like detail for a focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1118
+meshes = 1
+materials = 1
+size = [7.91978, 3.644517, 4.624839]
+
+[mesh.sm_env_rock_pile_07]
+name = "SM_Env_Rock_Pile_07"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Pile_07.fbx"
+sha256 = "3f9368176e93d0377d165096e4188b4068306dcd2adf12e20b191ad7a2106d76"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A cluster of angular, faceted boulders in pale beige and tan, with a tall central spire flanked by lower, rounded chunks. The low-poly surfaces are smooth and unmarked, suggesting clean, dry stone. Its compact, irregular silhouette works well as a natural scatter prop or a small landmark in a tropical environment."
+differs = "The tallest and most vertical, with a central spire, serving as a small landmark or spire."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1792
+meshes = 1
+materials = 1
+size = [9.92042, 7.357537, 5.887241]
+
+[mesh.sm_env_rock_ramp_01]
+name = "SM_Env_Rock_Ramp_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Ramp_01.fbx"
+sha256 = "01cc737fa8f7426ad210c023266d136ab1a2a986827cd4315ea130eafcd80454"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, chunky wedge of tan rock with a broad, flat top and a steep, irregular face, its faceted surface suggesting a natural, weathered boulder that doubles as a walkable incline."
+differs = "The smallest and most compact, with the steepest face and flattest top, best for a short, tight step."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1318
+meshes = 1
+materials = 1
+size = [8.631563, 5.591857, 6.058189]
+
+[mesh.sm_env_rock_ramp_02]
+name = "SM_Env_Rock_Ramp_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Ramp_02.fbx"
+sha256 = "2fe3928b9ec5bf020f2feadd2aa8b13212adcea274943182211b11bcc17acef9"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, wedge-shaped rock with a steep, angled face and a gently sloping top, its surface broken by a few deep, jagged fissures and a small notch near the base. The pale sandy-beige stone is weathered and matte, with subtle darker streaks along the crevices, giving it a natural, sun-bleached look that suits a jungle..."
+differs = "The largest and most detailed, with deep fissures and a notch, ideal for a dramatic, weathered centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1850
+meshes = 1
+materials = 1
+size = [20.285908, 9.212681, 9.448198]
+
+[mesh.sm_env_rock_ramp_03]
+name = "SM_Env_Rock_Ramp_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Ramp_03.fbx"
+sha256 = "62e92d600ec7edd4c487619b11ac23e13f88d19ebfd77c447564bcd4eeccf441"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, wedge-shaped rock with a steep, angled face and a flatter, sloping top, tapering to a blunt point at one end. Its faceted, sandy-beige surface is marked by subtle, darker striations that suggest natural weathering, giving it the look of a worn, stable stone step or a natural ramp for jungle trails."
+differs = "The longest and most tapered, with a blunt point and subtle striations, perfect for a smooth, gradual trail incline."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1144
+meshes = 1
+materials = 1
+size = [19.678555, 12.60211, 10.697128]
+
+[mesh.sm_env_rock_round_01]
+name = "SM_Env_Rock_Round_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Round_01.fbx"
+sha256 = "73e280e1e96f8e286c2fb6d259dc0e748c10339e774f3d716a8475ac4ebe9d3e"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A squat, irregularly rounded boulder with a broad, flattened base and a gently domed top, its low-poly facets catching light to suggest a smooth, weathered surface. The stone is a warm, sandy beige with subtle tonal variation, giving it a dry, sun-bleached appearance typical of tropical or arid environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 182
+meshes = 1
+materials = 1
+size = [2.8667178, 2.295289, 3.139591]
+
+[mesh.sm_env_rock_small_01]
+name = "SM_Env_Rock_Small_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Small_01.fbx"
+sha256 = "79c941fbd5abf1314c3a406e83c068681326fb25bcc9a5ba5f7f9855180ad68d"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, broad, irregularly faceted chunk of grey stone, wider than it is tall, with a flat base and a slightly domed top. Its surface is unmarked and matte, suggesting a clean, weathered rock suitable for ground cover or a small obstacle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [0.327451, 0.25803798, 0.341881]
+
+[mesh.sm_env_rock_spike_01]
+name = "SM_Env_Rock_Spike_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Spike_01.fbx"
+sha256 = "e3f9ed082411cc031745db8496a475190a7d65a0f69b8d8db437ee60cc7afde1"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A tall, faceted stone spike with a broad, uneven base tapering to a blunt point, rendered in a warm beige with subtle tan mottling. Its low-poly surface is smooth and unblemished, making it a versatile, clean landmark for tropical terrain."
+differs = "Taller and more slender than its sibling, with a cleaner, more symmetrical silhouette for a sharper landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 200
+meshes = 1
+materials = 1
+size = [1.808145, 2.65457, 2.004707]
+
+[mesh.sm_env_rock_spike_02]
+name = "SM_Env_Rock_Spike_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Spike_02.fbx"
+sha256 = "34430143260ca4423780734e003943f25026b2119308165fb91205171af44430"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A tall, faceted stone with a broad, uneven base tapering to a blunt, slightly off-center peak, its low-poly silhouette reading as a natural, weathered spire. The surface is a uniform, matte sandy beige with subtle tonal variation across the flat planes, giving it a dry, sun-bleached appearance."
+differs = "Shorter and broader with a more irregular, off-center peak, making it the better choice for a weathered, natural-looking spire."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 184
+meshes = 1
+materials = 1
+size = [1.774595, 3.432479, 2.894763]
+
+[mesh.sm_env_rock_spikes_01]
+name = "SM_Env_Rock_Spikes_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Spikes_01.fbx"
+sha256 = "4f802bbed5a700b4dbb1ed851dac0224a4e1beeb2b2562b175dec87c525fdc32"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A cluster of jagged, faceted stone shards rising from a low, chunky base, with one dominant central spike flanked by smaller, angled points. The surface is a uniform pale sandy beige with flat, untextured shading that emphasizes the sharp, angular silhouette, giving it a clean, stylized look suited for tropical or..."
+differs = "The smaller, more compact option with a single dominant central spike, best for tight spaces or as a secondary accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1344
+meshes = 1
+materials = 1
+size = [9.562016, 8.063509, 8.16938]
+
+[mesh.sm_env_rock_spikes_02]
+name = "SM_Env_Rock_Spikes_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Rock_Spikes_02.fbx"
+sha256 = "f0dabf9b2d9da94ea9e8eb9c875ef61c64ed791a4faa746d9221902e968a598b"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A jagged, low-poly rock formation with a tall, leaning central spire and a cluster of smaller, angular shards at its base, all in a uniform pale sandy beige. The faceted surfaces are smooth and unblemished, giving it a clean, stylized look that reads as a natural desert or tropical outcrop."
+differs = "The larger, more sprawling formation with a leaning spire and wider base, ideal as a standalone focal point or for filling broader terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1920
+meshes = 1
+materials = 1
+size = [16.161774, 14.680866, 11.341534]
+
+[mesh.sm_env_seaweed_01]
+name = "SM_Env_Seaweed_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Seaweed_01.fbx"
+sha256 = "1530121f84fe98df919f9ef40831c3566569c918bb64e36840cc181cbcff763d"
+atlas = "SeaWeed_Texture_01.tga"
+textures = "SeaWeed_Texture_01.tga"
+description = "A slender, upright cluster of feathery fronds, tapering to a point at the top and attached to a thin, bare stem at the base. The foliage is a soft, pale green with a slightly translucent, wispy appearance, suggesting a delicate aquatic plant that sways in the current."
+differs = "The smallest and simplest, with the fewest triangles, ideal as a sparse, low-cost filler for distant underwater scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 70
+meshes = 3
+materials = 1
+size = [1.227553, 2.2028, 1.148965]
+
+[mesh.sm_env_seaweed_02]
+name = "SM_Env_Seaweed_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Seaweed_02.fbx"
+sha256 = "72b720b9dce329355052e058833a96af4c759dd5e07309c0f51c449a3480f0b0"
+atlas = "SeaWeed_Texture_01.tga"
+textures = "SeaWeed_Texture_01.tga"
+description = "A dense, upright cluster of dark green, ribbon-like fronds with a pale, translucent fringe of fine, wispy tendrils around the base, giving it a soft, organic silhouette. The texture is mottled with lighter highlights, suggesting a wet, leafy surface, and the overall shape is a rounded, bushy clump that reads as a..."
+differs = "The only one with a pale, translucent fringe of tendrils around its base, giving it a unique soft, organic silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 350
+meshes = 3
+materials = 1
+size = [2.135153, 2.2028, 1.6262901]
+
+[mesh.sm_env_seaweed_03]
+name = "SM_Env_Seaweed_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Seaweed_03.fbx"
+sha256 = "b947226fc70e4912b734eb71b490ddc0f5aad20cb56432a5a22b6e6c707e1588"
+atlas = "SeaWeed_Texture_01.tga"
+textures = "SeaWeed_Texture_01.tga"
+description = "A cluster of vertical, blade-like fronds in varied shades of green, with a few pale, desaturated strands at the edges, forming a dense, bushy shape that suggests a soft, swaying underwater plant."
+differs = "The largest and most detailed, with the widest spread and highest triangle count, best for a hero foreground plant."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 914
+meshes = 3
+materials = 1
+size = [3.70316, 2.2028, 2.988859]
+
+[mesh.sm_env_seaweed_beach_01]
+name = "SM_Env_Seaweed_Beach_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Seaweed_Beach_01.fbx"
+sha256 = "9d6de6b9f0b8cfcdcd7bf49a408cdc9cd62164fd75cbeefcd75664bb3ab6e89f"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, sprawling cluster of dry, brittle seaweed strands, bleached to a pale sandy beige and grey, scattered flat across the ground as if washed ashore. The tangled, ribbon-like fronds are broken and uneven, giving it a weathered, sun-dried appearance that reads as beach debris rather than living growth."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 408
+meshes = 1
+materials = 1
+size = [1.662125, 0.104237005, 1.482144]
+
+[mesh.sm_env_skydome_01]
+name = "SM_Env_Skydome_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Skydome_01.fbx"
+sha256 = "480a1154ee48ad7503f0abd625236e39cb85c4123d846c074dda0b9488ebff4c"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "Sky.psd"
+description = "A low, flattened dome with a glossy black upper surface and a thin, iridescent rainbow band circling its base, set on a tan and green mottled ground ring. The reflective top and vibrant rim give it a polished, jewel-like appearance, suggesting a stylized magical barrier or a decorative jungle artifact."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [65.88029, 26.128487, 65.880295]
+
+[mesh.sm_env_tree_banana_01]
+name = "SM_Env_Tree_Banana_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Banana_01.fbx"
+sha256 = "4a1255a77ac7f7edd4cafb52e13aac0d6fb29b002b2744e915f1fb97f44da561"
+atlas = "treeBanana_01.tga"
+textures = "treeBanana_01.tga"
+wanted = "Bake_01_HandCut_07.png"
+description = "A slender, slightly curved trunk supports a crown of long, arching fronds that fan out in a loose, irregular rosette, with a dark, clustered mass of dead or fruiting material at the centre. The bark is a mottled brown with lighter horizontal bands, while the foliage transitions from a vibrant green at the base to a..."
+differs = "Most detailed and tallest crown, with the highest triangle count, ideal as a hero asset for close-up jungle scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1438
+meshes = 6
+materials = 3
+size = [5.1563683, 6.070198, 5.242309]
+
+[mesh.sm_env_tree_banana_02]
+name = "SM_Env_Tree_Banana_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Banana_02.fbx"
+sha256 = "d5524e5c2819cff59ccea04b80cc32c200f86489c96e2aa20dcac07451ab8d4b"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A short, curved trunk supports a crown of broad, dark green leaves with pale, yellowish-green undersides, some drooping and others upright, with a small cluster of brown fruit or seed pods visible near the top."
+differs = "Shortest and most compact, with a visible fruit cluster, best for mid-ground planting where a fruiting tree is needed."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 814
+meshes = 3
+materials = 1
+size = [5.1563683, 6.54186, 5.242308]
+
+[mesh.sm_env_tree_banana_03]
+name = "SM_Env_Tree_Banana_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Banana_03.fbx"
+sha256 = "04a098ce33a94c90a76a18b5224cdef07359bbf71c4f1740e939b825bad5e468"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A short, stout palm with a thick, slightly curved trunk and a dense crown of broad, overlapping fronds. The leaves are a muted, dark green with lighter, yellowish highlights along their edges, while the trunk is a rough, grey-brown with darker vertical striations."
+differs = "Tallest overall and stoutest trunk, with the densest, most overlapping fronds, perfect for a dominant, mature canopy tree."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 814
+meshes = 3
+materials = 1
+size = [5.22895, 7.8947053, 5.242309]
+
+[mesh.sm_env_tree_banana_04]
+name = "SM_Env_Tree_Banana_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Banana_04.fbx"
+sha256 = "739fe4ff0ba30e12ae5d5c4b9a244f7f98d25c9f29c24bdff5760796c1d1b1eb"
+atlas = "treeBanana_01.tga"
+textures = "treeBanana_01.tga"
+wanted = "Bake_01_HandCut_07.png"
+description = "A slender, curved trunk rises to a compact crown of dark green fronds, with a few pale, drooping leaves hanging beneath the canopy. The bark is a light, sandy tan, and the overall silhouette is that of a young, spindly palm, ideal for adding vertical variety to a jungle floor."
+differs = "Slimmest and spindliest, with the lightest bark, ideal for adding vertical variety to a jungle floor without visual weight."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 806
+meshes = 6
+materials = 3
+size = [5.1563683, 6.070198, 5.242308]
+
+[mesh.sm_env_tree_forest_01]
+name = "SM_Env_Tree_Forest_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Forest_01.fbx"
+sha256 = "27fda9f63f467f2e240c134361bd992e8ef2e903b3df0cd99401f17cb5b88fe3"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A stout, gnarled trunk splits into a dense, dark canopy of jagged, angular foliage, with a few pale, broken branches jutting out. The bark is a deep, shadowed brown, while the leaves are a muted, almost blackish green, giving it a weathered, ancient appearance suited for a dense jungle floor."
+differs = "Largest and most detailed, with pale broken branches and a taller, more imposing silhouette for a hero or landmark tree."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 35334
+meshes = 6
+materials = 1
+size = [17.357635, 18.4173, 17.28505]
+
+[mesh.sm_env_tree_forest_02]
+name = "SM_Env_Tree_Forest_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Forest_02.fbx"
+sha256 = "0ea844696627bd931bbd6c1a05ff8c7bd3c5313ddb17fce8bc7e7ec80d6dc953"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A stout, low-poly tree with a thick, gnarled trunk and a dense, irregular canopy of dark olive and brown foliage, featuring a few small red accents. The bark is deeply textured with grey and brown tones, giving it a weathered, ancient appearance suited for a dense jungle understory."
+differs = "Smallest and most compact, with red accents and a wider, flatter base, ideal for understory filler or close-up ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 24346
+meshes = 6
+materials = 1
+size = [10.889469, 12.821314, 9.88224]
+
+[mesh.sm_env_tree_forest_03]
+name = "SM_Env_Tree_Forest_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Forest_03.fbx"
+sha256 = "1373789487e5bd6d362b9d96472e44e188f7b18b7c5e21c30ef93e1e5dc064ab"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A gnarled, dark-barked tree with a dense, irregular canopy of near-black foliage, supported by a blocky, angular trunk that flares into a wide, flat base. The silhouette is jagged and asymmetrical, with small, protruding branches and a weathered, ancient appearance suited to a dense jungle floor."
+differs = "Mid-sized with the most jagged, asymmetrical silhouette and a flared base, best for creating irregular, varied jungle edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 25414
+meshes = 6
+materials = 1
+size = [10.024856, 10.563714, 8.939749]
+
+[mesh.sm_env_tree_palm_01]
+name = "SM_Env_Tree_Palm_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Palm_01.fbx"
+sha256 = "4c79b6fc66a66910538f9a44a73e7486f83a571d70c04ad19cae4539eee174f1"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A short, sturdy palm with a thick, textured trunk and a dense crown of broad, dark green fronds, some tipped with orange, suggesting a tropical setting. The low-poly silhouette is compact and angular, with a slightly weathered look that fits a jungle biome."
+differs = "The shortest and most compact, with orange-tipped fronds; ideal for dense undergrowth or foreground accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1396
+meshes = 4
+materials = 1
+size = [5.9675856, 8.260814, 6.3449154]
+
+[mesh.sm_env_tree_palm_01_coconuts_01]
+name = "SM_Env_Tree_Palm_01_Coconuts_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Palm_01_Coconuts_01.fbx"
+sha256 = "b83976f3ac3b595358295bac8cb1e450c161b9ef1e322730d06a956187a11c02"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tight cluster of low-poly green coconuts, rendered in a bright, yellowish lime green with flat, faceted shading that gives each nut a chunky, gem-like appearance. The irregular bunch is composed of roughly a dozen overlapping spheres, with no visible stem or leaves, making it ideal for placing directly on the ground."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 684
+meshes = 1
+materials = 1
+size = [0.86403894, 0.6752691, 0.8173]
+
+[mesh.sm_env_tree_palm_02]
+name = "SM_Env_Tree_Palm_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Palm_02.fbx"
+sha256 = "033689a89afbec4b89afb501c4e463aac3de19f2b6ea1065dc491f43d889c390"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A short, stout palm with a thick, dark trunk and a dense crown of broad, drooping fronds in muted greens and browns, featuring a slight lean that adds natural character to jungle scenes."
+differs = "The stoutest and most leaned, with muted browns; best for windswept coastal or swamp edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1360
+meshes = 4
+materials = 1
+size = [5.4600077, 4.179406, 8.094069]
+
+[mesh.sm_env_tree_palm_03]
+name = "SM_Env_Tree_Palm_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Palm_03.fbx"
+sha256 = "c37271f59e5845723e5303b3b617b3b3947e4531d0e582c470870195831732fc"
+atlas = "ANIMATION - Base Locomotion/T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A tall, slender palm with a gently curving trunk and a compact, star-shaped crown of broad, angular fronds, rendered in a dark, desaturated grey-green palette. The low-poly faceting is pronounced, giving the foliage a crisp, crystalline look that suits stylized jungle scenes."
+differs = "The tallest and most slender, with a desaturated grey-green palette; perfect for background silhouettes or vertical variety."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1400
+meshes = 4
+materials = 2
+size = [5.642045, 12.31086, 5.99879]
+
+[mesh.sm_env_tree_palm_04]
+name = "SM_Env_Tree_Palm_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Palm_04.fbx"
+sha256 = "969162f6d1418395fb3d0c1fb4e1363fb405f2d63a6d56186f6607f7cdbd3234"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A squat, broad palm with a short, thick trunk and a dense crown of dark green fronds, accented by bright orange and yellow highlights on the upper leaves. The foliage is chunky and angular, with a slight lean to the trunk that gives it a natural, windswept look."
+differs = "The broadest and most squat, with bright orange-yellow highlights; best for hero focal points or canopy gaps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1400
+meshes = 4
+materials = 1
+size = [6.3449154, 7.0028954, 7.0064554]
+
+[mesh.sm_env_tree_pohutukawa_01]
+name = "SM_Env_Tree_Pohutukawa_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Pohutukawa_01.fbx"
+sha256 = "b818aab23e4bb1e2ff41ece6f56f61db2588bb4121f41881ac82ef721b180f3a"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A broad, low canopy of dense, dark olive foliage with a hint of red-brown, supported by a short, thick trunk that flares into a wide base. The leaves form a rounded, almost spherical crown with a slightly irregular, natural silhouette, giving it a mature, established look."
+differs = "Largest and most detailed, with the broadest, most spherical canopy and red-brown hints, ideal as a hero centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 19210
+meshes = 5
+materials = 1
+size = [9.740332, 7.663725, 7.6652746]
+
+[mesh.sm_env_tree_pohutukawa_02]
+name = "SM_Env_Tree_Pohutukawa_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Pohutukawa_02.fbx"
+sha256 = "f474753ada718d12068e1e64850a8680bc3c5cea958e793127d7ee6eea3edf23"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A gnarled, low-poly tree with a dense, irregular canopy of dark olive and brown foliage, supported by a thick, twisting trunk and a broad, flat base of dark grey rock or earth. The silhouette is wide and squat, with jagged, angular branches protruding from the mass, giving it a weathered, ancient appearance suited for."
+differs = "Most gnarled and weathered, with a wide rocky base and jagged branches, perfect for ancient coastal or jungle ruins."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 17898
+meshes = 5
+materials = 1
+size = [8.819191, 6.260808, 8.139724]
+
+[mesh.sm_env_tree_pohutukawa_03]
+name = "SM_Env_Tree_Pohutukawa_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Pohutukawa_03.fbx"
+sha256 = "de5872f19a1c1015aee385a21c16256beacac8ede663b8043a8dcd4d30d56da8"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A stout, broad-trunked tree with a dense, irregular canopy of dark green and brown foliage, accented by small red blossoms. The trunk is thick and gnarled, with a dark, textured bark that suggests age and resilience. Its wide, spreading form makes it ideal for filling mid-ground space in a tropical biome."
+differs = "Mid-sized with red blossoms and a thick trunk, best for filling mid-ground space without dominating the scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6866
+meshes = 3
+materials = 1
+size = [4.6780825, 5.145452, 4.250708]
+
+[mesh.sm_env_tree_pohutukawa_04]
+name = "SM_Env_Tree_Pohutukawa_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tree_Pohutukawa_04.fbx"
+sha256 = "87b6f257454539f8d2eb5a6555ab5e5426fc349c98fdebd382df1f2101faa295"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A stout, blocky tree with a thick, dark trunk and a dense, jagged canopy of dark brown and black foliage, accented by a few vivid green leaves. The low-poly silhouette is broad and irregular, giving it a weathered, ancient look that suits a jungle or coastal setting."
+differs = "Smallest and most blocky, with a dark, jagged canopy and vivid green accents, suited for background or distant coastal clusters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6150
+meshes = 3
+materials = 1
+size = [5.0559196, 4.2227, 4.528519]
+
+[mesh.sm_env_tubes_01]
+name = "SM_Env_Tubes_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Tubes_01.fbx"
+sha256 = "20a89e5fe22c999f1f4d4c2ecfd6c5effea218ba3c72b3f4b07066f0eb236094"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A cluster of four jagged, tapering stalagmite-like spikes rising from a shared base, with a warm sandy tan colour and subtle darker striations suggesting layered rock. The forms are irregular and chunky, with flat, faceted surfaces that give them a weathered, natural look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 924
+meshes = 3
+materials = 1
+size = [1.514706, 1.633429, 1.197792]
+
+[mesh.sm_env_vines_01]
+name = "SM_Env_Vines_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Vines_01.fbx"
+sha256 = "e033cac002348adcde06fe10364462d5b3c931209de65253746eff58c507e56a"
+atlas = "POLYGON - Ancient Egypt/PolygonAncientEgypt_Texture_01_C.png"
+textures = "PolygonAncientEgypt_Texture_01_C.png"
+description = "A cluster of five vertical, slightly tapering vines with a single looping strand weaving between them, creating a natural, irregular curtain. The muted brown and grey-green tones suggest dry or aged vegetation, with a rough, matte texture that reads as organic and weathered."
+differs = "The widest and most complex curtain, with the most strands and a looping weave, ideal for dense, layered jungle walls."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 392
+meshes = 1
+materials = 1
+size = [1.434697, 2.141724, 0.430327]
+
+[mesh.sm_env_vines_02]
+name = "SM_Env_Vines_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Vines_02.fbx"
+sha256 = "38392cd6d1fd9c371c0e88e68f7efac0df8306c8ce3391b3f787878302e8fdbb"
+atlas = "POLYGON - Ancient Egypt/PolygonAncientEgypt_Texture_01_C.png"
+textures = "PolygonAncientEgypt_Texture_01_C.png"
+description = "Two slender, weathered brown vines hang vertically, one straight and one with a small loop, tapering to pointed tips with a dry, woody texture suited for jungle canopy or ruin edges."
+differs = "The most minimal and sparse, with only two strands and no leaf detail, best for subtle, dry accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 186
+meshes = 1
+materials = 1
+size = [0.63238704, 2.141724, 0.36991102]
+
+[mesh.sm_env_vines_03]
+name = "SM_Env_Vines_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Vines_03.fbx"
+sha256 = "485d110f9d046b9bc9d5f401d13b5702d6908cadeaf7ac4f90f7f9d68dd7562a"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A slender, vertical hanging vine with a knotted, irregular profile, rendered in muted olive and brown tones with subtle leaf clusters. The texture suggests a weathered, organic surface, making it ideal for adding vertical detail to jungle canopies or cave entrances."
+differs = "The longest and most detailed vertical vine, with knotted texture and leaf clusters, perfect for tall canopy drops."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 640
+meshes = 1
+materials = 1
+size = [0.463804, 6.545013, 0.457004]
+
+[mesh.sm_env_vines_04]
+name = "SM_Env_Vines_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Vines_04.fbx"
+sha256 = "881de81f8f1c8d7d0252131cc783e71b9a34d3e71c4345922fedf07ae9ada104"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A slender, vertical vine with a gentle, organic curve, rendered in a muted olive-green with subtle darker striping along its length. Its simple, unadorned surface makes it ideal for adding subtle vertical detail to jungle walls or hanging from branches without visual clutter."
+differs = "The plainest and most uniform, with no knots or leaves, offering a clean, uncluttered vertical line."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 144
+meshes = 1
+materials = 1
+size = [0.238532, 4.9135113, 0.352718]
+
+[mesh.sm_env_vines_05]
+name = "SM_Env_Vines_05"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Vines_05.fbx"
+sha256 = "300503d1c7b95b36d1cc8151adf2b0e532c7860e77a36bea37ae02629fd6ee80"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A slender, gently arching vine with a knobby, irregular surface and a muted olive-green hue, featuring a few small, curled tendrils that dangle from its underside. Its weathered, organic texture and natural curve make it ideal for adding subtle, hanging foliage detail to jungle environments."
+differs = "The only horizontal arching vine with tendrils, uniquely suited for draping across gaps or under branches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 474
+meshes = 1
+materials = 1
+size = [0.254647, 1.217428, 4.9419804]
+
+[mesh.sm_env_volcano_01]
+name = "SM_Env_Volcano_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Volcano_01.fbx"
+sha256 = "3086643fcb981a9e90bdad794f89a108ae6df0ac1ada3339b9b3291af28b01c0"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A squat, conical mound with a wide, flared base and a narrow, jagged peak, rendered in a pale, sandy beige with a low-poly faceted surface. The top features a dark, hollowed crater, giving it the appearance of a small, dormant volcano or a weathered rock formation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 586
+meshes = 1
+materials = 1
+size = [16.763475, 17.416842, 16.814018]
+
+[mesh.sm_env_water_plane_01]
+name = "SM_Env_Water_Plane_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Env_Water_Plane_01.fbx"
+sha256 = "47dbb745231ced49c8221637371c5cce15cbf6cc1f1aca161199382933dffed2"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A flat, square plane of murky, dark water with a subtle ripple texture, featuring a small wooden dock and a cluster of colorful, low-poly rocks and debris near one edge. The surface is broken by patches of green algae and a few lily pads, giving it a swampy, tropical feel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20000
+meshes = 1
+materials = 1
+size = [50.0, 0.000004, 50.0]
+
+[mesh.sm_prop_barrel_01]
+name = "SM_Prop_Barrel_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Barrel_01.fbx"
+sha256 = "f075ad5d82087b27b8aae2ceb15854005504f4b408d227932d052035c221ac0e"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A stout, open-topped wooden barrel with a bulging midsection, bound by three pale grey metal hoops. The light tan staves are weathered and slightly uneven, with a small dark knot or hole visible on one side, suggesting a rustic, well-used container for jungle storage or brewing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1178
+meshes = 1
+materials = 1
+size = [0.858274, 1.070222, 0.87939]
+
+[mesh.sm_prop_barrel_broken_01]
+name = "SM_Prop_Barrel_Broken_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Barrel_Broken_01.fbx"
+sha256 = "669e3d185f5bc9ec4e22d69a1e0ba667082d4134c9cc073fc669c81a9515595f"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered wooden barrel lying on its side, its staves splintered and burst outward at one end, held together by pale grey metal hoops that remain intact. The pale, desaturated wood shows grain and age, suggesting a discarded or ruined container left in a jungle environment."
+differs = "The intact, upright barrel shape with burst staves, ideal as a standing prop or cover, not just flat debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1410
+meshes = 1
+materials = 1
+size = [0.858274, 0.863212, 1.507608]
+
+[mesh.sm_prop_barrel_broken_02]
+name = "SM_Prop_Barrel_Broken_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Barrel_Broken_02.fbx"
+sha256 = "d7a297b01c1611d1e0f79bb485e6a1571ba7f1e757ef282b2b7689e96a220873"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A low, flattened heap of splintered wooden planks and pale grey metal hoops, suggesting a shattered barrel that has been crushed or collapsed. The weathered, tan wood and dull metal rings are scattered in a loose, irregular pile, giving it a ruined, abandoned look perfect for jungle debris or a broken supply cache."
+differs = "The flattest, most crushed variant, best for ground-level scatter or a collapsed cache, lacking any upright form."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 798
+meshes = 1
+materials = 1
+size = [1.8772559, 0.673223, 2.159468]
+
+[mesh.sm_prop_coconut_01]
+name = "SM_Prop_Coconut_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coconut_01.fbx"
+sha256 = "db4fcd303c59ff24fca9cfe7d9de83c9b150c4447042b9681433dae67bcf7630"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A squat, faceted sphere with a pointed top, carved by three deep vertical grooves that suggest a husk's natural seams. The matte, medium-brown surface has a subtle, weathered tone, giving it a dry, fibrous look perfect for jungle floor scatter or tropical props."
+differs = "The most detailed and largest, with carved husk seams and weathered brown texture, ideal for jungle floor scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 180
+meshes = 1
+materials = 1
+size = [0.287876, 0.300232, 0.288022]
+
+[mesh.sm_prop_coconut_02]
+name = "SM_Prop_Coconut_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coconut_02.fbx"
+sha256 = "012a63c48201d1727e786b14288dd1f3697fb56625fdf1e4f2415223a1274987"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A squat, faceted green sphere with a slightly flattened base, resembling an unripe coconut or a husked nut. The low-poly surface is a uniform, bright lime green with no visible markings, pores, or fibrous texture, giving it a clean, stylized appearance."
+differs = "The plainest and smallest, a uniform bright green unripe nut with no markings, suited for clean stylized props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 76
+meshes = 1
+materials = 1
+size = [0.278008, 0.288962, 0.278642]
+
+[mesh.sm_prop_coconut_half_01]
+name = "SM_Prop_Coconut_Half_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coconut_Half_01.fbx"
+sha256 = "94b9c0e14cb265156b1913152de1d175e771e03cb13d959c798fcb0524033e49"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A hollowed, low-poly coconut shell with a jagged, broken rim, revealing a bright white interior that contrasts with the faceted brown exterior. The outer surface features a small dark spot, suggesting a natural blemish, and the shape is wide and shallow, ideal for use as a bowl or a small container in a jungle scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 162
+meshes = 1
+materials = 1
+size = [0.287116, 0.18085, 0.271318]
+
+[mesh.sm_prop_coral_01]
+name = "SM_Prop_Coral_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coral_01.fbx"
+sha256 = "cc6f2cde5f9fe9b5ed20f112d14448e53eaea3569a5eef852841f7c024528152"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A low, rounded cluster of slender, finger-like fronds radiating outward from a dark, compact base, giving it a soft, feathery silhouette. The pale lavender-pink tips fade to a deeper purple at the centre, with a subtle, mottled texture that suggests a fleshy, organic surface."
+differs = "The only purple-tipped finger coral, with the most fronds and a feathery silhouette for dense reef clusters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 372
+meshes = 1
+materials = 1
+size = [0.255607, 0.277178, 0.257443]
+
+[mesh.sm_prop_coral_02]
+name = "SM_Prop_Coral_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coral_02.fbx"
+sha256 = "5ab24c79c3e53cb1345b89a56f519c87707d792e0b58b5d56930830aacf0fdbf"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A small, pale coral cluster with three thick, rounded branches rising from a short, cylindrical base, rendered in a soft, washed-out pinkish-beige with subtle darker mottling along the branch tips. The surface is smooth and matte, giving it a bleached or sun-faded appearance that suits a shallow, bright reef setting."
+differs = "The only bleached, washed-out beige coral with just three thick branches, ideal for a sun-faded shallow reef."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 212
+meshes = 1
+materials = 1
+size = [0.23275599, 0.23191, 0.17569]
+
+[mesh.sm_prop_coral_03]
+name = "SM_Prop_Coral_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coral_03.fbx"
+sha256 = "8caf14da2ee4d508bd615ef2d749a489a7bdc0beab6228cf8a5b23c09e3492f7"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A stout, branching coral in a warm sandy orange, with a thick central trunk and four blunt, upward-reaching arms. The low-poly facets give it a chunky, stylized look, and the surface is smooth and unblemished, suggesting a healthy, vibrant reef piece."
+differs = "The only warm sandy-orange coral with a thick trunk and four blunt arms, the most vibrant and chunky."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 268
+meshes = 1
+materials = 1
+size = [0.20810202, 0.255204, 0.18675399]
+
+[mesh.sm_prop_coral_04]
+name = "SM_Prop_Coral_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coral_04.fbx"
+sha256 = "60eeab061a233a072a5dcf465e30645f3a5f7bf9ed52a07b28fe52ba7768afd5"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A branching, antler-like coral with a pale pinkish-white hue and a matte, slightly porous texture. Its slender, tapering arms curve upward and outward from a narrow base, giving it a delicate, organic silhouette that reads clearly as a reef accent."
+differs = "The only antler-like coral in pale pinkish-white, with the widest spread and a delicate, porous look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 688
+meshes = 1
+materials = 1
+size = [0.481244, 0.435146, 0.105469]
+
+[mesh.sm_prop_coral_05]
+name = "SM_Prop_Coral_05"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coral_05.fbx"
+sha256 = "b7c38b94cedaaf01cf985cce23119e1be50216f924606dee769821cf3b1bb9bd"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A cluster of branching, antler-like fronds rising from a narrow base, rendered in a pale, icy blue-grey with a matte, slightly translucent look. The tips are blunt and rounded, giving it a soft, organic silhouette that reads as a stylized sea fan or staghorn coral."
+differs = "The only icy blue-grey staghorn coral, with the highest triangle count and the most intricate branching."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1266
+meshes = 1
+materials = 1
+size = [0.498115, 0.445182, 0.45011598]
+
+[mesh.sm_prop_coral_06]
+name = "SM_Prop_Coral_06"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coral_06.fbx"
+sha256 = "9b1108819007398cffb841ec31b04c466a9c8951ffab801bec2cc6f3ba2e6c82"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A low, rounded lump with a slightly irregular, organic silhouette, resembling a smooth boulder or a worn, featureless coral head. Its surface is a uniform, pale lavender-grey with no visible texture or branching structures, giving it a clean, minimalist look that suits a stylized underwater or rocky environment."
+differs = "The only uniform lavender-grey lump with no texture, the plainest and most minimalist filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 168
+meshes = 1
+materials = 1
+size = [0.351865, 0.239926, 0.332748]
+
+[mesh.sm_prop_coral_07]
+name = "SM_Prop_Coral_07"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coral_07.fbx"
+sha256 = "8319fee5af6e364e587f7967afa5bff7aec66022f24ceb1684d1da7b0c135b1e"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A low, rounded lump of pale pink coral with a slightly irregular, faceted surface, resembling a smooth brain coral or a weathered stone. Its soft, matte texture and muted colouring give it a natural, unobtrusive look, making it a versatile filler for tropical seabeds or rocky shores."
+differs = "The only pink faceted lump, a smooth brain-coral style rock for subtle seabed variety."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 166
+meshes = 1
+materials = 1
+size = [0.351865, 0.239926, 0.332748]
+
+[mesh.sm_prop_coral_08]
+name = "SM_Prop_Coral_08"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coral_08.fbx"
+sha256 = "d424fcc7c13cf97c461df514f61df66bf103992808e81aff2150ee918728912b"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A flat, low, roughly oval slab with a slightly irregular, lumpy rim, rendered in a pale lavender-blue. The surface is smooth and matte, with no visible branching or texture, resembling a smooth stone or a simple patch of soft coral."
+differs = "The only flat, oval slab, the lowest and widest asset, perfect as a ground patch or stepping stone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 1
+size = [0.651536, 0.03997, 0.645568]
+
+[mesh.sm_prop_coral_09]
+name = "SM_Prop_Coral_09"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coral_09.fbx"
+sha256 = "c8acf7e7ccc0f0b9e5ffe5dd09dd6959dc9b82a7fa32bac2303d0aaa075f9603"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A flat, low-lying cluster of pale turquoise polyps, forming a broad, irregular disc with a slightly darker, recessed center and a subtly ridged rim. Its smooth, matte surface suggests a soft, fleshy texture, making it ideal for adding organic detail to shallow seabeds or reef edges."
+differs = "The only turquoise option, with a recessed center and ridged rim for extra surface detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 106
+meshes = 1
+materials = 1
+size = [0.461363, 0.03871, 0.432993]
+
+[mesh.sm_prop_coral_10]
+name = "SM_Prop_Coral_10"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coral_10.fbx"
+sha256 = "5be381e62c857b5062a6a1f390362dda0c4599bd190765b2369b3dd1a87239ce"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A flat, pale pink disc with a slightly irregular, organic edge, resembling a cross-section of a sea sponge or a smooth coral polyp. Its surface is matte and untextured, with a subtle, darker pink rim that suggests a soft, fleshy material."
+differs = "The plainest and smallest, a simple pink disc with no interior detail, best for minimal filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 106
+meshes = 1
+materials = 1
+size = [0.459628, 0.061716, 0.40533298]
+
+[mesh.sm_prop_coral_11]
+name = "SM_Prop_Coral_11"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Coral_11.fbx"
+sha256 = "0db661e84e040ecf5d4210547e050b2ed438721f8c65bd48d745a3c9bc78172f"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A flat, low-lying patch of coral with a soft, rounded, organic silhouette, rendered in a pale peach hue with a subtle yellow rim. Its smooth, undulating surface suggests a soft, fleshy texture rather than a hard, jagged structure, making it ideal for adding gentle colour variation to a seabed."
+differs = "The largest and most detailed, with a peach hue and undulating surface for broad seabed coverage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 186
+meshes = 1
+materials = 1
+size = [0.979816, 0.058918, 0.89433]
+
+[mesh.sm_prop_giantclam_01]
+name = "SM_Prop_GiantClam_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_GiantClam_01.fbx"
+sha256 = "d871dbe3fcefb8d3e1ece3c324138a8d678861b99a6e6bfa9bacaa0f03ebab66"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A squat, rounded bivalve with a pale cream, ridged shell that flares outward at the lip, revealing a soft blue inner rim. The shell is closed, with a slightly weathered, matte finish that suggests a natural, sandy habitat."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1460
+meshes = 3
+materials = 1
+size = [0.86721, 0.449085, 0.756492]
+
+[mesh.sm_prop_message_bottle_01]
+name = "SM_Prop_Message_Bottle_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Message_Bottle_01.fbx"
+sha256 = "027c3edeaf0da54a6eaf433302e3a32b961762296b5a4469109a6db26f8233e6"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A slender, dark brown glass bottle with a long neck, sealed by a pale cork stopper, featuring a subtle sheen that suggests a smooth, polished surface. The proportions are tall and narrow, giving it a classic, utilitarian look suited for carrying a small note or potion."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 374
+meshes = 1
+materials = 2
+size = [0.12243, 0.470224, 0.122432]
+
+[mesh.sm_prop_pirateflag_01]
+name = "SM_Prop_PirateFlag_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_PirateFlag_01.fbx"
+sha256 = "cd1a1a55026c3e0122572b1e3bcfc911fd52ddfb9f222bf99e41900b5a0ca04b"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered wooden watchtower with a tattered black pirate flag bearing a white skull and crossbones, supported by a tripod of ropes and topped with a small grass patch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3701
+meshes = 1
+materials = 1
+size = [2.986526, 5.41145, 2.7331119]
+
+[mesh.sm_prop_plank_01]
+name = "SM_Prop_Plank_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Plank_01.fbx"
+sha256 = "cb26ad51ff9ae1ad903b06919fb2c0bde159bd4db5de8600fb0d2f61f18c81bf"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A long, flat, weathered wooden board with a pale, sun-bleached tan finish and subtle grain, featuring a darker, greyish stain patch near one end and slightly chipped, uneven edges, suggesting a rustic, worn plank suitable for jungle paths, bridges, or debris."
+differs = "Longest and most intact, with the most uniform surface, ideal for clean, unbroken walkways."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 58
+meshes = 1
+materials = 1
+size = [3.819413, 0.08203, 0.45366699]
+
+[mesh.sm_prop_plank_02]
+name = "SM_Prop_Plank_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Plank_02.fbx"
+sha256 = "994ed0c293c98c5b876f9b8dfc4fd4a4baf2729ba969fb1f5b62c6ef67c54a5e"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A long, narrow, flat plank of pale, weathered wood with a slightly rough, splintered edge at one end and a darker, greyish patch of wear or staining near the other, suggesting a single, functional piece of timber for jungle pathways, bridges, or scaffolding."
+differs = "Nearly identical to 01 but slightly shorter, with a splintered end and a more pronounced stain patch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 58
+meshes = 1
+materials = 1
+size = [3.7368531, 0.08203, 0.45366699]
+
+[mesh.sm_prop_plank_03]
+name = "SM_Prop_Plank_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Plank_03.fbx"
+sha256 = "2f9f362eda45dc0aa4454c6cbc694cccc9ccc6e1db99998d5c14043ce614341d"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A long, thin, weathered wooden plank with a pale, sun-bleached tan finish and a darker, greyish-brown patch near one end, suggesting age or water staining. Its surface shows subtle grain and slight warping, giving it a rustic, hand-hewn look ideal for jungle walkways, broken bridges, or scattered debris."
+differs = "Thickest and most warped, with the lowest triangle count, best for uneven, hand-hewn debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 34
+meshes = 1
+materials = 1
+size = [3.7397351, 0.12625, 0.453664]
+
+[mesh.sm_prop_plank_04]
+name = "SM_Prop_Plank_04"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Plank_04.fbx"
+sha256 = "068d9a263956d7e9516f97a1e9f97328c57081c025629487d4cb3c88ab61b36a"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A long, weathered wooden plank with a pale, sun-bleached finish and a distinct dark, greyish patch of rot or staining near one end. The surface is rough and uneven, with a splintered, broken tip that gives it a worn, rustic appearance."
+differs = "Shortest and most damaged, with a distinct broken tip, perfect for scattered, ruined debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [3.059565, 0.08203, 0.45366198]
+
+[mesh.sm_prop_raft_01]
+name = "SM_Prop_Raft_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Raft_01.fbx"
+sha256 = "94cdf551fdc10fa9a2daa078fc02cdc8dd8393c44791235acc5d1ce1007e4c84"
+atlas = "POLYGON - Swamp Marshland - Nature Biomes/PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A rectangular raft of pale, weathered logs lashed together with dark rope, featuring a small triangular mast at one end. The wood is a light, sun-bleached tan with visible grain, and the structure appears sturdy and ready for river travel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4820
+meshes = 1
+materials = 1
+size = [2.681382, 1.519061, 4.678326]
+
+[mesh.sm_prop_raft_oar_01]
+name = "SM_Prop_Raft_Oar_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Raft_Oar_01.fbx"
+sha256 = "e65036e7613f5cce46cd0b6b8de9263cfefa9c7f9c845aefdba812c6220c737a"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A long, slender wooden shaft with a flat, rounded blade at one end, carved from pale, sun-bleached timber with subtle grain. The blade shows a slight scoop and worn edges, suggesting a functional paddle for a small raft or canoe."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 196
+meshes = 1
+materials = 1
+size = [0.286748, 0.092146, 4.765228]
+
+[mesh.sm_prop_rum_bottle_01]
+name = "SM_Prop_Rum_Bottle_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Rum_Bottle_01.fbx"
+sha256 = "8f2528432e70b3d38307d8fa194a08ce1e2508a14c93a764ff1e470a619e2a86"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "PolygonClub_Texture_01.psd"
+description = "A stout, faceted brown bottle with a short white neck and a cork stopper, featuring a dark, cross-shaped patch on one side that suggests a repair or a pirate emblem. The low-poly shading gives it a matte, ceramic look, and the simple silhouette makes it read clearly as a generic prop for taverns or ship cabins."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 396
+meshes = 1
+materials = 1
+size = [0.19162, 0.419457, 0.19799]
+
+[mesh.sm_prop_shipwreck_01]
+name = "SM_Prop_ShipWreck_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_ShipWreck_01.fbx"
+sha256 = "3a77b4cf99b84e920ccc9c943140af6b51b7c1439c58a571346673824e079fed"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered wooden hull, broken and beached, with only the lower ribs and planking remaining. The curved, splintered frame is bleached and worn, suggesting a long-abandoned vessel stranded on a tropical shore."
+differs = "The plainest and smallest wreck, lacking any porthole detail, best for a distant background prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2573
+meshes = 1
+materials = 1
+size = [8.270066, 6.409468, 11.05029]
+
+[mesh.sm_prop_shipwreck_02]
+name = "SM_Prop_ShipWreck_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_ShipWreck_02.fbx"
+sha256 = "34a03382e11ef02c1d1b705da3437047774c73edde3505e327b37da9dae23fe0"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered, broken wooden hull with jagged, splintered edges and a skeletal frame of curved ribs exposed, suggesting a long-abandoned vessel. The pale, sun-bleached timber features dark, worn patches and a single circular porthole, giving it a distinct, recognizable silhouette for a jungle ruin."
+differs = "The largest and most detailed wreck, featuring a circular porthole, ideal for a close-up focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2667
+meshes = 1
+materials = 1
+size = [8.588774, 7.106286, 12.414558]
+
+[mesh.sm_prop_starfish_01]
+name = "SM_Prop_Starfish_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Starfish_01.fbx"
+sha256 = "236966f92c70738ba37a612227664c1478dd1144f837d779ab8eca2829218604"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A chunky, five-armed starfish with a plump, raised central disc and slightly tapered, rounded arms. It is a vivid magenta-pink with a glossy, wet-looking finish, dotted with small yellow spots clustered on the upper surface."
+differs = "Glossy magenta with yellow spots, the only one with a wet, shiny finish for vibrant reef scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 288
+meshes = 1
+materials = 1
+size = [0.181766, 0.044129003, 0.17274499]
+
+[mesh.sm_prop_starfish_02]
+name = "SM_Prop_Starfish_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Starfish_02.fbx"
+sha256 = "11fc3e32e3db73ec398e7a8ebff4b617b105652ba9bbf1a3736ea35efa201bf3"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A chunky, five-armed starfish with a plump, puffy body and slightly uneven, rounded tips, painted in a warm coral-red with a scattering of small white spots across its upper surface. The low-poly facets give it a stylized, sculpted look, and the matte finish suggests a dry, beach-worn texture, making it ideal for a..."
+differs = "Matte coral-red with white spots, the driest and most beach-worn, ideal for sandy shores."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 290
+meshes = 1
+materials = 1
+size = [0.181766, 0.042112, 0.17274499]
+
+[mesh.sm_prop_starfish_03]
+name = "SM_Prop_Starfish_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Starfish_03.fbx"
+sha256 = "b74ba59c2d31ad8c60b80660375139dc74da397a19a24464cff4fedceba427ee"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A five-armed starfish with a raised, textured central disc and tapering arms, rendered in a glossy, saturated cyan-blue that suggests wet or polished skin. The surface is smooth with subtle darker blue striping along each arm, giving it a clean, stylized look ideal for tropical shorelines or shallow water scenes."
+differs = "The largest and most detailed, with blue striping and a polished look for shallow water focal points."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 395
+meshes = 1
+materials = 1
+size = [0.46203, 0.046888, 0.439417]
+
+[mesh.sm_prop_tiki_torch_01]
+name = "SM_Prop_Tiki_Torch_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Tiki_Torch_01.fbx"
+sha256 = "5960239dc8f1c3cdd9a69e2d6aaadf88ea9d6129e7705dfa07665938768b338e"
+atlas = "POLYGON - Swamp Marshland - Nature Biomes/PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A tall, slender torch on a thin grey pole, topped with a pale, wrapped head bound by dark cord and a small, weathered wooden collar. The muted, desaturated palette and worn, fibrous texture suggest an aged, functional jungle prop ready for ambient lighting."
+differs = "Most detailed and widest, with a grey pole and wooden collar; best for a lit, aged torch prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1334
+meshes = 1
+materials = 1
+size = [0.32030702, 2.226669, 0.332342]
+
+[mesh.sm_prop_tiki_torch_02]
+name = "SM_Prop_Tiki_Torch_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Tiki_Torch_02.fbx"
+sha256 = "138e35ff7c30b48a1b5a6f1eb24123f86d3e05a8a0a903c28f36444c6a52db59"
+atlas = "POLYGON - Swamp Marshland - Nature Biomes/PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A slender, weathered wooden pole topped with a small, pale woven basket, bound by dark cord and holding a faint orange glow, suggesting a simple, functional torch for jungle lighting."
+differs = "Only one with an orange glow in its basket; ideal for an already-burning torch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 712
+meshes = 1
+materials = 1
+size = [0.24751599, 2.306591, 0.24866399]
+
+[mesh.sm_prop_tiki_torch_03]
+name = "SM_Prop_Tiki_Torch_03"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Tiki_Torch_03.fbx"
+sha256 = "03eb2f454e0b726092e57e6e095b173df594d40590dfe7fd1cd57f48d5516e09"
+atlas = "POLYGON - Swamp Marshland - Nature Biomes/PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A slender, weathered wooden pole topped with a small, pale green, wrapped bundle, suggesting a torch ready for lighting. The muted, desaturated tones and simple, low-poly construction give it a rustic, aged appearance suitable for a jungle environment."
+differs = "Plainest and greenest, with no glow or collar; best as an unlit, rustic stick."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 728
+meshes = 1
+materials = 1
+size = [0.189466, 2.169847, 0.228158]
+
+[mesh.sm_prop_whale_skeleton_01]
+name = "SM_Prop_Whale_Skeleton_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Whale_Skeleton_01.fbx"
+sha256 = "25e05559485821fcd8161bef84164701d507aa6444645bba204f16b8043e9a7d"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A weathered, bleached whale skeleton with a long ribcage and a blue-grey tail fluke, posed in a gentle swimming curve. The bone texture is pale and sandy, with a dark, hollow eye socket and a distinct jawline. The clean, low-poly silhouette makes it a striking, instantly readable prop for beach or ocean-floor scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8396
+meshes = 4
+materials = 1
+size = [12.060354, 6.158278, 29.63685]
+
+[mesh.sm_prop_whale_skeleton_rib_01]
+name = "SM_Prop_Whale_Skeleton_Rib_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Whale_Skeleton_Rib_01.fbx"
+sha256 = "5f2bdb9d5a3ddea4150217f685f033eef52a6aee0858e5e28b102e01bd8f8713"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "Four slender, gently curved bone segments in a pale, weathered beige, arranged as two pairs of opposing arcs. Each piece tapers to a rounded end and features subtle surface mottling, suggesting aged, sun-bleached bone."
+differs = "The largest and most detailed, with four paired curved segments for framing or arch structures."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 174
+meshes = 1
+materials = 1
+size = [1.556267, 0.568604, 4.804448]
+
+[mesh.sm_prop_whale_skeleton_rib_02]
+name = "SM_Prop_Whale_Skeleton_Rib_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Whale_Skeleton_Rib_02.fbx"
+sha256 = "a3c3c28cf8755b819b0e5b5f323b9bc0e08b6db6005e0f21b92f4e4db24721a2"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A long, gently curved bone fragment with a pale, weathered bone-white finish, tapering from a broader, broken-looking base to a pointed tip. Its low-poly faceting gives it a chipped, aged appearance, suggesting a single rib piece from a large skeleton, ideal for scattered jungle floor debris."
+differs = "The smallest and plainest, a single broken fragment for scattered floor debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [0.506963, 0.493514, 2.541877]
+
+[mesh.sm_prop_whale_skeleton_ribcage_01]
+name = "SM_Prop_Whale_Skeleton_Ribcage_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Whale_Skeleton_Ribcage_01.fbx"
+sha256 = "a0910bdb845a45ec5418cd7ea12c83fa2e5882d83d00214e81a862c1c2518820"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A weathered, bone-white ribcage with four long, curved ribs descending from a short, knobby spine, forming a wide, open arch. The surface is cracked and pitted, with a pale sandy hue and subtle darker staining that suggests age and exposure."
+differs = "The largest and most detailed with four ribs, ideal as a sprawling jungle centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2656
+meshes = 1
+materials = 1
+size = [5.388747, 6.279645, 5.10804]
+
+[mesh.sm_prop_whale_skeleton_ribcage_02]
+name = "SM_Prop_Whale_Skeleton_Ribcage_02"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Whale_Skeleton_Ribcage_02.fbx"
+sha256 = "20053ffecdb1ad81b8c496ea980f9ef83e8617e07e0588e623e063a3711c2695"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A weathered, bone-white ribcage arch with a short, blocky spine stub at the top, its two long, curved ribs tapering to sharp points. The low-poly facets give it a chunky, stylized look, suggesting a bleached, sun-dried relic perfect for a jungle floor or a pirate's lair."
+differs = "The plainest and flattest with two ribs, best for a low-profile floor prop or backdrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 724
+meshes = 1
+materials = 1
+size = [5.350093, 6.1665144, 1.388704]
+
+[mesh.sm_prop_whale_skeleton_shoulder_01]
+name = "SM_Prop_Whale_Skeleton_Shoulder_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Whale_Skeleton_Shoulder_01.fbx"
+sha256 = "5532ea1a489f274d6111cd9568fb8ff7ed5d0a3063fd12ca5e34983400f3ab2b"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A broad, flattened scapula blade with a thick, blocky shoulder joint, rendered in pale, sun-bleached bone with subtle grey mottling for a weathered, aged look. The low-poly facets give it a chunky, stylised appearance, and the piece is broken and jagged along its edges, suggesting a fossilised relic or a scavenged..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 302
+meshes = 1
+materials = 1
+size = [2.704072, 0.585024, 3.240236]
+
+[mesh.sm_prop_whale_skeleton_skull_01]
+name = "SM_Prop_Whale_Skeleton_Skull_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Whale_Skeleton_Skull_01.fbx"
+sha256 = "154426e3e4f3b0c18651cb5a502fa3210d7b1d4734e9e022e8a326c74392c8a5"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A weathered, bone-white whale skull with a long, tapered upper jaw and a deeply curved lower jaw, featuring a hollow eye socket and a blunt, blocky cranium. The low-poly facets give it a chunky, stylized look, and the pale, matte surface suggests sun-bleached bone, making it ideal for a jungle ruin or beach scavenger.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1130
+meshes = 2
+materials = 1
+size = [3.844433, 3.793652, 7.4744663]
+
+[mesh.sm_prop_whale_skeleton_tail_01]
+name = "SM_Prop_Whale_Skeleton_Tail_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Whale_Skeleton_Tail_01.fbx"
+sha256 = "e8b772de3380bb72306f38091c504c4caa4b327444a37b40cb8b01c9591a864f"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A weathered blue whale tail fluke, severed at the peduncle, with a jagged, exposed reddish-brown bone core at the cut end. The pale blue surface is marked with subtle darker streaks and small red spots, suggesting age and wear."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1002
+meshes = 1
+materials = 1
+size = [7.93747, 2.694172, 11.107345]
+
+[mesh.sm_prop_whale_skeleton_vertebra_01]
+name = "SM_Prop_Whale_Skeleton_Vertebra_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Prop_Whale_Skeleton_Vertebra_01.fbx"
+sha256 = "143a86a9c941a05c8fa1934a422483c071ac77bdd1d455cb5deccd097d277364"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A chunky, faceted bone segment with a thick central cylinder, a short upright spike, and a flat flared base, rendered in pale beige with subtle mottling. The low-poly silhouette reads as a stylised vertebra or joint piece, ideal for scattered skeletal props in a tropical ruin or beach scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 380
+meshes = 1
+materials = 1
+size = [2.054399, 1.497041, 1.2034]
+
+[mesh.sm_veh_outrigger_canoe_01]
+name = "SM_Veh_Outrigger_Canoe_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Veh_Outrigger_Canoe_01.fbx"
+sha256 = "7fad0e4e31668ff51ced2c3ef7973c33336e6fc41ab5606e3b8722be3b6733c8"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A slender, low-poly outrigger canoe with a curved hull and a central platform, topped by a red fabric canopy and a small mast. The pale wood and tan lashings give it a rustic, hand-built look, suggesting a small coastal fishing or transport vessel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3931
+meshes = 2
+materials = 1
+size = [3.16714, 2.220171, 6.841547]
+
+[mesh.sm_waterfall_mesh_01]
+name = "SM_Waterfall_Mesh_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/SM_Waterfall_Mesh_01.fbx"
+sha256 = "722e6548987d0aad752e91a90c71fb1be723997726529680250bad5ab2185a41"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A tall, narrow column of falling water with a dark, rocky overhang at the top, textured with vertical streaks of white, blue, and green that suggest a fast, frothy flow. The base is jagged and uneven, giving it a natural, rugged look, while the top ledge is flat and clean for easy placement."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 58
+meshes = 1
+materials = 1
+size = [2.818954, 6.348662, 3.177361]
+
+[mesh.turtle_rig_01]
+name = "Turtle_Rig_01"
+pack = "polygon_tropical_jungle_nature_biome"
+source = "Tropical_Jungle_SourceFiles/FBX/Turtle_Rig_01.fbx"
+sha256 = "83622b4d5ae3a17d557da70bc43a39072bf64358196be536812ffeec7558ccd2"
+atlas = "PolygonNatureBiomes_Tropical_Texture_01.png"
+textures = "PolygonNatureBiomes_Tropical_Texture_01.png"
+description = "A low, domed shell with a pebbled, segmented texture in warm browns and tans, supported by four splayed flippers and a small head. The underside is a lighter cream, and the whole body is matte, suggesting a dry, weathered reptile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 738
+meshes = 1
+materials = 1
+size = [1.972338, 0.543319, 1.703512]

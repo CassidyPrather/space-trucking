@@ -1,0 +1,246 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_icon_chest_01]
+name = "SM_Icon_Chest_01"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Icon_Chest_01.fbx"
+sha256 = "67e3b3df2df69530311407cbfbc23e551bcb9c96c6fb87f08f03473e1067f446"
+atlas = "POLYGON - Coffee Shop/Polygon_Texture_01_A.png"
+textures = "Polygon_Texture_01_A.png"
+description = "A stout, rounded wooden chest with a domed lid, bound by a single pale silver strap and a matching keyhole plate on the front. The low-poly faceting gives it a chunky, stylized look, with a warm brown finish that suggests aged timber."
+differs = "The only plain wooden chest with no colour accents, the least detailed, and the only one without a distinct latch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 768
+meshes = 2
+materials = 2
+size = [1.917656, 1.614027, 1.525942]
+
+[mesh.sm_icon_chest_02]
+name = "SM_Icon_Chest_02"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Icon_Chest_02.fbx"
+sha256 = "d59626a64043736de791083bbf9ec28965b4320fb31eb446a55c8bc35f554477"
+atlas = "POLYGON - Coffee Shop/Polygon_Texture_01_A.png"
+textures = "Polygon_Texture_01_A.png"
+description = "A stout, low-poly treasure chest with a rounded barrel lid and flared, chunky feet. The body is a flat, muted blue, framed by thick, pale grey stone-like trim and a matching vertical latch plate. The clean, faceted surfaces and simple geometry give it a stylized, game-ready look, ideal for a fantasy UI icon."
+differs = "The only stone-trimmed chest with a blue body, the most muted and plainest in colour, and the shortest of the four."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 758
+meshes = 2
+materials = 2
+size = [1.94317, 1.423328, 1.314012]
+
+[mesh.sm_icon_chest_03]
+name = "SM_Icon_Chest_03"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Icon_Chest_03.fbx"
+sha256 = "608278e6fd2a6ef13eb7cb166840538447f50255060ca7fb73ee75411896768e"
+atlas = "POLYGON - Coffee Shop/Polygon_Texture_01_A.png"
+textures = "Polygon_Texture_01_A.png"
+description = "A stout, low-poly treasure chest with a rounded barrel lid, banded in bright gold and dark green, featuring a prominent gold keyhole plate on the front and a simple latch, appearing pristine and ready for a fantasy loot interface."
+differs = "The only gold-and-green chest, the most pristine and brightly coloured, and the only one with a simple latch instead of a keyhole plate."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 946
+meshes = 2
+materials = 2
+size = [1.880024, 1.657322, 1.377886]
+
+[mesh.sm_icon_chest_04]
+name = "SM_Icon_Chest_04"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Icon_Chest_04.fbx"
+sha256 = "f630fdc8b2be720e89fdbb7b84ddc7e2125bec53279b0369d0957e0e42f4ff16"
+atlas = "POLYGON - Coffee Shop/Polygon_Texture_01_A.png"
+textures = "Polygon_Texture_01_A.png"
+description = "A stout, rounded treasure chest with a barrel-vaulted lid, finished in polished gold with deep plum-purple panels and a dark keyhole plate. The low-poly faceting gives it a chunky, stylized look, while the sturdy feet and thick bands suggest a heavy, secure container."
+differs = "The most detailed and largest chest, the only one with a dark keyhole plate, and the only one with a plum-purple finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2226
+meshes = 2
+materials = 2
+size = [1.916478, 1.835, 1.33293]
+
+[mesh.sm_prop_chest_01]
+name = "SM_Prop_Chest_01"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Prop_Chest_01.fbx"
+sha256 = "206fd09f9957431b0d33ea29f50e404ad365035748806e6ff3e6f94e7d0b91ab"
+atlas = "Interface_DarkFantasyMenus_01.png"
+textures = "PolygonFantasyGothic_Texture_01_A.png, Generic_Emissive_01_A.png, Interface_DarkFantasyMenus_01.png"
+description = "A stout, rectangular chest with a slightly arched lid, framed in dark grey metal with riveted corner brackets and a central lock plate. The wooden panels are a muted brown, and the lid features a pale, bone-like inlay that resembles a stylised skull or crest."
+differs = "The plainest and smallest, with a flat lid and no bone ribs or gems; a basic lootable container for early game."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2114
+meshes = 4
+materials = 3
+size = [1.17584, 0.740511, 0.762921]
+
+[mesh.sm_prop_chest_02]
+name = "SM_Prop_Chest_02"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Prop_Chest_02.fbx"
+sha256 = "c1539fff263a0e39003f24e6424e62475c51a4738a6c4efd3ae509d42ad6ab0a"
+atlas = "Interface_DarkFantasyMenus_01.png"
+textures = "PolygonFantasyGothic_Texture_01_A.png, Generic_Emissive_01_A.png, Interface_DarkFantasyMenus_01.png"
+description = "A stout, barrel-lidded strongbox with a dark iron frame and pale bone-like straps arching over the top. The wood is a muted brown, and small red gems are set into the corners of the lid, giving it a gothic, treasure-hoard appearance."
+differs = "The only one with a barrel lid and red gems, but lacks a skull motif; a mid-tier treasure chest for gothic dungeons."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3368
+meshes = 4
+materials = 3
+size = [1.1405859, 0.944692, 0.763226]
+
+[mesh.sm_prop_chest_03]
+name = "SM_Prop_Chest_03"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Prop_Chest_03.fbx"
+sha256 = "fe1c2856c4bb9f3ba40bd9d038c431e02c188255c13f91b679d9b75012628c7f"
+atlas = "Interface_DarkFantasyMenus_01.png"
+textures = "PolygonFantasyGothic_Texture_01_A.png, Generic_Emissive_01_A.png"
+description = "A squat, dark iron chest with a domed lid, bound by five pale bone-like ribs that arch over the top. The front face is carved with a gothic relief, and two glowing red gems are set into the corners, giving it a menacing, arcane presence."
+differs = "The most menacing with a carved gothic relief and glowing gems, but no skull face; a boss-room or arcane puzzle chest."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4641
+meshes = 4
+materials = 3
+size = [1.233036, 1.219934, 0.76252306]
+
+[mesh.sm_prop_chest_04]
+name = "SM_Prop_Chest_04"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Prop_Chest_04.fbx"
+sha256 = "4dcb0d22df8430274778e5112ffad0beaa8bac404f9e53d71110b33f36ad86db"
+atlas = "Interface_DarkFantasyMenus_01.png"
+textures = "PolygonFantasyGothic_Texture_01_A.png, Generic_Emissive_01_A.png, Interface_DarkFantasyMenus_01.png"
+description = "A squat, dark iron chest with a rounded lid, bound by pale bone-like ribs and topped with a jagged bone crest. The front is a grimacing skull face with glowing red eyes and a barred mouth, set on a flared, riveted base. Worn and gothic, it reads as a cursed reliquary or a grim dungeon loot container."
+differs = "The largest and most detailed, with a full skull face and barred mouth; a cursed reliquary or final dungeon loot."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6817
+meshes = 2
+materials = 3
+size = [1.492892, 1.721667, 0.97976696]
+
+[mesh.sm_prop_coin_01]
+name = "SM_Prop_Coin_01"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Prop_Coin_01.fbx"
+sha256 = "ba0fdd92e40e6c37ef9068021fcb54d822ed619b5830d96dfd552247bfc17588"
+atlas = "Interface_DarkFantasyMenus_01.png"
+textures = "Interface_DarkFantasyMenus_Swatches_01.png"
+description = "A chunky, faceted octagonal disc with a raised central boss and a stepped inner ring, rendered in a flat, matte gold. The low-poly geometry gives it a stylized, hand-carved look, and the uniform colour suggests a generic, unadorned currency piece suitable for any dark fantasy setting."
+differs = "The plainest and least detailed, with no rune or rim, best for generic treasure piles and currency."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 468
+meshes = 1
+materials = 1
+size = [1.226001, 1.2345929, 0.117158]
+
+[mesh.sm_prop_coin_02]
+name = "SM_Prop_Coin_02"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Prop_Coin_02.fbx"
+sha256 = "d223b5302c60f40a6f705e3687a07a9e279ad64a2b27809341a97b34f5640df1"
+atlas = "Interface_DarkFantasyMenus_01.png"
+textures = "Interface_DarkFantasyMenus_Swatches_01.png"
+description = "A chunky, decagonal gold coin with a raised rim and a jagged, abstract rune-like emblem stamped into its face, rendered in a flat, stylised low-poly finish with a warm, slightly worn metallic sheen."
+differs = "The most detailed with a jagged rune emblem, best for quest items, magical currency, or faction-specific loot."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 732
+meshes = 1
+materials = 1
+size = [1.226001, 1.2345929, 0.117158]
+
+[mesh.sm_prop_gem_01]
+name = "SM_Prop_Gem_01"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Prop_Gem_01.fbx"
+sha256 = "9cdee0a2f94880f3fca2f2b328c972cfac6dd0d08aed30e4d1a0c00ed7abe69f"
+atlas = "Interface_DarkFantasyMenus_01.png"
+textures = "Interface_DarkFantasyMenus_Swatches_01.png"
+description = "A tall, faceted crystal with a sharp point at both ends, its deep crimson surface catching bright white highlights that suggest a polished, glassy finish. The elongated hexagonal form and vivid red hue give it a magical, arcane presence, ideal for dark fantasy UI or inventory icons."
+differs = "The only double-pointed crystal, the smallest and least detailed, best for a generic mana potion icon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 196
+meshes = 1
+materials = 1
+size = [0.524912, 1.312876, 0.471626]
+
+[mesh.sm_prop_gem_02]
+name = "SM_Prop_Gem_02"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Prop_Gem_02.fbx"
+sha256 = "c541f209ded85a75906a81021db51509d876548267cac22c50c25aeaf291bb71"
+atlas = "Interface_DarkFantasyMenus_01.png"
+textures = "Interface_DarkFantasyMenus_Swatches_01.png"
+description = "A tall, faceted shard of deep red crystal, tapering to a sharp point at the bottom and crowned with a jagged, star-like crest. The surface is polished and glossy, with bright white highlights catching the sharp edges, giving it a hard, glassy appearance."
+differs = "The only one with a jagged, star-like crest, the most damaged-looking, ideal for a quest item or rare loot."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 368
+meshes = 1
+materials = 1
+size = [0.993521, 1.468434, 0.183938]
+
+[mesh.sm_prop_gem_03]
+name = "SM_Prop_Gem_03"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Prop_Gem_03.fbx"
+sha256 = "49b9a1ad2385ca5dc7bd2580d311783a8ae0d1e60f0a3fa922037ecff94bf80c"
+atlas = "Interface_DarkFantasyMenus_01.png"
+textures = "Interface_DarkFantasyMenus_Swatches_01.png"
+description = "A faceted, angular crystal shard with a sharp, elongated vertical profile and a hollowed central window, rendered in a glossy crimson red with pale pink highlights. The surface is smooth and reflective, with a subtle metallic sheen that suggests a polished, pristine condition."
+differs = "The only one with a hollowed central window, the most detailed and widest, perfect for a complex UI emblem or rune."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 368
+meshes = 1
+materials = 1
+size = [1.085908, 1.32379, 0.210295]
+
+[mesh.sm_prop_key_01]
+name = "SM_Prop_Key_01"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Prop_Key_01.fbx"
+sha256 = "3aa8995fddb8b401cea5d5bc9205e1ab67c73bc1d5cb45fd2a2e60dc4f3092a8"
+atlas = "Interface_DarkFantasyMenus_01.png"
+textures = "PolygonFantasyGothic_Texture_01_A.png, Generic_Emissive_01_A.png"
+description = "A heavy, ornate key with a broad, spiked bow shaped like a gothic crest, a thick square shaft, and a double-pronged bit. The dark, weathered metal is accented by a faintly glowing silver emblem in the bow's centre, giving it a sinister, ceremonial look suited to unlocking ancient or forbidden doors."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1188
+meshes = 1
+materials = 1
+size = [0.476206, 0.229155, 0.04671]
+
+[mesh.sm_prop_rune_01]
+name = "SM_Prop_Rune_01"
+pack = "interface_dark_fantasy_menus"
+source = "FBX/SM_Prop_Rune_01.fbx"
+sha256 = "7f3724e965e94bc93fac566ff3b8602c2fc5641c5f356e105e65847cb3895be8"
+atlas = "Interface_DarkFantasyMenus_01.png"
+textures = "Interface_DarkFantasyMenus_Swatches_01.png"
+description = "A chunky, interlocking six-pointed star with a hollow triangular centre, rendered in a flat, matte grey stone or metal finish. The thick, beveled arms give it a solid, carved appearance, suggesting a magical sigil or ancient relic suitable for dark fantasy interfaces."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 316
+meshes = 1
+materials = 1
+size = [1.129711, 1.16533, 0.166224]

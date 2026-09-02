@@ -1,0 +1,79 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sk_prop_casket_01]
+name = "SK_Prop_Casket_01"
+pack = "polygon_hearse_kit"
+source = "SourceFiles/FBX/SK_Prop_Casket_01.fbx"
+sha256 = "7f6a534920d70712c8ebc5ceccfcba68286787e9c6064a7e05d5216dbf48d618"
+atlas = "PolygonHearse_Texture_01.png"
+textures = "PolygonHearse_Texture_01.png"
+description = "A long, low rectangular box with a stepped, raised lid, finished in a dark, matte reddish-brown wood. The base is trimmed with a row of small, bright gold handles or studs along the sides, giving it a ceremonial or gothic look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2548
+meshes = 7
+materials = 1
+size = [2.558474, 0.661272, 1.154764]
+
+[mesh.sk_veh_hearse_01]
+name = "SK_Veh_Hearse_01"
+pack = "polygon_hearse_kit"
+source = "SourceFiles/FBX/SK_Veh_Hearse_01.fbx"
+sha256 = "99513667714808503858e3424c5c46c253d80d5f51f588b449b85a18b2bab8a6"
+atlas = "PolygonHearse_Texture_01.png"
+textures = "PolygonHearse_Texture_01.png"
+description = "A long, boxy hearse with a raised, flat rear roof and a prominent chrome grille and bumper. The dark grey body features light blue glass panels, silver trim, and a subtle red stripe along the side, giving it a clean, formal appearance suited for funeral processions."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 9165
+meshes = 13
+materials = 2
+size = [6.879582, 1.740164, 2.443884]
+
+[mesh.sm_prop_casket_01]
+name = "SM_Prop_Casket_01"
+pack = "polygon_hearse_kit"
+source = "SourceFiles/FBX/SM_Prop_Casket_01.fbx"
+sha256 = "b0fbeaa103fbde55454fa8cf6da51a9f59f2500ccde6e46b98722886745d1603"
+atlas = "PolygonHearse_Texture_01.png"
+textures = "PolygonHearse_Texture_01.png"
+description = "A long, low rectangular box with a stepped, tiered lid and a flared, moulded base, finished in a dark, polished wood brown with a subtle sheen. The sides are accented by a row of small, brass-coloured handles or fittings, giving it a ceremonial or funerary appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2548
+meshes = 7
+materials = 1
+size = [1.154764, 0.661272, 2.558474]
+
+[mesh.sm_veh_hearse_01]
+name = "SM_Veh_Hearse_01"
+pack = "polygon_hearse_kit"
+source = "SourceFiles/FBX/SM_Veh_Hearse_01.fbx"
+sha256 = "ede1d367331eff3652c85a4137d33fe930971d4928eb9ffb88623f4ee47041ea"
+atlas = "PolygonHearse_Texture_01.png"
+textures = "PolygonHearse_Texture_01.png"
+description = "A long, boxy hearse with a raised rear roof and a chrome grille, finished in glossy black with pale blue windows and silver trim, showing a clean, well-maintained body suited for a funeral procession."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 9165
+meshes = 13
+materials = 2
+size = [2.443884, 1.740166, 6.879582]

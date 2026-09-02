@@ -1,0 +1,151 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_env_base_01]
+name = "SM_Env_Base_01"
+pack = "polygon_frog_shrine"
+source = "SourceFiles/FBX/SM_Env_Base_01.fbx"
+sha256 = "57f5f1cd0a8d52a339eed4acc03ecb94c048bc96176655e2a34b469e93690488"
+atlas = "Polygon_FrogShrine_Texture_01.png"
+textures = "Polygon_FrogShrine_Texture_01.png"
+description = "A low, irregular chunk of raised earth with a flat, mossy green top and jagged grey rock sides, clustered with pale grey boulders and small stone slabs. The weathered, natural look makes it ideal for a shrine's ruined foundation or a forest floor platform."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2383
+meshes = 1
+materials = 1
+size = [6.682246, 2.9963071, 5.804433]
+
+[mesh.sm_env_grass_01]
+name = "SM_Env_Grass_01"
+pack = "polygon_frog_shrine"
+source = "SourceFiles/FBX/SM_Env_Grass_01.fbx"
+sha256 = "e58ee840db3f45a89589f793bb7742354e5eaebd8bbee9c2a3d38b2be50ad42b"
+atlas = "Polygon_FrogShrine_Texture_01.png"
+textures = "Polygon_FrogShrine_Texture_01.png"
+description = "A low, irregular patch of sparse, pale green blades forming a roughly circular clump, with a few taller stalks rising from the centre. The flat-shaded, stylised look gives it a clean, geometric appearance, and it reads as a simple ground cover tuft for a shrine or temple setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3014
+meshes = 1
+materials = 1
+size = [6.177689, 0.79155505, 4.359985]
+
+[mesh.sm_prop_frog_01]
+name = "SM_Prop_Frog_01"
+pack = "polygon_frog_shrine"
+source = "SourceFiles/FBX/SM_Prop_Frog_01.fbx"
+sha256 = "20c5569bdcaf411d58ab7235432caebc80adc4afa8a595622591209aeab8f702"
+atlas = "Polygon_FrogShrine_Texture_01.png"
+textures = "Polygon_FrogShrine_Texture_01.png"
+description = "A stout, low-poly frog in a resting squat, with a broad head, prominent eye ridges, and a wide mouth line. Its faceted body is a warm, sandy tan with darker brown shading on the back and a lighter underside, giving it a dry, earthy look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1286
+meshes = 1
+materials = 1
+size = [1.379774, 1.035612, 1.79157]
+
+[mesh.sm_prop_lantern_01]
+name = "SM_Prop_Lantern_01"
+pack = "polygon_frog_shrine"
+source = "SourceFiles/FBX/SM_Prop_Lantern_01.fbx"
+sha256 = "809fac491d841bec6cc3e6b31666beacde246c66f59f24d845b4114e63e53c47"
+atlas = "Polygon_FrogShrine_Texture_01.png"
+textures = "Polygon_FrogShrine_Texture_01.png"
+description = "A stout, low-poly stone lantern with a pale cream shaft and a warm tan, faceted pagoda roof topped by a small sphere. The square base features chunky, carved brackets, and the whole piece is clean and unlit, evoking a peaceful shrine setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 352
+meshes = 2
+materials = 1
+size = [0.37854302, 0.64818597, 0.350066]
+
+[mesh.sm_prop_shrine_base_01]
+name = "SM_Prop_Shrine_Base_01"
+pack = "polygon_frog_shrine"
+source = "SourceFiles/FBX/SM_Prop_Shrine_Base_01.fbx"
+sha256 = "7d3d4713ced7614ff9d96fdf93d9beeb96530dcc7827d338f713e33aa4960691"
+atlas = "Polygon_FrogShrine_Texture_01.png"
+textures = "Polygon_FrogShrine_Texture_01.png"
+description = "A low, broad stone platform of pale grey blocks, worn and chipped, with a darker, flat central slab and a small stepped section on one side. Mossy green patches cling to the lower edges and corners, suggesting age and a damp shrine setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1188
+meshes = 1
+materials = 1
+size = [2.89019, 0.50643504, 2.548356]
+
+[mesh.sm_prop_shrine_cover_01]
+name = "SM_Prop_Shrine_Cover_01"
+pack = "polygon_frog_shrine"
+source = "SourceFiles/FBX/SM_Prop_Shrine_Cover_01.fbx"
+sha256 = "53a85b4723bdef4eaf8f189fca3740907b0a084228685cb4a6a71fa5d9223e6b"
+atlas = "Polygon_FrogShrine_Texture_01.png"
+textures = "Polygon_FrogShrine_Texture_01.png"
+description = "A weathered, open-sided wooden shrine shelter with a gently sagging blue tiled roof, its four posts resting on pale stone bases. The roof is patched with green moss and features a small orange finial at the peak, while a tiny hanging bell dangles from one corner, giving it a rustic, ancient feel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5462
+meshes = 1
+materials = 1
+size = [2.7658892, 2.9836628, 2.5772948]
+
+[mesh.sm_prop_stand_01]
+name = "SM_Prop_Stand_01"
+pack = "polygon_frog_shrine"
+source = "SourceFiles/FBX/SM_Prop_Stand_01.fbx"
+sha256 = "16e7dd92f9d572dda7b4cbc3339144aac3f6715309ab720c07501ef3a5214ffa"
+atlas = "Polygon_FrogShrine_Texture_01.png"
+textures = "Polygon_FrogShrine_Texture_01.png"
+description = "A square stone pedestal with a stepped base and a flat top, supporting a faceted golden bowl. The brown central column is wrapped by two pale stone bands, with a diagonal crack visible on one face. The weathered, low-poly finish suggests an ancient shrine offering stand."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 192
+meshes = 1
+materials = 1
+size = [0.429581, 0.899232, 0.429047]
+
+[mesh.sm_prop_tree_01]
+name = "SM_Prop_Tree_01"
+pack = "polygon_frog_shrine"
+source = "SourceFiles/FBX/SM_Prop_Tree_01.fbx"
+sha256 = "a5792515217cb76feef0d96cb7e12578e074bbf6ae947f687842c25ace66ba5e"
+atlas = "Polygon_FrogShrine_Texture_01.png"
+textures = "Polygon_FrogShrine_Texture_01.png"
+description = "A gnarled, leafless trunk with a pronounced, sinuous curve, rising from a bulbous, mossy base and splitting into bare, reaching branches. The bark is a pale, weathered tan with subtle green moss accents, giving it a dead but organic look suited to a swamp or shrine."
+differs = "The smaller, more sinuous option with a pronounced curve and mossy base, ideal for a tighter, more organic shrine placement."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 546
+meshes = 1
+materials = 1
+size = [2.762012, 4.979969, 1.857286]
+
+[mesh.sm_prop_tree_02]
+name = "SM_Prop_Tree_02"
+pack = "polygon_frog_shrine"
+source = "SourceFiles/FBX/SM_Prop_Tree_02.fbx"
+sha256 = "def57379387167c76857bbcc2abb9fa5ae3d15388dc47bfc298f04828370c095"
+atlas = "Polygon_FrogShrine_Texture_01.png"
+textures = "Polygon_FrogShrine_Texture_01.png"
+description = "A gnarled, leafless tree with a thick, bulbous base and a twisting trunk that splits into bare, jagged branches. The bark is a pale, weathered brown, with a patch of vibrant green moss clinging to the lower trunk, suggesting a damp, swampy environment."
+differs = "The larger, more jagged variant with a thicker trunk and a distinct moss patch, better for a dominant, swampy focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 723
+meshes = 1
+materials = 1
+size = [3.2034712, 5.551016, 2.188862]

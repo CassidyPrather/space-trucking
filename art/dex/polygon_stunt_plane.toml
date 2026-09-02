@@ -1,0 +1,38 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_veh_plane_stunt_01]
+name = "SM_Veh_Plane_Stunt_01"
+pack = "polygon_stunt_plane"
+source = "SourceFiles/FBX/SM_Veh_Plane_Stunt_01.fbx"
+sha256 = "23985ff56abcbec85bd35687d889efba8f6baaa4dd9ca2254bdeb7ec66f26db5"
+atlas = "Polygon_Plane_Texture_01.png"
+textures = "Polygon_Plane_Texture_01.png"
+wanted = "Regular_Version.psd"
+description = "A low-wing stunt plane with a long, tapered fuselage and a two-blade propeller, finished in bright yellow with blue and white accents. The tail features a small vertical fin and horizontal stabilizers, while the fixed landing gear and struts are visible."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3866
+meshes = 13
+materials = 1
+size = [14.82797, 3.4981918, 9.561734]

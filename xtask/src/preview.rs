@@ -409,7 +409,13 @@ fn read(said: &str, jobs: usize) -> Vec<Result<Look, String>> {
 /// be — one line, no separators, nothing enormous.
 fn a_file_name(rest: &str) -> Option<String> {
     let name = rest.split(['\r', '\n']).next()?.trim();
-    let sound = !name.is_empty()
+    // An extension is part of what makes this a file rather than a
+    // datablock: Blender names an image node with nothing in it `Image`,
+    // and a mesh does not want a file called that.
+    let named = Path::new(name)
+        .extension()
+        .is_some_and(|extension| (1..=5).contains(&extension.len()));
+    let sound = named
         && name.len() <= 120
         && !name.contains(['\\', '/', '\'', '"', '|'])
         && !name.chars().any(char::is_control);
@@ -540,6 +546,36 @@ mod tests {
 
         let silent = read("some program that has never heard of this repository\n", 2);
         assert!(silent.iter().all(Result::is_err), "{silent:?}");
+    }
+
+    /// **What is read as a file name is a file name.**
+    ///
+    /// Both halves were found the same way, by something that was not a
+    /// file name arriving as one. Blender's renderer wrote a Windows path
+    /// over the top of the line naming a texture, and the backslash in it
+    /// made a catalogue that would not parse; and an image node with
+    /// nothing in it is a datablock Blender calls `Image`, which became
+    /// fourteen per cent of a nature pack flagged as missing a file of
+    /// that name.
+    #[test]
+    fn only_something_that_could_be_a_file_is_read_as_one() {
+        for name in ["atlas.png", "Poly Atlas 01.tga", "a.psd"] {
+            assert_eq!(a_file_name(name).as_deref(), Some(name), "`{name}`");
+        }
+        for name in [
+            "Image",
+            "",
+            "Atlas.pngFra:1 | Saved: 'C:\\art\\preview.png'",
+            "C:/art/atlas.png",
+            "atlas.png\rFra:1",
+        ] {
+            assert_ne!(a_file_name(name).as_deref(), Some(name), "`{name}`");
+        }
+        // The renderer's line is cut off rather than swallowed whole.
+        assert_eq!(
+            a_file_name("atlas.png\rFra:1").as_deref(),
+            Some("atlas.png")
+        );
     }
 
     /// **A mesh a launch refused is that mesh's complaint, not the

@@ -1,0 +1,440 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.polygonsyntycharacter]
+name = "PolygonSyntyCharacter"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Character/PolygonSyntyCharacter.fbx"
+sha256 = "3a7126251544386c8a10f48a22ba21846978a3fe85748f9fa4ceb01605e1301a"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A humanoid figure in a rigid T-pose, built from blocky, low-poly segments with a smooth, untextured grey finish. The proportions are slightly stylized, with a rounded head, broad shoulders, and sturdy legs, giving it a generic, mannequin-like appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4896
+meshes = 1
+materials = 1
+size = [2.0484562, 1.793553, 0.367266]
+
+[mesh.sidekicksyntycharacter]
+name = "SidekickSyntyCharacter"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Character/SidekickSyntyCharacter.fbx"
+sha256 = "319f10657e54c0dfd404081b7ef695aa8416eb5170b25e6ce7f9897b697538e3"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A slender humanoid in a T-pose, built from chunky, faceted low-poly geometry with a rounded helmet-like head and segmented limbs. The surface is a mottled, weathered grey and white, resembling worn stone or distressed armour, with darker patches suggesting grime or battle damage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6628
+meshes = 1
+materials = 1
+size = [1.896756, 1.787625, 0.36606002]
+
+[mesh.sm_background_01]
+name = "SM_Background_01"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Background_01.fbx"
+sha256 = "c571c8328c356040493d0ed94e99208f3f3fbe954912f8a7c07aaf7ee9f52daa"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, flat, irregular cluster of grey, blocky rubble and debris, scattered loosely across a wide area. The jagged fragments vary in size and are textured with a muted, concrete-like surface, suggesting a pile of broken stone or industrial ruins."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 85041
+meshes = 1
+materials = 1
+size = [193.51886, 18.429665, 197.80795]
+
+[mesh.sm_generic_skydome]
+name = "SM_Generic_SkyDome"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Generic_SkyDome.fbx"
+sha256 = "8326892169d2a303d06ad72c1fe569bafdecbabea815b57fab57cebf39ba17cd"
+atlas = "SIMPLE - Dungeons/SimpleDungeonTexture.png"
+textures = "SimpleDungeonTexture.png"
+description = "A squat, flattened sphere with a broad, dull red cap and a banded, grey-brown lower body, ringed by thin yellow and white stripes. The surface is smooth and matte, resembling a stylised, low-poly planet or a simple, decorative stone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 320
+meshes = 1
+materials = 1
+size = [131.76057, 104.51394, 131.76059]
+
+[mesh.sm_obstacle_01]
+name = "SM_Obstacle_01"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Obstacle_01.fbx"
+sha256 = "0e7f4e5ed276749e78f5d7fa5ccea3449cdef511e9a9fbf67e9e956202290bf3"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A heavily damaged, grey-green military-style truck with a crumpled cab and a missing rear section, exposing a dark, hollow interior. The wreck sits low on flattened wheels, with a detached cargo box and scattered debris lying beside it, suggesting a battlefield or post-apocalyptic setting."
+differs = "The only vehicle wreck, with the highest triangle count and most narrative detail, for post-apocalyptic scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10108
+meshes = 1
+materials = 1
+size = [6.852947, 2.087372, 5.416132]
+
+[mesh.sm_obstacle_01_collision]
+name = "SM_Obstacle_01_Collision"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/Collision/SM_Obstacle_01_Collision.fbx"
+sha256 = "cd5dcbc046769f19e36f8d948aed5a573874d46b0ba99a0eaab2dfec8a0de35b"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, angular wedge of battered grey metal, resembling a ruined barricade or industrial debris block. Its surface is scored with scratches and dents, with a small cylindrical pipe protruding from one side and a flat, stepped top."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 164
+meshes = 1
+materials = 1
+size = [6.4541187, 2.2818239, 5.149953]
+
+[mesh.sm_obstacle_02]
+name = "SM_Obstacle_02"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Obstacle_02.fbx"
+sha256 = "ee92e70a97c6770665bab46c9d62532f7a45a4a46d176fbceadc68c6ddbd98c1"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A long, low rectangular block with a flat top, resembling a concrete barrier or industrial crate, marked by a dark, jagged, paint-like splatter pattern across its lower half. The grey surface is weathered and stained, with a cluster of white cylindrical pipes or canisters protruding from one end, suggesting a damaged.."
+differs = "The only block with protruding pipes and a splatter pattern, for industrial spill or hazard set dressing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4630
+meshes = 1
+materials = 1
+size = [3.6802921, 2.169328, 7.137351]
+
+[mesh.sm_obstacle_02_collision]
+name = "SM_Obstacle_02_Collision"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/Collision/SM_Obstacle_02_Collision.fbx"
+sha256 = "048f6e10297c436b43074dbb8091f37be2fe04c840a65270f1e6e8099b84ad73"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A long, low rectangular block with a smaller, stepped section attached to one side, forming an L-shaped footprint. The surface is a worn, pale grey concrete or metal with faint panel lines, scuffs, and a white painted stripe along the top edge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 64
+meshes = 1
+materials = 1
+size = [3.6681938, 2.141416, 6.299325]
+
+[mesh.sm_obstacle_03]
+name = "SM_Obstacle_03"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Obstacle_03.fbx"
+sha256 = "55def4b55887eace9f6036ad1b3f5a7ef0287c6e5b9061042cadb5ae9d98d3e0"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A long, low, rectangular slab of weathered grey concrete with a raised, angled end, resembling a heavy industrial barrier or a collapsed section of wall. The surface is rough and stained, with a darker, recessed channel running along the top, suggesting a worn, utilitarian structure meant for blocking or cover in a..."
+differs = "The largest and longest asset, a massive concrete slab with a raised end, for heavy cover or wall collapse."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12912
+meshes = 1
+materials = 1
+size = [7.2854414, 2.186589, 10.350624]
+
+[mesh.sm_obstacle_03_collision]
+name = "SM_Obstacle_03_Collision"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/Collision/SM_Obstacle_03_Collision.fbx"
+sha256 = "6cb381b7c8acd964a497c8f32506b772bae34878f6325752fdeb21799372a15c"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, wedge-shaped concrete barrier with a sloped face, topped by a dense, tangled mass of grey metal pipes, valves, and machinery. The surface is weathered, with dark grime and rust streaks across the pale grey concrete, giving it a heavy, industrial feel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 220
+meshes = 1
+materials = 1
+size = [6.853956, 2.250917, 9.890663]
+
+[mesh.sm_obstacle_04]
+name = "SM_Obstacle_04"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Obstacle_04.fbx"
+sha256 = "81909af72f36cb06e568cfe85fde62620d531bd2e5d8be3372338535d2802a0e"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, flat, grey metal platform on two small wheels, with a sloped ramp at one end and a caged block at the other, resembling a wheeled industrial step or a small maintenance trolley. The surface is plain and unmarked, with a slightly worn, utilitarian finish that suggests heavy use in a factory or warehouse setting."
+differs = "The only wheeled platform with a ramp and caged block, for factory maintenance or access props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4876
+meshes = 1
+materials = 1
+size = [6.850028, 1.554106, 4.0791826]
+
+[mesh.sm_obstacle_04_collision]
+name = "SM_Obstacle_04_Collision"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/Collision/SM_Obstacle_04_Collision.fbx"
+sha256 = "470323e5e6a8cdbcdb3fb1bf161a9a75f47dfc1c77515fa49c47cf8da97e75a8"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, wide, flat-topped concrete barrier with a chunky, blocky silhouette, featuring a stepped profile and a recessed side channel. The pale grey surface is marked with dark, weathered streaks and grime, suggesting heavy industrial use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 168
+meshes = 1
+materials = 1
+size = [6.9243913, 1.652491, 4.142338]
+
+[mesh.sm_obstacle_05]
+name = "SM_Obstacle_05"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Obstacle_05.fbx"
+sha256 = "73b0ab9bc84228bffdb7b5719516568759cd6cf324c31feb239fdabca084b1eb"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, elongated concrete barrier with a weathered, pale grey surface, featuring a stepped profile and a single dark leg or support visible on one side. Its chipped edges and grime suggest heavy industrial or military use, making it ideal for a checkpoint or roadblock."
+differs = "The smallest and simplest barrier, a stepped concrete block with a single leg, for cheap roadblocks."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1048
+meshes = 1
+materials = 1
+size = [4.839913, 0.941036, 1.7105074]
+
+[mesh.sm_obstacle_05_collision]
+name = "SM_Obstacle_05_Collision"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/Collision/SM_Obstacle_05_Collision.fbx"
+sha256 = "621d6b92505a39d4cfedcbeedd020e203d6d9847617eb9cba98b09d99557c063"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, wide, rectangular block with a slightly rounded top edge, resembling a concrete barrier or a heavy industrial crate. The surface is a mottled, weathered grey with darker patches and scuffs, giving it a worn, utilitarian look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 112
+meshes = 1
+materials = 1
+size = [4.874509, 0.98006594, 1.8402948]
+
+[mesh.sm_obstacle_06]
+name = "SM_Obstacle_06"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Obstacle_06.fbx"
+sha256 = "b217c5d5bba34b65d594fe7634ce360f260f40b2fb0ccbb5cd004658187f378a"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A long, low, grey metal barrier or fence segment, featuring a repeating grid of vertical bars and a solid, heavier base rail, with a distinct, darker, blocky end cap or mounting fixture on one side."
+differs = "The only grid-bar fence with a solid base rail and end cap, for perimeter or containment walls."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8266
+meshes = 1
+materials = 2
+size = [7.766163, 1.972728, 8.136204]
+
+[mesh.sm_obstacle_06_collision]
+name = "SM_Obstacle_06_Collision"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/Collision/SM_Obstacle_06_Collision.fbx"
+sha256 = "33e3c9f3c3f75910dd6f99ef627d86fcdfd815262098d7083e7b90c85297dbad"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, flat rectangular slab of weathered grey concrete, with a chipped, uneven top edge and a darker, grimy patch along one side, resembling a broken barrier or a fallen wall segment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 164
+meshes = 1
+materials = 1
+size = [7.9133244, 1.910758, 7.88483]
+
+[mesh.sm_obstacle_07]
+name = "SM_Obstacle_07"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Obstacle_07.fbx"
+sha256 = "2dd4cb2311221dc6b70b12e0073663482fc4e15c4a2ebb7e690a2fe0eaaca40a"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A chunky, low-poly barricade formed from two thick, rectangular blocks joined by a central hinge, with a jagged, broken section splitting the middle. The surface is a flat, untextured grey, giving it a clean, prototype look that reads as a modular, heavy-duty roadblock or a damaged wall segment."
+differs = "The only hinged, broken barricade with a jagged split, and the lowest triangle count, for modular damage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 558
+meshes = 1
+materials = 1
+size = [1.5073867, 0.970396, 1.7856488]
+
+[mesh.sm_obstacle_07_collision]
+name = "SM_Obstacle_07_Collision"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/Collision/SM_Obstacle_07_Collision.fbx"
+sha256 = "dd6add58c04a271c9de317f5eae648c7676e39d6aee836540235c4c25c763e8b"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A chunky, low-poly concrete barrier block with a heavily weathered, grey surface, featuring a stepped, asymmetrical profile and a recessed, panel-like detail on one face. The sharp, angular geometry and worn, industrial texture suggest a modular piece of urban cover or a heavy roadblock for a gritty, post-apocalyptic.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 88
+meshes = 1
+materials = 1
+size = [1.6033282, 0.995224, 1.9402587]
+
+[mesh.sm_obstacle_08]
+name = "SM_Obstacle_08"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Obstacle_08.fbx"
+sha256 = "ab1dec721075d380445671cb85470bbcb182984b6fc7f68845c01785b6521d2f"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A long, low metal barrier with a heavy, blocky base and a tall, thin post at one end, rendered in a worn, grey industrial finish. The main body is a series of vertical slats, suggesting a heavy-duty fence or roadblock, with a distinct, darker mechanical housing near the base."
+differs = "The only barrier with a tall post and mechanical housing, for heavy-duty gates or checkpoints."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8200
+meshes = 1
+materials = 1
+size = [6.9927616, 1.631387, 7.692523]
+
+[mesh.sm_obstacle_08_collision]
+name = "SM_Obstacle_08_Collision"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/Collision/SM_Obstacle_08_Collision.fbx"
+sha256 = "0c5f3164615af9cf97797f06e3da34ad73873e8e4fdf16cfb4faca48721ddd28"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, flat, rectangular slab of dark grey concrete, broken into two uneven chunks with a jagged, splintered seam across its length. The surface is rough and pitted, with lighter grey scuffs and chipped edges that suggest heavy wear and impact damage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 264
+meshes = 1
+materials = 1
+size = [7.1401634, 1.646128, 7.8093376]
+
+[mesh.sm_obstacle_09]
+name = "SM_Obstacle_09"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Obstacle_09.fbx"
+sha256 = "50a99be5c1c23ce0331ddaa2b2191985dd06b7e638fb50920ed9b0159e2b76b9"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, wide cluster of blocky grey concrete slabs and rubble, forming a jagged, uneven mound with a few darker, broken pieces jutting out at the edges. The surface is a mottled mix of light and dark greys, suggesting a weathered, dusty finish typical of a ruined urban environment."
+differs = "The most detailed and widest rubble mound, with the most jagged silhouette, ideal for a large ruined barrier or cover piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14718
+meshes = 1
+materials = 1
+size = [6.3771772, 1.516883, 5.90585]
+
+[mesh.sm_obstacle_09_collision]
+name = "SM_Obstacle_09_Collision"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/Collision/SM_Obstacle_09_Collision.fbx"
+sha256 = "333fdfb799c5c47007125fe6b706faf0cece59abc90012b41f14f47e757c3019"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, irregular mound of jagged grey concrete slabs and rubble, resembling a collapsed wall or barricade. The surface is rough and weathered, with a uniform stone-grey palette that suggests a generic, reusable debris pile for post-apocalyptic or industrial environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 356
+meshes = 1
+materials = 1
+size = [6.545351, 1.5028391, 5.992961]
+
+[mesh.sm_obstacle_10]
+name = "SM_Obstacle_10"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Obstacle_10.fbx"
+sha256 = "12342530a30f6f0ef732da3a5dbdcc9ec028891e9d582a007ded458434c35950"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, wide, blocky wreck of a car, crumpled and flattened as if crushed from above, with a detached wheel and a small debris chunk lying beside it. The dark grey body is heavily dented, with a cracked windshield and missing glass, giving it a ruined, abandoned look perfect for post-apocalyptic or junkyard scenes."
+differs = "The only vehicle, a crushed car with a detached wheel, perfect for junkyard or post-apocalyptic street scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6304
+meshes = 1
+materials = 1
+size = [7.0239763, 2.221585, 2.992797]
+
+[mesh.sm_obstacle_10_collision]
+name = "SM_Obstacle_10_Collision"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/Collision/SM_Obstacle_10_Collision.fbx"
+sha256 = "4f32ce8d9cf19a112e0b6a2bcff72b118e0df9a4d93344fa213277133ec2d00e"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, wide rectangular block with a dark grey, matte finish, featuring a lighter, scuffed top surface and a small, cylindrical protrusion extending from one end. The texture suggests worn, industrial metal or concrete, making it suitable for use as a heavy, weathered barrier or a piece of debris in a gritty urban..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 108
+meshes = 1
+materials = 1
+size = [7.1220083, 2.1730251, 3.3158827]
+
+[mesh.sm_obstacle_11]
+name = "SM_Obstacle_11"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Obstacle_11.fbx"
+sha256 = "c9a38bfd77e93e347e8f3d5115b9b95202d33be8bcae87ae804f479e3c22b732"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, chunky pile of grey rubble and broken concrete slabs, with a single thin metal pole rising from the centre, topped by a small square sign. The blocky, angular debris suggests a collapsed structure or a ruined barricade, rendered in a flat, untextured grey that emphasises its simple, geometric forms."
+differs = "The tallest and only one with a signpost, making it the best for a ruined landmark or directional marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12614
+meshes = 1
+materials = 1
+size = [8.938428, 3.999718, 4.705428]
+
+[mesh.sm_obstacle_11_collision]
+name = "SM_Obstacle_11_Collision"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/Collision/SM_Obstacle_11_Collision.fbx"
+sha256 = "ecb0a0e8965cc872ce51c54763278973eff54c1ef49f8161340fd8d54cd5da1d"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, irregular cluster of grey concrete blocks and rubble, with a single vertical post rising from one end, suggesting a broken barrier or roadblock. The surface is heavily weathered and stained, with a rough, matte finish that conveys age and damage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 428
+meshes = 1
+materials = 1
+size = [9.018232, 4.1783347, 4.7645864]
+
+[mesh.sm_perimeter_01]
+name = "SM_Perimeter_01"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Perimeter_01.fbx"
+sha256 = "70f6b90d303f8899f6f17107f6f52939eba952927284d19a88543c23ec56c0ce"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, irregular oval of grey stone with a flat, pale interior, ringed by a jagged, broken wall and studded with small, pointed spikes. A single, blocky tower structure rises from one edge, giving the ruin a fortified, defensive appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 118028
+meshes = 1
+materials = 2
+size = [40.428715, 17.089024, 45.109215]
+
+[mesh.sm_perimeter_01_collision]
+name = "SM_Perimeter_01_Collision"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/Collision/SM_Perimeter_01_Collision.fbx"
+sha256 = "1aba1d414069829a3ef9cb3f2269035a30c6a0ee8b963e3f5db9a8e8b80c3797"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, irregularly shaped concrete barrier with a wide, flat top and a small, blocky annex attached to one side, rendered in a uniform, pale grey. The surface is smooth and unmarked, suggesting a clean, untextured state."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 820
+meshes = 1
+materials = 2
+size = [40.6846, 17.514189, 44.962452]
+
+[mesh.sm_prop_target_01]
+name = "SM_Prop_Target_01"
+pack = "animation_base_locomotion"
+source = "SourceFiles/Demo_Models/SM_Prop_Target_01.fbx"
+sha256 = "31490dc154c89ca81d2db29b07d1d201f0e19b9cf960b07672d0ef9e9258d218"
+atlas = "T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A weathered grey wooden post with a crossbar and a square plaque, marked with a white concentric-circle target. The paint is chipped and worn, giving it a used, battle-scarred look, and the simple, blocky geometry makes it a clear, readable aiming point for shooting ranges or combat scenarios."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 130
+meshes = 1
+materials = 1
+size = [0.767799, 1.6762531, 0.186917]

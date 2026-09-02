@@ -1,0 +1,164 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.bigrig_01]
+name = "BigRig_01"
+pack = "animation_idles"
+source = "SourceFiles/FBX/Characters/BigRig_01.fbx"
+sha256 = "d564d0a8cc494c6a23da885a755b145d0a2e16a646d7b48d6a962ad8899b68a4"
+atlas = "POLYGON - Fantasy Rivals Pack/FantasyRivals_Texture_01_D.png"
+textures = "FantasyRivals_Texture_01_D.png"
+description = "A blocky humanoid in a T-pose, rendered in a flat, pale tan with no visible facial features or clothing, appears as a generic placeholder figure rather than a vehicle. The low-poly silhouette is simple and unadorned, with a boxy torso and straight limbs, making it suitable as a base for rigging or as a distant..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1246
+meshes = 1
+materials = 1
+size = [2.889158, 1.824378, 0.51142]
+
+[mesh.kidrig_01]
+name = "KidRig_01"
+pack = "animation_idles"
+source = "SourceFiles/FBX/Characters/KidRig_01.fbx"
+sha256 = "14b644e050d729b3af276f7c7ae4167c51a8fa1c91899a32d06404d37858cb18"
+atlas = "POLYGON - Kids Pack/Polygon_Kids_Texture_A.png"
+textures = "Polygon_Kids_Texture_A.png"
+description = "A stylized child in a T-pose, wearing a white and yellow spacesuit with a clear helmet, grey gloves, and boots. The suit features orange accents and a chest control panel, with a slightly scuffed, matte finish that suggests a well-used but functional rig."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2002
+meshes = 1
+materials = 1
+size = [1.31194, 1.165017, 0.23884201]
+
+[mesh.polygonrig_01]
+name = "POLYGONRig_01"
+pack = "animation_idles"
+source = "SourceFiles/FBX/Characters/POLYGONRig_01.fbx"
+sha256 = "881819102b456130cb417ef69594b3479d8c7dd77e4d390a9f1b85dce911a7c7"
+atlas = "Polygon_Texture_01.png"
+textures = "Polygon_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A stylized low-poly humanoid in a rigid T-pose, rendered in a uniform peach skin tone with no clothing or facial features. The figure has a blocky, untextured appearance, with a simple bob haircut and basic hands and feet, making it a clean base for rigging and animation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2521
+meshes = 4
+materials = 1
+size = [2.047514, 1.822315, 0.311946]
+
+[mesh.polygonsyntycharacter]
+name = "PolygonSyntyCharacter"
+pack = "animation_idles"
+source = "SourceFiles/FBX/Characters/PolygonSyntyCharacter.fbx"
+sha256 = "4e0387308acc2afec1935df06025d83cfe964d0f241c5e818e944deb81153779"
+atlas = "Polygon_Texture_01.png"
+textures = "Polygon_Texture_01.png"
+description = "A stylized humanoid figure in a T-pose, rendered in a uniform, untextured grey. The low-poly geometry features a blocky head, segmented limbs, and a simple torso, with a small green accent on the right forearm. Its clean, neutral appearance makes it a versatile base for rigging and animation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4898
+meshes = 1
+materials = 1
+size = [2.0484562, 1.793553, 0.367266]
+
+[mesh.sidekicksyntycharacter]
+name = "SidekickSyntyCharacter"
+pack = "animation_idles"
+source = "SourceFiles/FBX/Characters/SidekickSyntyCharacter.fbx"
+sha256 = "8583d027d188321b614c39b04da5ab767f14e4b00de7d3ab451e1559774dff7f"
+atlas = "Polygon_Dummy_Texture_01.png"
+textures = "Polygon_Dummy_Texture_01.png"
+description = "A slender humanoid in a T-pose, clad in a bright yellow and black hazard suit with a full-face helmet and a small backpack, suggesting a sci-fi worker or engineer. The suit is marked with black stripes and a chest emblem, and the low-poly style gives it a clean, stylized look suitable for a game character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6628
+meshes = 1
+materials = 1
+size = [1.896755, 1.787625, 0.36606002]
+
+[mesh.sm_generic_skydome]
+name = "SM_Generic_SkyDome"
+pack = "animation_idles"
+source = "SourceFiles/FBX/Misc/SM_Generic_SkyDome.fbx"
+sha256 = "8326892169d2a303d06ad72c1fe569bafdecbabea815b57fab57cebf39ba17cd"
+atlas = "SIMPLE - Dungeons/SimpleDungeonTexture.png"
+textures = "SimpleDungeonTexture.png"
+description = "A squat, flattened dome with a broad, rounded profile, capped by a dull red top and ringed with thin, alternating bands of grey, ochre, and pale yellow. The surface is smooth and matte, with a subtle, worn texture that suggests a painted metal or ceramic finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 320
+meshes = 1
+materials = 1
+size = [131.76057, 104.51394, 131.76059]
+
+[mesh.sm_prop_comb_01]
+name = "SM_Prop_Comb_01"
+pack = "animation_idles"
+source = "SourceFiles/FBX/Props/SM_Prop_Comb_01.fbx"
+sha256 = "db2f43246f8931549533bff28905d47be9c525852b18aaa48b0a15b9a2a9a48d"
+atlas = "Polygon_Texture_01.png"
+textures = "Polygon_Texture_01.png"
+description = "A long, flat, rectangular slab with a slightly rounded top edge, rendered in a dark, matte charcoal grey. The surface is divided into two equal segments by a subtle groove, suggesting a simple, functional design. Its clean, unadorned appearance makes it suitable for a generic prop or a stylized, low-poly comb."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 52
+meshes = 1
+materials = 1
+size = [0.072572, 0.021292, 0.285122]
+
+[mesh.sm_prop_cup_01]
+name = "SM_Prop_Cup_01"
+pack = "animation_idles"
+source = "SourceFiles/FBX/Props/SM_Prop_Cup_01.fbx"
+sha256 = "f3d0a962416c89032c05c86a1867f095b0a09fe329203f0d4dd3f376e1643cde"
+atlas = "Polygon_Texture_01.png"
+textures = "Polygon_Texture_01.png"
+description = "A faceted, tapered cup with a thick white rim and a dark grey interior, rendered in a muted terracotta red with a flat, low-poly finish. The octagonal silhouette and simple geometry give it a stylised, generic look suitable for a disposable drink or small container."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 1
+materials = 1
+size = [0.163641, 0.217681, 0.163641]
+
+[mesh.sm_prop_donut_01]
+name = "SM_Prop_Donut_01"
+pack = "animation_idles"
+source = "SourceFiles/FBX/Props/SM_Prop_Donut_01.fbx"
+sha256 = "0020525ce44b6fec6ab1066233fafcccaa74c552b49499e4d8a9b0e5108cb89b"
+atlas = "Polygon_Texture_01.png"
+textures = "Polygon_Texture_01.png"
+description = "A low-poly, faceted torus with a pink icing top and a tan dough base, scattered with small, colourful sprinkles in white, blue, yellow, and orange. The central hole is clearly defined, and the flat, angular surfaces give it a stylised, game-ready appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 456
+meshes = 1
+materials = 1
+size = [0.190893, 0.067726, 0.190893]
+
+[mesh.sm_prop_smartphone_01]
+name = "SM_Prop_SmartPhone_01"
+pack = "animation_idles"
+source = "SourceFiles/FBX/Props/SM_Prop_SmartPhone_01.fbx"
+sha256 = "af80cd25f7843aa702b04fa308f5b5fd4441625601946478578fe3feaf5c02a5"
+atlas = "Polygon_Texture_01.png"
+textures = "Polygon_Texture_01.png"
+description = "A slim, rectangular slab with rounded corners and a dark, unlit screen set into a grey casing, featuring a small circular button on the lower bezel and a subtle camera notch at the top. The matte finish and simple geometry give it a clean, generic look suitable for background props or idle scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [0.13612, 0.02695, 0.263904]

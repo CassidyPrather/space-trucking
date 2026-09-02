@@ -1064,7 +1064,7 @@ fn describe(words: &[&str]) -> Result<(), String> {
         (None, None) => declared_candidates(&store, &cache, &manifest),
     };
     if candidates.is_empty() {
-        return Err(nothing_to_describe(&wanted, &manifest, &store));
+        return nothing_found(&wanted, &manifest, &store);
     }
 
     let mut books: BTreeMap<String, dex::Dex> = BTreeMap::new();
@@ -1247,6 +1247,28 @@ fn chosen(wanted: &Wanted) -> (Describer, String) {
     let describer = describe::find(wanted.model.clone());
     let note = describer.announce();
     (describer, note)
+}
+
+/// **A run that found nothing to look at.**
+///
+/// A pack with nothing in it is a fact rather than a failure: a library
+/// holds HUD packs and menu packs, which carry no mesh at all, and a
+/// sweep over every pack should say so and go on to the next rather than
+/// report an error for each of them. Anything else — a word that matched
+/// nothing, a manifest naming assets that are not here — is a person
+/// asking for something specific and not getting it, which is.
+fn nothing_found(wanted: &Wanted, manifest: &Manifest, store: &Store) -> Result<(), String> {
+    if let Some(named) = &wanted.pack {
+        println!(
+            "art: nothing in `{named}` is a mesh this can open{}.",
+            wanted
+                .needle
+                .as_ref()
+                .map_or_else(String::new, |needle| format!(" and matches `{needle}`"))
+        );
+        return Ok(());
+    }
+    Err(nothing_to_describe(wanted, manifest, store))
 }
 
 /// The message for a run that found nothing to do, which is a different

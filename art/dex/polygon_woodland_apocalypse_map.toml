@@ -1,0 +1,523 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_env_grass_alpine_01]
+name = "SM_Env_Grass_Alpine_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Env_Grass_Alpine_01.fbx"
+sha256 = "de1c76a36cac521d0d14039f983255fcdde6825856299a06c50e3596fca442ba"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, dense clump of dark green foliage, roughly oval in plan and slightly domed, with jagged, irregular edges that suggest a tuft of alpine grass or a small shrub. The surface is textured with fine, blade-like detail and scattered lighter flecks, giving it a dry, weathered appearance suited to a rugged woodland..."
+differs = "Largest and most detailed, with the highest triangle count, ideal for a dense, dominant ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1026
+meshes = 3
+materials = 1
+size = [7.448443, 1.503155, 7.050149]
+
+[mesh.sm_env_grass_alpine_02]
+name = "SM_Env_Grass_Alpine_02"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Env_Grass_Alpine_02.fbx"
+sha256 = "6431dfe78896e51c010ff6fd05b317495e935015c873b84af09606b82e92fe96"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, irregular clump of dense, dark green foliage with a slightly jagged, uneven top, suggesting a patch of wild alpine grass or low shrubbery. The texture is mottled with deep shadows and lighter green highlights, giving it a rough, natural appearance suitable for covering ground in a post-apocalyptic woodland..."
+differs = "Mid-sized and dense, a simpler, less detailed alternative to 01 for covering large areas."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 378
+meshes = 3
+materials = 1
+size = [4.28463, 1.245041, 4.681891]
+
+[mesh.sm_env_grass_alpine_03]
+name = "SM_Env_Grass_Alpine_03"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Env_Grass_Alpine_03.fbx"
+sha256 = "1d872aac60212402c35a7fcb0f947fda4e2779301ecd59e64746b9664a297f9c"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, rounded clump of pale grey-green blades, sparse and wispy, with a single dark, jagged rock embedded near the centre, giving it a rugged, alpine look suited for sparse, rocky terrain."
+differs = "Only one with a rock and pale grey-green blades, perfect for sparse, rocky alpine terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 2
+materials = 1
+size = [1.785118, 0.82707703, 1.460731]
+
+[mesh.sm_env_grass_alpine_04]
+name = "SM_Env_Grass_Alpine_04"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Env_Grass_Alpine_04.fbx"
+sha256 = "7c9df9a9d28ab27a1b47fc711cb05550052a44a8aa52333f42998bfbdd4d5f98"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, sprawling clump of dark green alpine grass with a few thin, pale blades rising from the dense base, giving it a wild, unkempt silhouette. The deep, shadowed greens and subtle browns suggest a hardy, weathered plant suited for rugged terrain, making it ideal for adding natural ground cover to mountainous or..."
+differs = "Only one with a sprawling, unkempt silhouette and thin pale blades, for wild, rugged edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 54
+meshes = 3
+materials = 1
+size = [1.914472, 0.797962, 1.926012]
+
+[mesh.sm_env_pine_large_01]
+name = "SM_Env_Pine_Large_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Env_Pine_Large_01.fbx"
+sha256 = "d8eb8467099e0ec80be6769a2cb0368866922cf22741e3a044b553213a54a532"
+atlas = "POLYGON - Swamp Marshland - Nature Biomes/PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A tall, slender pine with a narrow, conical crown of dark green needles, its trunk is broken and splintered near the top, leaving a jagged, bare spike. The bark is a weathered grey-brown, and the lower trunk is heavily scarred with pale, horizontal gouges, suggesting damage from claws or an explosion."
+differs = "The plainest and most damaged, with a splintered top and claw-like gouges; ideal for a battle-scarred or post-explosion woodland."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7402
+meshes = 3
+materials = 1
+size = [7.752803, 15.662718, 8.745867]
+
+[mesh.sm_env_pine_large_02]
+name = "SM_Env_Pine_Large_02"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Env_Pine_Large_02.fbx"
+sha256 = "27156cf68d0d27a3c5d9b7490fff92837ba4b3b40b91dde7f1da5ab742e9ae1e"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, slender pine with a narrow, conical crown of dark green needles, its trunk and branches are heavily encrusted with pale, bone-like fungal growths and hanging moss, giving it a gnarled, ancient appearance."
+differs = "The most detailed and gnarled, with bone-like fungal growths and moss; ideal for an ancient, corrupted, or eerie forest setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 25239
+meshes = 4
+materials = 1
+size = [10.009651, 14.20913, 10.199628]
+
+[mesh.sm_env_road_arrow_multidirectional_01]
+name = "SM_Env_Road_Arrow_Multidirectional_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Env_Road_Arrow_Multidirectional_01.fbx"
+sha256 = "fe21f6cda8ccee9e1824ddc791da5694d06dd326f50a3574babc526fa5a10b48"
+atlas = "POLYGON - Apocalypse Wasteland/Road_01.png"
+textures = "Road_01.png"
+description = "A flat, square road decal featuring a bold, yellow multidirectional arrow with three prongs pointing outward from a central stem, set against a dark asphalt background. The arrow is slightly raised and textured, with a worn, weathered appearance that suggests heavy use on a ruined or abandoned roadway."
+differs = "The most detailed with three prongs and a central stem, ideal for complex junctions or intersections."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 120
+meshes = 1
+materials = 1
+size = [5.0, 0.0, 5.0]
+
+[mesh.sm_env_road_arrow_multidirectional_02]
+name = "SM_Env_Road_Arrow_Multidirectional_02"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Env_Road_Arrow_Multidirectional_02.fbx"
+sha256 = "a67e7e97cc70167fe926d0e41a54b9645423cea1f17d9a28c6ba1acc78112559"
+atlas = "POLYGON - Apocalypse Wasteland/Road_01.png"
+textures = "Road_01.png"
+description = "A flat, square road decal featuring a bold, yellow double-headed arrow on a dark asphalt background, with a lighter yellow border. The paint appears slightly worn and weathered, giving it a used, post-apocalyptic look."
+differs = "The plainest with a double-headed arrow and lighter border, best for straight two-way traffic lanes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 114
+meshes = 1
+materials = 1
+size = [5.0, 0.0, 5.0]
+
+[mesh.sm_env_road_arrow_multidirectional_03]
+name = "SM_Env_Road_Arrow_Multidirectional_03"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Env_Road_Arrow_Multidirectional_03.fbx"
+sha256 = "ffcc752754190ea28f5c0144b4bb7002448b8bd3b7e864e53dc6e3038f40b980"
+atlas = "POLYGON - Apocalypse Wasteland/Road_01.png"
+textures = "Road_01.png"
+description = "A flat, square road decal featuring a bold, yellow-orange arrow pointing in three directions, set against a dark, weathered asphalt background. The paint appears slightly chipped and worn, giving it a gritty, post-apocalyptic feel."
+differs = "The most damaged with chipped yellow-orange paint, suited for gritty, heavily worn road markings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 94
+meshes = 1
+materials = 1
+size = [5.0, 0.0, 5.0]
+
+[mesh.sm_env_road_arrow_turnoff_01]
+name = "SM_Env_Road_Arrow_TurnOff_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Env_Road_Arrow_TurnOff_01.fbx"
+sha256 = "5f593af384ffa2095143ec252e826bc55b4fc6cc7682d02e086d9237ad1fa0f1"
+atlas = "POLYGON - Apocalypse Wasteland/Road_01.png"
+textures = "Road_01.png"
+description = "A flat, square road decal with a weathered black asphalt surface and a faded yellow border, featuring a bold yellow arrow that curves sharply to the right, indicating a turn-off or exit. The paint is worn and chipped, giving it a gritty, post-apocalyptic look, and the texture is designed to sit flush on the ground."
+differs = "Most damaged and chipped paint, with a distinct yellow border and a sharper right-turn arrow."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 90
+meshes = 1
+materials = 1
+size = [5.0, 0.0, 5.0]
+
+[mesh.sm_env_road_arrow_turnoff_02]
+name = "SM_Env_Road_Arrow_TurnOff_02"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Env_Road_Arrow_TurnOff_02.fbx"
+sha256 = "a89544e0e384a40f7141c927b80af88957bc349bef3cb03960893235e6b2d0ff"
+atlas = "POLYGON - Apocalypse Wasteland/Road_01.png"
+textures = "Road_01.png"
+description = "A flat, square road decal with a weathered yellow border and a bold, curved arrow painted on a dark, worn asphalt surface, indicating a turn-off or lane merge. The paint is chipped and faded, giving it a gritty, post-apocalyptic look."
+differs = "Features a faded yellow border and a more gradual, sweeping curve, ideal for lane merges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 90
+meshes = 1
+materials = 1
+size = [5.0, 0.0, 4.999999]
+
+[mesh.sm_env_road_arrow_turnoff_03]
+name = "SM_Env_Road_Arrow_TurnOff_03"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Env_Road_Arrow_TurnOff_03.fbx"
+sha256 = "f05d1b60beca4b914fab49e92be4ecc09f40e2df026fee7d7621a556028b9f54"
+atlas = "POLYGON - Apocalypse Wasteland/Road_01.png"
+textures = "Road_01.png"
+description = "A flat, square road decal with a bold yellow arrow curving sharply to the right, painted on a dark, weathered asphalt surface with a worn, faded finish. The arrow's tail is thick and straight before bending, and the edges of the decal are slightly irregular, suggesting age and use."
+differs = "Lowest poly count and most irregular edges, with a thick straight tail before the bend, for a simpler look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 64
+meshes = 1
+materials = 1
+size = [5.0, 0.0, 4.999999]
+
+[mesh.sm_prop_bait_sign_01]
+name = "SM_Prop_Bait_Sign_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Bait_Sign_01.fbx"
+sha256 = "8cabaf0de3eb939e01158a9af6bf9d926d6a6bc48632172796c90fc59230df02"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A weathered, grey cylindrical bucket with a rolled rim, overflowing with a mass of pale, fleshy, worm-like appendages that spill over the edge. The surface is stained with dark drips, giving it a grisly, horror-themed appearance perfect for an apocalypse setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2478
+meshes = 1
+materials = 1
+size = [1.727948, 1.71774, 1.703024]
+
+[mesh.sm_prop_bait_sign_alt_01]
+name = "SM_Prop_Bait_Sign_Alt_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Bait_Sign_Alt_01.fbx"
+sha256 = "1937954a4b36f7bc1b2de7f50c448fa16bfae4c785019dbed4c4b82bde36da1d"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A weathered wooden post holds a grey metal bucket overflowing with pale, fleshy viscera, mounted above a blue plank bearing the white text 'END OF THE LINE' in a distressed stencil font. The gore spills over the rim, giving the prop a macabre, post-apocalyptic feel that makes it a striking narrative focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3327
+meshes = 1
+materials = 1
+size = [3.067582, 3.198491, 1.620182]
+
+[mesh.sm_prop_brochure_stand_01]
+name = "SM_Prop_Brochure_Stand_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Brochure_Stand_01.fbx"
+sha256 = "1af3bb535525e61ee9fba1d4eaa253fd212887fd7cec3fa4a140650415471f8c"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A tall, dark wooden display stand with a slanted profile and three shelves holding colourful brochures and a stack of papers at the base, showing a weathered, post-apocalyptic finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 952
+meshes = 1
+materials = 1
+size = [0.964506, 1.865662, 0.500616]
+
+[mesh.sm_prop_chain_fence_broken_01]
+name = "SM_Prop_Chain_Fence_Broken_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Chain_Fence_Broken_01.fbx"
+sha256 = "39ba654b4f6ad60d515c334a5cf5d4bb03c0df0ade04f859d87cf1eb1012cb67"
+atlas = "ANIMATION - Goblin Locomotion/Wire_Alpha.tga"
+textures = "Wire_Alpha.tga"
+description = "A low, rectangular section of chain-link fencing with a top rail, showing a large, jagged tear in the mesh that leaves a wide gap. The wire is rendered in a pale, desaturated grey with a subtle metallic sheen, and the broken edges are uneven and frayed."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 854
+meshes = 1
+materials = 2
+size = [3.943728, 2.78071, 0.216636]
+
+[mesh.sm_prop_fence_wood_damaged_01]
+name = "SM_Prop_Fence_Wood_Damaged_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Fence_Wood_Damaged_01.fbx"
+sha256 = "f95924a83fcb528d38289a1078229e16eef17f3554f0f09974b120bbea403951"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A short, weathered section of wooden fencing with vertical planks of varying heights, a broken diagonal brace, and a splintered top edge. The pale, desaturated timber shows greyish weathering and dark grain, giving it a ruined, post-apocalyptic look perfect for abandoned or battle-scarred environments."
+differs = "The widest and most detailed piece, with a diagonal brace and splintered top, ideal for a standalone ruined barrier."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 410
+meshes = 1
+materials = 1
+size = [2.5405471, 2.1352181, 0.53271604]
+
+[mesh.sm_prop_fence_wood_damaged_02]
+name = "SM_Prop_Fence_Wood_Damaged_02"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Fence_Wood_Damaged_02.fbx"
+sha256 = "e9ba18cedb4b7d1f63d9c072d9696975694abb608c17e35e52027ee06d432abf"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A tall, narrow section of a wooden fence, consisting of three vertical planks with a single horizontal crossbar. The wood is a pale, weathered tan with visible grain, and the bottom is jaggedly splintered and broken, suggesting it has been violently snapped off from a larger structure."
+differs = "The narrowest and plainest, a snapped-off post with a single crossbar, perfect for a broken fence line or debris pile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 176
+meshes = 1
+materials = 1
+size = [0.83843404, 2.107516, 0.17036301]
+
+[mesh.sm_prop_gas_sign_01]
+name = "SM_Prop_Gas_Sign_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Gas_Sign_01.fbx"
+sha256 = "0f85ce2deab775c0d60b269704df2a566a047a06dafc9e388e615ca52b6836af"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A tall, weathered roadside sign on two rusted posts, featuring a black panel with yellow lettering, a red fuel pump icon, and a yellow smiley face, conveying a post-apocalyptic, abandoned aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4180
+meshes = 1
+materials = 1
+size = [4.4067926, 9.403916, 0.84105897]
+
+[mesh.sm_prop_log_pile_02]
+name = "SM_Prop_Log_Pile_02"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Log_Pile_02.fbx"
+sha256 = "6285b22fbff2ed7b58fc1da1a30340228c8d1ea8cb7b1d827a87384be17aa4a1"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A neat stack of pale, weathered logs, cut to uniform lengths and secured by two dark wooden A-frame trestles with upright posts, forming a tidy, rectangular pile with visible cut ends and subtle bark texture, ready for a survival camp or sawmill."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1360
+meshes = 1
+materials = 1
+size = [7.890394, 5.572247, 10.1761]
+
+[mesh.sm_prop_mug_01]
+name = "SM_Prop_Mug_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Mug_01.fbx"
+sha256 = "b1d453163fb0aec78cae7c0703e87fbcf895235fc8e800fe2feeebd34fc38377"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A chunky, octagonal tankard with a thick green rim and handle, featuring a yellow shield emblem with a green tree and a banner reading 'FOREST' on its off-white body. The low-poly facets give it a rugged, hand-painted look, suggesting a sturdy tavern or camp mug from a stylized apocalypse setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 198
+meshes = 1
+materials = 1
+size = [0.21429801, 0.178988, 0.127382]
+
+[mesh.sm_prop_nature_sign_01]
+name = "SM_Prop_Nature_Sign_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Nature_Sign_01.fbx"
+sha256 = "ab9bf2481287f16f71b5dc704a870405ebfe7a8409d56da09ee8a1845a61e25e"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A weathered wooden trail map board on two thick, irregular legs, tilted for easy reading. The pale, faded map face shows a winding blue river and green forest paths, framed by a simple timber border. The rustic, hand-hewn look and worn paint suggest an abandoned or overgrown park setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 572
+meshes = 1
+materials = 1
+size = [0.987708, 1.074677, 0.719074]
+
+[mesh.sm_prop_plate_01]
+name = "SM_Prop_Plate_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Plate_01.fbx"
+sha256 = "df2254cd68c4da1a7fb5816ec3e887cef2fc6ea70d91d4ac2e38591ba29e61f5"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A shallow, circular dish with a thick, irregularly chipped rim painted in a faded, dusty red, revealing a pale, off-white interior. The surface appears worn and weathered, suggesting a scavenged or discarded piece of tableware."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 136
+meshes = 1
+materials = 1
+size = [0.473034, 0.045623, 0.473034]
+
+[mesh.sm_prop_shipping_container_01]
+name = "SM_Prop_Shipping_Container_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Shipping_Container_01.fbx"
+sha256 = "a11c1d174641ec7eb7b13e2ec052383b51a93ffe63330345df4fd711f5c122af"
+atlas = "Containers_01.png"
+textures = "Containers_01.png"
+description = "A long, rectangular shipping container with corrugated side panels and a flat roof, rendered in a dark, near-black finish that suggests a weathered or shadowed metal surface. The end view reveals a set of double doors with visible hinges and locking rods, while the overall silhouette is clean and blocky, fitting the..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [2.477083, 2.59, 6.08074]
+
+[mesh.sm_prop_statue_base_01]
+name = "SM_Prop_Statue_Base_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Statue_Base_01.fbx"
+sha256 = "50d66e9fa8696ba3280eb4a0cf6e65e00059fe04eb73a3ff0bc07e69185b847f"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A low, rectangular stone plinth with a chamfered top and stepped base, rendered in pale grey with darker mottled patches. One side features a small, tan rectangular plaque, while the opposite side shows a dark, jagged break, suggesting a damaged or weathered monument base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 262
+meshes = 1
+materials = 1
+size = [2.206254, 1.075796, 1.614447]
+
+[mesh.sm_prop_statue_lumberjack_01]
+name = "SM_Prop_Statue_Lumberjack_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Statue_Lumberjack_01.fbx"
+sha256 = "805ef1981995139c17cc6c9b397a4d07c52b9b15568c4b167a81ea309e6dc141"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A weathered, stylized statue of a bearded man in a red plaid shirt and blue jeans, carrying a large axe over his shoulder and holding a smaller tool in his other hand. The figure is posed mid-stride, with a flat, blocky base and a muted, slightly desaturated palette that suggests age and outdoor exposure."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3032
+meshes = 1
+materials = 1
+size = [2.0512261, 4.163838, 1.75006]
+
+[mesh.sm_prop_trailer_log_single_01]
+name = "SM_Prop_Trailer_Log_Single_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Trailer_Log_Single_01.fbx"
+sha256 = "e23e2e9cafde84cc84ffe3080cf24b2ec741d4bb42af6d4b8fd12eca6adfdef0"
+atlas = "Containers_01.png"
+textures = "Containers_01.png"
+wanted = "Land_Vehicle_Master_01.psd"
+description = "A long, slender, weathered red-brown log with a rough, bark-like texture and slightly uneven ends, appearing as a single, straight timber piece suitable for use as a fence rail or debris in a ruined woodland setting."
+differs = "Thinnest and longest, bark-covered with uneven ends, ideal as a rough fence rail or debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 200
+meshes = 1
+materials = 1
+size = [0.556742, 0.533131, 8.648141]
+
+[mesh.sm_prop_trailer_log_single_02]
+name = "SM_Prop_Trailer_Log_Single_02"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Trailer_Log_Single_02.fbx"
+sha256 = "220cbeded44ad691049cda57dfc03afe6a5175c9be6276441efb85c8853edd84"
+atlas = "Containers_01.png"
+textures = "Containers_01.png"
+wanted = "Land_Vehicle_Master_01.psd"
+description = "A long, slender cylinder of weathered red-brown wood, cut square at both ends and stripped of bark, with a slightly rough, matte surface that suggests a single, seasoned log ready for hauling or stacking."
+differs = "Longest stripped log, square-cut ends, plainest and most uniform for clean hauling or stacking."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [0.862145, 0.822714, 8.804195]
+
+[mesh.sm_prop_trailer_log_single_03]
+name = "SM_Prop_Trailer_Log_Single_03"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Trailer_Log_Single_03.fbx"
+sha256 = "e70f2513bba6daada895bd532951c488269dadd6a1ccc57cca6975d23040e2b7"
+atlas = "Containers_01.png"
+textures = "Containers_01.png"
+wanted = "Land_Vehicle_Master_01.psd"
+description = "A long, slender cylinder of weathered red-brown wood, appearing as a stripped log or pole with flat, circular cut ends, showing a darker, hollowed core at one tip and a solid face at the other, suggesting a rustic prop for barricades, scaffolding, or debris in a ruined woodland setting."
+differs = "Shortest stripped log with a hollowed core at one tip, best for barricades or scaffolding."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [0.862146, 0.822714, 6.751384]
+
+[mesh.sm_prop_truck_wrecked_01]
+name = "SM_Prop_Truck_Wrecked_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Truck_Wrecked_01.fbx"
+sha256 = "85c3bb0de617c0777c935be64aec388f76af6aabf95e65d92fa29589b2740957"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A rusted, burnt-orange semi-truck cab with a missing trailer, its rear chassis exposed and skeletal. The cab is dented and scorched, with a broken windshield and a twisted exhaust stack, while the rear wheels are missing or mangled, leaving the axles bare."
+differs = "Largest and most detailed, with a twisted exhaust stack and bare rear axles, ideal as a focal wreck."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 11788
+meshes = 2
+materials = 2
+size = [3.161216, 4.3398013, 9.515076]
+
+[mesh.sm_prop_truck_wrecked_02]
+name = "SM_Prop_Truck_Wrecked_02"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Prop_Truck_Wrecked_02.fbx"
+sha256 = "5accc381f9d05c7ec6377bbc9bbfa63d1b168f690f48e109864d3431e1e0359b"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A rusted red semi-truck cab with a missing cargo bed, leaving only the bare chassis and rear wheels exposed. The cab is battered with shattered windows, missing doors, and heavy grime, while the exposed frame shows dark, corroded metal."
+differs = "Smaller and plainer, with a bare chassis and rear wheels, best for a mid-ground or background wreck."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7680
+meshes = 2
+materials = 2
+size = [3.265842, 3.631979, 7.882291]
+
+[mesh.sm_veh_attchment_antenna_01]
+name = "SM_Veh_Attchment_Antenna_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Veh_Attchment_Antenna_01.fbx"
+sha256 = "89b5056bed18bac3393031a0ebb8ee334b022de3b61ca708b4519ff2fcafce1d"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A tall, slender wooden pole rises from a small, weathered grey base, resembling a simple mast or antenna. The wood is a warm, faded brown with subtle grain, while the base is a chunky, angular block with a slightly darker, worn finish."
+differs = "Tallest and thinnest, with a plain block base, best for a simple mast or flagpole."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.084606, 0.729604, 0.16955599]
+
+[mesh.sm_veh_attchment_antenna_02]
+name = "SM_Veh_Attchment_Antenna_02"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Veh_Attchment_Antenna_02.fbx"
+sha256 = "c39c26ecd725ce858c550934bd9b7dff8eada23563d67a71aba9ace7042840ea"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A slender, slightly tapered mast rises from a chunky, stepped pyramidal base, suggesting a rugged radio or sensor antenna. The surface is a uniform, weathered tan with subtle darker grime, giving it a worn, utilitarian look. The simple, blocky silhouette makes it a versatile prop for rooftops, vehicles, or outposts."
+differs = "Shortest and widest, with a stepped pyramidal base, best for rugged vehicle or rooftop radio mounts."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.150154, 0.508995, 0.21442601]
+
+[mesh.sm_veh_attchment_siren_01]
+name = "SM_Veh_Attchment_Siren_01"
+pack = "polygon_woodland_apocalypse_map"
+source = "SourceFiles/FBX/SM_Veh_Attchment_Siren_01.fbx"
+sha256 = "54e4ac593b0fd839d6f86ad4b6f285c7890cac5509908a92352c2c54495dbffd"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A long, low, rectangular light bar with rounded ends, split into three colour blocks of weathered red, white, and grey, mounted on four short legs. The worn paint and simple, blocky construction suggest a rugged emergency beacon or warning light for a vehicle, with a clear, readable design that fits the apocalypse..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 136
+meshes = 1
+materials = 1
+size = [1.28854, 0.21081, 0.213114]

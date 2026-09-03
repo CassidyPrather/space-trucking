@@ -3,9 +3,18 @@
 //! The sim hit-tests against these rects and the renderer draws inside them,
 //! so the two can never disagree about where a button is. Everything is a
 //! constant: the console does not rearrange itself.
+//!
+//! The room grid lives east of the classic rects, in **net lanes**: one
+//! reserved rect of logical space per attached room, indexed by its dense
+//! `RoomId` (`super::room`). Lanes are fixed by id, so a room's rects are a
+//! pure function of that id and no attach ever reflows another room's
+//! coordinates.
 
 use super::Vec2;
-use super::cargo::{Loc, Piece};
+use super::cargo::{self, Loc, Piece};
+use super::room::{self, RoomId, Rooms};
+
+pub use super::room::{CELL, LANE_COLS as GRID_COLS, LANE_ROWS as GRID_ROWS, lane_origin};
 
 /// Axis-aligned rectangle in world coordinates.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -57,160 +66,133 @@ pub const WARP_BTN: Rect = Rect::new(580.0, 380.0, 40.0, 40.0);
 /// Speaker icon. Mute is frontend state; the sim never hears about it.
 pub const SPEAKER: Rect = Rect::new(630.0, 380.0, 40.0, 40.0);
 
-/// Hold grid width, in cells.
-pub const GRID_COLS: u8 = 6;
+/// Top-left corner of the cabin's lane — where the room grid used to
+/// begin, back when there was only one room.
+pub const GRID_ORIGIN: Vec2 = room::LANE_ORIGIN;
 
-/// Hold grid height, in cells.
-pub const GRID_ROWS: u8 = 4;
-
-/// Hold cell size, in world units.
-pub const CELL: f32 = 34.0;
-
-/// Top-left corner of the hold grid.
-pub const GRID_ORIGIN: Vec2 = Vec2::new(30.0, 450.0);
-
-/// The barter surface, bottom-right: shelves, pads, dial, and accept lever.
-pub const BARTER_PANEL: Rect = Rect::new(260.0, 440.0, 530.0, 150.0);
-
-/// The station's goods on offer, top-left of the barter panel.
-pub const SHELF_SLOTS: [Rect; 4] = slot_row(270.0, 448.0);
-
-/// Goods received in a concluded trade, below the shelf.
-pub const RECEIVED_SLOTS: [Rect; 4] = slot_row(270.0, 542.0);
-
-/// What the player is offering, top-middle of the barter panel.
-pub const GIVE_SLOTS: [Rect; 4] = slot_row(470.0, 448.0);
-
-/// What the player is asking for, below the give pads.
-pub const TAKE_SLOTS: [Rect; 4] = slot_row(470.0, 542.0);
-
-/// Pull to conclude the trade on the pads.
-pub const ACCEPT_LEVER: Rect = Rect::new(660.0, 530.0, 120.0, 40.0);
-
-/// Where travel-encounter flotsam drifts: the station shelf's own four
-/// sockets, doubling as the outboard rail.
-///
-/// The two meanings are mutually exclusive by construction — shelf goods
-/// exist only docked at a trading station (barter open), drift only
-/// underway or at barterless berths — so one row of wells serves both
-/// without a single ambiguous drop.
-pub const FLOTSAM_SLOTS: [Rect; 4] = SHELF_SLOTS;
-
-/// The encounter badge.
-///
-/// Whatever is alongside shows its sign in the dial housing's corner of
-/// the barter panel — which is dormant underway, when encounters happen —
-/// and pressing (or dropping cargo on) it is how the player engages.
-pub const ENCOUNTER_BADGE: Rect = Rect::new(666.0, 451.0, 68.0, 68.0);
-
-/// Centre of the eagerness dial, right of the pads.
-pub const DIAL_CENTER: Vec2 = Vec2::new(700.0, 485.0);
-
-/// Slot edge length. Slots are square.
-const SLOT: f32 = 40.0;
-
-/// Horizontal spacing between slot lefts in a row.
-const SLOT_STEP: f32 = 46.0;
-
-/// A row of four slots starting at `(x, y)`.
-const fn slot_row(x: f32, y: f32) -> [Rect; 4] {
-    [
-        Rect::new(x, y, SLOT, SLOT),
-        Rect::new(x + SLOT_STEP, y, SLOT, SLOT),
-        Rect::new(x + 2.0 * SLOT_STEP, y, SLOT, SLOT),
-        Rect::new(x + 3.0 * SLOT_STEP, y, SLOT, SLOT),
-    ]
-}
-
-/// World rect of hold cell `(x, y)`.
+/// World rect of net cell `(x, y)` in room `room`.
 #[must_use]
-pub fn cell_rect(x: u8, y: u8) -> Rect {
+pub fn cell_rect(room: RoomId, x: u8, y: u8) -> Rect {
+    let origin = lane_origin(room);
     Rect::new(
-        f32::from(x).mul_add(CELL, GRID_ORIGIN.x),
-        f32::from(y).mul_add(CELL, GRID_ORIGIN.y),
+        f32::from(x).mul_add(CELL, origin.x),
+        f32::from(y).mul_add(CELL, origin.y),
         CELL,
         CELL,
     )
 }
 
-/// Hold cell under `p`, if any.
+/// Which room and raw net cell `p` falls in, if any.
+///
+/// Raw: this answers about lanes, not about the room net's validity
+/// mask, because a lane's geometry is fixed and a room's charts are not.
+/// `Sim::cell_at` is the arbiter that also asks whether the room exists
+/// and whether the cell is a cell.
 #[must_use]
-pub fn cell_at(p: Vec2) -> Option<(u8, u8)> {
-    let dx = p.x - GRID_ORIGIN.x;
-    let dy = p.y - GRID_ORIGIN.y;
-    if dx < 0.0 || dy < 0.0 {
-        // Truncation rounds toward zero, so just-outside would land in the
-        // edge cells without this check.
-        return None;
-    }
-    let x = u8::try_from((dx / CELL) as i32).ok()?;
-    let y = u8::try_from((dy / CELL) as i32).ok()?;
-    (x < GRID_COLS && y < GRID_ROWS).then_some((x, y))
+pub fn cell_at(p: Vec2) -> Option<(RoomId, u8, u8)> {
+    room::lane_cell_at(p)
 }
 
-/// Slot index under `p` within a row of slots, if any.
-#[must_use]
-pub fn slot_at(slots: &[Rect; 4], p: Vec2) -> Option<u8> {
-    slots
-        .iter()
-        .position(|slot| slot.contains(p))
-        .map(|i| i as u8)
-}
+/// A rect parked outside the world: what a berth nobody can name gets,
+/// so it is never grabbed and never collides.
+const NOWHERE: Rect = Rect::new(-1000.0, -1000.0, 0.0, 0.0);
 
 /// World rect a piece occupies at its current [`Loc`]. Shared by hit-testing
 /// and the renderer, so pieces are grabbed exactly where they are drawn.
+///
+/// **The graph is a parameter because a footprint is** (`cargo::plan`):
+/// a berth's cells are the kind and the chart it lands on together, and
+/// the chart is the room's to say. Two berths of one wardrobe are two
+/// different rects, and neither of them is a property of the wardrobe.
+///
+/// A stowed piece sits in a cubby sub-rect of its cabinet's own footprint,
+/// which is why the whole board is a parameter too: the cabinet must be
+/// looked up. A stow whose cabinet is missing (impossible by the placement
+/// and save rules), or a berth off its room's net, resolves to
+/// [`NOWHERE`].
 #[must_use]
-pub fn piece_rect(piece: &Piece) -> Rect {
+pub fn piece_rect(rooms: &Rooms, pieces: &[Piece], piece: &Piece) -> Rect {
     match piece.loc {
-        Loc::Hold { x, y } => {
-            let (w, h) = piece.kind.cells();
-            let anchor = cell_rect(x, y);
-            Rect::new(anchor.x, anchor.y, f32::from(w) * CELL, f32::from(h) * CELL)
-        }
-        Loc::StationShelf { slot } => SHELF_SLOTS[usize::from(slot)],
-        Loc::GivePad { slot } => GIVE_SLOTS[usize::from(slot)],
-        Loc::TakePad { slot } => TAKE_SLOTS[usize::from(slot)],
-        Loc::ReceivedShelf { slot } => RECEIVED_SLOTS[usize::from(slot)],
-        Loc::Flotsam { slot } => FLOTSAM_SLOTS[usize::from(slot)],
+        Loc::Hold { room, x, y } | Loc::Laid { room, x, y } => rooms
+            .kind(room)
+            .and_then(|host| cargo::plan(host, piece.kind, x, y))
+            .map_or(NOWHERE, |(w, h)| {
+                let anchor = cell_rect(room, x, y);
+                Rect::new(anchor.x, anchor.y, f32::from(w) * CELL, f32::from(h) * CELL)
+            }),
+        Loc::Stow { cabinet, slot } => pieces
+            .iter()
+            .find(|other| other.id == cabinet)
+            .map_or(NOWHERE, |host| {
+                cubby_rect(piece_rect(rooms, pieces, host), slot)
+            }),
     }
+}
+
+/// The cubby sub-rect for `slot` within a cabinet body rect: a 2×2 rack,
+/// row-major from the top-left. Shared by hit-testing and any renderer,
+/// so a cubby is grabbed exactly where its contents are drawn.
+#[must_use]
+pub fn cubby_rect(body: Rect, slot: u8) -> Rect {
+    let w = body.w / 2.0;
+    let h = body.h / 2.0;
+    Rect::new(
+        f32::from(slot % 2).mul_add(w, body.x),
+        f32::from(slot / 2).mul_add(h, body.y),
+        w,
+        h,
+    )
+}
+
+/// The piece under `p`, cubby contents first and dressings last.
+///
+/// A stowed piece's rect lives inside its cabinet's, so scanning stows
+/// before everything else is what lets a click reach into an open cubby
+/// instead of always grabbing the furniture around it. Laid dressings
+/// scan last for the mirror reason: a rug underlies whatever stands on
+/// it, so the couch takes the click and only a bare stretch of rug
+/// answers for the rug.
+#[must_use]
+pub fn piece_at<'a>(rooms: &Rooms, pieces: &'a [Piece], p: Vec2) -> Option<&'a Piece> {
+    let stowed = pieces
+        .iter()
+        .filter(|piece| matches!(piece.loc, Loc::Stow { .. }));
+    let rest = pieces
+        .iter()
+        .filter(|piece| !matches!(piece.loc, Loc::Stow { .. } | Loc::Laid { .. }));
+    let laid = pieces
+        .iter()
+        .filter(|piece| matches!(piece.loc, Loc::Laid { .. }));
+    stowed
+        .chain(rest)
+        .chain(laid)
+        .find(|piece| piece_rect(rooms, pieces, piece).contains(p))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sim::room::MAX_ROOMS;
 
     /// Every interactive rect, named, for the pairwise checks below.
     fn interactive() -> Vec<(&'static str, Rect)> {
         let mut rects = vec![
             ("launch", LAUNCH_LEVER),
-            ("accept", ACCEPT_LEVER),
             ("pause", PAUSE_BTN),
             ("warp", WARP_BTN),
             ("speaker", SPEAKER),
-            (
-                "grid",
+        ];
+        for id in 0..MAX_ROOMS as RoomId {
+            let origin = lane_origin(id);
+            rects.push((
+                Box::leak(format!("lane[{id}]").into_boxed_str()),
                 Rect::new(
-                    GRID_ORIGIN.x,
-                    GRID_ORIGIN.y,
+                    origin.x,
+                    origin.y,
                     f32::from(GRID_COLS) * CELL,
                     f32::from(GRID_ROWS) * CELL,
                 ),
-            ),
-        ];
-        // FLOTSAM_SLOTS are the shelf rects themselves (exclusive
-        // contexts), so listing them would self-collide by design.
-        rects.push(("encounter", ENCOUNTER_BADGE));
-        for (name, row) in [
-            ("shelf", &SHELF_SLOTS),
-            ("received", &RECEIVED_SLOTS),
-            ("give", &GIVE_SLOTS),
-            ("take", &TAKE_SLOTS),
-        ] {
-            for (i, &slot) in row.iter().enumerate() {
-                // The name survives the loop; leaking four tiny strings in a
-                // test beats losing which slot collided.
-                rects.push((&*format!("{name}[{i}]").leak(), slot));
-            }
+            ));
         }
         rects
     }
@@ -221,7 +203,8 @@ mod tests {
 
     /// A drop can only mean one thing: no two click/drop targets may share
     /// any area. This is the guard against a hit-test resolving somewhere
-    /// the player did not aim.
+    /// the player did not aim — and, since every room now has a lane, the
+    /// guard that two rooms never share a rect.
     #[test]
     fn interactive_rects_never_overlap() {
         let rects = interactive();
@@ -233,25 +216,6 @@ mod tests {
                 );
             }
         }
-    }
-
-    /// The barter furniture stays inside its panel, so hiding the panel
-    /// while traveling also hides every target that needs a station.
-    #[test]
-    fn barter_furniture_sits_inside_the_panel() {
-        let inside = |r: Rect| {
-            r.x >= BARTER_PANEL.x
-                && r.y >= BARTER_PANEL.y
-                && r.x + r.w <= BARTER_PANEL.x + BARTER_PANEL.w
-                && r.y + r.h <= BARTER_PANEL.y + BARTER_PANEL.h
-        };
-        for row in [&SHELF_SLOTS, &RECEIVED_SLOTS, &GIVE_SLOTS, &TAKE_SLOTS] {
-            for &slot in row {
-                assert!(inside(slot), "slot {slot:?} escapes the barter panel");
-            }
-        }
-        assert!(inside(ACCEPT_LEVER));
-        assert!(BARTER_PANEL.contains(DIAL_CENTER));
     }
 
     /// Everything sits inside the logical world.

@@ -1,0 +1,826 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sk_chr_female_spy]
+name = "SK_Chr_Female_Spy"
+pack = "polygon_spy_kit"
+source = "SourceFiles/Characters/SK_Chr_Female_Spy.fbx"
+sha256 = "a98963f625052bc617d821d762e66f926e006787135ce6273168a8a2877512d6"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A low-poly female figure in a T-pose, wearing a sleeveless, floor-length dark red gown with a high slit, long black gloves, and black heels. Her blonde hair is styled in a neat updo, and the outfit's clean, stylized look is ideal for espionage or stealth game scenes."
+differs = "Identical to the other asset in geometry and texture; the only difference is the hairstyle, with this version featuring a neat updo instead of a bob, suited for more formal stealth scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2186
+meshes = 1
+materials = 1
+size = [2.04133, 1.801832, 0.329741]
+
+[mesh.sk_chr_female_spy_2]
+name = "SK_Chr_Female_Spy"
+pack = "polygon_spy_kit"
+source = "SourceFiles/Characters/Unreal/SK_Chr_Female_Spy.fbx"
+sha256 = "82ec33c2176569652bf39bf4982f94be0e4952b04696b5cfe79f8c3af6768ea6"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A low-poly female figure in a T-pose, featuring a short blonde bob and a floor-length dark red gown with a high slit. The dress is accented by a white halter collar and long black gloves, with black high-heeled shoes completing the sleek, formal spy aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2186
+meshes = 1
+materials = 1
+size = [2.04133, 1.801831, 0.329741]
+
+[mesh.sk_chr_male_spy_bowtie]
+name = "SK_Chr_Male_Spy_Bowtie"
+pack = "polygon_spy_kit"
+source = "SourceFiles/Characters/SK_Chr_Male_Spy_Bowtie.fbx"
+sha256 = "8f349007dc62e4f5d0a7b1dac6e67985640242af776fa379b96201ea6e68c263"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A low-poly male figure in a T-pose, wearing a dark charcoal suit with a white shirt and a black bowtie. He has brown hair, pale skin, and black shoes, with a slightly stylized, angular look typical of game assets. The model is clean and untextured in terms of wear, ready for animation."
+differs = "Identical to the other asset in geometry and texture, differing only in the wording of its catalogue description."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1730
+meshes = 1
+materials = 1
+size = [2.047519, 1.797036, 0.33116198]
+
+[mesh.sk_chr_male_spy_bowtie_2]
+name = "SK_Chr_Male_Spy_Bowtie"
+pack = "polygon_spy_kit"
+source = "SourceFiles/Characters/Unreal/SK_Chr_Male_Spy_Bowtie.fbx"
+sha256 = "c8cfd05f7ed54c6a2f9dfd6f432e69edabbbd93c5a47f0e0dee2319ea9d289b3"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A stylized male figure in a T-pose, wearing a dark charcoal suit with a white shirt and a black bowtie. He has brown hair, pale skin, and a neutral expression, with a slightly blocky, low-poly aesthetic that suits spy or detective game scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1730
+meshes = 1
+materials = 1
+size = [2.04752, 1.797036, 0.33116198]
+
+[mesh.sk_chr_male_spy_necktie]
+name = "SK_Chr_Male_Spy_Necktie"
+pack = "polygon_spy_kit"
+source = "SourceFiles/Characters/SK_Chr_Male_Spy_Necktie.fbx"
+sha256 = "11fb963aee86e717fb6b9659dfb231a49a5fe20e386815725e553a12cc907a43"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A low-poly male figure in a T-pose, wearing a dark charcoal suit with a white shirt and a black necktie, brown hair, and a neutral expression, presented in a clean, untextured style suitable for espionage-themed games."
+differs = "Identical to the other asset in geometry and texture, with no distinguishing features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1710
+meshes = 1
+materials = 1
+size = [2.047519, 1.797036, 0.33116198]
+
+[mesh.sk_chr_male_spy_necktie_2]
+name = "SK_Chr_Male_Spy_Necktie"
+pack = "polygon_spy_kit"
+source = "SourceFiles/Characters/Unreal/SK_Chr_Male_Spy_Necktie.fbx"
+sha256 = "a64a110a285ce4d6dddd99f46931c2283f9d04cc010adc3ec061d953a2616eda"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A low-poly male figure in a T-pose, wearing a dark charcoal suit with a white shirt and a dark necktie, with brown hair and a neutral expression. The suit jacket is open, revealing the shirt, and the figure has a slim, stylized build with simple facial features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1710
+meshes = 1
+materials = 1
+size = [2.04752, 1.797036, 0.33116198]
+
+[mesh.sk_prop_drone_01]
+name = "SK_Prop_Drone_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SK_Prop_Drone_01.fbx"
+sha256 = "46791f536e57883762aa1cc315129a718b1655c13a839f01f8f331762b07bc93"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact quadcopter with a boxy central chassis, four slender arms, and small landing skids. The dark grey body is accented with white panels and a subtle red stripe, giving it a utilitarian, surveillance-ready appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 898
+meshes = 5
+materials = 1
+size = [0.879186, 0.180046, 0.536716]
+
+[mesh.sk_prop_id_01]
+name = "SK_Prop_ID_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SK_Prop_ID_01.fbx"
+sha256 = "27539cbf81579dcf034e31113141dd42f8d8b97e3d81adda003425fa72c76d96"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact, open laptop with a dark grey casing and a light grey keyboard, featuring a screen displaying the word AGENT beside a white silhouette portrait. A small, gold USB drive is plugged into the right side, adding a touch of detail and suggesting a spy-themed utility."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 170
+meshes = 2
+materials = 1
+size = [0.179564, 0.161748, 0.100168005]
+
+[mesh.sk_veh_spycar_01]
+name = "SK_Veh_SpyCar_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SK_Veh_SpyCar_01.fbx"
+sha256 = "60083424c170e27fbfd81a3451c0590b6176a350a7ade9f561c4219c6510bd2a"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A sleek, low-slung sports coupe with a long bonnet and a sharply raked rear window, finished in pale grey with a dark olive-green glass canopy. It features a black front splitter, dark side intakes, and a subtle rear spoiler, with red taillight accents and dark wheels."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 11626
+meshes = 28
+materials = 2
+size = [2.417208, 1.49504, 5.105742]
+
+[mesh.sk_wep_butterfly_knife_01]
+name = "SK_Wep_Butterfly_Knife_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SK_Wep_Butterfly_Knife_01.fbx"
+sha256 = "45e97096f818723b71b17d4f41d12a8cd1ca712c7f9c5f2972562177c767139d"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact folding knife with a slender, pointed silver blade and a dark, textured handle, shown closed in all four views. The handle features a subtle metallic pivot and a small lanyard hole at the base, giving it a clean, utilitarian look suited for stealth or spy-themed games."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 234
+meshes = 3
+materials = 1
+size = [0.097137004, 0.58436, 0.027516]
+
+[mesh.sk_wep_flashbang_base_01]
+name = "SK_Wep_Flashbang_Base_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SK_Wep_Flashbang_Base_01.fbx"
+sha256 = "159b49eb54a2ee6523ea4a2ec410218fe4fa23fcd41ab295208fe5dda3cf9392"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact, cylindrical stun grenade with a faceted, low-poly body in dark grey and charcoal, marked by a single bright yellow band around the midsection. A grey lever and a metal pull-ring are attached to the top, giving it a utilitarian, tactical appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 286
+meshes = 3
+materials = 1
+size = [0.054934, 0.176148, 0.071327]
+
+[mesh.sk_wep_pistol_01]
+name = "SK_Wep_Pistol_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SK_Wep_Pistol_01.fbx"
+sha256 = "d991a2c8402f76314ef4bef89df43fc23bcbc2c690abe7ff8a71ebc6d2d79122"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A long-barrelled semi-automatic pistol with a dark grey slide and a black grip, featuring a distinctively elongated profile and a visible trigger guard. The flat-shaded surfaces give it a clean, stylised look, and the matte finish suggests a standard-issue sidearm rather than a custom piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 812
+meshes = 5
+materials = 1
+size = [0.04403, 0.20343399, 0.48872998]
+
+[mesh.sk_wep_smg_01]
+name = "SK_Wep_SMG_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SK_Wep_SMG_01.fbx"
+sha256 = "0e7d095d6ec925f5e7f39fa2cc5975d2a04537a04e4edd97035935c0f2039282"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact, angular submachine gun with a skeletal wire stock, a short suppressor, and a boxy receiver. The dark grey polymer body is accented with a red charging handle and a small red dot on the side, giving it a tactical, modern look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1864
+meshes = 5
+materials = 1
+size = [0.067163005, 0.340124, 0.908029]
+
+[mesh.sm_chr_attach_glasses_01]
+name = "SM_Chr_Attach_Glasses_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Glasses_01.fbx"
+sha256 = "12ea9de43dc694a1f2e85e0b3727840b181e6c7b861c93d6bf9c9fc7493107ef"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A pair of angular, low-poly sunglasses with thick, dark grey lenses set in a lighter grey frame. The straight arms extend back with a slight taper, and the overall design is sleek and modern, suggesting a tactical or spy aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 164
+meshes = 1
+materials = 1
+size = [0.244974, 0.085765004, 0.186433]
+
+[mesh.sm_chr_attach_nvg_female_01]
+name = "SM_Chr_Attach_NVG_Female_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_NVG_Female_01.fbx"
+sha256 = "fff8baccf343fb56f114cde361a32f750ed7046763f846a267dded3a4e70f770"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact, angular headband with a raised front bridge, rendered in matte dark grey with a subtle sheen, suggesting a tactical night-vision mount. The low-poly silhouette is clean and unadorned, with no visible lenses or straps, giving it a versatile, modular look for attaching gear to a character's head."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 90
+meshes = 1
+materials = 1
+size = [0.281914, 0.13717699, 0.283126]
+
+[mesh.sm_chr_attach_nvg_female_double_01]
+name = "SM_Chr_Attach_NVG_Female_Double_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_NVG_Female_Double_01.fbx"
+sha256 = "9e0809207378f536dbed15c04a613458ee168b53eb3b605d417a42f7236c69ea"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact, blocky head-mounted unit with two prominent forward-facing cylindrical lenses, a central rectangular housing, and a small rear-mounted box, all rendered in a flat, matte dark grey with subtle lighter grey panel accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 610
+meshes = 1
+materials = 1
+size = [0.190052, 0.118421, 0.169059]
+
+[mesh.sm_chr_attach_nvg_female_single_01]
+name = "SM_Chr_Attach_NVG_Female_Single_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_NVG_Female_Single_01.fbx"
+sha256 = "6ef8b27185a5bb18bd4e31a21ed87d25adf634f64172eede34ec0b5d145119cc"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact, blocky night-vision goggle unit in matte dark grey, featuring two large octagonal lenses and a central mounting bracket. The low-poly facets give it a rugged, utilitarian look, with a small top-mounted switch or sensor block."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 472
+meshes = 1
+materials = 1
+size = [0.190052, 0.118421, 0.178131]
+
+[mesh.sm_chr_attach_nvg_male_01]
+name = "SM_Chr_Attach_NVG_Male_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_NVG_Male_01.fbx"
+sha256 = "6e58843bedb029aa03d6a6bf6430dd4cdd1a8f5e6ca85b10ce524305594dd183"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact, angular head-mount frame with a raised bridge and a single forward lens housing, rendered in matte dark grey with a subtle sheen. The open, low-profile design suggests a lightweight tactical or night-vision attachment, with clean, faceted geometry that reads clearly at distance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 78
+meshes = 1
+materials = 1
+size = [0.269964, 0.13637, 0.287512]
+
+[mesh.sm_chr_attach_nvg_male_double_01]
+name = "SM_Chr_Attach_NVG_Male_Double_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_NVG_Male_Double_01.fbx"
+sha256 = "25c4c5fc095d41f59e72045eb6938452a87454987c2befab7f5d740fcd011c5a"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A chunky, low-poly head-mounted device with two large forward-facing cylindrical lenses, a central rectangular housing, and a rear strap block. The dark grey, faceted surfaces give it a rugged, tactical look, suggesting it is a dual-tube night-vision goggle for a male character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 610
+meshes = 1
+materials = 1
+size = [0.190052, 0.118421, 0.169059]
+
+[mesh.sm_chr_attach_nvg_male_single_01]
+name = "SM_Chr_Attach_NVG_Male_Single_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_NVG_Male_Single_01.fbx"
+sha256 = "1107a06e5b6514853b4041a869bc92ef42c40c29b7c10edb11b9f09235f9534f"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact, blocky night-vision goggle unit with twin cylindrical lenses and a central mounting bracket, rendered in matte dark grey with lighter grey panel accents. The low-poly faceting gives it a rugged, utilitarian look, suggesting a head-mounted tactical device for stealth or night operations."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 472
+meshes = 1
+materials = 1
+size = [0.190052, 0.118421, 0.178131]
+
+[mesh.sm_chr_attach_rose_01]
+name = "SM_Chr_Attach_Rose_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Rose_01.fbx"
+sha256 = "f16283a112b145e981a3e3b1c3d448f65ad233998221f7b0309cb9f9a08e1fa8"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A low-poly red rose blossom with angular, faceted petals that flare outward from a tight center, rendered in a flat, matte crimson with darker shading in the crevices. The stylized, chunky geometry gives it a crisp, game-ready look, and its compact, symmetrical form makes it ideal for use as a prop, decoration, or..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 64
+meshes = 1
+materials = 1
+size = [0.103129, 0.047008, 0.096952]
+
+[mesh.sm_prop_bomb_01]
+name = "SM_Prop_Bomb_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Bomb_01.fbx"
+sha256 = "6e0b9ccb31425d38ec4f298bb83300a197cdfa8ab38a2d61af576fbec327f8ca"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A low, flat, brick-shaped explosive charge with a chunky, industrial look, wrapped in dark grey straps and finished with bright yellow wiring. The top features a recessed grey panel with a green digital display, while the red casing shows scuffs and wear, suggesting a well-used, ready-to-place demolition device."
+differs = "The largest and flattest, a single brick-shaped charge with a recessed panel, ideal for placing under flat surfaces."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 620
+meshes = 1
+materials = 1
+size = [0.385732, 0.105933, 0.281358]
+
+[mesh.sm_prop_bomb_02]
+name = "SM_Prop_Bomb_02"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Bomb_02.fbx"
+sha256 = "692427404676fc6e49cc3f1bcde970506b1c7c8593079ea6140dfed81f53abf2"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A bundle of six rust-red dynamite sticks bound by dark grey straps, featuring a central grey block with a pale green digital display and a yellow detonator wire running along the top. The low-poly, weathered look suggests a classic explosive charge ready for demolition or sabotage."
+differs = "The most compact and detailed, a bundle of six sticks with a central block, better for tight, irregular spaces."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 704
+meshes = 1
+materials = 1
+size = [0.323142, 0.165317, 0.149092]
+
+[mesh.sm_prop_briefcase_01]
+name = "SM_Prop_Briefcase_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Briefcase_01.fbx"
+sha256 = "acce1d3bcb442baa137cad332b7d84fc36af6009b3aae80233573cbe3df069c6"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A slim, rectangular hard-shell briefcase with rounded corners, featuring a dark grey central panel framed by light grey ribbed edging and a black top handle. The surface is clean and unscuffed, with subtle metallic shading that suggests a durable, professional finish suited for carrying documents or spy equipment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 336
+meshes = 1
+materials = 1
+size = [0.527051, 0.469333, 0.084334]
+
+[mesh.sm_prop_briefcase_bomb_01]
+name = "SM_Prop_Briefcase_Bomb_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Briefcase_Bomb_01.fbx"
+sha256 = "1d47354b8bf14006d7ea97566ab4f1cbb454c4ee332510420b2dbe4a184543d2"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact, rectangular bundle of red-orange dynamite sticks, tightly bound by dark grey straps and capped with a grey electronic timer unit. The front panel features a small green screen and a yellow switch, with a short antenna extending from the side."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 842
+meshes = 1
+materials = 1
+size = [0.467666, 0.297822, 0.105932]
+
+[mesh.sm_prop_briefcase_cash_01]
+name = "SM_Prop_Briefcase_Cash_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Briefcase_Cash_01.fbx"
+sha256 = "9b496aa87238396b76a02c3e990ba221a1dd3c26916aa7184ad10bd0683047e6"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A slim, rectangular briefcase with a worn, pale green and white finish, its exterior covered in a grid of faded, green-bordered panels that resemble stacked banknotes. The case is slightly scuffed and weathered, with a dark handle and latch, suggesting a heavy, valuable payload that has seen rough handling."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 112
+meshes = 1
+materials = 1
+size = [0.45688, 0.336143, 0.110727996]
+
+[mesh.sm_prop_briefcase_cassette_01]
+name = "SM_Prop_Briefcase_Cassette_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Briefcase_Cassette_01.fbx"
+sha256 = "51419cd39f773210379ade3f6bf29e45794e54e6a9e3d9a58d911eee7d94a358"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact, rectangular grey cassette tape with two visible spools, a small red button, and a white label, showing a worn, utilitarian finish typical of spy equipment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 556
+meshes = 1
+materials = 1
+size = [0.36842102, 0.31405202, 0.120582]
+
+[mesh.sm_prop_briefcase_files_01]
+name = "SM_Prop_Briefcase_Files_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Briefcase_Files_01.fbx"
+sha256 = "bf08627c84ed35fe0bc8b23334358ac6c813fca1774e5527dc6a6c4321632571"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A squat, rectangular tan file folder with a slightly worn, matte finish, bearing a red 'TOP SECRET' stamp on its front. The folder is slightly open, revealing a few white paper sheets inside, and the cover is angled to show its thickness and the layered construction."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.424922, 0.31194, 0.105264]
+
+[mesh.sm_prop_briefcase_lid_01]
+name = "SM_Prop_Briefcase_Lid_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Briefcase_Lid_01.fbx"
+sha256 = "4f36cbcfc2e632ab44c147fa1d5622ab334f976884e9acd73cfad1e914ef7174"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A shallow, rectangular grey lid with a recessed dark panel and a ribbed outer surface, framed by a beveled rim with small corner caps. The matte finish and simple, utilitarian design suggest a sturdy, functional case component, ready to be paired with a matching base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 252
+meshes = 1
+materials = 1
+size = [0.527051, 0.412651, 0.102633]
+
+[mesh.sm_prop_camera_01]
+name = "SM_Prop_Camera_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Camera_01.fbx"
+sha256 = "566bc5275e5470d5f8d2c3d8794fb46f9ffed86ed2ee9452c01f6ccbf4321a9c"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A chunky, low-poly box camera with a rounded grey body, a dark blue circular lens, and a black side grip. The top features two small buttons, and the front has a raised square frame around the lens. Its clean, stylized look makes it a versatile prop for spy or surveillance scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 326
+meshes = 1
+materials = 1
+size = [0.117698, 0.114102, 0.060926]
+
+[mesh.sm_prop_cash_01]
+name = "SM_Prop_Cash_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Cash_01.fbx"
+sha256 = "0b65c98852c608cf4414bef8da0af10f29b60f10632f1734b1f9528f56279c30"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A neat, low-poly stack of banded banknotes, showing a pale green and off-white palette with a repeating currency pattern on the top face and a visible paper band wrapping the side. The crisp, angular edges and flat shading give it a stylised, game-ready look, suggesting a generic prop for heists, casinos, or loot..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 112
+meshes = 1
+materials = 1
+size = [0.45688, 0.110727, 0.336142]
+
+[mesh.sm_prop_cassette_01]
+name = "SM_Prop_Cassette_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Cassette_01.fbx"
+sha256 = "69485fb3b57749bcb6c7a587b9371794f45f493742a22df29d773281226423bc"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A chunky, low-poly grey cassette with two prominent white reels and a small red label, looking like a retro spy gadget or data tape."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 556
+meshes = 1
+materials = 1
+size = [0.36842, 0.126477, 0.314052]
+
+[mesh.sm_prop_cigarette_01]
+name = "SM_Prop_Cigarette_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Cigarette_01.fbx"
+sha256 = "fb812f59df57333bc30fe1afead36a4044f0a0c065ca6278bde4b307a4bd329a"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A slender, unlit cigarette with a tan cork-patterned filter and a white paper body, ending in a dark, flat tip. The clean, low-poly geometry and simple texture make it a versatile, instantly readable prop for ashtrays, tables, or character hands in spy-themed scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.01836, 0.0159, 0.149734]
+
+[mesh.sm_prop_cigarette_lit_01]
+name = "SM_Prop_Cigarette_Lit_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Cigarette_Lit_01.fbx"
+sha256 = "cb5541d7166e808f394ea29d7d894e460c4cacca4493844b5cbedb037eb6af35"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A slender, cylindrical cigarette with a tan filter and a white paper body, tipped with a bright red glowing ember. The low-poly faceting is visible on the surface, and the lit end suggests it is actively burning, making it suitable for scenes requiring active smoking or a source of light."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [0.01836, 0.0159, 0.149734]
+
+[mesh.sm_prop_diamond_01]
+name = "SM_Prop_Diamond_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Diamond_01.fbx"
+sha256 = "67966ee2af6772a6a8ec1547902f443f6c14826a54c72c4a50c50e6591492b99"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A classic brilliant-cut gemstone with a wide, flat table and a sharply tapered pavilion, rendered in a pale, icy blue with a subtle, cool sheen. The faceted surface is clean and unblemished, with no inclusions or internal reflections, giving it a pristine, freshly-cut appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.15453, 0.10307, 0.15453]
+
+[mesh.sm_prop_drink_01]
+name = "SM_Prop_Drink_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Drink_01.fbx"
+sha256 = "fe32a60f85c88be4792048863d1b253f8625fc5685a1de05e5b86ef8bc7e88e5"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A faceted, low-poly cocktail glass with a wide, angular bowl, a slender stem, and a flat hexagonal base. The bowl holds a pale yellow liquid, and a dark brown garnish rests on the rim, suggesting a martini or similar drink."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 222
+meshes = 1
+materials = 1
+size = [0.163132, 0.313625, 0.16342899]
+
+[mesh.sm_prop_drone_01]
+name = "SM_Prop_Drone_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/Obj/SM_Prop_Drone_01.obj"
+sha256 = "6e2cfb0fa7cde5454a816f4b819e7dfa1a2a6ef7c8122d3e5db35079631d825a"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact quadcopter with a boxy central fuselage and four slender arms, each ending in a small rotor with a T-shaped blade. The body is a flat, matte grey with darker panels and a lighter grey underside, suggesting a utilitarian surveillance or reconnaissance role."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 898
+meshes = 1
+materials = 1
+size = [87.91854, 18.004639, 53.671608]
+
+[mesh.sm_prop_files_01]
+name = "SM_Prop_Files_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Files_01.fbx"
+sha256 = "ac2f3d1633fd14bb8be5b65b02e1c8d3bcfa8dc66e12e90fa8a4f5a0eec3b388"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A squat, thick manila folder with a red 'TOP SECRET' stamp on the front, holding a stack of white papers that stick out from the top and side. The cover is slightly scuffed and worn, with a dark tab on the left edge, giving it a used, classified-dossier appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.429155, 0.317494, 0.107148]
+
+[mesh.sm_prop_flashdrive_01]
+name = "SM_Prop_FlashDrive_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_FlashDrive_01.fbx"
+sha256 = "e2b49447d4f61f429a64ce25bd5b14d67e4485aa90dc84e83a668cc8f24afea9"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A slim, rectangular USB flash drive with a dark charcoal body and a light grey metal connector. The casing is smooth and matte, with a subtle bevel on the edges, and the connector features the standard two square cutouts. It appears clean and functional, ready for a spy-themed mission."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [0.046242, 0.022346, 0.168282]
+
+[mesh.sm_prop_id_01]
+name = "SM_Prop_ID_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/Obj/SM_Prop_ID_01.obj"
+sha256 = "8a8b252b4409038263e8bf13072f4e971c9d6d0aa75ebfc324a1b8a257223329"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A low-poly open laptop with a dark grey casing and a light grey keyboard, featuring a screen displaying a blue 'AGENT' banner and a white silhouette profile. A gold ID badge rests on the right side of the keyboard, giving the asset a distinct spy-themed purpose."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 170
+meshes = 1
+materials = 1
+size = [17.95635, 16.17479, 10.016783]
+
+[mesh.sm_prop_laser_01]
+name = "SM_Prop_Laser_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Laser_01.fbx"
+sha256 = "da4cab3a45268618cf01d55bb41b81e0e19f485f62752f0fd1633822cb380d64"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact, low-poly hexagonal nut with a wide, dark grey base and a lighter grey raised collar, featuring a recessed, dark central bore. The faceted surfaces and muted, untextured palette give it a clean, industrial look, suggesting a mechanical fastener or a small, sturdy component for a sci-fi device."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [0.103854, 0.059247, 0.08994]
+
+[mesh.sm_prop_laser_beam_01]
+name = "SM_Prop_Laser_Beam_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Laser_Beam_01.fbx"
+sha256 = "a0854d596a3d89d8c09b54a9b24999b6babdf402148f2a595b4f61f015ea78af"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A slender, straight red beam with a soft, glowing core, rendered as a thin cylinder that reads clearly as a laser line. Its uniform, unbroken surface and bright, saturated colour make it ideal for sci-fi traps, security grids, or targeting effects."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [0.009917, 2.535608, 0.009917]
+
+[mesh.sm_prop_modem_01]
+name = "SM_Prop_Modem_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Modem_01.fbx"
+sha256 = "9f26bf2968f35a6f4ce0adbec53c7b5c3cc4549159ca92daca3a468c72f32e69"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A low, flat rectangular unit in dark grey, featuring a single tall antenna rising from the rear corner and a small circular dial with a red accent on the top surface. A short cable loops from the front edge, and the overall design suggests a compact, rugged piece of field communications equipment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 226
+meshes = 1
+materials = 1
+size = [0.281894, 0.336703, 0.495375]
+
+[mesh.sm_prop_pen_01]
+name = "SM_Prop_Pen_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Pen_01.fbx"
+sha256 = "9b30b4e57336b1f254243c41aeb6883cb53761eb5b9c291d7c9983690f54f24a"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A slender, cylindrical pen with a matte red barrel and dark grey metallic tip and end cap. The silver clip is visible near the top, and the faceted low-poly shading gives it a clean, stylized look suitable for a desk or inventory item."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 140
+meshes = 1
+materials = 1
+size = [0.040242, 0.044316, 0.331338]
+
+[mesh.sm_prop_podium_01]
+name = "SM_Prop_Podium_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Podium_01.fbx"
+sha256 = "3431ce4b7f1a16d2257f7294357471d291280a4140328d3ccd112ff82c51ad27"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A square, stepped pedestal in pale beige stone with a recessed central column and a flat, dark red top pad, suggesting a display stand for a small object."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 658
+meshes = 1
+materials = 1
+size = [0.401996, 0.852149, 0.401996]
+
+[mesh.sm_prop_podium_diamond_01]
+name = "SM_Prop_Podium_Diamond_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Podium_Diamond_01.fbx"
+sha256 = "79d411066e29c7c5e95538f5cfa0614d01bc2db97687f13f4bfbdfc494e4120f"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A faceted, pale ice-blue gem with a wide, flat table and a short, pointed pavilion, rendered in a clean low-poly style. Its cool, translucent-looking surface and simple geometric form make it ideal for a display pedestal, loot item, or quest objective in a stylized spy or fantasy setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.15453, 0.10307, 0.15453]
+
+[mesh.sm_prop_podium_glass_01]
+name = "SM_Prop_Podium_Glass_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_Podium_Glass_01.fbx"
+sha256 = "228c5c4aaad7725662b33fb243ffa2348407613ef25a49bcd7b15c663229d0cd"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A simple, perfectly cubic block with a flat, matte grey finish and a single dark, jagged shard-like marking on one corner, giving it a slightly damaged or stained appearance. The uniform shape and lack of any podium features make it read as a generic, unadorned cube rather than a display stand, suitable for a..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 30
+meshes = 1
+materials = 1
+size = [0.341838, 0.341838, 0.341838]
+
+[mesh.sm_prop_securitycard_01]
+name = "SM_Prop_SecurityCard_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_SecurityCard_01.fbx"
+sha256 = "3b10f5aba44b30ba51463f1850f12b432e809088a19d9b284ad0eb8cb4857e43"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A flat, rectangular white card with a blue central band and a dark grey stripe along one edge, bearing the word SECURITY in white capital letters. The low-poly design features a simple, clean look with a slight bevel, appearing as a standard access badge for a spy or office setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.15883, 0.009027, 0.1]
+
+[mesh.sm_prop_suctioncup_01]
+name = "SM_Prop_SuctionCup_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_SuctionCup_01.fbx"
+sha256 = "f3eb3c7aab9fa28ea6784131fab7113af7bbbff0244f2f6914ff4fe37ac89e53"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A chunky, low-poly suction cup with a wide, faceted base and a thick, angled lever arm rising from a central block. The dark grey plastic body features lighter grey highlights on the rim and lever, giving it a worn, utilitarian look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 212
+meshes = 1
+materials = 1
+size = [0.31048, 0.214636, 0.31048]
+
+[mesh.sm_prop_walkietalkie_01]
+name = "SM_Prop_WalkieTalkie_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Prop_WalkieTalkie_01.fbx"
+sha256 = "e83d9e317f39a2e24134aef49b49410be04e749747842b2b57b094968a59f3f2"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A boxy, upright grey handset with a tall, thin antenna, a small red top button, and a green screen with a dark bezel on the front face. The blocky, low-poly design features a simple side clip and a slightly worn, matte finish, clearly suited for a tactical or spy setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 222
+meshes = 1
+materials = 1
+size = [0.112782, 0.440742, 0.070936]
+
+[mesh.sm_veh_spycar_01]
+name = "SM_Veh_SpyCar_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Veh_SpyCar_01.fbx"
+sha256 = "d665c25cd04f28037330f982d590015071d343b937451a53a180103bc6cdf9de"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A sleek, low-slung sports car with a wedge-shaped nose and a wide, aggressive stance, featuring a prominent rear spoiler and side air intakes. Its body is a pale, cool grey with a contrasting olive-green engine cover and subtle red taillight accents, suggesting a high-tech, covert vehicle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 11858
+meshes = 30
+materials = 2
+size = [4.25559, 1.66512, 5.105742]
+
+[mesh.sm_veh_spycar_fins_main]
+name = "SM_Veh_SpyCar_Fins_Main"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Veh_SpyCar_Fins_Main.fbx"
+sha256 = "a490cfe84291bffd7049b555504f5fbcd5e5c5d309de1aef45c8579ff15f7cf0"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A sleek, low-slung sports car with a long, wedge-shaped nose and a sharply tapered tail, finished in a glossy, pale blue-grey. It features a dark, tinted canopy and a prominent rear spoiler, giving it a futuristic, aerodynamic profile suited for covert operations."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 148
+meshes = 1
+materials = 1
+size = [4.25559, 0.539019, 1.066294]
+
+[mesh.sm_veh_spycar_fins_rear]
+name = "SM_Veh_SpyCar_Fins_Rear"
+pack = "polygon_spy_kit"
+source = "SourceFiles/FBX/SM_Veh_SpyCar_Fins_Rear.fbx"
+sha256 = "66798935f9fb68c9c99a8f0e00e911ce7cfe4fa09fe0e9ad6d458cfeebc75a7c"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A set of eight separate, low-poly grey fins and spoiler pieces, each with a stepped, angular profile and a flat, matte finish. The parts are arranged in a loose circle, showing their simple, blocky construction and lack of any decals or weathering."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [1.849554, 0.628981, 0.80606306]
+
+[mesh.sm_wep_butterfly_knife_01]
+name = "SM_Wep_Butterfly_Knife_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/Obj/SM_Wep_Butterfly_Knife_01.obj"
+sha256 = "5d0c1d7ea1d06ccb6dfbec1e3d42ce11c55c0e9c33ed9d0b307511e1579814db"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact folding knife with a slender, tapered silver blade and a dark, textured handle, shown closed in two views and open in two. The handle features a subtle metallic pivot and a small lanyard hole at the base, giving it a utilitarian, tactical look suited for stealth or spy-themed scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 234
+meshes = 1
+materials = 1
+size = [9.713703, 58.436028, 2.7515502]
+
+[mesh.sm_wep_flashbang_base_01]
+name = "SM_Wep_Flashbang_Base_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/Obj/SM_Wep_Flashbang_Base_01.obj"
+sha256 = "baf9d2066d570b6f44972bcf1256add9f66be152cfa816931c16d7067f7052a5"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A tall, cylindrical canister with a faceted, blocky silhouette, featuring a prominent grey lever handle and a metal ring pull on the side. The body is dark charcoal with a single, bright yellow warning band around the middle, suggesting a tactical or explosive device."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 286
+meshes = 1
+materials = 1
+size = [5.4934397, 17.61487, 7.1327534]
+
+[mesh.sm_wep_pistol_01]
+name = "SM_Wep_Pistol_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/Obj/SM_Wep_Pistol_01.obj"
+sha256 = "59ac57b6e86799cc32a8f5a225679b7c98b268be1a7ebd895d62e4a8486ef176"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A long-barrelled semi-automatic pistol with a matte dark grey finish, featuring a distinctively slender slide and a squared trigger guard. The grip is textured with fine horizontal serrations, and the overall silhouette is angular and utilitarian, suggesting a target or competition sidearm rather than a compact carry.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 812
+meshes = 1
+materials = 1
+size = [4.403012, 20.34338, 48.873047]
+
+[mesh.sm_wep_smg_01]
+name = "SM_Wep_SMG_01"
+pack = "polygon_spy_kit"
+source = "SourceFiles/Obj/SM_Wep_SMG_01.obj"
+sha256 = "741bf41834903690d75db8519c502812eb726b57a3e3046dc61c9734ad85cec0"
+atlas = "PolygonSpy_Texture_01_A.png"
+textures = "PolygonSpy_Texture_01_A.png"
+description = "A compact, angular submachine gun with a skeletal wire stock, a short suppressor, and a boxy magazine, rendered in matte black with a red accent on the receiver. The low-poly silhouette is aggressive and utilitarian, suggesting a stealth or tactical role."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1864
+meshes = 1
+materials = 1
+size = [6.7163153, 34.012486, 90.80295]

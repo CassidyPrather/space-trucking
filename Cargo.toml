@@ -1,53 +1,19 @@
-[package]
-name = "space-trucking"
-version = "0.1.0"
-edition = "2024"
-rust-version = "1.85"
-authors = ["Cassidy Prather <pratherea@gmail.com>"]
-description = "Space Trucking — an ambient space-freight bartering toy"
-readme = "README.md"
-license = "AGPL-3.0-or-later"
-repository = "https://github.com/CassidyPrather/space-trucking"
-keywords = ["game", "gamedev", "macroquad", "wasm", "space"]
-categories = ["games", "wasm"]
-publish = false
+# One workspace, three packages: this root package is the pure game
+# library (sim, net, replay, synth, telemetry) that runs headless in tests
+# and benches, crates/cabin is the Bevy first-person frontend — the game
+# people play — and xtask is the errand runner that resolves purchased art
+# out of a store the repository is not allowed to contain. The workspaces
+# merged when the 2D macroquad console retired (see docs/BAY.md): the
+# `links = "alsa"` collision between quad-alsa-sys and Bevy's alsa-sys
+# left with macroquad.
+[workspace]
+members = ["crates/cabin", "xtask"]
+resolver = "3"
 
-[lib]
-name = "space_trucking"
-path = "src/lib.rs"
-
-[[bin]]
-name = "space-trucking"
-path = "src/main.rs"
-
-[[bench]]
-name = "sim_bench"
-harness = false
-
-[dependencies]
-# `audio` is off in macroquad's default features; the web build also needs
-# quad-snd's audio.js plugin in web/ (see CREDITS.md). It costs ~300 bytes of
-# wasm: on the web quad-snd is a few extern declarations and the browser does
-# the decoding, so the heavy native decoders never reach this target.
-macroquad = { version = "0.4", features = ["audio"] }
-fastrand = "2"
-# localStorage on the web, a data file natively; needs quad-storage's js
-# plugin vendored into web/ before the browser side actually persists.
-quad-storage = "0.1"
-
-# Native builds read the OS clock and timezone directly for the deep-night
-# window; on the web the shell mirrors the browser's answer instead, so the
-# wasm target never pulls this in.
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-chrono = { version = "0.4", default-features = false, features = ["clock"] }
-
-[dev-dependencies]
-criterion = "0.7"
-
-[lints.rust]
+[workspace.lints.rust]
 unsafe_code = "forbid"
 
-[lints.clippy]
+[workspace.lints.clippy]
 # Turn everything up. I'm not a coward!
 all = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
@@ -60,7 +26,57 @@ missing_panics_doc = "allow" # Ditto
 cast_precision_loss = "allow" # usize -> f32 in render math; the counts are tiny
 cast_possible_truncation = "allow" # f32 -> i32 for pixel/window sizes is the point
 
+[package]
+name = "space-trucking"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Cassidy Prather <pratherea@gmail.com>"]
+description = "Space Trucking — an ambient space-freight bartering toy"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/CassidyPrather/space-trucking"
+keywords = ["game", "gamedev", "bevy", "space"]
+categories = ["games"]
+publish = false
+
+[lib]
+name = "space_trucking"
+path = "src/lib.rs"
+
+[[bench]]
+name = "sim_bench"
+harness = false
+
+[dependencies]
+fastrand = "2"
+
+[dev-dependencies]
+criterion = "0.7"
+
+[lints]
+workspace = true
+
 [profile.release]
 # Smaller, faster binaries at the cost of compile time
 lto = "thin"
 strip = "symbols"
+
+# Dependencies get real optimization even in dev builds: Bevy at -O0 is
+# unplayably slow.
+[profile.dev.package."*"]
+opt-level = 2
+
+# Our own code gets light optimization too: the cabin's CRT screens are a
+# CPU rasterizer repainting every frame, and -O0 made whole dev builds
+# feel "way worse than such a simple game should" (playtest verdict).
+# -O1 keeps edit-compile loops quick; `--release` is the way to *play*.
+[profile.dev]
+opt-level = 1
+# Line tables, not a full description of every type in the graph. A dev
+# build wrote DWARF for all five hundred-odd crates and handed the lot
+# to the linker again on every edit. A backtrace reads the line table,
+# so a panic still names a file and a line; what goes is stepping
+# through a dependency in a debugger, which `debug = true` buys back for
+# the one run that needs it.
+debug = "line-tables-only"

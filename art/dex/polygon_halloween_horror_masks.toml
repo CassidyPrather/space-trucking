@@ -1,0 +1,93 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_plague_mask]
+name = "SM_Plague_Mask"
+pack = "polygon_halloween_horror_masks"
+source = "SourceFiles/FBX/SM_Plague_Mask.fbx"
+sha256 = "bd0ee5d2e22f60be70d77afe6ecd320fbd97aa304d3b638252fe2c8e134e3ae4"
+atlas = "Polygon_Mask_Texture.png"
+textures = "Polygon_Mask_Texture.png"
+description = "A weathered, dark grey plague doctor mask with a long, sharply pointed beak and a single round eyehole, secured by a simple black strap. The low-poly surface shows subtle mottled texture, suggesting worn leather or aged metal, giving it a grim, practical look suited to horror scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1068
+meshes = 2
+materials = 1
+size = [0.30326498, 0.317806, 0.506309]
+
+[mesh.sm_prop_alpaca_mask]
+name = "SM_Prop_Alpaca_Mask"
+pack = "polygon_halloween_horror_masks"
+source = "SourceFiles/FBX/SM_Prop_Alpaca_Mask.fbx"
+sha256 = "69aaf122cde6407b68701d710a87d84ba95127ccd5b0e08e29673a83cf3b5509"
+atlas = "Polygon_Mask_Texture.png"
+textures = "Polygon_Mask_Texture.png"
+description = "A stylized, low-poly witch hat with a wide, angular brim in deep purple, topped with a pointed crown and a red band. A white ring with a red gem sits at the front, while a small, pale face with a single visible eye peeks out from beneath the brim, giving it a spooky, mischievous look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2063
+meshes = 8
+materials = 1
+size = [0.61145306, 0.631364, 0.603302]
+
+[mesh.sm_prop_demonic_mask]
+name = "SM_Prop_Demonic_Mask"
+pack = "polygon_halloween_horror_masks"
+source = "SourceFiles/FBX/SM_Prop_Demonic_Mask.fbx"
+sha256 = "ddc5054a0eb6ebaf78583a58c50d57f54be68182271f94425d0b9313518b1027"
+atlas = "Polygon_Mask_Texture.png"
+textures = "Polygon_Mask_Texture.png"
+description = "A pale, off-white face mask with a pointed chin, hollow black eye sockets, and a small, dark, open mouth, framed by a thick, dark grey strap that loops behind it. The surface is smooth and matte, with faint, smudged dark markings around the eyes and a small spiral symbol on the forehead, giving it a worn, eerie look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 662
+meshes = 2
+materials = 1
+size = [0.297998, 0.23151201, 0.337276]
+
+[mesh.sm_prop_led_mask]
+name = "SM_Prop_LED_Mask"
+pack = "polygon_halloween_horror_masks"
+source = "SourceFiles/FBX/SM_Prop_LED_Mask.fbx"
+sha256 = "2264d7c9964afc3a5585bba6849751098605b1bd58d5203f1f8a832eb5061a38"
+atlas = "Polygon_Mask_Texture.png"
+textures = "Polygon_Mask_Texture.png"
+description = "A matte black half-mask with a curved, angular profile and a thin black strap, featuring a glowing neon purple and blue X on the forehead and a jagged, glowing mouth line, giving it a cyberpunk or rave aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1702
+meshes = 2
+materials = 1
+size = [0.30572098, 0.222052, 0.329001]
+
+[mesh.sm_prop_pumpkin_mask]
+name = "SM_Prop_Pumpkin_Mask"
+pack = "polygon_halloween_horror_masks"
+source = "SourceFiles/FBX/SM_Prop_Pumpkin_Mask.fbx"
+sha256 = "1a1efcb8b3c3ff7be461b2cabbbe7b8bd015cd99cf7cf51eb4abda554344cd78"
+atlas = "Polygon_Mask_Texture.png"
+textures = "Polygon_Mask_Texture.png"
+description = "A squat, faceted orange gourd with a short, curved grey stem, carved with a jagged, black grin and triangular eyes on one side, while the reverse remains smooth and unmarked, giving it a classic jack-o'-lantern look with a clean, stylised finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 788
+meshes = 1
+materials = 1
+size = [0.399533, 0.433764, 0.39331]

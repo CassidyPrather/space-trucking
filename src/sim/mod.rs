@@ -1,12 +1,20 @@
 //! The whole game: pure, deterministic, and macroquad-free.
 //!
 //! Space Trucking is an ambient hauling loop — pick a destination while
-//! docked, pull the launch lever, cruise in real time, auto-dock, and barter
-//! cargo for cargo with no currency in sight. All of it lives here as a plain
-//! library: the frontend's only channel in is an [`InputFrame`], and its only
-//! channels out are the state getters plus [`Sim::cues`]. A given seed plus a
-//! given input sequence produces a bit-identical run, which is what makes the
+//! docked, pull the launch lever, cruise in real time, auto-dock, and carry
+//! cargo into the station's own room to trade it for other cargo, with no
+//! currency in sight. All of it lives here as a plain library: the
+//! frontend's only channel in is an [`InputFrame`], and its only channels
+//! out are the state getters plus [`Sim::cues`]. A given seed plus a given
+//! input sequence produces a bit-identical run, which is what makes the
 //! save format, the tests, and the benches possible.
+//!
+//! The ship is a **graph of rooms** (`room`, docs/ROOMS.md). The cabin is
+//! room 0; the burner rides bolted to its starboard door; a point of
+//! interest attaches its own trade room at the dock and takes it away
+//! again at cast-off. Attach and detach ride the input schedule as four
+//! small integers, so the graph is a pure function of (seed, inputs)
+//! exactly as the cargo board is.
 //!
 //! Time is fixed-step with an accumulator (the classic "Fix Your Timestep"
 //! shape): [`Sim::advance`] runs whole [`TICK_DT`] steps and leaves the
@@ -32,14 +40,15 @@ mod event;
 pub mod layout;
 pub mod map;
 mod rats;
+pub mod room;
 pub mod save;
 
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub};
 
-pub use barter::{Barter, EAGER_MAX, PATIENCE, VALUE};
+pub use barter::{Barter, VALUE};
 pub use cargo::{
-    KIND_COUNT, Kind, Loc, Piece, Tag, Violation, first_fit, placement_check, placement_legal,
-    player_owned,
+    KIND_COUNT, Kind, Loc, Mount, Piece, Tag, Violation, first_fit, lamp, lamp_lit, lit_adjacent,
+    mount_accepts, placement_check, placement_legal, player_owned,
 };
 pub use encounter::{AD_SWATS, Drone, Encounter, EncounterKind};
 use encounter::{Drones, Encounters};
@@ -50,6 +59,7 @@ pub use map::{
 };
 pub use rats::Rat;
 use rats::Rats;
+pub use room::{CABIN, MAX_ROOMS, PortId, Refusal, RoomId, RoomKind, Rooms, Tile};
 pub use save::SaveError;
 
 /// Length of one simulation step. Ticks are always exactly this long.
@@ -57,7 +67,14 @@ pub const TICK_DT: f32 = 1.0 / 60.0;
 
 /// Logical world width. The renderer scales this onto the window, so the sim
 /// never learns what a pixel is.
-pub const WORLD_W: f32 = 800.0;
+///
+/// Grown from the console-era 800 when the room net moved in east of the
+/// classic rects — growing the world keeps the star map's distance space,
+/// and therefore every journey length, exactly as it was. It grew again
+/// when the cabin widened, and again when every room got a **net lane** of
+/// its own: [`MAX_ROOMS`] lanes side by side, each big enough for the
+/// widest room net, so a room's logical rects are a pure function of its id.
+pub const WORLD_W: f32 = 8642.0;
 
 /// Logical world height.
 pub const WORLD_H: f32 = 600.0;
@@ -93,26 +110,84 @@ const FLUFF_WINDOW: u64 = 10_800;
 /// Most fluffs the hold will breed to. Mercy, not realism.
 const FLUFF_CAP: usize = 8;
 
+/// The stoker's beat, ticks: underway with the alongside quiet, one
+/// hopper piece goes into the fire this often. Twelve seconds — slow
+/// enough to snatch a mistake back off a tile.
+const STOKE_PERIOD: u64 = 720;
+
+/// Boost ticks per point of flammability: a couch (3) pushes the ship
+/// at double speed for forty-five seconds. Public so views can scale
+/// "how much fire is banked" against the same number the fire uses.
+pub const STOKE_PER_FLAM: u64 = 900;
+
 /// The drone hangs this far from the ship while advertising.
 const DRONE_ORBIT: f32 = 22.0;
 
 /// Click radius for swatting the drone.
 const DRONE_RADIUS: f32 = 10.0;
 
+/// Every kind's bit set in a discovery-ledger mask (see `Sim::familiar`).
+///
+/// Written as a shift down rather than a shift up because the table has
+/// reached the mask's width: `1 << 32` is not a `u32`, and the day
+/// `KIND_COUNT` grows again the ledger widens with it (see
+/// `cargo::KIND_COUNT`).
+pub(crate) const KNOWN_ALL: u32 = u32::MAX >> (u32::BITS as usize - KIND_COUNT);
+
 /// The discovery ledger a fresh contractor starts with: the Guild is home
 /// turf — every kind reads true there — and everywhere else is fog.
-fn home_familiar() -> [u16; POI_COUNT] {
-    let mut familiar = [0_u16; POI_COUNT];
-    familiar[usize::from(GUILD)] = u16::MAX;
+fn home_familiar() -> [u32; POI_COUNT] {
+    let mut familiar = [0_u32; POI_COUNT];
+    familiar[usize::from(GUILD)] = KNOWN_ALL;
     familiar
 }
 
-/// Starter cargo and where it is stowed: three pieces, placed legally
-/// (the scrap is heavy, so it sits low).
-const STARTER_CARGO: [(Kind, u8, u8); 3] = [
-    (Kind::ScrapAlloy, 0, 2),
-    (Kind::PerfumeVial, 0, 0),
-    (Kind::BrinePearls, 2, 0),
+/// Starter cargo and where it is stowed in the cabin: trade goods low in
+/// the room, and the ship's fittings — light and instruments alike — hung
+/// at their traditional berths, every one a movable piece.
+const STARTER_CARGO: [(Kind, u8, u8); 11] = [
+    (Kind::ScrapAlloy, 4, 5),
+    (Kind::PerfumeVial, 3, 3),
+    (Kind::BrinePearls, 6, 3),
+    // The ship's two lights. Every lumen aboard is cargo — lights-out is
+    // a legal state and the emissive fittings carry it (docs/BAY.md,
+    // "Lights are cargo") — so both hang where losing them is a choice
+    // and not an accident. The ceiling chart folds over the starboard
+    // cornice, so its columns run BACKWARDS against the floor's:
+    // (18, 6) is the pendant over floor cell (6, 6), the middle of the
+    // wider room.
+    (Kind::CeilingLamp, 18, 6),
+    // And a sconce at the port cornice, over the porthole. A hull that
+    // launched with one lamp launched with one *kind* of lamp, and a
+    // crew that never saw a second one has no reason to believe a wall
+    // takes light at all; the pendant lights the middle of the deck and
+    // leaves the flanks to the starlight floor, which is where the
+    // playtest read black. Column 0 of the port chart is the cornice —
+    // that wall's courses run outward from the deck — so the arm hangs
+    // high, clear of the doorway two cells aft and clear of the
+    // baseboard that standing floor cargo shadows.
+    (Kind::WallLamp, 0, 8),
+    // The instruments (BAY.md, "Instruments are cargo"): the window at
+    // its old cornice punch-out, the gauges and the lever clustered on
+    // the front wall beside it, and the chart tank on the starboard
+    // wall by the burner doorway — off the baseboard ring, and behind
+    // the floor cells flanking the doorway, where tall furniture
+    // rarely stands, so cargo and the tank's housing seldom fight over
+    // the wall. Every one of them clears the cabin's four doorways,
+    // which the threshold rule keeps empty.
+    (Kind::Window, 4, 12),
+    // And the porthole every hull of this class was launched with,
+    // mid-course on the port flank where a bunk would be. It is not an
+    // instrument — nobody hangs one to fly by — but a working ship has
+    // more than one hole in it, and a starter board with exactly one
+    // window is a starter board that never exercises the case the
+    // exterior was rebuilt for (docs/ART_DIRECTION_3D.md, "One wall,
+    // one sky"). Two windows, two walls, two skies, from the first boot.
+    (Kind::Porthole, 1, 8),
+    (Kind::ChartTank, 12, 5),
+    (Kind::EtaGauge, 5, 11),
+    (Kind::DestPreview, 3, 12),
+    (Kind::LaunchLever, 5, 10),
 ];
 
 /// A 2D vector, kept deliberately tiny: the sim needs four operations and a
@@ -190,7 +265,7 @@ pub(crate) const fn step_toward(value: f32, target: f32, step: f32) -> f32 {
 /// Splitmix64's finalizer as a combiner: fold `salt` into `state` and
 /// return an independent, well-mixed value.
 ///
-/// Every derived randomness in the sim — visit shelves, jump schedules,
+/// Every derived randomness in the sim — visit stock, jump schedules,
 /// creaks — chains through this, so the one persistent RNG stays reserved
 /// for cosmetic variant rolls.
 #[must_use]
@@ -211,6 +286,19 @@ pub const MAX_CREW: usize = 6;
 
 /// One sealed tick's input for the whole crew; absent players are default.
 pub type CrewFrame = [InputFrame; MAX_CREW];
+
+/// An attach request: four small integers.
+///
+/// The only thing about the room graph that ever crosses the interface
+/// (docs/ROOMS.md, "The attachment interface"). Poses, boxes, and lattice
+/// occupancy never do — every replica computes its own, identically.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Attach {
+    pub anchor: RoomId,
+    pub anchor_port: PortId,
+    pub kind: RoomKind,
+    pub port: PortId,
+}
 
 /// Everything the sim is allowed to know about the outside world for one
 /// frame. The sim never reads global input state, which is what makes replay
@@ -240,6 +328,20 @@ pub struct InputFrame {
     /// inside press handlers — never in the tick — so sparse recordings
     /// stay exact.
     pub night: bool,
+    /// **The room this player's body occupies.**
+    ///
+    /// The sim learns rooms, not positions (docs/ROOMS.md): a room id is a
+    /// discrete berth-shaped datum, not a coordinate, and it gives the
+    /// launch and detach gates a law instead of six frontends' private
+    /// opinions. Like `night` it is consulted only inside press handlers,
+    /// so sparse recordings stay exact. Default is the cabin.
+    pub occupied: RoomId,
+    /// Attach a room this frame — the multiplayer interface, written now
+    /// and wired later (a crewmate joining is an attach).
+    pub attach: Option<Attach>,
+    /// Detach a room this frame. Shutting the door on an event room is
+    /// this, and it is always available: disengagement is participation.
+    pub detach: Option<RoomId>,
     /// Restart with a new seed.
     pub reseed: Option<u64>,
 }
@@ -253,30 +355,41 @@ pub enum Cue {
     Depart,
     Arrive,
     /// The Guild seized a suspicious crate at its dock and shuttled it to
-    /// the hangar. Fires alongside `Arrive`, before that visit's barter.
+    /// the hangar. Fires alongside `Arrive`, before that visit's room.
     Delivered,
     /// A piece was lifted.
     Pickup,
     /// A piece landed somewhere legal.
     Place,
-    /// `hard` = a placement rule refused an in-grid drop; soft = an ignored
+    /// `hard` = a placement rule refused an in-room drop; soft = an ignored
     /// click or drop.
     Reject {
         hard: bool,
     },
-    /// Trade concluded; `value` is the generosity overshoot, `0..=1`.
+    /// A deal was struck at a room's handshake; `value` is the generosity
+    /// overshoot, `0..=1`.
     Accept {
         value: f32,
     },
-    /// Accept lever pulled on a trade the station will not take.
+    /// A handshake worked with nothing to commit.
     Refuse,
-    /// The station's patience ran out: shutters down, shelf withdrawn,
-    /// gifts only until one of those gifts reopens it.
-    Shutter,
+    /// A room came alongside and mated.
+    Attached,
+    /// A room parted.
+    Parted,
+    /// An attach or detach was refused, and the law that refused it.
+    Refit {
+        refusal: Refusal,
+    },
+    /// A press marked (or unmarked) a piece of a room's stock: *I want
+    /// that one*. A hint to the offer, never a demand.
+    Mark {
+        on: bool,
+    },
     OmenStart,
     Jump,
     OmenEnd,
-    /// Free cargo came aboard at a barterless dock: comet ice chipped at
+    /// Free cargo came aboard at a roomless dock: comet ice chipped at
     /// perihelion, `intensity` scaling with the haul.
     Harvest {
         intensity: f32,
@@ -285,11 +398,11 @@ pub enum Cue {
     Exchange,
     /// Something pulled alongside for a stretch of the leg.
     EncounterStart,
-    /// It fell astern; unstowed flotsam went with it.
+    /// It fell astern.
     EncounterEnd,
     /// The gas station topped the tanks up: a sliver of leg skipped.
     GasBoost,
-    /// The casino paid out: wager returned, prize in the flotsam.
+    /// The casino paid out: the stake stands and a prize is on the floor.
     CasinoWin,
     /// The house won. Enjoy the commemorative chip.
     CasinoLoss,
@@ -305,10 +418,12 @@ pub enum Cue {
     AdEnd,
     /// A fluff became two fluffs. Nobody saw it happen.
     FluffBirth,
-    /// The outboard net was swept: jettisoned cargo drifted away for
-    /// good. Fires at the ceremonies that sweep it — docking, casting
-    /// off, an encounter falling astern — never on the reversible drop.
-    Jettison,
+    /// The burner took a piece from the hopper: it is gone, and the
+    /// fire pushes. `intensity` is the kind's flammability over the
+    /// scale's top — slag burns at zero and merely disposes.
+    Burn {
+        intensity: f32,
+    },
     /// The hangar counter filled: the Grand Parade is leaving the dock.
     ParadeStart,
     /// Ambient hull creak while traveling.
@@ -317,7 +432,7 @@ pub enum Cue {
     },
     /// A rat stowed away as the ship cast off.
     RatAboard,
-    /// The rat hopped to another hold cell. Quiet; ambient texture.
+    /// The rat hopped to another cabin cell. Quiet; ambient texture.
     RatSkitter {
         intensity: f32,
     },
@@ -340,11 +455,11 @@ pub enum Cue {
     Reseed,
 }
 
-/// A piece mid-drag. Each crew member can hold at most one, and a piece
+/// A piece mid-carry. Each crew member can hold at most one, and a piece
 /// held by anyone is unGrabbable by everyone else.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Held {
-    /// Id of the piece being dragged.
+    /// Id of the piece being carried.
     pub piece: u32,
     /// Where it was lifted from, and where it snaps back to.
     pub origin: Loc,
@@ -352,30 +467,24 @@ pub struct Held {
     pub legal: bool,
 }
 
-/// Which regions could accept the held piece.
+/// Which classes of berth could accept the held piece.
 ///
-/// Derived from the same ownership matrix [`Sim::resolve_drop`] applies.
-/// The renderer glows exactly these, so what the console invites is always
-/// what a release does — affordances are computed from the rules, never
-/// restated.
+/// Derived from the same ownership rule [`Sim::resolve_drop`] applies —
+/// the berth's room and tile class, and nothing else. The renderer glows
+/// exactly these, so what a room invites is always what a release does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-// One independent flag per console region is the honest shape here; folding
+// One independent flag per tile class is the honest shape here; folding
 // them into an enum would misrepresent that several can invite at once.
 #[allow(clippy::struct_excessive_bools)]
 pub struct DropTargets {
-    /// The hold grid (player pieces, anywhere, any time).
-    pub hold: bool,
-    /// The give pad (player pieces, while docked).
-    pub give: bool,
-    /// The take pad (station pieces, while docked).
-    pub take: bool,
-    /// The station shelf (station pieces re-shelving, while docked).
-    pub shelf: bool,
-    /// The received shelf (received pieces re-slotting, while docked).
-    pub received: bool,
-    /// The outboard net (player pieces, any time — jettison, reversible
-    /// until the next sweep). Suspicious cargo refuses it.
-    pub net: bool,
+    /// Ordinary cells of any attached room.
+    pub berth: bool,
+    /// Some cabinet's cubbies (a stowable piece, a free cubby).
+    pub stow: bool,
+    /// A calling room's offer area (the player's own cargo, proposed).
+    pub offer: bool,
+    /// The incinerator's hazard tiles.
+    pub consume: bool,
 }
 
 /// What [`Sim::fast_forward`] lived through, so the frontend can summarise
@@ -403,17 +512,23 @@ pub struct Sim {
     warp: bool,
     cues: Vec<Cue>,
     ship: Ship,
+    /// The room graph: what the ship is, and what is currently alongside.
+    rooms: Rooms,
     pieces: Vec<Piece>,
     /// Next piece id; never reused within a run.
     next_piece: u32,
-    /// Each crew member's drag in progress, indexed by [`PlayerId`].
+    /// Each crew member's carry in progress, indexed by [`PlayerId`].
     held: [Option<Held>; MAX_CREW],
+    /// Pieces of a room's stock the player has marked: *I want that one*.
+    /// A hint to the composed offer; cleared on resolution.
+    marks: Vec<u32>,
     /// Crates the Guild has seized at its dock, monotonic within a run.
     /// This is the counter cluster helms report to the guild server.
     deliveries: u32,
-    /// The current visit's trade, `Some` iff docked.
+    /// The current visit's trade, `Some` iff a trading POI's room is
+    /// alongside.
     barter: Option<Barter>,
-    /// The current visit's jittered value table; meaningful iff docked.
+    /// The current visit's jittered value table; meaningful iff trading.
     values: [u8; KIND_COUNT],
     /// Times each POI has been docked at.
     visits: [u32; POI_COUNT],
@@ -431,17 +546,25 @@ pub struct Sim {
     /// One haul of ice per pass: after that the comet is picked clean
     /// until it swings out and back again.
     comet_visit: Option<u64>,
-    /// Pieces ever gifted to the Hermitage; its shelf grows from this.
+    /// Boost ticks left in the burner: while positive, each travel tick
+    /// spends one and gains one — double speed until the fire dies down.
+    /// Banked across docks; the stoker wastes nothing.
+    stoke: u64,
+    /// Pieces ever gifted to the Hermitage; its stock grows from this.
     karma: u32,
     /// Per-station bitmask of kinds the player has traded there — the
-    /// discovery ledger the barter fog reads. Bit k set means kind k's
-    /// value at that station reads true on the dial.
-    familiar: [u16; POI_COUNT],
+    /// discovery ledger. Bit k set means kind k's value has been seen
+    /// demonstrated in public at that station.
+    familiar: [u32; POI_COUNT],
     /// Whether any crew member's wall clock reads deep night, refreshed
     /// from the frame every application round. Transient: consulted only
     /// by press handlers (Umbra selection), never by the tick, and never
     /// serialized.
     night: bool,
+    /// Which room each crew member's body is in, refreshed from the frame
+    /// every application round. Transient for the same reason `night` is:
+    /// the gates consult it inside press handlers only.
+    occupied: [RoomId; MAX_CREW],
     /// The rule behind the most recent hard reject, for the renderer's
     /// icon flash. Transient UI feedback: never serialized.
     last_violation: Option<Violation>,
@@ -449,12 +572,14 @@ pub struct Sim {
 
 impl Sim {
     /// Build a sim from a seed: docked at the Guild Station with the starter
-    /// cargo stowed and the first visit's shelf laid out.
+    /// cargo stowed, the burner bolted on, and the Guild's trade room
+    /// alongside with its first visit's goods out.
     #[must_use]
     pub fn new(seed: u64) -> Self {
         let mut rng = fastrand::Rng::with_seed(seed);
         let mut next_piece = 0_u32;
-        let mut pieces: Vec<Piece> = STARTER_CARGO
+        let rooms = Rooms::new();
+        let pieces: Vec<Piece> = STARTER_CARGO
             .iter()
             .map(|&(kind, x, y)| {
                 let piece = Piece {
@@ -462,7 +587,7 @@ impl Sim {
                     kind,
                     variant: rng.u8(..cargo::VARIANTS),
                     gnawed: false,
-                    loc: Loc::Hold { x, y },
+                    loc: Loc::Hold { room: CABIN, x, y },
                 };
                 next_piece += 1;
                 piece
@@ -470,22 +595,19 @@ impl Sim {
             .collect();
         debug_assert!(
             (0..pieces.len()).all(|i| {
-                let Loc::Hold { x, y } = pieces[i].loc else {
+                let Loc::Hold { room, x, y } = pieces[i].loc else {
                     return false;
                 };
-                placement_legal(&pieces, pieces[i].id, pieces[i].kind, x, y)
+                placement_legal(&rooms, &pieces, pieces[i].id, pieces[i].kind, room, x, y)
             }),
             "starter cargo must be stowed legally"
         );
 
         let mut visits = [0_u32; POI_COUNT];
         visits[usize::from(GUILD)] = 1;
-        let (barter, goods) =
-            barter::generate(seed, GUILD, 1, &pieces, 0, false, &mut rng, &mut next_piece);
-        pieces.extend(goods);
         let pos = map::poi_pos(GUILD, 0);
 
-        Self {
+        let mut sim = Self {
             seed,
             rng,
             accumulator: 0.0,
@@ -499,12 +621,14 @@ impl Sim {
                 state: ShipState::Docked(GUILD),
                 selected: None,
             },
+            rooms,
             pieces,
             next_piece,
             held: [None; MAX_CREW],
+            marks: Vec::new(),
             deliveries: 0,
-            barter: Some(barter),
-            values: barter::visit_values(seed, GUILD, 1),
+            barter: None,
+            values: [0; KIND_COUNT],
             visits,
             legs: 0,
             omen: Omen::new(),
@@ -513,11 +637,18 @@ impl Sim {
             drones: Drones::new(),
             parade_at: None,
             comet_visit: None,
+            stoke: 0,
             karma: 0,
             familiar: home_familiar(),
             night: false,
+            occupied: [CABIN; MAX_CREW],
             last_violation: None,
-        }
+        };
+        sim.open_trade(GUILD, 1);
+        // Construction is not a frame: the dock's own attach happened
+        // before anybody was listening.
+        sim.cues.clear();
+        sim
     }
 
     /// Consume one frame's worth of real time as player 0, returning how
@@ -528,6 +659,8 @@ impl Sim {
         // Cues describe this frame only; last frame's have been consumed.
         self.cues.clear();
         self.night = input.night;
+        self.occupied = [CABIN; MAX_CREW];
+        self.occupied[0] = input.occupied;
         let mut placed = Vec::new();
         self.apply_input(0, input, &mut placed);
         if self.paused {
@@ -565,6 +698,9 @@ impl Sim {
     /// - Toggles: each player's pause/warp edge flips the flag in order and
     ///   announces its cue, so two pause toggles in one tick net to no
     ///   change and read `Pause { true }` then `Pause { false }`.
+    /// - Attach and detach: applied in player order too, against the graph
+    ///   as earlier players left it, and refused by name when the laws say
+    ///   so.
     /// - Pause: a player whose input lands while the sim is paused still
     ///   toggles, but their pointer events are ignored, exactly as
     ///   [`Sim::advance`] ignores them.
@@ -580,6 +716,9 @@ impl Sim {
         // Night is the union of the crew's clocks: if it is deep night for
         // anyone aboard, the Umbra Market will see the ship.
         self.night = inputs.iter().any(|input| input.night);
+        for (player, input) in inputs.iter().enumerate() {
+            self.occupied[player] = input.occupied;
+        }
         let mut placed = Vec::new();
         for (player, input) in inputs.iter().enumerate() {
             self.apply_input(player as PlayerId, input, &mut placed);
@@ -589,10 +728,10 @@ impl Sim {
         }
     }
 
-    /// One player's input events: reseed, toggles, then — unless the sim is
-    /// paused by the time their turn comes — pointer edges. `placed` carries
-    /// the pieces successfully dropped earlier in the same application
-    /// round, for same-tick drop contention.
+    /// One player's input events: reseed, toggles, the graph, then — unless
+    /// the sim is paused by the time their turn comes — pointer edges.
+    /// `placed` carries the pieces successfully dropped earlier in the same
+    /// application round, for same-tick drop contention.
     fn apply_input(&mut self, player: PlayerId, input: &InputFrame, placed: &mut Vec<u32>) {
         if let Some(seed) = input.reseed {
             // Note the ordering: reseeding rebuilds `self`, cue list
@@ -613,6 +752,12 @@ impl Sim {
         if self.paused {
             return;
         }
+        if let Some(attach) = input.attach {
+            self.request_attach(attach);
+        }
+        if let Some(room) = input.detach {
+            self.request_detach(room);
+        }
 
         // Pointer edges are per-frame events, exactly like the template's
         // burst was: handling them inside the tick loop would fire them once
@@ -629,7 +774,7 @@ impl Sim {
         let ran = if self.paused {
             0
         } else {
-            // A default frame carries no pointer, so every drag in progress
+            // A default frame carries no pointer, so every carry in progress
             // snaps back exactly as N real advances would snap it.
             self.held = [None; MAX_CREW];
             for _ in 0..ticks {
@@ -704,20 +849,40 @@ impl Sim {
         &self.ship
     }
 
+    /// The room graph: every attached room, its pose on the lattice, and
+    /// its mates. The presentation derives its whole floor plan from this.
+    #[must_use]
+    pub const fn rooms(&self) -> &Rooms {
+        &self.rooms
+    }
+
     /// Every live piece, wherever it sits.
     #[must_use]
     pub fn pieces(&self) -> &[Piece] {
         &self.pieces
     }
 
-    /// The piece `player` is mid-drag with, if any. Out-of-range players
+    /// The piece `player` is mid-carry with, if any. Out-of-range players
     /// hold nothing.
     #[must_use]
     pub fn held(&self, player: PlayerId) -> Option<&Held> {
         self.held.get(usize::from(player))?.as_ref()
     }
 
-    /// Every drag in progress, in player order.
+    /// Boost ticks left in the burner. Frontends scale roar, glow, and
+    /// streak-stretch from this; the push itself is in the travel tick.
+    #[must_use]
+    pub const fn stoke(&self) -> u64 {
+        self.stoke
+    }
+
+    /// Whether the fire is pushing right now.
+    #[must_use]
+    pub const fn stoked(&self) -> bool {
+        self.stoke > 0
+    }
+
+    /// Every carry in progress, in player order.
     pub fn all_held(&self) -> impl Iterator<Item = (PlayerId, &Held)> {
         self.held
             .iter()
@@ -732,10 +897,46 @@ impl Sim {
         self.deliveries
     }
 
-    /// The current visit's trade. `Some` iff docked.
+    /// The current visit's trade. `Some` iff a trading POI's room is
+    /// alongside.
     #[must_use]
     pub const fn barter(&self) -> Option<&Barter> {
         self.barter.as_ref()
+    }
+
+    /// Pieces of a room's stock the player has marked as interesting.
+    #[must_use]
+    pub fn marks(&self) -> &[u32] {
+        &self.marks
+    }
+
+    /// The pile the trading room would hand over if the handshake were
+    /// worked right now — piece ids, ascending. **The offer is not a
+    /// number and not a needle**: it is goods, on tiles, that you can see.
+    /// Derived, never stored, so it can never disagree with the board.
+    #[must_use]
+    pub fn composed(&self) -> Vec<u32> {
+        self.trade_room()
+            .map(|room| self.compose_for(room))
+            .unwrap_or_default()
+    }
+
+    /// **What the launch is waiting on** — piece ids, ascending: every
+    /// piece of the player's standing in a room that will not ride out
+    /// (docs/ROOMS.md, "The staging law"). Empty means the gangway law
+    /// has nothing left to say about cargo.
+    ///
+    /// The refusal is a thing you can see rather than a thing you are
+    /// told: the frontend frames exactly these pieces where they stand,
+    /// with no string anywhere. Derived, never stored, and read from the
+    /// very predicate [`Sim::launch_gate`] refuses on.
+    #[must_use]
+    pub fn detained_cargo(&self) -> Vec<u32> {
+        self.pieces
+            .iter()
+            .filter(|piece| self.detained(piece))
+            .map(|piece| piece.id)
+            .collect()
     }
 
     /// The stowage rule behind the most recent hard `Cue::Reject`, for the
@@ -774,7 +975,7 @@ impl Sim {
     }
 
     /// Whether the player has ever traded `kind` at the current dock, so
-    /// its value reads true on the dial. Meaningless while traveling.
+    /// its value has been seen demonstrated. Meaningless while traveling.
     #[must_use]
     pub fn kind_familiar(&self, kind: Kind) -> bool {
         let Some(barter) = &self.barter else {
@@ -820,26 +1021,29 @@ impl Sim {
         self.poi_visible(id) && !self.inner_ring_locked(id) && !(id == COMET && self.comet_spent())
     }
 
-    /// Mysterious crates aboard: stowed or riding the outboard rail (the
-    /// donation ceremony passes through the rail, and ??? must not blink
-    /// out mid-offering).
+    /// Mysterious crates aboard: berthed in a room that rides. Deliberately
+    /// NOT counted: crates boxed in a cabinet — ??? does not open your
+    /// furniture (docs/BAY.md), which makes the cabinet the one place a
+    /// crate can ride without a summons — nor crates lying in a room that
+    /// is only alongside.
     #[must_use]
     pub fn mysterious_aboard(&self) -> u32 {
         self.pieces
             .iter()
             .filter(|piece| {
-                matches!(piece.loc, Loc::Hold { .. } | Loc::Flotsam { .. })
-                    && piece.kind == Kind::MysteriousCrate
+                piece.kind == Kind::MysteriousCrate
+                    && matches!(piece.loc, Loc::Hold { room, .. } if self.rooms.riding(room))
             })
             .count() as u32
     }
 
-    /// Whether a transit chit rides in the hold — the inner ring's toll.
+    /// Whether a transit chit rides aboard — the inner ring's toll.
     #[must_use]
     pub fn transit_chit_aboard(&self) -> bool {
-        self.pieces
-            .iter()
-            .any(|piece| matches!(piece.loc, Loc::Hold { .. }) && piece.kind == Kind::TransitChit)
+        self.pieces.iter().any(|piece| {
+            piece.kind == Kind::TransitChit
+                && matches!(piece.loc, Loc::Hold { room, .. } if self.rooms.riding(room))
+        })
     }
 
     /// Whether charting to `id` is currently refused for want of papers.
@@ -901,18 +1105,18 @@ impl Sim {
     }
 
     /// Whether the hangar counter has ever filled. The sky is different
-    /// after: mysterious crates surface on ordinary shelves.
+    /// after: mysterious crates surface on ordinary stock.
     #[must_use]
     pub const fn paraded(&self) -> bool {
         self.parade_at.is_some()
     }
 
-    /// Whether a suspicious piece is stowed in the hold.
+    /// Whether a suspicious piece rides aboard.
     #[must_use]
     pub fn suspicious_aboard(&self) -> bool {
         self.pieces.iter().any(|piece| {
-            matches!(piece.loc, Loc::Hold { .. })
-                && matches!(piece.kind.tag(), Some(Tag::Suspicious))
+            matches!(piece.kind.tag(), Some(Tag::Suspicious))
+                && matches!(piece.loc, Loc::Hold { room, .. } if self.rooms.riding(room))
         })
     }
 
@@ -942,6 +1146,212 @@ impl Sim {
         self.paused = paused;
     }
 
+    // ---- The room graph ----
+
+    /// Which room and cell `p` names, if it names one. The arbiter: the
+    /// lane says which room, the room's own net says whether that cell
+    /// exists.
+    #[must_use]
+    pub fn cell_at(&self, p: Vec2) -> Option<(RoomId, u8, u8)> {
+        let (room, x, y) = layout::cell_at(p)?;
+        self.rooms.tile(room, x, y).map(|_| (room, x, y))
+    }
+
+    /// The tile class of a piece's berth, following a cubby to its host.
+    #[must_use]
+    fn tile_of(&self, piece: &Piece) -> Option<Tile> {
+        match piece.loc {
+            Loc::Hold { room, x, y } | Loc::Laid { room, x, y } => self.rooms.tile(room, x, y),
+            Loc::Stow { .. } => Some(Tile::Plain),
+        }
+    }
+
+    /// The room a piece is berthed in, following a cubby to its cabinet.
+    #[must_use]
+    fn room_of(&self, piece: &Piece) -> Option<RoomId> {
+        piece.loc.room(&self.pieces)
+    }
+
+    /// The attached trade room, if a counterparty is alongside.
+    #[must_use]
+    fn trade_room(&self) -> Option<RoomId> {
+        self.rooms.find(RoomKind::Trade)
+    }
+
+    /// An attach asked for over the input schedule. Every refusal is
+    /// named and nothing else happens.
+    fn request_attach(&mut self, attach: Attach) {
+        match self
+            .rooms
+            .attach(attach.anchor, attach.anchor_port, attach.kind, attach.port)
+        {
+            Ok(_) => self.cues.push(Cue::Attached),
+            Err(refusal) => self.cues.push(Cue::Refit { refusal }),
+        }
+    }
+
+    /// A detach asked for over the input schedule — shutting the door.
+    fn request_detach(&mut self, room: RoomId) {
+        match self.part_check(room) {
+            Ok(()) => self.part(room),
+            Err(refusal) => self.cues.push(Cue::Refit { refusal }),
+        }
+    }
+
+    /// The gangway law's detach gates: **a seam that could strand anything
+    /// refuses to part.** Nothing detaches while it holds something of
+    /// yours; nothing of yours detaches while it holds you.
+    ///
+    /// **And a room that rides is not a room you leave.** Detaching is
+    /// how you walk out of somewhere you called at: the seam shuts and
+    /// the place goes on without you. A riding room came with the ship
+    /// and travels in it, so there is nothing on the far side of its
+    /// seam to be left behind — parting one is not leaving it, it is
+    /// throwing it away, and the fire, the hopper and the stoke go with
+    /// it in one press that nothing undoes. The rest of this file's
+    /// gates refuse what a detach would *strand*; this one refuses what
+    /// it would *destroy*.
+    fn part_check(&self, room: RoomId) -> Result<(), Refusal> {
+        if room == CABIN {
+            return Err(Refusal::Root);
+        }
+        if self.rooms.get(room).is_none() {
+            return Err(Refusal::Absent);
+        }
+        if self.rooms.riding(room) {
+            return Err(Refusal::Riding);
+        }
+        if self.occupied.iter().any(|&at| self.rooms.beyond(room, at)) {
+            return Err(Refusal::Aboard);
+        }
+        for piece in &self.pieces {
+            let Some(at) = self.room_of(piece) else {
+                continue;
+            };
+            if !self.rooms.beyond(room, at) {
+                continue;
+            }
+            if player_owned(&self.rooms, &self.pieces, piece.loc) {
+                return Err(Refusal::Cargo);
+            }
+        }
+        if self.offer_pending(room) {
+            return Err(Refusal::Pending);
+        }
+        Ok(())
+    }
+
+    /// Whether a proposal still lies on `room`'s offer area.
+    fn offer_pending(&self, room: RoomId) -> bool {
+        self.pieces.iter().any(|piece| {
+            matches!(piece.loc, Loc::Hold { room: at, x, y }
+                if self.rooms.beyond(room, at) && self.rooms.tile(at, x, y) == Some(Tile::Offer))
+        })
+    }
+
+    /// Cut a room loose and let whatever is still the room's own go with
+    /// it. Only ever called through [`Sim::part_check`], so nothing of the
+    /// player's is ever in there.
+    fn part(&mut self, room: RoomId) {
+        let doomed: Vec<u32> = self
+            .pieces
+            .iter()
+            .filter(|piece| {
+                self.room_of(piece)
+                    .is_some_and(|at| self.rooms.beyond(room, at))
+            })
+            .map(|piece| piece.id)
+            .collect();
+        self.pieces.retain(|piece| !doomed.contains(&piece.id));
+        self.marks.retain(|id| !doomed.contains(id));
+        for held in &mut self.held {
+            if matches!(held, Some(h) if doomed.contains(&h.piece)) {
+                *held = None;
+            }
+        }
+        let gone: Vec<RoomId> = self
+            .rooms
+            .iter()
+            .map(|(id, _)| id)
+            .filter(|&id| self.rooms.beyond(room, id))
+            .collect();
+        for id in gone {
+            let _ = self.rooms.detach(id);
+        }
+        if self.trade_room().is_none() {
+            self.barter = None;
+        }
+        self.cues.push(Cue::Parted);
+    }
+
+    /// Attach a room the game itself asked for — a dock, an event — through
+    /// the spawn contract's deterministic walk.
+    fn call_room(&mut self, kind: RoomKind) -> Option<RoomId> {
+        match self.rooms.spawn(kind, CABIN) {
+            Ok(id) => {
+                self.cues.push(Cue::Attached);
+                Some(id)
+            }
+            Err(refusal) => {
+                self.cues.push(Cue::Refit { refusal });
+                None
+            }
+        }
+    }
+
+    /// Detach every calling room, walking anything of the player's back
+    /// aboard first. Departure and arrival both do this; the launch gate
+    /// has already run by the time cast-off calls it, so the walk-back is
+    /// belt and braces at a dock and a no-op at a launch.
+    fn dismiss_callers(&mut self) {
+        let callers: Vec<RoomId> = self
+            .rooms
+            .iter()
+            .filter(|(_, room)| !room.kind.riding())
+            .map(|(id, _)| id)
+            .collect();
+        for room in &callers {
+            self.walk_aboard(*room);
+        }
+        for room in callers {
+            if self.rooms.get(room).is_some() {
+                self.part(room);
+            }
+        }
+        self.marks.clear();
+    }
+
+    /// Move every player-owned piece out of `room` to its first legal
+    /// berth aboard. Conservation before convenience.
+    fn walk_aboard(&mut self, room: RoomId) {
+        let strays: Vec<u32> = self
+            .pieces
+            .iter()
+            .filter(|piece| {
+                self.room_of(piece) == Some(room)
+                    && player_owned(&self.rooms, &self.pieces, piece.loc)
+            })
+            .map(|piece| piece.id)
+            .collect();
+        for id in strays {
+            let Some(index) = self.pieces.iter().position(|piece| piece.id == id) else {
+                continue;
+            };
+            let piece = self.pieces[index];
+            let berth =
+                if piece.kind.covering() {
+                    cargo::dress_fit(&self.rooms, &self.pieces, id, piece.kind)
+                        .map(|(room, x, y)| Loc::Laid { room, x, y })
+                } else {
+                    first_fit(&self.rooms, &self.pieces, id, piece.kind)
+                        .map(|(room, x, y)| Loc::Hold { room, x, y })
+                };
+            if let Some(loc) = berth {
+                self.pieces[index].loc = loc;
+            }
+        }
+    }
+
     /// One frame of one player's pointer handling: presses lift or actuate,
     /// releases drop, and the held piece's legality tracks the pointer.
     fn handle_pointer(&mut self, player: PlayerId, input: &InputFrame, placed: &mut Vec<u32>) {
@@ -954,7 +1364,7 @@ impl Sim {
         let slot = usize::from(player);
         if self.held[slot].is_some() && !input.held && !input.press && !input.release {
             // The release never arrived (window blur, touch cancel, a crew
-            // member vanished mid-drag): snap back silently rather than
+            // member vanished mid-carry): snap back silently rather than
             // glue a piece to a phantom pointer.
             self.held[slot] = None;
         }
@@ -975,10 +1385,10 @@ impl Sim {
         self.held.iter().flatten().any(|held| held.piece == piece)
     }
 
-    /// A press either chases the rat, lifts a piece, or actuates whatever
-    /// it landed on. The rat comes first: a press on its cell shoos it and
-    /// does NOT lift the piece under it — piece picks happen only where no
-    /// rat sits. Every other press path is unchanged.
+    /// A press chases the rat, works a room's handshake, lifts a piece,
+    /// marks a room's stock, or actuates whatever it landed on. The rat
+    /// comes first: a press on its cell shoos it and does NOT lift the
+    /// piece under it.
     fn on_press(&mut self, player: PlayerId, p: Vec2, shift: bool, placed: &mut Vec<u32>) {
         if self.held(player).is_some() {
             return;
@@ -995,27 +1405,42 @@ impl Sim {
                     return;
                 }
             }
-            if layout::ENCOUNTER_BADGE.contains(p) && self.gas_top_up() {
-                return;
-            }
+        }
+        if let Some(room) = self.handshake_at(p) {
+            self.work_handshake(room);
+            return;
         }
         if shift && self.quick_move(p, placed) {
             return;
         }
-        let docked = matches!(self.ship.state, ShipState::Docked(_));
-        let grabbed = self
-            .pieces
-            .iter()
-            .find(|piece| {
-                layout::piece_rect(piece).contains(p)
-                    && (docked || matches!(piece.loc, Loc::Hold { .. } | Loc::Flotsam { .. }))
-            })
-            .map(|piece| (piece.id, piece.loc));
-        if let Some((id, origin)) = grabbed {
+        let grabbed = layout::piece_at(&self.rooms, &self.pieces, p).map(|piece| {
+            (
+                piece.id,
+                piece.kind,
+                piece.loc,
+                self.tile_of(piece),
+                cargo::laid_pinned(&self.rooms, &self.pieces, piece),
+            )
+        });
+        if let Some((id, kind, origin, tile, pinned)) = grabbed {
+            if tile == Some(Tile::Stock) {
+                // The handle rule already reserved the body-click for
+                // function; on a piece of a room's stock, that function is
+                // *I want that one*.
+                self.toggle_mark(id);
+                return;
+            }
             if self.held_by_crew(id) {
                 // Someone else got there first — this tick (first in
                 // player order wins) or an earlier one. Losing a grab race
                 // is not an error, so it makes no noise at all.
+                return;
+            }
+            if (kind == Kind::Cabinet && cargo::cabinet_occupied(&self.pieces, id)) || pinned {
+                // Furniture full of goods, or a dressing with cargo
+                // standing on it: it stays put until cleared.
+                self.last_violation = Some(Violation::Occupied);
+                self.cues.push(Cue::Reject { hard: true });
                 return;
             }
             self.held[usize::from(player)] = Some(Held {
@@ -1024,31 +1449,309 @@ impl Sim {
                 legal: true,
             });
             self.cues.push(Cue::Pickup);
-        } else if docked {
+        } else if matches!(self.ship.state, ShipState::Docked(_)) {
             self.on_press_docked(p);
         } else if !icon_press(p) {
             self.cues.push(Cue::Reject { hard: false });
         }
     }
 
-    /// A press on the encounter badge while the gas station is alongside:
-    /// top up, once, and skip a sliver of the remaining leg. Returns
-    /// whether the press was consumed.
-    fn gas_top_up(&mut self) -> bool {
-        let open_station = self
-            .encounters
-            .current
-            .as_ref()
-            .is_some_and(|enc| enc.open() && enc.kind == EncounterKind::GasStation);
-        if !open_station {
-            return false;
+    /// Mark or unmark a piece of a room's stock. Marks are a hint to the
+    /// offer, never a demand, and they clear on resolution.
+    fn toggle_mark(&mut self, id: u32) {
+        if let Some(at) = self.marks.iter().position(|&other| other == id) {
+            self.marks.remove(at);
+            self.cues.push(Cue::Mark { on: false });
+        } else {
+            self.marks.push(id);
+            self.marks.sort_unstable();
+            self.cues.push(Cue::Mark { on: true });
         }
-        let Some(enc) = &mut self.encounters.current else {
-            return false;
+    }
+
+    /// Which room's handshake fixture `p` landed on, if any. The fixture
+    /// is set into the room's own fabric, so its cell is not a berth and
+    /// no cargo can ever cover it.
+    fn handshake_at(&self, p: Vec2) -> Option<RoomId> {
+        let (room, x, y) = layout::cell_at(p)?;
+        let kind = self.rooms.kind(room)?;
+        (kind.handshake() == Some((x, y))).then_some(room)
+    }
+
+    /// **Whether working `room`'s handshake right now would commit
+    /// anything** — the reading its one lamp is lit by.
+    ///
+    /// The lamp used to be the frontend's guess ("something of the
+    /// player's on an offer tile, or anything marked"), which is the
+    /// right answer for a market and the wrong answer for everywhere
+    /// else. The pump bay has no offer area and nothing to mark, so its
+    /// coupling read *dead* every second it was live: the one room whose
+    /// whole business is one press had a fixture that never lit and never
+    /// moved, and the playtest read the bay as scenery. So the sim
+    /// answers it, per kind, in exactly the shape [`Sim::work_handshake`]
+    /// commits — the two cannot disagree, because they are one question.
+    #[must_use]
+    pub fn handshake_ready(&self, room: RoomId) -> bool {
+        match self.rooms.kind(room) {
+            Some(RoomKind::Trade | RoomKind::Parlor) => !self.proposal(room).is_empty(),
+            Some(RoomKind::Wreck) => self
+                .stock_of(room)
+                .into_iter()
+                .any(|id| self.marks.contains(&id)),
+            // Fuel, once, while the forecourt is still alongside.
+            Some(RoomKind::Pump) => self.encounters.current.is_some_and(|enc| {
+                enc.kind == EncounterKind::GasStation && enc.open() && !enc.used
+            }),
+            _ => false,
+        }
+    }
+
+    /// Work a room's handshake: the one physical act that commits.
+    fn work_handshake(&mut self, room: RoomId) {
+        match self.rooms.kind(room) {
+            Some(RoomKind::Trade) => self.strike_deal(room),
+            Some(RoomKind::Wreck) => self.claim_salvage(room),
+            Some(RoomKind::Parlor) => self.spin_wager(room),
+            Some(RoomKind::Pump) => self.gas_top_up(),
+            _ => self.cues.push(Cue::Reject { hard: false }),
+        }
+    }
+
+    /// Pieces of the player's lying on `room`'s offer area, ascending.
+    fn proposal(&self, room: RoomId) -> Vec<u32> {
+        let mut ids: Vec<u32> = self
+            .pieces
+            .iter()
+            .filter(|piece| {
+                matches!(piece.loc, Loc::Hold { room: at, x, y }
+                    if at == room && self.rooms.tile(at, x, y) == Some(Tile::Offer))
+            })
+            .map(|piece| piece.id)
+            .collect();
+        ids.sort_unstable();
+        ids
+    }
+
+    /// The room's own goods, in tile order.
+    fn stock_of(&self, room: RoomId) -> Vec<u32> {
+        let mut ids: Vec<(u8, u8, u32)> = self
+            .pieces
+            .iter()
+            .filter_map(|piece| match piece.loc {
+                Loc::Hold { room: at, x, y }
+                    if at == room && self.rooms.tile(at, x, y) == Some(Tile::Stock) =>
+                {
+                    Some((y, x, piece.id))
+                }
+                _ => None,
+            })
+            .collect();
+        ids.sort_unstable();
+        ids.into_iter().map(|(_, _, id)| id).collect()
+    }
+
+    /// What the trading room would compose against the standing proposal:
+    /// the best pile of its own stock the proposal's value covers, marked
+    /// kinds preferred, ties broken deterministically.
+    fn compose_for(&self, room: RoomId) -> Vec<u32> {
+        let Some(barter) = &self.barter else {
+            return Vec::new();
         };
-        if enc.used {
+        let gnaw = barter::gnaw_loved(barter.station);
+        let value = |id: u32| {
+            self.pieces
+                .iter()
+                .find(|piece| piece.id == id)
+                .map_or(0, |piece| {
+                    barter::piece_value(&self.rooms, piece, &self.pieces, &self.values, gnaw)
+                })
+        };
+        let budget: u32 = self.proposal(room).into_iter().map(value).sum();
+        let candidates: Vec<(u32, u32, bool)> = self
+            .stock_of(room)
+            .into_iter()
+            .map(|id| {
+                (
+                    id,
+                    value(id) + barter::STOCK_MARKUP,
+                    self.marks.contains(&id),
+                )
+            })
+            .collect();
+        barter::compose(budget, &candidates)
+    }
+
+    /// The handshake at a trading room: the standing offer commits and
+    /// ownership crosses. What you proposed becomes the room's stock (it
+    /// resells what you sold it, and the overflow goes into the back
+    /// room); what the room composed lands on its own deck, yours to carry
+    /// aboard.
+    fn strike_deal(&mut self, room: RoomId) {
+        let Some(station) = self.barter.as_ref().map(|barter| barter.station) else {
             self.cues.push(Cue::Reject { hard: false });
-            return true;
+            return;
+        };
+        let given = self.proposal(room);
+        if given.is_empty() {
+            // Nothing proposed: there is no deal to strike.
+            self.cues.push(Cue::Refuse);
+            return;
+        }
+        let taken = self.compose_for(room);
+        let gnaw = barter::gnaw_loved(station);
+        let worth = |sim: &Self, id: u32| {
+            sim.pieces
+                .iter()
+                .find(|piece| piece.id == id)
+                .map_or(0, |piece| {
+                    barter::piece_value(&sim.rooms, piece, &sim.pieces, &sim.values, gnaw)
+                })
+        };
+        let given_value: u32 = given.iter().map(|&id| worth(self, id)).sum();
+
+        // The room's answer lands on its own deck first, so the goods it
+        // gave up leave room for the goods it took. Anything the deck
+        // cannot hold is not granted at all — a room never hands over
+        // what it has nowhere to set down, and the arithmetic prices
+        // exactly what crossed.
+        let stock_tiles = barter::tiles_of(&self.rooms, room, Tile::Stock);
+        let mut taken_value = 0_u32;
+        let mut granted = Vec::new();
+        for id in &taken {
+            let Some(index) = self.pieces.iter().position(|piece| piece.id == *id) else {
+                continue;
+            };
+            let kind = self.pieces[index].kind;
+            let asking = worth(self, *id) + barter::STOCK_MARKUP;
+            if let Some(loc) = self.deck_berth(room, *id, kind) {
+                self.pieces[index].loc = loc;
+                taken_value += asking;
+                granted.push(*id);
+            }
+        }
+        let taken = granted;
+        let value = barter::deal_value(given_value, taken_value);
+
+        if station == HERMITAGE && taken.is_empty() {
+            // The hermits remember every piece given, forever.
+            self.karma += given.len() as u32;
+        }
+        // Every kind that crossed is learned here for good: the deal's
+        // arithmetic was just demonstrated in public.
+        let learned: Vec<Kind> = given
+            .iter()
+            .chain(taken.iter())
+            .filter_map(|&id| self.pieces.iter().find(|piece| piece.id == id))
+            .map(|piece| piece.kind)
+            .collect();
+        let mask = &mut self.familiar[usize::from(station)];
+        for kind in learned {
+            *mask |= 1 << kind.index();
+        }
+
+        // What was proposed becomes the room's, restocked in tile order;
+        // whatever will not fit goes into the back room.
+        let mut doomed = Vec::new();
+        let mut used: Vec<(u8, u8)> = Vec::new();
+        for id in given {
+            let Some(index) = self.pieces.iter().position(|piece| piece.id == id) else {
+                continue;
+            };
+            let kind = self.pieces[index].kind;
+            let tile = stock_tiles.iter().copied().find(|&(x, y)| {
+                !used.contains(&(x, y))
+                    && placement_legal(&self.rooms, &self.pieces, id, kind, room, x, y)
+            });
+            match tile {
+                Some((x, y)) => {
+                    used.push((x, y));
+                    self.pieces[index].loc = Loc::Hold { room, x, y };
+                }
+                None => doomed.push(id),
+            }
+        }
+        self.pieces.retain(|piece| !doomed.contains(&piece.id));
+        for held in &mut self.held {
+            let orphaned = matches!(held, Some(h) if !self.pieces.iter().any(|p| p.id == h.piece));
+            if orphaned {
+                *held = None;
+            }
+        }
+        self.marks.clear();
+        self.cues.push(Cue::Accept { value });
+    }
+
+    /// The handshake in a wreck: nobody is watching, and what you marked
+    /// is what you carry. The derelict asks nothing and answers nothing.
+    fn claim_salvage(&mut self, room: RoomId) {
+        let claimed: Vec<u32> = self
+            .stock_of(room)
+            .into_iter()
+            .filter(|id| self.marks.contains(id))
+            .collect();
+        if claimed.is_empty() {
+            self.cues.push(Cue::Refuse);
+            return;
+        }
+        let mut lifted = Vec::new();
+        for id in &claimed {
+            let Some(index) = self.pieces.iter().position(|piece| piece.id == *id) else {
+                continue;
+            };
+            let kind = self.pieces[index].kind;
+            if let Some(loc) = self.deck_berth(room, *id, kind) {
+                self.pieces[index].loc = loc;
+                lifted.push(*id);
+            }
+        }
+        if lifted.is_empty() {
+            self.cues.push(Cue::Refuse);
+            return;
+        }
+        self.marks.retain(|id| !lifted.contains(id));
+        self.cues.push(Cue::Accept { value: 0.0 });
+    }
+
+    /// The handshake in the parlor: the coin comes down once for whatever
+    /// is staked on the offer area. Win and a gilded idol lands on the
+    /// house's floor beside your stake; lose and the stake IS still there
+    /// — transmuted into one commemorative casino chip, which the house
+    /// insists is priceless. Conservation holds either way: no piece is
+    /// ever destroyed, merely disrespected.
+    fn spin_wager(&mut self, room: RoomId) {
+        let staked = self.proposal(room);
+        if staked.is_empty() {
+            self.cues.push(Cue::Refuse);
+            return;
+        }
+        if Encounters::casino_coin(self.seed, self.tick) {
+            for _ in &staked {
+                self.spawn_in(room, Kind::GildedIdol);
+            }
+            let _ = room;
+            self.cues.push(Cue::CasinoWin);
+        } else {
+            for id in staked {
+                let Some(index) = self.pieces.iter().position(|piece| piece.id == id) else {
+                    continue;
+                };
+                self.pieces[index].kind = Kind::CasinoChip;
+                self.pieces[index].variant = self.rng.u8(..cargo::VARIANTS);
+            }
+            self.cues.push(Cue::CasinoLoss);
+        }
+    }
+
+    /// The handshake in the pump bay: top up, once, and skip a sliver of
+    /// the remaining leg.
+    fn gas_top_up(&mut self) {
+        let Some(enc) = &mut self.encounters.current else {
+            self.cues.push(Cue::Reject { hard: false });
+            return;
+        };
+        if enc.kind != EncounterKind::GasStation || enc.used {
+            self.cues.push(Cue::Reject { hard: false });
+            return;
         }
         enc.used = true;
         if let ShipState::Traveling {
@@ -1068,41 +1771,90 @@ impl Sim {
             };
         }
         self.cues.push(Cue::GasBoost);
-        true
+    }
+
+    /// Where a room sets down goods that have just become the player's:
+    /// its own ordinary deck first, then its offer area, so a cramped
+    /// room still hands over what it agreed to.
+    fn deck_berth(&self, room: RoomId, id: u32, kind: Kind) -> Option<Loc> {
+        let ordinary = self.rooms.kind(room)?.ordinary();
+        self.free_berth_in(room, Some(id), kind, ordinary)
+            .or_else(|| self.free_berth_in(room, Some(id), kind, Tile::Offer))
+    }
+
+    /// The first free berth of class `class` in `room` for `kind`.
+    ///
+    /// **A room never berths anything on its own doorstep.** Every berth
+    /// the game picks for you comes through here — a shelf putting its
+    /// goods out, a derelict's salvage, the parlor's winnings, a
+    /// quick-move's landing — and the deck a door stands on is the one
+    /// place none of them may go. The shelf order is row-major from the
+    /// aft wall, and the first two floor cells of a calling room's stock
+    /// band are *exactly* the two its own doorway lands in: every
+    /// derelict stocked its own door shut, and from the cabin the room
+    /// beyond was an open seam with a gilded idol wedged in it. The
+    /// studded tread stays what it says it is — traffic, not danger, and
+    /// the PLAYER may still stand a crate on it (`cabin::room::treads`).
+    /// The room may not, because the room is putting things where the
+    /// player has to walk.
+    fn free_berth_in(
+        &self,
+        room: RoomId,
+        ignore: Option<u32>,
+        kind: Kind,
+        class: Tile,
+    ) -> Option<Loc> {
+        let id = ignore.unwrap_or(u32::MAX);
+        let doorstep = self.rooms.kind(room)?;
+        barter::tiles_of(&self.rooms, room, class)
+            .into_iter()
+            .filter(|&(x, y)| !doorstep.doorstep(x, y))
+            .find(|&(x, y)| placement_legal(&self.rooms, &self.pieces, id, kind, room, x, y))
+            .map(|(x, y)| Loc::Hold { room, x, y })
     }
 
     /// A shift-press: move the piece under `p` straight to its one obvious
-    /// destination — hold pieces to the give pads, shelf goods to the take
-    /// pad, pad pieces back where they came from, received goods and
-    /// flotsam into the first legal hold cell (per the quality-of-life brief: the
-    /// first legal spot, even if that is a bad idea). Returns whether the
-    /// press was consumed; `false` means nothing shift-worthy sat under
-    /// the pointer and the press falls through to the ordinary paths.
+    /// destination — cargo aboard onto the calling room's offer area,
+    /// anything of the player's lying in a calling room back to its first
+    /// legal berth aboard (per the quality-of-life brief: the first legal
+    /// spot, even if that is a bad idea). Returns whether the press was
+    /// consumed.
     fn quick_move(&mut self, p: Vec2, placed: &mut Vec<u32>) -> bool {
-        let docked = self.barter.is_some();
-        let Some(piece) = self
-            .pieces
-            .iter()
-            .find(|piece| {
-                layout::piece_rect(piece).contains(p)
-                    && (docked || matches!(piece.loc, Loc::Hold { .. } | Loc::Flotsam { .. }))
-            })
-            .copied()
-        else {
+        let Some(piece) = layout::piece_at(&self.rooms, &self.pieces, p).copied() else {
             return false;
         };
+        if self.tile_of(&piece) == Some(Tile::Stock) {
+            // A room's own goods do not quick-move; the body-click marks.
+            return false;
+        }
         if self.held_by_crew(piece.id) {
-            // Someone is dragging it; a modifier press cannot yank it away.
+            // Someone is carrying it; a modifier press cannot yank it away.
             return true;
         }
-        let target = match piece.loc {
-            Loc::Hold { .. } if docked => self.free_slot(Loc::GivePad { slot: 0 }, 4),
-            Loc::StationShelf { .. } if docked => self.free_slot(Loc::TakePad { slot: 0 }, 4),
-            Loc::TakePad { .. } if docked => self.free_slot(Loc::StationShelf { slot: 0 }, 4),
-            Loc::GivePad { .. } | Loc::ReceivedShelf { .. } | Loc::Flotsam { .. } => {
-                first_fit(&self.pieces, piece.id, piece.kind).map(|(x, y)| Loc::Hold { x, y })
-            }
-            _ => None,
+        if (piece.kind == Kind::Cabinet && cargo::cabinet_occupied(&self.pieces, piece.id))
+            || cargo::laid_pinned(&self.rooms, &self.pieces, &piece)
+        {
+            // Same refusal as the grab: full furniture and pinned
+            // dressings stay put.
+            self.last_violation = Some(Violation::Occupied);
+            self.cues.push(Cue::Reject { hard: true });
+            return true;
+        }
+        let at = self.room_of(&piece);
+        let aboard = at.is_some_and(|room| self.rooms.riding(room));
+        let target = if aboard {
+            self.rooms
+                .iter()
+                .find(|(_, room)| !room.kind.riding())
+                .map(|(id, _)| id)
+                .filter(|_| !cargo::last_vital_aboard(&self.rooms, &self.pieces, &piece))
+                .and_then(|room| self.free_berth_in(room, Some(piece.id), piece.kind, Tile::Offer))
+        } else if piece.kind.covering() {
+            cargo::dress_fit(&self.rooms, &self.pieces, piece.id, piece.kind)
+                .map(|(room, x, y)| Loc::Laid { room, x, y })
+        } else {
+            first_fit(&self.rooms, &self.pieces, piece.id, piece.kind)
+                .map(|(room, x, y)| Loc::Hold { room, x, y })
         };
         match target {
             Some(loc) => {
@@ -1110,7 +1862,6 @@ impl Sim {
                     stored.loc = loc;
                 }
                 self.last_violation = None;
-                self.refresh_ready();
                 placed.push(piece.id);
                 self.cues.push(Cue::Place);
                 self.wanderer_retry();
@@ -1120,21 +1871,7 @@ impl Sim {
         true
     }
 
-    /// The first free slot in a row of `count` slots shaped like `proto`.
-    fn free_slot(&self, proto: Loc, count: u8) -> Option<Loc> {
-        (0..count)
-            .map(|slot| match proto {
-                Loc::GivePad { .. } => Loc::GivePad { slot },
-                Loc::TakePad { .. } => Loc::TakePad { slot },
-                Loc::StationShelf { .. } => Loc::StationShelf { slot },
-                Loc::ReceivedShelf { .. } => Loc::ReceivedShelf { slot },
-                Loc::Flotsam { .. } => Loc::Flotsam { slot },
-                Loc::Hold { .. } => proto,
-            })
-            .find(|&loc| self.slot_free(loc, u32::MAX))
-    }
-
-    /// Docked-only press targets: POIs, the launch lever, the accept lever.
+    /// Docked-only press targets: POIs and the launch lever.
     fn on_press_docked(&mut self, p: Vec2) {
         let ShipState::Docked(at) = self.ship.state else {
             return;
@@ -1169,20 +1906,20 @@ impl Sim {
             if self.ship.selected.is_some() && !armed_valid {
                 self.ship.selected = None;
             }
-            if armed_valid && !self.pads_occupied() {
+            if !armed_valid {
+                // Nothing chosen, or the choice lapsed: there is no law
+                // to name, so the lever simply does not take.
+                self.cues.push(Cue::Reject { hard: false });
+            } else if let Err(refusal) = self.launch_gate() {
+                // **The gangway law refuses by name at the lever, the way
+                // it already does at a latch.** Somebody or something
+                // would be left behind, and the frontend says which:
+                // `Cue::Refit` strobes the jambs, and the pieces
+                // [`Sim::detained_cargo`] names wear the frame that says
+                // they are not coming. Nothing is ever lost to the lever.
+                self.cues.push(Cue::Refit { refusal });
+            } else {
                 self.depart();
-            } else {
-                // No destination, or pieces on a pad or the received shelf:
-                // launching would strand them, so nothing is ever lost to
-                // the lever.
-                self.cues.push(Cue::Reject { hard: false });
-            }
-        } else if layout::ACCEPT_LEVER.contains(p) {
-            if self.barter.is_some() {
-                self.conclude();
-            } else {
-                // A comet or ??? has no counterparty; the lever is dead.
-                self.cues.push(Cue::Reject { hard: false });
             }
         } else if !icon_press(p) {
             self.cues.push(Cue::Reject { hard: false });
@@ -1191,7 +1928,7 @@ impl Sim {
 
     /// A release drops the held piece: place it if the target is legal,
     /// snap it back otherwise. A drop never destroys or surrenders a piece
-    /// — ownership changes only through the accept lever.
+    /// — ownership crosses only at a room's handshake.
     fn on_release(&mut self, player: PlayerId, p: Vec2, placed: &mut Vec<u32>) {
         let Some(held) = self.held[usize::from(player)].take() else {
             return;
@@ -1200,14 +1937,10 @@ impl Sim {
             return;
         };
         let piece = self.pieces[index];
-        if self.casino_wager(index, p) {
-            return;
-        }
         match self.resolve_drop(&piece, p) {
             Ok(loc) => {
                 self.pieces[index].loc = loc;
                 self.last_violation = None;
-                self.refresh_ready();
                 placed.push(piece.id);
                 self.cues.push(Cue::Place);
                 self.wanderer_retry();
@@ -1229,42 +1962,11 @@ impl Sim {
         }
     }
 
-    /// A player piece dropped on the badge while the casino is alongside
-    /// is a wager. Win: it snaps home and a gilded idol lands in the
-    /// flotsam. Lose: the piece IS still there — transmuted into one
-    /// commemorative casino chip, which the house insists is priceless.
-    /// Conservation holds either way: no piece is ever destroyed, merely
-    /// disrespected. Returns whether the drop was consumed.
-    fn casino_wager(&mut self, index: usize, p: Vec2) -> bool {
-        let open_casino = self
-            .encounters
-            .current
-            .as_ref()
-            .is_some_and(|enc| enc.open() && enc.kind == EncounterKind::Casino);
-        if !open_casino
-            || !layout::ENCOUNTER_BADGE.contains(p)
-            || !player_owned(self.pieces[index].loc)
-        {
-            return false;
-        }
-        if Encounters::casino_coin(self.seed, self.tick) {
-            self.spawn_flotsam(Kind::GildedIdol);
-            self.cues.push(Cue::CasinoWin);
-        } else {
-            let piece = &mut self.pieces[index];
-            piece.kind = Kind::CasinoChip;
-            piece.variant = self.rng.u8(..cargo::VARIANTS);
-            self.cues.push(Cue::CasinoLoss);
-        }
-        true
-    }
-
     /// Whether dropping `piece` at `p` would have been legal without the
     /// pieces placed earlier this round — i.e. the refusal is pure
-    /// same-tick contention. Slot drops need no such check: an occupied
-    /// slot is already a soft reject.
+    /// same-tick contention.
     fn contested_only(&self, piece: &Piece, p: Vec2, placed: &[u32]) -> bool {
-        let Some((x, y)) = layout::cell_at(p) else {
+        let Some((room, x, y)) = self.cell_at(p) else {
             return false;
         };
         let rest: Vec<Piece> = self
@@ -1273,275 +1975,198 @@ impl Sim {
             .filter(|other| !placed.contains(&other.id))
             .copied()
             .collect();
-        placement_check(&rest, piece.id, piece.kind, x, y).is_ok()
+        placement_check(&self.rooms, &rest, piece.id, piece.kind, room, x, y).is_ok()
     }
 
     /// Where dropping `piece` at `p` would settle it, or which flavour of
     /// rejection it earns. `Err(Some(_))` is the hard reject — a stowage
-    /// rule refused an in-grid drop — and names the rule; `Err(None)` is a
+    /// rule refused an in-room drop — and names the rule; `Err(None)` is a
     /// soft, ignorable miss that snaps the piece home. Every arm gates on
-    /// [`player_owned`], the same predicate [`Sim::drop_targets`] advertises
+    /// the tile class, the same reading [`Sim::drop_targets`] advertises
     /// from, so the glowing regions and the legal ones cannot drift apart.
     fn resolve_drop(&self, piece: &Piece, p: Vec2) -> Result<Loc, Option<Violation>> {
-        let ours = player_owned(piece.loc);
-        let flotsam = matches!(piece.loc, Loc::Flotsam { .. });
-        if let Some((x, y)) = layout::cell_at(p) {
-            if !ours && !flotsam {
-                // Station goods never enter the hold before a trade.
-                // Flotsam is nobody's: stowing it is how it becomes yours.
-                return Err(None);
+        let Some((room, x, y)) = self.cell_at(p) else {
+            return Err(None);
+        };
+        let Some(tile) = self.rooms.tile(room, x, y) else {
+            return Err(None);
+        };
+        if !player_owned(&self.rooms, &self.pieces, piece.loc) {
+            // A room's own goods do not move: they cross at the handshake.
+            return Err(None);
+        }
+        // **Which classes refuse a drop outright is
+        // [`Tile::takes_your_cargo`]'s answer**, and it is asked here
+        // rather than restated here, because a second law about where a
+        // body may WALK to set a crate down reads the same predicate
+        // (`RoomKind::marooned`). What is left in this match is only WHY
+        // each refusal is refused, which is a message and not a rule.
+        if !tile.takes_your_cargo() {
+            return Err(match tile {
+                Tile::Threshold => Some(Violation::Threshold),
+                // The counter's deck and the pendant's ceiling: the
+                // room's own hardware is already standing there.
+                Tile::Fixture => Some(Violation::Fixture),
+                // Nothing of the player's is ever laid on a room's own
+                // shelf; ownership crosses at the handshake, never
+                // through a drop.
+                _ => None,
+            });
+        }
+        match tile {
+            Tile::Offer | Tile::Consume => {
+                // Both are exits — the piece is leaving the ship, one way
+                // or another — so the vital rule stands at both doors.
+                if cargo::last_vital_aboard(&self.rooms, &self.pieces, piece) {
+                    return Err(Some(Violation::Vital));
+                }
+                if tile == Tile::Consume && piece.kind == Kind::SuspiciousCrate {
+                    // One thing will not go into the fire. It prefers to
+                    // stay.
+                    return Err(Some(Violation::Suspicious));
+                }
             }
-            return match placement_check(&self.pieces, piece.id, piece.kind, x, y) {
-                Ok(()) => Ok(Loc::Hold { x, y }),
+            // **Staging berths exactly as ordinary deck does**, and that
+            // uniformity is the whole point of the class: one grid, one
+            // arbiter, one carry everywhere in the room. It is not an
+            // exit, so the vital rule has no business here — the launch
+            // gate refuses while anything of yours stands on one, so the
+            // last chart tank left on a station's deck is not lost, it is
+            // simply not going anywhere yet.
+            _ => {}
+        }
+        // A drop over a cabinet's body reaches for its cubbies first — but
+        // only with something cubby-sized. Anything bigger falls through to
+        // the grid and collides like furniture does.
+        if piece.kind.extent() == (1, 1, 1) {
+            let host = self.pieces.iter().find(|other| {
+                other.id != piece.id
+                    && other.kind == Kind::Cabinet
+                    && matches!(other.loc, Loc::Hold { .. })
+                    && layout::piece_rect(&self.rooms, &self.pieces, other).contains(p)
+            });
+            if let Some(host) = host {
+                if !cargo::stowable(piece.kind) {
+                    // The one-cell kinds a cubby refuses, named: the cold
+                    // ones need the hull; a suspicious one (none is 1×1
+                    // today) would name its own rule.
+                    let violation = match piece.kind.tag() {
+                        Some(cargo::Tag::Suspicious) => Violation::Suspicious,
+                        _ => Violation::Cryo,
+                    };
+                    return Err(Some(violation));
+                }
+                return cargo::free_cubby(&self.pieces, host.id).map_or(
+                    Err(Some(Violation::Occupied)),
+                    |slot| {
+                        Ok(Loc::Stow {
+                            cabinet: host.id,
+                            slot,
+                        })
+                    },
+                );
+            }
+        }
+        // Coverings lay into the room instead of occupying it: the
+        // dressing layer's own check, same violation ladder.
+        if piece.kind.covering() {
+            return match cargo::dressing_check(
+                &self.rooms,
+                &self.pieces,
+                piece.id,
+                piece.kind,
+                room,
+                x,
+                y,
+            ) {
+                Ok(()) => Ok(Loc::Laid { room, x, y }),
                 Err(violation) => Err(Some(violation)),
             };
         }
-        if self.barter.is_none() {
-            if let Some(slot) = layout::slot_at(&layout::FLOTSAM_SLOTS, p) {
-                // With no counterparty the shelf row is the outboard rail:
-                // drifting pieces re-slot freely, and the player's own
-                // cargo can be put outside the hull — jettison, reversible
-                // until the next sweep (dock, depart, or the encounter
-                // that owns the drift falling astern). One thing will not
-                // go: the crate that hums. It prefers to stay.
-                if !ours && !flotsam {
-                    return Err(None);
-                }
-                if ours && piece.kind == Kind::SuspiciousCrate {
-                    return Err(Some(Violation::Suspicious));
-                }
-                let loc = Loc::Flotsam { slot };
-                return self.slot_free(loc, piece.id).then_some(loc).ok_or(None);
-            }
+        match placement_check(&self.rooms, &self.pieces, piece.id, piece.kind, room, x, y) {
+            Ok(()) => Ok(Loc::Hold { room, x, y }),
+            Err(violation) => Err(Some(violation)),
         }
-        if flotsam {
-            // Adrift and not headed for the hold or back to the rail:
-            // nothing else may take it.
-            return Err(None);
-        }
-        if self.barter.is_some() {
-            if let Some(slot) = layout::slot_at(&layout::GIVE_SLOTS, p) {
-                let loc = Loc::GivePad { slot };
-                return (ours && self.slot_free(loc, piece.id))
-                    .then_some(loc)
-                    .ok_or(None);
-            }
-            if let Some(slot) = layout::slot_at(&layout::TAKE_SLOTS, p) {
-                let loc = Loc::TakePad { slot };
-                return (!ours && self.slot_free(loc, piece.id))
-                    .then_some(loc)
-                    .ok_or(None);
-            }
-            if let Some(slot) = layout::slot_at(&layout::SHELF_SLOTS, p) {
-                // The shelf is the station's: only its own goods re-shelve
-                // here. Player cargo leaves the player through the accept
-                // lever (a gift trade), never through a stray drop.
-                let loc = Loc::StationShelf { slot };
-                return (!ours && self.slot_free(loc, piece.id))
-                    .then_some(loc)
-                    .ok_or(None);
-            }
-            if let Some(slot) = layout::slot_at(&layout::RECEIVED_SLOTS, p) {
-                let loc = Loc::ReceivedShelf { slot };
-                return (matches!(piece.loc, Loc::ReceivedShelf { .. })
-                    && self.slot_free(loc, piece.id))
-                .then_some(loc)
-                .ok_or(None);
-            }
-        }
-        Err(None)
     }
 
-    /// Which regions would accept `player`'s held piece, for the renderer
-    /// to glow. `None` while that player holds nothing. Derived from
-    /// [`player_owned`] and the dock state exactly as [`Sim::resolve_drop`]
-    /// is; per-slot freeness stays with the drop itself (a glowing row with
-    /// one occupied socket is still an honest invitation).
+    /// Which classes of berth would accept `player`'s held piece, for the
+    /// renderer to glow. `None` while that player holds nothing. Derived
+    /// from the tile classes exactly as [`Sim::resolve_drop`] is; per-cell
+    /// freeness stays with the drop itself (a glowing area with one
+    /// occupied cell is still an honest invitation).
     #[must_use]
     pub fn drop_targets(&self, player: PlayerId) -> Option<DropTargets> {
         let held = self.held(player)?;
         let piece = self.pieces.iter().find(|piece| piece.id == held.piece)?;
-        let ours = player_owned(piece.loc);
-        let docked = self.barter.is_some();
+        let ours = player_owned(&self.rooms, &self.pieces, piece.loc);
+        // The exits that would certainly hard-refuse this piece do not
+        // glow — the invitation and the arbiter must agree.
+        let vital = cargo::last_vital_aboard(&self.rooms, &self.pieces, piece);
         Some(DropTargets {
-            net: (!docked && ours && piece.kind != Kind::SuspiciousCrate)
-                || matches!(piece.loc, Loc::Flotsam { .. }),
-            hold: ours || matches!(piece.loc, Loc::Flotsam { .. }),
-            give: ours && docked,
-            take: !ours && docked,
-            shelf: !ours && docked,
-            received: docked && matches!(piece.loc, Loc::ReceivedShelf { .. }),
+            berth: ours,
+            stow: ours
+                && cargo::stowable(piece.kind)
+                && self.pieces.iter().any(|other| {
+                    other.id != piece.id
+                        && other.kind == Kind::Cabinet
+                        && matches!(other.loc, Loc::Hold { .. })
+                        && cargo::free_cubby(&self.pieces, other.id).is_some()
+                }),
+            offer: ours && !vital && self.rooms.iter().any(|(_, room)| !room.kind.riding()),
+            consume: ours && !vital && piece.kind != Kind::SuspiciousCrate,
         })
     }
 
-    /// Re-derive the lever's readiness from the pads this instant. Called
-    /// whenever a piece lands or a trade concludes, so the lever lights the
-    /// frame a trade becomes viable instead of one tick later. The dial's
-    /// sweep still eases in the tick; only readiness is instantaneous.
-    fn refresh_ready(&mut self) {
-        if let Some(barter) = &mut self.barter {
-            barter.ready = barter::eagerness_of(
-                &self.pieces,
-                &self.values,
-                barter::gnaw_loved(barter.station),
-            )
-            .1;
-            barter.fog = barter::fog_of(&self.pieces, self.familiar[usize::from(barter.station)]);
+    /// **What the launch would leave behind**: a piece of the player's
+    /// resting in a room that does not ride.
+    ///
+    /// A staging cell is the ordinary case and the reason the predicate
+    /// is worth a name — a station's deck takes cargo through the same
+    /// arbiter its own goods do, and the station leaves. The offer area
+    /// and a shelf's spare deck are the same fact from other angles, so
+    /// this asks the question once: *is it yours, and is it standing in
+    /// a room the ship is about to cast off?*
+    ///
+    /// [`Sim::launch_gate`] refuses on it and [`Sim::detained`] lights
+    /// it, so the law and its reading cannot come apart.
+    fn detained(&self, piece: &Piece) -> bool {
+        self.room_of(piece).is_some_and(|at| !self.rooms.riding(at))
+            && player_owned(&self.rooms, &self.pieces, piece.loc)
+    }
+
+    /// The gangway law's launch gate. The lever refuses unless every crew
+    /// body is in a riding room, nothing of the player's rests in a
+    /// calling room, every attached trade room's offer is resolved, and no
+    /// unresolved event room is attached. Departure detaches every calling
+    /// room as a consequence of casting off, which is safe precisely
+    /// because this ran first.
+    fn launch_gate(&self) -> Result<(), Refusal> {
+        if self.occupied.iter().any(|&at| !self.rooms.riding(at)) {
+            return Err(Refusal::Aboard);
         }
-    }
-
-    /// Whether no other piece occupies `loc`.
-    fn slot_free(&self, loc: Loc, id: u32) -> bool {
-        !self
-            .pieces
-            .iter()
-            .any(|other| other.id != id && other.loc == loc)
-    }
-
-    /// Whether any traded-for goods still wait on the received shelf.
-    fn received_occupied(&self) -> bool {
-        self.pieces
-            .iter()
-            .any(|piece| matches!(piece.loc, Loc::ReceivedShelf { .. }))
-    }
-
-    /// Whether any piece sits somewhere departure would strand it: a pad or
-    /// the received shelf. The launch lever refuses while this holds.
-    fn pads_occupied(&self) -> bool {
-        self.pieces.iter().any(|piece| {
-            matches!(
-                piece.loc,
-                Loc::GivePad { .. } | Loc::TakePad { .. } | Loc::ReceivedShelf { .. }
-            )
-        })
-    }
-
-    /// Pull the accept lever: swap the pads if the station agrees, refuse
-    /// otherwise. Received goods must be stowed before trading again, so the
-    /// received shelf never double-books a slot. Readiness and the deal
-    /// value come from the instantaneous pads, not the eased dial, so a
-    /// quick pull is never judged by an animation.
-    fn conclude(&mut self) {
-        let Some(station) = self.barter.as_ref().map(|barter| barter.station) else {
-            return;
-        };
-        let gnaw_love = barter::gnaw_loved(station);
-        let (_, ready) = barter::eagerness_of(&self.pieces, &self.values, gnaw_love);
-        if !ready || self.received_occupied() {
-            self.cues.push(Cue::Refuse);
-            if !ready {
-                // Wasting the station's time is the one discovery cost a
-                // gamble can pay: patience runs out, shutters come down.
-                self.spend_patience();
-            }
-            return;
+        if self.pieces.iter().any(|piece| self.detained(piece)) {
+            return Err(Refusal::Cargo);
         }
-        let value = barter::deal_value(&self.pieces, &self.values, gnaw_love);
-        if station == HERMITAGE {
-            // The hermits remember every piece given, forever.
-            self.karma += self
-                .pieces
-                .iter()
-                .filter(|piece| matches!(piece.loc, Loc::GivePad { .. }))
-                .count() as u32;
-        }
-        // Every kind that crossed the pads is learned here for good: the
-        // deal's arithmetic was just demonstrated in public.
-        let mask = &mut self.familiar[usize::from(station)];
-        let mut gave_only = true;
-        for piece in &self.pieces {
-            match piece.loc {
-                Loc::GivePad { .. } => *mask |= 1 << piece.kind.index(),
-                Loc::TakePad { .. } => {
-                    *mask |= 1 << piece.kind.index();
-                    gave_only = false;
+        for (id, room) in self.rooms.iter() {
+            match room.kind {
+                RoomKind::Cabin | RoomKind::Burner => {}
+                RoomKind::Trade => {
+                    if self.offer_pending(id) {
+                        return Err(Refusal::Pending);
+                    }
                 }
-                _ => {}
-            }
-        }
-        self.restock_from_give_pads();
-        for piece in &mut self.pieces {
-            if let Loc::TakePad { slot } = piece.loc {
-                piece.loc = Loc::ReceivedShelf { slot };
-            }
-        }
-        if gave_only {
-            if let Some(barter) = &mut self.barter {
-                if barter.patience == 0 {
-                    // A gift through the shutters: grudgingly, they reopen
-                    // a crack. (The shelf now holds exactly what you gave
-                    // them, and yes, they would sell it back to you.)
-                    barter.patience = 1;
+                // An unresolved event blocks the next takeoff — and the
+                // free way out is always there: shut the door.
+                RoomKind::Wreck | RoomKind::Parlor | RoomKind::Pump => {
+                    return Err(Refusal::Pending);
                 }
             }
         }
-        self.refresh_ready();
-        self.cues.push(Cue::Accept { value });
+        Ok(())
     }
 
-    /// One refused pull's worth of patience gone. At zero the station
-    /// shutters: shelf and take pad withdrawn (they are the station's),
-    /// leaving gifts as the only trade the lever will move.
-    fn spend_patience(&mut self) {
-        let Some(barter) = &mut self.barter else {
-            return;
-        };
-        if barter.patience == 0 {
-            return;
-        }
-        barter.patience -= 1;
-        if barter.patience > 0 {
-            return;
-        }
-        self.pieces
-            .retain(|piece| !matches!(piece.loc, Loc::StationShelf { .. } | Loc::TakePad { .. }));
-        for held in &mut self.held {
-            let holds_gone =
-                matches!(held, Some(h) if !self.pieces.iter().any(|p| p.id == h.piece));
-            if holds_gone {
-                *held = None;
-            }
-        }
-        self.refresh_ready();
-        self.cues.push(Cue::Shutter);
-    }
-
-    /// The station consumes the give pads: pieces restock free shelf slots
-    /// in pad order — it resells what you sold it — and the overflow
-    /// vanishes into the back room.
-    fn restock_from_give_pads(&mut self) {
-        let mut free: Vec<u8> = (0..layout::SHELF_SLOTS.len() as u8)
-            .filter(|&slot| {
-                !self
-                    .pieces
-                    .iter()
-                    .any(|piece| piece.loc == Loc::StationShelf { slot })
-            })
-            .collect();
-        free.reverse(); // pop() then yields ascending slots
-        let mut given: Vec<(u8, usize)> = self
-            .pieces
-            .iter()
-            .enumerate()
-            .filter_map(|(i, piece)| match piece.loc {
-                Loc::GivePad { slot } => Some((slot, i)),
-                _ => None,
-            })
-            .collect();
-        given.sort_unstable();
-        let mut doomed = Vec::new();
-        for (_, index) in given {
-            match free.pop() {
-                Some(slot) => self.pieces[index].loc = Loc::StationShelf { slot },
-                None => doomed.push(self.pieces[index].id),
-            }
-        }
-        self.pieces.retain(|piece| !doomed.contains(&piece.id));
-    }
-
-    /// Cast off toward the selected destination. Only the station's shelf
-    /// stays behind: the launch gate guarantees the pads and the received
-    /// shelf are already clear, so no player piece is ever lost here.
+    /// Cast off toward the selected destination. The launch gate has
+    /// already run, so detaching every calling room strands nothing.
     fn depart(&mut self) {
         let ShipState::Docked(from) = self.ship.state else {
             return;
@@ -1549,16 +2174,12 @@ impl Sim {
         let Some(to) = self.ship.selected else {
             return;
         };
-        debug_assert!(!self.pads_occupied(), "launch gate must clear the pads");
+        debug_assert!(self.launch_gate().is_ok(), "launch gate must have passed");
         let leg_ticks = map::leg_ticks(from, to, self.tick);
-        // Casting off tears the net clean: jettisoned cargo stays behind
-        // with the berth. Noted here, announced after the departure clunk.
-        let swept = self
-            .pieces
-            .iter()
-            .any(|piece| matches!(piece.loc, Loc::Flotsam { .. }));
-        self.pieces
-            .retain(|piece| matches!(piece.loc, Loc::Hold { .. }));
+        // Casting off ignites the burner: hopper cargo RIDES — it is this
+        // leg's fuel, fed to the fire on the stoker's beat. Only what is
+        // alongside stays behind, and it leaves with its own room.
+        self.dismiss_callers();
         self.barter = None;
         self.legs += 1;
         let suspicious = self.suspicious_aboard();
@@ -1573,9 +2194,6 @@ impl Sim {
             leg_ticks,
         };
         self.cues.push(Cue::Depart);
-        if swept {
-            self.cues.push(Cue::Jettison);
-        }
         // After the departure clunk: the stowaway slips in with the cargo.
         self.rats.on_depart(
             self.seed,
@@ -1600,19 +2218,23 @@ impl Sim {
         } = self.ship.state
         {
             progress += 1;
+            // The stoked fire pushes: one boost tick spent, one extra
+            // tick of way made good — double speed until it dies down.
+            if self.stoke > 0 {
+                self.stoke -= 1;
+                progress += 1;
+            }
+            self.feed_burner();
             self.omen
                 .travel_tick(&mut progress, leg_ticks, &mut self.cues);
             if let Some(cue) = event::creak(self.seed, self.tick) {
                 self.cues.push(cue);
             }
             let seedlings = self.pieces.iter().any(|piece| {
-                matches!(piece.loc, Loc::Hold { .. }) && piece.kind == Kind::Seedlings
+                piece.kind == Kind::Seedlings
+                    && matches!(piece.loc, Loc::Hold { room, .. } if self.rooms.riding(room))
             });
-            let ending = self
-                .encounters
-                .current
-                .as_ref()
-                .is_some_and(encounter::Encounter::open);
+            let watched = self.encounters.current.map(|enc| enc.opened);
             let spawn = self.encounters.travel_tick(
                 self.seed,
                 self.legs,
@@ -1621,14 +2243,9 @@ impl Sim {
                 seedlings,
                 &mut self.cues,
             );
-            if ending && self.cues.contains(&Cue::EncounterEnd) {
-                // It fell astern: loose flotsam drifts away with it. The
-                // meteor shower's souvenir spawns after, so it survives.
-                self.clear_flotsam();
-            }
-            for kind in spawn {
-                self.spawn_flotsam(kind);
-            }
+            let opened =
+                watched == Some(false) && self.encounters.current.is_some_and(|enc| enc.opened);
+            self.open_encounter_room(opened, &spawn);
             self.drones.travel_tick(progress, &mut self.cues);
             if self
                 .cues
@@ -1659,29 +2276,43 @@ impl Sim {
         self.omen.on_tick();
         self.rats
             .on_tick(self.seed, self.tick, &mut self.pieces, &mut self.cues);
+    }
 
-        if let Some(barter) = &mut self.barter {
-            // The dial eases toward the trade's true ratio (capped at the
-            // dial's peg); readiness tracks the ratio itself.
-            barter.prev_eagerness = barter.eagerness;
-            let (target, ready) = barter::eagerness_of(
-                &self.pieces,
-                &self.values,
-                barter::gnaw_loved(barter.station),
-            );
-            barter.ready = ready;
-            barter.fog = barter::fog_of(&self.pieces, self.familiar[usize::from(barter.station)]);
-            barter.eagerness = step_toward(
-                barter.eagerness,
-                target.clamp(0.0, EAGER_MAX),
-                barter::EAGER_RATE * TICK_DT,
-            );
+    /// An encounter with a counterparty or a place brings its own room
+    /// alongside; weather stays a schedule. `salvage` is whatever the
+    /// encounter machine wants materialised this tick.
+    fn open_encounter_room(&mut self, opened: bool, salvage: &[Kind]) {
+        if opened {
+            match self.encounters.current.as_ref().map(|enc| enc.kind) {
+                Some(EncounterKind::Derelict) => {
+                    if let Some(room) = self.call_room(RoomKind::Wreck) {
+                        for &kind in salvage {
+                            self.stock_in(room, kind);
+                        }
+                        return;
+                    }
+                }
+                Some(EncounterKind::Casino) => {
+                    self.call_room(RoomKind::Parlor);
+                }
+                Some(EncounterKind::GasStation) => {
+                    self.call_room(RoomKind::Pump);
+                }
+                // The meteor shower and the whale are weather: schedules
+                // hashed off the seed, with cues, and nothing to attach.
+                _ => {}
+            }
+        }
+        for &kind in salvage {
+            // Whatever a closing window leaves behind — the meteor's
+            // souvenir, embedded in the hull — is simply aboard.
+            self.spawn_in_hold(kind);
         }
     }
 
-    /// Arrive: snap to the pad, count the visit, and lay out its trade. At
-    /// the Guild the hangar steal runs first, so the visit's barter never
-    /// sees the crate.
+    /// Arrive: snap to the pad, count the visit, and bring the station's
+    /// own room alongside. At the Guild the hangar steal runs first, so
+    /// the visit's room never sees the crate.
     fn dock(&mut self, poi: PoiId) {
         self.ship.pos = map::poi_pos(poi, self.tick);
         self.ship.state = ShipState::Docked(poi);
@@ -1692,38 +2323,82 @@ impl Sim {
         self.omen.on_dock(&mut self.cues);
         self.encounters.on_dock(&mut self.cues);
         self.drones.on_dock(&mut self.cues);
-        self.clear_flotsam();
+        // Whatever was alongside falls astern with its room, and anything
+        // of the player's inside walks aboard first.
+        self.dismiss_callers();
+        self.barter = None;
         if poi == GUILD {
             self.steal_crate();
         }
-        // After any hangar steal, so the walk-off gate reads the hold as
+        // After any hangar steal, so the walk-off gate reads the cabin as
         // the dock leaves it.
         self.rats.on_dock(&self.pieces, &mut self.cues);
         self.visits[usize::from(poi)] += 1;
         let visit = self.visits[usize::from(poi)];
-        // Cleared first so the barterless docks (comet, ???) never inherit
-        // a stale counterparty from anywhere.
-        self.barter = None;
         match poi {
             COMET => self.harvest_comet(visit),
-            WANDERER => {} // ??? waits; the offering is the player's move.
-            _ => {
-                let (barter, goods) = barter::generate(
-                    self.seed,
-                    poi,
-                    visit,
-                    &self.pieces,
-                    self.karma,
-                    self.parade_at.is_some(),
-                    &mut self.rng,
-                    &mut self.next_piece,
-                );
-                self.values = barter::visit_values(self.seed, poi, visit);
-                self.pieces.extend(goods);
-                self.barter = Some(barter);
+            // ??? brings its room but stocks nothing and asks in crates.
+            WANDERER => {
+                self.call_room(RoomKind::Trade);
             }
+            _ => self.open_trade(poi, visit),
         }
         self.cues.push(Cue::Arrive);
+    }
+
+    /// Bring a trading POI's own room alongside and put its goods out.
+    fn open_trade(&mut self, poi: PoiId, visit: u32) {
+        let Some(room) = self.call_room(RoomKind::Trade) else {
+            return;
+        };
+        self.values = barter::visit_values(self.seed, poi, visit);
+        self.barter = Some(barter::open(self.seed, poi, visit));
+        let cap = barter::tiles_of(&self.rooms, room, Tile::Stock).len();
+        let kinds = barter::stock_kinds(
+            self.seed,
+            poi,
+            visit,
+            &self.pieces,
+            self.karma,
+            self.parade_at.is_some(),
+            cap,
+        );
+        for kind in kinds {
+            self.stock_in(room, kind);
+        }
+    }
+
+    /// Put one piece of a room's own goods on its first free stock tile.
+    fn stock_in(&mut self, room: RoomId, kind: Kind) {
+        let Some(loc) = self.free_berth_in(room, None, kind, Tile::Stock) else {
+            return;
+        };
+        self.pieces.push(Piece {
+            id: self.next_piece,
+            kind,
+            variant: self.rng.u8(..cargo::VARIANTS),
+            gnawed: false,
+            loc,
+        });
+        self.next_piece += 1;
+    }
+
+    /// Drop a fresh piece onto a room's ordinary deck, if there is room.
+    fn spawn_in(&mut self, room: RoomId, kind: Kind) {
+        let Some(ordinary) = self.rooms.kind(room).map(RoomKind::ordinary) else {
+            return;
+        };
+        let Some(loc) = self.free_berth_in(room, None, kind, ordinary) else {
+            return;
+        };
+        self.pieces.push(Piece {
+            id: self.next_piece,
+            kind,
+            variant: self.rng.u8(..cargo::VARIANTS),
+            gnawed: false,
+            loc,
+        });
+        self.next_piece += 1;
     }
 
     /// Turn warp off if it is on, with its cue. Arrivals and event
@@ -1737,7 +2412,7 @@ impl Sim {
     }
 
     /// Docked at the comet: chip off some ice, free. One to three shards
-    /// (as the hold's edges allow — ice hugs the hull like any cryo cargo)
+    /// (as the room's edges allow — ice hugs the hull like any cryo cargo)
     /// plus, one visit in three, something odd frozen inside. Once per
     /// apparition: a comet is not a vending machine, and a second dock in
     /// the same perihelion pass finds only chisel marks.
@@ -1767,111 +2442,127 @@ impl Sim {
         }
     }
 
-    /// The offering at ???: nothing is automatic. The player lays
-    /// mysterious crates on the outboard rail — three violet sockets mark
-    /// the price — and the moment three sit out there with a legal 2x2
-    /// berth waiting in the hold, ??? takes them and leaves one very
-    /// mysterious crate. Three railed crates with no berth buzz softly
-    /// and wait: nothing is ever half-taken. Checked after every
-    /// placement while docked here.
+    /// The offering at ???: nothing is automatic. The player carries
+    /// mysterious crates into the room ??? brings alongside and lays them
+    /// on its offer area, and the moment three sit there with a legal 2×2
+    /// berth waiting aboard, ??? takes them and leaves one very mysterious
+    /// crate. Three offered crates with no berth buzz softly and wait:
+    /// nothing is ever half-taken. Checked after every placement while
+    /// docked here.
     fn wanderer_retry(&mut self) {
         if self.ship.state != ShipState::Docked(WANDERER) {
             return;
         }
-        let mut railed: Vec<(u8, u32)> = self
-            .pieces
-            .iter()
-            .filter_map(|piece| match piece.loc {
-                Loc::Flotsam { slot } if piece.kind == Kind::MysteriousCrate => {
-                    Some((slot, piece.id))
-                }
-                _ => None,
+        let Some(room) = self.trade_room() else {
+            return;
+        };
+        let mut offered: Vec<u32> = self
+            .proposal(room)
+            .into_iter()
+            .filter(|id| {
+                self.pieces
+                    .iter()
+                    .any(|piece| piece.id == *id && piece.kind == Kind::MysteriousCrate)
             })
             .collect();
-        if (railed.len() as u32) < WANDERER_TOLL {
+        if (offered.len() as u32) < WANDERER_TOLL {
             return;
         }
-        railed.sort_unstable();
-        railed.truncate(WANDERER_TOLL as usize);
-        let Some((x, y)) = first_fit(&self.pieces, self.next_piece, Kind::VeryMysteriousCrate)
-        else {
+        offered.truncate(WANDERER_TOLL as usize);
+        let Some((berth, x, y)) = first_fit(
+            &self.rooms,
+            &self.pieces,
+            self.next_piece,
+            Kind::VeryMysteriousCrate,
+        ) else {
             self.cues.push(Cue::Reject { hard: false });
             return;
         };
-        let doomed: Vec<u32> = railed.iter().map(|&(_, id)| id).collect();
         for held in &mut self.held {
-            if matches!(held, Some(h) if doomed.contains(&h.piece)) {
+            if matches!(held, Some(h) if offered.contains(&h.piece)) {
                 *held = None;
             }
         }
-        self.pieces.retain(|piece| !doomed.contains(&piece.id));
+        self.pieces.retain(|piece| !offered.contains(&piece.id));
         self.pieces.push(Piece {
             id: self.next_piece,
             kind: Kind::VeryMysteriousCrate,
             variant: self.rng.u8(..cargo::VARIANTS),
             gnawed: false,
-            loc: Loc::Hold { x, y },
+            loc: Loc::Hold { room: berth, x, y },
         });
         self.next_piece += 1;
         self.cues.push(Cue::Exchange);
     }
 
-    /// Drop a fresh piece into the first free drift slot, if any.
-    fn spawn_flotsam(&mut self, kind: Kind) {
-        let Some(slot) = encounter::free_flotsam_slot(&self.pieces) else {
+    /// The stoker's beat: underway, on the metronome, with nothing
+    /// alongside to watch (an open encounter pauses the shovel — which
+    /// is also what keeps fresh salvage grabbable), the lowest occupied
+    /// `Consume` cell in the burner room's own row-major order goes into
+    /// the fire. Its flammability becomes boost; slag pushes nothing and
+    /// merely stops existing. This is a conservation ceremony
+    /// (`Cue::Burn`), one of the named doors.
+    fn feed_burner(&mut self) {
+        if self.tick % STOKE_PERIOD != 0 {
+            return;
+        }
+        let watching = self
+            .encounters
+            .current
+            .as_ref()
+            .is_some_and(encounter::Encounter::open);
+        if watching {
+            return;
+        }
+        let Some(burner) = self.rooms.find(RoomKind::Burner) else {
             return;
         };
-        self.pieces.push(Piece {
-            id: self.next_piece,
-            kind,
-            variant: self.rng.u8(..cargo::VARIANTS),
-            gnawed: false,
-            loc: Loc::Flotsam { slot },
-        });
-        self.next_piece += 1;
-    }
-
-    /// Sweep every drifting piece over the side, announcing it when
-    /// anything actually went. Encounter loot out here was never the
-    /// player's; jettisoned cargo was, which is why the sweep is a named
-    /// ceremony (`Cue::Jettison`) rather than a silent tidy-up.
-    fn clear_flotsam(&mut self) {
-        let before = self.pieces.len();
-        self.pieces
-            .retain(|piece| !matches!(piece.loc, Loc::Flotsam { .. }));
-        if self.pieces.len() < before {
-            self.cues.push(Cue::Jettison);
-        }
+        let fed = barter::tiles_of(&self.rooms, burner, Tile::Consume)
+            .into_iter()
+            .find_map(|(x, y)| {
+                self.pieces
+                    .iter()
+                    .find(|piece| piece.loc == Loc::Hold { room: burner, x, y })
+                    .map(|piece| (piece.id, piece.kind))
+            });
+        let Some((id, kind)) = fed else { return };
+        self.pieces.retain(|piece| piece.id != id);
+        self.marks.retain(|other| *other != id);
         for held in &mut self.held {
-            let orphaned = matches!(held, Some(h) if !self.pieces.iter().any(|p| p.id == h.piece));
-            if orphaned {
+            if matches!(held, Some(h) if h.piece == id) {
                 *held = None;
             }
         }
+        self.stoke += u64::from(kind.flammable()) * STOKE_PER_FLAM;
+        self.cues.push(Cue::Burn {
+            intensity: f32::from(kind.flammable()) / 3.0,
+        });
     }
 
     /// The fluff arithmetic: while traveling, each breeding window one
-    /// stowed fluff (lowest id — the eldest) buds a copy into an adjacent
-    /// free cell, up to the mercy cap. Deterministic from the window
-    /// number, stateless, and honestly a little unnerving.
+    /// berthed fluff (lowest id — the eldest) buds a copy into an adjacent
+    /// free cell of the same room, up to the mercy cap. Deterministic from
+    /// the window number, stateless, and honestly a little unnerving.
     fn breed_fluffs(&mut self) {
         if self.tick % FLUFF_WINDOW
             != splitmix(self.seed ^ SALT_FLUFF, self.tick / FLUFF_WINDOW) % FLUFF_WINDOW
         {
             return;
         }
-        let fluffs: Vec<(u32, u8, u8)> = self
+        let fluffs: Vec<(u32, RoomId, u8, u8)> = self
             .pieces
             .iter()
             .filter_map(|piece| match piece.loc {
-                Loc::Hold { x, y } if piece.kind == Kind::Fluff => Some((piece.id, x, y)),
+                Loc::Hold { room, x, y } if piece.kind == Kind::Fluff => {
+                    Some((piece.id, room, x, y))
+                }
                 _ => None,
             })
             .collect();
         if fluffs.is_empty() || fluffs.len() >= FLUFF_CAP {
             return;
         }
-        let &(_, x, y) = fluffs.iter().min_by_key(|&&(id, _, _)| id).unwrap();
+        let &(_, room, x, y) = fluffs.iter().min_by_key(|&&(id, _, _, _)| id).unwrap();
         let neighbours = [
             (x.wrapping_sub(1), y),
             (x + 1, y),
@@ -1879,16 +2570,21 @@ impl Sim {
             (x, y + 1),
         ];
         for (nx, ny) in neighbours {
-            if nx < layout::GRID_COLS
-                && ny < layout::GRID_ROWS
-                && placement_legal(&self.pieces, self.next_piece, Kind::Fluff, nx, ny)
-            {
+            if placement_legal(
+                &self.rooms,
+                &self.pieces,
+                self.next_piece,
+                Kind::Fluff,
+                room,
+                nx,
+                ny,
+            ) {
                 self.pieces.push(Piece {
                     id: self.next_piece,
                     kind: Kind::Fluff,
                     variant: self.rng.u8(..cargo::VARIANTS),
                     gnawed: false,
-                    loc: Loc::Hold { x: nx, y: ny },
+                    loc: Loc::Hold { room, x: nx, y: ny },
                 });
                 self.next_piece += 1;
                 self.cues.push(Cue::FluffBirth);
@@ -1897,10 +2593,10 @@ impl Sim {
         }
     }
 
-    /// Stow a fresh `kind` at the first legal cell, if any. Free cargo
-    /// only: barter pieces arrive through [`barter::generate`].
+    /// Stow a fresh `kind` at the first legal berth aboard, if any. Free
+    /// cargo only: a room's own goods arrive through [`Sim::stock_in`].
     fn spawn_in_hold(&mut self, kind: Kind) -> bool {
-        let Some((x, y)) = first_fit(&self.pieces, self.next_piece, kind) else {
+        let Some((room, x, y)) = first_fit(&self.rooms, &self.pieces, self.next_piece, kind) else {
             return false;
         };
         self.pieces.push(Piece {
@@ -1908,23 +2604,22 @@ impl Sim {
             kind,
             variant: self.rng.u8(..cargo::VARIANTS),
             gnawed: false,
-            loc: Loc::Hold { x, y },
+            loc: Loc::Hold { room, x, y },
         });
         self.next_piece += 1;
         true
     }
 
     /// The hangar steal: any suspicious crate aboard is seized the moment
-    /// the ship docks at the Guild — in front of the usual bartering — and
+    /// the ship docks at the Guild — in front of the usual trading — and
     /// counted on the delivery tally with a [`Cue::Delivered`]. The
     /// singleton rule caps this at one crate per docking, and a crate held
-    /// mid-drag drops first: it is dock time.
+    /// mid-carry drops first: it is dock time.
     fn steal_crate(&mut self) {
-        let Some(index) = self
-            .pieces
-            .iter()
-            .position(|piece| matches!(piece.kind.tag(), Some(Tag::Suspicious)))
-        else {
+        let Some(index) = self.pieces.iter().position(|piece| {
+            matches!(piece.kind.tag(), Some(Tag::Suspicious))
+                && matches!(piece.loc, Loc::Hold { room, .. } if self.rooms.riding(room))
+        }) else {
             return;
         };
         let id = self.pieces[index].id;
@@ -1966,12 +2661,16 @@ mod tests {
     /// transit chit, so generic travel tests chart outward).
     const URANUS: PoiId = 4;
 
-    /// Jupiter: the longest leg from the Guild, for creak statistics.
-    const JUPITER: PoiId = 3;
+    /// The burner: room 1 on every ship that ever left the yard.
+    const BURNER: RoomId = 1;
+
+    /// The room a counterparty brings alongside: room 2, because the
+    /// cabin and the burner already hold 0 and 1.
+    const TRADE: RoomId = 2;
 
     /// Seed for the scripted odyssey, found by search: the Guild's first
-    /// trade is acceptable AND the first leg meets no encounter or ad
-    /// drone (either would auto-disengage the scripted warp).
+    /// visit stocks something, and the first leg meets no encounter or
+    /// ad drone (either would auto-disengage the scripted warp).
     const ODYSSEY_SEED: u64 = 1;
 
     fn press_at(x: f32, y: f32) -> InputFrame {
@@ -2003,15 +2702,51 @@ mod tests {
         Vec2::new(rect.w.mul_add(0.5, rect.x), rect.h.mul_add(0.5, rect.y))
     }
 
-    fn cell_center(x: u8, y: u8) -> Vec2 {
-        rect_center(layout::cell_rect(x, y))
+    /// The world point at the middle of one room's net cell.
+    fn cell_center(room: RoomId, x: u8, y: u8) -> Vec2 {
+        rect_center(layout::cell_rect(room, x, y))
     }
 
-    fn slot_center(slots: &[layout::Rect; 4], i: usize) -> Vec2 {
-        rect_center(slots[i])
+    /// The cabin's own cells, which most tests mean when they say a cell.
+    fn cabin(x: u8, y: u8) -> Vec2 {
+        cell_center(CABIN, x, y)
     }
 
-    /// Drag as three zero-dt frames: press, mid-drag hold, release.
+    /// Conjure a piece at `loc` for a test board, id from the sim's own
+    /// counter so nothing collides.
+    fn inject_at(sim: &mut Sim, kind: Kind, loc: Loc) -> u32 {
+        let id = sim.next_piece;
+        sim.next_piece += 1;
+        sim.pieces.push(Piece {
+            id,
+            kind,
+            variant: 0,
+            gnawed: false,
+            loc,
+        });
+        id
+    }
+
+    /// Test scaffolding: berth an extra piece in the cabin.
+    fn inject_hold(sim: &mut Sim, kind: Kind, x: u8, y: u8) -> u32 {
+        let id = inject_at(sim, kind, Loc::Hold { room: CABIN, x, y });
+        assert!(
+            placement_legal(&sim.rooms, &sim.pieces, id, kind, CABIN, x, y),
+            "test piece berthed illegally at ({x}, {y})"
+        );
+        id
+    }
+
+    /// A docked sim with the cabin emptied: starter cargo swept aside so
+    /// tests can lay exact boards.
+    fn cleared(seed: u64) -> Sim {
+        let mut sim = Sim::new(seed);
+        sim.pieces
+            .retain(|p| !matches!(p.loc, Loc::Hold { room: CABIN, .. }));
+        sim
+    }
+
+    /// Carry as three zero-dt frames: press, mid-carry hold, release.
     fn drag(sim: &mut Sim, from: Vec2, to: Vec2) {
         sim.advance(0.0, &press_at(from.x, from.y));
         assert!(sim.held(0).is_some(), "nothing to lift at {from:?}");
@@ -2019,7 +2754,7 @@ mod tests {
         sim.advance(0.0, &release_at(to.x, to.y));
     }
 
-    /// The same drag appended to a script instead of played live.
+    /// The same carry appended to a script instead of played live.
     fn drag_frames(script: &mut Vec<(f32, InputFrame)>, from: Vec2, to: Vec2) {
         script.push((0.0, press_at(from.x, from.y)));
         script.push((0.0, held_at(to.x, to.y)));
@@ -2043,44 +2778,12 @@ mod tests {
         }
     }
 
-    /// Test scaffolding: stow an extra piece directly in the hold.
-    fn inject_hold(sim: &mut Sim, kind: Kind, x: u8, y: u8) -> u32 {
-        let id = sim.next_piece;
-        sim.next_piece += 1;
-        sim.pieces.push(Piece {
-            id,
-            kind,
-            variant: 0,
-            gnawed: false,
-            loc: Loc::Hold { x, y },
-        });
-        assert!(
-            placement_legal(&sim.pieces, id, kind, x, y),
-            "test piece stowed illegally at ({x}, {y})"
-        );
-        id
-    }
-
-    /// Test scaffolding: park an extra piece on a barter surface.
-    fn inject_at(sim: &mut Sim, kind: Kind, loc: Loc) -> u32 {
-        let id = sim.next_piece;
-        sim.next_piece += 1;
-        sim.pieces.push(Piece {
-            id,
-            kind,
-            variant: 0,
-            gnawed: false,
-            loc,
-        });
-        id
-    }
-
     /// Test scaffolding: a rat mid-tenure, schedules wound close so the
     /// monkeys meet skitters and nibbles quickly.
     const fn inject_rat(sim: &mut Sim) {
         sim.rats.rat = Some(Rat {
-            cell: (3, 1),
-            prev_cell: (3, 1),
+            cell: (5, 5),
+            prev_cell: (5, 5),
             moved_at: 0,
             next_move: 60,
             next_nibble: 120,
@@ -2088,15 +2791,30 @@ mod tests {
         });
     }
 
-    /// Whether a stowed piece's footprint covers `cell`.
-    fn cell_covered(sim: &Sim, cell: (u8, u8)) -> bool {
-        sim.pieces().iter().any(|p| {
-            let Loc::Hold { x, y } = p.loc else {
-                return false;
-            };
-            let (w, h) = p.kind.cells();
-            cell.0 >= x && cell.0 < x + w && cell.1 >= y && cell.1 < y + h
-        })
+    /// The cells of a class in the room alongside, in tile order.
+    fn tiles(sim: &Sim, room: RoomId, class: Tile) -> Vec<(u8, u8)> {
+        barter::tiles_of(&sim.rooms, room, class)
+    }
+
+    /// The world point of the `n`th offer tile of the room alongside.
+    fn offer(sim: &Sim, room: RoomId, n: usize) -> Vec2 {
+        let (x, y) = tiles(sim, room, Tile::Offer)[n];
+        cell_center(room, x, y)
+    }
+
+    /// The world point of the room's handshake fixture.
+    fn handshake(sim: &Sim, room: RoomId) -> Vec2 {
+        let (x, y) = sim
+            .rooms
+            .kind(room)
+            .and_then(RoomKind::handshake)
+            .expect("that room has a handshake");
+        cell_center(room, x, y)
+    }
+
+    /// Ids of the room's own goods, in tile order.
+    fn stock_ids(sim: &Sim, room: RoomId) -> Vec<u32> {
+        sim.stock_of(room)
     }
 
     /// Select `poi` and pull the launch lever; zero-dt frames run no ticks,
@@ -2108,7 +2826,7 @@ mod tests {
     }
 
     /// Select `poi` on an already-docked sim and pull the lever. The depart
-    /// frame may also carry a `RatAboard` on a crowded hold, so only the
+    /// frame may also carry a `RatAboard` on a crowded cabin, so only the
     /// departure itself is asserted exactly.
     fn launch(sim: &mut Sim, poi: PoiId) {
         let target = sim.poi_pos(poi);
@@ -2117,7 +2835,11 @@ mod tests {
         assert_eq!(sim.ship().selected, Some(poi));
         let lever = rect_center(layout::LAUNCH_LEVER);
         sim.advance(0.0, &press_at(lever.x, lever.y));
-        assert_eq!(sim.cues().first(), Some(&Cue::Depart));
+        assert!(
+            sim.cues().contains(&Cue::Depart),
+            "the lever refused: {:?}",
+            sim.cues()
+        );
         assert!(matches!(sim.ship().state, ShipState::Traveling { .. }));
     }
 
@@ -2141,73 +2863,6 @@ mod tests {
             panic!("not traveling")
         };
         leg_ticks
-    }
-
-    /// The full scripted voyage: offer all three starter pieces, take the
-    /// first shelf good, accept, bump into the launch gate, stow, depart
-    /// for Mars, warp most of the leg, and coast onto the dock.
-    fn odyssey_script() -> Vec<(f32, InputFrame)> {
-        let mut s = Vec::new();
-        // Starter cargo to the give pads (vial, scrap, pearls).
-        drag_frames(
-            &mut s,
-            cell_center(0, 0),
-            slot_center(&layout::GIVE_SLOTS, 0),
-        );
-        drag_frames(
-            &mut s,
-            cell_center(0, 2),
-            slot_center(&layout::GIVE_SLOTS, 1),
-        );
-        drag_frames(
-            &mut s,
-            cell_center(2, 0),
-            slot_center(&layout::GIVE_SLOTS, 2),
-        );
-        // First shelf good to the take pad.
-        drag_frames(
-            &mut s,
-            slot_center(&layout::SHELF_SLOTS, 0),
-            slot_center(&layout::TAKE_SLOTS, 0),
-        );
-        // Let the dial swing a moment, then pull accept.
-        for _ in 0..30 {
-            s.push((TICK_DT, InputFrame::default()));
-        }
-        let accept = rect_center(layout::ACCEPT_LEVER);
-        s.push((0.0, press_at(accept.x, accept.y)));
-        // Select Mars and hit the lever too early: received still loaded.
-        // Only the 30 dial frames above advance the clock, so the press
-        // lands at tick 30 exactly.
-        let mars = map::poi_pos(URANUS, 30);
-        s.push((0.0, press_at(mars.x, mars.y)));
-        let launch = rect_center(layout::LAUNCH_LEVER);
-        s.push((0.0, press_at(launch.x, launch.y)));
-        // Stow the received good — (0, 2) suits every kind on an empty
-        // board — and launch for real.
-        drag_frames(
-            &mut s,
-            slot_center(&layout::RECEIVED_SLOTS, 0),
-            cell_center(0, 2),
-        );
-        s.push((0.0, press_at(launch.x, launch.y)));
-        // Warp sixteen-fold through most of the leg — its length depends on
-        // where the sky stands at the tick-30 departure — then coast in.
-        let leg = map::leg_ticks(GUILD, URANUS, 30);
-        let warp_frames = (leg / 16).saturating_sub(20);
-        let warp = InputFrame {
-            toggle_warp: true,
-            ..InputFrame::default()
-        };
-        s.push((0.0, warp));
-        for _ in 0..warp_frames {
-            s.push((TICK_DT, InputFrame::default()));
-        }
-        s.push((0.0, warp));
-        for _ in 0..400 {
-            s.push((TICK_DT, InputFrame::default()));
-        }
-        s
     }
 
     /// How many cues in `log` match `pred`.
@@ -2258,25 +2913,75 @@ mod tests {
         assert_ne!(Sim::new(1).save_string(), Sim::new(2).save_string());
     }
 
+    /// The ship as it leaves the yard: cabin, burner bolted to its
+    /// starboard door, and the Guild's own room alongside with goods out.
     #[test]
-    fn new_sim_starts_docked_at_the_guild_with_starter_cargo() {
+    fn a_new_ship_is_a_cabin_a_burner_and_the_dock_alongside() {
         let sim = Sim::new(7);
         assert_eq!(sim.ship().state, ShipState::Docked(GUILD));
-        assert!(sim.barter().is_some(), "docked means barter");
-        let hold: Vec<&Piece> = sim
+        assert_eq!(sim.rooms().kind(CABIN), Some(RoomKind::Cabin));
+        assert_eq!(sim.rooms().kind(BURNER), Some(RoomKind::Burner));
+        assert_eq!(sim.rooms().kind(TRADE), Some(RoomKind::Trade));
+        assert!(sim.barter().is_some(), "a counterparty means a trade");
+        let aboard: Vec<&Piece> = sim
             .pieces()
             .iter()
-            .filter(|piece| matches!(piece.loc, Loc::Hold { .. }))
+            .filter(|piece| matches!(piece.loc, Loc::Hold { room: CABIN, .. }))
             .collect();
-        assert_eq!(hold.len(), STARTER_CARGO.len());
-        for piece in hold {
-            let Loc::Hold { x, y } = piece.loc else {
+        assert_eq!(aboard.len(), STARTER_CARGO.len());
+        for piece in aboard {
+            let Loc::Hold { room, x, y } = piece.loc else {
                 unreachable!()
             };
             assert!(
-                placement_legal(sim.pieces(), piece.id, piece.kind, x, y),
-                "starter {:?} stowed illegally",
+                placement_legal(sim.rooms(), sim.pieces(), piece.id, piece.kind, room, x, y),
+                "{:?} berthed illegally at ({x}, {y})",
                 piece.kind
+            );
+        }
+        // The station's goods sit on its own stock tiles and belong to it.
+        let stock = stock_ids(&sim, TRADE);
+        assert!(!stock.is_empty(), "the Guild put nothing out");
+        for id in stock {
+            let piece = sim.pieces().iter().find(|p| p.id == id).unwrap();
+            assert!(!player_owned(sim.rooms(), sim.pieces(), piece.loc));
+        }
+    }
+
+    /// **A new ship burns one lamp overhead and one on a wall.**
+    ///
+    /// Not "the table holds two lamp kinds": what the player gets is
+    /// light, so the sweep asks the two predicates light is read
+    /// through — [`lamp_lit`], which is false for a lamp boxed in a
+    /// cabinet, and the chart the berth lies on — and it asks them of
+    /// the board the ship actually leaves the yard with, at every seed,
+    /// because the variant roll is the only thing a seed moves and a
+    /// lamp's berth had better not be one of them.
+    #[test]
+    fn a_new_ship_burns_a_lamp_overhead_and_a_lamp_on_a_wall() {
+        for seed in 0..64 {
+            let sim = Sim::new(seed);
+            let planes: Vec<room::Surf> = sim
+                .pieces()
+                .iter()
+                .filter(|piece| lamp_lit(piece))
+                .filter_map(|piece| match piece.loc {
+                    Loc::Hold {
+                        room: CABIN, x, y, ..
+                    } => RoomKind::Cabin.surface_of(x, y),
+                    _ => None,
+                })
+                .collect();
+            assert!(
+                planes.contains(&room::Surf::Ceiling),
+                "seed {seed}: nothing burning under the ceiling ({planes:?})"
+            );
+            assert!(
+                planes.iter().any(|surf| matches!(
+                    surf,
+                    room::Surf::Aft | room::Surf::Port | room::Surf::Starboard | room::Surf::Front
+                )),
+                "seed {seed}: nothing burning on a wall ({planes:?})"
             );
         }
     }
@@ -2284,113 +2989,128 @@ mod tests {
     #[test]
     fn accumulator_runs_whole_ticks_and_carries_the_remainder() {
         let mut sim = Sim::new(1);
-        assert_eq!(sim.advance(TICK_DT * 2.5, &InputFrame::default()), 2);
-        assert!(
-            (sim.alpha() - 0.5).abs() < 1e-3,
-            "alpha was {}",
-            sim.alpha()
-        );
+        assert_eq!(sim.advance(TICK_DT / 2.0, &InputFrame::default()), 0);
+        assert_eq!(sim.tick(), 0);
+        assert_eq!(sim.advance(TICK_DT / 2.0, &InputFrame::default()), 1);
+        assert_eq!(sim.tick(), 1);
+        assert_eq!(sim.advance(TICK_DT * 3.0, &InputFrame::default()), 3);
+        assert_eq!(sim.tick(), 4);
     }
 
     #[test]
     fn alpha_stays_in_unit_range() {
-        let mut sim = Sim::new(1);
-        // Deliberately awkward frame times, none of them a tick multiple
-        for step in 1_u16..200 {
-            sim.advance(0.0007 * f32::from(step), &InputFrame::default());
+        let mut sim = Sim::new(2);
+        for i in 0..200 {
+            sim.advance(
+                ((i % 5) as f32).mul_add(0.003, 0.007),
+                &InputFrame::default(),
+            );
             let alpha = sim.alpha();
-            assert!((0.0..1.0).contains(&alpha), "alpha was {alpha}");
+            assert!((0.0..1.0).contains(&alpha), "alpha out of range: {alpha}");
         }
+    }
+
+    /// How many whole ticks an accumulator of `banked` seconds runs — the
+    /// same float arithmetic the sim does, so the expectation cannot drift
+    /// from the implementation by one ULP.
+    fn whole_ticks(banked: f32) -> u32 {
+        let mut acc = banked;
+        let mut ticks = 0;
+        #[allow(clippy::while_float)]
+        while acc >= TICK_DT {
+            acc -= TICK_DT;
+            ticks += 1;
+        }
+        ticks
     }
 
     #[test]
     fn long_frame_dt_is_clamped() {
-        let mut sim = Sim::new(1);
+        let mut sim = Sim::new(3);
         let ticks = sim.advance(10.0, &InputFrame::default());
-        // 10 s of real time is 600 ticks; the clamp caps one frame at 0.25 s
-        assert!(ticks <= 15, "clamped frame ran {ticks} ticks");
-        assert!(ticks >= 14, "clamped frame ran only {ticks} ticks");
+        assert_eq!(ticks, whole_ticks(MAX_FRAME_DT));
     }
 
     #[test]
     fn warp_multiplies_time_and_its_clamp() {
-        let mut sim = Sim::new(1);
-        let toggle = InputFrame {
+        let mut sim = Sim::new(4);
+        let warp = InputFrame {
             toggle_warp: true,
             ..InputFrame::default()
         };
-        assert_eq!(sim.advance(0.0, &toggle), 0);
+        sim.advance(0.0, &warp);
         assert!(sim.is_warp());
-        assert_eq!(sim.cues(), [Cue::Warp { engaged: true }]);
-
+        assert_eq!(sim.advance(TICK_DT, &InputFrame::default()), 16);
+        let mut sim = Sim::new(4);
+        sim.advance(0.0, &warp);
         assert_eq!(
-            sim.advance(TICK_DT, &InputFrame::default()),
-            16,
-            "one warped frame should run WARP_FACTOR ticks"
+            sim.advance(10.0, &InputFrame::default()),
+            whole_ticks(MAX_FRAME_DT * WARP_FACTOR)
         );
-        // The frame clamp scales with warp: 0.25 s * 16 = 240 ticks.
-        let ticks = sim.advance(10.0, &InputFrame::default());
-        assert!((239..=240).contains(&ticks), "warped clamp ran {ticks}");
     }
 
     #[test]
     fn pause_freezes_state() {
-        let mut sim = Sim::new(7);
-        let toggle = InputFrame {
+        let mut sim = launched(5);
+        coast(&mut sim, 10);
+        let before = sim.save_string();
+        let pause = InputFrame {
             toggle_pause: true,
             ..InputFrame::default()
         };
-        assert_eq!(sim.advance(TICK_DT, &toggle), 0);
+        sim.advance(0.0, &pause);
+        for _ in 0..50 {
+            sim.advance(TICK_DT, &InputFrame::default());
+        }
         assert!(sim.is_paused());
-
-        let before = sim.save_string();
-        assert_eq!(sim.advance(TICK_DT * 10.0, &InputFrame::default()), 0);
-        assert_eq!(sim.tick(), 0);
-        assert_eq!(sim.save_string(), before);
+        assert_eq!(
+            sim.save_string().replace("paused 1", "paused 0"),
+            before.replace("paused 1", "paused 0")
+        );
     }
 
     #[test]
     fn pause_warp_and_reseed_announce_themselves() {
-        let mut sim = Sim::new(7);
-        let toggle = InputFrame {
+        let mut sim = Sim::new(6);
+        let pause = InputFrame {
             toggle_pause: true,
             ..InputFrame::default()
         };
-        sim.advance(TICK_DT, &toggle);
+        sim.advance(0.0, &pause);
         assert_eq!(sim.cues(), [Cue::Pause { paused: true }]);
-        sim.advance(TICK_DT, &toggle);
+        sim.advance(0.0, &pause);
         assert_eq!(sim.cues(), [Cue::Pause { paused: false }]);
-
-        sim.advance(
-            TICK_DT,
-            &InputFrame {
-                reseed: Some(6),
-                ..InputFrame::default()
-            },
-        );
-        assert_eq!(sim.seed(), 6);
+        let warp = InputFrame {
+            toggle_warp: true,
+            ..InputFrame::default()
+        };
+        sim.advance(0.0, &warp);
+        assert_eq!(sim.cues(), [Cue::Warp { engaged: true }]);
+        let reseed = InputFrame {
+            reseed: Some(99),
+            ..InputFrame::default()
+        };
+        sim.advance(0.0, &reseed);
         assert_eq!(sim.cues(), [Cue::Reseed]);
+        assert_eq!(sim.seed(), 99);
     }
 
     #[test]
     fn cues_do_not_outlive_the_frame_that_made_them() {
-        let mut sim = Sim::new(7);
-        sim.advance(
-            TICK_DT,
-            &InputFrame {
-                reseed: Some(6),
-                ..InputFrame::default()
-            },
-        );
+        let mut sim = Sim::new(8);
+        let pause = InputFrame {
+            toggle_pause: true,
+            ..InputFrame::default()
+        };
+        sim.advance(0.0, &pause);
         assert!(!sim.cues().is_empty());
-
-        sim.advance(TICK_DT, &InputFrame::default());
-        assert!(sim.cues().is_empty(), "stale cues: {:?}", sim.cues());
+        sim.advance(0.0, &InputFrame::default());
+        assert!(sim.cues().is_empty());
     }
 
     #[test]
     fn launch_without_a_destination_soft_rejects() {
-        let mut sim = Sim::new(3);
+        let mut sim = Sim::new(9);
         let lever = rect_center(layout::LAUNCH_LEVER);
         sim.advance(0.0, &press_at(lever.x, lever.y));
         assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
@@ -2399,1973 +3119,1504 @@ mod tests {
 
     #[test]
     fn travel_arrives_and_docks() {
-        let mut sim = launched(11);
-        let ShipState::Traveling { leg_ticks, .. } = sim.ship().state else {
-            unreachable!()
-        };
-        let caught_up = sim.fast_forward(leg_ticks + 10);
-        assert!(caught_up.arrived, "leg of {leg_ticks} ticks never arrived");
-        assert_eq!(sim.ship().state, ShipState::Docked(SATURN));
-        assert!(sim.barter().is_some(), "docked means barter");
-        assert!(sim.cues().is_empty(), "fast_forward must suppress cues");
+        let mut sim = launched_toward(10, URANUS);
+        let leg = leg_of(&sim);
+        for _ in 0..leg {
+            sim.advance(TICK_DT, &InputFrame::default());
+        }
+        assert_eq!(sim.ship().state, ShipState::Docked(URANUS));
+        assert!(sim.barter().is_some());
+        assert_eq!(sim.rooms().kind(TRADE), Some(RoomKind::Trade));
     }
 
     #[test]
     fn drag_places_and_rejects() {
-        let mut sim = Sim::new(5);
-        // The starter vial sits at (0, 0); lift it.
-        let vial = rect_center(layout::cell_rect(0, 0));
-        sim.advance(0.0, &press_at(vial.x, vial.y));
-        assert_eq!(sim.cues(), [Cue::Pickup]);
-        assert!(sim.held(0).is_some());
-
-        // Drop onto the scrap at (0, 2): overlap, a hard reject.
-        let scrap = rect_center(layout::cell_rect(0, 2));
-        sim.advance(0.0, &release_at(scrap.x, scrap.y));
+        let mut sim = cleared(11);
+        let id = inject_hold(&mut sim, Kind::PerfumeVial, 5, 5);
+        drag(&mut sim, cabin(5, 5), cabin(6, 6));
+        let moved = sim.pieces().iter().find(|p| p.id == id).unwrap();
+        assert_eq!(
+            moved.loc,
+            Loc::Hold {
+                room: CABIN,
+                x: 6,
+                y: 6
+            }
+        );
+        // A wall cell refuses floor cargo, and names the mount.
+        drag(&mut sim, cabin(6, 6), cabin(5, 1));
         assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
-        assert!(sim.held(0).is_none());
-
-        // Lift again and drop on a free cell: placed.
-        sim.advance(0.0, &press_at(vial.x, vial.y));
-        let free = rect_center(layout::cell_rect(5, 3));
-        sim.advance(0.0, &release_at(free.x, free.y));
-        assert_eq!(sim.cues(), [Cue::Place]);
-        let vial_piece = sim.pieces().iter().find(|p| p.id == 1).unwrap();
-        assert_eq!(vial_piece.loc, Loc::Hold { x: 5, y: 3 });
+        assert_eq!(sim.last_violation(), Some(Violation::Affix(Mount::Floor)));
+        // And the doorway refuses everything, by name.
+        drag(&mut sim, cabin(6, 6), cabin(11, 3));
+        assert_eq!(sim.last_violation(), Some(Violation::Threshold));
     }
 
     #[test]
     fn save_round_trips() {
-        let mut sim = launched(0xC0FF_EE00);
-        for _ in 0..90 {
-            sim.advance(TICK_DT, &InputFrame::default());
-        }
-        let saved = sim.save_string();
-        let restored = Sim::from_save(&saved).expect("own save must parse");
-        assert_eq!(restored.save_string(), saved);
-        assert_eq!(restored.seed(), sim.seed());
-        assert_eq!(restored.tick(), sim.tick());
-
-        // A docked save rebuilds its barter too.
-        let docked = Sim::new(9);
-        let restored = Sim::from_save(&docked.save_string()).expect("docked save must parse");
-        assert_eq!(restored.barter(), docked.barter());
+        let mut sim = launched(12);
+        coast(&mut sim, 90);
+        let text = sim.save_string();
+        let restored = Sim::from_save(&text).expect("round trip");
+        assert_eq!(restored.save_string(), text);
+        assert_eq!(restored.pieces(), sim.pieces());
+        assert_eq!(restored.rooms().order(), sim.rooms().order());
     }
 
     #[test]
     fn from_save_rejects_garbage() {
-        assert_eq!(Sim::from_save("").unwrap_err(), SaveError::BadMagic);
-        assert_eq!(Sim::from_save("hello").unwrap_err(), SaveError::BadMagic);
+        assert_eq!(Sim::from_save("").err(), Some(SaveError::BadMagic));
+        assert_eq!(Sim::from_save("nonsense").err(), Some(SaveError::BadMagic));
         assert_eq!(
-            Sim::from_save("STV9\nseed 1").unwrap_err(),
-            SaveError::UnsupportedVersion
+            Sim::from_save("STV1\nseed 1\n").err(),
+            Some(SaveError::UnsupportedVersion)
         );
-        // STV1 predates the delivery tally: fail safe into a fresh game.
-        assert_eq!(
-            Sim::from_save("STV1\nseed 1").unwrap_err(),
-            SaveError::UnsupportedVersion
-        );
-        // STV2 predates the rat and the gnaw token: same fail-safe refusal.
-        assert_eq!(
-            Sim::from_save("STV2\nseed 1").unwrap_err(),
-            SaveError::UnsupportedVersion
-        );
-        let mangled = Sim::new(1).save_string().replace("seed", "sneed");
-        assert_eq!(
-            Sim::from_save(&mangled).unwrap_err(),
-            SaveError::Parse { line: 2 }
-        );
+        let save = Sim::new(13).save_string();
+        let broken = save.replacen("seed", "sxxd", 1);
+        assert!(matches!(
+            Sim::from_save(&broken),
+            Err(SaveError::Parse { .. })
+        ));
+    }
+
+    /// The full scripted voyage: carry two starter pieces into the
+    /// Guild's room, mark a good, shake hands, bump into the launch gate
+    /// with the answer still on the station's deck, carry it aboard, and
+    /// depart for the outer ring under warp.
+    fn odyssey_script(sim: &Sim) -> Vec<(f32, InputFrame)> {
+        let mut s = Vec::new();
+        drag_frames(&mut s, cabin(3, 3), offer(sim, TRADE, 0));
+        drag_frames(&mut s, cabin(6, 3), offer(sim, TRADE, 1));
+        // Mark the first good on the station's shelf: I want that one.
+        let stock = stock_ids(sim, TRADE);
+        let marked = sim
+            .pieces()
+            .iter()
+            .find(|p| p.id == stock[0])
+            .expect("a stocked good");
+        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), marked));
+        s.push((0.0, press_at(at.x, at.y)));
+        for _ in 0..30 {
+            s.push((TICK_DT, InputFrame::default()));
+        }
+        let shake = handshake(sim, TRADE);
+        s.push((0.0, press_at(shake.x, shake.y)));
+        // Select the destination and pull too early: the answer is still
+        // in the station's room, and the gangway law says no.
+        let dest = map::poi_pos(URANUS, 30);
+        s.push((0.0, press_at(dest.x, dest.y)));
+        let lever = rect_center(layout::LAUNCH_LEVER);
+        s.push((0.0, press_at(lever.x, lever.y)));
+        s
     }
 
     #[test]
-    fn long_scripted_run_is_bit_identical() {
-        let script = odyssey_script();
-        let mut a = Sim::new(ODYSSEY_SEED);
-        let mut b = Sim::new(ODYSSEY_SEED);
-        let cues_a = play(&mut a, &script);
-        let cues_b = play(&mut b, &script);
-        assert_eq!(cues_a, cues_b, "cue streams diverged");
-        // The choreography really happened: a concluded trade, a refused
-        // early launch, one departure, warp both ways, one arrival.
-        assert_eq!(count_cues(&cues_a, |c| matches!(c, Cue::Accept { .. })), 1);
-        assert_eq!(count_cues(&cues_a, |c| matches!(c, Cue::Depart)), 1);
-        assert_eq!(count_cues(&cues_a, |c| matches!(c, Cue::Arrive)), 1);
-        assert_eq!(count_cues(&cues_a, |c| matches!(c, Cue::Warp { .. })), 2);
-        assert!(count_cues(&cues_a, |c| matches!(c, Cue::Reject { hard: false })) >= 1);
-        assert_eq!(a.ship().state, ShipState::Docked(URANUS));
-        assert!(a.barter().is_some());
-        assert_eq!(a.save_string(), b.save_string());
-        assert_eq!(a.pieces(), b.pieces());
-        assert_eq!(a.barter(), b.barter());
-        assert_eq!(a.ship(), b.ship());
-        assert_eq!(a.tick(), b.tick());
+    fn a_scripted_voyage_trades_through_the_room_and_gates_the_launch() {
+        let mut sim = Sim::new(ODYSSEY_SEED);
+        let script = odyssey_script(&sim);
+        let log = play(&mut sim, &script);
+        assert_eq!(count_cues(&log, |c| matches!(c, Cue::Mark { on: true })), 1);
+        assert_eq!(count_cues(&log, |c| matches!(c, Cue::Accept { .. })), 1);
+        // The lever refused: goods of ours still lie in the calling room.
+        assert!(matches!(sim.ship().state, ShipState::Docked(GUILD)));
+        assert_eq!(sim.launch_gate(), Err(Refusal::Cargo));
+        // Carry the answer aboard and the gate opens.
+        let ours: Vec<u32> = sim
+            .pieces()
+            .iter()
+            .filter(|p| {
+                matches!(p.loc, Loc::Hold { room: TRADE, .. })
+                    && player_owned(sim.rooms(), sim.pieces(), p.loc)
+            })
+            .map(|p| p.id)
+            .collect();
+        assert!(!ours.is_empty(), "the station answered with nothing");
+        for id in ours {
+            let piece = *sim.pieces().iter().find(|p| p.id == id).unwrap();
+            let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+            let (room, x, y) =
+                first_fit(sim.rooms(), sim.pieces(), id, piece.kind).expect("room aboard");
+            drag(&mut sim, from, cell_center(room, x, y));
+        }
+        assert_eq!(sim.launch_gate(), Ok(()));
+        let lever = rect_center(layout::LAUNCH_LEVER);
+        sim.advance(0.0, &press_at(lever.x, lever.y));
+        assert!(sim.cues().contains(&Cue::Depart));
+        // Cast-off took the station's room with it.
+        assert_eq!(sim.rooms().kind(TRADE), None);
+        assert!(sim.barter().is_none());
     }
 
     #[test]
     fn save_load_continues_mid_travel() {
-        let mut sim = Sim::new(ODYSSEY_SEED);
-        play(&mut sim, &odyssey_script());
-        launch(&mut sim, SATURN);
-        coast(&mut sim, 1000);
-        assert!(matches!(sim.ship().state, ShipState::Traveling { .. }));
-        assert_save_continues(sim, 10_000);
+        let mut sim = launched(21);
+        coast(&mut sim, 300);
+        assert_save_continues(sim, 600);
     }
 
     #[test]
-    fn save_load_continues_docked_with_a_composed_trade() {
-        let mut sim = Sim::new(ODYSSEY_SEED);
-        play(&mut sim, &odyssey_script());
-        coast(&mut sim, 7000);
-        // Compose but do not conclude, then save with the dial mid-swing.
-        drag(
-            &mut sim,
-            cell_center(0, 2),
-            slot_center(&layout::GIVE_SLOTS, 0),
-        );
-        drag(
-            &mut sim,
-            slot_center(&layout::SHELF_SLOTS, 0),
-            slot_center(&layout::TAKE_SLOTS, 0),
-        );
-        coast(&mut sim, 7);
-        assert!(
-            sim.pieces()
-                .iter()
-                .any(|p| matches!(p.loc, Loc::TakePad { .. })),
-            "the composed trade fell apart"
-        );
-        assert_save_continues(sim, 10_000);
+    fn save_load_continues_docked_with_a_proposal_standing() {
+        let mut sim = Sim::new(22);
+        let to = offer(&sim, TRADE, 0);
+        drag(&mut sim, cabin(3, 3), to);
+        assert_save_continues(sim, 120);
     }
 
     #[test]
     fn save_load_continues_mid_omen() {
-        let mut sim = Sim::new(0xB00);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
+        let mut sim = cleared(0x00C0_FFEE);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 4);
         launch(&mut sim, SATURN);
-        // Walk to the omen's opening, then a beat further: light mid-dim,
-        // hum mid-swell, jump still pending.
-        for _ in 0..leg_of(&sim) {
+        let mut fired = false;
+        for _ in 0..leg_of(&sim) + 10 {
             sim.advance(TICK_DT, &InputFrame::default());
-            if sim.cues().contains(&Cue::OmenStart) {
+            if sim.cues().iter().any(|cue| matches!(cue, Cue::OmenStart)) {
+                fired = true;
+                break;
+            }
+            if matches!(sim.ship().state, ShipState::Docked(_)) {
                 break;
             }
         }
-        coast(&mut sim, 60);
-        assert!(
-            sim.omen() > 0.0 && sim.light() < 1.0,
-            "not inside the omen: omen {} light {}",
-            sim.omen(),
-            sim.light()
-        );
-        assert_save_continues(sim, 8_000);
+        assert!(fired, "no omen in a whole leg");
+        assert_save_continues(sim, 400);
     }
 
     #[test]
-    fn save_load_continues_mid_drag_with_piece_at_origin() {
-        let mut sim = Sim::new(11);
-        let vial = cell_center(0, 0);
-        sim.advance(0.0, &press_at(vial.x, vial.y));
-        let held = sim.held(0).expect("lifted the vial").piece;
-        let saved = sim.save_string();
-        let restored = Sim::from_save(&saved).expect("mid-drag save parses");
-        assert!(restored.held(0).is_none(), "held state is transient");
-        let loc_of = |s: &Sim| s.pieces().iter().find(|p| p.id == held).unwrap().loc;
+    fn save_load_continues_mid_carry_with_piece_at_origin() {
+        let mut sim = cleared(23);
+        let id = inject_hold(&mut sim, Kind::PerfumeVial, 5, 5);
+        let from = cabin(5, 5);
+        sim.advance(0.0, &press_at(from.x, from.y));
+        assert!(sim.held(0).is_some());
+        let restored = Sim::from_save(&sim.save_string()).expect("mid-carry save parses");
+        assert!(restored.held(0).is_none(), "a save drops every carry");
+        let piece = restored.pieces().iter().find(|p| p.id == id).unwrap();
         assert_eq!(
-            loc_of(&restored),
-            Loc::Hold { x: 0, y: 0 },
-            "held piece must serialize at its origin"
+            piece.loc,
+            Loc::Hold {
+                room: CABIN,
+                x: 5,
+                y: 5
+            }
         );
-        assert_eq!(loc_of(&restored), loc_of(&sim));
-        assert_save_continues(sim, 300);
     }
 
     #[test]
     fn fast_forward_matches_stepwise_across_a_dock() {
-        let base = launched(0xCAFE);
-        let n = leg_of(&base) + 123;
-        let mut ff = base.clone();
-        let report = ff.fast_forward(n);
-        assert_eq!(
-            report,
-            CatchUp {
-                ticks: n,
-                arrived: true,
-                jumped: false
-            }
-        );
-        assert!(ff.cues().is_empty(), "fast_forward must suppress cues");
-        let mut step = base;
-        for _ in 0..n {
-            step.advance(TICK_DT, &InputFrame::default());
+        let mut stepwise = launched_toward(24, URANUS);
+        let mut jumped = stepwise.clone();
+        let leg = leg_of(&stepwise);
+        for _ in 0..leg + 60 {
+            stepwise.advance(TICK_DT, &InputFrame::default());
         }
-        assert_eq!(ff.save_string(), step.save_string());
-        assert_eq!(ff.pieces(), step.pieces());
-        assert_eq!(ff.barter(), step.barter());
-        assert_eq!(ff.ship(), step.ship());
+        let catch = jumped.fast_forward(leg + 60);
+        assert!(catch.arrived);
+        assert_eq!(stepwise.save_string(), jumped.save_string());
     }
 
     #[test]
     fn fast_forward_matches_stepwise_across_an_omen_jump() {
-        let mut base = Sim::new(0xD1CE);
-        inject_hold(&mut base, Kind::SuspiciousCrate, 3, 0);
-        launch(&mut base, SATURN);
-        // Past the latest possible jump, not necessarily past the dock.
-        let n = leg_of(&base) * 3 / 4 + 200;
-        let mut ff = base.clone();
-        let report = ff.fast_forward(n);
-        assert!(report.jumped, "no jump despite the crate");
-        assert_eq!(report.ticks, n);
-        assert_eq!(
-            report.arrived,
-            matches!(ff.ship().state, ShipState::Docked(_))
-        );
-        assert!(ff.cues().is_empty());
-        let mut step = base;
-        for _ in 0..n {
-            step.advance(TICK_DT, &InputFrame::default());
+        let mut stepwise = cleared(0x0BAD_F00D);
+        inject_hold(&mut stepwise, Kind::SuspiciousCrate, 4, 4);
+        launch(&mut stepwise, SATURN);
+        let mut jumped = stepwise.clone();
+        let leg = leg_of(&stepwise);
+        for _ in 0..leg / 2 {
+            stepwise.advance(TICK_DT, &InputFrame::default());
         }
-        assert_eq!(ff.save_string(), step.save_string());
-        assert_eq!(ff.light().to_bits(), step.light().to_bits());
-        assert_eq!(ff.omen().to_bits(), step.omen().to_bits());
+        jumped.fast_forward(leg / 2);
+        assert_eq!(stepwise.save_string(), jumped.save_string());
     }
 
     #[test]
     fn fast_forward_while_paused_stays_put() {
-        let mut sim = launched(9);
-        sim.advance(
-            0.0,
-            &InputFrame {
-                toggle_pause: true,
-                ..InputFrame::default()
-            },
-        );
-        let before = sim.save_string();
-        let report = sim.fast_forward(50_000);
-        assert_eq!(
-            report,
-            CatchUp {
-                ticks: 0,
-                arrived: false,
-                jumped: false
-            }
-        );
-        assert_eq!(sim.save_string(), before);
-    }
-
-    /// Offer all three starters against the first shelf good, as zero-dt
-    /// frames on a fresh sim.
-    fn compose_starter_trade(sim: &mut Sim) {
-        drag(sim, cell_center(0, 0), slot_center(&layout::GIVE_SLOTS, 0));
-        drag(sim, cell_center(0, 2), slot_center(&layout::GIVE_SLOTS, 1));
-        drag(sim, cell_center(2, 0), slot_center(&layout::GIVE_SLOTS, 2));
-        drag(
-            sim,
-            slot_center(&layout::SHELF_SLOTS, 0),
-            slot_center(&layout::TAKE_SLOTS, 0),
-        );
-    }
-
-    /// Ids of pieces on the give pads, in pad order.
-    fn give_ids(sim: &Sim) -> Vec<u32> {
-        let mut given: Vec<(u8, u32)> = sim
-            .pieces()
-            .iter()
-            .filter_map(|p| match p.loc {
-                Loc::GivePad { slot } => Some((slot, p.id)),
-                _ => None,
-            })
-            .collect();
-        given.sort_unstable();
-        given.into_iter().map(|(_, id)| id).collect()
-    }
-
-    #[test]
-    fn accept_restocks_the_shelf_and_delivers_to_received() {
-        let mut sim = Sim::new(ODYSSEY_SEED);
-        compose_starter_trade(&mut sim);
-        let taken = sim
-            .pieces()
-            .iter()
-            .find(|p| matches!(p.loc, Loc::TakePad { .. }))
-            .expect("something on the take pad")
-            .id;
-        let given = give_ids(&sim);
-        assert_eq!(given.len(), 3);
-        let free: Vec<u8> = (0..layout::SHELF_SLOTS.len() as u8)
-            .filter(|&slot| {
-                !sim.pieces()
-                    .iter()
-                    .any(|p| p.loc == Loc::StationShelf { slot })
-            })
-            .collect();
-        let accept = rect_center(layout::ACCEPT_LEVER);
-        sim.advance(0.0, &press_at(accept.x, accept.y));
-        let &[Cue::Accept { value }] = sim.cues() else {
-            panic!("lever did not accept: {:?}", sim.cues())
-        };
-        assert!((0.0..=1.0).contains(&value), "overshoot {value} unclamped");
-        // The taken good waits on the received shelf, same slot number.
-        let loc_of = |s: &Sim, id: u32| s.pieces().iter().find(|p| p.id == id).map(|p| p.loc);
-        assert_eq!(loc_of(&sim, taken), Some(Loc::ReceivedShelf { slot: 0 }));
-        // The given goods restock the freed shelf slots in pad order; any
-        // overflow is gone for good.
-        for (i, &id) in given.iter().enumerate() {
-            match free.get(i) {
-                Some(&slot) => {
-                    assert_eq!(loc_of(&sim, id), Some(Loc::StationShelf { slot }));
-                }
-                None => assert_eq!(loc_of(&sim, id), None, "overflow piece survived"),
-            }
-        }
-        assert!(give_ids(&sim).is_empty(), "give pads must be consumed");
-        // A received good may return to the give pad for the next round.
-        drag(
-            &mut sim,
-            slot_center(&layout::RECEIVED_SLOTS, 0),
-            slot_center(&layout::GIVE_SLOTS, 0),
-        );
-        assert_eq!(sim.cues(), [Cue::Place]);
-        assert_eq!(loc_of(&sim, taken), Some(Loc::GivePad { slot: 0 }));
-    }
-
-    #[test]
-    fn accept_lever_gates_on_the_received_shelf() {
-        let mut sim = Sim::new(ODYSSEY_SEED);
-        compose_starter_trade(&mut sim);
-        let accept = rect_center(layout::ACCEPT_LEVER);
-        sim.advance(0.0, &press_at(accept.x, accept.y));
-        assert!(matches!(sim.cues(), [Cue::Accept { .. }]));
-        // Compose a provably fair second trade while the received good
-        // still waits: enough pearls to cover the asked good's cost.
-        let ask = sim
-            .pieces()
-            .iter()
-            .find(|p| p.loc == Loc::StationShelf { slot: 0 })
-            .expect("restocked shelf")
-            .id;
-        drag(
-            &mut sim,
-            slot_center(&layout::SHELF_SLOTS, 0),
-            slot_center(&layout::TAKE_SLOTS, 0),
-        );
-        let ask_kind = sim.pieces().iter().find(|p| p.id == ask).unwrap().kind;
-        let cost = usize::from(sim.values[ask_kind.index()]) + 1;
-        assert!(cost <= 4, "cost {cost} needs more give slots than exist");
-        for slot in 0..cost as u8 {
-            inject_at(&mut sim, Kind::BrinePearls, Loc::GivePad { slot });
-        }
-        let before = sim.pieces().to_vec();
-        sim.advance(0.0, &press_at(accept.x, accept.y));
-        assert_eq!(sim.cues(), [Cue::Refuse], "received shelf must gate");
-        assert_eq!(sim.pieces(), before, "a refusal moves nothing");
-        // Stow the received good; the same pull now concludes.
-        drag(
-            &mut sim,
-            slot_center(&layout::RECEIVED_SLOTS, 0),
-            cell_center(0, 2),
-        );
-        sim.advance(0.0, &press_at(accept.x, accept.y));
-        assert!(
-            matches!(sim.cues(), [Cue::Accept { .. }]),
-            "cleared shelf still refused: {:?}",
-            sim.cues()
-        );
-    }
-
-    #[test]
-    fn refuse_moves_nothing() {
-        let mut sim = Sim::new(7);
-        // Ask without offering: never ready.
-        drag(
-            &mut sim,
-            slot_center(&layout::SHELF_SLOTS, 0),
-            slot_center(&layout::TAKE_SLOTS, 0),
-        );
-        let before = sim.pieces().to_vec();
-        let accept = rect_center(layout::ACCEPT_LEVER);
-        sim.advance(0.0, &press_at(accept.x, accept.y));
-        assert_eq!(sim.cues(), [Cue::Refuse]);
-        assert_eq!(sim.pieces(), before);
-    }
-
-    #[test]
-    fn own_cargo_dropped_on_the_shelf_snaps_back() {
-        // A run whose opening shelf has a free slot, so the refusal below is
-        // an ownership call and not a full-slot technicality.
-        let seed = (0_u64..64)
-            .find(|&s| {
-                Sim::new(s)
-                    .pieces()
-                    .iter()
-                    .filter(|p| matches!(p.loc, Loc::StationShelf { .. }))
-                    .count()
-                    < 4
-            })
-            .expect("no shelf with a free slot in 64 seeds");
-        let mut sim = Sim::new(seed);
-        let free_slot = (0..4)
-            .find(|&slot| {
-                !sim.pieces()
-                    .iter()
-                    .any(|p| p.loc == Loc::StationShelf { slot })
-            })
-            .unwrap();
-        let gap = Vec2::new(
-            layout::SHELF_SLOTS[0].x + layout::SHELF_SLOTS[0].w + 3.0,
-            layout::SHELF_SLOTS[0].y + 20.0,
-        );
-        let before = sim.pieces().to_vec();
-        // Neither an open shelf slot nor the gap between slots takes player
-        // cargo: the shelf is the station's. Nothing is ever lost to a drop.
-        for target in [
-            slot_center(&layout::SHELF_SLOTS, usize::from(free_slot)),
-            gap,
-        ] {
-            drag(&mut sim, cell_center(0, 0), target);
-            assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-            assert_eq!(sim.pieces(), before);
-        }
-        // From a give pad the shelf refuses all the same.
-        drag(
-            &mut sim,
-            cell_center(0, 0),
-            slot_center(&layout::GIVE_SLOTS, 0),
-        );
-        drag(
-            &mut sim,
-            slot_center(&layout::GIVE_SLOTS, 0),
-            slot_center(&layout::SHELF_SLOTS, usize::from(free_slot)),
-        );
-        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-        assert_eq!(sim.pieces().len(), before.len());
-    }
-
-    #[test]
-    fn a_pure_gift_clears_the_hold_through_the_lever() {
-        let mut sim = Sim::new(1);
-        let owned_before = sim.pieces().iter().filter(|p| player_owned(p.loc)).count();
-        // Vial to the give pad, take pad empty: the dial must arm.
-        drag(
-            &mut sim,
-            cell_center(0, 0),
-            slot_center(&layout::GIVE_SLOTS, 0),
-        );
-        let barter = sim.barter().unwrap();
-        assert!(barter.ready, "a pure gift must arm the accept lever");
-        let accept = rect_center(layout::ACCEPT_LEVER);
-        sim.advance(0.0, &press_at(accept.x, accept.y));
-        assert!(
-            matches!(sim.cues(), [Cue::Accept { .. }]),
-            "gift refused: {:?}",
-            sim.cues()
-        );
-        // The vial left the player's side through the ceremony — the only
-        // door cargo ever leaves through.
-        let owned_after = sim.pieces().iter().filter(|p| player_owned(p.loc)).count();
-        assert_eq!(owned_after, owned_before - 1);
-        assert!(
-            !sim.pieces()
-                .iter()
-                .any(|p| matches!(p.loc, Loc::GivePad { .. })),
-            "give pad should be consumed"
-        );
-    }
-
-    #[test]
-    fn drop_targets_come_from_the_ownership_matrix() {
-        let mut sim = Sim::new(1);
-        assert_eq!(sim.drop_targets(0), None, "nothing held, nothing invited");
-        // Hold a player piece: hold and give invite; station rows never do.
-        let vial = cell_center(0, 0);
-        sim.advance(0.0, &press_at(vial.x, vial.y));
-        assert_eq!(
-            sim.drop_targets(0),
-            Some(DropTargets {
-                hold: true,
-                give: true,
-                take: false,
-                shelf: false,
-                received: false,
-                // No net while a trade is open: the gift lever is the
-                // disposal path at a counterparty's berth.
-                net: false,
-            })
-        );
-        sim.advance(0.0, &release_at(vial.x, vial.y));
-        // Hold a station piece: only its own furniture invites.
-        let shelf_piece = sim
-            .pieces()
-            .iter()
-            .find(|p| matches!(p.loc, Loc::StationShelf { .. }))
-            .expect("opening shelf is never empty");
-        let at = rect_center(layout::piece_rect(shelf_piece));
-        sim.advance(0.0, &press_at(at.x, at.y));
-        assert_eq!(
-            sim.drop_targets(0),
-            Some(DropTargets {
-                hold: false,
-                give: false,
-                take: true,
-                shelf: true,
-                received: false,
-                net: false,
-            })
-        );
-    }
-
-    /// The conservation drag-monkey: thousands of arbitrary press/hold/
-    /// release frames — including nonsense the frontend would never send —
-    /// must never cost the player a piece outside an accept. This is the
-    /// standing guard for the whole class of "dragged it somewhere and it
-    /// vanished" bugs; every new interactive surface is automatically under
-    /// test the moment it exists.
-    #[test]
-    fn no_input_stream_loses_cargo_without_an_accept() {
-        let mut sim = Sim::new(0xC0FF_EE00);
-        // The second event runs live under the monkey: skitters, nibbles,
-        // and chases must leave every invariant standing.
-        inject_rat(&mut sim);
-        let mut rng = fastrand::Rng::with_seed(0xF00D);
-        // Netted cargo is off the manifest but recoverable, so the
-        // conservation count keeps it: only an announced ceremony —
-        // accept, hangar steal, exchange, or a net sweep — may shrink
-        // this number.
-        let owned = |sim: &Sim| {
-            sim.pieces()
-                .iter()
-                .filter(|p| player_owned(p.loc) || matches!(p.loc, Loc::Flotsam { .. }))
-                .count()
-        };
-        let mut before = owned(&sim);
-        for frame in 0_u32..6000 {
-            let input = InputFrame {
-                pointer: Vec2::new(rng.f32() * WORLD_W, rng.f32() * WORLD_H),
-                press: rng.bool(),
-                held: rng.bool(),
-                release: rng.bool(),
-                toggle_pause: rng.u8(..) < 3,
-                toggle_warp: rng.u8(..) < 3,
-                // The quick-move path runs under the monkey too: shift
-                // presses must obey the same conservation rules as drags.
-                shift: rng.bool(),
-                night: rng.bool(),
-                reseed: None,
-            };
-            sim.advance(TICK_DT, &input);
-            // The two legitimate exits: the accept lever, and the Guild's
-            // hangar steal.
-            let ceded = sim.cues().iter().any(|cue| {
-                matches!(
-                    cue,
-                    Cue::Accept { .. } | Cue::Delivered | Cue::Exchange | Cue::Jettison
-                )
-            });
-            let after = owned(&sim);
-            assert!(
-                after >= before || ceded,
-                "frame {frame}: {before} -> {after} player pieces with no accept"
-            );
-            // Held pieces must stay real: a lifted id always exists.
-            if let Some(held) = sim.held(0) {
-                assert!(
-                    sim.pieces().iter().any(|p| p.id == held.piece),
-                    "frame {frame}: held piece {} is a ghost",
-                    held.piece
-                );
-            }
-            // The rat, while it lasts, stays on the grid.
-            if let Some(rat) = sim.rat() {
-                assert!(
-                    rat.cell.0 < layout::GRID_COLS && rat.cell.1 < layout::GRID_ROWS,
-                    "frame {frame}: rat off the grid at {:?}",
-                    rat.cell
-                );
-            }
-            before = after;
-        }
-    }
-
-    #[test]
-    fn launch_gate_refuses_while_pads_hold_pieces() {
-        let mut sim = Sim::new(3);
-        let venus = sim.poi_pos(SATURN);
-        sim.advance(0.0, &press_at(venus.x, venus.y));
-        let lever = rect_center(layout::LAUNCH_LEVER);
-        // Give pad occupied: refused.
-        drag(
-            &mut sim,
-            cell_center(0, 0),
-            slot_center(&layout::GIVE_SLOTS, 0),
-        );
-        sim.advance(0.0, &press_at(lever.x, lever.y));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-        assert!(matches!(sim.ship().state, ShipState::Docked(_)));
-        // Cleared back to the hold, but now the take pad is loaded: refused.
-        drag(
-            &mut sim,
-            slot_center(&layout::GIVE_SLOTS, 0),
-            cell_center(0, 0),
-        );
-        drag(
-            &mut sim,
-            slot_center(&layout::SHELF_SLOTS, 0),
-            slot_center(&layout::TAKE_SLOTS, 0),
-        );
-        sim.advance(0.0, &press_at(lever.x, lever.y));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-        assert!(matches!(sim.ship().state, ShipState::Docked(_)));
-        // Ask withdrawn: the lever finally throws.
-        drag(
-            &mut sim,
-            slot_center(&layout::TAKE_SLOTS, 0),
-            slot_center(&layout::SHELF_SLOTS, 0),
-        );
-        sim.advance(0.0, &press_at(lever.x, lever.y));
-        assert_eq!(sim.cues(), [Cue::Depart]);
-    }
-
-    #[test]
-    fn station_goods_never_enter_the_hold_or_give_pads() {
-        let mut sim = Sim::new(3);
-        let shelf0 = slot_center(&layout::SHELF_SLOTS, 0);
-        let before = sim.pieces().to_vec();
-        drag(&mut sim, shelf0, cell_center(5, 3));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-        drag(&mut sim, shelf0, slot_center(&layout::GIVE_SLOTS, 0));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-        assert_eq!(sim.pieces(), before);
-        // Shelf to take pad remains the legal path.
-        drag(&mut sim, shelf0, slot_center(&layout::TAKE_SLOTS, 1));
-        assert_eq!(sim.cues(), [Cue::Place]);
-    }
-
-    #[test]
-    fn hard_rejects_name_their_rule() {
-        let mut sim = Sim::new(5);
-        assert_eq!(sim.last_violation(), None);
-        // The vial dropped onto the scrap: overlap.
-        drag(&mut sim, cell_center(0, 0), cell_center(0, 2));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
-        assert_eq!(sim.last_violation(), Some(Violation::Overlap));
-        // The scrap lifted high into the rack: heavy.
-        drag(&mut sim, cell_center(0, 2), cell_center(3, 0));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
-        assert_eq!(sim.last_violation(), Some(Violation::Heavy));
-        // A soft miss over dead space leaves the record alone...
-        drag(&mut sim, cell_center(0, 0), Vec2::new(255.0, 300.0));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-        assert_eq!(sim.last_violation(), Some(Violation::Heavy));
-        // ...and a successful placement clears it.
-        drag(&mut sim, cell_center(0, 0), cell_center(5, 3));
-        assert_eq!(sim.cues(), [Cue::Place]);
-        assert_eq!(sim.last_violation(), None);
-    }
-
-    /// Crates of any location, aboard or shelved.
-    fn crates(sim: &Sim) -> usize {
-        sim.pieces()
-            .iter()
-            .filter(|p| p.kind == Kind::SuspiciousCrate)
-            .count()
-    }
-
-    #[test]
-    fn each_guild_docking_steals_the_crate_and_counts_it() {
-        let mut sim = Sim::new(0x0051_C0DE);
-        for round in 1..=3_u32 {
-            inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-            travel_to(&mut sim, SATURN);
-            // Venus neither steals the crate nor offers a second: the
-            // singleton aboard suppresses the shelf offer.
-            assert_eq!(crates(&sim), 1, "round {round}: the singleton broke");
-            assert_eq!(sim.deliveries(), round - 1);
-            travel_to(&mut sim, GUILD);
-            assert_eq!(crates(&sim), 0, "round {round}: the crate survived");
-            assert_eq!(sim.deliveries(), round, "round {round}: not counted");
-            // The steal ran in front of the barter: the visit is laid out
-            // as usual, one piece per shelf slot.
-            let barter = sim.barter().expect("docked means barter");
-            assert_eq!(barter.station, GUILD);
-            let shelved: Vec<u8> = sim
-                .pieces()
-                .iter()
-                .filter_map(|p| match p.loc {
-                    Loc::StationShelf { slot } => Some(slot),
-                    _ => None,
-                })
-                .collect();
-            assert!(!shelved.is_empty(), "the steal ate the shelf");
-            let mut deduped = shelved.clone();
-            deduped.sort_unstable();
-            deduped.dedup();
-            assert_eq!(deduped.len(), shelved.len(), "shelf slot conflict");
-        }
-    }
-
-    #[test]
-    fn guild_steal_fires_delivered_beside_arrive() {
-        let mut sim = Sim::new(0xDE11);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        travel_to(&mut sim, SATURN);
-        launch(&mut sim, GUILD);
-        // Walk to the dock live, so the arrival frame's cues are visible.
-        let mut arrival = Vec::new();
-        for _ in 0..=leg_of(&sim) {
-            sim.advance(TICK_DT, &InputFrame::default());
-            if sim.cues().contains(&Cue::Arrive) {
-                arrival = sim.cues().to_vec();
-                break;
-            }
-        }
-        let delivered = arrival
-            .iter()
-            .position(|c| matches!(c, Cue::Delivered))
-            .expect("no Delivered on the arrival frame");
-        let arrive = arrival
-            .iter()
-            .position(|c| matches!(c, Cue::Arrive))
-            .expect("no Arrive on the arrival frame");
-        assert!(delivered < arrive, "the steal happens in front of the dock");
-        assert_eq!(sim.deliveries(), 1);
-        assert_eq!(crates(&sim), 0);
-        assert!(sim.barter().is_some(), "the barter must survive the steal");
-    }
-
-    #[test]
-    fn docking_without_a_crate_never_delivers() {
-        let mut sim = Sim::new(0x00DE);
-        travel_to(&mut sim, SATURN);
-        travel_to(&mut sim, GUILD);
-        assert_eq!(sim.deliveries(), 0);
-        let mut sim = Sim::new(0x00DE);
-        travel_to(&mut sim, SATURN);
-        launch(&mut sim, GUILD);
-        let mut log = Vec::new();
-        for _ in 0..=leg_of(&sim) {
-            sim.advance(TICK_DT, &InputFrame::default());
-            log.extend_from_slice(sim.cues());
-        }
-        assert_eq!(count_cues(&log, |c| matches!(c, Cue::Arrive)), 1);
-        assert_eq!(count_cues(&log, |c| matches!(c, Cue::Delivered)), 0);
-        assert_eq!(sim.deliveries(), 0);
-    }
-
-    #[test]
-    fn a_crate_held_mid_drag_is_still_stolen_at_the_dock() {
-        let mut sim = Sim::new(0xD00D);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        travel_to(&mut sim, SATURN);
-        launch(&mut sim, GUILD);
-        // Lift the crate mid-flight and keep dragging through the dock.
-        let (crate_id, at) = {
-            let piece = sim
-                .pieces()
-                .iter()
-                .find(|p| p.kind == Kind::SuspiciousCrate)
-                .expect("the crate rides along");
-            (piece.id, rect_center(layout::piece_rect(piece)))
-        };
-        sim.advance(0.0, &press_at(at.x, at.y));
-        assert_eq!(sim.held(0).map(|h| h.piece), Some(crate_id));
-        while matches!(sim.ship().state, ShipState::Traveling { .. }) {
-            sim.advance(TICK_DT, &held_at(at.x, at.y));
-        }
-        // Dock time: the drag dropped, the crate is gone, the count is in.
-        assert_eq!(sim.held(0), None, "the steal must clear the drag");
-        assert_eq!(crates(&sim), 0);
-        assert_eq!(sim.deliveries(), 1);
-    }
-
-    #[test]
-    fn deliveries_survive_the_save_round_trip() {
-        let mut sim = Sim::new(0x5AFE);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        travel_to(&mut sim, SATURN);
-        travel_to(&mut sim, GUILD);
-        assert_eq!(sim.deliveries(), 1);
-        let restored = Sim::from_save(&sim.save_string()).expect("own save must parse");
-        assert_eq!(restored.deliveries(), 1);
-        assert_save_continues(sim, 5_000);
-    }
-
-    #[test]
-    fn omen_fires_exactly_once_at_the_derived_tick() {
-        let seed = 0xE7E7;
-        let mut sim = Sim::new(seed);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        launch(&mut sim, SATURN);
-        let leg = leg_of(&sim);
-        let lo = leg / 2;
-        let jump_at = lo + splitmix(seed, 1) % (leg * 3 / 4 - lo).max(1);
-        let mut starts = Vec::new();
-        let mut jumps = Vec::new();
-        let mut ends = Vec::new();
-        let mut skipped_to = None;
-        let mut light_at_jump = None;
-        let mut peak_omen = 0.0_f32;
-        while matches!(sim.ship().state, ShipState::Traveling { .. }) {
-            sim.advance(TICK_DT, &InputFrame::default());
-            for cue in sim.cues() {
-                match cue {
-                    Cue::OmenStart => starts.push(sim.tick()),
-                    Cue::Jump => {
-                        jumps.push(sim.tick());
-                        light_at_jump = Some(sim.light());
-                        if let ShipState::Traveling { progress, .. } = sim.ship().state {
-                            skipped_to = Some(progress);
-                        }
-                    }
-                    Cue::OmenEnd => ends.push(sim.tick()),
-                    _ => {}
-                }
-            }
-            let (light, omen) = (sim.light(), sim.omen());
-            peak_omen = peak_omen.max(omen);
-            assert!((0.0..=1.0).contains(&light), "light {light} out of range");
-            assert!((0.0..=1.0).contains(&omen), "omen {omen} out of range");
-            assert!(sim.tick() < leg * 2, "the leg never ended");
-        }
-        // Launch was tick zero, so progress and tick agree: the episode
-        // lands exactly where the hash said, once.
-        assert_eq!(starts, [jump_at]);
-        assert_eq!(jumps, [jump_at + 180]);
-        assert_eq!(ends, [jump_at + 270]);
-        let pre = jump_at + 180;
-        assert_eq!(
-            skipped_to,
-            Some(pre + (leg - pre) * 3 / 4),
-            "jump must skip three quarters of the remaining leg"
-        );
-        // Three seconds of omen more than covers the two-second eases: the
-        // light bottoms out at its dim floor and the hum peaks at full.
-        let light = light_at_jump.unwrap();
-        assert!((light - 0.2).abs() < 1e-6, "light at jump was {light}");
-        assert!((peak_omen - 1.0).abs() < 1e-6, "hum peaked at {peak_omen}");
-        // Back at a dock the ambience settles exactly.
-        coast(&mut sim, 150);
-        assert_eq!(sim.light().to_bits(), 1.0_f32.to_bits());
-        assert_eq!(sim.omen().to_bits(), 0.0_f32.to_bits());
-    }
-
-    #[test]
-    fn without_a_crate_the_leg_never_jumps() {
-        let mut sim = launched(0x30);
-        let leg = leg_of(&sim);
-        for _ in 0..=leg {
-            sim.advance(TICK_DT, &InputFrame::default());
-            assert!(
-                sim.cues()
-                    .iter()
-                    .all(|c| !matches!(c, Cue::OmenStart | Cue::Jump | Cue::OmenEnd)),
-                "omen without a crate"
-            );
-            assert_eq!(sim.light().to_bits(), 1.0_f32.to_bits());
-            assert_eq!(sim.omen().to_bits(), 0.0_f32.to_bits());
-        }
-        assert!(matches!(sim.ship().state, ShipState::Docked(_)));
-    }
-
-    #[test]
-    fn creaks_pepper_travel_and_never_the_dock() {
-        let mut sim = launched_toward(0xC4EA, JUPITER);
-        let mut creaks = 0_i64;
-        for _ in 0..6000 {
-            sim.advance(TICK_DT, &InputFrame::default());
-            for cue in sim.cues() {
-                if let Cue::Creak { intensity } = cue {
-                    creaks += 1;
-                    assert!((0.0..=1.0).contains(intensity), "creak {intensity}");
-                }
-            }
-        }
-        assert!(
-            matches!(sim.ship().state, ShipState::Traveling { .. }),
-            "the Jupiter leg should outlast the sample"
-        );
-        // One creak is scheduled per window; allow slack at the borders.
-        let windows = 6000 / 480;
-        assert!(
-            (windows - 2..=windows + 2).contains(&creaks),
-            "{creaks} creaks in {windows} windows"
-        );
-        // Docked, the hull is quiet.
-        let mut docked = Sim::new(0xC4EA);
-        for _ in 0..2000 {
-            docked.advance(TICK_DT, &InputFrame::default());
-            assert!(
-                docked
-                    .cues()
-                    .iter()
-                    .all(|c| !matches!(c, Cue::Creak { .. })),
-                "creak at the dock"
-            );
-        }
-    }
-
-    #[test]
-    fn reseed_preserves_pause_and_resets_warp() {
-        let mut sim = Sim::new(1);
-        sim.advance(
-            0.0,
-            &InputFrame {
-                toggle_warp: true,
-                ..InputFrame::default()
-            },
-        );
-        sim.advance(
-            0.0,
-            &InputFrame {
-                toggle_pause: true,
-                ..InputFrame::default()
-            },
-        );
-        assert!(sim.is_warp() && sim.is_paused());
-        sim.advance(
-            0.0,
-            &InputFrame {
-                reseed: Some(2),
-                ..InputFrame::default()
-            },
-        );
-        assert_eq!(sim.cues(), [Cue::Reseed]);
-        assert!(sim.is_paused(), "pause must survive a reseed");
-        assert!(!sim.is_warp(), "warp must reset with the world");
-        assert_eq!(sim.seed(), 2);
-        assert_eq!(sim.tick(), 0);
-    }
-
-    // -------------------------------------------------------------- crew --
-
-    /// A sealed tick's frames with the given players' inputs set; everyone
-    /// else is default, exactly as absent crew are in lockstep.
-    fn crew(entries: &[(PlayerId, InputFrame)]) -> CrewFrame {
-        let mut frame = [InputFrame::default(); MAX_CREW];
-        for &(player, input) in entries {
-            frame[usize::from(player)] = input;
-        }
-        frame
-    }
-
-    /// A crew schedule with some of everything: three players dragging
-    /// different pieces in parallel (a gift, a restow, a snap-back-to-self),
-    /// warp toggled on by one player and off by another, a destination
-    /// selected, the gift accepted, a departure, and the Venus leg coasted
-    /// onto the dock.
-    fn crew_schedule() -> Vec<CrewFrame> {
-        let vial = cell_center(0, 0);
-        let scrap = cell_center(0, 2);
-        let pearls = cell_center(2, 0);
-        let give0 = slot_center(&layout::GIVE_SLOTS, 0);
-        let restow = cell_center(4, 2);
-        let warp = InputFrame {
-            toggle_warp: true,
-            ..InputFrame::default()
-        };
-        // The Venus press lands on sealed tick 3 and the departure on
-        // sealed tick 5; the sky is sampled for those exact moments.
-        let venus = map::poi_pos(SATURN, 3);
-        let launch_lever = rect_center(layout::LAUNCH_LEVER);
-        let accept = rect_center(layout::ACCEPT_LEVER);
-        let mut s = vec![
-            crew(&[
-                (1, press_at(vial.x, vial.y)),
-                (2, press_at(scrap.x, scrap.y)),
-                (4, warp),
-            ]),
-            crew(&[
-                (1, held_at(give0.x, give0.y)),
-                (2, held_at(restow.x, restow.y)),
-                (3, press_at(pearls.x, pearls.y)),
-            ]),
-            crew(&[
-                (1, release_at(give0.x, give0.y)),
-                (2, release_at(restow.x, restow.y)),
-                (3, release_at(pearls.x, pearls.y)),
-            ]),
-            crew(&[(0, press_at(venus.x, venus.y)), (5, warp)]),
-            crew(&[(0, press_at(accept.x, accept.y))]),
-            crew(&[(0, press_at(launch_lever.x, launch_lever.y))]),
-        ];
-        for _ in 0..=map::leg_ticks(GUILD, SATURN, 5) + 1 {
-            s.push(crew(&[]));
-        }
-        s
-    }
-
-    #[test]
-    fn crew_schedules_replay_bit_identically() {
-        let schedule = crew_schedule();
-        let mut a = Sim::new(0xCE11);
-        let mut b = Sim::new(0xCE11);
-        let mut log_a = Vec::new();
-        let mut log_b = Vec::new();
-        for frame in &schedule {
-            a.crew_tick(frame);
-            log_a.extend_from_slice(a.cues());
-        }
-        for frame in &schedule {
-            b.crew_tick(frame);
-            log_b.extend_from_slice(b.cues());
-        }
-        assert_eq!(log_a, log_b, "cue streams diverged");
-        // The choreography really happened, once each.
-        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Pickup)), 3);
-        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Place)), 3);
-        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Warp { .. })), 2);
-        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Select)), 1);
-        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Accept { .. })), 1);
-        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Depart)), 1);
-        assert_eq!(count_cues(&log_a, |c| matches!(c, Cue::Arrive)), 1);
-        assert_eq!(a.ship().state, ShipState::Docked(SATURN));
-        assert_eq!(a.save_string(), b.save_string());
-        assert_eq!(a.pieces(), b.pieces());
-        assert_eq!(a.barter(), b.barter());
-        assert_eq!(a.ship(), b.ship());
-        assert_eq!(a.tick(), b.tick());
-    }
-
-    /// One frame per tick with only player 0 active: select Venus, launch,
-    /// pause and resume mid-leg, coast onto the dock, gift the vial, accept.
-    /// No warp toggles: warp multiplies ticks-per-frame in [`Sim::advance`],
-    /// while a lockstep session realises it by sealing ticks faster.
-    fn solo_schedule() -> Vec<InputFrame> {
-        let venus = map::poi_pos(SATURN, 0);
-        let launch_lever = rect_center(layout::LAUNCH_LEVER);
-        let accept = rect_center(layout::ACCEPT_LEVER);
+        let mut sim = launched(25);
         let pause = InputFrame {
             toggle_pause: true,
             ..InputFrame::default()
         };
-        let vial = cell_center(0, 0);
-        let give0 = slot_center(&layout::GIVE_SLOTS, 0);
-        let mut s = vec![
-            press_at(venus.x, venus.y),
-            press_at(launch_lever.x, launch_lever.y),
-        ];
-        for _ in 0..500 {
-            s.push(InputFrame::default());
-        }
-        s.push(pause);
-        for _ in 0..3 {
-            s.push(InputFrame::default());
-        }
-        s.push(pause);
-        for _ in 0..=map::leg_ticks(GUILD, SATURN, 1) + 1 {
-            s.push(InputFrame::default());
-        }
-        s.push(press_at(vial.x, vial.y));
-        s.push(held_at(give0.x, give0.y));
-        s.push(release_at(give0.x, give0.y));
-        for _ in 0..30 {
-            s.push(InputFrame::default());
-        }
-        s.push(press_at(accept.x, accept.y));
-        for _ in 0..30 {
-            s.push(InputFrame::default());
-        }
-        s
+        sim.advance(0.0, &pause);
+        let before = sim.save_string();
+        let catch = sim.fast_forward(600);
+        assert_eq!(catch.ticks, 0);
+        assert_eq!(sim.save_string(), before);
     }
 
-    /// The equivalence the whole lockstep slice rests on: a solo crew run
-    /// through [`Sim::crew_tick`] is bit-identical, cues included, to the
-    /// same inputs through [`Sim::advance`] one tick at a time.
+    /// **No room puts its own goods in its own doorway.**
+    ///
+    /// The playtest's derelict: from the cabin you looked through an open
+    /// seam at a gilded idol wedged in it, and could not read the room
+    /// beyond at all. The shelf fills row-major from the aft wall, and
+    /// the first two floor cells of a calling room's stock band are
+    /// exactly the two its own doorway lands in — so every derelict, and
+    /// every station, stocked its own door shut first.
+    ///
+    /// Swept over every station and every event room the game opens,
+    /// because the rule lives in the one function that picks a berth on
+    /// the player's behalf and must therefore hold for all of them.
     #[test]
-    fn crew_tick_equals_advance_for_a_solo_crew() {
-        let script = solo_schedule();
-        let mut via_crew = Sim::new(0x5010);
-        let mut via_advance = Sim::new(0x5010);
-        for (i, input) in script.iter().enumerate() {
-            via_crew.crew_tick(&crew(&[(0, *input)]));
-            let ticks = via_advance.advance(TICK_DT, input);
-            assert!(ticks <= 1, "solo equivalence needs one tick per frame");
-            assert_eq!(
-                via_crew.cues(),
-                via_advance.cues(),
-                "cues diverged at frame {i}"
-            );
-            if i % 512 == 0 {
-                assert_eq!(
-                    via_crew.save_string(),
-                    via_advance.save_string(),
-                    "state diverged by frame {i}"
-                );
-            }
-        }
-        assert_eq!(via_advance.ship().state, ShipState::Docked(SATURN));
-        assert_eq!(via_crew.save_string(), via_advance.save_string());
-        assert_eq!(via_crew.pieces(), via_advance.pieces());
-        assert_eq!(via_crew.barter(), via_advance.barter());
-        assert_eq!(via_crew.ship(), via_advance.ship());
-        assert_eq!(via_crew.tick(), via_advance.tick());
-        assert_eq!(via_crew.held(0), via_advance.held(0));
-    }
-
-    #[test]
-    fn same_tick_grab_goes_to_the_lowest_player_in_silence() {
-        let mut sim = Sim::new(5);
-        let vial = cell_center(0, 0);
-        let press = press_at(vial.x, vial.y);
-        sim.crew_tick(&crew(&[(1, press), (4, press)]));
-        let piece = sim.held(1).expect("player 1 wins the grab").piece;
-        assert_eq!(sim.held(4), None, "player 4 must lose the grab");
-        assert_eq!(
-            sim.cues(),
-            [Cue::Pickup],
-            "one lift; the loser makes no noise"
-        );
-        // Across ticks the piece stays claimed, in the same silence.
-        sim.crew_tick(&crew(&[(1, held_at(vial.x, vial.y)), (4, press)]));
-        assert_eq!(sim.held(4), None, "a held piece is not grabbable");
-        assert!(sim.cues().is_empty(), "a losing grab is silence, not buzz");
-        let all: Vec<(PlayerId, u32)> = sim.all_held().map(|(p, h)| (p, h.piece)).collect();
-        assert_eq!(all, [(1, piece)]);
-    }
-
-    #[test]
-    fn same_tick_release_contention_first_wins_second_snaps_back() {
-        let mut sim = Sim::new(5);
-        let vial = cell_center(0, 0);
-        let pearls = cell_center(2, 0);
-        sim.crew_tick(&crew(&[
-            (0, press_at(vial.x, vial.y)),
-            (1, press_at(pearls.x, pearls.y)),
-        ]));
-        assert_eq!(sim.cues(), [Cue::Pickup, Cue::Pickup]);
-        // Both release onto hold cell (5, 2): the earlier player lands it;
-        // the later snaps home with a soft reject — losing a race is not a
-        // stowage violation, so no rule icon flashes either.
-        let target = cell_center(5, 2);
-        sim.crew_tick(&crew(&[
-            (0, release_at(target.x, target.y)),
-            (1, release_at(target.x, target.y)),
-        ]));
-        assert_eq!(sim.cues(), [Cue::Place, Cue::Reject { hard: false }]);
-        assert_eq!(sim.last_violation(), None);
-        let loc = |id: u32| sim.pieces().iter().find(|p| p.id == id).unwrap().loc;
-        assert_eq!(loc(1), Loc::Hold { x: 5, y: 2 }, "the winner lands");
-        assert_eq!(loc(2), Loc::Hold { x: 2, y: 0 }, "the loser snaps home");
-
-        // The same race over a barter slot: first fills it, second bounces.
-        let shelf: Vec<Vec2> = sim
-            .pieces()
-            .iter()
-            .filter(|p| matches!(p.loc, Loc::StationShelf { .. }))
-            .map(|p| rect_center(layout::piece_rect(p)))
-            .collect();
-        assert!(shelf.len() >= 2, "a shelf always offers at least two");
-        sim.crew_tick(&crew(&[
-            (2, press_at(shelf[0].x, shelf[0].y)),
-            (3, press_at(shelf[1].x, shelf[1].y)),
-        ]));
-        let take0 = slot_center(&layout::TAKE_SLOTS, 0);
-        sim.crew_tick(&crew(&[
-            (2, release_at(take0.x, take0.y)),
-            (3, release_at(take0.x, take0.y)),
-        ]));
-        assert_eq!(sim.cues(), [Cue::Place, Cue::Reject { hard: false }]);
-        let on_take = sim
-            .pieces()
-            .iter()
-            .filter(|p| matches!(p.loc, Loc::TakePad { .. }))
-            .count();
-        assert_eq!(on_take, 1, "one slot takes one piece");
-    }
-
-    #[test]
-    fn same_tick_pause_toggles_net_out_and_announce_in_order() {
-        let mut sim = Sim::new(7);
-        let toggle = InputFrame {
-            toggle_pause: true,
-            ..InputFrame::default()
-        };
-        sim.crew_tick(&crew(&[(0, toggle), (3, toggle)]));
-        assert!(!sim.is_paused(), "two toggles must cancel");
-        assert_eq!(
-            sim.cues(),
-            [Cue::Pause { paused: true }, Cue::Pause { paused: false }]
-        );
-        assert_eq!(sim.tick(), 1, "a cancelled pause still ticks");
-        // An odd toggle count lands paused, and later players' pointer
-        // events are dropped from the moment the flag flips.
-        let vial = cell_center(0, 0);
-        sim.crew_tick(&crew(&[(1, toggle), (2, press_at(vial.x, vial.y))]));
-        assert!(sim.is_paused());
-        assert_eq!(sim.cues(), [Cue::Pause { paused: true }]);
-        assert_eq!(sim.held(2), None, "pointer input under pause is dropped");
-        assert_eq!(sim.tick(), 1, "a paused tick must not step");
-        // The mirror case: a press lands while still paused even though a
-        // later player unpauses the same tick.
-        sim.crew_tick(&crew(&[(1, press_at(vial.x, vial.y)), (5, toggle)]));
-        assert!(!sim.is_paused());
-        assert_eq!(sim.cues(), [Cue::Pause { paused: false }]);
-        assert_eq!(sim.held(1), None, "the press came while still paused");
-        assert_eq!(sim.tick(), 2, "the unpaused tick steps");
-    }
-
-    #[test]
-    fn crew_reseed_last_in_order_wins() {
-        let mut sim = Sim::new(1);
-        let reseed = |seed: u64| InputFrame {
-            reseed: Some(seed),
-            ..InputFrame::default()
-        };
-        sim.crew_tick(&crew(&[(2, reseed(0xAAA)), (4, reseed(0xBBB))]));
-        assert_eq!(sim.seed(), 0xBBB, "the last reseed in order wins");
-        assert_eq!(sim.cues(), [Cue::Reseed], "one replacement announced");
-        assert_eq!(sim.tick(), 1);
-    }
-
-    /// The conservation monkey, crewed: six chaotic players per tick
-    /// through [`Sim::crew_tick`], with a rat aboard from the first frame.
-    /// The solo monkey's guarantee holds under contention, plus the crew
-    /// invariants — no held id is a ghost, no piece is held twice, no two
-    /// pieces share a surface spot.
-    #[test]
-    fn no_crew_input_stream_loses_cargo_without_an_accept() {
-        let mut sim = Sim::new(0xC0FF_EE01);
-        inject_rat(&mut sim);
-        let mut rng = fastrand::Rng::with_seed(0xF00D);
-        // Netted cargo is off the manifest but recoverable, so the
-        // conservation count keeps it: only an announced ceremony —
-        // accept, hangar steal, exchange, or a net sweep — may shrink
-        // this number.
-        let owned = |sim: &Sim| {
-            sim.pieces()
-                .iter()
-                .filter(|p| player_owned(p.loc) || matches!(p.loc, Loc::Flotsam { .. }))
-                .count()
-        };
-        let mut before = owned(&sim);
-        for tick in 0_u32..4000 {
-            let mut frames = [InputFrame::default(); MAX_CREW];
-            for frame in &mut frames {
-                *frame = InputFrame {
-                    pointer: Vec2::new(rng.f32() * WORLD_W, rng.f32() * WORLD_H),
-                    press: rng.bool(),
-                    held: rng.bool(),
-                    release: rng.bool(),
-                    toggle_pause: rng.u8(..) < 2,
-                    toggle_warp: rng.u8(..) < 2,
-                    shift: rng.bool(),
-                    night: rng.bool(),
-                    reseed: None,
+    fn a_room_never_puts_its_goods_in_its_own_doorway() {
+        let mut swept = 0;
+        for seed in 0..80_u64 {
+            let mut sim = Sim::new(seed);
+            // Every event room the leg can bring alongside, and the
+            // station rooms of a dozen docks.
+            for _ in 0..6 {
+                for (id, room) in sim.rooms().iter() {
+                    let kind = room.kind;
+                    for piece in sim.pieces() {
+                        let Loc::Hold { room: at, x, y } = piece.loc else {
+                            continue;
+                        };
+                        if at != id || player_owned(&sim.rooms, &sim.pieces, piece.loc) {
+                            continue;
+                        }
+                        assert!(
+                            !kind.doorstep(x, y),
+                            "{kind:?} stocked {:?} on its own doorstep at ({x}, {y})",
+                            piece.kind
+                        );
+                        swept += 1;
+                    }
+                }
+                let ShipState::Docked(here) = sim.ship().state else {
+                    // Underway: run the leg on so the encounter rooms
+                    // that carry goods (the derelict) actually open.
+                    sim.fast_forward(600);
+                    continue;
                 };
+                let Some(there) = (0..12_u8).find(|&id| id != here && sim.poi_chartable(id)) else {
+                    break;
+                };
+                let at = sim.poi_pos(there);
+                sim.advance(0.0, &press_at(at.x, at.y));
+                let callers: Vec<RoomId> = sim
+                    .rooms()
+                    .iter()
+                    .filter(|(_, room)| !room.kind.riding())
+                    .map(|(id, _)| id)
+                    .collect();
+                for id in callers {
+                    sim.advance(
+                        0.0,
+                        &InputFrame {
+                            detach: Some(id),
+                            ..InputFrame::default()
+                        },
+                    );
+                }
+                let pull = rect_center(layout::LAUNCH_LEVER);
+                sim.advance(0.0, &press_at(pull.x, pull.y));
+                sim.advance(TICK_DT, &InputFrame::default());
             }
-            sim.crew_tick(&frames);
-            let ceded = sim.cues().iter().any(|cue| {
-                matches!(
-                    cue,
-                    Cue::Accept { .. } | Cue::Delivered | Cue::Exchange | Cue::Jettison
-                )
-            });
-            let after = owned(&sim);
-            assert!(
-                after >= before || ceded,
-                "tick {tick}: {before} -> {after} player pieces with no accept"
-            );
-            let mut held_ids: Vec<u32> = sim.all_held().map(|(_, held)| held.piece).collect();
-            for &id in &held_ids {
-                assert!(
-                    sim.pieces().iter().any(|p| p.id == id),
-                    "tick {tick}: held piece {id} is a ghost"
-                );
-            }
-            held_ids.sort_unstable();
-            held_ids.dedup();
-            assert_eq!(
-                held_ids.len(),
-                sim.all_held().count(),
-                "tick {tick}: two players hold one piece"
-            );
-            let pieces = sim.pieces();
-            for (i, a) in pieces.iter().enumerate() {
-                for b in &pieces[i + 1..] {
+        }
+        assert!(swept > 200, "only {swept} of a room's own goods were seen");
+    }
+
+    /// **You cannot walk off with a station's windows.** The half-joke,
+    /// answered: ownership is a function of tile class (`player_owned`
+    /// is "the berth's tile is not `Stock`"), so the question is whether
+    /// anything a station keeps ever stands on a tile that is not
+    /// `Stock`. Three clauses close it, and this pins all three:
+    ///
+    /// 1. **A station's fittings are not cargo.** Its windows, brass,
+    ///    counters and shelves are `cabin::poi::Fitting` decor — meshes
+    ///    measured in fractions of the room's own box, with no `Piece`
+    ///    anywhere in them and no `Loc` to be berthed at. There is
+    ///    nothing to pick up, which is why this test can only speak
+    ///    about goods.
+    /// 2. **A room's own goods only ever land on `Stock`.** The one
+    ///    function that berths them is `stock_in`, and it asks for that
+    ///    class by name. Everything else the sim ever puts down in a
+    ///    calling room has already crossed to the player by a
+    ///    resolution — a handshake's pile, the parlor's winnings — and
+    ///    is meant to be carried home.
+    /// 3. **A press on stock marks; it never lifts.** The handle rule
+    ///    reserves the body-click for function, and on a room's own
+    ///    goods that function is *I want that one*.
+    ///
+    /// So the joke is safe, and the mechanism that keeps it safe is one
+    /// predicate rather than a list of exceptions. Nothing here invents
+    /// a guard; it only refuses to let the three clauses drift apart.
+    #[test]
+    fn a_stations_goods_are_never_the_players_to_carry() {
+        let mut swept = 0;
+        for seed in 0..40_u64 {
+            let mut sim = Sim::new(seed);
+            let callers: Vec<(RoomId, RoomKind)> = sim
+                .rooms()
+                .iter()
+                .map(|(id, room)| (id, room.kind))
+                .filter(|(_, kind)| !kind.riding())
+                .collect();
+            for (id, room) in callers {
+                let goods: Vec<(u32, u8, u8)> = sim
+                    .pieces
+                    .iter()
+                    .filter_map(|piece| match piece.loc {
+                        Loc::Hold { room: at, x, y } if at == id => Some((piece.id, x, y)),
+                        _ => None,
+                    })
+                    .collect();
+                for (piece, x, y) in goods {
+                    // Clause two: a freshly opened room holds only its
+                    // own goods, and they are all on `Stock`.
+                    assert_eq!(
+                        sim.rooms.tile(id, x, y),
+                        Some(Tile::Stock),
+                        "{room:?} put a good of its own on a tile the player owns"
+                    );
                     assert!(
-                        a.loc != b.loc,
-                        "tick {tick}: pieces {} and {} share {:?}",
-                        a.id,
-                        b.id,
-                        a.loc
+                        !player_owned(&sim.rooms, &sim.pieces, Loc::Hold { room: id, x, y }),
+                        "{room:?}'s goods at ({x}, {y}) read as the player's"
+                    );
+                    // Clause three: pressing it marks, and marking is
+                    // not carrying.
+                    sim.advance(
+                        0.0,
+                        &press_at(cell_center(id, x, y).x, cell_center(id, x, y).y),
+                    );
+                    assert!(
+                        sim.held(0).is_none(),
+                        "{room:?}'s goods at ({x}, {y}) came away in the hand"
+                    );
+                    assert!(sim.marks().contains(&piece), "the press did not even mark");
+                    // And a shift-press does not smuggle it out either.
+                    let at = cell_center(id, x, y);
+                    sim.advance(
+                        0.0,
+                        &InputFrame {
+                            pointer: at,
+                            press: true,
+                            held: true,
+                            shift: true,
+                            ..InputFrame::default()
+                        },
+                    );
+                    assert!(
+                        matches!(
+                            sim.pieces.iter().find(|p| p.id == piece).map(|p| p.loc),
+                            Some(Loc::Hold { room: at, .. }) if at == id
+                        ),
+                        "{room:?}'s goods quick-moved out of the room"
+                    );
+                    swept += 1;
+                }
+            }
+        }
+        assert!(swept > 60, "only {swept} of a room's own goods were seen");
+        // The converse, so the predicate cannot be quietly widened: a
+        // `Stock` tile is the ONLY thing that makes a berth not yours.
+        let sim = Sim::new(7);
+        for (id, _) in sim.rooms().iter() {
+            let (cols, rows) = sim.rooms.kind(id).expect("attached").grid();
+            for y in 0..rows {
+                for x in 0..cols {
+                    let loc = Loc::Hold { room: id, x, y };
+                    assert_eq!(
+                        player_owned(&sim.rooms, &sim.pieces, loc),
+                        sim.rooms.tile(id, x, y) != Some(Tile::Stock),
+                        "ownership at room {id} ({x}, {y}) stopped being tile class"
                     );
                 }
             }
-            if let Some(rat) = sim.rat() {
-                assert!(
-                    rat.cell.0 < layout::GRID_COLS && rat.cell.1 < layout::GRID_ROWS,
-                    "tick {tick}: rat off the grid at {:?}",
-                    rat.cell
-                );
-            }
-            before = after;
         }
     }
 
-    // -------------------------------------------------------------- rats --
-
-    /// Stow enough extra cargo that the hold crosses the boarding gate:
-    /// starter cargo's 5 cells plus two ration bricks is 13 of 24.
-    fn crowd_hold(sim: &mut Sim) {
-        inject_hold(sim, Kind::RationBricks, 2, 2);
-        inject_hold(sim, Kind::RationBricks, 4, 2);
-    }
-
-    /// Fill the hold to all 24 cells, so a boarding rat must perch on a
-    /// piece. Laid out around the starter cargo with untagged kinds only.
-    fn fill_hold(sim: &mut Sim) {
-        for (x, y) in [(1, 0), (5, 0), (0, 1), (1, 1), (5, 1), (0, 3), (1, 3)] {
-            inject_hold(sim, Kind::Seedlings, x, y);
-        }
-        inject_hold(sim, Kind::RationBricks, 3, 0);
-        inject_hold(sim, Kind::RationBricks, 2, 2);
-        inject_hold(sim, Kind::RationBricks, 4, 2);
-    }
-
-    /// A seed whose first departure wins the boarding roll.
-    fn rat_seed() -> u64 {
-        (0..500_u64)
-            .find(|&s| splitmix(s ^ rats::SALT_BOARD, 1) % rats::BOARD_CHANCE == 0)
-            .expect("a boarding roll within 500 seeds")
-    }
-
-    /// A crowded sim just departed for Venus on a boarding seed.
-    fn rat_underway() -> Sim {
-        let mut sim = Sim::new(rat_seed());
-        crowd_hold(&mut sim);
-        launch(&mut sim, SATURN);
-        sim
-    }
+    // ---- The new barter: six beats ----
 
     #[test]
-    fn a_crowded_departure_rolls_a_stowaway_deterministically() {
-        let sim = rat_underway();
-        assert!(
-            sim.cues().contains(&Cue::RatAboard),
-            "the boarding roll must announce itself: {:?}",
-            sim.cues()
-        );
-        let rat = sim.rat().expect("the boarding roll hit");
-        assert_eq!(rat.chases, 0);
-        assert_eq!(rat.cell, rat.prev_cell, "a fresh stowaway has not hopped");
-        assert!(
-            !cell_covered(&sim, rat.cell),
-            "with empty cells on offer it boards bare floor"
-        );
-        let again = rat_underway();
-        assert_eq!(again.rat(), sim.rat());
-        assert_eq!(again.save_string(), sim.save_string());
-    }
+    fn the_room_answers_a_proposal_with_goods_and_the_handshake_commits() {
+        let mut sim = Sim::new(31);
+        let before: Vec<u32> = stock_ids(&sim, TRADE);
+        assert!(!before.is_empty());
+        // Nothing proposed: the handshake has nothing to commit.
+        let shake = handshake(&sim, TRADE);
+        sim.advance(0.0, &press_at(shake.x, shake.y));
+        assert_eq!(sim.cues(), [Cue::Refuse]);
+        assert!(sim.composed().is_empty(), "an empty proposal buys nothing");
 
-    #[test]
-    fn boarding_is_one_in_four_and_gated_by_crowding_and_the_crate() {
-        // Crowded holds: the roll lands near one in four over many seeds.
-        let mut boarded = 0_usize;
-        for seed in 0..400_u64 {
-            let mut sim = Sim::new(seed);
-            crowd_hold(&mut sim);
-            launch(&mut sim, SATURN);
-            boarded += usize::from(sim.rat().is_some());
+        // Propose the pearls: the room composes an answer out of stock.
+        let to = offer(&sim, TRADE, 0);
+        drag(&mut sim, cabin(6, 3), to);
+        let composed = sim.composed();
+        assert!(!composed.is_empty(), "a rich proposal must buy something");
+        for id in &composed {
+            assert!(before.contains(id), "the room offered someone else's goods");
         }
-        assert!(
-            (60..=140).contains(&boarded),
-            "{boarded}/400 boardings is far from one in four"
-        );
-        // A lean hold (starter cargo, 5 of 24 cells): never.
-        for seed in 0..100_u64 {
-            let mut sim = Sim::new(seed);
-            launch(&mut sim, SATURN);
+        // Strike the deal: what we proposed is the room's now, what it
+        // composed is on its deck and ours to carry.
+        sim.advance(0.0, &press_at(shake.x, shake.y));
+        assert!(matches!(sim.cues().first(), Some(Cue::Accept { .. })));
+        assert!(sim.marks().is_empty(), "marks clear on resolution");
+        for id in composed {
+            let piece = sim.pieces().iter().find(|p| p.id == id).unwrap();
             assert!(
-                sim.rat().is_none(),
-                "seed {seed} boarded a rat onto a lean hold"
+                player_owned(sim.rooms(), sim.pieces(), piece.loc),
+                "the answer must cross to the player"
             );
         }
-        // A suspicious crate aboard: never, even crowded on a boarding
-        // seed — the hum unnerves them at the gangway.
-        let mut sim = Sim::new(rat_seed());
-        crowd_hold(&mut sim);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 0);
-        launch(&mut sim, SATURN);
-        assert!(sim.rat().is_none(), "the hum should keep rats ashore");
-        assert!(!sim.cues().contains(&Cue::RatAboard));
+        assert!(sim.proposal(TRADE).is_empty(), "the offer area is clear");
     }
 
     #[test]
-    fn the_rat_skitters_and_nibbles_on_its_derived_schedule() {
-        let mut sim = rat_underway();
-        let rat = sim.rat().expect("boarding seed");
-        let (mut due_move, mut due_nibble) = (rat.next_move, rat.next_nibble);
-        let mut skitters = 0_usize;
-        let mut nibbles = 0_usize;
-        for _ in 0..6000 {
-            sim.advance(TICK_DT, &InputFrame::default());
-            for cue in sim.cues() {
-                match cue {
-                    Cue::RatSkitter { intensity } => {
-                        assert!((0.0..=1.0).contains(intensity), "skitter {intensity}");
-                        assert_eq!(sim.tick(), due_move, "skitter off schedule");
-                        let rat = sim.rat().expect("it skittered, it is aboard");
-                        assert_eq!(rat.moved_at, sim.tick());
-                        assert_ne!(rat.cell, rat.prev_cell, "a hop must move");
-                        assert!(
-                            !cell_covered(&sim, rat.cell),
-                            "11 empty cells: every hop lands on bare floor"
-                        );
-                        due_move = rat.next_move;
-                        skitters += 1;
+    fn a_mark_steers_the_offer_and_toggles_off_again() {
+        let mut sim = Sim::new(32);
+        let to = offer(&sim, TRADE, 0);
+        drag(&mut sim, cabin(6, 3), to);
+        let stock = stock_ids(&sim, TRADE);
+        assert!(stock.len() >= 2, "this test wants a choice");
+        let last = *stock.last().unwrap();
+        let piece = *sim.pieces().iter().find(|p| p.id == last).unwrap();
+        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        sim.advance(0.0, &press_at(at.x, at.y));
+        assert_eq!(sim.cues(), [Cue::Mark { on: true }]);
+        assert_eq!(sim.marks(), [last]);
+        assert!(
+            sim.composed().contains(&last),
+            "a marked kind comes first in the composed pile"
+        );
+        sim.advance(0.0, &press_at(at.x, at.y));
+        assert_eq!(sim.cues(), [Cue::Mark { on: false }]);
+        assert!(sim.marks().is_empty());
+        // Marking never lifts: the room's goods stay on their tiles.
+        assert!(sim.held(0).is_none());
+        assert_eq!(stock_ids(&sim, TRADE), stock);
+    }
+
+    #[test]
+    fn a_rooms_own_goods_never_leave_through_a_drop() {
+        let mut sim = Sim::new(33);
+        let stock = stock_ids(&sim, TRADE);
+        let piece = *sim.pieces().iter().find(|p| p.id == stock[0]).unwrap();
+        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        sim.advance(0.0, &press_at(at.x, at.y));
+        assert!(sim.held(0).is_none(), "stock marks, it does not lift");
+        assert_eq!(
+            sim.pieces().iter().find(|p| p.id == stock[0]).unwrap().loc,
+            piece.loc
+        );
+    }
+
+    #[test]
+    fn the_hermitage_remembers_a_gift_forever() {
+        let mut sim = cleared(41);
+        inject_hold(&mut sim, Kind::BrinePearls, 4, 4);
+        wait_for(&mut sim, HERMITAGE);
+        travel_to(&mut sim, HERMITAGE);
+        assert_eq!(sim.karma(), 0);
+        // The hermits stock nothing for strangers, so a proposal buys
+        // nothing back and the handshake reads as the gift it is.
+        assert!(stock_ids(&sim, TRADE).is_empty());
+        let piece = *sim
+            .pieces()
+            .iter()
+            .find(|p| p.kind == Kind::BrinePearls)
+            .unwrap();
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let to = offer(&sim, TRADE, 0);
+        drag(&mut sim, from, to);
+        let shake = handshake(&sim, TRADE);
+        sim.advance(0.0, &press_at(shake.x, shake.y));
+        assert!(matches!(sim.cues().first(), Some(Cue::Accept { .. })));
+        assert_eq!(sim.karma(), 1, "generosity is remembered");
+    }
+
+    #[test]
+    fn trading_a_kind_teaches_its_value() {
+        let mut sim = cleared(42);
+        inject_hold(&mut sim, Kind::BrinePearls, 4, 4);
+        travel_to(&mut sim, SATURN);
+        assert!(!sim.kind_familiar(Kind::BrinePearls), "Saturn is new turf");
+        let piece = *sim
+            .pieces()
+            .iter()
+            .find(|p| p.kind == Kind::BrinePearls)
+            .unwrap();
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let to = offer(&sim, TRADE, 0);
+        drag(&mut sim, from, to);
+        let shake = handshake(&sim, TRADE);
+        sim.advance(0.0, &press_at(shake.x, shake.y));
+        assert!(sim.kind_familiar(Kind::BrinePearls));
+    }
+
+    // ---- The staging law ----
+
+    /// **Nothing stays on a staging cell.**
+    ///
+    /// The possession half of the vital rule asks whether a berth is one
+    /// the piece would still hold after a launch, and a staging cell
+    /// never is — the room it is in leaves. Stated over every calling
+    /// kind and every one of its staging cells, with a real board and
+    /// the real predicate, so a kind that grows a class or a class that
+    /// grows a kind cannot quietly turn a station's deck into a hold.
+    ///
+    /// The consequence is the one that matters: staging a spare chart tank
+    /// on a station's deck does not make it the last one aboard, so both
+    /// of a pair can never be staged and lost.
+    #[test]
+    fn nothing_stays_on_a_staging_cell() {
+        let mut swept = 0;
+        for (poi, kind) in [(SATURN, RoomKind::Trade), (URANUS, RoomKind::Trade)] {
+            let mut sim = cleared(7);
+            travel_to(&mut sim, poi);
+            let Some(room) = sim.rooms().find(kind) else {
+                continue;
+            };
+            for (x, y) in tiles(&sim, room, Tile::Staging) {
+                if !placement_legal(
+                    &sim.rooms,
+                    &sim.pieces,
+                    u32::MAX,
+                    Kind::ChartTank,
+                    room,
+                    x,
+                    y,
+                ) {
+                    continue;
+                }
+                let id = inject_at(&mut sim, Kind::ChartTank, Loc::Hold { room, x, y });
+                let piece = *sim.pieces().iter().find(|p| p.id == id).unwrap();
+                assert!(
+                    player_owned(&sim.rooms, &sim.pieces, piece.loc),
+                    "{kind:?} claimed the crate on its staging cell ({x}, {y})"
+                );
+                assert!(
+                    !cargo::staying(&sim.rooms, &sim.pieces, &piece),
+                    "{kind:?} keeps a staying berth at ({x}, {y}), which it leaves with"
+                );
+                sim.pieces.retain(|p| p.id != id);
+                swept += 1;
+            }
+        }
+        assert!(swept > 0, "no staging cell was swept at all");
+    }
+
+    /// **Nothing launches while a staging cell holds yours.**
+    ///
+    /// The gangway law, said at the lever about a station's own deck:
+    /// set a crate down anywhere in a room that came alongside and the
+    /// ship will not leave without it. Swept over every staging cell a
+    /// crate fits, in a real market, because the refusal has to be the
+    /// whole class and not the offer area it started as.
+    ///
+    /// Both halves are asserted: the gate refuses by name, and
+    /// [`Sim::detained_cargo`] — the frontend's whole reading of that
+    /// refusal — names exactly the piece holding it. A law whose reading
+    /// can disagree with it is a law nobody can obey.
+    #[test]
+    fn nothing_launches_while_a_staging_cell_holds_yours() {
+        let mut sim = cleared(19);
+        travel_to(&mut sim, SATURN);
+        let room = sim.rooms().find(RoomKind::Trade).expect("alongside");
+        assert_eq!(sim.launch_gate(), Ok(()), "an empty caller holds nothing");
+        assert!(sim.detained_cargo().is_empty());
+        let mut swept = 0;
+        for (x, y) in tiles(&sim, room, Tile::Staging) {
+            if !placement_legal(
+                &sim.rooms,
+                &sim.pieces,
+                u32::MAX,
+                Kind::RationBricks,
+                room,
+                x,
+                y,
+            ) {
+                continue;
+            }
+            let id = inject_at(&mut sim, Kind::RationBricks, Loc::Hold { room, x, y });
+            assert_eq!(
+                sim.launch_gate(),
+                Err(Refusal::Cargo),
+                "the lever flew with a crate on staging ({x}, {y})"
+            );
+            assert_eq!(
+                sim.detained_cargo(),
+                vec![id],
+                "the frame does not point at what holds the launch at ({x}, {y})"
+            );
+            sim.pieces.retain(|p| p.id != id);
+            swept += 1;
+        }
+        assert!(swept > 0, "a market with no staging cell is not a market");
+        assert_eq!(
+            sim.launch_gate(),
+            Ok(()),
+            "the deck cleared and it still refuses"
+        );
+    }
+
+    /// **The refusal names something the player can pick back up.**
+    ///
+    /// The soft-lock this class could have reintroduced, refused in
+    /// advance: a staging cell that took cargo and would not give it
+    /// back is a launch refusal nobody can satisfy. Every staging berth
+    /// a piece may take is one the same arbiter will lift it out of, and
+    /// there is a berth aboard to carry it to — so the sentence "clear
+    /// the deck and go" is always a thing the player can actually do.
+    ///
+    /// The geometric half of the same guarantee — that no station's
+    /// furniture fences a staging cell off from every place a body may
+    /// stand — is the gauntlet's `berth-reached`, which is deliberately
+    /// **not** narrowed for staging (`cabin::gauntlet`).
+    #[test]
+    fn every_staging_cell_gives_back_what_it_took() {
+        let mut swept = 0;
+        // Every calling kind the game has, on the ship's own starting
+        // board — the loaded cabin, not an empty one, so "there is a
+        // berth aboard" is a claim about a real ship.
+        for host in room::ROOM_KINDS.into_iter().filter(|kind| !kind.riding()) {
+            for kind in [Kind::RationBricks, Kind::PerfumeVial, Kind::WallLamp] {
+                let mut sim = Sim::new(23);
+                let room = sim
+                    .rooms
+                    .spawn(host, CABIN)
+                    .unwrap_or_else(|why| panic!("a {host:?} comes alongside: {why:?}"));
+                for (x, y) in tiles(&sim, room, Tile::Staging) {
+                    if !placement_legal(&sim.rooms, &sim.pieces, u32::MAX, kind, room, x, y) {
+                        continue;
                     }
-                    Cue::RatNibble => {
-                        assert_eq!(sim.tick(), due_nibble, "nibble off schedule");
-                        due_nibble = sim.rat().expect("it nibbled, it is aboard").next_nibble;
-                        nibbles += 1;
-                    }
-                    _ => {}
+                    let id = inject_at(&mut sim, kind, Loc::Hold { room, x, y });
+                    let piece = *sim.pieces().iter().find(|p| p.id == id).unwrap();
+                    // Liftable: nothing pins a crate to a station's deck.
+                    assert!(
+                        !cargo::laid_pinned(sim.rooms(), &sim.pieces, &piece),
+                        "{host:?}: a {kind:?} on staging ({x}, {y}) is pinned where it stands"
+                    );
+                    // And somewhere aboard to carry it to.
+                    assert!(
+                        first_fit(&sim.rooms, &sim.pieces, id, kind).is_some(),
+                        "{host:?}: staging ({x}, {y}) took a {kind:?} the ship has no berth for"
+                    );
+                    sim.pieces.retain(|p| p.id != id);
+                    swept += 1;
                 }
             }
         }
-        // 13 of 24 cells stowed keeps it fed through the Venus dock.
-        assert!(sim.rat().is_some(), "the rat left a well-stocked hold");
-        // ~10 s hops and ~45 s nibbles across 100 s of sim time.
-        assert!((7..=13).contains(&skitters), "{skitters} skitters in 100 s");
-        assert!((1..=3).contains(&nibbles), "{nibbles} nibbles in 100 s");
-        assert!(
-            sim.pieces().iter().any(|p| p.gnawed),
-            "a nibble must leave a mark"
-        );
+        assert!(swept > 0, "nothing was staged anywhere");
     }
+
+    // ---- The gangway law ----
 
     #[test]
-    fn the_nibble_gnaws_the_nearest_piece_breaking_ties_low() {
-        // Scripted: the rat placed by hand between the starter pieces —
-        // scrap (id 0) at (0,2)-(1,2), vial (id 1) at (0,0), pearls (id 2)
-        // at (2,0)-(2,1) — with the nibble due on the next tick.
-        let mut sim = Sim::new(7);
-        sim.rats.rat = Some(Rat {
-            cell: (1, 1),
-            prev_cell: (1, 1),
-            moved_at: 0,
-            next_move: u64::MAX,
-            next_nibble: 1,
-            chases: 0,
-        });
-        sim.advance(TICK_DT, &InputFrame::default());
-        assert_eq!(sim.cues(), [Cue::RatNibble]);
-        let gnawed = |sim: &Sim| -> Vec<u32> {
-            sim.pieces()
-                .iter()
-                .filter(|p| p.gnawed)
-                .map(|p| p.id)
-                .collect()
-        };
-        // From (1,1) both the scrap and the pearls are one cell away; the
-        // vial is two. The tie breaks to the lower id: the scrap.
-        assert_eq!(gnawed(&sim), [0], "nearest rule or tie-break broke");
-        // Perched on the pearls, distance zero wins outright.
-        sim.rats.rat.as_mut().expect("still aboard").cell = (2, 1);
-        sim.rats.rat.as_mut().expect("still aboard").next_nibble = 2;
-        sim.advance(TICK_DT, &InputFrame::default());
-        assert_eq!(sim.cues(), [Cue::RatNibble]);
-        assert_eq!(gnawed(&sim), [0, 2]);
-        // A re-gnaw of a bitten piece changes nothing but the sound.
-        sim.rats.rat.as_mut().expect("still aboard").next_nibble = 3;
-        let before = sim.pieces().to_vec();
-        sim.advance(TICK_DT, &InputFrame::default());
-        assert_eq!(sim.cues(), [Cue::RatNibble]);
-        assert_eq!(sim.pieces(), before, "a re-gnaw must change nothing");
-    }
-
-    #[test]
-    fn three_chases_evict_the_stowaway() {
-        let mut sim = rat_underway();
-        for round in 1..=2_u8 {
-            let cell = sim.rat().expect("still aboard").cell;
-            let at = cell_center(cell.0, cell.1);
-            sim.advance(0.0, &press_at(at.x, at.y));
-            assert_eq!(sim.cues(), [Cue::RatChased], "chase {round}");
-            let rat = sim.rat().expect("two chases are survivable");
-            assert_eq!(rat.chases, round);
-            assert_ne!(rat.cell, cell, "a chased rat relocates instantly");
-            assert!(sim.held(0).is_none(), "a chase lifts nothing");
-        }
-        let cell = sim.rat().expect("still aboard").cell;
-        let at = cell_center(cell.0, cell.1);
-        sim.advance(0.0, &press_at(at.x, at.y));
-        assert_eq!(sim.cues(), [Cue::RatChased, Cue::RatLeft]);
-        assert!(sim.rat().is_none(), "the third chase abandons ship");
-    }
-
-    #[test]
-    fn a_press_on_a_perched_rat_chases_and_never_lifts_the_piece() {
-        let mut sim = Sim::new(rat_seed());
-        fill_hold(&mut sim);
-        launch(&mut sim, SATURN);
-        let rat = sim.rat().expect("a full hold still boards");
-        assert!(
-            cell_covered(&sim, rat.cell),
-            "a full hold leaves only perches"
-        );
-        let at = cell_center(rat.cell.0, rat.cell.1);
-        let before = sim.pieces().to_vec();
-        sim.advance(0.0, &press_at(at.x, at.y));
-        // Rat first: no Pickup, no cargo cues, nothing lifted or moved.
-        assert_eq!(sim.cues(), [Cue::RatChased]);
-        assert!(sim.held(0).is_none(), "the piece under the rat stays put");
-        assert_eq!(sim.pieces(), before);
-        // The rat hopped away, so the same press now lifts that piece: a
-        // piece pick happens exactly where no rat sits.
-        assert_ne!(sim.rat().expect("chased, not gone").cell, rat.cell);
-        sim.advance(0.0, &press_at(at.x, at.y));
-        assert_eq!(sim.cues(), [Cue::Pickup]);
-        assert!(sim.held(0).is_some());
-    }
-
-    #[test]
-    fn a_lean_hold_at_the_dock_sends_the_rat_ashore() {
-        let mut sim = rat_underway();
-        travel_to_dock(&mut sim);
-        assert!(
-            sim.rat().is_some(),
-            "13 of 24 cells is plenty to eat: it stays aboard"
-        );
-        // Test scaffolding: unload the injected bricks as if traded away,
-        // leaving the starter 5 of 24 cells — under the walk-off gate.
-        sim.pieces
-            .retain(|p| !(p.kind == Kind::RationBricks && matches!(p.loc, Loc::Hold { .. })));
-        launch(&mut sim, GUILD);
-        let mut left_at = None;
-        while matches!(sim.ship().state, ShipState::Traveling { .. }) {
-            sim.advance(TICK_DT, &InputFrame::default());
-            if sim.cues().contains(&Cue::RatLeft) {
-                left_at = Some(sim.tick());
-                assert!(
-                    sim.cues().contains(&Cue::Arrive),
-                    "the walk-off happens at the dock, not mid-flight"
-                );
-            }
-        }
-        assert!(left_at.is_some(), "nothing to eat: the rat walks");
-        assert!(sim.rat().is_none());
-    }
-
-    /// Fast-forward the current leg onto its dock.
-    fn travel_to_dock(sim: &mut Sim) {
-        let leg = leg_of(sim);
-        sim.fast_forward(leg + 10);
-        assert!(matches!(sim.ship().state, ShipState::Docked(_)));
-    }
-
-    #[test]
-    fn a_gnawed_piece_still_trades_and_the_station_resells_it_bitten() {
-        // A run whose opening shelf has a free slot, so the gifted piece
-        // restocks instead of vanishing into the back room.
-        let seed = (0_u64..64)
-            .find(|&s| {
-                Sim::new(s)
-                    .pieces()
-                    .iter()
-                    .filter(|p| matches!(p.loc, Loc::StationShelf { .. }))
-                    .count()
-                    < 4
-            })
-            .expect("no shelf with a free slot in 64 seeds");
-        let mut sim = Sim::new(seed);
-        // Bite the vial by hand (the schedule tests earn the nibble).
-        let vial = sim
-            .pieces
-            .iter_mut()
+    fn the_launch_gate_reads_bodies_cargo_offers_and_events() {
+        let mut sim = Sim::new(51);
+        assert_eq!(sim.launch_gate(), Ok(()));
+        // A body in the station's room strands that body.
+        sim.occupied[0] = TRADE;
+        assert_eq!(sim.launch_gate(), Err(Refusal::Aboard));
+        sim.occupied[0] = CABIN;
+        // A proposal standing on the offer area strands the proposal.
+        let to = offer(&sim, TRADE, 0);
+        drag(&mut sim, cabin(3, 3), to);
+        assert_eq!(sim.launch_gate(), Err(Refusal::Cargo));
+        // Carrying it back aboard clears both.
+        let piece = *sim
+            .pieces()
+            .iter()
             .find(|p| p.kind == Kind::PerfumeVial)
-            .expect("starter vial");
-        vial.gnawed = true;
-        let vial = vial.id;
-        // Gift it through the lever: the one door out.
-        drag(
-            &mut sim,
-            cell_center(0, 0),
-            slot_center(&layout::GIVE_SLOTS, 0),
-        );
-        let accept = rect_center(layout::ACCEPT_LEVER);
-        sim.advance(0.0, &press_at(accept.x, accept.y));
-        assert!(
-            matches!(sim.cues(), [Cue::Accept { .. }]),
-            "a gnawed gift still trades: {:?}",
-            sim.cues()
-        );
-        // It restocked the shelf still bitten: the gnaw travels the economy.
-        let resold = sim
+            .unwrap();
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        drag(&mut sim, from, cabin(3, 3));
+        assert_eq!(sim.launch_gate(), Ok(()));
+    }
+
+    #[test]
+    fn a_seam_that_could_strand_anything_refuses_to_part() {
+        let mut sim = Sim::new(52);
+        // The cabin is the root and never parts.
+        assert_eq!(sim.part_check(CABIN), Err(Refusal::Root));
+        // A body in the room refuses.
+        sim.occupied[0] = TRADE;
+        assert_eq!(sim.part_check(TRADE), Err(Refusal::Aboard));
+        sim.occupied[0] = CABIN;
+        // Cargo of ours in the room refuses.
+        let to = offer(&sim, TRADE, 0);
+        drag(&mut sim, cabin(3, 3), to);
+        assert_eq!(sim.part_check(TRADE), Err(Refusal::Cargo));
+        // Take it back and the seam parts, taking the station's goods.
+        let piece = *sim
             .pieces()
             .iter()
-            .find(|p| p.id == vial)
-            .expect("restocked, not destroyed");
-        assert!(matches!(resold.loc, Loc::StationShelf { .. }));
-        assert!(resold.gnawed, "the bite is permanent");
+            .find(|p| p.kind == Kind::PerfumeVial)
+            .unwrap();
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        drag(&mut sim, from, cabin(3, 3));
+        assert_eq!(sim.part_check(TRADE), Ok(()));
+        let detach = InputFrame {
+            detach: Some(TRADE),
+            ..InputFrame::default()
+        };
+        sim.advance(0.0, &detach);
+        assert!(sim.cues().contains(&Cue::Parted));
+        assert_eq!(sim.rooms().kind(TRADE), None);
+        assert!(sim.barter().is_none());
+        assert!(
+            sim.pieces()
+                .iter()
+                .all(|p| !matches!(p.loc, Loc::Hold { room: TRADE, .. })),
+            "the station's goods left with the station"
+        );
     }
 
+    /// **A room that rides refuses to part**, and every other room still
+    /// does.
+    ///
+    /// Detach is how you leave a room you called at: the seam shuts and
+    /// the place goes on without you. A riding room is equipment the
+    /// ship owns, so there is nothing on the far side of its seam to be
+    /// left behind — the press that parted the furnace destroyed it,
+    /// with the fire and the hopper and the banked stoke inside, and
+    /// nothing anywhere gave it back. The law is asked of the KIND
+    /// (`RoomKind::riding`, which the launch gate already turns on) and
+    /// not of the burner by name, so a crew module added tomorrow is
+    /// safe on the day it is written.
     #[test]
-    fn saves_continue_mid_rat_tenure_with_the_bite_intact() {
-        let mut sim = rat_underway();
-        // Deep enough into the leg that the rat has skittered and nibbled.
-        let mut nibbled = false;
-        for _ in 0..3000 {
-            sim.advance(TICK_DT, &InputFrame::default());
-            nibbled |= sim.cues().contains(&Cue::RatNibble);
+    fn a_riding_room_refuses_to_part() {
+        let mut sim = Sim::new(53);
+        for kind in [RoomKind::Trade, RoomKind::Wreck, RoomKind::Parlor] {
+            let _ = sim.rooms.spawn(kind, CABIN);
         }
-        assert!(nibbled, "the first nibble lands inside 50 s");
-        assert!(sim.pieces().iter().any(|p| p.gnawed));
-        let restored = Sim::from_save(&sim.save_string()).expect("own save must parse");
-        assert_eq!(restored.rat(), sim.rat());
-        assert_eq!(restored.pieces(), sim.pieces());
-        assert_eq!(restored.legs(), sim.legs());
-        assert_save_continues(sim, 8_000);
-    }
-
-    #[test]
-    fn fast_forward_matches_stepwise_across_a_rat_tenure() {
-        let base = rat_underway();
-        // Through every skitter, the first nibble, and the Venus dock.
-        let n = leg_of(&base) + 200;
-        let mut ff = base.clone();
-        ff.fast_forward(n);
-        assert!(ff.cues().is_empty(), "fast_forward must suppress rat cues");
-        let mut step = base;
-        for _ in 0..n {
-            step.advance(TICK_DT, &InputFrame::default());
-        }
-        assert_eq!(ff.save_string(), step.save_string());
-        assert_eq!(ff.rat(), step.rat());
-        assert_eq!(ff.pieces(), step.pieces());
-    }
-
-    // ------------------------------------------------- polish-pass tests --
-
-    #[test]
-    fn inner_to_inner_courses_need_a_transit_chit() {
-        // From the Guild, the inner ring is open: nobody polices arrivals
-        // from outside.
-        let mut sim = Sim::new(4);
-        let venus = sim.poi_pos(0);
-        sim.advance(0.0, &press_at(venus.x, venus.y));
-        assert_eq!(sim.cues(), [Cue::Select]);
-        assert_eq!(sim.ship().selected, Some(0));
-
-        // Docked AT Venus, its rivals check papers.
-        travel_to(&mut sim, 0);
-        let earth = sim.poi_pos(1);
-        sim.advance(0.0, &press_at(earth.x, earth.y));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-        assert_eq!(sim.ship().selected, None, "charted inner-to-inner bare");
-
-        // Leaving the ring entirely stays free.
-        let saturn = sim.poi_pos(SATURN);
-        sim.advance(0.0, &press_at(saturn.x, saturn.y));
-        assert_eq!(sim.cues(), [Cue::Select]);
-
-        // With a chit aboard the course opens...
-        let chit = inject_hold(&mut sim, Kind::TransitChit, 5, 3);
-        sim.advance(0.0, &press_at(earth.x, earth.y));
-        assert_eq!(sim.cues(), [Cue::Select]);
-        assert_eq!(sim.ship().selected, Some(1));
-
-        // ...and papers vanishing between charting and the lever disarm
-        // the selection rather than launching an illegal course.
-        sim.pieces.retain(|piece| piece.id != chit);
-        let lever = rect_center(layout::LAUNCH_LEVER);
-        sim.advance(0.0, &press_at(lever.x, lever.y));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-        assert_eq!(sim.ship().selected, None);
-        assert!(matches!(sim.ship().state, ShipState::Docked(_)));
-    }
-
-    #[test]
-    fn the_umbra_market_only_answers_at_night() {
-        let mut sim = Sim::new(4);
-        let umbra = sim.poi_pos(UMBRA);
-        sim.advance(0.0, &press_at(umbra.x, umbra.y));
-        assert_eq!(sim.ship().selected, None, "the market was open by day");
-
-        let mut press = press_at(umbra.x, umbra.y);
-        press.night = true;
-        sim.advance(0.0, &press);
-        assert_eq!(sim.cues(), [Cue::Select]);
-        assert_eq!(sim.ship().selected, Some(UMBRA));
-    }
-
-    #[test]
-    fn shift_press_moves_cargo_to_its_obvious_slot() {
-        let mut sim = Sim::new(5);
-        // Hold piece -> first free give slot.
-        let from = cell_center(0, 0);
-        let mut press = press_at(from.x, from.y);
-        press.shift = true;
-        sim.advance(0.0, &press);
-        assert_eq!(sim.cues(), [Cue::Place]);
-        assert!(sim.held(0).is_none(), "shift must move, never lift");
-        assert!(
-            sim.pieces()
-                .iter()
-                .any(|p| p.loc == Loc::GivePad { slot: 0 }),
-            "the vial should sit on give pad 0"
-        );
-
-        // Give pad piece -> back to the first legal hold cell.
-        let back = slot_center(&layout::GIVE_SLOTS, 0);
-        let mut press = press_at(back.x, back.y);
-        press.shift = true;
-        sim.advance(0.0, &press);
-        assert_eq!(sim.cues(), [Cue::Place]);
-        assert!(
-            sim.pieces()
-                .iter()
-                .all(|p| !matches!(p.loc, Loc::GivePad { .. })),
-            "the give pad should be empty again"
-        );
-
-        // Shelf good -> first free take slot.
-        let shelf_piece = sim
-            .pieces()
-            .iter()
-            .find(|p| matches!(p.loc, Loc::StationShelf { .. }))
-            .expect("a fresh dock shelves goods");
-        let at = rect_center(layout::piece_rect(shelf_piece));
-        let mut press = press_at(at.x, at.y);
-        press.shift = true;
-        sim.advance(0.0, &press);
-        assert_eq!(sim.cues(), [Cue::Place]);
-        assert!(
-            sim.pieces()
-                .iter()
-                .any(|p| p.loc == Loc::TakePad { slot: 0 }),
-            "the shelf good should sit on take pad 0"
-        );
-    }
-
-    #[test]
-    fn patience_runs_out_shutters_the_shop_and_a_gift_reopens_it() {
-        let mut sim = Sim::new(6);
-        // Ask for the first shelf good with nothing offered: never ready.
-        drag(
-            &mut sim,
-            slot_center(&layout::SHELF_SLOTS, 0),
-            slot_center(&layout::TAKE_SLOTS, 0),
-        );
-        let lever = rect_center(layout::ACCEPT_LEVER);
-        for pull in 1..=PATIENCE {
-            sim.advance(0.0, &press_at(lever.x, lever.y));
-            let cues = sim.cues();
-            assert_eq!(cues.first(), Some(&Cue::Refuse), "pull {pull}");
-            if pull == PATIENCE {
-                assert!(cues.contains(&Cue::Shutter), "no shutter on the last straw");
+        let mut riding = 0;
+        let mut calling = 0;
+        for (id, room) in sim.rooms().iter() {
+            let refusal = sim.part_check(id);
+            if room.kind.riding() {
+                riding += 1;
+                assert_eq!(
+                    refusal,
+                    if id == CABIN {
+                        Err(Refusal::Root)
+                    } else {
+                        Err(Refusal::Riding)
+                    },
+                    "room {id} rides and was let go"
+                );
+            } else {
+                calling += 1;
+                assert_ne!(refusal, Err(Refusal::Riding), "room {id} does not ride");
             }
         }
-        let barter = sim.barter().expect("still docked");
-        assert_eq!(barter.patience, 0);
         assert!(
-            sim.pieces()
-                .iter()
-                .all(|p| !matches!(p.loc, Loc::StationShelf { .. } | Loc::TakePad { .. })),
-            "the station should have withdrawn its goods"
+            riding >= 2 && calling >= 3,
+            "{riding} riding, {calling} not"
         );
-
-        // A gift through the shutters reopens them a crack.
-        drag(
-            &mut sim,
-            cell_center(0, 0),
-            slot_center(&layout::GIVE_SLOTS, 0),
-        );
-        sim.advance(0.0, &press_at(lever.x, lever.y));
-        assert!(
-            sim.cues().iter().any(|c| matches!(c, Cue::Accept { .. })),
-            "a gift is always accepted, shutters or not"
-        );
-        assert_eq!(sim.barter().expect("docked").patience, 1);
+        // The furnace stays, the press is answered, and nothing in it is
+        // lost: a refusal is a cue, so the room is still there after it.
+        let fuel = sim.pieces().len();
+        let detach = InputFrame {
+            detach: Some(BURNER),
+            ..InputFrame::default()
+        };
+        sim.advance(0.0, &detach);
+        assert_eq!(sim.rooms().kind(BURNER), Some(RoomKind::Burner));
+        assert_eq!(sim.pieces().len(), fuel, "a refused detach ate something");
+        assert!(sim.cues().contains(&Cue::Refit {
+            refusal: Refusal::Riding
+        }));
+        assert!(!sim.cues().contains(&Cue::Parted));
     }
 
     #[test]
-    fn trading_a_kind_teaches_its_value_and_burns_off_the_fog() {
-        let mut sim = Sim::new(7);
-        // Home turf: the Guild's ledger starts fully familiar.
-        drag(
-            &mut sim,
-            cell_center(0, 0),
-            slot_center(&layout::GIVE_SLOTS, 0),
+    fn attach_and_detach_ride_the_input_schedule() {
+        let mut sim = Sim::new(54);
+        // The cabin's port-side door to the pump bay's one door: a
+        // forecourt declares a single seam and mates through it.
+        let attach = InputFrame {
+            attach: Some(Attach {
+                anchor: CABIN,
+                anchor_port: 3,
+                kind: RoomKind::Pump,
+                port: 0,
+            }),
+            ..InputFrame::default()
+        };
+        sim.advance(0.0, &attach);
+        assert!(sim.cues().contains(&Cue::Attached));
+        let added = sim.rooms().find(RoomKind::Pump).expect("the pump attached");
+        // A slot the pump bay does not declare is refused by name, and
+        // the ladder it no longer carries is one of them.
+        let phantom = InputFrame {
+            attach: Some(Attach {
+                anchor: CABIN,
+                anchor_port: room::LADDER,
+                kind: RoomKind::Pump,
+                port: room::HATCH,
+            }),
+            ..InputFrame::default()
+        };
+        sim.advance(0.0, &phantom);
+        assert_eq!(
+            sim.cues(),
+            [Cue::Refit {
+                refusal: Refusal::Absent
+            }]
         );
-        assert!(
-            sim.barter().expect("docked").fog.abs() < f32::EPSILON,
-            "the Guild is home; nothing there is guesswork"
+        // The same port twice is refused by name, and nothing changes.
+        sim.advance(0.0, &attach);
+        assert_eq!(
+            sim.cues(),
+            [Cue::Refit {
+                refusal: Refusal::Mated
+            }]
         );
-        drag(
-            &mut sim,
-            slot_center(&layout::GIVE_SLOTS, 0),
-            cell_center(0, 0),
-        );
+        // An unresolved event room blocks the next takeoff.
+        assert_eq!(sim.launch_gate(), Err(Refusal::Pending));
+        let detach = InputFrame {
+            detach: Some(added),
+            ..InputFrame::default()
+        };
+        sim.advance(0.0, &detach);
+        assert!(sim.cues().contains(&Cue::Parted));
+        assert_eq!(sim.launch_gate(), Ok(()));
+    }
 
-        // Abroad, the same cargo reads foggy until it is traded once.
-        travel_to(&mut sim, SATURN);
-        drag(
-            &mut sim,
-            cell_center(0, 0),
-            slot_center(&layout::GIVE_SLOTS, 0),
-        );
-        let foggy = sim.barter().expect("docked").fog;
-        assert!(foggy > 0.0, "an untraded kind should fog the dial");
-        let lever = rect_center(layout::ACCEPT_LEVER);
-        sim.advance(0.0, &press_at(lever.x, lever.y));
-        assert!(
-            sim.cues().iter().any(|c| matches!(c, Cue::Accept { .. })),
-            "the gift concludes"
-        );
-        // The vial is now a known quantity at Saturn, this run and forever.
-        drag(
-            &mut sim,
-            slot_center(&layout::SHELF_SLOTS, 0),
-            slot_center(&layout::TAKE_SLOTS, 0),
-        );
-        assert!(sim.kind_familiar(Kind::PerfumeVial));
+    // ---- Conservation ----
 
-        // And the ledger survives the save round trip.
-        let restored = Sim::from_save(&sim.save_string()).expect("own save parses");
-        assert_eq!(restored.familiar, sim.familiar);
-        assert_eq!(restored.save_string(), sim.save_string());
+    /// The named doors a piece may leave by. Everything else is theft.
+    fn conservation_door(cue: Cue) -> bool {
+        matches!(
+            cue,
+            Cue::Accept { .. }
+                | Cue::Burn { .. }
+                | Cue::Delivered
+                | Cue::Exchange
+                | Cue::Parted
+                | Cue::Harvest { .. }
+                | Cue::FluffBirth
+                | Cue::CasinoWin
+                | Cue::Arrive
+                | Cue::Depart
+                | Cue::Reseed
+        )
+    }
+
+    /// Random input, including carries that cross a doorway, never loses
+    /// a piece except through one of the named ceremonies. The interesting
+    /// interleaving now is a carry that crosses a seam.
+    #[test]
+    fn no_input_stream_loses_cargo_without_a_ceremony() {
+        let mut rng = fastrand::Rng::with_seed(0x5EA1);
+        for run in 0..24 {
+            let mut sim = Sim::new(run);
+            inject_rat(&mut sim);
+            let mut count = sim.pieces().len();
+            for _ in 0..900 {
+                // Aim mostly at the rooms' own lanes, so carries really do
+                // cross seams instead of flapping at empty world.
+                let target = match rng.u8(..6) {
+                    0 => rect_center(layout::LAUNCH_LEVER),
+                    1 => cabin(rng.u8(0..22), rng.u8(0..13)),
+                    2 => cell_center(BURNER, rng.u8(0..14), rng.u8(0..9)),
+                    3 => cell_center(TRADE, rng.u8(0..16), rng.u8(0..11)),
+                    4 => Vec2::new(rng.f32() * 800.0, rng.f32() * 600.0),
+                    _ => {
+                        let pieces = sim.pieces();
+                        if pieces.is_empty() {
+                            cabin(5, 5)
+                        } else {
+                            let piece = pieces[rng.usize(..pieces.len())];
+                            rect_center(layout::piece_rect(sim.rooms(), pieces, &piece))
+                        }
+                    }
+                };
+                let input = InputFrame {
+                    pointer: target,
+                    press: rng.bool(),
+                    held: rng.bool(),
+                    release: rng.bool(),
+                    shift: rng.u8(..8) == 0,
+                    detach: (rng.u8(..64) == 0).then(|| rng.u8(..4)),
+                    ..InputFrame::default()
+                };
+                sim.advance(TICK_DT, &input);
+                let door = sim.cues().iter().copied().any(conservation_door);
+                let now = sim.pieces().len();
+                assert!(
+                    now >= count || door,
+                    "a piece vanished with no ceremony: {:?}",
+                    sim.cues()
+                );
+                count = now;
+            }
+        }
+    }
+
+    /// The same, in lockstep, with six crew grabbing at once.
+    #[test]
+    fn no_crew_input_stream_loses_cargo_without_a_ceremony() {
+        let mut rng = fastrand::Rng::with_seed(0xC5EA);
+        for run in 0..8 {
+            let mut sim = Sim::new(run);
+            let mut count = sim.pieces().len();
+            for _ in 0..500 {
+                let mut frames = [InputFrame::default(); MAX_CREW];
+                for frame in &mut frames {
+                    let target = match rng.u8(..4) {
+                        0 => cabin(rng.u8(0..22), rng.u8(0..13)),
+                        1 => cell_center(BURNER, rng.u8(0..14), rng.u8(0..9)),
+                        2 => cell_center(TRADE, rng.u8(0..16), rng.u8(0..11)),
+                        _ => {
+                            let pieces = sim.pieces();
+                            let piece = pieces[rng.usize(..pieces.len())];
+                            rect_center(layout::piece_rect(sim.rooms(), pieces, &piece))
+                        }
+                    };
+                    *frame = InputFrame {
+                        pointer: target,
+                        press: rng.bool(),
+                        held: rng.bool(),
+                        release: rng.bool(),
+                        ..InputFrame::default()
+                    };
+                }
+                sim.crew_tick(&frames);
+                let door = sim.cues().iter().copied().any(conservation_door);
+                let now = sim.pieces().len();
+                assert!(now >= count || door, "a piece vanished in the crowd");
+                count = now;
+            }
+        }
+    }
+
+    // ---- Cabinets and dressings ----
+
+    #[test]
+    fn cubby_flow_stows_grabs_back_and_quick_pops() {
+        let mut sim = cleared(61);
+        let cabinet = inject_hold(&mut sim, Kind::Cabinet, 5, 5);
+        let vial = inject_hold(&mut sim, Kind::PerfumeVial, 3, 3);
+        let body = layout::piece_rect(
+            sim.rooms(),
+            sim.pieces(),
+            sim.pieces().iter().find(|p| p.id == cabinet).unwrap(),
+        );
+        let cubby = rect_center(layout::cubby_rect(body, 0));
+        drag(&mut sim, cabin(3, 3), cubby);
+        assert_eq!(
+            sim.pieces().iter().find(|p| p.id == vial).unwrap().loc,
+            Loc::Stow { cabinet, slot: 0 }
+        );
+        // An occupied cabinet will not budge.
+        let anchor = rect_center(layout::cell_rect(CABIN, 5, 5));
+        sim.advance(0.0, &press_at(anchor.x, anchor.y));
+        assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
+        assert_eq!(sim.last_violation(), Some(Violation::Occupied));
+        // Shift pops it back aboard.
+        sim.advance(
+            0.0,
+            &InputFrame {
+                pointer: cubby,
+                press: true,
+                held: true,
+                shift: true,
+                ..InputFrame::default()
+            },
+        );
+        assert!(matches!(
+            sim.pieces().iter().find(|p| p.id == vial).unwrap().loc,
+            Loc::Hold { .. }
+        ));
     }
 
     #[test]
-    fn the_comet_hands_over_free_ice_and_no_barter() {
-        let mut sim = Sim::new(8);
-        let hold_before = sim
-            .pieces()
-            .iter()
-            .filter(|p| matches!(p.loc, Loc::Hold { .. }))
-            .count();
-        sim.dock(COMET);
-        assert!(sim.barter().is_none(), "comets do not haggle");
-        assert!(sim.cues().iter().any(|c| matches!(c, Cue::Harvest { .. })));
-        let ice = sim
-            .pieces()
-            .iter()
-            .filter(|p| matches!(p.loc, Loc::Hold { .. }) && p.kind == Kind::CometIce)
-            .count();
-        assert!(ice >= 1, "no ice chipped off");
-        assert!(
-            sim.pieces()
-                .iter()
-                .filter(|p| matches!(p.loc, Loc::Hold { .. }))
-                .count()
-                > hold_before
+    fn dressings_lay_pin_and_peel() {
+        let mut sim = cleared(62);
+        let rug = inject_at(
+            &mut sim,
+            Kind::Rug,
+            Loc::Laid {
+                room: CABIN,
+                x: 4,
+                y: 7,
+            },
         );
-        // The accept lever is dead furniture here; launching still works.
-        let lever = rect_center(layout::ACCEPT_LEVER);
-        sim.advance(0.0, &press_at(lever.x, lever.y));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
+        let couch = inject_hold(&mut sim, Kind::Couch, 4, 7);
+        assert!(cargo::laid_pinned(
+            sim.rooms(),
+            sim.pieces(),
+            sim.pieces().iter().find(|p| p.id == rug).unwrap()
+        ));
+        // A pinned rug refuses to lift.
+        let at = cabin(4, 7);
+        sim.advance(0.0, &press_at(at.x, at.y));
+        assert!(sim.held(0).is_some(), "the couch lifts, not the rug");
+        sim.advance(0.0, &release_at(at.x, at.y));
+        // Move the couch, then the rug peels.
+        drag(&mut sim, cabin(4, 7), cabin(7, 4));
+        assert!(matches!(
+            sim.pieces().iter().find(|p| p.id == couch).unwrap().loc,
+            Loc::Hold { .. }
+        ));
+        drag(&mut sim, cabin(4, 7), cabin(4, 9));
+        assert_eq!(
+            sim.pieces().iter().find(|p| p.id == rug).unwrap().loc,
+            Loc::Laid {
+                room: CABIN,
+                x: 4,
+                y: 9
+            }
+        );
+    }
+
+    // ---- The burner room ----
+
+    #[test]
+    fn the_hopper_is_reversible_and_rides_into_the_fire() {
+        let mut sim = cleared(71);
+        let fuel = inject_hold(&mut sim, Kind::PerfumeVial, 5, 5);
+        // Staging is an ordinary carry into an ordinary room.
+        drag(&mut sim, cabin(5, 5), cell_center(BURNER, 3, 3));
+        assert_eq!(
+            sim.pieces().iter().find(|p| p.id == fuel).unwrap().loc,
+            Loc::Hold {
+                room: BURNER,
+                x: 3,
+                y: 3
+            }
+        );
+        // Snatching it back out is an ordinary carry too.
+        drag(&mut sim, cell_center(BURNER, 3, 3), cabin(5, 5));
+        assert!(matches!(
+            sim.pieces().iter().find(|p| p.id == fuel).unwrap().loc,
+            Loc::Hold { room: CABIN, .. }
+        ));
+        // Cast off with it staged and the stoker takes it on the beat.
+        drag(&mut sim, cabin(5, 5), cell_center(BURNER, 3, 3));
         launch(&mut sim, SATURN);
+        let mut burned = false;
+        for _ in 0..STOKE_PERIOD * 2 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            if sim.cues().iter().any(|c| matches!(c, Cue::Burn { .. })) {
+                burned = true;
+                break;
+            }
+        }
+        assert!(burned, "the stoker never shovelled");
+        assert!(sim.pieces().iter().all(|p| p.id != fuel));
+        assert!(sim.stoked(), "a burn banks way");
+    }
+
+    /// Fuel simply stays staged, and the fire is the only thing that ever
+    /// takes it: conservation becomes total, and `Cue::Jettison` — the one
+    /// ceremony that still discarded — is gone from the vocabulary.
+    #[test]
+    fn fuel_waits_in_the_furnace_room_and_only_the_fire_takes_it() {
+        let mut sim = cleared(72);
+        for (i, cell) in [(3_u8, 3_u8), (4, 3), (6, 3)].into_iter().enumerate() {
+            inject_hold(&mut sim, Kind::PerfumeVial, 3 + i as u8, 5);
+            drag(
+                &mut sim,
+                cabin(3 + i as u8, 5),
+                cell_center(BURNER, cell.0, cell.1),
+            );
+        }
+        launch(&mut sim, SATURN);
+        let staged = sim.pieces().len();
+        let mut burns = 0;
+        for _ in 0..STOKE_PERIOD + 60 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            burns += count_cues(sim.cues(), |c| matches!(c, Cue::Burn { .. }));
+        }
+        assert!(burns > 0, "the stoker never shovelled");
+        assert_eq!(
+            sim.pieces().len(),
+            staged - burns,
+            "nothing left the ship but through the fire"
+        );
+        let waiting = sim
+            .pieces()
+            .iter()
+            .filter(|p| matches!(p.loc, Loc::Hold { room: BURNER, .. }))
+            .count();
+        assert_eq!(waiting, 3 - burns, "unburned fuel waits where it was set");
+    }
+
+    #[test]
+    fn the_fire_pushes_double_time() {
+        let mut sim = cleared(73);
+        inject_hold(&mut sim, Kind::Fluff, 5, 5);
+        drag(&mut sim, cabin(5, 5), cell_center(BURNER, 3, 3));
+        launch(&mut sim, SATURN);
+        for _ in 0..STOKE_PERIOD + 5 {
+            sim.advance(TICK_DT, &InputFrame::default());
+        }
+        assert!(sim.stoke() > 0);
+        let ShipState::Traveling { progress, .. } = sim.ship().state else {
+            panic!("still traveling")
+        };
+        assert!(
+            progress > STOKE_PERIOD,
+            "the fire should have made extra way"
+        );
+    }
+
+    // ---- The vital rule's new exits ----
+
+    #[test]
+    fn the_last_vital_instrument_refuses_every_exit() {
+        let mut sim = Sim::new(81);
+        // The offer area of a calling room is an exit.
+        let tank = *sim
+            .pieces()
+            .iter()
+            .find(|p| p.kind == Kind::ChartTank)
+            .unwrap();
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &tank));
+        let to = offer(&sim, TRADE, 0);
+        drag(&mut sim, from, to);
+        assert_eq!(sim.last_violation(), Some(Violation::Vital));
+        assert_eq!(
+            sim.pieces().iter().find(|p| p.id == tank.id).unwrap().loc,
+            tank.loc
+        );
+        // So is the incinerator, whose whole net is hazard — a wall
+        // instrument burns as readily as a couch, so it goes on the
+        // furnace room's wall, and the fire does not care which.
+        drag(&mut sim, from, cell_center(BURNER, 5, 0));
+        assert_eq!(sim.last_violation(), Some(Violation::Vital));
+        // A spare aboard releases the rule.
+        inject_hold(&mut sim, Kind::ChartTank, 0, 5);
+        drag(&mut sim, from, cell_center(BURNER, 5, 0));
+        assert!(matches!(
+            sim.pieces().iter().find(|p| p.id == tank.id).unwrap().loc,
+            Loc::Hold { room: BURNER, .. }
+        ));
+    }
+
+    #[test]
+    fn the_humming_crate_refuses_the_fire() {
+        let mut sim = cleared(82);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 4);
+        let from = cabin(4, 4);
+        drag(&mut sim, from, cell_center(BURNER, 3, 3));
+        assert_eq!(sim.last_violation(), Some(Violation::Suspicious));
+    }
+
+    // ---- Rooms and the encounters that bring them ----
+
+    /// Launch on a leg whose encounter is `kind`, searching seeds.
+    fn launched_with_encounter(kind: EncounterKind) -> Sim {
+        for seed in 0..4000_u64 {
+            let mut sim = cleared(seed);
+            launch(&mut sim, SATURN);
+            if sim
+                .encounter()
+                .is_some_and(|enc| enc.kind == kind && enc.end > enc.start + 60)
+            {
+                return sim;
+            }
+        }
+        panic!("no seed produced a {kind:?}");
+    }
+
+    /// Run to the encounter's window and stop just inside it.
+    fn into_the_window(sim: &mut Sim) {
+        let start = sim.encounter().expect("an encounter").start;
+        while !sim.encounter().is_some_and(Encounter::open) {
+            sim.advance(TICK_DT, &InputFrame::default());
+            assert!(
+                matches!(sim.ship().state, ShipState::Traveling { .. }),
+                "the leg ended before the window at {start}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_derelict_brings_its_hold_alongside_and_salvage_is_a_carry() {
+        let mut sim = launched_with_encounter(EncounterKind::Derelict);
+        into_the_window(&mut sim);
+        let wreck = sim.rooms().find(RoomKind::Wreck).expect("a hold attached");
+        let salvage = stock_ids(&sim, wreck);
+        assert!(!salvage.is_empty(), "a derelict with nothing in it");
+        // The salvage is the wreck's until claimed.
+        for id in &salvage {
+            let piece = sim.pieces().iter().find(|p| p.id == *id).unwrap();
+            assert!(!player_owned(sim.rooms(), sim.pieces(), piece.loc));
+        }
+        // Mark one and work the handshake: it is yours, on the floor.
+        let piece = *sim.pieces().iter().find(|p| p.id == salvage[0]).unwrap();
+        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        sim.advance(0.0, &press_at(at.x, at.y));
+        assert_eq!(sim.cues(), [Cue::Mark { on: true }]);
+        let shake = handshake(&sim, wreck);
+        sim.advance(0.0, &press_at(shake.x, shake.y));
+        assert!(matches!(sim.cues().first(), Some(Cue::Accept { .. })));
+        let claimed = sim.pieces().iter().find(|p| p.id == salvage[0]).unwrap();
+        assert!(player_owned(sim.rooms(), sim.pieces(), claimed.loc));
+        // An unresolved event blocks the next takeoff; shutting the door
+        // is free and always available — after the claim comes aboard.
+        let (room, x, y) =
+            first_fit(sim.rooms(), sim.pieces(), salvage[0], claimed.kind).expect("a berth");
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), claimed));
+        drag(&mut sim, from, cell_center(room, x, y));
+        assert_eq!(sim.part_check(wreck), Ok(()));
+    }
+
+    #[test]
+    fn the_gas_station_tops_up_exactly_once() {
+        let mut sim = launched_with_encounter(EncounterKind::GasStation);
+        into_the_window(&mut sim);
+        let pump = sim.rooms().find(RoomKind::Pump).expect("a pump bay");
+        let shake = handshake(&sim, pump);
+        let ShipState::Traveling { progress, .. } = sim.ship().state else {
+            panic!("traveling")
+        };
+        sim.advance(0.0, &press_at(shake.x, shake.y));
+        assert_eq!(sim.cues(), [Cue::GasBoost]);
+        let ShipState::Traveling {
+            progress: after, ..
+        } = sim.ship().state
+        else {
+            panic!("traveling")
+        };
+        assert!(after > progress, "the top-up skipped nothing");
+        sim.advance(0.0, &press_at(shake.x, shake.y));
+        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
+    }
+
+    #[test]
+    fn the_casino_transmutes_losses_and_pays_winners_on_its_own_floor() {
+        let mut sim = launched_with_encounter(EncounterKind::Casino);
+        inject_hold(&mut sim, Kind::BrinePearls, 4, 4);
+        into_the_window(&mut sim);
+        let parlor = sim.rooms().find(RoomKind::Parlor).expect("a parlor");
+        let wager = *sim
+            .pieces()
+            .iter()
+            .find(|p| p.kind == Kind::BrinePearls)
+            .unwrap();
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &wager));
+        let to = offer(&sim, parlor, 0);
+        drag(&mut sim, from, to);
+        let before = sim.pieces().len();
+        let shake = handshake(&sim, parlor);
+        sim.advance(0.0, &press_at(shake.x, shake.y));
+        let won = sim.cues().contains(&Cue::CasinoWin);
+        let lost = sim.cues().contains(&Cue::CasinoLoss);
+        assert!(won || lost, "the coin never came down: {:?}", sim.cues());
+        if won {
+            assert_eq!(sim.pieces().len(), before + 1, "a prize on the house floor");
+            assert_eq!(
+                sim.pieces().iter().find(|p| p.id == wager.id).unwrap().kind,
+                Kind::BrinePearls
+            );
+        } else {
+            assert_eq!(sim.pieces().len(), before, "conservation, not destruction");
+            assert_eq!(
+                sim.pieces().iter().find(|p| p.id == wager.id).unwrap().kind,
+                Kind::CasinoChip
+            );
+        }
+    }
+
+    #[test]
+    fn two_swats_knock_the_ad_drone_off() {
+        for seed in 0..4000_u64 {
+            let mut sim = cleared(seed);
+            launch(&mut sim, SATURN);
+            let mut attached = false;
+            for _ in 0..leg_of(&sim) {
+                sim.advance(TICK_DT, &InputFrame::default());
+                if sim.advertising() {
+                    attached = true;
+                    break;
+                }
+            }
+            if !attached {
+                continue;
+            }
+            for _ in 0..AD_SWATS {
+                let at = sim.drone_pos().expect("it is right there");
+                sim.advance(0.0, &press_at(at.x, at.y));
+            }
+            assert!(!sim.advertising());
+            return;
+        }
+        panic!("no seed produced an ad drone");
+    }
+
+    // ---- The rest of the world, unchanged by the rooms ----
+
+    #[test]
+    fn each_guild_docking_steals_the_crate_and_counts_it() {
+        let mut sim = cleared(91);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 4);
+        travel_to(&mut sim, SATURN);
+        travel_to(&mut sim, GUILD);
+        assert_eq!(sim.deliveries(), 1);
+        assert!(
+            sim.pieces().iter().all(|p| p.kind != Kind::SuspiciousCrate),
+            "the hangar took it"
+        );
+    }
+
+    /// Sit at the dock until `poi` can be charted — the comet has to come
+    /// round, and the Hermitage has to light its window.
+    fn wait_for(sim: &mut Sim, poi: PoiId) {
+        for _ in 0..20_000 {
+            if sim.poi_chartable(poi) {
+                return;
+            }
+            sim.fast_forward(30);
+        }
+        panic!("{poi} never became chartable");
+    }
+
+    #[test]
+    fn the_comet_hands_over_free_ice_and_no_counterparty() {
+        let mut sim = cleared(92);
+        wait_for(&mut sim, COMET);
+        travel_to(&mut sim, COMET);
+        assert!(sim.barter().is_none(), "a comet has no counterparty");
+        assert_eq!(sim.rooms().find(RoomKind::Trade), None);
+        assert!(
+            sim.pieces().iter().any(|p| p.kind == Kind::CometIce),
+            "no ice was chipped"
+        );
     }
 
     #[test]
     fn three_mysterious_crates_summon_and_feed_the_wanderer() {
-        let mut sim = Sim::new(9);
-        assert!(!sim.poi_visible(WANDERER), "??? showed up uninvited");
-        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 0);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 1);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 2);
-        assert!(sim.poi_visible(WANDERER), "three crates should call it");
-
-        sim.dock(WANDERER);
-        assert!(
-            !sim.cues().contains(&Cue::Exchange),
-            "nothing is automatic: the offering is the player's move"
-        );
-        assert!(sim.barter().is_none());
-        // Lay the toll on the rail, parcel by parcel: the third completes.
-        for (i, cell) in [(5_u8, 0_u8), (5, 1), (5, 2)].iter().enumerate() {
-            drag(
-                &mut sim,
-                cell_center(cell.0, cell.1),
-                rect_center(layout::FLOTSAM_SLOTS[i]),
-            );
-            let done = sim.cues().contains(&Cue::Exchange);
-            assert_eq!(done, i == 2, "offering completed at parcel {}", i + 1);
+        let mut sim = cleared(93);
+        for (i, cell) in [(3_u8, 3_u8), (5, 3), (7, 3)].into_iter().enumerate() {
+            let id = inject_hold(&mut sim, Kind::MysteriousCrate, cell.0, cell.1);
+            assert_eq!(id as usize, sim.next_piece as usize - 1);
+            let _ = i;
         }
-        assert_eq!(sim.mysterious_aboard(), 0, "the toll was not taken");
-        assert_eq!(
+        assert_eq!(sim.mysterious_aboard(), WANDERER_TOLL);
+        assert!(sim.poi_visible(WANDERER));
+        travel_to(&mut sim, WANDERER);
+        let room = sim.trade_room().expect("??? brings a room");
+        for (i, cell) in [(3_u8, 3_u8), (5, 3), (7, 3)].into_iter().enumerate() {
+            let to = offer(&sim, room, i);
+            drag(&mut sim, cabin(cell.0, cell.1), to);
+        }
+        assert!(
             sim.pieces()
                 .iter()
-                .filter(|p| p.kind == Kind::VeryMysteriousCrate)
-                .count(),
-            1
+                .any(|p| p.kind == Kind::VeryMysteriousCrate),
+            "??? never took the offering"
         );
-
-        // Delivered home, the hangar counts it four times.
-        let before = sim.deliveries();
-        travel_to(&mut sim, GUILD);
-        assert_eq!(sim.deliveries(), before + 4);
+        assert_eq!(sim.mysterious_aboard(), 0);
     }
 
     #[test]
-    fn a_suspicious_crate_blocks_the_exchange_and_nothing_is_taken() {
-        let mut sim = Sim::new(10);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 0);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 1, 0);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 3, 0);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 1, 1);
-        sim.dock(WANDERER);
-        for (i, cell) in [(1_u8, 0_u8), (3, 0), (1, 1)].iter().enumerate() {
-            drag(
-                &mut sim,
-                cell_center(cell.0, cell.1),
-                rect_center(layout::FLOTSAM_SLOTS[i]),
-            );
-        }
-        assert!(
-            !sim.cues().contains(&Cue::Exchange),
-            "two hums in one hold should quarrel"
-        );
-        assert_eq!(sim.mysterious_aboard(), 3, "the toll must not half-take");
+    fn inner_to_inner_courses_need_a_transit_chit() {
+        let mut sim = cleared(94);
+        travel_to(&mut sim, INNER_RING[0]);
+        assert!(sim.inner_ring_locked(INNER_RING[1]));
+        inject_hold(&mut sim, Kind::TransitChit, 5, 5);
+        assert!(!sim.inner_ring_locked(INNER_RING[1]));
     }
 
     #[test]
-    fn the_hermitage_shelves_nothing_until_gifts_have_been_given() {
-        let mut sim = Sim::new(12);
-        // A stranger only catches the Hermitage with its window lit.
-        while !sim.poi_visible(HERMITAGE) {
-            sim.fast_forward(3600);
-        }
-        travel_to(&mut sim, HERMITAGE);
-        assert!(
-            sim.pieces()
-                .iter()
-                .all(|p| !matches!(p.loc, Loc::StationShelf { .. })),
-            "hermits shelve nothing for strangers"
+    fn the_umbra_market_only_answers_at_night() {
+        let mut sim = Sim::new(95);
+        assert!(!sim.poi_visible(UMBRA));
+        sim.advance(
+            0.0,
+            &InputFrame {
+                night: true,
+                ..InputFrame::default()
+            },
         );
-        // Gift two pieces.
-        drag(
-            &mut sim,
-            cell_center(0, 0),
-            slot_center(&layout::GIVE_SLOTS, 0),
-        );
-        drag(
-            &mut sim,
-            cell_center(2, 0),
-            slot_center(&layout::GIVE_SLOTS, 1),
-        );
-        let lever = rect_center(layout::ACCEPT_LEVER);
-        sim.advance(0.0, &press_at(lever.x, lever.y));
-        assert!(sim.cues().iter().any(|c| matches!(c, Cue::Accept { .. })));
-        assert_eq!(sim.karma(), 2);
+        assert!(sim.poi_visible(UMBRA));
+    }
 
-        // Generosity comes back on the next visit: one good per two gifts.
-        travel_to(&mut sim, SATURN);
-        travel_to(&mut sim, HERMITAGE);
-        assert_eq!(
-            sim.pieces()
-                .iter()
-                .filter(|p| matches!(p.loc, Loc::StationShelf { .. }))
-                .count(),
-            1
+    #[test]
+    fn fluffs_multiply_in_transit_up_to_the_mercy_cap() {
+        let mut sim = cleared(96);
+        inject_hold(&mut sim, Kind::Fluff, 5, 5);
+        launch(&mut sim, SATURN);
+        let mut births = 0;
+        for _ in 0..FLUFF_WINDOW * 3 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            births += count_cues(sim.cues(), |c| matches!(c, Cue::FluffBirth));
+            if matches!(sim.ship().state, ShipState::Docked(_)) {
+                break;
+            }
+        }
+        assert!(births > 0, "nothing bred in three windows");
+    }
+
+    #[test]
+    fn omen_fires_exactly_once_at_the_derived_tick() {
+        let mut sim = cleared(0x00C0_FFEE);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 4);
+        launch(&mut sim, SATURN);
+        let leg = leg_of(&sim);
+        let mut starts = 0;
+        let mut jumps = 0;
+        for _ in 0..leg + 10 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            starts += count_cues(sim.cues(), |c| matches!(c, Cue::OmenStart));
+            jumps += count_cues(sim.cues(), |c| matches!(c, Cue::Jump));
+        }
+        assert_eq!(starts, 1);
+        assert_eq!(jumps, 1);
+    }
+
+    #[test]
+    fn without_a_crate_the_leg_never_jumps() {
+        let mut sim = cleared(0x00C0_FFEE);
+        launch(&mut sim, SATURN);
+        let leg = leg_of(&sim);
+        for _ in 0..leg {
+            sim.advance(TICK_DT, &InputFrame::default());
+            assert!(!sim.cues().iter().any(|c| matches!(c, Cue::Jump)));
+        }
+    }
+
+    #[test]
+    fn creaks_pepper_travel_and_never_the_dock() {
+        let mut sim = Sim::new(97);
+        for _ in 0..600 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            assert!(
+                !sim.cues().iter().any(|c| matches!(c, Cue::Creak { .. })),
+                "a docked ship creaked"
+            );
+        }
+        let mut sim = launched(97);
+        let mut creaks = 0;
+        for _ in 0..20_000 {
+            sim.advance(TICK_DT, &InputFrame::default());
+            creaks += count_cues(sim.cues(), |c| matches!(c, Cue::Creak { .. }));
+            if matches!(sim.ship().state, ShipState::Docked(_)) {
+                break;
+            }
+        }
+        assert!(creaks > 0, "a whole leg without a creak");
+    }
+
+    #[test]
+    fn reseed_preserves_pause_and_resets_warp() {
+        let mut sim = Sim::new(98);
+        let toggles = InputFrame {
+            toggle_pause: true,
+            toggle_warp: true,
+            ..InputFrame::default()
+        };
+        sim.advance(0.0, &toggles);
+        assert!(sim.is_paused() && sim.is_warp());
+        sim.advance(
+            0.0,
+            &InputFrame {
+                reseed: Some(1234),
+                ..InputFrame::default()
+            },
         );
-        // Karma survives the save round trip.
-        let restored = Sim::from_save(&sim.save_string()).expect("own save parses");
-        assert_eq!(restored.karma(), 2);
+        assert!(sim.is_paused());
+        assert!(!sim.is_warp());
+        assert_eq!(sim.seed(), 1234);
     }
 
     #[test]
     fn arrival_disengages_warp() {
-        let mut sim = launched(13);
+        let mut sim = launched(99);
         sim.advance(
             0.0,
             &InputFrame {
@@ -4373,575 +4624,131 @@ mod tests {
                 ..InputFrame::default()
             },
         );
-        assert!(sim.is_warp());
         let leg = leg_of(&sim);
         sim.fast_forward(leg + 10);
-        assert!(
-            !sim.is_warp(),
-            "fast-forward must not carry anyone obliviously past the dock"
-        );
-        assert!(matches!(sim.ship().state, ShipState::Docked(_)));
+        assert!(!sim.is_warp());
     }
 
-    /// The anti-softlock guarantee, exercised: whatever is stranded on the
-    /// pads or received shelf, gifting always clears it — so the launch
-    /// lever can always be satisfied and no dock is a dead end.
-    #[test]
-    fn the_gift_escape_hatch_always_clears_the_pads() {
-        let mut sim = Sim::new(14);
-        // Strand things everywhere strandable: one hold piece on a give
-        // pad, one shelf good asked for.
-        drag(
-            &mut sim,
-            cell_center(0, 0),
-            slot_center(&layout::GIVE_SLOTS, 0),
-        );
-        drag(
-            &mut sim,
-            slot_center(&layout::SHELF_SLOTS, 0),
-            slot_center(&layout::TAKE_SLOTS, 0),
-        );
-        // Put the asked good back on the shelf; gift the rest.
-        drag(
-            &mut sim,
-            slot_center(&layout::TAKE_SLOTS, 0),
-            slot_center(&layout::SHELF_SLOTS, 0),
-        );
-        let lever = rect_center(layout::ACCEPT_LEVER);
-        sim.advance(0.0, &press_at(lever.x, lever.y));
-        assert!(sim.cues().iter().any(|c| matches!(c, Cue::Accept { .. })));
-        assert!(!sim.pads_occupied(), "the gift should clear every pad");
-        // Launchable again.
-        launch(&mut sim, SATURN);
-    }
-
-    // ---------------------------------------------------- encounter tests --
-
-    /// A seed whose first Guild->Uranus leg carries an encounter, found by
-    /// scanning; the assert guards the premise against table drift.
-    fn launched_with_encounter(kind: Option<EncounterKind>) -> Sim {
-        for seed in 0..40_000 {
-            let mut sim = Sim::new(seed);
-            sim.ship.selected = Some(URANUS);
-            sim.depart();
-            if let Some(enc) = sim.encounter() {
-                if kind.is_none() || kind == Some(enc.kind) {
-                    return sim;
-                }
-            }
-        }
-        panic!("no seed under 40k rolls that encounter; tables drifted?");
-    }
+    // ---- The rat ----
 
     #[test]
-    fn encounters_open_and_close_exactly_at_their_window() {
-        let mut sim = launched_with_encounter(None);
-        let enc = *sim.encounter().expect("scheduled");
-        assert!(enc.start < enc.end, "window must have extent");
-        let mut opened_at = None;
-        let mut closed_at = None;
-        for _ in 0..enc.end + 10 {
-            sim.advance(TICK_DT, &InputFrame::default());
-            let ShipState::Traveling { progress, .. } = sim.ship().state else {
-                panic!("docked before the window closed");
-            };
-            if sim.cues().contains(&Cue::EncounterStart) {
-                opened_at = Some(progress);
-            }
-            if sim.cues().contains(&Cue::EncounterEnd) {
-                closed_at = Some(progress);
-                break;
-            }
-        }
-        // The timestamps hold exactly: open on the first tick at/after
-        // `start`, close on the first tick at/after `end`.
-        assert_eq!(opened_at, Some(enc.start));
-        assert_eq!(closed_at, Some(enc.end));
-    }
-
-    /// The omen leap lands past a window that never opened: the encounter
-    /// is skipped entirely — no start, no end, nothing to miss.
-    #[test]
-    fn an_omen_jump_can_skip_an_encounter_wholesale() {
-        let mut sim = Sim::new(0xA11E);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        launch(&mut sim, URANUS);
-        let jump_at = sim.omen.jump_at.expect("crate aboard means a jump");
-        // Park the window just past the omen's lead-out: unreachable at
-        // 1 tick/tick, swallowed whole by the leap.
-        sim.encounters.current = Some(Encounter {
-            kind: EncounterKind::Whale,
-            start: jump_at + 200,
-            end: jump_at + 260,
-            opened: false,
-            closed: false,
-            used: false,
-        });
-        let leg = leg_of(&sim);
-        let mut log = Vec::new();
-        for _ in 0..leg {
-            sim.advance(TICK_DT, &InputFrame::default());
-            log.extend_from_slice(sim.cues());
-            if matches!(sim.ship().state, ShipState::Docked(_)) {
-                break;
-            }
-        }
-        assert!(log.contains(&Cue::Jump), "the omen never fired");
-        assert!(
-            !log.iter().any(|c| matches!(c, Cue::EncounterStart)),
-            "a skipped window must never open"
-        );
-        assert!(
-            !log.iter().any(|c| matches!(c, Cue::EncounterEnd)),
-            "nothing opened, so nothing may close"
-        );
-    }
-
-    /// The omen leap lands past the end of a window that IS open: it
-    /// closes on the next travel tick, cues balanced.
-    #[test]
-    fn an_omen_jump_slams_an_open_encounter_shut() {
-        let mut sim = Sim::new(0xA11F);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        launch(&mut sim, URANUS);
-        let jump_at = sim.omen.jump_at.expect("crate aboard means a jump");
-        assert!(jump_at > 400, "window would not fit before the omen");
-        sim.encounters.current = Some(Encounter {
-            kind: EncounterKind::Whale,
-            start: jump_at - 300,
-            end: jump_at + 3000,
-            opened: false,
-            closed: false,
-            used: false,
-        });
-        let leg = leg_of(&sim);
-        let mut log = Vec::new();
-        for _ in 0..leg {
-            sim.advance(TICK_DT, &InputFrame::default());
-            log.extend_from_slice(sim.cues());
-            if matches!(sim.ship().state, ShipState::Docked(_)) {
-                break;
-            }
-        }
-        let starts = count_cues(&log, |c| matches!(c, Cue::EncounterStart));
-        let ends = count_cues(&log, |c| matches!(c, Cue::EncounterEnd));
-        assert_eq!(starts, 1, "the window sat before the jump; it must open");
-        assert_eq!(ends, 1, "the leap passed the end; it must close");
-        let jump_i = log.iter().position(|c| matches!(c, Cue::Jump)).unwrap();
-        let end_i = log
-            .iter()
-            .position(|c| matches!(c, Cue::EncounterEnd))
-            .unwrap();
-        assert!(end_i > jump_i, "the close must follow the leap");
-    }
-
-    #[test]
-    fn encounter_legs_survive_the_save_round_trip() {
-        let mut sim = launched_with_encounter(None);
-        let enc = *sim.encounter().expect("scheduled");
-        // Walk inside the window, then hand the run across a save.
-        while !matches!(sim.ship().state, ShipState::Docked(_)) {
-            sim.advance(TICK_DT, &InputFrame::default());
-            let ShipState::Traveling { progress, .. } = sim.ship().state else {
-                break;
-            };
-            if progress > enc.start + 5 {
-                break;
-            }
-        }
-        assert!(sim.encounter().expect("still there").open());
-        assert_save_continues(sim, 6_000);
-    }
-
-    #[test]
-    fn the_gas_station_tops_up_exactly_once() {
-        let mut sim = launched_with_encounter(None);
-        // Transmute whatever was rolled into an open gas station.
-        let ShipState::Traveling { progress, .. } = sim.ship().state else {
-            unreachable!()
-        };
-        sim.encounters.current = Some(Encounter {
-            kind: EncounterKind::GasStation,
-            start: progress,
-            end: progress + 6000,
-            opened: false,
-            closed: false,
-            used: false,
-        });
-        sim.advance(TICK_DT, &InputFrame::default());
-        assert!(sim.cues().contains(&Cue::EncounterStart));
-        let before = match sim.ship().state {
-            ShipState::Traveling { progress, .. } => progress,
-            ShipState::Docked(_) => unreachable!(),
-        };
-        let badge = rect_center(layout::ENCOUNTER_BADGE);
-        sim.advance(0.0, &press_at(badge.x, badge.y));
-        assert_eq!(sim.cues(), [Cue::GasBoost]);
-        let after = match sim.ship().state {
-            ShipState::Traveling { progress, .. } => progress,
-            ShipState::Docked(_) => unreachable!(),
-        };
-        assert!(after > before + 10, "the top-up should skip real distance");
-        // The pump is dry now.
-        sim.advance(0.0, &press_at(badge.x, badge.y));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: false }]);
-    }
-
-    #[test]
-    fn the_casino_transmutes_losses_and_pays_winners_in_flotsam() {
-        let mut sim = launched_with_encounter(None);
-        let ShipState::Traveling { progress, .. } = sim.ship().state else {
-            unreachable!()
-        };
-        sim.encounters.current = Some(Encounter {
-            kind: EncounterKind::Casino,
-            start: progress,
-            end: progress + 6000,
-            opened: false,
-            closed: false,
-            used: false,
-        });
-        sim.advance(TICK_DT, &InputFrame::default());
-        let badge = rect_center(layout::ENCOUNTER_BADGE);
-        let stake = cell_center(0, 0); // the perfume vial
-        let count_before = sim.pieces().len();
-        let win = Encounters::casino_coin(sim.seed(), sim.tick());
-        drag(&mut sim, stake, badge);
-        if win {
-            assert!(sim.cues().contains(&Cue::CasinoWin));
-            assert!(
-                sim.pieces()
-                    .iter()
-                    .any(|p| matches!(p.loc, Loc::Flotsam { .. }) && p.kind == Kind::GildedIdol),
-                "the payout should drift in the flotsam"
-            );
-            assert_eq!(sim.pieces().len(), count_before + 1);
-        } else {
-            assert!(sim.cues().contains(&Cue::CasinoLoss));
-            assert_eq!(sim.pieces().len(), count_before, "losses transmute");
-            assert!(
-                sim.pieces()
-                    .iter()
-                    .any(|p| matches!(p.loc, Loc::Hold { .. }) && p.kind == Kind::CasinoChip),
-                "the stake should now be a commemorative chip"
-            );
-        }
-    }
-
-    #[test]
-    fn derelict_flotsam_can_be_stowed_and_drifts_away_otherwise() {
-        let mut sim = launched_with_encounter(None);
-        let ShipState::Traveling { progress, .. } = sim.ship().state else {
-            unreachable!()
-        };
-        sim.encounters.current = Some(Encounter {
-            kind: EncounterKind::Derelict,
-            start: progress,
-            end: progress + 1200,
-            opened: false,
-            closed: false,
-            used: false,
-        });
-        sim.advance(TICK_DT, &InputFrame::default());
-        let drifting: Vec<u32> = sim
-            .pieces()
-            .iter()
-            .filter(|p| matches!(p.loc, Loc::Flotsam { .. }))
-            .map(|p| p.id)
-            .collect();
-        assert_eq!(drifting.len(), 2, "a derelict spills two pieces");
-        // Stow the first (a 1x1-or-bigger drop at a free low cell).
-        let from = rect_center(layout::FLOTSAM_SLOTS[0]);
-        let flotsam_kind = sim
-            .pieces()
-            .iter()
-            .find(|p| p.loc == Loc::Flotsam { slot: 0 })
-            .map(|p| p.kind)
-            .unwrap();
-        let (x, y) =
-            first_fit(sim.pieces(), u32::MAX, flotsam_kind).expect("the starter hold has room");
-        drag(&mut sim, from, cell_center(x, y));
-        assert!(
-            sim.pieces()
-                .iter()
-                .any(|p| p.id == drifting[0] && matches!(p.loc, Loc::Hold { .. })),
-            "stowed flotsam becomes cargo"
-        );
-        // Let the window close: the unstowed one drifts away.
-        sim.fast_forward(1300);
-        assert!(
-            sim.pieces().iter().any(|p| p.id == drifting[0]),
-            "stowed cargo must survive the closing"
-        );
-        assert!(
-            !sim.pieces().iter().any(|p| p.id == drifting[1]),
-            "unstowed flotsam drifts away with the derelict"
-        );
-    }
-
-    #[test]
-    fn two_swats_knock_the_ad_drone_off() {
-        let mut sim = launched(21);
-        let ShipState::Traveling { progress, .. } = sim.ship().state else {
-            unreachable!()
-        };
-        sim.drones.drone = Some(Drone {
-            start: progress,
-            end: progress + 6000,
-            attached: false,
-            gone: false,
-            swats: 0,
-        });
-        sim.advance(TICK_DT, &InputFrame::default());
-        assert!(sim.cues().contains(&Cue::AdStart));
-        assert!(sim.advertising());
-        for expected_end in [false, true] {
-            let at = sim.drone_pos().expect("advertising means a drone");
-            sim.advance(0.0, &press_at(at.x, at.y));
-            assert!(sim.cues().contains(&Cue::AdSwat));
-            assert_eq!(sim.cues().contains(&Cue::AdEnd), expected_end);
-        }
-        assert!(!sim.advertising(), "two swats should end the ads");
-    }
-
-    #[test]
-    fn fluffs_multiply_in_transit_up_to_the_mercy_cap() {
-        let mut sim = Sim::new(22);
-        inject_hold(&mut sim, Kind::Fluff, 4, 1);
-        launch(&mut sim, URANUS);
-        let fluffs = |sim: &Sim| {
-            sim.pieces()
-                .iter()
-                .filter(|p| p.kind == Kind::Fluff)
-                .count()
-        };
-        assert_eq!(fluffs(&sim), 1);
-        sim.fast_forward(FLUFF_WINDOW * 3);
-        let bred = fluffs(&sim);
-        assert!(bred >= 2, "three windows and no births");
-        assert!(bred <= FLUFF_CAP, "the mercy cap failed");
-    }
-
-    #[test]
-    fn a_full_counter_sets_the_parade_loose_and_it_persists() {
-        let mut sim = Sim::new(23);
-        sim.deliveries = PARADE_AT - 1;
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 3, 0);
-        travel_to(&mut sim, SATURN);
-        travel_to(&mut sim, GUILD);
-        // travel_to fast-forwards, which swallows cues; the state is the
-        // record: the counter crossed, the parade is in the sky.
-        assert_eq!(sim.deliveries(), PARADE_AT);
-        assert!(sim.paraded(), "the counter filled; where is the parade?");
-        // (Whether it is still crossing depends on how much of the leg the
-        // crate's own jump skipped — the fraction is checked structurally:
-        // inside the window Some, after it None, `paraded` forever.)
-        let at = sim.parade_at.expect("paraded means a start tick");
-        if sim.tick() - at < PARADE_TICKS {
-            assert!(sim.parade().is_some());
-        }
-        let restored = Sim::from_save(&sim.save_string()).expect("own save parses");
-        assert!(restored.paraded());
-        assert_eq!(restored.save_string(), sim.save_string());
-        // After the crossing, the sky remembers but the barge is gone.
-        sim.fast_forward(PARADE_TICKS + 10);
-        assert!(sim.parade().is_none());
-        assert!(sim.paraded());
-    }
-
-    #[test]
-    fn the_comet_gives_ice_once_per_apparition() {
-        let mut sim = Sim::new(8);
-        // Walk the clock into the comet's visible window first: picked
-        // clean is a statement about the pass being harvested, and a pass
-        // must be happening to make it.
-        let mut probe = 0;
-        while !map::comet_visible(probe) {
-            probe += 600;
-        }
-        sim.fast_forward(probe);
-        sim.dock(COMET);
-        assert!(sim.cues().iter().any(|c| matches!(c, Cue::Harvest { .. })));
-        let ice = |sim: &Sim| {
-            sim.pieces()
-                .iter()
-                .filter(|p| p.kind == Kind::CometIce)
-                .count()
-        };
-        let first_haul = ice(&sim);
-        assert!(first_haul >= 1);
-        assert!(sim.comet_spent(), "harvested means picked clean");
-        assert!(
-            !sim.poi_chartable(COMET),
-            "a picked-clean comet must not invite a second trip"
-        );
-
-        // A second dock the same pass finds only chisel marks. (The flush
-        // frame consumes the first haul's cues.)
-        sim.advance(0.0, &InputFrame::default());
-        sim.dock(COMET);
-        assert!(
-            !sim.cues().iter().any(|c| matches!(c, Cue::Harvest { .. })),
-            "no second haul in one apparition"
-        );
-        assert_eq!(ice(&sim), first_haul);
-
-        // The ledger survives a save, and the NEXT apparition is fresh.
-        let restored = Sim::from_save(&sim.save_string()).expect("own save parses");
-        assert!(restored.comet_visit.is_some());
-        assert_eq!(restored.save_string(), sim.save_string());
-        let apparition = map::comet_apparition(sim.tick());
-        sim.fast_forward(240 * 3600); // one comet period
-        assert_eq!(map::comet_apparition(sim.tick()), apparition + 1);
-        assert!(!sim.comet_spent(), "a new pass brings new ice");
-    }
-
-    #[test]
-    fn earlier_stv4_saves_without_the_comet_token_still_load() {
-        let sim = Sim::new(8);
-        let save = sim.save_string();
-        assert!(save.contains("parade - -"), "format drifted; fix this test");
-        let elder = save.replacen("parade - -", "parade -", 1);
-        let restored = Sim::from_save(&elder).expect("earlier STV4 must load");
-        assert_eq!(restored.comet_visit, None);
-    }
-
-    #[test]
-    fn making_room_mid_visit_completes_the_wanderer_exchange() {
-        let mut sim = Sim::new(10);
-        // Three crates along the top, their 2x2 shadow blocked by vials,
-        // and the low rows bricked solid with heavy scrap: no toll subset
-        // opens a berth for the big crate at dock time.
-        inject_hold(&mut sim, Kind::MysteriousCrate, 3, 0);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 4, 0);
-        inject_hold(&mut sim, Kind::MysteriousCrate, 5, 0);
-        let blocker = inject_hold(&mut sim, Kind::PerfumeVial, 4, 1);
-        inject_hold(&mut sim, Kind::PerfumeVial, 3, 1);
-        inject_hold(&mut sim, Kind::ScrapAlloy, 2, 2);
-        inject_hold(&mut sim, Kind::ScrapAlloy, 4, 2);
-        inject_hold(&mut sim, Kind::ScrapAlloy, 0, 3);
-        inject_hold(&mut sim, Kind::ScrapAlloy, 2, 3);
-        inject_hold(&mut sim, Kind::ScrapAlloy, 4, 3);
-        sim.dock(WANDERER);
-        for (i, cell) in [(3_u8, 0_u8), (4, 0), (5, 0)].iter().enumerate() {
-            drag(
-                &mut sim,
-                cell_center(cell.0, cell.1),
-                rect_center(layout::FLOTSAM_SLOTS[i]),
-            );
-        }
-        assert!(
-            !sim.cues().contains(&Cue::Exchange),
-            "no berth for the big crate; the toll must wait"
-        );
-        assert_eq!(sim.mysterious_aboard(), 3, "nothing may be half-taken");
-
-        // Slide one blocking vial out of the crates' shadow: the retry on
-        // that very placement completes the deal, no round trip needed.
-        let vial_at = sim
-            .pieces()
-            .iter()
-            .find(|p| p.id == blocker)
-            .map(|p| rect_center(layout::piece_rect(p)))
-            .unwrap();
-        drag(&mut sim, vial_at, cell_center(1, 1));
-        assert!(
-            sim.cues().contains(&Cue::Exchange),
-            "the freed 2x2 should close the exchange on the spot"
-        );
-        assert_eq!(sim.mysterious_aboard(), 0);
+    fn a_press_on_a_perched_rat_chases_and_never_lifts_the_piece() {
+        let mut sim = cleared(101);
+        let id = inject_hold(&mut sim, Kind::PerfumeVial, 5, 5);
+        inject_rat(&mut sim);
+        let at = cabin(5, 5);
+        sim.advance(0.0, &press_at(at.x, at.y));
+        assert!(sim.cues().contains(&Cue::RatChased));
+        assert!(sim.held(0).is_none());
         assert_eq!(
-            sim.pieces()
-                .iter()
-                .filter(|p| p.kind == Kind::VeryMysteriousCrate)
-                .count(),
-            1
-        );
-    }
-
-    #[test]
-    fn jettison_is_reversible_until_the_departure_sweep() {
-        let mut sim = Sim::new(15);
-        // The rail only exists where there is no counterparty; moor at
-        // the comet (barterless) and put the vial overboard there.
-        sim.dock(COMET);
-        sim.advance(0.0, &InputFrame::default());
-        let net0 = rect_center(layout::FLOTSAM_SLOTS[0]);
-        drag(&mut sim, cell_center(0, 0), net0);
-        let netted = sim
-            .pieces()
-            .iter()
-            .find(|p| p.loc == Loc::Flotsam { slot: 0 })
-            .expect("the vial should ride the net")
-            .id;
-        // Second thoughts: back into the hold, no harm done.
-        drag(&mut sim, net0, cell_center(0, 0));
-        assert!(
-            sim.pieces()
-                .iter()
-                .any(|p| p.id == netted && matches!(p.loc, Loc::Hold { .. })),
-            "netted cargo must be recoverable before a sweep"
-        );
-        // Third thoughts: overboard again, and cast off. The sweep is the
-        // ceremony, and it announces itself.
-        drag(&mut sim, cell_center(0, 0), net0);
-        launch(&mut sim, SATURN);
-        assert!(
-            sim.cues().contains(&Cue::Jettison),
-            "the departure sweep must be announced"
-        );
-        assert!(
-            !sim.pieces().iter().any(|p| p.id == netted),
-            "jettisoned cargo stays behind with the berth"
-        );
-    }
-
-    #[test]
-    fn the_dock_sweep_takes_what_rides_the_net() {
-        let mut sim = launched(16);
-        // Mid-leg: the pearls go over the side, and stay grabbable...
-        drag(
-            &mut sim,
-            cell_center(2, 0),
-            rect_center(layout::FLOTSAM_SLOTS[1]),
-        );
-        let netted = sim
-            .pieces()
-            .iter()
-            .find(|p| p.loc == Loc::Flotsam { slot: 1 })
-            .expect("pearls on the net")
-            .id;
-        // ...until the dock. Walk in stepwise so the cue is observable.
-        let mut saw_sweep = false;
-        for _ in 0..leg_of(&sim) + 10 {
-            sim.advance(TICK_DT, &InputFrame::default());
-            saw_sweep |= sim.cues().contains(&Cue::Jettison);
-            if matches!(sim.ship().state, ShipState::Docked(_)) {
-                break;
+            sim.pieces().iter().find(|p| p.id == id).unwrap().loc,
+            Loc::Hold {
+                room: CABIN,
+                x: 5,
+                y: 5
             }
-        }
-        assert!(saw_sweep, "the dock sweep must be announced");
-        assert!(!sim.pieces().iter().any(|p| p.id == netted));
+        );
     }
 
     #[test]
-    fn the_humming_crate_refuses_the_net() {
-        let mut sim = Sim::new(17);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 0);
+    fn three_chases_evict_the_stowaway() {
+        let mut sim = cleared(102);
+        inject_rat(&mut sim);
+        for _ in 0..rats::CHASE_LIMIT {
+            let cell = sim.rat().expect("a rat").cell;
+            let at = cabin(cell.0, cell.1);
+            sim.advance(0.0, &press_at(at.x, at.y));
+        }
+        assert!(sim.rat().is_none());
+    }
+
+    #[test]
+    fn saves_continue_mid_rat_tenure_with_the_bite_intact() {
+        let mut sim = cleared(103);
+        inject_hold(&mut sim, Kind::Couch, 5, 5);
+        inject_rat(&mut sim);
         launch(&mut sim, SATURN);
-        let crate_at = cell_center(4, 0);
-        let net0 = rect_center(layout::FLOTSAM_SLOTS[0]);
-        sim.advance(0.0, &press_at(crate_at.x, crate_at.y));
+        coast(&mut sim, 400);
+        assert_save_continues(sim, 400);
+    }
+
+    // ---- Lockstep ----
+
+    fn crew(entries: &[(PlayerId, InputFrame)]) -> CrewFrame {
+        let mut frames = [InputFrame::default(); MAX_CREW];
+        for &(player, frame) in entries {
+            frames[usize::from(player)] = frame;
+        }
+        frames
+    }
+
+    #[test]
+    fn crew_tick_equals_advance_for_a_solo_crew() {
+        let mut solo = Sim::new(111);
+        let mut lockstep = Sim::new(111);
+        let script = [
+            press_at(cabin(3, 3).x, cabin(3, 3).y),
+            held_at(cabin(5, 5).x, cabin(5, 5).y),
+            release_at(cabin(5, 5).x, cabin(5, 5).y),
+            InputFrame::default(),
+        ];
+        for input in script {
+            solo.advance(TICK_DT, &input);
+            lockstep.crew_tick(&crew(&[(0, input)]));
+        }
+        assert_eq!(solo.save_string(), lockstep.save_string());
+    }
+
+    #[test]
+    fn same_tick_grab_goes_to_the_lowest_player_in_silence() {
+        let mut sim = cleared(112);
+        inject_hold(&mut sim, Kind::PerfumeVial, 5, 5);
+        let at = cabin(5, 5);
+        let press = press_at(at.x, at.y);
+        sim.crew_tick(&crew(&[(0, press), (3, press)]));
         assert!(sim.held(0).is_some());
-        sim.advance(0.0, &held_at(net0.x, net0.y));
-        sim.advance(0.0, &release_at(net0.x, net0.y));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
-        assert_eq!(sim.last_violation(), Some(Violation::Suspicious));
-        assert!(
-            sim.pieces()
-                .iter()
-                .any(|p| p.kind == Kind::SuspiciousCrate && matches!(p.loc, Loc::Hold { .. })),
-            "it prefers to stay, and it stays"
-        );
+        assert!(sim.held(3).is_none());
+        assert_eq!(count_cues(sim.cues(), |c| matches!(c, Cue::Pickup)), 1);
+    }
+
+    #[test]
+    fn crew_schedules_replay_bit_identically() {
+        let mut a = Sim::new(113);
+        let mut b = Sim::new(113);
+        let mut rng = fastrand::Rng::with_seed(0x5CED);
+        let mut schedule = Vec::new();
+        for _ in 0..300 {
+            let mut frames = [InputFrame::default(); MAX_CREW];
+            for frame in &mut frames {
+                let at = cabin(rng.u8(0..22), rng.u8(0..13));
+                *frame = InputFrame {
+                    pointer: at,
+                    press: rng.bool(),
+                    held: rng.bool(),
+                    release: rng.bool(),
+                    occupied: rng.u8(..3),
+                    ..InputFrame::default()
+                };
+            }
+            schedule.push(frames);
+        }
+        for frames in &schedule {
+            a.crew_tick(frames);
+        }
+        for frames in &schedule {
+            b.crew_tick(frames);
+        }
+        assert_eq!(a.save_string(), b.save_string());
+    }
+
+    #[test]
+    fn crew_reseed_last_in_order_wins() {
+        let mut sim = Sim::new(114);
+        let seeded = |seed| InputFrame {
+            reseed: Some(seed),
+            ..InputFrame::default()
+        };
+        sim.crew_tick(&crew(&[(1, seeded(7)), (4, seeded(9))]));
+        assert_eq!(sim.seed(), 9);
     }
 }

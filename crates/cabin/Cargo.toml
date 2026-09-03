@@ -1,0 +1,102 @@
+# The game people play: Space Trucking's Bevy first-person cabin. A member
+# of the root workspace since the 2D console retired (docs/BAY.md) — the
+# ALSA links collision left with macroquad, and the lint table and build
+# profiles now live at the workspace root.
+[package]
+name = "cabin"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95" # Bevy 0.19's floor; the root library still builds on 1.85
+authors = ["Cassidy Prather <pratherea@gmail.com>"]
+description = "Space Trucking's 3D cabin — the Bevy first-person frontend"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/CassidyPrather/space-trucking"
+keywords = ["game", "gamedev", "bevy", "3d", "space"]
+categories = ["games"]
+publish = false
+
+# The binary keeps the game's own name: releases ship `space-trucking`,
+# whatever the package that builds it is called.
+[[bin]]
+name = "space-trucking"
+path = "src/main.rs"
+
+# The seam purchased art will arrive through.
+#
+# The game has two graphical implementations of every object planned: the
+# whitebox this repository cuts in code, and a bought asset. `art` is
+# which one a build carries, and it is OFF here and in CI on purpose,
+# because CI cannot build the other one — the payload is not in the
+# repository and never will be (Synty's licence lets their meshes ship
+# inside a built game and forbids redistributing them as source). So CI
+# keeps testing the whitebox, which is where all sixteen gauntlet
+# families and the determinism guards live.
+#
+# The feature now carries what it always said it would: the ability to
+# read a converted mesh and spawn what is in it. That turned out to be
+# ONE Bevy feature and not two — `bevy_gltf` brings
+# `bevy_world_serialization` with it, and a loaded glTF scene is a
+# `WorldAsset` spawned through a `WorldAssetRoot`, which is where Bevy
+# 0.19's scene rework left it. `bevy_scene` is the BSN authoring language
+# and this game authors no scenes, so it is not here. Eight crates, off in
+# the default build, whose dependency graph is byte for byte what it was
+# before the seam grew teeth
+# (`the_cabin_ships_the_whitebox_unless_art_is_asked_for` in xtask).
+#
+# **No image decoder is added, and that is a measurement rather than an
+# oversight.** `png` is already on the list above — it was put there to
+# WRITE screenshots — and Bevy's `png` feature is `image/png`, which is
+# the same code either way. A Blender-exported .glb embeds its textures
+# as PNG unless the source was a JPEG, and Synty's atlases are PNG. If a
+# pack ever ships one that is not, `"jpeg"` on the art line is the fix,
+# and it costs the default build nothing.
+[features]
+default = []
+art = ["bevy/bevy_gltf"]
+
+[dependencies]
+# The whole game, headless: sim, net, replay, synth, telemetry.
+space-trucking = { path = "../.." }
+# The engine, cut to what the cabin actually draws. The default set is
+# four umbrella features — 2d, 3d, ui, audio — and they carry passengers
+# this game never boards: nothing in a default build asks the
+# `AssetServer` for a file, every mesh and texture being cut in code, so
+# no glTF, no image decoders, no animation, no scene files, no sprites,
+# and the only sound is synth.rs's WAV bytes. (The `art` feature above is
+# the one exception, and it is the exception it was declared to be: it
+# adds the glTF loader and points the asset server at the art cache.)
+# Each line below answers to something on screen.
+bevy = { version = "0.19", default-features = false, features = [
+    # App and platform: what DefaultPlugins is assembled out of.
+    "std", "async_executor", "multi_threaded", "bevy_asset", "bevy_log",
+    "bevy_state", "reflect_auto_register", "bevy_winit", "x11", "wayland",
+    # The 3D pass: PBR materials, point lights (no shadow maps), and the
+    # bloom the lamps and the CRTs are lit with.
+    "bevy_render", "bevy_core_pipeline", "bevy_pbr", "bevy_light",
+    "bevy_post_process", "bevy_camera", "bevy_mesh", "bevy_material",
+    "bevy_shader", "bevy_color", "bevy_image", "bevy_window",
+    # A Camera3d tonemaps through TonyMcMapface unless told otherwise, and
+    # the LUT it reads is a zstd-compressed ktx2. Drop these three and
+    # every frame in the game comes out a different colour.
+    "tonemapping_luts", "ktx2", "zstd_rust",
+    # `png` is here to WRITE, not to read: nothing in the game loads an
+    # image, but `--shot` saves through the same format registry, and
+    # without this every screenshot run exits 0 having written a
+    # zero-byte file ("The image format `Png` is not supported").
+    "png",
+    # The Esc menu: text nodes, and the picking backend that drives the
+    # `Interaction` they are clicked through.
+    "bevy_ui", "bevy_ui_render", "bevy_text", "default_font",
+    "bevy_input_focus", "bevy_picking", "ui_picking",
+    # The soundscape arrives as synth.rs's WAV bytes, so wav and nothing
+    # else: no vorbis, no audio files.
+    "bevy_audio", "wav",
+] }
+# The deep-night window for the Umbra Market, read from the OS clock.
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+# Reading the retired 2D console's quad-storage container (local.data is
+# JSON) so an old run walks aboard on first boot. Already in Bevy's graph.
+serde_json = "1"
+
+[lints]
+workspace = true

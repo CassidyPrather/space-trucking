@@ -1,0 +1,4400 @@
+//! The rooms the ship attaches, drawn (docs/ROOMS.md, stage two).
+//!
+//! Stage one made the ship a **graph of rooms on an integer lattice**; the
+//! sim hands over every room's kind, its pose, its mated ports, and a net
+//! lane of logical space per dense `RoomId`. This module is the other half
+//! of that bargain: it turns those integers into a place you can look at
+//! and walk into, and it is the ONLY module allowed to know where a room
+//! stands.
+//!
+//! Three ideas carry the whole thing:
+//!
+//! - **One anchor, everything else derived.** The cabin is the root at the
+//!   lattice origin, so [`ANCHOR`] — where lattice cell `(0, 0, 0)`'s
+//!   aft-port corner lands in the room — is the single position written
+//!   down anywhere in the presentation. Every other room's box, chart,
+//!   doorway, and painted tile is arithmetic on its pose.
+//! - **A room is its net, folded onto its box.** BAY.md's cross of six
+//!   charts generalizes from the cabin to the family: each room's charts
+//!   bind its OWN lane rects onto its OWN physical box, so `SimSurface`
+//!   keeps making every ruling and the sim never learns it grew a third
+//!   dimension.
+//! - **The hull follows the ports, never the other way round.** Which wall
+//!   a door is on is data (the port law's first clause), so every wall,
+//!   deck, and ceiling slab is *punched* by the aperture cells its own
+//!   room declares. A mated port is an open doorway; an unmated one is a
+//!   plate, drawn shut.
+//!
+//! **The cabin's privileges are down to two, and both are declared.**
+//! Its walk envelope is authored (`rig::WALK_*`), because a body has to
+//! be able to stand over the middle of the outermost deck row and a
+//! body's half-width is wider than half a cell; and its hull wears ribs
+//! nobody derived. Everything else about it comes off its pose like
+//! every other room's — its box, its charts, its trim, its six
+//! apertures, and now its six structural slabs, which
+//! `rig::structure` takes from [`shell_boxes`] rather than from the
+//! numbers somebody measured by eye before the lattice existed.
+//!
+//! **And a fourth idea, which is the owner's:** the whole world is
+//! aligned to the cargo grid, and **one cube of it stands between any
+//! two rooms** (`sim::room::PAD`). A doorway is therefore not a shared
+//! plane with two owners but a [`passage`] a cell long with one, which
+//! is what stopped the incinerator standing inside the cabin: two rooms
+//! that mate flush put two hulls through each other by construction,
+//! and no care about placement can undo that.
+
+use std::collections::BTreeMap;
+
+use bevy::prelude::*;
+
+use space_trucking::sim::layout;
+use space_trucking::sim::room::{
+    APERTURE, CABIN, COURSES, PORTS, Port, PortId, Pose, Room, RoomId, RoomKind, Rooms, Tile,
+};
+use space_trucking::sim::{Cue, Sim};
+
+use crate::rig::{BAY_CELL, BAY_WALL_Z, EYE_HEIGHT, REACH, Skin, TileFade, WALK_MAX, WALK_MIN};
+use crate::surface::{SimSurface, Station};
+use crate::{Phase, Shell, glow, palette};
+
+/// Where lattice cell `(0, 0, 0)`'s aft-port corner stands in the world.
+///
+/// The cabin is the graph's root at the lattice origin (`Rooms::root`), so
+/// pinning its own aft-port corner pins the lattice for every room the
+/// trip ever attaches. This is the presentation's one written-down
+/// position, and it is the cabin's rather than any room's.
+pub const ANCHOR: Vec3 = Vec3::new(
+    -(RoomKind::Cabin.floor().0 as f32) * BAY_CELL * 0.5,
+    0.0,
+    BAY_WALL_Z,
+);
+
+/// Wall band height: three courses, the same on every room. Uniform
+/// height is what lets any door mate any door (docs/ROOMS.md, "One storey,
+/// everywhere").
+pub const WALL_H: f32 = COURSES as f32 * BAY_CELL;
+
+/// The deck's decal plane, a hair above the floor slab.
+pub const FLOOR_Y: f32 = 0.012;
+
+/// The ceiling chart's plane — **four courses of the cargo grid above the
+/// deck**, so a room is a whole number of cells tall exactly as it is a
+/// whole number of cells wide.
+///
+/// It was 2.26 m, which is 4.109 cells: sixty millimetres of nothing in
+/// particular above the fourth course, and the one axis of a room that
+/// the lattice did not govern. The walls are [`WALL_H`] — three courses,
+/// on the grid already — so the band between the cornices and the
+/// deckhead is now exactly one cell rather than 0.61 m of trim. The net's
+/// fold seam glues logically, not physically.
+pub const CEIL_Y: f32 = (COURSES + 1) as f32 * BAY_CELL;
+
+/// Centre height of a room's ceiling slab. **Derived**: the slab stands
+/// wholly outside the interior, on the ceiling plane, exactly as the deck
+/// slab hangs wholly under the deck. A room's fabric never eats a cell of
+/// the room.
+const CEIL_SLAB_Y: f32 = CEIL_Y + WALL_T * 0.5;
+
+/// Structural thickness of every hull plane: **a quarter of the padding
+/// cell**.
+///
+/// It was 0.1 m, which is 0.18 cells — a free parameter, and the last
+/// one in the fabric. What decides it now is the cube between two rooms:
+/// each of the two spends a wall of that cube on its own hull, so a
+/// quarter apiece leaves the passage between them **half a cell** of
+/// daylight. Quarter, half, quarter, and the whole of it is the grid's.
+///
+/// The bound the derivation has to respect is that two walls fit inside
+/// one pad with room to walk between them, which is what makes
+/// `no_two_rooms_hulls_ever_share_a_cubic_centimetre` a consequence of
+/// arithmetic rather than of care.
+pub const WALL_T: f32 = PAD_M * 0.25;
+
+/// **One cube of the cargo grid, in metres**: the padding that stands
+/// between any two rooms (`sim::room::PAD`).
+///
+/// The sim states the pad in cells because the pad is a lattice law; this
+/// is the same quantity in the units a wall is drawn in, and every
+/// passage, connector and hull clearance in this module is measured off
+/// it rather than off a number of its own.
+pub const PAD_M: f32 = space_trucking::sim::room::PAD as f32 * BAY_CELL;
+
+/// One storey's pitch on the lattice: a room, and the pad over it. A
+/// ladder's neighbour sits exactly one of these up.
+///
+/// It used to be the ceiling slab plus a seam — 2.42 m, or 4.4 cells —
+/// which is the vertical axis doing by eye what the horizontal ones did
+/// by arithmetic. A storey is five cells now, four of room and one of
+/// padding, so the pad between two rooms is the same cube whether they
+/// are side by side or one above the other.
+const STOREY: f32 = CEIL_Y + PAD_M;
+
+/// **The finest cut of the cargo grid**: a sixteenth of a cell, and the
+/// unit every length in a room's fabric is a whole number of.
+///
+/// It is a sixteenth because that is what the fabric's two derived
+/// lengths already are — a hull plane is four of these and a chart's
+/// trim is one — and because finer than this stops being a fraction of
+/// the grid and starts being a number somebody chose. The gauntlet's
+/// `grid-fits` family holds every face of every shell to it.
+pub const NOTCH: f32 = BAY_CELL / 16.0;
+
+/// How far a wall chart stands inside its own box face: **a quarter of
+/// the wall it is hung on**, which is a quarter of a quarter of the
+/// padding cell.
+///
+/// It has to stand proud of the hull's junk, so that every chart cell
+/// stays workable in front of the ribs rather than behind them — the
+/// cabin's ribs straddle their wall face and stand 0.03 m into the room,
+/// and this is 0.034. It was 0.03 flat, which cleared them by nothing at
+/// all and was a second free parameter besides.
+const CHART_INSET: f32 = NOTCH;
+
+/// Half-width of a walking body, for the derived envelopes. The cabin's
+/// own envelope is authored (`rig::WALK_*`) because its hull is; every
+/// attached room insets its lattice box by this.
+pub const BODY: f32 = 0.30;
+
+/// A sealed leaf's thickness — a door drawn shut is a real plate. Two
+/// notches, like everything else a doorway is made of.
+const PLATE_T: f32 = 2.0 * NOTCH;
+
+/// Doorjamb girth.
+const JAMB: f32 = 2.0 * NOTCH;
+
+/// The detach latch's plate: a hand-sized amber lever beside the jamb.
+const LATCH_W: f32 = 2.0 * NOTCH;
+const LATCH_H: f32 = 5.0 * NOTCH;
+
+/// How thick the latch's plate is, and how far its amber stands proud of
+/// it: one girth, spent twice, so the lever reads as a lever from the
+/// side rather than as a decal on a plate.
+const LATCH_T: f32 = 0.02;
+
+/// **How far a body bolted to the fabric is buried in what holds it up.**
+///
+/// One fight-free step of the decal ladder, which is the same step a
+/// rig's sole spends on the deck it stands on (`pieces::SOLE_BURY`) and a
+/// pane spends on the bezel it is glazed into (`pieces::GLAZE`). Flush is
+/// a coin toss in the depth buffer and proud is furniture floating, so a
+/// joint that has to read as a joint goes one step in. The gauntlet's
+/// tolerance is this plus a paint's thickness (`gauntlet::SEAT_GAP`), so
+/// a body spending exactly this sits inside the rule with room to spare.
+const SEAT_BURY: f32 = crate::rig::layer::STEP;
+
+/// How long a seam cue burns, seconds — feedback, inside the half-second
+/// law (`docs/ART_DIRECTION_3D.md`).
+const SEAM_LEN: f32 = 0.45;
+
+/// Which room a spawned entity belongs to, and what kind of room that is.
+/// Everything this module builds carries one, so a parted room takes its
+/// whole presentation with it and a chart hit can ask its own room's net
+/// whether the cell it landed on is a cell.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct InRoom {
+    pub room: RoomId,
+    pub kind: RoomKind,
+}
+
+impl InRoom {
+    /// Whether this room's net would let a piece berth on `(x, y)` — the
+    /// question the pointer asks before it believes a chart hit. Holes and
+    /// thresholds are misses, and the ray carries on past them.
+    #[must_use]
+    pub fn berthable(self, x: u8, y: u8) -> bool {
+        !matches!(self.kind.tile_of(x, y), None | Some(Tile::Threshold))
+    }
+}
+
+/// The amber latch beside a calling room's doorway: clicking it asks the
+/// input schedule to part that seam. The sim's gates answer, and a refusal
+/// arrives as a cue like any other.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct Latch {
+    pub room: RoomId,
+    /// The quad the crosshair must land on.
+    pub face: SimSurface,
+}
+
+/// A lamp this module drives from cues: the latch's own amber, and the
+/// jamb lamp that answers a seam mating or parting.
+#[derive(Component, Clone, Debug)]
+pub struct SeamLamp {
+    pub mat: Handle<StandardMaterial>,
+    /// Whether this lamp belongs to a latch (amber, standing) rather than
+    /// a jamb (dark until a cue).
+    pub latch: bool,
+}
+
+/// The handshake fixture's lamp: lit while the room has something to
+/// commit, dark while the throw would find nothing.
+#[derive(Component, Clone, Debug)]
+pub struct HandshakeLamp {
+    pub room: RoomId,
+    pub mat: Handle<StandardMaterial>,
+    /// What this station lights it in. The lamp's *meaning* is fixed —
+    /// lit is "there is something to commit" — and only its hue is the
+    /// station's, which is why the colour rides the component rather than
+    /// being read back out of a registry every frame.
+    pub hue: Color,
+}
+
+/// The handshake's knob, which visibly throws when it is worked.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct HandshakeThrow {
+    pub rest: Vec3,
+    pub travel: Vec3,
+}
+
+/// One placed room, as the presentation needs it: the same room the sim
+/// has, in world units.
+#[derive(Clone, Debug)]
+pub struct Placed {
+    pub id: RoomId,
+    pub kind: RoomKind,
+    /// **Whose room this is** — the station it serves, or `None` for a
+    /// room of the ship's own.
+    ///
+    /// Room kind is not station identity: one `Trade` kind serves twelve
+    /// places. It is derived rather than stored (`poi::of`), from the
+    /// room's kind and the ship's state, which is the sim's own law about
+    /// counterparties read from this side of the wall. [`survey`] fills it
+    /// in, because that is the one place the graph and the ship's state are
+    /// read together; a [`placed`] built for geometry alone leaves it
+    /// `None` and gets the neutral room, which is what a room with no
+    /// nameable station should look like.
+    pub host: Option<crate::poi::Host>,
+    /// Quarter turns clockwise, straight off the pose.
+    pub yaw: u8,
+    /// The room's interior box: deck corner to ceiling corner.
+    pub lo: Vec3,
+    pub hi: Vec3,
+    /// The net's six charts, bound to this room's own lane rects.
+    pub charts: [(Station, SimSurface); 6],
+    /// Every declared attachment point, mated or not.
+    pub ports: [Site; PORTS],
+}
+
+impl Placed {
+    /// This room's chart for one plane of its net.
+    #[must_use]
+    pub fn chart(&self, want: Station) -> Option<&SimSurface> {
+        self.charts
+            .iter()
+            .find(|(station, _)| *station == want)
+            .map(|(_, surface)| surface)
+    }
+}
+
+/// One attachment point, sited on the hull.
+#[derive(Clone, Copy, Debug)]
+pub struct Site {
+    pub port: PortId,
+    /// What the room declares in this slot — `None` where the kind
+    /// declares nothing, and a wall that declares nothing is a wall.
+    pub declared: Option<Port>,
+    /// Which room and port this one is mated to, if any.
+    pub mate: Option<(RoomId, PortId)>,
+    /// **What kind of room is on the far side**, where anything is.
+    ///
+    /// A seam is a fact about two rooms and every other field here is a
+    /// fact about one, which is why this had to be read off the graph
+    /// rather than off the room. The hardware a doorway hangs asks it:
+    /// a latch parts the room beyond, and a room that rides is not one
+    /// the sim will ever let go ([`latch_at`]).
+    pub beyond: Option<RoomKind>,
+    /// The hole this port punches through the hull, as a world box.
+    pub lo: Vec3,
+    pub hi: Vec3,
+    /// The plane's outward direction — where a neighbour would be.
+    pub out: Vec3,
+    /// Centre of the opening on the DRAWN wall, where a leaf hangs.
+    pub leaf: Vec3,
+    /// The opening's two in-plane half-extents.
+    pub half_a: Vec3,
+    pub half_b: Vec3,
+}
+
+impl Site {
+    /// Whether this port is a door — the only kind the body walks through
+    /// this stage (see the module note on verticality).
+    #[must_use]
+    pub const fn is_door(&self) -> bool {
+        matches!(self.declared, Some(Port::Door { .. }))
+    }
+}
+
+/// The whole ship as the presentation sees it, rebuilt whenever the sim's
+/// graph changes shape. Every consumer — the hull, the charts, the tiles,
+/// the walk envelope, the occupied-room field — reads this and nothing
+/// else, so no two of them can disagree about where a room is.
+#[derive(Resource, Default)]
+pub struct Plan {
+    pub rooms: Vec<Placed>,
+    /// The graph's shape last time this was rebuilt.
+    signature: Vec<Shape>,
+}
+
+/// The cheap fingerprint of one room's placement, for change detection.
+///
+/// The host's token rides along with the pose, and it has to: a ship that
+/// departs one station and docks at the next re-attaches a trade room with
+/// the same id at the same pose, and a signature that only knew the graph
+/// would leave Venus's enamel standing in Earth's market. (It cannot
+/// happen a frame at a time — a leg passes in between — but a warp or a
+/// catch-up runs both docks inside one frame, and a change detector that
+/// is only *usually* right is the kind that fails in a save file.)
+type Shape = (RoomId, u8, i32, i32, i32, u8, u32, u8);
+
+impl Plan {
+    /// The placed room with this id, if it is attached.
+    #[must_use]
+    pub fn get(&self, id: RoomId) -> Option<&Placed> {
+        self.rooms.iter().find(|room| room.id == id)
+    }
+
+    /// Which room's interior box holds `p`, if any.
+    ///
+    /// **This is the whole derivation of the occupied-room field.** The
+    /// sim learns rooms, not positions: the body is in the room whose box
+    /// it stands in, and one dense id is what crosses the interface.
+    #[must_use]
+    pub fn room_at(&self, p: Vec3) -> Option<RoomId> {
+        self.rooms
+            .iter()
+            .find(|room| {
+                p.x >= room.lo.x
+                    && p.x <= room.hi.x
+                    && p.z >= room.lo.z
+                    && p.z <= room.hi.z
+                    && p.y >= room.lo.y - WALL_T
+                    && p.y <= room.hi.y + WALL_T
+            })
+            .map(|room| room.id)
+    }
+}
+
+/// Where the body may stand: one box per attached room, joined at every
+/// mated doorway. Hull collision and nothing else — cargo has no body to
+/// bump (docs/BAY.md), so a stack of crates can never fence a corner off.
+#[derive(Resource, Default)]
+pub struct Envelope {
+    /// One box per attached room: its own floor, standable end to end.
+    pub rooms: Vec<(Vec3, Vec3)>,
+    /// One connector per mated doorway, reaching a body's width into the
+    /// rooms on both sides so the two envelopes actually meet.
+    pub seams: Vec<(Vec3, Vec3)>,
+}
+
+/// Whether `p` falls inside a box, in plan.
+fn inside(p: Vec3, (lo, hi): (Vec3, Vec3)) -> bool {
+    p.x >= lo.x && p.x <= hi.x && p.z >= lo.z && p.z <= hi.z
+}
+
+impl Envelope {
+    /// Whether the eye may stand at `p`.
+    #[must_use]
+    pub fn holds(&self, p: Vec3) -> bool {
+        self.rooms.iter().chain(&self.seams).any(|b| inside(p, *b))
+    }
+
+    /// Whether `p` is in a doorway rather than in a room.
+    ///
+    /// An aperture is two courses of the CARGO grid, which makes it a
+    /// hatch rather than a hall: a body passes through it the way anybody
+    /// boards a freighter, by ducking. The sim's aperture stays exactly
+    /// the two cells it declares, and the eye bends instead.
+    #[must_use]
+    pub fn ducking(&self, p: Vec3) -> bool {
+        self.seams.iter().any(|b| inside(p, *b)) && !self.rooms.iter().any(|b| inside(p, *b))
+    }
+
+    /// The nearest legal standing point to `p` — for the frame a room
+    /// parts out from under the body.
+    #[must_use]
+    pub fn nearest(&self, p: Vec3) -> Vec3 {
+        self.rooms
+            .iter()
+            .chain(&self.seams)
+            .map(|(lo, hi)| Vec3::new(p.x.clamp(lo.x, hi.x), p.y, p.z.clamp(lo.z, hi.z)))
+            .min_by(|a, b| a.distance_squared(p).total_cmp(&b.distance_squared(p)))
+            .unwrap_or(p)
+    }
+}
+
+/// Which room the crew body occupies, derived from the camera each frame
+/// and handed to the sim as the one new input field (docs/ROOMS.md, "The
+/// one new input field").
+#[derive(Resource)]
+pub struct Occupancy(pub RoomId);
+
+impl Default for Occupancy {
+    fn default() -> Self {
+        Self(CABIN)
+    }
+}
+
+/// The detach latch the crosshair rests on this frame, if any.
+#[derive(Resource, Default)]
+pub struct AimedLatch(pub Option<RoomId>);
+
+/// The seam cues' latched clocks: a refusal strobe and a mate/part pulse.
+#[derive(Resource, Default)]
+pub struct SeamFx {
+    refit: f32,
+    seam: f32,
+    /// The handshake's own throw, so the plunger visibly works.
+    throw: f32,
+}
+
+// ---- The lattice, in world units ----
+
+/// The world point at lattice corner `(x, y, z)`. Lattice +x runs to
+/// starboard, lattice +y runs forward (world -Z), lattice +z is a storey.
+#[must_use]
+pub fn lattice_corner(cell: (i32, i32, i32)) -> Vec3 {
+    Vec3::new(
+        (cell.0 as f32).mul_add(BAY_CELL, ANCHOR.x),
+        (cell.2 as f32).mul_add(STOREY, ANCHOR.y),
+        (-(cell.1 as f32)).mul_add(BAY_CELL, ANCHOR.z),
+    )
+}
+
+/// World direction of one step along a room's local +i (net x) axis.
+#[must_use]
+pub const fn axis_i(yaw: u8) -> Vec3 {
+    match yaw % 4 {
+        0 => Vec3::X,
+        1 => Vec3::NEG_Z,
+        2 => Vec3::NEG_X,
+        _ => Vec3::Z,
+    }
+}
+
+/// World direction of one step along a room's local +j (net y) axis.
+#[must_use]
+pub const fn axis_j(yaw: u8) -> Vec3 {
+    match yaw % 4 {
+        0 => Vec3::NEG_Z,
+        1 => Vec3::NEG_X,
+        2 => Vec3::Z,
+        _ => Vec3::X,
+    }
+}
+
+/// A local wall's outward direction: wall 0 is aft (-j), 1 starboard
+/// (+i), 2 front (+j), 3 port (-i) — the sim's own numbering.
+#[must_use]
+pub fn wall_out(wall: u8, yaw: u8) -> Vec3 {
+    match wall % 4 {
+        0 => -axis_j(yaw),
+        1 => axis_i(yaw),
+        2 => axis_j(yaw),
+        _ => -axis_i(yaw),
+    }
+}
+
+/// How far a room's wall chart stands inside its own box face — the same
+/// inset on every wall of every room.
+///
+/// **The cabin's authored trim is gone**, and with it the last thing in
+/// this module that was a number rather than a derivation. Three of its
+/// walls already took the ordinary inset and its aft wall took none,
+/// because the aft chart WAS the box face — which was survivable while
+/// the cabin's hull was hand-built and its aft wall happened to stand a
+/// centimetre behind that plane, and stopped being survivable the moment
+/// the hull was derived from the box like everybody else's: the decal
+/// ladder's backer, which rides behind the paint, was suddenly inside
+/// the wall rather than in the gap. It takes the same three centimetres
+/// as the other three now.
+///
+/// It stays a function of `(kind, wall)` rather than becoming a constant
+/// because the port law's first clause is that a room's geometry is read
+/// from its declaration, and a kind that one day needs its own trim
+/// should have somewhere to declare it.
+#[must_use]
+pub const fn chart_inset(kind: RoomKind, wall: u8) -> f32 {
+    let _ = (kind, wall);
+    CHART_INSET
+}
+
+/// A room's interior box in world units, from its pose alone.
+#[must_use]
+pub fn room_box(room: &Room) -> (Vec3, Vec3) {
+    let (x0, y0, x1, y1) = room.box_rect();
+    let a = lattice_corner((x0, y0, room.pose.z));
+    let b = lattice_corner((x1, y1, room.pose.z));
+    (
+        Vec3::new(a.x.min(b.x), a.y, a.z.min(b.z)),
+        Vec3::new(a.x.max(b.x), a.y + CEIL_Y, a.z.max(b.z)),
+    )
+}
+
+/// A room's OUTER box: the same room, seen from the void.
+///
+/// The interior box is the volume a body stands in; this is the volume
+/// the hull occupies around it — one wall thickness proud on all four
+/// sides and under the deck, capped by the room's own ceiling slab. The
+/// exterior (`crate::viewport`) grows every room's shell from exactly
+/// this, which is the whole reason the trade room you walked out of is
+/// bolted to your hull where you left it: one pose, two sides of the
+/// same plate.
+///
+/// The cabin is the one exception, and what is left of it is its RIBS:
+/// its six structural slabs are this box now (`rig::structure` derives
+/// them from [`shell_boxes`]), and the union is taken so the junk bolted
+/// to its flanks is inside its own outside.
+#[must_use]
+pub fn hull_box(placed: &Placed) -> (Vec3, Vec3) {
+    if placed.id == CABIN {
+        return crate::rig::structure()
+            .iter()
+            .map(|slab| (slab.center - slab.size * 0.5, slab.center + slab.size * 0.5))
+            .reduce(union)
+            .unwrap_or((placed.lo, placed.hi));
+    }
+    let skirt = Vec3::new(WALL_T, 0.0, WALL_T);
+    (
+        placed.lo - skirt - Vec3::Y * WALL_T,
+        placed.hi + skirt + Vec3::Y * (WALL_T.mul_add(0.5, CEIL_SLAB_Y) - CEIL_Y),
+    )
+}
+
+/// The cabin as the graph always has it: the root, at the lattice origin.
+/// Lets the hull derive its own apertures without asking the sim, since
+/// the root's pose is fixed by `Rooms::root` and nothing can move it.
+#[must_use]
+pub const fn cabin_room() -> Room {
+    Room {
+        kind: RoomKind::Cabin,
+        pose: Pose {
+            x: 0,
+            y: 0,
+            z: 0,
+            yaw: 0,
+        },
+        mates: [None; PORTS],
+        anchor: None,
+    }
+}
+
+/// One placed room, derived from the graph's own record of it. Every
+/// consumer builds its `Placed` through here, so nothing can derive a
+/// room's geometry two different ways.
+#[must_use]
+pub fn placed(rooms: &Rooms, id: RoomId, room: &Room) -> Placed {
+    let (lo, hi) = room_box(room);
+    Placed {
+        id,
+        kind: room.kind,
+        host: None,
+        yaw: room.pose.yaw,
+        lo,
+        hi,
+        charts: charts(id, room),
+        ports: sites(rooms, room),
+    }
+}
+
+/// One net chart's logical rect in room `id`'s own lane.
+fn chart_rect(id: RoomId, cx: u8, cy: u8, cw: u8, ch: u8) -> layout::Rect {
+    let origin = layout::cell_rect(id, cx, cy);
+    layout::Rect::new(
+        origin.x,
+        origin.y,
+        f32::from(cw) * layout::CELL,
+        f32::from(ch) * layout::CELL,
+    )
+}
+
+/// The room net's six charts, folded onto a placed room's own box.
+///
+/// The box unfolds exactly as BAY.md unfolds the cabin's — rows 0–2 stand
+/// on the aft wall, the middle rows fold onto the deck and the side walls,
+/// the last three stand on the front wall, and the ceiling chart folds on
+/// past the starboard cornice — but every plane and every axis now comes
+/// out of the pose, so a room at any yaw folds the same way.
+#[must_use]
+pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
+    let kind = room.kind;
+    let yaw = room.pose.yaw;
+    let (w, h) = kind.floor();
+    let (lo, hi) = room_box(room);
+    let mid = (lo + hi) * 0.5;
+    let (i, j) = (axis_i(yaw), axis_j(yaw));
+    let half_i = f32::from(w) * BAY_CELL * 0.5;
+    let half_j = f32::from(h) * BAY_CELL * 0.5;
+    let wall_mid = WALL_H * 0.5;
+    // A wall chart's plane, measured inward from its own box face.
+    let plane = |wall: u8, half: f32| wall_out(wall, yaw) * (half - chart_inset(kind, wall));
+    let level = |y: f32| Vec3::new(mid.x, lo.y + y, mid.z);
+    [
+        (
+            Station::BayWall,
+            SimSurface {
+                center: level(wall_mid) + plane(0, half_j),
+                half_u: i * half_i,
+                half_v: Vec3::NEG_Y * wall_mid,
+                rect: chart_rect(id, COURSES, 0, w, COURSES),
+                deep: 0.0,
+            },
+        ),
+        (
+            Station::BayFloor,
+            SimSurface {
+                center: level(FLOOR_Y),
+                half_u: i * half_i,
+                half_v: j * half_j,
+                rect: chart_rect(id, COURSES, COURSES, w, h),
+                deep: 0.0,
+            },
+        ),
+        (
+            Station::BayPort,
+            SimSurface {
+                center: level(wall_mid) + plane(3, half_i),
+                half_u: Vec3::NEG_Y * wall_mid,
+                half_v: j * half_j,
+                rect: chart_rect(id, 0, COURSES, COURSES, h),
+                deep: 0.0,
+            },
+        ),
+        (
+            Station::BayStarboard,
+            SimSurface {
+                center: level(wall_mid) + plane(1, half_i),
+                half_u: Vec3::Y * wall_mid,
+                half_v: j * half_j,
+                rect: chart_rect(id, COURSES + w, COURSES, COURSES, h),
+                deep: 0.0,
+            },
+        ),
+        (
+            Station::BayFront,
+            SimSurface {
+                center: level(wall_mid) + plane(2, half_j),
+                half_u: i * half_i,
+                half_v: Vec3::Y * wall_mid,
+                rect: chart_rect(id, COURSES, COURSES + h, w, COURSES),
+                deep: 0.0,
+            },
+        ),
+        (
+            Station::BayCeiling,
+            SimSurface {
+                center: level(CEIL_Y),
+                half_u: -i * half_i,
+                half_v: j * half_j,
+                rect: chart_rect(id, 2 * COURSES + w, COURSES, w, h),
+                deep: 0.0,
+            },
+        ),
+    ]
+}
+
+/// The local floor cells a door's aperture stands on — the port law's own
+/// declaration, read rather than assumed.
+fn door_cells(kind: RoomKind, wall: u8, offset: u8) -> [(u8, u8); APERTURE as usize] {
+    let (w, h) = kind.floor();
+    let mut cells = [(0, 0); APERTURE as usize];
+    for (step, cell) in cells.iter_mut().enumerate() {
+        let along = offset + step as u8;
+        *cell = match wall % 4 {
+            0 => (along, 0),
+            1 => (w - 1, along),
+            2 => (along, h - 1),
+            _ => (0, along),
+        };
+    }
+    cells
+}
+
+/// The world box one lattice cell's column occupies between two heights
+/// above its own deck.
+fn cell_column(room: &Room, i: u8, j: u8, y0: f32, y1: f32) -> (Vec3, Vec3) {
+    let cell = room.cell_of(i, j);
+    let a = lattice_corner(cell);
+    let b = lattice_corner((cell.0 + 1, cell.1 + 1, cell.2));
+    (
+        Vec3::new(a.x.min(b.x), a.y + y0, a.z.min(b.z)),
+        Vec3::new(a.x.max(b.x), a.y + y1, a.z.max(b.z)),
+    )
+}
+
+/// Grow a box to hold another.
+fn union(a: (Vec3, Vec3), b: (Vec3, Vec3)) -> (Vec3, Vec3) {
+    (a.0.min(b.0), a.1.max(b.1))
+}
+
+/// The horizontal axis a wall runs along, given its outward normal.
+fn axis_along(out: Vec3) -> Vec3 {
+    if out.x.abs() > out.z.abs() {
+        Vec3::Z
+    } else {
+        Vec3::X
+    }
+}
+
+/// Every attachment point of a placed room, sited: the hole it punches,
+/// the plane its leaf hangs in, and who (if anyone) is on the far side.
+#[must_use]
+pub fn sites(rooms: &Rooms, room: &Room) -> [Site; PORTS] {
+    let kind = room.kind;
+    let yaw = room.pose.yaw;
+    let ports = kind.ports();
+    let blank = Site {
+        port: 0,
+        declared: None,
+        mate: None,
+        beyond: None,
+        lo: Vec3::ZERO,
+        hi: Vec3::ZERO,
+        out: Vec3::Y,
+        leaf: Vec3::ZERO,
+        half_a: Vec3::ZERO,
+        half_b: Vec3::ZERO,
+    };
+    let mut sites = [blank; PORTS];
+    for (index, site) in sites.iter_mut().enumerate() {
+        site.port = index as PortId;
+        site.declared = ports[index];
+        site.mate = room.mates[index];
+        site.beyond = site.mate.and_then(|(other, _)| rooms.kind(other));
+        // A slot the kind does not declare is a wall: nothing punched,
+        // nothing hung, nothing drawn (docs/ROOMS.md, "The port law").
+        let Some(declared) = ports[index] else {
+            continue;
+        };
+        match declared {
+            Port::Door { wall, offset } => {
+                let cells = door_cells(kind, wall, offset);
+                let clear = f32::from(APERTURE) * BAY_CELL;
+                let mut hole = cell_column(room, cells[0].0, cells[0].1, 0.0, clear);
+                for &(i, j) in &cells[1..] {
+                    hole = union(hole, cell_column(room, i, j, 0.0, clear));
+                }
+                let out = wall_out(wall, yaw);
+                let inset = chart_inset(kind, wall);
+                // The DRAWN wall may stand beyond the box face (the
+                // cabin's authored gutter), so the cut reaches as far out
+                // as that room's own trim says the plane is — with half a
+                // wall to spare, because a doorway that leaves a
+                // paper-thin sliver of hull in it is not a doorway.
+                let reach = WALL_T.mul_add(1.5, (-inset).max(0.0));
+                let sign = out.x + out.z;
+                let far = if sign > 0.0 { hole.1 } else { hole.0 };
+                let face = far * out.abs() + (hole.0 + hole.1) * 0.5 * (Vec3::ONE - out.abs());
+                let outward = face + out * reach;
+                let grown = union(hole, (outward, outward));
+                let along = axis_along(out);
+                site.lo = grown.0;
+                site.hi = grown.1;
+                site.out = out;
+                site.half_a = along * (clear * 0.5);
+                site.half_b = Vec3::Y * (clear * 0.5);
+                site.leaf = Vec3::new(face.x, clear.mul_add(0.5, hole.0.y), face.z) - out * inset;
+            }
+            Port::Ladder { x, y } | Port::Hatch { x, y } => {
+                let up = matches!(declared, Port::Ladder { .. });
+                let (y0, y1) = if up {
+                    (CEIL_SLAB_Y - WALL_T, CEIL_SLAB_Y + WALL_T)
+                } else {
+                    (-WALL_T * 1.5, WALL_T * 0.25)
+                };
+                let mut hole = cell_column(room, x, y, y0, y1);
+                for j in 0..APERTURE {
+                    for i in 0..APERTURE {
+                        hole = union(hole, cell_column(room, x + i, y + j, y0, y1));
+                    }
+                }
+                let centre = (hole.0 + hole.1) * 0.5;
+                let deck = lattice_corner((0, 0, room.pose.z)).y;
+                site.lo = hole.0;
+                site.hi = hole.1;
+                site.out = if up { Vec3::Y } else { Vec3::NEG_Y };
+                site.leaf = Vec3::new(centre.x, deck + if up { CEIL_Y } else { FLOOR_Y }, centre.z);
+                site.half_a = Vec3::X * ((hole.1.x - hole.0.x) * 0.5);
+                site.half_b = Vec3::Z * ((hole.1.z - hole.0.z) * 0.5);
+            }
+        }
+    }
+    sites
+}
+
+/// The cabin's six apertures as world boxes, for the hull that was built
+/// before the lattice was. `rig::structure` punches every one of them,
+/// which is why no slab in this game says where a door is.
+#[must_use]
+pub fn cabin_holes() -> [(Vec3, Vec3); PORTS] {
+    lone_cabin().ports.map(|site| (site.lo, site.hi))
+}
+
+/// **The cabin on its own, placed** — the hull's own geometry, with no
+/// graph around it.
+///
+/// `rig::structure` builds the ship's shell once, before there is a sim
+/// to ask, and a lone cabin mates nothing: what lies beyond each of its
+/// ports is nothing, whichever graph the question is put to. So the
+/// root graph is the honest one to ask, and this is where saying so
+/// lives instead of at each caller.
+#[must_use]
+pub fn lone_cabin() -> Placed {
+    placed(&Rooms::root(RoomKind::Cabin), CABIN, &cabin_room())
+}
+
+/// Subtract a box from a slab, as up to six axis-aligned remainders. A
+/// hole that misses leaves the slab whole; a hole that swallows it leaves
+/// nothing. This is how every doorway, hatch, and ladder well is cut.
+#[must_use]
+pub fn punch(center: Vec3, size: Vec3, hole_lo: Vec3, hole_hi: Vec3) -> Vec<(Vec3, Vec3)> {
+    let mut lo = center - size * 0.5;
+    let mut hi = center + size * 0.5;
+    if (hole_lo.cmpge(hi) | hole_hi.cmple(lo)).any() {
+        return vec![(center, size)];
+    }
+    let mut parts = Vec::new();
+    for axis in 0..3 {
+        if hole_lo[axis] > lo[axis] {
+            let mut cut = hi;
+            cut[axis] = hole_lo[axis];
+            keep(lo, cut, &mut parts);
+            lo[axis] = hole_lo[axis];
+        }
+        if hole_hi[axis] < hi[axis] {
+            let mut cut = lo;
+            cut[axis] = hole_hi[axis];
+            keep(cut, hi, &mut parts);
+            hi[axis] = hole_hi[axis];
+        }
+    }
+    parts
+}
+
+/// Push a remainder, unless the cut left a sliver too thin to be a wall.
+fn keep(lo: Vec3, hi: Vec3, parts: &mut Vec<(Vec3, Vec3)>) {
+    let span = hi - lo;
+    if span.min_element() > 1e-4 {
+        parts.push(((lo + hi) * 0.5, span));
+    }
+}
+
+/// A `--view` preset parked in an attached room, as `(eye, yaw, pitch)`.
+///
+/// Dev tooling, and derived like everything else: it asks the graph where
+/// the room is rather than remembering where it was last time. Attach the
+/// trade room somewhere else and the preset follows it.
+///
+/// - `trade` / `wreck` / `parlor` / `pump`: inside that room, facing its
+///   own aft band — where the stock stands and the handshake is set.
+/// - `offer`: inside the trade room, facing its offer band.
+/// - `burner`: inside the furnace, facing the firebox.
+/// - `door`: in the cabin, facing the seam a calling room came in by.
+#[must_use]
+pub fn preset(rooms: &Rooms, name: &str) -> Option<(Vec3, f32, f32)> {
+    let look = |from: Vec3, at: Vec3, pitch: f32| {
+        let d = at - from;
+        (from, (-d.x).atan2(-d.z), pitch)
+    };
+    let inside = |kind: RoomKind, wall: u8, pitch: f32| {
+        let id = rooms.find(kind)?;
+        let room = rooms.get(id)?;
+        let placed = placed(rooms, id, room);
+        let mid = (placed.lo + placed.hi) * 0.5;
+        let eye = Vec3::new(mid.x, EYE_HEIGHT, mid.z);
+        let face = wall_out(wall, placed.yaw);
+        Some(look(
+            eye - face * ((placed.hi - placed.lo) * face.abs()).length() * 0.22,
+            eye + face,
+            pitch,
+        ))
+    };
+    match name {
+        // The cabin's own floor hatch, from a body's length away and
+        // looking down at it — the reading the playtest could not make.
+        "hatch" => {
+            let cabin = placed(rooms, CABIN, rooms.get(CABIN)?);
+            let site = cabin
+                .ports
+                .iter()
+                .find(|site| matches!(site.declared, Some(Port::Hatch { .. })))?;
+            let eye = Vec3::new(site.leaf.x, EYE_HEIGHT, site.leaf.z + 1.15);
+            let down = site.leaf - eye;
+            Some(look(eye, site.leaf, down.y.atan2(down.xz().length())))
+        }
+        "trade" => inside(RoomKind::Trade, 0, -0.30),
+        "offer" => inside(RoomKind::Trade, 2, -0.18),
+        // **Outside, off a caller's outboard face**: the view a station's
+        // own shell is judged from. `drydock` stands off the CABIN's bow,
+        // which frames the ship and puts whatever came alongside at the
+        // far end of it — fine for the graph, useless for the hardware a
+        // station bolted to its own plate. This one stands square on the
+        // wall opposite the caller's one door, which is the wall facing
+        // the void and therefore the wall a design agent dressed.
+        "berth" => {
+            let id = rooms
+                .iter()
+                .filter(|(_, room)| !room.kind.riding())
+                .map(|(id, _)| id)
+                .max()?;
+            let placed = placed(rooms, id, rooms.get(id)?);
+            let (lo, hi) = hull_box(&placed);
+            let mid = (lo + hi) * 0.5;
+            // Wall 0 is the door; the outboard face is the other way.
+            let out = -wall_out(0, placed.yaw);
+            let flank = axis_i(placed.yaw);
+            let reach = (hi - lo).length();
+            let eye = mid + out * reach * 1.25 + flank * reach * 0.5 + Vec3::Y * reach * 0.5;
+            // Aimed above the box's middle, because what a station bolts
+            // to its shell stands PROUD of it — a frame centred on the
+            // plate crops the mast off the top of every shot.
+            let at = mid + Vec3::Y * reach * 0.28;
+            let down = at - eye;
+            Some(look(eye, at, down.y.atan2(down.xz().length())))
+        }
+        // The market's port flank — the one wall of a calling room that
+        // is neither its goods nor its counter, which is why anything a
+        // crew hangs in somebody else's room ends up on it.
+        "flank" => inside(RoomKind::Trade, 3, -0.06),
+        "wreck" => inside(RoomKind::Wreck, 0, -0.10),
+        "parlor" => inside(RoomKind::Parlor, 0, -0.10),
+        "pump" => inside(RoomKind::Pump, 0, -0.10),
+        // The furnace is entered through its own door, so the eye stands
+        // by the doorway and looks at the fire in the far wall.
+        "burner" => inside(RoomKind::Burner, 1, -0.06),
+        // The cabin side of whatever seam is open: the doorway a calling
+        // room came in by, or the furnace's if nothing is alongside.
+        // On the stoop of whatever seam is open, and standing back from
+        // it. `seam` is where a ducking body's eye actually is while it
+        // passes through: an aperture is two courses of the cargo grid,
+        // which is a hatch, not a hall.
+        "seam" | "door" => {
+            let cabin = placed(rooms, CABIN, rooms.get(CABIN)?);
+            let site = cabin
+                .ports
+                .iter()
+                .filter(|site| site.is_door() && site.mate.is_some())
+                .max_by_key(|site| site.mate.map(|(other, _)| other))?;
+            let stoop = name == "seam";
+            // Stand off the jamb's inboard flank, so the doorway is seen
+            // rather than filled by whatever the room keeps beside it.
+            let flank = site.half_a.normalize_or_zero();
+            let toward = Vec3::new(
+                f32::midpoint(cabin.lo.x, cabin.hi.x),
+                0.0,
+                f32::midpoint(cabin.lo.z, cabin.hi.z),
+            ) - Vec3::new(site.leaf.x, 0.0, site.leaf.z);
+            let flank = if flank.dot(toward) < 0.0 {
+                -flank
+            } else {
+                flank
+            };
+            let (back, aside, high, pitch) = if stoop {
+                (0.10, 0.0, crate::rig::DUCK_HEIGHT, 0.0)
+            } else {
+                (1.9, 0.9, EYE_HEIGHT, -0.16)
+            };
+            let eye = Vec3::new(site.leaf.x, high, site.leaf.z) - site.out * back + flank * aside;
+            Some(look(eye, Vec3::new(site.leaf.x, 0.55, site.leaf.z), pitch))
+        }
+        _ => None,
+    }
+}
+
+// ---- The plan, rebuilt from the graph ----
+
+/// Read the sim's graph and, when its shape changed, re-derive the plan
+/// and the walk envelope. Runs before anything that reads either.
+pub fn survey(shell: Res<Shell>, mut plan: ResMut<Plan>, mut envelope: ResMut<Envelope>) {
+    let rooms = shell.bridge.sim.rooms();
+    // **The one place a room learns whose it is.** The graph says what
+    // kind of room it is; the ship's state says where the ship is; the
+    // pair names the counterparty, exactly as the save's own
+    // reconstruction of a trade does (`sim::save`). Nothing is stored,
+    // so nothing can disagree.
+    let state = shell.bridge.sim.ship().state;
+    let host = |kind| crate::poi::of(kind, state);
+    let signature: Vec<Shape> = rooms
+        .iter()
+        .map(|(id, room)| {
+            let mates = room
+                .mates
+                .iter()
+                .enumerate()
+                .fold(0_u32, |acc, (port, at)| {
+                    acc | (u32::from(at.is_some()) << port)
+                });
+            (
+                id,
+                room.kind.token(),
+                room.pose.x,
+                room.pose.y,
+                room.pose.z,
+                room.pose.yaw,
+                mates,
+                host(room.kind).map_or(u8::MAX, crate::poi::Host::token),
+            )
+        })
+        .collect();
+    if signature == plan.signature {
+        return;
+    }
+    plan.signature = signature;
+    plan.rooms = rooms
+        .iter()
+        .map(|(id, room)| Placed {
+            host: host(room.kind),
+            ..placed(rooms, id, room)
+        })
+        .collect();
+    *envelope = walk_boxes(&plan.rooms);
+}
+
+/// The walk envelope: a box per room, joined at every mated doorway.
+///
+/// The cabin's box is authored, because its hull is — it stands a gutter
+/// of desk furniture forward of its own floor box that the lattice knows
+/// nothing about. Every attached room insets its lattice box by a body's
+/// half-width, and each mated door adds a connector reaching a body's
+/// width into the rooms on both sides. Hull collision, per-room boxes
+/// joined at apertures, and nothing else.
+///
+/// The vertical pair is deliberately not joined: a ladder is not walkable
+/// until the camera can climb, so hatches and ladders stay sealed plates
+/// this stage.
+#[must_use]
+pub fn walk_boxes(rooms: &[Placed]) -> Envelope {
+    let mut envelope = Envelope::default();
+    for placed in rooms {
+        if placed.id == CABIN {
+            envelope.rooms.push((WALK_MIN, WALK_MAX));
+        } else {
+            let lo = placed.lo + Vec3::new(BODY, 0.0, BODY);
+            let hi = placed.hi - Vec3::new(BODY, 0.0, BODY);
+            if hi.x > lo.x && hi.z > lo.z {
+                envelope.rooms.push((
+                    Vec3::new(lo.x, EYE_HEIGHT, lo.z),
+                    Vec3::new(hi.x, EYE_HEIGHT, hi.z),
+                ));
+            }
+        }
+        for site in &placed.ports {
+            let Some((other, _)) = site.mate else {
+                continue;
+            };
+            if !site.is_door() || other < placed.id {
+                // One connector per seam, drawn by the lower id — the
+                // shared-partition convention, one scale up.
+                continue;
+            }
+            // The connector spans the PASSAGE, and a body's width and a
+            // wall past the mouth at either end of it. A doorway is a
+            // cell long now: it used to be a plane, and a connector
+            // reaching a wall's thickness either side of a plane was the
+            // whole of it. The extra wall is the cabin's: its envelope is
+            // authored rather than inset, and stands a little further off
+            // its own face than a derived one would, so a connector that
+            // reached exactly a body's width would leave five centimetres
+            // of nothing between the two.
+            let along = site.half_a.abs() - site.half_a.normalize_or_zero().abs() * BODY;
+            let half = along.max(Vec3::ZERO) + site.out.abs() * PAD_M.mul_add(0.5, BODY + WALL_T);
+            let mid = seam_centre(placed, site) + site.out * (PAD_M * 0.5);
+            let centre = Vec3::new(mid.x, EYE_HEIGHT, mid.z);
+            envelope.seams.push((centre - half, centre + half));
+        }
+    }
+    envelope
+}
+
+// ---- Building the rooms ----
+
+/// What has been built, so a graph change rebuilds exactly what changed.
+#[derive(Resource, Default)]
+pub struct Built(Vec<Shape>);
+
+pub struct RoomsPlugin;
+
+impl Plugin for RoomsPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<Plan>()
+            .init_resource::<Envelope>()
+            .init_resource::<Occupancy>()
+            .init_resource::<AimedLatch>()
+            .init_resource::<SeamFx>()
+            .init_resource::<Built>()
+            .add_systems(
+                Update,
+                (survey, rebuild, occupy)
+                    .chain()
+                    .in_set(Phase::Input)
+                    .before(crate::rig::steer),
+            )
+            // The latch is arbitrated against the pointer, so it runs
+            // where the pointer is: after the cast, not before the pose.
+            .add_systems(
+                Update,
+                aim_latch
+                    .in_set(Phase::Input)
+                    .after(crate::surface::track_pointer),
+            )
+            .add_systems(Update, seam_fx.in_set(Phase::View));
+    }
+}
+
+/// Spawn what the plan says and despawn what it no longer says. Rooms are
+/// rebuilt wholesale when the graph changes: a room is a handful of slabs
+/// and a few dozen decals, and a diff finer than "this room" would be
+/// machinery guarding nothing.
+#[allow(clippy::too_many_arguments)]
+pub fn rebuild(
+    mut commands: Commands,
+    plan: Res<Plan>,
+    skin: Option<Res<Skin>>,
+    fade: Option<Res<TileFade>>,
+    shared: Option<Res<crate::pieces::SharedBits>>,
+    mut built: ResMut<Built>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    standing: Query<(Entity, &InRoom)>,
+) {
+    let (Some(skin), Some(fade), Some(shared)) = (skin, fade, shared) else {
+        return;
+    };
+    if built.0 == plan.signature {
+        return;
+    }
+    built.0.clone_from(&plan.signature);
+    for (entity, _) in &standing {
+        commands.entity(entity).despawn();
+    }
+    let cube = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+    let shapes = crate::poi::Shapes::new(&mut meshes);
+    for placed in &plan.rooms {
+        let tag = InRoom {
+            room: placed.id,
+            kind: placed.kind,
+        };
+        // **Whose room this is.** A station nobody has filled in yet, and
+        // every room of the ship's own, gets the neutral character —
+        // which is exactly the room this module used to build inline.
+        let character = crate::poi::character_of(placed.host);
+        for (station, surface) in placed.charts {
+            commands.spawn((station, surface, tag));
+        }
+        if placed.id != CABIN {
+            // The cabin's own hull is `rig::structure`'s, authored and
+            // standing since before the lattice; everything else grows
+            // its shell from its box.
+            shell_slabs(&mut commands, &cube, &skin, placed, &plan.rooms, tag);
+        }
+        if !placed.kind.riding() {
+            caller_lamp(
+                &mut commands,
+                &shapes,
+                &mut materials,
+                &skin,
+                &character.light,
+                placed,
+                tag,
+            );
+        }
+        tiles(
+            &mut commands,
+            &cube,
+            &mut materials,
+            &skin,
+            &fade,
+            &character.tiles,
+            placed,
+            tag,
+        );
+        dress_ports(
+            &mut commands,
+            &cube,
+            &mut materials,
+            &skin,
+            &character.tiles,
+            placed,
+            tag,
+        );
+        handshake(
+            &mut commands,
+            &cube,
+            &shapes,
+            &mut materials,
+            &skin,
+            &character.handshake,
+            placed,
+            tag,
+        );
+        furnish(
+            &mut commands,
+            &shapes,
+            &mut materials,
+            &skin,
+            character.decor,
+            placed,
+            tag,
+        );
+        crate::pieces::hint_cells(&mut commands, &cube, &mut materials, &shared, placed);
+        crate::airlock::fittings(
+            &mut commands,
+            &cube,
+            &mut meshes,
+            &mut materials,
+            &skin,
+            placed,
+            tag,
+        );
+    }
+}
+
+/// A **calling** room lights its own premises, and only its own.
+///
+/// The ship owns not one lumen — every light aboard is cargo, and
+/// lights-out is a legal state (docs/BAY.md) — but a room that came
+/// alongside is not the ship's, and a station that let you trade in the
+/// dark would be a station with something to hide. So the callers arrive
+/// lit and take their light with them when they part, while the cabin and
+/// the burner stay exactly as dark as the crew's own lamps leave them.
+///
+/// Three clauses keep that exception honest, and all three are tested
+/// ([`tests::a_callers_lamp_lights_its_own_room_and_no_further`]):
+///
+/// 1. **It dims like everything else.** The lamp carries [`Dimmable`]
+///    with the very intensity it burns at, so `fx::dim_cabin`'s
+///    `intensity * sim.light()` is the omen leaning on a station exactly
+///    as it leans on a crew lamp. There is no opt-out and no second path.
+/// 2. **It is sized to its own room.** The reach is derived from the
+///    room's box — far floor corner and a step — never a constant. It
+///    used to be a flat 7.5 m at 260,000 lumens, which is twice the
+///    ship's own key light thrown right through the partition and across
+///    the whole cabin: the lights-out economy paid for a station's
+///    electricity bill. What crosses the seam now is the last of the
+///    falloff, which is what a doorway does, and no riding room's middle
+///    is ever reached.
+/// 3. **It hangs on something.** A room lit from an invisible point is a
+///    debug harness; this one wears a shade, and the shade is the
+///    neutral form every per-POI agent will differentiate from.
+const CALLER_LUMENS: f32 = 150_000.0;
+
+/// A hand's breadth of daylight between a standing head and whatever
+/// hangs over it. Zero clears by arithmetic and gives everybody aboard
+/// a haircut.
+const HEADROOM: f32 = 0.03;
+
+/// **How high a standing body reaches**: the eye, the head it swings, and
+/// a hand's breadth of daylight over it.
+///
+/// What a room hangs from its own ceiling is measured off this — the
+/// pendant's drop ([`CALLER_DROP`]) is derived from it and nothing else —
+/// so a crew member walks under the room's own hardware. A station's
+/// floor furniture is not held to it and should not be: a crate stands on
+/// a deck and so does a bollard, and you walk round both.
+pub const HEAD_CLEAR: f32 = EYE_HEIGHT + crate::rig::HEAD_R + HEADROOM;
+
+/// How far under a caller's ceiling its lamp hangs.
+///
+/// **Derived, not chosen.** A pendant, not a panel: low enough that its
+/// reach is the room's rather than the ship's, high enough that a
+/// standing body walks under it — and "it" is the whole fitting, not
+/// the lamp point. The shade's own box is as low as a station's cage
+/// may reach (`poi`'s containment law), so the drop is whatever leaves
+/// a standing head under that box.
+///
+/// It used to be a round 0.55, which hung the cages at 1.47 against an
+/// eye at 1.50: eleven of them, at seven stations, and the playtest
+/// walked face-first into every one.
+pub const CALLER_DROP: f32 = CEIL_Y - (HEAD_CLEAR + SHADE_R);
+
+/// The pendant's shade radius and the glass under it.
+pub const SHADE_R: f32 = 0.24;
+pub const SHADE_H: f32 = 0.11;
+
+/// How far above the lamp a station's cage may reach, in shades: to the
+/// ceiling the pendant hangs from and not past it. A hanger is part of a
+/// pendant and a spike through the deckhead is not, so up is the one
+/// direction a cage is allowed out of the shade's own box.
+///
+/// Read by the containment law and by the hangers themselves — a fitting
+/// that runs from the shade to the deckhead states its top end as this
+/// rather than as the decimal the clearance happened to be the day it was
+/// drawn (`poi::Fitting::spanning`). Four stations had four such
+/// decimals, and the day the deckhead came down onto the cargo grid all
+/// four became spikes through the ceiling.
+pub const CAGE_RISE: f32 = CALLER_DROP / SHADE_R;
+
+/// The stem's girth, and the glass disc's radius as a fraction of the
+/// shade. Fixed, not a station's: a pendant that could be any size would
+/// be a station reaching for the ceiling height, which is the room's.
+pub const STEM_T: f32 = 0.05;
+pub const GLASS_R: f32 = 0.72;
+
+/// Where a caller's lamp hangs and how far it carries — derived from the
+/// room's own box, so a wider room gets a wider pool and a small one
+/// keeps its light to itself. The reach stops a quarter cell past the
+/// room's own far floor corner: far enough that the corners are lit, near
+/// enough that the neighbours are not.
+pub fn caller_reach(placed: &Placed) -> (Vec3, f32) {
+    let mid = (placed.lo + placed.hi) * 0.5;
+    let at = Vec3::new(mid.x, placed.hi.y - CALLER_DROP, mid.z);
+    let corner = Vec3::new(placed.lo.x, placed.lo.y, placed.lo.z);
+    (at, BAY_CELL.mul_add(0.25, (at - corner).length()))
+}
+
+/// The caller's pendant, as the components it spawns with — pure, so the
+/// three clauses above can be asserted against exactly what the room
+/// gets. The `Dimmable` base and the light's own intensity come from one
+/// value on purpose: a lamp that remembered a different honest brightness
+/// than it burns at would brighten or dim the first time the omen passed.
+fn caller_light(
+    placed: &Placed,
+    light: &crate::poi::Light,
+) -> (PointLight, Transform, crate::rig::Dimmable) {
+    let (at, range) = caller_reach(placed);
+    // A station picks what it burns and how hard, out of the caller
+    // budget; it does not pick the REACH, which is derived from its own
+    // box. That is the containment rule surviving every character that
+    // will ever be written (docs/ART_DIRECTION_3D.md).
+    let intensity = CALLER_LUMENS * light.burn.clamp(0.0, 1.0);
+    (
+        PointLight {
+            color: light.color,
+            intensity,
+            range,
+            // No shadow maps anywhere, on purpose: the art direction is
+            // light VOLUMES, not simulated occlusion. Which is precisely
+            // why the reach above has to do the partition's job.
+            shadow_maps_enabled: false,
+            ..default()
+        },
+        Transform::from_translation(at),
+        crate::rig::Dimmable { intensity },
+    )
+}
+
+/// The pendant itself: a stem off the ceiling, a shade, the glass inside
+/// it, whatever cage the station hangs round it, and the light. One honest
+/// industrial fitting — the same argument the handshake's brass makes, one
+/// storey up — because a trading floor that is lit by nothing at all reads
+/// as a test harness with cargo in it.
+///
+/// **What is the station's and what is the room's** is the whole shape of
+/// this function: the station picks the colour, the burn, the shade's
+/// silhouette and coats, and the cage; the room keeps where the lamp hangs
+/// and how far it reaches, because both of those are its box's business
+/// and a station billing the crew for its electricity is the defect the
+/// containment rule exists to forbid.
+fn caller_lamp(
+    commands: &mut Commands,
+    shapes: &crate::poi::Shapes,
+    materials: &mut Assets<StandardMaterial>,
+    skin: &Skin,
+    light: &crate::poi::Light,
+    placed: &Placed,
+    tag: InRoom,
+) {
+    let (at, _) = caller_reach(placed);
+    let stem = (placed.hi.y - at.y) * 0.5;
+    commands.spawn((
+        Mesh3d(shapes.of(crate::poi::Shape::Slab)),
+        MeshMaterial3d(crate::poi::Coat::enamel(palette::PLATE_SHADE).material(materials, None)),
+        Transform::from_translation(Vec3::new(at.x, at.y + stem, at.z)).with_scale(Vec3::new(
+            STEM_T,
+            stem * 2.0,
+            STEM_T,
+        )),
+        tag,
+    ));
+    commands.spawn((
+        Mesh3d(shapes.of(light.shade)),
+        MeshMaterial3d(light.shade_coat.material(materials, Some(skin))),
+        Transform::from_translation(Vec3::new(at.x, SHADE_H.mul_add(0.5, at.y), at.z))
+            .with_scale(Vec3::new(SHADE_R * 2.0, SHADE_H, SHADE_R * 2.0)),
+        tag,
+    ));
+    commands.spawn((
+        Mesh3d(shapes.of(crate::poi::Shape::Post)),
+        MeshMaterial3d(light.glass.material(materials, Some(skin))),
+        Transform::from_translation(Vec3::new(at.x, at.y - 0.01, at.z)).with_scale(Vec3::new(
+            SHADE_R * GLASS_R * 2.0,
+            0.02,
+            SHADE_R * GLASS_R * 2.0,
+        )),
+        tag,
+    ));
+    // The station's own hardware round the fitting, measured off a box one
+    // shade across on every side of the lamp — never off the room, so a
+    // cage cannot become a beam across it.
+    let cage = crate::poi::Frame {
+        mid: at,
+        half: Vec3::splat(SHADE_R),
+        rot: Quat::IDENTITY,
+    };
+    for fitting in light.cage {
+        commands.spawn((
+            Mesh3d(shapes.of(fitting.shape)),
+            MeshMaterial3d(fitting.coat.material(materials, Some(skin))),
+            cage.place(fitting),
+            tag,
+        ));
+    }
+    // A station may go dark, and a dark station has no light source at
+    // all rather than a source burning nothing: the Umbra Market is a
+    // legal state, not a bug (docs/BAY.md, "lights-out is legal").
+    if light.burn > 0.0 {
+        let (lamp, transform, dimmable) = caller_light(placed, light);
+        commands.spawn((lamp, transform, dimmable, tag));
+    }
+}
+
+/// A station's own furniture, inside its own room.
+///
+/// The frame is **the room's own box**, floor to deckhead, and the
+/// fittings are fractions of it — so a character never learns how big a
+/// trade room is and cannot reach out of one ([`crate::poi`]'s
+/// containment law). Nothing here is click-functional and nothing here is
+/// a berth: it is dressing, and the sim does not hear about it.
+///
+/// It was briefly the band left over above cargo's air, which was
+/// technically clear of every berth and eighty-two millimetres tall: a
+/// pump bay dressed in it read as an empty box. A station's furniture
+/// stands on the deck it belongs on now, and the room a station keeps for
+/// it is stated in **cells** instead of in air — [`Tile::Staging`], which
+/// a fitting may stand in and cargo may be set down in, because a room
+/// that leaves owns no volume it needs to defend (docs/ROOMS.md, "The
+/// staging law").
+fn furnish(
+    commands: &mut Commands,
+    shapes: &crate::poi::Shapes,
+    materials: &mut Assets<StandardMaterial>,
+    skin: &Skin,
+    decor: &[crate::poi::Fitting],
+    placed: &Placed,
+    tag: InRoom,
+) {
+    if decor.is_empty() {
+        return;
+    }
+    let frame = crate::poi::Frame::of(placed.lo, placed.hi, placed.yaw);
+    for fitting in decor {
+        commands.spawn((
+            Mesh3d(shapes.of(fitting.shape)),
+            MeshMaterial3d(fitting.coat.material(materials, Some(skin))),
+            frame.place(fitting),
+            tag,
+        ));
+    }
+}
+
+/// A room's hull: deck, ceiling, and four walls, each punched by whatever
+/// apertures its own ports declare and by whatever a lower-id room's box
+/// already fills. Two rooms may share a plane and may never share a slab
+/// (docs/ROOMS.md, "Walls have no thickness on the lattice").
+fn shell_slabs(
+    commands: &mut Commands,
+    cube: &Handle<Mesh>,
+    skin: &Skin,
+    placed: &Placed,
+    all: &[Placed],
+    tag: InRoom,
+) {
+    for (center, size, hull) in shell_boxes(placed, all) {
+        commands.spawn((
+            Mesh3d(cube.clone()),
+            MeshMaterial3d(if hull {
+                skin.hull.clone()
+            } else {
+                skin.desk.clone()
+            }),
+            Transform::from_translation(center).with_scale(size),
+            tag,
+        ));
+    }
+}
+
+/// [`shell_slabs`]' geometry, as `(centre, size, is_hull)`. Pure, so the
+/// no-clipping law can be asserted against exactly what gets drawn.
+#[must_use]
+pub fn shell_boxes(placed: &Placed, all: &[Placed]) -> Vec<(Vec3, Vec3, bool)> {
+    let (lo, hi) = (placed.lo, placed.hi);
+    let span = hi - lo;
+    let plan_centre = Vec3::new(f32::midpoint(lo.x, hi.x), 0.0, f32::midpoint(lo.z, hi.z));
+    // The deck and the deckhead reach a full wall past the box on every
+    // side, which is exactly where the walls standing on them end. A
+    // room's whole fabric is therefore the interior grown by one wall —
+    // the box [`hull_box`] already claimed it was — and a passage can
+    // butt against it rather than lie over it.
+    let pan = Vec3::new(
+        WALL_T.mul_add(2.0, span.x),
+        WALL_T,
+        WALL_T.mul_add(2.0, span.z),
+    );
+    let mut slabs: Vec<(Vec3, Vec3, bool)> = vec![
+        (
+            Vec3::new(plan_centre.x, WALL_T.mul_add(-0.5, lo.y), plan_centre.z),
+            pan,
+            false,
+        ),
+        (
+            Vec3::new(plan_centre.x, lo.y + CEIL_SLAB_Y, plan_centre.z),
+            pan,
+            true,
+        ),
+    ];
+    // **A room's fabric is the shell of its own box, grown by one wall,
+    // and nothing else.** Every face of every slab therefore lands
+    // either on the interior box or on [`hull_box`], which is the same
+    // box and one named offset — there is no third plane, and no slab
+    // reaches a hand's breadth past anything for reasons nobody wrote
+    // down. The walls used to stop four fifths of a wall above the
+    // ceiling slab, which is a height nothing else in the game is
+    // measured to.
+    let y0 = lo.y - WALL_T;
+    let y1 = lo.y + CEIL_Y + WALL_T;
+    for wall in 0..4_u8 {
+        let out = wall_out(wall, placed.yaw);
+        let along = axis_along(out);
+        // The slab stands wholly OUTSIDE the box: a room occupies its
+        // interior, and the partition between two rooms is a boundary,
+        // not a volume (docs/ROOMS.md). A wall centred on the face would
+        // swallow its own chart — and with it every tile painted on it.
+        let face = plan_centre + out * (span * out.abs()).length().mul_add(0.5, WALL_T * 0.5);
+        let length = WALL_T.mul_add(2.0, (span * along.abs()).length());
+        slabs.push((
+            Vec3::new(face.x, f32::midpoint(y0, y1), face.z),
+            out.abs() * WALL_T + along.abs() * length + Vec3::Y * (y1 - y0),
+            true,
+        ));
+    }
+    let mut out = Vec::new();
+    for (center, size, hull) in slabs {
+        let mut parts = vec![(center, size)];
+        for site in &placed.ports {
+            parts = parts
+                .into_iter()
+                .flat_map(|(c, s)| punch(c, s, site.lo, site.hi))
+                .collect();
+        }
+        // **Nothing is cut against a neighbour any more.** A shell used
+        // to be punched by every other room's box grown by a wall,
+        // because two rooms mated flush and their hulls therefore stood
+        // through each other — and that cut was the reason the cabin's
+        // aft wall vanished the moment a market came alongside, taking
+        // with it the plate the seam's amber latch was mounted on. The
+        // latch was the thing the playtest saw floating in the air; the
+        // wall behind it was the defect. A room is a cell clear of every
+        // other room now, so there is nothing of anybody else's in the
+        // way and a hull is simply its own (`all` is kept for the walk
+        // envelope and for whoever needs the neighbours next).
+        let _ = all;
+        out.extend(parts.into_iter().map(|(c, s)| (c, s, hull)));
+    }
+    out
+}
+
+// ---- Colored tiles ----
+
+/// How wide a class's rim band is, in fractions of a cell: wide enough
+/// to read from across a room and at a grazing angle, narrow enough to
+/// stay a border rather than become a second field.
+const BAND: f32 = 0.20;
+
+/// The offer bay's chalk line — a struck line, not a band. It is the
+/// only mark its class carries, so it is thin and bright.
+const CHALK: f32 = 0.09;
+
+/// The tread plate's studs: how far off a cell's centre the outer ones
+/// sit, and how big each stud is. Three by three, sparse enough to read
+/// as non-slip studs rather than as a pattern.
+const STUD_STEP: f32 = 0.27;
+const STUD: f32 = 0.085;
+
+/// The sill bar along a doorway's jamb line, in fractions of a cell.
+const SILL: f32 = 0.13;
+
+/// One cell of one chart, as the tile painter needs it: where its centre
+/// lands, which way the surface faces, and how big a cell is in world
+/// units — plus the one cube every flat paint is scaled from and the room
+/// tag they all carry. Every mark below is a fraction of this and nothing
+/// else, which is what lets one vocabulary paint a 3×3 pump bay and an
+/// 8×7 cabin without measuring either.
+#[derive(Clone, Copy)]
+struct Patch<'a> {
+    cube: &'a Handle<Mesh>,
+    tag: InRoom,
+    at: Vec3,
+    normal: Vec3,
+    rot: Quat,
+    w: f32,
+    h: f32,
+}
+
+/// One rim mark: what to draw it in, how wide it runs, and which rung of
+/// the decal ladder it rides.
+#[derive(Clone, Copy)]
+struct Mark<'a> {
+    mat: &'a Handle<StandardMaterial>,
+    width: f32,
+    lift: f32,
+}
+
+impl<'a> Patch<'a> {
+    /// Lay one flat paint on this cell. `offset` and `size` are fractions
+    /// of the cell in **net axes** (+x along the chart's own x, +y down
+    /// it — the axes the sim declares tiles in); the charts face into the
+    /// room, so the mirror is undone here, once, instead of in every
+    /// mark.
+    fn paint(
+        self,
+        commands: &mut Commands,
+        mat: &Handle<StandardMaterial>,
+        lift: f32,
+        offset: Vec2,
+        size: Vec2,
+    ) {
+        commands.spawn((
+            Mesh3d(self.cube.clone()),
+            MeshMaterial3d(mat.clone()),
+            Transform::from_translation(
+                self.at
+                    + self.normal * lift
+                    + self.rot * Vec3::new(-offset.x * self.w, -offset.y * self.h, 0.0),
+            )
+            .with_rotation(self.rot)
+            .with_scale(Vec3::new(
+                size.x * self.w,
+                size.y * self.h,
+                crate::rig::layer::SKIN,
+            )),
+            self.tag,
+        ));
+    }
+
+    /// A class's field: the whole cell, edge to edge. Neighbouring cells
+    /// of one class abut exactly, so a region paints as one continuous
+    /// surface instead of a grid of stamps with grout between them.
+    fn field(self, commands: &mut Commands, mat: &Handle<StandardMaterial>) {
+        self.paint(
+            commands,
+            mat,
+            crate::rig::layer::TILE,
+            Vec2::ZERO,
+            Vec2::ONE,
+        );
+    }
+
+    /// A band along one edge of this cell. `side` is a net direction
+    /// (0 up, 1 down, 2 left, 3 right) and `rim` says which of the four
+    /// sides the region actually ends on, so a side band stands aside
+    /// wherever a top or bottom band already owns the corner. **Two marks
+    /// never share a plane**, which is how a rung stays a rung.
+    fn band(self, commands: &mut Commands, mark: Mark<'a>, side: usize, ends: [bool; 4]) {
+        let (offset, span) = band_extent(side, ends, mark.width);
+        self.paint(commands, mark.mat, mark.lift, offset, span);
+    }
+
+    /// The whole rim mark: a band on every side where the region ends,
+    /// and nothing anywhere else. This is the line that keeps a class's
+    /// form on the boundary of its region instead of stamped into every
+    /// cell of it.
+    fn rim_mark(self, commands: &mut Commands, mark: Mark<'a>, rim: [bool; 4]) {
+        for (side, &ends) in rim.iter().enumerate() {
+            if ends {
+                self.band(commands, mark, side, rim);
+            }
+        }
+    }
+}
+
+/// A rim band's footprint inside its own cell, as `(offset, size)` in
+/// cell fractions — the pure half of [`Patch::band`], so "no mark leaves
+/// its cell" and "no two bands of one mark overlap" are laws a test
+/// holds rather than numbers an eye checks.
+fn band_extent(side: usize, rim: [bool; 4], width: f32) -> (Vec2, Vec2) {
+    let far = width.mul_add(-0.5, 0.5);
+    match side {
+        0 => (Vec2::new(0.0, -far), Vec2::new(1.0, width)),
+        1 => (Vec2::new(0.0, far), Vec2::new(1.0, width)),
+        // A side band stands aside wherever a top or bottom band already
+        // owns the corner: the horizontal runs full width, the vertical
+        // yields to it.
+        _ => {
+            let head = if rim[0] { width } else { 0.0 };
+            let tail = if rim[1] { width } else { 0.0 };
+            (
+                Vec2::new(if side == 2 { -far } else { far }, (head - tail) * 0.5),
+                Vec2::new(width, 1.0 - head - tail),
+            )
+        }
+    }
+}
+
+/// Which of a cell's four net neighbours fall OUTSIDE its own class —
+/// the region's own rim, as `[up, down, left, right]`. Off the net counts
+/// as outside: a region that runs into the edge of a room's skin has
+/// ended, and its mark belongs there.
+fn rim(kind: RoomKind, x: u8, y: u8, tile: Tile) -> [bool; 4] {
+    let (cols, rows) = kind.grid();
+    let mut rim = [false; 4];
+    for (slot, (dx, dy)) in [(0_i32, -1_i32), (0, 1), (-1, 0), (1, 0)]
+        .into_iter()
+        .enumerate()
+    {
+        let neighbour = u8::try_from(i32::from(x) + dx)
+            .ok()
+            .zip(u8::try_from(i32::from(y) + dy).ok())
+            .filter(|&(nx, ny)| nx < cols && ny < rows)
+            .and_then(|(nx, ny)| kind.tile_of(nx, ny));
+        rim[slot] = neighbour != Some(tile);
+    }
+    rim
+}
+
+/// The colored tiles, painted (docs/ROOMS.md, "The tile-class
+/// vocabulary"). The class is declared once by the room kind; the rules
+/// and the paint read the same declaration, so a tile that *looks* like an
+/// offer area and does not behave like one cannot exist.
+///
+/// **A class is told by the KIND of mark it wears, never by stacking
+/// patterns.** The playtest found three striped things inside one square
+/// metre of the furnace — striped tape under striped tiles under ember
+/// edges — and read it, correctly, as noise. So the vocabulary is written
+/// down, and each class takes exactly one line of it:
+///
+/// | Class | Field | Mark | Reads as |
+/// | --- | --- | --- | --- |
+/// | `Plain` | none | none | ordinary deck — the ground the others are read against |
+/// | `Staging` | none | none, until something stands there: then the amber line that says it is not coming with you ([`crate::outline`]) | a station's own deck. Set yours down; take it back before you leave |
+/// | `Offer` | none: bare deck | a chalk line struck round the region | a bay taped out on the floor. Set yours inside the line; it is still yours |
+/// | `Stock` | the room's enamel, filled | a dark border band round the region | painted floor: what stands on the paint is the room's |
+/// | `Consume` | scorched plate | hazard tape round the region | a danger zone, taped at its edge the way tape is actually used |
+/// | `Threshold` | none: it IS the opening | the tread on the deck it stands on ([`treads`]) | traffic crosses here, and nothing berths |
+///
+/// Four rules hold it together:
+///
+/// - **Stripes belong to one class.** Hazard tape is `Consume`'s and
+///   nobody else's, because striped tape is the real-world idiom for
+///   *this will hurt you*, and a second claimant makes both meaningless.
+/// - **Marks ride a region's rim, not every cell.** A field is
+///   continuous across a whole region and the mark is drawn only where
+///   the region ends. Per-cell stamping is what turned the Guild's aft
+///   wall into bathroom tiling and the furnace into a striped box.
+/// - **Filled against hollow.** The two trading classes are told apart
+///   by whether the paint is there at all — the room's goods stand on
+///   the room's enamel, a proposal stands on bare deck inside a chalk
+///   line — so they read from any angle, at any distance, and under any
+///   lamp, which no pair of hues can promise.
+/// - **A mark never lands on a mark.** Field, mark, and tread are three
+///   rungs of the decal ladder (`rig::layer`), and within a rung nothing
+///   overlaps: a rim band shortens where a perpendicular one owns the
+///   corner.
+#[allow(clippy::too_many_arguments)] // one argument per thing painted
+fn tiles(
+    commands: &mut Commands,
+    cube: &Handle<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    skin: &Skin,
+    fade: &TileFade,
+    paint: &crate::poi::Tiles,
+    placed: &Placed,
+    tag: InRoom,
+) {
+    let (cols, rows) = placed.kind.grid();
+    // One material instance per class per room: paint is shared, and
+    // nothing here changes brightness per frame.
+    //
+    // The fields are FLAT coats, and that is the one place this module
+    // steps outside "nothing ships unweathered" — deliberately. A field
+    // is drawn per cell, so a wear tile on it repeats once per cell and
+    // becomes exactly the stamped pattern this pass took out; the
+    // weathering lives on the slabs and backer plates behind the paint,
+    // where it can run across a whole wall without counting cells.
+    // The station's own paint, where it has one. The FORMS below are not
+    // its to change — a field is a field and a rim mark is a rim mark at
+    // every station in the game — which is the no-hue-alone law made
+    // structural rather than remembered (`crate::poi`).
+    let chalk = paint.chalk.material(materials, Some(skin));
+    let border = paint.rim.material(materials, Some(skin));
+    let stock = paint.stock.material(materials, Some(skin));
+    // The furnace's scorch is nobody's character: `Consume` belongs to a
+    // riding room, and hazard stripes belong to `Consume` alone.
+    let scorch = glow::enamel(materials, palette::SOOT);
+    for (station, surface) in placed.charts {
+        let normal = station.inward(&surface);
+        let rot = station.face(&surface);
+        let (su, sv) = (surface.scale_u(), surface.scale_v());
+        for y in 0..rows {
+            for x in 0..cols {
+                let cell = layout::cell_rect(placed.id, x, y);
+                let mid = space_trucking::sim::Vec2::new(
+                    cell.w.mul_add(0.5, cell.x),
+                    cell.h.mul_add(0.5, cell.y),
+                );
+                if !surface.rect.contains(mid) {
+                    continue;
+                }
+                let Some(tile) = placed.kind.tile_of(x, y) else {
+                    continue;
+                };
+                let patch = Patch {
+                    cube,
+                    tag,
+                    at: surface.to_world(mid),
+                    normal,
+                    rot,
+                    w: cell.w * su,
+                    h: cell.h * sv,
+                };
+                let edges = rim(placed.kind, x, y, tile);
+                let mark = |mat, width| Mark {
+                    mat,
+                    width,
+                    lift: crate::rig::layer::MARK,
+                };
+                match tile {
+                    // Ordinary deck, and a station's own deck, which
+                    // berths identically: the contextual berth well,
+                    // raised by `rig::fade_tiles` only while a carry asks
+                    // "where can this go?".
+                    //
+                    // **`Staging` paints exactly what `Plain` paints, and
+                    // that is the class saying what it means.** The owner
+                    // asked that the whole room stay one grid with one
+                    // set of pickup and placement mechanics; a second
+                    // well, a second hue, or a hatched field would be the
+                    // paint quietly claiming a second mechanic that the
+                    // arbiter does not have. What is different about a
+                    // station's deck is not where you may set a crate
+                    // down — it is that the room leaves — and that is a
+                    // fact about a crate rather than about a cell, so it
+                    // is read on the crate: `Sim::detained_cargo` names
+                    // it and the amber frame goes round it.
+                    Tile::Plain | Tile::Staging => {
+                        commands.spawn((
+                            Mesh3d(cube.clone()),
+                            MeshMaterial3d(fade.mat.clone()),
+                            Transform::from_translation(
+                                patch.at + normal * crate::rig::layer::TILE,
+                            )
+                            .with_rotation(rot)
+                            .with_scale(Vec3::new(
+                                (cell.w - 4.0) * su,
+                                (cell.h - 4.0) * sv,
+                                crate::rig::layer::SKIN,
+                            )),
+                            crate::rig::BerthTile,
+                            tag,
+                        ));
+                    }
+                    // Bare deck inside a chalk line: what stands here is
+                    // proposed, not surrendered, and the room has not
+                    // painted over it. The line is the whole mark.
+                    Tile::Offer => patch.rim_mark(commands, mark(&chalk, CHALK), edges),
+                    // The room's enamel, filled to the region's edge and
+                    // bordered there: these goods are the room's own.
+                    Tile::Stock => {
+                        patch.field(commands, &stock);
+                        patch.rim_mark(commands, mark(&border, BAND), edges);
+                    }
+                    // Scorched plate, taped at the rim: what lands here
+                    // is scheduled for destruction on the room's own
+                    // beat, and the tape is where the danger begins —
+                    // which, in a room that is danger throughout, is its
+                    // cornices and its doorway.
+                    Tile::Consume => {
+                        patch.field(commands, &scorch);
+                        patch.rim_mark(commands, mark(&skin.hazard, BAND), edges);
+                    }
+                    // The two classes that paint nothing, for the same
+                    // reason from opposite directions: something else is
+                    // already there.
+                    //
+                    // An aperture's own cells are the OPENING — a leaf
+                    // hangs there when the port is shut and there is
+                    // nothing but air when it is open, so painting them
+                    // would stripe a doorway you can walk through; the
+                    // reading that carries the threshold is the tread on
+                    // the deck the door stands on ([`treads`]), derived
+                    // from the very same declaration. A fixture's cells
+                    // are the room's own hardware — the counter stands
+                    // on that deck and the pendant hangs from that
+                    // ceiling — so the fabric under them stays bare, and
+                    // a berth well above all, because a well is an
+                    // invitation and nothing may berth here.
+                    Tile::Threshold | Tile::Fixture => {}
+                }
+            }
+        }
+    }
+}
+
+/// The tread: what a doorway does to the deck it stands on.
+///
+/// The threshold rule's own reading, laid where a body can see it. Every
+/// door gets a **studded plate** across its footprint and a **brass sill**
+/// along its jamb line, in both rooms, from the same port declaration the
+/// sim rules by — so the mat can never be somewhere the door is not.
+///
+/// It used to be hazard stripes, and that was the second thing in the
+/// game claiming the tape idiom while the burner claimed it too. A
+/// doorway is **traffic, not danger**: studded steel is what a freighter
+/// actually puts where feet cross, and the brass is the same radium
+/// paint every other fitting wears — so with the lights out the way
+/// through a room is still a line you can see.
+///
+/// Paint and plate only: those cells are ordinary berths, and cargo may
+/// stand on the tread like anywhere else.
+///
+/// **One tread per cell, not one per doorway.** The cabin declares its
+/// aft door and its port door at the same corner (`RoomKind::ports` says
+/// so in as many words), so that corner belongs to two doorways — and it
+/// was studded twice, nine plates over nine identical plates on one rung
+/// of the decal ladder, with two sill bars crossing each other over the
+/// top. A cell is laid once and wears every jamb line that reaches it,
+/// which is also what stops the corner being drawn twice: the bands take
+/// the rim rule ([`band_extent`]), so the bar running down a cell stands
+/// aside where the bar running across it already owns the corner.
+fn treads(placed: &Placed, out: &mut Vec<SeamPart>) {
+    let Some(floor) = placed.chart(Station::BayFloor).copied() else {
+        return;
+    };
+    // Which jamb lines cross each deck cell a doorway stands on. In net
+    // terms: a door on the aft wall is the deck's own -y edge, starboard
+    // its +x, and so on round the room. Read off the declaration, never
+    // assumed.
+    let mut laid: BTreeMap<(u8, u8), [bool; 4]> = BTreeMap::new();
+    for site in &placed.ports {
+        let Some(Port::Door { wall, offset }) = site.declared else {
+            continue;
+        };
+        let jamb = match wall % 4 {
+            0 => 0,
+            1 => 3,
+            2 => 1,
+            _ => 2,
+        };
+        for (i, j) in door_cells(placed.kind, wall, offset) {
+            laid.entry((i, j)).or_default()[jamb] = true;
+        }
+    }
+    let normal = Station::BayFloor.inward(&floor);
+    let rot = Station::BayFloor.face(&floor);
+    let (su, sv) = (floor.scale_u(), floor.scale_v());
+    for ((i, j), jambs) in laid {
+        let cell = layout::cell_rect(placed.id, COURSES + i, COURSES + j);
+        let mid = space_trucking::sim::Vec2::new(
+            cell.w.mul_add(0.5, cell.x),
+            cell.h.mul_add(0.5, cell.y),
+        );
+        let at = floor.to_world(mid);
+        let (w, h) = (cell.w * su, cell.h * sv);
+        // The same axes every other mark is laid in ([`Patch::paint`]):
+        // fractions of the cell in net terms, with the chart's own mirror
+        // undone once.
+        let mut lay = |what: String, dress, offset: Vec2, size: Vec2| {
+            out.push(SeamPart {
+                what,
+                at: Transform::from_translation(
+                    at + normal * crate::rig::layer::TREAD
+                        + rot * Vec3::new(-offset.x * w, -offset.y * h, 0.0),
+                )
+                .with_rotation(rot)
+                .with_scale(Vec3::new(
+                    size.x * w,
+                    size.y * h,
+                    crate::rig::layer::SKIN,
+                )),
+                dress,
+                across: None,
+                seat: None,
+            });
+        };
+        for (row, down) in [-STUD_STEP, 0.0, STUD_STEP].into_iter().enumerate() {
+            for (col, along) in [-STUD_STEP, 0.0, STUD_STEP].into_iter().enumerate() {
+                lay(
+                    format!("tread ({i}, {j}) stud[{row}{col}]"),
+                    Dress::Stud,
+                    Vec2::new(along, down),
+                    Vec2::splat(STUD),
+                );
+            }
+        }
+        for (side, &ends) in jambs.iter().enumerate() {
+            if !ends {
+                continue;
+            }
+            let (offset, span) = band_extent(side, jambs, SILL);
+            lay(
+                format!("tread ({i}, {j}) sill[{side}]"),
+                Dress::Sill,
+                offset,
+                span,
+            );
+        }
+    }
+}
+
+// ---- Doorways ----
+
+/// **The seam is drawn once, by the room with the lower id, and it is
+/// drawn in the seam.** Two rooms share a partition, and a partition is a
+/// boundary rather than a volume (docs/ROOMS.md) — so a mated aperture's
+/// hardware may not be built twice, once per side, at two planes a trim
+/// apart. That is what put a jamb of the furnace inside the cabin and a
+/// jamb of the cabin inside the furnace, interpenetrating, with the
+/// station's own hatching showing through the sliver between them.
+///
+/// Whether this room dresses this seam: only for a mated door, and only
+/// from the lower id. The other side gets the same frame, because there
+/// is only one frame and it stands on the boundary they share.
+const fn dresses(placed: &Placed, site: &Site) -> bool {
+    match site.mate {
+        Some((other, _)) => site.is_door() && placed.id <= other,
+        None => false,
+    }
+}
+
+/// The point at the middle of a door's opening ON THE SHARED PARTITION —
+/// the room's own box face, not the plane its chart was trimmed to. Seam
+/// hardware is centred here so one frame reads from both rooms.
+fn seam_centre(placed: &Placed, site: &Site) -> Vec3 {
+    let face = if site.out.x + site.out.z > 0.0 {
+        placed.hi
+    } else {
+        placed.lo
+    };
+    Vec3::new(
+        if site.out.x.abs() > 0.5 {
+            face.x
+        } else {
+            site.leaf.x
+        },
+        site.leaf.y,
+        if site.out.z.abs() > 0.5 {
+            face.z
+        } else {
+            site.leaf.z
+        },
+    )
+}
+
+/// **How one part of a port's dressing is finished**, and what the
+/// runtime does with it beyond drawing it.
+///
+/// A doorway is hardware, so most of this is the room's own metal. The
+/// two that are not are the tread's: a doorway crosses a room's paint
+/// rather than replacing it, so its studs and its sill are the station's
+/// own ([`crate::poi::Tiles`]).
+#[derive(Clone, Copy, Debug)]
+pub enum Dress {
+    /// A riveted leaf: a door drawn shut, and the plate sunk into a
+    /// hatch.
+    Leaf,
+    /// The rivets round a shut door.
+    Rivet,
+    /// The frame's shade — stiles, lintel, coaming, and the plate the
+    /// latch's amber stands on.
+    Frame,
+    /// Radium brass: a hatch's hinge barrels and its pull.
+    Brass,
+    /// The shadowed well a flush pull lies in.
+    Well,
+    /// The tread's studs, in the station's own paint.
+    Stud,
+    /// The sill bar along the jamb line, likewise.
+    Sill,
+    /// The jamb lamp: dark glass that answers a seam mating or parting.
+    Jamb,
+    /// The amber latch that asks the room beyond to part — which room
+    /// that is, and the quad the crosshair must land on.
+    Grab(RoomId, SimSurface),
+}
+
+impl Dress {
+    /// Whether this is a **flat paint riding the decal ladder** rather
+    /// than a body standing in the room. A paint shows the one side it
+    /// turns to the room, and its mesh is a box only because the renderer
+    /// draws boxes; a body shows all six.
+    #[must_use]
+    pub const fn paint(self) -> bool {
+        matches!(self, Self::Stud | Self::Sill)
+    }
+}
+
+/// **One body a port's dressing draws**: what it is called, where it
+/// stands, and what it is finished in.
+///
+/// The description is what gets built — [`dress_ports`] spawns exactly
+/// this list and nothing else — which is the bargain `pieces::parts`
+/// struck for a cargo rig, made a second time for a doorway and for the
+/// same reason: a harness can only measure what something can be asked
+/// about, and a doorway that was composed straight into a live world
+/// could not be asked anything at all.
+#[derive(Clone, Debug)]
+pub struct SeamPart {
+    /// What it is called in its own port.
+    pub what: String,
+    /// Where it stands, turned how it is turned, with the box's own size
+    /// as the scale — the very transform the cube is posed by.
+    pub at: Transform,
+    /// How it is finished.
+    pub dress: Dress,
+    /// **The room on the far side of the seam this dresses**, where it
+    /// dresses one. A mated doorway's frame is drawn once, by the room
+    /// with the lower id, and it stands on the boundary the two rooms
+    /// share — so the room that did not draw it still has it standing in
+    /// its own doorway, and anything asking what a room draws has to be
+    /// able to find it. `None` for a shut port and for a tread, which
+    /// belong to the room they stand in and to nobody else.
+    pub across: Option<RoomId>,
+    /// **What holds it up**, where it claims anything — see [`Seat`].
+    pub seat: Option<Seat>,
+}
+
+/// **What a doorway's hardware claims holds it up** — `poi::Seat` and
+/// `pieces::Seat` again, in the one frame a seam is written in.
+///
+/// A station's fitting is a fraction of a room's box and a rig's part is
+/// a fraction of its own; a doorway is built straight in world units off
+/// the site the sim declares, so the surface a piece of hardware bolts to
+/// is a world plane rather than a side of anybody's box. The claim is
+/// still declared and then checked and never guessed at: a part that is
+/// construction — a lining straddling the edge it dresses, a passage
+/// plate spanning the pad between two rooms — says nothing and is asked
+/// nothing.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Seat {
+    /// The plane it is bolted to: what that surface is called, a point
+    /// on it, and the way the part reaches along to meet it.
+    Plane(&'static str, Vec3, Vec3),
+    /// Another part of the same room's dressing, by its own
+    /// [`what`](SeamPart::what) — and any part whose name BEGINS with
+    /// the claim answers to it, so a body drawn several times over
+    /// (`leaf[0]`, `leaf[1]`) is named once and meeting any of them is
+    /// meeting the seat.
+    On(String),
+}
+
+/// **Everything the ports of one room draw.** A mated door's frame where
+/// this room dresses the seam, a shut port's leaf where it does not, and
+/// the tread every declared door lays on the deck it stands on.
+///
+/// Pure: the no-clipping law is asserted against exactly this list
+/// (`tests::no_rooms_geometry_reaches_into_another_room`), and so is the
+/// gauntlet's seam sweep (`crate::gauntlet::scene`).
+#[must_use]
+pub fn seam_parts(placed: &Placed) -> Vec<SeamPart> {
+    let mut out = Vec::new();
+    for site in &placed.ports {
+        let (a, b) = (site.half_a.length(), site.half_b.length());
+        if a <= 0.0 || b <= 0.0 {
+            continue;
+        }
+        if site.is_door() && site.mate.is_some() {
+            // **A doorway has two mouths and one passage.** Each room
+            // frames the opening in its own wall — there is no shared
+            // partition to draw once any more, because there is a cell
+            // of padding where the partition used to be — and the room
+            // with the lower id draws the tube that joins them.
+            seam_frame(placed, site, &mut out);
+            if dresses(placed, site) {
+                passage(placed, site, &mut out);
+            }
+        } else if site.mate.is_none() {
+            shut_port(placed, site, &mut out);
+        }
+    }
+    treads(placed, &mut out);
+    out
+}
+
+/// A mated door's frame: two stiles, a lintel, the jamb lamp, and (where
+/// the room beyond can be sent away) the latch's plate and its amber.
+///
+/// The frame stands in the partition and a jamb's girth either side of
+/// it, so both rooms see the same doorway and neither is reached into any
+/// further than the opening they share.
+fn seam_frame(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
+    let (a, b) = (site.half_a.length(), site.half_b.length());
+    let dir_a = site.half_a.normalize_or_zero().abs();
+    let dir_b = site.half_b.normalize_or_zero().abs();
+    let up = site.half_b.normalize_or_zero();
+    let mid = seam_centre(placed, site);
+    let girth = site.out.abs() * (JAMB * 2.0);
+    let port = site.port;
+    let across = site.mate.map(|(other, _)| other);
+    let mut body = |what: String, at: Vec3, size: Vec3, dress, seat| {
+        out.push(SeamPart {
+            what,
+            at: Transform::from_translation(at).with_scale(size),
+            dress,
+            across,
+            seat,
+        });
+    };
+    // **A frame straddles the edge it dresses, and the stiles own the
+    // corners.**
+    //
+    // It used to stand entirely beside the opening, filling the margin
+    // between the clear width and the punch, which put two faces on one
+    // plane twice over. Once against the hull: a stile ran out flush with
+    // the very edge the aperture was punched at, and so did the lintel,
+    // so the wall's own cut face and the frame's outer face were the same
+    // plane looking the same way — three of them, on every doorway a
+    // calling room ever mates. And once against itself: the lintel ran
+    // the full outer width, so it crossed both stiles and shared a top
+    // face and two girth faces with each.
+    //
+    // Half a jamb over the line cures both. The hull's cut edge is then
+    // inside the frame rather than beside it, which is what a lining is
+    // for, and the head spans the clear opening between the stiles, which
+    // is how a door frame is built. Nothing is measured off the drawing:
+    // the aperture stays the sim's, and the walk still ducks by it.
+    //
+    // **The lining and the lamp set into it claim nothing.** A frame
+    // straddles the edge it dresses — half a jamb either side of the
+    // plane the aperture was punched on — so it is not bolted TO a
+    // surface, it is what the room is cut with. Declaring a seat for it
+    // would be inventing a promise nobody made.
+    body(
+        format!("seam[{port}] lintel"),
+        mid + up * b,
+        girth + dir_a * a.mul_add(2.0, -JAMB) + dir_b * JAMB,
+        Dress::Frame,
+        None,
+    );
+    body(
+        format!("seam[{port}] jamb lamp"),
+        mid + up * (b + JAMB),
+        site.out.abs() * (JAMB * 0.9) + dir_a * (a * 0.5) + dir_b * 0.035,
+        Dress::Jamb,
+        None,
+    );
+    for (nth, side) in [-1.0_f32, 1.0].into_iter().enumerate() {
+        body(
+            format!("seam[{port}] stile[{nth}]"),
+            mid + site.half_a.normalize_or_zero() * side * a,
+            girth + dir_a * JAMB + dir_b * b.mul_add(2.0, JAMB),
+            Dress::Frame,
+            None,
+        );
+    }
+    let (Some(at), Some((other, _))) = (latch_at(placed, site), site.mate) else {
+        return;
+    };
+    // **The plate is screwed to the wall and the amber is screwed to the
+    // plate**, and both of those are said out loud now. The plate spent
+    // its sideways clearance along the wall's own normal as well and
+    // stood an eighth of a metre out in the room with its back to
+    // nothing; there was nothing in the harness that could ask, because a
+    // doorway declared where its hardware WAS and never what held it.
+    body(
+        format!("seam[{port}] latch plate"),
+        at,
+        dir_a * (LATCH_W * 1.6) + Vec3::Y * (LATCH_H * 1.3) + site.out.abs() * LATCH_T,
+        Dress::Frame,
+        seam_wall(placed, site).map(|(on, toward)| Seat::Plane("wall", on, toward)),
+    );
+    body(
+        format!("seam[{port}] latch grab"),
+        at - site.out * LATCH_T,
+        dir_a * LATCH_W + Vec3::Y * LATCH_H + site.out.abs() * LATCH_T,
+        Dress::Grab(
+            other,
+            SimSurface {
+                center: at - site.out * (LATCH_T * 2.0),
+                half_u: site.half_a.normalize_or_zero() * (LATCH_W * 1.2),
+                half_v: Vec3::NEG_Y * (LATCH_H * 1.2),
+                rect: layout::cell_rect(placed.id, 0, 0),
+                deep: 0.0,
+            },
+        ),
+        Some(Seat::On(format!("seam[{port}] latch plate"))),
+    );
+}
+
+/// **The face the wall shows at a doorway**, as a point on it and the
+/// way a body reaches along to meet it: the chart plane, a notch inside
+/// the room's own box face ([`chart_inset`]).
+///
+/// The box face is where the hull's inner skin is and where the frame
+/// straddles; the chart is where the room's paint rides and where a wall
+/// berth hangs a crate. A plate bolted to the skin is a plate behind the
+/// wall's own paint, so this is the plane a doorway's hardware is held
+/// to, and it is one derivation rather than a number in two places.
+fn seam_wall(placed: &Placed, site: &Site) -> Option<(Vec3, Vec3)> {
+    let Some(Port::Door { wall, .. }) = site.declared else {
+        return None;
+    };
+    let inset = chart_inset(placed.kind, wall);
+    Some((seam_centre(placed, site) - site.out * inset, site.out))
+}
+
+/// **The passage**: the tube of hull that carries a mated doorway across
+/// the cube of padding between two rooms.
+///
+/// This is what the padding cell buys, and it is worth saying plainly.
+/// A doorway used to be a *shared plane*: two rooms mated flush, both
+/// drew on the same partition, and the question of who owned which
+/// millimetre of it had no answer — which is where fifty-three coplanar
+/// findings came from, and where the incinerator's hazard tape came from
+/// standing inside the cabin. Now the two rooms are a cell apart and
+/// neither of them owns the cell. The passage does: four plates round the
+/// clear opening, drawn once by the room with the lower id, running from
+/// one room's box face to the other's.
+fn passage(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
+    let (a, b) = (site.half_a.length(), site.half_b.length());
+    let along = site.half_a.normalize_or_zero().abs();
+    let across = site.out.abs();
+    let mid = seam_centre(placed, site) + site.out * (PAD_M * 0.5);
+    // The pad is a cell; the two rooms each spend a wall of it on their
+    // own hull, so the tube is what is left between the two skins. Ending
+    // it on the skins rather than over them is the difference between a
+    // passage and eight coplanar faces.
+    let run = WALL_T.mul_add(-2.0, PAD_M);
+    let deck = site.leaf.y - b;
+    let head = site.leaf.y + b;
+    let port = site.port;
+    let mut plate = |what: String, at: Vec3, size: Vec3| {
+        out.push(SeamPart {
+            what,
+            at: Transform::from_translation(at).with_scale(size),
+            dress: Dress::Frame,
+            across: site.mate.map(|(other, _)| other),
+            // The tube is what the padding cell is FOR — construction,
+            // not hardware, and it stands between two rooms rather than
+            // on either of them. Nothing holds it up but its own ends.
+            seat: None,
+        });
+    };
+    // Deck and deckhead, each a wall thick and reaching a wall out to
+    // either side so the corners of the tube are filled once.
+    for (nth, y) in [
+        (0, WALL_T.mul_add(-0.5, deck)),
+        (1, WALL_T.mul_add(0.5, head)),
+    ] {
+        plate(
+            format!("seam[{port}] passage pan[{nth}]"),
+            Vec3::new(mid.x, y, mid.z),
+            across * run + along * WALL_T.mul_add(2.0, a * 2.0) + Vec3::Y * WALL_T,
+        );
+    }
+    // And the two flanks, standing between them.
+    for (nth, side) in [-1.0_f32, 1.0].into_iter().enumerate() {
+        let flank = site.half_a.normalize_or_zero() * side * WALL_T.mul_add(0.5, a);
+        plate(
+            format!("seam[{port}] passage flank[{nth}]"),
+            Vec3::new(mid.x + flank.x, f32::midpoint(deck, head), mid.z + flank.z),
+            across * run + along * WALL_T + Vec3::Y * (head - deck),
+        );
+    }
+}
+
+/// Where a seam's amber latch hangs, if this seam gets one: on the
+/// ANCHOR's side — the lower id, which is the room that stays — and on
+/// whichever flank of the jamb stands inside it. The hand that parts a
+/// room is never the hand standing in it, and the gangway law would
+/// refuse it if it were. The cabin does not part from itself, and a
+/// riding room's seam is not asked to.
+///
+/// **That last sentence is now the code and not just the comment.** A
+/// latch was drawn on the furnace's doorway and it worked: one press
+/// took the room away, with the fire and the hopper and whatever was
+/// staged in it, and nothing anywhere gave it back. The sim refuses it
+/// now (`Refusal::Riding`), which is where a rule belongs — and a
+/// control that can only ever refuse is a control that should not be
+/// drawn, so the seam of a room that rides carries no latch at all.
+/// Which room that is comes off the graph
+/// (`Site::beyond`, `RoomKind::riding`) rather than off the burner's
+/// name, so the crew module attached tomorrow is safe on the day it is
+/// written.
+///
+/// **It is bolted to the wall, and it used to hang in front of it.** The
+/// sideways clearance is `JAMB + LATCH_W` — out past the jamb, then out
+/// past the latch's own width, which is what puts the plate on bare wall
+/// beside the frame — and that same length was being spent a second time
+/// along `site.out`, inward. Four notches is 0.1375 m into the room, so a
+/// plate 0.02 m thick stood with its back face 0.0931 m off the wall it
+/// screws to and the amber rode out in front of that: a small orange
+/// rectangle on a bigger metal one, floating in a doorway, which is
+/// exactly what the owner photographed. Sideways is the only axis that
+/// clearance belongs on. The depth is a joint, and a joint is one
+/// fight-free step into the thing that holds it ([`SEAT_BURY`]), so the
+/// plate's back face lands inside the wall and its own girth is what
+/// stands it off — the amber still rides [`LATCH_T`] proud of the plate.
+///
+/// **The wall is where the room's own face is, and that is the chart
+/// plane** ([`chart_inset`]) rather than the box face the frame straddles.
+/// A room's paint rides on the chart, a wall berth hangs its cargo on the
+/// chart, and the notch of cladding behind it is where the ribs and the
+/// decal ladder's backer live — so a plate screwed to the box face is a
+/// plate behind the wall's own paint, which the coplanar detector said in
+/// as many words the first time this was seated one notch too deep: the
+/// amber's face came out 1.1 mm off a `Plain` field's, on one plane and
+/// one facing, which is the flicker `coplanar-faces` exists to refuse.
+fn latch_at(placed: &Placed, site: &Site) -> Option<Vec3> {
+    let (other, _) = site.mate?;
+    let (on, toward) = seam_wall(placed, site)?;
+    if placed.id > other || site.beyond.is_some_and(RoomKind::riding) {
+        return None;
+    }
+    let (a, b) = (site.half_a.length(), site.half_b.length());
+    let mid = seam_centre(placed, site);
+    let flank = site.half_a.normalize_or_zero() * (a + JAMB + LATCH_W);
+    let inward = Vec3::new(
+        f32::midpoint(placed.lo.x, placed.hi.x),
+        0.0,
+        f32::midpoint(placed.lo.z, placed.hi.z),
+    ) - Vec3::new(mid.x, 0.0, mid.z);
+    let flank = if flank.dot(inward) < 0.0 {
+        -flank
+    } else {
+        flank
+    };
+    Some(on - toward * LATCH_T.mul_add(0.5, -SEAT_BURY) + flank + Vec3::Y * (b * 0.25))
+}
+
+/// **Every declared port, dressed** — [`seam_parts`] spawned, one entity
+/// per part and no entity that is not a part.
+///
+/// **A body is drawn once.** This used to build the frame off one list
+/// and then build the jamb lamp and the amber latch again beside it, at
+/// the same transforms, in the room's shade. Two coincident boxes have
+/// six coplanar faces and no separation at all, so which one the depth
+/// buffer kept was whatever order the frame happened to be batched in —
+/// and the latch, the one amber thing in a doorway, came out fully lit in
+/// some runs of a screenshot command and gone in others. It is not a
+/// number that fixes that and there is no rung of the decal ladder it
+/// belongs on: a ladder separates a paint from the surface it is painted
+/// on, and these were one body entered twice.
+fn dress_ports(
+    commands: &mut Commands,
+    cube: &Handle<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    skin: &Skin,
+    paint: &crate::poi::Tiles,
+    placed: &Placed,
+    tag: InRoom,
+) {
+    let stud = paint.stud.material(materials, Some(skin));
+    let sill = paint.sill.material(materials, Some(skin));
+    for part in seam_parts(placed) {
+        let mut entity = commands.spawn((Mesh3d(cube.clone()), part.at, tag));
+        // The name the description gave it, carried into the world, so
+        // the thing a finding blames and the entity a debugger picks are
+        // the same thing said once.
+        entity.insert(Name::new(part.what));
+        match part.dress {
+            Dress::Leaf => entity.insert(MeshMaterial3d(skin.plate.clone())),
+            Dress::Rivet => entity.insert(MeshMaterial3d(skin.rivet.clone())),
+            Dress::Frame => entity.insert(MeshMaterial3d(skin.plate_shade.clone())),
+            Dress::Brass => entity.insert(MeshMaterial3d(skin.brass.clone())),
+            Dress::Well => entity.insert(MeshMaterial3d(skin.socket.clone())),
+            Dress::Stud => entity.insert(MeshMaterial3d(stud.clone())),
+            Dress::Sill => entity.insert(MeshMaterial3d(sill.clone())),
+            Dress::Jamb => {
+                let lamp = glow::phosphor(materials, palette::LAMP_OK, 0.0);
+                entity.insert((
+                    MeshMaterial3d(lamp.clone()),
+                    SeamLamp {
+                        mat: lamp,
+                        latch: false,
+                    },
+                ))
+            }
+            Dress::Grab(room, face) => {
+                let grab = glow::phosphor(materials, palette::AMBER, 1.2);
+                entity.insert((
+                    MeshMaterial3d(grab.clone()),
+                    SeamLamp {
+                        mat: grab,
+                        latch: true,
+                    },
+                    Latch { room, face },
+                ))
+            }
+        };
+    }
+}
+
+/// How far a shut vertical port's leaf sits below the deck it is set
+/// into — a hatch is a thing you step ON, so it is recessed, never a
+/// block you trip over. The playtest could not tell what the lump in the
+/// bow-starboard corner was; this is the answer, and it is a shape
+/// rather than a label.
+const SINK: f32 = 0.022;
+
+/// The coaming's width and how far it stands proud of the deck: a rim
+/// you can see from across the room and still walk over.
+///
+/// Four notches wide, which is two of overhang either side of the
+/// opening's own edge. Two notches was the near miss: the overhang was
+/// then exactly the depth a cabin rib stands proud of its wall, and a
+/// well cut hard against a wall put the rim's outer face and the rib's
+/// on one plane.
+const RIM_W: f32 = 4.0 * NOTCH;
+const RIM_H: f32 = 0.012;
+
+/// The plate a door drawn shut hangs in its own opening, as
+/// `(centre, size)`. Named because two of them can cross, and the one
+/// that laps has to be able to ask where the other stands.
+fn shut_leaf(site: &Site) -> (Vec3, Vec3) {
+    let leaf = site.out.abs() * PLATE_T + site.half_a.abs() * 2.0 + site.half_b.abs() * 2.0;
+    (site.leaf, leaf.max(Vec3::splat(0.02)))
+}
+
+/// A shut port, dressed as the thing it is.
+///
+/// A **door** drawn shut is a riveted plate, as it always was. The
+/// **vertical pair** is not a door and must not read as one: a hatch in
+/// the deck and a ladder port in the ceiling get a recessed leaf, a
+/// coaming rim around the opening, a hinge barrel down one edge, and a
+/// recessed pull opposite it — so the eye reads *hinged, lifts that way*
+/// without a word of text.
+///
+/// The pull is BRASS, not amber. Amber is the handle rule's, and it
+/// promises a carry: the day apertures become cargo (docs/ROOMS.md's
+/// stretch goal) this hardware grows an amber grab and means it. Until
+/// then the radium brass says "hardware, findable in the dark", which is
+/// the truth.
+fn shut_port(placed: &Placed, site: &Site, out: &mut Vec<SeamPart>) {
+    let port = site.port;
+    let mut body = |what: String, at: Vec3, size: Vec3, dress, seat| {
+        out.push(SeamPart {
+            what,
+            at: Transform::from_translation(at).with_scale(size),
+            dress,
+            across: None,
+            seat,
+        });
+    };
+    if site.is_door() {
+        // **Where two shut leaves cross, the later one laps.** The cabin
+        // declares its aft and its port door at one corner, and two
+        // riveted plates stood through each other there for the whole
+        // height of the doorway, tops on one plane and bottoms on
+        // another. The tie-break is the seam's own — the lower id draws
+        // it — so a leaf is cut round every leaf declared before it, by
+        // the same [`punch`] that cuts an aperture out of a wall.
+        let mut parts = vec![shut_leaf(site)];
+        for prior in placed.ports.iter().take(site.port as usize) {
+            if !prior.is_door() || prior.mate.is_some() {
+                continue;
+            }
+            let (centre, span) = shut_leaf(prior);
+            let (lo, hi) = (centre - span * 0.5, centre + span * 0.5);
+            parts = parts
+                .into_iter()
+                .flat_map(|(at, size)| punch(at, size, lo, hi))
+                .collect();
+        }
+        for (nth, (at, size)) in parts.into_iter().enumerate() {
+            // A leaf drawn shut FILLS the opening it hangs in; the
+            // aperture's own edge is what carries it, and there is no
+            // surface it stands off. Nothing claimed.
+            body(
+                format!("shut[{port}] leaf[{nth}]"),
+                at,
+                size,
+                Dress::Leaf,
+                None,
+            );
+        }
+        for (nth, (corner, course)) in [
+            (-0.66_f32, -0.66_f32),
+            (-0.66, 0.66),
+            (0.66, -0.66),
+            (0.66, 0.66),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            // **A rivet head is on the side of the plate you can see.**
+            // These stood a whole plate thickness the OTHER way — out
+            // past the leaf's back face, in the punched-out depth of the
+            // aperture, 11.9 mm clear of the plate they fasten and
+            // squarely behind it from every stance in the room. Nothing
+            // could ask until a leaf said what held its rivets up. A head
+            // straddles the face it fastens, so half of it is in the
+            // plate and half of it is proud, which is also what a rivet
+            // looks like.
+            body(
+                format!("shut[{port}] rivet[{nth}]"),
+                site.leaf + site.half_a * corner + site.half_b * course
+                    - site.out * (PLATE_T * 0.5),
+                Vec3::splat(0.045),
+                Dress::Rivet,
+                Some(Seat::On(format!("shut[{port}] leaf"))),
+            );
+        }
+        return;
+    }
+    shut_hatch(site, out);
+}
+
+/// A hatch or a ladder port, dressed: a leaf sunk into the opening, a
+/// coaming rim round it, a hinge barrel down one edge and a recessed
+/// pull opposite, so the eye reads *hinged, lifts that way* without a
+/// word of text.
+///
+/// `out` points out of the room (down through a hatch, up through a
+/// ladder port), so `-out` is always "into the room" and the whole
+/// fitting is written once for both.
+fn shut_hatch(site: &Site, out: &mut Vec<SeamPart>) {
+    let port = site.port;
+    let mut body = |what: String, at: Vec3, size: Vec3, dress, seat| {
+        out.push(SeamPart {
+            what,
+            at: Transform::from_translation(at).with_scale(size),
+            dress,
+            across: None,
+            seat,
+        });
+    };
+    let (a, b) = (site.half_a.length(), site.half_b.length());
+    let dir_a = site.half_a.normalize_or_zero().abs();
+    let dir_b = site.half_b.normalize_or_zero().abs();
+    let flat = site.out.abs();
+    // The leaf, sunk into the opening: nothing of it stands proud.
+    body(
+        format!("hatch[{port}] leaf"),
+        site.leaf + site.out * PLATE_T.mul_add(0.5, SINK),
+        dir_a * (a * 2.0) + dir_b * (b * 2.0) + flat * PLATE_T,
+        Dress::Leaf,
+        None,
+    );
+    // The coaming: four bars round the opening, a rim's height proud —
+    // straddling the lip, and yielding at the corners.
+    //
+    // A rim that stopped at the lip ended flush with the very face the
+    // opening was punched in, on the deck and against the starboard wall
+    // the cabin's hatch column runs down; and four bars each run out to
+    // the full outer size crossed at all four corners, which is two
+    // members of one fitting cut to one length. So the bar sits on the
+    // edge it protects, and the pair running the long way owns the
+    // corners while the other pair stands aside — the rim rule
+    // [`band_extent`] gives every other mark in this room.
+    for (nth, (along, across, edge, long)) in [
+        (dir_a, dir_b, site.half_b, true),
+        (dir_a, dir_b, -site.half_b, true),
+        (dir_b, dir_a, site.half_a, false),
+        (dir_b, dir_a, -site.half_a, false),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        body(
+            format!("hatch[{port}] coaming[{nth}]"),
+            site.leaf + edge - site.out * (RIM_H * 0.5),
+            along
+                * if long {
+                    a.mul_add(2.0, RIM_W)
+                } else {
+                    b.mul_add(2.0, -RIM_W)
+                }
+                + across * RIM_W
+                + flat * RIM_H,
+            Dress::Frame,
+            // The rim stands ON the plane the opening is punched in —
+            // `site.leaf` is that plane, the deck's own chart — and
+            // straddles the lip from there.
+            Some(Seat::Plane("deck", site.leaf, site.out)),
+        );
+    }
+    // The hinge: two brass barrels down one edge of the sunk leaf.
+    for (nth, step) in [-0.45_f32, 0.45].into_iter().enumerate() {
+        body(
+            format!("hatch[{port}] hinge[{nth}]"),
+            site.leaf + site.half_a * -0.86 + site.half_b * step + site.out * (SINK * 0.5)
+                - site.out * 0.002,
+            dir_a * (a * 0.18) + dir_b * (b * 0.34) + flat * (SINK * 0.7),
+            Dress::Brass,
+            // A hinge is carried by the coaming on one side and the leaf
+            // on the other, and its own comment says only where it runs.
+            // Nothing is promised, so nothing is asked.
+            None,
+        );
+    }
+    // And the pull, opposite the hinge: a brass bar lying in a shadowed
+    // well, which is what a flush deck fitting looks like — the well
+    // reaches the deck plane so the shadow reads, the bar sits inside it
+    // so the hand knows where to reach.
+    body(
+        format!("hatch[{port}] pull well"),
+        site.leaf + site.half_a * 0.62 + site.out * (SINK * 0.5),
+        dir_a * (a * 0.5) + dir_b * (b * 0.42) + flat * SINK,
+        Dress::Well,
+        // "The well reaches the deck plane so the shadow reads" — that
+        // is a promise about a surface, so it is written down.
+        Some(Seat::Plane("deck", site.leaf, site.out)),
+    );
+    body(
+        format!("hatch[{port}] pull bar"),
+        site.leaf + site.half_a * 0.62 + site.out * (SINK * 0.06),
+        dir_a * (a * 0.30) + dir_b * (b * 0.09) + flat * (SINK * 0.30),
+        Dress::Brass,
+        // "The bar sits inside it", which is a joint with the well.
+        Some(Seat::On(format!("hatch[{port}] pull well"))),
+    );
+}
+
+// ---- The handshake ----
+
+/// The room's one click-functional fixture: the handshake where a deal is
+/// struck (docs/ROOMS.md, "The new barter: six beats", step five). The
+/// handle rule reads a body click as *function* (BAY.md), and on a fixture
+/// set into the room's fabric the whole body IS the function: it wears no
+/// grab, because it is not cargo and cannot be carried.
+///
+/// **The form is the station's; everything that means something is not.**
+/// A chit press at the Guild, a bell at the Hermitage, whatever Venus
+/// thinks is tasteful — the plate, the knob, its throw and its brasswork
+/// all come out of [`crate::poi::Handshake`]. What does not: the cell,
+/// which the sim declares; the lamp, because *lit means there is something
+/// to commit* and a station that could delete it would be a station
+/// hiding the one moment that matters; and the pick face, which is bound
+/// to the whole declared cell so the crosshair meets the fixture the
+/// player is looking at.
+///
+/// The sim does the rest: `Sim::handshake_at` reads the cell,
+/// `work_handshake` commits, and the cue says how it went.
+#[allow(clippy::too_many_arguments)] // the fixture, and what it is made of
+fn handshake(
+    commands: &mut Commands,
+    cube: &Handle<Mesh>,
+    shapes: &crate::poi::Shapes,
+    materials: &mut Assets<StandardMaterial>,
+    skin: &Skin,
+    form: &crate::poi::Handshake,
+    placed: &Placed,
+    tag: InRoom,
+) {
+    let Some(((hx, hy), station, surface)) = handshake_site(placed) else {
+        return;
+    };
+    let cell = layout::cell_rect(placed.id, hx, hy);
+    let mid =
+        space_trucking::sim::Vec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
+    let normal = station.inward(&surface);
+    let rot = station.face(&surface);
+    let at = surface.to_world(mid);
+    let (su, sv) = (surface.scale_u(), surface.scale_v());
+    let span = crate::poi::PLATE_SPAN;
+    let plate = Vec3::new(cell.w * su * span, cell.h * sv * span, 0.03);
+    commands.spawn((
+        Mesh3d(cube.clone()),
+        MeshMaterial3d(form.plate.material(materials, Some(skin))),
+        Transform::from_translation(at + normal * 0.015)
+            .with_rotation(rot)
+            .with_scale(plate),
+        tag,
+    ));
+    // The fixture's own frame, so a station's brasswork is measured off
+    // the cell the sim declared and off nothing else: x and y are cell
+    // fractions, z is metres out of the wall (`crate::poi::Fitting`).
+    let cell_frame = crate::poi::Frame {
+        mid: at,
+        half: Vec3::new(cell.w * su * 0.5, cell.h * sv * 0.5, 1.0),
+        rot,
+    };
+    for fitting in form.trim {
+        commands.spawn((
+            Mesh3d(shapes.of(fitting.shape)),
+            MeshMaterial3d(fitting.coat.material(materials, Some(skin))),
+            cell_frame.place(fitting),
+            tag,
+        ));
+    }
+    // The knob: the part a hand actually works, and the part that visibly
+    // throws when it is. Its silhouette and its travel are the station's;
+    // that it throws at all is the fixture's, because a commit the player
+    // cannot see happen is the thing step five exists to prevent.
+    let knob = crate::poi::Fitting::new(form.knob, form.knob_coat, form.knob_at, form.knob_half);
+    let placement = cell_frame.place(&knob);
+    let rest = placement.translation;
+    commands.spawn((
+        Mesh3d(shapes.of(form.knob)),
+        MeshMaterial3d(form.knob_coat.material(materials, Some(skin))),
+        placement,
+        HandshakeThrow {
+            rest,
+            travel: -normal * form.throw,
+        },
+        tag,
+    ));
+    // Its one lamp: lit while there is something to commit.
+    let lamp = glow::phosphor(materials, form.lamp, 0.0);
+    commands.spawn((
+        Mesh3d(cube.clone()),
+        MeshMaterial3d(lamp.clone()),
+        Transform::from_translation(
+            at + normal * 0.05 + rot * Vec3::new(0.0, -plate.y * 0.62, 0.0),
+        )
+        .with_rotation(rot)
+        .with_scale(Vec3::new(plate.x * 0.5, plate.y * 0.16, 0.02)),
+        HandshakeLamp {
+            room: placed.id,
+            mat: lamp,
+            hue: form.lamp,
+        },
+        tag,
+    ));
+    // The pick face: the fixture's own body, bound to its own cell and
+    // standing proud of the chart it is set into, so the aim meets the
+    // brass the player is looking at.
+    if let Some(face) = handshake_face(placed) {
+        commands.spawn((Station::Handshake, face, tag));
+    }
+}
+
+/// How far the handshake's pick face stands off the chart it is set
+/// into: proud enough that the ray settles on the brass and never on the
+/// wall behind it, shallow enough that the aim reads where the fixture is.
+const HANDSHAKE_FACE: f32 = 0.10;
+
+/// Where a room's handshake is set: its declared cell, and the chart
+/// that cell reads through. `None` for a room that shakes no hands.
+fn handshake_site(placed: &Placed) -> Option<((u8, u8), Station, SimSurface)> {
+    let (hx, hy) = placed.kind.handshake()?;
+    let cell = layout::cell_rect(placed.id, hx, hy);
+    let mid =
+        space_trucking::sim::Vec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
+    placed
+        .charts
+        .iter()
+        .find(|(_, surface)| surface.rect.contains(mid))
+        .map(|(station, surface)| ((hx, hy), *station, *surface))
+}
+
+/// **The quad the crosshair meets a handshake on**, derived rather than
+/// spawned, so a test can aim at a room's fixture without a window — and
+/// so the surface the pick answers through is the one the fixture is
+/// actually drawn on.
+#[must_use]
+pub fn handshake_face(placed: &Placed) -> Option<SimSurface> {
+    let ((hx, hy), station, surface) = handshake_site(placed)?;
+    let cell = layout::cell_rect(placed.id, hx, hy);
+    let mid =
+        space_trucking::sim::Vec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
+    let rot = station.face(&surface);
+    let (su, sv) = (surface.scale_u(), surface.scale_v());
+    Some(SimSurface {
+        center: surface.to_world(mid) + station.inward(&surface) * HANDSHAKE_FACE,
+        half_u: rot * (Vec3::X * (cell.w * su * 0.5)),
+        half_v: rot * (Vec3::NEG_Y * (cell.h * sv * 0.5)),
+        rect: cell,
+        deep: 0.0,
+    })
+}
+
+// ---- The body, and the cues ----
+
+/// Which room the eye stands in, fed to the sim as the occupied-room
+/// field. A body in a doorway keeps the room it came from until it is
+/// wholly inside another; a body whose room parted falls back to the
+/// cabin, which is the only room that cannot leave.
+pub fn occupy(
+    plan: Res<Plan>,
+    camera: Single<&Transform, With<crate::rig::CabinCamera>>,
+    mut occupancy: ResMut<Occupancy>,
+) {
+    if let Some(room) = plan.room_at(camera.translation) {
+        occupancy.0 = room;
+    } else if plan.get(occupancy.0).is_none() {
+        occupancy.0 = CABIN;
+    }
+}
+
+/// **Which detach latch the crosshair rests on — and only when the
+/// latch is the nearest thing the player is looking at.** Roam only,
+/// within reach: the latch is hardware you walk up to, exactly like a
+/// berth.
+///
+/// The latch used to cast a ray of its own and take the nearest latch
+/// in front of it, with nothing else in the comparison, and `advance`
+/// then spent the whole frame's pointer on the answer. So a latch
+/// standing behind a crate, a handshake's brass, or a piece's own body
+/// ate every press aimed at the thing in front of it: that piece could
+/// be neither lifted nor focused, and the first such click sent a room
+/// away instead. The arbitration is here rather than in `advance`
+/// because the amber tell reads this answer too (`seam_fx`), and a lamp
+/// that brightens for a latch the press can no longer reach is the
+/// promise the press just broke.
+///
+/// It settles it by *not casting a second ray*. The pointer already
+/// cast one and already knows how far it got before something stopped
+/// it ([`crate::surface::VirtualPointer::depth`]) — including a surface
+/// that blocks the crosshair without answering it — so the latch is
+/// tested against that same line and has to beat that same depth. Two
+/// rays could disagree; one cannot.
+///
+/// **Ordering, which is the other half of it.** This runs after
+/// `surface::track_pointer`, at the tail of `Phase::Input`, so it reads
+/// the pointer `advance` is about to spend it against and the
+/// `roaming()` `rig::steer` just settled. It used to run at the head of
+/// the phase, ahead of `rig::steer` and `rig::pose`, and so answered
+/// from last frame's camera and last frame's mode: a press that turned
+/// onto a crate and clicked in one frame was still eaten by the latch
+/// the crosshair had left behind. Whichever frame the pointer's own ray
+/// belongs to is now the frame this belongs to as well, which is the
+/// whole of the claim — the two can no longer disagree.
+pub fn aim_latch(
+    rig: Res<crate::rig::CameraRig>,
+    pointer: Res<crate::surface::VirtualPointer>,
+    latches: Query<&Latch>,
+    mut aimed: ResMut<AimedLatch>,
+) {
+    aimed.0 = None;
+    if !rig.roaming() {
+        return;
+    }
+    let Some(ray) = pointer.ray else {
+        return;
+    };
+    let mut nearest = pointer.depth.min(REACH);
+    for latch in &latches {
+        if let Some((t, _, _)) = latch.face.project(ray)
+            && t < nearest
+        {
+            nearest = t;
+            aimed.0 = Some(latch.room);
+        }
+    }
+}
+
+/// The seam's own feedback: a mate or a part pulses every jamb lamp green,
+/// a refused refit strobes them red the way a violation flashes, the
+/// latches breathe amber while a seam could be worked, and the handshake's
+/// plunger throws when it is used.
+#[allow(clippy::too_many_arguments)]
+fn seam_fx(
+    time: Res<Time>,
+    shell: Res<Shell>,
+    aimed: Res<AimedLatch>,
+    mut fx: ResMut<SeamFx>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    lamps: Query<&SeamLamp>,
+    hands: Query<&HandshakeLamp>,
+    mut throws: Query<(&HandshakeThrow, &mut Transform)>,
+) {
+    let dt = time.delta_secs();
+    fx.refit = (fx.refit - dt).max(0.0);
+    fx.seam = (fx.seam - dt).max(0.0);
+    fx.throw = (fx.throw - dt).max(0.0);
+    for cue in shell.bridge.sim.cues() {
+        match cue {
+            Cue::Attached | Cue::Parted => fx.seam = SEAM_LEN,
+            Cue::Refit { .. } => fx.refit = SEAM_LEN,
+            // **Every answer a handshake can give throws the plunger.**
+            // The list used to be the market's two, so the pump bay's
+            // coupling and the parlor's wheel were worked and did not
+            // move — a commit the player cannot see happen is the thing
+            // the fixture exists to prevent, and it was exactly the
+            // rooms with no other feedback that had none.
+            Cue::Accept { .. } | Cue::Refuse | Cue::GasBoost | Cue::CasinoWin | Cue::CasinoLoss => {
+                fx.throw = SEAM_LEN * 0.5;
+            }
+            _ => {}
+        }
+    }
+    let t = time.elapsed_secs();
+    for lamp in &lamps {
+        let Some(mut mat) = materials.get_mut(&lamp.mat) else {
+            continue;
+        };
+        if fx.refit > 0.0 {
+            // Hard on/off at strobe cadence: motion and brightness carry
+            // the refusal, never hue alone.
+            let on = (t * 22.0).sin() > 0.0;
+            glow::set_lamp(&mut mat, palette::LAMP_NO, if on { 1.0 } else { 0.1 });
+        } else if fx.seam > 0.0 {
+            glow::set_lamp(&mut mat, palette::LAMP_OK, fx.seam / SEAM_LEN);
+        } else if lamp.latch {
+            let aim = aimed.0.is_some();
+            let level = glow::breathe(t, 2.0, 0.0).mul_add(0.2, if aim { 0.75 } else { 0.4 });
+            glow::set_lamp(&mut mat, palette::AMBER, level);
+        } else {
+            glow::set_lamp(&mut mat, palette::LAMP_OK, 0.0);
+        }
+    }
+    // The handshake's lamp reads the sim's own answer: something to
+    // commit, or a throw that would find nothing. It IS the sim's answer
+    // now (`Sim::handshake_ready`) rather than a guess shaped like a
+    // market's — the guess counted offer tiles and marks, and a pump bay
+    // has neither, so the one room whose whole business is one press
+    // wore a lamp that could never light.
+    let sim = &shell.bridge.sim;
+    for hand in &hands {
+        let Some(mut mat) = materials.get_mut(&hand.mat) else {
+            continue;
+        };
+        let ready = sim.handshake_ready(hand.room);
+        let level = if ready {
+            glow::breathe(t, 1.8, 0.0).mul_add(0.25, 0.6)
+        } else {
+            0.08
+        };
+        glow::set_lamp(&mut mat, hand.hue, level);
+    }
+    for (throw, mut transform) in &mut throws {
+        let press = (fx.throw / (SEAM_LEN * 0.5)).clamp(0.0, 1.0);
+        transform.translation = throw.rest + throw.travel * press;
+    }
+}
+
+// ---- The composed offer, lit ----
+
+/// **Which pieces the standing tells light, and in which of their two
+/// forms** — `true` for the dashed form a mark wears.
+///
+/// The pure half of the standing tells (`crate::outline`), so what the room
+/// says can be asked about without a world to say it in. Every entry is
+/// the sim's own answer to a question the sim already asks itself;
+/// nothing here re-derives a rule, and a piece may appear twice because
+/// it may be answering two of them.
+///
+/// It is the room's sentence and the cargo layer's outline, which is why
+/// the two halves live a module apart: what a room is waiting on is the
+/// room's business, and the body it is waiting on is a rig's.
+pub fn lit_footprints(sim: &Sim) -> Vec<(u32, bool)> {
+    // Detained first: it is the reading with no second channel. A
+    // composed pile has the handshake's own lamp saying there is
+    // something to commit; a crate holding the launch has nothing but
+    // this outline and a strobe that fires only when the lever is
+    // pulled.
+    let mut lit: Vec<(u32, bool)> = sim
+        .detained_cargo()
+        .into_iter()
+        .map(|id| (id, false))
+        .collect();
+    for id in sim.composed() {
+        if !lit.contains(&(id, false)) {
+            lit.push((id, false));
+        }
+    }
+    // Then the marks, each an entry of its own rather than sharing one,
+    // because a good may be both offered and asked for and the player
+    // asked for it second.
+    lit.extend(sim.marks().iter().map(|&id| (id, true)));
+    lit
+}
+
+#[cfg(test)]
+mod tests {
+    use space_trucking::sim::Loc;
+    use space_trucking::sim::room::ROOM_KINDS;
+
+    use super::*;
+
+    /// The anchor is honest: the cabin's own lattice box maps onto the
+    /// floor chart the bay was authored with, cell for cell. Everything
+    /// else in this module is arithmetic on this.
+    #[test]
+    fn the_cabin_box_is_the_bay_it_always_was() {
+        let cabin = cabin_room();
+        let (lo, hi) = room_box(&cabin);
+        assert!((lo.x - -2.2).abs() < 1e-4, "port wall at {}", lo.x);
+        assert!((hi.x - 2.2).abs() < 1e-4, "starboard wall at {}", hi.x);
+        assert!((hi.z - BAY_WALL_Z).abs() < 1e-4, "aft wall at {}", hi.z);
+        assert!((lo.z - -1.44).abs() < 1e-3, "front floor edge at {}", lo.z);
+    }
+
+    /// **A room stands a whole number of cells from deck to deckhead**,
+    /// exactly as it is a whole number of cells wide and deep.
+    ///
+    /// The lattice governed x and z from the day it arrived and stopped
+    /// at y: the deckhead was 2.26 m, which is 4.109 cells, and the sixty
+    /// millimetres over four courses were nothing in particular. They are
+    /// gone. This is swept over every kind's own box rather than asserted
+    /// of the constant, because the constant is not what a room is built
+    /// from — `room_box` is, and a kind that grew its own ceiling would
+    /// pass a test on `CEIL_Y` and fail this one.
+    #[test]
+    fn a_room_stands_a_whole_number_of_courses_deck_to_deckhead() {
+        for kind in ROOM_KINDS {
+            let room = Room {
+                kind,
+                pose: Pose {
+                    x: 0,
+                    y: 0,
+                    z: 0,
+                    yaw: 0,
+                },
+                mates: [None; PORTS],
+                anchor: None,
+            };
+            let (lo, hi) = room_box(&room);
+            for (axis, name) in [(0, "width"), (1, "height"), (2, "depth")] {
+                let cells = (hi[axis] - lo[axis]) / BAY_CELL;
+                assert!(
+                    (cells - cells.round()).abs() < 1e-4,
+                    "{kind:?} is {cells} cells of {name}"
+                );
+            }
+            // And the band above the wall courses is one of those cells,
+            // rather than whatever was left over.
+            let band = (hi.y - lo.y) - WALL_H;
+            assert!(
+                (band - BAY_CELL).abs() < 1e-4,
+                "{kind:?} keeps {band} m over its cornices, not one cell"
+            );
+        }
+    }
+
+    /// **A standing body still walks under what a room hangs.** The
+    /// deckhead came down sixty millimetres and the pendant did not move
+    /// — its height is [`HEAD_CLEAR`] plus a shade, which is a body's
+    /// measurement and not a ceiling's — so what shortened is the stem
+    /// above it, and this is the guard that says by how much and that it
+    /// is still a positive number.
+    #[test]
+    fn the_pendant_hangs_off_a_head_and_not_off_a_ceiling() {
+        const { assert!(CALLER_DROP > 0.0, "the deckhead came down onto the lamp") };
+        let mut rooms = Rooms::new();
+        let trade = rooms.spawn(RoomKind::Trade, CABIN).expect("a market fits");
+        let placed = placed(&rooms, trade, rooms.get(trade).expect("just attached"));
+        let (at, _) = caller_reach(&placed);
+        assert!(
+            (at.y - placed.lo.y - (HEAD_CLEAR + SHADE_R)).abs() < 1e-4,
+            "the lamp hangs at {} and a head reaches {}",
+            at.y - placed.lo.y,
+            HEAD_CLEAR + SHADE_R
+        );
+        assert!(
+            at.y + SHADE_R < placed.hi.y,
+            "the shade is through the deckhead"
+        );
+    }
+
+    /// The derived charts ARE the authored bay: the generalization moved
+    /// no cabin cell, and the trim it needed to do that is declared.
+    #[test]
+    fn the_derived_cabin_charts_match_the_authored_bay() {
+        let cabin = cabin_room();
+        let derived = charts(CABIN, &cabin);
+        let authored = crate::rig::bay_authored();
+        for ((sa, a), (sb, b)) in derived.iter().zip(authored.iter()) {
+            assert_eq!(sa, sb);
+            assert!(
+                (a.center - b.center).length() < 1e-3,
+                "{sa:?} centre {} vs {}",
+                a.center,
+                b.center
+            );
+            assert!((a.half_u - b.half_u).length() < 1e-3, "{sa:?} u axis");
+            assert!((a.half_v - b.half_v).length() < 1e-3, "{sa:?} v axis");
+            assert_eq!(a.rect, b.rect, "{sa:?} rect");
+        }
+    }
+
+    /// Every room's charts stay inside its own box (bar the cabin's
+    /// declared gutter), and every chart's axes stay perpendicular — the
+    /// fold is a fold, at every yaw the lattice can produce.
+    #[test]
+    fn every_room_folds_its_own_box() {
+        let mut rooms = Rooms::new();
+        // Reach every yaw: doors on all four walls of the cabin.
+        for kind in [RoomKind::Trade, RoomKind::Wreck, RoomKind::Parlor] {
+            assert!(rooms.spawn(kind, CABIN).is_ok());
+        }
+        for (id, room) in rooms.iter() {
+            let (lo, hi) = room_box(&room.clone());
+            for (station, surface) in charts(id, room) {
+                let n = surface.normal();
+                assert!(
+                    n.length_squared() > 0.9,
+                    "room {id} {station:?} has no normal"
+                );
+                assert!(
+                    surface.half_u.dot(surface.half_v).abs() < 1e-3,
+                    "room {id} {station:?} axes are not perpendicular"
+                );
+                let slack = 0.6;
+                assert!(
+                    surface.center.x >= lo.x - slack
+                        && surface.center.x <= hi.x + slack
+                        && surface.center.z >= lo.z - slack
+                        && surface.center.z <= hi.z + slack,
+                    "room {id} {station:?} centre {} escapes its box",
+                    surface.center
+                );
+            }
+        }
+    }
+
+    /// A punch takes a hole out of a slab and leaves the rest: the volume
+    /// arithmetic that keeps every doorway open and every wall standing.
+    #[test]
+    fn a_punch_removes_exactly_the_hole() {
+        let center = Vec3::new(0.0, 1.0, 0.0);
+        let size = Vec3::new(4.0, 2.0, 0.2);
+        let parts = punch(
+            center,
+            size,
+            Vec3::new(-0.5, 0.0, -1.0),
+            Vec3::new(0.5, 1.0, 1.0),
+        );
+        let volume: f32 = parts.iter().map(|(_, s)| s.x * s.y * s.z).sum();
+        let expected = 4.0f32.mul_add(2.0, -1.0) * 0.2;
+        assert!(
+            (volume - expected).abs() < 1e-3,
+            "punched volume {volume} should be {expected}"
+        );
+        // Nothing left standing inside the hole.
+        for (c, s) in &parts {
+            let lo = *c - *s * 0.5;
+            let hi = *c + *s * 0.5;
+            assert!(
+                lo.x >= 0.5 - 1e-4 || hi.x <= -0.5 + 1e-4 || lo.y >= 1.0 - 1e-4,
+                "a remainder at {c} sits in the doorway"
+            );
+        }
+        // A miss leaves the slab whole.
+        assert_eq!(
+            punch(center, size, Vec3::splat(9.0), Vec3::splat(10.0)).len(),
+            1
+        );
+    }
+
+    /// The cabin's six apertures come out of its declared ports, and the
+    /// starboard one lands where the burner's doorway has always been.
+    #[test]
+    fn the_cabin_punches_its_declared_ports() {
+        let holes = cabin_holes();
+        assert_eq!(holes.len(), PORTS);
+        let (lo, hi) = holes[1];
+        assert!((hi.x - lo.x) > 0.2, "the starboard doorway has no depth");
+        assert!(
+            2.0f32.mul_add(-BAY_CELL, hi.z - lo.z).abs() < 1e-3,
+            "the starboard doorway spans {} not two cells",
+            hi.z - lo.z
+        );
+        assert!(
+            f32::from(APERTURE).mul_add(-BAY_CELL, hi.y - lo.y).abs() < 1e-3,
+            "the starboard doorway stands {} tall",
+            hi.y - lo.y
+        );
+        // It reaches through the authored hull it is cut into.
+        assert!(
+            hi.x >= 2.33,
+            "the doorway stops inside the wall at {}",
+            hi.x
+        );
+    }
+
+    /// The envelope joins: from anywhere in the cabin a body can reach the
+    /// burner through the mated door, and the two boxes overlap at the
+    /// connector rather than leaving a step of nothing between them.
+    #[test]
+    fn the_walk_envelope_reaches_through_a_mated_door() {
+        let rooms = Rooms::new();
+        let placed: Vec<Placed> = rooms
+            .iter()
+            .map(|(id, room)| placed(&rooms, id, room))
+            .collect();
+        let envelope = walk_boxes(&placed);
+        // Mid-cabin, mid-doorway, and mid-burner are all legal, and the
+        // walk from one to the other never leaves the envelope.
+        let burner = &placed[1];
+        let inside = Vec3::new(
+            f32::midpoint(burner.lo.x, burner.hi.x),
+            EYE_HEIGHT,
+            f32::midpoint(burner.lo.z, burner.hi.z),
+        );
+        assert!(envelope.holds(Vec3::new(0.0, EYE_HEIGHT, 0.5)), "the cabin");
+        assert!(envelope.holds(inside), "the burner at {inside}");
+        // Up to the seam, through the passage, and on into the room. A
+        // doorway is a cell long now, so the way through it is square on
+        // — you no longer cut its corner, any more than you cut the
+        // corner of a real one.
+        let site = placed[0]
+            .ports
+            .iter()
+            .find(|site| site.is_door() && site.mate.is_some())
+            .expect("the furnace's seam");
+        let axis = Vec3::new(site.leaf.x, EYE_HEIGHT, site.leaf.z);
+        let legs = [
+            (axis - site.out, axis + site.out * (PAD_M + 1.0)),
+            (axis + site.out * (PAD_M + 1.0), inside),
+        ];
+        for (a, b) in legs {
+            for step in 0..=40u8 {
+                let t = f32::from(step) / 40.0;
+                let p = a.lerp(b, t);
+                assert!(envelope.holds(p), "the walk breaks at {p}");
+            }
+        }
+        // And nothing outside the hull is walkable.
+        assert!(!envelope.holds(Vec3::new(0.0, EYE_HEIGHT, 6.0)));
+        assert!(!envelope.holds(Vec3::new(6.0, EYE_HEIGHT, 0.0)));
+    }
+
+    /// The same, for a room that came alongside at a yaw of its own: the
+    /// station's trade room mates the cabin's AFT door and lands turned
+    /// half around, and the walk into it is still continuous.
+    #[test]
+    fn the_walk_envelope_reaches_a_room_that_arrived_turned_around() {
+        let mut rooms = Rooms::new();
+        let trade = rooms
+            .spawn(RoomKind::Trade, CABIN)
+            .expect("the dock attaches its room");
+        let placed: Vec<Placed> = rooms
+            .iter()
+            .map(|(id, room)| placed(&rooms, id, room))
+            .collect();
+        let envelope = walk_boxes(&placed);
+        let shop = placed
+            .iter()
+            .find(|room| room.id == trade)
+            .expect("the trade room is placed");
+        assert_ne!(shop.yaw, 0, "this test wants a turned room");
+        let inside = Vec3::new(
+            f32::midpoint(shop.lo.x, shop.hi.x),
+            EYE_HEIGHT,
+            f32::midpoint(shop.lo.z, shop.hi.z),
+        );
+        assert!(envelope.holds(inside), "the trade room at {inside}");
+        // Through the doorway, not across its corner: a mated aperture is
+        // two cells wide and a body is not thin, so the way in is the way
+        // a body actually walks it — up to the seam, then through.
+        let site = placed[0]
+            .ports
+            .iter()
+            .find(|site| site.is_door() && site.mate == Some((trade, 0)))
+            .expect("the market's seam");
+        let axis = Vec3::new(site.leaf.x, EYE_HEIGHT, site.leaf.z);
+        let from = axis - site.out;
+        let seam = axis + site.out * (PAD_M + 1.0);
+        let plan = plan_of(&placed);
+        for (a, b) in [(from, seam), (seam, inside)] {
+            for step in 0..=40u8 {
+                let t = f32::from(step) / 40.0;
+                let p = a.lerp(b, t);
+                assert!(envelope.holds(p), "the walk breaks at {p}");
+                // And the body is either standing in a room or ducking
+                // through a doorway; there is no third place to be.
+                assert!(
+                    plan.room_at(p).is_some() || envelope.ducking(p),
+                    "at {p} the body is in no room and no doorway"
+                );
+            }
+        }
+    }
+
+    /// A plan wrapping a placed list, for the tests.
+    fn plan_of(rooms: &[Placed]) -> Plan {
+        Plan {
+            rooms: rooms.to_vec(),
+            signature: Vec::new(),
+        }
+    }
+
+    /// Every mapped quad the running game stands up, from a sim alone:
+    /// each room's six charts (tagged with whose they are), the
+    /// handshake faces, and the stations and pick faces that ride the
+    /// cargo (`pieces::ride_pieces`). The carry is driven through exactly
+    /// this list, because the carry is driven through exactly this list
+    /// at runtime.
+    fn world_surfaces(sim: &space_trucking::sim::Sim) -> Vec<crate::surface::Aimable> {
+        use crate::surface::Aimable;
+        let rooms = sim.rooms();
+        let plan: Vec<Placed> = rooms
+            .iter()
+            .map(|(id, room)| placed(rooms, id, room))
+            .collect();
+        let mut aims: Vec<Aimable> = Vec::new();
+        for room in &plan {
+            let tag = InRoom {
+                room: room.id,
+                kind: room.kind,
+            };
+            for (station, surface) in room.charts {
+                aims.push(Aimable {
+                    station,
+                    surface,
+                    riding: false,
+                    in_room: Some(tag),
+                });
+            }
+            // The one click-functional thing set into a room's fabric.
+            // This list claimed to carry them long before it did, which
+            // is how the pump bay's coupling went unswept.
+            if let Some(surface) = handshake_face(room) {
+                aims.push(Aimable {
+                    station: Station::Handshake,
+                    surface,
+                    riding: false,
+                    in_room: Some(tag),
+                });
+            }
+        }
+        let charts: Vec<(Station, SimSurface)> =
+            aims.iter().map(|aim| (aim.station, aim.surface)).collect();
+        let in_hand = sim.held(0).map(|held| held.piece);
+        for piece in sim.pieces() {
+            // A piece in hand rides the crosshair, not a berth, so it
+            // carries no surface — `ride_pieces`' own rule.
+            if !matches!(piece.loc, Loc::Hold { .. }) || in_hand == Some(piece.id) {
+                continue;
+            }
+            let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
+            if let Some((station, surface)) =
+                crate::pieces::instrument_surface(&charts, piece.kind, rect)
+            {
+                aims.push(Aimable {
+                    station,
+                    surface,
+                    riding: true,
+                    in_room: None,
+                });
+            }
+            if let Some(surface) = crate::pieces::standing_surface(&charts, piece.kind, rect) {
+                aims.push(Aimable {
+                    station: Station::Standing,
+                    surface,
+                    riding: true,
+                    in_room: None,
+                });
+            }
+        }
+        // No hull panels to add: `rig::panels()` retired with the last
+        // fixed station, so the charts and the pieces are the whole list.
+        aims
+    }
+
+    /// **The carry begins, end to end, without a window.** Walk up to
+    /// every piece berthed in the cabin, put the crosshair on it, press,
+    /// and the sim must report it in hand.
+    ///
+    /// This is the whole grab path and nothing else: the pointer is
+    /// [`crate::surface::pick`]'s (the same call `track_pointer` makes),
+    /// the click routing is [`crate::rig::handle_route`]'s (the same
+    /// call `steer` makes), and the frame is the one `advance`
+    /// synthesizes for a roam grab. A press that reaches the sim and
+    /// lifts nothing is the playtest's dead left click, and it fails
+    /// here first.
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn a_press_on_a_berthed_piece_lifts_it() {
+        use crate::bridge::{Bridge, FrameInput};
+        use space_trucking::sim::Sim;
+
+        let mut bridge = Bridge::boot_fixture(&Sim::new(4).save_string());
+        let berthed: Vec<(u32, space_trucking::sim::Kind)> = bridge
+            .sim
+            .pieces()
+            .iter()
+            .filter(|piece| matches!(piece.loc, Loc::Hold { room, .. } if room == CABIN))
+            .map(|piece| (piece.id, piece.kind))
+            .collect();
+        assert!(berthed.len() >= 4, "the starter cabin should be furnished");
+        let mut lifted = 0;
+        for (id, kind) in berthed {
+            let aims = world_surfaces(&bridge.sim);
+            let rooms = bridge.sim.rooms();
+            let plan: Vec<Placed> = rooms
+                .iter()
+                .map(|(room, r)| placed(rooms, room, r))
+                .collect();
+            let envelope = walk_boxes(&plan);
+            let charts: Vec<(Station, SimSurface)> =
+                aims.iter().map(|aim| (aim.station, aim.surface)).collect();
+            let piece = bridge
+                .sim
+                .pieces()
+                .iter()
+                .find(|piece| piece.id == id)
+                .expect("the piece is still aboard");
+            let rect = layout::piece_rect(bridge.sim.rooms(), bridge.sim.pieces(), piece);
+            let mid = space_trucking::sim::Vec2::new(
+                rect.w.mul_add(0.5, rect.x),
+                rect.h.mul_add(0.5, rect.y),
+            );
+            let Some((station, surface)) = charts
+                .iter()
+                .find(|(station, surface)| station.chart_flipped() && surface.rect.contains(mid))
+                .copied()
+            else {
+                continue;
+            };
+            // Where the piece is drawn, and a body's step back from it.
+            let inward = station.inward(&surface);
+            let at = surface.to_world(mid) + inward * 0.20;
+            let flat = Vec3::new(inward.x, 0.0, inward.z).normalize_or(Vec3::Z);
+            let mut found = None;
+            for back in [0.75_f32, 0.9, 1.1, 0.55] {
+                let eye = envelope.nearest(Vec3::new(at.x, EYE_HEIGHT, at.z) + flat * back);
+                let Ok(dir) = Dir3::new(at - eye) else {
+                    continue;
+                };
+                let pointer = crate::surface::pick(
+                    Ray3d::new(eye, dir),
+                    true,
+                    crate::rig::REACH,
+                    aims.iter().copied(),
+                );
+                if layout::piece_at(bridge.sim.rooms(), bridge.sim.pieces(), pointer.sim)
+                    .map(|hit| hit.id)
+                    == Some(id)
+                {
+                    found = Some(pointer);
+                    break;
+                }
+            }
+            // The aft-most row of the deck is reached from inside its own
+            // cell; the sweep does not insist on aiming at the player's
+            // feet, only that whatever the crosshair DOES rest on lifts.
+            let Some(pointer) = found else { continue };
+            assert!(
+                pointer.station.is_some(),
+                "{kind:?} resolves no station, so the carry never asks the sim"
+            );
+            // The handle rule must not eat this press: passive cargo has
+            // no function to guard.
+            if crate::rig::handle_route(bridge.sim.rooms(), bridge.sim.pieces(), pointer.sim)
+                .is_some()
+            {
+                continue;
+            }
+            // `advance`'s roam grab, verbatim.
+            bridge.frame(
+                0.016,
+                &FrameInput {
+                    pointer: pointer.sim,
+                    press: true,
+                    held: true,
+                    occupied: CABIN,
+                    ..FrameInput::default()
+                },
+            );
+            assert_eq!(
+                bridge.sim.held(0).map(|held| held.piece),
+                Some(id),
+                "a press on {kind:?} at {:?} lifted nothing",
+                pointer.sim
+            );
+            lifted += 1;
+            // And set it down again, through the CHART this time: the
+            // piece is in hand, so its own pick face has come down and
+            // the ray meets the room's net where the berth is. That is
+            // the other half of the carry, and it is the half that
+            // proves the chart still answers for a cell a piece could
+            // berth on (`surface::chart_cell`).
+            let aims = world_surfaces(&bridge.sim);
+            let mut placed_back = None;
+            for back in [0.75_f32, 0.9, 1.1, 0.55] {
+                let eye = envelope.nearest(Vec3::new(at.x, EYE_HEIGHT, at.z) + flat * back);
+                let Ok(dir) = Dir3::new(surface.to_world(mid) - eye) else {
+                    continue;
+                };
+                let aim = crate::surface::pick(
+                    Ray3d::new(eye, dir),
+                    true,
+                    crate::rig::REACH,
+                    aims.iter().copied(),
+                );
+                if layout::cell_at(aim.sim).is_some() {
+                    placed_back = Some(aim);
+                    break;
+                }
+            }
+            let aim = placed_back.expect("the emptied berth still answers the crosshair");
+            bridge.frame(
+                0.016,
+                &FrameInput {
+                    pointer: aim.sim,
+                    release: true,
+                    occupied: CABIN,
+                    ..FrameInput::default()
+                },
+            );
+            assert!(
+                bridge.sim.held(0).is_none(),
+                "the hand never emptied over {:?}",
+                aim.sim
+            );
+        }
+        assert!(lifted >= 3, "only {lifted} pieces were actually carried");
+    }
+
+    /// **Pressing a station's goods says so.**
+    ///
+    /// A press on `Stock` marks rather than lifts, which is right and
+    /// load-bearing — `a_stations_goods_are_never_the_players_to_carry`
+    /// pins it in the sim — and the playtest reported the consequence:
+    /// the press was silent, so it read as a dead click. Nothing on
+    /// screen changed unless the mark happened to move the room's
+    /// arithmetic, and a mark is *allowed* not to.
+    ///
+    /// So the assertion is the player's and not the sim's: press a
+    /// good, and the set of footprints the room lights gains that good,
+    /// in the form a mark wears. Press it again and the set loses it.
+    /// `sim.marks()` is deliberately not what is asked — a test that
+    /// read the ledger back would have passed on the day of the defect.
+    /// Every good of every calling room, over a sweep of seeds, because
+    /// the interesting cases are the ones the room's arithmetic ignores.
+    #[test]
+    fn a_press_on_a_stations_goods_lights_what_it_marked() {
+        use space_trucking::sim::{InputFrame, Sim};
+
+        let mut swept = 0;
+        for seed in 0..24_u64 {
+            let mut sim = Sim::new(seed);
+            let goods: Vec<u32> = sim
+                .pieces()
+                .iter()
+                .filter(|piece| {
+                    matches!(piece.loc, Loc::Hold { room, .. } if !sim.rooms().riding(room))
+                })
+                .map(|piece| piece.id)
+                .collect();
+            for id in goods {
+                let piece = *sim
+                    .pieces()
+                    .iter()
+                    .find(|piece| piece.id == id)
+                    .expect("the room still stocks it");
+                let rect = layout::piece_rect(sim.rooms(), sim.pieces(), &piece);
+                let at = space_trucking::sim::Vec2::new(
+                    rect.w.mul_add(0.5, rect.x),
+                    rect.h.mul_add(0.5, rect.y),
+                );
+                let press = InputFrame {
+                    pointer: at,
+                    press: true,
+                    held: true,
+                    ..InputFrame::default()
+                };
+                assert!(
+                    !lit_footprints(&sim).contains(&(id, true)),
+                    "seed {seed}: {:?} was already lit before anybody pressed it",
+                    piece.kind
+                );
+                sim.advance(0.0, &press);
+                assert!(
+                    sim.held(0).is_none(),
+                    "seed {seed}: {:?} came up in the hand",
+                    piece.kind
+                );
+                assert!(
+                    lit_footprints(&sim).contains(&(id, true)),
+                    "seed {seed}: pressing {:?} lit nothing — the click is dead",
+                    piece.kind
+                );
+                sim.advance(0.0, &press);
+                assert!(
+                    !lit_footprints(&sim).contains(&(id, true)),
+                    "seed {seed}: {:?} stayed lit after the mark came off",
+                    piece.kind
+                );
+                swept += 1;
+            }
+        }
+        assert!(swept > 40, "only {swept} of a room's goods were pressed");
+    }
+
+    /// **The pump bay's coupling works, from a body standing in it.**
+    ///
+    /// Driven the way the game drives it: the pointer is
+    /// [`crate::surface::pick`]'s, the frame is the one `advance`
+    /// synthesizes for a roam click, and the eye stands somewhere the
+    /// walk envelope actually allows. `gas_top_up` is the mechanic, and
+    /// what it does is skip a sliver of the remaining leg — so the test
+    /// asks the ship, not the cue.
+    #[test]
+    fn the_pump_bay_s_coupling_tops_the_tanks_up() {
+        use crate::bridge::{Bridge, FrameInput};
+        use space_trucking::sim::ShipState;
+
+        let save = crate::fixture::alongside(RoomKind::Pump).expect("a leg meets a pump bay");
+        let mut bridge = Bridge::boot_fixture(&save);
+        let pump = bridge.sim.rooms().find(RoomKind::Pump).expect("alongside");
+        let rooms = bridge.sim.rooms();
+        let plan: Vec<Placed> = rooms
+            .iter()
+            .map(|(id, room)| placed(rooms, id, room))
+            .collect();
+        let envelope = walk_boxes(&plan);
+        let room = plan.iter().find(|room| room.id == pump).expect("placed");
+        let face = handshake_face(room).expect("the pump bay shakes hands");
+        let aims = world_surfaces(&bridge.sim);
+        // Stand in the bay and look at the coupling. Anywhere legal will
+        // do; the sweep is over the room's own floor.
+        let mut aimed = None;
+        for a in 0..=8u8 {
+            for b in 0..=8u8 {
+                let eye = Vec3::new(
+                    (f32::from(a) / 8.0).mul_add(room.hi.x - room.lo.x, room.lo.x),
+                    EYE_HEIGHT,
+                    (f32::from(b) / 8.0).mul_add(room.hi.z - room.lo.z, room.lo.z),
+                );
+                if !envelope.holds(eye) {
+                    continue;
+                }
+                let Ok(dir) = Dir3::new(face.center - eye) else {
+                    continue;
+                };
+                let pointer = crate::surface::pick(
+                    Ray3d::new(eye, dir),
+                    true,
+                    crate::rig::REACH,
+                    aims.iter().copied(),
+                );
+                if pointer.station == Some(Station::Handshake) {
+                    aimed = Some(pointer);
+                    break;
+                }
+            }
+        }
+        let pointer = aimed.expect("the coupling is out of reach from the whole bay");
+        let ShipState::Traveling { progress, .. } = bridge.sim.ship().state else {
+            panic!("a pump bay is met underway or not at all");
+        };
+        assert!(
+            bridge.sim.handshake_ready(pump),
+            "the coupling reads dead while there is a top-up standing"
+        );
+        bridge.frame(
+            0.016,
+            &FrameInput {
+                pointer: pointer.sim,
+                press: true,
+                held: true,
+                occupied: pump,
+                ..FrameInput::default()
+            },
+        );
+        let ShipState::Traveling {
+            progress: after, ..
+        } = bridge.sim.ship().state
+        else {
+            panic!("the top-up took the ship off its leg");
+        };
+        assert!(
+            after > progress,
+            "the coupling was worked and the tanks did not fill: {progress} -> {after}"
+        );
+        assert!(
+            !bridge.sim.handshake_ready(pump),
+            "the coupling still reads live after its one top-up"
+        );
+    }
+
+    /// A ship with a room on every wall of the cabin, for the geometry
+    /// laws below: the widest spread of seams the lattice can hand us.
+    fn crowded_ship() -> Vec<Placed> {
+        let mut rooms = Rooms::new();
+        for kind in [
+            RoomKind::Trade,
+            RoomKind::Wreck,
+            RoomKind::Parlor,
+            RoomKind::Pump,
+        ] {
+            let _ = rooms.spawn(kind, CABIN);
+        }
+        rooms
+            .iter()
+            .map(|(id, room)| placed(&rooms, id, room))
+            .collect()
+    }
+
+    /// **A doorway draws each body once.**
+    ///
+    /// The seam's amber latch was entered twice — once in the frame's own
+    /// list of shaded boxes and once again beside it, at the same
+    /// transform, wearing its amber — and so was the jamb lamp. Two boxes
+    /// on one transform present six coplanar faces with no separation to
+    /// settle them by, so the depth buffer kept whichever the renderer
+    /// batched last, and `--view starboard` came out with a lit latch in
+    /// five runs of one command and no latch at all in the sixth.
+    ///
+    /// No number cures that and no rung of the decal ladder is where it
+    /// belongs: a rung separates a paint from the surface it is painted
+    /// on, and this was one body written down twice. So the law is a
+    /// count rather than a distance, and it is swept over every room a
+    /// crowded ship has.
+    #[test]
+    fn a_doorway_draws_each_body_once() {
+        for room in crowded_ship() {
+            let parts = seam_parts(&room);
+            for (i, part) in parts.iter().enumerate() {
+                for other in &parts[i + 1..] {
+                    let apart = (part.at.translation - other.at.translation).abs()
+                        + (part.at.scale.abs() - other.at.scale.abs()).abs();
+                    assert!(
+                        apart.max_element() > crate::rig::layer::SKIN,
+                        "room {} ({:?}) draws {} and {} on one transform",
+                        room.id,
+                        room.kind,
+                        part.what,
+                        other.what
+                    );
+                }
+            }
+        }
+    }
+
+    /// Whether two boxes share a volume worth seeing.
+    fn intersects((alo, ahi): (Vec3, Vec3), (blo, bhi): (Vec3, Vec3), slack: f32) -> bool {
+        (0..3).all(|axis| ahi[axis].min(bhi[axis]) - alo[axis].max(blo[axis]) > slack)
+    }
+
+    /// **No room reaches into another room.** The partition is a
+    /// boundary, not a volume: everything a room draws stands inside its
+    /// own box, and the only thing allowed across the line is the
+    /// hardware that dresses a mated aperture — one frame, drawn once,
+    /// standing in the opening the two rooms share.
+    ///
+    /// This is the playtest's sliver of another room's hatching, made
+    /// geometrically impossible instead of merely absent.
+    #[test]
+    fn no_rooms_geometry_reaches_into_another_room() {
+        let plan = crowded_ship();
+        assert!(plan.len() >= 3, "this law wants a ship with neighbours");
+        for room in &plan {
+            // The aperture columns this room is allowed to stand in: its
+            // own mated openings, a jamb's girth either side.
+            let seams: Vec<(Vec3, Vec3)> = room
+                .ports
+                .iter()
+                .filter(|site| site.mate.is_some() && site.is_door())
+                .map(|site| {
+                    let mid = seam_centre(room, site);
+                    let half = site.half_a.abs()
+                        + site.half_b.abs()
+                        + Vec3::splat(JAMB + PLATE_T)
+                        + site.out.abs() * JAMB;
+                    (mid - half, mid + half)
+                })
+                .collect();
+            let mut drawn: Vec<(Vec3, Vec3)> = shell_boxes(room, &plan)
+                .into_iter()
+                .map(|(c, s, _)| (c - s * 0.5, c + s * 0.5))
+                .collect();
+            drawn.extend(seam_parts(room).into_iter().map(|part| {
+                // A tread lies on the deck chart and is turned onto it,
+                // so the box is the turned one, not the scale.
+                let half = part.at.scale.abs() * 0.5;
+                let turn = Mat3::from_quat(part.at.rotation);
+                let reach = turn.x_axis.abs() * half.x
+                    + turn.y_axis.abs() * half.y
+                    + turn.z_axis.abs() * half.z;
+                (part.at.translation - reach, part.at.translation + reach)
+            }));
+            for other in plan.iter().filter(|other| other.id != room.id) {
+                // The neighbour's interior, less a hair so a shared
+                // boundary plane is contact rather than trespass.
+                let inside = (other.lo + Vec3::splat(1e-3), other.hi - Vec3::splat(1e-3));
+                for box_ in &drawn {
+                    if !intersects(*box_, inside, 1e-3) {
+                        continue;
+                    }
+                    assert!(
+                        seams.iter().any(|seam| {
+                            (0..3).all(|axis| {
+                                box_.0[axis] >= seam.0[axis] - 1e-3
+                                    && box_.1[axis] <= seam.1[axis] + 1e-3
+                            })
+                        }),
+                        "room {} ({:?}) draws {:?}..{:?} inside room {} ({:?})",
+                        room.id,
+                        room.kind,
+                        box_.0,
+                        box_.1,
+                        other.id,
+                        other.kind
+                    );
+                }
+            }
+        }
+    }
+
+    /// **Every length the fabric is built from is a fraction of the
+    /// cargo grid**, and the fractions are the ones the padding cube can
+    /// actually pay for.
+    ///
+    /// A wall and a chart's trim were the last two free parameters in
+    /// this module — 0.1 m and 0.03 m, which are 0.18 and 0.055 cells and
+    /// were chosen by eye. What decides them now is the cube between two
+    /// rooms: the two hulls each spend a quarter of it, so the passage
+    /// between them keeps half a cell of daylight, and the trim is a
+    /// quarter of the wall again.
+    ///
+    /// The clauses below are the two things the derivation has to buy,
+    /// stated as the world rather than as the arithmetic: two hulls fit
+    /// inside one pad with a walkable gap left over, and a chart stands
+    /// clear of the junk bolted to the wall behind it.
+    #[test]
+    fn the_fabric_is_built_out_of_fractions_of_a_cargo_cell() {
+        for (name, length) in [("a wall", WALL_T), ("a chart's trim", CHART_INSET)] {
+            let sixteenths = length / (BAY_CELL / 16.0);
+            assert!(
+                (sixteenths - sixteenths.round()).abs() < 1e-4,
+                "{name} is {sixteenths} sixteenths of a cell"
+            );
+        }
+        let daylight = WALL_T.mul_add(-2.0, PAD_M);
+        assert!(
+            daylight >= BAY_CELL * 0.5,
+            "two hulls leave {daylight} m of passage between them"
+        );
+        // The junk on a cabin wall straddles its own face, so it stands
+        // half its girth into the room; a chart hung behind that is a
+        // chart you cannot work. Level with it is the tightest this may
+        // be and still be true: a crate on the wall has its back against
+        // the ribs rather than inside them.
+        let face = f32::from(RoomKind::Cabin.floor().0) * BAY_CELL * 0.5;
+        let proud = crate::rig::structure()
+            .iter()
+            .filter(|slab| slab.center.x > 0.0 && slab.size.x < BAY_CELL)
+            .map(|slab| face - slab.size.x.mul_add(-0.5, slab.center.x))
+            .fold(0.0_f32, f32::max);
+        assert!(
+            CHART_INSET >= proud - 1e-5,
+            "the ribs stand {proud} m proud and the chart insets {CHART_INSET} m"
+        );
+    }
+
+    /// **No two rooms' hulls ever share a cubic centimetre.**
+    ///
+    /// This is the law the padding cell exists for, and it is the one
+    /// the owner reported three times as the incinerator clipping into
+    /// the main cabin, hazard tape and all. It was never a placement
+    /// slip. Two rooms mated flush on the interior lattice — the port
+    /// law says the slot IS the position — and then each of them grew a
+    /// wall proud of that plane on all four sides and under the deck, so
+    /// the two hulls overlapped by two wall thicknesses **by
+    /// construction**, at every seam, on every ship. No amount of care
+    /// about where a room was put could have made it otherwise.
+    ///
+    /// So the assertion is not about the drawn slabs, which is where the
+    /// last four passes looked. It is about the boxes those slabs are
+    /// cut from: a room's hull is its interior grown by one wall, the
+    /// interiors stand a cell apart, and a cell is wider than two walls.
+    /// Swept over a crowded ship AND over the yard-fresh one, because
+    /// the furnace's seam is the one that was reported.
+    #[test]
+    fn no_two_rooms_hulls_ever_share_a_cubic_centimetre() {
+        for plan in [crowded_ship(), {
+            let rooms = Rooms::new();
+            rooms
+                .iter()
+                .map(|(id, room)| placed(&rooms, id, room))
+                .collect()
+        }] {
+            assert!(plan.len() >= 2, "this law wants a ship with neighbours");
+            for (i, a) in plan.iter().enumerate() {
+                for b in &plan[i + 1..] {
+                    let (alo, ahi) = hull_box(a);
+                    let (blo, bhi) = hull_box(b);
+                    let meet = (ahi.min(bhi) - alo.max(blo)).max(Vec3::ZERO);
+                    assert!(
+                        meet.min_element() <= 0.0,
+                        "room {} ({:?}) and room {} ({:?}) share {meet} m of hull",
+                        a.id,
+                        a.kind,
+                        b.id,
+                        b.kind
+                    );
+                }
+            }
+        }
+    }
+
+    /// Every chart a room paints on — and therefore every colored tile,
+    /// every doormat, and every decal that rides one — stays inside that
+    /// room's own box. The cabin is the one exception, and it is a
+    /// DECLARED one: its front wall stands an authored gutter beyond its
+    /// floor box (`chart_inset`), because its hull was built before the
+    /// lattice was.
+    #[test]
+    fn every_attached_rooms_paint_stays_in_its_own_box() {
+        for room in crowded_ship().iter().filter(|room| room.id != CABIN) {
+            for (station, surface) in room.charts {
+                // The deepest a decal ever rides, plus its own skin.
+                let lift =
+                    station.inward(&surface) * (crate::rig::layer::GLYPH + crate::rig::layer::SKIN);
+                for corner in [-1.0_f32, 1.0] {
+                    for course in [-1.0_f32, 1.0] {
+                        let at = surface.center
+                            + surface.half_u * corner
+                            + surface.half_v * course
+                            + lift;
+                        assert!(
+                            at.x >= room.lo.x - 1e-3
+                                && at.x <= room.hi.x + 1e-3
+                                && at.z >= room.lo.z - 1e-3
+                                && at.z <= room.hi.z + 1e-3,
+                            "room {} {station:?} paints at {at} outside {}..{}",
+                            room.id,
+                            room.lo,
+                            room.hi
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// **The latch stands in the room that stays, and names the room
+    /// that goes.** It used to be drawn by the calling room — inside the
+    /// room it was meant to send away, asking to part the CABIN, which
+    /// is the one room the graph cannot lose. Now the lower id dresses
+    /// the seam, so the hand is aboard and the room named is the one
+    /// alongside.
+    #[test]
+    fn the_seams_latch_is_worked_from_the_room_that_stays() {
+        let plan = crowded_ship();
+        let mut latches = 0;
+        for room in &plan {
+            for site in &room.ports {
+                let Some(at) = latch_at(room, site) else {
+                    continue;
+                };
+                let (other, _) = site.mate.expect("a latch only hangs on a mated seam");
+                assert_ne!(other, room.id, "a room cannot part from itself");
+                assert!(
+                    room.id < other,
+                    "room {} hung the latch for room {other}, which outranks it",
+                    room.id
+                );
+                assert!(
+                    at.x >= room.lo.x - JAMB
+                        && at.x <= room.hi.x + JAMB
+                        && at.z >= room.lo.z - JAMB
+                        && at.z <= room.hi.z + JAMB,
+                    "the latch for room {other} hangs at {at}, outside room {}",
+                    room.id
+                );
+                latches += 1;
+            }
+        }
+        assert!(latches >= 2, "only {latches} seams grew a latch");
+    }
+
+    /// **A seam that cannot part is drawn without a latch.**
+    ///
+    /// The furnace's doorway wore one, and it worked: the sim let a
+    /// riding room go, so one press took the room away with the fire
+    /// and the hopper inside it and nothing anywhere gave it back. The
+    /// sim refuses it now (`Refusal::Riding`) and this is the other
+    /// half — a control whose only possible answer is a refusal is a
+    /// control that should not be drawn, and the amber that means *this
+    /// seam can be worked* must never be hung where it cannot.
+    ///
+    /// It is asked of every seam of every room rather than of the
+    /// burner: what a latch may name is `RoomKind::riding`, the sim's
+    /// own predicate, so the rule holds for the crew module nobody has
+    /// written yet. The counts are in it because a rule about which
+    /// latches exist passes trivially on a ship with none.
+    #[test]
+    fn a_riding_rooms_seam_is_drawn_without_a_latch() {
+        let ship = Rooms::new();
+        let yard: Vec<Placed> = ship
+            .iter()
+            .map(|(id, room)| placed(&ship, id, room))
+            .collect();
+        for room in &yard {
+            for site in &room.ports {
+                assert!(
+                    latch_at(room, site).is_none(),
+                    "room {} port {} hung a latch on the furnace seam",
+                    room.id,
+                    site.port
+                );
+            }
+        }
+        // And the ordinary seams still grow one each. A calling room is
+        // reached through exactly one seam and that seam is what
+        // dismisses it, so the tally is the callers themselves.
+        let plan = crowded_ship();
+        let mut latches = 0;
+        for room in &plan {
+            for site in &room.ports {
+                if latch_at(room, site).is_none() {
+                    continue;
+                }
+                let beyond = site.beyond.expect("a latch only hangs on a mated seam");
+                assert!(
+                    !beyond.riding(),
+                    "room {} hung a latch on a {beyond:?}, which rides",
+                    room.id
+                );
+                latches += 1;
+            }
+        }
+        let callers = plan.iter().filter(|room| !room.kind.riding()).count();
+        assert!(callers >= 3, "only {callers} rooms came alongside");
+        assert_eq!(
+            latches, callers,
+            "a caller was left with no way to send it away"
+        );
+    }
+
+    /// **The seam's amber latch is bolted to the wall it hangs on.**
+    ///
+    /// `JAMB + LATCH_W` is the sideways clearance that puts the plate on
+    /// bare wall beside the frame, and it was being spent a second time
+    /// along the wall's own normal — so the plate stood an eighth of a
+    /// metre out in the room with its back to nothing and the amber
+    /// rode further out still. The owner photographed it from the
+    /// burner doorway and described it exactly: a small orange
+    /// rectangle on a bigger metal one, floating in front of a door.
+    ///
+    /// The law is the joint every other body in this game meets a
+    /// surface with. The plate's back face reaches the face the room
+    /// shows — its chart plane, which is where its paint rides and
+    /// where a wall berth hangs a crate — and goes into it rather than
+    /// stopping in front of it, and the amber stays proud of the plate,
+    /// because a lever flush with its own plate is a decal.
+    #[test]
+    fn the_seams_latch_is_bolted_to_the_wall_it_hangs_on() {
+        let plan = crowded_ship();
+        let mut checked = 0;
+        for room in &plan {
+            let parts = seam_parts(room);
+            for site in &room.ports {
+                let Some(Port::Door { wall, .. }) = site.declared else {
+                    continue;
+                };
+                if latch_at(room, site).is_none() {
+                    continue;
+                }
+                let wall = seam_centre(room, site).dot(site.out) - chart_inset(room.kind, wall);
+                let face = |what: &str, sign: f32| {
+                    let part = parts
+                        .iter()
+                        .find(|part| part.what == format!("seam[{}] {what}", site.port))
+                        .expect("a sited latch draws both of its bodies");
+                    (sign * part.at.scale.abs().dot(site.out.abs()))
+                        .mul_add(0.5, part.at.translation.dot(site.out))
+                };
+                let (back, front) = (face("latch plate", 1.0), face("latch plate", -1.0));
+                assert!(
+                    back >= wall,
+                    "room {} port {} hangs its latch plate {:.4} m off the wall it \
+                     bolts to",
+                    room.id,
+                    site.port,
+                    wall - back
+                );
+                assert!(
+                    back - wall <= CHART_INSET,
+                    "room {} port {} drives its latch plate {:.4} m through the \
+                     {CHART_INSET:.4} m of cladding behind its own wall face",
+                    room.id,
+                    site.port,
+                    back - wall
+                );
+                assert!(
+                    face("latch grab", -1.0) < front,
+                    "room {} port {} draws its amber flush with the plate it is a \
+                     lever on",
+                    room.id,
+                    site.port
+                );
+                checked += 1;
+            }
+        }
+        assert!(checked >= 2, "only {checked} seams grew a latch");
+    }
+
+    /// The cabin's floor hatch reads as a hatch: nothing of its leaf
+    /// stands proud of the deck, and what does stand proud is a rim thin
+    /// enough to walk over. The playtest could not tell what the lump in
+    /// the bow-starboard corner was, and a lump is what it was.
+    #[test]
+    fn the_cabins_floor_hatch_is_flush_with_its_deck() {
+        let cabin = lone_cabin();
+        let hatch = cabin
+            .ports
+            .iter()
+            .find(|site| matches!(site.declared, Some(Port::Hatch { .. })))
+            .expect("the cabin declares a hatch");
+        assert!(hatch.mate.is_none(), "this test wants the hatch drawn shut");
+        // The leaf: sunk, its whole body below the deck plane.
+        let sink = PLATE_T.mul_add(0.5, SINK);
+        let leaf_top = PLATE_T.mul_add(0.5, hatch.out.y.mul_add(sink, hatch.leaf.y));
+        assert!(
+            leaf_top <= SINK.mul_add(-0.5, FLOOR_Y),
+            "the hatch leaf stands {leaf_top} proud of a deck at {FLOOR_Y}"
+        );
+        // The rim: proud, but no more than a rim.
+        let rim_top = RIM_H.mul_add(0.5, hatch.out.y.mul_add(-(RIM_H * 0.5), hatch.leaf.y));
+        assert!(
+            rim_top - FLOOR_Y <= RIM_H,
+            "the hatch coaming stands {} proud, which is a step not a rim",
+            rim_top - FLOOR_Y
+        );
+        const {
+            assert!(
+                RIM_H < SINK,
+                "a rim that outstands its own recess is a lump"
+            );
+        }
+    }
+
+    /// **A caller's lamp lights its own room and no further.**
+    ///
+    /// The one exception to "the ship owns no lumen" (docs/BAY.md), held
+    /// to its three clauses: it burns the brightness it remembers, so the
+    /// omen dims it through `Dimmable` like every crew lamp; it reaches
+    /// every corner of its own floor; and it dies before the middle of
+    /// any room that RIDES. A station may light its own premises and may
+    /// not light the crew's — the playtest's flat 7.5 m at 260,000 lumens
+    /// lit the whole cabin through a solid partition, which is a
+    /// lights-out economy paid for by whoever docked.
+    ///
+    /// It now runs over **every station in the registry**, not just the
+    /// neutral lamp: a character may pick a colour and a fraction of the
+    /// budget, and the three clauses have to survive all fifteen of them
+    /// — which they do structurally, because the reach is derived from
+    /// the room and is not a knob a station has.
+    #[test]
+    fn a_callers_lamp_lights_its_own_room_and_no_further() {
+        let plan = crowded_ship();
+        let mut lamps = 0;
+        for room in plan.iter().filter(|room| !room.kind.riding()) {
+            for host in crate::poi::HOSTS {
+                let station = crate::poi::character(host).light;
+                let (light, transform, dimmable) = caller_light(room, &station);
+                let at = transform.translation;
+                assert!(
+                    (light.intensity - dimmable.intensity).abs() < 1.0,
+                    "{host:?} in a {:?} burns {} but remembers {}: the omen would move it",
+                    room.kind,
+                    light.intensity,
+                    dimmable.intensity
+                );
+                assert!(
+                    light.intensity <= CALLER_LUMENS,
+                    "{host:?} outshines the caller budget"
+                );
+                // Every corner of its own floor is inside the pool.
+                for x in [room.lo.x, room.hi.x] {
+                    for z in [room.lo.z, room.hi.z] {
+                        let corner = Vec3::new(x, room.lo.y, z);
+                        assert!(
+                            (at - corner).length() <= light.range,
+                            "{:?} leaves its own corner {corner} unlit",
+                            room.kind
+                        );
+                    }
+                }
+                // And no riding room's middle is.
+                for other in plan.iter().filter(|other| other.kind.riding()) {
+                    let mid = (other.lo + other.hi) * 0.5;
+                    assert!(
+                        (at - mid).length() > light.range,
+                        "{host:?}'s lamp reaches the middle of the {:?} \
+                         ({} m of a {} m reach)",
+                        other.kind,
+                        (at - mid).length(),
+                        light.range
+                    );
+                }
+            }
+            lamps += 1;
+        }
+        assert!(lamps >= 2, "only {lamps} callers came alongside");
+    }
+
+    /// **A class's mark rides its region's rim, and stays inside its own
+    /// cell.** Both halves matter: the rim is what stops a class from
+    /// stamping itself into every cell (the Guild's aft wall, tiled like
+    /// a bathroom), and the containment is what stops one cell's mark
+    /// from lying across its neighbour's — the Stock hatching used to
+    /// overhang its cell by a fifth and land on the doorway's stripes at
+    /// the very same rung, which is the shimmer the owner reported.
+    #[test]
+    fn a_tile_mark_stays_on_its_own_rim_and_in_its_own_cell() {
+        for kind in space_trucking::sim::room::ROOM_KINDS {
+            let (cols, rows) = kind.grid();
+            for y in 0..rows {
+                for x in 0..cols {
+                    let Some(tile) = kind.tile_of(x, y) else {
+                        continue;
+                    };
+                    let edges = rim(kind, x, y, tile);
+                    for width in [BAND, CHALK, SILL] {
+                        for (side, &ends) in edges.iter().enumerate() {
+                            if !ends {
+                                continue;
+                            }
+                            let (offset, size) = band_extent(side, edges, width);
+                            for axis in 0..2 {
+                                let half = size[axis] * 0.5;
+                                assert!(
+                                    offset[axis].abs() + half <= 0.5 + 1e-6,
+                                    "{kind:?} ({x}, {y}) side {side} reaches \
+                                     {} past its own cell",
+                                    offset[axis].abs() + half - 0.5
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // **The rim is the whole economy**: a cell surrounded by its own
+        // class wears nothing at all. The furnace is the case that proves
+        // it — every cell of its net is `Consume`, so under the old
+        // per-cell stamping it wore a hazard tile and two ember bars a
+        // hundred and some times over, and now its middle is bare
+        // scorched plate with tape only at its cornices, its doorway, and
+        // the edges of its own skin.
+        let furnace = RoomKind::Burner;
+        let (cols, rows) = furnace.grid();
+        let bare = (0..rows)
+            .flat_map(|y| (0..cols).map(move |x| (x, y)))
+            .filter(|&(x, y)| {
+                furnace
+                    .tile_of(x, y)
+                    .is_some_and(|tile| !rim(furnace, x, y, tile).iter().any(|ends| *ends))
+            })
+            .count();
+        assert!(
+            bare >= 6,
+            "the furnace stamps its own middle: only {bare} cells go unmarked"
+        );
+    }
+
+    /// Two marks on one rung never share a plane: at a region's corner
+    /// the top and bottom bands run the full cell and the side bands
+    /// stand aside, so a corner is drawn once. Overlapping paint at one
+    /// rung is z-fighting with extra steps.
+    #[test]
+    fn two_bands_of_one_mark_never_overlap() {
+        for corner in [[true, false, true, false], [true, true, true, true]] {
+            let boxes: Vec<(Vec2, Vec2)> = (0..4)
+                .filter(|side| corner[*side])
+                .map(|side| band_extent(side, corner, BAND))
+                .collect();
+            for (i, a) in boxes.iter().enumerate() {
+                for b in &boxes[i + 1..] {
+                    let clear = (0..2).any(|axis| {
+                        (a.1[axis] + b.1[axis]).mul_add(-0.5, (a.0[axis] - b.0[axis]).abs()) > -1e-6
+                    });
+                    assert!(clear, "two bands of one mark overlap at {a:?} and {b:?}");
+                }
+            }
+        }
+    }
+
+    /// The occupied-room field derives from the body's position and
+    /// nothing else, and it answers with the room the body is actually in.
+    #[test]
+    fn the_occupied_room_is_the_box_the_body_stands_in() {
+        let rooms = Rooms::new();
+        let plan = Plan {
+            rooms: rooms
+                .iter()
+                .map(|(id, room)| placed(&rooms, id, room))
+                .collect(),
+            signature: Vec::new(),
+        };
+        assert_eq!(plan.room_at(Vec3::new(0.0, EYE_HEIGHT, 0.5)), Some(CABIN));
+        assert_eq!(plan.room_at(Vec3::new(3.3, EYE_HEIGHT, 1.6)), Some(1));
+        assert_eq!(plan.room_at(Vec3::new(0.0, EYE_HEIGHT, 9.0)), None);
+    }
+}

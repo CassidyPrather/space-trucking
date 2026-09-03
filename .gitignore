@@ -1,6 +1,18 @@
 /target/
 /dist/
+# The cabin is its own cargo workspace with its own build directory
+/crates/cabin/target/
 # Claude Code session workspace (agent worktrees, local settings)
 /.claude/
+# Purchased art: rebuilt from $SYNTY_STORE by `cargo xtask art resolve`.
+# Synty's licence lets their meshes ship inside a built game and not be
+# redistributed as source, so nothing derived from a pack may be
+# committed — see art/manifest.toml and docs/ART_PIPELINE.md.
+/art/cache/
 # quad-storage's native persistence file (the desktop stand-in for localStorage)
 /local.data
+# The cabin's save + flight recorder (same roles, different frontend)
+/cabin.data
+/cabin.replay
+/crates/cabin/cabin.data
+/crates/cabin/cabin.replay

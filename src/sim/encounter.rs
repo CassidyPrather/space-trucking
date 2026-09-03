@@ -5,10 +5,13 @@
 //! `[start, end)` in leg progress, scheduled at departure from
 //! `splitmix(seed, legs)` exactly like the omen's jump tick — so it saves,
 //! replays, and fast-forwards bit-identically. Inside the window something
-//! sits alongside the ship: a derelict spilling flotsam, an inexplicable
-//! gas station, an inexplicable casino, a meteor shower, or a whale.
-//! Ignore any of them and the window closes; whatever flotsam was not
-//! stowed drifts away.
+//! sits alongside the ship: a derelict with a hold, an inexplicable gas
+//! station, an inexplicable casino, a meteor shower, or a whale. The
+//! three with a counterparty or a place bring a **room** alongside
+//! (docs/ROOMS.md, "Events as rooms"); the meteor shower and the whale
+//! are weather and stay schedules. Ignore any of them and the window
+//! closes — but a room that came alongside stays until somebody shuts
+//! the door, which is why an unresolved event blocks the next takeoff.
 //!
 //! The omen interaction is the subtle part, and it is tested from the
 //! outside: a suspicious jump moves `progress` forward discontinuously,
@@ -24,8 +27,7 @@
 //! `on_dock` hooks, own save lines, own cues) that `event.rs` and
 //! `rats.rs` established.
 
-use super::cargo::{Kind, Loc, Piece};
-use super::layout::FLOTSAM_SLOTS;
+use super::cargo::Kind;
 use super::{Cue, splitmix};
 
 /// One leg in this many carries an encounter.
@@ -54,14 +56,15 @@ const SALT_CASINO: u64 = 0xCA_51F0;
 /// What is out there this leg.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EncounterKind {
-    /// A dead ship, cargo drifting loose. Take what you can reach.
+    /// A dead ship. Its cargo is on its own floor; taking it is a carry
+    /// through a doorway.
     Derelict,
-    /// Fuel, snacks, flickering sign. Nobody knows who runs it. Pressing
-    /// its badge tops the tanks up: a little of the remaining leg is
-    /// skipped, once.
+    /// Fuel, snacks, flickering sign. Nobody knows who runs it. Working
+    /// its pump bay's handshake tops the tanks up: a little of the
+    /// remaining leg is skipped, once.
     GasStation,
-    /// Neon heptagram, no visible doors. Drop a piece of cargo onto its
-    /// badge to wager it: double or a commemorative chip.
+    /// Neon heptagram, no visible doors. Stake cargo on the parlor's
+    /// offer area and work its handshake: double or a commemorative chip.
     Casino,
     /// Gravel weather. Loud, then profitable: something always ends up
     /// embedded in the hull.
@@ -371,11 +374,4 @@ impl Drones {
     pub fn advertising(&self) -> bool {
         self.drone.is_some_and(|drone| drone.attached)
     }
-}
-
-/// Where fresh flotsam settles: the first free drift slot.
-#[must_use]
-pub fn free_flotsam_slot(pieces: &[Piece]) -> Option<u8> {
-    (0..FLOTSAM_SLOTS.len() as u8)
-        .find(|&slot| !pieces.iter().any(|p| p.loc == Loc::Flotsam { slot }))
 }

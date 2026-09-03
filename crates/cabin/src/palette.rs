@@ -1,0 +1,391 @@
+//! All color lives here, by role — the cabin restates the 2D console's
+//! palette discipline in 3D terms (`docs/ART_DIRECTION_3D.md`). The hex
+//! values are the 2D prototype's, verbatim: retuning still happens in one
+//! place. What changes is the physics: in 3D a role is either a *surface*
+//! (a lit material — worn metal family) or a *phosphor* (an emissive —
+//! screens, lamps, glows), and light itself is real, so the omen dims the
+//! cabin by dimming actual lights instead of multiplying draw calls.
+//!
+//! No raw color constructors outside this file — the purity test at the
+//! bottom greps the crate the same way the 2D `palette.rs` does.
+
+// Hex colors read as `0xRRGGBB`, the same spelling as the art doc's
+// tables; separators would break the correspondence.
+#![allow(clippy::unreadable_literal)]
+
+use bevy::prelude::*;
+
+/// Build a full-alpha sRGB color from `0xRRGGBB`, the shared idiom.
+const fn hex(rgb: u32) -> Color {
+    Color::srgb_u8(
+        ((rgb >> 16) & 0xff) as u8,
+        ((rgb >> 8) & 0xff) as u8,
+        (rgb & 0xff) as u8,
+    )
+}
+
+// ---- Material families (values from docs/ART_DIRECTION.md) ----
+
+/// Space, behind everything; the window clear color.
+pub const VOID: Color = hex(0x0a0d10);
+/// Cabin walls between plates.
+pub const HULL: Color = hex(0x1a1f1d);
+/// Riveted plate faces, green-gray metal.
+pub const PLATE: Color = hex(0x242b27);
+/// Bevel edge toward the light.
+pub const PLATE_LIT: Color = hex(0x3a443d);
+/// Bevel edge away from it.
+pub const PLATE_SHADE: Color = hex(0x121614);
+/// Rivet heads; also the rat's fur.
+pub const RIVET: Color = hex(0x465049);
+/// Inset wells: hold sockets, slot cubbies, lever tracks.
+pub const SOCKET: Color = hex(0x151a17);
+/// Unlit CRT glass.
+pub const SCREEN: Color = hex(0x0a120c);
+/// CRT foreground: POI readings, routes, rings, sweep.
+pub const PHOSPHOR: Color = hex(0x7fd962);
+/// CRT furniture: range rings, grids, trails.
+pub const PHOSPHOR_DIM: Color = hex(0x2c4a2a);
+/// Hottest trace: the ship, arrival pulses.
+pub const PHOSPHOR_HOT: Color = hex(0xbdf29b);
+/// Invitation and warning lamps, ETA arc, want pips.
+pub const AMBER: Color = hex(0xe8a33d);
+/// The burner's firebox: banked fire behind the hatch glass, feeding
+/// flares. Hotter than [`AMBER`], redder than any lamp.
+pub const EMBER: Color = hex(0xe0662a);
+/// Fire-blackened plate: the furnace's deck and walls, and any surface
+/// the game means as *scorched*. Warmer than [`PLATE`] on purpose — what
+/// blackened this was flame, not shadow — and near enough its value that
+/// a hazard field reads as burnt metal rather than as a hole in the
+/// floor. The furnace owns no lamp (its light is whatever the crew fed
+/// it), so this tone has to carry the room under starlight alone.
+pub const SOOT: Color = hex(0x36271d);
+/// Lever handles and hardware accents.
+pub const BRASS: Color = hex(0xb08d57);
+/// Ready/go lamps.
+pub const LAMP_OK: Color = hex(0x59c135);
+/// Refusal flashes, violation glyphs.
+pub const LAMP_NO: Color = hex(0xd84a35);
+/// The suspicious violet: crate glow, omen cast, hangar lamps.
+pub const EERIE: Color = hex(0x8f5fd6);
+/// The jump flash, crate hot core, ??? toll.
+pub const EERIE_BRIGHT: Color = hex(0xb388ea);
+/// Warm off-white: needles, glints. Pure white is banned.
+pub const GLINT: Color = hex(0xe7e3d1);
+/// Near-black: wells and shadows. Pure black is banned.
+pub const SHADOW: Color = hex(0x05070a);
+/// Off-lamp glass: dark but visibly still a lamp.
+pub const GLASS: Color = hex(0x101512);
+/// Etched icon lines while the function sleeps.
+pub const ICON: Color = hex(0x5b665e);
+/// Icon lines while live but not lamp-hot.
+pub const ICON_LIT: Color = hex(0xa7b3a9);
+
+// ---- Barter furniture trims ----
+
+pub const TRIM_SHELF: Color = hex(0x6b5f80);
+pub const TRIM_RECEIVED: Color = hex(0x567a5d);
+pub const TRIM_GIVE: Color = hex(0x76714f);
+pub const TRIM_TAKE: Color = hex(0x4d7a80);
+
+/// The version string, the game's one piece of text.
+pub const VERSION_TEXT: Color = Color::srgba(0.851, 0.851, 0.902, 0.75);
+
+// ---- POI identity hues (enamel; the tank phosphorizes its readings) ----
+
+pub const POI_VENUS: Color = hex(0xf0b38c);
+pub const POI_EARTH: Color = hex(0x738ca6);
+pub const POI_MARS: Color = hex(0xc25738);
+pub const POI_JUPITER: Color = hex(0xdb9957);
+pub const POI_URANUS: Color = hex(0x9ed9e0);
+pub const POI_NEPTUNE: Color = hex(0x4266d9);
+pub const POI_GUILD: Color = hex(0x6b618c);
+pub const POI_SATURN: Color = hex(0xd6c28a);
+pub const POI_UMBRA: Color = hex(0x8c93c9);
+pub const POI_HERMITAGE: Color = hex(0xa68a6b);
+pub const POI_COMET: Color = hex(0xcfeaf2);
+pub const POI_WANDERER: Color = hex(0x7de0c0);
+
+/// Accent hues the glyphs spend on planet detail — Venus's halo,
+/// Earth's smog, the ring systems — consumed by the faithful CRT port.
+pub mod accent {
+    use super::{Color, hex};
+    pub const VENUS_HALO: Color = hex(0xffdb99);
+    pub const SMOG: Color = hex(0x7a5c3d);
+    pub const MARS_PATCH: Color = hex(0x943d2b);
+    pub const URANUS_RING: Color = hex(0xb8d6e6);
+    pub const GUILD_EDGE: Color = hex(0x9e8fc7);
+    pub const SATURN_RING: Color = hex(0xa8936b);
+}
+
+// ---- Station character roles (crates/cabin/src/poi/) ----
+//
+// A station's character (`poi::Character`) composes from the roles above
+// wherever it can, and most stations can. Where one genuinely needs a
+// tone the palette does not carry, it lands HERE, documented at the
+// constant, **appended at the end of the section** — this is the one
+// shared file a per-station design agent touches, and appending is what
+// keeps a dozen of them from landing on each other.
+//
+// **When to reach through [`kind_color`] instead.** A station may paint
+// itself in the hue of a cargo kind, and across the chart most of them
+// do: Saturn's rim is the bay window's own blue, Jupiter's fittings the
+// gas canister's orange, the Umbra's walls the midnight it bottles.
+// That is not indirection, it is the story — *a station's paint is the
+// colour of what it sells* — and it should stay coupled, so that
+// retuning a good's hue moves the room that deals in it.
+//
+// The test is what the surface IS, not what it resembles. Frost on a
+// dead hull is not comet ice and a fluorescent tube is not luminous
+// paint; they merely land on the same value. Those are materials, and a
+// material gets a role of its own down here — otherwise a cargo retune
+// silently repaints somebody's architecture for reasons that have
+// nothing to do with it.
+
+/// The Guild's bonded enamel: the paint on a floor whose contents are not
+/// yours yet. Deeper and colder than [`TRIM_SHELF`], which is the neutral
+/// room's stock paint — a bonded store has to read as a *different place*
+/// from a market at a glance, and it does that by value before hue.
+pub const GUILD_BOND: Color = hex(0x3d3357);
+
+/// The Guild's hall light: the violet-white a customs house lights a
+/// floor in. Held well off [`EERIE`]'s saturation on purpose — the omen's
+/// violet is the game's one *something is wrong* signal, and a room lit
+/// in it would spend that signal on the place every run starts.
+pub const GUILD_HALL: Color = hex(0xcfc6e6);
+
+/// Frost: what an atmosphere leaves on the walls on its way out of a
+/// hull nobody closed. The derelict's one accent, and the one warm-ish
+/// thing about a room with no light in it.
+///
+/// Lands on the same value as comet ice and is *not* comet ice — the
+/// physics rhyme, the substances do not. A material, so it carries its
+/// own role rather than reaching through [`kind_color`]; see the note
+/// at the head of this section.
+pub const RIME: Color = hex(0xbfe4ef);
+
+/// The pale green-white of a cheap fluorescent tube — the palette's only
+/// cold high-value white, and the light a room gets when nobody chose
+/// its lighting.
+///
+/// Shares luminous paint's value and owes it nothing: one is a lamp a
+/// contractor bought by the crate, the other is paint strained from
+/// something that should not have been strained.
+pub const TUBE: Color = hex(0xd8f0c0);
+
+/// Identity hue per POI index, for the tank's readings and enamel badges.
+#[must_use]
+pub const fn poi_color(id: u8) -> Color {
+    match id {
+        0 => POI_VENUS,
+        1 => POI_EARTH,
+        2 => POI_MARS,
+        3 => POI_JUPITER,
+        4 => POI_URANUS,
+        5 => POI_NEPTUNE,
+        7 => POI_SATURN,
+        8 => POI_UMBRA,
+        9 => POI_HERMITAGE,
+        10 => POI_COMET,
+        11 => POI_WANDERER,
+        _ => POI_GUILD,
+    }
+}
+
+// ---- Cargo kind hues (one saturated identity hue per kind) ----
+
+use space_trucking::sim::Kind;
+
+/// The story color of a cargo kind, matching the 2D console exactly.
+#[must_use]
+pub const fn kind_color(kind: Kind) -> Color {
+    match kind {
+        Kind::PerfumeVial => hex(0xd987a6),
+        Kind::GildedIdol => hex(0xe3bc4a),
+        Kind::RationBricks => hex(0x8f8f4e),
+        Kind::ScrapAlloy => hex(0xb06a45),
+        Kind::Seedlings => hex(0x6fb85a),
+        Kind::GasCanister => hex(0xde8433),
+        Kind::CryoCore => hex(0x6cc4d9),
+        Kind::BrinePearls => hex(0x93a8cf),
+        Kind::SuspiciousCrate => hex(0x16131c),
+        Kind::MysteriousCrate => hex(0x5c5449),
+        Kind::VeryMysteriousCrate => hex(0x241038),
+        Kind::CometIce => hex(0xbfe4ef),
+        Kind::BottledMidnight => hex(0x1c254d),
+        Kind::Fluff => hex(0xe0c9a8),
+        Kind::TransitChit => hex(0xc9d256),
+        Kind::CasinoChip => hex(0xd44f6f),
+        // Fixture hues, canon: lamp golds cooling from ceiling to floor,
+        // upholstery plum, gallery violet.
+        Kind::CeilingLamp => hex(0xe8d06f),
+        Kind::WallLamp => hex(0xd9a94e),
+        Kind::FloorLamp => hex(0xc08d5a),
+        Kind::Couch => hex(0x96566a),
+        Kind::Painting => hex(0x8f76c0),
+        // Oiled oak and brass fittings: furniture that means business.
+        Kind::Cabinet => hex(0x8a6f4d),
+        // Dressing hues, canon: madder weave, battered tin, and the
+        // pale luminous coat (docs/BAY.md's dressing layer).
+        Kind::Rug => hex(0x9c4a3a),
+        Kind::PaintTin => hex(0x7a7d82),
+        Kind::LuminousPaint => hex(0xd8f0c0),
+        // Instrument hues: void-glass window, phosphor tank, brass
+        // gauge faces, preview glass, and the launch handle's alarm
+        // brass — the click-functional family leans amber on purpose.
+        Kind::Window => hex(0x2b3a55),
+        // The rest of the window family, told apart by the metal round
+        // the glass rather than the glass: a porthole's bolt ring is
+        // scavenged steel gone slightly green, and a bay window's frame
+        // is the deep yard-blue Saturn paints everything it cuts. The
+        // void behind all three is the same void, which is the point.
+        Kind::Porthole => hex(0x36514f),
+        Kind::BayWindow => hex(0x24304f),
+        Kind::ChartTank => hex(0x54e0c8),
+        Kind::EtaGauge => hex(0xc9a86a),
+        Kind::DestPreview => hex(0x86b8d4),
+        Kind::LaunchLever => hex(0xe0a832),
+    }
+}
+
+/// Ship enamel by the paint tin's variant roll, canon: oxide red, teal,
+/// mustard, slate blue — the muted register, so a coated cell reads as
+/// paintwork on a working hull rather than a highlight.
+#[must_use]
+pub const fn enamel_color(variant: u8) -> Color {
+    match variant % 4 {
+        0 => hex(0x8c3f2e),
+        1 => hex(0x2e6b62),
+        2 => hex(0xb08a3c),
+        _ => hex(0x44586e),
+    }
+}
+
+/// Variant tints, the 2D console's cosmetic shifts carried over.
+const VARIANT_SHIFT: [(f32, f32, f32); 4] = [
+    (0.0, 0.0, 0.0),
+    (0.06, -0.03, -0.02),
+    (-0.05, 0.04, 0.02),
+    (0.02, 0.02, -0.06),
+];
+
+/// Nudge a kind hue by the piece's cosmetic variant roll.
+#[must_use]
+pub fn variant_tint(col: Color, variant: u8) -> Color {
+    let (dr, dg, db) = VARIANT_SHIFT[(variant % 4) as usize];
+    let c = col.to_srgba();
+    Color::srgba(
+        (c.red + dr).clamp(0.0, 1.0),
+        (c.green + dg).clamp(0.0, 1.0),
+        (c.blue + db).clamp(0.0, 1.0),
+        c.alpha,
+    )
+}
+
+/// Channel-wise mix, alpha included — the dial ramp's helper.
+#[must_use]
+pub fn mix(a: Color, b: Color, t: f32) -> Color {
+    let (a, b) = (a.to_srgba(), b.to_srgba());
+    let t = t.clamp(0.0, 1.0);
+    Color::srgba(
+        (b.red - a.red).mul_add(t, a.red),
+        (b.green - a.green).mul_add(t, a.green),
+        (b.blue - a.blue).mul_add(t, a.blue),
+        (b.alpha - a.alpha).mul_add(t, a.alpha),
+    )
+}
+
+/// [`mix`], usable where a `const` is demanded.
+///
+/// A station's whole character is one `const CHARACTER` item
+/// (`poi::Character`), and a `const` cannot call [`mix`] — `to_srgba` is
+/// not const, so a designer reaching for a blend between two roles finds
+/// the door shut and is tempted toward a raw colour, which the purity
+/// test rightly forbids. This is that door, opened: it destructures the
+/// sRGB variant directly (the form every role in this file is built in)
+/// and falls back to `a` for anything else, since a role that is not
+/// sRGB is a role this palette did not write.
+#[must_use]
+pub const fn blend(from: Color, to: Color, t: f32) -> Color {
+    let (Color::Srgba(start), Color::Srgba(end)) = (from, to) else {
+        return from;
+    };
+    let t = if t < 0.0 {
+        0.0
+    } else if t > 1.0 {
+        1.0
+    } else {
+        t
+    };
+    Color::srgba(
+        (end.red - start.red) * t + start.red,
+        (end.green - start.green) * t + start.green,
+        (end.blue - start.blue) * t + start.blue,
+        (end.alpha - start.alpha) * t + start.alpha,
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The purity rule, restated for the cabin: no raw color constructors
+    /// outside this file. Same enforcement style as the 2D palette.
+    ///
+    /// It walks **subdirectories too**, which it did not have to before
+    /// `poi/` existed — a rule that stopped at the top level would be a
+    /// rule that stopped exactly where a dozen design agents were about
+    /// to start writing colors.
+    #[test]
+    fn palette_purity() {
+        fn sweep(dir: &std::path::Path) {
+            for entry in std::fs::read_dir(dir).expect("src dir readable") {
+                let path = entry.expect("entry").path();
+                if path.is_dir() {
+                    sweep(&path);
+                    continue;
+                }
+                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if name == "palette.rs" || path.extension().is_none_or(|ext| ext != "rs") {
+                    continue;
+                }
+                let text = std::fs::read_to_string(&path).expect("source readable");
+                for banned in [
+                    "Color::srgb",
+                    "Color::linear_rgb",
+                    "Color::hsl",
+                    "Color::oklab",
+                ] {
+                    assert!(
+                        !text.contains(banned),
+                        "{name} constructs a raw color ({banned}); use a palette role"
+                    );
+                }
+            }
+        }
+        sweep(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"));
+    }
+
+    #[test]
+    fn dial_ramp_hits_its_landmarks() {
+        let close = |a: Color, b: Color| {
+            let (a, b) = (a.to_srgba(), b.to_srgba());
+            (a.red - b.red).abs() < 1e-5
+                && (a.green - b.green).abs() < 1e-5
+                && (a.blue - b.blue).abs() < 1e-5
+        };
+        assert!(close(mix(LAMP_NO, AMBER, 0.0), LAMP_NO));
+        assert!(close(mix(LAMP_NO, AMBER, 1.0), AMBER));
+        assert!(close(mix(AMBER, LAMP_OK, 1.0), LAMP_OK));
+    }
+
+    #[test]
+    fn variant_tints_stay_in_gamut() {
+        for variant in 0..4 {
+            let c = variant_tint(kind_color(Kind::GildedIdol), variant).to_srgba();
+            for ch in [c.red, c.green, c.blue] {
+                assert!((0.0..=1.0).contains(&ch));
+            }
+        }
+    }
+}

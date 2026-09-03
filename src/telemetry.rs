@@ -90,13 +90,13 @@ pub struct Snapshot {
     pub warp: bool,
     /// Ticking is suspended.
     pub paused: bool,
-    /// Whether anything sits on the received shelf. The trade/gift split
-    /// hangs on this: the accept ceremony refuses while the received shelf
-    /// is occupied and moves the take pad onto it, so on the frame a
-    /// [`Cue::Accept`] fires, an occupied received shelf means something
-    /// was taken (a trade) and an empty one means the take pad was empty
-    /// (a gift).
-    pub received_occupied: bool,
+    /// Whether anything of the player's rests in a room that is only
+    /// alongside. The trade/gift split hangs on this: a handshake moves
+    /// whatever the room composed onto that room's own deck, where it is
+    /// the player's to carry aboard, so on the frame a [`Cue::Accept`]
+    /// fires, goods alongside mean something was taken (a trade) and none
+    /// mean the room answered with nothing (a gift).
+    pub goods_alongside: bool,
 }
 
 impl Snapshot {
@@ -108,10 +108,11 @@ impl Snapshot {
             docked: matches!(sim.ship().state, ShipState::Docked(_)),
             warp: sim.is_warp(),
             paused: sim.is_paused(),
-            received_occupied: sim
-                .pieces()
-                .iter()
-                .any(|piece| matches!(piece.loc, Loc::ReceivedShelf { .. })),
+            goods_alongside: sim.pieces().iter().any(|piece| {
+                matches!(piece.loc, Loc::Hold { room, .. } | Loc::Laid { room, .. }
+                    if !sim.rooms().riding(room))
+                    && crate::sim::player_owned(sim.rooms(), sim.pieces(), piece.loc)
+            }),
         }
     }
 }
@@ -145,8 +146,8 @@ pub struct Aggregate {
     /// Friction signals; hard means a stowage rule refused an in-grid drop.
     rejects_soft: u64,
     rejects_hard: u64,
-    /// Accepts, split by whether the take pad was empty (see
-    /// [`Snapshot::received_occupied`] for how that is observed).
+    /// Accepts, split by whether the room answered with goods (see
+    /// [`Snapshot::goods_alongside`] for how that is observed).
     trades: u64,
     gifts: u64,
     /// Accepts bucketed by generosity quartile.
@@ -212,7 +213,7 @@ impl Aggregate {
                 Cue::Reject { hard: false } => bump(&mut self.rejects_soft),
                 Cue::Reject { hard: true } => bump(&mut self.rejects_hard),
                 Cue::Accept { value } => {
-                    bump(if at.received_occupied {
+                    bump(if at.goods_alongside {
                         &mut self.trades
                     } else {
                         &mut self.gifts
@@ -229,7 +230,10 @@ impl Aggregate {
                 | Cue::OmenEnd
                 | Cue::Harvest { .. }
                 | Cue::Exchange
-                | Cue::Shutter
+                | Cue::Attached
+                | Cue::Parted
+                | Cue::Refit { .. }
+                | Cue::Mark { .. }
                 | Cue::EncounterStart
                 | Cue::EncounterEnd
                 | Cue::GasBoost
@@ -240,7 +244,7 @@ impl Aggregate {
                 | Cue::AdSwat
                 | Cue::AdEnd
                 | Cue::FluffBirth
-                | Cue::Jettison
+                | Cue::Burn { .. }
                 | Cue::ParadeStart
                 | Cue::Creak { .. }
                 | Cue::RatAboard
@@ -457,7 +461,7 @@ impl<'a> Reader<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sim::{InputFrame, Vec2, layout, splitmix};
+    use crate::sim::{InputFrame, Kind, RoomKind, Vec2, layout, splitmix};
 
     /// Seed whose first Guild trade is acceptable (the sim tests' odyssey
     /// seed), so the accept lever concludes a real trade.
@@ -489,6 +493,39 @@ mod tests {
     fn observed(sim: &mut Sim, aggregate: &mut Aggregate, input: &InputFrame) {
         sim.advance(0.0, input);
         aggregate.observe(sim.cues(), 0.0, Snapshot::of(sim));
+    }
+
+    /// The first offer tile of the room alongside.
+    fn offer_at(sim: &Sim, room: crate::sim::RoomId) -> Vec2 {
+        let (x, y) = crate::sim::barter::tiles_of(sim.rooms(), room, crate::sim::Tile::Offer)[0];
+        rect_center(layout::cell_rect(room, x, y))
+    }
+
+    /// The room's handshake fixture.
+    fn handshake_at(sim: &Sim, room: crate::sim::RoomId) -> Vec2 {
+        let (x, y) = sim
+            .rooms()
+            .kind(room)
+            .and_then(RoomKind::handshake)
+            .expect("that room has a handshake");
+        rect_center(layout::cell_rect(room, x, y))
+    }
+
+    /// Fly to the Hermitage, whose economy is the karma one.
+    fn travel_to_hermitage(sim: &mut Sim) {
+        for _ in 0..20_000 {
+            if sim.poi_chartable(crate::sim::HERMITAGE) {
+                break;
+            }
+            sim.fast_forward(30);
+        }
+        let target = sim.poi_pos(crate::sim::HERMITAGE);
+        sim.advance(0.0, &press_at(target));
+        sim.advance(0.0, &press_at(rect_center(layout::LAUNCH_LEVER)));
+        let crate::sim::ShipState::Traveling { leg_ticks, .. } = sim.ship().state else {
+            panic!("the Hermitage must be chartable")
+        };
+        sim.fast_forward(leg_ticks + 10);
     }
 
     /// Drag as two observed zero-dt frames: press, then release at `to`.
@@ -547,7 +584,7 @@ mod tests {
                 Cue::Reject { hard: false },
                 Cue::Reject { hard: true },
                 Cue::Reject { hard: false },
-                Cue::Accept { value: 0.9 }, // received shelf empty: a gift
+                Cue::Accept { value: 0.9 }, // nothing alongside: a gift
                 Cue::Refuse,
                 Cue::Delivered,
                 Cue::OmenStart,
@@ -559,7 +596,7 @@ mod tests {
         );
         let take_landed = Snapshot {
             docked: true,
-            received_occupied: true,
+            goods_alongside: true,
             ..Snapshot::default()
         };
         aggregate.observe(&[Cue::Accept { value: 0.0 }], 0.0, take_landed);
@@ -599,64 +636,49 @@ mod tests {
         assert_eq!(aggregate, Aggregate::default());
     }
 
-    /// The split the doc promises — accepts by whether the take pad was
-    /// empty — read off a real sim through the received shelf, not
-    /// synthetic bools: a pure gift and the odyssey trade.
+    /// The split the doc promises — accepts by whether the room answered
+    /// with goods — read off a real sim through the room flow, not
+    /// synthetic bools: a pure gift and a real trade.
     #[test]
-    fn a_real_gift_and_a_real_trade_split_by_the_received_shelf() {
-        let vial = rect_center(layout::cell_rect(0, 0));
-        let scrap = rect_center(layout::cell_rect(0, 2));
-        let pearls = rect_center(layout::cell_rect(2, 0));
-        let accept = rect_center(layout::ACCEPT_LEVER);
-
-        // A pure gift: one starter piece to the give pad, nothing taken.
+    fn a_real_gift_and_a_real_trade_split_by_what_came_back() {
+        // The Hermitage stocks nothing for strangers, so a proposal there
+        // is a pure gift and the room answers with nothing.
         let mut sim = Sim::new(SEED);
         let mut aggregate = Aggregate::default();
-        drag(
-            &mut sim,
-            &mut aggregate,
-            vial,
-            rect_center(layout::GIVE_SLOTS[0]),
-        );
-        observed(&mut sim, &mut aggregate, &press_at(accept));
+        travel_to_hermitage(&mut sim);
+        let room = sim.rooms().find(RoomKind::Trade).expect("a room alongside");
+        let piece = *sim
+            .pieces()
+            .iter()
+            .find(|p| p.kind == Kind::BrinePearls)
+            .expect("the gift");
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let to = offer_at(&sim, room);
+        drag(&mut sim, &mut aggregate, from, to);
+        let shake = handshake_at(&sim, room);
+        observed(&mut sim, &mut aggregate, &press_at(shake));
         assert_eq!(aggregate.gifts, 1);
         assert_eq!(aggregate.trades, 0);
         assert_eq!(aggregate.trade_value.iter().sum::<u64>(), 1);
 
-        // The odyssey trade: all three starter pieces given, the first
-        // shelf good taken — the accept moves it to the received shelf.
+        // And a real trade at the Guild: propose the pearls, take what the
+        // room composes, and the goods land alongside.
         let mut sim = Sim::new(SEED);
         let mut aggregate = Aggregate::default();
-        drag(
-            &mut sim,
-            &mut aggregate,
-            vial,
-            rect_center(layout::GIVE_SLOTS[0]),
-        );
-        drag(
-            &mut sim,
-            &mut aggregate,
-            scrap,
-            rect_center(layout::GIVE_SLOTS[1]),
-        );
-        drag(
-            &mut sim,
-            &mut aggregate,
-            pearls,
-            rect_center(layout::GIVE_SLOTS[2]),
-        );
-        drag(
-            &mut sim,
-            &mut aggregate,
-            rect_center(layout::SHELF_SLOTS[0]),
-            rect_center(layout::TAKE_SLOTS[0]),
-        );
-        observed(&mut sim, &mut aggregate, &press_at(accept));
+        let room = sim.rooms().find(RoomKind::Trade).expect("a room alongside");
+        let piece = *sim
+            .pieces()
+            .iter()
+            .find(|p| p.kind == Kind::BrinePearls)
+            .expect("the starter pearls");
+        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let to = offer_at(&sim, room);
+        drag(&mut sim, &mut aggregate, from, to);
+        assert!(!sim.composed().is_empty(), "the room must answer");
+        let shake = handshake_at(&sim, room);
+        observed(&mut sim, &mut aggregate, &press_at(shake));
         assert_eq!(aggregate.trades, 1);
         assert_eq!(aggregate.gifts, 0);
-        assert_eq!(aggregate.pickups, 4);
-        assert_eq!(aggregate.places, 4);
-        assert_eq!(aggregate.trade_value.iter().sum::<u64>(), 1);
     }
 
     #[test]
@@ -664,7 +686,7 @@ mod tests {
         let mut sim = Sim::new(SEED);
         let at = Snapshot::of(&sim);
         assert!(at.docked, "a fresh sim starts docked");
-        assert!(!at.traveling && !at.warp && !at.paused && !at.received_occupied);
+        assert!(!at.traveling && !at.warp && !at.paused && !at.goods_alongside);
 
         // Select Venus, launch, then toggle warp and pause.
         sim.advance(0.0, &press_at(sim.poi_pos(3)));

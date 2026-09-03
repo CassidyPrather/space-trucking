@@ -1,0 +1,1069 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sk_character_snow_female_01]
+name = "SK_Character_Snow_Female_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/Characters/SK_Character_Snow_Female_01.fbx"
+sha256 = "5c07fd353c789f9eac24effa7b768ebbe9e2099df7b8f93ef3718908c58be92f"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A stylized humanoid figure in a T-pose, rendered in a uniform, flat coral-red tone with no visible texture or markings. The proportions are slightly exaggerated with a rounded head and simplified limbs, giving it a generic, untextured appearance that suggests it is a placeholder or a base mesh for rigging."
+differs = "Identical to its sibling in every way except for a marginally different description; no unique use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1786
+meshes = 1
+materials = 1
+size = [2.04133, 1.791504, 0.36524302]
+
+[mesh.sk_character_snow_female_01_2]
+name = "SK_Character_Snow_Female_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/Characters/Unreal_Characters/SK_Character_Snow_Female_01.fbx"
+sha256 = "12c8ec038d7897b14927e9e501be7123efd7124d3f89a651e52f57cc3e46c647"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A stylized humanoid figure in a T-pose, rendered entirely in a flat, bright red with no surface texture or markings. The proportions are slightly exaggerated with a large head and slender limbs, suggesting a generic placeholder or a base mesh for animation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1786
+meshes = 1
+materials = 1
+size = [2.04133, 1.791504, 0.36524302]
+
+[mesh.sk_character_snow_male_01]
+name = "SK_Character_Snow_Male_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/Characters/SK_Character_Snow_Male_01.fbx"
+sha256 = "d470f2c850144845619211dc27150738b002d18ed0385bf74213a4953756b68e"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, flat red wooden fence with a rounded post cap, rendered in a stylised low-poly aesthetic with a bright, saturated red paint finish and subtle weathering, suggesting a simple boundary marker for a snowy environment."
+differs = "Identical to its sibling in every way; no unique features, size, or use case."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2062
+meshes = 1
+materials = 1
+size = [2.047514, 1.7907571, 0.362898]
+
+[mesh.sk_character_snow_male_01_2]
+name = "SK_Character_Snow_Male_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/Characters/Unreal_Characters/SK_Character_Snow_Male_01.fbx"
+sha256 = "fc348e09ce4961e1dc52522930237be045b8f3392a7c6efee3f6dde324d7a516"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, flat wooden fence section with a single plank rail and two chunky posts, finished in a bright, saturated red with subtle weathering. The simple, blocky construction and clean texture make it ideal for snowy environments, offering a bold, readable silhouette for stylized scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2062
+meshes = 1
+materials = 1
+size = [2.047514, 1.7907571, 0.36289698]
+
+[mesh.sm_attachment_balaclava_01]
+name = "SM_Attachment_Balaclava_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_Balaclava_01.fbx"
+sha256 = "53113c39fb3fbe692b414957c8ded517f3866b2827657b3e6a51ac380e02fde3"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A curved, low-poly red fabric strip with a jagged, torn edge, resembling a bloodied bandage or a torn piece of cloth. It appears to be a flat, flexible attachment with a rough, worn texture, suggesting it is a damaged or used item for a character or environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 392
+meshes = 1
+materials = 1
+size = [0.290246, 0.41316605, 0.314184]
+
+[mesh.sm_attachment_beanie_01]
+name = "SM_Attachment_Beanie_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_Beanie_01.fbx"
+sha256 = "c9760e8fb9b9622a93ebe87b63e1fb0b5ba1f539112e69b7c6dcdd6885ba546d"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, faceted red cap with a shallow, open bowl shape and a small, raised central dome, rendered in a flat, matte finish with no visible markings or wear."
+differs = "The only brimless, pom-pom-free cap, with a shallow open bowl and central dome, best for a skullcap or beret look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 120
+meshes = 1
+materials = 1
+size = [0.299262, 0.23879898, 0.302418]
+
+[mesh.sm_attachment_beanie_02]
+name = "SM_Attachment_Beanie_02"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_Beanie_02.fbx"
+sha256 = "1b7d92de48ac64ccb468c8240fc20cc88de028ca5f1102fd9f8c18db1c3a6d1d"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low-poly knit beanie in a bright, solid red, featuring a folded brim and a small pom-pom on top, with a faceted surface that suggests a soft, woolly material."
+differs = "The only one with a folded brim and pom-pom, offering a classic knit beanie silhouette for a cozy, winter character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 158
+meshes = 1
+materials = 1
+size = [0.299262, 0.25264597, 0.34705]
+
+[mesh.sm_attachment_beanie_03]
+name = "SM_Attachment_Beanie_03"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_Beanie_03.fbx"
+sha256 = "bd9144b1d00dfd7a14ebf58d948806dfe55bb25cf9923ad029cbab2bd9c7eb47"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low-poly, bright red beanie with a small pom-pom on top, featuring a folded brim and a faceted, angular silhouette. The solid, untextured colour gives it a clean, stylised look, making it a versatile winter accessory for character customisation."
+differs = "Identical to _02 in shape and size, but with a more angular, faceted silhouette for a sharper, stylized aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 158
+meshes = 1
+materials = 1
+size = [0.299262, 0.25264597, 0.34705]
+
+[mesh.sm_attachment_defaulthairfemale_01]
+name = "SM_Attachment_DefaultHairFemale_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_DefaultHairFemale_01.fbx"
+sha256 = "7dd4664859d7d354d8e1ff80ade1cee5193a12a219595192633c7c7a6fb8ba81"
+atlas = "PolygonSnow_Texture_01_A.png"
+textures = "PolygonSnow_Texture_01_A.png"
+description = "A short, chin-length bob with a heavy fringe, rendered in faceted low-poly style. The hair is a muted taupe-brown with a lighter, pale-grey streak across the crown, and the hollow underside reveals it is a shell meant to sit over a head."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 187
+meshes = 1
+materials = 1
+size = [0.26047, 0.31781995, 0.269023]
+
+[mesh.sm_attachment_defaulthairmale_01]
+name = "SM_Attachment_DefaultHairMale_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_DefaultHairMale_01.fbx"
+sha256 = "1426a6b0b874e5d4f7831ea642885a7fa3c0ed15b4b94b35efcd4d2fcb5aef9d"
+atlas = "PolygonSnow_Texture_01_A.png"
+textures = "PolygonSnow_Texture_01_A.png"
+description = "A short, blocky cap of faceted brown hair, cut with a straight fringe and open sides that reveal the ears, styled with a slight peak at the crown and a clean, matte finish suited to low-poly characters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 131
+meshes = 1
+materials = 1
+size = [0.247456, 0.23457599, 0.251221]
+
+[mesh.sm_attachment_facemask_female_01]
+name = "SM_Attachment_FaceMask_Female_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_FaceMask_Female_01.fbx"
+sha256 = "313698d4a701ade1c587b4d5d3265a53b82131269b7d07ac60d4ef8b058075ea"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low-poly, angular face mask with a flat, shield-like front and a curved profile that wraps around the face. It features a dark, weathered grey surface with a subtle, worn texture and a small, rectangular vent or emblem near the top center."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 104
+meshes = 1
+materials = 1
+size = [0.26288, 0.19295704, 0.264975]
+
+[mesh.sm_attachment_facemask_male_01]
+name = "SM_Attachment_FaceMask_Male_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_FaceMask_Male_01.fbx"
+sha256 = "ecc98a6cc693bae488189679e583f24ed0be125ac4055261931a5265b2113377"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low-poly, angular face mask with a broad, flat front and a curved profile, featuring a dark, weathered grey finish with subtle blue-grey highlights. It has a raised central ridge and small, rectangular vents or eye slits, suggesting a utilitarian, protective design suited for cold-weather or tactical characters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 104
+meshes = 1
+materials = 1
+size = [0.26288, 0.20449507, 0.264975]
+
+[mesh.sm_attachment_goggles_01]
+name = "SM_Attachment_Goggles_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_Goggles_01.fbx"
+sha256 = "0b9d3ec7fc02248c13584ef26a2d10abb41e770b740a7783299c8e920c7580ce"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, flat, curved red band with a notched lower edge, resembling a visor or a headband segment, rendered in a solid, matte red with no visible markings or texture detail. Its simple, unadorned shape suggests a basic, functional attachment piece, appearing clean and unused."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 192
+meshes = 1
+materials = 1
+size = [0.285176, 0.109124064, 0.293917]
+
+[mesh.sm_attachment_helmet_01]
+name = "SM_Attachment_Helmet_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_Helmet_01.fbx"
+sha256 = "0b531c90c5cc9104a30116fb0017ad13405aeb5480ee8b501858e7b98aeb5e85"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A faceted, bright red dome with a short brim and side flaps, resembling a hard hat or combat helmet. It features a small rectangular slot on the crown and a thin white stripe along the rear rim, suggesting a tactical or industrial role."
+differs = "The only one with a white stripe and a crown slot, making it the most tactical or industrial of the three."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 238
+meshes = 1
+materials = 1
+size = [0.294696, 0.26702607, 0.32738698]
+
+[mesh.sm_attachment_helmet_02]
+name = "SM_Attachment_Helmet_02"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_Helmet_02.fbx"
+sha256 = "8066267b9b9c15583e1e598e9a4365a0250d41419c15a2252a9f8ae00e47bf9e"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A compact, low-poly winter helmet with a rounded dome and a short brim, rendered in a flat, pale grey-blue. It features a small, dark rectangular mount on the front, suggesting a spot for a light or camera, and a subtle darker band around the base."
+differs = "The only one in grey-blue with a front mount, and it is the plainest and least detailed of the trio."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 238
+meshes = 1
+materials = 1
+size = [0.294696, 0.26702607, 0.32738698]
+
+[mesh.sm_attachment_helmet_03]
+name = "SM_Attachment_Helmet_03"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_Helmet_03.fbx"
+sha256 = "1f7a9da0182b213571a2b0f35b5d4167295741263d54ece3c7267fa32a0cc21c"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A curved, low-poly red plastic shell with a matte finish, shaped like a half-cylinder with a wide opening at the back and a small rectangular notch cut into the top front edge. Its smooth, unadorned surface and bright, uniform colouring suggest a protective cover or a simple headpiece, with a clean, pristine condition."
+differs = "The only open-backed half-shell with a top notch, and it is the most detailed and largest by triangle count."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 358
+meshes = 1
+materials = 1
+size = [0.294696, 0.26702607, 0.32738698]
+
+[mesh.sm_attachment_helmet_bike_01]
+name = "SM_Attachment_Helmet_Bike_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_Helmet_Bike_01.fbx"
+sha256 = "4327fe53533dca09f03e8ac0e48ea503765ef1ddd0129c920357f62304d4b7d4"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A compact, faceted helmet with a short rear brim and a small front visor, rendered in a solid, bright red with no visible markings or weathering. Its angular, low-poly construction suggests a lightweight, sporty design, appearing clean and unused, making it ideal for a rider or racer character."
+differs = "The plainest and cleanest of the two, with no strap or band, ideal for a pristine racer look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 508
+meshes = 1
+materials = 1
+size = [0.297464, 0.38569403, 0.43174]
+
+[mesh.sm_attachment_helmet_bike_02]
+name = "SM_Attachment_Helmet_Bike_02"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Attachment_Helmet_Bike_02.fbx"
+sha256 = "446f5dea2bfefafae03976ed6e6e86a59f4f1feda18a9a3556ad678411c1112f"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A compact, low-poly helmet with a rounded crown and a short, flared rear brim, rendered in a flat, bright red. It features a small, angular visor or faceplate and a thin, curved strap or band wrapping around the back."
+differs = "The more detailed option, featuring a visible strap and a flared rear brim, suited for a rugged or vintage rider."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 508
+meshes = 1
+materials = 1
+size = [0.297464, 0.38569403, 0.43174]
+
+[mesh.sm_prop_binding_board_01]
+name = "SM_Prop_Binding_Board_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Binding_Board_01.fbx"
+sha256 = "fc678fca569b35c2955ba95183a87799ba6a8f35639f5dfcccdd7bcf9cd5f93e"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A weathered wooden plank with a dark metal bracket at one end, featuring a worn, pale grey-brown finish and a small red stripe near the top, suggesting a rustic, functional piece for securing or tying down objects in a snowy environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 1
+size = [0.170568, 0.110984, 0.299104]
+
+[mesh.sm_prop_binding_ski_01]
+name = "SM_Prop_Binding_Ski_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Binding_Ski_01.fbx"
+sha256 = "ec45d2cfed500e691955048283289012a5a12ff16cc6f54c3b62e2d9b45a95b2"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A weathered wooden post with a dark metal bracket and a small rope loop, painted in faded red and grey with chipped edges. The low-poly build gives it a rustic, worn look, ideal for a ski lift or trail marker. The visible wear and muted palette add a practical, used feel to any snowy scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 52
+meshes = 1
+materials = 1
+size = [0.103554, 0.052396, 0.391366]
+
+[mesh.sm_prop_bottle_01]
+name = "SM_Prop_Bottle_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Bottle_01.fbx"
+sha256 = "923901ffdbea058bf4014c49590ae1f32c76fc8a208dae3e3d778ee5df513b7e"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A squat, faceted cylinder with a wide, open mouth and a flat base, rendered in a solid, bright red. The surface is unadorned and matte, suggesting a simple plastic or painted metal container. Its clean, low-poly form makes it a versatile, generic prop for a snowy environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 172
+meshes = 1
+materials = 1
+size = [0.153566, 0.536558, 0.153566]
+
+[mesh.sm_prop_camera_01]
+name = "SM_Prop_Camera_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Camera_01.fbx"
+sha256 = "fe47690550dce7d7072634af0c3a82596886fcb64ddcce5b485c2011e0042587"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A boxy, low-poly camera with a prominent cylindrical lens and a small top-mounted viewfinder, finished in weathered grey and black with a red accent stripe. The chunky, stylized proportions and worn paint give it a rugged, utilitarian look suited for outdoor or adventure scenes."
+differs = "The compact, standalone unit with a red accent stripe, ideal as a handheld prop or tabletop item, unlike the taller post-mounted variant."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 1
+size = [0.114442, 0.31629002, 0.099988]
+
+[mesh.sm_prop_camera_02]
+name = "SM_Prop_Camera_02"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Camera_02.fbx"
+sha256 = "d8f6fe9ca2b31be7aa0a8e0e2c070031e080330156b3d8209709af8fc7cc6133"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A weathered, low-poly camera on a tall, thin post, featuring a boxy body with a cylindrical lens and a small viewfinder on top, all in muted grey and dark metal tones with a worn, utilitarian look suited for a snowy outpost or surveillance scene."
+differs = "The taller, post-mounted surveillance version, lacking the red stripe, best for fixed outdoor or outpost monitoring setups."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 148
+meshes = 1
+materials = 1
+size = [0.114442, 0.66725695, 0.120557]
+
+[mesh.sm_prop_fence_01]
+name = "SM_Prop_Fence_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Fence_01.fbx"
+sha256 = "386fcbae910d592bba508a169ed230ebab45dce0ed5f85627d0382e48dc39a7c"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A flat, rectangular panel of wire mesh, rendered in a bright, uniform red that suggests a painted metal finish. The grid pattern is dense and regular, with no visible frame or posts, giving it a lightweight, utilitarian appearance."
+differs = "The only perfectly flat, frameless panel; plainest and most uniform, for clean, straight boundary lines."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 2
+size = [2.029426, 1.094279, 0.03208]
+
+[mesh.sm_prop_fence_02]
+name = "SM_Prop_Fence_02"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Fence_02.fbx"
+sha256 = "e9e7fd57f4a64cbf81fcbaa4992635f9cd976588a268ac6341b89689110be09b"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, rectangular section of wire fencing with a slight vertical bow, rendered in a bright coral-red wire mesh. The grid pattern is uniform and dense, with a subtle darker red tint along the bottom edge suggesting a base rail or shadow."
+differs = "The only one with a vertical bow and no frame, giving it a subtle curved, sagging look for uneven ground."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 2
+size = [2.029426, 1.094279, 0.03208]
+
+[mesh.sm_prop_fence_03]
+name = "SM_Prop_Fence_03"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Fence_03.fbx"
+sha256 = "45e57ae5da72b65767912654d314ba047cc06713404bb591996b245bf5c2bb4f"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, rectangular section of wire mesh fencing, slightly bowed and leaning, with a thin top rail and a single vertical support post. The bright red-orange grid pattern suggests a lightweight plastic or painted metal barrier, likely for temporary snow control or marking boundaries."
+differs = "The only one with a top rail and support post, making it the most detailed and structurally reinforced for freestanding use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 2
+size = [2.029426, 1.109371, 0.171487]
+
+[mesh.sm_prop_flag_01]
+name = "SM_Prop_Flag_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Flag_01.fbx"
+sha256 = "e78ac17064eaeace01c6b0565cf1ff2f05134464777fb20b94345c6a1d22e64d"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A tall, narrow banner on a simple pole, with a slightly weathered white cloth bearing a blue snowflake emblem and a red stripe along the bottom edge, suggesting a winter outpost or festival marker."
+differs = "The only one with a snowflake emblem and red stripe, ideal for a festive winter outpost."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 80
+meshes = 1
+materials = 1
+size = [1.243308, 2.902691, 0.15509]
+
+[mesh.sm_prop_flag_02]
+name = "SM_Prop_Flag_02"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Flag_02.fbx"
+sha256 = "07b0f7932855e22969e3338eb496244369873247f5ccc1b397502c834f9b0f97"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A tall, narrow banner on a simple pole, with a slightly tattered edge and a subtle snow-dusted top, rendered in muted blues and greys with a weathered, low-poly finish."
+differs = "The most snow-dusted and tattered of the blue-grey banners, best for a weathered, cold-weather camp."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 80
+meshes = 1
+materials = 1
+size = [1.219626, 2.902691, 0.155175]
+
+[mesh.sm_prop_flag_03]
+name = "SM_Prop_Flag_03"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Flag_03.fbx"
+sha256 = "83513547c3d297f16bcb57e0fd07161f3a75304e878d6f2bf8332b42f0ace94a"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A tall, narrow banner on a simple pole, the fabric hangs in a straight vertical drop with a slight curve at the bottom, suggesting a light breeze. The cloth is a solid, muted blue-grey with a darker, simple geometric emblem near the top, while the pole is a dark, weathered wood."
+differs = "The widest and most curved banner with a dark geometric emblem, suited for a sturdy, wind-blown marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 80
+meshes = 1
+materials = 1
+size = [1.103766, 2.794702, 0.26736897]
+
+[mesh.sm_prop_flag_04]
+name = "SM_Prop_Flag_04"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Flag_04.fbx"
+sha256 = "483222431fd50c599082327699a50b99ca3d7c88c6c748da35c6132f8ebe8f23"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A tall, narrow banner on a simple pole, with a tattered, weathered edge that suggests wind and age. The fabric is a muted, pale blue-grey with a subtle, faded pattern, giving it a worn, realistic look."
+differs = "The most faded and worn of the pale blue-grey flags, perfect for an ancient, wind-beaten ruin."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 42
+meshes = 1
+materials = 1
+size = [0.88001, 2.902691, 0.15509]
+
+[mesh.sm_prop_flag_05]
+name = "SM_Prop_Flag_05"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Flag_05.fbx"
+sha256 = "77a614ff0305dafaf371820e2bd06a36cdd22be8d041727c7149440053e54a77"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A tall, narrow wooden post topped with a small, tattered pennant, weathered grey-brown with a faded red stripe, suggesting an old boundary marker or camp banner."
+differs = "The only pennant on a post, not a full banner, and the lowest-poly, ideal for a simple boundary marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 30
+meshes = 1
+materials = 1
+size = [0.88001, 2.902691, 0.15509]
+
+[mesh.sm_prop_lift_cable_01]
+name = "SM_Prop_Lift_Cable_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Lift_Cable_01.fbx"
+sha256 = "001497f3e4ba90151b3ddba8ad7dcc646c94f1a0b99e8ea36b43e6a005302dac"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A slender, weathered grey cable with a small metal hook at the bottom end, suggesting a vertical lift or hoist mechanism for a snowy environment. The surface shows subtle wear and a muted, industrial finish that fits the low-poly aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [0.063356, 0.063356996, 8.191491]
+
+[mesh.sm_prop_lift_chair_01]
+name = "SM_Prop_Lift_Chair_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Lift_Chair_01.fbx"
+sha256 = "1386389427f073cf4dae282d2b1435fc70029244e56aaa57cec9b8ec01d68b17"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A sturdy, low-poly wooden chairlift with a thick plank seat and a simple backrest, mounted on a dark metal frame with a single overhead bar. The wood is a warm, weathered brown with visible grain, while the metal is a matte grey, giving it a functional, alpine-resort look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 602
+meshes = 1
+materials = 1
+size = [2.31095, 3.9046779, 0.779777]
+
+[mesh.sm_prop_lift_pillar_01]
+name = "SM_Prop_Lift_Pillar_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Lift_Pillar_01.fbx"
+sha256 = "5cc77e303d3ff6c375c3edc2fa3f1c7fb6a937a5af2dbe9d6c5808aa9ea217e9"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A tall, narrow wooden post with a dark metal cap and a small, angled sign plate near the top, finished in weathered grey-brown planks with subtle grain. The simple, sturdy silhouette suggests a rustic wayfinding marker or a support for a rope or chain, fitting well into snowy village or frontier scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 848
+meshes = 1
+materials = 1
+size = [3.80595, 10.258188, 3.10285]
+
+[mesh.sm_prop_lift_turn_01]
+name = "SM_Prop_Lift_Turn_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Lift_Turn_01.fbx"
+sha256 = "e94a6e6a39927ab1b82f03be7faa32702f3fdbeb5a0547b909599c0a9759f821"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A compact, bright red cylindrical device with a flared base and a small black lever or handle protruding from one side, resembling a manual turnstile or valve control. The surface is smooth and uniform, with no visible wear, suggesting a clean, functional prop for industrial or snowy environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1156
+meshes = 2
+materials = 1
+size = [4.570948, 6.568564, 7.2840652]
+
+[mesh.sm_prop_rail_01]
+name = "SM_Prop_Rail_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Rail_01.fbx"
+sha256 = "107af21365bf53024625a29a524ffe792859e290e67ad472b7dc9a286bdf1122"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, broad wooden barrier with a single horizontal plank, supported by two thick, weathered posts and a diagonal brace. The wood is a pale, greyish-brown with visible grain and a slightly worn, rustic finish. It is a simple, sturdy fence section designed to block a path or mark a boundary in a snowy environment."
+differs = "The bulkier, lower option with a diagonal brace, best for a chunky, rustic barrier in heavy snow."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 136
+meshes = 1
+materials = 1
+size = [0.530674, 0.95191705, 4.186305]
+
+[mesh.sm_prop_rail_02]
+name = "SM_Prop_Rail_02"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Rail_02.fbx"
+sha256 = "e929e69fdd7a392bdd4a93af7566bef6a4a7c6c362004a778e6da329f0738aa0"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, weathered wooden barrier with a single horizontal plank and two sturdy posts, finished in a pale grey-brown with subtle grain. The plank shows slight wear and a few dark knots, giving it a rustic, utilitarian look suited for marking paths or edges in a snowy environment."
+differs = "The taller, slimmer, more detailed version with extra knots, ideal for a cleaner, more refined path edge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 270
+meshes = 1
+materials = 1
+size = [0.2, 1.223505, 4.272854]
+
+[mesh.sm_prop_ramp_01]
+name = "SM_Prop_Ramp_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ramp_01.fbx"
+sha256 = "b7dc796fca680ea686a616bbd614209d07e1e0070a9bfaa432980a09a6457ec3"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, broad wedge with a gentle incline, built from thick, weathered planks and framed by sturdy side rails, all in a muted grey-brown wood tone. The surface shows subtle grain and wear, suggesting a sturdy, functional piece for climbing or traversing snowy terrain."
+differs = "The only ramp with no metal bracing, making it the plainest and most basic option for simple wooden climbs."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 713
+meshes = 1
+materials = 1
+size = [4.266194, 0.899976, 7.074704]
+
+[mesh.sm_prop_ramp_02]
+name = "SM_Prop_Ramp_02"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ramp_02.fbx"
+sha256 = "0c4b4f869769d6e3234177aca0ea9032aa5e7171a68bafd335d6a67942696a8c"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, broad wedge of weathered grey timber, its sloped face reinforced with dark metal cross-bracing and a single central plank, framed by thick side rails and a sturdy base. The surface shows subtle grain and wear, suggesting a sturdy, functional ramp for hauling crates or sleds across snowy terrain."
+differs = "The shortest and widest ramp, with a single central plank and no flat top, ideal for low-profile sled hauling."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 512
+meshes = 1
+materials = 1
+size = [4.317562, 1.6706381, 6.79939]
+
+[mesh.sm_prop_ramp_03]
+name = "SM_Prop_Ramp_03"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ramp_03.fbx"
+sha256 = "18ded8caa40d6d9c0ed2f8af4c09786ae39a6751ac062fb4ae2cdec341677e1a"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, broad wedge of weathered grey timber, its sloped face reinforced with dark metal cross-bracing and a central plank, rising to a flat top edge. The surface shows worn grain and subtle blue-grey paint remnants, suggesting a sturdy, utilitarian ramp for hauling cargo or traversing snowy terrain."
+differs = "The tallest and most vertical ramp, with a flat top edge and blue-grey paint remnants, best for reaching elevated platforms."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 800
+meshes = 1
+materials = 1
+size = [3.348538, 3.790646, 5.208686]
+
+[mesh.sm_prop_ramp_04]
+name = "SM_Prop_Ramp_04"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ramp_04.fbx"
+sha256 = "fce2278fe78509c422386eef8182f9ff0d313cce03f49370ec67be7d5fee87bc"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, broad wedge of weathered grey timber, its sloped face reinforced with dark metal cross-bracing and a central support strut, suggesting a sturdy, heavy-duty ramp for snow vehicles or sleds. The wood shows visible grain and a worn, matte finish, with a slightly darker, worn edge along the incline."
+differs = "The most compact and steepest ramp, with a central support strut, designed for heavy-duty snow vehicle access."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 512
+meshes = 1
+materials = 1
+size = [3.814456, 1.768968, 5.75868]
+
+[mesh.sm_prop_ski_l_01]
+name = "SM_Prop_Ski_L_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_L_01.fbx"
+sha256 = "0cf353d6efa0bc4493157cd2536b2198d4077f4ff2a83f0eb0bd1648cc295aee"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, long, slender ski with a pronounced upward curve at the tip and a slight upward kick at the tail, rendered in a flat, bright coral-red. The surface is smooth and unadorned, with no visible bindings, grooves, or markings, giving it a clean, stylized appearance suited for minimalist winter scenes."
+differs = "The only ski with no binding block at all, making it the plainest option for pure decoration."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.720479]
+
+[mesh.sm_prop_ski_l_02]
+name = "SM_Prop_Ski_L_02"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_L_02.fbx"
+sha256 = "c52f93019fce70009dc832ab6e17c6f4c5d2010fc23f3579664f7264c74d55ec"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, slender ski with a gently upturned tip and a flat tail, rendered in a bright, saturated coral-red. The surface is smooth and unmarked, with a small, darker red block near the midpoint serving as the binding mount."
+differs = "Identical to 03 but with a darker red binding block, offering a subtle color contrast."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.720479]
+
+[mesh.sm_prop_ski_l_03]
+name = "SM_Prop_Ski_L_03"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_L_03.fbx"
+sha256 = "0a09f7fa0692e937bbb2f6debe937fe891cec91b33b8e6be9b1143d096e5dca1"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, long, slender ski with an upturned tip and a flat tail, rendered in a bright, flat coral-red with a darker red binding block near the centre. The surface is smooth and untextured, showing no wear or markings, making it a clean, stylized prop for winter sports scenes."
+differs = "Identical to 02 but with a slightly different binding block shade, making it a near-duplicate."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.716198]
+
+[mesh.sm_prop_ski_l_04]
+name = "SM_Prop_Ski_L_04"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_L_04.fbx"
+sha256 = "5f640baa66faa56feb93e45fac68968f4db8e32716259aea0be0b84068e39a46"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, long, narrow ski with a gently upturned tip and a flat tail, finished in a bright, saturated red with a subtle white stripe running along its top surface. The low-poly build gives it a clean, faceted look, and it appears to be a standalone piece of sporting equipment, ready to be paired with poles or boots..."
+differs = "The only single ski with a white stripe, adding a touch of detail to the plain red surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.716198]
+
+[mesh.sm_prop_ski_l_05]
+name = "SM_Prop_Ski_L_05"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_L_05.fbx"
+sha256 = "9cfd7d045ffa956781dda0cb70d8180f018a6aa58fbfac11e01f44856ca6368a"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A slender, flat plank with an upturned tip and a small raised block near the centre, finished in a bright coral-red with a subtle white stripe along its length. The surface is smooth and clean, suggesting a lightweight, modern design for snow travel."
+differs = "A single ski with a white stripe and a raised block, combining detail with a functional mount."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.716198]
+
+[mesh.sm_prop_ski_l_06]
+name = "SM_Prop_Ski_L_06"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_L_06.fbx"
+sha256 = "15dd5453ed3d3a251c32eeea4c6be7d1265b312113b38e7f01ed32ce706274af"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A pair of long, slender skis with slightly upturned tips, rendered in a flat, bright coral-red with a simple white stripe running along each edge. The bindings are small, blocky, and match the body colour, giving the asset a clean, stylized look suitable for winter sports scenes."
+differs = "The only pair with white stripes on both edges, giving it a more symmetrical, detailed look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.716198]
+
+[mesh.sm_prop_ski_l_07]
+name = "SM_Prop_Ski_L_07"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_L_07.fbx"
+sha256 = "af2509a2b55daa3f1c011226ea42a7d60103a36ff6100ef50ad5a27857b123bf"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A pair of long, slender skis with slightly upturned tips, rendered in a flat, bright coral-red with a subtle white stripe along the top edge. Each ski features a small, blocky binding mechanism near the center, suggesting a low-poly, stylized design suitable for winter sports scenes."
+differs = "A pair with a single white stripe per ski, offering a cleaner, less busy design than 06."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.720479]
+
+[mesh.sm_prop_ski_l_08]
+name = "SM_Prop_Ski_L_08"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_L_08.fbx"
+sha256 = "534c9c40215a32af40eafb614516148a0c26fa3efd8f85a1f540fb2c16f58036"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, long, slender ski with a pronounced upward curve at the tip and a flat tail, rendered in a bright, solid coral-red. A small, darker red block sits at the midpoint, representing the binding. The surface is smooth and unmarked, suggesting a clean, stylized prop ready for a winter sports scene."
+differs = "The only single ski with a pronounced tip curve and a binding block, blending style with function."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.716198]
+
+[mesh.sm_prop_ski_r_01]
+name = "SM_Prop_Ski_R_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_R_01.fbx"
+sha256 = "ba39388b27045acdc5d9a13f614570fc38b8789bde750d1ef371e4270b19a1f8"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, slender ski with a gently upturned tip and tail, finished in a bright coral-red with a darker red central stripe and a small, dark binding block. The surface is clean and unblemished, suggesting a pristine, unused condition."
+differs = "The only ski with both upturned tip and tail plus a central stripe and binding block, making it the most detailed for pristine scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.716198]
+
+[mesh.sm_prop_ski_r_02]
+name = "SM_Prop_Ski_R_02"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_R_02.fbx"
+sha256 = "c1e517a5efc7039a0e241406d749fb6e68572cca93a15dc5a6ca273e17f7664b"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, long, slender ski with a pronounced upward curve at the tip and a flat tail, rendered in a bright, saturated coral-red. The surface is smooth and untextured, with a small, darker red block near the middle serving as a simple binding mount."
+differs = "The only ski with a flat tail and a binding block but no stripe, offering a simple, functional look for basic winter props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.716198]
+
+[mesh.sm_prop_ski_r_03]
+name = "SM_Prop_Ski_R_03"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_R_03.fbx"
+sha256 = "c7928dcb79457b3390961a809556b8c742b517cad2815f4728a7dfeac222dcb0"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, slender ski with a pronounced upward curve at the tip and a subtle rise at the tail, rendered in a flat, bright coral-red. The surface is smooth and unadorned, lacking any visible bindings, grooves, or markings, giving it a clean, minimalist look."
+differs = "The plainest ski with an upturned tip and subtle tail rise, completely unadorned, ideal for minimalist or background use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.720479]
+
+[mesh.sm_prop_ski_r_04]
+name = "SM_Prop_Ski_R_04"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_R_04.fbx"
+sha256 = "9d11e40697390a3b2ffb313dddb2ca506491877a018eae7809c7d89a88668260"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, slender ski with a pronounced upward curve at the tip and a flat tail, rendered in a bright, saturated coral-red. The surface is marked with a darker red stripe and a small, rectangular binding block positioned near the centre, suggesting a minimalist, stylised design for a winter sports scene."
+differs = "The only ski combining a flat tail, a darker stripe, and a binding block, giving it a balanced, stylized design for mid-detail scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.720479]
+
+[mesh.sm_prop_ski_r_05]
+name = "SM_Prop_Ski_R_05"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_R_05.fbx"
+sha256 = "66d68cf6f912751cbbf8c46123f955aa089ba5edc2c9bfbb963161a1c26ad2a0"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, long, slender ski with a pronounced upward curve at the tip and a slight rise at the tail, rendered in a flat, bright coral-red. The surface is smooth and unadorned, with no visible bindings, grooves, or markings, giving it a clean, stylized look."
+differs = "The only ski with an upturned tip and tail rise but no bindings or markings, making it the cleanest for uncluttered winter environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.720479]
+
+[mesh.sm_prop_ski_r_06]
+name = "SM_Prop_Ski_R_06"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_R_06.fbx"
+sha256 = "acb0ec0a82a6ae2675e41bc4f2c24751191f5c7715cf8bb919226fba7efaaa16"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A pair of long, slender skis with a bright red finish and a subtle white stripe along the top edge, featuring a slight upward curve at the tip and a flat tail, appearing as a clean, low-poly prop for winter sports scenes."
+differs = "The only ski that is a pair rather than a single, with a white stripe and flat tail, perfect for ready-to-use skiing setups."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.720479]
+
+[mesh.sm_prop_ski_r_07]
+name = "SM_Prop_Ski_R_07"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_R_07.fbx"
+sha256 = "6757b92877426dd16091a5ca61f34377cada76c534a1626d09dfcef886c11bf2"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, slender ski with a pronounced upward curve at the tip and a flat tail, rendered in a bright, saturated coral-red with a white stripe running along its top edge. The surface shows a slightly worn, matte finish with subtle darker streaks, suggesting a used but functional piece of winter sports equipment."
+differs = "The only ski with a white stripe and a worn, matte finish with darker streaks, making it the most damaged and used-looking option."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.716198]
+
+[mesh.sm_prop_ski_r_08]
+name = "SM_Prop_Ski_R_08"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Ski_R_08.fbx"
+sha256 = "a692edd8ee9d69e6910fa32b94fc5cb69f1b2897de769702ae3cc314a84cb107"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, slender ski with a gently upturned tip and tail, finished in a bright, flat coral-red. The surface is unadorned, with no visible bindings or markings, presenting a clean, minimalist profile suited for stylized winter scenes."
+differs = "The only ski with both tip and tail upturned but no bindings or markings, offering a clean, symmetrical profile for stylized scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.14084, 0.078727, 1.720479]
+
+[mesh.sm_prop_skipole_01]
+name = "SM_Prop_SkiPole_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_SkiPole_01.fbx"
+sha256 = "d3336df7a0386b6b1858bc4c2fea867b6f88610d3114ab537a86569bbab7cb9f"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A slender, dark grey shaft with a black rubber grip and a small round basket near the bottom, tipped with a metal spike. The surface shows subtle wear and a faint red band near the grip, suggesting a practical, used alpine pole."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 192
+meshes = 1
+materials = 1
+size = [0.09769, 1.39117, 0.108346]
+
+[mesh.sm_prop_sled_01]
+name = "SM_Prop_Sled_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Sled_01.fbx"
+sha256 = "324cbd20f4e65ef8e9c3dcf4e867758581e9b6712341e478bc4d10f10419f24e"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, flat wooden sled with two long runners and a simple slatted deck, painted a faded red with visible wear and chipping. The front tips curve upward slightly, and the overall look is rustic and utilitarian, ideal for a snowy village or cabin scene."
+differs = "The shorter, more weathered option with chipped faded red paint, best for rustic village props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 288
+meshes = 1
+materials = 1
+size = [0.744434, 0.140311, 1.36675]
+
+[mesh.sm_prop_sled_02]
+name = "SM_Prop_Sled_02"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Sled_02.fbx"
+sha256 = "69411ff476956657a56971fda46cb42189247255279ca8c3f341d34798050072"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, flat wooden sled with a slatted deck and two curved runners, finished in a bright, uniform red. The simple, blocky construction suggests a lightweight, utilitarian design for hauling small loads or winter recreation."
+differs = "The longer, taller, and brighter uniform red sled, better for hauling loads in a clean winter scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 320
+meshes = 1
+materials = 1
+size = [0.732772, 0.40517, 2.115148]
+
+[mesh.sm_prop_snowboard_01]
+name = "SM_Prop_Snowboard_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Snowboard_01.fbx"
+sha256 = "c040bffa2d1fd1d1b241a465b5ae0f657248c0ecc4d51d871649b4014c9c44e9"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single snowboard with a bright coral-red top and a white underside, featuring a subtle geometric pattern of pale diamonds and a small dark logo near the tail. The board has a slight upward curve at both ends and a smooth, glossy finish, ready for a winter sports scene."
+differs = "The only one with a dark logo and pale diamond pattern, making it the most detailed and branded option."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.343948, 0.078727, 1.720479]
+
+[mesh.sm_prop_snowboard_02]
+name = "SM_Prop_Snowboard_02"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Snowboard_02.fbx"
+sha256 = "ac0e458e5af1340c863694aa6bd6080d8327597327ecdc1cec77ea9bea72a876"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A long, flat board with a pronounced upward curve at both ends, rendered in a bright, solid coral-orange with a glossy finish. The top surface features a repeating pattern of three large, white oval cutouts, giving it a lightweight, stylized appearance."
+differs = "The only one with three large white oval cutouts and a coral-orange finish, giving it a distinct lightweight look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.343948, 0.078727, 1.720479]
+
+[mesh.sm_prop_snowboard_03]
+name = "SM_Prop_Snowboard_03"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Snowboard_03.fbx"
+sha256 = "0664cd95afc82c0a57075f06be1bb85549626670e257c3a96f5d2ee3da71e4e3"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A slender, flat plank with a pronounced upward curve at the tip and tail, finished in a bright coral-red with a glossy sheen. The top surface features a repeating pattern of white, rounded rectangular cutouts, giving it a stylized, perforated look."
+differs = "The only one with rounded rectangular cutouts, offering a unique perforated style different from the oval variants."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.343948, 0.078727, 1.720479]
+
+[mesh.sm_prop_snowboard_04]
+name = "SM_Prop_Snowboard_04"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Snowboard_04.fbx"
+sha256 = "9b0961fca60357546b93f2cfe0ccad42500fda2c3f92fdf9b20b32d9d71c216c"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A long, flat plank with a pronounced upward curve at both ends, rendered in a bright, saturated coral-orange. The top surface features a repeating pattern of large, pale oval cutouts, giving it a skeletal or webbed appearance."
+differs = "The only one with pale oval cutouts on a coral-orange base, creating a skeletal, webbed appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.343948, 0.078727, 1.720479]
+
+[mesh.sm_prop_snowboard_05]
+name = "SM_Prop_Snowboard_05"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Snowboard_05.fbx"
+sha256 = "d280ca92892cf8cc361b0940f33662aaa02da6d4cf895799f21e221b5e73779e"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, slender snowboard with a bright coral-red top and a white base, featuring a bold, repeating geometric pattern of white diamonds and rectangles along its length. The board has a slight upward curve at the nose and tail, with a subtle, worn texture that suggests use."
+differs = "The only one with a worn texture and a diamond-and-rectangle pattern, making it the most used-looking board."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.343948, 0.078727, 1.720479]
+
+[mesh.sm_prop_snowboard_06]
+name = "SM_Prop_Snowboard_06"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Snowboard_06.fbx"
+sha256 = "d018d8fbb0adee754932ec269f6d543a2676c247604f8c03e10662effe3684be"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A single, slender snowboard with a bright coral-red top and a white underside, featuring a bold white geometric pattern across its deck. The board has a slight upward curve at both ends and a subtle sidecut, appearing clean and ready for the slopes."
+differs = "The only one with a bold white geometric pattern and a subtle sidecut, appearing clean and sporty."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.343948, 0.078727, 1.720479]
+
+[mesh.sm_prop_snowboard_07]
+name = "SM_Prop_Snowboard_07"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Snowboard_07.fbx"
+sha256 = "747d36b2a7438401538aa7f9b909acf4702f2f26876aaf0971ea51529bd58ae6"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A slim, flat snowboard with a bright coral-red top and a white underside, featuring three large oval cutouts along its length that give it a lightweight, perforated look. The edges are clean and the surface is smooth, suggesting a modern, sporty design ready for a winter scene."
+differs = "The only one with three large oval cutouts on a coral-red top, offering a modern, perforated design."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.343948, 0.078727, 1.720479]
+
+[mesh.sm_prop_snowboard_08]
+name = "SM_Prop_Snowboard_08"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Snowboard_08.fbx"
+sha256 = "a5be092fc11e2070756a4ea4e7e32b9c99059edcf07b1c42ae1be69fd2e3a80f"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A slim, flat plank with a pronounced upward curve at both ends, rendered in a bright, saturated coral-red with a subtle white trim along the edges. The top surface features a series of three elongated, oval cutouts that reveal a lighter, pale interior, giving it a distinctively skeletal or perforated look."
+differs = "The only one with a white trim and elongated oval cutouts revealing a pale interior, giving it a distinct skeletal look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.343948, 0.078727, 1.720479]
+
+[mesh.sm_prop_snowmaker_01]
+name = "SM_Prop_SnowMaker_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_SnowMaker_01.fbx"
+sha256 = "e81429d88c3a0ac7bef647d95599e1b1c2ab0dcf50f0a79c2c3898d236d8899c"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low, wide, rectangular wooden frame with a slatted base, built like a sled or a drag for hauling snow. The dark, weathered timber is marked with pale, chipped paint and a small red tag, giving it a used, utilitarian look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2090
+meshes = 1
+materials = 1
+size = [1.431262, 1.875246, 1.708864]
+
+[mesh.sm_prop_snowman]
+name = "SM_Prop_Snowman"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Prop_Snowman.fbx"
+sha256 = "fc8ed5ca2f150af6f7d1fd609d7bf28886ce6ec86245daaab42bfaefe488a2bc"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A stylized snowman with a bright red top hat, red stick arms, and red buttons, standing on a rounded snow mound. The body is a pale, icy white with a subtle pink tint, and the low-poly faceting gives it a crisp, game-ready look. The cheerful, classic design makes it a versatile winter prop for festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 897
+meshes = 1
+materials = 1
+size = [1.45396, 1.735914, 1.6636009]
+
+[mesh.sm_veh_snowmobile_01]
+name = "SM_Veh_Snowmobile_01"
+pack = "polygon_snow_kit"
+source = "SourceFiles/FBX/SM_Veh_Snowmobile_01.fbx"
+sha256 = "cfd9a04b28a7a40cddcfcc777ab186b605bc04c7979ea319a4744a5bdb49526f"
+atlas = "PolygonSnow_Fence_Texture_01.tga"
+textures = "PolygonSnow_Fence_Texture_01.tga"
+description = "A low-slung snowmobile with a long, curved front ski and a raised rear track, rendered in a flat coral-orange with dark grey mechanical details. The body is sleek and angular, featuring a small windshield and a single seat, suggesting a fast, agile vehicle for snowy terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4253
+meshes = 7
+materials = 1
+size = [1.2940891, 1.329649, 3.140841]

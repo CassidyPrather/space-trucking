@@ -41,6 +41,39 @@ the moment a toy wants real sound design.
 
 - [Google Fonts](https://fonts.google.com/) — OFL
 
+## Build Times
+
+A Bevy toy is a five-hundred-crate graph, and two of its defaults cost more
+than they look. Worth doing early on any new one, because both are one line
+and neither changes what is on screen.
+
+- **`debug = "line-tables-only"` in `[profile.dev]`.** The dev default is
+  full DWARF across the whole graph, and a per-package `opt-level`
+  override does not touch it. Here it was two thirds of the binary, and
+  the linker read all of it again on every edit.
+- **Name the engine features.** Bevy's `default` is four umbrellas — 2d,
+  3d, ui, audio — so a game that cuts its geometry in code still builds a
+  glTF loader, an animation player, a scene serialiser and every image
+  decoder. Turn defaults off and list what the game actually draws.
+  Keep `png` even with no assets: screenshot saving goes through the same
+  format registry, and without it `--shot` writes an empty file and
+  exits 0.
+
+Measure before reaching for a linker. On this project the link is about
+1.9 s and the stock GNU ld beat both lld and gold, so the usual advice to
+install one bought nothing. `cargo build --timings` names the crates that
+actually cost; the two items above were worth more than any of them.
+
+## Verification
+
+- [GAUNTLET.md](GAUNTLET.md) — this project's own answer to "how do you
+  check a 3D scene without a human looking at it". Worth reading for the
+  shape of the idea before the specifics: describe the geometry purely,
+  sweep the descriptions for defect classes a screenshot cannot show, and
+  keep the findings in a file the build asserts equality against. The
+  timestep link below is the other half of it: a picture only reproduces
+  if the clock does.
+
 ## Shaders and Techniques
 
 - [Shadertoy](https://www.shadertoy.com/) — the ideal zero-setup shader-fidget environment

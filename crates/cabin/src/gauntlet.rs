@@ -3738,6 +3738,11 @@ mod tests {
     /// a body the rig does not draw is a promise nobody can keep, so
     /// this refuses one; and the reading itself has to tell a joint from
     /// daylight, so it is exercised at both ends of its own tolerance.
+    ///
+    /// Asked in the undressed frame, deliberately: joints are claims the
+    /// whitebox description makes about its own parts, the family skips
+    /// dressed kinds for exactly that reason, and a manifest dressing
+    /// the Couch must not make the Couch's own joints unaskable.
     #[test]
     fn the_seat_family_is_asked_about_real_joints_and_answers_when_one_opens() {
         let mut claims = 0_u32;
@@ -3750,9 +3755,10 @@ mod tests {
             kinds += 1;
             for seat in &seats {
                 claims += 1;
+                let whitebox = Dressings::default();
                 let drawn = Screens::BOTH.into_iter().any(|screens| {
                     rig_forms(kind).into_iter().any(|showing| {
-                        rig_parts(Dressings::shipped(), kind, screens, showing)
+                        rig_parts(&whitebox, kind, screens, showing)
                             .iter()
                             .any(|part| part.what == seat.on)
                     })
@@ -5107,6 +5113,12 @@ mod tests {
     /// or rolled and canned on a counter — so a plane the rolled bolt
     /// happens to share with the laid pile is a plane nobody can see, and
     /// a detector that reported it would be finding its own footprints.
+    ///
+    /// Asked in the undressed frame: the two bodies are the whitebox
+    /// description's, and a dressed covering deliberately wears its one
+    /// declared body in both forms — the manifest has no per-form
+    /// vocabulary yet, and that gap is docs/GAUNTLET.md's to record, not
+    /// this guard's to report as a footprint.
     #[test]
     fn a_coverings_two_bodies_are_never_judged_against_each_other() {
         for kind in Kind::ALL {
@@ -5119,8 +5131,9 @@ mod tests {
             if !kind.covering() {
                 continue;
             }
+            let whitebox = Dressings::default();
             let named = |showing| -> Vec<String> {
-                rig_scene(Dressings::shipped(), kind, Screens::LIVE, showing)
+                rig_scene(&whitebox, kind, Screens::LIVE, showing)
                     .into_iter()
                     .map(|drawn| drawn.what)
                     .collect()

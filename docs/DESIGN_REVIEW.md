@@ -143,6 +143,13 @@ and no taste in it, it was made rather than escalated — but made in the
 open, so catching up is a scan of this list and not a feat of memory.
 Every line is reversible; strike one by overruling it.
 
+- **A dressed covering keeps its one declared body in both forms**, and
+  the two whitebox meta-guards ask their questions in the undressed
+  frame. The alternative — refusing a `dresses` line on a covering until
+  the manifest can declare per-form bodies — would have undone the first
+  rough draft that dressed a rug; the gap is recorded as the fourth
+  structural blind spot in docs/GAUNTLET.md instead.
+
 - **A room is four cells tall** (`CEIL_Y` 2.20, `COURSES` still 3), not
   five. Five scales every station's decor by 1.22 vertically and leaves
   1.10 m of blank band over 1.65 m of wall, and DESIGN.md wants the

@@ -1223,8 +1223,19 @@ Other things it deliberately does not see, each for a stated reason:
 - **Anything about colour, taste, or composition.** It measures shapes.
   A room can pass every rule here and look like nothing.
 
-And three structural blind spots that are worth knowing about because
+And four structural blind spots that are worth knowing about because
 they are not closed, only bounded:
+
+- **A dressed covering wears one body in both of its forms.** The
+  whitebox gives a covering two bodies — laid into the room, or rolled
+  and canned on a counter — and the manifest's vocabulary declares one:
+  one `fill`, one `offset`, one mesh. So the first rug anybody dressed
+  is swept, drawn and clicked as the same declared box whether it lies
+  flat or stands rolled, and at least one of those readings is the wrong
+  shape. Bounded because both forms are still held inside the berth the
+  declaration names; closed only when the manifest learns a per-form
+  declaration, which is also what the nudge bench would need to write
+  one.
 
 - **A latch and a berth want the same piece of wall, and always will.**
   This used to read "`berth-seen` only looks one way", and the other way

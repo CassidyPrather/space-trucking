@@ -50,6 +50,36 @@ title = "POLYGON Sci-Fi Horror"
 dir = "POLYGON - Sci-Fi Horror"
 download = "POLYGON Sci-Fi Horror, the Source Files download"
 
+[pack.ancient_egypt]
+title = "POLYGON Ancient Egypt"
+dir = "POLYGON - Ancient Egypt"
+download = "POLYGON Ancient Egypt, the Source Files download"
+
+[pack.apocalypse]
+title = "POLYGON Apocalypse"
+dir = "POLYGON - Apocalypse"
+download = "POLYGON Apocalypse, the Source Files download"
+
+[pack.casino]
+title = "POLYGON Casino"
+dir = "POLYGON - Casino"
+download = "POLYGON Casino, the Source Files download"
+
+[pack.construction]
+title = "POLYGON Construction"
+dir = "POLYGON - Construction Pack"
+download = "POLYGON Construction, the Source Files download"
+
+[pack.cyber_city]
+title = "POLYGON Sci-Fi Cyber City"
+dir = "POLYGON - Sci-Fi Cyber City"
+download = "POLYGON Sci-Fi Cyber City, the Source Files download"
+
+[pack.scifi_worlds]
+title = "POLYGON Sci-Fi Worlds"
+dir = "POLYGON - Sci-Fi Worlds Pack"
+download = "POLYGON Sci-Fi Worlds, the Source Files download"
+
 
 # ---------------------------------------------------------------------
 # Assets
@@ -129,3 +159,272 @@ offset = [0.0, -0.386806, 0.0]
 rotation = [0.0, 0.0, 0.0]
 fill = [0.72751, 0.613194, 0.672727]
 dresses = "cargo/mysterious_crate"
+
+# The rest of the cargo, in `Kind::index` order. Every line below came out
+# of `cargo xtask art dex` — the catalogue is what knew which of a hundred
+# files called `SM_Prop_Crate_0N` was the one worth naming here.
+#
+# Not dressed, and each for a stated reason: the three lamps and the
+# luminous paint own a real `PointLight` that lights the ROOM, and a
+# purchased mesh replaces a description rather than joining it
+# (`pieces::build_kind`), so dressing one puts the bay in the dark; the
+# window, porthole and bay window frame a rendered viewport a solid body
+# would occlude; and the chart tank, ETA gauge, destination preview and
+# launch lever are the game's instruments, which is the UI.
+
+# A conical flask with an orange stopper. The description asks for cut
+# crystal balanced on a point; a lab flask is the sci-fi reading of it.
+[asset.beaker_small]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Beaker_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "7302ebee8be133df6ea0bbd9cf34f7ecddc1e42384217440586727822deb89d3"
+scale = [5.337432, 5.337432, 5.337432]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.641826, 1.0, 0.641826]
+dresses = "cargo/perfume_vial"
+
+# A pharaoh's bust on its pedestal, painted from the pack's own GOLD alt
+# atlas rather than its stone one — the kind is a gilded idol, and Ancient
+# Egypt ships the gilding as a texture.
+[asset.bust_pharaoh]
+pack = "ancient_egypt"
+source = "SourceFiles/FBX/Props/SM_Prop_Bust_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonAncientEgypt_Texture_01_A_Gold.png"
+sha256 = "4c4f0d1760abe8d939a1ff91025c0d84cfc8427b4f45dab37ced6989c54814f6"
+scale = [4.712025, 2.356012, 4.712025]
+offset = [0.0, -0.026806, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.901566, 0.973194, 1.0]
+dresses = "cargo/gilded_idol"
+
+# A stack of three ration packs, orange-striped. Literally the thing.
+[asset.ration_stack]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Ration_Hub_Insert_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "3c873908cf0b0793258536487d16d5126118dc1b640af2b9454b802191b476b1"
+scale = [1.777294, 1.777294, 3.554589]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.481357, 1.0, 0.440861]
+dresses = "cargo/ration_bricks"
+
+# A bound stack of ribbed panels and pipes off a scavenger world: the
+# whitebox is bars laid on bars, and so is this.
+[asset.scrap_plate]
+pack = "scifi_worlds"
+source = "Sourcefiles/FBX/SM_Prop_Scav_Scrap_11.fbx"
+texture = "Sourcefiles/Textures/Alts/PolygonScifiWorlds_Texture_01_A.png"
+sha256 = "3970361a01b38ca44683d72c86530dc86a1a4461d765c7d8e95d8488ada1f0ee"
+scale = [0.177434, 0.354867, 0.354867]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.568326, 1.0, 0.819961]
+dresses = "cargo/scrap_alloy"
+
+# A planter of broad green leaves with an orange rim band.
+[asset.plant_vase]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Plant_Vase_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "9bf9b55a3c8d5d2c16a17f05acd8896447e1c14f7fa8b9b660b01bc2a83dfd6b"
+scale = [1.737635, 1.737635, 1.737635]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.802088, 1.0, 0.781806]
+dresses = "cargo/seedlings"
+
+# A blue oxygen bottle with a valve head. The description draws it lying
+# across the berth, so the mesh is turned a quarter about z to match.
+[asset.oxygen_tank]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Oxygen_Tank.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "246ecda36fb6e10032ff4b0162404d3b2d267b4767c4eded2cce305d6f9b46d9"
+scale = [0.965408, 1.930815, 1.930815]
+offset = [0.0, -0.674245, 0.0]
+rotation = [0.0, 0.0, 90.0]
+fill = [0.162877, 1.0, 0.325752]
+dresses = "cargo/gas_canister"
+
+# A hazard-orange octagonal power cell, banded in white. The whitebox is
+# a six-faceted drum; this is that, bought.
+[asset.power_cell]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Generator_PowerCell_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "6336f1a0e1c14a468397ae392d6dd3d84f47af469a72c026f62fec976a9ca803"
+scale = [2.03776, 2.03776, 2.03776]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.776278, 1.0, 0.776278]
+dresses = "cargo/cryo_core"
+
+# A bulbous milky pod on a twisted stalk. Three stacked pearls was the
+# whitebox; one briny pod is the same idea with a pack behind it.
+[asset.egg_sack]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Environment/SM_Env_EggSack_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "967b8733732d50510b824f50704c3bfb949b2ea397a8fc63281a593a2ea5f00e"
+scale = [3.213977, 1.606988, 3.213977]
+offset = [0.0, -0.0489, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.894797, 0.9511, 1.0]
+dresses = "cargo/brine_pearls"
+
+# A beige shipping crate with a domed lid and dark trim.
+[asset.crate_ribbed]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Crate_01_Alt_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "fee9ba0d5ea26af1a0eebe1dee29bc35779ab7594c4ef4a01a01f83ab6f43878"
+scale = [1.392773, 1.392773, 2.785546]
+offset = [0.0, -0.491149, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.714377, 0.508851, 1.0]
+dresses = "cargo/suspicious_crate"
+
+# An octagonal containment cylinder with a ribbed dark glass core and a
+# heavy lid. What ??? hands back should not look like a parcel.
+[asset.specimen_chamber]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Specimen_Chamber_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "60a296a6431d5d6c65c8c673c040ab43c5ccdbdc9a56998a221b6ded7f4d8c17"
+scale = [1.059243, 1.059243, 2.118487]
+offset = [0.0, -0.289638, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.444651, 0.710362, 1.0]
+dresses = "cargo/very_mysterious_crate"
+
+# A twisted vertical shard spiralling upward. The whitebox is a horn; so
+# is this.
+[asset.crystal_shard]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Artifact_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "b6cb56a321eff68e55b12e1aae7972d7ffd419c1c1c42ada30d1d08bc5534975"
+scale = [2.186457, 2.186457, 2.186457]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.51155, 1.0, 0.467626]
+dresses = "cargo/comet_ice"
+
+# A squat capped canister with a worn label — bottle, neck and cork, the
+# three parts the description cuts.
+[asset.bottle_small]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Bottle_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "e22553707ed57b3a9b83961b18c7e4fbc82a70dd3f0ce2481178691e1d1eaff1"
+scale = [4.921199, 4.921199, 4.921199]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.563763, 1.0, 0.563763]
+dresses = "cargo/bottled_midnight"
+
+# A plush hermit crab. A legally distinct ball of fur, with legs.
+[asset.plush_crab]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Plushie_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "b9a10211ffb6f1ad9763c60e66d9d2a60ec7969bdcf1f4b78674b4d7ba48ad9e"
+scale = [2.404806, 2.404806, 2.404806]
+offset = [0.0, -0.590015, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 0.409985, 0.939712]
+dresses = "cargo/fluff"
+
+# A blue plastic keycard with a hex bezel. Inner-ring transit papers, as
+# a station would actually issue them.
+[asset.keycard]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Keycard_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "6b49afd4e00aa21c255d9a7e264e6da0ea706fbf00514ca1b8d6706cee7ad76e"
+scale = [5.182166, 5.182166, 5.182166]
+offset = [0.0, -0.827449, 0.0]
+rotation = [90.0, 0.0, 0.0]
+fill = [0.77143, 1.0, 0.172551]
+dresses = "cargo/transit_chit"
+
+# A leaning stack of chips rather than one disc: a single chip scaled to
+# a berth reads as a dinner plate.
+[asset.chip_stack]
+pack = "casino"
+source = "SourceFiles/FBX/Items/SM_Item_Casino_Chip_Pile_02.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonCasino_Texture_01_A.png"
+sha256 = "42549890a844f4ae35ae2768f698ceb093c9d63f81d7c18e8eff5be6ed3d98a6"
+scale = [12.25708, 12.25708, 12.25708]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.713105, 1.0, 0.722009]
+dresses = "cargo/casino_chip"
+
+# A three-cushion padded bench off a ship's mess. Somebody's living room,
+# in transit.
+[asset.bench_padded]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Bench_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "92728543c33d5056b1a8e0b0bdc5404e7d854032f74884daeb5e39ed2695b038"
+scale = [0.823535, 1.647071, 1.647071]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.91177, 1.0, 0.637047]
+dresses = "cargo/couch"
+
+# A framed abstract in a light wood bevel. Gilt frame, subject debatable.
+[asset.framed_art]
+pack = "casino"
+source = "SourceFiles/FBX/Props/SM_Prop_Picture_05.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonCasino_Texture_01_A.png"
+sha256 = "e684367509d9dd056cae5fbf455b12e09b36b4c1466134c44469dc41fcfdd7ac"
+scale = [0.533549, 1.067098, 1.067098]
+offset = [0.0, 0.0, -0.906429]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.663842, 1.0, 0.093571]
+dresses = "cargo/painting"
+
+# A tall open-framed shelving unit. OPEN is the requirement, not a taste:
+# a cabinet's stowed goods are their own rigs standing in its cubbies, and
+# a closed locker would swallow them.
+[asset.shelf_tall]
+pack = "cyber_city"
+source = "SourceFiles/FBX/Props/SM_Prop_Shelf_02.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonCyberCity_Texture_01_A.png"
+sha256 = "103ec1647a8c649452f713545934148a59c98db6486658ddf60e43581ee52fe5"
+scale = [1.857676, 0.928838, 1.857676]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.88785, 1.0, 0.527049]
+dresses = "cargo/cabinet"
+
+# A worn woven rug. Turned so its weave stands in the rig's own x-y, which
+# is where a covering's laid body is composed before the berth lays it
+# down, and its long axis lies across the two cells.
+[asset.rug_woven]
+pack = "apocalypse"
+source = "Source_Files/FBX/SM_Prop_Rug_01.fbx"
+texture = "Source_Files/Textures/PolygonApocalypse_Texture_01_A.png"
+sha256 = "a264ebde85b754f0613636ce94d5ec6d3064b543fed931bb4944445817c7f573"
+scale = [1.035538, 0.670639, 0.709389]
+offset = [0.0, 0.0, 0.0]
+rotation = [90.0, 0.0, 0.0]
+fill = [1.0, 0.035, 1.0]
+dresses = "cargo/rug"
+
+# A closed octagonal paint tin. Ship enamel in a battered can.
+[asset.paint_can]
+pack = "construction"
+source = "SourceFiles/FBX/SM_Prop_Paint_Can_Closed_Alt_02.fbx"
+texture = "SourceFiles/Textures/PolygonConstruction_Texture_01_A.png"
+sha256 = "e73e4d4048d8998a220425e909a9b7ee6d0f04ebffde794ede6b31c5cf0d784c"
+scale = [5.521217, 5.521217, 5.521217]
+offset = [0.0, -0.007387, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 0.992613, 0.862077]
+dresses = "cargo/paint_tin"

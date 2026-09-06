@@ -403,6 +403,7 @@ fn index_all(
             glb: one.converted.relative(),
             sha256: one.digest.clone(),
             dresses: asset.dresses.clone(),
+            room: asset.room.clone(),
             scale: asset.scale,
             offset: asset.offset,
             rotation: asset.rotation,

@@ -76,6 +76,7 @@ use std::sync::OnceLock;
 
 use bevy::prelude::*;
 use space_trucking::sim::cargo::KIND_COUNT;
+use space_trucking::sim::room::{ROOM_KINDS, RoomKind};
 use space_trucking::sim::{Kind, layout};
 
 /// The manifest as it stands in the repository, read at compile time.
@@ -86,6 +87,98 @@ use space_trucking::sim::{Kind, layout};
 /// the build and the run is not a promise. Editing the manifest rebuilds
 /// the cabin, which is correct: the docket depends on it.
 const SHIPPED: &str = include_str!("../../../art/manifest.toml");
+
+/// **The parts of a room's shell a purchased module can stand in for.**
+///
+/// Cargo is dressed one mesh per kind; the shell is dressed one mesh per
+/// *role*, and `room::cladding` decides how many of each a room needs
+/// and where each one's frame is — a wall five cells long is one panel
+/// stretched, a wall eight cells long is two. The roles are the things
+/// the whitebox draws separately: a wall slab, the deck pan, the
+/// deckhead pan, and what stands in an opening.
+///
+/// An **appended table**, like `Kind`: the manifest spells these by
+/// name (`fabric/wall`) and a build older than a role reads the binding
+/// as a stranger rather than as the wrong role.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Fabric {
+    /// A wall panel, stood between deck and deckhead; also stood over a
+    /// mated doorway, upside down, as the lintel.
+    Wall,
+    /// A deck tile.
+    Floor,
+    /// A deckhead tile.
+    Ceiling,
+    /// What fills a door drawn shut: a sealed panel over the aperture.
+    Door,
+    /// The surround of a mated doorway, running through the padding cell
+    /// from one room's face to the other's.
+    Doorway,
+    /// What fills a hatch drawn shut: a cover in the deck's aperture.
+    Hatch,
+}
+
+/// How many fabric roles there are.
+pub const FABRIC_COUNT: usize = 6;
+
+/// One slot per room kind and one for "every room": what a `room` line
+/// selects among.
+const ROOM_SLOTS: usize = ROOM_KINDS.len() + 1;
+
+impl Fabric {
+    /// Every role, in table order.
+    pub const ALL: [Self; FABRIC_COUNT] = [
+        Self::Wall,
+        Self::Floor,
+        Self::Ceiling,
+        Self::Door,
+        Self::Doorway,
+        Self::Hatch,
+    ];
+
+    /// The stable slot.
+    #[must_use]
+    pub const fn index(self) -> usize {
+        self as usize
+    }
+
+    /// The name a manifest spells it by, after `fabric/`.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Wall => "wall",
+            Self::Floor => "floor",
+            Self::Ceiling => "ceiling",
+            Self::Door => "door",
+            Self::Doorway => "doorway",
+            Self::Hatch => "hatch",
+        }
+    }
+}
+
+/// **Which fabric role a `dresses` name means.**
+#[must_use]
+pub fn fabric_named(name: &str) -> Option<Fabric> {
+    Fabric::ALL.into_iter().find(|role| role.name() == name)
+}
+
+/// **Which room kind a `room` line means**, by the kind's own spelling
+/// in snake case — the same derivation [`kind_named`] uses for cargo,
+/// for the same reason: a second table would have to be kept in step
+/// with `ROOM_KINDS` by hand.
+#[must_use]
+pub fn room_named(name: &str) -> Option<RoomKind> {
+    ROOM_KINDS
+        .into_iter()
+        .find(|kind| snake_case(&format!("{kind:?}")) == name)
+}
+
+/// A room kind's manifest spelling.
+#[must_use]
+#[cfg_attr(not(test), allow(dead_code))]
+pub fn room_snake(kind: RoomKind) -> String {
+    snake_case(&format!("{kind:?}"))
+}
 
 /// **One purchased body, as declared**: which kind it dresses, and the
 /// four numbers that put it in that kind's box.
@@ -159,12 +252,28 @@ impl Dressing {
     #[cfg_attr(not(feature = "art"), allow(dead_code))]
     pub fn pose(&self, kind: Kind) -> Transform {
         let (mid, half) = Self::berth_box(kind);
+        self.pose_in(mid, half, Quat::IDENTITY)
+    }
+
+    /// **Where the purchased scene stands in an arbitrary frame**: a box
+    /// given as its middle and half-extents, turned by `frame` — the
+    /// same arithmetic as [`Dressing::pose`], with the berth box handed
+    /// in rather than looked up.
+    ///
+    /// This is what lets one declaration dress many frames. A cargo
+    /// kind's frame is its berth box, always the same; a wall panel's
+    /// frame is whatever run of wall `room::cladding` hands it, and the
+    /// four numbers mean exactly what they mean in a berth: `scale` is
+    /// mesh units per frame half-unit, so a panel declared to fill its
+    /// frame fills a long wall and a short one alike, stretched to each.
+    #[must_use]
+    pub fn pose_in(&self, mid: Vec3, half: Vec3, frame: Quat) -> Transform {
         let turn = self.turn();
         let scale = self.scale * half;
         let recentre = self.measured.map_or(Vec3::ZERO, |(measured, _)| measured);
         Transform {
-            translation: mid + self.offset * half - turn * (scale * recentre),
-            rotation: turn,
+            translation: mid + frame * (self.offset * half - turn * (scale * recentre)),
+            rotation: frame * turn,
             scale,
         }
     }
@@ -202,10 +311,22 @@ impl Dressing {
 #[derive(Resource, Debug, Default)]
 pub struct Dressings {
     by_kind: [Option<Dressing>; KIND_COUNT],
+    /// **The shell's dressings**, by room slot and then by role. Slot 0
+    /// is the table with no `room` line — every room — and slot `1 + n`
+    /// is room kind `n`'s own, which wins where it exists.
+    by_fabric: [[Option<Dressing>; FABRIC_COUNT]; ROOM_SLOTS],
     /// Bindings that named a body this game does not have, kept rather
     /// than dropped so a guard can be about them. At runtime they are
     /// simply not drawn.
     pub strangers: Vec<String>,
+}
+
+/// The slot a `room` line selects: none is every room's.
+const fn room_slot(room: Option<RoomKind>) -> usize {
+    match room {
+        None => 0,
+        Some(kind) => 1 + kind.token() as usize,
+    }
 }
 
 impl Dressings {
@@ -213,6 +334,21 @@ impl Dressings {
     #[must_use]
     pub const fn of(&self, kind: Kind) -> Option<&Dressing> {
         self.by_kind[kind.index()].as_ref()
+    }
+
+    /// **What one role of a room's shell is dressed in**: the room
+    /// kind's own table where it has one, the table for every room
+    /// otherwise, and nothing where neither was declared.
+    ///
+    /// The declaration half's answer; the loading half asks its own copy
+    /// (`Dressed::of_fabric`) with the scene beside it. Read by the
+    /// guards today, and by the bench the day it learns to nudge a wall.
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn of_fabric(&self, room: RoomKind, role: Fabric) -> Option<&Dressing> {
+        self.by_fabric[room_slot(Some(room))][role.index()]
+            .as_ref()
+            .or_else(|| self.by_fabric[room_slot(None)][role.index()].as_ref())
     }
 
     /// **Move what this run believes**, for the one caller that has
@@ -231,6 +367,10 @@ impl Dressings {
     #[allow(dead_code)]
     pub fn any(&self) -> bool {
         self.by_kind.iter().any(Option::is_some)
+            || self
+                .by_fabric
+                .iter()
+                .any(|slot| slot.iter().any(Option::is_some))
     }
 
     /// **What the manifest in this repository declares.** Parsed once.
@@ -260,20 +400,9 @@ impl Dressings {
             let Some(binding) = table.string("dresses") else {
                 continue;
             };
-            let Some(name) = binding.strip_prefix("cargo/") else {
-                // A namespace this build has no bodies for. The resolver
-                // refuses one it has never heard of; one it knows and
-                // this does not is a build that is simply older.
-                out.strangers.push(binding.to_owned());
-                continue;
-            };
-            let Some(kind) = kind_named(name) else {
-                out.strangers.push(binding.to_owned());
-                continue;
-            };
             let mid = table.triple("measured_mid");
             let half = table.triple("measured_half");
-            out.by_kind[kind.index()] = Some(Dressing {
+            let dressing = Dressing {
                 id: table.id.clone(),
                 glb: table.string("glb").map(str::to_owned),
                 scale: table.triple("scale").unwrap_or(Vec3::ONE),
@@ -281,7 +410,38 @@ impl Dressings {
                 rotation: table.triple("rotation").unwrap_or(Vec3::ZERO),
                 fill: table.triple("fill").unwrap_or(Vec3::ONE),
                 measured: mid.zip(half),
-            });
+            };
+            if let Some(name) = binding.strip_prefix("cargo/") {
+                let Some(kind) = kind_named(name) else {
+                    out.strangers.push(binding.to_owned());
+                    continue;
+                };
+                out.by_kind[kind.index()] = Some(dressing);
+            } else if let Some(name) = binding.strip_prefix("fabric/") {
+                let Some(role) = fabric_named(name) else {
+                    out.strangers.push(binding.to_owned());
+                    continue;
+                };
+                // A `room` line naming a kind this build has not got is
+                // a stranger in the same sense: the binding is real and
+                // the body it is for is not here.
+                let room = if let Some(spelling) = table.string("room") {
+                    let Some(kind) = room_named(spelling) else {
+                        out.strangers
+                            .push(format!("{binding} in room `{spelling}`"));
+                        continue;
+                    };
+                    Some(kind)
+                } else {
+                    None
+                };
+                out.by_fabric[room_slot(room)][role.index()] = Some(dressing);
+            } else {
+                // A namespace this build has no bodies for. The resolver
+                // refuses one it has never heard of; one it knows and
+                // this does not is a build that is simply older.
+                out.strangers.push(binding.to_owned());
+            }
         }
         Ok(out)
     }
@@ -303,8 +463,14 @@ pub fn kind_named(name: &str) -> Option<Kind> {
 /// `very_mysterious_crate`.
 #[must_use]
 pub fn snake(kind: Kind) -> String {
+    snake_case(&format!("{kind:?}"))
+}
+
+/// A `Debug` spelling in snake case: the one derivation behind every
+/// name the manifest spells.
+fn snake_case(camel: &str) -> String {
     let mut out = String::new();
-    for letter in format!("{kind:?}").chars() {
+    for letter in camel.chars() {
         if letter.is_ascii_uppercase() && !out.is_empty() {
             out.push('_');
         }
@@ -610,7 +776,7 @@ fn number(value: f32) -> String {
 // ------------------------------------------------------- the loading half --
 
 #[cfg(feature = "art")]
-pub use loading::{Dressed, Worn, cache_root, plugin};
+pub use loading::{Clad, Dressed, Worn, cache_root, plugin};
 
 #[cfg(feature = "art")]
 mod loading {
@@ -621,7 +787,9 @@ mod loading {
     use space_trucking::sim::Kind;
     use space_trucking::sim::cargo::KIND_COUNT;
 
-    use super::{Dressing, Dressings};
+    use space_trucking::sim::room::{ROOM_KINDS, RoomKind};
+
+    use super::{Dressing, Dressings, FABRIC_COUNT, Fabric, ROOM_SLOTS, room_slot};
     use crate::Phase;
     use crate::outline::{MaskBody, MaskProxy};
 
@@ -662,9 +830,15 @@ mod loading {
     /// The resource is inserted whether or not anything resolved, so the
     /// systems that read it need no `Option` and the "no art on this
     /// machine" case is an empty table rather than an absent one.
+    /// A loaded scene and the declaration that places it.
+    type Bought = (Handle<WorldAsset>, Dressing);
+
     #[derive(Resource, Default)]
     pub struct Dressed {
-        scenes: [Option<(Handle<WorldAsset>, Dressing)>; KIND_COUNT],
+        scenes: [Option<Bought>; KIND_COUNT],
+        /// The shell's, by room slot and role — `Dressings::by_fabric`
+        /// with the loaded scene beside each declaration.
+        fabric: [[Option<Bought>; FABRIC_COUNT]; ROOM_SLOTS],
     }
 
     impl Dressed {
@@ -675,6 +849,43 @@ mod loading {
             self.scenes[kind.index()]
                 .as_ref()
                 .map(|(scene, dressing)| (scene, dressing))
+        }
+
+        /// The scene and the numbers for one role of one room kind's
+        /// shell: the kind's own table where it has one, every room's
+        /// otherwise, nothing where neither resolved.
+        #[must_use]
+        pub fn of_fabric(
+            &self,
+            room: RoomKind,
+            role: Fabric,
+        ) -> Option<(&Handle<WorldAsset>, &Dressing)> {
+            self.fabric[room_slot(Some(room))][role.index()]
+                .as_ref()
+                .or_else(|| self.fabric[room_slot(None)][role.index()].as_ref())
+                .map(|(scene, dressing)| (scene, dressing))
+        }
+
+        /// **Every scene this run asked for**, cargo and shell alike — what
+        /// a screenshot waits on before it fires.
+        pub fn scenes(&self) -> impl Iterator<Item = &Handle<WorldAsset>> {
+            self.scenes
+                .iter()
+                .chain(self.fabric.iter().flatten())
+                .flatten()
+                .map(|(scene, _)| scene)
+        }
+
+        /// **Put one shell role's scene and numbers in**, for one room
+        /// kind or for every room.
+        pub fn clad(
+            &mut self,
+            room: Option<RoomKind>,
+            role: Fabric,
+            scene: Handle<WorldAsset>,
+            dressing: Dressing,
+        ) {
+            self.fabric[room_slot(room)][role.index()] = Some((scene, dressing));
         }
 
         /// **Put one kind's scene and numbers in.** [`load_index`] fills
@@ -697,6 +908,15 @@ mod loading {
     /// child of a rig. The bench moves these and nothing else.
     #[derive(Component, Clone, Copy, Debug)]
     pub struct Worn(pub Kind);
+
+    /// **A purchased panel of a room's shell, as it stands in the
+    /// world.** The counterpart of [`Worn`] for the fabric: put on the
+    /// entity `room::rebuild` spawns a module's scene under, so what a
+    /// room is clad in can be found — and so the bench and the outline,
+    /// which query [`Worn`], never mistake a wall for a piece of cargo.
+    #[derive(Component, Clone, Copy, Debug)]
+    #[allow(dead_code)]
+    pub struct Clad(pub Fabric);
 
     /// Read the index at boot and ask for every scene it names.
     ///
@@ -775,6 +995,33 @@ mod loading {
             // verbatim. `#Scene0` is `GltfAssetLabel::Scene(0)`, glTF's
             // first scene, which is the one a single-object export has.
             dressed.dress(kind, assets.load(format!("{glb}#Scene0")), dressing.clone());
+        }
+        // The shell's, slot by slot: the table for every room and then
+        // each kind's own, each asked directly rather than through the
+        // fallback so a kind without a table of its own loads nothing
+        // twice.
+        for (slot, roles) in read.by_fabric.iter().enumerate() {
+            let room = (slot > 0).then(|| ROOM_KINDS[slot - 1]);
+            for role in Fabric::ALL {
+                let Some(dressing) = &roles[role.index()] else {
+                    continue;
+                };
+                let Some(glb) = &dressing.glb else {
+                    eprintln!(
+                        "art: `{}` dresses fabric/{} and names no converted file — drawing \
+                         the whitebox",
+                        dressing.id,
+                        role.name()
+                    );
+                    continue;
+                };
+                dressed.clad(
+                    room,
+                    role,
+                    assets.load(format!("{glb}#Scene0")),
+                    dressing.clone(),
+                );
+            }
         }
         // The numbers, kept where something with no asset server can
         // read them: the bench reads this and never touches a handle,
@@ -1731,14 +1978,121 @@ offset = [0.25, 0.0, 0.0]
         assert!(
             declared.strangers.is_empty(),
             "art/manifest.toml dresses {:?}, and this game has no such body. \
-             The names it does have are: {}",
+             The names it does have are: cargo/{}; fabric/{}; and the rooms are {}",
             declared.strangers,
             Kind::ALL
                 .into_iter()
                 .map(snake)
                 .collect::<Vec<_>>()
+                .join(", cargo/"),
+            Fabric::ALL
+                .into_iter()
+                .map(Fabric::name)
+                .collect::<Vec<_>>()
+                .join(", fabric/"),
+            ROOM_KINDS
+                .into_iter()
+                .map(room_snake)
+                .collect::<Vec<_>>()
                 .join(", ")
         );
+    }
+
+    /// **A shell binding is read into its role and its room, and the
+    /// room's own table wins over the table for every room.** The
+    /// fallback is the whole reason a manifest can dress every wall in
+    /// one line and then give the furnace its own; a fallback that did
+    /// not fall back, or a kind's table that did not win, would each be
+    /// a colour quietly wrong in one room.
+    #[test]
+    fn a_fabric_binding_is_read_by_role_and_by_room() {
+        let declared = Dressings::read(
+            "[asset.panel]\ndresses = \"fabric/wall\"\nglb = \"glb/a.glb\"\n\
+             [asset.panel_hot]\ndresses = \"fabric/wall\"\nroom = \"burner\"\n\
+             glb = \"glb/b.glb\"\n\
+             [asset.tile]\ndresses = \"fabric/floor\"\nglb = \"glb/c.glb\"\n\
+             [asset.odd]\ndresses = \"fabric/wall\"\nroom = \"attic\"\n\
+             [asset.odder]\ndresses = \"fabric/gable\"\n",
+        )
+        .expect("the dialect");
+        assert_eq!(
+            declared
+                .of_fabric(RoomKind::Cabin, Fabric::Wall)
+                .map(|one| one.id.as_str()),
+            Some("panel")
+        );
+        assert_eq!(
+            declared
+                .of_fabric(RoomKind::Burner, Fabric::Wall)
+                .map(|one| one.id.as_str()),
+            Some("panel_hot")
+        );
+        assert_eq!(
+            declared
+                .of_fabric(RoomKind::Burner, Fabric::Floor)
+                .map(|one| one.id.as_str()),
+            Some("tile")
+        );
+        assert_eq!(
+            declared
+                .of_fabric(RoomKind::Trade, Fabric::Door)
+                .map(|one| one.id.as_str()),
+            None
+        );
+        assert!(declared.any());
+        assert_eq!(
+            declared.strangers,
+            vec!["fabric/wall in room `attic`", "fabric/gable"]
+        );
+        // Every role and every room round-trips its own spelling.
+        for role in Fabric::ALL {
+            assert_eq!(fabric_named(role.name()), Some(role));
+        }
+        for kind in ROOM_KINDS {
+            assert_eq!(room_named(&room_snake(kind)), Some(kind), "{kind:?}");
+        }
+        assert_eq!(room_named("Burner"), None);
+    }
+
+    /// **A frame turns the declaration with it.** The same numbers that
+    /// put a body in a berth put a panel in a wall; the wall's frame is
+    /// turned to face the room, and a mesh's own offset has to turn with
+    /// it or a panel nudged "into the wall" on the aft wall would move
+    /// sideways on the starboard one.
+    #[test]
+    fn a_pose_in_a_turned_frame_carries_the_offset_round_with_it() {
+        let declared = Dressings::read(
+            "[asset.panel]\ndresses = \"fabric/wall\"\nglb = \"glb/a.glb\"\n\
+             measured_mid = [0.0, 0.0, 0.0]\nmeasured_half = [1.0, 1.0, 1.0]\n\
+             offset = [0.0, 0.0, 0.5]\n",
+        )
+        .expect("the dialect");
+        let one = declared
+            .of_fabric(RoomKind::Cabin, Fabric::Wall)
+            .expect("a dressing");
+        let mid = Vec3::new(3.0, 1.0, -2.0);
+        let half = Vec3::new(2.0, 1.5, 0.25);
+        let quarter = Quat::from_rotation_y(std::f32::consts::FRAC_PI_2);
+        let pose = one.pose_in(mid, half, quarter);
+        // Half the frame's depth along the frame's own +z, which the
+        // quarter turn has pointed down world +x.
+        let expected = mid + quarter * Vec3::new(0.0, 0.0, 0.5 * half.z);
+        assert!((pose.translation - expected).length() < 1e-5, "{pose:?}");
+        assert!((pose.scale - half).length() < 1e-5, "{:?}", pose.scale);
+        assert!((pose.rotation.dot(quarter).abs() - 1.0).abs() < 1e-5);
+        // And the berth pose is the same arithmetic with the berth box in.
+        let cargo = Dressings::read(
+            "[asset.crate_small]\ndresses = \"cargo/suspicious_crate\"\n\
+             glb = \"glb/abc.glb\"\nmeasured_mid = [0.0, 0.0, 0.0]\n\
+             measured_half = [1.0, 1.0, 1.0]\n",
+        )
+        .expect("the dialect");
+        let crate_small = cargo.of(Kind::SuspiciousCrate).expect("a dressing");
+        let (bmid, bhalf) = Dressing::berth_box(Kind::SuspiciousCrate);
+        let a = crate_small.pose(Kind::SuspiciousCrate);
+        let b = crate_small.pose_in(bmid, bhalf, Quat::IDENTITY);
+        assert!((a.translation - b.translation).length() < 1e-6);
+        assert!((a.scale - b.scale).length() < 1e-6);
     }
 
     /// **A binding that names nothing is caught, and a binding that
@@ -1767,6 +2121,10 @@ offset = [0.25, 0.0, 0.0]
         // A namespace the resolver would refuse outright, which a build
         // older than the namespace still has to survive reading.
         assert_eq!(one("fitting/beacon").strangers, vec!["fitting/beacon"]);
+        // And the shell's namespace, which this build does have.
+        let clad = one("fabric/wall");
+        assert!(clad.strangers.is_empty(), "{:?}", clad.strangers);
+        assert!(clad.any());
     }
 
     /// **A kind's manifest name is its own spelling, in snake case.**

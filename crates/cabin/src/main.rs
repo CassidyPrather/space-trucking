@@ -918,9 +918,30 @@ fn shoot(
     mut mode: ResMut<ShotMode>,
     capturing: Query<(), With<bevy::render::view::screenshot::Capturing>>,
     mut exit: MessageWriter<AppExit>,
+    #[cfg(feature = "art")] dressed: Option<Res<art::Dressed>>,
+    #[cfg(feature = "art")] assets: Res<AssetServer>,
 ) {
     mode.frames += 1;
-    if !mode.fired && mode.frames > SHOT_SETTLE {
+    // **A dressed build waits for its art.** The settle is forty-five
+    // pinned frames, and a purchased scene lands whenever the loader has
+    // read its file, which on a slow disk or a small machine is later
+    // than that — and a shot of a room whose walls are still on their
+    // way in is a picture of the void. The whitebox build has nothing to
+    // wait for, and a scene that failed stops nobody: it is already a
+    // sentence on stderr and a whitebox in its place.
+    #[cfg(feature = "art")]
+    let settled = dressed.as_deref().is_none_or(|dressed| {
+        dressed.scenes().all(|scene| {
+            !matches!(
+                assets.recursive_dependency_load_state(scene),
+                bevy::asset::RecursiveDependencyLoadState::NotLoaded
+                    | bevy::asset::RecursiveDependencyLoadState::Loading
+            )
+        })
+    });
+    #[cfg(not(feature = "art"))]
+    let settled = true;
+    if !mode.fired && mode.frames > SHOT_SETTLE && settled {
         mode.fired = true;
         let path = mode.path.clone();
         commands

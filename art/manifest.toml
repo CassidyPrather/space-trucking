@@ -428,3 +428,177 @@ offset = [0.0, -0.007387, 0.0]
 rotation = [0.0, 0.0, 0.0]
 fill = [1.0, 0.992613, 0.862077]
 dresses = "cargo/paint_tin"
+
+
+# ---------------------------------------------------------------------
+# The fabric: walls, deck, deckhead, and what stands in the openings.
+#
+# The shell is dressed by ROLE rather than by kind — `fabric/wall` is
+# every wall panel aboard, and `room::cladding` decides how many a wall
+# needs and how wide each one is — so one table here dresses every room.
+# A table with a `room` line beside its binding dresses that room kind
+# alone, and wins over the table without one. That is how a room gets
+# its own colour: Synty paint a whole pack from one atlas of flat
+# swatches and ship the same atlas repainted six ways under
+# `Textures/Alts`, so the cabin's wall and the furnace's wall are ONE
+# mesh named twice, with two `texture` lines. The mesh is never
+# repainted; the atlas is chosen (docs/ART_DIRECTION_3D.md, "Two voices").
+#
+# Every frame here is stated in docs/ART_PIPELINE.md, "The fabric
+# namespace". The one thing to know reading the numbers: a wall panel's
+# relief is squeezed nearly flat (`scale` on z), on purpose. This kit's
+# panels carry a plinth at the floor line and a cornice under the
+# deckhead that stand a fifth of a metre proud of the panel body, and
+# the game hangs cargo on its walls with its back a hair in front of the
+# hull — so the relief is held inside the notch the paint rides in, and
+# the panel reads as panelling rather than as a shelf.
+# ---------------------------------------------------------------------
+
+# The wall panel: an X-braced bay under a lit cornice, five cells wide
+# and four tall above its plinth. Every room's, unless a room below has
+# its own.
+[asset.wall_panel]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "0a725d9d3ea4b04f83977ebbdb678bd6495bb68949fa9d6a6f2eff8b1461dacd"
+scale = [0.4, 0.40037, 0.388]
+offset = [0.0, 0.0, 0.827]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 0.173]
+dresses = "fabric/wall"
+
+# The same panel, in the pack's other paint jobs, one per room kind
+# that wants its own. The furnace runs hot.
+[asset.wall_panel_burner]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_02_A.png"
+sha256 = "0a725d9d3ea4b04f83977ebbdb678bd6495bb68949fa9d6a6f2eff8b1461dacd"
+scale = [0.4, 0.40037, 0.388]
+offset = [0.0, 0.0, 0.827]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 0.173]
+dresses = "fabric/wall"
+room = "burner"
+
+[asset.wall_panel_trade]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_01_B.png"
+sha256 = "0a725d9d3ea4b04f83977ebbdb678bd6495bb68949fa9d6a6f2eff8b1461dacd"
+scale = [0.4, 0.40037, 0.388]
+offset = [0.0, 0.0, 0.827]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 0.173]
+dresses = "fabric/wall"
+room = "trade"
+
+[asset.wall_panel_parlor]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_03_A.png"
+sha256 = "0a725d9d3ea4b04f83977ebbdb678bd6495bb68949fa9d6a6f2eff8b1461dacd"
+scale = [0.4, 0.40037, 0.388]
+offset = [0.0, 0.0, 0.827]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 0.173]
+dresses = "fabric/wall"
+room = "parlor"
+
+[asset.wall_panel_wreck]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_04_A.png"
+sha256 = "0a725d9d3ea4b04f83977ebbdb678bd6495bb68949fa9d6a6f2eff8b1461dacd"
+scale = [0.4, 0.40037, 0.388]
+offset = [0.0, 0.0, 0.827]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 0.173]
+dresses = "fabric/wall"
+room = "wreck"
+
+[asset.wall_panel_pump]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_01_D.png"
+sha256 = "0a725d9d3ea4b04f83977ebbdb678bd6495bb68949fa9d6a6f2eff8b1461dacd"
+scale = [0.4, 0.40037, 0.388]
+offset = [0.0, 0.0, 0.827]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 0.173]
+dresses = "fabric/wall"
+room = "pump"
+
+# The deck tile: four scratched panels in a dark rim, and no lights and
+# no hazard stripe — tape is `Consume`'s alone, and a deck striped at
+# every tile edge would be a warning about nothing. Its top is the deck
+# plane; the rest of it is inside the pan.
+[asset.deck_tile]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Floor_Small_05.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "6365d8d6ec76fe72018e02bfbc4251b79196b2b61ff6ca171b16376a26a9f3d7"
+scale = [0.8, 8.0, 0.8]
+offset = [0.0, 0.162, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 0.838, 1.0]
+dresses = "fabric/floor"
+
+# The deckhead tile: a bevelled slab with one recessed panel. Squeezed
+# flat on y so the recess stays a centimetre, clear of the lamps that
+# hang from the deckhead chart.
+[asset.deckhead_tile]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Ceiling_03.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "4aa15f28591fe8e44ac5412cd2ba1776ce04d8067be9a6c430a0fe3b275acdb9"
+scale = [0.4, 2.914, 0.4]
+offset = [0.0, -0.2, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 0.8, 1.0]
+dresses = "fabric/ceiling"
+
+# A door drawn shut: a sealed panel with a round hub between two
+# canisters. The pack's other door panels are sealed too — including
+# `SM_Bld_Wall_Doorframe_03`, whose wide hatch is a recess, not a hole —
+# which is why the shut door is a panel and the OPEN doorway below is an
+# `Outer` frame. Shrunk from five cells to the two-cell aperture.
+[asset.door_sealed]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_Doorframe_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "da4b34787ac2cfcf329f63866f11e547ef8c5222dcdbc86f22cd6469703b7669"
+scale = [0.4, 0.4, 2.746]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fabric/door"
+
+# The surround of a mated doorway: a plain square frame with a chamfered
+# reveal and a low sill, run through the padding cell so its reveal IS
+# the passage. Scaled so its opening is exactly the two-cell aperture;
+# the frame round it stands proud of both rooms' walls.
+[asset.door_surround]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_Doorframe_Outer_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "44c5fe089df2499fb74125488efd5e25b0e316f2a0045e6725e6916b8517d724"
+scale = [0.2878, 0.3359, 1.404]
+offset = [-0.002, -0.0941, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.7778, 0.9078, 1.0]
+dresses = "fabric/doorway"
+
+# The cover over a shut deck hatch: a recessed access plate in a lit
+# rim, standing a few centimetres proud of the deck.
+[asset.hatch_cover]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Floor_Small_Hatch_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "ac0fc83edc98276dbe248b54e78919bca548a150138083ff984d83b514c0f6bf"
+scale = [0.8, 6.547, 0.8]
+offset = [0.0, 0.4458, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 0.965, 1.0]
+dresses = "fabric/hatch"

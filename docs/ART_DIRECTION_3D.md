@@ -409,6 +409,44 @@ geometry the repository cuts, because that is the version continuous
 integration builds and the version that has to stand on its own. Art is
 presentation over a description that does not change.
 
+#### Colour on a bought mesh is the atlas you choose
+
+The one lever the cabin has over a purchased mesh's colour is **which
+atlas it is painted from**, and that lever is the pack's own. Synty's
+UV strategy: every face of every mesh in a pack is mapped onto a flat
+swatch of one shared 2048² atlas — the same grey for every panel, the
+same orange for every accent — and the pack ships that atlas repainted
+half a dozen ways under `Textures/Alts`, with the swatch layout held
+fixed so that any mesh reads correctly against any of them. So a
+recolour is a second `texture` line on the same mesh, and the shell is
+where it is used: a `fabric/` binding in `art/manifest.toml` may carry a
+`room` line, and the furnace's walls are the cabin's walls painted from
+the pack's red family (docs/ART_PIPELINE.md, "`room`: one mesh, many
+colours"). Nothing in the cabin tints, multiplies or repaints a bought
+material, and the palette purity sweep still passes untouched: the art
+module still writes no colour.
+
+Two consequences for the room. **The no-hue-alone law is untouched**,
+because the room's readings — the tile fields and marks, the tread, the
+jamb lamp, the latch — are still the cabin's own paint on the chart
+plane, and a bought wall stands behind them. And **hazard stripes are
+still `Consume`'s alone**, which is a constraint on which modules are
+chosen: the deck tile shipped is the pack's plainest, because a tile
+with a hazard rim at every edge would be a warning about nothing, and
+the pack has one.
+
+#### A bought wall keeps out of the notch
+
+The shell's dressing is held to the same geometry the whitebox is
+(docs/ROOMS.md; `room::NOTCH`): the room's paint rides a notch in front
+of the box face, and a rig hangs on a wall with its back a hair in front
+of that face. A kit wall's plinth and cornice stand a fifth of a metre
+proud of its body at natural depth, so the shipped manifest squeezes a
+panel's relief to about an eighth and stands its body on the box face —
+the cornice reaches the chart plane and nothing composed on a berth is
+touched. That is a manifest number and not a law; what is a law is that
+whatever stands in the notch is not the wall's to stand in.
+
 ## Colored tiles: form, not stacking
 
 The room grid's tile classes (ROOMS.md) are a signal system, and the

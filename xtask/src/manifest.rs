@@ -134,6 +134,15 @@ pub struct Asset {
     /// have to be re-spelled everywhere the day a station fitting gets
     /// one. See [`binding_trouble`] for which namespaces exist.
     pub dresses: Option<String>,
+    /// **Which room kind this dressing is for**, and only for a `fabric/`
+    /// binding: `room = "burner"` says this wall panel is the furnace's,
+    /// and a table with no `room` line dresses every room that has no
+    /// line of its own. A pack recolours a module by swapping the atlas
+    /// it is painted from, so two tables naming one mesh and two
+    /// `texture` lines is how a room gets its own colour — and this key
+    /// is what tells them apart. Checked for shape here; which kinds the
+    /// game has is the cabin's own guard, like a `dresses` name.
+    pub room: Option<String>,
     /// Multiplied onto the size the game's own description asks for.
     pub scale: [f32; 3],
     /// Shifted, in the description's frame, after scaling.
@@ -233,6 +242,7 @@ impl Manifest {
                 .take_optional_str("sha256", "asset", &id, path)?
                 .unwrap_or_default();
             let dresses = draft.take_optional_str("dresses", "asset", &id, path)?;
+            let room = draft.take_optional_str("room", "asset", &id, path)?;
             let scale = draft.take_triple("scale", "asset", &id, path, [1.0; 3])?;
             let offset = draft.take_triple("offset", "asset", &id, path, [0.0; 3])?;
             let rotation = draft.take_triple("rotation", "asset", &id, path, [0.0; 3])?;
@@ -259,11 +269,7 @@ impl Manifest {
                     return Err(complain(line, format!("`{part}` {reason}")));
                 }
             }
-            if let Some(binding) = &dresses
-                && let Some(reason) = binding_trouble(binding)
-            {
-                return Err(complain(line, format!("`dresses` {reason}")));
-            }
+            check_binding(path, line, dresses.as_deref(), room.as_deref())?;
             if !sha256.is_empty() && !is_digest(&sha256) {
                 return Err(complain(
                     line,
@@ -304,6 +310,7 @@ impl Manifest {
                     texture,
                     sha256,
                     dresses,
+                    room,
                     scale,
                     offset,
                     rotation,
@@ -481,11 +488,82 @@ fn unusable_path(value: &str) -> Option<String> {
 /// apply, and a mesh that never applies looks exactly like a mesh that
 /// converted wrong.
 ///
+/// `fabric` is the room's own shell — its walls, deck, deckhead and the
+/// hardware in its openings — and a `fabric/` binding may carry a `room`
+/// line beside it ([`room_trouble`]), because the shell is the one thing
+/// every room has and the one thing a room's colour is read off.
+///
 /// `fitting` is the one everybody can see coming — a station's own
 /// hardware is described the same way cargo is (`poi::Fitting`) — and it
 /// is not here, because a namespace nothing reads is a promise this file
 /// cannot keep. Adding it is a word here and a match arm in the cabin.
-const NAMESPACES: [&str; 1] = ["cargo"];
+const NAMESPACES: [&str; 2] = ["cargo", "fabric"];
+
+/// The namespace whose bindings a `room` line may qualify.
+const ROOMED: &str = "fabric";
+
+/// A `dresses` line and the `room` line beside it, refused together
+/// where either cannot be used: the binding's shape first, then the room
+/// against the binding.
+fn check_binding(
+    path: &Path,
+    line: usize,
+    dresses: Option<&str>,
+    room: Option<&str>,
+) -> Result<(), Complaint> {
+    let complain = |message: String| Complaint {
+        file: path.to_path_buf(),
+        line,
+        message,
+    };
+    if let Some(binding) = dresses
+        && let Some(reason) = binding_trouble(binding)
+    {
+        return Err(complain(format!("`dresses` {reason}")));
+    }
+    if let Some(room) = room
+        && let Some(reason) = room_trouble(dresses, room)
+    {
+        return Err(complain(format!("`room` {reason}")));
+    }
+    Ok(())
+}
+
+/// Why a `room` line cannot be used, or `None` if it can.
+///
+/// Shape only, like [`binding_trouble`]: which room kinds exist is the
+/// game's question. What IS this file's question is that a `room` line
+/// beside a cargo binding, or beside no binding at all, would be a line
+/// that silently never applied — and this file's whole personality is
+/// that such a line is a refusal.
+fn room_trouble(dresses: Option<&str>, room: &str) -> Option<String> {
+    match dresses.and_then(|binding| binding.split_once('/')) {
+        Some((namespace, _)) if namespace == ROOMED => {}
+        Some((namespace, _)) => {
+            return Some(format!(
+                "is `{room}`, and a `room` line goes with a `{ROOMED}/` binding, not a \
+                 `{namespace}/` one: cargo is the same crate in every room"
+            ));
+        }
+        None => {
+            return Some(format!(
+                "is `{room}`, and nothing here dresses anything; a `room` line says which \
+                 room a `{ROOMED}/` binding is for, so it wants a `dresses` line beside it"
+            ));
+        }
+    }
+    if room.is_empty()
+        || !room
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+    {
+        return Some(format!(
+            "is `{room}`, which is not a room kind's name; names here are lowercase \
+             letters, digits and `_`, like `burner`"
+        ));
+    }
+    None
+}
 
 /// Why a `dresses` value cannot be used, or `None` if it can.
 ///
@@ -761,6 +839,9 @@ pub struct Resolved {
     /// manifest so the thing that reads the index never has to read the
     /// manifest.
     pub dresses: Option<String>,
+    /// Which room kind a `fabric/` binding is for, carried through the
+    /// same way. Absent means every room without a line of its own.
+    pub room: Option<String>,
     pub scale: [f32; 3],
     pub offset: [f32; 3],
     pub rotation: [f32; 3],
@@ -804,7 +885,8 @@ pub fn render_index(resolved: &[Resolved]) -> String {
          # read, so a changed pack OR a changed atlas changes the path and nothing\n\
          # stale is read.\n\
          #\n\
-         # `dresses` is which body of the game draws this one. `measured_mid` and\n\
+         # `dresses` is which body of the game draws this one, and `room` which room\n\
+         # kind a `fabric/` binding is for. `measured_mid` and\n\
          # `measured_half` are the tight box the converter reported round the mesh, in\n\
          # the glb's own units — the fact the `fill` promise beside them was checked\n\
          # against. Both are absent where the converter reported nothing.\n",
@@ -817,6 +899,9 @@ pub fn render_index(resolved: &[Resolved]) -> String {
         );
         if let Some(dresses) = &entry.dresses {
             let _ = writeln!(text, "dresses = \"{dresses}\"");
+        }
+        if let Some(room) = &entry.room {
+            let _ = writeln!(text, "room = \"{room}\"");
         }
         let _ = write!(
             text,
@@ -932,6 +1017,7 @@ pub fn read_index(path: &Path, text: &str) -> Result<Vec<Resolved>, Complaint> {
         let glb = draft.take_str("glb", "asset", &id, path)?;
         let sha256 = draft.take_str("sha256", "asset", &id, path)?;
         let dresses = draft.take_optional_str("dresses", "asset", &id, path)?;
+        let room = draft.take_optional_str("room", "asset", &id, path)?;
         let scale = draft.take_triple("scale", "asset", &id, path, [1.0; 3])?;
         let offset = draft.take_triple("offset", "asset", &id, path, [0.0; 3])?;
         let rotation = draft.take_triple("rotation", "asset", &id, path, [0.0; 3])?;
@@ -942,6 +1028,7 @@ pub fn read_index(path: &Path, text: &str) -> Result<Vec<Resolved>, Complaint> {
             glb,
             sha256,
             dresses,
+            room,
             scale,
             offset,
             rotation,
@@ -1091,6 +1178,7 @@ mod tests {
             glb: "glb/abc.glb".to_owned(),
             sha256: "a".repeat(64),
             dresses: Some("cargo/suspicious_crate".to_owned()),
+            room: None,
             scale: [0.013_7, 1.0, 2.5],
             offset: [-0.25, 0.0, 0.125],
             rotation: [0.0, -90.0, 0.0],
@@ -1167,6 +1255,47 @@ mod tests {
             one("cargo/suspicious_crate").expect("a binding").assets["crate"].dresses,
             Some("cargo/suspicious_crate".to_owned())
         );
+        assert_eq!(
+            one("fabric/wall").expect("a binding").assets["crate"].dresses,
+            Some("fabric/wall".to_owned())
+        );
+    }
+
+    /// **A `room` line qualifies a `fabric/` binding and nothing else.**
+    /// The shell is the one thing a room's colour is read off, and a pack
+    /// recolours a module by swapping the atlas it is painted from — so
+    /// two tables naming one mesh, two `texture` lines and two `room`
+    /// lines is how the furnace and the cabin come to wear different
+    /// walls. A `room` line beside a cargo binding, or beside no binding,
+    /// is a line that would never apply, and is refused for it.
+    #[test]
+    fn a_room_line_goes_with_a_fabric_binding_and_nowhere_else() {
+        let one = |lines: &str| {
+            parse(&format!(
+                "{PACK}\n[asset.panel]\npack = \"demo\"\nsource = \"a.fbx\"\n{lines}"
+            ))
+        };
+        let furnace = one("dresses = \"fabric/wall\"\nroom = \"burner\"\n").expect("a binding");
+        assert_eq!(furnace.assets["panel"].room, Some("burner".to_owned()));
+        let everyone = one("dresses = \"fabric/wall\"\n").expect("a binding");
+        assert_eq!(everyone.assets["panel"].room, None);
+        for (bad, why) in [
+            (
+                "dresses = \"cargo/suspicious_crate\"\nroom = \"burner\"\n",
+                "cargo",
+            ),
+            ("room = \"burner\"\n", "dresses"),
+            (
+                "dresses = \"fabric/wall\"\nroom = \"Burner\"\n",
+                "lowercase",
+            ),
+            ("dresses = \"fabric/wall\"\nroom = \"\"\n", "lowercase"),
+        ] {
+            let complaint = one(bad)
+                .err()
+                .unwrap_or_else(|| panic!("`{bad}` was accepted"));
+            assert!(complaint.message.contains(why), "{complaint}");
+        }
     }
 
     /// **A mesh that is not the size its `fill` says it is stops the

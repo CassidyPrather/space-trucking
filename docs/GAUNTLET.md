@@ -1295,6 +1295,19 @@ they are not closed, only bounded:
   `.github/workflows/ci-cd.yml` installs no `xvfb` and no Vulkan ICD, so
   the flicker and light-pop detectors run only when a human or an agent
   runs them.
+- **A dressed shell is out of sight, like a dressed crate's mesh.** The
+  fill family swaps what a *cargo kind's* body is; nothing swaps what a
+  wall is. Under `--features art` a room's walls, deck, deckhead and
+  doorways may be bought modules stood in the frames `room::cladding`
+  describes (docs/ART_PIPELINE.md, "The fabric namespace"), and the
+  sweep goes on measuring the whitebox slabs and seam parts those
+  modules replace. What holds the frames is their own guards in
+  `room::tests` — every wall's panels tile its run and leave a mated
+  doorway open, the tiles cover each pan once, a shut hatch is covered
+  once — and what holds the relief inside the notch is a manifest
+  number the resolver checks against the mesh, not a rule here. A
+  module that protruded into a berth would be found by an eye and by
+  nothing in this file.
 - **The placement bench's overlay has never been looked at.** The sweep
   stages rooms, and the bench (`crate::nudge`, `--nudge` under
   `--features art`) is a dev mode that stages nothing: its rods, rings,

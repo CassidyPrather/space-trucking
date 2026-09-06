@@ -925,14 +925,12 @@ pub fn spawn(
         GlobalZIndex(2),
     ));
 
-    // --- Structure: every axis-aligned mass, from the one data source.
-    for slab in structure() {
-        commands.spawn((
-            Mesh3d(skin.cube.clone()),
-            MeshMaterial3d(skin.hull.clone()),
-            Transform::from_translation(slab.center).with_scale(slab.size),
-        ));
-    }
+    // --- Structure: none of it here any more. The cabin's hull — every
+    // axis-aligned mass `structure` lists, ribs and apertures included —
+    // is stamped by `room::rebuild` with every other room's shell, so
+    // that the one place deciding whether a plane is cut or bought
+    // (`room::shell`) is one place. The list itself is still this
+    // module's, because it is what the gauntlet and the exterior read.
     // Ceiling pipes: oriented decor, outside the slab list on purpose.
     commands.spawn((
         Mesh3d(meshes.add(Cylinder::new(0.09, 4.3))),
@@ -976,57 +974,10 @@ pub fn spawn(
         mat: tile_mat,
         level: 0.0,
     });
-    for (station, surface) in bay() {
-        // Backer plate: a worn slab just behind the mapped quad — except
-        // on the wall and ceiling charts, whose backing IS the hull the
-        // structure already built; a second slab would swallow the trim.
-        //
-        // It is punched by the cabin's own apertures for the same reason
-        // the hull is: a backer that spanned the whole aft wall would
-        // quietly board up every doorway cut through it, which is exactly
-        // the defect this pass found by looking through one.
-        if matches!(station, Station::BayWall | Station::BayFloor) {
-            let n = station.inward(&surface);
-            // The plate rides `layer::BACKER`, and it is thin on purpose:
-            // a slab thick enough to reach the hull behind it gets sliced
-            // at the hull's own plane by the aperture punch, and the
-            // remainder's face and the hull's face are then one plane —
-            // the deck's flicker. Face a step under the chart, back still
-            // clear of the hull, and the punch has nothing to slice.
-            let deep = layer::BACKER_T;
-            // Overlap along the chart's u only. Growing along v would
-            // hang the aft plate's skirt below the deck, where the
-            // doorway punch would cut it off flush with the floor and
-            // put two upward faces on one plane all over again.
-            let flat = Vec3::new(
-                surface.half_u.length().mul_add(2.0, 0.08),
-                surface.half_v.length() * 2.0,
-                deep,
-            );
-            // The charts are axis-aligned, so the plate's world extent is
-            // its own frame's, spun onto the world axes.
-            let size = (surface.orientation() * flat).abs();
-            let center = surface.center - n * deep.mul_add(0.5, layer::BACKER);
-            let material = match station {
-                Station::BayFloor => skin.desk.clone(),
-                _ => skin.plate.clone(),
-            };
-            let mut parts = vec![(center, size)];
-            for (lo, hi) in crate::room::cabin_holes() {
-                parts = parts
-                    .into_iter()
-                    .flat_map(|(c, s)| crate::room::punch(c, s, lo, hi))
-                    .collect();
-            }
-            for (c, s) in parts {
-                commands.spawn((
-                    Mesh3d(skin.cube.clone()),
-                    MeshMaterial3d(material.clone()),
-                    Transform::from_translation(c).with_scale(s),
-                ));
-            }
-        }
-    }
+    // The backer plates behind the aft wall's chart and the deck's went
+    // with the hull (`room::cabin_backers`): a backer stands in the notch
+    // a bought panel's relief fills, so whether to draw one is the same
+    // question as whether to draw the hull behind it.
     {
         let charts = bay();
         let (_, wall) = charts[0];

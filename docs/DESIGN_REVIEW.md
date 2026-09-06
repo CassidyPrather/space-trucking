@@ -129,6 +129,14 @@ changing; remove a line only by shipping it or striking it in review.
 - Wallpaper and larger coverings: rugs and paints shipped as the
   dressing layer (BAY.md); wallpaper is the same shape with a bigger
   footprint, waiting on a reason
+- The rest of the shell's dressing (docs/ART_PIPELINE.md, "The fabric
+  namespace"): the nudge bench takes cargo and not panels, so a panel's
+  four numbers are typed and checked by `resolve` rather than nudged;
+  a wall is one panel repeated, with no alternation between the pack's
+  variants (`SM_Bld_Wall_01_Alt` is catalogued and unused); the vertical
+  seam gets no surround when a hatch or ladder is mated, because no
+  swept scene mates one yet; and the pack's emissive strips are painted
+  rather than lit, which the lamps-are-cargo law would want anyway
 - Additional star systems
 - More events (mimics, ad bots, hull breaches, secret color-code objectives)
 - Rat-gnaw repair: DESIGN.md's "requiring repair" reading is deliberately
@@ -142,6 +150,39 @@ The companion to the list above. Where a choice had a defensible answer
 and no taste in it, it was made rather than escalated — but made in the
 open, so catching up is a scan of this list and not a feat of memory.
 Every line is reversible; strike one by overruling it.
+
+- **The shell is dressed by role, and a room's colour is an atlas.** A
+  `fabric/wall` binding dresses every wall aboard; `room::cladding`
+  decides how many panels a wall takes and how wide each is. The
+  alternative — one binding per room kind per wall — is six times the
+  manifest for the same six meshes. A room kind that wants its own look
+  says `room = "burner"` on a second table naming the same mesh with a
+  different `texture`, because that is how the pack itself recolours: one
+  atlas of flat swatches, shipped repainted, with the UVs held fixed.
+  Nothing tints or repaints a bought material.
+- **A wall panel's relief is squeezed into the notch**, by the shipped
+  `scale` on z, so a kit plinth and cornice that stand a fifth of a
+  metre proud at natural depth stand three centimetres proud here. The
+  alternative was a shelf through every crate berthed along a wall; the
+  choice is a manifest number and the law it keeps is the notch's.
+- **`SM_Bld_Wall_Doorframe_03` dresses nothing**, though it was the
+  first module asked for. Measured, its wide hatch is a recess and not
+  a hole — every `Doorframe_0N` in the pack is sealed — so a door drawn
+  shut takes `Doorframe_01`'s hub panel, and a mated doorway takes the
+  `Doorframe_Outer_01` through-frame, scaled so its opening is the
+  two-cell aperture and run through the padding cell as the passage.
+- **The lintel over a mated doorway is the wall panel upside down.** The
+  panel's skirt then stands above the deckhead where nothing sees it and
+  its cornice becomes the beam over the door; the alternative, a panel
+  the right way up shrunk to two cells, hangs its plinth into the top of
+  the doorway.
+- **The cabin's hull is stamped by `room::rebuild` now**, with every
+  other room's shell, so the one place deciding whether a plane is cut or
+  bought is one place. `rig::structure` is still the list — the
+  gauntlet and the exterior read it — and its slabs are drawn exactly as
+  before when nothing is bought. The backer plates behind the cabin's
+  aft wall and deck went with it: a backer stands in the notch a panel's
+  relief fills.
 
 - **A dressed covering keeps its one declared body in both forms**, and
   the two whitebox meta-guards ask their questions in the undressed

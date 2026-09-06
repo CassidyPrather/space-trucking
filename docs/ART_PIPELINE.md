@@ -833,11 +833,12 @@ dresses = "cargo/suspicious_crate"
 ```
 
 The namespace is there from the first line so that `fitting/...` can
-exist later without re-spelling anything; `cargo` is the only one today
-and anything else is a refusal naming what it knows. The name after the
-slash is the cargo kind's own spelling in snake case — `Kind::BayWindow`
-is `bay_window` — derived rather than tabled, so no second list can fall
-out of step with `Kind::ALL`.
+exist later without re-spelling anything; `cargo` and `fabric` are the
+two today ([the fabric namespace](#the-fabric-namespace-walls-deck-deckhead-and-doorways)
+is the second) and anything else is a refusal naming what it knows. The
+name after the slash is the cargo kind's own spelling in snake case —
+`Kind::BayWindow` is `bay_window` — derived rather than tabled, so no
+second list can fall out of step with `Kind::ALL`.
 
 The resolver checks the *shape* of a binding and deliberately not its
 meaning: `xtask` cannot see a `cargo::Kind` and should not learn to. The
@@ -858,6 +859,131 @@ paint_tin           luminous_paint    window           chart_tank
 eta_gauge           dest_preview      launch_lever     porthole
 bay_window
 ```
+
+### The fabric namespace: walls, deck, deckhead and doorways
+
+Cargo is dressed one mesh per kind. The room's shell is dressed one mesh
+per **role**, and the room decides how many of each it needs:
+
+```toml
+[asset.wall_panel]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+dresses = "fabric/wall"
+```
+
+That one table dresses every wall of every room aboard. `room::cladding`
+turns each placed room into a list of **frames** — a box with a middle,
+half-extents and a turn, the same vocabulary a berth is — and `rebuild`
+stands the declared module in each frame with the same four numbers and
+the same arithmetic that stands a crate in a berth
+(`art::Dressing::pose_in`). `scale` is mesh units per frame half-unit, so
+a panel declared to fill its frame fills a long wall and a short one
+alike, stretched to each. The six roles:
+
+| role | what fills it | the frame |
+| --- | --- | --- |
+| `fabric/wall` | a wall panel | a run of wall: from the chart plane out to the middle of the padding cell; from a skirt under the deck to the deckhead; as wide as the run divided by the nearest whole number of panels. Local `+z` points **into the room**. Also stood, upside down, over every mated doorway as the lintel |
+| `fabric/floor` | a deck tile | a rectangle of the deck pan, cut round the hatch; the pan's own thickness, top at the deck |
+| `fabric/ceiling` | a deckhead tile | the same over the deckhead, cut round the ladder port; also the cover over a ladder port drawn shut |
+| `fabric/door` | a sealed panel | a door drawn shut: the two-cell aperture and a skirt under it, the whitebox leaf's thickness proud of the box face |
+| `fabric/doorway` | a surround | a mated door: the aperture grown half a cell each side, three quarters under the deck and a quarter over the head, running through the pad from this room's chart plane to the other's. Drawn once, by the room that draws the passage |
+| `fabric/hatch` | a hatch cover | a hatch drawn shut: its aperture, the pan's thickness |
+
+Two numbers about the frames are the pack's and not the room's, and they
+are constants in `room.rs` with the reason beside them: a wall panel is
+**five cells** wide at its natural size (this kit is built to a grid, and
+the grid is the cargo cell — one Synty unit is 0.55 m, a panel is 5 × 4
+above the deck and a room is 4 high), and a panel carries a **skirt a
+quarter of its height** under the floor line. The frame reaches under
+the deck by that much so that `fill = 1` on the height axis means the
+whole module, because `fill` may not exceed one: a module that outgrows
+its frame wants a bigger frame, and this is it.
+
+**Where a module sits in its frame is the manifest's business**, exactly
+as it is for cargo, and the shipped numbers make one choice worth
+knowing about. Every panel in this kit carries a plinth at the floor
+line and a cornice under the deckhead that stand a fifth of a metre
+proud of the panel body. The game hangs cargo on its walls with its back
+a hair in front of the hull's own face and stands cargo on the deck's
+edge cells, so a plinth at natural depth is a shelf through every crate
+along the wall. The shipped `scale` on `z` squeezes the relief to about
+an eighth, which keeps every bit of it inside the notch the room's paint
+already rides in (`room::NOTCH`): the panel body lands on the box face
+where the whitebox hull's face was, the cornice reaches the chart plane,
+and nothing a berth composes is touched. A wall reads as panelling. It
+is a number on a line, and a wall that may protrude is a different
+number.
+
+**A shut door is a panel and an open one is a frame, and the pack
+decided that.** Every `SM_Bld_Wall_Doorframe_0N` in this pack is
+sealed — `_03`'s wide hatch is a recess a few units deep, not a hole —
+so those dress a door drawn shut, and a mated doorway takes a
+`Doorframe_Outer` surround, which is a through-frame with a reveal. The
+whitebox parts a module stands in for say so on the part
+(`room::SeamPart::replaced_by`): the stiles, lintel and passage of a
+doorway, the leaf and rivets of a shut door, the sunk leaf, coaming,
+hinges and pull of a shut hatch. The parts that are *readings* — the
+jamb lamp, the amber latch and its plate, the tread — name nothing and
+are drawn under any dressing. A role nobody declared is drawn by the
+whitebox, so a manifest with walls and no floor stands bought walls on
+a cut deck, and a doorway nobody bought a surround for keeps its stiles.
+
+#### `room`: one mesh, many colours
+
+```toml
+[asset.wall_panel_burner]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_02_A.png"
+dresses = "fabric/wall"
+room = "burner"
+```
+
+A `fabric/` binding may carry a `room` line naming a room kind by its
+own spelling in snake case (`cabin`, `burner`, `trade`, `wreck`,
+`parlor`, `pump`), and a table with one dresses that kind alone, winning
+over the table without one. **That is how a room gets its own colour,
+and it is the only way a bought mesh gets one.** Synty's UV strategy is
+that every face of every mesh in a pack is mapped onto a flat swatch of
+one shared atlas, and the pack ships the same atlas repainted under
+`Textures/Alts` — `_01_B` through `_01_F` recolour the accents, `_02`,
+`_03` and `_04` change the family — with the swatch layout held fixed so
+that any mesh reads correctly against any of them. A recolour is
+therefore a second `texture` line on the same mesh and nothing else. The
+cache is addressed by the atlas as well as the mesh, so the two tables
+are two `.glb` files and the mesh is converted once per colour.
+
+The manifest repaints nothing, and will not: the palette governs the
+materials the cabin authors, a bought mesh speaks its atlas, and
+choosing which atlas is the whole of the cabin's say
+(docs/ART_DIRECTION_3D.md, "Two voices"). `room` is refused beside a
+`cargo/` binding and beside no binding at all, because a crate is the
+same crate in every room and a line that could never apply is this
+file's idea of a bug.
+
+The cabin's guard over this file
+(`art::tests::every_dressed_name_in_the_manifest_is_a_body_this_game_has`)
+reads the roles and the room kinds the same way it reads cargo names:
+a `fabric/gable`, or a `room = "attic"`, is a stranger it refuses.
+
+One thing about looking at it: **`--shot` waits for the art.** The
+screenshot's settle is forty-five pinned frames, and on a small machine a
+dozen scenes with a 2048² atlas each are still loading then, so a shot of
+a dressed room used to be a picture of the void. Under `--features art`
+the shot fires once every scene the index named has loaded (or failed,
+which is a whitebox and a sentence on stderr). The first dressed room
+was photographed on a 7 GB laptop, where the dressed build also runs
+close to the memory the integrated GPU shares with everything else — a
+dressed session there is worth keeping short.
+
+**What is not there yet**, said plainly: the bench (`--nudge`) takes
+cargo and not panels, so a panel's numbers are typed; a wall is one
+panel repeated, with no alternation between variants; and the pack's
+emissive strips are painted, not lit, because the converter carries the
+base atlas and nothing else — which is also what the lamps-are-cargo law
+would want.
 
 ### The promise, and where it meets the fact
 

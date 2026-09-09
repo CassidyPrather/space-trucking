@@ -535,7 +535,7 @@ struct DressForm {
 /// `mat` would be `None` for the reason [`LampGlow`]'s is, the day a
 /// covering is dressed. None is today: what luminous paint lights with
 /// is a painted deck cell, and no pack sells a coat (art/manifest.toml,
-/// and docs/ART_PIPELINE.md's "Light is not a drawing").
+/// and `docs/ART_PIPELINE.md`'s "Light is not a drawing").
 #[derive(Component)]
 struct CoatGlow {
     piece: u32,

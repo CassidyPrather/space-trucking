@@ -2155,7 +2155,10 @@ fn doorways(
                 cell.mul_add(-DOOR_FLANK, column.0),
                 cell.mul_add(DOOR_FLANK, column.1),
             ),
-            (cell.mul_add(-DOOR_SKIRT, deck), cell.mul_add(DOOR_HEAD, head)),
+            (
+                cell.mul_add(-DOOR_SKIRT, deck),
+                cell.mul_add(DOOR_HEAD, head),
+            ),
             depth,
             false,
         ));

@@ -1213,7 +1213,10 @@ mod tests {
     #[test]
     fn a_leaf_goes_with_a_fabric_binding_and_survives_the_index() {
         for (tail, wrong) in [
-            ("dresses = \"cargo/crate_small\"\nleaf = \"SM_Door\"\n", "cargo"),
+            (
+                "dresses = \"cargo/crate_small\"\nleaf = \"SM_Door\"\n",
+                "cargo",
+            ),
             ("leaf = \"SM_Door\"\n", "dresses"),
             ("dresses = \"fabric/doorway\"\nleaf = \"\"\n", "empty"),
         ] {

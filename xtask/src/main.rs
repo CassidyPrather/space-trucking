@@ -404,6 +404,7 @@ fn index_all(
             sha256: one.digest.clone(),
             dresses: asset.dresses.clone(),
             room: asset.room.clone(),
+            leaf: asset.leaf.clone(),
             scale: asset.scale,
             offset: asset.offset,
             rotation: asset.rotation,

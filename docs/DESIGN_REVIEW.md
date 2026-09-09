@@ -165,12 +165,19 @@ Every line is reversible; strike one by overruling it.
   metre proud at natural depth stand three centimetres proud here. The
   alternative was a shelf through every crate berthed along a wall; the
   choice is a manifest number and the law it keeps is the notch's.
-- **`SM_Bld_Wall_Doorframe_03` dresses nothing**, though it was the
-  first module asked for. Measured, its wide hatch is a recess and not
-  a hole — every `Doorframe_0N` in the pack is sealed — so a door drawn
-  shut takes `Doorframe_01`'s hub panel, and a mated doorway takes the
-  `Doorframe_Outer_01` through-frame, scaled so its opening is the
-  two-cell aperture and run through the padding cell as the passage.
+- **A door is one mesh in two states, and that corrected an earlier
+  reading of this pack.** The note here used to say every
+  `Doorframe_0N` was sealed, so a shut door took `Doorframe_01`'s hub
+  panel and a mated one took the `Doorframe_Outer_01` through-frame. It
+  was measured off the whole file, and the whole file includes the leaf:
+  raycast the frame alone and there is an opening behind it, with the
+  leaf hung in it as a child object (`SM_Bld_Wall_Door_0N`). The cost of
+  the misreading was visible — a doorway swapped one mesh for a
+  different one when a room docked, so the wall appeared to change
+  shape. Now `Doorframe_02` dresses both roles from one box, and
+  `fabric/doorway` hides the leaf by name (`art::Open`). `_02` rather
+  than `_01` because its opening is 2.61 × 2.92 in mesh units against a
+  square two-cell aperture, a 12% stretch where `_01`'s would be 53%.
 - **The lintel over a mated doorway is the wall panel upside down.** The
   panel's skirt then stands above the deckhead where nothing sees it and
   its cornice becomes the beam over the door; the alternative, a panel

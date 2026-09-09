@@ -559,36 +559,62 @@ rotation = [0.0, 0.0, 0.0]
 fill = [1.0, 0.8, 1.0]
 dresses = "fabric/ceiling"
 
-# A door drawn shut: a sealed panel with a round hub between two
-# canisters. The pack's other door panels are sealed too — including
-# `SM_Bld_Wall_Doorframe_03`, whose wide hatch is a recess, not a hole —
-# which is why the shut door is a panel and the OPEN doorway below is an
-# `Outer` frame. Shrunk from five cells to the two-cell aperture.
-[asset.door_sealed]
+# THE DOOR, and it is one mesh in two tables.
+#
+# `SM_Bld_Wall_Doorframe_02` is a panel with a stepped archway cut
+# THROUGH it and the leaf hung in that opening as its own object,
+# `SM_Bld_Wall_Door_01`. That is the pack's own convention and every
+# `Doorframe_0N` here follows it: the frame is a real hole and the leaf
+# is a child that fills it, which is why measuring the file as one body
+# reads "sealed" and measuring the frame alone reads "open". Synty ship
+# no blendshape and no animation for it — the slide is the buyer's.
+#
+# So the two states are ONE module and one box: `fabric/door` is this
+# mesh as it comes, and `fabric/doorway` is the same mesh with the leaf
+# hidden by the `leaf` line below (`art::Open`). A door that is shut on
+# one dock and open on the next is then a leaf coming and going, rather
+# than one frame swapped for a different one — which is what it used to
+# be, and it read as the wall changing shape.
+#
+# The numbers. Both tables carry the same four, because the frame stands
+# in the same box in both states: `scale` puts the archway's own opening
+# EXACTLY on the two-cell aperture, 1.1 m square, measured by raycast
+# rather than guessed (the hole is 2.60986 × 2.92498 in mesh units,
+# which is why x and y are not one number). `offset` on y carries the
+# hole's centre onto the aperture's, the frame being taller above its
+# opening than below it. `scale` on z fills the wall's own depth slice —
+# chart plane to the middle of the padding cell — so a mated doorway's
+# two mouths meet back to back in the middle of the pad where nothing
+# sees the join, and a shut door stands no further out of its hull than
+# the wall beside it. The mesh is symmetric front to back, so no
+# rotation: both rooms see the same face.
+[asset.door_frame]
 pack = "scifi_space"
-source = "SourceFiles/FBX/SM_Bld_Wall_Doorframe_01.fbx"
+source = "SourceFiles/FBX/SM_Bld_Wall_Doorframe_02.fbx"
 texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
-sha256 = "da4b34787ac2cfcf329f63866f11e547ef8c5222dcdbc86f22cd6469703b7669"
-scale = [0.4, 0.4, 2.746]
-offset = [0.0, 0.0, 0.0]
+sha256 = "943a1c072bbb24893d43d581e096e2ad106ba831a7c53298bc1cd306a61bd541"
+scale = [0.383162, 0.364675, 2.296052]
+offset = [0.0, -0.067312, 0.0]
 rotation = [0.0, 0.0, 0.0]
-fill = [1.0, 1.0, 1.0]
+fill = [0.957906, 0.911687, 1.0]
 dresses = "fabric/door"
 
-# The surround of a mated doorway: a plain square frame with a chamfered
-# reveal and a low sill, run through the padding cell so its reveal IS
-# the passage. Scaled so its opening is exactly the two-cell aperture;
-# the frame round it stands proud of both rooms' walls.
-[asset.door_surround]
+# The same frame, in a mated doorway, with its leaf hidden. Every number
+# above, repeated verbatim on purpose: the two states are one box, and
+# two tables that drifted apart would be a doorway that jumps when a
+# room docks. The `leaf` line is the only difference, and it is the
+# whole mechanism.
+[asset.door_frame_open]
 pack = "scifi_space"
-source = "SourceFiles/FBX/SM_Bld_Wall_Doorframe_Outer_01.fbx"
+source = "SourceFiles/FBX/SM_Bld_Wall_Doorframe_02.fbx"
 texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
-sha256 = "44c5fe089df2499fb74125488efd5e25b0e316f2a0045e6725e6916b8517d724"
-scale = [0.2878, 0.3359, 1.404]
-offset = [-0.002, -0.0941, 0.0]
+sha256 = "943a1c072bbb24893d43d581e096e2ad106ba831a7c53298bc1cd306a61bd541"
+scale = [0.383162, 0.364675, 2.296052]
+offset = [0.0, -0.067312, 0.0]
 rotation = [0.0, 0.0, 0.0]
-fill = [0.7778, 0.9078, 1.0]
+fill = [0.957906, 0.911687, 1.0]
 dresses = "fabric/doorway"
+leaf = "SM_Bld_Wall_Door_01"
 
 # The cover over a shut deck hatch: a recessed access plate in a lit
 # rim, standing a few centimetres proud of the deck.

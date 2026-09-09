@@ -143,6 +143,14 @@ pub struct Asset {
     /// is what tells them apart. Checked for shape here; which kinds the
     /// game has is the cabin's own guard, like a `dresses` name.
     pub room: Option<String>,
+    /// **Which node of the mesh is a door's leaf**, and only for a
+    /// `fabric/` binding. A kit's door frame ships its leaf as a child
+    /// object of the frame, sitting shut over a real opening, so the
+    /// same file is a shut door with the leaf drawn and an open doorway
+    /// with it hidden — and this line is how the game knows which node
+    /// to hide. Checked for shape here, like `room`; which roles draw a
+    /// leaf open is the cabin's own question.
+    pub leaf: Option<String>,
     /// Multiplied onto the size the game's own description asks for.
     pub scale: [f32; 3],
     /// Shifted, in the description's frame, after scaling.
@@ -243,6 +251,7 @@ impl Manifest {
                 .unwrap_or_default();
             let dresses = draft.take_optional_str("dresses", "asset", &id, path)?;
             let room = draft.take_optional_str("room", "asset", &id, path)?;
+            let leaf = draft.take_optional_str("leaf", "asset", &id, path)?;
             let scale = draft.take_triple("scale", "asset", &id, path, [1.0; 3])?;
             let offset = draft.take_triple("offset", "asset", &id, path, [0.0; 3])?;
             let rotation = draft.take_triple("rotation", "asset", &id, path, [0.0; 3])?;
@@ -269,7 +278,13 @@ impl Manifest {
                     return Err(complain(line, format!("`{part}` {reason}")));
                 }
             }
-            check_binding(path, line, dresses.as_deref(), room.as_deref())?;
+            check_binding(
+                path,
+                line,
+                dresses.as_deref(),
+                room.as_deref(),
+                leaf.as_deref(),
+            )?;
             if !sha256.is_empty() && !is_digest(&sha256) {
                 return Err(complain(
                     line,
@@ -311,6 +326,7 @@ impl Manifest {
                     sha256,
                     dresses,
                     room,
+                    leaf,
                     scale,
                     offset,
                     rotation,
@@ -502,14 +518,15 @@ const NAMESPACES: [&str; 2] = ["cargo", "fabric"];
 /// The namespace whose bindings a `room` line may qualify.
 const ROOMED: &str = "fabric";
 
-/// A `dresses` line and the `room` line beside it, refused together
-/// where either cannot be used: the binding's shape first, then the room
-/// against the binding.
+/// A `dresses` line and the `room` and `leaf` lines beside it, refused
+/// together where any cannot be used: the binding's shape first, then
+/// each of the other two against the binding.
 fn check_binding(
     path: &Path,
     line: usize,
     dresses: Option<&str>,
     room: Option<&str>,
+    leaf: Option<&str>,
 ) -> Result<(), Complaint> {
     let complain = |message: String| Complaint {
         file: path.to_path_buf(),
@@ -526,7 +543,46 @@ fn check_binding(
     {
         return Err(complain(format!("`room` {reason}")));
     }
+    if let Some(leaf) = leaf
+        && let Some(reason) = leaf_trouble(dresses, leaf)
+    {
+        return Err(complain(format!("`leaf` {reason}")));
+    }
     Ok(())
+}
+
+/// Why a `leaf` line cannot be used, or `None` if it can.
+///
+/// The same shape of question as [`room_trouble`], for the same reason:
+/// a leaf is a node of a module of the room's fabric, so a `leaf` line
+/// beside a cargo binding, or beside no binding, is a line that could
+/// never apply. Whether the node is IN the mesh is not asked here — the
+/// resolver never opens a converted file — and the game says so on
+/// stderr when a doorway it was told to draw open has no such node.
+fn leaf_trouble(dresses: Option<&str>, leaf: &str) -> Option<String> {
+    match dresses.and_then(|binding| binding.split_once('/')) {
+        Some((namespace, _)) if namespace == ROOMED => {}
+        Some((namespace, _)) => {
+            return Some(format!(
+                "is `{leaf}`, and a `leaf` line goes with a `{ROOMED}/` binding, not a \
+                 `{namespace}/` one: a leaf is the door of a doorway, and cargo has none"
+            ));
+        }
+        None => {
+            return Some(format!(
+                "is `{leaf}`, and nothing here dresses anything; a `leaf` line names the \
+                 node a `{ROOMED}/doorway` binding draws open, so it wants a `dresses` \
+                 line beside it"
+            ));
+        }
+    }
+    if leaf.trim().is_empty() {
+        return Some(String::from(
+            "is empty, and a leaf is the name of a node in the mesh, like \
+             `SM_Bld_Wall_Door_01`",
+        ));
+    }
+    None
 }
 
 /// Why a `room` line cannot be used, or `None` if it can.
@@ -842,6 +898,9 @@ pub struct Resolved {
     /// Which room kind a `fabric/` binding is for, carried through the
     /// same way. Absent means every room without a line of its own.
     pub room: Option<String>,
+    /// Which node of the mesh is a door's leaf, carried through the same
+    /// way. Absent means the module has no leaf to draw open.
+    pub leaf: Option<String>,
     pub scale: [f32; 3],
     pub offset: [f32; 3],
     pub rotation: [f32; 3],
@@ -885,8 +944,9 @@ pub fn render_index(resolved: &[Resolved]) -> String {
          # read, so a changed pack OR a changed atlas changes the path and nothing\n\
          # stale is read.\n\
          #\n\
-         # `dresses` is which body of the game draws this one, and `room` which room\n\
-         # kind a `fabric/` binding is for. `measured_mid` and\n\
+         # `dresses` is which body of the game draws this one, `room` which room\n\
+         # kind a `fabric/` binding is for, and `leaf` which node of the mesh a\n\
+         # doorway draws open. `measured_mid` and\n\
          # `measured_half` are the tight box the converter reported round the mesh, in\n\
          # the glb's own units — the fact the `fill` promise beside them was checked\n\
          # against. Both are absent where the converter reported nothing.\n",
@@ -902,6 +962,9 @@ pub fn render_index(resolved: &[Resolved]) -> String {
         }
         if let Some(room) = &entry.room {
             let _ = writeln!(text, "room = \"{room}\"");
+        }
+        if let Some(leaf) = &entry.leaf {
+            let _ = writeln!(text, "leaf = \"{leaf}\"");
         }
         let _ = write!(
             text,
@@ -1018,6 +1081,7 @@ pub fn read_index(path: &Path, text: &str) -> Result<Vec<Resolved>, Complaint> {
         let sha256 = draft.take_str("sha256", "asset", &id, path)?;
         let dresses = draft.take_optional_str("dresses", "asset", &id, path)?;
         let room = draft.take_optional_str("room", "asset", &id, path)?;
+        let leaf = draft.take_optional_str("leaf", "asset", &id, path)?;
         let scale = draft.take_triple("scale", "asset", &id, path, [1.0; 3])?;
         let offset = draft.take_triple("offset", "asset", &id, path, [0.0; 3])?;
         let rotation = draft.take_triple("rotation", "asset", &id, path, [0.0; 3])?;
@@ -1029,6 +1093,7 @@ pub fn read_index(path: &Path, text: &str) -> Result<Vec<Resolved>, Complaint> {
             sha256,
             dresses,
             room,
+            leaf,
             scale,
             offset,
             rotation,
@@ -1138,6 +1203,57 @@ mod tests {
         .is_ok());
     }
 
+    /// **A `leaf` line goes with a fabric binding, and is carried
+    /// through.** The leaf is the whole of how one bought door frame is
+    /// both a shut door and an open doorway, so a line naming one beside
+    /// a crate — or beside nothing — is a line that could never apply,
+    /// which is this file's idea of a bug; and one beside a doorway
+    /// reaches the index verbatim, because the game reads the index and
+    /// never the manifest.
+    #[test]
+    fn a_leaf_goes_with_a_fabric_binding_and_survives_the_index() {
+        for (tail, wrong) in [
+            ("dresses = \"cargo/crate_small\"\nleaf = \"SM_Door\"\n", "cargo"),
+            ("leaf = \"SM_Door\"\n", "dresses"),
+            ("dresses = \"fabric/doorway\"\nleaf = \"\"\n", "empty"),
+        ] {
+            let complaint = parse(&format!(
+                "{PACK}\n[asset.door]\npack = \"demo\"\nsource = \"a.fbx\"\n{tail}"
+            ))
+            .err()
+            .unwrap_or_else(|| panic!("a leaf that never applies was accepted: {tail}"));
+            assert!(
+                complaint.message.starts_with("`leaf`") && complaint.message.contains(wrong),
+                "{complaint}"
+            );
+        }
+        let manifest = parse(&format!(
+            "{PACK}\n[asset.door]\npack = \"demo\"\nsource = \"a.fbx\"\n\
+             dresses = \"fabric/doorway\"\nleaf = \"SM_Bld_Wall_Door_01\"\n"
+        ))
+        .expect("a leaf beside a doorway");
+        assert_eq!(
+            manifest.assets["door"].leaf.as_deref(),
+            Some("SM_Bld_Wall_Door_01")
+        );
+        let text = render_index(&[Resolved {
+            id: "door".to_owned(),
+            glb: "glb/door.glb".to_owned(),
+            sha256: "b".repeat(64),
+            dresses: Some("fabric/doorway".to_owned()),
+            room: None,
+            leaf: Some("SM_Bld_Wall_Door_01".to_owned()),
+            scale: [1.0; 3],
+            offset: [0.0; 3],
+            rotation: [0.0; 3],
+            fill: [1.0; 3],
+            measured: None,
+        }]);
+        assert!(text.contains("leaf = \"SM_Bld_Wall_Door_01\""), "{text}");
+        let read = read_index(Path::new("index.toml"), &text).expect("its own dialect");
+        assert_eq!(read[0].leaf.as_deref(), Some("SM_Bld_Wall_Door_01"));
+    }
+
     /// **A path in the manifest is a relative path inside its pack,
     /// spelled with `/`.** One manifest is read on three platforms, and
     /// the two ways to break that are a backslash, which is not a
@@ -1179,6 +1295,7 @@ mod tests {
             sha256: "a".repeat(64),
             dresses: Some("cargo/suspicious_crate".to_owned()),
             room: None,
+            leaf: None,
             scale: [0.013_7, 1.0, 2.5],
             offset: [-0.25, 0.0, 0.125],
             rotation: [0.0, -90.0, 0.0],

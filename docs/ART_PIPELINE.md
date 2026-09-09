@@ -887,8 +887,8 @@ alike, stretched to each. The six roles:
 | `fabric/wall` | a wall panel | a run of wall: from the chart plane out to the middle of the padding cell; from a skirt under the deck to the deckhead; as wide as the run divided by the nearest whole number of panels. Local `+z` points **into the room**. Also stood, upside down, over every mated doorway as the lintel |
 | `fabric/floor` | a deck tile | a rectangle of the deck pan, cut round the hatch; the pan's own thickness, top at the deck |
 | `fabric/ceiling` | a deckhead tile | the same over the deckhead, cut round the ladder port; also the cover over a ladder port drawn shut |
-| `fabric/door` | a sealed panel | a door drawn shut: the two-cell aperture and a skirt under it, the whitebox leaf's thickness proud of the box face |
-| `fabric/doorway` | a surround | a mated door: the aperture grown half a cell each side, three quarters under the deck and a quarter over the head, running through the pad from this room's chart plane to the other's. Drawn once, by the room that draws the passage |
+| `fabric/door` | a door frame, leaf and all | a door drawn shut: the aperture grown a cell each flank, three quarters of a cell under the deck and a cell over the head, in the wall's own depth slice |
+| `fabric/doorway` | the same frame, leaf hidden | a mated door: **the same box**, drawn by each of the two rooms. The `leaf` line names the node to hide |
 | `fabric/hatch` | a hatch cover | a hatch drawn shut: its aperture, the pan's thickness |
 
 Two numbers about the frames are the pack's and not the room's, and they
@@ -916,19 +916,65 @@ and nothing a berth composes is touched. A wall reads as panelling. It
 is a number on a line, and a wall that may protrude is a different
 number.
 
-**A shut door is a panel and an open one is a frame, and the pack
-decided that.** Every `SM_Bld_Wall_Doorframe_0N` in this pack is
-sealed — `_03`'s wide hatch is a recess a few units deep, not a hole —
-so those dress a door drawn shut, and a mated doorway takes a
-`Doorframe_Outer` surround, which is a through-frame with a reveal. The
-whitebox parts a module stands in for say so on the part
+**A shut door and an open one are the same mesh, and the pack decided
+that too.** Every `SM_Bld_Wall_Doorframe_0N` in this kit is a panel with
+a real opening cut through it and the leaf hung in that opening **as its
+own child object**, named `SM_Bld_Wall_Door_0N`. Measure the file as one
+body and it reads sealed; measure the frame alone, by raycast, and the
+opening is there. Synty ship no blendshape and no animation clip for it,
+in the source download or the `.unitypackage` — the slide is the
+buyer's — but the leaf is a node, and a node can be hidden.
+
+So the two states are one module in one box. `fabric/door` is the mesh
+as it comes and `fabric/doorway` is the same mesh with the leaf hidden,
+which is what the manifest's `leaf` line names and `art::Open` does once
+the scene has landed. Each of the two rooms draws its own mouth, both
+reaching the middle of the padding cell, so they meet back to back where
+nothing sees the join.
+
+That is worth stating as a *rule about kits* and not as a fact about one
+file: **a module's states are its nodes**. This repository read "every
+Doorframe is sealed" off a measurement of the whole file for a while,
+and paid for it with a doorway that swapped one mesh for a different one
+at every dock — the wall appeared to change shape when a room came
+alongside. `cargo xtask art dex` counts a file's meshes and does not name
+its objects, which is how the leaf went unseen; when a kit part has a
+moving half, look for it as a child object before concluding it has none.
+
+The whitebox parts a module stands in for say so on the part
 (`room::SeamPart::replaced_by`): the stiles, lintel and passage of a
 doorway, the leaf and rivets of a shut door, the sunk leaf, coaming,
 hinges and pull of a shut hatch. The parts that are *readings* — the
 jamb lamp, the amber latch and its plate, the tread — name nothing and
 are drawn under any dressing. A role nobody declared is drawn by the
 whitebox, so a manifest with walls and no floor stands bought walls on
-a cut deck, and a doorway nobody bought a surround for keeps its stiles.
+a cut deck, and a doorway nobody bought a frame for keeps its stiles.
+
+#### `leaf`: the node a doorway draws open
+
+```toml
+[asset.door_frame_open]
+source = "SourceFiles/FBX/SM_Bld_Wall_Doorframe_02.fbx"
+dresses = "fabric/doorway"
+leaf = "SM_Bld_Wall_Door_01"
+```
+
+One optional key, and only beside a `fabric/` binding — a `leaf` next to
+a crate, or next to no binding at all, is refused the way a stray `room`
+line is, because it is a line that could never apply.
+
+The resolver checks that shape and **never opens the mesh to look for
+the node**: it has no reader for a converted file and wants none. So the
+first place the name meets the file is the running game, and a doorway
+whose leaf is misspelled is a doorway drawn shut — which is the one
+thing the key exists to prevent. `art::open_doors` therefore says so on
+stderr, once, naming the node it could not find, and leaves the frame as
+it came.
+
+The key is carried on every binding and read by `fabric/doorway` alone.
+That asymmetry is deliberate: the shut table and the open table are the
+same mesh with the same four overrides, and what separates them is the
+role, not the numbers.
 
 #### `room`: one mesh, many colours
 

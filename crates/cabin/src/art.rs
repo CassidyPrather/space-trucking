@@ -109,10 +109,14 @@ pub enum Fabric {
     Floor,
     /// A deckhead tile.
     Ceiling,
-    /// What fills a door drawn shut: a sealed panel over the aperture.
+    /// What fills a door drawn shut: a door frame over the aperture with
+    /// its leaf in it. The same frame as [`Fabric::Doorway`]'s, in the
+    /// same box, so a door that is shut on one dock and open on the next
+    /// is one frame whose leaf comes and goes rather than two frames.
     Door,
-    /// The surround of a mated doorway, running through the padding cell
-    /// from one room's face to the other's.
+    /// A mated doorway's mouth: the same frame, drawn open. A module
+    /// with a `leaf` line hides that node here (`loading::Open`); one
+    /// without is a frame with a hole in it, which is also open.
     Doorway,
     /// What fills a hatch drawn shut: a cover in the deck's aperture.
     Hatch,
@@ -203,6 +207,13 @@ pub struct Dressing {
     /// its own middle — the only honest thing to do with a body whose
     /// size nobody knows.
     pub measured: Option<(Vec3, Vec3)>,
+    /// **The node of the scene that is a door's leaf**, where the module
+    /// has one. A kit ships a door as a frame with the leaf a child
+    /// object of it, shut over a real opening; naming the node is what
+    /// lets one bought frame dress both a shut door and an open doorway.
+    /// Read by [`Fabric::Doorway`] alone — a doorway hides it — and
+    /// carried, unread, on every other binding.
+    pub leaf: Option<String>,
 }
 
 impl Dressing {
@@ -410,6 +421,7 @@ impl Dressings {
                 rotation: table.triple("rotation").unwrap_or(Vec3::ZERO),
                 fill: table.triple("fill").unwrap_or(Vec3::ONE),
                 measured: mid.zip(half),
+                leaf: table.string("leaf").map(str::to_owned),
             };
             if let Some(name) = binding.strip_prefix("cargo/") {
                 let Some(kind) = kind_named(name) else {
@@ -776,7 +788,7 @@ fn number(value: f32) -> String {
 // ------------------------------------------------------- the loading half --
 
 #[cfg(feature = "art")]
-pub use loading::{Clad, Dressed, Worn, cache_root, plugin};
+pub use loading::{Clad, Dressed, Open, Worn, cache_root, plugin};
 
 #[cfg(feature = "art")]
 mod loading {
@@ -918,6 +930,36 @@ mod loading {
     #[allow(dead_code)]
     pub struct Clad(pub Fabric);
 
+    /// **A bought door frame standing in a mated doorway**, with the name
+    /// of the node in its scene that is the leaf. Put beside [`Clad`] on
+    /// the root of a `fabric/doorway` module whose declaration carries a
+    /// `leaf` line, and read by [`open_doors`], which hides that node
+    /// once the scene has landed.
+    ///
+    /// The state is the role's, not the module's: the same file is a
+    /// shut door in a `fabric/door` frame and an open one here, and what
+    /// differs is exactly this component being on the root.
+    #[derive(Component, Clone, Debug)]
+    pub struct Open {
+        /// The node to hide, by its glTF name.
+        pub leaf: String,
+        /// Whether the scene has arrived and been looked through once —
+        /// so a doorway with no such node is said on stderr once rather
+        /// than every frame.
+        looked: bool,
+    }
+
+    impl Open {
+        /// A doorway to draw open, by the name of its leaf.
+        #[must_use]
+        pub const fn new(leaf: String) -> Self {
+            Self {
+                leaf,
+                looked: false,
+            }
+        }
+    }
+
     /// Read the index at boot and ask for every scene it names.
     ///
     /// **Every way this can go wrong ends in the whitebox.** No cache
@@ -944,7 +986,8 @@ mod loading {
                 mask_dressed
                     .in_set(Phase::View)
                     .before(crate::outline::paint),
-            );
+            )
+            .add_systems(Update, open_doors.in_set(Phase::View));
     }
 
     pub(super) fn load_index(
@@ -1078,6 +1121,58 @@ mod loading {
             }
         }
     }
+
+    /// **Draw every open doorway open**: hide the leaf of each bought
+    /// door frame standing in a mated doorway.
+    ///
+    /// The frame arrives as a scene, frames after its root was spawned,
+    /// so this walks the root's descendants rather than acting at spawn
+    /// — and re-walks every frame for the reason [`mask_dressed`] does:
+    /// a scene that lands late or is copied in fresh by a hot reload
+    /// gets its leaf hidden again for nothing. The walk is a handful of
+    /// door roots with a couple of nodes each.
+    ///
+    /// **A doorway with no such node is said once and drawn as it
+    /// came.** The manifest names the leaf and the resolver checks the
+    /// line's shape and never opens the mesh, so the first place the
+    /// name meets the file is here; a frame whose leaf is misspelled is
+    /// a doorway drawn shut, which is the one thing a `leaf` line exists
+    /// to prevent, and it is worth a sentence on stderr.
+    pub(super) fn open_doors(
+        mut doorways: Query<(Entity, &mut Open, &Name)>,
+        kin: Query<&Children>,
+        mut nodes: Query<(&Name, &mut Visibility)>,
+    ) {
+        for (root, mut open, what) in &mut doorways {
+            let mut landed = false;
+            let mut hidden = 0;
+            for node in kin.iter_descendants(root) {
+                landed = true;
+                let Ok((name, mut visibility)) = nodes.get_mut(node) else {
+                    continue;
+                };
+                if name.as_str() != open.leaf {
+                    continue;
+                }
+                hidden += 1;
+                if *visibility != Visibility::Hidden {
+                    *visibility = Visibility::Hidden;
+                }
+            }
+            if !landed || open.looked {
+                continue;
+            }
+            open.looked = true;
+            if hidden == 0 {
+                eprintln!(
+                    "art: `{what}` is drawn open, and its scene has no node called `{}` to \
+                     hide — the doorway keeps its leaf. The manifest's `leaf` line names a \
+                     node of the mesh; `cargo xtask art dex` lists what a file is made of.",
+                    open.leaf
+                );
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1101,6 +1196,30 @@ mod tests {
     /// agrees with itself.
     #[cfg(feature = "art")]
     fn unit_cube_glb() -> Vec<u8> {
+        cube_glb("\"scenes\":[{\"nodes\":[0]}],\"nodes\":[{\"mesh\":0}],")
+    }
+
+    /// **A door frame as a binary glTF**: one cube named for the frame
+    /// with a second cube named for the leaf hung under it, which is the
+    /// shape every `SM_Bld_Wall_Doorframe_0N` in the Synty kit arrives
+    /// in — a frame with a real opening and the leaf a CHILD object
+    /// sitting shut in it.
+    ///
+    /// The whole of what `art::Open` is about is that shape, so the
+    /// fixture has to have it. A single-node cube would let the pass
+    /// pass by finding nothing and hiding nothing.
+    #[cfg(feature = "art")]
+    fn door_frame_glb() -> Vec<u8> {
+        cube_glb(
+            "\"scenes\":[{\"nodes\":[0]}],\
+             \"nodes\":[{\"name\":\"SM_Frame\",\"mesh\":0,\"children\":[1]},\
+             {\"name\":\"SM_Leaf\",\"mesh\":0}],",
+        )
+    }
+
+    /// The cube above, in whatever scene and node graph is handed in.
+    #[cfg(feature = "art")]
+    fn cube_glb(scene: &str) -> Vec<u8> {
         // Eight corners of a cube half a unit each way, so the tight box
         // round it is exactly `[-0.5, 0.5]` — the number the index
         // fixture below declares it measured.
@@ -1133,8 +1252,7 @@ mod tests {
         let positions = 8 * 3 * 4;
         let indices = bin.len() - positions;
         let json = format!(
-            "{{\"asset\":{{\"version\":\"2.0\"}},\"scene\":0,\
-             \"scenes\":[{{\"nodes\":[0]}}],\"nodes\":[{{\"mesh\":0}}],\
+            "{{\"asset\":{{\"version\":\"2.0\"}},\"scene\":0,{scene}\
              \"meshes\":[{{\"primitives\":[{{\"attributes\":{{\"POSITION\":0}},\
              \"indices\":1}}]}}],\
              \"accessors\":[\
@@ -1396,6 +1514,161 @@ mod tests {
         }
         out.sort_unstable();
         out
+    }
+
+    /// Every entity under `root`, however deep, that carries this name,
+    /// with what it is drawn as. The leaf of a door frame is a node of a
+    /// loaded scene, so nothing here may assume a depth.
+    #[cfg(feature = "art")]
+    fn named_under(app: &App, root: Entity, name: &str) -> Vec<Visibility> {
+        let mut out = Vec::new();
+        let mut stack = vec![root];
+        while let Some(at) = stack.pop() {
+            let entity = app.world().entity(at);
+            if let Some(kids) = entity.get::<Children>() {
+                stack.extend(kids.iter());
+            }
+            if at != root
+                && entity.get::<Name>().is_some_and(|had| had.as_str() == name)
+                && let Some(shown) = entity.get::<Visibility>()
+            {
+                out.push(*shown);
+            }
+        }
+        out
+    }
+
+    /// **A doorway drawn open hides its leaf, and a shut door keeps
+    /// it — from one mesh, in one box.**
+    ///
+    /// This is the whole mechanism, and it is worth saying what it
+    /// replaced. A shut door used to be one purchased mesh and a mated
+    /// doorway a DIFFERENT one, in a different frame, because this
+    /// repository had measured the kit's door panels as one body each
+    /// and concluded they were sealed. They are not: the opening is
+    /// there and the leaf is a child object hung in it. So the two
+    /// states are now one module whose leaf comes and goes, and a door
+    /// that is shut on one dock and open on the next no longer swaps the
+    /// wall for a different wall.
+    ///
+    /// What is proved here is the runtime half — that the pass finds a
+    /// node by the name the manifest gave it and hides that node and
+    /// nothing else. The description half, that both states are one box,
+    /// is `room::tests::the_cladding_tiles_every_wall_and_leaves_each_open_doorway_open`,
+    /// which runs in the build with no art on it.
+    #[cfg(feature = "art")]
+    #[test]
+    fn a_doorway_drawn_open_hides_its_leaf_and_a_shut_door_keeps_it() {
+        use bevy::asset::LoadState;
+
+        let dir = std::env::temp_dir().join("space-trucking-art-open-doors");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("glb")).expect("a scratch cache");
+        std::fs::write(dir.join("glb/door.glb"), door_frame_glb()).expect("a fixture mesh");
+        // Both roles, one mesh, the same four numbers: the `leaf` line is
+        // the only difference between them, exactly as the shipped
+        // manifest has it.
+        std::fs::write(
+            dir.join("index.toml"),
+            "[asset.door_frame]\nglb = \"glb/door.glb\"\ndresses = \"fabric/door\"\n\
+             scale = [1.0, 1.0, 1.0]\noffset = [0.0, 0.0, 0.0]\nfill = [1.0, 1.0, 1.0]\n\
+             [asset.door_frame_open]\nglb = \"glb/door.glb\"\ndresses = \"fabric/doorway\"\n\
+             leaf = \"SM_Leaf\"\n\
+             scale = [1.0, 1.0, 1.0]\noffset = [0.0, 0.0, 0.0]\nfill = [1.0, 1.0, 1.0]\n",
+        )
+        .expect("a fixture index");
+
+        let mut app = stand(&dir);
+        app.update();
+        let (handle, mouth) = app
+            .world()
+            .resource::<Dressed>()
+            .of_fabric(RoomKind::Cabin, Fabric::Doorway)
+            .expect("the index dresses a doorway");
+        let (handle, leaf) = (handle.clone(), mouth.leaf.clone());
+        assert_eq!(
+            leaf.as_deref(),
+            Some("SM_Leaf"),
+            "the leaf did not survive the index"
+        );
+        assert_eq!(
+            app.world()
+                .resource::<Dressed>()
+                .of_fabric(RoomKind::Cabin, Fabric::Door)
+                .and_then(|(_, shut)| shut.leaf.clone()),
+            None,
+            "a shut door was given a leaf to hide"
+        );
+        for _ in 0..10_000 {
+            app.update();
+            match app
+                .world()
+                .resource::<AssetServer>()
+                .get_load_state(&handle)
+                .unwrap_or(LoadState::NotLoaded)
+            {
+                LoadState::Loaded => break,
+                LoadState::Failed(_) => panic!("the cabin could not load a glTF it wrote itself"),
+                _ => {}
+            }
+        }
+
+        // One of each, spawned the way `room::clad` spawns them.
+        let open = app
+            .world_mut()
+            .spawn((
+                bevy::world_serialization::WorldAssetRoot(handle.clone()),
+                Transform::default(),
+                Visibility::default(),
+                Clad(Fabric::Doorway),
+                Name::new("seam[0] mouth"),
+                Open::new(leaf.expect("the leaf read above")),
+            ))
+            .id();
+        let shut = app
+            .world_mut()
+            .spawn((
+                bevy::world_serialization::WorldAssetRoot(handle),
+                Transform::default(),
+                Visibility::default(),
+                Clad(Fabric::Door),
+                Name::new("shut[1] door"),
+            ))
+            .id();
+        // The scene lands in `SpawnScene`, after this frame's `Update`,
+        // so the pass cannot reach it before the frame after. Pumped
+        // rather than counted, like the mask's.
+        for _ in 0..16 {
+            app.update();
+        }
+
+        let hidden = named_under(&app, open, "SM_Leaf");
+        assert_eq!(
+            hidden.len(),
+            1,
+            "the fixture scene put {} leaves under the open doorway, so this guard asks \
+             nothing — the glTF node's name did not reach the world",
+            hidden.len()
+        );
+        assert_eq!(
+            hidden[0],
+            Visibility::Hidden,
+            "a mated doorway is drawing its leaf: the door is open and the door is shut"
+        );
+        assert!(
+            named_under(&app, open, "SM_Frame")
+                .iter()
+                .all(|shown| *shown != Visibility::Hidden),
+            "hiding the leaf took the frame with it, and the doorway is a hole in the wall"
+        );
+        let kept = named_under(&app, shut, "SM_Leaf");
+        assert_eq!(kept.len(), 1, "the shut door lost its leaf node");
+        assert!(
+            kept[0] != Visibility::Hidden,
+            "a shut door is drawing no leaf, which is a doorway nobody can close"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// **A purchased body wears the mask its whitebox parts would.**
@@ -2012,9 +2285,24 @@ offset = [0.25, 0.0, 0.0]
              glb = \"glb/b.glb\"\n\
              [asset.tile]\ndresses = \"fabric/floor\"\nglb = \"glb/c.glb\"\n\
              [asset.odd]\ndresses = \"fabric/wall\"\nroom = \"attic\"\n\
-             [asset.odder]\ndresses = \"fabric/gable\"\n",
+             [asset.odder]\ndresses = \"fabric/gable\"\n\
+             [asset.mouth]\ndresses = \"fabric/doorway\"\nglb = \"glb/d.glb\"\n\
+             leaf = \"SM_Bld_Wall_Door_01\"\n",
         )
         .expect("the dialect");
+        // A leaf is read where it is named and absent where it is not.
+        assert_eq!(
+            declared
+                .of_fabric(RoomKind::Cabin, Fabric::Doorway)
+                .and_then(|one| one.leaf.as_deref()),
+            Some("SM_Bld_Wall_Door_01")
+        );
+        assert_eq!(
+            declared
+                .of_fabric(RoomKind::Cabin, Fabric::Wall)
+                .and_then(|one| one.leaf.as_deref()),
+            None
+        );
         assert_eq!(
             declared
                 .of_fabric(RoomKind::Cabin, Fabric::Wall)

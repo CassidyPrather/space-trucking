@@ -1535,13 +1535,21 @@ fn clad<'a>(
             continue;
         };
         worn += 1;
-        commands.spawn((
+        let mut module = commands.spawn((
             bevy::world_serialization::WorldAssetRoot(scene.clone()),
             dressing.pose_in(panel.mid, panel.half, panel.rot),
             crate::art::Clad(panel.role),
             Name::new(panel.what),
             tag,
         ));
+        // A mated doorway is the door frame with its leaf hidden, and
+        // the role is what says so: the same declaration under
+        // `fabric/door` keeps its leaf.
+        if panel.role == Fabric::Doorway
+            && let Some(leaf) = &dressing.leaf
+        {
+            module.insert(crate::art::Open::new(leaf.clone()));
+        }
     }
     // Stderr is where this pipeline talks; a room that dressed nothing
     // says nothing, like a kind that dressed nothing.
@@ -1850,9 +1858,30 @@ pub const SKIRT: f32 = 0.25;
 
 /// The narrowest run of wall that gets a panel of its own: a quarter
 /// cell. Anything narrower is the corner notch beside a doorway, and the
-/// doorway's surround already covers it.
+/// doorway's frame already covers it.
 #[cfg_attr(not(feature = "art"), allow(dead_code))]
 pub const SLIVER: f32 = BAY_CELL * 0.25;
+
+/// **The frame a door module fills**, in cells beyond the aperture: a
+/// cell of flank either side, three quarters of a cell under the deck,
+/// and a cell over the head. The one frame for a door drawn shut and a
+/// doorway drawn open, because the module is one file in both states —
+/// a kit door frame with its leaf a child object, and the leaf hidden
+/// when the door is mated (`art::Open`).
+///
+/// Sized to the kit and not to the aperture, like [`PANEL_CELLS`]: a
+/// door frame in this kit is five units wide and five tall with a
+/// two-and-a-half-unit hole in it, and at the scale that stands the hole
+/// on the two-cell aperture the frame round it wants nearly a cell each
+/// way. The manifest's `fill` says how much of this box a bought frame
+/// takes; a frame that outgrows it wants these numbers bigger, not a
+/// `fill` over one.
+#[cfg_attr(not(feature = "art"), allow(dead_code))]
+pub const DOOR_FLANK: f32 = 1.0;
+#[cfg_attr(not(feature = "art"), allow(dead_code))]
+pub const DOOR_SKIRT: f32 = 0.75;
+#[cfg_attr(not(feature = "art"), allow(dead_code))]
+pub const DOOR_HEAD: f32 = 1.0;
 
 /// **One frame of a room's cladding**: which module fills it, where it
 /// stands, and which way it faces.
@@ -1925,16 +1954,17 @@ fn facing(inward: Vec3) -> Quat {
 }
 
 /// **Every frame a room's shell wants filled**, in one list: the wall
-/// panels, the lintel over each open doorway, the surround through each
-/// doorway this room draws, the sealed panel over each shut door, the
+/// panels, the lintel over each doorway, the door frame in each — drawn
+/// shut over a door nothing is mated to and open over a mated one — the
 /// deck and deckhead tiles cut round the vertical apertures, and the
 /// cover over a shut hatch.
 ///
 /// Pure, like [`shell_boxes`] and [`seam_parts`], and for the same
 /// reason: what a dressed room draws has to be something a test can be
 /// about. What it asserts is in `tests`: the panels of a wall tile its
-/// run exactly and leave a mated doorway open, a shut door is covered,
-/// the tiles cover the pan and leave a mated hatch open.
+/// run exactly and leave every doorway's column to its frame, a shut
+/// door and a mated one get the same frame in the same box, the tiles
+/// cover the pan and leave a mated hatch open.
 ///
 /// The frames are the *description's*: nothing here knows what a module
 /// looks like beyond [`PANEL_CELLS`] and [`SKIRT`]. Which mesh fills a
@@ -2060,10 +2090,24 @@ fn walls(placed: &Placed, out: &mut Vec<Panel>) {
     }
 }
 
-/// The doorway frames of one wall — a lintel and, from the room that
-/// draws the passage, a surround over every mated door; a sealed panel
-/// over every door drawn shut — and the columns the mated ones leave
-/// open in the wall's run.
+/// The doorway frames of one wall — a lintel over every declared door
+/// and a door frame in it, shut or open — and the columns those doors
+/// take out of the wall's run.
+///
+/// **A shut door and a mated one are one frame in one box**, and each
+/// room draws its own. The frame is a kit door: a panel with a real
+/// opening and the leaf a child object shut over it, so the shut door
+/// is the module as it came and the mated doorway is the module with
+/// its leaf hidden (`art::Open`), and a door that is shut on one dock
+/// and open on the next is one frame whose leaf comes and goes. The
+/// box is the wall's own depth slice — chart plane to the middle of the
+/// pad — grown round the aperture by [`DOOR_FLANK`], [`DOOR_SKIRT`] and
+/// [`DOOR_HEAD`]; a mated doorway's two mouths meet back to back at the
+/// middle of the pad, where nothing sees the join, and a shut door
+/// stands no further out of its hull than the wall beside it. The wall
+/// stops at the column either way, because a frame this deep would
+/// otherwise have the wall's own panel body standing between its leaf
+/// and the room.
 #[cfg_attr(not(feature = "art"), allow(dead_code))]
 fn doorways(
     placed: &Placed,
@@ -2073,6 +2117,7 @@ fn doorways(
     out: &mut Vec<Panel>,
 ) -> Vec<(f32, f32)> {
     let deck = placed.lo.y;
+    let cell = BAY_CELL;
     let mut open = Vec::new();
     for site in &placed.ports {
         let Some(Port::Door { wall: on, .. }) = site.declared else {
@@ -2085,50 +2130,35 @@ fn doorways(
         let a = site.half_a.length();
         let head = site.leaf.y + site.half_b.length();
         let column = (centre - a, centre + a);
-        if site.mate.is_some() {
-            open.push(column);
-            // The lintel: the same panel as the wall, upside down, so
-            // its skirt stands above the deckhead where nothing sees
-            // it and its cornice becomes the beam over the door.
-            let over = CEIL_Y + deck - head;
-            out.push(wf.at(
-                Fabric::Wall,
-                format!("wall[{wall}] lintel over seam[{}]", site.port),
-                column,
-                (head, over.mul_add(1.0 + SKIRT, head)),
-                depth,
-                true,
-            ));
-            if dresses(placed, site) {
-                // The surround, through the pad from this room's chart
-                // plane to the far room's, drawn once by the room that
-                // draws the passage. Half a cell of frame round the
-                // opening, a quarter above and three under the deck for
-                // the module's own sill and skirt.
-                let cell = BAY_CELL;
-                out.push(wf.at(
-                    Fabric::Doorway,
-                    format!("seam[{}] surround", site.port),
-                    (cell.mul_add(-0.5, column.0), cell.mul_add(0.5, column.1)),
-                    (cell.mul_add(-0.75, deck), cell.mul_add(0.25, head)),
-                    (-(PAD_M + NOTCH), NOTCH),
-                    false,
-                ));
-            }
+        open.push(column);
+        // The lintel: the same panel as the wall, upside down, so its
+        // skirt stands above the deckhead where nothing sees it and its
+        // cornice becomes the beam over the door.
+        let over = CEIL_Y + deck - head;
+        out.push(wf.at(
+            Fabric::Wall,
+            format!("wall[{wall}] lintel over seam[{}]", site.port),
+            column,
+            (head, over.mul_add(1.0 + SKIRT, head)),
+            depth,
+            true,
+        ));
+        let (role, what) = if site.mate.is_some() {
+            (Fabric::Doorway, format!("seam[{}] mouth", site.port))
         } else {
-            // A door drawn shut: the wall runs straight across it, and a
-            // sealed panel stands over the aperture where the whitebox
-            // hangs its leaf — the leaf's own thickness proud of the box
-            // face, skirt under the deck.
-            out.push(wf.at(
-                Fabric::Door,
-                format!("shut[{}] panel", site.port),
-                column,
-                ((head - deck).mul_add(-SKIRT, deck), head),
-                (0.0, PLATE_T),
-                false,
-            ));
-        }
+            (Fabric::Door, format!("shut[{}] door", site.port))
+        };
+        out.push(wf.at(
+            role,
+            what,
+            (
+                cell.mul_add(-DOOR_FLANK, column.0),
+                cell.mul_add(DOOR_FLANK, column.1),
+            ),
+            (cell.mul_add(-DOOR_SKIRT, deck), cell.mul_add(DOOR_HEAD, head)),
+            depth,
+            false,
+        ));
     }
     open
 }
@@ -5113,16 +5143,18 @@ mod tests {
             .collect()
     }
 
-    /// **The panels of a wall tile its run exactly, and a mated doorway
-    /// is the one gap in them.** The description of a dressed room is
-    /// what `rebuild` stamps under `--features art`, and this is the
-    /// build that cannot draw it asking what it would draw: every wall
-    /// panel stands deck-to-deckhead with its skirt under the deck and
-    /// its depth from the chart plane to the middle of the pad; the
-    /// panels of a run abut, begin a notch before the corner and end a
-    /// notch after it; a mated door's column is left open below a lintel
-    /// that starts at the door's head; a shut door is covered by a sealed
-    /// panel standing the whitebox leaf's thickness proud of the face.
+    /// **The panels of a wall tile its run exactly, and a doorway is the
+    /// one gap in them.** The description of a dressed room is what
+    /// `rebuild` stamps under `--features art`, and this is the build
+    /// that cannot draw it asking what it would draw: every wall panel
+    /// stands deck-to-deckhead with its skirt under the deck and its
+    /// depth from the chart plane to the middle of the pad; the panels
+    /// of a run abut, begin a notch before the corner and end a notch
+    /// after it; every declared door's column is left to its frame below
+    /// a lintel that starts at the door's head; and that frame is one
+    /// box whether the door is shut or mated — the wall's own depth
+    /// slice, grown round the aperture by the door constants — with the
+    /// role the only thing that differs.
     #[test]
     #[allow(clippy::too_many_lines, clippy::suboptimal_flops, clippy::while_float)]
     fn the_cladding_tiles_every_wall_and_leaves_each_open_doorway_open() {
@@ -5188,15 +5220,14 @@ mod tests {
                         placed.id
                     );
                 }
-                // Every point of the grown run is under a panel, or in an
-                // open doorway's column, or in the sliver of corner notch
-                // beside one that the surround covers instead.
+                // Every point of the grown run is under a panel, or in a
+                // doorway's column, or in the sliver of corner notch
+                // beside one that the door frame covers instead.
                 let doors: Vec<(f32, f32)> = placed
                     .ports
                     .iter()
                     .filter(|site| {
                         matches!(site.declared, Some(Port::Door { wall: on, .. }) if on == wall)
-                            && site.mate.is_some()
                     })
                     .map(|site| {
                         let (c, a) = (site.leaf.dot(along), site.half_a.length());
@@ -5242,77 +5273,85 @@ mod tests {
                             panel.what
                         );
                     };
-                    if site.mate.is_some() {
-                        assert!(
-                            !runs.iter().any(|(a0, a1)| *a0 < centre && *a1 > centre),
-                            "room {} wall {wall}: a panel stands across its mated door",
-                            placed.id
-                        );
-                        let lintel = panels
-                            .iter()
-                            .filter(|panel| panel.role == Fabric::Wall)
-                            .find(|panel| {
-                                panel.what
-                                    == format!("wall[{wall}] lintel over seam[{}]", site.port)
-                            })
-                            .unwrap_or_else(|| {
-                                panic!("room {} wall {wall}: no lintel over its doorway", placed.id)
-                            });
-                        column(lintel);
-                        let (lo, hi) = lintel.bounds();
-                        assert!(
-                            (lo.y - head).abs() < 1e-4,
-                            "room {} lintel starts at {}",
-                            placed.id,
-                            lo.y
-                        );
-                        assert!(
-                            hi.y > placed.lo.y + CEIL_Y - 1e-4,
-                            "room {} lintel stops short of the deckhead",
-                            placed.id
-                        );
-                        // The surround is drawn by one of the two rooms and
-                        // runs through the pad, its opening on the aperture.
-                        let surround = panels
-                            .iter()
-                            .filter(|panel| panel.role == Fabric::Doorway)
-                            .find(|panel| panel.what == format!("seam[{}] surround", site.port));
-                        assert_eq!(
-                            surround.is_some(),
-                            dresses(&placed, site),
-                            "room {} wall {wall} surround",
-                            placed.id
-                        );
-                        if let Some(surround) = surround {
-                            let (lo, hi) = surround.bounds();
-                            let (near, far) =
-                                (lo.dot(out).min(hi.dot(out)), lo.dot(out).max(hi.dot(out)));
-                            assert!(
-                                (near - (face - NOTCH)).abs() < 1e-4
-                                    && (far - (face + PAD_M + NOTCH)).abs() < 1e-4
-                            );
-                        }
+                    assert!(
+                        !runs.iter().any(|(a0, a1)| *a0 < centre && *a1 > centre),
+                        "room {} wall {wall}: a panel stands across its door",
+                        placed.id
+                    );
+                    let lintel = panels
+                        .iter()
+                        .filter(|panel| panel.role == Fabric::Wall)
+                        .find(|panel| {
+                            panel.what == format!("wall[{wall}] lintel over seam[{}]", site.port)
+                        })
+                        .unwrap_or_else(|| {
+                            panic!("room {} wall {wall}: no lintel over its doorway", placed.id)
+                        });
+                    column(lintel);
+                    let (lo, hi) = lintel.bounds();
+                    assert!(
+                        (lo.y - head).abs() < 1e-4,
+                        "room {} lintel starts at {}",
+                        placed.id,
+                        lo.y
+                    );
+                    assert!(
+                        hi.y > placed.lo.y + CEIL_Y - 1e-4,
+                        "room {} lintel stops short of the deckhead",
+                        placed.id
+                    );
+                    // One frame, shut or mated, and each room draws its
+                    // own: the role and the name are the only difference.
+                    let (role, what) = if site.mate.is_some() {
+                        (Fabric::Doorway, format!("seam[{}] mouth", site.port))
                     } else {
-                        let sealed = panels
-                            .iter()
-                            .filter(|panel| panel.role == Fabric::Door)
-                            .find(|panel| panel.what == format!("shut[{}] panel", site.port))
-                            .unwrap_or_else(|| {
-                                panic!(
-                                    "room {} wall {wall}: no sealed panel over its shut door",
-                                    placed.id
-                                )
-                            });
-                        column(sealed);
-                        let (lo, hi) = sealed.bounds();
-                        assert!((hi.y - head).abs() < 1e-4);
-                        let (near, far) =
-                            (lo.dot(out).min(hi.dot(out)), lo.dot(out).max(hi.dot(out)));
-                        assert!(
-                            (far - face).abs() < 1e-4 && (near - (face - PLATE_T)).abs() < 1e-4,
-                            "{near}..{far} at {face}"
-                        );
-                    }
+                        (Fabric::Door, format!("shut[{}] door", site.port))
+                    };
+                    let frame = panels
+                        .iter()
+                        .filter(|panel| panel.role == role)
+                        .find(|panel| panel.what == what)
+                        .unwrap_or_else(|| {
+                            panic!("room {} wall {wall}: no `{what}` in its doorway", placed.id)
+                        });
+                    assert_eq!(
+                        panels.iter().filter(|panel| panel.what == what).count(),
+                        1,
+                        "room {} draws `{what}` more than once",
+                        placed.id
+                    );
+                    let (lo, hi) = frame.bounds();
+                    assert!(
+                        (lo.dot(along) - BAY_CELL.mul_add(-DOOR_FLANK, centre - a)).abs() < 1e-4
+                            && (hi.dot(along) - BAY_CELL.mul_add(DOOR_FLANK, centre + a)).abs()
+                                < 1e-4,
+                        "room {} `{what}` is not a flank either side of its column",
+                        placed.id
+                    );
+                    assert!(
+                        (lo.y - BAY_CELL.mul_add(-DOOR_SKIRT, placed.lo.y)).abs() < 1e-4
+                            && (hi.y - BAY_CELL.mul_add(DOOR_HEAD, head)).abs() < 1e-4,
+                        "room {} `{what}` stands {}..{} for a deck at {} and a head at {head}",
+                        placed.id,
+                        lo.y,
+                        hi.y,
+                        placed.lo.y
+                    );
+                    // The wall's own depth: chart plane to mid-pad, so two
+                    // mouths meet at the middle of the pad and a shut door
+                    // stands no further out than the wall beside it.
+                    let (near, far) = (lo.dot(out).min(hi.dot(out)), lo.dot(out).max(hi.dot(out)));
+                    assert!(
+                        (near - (face - NOTCH)).abs() < 1e-4
+                            && (far - (face + PAD_M * 0.5)).abs() < 1e-4,
+                        "room {} `{what}` is {near}..{far} deep against a face at {face}",
+                        placed.id
+                    );
+                    assert!(
+                        (frame.rot * Vec3::Z).dot(-out) > 0.0,
+                        "room {} `{what}` faces out of the room",
+                        placed.id
+                    );
                 }
             }
         }

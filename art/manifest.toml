@@ -489,13 +489,22 @@ dresses = "cargo/cabinet"
 # A worn woven rug. Turned so its weave stands in the rig's own x-y, which
 # is where a covering's laid body is composed before the berth lays it
 # down, and its long axis lies across the two cells.
+#
+# And pushed down the band to sit ON the chart. A standing berth draws its
+# rig back onto its cells (`pieces::site_on`), so a body composed on the
+# middle of the depth band lands where it belongs; a LAID berth has no such
+# plane to draw back from — its rig root is the chart itself
+# (`pieces::net_laid`) — so a mesh centred in the band floats `rig_mid`
+# above the deck, which is 23 cm of daylight under a rug. The offset spends
+# the band: the underside comes to rest on the same plane the whitebox
+# rug's own binding lies on.
 [asset.rug_woven]
 pack = "apocalypse"
 source = "Source_Files/FBX/SM_Prop_Rug_01.fbx"
 texture = "Source_Files/Textures/PolygonApocalypse_Texture_01_A.png"
 sha256 = "a264ebde85b754f0613636ce94d5ec6d3064b543fed931bb4944445817c7f573"
 scale = [1.035538, 0.670639, 0.709389]
-offset = [0.0, 0.0, 0.0]
+offset = [0.0, 0.0, -0.847353]
 rotation = [90.0, 0.0, 0.0]
 fill = [1.0, 0.035, 1.0]
 dresses = "cargo/rug"

@@ -1275,13 +1275,69 @@ this game reads a file through the asset server, so there is no
 `assets/` directory to share and a path out of the index is a path the
 server takes verbatim. `pieces::build_kind` then spawns that scene in the
 rig's place **instead of** stamping the whitebox parts: two graphical
-implementations of one object means the player sees one of them.
+implementations of one object means the player sees one of them. With one
+exception, and it is the next section.
 
 **Everything about it fails soft.** No cache directory, no index, an
 index that will not parse, an entry naming a file that is not there, a
 `dresses` naming a body this build has no kind for: each leaves the kind
 undressed, draws the whitebox, and puts a sentence on stderr. Nothing
 reaches the screen as text — the zero-text law covers what is drawn.
+
+### Light is not a drawing
+
+Three cargo kinds are lamps and a fourth is paint that glows, and every
+one of them hangs a real `PointLight` in the room. For a year that was
+the reason none of the four could be dressed: a purchased mesh replaces
+the parts a kind draws, the light is spawned by one of those parts, and
+so a bought lamp was a lamp that lit nothing. `art/manifest.toml` said
+so, in a comment listing the four kinds it must not name.
+
+The rule it was breaking is real and stays: **a bought body replaces the
+description.** What was wrong was the reading of it, because a lamp's
+pool of light on the deck is not a picture of a lamp. It is the sim's
+`lamp_lit` answered in the world — the same predicate the rat's fear,
+the seedlings' bloom and the well-lit-art bonus read — and where it
+comes from and how far it carries are facts about the KIND, written once
+in that kind's description. Buying a mesh does not buy new answers to
+them.
+
+So `build_kind` walks the description anyway and keeps the parts that
+light (`pieces::Role::lights` — a lamp's bulb, a coat's tinge), in the
+sub-frames they were described in, and drops every part that draws.
+Same colour, same reach, same place, same `Dimmable` the omen dims
+through `fx.rs`. `pieces::stamp_light` is the one spawner both paths go
+through so the two cannot drift, and
+`pieces::tests::a_bought_light_source_still_lights_the_room` holds the
+set of kinds the sim calls a light source to the set of descriptions
+that describe one.
+
+**What a purchased lamp gives up is its glass.** A whitebox bulb owns a
+material instance and `sync_fixtures` writes the eased level into it, so
+a lamp on the barter counter is visibly dark glass. A Synty fitting is
+painted from a flat atlas with no emissive in it — there is nothing to
+write a level into — so `LampGlow::mat` is `None` on a bought lamp and
+what says it is burning is the pool of light under it. That is a real
+loss and it is small: the pool is the tell the room reads.
+
+It need not stay lost. Two of the three fittings named today carry their
+glass as a node of their own — `SM_Prop_Lighting_Wall_Glass_05` on the
+sconce, `SM_Prop_Lamp_01_Light_01` on the floor lamp — so a `glass` line
+beside `leaf` would name it, and `art::open_doors` is the shape of the
+pass that would find it. What it needs beyond that is a material
+instance per lamp rather than per scene, because a glTF material is
+shared by every copy of its scene and writing to it would light every
+lamp aboard at once.
+
+**The luminous paint is still not dressed**, and for a different reason
+now: what it lights with is a painted deck cell, and nobody models a
+coat. Its other body is a tin, POLYGON Construction has the blackout one
+the fiction asks for, and a `dresses` line names one mesh where a
+covering draws two (`Under::Laid` beside `Under::Packed`) — so a bought
+tin would stand in the coat's place as well as the shelf's, which is the
+glowing patch on the deck replaced by a can lying in the middle of the
+cell. The day a binding can say which of a covering's two bodies it is,
+that tin is a four-line table.
 
 ## The bench: nudging a body into its berth
 

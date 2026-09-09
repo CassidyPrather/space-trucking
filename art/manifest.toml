@@ -80,6 +80,11 @@ title = "POLYGON Sci-Fi Worlds"
 dir = "POLYGON - Sci-Fi Worlds Pack"
 download = "POLYGON Sci-Fi Worlds, the Source Files download"
 
+[pack.shops]
+title = "POLYGON Shops"
+dir = "POLYGON - Shops Pack"
+download = "POLYGON Shops, the Source Files download"
+
 
 # ---------------------------------------------------------------------
 # Assets
@@ -164,13 +169,28 @@ dresses = "cargo/mysterious_crate"
 # of `cargo xtask art dex` — the catalogue is what knew which of a hundred
 # files called `SM_Prop_Crate_0N` was the one worth naming here.
 #
-# Not dressed, and each for a stated reason: the three lamps and the
-# luminous paint own a real `PointLight` that lights the ROOM, and a
-# purchased mesh replaces a description rather than joining it
-# (`pieces::build_kind`), so dressing one puts the bay in the dark; the
-# window, porthole and bay window frame a rendered viewport a solid body
-# would occlude; and the chart tank, ETA gauge, destination preview and
-# launch lever are the game's instruments, which is the UI.
+# Not dressed, and each for a stated reason. The window, porthole and bay
+# window frame a rendered viewport a solid body would occlude; the chart
+# tank, ETA gauge, destination preview and launch lever are the game's
+# instruments, which is the UI.
+#
+# And the luminous paint, which is the fourth of this ship's light
+# sources and the one no pack can sell. What it lights with is a PAINTED
+# DECK CELL — a coat, and nobody models a coat. Its other body is a tin,
+# and there is a fine blackout tin next to the paint tin's in POLYGON
+# Construction (`SM_Prop_Paint_Can_Closed_Black_01`), but a `dresses`
+# line names ONE mesh and a covering draws two (`Under::Laid` beside
+# `Under::Packed`, `pieces::sync_dressings`), so a bought tin stands in
+# the coat's place as well as the shelf's. Photographed, that is the
+# glowing patch on the deck replaced by a can lying in the middle of the
+# cell, and the laid coat is the only state in which luminous paint
+# lights anything at all. The day a binding can name which of a
+# covering's two bodies it is, the tin is a four-line table.
+#
+# The three lamps used to stand in this list too, on a reason that has
+# gone: a purchased mesh replaces a description rather than joining it,
+# so dressing one put the bay in the dark. The light is kept now and
+# only the drawing is replaced — see below.
 
 # A conical flask with an orange stopper. The description asks for cut
 # crystal balanced on a point; a lab flask is the sci-fi reading of it.
@@ -363,6 +383,69 @@ offset = [0.0, 0.0, 0.0]
 rotation = [0.0, 0.0, 0.0]
 fill = [0.713105, 1.0, 0.722009]
 dresses = "cargo/casino_chip"
+
+# THE THREE LAMPS. Each owns a real `PointLight` that lights the ROOM
+# rather than the body, and the room's light is not a drawing:
+# `pieces::build_kind` keeps every part of a description that lights and
+# drops only the parts that draw, so a bought lamp burns exactly where
+# the whitebox's bulb burned and to the same reach.
+#
+# What a purchased lamp does NOT do is wake its own glass. A Synty
+# fitting is painted from a flat atlas with no emissive in it, so there
+# is nothing to write a level into; a lamp aboard reads lit by the pool
+# of light under it and a lamp on the barter counter reads dark because
+# there is no pool. Two of these three carry the glass as a node of
+# their own — `SM_Prop_Lighting_Wall_Glass_05` and
+# `SM_Prop_Lamp_01_Light_01` — so the day a `glass` line joins `leaf`,
+# the names are already measured. See docs/ART_PIPELINE.md, "Light is
+# not a drawing".
+
+# A hanging pendant: a small ceiling mount, a slender tiered stem, and a
+# flared faceted shade with frosted glass panels in dark ribs. The
+# whitebox is a mount plate, a stem and a flattened cone; this is that,
+# bought. Its canopy is flush with the deckhead, which is where a
+# pendant's plate meets the ship (`gauntlet::rig_seated`).
+[asset.pendant_shade]
+pack = "casino"
+source = "SourceFiles/FBX/Props/SM_Prop_Lights_06.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonCasino_Texture_01_A.png"
+sha256 = "be97c56c85ab7513f73322c4f6b11adedea3901e343429349eb9ac366fb6099e"
+scale = [1.293512, 1.293512, 1.293512]
+offset = [0.0, 0.265003, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.548659, 0.734997, 0.548659]
+dresses = "cargo/ceiling_lamp"
+
+# A sconce: a faceted octagonal backplate, a curved arm, and a teardrop
+# shade on the end of it — the whitebox's mount pad, bracket and cup, in
+# that order. Off a repossessed liner, which is what the kind is. Its
+# backplate owns the wall, so the body begins at the berth plane rather
+# than in the middle of the air in front of it.
+[asset.sconce_arm]
+pack = "shops"
+source = "SourceFiles/FBX/SM_Prop_Lighting_Wall_05.fbx"
+texture = "SourceFiles/Textures/PolygonShops_Building_Texture_01.png"
+sha256 = "870fd9a14b95516231aba7527086530f892d39d2e78de62d06e5b259215e7ce8"
+scale = [2.304118, 2.304118, 2.304118]
+offset = [0.0, 0.0, -0.441197]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.332982, 0.682935, 0.441156]
+dresses = "cargo/wall_lamp"
+
+# A standing lamp off a ship's corridor: a flared weighted base, a thin
+# segmented stem, and a cylindrical head with a lit band round it. Base
+# plate, pole and shade, which is the whitebox's own column, and the
+# base is bolted flat to the deck.
+[asset.lamp_column]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Lamp_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "9617cd4956df4b46fca6d4a266d91128bbaaa7c9a708d7d5828d1a5dfd73f451"
+scale = [4.319294, 2.159647, 4.319294]
+offset = [0.0, -0.074992, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.359879, 0.925008, 0.359879]
+dresses = "cargo/floor_lamp"
 
 # A three-cushion padded bench off a ship's mess. Somebody's living room,
 # in transit.

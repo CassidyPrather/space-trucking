@@ -483,11 +483,17 @@ struct RatTail {
 /// material instance per the shared-handle rule. Lamps burn only while
 /// the sim's `lamp_lit` says so: berthed in the hold, nowhere else — a
 /// lamp on the counter or boxed in a cubby is dark glass.
+///
+/// **`mat` is `None` on a lamp somebody bought**, and that is the whole
+/// of what a purchased lamp gives up. A Synty fitting is painted from a
+/// flat atlas with no emissive in it, so there is no glass of its own to
+/// wake; what says a bought lamp is burning is the pool of light under
+/// it, which is this component's other sink and the one the room reads.
 #[derive(Component)]
 struct LampGlow {
     piece: u32,
     color: Color,
-    mat: Handle<StandardMaterial>,
+    mat: Option<Handle<StandardMaterial>>,
     /// Eased lit level, `0..=1`.
     level: f32,
 }
@@ -525,11 +531,16 @@ struct DressForm {
 /// shared-handle rule) and a faint real point light whose [`Dimmable`]
 /// base the omen dims through fx.rs, no special case. Canned, the tin
 /// is blacked out and the level falls to dark.
+///
+/// `mat` would be `None` for the reason [`LampGlow`]'s is, the day a
+/// covering is dressed. None is today: what luminous paint lights with
+/// is a painted deck cell, and no pack sells a coat (art/manifest.toml,
+/// and docs/ART_PIPELINE.md's "Light is not a drawing").
 #[derive(Component)]
 struct CoatGlow {
     piece: u32,
     color: Color,
-    mat: Handle<StandardMaterial>,
+    mat: Option<Handle<StandardMaterial>>,
     /// Eased laid level, `0..=1`.
     level: f32,
 }
@@ -1832,7 +1843,9 @@ fn sync_fixtures(
             LAMP_LUMENS
         };
         dimmable.intensity = lumens * lamp.level;
-        if let Some(mut mat) = materials.get_mut(&lamp.mat) {
+        if let Some(glass) = &lamp.mat
+            && let Some(mut mat) = materials.get_mut(glass)
+        {
             glow::set_lamp(&mut mat, lamp.color, lamp.level);
         }
     }
@@ -1905,7 +1918,9 @@ fn sync_dressings(
             (coat.level - step).max(0.0)
         };
         dimmable.intensity = COAT_LUMENS * coat.level;
-        if let Some(mut mat) = materials.get_mut(&coat.mat) {
+        if let Some(glass) = &coat.mat
+            && let Some(mut mat) = materials.get_mut(glass)
+        {
             glow::set_lamp(&mut mat, coat.color, coat.level * COAT_GLOW);
         }
     }
@@ -3534,6 +3549,20 @@ impl Role {
     /// Whether the part is hung hidden for a system to show later.
     const fn dark(self) -> bool {
         matches!(self, Self::Bud | Self::Cubby { .. })
+    }
+
+    /// **Whether the part hangs a light in the room** rather than only
+    /// drawing something.
+    ///
+    /// The two that do are a lamp's bulb and a luminous coat's tinge,
+    /// and what asks is [`build_kind`] with a purchased mesh in its
+    /// hand: a bought body replaces a DRAWING, and the pool of light a
+    /// lamp throws on the deck is not one — it is the sim's `lamp_lit`
+    /// answered in the room. So these parts outlive the replacement and
+    /// every other part of the description does not.
+    #[cfg_attr(not(feature = "art"), allow(dead_code))]
+    const fn lights(self) -> bool {
+        matches!(self, Self::Bulb { .. } | Self::Tinge)
     }
 }
 
@@ -5383,6 +5412,11 @@ fn bulb_part(kind: Kind, shade: &Part, radius: f32) -> Part {
 /// role writes its own material is the exception and says so
 /// ([`Role::alone`]).
 fn build_kind(rig: &mut RigParts, piece: &Piece) {
+    let screens = Screens {
+        sky: rig.sky,
+        map: rig.map_image.is_some(),
+        preview: rig.preview_image.is_some(),
+    };
     // **A purchased mesh replaces the description; it does not join
     // it.** Two graphical implementations of one object is the plan, and
     // "two" means the player sees one of them.
@@ -5409,13 +5443,23 @@ fn build_kind(rig: &mut RigParts, piece: &Piece) {
         // the mark down to each body as it arrives. Without it a bought
         // mesh selects and never wears the line.
         rig.mask(body);
+        // **What it replaces is the DRAWING, and a lamp is not only a
+        // drawing.** Three of this game's kinds are lamps and a fourth
+        // is paint that glows; each of them hangs a real `PointLight`
+        // that lights the ROOM, and that light is the sim answering
+        // `lamp_lit` rather than anything anybody drew. Bought bodies
+        // used to take it with them when they replaced the parts —
+        // which is why the manifest carried a line saying the lamps
+        // were the four kinds it must not dress, and why dressing one
+        // put the bay in the dark.
+        //
+        // So the description is walked anyway and the parts that LIGHT
+        // are kept, in the frames they were described in and with no
+        // glass to wake ([`stamp_light`]). Every part that draws is
+        // dropped, which is the rule above, unchanged.
+        stamp_lighting(rig, piece, screens);
         return;
     }
-    let screens = Screens {
-        sky: rig.sky,
-        map: rig.map_image.is_some(),
-        preview: rig.preview_image.is_some(),
-    };
     let home = rig.root;
     let mut bodies: Vec<(Body, Handle<Mesh>)> = Vec::new();
     let mut coats: Vec<(Coat, Handle<StandardMaterial>)> = Vec::new();
@@ -5423,6 +5467,33 @@ fn build_kind(rig: &mut RigParts, piece: &Piece) {
     for part in parts(piece, screens) {
         rig.root = frame_of(rig, piece, home, &mut frames, part.under);
         stamp(rig, piece, &part, &mut bodies, &mut coats);
+    }
+    rig.root = home;
+}
+
+/// **Everything one kind's description lights the room with**, stamped
+/// under a rig whose body somebody bought.
+///
+/// The whitebox half of [`build_kind`] read backwards: the same parts,
+/// through the same `Under` frames, keeping exactly what [`stamp`]
+/// would have kept the light of and drawing none of it. The frames
+/// matter and are not ceremony: a sconce's bulb hangs off the arm
+/// `sync_fixtures` swings to whichever stile the piece's wall column
+/// touches, so a bought sconce's light changes sides with it. The other
+/// frame that would matter is a covering's — a laid coat's tinge hangs
+/// under the form `sync_dressings` shows only while the coat lies down,
+/// so a canned tin would go dark for nothing more than its parent being
+/// hidden — and no covering is dressed today.
+#[cfg(feature = "art")]
+fn stamp_lighting(rig: &mut RigParts<'_, '_, '_>, piece: &Piece, screens: Screens) {
+    let home = rig.root;
+    let mut frames: Vec<(Under, Entity)> = Vec::new();
+    for part in parts(piece, screens) {
+        if !part.role.lights() {
+            continue;
+        }
+        rig.root = frame_of(rig, piece, home, &mut frames, part.under);
+        stamp_light(rig, piece, &part, None);
     }
     rig.root = home;
 }
@@ -5508,26 +5579,7 @@ fn stamp(
     };
     let Some(body) = part.body else {
         // A light and no body at all: the luminous coat's own tinge.
-        if let Cut::Coat(coat) = part.cut {
-            rig.commands.spawn((
-                PointLight {
-                    color: coat.color,
-                    intensity: 0.0,
-                    range: COAT_RANGE,
-                    shadow_maps_enabled: false,
-                    ..default()
-                },
-                part.at,
-                Dimmable { intensity: 0.0 },
-                CoatGlow {
-                    piece: piece.id,
-                    color: coat.color,
-                    mat: material,
-                    level: 0.0,
-                },
-                ChildOf(rig.root),
-            ));
-        }
+        stamp_light(rig, piece, part, Some(material));
         return;
     };
     let mesh = if let Some((_, handle)) = bodies.iter().find(|(seen, _)| *seen == body) {
@@ -5595,11 +5647,35 @@ fn stamp(
             rig.commands.entity(entity).insert(LeverHalo);
         }
         Role::Grab => rig.grab = Some(material),
+        Role::Bulb { .. } => stamp_light(rig, piece, part, Some(material)),
+    }
+}
+
+/// **The light one part hangs in the room, spawned** — a lamp's own
+/// point light under its glass, or a luminous coat's tinge — and
+/// nothing at all for a part that lights nothing ([`Role::lights`]).
+///
+/// One spawner rather than two, because there are two callers now and
+/// they must not drift: [`stamp`], which is building the whitebox and
+/// hands the part's own glass in, and [`build_kind`]'s purchased
+/// branch, which hands `None`. What comes out is identical either way —
+/// same colour, same reach, same place, same [`Dimmable`] the omen dims
+/// through fx.rs — because where a kind's light comes from and how far
+/// it carries are facts about the KIND, written once in its
+/// description, and buying a mesh does not buy new answers to them.
+fn stamp_light(
+    rig: &mut RigParts<'_, '_, '_>,
+    piece: &Piece,
+    part: &Part,
+    glass: Option<Handle<StandardMaterial>>,
+) {
+    let coat = match part.cut {
+        Cut::Coat(coat) => Some(coat),
+        _ => None,
+    };
+    match part.role {
         Role::Bulb { range } => {
-            let color = match part.cut {
-                Cut::Coat(coat) => coat.color,
-                _ => palette::GLINT,
-            };
+            let color = coat.map_or(palette::GLINT, |coat| coat.color);
             rig.commands.spawn((
                 PointLight {
                     color,
@@ -5613,12 +5689,34 @@ fn stamp(
                 LampGlow {
                     piece: piece.id,
                     color,
-                    mat: material,
+                    mat: glass,
                     level: 0.0,
                 },
                 ChildOf(rig.root),
             ));
         }
+        Role::Tinge => {
+            let Some(coat) = coat else { return };
+            rig.commands.spawn((
+                PointLight {
+                    color: coat.color,
+                    intensity: 0.0,
+                    range: COAT_RANGE,
+                    shadow_maps_enabled: false,
+                    ..default()
+                },
+                part.at,
+                Dimmable { intensity: 0.0 },
+                CoatGlow {
+                    piece: piece.id,
+                    color: coat.color,
+                    mat: glass,
+                    level: 0.0,
+                },
+                ChildOf(rig.root),
+            ));
+        }
+        _ => {}
     }
 }
 
@@ -7491,6 +7589,53 @@ mod tests {
                          opaque faces on one plane"
                     );
                 }
+            }
+        }
+    }
+
+    /// **Every kind that lights the room keeps a light when its body is
+    /// bought, and no other kind claims one.**
+    ///
+    /// This is the invariant [`build_kind`]'s purchased branch stands
+    /// on. A bought mesh replaces the parts a kind DRAWS, and for a year
+    /// that meant it replaced the lamps too: `art/manifest.toml` carried
+    /// a line naming the three lamps and the luminous paint as the four
+    /// kinds it must not dress, because dressing one put the bay in the
+    /// dark. The branch keeps [`Role::lights`] now and drops the rest,
+    /// so what has to hold is that the roles and the sim agree about
+    /// which kinds are light sources — and they are written down in two
+    /// places that cannot see each other, `cargo::lamp` plus the coat
+    /// over in the sim, and a `Role` in a description here.
+    ///
+    /// Both directions, because both are defects. A light source with no
+    /// lighting part is a lamp you can buy that lights nothing the
+    /// moment its mesh arrives; a part that lights on a kind the sim
+    /// does not call a source is light the rat's fear, the seedlings'
+    /// bloom and the well-lit-art bonus will never account for.
+    ///
+    /// Asked in both screen states, because a description may draw
+    /// differently headless and a lamp that lit only when the chart tank
+    /// had a picture would be a lamp that goes out in a screenshot.
+    #[test]
+    fn a_bought_light_source_still_lights_the_room() {
+        for kind in Kind::ALL {
+            // The sim's own answer: the three affixed lamps, and the
+            // luminous coat, which `cargo::lit_adjacent` reads as a
+            // source in the same breath as it reads a lamp.
+            let source = cargo::lamp(kind) || kind == Kind::LuminousPaint;
+            for screens in Screens::BOTH {
+                let kept = rig_of(kind, screens)
+                    .iter()
+                    .filter(|part| part.role.lights())
+                    .count();
+                assert_eq!(
+                    source,
+                    kept > 0,
+                    "{kind:?} is {}a light source to the sim and describes {kept} part(s) \
+                     that light with {screens:?} — a purchased body keeps exactly these, \
+                     so the two have to be the same set",
+                    if source { "" } else { "not " }
+                );
             }
         }
     }

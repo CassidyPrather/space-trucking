@@ -129,6 +129,21 @@ changing; remove a line only by shipping it or striking it in review.
 - Wallpaper and larger coverings: rugs and paints shipped as the
   dressing layer (BAY.md); wallpaper is the same shape with a bigger
   footprint, waiting on a reason
+- **Which of a covering's two bodies a `dresses` line means.** A
+  covering draws laid and packed and a binding names one mesh, so a
+  dressed covering wears the same body on the deck and on the shelf.
+  The rug and the paint tin live with it; the luminous paint is what
+  made it a defect rather than a wart, because the coat is the only
+  state in which it lights anything, and it is undressed for that
+  reason (docs/ART_PIPELINE.md, "Light is not a drawing"). A `form`
+  line, or a second binding, is the fix; either wants a rule for what a
+  covering with only one of the two declared should draw for the other
+- **A bought lamp's glass.** The three lamps are dressed and their room
+  light is kept, but a Synty fitting's atlas carries no emissive, so a
+  purchased lamp does not wake and dim the way a whitebox one does — it
+  is read by the pool of light under it alone. A `glass` line naming
+  the node (both node names are already measured and written down in
+  the manifest) plus a per-instance material clone is the fix
 - The rest of the shell's dressing (docs/ART_PIPELINE.md, "The fabric
   namespace"): the nudge bench takes cargo and not panels, so a panel's
   four numbers are typed and checked by `resolve` rather than nudged;

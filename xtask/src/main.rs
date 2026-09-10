@@ -271,7 +271,14 @@ fn source(
         ));
     }
     let atlas = atlas(store, cache, manifest, asset)?;
-    let emissive = image_named(store, cache, manifest, asset, asset.emissive.as_deref(), "emissive")?;
+    let emissive = image_named(
+        store,
+        cache,
+        manifest,
+        asset,
+        asset.emissive.as_deref(),
+        "emissive",
+    )?;
     let converted = Converted::of(
         &digest,
         atlas.as_ref().map(|one| one.digest.as_str()),
@@ -300,7 +307,14 @@ fn atlas(
     manifest: &Manifest,
     asset: &Asset,
 ) -> Result<Option<Atlas>, String> {
-    image_named(store, cache, manifest, asset, asset.texture.as_deref(), "texture")
+    image_named(
+        store,
+        cache,
+        manifest,
+        asset,
+        asset.texture.as_deref(),
+        "texture",
+    )
 }
 
 /// **One declared image of an asset's, found in its pack and hashed** —

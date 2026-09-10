@@ -70,12 +70,7 @@ impl Converted {
     /// The same, with the script spelled out, so the guard below can ask
     /// what a different one would be addressed as. Nothing else should
     /// need it: there is exactly one script and it is compiled in.
-    fn under(
-        source: &str,
-        texture: Option<&str>,
-        emissive: Option<&str>,
-        script: &str,
-    ) -> Self {
+    fn under(source: &str, texture: Option<&str>, emissive: Option<&str>, script: &str) -> Self {
         // A recipe is a few lines of text rather than a struct with a
         // hash of its own, because the thing that has to stay stable is
         // what the bytes ARE — a cache entry written by one build of this

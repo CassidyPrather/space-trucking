@@ -1543,6 +1543,16 @@ fn furnish(
     }
 }
 
+/// **What a binding buys**: the converted scene and the numbers it is
+/// stood under, or nothing for a name the index does not carry. The
+/// pair `art::Dressed::of` answers with, named once so `fit` can be
+/// read.
+#[cfg(feature = "art")]
+type Bought<'a> = Option<(
+    &'a Handle<bevy::world_serialization::WorldAsset>,
+    &'a crate::art::Dressing,
+)>;
+
 /// **Stand a bought module in the box of every station object that has
 /// one declared** — [`furnish`]'s other half, and `clad`'s counterpart
 /// for the furniture inside the room rather than the shell round it.
@@ -1558,12 +1568,7 @@ fn fit<'a>(
     commands: &mut Commands,
     placed: &Placed,
     tag: InRoom,
-    bought: &dyn Fn(
-        &str,
-    ) -> Option<(
-        &'a Handle<bevy::world_serialization::WorldAsset>,
-        &'a crate::art::Dressing,
-    )>,
+    bought: &dyn Fn(&str) -> Bought<'a>,
 ) {
     let Some(host) = placed.host else {
         return;

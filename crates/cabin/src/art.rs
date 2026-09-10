@@ -1580,14 +1580,23 @@ mod tests {
         // twice the berth box, a quarter turn about its own up, and half
         // a half-box down — which is what `build_kind` hands the
         // `WorldAssetRoot` it spawns in place of the whitebox parts.
+        //
+        // Twice the berth box READ ALONG THE AXES THE TURNED MESH LANDS
+        // ON (`Dressing::landing`): `scale` counts mesh units per frame
+        // half-unit along the mesh's own axes, and a quarter turn about
+        // up carries mesh x onto frame z and mesh z onto frame x. This
+        // berth is two cells across and one deep, so the two readings
+        // differ, and the one that fills the berth is the landed one.
         assert_eq!(dressing.scale, Vec3::splat(2.0));
         assert_eq!(dressing.rotation, Vec3::new(0.0, 90.0, 0.0));
         let pose = dressing.pose(Kind::SuspiciousCrate);
         let (mid, half) = Dressing::berth_box(Kind::SuspiciousCrate);
+        let landed = Vec3::new(half.z, half.y, half.x);
         assert!(
-            (pose.scale - half * 2.0).length() < 1e-4,
-            "{:?}",
-            pose.scale
+            (pose.scale - landed * 2.0).length() < 1e-4,
+            "{:?} is not twice the berth half-extents the turned mesh lands on, {:?}",
+            pose.scale,
+            landed * 2.0
         );
         assert!(
             (pose.translation - (mid - Vec3::Y * (half.y * 0.5))).length() < 1e-4,

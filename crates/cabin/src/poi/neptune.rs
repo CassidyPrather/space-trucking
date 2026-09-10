@@ -196,6 +196,7 @@ const THE_DIVE_LOCK: [Fitting; 17] = [
     )
     .meeting(Face::Deck)
     .called("pool collar")
+    .part_of("pool_collar")
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Post,
@@ -229,14 +230,15 @@ const THE_DIVE_LOCK: [Fitting; 17] = [
         Vec3::new(0.12, 0.09, 0.14),
     )
     .called("ceiling block")
+    .part_of("ceiling_block")
     .seated(Seat::Face(Face::Deckhead)),
     inboard_bead(-0.42),
     inboard_bead(0.10),
     inboard_bead(0.62),
     // The catch: two shallow trays on the port wall with the day's
     // pearls in them, which is the produce sitting in the room.
-    tray(-0.30),
-    tray(0.30),
+    tray(-0.30).part_of("catch_tray_fore"),
+    tray(0.30).part_of("catch_tray_aft"),
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::kind_color(Kind::BrinePearls)),

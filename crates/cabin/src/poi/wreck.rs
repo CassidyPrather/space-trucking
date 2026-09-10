@@ -281,6 +281,7 @@ const THE_HOLD: [Fitting; 23] = [
         Vec3::new(0.945, -0.06, -0.30),
         Vec3::new(0.022, 0.028, 0.60),
     )
+    .part_of("grab_rail")
     .seated(Seat::On("rail stanchion")),
     stanchion(0.978, -0.86),
     stanchion(0.978, 0.24),
@@ -341,6 +342,7 @@ const THE_HOLD: [Fitting; 23] = [
         Vec3::new(0.30, 0.44, 0.028),
     )
     .called("hull hatch")
+    .part_of("hull_hatch")
     .seated(Seat::Face(Face::Fore)),
     dog(-0.78, 0.26),
     dog(-0.26, 0.26),
@@ -367,6 +369,7 @@ const fn stanchion(x: f32, z: f32) -> Fitting {
         Vec3::new(0.020, 0.34, 0.030),
     )
     .called("rail stanchion")
+    .part_of("grab_rail")
     .seated(Seat::Face(Face::Starboard))
 }
 
@@ -378,6 +381,7 @@ const fn dog(x: f32, y: f32) -> Fitting {
         Vec3::new(x, y, -0.92),
         Vec3::new(0.045, 0.055, 0.04),
     )
+    .part_of("hull_hatch")
     .seated(Seat::On("hull hatch"))
 }
 

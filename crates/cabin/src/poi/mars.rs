@@ -234,21 +234,24 @@ const FIELD_SHOP: [Fitting; 20] = [
         Coat::enamel(palette::enamel_color(0)),
         Vec3::new(0.86, -0.30, 0.48),
         Vec3::new(0.12, 0.055, 0.22),
-    ),
+    )
+    .part_of("counter"),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Plate),
         Vec3::new(0.86, -0.24, 0.12),
         Vec3::new(0.12, 0.055, 0.14),
-    ),
+    )
+    .part_of("counter"),
     Fitting::new(
         Shape::Slab,
         Coat::enamel(palette::enamel_color(3)),
         Vec3::new(0.86, -0.34, -0.22),
         Vec3::new(0.12, 0.055, 0.20),
-    ),
-    leg(0.48, 0.32),
-    leg(-0.30, 0.30),
+    )
+    .part_of("counter"),
+    leg(0.48, 0.32).part_of("counter"),
+    leg(-0.30, 0.30).part_of("counter"),
     // The patch on the port wall: newer plate over a hole nobody talks
     // about, and four rivets that went in by hand.
     Fitting::new(
@@ -258,6 +261,7 @@ const FIELD_SHOP: [Fitting; 20] = [
         Vec3::new(0.025, 0.34, 0.40),
     )
     .called("wall patch")
+    .part_of("wall_patch")
     .seated(Seat::Face(Face::Port)),
     rivet(0.44, 0.21),
     rivet(0.44, -0.45),
@@ -271,6 +275,7 @@ const FIELD_SHOP: [Fitting; 20] = [
         Vec3::new(-0.70, -0.90, -0.36),
         Vec3::new(0.050, 0.100, 0.050),
     )
+    .part_of("paint_tin_big")
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Post,
@@ -278,6 +283,7 @@ const FIELD_SHOP: [Fitting; 20] = [
         Vec3::new(-0.53, -0.915, -0.30),
         Vec3::new(0.045, 0.085, 0.045),
     )
+    .part_of("paint_tin_small")
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Slab,
@@ -295,6 +301,7 @@ const FIELD_SHOP: [Fitting; 20] = [
         Vec3::new(0.19, 0.15, 0.14),
     )
     .called("offcut bin")
+    .part_of("offcut_bin")
     .seated(Seat::Face(Face::Deck)),
     offcut(0.38, -0.56, 0.30, 0.16),
     offcut(0.47, -0.50, 0.34, 0.20),
@@ -306,6 +313,7 @@ const FIELD_SHOP: [Fitting; 20] = [
         Vec3::new(-0.10, 0.90, 0.140),
         Vec3::new(0.055, 0.025, 0.55),
     )
+    .part_of("conduit")
     .seated(Seat::On("conduit clamp")),
     pipe_clamp(-0.30),
     pipe_clamp(0.22),
@@ -330,6 +338,7 @@ const fn rivet(y: f32, z: f32) -> Fitting {
         Vec3::new(-0.935, y, z),
         Vec3::new(0.025, 0.045, 0.030),
     )
+    .part_of("wall_patch")
     .seated(Seat::On("wall patch"))
 }
 
@@ -357,6 +366,7 @@ const fn pipe_clamp(z: f32) -> Fitting {
         Vec3::new(0.090, 0.075, 0.035),
     )
     .called("conduit clamp")
+    .part_of("conduit")
     .seated(Seat::Face(Face::Deckhead))
 }
 

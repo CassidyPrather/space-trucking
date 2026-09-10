@@ -310,13 +310,15 @@ const CUT_FACE: [Fitting; 20] = [
         Coat::metal(Worn::Rivet),
         Vec3::new(-0.86, -0.55, -0.62),
         Vec3::new(0.020, 0.44, 0.020),
-    ),
+    )
+    .part_of("pick"),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
         Vec3::new(-0.86, -0.04, -0.62),
         Vec3::new(0.13, 0.020, 0.030),
-    ),
+    )
+    .part_of("pick"),
     // Shards, on the deck, where they fell.
     shard(0.42, -0.923, 0.28, 0.11),
     shard(0.10, -0.944, -0.10, 0.08),

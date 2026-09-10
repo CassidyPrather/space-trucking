@@ -242,6 +242,87 @@ def paint_with(path):
     return image
 
 
+def light_with(path):
+    """Wire this emissive atlas into every material in the scene.
+
+    The counterpart of `paint_with`, and deliberately NOT the same rule.
+    An atlas fills a silence and never overrules a statement, because a
+    Synty FBX often does know where its colour texture is. **No Synty FBX
+    has ever known where its emissive is** — emission is assigned in
+    Unity, in the `.mat`, which the FBX does not carry — so there is no
+    statement here to defer to and the declaration is the whole of it.
+    Every material gets it, on the emission slot alone; nothing about
+    Base Color is touched.
+
+    The image is the pack's own emissive atlas, laid out on the same
+    swatch grid as the colour one: black everywhere the mesh is not lit,
+    and the lamp's colour where it is. So this lights exactly the faces
+    Synty meant to light, and a mesh that is mostly not a lamp stays
+    mostly dark.
+
+    Strength is left at one. glTF carries `emissiveTexture` times
+    `emissiveFactor` and Bevy reads both into `StandardMaterial`, so what
+    reaches the screen is the atlas at its own brightness — the pack's
+    judgement about how hard its own lamps burn, which is the same
+    deference the colour atlas gets.
+    """
+    path = openable(path)
+    if not os.path.isfile(path):
+        raise SystemExit(
+            f"the declared emissive is not where the resolver staged it: {path}\n"
+            "  `cargo xtask art resolve` copies it beside the mesh before running this,\n"
+            "  so a missing one is a fault in the resolver rather than in the pack."
+        )
+    image = bpy.data.images.load(path, check_existing=True)
+    # Emission is light, not albedo: reading it through the colour
+    # pipeline would gamma-correct a quantity that is already linear.
+    try:
+        image.colorspace_settings.name = "Non-Color"
+    except Exception:  # noqa: BLE001 - an old Blender may spell it differently
+        pass
+    for obj in mesh_objects():
+        materials = getattr(obj.data, "materials", None)
+        if materials is None:
+            continue
+        for material in materials:
+            if material is not None:
+                light_material(material, image)
+    return image
+
+
+def light_material(material, image):
+    """Plug `image` into this material's emission, building what it needs.
+
+    Same defensive shape as `paint_material`: it runs on somebody else's
+    Blender against a file nothing here has seen, and the worst outcome
+    available should be a mesh that does not glow rather than a
+    traceback. A material with no Principled shader gets no emission —
+    there is nowhere to put one that the glTF exporter would read.
+    """
+    if not getattr(material, "use_nodes", True):
+        material.use_nodes = True
+    tree = material.node_tree
+    if tree is None:
+        return
+    shader = next((node for node in tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
+    if shader is None:
+        return
+    colour = shader.inputs.get("Emission Color") or shader.inputs.get("Emission")
+    strength = shader.inputs.get("Emission Strength")
+    if colour is None:
+        return
+    node = tree.nodes.new("ShaderNodeTexImage")
+    node.image = image
+    tree.links.new(node.outputs["Color"], colour)
+    if strength is not None and not strength.is_linked:
+        # Blender 4.x defaults this to 0.0 on an untouched Principled
+        # node, and a texture into a colour multiplied by nothing is a
+        # conversion that reports success and exports a dark mesh —
+        # which is the exact failure mode every colourless crate in this
+        # pipeline's history has taken.
+        strength.default_value = 1.0
+
+
 def paint_material(material, image):
     """Plug `image` into this material, unless it already has one that loads.
 
@@ -432,15 +513,20 @@ def main():
     if "--" not in sys.argv:
         raise SystemExit(
             "expected: blender --background --python fbx_to_gltf.py -- "
-            "<source> <destination> [texture]"
+            "<source> <destination> [texture [emissive]]"
         )
     arguments = sys.argv[sys.argv.index("--") + 1 :]
-    if len(arguments) not in (2, 3):
+    if len(arguments) not in (2, 3, 4):
         raise SystemExit(
-            f"expected a source, a destination and an optional texture, got {arguments}"
+            "expected a source, a destination, an optional texture and an optional "
+            f"emissive, got {arguments}"
         )
     source, destination = arguments[0], arguments[1]
-    texture = arguments[2] if len(arguments) == 3 else None
+    texture = arguments[2] if len(arguments) >= 3 else None
+    # Positional and behind the atlas, which is why the resolver refuses
+    # a manifest that declares one without the other: a lone emissive
+    # would arrive here as `texture` and be painted on as Base Color.
+    emissive = arguments[3] if len(arguments) == 4 else None
     if not os.path.isfile(source):
         raise SystemExit(f"no such source file: {source}")
 
@@ -450,6 +536,8 @@ def main():
         raise SystemExit(f"{source} imported without producing a single object")
     if texture is not None:
         refuse_unless_painted(source, texture, paint_with(texture))
+    if emissive is not None:
+        light_with(emissive)
     export_glb(destination)
     report_bounds()
     print(f"fbx_to_gltf: wrote {destination}")

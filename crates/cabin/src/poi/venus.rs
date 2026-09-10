@@ -237,10 +237,10 @@ const SALON: [Fitting; 17] = [
     // between them, standing a hand off the goods. It stops well short
     // of the doorway, because a threshold belongs to two rooms and this
     // one owns neither.
-    stanchion(-0.14),
-    stanchion(0.92),
-    finial(-0.14),
-    finial(0.92),
+    stanchion(-0.14).part_of("rope_post_port"),
+    stanchion(0.92).part_of("rope_post_starboard"),
+    finial(-0.14).part_of("rope_post_port"),
+    finial(0.92).part_of("rope_post_starboard"),
     Fitting::new(
         Shape::Slab,
         // Upholstery plum: the rope is the same cloth as the couches
@@ -250,6 +250,7 @@ const SALON: [Fitting; 17] = [
         Vec3::new(0.39, -0.55, 0.52),
         Vec3::new(0.53, 0.026, 0.026),
     )
+    .part_of("rope")
     .seated(Seat::On("stanchion")),
     // The vitrine on the starboard flank: a rose plinth, a shelf, a lit
     // back panel, and the house produce standing on it. Two vials, both
@@ -261,6 +262,7 @@ const SALON: [Fitting; 17] = [
         Vec3::new(0.10, 0.26, 0.20),
     )
     .called("vitrine plinth")
+    .part_of("vitrine")
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Slab,
@@ -269,6 +271,7 @@ const SALON: [Fitting; 17] = [
         Vec3::new(0.10, 0.020, 0.19),
     )
     .called("vitrine shelf")
+    .part_of("vitrine")
     .seated(Seat::On("vitrine plinth")),
     Fitting::new(
         Shape::Slab,
@@ -288,6 +291,7 @@ const SALON: [Fitting; 17] = [
         Vec3::new(0.020, 0.32, 0.34),
     )
     .called("picture frame")
+    .part_of("picture")
     .seated(Seat::Face(Face::Port)),
     Fitting::new(
         Shape::Slab,
@@ -295,6 +299,7 @@ const SALON: [Fitting; 17] = [
         Vec3::new(-0.950, 0.12, -0.60),
         Vec3::new(0.014, 0.27, 0.29),
     )
+    .part_of("picture")
     .seated(Seat::On("picture frame")),
     Fitting::new(
         Shape::Cone,

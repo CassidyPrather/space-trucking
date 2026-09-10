@@ -818,6 +818,30 @@ so the frame is anisotropic on the tall kinds. A rotation that is not a
 quarter turn shears a body there. A per-axis `scale` is how to answer
 that, or turn the mesh in Blender and leave `rotation` alone.
 
+**A quarter turn turns the frame with the body.** `scale` is per-axis in
+the mesh's own frame; `half` is per-axis in the frame's; and the mesh is
+scaled along its own axes *before* it is turned. So the half-unit `scale`
+is counted in is the one belonging to the frame axis that mesh axis lands
+on — `art::Dressing::landing`, which is the identity when `rotation` is
+zero. That is why nothing needed it for a year: every rotated declaration
+in the manifest sat in a frame that happened to be square across the pair
+its turn swapped, so the two readings agreed. A trade room is 4.4 m
+across and 3.85 m deep and is not square, and the first station fitting
+turned a quarter about `y` — Venus's rope line — asked for a `fill` of
+twenty-three on one axis. The resolver refused it and was right to: a
+`fill` is a fraction of a frame, and a fraction of the wrong axis is not
+one. With the frame turned instead, `scale = 1 / measured_half` with
+`fill = [1, 1, 1]` means "fills its frame" under **any** quarter turn,
+which is exactly what the refusal above already prints as its advice.
+
+The one declaration this moved was the gas canister, whose berth is
+`1:2:1` across the pair its quarter turn about `z` swaps: its `scale`
+came out of the old reading with the anisotropy hand-cancelled into it,
+`x` and `y` in the ratio 2, and the cure is the two numbers swapped. Its
+body is in the same place, the same size, to five decimal places; only
+the bookkeeping changed, and `rig-seated` catching it the moment the
+frame changed is how that was known rather than hoped.
+
 **The game draws the index's numbers, not the manifest's.** An edit to
 `art/manifest.toml` reaches the game through `resolve`, which is also the
 only moment it is checked. The gauntlet is the other way round: it reads
@@ -832,10 +856,13 @@ One optional key per asset says what the mesh is *for*:
 dresses = "cargo/suspicious_crate"
 ```
 
-The namespace is there from the first line so that `fitting/...` can
-exist later without re-spelling anything; `cargo` and `fabric` are the
-two today ([the fabric namespace](#the-fabric-namespace-walls-deck-deckhead-and-doorways)
-is the second) and anything else is a refusal naming what it knows. The
+The namespace is there from the first line so that a second and a third
+kind of body can exist without re-spelling anything. There are three:
+`cargo`, `fabric`
+([walls, deck, deckhead and doorways](#the-fabric-namespace-walls-deck-deckhead-and-doorways))
+and `fitting`
+([a station's own furniture](#the-fitting-namespace-a-stations-own-furniture)),
+and anything else is a refusal naming what it knows. The
 name after the slash is the cargo kind's own spelling in snake case —
 `Kind::BayWindow` is `bay_window` — derived rather than tabled, so no
 second list can fall out of step with `Kind::ALL`.
@@ -859,6 +886,98 @@ paint_tin           luminous_paint    window           chart_tank
 eta_gauge           dest_preview      launch_lever     porthole
 bay_window
 ```
+
+### The `fitting` namespace: a station's own furniture
+
+Cargo is dressed one mesh per kind and the shell one mesh per role. A
+station's furniture is dressed one mesh per **object**, and an object is
+a *group* of `poi::Fitting`s:
+
+```toml
+[asset.cell_grille]
+pack = "police_station"
+source = "SourceFiles/FBX/SM_Bld_Wall_Cell_02.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonPoliceStation_Texture_01_A.png"
+dresses = "fitting/guild_shopfront"
+```
+
+**A `Fitting` is a primitive and an object is several of them.** The
+Guild's shopfront is five brass bars and the rail they hang from; its
+chute is a drum, a collar and a throat; its plaque is a frame and the
+enamel in it. Nobody sells a bar. So the thing a binding names is the
+OBJECT, and what says which fittings are pieces of one is
+`poi::Fitting::part_of` — every fitting in one station's
+`Character::decor` sharing a name there is one object, and a bought
+module stands in for the whole group at once. The whitebox draws exactly
+the pieces no module stands in for (`room::furnish`), so a station whose
+chute is bought and whose plaque is not keeps its cut plaque.
+
+**It is deliberately not `Fitting::called`.** That name is a *seat's*
+address and the two answer different questions: the plaque's enamel is
+seated `On("plaque frame")` and is `part_of("plaque")` — one name for
+what holds it up, one for what it is part of. Fused into a single field
+the enamel would be seated on its own group, and nothing holds itself up.
+
+**The name is the station's spelling and then the object's** —
+`fitting/guild_shopfront`, from `art::piece_binding` — because a binding
+is `<namespace>/<name>` with no third part to put the station in, and
+fifteen stations would otherwise race for the word `counter`. The
+station half is derived from `Host`'s own `Debug`, for the reason the
+cargo half is derived from `Kind`'s: a second table is a table that falls
+out of step. `art::piece_named` answers a name by searching what the
+stations actually declare, so a `part_of` nobody wrote is a stranger
+rather than a table that silently never applies.
+
+**The frame is the object's own box** (`poi::piece_box`): the union of
+its pieces' `Fitting::span`s — the bodies, not the frames they are drawn
+in, for the reason `span` exists — in the room's own fractions, carried
+into the world by `room::fit`. So the four numbers mean exactly what they
+mean in a berth and in a run of wall, and because the frame is derived
+from the whitebox object itself, `scale = 1 / measured_half` with
+`fill = [1, 1, 1]` is usually right here: the bought body should occupy
+the space the cut one occupied. That is the number `resolve` prints when
+it refuses.
+
+There is no `room` line and no fallback: an object belongs to one
+station, and a module bought for the Guild's chute is not a module for
+anybody else's.
+
+#### What is deliberately not dressed, and why
+
+**Anything whose reading is its light.** A Synty atlas carries no
+emissive, so a bought body cannot glow ("Light is not a drawing", below),
+and a cargo lamp survives being bought only because `build_kind` keeps
+the parts that *light* and drops the parts that *draw*. A station's lit
+decor has no such split — it is one `Coat::phosphor` slab and nothing
+else — so buying it would put a dark prop exactly where the room's whole
+meaning was. Left cut, everywhere: the Guild's seizure beacon and the
+violet throat of its chute, Venus's picture light, Earth's dying grow
+strip, Jupiter's pilot slit and furnace port, the Umbra's leaking tins,
+Neptune's rim lamps, the Parlor's cove and its seven.
+
+**The Wanderer, entirely.** Its pillars hold nothing up, its fourth
+collar has nothing under it, and its free-standing panel is "the only
+surface in the game with no visible way it was made". A purchased body
+arrives with a way it was made written all over it, so buying one would
+answer the question the room exists to ask. It names no objects at all,
+which is how a station says so.
+
+**And a pick whose mesh fights the object's box.** The frame is the
+whitebox object's own proportions and `scale` is per-axis, so a mesh
+whose aspect is a long way off gets stretched into something else: a
+sagging casino cord is long along its own `z` and Venus's rope line is
+long along the room's `x`, which per-axis fitting turns into a squashed
+disc. Two picks were dropped for this rather than shipped bent —
+`venus_rope` and `mars_counter` — and both stay named objects with no
+table, which is exactly what an object nobody has picked a mesh for looks
+like. The cure when it matters is a `rotation`, and a quarter turn there
+makes `scale` depend on the room's own aspect rather than only the
+mesh's, which is a thing to work out at the bench and not in a text
+editor.
+
+Two constraints ride on every pick and both come from the art direction:
+**no hazard striping**, which is `Consume`'s alone, and **no legible
+text**, which the zero-text law forbids anywhere a player can see it.
 
 ### The fabric namespace: walls, deck, deckhead and doorways
 
@@ -1312,13 +1431,26 @@ through so the two cannot drift, and
 set of kinds the sim calls a light source to the set of descriptions
 that describe one.
 
-**What a purchased lamp gives up is its glass.** A whitebox bulb owns a
-material instance and `sync_fixtures` writes the eased level into it, so
-a lamp on the barter counter is visibly dark glass. A Synty fitting is
-painted from a flat atlas with no emissive in it — there is nothing to
-write a level into — so `LampGlow::mat` is `None` on a bought lamp and
-what says it is burning is the pool of light under it. That is a real
-loss and it is small: the pool is the tell the room reads.
+**What a purchased lamp gives up is its glass — and half of that has
+since been bought back.** A whitebox bulb owns a material instance and
+`sync_fixtures` writes the eased level into it, so a lamp on the barter
+counter is visibly dark glass.
+
+A Synty fitting used to be painted from a flat atlas with nothing to
+write a level into. That half is no longer true: the packs ship an
+emissive atlas beside the colour one, laid out on the same swatch grid,
+and an `emissive` line in the manifest declares it
+([the fitting namespace](#the-fitting-namespace-a-stations-own-furniture)).
+A bought body can therefore be lit where its own pack meant it to be
+lit, statically, and the Guild's hangar strip is.
+
+What is still missing is the LEVEL. `LampGlow::mat` is `None` on a bought
+lamp because a glTF material is shared by every copy of its scene, so
+writing an eased value into one would light every lamp aboard at once —
+the cure is a material instance per lamp, and it is the same cure the
+`glass` line wants. Until then a bought lamp burns flat and what says it
+is dimming is the pool of light under it, which is the tell the room
+reads.
 
 It need not stay lost. Two of the three fittings named today carry their
 glass as a node of their own — `SM_Prop_Lighting_Wall_Glass_05` on the

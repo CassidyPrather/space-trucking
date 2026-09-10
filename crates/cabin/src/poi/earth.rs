@@ -241,19 +241,22 @@ const RATION_COUNTER: [Fitting; 14] = [
         Coat::metal(Worn::Plate),
         Vec3::new(0.70, 0.42, 0.200),
         Vec3::new(0.26, 0.28, 0.22),
-    ),
+    )
+    .part_of("hopper"),
     Fitting::new(
         Shape::Post,
         Coat::metal(Worn::Socket),
         Vec3::new(0.70, -0.05, 0.200),
         Vec3::new(0.085, 0.22, 0.085),
-    ),
+    )
+    .part_of("hopper"),
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Rivet),
         Vec3::new(0.70, -0.34, 0.200),
         Vec3::new(0.24, 0.025, 0.19),
-    ),
+    )
+    .part_of("hopper"),
     brick(0.60, -0.280, 0.14),
     brick(0.79, -0.285, 0.25),
     // The grow rack, port flank: two uprights, two shelves, a strip
@@ -276,7 +279,8 @@ const RATION_COUNTER: [Fitting; 14] = [
         Coat::metal(Worn::Socket),
         Vec3::new(-0.82, -0.40, -0.30),
         Vec3::new(0.12, 0.020, 0.15),
-    ),
+    )
+    .part_of("grow_rack"),
     // The duct along the ceiling, and the two clamps holding it there.
     Fitting::new(
         Shape::Slab,
@@ -284,6 +288,7 @@ const RATION_COUNTER: [Fitting; 14] = [
         Vec3::new(0.10, 0.90, 0.140),
         Vec3::new(0.09, 0.025, 0.55),
     )
+    .part_of("duct")
     .seated(Seat::On("duct clamp")),
     clamp(-0.30),
     clamp(0.24),
@@ -308,6 +313,7 @@ const fn upright(z: f32) -> Fitting {
         Vec3::new(0.022, 0.56, 0.022),
     )
     .called("grow rack upright")
+    .part_of("grow_rack")
     .seated(Seat::Face(Face::Deck))
 }
 
@@ -319,6 +325,7 @@ const fn shelf(y: f32) -> Fitting {
         Vec3::new(-0.82, y, -0.36),
         Vec3::new(0.145, 0.020, 0.34),
     )
+    .part_of("grow_rack")
     .seated(Seat::On("grow rack upright"))
 }
 
@@ -335,6 +342,7 @@ const fn clamp(z: f32) -> Fitting {
         Vec3::new(0.12, 0.075, 0.035),
     )
     .called("duct clamp")
+    .part_of("duct")
     .seated(Seat::Face(Face::Deckhead))
 }
 

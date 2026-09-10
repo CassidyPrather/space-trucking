@@ -223,15 +223,25 @@ const BONDED_STORE: [Fitting; 14] = [
         Coat::metal(Worn::Brass),
         Vec3::new(0.32, 0.40, 0.690),
         Vec3::new(0.62, 0.022, 0.014),
-    ),
+    )
+    .part_of("shopfront"),
     // The hangar's light, over the aft cornice. Whatever is on the other
     // side of that wall is lit, and it is not lit like this room.
+    //
+    // **It is an object**, and it is the one lit fitting aboard that a
+    // bought body can stand in for: a strip light is a strip light, and
+    // a pack that ships an emissive atlas beside its colour one can say
+    // so (`art/manifest.toml`, `hangar_strip`). What it gives up is the
+    // violet — the pack's own lamps burn the pack's own colour — and
+    // what it keeps is the reading, which is a lit line over the
+    // cornice where the room's own light does not reach.
     Fitting::new(
         Shape::Slab,
         Coat::phosphor(palette::EERIE, 1.6),
         Vec3::new(0.0, 0.94, 0.660),
         Vec3::new(0.92, 0.030, 0.040),
-    ),
+    )
+    .part_of("hangar_light"),
     // The seizure chute, in the starboard wall: a drum, a brass collar,
     // and a violet throat. Suspicious cargo goes in here and comes out
     // somewhere nobody has been.
@@ -304,6 +314,7 @@ const BONDED_STORE: [Fitting; 14] = [
         Vec3::new(0.012, 0.23, 0.29),
     )
     .called("plaque frame")
+    .part_of("plaque")
     .seated(Seat::Face(Face::Port)),
     Fitting::new(
         Shape::Slab,
@@ -311,6 +322,7 @@ const BONDED_STORE: [Fitting; 14] = [
         Vec3::new(-0.96, 0.30, -0.20),
         Vec3::new(0.015, 0.155, 0.26),
     )
+    .part_of("plaque")
     .seated(Seat::On("plaque frame")),
 ];
 
@@ -322,6 +334,7 @@ const fn bar(x: f32) -> Fitting {
         Vec3::new(x, -0.34, 0.690),
         Vec3::new(0.014, 0.66, 0.014),
     )
+    .part_of("shopfront")
     .seated(Seat::Face(Face::Deck))
 }
 

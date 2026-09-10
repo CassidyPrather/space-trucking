@@ -91,6 +91,7 @@ impl Converter {
         source: &Path,
         destination: &Path,
         texture: Option<&Path>,
+        emissive: Option<&Path>,
     ) -> Result<Option<Bounds>, String> {
         if let Some(parent) = destination.parent() {
             fsx::create_dir_all(parent)?;
@@ -103,7 +104,7 @@ impl Converter {
                 script
             }
         };
-        let mut command = self.command(&script, source, destination, texture);
+        let mut command = self.command(&script, source, destination, texture, emissive);
         let output = command
             .output()
             .map_err(|err| format!("cannot run {}: {err}", self.describe()))?;
@@ -143,6 +144,7 @@ impl Converter {
         source: &Path,
         destination: &Path,
         texture: Option<&Path>,
+        emissive: Option<&Path>,
     ) -> Command {
         let mut command = match self {
             Self::Program(program) => {
@@ -165,8 +167,16 @@ impl Converter {
                 command
             }
         };
+        // Positional, and the emissive rides behind the atlas — which
+        // is why a manifest may not declare one without the other
+        // (`manifest::emissive_trouble`). A lone emissive handed over
+        // here would arrive in the atlas's own place and be painted on
+        // as Base Color, which is a mesh the colour of its own light.
         if let Some(texture) = texture {
             command.arg(texture);
+            if let Some(emissive) = emissive {
+                command.arg(emissive);
+            }
         }
         command
     }
@@ -402,7 +412,7 @@ mod tests {
         let destination = Path::new("/cache/glb/crate.glb");
         let atlas = Path::new("/cache/stage/PolygonSciFiSpace_Texture_01_A.png");
 
-        let painted = arguments(&blender.command(script, source, destination, Some(atlas)));
+        let painted = arguments(&blender.command(script, source, destination, Some(atlas), None));
         assert_eq!(
             painted,
             [
@@ -423,7 +433,7 @@ mod tests {
         // And silence stays silence: absent rather than empty, so the
         // script can tell the difference without guessing what an empty
         // path means.
-        let silent = arguments(&blender.command(script, source, destination, None));
+        let silent = arguments(&blender.command(script, source, destination, None, None));
         assert_eq!(silent, painted[..painted.len() - 1], "{silent:#?}");
 
         // The same for the escape hatch, which is two positionals and
@@ -431,7 +441,7 @@ mod tests {
         // stay `cp "$1" "$2"`.
         let program = Converter::Program(PathBuf::from("fbx2gltf"));
         assert_eq!(
-            arguments(&program.command(script, source, destination, Some(atlas))),
+            arguments(&program.command(script, source, destination, Some(atlas), None)),
             [
                 "/cache/stage/SM_Prop_Crate_01.fbx",
                 "/cache/glb/crate.glb",

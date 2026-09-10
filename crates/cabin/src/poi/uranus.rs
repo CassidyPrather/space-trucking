@@ -218,6 +218,7 @@ const THE_COLD_STORE: [Fitting; 15] = [
         Vec3::new(-0.95, 0.30, -0.30),
         Vec3::new(0.05, 0.05, 0.62),
     )
+    .part_of("chill_main")
     .seated(Seat::Face(Face::Port)),
     // Rime along the foot of both side walls: the low edges are where a
     // hull this cold sweats, and the sweat has been there for years.
@@ -234,6 +235,7 @@ const THE_COLD_STORE: [Fitting; 15] = [
     )
     .meeting(Face::Deck)
     .called("core cradle")
+    .part_of("core_cradle")
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Dome,
@@ -264,6 +266,7 @@ const THE_COLD_STORE: [Fitting; 15] = [
         Vec3::new(-0.955, -0.34, 0.620),
         Vec3::new(0.014, 0.66, 0.025),
     )
+    .part_of("door_seal")
     .seated(Seat::Face(Face::Deck)),
 ];
 

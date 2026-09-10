@@ -240,17 +240,27 @@ const CELL: [Fitting; 27] = [
     // any of them, because `barter::stock_kinds` puts
     // `karma / 2` goods out and a stranger's karma is zero. The hermits
     // are not out of stock: they have not decided about you.
-    ledge(-0.10, 0.20, 0.600, 0.17).seated(Seat::On("corbel")),
-    ledge(0.34, 0.20, 0.600, 0.17).seated(Seat::On("corbel")),
-    ledge(0.78, 0.20, 0.600, 0.17).seated(Seat::On("corbel")),
-    corbel(-0.20, 0.13, 0.600),
-    corbel(0.44, 0.13, 0.600),
+    ledge(-0.10, 0.20, 0.600, 0.17)
+        .part_of("shelves")
+        .seated(Seat::On("corbel")),
+    ledge(0.34, 0.20, 0.600, 0.17)
+        .part_of("shelves")
+        .seated(Seat::On("corbel")),
+    ledge(0.78, 0.20, 0.600, 0.17)
+        .part_of("shelves")
+        .seated(Seat::On("corbel")),
+    corbel(-0.20, 0.13, 0.600).part_of("shelves"),
+    corbel(0.44, 0.13, 0.600).part_of("shelves"),
     // The third ledge had no corbel: two brackets under three shelves,
     // and the outboard one carried on nothing for 0.264 m of its span.
-    corbel(0.88, 0.13, 0.600),
+    corbel(0.88, 0.13, 0.600).part_of("shelves"),
     // Two more down the starboard wall, for a body that walks round.
-    ledge(0.925, 0.02, -0.30, 0.075).seated(Seat::Face(Face::Starboard)),
-    ledge(0.925, 0.02, 0.16, 0.075).seated(Seat::Face(Face::Starboard)),
+    ledge(0.925, 0.02, -0.30, 0.075)
+        .part_of("side_ledge_fore")
+        .seated(Seat::Face(Face::Starboard)),
+    ledge(0.925, 0.02, 0.16, 0.075)
+        .part_of("side_ledge_aft")
+        .seated(Seat::Face(Face::Starboard)),
     // ---- the votive rack, to port ----
     // The gifts they remember. Five niches cut in the rock aft of the
     // crew's own window, three of them still alight — and the dark ones

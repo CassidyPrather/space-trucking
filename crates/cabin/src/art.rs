@@ -59,6 +59,22 @@
 //! here — a body that leaves its berth is a finding, and the gauntlet's
 //! families already know how to say so.
 //!
+//!
+//! **A turn turns the frame, not just the body.** `scale` is per-axis in
+//! the MESH's frame and `half` is per-axis in the FRAME's, and the mesh
+//! is scaled along its own axes before it is turned — so the half-unit
+//! `scale` is counted in is the one belonging to the frame axis that
+//! mesh axis LANDS on ([`Dressing::landing`]). While every rotated
+//! declaration happened to sit in a frame that was square across the
+//! pair its turn swapped, the two readings agreed and nothing needed
+//! saying. A trade room is not square, so the first station fitting
+//! turned a quarter about `y` asked for a `fill` of twenty-three on one
+//! axis — refused, and rightly, because a fraction of the wrong axis is
+//! not a fraction of a frame. With the frame turned instead,
+//! `scale = 1 / measured_half` and `fill = [1, 1, 1]` mean "fills its
+//! frame" under **any** quarter turn, which is what the resolver's own
+//! advice always claimed.
+//!
 //! `scale` and `fill` are deliberately **redundant**, and the redundancy
 //! is the mechanism: `fill` is a promise living in the repository, and
 //! `scale` times the mesh's own measured size is the fact. `cargo xtask
@@ -184,6 +200,37 @@ pub fn room_snake(kind: RoomKind) -> String {
     snake_case(&format!("{kind:?}"))
 }
 
+/// **The name a manifest spells one of a station's objects by**, after
+/// `fitting/`: the host's own spelling, then the object's.
+///
+/// Qualified by the station because a binding is `<namespace>/<name>` and
+/// has no third part to put the station in — and unqualified names would
+/// have fifteen authors racing for the word `counter`. The station half
+/// is derived from `Host`'s own `Debug` for the reason [`kind_named`]
+/// derives its half: a second table is a table that falls out of step.
+#[must_use]
+pub fn piece_binding(host: crate::poi::Host, piece: &str) -> String {
+    format!("{}_{piece}", snake_case(&format!("{host:?}")))
+}
+
+/// **Which station object a `dresses` name means**, or `None` where no
+/// station names one.
+///
+/// Searched rather than parsed on the underscore, because a host's
+/// spelling and an object's are both lowercase words joined by
+/// underscores and `venus_mirror_frame` could be split two ways. What
+/// the stations actually declare is the list, so it is the list that
+/// answers.
+#[must_use]
+pub fn piece_named(name: &str) -> Option<(crate::poi::Host, &'static str)> {
+    crate::poi::HOSTS.into_iter().find_map(|host| {
+        crate::poi::pieces(host)
+            .into_iter()
+            .find(|piece| piece_binding(host, piece) == name)
+            .map(|piece| (host, piece))
+    })
+}
+
 /// **One purchased body, as declared**: which kind it dresses, and the
 /// four numbers that put it in that kind's box.
 #[derive(Clone, Debug, PartialEq)]
@@ -280,13 +327,41 @@ impl Dressing {
     #[must_use]
     pub fn pose_in(&self, mid: Vec3, half: Vec3, frame: Quat) -> Transform {
         let turn = self.turn();
-        let scale = self.scale * half;
+        let scale = self.scale * self.landing(half);
         let recentre = self.measured.map_or(Vec3::ZERO, |(measured, _)| measured);
         Transform {
             translation: mid + frame * (self.offset * half - turn * (scale * recentre)),
             rotation: frame * turn,
             scale,
         }
+    }
+
+    /// **The frame half-extent each of the mesh's own axes lands on**,
+    /// once [`Dressing::rotation`] has turned it.
+    ///
+    /// `scale` is "mesh units per frame half-unit" and the mesh is
+    /// scaled along its OWN axes before it is turned, so the half-unit
+    /// meant is the one belonging to the frame axis that mesh axis ends
+    /// up along. Without the turn those are the same axis and this is
+    /// the identity, which is why nothing needed it while every rotated
+    /// declaration happened to sit in a frame that was square across the
+    /// pair it swapped.
+    ///
+    /// **A trade room is not square** — 4.4 m across, 3.85 m deep, 2.2 m
+    /// high — and a station fitting turned a quarter about `y` therefore
+    /// asks for a `fill` on one axis of over twenty, which the resolver
+    /// refuses and is right to: `fill` is a fraction of a frame, and a
+    /// fraction of the wrong axis is not one. Turning the frame instead
+    /// keeps `fill` a fraction of the axis the body actually reaches
+    /// along, so `scale = 1 / measured_half` with `fill = [1, 1, 1]`
+    /// means "fills its frame" under **any** quarter turn — which is
+    /// what the resolver's own advice has always claimed it means.
+    ///
+    /// Quarter turns permute; anything else blends, which is the same
+    /// hair of generosity `fill_box` already takes on a turn that is not
+    /// a quarter.
+    fn landing(&self, half: Vec3) -> Vec3 {
+        (self.turn().inverse() * half).abs()
     }
 
     /// **The box the harness measures and the aim meets**, as a
@@ -300,7 +375,10 @@ impl Dressing {
     #[must_use]
     pub fn fill_box(&self, kind: Kind) -> (Vec3, Vec3) {
         let (mid, half) = Self::berth_box(kind);
-        let body = (self.fill * half).abs();
+        // The same landing the pose scales in, for the same reason: a
+        // `fill` is a fraction of the frame axis its own mesh axis
+        // reaches along, and the two readings may never drift.
+        let body = (self.fill * self.landing(half)).abs();
         let m = Mat3::from_quat(self.turn());
         let reach = m.x_axis.abs() * body.x + m.y_axis.abs() * body.y + m.z_axis.abs() * body.z;
         (mid + self.offset * half, reach)
@@ -326,6 +404,15 @@ pub struct Dressings {
     /// is the table with no `room` line — every room — and slot `1 + n`
     /// is room kind `n`'s own, which wins where it exists.
     by_fabric: [[Option<Dressing>; FABRIC_COUNT]; ROOM_SLOTS],
+    /// **A station's own objects**, by the name a manifest spells them
+    /// by ([`piece_binding`]).
+    ///
+    /// A `Vec` where the other two are arrays, because a piece is named
+    /// by a string a station chose rather than by an index the sim
+    /// hands out, and because there are a few dozen of them against
+    /// thirty-two kinds asked about every frame. The lookup is a scan
+    /// and it is done once per room built, not once per body drawn.
+    by_piece: Vec<(String, Dressing)>,
     /// Bindings that named a body this game does not have, kept rather
     /// than dropped so a guard can be about them. At runtime they are
     /// simply not drawn.
@@ -370,6 +457,21 @@ impl Dressings {
         self.by_kind[kind.index()] = Some(dressing);
     }
 
+    /// **What one of a station's own objects is dressed in**, by the
+    /// name a manifest spells it by ([`piece_binding`]).
+    ///
+    /// There is no room slot here and there is no fallback: an object
+    /// belongs to one station, and a module bought for the Guild's chute
+    /// is not a module for anybody else's.
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn of_piece(&self, name: &str) -> Option<&Dressing> {
+        self.by_piece
+            .iter()
+            .find(|(spelled, _)| spelled == name)
+            .map(|(_, dressing)| dressing)
+    }
+
     /// Whether anything at all is dressed. The answer is no in every
     /// build this repository can make on its own, and the sweep leans on
     /// that: a manifest with no `dresses` line in it changes nothing.
@@ -382,6 +484,7 @@ impl Dressings {
                 .by_fabric
                 .iter()
                 .any(|slot| slot.iter().any(Option::is_some))
+            || !self.by_piece.is_empty()
     }
 
     /// **What the manifest in this repository declares.** Parsed once.
@@ -448,6 +551,15 @@ impl Dressings {
                     None
                 };
                 out.by_fabric[room_slot(room)][role.index()] = Some(dressing);
+            } else if let Some(name) = binding.strip_prefix("fitting/") {
+                // The name is checked against what the stations actually
+                // declare, so a `part_of` nobody wrote is a stranger
+                // rather than a table that silently never applies.
+                if piece_named(name).is_none() {
+                    out.strangers.push(binding.to_owned());
+                    continue;
+                }
+                out.by_piece.push((name.to_owned(), dressing));
             } else {
                 // A namespace this build has no bodies for. The resolver
                 // refuses one it has never heard of; one it knows and
@@ -788,7 +900,7 @@ fn number(value: f32) -> String {
 // ------------------------------------------------------- the loading half --
 
 #[cfg(feature = "art")]
-pub use loading::{Clad, Dressed, Open, Worn, cache_root, plugin};
+pub use loading::{Clad, Dressed, Fitted, Open, Worn, cache_root, plugin};
 
 #[cfg(feature = "art")]
 mod loading {
@@ -851,6 +963,9 @@ mod loading {
         /// The shell's, by room slot and role — `Dressings::by_fabric`
         /// with the loaded scene beside each declaration.
         fabric: [[Option<Bought>; FABRIC_COUNT]; ROOM_SLOTS],
+        /// A station's own objects, by the name a manifest spells them
+        /// by — `Dressings::by_piece` with the loaded scene beside each.
+        pieces: Vec<(String, Bought)>,
     }
 
     impl Dressed {
@@ -878,14 +993,31 @@ mod loading {
                 .map(|(scene, dressing)| (scene, dressing))
         }
 
-        /// **Every scene this run asked for**, cargo and shell alike — what
-        /// a screenshot waits on before it fires.
+        /// The scene and the numbers for one of a station's own
+        /// objects, by the name a manifest spells it by
+        /// ([`super::piece_binding`]).
+        #[must_use]
+        pub fn of_piece(&self, name: &str) -> Option<(&Handle<WorldAsset>, &Dressing)> {
+            self.pieces
+                .iter()
+                .find(|(spelled, _)| spelled == name)
+                .map(|(_, (scene, dressing))| (scene, dressing))
+        }
+
+        /// **Every scene this run asked for**, cargo, shell and station
+        /// furniture alike — what a screenshot waits on before it fires.
         pub fn scenes(&self) -> impl Iterator<Item = &Handle<WorldAsset>> {
             self.scenes
                 .iter()
                 .chain(self.fabric.iter().flatten())
                 .flatten()
+                .chain(self.pieces.iter().map(|(_, bought)| bought))
                 .map(|(scene, _)| scene)
+        }
+
+        /// **Put one station object's scene and numbers in.**
+        pub fn furnish(&mut self, name: String, scene: Handle<WorldAsset>, dressing: Dressing) {
+            self.pieces.push((name, (scene, dressing)));
         }
 
         /// **Put one shell role's scene and numbers in**, for one room
@@ -929,6 +1061,16 @@ mod loading {
     #[derive(Component, Clone, Copy, Debug)]
     #[allow(dead_code)]
     pub struct Clad(pub Fabric);
+
+    /// **A purchased piece of a station's furniture, as it stands in
+    /// the world**, by the name a manifest spells it by. The
+    /// counterpart of [`Worn`] and [`Clad`] for `fitting/` — so a
+    /// station's bought chute is as findable as a bought crate, and so
+    /// the bench and the outline, which query [`Worn`], never mistake
+    /// somebody's furniture for cargo.
+    #[derive(Component, Clone, Debug)]
+    #[allow(dead_code)]
+    pub struct Fitted(pub String);
 
     /// **A bought door frame standing in a mated doorway**, with the name
     /// of the node in its scene that is the leaf. Put beside [`Clad`] on
@@ -1065,6 +1207,22 @@ mod loading {
                     dressing.clone(),
                 );
             }
+        }
+        // The stations' own furniture. One flat list, because a piece
+        // is named by a station and not indexed by the sim.
+        for (name, dressing) in &read.by_piece {
+            let Some(glb) = &dressing.glb else {
+                eprintln!(
+                    "art: `{}` dresses fitting/{name} and names no converted file —                      drawing the whitebox",
+                    dressing.id
+                );
+                continue;
+            };
+            dressed.furnish(
+                name.clone(),
+                assets.load(format!("{glb}#Scene0")),
+                dressing.clone(),
+            );
         }
         // The numbers, kept where something with no asset server can
         // read them: the bench reads this and never touches a handle,
@@ -2251,7 +2409,8 @@ offset = [0.25, 0.0, 0.0]
         assert!(
             declared.strangers.is_empty(),
             "art/manifest.toml dresses {:?}, and this game has no such body. \
-             The names it does have are: cargo/{}; fabric/{}; and the rooms are {}",
+             The names it does have are: cargo/{}; fabric/{}; fitting/{}; \
+             and the rooms are {}",
             declared.strangers,
             Kind::ALL
                 .into_iter()
@@ -2263,6 +2422,15 @@ offset = [0.25, 0.0, 0.0]
                 .map(Fabric::name)
                 .collect::<Vec<_>>()
                 .join(", fabric/"),
+            crate::poi::HOSTS
+                .into_iter()
+                .flat_map(|host| {
+                    crate::poi::pieces(host)
+                        .into_iter()
+                        .map(move |piece| piece_binding(host, piece))
+                })
+                .collect::<Vec<_>>()
+                .join(", fitting/"),
             ROOM_KINDS
                 .into_iter()
                 .map(room_snake)
@@ -2406,9 +2574,15 @@ offset = [0.25, 0.0, 0.0]
             Some("crate_small")
         );
 
-        // A namespace the resolver would refuse outright, which a build
-        // older than the namespace still has to survive reading.
+        // A real namespace and an object no station declares. `beacon`
+        // is short a station: every piece is spelled `<host>_<piece>`,
+        // so a bare object name can never be one and this is also the
+        // shape a build older than the station that named it reads.
         assert_eq!(one("fitting/beacon").strangers, vec!["fitting/beacon"]);
+
+        // A namespace nothing here has ever had, which a build older
+        // than a namespace still has to survive reading.
+        assert_eq!(one("rigging/mast").strangers, vec!["rigging/mast"]);
         // And the shell's namespace, which this build does have.
         let clad = one("fabric/wall");
         assert!(clad.strangers.is_empty(), "{:?}", clad.strangers);

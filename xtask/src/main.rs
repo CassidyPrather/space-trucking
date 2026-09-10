@@ -148,6 +148,11 @@ struct Sourced {
     found: Found,
     /// The atlas the manifest declared for it, if it declared one.
     atlas: Option<Atlas>,
+    /// The emissive atlas it declared, if it declared one. Found and
+    /// hashed on the same terms as `atlas`, and part of the recipe for
+    /// the same reason: a mesh converted before it glowed and a mesh
+    /// converted after are two different files.
+    emissive: Option<Atlas>,
     /// How this asset's conversion is addressed in the cache: the mesh,
     /// the atlas above, and the script that will read them.
     converted: Converted,
@@ -266,12 +271,18 @@ fn source(
         ));
     }
     let atlas = atlas(store, cache, manifest, asset)?;
-    let converted = Converted::of(&digest, atlas.as_ref().map(|one| one.digest.as_str()));
+    let emissive = image_named(store, cache, manifest, asset, asset.emissive.as_deref(), "emissive")?;
+    let converted = Converted::of(
+        &digest,
+        atlas.as_ref().map(|one| one.digest.as_str()),
+        emissive.as_ref().map(|one| one.digest.as_str()),
+    );
     Ok(Sourced {
         unrecorded: asset.sha256 == Asset::NO_DIGEST_YET,
         digest,
         found,
         atlas,
+        emissive,
         converted,
     })
 }
@@ -289,13 +300,28 @@ fn atlas(
     manifest: &Manifest,
     asset: &Asset,
 ) -> Result<Option<Atlas>, String> {
-    let Some(texture) = &asset.texture else {
+    image_named(store, cache, manifest, asset, asset.texture.as_deref(), "texture")
+}
+
+/// **One declared image of an asset's, found in its pack and hashed** —
+/// the colour atlas and the emissive one go through here, because they
+/// are the same kind of claim and a second copy of this would be a
+/// second place for the refusal wording to drift.
+fn image_named(
+    store: &Store,
+    cache: &Cache,
+    manifest: &Manifest,
+    asset: &Asset,
+    declared: Option<&str>,
+    what: &str,
+) -> Result<Option<Atlas>, String> {
+    let Some(declared) = declared else {
         return Ok(None);
     };
     let pack = manifest.pack_of(asset);
-    let from = store::find_relative(store, cache, pack, texture).ok_or_else(|| {
+    let from = store::find_relative(store, cache, pack, declared).ok_or_else(|| {
         format!(
-            "{} names texture `{texture}`, and it is not in {}",
+            "{} names {what} `{declared}`, and it is not in {}",
             asset.id,
             store.pack_dir(pack).display()
         )
@@ -350,11 +376,26 @@ fn convert_all(cache: &Cache, sourced: &[(&Asset, Sourced)]) -> Result<(), Strin
                 Some(beside)
             }
         };
+        // The emissive gets one copy and no second one in `Textures`.
+        // The pair above exists so that an FBX naming its OWN colour
+        // atlas by a relative path still resolves; nothing in a Synty
+        // FBX ever names an emissive, so there is no reference here to
+        // catch — the declaration is the whole of it.
+        let lit = match &one.emissive {
+            None => None,
+            Some(emissive) => {
+                let leaf = emissive.from.file_name().expect("an image file has a name");
+                let beside = stage.join(leaf);
+                fsx::copy(&emissive.from, &beside)?;
+                Some(beside)
+            }
+        };
         let measured = converter.run(
             cache,
             &staged,
             &cache.glb(&one.converted),
             painted.as_deref(),
+            lit.as_deref(),
         )?;
         write_bounds(cache, &one.converted, measured)?;
         println!(

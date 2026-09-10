@@ -220,6 +220,7 @@ const THE_HOUSE: [Fitting; 23] = [
         Vec3::new(0.37, 0.37, 0.016),
     )
     .called("sign frame")
+    .part_of("sign")
     .seated(Seat::Face(Face::Fore)),
     Fitting::new(
         Shape::Slab,
@@ -228,6 +229,7 @@ const THE_HOUSE: [Fitting; 23] = [
         Vec3::new(0.33, 0.33, 0.018),
     )
     .called("sign board")
+    .part_of("sign")
     .seated(Seat::On("sign frame")),
     lamp(-0.600, 0.364),
     lamp(-0.807, 0.264),
@@ -316,6 +318,7 @@ const THE_HOUSE: [Fitting; 23] = [
         Vec3::new(0.018, 0.20, 0.45),
     )
     .called("chip rack")
+    .part_of("chip_rack")
     .seated(Seat::Face(Face::Starboard)),
     chip(0.10),
     chip(0.33),
@@ -327,6 +330,7 @@ const THE_HOUSE: [Fitting; 23] = [
         Vec3::new(0.962, 0.02, 0.450),
         Vec3::new(0.030, 0.022, 0.45),
     )
+    .part_of("chip_rack")
     .seated(Seat::On("chip rack")),
 ];
 

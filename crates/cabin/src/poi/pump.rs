@@ -299,6 +299,7 @@ const PLUMBING: [Fitting; 24] = [
         Vec3::new(-0.46, 0.70, 0.900),
         Vec3::new(0.16, 0.13, 0.085),
     )
+    .part_of("junction_box")
     .seated(Seat::On("aft duct")),
     // The main riser, deck to cornice in the starboard-forward corner,
     // with three flange collars up it. A `Ring` lies flat in the room's
@@ -361,6 +362,7 @@ const PLUMBING: [Fitting; 24] = [
         Vec3::new(0.22, 0.018, 0.18),
     )
     .called("drip tray")
+    .part_of("drip_tray")
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Slab,
@@ -393,6 +395,7 @@ const PLUMBING: [Fitting; 24] = [
         Vec3::new(0.30, 0.060, 0.30),
     )
     .meeting(Face::Deck)
+    .part_of("hose")
     .seated(Seat::Face(Face::Deck)),
     // Snacks. The case is the second thing on these premises anybody
     // chose, it is lit from behind, and there is one thing left in it.
@@ -403,6 +406,7 @@ const PLUMBING: [Fitting; 24] = [
         Vec3::new(0.030, 0.24, 0.19),
     )
     .called("snack case")
+    .part_of("snack_case")
     .seated(Seat::Face(Face::Port)),
     Fitting::new(
         Shape::Slab,

@@ -242,6 +242,7 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
         Vec3::new(0.90, -0.10, 0.050),
         Vec3::new(0.03, 0.03, 0.350),
     )
+    .part_of("bottle_rack")
     .seated(Seat::On("bottle")),
     // The manifold, high along the starboard cornice, with its collars.
     Fitting::new(
@@ -308,13 +309,15 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
         Vec3::new(0.10, 0.04, 0.400),
     )
     .called("drip pan")
+    .part_of("drip_pan")
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Ring,
         Coat::enamel(palette::SOOT),
         Vec3::new(-0.55, -0.90, 0.10),
         Vec3::new(0.15, 0.10, 0.18),
-    ),
+    )
+    .part_of("hose"),
 ];
 
 /// One valve stem standing on the counter pipe, at `x` across the wall.
@@ -358,6 +361,7 @@ const fn bottle(z: f32) -> Fitting {
         Vec3::new(0.055, 0.56, 0.066),
     )
     .called("bottle")
+    .part_of("bottle_rack")
     .seated(Seat::On("drip pan"))
 }
 

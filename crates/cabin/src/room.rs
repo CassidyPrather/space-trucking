@@ -1201,6 +1201,20 @@ pub fn rebuild(
         #[cfg(not(feature = "art"))]
         let bought = |_: Fabric| -> Option<()> { None };
         let dressed_role = |role: Fabric| bought(role).is_some();
+        // **Which of this station's own furniture is bought.** The same
+        // question as the fabric's one box in, and the same answer: an
+        // object is dressed or it is not, and the whitebox draws exactly
+        // the pieces no module stands in for — so a station whose chute
+        // is bought and whose plaque is not keeps its cut plaque.
+        #[cfg(feature = "art")]
+        let bought_piece = |name: &str| {
+            dressed
+                .as_deref()
+                .and_then(|dressed| dressed.of_piece(name))
+        };
+        #[cfg(not(feature = "art"))]
+        let bought_piece = |_: &str| -> Option<()> { None };
+        let dressed_piece = |name: &str| bought_piece(name).is_some();
         shell(
             &mut commands,
             &cube,
@@ -1261,7 +1275,10 @@ pub fn rebuild(
             character.decor,
             placed,
             tag,
+            &dressed_piece,
         );
+        #[cfg(feature = "art")]
+        fit(&mut commands, placed, tag, &bought_piece);
         crate::pieces::hint_cells(&mut commands, &cube, &mut materials, &shared, placed);
         crate::airlock::fittings(
             &mut commands,
@@ -1490,6 +1507,7 @@ fn caller_lamp(
 /// a fitting may stand in and cargo may be set down in, because a room
 /// that leaves owns no volume it needs to defend (docs/ROOMS.md, "The
 /// staging law").
+#[allow(clippy::too_many_arguments)]
 fn furnish(
     commands: &mut Commands,
     shapes: &crate::poi::Shapes,
@@ -1498,18 +1516,88 @@ fn furnish(
     decor: &[crate::poi::Fitting],
     placed: &Placed,
     tag: InRoom,
+    dressed_piece: &dyn Fn(&str) -> bool,
 ) {
     if decor.is_empty() {
         return;
     }
     let frame = crate::poi::Frame::of(placed.lo, placed.hi, placed.yaw);
     for fitting in decor {
+        // **A bought object replaces its whole group at once.** A
+        // station's shopfront is five bars and a rail; the module stands
+        // in for the object, so every piece of it stands down together
+        // and [`fit`] draws the one body. A piece of no object, or of an
+        // object nobody bought, is cut here as it always was.
+        if let Some(piece) = fitting.piece
+            && let Some(host) = placed.host
+            && dressed_piece(&crate::art::piece_binding(host, piece))
+        {
+            continue;
+        }
         commands.spawn((
             Mesh3d(shapes.of(fitting.shape)),
             MeshMaterial3d(fitting.coat.material(materials, Some(skin))),
             frame.place(fitting),
             tag,
         ));
+    }
+}
+
+/// **Stand a bought module in the box of every station object that has
+/// one declared** — [`furnish`]'s other half, and `clad`'s counterpart
+/// for the furniture inside the room rather than the shell round it.
+///
+/// The frame is the object's own box (`poi::piece_box`): the union of
+/// its pieces' bodies, carried out of the room's fractions into the
+/// world. So the four numbers in a `fitting/` table mean exactly what
+/// they mean in a berth and in a run of wall — `scale` is mesh units per
+/// frame half-unit, and a module declared to fill its frame fills the
+/// space the whitebox object filled.
+#[cfg(feature = "art")]
+fn fit<'a>(
+    commands: &mut Commands,
+    placed: &Placed,
+    tag: InRoom,
+    bought: &dyn Fn(
+        &str,
+    ) -> Option<(
+        &'a Handle<bevy::world_serialization::WorldAsset>,
+        &'a crate::art::Dressing,
+    )>,
+) {
+    let Some(host) = placed.host else {
+        return;
+    };
+    let frame = crate::poi::Frame::of(placed.lo, placed.hi, placed.yaw);
+    let mut worn = 0;
+    for piece in crate::poi::pieces(host) {
+        let name = crate::art::piece_binding(host, piece);
+        let Some((scene, dressing)) = bought(&name) else {
+            continue;
+        };
+        // An object with a binding and no box is impossible — the names
+        // come from the same walk of the same list — so this is the
+        // compiler's question and not a case.
+        let Some((lo, hi)) = crate::poi::piece_box(host, piece) else {
+            continue;
+        };
+        worn += 1;
+        commands.spawn((
+            bevy::world_serialization::WorldAssetRoot(scene.clone()),
+            dressing.pose_in(
+                frame.mid + frame.rot * ((lo + hi) * 0.5 * frame.half),
+                ((hi - lo) * 0.5 * frame.half).abs(),
+                frame.rot,
+            ),
+            crate::art::Fitted(name),
+            tag,
+        ));
+    }
+    if worn > 0 {
+        eprintln!(
+            "art: room {} ({host:?}) wears {worn} bought fittings",
+            placed.id
+        );
     }
 }
 

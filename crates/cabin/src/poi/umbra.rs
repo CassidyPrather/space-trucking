@@ -277,7 +277,8 @@ const NIGHT_SHOP: [Fitting; 30] = [
         Vec3::new(0.36, 0.765, 0.640),
         Vec3::new(0.60, 0.014, 0.012),
     )
-    .called("tin rail"),
+    .called("tin rail")
+    .part_of("tin_rail"),
     tin(-0.16),
     tin(0.10),
     tin(0.36),
@@ -302,6 +303,7 @@ const NIGHT_SHOP: [Fitting; 30] = [
         Vec3::new(0.16, 0.020, 0.40),
     )
     .called("midnight case")
+    .part_of("midnight_case")
     .seated(Seat::Face(Face::Deck)),
     bottle(-0.20),
     bottle(0.06),

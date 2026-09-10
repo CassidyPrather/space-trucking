@@ -120,6 +120,19 @@ pub struct Asset {
     /// mesh copied somewhere else converts untextured unless the atlas is
     /// carried along with it.
     pub texture: Option<String>,
+    /// **The emissive atlas, where the mesh is meant to glow.**
+    ///
+    /// The same shape of declaration as `texture` and for the same
+    /// reason: Synty assign emission in Unity, so an FBX that glows in
+    /// the pack's own screenshots names nothing about it here. A pack
+    /// ships this as a second image beside the colour atlas, laid out on
+    /// the same swatch grid — black everywhere the mesh is not lit, and
+    /// the lamp's own colour where it is — so declaring it lights
+    /// exactly the faces Synty meant to light and nothing else.
+    ///
+    /// Optional and rare: most props do not glow, and a mesh with no
+    /// line here converts exactly as it did before this key existed.
+    pub emissive: Option<String>,
     /// The digest the line was written against. Empty means "not recorded
     /// yet"; see [`Asset::NO_DIGEST_YET`].
     pub sha256: String,
@@ -246,6 +259,7 @@ impl Manifest {
             let source = draft.take_str("source", "asset", &id, path)?;
             let unity = draft.take_optional_str("unity", "asset", &id, path)?;
             let texture = draft.take_optional_str("texture", "asset", &id, path)?;
+            let emissive = draft.take_optional_str("emissive", "asset", &id, path)?;
             let sha256 = draft
                 .take_optional_str("sha256", "asset", &id, path)?
                 .unwrap_or_default();
@@ -267,16 +281,14 @@ impl Manifest {
                     ),
                 ));
             }
-            for (part, value) in [
-                ("source", Some(&source)),
-                ("unity", unity.as_ref()),
-                ("texture", texture.as_ref()),
-            ] {
-                if let Some(value) = value
-                    && let Some(reason) = unusable_path(value)
-                {
-                    return Err(complain(line, format!("`{part}` {reason}")));
-                }
+            if let Some(reason) = declared_files_trouble(
+                &id,
+                &source,
+                unity.as_deref(),
+                texture.as_deref(),
+                emissive.as_deref(),
+            ) {
+                return Err(complain(line, reason));
             }
             check_binding(
                 path,
@@ -323,6 +335,7 @@ impl Manifest {
                     source,
                     unity,
                     texture,
+                    emissive,
                     sha256,
                     dresses,
                     room,
@@ -497,7 +510,7 @@ fn unusable_path(value: &str) -> Option<String> {
     None
 }
 
-/// **Which namespaces a `dresses` line may name.** One today, and the
+/// **Which namespaces a `dresses` line may name.** Three today, and the
 /// list is here rather than the check being "anything with a slash in
 /// it", because this file's whole personality is that a typo is a
 /// refusal: `carg/brine_pearls` is a binding that would silently never
@@ -509,11 +522,15 @@ fn unusable_path(value: &str) -> Option<String> {
 /// line beside it ([`room_trouble`]), because the shell is the one thing
 /// every room has and the one thing a room's colour is read off.
 ///
-/// `fitting` is the one everybody can see coming — a station's own
-/// hardware is described the same way cargo is (`poi::Fitting`) — and it
-/// is not here, because a namespace nothing reads is a promise this file
-/// cannot keep. Adding it is a word here and a match arm in the cabin.
-const NAMESPACES: [&str; 2] = ["cargo", "fabric"];
+/// `fitting` is a station's own furniture, described the same way cargo
+/// is (`poi::Fitting`). Its name is the station's spelling and then the
+/// object's — `fitting/guild_shopfront` — because a binding is
+/// `<namespace>/<name>` with no third part to put the station in, and
+/// fifteen stations would otherwise race for the word `counter`. What
+/// makes an object is `poi::Fitting::part_of`: a bought module stands in
+/// for a whole GROUP of fittings, because a station's shopfront is five
+/// bars and a rail and nobody sells a bar.
+const NAMESPACES: [&str; 3] = ["cargo", "fabric", "fitting"];
 
 /// The namespace whose bindings a `room` line may qualify.
 const ROOMED: &str = "fabric";
@@ -616,6 +633,50 @@ fn room_trouble(dresses: Option<&str>, room: &str) -> Option<String> {
         return Some(format!(
             "is `{room}`, which is not a room kind's name; names here are lowercase \
              letters, digits and `_`, like `burner`"
+        ));
+    }
+    None
+}
+
+/// **Why one asset's four file lines cannot be used**, or `None` if they
+/// can: each path in a shape this resolver can take out of a pack, and
+/// an `emissive` with a `texture` beside it.
+fn declared_files_trouble(
+    id: &str,
+    source: &str,
+    unity: Option<&str>,
+    texture: Option<&str>,
+    emissive: Option<&str>,
+) -> Option<String> {
+    for (part, value) in [
+        ("source", Some(source)),
+        ("unity", unity),
+        ("texture", texture),
+        ("emissive", emissive),
+    ] {
+        if let Some(value) = value
+            && let Some(reason) = unusable_path(value)
+        {
+            return Some(format!("`{part}` {reason}"));
+        }
+    }
+    lone_emissive(id, texture, emissive)
+}
+
+/// Why an `emissive` line cannot stand where it is, or `None` if it can.
+///
+/// The converter takes its images positionally and the emissive rides
+/// behind the atlas, so a lone one would arrive in the atlas's own place
+/// and be painted on as Base Color — a mesh the colour of its own light.
+/// The same shape of refusal as [`room_trouble`] and [`leaf_trouble`]:
+/// a line that could never apply is a refusal rather than a silence.
+fn lone_emissive(id: &str, texture: Option<&str>, emissive: Option<&str>) -> Option<String> {
+    if emissive.is_some() && texture.is_none() {
+        return Some(format!(
+            "`{id}` names an `emissive` and no `texture`. The converter takes them \
+             positionally and the emissive rides behind the atlas, so a lone one would be \
+             painted on as Base Color — a mesh the colour of its own light. Declare the \
+             colour atlas too."
         ));
     }
     None

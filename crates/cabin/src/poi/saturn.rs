@@ -246,9 +246,15 @@ const THE_YARD: [Fitting; 15] = [
     // The stack stood 0.105 m off the deck it is "on", all three
     // pieces of it, which from a stance down the flank is a pile of
     // hull plate hovering.
-    plate(0, -0.955, 0.16).seated(Seat::Face(Face::Deck)),
-    plate(3, -0.875, 0.12).seated(Seat::On("cut plate")),
-    plate(2, -0.795, 0.08).seated(Seat::On("cut plate")),
+    plate(0, -0.955, 0.16)
+        .part_of("plate_stack")
+        .seated(Seat::Face(Face::Deck)),
+    plate(3, -0.875, 0.12)
+        .part_of("plate_stack")
+        .seated(Seat::On("cut plate")),
+    plate(2, -0.795, 0.08)
+        .part_of("plate_stack")
+        .seated(Seat::On("cut plate")),
     // The patch on the starboard wall over the rack: a slate-blue
     // rectangle riveted over the yard's own sand, with two heads showing.
     // The wall did not come from here either. It is off the aft face
@@ -260,6 +266,7 @@ const THE_YARD: [Fitting; 15] = [
         Vec3::new(0.014, 0.24, 0.30),
     )
     .called("hull patch")
+    .part_of("hull_patch")
     .seated(Seat::Face(Face::Starboard)),
     Fitting::new(
         Shape::Dome,
@@ -267,6 +274,7 @@ const THE_YARD: [Fitting; 15] = [
         Vec3::new(0.960, 0.84, -0.10),
         Vec3::new(0.018, 0.045, 0.022),
     )
+    .part_of("hull_patch")
     .seated(Seat::On("hull patch")),
     Fitting::new(
         Shape::Dome,
@@ -274,6 +282,7 @@ const THE_YARD: [Fitting; 15] = [
         Vec3::new(0.960, 0.48, 0.28),
         Vec3::new(0.018, 0.045, 0.022),
     )
+    .part_of("hull_patch")
     .seated(Seat::On("hull patch")),
     // The torch: a bottle in the port-forward corner, its hose coiled on
     // the deck, and the cutting head laid on top still glowing. Whatever
@@ -285,6 +294,7 @@ const THE_YARD: [Fitting; 15] = [
         Vec3::new(0.055, 0.40, 0.066),
     )
     .called("torch bottle")
+    .part_of("torch_bottle")
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Ring,
@@ -293,6 +303,7 @@ const THE_YARD: [Fitting; 15] = [
         Vec3::new(0.14, 0.10, 0.17),
     )
     .meeting(Face::Deck)
+    .part_of("torch_hose")
     .seated(Seat::Face(Face::Deck)),
     Fitting::new(
         Shape::Dome,
@@ -310,6 +321,7 @@ const THE_YARD: [Fitting; 15] = [
         Vec3::new(-0.984, 0.34, -0.10),
         Vec3::new(0.016, 0.26, 0.34),
     )
+    .part_of("tally_board")
     .seated(Seat::Face(Face::Port)),
 ];
 

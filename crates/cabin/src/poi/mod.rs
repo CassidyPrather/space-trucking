@@ -575,6 +575,10 @@ pub struct Fitting {
     /// list is bolted to it ([`Fitting::called`]). `None` for the great
     /// majority, which nothing hangs off.
     pub name: Option<&'static str>,
+    /// **Which of the station's own objects this fitting is a piece
+    /// of**, where one exists ([`Fitting::part_of`]). `None` for a
+    /// fitting that is only ever itself.
+    pub piece: Option<&'static str>,
     /// **What it claims holds it up**, if it claims anything — see
     /// [`Seat`]. A fitting that is composition claims nothing and is
     /// asked nothing.
@@ -681,6 +685,7 @@ impl Fitting {
             at,
             half,
             name: None,
+            piece: None,
             seat: None,
         }
     }
@@ -690,6 +695,34 @@ impl Fitting {
     #[must_use]
     pub const fn called(mut self, name: &'static str) -> Self {
         self.name = Some(name);
+        self
+    }
+
+    /// **A piece of one of the station's own objects, and which one** —
+    /// the unit a purchased module stands in for.
+    ///
+    /// A [`Fitting`] is a primitive and an object is several of them: the
+    /// Guild's shopfront is five bars and the rail they hang from, its
+    /// chute is a drum, a collar and a throat. Nobody sells a bar. So the
+    /// thing a `fitting/` binding names is the OBJECT, and this is what
+    /// says which fittings are pieces of it — every fitting in one
+    /// station's [`Character::decor`] sharing a name here is one object,
+    /// and a bought module stands in for the whole group at once
+    /// (`crate::art`, and `room::furnish`).
+    ///
+    /// **It is deliberately not [`Fitting::called`].** That name is a
+    /// seat's address, and the two answer different questions: the
+    /// Guild's plaque is one object of two pieces, and the enamel is
+    /// seated `On("plaque frame")` — one name for what holds it up, one
+    /// for what it is part of. Fused into a single field the enamel
+    /// would be seated on its own group, and nothing holds itself up.
+    ///
+    /// The name is the manifest's, so it is spelled the way a manifest
+    /// name is spelled: lowercase, digits and underscores
+    /// (`art::piece_binding`).
+    #[must_use]
+    pub const fn part_of(mut self, piece: &'static str) -> Self {
+        self.piece = Some(piece);
         self
     }
 
@@ -731,6 +764,7 @@ impl Fitting {
                 (hi.z - lo.z) * 0.5,
             ),
             name: None,
+            piece: None,
             seat: None,
         }
     }
@@ -750,6 +784,7 @@ impl Fitting {
             at: self.at,
             half: self.half,
             name: None,
+            piece: None,
             seat: None,
         }
     }
@@ -796,6 +831,60 @@ impl Fitting {
         }
         self
     }
+}
+
+// ------------------------------------------------------------ the objects --
+
+/// **Every object one station's interior is made of**, in the order each
+/// one's first piece is written.
+///
+/// An object is the set of [`Character::decor`] fittings sharing a
+/// [`Fitting::part_of`] name, and it is the unit a purchased module
+/// stands in for. A station that has named none has none, which is the
+/// honest answer for a room nobody has picked meshes for yet.
+///
+/// A `Vec` and not an iterator because the callers all want it whole —
+/// the guard over the manifest asks for every station's at once, and the
+/// list is six long.
+#[must_use]
+pub fn pieces(host: Host) -> Vec<&'static str> {
+    let mut out: Vec<&'static str> = Vec::new();
+    for fitting in character(host).decor {
+        if let Some(piece) = fitting.piece
+            && !out.contains(&piece)
+        {
+            out.push(piece);
+        }
+    }
+    out
+}
+
+/// **The box one object fills**, as a `(lo, hi)` in the room's own
+/// fractions, or `None` where the station names no such object.
+///
+/// The union of its pieces' [`Fitting::span`]s — the BODIES and not the
+/// frames they are drawn in, for the reason `span` exists: a hoop's
+/// frame is mostly the hole, and a module bought to stand in for a hoop
+/// should be the size of the hoop.
+///
+/// This is the frame the bought module is stood in
+/// (`art::Dressing::pose_in`), so it is what every number in that
+/// module's table is a fraction of. An object of one piece is that
+/// piece's own body, which is the case a wall plaque is.
+#[must_use]
+pub fn piece_box(host: Host, piece: &str) -> Option<(Vec3, Vec3)> {
+    let mut bounds: Option<(Vec3, Vec3)> = None;
+    for fitting in character(host).decor {
+        if fitting.piece != Some(piece) {
+            continue;
+        }
+        let (lo, hi) = fitting.span();
+        bounds = Some(match bounds {
+            None => (lo, hi),
+            Some((was_lo, was_hi)) => (was_lo.min(lo), was_hi.max(hi)),
+        });
+    }
+    bounds
 }
 
 /// The box a character measures fittings off: where it is, how big it is

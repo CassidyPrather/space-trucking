@@ -61,16 +61,21 @@ const RECIPE: u32 = 1;
 const RECIPE_SHOWN: usize = 12;
 
 impl Converted {
-    /// The identity of converting `source` with `texture` beside it,
-    /// under the script this binary carries.
-    pub fn of(source: &str, texture: Option<&str>) -> Self {
-        Self::under(source, texture, SCRIPT)
+    /// The identity of converting `source` with `texture` and `emissive`
+    /// beside it, under the script this binary carries.
+    pub fn of(source: &str, texture: Option<&str>, emissive: Option<&str>) -> Self {
+        Self::under(source, texture, emissive, SCRIPT)
     }
 
     /// The same, with the script spelled out, so the guard below can ask
     /// what a different one would be addressed as. Nothing else should
     /// need it: there is exactly one script and it is compiled in.
-    fn under(source: &str, texture: Option<&str>, script: &str) -> Self {
+    fn under(
+        source: &str,
+        texture: Option<&str>,
+        emissive: Option<&str>,
+        script: &str,
+    ) -> Self {
         // A recipe is a few lines of text rather than a struct with a
         // hash of its own, because the thing that has to stay stable is
         // what the bytes ARE — a cache entry written by one build of this
@@ -81,8 +86,10 @@ impl Converted {
                 "art conversion recipe {RECIPE}\n\
                  source {source}\n\
                  texture {}\n\
+                 emissive {}\n\
                  script {}\n",
                 texture.unwrap_or("none"),
+                emissive.unwrap_or("none"),
                 sha256::of_bytes(script.as_bytes()),
             )
             .as_bytes(),
@@ -211,16 +218,27 @@ mod tests {
     /// nothing.
     #[test]
     fn a_conversion_is_addressed_by_everything_that_made_it() {
-        let plain = Converted::of(SOURCE, None);
-        let painted = Converted::of(SOURCE, Some("f".repeat(64).as_str()));
-        let repainted = Converted::of(SOURCE, Some("e".repeat(64).as_str()));
-        let elsewhere = Converted::of(&"b".repeat(64), None);
-        let rewritten = Converted::under(SOURCE, None, "a script that says something else");
+        let plain = Converted::of(SOURCE, None, None);
+        let painted = Converted::of(SOURCE, Some("f".repeat(64).as_str()), None);
+        let repainted = Converted::of(SOURCE, Some("e".repeat(64).as_str()), None);
+        // The same mesh and the same atlas, once dark and once lit: a
+        // mesh converted before it glowed and a mesh converted after are
+        // two different files, and a cache that could not tell them
+        // apart would answer "already converted" to the run that added
+        // the light.
+        let lit = Converted::of(
+            SOURCE,
+            Some("f".repeat(64).as_str()),
+            Some("d".repeat(64).as_str()),
+        );
+        let elsewhere = Converted::of(&"b".repeat(64), None, None);
+        let rewritten = Converted::under(SOURCE, None, None, "a script that says something else");
 
         let names = [
             plain.relative(),
             painted.relative(),
             repainted.relative(),
+            lit.relative(),
             elsewhere.relative(),
             rewritten.relative(),
         ];
@@ -239,8 +257,8 @@ mod tests {
     #[test]
     fn the_same_conversion_is_the_same_name_twice_running() {
         assert_eq!(
-            Converted::of(SOURCE, Some("f".repeat(64).as_str())).relative(),
-            Converted::of(SOURCE, Some("f".repeat(64).as_str())).relative()
+            Converted::of(SOURCE, Some("f".repeat(64).as_str()), None).relative(),
+            Converted::of(SOURCE, Some("f".repeat(64).as_str()), None).relative()
         );
     }
 
@@ -250,7 +268,7 @@ mod tests {
     /// still tell which mesh a file came out of without running anything.
     #[test]
     fn the_name_still_says_which_mesh_it_came_out_of() {
-        let name = Converted::of(SOURCE, None).relative();
+        let name = Converted::of(SOURCE, None, None).relative();
         let recipe = name
             .strip_prefix(&format!("glb/{SOURCE}-"))
             .and_then(|rest| rest.strip_suffix(".glb"))

@@ -37,6 +37,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
@@ -71,6 +72,19 @@ jobs:
 
       - name: Test the art seam
         run: cargo test -p cabin --features art
+
+      # The browser target, checked rather than built: nothing here
+      # deploys to the web yet, so this proves the cheaper thing — that
+      # the cabin still compiles for wasm32 at all, with the wasm-only
+      # table in crates/cabin/Cargo.toml and nothing on the command line.
+      # Without this step that table would rot the way the art seam would
+      # have: nobody builds this target by accident, and the first person
+      # to try would find out how long ago a Bevy feature edit broke it.
+      #
+      # Measured here: 3 min 18 s from cold with the registry warm, and
+      # Swatinem/rust-cache keeps the wasm32 artifacts like any other.
+      - name: Check the browser target compiles
+        run: cargo check --target wasm32-unknown-unknown -p cabin
 
       - name: Enforce performance budgets
         # Release-only ceilings with wide headroom; see docs/BUDGETS.md.

@@ -13,11 +13,14 @@
 //! window.
 
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use space_trucking::replay::Recording;
 use space_trucking::sim::room::{CABIN, RoomId};
 use space_trucking::sim::{Cue, InputFrame, Sim, Vec2};
+// `std::time` on native, `Date.now()` on wasm32, where std's clock is a
+// panic rather than a number. The market hours below ask chrono instead,
+// which the manifest routes the same way for wasm32 (`wasmbind`).
+use web_time::{SystemTime, UNIX_EPOCH};
 
 /// Seconds between wall-clock autosaves; cue-driven saves come sooner.
 const SAVE_EVERY: f64 = 10.0;

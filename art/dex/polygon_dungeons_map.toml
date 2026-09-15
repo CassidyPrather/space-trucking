@@ -1,0 +1,858 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_env_balcony_01]
+name = "SM_Env_Balcony_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Env_Balcony_01.fbx"
+sha256 = "eb903ad1813d61291fcf99aef4d6a84f2129a4c054568f823f844ac404e39728"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A curved, semi-circular stone balcony with a solid parapet wall, supported by a single corbel beneath. The blocky, low-poly form is rendered in a muted, earthy brown with a rough, weathered texture, suggesting a sturdy, ancient stone structure suitable for a dungeon or castle exterior."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1000
+meshes = 1
+materials = 1
+size = [2.460615, 1.6304181, 1.2298249]
+
+[mesh.sm_env_cave_background_hole_01]
+name = "SM_Env_Cave_Background_Hole_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Env_Cave_Background_Hole_01.fbx"
+sha256 = "6a8fe70fff67b12d77d175a26a29a630b56f7da962209550ba3625daf31ab3ba"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A jagged, low-poly rock formation with a central square hole, resembling a ruined wall or natural arch. Its faceted, grey-brown surface suggests weathered stone, making it ideal for dungeon entrances or cave backdrops."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 579
+meshes = 1
+materials = 1
+size = [11.515123, 25.275017, 46.867012]
+
+[mesh.sm_env_cave_hole_01]
+name = "SM_Env_Cave_Hole_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Env_Cave_Hole_01.fbx"
+sha256 = "727f3622f1e3942d55b150fe5a838ba91ecaba365b3cae46e3924b2b9a6d628e"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A low, irregular ring of faceted brown rock, roughly oval in plan, with a flat, rectangular opening through its centre, resembling a collapsed cave mouth or a broken stone well. The surface is chunky and angular, with a plain earthy texture and no extra details, giving it a clean, stylised look that reads clearly as a."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 186
+meshes = 1
+materials = 1
+size = [16.301842, 13.087833, 4.031665]
+
+[mesh.sm_env_railing_curved_01]
+name = "SM_Env_Railing_Curved_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Env_Railing_Curved_01.fbx"
+sha256 = "12de58611f3433e78ff481eddfc7dfa819ec4012355ff7f0a06b4da5c24ca8a6"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A quarter-circle arc of weathered brown wood, featuring a top rail, a lower rail, and vertical balusters, with a small end post on one side. The simple, rustic design suggests a dungeon or medieval setting, and its curved shape allows for creating circular or winding pathways."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1026
+meshes = 1
+materials = 1
+size = [4.880963, 0.979225, 2.4423752]
+
+[mesh.sm_env_tiles_round_01]
+name = "SM_Env_Tiles_Round_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Env_Tiles_Round_01.fbx"
+sha256 = "80f5948369c54cf1a4943433e1891b0b2e359c6cf21cda432eb8d8accb267e80"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A flat, circular stone tile with a raised, segmented rim, rendered in muted brown and grey. The surface is smooth and unadorned, suggesting a simple floor piece or platform for a dungeon environment. Its low, disc-like profile makes it ideal for creating round stepping stones or decorative floor inlays."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1777
+meshes = 1
+materials = 1
+size = [6.498291, 0.22585, 6.50541]
+
+[mesh.sm_prop_book_01]
+name = "SM_Prop_Book_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_01.fbx"
+sha256 = "975baf77410f1142c0ab5b15b60e30da0fe0a01f383d9708b4e6e5038a35bc05"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A stout, upright tome with a muted olive-green cover and a tan spine, bound with two darker horizontal straps. The lower corner of the front cover is stained with a dark, weathered patch, suggesting age and heavy use."
+differs = "The only one with two horizontal straps and a green cover, making it the most detailed and ornate for a quest item."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 104
+meshes = 1
+materials = 1
+size = [0.074034, 0.35093, 0.298218]
+
+[mesh.sm_prop_book_02]
+name = "SM_Prop_Book_02"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_02.fbx"
+sha256 = "6f0b23f943b87f47e12825cea45f356ab352e52684b591e731b577af50c730be"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, upright rectangular slab with a plain, unadorned face, resembling a closed tome or a standing stone tablet. The surface is a flat, muted tan with a subtle darker brown shading along the bottom edge, suggesting wear or a shadowed base."
+differs = "The plainest and most uniform, with no straps or bands, ideal as a generic background prop or stone tablet."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 76
+meshes = 1
+materials = 1
+size = [0.074034, 0.346226, 0.295978]
+
+[mesh.sm_prop_book_03]
+name = "SM_Prop_Book_03"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_03.fbx"
+sha256 = "e1392d9eca05cd7f52ee01e388e262ed091ac824a45b3f23083aad4fa1d7fbc2"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, upright rectangular slab with a plain, unadorned face, resembling a closed tome or a blank wooden board. The muted brown surface is smooth and featureless, with a darker, worn patch at the bottom corner suggesting age or damage."
+differs = "The thinnest and lightest, with a smooth featureless face and a single worn patch, best for a simple wooden board."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 68
+meshes = 1
+materials = 1
+size = [0.064998, 0.332782, 0.297762]
+
+[mesh.sm_prop_book_04]
+name = "SM_Prop_Book_04"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_04.fbx"
+sha256 = "ad47401e4f0e31f1848550608c67256c5ec09740315f24061272180c16b302f0"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, upright rectangular block with a plain, unadorned surface, finished in a flat, muted brown with a lighter tan spine. The only detail is a small, dark chip or worn patch at the bottom corner, suggesting age and use."
+differs = "The lowest poly count and most minimal, with only a small chip, perfect for a cheap filler or distant decoration."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 44
+meshes = 1
+materials = 1
+size = [0.074034, 0.35093, 0.298218]
+
+[mesh.sm_prop_book_05]
+name = "SM_Prop_Book_05"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_05.fbx"
+sha256 = "354aae7f3666bb4e189158f14e1d329b36342a6a5c9331dc8d80c13582a317ed"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, upright rectangular block with a flat, unadorned face, resembling a closed hardcover book. The spine features a single dark green band, while the lower corner shows a dark, worn patch suggesting damage or shadow."
+differs = "The only one with a dark green spine band, making it the most distinctive for a specific themed book or spell tome."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [0.074036, 0.332782, 0.301835]
+
+[mesh.sm_prop_book_block_01]
+name = "SM_Prop_Book_Block_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_Block_01.fbx"
+sha256 = "769b795437ba3b669815353ac24457cee74b4fd3e82ce50807449801f310648f"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A chunky, blocky stack of three thick books, with the top volume slightly offset to the right. The covers are a flat, muted tan with a single dark green band on the spine, suggesting a simple, worn leather binding. The low-poly aesthetic gives it a clean, stylized look, perfect for a dungeon shelf or tabletop."
+differs = "Smallest and most compact, a vertical stack rather than a row, ideal for a single shelf accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 200
+meshes = 1
+materials = 1
+size = [0.298478, 0.350929, 0.321804]
+
+[mesh.sm_prop_book_block_02]
+name = "SM_Prop_Book_Block_02"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_Block_02.fbx"
+sha256 = "c1985df531aa737df5091a247b00c32f35d29c6af0ee013b9cd0634e0325ac4f"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A low, rectangular block of tightly packed, upright books, with a few leaning and slightly misaligned to suggest casual use. The covers are a muted tan and dark brown, with a single green spine adding a touch of colour."
+differs = "Mid-sized and least detailed, with the fewest polygons and no visible page blocks, best as a background filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 414
+meshes = 1
+materials = 1
+size = [1.114406, 0.425395, 0.353023]
+
+[mesh.sm_prop_book_block_03]
+name = "SM_Prop_Book_Block_03"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_Block_03.fbx"
+sha256 = "e0dc325c929236e49824cdeacbdd7e0de442dd5d42321b8561ce27ab75426de2"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A row of six upright books, mostly plain tan covers with a few dark green spines, leaning together and slightly askew. The books are thick and blocky, with simple page blocks visible, suggesting a worn, well-used set for dungeon shelves."
+differs = "Largest and most detailed, with the highest triangle count and visible page blocks, suited for a focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 912
+meshes = 1
+materials = 1
+size = [1.114406, 0.470717, 0.363956]
+
+[mesh.sm_prop_book_open_01]
+name = "SM_Prop_Book_Open_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_Open_01.fbx"
+sha256 = "771c1523890be69b1cd5be8ad6704746b6b579c7b1771ea23ba4c66685b5e040"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A low, flat, open book with two broad pages angled slightly upward from a central spine, rendered in a plain tan brown with a darker brown patch on the left page suggesting a text block or stain. The simple, blocky form and muted palette make it a versatile, unobtrusive prop for dungeon shelves or tables."
+differs = "The plainest, lowest-poly option with a dark patch on the left page, ideal for a simple, unobtrusive dungeon prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 88
+meshes = 1
+materials = 1
+size = [0.539576, 0.077251, 0.367626]
+
+[mesh.sm_prop_book_open_02]
+name = "SM_Prop_Book_Open_02"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_Open_02.fbx"
+sha256 = "0bab5e667031653212e3bd5814d60f69856ffc1982d3865ca97dde47b0b5cc39"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A low, wide, open book with a shallow V-shaped dip at the spine, its pages fanned out in a gentle curve. The cover and pages are a uniform, muted tan with a subtle wood-grain texture, suggesting a simple, aged tome."
+differs = "The most detailed with a fanned page curve and wood-grain texture, suited for a more prominent, aged tome."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 310
+meshes = 1
+materials = 1
+size = [0.539582, 0.077251, 0.36762]
+
+[mesh.sm_prop_book_pile_01]
+name = "SM_Prop_Book_Pile_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_Pile_01.fbx"
+sha256 = "9ede221b5f1054b24651fa83d487155eb7b3c7a3d4263b61970e169c827c9a2f"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A stack of five closed books, with the top volume resting at a slight angle, creating an irregular, chunky silhouette. The covers are plain, unadorned brown leather with lighter page edges, giving it a worn, utilitarian look suitable for a dungeon study or library."
+differs = "Smallest and simplest stack, ideal as a low-poly clutter prop where detail is unnecessary."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 344
+meshes = 1
+materials = 1
+size = [0.579442, 0.517661, 0.569742]
+
+[mesh.sm_prop_book_pile_02]
+name = "SM_Prop_Book_Pile_02"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_Pile_02.fbx"
+sha256 = "144294269b720594427a83cabc6f1f00b051e694c0050bbdbc8c4469357fc362"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A slightly irregular, leaning stack of roughly a dozen closed books, with the top volume resting askew. The covers are a muted tan-brown, while the page blocks show a distinct pale green tint, suggesting aged or mossy paper. The pile appears weathered and settled, evoking a forgotten library or dungeon shelf."
+differs = "Tallest and most detailed pile with green-tinted pages, perfect for a mossy, overgrown dungeon setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 636
+meshes = 1
+materials = 1
+size = [0.597446, 0.729878, 0.57429]
+
+[mesh.sm_prop_book_pile_03]
+name = "SM_Prop_Book_Pile_03"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_Pile_03.fbx"
+sha256 = "27c3ff555625d2552ac44dd9c4ee3b650040f578d2aa136c0f04ecbcd9c9a3a1"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, precarious stack of eight or nine closed books, leaning slightly to one side with a few volumes jutting out at odd angles. The covers are a uniform, muted tan with no visible titles or ornamentation, giving the pile a weathered, utilitarian look."
+differs = "Most precarious and tallest stack, best for a dramatic, leaning tower on a shelf or desk."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 616
+meshes = 1
+materials = 1
+size = [0.613502, 0.925043, 0.578062]
+
+[mesh.sm_prop_book_stand_01]
+name = "SM_Prop_Book_Stand_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_Stand_01.fbx"
+sha256 = "d2d797e39220c7dfd1d52598a403deead350ee9a96dc8b2634a3dfc6dfb54ee1"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, weathered wooden lectern with a slanted top holding an open book, supported by two square posts on a stepped base. The pale pages show faint text lines, while the brown wood has a worn, aged look. Its sturdy, simple design suits a dungeon study, library, or chapel setting."
+differs = "Has an open book with text on the slanted top, making it the more detailed, story-driven choice for study or chapel scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 488
+meshes = 1
+materials = 1
+size = [0.80859, 1.475946, 0.799194]
+
+[mesh.sm_prop_book_stand_02]
+name = "SM_Prop_Book_Stand_02"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Book_Stand_02.fbx"
+sha256 = "c2fa1ab6b4f0fd416dd7e2c642cafba4ec6423a66f575015cf2b5ca4e9e546dc"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden lectern with a slanted, open-faced top, supported by two square posts on a tiered, stepped base. The wood is a muted, dusty brown with subtle grain, and the surface appears worn and aged, suggesting a well-used reading stand in a dungeon or library setting."
+differs = "Has an empty, plain slanted top, making it the simpler, more versatile stand for displaying items or use without a book."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 178
+meshes = 1
+materials = 1
+size = [0.80859, 1.475946, 0.799194]
+
+[mesh.sm_prop_bookcase_01]
+name = "SM_Prop_Bookcase_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_01.fbx"
+sha256 = "98cb0b5589b12677f432e6ed643e3b7deec1e5222a43cffd5c15d0a49a65e9a3"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with a slightly weathered, grey-brown finish, featuring a solid back and sides with a small top ledge. The front is packed with rows of books in muted greens, browns, and creams, some leaning and others stacked flat, giving it a lived-in, dungeon-worn appearance."
+differs = "The most fully stocked, with dense rows of books for a lived-in library look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6038
+meshes = 1
+materials = 1
+size = [2.500002, 5.0, 1.052525]
+
+[mesh.sm_prop_bookcase_02]
+name = "SM_Prop_Bookcase_02"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_02.fbx"
+sha256 = "5e72b8d4d3e98500059f26fc4ba7ab071071426169c841879dd28295ed0a0229"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with a solid back and sides, featuring a single open shelf holding a sparse, uneven row of books. The wood is a muted, dusty brown with a weathered, aged finish, and the frame shows simple, blocky construction with a slight overhang at the top."
+differs = "The sparsest shelf, holding only a few uneven books for a half-empty dungeon feel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6080
+meshes = 1
+materials = 1
+size = [2.500001, 5.0, 1.052525]
+
+[mesh.sm_prop_bookcase_03]
+name = "SM_Prop_Bookcase_03"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_03.fbx"
+sha256 = "d03465ef1fe2de59eedfa24e5ff2becb53e6c7e2c7269e4fc4890e82ca3c3107"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with a weathered, grey-brown finish, featuring a solid back panel and a single top shelf. The front is mostly empty, with only a few broken, uneven shelves remaining, giving it a dilapidated, abandoned look suitable for a dungeon or ruin setting."
+differs = "The most damaged, with broken shelves and almost no books for a ruined, abandoned setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3394
+meshes = 1
+materials = 1
+size = [2.500001, 5.0, 1.052525]
+
+[mesh.sm_prop_bookcase_block_01]
+name = "SM_Prop_Bookcase_Block_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Block_01.fbx"
+sha256 = "233315afd4bcd74578c3489f5f3328b5541ea869e2e59ad65db84b400769a047"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden block with a chunky, low-poly silhouette, featuring a single recessed panel on its front face and a small, dark square peg or hole near the top. The muted brown wood grain and simple, blocky construction give it a sturdy, rustic feel, suggesting it is a single segment of a larger shelving unit or."
+differs = "Narrowest and most detailed, with a recessed panel and peg hole, best for a single rustic shelf segment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [0.99813, 5.0, 0.99813]
+
+[mesh.sm_prop_bookcase_block_02]
+name = "SM_Prop_Bookcase_Block_02"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Block_02.fbx"
+sha256 = "b7bcc62674862874c7d663ba410873e14f643a4cca4cd1fb532b5d9c1fd43280"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow rectangular block with a flat front and a simple, unadorned surface in a muted, earthy brown. The sides feature subtle, recessed vertical channels that suggest a simple frame or paneling, giving it a clean, functional look."
+differs = "Widest and plainest, with only subtle side channels, ideal for a clean, functional double-width shelf unit."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [2.498895, 5.0, 0.99813]
+
+[mesh.sm_prop_bookcase_broken_01]
+name = "SM_Prop_Bookcase_Broken_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Broken_01.fbx"
+sha256 = "cfd9973232e1b90e5b27a5e44fbacad175b0c25b45bfa5d00013ddd1a6bc43d9"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with a broken side panel and a collapsed, splintered shelf, leaving the interior cluttered with debris. The dark brown wood is weathered and worn, with a jagged tear in the back panel, giving it a ruined, dungeon-worn appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2778
+meshes = 1
+materials = 1
+size = [2.500001, 5.0, 1.472127]
+
+[mesh.sm_prop_bookcase_empty_01]
+name = "SM_Prop_Bookcase_Empty_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Empty_01.fbx"
+sha256 = "a20361a426989c9b4b0cfdef10492a31698e23b82be0a12ba1f88e3c8cb9d935"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with five shelves, framed by thick, rough-hewn posts and a top rail. The back is a solid, weathered plank panel with a dark diagonal stain, while the front shows empty, dusty shelves in a muted brown tone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 410
+meshes = 1
+materials = 1
+size = [2.500002, 5.0, 1.052525]
+
+[mesh.sm_prop_bookcase_grand_01]
+name = "SM_Prop_Bookcase_Grand_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Grand_01.fbx"
+sha256 = "d927081e175d95e818e0cb9775283574bea2e6b1c84dffe951f3327f7311c5d6"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with a heavy, blocky frame and a stepped base, featuring a recessed front filled with irregular, grid-like shelves. The back is a plain, flat panel, and the wood is a muted, dusty brown with a weathered, worn finish, giving it a sturdy, dungeon-worn appearance."
+differs = "The only wooden bookcase with empty shelves, ideal for a dungeon library where props are placed separately."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4226
+meshes = 1
+materials = 1
+size = [2.500001, 5.0, 1.109244]
+
+[mesh.sm_prop_bookcase_grand_02]
+name = "SM_Prop_Bookcase_Grand_02"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Grand_02.fbx"
+sha256 = "35e21cfd603798006571af79310878bb677c70c52567ea1f21659476a59e541d"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with a heavy, blocky frame and a solid plinth base, featuring a recessed front filled with a dense, irregular grid of small books. The back is a plain, flat panel, and the wood is a muted, weathered brown with subtle grain, giving it a sturdy, dungeon-worn appearance."
+differs = "The only wooden bookcase with books already on the shelves, saving time by avoiding individual book placement."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4130
+meshes = 1
+materials = 1
+size = [2.500002, 5.0, 1.109244]
+
+[mesh.sm_prop_bookcase_grand_03]
+name = "SM_Prop_Bookcase_Grand_03"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Grand_03.fbx"
+sha256 = "7156d5a94d68d1959d5cbb1324439fc4819f693a517a93df04045fba5cbe0711"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow stone bookcase with a heavy, blocky frame and a stepped base, featuring a recessed front filled with irregular, empty shelves. The back is a solid, flat panel, and the entire piece is a uniform, weathered grey-brown, giving it a sturdy, ancient, and dungeon-worn appearance."
+differs = "The only stone variant, making it the most durable and ancient-looking, perfect for ruins or crypts."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2724
+meshes = 1
+materials = 1
+size = [2.500002, 5.0, 1.109244]
+
+[mesh.sm_prop_bookcase_grand_broken_01]
+name = "SM_Prop_Bookcase_Grand_Broken_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Grand_Broken_01.fbx"
+sha256 = "9f68f505eabc11e256556e2b289ffcf40521d402b3b157c4812bb36cfe129024"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with a broken, jagged side and a missing back panel, revealing a dark interior with a few scattered shelves and a single book. The front face is a solid, flat board, while the frame is chipped and splintered, giving it a ruined, dungeon-worn appearance in muted brown tones."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2262
+meshes = 1
+materials = 1
+size = [2.500001, 5.0, 1.632369]
+
+[mesh.sm_prop_bookcase_grand_empty_01]
+name = "SM_Prop_Bookcase_Grand_Empty_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Grand_Empty_01.fbx"
+sha256 = "73b25a8a825ab63cfa7dcedc282917e53cefa9c20b633f30640b0bd61686c03b"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow stone bookcase with a flat top and a stepped base, featuring five empty shelves set within a thick, chunky frame. The back panel is solid and unadorned, and the entire structure is a uniform, weathered grey-brown stone with a rough, low-poly finish, giving it a sturdy, dungeon-ready appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 652
+meshes = 1
+materials = 1
+size = [2.500002, 5.0, 1.109244]
+
+[mesh.sm_prop_bookcase_grand_top_01]
+name = "SM_Prop_Bookcase_Grand_Top_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Grand_Top_01.fbx"
+sha256 = "aa9b91d09efee424a6945fbc715cec758ae44164fb0f6af7024874cd7efa1cb0"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A long, low, flat-topped wooden shelf or plinth with a stepped, moulded base and a shallow recessed channel along its upper surface, finished in a muted, weathered brown with subtle grain. The simple, blocky silhouette and lack of ornate carving make it a versatile, understated piece for dungeon interiors, suitable as."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 1
+size = [2.500001, 0.22253084, 0.86689997]
+
+[mesh.sm_prop_bookcase_optimised_01]
+name = "SM_Prop_Bookcase_Optimised_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Optimised_01.fbx"
+sha256 = "643e0c7770ff696a415c906c09a2b1aa525897ab379009eee9dafa400b7ff123"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with a solid back and four shelves packed with varied books in muted blues, greens, and browns. The frame is a simple, light tan wood with small feet and a subtle top cornice, giving it a sturdy, functional look perfect for filling dungeon library walls."
+differs = "Identical geometry and size to _02; only the book colours differ, with blues and greens instead of reds."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [2.513891, 4.999999, 0.897394]
+
+[mesh.sm_prop_bookcase_optimised_02]
+name = "SM_Prop_Bookcase_Optimised_02"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Optimised_02.fbx"
+sha256 = "7eb05e60bf5651d1e807603e0df64ef91a3c9629a6dde6aa9645705dc5a2219d"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with a solid back and four shelves, framed by corner posts with small feet and a top rail. The shelves are packed with assorted books and scrolls in muted blues, reds, and browns, giving it a well-stocked, dungeon-ready appearance."
+differs = "Identical geometry and size to _01; only the book colours differ, with reds and scrolls instead of blues and greens."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [2.513892, 4.999999, 0.897394]
+
+[mesh.sm_prop_bookcase_small_01]
+name = "SM_Prop_Bookcase_Small_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Small_01.fbx"
+sha256 = "11cef567246744a505303f180d6e2feeb26c55227b01b5230955aa87cd7242ef"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with a solid back and chunky, uneven side panels that give it a hand-hewn, rustic look. The front is divided into five shelves, mostly filled with a jumble of books in muted browns, greens, and greys, some leaning or stacked."
+differs = "Densely packed with books, ideal for a library or study, more detailed and fuller than its sibling."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3870
+meshes = 1
+materials = 1
+size = [2.13214, 3.351464, 0.886438]
+
+[mesh.sm_prop_bookcase_small_02]
+name = "SM_Prop_Bookcase_Small_02"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Small_02.fbx"
+sha256 = "d63b17f66390f0d00b6493f5d0c232abbe5744175f6274b2d10b264d48299dc6"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with a solid back and chunky, uneven side panels that give it a rough-hewn, handcrafted look. It holds a few sparse rows of books in muted browns and greens, with a weathered, dusty finish that suggests it belongs in an old dungeon or ruin."
+differs = "Sparse, dusty shelves with fewer books, perfect for a ruined or abandoned dungeon setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3094
+meshes = 1
+materials = 1
+size = [2.13214, 3.351464, 0.886438]
+
+[mesh.sm_prop_bookcase_small_empty_01]
+name = "SM_Prop_Bookcase_Small_Empty_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Bookcase_Small_Empty_01.fbx"
+sha256 = "63e237ac3c5c769fa69741fe62992dfcf95a646fea0df522a795899b946f275a"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden bookcase with a solid back and five open shelves, framed by thick, rough-hewn posts with a slightly uneven, hand-carved silhouette. The plain, muted tan-brown finish shows no visible grain or ornamentation, giving it a clean, unadorned look that suits a basic dungeon or rustic interior."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 296
+meshes = 1
+materials = 1
+size = [2.132139, 3.351464, 0.886438]
+
+[mesh.sm_prop_globe_01]
+name = "SM_Prop_Globe_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Globe_01.fbx"
+sha256 = "caa598770921c470d3f14ee35f916a1b7e0be8e062916ebdec8292bb8b9c6bc5"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A weathered, low-poly armillary sphere on a four-legged pedestal, with a faceted globe and a single ring. The muted brown and grey palette suggests aged wood or stone, fitting a dungeon or study. Its compact, sturdy design makes it a versatile prop for scholarly or mystical scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2466
+meshes = 1
+materials = 1
+size = [0.840902, 1.205295, 0.840902]
+
+[mesh.sm_prop_knightstand_01]
+name = "SM_Prop_KnightStand_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_KnightStand_01.fbx"
+sha256 = "8db3bfb311e9e115c75a44adbdde1d4b27f69decdfb235e3975777bcec2e02e7"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A weathered, full-plate suit of armour, empty and standing upright, with a closed, rounded great helm and a longsword held vertically at its right side. The metal is a dull, tarnished bronze-gold with dark, worn patches, giving it an aged, abandoned look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6000
+meshes = 1
+materials = 1
+size = [0.714026, 1.835675, 0.620688]
+
+[mesh.sm_prop_knightstand_broken_01]
+name = "SM_Prop_KnightStand_Broken_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_KnightStand_Broken_01.fbx"
+sha256 = "1e17aeb4f6e850d7629d5fcb6067fb2f19649ba6b51f3a1e2db90993f0288d79"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A weathered, grey-brown stone knight statue broken at the waist, with the upper torso and helmeted head leaning heavily to one side. The lower legs remain standing on a small base, while a detached block rests nearby, suggesting a ruined monument or a dungeon decoration."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5966
+meshes = 1
+materials = 1
+size = [0.99816704, 1.627756, 0.709062]
+
+[mesh.sm_prop_knightstand_royal_01]
+name = "SM_Prop_KnightStand_Royal_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_KnightStand_Royal_01.fbx"
+sha256 = "f57b8126200fe2b9dc4c6d0ea2492de083ce6e97237294600618fa331c337768"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden stand with a curved top hook, draped in a long, tattered beige cloth that suggests age and neglect. The fabric hangs unevenly, revealing a dark, simple frame beneath, and the muted, dusty tones give it a weathered, ancient look suited for a ruined or abandoned hall."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6508
+meshes = 1
+materials = 1
+size = [0.714026, 1.959845, 0.86387706]
+
+[mesh.sm_prop_ladder_01]
+name = "SM_Prop_Ladder_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Ladder_01.fbx"
+sha256 = "d66c69f8db8650f96df907534330a134f1dc6c2dc58cceed486d4e3265515cce"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden ladder with two side rails and roughly a dozen rungs, rendered in a low-poly style with a weathered brown finish. The wood appears aged and slightly worn, with a subtle grain texture suggesting a dungeon setting."
+differs = "The shorter, lighter option, ideal for reaching lower dungeon ledges or shelves."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 460
+meshes = 1
+materials = 1
+size = [0.74966204, 4.935678, 0.958715]
+
+[mesh.sm_prop_ladder_02]
+name = "SM_Prop_Ladder_02"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Ladder_02.fbx"
+sha256 = "7a5219030c204236d42953fcaf2349cabb8d0dae79a8ab56ccf1a9e6838152c5"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden ladder with two side rails and numerous thin rungs, rendered in a muted brown with a weathered, aged finish. The simple, straight design suggests a functional dungeon prop for climbing or blocking, with a slightly worn texture that fits a medieval or fantasy setting."
+differs = "The taller, heavier variant, best for scaling high walls or spanning deep chasms."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 680
+meshes = 1
+materials = 1
+size = [0.746302, 9.955904, 1.1270621]
+
+[mesh.sm_prop_papers_01]
+name = "SM_Prop_Papers_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Papers_01.fbx"
+sha256 = "2c4b6a42ea7f8225073a8df1d2b5fc122a59501e2021cea026f30eb77bbdfa58"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A flat, rectangular sheet of parchment or paper, rendered in a muted tan with faint, darker horizontal lines suggesting text, lies completely flat on the ground. One face features a large, dark brown rectangular patch, resembling a stain or a pasted-on label, while the others show only the subtle striations of writing."
+differs = "Identical to _02 but with a large dark stain patch on one face."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 42
+meshes = 1
+materials = 1
+size = [0.289032, 0.0, 0.37914]
+
+[mesh.sm_prop_papers_02]
+name = "SM_Prop_Papers_02"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Papers_02.fbx"
+sha256 = "35a60d9375fe2ec0dc955a84d3d7b560f2965041935b45dd429d57f67b8896bb"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A flat, rectangular sheet of parchment or paper, rendered in a muted tan with subtle darker streaks suggesting age or wear. One face features a large, dark rectangular patch, resembling a stain or a block of dense text, while the others show only faint horizontal lines."
+differs = "Identical to _01 but with a large dark stain patch on one face."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 42
+meshes = 1
+materials = 1
+size = [0.289032, 0.0, 0.37914]
+
+[mesh.sm_prop_papers_03]
+name = "SM_Prop_Papers_03"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Papers_03.fbx"
+sha256 = "ba4b39bf79a758bd34c21a1029156c31bf1a71bb30c9d53dcb6d63c9eee605a0"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A flat, irregular sheet of tan paper with a single dark brown rectangular patch near one edge, appearing slightly crumpled or torn, suggesting a discarded note or scrap for dungeon environments."
+differs = "The only irregular, torn scrap with a stain, and the smallest single sheet."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6
+meshes = 1
+materials = 1
+size = [0.331048, 0.002393, 0.31543]
+
+[mesh.sm_prop_papers_04]
+name = "SM_Prop_Papers_04"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Papers_04.fbx"
+sha256 = "b8ceeb1a5f3a626bbbdd753327695090cc340f11fbc10e56ce777703110a7df9"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A flat, irregular polygon of tan paper, angled as if dropped or tossed, with a darker brown rectangular patch on one face suggesting a label or stain, giving it a worn, scattered look ideal for dungeon clutter."
+differs = "The only single sheet with an irregular, angled shape and a stain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5
+meshes = 1
+materials = 1
+size = [0.289032, 0.0, 0.37914]
+
+[mesh.sm_prop_papers_05]
+name = "SM_Prop_Papers_05"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Papers_05.fbx"
+sha256 = "dc718c3a4e542da7d49896fc83a251da9fe64a9b0191df0d5b32cadc6de71afc"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A flat, rectangular sheet of parchment or paper, rendered as a simple plane with a tan, aged-paper texture. One corner features a darker brown rectangular patch, suggesting a stain or a piece of tape. The asset is completely flat and unadorned, ideal for a scattered floor detail or a simple tabletop prop."
+differs = "The only completely flat, unadorned rectangular sheet with a corner stain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2
+meshes = 1
+materials = 1
+size = [0.289032, 0.0, 0.37914]
+
+[mesh.sm_prop_papers_06]
+name = "SM_Prop_Papers_06"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Papers_06.fbx"
+sha256 = "28e4e92cc6ae9e80bd78847a513c3696438e6f20ae1e21376d3c7237e27e2265"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A scattered cluster of flat, irregularly torn parchment scraps, each with a subtle tan hue and slightly darker, worn edges. The pieces overlap in a loose pile, suggesting discarded notes or debris, with a simple, unadorned surface that reads as aged paper."
+differs = "The most detailed scattered cluster of torn scraps, with the most pieces."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 97
+meshes = 1
+materials = 1
+size = [1.165079, 0.011981001, 0.88603]
+
+[mesh.sm_prop_papers_07]
+name = "SM_Prop_Papers_07"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Papers_07.fbx"
+sha256 = "64563021e59579531230e0f5120c4ca2743594cfd405754d7c2ff08b64431f27"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A scattered pile of flat, rectangular parchment sheets in a warm tan hue, some overlapping and slightly askew, suggesting discarded notes or loose pages dropped on a dungeon floor."
+differs = "The largest and most spread-out pile of overlapping rectangular sheets."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 198
+meshes = 1
+materials = 1
+size = [2.30939, 0.008441001, 1.522582]
+
+[mesh.sm_prop_papers_08]
+name = "SM_Prop_Papers_08"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Papers_08.fbx"
+sha256 = "270e3b45546c239ba6d433913c24d4541b20c36240f129b7547c49fe95125798"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A cluster of four flat, rectangular parchment sheets, slightly curled and overlapping, with a plain tan texture and no visible writing, suggesting scattered, blank notes or loose pages for a dungeon floor."
+differs = "The only cluster of four slightly curled, blank rectangular sheets."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 53
+meshes = 1
+materials = 1
+size = [0.851623, 0.0072770007, 0.793024]
+
+[mesh.sm_prop_tomb_01]
+name = "SM_Prop_Tomb_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Tomb_01.fbx"
+sha256 = "ce96bdd2046b602bc8f4f366b784103194bb63516452f6b75c3fd65d9f806446"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A rectangular, open-topped stone sarcophagus with a stepped, moulded base and rim, rendered in a muted grey-brown. The interior is hollow and dark, suggesting a receptacle for a body or relics, with a weathered, aged finish suitable for a dungeon crypt."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 920
+meshes = 1
+materials = 1
+size = [1.054896, 0.631963, 2.426006]
+
+[mesh.sm_prop_tomb_lid_01]
+name = "SM_Prop_Tomb_Lid_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Tomb_Lid_01.fbx"
+sha256 = "969c97bd9bae0d7748d724db805e0ba45a04d6ecc37404d60db1c7ea675e5d82"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A long, flat rectangular slab of weathered grey-brown stone with a slightly raised, beveled rim and a subtle carved groove across the top, resembling a heavy tomb cover or floor plate. Its worn, chipped edges and muted, earthy tones give it an ancient, dungeon-worn appearance, making it ideal for use as a functional..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 580
+meshes = 1
+materials = 1
+size = [1.029624, 0.299548, 2.39791]
+
+[mesh.sm_prop_tomb_royal_01]
+name = "SM_Prop_Tomb_Royal_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Tomb_Royal_01.fbx"
+sha256 = "9173ffa8f5efad21f9e34148e9a4aeeaa9a4ff359159866cfd65ece0a300f06b"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A rectangular stone sarcophagus with an open, empty interior, featuring a stepped base and a carved frieze of repeating circular motifs along its sides. The weathered brown-grey stone surface suggests age and antiquity, making it suitable for royal crypts or ancient dungeon settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3485
+meshes = 1
+materials = 1
+size = [1.054894, 0.632049, 2.426006]
+
+[mesh.sm_prop_tomb_royal_lid_01]
+name = "SM_Prop_Tomb_Royal_Lid_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Tomb_Royal_Lid_01.fbx"
+sha256 = "61dc5f3cd40d883b856e2ac92bfd4358e30600de805e920413b8080cd182be2d"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A rectangular stone plinth supporting a sculpted, recumbent effigy of a royal figure, carved in a weathered, grey-brown stone. The figure lies in repose with hands folded, wearing a crown and draped robes, while small decorative pillars stand at the corners."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3024
+meshes = 1
+materials = 1
+size = [1.03899, 0.649822, 2.420386]
+
+[mesh.sm_prop_tomb_skeleton_01]
+name = "SM_Prop_Tomb_Skeleton_01"
+pack = "polygon_dungeons_map"
+source = "SourceFiles/FBX/SM_Prop_Tomb_Skeleton_01.fbx"
+sha256 = "4627296dbec6b1f831e4c4339c31cb460b9777cbc299091109934a752f20e4cd"
+atlas = "Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A low, flat rectangular slab of sandy stone, bearing the weathered remains of a skeleton laid out in state, with a small headstone at one end and a few scattered bone fragments. The surface is cracked and uneven, with a mottled tan and brown texture that suggests age and exposure, making it ideal for a dungeon floor..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2872
+meshes = 1
+materials = 1
+size = [0.914575, 0.33205903, 2.211497]

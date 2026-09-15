@@ -1,0 +1,588 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_bld_awning_long_01]
+name = "SM_Bld_Awning_Long_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Awning_Long_01.fbx"
+sha256 = "ce11a4a64503d6fd1d40526e16313c9a5b26f5ae6a9c6d850d6a5a57f05eee06"
+atlas = "POLYGON - Pride Flags/PolygonPride_Texture_01_A.png"
+textures = "PolygonPride_Texture_01_A.png"
+description = "A rectangular canopy of yellow and pink fabric, sagging slightly between four slender red posts, with a dark green rope trim along the edges and small white finials capping each pole. The cloth appears weathered and slightly translucent, suggesting a sun-bleached market stall or beachside shelter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1077
+meshes = 1
+materials = 2
+size = [3.963423, 2.887399, 2.479594]
+
+[mesh.sm_bld_chimney_sloped_01]
+name = "SM_Bld_Chimney_Sloped_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Chimney_Sloped_01.fbx"
+sha256 = "a4460cee1654ceab139e55b6feabb562811509b8acd69462584aab5a199c18e0"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+wanted = "RockFlat_Texture_01.png"
+description = "A stout, blocky stone chimney with a sloped, open top, its grey masonry heavily encrusted with vibrant, multicoloured coral, shells, and sea growth, giving it a weathered, sunken ruin appearance perfect for a pirate-themed coastal setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 814
+meshes = 1
+materials = 3
+size = [1.0844901, 2.477333, 1.1312921]
+
+[mesh.sm_bld_colonial_arch_01]
+name = "SM_Bld_Colonial_Arch_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Colonial_Arch_01.fbx"
+sha256 = "35d80674025c78334f1e230ae3979b9a47120439979c6dd62d787c4b54d036c3"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A freestanding semicircular arch supported by two square pillars with stepped bases and capitals, rendered in weathered cream stone with terracotta brick accents along the curve. The structure is simple and symmetrical, with a slightly worn, aged appearance that suggests a colonial or Mediterranean setting, ideal for.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1070
+meshes = 1
+materials = 1
+size = [2.983131, 2.8150928, 0.568328]
+
+[mesh.sm_bld_colonial_balcony_01]
+name = "SM_Bld_Colonial_Balcony_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Colonial_Balcony_01.fbx"
+sha256 = "23a0df0e55712aaced4a003e709b320d0d07c6bd64a4ffc07274e266b29c2c0d"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A compact, L-shaped wooden balcony with a weathered terracotta finish, featuring a white railing with decorative balusters and a small set of stairs leading down. The structure is enclosed by solid side panels with recessed rectangular details, giving it a sturdy, colonial architectural feel."
+differs = "The only L-shaped variant with a descending stair, ideal for a corner or upper-level exit; it is the smaller, more compact option."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1106
+meshes = 1
+materials = 1
+size = [2.623136, 1.648015, 1.4062151]
+
+[mesh.sm_bld_colonial_balcony_02]
+name = "SM_Bld_Colonial_Balcony_02"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Colonial_Balcony_02.fbx"
+sha256 = "4529b78a424dbe4d000dd93bc259ae061fcafa5f328b2d2f82a739ef96091ce0"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A long, low, open-fronted wooden balcony with a weathered terracotta-orange finish, featuring a pale plank floor and a simple railing of thin grey posts and rails. The solid end panels are capped with a darker trim, and the underside is supported by small, blocky feet."
+differs = "The longest, straightest, and plainest option, with no stairs and a simple open front, suited for a wide, flat walkway or a long facade."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1933
+meshes = 1
+materials = 1
+size = [4.946021, 1.648015, 1.4062151]
+
+[mesh.sm_bld_colonial_door_01]
+name = "SM_Bld_Colonial_Door_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Colonial_Door_01.fbx"
+sha256 = "970bd5557936f7e13fd2e4ad20a52b27376928e5c8a9654b85c6a253a65eef5b"
+atlas = "Crab_White_Texture.png"
+textures = "Crab_White_Texture.png"
+description = "A weathered, whitewashed wooden door with a simple rectangular frame, featuring a small barred window near the top and a sturdy metal latch and hinge hardware. The paint is chipped and worn, revealing the wood beneath, giving it a sun-bleached, colonial-era appearance suitable for a pirate island setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1192
+meshes = 1
+materials = 1
+size = [1.011323, 1.96477, 0.216052]
+
+[mesh.sm_bld_fence_arch_colonial_01]
+name = "SM_Bld_Fence_Arch_Colonial_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Fence_Arch_Colonial_01.fbx"
+sha256 = "688fb177ccbe6e50e7065863d100d949abd32baa54051b0b46da28790e4cea29"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A weathered, freestanding stone archway with a rounded top, built from blocky, chunky segments that give it a sturdy, low-poly look. The pale grey-green stone is heavily mottled with patches of orange, yellow, and blue, suggesting age, moss, or lichen, and the structure rests on simple square bases, making it ideal..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1448
+meshes = 1
+materials = 2
+size = [3.012768, 3.905314, 0.575604]
+
+[mesh.sm_bld_fence_colonial_01]
+name = "SM_Bld_Fence_Colonial_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Fence_Colonial_01.fbx"
+sha256 = "9aee6eeedcbf35b859dd7826165ea2421da93b96a25c43e7703334ca4e78ecdb"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A low, rectangular wall segment with a thick, weathered green-grey timber frame and a flat top rail, filled with a dense, chaotic collage of colourful posters, notices, and painted signs in reds, yellows, blues, and whites."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 2
+size = [2.499991, 2.386009, 0.391801]
+
+[mesh.sm_bld_fence_pillar_colonial_01]
+name = "SM_Bld_Fence_Pillar_Colonial_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Fence_Pillar_Colonial_01.fbx"
+sha256 = "12a70411e4a7623f5d3d47ae6edfa32f426fce5a691c40189129b466235d3922"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A tall, square stone pillar with a stepped base and cap, its central shaft plastered with a chaotic collage of colourful posters and notices in reds, yellows, and blues, giving it a weathered, heavily used look perfect for a busy colonial town square or harbour front."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 316
+meshes = 1
+materials = 2
+size = [0.575604, 2.579959, 0.575604]
+
+[mesh.sm_bld_ruins_arch_01]
+name = "SM_Bld_Ruins_Arch_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Ruins_Arch_01.fbx"
+sha256 = "4b2bbc625573b8bd2ca05b33f7974e93e88763b90b26d5140c6d50ff0864a7d1"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A chunky, low-poly stone arch fragment with a curved underside and blocky, stepped top, broken at both ends. The pale sandstone is weathered with dark cracks and patches of green moss, giving it an aged, ruined look perfect for pirate-isle ruins."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1001
+meshes = 1
+materials = 1
+size = [5.775067, 4.062585, 1.501046]
+
+[mesh.sm_bld_temple_floor_01]
+name = "SM_Bld_Temple_Floor_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Temple_Floor_01.fbx"
+sha256 = "97deb47115bd544d05192461c9e7ee52ad4efa83263a445d27d9d5a4721a52da"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A flat, square stone slab with a raised, circular motif carved into its surface, resembling a decorative floor tile or ancient seal. The weathered grey stone features a central ring and radiating spokes, with one corner showing a darker, rougher patch that suggests damage or a distinct paving block."
+differs = "The most detailed with a carved radial seal, twice the triangles, ideal for a decorative ancient seal or puzzle floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1004
+meshes = 1
+materials = 1
+size = [5.000322, 0.251403, 5.000693]
+
+[mesh.sm_bld_temple_floor_02]
+name = "SM_Bld_Temple_Floor_02"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Temple_Floor_02.fbx"
+sha256 = "ec8e71e9a7242c8bb044367f977a34adf73aba458faf94e53d904907fa779363"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A flat, square stone slab with a raised, rounded border and a subtle inset panel, rendered in pale grey with a darker, weathered patch on one corner. The surface is smooth and unadorned, suggesting a simple, functional floor tile for a temple or ruin, with a clean, low-poly aesthetic that fits seamlessly into a..."
+differs = "The plainest with a simple rounded border and inset, half the triangles, best for a clean, unadorned functional tile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 500
+meshes = 1
+materials = 1
+size = [5.000371, 0.25658, 5.000391]
+
+[mesh.sm_bld_wall_colonial_door_01]
+name = "SM_Bld_Wall_Colonial_Door_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Wall_Colonial_Door_01.fbx"
+sha256 = "af8f02b90780b4cf8af0f86abb485825f6c0374f0376cbc37090fda4ec80cd6d"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A freestanding rectangular doorway frame with a flat lintel, its surface covered in a dense, colourful collage of posters, notices, and graffiti. The weathered, sun-bleached texture suggests a worn, sun-baked colonial wall, making it ideal for a cluttered, lived-in pirate town or market street."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 284
+meshes = 1
+materials = 3
+size = [2.499992, 3.027657, 0.238078]
+
+[mesh.sm_bld_wall_colonial_trim_01]
+name = "SM_Bld_Wall_Colonial_Trim_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Wall_Colonial_Trim_01.fbx"
+sha256 = "3c46beacd24e97d1f8192378400d9e040dc1d3e09eb4e6889046be33d9004d90"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A low, weathered wall segment with a curved, arched top profile and a dark brown wooden cap rail, featuring a patchy plaster face of faded white, grey, and pale yellow with exposed brickwork and a rough, aged texture suitable for colonial ruins."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 530
+meshes = 1
+materials = 2
+size = [7.5, 1.647984, 0.35689]
+
+[mesh.sm_bld_wall_colonial_window_01]
+name = "SM_Bld_Wall_Colonial_Window_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Wall_Colonial_Window_01.fbx"
+sha256 = "363e24f4840084a9defab5caf872130764db5da7b7da7c3094489963105afbb8"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A tall, flat rectangular wall panel with a central dark wooden window frame, its surface covered in a dense, chaotic collage of colourful posters, signs, and graffiti. The weathered, multi-coloured texture gives it a heavily used, urban appearance, making it ideal for a cluttered or rundown colonial setting."
+differs = "The only one with a solid dark window, no slats or lattice, and the most poster-dense surface for a fully boarded-up look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 340
+meshes = 2
+materials = 3
+size = [2.499991, 3.005743, 0.225]
+
+[mesh.sm_bld_wall_colonial_window_02]
+name = "SM_Bld_Wall_Colonial_Window_02"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Wall_Colonial_Window_02.fbx"
+sha256 = "81a447f437f1c4406537f003900f05a83d64fb39a23c8af64db0104f346944b3"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A flat, rectangular wall panel featuring a dark brown wooden window frame with vertical slats, set against a vibrant, chaotic collage of colourful posters, signs, and graffiti. The surface is heavily weathered and distressed, giving it a cluttered, urban pirate-town aesthetic that stands out from standard colonial..."
+differs = "The only one with vertical slats over the window, offering a partially open, barred appearance for a jail or shuttered shop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 380
+meshes = 1
+materials = 3
+size = [2.499991, 3.005743, 0.225]
+
+[mesh.sm_bld_wall_colonial_window_03]
+name = "SM_Bld_Wall_Colonial_Window_03"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Wall_Colonial_Window_03.fbx"
+sha256 = "f083d9c57baf75b419b83598144365e6167d2b8ba7a5d496958cf2885c140031"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A flat, rectangular wall segment featuring a large, dark-brown wooden lattice window with a grid of small panes. The surrounding plaster is heavily weathered and distressed, showing patches of exposed brick, peeling paint, and vibrant graffiti in red, yellow, and blue."
+differs = "The only one with a multi-pane lattice grid, providing the most detailed glass structure and exposed brick for a ruined, high-detail facade."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 396
+meshes = 1
+materials = 3
+size = [2.499991, 3.005743, 0.225]
+
+[mesh.sm_bld_wall_colonial_window_half_01]
+name = "SM_Bld_Wall_Colonial_Window_Half_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Wall_Colonial_Window_Half_01.fbx"
+sha256 = "ebd947d24ef5ff28c6f3c4ce33484317b3459cd5488b50f8ac84ce9f2583969b"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A tall, narrow rectangular wall segment with a central arched window opening, framed by weathered timber and stone. The surface is heavily distressed, with peeling paint in muted reds, blues, and yellows, and a patchwork of colourful, graffiti-like markings."
+differs = "Thinner and lighter, with a round-arched opening and no mullions; best for a simple, flat facade."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 334
+meshes = 2
+materials = 3
+size = [1.25, 3.005743, 0.225]
+
+[mesh.sm_bld_wall_colonial_window_half_02]
+name = "SM_Bld_Wall_Colonial_Window_Half_02"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Wall_Colonial_Window_Half_02.fbx"
+sha256 = "7ce8d696610e17c5621e0e79553b239eb74982b68432870942ab57cce3d0b253"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A narrow, tall wall segment featuring a pointed-arch window with wooden mullions and a small sill, set within a plastered frame. The surrounding surface is heavily weathered, showing peeling paint and exposed brickwork in faded reds, yellows, and blues, giving it a distressed, sun-bleached colonial look."
+differs = "Deeper and heavier, with a pointed arch and mullioned glass; best for a more detailed, shaded window reveal."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 620
+meshes = 2
+materials = 3
+size = [1.249995, 3.005743, 0.582326]
+
+[mesh.sm_bld_window_colonial_shutter_01]
+name = "SM_Bld_Window_Colonial_Shutter_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Bld_Window_Colonial_Shutter_01.fbx"
+sha256 = "4750d0f7472a1700ea27893403990bfec67605d4a52a141ef28a9a9e11b001b8"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A tall, narrow rectangular shutter with a dark, weathered wood finish and a prominent frame. The central panel features four horizontal slats angled downwards, with small tan hinge blocks on the left edge. The wood grain and worn edges give it a rustic, aged appearance suitable for colonial or pirate-themed buildings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 406
+meshes = 1
+materials = 1
+size = [0.888208, 1.576821, 0.125673]
+
+[mesh.sm_env_rock_carved_01]
+name = "SM_Env_Rock_Carved_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Env_Rock_Carved_01.fbx"
+sha256 = "4a4316fa191b726d8a9764b8ec85584b21b1e3e8471809b010fc7bc69a5a4e18"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A weathered, pale grey stone pillar with a rounded top and a chipped, uneven base, featuring a carved, stylized face with a prominent brow and nose. The surface is marked by deep, vertical cracks and pitting, giving it an ancient, ruined appearance suited for forgotten temple ruins or island cliffs."
+differs = "The shorter, blockier pillar with a carved face and cracked base, best for ruined temple walls or cliffside rubble."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 836
+meshes = 1
+materials = 1
+size = [1.777909, 3.204607, 2.0350351]
+
+[mesh.sm_env_rock_carved_02]
+name = "SM_Env_Rock_Carved_02"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Env_Rock_Carved_02.fbx"
+sha256 = "0542079a17bd1b31f8cbdf42c9260bcf403e66e7f5e3dba7c8d07382e7df2166"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A weathered grey stone monolith shaped like a stylized, elongated head with a heavy brow and deep-set eyes, resembling a Moai statue. The faceted surface suggests rough, hand-carved rock with a flat base for placement on sandy shores or temple ruins."
+differs = "The taller, more elongated Moai-style monolith with a flat base, ideal as a standalone statue on sandy shores or in temple ruins."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 702
+meshes = 1
+materials = 1
+size = [2.07824, 4.611856, 2.3151]
+
+[mesh.sm_env_temple_rubble_01]
+name = "SM_Env_Temple_Rubble_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Env_Temple_Rubble_01.fbx"
+sha256 = "14cbeac2e8cb4d8468d120ec600cc65ad19701629050aecf67a3064ad0dd9f76"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A chunky, low-poly block of pale sandstone with a flat top and a stepped, broken profile, featuring a dark, scorched patch on one face and a small, pale chip on the side, resembling a weathered architectural fragment or a piece of ruined masonry."
+differs = "The only single block with a scorched patch, ideal for a burnt or cursed ruin accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 1
+size = [0.838696, 0.441092, 1.078877]
+
+[mesh.sm_env_temple_rubble_02]
+name = "SM_Env_Temple_Rubble_02"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Env_Temple_Rubble_02.fbx"
+sha256 = "42e971c40deef27cf5d39063c98ee5c00b21e456fc050bc7c44dd8d94bce8a73"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A cluster of two low-poly, sandy-beige stone blocks, one larger and one smaller, with flat, angular facets and a rough, weathered texture. The pieces are separated and irregular, suggesting a broken or collapsed architectural element rather than a single intact structure."
+differs = "The widest and flattest asset, with the most separated pieces, perfect for a scattered debris field."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 104
+meshes = 1
+materials = 1
+size = [1.601778, 0.345595, 1.577095]
+
+[mesh.sm_env_temple_rubble_03]
+name = "SM_Env_Temple_Rubble_03"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Env_Temple_Rubble_03.fbx"
+sha256 = "7d3b20a80ba64e8aec5c97636eee388dabae667ac98734c21c7f8faa8bb3a0c0"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A cluster of two chunky, low-poly stone blocks, one larger and one smaller, with flat, sandy-tan faces and sharp, angular edges. The surface is untextured and clean, suggesting a weathered but intact piece of masonry. Its simple, blocky silhouette makes it ideal for generic rubble or a small, standalone stone prop."
+differs = "The tallest and most compact cluster, with the cleanest untextured faces, best for a generic stacked stone prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 1
+size = [1.491914, 0.683043, 0.784673]
+
+[mesh.sm_prop_air_barrel_01]
+name = "SM_Prop_Air_Barrel_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Air_Barrel_01.fbx"
+sha256 = "7014126a3bf8b4e160f3643cfc72a071e9325fefea42e3e87d14062ce634acb8"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A weathered grey keg, bound by coarse rope, hangs suspended from a looped line that drops to a small stone anchor, suggesting a floating marker or buoy for mooring."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2336
+meshes = 3
+materials = 1
+size = [0.997105, 3.650054, 0.964341]
+
+[mesh.sm_prop_bottle_message_01]
+name = "SM_Prop_Bottle_Message_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Bottle_Message_01.fbx"
+sha256 = "60f6e31de4f946ea1e4e830d3569c75230ac61d71c99d4bda75e5bdf0eafa1e6"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A stout, faceted blue glass bottle with a short neck, sealed by a tan cork and wrapped in a pale, knotted cord. Clinging to the lower body are clusters of white barnacles and a single pink starfish, giving it a weathered, long-lost look perfect for a shipwreck or castaway scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 440
+meshes = 1
+materials = 1
+size = [0.126648, 0.436515, 0.14738199]
+
+[mesh.sm_prop_crate_04_insert_01]
+name = "SM_Prop_Crate_04_Insert_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Crate_04_Insert_01.fbx"
+sha256 = "b7cca0879d4e0ca34d4e792f6fe67a56dd6c05baf922962a4abe9b5f265c9e8e"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A cluster of five low-poly bottles, four in amber and one in grey, each with a dark cap and a dark rectangular label. The grey bottle stands out in the front, suggesting a mix of contents or a special variant."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1808
+meshes = 1
+materials = 2
+size = [0.744819, 0.58258003, 0.477047]
+
+[mesh.sm_prop_crate_06_insert_01]
+name = "SM_Prop_Crate_06_Insert_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Crate_06_Insert_01.fbx"
+sha256 = "6429fc90878b6b7ba136aaf2d491167d47f43b1ff8047ca5ec876af344866eed"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A low, irregular mound of cannonballs piled on a small square wooden base, with a few balls showing a weathered brown patina against the dark grey iron, suggesting a ready supply of ammunition for a ship's cannon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1234
+meshes = 1
+materials = 1
+size = [0.838699, 0.46968, 0.554865]
+
+[mesh.sm_prop_flag_pole_01]
+name = "SM_Prop_Flag_Pole_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Flag_Pole_01.fbx"
+sha256 = "af59f76d420ef4d0e747259c7fd015cfe7f9b1deeb3ea6a0d861761f1ca320c6"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+wanted = "PolygonGeneric_Texture_01_A.psd"
+description = "A tall, slender wooden pole with a small crossbar and a rounded base, weathered grey-brown with a lighter, worn tip."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 846
+meshes = 1
+materials = 2
+size = [0.68660295, 10.071485, 0.799941]
+
+[mesh.sm_prop_garden_bench_01]
+name = "SM_Prop_Garden_Bench_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Garden_Bench_01.fbx"
+sha256 = "cb2339aa543739f6a0f332612561606b5de0364305bf4d97000b50e9128239f1"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A simple, backless wooden bench with a flat plank seat and two sturdy, slightly flared trestle legs, finished in weathered grey-brown timber with subtle grain and wear, suited for docks, plazas, or tavern courtyards."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 218
+meshes = 1
+materials = 1
+size = [2.400198, 0.53902, 0.605654]
+
+[mesh.sm_prop_harpoon_crate_01]
+name = "SM_Prop_Harpoon_Crate_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Harpoon_Crate_01.fbx"
+sha256 = "eca1c613c84953ea6f2885c359d51f3b3fd2706b154644031b6250e49301dd13"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A long, low wooden crate with a flat plank lid, bound by two dark metal straps and secured with a central latch. The pale, weathered timber shows visible grain and a slightly worn finish, suggesting a sturdy container for storing harpoon heads or ship supplies."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1466
+meshes = 2
+materials = 1
+size = [3.073213, 0.488956, 0.894302]
+
+[mesh.sm_prop_harpoon_crate_01_insert_01]
+name = "SM_Prop_Harpoon_Crate_01_Insert_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Harpoon_Crate_01_Insert_01.fbx"
+sha256 = "f07e9b82fc739d74923975c11ecd0e7dc9d0cf23bd72b17685006882931ad124"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A long, flat wooden plank with a weathered grey-brown finish, featuring a faded red stripe and a small white label near one end. Two thin metal rods are attached along its length, giving it the appearance of a harpoon or spear shaft."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1308
+meshes = 1
+materials = 1
+size = [2.581771, 0.150457, 0.671962]
+
+[mesh.sm_prop_temple_plinth_01]
+name = "SM_Prop_Temple_Plinth_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Temple_Plinth_01.fbx"
+sha256 = "64d027e320d5f4ec990bef4a6d915c0e9980cf3e71d52a182e86b18187673ac7"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A squat, tiered stone pedestal with a wide, dodecagonal base and a cylindrical shaft, topped by a flat circular cap. The pale sandstone is weathered with darker grime in the recesses, and faint carved bands and a small central emblem suggest a ceremonial or ritual purpose."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1498
+meshes = 2
+materials = 1
+size = [2.518696, 1.157492, 2.5942678]
+
+[mesh.sm_prop_vase_01]
+name = "SM_Prop_Vase_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Vase_01.fbx"
+sha256 = "7f3b367f2bdbf1435e679628c2dfd484999e77fb45219f485bd50a9d7b3dfc2d"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A stout, faceted clay vessel with a flared rim and a narrow neck, its rounded body swelling to a wide base. Two terracotta-red bands encircle the upper and lower halves, contrasting with the pale, sandy-brown ceramic. The low-poly finish gives it a chunky, hand-thrown look, ideal for a rustic tavern or market stall."
+differs = "The plainest, with only two red bands and no motif; use as a generic background prop where decoration would distract."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 268
+meshes = 1
+materials = 1
+size = [0.309442, 0.544496, 0.309442]
+
+[mesh.sm_prop_vase_02]
+name = "SM_Prop_Vase_02"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Vase_02.fbx"
+sha256 = "0a001203299752d073698344fcb7b57654d043c81fba7bc12b3f6a1f39da462d"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A stout, faceted terracotta urn with a flared rim and a narrow neck, wrapped in a painted red band and bearing a stylised red figure on its belly. The low-poly surface gives it a chunky, hand-thrown look, and the muted, dusty finish suggests an ancient or weathered piece of pottery."
+differs = "The most detailed, with a stylised red figure on the belly; use as an ancient artifact or quest item."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 680
+meshes = 1
+materials = 1
+size = [0.309442, 0.544496, 0.309442]
+
+[mesh.sm_prop_vase_03]
+name = "SM_Prop_Vase_03"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Vase_03.fbx"
+sha256 = "6b94a98c1ceb3e5648063f649d199e23dacdbb17411df4572e9b0d941df727a2"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A squat, faceted clay vessel with a flared red rim and a matching red band around the shoulder, decorated with a simple red diamond motif on the belly. The low-poly finish gives it a chunky, hand-thrown look, suggesting a rustic storage jar for a pirate camp or island settlement."
+differs = "The most decorative, with a red rim, shoulder band, and diamond motif; use as a premium storage jar for a pirate camp."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 454
+meshes = 1
+materials = 1
+size = [0.309442, 0.544496, 0.309442]
+
+[mesh.sm_prop_zipline_01]
+name = "SM_Prop_Zipline_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Prop_Zipline_01.fbx"
+sha256 = "be6269394aae03983897fa84769160f5f69afba29f3a3c6e665b3dbad84e70a8"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A weathered wooden frame with two forked legs and a crossbar, resembling a small goal or support structure. The pale, grainy timber shows visible plank seams and a simple, sturdy construction, suggesting a rustic prop for jungle or island environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 651
+meshes = 1
+materials = 1
+size = [2.474784, 3.0229552, 1.453722]
+
+[mesh.sm_wep_harpoon_01]
+name = "SM_Wep_Harpoon_01"
+pack = "polygon_pirate_isles_map"
+source = "FBX/SM_Wep_Harpoon_01.fbx"
+sha256 = "d005292fc65e5fc89649da32ab8b30aef201f295008a9cb30563408e189144ec"
+atlas = "POLYGON - Pirate Realm/PolygonPirateRealm_01_A.png"
+textures = "PolygonPirateRealm_01_A.png"
+description = "A slender harpoon with a long, dark metal shaft and a small barbed head, wrapped in tan cord along the grip with a single red band near the base, appearing weathered and ready for use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 436
+meshes = 1
+materials = 1
+size = [0.127388, 2.504307, 0.238121]

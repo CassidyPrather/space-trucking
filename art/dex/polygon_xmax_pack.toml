@@ -1,0 +1,885 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_xmas_bow_01_blue]
+name = "SM_Xmas_Bow_01_Blue"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Bow_01_Blue.fbx"
+sha256 = "0b67a5e2ed0b5a428292360159ec0baf2e9eee0a7e3a71d122b5b043e8caecbc"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A stylized, low-poly blue ribbon bow with a chunky central knot and two pairs of angular, flattened loops, finished with two long, straight tails that trail outwards. The flat, matte blue surface is uniform and untextured, giving it a clean, toy-like appearance suited for festive decoration or gift wrapping."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 267
+meshes = 1
+materials = 1
+size = [0.348172, 0.069314, 0.50226]
+
+[mesh.sm_xmas_bow_01_green]
+name = "SM_Xmas_Bow_01_Green"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Bow_01_Green.fbx"
+sha256 = "3c88b8deff46a733beddc366d27ae6760c0313d845ff951a00361f29dfd6bfe4"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, low-poly green bow with a central knot and two loops, finished with two long, straight ribbon tails that extend outward. The muted sage-green colour and simple faceted texture give it a clean, stylised look, ideal for decorating gift boxes or wreaths in a festive winter scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 267
+meshes = 1
+materials = 1
+size = [0.348172, 0.069314, 0.50226]
+
+[mesh.sm_xmas_bow_01_yellow]
+name = "SM_Xmas_Bow_01_Yellow"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Bow_01_Yellow.fbx"
+sha256 = "677b79969e0340c9bbbc80dd6b8b184c3ff83896bea623aee7d94171169044d3"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A stylized, low-poly yellow bow with a chunky central knot and two broad, flat loops, finished with two long, straight ribbon tails that extend outward. The bright, saturated yellow hue and faceted, matte surface give it a cheerful, festive look, ideal for decorating gifts or holiday scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 267
+meshes = 1
+materials = 1
+size = [0.348172, 0.069314, 0.50226]
+
+[mesh.sm_xmas_bow_02_blue]
+name = "SM_Xmas_Bow_02_Blue"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Bow_02_Blue.fbx"
+sha256 = "2788299db8364e972cb52ad1aad43ee13208dd4d32dbbbb9c645801c79288e99"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A chunky, low-poly blue bow with two wide, faceted loops and a small central knot, rendered in a flat, matte blue with no visible pattern or texture. Its simple, stylized geometry makes it read clearly as a festive decoration, and the clean, unadorned surface suggests it is a brand-new, untextured asset ready for..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 132
+meshes = 1
+materials = 1
+size = [0.350282, 0.07467, 0.218282]
+
+[mesh.sm_xmas_bow_02_green]
+name = "SM_Xmas_Bow_02_Green"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Bow_02_Green.fbx"
+sha256 = "801979efe446313ead8b2f86a195760984318fd4b68f3621961384aa7e110e49"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A chunky, low-poly bow with two broad, faceted loops and a small central knot, rendered in a flat, matte green with no visible pattern or texture. The angular, stylized shape gives it a playful, festive look, and its clean, unadorned surface makes it ideal for decorating gifts or trees in a stylized winter scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 132
+meshes = 1
+materials = 1
+size = [0.35028303, 0.07467, 0.218282]
+
+[mesh.sm_xmas_bow_02_red]
+name = "SM_Xmas_Bow_02_Red"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Bow_02_Red.fbx"
+sha256 = "f0f80fcf6434ca387a02eeac678d7be722216a78d0d344af5a16139817fd4ae6"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A chunky, low-poly red bow with two broad, faceted loops and a small central knot, rendered in a flat, matte red with no visible pattern or texture. The angular, stylised geometry gives it a crisp, festive look, ideal for decorating gifts or holiday scenes where a simple, bold silhouette is needed."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 132
+meshes = 1
+materials = 1
+size = [0.350282, 0.07467, 0.218282]
+
+[mesh.sm_xmas_bow_02_yellow]
+name = "SM_Xmas_Bow_02_Yellow"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Bow_02_Yellow.fbx"
+sha256 = "b65537ce0a5a9652e109efbd3aea170b361d28624aa26e364fc6b4dc92c17a25"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A chunky, low-poly bow tie in a warm, golden yellow, featuring a broad central knot and two wide, slightly angular loops that taper to blunt points. The faceted surface catches light to suggest a soft, matte fabric, giving it a simple, festive look suited for decorating gifts or characters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 132
+meshes = 1
+materials = 1
+size = [0.350282, 0.07467, 0.218282]
+
+[mesh.sm_xmas_cookie]
+name = "SM_Xmas_Cookie"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Cookie.fbx"
+sha256 = "6f63757331a916e1039b8a38e6bc82466a1359824f9c886cbc127d016a883fa3"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, faceted disc with a pale tan base and a slightly darker, raised rim, topped with irregular dark brown chunks resembling chocolate chips. The low-poly geometry gives it a crisp, angular silhouette, and the matte finish suggests a baked, slightly crumbly texture, making it ideal for festive scenes or holiday..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 88
+meshes = 1
+materials = 1
+size = [0.201916, 0.04419, 0.191522]
+
+[mesh.sm_xmas_cookie_plate]
+name = "SM_Xmas_Cookie_Plate"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Cookie_Plate.fbx"
+sha256 = "c9fafab1c08a0de467842c45734b9f1eaa61690bd45bc84b566bf1047c2e3c00"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A low, round white plate holds a cluster of five golden-brown chocolate chip cookies, with dark chips scattered across their surfaces. The cookies are piled slightly off-centre, giving the arrangement a casual, ready-to-eat look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 364
+meshes = 1
+materials = 1
+size = [0.51082, 0.098126, 0.485818]
+
+[mesh.sm_xmas_glass_milk]
+name = "SM_Xmas_Glass_Milk"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Glass_Milk.fbx"
+sha256 = "a57f633612d2089b1087b0d4775cc492378a7526af13b2d405fc852e0421b35c"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A stout, faceted octagonal tumbler with a pale blue upper band and a cream lower body, suggesting a two-tone milk bottle. The hollow interior is visible through the wide rim, and the flat, matte shading gives it a clean, stylized look perfect for a festive table setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 80
+meshes = 1
+materials = 1
+size = [0.162312, 0.228139, 0.162312]
+
+[mesh.sm_xmas_light_blue]
+name = "SM_Xmas_Light_Blue"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Light_Blue.fbx"
+sha256 = "3c1e80077ed27195ea7f22eea5fdbc205d6b36982df33d4ed1cea02dabb44b04"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, faceted blue bauble with a chunky yellow cube cap, resembling a stylized Christmas tree ornament. The low-poly geometry gives it a gem-like, angular appearance, and the matte finish suggests a painted plastic or ceramic material."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.18318, 0.236639, 0.183966]
+
+[mesh.sm_xmas_light_red]
+name = "SM_Xmas_Light_Red"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Light_Red.fbx"
+sha256 = "c40cb835b64386c91a0b7df50cd855e1b2033cec6658175d39ac0d64ad98581f"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, faceted red bulb with a bright yellow cube cap, rendered in a flat, low-poly style. The geometric shading gives it a matte, plastic look, and the simple construction makes it ideal for hanging on a stylized Christmas tree or string."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.18318, 0.236639, 0.183966]
+
+[mesh.sm_xmas_present_01_blue_base]
+name = "SM_Xmas_Present_01_Blue_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Blue_Base.fbx"
+sha256 = "b0cf4b1bbb7a68af085b3c7262c9d4258ec83f2d5e06109ac8f028412066645a"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A shallow, open-topped rectangular box in a single flat blue tone, with a small darker blue patch on one outer side. The interior is empty and unadorned, giving it a plain, functional look that reads more like a tray or container than a wrapped gift."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.556841, 0.189082, 0.401696]
+
+[mesh.sm_xmas_present_01_blue_top]
+name = "SM_Xmas_Present_01_Blue_Top"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Blue_Top.fbx"
+sha256 = "3322373907f0d9d741937a5d06d59bb2f6d39a33e5e763f88461eec9a24623bb"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, rectangular slab with a slightly rounded top edge, rendered in a solid, matte blue. The underside is a darker shade, and the top surface features a subtle, darker blue rectangular patch near one end, suggesting a lid or a decorative panel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.583064, 0.059698004, 0.420612]
+
+[mesh.sm_xmas_present_01_facewrap_base]
+name = "SM_Xmas_Present_01_Facewrap_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Facewrap_Base.fbx"
+sha256 = "f59b6873e4e2b90e324e2858ff7408799e16a7e571df364a88074adc39f96782"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A shallow, open-topped rectangular box with a pyramidal peak rising from its centre, wrapped in a glossy silver-grey material. The surface is scattered with white snowflake motifs, rainbow-striped candy canes, and dark geometric shapes, giving it a festive, wrapped-gift appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.556841, 0.189082, 0.401696]
+
+[mesh.sm_xmas_present_01_facewrap_lid]
+name = "SM_Xmas_Present_01_Facewrap_Lid"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Facewrap_Lid.fbx"
+sha256 = "337103e6a298d0663f0ea24185b9d70d70c038cdb321d83a3424762738f26418"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, rectangular lid with a slightly raised rim, wrapped in a light grey paper patterned with white, black, and red geometric shapes and a central rainbow stripe. The low-poly facets give it a crisp, stylized look, and the subtle sheen suggests a glossy finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.583064, 0.059698004, 0.420612]
+
+[mesh.sm_xmas_present_01_green_base]
+name = "SM_Xmas_Present_01_Green_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Green_Base.fbx"
+sha256 = "41c759d1c51a209456f892d620e0c0c5ab45938438d3a6f53cb07083fe6e8371"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A low, wide, open-topped rectangular box with a flat, solid green exterior and a darker, recessed interior, suggesting a shallow container or tray. The clean, unadorned surfaces and simple geometry give it a versatile, utilitarian look, ideal for use as a generic storage prop or a base for other items."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.556841, 0.189082, 0.401696]
+
+[mesh.sm_xmas_present_01_green_top]
+name = "SM_Xmas_Present_01_Green_Top"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Green_Top.fbx"
+sha256 = "89e78e2496fe03f685ac0016b255a03acb57c3ea06b534384aaa59deef8ba9f0"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, rectangular green slab with a slightly raised rim and a subtle darker green patch on one face, resembling a closed gift box lid or a low platform."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.583064, 0.059698004, 0.420612]
+
+[mesh.sm_xmas_present_01_pinewrap_base]
+name = "SM_Xmas_Present_01_Pinewrap_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Pinewrap_Base.fbx"
+sha256 = "07d4849d12dd3f8711993c7c4b679b3efa6aa8530e8521f801fd737fc282ae2f"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A low, open rectangular box with a dark, empty interior, wrapped in a grey paper patterned with white pine trees and scattered red, yellow, and blue dots. The flat, unadorned sides and lack of a lid or ribbon give it a simple, generic look, making it ideal for a background prop or a container for other items."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.556841, 0.189082, 0.401696]
+
+[mesh.sm_xmas_present_01_pinewrap_lid]
+name = "SM_Xmas_Present_01_Pinewrap_Lid"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Pinewrap_Lid.fbx"
+sha256 = "55e46280b121933d92eebed75228e21ca7a40a0084f861558b3703aa8df3b466"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, rectangular slab with a raised rim, resembling a shallow tray or lid, covered in a dense, repeating pattern of small, colourful wrapped gifts on a pale grey background, giving it a festive, decorative appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.583064, 0.059698004, 0.420612]
+
+[mesh.sm_xmas_present_01_red_base]
+name = "SM_Xmas_Present_01_Red_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Red_Base.fbx"
+sha256 = "a511d392e0dbeb63bec4631bd3b9c23c37fe7a2fd1d3c4c3ba83e99568fe2fc7"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A low, open-topped red box with a flat, square base and four straight, slightly angled sides, its interior forming a deep, empty square well. The matte, solid red finish is unadorned, with no lid, ribbon, or bow, giving it a stark, utilitarian look that suggests a simple container or a minimalist gift box rather than.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.556841, 0.189082, 0.401696]
+
+[mesh.sm_xmas_present_01_red_top]
+name = "SM_Xmas_Present_01_Red_Top"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Red_Top.fbx"
+sha256 = "afdc99c64b5a9d2a7a875c5374c20bdd256537e702a7938f43f863e03e6db91a"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, rectangular slab of solid red material with a smooth, matte finish, featuring a single dark red band across one end that suggests a ribbon or wrapping. Its simple, low-poly form and lack of a bow or lid make it ideal for a generic, unadorned gift or a stylized brick-like object."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.583064, 0.059698004, 0.420612]
+
+[mesh.sm_xmas_present_01_stripped_base]
+name = "SM_Xmas_Present_01_Stripped_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Stripped_Base.fbx"
+sha256 = "a269c876ce3430047457f5ce3c9374f7463ca3d38cb674594e7e45606045d4b0"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A low, rectangular grey box with a raised, pyramidal peak at its centre, wrapped in a repeating pattern of white and multicoloured gift bows. The surface is flat-shaded and crisp, with a dark, open interior that suggests it is a stripped or empty present base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.556841, 0.189082, 0.401696]
+
+[mesh.sm_xmas_present_01_stripped_lid]
+name = "SM_Xmas_Present_01_Stripped_Lid"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Stripped_Lid.fbx"
+sha256 = "0b91c23c16bb3602ed6b1ccf8993767e89ff5aac4bcf594f7fa6cb65689ec297"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, rectangular slab of pale grey stone, its surface densely packed with small, low-poly white and grey skulls, some with faint yellow or red accents. The top is slightly uneven, giving it a macabre, bone-strewn appearance, and it looks like a grim decorative floor tile or a gruesome platform base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.583064, 0.059698004, 0.420612]
+
+[mesh.sm_xmas_present_01_tie_blue]
+name = "SM_Xmas_Present_01_Tie_Blue"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Tie_Blue.fbx"
+sha256 = "c2f1dc9c0fd84c4f183d56efd4e8c00f2449b3a57fb2e7f85f25d3f93087395f"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A chunky, low-poly X-shaped block in a flat, matte blue, with a raised central square and a subtle darker band running across the middle, suggesting a tied ribbon. The faceted surfaces give it a stylised, toy-like appearance, and its simple geometry makes it a versatile prop for festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.622444, 0.256046, 0.443674]
+
+[mesh.sm_xmas_present_01_tie_green]
+name = "SM_Xmas_Present_01_Tie_Green"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Tie_Green.fbx"
+sha256 = "cd1b4de31b5f362ad2b561dedb3906a4dd1f9c5a43ccd0896f6bf0cb6f72e38a"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A chunky, low-poly bow with four thick, faceted loops and a central knot, rendered in a flat, matte green with no visible pattern or ribbon. The clean, untextured surface gives it a stylized, toy-like appearance, making it ideal for a simple gift decoration or a festive prop where a plain, solid colour is preferred."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.622444, 0.256046, 0.443674]
+
+[mesh.sm_xmas_present_01_tie_red]
+name = "SM_Xmas_Present_01_Tie_Red"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Tie_Red.fbx"
+sha256 = "f920719a9e859b4588a0e7812d7a835bc425919e40ffc53b4ef3b26217038b2b"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A chunky, low-poly red bow with four thick, faceted loops and a central knot, rendered in a flat, matte finish with no visible ribbon or gift box attached. The geometric facets catch light to give it a solid, sculpted look, making it ideal as a standalone decoration or a stylized prop for festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.622444, 0.256046, 0.443674]
+
+[mesh.sm_xmas_present_01_tie_yellow]
+name = "SM_Xmas_Present_01_Tie_Yellow"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Tie_Yellow.fbx"
+sha256 = "108435a4e13abb16fce09c47b15d2761f5a4ee8108abdafe0286fd79cc8c6d55"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A chunky, low-poly bow with four thick, faceted loops and a pinched centre, rendered in a flat, warm yellow with no visible ribbon or gift box. The blocky silhouette and untextured surface give it a clean, stylised look, making it ideal as a standalone decoration or a generic festive prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.622444, 0.256046, 0.443674]
+
+[mesh.sm_xmas_present_01_yellow_base]
+name = "SM_Xmas_Present_01_Yellow_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Yellow_Base.fbx"
+sha256 = "a4db6cbadd464fb524a4d3b776ac4eb903b083104b14289f5588ca44b0186659"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A low, wide, open-topped rectangular box in a flat, matte yellow-orange, with a hollow interior and a small dark notch on one side. Its simple, unadorned surfaces and lack of a lid or ribbon suggest it is an empty container or a base for a customisable gift, rather than a wrapped present."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.556841, 0.189082, 0.401696]
+
+[mesh.sm_xmas_present_01_yellow_top]
+name = "SM_Xmas_Present_01_Yellow_Top"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_01_Yellow_Top.fbx"
+sha256 = "9bb10f7f7fa168e92b14e043b273925562b158a734de14f87d6973a85ad32c10"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, rectangular slab with a beveled edge, rendered in a solid, bright yellow with a subtle sheen that suggests a smooth, matte plastic or painted wood finish. The surface is completely plain, lacking any ribbon, bow, or lid detail, making it read more like a simple tile or base plate than a wrapped gift."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.583064, 0.059698004, 0.420612]
+
+[mesh.sm_xmas_present_02_blue_base]
+name = "SM_Xmas_Present_02_Blue_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Blue_Base.fbx"
+sha256 = "f4cc7373c93f074324c159a387a94649ef4af7969d8c5c63deb2d202f38cf516"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A simple, open-topped blue box with a hollow interior, its flat, unadorned faces showing no lid, ribbon, or festive markings, making it a versatile, generic container rather than a wrapped gift."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.431196, 0.316377, 0.401696]
+
+[mesh.sm_xmas_present_02_blue_top]
+name = "SM_Xmas_Present_02_Blue_Top"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Blue_Top.fbx"
+sha256 = "db8b795c9c4307eb13f415d1803abb76cded6d0e4950fb26a57bf0ddd31e2ff6"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, rectangular slab with a slightly beveled edge, rendered in a solid, matte blue. The top surface features a darker blue, curved patch that suggests a stylized ribbon or a subtle decorative marking. Its simple, low-poly form makes it a versatile prop for festive scenes, easily placed under a tree or on a shelf."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.457418, 0.059697002, 0.420612]
+
+[mesh.sm_xmas_present_02_green_base]
+name = "SM_Xmas_Present_02_Green_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Green_Base.fbx"
+sha256 = "337cc74c4481d5c537801a6eb513effae6329a5d7916fd4d08297c37e7299c96"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A simple, open-topped green box with a square base and straight, slightly tapered sides, featuring a darker interior and a subtle, flat-shaded texture that suggests a matte finish. Its clean, unadorned design makes it a versatile, generic container for any festive scene, easily distinguishable from more decorated or..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.431196, 0.316377, 0.401696]
+
+[mesh.sm_xmas_present_02_green_top]
+name = "SM_Xmas_Present_02_Green_Top"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Green_Top.fbx"
+sha256 = "5101b133b2bc4f93c9887fd15c875f32e4a6478fd371700c602c2b76f543dbc1"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, square green lid with a subtle beveled edge and a slightly raised rim, featuring a darker green curved patch on one corner that suggests a ribbon or bow. The matte finish and simple geometry make it a clean, versatile top for a gift box, with the darker marking adding a touch of festive detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.457418, 0.059697002, 0.420612]
+
+[mesh.sm_xmas_present_02_red_base]
+name = "SM_Xmas_Present_02_Red_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Red_Base.fbx"
+sha256 = "91c467cadeeb020ec0013d81947dced25986c6af0b2786c4499f21fe65085a31"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A simple, open-topped red box with a flat, unadorned exterior and a hollow interior, showing a plain matte finish with no lid, ribbon, or festive markings. Its clean, geometric form makes it a versatile prop for a variety of scenes, from a storage crate to a minimalist gift container."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.431196, 0.316377, 0.401696]
+
+[mesh.sm_xmas_present_02_red_top]
+name = "SM_Xmas_Present_02_Red_Top"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Red_Top.fbx"
+sha256 = "3590f2531f48d28b7da56d9d558d4121166331728fcb1b0bdd9169d3926bbeb1"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, rectangular red slab with a slightly raised, bevelled rim, resembling a closed gift box lid or a low platform. The surface is a uniform, matte red with no visible markings, ribbons, or bow, giving it a clean, minimalist look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.457418, 0.059697002, 0.420612]
+
+[mesh.sm_xmas_present_02_stripped_base]
+name = "SM_Xmas_Present_02_Stripped_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Stripped_Base.fbx"
+sha256 = "46eaac6c489dbc2e087c1c16e5dc067e66cce3324c7954e799342622fbc3d4c6"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, open-topped box with a square footprint and slightly tapered sides, its grey surface is covered in a repeating pattern of small white gift boxes with colourful ribbons. The interior is dark and empty, giving it a stripped or empty appearance despite the festive exterior, making it ideal for a container that..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.431196, 0.316377, 0.401696]
+
+[mesh.sm_xmas_present_02_stripped_lid]
+name = "SM_Xmas_Present_02_Stripped_Lid"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Stripped_Lid.fbx"
+sha256 = "cd99a49e47737959fd03484d058a99341d6d869e11db52d6274a6efb6d06ec21"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, square slab with a low, pyramidal peak at its centre, resembling a stylised gift box lid. The surface is a light, mottled grey with scattered white and multicoloured speckles, giving it a worn, festive, or slightly weathered appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.457419, 0.059697002, 0.420612]
+
+[mesh.sm_xmas_present_02_tie_blue]
+name = "SM_Xmas_Present_02_Tie_Blue"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Tie_Blue.fbx"
+sha256 = "7dca1b20e0f76a7a520c85265a118bb1a225ed92d1a9d4d6c19ebad82a0fb773"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A chunky, low-poly blue cross-shaped block with a faceted surface and a deep central notch, resembling a stylised gift bow or knot. The flat, matte blue material is uniform with no visible pattern or texture, giving it a clean, toy-like appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.48605102, 0.385236, 0.437164]
+
+[mesh.sm_xmas_present_02_tie_green]
+name = "SM_Xmas_Present_02_Tie_Green"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Tie_Green.fbx"
+sha256 = "6457c0a4a0751e570fab1eca91be0b998ac3d636213fd5619d81cae77cd7e1c1"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A chunky, low-poly green bow with four thick, faceted loops meeting at a pinched centre, rendered in a flat, matte forest green with no visible ribbon or gift box attached. The stylised, angular geometry gives it a playful, toy-like appearance, making it ideal for decorating festive scenes or as a standalone prop on a."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.48605102, 0.385236, 0.437164]
+
+[mesh.sm_xmas_present_02_tie_red]
+name = "SM_Xmas_Present_02_Tie_Red"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Tie_Red.fbx"
+sha256 = "95f14d7a8879dad869a9ba833b744a4bab812079d2c22baf1750232cdf85406f"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A chunky, low-poly red bow with four thick, faceted loops and a central knot, rendered in a flat, matte red with subtle shading that highlights its angular planes. The clean, untextured surface and simple geometric form make it a versatile, instantly readable festive decoration, ideal for topping a gift or adorning a.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.48605102, 0.385236, 0.437164]
+
+[mesh.sm_xmas_present_02_tie_yellow]
+name = "SM_Xmas_Present_02_Tie_Yellow"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Tie_Yellow.fbx"
+sha256 = "ec20e84bf8d38841976e7a98a10a2930e79581be6529bd6ee9ee08bb7c09f3aa"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A chunky, low-poly bow with a pinched centre and two broad, faceted loops, rendered in a flat, matte yellow that reads as painted wood or plastic. The simple, stylised geometry gives it a clean, toy-like appearance, making it a versatile decorative element for gift wrapping or festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.48605102, 0.385236, 0.437164]
+
+[mesh.sm_xmas_present_02_yellow_base]
+name = "SM_Xmas_Present_02_Yellow_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Yellow_Base.fbx"
+sha256 = "33f137245f75c1053098b10d897dea078dab83ac5f867e01413f14553b34edd6"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A simple, open-topped square box with a flat, unadorned exterior and a smooth, solid yellow-orange finish. The interior is visible and empty, showing the same flat colour as the outside, with no lid, ribbon, or festive markings to suggest a wrapped gift."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.431196, 0.316377, 0.401696]
+
+[mesh.sm_xmas_present_02_yellow_top]
+name = "SM_Xmas_Present_02_Yellow_Top"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_02_Yellow_Top.fbx"
+sha256 = "a65407ff225c9c3677e6fb6291397088abf2232e2912b2885e12f93cce2cb99e"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, square yellow slab with a beveled edge, resembling a low-poly tile or a closed gift box lid. The top surface is a solid, bright yellow with a subtle darker shading on one corner, while the sides are a slightly deeper orange-yellow."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.457418, 0.059697002, 0.420612]
+
+[mesh.sm_xmas_present_03_base]
+name = "SM_Xmas_Present_03_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_03_Base.fbx"
+sha256 = "cc589476bf9e5ce0c1d7323e270c9112fedd828fdd2dc371755075720e7b8433"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A faceted, open-topped blue container with a flat, octagonal rim and a hollow interior, resembling a low-poly bucket or bin. The uniform matte blue finish and clean geometry give it a versatile, unadorned look that suits industrial or abstract scenes rather than festive ones."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 64
+meshes = 1
+materials = 1
+size = [0.448888, 0.33699, 0.448888]
+
+[mesh.sm_xmas_present_03_tie_blue]
+name = "SM_Xmas_Present_03_Tie_Blue"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_03_Tie_Blue.fbx"
+sha256 = "6a6914cc9da016139475df7d6ad5058858936c2865b8a370d1ea8172f6ee9855"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, blocky cube with a flat, matte blue finish, wrapped by a raised cross-shaped band that forms a simple ribbon and bow. The low-poly faceting gives it a crisp, stylized look, and the uniform colour makes it read as a generic gift box ready for any festive scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.491667, 0.477543, 0.491668]
+
+[mesh.sm_xmas_present_03_tie_green]
+name = "SM_Xmas_Present_03_Tie_Green"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_03_Tie_Green.fbx"
+sha256 = "d994c13d36625306985234f3de6e5c585daf35c2f47d72a7a8c454850137ae8f"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, cube-shaped present with a flat, matte green finish and a darker green ribbon wrapped around it in a cross pattern, featuring a simple bow on top. The ribbon is flush with the box, giving it a clean, stylized look perfect for a festive game environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.491667, 0.477543, 0.491668]
+
+[mesh.sm_xmas_present_03_tie_red]
+name = "SM_Xmas_Present_03_Tie_Red"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_03_Tie_Red.fbx"
+sha256 = "a21eb25e4b606527eb69d73cf9c972b68be13fbdf254aa621e31617de2977303"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, cube-shaped present with a chunky cross-shaped ribbon wrapping over the top and down the sides, rendered in a flat, matte red with no visible bow or pattern. The low-poly facets give it a crisp, stylised look, and the simple, unadorned design makes it a versatile, instantly readable prop for festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.491667, 0.477543, 0.491668]
+
+[mesh.sm_xmas_present_03_tie_yellow]
+name = "SM_Xmas_Present_03_Tie_Yellow"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_03_Tie_Yellow.fbx"
+sha256 = "f52f3b8a3104a83cfd96b2f3250f75b9e9d9d73a9fcfaad82ef1d50098406db7"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, blocky cube with a chunky cross-shaped ribbon tied over the top, rendered in a flat, matte yellow with no visible pattern or texture, giving it a clean, stylised look that reads as a simple wrapped gift rather than a realistic one."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.491667, 0.477543, 0.491668]
+
+[mesh.sm_xmas_present_03_top]
+name = "SM_Xmas_Present_03_Top"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_03_Top.fbx"
+sha256 = "a2db50da5ee4eafd3d1277e03b765dc41d04d6c16953f87024a7c75afae8b2dd"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A flat, low-poly decagonal slab in a solid, matte blue, with a slightly darker blue top face that suggests a lid or a separate surface. The faceted sides give it a chunky, stylized look, and the clean, unadorned finish makes it a versatile, generic base for a gift or a simple platform."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 64
+meshes = 1
+materials = 1
+size = [0.490582, 0.10525301, 0.490582]
+
+[mesh.sm_xmas_present_preset_01]
+name = "SM_Xmas_Present_Preset_01"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_Preset_01.fbx"
+sha256 = "0408563a0d603a86d0c68d821e64e6b9fba4653efc9e3e10b14c0b4c03ddecbb"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, rectangular box with a flat lid, wrapped in a deep purple material and bound by two bright yellow ribbons that cross over the top. A large, stylized green bow with thick, looping petals sits at the center, giving it a festive, cartoonish look."
+differs = "The only purple present with a green bow, and the widest of the purple pair."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 481
+meshes = 1
+materials = 1
+size = [0.710515, 0.308335, 0.54424]
+
+[mesh.sm_xmas_present_preset_02]
+name = "SM_Xmas_Present_Preset_02"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_Preset_02.fbx"
+sha256 = "e9f2261bf2725d42ccd05ee06467eca0f0aa315dff908e1ce1c4fedb1991abc3"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, cube-shaped present with a slightly glossy green finish, wrapped by two bright yellow ribbons that cross over the top and are crowned by a chunky red bow. The low-poly facets give it a crisp, stylised look, and the clean, unblemished surface makes it ideal for festive scenes."
+differs = "The only cube-shaped green present with a red bow and yellow ribbon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 346
+meshes = 1
+materials = 1
+size = [0.48605102, 0.458129, 0.437164]
+
+[mesh.sm_xmas_present_preset_03]
+name = "SM_Xmas_Present_Preset_03"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_Preset_03.fbx"
+sha256 = "e0a9237a25d894c8ab84f5cd37c93b9f6ba3918417aa4c63d2b5369f6a484ef8"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A stout, boxy present with a slightly tapered base, wrapped in a flat blue material and tied with a bright yellow ribbon that forms a cross over the top. A large, crumpled pink bow sits off-center, giving the gift a playful, festive look."
+differs = "The only blue present with a pink bow, and the tallest of the blue pair."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 316
+meshes = 1
+materials = 1
+size = [0.491667, 0.552149, 0.491668]
+
+[mesh.sm_xmas_present_preset_04]
+name = "SM_Xmas_Present_Preset_04"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_Preset_04.fbx"
+sha256 = "b14de8cd3832fba66d69e832f762978ef1af08f53700a6328e5df6fe49f6e8bf"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, rectangular red present with a glossy finish, wrapped by a single green ribbon that crosses over the lid and is topped with a large, stylized yellow bow. The bow's loops are thick and angular, giving it a playful, low-poly look that stands out against the smooth box."
+differs = "The only red present with a yellow bow and green ribbon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 481
+meshes = 1
+materials = 1
+size = [0.623374, 0.299815, 0.516088]
+
+[mesh.sm_xmas_present_preset_05]
+name = "SM_Xmas_Present_Preset_05"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_Preset_05.fbx"
+sha256 = "e38193e98c5e8677154986e2a1f69c54cb67af5d2ada740afd9b5e20cb5d171d"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, rectangular green gift box with a white ribbon wrapping around it in a cross pattern, topped with a chunky red bow. The low-poly facets give it a crisp, stylized look, and the slightly muted tones suggest a classic, festive present ready for a holiday scene."
+differs = "The only green present with a white ribbon, and the shortest of the green pair."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 346
+meshes = 1
+materials = 1
+size = [0.622444, 0.339932, 0.443674]
+
+[mesh.sm_xmas_present_preset_06]
+name = "SM_Xmas_Present_Preset_06"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Present_Preset_06.fbx"
+sha256 = "fe7160440110156099ce32c0feaf6f16394475f4196ff2b5be081db84f5656e7"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A low, wide rectangular white box with a flat lid, wrapped by a teal ribbon that crosses over the top and is finished with a large, leafy green bow. The bow's long, slightly curved loops give it a stylised, organic look, and the clean, untextured surfaces suggest a simple, festive gift ready for a holiday scene."
+differs = "The only white present with a teal ribbon and green bow, and the widest of all six."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 481
+meshes = 1
+materials = 1
+size = [0.700938, 0.31428, 0.54493]
+
+[mesh.sm_xmas_pudding]
+name = "SM_Xmas_Pudding"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Pudding.fbx"
+sha256 = "d7a1a60a9343f1430be3e05042d3a2ada5dc65f9abed86023717ba57b0659c35"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A squat, faceted dome of dark brown sponge, capped with a thick, uneven layer of white icing that drips down the sides. A single red berry and a sprig of dark green holly sit on top, all resting on a flat, pale grey plate. The low-poly style gives it a charming, stylised look perfect for festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 382
+meshes = 1
+materials = 1
+size = [0.716994, 0.384402, 0.686658]
+
+[mesh.sm_xmas_snowman]
+name = "SM_Xmas_Snowman"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Snowman.fbx"
+sha256 = "58636e7e5a421229c5a4e8e8ad6880f7f7dc1b65eba7e02f564d7c6afc8c9562"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A classic three-tier snowman with a blue top hat, a red scarf, and stick arms, featuring a carrot nose and black coal buttons, rendered in a crisp low-poly style with a clean white finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 812
+meshes = 1
+materials = 1
+size = [1.129581, 1.659876, 0.89104104]
+
+[mesh.sm_xmas_snowman_base]
+name = "SM_Xmas_Snowman_Base"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Snowman_Base.fbx"
+sha256 = "5aa6064a98b7f89174a2e573b019f9db666d35cebd68733c57b86bd3a1b5f039"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A low, wide mound of pure white snow with a faceted, irregular surface, tapering to a slightly flattened peak and a thin, uneven base. It is unmarked and untextured, appearing as a clean, freshly fallen drift. Its simple, generic shape makes it a versatile ground cover piece for winter scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 55
+meshes = 1
+materials = 1
+size = [1.244322, 0.23185, 1.423736]
+
+[mesh.sm_xmas_tree_01]
+name = "SM_Xmas_Tree_01"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Tree_01.fbx"
+sha256 = "f481d27560a0c9b44b6110ba8b4d103d98f4d240bfa6b231af87787b12dc99a6"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A stylized, low-poly Christmas tree with a tiered, conical shape and a flat, square base. It features a bright yellow star on top, a spiraling yellow garland, and scattered red and blue ornaments."
+differs = "The only decorated tree, with star, garland, and ornaments; use for festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1304
+meshes = 1
+materials = 1
+size = [1.6506901, 2.911649, 1.700714]
+
+[mesh.sm_xmas_tree_02]
+name = "SM_Xmas_Tree_02"
+pack = "polygon_xmax_pack"
+source = "SourceFiles/FBX_Export/SM_Xmas_Tree_02.fbx"
+sha256 = "fe4541e881786dac6baa530825557a3972b5ebbc4aa5261cbd1049ab9a676ea5"
+atlas = "Polygon_Xmas_Texture_01.png"
+textures = "Polygon_Xmas_Texture_01.png"
+description = "A stylised, low-poly conifer with a broad, conical silhouette formed by five stacked, jagged tiers of faceted foliage. The flat-shaded green surfaces show subtle tonal variation, giving it a crisp, game-ready look with no decorations, making it ideal for a minimalist winter scene."
+differs = "The plainest, undecorated tree; use for minimalist or natural winter settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 340
+meshes = 1
+materials = 1
+size = [1.650691, 2.592412, 1.6391699]

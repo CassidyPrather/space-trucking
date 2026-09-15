@@ -1,0 +1,1160 @@
+# The art manifest: everything this repository is allowed to know about
+# art it is not allowed to carry.
+#
+# Synty's licence lets their meshes ship inside a BUILT GAME and forbids
+# redistributing them as SOURCE. A public repository is source. So the
+# meshes are not here, will not be here, and would not be here even in
+# LFS — what is here is a set of references, and `cargo xtask art resolve`
+# turns them into files on the machine of whoever holds the licence.
+#
+#     art/manifest.toml   this file: ids, packs, paths, digests, overrides
+#     $SYNTY_STORE        the packs exactly as downloaded, on your disk
+#     art/cache/          the few files this file names, converted; gitignored
+#     art/dex/            what the meshes in those packs look like, in English,
+#                         so a pack can be searched by more than its file names.
+#                         `cargo xtask art describe` writes it; it is in git,
+#                         because names, counts and English are not art.
+#
+# Nothing in continuous integration reads this file. CI builds the
+# whitebox — the geometry the game cuts in code — because that is the
+# version whose payload is in the repository. See docs/ART_PIPELINE.md.
+#
+# The format is a strict subset of TOML: comments, `[table.id]` headers,
+# and `key = value` where a value is a quoted string or three numbers.
+# Anything else is an error naming the line, so a mistyped key is a
+# refusal rather than an override that silently never applied.
+
+
+# ---------------------------------------------------------------------
+# Packs
+#
+# One table per pack you have bought. `dir` is YOUR directory name under
+# $SYNTY_STORE, not a guess at what Synty's zip unpacks to: this line is
+# the contract, so nothing has to predict a download's naming, and moving
+# your packs around is an edit here rather than a code change. Spaces and
+# capitals in it are ordinary; the name the store gave the pack is a fine
+# name for the directory you drop the download into.
+#
+# `title` and `download` are English, and they exist for exactly one
+# moment — the one where somebody clones this on a machine with no packs
+# on it and has to be told which thing to go and get.
+# ---------------------------------------------------------------------
+
+[pack.scifi_space]
+title = "POLYGON Sci-Fi Space"
+dir = "POLYGON - Sci-Fi Space Pack"
+download = "POLYGON Sci-Fi Space, the Source Files download"
+
+[pack.scifi_horror]
+title = "POLYGON Sci-Fi Horror"
+dir = "POLYGON - Sci-Fi Horror"
+download = "POLYGON Sci-Fi Horror, the Source Files download"
+
+[pack.ancient_egypt]
+title = "POLYGON Ancient Egypt"
+dir = "POLYGON - Ancient Egypt"
+download = "POLYGON Ancient Egypt, the Source Files download"
+
+[pack.apocalypse]
+title = "POLYGON Apocalypse"
+dir = "POLYGON - Apocalypse"
+download = "POLYGON Apocalypse, the Source Files download"
+
+[pack.casino]
+title = "POLYGON Casino"
+dir = "POLYGON - Casino"
+download = "POLYGON Casino, the Source Files download"
+
+[pack.construction]
+title = "POLYGON Construction"
+dir = "POLYGON - Construction Pack"
+download = "POLYGON Construction, the Source Files download"
+
+[pack.cyber_city]
+title = "POLYGON Sci-Fi Cyber City"
+dir = "POLYGON - Sci-Fi Cyber City"
+download = "POLYGON Sci-Fi Cyber City, the Source Files download"
+
+[pack.scifi_worlds]
+title = "POLYGON Sci-Fi Worlds"
+dir = "POLYGON - Sci-Fi Worlds Pack"
+download = "POLYGON Sci-Fi Worlds, the Source Files download"
+
+[pack.shops]
+title = "POLYGON Shops"
+dir = "POLYGON - Shops Pack"
+download = "POLYGON Shops, the Source Files download"
+
+
+[pack.police_station]
+title = "POLYGON Police Station"
+dir = "POLYGON - Police Station"
+download = "POLYGON Police Station, the Source Files download"
+
+[pack.apocalypse_wasteland]
+title = "POLYGON Apocalypse Wasteland"
+dir = "POLYGON - Apocalypse Wasteland"
+download = "POLYGON Apocalypse Wasteland, the Source Files download"
+
+# ---------------------------------------------------------------------
+# Assets
+#
+# One table per referenced asset. The table name is the STABLE ID: it is
+# what code will name, so re-cutting a fitting out of a different pack
+# stays an edit to this file.
+#
+#   pack      which [pack.*] above it comes out of
+#   source    where it is in that pack, relative to the pack directory,
+#             written with `/` on every platform. Prefer the Source Files
+#             download: it holds the FBX and the textures directly, and
+#             the .unitypackage route below is for packs that ship no
+#             source download.
+#   unity     optional. The project-relative path (`Assets/...`) the same
+#             asset has INSIDE a .unitypackage, used only when `source`
+#             is not there. Rebuilding that archive is done for you.
+#   texture   optional, and usually needed. A Synty pack paints itself
+#             from one shared atlas, and this line DECLARES which one. It
+#             is handed to the converter, which paints every material
+#             that names no image of its own with it — because Synty
+#             assign their materials in Unity, so the FBX itself commonly
+#             names nothing and a mesh converted on its word comes out
+#             grey. An FBX that DOES name its own texture still wins: the
+#             atlas is also staged beside the mesh, where a relative
+#             reference out of the original tree resolves against it.
+#   emissive  optional, and rare. The pack's EMISSIVE atlas, where this
+#             mesh is meant to glow. Synty assign emission in Unity like
+#             they assign colour, so an FBX that glows in the pack's own
+#             screenshots names nothing about it — this line is the whole
+#             of it. The image is laid out on the same swatch grid as the
+#             colour atlas, black everywhere the mesh is not lit, so
+#             declaring it lights exactly the faces Synty meant to light.
+#             It is wired into emission alone and never into Base Color,
+#             and it may not be declared without a `texture` beside it:
+#             the converter takes the two positionally.
+#   sha256    the digest of the bytes this line was written against.
+#             Leave it out until you have the pack; `cargo xtask art hash`
+#             prints the line to paste. Once it is set, a pack update
+#             that changes the file is a refusal with both digests in it
+#             rather than a mesh that quietly became a different mesh.
+#
+# Then the four overrides. They are here from the first day and nothing
+# consumes them yet, which is deliberate: `poi::Shape::fill` arrived
+# AFTER five stations had already written hoops that could not reach
+# their own deck, and the whole cost of that was the field not existing
+# when the descriptions were authored.
+#
+#   scale     multiplied onto the size the game's description asks for.
+#             An FBX arrives at whatever unit its exporter chose and the
+#             converter is deliberately not allowed to guess, so the
+#             correction lives here, on a line you can comment.
+#   offset    shifted in the description's own frame, after scaling.
+#   rotation  degrees about x, y, z.
+#   fill      what fraction of its drawing frame the mesh actually
+#             occupies, per axis — the same number, meaning the same
+#             thing, as `poi::Shape::fill`. A description claims a box; a
+#             purchased mesh occupies some part of it, and every rule
+#             that measures a body is measuring the frame until this says
+#             otherwise.
+#
+# All four default to the identity: scale [1,1,1], offset [0,0,0],
+# rotation [0,0,0], fill [1,1,1]. That default is a CLAIM — that the mesh
+# is exactly the box the description asks for — and it is the claim most
+# imported meshes turn out to break.
+#
+# To add one, with the packs under $SYNTY_STORE — as downloaded, nothing
+# unzipped:
+#
+#     cargo xtask art find crate      # what is actually in the packs
+#     # paste the pack and source lines it prints into a table below
+#     cargo xtask art hash            # paste the sha256 line it prints
+#     cargo xtask art resolve
+#
+# The table below is one that has been through that, against real packs.
+# Copy its shape rather than an invented one: every path in it is a path
+# that exists, and `find` is what knew them.
+# ---------------------------------------------------------------------
+
+[asset.crate_small]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Crate_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "aae840d30cdda45baa5fa80367f754ed7ab92cc6c59c2beb4e8481a044f5f0cb"
+scale = [2.0, 2.0, 2.0]
+offset = [0.0, -0.386806, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.72751, 0.613194, 0.672727]
+dresses = "cargo/mysterious_crate"
+
+# The rest of the cargo, in `Kind::index` order. Every line below came out
+# of `cargo xtask art dex` — the catalogue is what knew which of a hundred
+# files called `SM_Prop_Crate_0N` was the one worth naming here.
+#
+# Not dressed, and each for a stated reason. The window, porthole and bay
+# window frame a rendered viewport a solid body would occlude; the chart
+# tank, ETA gauge, destination preview and launch lever are the game's
+# instruments, which is the UI.
+#
+# And the luminous paint, which is the fourth of this ship's light
+# sources and the one no pack can sell. What it lights with is a PAINTED
+# DECK CELL — a coat, and nobody models a coat. Its other body is a tin,
+# and there is a fine blackout tin next to the paint tin's in POLYGON
+# Construction (`SM_Prop_Paint_Can_Closed_Black_01`), but a `dresses`
+# line names ONE mesh and a covering draws two (`Under::Laid` beside
+# `Under::Packed`, `pieces::sync_dressings`), so a bought tin stands in
+# the coat's place as well as the shelf's. Photographed, that is the
+# glowing patch on the deck replaced by a can lying in the middle of the
+# cell, and the laid coat is the only state in which luminous paint
+# lights anything at all. The day a binding can name which of a
+# covering's two bodies it is, the tin is a four-line table.
+#
+# The three lamps used to stand in this list too, on a reason that has
+# gone: a purchased mesh replaces a description rather than joining it,
+# so dressing one put the bay in the dark. The light is kept now and
+# only the drawing is replaced — see below.
+
+# A conical flask with an orange stopper. The description asks for cut
+# crystal balanced on a point; a lab flask is the sci-fi reading of it.
+[asset.beaker_small]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Beaker_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "7302ebee8be133df6ea0bbd9cf34f7ecddc1e42384217440586727822deb89d3"
+scale = [5.337432, 5.337432, 5.337432]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.641826, 1.0, 0.641826]
+dresses = "cargo/perfume_vial"
+
+# A pharaoh's bust on its pedestal, painted from the pack's own GOLD alt
+# atlas rather than its stone one — the kind is a gilded idol, and Ancient
+# Egypt ships the gilding as a texture.
+[asset.bust_pharaoh]
+pack = "ancient_egypt"
+source = "SourceFiles/FBX/Props/SM_Prop_Bust_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonAncientEgypt_Texture_01_A_Gold.png"
+sha256 = "4c4f0d1760abe8d939a1ff91025c0d84cfc8427b4f45dab37ced6989c54814f6"
+scale = [4.712025, 2.356012, 4.712025]
+offset = [0.0, -0.026806, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.901566, 0.973194, 1.0]
+dresses = "cargo/gilded_idol"
+
+# A stack of three ration packs, orange-striped. Literally the thing.
+[asset.ration_stack]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Ration_Hub_Insert_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "3c873908cf0b0793258536487d16d5126118dc1b640af2b9454b802191b476b1"
+scale = [1.777294, 1.777294, 3.554589]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.481357, 1.0, 0.440861]
+dresses = "cargo/ration_bricks"
+
+# A bound stack of ribbed panels and pipes off a scavenger world: the
+# whitebox is bars laid on bars, and so is this.
+[asset.scrap_plate]
+pack = "scifi_worlds"
+source = "Sourcefiles/FBX/SM_Prop_Scav_Scrap_11.fbx"
+texture = "Sourcefiles/Textures/Alts/PolygonScifiWorlds_Texture_01_A.png"
+sha256 = "3970361a01b38ca44683d72c86530dc86a1a4461d765c7d8e95d8488ada1f0ee"
+scale = [0.177434, 0.354867, 0.354867]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.568326, 1.0, 0.819961]
+dresses = "cargo/scrap_alloy"
+
+# A planter of broad green leaves with an orange rim band.
+[asset.plant_vase]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Plant_Vase_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "9bf9b55a3c8d5d2c16a17f05acd8896447e1c14f7fa8b9b660b01bc2a83dfd6b"
+scale = [1.737635, 1.737635, 1.737635]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.802088, 1.0, 0.781806]
+dresses = "cargo/seedlings"
+
+# A blue oxygen bottle with a valve head. The description draws it lying
+# across the berth, so the mesh is turned a quarter about z to match.
+[asset.oxygen_tank]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Oxygen_Tank.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "246ecda36fb6e10032ff4b0162404d3b2d267b4767c4eded2cce305d6f9b46d9"
+scale = [1.930816, 0.965408, 1.930815]
+offset = [0.0, -0.674245, 0.0]
+rotation = [0.0, 0.0, 90.0]
+fill = [0.325755, 0.500000, 0.325752]
+dresses = "cargo/gas_canister"
+
+# A hazard-orange octagonal power cell, banded in white. The whitebox is
+# a six-faceted drum; this is that, bought.
+[asset.power_cell]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Generator_PowerCell_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "6336f1a0e1c14a468397ae392d6dd3d84f47af469a72c026f62fec976a9ca803"
+scale = [2.03776, 2.03776, 2.03776]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.776278, 1.0, 0.776278]
+dresses = "cargo/cryo_core"
+
+# A bulbous milky pod on a twisted stalk. Three stacked pearls was the
+# whitebox; one briny pod is the same idea with a pack behind it.
+[asset.egg_sack]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Environment/SM_Env_EggSack_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "967b8733732d50510b824f50704c3bfb949b2ea397a8fc63281a593a2ea5f00e"
+scale = [3.213977, 1.606988, 3.213977]
+offset = [0.0, -0.0489, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.894797, 0.9511, 1.0]
+dresses = "cargo/brine_pearls"
+
+# A beige shipping crate with a domed lid and dark trim.
+[asset.crate_ribbed]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Crate_01_Alt_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "fee9ba0d5ea26af1a0eebe1dee29bc35779ab7594c4ef4a01a01f83ab6f43878"
+scale = [1.392773, 1.392773, 2.785546]
+offset = [0.0, -0.491149, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.714377, 0.508851, 1.0]
+dresses = "cargo/suspicious_crate"
+
+# An octagonal containment cylinder with a ribbed dark glass core and a
+# heavy lid. What ??? hands back should not look like a parcel.
+[asset.specimen_chamber]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Specimen_Chamber_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "60a296a6431d5d6c65c8c673c040ab43c5ccdbdc9a56998a221b6ded7f4d8c17"
+scale = [1.059243, 1.059243, 2.118487]
+offset = [0.0, -0.289638, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.444651, 0.710362, 1.0]
+dresses = "cargo/very_mysterious_crate"
+
+# A twisted vertical shard spiralling upward. The whitebox is a horn; so
+# is this.
+[asset.crystal_shard]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Artifact_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "b6cb56a321eff68e55b12e1aae7972d7ffd419c1c1c42ada30d1d08bc5534975"
+scale = [2.186457, 2.186457, 2.186457]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.51155, 1.0, 0.467626]
+dresses = "cargo/comet_ice"
+
+# A squat capped canister with a worn label — bottle, neck and cork, the
+# three parts the description cuts.
+[asset.bottle_small]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Bottle_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "e22553707ed57b3a9b83961b18c7e4fbc82a70dd3f0ce2481178691e1d1eaff1"
+scale = [4.921199, 4.921199, 4.921199]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.563763, 1.0, 0.563763]
+dresses = "cargo/bottled_midnight"
+
+# A plush hermit crab. A legally distinct ball of fur, with legs.
+[asset.plush_crab]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Plushie_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "b9a10211ffb6f1ad9763c60e66d9d2a60ec7969bdcf1f4b78674b4d7ba48ad9e"
+scale = [2.404806, 2.404806, 2.404806]
+offset = [0.0, -0.590015, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 0.409985, 0.939712]
+dresses = "cargo/fluff"
+
+# A blue plastic keycard with a hex bezel. Inner-ring transit papers, as
+# a station would actually issue them.
+[asset.keycard]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Keycard_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "6b49afd4e00aa21c255d9a7e264e6da0ea706fbf00514ca1b8d6706cee7ad76e"
+scale = [5.182166, 5.182166, 5.182166]
+offset = [0.0, -0.827449, 0.0]
+rotation = [90.0, 0.0, 0.0]
+fill = [0.77143, 1.0, 0.172551]
+dresses = "cargo/transit_chit"
+
+# A leaning stack of chips rather than one disc: a single chip scaled to
+# a berth reads as a dinner plate.
+[asset.chip_stack]
+pack = "casino"
+source = "SourceFiles/FBX/Items/SM_Item_Casino_Chip_Pile_02.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonCasino_Texture_01_A.png"
+sha256 = "42549890a844f4ae35ae2768f698ceb093c9d63f81d7c18e8eff5be6ed3d98a6"
+scale = [12.25708, 12.25708, 12.25708]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.713105, 1.0, 0.722009]
+dresses = "cargo/casino_chip"
+
+# THE THREE LAMPS. Each owns a real `PointLight` that lights the ROOM
+# rather than the body, and the room's light is not a drawing:
+# `pieces::build_kind` keeps every part of a description that lights and
+# drops only the parts that draw, so a bought lamp burns exactly where
+# the whitebox's bulb burned and to the same reach.
+#
+# And each wakes its own glass, the way a whitebox bulb does. Two lines
+# do it. The `emissive` line is the pack's own emissive atlas, laid out
+# on the colour atlas's swatch grid and black everywhere the mesh is not
+# a lamp, so it lights exactly the faces Synty lit — the pendant's
+# frosted panels, the sconce's bulb, the column's band. The LEVEL is the
+# cabin's: a glTF material is shared by every copy of its scene, so the
+# game copies every lit material once per lamp as its scene lands and
+# writes `sync_fixtures`'s eased value into the copy
+# (`pieces::wake_fittings`). A lamp aboard therefore burns, a lamp on
+# the barter counter is dark glass, and the omen dims both.
+#
+#   glass     optional, and only beside a `cargo/` binding. The node of
+#             the mesh that is the lamp's shade, where the pack hangs one
+#             as an object of its own with the lit bulb INSIDE it, as the
+#             sconce below does. The game draws that node see-through;
+#             opaque, it is a shade over a bulb nobody can see burn. Like
+#             `leaf`, the resolver checks the line's shape and never
+#             opens the mesh, so a misspelled node is said on stderr by
+#             the running game and the shade is drawn as it came.
+#
+# See docs/ART_PIPELINE.md, "Light is not a drawing".
+
+# A hanging pendant: a small ceiling mount, a slender tiered stem, and a
+# flared faceted shade with frosted glass panels in dark ribs. The
+# whitebox is a mount plate, a stem and a flattened cone; this is that,
+# bought. Its canopy is flush with the deckhead, which is where a
+# pendant's plate meets the ship (`gauntlet::rig_seated`). The frosted
+# panels are the lit faces in the pack's emissive atlas, and they are
+# the whole of the head's glass — no separate node, so no `glass` line.
+[asset.pendant_shade]
+pack = "casino"
+source = "SourceFiles/FBX/Props/SM_Prop_Lights_06.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonCasino_Texture_01_A.png"
+emissive = "SourceFiles/Textures/Emissive/PolygonCasino_Emissive_01_A.png"
+sha256 = "be97c56c85ab7513f73322c4f6b11adedea3901e343429349eb9ac366fb6099e"
+scale = [1.293512, 1.293512, 1.293512]
+offset = [0.0, 0.265003, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.548659, 0.734997, 0.548659]
+dresses = "cargo/ceiling_lamp"
+
+# A sconce: a faceted octagonal backplate, a curved arm, and a teardrop
+# shade on the end of it — the whitebox's mount pad, bracket and cup, in
+# that order. Off a repossessed liner, which is what the kind is. Its
+# backplate owns the wall, so the body begins at the berth plane rather
+# than in the middle of the air in front of it.
+#
+# The atlas is the one the FBX itself names (`PolygonShops_Texture_01`,
+# as a `.psd` on Synty's disk); the catalogue's guess was the pack's
+# BUILDING atlas, which is not laid out on the same grid and painted the
+# whole fitting one brown. Its bulb is the lit body in the emissive
+# atlas, and it sits INSIDE the teardrop, which the pack hangs as a node
+# of its own — the `glass` line names it, so the bulb shows through.
+[asset.sconce_arm]
+pack = "shops"
+source = "SourceFiles/FBX/SM_Prop_Lighting_Wall_05.fbx"
+texture = "SourceFiles/Textures/PolygonShops_Texture_01_A.png"
+emissive = "SourceFiles/Textures/PolygonShops_Texture_01_Emissive.png"
+glass = "SM_Prop_Lighting_Wall_Glass_05"
+sha256 = "870fd9a14b95516231aba7527086530f892d39d2e78de62d06e5b259215e7ce8"
+scale = [2.304118, 2.304118, 2.304118]
+offset = [0.0, 0.0, -0.441197]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.332982, 0.682935, 0.441156]
+dresses = "cargo/wall_lamp"
+
+# A standing lamp off a ship's corridor: a flared weighted base, a thin
+# segmented stem, and a cylindrical head with a lit band round it. Base
+# plate, pole and shade, which is the whitebox's own column, and the
+# base is bolted flat to the deck.
+#
+# This is the FBX that names BOTH its atlases, by Synty's own Dropbox
+# paths, and it is the one that taught the converter a colour is not a
+# light: with no `emissive` declared, the colour atlas used to be
+# rebound onto the emission slot too, and the whole column glowed at
+# the brightness of its own paint. The line below is the atlas the FBX
+# asked for, under the name the pack ships it by.
+[asset.lamp_column]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Lamp_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+emissive = "SourceFiles/SciFiHorror/Textures/Emissive/PolygonSciFiHorror_Emissive_01_A.png"
+sha256 = "9617cd4956df4b46fca6d4a266d91128bbaaa7c9a708d7d5828d1a5dfd73f451"
+scale = [4.319294, 2.159647, 4.319294]
+offset = [0.0, -0.074992, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.359879, 0.925008, 0.359879]
+dresses = "cargo/floor_lamp"
+
+# A three-cushion padded bench off a ship's mess. Somebody's living room,
+# in transit.
+[asset.bench_padded]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Bench_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "92728543c33d5056b1a8e0b0bdc5404e7d854032f74884daeb5e39ed2695b038"
+scale = [0.823535, 1.647071, 1.647071]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.91177, 1.0, 0.637047]
+dresses = "cargo/couch"
+
+# A framed abstract in a light wood bevel. Gilt frame, subject debatable.
+[asset.framed_art]
+pack = "casino"
+source = "SourceFiles/FBX/Props/SM_Prop_Picture_05.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonCasino_Texture_01_A.png"
+sha256 = "e684367509d9dd056cae5fbf455b12e09b36b4c1466134c44469dc41fcfdd7ac"
+scale = [0.533549, 1.067098, 1.067098]
+offset = [0.0, 0.0, -0.906429]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.663842, 1.0, 0.093571]
+dresses = "cargo/painting"
+
+# A tall open-framed shelving unit. OPEN is the requirement, not a taste:
+# a cabinet's stowed goods are their own rigs standing in its cubbies, and
+# a closed locker would swallow them.
+[asset.shelf_tall]
+pack = "cyber_city"
+source = "SourceFiles/FBX/Props/SM_Prop_Shelf_02.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonCyberCity_Texture_01_A.png"
+sha256 = "103ec1647a8c649452f713545934148a59c98db6486658ddf60e43581ee52fe5"
+scale = [1.857676, 0.928838, 1.857676]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.88785, 1.0, 0.527049]
+dresses = "cargo/cabinet"
+
+# A worn woven rug. Turned so its weave stands in the rig's own x-y, which
+# is where a covering's laid body is composed before the berth lays it
+# down, and its long axis lies across the two cells.
+#
+# And pushed down the band to sit ON the chart. A standing berth draws its
+# rig back onto its cells (`pieces::site_on`), so a body composed on the
+# middle of the depth band lands where it belongs; a LAID berth has no such
+# plane to draw back from — its rig root is the chart itself
+# (`pieces::net_laid`) — so a mesh centred in the band floats `rig_mid`
+# above the deck, which is 23 cm of daylight under a rug. The offset spends
+# the band: the underside comes to rest on the same plane the whitebox
+# rug's own binding lies on.
+[asset.rug_woven]
+pack = "apocalypse"
+source = "Source_Files/FBX/SM_Prop_Rug_01.fbx"
+texture = "Source_Files/Textures/PolygonApocalypse_Texture_01_A.png"
+sha256 = "a264ebde85b754f0613636ce94d5ec6d3064b543fed931bb4944445817c7f573"
+scale = [1.035538, 0.670639, 0.709389]
+offset = [0.0, 0.0, -0.847353]
+rotation = [90.0, 0.0, 0.0]
+fill = [1.0, 0.035, 1.0]
+dresses = "cargo/rug"
+
+# A closed octagonal paint tin. Ship enamel in a battered can.
+[asset.paint_can]
+pack = "construction"
+source = "SourceFiles/FBX/SM_Prop_Paint_Can_Closed_Alt_02.fbx"
+texture = "SourceFiles/Textures/PolygonConstruction_Texture_01_A.png"
+sha256 = "e73e4d4048d8998a220425e909a9b7ee6d0f04ebffde794ede6b31c5cf0d784c"
+scale = [5.521217, 5.521217, 5.521217]
+offset = [0.0, -0.007387, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 0.992613, 0.862077]
+dresses = "cargo/paint_tin"
+
+
+# ---------------------------------------------------------------------
+# The fabric: walls, deck, deckhead, and what stands in the openings.
+#
+# The shell is dressed by ROLE rather than by kind — `fabric/wall` is
+# every wall panel aboard, and `room::cladding` decides how many a wall
+# needs and how wide each one is — so one table here dresses every room.
+# A table with a `room` line beside its binding dresses that room kind
+# alone, and wins over the table without one. That is how a room gets
+# its own colour: Synty paint a whole pack from one atlas of flat
+# swatches and ship the same atlas repainted six ways under
+# `Textures/Alts`, so the cabin's wall and the furnace's wall are ONE
+# mesh named twice, with two `texture` lines. The mesh is never
+# repainted; the atlas is chosen (docs/ART_DIRECTION_3D.md, "Two voices").
+#
+# Every frame here is stated in docs/ART_PIPELINE.md, "The fabric
+# namespace". The one thing to know reading the numbers: a wall panel's
+# relief is squeezed nearly flat (`scale` on z), on purpose. This kit's
+# panels carry a plinth at the floor line and a cornice under the
+# deckhead that stand a fifth of a metre proud of the panel body, and
+# the game hangs cargo on its walls with its back a hair in front of the
+# hull — so the relief is held inside the notch the paint rides in, and
+# the panel reads as panelling rather than as a shelf.
+# ---------------------------------------------------------------------
+
+# The wall panel: an X-braced bay under a lit cornice, five cells wide
+# and four tall above its plinth. Every room's, unless a room below has
+# its own.
+[asset.wall_panel]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "0a725d9d3ea4b04f83977ebbdb678bd6495bb68949fa9d6a6f2eff8b1461dacd"
+scale = [0.4, 0.40037, 0.388]
+offset = [0.0, 0.0, 0.827]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 0.173]
+dresses = "fabric/wall"
+
+# The same panel, in the pack's other paint jobs, one per room kind
+# that wants its own. The furnace runs hot.
+[asset.wall_panel_burner]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_02_A.png"
+sha256 = "0a725d9d3ea4b04f83977ebbdb678bd6495bb68949fa9d6a6f2eff8b1461dacd"
+scale = [0.4, 0.40037, 0.388]
+offset = [0.0, 0.0, 0.827]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 0.173]
+dresses = "fabric/wall"
+room = "burner"
+
+[asset.wall_panel_trade]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_01_B.png"
+sha256 = "0a725d9d3ea4b04f83977ebbdb678bd6495bb68949fa9d6a6f2eff8b1461dacd"
+scale = [0.4, 0.40037, 0.388]
+offset = [0.0, 0.0, 0.827]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 0.173]
+dresses = "fabric/wall"
+room = "trade"
+
+[asset.wall_panel_parlor]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_03_A.png"
+sha256 = "0a725d9d3ea4b04f83977ebbdb678bd6495bb68949fa9d6a6f2eff8b1461dacd"
+scale = [0.4, 0.40037, 0.388]
+offset = [0.0, 0.0, 0.827]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 0.173]
+dresses = "fabric/wall"
+room = "parlor"
+
+[asset.wall_panel_wreck]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_04_A.png"
+sha256 = "0a725d9d3ea4b04f83977ebbdb678bd6495bb68949fa9d6a6f2eff8b1461dacd"
+scale = [0.4, 0.40037, 0.388]
+offset = [0.0, 0.0, 0.827]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 0.173]
+dresses = "fabric/wall"
+room = "wreck"
+
+[asset.wall_panel_pump]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_01_D.png"
+sha256 = "0a725d9d3ea4b04f83977ebbdb678bd6495bb68949fa9d6a6f2eff8b1461dacd"
+scale = [0.4, 0.40037, 0.388]
+offset = [0.0, 0.0, 0.827]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 0.173]
+dresses = "fabric/wall"
+room = "pump"
+
+# The deck tile: four scratched panels in a dark rim, and no lights and
+# no hazard stripe — tape is `Consume`'s alone, and a deck striped at
+# every tile edge would be a warning about nothing. Its top is the deck
+# plane; the rest of it is inside the pan.
+[asset.deck_tile]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Floor_Small_05.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "6365d8d6ec76fe72018e02bfbc4251b79196b2b61ff6ca171b16376a26a9f3d7"
+scale = [0.8, 8.0, 0.8]
+offset = [0.0, 0.162, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 0.838, 1.0]
+dresses = "fabric/floor"
+
+# The deckhead tile: a bevelled slab with one recessed panel. Squeezed
+# flat on y so the recess stays a centimetre, clear of the lamps that
+# hang from the deckhead chart.
+[asset.deckhead_tile]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Ceiling_03.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "4aa15f28591fe8e44ac5412cd2ba1776ce04d8067be9a6c430a0fe3b275acdb9"
+scale = [0.4, 2.914, 0.4]
+offset = [0.0, -0.2, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 0.8, 1.0]
+dresses = "fabric/ceiling"
+
+# THE DOOR, and it is one mesh in two tables.
+#
+# `SM_Bld_Wall_Doorframe_02` is a panel with a stepped archway cut
+# THROUGH it and the leaf hung in that opening as its own object,
+# `SM_Bld_Wall_Door_01`. That is the pack's own convention and every
+# `Doorframe_0N` here follows it: the frame is a real hole and the leaf
+# is a child that fills it, which is why measuring the file as one body
+# reads "sealed" and measuring the frame alone reads "open". Synty ship
+# no blendshape and no animation for it — the slide is the buyer's.
+#
+# So the two states are ONE module and one box: `fabric/door` is this
+# mesh as it comes, and `fabric/doorway` is the same mesh with the leaf
+# hidden by the `leaf` line below (`art::Open`). A door that is shut on
+# one dock and open on the next is then a leaf coming and going, rather
+# than one frame swapped for a different one — which is what it used to
+# be, and it read as the wall changing shape.
+#
+# The numbers. Both tables carry the same four, because the frame stands
+# in the same box in both states: `scale` puts the archway's own opening
+# EXACTLY on the two-cell aperture, 1.1 m square, measured by raycast
+# rather than guessed (the hole is 2.60986 × 2.92498 in mesh units,
+# which is why x and y are not one number). `offset` on y carries the
+# hole's centre onto the aperture's, the frame being taller above its
+# opening than below it. `scale` on z fills the wall's own depth slice —
+# chart plane to the middle of the padding cell — so a mated doorway's
+# two mouths meet back to back in the middle of the pad where nothing
+# sees the join, and a shut door stands no further out of its hull than
+# the wall beside it. The mesh is symmetric front to back, so no
+# rotation: both rooms see the same face.
+[asset.door_frame]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_Doorframe_02.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "943a1c072bbb24893d43d581e096e2ad106ba831a7c53298bc1cd306a61bd541"
+scale = [0.383162, 0.364675, 2.296052]
+offset = [0.0, -0.067312, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.957906, 0.911687, 1.0]
+dresses = "fabric/door"
+
+# The same frame, in a mated doorway, with its leaf hidden. Every number
+# above, repeated verbatim on purpose: the two states are one box, and
+# two tables that drifted apart would be a doorway that jumps when a
+# room docks. The `leaf` line is the only difference, and it is the
+# whole mechanism.
+[asset.door_frame_open]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Wall_Doorframe_02.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "943a1c072bbb24893d43d581e096e2ad106ba831a7c53298bc1cd306a61bd541"
+scale = [0.383162, 0.364675, 2.296052]
+offset = [0.0, -0.067312, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [0.957906, 0.911687, 1.0]
+dresses = "fabric/doorway"
+leaf = "SM_Bld_Wall_Door_01"
+
+# The cover over a shut deck hatch: a recessed access plate in a lit
+# rim, standing a few centimetres proud of the deck.
+[asset.hatch_cover]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Floor_Small_Hatch_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "ac0fc83edc98276dbe248b54e78919bca548a150138083ff984d83b514c0f6bf"
+scale = [0.8, 6.547, 0.8]
+offset = [0.0, 0.4458, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 0.965, 1.0]
+dresses = "fabric/hatch"
+
+
+# ---------------------------------------------------------------------
+# The fittings: a station's own furniture.
+#
+# Cargo is dressed one mesh per kind and the shell one mesh per role.
+# A station's furniture is dressed one mesh per **object**, and an object
+# is a GROUP of `poi::Fitting`s — the ones sharing a `Fitting::part_of`
+# name in that station's `Character::decor`. The Guild's shopfront is
+# five brass bars and the rail they hang from; nobody sells a bar, so the
+# thing a binding names is the shopfront.
+#
+# The name is the station's own spelling and then the object's
+# (`art::piece_binding`), because a binding is `<namespace>/<name>` with
+# no third part to put the station in, and fifteen stations would
+# otherwise race for the word `counter`.
+#
+# The frame is the object's own box: the union of its pieces' bodies,
+# floor-to-deckhead fractions of the room, carried into the world by
+# `room::fit`. So the four numbers mean exactly what they mean in a
+# berth — `scale` is mesh units per frame half-unit — and a module
+# declared to fill its frame fills the space the whitebox object filled.
+#
+# **What is deliberately NOT dressed here, and why.** Not "because a
+# bought body cannot glow" — it can, and `hangar_strip` below does. Synty
+# ship an emissive atlas beside the colour one, an `emissive` line
+# declares it, and the converter wires it into emission alone. What a
+# bought body cannot do is glow in a colour somebody else chose.
+#
+# So the test is whether the fitting's meaning is its SHAPE or its HUE.
+# A strip light is a strip light and a pack sells one. The Guild's
+# seizure beacon burning `EERIE` is the hangar's own violet held one step
+# off the omen's; Earth's grow strip is the dimmest green the palette
+# carries, over a shelf that has not needed one in years; the Umbra's
+# tins leak `LuminousPaint` at the rim because that is the good they buy
+# at zero. Those are colours doing a job, and no atlas anybody sells does
+# that job. Left cut, with the violet throat of the Guild's chute,
+# Venus's picture light, Jupiter's pilot slit and furnace port, Neptune's
+# rim lamps, and the Parlor's cove and its seven.
+#
+# **And the Wanderer is dressed nowhere at all.** Its pillars hold
+# nothing up, its fourth collar has nothing under it, and its free-
+# standing panel is "the only surface in the game with no visible way it
+# was made" (`poi::wanderer`). A purchased body arrives with a way it was
+# made written all over it, so buying one would answer the question the
+# room exists to ask.
+#
+# Two constraints ride on every pick below and both come from the art
+# direction: **no hazard striping**, which is `Consume`'s alone, and **no
+# legible text**, which the zero-text law forbids anywhere a player can
+# see it.
+# ---------------------------------------------------------------------
+
+# VENUS. A rope line across the front of the goods, and the two posts it
+# hangs between: the salon buys its crowd control from the same catalogue
+# the Parlor buys its chips from, which is the joke the two stations
+# share. One mesh, two tables, because two posts are two objects — a
+# module stands in one frame and there are two frames.
+[asset.rope_post_port]
+pack = "casino"
+source = "SourceFiles/FBX/Props/SM_Prop_Stanchion_01_Pole_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonCasino_Texture_01_A.png"
+sha256 = "228ec9d1650d58383b9119fb6ecbdd091d42e37792b93edff6d1af03100473b1"
+scale = [3.102507, 1.700484, 3.102502]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/venus_rope_post_port"
+
+[asset.rope_post_starboard]
+pack = "casino"
+source = "SourceFiles/FBX/Props/SM_Prop_Stanchion_01_Pole_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonCasino_Texture_01_A.png"
+sha256 = "228ec9d1650d58383b9119fb6ecbdd091d42e37792b93edff6d1af03100473b1"
+scale = [3.102507, 1.700484, 3.102502]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/venus_rope_post_starboard"
+
+# The cord between them, and **the one turned body in this file**. The
+# pack ships a sagging velvet rope whose length runs along its own `z`;
+# Venus's rope line runs along the room's `x`, so the mesh takes a
+# quarter turn about `y` — and a quarter turn is what taught this
+# pipeline that `scale` is per-axis in the MESH's frame while `half` is
+# per-axis in the FRAME's. A trade room is 4.4 m across and 3.85 m deep,
+# so the two axes the turn swaps are not the same length, and the old
+# arithmetic wanted a `fill` of 23 on one of them — refused, and rightly.
+# `Dressing::landing` turns the frame instead, so these numbers are the
+# ordinary ones: `1 / measured_half`, and a fill of one.
+#
+# The sag goes. The whitebox rope is a straight bar 5.7 cm deep and this
+# fills that box, which is the contract — a bought body occupies the
+# space the cut one did. A rope allowed to droop out of its own box
+# would be a station reaching somewhere its description does not.
+[asset.rope_cord]
+pack = "casino"
+source = "SourceFiles/FBX/Props/SM_Prop_Stanchion_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonCasino_Texture_01_A.png"
+sha256 = "ff9e1100dab87a7339cb8eb2edcb7cd6da57c9d07c39e24e8a383f2fe9a48150"
+scale = [21.303020, 4.458080, 1.261230]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 90.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/venus_rope"
+# The vitrine's plinth: a squat stepped pedestal. The lit back panel and
+# the two vials standing on the shelf are the station's own and stay cut
+# — one is a light and two are goods.
+[asset.plinth_stepped]
+pack = "scifi_horror"
+source = "SourceFiles/Generic/FBX/SM_Gen_Prop_Plinth_02.fbx"
+texture = "SourceFiles/Generic/Textures/Generic_01_A.png"
+sha256 = "b773838ca381fe0130a144bf1fd3d71d0eec1bd2040f5bd5582423cc46be8b93"
+scale = [2.462412, 2.822386, 2.462412]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/venus_vitrine"
+
+# EARTH. The grow rack: a tall open-framed unit of five tiers. OPEN for
+# the reason the cargo cabinet is open — what stands on a shelf here is
+# the room's own, and a closed locker would swallow it.
+[asset.rack_open]
+pack = "scifi_horror"
+source = "SourceFiles/Generic/FBX/SM_Gen_Prop_Shelf_03.fbx"
+texture = "SourceFiles/Generic/Textures/Generic_01_A.png"
+sha256 = "751c76253c15b76262ec76f8c654c26d4351bf96fd30fae81a85094b2506e6ab"
+scale = [1.075453, 0.923511, 3.930977]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/earth_grow_rack"
+
+# THE CEILING RUN, and it is one mesh in three tables. A bundle of four
+# parallel pipes is what Earth's duct, Mars's conduit and Uranus's chill
+# main all are: three stations that each drew a slab and two clamps and
+# meant the same thing by it. Three atlases, because the three rooms are
+# not the same colour and the pack ships the swatch repainted.
+[asset.ceiling_pipes_earth]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Ceiling_Pipes_Straight_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "97eaf728fc28c4a6fb5e09bb9bf6fb1c1a476fcffab1f8b3c168897a3879e980"
+scale = [0.694450, 3.612769, 0.400000]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/earth_duct"
+
+[asset.ceiling_pipes_mars]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Ceiling_Pipes_Straight_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_02_A.png"
+sha256 = "97eaf728fc28c4a6fb5e09bb9bf6fb1c1a476fcffab1f8b3c168897a3879e980"
+scale = [0.694450, 3.612769, 0.400000]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/mars_conduit"
+
+[asset.ceiling_pipes_uranus]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Bld_Ceiling_Pipes_Straight_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_01_D.png"
+sha256 = "97eaf728fc28c4a6fb5e09bb9bf6fb1c1a476fcffab1f8b3c168897a3879e980"
+scale = [0.694450, 3.612769, 0.400000]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/uranus_chill_main"
+# The offcut bin, and the Umbra's broken case: one open-topped crate,
+# twice. What is in each of them is the station's own and stays cut.
+[asset.crate_open]
+pack = "apocalypse"
+source = "Source_Files/FBX/SM_Prop_AmmoBox_01.fbx"
+texture = "Source_Files/Textures/PolygonApocalypse_Texture_01_A.png"
+sha256 = "ac1f552486192d735142ee837e3152cdbdb9dc57146a094fa43f2a21c34b7a39"
+scale = [19.145927, 11.828720, 8.698689]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/mars_offcut_bin"
+
+[asset.crate_open_umbra]
+pack = "apocalypse"
+source = "Source_Files/FBX/SM_Prop_AmmoBox_01.fbx"
+texture = "Source_Files/Textures/PolygonApocalypse_Texture_01_A.png"
+sha256 = "ac1f552486192d735142ee837e3152cdbdb9dc57146a094fa43f2a21c34b7a39"
+scale = [19.145927, 11.828720, 8.698689]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/umbra_midnight_case"
+
+# THE GUILD'S SHOPFRONT. A full-height grid of bars in a heavy frame
+# with a mid crossbar — the pack's cell front, which is exactly what a
+# bonded warehouse counter is: you can see the stock and you cannot
+# reach it. The version WITHOUT the solid kick plate, because the
+# Guild's goods stand on the deck behind these bars and a privacy band
+# would hide the bottom course of them.
+[asset.cell_grille]
+pack = "police_station"
+source = "SourceFiles/FBX/SM_Bld_Wall_Cell_02.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonPoliceStation_Texture_01_A.png"
+sha256 = "f878f01c704875db0728b8dc2b474eaebd718bc0333526d94dc952c1d1aa3df8"
+scale = [0.800002, 0.666667, 15.564334]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/guild_shopfront"
+
+# SATURN. The torch bottle: a tall clean faceted cylinder with a valve.
+# The pack's plainest, because the yard's own hose and its still-glowing
+# cutting head are drawn beside it and a labelled bottle would argue.
+[asset.torch_bottle]
+pack = "apocalypse_wasteland"
+source = "SourceFiles/FBX/Props/SM_Prop_Gas_Bottle_02.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonApocalypseWasteland_Texture_05_B.png"
+sha256 = "d50ce023363b10e9989a85f8fead8fee39dc6d70b116dd74afe9a31e44c3dfa1"
+scale = [8.395706, 2.459716, 8.149893]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/saturn_torch_bottle"
+
+# THE COMET'S PICK, leaned where somebody leaned it and never came back
+# for: a long straight handle and a chipped head, which is the two slabs
+# the whitebox cuts.
+[asset.pickaxe]
+pack = "scifi_horror"
+source = "SourceFiles/Generic/FBX/SM_Gen_Wep_Pickaxe_01.fbx"
+texture = "SourceFiles/Generic/Textures/Generic_01_A.png"
+sha256 = "2bb5f673ace803fee6f69682df381afb93f5801333824cfca3c7ed535d7881c9"
+scale = [3.767963, 2.712225, 22.715791]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/comet_pick"
+
+# THE WRECK'S GRAB RAIL: a long bar on two right-angled brackets. The
+# yard painted it in radium when the ship was new; the pack paints it
+# grey, and in a hold with no lamp in it that is the same thing.
+[asset.grab_rail]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Handle_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "4e6e2580764e28ec8ccd8bace940f3988b34954fecbe612c4ed58d13ef5846c8"
+scale = [19.408612, 12.458421, 1.928183]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/wreck_grab_rail"
+
+# THE PUMP BAY'S JUNCTION BOX, hung crooked on the duct with nothing to
+# say: a chunky industrial connector.
+[asset.junction_box]
+pack = "scifi_horror"
+source = "SourceFiles/SciFiHorror/FBX/Props/SM_Prop_Pipe_Connector_01.fbx"
+texture = "SourceFiles/SciFiHorror/Textures/Alts/PolygonSciFiHorror_01_A.png"
+sha256 = "d0357091c1cd514b79c83b737cce15c211a4f4b7f8015050f8c10774300dca40"
+scale = [1.593008, 2.221685, 1.593008]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/pump_junction_box"
+
+# THE COILED HOSE, and it is one mesh in three tables. Jupiter leaves one
+# on the dispatch floor, Saturn one beside the torch bottle, the pump bay
+# one perished on the deck — three stations that each drew a `Ring` lying
+# flat and meant a hose somebody did not put away. The mesh is a flat
+# coil with fittings on both ends, which is the same silhouette from
+# above and a great deal more of one from anywhere else.
+[asset.hose_coil_jupiter]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Hose_01.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+sha256 = "a0c519a73a82d7a8fe01d463ab190a95caea630aa8ac419a0e8286f93dbc81ab"
+scale = [1.443887, 7.006531, 1.431343]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/jupiter_hose"
+
+[asset.hose_coil_saturn]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Hose_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_04_A.png"
+sha256 = "a0c519a73a82d7a8fe01d463ab190a95caea630aa8ac419a0e8286f93dbc81ab"
+scale = [1.443887, 7.006531, 1.431343]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/saturn_torch_hose"
+
+[asset.hose_coil_pump]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Hose_01.fbx"
+texture = "SourceFiles/Textures/Alts/PolygonSciFiSpace_Texture_01_D.png"
+sha256 = "a0c519a73a82d7a8fe01d463ab190a95caea630aa8ac419a0e8286f93dbc81ab"
+scale = [1.443887, 7.006531, 1.431343]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/pump_hose"
+
+# NEPTUNE'S POOL. A flat iron ring with a recessed dark interior, which
+# the pack ships as a ready-made hole in a floor — and a hole in a floor
+# is exactly what the dive lock's collar is: the whitebox's own note says
+# the surface and the rim are one line, "a hole in a floor rather than a
+# tub standing on one". The water in it stays cut, because the water is
+# a phosphor and a bought body cannot glow.
+[asset.pool_ring]
+pack = "apocalypse"
+source = "Source_Files/FBX/SM_Prop_Manhole_Hole_01.fbx"
+texture = "Source_Files/Textures/PolygonApocalypse_Texture_01_A.png"
+sha256 = "00d89979b0f3587f4c023bf6c9ecbb4843bab59a4a5463f2d4387c17f2c0c801"
+scale = [1.708517, 23.037494, 1.667018]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/neptune_pool_collar"
+
+# MARS'S TWO TINS, still on the deck under the patch they were used on:
+# the same closed octagonal can the ship's own paint tin is dressed from
+# (`paint_can`, above), twice, at the two sizes the whitebox cuts. The
+# run one of them left down the wall stays cut — nobody models a drip.
+[asset.paint_tin_big]
+pack = "construction"
+source = "SourceFiles/FBX/SM_Prop_Paint_Can_Closed_Alt_02.fbx"
+texture = "SourceFiles/Textures/PolygonConstruction_Texture_01_A.png"
+sha256 = "e73e4d4048d8998a220425e909a9b7ee6d0f04ebffde794ede6b31c5cf0d784c"
+scale = [5.521217, 5.562308, 6.404550]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/mars_paint_tin_big"
+
+[asset.paint_tin_small]
+pack = "construction"
+source = "SourceFiles/FBX/SM_Prop_Paint_Can_Closed_Alt_02.fbx"
+texture = "SourceFiles/Textures/PolygonConstruction_Texture_01_A.png"
+sha256 = "e73e4d4048d8998a220425e909a9b7ee6d0f04ebffde794ede6b31c5cf0d784c"
+scale = [5.521217, 5.562308, 6.404550]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/mars_paint_tin_small"
+
+# THE GUILD'S HANGAR LIGHT, and it is the first body in this file that
+# GLOWS.
+#
+# A slim housing with a row of five square panels in it — a corridor
+# strip, which is what a line of light leaking over a cornice is. The
+# `emissive` line beside the atlas is the whole mechanism: Synty ship a
+# second image laid out on the same swatch grid as the colour one, black
+# everywhere the mesh is not lit and the lamp's colour where it is, and
+# the converter wires it into emission alone (`light_with` in
+# xtask/blender/fbx_to_gltf.py). So this lights exactly the five panels
+# and nothing else on the housing.
+#
+# **What it gives up is the violet.** The whitebox strip burns `EERIE`
+# because the Guild's hangar is violet; the pack's own lamps burn the
+# pack's own colour, and repainting a bought material is throwing away
+# the thing that was bought (docs/ART_DIRECTION_3D.md, "Two voices").
+# What survives is the reading, which was never the hue on its own: a
+# lit line over the aft cornice, at a height nothing else in the room
+# reaches, saying that whatever is through that wall has its own
+# electricity.
+#
+# This is the counter-example to the paragraph above about lit fittings,
+# and the paragraph stands for the rest of them. A strip light is a
+# thing a pack sells. A beacon whose whole meaning is the Guild's own
+# violet, a candle, a grow strip at the end of its life, the seam of
+# light leaking round a shut tin — those are colours doing a job, and no
+# atlas anybody sells is going to do that job.
+[asset.hangar_strip]
+pack = "scifi_space"
+source = "SourceFiles/FBX/SM_Prop_Detail_Lights_02.fbx"
+texture = "SourceFiles/Textures/PolygonSciFiSpace_Texture_01_A.png"
+emissive = "SourceFiles/Textures/PolygonSciFiSpace_Emissive_01.png"
+sha256 = "e11a49c0a55506cc9cf82c63fc4646e996e39359203a8deb0fc75454771ffc84"
+scale = [1.980151, 20.000000, 6.855372]
+offset = [0.0, 0.0, 0.0]
+rotation = [0.0, 0.0, 0.0]
+fill = [1.0, 1.0, 1.0]
+dresses = "fitting/guild_hangar_light"

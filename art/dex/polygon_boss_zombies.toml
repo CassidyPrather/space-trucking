@@ -1,0 +1,898 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sk_chr_zombieboss_blobber_01]
+name = "SK_Chr_ZombieBoss_Blobber_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SK_Chr_ZombieBoss_Blobber_01.fbx"
+sha256 = "a572185ab98d600eef9eb018148a8756206adcc16bf615f3a7e37ac73ee4ce9d"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A bloated, hunched humanoid with a distended pink belly, a tattered purple skirt, and a pink-striped shirt, posed in a T-pose. Its skin is a sickly grey-green, and it wears a small pink cap, giving it a grotesque, clown-like appearance."
+differs = "Identical to the other asset in geometry and texture, differing only in name and description."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4988
+meshes = 1
+materials = 1
+size = [2.91318, 1.8309461, 0.81243]
+
+[mesh.sk_chr_zombieboss_blobber_01_2]
+name = "SK_Chr_ZombieBoss_Blobber_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/Unreal_Characters/SK_Chr_ZombieBoss_Blobber_01.fbx"
+sha256 = "e0a2c6b78782a5c61b0a773c3817a8ab59a57c05d17eb1b1fd173cd8527695cb"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A bloated, hunched humanoid with a distended belly, posed in a T-pose with arms outstretched. It wears a tattered pink skirt and a torn, pale top, with a greyish, mottled skin tone and a single visible eye, suggesting a mutated, oozing boss creature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4988
+meshes = 1
+materials = 1
+size = [2.91318, 1.8309461, 0.81243]
+
+[mesh.sk_chr_zombieboss_brute_01]
+name = "SK_Chr_ZombieBoss_Brute_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SK_Chr_ZombieBoss_Brute_01.fbx"
+sha256 = "dff2fba40b36cf51cab6b304ff68b34a1cdfe9fd7850a4b7cdc048b407667af5"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A hulking, top-heavy brute with a massive humped back and oversized arms held out in a T-pose, its small head sunk low between the shoulders. The skin is a mottled, sickly green-grey with a pale, fleshy underbelly, and the right arm is swollen with a thick, yellowed, pus-like growth."
+differs = "Distinct humped back and swollen right arm with pus growth, ideal for a grotesque, asymmetrical boss variant."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6104
+meshes = 1
+materials = 1
+size = [3.003737, 1.845109, 0.611114]
+
+[mesh.sk_chr_zombieboss_brute_01_2]
+name = "SK_Chr_ZombieBoss_Brute_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/Unreal_Characters/SK_Chr_ZombieBoss_Brute_01.fbx"
+sha256 = "6f81d2d1bf4c8a607e4ef0feebcbfb9db24627b6fd1d51c6df1105c270be9fd7"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A hulking, broad-shouldered brute in a T-pose, with a heavy, forward-leaning stance and oversized arms ending in massive, swollen fists. The skin is a mottled, sickly grey-green with patches of decay and exposed muscle, while tattered, dark trousers and a torn, grimy shirt hang off its frame."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6104
+meshes = 1
+materials = 1
+size = [3.003736, 1.845109, 0.611114]
+
+[mesh.sk_chr_zombieboss_slobber_01]
+name = "SK_Chr_ZombieBoss_Slobber_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SK_Chr_ZombieBoss_Slobber_01.fbx"
+sha256 = "ebe011877f15fda9a5b9818e7baa34d2eee5f683b46a92ad4dbb12a233c17db9"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A hulking, pale-skinned zombie boss with a distended, slobbering jaw and a massive gut, posed in a T-pose. It wears tattered blue shorts and a torn white shirt, with a dark, matted patch of hair on its head and a grimy, mottled complexion that suggests a bloated, decaying state."
+differs = "Identical to the other asset in geometry and texture; only the descriptive text differs, so no unique use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4502
+meshes = 1
+materials = 1
+size = [2.913564, 1.831187, 0.667593]
+
+[mesh.sk_chr_zombieboss_slobber_01_2]
+name = "SK_Chr_ZombieBoss_Slobber_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/Unreal_Characters/SK_Chr_ZombieBoss_Slobber_01.fbx"
+sha256 = "64c2b6e79e4d88d303a9019268e31654ef465e887f5ce955f9664a22b756a82b"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A hulking, bloated zombie with a massive, distended belly and a small head, posed in a rigid T-pose. Its skin is a sickly pale grey-green, and it wears tattered, torn blue shorts with a grimy white tank top stained with dark, mottled patches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4502
+meshes = 1
+materials = 1
+size = [2.913564, 1.831187, 0.667593]
+
+[mesh.sk_chr_zombieboss_wretch_01]
+name = "SK_Chr_ZombieBoss_Wretch_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SK_Chr_ZombieBoss_Wretch_01.fbx"
+sha256 = "dab6985a805c04c0f73bedf98a8f4869a22a3813807db443b9313c1ef29d29b7"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A gaunt, hunched humanoid with a pale, mottled grey body and a bloated, dark blue-grey torso, standing in a rigid T-pose. Its arms are elongated and end in oversized, clawed hands, while the legs are thin and spindly, with a tattered blue loincloth around the waist."
+differs = "Identical to its sibling in every way; only the description's wording differs, so choose either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4444
+meshes = 1
+materials = 1
+size = [2.315964, 1.781724, 0.44602302]
+
+[mesh.sk_chr_zombieboss_wretch_01_2]
+name = "SK_Chr_ZombieBoss_Wretch_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/Unreal_Characters/SK_Chr_ZombieBoss_Wretch_01.fbx"
+sha256 = "8e81b38da0c0a0e9aa6b20d14926b7ba02c6515acdf9168069c929a14eb7e517"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A gaunt, pale humanoid with a bald head and a hunched, rigid posture, its arms held out in a stiff T-pose. It wears tattered blue shorts and a dark, ragged vest, with a bloated, greyish belly and a single glowing yellow eye visible on its face."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4444
+meshes = 1
+materials = 1
+size = [2.315964, 1.781724, 0.44602302]
+
+[mesh.sk_veh_scooter_01]
+name = "SK_Veh_Scooter_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SK_Veh_Scooter_01.fbx"
+sha256 = "e13855bfbd5c903c63d0a6ab7a63f576768e93e9eb7d2fa0fced75c1955dac05"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A chunky, four-wheeled mobility scooter with a padded black captain's chair, a small front basket, and a tiller with handlebars. The body is a weathered, muddy brown with a rusted metal front plate and a dark grey floorboard, suggesting a rugged, post-apocalyptic utility vehicle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3003
+meshes = 9
+materials = 1
+size = [1.200872, 0.972759, 0.516162]
+
+[mesh.sm_chr_attach_blobber_hair_01]
+name = "SM_Chr_Attach_Blobber_Hair_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SM_Chr_Attach_Blobber_Hair_01.fbx"
+sha256 = "4048676a3fbdd8feaa6d7b6879453b4da9a8f2dace803b95c183d907b447facb"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A bulky, faceted mass of dark grey hair, styled into a thick, drooping mop with a heavy fringe and a long, curved tail at the back. The low-poly silhouette is chunky and irregular, with a matte, unlit texture that gives it a heavy, deadened look."
+differs = "The first variant has a long curved tail at the back, unlike the second's side part."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 562
+meshes = 1
+materials = 1
+size = [0.540844, 0.435418, 0.410237]
+
+[mesh.sm_chr_attach_blobber_hair_01_2]
+name = "SM_Chr_Attach_Blobber_Hair_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Chr_Attach_Blobber_Hair_01.fbx"
+sha256 = "3b12200e806827264ed4dd2ec59c6a18762032bc1f64375662c427f7cfeff913"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A bulky, faceted mass of dark grey hair, styled as a thick, messy mop with jagged, drooping strands and a pronounced side part. The low-poly geometry gives it a chunky, sculpted look, and the muted, desaturated colouring suggests a grimy, undead aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 562
+meshes = 1
+materials = 1
+size = [0.540844, 0.435418, 0.410237]
+
+[mesh.sm_chr_attach_blobber_hair_02]
+name = "SM_Chr_Attach_Blobber_Hair_02"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SM_Chr_Attach_Blobber_Hair_02.fbx"
+sha256 = "30c4c1e29230a402f137075744bfd8831a9aa2279593d95313dbb1853c034d88"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A bulky, faceted mass of dark grey hair with a matte finish, featuring a central knot and several thick, jagged strands that hang down like tentacles. The low-poly geometry gives it a chunky, stylized look, and the uniform dark colouring suggests it is a separate attachment piece for a zombie boss character."
+differs = "The first variant has a central knot and tentacle-like strands, making it the most distinct."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 736
+meshes = 1
+materials = 1
+size = [0.599397, 0.356943, 0.281351]
+
+[mesh.sm_chr_attach_blobber_hair_02_2]
+name = "SM_Chr_Attach_Blobber_Hair_02"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Chr_Attach_Blobber_Hair_02.fbx"
+sha256 = "12c8934e7e5dfacdfc8fae05b68fa0146166463b7f60b0cd6787cdd575f10a63"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A bulky, faceted mass of dark grey hair, styled as a thick, messy mop with jagged, drooping strands that hang low around the sides and back, giving it a heavy, unkempt look. The low-poly geometry creates sharp, angular planes that catch the light, suggesting a coarse, matted texture."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 736
+meshes = 1
+materials = 1
+size = [0.599397, 0.356943, 0.281351]
+
+[mesh.sm_chr_attach_blobber_tiara_01]
+name = "SM_Chr_Attach_Blobber_Tiara_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SM_Chr_Attach_Blobber_Tiara_01.fbx"
+sha256 = "e7eaaaf533c38e0aa3b433ac89152e0bdf55f37cfa5e9ac497f401c64ce7e0b6"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A curved, bone-colored band with a jagged, tooth-like crest along its upper edge, resembling a crown or a piece of a skeletal jaw. The surface is flat-shaded and matte, with a pale, ivory hue that suggests aged bone or carved stone."
+differs = "The plainest bone tiara, with a jagged crest and no gems, ideal for a feral or primitive zombie boss."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 148
+meshes = 1
+materials = 1
+size = [0.219338, 0.080542, 0.089311]
+
+[mesh.sm_chr_attach_blobber_tiara_01_2]
+name = "SM_Chr_Attach_Blobber_Tiara_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Chr_Attach_Blobber_Tiara_01.fbx"
+sha256 = "367ff61cf958414c30be01c040706806a189d9273edeb08e902c9c191623020e"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A curved, bone-coloured crown with three jagged peaks, resembling a small tiara or a set of teeth, with a flat band that extends into a short tail. The surface is smooth and matte, with a pale, ivory hue and subtle shading that suggests a hard, organic material."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 148
+meshes = 1
+materials = 1
+size = [0.219338, 0.080542, 0.089311]
+
+[mesh.sm_chr_attach_blobber_tiara_02]
+name = "SM_Chr_Attach_Blobber_Tiara_02"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Chr_Attach_Blobber_Tiara_02.fbx"
+sha256 = "1ac8fcbd0446da730a4755ce62bd6cc409dd89058b0895c596ff41bd624753c5"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A pale silver circlet with a curved, tapering band and a raised, ornate crest at the front, set with two large, oval purple gemstones. The metal appears smooth and polished, with a slightly worn or tarnished finish that gives it an aged, ceremonial look."
+differs = "The most detailed and ornate, with a silver frame and two purple gems, suited for a regal or ceremonial undead ruler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 364
+meshes = 1
+materials = 1
+size = [0.20985, 0.113928005, 0.106599]
+
+[mesh.sm_chr_attach_blobber_tiara_02_2]
+name = "SM_Chr_Attach_Blobber_Tiara_02"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SM_Chr_Attach_Blobber_Tiara_02.fbx"
+sha256 = "d0ceeae5b31e265fca57bb37e1c4a20c77a7a745de50e10931381304ae2d00ca"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A slender, pale silver circlet with a curved browband and a raised, ornate crest at the front. The crest features a large, oval purple gemstone set in a decorative frame, flanked by smaller, rounded silver details."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 364
+meshes = 1
+materials = 1
+size = [0.20985, 0.113928005, 0.106599]
+
+[mesh.sm_chr_attach_brute_bandana_01]
+name = "SM_Chr_Attach_Brute_Bandana_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Chr_Attach_Brute_Bandana_01.fbx"
+sha256 = "2510d010ab1dcdecd0d8bf9cae9374b7bef58d034fbb181c5e3f670a9aa8fa88"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A low-poly, brick-red cloth bandana with a knotted tail at the back, featuring a white and blue striped pattern on the side panels. The fabric appears slightly worn and crumpled, suggesting a rugged, battle-ready accessory for a brute character."
+differs = "Identical to the other asset in every way, including size, shape, and texture, with no distinguishing features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 282
+meshes = 1
+materials = 1
+size = [0.27616102, 0.113506, 0.3727]
+
+[mesh.sm_chr_attach_brute_bandana_01_2]
+name = "SM_Chr_Attach_Brute_Bandana_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SM_Chr_Attach_Brute_Bandana_01.fbx"
+sha256 = "997faddc8c973312c7b8ceefbd4d280b291c39f0abd5c98cba779c0cd0e4a786"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A low-poly headband with a short, knotted tail, wrapped in muted red fabric with a white and blue striped panel at the front, appearing worn and slightly crumpled."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 282
+meshes = 1
+materials = 1
+size = [0.27616102, 0.113506, 0.3727]
+
+[mesh.sm_chr_attach_brute_extra_01]
+name = "SM_Chr_Attach_Brute_Extra_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Chr_Attach_Brute_Extra_01.fbx"
+sha256 = "47e9f70b158babd03748961bced7ffb25e6e838093b947687518a365bc5515e0"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A pair of crude, dark brown wooden stakes, bound together with a dark strap, showing a weathered, splintered texture with darker grain lines and a slightly jagged, broken end, suggesting a makeshift weapon or a trap component for a brute enemy."
+differs = "Identical to the other asset in geometry and texture; no distinguishing features beyond the given name."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.16663101, 0.281634, 0.158753]
+
+[mesh.sm_chr_attach_brute_extra_01_2]
+name = "SM_Chr_Attach_Brute_Extra_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SM_Chr_Attach_Brute_Extra_01.fbx"
+sha256 = "e7758e4639777279f7c6692372d1320ef2f9ba0ffe7eb06023216f1d7048e39c"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A pair of short, roughly cylindrical wooden stakes or batons, bound together with dark leather straps at one end, showing a weathered brown grain with lighter worn patches and dark end caps. The simple, low-poly form suggests a makeshift club or a bundle of firewood, with a slightly rough, battered finish that fits a.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.16663101, 0.281634, 0.158753]
+
+[mesh.sm_chr_attach_brute_hair_01]
+name = "SM_Chr_Attach_Brute_Hair_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Chr_Attach_Brute_Hair_01.fbx"
+sha256 = "d3ca07c440b1c51dba04db6e6e80c5aca3d675b8f4562a9c3b5bdb3eb30f19e7"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A chunky, faceted mass of dark grey hair, styled as a short, swept-back crest with a pronounced, angular quiff at the front. The low-poly geometry gives it a rough, unkempt look, and the muted, matte texture suggests a gritty, undead aesthetic."
+differs = "Identical to the other 01, just a duplicate entry."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [0.094174996, 0.17768401, 0.271224]
+
+[mesh.sm_chr_attach_brute_hair_01_2]
+name = "SM_Chr_Attach_Brute_Hair_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SM_Chr_Attach_Brute_Hair_01.fbx"
+sha256 = "0860285477963a23feddb6e75b2430748029a34a66e76635262f195e6452887a"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A chunky, low-poly hair mass with a swept-back, angular silhouette, rendered in a flat, dark charcoal grey with no visible texture detail. The faceted surface suggests a stiff, matte material, and the shape is a simple, solid block that reads as a stylized, unkempt tuft or a short, messy mane."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [0.094174996, 0.17768401, 0.271224]
+
+[mesh.sm_chr_attach_brute_hair_02]
+name = "SM_Chr_Attach_Brute_Hair_02"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Chr_Attach_Brute_Hair_02.fbx"
+sha256 = "543b093045e1dd2d3f810773553c5be6c0f3ca2cc8ee3d87b32c8ee99cc4acb9"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A chunky, angular cap of dark grey hair with a flat, blocky fringe and a short, stubby ponytail jutting from the back, styled for a heavy brute. The faceted, low-poly surface gives it a rough, unkempt look, and the muted charcoal tone suggests a grimy, battle-worn condition."
+differs = "Identical to the other 02, just a duplicate entry."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 210
+meshes = 1
+materials = 1
+size = [0.25881702, 0.171821, 0.290432]
+
+[mesh.sm_chr_attach_brute_hair_02_2]
+name = "SM_Chr_Attach_Brute_Hair_02"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SM_Chr_Attach_Brute_Hair_02.fbx"
+sha256 = "127af452dc812b0422ed1647f74f8e3a4f09616f5dde5e0c61a3aae52094ac82"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A chunky, low-poly hairpiece with a swept-back, angular silhouette and a short, blunt fringe, rendered in a flat, matte charcoal grey. The faceted surface suggests thick, coarse strands, and the blocky form is designed to sit over a brute's head, with a small protruding tuft at the nape."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 210
+meshes = 1
+materials = 1
+size = [0.25881702, 0.171821, 0.290432]
+
+[mesh.sm_chr_attach_slobber_facialhair_01]
+name = "SM_Chr_Attach_Slobber_FacialHair_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Chr_Attach_Slobber_FacialHair_01.fbx"
+sha256 = "a84e8e9885a5b164e9ef8c09e7b0f095834405c27b8418ff7df9ed5380e906c1"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A pair of thick, dark grey, low-poly moustache pieces that arch downward, tapering to points at the ends. The faceted surface has a slightly glossy finish, suggesting a wet or slimy texture, and the pieces are separate, allowing for flexible placement on a character's face."
+differs = "Identical to the other asset in geometry and size, differing only by a glossy wet finish versus a matte one."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 52
+meshes = 1
+materials = 1
+size = [0.12829301, 0.06506299, 0.023524001]
+
+[mesh.sm_chr_attach_slobber_facialhair_01_2]
+name = "SM_Chr_Attach_Slobber_FacialHair_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SM_Chr_Attach_Slobber_FacialHair_01.fbx"
+sha256 = "e548b877973a3489befdc1609a9e253dced534f25286f8ba9154d859d8061fb7"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A pair of thick, dark grey moustache pieces with a low-poly, faceted surface, angled downwards and tapering to points at the ends, appearing as a stylized facial hair attachment for a zombie character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 52
+meshes = 1
+materials = 1
+size = [0.12829301, 0.06506299, 0.023524001]
+
+[mesh.sm_chr_attach_slobber_hair_01]
+name = "SM_Chr_Attach_Slobber_Hair_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Chr_Attach_Slobber_Hair_01.fbx"
+sha256 = "3341f479097fe911258cdc824323a0029c363f2ea0a9075e6861ab8b35b075ea"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A flat, angular cap with a wide brim and a low, squared crown, rendered in muted blue with dark grey trim and a segmented band. The surface is clean and matte, with a subtle worn edge along the rim, and the piece sits low on the head, suggesting a heavy, protective fit."
+differs = "Identical to the other asset; same mesh, size, and colour, with no distinguishing features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 215
+meshes = 1
+materials = 1
+size = [0.285038, 0.128428, 0.259251]
+
+[mesh.sm_chr_attach_slobber_hair_01_2]
+name = "SM_Chr_Attach_Slobber_Hair_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SM_Chr_Attach_Slobber_Hair_01.fbx"
+sha256 = "1db1f254ab93d6bea87f72fc2cc2f3a082e6668fd5fc6bdfe305617c29e525cb"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A low, flat, roughly rectangular slab of blue-grey material with a slightly domed top, framed by dark grey, angular corner guards. Four short, dark, peg-like legs extend from the underside, giving it a squat, mechanical look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 215
+meshes = 1
+materials = 1
+size = [0.285038, 0.128428, 0.259251]
+
+[mesh.sm_chr_attach_wretch_hair_01]
+name = "SM_Chr_Attach_Wretch_Hair_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Chr_Attach_Wretch_Hair_01.fbx"
+sha256 = "8d7e0156b872387fadf233365e4c2266fd5dd0bc72af3817d75b3bb0946e8697"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A bulky, faceted hood or cowl with a rounded crown and a deep, open front, rendered in a flat, untextured pale grey. Long, jagged strips hang down the sides and back, resembling torn cloth or matted hair, giving it a ragged, worn appearance."
+differs = "Pale grey hood with open front, no face-covering fringe, plainest of the set."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 428
+meshes = 1
+materials = 1
+size = [0.271353, 0.370812, 0.288705]
+
+[mesh.sm_chr_attach_wretch_hair_01_2]
+name = "SM_Chr_Attach_Wretch_Hair_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SM_Chr_Attach_Wretch_Hair_01.fbx"
+sha256 = "cf66587aa7f20330e52c4990d706943aa8d5a354043e8ed051bac464aea1da4f"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A bulky, faceted hood or cowl with a rounded crown and a deep, open front, featuring a thick, ragged fringe of dangling strands that hang down over the face and shoulders. The surface is a flat, untextured pale grey, giving it a clean, sculptural look that reads as a stylized, tattered cloth or a monstrous head..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 428
+meshes = 1
+materials = 1
+size = [0.271353, 0.370812, 0.288705]
+
+[mesh.sm_chr_attach_wretch_hair_02]
+name = "SM_Chr_Attach_Wretch_Hair_02"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Chr_Attach_Wretch_Hair_02.fbx"
+sha256 = "7622498832329a6768b367580aa7fae414325da1be51cdcdf966b74787b9e9ef"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A matte black, low-poly hair asset with a rounded crown and jagged, uneven strands that hang down to form a ragged fringe, giving it a dishevelled, unkempt appearance. The flat, faceted surfaces and dark, uniform colour suggest a grimy, oily texture, making it ideal for a zombie or monstrous character."
+differs = "Dark grey matted hair, larger and more dishevelled than the hoods, no open front."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 506
+meshes = 1
+materials = 1
+size = [0.287702, 0.434773, 0.310261]
+
+[mesh.sm_chr_attach_wretch_hair_02_2]
+name = "SM_Chr_Attach_Wretch_Hair_02"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/Chr/SM_Chr_Attach_Wretch_Hair_02.fbx"
+sha256 = "2b513e6897248c94fd427626c228505827fda02cf5e19935beefe057b3681e00"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A ragged, matted wig of dark grey hair, styled in thick, chunky strands that fall unevenly to a jagged hem, with a few thin, dangling locks hanging lower than the rest. The low-poly facets give it a stiff, unkempt look, and the uniform dark colour suggests a grimy, unwashed condition, making it ideal for a feral or..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 506
+meshes = 1
+materials = 1
+size = [0.287702, 0.434773, 0.310261]
+
+[mesh.sm_prop_cardoor_01]
+name = "SM_Prop_CarDoor_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_CarDoor_01.fbx"
+sha256 = "3b5b62d245c3ad85d42c4165eb45a94c7798881de0bd8a13234eb72bc33e585a"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A battered, sand-yellow car door with a rectangular window cutout, a dark grey armrest, and two black hinges. The lower panel features a prominent X-shaped cross-brace, and the surface is scuffed and weathered, suggesting it was ripped from a vehicle in a ruined or abandoned setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 490
+meshes = 1
+materials = 1
+size = [0.871928, 1.08984, 0.272111]
+
+[mesh.sm_prop_cigarette_01]
+name = "SM_Prop_Cigarette_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_Cigarette_01.fbx"
+sha256 = "5ad77b9a5751d13ddf78992ab47d26010b8aeb486f117d2fd2a00a6f0dd26d2d"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A slender, cylindrical cigarette with a tan filter and a white paper body, topped by a dark grey, charred tip with a faint red ember glow. The surface is clean and unblemished, with a simple, flat-shaded texture that reads clearly at a distance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.009555999, 0.08212601, 0.008289]
+
+[mesh.sm_prop_dumbbell_01]
+name = "SM_Prop_Dumbbell_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_Dumbbell_01.fbx"
+sha256 = "ee25d126399253e8ce128abc4c7dfa651811ff4068d769503fd4f9fc242e0e50"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A chunky, low-poly dumbbell with two thick, faceted octagonal weight plates on a short, dark metal handle, rendered in a matte, dark charcoal grey with subtle lighter edge highlights that suggest worn, heavy iron."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 612
+meshes = 1
+materials = 1
+size = [0.301298, 0.300666, 0.60295]
+
+[mesh.sm_prop_flowers_01]
+name = "SM_Prop_Flowers_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_Flowers_01.fbx"
+sha256 = "78dd244969c8a0cdbf782292aa5139195051569f9803ff639e37304359719b54"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A small bouquet of three wilted, dusty-pink roses with drooping heads, wrapped in pale grey paper and tied with a green stem, suggesting a discarded or forgotten funeral offering."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 696
+meshes = 1
+materials = 1
+size = [0.230659, 0.587232, 0.18560201]
+
+[mesh.sm_prop_hamleg_01]
+name = "SM_Prop_HamLeg_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_HamLeg_01.fbx"
+sha256 = "bfc3abf82cab40cf09f2502d321ecfcaedc377cd466fabeda738df707ee81c84"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A stylized, low-poly ham hock with a pale bone protruding from one end, rendered in flat, faceted tan and brown polygons. The meaty section features a dark, glossy patch on one side, suggesting a charred or cured surface, giving it a grisly, edible prop appearance suitable for zombie-themed environments."
+differs = "The only ham hock with a glossy charred patch, making it the most grizzled and edible-looking of the three."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [0.8295, 0.24689, 0.262224]
+
+[mesh.sm_prop_hamleg_02]
+name = "SM_Prop_HamLeg_02"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_HamLeg_02.fbx"
+sha256 = "37da5aa4e9443a4ab1240c7ba3d62ab763ec7623ee4466f5283be98cd79ae231"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A severed, low-poly human leg severed at the thigh, with a pale, sickly flesh tone and a large, dark, circular wound at the top of the stump. The foot is bare, with blocky toes, and the limb is angled in a relaxed, slightly bent pose."
+differs = "The only severed human leg with a bare foot and stump wound, not a ham hock, and the longest asset."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 292
+meshes = 1
+materials = 1
+size = [0.902843, 0.24689, 0.26222402]
+
+[mesh.sm_prop_hamleg_03]
+name = "SM_Prop_HamLeg_03"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_HamLeg_03.fbx"
+sha256 = "8c5e31a4bf5f88464df6c52215251372e1b24bbc498e2a7e0888dfb299c8917d"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A stylized, low-poly ham hock with a chunky, faceted meat section and a clean white bone protruding from one end. The meat is a flat, matte tan with a darker brown circular patch on the cut face, suggesting a smoked or cured finish."
+differs = "The plainest and smallest ham hock, with a clean white bone and no glossy patch, ideal for a generic food prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 288
+meshes = 1
+materials = 1
+size = [0.645453, 0.271913, 0.24257699]
+
+[mesh.sm_prop_handbag_01]
+name = "SM_Prop_Handbag_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_Handbag_01.fbx"
+sha256 = "700852553c82ccf176eae95dec6d36ba31529d89211b806ac398fcedbecb6610"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A weathered tan leather handbag with two arched handles and a horizontal front seam, featuring a small grey skull with a purple bandana and a red bandana tail hanging from the side, giving it a worn, post-apocalyptic look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1230
+meshes = 1
+materials = 1
+size = [0.280067, 0.501281, 0.54915404]
+
+[mesh.sm_prop_heartglasses_01]
+name = "SM_Prop_HeartGlasses_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_HeartGlasses_01.fbx"
+sha256 = "3808ece1c11554bdcb54a7861604df56cbac4acfe1b6f986148d0be9c75ea512"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A pair of novelty sunglasses with two heart-shaped lenses joined by a thin blue frame and straight arms. The lenses are dark and glossy, giving the prop a playful, costume-like appearance suited for a quirky character or a humorous scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 196
+meshes = 1
+materials = 1
+size = [0.13598, 0.043332, 0.115428]
+
+[mesh.sm_prop_rebarclub_01]
+name = "SM_Prop_RebarClub_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_RebarClub_01.fbx"
+sha256 = "9db61a3c2f2544a5fc9d26c32d1c3e624dc0da1af6dc41fa7f26dfaf0a8a7def"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A heavy, improvised melee weapon consisting of a thick, blocky grey stone head lashed to a long, thin wooden handle with dark bindings. The head is chunky and uneven, with small spikes protruding from the top, giving it a brutal, makeshift appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 298
+meshes = 1
+materials = 1
+size = [0.35688, 1.77211, 0.46770102]
+
+[mesh.sm_prop_ribbon_01]
+name = "SM_Prop_Ribbon_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_Ribbon_01.fbx"
+sha256 = "73a68c3748d1413537e3753e93faf85aec4004731e685054dbc3ef775c4f581f"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A low-poly award rosette with a faceted, dusty red fabric rosette and two hanging ribbon tails, marked by a simple yellow ring on the front, appearing slightly worn and suited for a boss zombie's trophy or quest item."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.186139, 0.34532198, 0.076314]
+
+[mesh.sm_prop_rollingpin_01]
+name = "SM_Prop_RollingPin_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_RollingPin_01.fbx"
+sha256 = "5281dc84bda434441ee83a00a3c4ed6474610736fc3176e06b20dab7b16b6ae5"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A slender wooden rolling pin with a long, straight barrel and narrow, tapered handles, finished in a pale, worn beige with subtle grain streaks and a slightly darker, scuffed end cap, suggesting a well-used kitchen tool that has survived a zombie apocalypse."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 284
+meshes = 1
+materials = 1
+size = [0.05891, 0.446019, 0.05891]
+
+[mesh.sm_prop_scepter_01]
+name = "SM_Prop_Scepter_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_Scepter_01.fbx"
+sha256 = "e552688a243163cc53a31535638bf58a89c1c0174b0bad087ebc6f2c8ec66f64"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A slender grey shaft with a red grip and pommel, topped by a chunky, faceted yellow star with a red collar beneath it. The low-poly, stylized look gives it a simple, game-ready appearance, suggesting a magical or ceremonial item for a boss character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 168
+meshes = 1
+materials = 1
+size = [0.121658, 0.6355, 0.034596]
+
+[mesh.sm_prop_scooter_broken_01]
+name = "SM_Prop_Scooter_Broken_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_Scooter_Broken_01.fbx"
+sha256 = "c3954d05ab2084ddbbd2208e9e3b7e3d414d91bb5eeff8fa0a760fcfdb18837f"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A weathered mobility scooter with a padded black seat, a front basket, and a handlebar assembly, finished in a worn brownish-grey with rust and grime detailing. The rear body panel is visibly cracked and broken, exposing the frame beneath, while the front wheel is misaligned, giving it a dilapidated, abandoned look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3003
+meshes = 1
+materials = 1
+size = [0.935234, 0.952335, 1.315409]
+
+[mesh.sm_prop_stopsign_01]
+name = "SM_Prop_StopSign_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_StopSign_01.fbx"
+sha256 = "276c89b42a3e7bd183da87a2a95da57d2120df5737f471bc756717d2695ee9dc"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A weathered red octagonal stop sign with white lettering, mounted on a thin grey pole with a small base, showing a bent and battered condition with a slightly tilted head, suggesting a zombie-apocalypse setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 268
+meshes = 1
+materials = 1
+size = [0.409376, 1.363435, 0.20819399]
+
+[mesh.sm_prop_tankbarrel_01]
+name = "SM_Prop_TankBarrel_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_TankBarrel_01.fbx"
+sha256 = "b79ce673e3ee107cf9c4119efec38f76297b75a728c7c3033985d0f961b6ab92"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A tall, slender cylinder with a flared, dark-rimmed top and a bulbous mid-section, rendered in a weathered, pale bone-like beige with a darker, grimy base. The surface shows subtle vertical streaking and grime, suggesting a worn, scavenged industrial prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 336
+meshes = 1
+materials = 1
+size = [0.309888, 2.29984, 0.319524]
+
+[mesh.sm_prop_trafficlights_01]
+name = "SM_Prop_TrafficLights_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_TrafficLights_01.fbx"
+sha256 = "4131669f4da0ee4c5f154fd2391e344582f05ab41cdbfbb036e6110c97245334"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A tall, slender grey pole supports a yellow traffic signal head with three dark lenses, mounted on a short side arm with a small junction box. The head is angled slightly, and the paint shows chipped, weathered edges, giving it a worn, post-apocalyptic look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 642
+meshes = 1
+materials = 1
+size = [0.48163497, 1.941798, 0.327061]
+
+[mesh.sm_prop_trophy_01]
+name = "SM_Prop_Trophy_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Prop_Trophy_01.fbx"
+sha256 = "27765e8ec67a793b7cc6a1b2b3eedbc2f6ad18da3b7bf91328cc2c4b3f38d793"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A slender, totem-like trophy with a dark, faceted stone base, a deep red cylindrical pillar, and a pale gold skeletal figure with a circular frame, topped by a small skull. The gold has a worn, matte finish, giving it an ancient or ceremonial look, and a small plaque sits on the base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 468
+meshes = 1
+materials = 1
+size = [0.187092, 0.77391, 0.187044]
+
+[mesh.sm_veh_scooter_01]
+name = "SM_Veh_Scooter_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Veh_Scooter_01.fbx"
+sha256 = "17f3023ce10d394a620eab881b531e2b975d1e9ff579d132faea325c93a06c06"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A low-slung, two-wheeled scooter with a bulky, angular body, a flat footboard, and a raised rear deck, rendered in a worn, dark olive-brown metal with a single orange accent on the front cowl. The surface is scuffed and grimy, suggesting a post-apocalyptic utility vehicle built for rough, off-road travel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 723
+meshes = 1
+materials = 1
+size = [0.500426, 0.30418, 1.1567359]
+
+[mesh.sm_veh_scooter_01_preset]
+name = "SM_Veh_Scooter_01_Preset"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Veh_Scooter_01_Preset.fbx"
+sha256 = "86b744e8f106d7681582da9f5679fed2f784ae9c2ad627c4da507e8538999d48"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A four-wheeled mobility scooter with a padded black seat, a brown body, and a front basket, showing signs of wear and grime, suggesting a post-apocalyptic setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3003
+meshes = 1
+materials = 1
+size = [0.516162, 0.972759, 1.200872]
+
+[mesh.sm_veh_scooter_chair_01]
+name = "SM_Veh_Scooter_Chair_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Veh_Scooter_Chair_01.fbx"
+sha256 = "30480f656de2b2ff0bdc45a069cfdb7134df3776acd21660e03b2b4275ca222e"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A low-poly, dark grey car seat with a high backrest, a separate headrest, and a flat, worn cushion, mounted on a small base with a single rear caster wheel, resembling a motorized mobility scooter chair."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 428
+meshes = 1
+materials = 1
+size = [0.430765, 0.675696, 0.52479]
+
+[mesh.sm_veh_scooter_chair_arm_l]
+name = "SM_Veh_Scooter_Chair_Arm_L"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Veh_Scooter_Chair_Arm_L.fbx"
+sha256 = "037b74e1a73d030d702e8f8ec69bb033f2ff111ea994960c3141171bb0390204"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A worn, dark grey padded armrest with a scuffed, pale grey metal frame, mounted on a short, angled post that ends in a small circular base. The cushion is thick and slightly rounded, suggesting it is for a scooter or wheelchair, and the whole piece is visibly weathered and used."
+differs = "Dark grey cushion, pale metal frame, and a more visibly scuffed, weathered finish than the right-hand version."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 1
+materials = 1
+size = [0.097599, 0.244799, 0.352218]
+
+[mesh.sm_veh_scooter_chair_arm_r]
+name = "SM_Veh_Scooter_Chair_Arm_R"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Veh_Scooter_Chair_Arm_R.fbx"
+sha256 = "6309968f8d7666c0694ee711925bb307e0906ee0c8cf3ee03a300086363dfac0"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A worn black padded armrest with a scuffed grey metal frame, mounted on a short post with a circular base, angled for a scooter or wheelchair. The dark cushion shows subtle wear, while the bracket has a dull, utilitarian finish."
+differs = "Black cushion with a duller, utilitarian bracket, offering a darker, less worn look than the left-hand version."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 1
+materials = 1
+size = [0.097594, 0.244628, 0.35221702]
+
+[mesh.sm_veh_scooter_steering_01]
+name = "SM_Veh_Scooter_Steering_01"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Veh_Scooter_Steering_01.fbx"
+sha256 = "e1c1a6d40135ae8186e6909f43921a2eb888adb958cd76743af45e39d7226dcd"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A detached scooter steering column with a bulky, boxy black front basket, a worn brown handlebar stem, and grey grips. The handlebars are angled, and the assembly is capped with a dark, ribbed base, suggesting a standalone prop for a ruined or abandoned vehicle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 636
+meshes = 1
+materials = 1
+size = [0.39629, 0.56202, 0.47549498]
+
+[mesh.sm_veh_scooter_wheel_fl]
+name = "SM_Veh_Scooter_Wheel_fl"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Veh_Scooter_Wheel_fl.fbx"
+sha256 = "2e84f54646b153b439c50b67ce49b0c3d8dd4cf5ac2a9ab6bbce71aa71e74653"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A chunky, low-poly scooter wheel with a thick, faceted grey tyre and a pale blue-grey hub. The hub face features a simple, dark grey six-spoke pattern, giving it a clean, stylised look suitable for a zombie survival game."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [0.076868, 0.258408, 0.258408]
+
+[mesh.sm_veh_scooter_wheel_fr]
+name = "SM_Veh_Scooter_Wheel_fr"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Veh_Scooter_Wheel_fr.fbx"
+sha256 = "7181c56b6668715402cf947cb947733be6092d6a197dbe1b0af9355b189e9c61"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A chunky, low-poly scooter wheel with a thick, faceted grey tire and a pale blue-grey hub. The front view features a five-spoke design, while the rear view shows a solid, flat cap, making it suitable for either end of a vehicle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [0.076868, 0.258408, 0.258408]
+
+[mesh.sm_veh_scooter_wheel_rl]
+name = "SM_Veh_Scooter_Wheel_rl"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Veh_Scooter_Wheel_rl.fbx"
+sha256 = "e94c54a56765fccaac7405cda52c71927e0e46da8e8de60a50505c79d0121f8e"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A chunky, low-poly scooter wheel with a thick, faceted grey tire and a flat, pale blue-grey hub. The hub features a simple, dark grey spoke pattern on one side, while the reverse is a smooth, solid disc. The clean, stylized look makes it ideal for a rugged, undead-themed vehicle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [0.076868, 0.258408, 0.258408]
+
+[mesh.sm_veh_scooter_wheel_rr]
+name = "SM_Veh_Scooter_Wheel_rr"
+pack = "polygon_boss_zombies"
+source = "SourceFiles/FBX/SM_Veh_Scooter_Wheel_rr.fbx"
+sha256 = "fc40fa891c935be958e7e3b301bfd1ec8875aa88b120604b5eda00d7e6e1c1e3"
+atlas = "PolygonZombieBoss_Texture_01_A.png"
+textures = "PolygonZombieBoss_Texture_01_A.png"
+description = "A chunky, low-poly scooter wheel with a thick, faceted grey tire and a pale blue-grey hub. The outer face features a recessed, six-spoke design, while the inner face is a smooth, flat disc, making it suitable for either side of an axle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [0.076868, 0.258408, 0.258408]

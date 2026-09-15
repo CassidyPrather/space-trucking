@@ -53,12 +53,12 @@ Starting values (tune by screenshot, in one place):
 | `PLATE_LIT` | `#3a443d` | bevel edge facing the light (top/left) |
 | `PLATE_SHADE` | `#121614` | bevel edge away from it (bottom/right) |
 | `RIVET` | `#465049` | plus a `PLATE_SHADE` pixel under each, top-left light |
-| `SOCKET` | `#151a17` | inset wells: hold cells, shelf/pad slots |
+| `SOCKET` | `#151a17` | inset wells: room-net cells, hopper tiles |
 | `PHOSPHOR` | `#7fd962` | CRT foreground: POI rings, routes, sweep |
 | `PHOSPHOR_DIM` | `#2c4a2a` | CRT furniture: grid hints, trails, scanline tint |
 | `AMBER` | `#e8a33d` | invitation and warning lamps, ETA arc, want pips |
 | `BRASS` | `#b08d57` | lever handles and hardware accents |
-| `LAMP_OK` | `#59c135` | ready/go lamps (accept lever, launch lever) |
+| `LAMP_OK` | `#59c135` | ready/go lamps (the launch lever), legal-drop hints |
 | `LAMP_NO` | `#d84a35` | refusal flashes, violation glyphs |
 | `EERIE` | `#8f5fd6` | the suspicious violet: crate glow, omen cast |
 

@@ -1,0 +1,897 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.fx_ammo_01]
+name = "FX_Ammo_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Ammo_01.fbx"
+sha256 = "c4bc61f3304c7eec42b7ac7739ca0a06b494651fe967d16ec0da0376542e7123"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A tight cluster of three rifle cartridges, each with a pointed copper-jacketed bullet and a straight-walled brass case, rendered in a flat, untextured grey. The middle round is slightly offset, creating a compact, ready-to-load grouping that reads clearly as ammunition at a distance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 480
+meshes = 1
+materials = 1
+size = [0.53176403, 0.725847, 0.147346]
+
+[mesh.fx_arrow_01]
+name = "FX_Arrow_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Arrow_01.fbx"
+sha256 = "47390f6dc189890b1955a4d11490bc19710b069b2ea10dbd2c3357866b8068b8"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A chunky, low-poly chevron in bright, flat orange, bent at a right angle with thick, squared-off arms. The blocky form has no visible fletching or arrowhead, reading as a simple directional marker or projectile trail."
+differs = "The only orange asset, half the triangle count, and a single chevron for simple directional cues."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 44
+meshes = 1
+materials = 1
+size = [0.338492, 0.189327, 0.05963]
+
+[mesh.fx_arrow_02]
+name = "FX_Arrow_02"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Arrow_02.fbx"
+sha256 = "9b1c31d91ae0a07a748fee4c9aa98eefea3291b2a75f7352e98af8ea4b17ebee"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A pair of thick, angular chevrons pointing right, each with a beveled front face and a recessed inner channel, rendered in flat, untextured light grey with a subtle white edge highlight. The clean, faceted geometry suggests a stylized projectile or directional marker, appearing pristine and ready for use as a generic.."
+differs = "The only grey asset, double the triangles, and a double chevron for more complex projectile trails."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 88
+meshes = 1
+materials = 1
+size = [0.341079, 0.338492, 0.05963]
+
+[mesh.fx_bullet_trail]
+name = "FX_Bullet_Trail"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Bullet_Trail.fbx"
+sha256 = "c8aea643788bc5b84f65cb71dbae9562df5a8bb33404fa1621efc5e9fb202552"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A slender, straight line of pale grey light, tapering to a point at each end and glowing faintly along its length, suggesting a high-speed projectile's wake or a laser beam."
+differs = "The shortest and plainest option, with a faint pale glow, best for subtle, close-range projectile wakes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8
+meshes = 1
+materials = 1
+size = [0.01, 0.01, 1.284006]
+
+[mesh.fx_bullet_trail_01]
+name = "FX_Bullet_Trail_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Bullet_Trail_01.fbx"
+sha256 = "3d2eeed856c0b7e06a70e0bf1b168520ff7bd5dcc150022ff6e0fa21aadfc71b"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A long, thin, straight streak with a bright white core and a soft, translucent outer glow, tapering to a point at each end. The texture gives it a subtle, smoky edge, making it read as a high-speed tracer round or energy beam in motion."
+differs = "The longest and most detailed, with a bright core and smoky edge, ideal for dramatic, long-distance tracer fire."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 16
+meshes = 1
+materials = 1
+size = [0.042832, 0.042833, 16.527706]
+
+[mesh.fx_cloud_placement_01]
+name = "FX_Cloud_Placement_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Cloud_Placement_01.fbx"
+sha256 = "0159c7be2fe4a8c31339554a762abe80c96713ca1204420be8a16a0c6494c022"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A flattened, irregular ring of low-poly geometry, resembling a swirling vortex or a dust devil, with a hollow centre. The surface is a mottled grey with subtle hints of warm brown, giving it a dusty, smoky appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 85
+meshes = 1
+materials = 1
+size = [6.414419, 0.982372, 6.498111]
+
+[mesh.fx_cone_01]
+name = "FX_Cone_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Cone_01.fbx"
+sha256 = "4aa106483974ab0e823b0ad8b4eeb7e508542fef083877f7103248b37bdf57cc"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A flat, wide circular disc with a hollow centre, resembling a low-poly ring or a stylised shockwave. The surface is a muted grey with subtle, iridescent rainbow highlights along the inner rim, suggesting a magical or energy-based effect."
+differs = "The flat ring is the widest and flattest, ideal for ground shockwaves or expanding energy rings, not a projectile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [0.41311, 0.029237, 0.402754]
+
+[mesh.fx_cone_02]
+name = "FX_Cone_02"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Cone_02.fbx"
+sha256 = "ad12c69cd87fda28763a4409b242a3d8bbbe2bd5ba31b2e86a1010e0c9ef9d74"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A low-poly grey cone with a faceted surface, featuring a small, iridescent rainbow band near the tip that suggests a magical or energy effect. The simple geometry and subtle colouring make it a versatile, understated particle emitter or projectile base."
+differs = "The compact cone is the smallest and most vertical, best for a directional projectile or emitter, lacking the ring's flat spread."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14
+meshes = 1
+materials = 1
+size = [0.148358, 0.182488, 0.144638]
+
+[mesh.fx_crystal_01]
+name = "FX_Crystal_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Crystal_01.fbx"
+sha256 = "803dba446d65d34a633d99ebf6845529825d49edf8bb65d04c963d92099ab182"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A tall, slender shard of pale blue crystal, tapering to a sharp point at the top and a narrower base. Its faceted surface is broken by irregular, angular planes that catch the light, giving it a cool, glassy sheen."
+differs = "Largest and most detailed, with the most irregular facets, ideal as a hero prop or centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.226524, 0.736766, 0.241804]
+
+[mesh.fx_crystal_02]
+name = "FX_Crystal_02"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Crystal_02.fbx"
+sha256 = "73525ea1c2dd9077661fb215287892566f83b01ea266df27e7e198c9c4aa996f"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A tall, slender shard of pale blue crystal, tapering to a sharp point at the top and a narrower base. Its faceted surface catches light with a cool, icy sheen, suggesting a magical or mineral origin. The clean, angular geometry makes it ideal for a glowing pickup or a decorative element in a frozen environment."
+differs = "Mid-sized with a clean, icy sheen, best for a glowing pickup in a frozen environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 40
+meshes = 1
+materials = 1
+size = [0.163928, 0.48798698, 0.154171]
+
+[mesh.fx_crystal_03]
+name = "FX_Crystal_03"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Crystal_03.fbx"
+sha256 = "8023855efa451f3babd87071fa9870f0e2be1767a331857cc5876351a843a748"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A tall, slender shard of pale blue crystal, tapering to a sharp point at the top and a smaller point at the base. Its faceted surface is marked by subtle, lighter streaks that suggest internal fractures or growth lines, giving it a cool, glassy appearance."
+differs = "Has subtle internal fracture streaks, making it the most 'damaged' or growth-lined shard."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 38
+meshes = 1
+materials = 1
+size = [0.11845, 0.37903798, 0.109608]
+
+[mesh.fx_crystal_04]
+name = "FX_Crystal_04"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Crystal_04.fbx"
+sha256 = "bbc2c313a5e1267cf41f62264a43ec9af31d41c95b7405541fa4a49a3e59fd11"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A slender, vertically elongated crystal shard with a sharp, pointed tip and a faceted, angular body that tapers to a narrow base. Its surface is a uniform, pale cyan with a matte, non-reflective finish, giving it a frosted or icy appearance."
+differs = "Smallest and plainest with a matte, frosted finish, perfect for a subtle, non-reflective scatter piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [0.080054, 0.267683, 0.082297]
+
+[mesh.fx_crystalshard_01]
+name = "FX_CrystalShard_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_CrystalShard_01.fbx"
+sha256 = "b94299d1239c0f64980a06c753a06d3e37d3347a60593f1eabf13a5504917c21"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A tall, slender crystal shard with a sharp, pointed tip and a faceted, low-poly surface, rendered in a uniform, pale icy blue with a matte finish. The clean, untextured look and simple geometry make it ideal for a generic magic or ice effect, offering a versatile and lightweight particle component."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 22
+meshes = 1
+materials = 1
+size = [0.091701, 0.332493, 0.092783004]
+
+[mesh.fx_cylinder_01]
+name = "FX_Cylinder_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Cylinder_01.fbx"
+sha256 = "7b8bd86e59873f8d02ae55156f4a37fa5f8186e0724c0998563ebcb7e621c32e"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A squat, dark grey cylinder with a hollow, open top and a flat base, wrapped in a glossy, iridescent band that shifts through rainbow hues. The surface is smooth and reflective, suggesting a polished metal or glass material, with a subtle, worn edge at the bottom."
+differs = "Glossy iridescent wrap and worn base, taller and wider than the other, for polished magical containers."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [0.148358, 0.182488, 0.144638]
+
+[mesh.fx_cylinder_02]
+name = "FX_Cylinder_02"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Cylinder_02.fbx"
+sha256 = "471c76089306c42eadc387de74f6751aef3615a12753f8c6d29ffc60ff20f36e"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A short, open-ended grey cylinder with a smooth matte finish, featuring a band of iridescent rainbow stripes near one rim and a small rectangular metallic plate on the opposite side. The interior is dark and hollow, suggesting a magical or energy-based effect."
+differs = "Matte finish with a metallic plate and open-ended design, taller and narrower, for energy conduits or portals."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [0.144638, 0.148358, 0.182488]
+
+[mesh.fx_grenade_01]
+name = "FX_Grenade_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Grenade_01.fbx"
+sha256 = "218f20aeecf71a4c50b61b4a5739363eac1cfaf08f7ecd87cf1f123bc95acfe6"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A squat, faceted grey grenade with a chunky angular body, a distinct hexagonal cap, and a small base ring. The low-poly silhouette is clean and untextured, suggesting a raw, unadorned prop that reads clearly as a thrown explosive in a stylized game environment."
+differs = "The only one with a bulbous, rounded body; best for a classic thrown explosive rather than a static canister."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 108
+meshes = 1
+materials = 1
+size = [0.256178, 0.594695, 0.29581]
+
+[mesh.fx_grenade_02]
+name = "FX_Grenade_02"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Grenade_02.fbx"
+sha256 = "9b585120d02f08fd5c1beb92920d90c007f4770fbe67e7437787e871edcdaafb"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A tall, faceted cylinder with a chunky, angled cap and a flared base, rendered in flat grey tones with darker banding. The low-poly silhouette suggests a sturdy, industrial canister or pillar, with a matte finish that gives it a clean, untextured look suitable for generic props or stylized environments."
+differs = "The only one with a flared base and darker banding; best for a tall industrial pillar or canister prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 108
+meshes = 1
+materials = 1
+size = [0.220188, 0.594695, 0.278671]
+
+[mesh.fx_grenade_03]
+name = "FX_Grenade_03"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Grenade_03.fbx"
+sha256 = "5d58e4ae884c5f48e5a5861bcdf8cc8e148a2650d90483817a62942c0f9a1d1d"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A tall, faceted grey cylinder with a chunky, angular cap and base, resembling a stylized canister or grenade. The matte finish and blocky silhouette give it a rugged, utilitarian look, while the muted palette suggests a military or industrial origin."
+differs = "The only one with a straight cylindrical body and no banding; best for a plain, unadorned military canister."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 108
+meshes = 1
+materials = 1
+size = [0.260276, 0.594695, 0.301816]
+
+[mesh.fx_healthcube_01]
+name = "FX_Healthcube_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Healthcube_01.fbx"
+sha256 = "a6e20e05b6ec986317227bdfa5d6399cf833f115b2fdf59814ab7090293e083a"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A chunky, low-poly plus sign in bright orange, with a flat, matte finish and no surface markings. Its thick, blocky arms are uniform in depth, giving it a solid, toy-like appearance that reads as a generic pickup or collectible rather than a medical item."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [0.524936, 0.524936, 0.109056]
+
+[mesh.fx_heart_01]
+name = "FX_Heart_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Heart_01.fbx"
+sha256 = "fa13e6ef19854799cc15d720d3b60e313ea5b4c0e2e9bea89a952f721097d8f1"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A flat, faceted heart shape with a warm orange tone and a subtle darker shading on its beveled edge, giving it a solid, low-poly look. It appears as a simple, stylized icon or collectible, with no additional details or markings beyond its clean, geometric form."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 176
+meshes = 1
+materials = 1
+size = [0.6473, 0.601609, 0.09387]
+
+[mesh.fx_money_coin_01]
+name = "FX_Money_Coin_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Money_Coin_01.fbx"
+sha256 = "99f57b62e00670a918818ce10641aa25e94970b82b1d76d8965dfe64b84a2383"
+atlas = "POLYGON - Heist Pack/PolygonHeist_Texture_01_A.png"
+textures = "PolygonHeist_Texture_01_A.png"
+description = "A flat, decagonal gold coin with a beveled edge and a subtle darker inner ring, rendered in a matte, low-poly style."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.056296, 0.007474, 0.056296]
+
+[mesh.fx_money_note_01]
+name = "FX_Money_Note_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Money_Note_01.fbx"
+sha256 = "451cd3117b519cb5dbba1e94d1149e9f402ebfe54b13faf17647f11eb710a69c"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A single, flat banknote with a gentle S-curve, as if fluttering or caught mid-fall. It features a pale green face with a darker green border, a central oval, and corner rectangles, all rendered in a clean, low-poly style."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [0.241574, 0.058829, 0.111402]
+
+[mesh.fx_question_01]
+name = "FX_Question_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Question_01.fbx"
+sha256 = "a124af10dae9112a04b2df2068a462adb0a40582caeb68dfe61f8a6909cde39e"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A chunky, low-poly question mark with a faceted, crystalline surface in flat light grey, featuring a detached square dot and a slight forward lean that gives it a curious, floating presence."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [0.357622, 0.68022, 0.113894]
+
+[mesh.fx_ring_01]
+name = "FX_Ring_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Ring_01.fbx"
+sha256 = "4de91ab31c1a347be33bbc28476e974be5ddeacef419f5df5c4bb87116fc437d"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A flat, low-poly ring of pale, translucent white fragments, broken into four curved shards that hover in a loose circle. The pieces are thin and angular, with a faint, icy sheen that suggests a magical or energy-based effect."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 162
+meshes = 1
+materials = 1
+size = [0.94093204, 0.097215, 0.913804]
+
+[mesh.fx_shard_rock_01]
+name = "FX_Shard_Rock_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Shard_Rock_01.fbx"
+sha256 = "6e173eeed1637f098a071d89ca2d93ebbb824569204abb2a86c4a787215515d8"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A tall, jagged crystal shard with a pale icy blue hue and a smooth, glassy finish, featuring sharp, angular facets that catch the light. Its elongated, asymmetrical form suggests a magical or mineral fragment, ideal for use as a glowing collectible, a frozen projectile, or a piece of scattered debris in a frost-themed."
+differs = "Largest and most detailed, with the most complex asymmetrical silhouette; best as a hero collectible or centerpiece debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [0.277489, 0.700175, 0.331117]
+
+[mesh.fx_shard_rock_02]
+name = "FX_Shard_Rock_02"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Shard_Rock_02.fbx"
+sha256 = "fb81eb414c07ead9582319da4751369dbd3a948779c47741c8251dc34ba4ca20"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A tall, jagged crystal shard with a pale icy blue hue and a smooth, glossy finish, rising from a chunky, faceted base. Its sharp, angular silhouette and clean, unblemished surface suggest a magical or sci-fi energy source, ideal for a glowing pickup or environmental accent."
+differs = "Tallest and thinnest, with a distinct chunky base; ideal as a standing energy source or sci-fi pickup."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 42
+meshes = 1
+materials = 1
+size = [0.14919001, 0.45722, 0.15326399]
+
+[mesh.fx_shard_rock_03]
+name = "FX_Shard_Rock_03"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Shard_Rock_03.fbx"
+sha256 = "8b66ee9f08368d4b11436fca82089e1cb837f3ce40a6768f888d3201b2a06906"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A tall, jagged crystal shard with a pale icy blue hue and a smooth, glassy finish, tapering to a sharp point at the top. Its faceted surface catches light to suggest a translucent, magical mineral, making it ideal for frost or arcane effects."
+differs = "Mid-sized, plainest and most uniform taper; best as a simple projectile or generic frost effect."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 40
+meshes = 1
+materials = 1
+size = [0.139494, 0.331986, 0.127963]
+
+[mesh.fx_shard_rock_04]
+name = "FX_Shard_Rock_04"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Shard_Rock_04.fbx"
+sha256 = "fddf81e983ec2877e399d137830311c6282e862bccc85369bc358d9bcf2e55a2"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A tall, faceted crystal shard with a pale cyan body and a darker, translucent blue base, giving it a cool, icy appearance. The angular, low-poly surfaces catch light to suggest a glassy or gem-like material, making it ideal for use as a magical or frozen debris piece in a stylized environment."
+differs = "Smallest and simplest, with a two-tone base; best as scattered ground debris or a minor particle effect."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 22
+meshes = 1
+materials = 1
+size = [0.113656, 0.228402, 0.108063996]
+
+[mesh.fx_shard_rock_small_01]
+name = "FX_Shard_Rock_Small_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Shard_Rock_Small_01.fbx"
+sha256 = "1efbd17f1d41072d667f2db5777e020a253f615322f3e746490bffa8c5e71b03"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A faceted, roughly hexagonal crystal shard with a pale cyan, icy blue tone and a smooth, matte finish. Its irregular, angular planes catch light to suggest a translucent, gem-like material, making it ideal for magic, ice, or sci-fi debris effects."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 22
+meshes = 1
+materials = 1
+size = [0.0809, 0.150254, 0.083492]
+
+[mesh.fx_skull_02]
+name = "FX_Skull_02"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Skull_02.fbx"
+sha256 = "8a083c5fefb2039a0be295a9ef8f7c08b27ae4877f80606c32200f68801596f4"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A faceted, low-poly human skull with a broad, rounded cranium and a short, blunt jaw, rendered in flat, untextured light grey. The eye sockets and nasal cavity are simple dark recesses, and the surface is clean and unmarked, giving it a generic, neutral appearance suitable for a variety of stylized fantasy or horror..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 184
+meshes = 1
+materials = 1
+size = [0.475898, 0.57547, 0.52412]
+
+[mesh.fx_spark_01]
+name = "FX_Spark_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Spark_01.fbx"
+sha256 = "6999c2bc260a9a49445fc2bbaad5e1c75764ddc77088090a88a129c041c68843"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A single, elongated, flat diamond-shaped sliver, rendered in a plain, untextured light grey, appears as a sharp, minimalist shard. Its extreme thinness and pointed ends suggest a high-speed projectile or a stylized spark, making it a versatile, unobtrusive particle for effects."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8
+meshes = 1
+materials = 1
+size = [0.11169, 0.11169, 0.8198]
+
+[mesh.fx_sphere]
+name = "FX_Sphere"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Sphere.fbx"
+sha256 = "bcf88eaf31da43bccf9eadfbc9d1ae1fc5aad3c5697f4e52822b1b1744e186c0"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A faceted, low-poly orb with a slightly flattened base, rendered in a matte, pale grey-white that suggests a stone or a burst of smoke. The surface is clean and unmarked, with sharp, angular planes catching light to create a subtle gradient."
+differs = "Smallest and flattest, with a pale white-grey finish unlike the others' neutral grey."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [0.129568, 0.097806, 0.128853]
+
+[mesh.fx_sphere_01]
+name = "FX_Sphere_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Sphere_01.fbx"
+sha256 = "e7b09a913d0f4964fd4f6fe08d8a004e1409d73456cb85fb019fa7d4b6058686"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A low-poly, faceted orb with a matte, untextured grey finish, appearing as a plain, unadorned sphere. Its surface is composed of flat, angular polygons that catch the light in a uniform, neutral way, giving it a clean, generic look."
+differs = "The plainest and most uniform, with the highest triangle count among the faceted orbs."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [1.070287, 1.097632, 1.078998]
+
+[mesh.fx_sphere_02]
+name = "FX_Sphere_02"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Sphere_02.fbx"
+sha256 = "bbaf337da17683975a419dd29b6e1212f6a125b0261a77a445e86c85714a15ef"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A smooth, matte grey sphere with a subtle, irregular surface undulation, resembling a soft, low-poly orb of smoke or a stylised energy mote. Its uniform, untextured appearance makes it a versatile, neutral base for any particle effect."
+differs = "The only smooth, undulating orb, with the most triangles and no sharp facets."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 180
+meshes = 1
+materials = 1
+size = [1.081667, 1.097632, 1.078998]
+
+[mesh.fx_sphere_03]
+name = "FX_Sphere_03"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Sphere_03.fbx"
+sha256 = "3dcd2a28f59c9c4a3770d626b0a1dcf904113d24a4eb97997f3f233dca2c2b22"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A faceted, low-poly orb with a slightly flattened top and bottom, rendered in a matte, untextured grey. Its surface is composed of large, flat triangular planes that catch light differently, giving it a crystalline or stone-like appearance."
+differs = "The largest and widest, with flattened top and bottom, but the same triangle count as FX_Sphere."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [1.215994, 0.91791, 1.209293]
+
+[mesh.fx_sphere_pivot_01]
+name = "FX_Sphere_Pivot_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Sphere_Pivot_01.fbx"
+sha256 = "18c1f3f6738e4c075174cccf62fb7a389f061cac088ed67a97d8794416d99c7f"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A faceted, roughly spherical polyhedron with a flat grey base, rendered in a matte stone-like grey. The upper facets are marked with irregular patches of pale green and a single dark brown streak, suggesting a weathered or magical surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 22
+meshes = 1
+materials = 1
+size = [0.205046, 0.202662, 0.23541498]
+
+[mesh.fx_sphere_puff_01]
+name = "FX_Sphere_Puff_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Sphere_Puff_01.fbx"
+sha256 = "645a72b0e1f4a03c748c76e578ef249c9e2ef18d2644c407bbea005195427d14"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A faceted, irregular polyhedral blob with a matte, pale grey surface, resembling a low-poly puff of smoke or a stylised rock. Its chunky, angular planes give it a solid, sculpted look rather than a soft, wispy one, making it ideal for stylised impacts or debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [1.329252, 1.129277, 1.326082]
+
+[mesh.fx_sphere_spikes_01]
+name = "FX_Sphere_Spikes_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Sphere_Spikes_01.fbx"
+sha256 = "c4307d58b10be5fec8c2fd5133bb09f01b93d6db4020a325b1c84dfa9d8b358d"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A cluster of sharp, jagged shards erupting from a central core, forming a spiky, crystalline burst. The low-poly facets are rendered in a flat, untextured grey, giving it a raw, stone-like appearance. It resembles a frozen explosion or a shattered rock formation, ideal for impact effects or magical debris."
+differs = "Tallest and widest, with the most extreme vertical reach, best for a towering, dramatic burst."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 78
+meshes = 1
+materials = 1
+size = [2.148847, 2.26456, 3.143321]
+
+[mesh.fx_sphere_spikes_02]
+name = "FX_Sphere_Spikes_02"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Sphere_Spikes_02.fbx"
+sha256 = "5cb5b8ec5b19a1fc33c13b61fe0e00920df8be42416f1856abefd6c7c214b1b3"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A cluster of jagged, shard-like protrusions radiating from a central core, forming a spiky, crystalline burst. The low-poly facets are shaded in flat greys, giving it a stone or metal appearance. It reads as a static impact burst or a stylized explosion fragment, ideal for a frozen moment of destruction."
+differs = "More compact and squat, with a flatter profile, ideal for a ground-level, low-impact debris scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 76
+meshes = 1
+materials = 1
+size = [2.148847, 1.7700341, 2.928611]
+
+[mesh.fx_star]
+name = "FX_Star"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Star.fbx"
+sha256 = "e6af3aed98ac89997d5a11b7fa2d7958f2a2441f1e4eca8952026f63e0d460e7"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A chunky, faceted five-pointed star with a thick, extruded body and a single sharp point angled upward, rendered in flat, untextured grey. The low-poly silhouette is crisp and angular, with no visible glow or particle effects, making it a versatile, neutral base for custom shaders or scaling."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 40
+meshes = 1
+materials = 1
+size = [0.007972, 0.018089999, 0.019022]
+
+[mesh.fx_star_pivot]
+name = "FX_Star_Pivot"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Star_Pivot.fbx"
+sha256 = "3ac632108a6cd83cd8b93db0ba49cbb43aa51fca212539edd539fe82c9433554"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A chunky, five-pointed star with a thick, extruded body and faceted, low-poly surfaces. The flat, untextured grey material gives it a neutral, unlit appearance, making it a versatile base for custom particle effects or magical VFX. Its solid, geometric form is ideal for stylized game environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 40
+meshes = 1
+materials = 1
+size = [0.007972, 0.018089999, 0.019020997]
+
+[mesh.fx_tower_01]
+name = "FX_Tower_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Tower_01.fbx"
+sha256 = "e4dc0254fbbd9347e0c7b7389e92097a3def2008df624117dc53c989b9928137"
+atlas = "POLYGON - Apocalypse/PolygonApocalypse_Texture_01_A.png"
+textures = "PolygonApocalypse_Texture_01_A.png"
+description = "A low, squat cylindrical hub rises from a wide, flat circular base, with a single straight arm extending outward to one side. The entire structure is a uniform pale grey with a subtle sheen, suggesting a smooth, untextured metal or stone surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 212
+meshes = 1
+materials = 1
+size = [3.198415, 1.2291679, 3.198291]
+
+[mesh.fx_vine_01]
+name = "FX_Vine_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Vine_01.fbx"
+sha256 = "29f4aceff113d399ee5eb45e0b046b38192a288dfc86023bddadd730a56063d6"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A segmented, low-poly vine curling into a loose, open C-shape, with a few small thorn-like protrusions along its length. The flat-shaded surface is a muted, mossy green with darker mottled patches, giving it a dry, weathered look."
+differs = "The largest and most detailed, with the most pronounced thorns, best for a sprawling, dominant vine feature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 308
+meshes = 1
+materials = 1
+size = [0.365773, 0.419419, 0.371364]
+
+[mesh.fx_vine_02]
+name = "FX_Vine_02"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Vine_02.fbx"
+sha256 = "c9697508a0f6e57ed82454d3bdc1597e585cebdc1184460faffc7a6d8e1a558a"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A segmented, low-poly vine curled into a loose, open ring, with a few small thorns or leaf nodes protruding from its surface. The muted olive-green texture shows subtle variation, giving it a dry, weathered look. Its open shape makes it ideal for wrapping around terrain or other props, adding organic detail to a scene."
+differs = "The most open and ring-like, ideal for wrapping around objects, with a moderate detail level."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 164
+meshes = 1
+materials = 1
+size = [0.33127898, 0.21121699, 0.334631]
+
+[mesh.fx_vine_03]
+name = "FX_Vine_03"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_Vine_03.fbx"
+sha256 = "760ae5c0eb620644bee137f196da22d90dbb32561260d415bef3d97303bd8a90"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A short, curved segment of a thick vine, bent into a hook shape with a blunt, squared-off tip. The low-poly surface is a muted olive green with darker, mottled patches suggesting bark or decay, giving it a weathered, organic look."
+differs = "The smallest and plainest, a simple hook segment for minor accents, lacking the thorns and open shape of the others."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [0.20757, 0.131167, 0.24491301]
+
+[mesh.fx_woodchip_01]
+name = "FX_WoodChip_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/FX_WoodChip_01.fbx"
+sha256 = "439ff1df9a7ba26e951650fc3815b2e037dcb8de058075f85ec56b2a161ef6f4"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A slender, elongated bipyramid with sharp, faceted planes, rendered in a matte, wood-toned tan with darker brown shading that gives it a chipped, splintered appearance. The crisp, angular silhouette and flat shading make it read as a stylized, low-poly wood shaving or splinter, ideal for debris or impact effects."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [0.13873, 0.71414, 0.16749]
+
+[mesh.sm_flame_fx]
+name = "SM_Flame_FX"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/SM_Flame_FX.fbx"
+sha256 = "f2f38f19cae42147ddf8825f3c445d82d6780e04279034ae0ba99bf485941550"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A faceted, teardrop-shaped crystal with a sharp point and a broad, angular base, rendered in a flat grey with a warm, coppery-orange band wrapping around its lower half. The surface is smooth and unblemished, with a subtle sheen that suggests a polished or glassy material."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 24
+meshes = 1
+materials = 1
+size = [0.116456, 0.207718, 0.100854]
+
+[mesh.sm_gorechunk_01]
+name = "SM_GoreChunk_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/SM_GoreChunk_01.fbx"
+sha256 = "a5d825cf6ad19f73f8c69b7dbfa1b27975e12bb3ad68005e3c66ce6098cf8e49"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A faceted, irregular lump of dark red flesh with a matte finish, featuring a small pale bone fragment protruding from one end and a jagged tear on the opposite side, suggesting a severed limb or organ chunk."
+differs = "The only chunk with a bone fragment and jagged tear, making it the most distinct for severed-limb effects."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 76
+meshes = 1
+materials = 1
+size = [0.10112, 0.075229004, 0.15121299]
+
+[mesh.sm_gorechunk_02]
+name = "SM_GoreChunk_02"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/SM_GoreChunk_02.fbx"
+sha256 = "f43412ee03bab5d528fc10a54973bf66e15c1320d1caf219bfe44544a00eaf07"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A faceted, roughly oval lump of dark red flesh, slightly flattened and elongated, with a darker, glossy sheen that suggests a wet, bloody surface. The low-poly form is simple and irregular, resembling a severed organ or a chunk of meat, with a small, darker patch on one side that adds to its visceral appearance."
+differs = "The smallest and plainest, with a glossy sheen; best for generic, wet blood splatter or organ debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.057794, 0.043420002, 0.091426]
+
+[mesh.sm_gorechunk_03]
+name = "SM_GoreChunk_03"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/SM_GoreChunk_03.fbx"
+sha256 = "3d1a60897a9d6a970e47810c63b4f1495d2723d309c5212134c018775871772a"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A small, elongated chunk of dark red flesh with a faceted, low-poly surface, shaped like a bone with rounded, bulbous ends and a thinner middle. The texture is a flat, matte crimson with subtle darker shading, giving it a raw, visceral appearance."
+differs = "The only bone-shaped piece with bulbous ends, ideal for skeletal or joint-specific gore."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 76
+meshes = 1
+materials = 1
+size = [0.049124, 0.04535, 0.198431]
+
+[mesh.sm_gorechunk_04]
+name = "SM_GoreChunk_04"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/SM_GoreChunk_04.fbx"
+sha256 = "6a999cd98b6888836993a54bac6e4aea81e7d130de5791177379e69c26edc4a8"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "An elongated, low-poly chunk of dark red flesh, faceted like a rough-cut gemstone. Its flat, angular surfaces suggest a torn or severed piece of organic matter, with a matte finish that gives it a wet, fleshy appearance. The irregular, tapered shape makes it ideal for scattering as a small gore effect or debris."
+differs = "The largest and most detailed, with a gem-like faceted shape, perfect for a standout, high-impact gore chunk."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.098822996, 0.080683, 0.21354699]
+
+[mesh.sm_lightray_cube]
+name = "SM_LightRay_Cube"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/OBJ/SM_LightRay_Cube.obj"
+sha256 = "3547b4c1009cd06ec10e60c3a5cca160ce114b398d0653a38749a12402a5494c"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A plain white cube with a single large, angled cutaway on one corner, creating a smooth, flat diagonal face that catches light differently than the rest of the surface. The clean, untextured white material gives it a stark, minimalist look, making it ideal as a stylized light beam or a simple, abstract environmental..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10
+meshes = 1
+materials = 1
+size = [1.829396, 1.829398, 1.829396]
+
+[mesh.sm_lightray_round]
+name = "SM_LightRay_Round"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/OBJ/SM_LightRay_Round.obj"
+sha256 = "c174ec672f58c5628f5c6a19fee82bdccfefa52066f6d13abb1b43a714bde737"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A squat, faceted cylinder with a flat top and a distinct horizontal seam dividing it into two equal halves. The upper section is a matte, neutral grey, while the lower band features a warm, amber-brown gradient that suggests a glowing core or tinted glass."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 1
+size = [1.999999, 1.829398, 1.999999]
+
+[mesh.sm_lightraycube_1]
+name = "SM_LightRayCube 1"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/SM_LightRayCube 1.fbx"
+sha256 = "7cd8fd5a37063d2cd9a9126b0ce0052389a04478c80a91e18c7871dd67f23e83"
+atlas = "POLYGON - Dungeons Map/Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A plain, unadorned cube with flat, muted tan surfaces and a single dark brown, curved patch on one corner, resembling a shadow or a stain. It appears to be a simple, low-poly block with no distinct features, making it suitable as a generic prop or a placeholder for a light-emitting object."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10
+meshes = 1
+materials = 1
+size = [0.018294, 0.018294, 0.018294]
+
+[mesh.sm_lightrayround_1]
+name = "SM_LightRayRound 1"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/SM_LightRayRound 1.fbx"
+sha256 = "e11ee539878008cc1a18fcc912a13f670742d216173507cca46f39457d2c27b2"
+atlas = "POLYGON - Dungeons Map/Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A squat, cylindrical drum with a flat top and a smooth, tan-brown surface, wrapped in a band of dark, rectangular panels that resemble a bookshelf or storage rack. The texture is low-resolution and slightly worn, giving it a dusty, aged look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 1
+size = [0.02, 0.018294, 0.02]
+
+[mesh.sm_particle_smoke_01]
+name = "SM_Particle_Smoke_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/SM_Particle_Smoke_01.fbx"
+sha256 = "1f9189584c5748bae7acf85ce9468faf050c53cc8eba856fa0f27457c854dcfe"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A faceted, low-poly grey rock-like chunk with a flat base, featuring a vibrant, iridescent rainbow band of spectral colours wrapping around its lower edge, suggesting a magical or elemental smoke effect."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.191407, 0.15191099, 0.193869]
+
+[mesh.sm_rock_01]
+name = "SM_Rock_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/SM_Rock_01.fbx"
+sha256 = "3116200ca88b8ff2a8c5c87dd06aa06d4f960de3042c618ab80e1377e09df9d6"
+atlas = "POLYGON - Nature Pack/PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, chunky boulder with a flat base and a broad, slightly domed top, its low-poly facets catching light in warm beige and grey tones. The surface is smooth and unblemished, with a subtle horizontal band of darker shading near the base that suggests a natural sediment layer."
+differs = "The smaller, more compact choice, with a domed top and sediment band, ideal for tight clusters or ground scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 50
+meshes = 1
+materials = 1
+size = [0.331289, 0.229846, 0.33686203]
+
+[mesh.sm_rock_04]
+name = "SM_Rock_04"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/SM_Rock_04.fbx"
+sha256 = "dd5b6c522b2996592f1eea71683754687ab939b7070fbb513d997aea68c42e01"
+atlas = "POLYGON - Nature Pack/PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad, angular boulder with a flat base and a gently sloped top, its faceted surface catching light in broad planes. The pale beige-grey stone is unmarked and clean, with a subtle darker patch on one side, giving it a smooth, weathered look."
+differs = "The larger, broader slab with a sloped top and side patch, best for flat terrain or as a low platform."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 66
+meshes = 1
+materials = 1
+size = [0.625233, 0.281138, 0.40456802]
+
+[mesh.sm_wep_ammo_bulletlarge_01]
+name = "SM_Wep_Ammo_BulletLarge_01"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/SM_Wep_Ammo_BulletLarge_01.fbx"
+sha256 = "767cc18f18d7796846af6795951206a137bb24888b0611618c018d8185a06872"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A long, faceted golden cartridge with a flat base and a tapered neck, ending in a dark grey tip that suggests a primer or projectile. The low-poly geometry gives it a clean, stylized look, and the uniform metallic yellow finish makes it read as a single, unadorned round of ammunition."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 44
+meshes = 1
+materials = 1
+size = [0.013694, 0.01186, 0.057377003]
+
+[mesh.sunshafts]
+name = "SunShafts"
+pack = "polygon_particle_fx_pack"
+source = "Source Files/FBX/SunShafts.fbx"
+sha256 = "c580e93743311c9905794d42239bcffbe552c641cfa529bec9d97867741f2a8a"
+atlas = "PolygonParticles_Texture_01_A.png"
+textures = "PolygonParticles_Texture_01_A.png"
+description = "A tall, narrow vertical plane with a subtle central crease, rendered in dark grey with faint iridescent rainbow highlights along its edges. The surface appears semi-transparent and glassy, suggesting a light beam or energy shaft effect."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.01, 0.03592, 0.01]

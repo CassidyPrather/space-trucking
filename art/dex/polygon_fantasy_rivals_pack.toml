@@ -1,0 +1,1322 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.characters]
+name = "Characters"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/Characters.fbx"
+sha256 = "ea3d590297e15456c880f760a9e11fde4e96b12500079f48890d7921cb91f000"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A tall, robed humanoid in a T-pose, crowned with a jagged, antler-like headdress and a dark, ornate mask. The long, layered skirt is a muted green with gold trim and a central emblem, while the upper body is clad in dark, textured armour with gold accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 30125
+meshes = 10
+materials = 10
+size = [2.10789, 2.212581, 0.605387]
+
+[mesh.characters_br]
+name = "Characters_BR"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/Characters_BR.fbx"
+sha256 = "8fce0877e860e1db86063b625bbda73bad00a727c8d3c88c3526d3e8d0911e53"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A bulky, hunched humanoid in a T-pose, clad in ragged, layered armor and furs in muted browns, tans, and dull greens. The figure wears a horned helmet and carries a heavy, worn shield on its left arm, suggesting a rugged, battle-scarred warrior or barbarian."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56325
+meshes = 11
+materials = 11
+size = [3.070715, 2.068068, 0.809537]
+
+[mesh.fx_runes]
+name = "FX_Runes"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/FX_Runes.fbx"
+sha256 = "406675f156f75306518981a2dd47046a4d36abb53a5cb6baa41ad4565d07a276"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Runes.png"
+description = "A flat, circular stone slab with a dark grey, mottled surface, featuring a raised, segmented ring of white and black blocks around its edge. The centre is marked with a vibrant, rainbow-coloured arc and faint, glowing runic symbols, giving it a magical, arcane appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 2
+materials = 1
+size = [1.0, 1.0, 0.0]
+
+[mesh.medusa_snakes]
+name = "Medusa_Snakes"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/Medusa_Snakes.fbx"
+sha256 = "791e101127195c44824df76cd83792b198423cbc0a836aca2aca48ece57b2d81"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A cluster of five thick, dark green snakes with pale underbellies and small red-tipped heads, coiled into a dense, writhing knot with no visible body or face. The low-poly forms are smooth and matte, suggesting a living hazard or trap to scatter across a dungeon floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1200
+meshes = 1
+materials = 1
+size = [0.695734, 0.452723, 0.566833]
+
+[mesh.mystic_arms]
+name = "Mystic_Arms"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/Mystic_Arms.fbx"
+sha256 = "362f651c38523b4ea1f5399987e4f6fc41a00b5d18b5af9400131c016f6c2186"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Arms.tga"
+description = "A skeletal, mechanical armature of pale grey metal, its thin, angular struts and joints forming a wide, claw-like frame. Red and green accents on the tips and small, glowing yellow nodes suggest a magical or energy-based function, giving it a fragile, ceremonial appearance rather than a weapon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 552
+meshes = 1
+materials = 1
+size = [1.617033, 0.31424, 0.398448]
+
+[mesh.sk_arms_lower_01]
+name = "SK_Arms_Lower_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_Arms_Lower_01.fbx"
+sha256 = "e5a48df49ccab5f942bb5bd8b912c6a228849197dfee073c3cbee3be3350a4a7"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Arms.tga"
+description = "A pair of skeletal, mechanical arms with exposed joints and thin, segmented limbs, painted in weathered white with red and green accents. The design suggests a robotic or undead creature, with a worn, utilitarian look that fits a fantasy or sci-fi setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 552
+meshes = 1
+materials = 1
+size = [1.617034, 0.314255, 0.39844698]
+
+[mesh.sk_arms_upper_01]
+name = "SK_Arms_Upper_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_Arms_Upper_01.fbx"
+sha256 = "f9b2447cdd324e33bda9dc34febb1c95e4ce9400d2b580d1a61270a82893c828"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Arms.tga"
+description = "A pair of pale, gaunt humanoid arms with long, spindly fingers, each tipped with a sharp, dark claw. The limbs are marked with red and green paint or blood, and the hands are posed in a grasping, reaching gesture, suggesting a zombie or undead creature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 552
+meshes = 1
+materials = 1
+size = [1.617034, 0.314255, 0.39844698]
+
+[mesh.sk_br_character_barbariangiant_01]
+name = "SK_BR_Character_BarbarianGiant_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_BR_Character_BarbarianGiant_01.fbx"
+sha256 = "18f003b6393a8a864a54cc77f00b54699bfebd2af97bb34387f27924ec2c28da"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A hulking, broad-shouldered brute in a T-pose, with a grey beard and a fur-trimmed grey hood. He wears a red and brown kilt with a belt, brown bracers, and boots, while his pale blue hands are clenched into fists, suggesting a brawler or heavy melee fighter."
+differs = "Identical to the other asset in geometry and texture; no distinguishing features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4324
+meshes = 1
+materials = 1
+size = [2.889158, 1.8343799, 0.529791]
+
+[mesh.sk_br_character_barbariangiant_01_2]
+name = "SK_BR_Character_BarbarianGiant_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_BR_Character_BarbarianGiant_01.fbx"
+sha256 = "ecdcce9bf1b25dd207370f6c8781352313bbcd1c08d7fcd46e8e092e8ccfe469"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A hulking, broad-shouldered giant in a T-pose, wearing a grey tunic with a red skirt and brown leather straps. He has a thick grey beard, a fur-trimmed hood, and pale blue skin on his hands and face, with a weathered, battle-worn appearance suited for a fantasy melee brute."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4324
+meshes = 1
+materials = 1
+size = [2.889158, 1.8343799, 0.529791]
+
+[mesh.sk_br_character_big_ork_01]
+name = "SK_BR_Character_Big_Ork_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_BR_Character_Big_Ork_01.fbx"
+sha256 = "28190ab5356c8c24f4152c7a0a2c078f90e4e19524c29305e2e3fe73a88f048a"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A hulking, broad-shouldered orc in a T-pose, wearing a patchwork of mossy green and brown leather armor with a fur collar and a tattered loincloth. The figure has a heavy, hunched posture, a prominent underbite with tusks, and a weathered, battle-worn appearance."
+differs = "Identical to the other asset in geometry and texture; the only difference is the description, not the model."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6112
+meshes = 1
+materials = 1
+size = [2.889158, 1.86137, 0.582777]
+
+[mesh.sk_br_character_big_ork_01_2]
+name = "SK_BR_Character_Big_Ork_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_BR_Character_Big_Ork_01.fbx"
+sha256 = "73b037e369ae0b2187538d09cea90aa89985d7b9e77752037c204972be225df3"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A hulking, broad-shouldered orc in a T-pose, with a hunched, heavy build and a large, protruding jaw. It wears a tattered, moss-green tunic over a dark leather harness and belt, with a single shoulder pauldron and a fur-lined collar."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6112
+meshes = 1
+materials = 1
+size = [2.889158, 1.861372, 0.582777]
+
+[mesh.sk_br_character_dwarf_01]
+name = "SK_BR_Character_Dwarf_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_BR_Character_Dwarf_01.fbx"
+sha256 = "12d77592a582d907939c7fa8d4d3d837eadf9e754b79e057a1cb9cd1e50f5d84"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A stocky dwarf in a T-pose, with a long braided beard and hair, wearing a dark grey tunic with a purple hem, a brown leather chest strap, and dark boots. The figure has a stern expression and is textured in muted, earthy tones, ready for animation or placement in a fantasy game scene."
+differs = "Identical to the other asset in geometry and texture; no unique features, use for the same frontline fighter or tavern brawler roles."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3378
+meshes = 1
+materials = 1
+size = [2.889158, 1.986355, 0.619442]
+
+[mesh.sk_br_character_dwarf_01_2]
+name = "SK_BR_Character_Dwarf_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_BR_Character_Dwarf_01.fbx"
+sha256 = "5f17dcc49772682b8a06c1452e89e5b589f4e1ccf6d5196e1026536ed3cdcfe7"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A stocky dwarf in a T-pose, with a thick brown beard and hair, wearing a dark grey tunic with purple trim, a brown leather chest strap, and dark boots. He has a stern expression and a weathered, battle-ready look, making him ideal for a frontline fighter or tavern brawler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3378
+meshes = 1
+materials = 1
+size = [2.889158, 1.986357, 0.619441]
+
+[mesh.sk_br_character_elementalgolem_01]
+name = "SK_BR_Character_ElementalGolem_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_BR_Character_ElementalGolem_01.fbx"
+sha256 = "142397fd63bed01b2d55dfe7d10785a5691436fc8f9d4c984a3dc970607e6411"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A hulking humanoid golem of stacked, cracked grey stone, posed in a rigid T-pose. Its broad shoulders and chest are marked with a bright, glowing green energy that suggests a magical core or elemental power source."
+differs = "Identical to the other asset in every way; no unique features, size, or damage, so use is interchangeable."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3872
+meshes = 1
+materials = 1
+size = [2.892745, 1.823932, 0.554882]
+
+[mesh.sk_br_character_elementalgolem_01_2]
+name = "SK_BR_Character_ElementalGolem_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_BR_Character_ElementalGolem_01.fbx"
+sha256 = "bc0475ef26f83c9d24254e88f3074a073bc7d6f38ac9b56486661957eeb7fbf1"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A bulky, humanoid golem of stacked grey stone slabs, posed in a rigid T-pose with arms outstretched. Its broad shoulders and chest are marked with a bright, glowing green rune, while the head is a simple block with a single luminous eye."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3872
+meshes = 1
+materials = 1
+size = [2.892745, 1.823934, 0.554882]
+
+[mesh.sk_br_character_fortgolem_01]
+name = "SK_BR_Character_FortGolem_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_BR_Character_FortGolem_01.fbx"
+sha256 = "6be649472d91174dda8bbd2d789c0eddf14c35b79dcdc13a774d7690c909742f"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A bulky, broad-shouldered golem in a T-pose, built from chunky, cracked stone plates in a sandy tan hue with faint green mossy accents on its forearms, chest, and feet. Its blocky, segmented limbs and heavy, rounded torso suggest a slow, powerful guardian, while the weathered texture and subtle glowing green details..."
+differs = "Identical to the other asset in geometry and texture; only the descriptive text differs, so choose either for the same use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7511
+meshes = 1
+materials = 1
+size = [2.890168, 1.882671, 0.638995]
+
+[mesh.sk_br_character_fortgolem_01_2]
+name = "SK_BR_Character_FortGolem_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_BR_Character_FortGolem_01.fbx"
+sha256 = "7caf497e2af2572431c5a2557bf9c3c88fb04b2daac75ef73753cea4c22b815b"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A bulky, broad-shouldered stone golem in a T-pose, built from chunky, weathered tan rock slabs with a single glowing green eye and matching green crystals embedded in its chest and legs. Its blocky, low-poly silhouette and cracked, mossy texture suggest an ancient, magical guardian, ideal for a fantasy battlefield or.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7511
+meshes = 1
+materials = 1
+size = [2.890168, 1.882672, 0.638996]
+
+[mesh.sk_br_character_mechanicalgolem_01]
+name = "SK_BR_Character_MechanicalGolem_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_BR_Character_MechanicalGolem_01.fbx"
+sha256 = "7b1f0fc03591f6b151f688263ad6bfe63de7afc54fab842e85349f6ab349960f"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A bulky, humanoid construct of weathered grey stone and tarnished metal, posed in a T-pose. It features broad, layered shoulder pauldrons, a glowing orange core in the chest, and a heavy, blocky head with a single central eye."
+differs = "Identical to the other asset in geometry and size; only the core color and head spikes differ, so use it for a warmer, orange-eyed guardian variant."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5702
+meshes = 1
+materials = 1
+size = [2.889158, 1.790884, 0.576527]
+
+[mesh.sk_br_character_mechanicalgolem_01_2]
+name = "SK_BR_Character_MechanicalGolem_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_BR_Character_MechanicalGolem_01.fbx"
+sha256 = "63880c38ec53e095e5192e3534548020bc67fab42c660fc4616c20ac538eadb7"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A bulky, humanoid construct of weathered grey stone and dark metal, posed in a rigid T-pose with broad, blocky shoulders and thick, segmented limbs. Its chest features a glowing red circular core, and the head is crowned with jagged spikes, giving it a menacing, ancient guardian appearance suited for fantasy battle..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5702
+meshes = 1
+materials = 1
+size = [2.889158, 1.790886, 0.576527]
+
+[mesh.sk_br_character_mutantguy_01]
+name = "SK_BR_Character_MutantGuy_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_BR_Character_MutantGuy_01.fbx"
+sha256 = "aaadea77f389897d75e1b2cce5910c5655d720598dfa96f00bf556a80d4dbd23"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A hulking, hunched humanoid with a bloated torso and short, thick legs, posed in a T-pose with arms outstretched. Its skin is a mottled, sickly green with patches of red, and it wears tattered, dark brown rags around its waist and shoulders."
+differs = "Identical to its sibling in geometry and texture; only the description differs, so pick either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6810
+meshes = 1
+materials = 1
+size = [3.0690799, 1.951877, 0.809537]
+
+[mesh.sk_br_character_mutantguy_01_2]
+name = "SK_BR_Character_MutantGuy_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_BR_Character_MutantGuy_01.fbx"
+sha256 = "c9182af750e3cf566160fc27e575528583b6669c9b50edf50a4f480ca8ded489"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A hulking, hunched humanoid with a heavily mutated, lumpy physique, its arms are outstretched in a menacing T-pose. The skin is a mottled, sickly green with darker patches and exposed reddish flesh, suggesting a feral, battle-worn creature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6810
+meshes = 1
+materials = 1
+size = [3.0690799, 1.951879, 0.809537]
+
+[mesh.sk_br_character_pig_butcher_01]
+name = "SK_BR_Character_Pig_Butcher_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_BR_Character_Pig_Butcher_01.fbx"
+sha256 = "3d979e848c220a8622138b5f84ffc9e24d1ebf47d355a329409f01b91ad3ad1a"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A stocky humanoid in a T-pose, wearing a pale, blood-flecked apron over a grimy white shirt and dark trousers, with a cleaver gripped in one hand and a stained cloth in the other, suggesting a butcher or meat-worker."
+differs = "Human variant, plainest, no pig features, for a human NPC butcher."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4088
+meshes = 1
+materials = 1
+size = [2.889156, 1.821945, 0.767257]
+
+[mesh.sk_br_character_pig_butcher_01_2]
+name = "SK_BR_Character_Pig_Butcher_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_BR_Character_Pig_Butcher_01.fbx"
+sha256 = "128870b7720d39e0f7eb5e7cdbdfb3e1702ed30fb30bb9c0a5f0ca4aa494be6f"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A rotund, bipedal pig-man in a T-pose, clad in a blood-stained white apron and a matching cap, with a cleaver gripped in one hand and a hook in the other. The low-poly model features a pale pink hide, a snout, and small tusks, with a dark, grimy texture that suggests a working butcher."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4088
+meshes = 1
+materials = 1
+size = [2.889155, 1.8219459, 0.767256]
+
+[mesh.sk_br_character_reddemon_01]
+name = "SK_BR_Character_RedDemon_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_BR_Character_RedDemon_01.fbx"
+sha256 = "139720bb3526a5608a6f1a07bedaf09fc5a546b9b91c6aa21eec7cf1ee0323ca"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A muscular, horned demon in a rigid T-pose, wearing a dark loincloth with gold trim and a matching belt. Its skin is a deep crimson, with contrasting yellow horns and hooves, and a dark mane of hair. The figure is a classic fantasy enemy, ready for animation, with a slightly weathered, low-poly aesthetic."
+differs = "Identical to the other asset; same mesh, textures, and dimensions, with no distinguishing features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5472
+meshes = 1
+materials = 1
+size = [2.889158, 2.052681, 0.545241]
+
+[mesh.sk_br_character_reddemon_01_2]
+name = "SK_BR_Character_RedDemon_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_BR_Character_RedDemon_01.fbx"
+sha256 = "8503e3cffe1f10467fd7686f9fae31d862f03e88d9b83ce32d99f7f45bcf560f"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A muscular, horned humanoid in a T-pose, with dark crimson skin, a bare chest, and a yellow-green loincloth with a dark belt. It wears a horned headdress and armbands, with a stoic, aggressive stance suited for a melee enemy or boss."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5472
+meshes = 1
+materials = 1
+size = [2.889158, 2.0526829, 0.545241]
+
+[mesh.sk_br_character_slayer_01]
+name = "SK_BR_Character_Slayer_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_BR_Character_Slayer_01.fbx"
+sha256 = "7583fbbf4262832eb0d634ddc21bc414ba962e7572e2ba47c2553d01b724e705"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A bulky humanoid in a T-pose, clad in heavy, tarnished grey plate armour with a prominent orange tabard hanging from the waist. The helmet is fully enclosed with a narrow visor, and the shoulders are broad and layered, giving it a menacing, knight-like silhouette."
+differs = "Identical to the other asset in geometry and texture; only the description differs, so pick either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5022
+meshes = 1
+materials = 1
+size = [2.889158, 1.8532, 0.642915]
+
+[mesh.sk_br_character_slayer_01_2]
+name = "SK_BR_Character_Slayer_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_BR_Character_Slayer_01.fbx"
+sha256 = "8690a004de8de455bed8a6dcb88abf6bafd32f4ff255deeaf085bed13bf078fb"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A bulky humanoid in a T-pose, clad in heavy, weathered grey plate armour with a spiked pauldron on the left shoulder and a tattered orange tabard hanging from the waist. The helmet is fully enclosed, and the overall look is that of a battle-worn knight or juggernaut, with a muted, gritty palette that suggests a..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5022
+meshes = 1
+materials = 1
+size = [2.889158, 1.853202, 0.642915]
+
+[mesh.sk_br_character_troll_01]
+name = "SK_BR_Character_Troll_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_BR_Character_Troll_01.fbx"
+sha256 = "f77d6d5d4aa2c2c331cc89aacf58d50e62917888aac7a41fd6b69f3dd184ff7e"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A bulky, hunched humanoid in a T-pose with a massive upper body and short legs, wearing a tattered tan loincloth and dark leather straps. Its skin is a pale, sickly green with a lighter belly, and it has a small head with a heavy brow and a protruding jaw."
+differs = "Bare-chested with a tan loincloth and no hood, the plainest of the two, best for a basic melee grunt."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4034
+meshes = 1
+materials = 1
+size = [2.889158, 1.8175219, 0.53938603]
+
+[mesh.sk_br_character_troll_01_2]
+name = "SK_BR_Character_Troll_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_BR_Character_Troll_01.fbx"
+sha256 = "f7ecab1c56bece903a2b27155dbe681e8973f860e2a6945eb2b53a5d78382280"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A bulky, hunched humanoid with a massive upper body and short legs, posed in a T-pose. It wears tattered, pale-yellow cloth over dark leather, with a hooded cowl and a large, round belly. The skin is a sickly green, and the overall look is that of a brutish, primitive creature ready for melee combat."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4034
+meshes = 1
+materials = 1
+size = [2.889158, 1.8175219, 0.53938603]
+
+[mesh.sk_character_ancient_warrior_01]
+name = "SK_Character_Ancient_Warrior_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_Character_Ancient_Warrior_01.fbx"
+sha256 = "b05d097e9362f6c78e0d86bbac083dc5187e018f2eaecf0adc78a2062bf36c6e"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A tall, slender humanoid in a T-pose, clad in a dark, segmented cuirass with gold trim and a white skirt. A horned, crested helmet and layered greaves complete the set, with a blue and gold palette that reads as an ancient, ceremonial guardian."
+differs = "Identical to the other asset; same mesh, palette, and proportions, with no distinguishing features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3286
+meshes = 1
+materials = 1
+size = [2.047637, 2.093453, 0.605387]
+
+[mesh.sk_character_ancient_warrior_01_2]
+name = "SK_Character_Ancient_Warrior_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_Character_Ancient_Warrior_01.fbx"
+sha256 = "ffbb1c31f88af458eed0a46b42276ef1a8ee5ecf88e29a8753925bf4236dc679"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A tall, imposing humanoid in a T-pose, clad in dark, weathered armour with a white tabard and a horned helmet. The figure is marked by gold trim and blue accents, suggesting a high-ranking or elite warrior. The design is angular and stylized, fitting a fantasy setting, with a stern, battle-ready appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3286
+meshes = 1
+materials = 1
+size = [2.047637, 2.093453, 0.605387]
+
+[mesh.sk_character_ancientqueen_01]
+name = "SK_Character_AncientQueen_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_Character_AncientQueen_01.fbx"
+sha256 = "2fc209091c94e1c173f0240cd07d3bf453a28613cb8834e0f3fd5796efd12140"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A regal female figure in a T-pose, wearing a tall, ornate crown and a layered blue and white gown with gold trim. The dress features a high collar and a long, flowing skirt with red accents, while the arms are extended horizontally."
+differs = "Identical to the other asset in geometry, texture, and dimensions; no unique traits or uses."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3341
+meshes = 1
+materials = 1
+size = [2.0413299, 1.983877, 0.311946]
+
+[mesh.sk_character_ancientqueen_01_2]
+name = "SK_Character_AncientQueen_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_Character_AncientQueen_01.fbx"
+sha256 = "ad53d5e3bb90d030ea5d75f967d8426e538ea10d971b8780c995f5dee6589bc9"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A regal female figure in a T-pose, wearing a blue and white gown with gold trim and a tall, ornate crown. She has pale skin and a stern expression, with a red sash and layered skirt panels. The low-poly style gives her a stylized, game-ready appearance suitable for a fantasy ruler or boss character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3341
+meshes = 1
+materials = 1
+size = [2.0413299, 1.983877, 0.311946]
+
+[mesh.sk_character_darkelf_01]
+name = "SK_Character_DarkElf_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_Character_DarkElf_01.fbx"
+sha256 = "900b49df99d6ec4df84ccea5552b2b9acdde602ba5e7402490c102f276e65d16"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "Slender humanoid in a T-pose with long white hair, pale skin, and dark grey leather armour with purple accents. The outfit includes a layered tunic, bracers, and tall boots, giving a stealthy, agile appearance suited for a rogue or ranger archetype."
+differs = "Identical to its sibling in geometry and pose; only the armour's purple hue and silver trim differ, suiting a rogue or ranger."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2818
+meshes = 1
+materials = 1
+size = [2.047514, 1.830501, 0.323933]
+
+[mesh.sk_character_darkelf_01_2]
+name = "SK_Character_DarkElf_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_Character_DarkElf_01.fbx"
+sha256 = "b70136fc1e1d63986d425ba96e94299305df669c2653a76ed6642a5a66e9296a"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "Slender humanoid in a T-pose with long white hair, pale skin, and dark purple-grey leather armour with silver trim, including a chest piece, bracers, and tall boots, suggesting a nimble rogue or ranger archetype."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2818
+meshes = 1
+materials = 1
+size = [2.047514, 1.830501, 0.323933]
+
+[mesh.sk_character_evilgod_01]
+name = "SK_Character_EvilGod_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_Character_EvilGod_01.fbx"
+sha256 = "62ee60d17f73cfdffdaf8a601b4195591841977a8f8c26b01089703fe052c175"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, humanoid figure in a T-pose, rendered in a dark, monochrome palette of greys and blacks. The torso is heavily armoured with a segmented chest plate and a prominent, horned helmet, while the limbs are thin and skeletal, suggesting a gaunt, undead or demonic nature."
+differs = "Dark monochrome palette with horned helmet, suited for a demonic or undead boss."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2736
+meshes = 1
+materials = 1
+size = [2.037898, 1.8982271, 0.28276902]
+
+[mesh.sk_character_evilgod_01_2]
+name = "SK_Character_EvilGod_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_Character_EvilGod_01.fbx"
+sha256 = "baea5c830c63f5ddf7cf75174e1c2b2c2e2b42d0bcd3ae848163da40e8d45934"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, humanoid figure in a T-pose, rendered in a flat, untextured grey, with a tall, pointed crown or headdress and a narrow, segmented torso. The proportions are elongated and thin, with spindly arms and legs, giving it a skeletal or spectral appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2736
+meshes = 1
+materials = 1
+size = [2.037898, 1.8982271, 0.28276902]
+
+[mesh.sk_character_forestguardian_01]
+name = "SK_Character_ForestGuardian_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_Character_ForestGuardian_01.fbx"
+sha256 = "a4ffc9d48dfdb9f4b3a4b5b4950a72cb43aa94b48524cec7c68104c53099e0ee"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, antlered humanoid in a T-pose, wearing a pale bone-like mask and a tattered brown leather tunic with a rope belt. The figure's arms and legs are wrapped in dark cloth, and the overall look is that of a mystical, forest-dwelling guardian, with a weathered, earthy palette of browns, greys, and muted greens."
+differs = "The bone-masked variant is the more mystical, less visceral option, ideal for a neutral forest spirit or druid NPC."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3608
+meshes = 1
+materials = 1
+size = [2.04133, 2.193558, 0.35904902]
+
+[mesh.sk_character_forestguardian_01_2]
+name = "SK_Character_ForestGuardian_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_Character_ForestGuardian_01.fbx"
+sha256 = "0bd40549ff0f37f003a6895e46ec7c894651452a091119596fc811784ec96e7c"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, humanoid forest guardian with a stag's skull for a head, crowned by tall, branching antlers. It wears a tattered, layered brown tunic and skirt, with pale, bone-like arms and legs, and a small, glowing red heart visible in its chest cavity."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3608
+meshes = 1
+materials = 1
+size = [2.04133, 2.193558, 0.35904902]
+
+[mesh.sk_character_forestwitch_01]
+name = "SK_Character_ForestWitch_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_Character_ForestWitch_01.fbx"
+sha256 = "60be6e37f73cf086cc463cab7b34f28cb05657a128b118fca9dd2b583ca7a462"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender humanoid figure in a long, floor-length gown of muted green and brown, posed in a rigid T-pose. The head is crowned with a jagged, twig-like headdress, and the arms are extended straight out, ending in simple hands."
+differs = "Identical to its sibling in every way; no unique traits, use for either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3225
+meshes = 1
+materials = 1
+size = [2.04133, 1.906148, 0.426703]
+
+[mesh.sk_character_forestwitch_01_2]
+name = "SK_Character_ForestWitch_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_Character_ForestWitch_01.fbx"
+sha256 = "d1e405c1632ce600cf8e265e5a59f8b35689130a253bef0e83cae63b077c06ac"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender humanoid in a floor-length green gown with a brown bodice and a tattered hem, posed in a T-pose with arms outstretched. The figure wears a dark, twig-like headdress and has a pale face, suggesting a woodland or swamp-dwelling sorceress."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3225
+meshes = 1
+materials = 1
+size = [2.04133, 1.906148, 0.426703]
+
+[mesh.sk_character_medusa_01]
+name = "SK_Character_Medusa_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_Character_Medusa_01.fbx"
+sha256 = "fbfda82f71d174e6ba8bd72679f610aaa624978efa03ad174c6608238c1a853d"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender humanoid in a T-pose, with a pale, scaled torso and a head crowned by a mass of dark, writhing snakes. The figure wears a dark, tattered skirt and armbands, with greenish-gold accents on the limbs and face, giving it a mythic, serpentine appearance."
+differs = "Identical to the other asset in geometry and texture; only the description's wording differs, so choose either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4199
+meshes = 1
+materials = 1
+size = [2.10789, 1.872088, 0.353094]
+
+[mesh.sk_character_medusa_01_2]
+name = "SK_Character_Medusa_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_Character_Medusa_01.fbx"
+sha256 = "86264dcdcb3e1d05922274c206226e9025b4d0385971078d94157d11cd6862e9"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender female figure in a T-pose, her head crowned with a mass of dark, writhing snakes. She wears a tattered, earthy-toned skirt and a simple top, with greenish skin and a stoic, serpentine presence that reads clearly as a mythological gorgon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4199
+meshes = 1
+materials = 1
+size = [2.10789, 1.872088, 0.353094]
+
+[mesh.sk_character_mystic_01]
+name = "SK_Character_Mystic_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_Character_Mystic_01.fbx"
+sha256 = "5fe8e81be146344899f1964139bd2afe3f9f6b9a80ce639909ccbe787efeb9cf"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender humanoid in a T-pose, clad in a blue tunic with gold trim and a matching blue headdress, with bare arms and legs. The figure appears to be a stylized mystic or priest, with a simple, low-poly design and a slightly weathered, textured finish."
+differs = "Wears a headdress and is more weathered, suited for a priest or mystic role."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3084
+meshes = 1
+materials = 1
+size = [2.047514, 1.859484, 0.473825]
+
+[mesh.sk_character_mystic_01_2]
+name = "SK_Character_Mystic_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_Character_Mystic_01.fbx"
+sha256 = "c37de433490e1d1872de874aa9142210b5a317cb4d85f8538ef661b901069b14"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender humanoid in a T-pose, clad in a blue tunic with gold trim and a matching blue hood, with bare legs and sandals. The low-poly figure has a pale face and a simple, clean design, appearing ready for animation or use as a spellcaster or monk character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3084
+meshes = 1
+materials = 1
+size = [2.047514, 1.859484, 0.473825]
+
+[mesh.sk_character_spiritdemon]
+name = "SK_Character_SpiritDemon"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/Unreal_Characters/SK_Character_SpiritDemon.fbx"
+sha256 = "daccbdfc7966ba880741b760b0586b4c7191d9136eb4f4af150f50e5255822b5"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, horned humanoid in a T-pose, wearing a rust-red and bone-white harness with a loincloth and arm wraps. The dark, curved horns and pointed ears give it a demonic silhouette, while the muted, earthy palette and simple textures suggest a low-poly fantasy enemy or summon."
+differs = "Neutral T-pose, upright stance, and clean harness make it a standard rigged enemy for idle or spawn animations."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3816
+meshes = 1
+materials = 2
+size = [2.04133, 1.94136, 0.430585]
+
+[mesh.sk_character_spiritdemon_2]
+name = "SK_Character_SpiritDemon"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_Character_SpiritDemon.fbx"
+sha256 = "e11f8fb1f38c7e7e0f1ff1a2665254f242687bd1d0c08e32dae5a0547f1fba14"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, hunched humanoid with long, spindly arms and digitigrade legs, posed in a floating, aggressive stance. Its skin is a deep, mottled red with dark, jagged markings, and it wears tattered white cloth wrappings around its torso and limbs."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3816
+meshes = 1
+materials = 2
+size = [2.04133, 1.941361, 0.430584]
+
+[mesh.sk_medusasnakes_01]
+name = "SK_MedusaSnakes_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/Characters/SK_MedusaSnakes_01.fbx"
+sha256 = "75d8c8814728d5891aa653f051d05acecef6e866290d1de648ef9ea573f8b00e"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A cluster of dark green serpents with pale pinkish snouts, coiled and intertwined in a loose, dynamic knot. The low-poly forms show individual heads and tails, suggesting a living, writhing mass rather than a static object. The muted, matte finish gives it a naturalistic, slightly weathered appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1200
+meshes = 1
+materials = 1
+size = [0.69573, 0.452719, 0.566835]
+
+[mesh.sm_base_dirt_01]
+name = "SM_Base_Dirt_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Base_Dirt_01.fbx"
+sha256 = "d43e7bf0655172d0b7b99799bb1520b3b811d089a5774a880fb89fa5e816a12b"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A flat, roughly circular patch of earth with a slightly irregular, low-poly rim, rendered in muted browns and greys. Scattered pebbles and small stones are embedded across the surface, giving it a natural, uneven texture. It serves as a simple, versatile ground decal for outdoor scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 646
+meshes = 1
+materials = 1
+size = [4.993336, 0.469453, 4.993336]
+
+[mesh.sm_base_dungeon_01]
+name = "SM_Base_Dungeon_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Base_Dungeon_01.fbx"
+sha256 = "7121bedcee7c94f9b01b2c81466de46d7ea00d9ab5b6e3fb757000dc2369ce49"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A low, roughly circular stone platform with a chipped, uneven rim, its surface broken by a shallow, jagged fissure running across the middle. The dark grey rock is textured with cracks and weathering, giving it the look of an ancient, ruined floor tile or a natural stepping stone for a dungeon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 864
+meshes = 1
+materials = 1
+size = [4.970496, 0.441626, 4.963796]
+
+[mesh.sm_base_grass_01]
+name = "SM_Base_Grass_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Base_Grass_01.fbx"
+sha256 = "99e367557666ae0c96e8e6ec71c7cfb7acaff6099f19ce922bfe45c84f81d1a5"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A low, irregular disc of mossy green earth with a dark, rocky underside, topped with a few sparse, spiky tufts of pale green grass. The surface is flat and uncluttered, making it ideal as a subtle ground patch or a base for other props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1346
+meshes = 1
+materials = 1
+size = [4.993336, 1.459678, 4.993336]
+
+[mesh.sm_base_mechanical_01]
+name = "SM_Base_Mechanical_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Base_Mechanical_01.fbx"
+sha256 = "925000a3f131e799d210d96a8353fe0e988affe341892275fc234a84cfcf7137"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A low, flat circular base of dark, weathered metal, scattered with broken brass gears and cogs of varying sizes, suggesting a discarded mechanical component or a steampunk-themed platform. The surface is worn and tarnished, with the golden gears providing a stark contrast against the dark, matte metal, evoking a sense."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1316
+meshes = 1
+materials = 1
+size = [4.993336, 0.933277, 4.993336]
+
+[mesh.sm_base_rock_01]
+name = "SM_Base_Rock_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Base_Rock_01.fbx"
+sha256 = "6ac1429426f0b61a2c99e30b7f2b6fa6b8930ecc34bf6585ed33cd109750de10"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A squat, low-poly slab of grey stone with a flat, slightly uneven top and a darker, jagged base. Its surface is broken by a few shallow cracks and small raised ridges, giving it a weathered, natural look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1012
+meshes = 1
+materials = 1
+size = [4.993334, 0.804386, 4.993334]
+
+[mesh.sm_prop_backharness_01]
+name = "SM_Prop_Backharness_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Backharness_01.fbx"
+sha256 = "ec059c5fb232e1bddaf66e8b34a3329840a7e8530c13844dda356506a8f2d716"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A weathered wooden frame with four vertical posts and a slatted back panel, bound by thick rope lashings at the corners. The pale, greyish-brown timber shows visible grain and wear, suggesting a sturdy, utilitarian pack frame or harness for carrying loads in a rustic fantasy setting."
+differs = "The slatted back and shallowest depth make it a pure pack frame, not a sled."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1196
+meshes = 1
+materials = 1
+size = [0.74139, 0.754333, 0.185799]
+
+[mesh.sm_prop_backharness_02]
+name = "SM_Prop_Backharness_02"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Backharness_02.fbx"
+sha256 = "22dc892f1a764ce93ab971edcecc04738c6adac1ea488b1613a8f9b2443adf5c"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A weathered wooden frame with four corner posts, a solid back panel, and a rope cross-lacing that suggests a portable carrying harness or a small sled. The pale, worn timber and simple construction give it a rustic, utilitarian look, ideal for a fantasy setting where it could be used to haul supplies or gear."
+differs = "The only one with a solid back panel and cross-lacing, sized as a small sled."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2046
+meshes = 1
+materials = 1
+size = [0.74139, 0.754333, 0.57767797]
+
+[mesh.sm_prop_backharness_03]
+name = "SM_Prop_Backharness_03"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Backharness_03.fbx"
+sha256 = "1b75e6e5ed51fe92547dfddcad5cd808bbcfd5ca99dcf2d2a097de0ed1b1fffe"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A sturdy wooden frame with four corner posts and a rope lashing holds a heavy load of jagged grey boulders, suggesting a mining or quarrying sled. The pale timber and off-white rope are clean and unweathered, giving it a fresh, functional look."
+differs = "The only one loaded with boulders, the largest and most detailed, for quarry hauling."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3520
+meshes = 1
+materials = 1
+size = [0.74139, 0.77284396, 0.594975]
+
+[mesh.sm_prop_bones_01]
+name = "SM_Prop_Bones_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Bones_01.fbx"
+sha256 = "620f172b90d3e8b9c37429a8c060ca9a53ad95d844ca45b082870d3c17911b97"
+atlas = "POLYGON - Dungeons Map/Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A small pile of three weathered, pale-bone-coloured long bones, crossed and resting together, with knobby joints and a matte, slightly stained surface suggesting age and decay, ideal for dungeon or crypt floor clutter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 176
+meshes = 1
+materials = 1
+size = [0.57967, 0.172056, 0.84009]
+
+[mesh.sm_prop_mushroom_01]
+name = "SM_Prop_Mushroom_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Mushroom_01.fbx"
+sha256 = "76880055be7540c9d567cdd64e4b34b907a927f64efbe36e0d1ab0bd413e9177"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A cluster of three low-poly mushrooms with faceted, dusty-red caps and pale, curved stems that bend and intertwine, suggesting a natural, organic growth. The simple, stylized geometry and muted, earthy palette make it a versatile prop for fantasy environments, adding a touch of whimsical detail without visual clutter."
+differs = "The largest and most detailed, a triple cluster for dense forest-floor dressing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 294
+meshes = 1
+materials = 1
+size = [0.163789, 0.303754, 0.199013]
+
+[mesh.sm_prop_mushroom_02]
+name = "SM_Prop_Mushroom_02"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Mushroom_02.fbx"
+sha256 = "6c940d2380d04f0a3b121fa7a35975b1b9eeedde0a589269b77b480a8dc0ffed"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A squat, faceted mushroom with a broad, dusty-red cap and a pale, curved stalk that bends sharply near the base, giving it a slightly wilted or wind-blown appearance. The low-poly geometry and muted, earthy palette make it a natural fit for a forest floor or a ruined fantasy environment, offering a more organic and..."
+differs = "The smallest and plainest, a single bent stalk for sparse, wind-blown accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 112
+meshes = 1
+materials = 1
+size = [0.104046, 0.24926001, 0.154486]
+
+[mesh.sm_prop_pouch_01]
+name = "SM_Prop_Pouch_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Pouch_01.fbx"
+sha256 = "c7eb87d0f9b5a1e7ba0f3a8508f562c1712ee7e7293a3eafe687972d16354fd4"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A blocky, rectangular satchel with a slightly bulging profile, secured by two pale tan straps and a dark metal buckle. The dark brown leather is scuffed and weathered, with a small white patch on one end, suggesting a worn, well-used travel bag."
+differs = "Most damaged and weathered, with a white patch and dual straps, ideal for a worn travel bag."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 280
+meshes = 1
+materials = 1
+size = [0.212662, 0.14985299, 0.099693]
+
+[mesh.sm_prop_pouch_02]
+name = "SM_Prop_Pouch_02"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Pouch_02.fbx"
+sha256 = "f9406219605ca45bed0d8f3fe3bf822253ec106303c3f2d24ed04b7867ba6ca1"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A blocky, low-poly satchel with a dark brown body and a lighter tan central strap, secured by a small grey buckle and a hanging leather flap. The chunky, angular silhouette suggests a rugged adventurer's bag, with a slightly worn, matte finish that fits a fantasy setting."
+differs = "Plainest and most rugged, with a single tan strap and hanging flap, suited for a basic adventurer's satchel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [0.18247, 0.14959, 0.084858]
+
+[mesh.sm_prop_pouch_03]
+name = "SM_Prop_Pouch_03"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Pouch_03.fbx"
+sha256 = "7b892700f50ba26df727413099cb0836621d8eb9131cb744b48f5199c2080080"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A compact, blocky satchel with a rounded top and a prominent front flap, featuring a small, square gold clasp. The dark charcoal leather-like material has a subtle sheen, and the strap is visible on the back, suggesting a functional, low-poly belt pouch for adventurers."
+differs = "Most detailed and sleek, with a gold clasp and rounded top, best for a refined belt pouch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 196
+meshes = 1
+materials = 1
+size = [0.220074, 0.246658, 0.099854]
+
+[mesh.sm_prop_pouch_bag_01]
+name = "SM_Prop_Pouch_Bag_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Pouch_Bag_01.fbx"
+sha256 = "6a0267c5a9fdf561b54bd2e20e8575abaaa8b0feb42c879418a0cb238bc42467"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A squat, faceted pouch with a wide, rounded base tapering to a cinched neck, tied with a dark brown band that leaves a flared, open rim. The plain tan leather is unadorned, giving it a simple, utilitarian look suited for carrying coins or small supplies."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 144
+meshes = 1
+materials = 1
+size = [0.131412, 0.208831, 0.131509]
+
+[mesh.sm_prop_skull_01]
+name = "SM_Prop_Skull_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Skull_01.fbx"
+sha256 = "58fa0285e0aa7ac181eb5034dfb802afab30aea87689fd5a09a1c8f81fd6b720"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A weathered, bone-white cranium with a broad, blocky dome and a heavy brow, featuring deep, square black eye sockets and a jagged, toothy jaw. The low-poly facets give it a chunky, stylized look, with a dark, hollowed nasal cavity and a slightly uneven surface that suggests age and exposure."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [0.233112, 0.25618, 0.29434198]
+
+[mesh.sm_prop_tree_01]
+name = "SM_Prop_Tree_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Tree_01.fbx"
+sha256 = "162e5df64a9c1e21938e2170968b80f7b9a59ff8bc50b6f66e030b677de20236"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A young, slender sapling with a curved brown trunk and a single, chunky, low-poly green canopy, plus a small side leaf cluster, giving it a whimsical, stylized look perfect for fantasy forests or gardens."
+differs = "Larger and taller with a side leaf cluster, ideal as a whimsical focal point in fantasy gardens."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 334
+meshes = 1
+materials = 1
+size = [0.202361, 0.452685, 0.170762]
+
+[mesh.sm_prop_tree_02]
+name = "SM_Prop_Tree_02"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_Tree_02.fbx"
+sha256 = "362f6933e62c6bcd21bbb5bb9a3e2202cf0640bd8e0d4567064e7e4d369264ce"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+wanted = "Texture_A1.png"
+description = "A young, low-poly sapling with a short, slightly curved brown trunk and a single, irregularly faceted green canopy. The foliage is a uniform, bright green with no visible fruit or flowers, giving it a clean, stylized look suitable for a forest or garden setting."
+differs = "Smaller and more compact with a single uniform canopy, best for dense forest undergrowth or background filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 366
+meshes = 1
+materials = 1
+size = [0.162203, 0.265889, 0.117422]
+
+[mesh.sm_prop_trollhelmet]
+name = "SM_Prop_TrollHelmet"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/OBJ/SM_Prop_TrollHelmet.obj"
+sha256 = "a6311cb616bd99d7f1a4fe63955621ce96c1344cd43d2ad57c92594dc15212e8"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A bulky, faceted helm with a broad domed crown and a single forward-swept horn, flanked by thick cheek guards that flare outward. Its untextured grey surface shows only sharp, angular planes, giving it a raw, unadorned look suited to a barbarian or orc chieftain."
+differs = "100x larger than its sibling, suited for giant-scale scenes or distant props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 444
+meshes = 1
+materials = 1
+size = [32.06294, 34.294254, 37.31232]
+
+[mesh.sm_prop_trollhelmet_01]
+name = "SM_Prop_TrollHelmet_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Prop_TrollHelmet_01.fbx"
+sha256 = "ea0b496a405a8551cf807f9ca14d69c519f701db2b68648886e31130a7ca7272"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A bulky, angular helmet with a domed crown and a prominent forward-pointing nasal spike, flanked by two large cheek guards that flare outward. The surface is a flat, untextured grey, showing only the faceted low-poly geometry and a single horizontal band across the brow, giving it a raw, unadorned look suitable for a.."
+differs = "Identical geometry to its sibling, only scaled down for close-up or small-character use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 444
+meshes = 1
+materials = 1
+size = [0.32063, 0.342942, 0.373124]
+
+[mesh.sm_wep_ancientqueen_01]
+name = "SM_Wep_AncientQueen_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_AncientQueen_01.fbx"
+sha256 = "72525ea2ac01309f5d229e4c08e24d7615ddc0ba85b27f4b578c28fdd9e244fc"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender ceremonial staff with a dark, near-black shaft and a bright gold head shaped as a coiled loop, suggesting a stylized serpent or crown. The gold is polished and reflective, contrasting with the matte dark wood, and the piece appears pristine and regal, clearly intended for a queen or high-ranking spellcaster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 414
+meshes = 1
+materials = 1
+size = [0.26731, 1.9857941, 0.11178]
+
+[mesh.sm_wep_ancientwarrior_01]
+name = "SM_Wep_AncientWarrior_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_AncientWarrior_01.fbx"
+sha256 = "f90aedad02f28007059be6792dde84bbf953c0f597b059b3e40831ce6f1dd57f"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, single-edged sword with a pronounced, sweeping curve, featuring a short, dark grip and a small, simple guard. The blade is a pale, polished gold with a subtle sheen, while the handle is a matte black, creating a stark contrast."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 396
+meshes = 1
+materials = 1
+size = [0.037526, 1.112311, 0.19483301]
+
+[mesh.sm_wep_barbariangiant_01]
+name = "SM_Wep_BarbarianGiant_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_BarbarianGiant_01.fbx"
+sha256 = "2cbc8f6e43f4d1acb697aa06f9f8cc81aaada5ae3629a6e306203712d138eabc"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A crude, heavy war club with a long, dark wooden haft and a thick, blocky stone head, bound with pale leather straps and wrapped with a grey cloth banner that hangs in tattered strips. The head is chipped and weathered, suggesting a brutal, primitive weapon for a giant or barbarian."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1110
+meshes = 1
+materials = 1
+size = [0.173733, 1.4385109, 0.905813]
+
+[mesh.sm_wep_bigork_01]
+name = "SM_Wep_BigOrk_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_BigOrk_01.fbx"
+sha256 = "509fdc7ea82e8f9231f7819df1bc8be899b1143c1ed61fe4a1342550ea273684"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A crude, heavy war hammer with a massive, blocky grey stone head bound to a gnarled, dark wooden haft by thick red cord. The shaft is wrapped in worn leather, and the weapon's chunky, brutalist silhouette suggests it is built for raw, unrefined force."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1286
+meshes = 1
+materials = 1
+size = [0.215954, 1.623067, 0.620869]
+
+[mesh.sm_wep_darkelf_01]
+name = "SM_Wep_DarkElf_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_DarkElf_01.fbx"
+sha256 = "748e52c4d9a69a73cfc992480b2423cdaab6bb24df39e9ed3f3247f39cd38c58"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, single-edged sword with a gentle curve, featuring a pale, weathered grey blade that transitions into a dark, near-black grip. The simple, unadorned design suggests a lightweight, agile weapon suited for a rogue or scout, with a subtle texture that gives it a worn, practical appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 242
+meshes = 1
+materials = 1
+size = [0.028154, 1.320702, 0.148319]
+
+[mesh.sm_wep_dwarf_01]
+name = "SM_Wep_Dwarf_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_Dwarf_01.fbx"
+sha256 = "11a6910ace70241d0dd249b37ff354c90e2c9ff1bc352bd472b75f6a1274502a"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A stout, single-handed war hammer with a thick, dark grey stone head and a pale wooden haft, bound by three grey metal rings and a small cross-guard. The head is chunky and slightly asymmetrical, with a flat striking face and a blunt rear peen, giving it a rugged, hand-forged look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 260
+meshes = 1
+materials = 1
+size = [0.103448, 0.790731, 0.296965]
+
+[mesh.sm_wep_elementalgolem_01]
+name = "SM_Wep_ElementalGolem_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_ElementalGolem_01.fbx"
+sha256 = "23cfcf7e9318ffbb95953ac56c5ac2baac977d3aa5ff81f978b3f3c4ce507001"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A weathered, upright wooden stump with a jagged, splintered top and a flared root base, rendered in muted browns with pale highlights on the broken edges. Its rough, bark-like texture and sturdy proportions suggest it is a magical staff or club, though its elemental nature is not immediately obvious from the surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 678
+meshes = 1
+materials = 1
+size = [0.41967702, 1.473333, 0.42937702]
+
+[mesh.sm_wep_evilgod_01]
+name = "SM_Wep_EvilGod_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_EvilGod_01.fbx"
+sha256 = "b16c62b5125867975dbb6f2db18d54b7926a953070b044be395701eb381dbd35"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, tapered projectile with a rust-red conical tip and a grey, segmented shaft, ending in a small, flared base. The surface is smooth and unadorned, suggesting a simple, functional design. Its proportions are elongated and narrow, giving it the appearance of a heavy bolt or a spear tip."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 78
+meshes = 1
+materials = 1
+size = [0.076104, 0.53114, 0.083339]
+
+[mesh.sm_wep_forestguardian_01]
+name = "SM_Wep_ForestGuardian_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_ForestGuardian_01.fbx"
+sha256 = "97fc3482cae7a22885f3c9a2cc4d522f4063551a3b674a29929c0426868a6ce1"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A tall, slender staff of dark, gnarled wood, tapering to a split, claw-like crown that suggests a grasping hand or root. The surface is rough and uneven, with small knots and a single protruding branch near the lower third, giving it a weathered, organic look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 466
+meshes = 1
+materials = 1
+size = [0.28743, 2.08063, 0.23518899]
+
+[mesh.sm_wep_forestwitch_01]
+name = "SM_Wep_ForestWitch_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_ForestWitch_01.fbx"
+sha256 = "fc88d4a6531f814749b658a1516b07c927862b55eec400ffa3359d35a7f89987"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, gnarled wand of dark, weathered wood, tapering to a fine point with a slightly thicker, knotted base, its surface marked by subtle twists and organic irregularities that suggest a natural, hand-hewn origin rather than a crafted tool."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 168
+meshes = 1
+materials = 1
+size = [0.03579, 0.507147, 0.037002]
+
+[mesh.sm_wep_fortgolem_01]
+name = "SM_Wep_FortGolem_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_FortGolem_01.fbx"
+sha256 = "39203b4c7c4e4d492cb14c84be812d6f3a56ff7386445f8597cf86075090c16b"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A massive, blocky stone warhammer with a chunky, rectangular head and a short, thick handle wrapped in dark leather. The head is carved from pale, sandy rock with a single glowing orange rune etched into one face, giving it a magical, ancient feel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1008
+meshes = 1
+materials = 1
+size = [0.305416, 1.128659, 0.498104]
+
+[mesh.sm_wep_mechanicalgolem_01]
+name = "SM_Wep_MechanicalGolem_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_MechanicalGolem_01.fbx"
+sha256 = "4eb9dad5223fbe102531965bdc15d0d0d511e807f4c122a4d72a6dcb8d652751"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, weathered bronze-toned mechanical arm, bent at a right angle near the top, with a hollow circular socket at the end and a small flanged base. The surface is worn and tarnished, suggesting an ancient or discarded relic, and its proportions are too thin to be a full golem, making it ideal for a detached limb.."
+differs = "Tallest and thinnest, a detached limb piece for golem assembly or scrap decoration, lacking any wheels or body."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 512
+meshes = 1
+materials = 1
+size = [0.23928401, 1.646468, 0.425941]
+
+[mesh.sm_wep_mechanicalgolem_02]
+name = "SM_Wep_MechanicalGolem_02"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_MechanicalGolem_02.fbx"
+sha256 = "544f049d0ad35e2b6d86db03c295c08c40e256762121e12378ac18e45a0d454e"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A squat, low-poly mechanical contraption with a large spiked wheel at the rear and a smaller front wheel, topped by a boxy body with a single vertical exhaust pipe. The tan and dark grey metal is weathered and battle-worn, with a prominent circular emblem on the side, suggesting a rugged, steampunk-style weapon or..."
+differs = "The only wheeled, self-propelled vehicle, most detailed with spiked wheels and exhaust, used as a mobile weapon or trap."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1174
+meshes = 2
+materials = 1
+size = [0.551306, 1.052769, 1.2798799]
+
+[mesh.sm_wep_medusa_01]
+name = "SM_Wep_Medusa_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_Medusa_01.fbx"
+sha256 = "a8e10577f2f68334bb8f9dc23e52b854cee307c539b3e95c129c0c8b468365c2"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, dark wooden staff with a pale gold, serpentine form coiling around the upper half, its head rearing at the top. The snake's body is textured with subtle scales, contrasting against the smooth, dark shaft."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 678
+meshes = 1
+materials = 1
+size = [0.124185994, 1.5098541, 0.148456]
+
+[mesh.sm_wep_mutantguy_01]
+name = "SM_Wep_MutantGuy_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_MutantGuy_01.fbx"
+sha256 = "6fab027a38ac0fea692f5054b95aa965f555d808612eeec1e7f58c8c7108ec75"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A crude, bulbous club with a short, thick handle, its head covered in clustered, fleshy orange growths and small brown spikes. The mottled green surface suggests a mutated, organic weapon, with a rough, uneven texture that gives it a diseased, monstrous appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1546
+meshes = 1
+materials = 1
+size = [0.55891204, 1.212035, 0.469406]
+
+[mesh.sm_wep_mystic_01]
+name = "SM_Wep_Mystic_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_Mystic_01.fbx"
+sha256 = "5cd250cd21ed6988d083eddd1de31aabbf5b3d6cf055bf8d4e3cac33ce2b39c1"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, single-edged short sword with a pronounced upward curve near the tip, resembling a stylized scimitar or kris. The blade is a smooth, unadorned grey metal, while the short grip is dark with a bright orange pommel and guard, giving it a distinct, magical appearance suited for a fantasy rogue or mystic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 161
+meshes = 1
+materials = 1
+size = [0.057154, 0.698382, 0.171305]
+
+[mesh.sm_wep_pigbutcher_01]
+name = "SM_Wep_PigButcher_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_PigButcher_01.fbx"
+sha256 = "c85e312e874de83b5af54ce441d8f7977d1d7f91746ec292b5df70d54128976b"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A broad, rectangular blade with a chipped, uneven edge and a dark, bloodstained surface, mounted on a short, dark grey handle. The blade's face is marked with a lighter, jagged pattern, giving it a weathered, brutal look suited for a fantasy butcher or executioner."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 963
+meshes = 1
+materials = 1
+size = [0.136006, 1.502891, 0.629011]
+
+[mesh.sm_wep_reddemon_01]
+name = "SM_Wep_RedDemon_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_RedDemon_01.fbx"
+sha256 = "d1ab7c8e73339db06e5a166cf96fa5ee8cd1336cd78a87079f7c1cee941026b4"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A slender, straight ceremonial staff with a pale bone-like shaft, wrapped in dark red leather bands and accented with dull gold rings and a small, ornate gold head, suggesting a magical or ritualistic weapon rather than a demonic one."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1812
+meshes = 1
+materials = 1
+size = [0.194781, 2.099855, 0.194786]
+
+[mesh.sm_wep_slayer_01]
+name = "SM_Wep_Slayer_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_Slayer_01.fbx"
+sha256 = "8e344b76d43730912e21af0800ed64e974d555d191f294ffb1eaaa4b53c13bb3"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A long, jagged greatsword with a heavily chipped and notched blade, suggesting brutal, battle-worn use. The dark, weathered steel is accented by a simple crossguard and a wrapped grip, giving it a menacing, fantasy-appropriate silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 700
+meshes = 1
+materials = 1
+size = [0.192226, 1.96382, 0.426218]
+
+[mesh.sm_wep_spiritdemon_01]
+name = "SM_Wep_SpiritDemon_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_SpiritDemon_01.fbx"
+sha256 = "bcf1b4dc601779e11cf6eb8163807c5eb00ef6ded750d4fbc02b0f7cfea778df"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A jagged, dark grey pickaxe with a curved, serrated blade and a red-wrapped handle, ending in a pointed spike, suggesting a brutal, demonic tool for combat or mining."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 380
+meshes = 1
+materials = 1
+size = [0.049957, 1.066297, 0.897984]
+
+[mesh.sm_wep_troll_01]
+name = "SM_Wep_Troll_01"
+pack = "polygon_fantasy_rivals_pack"
+source = "PolygonFantasyRivals_Source_Files/Source_Files/FBX/SM_Wep_Troll_01.fbx"
+sha256 = "e8b5dc2b6d3f23d48cafe78e93ca631a2e8da17e5cc7339d962e5b5363b85263"
+atlas = "FantasyRivals_Texture_01_A.png"
+textures = "FantasyRivals_Texture_01_A.png"
+description = "A crude, heavy wooden club, tapering from a thick, knotty head to a narrow, pale handle bound with dark grey metal. The wood is a weathered, dark brown with visible grain and chipped edges, suggesting a brutal, hand-hewn weapon for a giant or troll."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1186
+meshes = 1
+materials = 1
+size = [0.571974, 1.48264, 0.668582]

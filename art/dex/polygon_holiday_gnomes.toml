@@ -1,0 +1,178 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_env_ground_snow_01]
+name = "SM_Env_Ground_Snow__01"
+pack = "polygon_holiday_gnomes"
+source = "SourceFiles/FBX/SM_Env_Ground_Snow__01.fbx"
+sha256 = "f6a0cb95659f5eb9554e9b2b6557269d975c56f0829b857afd3594c84fcb0fa5"
+atlas = "PolygonXmasGnomes_Texture_01.png"
+textures = "PolygonXmasGnomes_Texture_01.png"
+wanted = "PolygonGeneric_Texture_01_A.psd"
+description = "A flat, roughly circular patch of snow with a slightly irregular, organic edge, rendered in a soft off-white with subtle blue-grey shading. The surface is smooth and unbroken, with no footprints or debris, making it ideal for clean, stylized winter ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 154
+meshes = 1
+materials = 1
+size = [3.7211351, 0.072894, 3.601112]
+
+[mesh.sm_env_skybox_01]
+name = "SM_Env_Skybox_01"
+pack = "polygon_holiday_gnomes"
+source = "SourceFiles/FBX/SM_Env_Skybox_01.fbx"
+sha256 = "b01821f82099150862922d946b8cab753f600cc50bd5ffaea2cfc024ea8511bc"
+atlas = "PolygonXmasGnomes_Texture_01.png"
+textures = "PolygonXmasGnomes_Texture_01.png"
+description = "A perfectly smooth, matte grey sphere bisected by a single vertical seam, with a narrow, vibrant rainbow band wrapping around its lower equator. The band features distinct, saturated colour segments, giving the object a festive, decorative appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12480
+meshes = 1
+materials = 1
+size = [52.203598, 53.135258, 52.203613]
+
+[mesh.sm_prop_christmas_tree_01]
+name = "SM_Prop_Christmas_Tree_01"
+pack = "polygon_holiday_gnomes"
+source = "SourceFiles/FBX/SM_Prop_Christmas_Tree_01.fbx"
+sha256 = "f0ced3a860c531268b1aa139a91d44484dc12ff652cd66a0c14798e6473050ac"
+atlas = "PolygonXmasGnomes_Texture_01.png"
+textures = "PolygonXmasGnomes_Texture_01.png"
+description = "A squat, faceted pine with four stacked tiers, a gold star topper, and a yellow garland spiralling down. Decorated with red, blue, and gold baubles, it has a matte, low-poly finish and a flat base, ideal for festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1304
+meshes = 1
+materials = 1
+size = [1.6506901, 2.911649, 1.700714]
+
+[mesh.sm_prop_gnome_basalt_01]
+name = "SM_Prop_Gnome_Basalt_01"
+pack = "polygon_holiday_gnomes"
+source = "SourceFiles/FBX/SM_Prop_Gnome_Basalt_01.fbx"
+sha256 = "20fd44a5ccf055c8057a22028112fc226175a0b42d36a0de2415f099f332a1c7"
+atlas = "PolygonXmasGnomes_Texture_01.png"
+textures = "PolygonXmasGnomes_Texture_01.png"
+description = "A stout grey stone tombstone with a chunky, faceted silhouette, featuring a carved cross and faint engraved text. A pale, bare-chested gnome with a brown beard and green boots is embedded in the front, appearing trapped or emerging from the rock."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1720
+meshes = 1
+materials = 1
+size = [0.54046, 0.46445203, 0.480762]
+
+[mesh.sm_prop_gnome_beach_01]
+name = "SM_Prop_Gnome_Beach_01"
+pack = "polygon_holiday_gnomes"
+source = "SourceFiles/FBX/SM_Prop_Gnome_Beach_01.fbx"
+sha256 = "cc5a717f6c6f72000dd798a50cbda980365534cb4c98c2c598e90d6ed4a3f54e"
+atlas = "PolygonXmasGnomes_Texture_01.png"
+textures = "PolygonXmasGnomes_Texture_01.png"
+description = "A stout, pear-shaped gnome with a large, floppy straw hat featuring a red band, a dark beard, and a pale pink tunic with red vertical stripes. The figure is posed with arms tucked in and legs extended, giving it a relaxed, seated appearance suitable for beach or summer scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1706
+meshes = 1
+materials = 1
+size = [0.43146598, 0.466539, 0.387657]
+
+[mesh.sm_prop_gnome_dwarf_01]
+name = "SM_Prop_Gnome_Dwarf_01"
+pack = "polygon_holiday_gnomes"
+source = "SourceFiles/FBX/SM_Prop_Gnome_Dwarf_01.fbx"
+sha256 = "cb90b878c5d50e8b496e1c35214d9ed2a3a7702cf89da5ad5ceca313a369bcde"
+atlas = "PolygonXmasGnomes_Texture_01.png"
+textures = "PolygonXmasGnomes_Texture_01.png"
+description = "A stout, pear-shaped figure with a large, pointed yellow helmet and a thick grey beard, wearing a red tunic with brown shoulder pads and a belt. Its stubby arms and legs are visible beneath the bulky torso, giving it a sturdy, dwarven appearance with a festive, toy-like charm."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1458
+meshes = 1
+materials = 1
+size = [0.487495, 0.425831, 0.333877]
+
+[mesh.sm_prop_gnome_santa_01]
+name = "SM_Prop_Gnome_Santa_01"
+pack = "polygon_holiday_gnomes"
+source = "SourceFiles/FBX/SM_Prop_Gnome_Santa_01.fbx"
+sha256 = "10990e21002af0fc9d248157e99f055dae823130a6397c1b9c3d0a15dbf5c7cd"
+atlas = "PolygonXmasGnomes_Texture_01.png"
+textures = "PolygonXmasGnomes_Texture_01.png"
+description = "A stout, seated gnome with a long white beard and a tall, floppy red hat with a white pom-pom, wearing a red tunic with a dark belt and black boots, all in a flat-shaded, low-poly style."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1407
+meshes = 1
+materials = 1
+size = [0.433431, 0.654311, 0.379834]
+
+[mesh.sm_prop_gnome_soldier_01]
+name = "SM_Prop_Gnome_Soldier_01"
+pack = "polygon_holiday_gnomes"
+source = "SourceFiles/FBX/SM_Prop_Gnome_Soldier_01.fbx"
+sha256 = "35bdfc4459c145afcd6ef61515fda5d5ff57a6d293161230be15dab3863251dc"
+atlas = "PolygonXmasGnomes_Texture_01.png"
+textures = "PolygonXmasGnomes_Texture_01.png"
+description = "A stout, low-poly gnome soldier with a large green helmet, a tan beard, and a matching green uniform with a brown belt. The helmet features a white star emblem, and the figure stands in a sturdy, combat-ready pose with a determined expression."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1802
+meshes = 1
+materials = 1
+size = [0.49532497, 0.401509, 0.333877]
+
+[mesh.sm_prop_gnome_theorist_01]
+name = "SM_Prop_Gnome_Theorist_01"
+pack = "polygon_holiday_gnomes"
+source = "SourceFiles/FBX/SM_Prop_Gnome_Theorist_01.fbx"
+sha256 = "81bf17321002d0b905afd97e44bbc7bbadff558592285ea7ddc23a1460f01fe0"
+atlas = "PolygonXmasGnomes_Texture_01.png"
+textures = "PolygonXmasGnomes_Texture_01.png"
+description = "A stout gnome with a large, grey, mushroom-cap hat dotted with dark spots and two green sprouts, one tall and one short, growing from the top. He wears a tan tunic with a green strap and dark blue trousers, with a small pouch on his back, and stands with arms slightly out, looking like a cheerful forest forager."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1850
+meshes = 1
+materials = 1
+size = [0.46953, 0.505976, 0.33473098]
+
+[mesh.sm_prop_gnome_wizard_01]
+name = "SM_Prop_Gnome_Wizard_01"
+pack = "polygon_holiday_gnomes"
+source = "SourceFiles/FBX/SM_Prop_Gnome_Wizard_01.fbx"
+sha256 = "b1b2b688376493dcbc2b1e5a18793e542d29a6f866e14559a4426eb90a8e9bd5"
+atlas = "PolygonXmasGnomes_Texture_01.png"
+textures = "PolygonXmasGnomes_Texture_01.png"
+description = "A stout, bearded gnome with a long, curved red wizard hat decorated with gold stars and a matching band, a grey beard, and a simple robe with a gold belt, standing on small black shoes, appearing as a cheerful, stylized magical character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1410
+meshes = 1
+materials = 1
+size = [0.433431, 0.65573096, 0.395873]
+
+[mesh.sm_prop_gnome_zombie_01]
+name = "SM_Prop_Gnome_Zombie_01"
+pack = "polygon_holiday_gnomes"
+source = "SourceFiles/FBX/SM_Prop_Gnome_Zombie_01.fbx"
+sha256 = "13d77fd8c510ca2c562a44eed7791f3a36c3c08f8c3ad795b984668305d09d8c"
+atlas = "PolygonXmasGnomes_Texture_01.png"
+textures = "PolygonXmasGnomes_Texture_01.png"
+description = "A stout, hunched gnome with a bulbous body, wearing a tattered orange and black striped beanie and a matching vest over a pale tunic. Its face is a decaying, greenish-grey skull with exposed teeth and a single visible eye, while its arms are outstretched with pale green skin and dark claws, giving it a shambling..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1802
+meshes = 1
+materials = 1
+size = [0.48749602, 0.41154298, 0.333877]

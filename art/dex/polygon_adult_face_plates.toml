@@ -1,0 +1,51 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_chr_faceplate_adult_female]
+name = "SM_Chr_Faceplate_Adult_Female"
+pack = "polygon_adult_face_plates"
+source = "Adult_Face_Plates/FBX/SM_Chr_Faceplate_Adult_Female.fbx"
+sha256 = "e700c8837106733b14e0486d311f2f292f19938ec7d17a7d678f72c4547d55f7"
+atlas = "POLYGON - Kids Pack/Polygon_Kids_Texture_Facial_Expression_Smile_01.png"
+textures = "Polygon_Kids_Texture_Facial_Expression_Smile_01.png"
+description = "A flat, pale oval plate with a subtle upward curve, featuring a simple painted smile and closed eyes, designed to be layered onto a character's face for a cheerful expression."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8
+meshes = 1
+materials = 1
+size = [0.177304, 0.190405, 0.028766997]
+
+[mesh.sm_chr_faceplate_adult_male]
+name = "SM_Chr_Faceplate_Adult_Male"
+pack = "polygon_adult_face_plates"
+source = "Adult_Face_Plates/FBX/SM_Chr_Faceplate_Adult_Male.fbx"
+sha256 = "4657d51dc7a931186304161abd14c7e111514d25b92b74df69709833d1262c63"
+atlas = "POLYGON - Kids Pack/Polygon_Kids_Texture_Facial_Expression_Smile_01.png"
+textures = "Polygon_Kids_Texture_Facial_Expression_Smile_01.png"
+description = "A flat, pale grey plate with a subtle upward curve, featuring a simple, stylized smiling mouth cutout near the lower edge. The surface is smooth and untextured, appearing as a clean, blank canvas ready for custom facial expressions or decals. Its minimalist design makes it a versatile base for character customization."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8
+meshes = 1
+materials = 1
+size = [0.177304, 0.22434999, 0.029472]

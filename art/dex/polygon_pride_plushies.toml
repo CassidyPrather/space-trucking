@@ -1,0 +1,127 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.rainbow_plane_01]
+name = "Rainbow_Plane_01"
+pack = "polygon_pride_plushies"
+source = "SourceFiles/Models/Rainbow_Plane_01.fbx"
+sha256 = "9038bb05fe69572baa6092079013c5f4587d2af34e10b19b6550c4af92b97b3a"
+atlas = "POLYGON - Particle FX Pack/PolygonParticles_RainbowCircle.png"
+textures = "PolygonParticles_RainbowCircle.png"
+description = "A flat, two-dimensional plane with a subtle rainbow gradient texture, appearing as a simple, unadorned surface with no depth or built-on geometry. The texture is faint and washed out, giving it a soft, pastel look that suggests it is meant to be a decorative backdrop or a particle effect rather than a solid object."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2
+meshes = 1
+materials = 1
+size = [6.268682, 3.134341, 0.0]
+
+[mesh.sm_prop_plushie_pacca_01]
+name = "SM_Prop_Plushie_Pacca_01"
+pack = "polygon_pride_plushies"
+source = "SourceFiles/Models/SM_Prop_Plushie_Pacca_01.fbx"
+sha256 = "55163d718a1d16046f103b8b79208f3a7c6e5dad320d4e364587deb1d947ca3f"
+atlas = "PolygonPlushies_Texture_01_C.png"
+textures = "PolygonPlushies_Texture_01_C.png"
+description = "A chunky, low-poly white plushie shaped like a llama or alpaca, with a rounded body, a short neck, and a blocky head. It features tall, dark brown ears, a brown muzzle, and small brown feet, with a fluffy white tail and a simple stitched face."
+differs = "The plainest, with no horns or purple accents; best for a generic farm or pet-store scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 682
+meshes = 1
+materials = 1
+size = [0.240352, 0.464919, 0.395194]
+
+[mesh.sm_prop_plushie_pacca_02]
+name = "SM_Prop_Plushie_Pacca_02"
+pack = "polygon_pride_plushies"
+source = "SourceFiles/Models/SM_Prop_Plushie_Pacca_02.fbx"
+sha256 = "e68cf91c8500dec91987c7c5e36b3251ef9aab825aa40c2d6d53f44964ffc301"
+atlas = "PolygonPlushies_Texture_01_D.png"
+textures = "PolygonPlushies_Texture_01_D.png"
+description = "A chunky, low-poly quadruped plushie with a white body, a purple mane, and a purple patch on its flank. It has a rounded muzzle, a black nose, and two yellow-tipped horns on its head, giving it a whimsical, toy-like appearance."
+differs = "The most detailed, with purple mane, patch, and yellow-tipped horns; ideal for a fantasy or magical toy display."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 682
+meshes = 1
+materials = 1
+size = [0.240352, 0.464919, 0.395194]
+
+[mesh.sm_prop_plushie_rhino_01]
+name = "SM_Prop_Plushie_Rhino_01"
+pack = "polygon_pride_plushies"
+source = "SourceFiles/Models/SM_Prop_Plushie_Rhino_01.fbx"
+sha256 = "69c3211575bc6a902816a3cfd3775c2f6ba6c2cfbe955d460b759e69cbd847a5"
+atlas = "PolygonPlushies_Texture_01_C.png"
+textures = "PolygonPlushies_Texture_01_C.png"
+description = "A chunky, low-poly rhino plushie in a soft grey with a lighter belly, featuring a small white horn, stubby legs, and a tiny black tail. The faceted surface gives it a stylized, toy-like appearance, perfect for a cute, cuddly prop in a game environment."
+differs = "The plainest, muted grey option with a white horn, suited for neutral or realistic scenes over pastel ones."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 832
+meshes = 1
+materials = 1
+size = [0.352042, 0.410701, 0.440824]
+
+[mesh.sm_prop_plushie_rhino_02]
+name = "SM_Prop_Plushie_Rhino_02"
+pack = "polygon_pride_plushies"
+source = "SourceFiles/Models/SM_Prop_Plushie_Rhino_02.fbx"
+sha256 = "3c4b590b0a312cea7f635e34d68d7dc72ea4e61b00f748aadda026f35f224b59"
+atlas = "PolygonPlushies_Texture_01_C.png"
+textures = "PolygonPlushies_Texture_01_C.png"
+description = "A chunky, low-poly white rhino plushie with a soft, rounded body and stubby legs, featuring a pink horn and inner ears, plus cyan accents on the hooves and ear tips. The faceted surface gives it a stylized, toy-like appearance, and the pastel colour scheme makes it a cute, cuddly prop for playful scenes."
+differs = "The most colourful variant with pink and cyan accents, ideal for vibrant, playful environments needing a pop of pastel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 832
+meshes = 1
+materials = 1
+size = [0.352042, 0.410701, 0.440824]
+
+[mesh.sm_prop_plushie_shark_01]
+name = "SM_Prop_Plushie_Shark_01"
+pack = "polygon_pride_plushies"
+source = "SourceFiles/Models/SM_Prop_Plushie_Shark_01.fbx"
+sha256 = "1db3c26f2786eda5ba7c67a22f65e824ed19ca6b8e836b731fbec44115781413"
+atlas = "PolygonPlushies_Texture_01_C.png"
+textures = "PolygonPlushies_Texture_01_C.png"
+description = "A stylized, low-poly plush shark with a rounded, chubby body, a short snout, and a small black eye. It features a pale grey-blue body with a white belly, a dorsal fin, side fins, and a tail, all with a soft, matte fabric look. The asset is a cute, toy-like prop perfect for children's rooms or playful environments."
+differs = "The plainest, muted grey-blue variant with no stitched smile, best for neutral or realistic children's rooms."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 674
+meshes = 1
+materials = 1
+size = [0.505812, 0.48899, 1.046683]
+
+[mesh.sm_prop_plushie_shark_02]
+name = "SM_Prop_Plushie_Shark_02"
+pack = "polygon_pride_plushies"
+source = "SourceFiles/Models/SM_Prop_Plushie_Shark_02.fbx"
+sha256 = "513bdbfeb8224f7c468428228a9c8ea78af5d07a2239ff52722f5b2d017e7b2a"
+atlas = "PolygonPlushies_Texture_01_C.png"
+textures = "PolygonPlushies_Texture_01_C.png"
+description = "A stylized plush shark with a rounded white body, a bright cyan back, and pink fins, featuring a small stitched smile and dot eyes. The soft, toy-like proportions and pastel palette give it a friendly, huggable appearance, making it ideal for playful or cute environments."
+differs = "The most detailed, with a stitched smile and pastel pink fins, best for vibrant, playful, or pride-themed environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 728
+meshes = 1
+materials = 1
+size = [0.505811, 0.48899, 1.046683]

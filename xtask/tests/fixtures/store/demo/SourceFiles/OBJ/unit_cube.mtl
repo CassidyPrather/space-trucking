@@ -1,0 +1,7 @@
+# The material the cube names, pointing at the pack's texture the way a
+# bought asset points at its atlas: by a relative path that only resolves
+# inside the tree it was exported in. The resolver stages the texture
+# beside the mesh before conversion for exactly this reason.
+newmtl checker
+Kd 1.0 1.0 1.0
+map_Kd checker.png

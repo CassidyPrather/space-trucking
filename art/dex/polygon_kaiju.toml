@@ -1,0 +1,1386 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.kaiju_01_02_04]
+name = "Kaiju_01_02_04"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/Kaiju_01_02_04.fbx"
+sha256 = "e03e08c025a36ecd7e64e842dbbc97864e58453fccea54cc59d75f8271a63a59"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+wanted = "Blender_Default_Mixed_Grid.jpg"
+description = "A bulky bipedal kaiju with a broad, armoured torso and a short, thick tail, its arms are held wide in a menacing pose. The body is covered in pale grey and white plates with dark under-layers, accented by jagged purple and orange spikes along the back and shoulders."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 29746
+meshes = 3
+materials = 2
+size = [3.438294, 2.2655659, 0.933267]
+
+[mesh.kaiju_03]
+name = "Kaiju_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/Kaiju_03.fbx"
+sha256 = "88fdecbff37b7a6a9065ae517a9ffe0ebe4761b40f452d8ba6013cadceb2330f"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+wanted = "Blender_Default_Mixed_Grid.jpg"
+description = "A bipedal reptilian kaiju with a pale grey hide, a spiky white crest, and a heavy, muscular build. Its chest and legs are marked with patches of green, orange, and brown, giving it a weathered, organic look. The creature stands in a T-pose with clawed hands and feet, ready for animation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 9614
+meshes = 1
+materials = 1
+size = [2.26002, 2.098585, 1.0160561]
+
+[mesh.sm_bld_city_01]
+name = "SM_Bld_City_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_01.fbx"
+sha256 = "aeb9d4f33829f1a9a7cf63fb7a6869b35a795979c4c1bcc754940f897bbda395"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A tall, narrow rectangular block with a flat roof, clad in beige panels and accented by dark horizontal window bands on two faces. One side features a recessed vertical grid of dark windows, while the base sits on a grey plinth with a small entrance."
+differs = "The tallest and most slender of the set, with a recessed vertical window grid and a small entrance on a plinth, ideal for a dense urban backdrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 596
+meshes = 1
+materials = 1
+size = [0.76133, 1.6538451, 0.593402]
+
+[mesh.sm_bld_city_02]
+name = "SM_Bld_City_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_02.fbx"
+sha256 = "69b904d08ad24134ff36d98d32b6c50b033e9dcd52e35d79421ea2d33888da1a"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A compact, blocky mid-rise with a flat, open roof and a small penthouse structure, featuring a grid of dark windows on one face and horizontal window bands on the others. The plain grey concrete facade is unadorned, giving it a utilitarian, industrial look suitable for a generic city backdrop or a ruined district."
+differs = "The most utilitarian and plain, with a flat open roof and penthouse, perfect for a generic industrial or ruined district."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 848
+meshes = 1
+materials = 1
+size = [0.876373, 1.365653, 0.52896]
+
+[mesh.sm_bld_city_03]
+name = "SM_Bld_City_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_03.fbx"
+sha256 = "fdf4561b21f735c28201c1dcb843bfb5534f5bb7cbdcaddbe4b52263a2e844dc"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A tall, narrow rectangular block with a flat, pale roof and a dark grid of window panels across its facades, framed by olive-green corner trim and a matching base. A single dark doorway is set into one side, and the structure stands clean and unblemished, reading as a generic office or apartment tower suitable for a..."
+differs = "The only one with olive-green corner trim and a matching base, giving it a distinct, clean, and unblemished look for a generic office tower."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 870
+meshes = 1
+materials = 1
+size = [0.521926, 1.141635, 0.530522]
+
+[mesh.sm_bld_city_04]
+name = "SM_Bld_City_04"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_04.fbx"
+sha256 = "3a1ddd394ecf32c22c2e3d76a869156b906d1608bf5dab05ef990c427cd2f44a"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A narrow, rectangular mid-rise tower with a flat roof and a small ground-floor base, featuring a grid of dark, recessed windows on two faces and a few scattered square windows on the others. The pale grey concrete facade shows subtle weathering and a distinct vertical crack running down one side, giving it a damaged..."
+differs = "The most damaged, featuring a distinct vertical crack and subtle weathering, making it the go-to for a battle-worn or ruined city scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 662
+meshes = 1
+materials = 1
+size = [0.621694, 1.368055, 0.420214]
+
+[mesh.sm_bld_city_05]
+name = "SM_Bld_City_05"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_05.fbx"
+sha256 = "4831c16fcf300e4ee69058ffb92ceaacff9fd94d99c2ee1256d6284cc2f55f3e"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A tall, narrow grey tower with a stepped, boxy rooftop penthouse and a dark recessed entrance at its base. The facade is broken by horizontal bands of dark, inset windows, giving it a dense, urban look. The flat, untextured surfaces and simple geometry make it a clean, versatile background building for a city scene."
+differs = "The most versatile and clean, with a stepped rooftop penthouse and horizontal window bands, ideal for a dense, untextured urban background."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 796
+meshes = 1
+materials = 1
+size = [0.524478, 1.379493, 0.528542]
+
+[mesh.sm_bld_city_06]
+name = "SM_Bld_City_06"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_06.fbx"
+sha256 = "8287e793808077192c3fd2056d36405e4d07fdca8fe2895f0e6adad03ae81684"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A compact, blocky mid-rise with a flat roof and a small rooftop utility box, clad in tan panels with dark horizontal window bands on two faces and vertical recessed strips on the others. A grey concrete base and a jagged, dark grey chunk of missing wall at one corner give it a damaged, battle-worn look, suggesting a..."
+differs = "The most battle-worn, with a jagged missing wall chunk at a corner, making it the only one with a distinct, large-scale damage feature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 727
+meshes = 1
+materials = 1
+size = [0.675938, 0.864274, 0.471088]
+
+[mesh.sm_bld_city_07]
+name = "SM_Bld_City_07"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_07.fbx"
+sha256 = "758894724f968383a93e5b8e07698d2e91d53591b8fd45981d0877dc76bda44f"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A compact, blocky three-storey building with a flat roof, set on a low plinth. The pale grey facade features a grid of dark, recessed rectangular windows and a tall, dark double door at street level, with a subtle darker patch on one side wall suggesting wear or a painted mural."
+differs = "The smallest and most compact, a three-storey block with a double door and a mural-like patch, perfect for a low-rise street-level detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 442
+meshes = 1
+materials = 1
+size = [0.382712, 0.566129, 0.673528]
+
+[mesh.sm_bld_city_destroyed_01]
+name = "SM_Bld_City_Destroyed_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_Destroyed_01.fbx"
+sha256 = "8cd4f0ea24abbf3d5af7d5009fb45c62ee2a10c2764f3eaa8acc5bc18efacad5"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A tall, narrow office block with a sheer, jagged diagonal break across its upper half, leaving a hollow, blackened interior exposed. The intact lower section features a grid of dark, recessed windows and a small doorway, all rendered in flat beige and charcoal tones."
+differs = "Tallest and narrowest of the set, with a sheer diagonal break and hollow black interior, ideal for a dramatic mid-block ruin."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 630
+meshes = 1
+materials = 1
+size = [0.76133, 1.6538451, 0.593402]
+
+[mesh.sm_bld_city_destroyed_02]
+name = "SM_Bld_City_Destroyed_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_Destroyed_02.fbx"
+sha256 = "c9a67da9a84d6481e1a307a1ed2dd9ba3d84ad1b5647db8dbe82a191f69a39ee"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A mid-rise office block with a stepped, tiered profile, its lower floors sheared away to expose dark, jagged rubble and a slanted, collapsed roof. The pale grey concrete facade features regular dark window grids, with the ruin concentrated on one side, leaving the opposite face intact."
+differs = "Most asymmetric, with a stepped tiered profile and one fully intact face, perfect for a corner building with partial collapse."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 800
+meshes = 1
+materials = 1
+size = [0.876373, 1.365653, 0.52896]
+
+[mesh.sm_bld_city_destroyed_03]
+name = "SM_Bld_City_Destroyed_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_Destroyed_03.fbx"
+sha256 = "0c5a8beb8795c7e06e4080d43c3ffb97a51ff1ef259159b36d4ed24bde924fd7"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A tall, rectangular office tower with a dark grey grid facade and a tan base, featuring a large, jagged bite taken out of its upper half that exposes a hollow, black interior. The lower section remains intact with a small doorway, while the top edge is broken and uneven, conveying heavy damage."
+differs = "Most detailed grid facade with a large jagged bite, the only one with a tan base and dark grey upper grid."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1076
+meshes = 1
+materials = 1
+size = [0.521926, 1.141636, 0.530522]
+
+[mesh.sm_bld_city_destroyed_04]
+name = "SM_Bld_City_Destroyed_04"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_Destroyed_04.fbx"
+sha256 = "8890fb88dfcc0cd4a97c874e50e0f2c697a1ed65142e173e0b620c0fe801111f"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A narrow, tall city building with a stepped, jagged roofline and a dark grey, sloped top section. The pale grey facade features a large grid of dark windows on one side and smaller, scattered openings on the others."
+differs = "Only one with a sloped dark top and stepped roofline, lacking a major crater, making it the least damaged tall option."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 689
+meshes = 1
+materials = 1
+size = [0.621694, 1.368055, 0.420214]
+
+[mesh.sm_bld_city_destroyed_05]
+name = "SM_Bld_City_Destroyed_05"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_Destroyed_05.fbx"
+sha256 = "2dd2628ce98afa4f2d33136e8111e0118c085644712536e811fe22b7ef35b93c"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A tall, narrow office block with a stepped, boxy silhouette and a small rooftop penthouse, rendered in pale grey concrete with dark window bands. The structure is heavily damaged, with a large, blackened blast crater torn through one side and a jagged, missing corner that exposes the interior."
+differs = "Only one with a rooftop penthouse and a blackened blast crater, offering a unique silhouette among the tall ruins."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 850
+meshes = 1
+materials = 1
+size = [0.524478, 1.379493, 0.528542]
+
+[mesh.sm_bld_city_destroyed_06]
+name = "SM_Bld_City_Destroyed_06"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_Destroyed_06.fbx"
+sha256 = "99bd82e72a9c02dc8e77d6eb00ba25f43f5b9ed65224ad14b044926612a29563"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A blocky, low-poly mid-rise office building with a tan facade, dark window strips, and a grey concrete base. The top corner is sheared off, exposing jagged black rubble and structural damage, giving it a ruined, post-apocalyptic look."
+differs = "Shortest and widest mid-rise, with a sheared top corner and tan facade, ideal for a low, blocky ruin."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 694
+meshes = 1
+materials = 1
+size = [0.675938, 0.76600903, 0.471088]
+
+[mesh.sm_bld_city_destroyed_07]
+name = "SM_Bld_City_Destroyed_07"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_City_Destroyed_07.fbx"
+sha256 = "a0db41f9e270766c0f9e058bb960e10a44d17099a982064d628a26e4073bd2f9"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A blocky, three-storey concrete building with a flat roof and dark rectangular windows, sitting on a low plinth. It is heavily damaged, with a jagged corner collapse and a large, hollowed-out crater exposing dark interior walls."
+differs = "Smallest and most compact, a three-storey block with a hollowed crater, perfect for a low-poly background filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 476
+meshes = 1
+materials = 1
+size = [0.382712, 0.566129, 0.673528]
+
+[mesh.sm_bld_highrise_01]
+name = "SM_Bld_Highrise_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_Highrise_01.fbx"
+sha256 = "62dff47bd3a58cc26516a39cca76149e1c71e75cc7107f36890cb683b6e0d587"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slender, dark grey tower with a chamfered top and a recessed, lighter grey vertical core, featuring small blue-lit windows and a dark base, suggesting a futuristic or cyberpunk high-rise."
+differs = "The most futuristic and slender, with a chamfered top and recessed core, ideal for a cyberpunk skyline."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 224
+meshes = 1
+materials = 2
+size = [0.340628, 1.678731, 0.19893399]
+
+[mesh.sm_bld_highrise_02]
+name = "SM_Bld_Highrise_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_Highrise_02.fbx"
+sha256 = "03a5f5436dfdca61e78ffb34110f05d4cf00afb452ba13b09b42ab0bfb458f04"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slender, rectangular tower with a stepped, tiered roof and a thin spire, clad in grey panels with dark glass windows. The facade features horizontal bands and small, boxy balconies, giving it a modern, utilitarian look suitable for a dense city block."
+differs = "The tallest and most detailed, with a stepped tiered roof, spire, and balconies, perfect for a modern city center."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 394
+meshes = 1
+materials = 2
+size = [0.507977, 2.353489, 0.507844]
+
+[mesh.sm_bld_highrise_03]
+name = "SM_Bld_Highrise_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_Highrise_03.fbx"
+sha256 = "2347ecb9d5f91543f5babe1314442919cc57f7c1b6c1e3774167eb7d5dac40bd"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slender, rectangular tower with a dark grey frame and a heavily damaged, jagged top, exposing a black interior. The lower half features a dense, colourful mosaic of windows in rainbow hues, suggesting a ruined commercial or residential building."
+differs = "The most damaged and colorful, with a jagged top and rainbow mosaic windows, ideal for a ruined district."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 761
+meshes = 1
+materials = 2
+size = [0.50563, 1.1923189, 0.507498]
+
+[mesh.sm_bld_highrise_04]
+name = "SM_Bld_Highrise_04"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_Highrise_04.fbx"
+sha256 = "f55df464f9136741d364ad618003be285a427135ccf3239af624f51f3081ec43"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A narrow, angular tower with a chamfered corner, topped by a smaller open penthouse frame. The pale grey facade features dark window strips and a prominent black, jagged hole in the upper section, suggesting heavy damage. A bent antenna protrudes from the roof, giving it a distinct, battle-worn silhouette."
+differs = "The most battle-worn, with a jagged hole, bent antenna, and open penthouse frame, for a war-torn zone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 558
+meshes = 1
+materials = 2
+size = [0.56804895, 1.526072, 0.56804895]
+
+[mesh.sm_bld_highrise_05]
+name = "SM_Bld_Highrise_05"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_Highrise_05.fbx"
+sha256 = "5b37b4230cee2cf6f8e10ba8fe23cfb7ba17950dce147cd647b8e90ac2d744d9"
+atlas = "Highrise_Diffuse_01.png"
+textures = "Highrise_Diffuse_01.png"
+description = "A slender, dark grey octagonal tower with a flat, slightly overhanging roof and a plain, unadorned facade. The surface is covered in a dense, uniform grid of small, recessed windows, giving it a monolithic, industrial appearance."
+differs = "The plainest and most monolithic, an octagonal tower with a uniform window grid, for industrial backdrops."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 1
+size = [0.541327, 1.805337, 0.541328]
+
+[mesh.sm_bld_highrise_06]
+name = "SM_Bld_Highrise_06"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_Highrise_06.fbx"
+sha256 = "01d3bb66d83d71b28b0869fcc33364fc4c38afd61a4fbfc0f7bd15258f3686c0"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slender, rectangular tower with a flat roof and a dark, recessed vertical band of windows running down its centre. The facade is a pale, weathered grey with subtle panel lines, and the base features a small, dark entrance. Its narrow footprint makes it ideal for dense city backdrops or filling tight urban gaps."
+differs = "The narrowest and most minimal, with a central window band, perfect for filling tight urban gaps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 2
+size = [0.25932902, 1.498999, 0.259328]
+
+[mesh.sm_bld_highrise_07]
+name = "SM_Bld_Highrise_07"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_Highrise_07.fbx"
+sha256 = "aa16c7d07c187d96dd60bcd1af85ba5873075976a0bdeaed5d7e30725c228021"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slender, rectangular tower with a dark, flat roof and a stepped base, featuring a large, colourful mural of a kaiju on its lower facade. The grey concrete body is accented by dark side panels and a small, protruding mechanical unit near the top, giving it a weathered, urban look."
+differs = "The only one with a kaiju mural and stepped base, giving it a unique cultural landmark role."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 138
+meshes = 1
+materials = 2
+size = [0.623121, 1.8844041, 0.678657]
+
+[mesh.sm_bld_highrise_08]
+name = "SM_Bld_Highrise_08"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_Highrise_08.fbx"
+sha256 = "8eb4fc12624b239acf61ba578aa05b2d140b640017729fb89d4c2a40fc1960cb"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A narrow, rectangular tower with a flat roof and dark grey corner columns, clad in light grey panels with a central vertical window strip and a few small blue accents. The facade shows subtle wear and grime, giving it a weathered, industrial look suitable for a dense city block."
+differs = "The most weathered and industrial, with corner columns and subtle grime, for a gritty, dense city block."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 2
+size = [0.521172, 1.439363, 0.521172]
+
+[mesh.sm_bld_highrise_09]
+name = "SM_Bld_Highrise_09"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Bld_Highrise_09.fbx"
+sha256 = "1df7bafd3ca2d8f95cc5fa6e346d1f4373fb1fd2d79bdf3a69572cc80375224b"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A compact, octagonal tower with a flat dark roof and a white facade broken by dark vertical window strips and a central black panel. The base features a dark band with orange accents, giving it a weathered, industrial look suited for a sci-fi city block."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 2
+size = [0.623268, 1.175849, 0.623268]
+
+[mesh.sm_bld_largebuilding_01]
+name = "SM_Bld_LargeBuilding_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/Diorama/SM_Bld_LargeBuilding_01.fbx"
+sha256 = "19f042b6a17e3a4d277d4a2964d3d9ef8c476498421f755565ecfd04421ae162"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A tall, stepped Art Deco skyscraper with a slender spire, featuring a beige stone base and dark brown window bands that taper upward. The facade is detailed with vertical ribs and a recessed entrance, giving it a classic, imposing urban presence."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 16180
+meshes = 1
+materials = 1
+size = [1.442554, 5.409014, 1.570889]
+
+[mesh.sm_env_base_city_01]
+name = "SM_Env_Base_City_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/Diorama/SM_Env_Base_City_01.fbx"
+sha256 = "8c9c1955fbb5b117bbf286a96558e76e8575056198833113e9fcffa9b33d9a38"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A flat, dark grey slab with a stepped, irregular footprint, resembling a modular city block or foundation pad. The surface is plain and untextured, with a subtle reddish-brown edge visible along the base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 372
+meshes = 1
+materials = 1
+size = [3.8810492, 0.343398, 3.8211591]
+
+[mesh.sm_env_base_ocean_01]
+name = "SM_Env_Base_Ocean_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/Diorama/SM_Env_Base_Ocean_01.fbx"
+sha256 = "7f2909d60e31e5bb75458f874ebb43a44f84bc477e78eeffcfc8bf97e07a4a8c"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A flat, dark grey circular disc with a slightly raised rim, resembling a simple manhole cover or a stylised round platform. The surface is smooth and unmarked, with a subtle bevel around the edge that catches the light. Its minimalist design makes it a versatile, unobtrusive base for a variety of scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 1
+materials = 1
+size = [3.992659, 0.283651, 3.99266]
+
+[mesh.sm_env_cloud_01]
+name = "SM_Env_Cloud_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Env_Cloud_01.fbx"
+sha256 = "9c6e370bd3fe345a85dc9c28366d57c9a156bb2fec032b08ebcef9d561182657"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+wanted = "Texture_01.psd"
+description = "A low, elongated cluster of angular white puffs, tapering to a thin tail at one end and a small detached fragment at the other, resembling a drifting cumulus cloud. Its faceted, matte surface gives it a stylized, chunky look, ideal for adding a soft, atmospheric touch to a skybox or distant vista."
+differs = "The only one with a detached fragment and a tapering tail, making it the most dynamic and broken-up silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 280
+meshes = 1
+materials = 1
+size = [0.667848, 0.165129, 0.16084]
+
+[mesh.sm_env_cloud_02]
+name = "SM_Env_Cloud_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Env_Cloud_02.fbx"
+sha256 = "8387496edbb25c3299de74d8968794c58acb253b133166e90d9727f8200d23fc"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+wanted = "Texture_01.psd"
+description = "A low, elongated, flat-bottomed cloud with a lumpy, faceted top, rendered in pure white with soft grey shading that gives it a puffy, low-poly look. Its stretched, horizontal form makes it ideal for distant background layers or for adding subtle atmospheric depth to a scene."
+differs = "The flattest and most stretched, with the lowest triangle count, making it the plainest and best for a distant, thin horizon layer."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 252
+meshes = 1
+materials = 1
+size = [0.729182, 0.170524, 0.257066]
+
+[mesh.sm_env_cloud_03]
+name = "SM_Env_Cloud_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Env_Cloud_03.fbx"
+sha256 = "f0e4fe9a8f5254fa024283049c6fdd43b7b9711b788f679b0cf4ac77c292dfde"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+wanted = "Texture_01.psd"
+description = "A low, elongated puff of cumulus with a flat base and a softly lumpy top, rendered in a clean, matte white that reads as stylized vapour. Its gentle, irregular silhouette suggests a drifting cloud at rest, making it a versatile filler for skyboxes or distant scenery."
+differs = "The tallest and most detailed, with nearly double the triangles, giving it the most voluminous, puffy look for a closer background element."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 490
+meshes = 1
+materials = 1
+size = [0.703014, 0.198443, 0.388742]
+
+[mesh.sm_env_cloud_ring_01]
+name = "SM_Env_Cloud_Ring_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Env_Cloud_Ring_01.fbx"
+sha256 = "6b6dca6c3f1c1c11483b68521f705e4cf1bdd0a2939de824d3ca7320463cbe9c"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A flattened, irregular ring of pale grey stone with a rough, weathered surface, resembling a floating island or a broken halo. It features a distinct, darker, circular depression in the center, giving it a cratered or hollowed appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 17656
+meshes = 1
+materials = 1
+size = [857.7613, 255.95439, 810.1979]
+
+[mesh.sm_env_fissure_01]
+name = "SM_Env_Fissure_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Env_Fissure_01.fbx"
+sha256 = "5581cd6cff99567ecf89ba3ba18bd124f9b5dd79553274397628ebaa9794b229"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, flat, irregular slab of dark grey rock with a jagged, glowing green fissure running through its centre, resembling a crack in the earth emitting toxic energy. The surface is rough and uneven, with the bright green core contrasting sharply against the dark stone, making it ideal for hazard or environmental..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 400
+meshes = 1
+materials = 1
+size = [2.182095, 0.29265, 2.6177511]
+
+[mesh.sm_env_ocean_waves_01]
+name = "SM_Env_Ocean_Waves_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/Diorama/SM_Env_Ocean_Waves_01.fbx"
+sha256 = "d13db8e9aa4ae93489c0f267b14b2cc6308af13680d74b3e81c83bdfa206b553"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A flat, circular disc with a slightly irregular rim, textured with a swirling, turbulent pattern of dark teal, grey, and white that resembles churning water or a maelstrom viewed from above. The surface is glossy and reflective, suggesting a wet or liquid material, and the subtle height variations give it a sculpted..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 9248
+meshes = 1
+materials = 1
+size = [3.961708, 0.506133, 3.961701]
+
+[mesh.sm_env_ocean_waves_01_splash_01]
+name = "SM_Env_Ocean_Waves_01_Splash_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Env_Ocean_Waves_01_Splash_01.fbx"
+sha256 = "54c970cb05f2e6eb0dd561e45f02de6a1e2f46143136d2049bb3e2bb1523cd9c"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, irregular cluster of white foam patches, each with a jagged, frothy silhouette, scattered across a flat plane to suggest the turbulent crest of a breaking wave. The bright, untextured white surface gives it a clean, stylized look that reads clearly as sea foam from a distance."
+differs = "The largest and flattest, a wide foam patch for wave crests, not a vertical burst."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5280
+meshes = 1
+materials = 1
+size = [1.146353, 0.4655, 1.925035]
+
+[mesh.sm_env_ocean_waves_01_splash_02]
+name = "SM_Env_Ocean_Waves_01_Splash_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Env_Ocean_Waves_01_Splash_02.fbx"
+sha256 = "0d89dd7237ff700db6a277451923d24042ff1a61e49e86681ddbcdce4481d75a"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A cluster of chunky, faceted white polyhedra forms a frothy, irregular splash, with smaller detached droplets floating around the main mass. The pure white, untextured surface gives it a clean, stylized look, perfect for a dramatic water impact or a magical burst effect."
+differs = "The most detailed and compact, a 3D splash with droplets for impacts, not a flat surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 840
+meshes = 1
+materials = 1
+size = [0.47676, 0.276248, 0.444022]
+
+[mesh.sm_fx_bullet_01]
+name = "SM_FX_Bullet_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_FX_Bullet_01.fbx"
+sha256 = "a1742fea6e17a6c6f11da15aec0ab75b7bfbf797b9557680663c9cace015db72"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slender, needle-like projectile rendered as a thin, bright yellow streak with a subtle gradient fading to a lighter tip, suggesting a high-velocity tracer round or energy bolt. The surface is smooth and unadorned, with no visible casing or fins, giving it a clean, minimalist look ideal for fast-moving combat effects."
+differs = "The longest and thinnest, with a smooth gradient and no facets, ideal for a distant tracer or energy bolt."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8
+meshes = 1
+materials = 1
+size = [0.01, 0.01, 0.686922]
+
+[mesh.sm_fx_bullet_02]
+name = "SM_FX_Bullet_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_FX_Bullet_02.fbx"
+sha256 = "aafe62dcb3c2658861b85b922517f5ce9280a9977068a86992d58335266eef6d"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slender, faceted golden-yellow spike that tapers to a sharp point, resembling a stylized bullet or projectile in flight. Its low-poly surface catches light with distinct planar highlights, giving it a hard, metallic appearance."
+differs = "The shortest and thickest, with a faceted metallic look and planar highlights, suited for a close-range stylized projectile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8
+meshes = 1
+materials = 1
+size = [0.02377, 0.02377, 0.224731]
+
+[mesh.sm_fx_fire_01]
+name = "SM_FX_Fire_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_FX_Fire_01.fbx"
+sha256 = "6e310ed08f690b39147a75b3a62bb53ba8f10664f3962a783cc7efa502e570f3"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A stylized, low-poly fire effect composed of clustered, faceted orange and red polygonal chunks that rise in a vertical plume, with smaller detached embers floating above and around the main body."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 600
+meshes = 1
+materials = 1
+size = [1.464782, 2.241354, 1.476696]
+
+[mesh.sm_fx_stompring_01]
+name = "SM_FX_StompRing_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_FX_StompRing_01.fbx"
+sha256 = "4ae863c16df8aa6fe58ba269e37fbb8f11d5d69e8ec30bdaa49ec4d0f4cda21c"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, wide ring of clustered, rounded grey-white puffs, resembling a burst of dust or smoke spreading outward from a central impact. The irregular, lumpy silhouette and soft, matte texture give it a billowing, volumetric look, making it ideal for ground-impact effects or explosion debris."
+differs = "The only volumetric, opaque dust burst, far more detailed and taller, for lingering debris clouds rather than a flat pulse."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1800
+meshes = 1
+materials = 1
+size = [1.431104, 0.564965, 1.54853]
+
+[mesh.sm_fx_stompring_02]
+name = "SM_FX_StompRing_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_FX_StompRing_02.fbx"
+sha256 = "40942b1051c2cb56b0d5458db7363b76f78b4e5c28f16e454ae8bce0d1a29b43"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A flat, circular shockwave ring rendered in translucent white, with a bright inner core and a feathered outer edge that suggests rapid expansion. The effect is clean and untextured, appearing as a crisp, glowing pulse meant to be placed on the ground for a heavy impact."
+differs = "The only flat, translucent shockwave with zero height, far simpler and cleaner, for a crisp ground pulse without debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 64
+meshes = 1
+materials = 1
+size = [1.380496, 0.0, 1.28802]
+
+[mesh.sm_highrise_greeble_01]
+name = "SM_Highrise_Greeble_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Highrise_Greeble_01.fbx"
+sha256 = "285a828e90ac2de32cd72e953c8ab36375b79621041c4807c058860d34cd3f83"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slender, dark grey lattice tower rises from a wider, blocky base, topped by a thin antenna with a single red band near its midpoint. The open framework suggests a radio or communications mast, with a weathered, industrial look that suits a ruined cityscape."
+differs = "Tallest and most detailed lattice mast, with a red band and blocky base, ideal as a landmark radio tower."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 516
+meshes = 1
+materials = 1
+size = [0.05329, 0.502735, 0.053242]
+
+[mesh.sm_highrise_greeble_02]
+name = "SM_Highrise_Greeble_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Highrise_Greeble_02.fbx"
+sha256 = "09872b3ba5273c6901408b4de9e67e7985c2ab5b8733d0da09691b030d6fc5dd"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A squat, faceted grey tank with a dark rim sits atop four thin, splayed legs, resembling a small industrial water tower or rooftop silo. The muted, weathered surface and simple geometric construction make it ideal for populating city skylines or industrial zones with a distinct, low-poly silhouette."
+differs = "The only tank-style structure, with a faceted body and splayed legs, perfect for rooftop water storage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 222
+meshes = 1
+materials = 1
+size = [0.089115, 0.234611, 0.089116]
+
+[mesh.sm_highrise_greeble_03]
+name = "SM_Highrise_Greeble_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Highrise_Greeble_03.fbx"
+sha256 = "1a66b32fd06c236ec592a3784785794d1b5ba4817374c301dcefe404840815a1"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slender, dark grey lattice tower with a square base tapering to a narrow top, featuring a small boxy platform near the summit and a thin antenna mast. The open framework suggests a radio or communications mast, with a weathered, industrial finish that adds a gritty, utilitarian feel to any urban scene."
+differs = "Mid-sized lattice tower with a boxy platform, a simpler alternative to 01 for communications masts."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 252
+meshes = 1
+materials = 1
+size = [0.054686002, 0.318197, 0.054686]
+
+[mesh.sm_highrise_greeble_04]
+name = "SM_Highrise_Greeble_04"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Highrise_Greeble_04.fbx"
+sha256 = "d46d63d7cc1c691e07003a2079fcae95e8945460227aba1d628ccfca6cf5495e"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A dark grey, angular rooftop unit with a large, tilted square panel mounted on a short, blocky pedestal, resembling a solar tracker or a communications dish. The panel's face is recessed and features a small, lighter grey cylindrical sensor at its centre, giving it a functional, industrial look."
+differs = "The smallest and only dish-style asset, a solar tracker or sensor unit for rooftop tech details."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 88
+meshes = 1
+materials = 1
+size = [0.065026, 0.089879, 0.041368]
+
+[mesh.sm_prop_bridge_01]
+name = "SM_Prop_Bridge_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Bridge_01.fbx"
+sha256 = "5ad1b005e14b2d3b133b40f405c068a89c93e453f77cb3faa7951d9546544e1c"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A short, sturdy footbridge with olive-green metal railings and a dark grey deck, supported by two chunky, blocky concrete abutments. The railings are broken and bent, with snapped cables trailing off the ends, giving it a weathered, post-apocalyptic look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1632
+meshes = 1
+materials = 1
+size = [1.5068879, 1.254473, 0.96544504]
+
+[mesh.sm_prop_bridge_rubble_01]
+name = "SM_Prop_Bridge_Rubble_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Bridge_Rubble_01.fbx"
+sha256 = "72c4f252160ab5c6f01a35e71f787ad6f9360f791a61a0acf9cf2de0c3d01a45"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, angular slab of dark grey concrete, broken into two uneven chunks with a smaller fragment resting on top. Bright yellow hazard stripes run along the fractured edges, and a single white chevron marks the larger piece."
+differs = "Smallest and simplest, with a white chevron and stacked fragment, best for a compact, tidy debris pile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 76
+meshes = 1
+materials = 1
+size = [0.66403, 0.164719, 0.493501]
+
+[mesh.sm_prop_bridge_rubble_02]
+name = "SM_Prop_Bridge_Rubble_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Bridge_Rubble_02.fbx"
+sha256 = "044e7f4e0bd0b2227ecc8a2a46e72f7f63b454df237c6b173680a58021cd5dce"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A shattered, low-poly slab of dark grey asphalt road, broken into two jagged, uneven sections that rest at a slight angle. The surface is marked with faded, chipped yellow lane lines and a white edge stripe, with rough, exposed edges suggesting a violent tear from a larger structure."
+differs = "Largest and most detailed, with asphalt texture and lane markings, ideal for a road surface fragment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 176
+meshes = 1
+materials = 1
+size = [0.841914, 0.273857, 0.444436]
+
+[mesh.sm_prop_bridge_rubble_03]
+name = "SM_Prop_Bridge_Rubble_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Bridge_Rubble_03.fbx"
+sha256 = "6ce89f63cad850e38950188c0e2f620e652ce27ab5e03747367204363772ff17"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, angular slab of dark grey concrete with a jagged, broken edge, marked by twin yellow hazard stripes across its top surface. The block is tilted and split, with a smaller fragment resting against the main body, suggesting a piece of a collapsed roadway or industrial platform."
+differs = "Most tilted and split, with twin hazard stripes, best for a dramatic, angled collapse piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 108
+meshes = 1
+materials = 1
+size = [0.647267, 0.323672, 0.436703]
+
+[mesh.sm_prop_bus_01]
+name = "SM_Prop_Bus_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Bus_01.fbx"
+sha256 = "682ca6578b72a2e168f50d38680f712aeea4bc44d1f70cdf906aaf20a2de7b48"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A long, low, boxy vehicle with a rounded front and a flat rear, painted in a flat, matte grey. The side panels are covered in a vivid, multi-coloured rainbow graffiti mural with abstract shapes and a white square near the front."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.101424, 0.114818, 0.413036]
+
+[mesh.sm_prop_car_01]
+name = "SM_Prop_Car_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Car_01.fbx"
+sha256 = "3ec7698d27e3fa324b2ab7a8991d6f477e5d5f78462c89b48386aac02cdc224f"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low-slung, wedge-shaped coupe with a long hood and a short rear deck, its grey bodywork accented by a vivid rainbow stripe running across the hood and front fenders. The flat-shaded surfaces and blocky wheel arches give it a stylized, retro-futuristic look, while the muted grey finish suggests a weathered or dusty..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 76
+meshes = 1
+materials = 1
+size = [0.087988, 0.073328, 0.256428]
+
+[mesh.sm_prop_crane_01]
+name = "SM_Prop_Crane_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Crane_01.fbx"
+sha256 = "1bb582bc1231ccd15fd94ffe2c2472c52d6a8875fa0bc896ace67466d9d6b755"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A tall, yellow tower crane with a lattice mast and horizontal jib, supported by a grey concrete block base. The jib features a hanging hook and counterweight, with dark grey cables and a small operator cab. The paint is clean and bright, suggesting a well-maintained construction asset ready for a building site."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1468
+meshes = 1
+materials = 1
+size = [0.544918, 0.68047, 0.078408]
+
+[mesh.sm_prop_diorama_base_01]
+name = "SM_Prop_Diorama_Base_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/Diorama/SM_Prop_Diorama_Base_01.fbx"
+sha256 = "ef53762c1deb54fe73ebfe31441e5a186e83508a1dcfd1d70d9914c9458bbd63"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, flat, roughly octagonal slab of pale grey concrete with a chamfered brown earth rim, serving as a modular base for a ruined city block. Its surface is broken into a grid of dark asphalt streets and cracked pavement, with patches of bright green moss and grass creeping over the edges and through the fissures."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 702
+meshes = 1
+materials = 1
+size = [3.613074, 0.47911602, 3.506766]
+
+[mesh.sm_prop_fishing_boat_01]
+name = "SM_Prop_Fishing_Boat_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Fishing_Boat_01.fbx"
+sha256 = "b74fb8e845774b9f0475c0ca1a0296b00974423ae1592f497cab2034cd15e214"
+atlas = "Vehicle_01_A.png"
+textures = "Vehicle_01_A.png"
+description = "A compact blue workboat with a boxy hull, a small raised wheelhouse, and a rear A-frame gantry with rigging, suggesting a trawler or utility vessel. The low-poly build features flat, faceted surfaces with a simple blue and grey palette, appearing clean and ready for use in stylized coastal scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 534
+meshes = 1
+materials = 1
+size = [0.116838, 0.19705501, 0.248148]
+
+[mesh.sm_prop_jet_01]
+name = "SM_Prop_Jet_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Jet_01.fbx"
+sha256 = "8fb3cf2bc9ee325b7f4b8b9a1bc7069881fdf3e47cedd8e064aedc06bb0125fe"
+atlas = "Vehicle_01_A.png"
+textures = "Vehicle_01_A.png"
+description = "A compact, twin-engine fighter jet with a pointed nose, swept wings, and a single vertical tail, painted in a two-tone blue and white scheme with dark grey cockpit glass and engine intakes. The low-poly build gives it a clean, angular silhouette, and the bright, flat colours make it read clearly as a fast, agile..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 848
+meshes = 1
+materials = 1
+size = [0.21232, 0.089458, 0.323902]
+
+[mesh.sm_prop_lightpole_01]
+name = "SM_Prop_Lightpole_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Lightpole_01.fbx"
+sha256 = "cb63ca81d2c7cdac8afa46065855ccfcc5189d4aee92521fee4c757ae51b040e"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slender, unadorned grey pole with a smooth, curved arm ending in a small, flat lamp head, resembling a simple street or path light. Its minimalist, low-poly design and muted, weathered finish give it a utilitarian look suitable for urban or industrial settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 110
+meshes = 1
+materials = 1
+size = [0.029598, 0.42125902, 0.206115]
+
+[mesh.sm_prop_missle_01]
+name = "SM_Prop_Missle_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Missle_01.fbx"
+sha256 = "622921942934c6d3c63ed7054199af8fc5ce93b526fc3586ba26852c97234af3"
+atlas = "Vehicle_01_A.png"
+textures = "Vehicle_01_A.png"
+description = "A slender, cylindrical missile with a pointed blue nose cone and four small, swept-back fins at the tail, all in a flat, matte olive-drab finish. The simple, unadorned surface suggests a basic, unguided rocket or a low-detail projectile, ideal for background combat scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [0.024496, 0.024496, 0.105512]
+
+[mesh.sm_prop_neon_sign_01]
+name = "SM_Prop_Neon_Sign_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Neon_Sign_01.fbx"
+sha256 = "3da5b588ecf3661b8e757533f1b64bebd5924b2e75e55841a75c113b0cb0a3a1"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A rectangular red neon sign with a dark backing, featuring stylized, angular glyphs that resemble a fictional or East Asian script. The glowing tubes are encased in a thin, dark frame, giving it a weathered, industrial look suitable for a cyberpunk or urban environment."
+differs = "The only sign with a fully enclosed dark backing and the most angular, dense glyph layout, ideal for a large wall display."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 464
+meshes = 1
+materials = 1
+size = [0.17083, 0.086362, 0.00672]
+
+[mesh.sm_prop_neon_sign_02]
+name = "SM_Prop_Neon_Sign_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Neon_Sign_02.fbx"
+sha256 = "2bfd93ef56dc5cba6de0fe89dc9cfa08cfa675bd19bf4e8afb94202a31d447fb"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A compact, octagonal sign with a thick, flat red frame and a matching red zigzag glyph suspended inside by two small dark posts. The matte, slightly weathered finish gives it a worn, industrial look, making it ideal for a gritty urban or sci-fi environment where a simple, bold neon-style marker is needed."
+differs = "The smallest and most compact, with a unique octagonal frame and a single zigzag glyph, perfect for a small doorway or alley marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 200
+meshes = 1
+materials = 1
+size = [0.071894, 0.086362, 0.00672]
+
+[mesh.sm_prop_neon_sign_03]
+name = "SM_Prop_Neon_Sign_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Neon_Sign_03.fbx"
+sha256 = "95c55ba2cdfca5f4d4e12b5fc08d85dad118043e13f69cc77549631bd117b34d"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slim, rectangular sign with a purple border, featuring three stylized, jagged glyphs in alternating red and blue, set against a pale, off-white panel. The flat, low-poly design suggests a glowing neon display for a cyberpunk or futuristic setting, with a slightly weathered look that adds character."
+differs = "The only one with a purple border and a pale panel, featuring three distinct glyphs in alternating red and blue, giving it the most varied color palette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 552
+meshes = 1
+materials = 1
+size = [0.217734, 0.086362, 0.00672]
+
+[mesh.sm_prop_neon_sign_04]
+name = "SM_Prop_Neon_Sign_04"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Neon_Sign_04.fbx"
+sha256 = "61e4defd6c5344a389ab74cd328fb45cea03ac08af0458ec2f56499308da68a2"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slim, rectangular sign with a red border, featuring stylized blue and green glyphs that resemble a neon kanji character. The flat, low-poly design and vibrant colours give it a distinct cyberpunk or futuristic aesthetic, making it ideal for urban sci-fi environments."
+differs = "The widest sign, with a red border and blue-green glyphs, making it the most horizontally stretched option for a long facade."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 688
+meshes = 1
+materials = 1
+size = [0.314338, 0.086362, 0.00672]
+
+[mesh.sm_prop_neon_sign_05]
+name = "SM_Prop_Neon_Sign_05"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Neon_Sign_05.fbx"
+sha256 = "b02dfb239ba4f5ce4099d9ece94905e9ef25b06a180c1a4c757c5290e6b6c58b"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A tall, narrow vertical sign with a rounded red-orange border and dark blue-grey blocky glyphs stacked down its face, resembling stylized kanji or abstract lettering. The flat, low-poly design suggests a wall-mounted neon or LED display for a cyberpunk or urban setting, with a slightly weathered, matte finish that..."
+differs = "The only vertical sign, with a rounded red-orange border and stacked dark glyphs, ideal for a tall, narrow wall space."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 304
+meshes = 1
+materials = 1
+size = [0.086362, 0.314338, 0.009023]
+
+[mesh.sm_prop_neon_sign_06]
+name = "SM_Prop_Neon_Sign_06"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Neon_Sign_06.fbx"
+sha256 = "0a3583a50f3eebae0536a3494f5188dbece9343f45616c7dcd9a68604e9636df"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A compact, flat sign featuring two extruded Chinese characters, one green and one red, mounted side by side on a dark backing plate. The characters are rendered in a clean, matte plastic finish, giving the piece a vibrant, readable look suitable for a noodle shop or street-food stall."
+differs = "The only sign with actual extruded Chinese characters rather than abstract glyphs, making it the most readable and specific for a noodle shop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 452
+meshes = 1
+materials = 1
+size = [0.179806, 0.10676, 0.009631]
+
+[mesh.sm_prop_powerlines_01]
+name = "SM_Prop_Powerlines_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Powerlines_01.fbx"
+sha256 = "eede8f542b50536a087749371656411b4e9a69cb1898bb343046cc499bdd030a"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A slender, weathered grey utility line with three thin poles and two sagging cables, its simple silhouette and muted tones making it ideal for background depth in industrial or ruined city scenes."
+differs = "The only intact three-pole line, longest span, and the only one with two cables, best for a functioning grid."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 476
+meshes = 1
+materials = 1
+size = [2.149458, 0.490372, 0.193602]
+
+[mesh.sm_prop_powerlines_02]
+name = "SM_Prop_Powerlines_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Powerlines_02.fbx"
+sha256 = "4158baed07755737d5a7bf960d1fc7d837b2c7e81f18364bdc28ee4377631bf5"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A pair of slender, dark grey utility poles lean slightly, supporting a single sagging cable that trails off to the right, suggesting a broken or damaged line. The low-poly structure is minimal and weathered, ideal for adding a sense of decay or abandonment to a ruined urban or industrial scene."
+differs = "The only one with a single cable and a broken, trailing end, making it the most minimal and damaged option."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 384
+meshes = 1
+materials = 1
+size = [1.509076, 0.49442402, 0.444475]
+
+[mesh.sm_prop_powerlines_03]
+name = "SM_Prop_Powerlines_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Powerlines_03.fbx"
+sha256 = "89cbb42279edb59e0939f14b2d7c065d9d828c0f39840a23660e3c4ef9bd4d48"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A pair of weathered wooden utility poles connected by a sagging power line, with a second line drooping down to the ground. The poles are simple, dark brown, and feature small crossbars at the top, giving the asset a broken or abandoned look."
+differs = "The only one with a cable drooping to the ground and wooden brown poles, offering a distinct grounded, abandoned look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 376
+meshes = 1
+materials = 1
+size = [1.303702, 0.494053, 0.522912]
+
+[mesh.sm_prop_powerpole_01]
+name = "SM_Prop_Powerpole_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Powerpole_01.fbx"
+sha256 = "50bdf87d02224b4796745813359bc6026da6b635d55fd6022fb65dfbe9acaeb9"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A tall, slender wooden utility pole with a single crossbar near the top, supporting three grey insulators. The wood is a weathered brown, and the crossbar is reinforced with metal brackets, giving it a sturdy, functional look for a rural or industrial setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.193602, 0.490372, 0.073216]
+
+[mesh.sm_prop_rock_01]
+name = "SM_Prop_Rock_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Rock_01.fbx"
+sha256 = "36c97b6607bea5e34f74d0f085401888458aca39b850e8b00b636fea6b2acd98"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, elongated cluster of faceted grey boulders, forming a natural-looking ridge or barrier. The flat, angular surfaces suggest a weathered, rocky material ideal for terrain scatter or ground cover in a stylised environment."
+differs = "The longest, lowest, and most elongated ridge, ideal for a linear barrier or scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 512
+meshes = 1
+materials = 1
+size = [0.94047, 0.127444, 0.412948]
+
+[mesh.sm_prop_rock_02]
+name = "SM_Prop_Rock_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Rock_02.fbx"
+sha256 = "63dce6b94806973e109e9ef52f92631ad1d695d933187f66385789a8d116214e"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, wide cluster of angular grey boulders, with a larger central mass flanked by smaller, scattered stones. The flat-shaded facets give it a clean, stylized look, and its squat, grounded silhouette makes it ideal for a natural, unobtrusive terrain accent."
+differs = "The most balanced, grounded cluster with a clear central mass, best for a natural accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 370
+meshes = 1
+materials = 1
+size = [0.530552, 0.169981, 0.48999]
+
+[mesh.sm_prop_rock_03]
+name = "SM_Prop_Rock_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Rock_03.fbx"
+sha256 = "1259f17ea56b53f8c5579f1d1daacd753eb4e5162bb9455cc2724d22c7d9b225"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, wide cluster of faceted boulders, wider than it is tall, with a prominent central peak and smaller stones clustered around the base. The uniform grey surface is untextured, giving it a clean, unblemished look that reads as a generic, versatile rock formation for terrain decoration."
+differs = "The tallest and most prominent central peak, making it the most visually striking cluster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 538
+meshes = 1
+materials = 1
+size = [0.51944, 0.197942, 0.50362206]
+
+[mesh.sm_prop_rock_04]
+name = "SM_Prop_Rock_04"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Rock_04.fbx"
+sha256 = "3163cc41c3fcb963229539d2911f2fa181581b24eb48d08a0214e39f1c658eb7"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A squat, low-poly boulder with a broad, flattened base and a gently domed top, its surface broken into large, angular facets. The dark grey stone is marked by a few shallow, lighter-grey scratches and a distinct, pale streak across the upper face, suggesting a weathered, igneous rock."
+differs = "The only one with visible weathering marks, scratches, and a pale streak, making it the most damaged."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 134
+meshes = 1
+materials = 1
+size = [0.486944, 0.252458, 0.486946]
+
+[mesh.sm_prop_rock_05]
+name = "SM_Prop_Rock_05"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Rock_05.fbx"
+sha256 = "1692163064a2631e0f5a1d67c1869022fb1b5aeb35887ccc3ef9ce6a7bcf9b8b"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A squat, low-poly boulder with a broad, flattened dome shape and a wide, stable base, rendered in a uniform matte grey. Its surface is broken into large, angular facets that catch the light with subtle variation, giving it a clean, unweathered appearance."
+differs = "The cleanest, most uniform dome with no weathering, perfect for a pristine, unblemished look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 80
+meshes = 1
+materials = 1
+size = [0.48694402, 0.169665, 0.48694497]
+
+[mesh.sm_prop_rock_06]
+name = "SM_Prop_Rock_06"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Rock_06.fbx"
+sha256 = "512ead662dbbf4a659e0f504bab6e95b0d8703b5da8b4e6a2608a2a18e3c6f62"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A squat, low-poly boulder with a broad, flattened top and steeply angled sides, rendered in a uniform dark grey with subtle faceted shading. Its smooth, unadorned surface and lack of weathering make it a clean, versatile ground cover piece that reads clearly from any angle."
+differs = "The smallest and simplest, with the fewest triangles, ideal for tiny ground cover or distant scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [0.200473, 0.092816, 0.200474]
+
+[mesh.sm_prop_rock_07]
+name = "SM_Prop_Rock_07"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Rock_07.fbx"
+sha256 = "b6ae7736c912b971ced95d5d2b2c224f92b5d42cbe5367c6693be8755b0d4492"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, wide, irregularly faceted boulder with a flattened top and a single deep crease running along its upper surface, rendered in a uniform matte grey with no visible texture or weathering. Its squat, stable silhouette suggests a ground-level prop for use as a simple obstacle or terrain detail, offering a clean..."
+differs = "The only one with a deep crease on its top, giving it a unique, irregular silhouette for obstacles."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.392444, 0.122176, 0.22804199]
+
+[mesh.sm_prop_rock_edge_01]
+name = "SM_Prop_Rock_Edge_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Rock_Edge_01.fbx"
+sha256 = "7ed62f5e5c9476d61595629eae98a37c4e2dc88b1f1545953bfc7a23107aec00"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, flat slab of grey stone with a jagged, broken top and a cluster of angular boulders rising from one end, resembling a weathered ledge or a ruined piece of masonry. Its blocky silhouette and uniform grey texture make it a versatile, unobtrusive terrain accent for rocky environments."
+differs = "The tallest and most jagged, with a broken slab look; best for a ruined ledge or cliff accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 389
+meshes = 1
+materials = 1
+size = [0.503689, 0.164802, 0.465196]
+
+[mesh.sm_prop_rock_edge_02]
+name = "SM_Prop_Rock_Edge_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Rock_Edge_02.fbx"
+sha256 = "211cb9126752a02a700a43270630c86fe40a10faec6533d512f05afac3818f05"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, elongated cluster of angular grey boulders, forming a natural-looking rocky outcrop with flat, fractured faces and a few smaller stones scattered at its base. The uniform, matte grey texture gives it a clean, unadorned appearance, making it ideal for a subtle, non-intrusive terrain detail or a modular boundary.."
+differs = "The longest and lowest, with a scattered, linear cluster; ideal for a modular boundary or path edge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 346
+meshes = 1
+materials = 1
+size = [0.94047, 0.19087, 0.347735]
+
+[mesh.sm_prop_rock_edge_03]
+name = "SM_Prop_Rock_Edge_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Rock_Edge_03.fbx"
+sha256 = "0fb6a4116819f4a1be387fedc05dfc8be28692b37d38bcf65fa20c96b28635dc"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low, flat-topped cluster of angular grey boulders, wider than it is tall, with a stepped, blocky profile and a few sharp facets catching light. The surface is clean and unweathered, suggesting a sturdy, generic rock formation suitable for a path or ledge."
+differs = "The most compact and stepped, with a flat top; best for a sturdy, generic ledge or stepping stone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 330
+meshes = 1
+materials = 1
+size = [0.555738, 0.210474, 0.382294]
+
+[mesh.sm_prop_rubble_01]
+name = "SM_Prop_Rubble_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Rubble_01.fbx"
+sha256 = "d8dccbf5dec7e1e96fdfc638b747d5b87a17b5f30dd21238fe789ba838b7508f"
+atlas = "Vehicle_01_A.png"
+textures = "Vehicle_01_A.png"
+description = "A cluster of two jagged, dark grey rock chunks, one larger and one smaller, with a thin, bent metal rod protruding from the side, suggesting a broken piece of rebar or a snapped antenna. The low-poly surfaces are flat and untextured, giving it a clean, stylized look that reads as generic debris."
+differs = "The larger, more detailed piece with a metal rod, best for a focal debris point rather than ground scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 132
+meshes = 1
+materials = 1
+size = [0.322454, 0.119049, 0.332122]
+
+[mesh.sm_prop_rubble_02]
+name = "SM_Prop_Rubble_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Rubble_02.fbx"
+sha256 = "0da999b3bc1a8b54302957e6accb248da178b8f572886309426a0c3b59e4e77f"
+atlas = "Vehicle_01_A.png"
+textures = "Vehicle_01_A.png"
+description = "A low, irregular chunk of dark grey stone, faceted like a broken slab of concrete or asphalt. Its flat top and angled sides suggest a piece of shattered paving or debris, with a matte, weathered finish that makes it ideal for scattered ground clutter in ruined urban or industrial scenes."
+differs = "The plainest and smallest, a simple flat slab ideal for tiling as generic ground clutter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 38
+meshes = 1
+materials = 1
+size = [0.132754, 0.052086, 0.156952]
+
+[mesh.sm_prop_shipwreck_01]
+name = "SM_Prop_Shipwreck_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Shipwreck_01.fbx"
+sha256 = "e67b7aa31120a97a1944cb6e611fc362d4ab9f3fa4c92a93bb5c38577583559c"
+atlas = "Vehicle_01_A.png"
+textures = "Vehicle_01_A.png"
+description = "A compact, blocky patrol boat with a raised blue bridge and a flat grey deck, featuring a white lower hull and a dark, open bow that suggests a ramp or a missing section. The low-poly build gives it a clean, stylized look, and the intact upper structure contrasts with the damaged front, making it suitable for a..."
+differs = "The largest and most detailed, with a raised bridge and damaged bow, ideal for a wrecked patrol boat scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 689
+meshes = 1
+materials = 1
+size = [0.245066, 0.40264198, 0.55061]
+
+[mesh.sm_prop_shipwreck_02]
+name = "SM_Prop_Shipwreck_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Shipwreck_02.fbx"
+sha256 = "52027ea780b470e736e180748134d3faec9399043397f5d1eae180621b90334b"
+atlas = "Vehicle_01_A.png"
+textures = "Vehicle_01_A.png"
+description = "A long, low-slung blue hull with a grey deck and a dark, open stern, suggesting a landing craft or small transport vessel. The bow features a raised wheelhouse with white detailing and a small mast, while the flat main deck is empty and ready for cargo."
+differs = "The plainest and longest, with an open stern and empty deck, perfect for a cargo or landing craft."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 400
+meshes = 1
+materials = 1
+size = [0.202552, 0.157169, 0.59448]
+
+[mesh.sm_prop_taxi_01]
+name = "SM_Prop_Taxi_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Taxi_01.fbx"
+sha256 = "8b69a3c5ba1f10408d18bed2f98cad6d096c4eab1dc4f0270e47b6d23459ec12"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A low-slung, boxy sedan with a flat grey body and a prominent white roof rack, its front end wrapped in a vivid rainbow gradient that suggests a custom paint job or a stylized decal. The angular, faceted surfaces and chunky wheels give it a sturdy, toy-like appearance, while the bright, multi-coloured hood and bumper.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [0.087976, 0.084504, 0.25639]
+
+[mesh.sm_prop_tree_01]
+name = "SM_Prop_Tree_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Tree_01.fbx"
+sha256 = "73d1135001bbb0aa51aff22e464cee74db3df1f98e43696e4de6d8c13916e015"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A stout, low-poly sapling with a single brown trunk and a chunky, faceted olive-green canopy, featuring a smaller secondary cluster of leaves jutting from the lower side, giving it a slightly asymmetrical, wind-blown silhouette."
+differs = "Most asymmetrical with a wind-blown side cluster, ideal for adding organic variation to a scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 58
+meshes = 1
+materials = 1
+size = [0.232862, 0.437154, 0.220729]
+
+[mesh.sm_prop_tree_02]
+name = "SM_Prop_Tree_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Tree_02.fbx"
+sha256 = "553a41939e7509208a12baf2e591e434da10c30d8669d2e087be6e24b56b091f"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A stout, low-poly sapling with a single brown trunk and a large, faceted olive-green canopy, supported by a smaller cluster of leaves at its base. The flat-shaded surfaces and muted palette give it a stylized, weathered look, ideal for adding simple, natural landmarks to a ruined or overgrown environment."
+differs = "Most detailed and largest, with a base cluster, best for a prominent, weathered landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 78
+meshes = 1
+materials = 1
+size = [0.239166, 0.437154, 0.218768]
+
+[mesh.sm_prop_tree_03]
+name = "SM_Prop_Tree_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Tree_03.fbx"
+sha256 = "560973814260676526607bf54a088d805d609dfdfdbca4dbc564e3ad6f953a77"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A squat, faceted olive-green canopy sits atop a short, straight brown trunk, resembling a young sapling or stylized shrub. The low-poly geometry gives it a chunky, crystalline look, and the muted, earthy palette suggests a hardy, wind-swept plant suited for sparse or arid environments."
+differs = "Plainest and simplest, a single canopy on a trunk, perfect for a sparse, arid background filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 38
+meshes = 1
+materials = 1
+size = [0.209238, 0.421519, 0.216037]
+
+[mesh.sm_prop_yacht_01]
+name = "SM_Prop_Yacht_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Prop_Yacht_01.fbx"
+sha256 = "e14750c910dbd872b31e4f19bd2153214380d2e6962b9249466e6f24a781c856"
+atlas = "Vehicle_01_A.png"
+textures = "Vehicle_01_A.png"
+description = "A sleek, low-poly motor yacht with a white hull, dark grey superstructure, and blue accents on the deck and seating. It features a small upper helm with a radar arch and a pointed bow, appearing pristine and ready for coastal cruising."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 684
+meshes = 1
+materials = 1
+size = [0.14871, 0.222415, 0.497148]
+
+[mesh.sm_veh_biplane_01]
+name = "SM_Veh_Biplane_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Veh_Biplane_01.fbx"
+sha256 = "3a386316331673832770ff0736c474c710edccd9c11d5d6f23121593641c8441"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A compact, stylized biplane with a boxy fuselage and a single central pontoon, rendered in flat olive green with white wingtips and a white engine cowling. The low-poly build features a two-blade propeller and a small tail fin, giving it a clean, toy-like appearance suited for aerial combat or exploration scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1086
+meshes = 3
+materials = 2
+size = [0.696722, 0.237725, 0.475304]
+
+[mesh.sm_veh_biplane_damaged_01]
+name = "SM_Veh_Biplane_Damaged_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Veh_Biplane_Damaged_01.fbx"
+sha256 = "e369582b086dec766a674d82b38a6f1c35efa7b7d4652d445f25d15ec84cdeeb"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A compact olive-green biplane with a white-painted nose cowl and yellow wingtip accents, its upper wing is visibly bent and its tail section is twisted, suggesting a crash-landed or battle-worn state."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1048
+meshes = 1
+materials = 1
+size = [0.694041, 0.326311, 0.464522]
+
+[mesh.sm_veh_helicopter_01]
+name = "SM_Veh_Helicopter_01"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/SM_Veh_Helicopter_01.fbx"
+sha256 = "b9a84cda8241699101c976b07a6b6b2333fb41d57dc716eb5356e382f9d89b43"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+description = "A compact observation helicopter with a broad, flat main rotor, a small blue fuselage, and a white tail boom. The rotor blades are dark with a rainbow-striped pattern, and the body features simple blue and white paneling. It appears clean and functional, suited for civilian or light utility roles."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 674
+meshes = 3
+materials = 3
+size = [1.229956, 0.382337, 1.373206]
+
+[mesh.tail_02]
+name = "Tail_02"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/Tail_02.fbx"
+sha256 = "9b78f24a3fedd58558cf46cc49e3ec4494266e378d80871de9ec070148a4d220"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+wanted = "Blender_Default_Mixed_Grid.jpg"
+description = "A thick, grey, segmented tail that curves upward and tapers to a point, with a row of jagged spikes running along its top ridge. The tip is severed, exposing a fleshy, red-and-orange cross-section with a small green accent, giving it a gory, battle-damaged look."
+differs = "The only severed tail, with a gory exposed cross-section, ideal for battle-damaged kaiju props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1046
+meshes = 1
+materials = 1
+size = [0.407042, 0.72764003, 1.547796]
+
+[mesh.tail_03]
+name = "Tail_03"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/Tail_03.fbx"
+sha256 = "7a0a32bbc5ca0e1f7d08761a2f371fad80a1ce3141825b01a6eb125f28fabb30"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+wanted = "Blender_Default_Mixed_Grid.jpg"
+description = "A thick, tapering grey tail segment with a rounded base, ending in a sharp bone-coloured spike. It features jagged white dorsal plates along the top and a dark, gold-trimmed armour plate near the tip, with a magenta underside. The surface is weathered and battle-worn, suggesting a heavy, reptilian creature."
+differs = "The most detailed and heaviest tail, with gold-trimmed armour and a bone spike, suited for armoured or elite creatures."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1672
+meshes = 1
+materials = 1
+size = [0.373424, 0.764961, 1.52884]
+
+[mesh.tail_04]
+name = "Tail_04"
+pack = "polygon_kaiju"
+source = "SourceFiles/FBX/Tail_04.fbx"
+sha256 = "710a35afd6e2eeeed8105f30ef1f9e1f403eb6c8a82190195a72a4da30ede6d9"
+atlas = "PolygonKaiju_Texture_01.png"
+textures = "PolygonKaiju_Texture_01.png"
+wanted = "Monkey_01.psd"
+description = "A long, slender, gently tapering appendage with a subtle S-curve, ending in a small, rounded tip. The surface is smooth and untextured, appearing as a flat, pale grey material, suggesting a base or untextured state."
+differs = "The longest, plainest, and untextured tail, with the fewest triangles, perfect as a base mesh or for custom texturing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 258
+meshes = 1
+materials = 1
+size = [0.21333599, 0.748349, 2.1073952]

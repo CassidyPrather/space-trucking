@@ -1,0 +1,589 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.characters]
+name = "Characters"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/Characters.fbx"
+sha256 = "f9160f336aedb98911f8c4d1da4f8788a67578f06bd8edb1509b470b782a7c62"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A stocky, low-poly warrior with a broad, armored torso and a large, rectangular shield bearing a purple and gold emblem. The figure is clad in grey plate with brown leather accents and a red plume on the helmet, wielding a long, two-handed sword. The pose is static and upright, suggesting a ready-for-battle stance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 30963
+meshes = 24
+materials = 1
+size = [78.62307, 96.697784, 69.960884]
+
+[mesh.sk_character_female_druid]
+name = "SK_Character_Female_Druid"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/SK_Character_Female_Druid.fbx"
+sha256 = "9e0e19b3bfd13bb91f39da96ea3697ff9d209b6b0985719f4bf9b81e356a2b85"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender female figure in a T-pose, wearing a green and purple leaf-themed outfit with a floral headpiece, a short skirt, and brown boots, suggesting a nature-oriented spellcaster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3032
+meshes = 1
+materials = 1
+size = [2.04133, 1.865499, 0.371368]
+
+[mesh.sk_character_female_gypsy]
+name = "SK_Character_Female_Gypsy"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/SK_Character_Female_Gypsy.fbx"
+sha256 = "71e019fa29608f4785cb29b5e018c03bcf53f6aefa86d6c67de8f3655ec2b70f"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender female figure in a T-pose, wearing a green headscarf with a feather, a white midriff-baring top with green trim, and loose tan trousers with a green sash. The low-poly style gives her a stylized, slightly angular look, and the earthy palette suggests a wandering or bohemian character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2989
+meshes = 1
+materials = 1
+size = [2.04133, 1.969013, 0.468161]
+
+[mesh.sk_character_female_peasant_01]
+name = "SK_Character_Female_Peasant_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/SK_Character_Female_Peasant_01.fbx"
+sha256 = "f45914b732864c0abd92d190840d9db29ff84b33aaa1e9cc37c5d21eb5f5aaf3"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A young woman in a T-pose with auburn hair in a braid, wearing a white blouse with rolled sleeves, a brown bodice, and a knee-length tan skirt with a red sash. She has bare feet and a neutral expression, with a simple, low-poly style suited for a rural or fantasy village setting."
+differs = "The most detailed and colorful option, with bare feet and a braid, ideal for a lively village scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2646
+meshes = 1
+materials = 1
+size = [2.04133, 1.826411, 0.38132602]
+
+[mesh.sk_character_female_peasant_02]
+name = "SK_Character_Female_Peasant_02"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/SK_Character_Female_Peasant_02.fbx"
+sha256 = "a06ef1eba6adeebabd7a879f9e31df0f5676224a60ea74eb1cbce64957be943f"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A low-poly female villager in a T-pose, featuring auburn hair tied back and a long, grey-green dress with a darker green apron. The simple, muted palette and sturdy, practical clothing suggest a working-class character, ideal for a rural or medieval setting."
+differs = "The plainer, more muted choice with a full-length dress and apron, best for a working-class medieval setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1829
+meshes = 1
+materials = 1
+size = [2.041328, 1.816567, 0.397115]
+
+[mesh.sk_character_female_queen]
+name = "SK_Character_Female_Queen"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/SK_Character_Female_Queen.fbx"
+sha256 = "fce84254c4d0e10df88e658e21a8d44d4068a9510d5c42f179aed55587505832"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A regal female figure in a floor-length gown with a green bodice and a tan skirt featuring a darker green central panel, paired with a matching green cape. She wears a red headdress and a white collar, posed in a T-pose with pale skin and a neutral expression, conveying a formal, ceremonial appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2153
+meshes = 1
+materials = 1
+size = [2.041329, 1.837369, 0.422568]
+
+[mesh.sk_character_female_witch]
+name = "SK_Character_Female_Witch"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/SK_Character_Female_Witch.fbx"
+sha256 = "3503ef8f4718a015bba01ba295feb8b2cb0f1fec01f3208ba70906836e1fd959"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender figure in a long, forest-green coat with a matching wide-brimmed pointed hat, posed with arms outstretched in a T-pose. The outfit features a lighter green tunic, a brown belt with a buckle, and dark boots, with pale skin and light hair visible beneath the hat."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2628
+meshes = 1
+materials = 1
+size = [2.041328, 1.970747, 0.608255]
+
+[mesh.sk_character_male_baird]
+name = "SK_Character_Male_Baird"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/SK_Character_Male_Baird.fbx"
+sha256 = "a00dc6cf708cbef90ff03c67ab3edfb9ddaa23953308143f157f3d4a80bde7ca"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A stocky male figure in a T-pose, dressed as a jester or court fool in a green and yellow tunic with a matching pointed cap and a single feather. He wears dark trousers and boots, with a pale face and a small beard, and the low-poly style gives him a chunky, stylized look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2594
+meshes = 1
+materials = 1
+size = [2.04752, 2.070005, 0.523057]
+
+[mesh.sk_character_male_king]
+name = "SK_Character_Male_King"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/SK_Character_Male_King.fbx"
+sha256 = "10e90b13833ed5f7a80bdad74168fdea9ffaf3341f609aaee90edec0415dfabb"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A youthful, slender male figure in a T-pose, with a short ginger beard and swept-back hair. He wears a green tunic with a white fur collar, a grey under-layer, brown boots, and a dark cape, giving him a regal yet approachable look. The low-poly style and muted palette make him ideal for fantasy RPGs or strategy games."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2386
+meshes = 1
+materials = 1
+size = [2.047519, 1.839053, 0.45571703]
+
+[mesh.sk_character_male_peasant_01]
+name = "SK_Character_Male_Peasant_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/SK_Character_Male_Peasant_01.fbx"
+sha256 = "427fca6e5512f0d268bf77d7165a2ec226dbc915028737b23344e0d8196160c9"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A young male peasant in a T-pose, with shaggy light-brown hair and a slight beard. He wears a dark green tunic over a brown shirt, with brown trousers and dark boots, plus a belt with a small pouch. The low-poly style and neutral stance make him a versatile, ready-to-animate villager or commoner."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2018
+meshes = 1
+materials = 1
+size = [2.04752, 1.822766, 0.36392]
+
+[mesh.sk_character_male_rouge_01]
+name = "SK_Character_Male_Rouge_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/SK_Character_Male_Rouge_01.fbx"
+sha256 = "4a6bad7b8978b417cda5c8ec3045d748bf00646b49a9afb34729dc6d0b4a4e6a"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slim humanoid in a T-pose, clad in a muted olive-green hooded tunic and matching trousers, with dark boots and bracers. The hood is up, framing a pale face, and the outfit is accented by a brown belt and a small red pouch on the hip."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1662
+meshes = 1
+materials = 1
+size = [2.04752, 1.797353, 0.347848]
+
+[mesh.sk_character_male_sorcerer]
+name = "SK_Character_Male_Sorcerer"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/SK_Character_Male_Sorcerer.fbx"
+sha256 = "93d63eef66d268238ae6f21800a7803ae41b3fb48681ad304d91b6315245c2f9"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender male figure in a T-pose, clad in a knee-length green tunic with gold trim and a white sash, paired with dark trousers and brown boots. He has a short orange beard and hair, with a small pouch hanging from his belt, suggesting a scholarly or magical role."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2419
+meshes = 1
+materials = 1
+size = [2.047524, 1.838394, 0.342754]
+
+[mesh.sk_character_male_wizard]
+name = "SK_Character_Male_Wizard"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/SK_Character_Male_Wizard.fbx"
+sha256 = "328699372cdb8a9a57daef5b4ca3139d0b76a5cdb028f1558446fdf7a512e80f"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A low-poly male wizard in a T-pose, clad in a long, dark green robe with a matching pointed hat featuring a brown band. A brown belt cinches the waist, and a white beard and hair frame a pale face. The figure is posed for rigging, with a simple, stylized look suited for fantasy games."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2059
+meshes = 1
+materials = 1
+size = [2.04752, 2.051289, 0.536237]
+
+[mesh.sk_chr_female_druid]
+name = "SK_Chr_Female_Druid"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/Unreal_Characters/SK_Chr_Female_Druid.fbx"
+sha256 = "1aeca4fa7bb868108409297090d5b9c6cc5dc3eb3ee26880065c55bcac7649e5"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender female figure in a T-pose, wearing a green and purple outfit with a floral crown and a short skirt, accented by a belt and boots, giving a nature-oriented, woodland appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3032
+meshes = 1
+materials = 1
+size = [2.04133, 1.865499, 0.371368]
+
+[mesh.sk_chr_female_gypsy]
+name = "SK_Chr_Female_Gypsy"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/Unreal_Characters/SK_Chr_Female_Gypsy.fbx"
+sha256 = "a0691ca96fbd48c2220f1c27ee4e4a208dbd09f917a807d5e3bee0098a37aa36"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender female figure in a T-pose, wearing a green headscarf, a cropped white top with green trim, and loose tan trousers with a green sash. The outfit suggests a wandering or bohemian style, with a soft, low-poly aesthetic and muted earthy tones."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2989
+meshes = 1
+materials = 1
+size = [2.04133, 1.969013, 0.468161]
+
+[mesh.sk_chr_female_peasant_01]
+name = "SK_Chr_Female_Peasant_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/Unreal_Characters/SK_Chr_Female_Peasant_01.fbx"
+sha256 = "1873b1d6965cbf4ca2dbce52311a90a6f86261626f119f038321ace2ff8dc9d4"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A young woman in a T-pose with auburn hair tied back, wearing a white blouse with rolled sleeves, a brown bodice, and a knee-length tan skirt with a red sash. She has bare legs, simple brown shoes, and a neutral expression, appearing as a sturdy, everyday villager ready for animation."
+differs = "The most detailed and highest-poly variant, with a layered blouse, bodice, and sash, ideal for a sturdy, active villager role."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2646
+meshes = 1
+materials = 1
+size = [2.04133, 1.826411, 0.38132602]
+
+[mesh.sk_chr_female_peasant_02]
+name = "SK_Chr_Female_Peasant_02"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/Unreal_Characters/SK_Chr_Female_Peasant_02.fbx"
+sha256 = "82361074b6988d80f5892fdeb2237fd251dd69096388b43d1fab66e7471f44de"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender woman in a T-pose with auburn hair tied back, wearing a long grey dress with a green apron and a dark belt, her arms outstretched and a neutral expression, appearing as a simple, functional peasant character."
+differs = "The plainest and lowest-poly variant, with a simpler long dress and apron, ideal for a background or generic NPC role."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1829
+meshes = 1
+materials = 1
+size = [2.041328, 1.816567, 0.397115]
+
+[mesh.sk_chr_female_queen]
+name = "SK_Chr_Female_Queen"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/Unreal_Characters/SK_Chr_Female_Queen.fbx"
+sha256 = "5ecd083b2dffe1748ac488138f96b3963c524880f600495735b8afbd7db53309"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A low-poly female figure in a T-pose, wearing a long, floor-length gown with a green bodice and a tan skirt featuring a darker green central panel. She has a red headpiece or hair, a white collar, and a small pouch at her waist, with a simple, stylized texture that gives her a regal, medieval appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2153
+meshes = 1
+materials = 1
+size = [2.041329, 1.837369, 0.422568]
+
+[mesh.sk_chr_female_witch]
+name = "SK_Chr_Female_Witch"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/Unreal_Characters/SK_Chr_Female_Witch.fbx"
+sha256 = "2286642ef344685dd6307bedc695d83c997d11d2dcdab90464a61ef88cc46fdb"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender figure in a knee-length forest-green coat with a wide-brimmed pointed hat, posed with arms outstretched in a T-pose. The outfit features a lighter green tunic, dark boots, and a brown belt with a small pouch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2628
+meshes = 1
+materials = 1
+size = [2.041328, 1.970747, 0.608255]
+
+[mesh.sk_chr_male_baird]
+name = "SK_Chr_Male_Baird"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/Unreal_Characters/SK_Chr_Male_Baird.fbx"
+sha256 = "5c8276845d0f1d4779f11118be760e26efd701af2c06b174ce9bdb816b76af1d"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A stocky male figure in a T-pose, dressed in a green tunic with a brown leather chest strap and belt, brown trousers, and a green cap with a yellow feather. He has a red beard and a cheerful expression, with a small pouch on his hip, giving him the look of a jolly ranger or woodsman."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2594
+meshes = 1
+materials = 1
+size = [2.04752, 2.070005, 0.523057]
+
+[mesh.sk_chr_male_king]
+name = "SK_Chr_Male_King"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/Unreal_Characters/SK_Chr_Male_King.fbx"
+sha256 = "218585c52ab13e76334b9c3ff58808a08e3b10f285dd3e8cb960c192c63c7e85"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A young, slender male figure in a T-pose, with auburn hair and a short beard, wearing a green tunic with a white fur collar, a dark grey under-layer, and brown boots. The low-poly style gives him a stylized, regal appearance, and his neutral stance makes him suitable for idle or dialogue scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2386
+meshes = 1
+materials = 1
+size = [2.047519, 1.839053, 0.45571703]
+
+[mesh.sk_chr_male_peasant_01]
+name = "SK_Chr_Male_Peasant_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/Unreal_Characters/SK_Chr_Male_Peasant_01.fbx"
+sha256 = "2ce5175787b23bd2acbdd06a6f7c844bbd2847177ba4b0414467bdb8cda7da0c"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A young, slender male figure in a T-pose, with a mop of shaggy, light-brown hair and a pale complexion. He wears a dark green tunic with a brown belt and a lighter brown skirt or apron, paired with dark trousers and simple brown shoes, giving him a humble, rustic appearance suited for a village or farm setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2018
+meshes = 1
+materials = 1
+size = [2.04752, 1.822766, 0.36392]
+
+[mesh.sk_chr_male_rouge_01]
+name = "SK_Chr_Male_Rouge_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/Unreal_Characters/SK_Chr_Male_Rouge_01.fbx"
+sha256 = "cf0485be80e76bd6e7e0e2a31c7965f2eba9c1e83359c81a83511e498bebb444"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender humanoid in a T-pose, wearing a green hooded tunic with a dark belt and a small shoulder pouch, paired with dark trousers and boots. The face is pale with auburn hair, and the outfit is textured in muted, earthy greens with subtle wear, suggesting a rogue or scout archetype."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1662
+meshes = 1
+materials = 1
+size = [2.04752, 1.797353, 0.347848]
+
+[mesh.sk_chr_male_sorcerer]
+name = "SK_Chr_Male_Sorcerer"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/Unreal_Characters/SK_Chr_Male_Sorcerer.fbx"
+sha256 = "0eb83b5da1532eaf8476cfeb83998c10fb56f043e5f1c679a1d49ea532a3b831"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender male figure in a T-pose, wearing a knee-length green tunic with gold trim and a white front panel, dark trousers, and tall brown boots. He has a long white beard, a bald top with orange hair on the sides, and a small pouch on his hip, giving him a wise, scholarly appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2419
+meshes = 1
+materials = 1
+size = [2.047524, 1.838394, 0.342754]
+
+[mesh.sk_chr_male_wizard]
+name = "SK_Chr_Male_Wizard"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/Characters/Unreal_Characters/SK_Chr_Male_Wizard.fbx"
+sha256 = "b62857554f830eae4a5eaff169159ad7411c2916d3ea781eb00595c5cb17c338"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A stocky, bearded wizard in a floor-length green robe with a wide-brimmed pointed hat, posed in a T-pose. The outfit features a brown belt with a gold buckle and a lighter green sash, with pale skin and a white beard. The low-poly style gives it a chunky, stylized look suitable for fantasy games."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2059
+meshes = 1
+materials = 1
+size = [2.04752, 2.051289, 0.536237]
+
+[mesh.sm_prop_broom_01]
+name = "SM_Prop_Broom_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_Broom_01.fbx"
+sha256 = "7e66edf9571c4a17df01abf3b6c7bcd4b91391fe857d674b12ed779535640fab"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender, slightly crooked wooden handle rises from a dark, bulbous head, suggesting a simple sweeping tool. The head is a muted grey-brown with a lighter band at the top, while the shaft is a pale, weathered tan. The low-poly faceting gives it a rustic, hand-hewn appearance, ideal for a humble household prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 204
+meshes = 1
+materials = 1
+size = [0.22195, 1.9806211, 0.192214]
+
+[mesh.sm_prop_bucket_01]
+name = "SM_Prop_Bucket_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_Bucket_01.fbx"
+sha256 = "10e0fe35b412931ff3d8c41b166a3ddd8d0e6bbb940a0153e9103c638c5d0f3b"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A weathered wooden bucket with a simple arched handle, built from vertical staves bound by two dark metal hoops. The muted brown planks and grey bands give it a rustic, utilitarian look, perfect for carrying water or supplies in a fantasy village setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 876
+meshes = 1
+materials = 1
+size = [0.398026, 0.54722, 0.385486]
+
+[mesh.sm_prop_crystal_ball_01]
+name = "SM_Prop_Crystal_Ball_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_Crystal_Ball_01.fbx"
+sha256 = "13a1066ff5e3daff55bc3796817768a99b698bf0a1a588465bbe5c6ee379cf51"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A faceted, pale grey orb rests in a golden, claw-footed stand, giving it a mystical, arcane appearance. The low-poly geometry gives the crystal a gem-like quality, while the warm metallic base provides a strong contrast. It is a classic fortune-telling prop, ready to be placed on a table or shelf in a fantasy scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 336
+meshes = 1
+materials = 1
+size = [0.440676, 0.342673, 0.440676]
+
+[mesh.sm_prop_dagger_01]
+name = "SM_Prop_Dagger_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_Dagger_01.fbx"
+sha256 = "d33b1947c18acbff7a3e3c6913207412e57c5921be3d894fc91fc4a841dc3bfa"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A short, broad-bladed dagger with a pronounced curve and a single cutting edge, tapering to a sharp point. The grey steel blade shows a distinct fuller groove and a slightly worn, matte finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 242
+meshes = 1
+materials = 1
+size = [0.044456, 0.640686, 0.19685]
+
+[mesh.sm_prop_druid_staff_01]
+name = "SM_Prop_Druid_Staff_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_Druid_Staff_01.fbx"
+sha256 = "fb24f47fe972cc1365ac213bb6216e24ff14b227b61ff6ed027790d4f9142650"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A tall, gnarled wooden staff with a twisted, organic shaft, topped by a pale blue crystal cluster bound with leather straps and small feathers. The wood is a weathered brown with lighter, worn patches, and a small leather-wrapped grip sits midway down."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1082
+meshes = 1
+materials = 1
+size = [0.343635, 1.8950391, 0.31422502]
+
+[mesh.sm_prop_jug_01]
+name = "SM_Prop_Jug_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_Jug_01.fbx"
+sha256 = "433c0c7a882390e54e11ccb2352cb4a846dee147c1e2f51627a51d750be644cb"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A squat, faceted clay jug with a flared rim, a short neck, and a single loop handle, rendered in a flat, matte tan with a darker brown patch on the shoulder suggesting a stain or wear. The low-poly silhouette is chunky and utilitarian, evoking a rustic, everyday vessel for water or ale in a fantasy setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 196
+meshes = 1
+materials = 1
+size = [0.33102202, 0.493518, 0.415016]
+
+[mesh.sm_prop_lute_01]
+name = "SM_Prop_Lute_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_Lute_01.fbx"
+sha256 = "06e07ec14ceb7d4e39c6f29e0fc0f8c35b765fcc2dacb7b79749413df993cc21"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A teardrop-shaped lute with a pale wooden body, a darker brown neck, and a small soundhole, featuring a simple, low-poly design with a slightly weathered finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 378
+meshes = 1
+materials = 1
+size = [0.606288, 1.518815, 0.23013002]
+
+[mesh.sm_prop_sceptre_01]
+name = "SM_Prop_Sceptre_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_Sceptre_01.fbx"
+sha256 = "e2c3de14e592290e0326e39b79a95cbf3ebd5587fcd76753587a22479c49f120"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender ceremonial staff with a golden shaft, a red gem set in a circular gold head, and a small cross finial, suggesting a holy or magical focus. The gold is bright and polished, with red accents at the grip and base, giving it a regal, unblemished appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 550
+meshes = 1
+materials = 1
+size = [0.149448, 1.206836, 0.102407]
+
+[mesh.sm_prop_spellbook_01]
+name = "SM_Prop_SpellBook_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_SpellBook_01.fbx"
+sha256 = "80960f76cba53916fbd4b18f0f98f5fe0df576f39841e5b30f687fb366885e63"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "An open tome with slightly curved, parchment-toned pages, bound in a dark purple cover with a lighter purple spine. The visible pages feature dense, dark text blocks and a small illustration, giving it the look of an ancient, well-used grimoire."
+differs = "The largest and most detailed, with an open, illustrated spread ideal for a magical or ritual focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 260
+meshes = 1
+materials = 1
+size = [0.512186, 0.104666, 0.280942]
+
+[mesh.sm_prop_spellbook_02]
+name = "SM_Prop_SpellBook_02"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_SpellBook_02.fbx"
+sha256 = "ba34eb74446c36d4dad1f6fec2b76bdbbf7e648634aa3424f862b57287927fc6"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A squat, thick tome with a muted purple cover, bound by tan corner caps and a matching spine strap. The front displays a simple tan rectangular clasp and a horizontal band, while the thick, pale page block is visible from every angle, giving it a sturdy, well-worn appearance suited for a scholar's desk or a dungeon..."
+differs = "The plainest and most compact, with a closed, sturdy design perfect for a generic prop or background clutter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 194
+meshes = 1
+materials = 1
+size = [0.258071, 0.083386, 0.280942]
+
+[mesh.sm_prop_spellbook_chained_01]
+name = "SM_Prop_SpellBook_Chained_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_SpellBook_Chained_01.fbx"
+sha256 = "b04a893998ab37a074dae351cd928afec0cf076f1c1d1ca1586a76823fec393f"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A thick, closed tome bound in muted purple leather with tan corner caps and a matching spine strap, secured by a dark grey chain that loops from the front cover to the side. The cover features a large, blocky tan rune or sigil, and the pages are a pale cream, giving it a worn, arcane appearance suited for a wizard's..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 326
+meshes = 1
+materials = 1
+size = [0.40075898, 0.083386, 0.301291]
+
+[mesh.sm_prop_swordornate_01]
+name = "SM_Prop_SwordOrnate_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_SwordOrnate_01.fbx"
+sha256 = "c590d79f9e5d820355d10131b6f063ef1424252f24f98ba8c232bf8b760b0ec5"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender, straight-bladed sword with a subtle central ridge, featuring a gold crossguard with flared, curved quillons and a brown leather-wrapped grip ending in a gold pommel. The steel blade shows a worn, brushed finish with darker edges, while the gold accents appear slightly tarnished, giving it a practical..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 414
+meshes = 1
+materials = 1
+size = [0.065068, 1.323179, 0.282045]
+
+[mesh.sm_prop_vials_01]
+name = "SM_Prop_Vials_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_Vials_01.fbx"
+sha256 = "94cf5aa158de2c2281945dc3367cf76af85939b16999f20cbc717c3dd6494a79"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A cluster of two cylindrical vials, one green and one red, held together by a chunky brown wooden block. The vials are capped with pale yellow stoppers, and the low-poly faceting gives the glass a stylized, crystalline look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 236
+meshes = 1
+materials = 1
+size = [0.106826, 0.191301, 0.05514]
+
+[mesh.sm_prop_wand_01]
+name = "SM_Prop_Wand_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_Wand_01.fbx"
+sha256 = "c135a2c3f1336143d732a39b1fa23ccc8f61e3d48df1f2af6a499d00d47bb9d9"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender, slightly gnarled wooden shaft rises from a short, dark metal grip, giving it the look of a simple, rustic casting stick. The wood is a pale, dry tan with subtle darker streaks, while the handle is a weathered, dark iron grey with a flared pommel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.047948, 0.698191, 0.041524]
+
+[mesh.sm_prop_wizardstaff_01]
+name = "SM_Prop_WizardStaff_01"
+pack = "polygon_fantasy_characters_pack"
+source = "Source_Files/FBX/SM_Prop_WizardStaff_01.fbx"
+sha256 = "fa7904a205d88723ba9782788ee1a287733e99822958b5db699fa013dfefd89a"
+atlas = "Polygon_Fantasy_Characters_Texture_02_A.png"
+textures = "Polygon_Fantasy_Characters_Texture_02_A.png"
+description = "A slender, slightly gnarled wooden shaft rises to a golden, open-loop head that cradles a faceted blue gem, with a small gold collar beneath the crown. The wood is a muted brown with subtle grain, while the gold and gem provide a bright, magical contrast, suggesting a well-used but sturdy arcane focus."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 328
+meshes = 1
+materials = 1
+size = [0.167088, 2.187876, 0.38563]

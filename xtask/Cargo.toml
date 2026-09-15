@@ -1,0 +1,36 @@
+# The workspace's errand runner. Today it holds one errand: the art
+# resolver, which turns the references in art/manifest.toml into
+# build-ready glTF in a gitignored cache.
+#
+# It is a workspace member rather than a loose script for two reasons.
+# The first is that its rules get named guards like every other rule in
+# this repo, and `cargo test --workspace` is what runs them. The second
+# is that a script would have to be written in something, and the two
+# candidates both cost more than they save: a shell script cannot be
+# tested the way this repo tests things, and a Python one would put a
+# second language and a second dependency story in a tree that has
+# neither.
+#
+# The cost is one more crate in `cargo clippy --workspace --all-targets`
+# and `cargo test --workspace`. It is kept small on purpose: this package
+# has NO dependencies, not even the obvious ones. A TOML crate, a tar
+# crate, a flate crate and a hashing crate would be four more graphs in
+# CI's cache to save about three hundred lines, and the three hundred
+# lines are the part that can be read.
+[package]
+name = "xtask"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Cassidy Prather <pratherea@gmail.com>"]
+description = "Space Trucking's errand runner — the purchased-art resolver"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/CassidyPrather/space-trucking"
+keywords = ["gamedev", "assets", "build"]
+categories = ["development-tools"]
+publish = false
+
+[dependencies]
+
+[lints]
+workspace = true

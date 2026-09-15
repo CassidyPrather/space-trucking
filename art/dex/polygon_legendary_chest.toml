@@ -1,0 +1,93 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_prop_legendary_chest_01]
+name = "SM_Prop_Legendary_Chest_01"
+pack = "polygon_legendary_chest"
+source = "SourceFiles_PolygonLegendaryChest/FBX/SM_Prop_Legendary_Chest_01.fbx"
+sha256 = "c3be73d3d700aea0bc4b1f78d6b777c81585a2a6e18e5f22a7d84db2ae8037fd"
+atlas = "Polygon_Legendary_Chest_Texture_01.png"
+textures = "Polygon_Legendary_Chest_Texture_01.png"
+description = "A rectangular, open-topped chest with a stepped base and thick, gilded trim, its pale stone sides are adorned with ornate golden scrollwork and small purple gems at the corners. The interior is a plain, dark brown, suggesting a container for treasures or relics, with a weathered, antique finish that gives it a regal..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5953
+meshes = 1
+materials = 1
+size = [1.6011369, 0.902725, 0.881618]
+
+[mesh.sm_prop_legendary_chest_details_01]
+name = "SM_Prop_Legendary_Chest_Details_01"
+pack = "polygon_legendary_chest"
+source = "SourceFiles_PolygonLegendaryChest/FBX/SM_Prop_Legendary_Chest_Details_01.fbx"
+sha256 = "f2bf722bcfe0d3c2f8f0e9dd210bacfa55cc74da9cc11f642ddc8573b0243bc9"
+atlas = "Polygon_Legendary_Chest_Texture_01.png"
+textures = "Polygon_Legendary_Chest_Texture_01.png"
+description = "A low, wide rectangular chest with a gently curved lid, bound by dark metal straps and corner plates. The wood is a warm, golden brown with a subtle grain, while the metal fittings are a dull, tarnished gold."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14896
+meshes = 1
+materials = 1
+size = [1.487138, 0.339859, 0.753722]
+
+[mesh.sm_prop_legendary_chest_feet_01]
+name = "SM_Prop_Legendary_Chest_Feet_01"
+pack = "polygon_legendary_chest"
+source = "SourceFiles_PolygonLegendaryChest/FBX/SM_Prop_Legendary_Chest_Feet_01.fbx"
+sha256 = "6d257d1cc8d74b611aeb651e6ebf56ac344cca7bb69f1b8fd8e5b0b106c2e5ad"
+atlas = "Polygon_Legendary_Chest_Texture_01.png"
+textures = "Polygon_Legendary_Chest_Texture_01.png"
+description = "A set of twelve small, flat, pale grey rectangular blocks arranged in two concentric circles, each with a subtle beveled top edge and a slightly darker underside. They appear to be simple, unadorned feet or spacers for a larger chest, with a clean, worn stone or metal finish that suggests they are functional hardware.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [1.654907, 0.076286, 0.924283]
+
+[mesh.sm_prop_legendary_chest_lid_01]
+name = "SM_Prop_Legendary_Chest_Lid_01"
+pack = "polygon_legendary_chest"
+source = "SourceFiles_PolygonLegendaryChest/FBX/SM_Prop_Legendary_Chest_Lid_01.fbx"
+sha256 = "c9afef4fe18b9682cf9a51d97e2df7508a86706ddb7b1814dfb60dad8bd79de7"
+atlas = "Polygon_Legendary_Chest_Texture_01.png"
+textures = "Polygon_Legendary_Chest_Texture_01.png"
+description = "A low, rectangular wooden lid with a raised, ornate frame and four circular gold medallions set into the top, flanked by carved, horn-like corner posts. The pale, weathered wood and tarnished gold finish suggest an ancient, valuable relic, ideal for a dungeon or temple setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5256
+meshes = 1
+materials = 1
+size = [1.620002, 0.51674, 0.991038]
+
+[mesh.sm_prop_legendary_chest_rails_01]
+name = "SM_Prop_Legendary_Chest_Rails_01"
+pack = "polygon_legendary_chest"
+source = "SourceFiles_PolygonLegendaryChest/FBX/SM_Prop_Legendary_Chest_Rails_01.fbx"
+sha256 = "ade75318dd9873a42d644360cc72d719d38f320f22a2b8df74acfee2371afd34"
+atlas = "Polygon_Legendary_Chest_Texture_01.png"
+textures = "Polygon_Legendary_Chest_Texture_01.png"
+description = "Two parallel, slender wooden rails with dark metal end caps and small decorative studs, finished in a warm honey-brown with subtle weathering. The low-poly build gives them a clean, stylized look, and their simple, functional design suggests they are meant to be mounted on a chest as handles or decorative trim."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1304
+meshes = 1
+materials = 1
+size = [2.634964, 0.09446597, 0.928118]

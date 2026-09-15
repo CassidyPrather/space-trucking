@@ -1,0 +1,155 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_prop_flag_01]
+name = "SM_Prop_Flag_01"
+pack = "polygon_pride_flags"
+source = "SourceFiles/FBX/SM_Prop_Flag_01.fbx"
+sha256 = "92446a5c99a5650ee20e5ad912a6f85bbf5d9d1f21a3b85a80d703654af48c70"
+atlas = "PolygonPride_Texture_01_A.png"
+textures = "PolygonPride_Texture_01_A.png"
+description = "A rectangular flag with a slight wave, displaying the six-stripe rainbow pride design in flat, saturated colours, with a subtle fabric-like ripple across its surface."
+differs = "Larger and roughly double the triangle count, with red at the top and a more pronounced ripple for hero or close-up use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 320
+meshes = 1
+materials = 1
+size = [0.012307, 1.089174, 1.937842]
+
+[mesh.sm_prop_flag_02]
+name = "SM_Prop_Flag_02"
+pack = "polygon_pride_flags"
+source = "SourceFiles/FBX/SM_Prop_Flag_02.fbx"
+sha256 = "16ff42ef88e566f3a5bbe068610a1a90876615a02cc734f29224425db4f2115f"
+atlas = "PolygonPride_Texture_01_A.png"
+textures = "PolygonPride_Texture_01_A.png"
+description = "A rectangular banner with a slight wave, displaying the six-stripe rainbow pride flag in vivid, flat colours from purple at the top to red at the bottom, with a clean, stylised finish suitable for a low-poly environment."
+differs = "Smaller and simpler, with purple at the top and a flatter finish, ideal for distant background or repeated placement."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.02238, 0.85877, 1.502853]
+
+[mesh.sm_prop_flag_pole_01]
+name = "SM_Prop_Flag_Pole_01"
+pack = "polygon_pride_flags"
+source = "SourceFiles/FBX/SM_Prop_Flag_Pole_01.fbx"
+sha256 = "28ccf0c99e3e12b726d4876742b29564ff7f83bfd0ce8f1b921f0481a75a6fec"
+atlas = "PolygonPride_Texture_01_A.png"
+textures = "PolygonPride_Texture_01_A.png"
+description = "A slender, vertical pole with a small, rounded base and a rainbow pride flag attached near the top, shown in four rotations. The flag features the classic six-stripe design and appears to be waving, giving it a dynamic, wind-blown look."
+differs = "More triangular and wider flag, attached directly to the pole without a crossbar or gold finial, for a simpler, more dynamic look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 432
+meshes = 2
+materials = 1
+size = [0.468624, 5.739098, 0.570648]
+
+[mesh.sm_prop_flag_pole_02]
+name = "SM_Prop_Flag_Pole_02"
+pack = "polygon_pride_flags"
+source = "SourceFiles/FBX/SM_Prop_Flag_Pole_02.fbx"
+sha256 = "0f756ec55b848d8bc61bad0cc345b72aa41fa9c5ee8e22d1782f1cf430f49794"
+atlas = "PolygonPride_Texture_01_A.png"
+textures = "PolygonPride_Texture_01_A.png"
+description = "A slender, dark metal pole rises from a small, round gold base, topped with a simple gold finial. A six-stripe rainbow flag hangs from a horizontal crossbar, its fabric slightly rippled as if caught in a gentle breeze."
+differs = "Features a gold finial and horizontal crossbar, with a narrower flag, making it the more formal and detailed choice for ceremonial use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 372
+meshes = 2
+materials = 1
+size = [1.29401, 5.739098, 0.383691]
+
+[mesh.sm_prop_flag_poster_01]
+name = "SM_Prop_Flag_Poster_01"
+pack = "polygon_pride_flags"
+source = "SourceFiles/FBX/SM_Prop_Flag_Poster_01.fbx"
+sha256 = "5c7995f09826d9ee366c1cf019b3252da015c08e2742c24f87804bac2837a445"
+atlas = "PolygonPride_Texture_01_A.png"
+textures = "PolygonPride_Texture_01_A.png"
+description = "A tall, narrow rectangular banner with a slight diagonal cut at the bottom, displaying the six-stripe rainbow pride flag in vivid, saturated colours. The flat, matte surface suggests a fabric or paper material, ideal for decorating walls or fences in a low-poly environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.374458, 0.646866, 0.000834]
+
+[mesh.sm_prop_handheld_flag_01]
+name = "SM_Prop_Handheld_Flag_01"
+pack = "polygon_pride_flags"
+source = "SourceFiles/FBX/SM_Prop_Handheld_Flag_01.fbx"
+sha256 = "ffec2ea550a7fd97f347774abb3ef672ce36cac57ac65e250b94371e77a7e3e8"
+atlas = "PolygonPride_Texture_01_A.png"
+textures = "PolygonPride_Texture_01_A.png"
+description = "A small rectangular flag on a plain grey pole, displaying the six-stripe rainbow pride design in flat, saturated colours. The fabric is rendered as a rigid, slightly angled plane with a subtle wave, giving it a clean, stylised look suitable for low-poly scenes."
+differs = "The simplest, lowest-poly option with a single rigid pose, ideal for static scenes needing minimal geometry."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.021988, 0.479032, 0.303779]
+
+[mesh.sm_prop_handheld_flag_02]
+name = "SM_Prop_Handheld_Flag_02"
+pack = "polygon_pride_flags"
+source = "SourceFiles/FBX/SM_Prop_Handheld_Flag_02.fbx"
+sha256 = "6d66af5779e5a747952b3bcf21a67f1848086f1351ff298f3086a848aebaf1dd"
+atlas = "PolygonPride_Texture_01_A.png"
+textures = "PolygonPride_Texture_01_A.png"
+description = "A small rectangular pride flag with six horizontal stripes in red, orange, yellow, green, blue, and purple, mounted on a plain grey pole. The fabric is shown in four distinct poses, from a flat hanging position to a curved, waving shape, giving the asset a lively, dynamic feel."
+differs = "The most detailed and dynamic, with four distinct waving poses and higher triangle count, perfect for animated or lively displays."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.034025, 0.479032, 0.21596901]
+
+[mesh.sm_prop_pinned_flag_01]
+name = "SM_Prop_Pinned_Flag_01"
+pack = "polygon_pride_flags"
+source = "SourceFiles/FBX/SM_Prop_Pinned_Flag_01.fbx"
+sha256 = "2dfbe2893c7a7d503b5371e1d3c1a6f2d674ac85bf507c19d0bab4cc3639efaa"
+atlas = "PolygonPride_Texture_01_A.png"
+textures = "PolygonPride_Texture_01_A.png"
+description = "A rectangular pride flag with six horizontal stripes in red, orange, yellow, green, blue, and violet, shown with a gentle, wavy curve as if caught in a light breeze. It is attached to a thin, vertical pole along its left edge, which is visible in the side views, and the fabric has a flat, matte finish typical of..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 300
+meshes = 1
+materials = 1
+size = [2.095807, 1.416496, 0.094388]
+
+[mesh.sm_prop_pride_poster_01]
+name = "SM_Prop_Pride_Poster_01"
+pack = "polygon_pride_flags"
+source = "SourceFiles/FBX/SM_Prop_Pride_Poster_01.fbx"
+sha256 = "0601836c46e5ed483f36db19cb9ee96a7ba5955e78aa81b58b6dd484108ca479"
+atlas = "PolygonPride_Texture_01_A.png"
+textures = "PolygonPride_Texture_01_A.png"
+description = "A thin, upright rectangular poster with a slight curl, featuring a vibrant six-stripe rainbow gradient and a white speech bubble reading 'YOU ARE LOVED' with a red heart. The reverse is plain grey, and the subtle bend gives it a realistic, slightly weathered look, making it ideal for adding a supportive, modern touch.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [0.309108, 0.46479, 0.021516]

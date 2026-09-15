@@ -1,0 +1,291 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_chr_attach_hair_01]
+name = "SM_Chr_Attach_Hair_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_01.fbx"
+sha256 = "69e573ce15846295d273a8e4041e6fac1e39ad36f5cac8988d5021bb8756641c"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A short, tousled wig of sandy-blonde hair, styled with a low fringe and jagged, chunky locks that fall around the face and neck. The faceted low-poly surface gives it a soft, matte appearance, ideal for a casual or romantic character look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 532
+meshes = 1
+materials = 1
+size = [0.33268, 0.28337502, 0.315019]
+
+[mesh.sm_chr_attach_wings_01]
+name = "SM_Chr_Attach_Wings_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Wings_01.fbx"
+sha256 = "e2c81a9bcaab486f4916e7b3c8eb207d9351cccc1857499807cc6117d75ac4bb"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A pair of feathered angel wings, sculpted in a chunky low-poly style with layered, jagged feather tips. The pale cream and beige tones give a soft, romantic feel, with a small central mount for attachment. The wings are slightly curved and spread, ideal for a cherub or cupid character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1472
+meshes = 1
+materials = 1
+size = [1.017002, 1.015715, 0.22792199]
+
+[mesh.sm_chr_attach_wings_rigged_01]
+name = "SM_Chr_Attach_Wings_Rigged_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Wings_Rigged_01.fbx"
+sha256 = "49b5f9f654d234d9737054319696c01304d7595b0274ed347bef9a99760721c4"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A pair of feathered angel wings in a pale cream and beige palette, sculpted with layered, jagged feather tips that give a stylized, low-poly silhouette. The wings are angled slightly forward, suggesting a rigged attachment for a character's back, and the soft, matte texture conveys a clean, romantic aesthetic suited..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1478
+meshes = 1
+materials = 1
+size = [1.017002, 1.015715, 0.22792199]
+
+[mesh.sm_chr_cupid_01]
+name = "SM_Chr_Cupid_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Chr_Cupid_01.fbx"
+sha256 = "ae7dd246c0b7b2c50cc9f073aac762410b8dc3f6af4906502fe133e0b75ba42a"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A chibi-style cherub with a bald head, tiny wings, and a golden sash, posed with arms outstretched in a T-shape, wearing white shorts with a gold trim and a matching gold wristband, rendered in a soft, pastel palette with a smooth, matte finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1520
+meshes = 1
+materials = 1
+size = [1.311942, 1.165017, 0.268045]
+
+[mesh.sm_chr_kid_face_01]
+name = "SM_Chr_Kid_Face_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Chr_Kid_Face_01.fbx"
+sha256 = "57e37041afcf154dfbf19ab98e80c2ee6b06594abe1325dd3923d4e343450d7f"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A low-poly, angular grey block with a flat, rectangular face, featuring a small, colourful sticker-like decal with a rainbow stripe and a white heart, giving it a playful, valentine-themed appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10
+meshes = 1
+materials = 1
+size = [0.14259401, 0.180125, 0.022357]
+
+[mesh.sm_prop_balloon_01]
+name = "SM_Prop_Balloon_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Prop_Balloon_01.fbx"
+sha256 = "aa80d24e2f1e5c558e68f56c64f7dbb801522a3f05f8247c3f7dd94ae100d8db"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A plump, faceted red heart with a subtle glossy sheen sits atop a thin, dark grey stick, resembling a romantic prop or a stylized lollipop. The low-poly geometry gives it a charming, hand-crafted look, and the clean, unadorned surface makes it versatile for festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 143
+meshes = 1
+materials = 1
+size = [0.357266, 1.06948, 0.200916]
+
+[mesh.sm_prop_balloon_group_01]
+name = "SM_Prop_Balloon_Group_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Prop_Balloon_Group_01.fbx"
+sha256 = "c7cb218548b3a55703bf04eaceb51b7d620fde4b62bce2d2462bed1c1f64f0f1"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A cluster of three glossy red heart-shaped balloons, each with a small tied knot at the base, floats above a bundle of thin, dark grey strings that converge into a single trailing line, evoking a romantic gift ready to be held."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 549
+meshes = 1
+materials = 1
+size = [0.57101405, 1.260214, 0.38318402]
+
+[mesh.sm_prop_chocolate_01]
+name = "SM_Prop_Chocolate_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Prop_Chocolate_01.fbx"
+sha256 = "87a9e688201a0b31632a90df7f44ff9bd36c7389e5cbfe89c5bdca30d1b52718"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A squat, faceted chocolate truffle with a flat base and a rounded top, featuring a single bite taken out of one side. The low-poly surface is a uniform matte milk-brown with no distinct markings, giving it a simple, stylized look perfect for a romantic scene or dessert display."
+differs = "The smaller, rounder truffle with a bite on its side, best for a simple dessert bite or scattered prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 44
+meshes = 1
+materials = 1
+size = [0.083234, 0.033853, 0.086876]
+
+[mesh.sm_prop_chocolate_02]
+name = "SM_Prop_Chocolate_02"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Prop_Chocolate_02.fbx"
+sha256 = "8058b7981a24071ef0dae346eec5f21bb8ea54b7dc69e03b5a557c8067bc9e8f"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A chunky, low-poly heart-shaped chocolate with a flat base and a single bite taken from its right side, rendered in a matte, milk-brown tone with subtle faceting that catches light across its curved surfaces."
+differs = "The larger, heart-shaped chocolate with a bite on the right, ideal for a romantic focal point or gift."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 68
+meshes = 1
+materials = 1
+size = [0.096638, 0.036572, 0.100866]
+
+[mesh.sm_prop_chocolatebox_01]
+name = "SM_Prop_ChocolateBox_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Prop_ChocolateBox_01.fbx"
+sha256 = "88ddc40464f2f8c7097e620760539eab525106273c59432ab702af7deffcd679"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A low, flat heart-shaped box with a stepped, two-tiered profile, rendered in a solid, matte red with no visible pattern, lid, or ribbon. The faceted, chunky silhouette and clean, unadorned surface make it a versatile prop for romantic scenes, reading clearly as a closed container without the clutter of decorative..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1124
+meshes = 3
+materials = 1
+size = [0.467138, 0.097488, 0.487576]
+
+[mesh.sm_prop_giftbox_01]
+name = "SM_Prop_GiftBox_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Prop_GiftBox_01.fbx"
+sha256 = "178b8546629386de0b18242022c2364c90377a068dc80f155cedee82c3656aa6"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A squat, low-poly red gift box with a chunky, oversized bow and ribbon wrapping across the lid, rendered in a flat, matte style with subtle shading that gives it a clean, festive appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 400
+meshes = 1
+materials = 1
+size = [0.259406, 0.15485, 0.308382]
+
+[mesh.sm_prop_letter_01]
+name = "SM_Prop_Letter_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Prop_Letter_01.fbx"
+sha256 = "644512f1ac3d6bd3508a171643d598c1d534f939f2019f1b953af86882a395ba"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A flat, rectangular cream envelope with a folded triangular flap and a glossy red wax seal at its centre, rendered in a clean low-poly style with soft shading. The seal's sculpted ridges and the envelope's crisp edges give it a tidy, unblemished appearance, making it ideal for romantic or festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 198
+meshes = 1
+materials = 1
+size = [0.301358, 0.017371, 0.17836]
+
+[mesh.sm_prop_ribbon_01]
+name = "SM_Prop_Ribbon_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Prop_Ribbon_01.fbx"
+sha256 = "079a7f02f05d9648ab26ca0be02e9114343c4bfd0eb937e8be7d70fd0325ef82"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A low-poly red ribbon tied into a loose, chunky bow with two loops and two short trailing tails, rendered in a flat, matte crimson with subtle faceted shading that gives it a soft, fabric-like appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 196
+meshes = 1
+materials = 1
+size = [0.17844099, 0.061416, 0.18042]
+
+[mesh.sm_prop_rose_01]
+name = "SM_Prop_Rose_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Prop_Rose_01.fbx"
+sha256 = "08e68894de506e4f5c30a9d09901de52fd13076bcae2e37257f0f08beace6a2e"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A single red rose on a long, slender green stem, featuring a stylised, low-poly bloom with layered petals and two small, pointed leaves branching off below the flower head. The petals are a vibrant, slightly glossy red, while the stem and leaves are a flat, matte green, giving it a clean, game-ready appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 482
+meshes = 1
+materials = 1
+size = [0.215634, 0.475119, 0.17861]
+
+[mesh.sm_prop_rose_bunch_01]
+name = "SM_Prop_Rose_Bunch_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Prop_Rose_Bunch_01.fbx"
+sha256 = "e5b9092360d6d55bc46b102a629ee4ac77a35f75398ccfc2191e892376743377"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A cluster of three stylised red roses with layered, slightly angular petals, supported by a single green stem with a few small leaves. The low-poly construction gives the blooms a faceted, geometric look, and the deep red colour is uniform with no visible wear."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1416
+meshes = 1
+materials = 1
+size = [0.29737198, 0.502904, 0.28703701]
+
+[mesh.sm_prop_teddy_01]
+name = "SM_Prop_Teddy_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Prop_Teddy_01.fbx"
+sha256 = "4162002f9f0c493485db0d095914b3de5f8ed01981923428bf36b9be16fca17d"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A chunky, low-poly teddy bear in a seated pose with stubby limbs, round ears, and a simple face, finished in a soft cream colour and accented by a bright red bow tie, giving it a classic, cuddly appearance perfect for romantic or festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 758
+meshes = 1
+materials = 1
+size = [0.439854, 0.49568298, 0.413136]
+
+[mesh.sm_wep_arrow_01]
+name = "SM_Wep_Arrow_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Wep_Arrow_01.fbx"
+sha256 = "13607e198a33633ad67ac761eb6534032df2a737ed0cefcfdcb4592653401644"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A slender wooden shaft with a pale, pointed head and a red fletched tail, styled as a classic arrow with a clean, low-poly finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 282
+meshes = 1
+materials = 1
+size = [0.065566, 0.075453, 0.665592]
+
+[mesh.sm_wep_bow_01]
+name = "SM_Wep_Bow_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Wep_Bow_01.fbx"
+sha256 = "fee0fae95b8ea39a9c12bb12ec184264aa6745b2d027ed647631c701f3dd17fd"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A slender recurve bow with a pale gold wooden finish, featuring a bright red grip wrap and small gold accents at the tips. The limbs curve elegantly, connected by a thin black string, giving it a festive and polished look suitable for a romantic or holiday-themed archer."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 556
+meshes = 1
+materials = 1
+size = [0.056894, 1.121698, 0.168212]
+
+[mesh.sm_wep_bow_rigged_01]
+name = "SM_Wep_Bow_Rigged_01"
+pack = "polygon_valentines_kit"
+source = "SourceFiles/FBX/SM_Wep_Bow_Rigged_01.fbx"
+sha256 = "ce19b013bfff99490dfda7e3b414f3ba16e1108f9b58cfadebebeb8e81392f73"
+atlas = "PolygonValentines_Texture_01_A.png"
+textures = "PolygonValentines_Texture_01_A.png"
+description = "A slender recurve bow with a pale gold wooden finish and a dark red leather-wrapped grip, accented by small gold caps at the tips. The limbs curve gracefully inward, and a thin dark string connects the ends, giving it a light, elegant silhouette suited for a stylized romantic archer."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 556
+meshes = 1
+materials = 1
+size = [0.056894, 1.121698, 0.186598]

@@ -1,0 +1,133 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_wep_attach_trinket_01]
+name = "SM_Wep_Attach_Trinket_01"
+pack = "polygon_bubblegum_killstick_kit"
+source = "Polygon_KillStick_SourceFiles/FBX/SM_Wep_Attach_Trinket_01.fbx"
+sha256 = "191d600ea8d11c075cf72f2493ccd9b5a5f930ccc6cf66ba2ac051e699010edc"
+atlas = "PolygonKillStick_Texture_01_A.png"
+textures = "PolygonKillStick_Texture_01_A.png"
+wanted = "Polygon_Longsaw_Texture_01_D_Ashe.png"
+description = "A dark grey split ring holds two dangling charms on short cords: a white bunny head with pink inner ears and a red rectangular tag on one side, and a white bunny head paired with a rainbow arc on the other."
+differs = "Identical to 05 but with a red tag on the opposite side of the bunny."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 848
+meshes = 1
+materials = 1
+size = [0.061094, 0.202723, 0.105457]
+
+[mesh.sm_wep_attach_trinket_02]
+name = "SM_Wep_Attach_Trinket_02"
+pack = "polygon_bubblegum_killstick_kit"
+source = "Polygon_KillStick_SourceFiles/FBX/SM_Wep_Attach_Trinket_02.fbx"
+sha256 = "46ca8da4c6f7823603b003aaec2db6f1461a91adbabee3c934827d90d544419c"
+atlas = "PolygonKillStick_Texture_01_A.png"
+textures = "PolygonKillStick_Texture_01_A.png"
+wanted = "Polygon_Longsaw_Texture_01_D_Ashe.png"
+description = "A dark grey metal keyring suspends two small charms on short chains: a glossy red heart and a white bear head with black eyes, a black nose, and pink inner ears. The bear's face is slightly scuffed, giving it a worn, loved appearance, and the piece reads as a cute, sentimental accessory for a weapon."
+differs = "The only one with a bear charm and the only one with visible wear or scuffing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 650
+meshes = 1
+materials = 1
+size = [0.057848997, 0.20520198, 0.099382]
+
+[mesh.sm_wep_attach_trinket_03]
+name = "SM_Wep_Attach_Trinket_03"
+pack = "polygon_bubblegum_killstick_kit"
+source = "Polygon_KillStick_SourceFiles/FBX/SM_Wep_Attach_Trinket_03.fbx"
+sha256 = "dbd14823bf85080dab48322d77c25abe7830682c7525798490606f69c9fda612"
+atlas = "PolygonKillStick_Texture_01_A.png"
+textures = "PolygonKillStick_Texture_01_A.png"
+wanted = "Polygon_Longsaw_Texture_01_D_Ashe.png"
+description = "A small, dark grey metal split ring suspends a short chain that holds a glossy red heart charm and a tiny, silver-bladed knife with a red handle, suggesting a macabre keychain or weapon charm. The heart is smooth and rounded, while the knife is a miniature, stylised blade with a visible edge, giving the trinket a..."
+differs = "The only one with a knife charm, making it the most macabre and the only one with a blade."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 576
+meshes = 1
+materials = 1
+size = [0.104931, 0.24174601, 0.076946]
+
+[mesh.sm_wep_attach_trinket_04]
+name = "SM_Wep_Attach_Trinket_04"
+pack = "polygon_bubblegum_killstick_kit"
+source = "Polygon_KillStick_SourceFiles/FBX/SM_Wep_Attach_Trinket_04.fbx"
+sha256 = "248f9455f081c9ca0a3faaff2980304f91d6ea9c03615dae90d4ef00ee7394f3"
+atlas = "PolygonKillStick_Texture_01_A.png"
+textures = "PolygonKillStick_Texture_01_A.png"
+wanted = "Polygon_Longsaw_Texture_01_D_Ashe.png"
+description = "A small, chunky keychain with a thick black ring and cord, featuring a frosted cupcake with a cherry and a rainbow charm, rendered in a stylized low-poly look with pastel pink, blue, and yellow frosting, conveying a playful, whimsical accessory for a weapon."
+differs = "The only one with a cupcake charm and the only one with a thick black ring instead of a split ring."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 800
+meshes = 1
+materials = 1
+size = [0.063744, 0.222051, 0.107470006]
+
+[mesh.sm_wep_attach_trinket_05]
+name = "SM_Wep_Attach_Trinket_05"
+pack = "polygon_bubblegum_killstick_kit"
+source = "Polygon_KillStick_SourceFiles/FBX/SM_Wep_Attach_Trinket_05.fbx"
+sha256 = "d66368b81fe1395558661f693a227c72cd28d9f7244d7dfd69f5fffc450a10c8"
+atlas = "PolygonKillStick_Texture_01_A.png"
+textures = "PolygonKillStick_Texture_01_A.png"
+wanted = "Polygon_Longsaw_Texture_01_D_Ashe.png"
+description = "A chunky dark grey keychain with a large ring and two dangling charms: a white bunny head with long ears and a red rectangular tag, plus a small rainbow arc. The low-poly style gives it a playful, toy-like appearance, suggesting a collectible trinket or accessory for a weapon."
+differs = "Identical to 01 but with the red tag on the opposite side of the bunny."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 848
+meshes = 1
+materials = 1
+size = [0.061094, 0.202723, 0.10545799]
+
+[mesh.sm_wep_bubblegum_killsaw_01]
+name = "SM_Wep_Bubblegum_Killsaw_01"
+pack = "polygon_bubblegum_killstick_kit"
+source = "Polygon_KillStick_SourceFiles/FBX/SM_Wep_Bubblegum_Killsaw_01.fbx"
+sha256 = "8bfd14ba40ff515e48da91b67ffe5d1ccf61ace1f4859495c9329d3625869f1b"
+atlas = "Saw_Teeth.tga"
+textures = "Saw_Teeth.tga"
+wanted = "Polygon_Longsaw_Texture_01_D_Ashe.png"
+description = "A compact, boxy chainsaw with a short, stubby blade, rendered in a dark, matte grey with a worn, metallic finish. The blade features a series of circular cutouts along its length, and a simple, curved handle is mounted on top."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2562
+meshes = 1
+materials = 2
+size = [1.14142, 0.365986, 0.361077]
+
+[mesh.sm_wep_bubblegum_killstick_01]
+name = "SM_Wep_Bubblegum_Killstick_01"
+pack = "polygon_bubblegum_killstick_kit"
+source = "Polygon_KillStick_SourceFiles/FBX/SM_Wep_Bubblegum_Killstick_01.fbx"
+sha256 = "dbab41c58ce1251a81fd5e487121ae0890cb84bd4451984b4e8b43e5bc656bfc"
+atlas = "Saw_Teeth.tga"
+textures = "Saw_Teeth.tga"
+wanted = "Polygon_Longsaw_Texture_01_D_Ashe.png"
+description = "A long, slender melee weapon with a short, boxy head and a thin, straight shaft ending in a small, cylindrical pommel. The dark, worn metal surface features a distinct saw-tooth pattern along the shaft, giving it a gritty, industrial look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3888
+meshes = 1
+materials = 2
+size = [2.479068, 0.365986, 0.361077]

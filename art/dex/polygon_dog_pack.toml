@@ -1,0 +1,1966 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sk_chr_attach_vest_highvis_germanshepherd_01]
+name = "SK_Chr_Attach_Vest_HighVis_GermanShepherd_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_HighVis_GermanShepherd_01.fbx"
+sha256 = "621c28f7650f8c43a968df64870e2e55cb4a9d9f45ddc71e50c8116c1c6a6b1a"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A high-visibility vest for a German Shepherd, rendered in bright yellow with two silver reflective stripes and a small circular badge on the side. The vest is fitted with a dark grey collar and a black underbelly strap, showing a clean, low-poly build that clearly reads as a working dog's safety gear."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 294
+meshes = 1
+materials = 1
+size = [0.322782, 0.429005, 0.78104997]
+
+[mesh.sk_chr_attach_vest_highvis_large_01]
+name = "SK_Chr_Attach_Vest_HighVis_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_HighVis_Large_01.fbx"
+sha256 = "0b04c180c1804c5e45d6ff8e381212158cf0313af0b26e4c83359b22fc136ff9"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A high-visibility safety vest with a boxy, low-poly silhouette, featuring a bright yellow body crossed by two silver reflective stripes and a dark grey collar. A small circular emblem sits on the chest, and the open front reveals a dark interior, suggesting it is designed to be worn over a character's torso."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 294
+meshes = 1
+materials = 1
+size = [0.32372898, 0.475774, 0.78006]
+
+[mesh.sk_chr_attach_vest_highvis_medium_01]
+name = "SK_Chr_Attach_Vest_HighVis_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_HighVis_Medium_01.fbx"
+sha256 = "bb895a04e33f14be72da904b5d95c1fe50dd666e53f3aee2c21eaabb6da7b43e"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, high-visibility safety vest with a boxy, low-poly silhouette, featuring a bright yellow-green shell and a dark grey collar. Two horizontal silver reflective stripes wrap around the torso, and a small circular emblem is printed on the chest."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 294
+meshes = 1
+materials = 1
+size = [0.322782, 0.411177, 0.76153004]
+
+[mesh.sk_chr_attach_vest_highvis_small_01]
+name = "SK_Chr_Attach_Vest_HighVis_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_HighVis_Small_01.fbx"
+sha256 = "ac265ba0758963881ba6054039e62e51d39e8afdb4326c0e9d991888ad1d2ab9"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, cylindrical high-visibility vest with a dark grey collar and underarm sections, featuring two broad silver reflective bands and a small circular badge on the chest. The bright yellow fabric is clean and unwrinkled, suggesting a stiff, new garment intended for a small dog or pet character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 294
+meshes = 1
+materials = 1
+size = [0.31868, 0.40544, 0.753994]
+
+[mesh.sk_chr_attach_vest_military_germanshepherd_01]
+name = "SK_Chr_Attach_Vest_Military_GermanShepherd_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Military_GermanShepherd_01.fbx"
+sha256 = "865e3137e7267aa1762167611bddc1cb2c51657552aa027b52d33b8db66b4d21"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, low-poly tactical vest with a broad back panel, two shoulder straps, and a front plate, rendered in muted olive drab with tan trim and a small top loop. The blocky, faceted surfaces give it a rugged, utilitarian look suited for a military or survival game, with a clean, unblemished finish that reads as new.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 412
+meshes = 1
+materials = 1
+size = [0.347132, 0.454187, 0.67618704]
+
+[mesh.sk_chr_attach_vest_military_large_01]
+name = "SK_Chr_Attach_Vest_Military_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Military_Large_01.fbx"
+sha256 = "91a936575f59169fa488bbcfff59d5fe3cfb6cbf5d9b0cbaf252c76f8452c1d6"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A bulky, low-poly tactical vest with a broad, rounded chest plate and a thick, segmented collar. The olive-drab fabric is reinforced with tan straps and a top carry handle, giving it a rugged, military look suitable for heavy infantry or armored characters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 412
+meshes = 1
+materials = 1
+size = [0.347132, 0.454187, 0.67618704]
+
+[mesh.sk_chr_attach_vest_military_medium_01]
+name = "SK_Chr_Attach_Vest_Military_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Military_Medium_01.fbx"
+sha256 = "836aa669b33987be1c01bec7b2f456f758535b0fa045edda035130183456281d"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, low-poly tactical vest with a boxy, segmented chest plate and a prominent top carry handle, rendered in muted olive-drab fabric with tan trim and a large, flat tan back panel. The chunky, stylized proportions and clean, untextured surfaces give it a sturdy, game-ready appearance suited for a soldier or..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 412
+meshes = 1
+materials = 1
+size = [0.345652, 0.434316, 0.65616]
+
+[mesh.sk_chr_attach_vest_military_small_01]
+name = "SK_Chr_Attach_Vest_Military_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Military_Small_01.fbx"
+sha256 = "0160e4955432f636cea4df201c2abba94239856290fdf32ffea60a707723a36f"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, low-poly tactical vest with a boxy, segmented silhouette, featuring a prominent front plate and a rear panel connected by thick shoulder straps. The olive-drab fabric is accented with tan trim and a small top loop, giving it a rugged, utilitarian look suited for a soldier or survivor character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 412
+meshes = 1
+materials = 1
+size = [0.33365, 0.43087, 0.651922]
+
+[mesh.sk_chr_attach_vest_police_germanshepherd_01]
+name = "SK_Chr_Attach_Vest_Police_GermanShepherd_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Police_GermanShepherd_01.fbx"
+sha256 = "78f7c961c1f9e5ddfb7cef81c7e1edc7918be89dfe4125e31533e93eaaf11ce0"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A blocky, low-poly tactical vest for a German Shepherd, rendered in dark charcoal grey with a bright blue dashed trim along the top edge and a white 'POLICE' label on the side. It features a thick, padded collar section and a sturdy chest plate, giving it a robust, utilitarian look suitable for law-enforcement or..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 344
+meshes = 1
+materials = 1
+size = [0.335832, 0.44477, 0.70807695]
+
+[mesh.sk_chr_attach_vest_police_large_01]
+name = "SK_Chr_Attach_Vest_Police_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Police_Large_01.fbx"
+sha256 = "f99240422b5f413f4640f3cbdea1108936d01fe76ef61d995a63495453ae50fa"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A bulky, dark grey tactical vest with a high collar and thick shoulder pads, featuring a bright blue trim along the top edge and a white 'POLICE' label on the chest. The low-poly, faceted surface gives it a rugged, utilitarian look, designed for a large character model."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 344
+meshes = 1
+materials = 1
+size = [0.353182, 0.48703098, 0.714421]
+
+[mesh.sk_chr_attach_vest_police_medium_01]
+name = "SK_Chr_Attach_Vest_Police_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Police_Medium_01.fbx"
+sha256 = "7b2a098da9dfb0dbd28a79795f525872958d4f4d4a1e5fef6ba2697aaba0391a"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A bulky, dark grey tactical vest with a high collar and thick shoulder padding, featuring a bright blue and white checkered band across the chest and the word POLICE in white on the front. The blocky, low-poly design suggests a heavy-duty protective role for law enforcement characters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 344
+meshes = 1
+materials = 1
+size = [0.335832, 0.39802802, 0.681083]
+
+[mesh.sk_chr_attach_vest_police_small_01]
+name = "SK_Chr_Attach_Vest_Police_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Police_Small_01.fbx"
+sha256 = "95940278fd3db1aee8bfe6efd6408bae0c25c8daa4c2269ddc2b12b386181b82"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, low-poly tactical vest with a high collar and thick shoulder padding, rendered in dark charcoal grey. It features a bright blue and white checkered band across the chest and the word 'POLICE' in white on the front, with a small grey buckle at the bottom."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 344
+meshes = 1
+materials = 1
+size = [0.338288, 0.38099402, 0.679236]
+
+[mesh.sk_chr_attach_vest_rescue_germanshepherd_01]
+name = "SK_Chr_Attach_Vest_Rescue_GermanShepherd_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Rescue_GermanShepherd_01.fbx"
+sha256 = "9cb261e357962abcc999a0d4d9bc8ab3feebedc11b6ff98861525178a698e95c"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, boxy rescue vest in bright red with white 'RESCUE' lettering on the side panels, featuring a black top handle and a small grey pouch on the back. The dark grey underside and simple, low-poly construction make it a clear, readable attachment for a German Shepherd model in a game."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 472
+meshes = 1
+materials = 1
+size = [0.347132, 0.454187, 0.707505]
+
+[mesh.sk_chr_attach_vest_rescue_large_01]
+name = "SK_Chr_Attach_Vest_Rescue_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Rescue_Large_01.fbx"
+sha256 = "196a0cc519c729876b83a668c0ba5b71aa7019455e519e6c04bbdbf14c8cf011"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A bulky, dark grey harness with a red top panel bearing white 'RESCUE' lettering, a black handle, and silver rivets, designed to fit a large dog's torso."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 472
+meshes = 1
+materials = 1
+size = [0.347132, 0.489742, 0.707505]
+
+[mesh.sk_chr_attach_vest_rescue_medium_01]
+name = "SK_Chr_Attach_Vest_Rescue_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Rescue_Medium_01.fbx"
+sha256 = "b6b7405185b464c2eee282650c16c187d43959f8eda9c66a7e80e08914f66a44"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, boxy rescue vest with a bold red main panel and dark grey side sections, featuring white 'RESCUE' lettering on the chest and a small top handle. The low-poly design includes a front pouch and a rear pack, giving it a utilitarian, emergency-ready look suitable for a medium-sized dog."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 472
+meshes = 1
+materials = 1
+size = [0.337365, 0.445275, 0.685982]
+
+[mesh.sk_chr_attach_vest_rescue_small_01]
+name = "SK_Chr_Attach_Vest_Rescue_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Rescue_Small_01.fbx"
+sha256 = "9fa36f5d036d2aa31022f437e433bade1fb3451eabf7c4e05b14078a633bb9ac"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, low-poly rescue vest with a red main body and dark grey trim, featuring a black top handle and a white 'RESCUE' label on the side. The blocky, stylized design suggests it is a functional attachment for a small dog, with a simple, clean texture that fits a stylized game aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 472
+meshes = 1
+materials = 1
+size = [0.343112, 0.428166, 0.690186]
+
+[mesh.sk_chr_attach_vest_saddle_germanshepherd_01]
+name = "SK_Chr_Attach_Vest_Saddle_GermanShepherd_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Saddle_GermanShepherd_01.fbx"
+sha256 = "77584ef9ac4011a2051da350067004168c2f5a439e039e3b084531432903a39a"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A low-poly saddle and vest attachment for a German Shepherd, featuring a dark grey and black fabric body with a lighter grey padded seat panel and a rounded rear flap. It includes a small handle on top and two hanging stirrups with metal loops, giving it a functional, ready-to-ride appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 452
+meshes = 1
+materials = 1
+size = [0.357142, 0.50276697, 0.67618704]
+
+[mesh.sk_chr_attach_vest_saddle_large_01]
+name = "SK_Chr_Attach_Vest_Saddle_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Saddle_Large_01.fbx"
+sha256 = "a4a1152701a3b8ed7894c3540bea15d95f430d95e8c237ec06d37e073700cddd"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A bulky, low-poly saddle with a high, curved rear cantle and a broad, rounded front pommel, featuring a dark grey seat panel with lighter grey trim and a single hanging stirrup strap on each side."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 452
+meshes = 1
+materials = 1
+size = [0.357142, 0.50711405, 0.679317]
+
+[mesh.sk_chr_attach_vest_saddle_medium_01]
+name = "SK_Chr_Attach_Vest_Saddle_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Saddle_Medium_01.fbx"
+sha256 = "bcbda05bb0a442ec00fc8bdcced4fec2e6f96deb54becbfae79d01c48578f930"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, low-poly saddle with a high, rounded rear cantle and a flat seat, rendered in muted grey-brown leather with darker panel stitching. It features a small rear storage pouch and two hanging stirrups with metal loops, appearing sturdy and slightly worn, ready to be fitted onto a medium-sized mount."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 452
+meshes = 1
+materials = 1
+size = [0.357142, 0.48149803, 0.657517]
+
+[mesh.sk_chr_attach_vest_saddle_small_01]
+name = "SK_Chr_Attach_Vest_Saddle_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Saddle_Small_01.fbx"
+sha256 = "d2e404a7504b04f685ac19c6f8cdeadcbc534e8b19f9bb527827629d3a48037c"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, low-slung saddle with a raised cantle and pommel, featuring a broad, flat seat and a single girth strap hanging beneath. The dark grey leather is accented with lighter, worn stitching and a subtle brown trim along the edges, giving it a practical, used look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 452
+meshes = 1
+materials = 1
+size = [0.357142, 0.482038, 0.658298]
+
+[mesh.sk_chr_attach_vest_saddle_wolf_01]
+name = "SK_Chr_Attach_Vest_Saddle_Wolf_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_Saddle_Wolf_01.fbx"
+sha256 = "630381537a7a5e4b93f581bcbe29313429986195688c81d416b48290919c2b01"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, low-poly saddle and harness assembly in dark grey and charcoal, featuring a broad, curved seat and a lighter grey side panel. Two small metal rings hang from the lower straps, suggesting a functional attachment point for gear or a rider."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 452
+meshes = 1
+materials = 1
+size = [0.399517, 0.583827, 0.67618704]
+
+[mesh.sk_chr_attach_vest_war_germanshepherd_01]
+name = "SK_Chr_Attach_Vest_War_GermanShepherd_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_War_GermanShepherd_01.fbx"
+sha256 = "b8e86a369c3f7feeacc827f8e7b8df94101dcc4943578efb8203d45cd3c4c49e"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A low-poly olive-drab tactical vest with a prominent white cross on a red square, featuring a front pouch, a rear plate, and a top carry handle, designed for a German Shepherd war dog."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1382
+meshes = 1
+materials = 1
+size = [0.425716, 0.454187, 0.824293]
+
+[mesh.sk_chr_attach_vest_war_large_01]
+name = "SK_Chr_Attach_Vest_War_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_War_Large_01.fbx"
+sha256 = "2b87feb9cfae4d1d9755ffe45c13188ac96c564052aa73464835e58818462874"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A bulky olive-drab tactical vest with a large grey back plate, front pouches, and a prominent red cross on a white circle, indicating a combat medic role. The low-poly style features clean, flat shading and a slightly worn, utilitarian appearance suitable for military or survival games."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1382
+meshes = 1
+materials = 1
+size = [0.425716, 0.48792702, 0.83178604]
+
+[mesh.sk_chr_attach_vest_war_medium_01]
+name = "SK_Chr_Attach_Vest_War_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_War_Medium_01.fbx"
+sha256 = "71a5978460cf017a743d6ff0965d912646920b9610efd6b62c97837d7e0276e2"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A bulky olive-drab tactical vest with a prominent white cross on a red square panel, featuring a front pouch, a rear pack, and a top carry handle, suggesting a combat medic role."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1382
+meshes = 1
+materials = 1
+size = [0.425716, 0.454187, 0.803378]
+
+[mesh.sk_chr_attach_vest_war_small_01]
+name = "SK_Chr_Attach_Vest_War_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SK_Chr_Attach_Vest_War_Small_01.fbx"
+sha256 = "62840f2ac26f02b3bc7f40f45e745d4fe8144ea0be506529afe0a155d11da9fb"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact olive-drab tactical vest with a prominent white square bearing a red cross on the chest, indicating a medic role. It features a high collar, a small top handle, and a grey side pouch, with a worn, matte finish that suggests field use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1382
+meshes = 1
+materials = 1
+size = [0.425716, 0.41643396, 0.791718]
+
+[mesh.sm_chr_attach_armour_dark_back_large_01]
+name = "SM_Chr_Attach_Armour_Dark_Back_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Back_Large_01.fbx"
+sha256 = "f3031a06d4802952612753e2fef234efdee7162d7a9795a9fe0b51330ac2239e"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A chunky, faceted shoulder plate with a raised central ridge and a flared, angular silhouette, rendered in a dark, matte grey. The low-poly construction gives it a rugged, battle-worn look, and its curved underside suggests it is designed to sit over a character's shoulder as a piece of heavy, protective armour."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.22960001, 0.15693897, 0.24650301]
+
+[mesh.sm_chr_attach_armour_dark_back_medium_01]
+name = "SM_Chr_Attach_Armour_Dark_Back_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Back_Medium_01.fbx"
+sha256 = "9c02fef4c76be03989239040c5b88b2d22e210732f499db0e5d53c72bb20600e"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, angular back-mounted armour piece with a central raised ridge and flared side plates, rendered in a flat, untextured dark grey. The faceted, low-poly silhouette suggests a rigid, protective shell for a medium-sized character, with a clean, undamaged surface that reads as a simple, versatile attachment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.233979, 0.159311, 0.23924002]
+
+[mesh.sm_chr_attach_armour_dark_back_small_01]
+name = "SM_Chr_Attach_Armour_Dark_Back_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Back_Small_01.fbx"
+sha256 = "d6939e18c9c0b43a2dfa860542b8a8f3bcf796d8436840669a45a257582e2b01"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, angular shoulder plate with a raised central ridge and layered, faceted panels that curve to hug the upper arm. The dark grey surface is smooth and unadorned, with a subtle metallic sheen that catches light on the beveled edges, giving it a clean, armored look suited for a rogue or scout."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.210801, 0.11947596, 0.202932]
+
+[mesh.sm_chr_attach_armour_dark_back_wolf_01]
+name = "SM_Chr_Attach_Armour_Dark_Back_Wolf_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Back_Wolf_01.fbx"
+sha256 = "de42f4064a06f53375213303c6d493c3c4ef84c3831ec05ee94ccaa04f1609c7"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, angular back-mounted armour piece with a central raised ridge and two flared side plates, rendered in flat, dark grey with lighter grey edge highlights. The faceted, low-poly surfaces give it a chunky, stylised look, suggesting a lightweight protective shell for a wolf or similar creature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.22960001, 0.16780102, 0.24650301]
+
+[mesh.sm_chr_attach_armour_dark_chest_large_01]
+name = "SM_Chr_Attach_Armour_Dark_Chest_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Chest_Large_01.fbx"
+sha256 = "89fd0a838a5eef676612a4078441c9bc2c82936949b7bcb6c998c7214a8e6d98"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A bulky, faceted chest plate with a high, angular collar and a pronounced central ridge, rendered in a dark, matte grey. The surface is clean and unadorned, with sharp, low-poly planes that suggest heavy, rigid armour."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 1
+materials = 1
+size = [0.249036, 0.220157, 0.226612]
+
+[mesh.sm_chr_attach_armour_dark_chest_medium_01]
+name = "SM_Chr_Attach_Armour_Dark_Chest_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Chest_Medium_01.fbx"
+sha256 = "750706c5ed0ba1b50a901e54343f061647230b2265002f6a84b3eadb36ffdb00"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark grey, faceted chest plate with a jagged, angular silhouette and a prominent central ridge, featuring a sharp, upward-pointing spike at the top and a flared lower edge, suggesting a piece of aggressive, lightweight armour for a medium-sized character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 1
+materials = 1
+size = [0.23958299, 0.21180004, 0.21800998]
+
+[mesh.sm_chr_attach_armour_dark_chest_small_01]
+name = "SM_Chr_Attach_Armour_Dark_Chest_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Chest_Small_01.fbx"
+sha256 = "b4a874bb63f6d4e438470b98aa53a13dfde59ad4e48e3508c64e1749e6560639"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, angular chest plate with a faceted, low-poly surface and a sharp, forward-jutting spike on the upper back. The dark grey, almost black material has a subtle metallic sheen, suggesting hardened leather or iron, and the piece is visibly worn with scratches and scuffs."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 1
+materials = 1
+size = [0.21849501, 0.20471403, 0.18534702]
+
+[mesh.sm_chr_attach_armour_dark_chest_wolf_01]
+name = "SM_Chr_Attach_Armour_Dark_Chest_Wolf_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Chest_Wolf_01.fbx"
+sha256 = "9ca7656230bdc6857fb910ded2ffe9f51d54d6ce9fb6b8410481f4b8ef24434d"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark grey, faceted chest plate with a jagged, angular silhouette, featuring a prominent central ridge and sharp, upward-pointing spikes at the shoulders and collar. Its low-poly construction gives it a rough, forged appearance, suggesting a piece of heavy, protective armour for a large beast."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 1
+materials = 1
+size = [0.260413, 0.23021498, 0.236965]
+
+[mesh.sm_chr_attach_armour_dark_leg_fl_large_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_FL_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_FL_Large_01.fbx"
+sha256 = "9f936653b95e0aab9219fbd2cc46c21211e7706fa4621b350d09b237f5a41973"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A chunky, faceted dark grey plate of armour, roughly teardrop-shaped with a jagged, spiked lower edge and a small side fin, built to wrap around a leg. The low-poly surface is unadorned and matte, suggesting a worn, heavy metal piece for a large orc-like character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 198
+meshes = 1
+materials = 1
+size = [0.119036004, 0.326234, 0.19111499]
+
+[mesh.sm_chr_attach_armour_dark_leg_fl_medium_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_FL_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_FL_Medium_01.fbx"
+sha256 = "84f919b51b21d53c4446271426e3596fbbf4480acea80e3a2ba562178373c08a"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A jagged, dark grey plate of armour with a sharp, angular silhouette, featuring a prominent upward-pointing spike and a layered, faceted surface. The matte finish and chunky, low-poly construction give it a rugged, battle-worn appearance, suggesting it is a heavy, protective shin guard or greave designed for a..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 198
+meshes = 1
+materials = 1
+size = [0.109946, 0.304071, 0.17793898]
+
+[mesh.sm_chr_attach_armour_dark_leg_fl_small_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_FL_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_FL_Small_01.fbx"
+sha256 = "e6b425e44c04c7c1d6c0b5762c71f5658916fb1cf9b1a79cabbfdf178e44d68a"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A jagged, dark grey plate of angular armour, shaped like a shard with a sharp, forward-pointing spike at the top and a flared, layered base. Its faceted surface catches light to reveal a matte, metallic finish, suggesting a rugged, battle-worn piece designed to strap onto a small creature's lower leg for protection."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 198
+meshes = 1
+materials = 1
+size = [0.101969, 0.28638798, 0.168277]
+
+[mesh.sm_chr_attach_armour_dark_leg_fl_wolf_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_FL_Wolf_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_FL_Wolf_01.fbx"
+sha256 = "e082700d68e3aa23006d323b96b7858a5bb8621eed28382fb2a6e4c61263d417"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A jagged, faceted dark grey armour plate with a sharp, angular silhouette, featuring a prominent forward-pointing spike and a layered, overlapping construction. The matte finish and chunky low-poly edges give it a rugged, battle-worn appearance, suggesting it is a protective shin or leg guard designed for a wolf-like.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 198
+meshes = 1
+materials = 1
+size = [0.128255, 0.332802, 0.19578901]
+
+[mesh.sm_chr_attach_armour_dark_leg_fr_large_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_FR_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_FR_Large_01.fbx"
+sha256 = "bcce57bd5f1051fb27125d2747e3a760107f0f31fd7ad14ce35b88968e4c8e7e"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark, jagged, faceted leg armour piece with a sharp, angular silhouette, featuring a spiked crest and a layered, overlapping plate design that suggests a heavy, aggressive fantasy style."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 198
+meshes = 1
+materials = 1
+size = [0.119036004, 0.326234, 0.19111499]
+
+[mesh.sm_chr_attach_armour_dark_leg_fr_medium_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_FR_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_FR_Medium_01.fbx"
+sha256 = "fe0e6cb6f682692c455132b5538d9663c28f050a33c58ea1326f367e15dcffac"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark, jagged, angular leg armour piece with a spiked, layered silhouette, featuring a matte gunmetal finish and a lighter grey trim along the upper edge, suggesting a heavy, protective greave for a medium-sized fantasy warrior."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 198
+meshes = 1
+materials = 1
+size = [0.109946, 0.304071, 0.17793898]
+
+[mesh.sm_chr_attach_armour_dark_leg_fr_small_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_FR_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_FR_Small_01.fbx"
+sha256 = "dba69686bb759250ba07c2032e672c6f7dfa09529a42d161369f28d23c0a2bb2"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, angular leg guard built from overlapping dark grey plates with a lighter grey underlayer, featuring a pointed knee cap and a flared top edge. The faceted, low-poly surface gives it a worn, battle-ready appearance, suggesting it is a small, standalone piece of armour for a character's lower leg."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 198
+meshes = 1
+materials = 1
+size = [0.101968005, 0.28638798, 0.168277]
+
+[mesh.sm_chr_attach_armour_dark_leg_fr_wolf_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_FR_Wolf_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_FR_Wolf_01.fbx"
+sha256 = "44f1100d38b3a938482014f6f3520da4afaff312cb5587b5fdeb3ea542d17df9"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark, jagged leg armour piece with a sharp, angular silhouette, featuring layered plates and a pointed knee spike. The matte black finish and aggressive, spiked design suggest a heavy, wolf-themed aesthetic for a fierce warrior character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 198
+meshes = 1
+materials = 1
+size = [0.12825601, 0.332802, 0.19578901]
+
+[mesh.sm_chr_attach_armour_dark_leg_rl_large_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_RL_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_RL_Large_01.fbx"
+sha256 = "173ca24c1b777caad65c4b6edfaf93ad55d47b10c3f4f8b2dcb73c501e72aed1"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A chunky, faceted dark-grey leg armour piece with a pointed knee spike and a rounded, bulbous lower section, featuring a flat, angular top plate and a small upward fin, suggesting heavy, low-poly fantasy greaves."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 182
+meshes = 1
+materials = 1
+size = [0.112864, 0.442368, 0.23384601]
+
+[mesh.sm_chr_attach_armour_dark_leg_rl_medium_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_RL_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_RL_Medium_01.fbx"
+sha256 = "09dcd0d74378a00b757f463446b0e20f9c6ffe6918248c46d42fa7249d52507f"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark, angular leg armour piece with a sharp, upward-pointing spike at the top and a rounded, bulbous lower section. The faceted surface is a uniform charcoal grey with subtle lighter highlights, suggesting a hard, worn metal or hardened leather material."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 182
+meshes = 1
+materials = 1
+size = [0.10534301, 0.412889, 0.21826299]
+
+[mesh.sm_chr_attach_armour_dark_leg_rl_small_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_RL_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_RL_Small_01.fbx"
+sha256 = "c710f9d334e7abbe6d723dc3673ae69b673b2dba26163c5486b611d31a76e67c"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, angular piece of dark grey armour with a faceted, low-poly surface, featuring a sharp, upward-pointing spike at the top and a rounded, bulbous base. The matte finish and segmented plates suggest a sturdy, protective role, likely a small leg guard or shin attachment for a heavy-set character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 182
+meshes = 1
+materials = 1
+size = [0.097181, 0.38102502, 0.201372]
+
+[mesh.sm_chr_attach_armour_dark_leg_rl_wolf_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_RL_Wolf_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_RL_Wolf_01.fbx"
+sha256 = "aa3f854c6db606da36c3554b5ad8d2057786e7e61ada1b8ac153d53a4e44c5a2"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark, angular leg armour piece with a sharp, upward-pointing spike at the top and a rounded, hoof-like base, rendered in a matte charcoal grey with lighter grey highlights on the faceted surfaces."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 182
+meshes = 1
+materials = 1
+size = [0.11591101, 0.45430902, 0.24015899]
+
+[mesh.sm_chr_attach_armour_dark_leg_rr_large_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_RR_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_RR_Large_01.fbx"
+sha256 = "dde95603c8564ed602bd796521588f6fafcf72d71d2e447e2576673b2da1bb84"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A jagged, dark grey plate of angular armour, shaped like a shin guard with a sharp upward spike and a rounded lower section. The faceted surface shows subtle lighter grey highlights, giving it a worn, metallic look. It appears to be a heavy, protective leg piece designed for a large character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 182
+meshes = 1
+materials = 1
+size = [0.112864, 0.442368, 0.23384601]
+
+[mesh.sm_chr_attach_armour_dark_leg_rr_medium_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_RR_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_RR_Medium_01.fbx"
+sha256 = "93034e224501180f3d1929e43e3a61fa9f77adb7eccda53bad2e0afa727a52bf"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark, faceted leg armour piece with a jagged, spiked silhouette, featuring a pointed crest at the top and a rounded knee guard below, rendered in a matte charcoal finish with subtle grey highlights that suggest a worn, hardened leather or metal surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 182
+meshes = 1
+materials = 1
+size = [0.10534301, 0.412889, 0.21826299]
+
+[mesh.sm_chr_attach_armour_dark_leg_rr_small_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_RR_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_RR_Small_01.fbx"
+sha256 = "c66b44f7cca78ec8a9ddbc3733dc1473ca380529d431504242b46f886bca897e"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A jagged, dark grey plate of armour with a pointed top spike and a rounded lower section, designed to wrap around a leg. Its faceted surface shows a matte finish with subtle lighter highlights, suggesting a worn, hardened material."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 182
+meshes = 1
+materials = 1
+size = [0.097183, 0.38102502, 0.201372]
+
+[mesh.sm_chr_attach_armour_dark_leg_rr_wolf_01]
+name = "SM_Chr_Attach_Armour_Dark_Leg_RR_Wolf_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Leg_RR_Wolf_01.fbx"
+sha256 = "72ac9ddb33af4953f6d5f3a8fcf0cd2f3a75289e044b792b214c43c8175c437f"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A jagged, dark grey plate of armour with a sharp, upward-pointing spike at the top and a rounded, bulbous lower section, designed to wrap around a leg. The surface is faceted and matte, with a lighter grey trim visible along the inner edge, giving it a worn, battle-ready appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 182
+meshes = 1
+materials = 1
+size = [0.115912005, 0.45430902, 0.24015899]
+
+[mesh.sm_chr_attach_armour_dark_neck_large_01]
+name = "SM_Chr_Attach_Armour_Dark_Neck_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Neck_Large_01.fbx"
+sha256 = "44a9b95498ebeffcd5ae6a606f342b4ee558c479c95f453ba2643c7407cb06af"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark grey, low-poly neck guard with three overlapping, curved plates that flare outward, accented by lighter grey trim along the edges. The segmented design suggests flexible, layered protection for a large creature or heavy infantry, with a matte finish that gives it a worn, battle-ready appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 230
+meshes = 1
+materials = 1
+size = [0.272296, 0.19890398, 0.25983]
+
+[mesh.sm_chr_attach_armour_dark_neck_medium_01]
+name = "SM_Chr_Attach_Armour_Dark_Neck_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Neck_Medium_01.fbx"
+sha256 = "e57f6984f63d3290f79bb07830ff580101cff85f5e1af26a499bf517dc55074b"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A curved, segmented plate of dark grey armour, built from three overlapping, angled ridges that taper to a point at the front, designed to sit around the neck or upper chest. The surface is a matte, unpolished metal with a subtle lighter grey trim along the edges, giving it a worn, utilitarian look suited for a heavy.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 230
+meshes = 1
+materials = 1
+size = [0.269907, 0.19090402, 0.257572]
+
+[mesh.sm_chr_attach_armour_dark_neck_small_01]
+name = "SM_Chr_Attach_Armour_Dark_Neck_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Neck_Small_01.fbx"
+sha256 = "4cec8d97a1649d528ca8f35aa35ae45207998b9ec32472e478ff8695eab5cef9"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, curved collar piece with three overlapping, segmented plates that fan out from a central spine, giving it a layered, armoured look. The dark grey metal is accented by lighter, silver-toned edges that catch the light, suggesting a worn but sturdy finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 230
+meshes = 1
+materials = 1
+size = [0.20671001, 0.16175199, 0.218239]
+
+[mesh.sm_chr_attach_armour_dark_neck_wolf_01]
+name = "SM_Chr_Attach_Armour_Dark_Neck_Wolf_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Dark_Neck_Wolf_01.fbx"
+sha256 = "4ef7e0c508429c295ac84662d509bd8fe3af1f166cf2f4f4f7018bd7433b4280"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A curved, segmented plate of dark grey armour, shaped to wrap around the neck or shoulder, with three raised, parallel ridges running along its length. The low-poly facets give it a hard, forged look, and the matte finish suggests a durable, non-reflective metal or hardened leather, ideal for a wolf or beast companion."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 230
+meshes = 1
+materials = 1
+size = [0.280696, 0.179937, 0.272402]
+
+[mesh.sm_chr_attach_armour_light_chest_large_01]
+name = "SM_Chr_Attach_Armour_Light_Chest_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Light_Chest_Large_01.fbx"
+sha256 = "0cf0a11c2f1fe978998dae400418302c8e12f9850817f0b5d6e2e3e40323fab5"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A curved, kite-shaped plate of dark grey armour with a pale silver rim, tapering to a point at the bottom. The faceted surface suggests a rigid, forged metal piece, likely a chest guard or shoulder plate, with a clean, unadorned finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 108
+meshes = 1
+materials = 1
+size = [0.226017, 0.20948899, 0.15566602]
+
+[mesh.sm_chr_attach_armour_light_chest_medium_01]
+name = "SM_Chr_Attach_Armour_Light_Chest_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Light_Chest_Medium_01.fbx"
+sha256 = "c85a129a60012ed0c20aba489d115736a842459745300f438bbfe9643e17be30"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A curved, kite-shaped chest plate with a pointed lower edge and a flared top rim, rendered in dark charcoal grey with a lighter grey trim along the border. The surface is faceted and matte, with a subtle sheen suggesting hardened leather or painted metal, and it appears clean and unblemished, ready to be equipped as..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 108
+meshes = 1
+materials = 1
+size = [0.226017, 0.20948899, 0.15566602]
+
+[mesh.sm_chr_attach_armour_light_chest_small_01]
+name = "SM_Chr_Attach_Armour_Light_Chest_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Light_Chest_Small_01.fbx"
+sha256 = "9f32180ae06e5d840580bd4ab1baf2c6f2343ebe4d24695dbe7f95ec36a17930"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A small, curved chest plate with a pointed lower edge and a raised rim, rendered in dark grey with a lighter grey trim. The surface is faceted and matte, showing a subtle two-tone finish that suggests a worn, lightweight metal or hardened leather."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 108
+meshes = 1
+materials = 1
+size = [0.211678, 0.19292101, 0.14335603]
+
+[mesh.sm_chr_attach_armour_light_leg_l_01]
+name = "SM_Chr_Attach_Armour_Light_Leg_L_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Light_Leg_L_01.fbx"
+sha256 = "8197b2623f14a84d7764873ee734d647125fbd902aad464460bcb03805be48c2"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A single, angular shin guard with a faceted, low-poly silhouette, tapering to a pointed top and a flared base. The dark grey, matte surface is edged with a lighter grey rim, suggesting a hard, protective plate for a light-armored character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 114
+meshes = 1
+materials = 1
+size = [0.09455301, 0.177769, 0.055611014]
+
+[mesh.sm_chr_attach_armour_light_leg_r_01]
+name = "SM_Chr_Attach_Armour_Light_Leg_R_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Light_Leg_R_01.fbx"
+sha256 = "c900ae7e1725fba58e963fa41b12a2acef45ee5107208243e42ab08eea6cfb99"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A single, faceted plate of dark grey armour with a lighter grey rim, shaped to curve around a leg. It features a raised central ridge and a pointed top, appearing as a sturdy, unadorned piece of light protection."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 114
+meshes = 1
+materials = 1
+size = [0.094554, 0.177769, 0.055611014]
+
+[mesh.sm_chr_attach_armour_light_neck_large_01]
+name = "SM_Chr_Attach_Armour_Light_Neck_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Light_Neck_Large_01.fbx"
+sha256 = "59d8034ecf643736b725783ce667711501a1251e36e833cf0019ba87ed2d595a"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A curved, angular plate of grey armour with a pale silver rim, shaped to sit over the shoulders and upper chest. The faceted low-poly surface is smooth and unblemished, with a dark, open underside suggesting a hollow shell."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 134
+meshes = 1
+materials = 1
+size = [0.30514503, 0.19836503, 0.221311]
+
+[mesh.sm_chr_attach_armour_light_neck_medium_01]
+name = "SM_Chr_Attach_Armour_Light_Neck_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Light_Neck_Medium_01.fbx"
+sha256 = "017ad0f87015f58cc6e38deff702b67f15f1f8c765dac6227a0d93e5a73699f7"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A low-poly, angular gorget or neck guard with a faceted, curved profile, rendered in flat grey with a lighter, pale trim along the edges. The dark, hollow interior suggests a piece of light armour designed to sit over the shoulders and collar, offering a clean, unadorned look that fits a variety of characters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 134
+meshes = 1
+materials = 1
+size = [0.288225, 0.19659698, 0.216379]
+
+[mesh.sm_chr_attach_armour_light_neck_small_01]
+name = "SM_Chr_Attach_Armour_Light_Neck_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Armour_Light_Neck_Small_01.fbx"
+sha256 = "dc28ed73e9f52428ab6aceba4964bb26c79ee53bfc57269d97630362e74ea1ec"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, angular gorget of faceted grey metal, featuring a raised, lighter-edged rim and a dark, hollow interior that suggests a rigid, protective fit around the neck. Its low-poly construction gives it a chunky, stylized look, appearing as a lightweight piece of segmented armour ready to be equipped on a character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 134
+meshes = 1
+materials = 1
+size = [0.212982, 0.17143297, 0.212732]
+
+[mesh.sm_chr_attach_head_gasmask_large_01]
+name = "SM_Chr_Attach_Head_GasMask_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Head_GasMask_Large_01.fbx"
+sha256 = "cf2277965aa3c8f6acf56a109954bcbb44ed05e58318c223ca8b78ef46c02b34"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A bulky, angular gas mask with a single large circular filter protruding from the cheek, a wide visor, and a dark grey, matte finish. The design is chunky and stylized, with a prominent brow ridge and a strap system that suggests a heavy-duty, post-apocalyptic or tactical purpose."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1050
+meshes = 1
+materials = 1
+size = [0.309016, 0.277089, 0.37998003]
+
+[mesh.sm_chr_attach_head_gasmask_medium_01]
+name = "SM_Chr_Attach_Head_GasMask_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Head_GasMask_Medium_01.fbx"
+sha256 = "5437493b0060e47c1b3e35d0000f003572f759789d5c6a8a6bdd38edac2f3947"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A bulky, matte black gas mask with a rounded, full-face shell, a prominent circular front filter, and a smaller side canister, all connected by thick straps that wrap around the back of the head."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1010
+meshes = 1
+materials = 1
+size = [0.229102, 0.262007, 0.367037]
+
+[mesh.sm_chr_attach_head_gasmask_small_01]
+name = "SM_Chr_Attach_Head_GasMask_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Head_GasMask_Small_01.fbx"
+sha256 = "d668ff4fc14fae8b58cc368c2b938c69ab35683676b7e3977f86f3978e1ea74e"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, dark grey half-mask respirator with a single central filter canister and two side vents, secured by a simple strap. The matte finish and blocky, angular silhouette give it a utilitarian, tactical look suited to post-apocalyptic or military characters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1010
+meshes = 1
+materials = 1
+size = [0.21282, 0.260593, 0.364678]
+
+[mesh.sm_chr_attach_head_goggles_large_01]
+name = "SM_Chr_Attach_Head_Goggles_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Head_Goggles_Large_01.fbx"
+sha256 = "d48fca189c6fb46f98a3e08aa38438d09e0a814c56bf02bb131c040c6a728f33"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A bulky, angular set of dark grey goggles with a thick strap and a large, faceted lens housing, giving it a rugged, tactical appearance suited for survival or combat characters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 332
+meshes = 1
+materials = 1
+size = [0.289531, 0.22796303, 0.28016004]
+
+[mesh.sm_chr_attach_head_goggles_medium_01]
+name = "SM_Chr_Attach_Head_Goggles_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Head_Goggles_Medium_01.fbx"
+sha256 = "64323c213d45f7d882cc312ef513e4fc19a8dceff83f8ed8eb30779019f7b623"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, dark grey headpiece featuring a rounded, faceted visor-like front and a thick, open strap that loops around the back, suggesting a tactical or industrial design. The matte, low-poly finish gives it a rugged, utilitarian look, with the strap's cutout shape making it appear lightweight and ready for..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 332
+meshes = 1
+materials = 1
+size = [0.21942, 0.216344, 0.26573]
+
+[mesh.sm_chr_attach_head_goggles_small_01]
+name = "SM_Chr_Attach_Head_Goggles_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Head_Goggles_Small_01.fbx"
+sha256 = "032c115cf26be3db53ee98cc943efcc7c6559f692f3c76b9c9722a5a7c91493f"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, low-poly set of dark grey goggles with a thick, faceted strap and a single, chunky lens housing. The angular, blocky design suggests a utilitarian or tactical look, with a matte finish that reads as worn rubber or plastic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 332
+meshes = 1
+materials = 1
+size = [0.180346, 0.20059502, 0.259228]
+
+[mesh.sm_chr_attach_head_muzzle_large_01]
+name = "SM_Chr_Attach_Head_Muzzle_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Head_Muzzle_Large_01.fbx"
+sha256 = "d290a8c3de8c7fe20a58aa62f2b1890007ab3c249b2eea86a72cc70d28420467"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark grey, low-poly muzzle with a broad, open cage and a solid, blocky snout, featuring three vertical slits on each side for ventilation. The angular, faceted design gives it a rugged, industrial look, and it appears to be a wearable attachment for a large canine character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 424
+meshes = 1
+materials = 1
+size = [0.303192, 0.24954396, 0.35273]
+
+[mesh.sm_chr_attach_head_muzzle_medium_01]
+name = "SM_Chr_Attach_Head_Muzzle_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Head_Muzzle_Medium_01.fbx"
+sha256 = "a258915b4ff1bb056d1bbac50407f1c9c161630946bdae1578d788c88d98b044"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark grey, low-poly muzzle with a broad, open cage and a thick, rounded strap loop, featuring a small buckle detail at the front and a flat, matte finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 424
+meshes = 1
+materials = 1
+size = [0.2253, 0.24401498, 0.34767202]
+
+[mesh.sm_chr_attach_head_muzzle_small_01]
+name = "SM_Chr_Attach_Head_Muzzle_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Head_Muzzle_Small_01.fbx"
+sha256 = "6e166285ce01d4201fd825a0200fde93f03d694984e88659711c7f99afa0f7ed"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, low-poly muzzle with a rounded, open cage that tapers to a blunt snout, featuring a wide strap loop at the back and a small buckle detail underneath. The dark grey, matte finish gives it a worn, utilitarian look, suggesting it is a functional restraint accessory for a small canine character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 424
+meshes = 1
+materials = 1
+size = [0.17956999, 0.24401498, 0.34164]
+
+[mesh.sm_chr_attach_head_straps_large_01]
+name = "SM_Chr_Attach_Head_Straps_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Head_Straps_Large_01.fbx"
+sha256 = "fd65e52de55d9e8bc4342ecdc9e157dec4034299ae8bc1d7c00dae37189e8206"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A weathered, dark grey-brown leather strap assembly forming a closed loop with a raised, padded brow section and a thinner rear band, featuring a small metal buckle on the side. The low-poly geometry gives it a rugged, worn look, suggesting a functional head harness or chin strap for a large creature or helmet."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 272
+meshes = 1
+materials = 1
+size = [0.302608, 0.247248, 0.27041298]
+
+[mesh.sm_chr_attach_head_straps_medium_01]
+name = "SM_Chr_Attach_Head_Straps_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Head_Straps_Medium_01.fbx"
+sha256 = "b5f86d0fd578cc28bcda72cf3b2a755f970acb78219b0927acda867b25947f01"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A chunky, low-poly head strap with a wide, flat band and a thick, angular rear cradle, rendered in a dark, matte grey-brown. Small, bright yellow accents mark the side attachment points, giving the piece a utilitarian, tactical look suited for a medium-sized character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 272
+meshes = 1
+materials = 1
+size = [0.2253, 0.24371296, 0.265448]
+
+[mesh.sm_chr_attach_head_straps_small_01]
+name = "SM_Chr_Attach_Head_Straps_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Head_Straps_Small_01.fbx"
+sha256 = "539469fd805ef8ef26173b4afbb4898c98b32e105e724d1b551b434f108c85ad"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, low-poly head strap with a broad, flat band forming an open loop, a small rectangular buckle at the rear, and a tiny brass-toned stud on the side. The dark grey-brown leather-like material is matte and unadorned, with a subtle stitched edge along the band."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 272
+meshes = 1
+materials = 1
+size = [0.170828, 0.22879404, 0.264825]
+
+[mesh.sm_chr_attach_headcone_large_01]
+name = "SM_Chr_Attach_HeadCone_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_HeadCone_Large_01.fbx"
+sha256 = "78c4fb1d1c2af1ddafc530d6b41522c8e1cb6e5ede4d5090d617a5ee496f4565"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A squat, faceted cone with a wide, flared base and a blunt, rounded tip, rendered in a single flat grey material with no visible texture or markings. Its chunky, low-poly silhouette suggests a simple decorative cap or a stylised party hat, appearing clean and unadorned."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 230
+meshes = 1
+materials = 1
+size = [0.542645, 0.527289, 0.38280502]
+
+[mesh.sm_chr_attach_headcone_medium_01]
+name = "SM_Chr_Attach_HeadCone_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_HeadCone_Medium_01.fbx"
+sha256 = "ad6839a922730b64a7a409b92feb7ed377cec897fcbb2e1a57825e4d416cfe34"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A squat, faceted cone with a wide, rounded base and a blunt tip, rendered in flat, untextured grey. It resembles a simple party hat or a stylised spike, with a small circular hole near the rim on one side, suggesting an attachment point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 230
+meshes = 1
+materials = 1
+size = [0.51486003, 0.48191, 0.38054302]
+
+[mesh.sm_chr_attach_headcone_small_01]
+name = "SM_Chr_Attach_HeadCone_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_HeadCone_Small_01.fbx"
+sha256 = "1aa52719286f549cbadcf11478e9928edcd0ec3d8fdf9b403bed61c0b07bb702"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A flared, faceted cone with a wide, open base and a narrow, blunt tip, rendered in a single flat grey tone with no visible texture or markings. The surface is smooth and unblemished, with a matte finish that suggests a simple, unadorned plastic or stone material."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 230
+meshes = 1
+materials = 1
+size = [0.453847, 0.418059, 0.37175503]
+
+[mesh.sm_chr_attach_helmet_dark_large_01]
+name = "SM_Chr_Attach_Helmet_Dark_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Helmet_Dark_Large_01.fbx"
+sha256 = "38d553180e0e536f32088b358d87608cbbc8dc9e11c10c68c69db2e09d3b69b3"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark grey, low-poly helmet with a swept-back, pointed crest and a flared neck guard, giving it a sleek, aggressive silhouette. The matte finish and angular facets suggest hardened leather or dark metal, with a deep black opening for the head."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 250
+meshes = 1
+materials = 1
+size = [0.237086, 0.241113, 0.40269998]
+
+[mesh.sm_chr_attach_helmet_dark_medium_01]
+name = "SM_Chr_Attach_Helmet_Dark_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Helmet_Dark_Medium_01.fbx"
+sha256 = "a15fd6c237d074a65f06483a41c6fc8288a5bdea096b728abf06e8808d4fa210"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark grey, angular helmet with a swept-back, pointed crest and a flared neck guard, featuring a black visor slit and a small circular emblem on the side, suggesting a medium-weight tactical or scout role."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 250
+meshes = 1
+materials = 1
+size = [0.202875, 0.20864797, 0.40700403]
+
+[mesh.sm_chr_attach_helmet_dark_small_01]
+name = "SM_Chr_Attach_Helmet_Dark_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Helmet_Dark_Small_01.fbx"
+sha256 = "41ba6921003d0a2c4bb1fddc56fafff81a92367379988e9b70397b12b6fbd4f2"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A dark, angular headpiece with a swept-back, horn-like crest and a curved brow ridge, rendered in matte charcoal grey with subtle lighter edge highlights. The open, hollow underside suggests it is designed to sit over a character's head, and the sharp, aggressive silhouette gives it a menacing, tactical appearance..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 250
+meshes = 1
+materials = 1
+size = [0.189468, 0.214338, 0.39437202]
+
+[mesh.sm_chr_attach_helmet_light_large_01]
+name = "SM_Chr_Attach_Helmet_Light_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Helmet_Light_Large_01.fbx"
+sha256 = "e61a525bab4b2d1ea1b1575cc4190d3600492b4f95d9ddbb9e3a13036047a6bb"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A sleek, angular helmet with a swept-back profile and a pointed rear fin, rendered in a matte grey metal finish. It features a dark visor slit and a small red emblem on the side, giving it a futuristic, tactical look suitable for sci-fi soldiers or pilots."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 538
+meshes = 1
+materials = 1
+size = [0.313792, 0.23801804, 0.45355302]
+
+[mesh.sm_chr_attach_helmet_light_medium_01]
+name = "SM_Chr_Attach_Helmet_Light_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Helmet_Light_Medium_01.fbx"
+sha256 = "79854fee810144bce2657c32699235df6624c611080c744775e190ea76b202b7"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A sleek, angular helmet with a swept-back profile and a pointed rear fin, rendered in a matte grey metal. A small red emblem sits on the side, and the front features a dark, recessed visor opening, giving it a light, aerodynamic look suited for scouts or pilots."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 538
+meshes = 1
+materials = 1
+size = [0.251386, 0.23801804, 0.45355302]
+
+[mesh.sm_chr_attach_helmet_light_small_01]
+name = "SM_Chr_Attach_Helmet_Light_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Helmet_Light_Small_01.fbx"
+sha256 = "67525445c7ec8eb247d06b1c46aea6479036a806bbc469711e232aeee9e74d5d"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A compact, angular helmet with a swept-back profile and a short rear brim, rendered in a flat, light grey metal. A small red emblem sits on the side, and the front features a dark, recessed visor opening, giving it a utilitarian, scout-like appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 538
+meshes = 1
+materials = 1
+size = [0.223366, 0.22577596, 0.39554697]
+
+[mesh.sm_chr_attach_helmet_skull_large_01]
+name = "SM_Chr_Attach_Helmet_Skull_Large_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Helmet_Skull_Large_01.fbx"
+sha256 = "f15c9317859843d692b84b9fb309a0ab1d442fe502f0837ecefa1713240588f2"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A weathered grey helmet with a jagged, broken crown and a large white skull painted on the front, flanked by two curved bone tusks protruding from the sides. The dark, hollow eye sockets and nasal cavity give it a menacing, tribal look, while a simple chin strap hangs below, suggesting it is a lightweight ceremonial..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 694
+meshes = 1
+materials = 1
+size = [0.276786, 0.31954002, 0.40214598]
+
+[mesh.sm_chr_attach_helmet_skull_medium_01]
+name = "SM_Chr_Attach_Helmet_Skull_Medium_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Helmet_Skull_Medium_01.fbx"
+sha256 = "1efb8e55a7fe408b8bb8ce1feeb4d58c05ce073159836863b02c6ca346160912"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A weathered grey skull helmet with a jagged, broken crown, featuring a white painted skull face with a red eye and a red cross on the forehead. Two large, curved bone tusks jut from the jawline, and a dark strap hangs beneath, suggesting a worn, battle-ready headpiece for a skeletal or barbarian character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 694
+meshes = 1
+materials = 1
+size = [0.236471, 0.302688, 0.391497]
+
+[mesh.sm_chr_attach_helmet_skull_small_01]
+name = "SM_Chr_Attach_Helmet_Skull_Small_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Helmet_Skull_Small_01.fbx"
+sha256 = "d998bcb7251bb1595238e996a964c14054ad495c73d574124d6df0a7ed8b6ac9"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A weathered grey skull helmet with a jagged crest, large dark eye sockets, and two long curved bone tusks protruding from the jaw, mounted on a simple black strap for headwear."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 694
+meshes = 1
+materials = 1
+size = [0.218067, 0.298761, 0.383386]
+
+[mesh.sm_chr_attach_saddle_roll_01]
+name = "SM_Chr_Attach_Saddle_Roll_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Saddle_Roll_01.fbx"
+sha256 = "969c730eab13e8bbab19f365019db20db3ab162d4a23f8b2ac77c8f887927b1b"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A curved, segmented bedroll with a low-poly, faceted surface, wrapped by three dark grey straps and finished with a rolled end cap. The muted red-brown fabric shows subtle wear and a slightly dusty texture, suggesting a practical, well-used camping item for a stylized adventurer."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 502
+meshes = 1
+materials = 1
+size = [0.403184, 0.18105501, 0.17285001]
+
+[mesh.sm_chr_attach_saddle_seat_01]
+name = "SM_Chr_Attach_Saddle_Seat_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Saddle_Seat_01.fbx"
+sha256 = "2c4fee296f19eef009ab12e6ad5374ee7c9b5ae696b7542545aa3e7060cc10fe"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A low, wide saddle seat with a scooped, contoured leather cushion in tan, framed by a dark grey base and a single metal loop handle at the rear, showing visible stitching and a slightly worn, used finish."
+differs = "The larger, more detailed asset with a rear metal loop handle, suited for a more secure, decorative mount."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 462
+meshes = 1
+materials = 1
+size = [0.265734, 0.20763803, 0.41113102]
+
+[mesh.sm_chr_attach_saddle_seat_02]
+name = "SM_Chr_Attach_Saddle_Seat_02"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Saddle_Seat_02.fbx"
+sha256 = "8b4cb2cb523e81ceaceb64ef70e6615be75f72c9e673fb7163a2cfa5e52e8173"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A low-slung, saddle-style seat with a scooped tan leather cushion and dark grey, angular side panels. The cushion features a stitched seam across its centre, and the whole piece has a worn, weathered look, suggesting a practical, well-used riding attachment for a mount or creature."
+differs = "The smaller, plainer asset with angular side panels and a central stitched seam, lacking the rear handle, for a simpler, more rugged mount."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 250
+meshes = 1
+materials = 1
+size = [0.327236, 0.223369, 0.35732]
+
+[mesh.sm_chr_attach_saddle_seat_wolf_01]
+name = "SM_Chr_Attach_Saddle_Seat_Wolf_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Saddle_Seat_Wolf_01.fbx"
+sha256 = "93d2b9c6dc163148699bc488cef45ffe1cdb5020daecd9ee5a61c09369bf4ea8"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A low, curved saddle seat with a raised front pommel and a small metal ring at the rear, upholstered in worn brown leather with visible stitching and a dark, rigid base. The seat is contoured for a rider, with a slightly distressed finish that suggests practical, field-worn use."
+differs = "The most detailed and tallest option, with a raised pommel and rear ring, ideal for a rider needing extra security."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 462
+meshes = 1
+materials = 1
+size = [0.29884, 0.26445603, 0.396389]
+
+[mesh.sm_chr_attach_saddle_seat_wolf_02]
+name = "SM_Chr_Attach_Saddle_Seat_Wolf_02"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Attachments/SM_Chr_Attach_Saddle_Seat_Wolf_02.fbx"
+sha256 = "0ad56c7b9ed215ffb9ed7f7543f9d247ca3cc41530a3615c6707660fd5bc46d3"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A low-slung, saddle-like seat with a curved, scooped profile, featuring a tan leather-textured top panel with a stitched seam and dark grey, angular side rails. The seat dips deeply in the middle and flares out at the front and back, suggesting a comfortable perch for a large mount."
+differs = "The widest and lowest option, with a deep scooped profile and angular side rails, best for a comfortable, open perch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 250
+meshes = 1
+materials = 1
+size = [0.34859, 0.23711103, 0.357577]
+
+[mesh.sm_prop_ball_01]
+name = "SM_Prop_Ball_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Ball_01.fbx"
+sha256 = "cda4081d2a420a08576ff512912e5efa5ca944e2b556eecc8287792f67af804d"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A faceted, low-poly sphere with a two-tone colour scheme: a blue top and pink bottom separated by a white band, resembling a classic beach ball. The flat-shaded surfaces give it a playful, toy-like appearance, and the clean, unblemished texture suggests it is brand new and ready for use in a casual or sports-themed..."
+differs = "Blue-pink beach ball, the only one with a horizontal white band, best for pool or summer scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [0.09817, 0.099562, 0.094594]
+
+[mesh.sm_prop_ball_02]
+name = "SM_Prop_Ball_02"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Ball_02.fbx"
+sha256 = "1f2ef51e2ca2afa2e45a661b0ffadadbfc38db0c146560d0961788e495bab579"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A low-poly sphere with a faceted surface, painted in a two-tone pattern of coral red and lime green separated by a thick white band, resembling a stylized beach ball or a classic bouncy toy. The matte finish and clean, chunky geometry give it a playful, versatile look suitable for playgrounds, arcades, or casual..."
+differs = "Coral-lime beach ball, the only one with a horizontal white band, best for playground or arcade scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [0.09817, 0.099562, 0.094594]
+
+[mesh.sm_prop_ball_03]
+name = "SM_Prop_Ball_03"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Ball_03.fbx"
+sha256 = "330f138eafd06a3e1b3a69b27ddb73d039147024a356a1bbf4706a7c0a734e0a"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A faceted, low-poly sphere in bright yellow-green with a white curved seam, instantly readable as a tennis ball. The chunky geometry gives it a stylized, playful look, and the clean, matte texture makes it suitable for sports, playground, or casual game scenes."
+differs = "Yellow-green tennis ball, the only one with a curved seam, best for sports or tennis scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [0.09817, 0.099562, 0.094594]
+
+[mesh.sm_prop_ball_thrower_01]
+name = "SM_Prop_Ball_Thrower_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Ball_Thrower_01.fbx"
+sha256 = "def0231c1ee2fbdc91f9a05a1329defa78780a8a6a63ca062e968d1093a27214"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A slender, curved green plastic handle with a yellow grip and a small cup at the top, resembling a ball thrower for dogs. The surface is smooth and clean, with a bright, toy-like appearance that clearly indicates its purpose for outdoor play."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 320
+meshes = 1
+materials = 1
+size = [0.120282, 0.725618, 0.26381302]
+
+[mesh.sm_prop_barrel_01]
+name = "SM_Prop_Barrel_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Barrel_01.fbx"
+sha256 = "1aed9f34cdbdc857a11aa85878034ccedc0710ffa24bbfd90e1bcb7e5b6635c0"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A stout, low-poly wooden barrel with a bulging middle and flat, angled ends, bound by two dark hoops. Its light tan planks show subtle grain variation, giving it a clean, sturdy look suitable for storage or shipping in a stylized fantasy or medieval setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 248
+meshes = 1
+materials = 1
+size = [0.25835, 0.203166, 0.203166]
+
+[mesh.sm_prop_basket_01]
+name = "SM_Prop_Basket_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Basket_01.fbx"
+sha256 = "4c966d5925e02dcc1ceee6462c9b1d0d594fac09df07e1bb0d0cf6059d93f9e7"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A low, irregularly shaped woven container with a thick, rounded rim and a zigzag pattern along its base, rendered in a pale beige with a darker grey interior. The faceted, stylized look suggests a rustic pet bed or a shallow storage basket, with a slightly worn, matte finish that adds to its handcrafted appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 466
+meshes = 1
+materials = 1
+size = [1.25288, 0.379269, 0.926072]
+
+[mesh.sm_prop_bed_01]
+name = "SM_Prop_Bed_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Bed_01.fbx"
+sha256 = "06fa5c8ae5de91f46062ffcdf193dc90bb03a1501c828c86cdea9c4cedcc733e"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A low, chunky pet bed with a thick, dark grey base and a lighter grey, raised rim that dips at the front for easy entry. The faceted, low-poly construction gives it a stylised, game-ready look, with a simple, unadorned interior that suggests a comfortable, functional resting spot for a small animal."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 308
+meshes = 1
+materials = 1
+size = [1.161222, 0.379739, 0.860522]
+
+[mesh.sm_prop_bone_01]
+name = "SM_Prop_Bone_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Bone_01.fbx"
+sha256 = "5fc3875012ba0ef30df39052a5d7d00b09e519ff44ae101d8deaf2c761388403"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A classic, clean dog bone with two knobby ends and a slightly tapered shaft, rendered in a pale, off-white bone colour with subtle shading that gives it a smooth, solid appearance. The low-poly faceting is visible on the rounded ends, giving it a stylised look that fits perfectly in a cartoon or game environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 152
+meshes = 1
+materials = 1
+size = [0.30045402, 0.051663, 0.09403]
+
+[mesh.sm_prop_bowl_blue_01]
+name = "SM_Prop_Bowl_Blue_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Bowl_Blue_01.fbx"
+sha256 = "d947d198671293687cfcf5888d133796c35cb88c973cbfdd5da6895da6ed058c"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A low, wide, faceted blue bowl with a flat base and a shallow, open interior, rendered in a solid, matte light-blue tone with no visible markings or wear. Its clean, geometric silhouette and simple, unadorned surface make it a versatile, neutral prop for a tabletop, shelf, or floor setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.34935, 0.079693, 0.34506702]
+
+[mesh.sm_prop_bowl_food_01]
+name = "SM_Prop_Bowl_Food_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Bowl_Food_01.fbx"
+sha256 = "5cd91a067b60c8c18b896f9a666feb04322e7102d7d3e80e6814a46f9dfd3e71"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A low, wide, faceted dish with a shallow, angular basin and a thick, irregular rim, rendered in a warm terracotta orange with subtle darker mottling that suggests a glazed ceramic or baked clay finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 22
+meshes = 1
+materials = 1
+size = [0.19709301, 0.025439002, 0.204747]
+
+[mesh.sm_prop_bowl_green_01]
+name = "SM_Prop_Bowl_Green_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Bowl_Green_01.fbx"
+sha256 = "ecfa5a4f33676aabbf29e81a5fb262133dc6ff27c143870838aeaa6eb6c9bc46"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A low, wide, faceted bowl with a thick, flared rim and a shallow, flat-bottomed basin, rendered in a bright, uniform green with subtle shading that highlights its chunky, polygonal silhouette. The simple, unadorned surface and sturdy proportions suggest a basic, functional container for food or water, well-suited to a."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.34935, 0.079693, 0.34506702]
+
+[mesh.sm_prop_bowl_metal_01]
+name = "SM_Prop_Bowl_Metal_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Bowl_Metal_01.fbx"
+sha256 = "269324b792d468d4e101f9abd990ded8a34d7f82b67ad88f3410e5cd98317758"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A low, wide, faceted dish with a thick, dark rim and a shallow, pale grey interior, suggesting a simple metal pet bowl. The flat, untextured surface and clean silhouette make it a versatile, unobtrusive prop for any scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.34935, 0.079693, 0.34506702]
+
+[mesh.sm_prop_bowl_red_01]
+name = "SM_Prop_Bowl_Red_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Bowl_Red_01.fbx"
+sha256 = "26d508708fb1f3b41be2dc5852ee588039bd4d0f5364c0ea4e5cd9755e3b3e48"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A squat, low-poly bowl with a wide, faceted base and a deep, circular recess, rendered in a flat, matte red with subtle shading that highlights its angular geometry. The interior is unmarked and clean, suggesting a simple, functional prop for pet-food or water scenes, with a stylized look that fits well in low-poly..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.34935, 0.079693, 0.34506702]
+
+[mesh.sm_prop_bowl_water_01]
+name = "SM_Prop_Bowl_Water_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Bowl_Water_01.fbx"
+sha256 = "231e3d624b24ab82f07c057e1dc2a9b8490187b09b8465e22f3b033c366af901"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A flat, low-poly hexagonal slab of solid blue, with a slightly darker top surface suggesting a shallow pool of water. The angular, faceted edges give it a stylized, geometric look, and it appears to be a simple, unadorned prop for use as a ground-level water feature or puddle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.191266, 0.000020004809, 0.220084]
+
+[mesh.sm_prop_brush_round_01]
+name = "SM_Prop_Brush_Round_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Brush_Round_01.fbx"
+sha256 = "ffc376d19baa83a8d156910c85ec095c0d4b98bf0b1051cc9eddf2077a8d8681"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A short, chunky paintbrush with a dark grey, faceted handle and a thick, rounded red head, suggesting a broad brush for applying paint or a stylized tool for a workshop or artist's studio."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 108
+meshes = 1
+materials = 1
+size = [0.107268, 0.335658, 0.062377002]
+
+[mesh.sm_prop_brush_square_01]
+name = "SM_Prop_Brush_Square_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Brush_Square_01.fbx"
+sha256 = "3e4271319f26b8fdb6cc5e649023e1023effe9524b0b87f6ded3163b587d56b2"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A chunky, stylized paintbrush with a broad, flat red head and a short, dark grey handle, featuring a simple two-tone colour scheme and a clean, low-poly finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 116
+meshes = 1
+materials = 1
+size = [0.172123, 0.331573, 0.060001]
+
+[mesh.sm_prop_can_01]
+name = "SM_Prop_Can_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Can_01.fbx"
+sha256 = "0fbf6742104cb3ed344722400b020cda49f07cb8a55e35d3705b95d6f7d51d59"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A squat, cylindrical can with a flat grey lid and a white body, wrapped by red bands at the top and bottom with a thin yellow stripe above the upper band. A blue, stylised fish silhouette is printed on one side, suggesting a pet-food or bait container, and the low-poly faceting gives it a clean, stylised look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 246
+meshes = 1
+materials = 1
+size = [0.150716, 0.244049, 0.158472]
+
+[mesh.sm_prop_can_open_01]
+name = "SM_Prop_Can_Open_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Can_Open_01.fbx"
+sha256 = "dd22cd6ab773479f4991bd2a91e4c3e76d1ba4765a261dcb4826f32e9bf3300d"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A squat, cylindrical tin can with a grey metal lid that is partially peeled back and bent open, revealing a dark interior. The body is white with a red band at the base and a yellow and red stripe near the top, marked by a single blue diamond."
+differs = "Lid is bent and peeled back, not hinged, making it the more damaged, jagged-looking option for ruined scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 290
+meshes = 1
+materials = 1
+size = [0.229893, 0.281658, 0.232011]
+
+[mesh.sm_prop_can_open_02]
+name = "SM_Prop_Can_Open_02"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Can_Open_02.fbx"
+sha256 = "56e5c0fb3e3db5cc10b5ffa083a86ec52818cf30442b7eadcb89072c11ba217a"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A squat, cylindrical tin can with a grey, hinged lid flipped open, revealing a dark interior. The body is white with a red base and a yellow and red band near the top, featuring a small blue diamond logo. The low-poly finish gives it a clean, stylized look, suggesting a generic food or paint container."
+differs = "Lid is hinged and flipped open, giving a cleaner, more functional look for intact, usable containers."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 282
+meshes = 1
+materials = 1
+size = [0.229893, 0.281658, 0.232011]
+
+[mesh.sm_prop_carrier_01]
+name = "SM_Prop_Carrier_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Carrier_01.fbx"
+sha256 = "18d15822ca336ff71c3f91acd615acdb51451e2388279d3afdb645b13a64ed3c"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A sturdy pet travel crate with a white, vented upper shell and a dark blue base, featuring a metal carry handle and a barred metal door on the front. The low-poly build gives it a clean, utilitarian look, ready for any game scene needing a portable animal enclosure."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1706
+meshes = 3
+materials = 1
+size = [0.856692, 0.970442, 1.422987]
+
+[mesh.sm_prop_disc_red_01]
+name = "SM_Prop_Disc_Red_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Disc_Red_01.fbx"
+sha256 = "cbec9d33599909a6bf3afb5a292f589d44306682fba60e0c27253f3972416d02"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A squat, faceted octagonal puck with a raised central boss, painted bright red with a thin blue ring around the top. The low-poly shading gives it a worn, chunky look, suggesting a game token, a small shield, or a stylised floor marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 170
+meshes = 1
+materials = 1
+size = [0.324868, 0.050278, 0.341588]
+
+[mesh.sm_prop_disc_yellow_01]
+name = "SM_Prop_Disc_Yellow_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Disc_Yellow_01.fbx"
+sha256 = "40bf26b4ce279fd6f5dab82a5f213b69316e61427fef7c5f18e4d6b575e6cc60"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A squat, faceted octagonal puck with a raised central boss, painted bright yellow with a dark blue ring around the top. The surface shows subtle wear and grime, giving it a used, industrial look, perfect for a game objective or collectible marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 170
+meshes = 1
+materials = 1
+size = [0.324868, 0.049712, 0.341588]
+
+[mesh.sm_prop_doggiebag_01]
+name = "SM_Prop_DoggieBag_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_DoggieBag_01.fbx"
+sha256 = "50071585e60da2231e50ffc9bd6f4999011a5ce3289735ec34750e29eeea76d8"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A squat, faceted pouch with a bulbous base tapering to a knotted, twisted neck, rendered in a single flat mint-green tone with no visible pattern or wear. The low-poly silhouette clearly suggests a small tied sack or bag, though the uniform colouring and lack of seams or texture give it a stylised, almost abstract..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 142
+meshes = 1
+materials = 1
+size = [0.158462, 0.31252, 0.14316]
+
+[mesh.sm_prop_foodbag_01]
+name = "SM_Prop_FoodBag_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_FoodBag_01.fbx"
+sha256 = "dfe251e51e70f7f45046f600684dd0ac0a172278efaea59e195730a41753f775"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A low-poly, gusseted paper bag with a grey crimped top, rendered in muted red-brown with yellow side panels. The front features a white label with a blue band and a dark blue dog-bone icon, suggesting pet food. The bag has a slightly crumpled, angular silhouette, appearing full and ready for use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 166
+meshes = 1
+materials = 1
+size = [0.356432, 0.57071, 0.177402]
+
+[mesh.sm_prop_house_01]
+name = "SM_Prop_House_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_House_01.fbx"
+sha256 = "835d17d938be468925d15a6a64cb12203e06efe8bab88810661ac5bca575763d"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A compact, low-poly doghouse with a steep, terracotta-red gabled roof and pale, horizontal wooden planks. Dark corner trim frames the structure, and a simple arched entrance is set into the front, giving it a clean, classic look suitable for a stylized backyard or farm setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 587
+meshes = 1
+materials = 1
+size = [1.40674, 1.551823, 1.4940369]
+
+[mesh.sm_prop_obstacle_jump_01]
+name = "SM_Prop_Obstacle_Jump_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Obstacle_Jump_01.fbx"
+sha256 = "e2ca59005eb7e5a77f7524aaec88678a5bae97571458b6a4c632cfad69859118"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A low, two-post agility hurdle with a diagonal crossbar, finished in navy blue with bright yellow caps on every post end and joint. The crossbar is striped in alternating blue and yellow segments, and the whole structure is clean and rigid, clearly built for a dog training course."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 388
+meshes = 2
+materials = 1
+size = [1.559062, 1.271908, 0.65196]
+
+[mesh.sm_prop_obstacle_pole_single_01]
+name = "SM_Prop_Obstacle_Pole_Single_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Obstacle_Pole_Single_01.fbx"
+sha256 = "4e58cd45257175f813d74dea3754bab835fa9cf3aeeddb7090ca2b614f673190"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A slender, low-poly wooden pole with alternating blue and orange painted bands, topped with a small white cap and ending in a dark, pointed tip for ground insertion. It appears clean and new, functioning as a simple obstacle or boundary marker for courses or tracks."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 95
+meshes = 1
+materials = 1
+size = [0.046564, 0.951106, 0.0489]
+
+[mesh.sm_prop_obstacle_poles_01]
+name = "SM_Prop_Obstacle_Poles_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Obstacle_Poles_01.fbx"
+sha256 = "28916ed76feac3486668dce37849b24b8b78dd3921c2ac88e11f2ff0f459b273"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A set of five slender, tapered poles arranged in a row, each painted with alternating blue and orange bands. The paint appears worn and chipped, giving the obstacle course markers a weathered, used look suitable for outdoor training or racing tracks."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 570
+meshes = 1
+materials = 1
+size = [3.91164, 0.951106, 0.0489]
+
+[mesh.sm_prop_obstacle_ramp_01]
+name = "SM_Prop_Obstacle_Ramp_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Obstacle_Ramp_01.fbx"
+sha256 = "2629c4bf14acc7e67dbd2dbd077da3c28e1f6c0dd6f8dbc94353ffac0a9bac02"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A long, low blue ramp with a kinked profile, supported by four dark legs, and tipped with a bright orange warning stripe at the base, suggesting a hazard or stunt element for a game course."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 338
+meshes = 1
+materials = 1
+size = [0.777832, 0.946039, 4.465392]
+
+[mesh.sm_prop_obstacle_seesaw_01]
+name = "SM_Prop_Obstacle_SeeSaw_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Obstacle_SeeSaw_01.fbx"
+sha256 = "58ec6474dd36692dd36ab3bcbee0571e729ed1c5bf2306064d739124b986c413"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A long, flat plank in a deep blue finish is balanced on a central A-frame support, with the ends tipped in bright orange to mark the seating areas. The low-poly build gives it a clean, stylized look, and the simple geometry makes it a versatile playground or park obstacle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 234
+meshes = 2
+materials = 1
+size = [0.516426, 0.777121, 2.615734]
+
+[mesh.sm_prop_obstacle_tubejump_01]
+name = "SM_Prop_Obstacle_TubeJump_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Obstacle_TubeJump_01.fbx"
+sha256 = "a245592c2ec1da212f037132d1cecf5a2e7c072c0d7325f2953a5d81030bc9cd"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A wide, open-ended blue tube with a white central stripe, mounted on four grey legs with small feet, forming a low obstacle for characters to jump or run through. The smooth, clean surface and simple geometry give it a playful, parkour-course appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 678
+meshes = 1
+materials = 1
+size = [1.445456, 1.513189, 0.67843]
+
+[mesh.sm_prop_poop_01]
+name = "SM_Prop_Poop_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Poop_01.fbx"
+sha256 = "382f69675ad8c0288b118cf3b509896bef506851351c85fc28f4ca867294a976"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k.png"
+description = "A squat, faceted mound with a raised, spiralling tip, rendered in flat grey with no texture detail, giving it a clean, stylised look that reads as a cartoonish pile of waste."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.15555099, 0.083728, 0.16508299]
+
+[mesh.sm_prop_pooplog_01]
+name = "SM_Prop_PoopLog_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_PoopLog_01.fbx"
+sha256 = "3b512d210daf5ab72efb9e4893b46c415ea07b8e10b46d3f7d8cd8edce8fe538"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k.png"
+description = "A low-poly, elongated hexagonal prism with a slight taper and a subtle bend, rendered in a flat, untextured grey. The faceted surface suggests a stylized, generic object rather than a specific organic shape, making it suitable as a placeholder or a base for custom texturing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 74
+meshes = 1
+materials = 1
+size = [0.042355, 0.0406, 0.167666]
+
+[mesh.sm_prop_roll_01]
+name = "SM_Prop_Roll_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Roll_01.fbx"
+sha256 = "5b60659fd6d52a607e67b7e600a058f7f1a48a831b748ba20b85aa7f05dc55ce"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A low-poly, faceted cylinder with rounded ends, resembling a rolled-up mat or sleeping bag. It features a wide white central band with a blue triangle and yellow trim, while the main body is a muted brick red. The surface appears smooth and clean, suggesting a compact, portable prop for camping or travel scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 256
+meshes = 1
+materials = 1
+size = [0.166848, 0.166848, 0.5896]
+
+[mesh.sm_prop_roll_half_01]
+name = "SM_Prop_Roll_Half_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Roll_Half_01.fbx"
+sha256 = "133ff9efc8c238bce1a4e08d5c94636b653b0a3d098d319d7752e891ba2218ee"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A low-poly, faceted cylinder with flat, hexagonal end caps, wrapped in a white paper band with a blue triangle and yellow trim. The red-brown body suggests a rolled mat or sleeping bag, with a worn, slightly scuffed texture that adds a rugged, used look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 184
+meshes = 1
+materials = 1
+size = [0.166848, 0.166848, 0.39290202]
+
+[mesh.sm_prop_scissors_01]
+name = "SM_Prop_Scissors_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Scissors_01.fbx"
+sha256 = "dbb4d884f5704b1c39c2f644a7be0137a01898e9d42718e1c7e8ff0d3a983238"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A pair of open scissors with long, slender blades and small, rounded finger loops, rendered in a flat, pale grey with subtle shading that suggests a smooth, untextured metal surface. The simple, low-poly construction gives it a clean, utilitarian look, ideal for a generic prop in a workshop or medical setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 2
+materials = 1
+size = [0.129338, 0.36225802, 0.022195999]
+
+[mesh.sm_prop_steak_01]
+name = "SM_Prop_Steak_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Steak_01.fbx"
+sha256 = "9d50a48437b1222911a54560e16ef92c9e9091e2fad119bd64abc5182474da6c"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A flat, irregularly shaped cut of raw red meat with a pale outer rim of fat and a small, circular bone in the center, rendered in a clean, low-poly style with a matte finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 152
+meshes = 1
+materials = 1
+size = [0.414748, 0.037262, 0.23392]
+
+[mesh.sm_prop_stick_01]
+name = "SM_Prop_Stick_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Stick_01.fbx"
+sha256 = "348a757e9057061b55fdb90a4398b442826adfc579b0c5e14128c50c17477bdf"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A slender, weathered branch with a single stubby offshoot near one end, tapering to a pale, cleanly cut tip. The bark is a muted grey-brown with subtle lighter streaks, giving it a dry, natural look suited for forest floors or campfire props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 136
+meshes = 1
+materials = 1
+size = [0.51381, 0.07695, 0.096046]
+
+[mesh.sm_prop_tag_bone_01]
+name = "SM_Prop_Tag_Bone_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Tag_Bone_01.fbx"
+sha256 = "b53c7922410c8b5b28e20a91d4611925ad0c7155a7dd840e7e9cd4ef5243eee9"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A stylized, low-poly dog bone in a muted red-orange, with a small grey metal ring attached to the top center, suggesting a pet tag or charm. The surface is flat-shaded and matte, with a slightly worn or chipped appearance on the edges, giving it a playful, game-ready look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 152
+meshes = 1
+materials = 1
+size = [0.104032, 0.064534, 0.021224]
+
+[mesh.sm_prop_tag_circle_01]
+name = "SM_Prop_Tag_Circle_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Tag_Circle_01.fbx"
+sha256 = "efdf6fb564a1d029e019567fb35a46bee1e3528025f5fc58eff56d872e15dad8"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A chunky, low-poly circular tag in bright orange with a grey metal loop at the top, hanging at a slight angle. The faceted surface and simple two-tone colour scheme make it read clearly as a generic pet or luggage identifier, with a clean, unmarked face ready for customisation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [0.053792, 0.065032, 0.021224]
+
+[mesh.sm_prop_tag_heart_01]
+name = "SM_Prop_Tag_Heart_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Tag_Heart_01.fbx"
+sha256 = "76b83c81f403a5c28437d132408f64989fc7f17fa229c3810c26e6b7ae2baef7"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A chunky, faceted heart in muted rose pink, topped with a small, pale yellow rectangular loop for hanging. The low-poly style gives it a playful, stylized look, suggesting a simple decorative tag or charm for a pet collar."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.056122, 0.06252, 0.021224]
+
+[mesh.sm_prop_toy_chicken_01]
+name = "SM_Prop_Toy_Chicken_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Toy_Chicken_01.fbx"
+sha256 = "9b42b0f3a6a31d4e2e177421c56a980143a0b201bd264b418f7b42d36ae6578b"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A stylized, low-poly rubber chicken in a bright, flat purple with a yellow beak and a red comb, posed in a rigid, horizontal flying position. The faceted geometry gives it a playful, toy-like appearance, and the simple, untextured colouring makes it a versatile prop for comedic scenes or as a projectile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 294
+meshes = 1
+materials = 1
+size = [0.161702, 0.119045, 0.450056]
+
+[mesh.sm_prop_toy_duck_01]
+name = "SM_Prop_Toy_Duck_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Toy_Duck_01.fbx"
+sha256 = "781ca75f1a99f580dcde0e3743225da4017a6fd947962e3916f8caa944a068b1"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A low-poly mallard duck with a grey body, brown wing panels, a teal head, and a bright orange bill and feet, posed in a floating, swimming position. The flat-shaded facets give it a clean, stylized look, and the simple, iconic silhouette makes it instantly readable as a classic rubber duck toy."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 306
+meshes = 1
+materials = 1
+size = [0.138438, 0.100482, 0.48647]
+
+[mesh.sm_prop_toy_rubberbone_01]
+name = "SM_Prop_Toy_RubberBone_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Props/SM_Prop_Toy_RubberBone_01.fbx"
+sha256 = "495903e9462c7787229e98d188e02b0fc388034f0dcab532a9583b9738dc4e6a"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+wanted = "Polygondog_Texture_01_A_2k_Update.psd"
+description = "A chunky, stylised dog bone with a matte pink finish and a subtle darker red band near one end, suggesting a rubber toy. The low-poly build gives it a faceted, playful look, with the classic knobby ends and a slight taper in the middle, making it ideal for pet-themed scenes or as a fetchable prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 132
+meshes = 1
+materials = 1
+size = [0.278514, 0.05125, 0.097824]
+
+[mesh.unity_sk_animals_dog_01]
+name = "Unity_SK_Animals_Dog_01"
+pack = "polygon_dog_pack"
+source = "_SourceFiles/Models/Unity_SK_Animals_Dog_01.fbx"
+sha256 = "be4d657e953d179774016b7fa910823517483364536cb12d1c4bb09cbcf7056b"
+atlas = "PolygonDog_01.png"
+textures = "PolygonDog_01.png"
+description = "A squat, low-poly quadruped with a broad, rounded body and a short, thick tail, built with a dark grey base coat and a bright yellow-green stripe running along its back and head. It features a red collar-like band around the neck and a small, flat snout, giving it a sturdy, toy-like appearance with a slightly worn..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 130812
+meshes = 147
+materials = 119
+size = [51.735596, 84.23833, 90.516655]

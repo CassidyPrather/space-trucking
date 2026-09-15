@@ -1,0 +1,67 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_wep_watergun_01]
+name = "SM_Wep_Watergun_01"
+pack = "polygon_water_guns"
+source = "Unity_SourceFiles/FBX/SM_Wep_Watergun_01.fbx"
+sha256 = "81b1f59b9e673f248c476031c41f51e745b250ebcd9cfe55eabaa7a65477841a"
+atlas = "Polygon_Texture_01_A.png"
+textures = "Polygon_Texture_01_A.png"
+description = "A chunky, toy-like water blaster with a bright green body, a large yellow cylindrical tank on top, and a blue side reservoir. The design features a distinct orange nozzle and a small green pump handle beneath the barrel, giving it a playful, stylized appearance perfect for casual or cartoonish games."
+differs = "The shorter, more compact blaster with a blue side reservoir and green pump handle, ideal for close-range or one-handed play."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1046
+meshes = 4
+materials = 1
+size = [0.086182, 0.327113, 0.54928803]
+
+[mesh.sm_wep_watergun_02]
+name = "SM_Wep_Watergun_02"
+pack = "polygon_water_guns"
+source = "Unity_SourceFiles/FBX/SM_Wep_Watergun_02.fbx"
+sha256 = "8f79b840b8cd2f4d196d649ed51c271eecb79457501e94f36211ec5a5b157f07"
+atlas = "Polygon_Texture_01_A.png"
+textures = "Polygon_Texture_01_A.png"
+description = "A chunky, toy-like water blaster with a bright lime-green body, a thick yellow cylindrical tank on top, and a blue pump handle beneath the barrel. The orange nozzle and trigger add a playful contrast, while the blocky, faceted low-poly styling gives it a distinct, stylized look perfect for casual or cartoonish games."
+differs = "The longer, more elongated blaster with a blue pump handle and no side reservoir, suited for longer-range or two-handed use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1017
+meshes = 4
+materials = 1
+size = [0.123139, 0.326517, 0.875851]
+
+[mesh.sm_wep_waterpistol_01]
+name = "SM_Wep_WaterPistol_01"
+pack = "polygon_water_guns"
+source = "Unity_SourceFiles/FBX/SM_Wep_WaterPistol_01.fbx"
+sha256 = "f3941b1be3bae68feae618fa09790911597b669ada7bb39e586d3f93c1771ff2"
+atlas = "Polygon_Texture_01_A.png"
+textures = "Polygon_Texture_01_A.png"
+description = "A chunky, toy-like water pistol with a bright lime-green body and a blocky, angular grip. The barrel tip and trigger are accented in vivid orange, with a small orange nozzle detail. The flat-shaded, low-poly finish gives it a playful, stylized look perfect for casual or cartoon games."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 461
+meshes = 2
+materials = 1
+size = [0.039802, 0.174235, 0.261357]

@@ -1,0 +1,281 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.character]
+name = "character"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/character.fbx"
+sha256 = "453443532ded76bfbae1a24f723447c543fdf5f0f4323af28fcec1eec7dd597f"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A stylized, low-poly gingerbread figure with a round head, stubby arms, and short legs, rendered in a glossy, dark chocolate-brown finish. It wears a small, flared skirt and has a single arm extended outward, giving it a lively, posed stance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2668
+meshes = 4
+materials = 1
+size = [1.665205, 2.232605, 0.159161]
+
+[mesh.sm_chr_attach_bow_01]
+name = "SM_Chr_Attach_Bow_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Chr_Attach_Bow_01.fbx"
+sha256 = "19d96144aa6ecbb06dbf7520019be65d939bf5ff66a3a19f7b496c86a8acd546"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A stylised bow tie with two broad, angular black wings and a pale grey central knot, rendered in a flat, low-poly style. The wings are solid black with a subtle sheen, while the knot is a lighter, matte grey, giving it a clean, crisp appearance."
+differs = "Identical to _02 in geometry and size; only the knot's grey is slightly lighter, making it the plainer, less satin-like option."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 1
+size = [0.512523, 0.422645, 0.085525006]
+
+[mesh.sm_chr_attach_bow_02]
+name = "SM_Chr_Attach_Bow_02"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Chr_Attach_Bow_02.fbx"
+sha256 = "a31bd4ce2be1c8c1d331deb98f9a416aad76ad70f7dd3fe1a6f0fb4451bcd393"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A formal black bow tie with a light grey central knot, featuring broad, slightly flared wings with a subtle sheen that suggests a smooth, satin-like finish. The crisp, low-poly faceting gives it a clean, stylized look, making it ideal for festive or formal character attachments."
+differs = "Identical to _01 in geometry and size; the darker knot and subtle sheen make it the more formal, satin-finished choice for festive wear."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 1
+size = [0.512523, 0.422645, 0.085525006]
+
+[mesh.sm_chr_attach_hat_01]
+name = "SM_Chr_Attach_Hat_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hat_01.fbx"
+sha256 = "0f04aa81921fda45d8846c33b2b9f48ab033e7f43b30f94336bb32505d544448"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A low, curved black cap with a glossy sheen, featuring a thick, pale grey band that wraps around the base and ends in rounded, blocky ear flaps. The faceted, angular construction gives it a stylised, chunky look, suggesting a winter hat or a festive accessory for a character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 220
+meshes = 1
+materials = 1
+size = [0.78795695, 0.45739102, 0.197649]
+
+[mesh.sm_env_ground_snow_large_01]
+name = "SM_Env_Ground_Snow_Large_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Env_Ground_Snow_Large_01.fbx"
+sha256 = "b9d462d807bf42c256114fc3ff62e35d481837cc70f54c4ade228327f11996ff"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A low, irregular mound with a gently rounded top and a soft, organic silhouette, rendered in a pale, matte cream tone. The surface is smooth and unmarked, with a subtle, even shading that suggests a soft, powdery material. Its simple, clean form makes it a versatile, unobtrusive ground piece for winter scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 227
+meshes = 1
+materials = 1
+size = [15.456781, 1.289118, 15.508044]
+
+[mesh.sm_prop_fireplace_01]
+name = "SM_Prop_Fireplace_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Fireplace_01.fbx"
+sha256 = "66298d0691ef4dc21a97da4774bbb07caa14666a1ed7518fa933afce02128cf6"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A chunky, low-poly stone fireplace with a flat tan mantel and a wide open hearth, its blocky masonry rendered in warm beige and brown. Four red stockings with white cuffs hang in a row from the mantel, giving it a festive, ready-for-the-holidays look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1584
+meshes = 2
+materials = 1
+size = [2.484087, 1.501643, 0.66346097]
+
+[mesh.sm_prop_garden_01]
+name = "SM_Prop_Garden_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Garden_01.fbx"
+sha256 = "69ff7d876f9a4a3a8f9f3a8114761c4661b8ba883ed27226557a8d8d0c25ed3d"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A flat, rectangular green grass patch with a central brown wooden plank, flanked by small clusters of yellow, purple, and green round fruits or vegetables, resembling a garden bed or a small harvest display."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 260
+meshes = 1
+materials = 1
+size = [4.649046, 0.567459, 2.2458892]
+
+[mesh.sm_prop_gingerbread_candycane_01]
+name = "SM_Prop_Gingerbread_CandyCane_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Gingerbread_CandyCane_01.fbx"
+sha256 = "1a0faaec4d1b684ffef16e5fb20b11421a8b22d102d184919651a39af2d8b5a4"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A classic crook-shaped candy cane with a matte finish, featuring a tight spiral of alternating red and white stripes that wraps cleanly around the entire length, ending in a flat, blunt tip at the bottom. The low-poly faceting is visible along the curve, giving it a stylized, chunky look suitable for festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 192
+meshes = 1
+materials = 1
+size = [0.179466, 1.0910081, 0.611429]
+
+[mesh.sm_prop_gingerbread_chair_01]
+name = "SM_Prop_Gingerbread_Chair_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Gingerbread_Chair_01.fbx"
+sha256 = "cdce4ab5cca8be61e1a81b32edded1f75354aaf2dedbe299a33a650e7f26dc47"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A stout, blocky armchair with a tall, curved back and thick, square legs, built from a warm tan gingerbread-brown material. The seat and inner back are a deep, glossy red, suggesting a soft cushion or icing, with a small rectangular pillow resting against the back."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 678
+meshes = 1
+materials = 1
+size = [0.831672, 1.287864, 0.884748]
+
+[mesh.sm_prop_gingerbread_fence_01]
+name = "SM_Prop_Gingerbread_Fence_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Gingerbread_Fence_01.fbx"
+sha256 = "1259b4c3d9b7beb01cfab781fa9347518e7ae4a0d249c790b3d087f98d4269c9"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A short, L-shaped section of gingerbread fencing, formed from vertical, rounded planks with a baked brown crust and lighter, doughy interior edges. The piece is sturdy and low, with a slightly uneven, hand-pressed look that suggests a sweet, edible barrier for a festive village or candy-themed level."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1144
+meshes = 1
+materials = 1
+size = [4.6372204, 0.885519, 1.964293]
+
+[mesh.sm_prop_gingerbread_house_01]
+name = "SM_Prop_Gingerbread_House_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Gingerbread_House_01.fbx"
+sha256 = "70f0233a4b2c97b2da991bd704d3661617fd3cc7d2c0d7719ae2a0017b568e23"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A squat, rectangular gingerbread cottage with a steep, chocolate-tiled roof, thick white icing dripping from the eaves, and a small chimney. The front features a white door with a red-and-white peppermint arch, while the sides have paned windows with white frames."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6358
+meshes = 7
+materials = 1
+size = [5.226789, 5.31, 6.727743]
+
+[mesh.sm_prop_gingerbread_lollypop_01]
+name = "SM_Prop_Gingerbread_Lollypop_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Gingerbread_Lollypop_01.fbx"
+sha256 = "0e68c53bb6176eb06116f9eb58f4c6aaaef49b501095ecd81f38cd525de46e8f"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A flat, round peppermint candy disc with a red and white pinwheel swirl, mounted on a straight, dark brown stick. The candy has a glossy, slightly faceted surface that catches the light, giving it a hard, sugary look. It reads clearly as a festive, oversized sweet treat, ideal for a holiday scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 90
+meshes = 1
+materials = 1
+size = [0.698182, 1.500601, 0.114611]
+
+[mesh.sm_prop_snowball_01]
+name = "SM_Prop_Snowball_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Snowball_01.fbx"
+sha256 = "a70d45020e4180ee525b04791d2743332028b476008dd36b9962cdb8824a94aa"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A faceted, low-poly sphere with a subtle icy sheen, rendered in a clean, pale white that suggests fresh snow. Its surface is smooth and unmarked, with no visible damage or weathering, giving it a pristine, freshly fallen appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.3, 0.3, 0.3]
+
+[mesh.sm_prop_tree_cookie_large_01]
+name = "SM_Prop_Tree_Cookie_Large_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Tree_Cookie_Large_01.fbx"
+sha256 = "df447ff512a9b44ad8b80f107da89bc2018eb2b594d3a0fa7b10f74cc618b0ba"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A flat, stylized pine tree cut from a thick slab of gingerbread, featuring a dark green icing layer on the front face and a baked tan crust on the sides and back. The silhouette has three distinct tiers with jagged edges, and the piece is finished with a lighter brown border, giving it a crisp, cookie-cutter..."
+differs = "The smaller, flatter variant with a darker, muted icing, best for subtle background decoration."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 212
+meshes = 1
+materials = 1
+size = [4.026388, 6.259969, 0.52157]
+
+[mesh.sm_prop_tree_cookie_large_02]
+name = "SM_Prop_Tree_Cookie_Large_02"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Tree_Cookie_Large_02.fbx"
+sha256 = "abb48b23a2820047ac14bd84917b8b99c7bbcf597370327f96aa3c0a4c0821bf"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A flat, stylised pine tree with a stepped, triangular silhouette, rendered as a cookie with a glossy green icing front and a plain, baked-dough back. The icing is bordered by a lighter, piped outline, and the base shows a small, rectangular cutout, suggesting it is designed to hang or stand as a festive decoration."
+differs = "The larger, thicker variant with brighter green icing and a hanging cutout, ideal for a focal festive prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 212
+meshes = 1
+materials = 1
+size = [5.3072157, 8.251318, 0.79643]
+
+[mesh.sm_prop_tree_cookie_small_01]
+name = "SM_Prop_Tree_Cookie_Small_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Tree_Cookie_Small_01.fbx"
+sha256 = "f04065a48260963a418a2279e0ca4d118ba2299e4f6e90f9df83abc983d6a60e"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A flat, stylized pine tree with a pale tan cookie-dough body and a muted green icing layer, featuring a jagged, tiered silhouette and a small trunk. The icing is applied to one face, leaving the reverse as plain dough, giving it a distinct front and back."
+differs = "Muted green icing on one face only; the plainest, least damaged option, for a subtle front-facing backdrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 212
+meshes = 1
+materials = 1
+size = [2.78112, 4.323907, 0.36026102]
+
+[mesh.sm_prop_tree_cookie_small_02]
+name = "SM_Prop_Tree_Cookie_Small_02"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Tree_Cookie_Small_02.fbx"
+sha256 = "d30122125fe0258fb06cf9a5099c037783e49ef91b7c9221957a6c5f7bf1d4c3"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A flat, cookie-like tree with three jagged tiers, rendered as a solid tan biscuit on one side and a bright green icing silhouette on the other, with a small rectangular bite taken from the base."
+differs = "Bright green icing on the reverse and a bite taken from the base; the most damaged, for a chewed or eaten look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 212
+meshes = 1
+materials = 1
+size = [2.78112, 4.323907, 0.36026]
+
+[mesh.sm_prop_tree_xmas_01]
+name = "SM_Prop_Tree_Xmas_01"
+pack = "polygon_gingerbread"
+source = "SourceFiles/FBX/SM_Prop_Tree_Xmas_01.fbx"
+sha256 = "f1005b6cb77f986c09f5e4d743de1a18fd0986d76d2244b599d3632910e2c38f"
+atlas = "PolygonGingerbread_Texture_01_A.png"
+textures = "PolygonGingerbread_Texture_01_A.png"
+description = "A stylised, low-poly Christmas tree with a chunky, tiered silhouette of four stacked triangular sections, each with scalloped edges and dark circular ornaments. A bright yellow star sits atop the trunk, and the wood-brown material has a flat, matte finish with subtle darker shading that gives it a warm..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2240
+meshes = 1
+materials = 1
+size = [1.374742, 3.059294, 1.299602]

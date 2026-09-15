@@ -1,0 +1,3339 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.mountainskybox]
+name = "MountainSkybox"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/MountainSkybox.fbx"
+sha256 = "2d2d5c26759f26e02e1267e73115fcea5bd04ab9dd45cf22bc648add56347e48"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad, and roughly conical peak with a flattened top, its slopes are a muted grey-brown rock with a dusting of pale snow near the summit. The surface is faceted and angular, giving it a rugged, stylised look that reads as a distant, snow-capped mountain for a game horizon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 552
+meshes = 1
+materials = 1
+size = [594.0592, 297.0297, 594.0591]
+
+[mesh.river_plane_01]
+name = "River_Plane_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/River_Plane_01.fbx"
+sha256 = "8b29ef71a32f573894625c52240e264ffb245192bfc9f90047720276d4cd598b"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A flat, diamond-shaped plane with a low-poly, faceted surface, textured with a patchwork of muted earthy tones including grey, brown, cream, and a distinct red stripe. The irregular colour blocks suggest a stylized, abstract river or a patch of land, offering a versatile ground piece for nature scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2
+meshes = 1
+materials = 1
+size = [5.0, 0.0, 5.0]
+
+[mesh.river_plane_dip_01]
+name = "River_Plane_Dip_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/River_Plane_Dip_01.fbx"
+sha256 = "e1a1805f0be0c5fb70499fc009d52417d6ce78a61f73e0572a4d31bcc50564ce"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, irregular patch of terrain with a shallow, winding depression, textured in a patchwork of earthy greens, browns, greys, and a single rust-red accent. The faceted surface suggests a dry riverbed or a muddy hollow, with a subtle dip that would suit a small water plane or a natural ground-level feature."
+differs = "More muted and earthy, with a rust-red accent, suited for a dry riverbed or muddy hollow."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [5.0, 1.0, 5.0]
+
+[mesh.river_plane_dip_02]
+name = "River_Plane_Dip_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/River_Plane_Dip_02.fbx"
+sha256 = "dca6d46cccdea397e3b84061c35357c6701fbac45a45cbd398f0b8033e3eb19c"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, flat, roughly square patch of terrain with a shallow, irregular depression carved through its centre, suggesting a sunken riverbed or dried channel. The surface is faceted with a muted palette of grey, brown, and tan, accented by a distinct, bright orange-red streak that runs along one side of the dip, giving..."
+differs = "Features a brighter orange-red streak along the dip, better for a sunken channel with a vivid accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [5.0, 1.0, 5.0]
+
+[mesh.river_plane_waterfall_01]
+name = "River_Plane_WaterFall_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/River_Plane_WaterFall_01.fbx"
+sha256 = "99ae69bea2bade7f5e34554885f2c68b7b42699d29fbbaf2f97bdb32d6b9fd21"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, narrow waterfall segment that curves sharply at the top, with a flat, angled lip where the water spills over. The surface is textured with vertical streaks of grey, brown, and cream, suggesting a rocky or muddy flow, while the crest features a distinct patch of red-orange."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8
+meshes = 1
+materials = 1
+size = [3.75, 10.0, 5.000001]
+
+[mesh.sm_plant_01]
+name = "SM_Plant_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_01.fbx"
+sha256 = "231991076cbd3cbc8dcfae9d788d6a7e43cabcb36c3f0fa3485aadc15b2da6e4"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, squat clump of broad, pointed leaves radiating from a central base, forming a dense, rounded rosette. The foliage is a muted, pale green with subtle lighter streaks along the leaf blades, giving it a slightly dusty or dry appearance."
+differs = "The widest and most squat of the green rosettes, with the most pronounced leaf streaks, best for dry ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 416
+meshes = 1
+materials = 1
+size = [1.37192, 0.478976, 1.368571]
+
+[mesh.sm_plant_02]
+name = "SM_Plant_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_02.fbx"
+sha256 = "e0e1823afbe8fae842a55ad339b013db3561d1ee8cb04332a2c551d76afd77d6"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad cluster of angular green leaves supports a single thick stalk crowned with a cluster of bright red, star-shaped blossoms, giving it a striking, almost flame-like silhouette. The faceted, flat-shaded surfaces give the plant a crisp, stylized look, and the vivid red against the muted green makes it a strong."
+differs = "The tallest and most detailed red-flowered plant, with a star-shaped bloom cluster and the most striking silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 280
+meshes = 1
+materials = 1
+size = [0.524254, 0.902367, 0.408584]
+
+[mesh.sm_plant_03]
+name = "SM_Plant_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_03.fbx"
+sha256 = "f287d662986fe9f8702795c13ff773575d22c717943973ccfd2179a6e76d2577"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low-poly plant with a thick, upright green stem and a cluster of angular, bright red flowers at the top, supported by a few broad, pointed leaves at the base. The faceted geometry gives it a stylized, chunky look, ideal for adding a pop of colour to a nature scene."
+differs = "The smallest and simplest red-flowered plant, with a single bloom cluster, ideal for low-detail background accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 272
+meshes = 1
+materials = 1
+size = [0.524254, 0.813644, 0.408584]
+
+[mesh.sm_plant_04]
+name = "SM_Plant_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_04.fbx"
+sha256 = "131f88b6d7d179a7a7a5a63ecba1c5a13ed5d22d11bfb84739aa5d10517db43c"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, squat cluster of pale green, broad leaves radiating from a short, thick central stalk, forming a dense, rounded crown. The flat, faceted foliage is a uniform, muted sage green with no visible veining or damage, giving it a clean, stylized look."
+differs = "The plainest and most uniform green rosette, with no streaks or damage, perfect for clean, stylized ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [0.707386, 0.387088, 0.68950295]
+
+[mesh.sm_plant_05]
+name = "SM_Plant_05"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_05.fbx"
+sha256 = "16b9238230b0dfdc12d619d7780881a43dd569a3e04bf31bcb2024b0d81ee343"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, slender stalk with sparse, narrow leaves and a small cluster of pale green buds at the tip, rendered in muted olive tones with a slightly weathered, natural finish. Its upright, simple silhouette makes it ideal for adding vertical detail to grassy fields or forest floors without visual clutter."
+differs = "The only tall, slender stalk with buds, and the tallest asset overall, for adding vertical interest without bulk."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 384
+meshes = 1
+materials = 1
+size = [0.829118, 3.02084, 0.860693]
+
+[mesh.sm_plant_06]
+name = "SM_Plant_06"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_06.fbx"
+sha256 = "23f84472ecac8ff454b76424fd3ec535debe115b734c3e9faecb2f5eac250beb"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, clumping plant with broad, arching leaves that fan out from a central base, creating a rounded, bushy silhouette. The foliage is a muted, pale green with subtle darker shading, giving it a soft, natural appearance."
+differs = "The most detailed and bushy green clump, with the highest triangle count and arching leaves for dense foliage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 832
+meshes = 1
+materials = 1
+size = [1.05302, 1.0888449, 1.073491]
+
+[mesh.sm_plant_07]
+name = "SM_Plant_07"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_07.fbx"
+sha256 = "e66b9954e16c1fcbf486e555365ba8a1ac4a9c15a5281054f21308d2173f4a2a"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, compact cluster of broad, pale-green leaves fans out from a short central stem, topped by two vivid red, cup-shaped blooms and a smaller closed bud, giving it a freshly picked, garden-ready look."
+differs = "The only red-flowered plant with multiple blooms and a bud, giving it a garden-ready, freshly picked look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 522
+meshes = 1
+materials = 1
+size = [0.989968, 0.770348, 0.964936]
+
+[mesh.sm_plant_bush_01]
+name = "SM_Plant_Bush_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Bush_01.fbx"
+sha256 = "93a5fd6f491b149618131747e1655b0493b71cc2742dd571f88455b09533c214"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, faceted clump of low-poly foliage with a broad base and a single, slightly off-centre peak, rendered in a muted sage green with flat shading that gives it a chunky, crystalline look. It reads as a dense, rounded shrub or small bush, with no visible stems or individual leaves, making it ideal for filling out..."
+differs = "Tallest and most angular, with a single peak and no visible trunks, best for a lone accent rock-like shrub."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 200
+meshes = 1
+materials = 1
+size = [1.61496, 2.040512, 1.4146731]
+
+[mesh.sm_plant_bush_02]
+name = "SM_Plant_Bush_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Bush_02.fbx"
+sha256 = "0aebfa5979e0ad8f1ca7e14543b658dd119ff72f4b35b9ebb9a3672283267518"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, mounded shrub with a broad, irregular canopy of faceted sage-green leaves, supported by several thin, dark brown trunks that emerge from the base. The foliage is dense and lumpy, giving it a soft, organic silhouette that reads as a mature, well-established bush."
+differs = "Only one with visible trunks and the widest, most detailed canopy, ideal for a mature, layered garden centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 282
+meshes = 1
+materials = 1
+size = [2.091846, 2.003421, 1.789335]
+
+[mesh.sm_plant_bush_03]
+name = "SM_Plant_Bush_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Bush_03.fbx"
+sha256 = "e24a0f858ea93cd8186945a347f9035bb2c68b74973e83144ede97d874725ebd"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, rounded mound of faceted foliage with a slightly irregular, organic silhouette, rendered in a muted sage green with subtle tonal variation across its flat surfaces. The dense, blocky clusters suggest a mature, well-established shrub that would sit naturally in a forest or garden setting, offering a softer, more."
+differs = "Lowest triangle count and most compact, perfectly round mound, best for a simple, uniform ground filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 1
+size = [2.080368, 1.866745, 2.003144]
+
+[mesh.sm_plant_bush_leaves_01]
+name = "SM_Plant_Bush_Leaves_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Bush_Leaves_01.fbx"
+sha256 = "2b3680623b46606e0ac5df2308c445c3bb189c588b2cd7efcdecf0488b656cdb"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A compact, roughly spherical cluster of jagged, angular leaves, rendered in very dark, near-black greens with subtle reddish-brown highlights on the edges. The low-poly facets give it a sharp, crystalline appearance, making it look like a dense, shadowy shrub or a pile of dried foliage."
+differs = "Mid-sized and most jagged, with the sharpest crystalline facets; ideal for a spiky, dried shrub accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 90
+meshes = 1
+materials = 1
+size = [1.148796, 1.167851, 1.019013]
+
+[mesh.sm_plant_bush_leaves_02]
+name = "SM_Plant_Bush_Leaves_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Bush_Leaves_02.fbx"
+sha256 = "856787bb442a5565c36c5f0edee3c5acdfdba061fcf01d48de93b19ca2fc394f"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A dense, rounded clump of angular, faceted leaves forming a low, bushy mound. The foliage is predominantly dark, near-black green with subtle reddish-brown highlights on the upper surfaces, giving it a shadowed, autumnal appearance."
+differs = "Smallest and simplest, with the fewest triangles; a cheap, low-detail filler for distant ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 30
+meshes = 1
+materials = 1
+size = [0.534328, 0.604864, 0.612274]
+
+[mesh.sm_plant_bush_leaves_03]
+name = "SM_Plant_Bush_Leaves_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Bush_Leaves_03.fbx"
+sha256 = "8742f2b4ed48dd895906375caebf2687e445b1874d97bfd69db67c1b1749c7c6"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A dense, rounded cluster of broad, overlapping leaves forming a compact, low-poly bush with a slightly irregular, organic silhouette. The foliage is a deep, shadowed green with subtle lighter highlights on the upper surfaces, giving it a realistic, shaded appearance."
+differs = "Largest and most detailed, with the broadest, most organic silhouette; the hero bush for close-up scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 120
+meshes = 1
+materials = 1
+size = [1.621322, 1.52309, 1.7419]
+
+[mesh.sm_plant_fern_01]
+name = "SM_Plant_Fern_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Fern_01.fbx"
+sha256 = "2176159687d91507111e7ae015351ce4214021f36b79f8268030ed7a7735f4f4"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, wide clump of pale green fronds radiating from a central base, with a few leaves drooping toward the ground. The flat, faceted blades give it a stylised, geometric look, and its compact, ground-hugging form makes it ideal for filling forest floors or adding subtle ground cover."
+differs = "Widest and flattest of the three, with the palest, most yellow-green fronds; best for sparse, low-poly ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 1
+materials = 1
+size = [1.2935259, 0.341942, 1.39801]
+
+[mesh.sm_plant_fern_02]
+name = "SM_Plant_Fern_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Fern_02.fbx"
+sha256 = "e3bd6bc033510f3fb7a0e3db4cbd40bbd1a8f987c929438618a00679ab9928e4"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, mounded cluster of broad, pointed fronds radiating outward from a central crown, with a flat, fan-like silhouette that reads as a mature fern or a dense ground cover. The leaves are a muted, desaturated green with subtle lighter tips and darker undersides, giving the asset a soft, naturalistic look."
+differs = "Tallest and most detailed, with the densest, most mature fan-like silhouette; best as a standalone hero fern."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 210
+meshes = 1
+materials = 1
+size = [1.150329, 0.63378, 1.0528641]
+
+[mesh.sm_plant_fern_03]
+name = "SM_Plant_Fern_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Fern_03.fbx"
+sha256 = "5873fde2472562f88c6f0685de3e9ae5287b530480a67a6b4a2573354ecd085e"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, spreading clump of broad, pointed fronds that fan outward from a central base, creating a rounded, bushy silhouette. The flat-shaded leaves are a muted, pale green with subtle darker tips and a slightly weathered, matte finish, giving it a hardy, natural look."
+differs = "Smallest and most compact, with a rounded, bushy shape; best for tight clusters or filling small gaps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 1
+materials = 1
+size = [0.67333996, 0.440903, 0.67785597]
+
+[mesh.sm_plant_fern_leaves_01]
+name = "SM_Plant_Fern_Leaves_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Fern_Leaves_01.fbx"
+sha256 = "f1505fd2707d28d50d21cc8ef75d2d5da1d6f453a266fb6cdfae5afb77562a5c"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, spreading cluster of broad, pointed fronds fans out from a central crown, with the pale, desaturated green leaves tipped in a rusty, autumnal red that gives the plant a weathered, dry appearance."
+differs = "The flatter, lower-profile option with half the triangle count, best for ground cover where height is unwanted."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 1
+materials = 1
+size = [1.2935181, 0.339859, 1.398056]
+
+[mesh.sm_plant_fern_leaves_02]
+name = "SM_Plant_Fern_Leaves_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Fern_Leaves_02.fbx"
+sha256 = "56e6a995f6995ea2bce4b2345a4cd2f2da803f8d1eb6e10b74866e27fad7e93f"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, spreading clump of arching fronds that radiate outward from a central crown, with a few leaves standing upright and others drooping toward the ground. The foliage is a muted, dusty green with prominent rust-red edges and tips, giving it a dry, weathered appearance."
+differs = "The taller, more detailed variant with upright and drooping fronds, ideal for adding vertical variation to fern clusters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 252
+meshes = 1
+materials = 1
+size = [1.2935181, 0.560059, 1.398056]
+
+[mesh.sm_plant_flowerpatch_01]
+name = "SM_Plant_FlowerPatch_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_FlowerPatch_01.fbx"
+sha256 = "30b1e279fbadf21a7502d74ed59f037fef469a62b6eaade534e7663fd63fd450"
+atlas = "FlowerPatch_02.png"
+textures = "FlowerPatch_02.png"
+description = "A low, flat cluster of small white blossoms scattered across a wide, irregular patch, appearing as a sparse, airy ground cover rather than a dense bed. The tiny, bright petals stand out against the plain background, suggesting a delicate, naturalistic scatter ideal for adding subtle floral detail to meadows or forest.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [1.147295, 0.138664, 1.174192]
+
+[mesh.sm_plant_flowers_01]
+name = "SM_Plant_Flowers_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Flowers_01.fbx"
+sha256 = "89a841cecb035771f86e992e8be3ce7bf20d23ad50e2643b638d9b349d012cff"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, upright stem with a single pointed red flower bud at the tip, flanked by several pairs of broad, muted green leaves that curve outward and slightly downward. The low-poly foliage has a flat-shaded, faceted look, suggesting a young, unbloomed plant suitable for adding subtle colour to a meadow or garden..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 282
+meshes = 1
+materials = 1
+size = [0.753416, 1.387184, 0.691103]
+
+[mesh.sm_plant_grass_01]
+name = "SM_Plant_Grass_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Grass_01.fbx"
+sha256 = "6e0a0f2831679b1ca518fbb55a726cbabcc979b53c6bc52a54c9584e37b379a9"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A small, low-poly clump of three or four upright, pointed blades that fan out from a narrow base, with a flat, muted green texture and no visible stems or flowers. The blades are slightly uneven in height and angle, giving it a natural, windswept look, and it is ideal for adding simple ground cover to stylized outdoor."
+differs = "The only one with no base volume, just a few blades; use it as a sparse, windblown accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 42
+meshes = 1
+materials = 1
+size = [0.0029870002, 0.003063, 0.0028169998]
+
+[mesh.sm_plant_grass_02]
+name = "SM_Plant_Grass_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Grass_02.fbx"
+sha256 = "cfe13ca68bde411042f3323d375c6d0690d1b64cc8e5589578aff772510d859c"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, dense clump of stiff, blade-like leaves that fan outward from a central base, with a few taller blades rising above the rest. The foliage is a muted, desaturated green with subtle darker shading along the edges, giving it a slightly weathered, natural look."
+differs = "The tallest and widest of the set, with the most upright, stiff blades; use it for a dominant, hardy clump."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 238
+meshes = 1
+materials = 1
+size = [1.11366, 1.158715, 1.292384]
+
+[mesh.sm_plant_grass_03]
+name = "SM_Plant_Grass_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Grass_03.fbx"
+sha256 = "ecc19b5bc324a08a14d71e389f95fb589b37646582f9a9db11cbeb83dfa24501"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A dense, low clump of stiff, pointed blades radiating outward from a central base, forming a spiky, hemispherical mound. The muted olive-green leaves show subtle lighter striping and a matte finish, suggesting a hardy, wind-swept grass tuft ideal for ground cover in temperate or arid environments."
+differs = "The most detailed and densest, with the most triangles and a spiky, hemispherical mound; use it for a lush, textured ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 602
+meshes = 1
+materials = 1
+size = [0.90857, 0.65538, 0.79506695]
+
+[mesh.sm_plant_grass_04]
+name = "SM_Plant_Grass_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Grass_04.fbx"
+sha256 = "dc1d465a2a973ca0c52747448eb11b43457800f2365d4361455f42c185aade88"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A dense, low clump of broad, blade-like leaves that fan outward from a central base, with several tips bending gracefully. The foliage is a muted, slightly desaturated green with subtle darker shading along the edges, giving it a natural, weathered look."
+differs = "The flattest and lowest, with broad, bending tips; use it for a drooping, ground-hugging patch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 330
+meshes = 1
+materials = 1
+size = [0.818509, 0.694027, 0.372904]
+
+[mesh.sm_plant_grass_05]
+name = "SM_Plant_Grass_05"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Grass_05.fbx"
+sha256 = "ea88765278e678c7440592154ed5085f9c38a398ce03c513ca761208f7108eef"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A dense, low-poly clump of broad, blade-like leaves that fan outward from a central base, with a few taller spikes rising above the rest. The foliage is a muted, desaturated green with subtle darker shading at the base, giving it a dry, hardy look."
+differs = "The most compact and dry-looking, with a few taller spikes; use it for a small, hardy tuft in arid spots."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 322
+meshes = 1
+materials = 1
+size = [0.627548, 0.735272, 0.636016]
+
+[mesh.sm_plant_hedge_bush_01]
+name = "SM_Plant_Hedge_Bush_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Hedge_Bush_01.fbx"
+sha256 = "ae85eeb2ce3e2f0f12e5ef01b1cec7c528d126eb0666be4cf3cd35ae7c4cd177"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, irregular mound of faceted low-poly geometry, rendered in a muted sage green with flat shading that highlights its angular planes. The surface is textured with subtle mottling, suggesting a dense, leafy shrub with no distinct branches or flowers, appearing as a simple, rounded bush ready to be placed in a..."
+differs = "The largest and widest bush, with a mottled texture and flatter, more sprawling form for filling larger hedgerow gaps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 234
+meshes = 1
+materials = 1
+size = [3.4129028, 2.069677, 3.405995]
+
+[mesh.sm_plant_hedge_bush_02]
+name = "SM_Plant_Hedge_Bush_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Hedge_Bush_02.fbx"
+sha256 = "2c297d7fcf5562b0239d9dc0acd9bd9baa071f6729446ffd5fe2d766d43eb1cf"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, irregular mound of faceted foliage, roughly as wide as it is tall, with a slightly flattened top and a subtle notch on one side. The low-poly surface is a muted, matte olive green with darker shading in the crevices, giving it a dense, leafy appearance."
+differs = "The smaller, more compact and rounded bush with a distinct notch, ideal for tighter, more uniform hedge lines."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 294
+meshes = 1
+materials = 1
+size = [1.924405, 1.732979, 1.8655429]
+
+[mesh.sm_plant_lillypad_large_01]
+name = "SM_Plant_Lillypad_Large_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Lillypad_Large_01.fbx"
+sha256 = "ee6075e152619fa8bcd6177645709691b9c3485cf51b0b6cb22831711d8db509"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A cluster of seven flat, circular lily pads with a subtle notch cut into each, arranged in a loose, overlapping group. The muted sage-green tops are smooth and matte, while the undersides are a darker, shadowed green, giving the pads a natural, slightly weathered look."
+differs = "The largest and most complex cluster, with seven pads, ideal for filling large pond areas."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 498
+meshes = 1
+materials = 1
+size = [2.874378, 0.136073, 2.075326]
+
+[mesh.sm_plant_lillypad_large_02]
+name = "SM_Plant_Lillypad_Large_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Lillypad_Large_02.fbx"
+sha256 = "4bc5cce14642a67e89ad9dd0b519f0da633902e5f6d7ddb1deec0acb6bdf53f3"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A cluster of four flat, rounded lily pads in muted sage green, with a subtle notch cut into each disc. The pads overlap slightly, creating a natural, floating arrangement ideal for pond surfaces or swampy terrain."
+differs = "A mid-sized four-pad cluster, offering a balanced, natural grouping for medium water surfaces."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 332
+meshes = 1
+materials = 1
+size = [1.489594, 0.107076, 1.969018]
+
+[mesh.sm_plant_lillypad_large_03]
+name = "SM_Plant_Lillypad_Large_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Lillypad_Large_03.fbx"
+sha256 = "2b835281dfa1fcf95c5e276fc082280265f5501d11c5265b3b35f39e7f2c11f7"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A broad, flat, low-poly lily pad with a gently faceted rim and a single notch cut into its edge, rendered in a muted sage green. The surface is smooth and matte, with subtle shading that gives it a slightly waxy look, and the underside is a darker, shadowed green."
+differs = "The single, standalone pad, perfect for sparse placement or as a simple, isolated detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 83
+meshes = 1
+materials = 1
+size = [0.74712, 0.099652, 0.77072597]
+
+[mesh.sm_plant_lillypad_small_01]
+name = "SM_Plant_Lillypad_Small_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Lillypad_Small_01.fbx"
+sha256 = "f880f1e8b193b563699ab8194ef770e287c62d7e26edda43158ca3eb63b57fd0"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A cluster of small, flat green lily pads on thin, straight stems, with two bright red, bulbous flower buds rising above the foliage. The pads are simple, round discs with a subtle notch, and the arrangement is sparse and airy, ideal for adding a touch of aquatic life to a pond or swamp scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 424
+meshes = 1
+materials = 1
+size = [1.740952, 0.714256, 1.8780639]
+
+[mesh.sm_plant_mushrooms_01]
+name = "SM_Plant_Mushrooms_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Mushrooms_01.fbx"
+sha256 = "eb9d20e861c5383eb54defd6b594dadb48be70594d91f7b38feb528be9c30d61"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A cluster of five flat, low-poly mushroom caps in muted brown, stacked vertically with a slight lean, resembling a floating fungal totem or a stylized shelf fungus formation."
+differs = "The only stemless floating stack, tallest and most totemic, for surreal or magical scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 552
+meshes = 1
+materials = 1
+size = [0.33478302, 0.54273903, 0.316717]
+
+[mesh.sm_plant_mushrooms_02]
+name = "SM_Plant_Mushrooms_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Mushrooms_02.fbx"
+sha256 = "71da62bb0792a86793569473dba2922095207c9d096591dfee70d1199044fc13"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A cluster of seven low-poly mushrooms with angular, faceted caps in a muted brownish-grey and pale, straight stems, arranged in a tight, natural-looking group that reads clearly at a distance."
+differs = "The largest and most detailed cluster, with the most mushrooms, for a dense forest floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 445
+meshes = 1
+materials = 1
+size = [0.551766, 0.477067, 0.690238]
+
+[mesh.sm_plant_mushrooms_03]
+name = "SM_Plant_Mushrooms_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Mushrooms_03.fbx"
+sha256 = "28a88c3925ee3a7adf9ab7bb09dcd6724f87e9ef4fe3d65e481bc718a10decf5"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A cluster of three low-poly mushrooms with angular, conical caps in a muted brown, supported by slender, pale tan stems that curve and branch from a shared base. The flat-shaded facets give it a stylized, chunky look, and the arrangement suggests a small, natural forest floor detail."
+differs = "The tallest asset with the most curved, branching stems, for a distinctive vertical accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 294
+meshes = 1
+materials = 1
+size = [0.468852, 0.843048, 0.432069]
+
+[mesh.sm_plant_mushrooms_04]
+name = "SM_Plant_Mushrooms_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Mushrooms_04.fbx"
+sha256 = "f99d822ee2fd91ccad59ab8afb826e84ca0406b10b2080adbbde00a17567ff73"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A cluster of three low-poly mushrooms with dark brown, faceted caps and pale, curved stems that lean outward, giving the group a natural, slightly sprawling stance. The simple, angular geometry and muted earthy palette make it ideal for adding subtle ground-level detail to forest or swamp environments."
+differs = "The widest, most sprawling cluster with the most outward lean, for a natural, grounded spread."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 276
+meshes = 1
+materials = 1
+size = [0.48454303, 0.45366502, 0.47379702]
+
+[mesh.sm_plant_mushrooms_05]
+name = "SM_Plant_Mushrooms_05"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Mushrooms_05.fbx"
+sha256 = "ff61408866904e9ac6e184a7f1830bf8c764d4739243d60991f28b4058a802f8"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A cluster of three low-poly mushrooms with faceted, conical caps in a muted brownish-grey, supported by pale, slender stems. The caps show subtle vertical striping, and the arrangement varies in height, offering a natural, grounded look for forest floor scenes."
+differs = "The smallest and simplest cluster, with the most uniform caps, for subtle background detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 206
+meshes = 1
+materials = 1
+size = [0.38399, 0.476972, 0.347956]
+
+[mesh.sm_plant_mushrooms_06]
+name = "SM_Plant_Mushrooms_06"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Mushrooms_06.fbx"
+sha256 = "b68b5d6519e7e77264ecba014e115017259cf3ad94ce6610211ec5570f305872"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A cluster of three flat, angular mushroom caps in muted brown, with no visible stems, appearing as low, weathered stones or shelf fungi. The caps are broad and irregular, with a matte finish and subtle darker shading on the undersides, giving them a dry, earthy look."
+differs = "The only stemless, flat-capped asset, the most weathered and stone-like, for rocky or dry terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 276
+meshes = 1
+materials = 1
+size = [0.508907, 0.37808, 0.366918]
+
+[mesh.sm_plant_palmbush_01]
+name = "SM_Plant_PalmBush_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_PalmBush_01.fbx"
+sha256 = "14e1101c60bdfd458075f961ee0f57fb59e39219453cf454e63335e5d835a946"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A short, squat cluster of broad, paddle-shaped leaves fans out from a dark, narrow trunk base, giving it a young, freshly planted look. The muted olive-green foliage is slightly glossy and shows subtle tonal variation, while the low-poly faceting keeps the silhouette crisp and readable from all angles."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 400
+meshes = 1
+materials = 1
+size = [3.4801002, 3.805377, 2.2804]
+
+[mesh.sm_plant_purpleflower_01]
+name = "SM_Plant_PurpleFlower_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_PurpleFlower_01.fbx"
+sha256 = "7b60f17a5492cfc208cf89cdf3741161047aabc2dbbb13526da23d0f3471709b"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A cluster of three upward-reaching, faceted stalks with dark green, angular leaves and pointed, red-tipped buds, giving it a menacing, carnivorous appearance that contrasts with its delicate name."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 216
+meshes = 1
+materials = 1
+size = [0.627587, 1.082963, 0.504872]
+
+[mesh.sm_plant_reeds_01]
+name = "SM_Plant_Reeds_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Reeds_01.fbx"
+sha256 = "fe93b3e65189c906bd623374da6c24db19362ef91cf609922b06148bf9694690"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A cluster of tall, blade-like green leaves fans outward from a narrow base, supporting a single upright brown cattail head with a slender spike. The low-poly foliage is flat-shaded with muted olive and tan tones, giving it a clean, stylized look suitable for wetland or pond environments."
+differs = "The only one with a cattail head, taller and narrower, ideal for adding vertical focal points to wetland scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 136
+meshes = 1
+materials = 1
+size = [0.831886, 1.347845, 0.751626]
+
+[mesh.sm_plant_reeds_02]
+name = "SM_Plant_Reeds_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Reeds_02.fbx"
+sha256 = "1cdcfd730cfcb775200ec534924cc43b452a7d3eed05487853382d0e9a4eb271"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A dense, low clump of broad, blade-like leaves that fan outward from a central base, with a few taller, pointed stalks rising above the rest. The foliage is a muted, olive green with subtle darker shading along the edges, giving it a slightly weathered, natural look."
+differs = "The only one without a cattail, shorter and denser, best for filling ground-level marsh areas with plain, leafy clumps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 168
+meshes = 1
+materials = 1
+size = [0.994606, 1.009879, 1.007393]
+
+[mesh.sm_plant_undergrowth_01]
+name = "SM_Plant_Undergrowth_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Plant_Undergrowth_01.fbx"
+sha256 = "7deda7ee0a31df3d8f079846c43cf31bae7919ed87510731cc76de31357d1622"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, sprawling cluster of jagged, blade-like leaves radiating outward from a central base, forming a dense, spiky mound. The foliage is a muted mix of olive green and rusty red-brown, with a flat-shaded, faceted texture that gives it a dry, autumnal appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 288
+meshes = 1
+materials = 1
+size = [1.3467491, 0.477761, 1.259726]
+
+[mesh.sm_prop_arrow_01]
+name = "SM_Prop_Arrow_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Arrow_01.fbx"
+sha256 = "bd9f07bdff5ca17dfe75c01efb70bfc0808bf93a67ab17237cc749dcdaa688e2"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender wooden shaft with a grey, pointed metal head and a red fletched tail, appearing as a standard, functional projectile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 214
+meshes = 1
+materials = 1
+size = [0.05343, 0.065154, 0.932185]
+
+[mesh.sm_prop_brick_01]
+name = "SM_Prop_Brick_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Brick_01.fbx"
+sha256 = "ef92d4d4766f778dcac942798b3f8d73e1e4a0f4fbf1a655ad0f1466ae8a6663"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, flat, roughly rectangular slab of pale beige stone with a slightly uneven, chipped top surface and a darker, mottled patch on one face, suggesting a weathered, broken brick or paving stone."
+differs = "Longest and flattest, with a chipped top and mottled patch; best for broken paving or ruin floors."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.769606, 0.18413301, 0.401218]
+
+[mesh.sm_prop_brick_02]
+name = "SM_Prop_Brick_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Brick_02.fbx"
+sha256 = "297c7532467e78dd2376171464d0f08e3c1b4dd84e21d06af284e054e5e13487"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, irregularly faceted stone slab with a flat top and beveled edges, rendered in a pale sandy beige with a subtle darker patch on one side. Its chunky, angular silhouette suggests a weathered paving stone or a broken piece of masonry, making it a versatile ground detail for ruins or pathways."
+differs = "Most angular and faceted, with beveled edges and a darker side patch; ideal for irregular masonry or pathway details."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 68
+meshes = 1
+materials = 1
+size = [0.522472, 0.170546, 0.39459598]
+
+[mesh.sm_prop_bridge_curved_01]
+name = "SM_Prop_Bridge_Curved_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Bridge_Curved_01.fbx"
+sha256 = "12053576286c940bb10e9e0516672740c86a461e6945e0ddd48b9e787509b05d"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A gently arched footbridge with a weathered wooden plank deck and simple railings, supported by sturdy posts. Its muted brown and grey tones suggest aged timber, fitting a rustic or medieval setting. The curved profile makes it ideal for spanning small streams or uneven terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1504
+meshes = 1
+materials = 1
+size = [2.0950031, 1.840333, 8.791232]
+
+[mesh.sm_prop_campfire_01]
+name = "SM_Prop_CampFire_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_CampFire_01.fbx"
+sha256 = "010e0e9556ea92e2a58dcd9696026b3049b5592b4425a8b9c3b9dae6148f4137"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, wide ring of grey stones encloses a small teepee of brown logs, with no visible flame or charring, suggesting an unlit or extinguished campfire ready for placement in a scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 630
+meshes = 1
+materials = 1
+size = [1.528504, 0.599535, 1.531022]
+
+[mesh.sm_prop_chest_wood_01]
+name = "SM_Prop_Chest_Wood_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Chest_Wood_01.fbx"
+sha256 = "eb901ae805c0fc3d3597d765809afdd456164f0a2c9004f2d9f20c96d8e6051e"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stout, rectangular wooden chest with a slightly domed lid, reinforced by grey metal straps and corner brackets. The light brown planks show visible grain and weathering, while a simple latch and side handles suggest a sturdy, functional container for game environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 791
+meshes = 2
+materials = 1
+size = [1.1647451, 0.679265, 0.832036]
+
+[mesh.sm_prop_chest_wood_lid]
+name = "SM_Prop_Chest_Wood_Lid"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Prop_Chest_Wood_Lid.obj"
+sha256 = "e3bbbaa3fdd6bf25a93caa9b0d74d5215b3afc49ee4fe8ad91bd6f56b51ab418"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, wide wooden chest with a flat, weathered grey lid, bound by two red metal straps and a central latch. The dark brown base shows chipped paint and a small circular lock on the front, giving it a sturdy, used appearance suited for rustic or medieval settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 379
+meshes = 1
+materials = 1
+size = [112.33009, 30.838509, 83.20355]
+
+[mesh.sm_prop_cloud_01]
+name = "SM_Prop_Cloud_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Cloud_01.fbx"
+sha256 = "d4d484cf3bcb0f39e2538bc534b611e48bcdaf7e3987d587ab89931ae90a2adf"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A long, low, irregular slab of pale, off-white stone with a rough, faceted surface, resembling a weathered rock or a small, flat cloud. Its elongated, jagged silhouette and muted, sandy colouring make it a versatile, understated prop for natural environments."
+differs = "The plainest and least detailed, with the flattest profile and lowest height, best for a distant, barely-there streak."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 280
+meshes = 1
+materials = 1
+size = [7.440134, 1.243191, 1.886404]
+
+[mesh.sm_prop_cloud_02]
+name = "SM_Prop_Cloud_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Cloud_02.fbx"
+sha256 = "ffac8823a0d273674a16a0e98bd3151acf79f084c2a641ed999072961e1fde83"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A long, low, irregularly shaped cloud with a flat underside and a lumpy, faceted top, rendered in a pale cream tone with subtle shading. Its stretched, wispy form suggests a high-altitude cirrus or a wind-blown streak, making it ideal for adding horizontal variation to a sky without the bulk of a puffy cumulus."
+differs = "The longest and most stretched, with the most uniform, wispy shape, ideal for a thin, high-altitude cirrus band."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 252
+meshes = 1
+materials = 1
+size = [8.314779, 1.283807, 2.577452]
+
+[mesh.sm_prop_cloud_03]
+name = "SM_Prop_Cloud_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Cloud_03.fbx"
+sha256 = "45c27de7669bb67e80032958f2644b73b6006033d4eab35efe42609086fc2bfe"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, elongated wisp of pale beige cloud, stretched thin and tapering to a point at one end, with a slightly thicker, lumpier head at the other. Its faceted surface suggests a soft, wind-blown form, ideal for adding a subtle, drifting accent to a sky."
+differs = "The most detailed and tallest, with a distinct tapered point and thicker head, best for a more prominent, wind-blown accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 490
+meshes = 1
+materials = 1
+size = [7.896634, 1.493997, 3.092723]
+
+[mesh.sm_prop_fence_01]
+name = "SM_Prop_Fence_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Fence_01.fbx"
+sha256 = "8d2fe37a38250e7ca27144936deb56b30a51865f077d4f1de74b831cfd25e5a9"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A rustic, weathered wooden fence section with two sagging horizontal rails and three uneven posts, showing a natural brown grain and a slightly crooked, hand-built appearance suited for rural or wilderness settings."
+differs = "The only two-rail section, with the most sag and lean, making it the most damaged-looking and best for broken or abandoned boundaries."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 176
+meshes = 1
+materials = 1
+size = [2.9796362, 1.085228, 0.25419098]
+
+[mesh.sm_prop_fence_02]
+name = "SM_Prop_Fence_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Fence_02.fbx"
+sha256 = "1c7333f68e762667dafba17f96de996618dfa9a2c0d2873695ac5ea3e342051b"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A rustic wooden fence section with three horizontal rails and three vertical posts, finished in weathered grey-brown timber. The rails are slightly uneven, giving it a hand-built, rural feel. Its low, wide proportions make it ideal for marking boundaries in pastoral or forest settings."
+differs = "The only three-rail section, with the flattest, widest profile and most uniform spacing, making it the most detailed and best for intact, orderly pasture borders."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 220
+meshes = 1
+materials = 1
+size = [3.021795, 1.141583, 0.153552]
+
+[mesh.sm_prop_grave_03]
+name = "SM_Prop_Grave_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Grave_03.fbx"
+sha256 = "f985afe7af817ad1c8c814367c39535a8a2a1c0595fa7f893cc9637fd1eb1a1b"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A weathered wooden cross with a slightly irregular, hand-hewn shape, standing upright in a small mound of grey stones. The pale, desaturated timber shows subtle grain and a matte finish, giving it a rustic, aged appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 292
+meshes = 1
+materials = 1
+size = [0.748886, 1.072232, 0.414531]
+
+[mesh.sm_prop_pillar_01]
+name = "SM_Prop_Pillar_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Pillar_01.fbx"
+sha256 = "3eaa900cdb0461274584a2c6997bae9e18edf894f52ee809ad41dfee7d3ab561"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, square stone pillar with a stepped base and capital, featuring recessed vertical panels and a simple cornice. The pale beige stone is weathered with dark grime concentrated near the base, giving it an aged, ruined look suitable for ancient or abandoned settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 700
+meshes = 1
+materials = 1
+size = [0.6337, 2.813059, 0.633742]
+
+[mesh.sm_prop_pillar_arch_01]
+name = "SM_Prop_Pillar_Arch_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Pillar_Arch_01.fbx"
+sha256 = "d62add4a84c4cbd9f69f0beb6e172b8dd95db9876cdeddf3e7453692bd789db5"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A weathered, pale stone archway built from chunky, stepped blocks, forming a sturdy semicircular span. The low-poly geometry gives it a rugged, hand-carved look, with a flat top and a simple, unadorned surface that suggests ancient, ruined architecture."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 700
+meshes = 1
+materials = 1
+size = [2.569304, 1.4240279, 0.581266]
+
+[mesh.sm_prop_pillar_arch_broken_01]
+name = "SM_Prop_Pillar_Arch_Broken_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Pillar_Arch_Broken_01.fbx"
+sha256 = "083af02b9a62ba587c7537232b1edd36d2ebe2e6e4fc0f1b4c37db7156794027"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, chunky stone pillar with a stepped, square capital and base, broken off at a steep angle near the top. The pale grey-beige surface is unadorned, with a simple banded mid-section, giving it a clean, stylized look perfect for ruined classical or fantasy environments."
+differs = "Taller and more upright, with a stepped capital and base; best for standing ruined pillars or columns."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 140
+meshes = 1
+materials = 1
+size = [0.599471, 0.8051779, 0.39979]
+
+[mesh.sm_prop_pillar_arch_broken_02]
+name = "SM_Prop_Pillar_Arch_Broken_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Pillar_Arch_Broken_02.fbx"
+sha256 = "c685bc568520b0b9dd2dca9325f61a16a694d8422d464bceb87e265582d527bb"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, chunky fragment of a ruined stone column, broken into two uneven, blocky halves with a flat, circular top and a jagged, stepped profile. The pale beige stone is unadorned, with a smooth, matte finish that suggests weathered masonry."
+differs = "Wider and lower, with a flat circular top and jagged profile; ideal for ground-level rubble or broken column segments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 334
+meshes = 1
+materials = 1
+size = [1.4085879, 0.601441, 0.713938]
+
+[mesh.sm_prop_pillar_arch_broken_moss_01]
+name = "SM_Prop_Pillar_Arch_Broken_Moss_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Pillar_Arch_Broken_Moss_01.fbx"
+sha256 = "4c3081f91b520a4f8de67bfc6e8ffccf5c818cd34694c90b3ac40f8d81e5fb90"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, chunky stone pillar broken off at the top, with a stepped base and a jutting ledge. The pale grey stone is heavily veined with bright green moss, giving it a weathered, ancient look. Its compact, blocky form makes it ideal for ruins or overgrown environments."
+differs = "Taller, narrower, and more upright, with a jutting ledge; best for vertical ruin accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 140
+meshes = 1
+materials = 1
+size = [0.60999, 0.88662195, 0.399791]
+
+[mesh.sm_prop_pillar_arch_broken_moss_02]
+name = "SM_Prop_Pillar_Arch_Broken_Moss_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Pillar_Arch_Broken_Moss_02.fbx"
+sha256 = "89f03d095e40c02106b948373cf7e130d7f1b2fef31614ae24bf6614435a74b4"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, ruined stone column with a stepped, square base and a jagged, broken top, draped in thick, bright green moss that clings to the upper edges and cascades down the sides. The pale grey stone is chipped and weathered, giving it a soft, rounded look that suggests an ancient, forgotten ruin."
+differs = "Wider, lower, and more horizontal, with a stepped base and cascading moss; best for ground-level rubble."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 431
+meshes = 1
+materials = 1
+size = [1.408588, 0.601441, 0.713938]
+
+[mesh.sm_prop_pillar_arch_moss_01]
+name = "SM_Prop_Pillar_Arch_Moss_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Pillar_Arch_Moss_01.fbx"
+sha256 = "19306953182e7110ac2ca005e15329bfe118a451b0eef55d66cc004da19a3712"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A weathered, freestanding stone arch built from chunky, irregular blocks, draped with patches of bright green moss that cling to the upper surfaces and joints. The pale grey stone is heavily textured with cracks and dirt, giving it an ancient, ruined look perfect for overgrown ruins or forgotten pathways."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 842
+meshes = 1
+materials = 1
+size = [2.569304, 1.4689021, 0.597279]
+
+[mesh.sm_prop_pillar_broken_01]
+name = "SM_Prop_Pillar_Broken_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Pillar_Broken_01.fbx"
+sha256 = "b46945db8ab550431e74de60d6eaa9b8817cadca3fbedba04c2f1fcf986ac0c9"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, rectangular stone block with a stepped, moulded base and a flat top, broken off at one end with a jagged, uneven edge. Its pale beige surface is smooth and unadorned, suggesting a weathered but clean architectural fragment."
+differs = "The low, horizontal block is the widest and flattest option, ideal as a fallen step or low wall segment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 368
+meshes = 1
+materials = 1
+size = [1.500777, 0.512748, 0.510332]
+
+[mesh.sm_prop_pillar_broken_02]
+name = "SM_Prop_Pillar_Broken_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Pillar_Broken_02.fbx"
+sha256 = "f031dde98728511ad2acc5df00697f676ee1b9bbb3fe9b2363866498eb075113"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A weathered stone pillar with a chamfered, tapering shaft rising from a stepped, moulded base, broken off at the top. The pale beige surface shows chipped edges and a dark vertical gouge on one face, giving it a ruined, ancient look suited to temple or courtyard ruins."
+differs = "The tall, vertical shaft is the only upright piece, best for standing ruins or as a broken column base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 472
+meshes = 1
+materials = 1
+size = [0.6337, 1.521534, 0.633742]
+
+[mesh.sm_prop_pillar_broken_moss_01]
+name = "SM_Prop_Pillar_Broken_Moss_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Pillar_Broken_Moss_01.fbx"
+sha256 = "a7ca34e45fbea3edafc32929714dd4513a854c6413522fc6ddde7cb991b491fb"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, rectangular stone block with a stepped, fluted profile, broken and chipped at both ends. Pale grey masonry is heavily overgrown with bright green moss patches that drape over the top and sides, giving it a weathered, ancient look suited to ruined temple or forest settings."
+differs = "The lowest, widest, and flattest option, ideal as a fallen lintel or low step, not a standing column."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 465
+meshes = 1
+materials = 1
+size = [1.500776, 0.51614803, 0.514172]
+
+[mesh.sm_prop_pillar_broken_moss_02]
+name = "SM_Prop_Pillar_Broken_Moss_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Pillar_Broken_Moss_02.fbx"
+sha256 = "49e7b9fdbd5bb6329a83c17577ba04cce791e099d6ffc1197ca45cf90b4783e3"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A weathered stone pillar with a square, tapering shaft and a stepped, blocky base, topped by a simple pyramidal cap. Bright green moss clings heavily to the edges, corners, and the base, with a large chunk missing from the lower section, revealing a jagged break."
+differs = "The tallest and most upright, with a pyramidal cap and a large jagged break, perfect for a standing ruined column."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 536
+meshes = 1
+materials = 1
+size = [0.691248, 1.56102, 0.633742]
+
+[mesh.sm_prop_pillar_moss_01]
+name = "SM_Prop_Pillar_Moss_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Pillar_Moss_01.fbx"
+sha256 = "d2cc95bdaf68f2bad78136cc626810299e4d3cb512c9b8ce3cf431668c242377"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, slender stone column with a square capital and stepped base, featuring a recessed vertical panel on each face. The pale grey stone is heavily weathered, with bright green moss creeping up from the base and clinging to the edges and capital, giving it an ancient, overgrown look suited to ruined temples or..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 700
+meshes = 1
+materials = 1
+size = [0.6337, 2.813059, 0.633742]
+
+[mesh.sm_prop_roadsign_01]
+name = "SM_Prop_RoadSign_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_RoadSign_01.fbx"
+sha256 = "e65f87528eb201290cae2cf927c7440cdff81a09f2d87b00bd9a43e5ccf37387"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A weathered wooden post with three arrow-shaped signs pointing in different directions, painted in faded red and off-white with chipped edges and a slightly tilted, rustic appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 286
+meshes = 1
+materials = 1
+size = [1.158386, 2.353375, 0.52986395]
+
+[mesh.sm_prop_skeleton_ground_01]
+name = "SM_Prop_Skeleton_Ground_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Skeleton_Ground_01.fbx"
+sha256 = "0f35b8682d6e05915f623821880162ad2f910103c8c56b000bb12a35ca316cf0"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A weathered humanoid skeleton sprawled on its back, with a skull, ribcage, and scattered limb bones in a pale, dusty bone-white. The remains are broken and disjointed, suggesting a long-forgotten corpse in a natural setting, ideal for adding a grim, ancient touch to graveyards or ruins."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2736
+meshes = 1
+materials = 1
+size = [1.286626, 0.406722, 1.959878]
+
+[mesh.sm_prop_skull_01]
+name = "SM_Prop_Skull_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_Skull_01.fbx"
+sha256 = "3d36054d67cbd764eb955fc7080a4a504c4d487d88e696591d583418e8b2a976"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stylised, blocky cranium with a broad, rounded dome and a short, blunt snout, featuring deep, square eye sockets and a small nasal notch. The bone is a pale, matte beige with subtle darker shading in the recesses, and the jaw is fused to the skull, giving it a simplified, cartoonish look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 188
+meshes = 1
+materials = 1
+size = [0.233112, 0.25062, 0.253254]
+
+[mesh.sm_prop_stonewall_01]
+name = "SM_Prop_StoneWall_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_StoneWall_01.fbx"
+sha256 = "4e147291671d37d8c4705be5edc2d4e93f699e50c8c7f3c1f0499d025011a994"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, straight segment of dry-stacked fieldstone, roughly hewn and irregular, with a slightly uneven top edge and a flat, weathered grey-brown surface. It reads as a rustic boundary or low garden wall, with a chunky, hand-built look that suits natural or medieval settings."
+differs = "The longest and most detailed straight segment, ideal for continuous fencing or long boundaries."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1696
+meshes = 1
+materials = 1
+size = [5.129447, 1.089441, 0.507078]
+
+[mesh.sm_prop_stonewall_02]
+name = "SM_Prop_StoneWall_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_StoneWall_02.fbx"
+sha256 = "43b557c7ce3787e271cc92fd35b9fa826016da90a14295ba8fce23954f9de3ff"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, irregular dry-stone boundary of rounded, pale grey boulders, tapering at both ends and rising to a slightly higher, thicker middle section. The weathered, matte surface suggests a rustic, natural barrier suited to rural or fantasy environments, with a subtle height variation that adds organic character."
+differs = "The most organic with a tapered, curved profile, best for natural, winding borders."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1251
+meshes = 1
+materials = 1
+size = [4.267107, 1.076245, 0.636751]
+
+[mesh.sm_prop_stonewall_03]
+name = "SM_Prop_StoneWall_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_StoneWall_03.fbx"
+sha256 = "57cab5eb4605bdbe143ed755f080f8b65c9cb8581530eccead8a4db645919092"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, irregular stack of chunky, rounded stones in pale grey and beige, forming a short, freestanding barrier with a jagged top and a small gap near the base. The weathered, faceted blocks suggest a rustic, hand-built wall suitable for ruins or natural boundaries."
+differs = "The shortest and most damaged with a gap, perfect for ruins or broken, freestanding accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 398
+meshes = 1
+materials = 1
+size = [1.334067, 1.080548, 0.467819]
+
+[mesh.sm_prop_torchstick_01]
+name = "SM_Prop_TorchStick_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Prop_TorchStick_01.fbx"
+sha256 = "bdedbc660e336b9f3b6799011e9f46a442cbb0f945d278014f4c70fff4e1e826"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, roughly hewn wooden shaft that tapers to a blunt point at the base, topped with a pale, wrapped head of cloth or fibrous material, suggesting a torch ready for fuel and flame. The wood is a muted, weathered brown with subtle grain, while the head is a light, off-white grey, giving it a rustic, handcrafted..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 220
+meshes = 1
+materials = 1
+size = [0.154968, 1.882072, 0.166264]
+
+[mesh.sm_rock_01]
+name = "SM_Rock_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_01.fbx"
+sha256 = "ef7653c96da663e055798a43bb46661c95304bf685e259fd97cd9201665fec73"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, angular boulder with a broad, flattened top and a slightly wider base, rendered in a pale, warm grey-beige. Its faceted surface is mostly smooth and unmarked, with a subtle darker band running along the upper edge, giving it a clean, weathered look."
+differs = "The most compact and upright of the set, with a distinct darker band along its top edge, ideal for a standalone accent rock."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 74
+meshes = 1
+materials = 1
+size = [0.32655, 0.268144, 0.35018]
+
+[mesh.sm_rock_02]
+name = "SM_Rock_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_02.fbx"
+sha256 = "a7dbdb233a116aa1e1ecb66b68b9e8e7ddbd5e129adf10ce0e0d7d5653f7cf95"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad, angular boulder with a flat base and a slightly domed top, its faceted surface catching light in pale beige and grey tones. The blocky silhouette is wider than it is tall, with a few sharp, irregular planes suggesting a weathered, chunky stone."
+differs = "The most balanced and symmetrical boulder, with a domed top and flat base, perfect for a stable, generic ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 64
+meshes = 1
+materials = 1
+size = [0.38742, 0.288004, 0.404568]
+
+[mesh.sm_rock_03]
+name = "SM_Rock_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_03.fbx"
+sha256 = "ee2ee7867aeffbb190f014c3e2062f6d8a1b87552414ee0ca292c33aae3dec99"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, wide, roughly hexagonal block of pale grey stone, its flat top and sides broken by sharp, irregular facets that give it a chunky, weathered look. The surface is smooth and unmarked, with subtle shading that highlights its angular planes, making it a versatile, neutral boulder for ground cover or terrain..."
+differs = "The lowest-poly and most hexagonal, with the widest, flattest top, making it the best choice for a stepping stone or flat terrain filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 46
+meshes = 1
+materials = 1
+size = [0.476069, 0.307943, 0.384031]
+
+[mesh.sm_rock_04]
+name = "SM_Rock_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_04.fbx"
+sha256 = "dd5b6c522b2996592f1eea71683754687ab939b7070fbb513d997aea68c42e01"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad, angular boulder with a flat base and a gently sloped top, its faceted planes catching light to suggest a smooth, pale beige stone. The silhouette is wider than it is tall, with a slightly irregular, chunky form that reads as a weathered, rounded rock rather than a jagged shard."
+differs = "The longest and most elongated, with a gently sloped top, making it the only one suited for a low, wide ledge or a path border."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 66
+meshes = 1
+materials = 1
+size = [0.625233, 0.281138, 0.40456802]
+
+[mesh.sm_rock_boulder_01]
+name = "SM_Rock_Boulder_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Boulder_01.fbx"
+sha256 = "5a944b4187651f70668ae7d19c1c1fd8abfc37587435a603e3edfce1667767a9"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A chunky, faceted boulder with a broad, rounded base and a slightly flattened top, rendered in a warm, sandy beige. Its low-poly surface is smooth and unblemished, with no cracks or extra details, making it a clean, versatile piece for terrain or scatter placement."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 514
+meshes = 1
+materials = 1
+size = [2.665104, 2.665104, 2.665104]
+
+[mesh.sm_rock_caveentrance_01]
+name = "SM_Rock_CaveEntrance_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_CaveEntrance_01.fbx"
+sha256 = "c75201a30ba9870b9d314f1674f3ff62993629ba6641408ba174a890cebfee68"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad mound of faceted grey stone with a dark, jagged opening on one side, suggesting a shallow cave mouth or den entrance. The rock is weathered and unadorned, with a matte finish that suits natural environments. Its compact, grounded silhouette makes it ideal for framing paths or hiding loot in outdoor scenes."
+differs = "Slightly longer and narrower, with a more jagged, asymmetrical opening suited for framing paths or hiding loot."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1886
+meshes = 1
+materials = 1
+size = [11.626204, 9.287175, 6.7933893]
+
+[mesh.sm_rock_caveentrance_02]
+name = "SM_Rock_CaveEntrance_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_CaveEntrance_02.fbx"
+sha256 = "7a3f0b5a65c6ae6e54b8e89187e9955ca254e0aa2df67fab30c16fdf7a844d44"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad mound of faceted grey stone with a dark, arched opening at its base, suggesting a shallow cave or den. The rock is weathered and uneven, with a flat top and a wide footprint that makes it read as a natural terrain feature rather than a constructed entrance."
+differs = "Wider and squarer, with a flatter top and a more regular arched opening, better for a natural den or terrain feature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1814
+meshes = 1
+materials = 1
+size = [11.190297, 10.211777, 6.659156]
+
+[mesh.sm_rock_caveinterior_01]
+name = "SM_Rock_CaveInterior_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_CaveInterior_01.fbx"
+sha256 = "2f134f5ea76af8295b4bdb51adcc5f6ad22231d6a0d140ddebe9357e61244472"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad, and irregular cluster of faceted grey stone, featuring a prominent overhang and a deep, shadowed recess that suggests a natural shelter or cave mouth. The surface is a mix of pale beige and darker grey tones, with a rough, weathered texture that gives it a rugged, ancient appearance."
+differs = "More compact and enclosed, with a deeper, more defined cave mouth suited for a tight, intimate shelter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1001
+meshes = 1
+materials = 1
+size = [9.731229, 6.128182, 9.04447]
+
+[mesh.sm_rock_caveinterior_02]
+name = "SM_Rock_CaveInterior_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_CaveInterior_02.fbx"
+sha256 = "67695eb76d350301081fc93ab3619c3026b72b9393903f85bd0a722779a1b9a7"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad, irregular rock formation with a jagged, faceted surface, featuring a prominent overhang and a hollowed, cave-like recess on one side. Its pale grey and beige tones are accented by darker crevices, giving it a weathered, natural look suited for a rocky terrain or a sheltered alcove."
+differs = "The larger, more sprawling piece, with a wider, lower profile and a more open, elongated recess for a broader alcove."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1055
+meshes = 1
+materials = 1
+size = [13.613989, 7.2369337, 11.770462]
+
+[mesh.sm_rock_cluster_large_01]
+name = "SM_Rock_Cluster_Large_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Cluster_Large_01.fbx"
+sha256 = "a2f6ad4d853d65267742ee0a8b4a688c690c429c7e9a8036694a4c4b9abac8fe"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A jagged, angular cluster of faceted boulders, with a prominent, sharp peak rising from a broad, uneven base. The pale, sandy-grey stone is marked by deep, shadowed crevices and flat, planar surfaces, giving it a weathered, monolithic appearance suited for natural terrain or rocky outcrops."
+differs = "The most vertical and peak-heavy of the set, ideal for a jagged spire or landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 988
+meshes = 1
+materials = 1
+size = [13.508999, 13.1146, 13.641102]
+
+[mesh.sm_rock_cluster_large_02]
+name = "SM_Rock_Cluster_Large_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Cluster_Large_02.fbx"
+sha256 = "e2e1a63cfa31ffc7b2b8440229633d9af21a36cf3a65d2cd63e4b663f7d7cd31"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, wide, irregular mass of faceted grey stone, resembling a weathered outcrop or a cluster of boulders fused together. Its flat base and broad footprint make it ideal for grounding a scene, while the subtle beige and grey mottling gives it a natural, sun-bleached appearance."
+differs = "The widest and flattest of the mid-sized rocks, best for a long, low barrier."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1976
+meshes = 1
+materials = 1
+size = [19.4725, 8.369502, 28.639399]
+
+[mesh.sm_rock_cluster_large_03]
+name = "SM_Rock_Cluster_Large_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Cluster_Large_03.fbx"
+sha256 = "d5a586a729c16848df7bbb7502a2212c09e54b2e079c7dc3d48bbe5799c0b4c9"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A jagged, angular cluster of pale grey stone with a flat, stable base, featuring a prominent, sharp peak that rises asymmetrically from a broader, blocky foundation. The low-poly facets create deep, shadowed crevices and a rough, weathered surface, making it ideal for a natural, rocky outcrop or a rugged terrain..."
+differs = "The most asymmetrical and lopsided, with a single sharp peak offset to one side."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 994
+meshes = 1
+materials = 1
+size = [15.548098, 13.666794, 13.4713]
+
+[mesh.sm_rock_cluster_large_04]
+name = "SM_Rock_Cluster_Large_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Cluster_Large_04.fbx"
+sha256 = "139124205040edb58b591dd0f288085d0f09f704b1b2afad4d1dd803c9ffc5a7"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A broad, low, and irregularly rounded boulder with a heavily faceted surface, featuring a distinct horizontal cleft or fissure running along its midsection. The pale beige and light grey tones suggest a dry, weathered stone, making it ideal for a natural, low-poly environment where a wide, grounded rock formation is..."
+differs = "The only one with a distinct horizontal fissure, making it the most damaged-looking."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 970
+meshes = 1
+materials = 1
+size = [15.5901, 9.796301, 16.7229]
+
+[mesh.sm_rock_cluster_large_05]
+name = "SM_Rock_Cluster_Large_05"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Cluster_Large_05.fbx"
+sha256 = "9605576680c9a7905b657a6dc5412a284eec5b86543e6f084dfa2f711a20e2c1"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A broad, low-slung cluster of angular, faceted boulders with a flat, stable base and a jagged, uneven top, rendered in a uniform pale grey-beige stone tone. The chunky, polygonal surfaces suggest a weathered, dry rock formation suitable for arid or rocky terrain, offering a substantial footprint for ground cover or a.."
+differs = "The most balanced and uniform cluster, with a broad, even top for stable ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 990
+meshes = 1
+materials = 1
+size = [16.5357, 15.058201, 17.881899]
+
+[mesh.sm_rock_cluster_large_06]
+name = "SM_Rock_Cluster_Large_06"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Cluster_Large_06.fbx"
+sha256 = "2f1c786654e319701f76a9c427f3e6d0a2b11f3b6a5cdec775beb6f206717b03"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, flat, elongated slab of pale beige stone with a jagged, faceted top and a smooth, planar underside, resembling a weathered stepping stone or a natural ledge. Its muted, sandy colouring and lack of sharp peaks make it ideal for a subtle ground detail or a low-profile obstacle in a dry or desert environment."
+differs = "The largest and most elongated slab, perfect for a wide, flat stepping stone or ledge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2000
+meshes = 1
+materials = 1
+size = [27.496399, 8.391301, 38.945297]
+
+[mesh.sm_rock_pile_01]
+name = "SM_Rock_Pile_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Pile_01.fbx"
+sha256 = "0457ef83646e4f039272249580c263bc97dc6de368e2a9db92a809ea2c412620"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, wide cluster of angular, faceted boulders in a pale, sandy beige, with a flat, grounded base and a slightly uneven top, suggesting a natural, weathered stone pile suitable for scattered terrain decoration."
+differs = "The most balanced, rounded cluster; best for a generic mid-size scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1000
+meshes = 1
+materials = 1
+size = [6.615552, 3.887467, 4.015102]
+
+[mesh.sm_rock_pile_02]
+name = "SM_Rock_Pile_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Pile_02.fbx"
+sha256 = "f729e28bd3e685e64dc86f63a344c16f8dc23bcbdf2d5f724f4a4ed04b8f606b"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A cluster of angular, faceted boulders in a pale, sandy beige, forming a low, irregular mound with a flat base. The jagged, low-poly surfaces suggest a dry, weathered stone, ideal for scattered terrain decoration or a natural obstacle in a stylized environment."
+differs = "The most compact and tallest mound; ideal for a tight, vertical obstacle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 700
+meshes = 1
+materials = 1
+size = [5.4018974, 4.353882, 5.5540543]
+
+[mesh.sm_rock_pile_03]
+name = "SM_Rock_Pile_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Pile_03.fbx"
+sha256 = "c43d13efcc52de923a84c0f24dca8d3b3affcb2cb376cce0780838b5dde0ce2f"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, chunky cairn of angular, flat-shaded slabs stacked in a loose, irregular pile, with a broad base and a small, flat capstone. The pale, sandy-grey stone is unmarked and clean, giving it a dry, weathered look that suits desert or rocky terrain."
+differs = "The only stacked cairn with a capstone; perfect for a deliberate landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 884
+meshes = 1
+materials = 1
+size = [6.335702, 5.252995, 5.017873]
+
+[mesh.sm_rock_pile_04]
+name = "SM_Rock_Pile_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Pile_04.fbx"
+sha256 = "83e32c92cb31b79ee90f8635860e8bf3926797eeb3b6f1a68a84662b91d48285"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, flat stack of angular slabs, wider than it is tall, with a pale sandy beige tone and a subtle horizontal groove suggesting a split between layers. The faceted, chunky silhouette reads as a weathered, sedimentary outcrop, ideal for a dry or desert environment where a simple, grounded rock formation is needed."
+differs = "The flattest and most elongated; best as a low ledge or step."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 480
+meshes = 1
+materials = 1
+size = [4.05595, 2.515579, 6.243742]
+
+[mesh.sm_rock_pile_05]
+name = "SM_Rock_Pile_05"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Pile_05.fbx"
+sha256 = "ec7a34719072b8ab26c7a468dc8ce9759027daf1718a1c776103154cdc282e1d"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, sprawling cluster of angular grey boulders, with a few smaller stones scattered at the base, forming a natural, uneven mound with a flat, weathered surface."
+differs = "The widest and most sprawling; best for covering large ground areas."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 744
+meshes = 1
+materials = 1
+size = [10.369018, 4.363291, 4.683472]
+
+[mesh.sm_rock_pile_curved_01]
+name = "SM_Rock_Pile_Curved_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Pile_Curved_01.fbx"
+sha256 = "a69bd8244e9e63e257a8b2f98b51ab68691c9c90202a1b2b49047e5ceb8019b2"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, elongated mound of angular, faceted boulders in a pale, sandy beige, forming a gentle curve that reads as a natural, weathered barrier or a partial ring of stones. The flat-shaded surfaces give it a clean, stylized look, and its low profile makes it ideal for creating subtle ground cover or a winding path edge.."
+differs = "The larger, more elongated option, with a smoother, more continuous curve ideal for a winding path edge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 990
+meshes = 1
+materials = 1
+size = [5.339695, 2.602687, 3.8150601]
+
+[mesh.sm_rock_pile_curved_02]
+name = "SM_Rock_Pile_Curved_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Pile_Curved_02.fbx"
+sha256 = "ff6305ae994750b29dc55d57b789f57db6ffb8d30fc7aa1321b6b6b7ec275108"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, wide cluster of angular, faceted boulders in pale beige and grey, forming a gentle curve. The flat, chunky rocks are tightly packed with a rough, weathered surface, suggesting a natural, dry stone pile suitable for desert or rocky terrain."
+differs = "The smaller, more compact cluster with a tighter, more irregular curve, better for a dense, natural stone pile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 970
+meshes = 1
+materials = 1
+size = [5.050249, 2.443388, 3.901114]
+
+[mesh.sm_rock_rounded_01]
+name = "SM_Rock_Rounded_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Rounded_01.fbx"
+sha256 = "81eabae3ba5f44559780f72c4a6d38deb47619a735561825ea07d85d7856e3cd"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, flattened dome with a broad, irregular base and a gently sloped top, its faceted surface catching light in soft, even planes. The pale beige stone is smooth and unblemished, with no cracks or extra details, making it ideal for a clean, minimalist ground cover or a subtle stepping stone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 1
+size = [1.366756, 0.50349903, 1.567009]
+
+[mesh.sm_rock_small_01]
+name = "SM_Rock_Small_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Small_01.fbx"
+sha256 = "6e3973634f2e6eb684a9aed15ac0d5514b0bc4a6f1da79593a0640aaa1cf39de"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, irregularly shaped boulder with a broad, flattened top and a slightly wider base, rendered in a pale, sandy beige with subtle grey mottling. Its faceted surface is smooth and unblemished, with no cracks or vegetation, making it ideal for a clean, minimalist environment or as a subtle ground detail."
+differs = "The larger, more detailed boulder with a flattened top, ideal as a standalone focal point or hero prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 186
+meshes = 1
+materials = 1
+size = [0.85743403, 0.675209, 1.3199661]
+
+[mesh.sm_rock_small_02]
+name = "SM_Rock_Small_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Small_02.fbx"
+sha256 = "501ec2d0d747ed059acabae85c1ba4b4eb770396c639f723ef804466ee4dca30"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, irregularly faceted stone with a broad, flat base and a slightly domed top, rendered in a pale, uniform beige with no visible cracks or weathering. Its chunky, low-poly silhouette reads as a clean, generic boulder suitable for scattered ground cover or subtle terrain variation."
+differs = "The smaller, simpler stone with a domed top, best for scattered ground cover or subtle terrain variation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 36
+meshes = 1
+materials = 1
+size = [0.392034, 0.287289, 0.511228]
+
+[mesh.sm_rock_tile_01]
+name = "SM_Rock_Tile_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Tile_01.fbx"
+sha256 = "9ce5d0f8ef01af85ab6ff2d07dfa98c72f422e9f0d4fde33510bfb44f63b51f6"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A flat, roughly square slab of pale beige stone with a rough, chipped top surface and irregular edges. One face features a darker, greyish patch, suggesting weathering or a different mineral inclusion, giving it a natural, worn appearance suitable for paving or ground cover."
+differs = "The only one with a dark grey patch, making it the most weathered and distinct for accent paving."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2223
+meshes = 1
+materials = 1
+size = [12.917578, 0.69756204, 12.72072]
+
+[mesh.sm_rock_tile_02]
+name = "SM_Rock_Tile_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Tile_02.fbx"
+sha256 = "cf59f760cd38d585b1e273c0bcc578450972d00454728b56acd9db97099f393c"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, flat, irregular slab of pale beige stone with a rough, chiselled top surface and jagged, uneven edges, resembling a weathered paving stone or a natural stepping stone for a path."
+differs = "The largest and thickest slab, with the most jagged edges, ideal for a bold, uneven stepping stone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2223
+meshes = 1
+materials = 1
+size = [26.80722, 3.329245, 27.132668]
+
+[mesh.sm_rock_tile_03]
+name = "SM_Rock_Tile_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Tile_03.fbx"
+sha256 = "a3905aa83fc81d548ba43518a78a2911cd8f183d56e4d7bf6c9d0f4cf07f88b7"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, flat, roughly circular slab of pale beige stone with a faceted, chunky surface, resembling a natural stepping stone or a piece of broken pavement. Its top is uneven with small bumps and shallow depressions, while the underside is flat and untextured, making it ideal for placing flush against the ground."
+differs = "The smallest, roundest, and lowest-poly option, with a flat underside for flush ground placement."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 716
+meshes = 1
+materials = 1
+size = [10.746866, 2.189958, 10.777363]
+
+[mesh.sm_rock_wall_01]
+name = "SM_Rock_Wall_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Wall_01.fbx"
+sha256 = "965b485cd6ad9d235891aaba9dd87103b096373ff1ac2b2cfe004a9a81ab7677"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, elongated boulder with a flat, slab-like profile and a heavily stratified, chunky surface. The pale grey-beige stone features deep horizontal grooves and angular facets, giving it a weathered, layered look suited for cliff bases or natural barriers."
+differs = "The flatter, more slab-like of the two, with deeper horizontal grooves and a lower profile, ideal for low cliff bases or barriers."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 948
+meshes = 1
+materials = 1
+size = [1.3247659, 2.607775, 4.639674]
+
+[mesh.sm_rock_wall_02]
+name = "SM_Rock_Wall_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Rock_Wall_02.fbx"
+sha256 = "d90465652df813059a0c7cebf9f58e437ce4808a41cddeaf5bfd4e12fc082e1c"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A chunky, low-poly boulder with a broad, blocky base and a slightly tapered top, featuring a flat, sheer face on one side and a more irregular, fractured profile on the other. Its pale, sandy-beige surface is marked by subtle, horizontal striations and a few small, dark crevices, giving it a weathered, sedimentary..."
+differs = "The taller, blockier option with a sheer face and more irregular fracture, better suited for standalone walls or vertical cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 948
+meshes = 1
+materials = 1
+size = [1.559706, 3.594656, 4.616118]
+
+[mesh.sm_swamp_root_01]
+name = "SM_Swamp_Root_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Swamp_Root_01.fbx"
+sha256 = "ea741b7c3fe55a9a188b4adcaea8a8b27587e2ad4c2ed7f289c3604b4f6079fe"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, arching root with a pronounced central hump and two tapering legs, rendered in a flat, muted grey-brown. Its faceted, angular surface suggests a weathered, dead wood texture, making it ideal for adding organic, grounded detail to swamp or forest floors."
+differs = "The longest and most elongated asset, with a smoother, simpler arch and a plain grey-brown tone, best for spanning gaps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.18747, 0.483112, 1.012113]
+
+[mesh.sm_swamp_root_02]
+name = "SM_Swamp_Root_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Swamp_Root_02.fbx"
+sha256 = "dff489e78d75c373b4d050e59e62d7b9eccf72eaa36dc7bb0e1e05eaf0e16948"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A gnarled, arching root with a low, angular profile, rising from a wide base into a jagged peak before descending to a second, shorter leg. The surface is a flat, muted brown with subtle darker striations, giving it a weathered, organic look."
+differs = "The most detailed and jagged, with a pronounced peak and darker striations, ideal for adding a gnarled, weathered focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 120
+meshes = 1
+materials = 1
+size = [0.21023901, 0.48725, 0.920925]
+
+[mesh.sm_terrain_dustpile_long_01]
+name = "SM_Terrain_DustPile_Long_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_DustPile_Long_01.fbx"
+sha256 = "a0bf0fccbd3d03da07e7f057f1477d4e84fd744067123cd4085e1d023ac94042"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, elongated wedge of pale sandy earth with a few sharp, angular facets, tapering to thin edges at both ends. One view reveals a small, dark grey rock embedded near the surface, adding a touch of rugged detail to the otherwise smooth, dry dirt mound."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 64
+meshes = 1
+materials = 1
+size = [1.98346, 0.270178, 0.66243]
+
+[mesh.sm_terrain_dustpile_small_01]
+name = "SM_Terrain_DustPile_Small_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_DustPile_Small_01.fbx"
+sha256 = "6eb5f8fea4e0c7d78d9f1df98bebf93b6c1961a61e7e359a98e9abc5738120fd"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, wide mound of faceted, pale sand-coloured terrain, flattened on top with gently sloping sides and a slightly irregular, organic outline. Its smooth, untextured surface and simple geometry make it ideal for adding subtle ground variation or scattered debris in stylised environments."
+differs = "The largest and flattest of the two, with a broad, plateau-like top for wide, subtle ground variation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 97
+meshes = 1
+materials = 1
+size = [0.751038, 0.215725, 0.82782]
+
+[mesh.sm_terrain_dustpile_small_02]
+name = "SM_Terrain_DustPile_Small_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_DustPile_Small_02.fbx"
+sha256 = "34e1180eca36dd50042f6290451108eb3ff91c48bc5b259492db25446e8b44bd"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, faceted mound of pale sand with a single sharp peak, its angular geometry giving it a stylized, crystalline look. The surface is smooth and unmarked, suggesting a clean, untouched pile of fine dust or sand."
+differs = "The smaller, sharper option with a single peak, ideal for a distinct, crystalline focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 97
+meshes = 1
+materials = 1
+size = [0.611236, 0.230479, 0.641204]
+
+[mesh.sm_terrain_grassedge_01]
+name = "SM_Terrain_GrassEdge_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_GrassEdge_01.fbx"
+sha256 = "e26833b9bb504fa223a35c615db54b7f163f1c16086b7a7df0dba235baad9012"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, irregular mound of pale, sandy earth capped with a flat, faceted layer of grass green, forming a natural-looking transition between ground and turf. The organic, asymmetrical silhouette and subtle colour variation make it ideal for blending terrain edges in stylised environments."
+differs = "The largest and most elongated, with the most dramatic overhang and highest triangle count, ideal for wide, sweeping terrain transitions."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 345
+meshes = 1
+materials = 1
+size = [10.117641, 3.639991, 6.107334]
+
+[mesh.sm_terrain_grassedge_02]
+name = "SM_Terrain_GrassEdge_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_GrassEdge_02.fbx"
+sha256 = "782067b43ebd401d4096906dc537cc3bc93d97bad475cc7b6a7001e1e85951a2"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, irregular chunk of terrain with a flat, grassy green top and a pale, faceted dirt underside, forming a natural-looking overhang or bank edge. The angular geometry gives it a clean, stylised look, and the contrasting layers make it ideal for creating sharp transitions between elevated ground and lower areas."
+differs = "The most angular and steep-sided, with a pronounced cliff-like drop, perfect for sharp, elevated bank edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 253
+meshes = 1
+materials = 1
+size = [6.493326, 3.1755981, 4.162369]
+
+[mesh.sm_terrain_grassedge_03]
+name = "SM_Terrain_GrassEdge_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_GrassEdge_03.fbx"
+sha256 = "730060ff3271ad7bca346d70530437eea3177a602d680166731d46804734adc0"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, squat mound of pale, sandy earth with a flat, irregular green top, resembling a small grassy plateau or a chunk of terrain. The faceted, low-poly surface gives it a clean, stylised look, and the distinct two-tone layering makes it ideal for creating natural ground transitions or elevated patches in a stylised..."
+differs = "The smallest and most compact, a squat, symmetrical plateau, best for isolated, small-scale ground patches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 253
+meshes = 1
+materials = 1
+size = [4.325286, 2.488185, 4.255319]
+
+[mesh.sm_terrain_grassedge_04]
+name = "SM_Terrain_GrassEdge_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_GrassEdge_04.fbx"
+sha256 = "3e0f0a8f568b1f544860d2dc682ede6b7543862b3824212b02ec218eaa4f1a5b"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, rounded mound of pale, sandy rock with a flat, grass-green top, resembling a small natural platform or a weathered stepping stone. The faceted, low-poly surface gives it a clean, stylised look, and the contrasting colours make it ideal for adding subtle elevation to a grassy terrain."
+differs = "The flattest and widest, a low, rounded stepping-stone platform, ideal for subtle, walkable elevation changes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 275
+meshes = 1
+materials = 1
+size = [6.758519, 1.999653, 6.927022]
+
+[mesh.sm_terrain_grassedge_roots_01]
+name = "SM_Terrain_GrassEdge_Roots_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_GrassEdge_Roots_01.fbx"
+sha256 = "34822fb88f6bd3744ce4812abe61e2eb436fbaeea4bfcf0785c16260c0f3e1ee"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, irregular strip of dark, earthy ground with a jagged, broken edge, from which several thin, bare, twisting roots protrude upward and outward. The surface is textured with mottled browns and greys, giving it a weathered, organic appearance."
+differs = "The largest and most detailed, with a jagged broken edge and taller twisting roots, ideal for a prominent, weathered forest-floor feature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 452
+meshes = 1
+materials = 1
+size = [6.0757427, 1.846416, 2.072568]
+
+[mesh.sm_terrain_grassedge_roots_02]
+name = "SM_Terrain_GrassEdge_Roots_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_GrassEdge_Roots_02.fbx"
+sha256 = "9da4b42bab79dd7dee5e124dbc17e3afa691f0dcb9937662f1b0827f721d5844"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, flat patch of dry, earthy ground with a scattering of thin, jagged roots protruding upward, giving it a sparse, weathered look. The muted brown and grey tones suggest a barren or autumnal setting, making it ideal for adding natural, unkempt detail to forest floors or wasteland edges."
+differs = "The smallest and plainest, a sparse flat patch with short roots, best for subtle, unkempt detail on barren or autumnal ground."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 280
+meshes = 1
+materials = 1
+size = [3.5230381, 1.6443961, 0.80244595]
+
+[mesh.sm_terrain_ground_mound_large_01]
+name = "SM_Terrain_Ground_Mound_Large_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Ground_Mound_Large_01.fbx"
+sha256 = "fe29eeff34f87831c9179865992767f47642e84de5bbfa2d0d12e82da01335ff"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A broad, low elliptical mound of soft green grass, rising gently to a rounded peak with a smooth, unbroken surface. The subtle shading across the top suggests a natural, weathered form, making it ideal for filling open terrain or creating gentle, rolling hills in a low-poly environment."
+differs = "The smallest and plainest, with a perfectly smooth surface and no dark patch, best for subtle, uniform terrain filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 342
+meshes = 1
+materials = 1
+size = [12.736076, 0.338846, 12.471076]
+
+[mesh.sm_terrain_ground_mound_large_02]
+name = "SM_Terrain_Ground_Mound_Large_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Ground_Mound_Large_02.fbx"
+sha256 = "655b64bc33b6804bd7f95c9939fedbbbdc7a7bb217b62d72e67f5a3c59daedbc"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad, gently rounded grassy mound with a soft, organic silhouette, its surface a uniform light green with subtle mottling and a darker patch on one flank, suggesting a natural, unworked terrain feature for open landscapes."
+differs = "The largest and most detailed, with a distinct darker patch on one flank, ideal for adding visual interest to large open landscapes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 760
+meshes = 1
+materials = 1
+size = [19.782421, 0.786211, 19.511427]
+
+[mesh.sm_terrain_ground_mound_small_01]
+name = "SM_Terrain_Ground_Mound_Small_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Ground_Mound_Small_01.fbx"
+sha256 = "85a1757b9ea1f46155bbb38e035890b5eea17f5458602629e0acbadffdcd917c"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, flattened dome of grass, wider than it is tall, with a gently rounded top and a slightly irregular, faceted rim. The surface is a uniform, muted green with subtle tonal variation, suggesting a soft, mossy ground cover. Its simple, broad shape makes it ideal for a subtle terrain bump or a small grassy island."
+differs = "The smallest and most compact, with a faceted rim and uniform green, best for a tight, subtle bump."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 102
+meshes = 1
+materials = 1
+size = [1.6957109, 0.193272, 1.663648]
+
+[mesh.sm_terrain_ground_mound_small_02]
+name = "SM_Terrain_Ground_Mound_Small_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Ground_Mound_Small_02.fbx"
+sha256 = "91d0f4fc830509387d9540b56e81378e6c765273e5534ea5be9752385e8265a5"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, gently rounded grassy hillock with a soft, elliptical profile and a subtle peak, rendered in a flat, light green with darker mottled patches suggesting sparse vegetation or soil. Its smooth, uncluttered surface makes it ideal for a subtle terrain accent or a natural ground cover piece."
+differs = "The largest and most elongated, with a soft peak and mottled patches, ideal for a broad, natural hillock."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 101
+meshes = 1
+materials = 1
+size = [5.094337, 0.418398, 4.9792356]
+
+[mesh.sm_terrain_ice_01]
+name = "SM_Terrain_Ice_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Ice_01.fbx"
+sha256 = "805ff1464a0d97fca5b6f584361d9bc4eccfb4938e9574c57be1a11d5aac23c7"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, irregular slab of pale beige stone with a flat top and jagged, faceted edges, resembling a broken piece of a frozen lake or a weathered rock platform. The surface is mostly smooth and uniform, with a subtle darker patch on one side suggesting a shallow depression or a hint of icy moisture."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 184
+meshes = 1
+materials = 1
+size = [2.369849, 0.32023197, 2.176525]
+
+[mesh.sm_terrain_mountain_01]
+name = "SM_Terrain_Mountain_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Mountain_01.fbx"
+sha256 = "312d5fcb113aa73b01661b3e0233dbdcf1a0b8368c475e29c5380e540d6d6434"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad, faceted peak with a slightly irregular, asymmetrical silhouette, rendered in a soft, pale green that suggests mossy or grassy cover. The surface is smooth and unbroken, with no visible rock strata or snow, giving it a clean, stylized look ideal for a gentle, rolling landscape."
+differs = "Largest and tallest, with the most irregular silhouette, best for a hero focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 938
+meshes = 1
+materials = 1
+size = [49.310646, 23.607178, 48.97151]
+
+[mesh.sm_terrain_mountain_02]
+name = "SM_Terrain_Mountain_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Mountain_02.fbx"
+sha256 = "34a0b5a21deb8454a3bdd68d525992738aa5910d90ce674a126420c5b76157c6"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A broad, low-poly peak with a wide, irregular base and a single sharp summit, rendered in a flat, pale green that suggests mossy grass. The faceted surface is smooth and unmarked, with no rocks or trees, giving it a clean, stylized look ideal for a distant backdrop or a simple, uncluttered terrain piece."
+differs = "Sharpest, most conical summit, ideal for a distant, iconic peak."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 819
+meshes = 1
+materials = 1
+size = [29.08896, 16.480042, 29.080402]
+
+[mesh.sm_terrain_mountain_03]
+name = "SM_Terrain_Mountain_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Mountain_03.fbx"
+sha256 = "3749ba93db5df6dbb3fa12084fcf3947ec6479fa126d72be0be9a4acede8088f"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad, gently rounded hill with a soft, organic profile and a single subtle peak, rendered in a uniform, pale grassy green. The surface is smooth and undulating, with no rock faces, trees, or other features, making it a clean, versatile base for a natural landscape."
+differs = "Flattest and lowest, with the gentlest slope, perfect for a rolling meadow or hill."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 913
+meshes = 1
+materials = 1
+size = [39.220345, 11.232723, 39.771656]
+
+[mesh.sm_terrain_riverside_01]
+name = "SM_Terrain_RiverSide_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_RiverSide_01.fbx"
+sha256 = "a78b8ecceda98ec41defdf63737e0f4852271ae9a41d01d30a3bdbdf92be72f1"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, flat wedge of terrain with a pale sandy bank rising into a smooth green grassy top, the grass edge cut in a clean, jagged line. The sandy face is faceted and uneven, suggesting a natural, eroded riverbank, while the top surface is broad and walkable."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 222
+meshes = 1
+materials = 1
+size = [8.66115, 1.925414, 4.5131598]
+
+[mesh.sm_terrain_riverside_corner_01]
+name = "SM_Terrain_RiverSide_Corner_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_RiverSide_Corner_01.fbx"
+sha256 = "325c86eb42238eb725f7f92908680932d2ff783453efc4e239966314059c5441"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A curved wedge of grassy bank meeting pale sandy soil, forming a gentle outer corner where a river bends. The low-poly surface is clean and uncluttered, with a soft green turf sloping down to a flat, light-tan shore."
+differs = "The shorter, more compact corner with a steeper, cleaner grassy slope, best for tight bends needing a tidy turf edge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 222
+meshes = 1
+materials = 1
+size = [9.125396, 1.9012439, 6.0469437]
+
+[mesh.sm_terrain_riverside_corner_02]
+name = "SM_Terrain_RiverSide_Corner_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_RiverSide_Corner_02.fbx"
+sha256 = "2e5cae593fa290ff6678792e2c45e9ca0e0f1ae1228429007e40413ef9d27dff"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, irregular wedge of pale sandy earth with a flat, grassy green top, forming a gentle outer curve. The faceted, low-poly surface suggests a natural riverbank corner, with the grass appearing as a thin, slightly uneven layer over the lighter soil."
+differs = "The longer, flatter wedge with a thinner grass layer and more exposed sandy soil, ideal for wider, more gradual river curves."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 222
+meshes = 1
+materials = 1
+size = [9.17597, 1.925414, 6.7400017]
+
+[mesh.sm_terrain_rubble_pebbles_01]
+name = "SM_Terrain_Rubble_Pebbles_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Rubble_Pebbles_01.fbx"
+sha256 = "ebbf9d49dcef1615c8c26a826f22287e24bc1b12b2d9aac7a04723fd450fd06b"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, flat scatter of pale grey stones, ranging from a few larger, chunky boulders to tiny pebbles, all with a smooth, matte finish and subtle mottled texture. The cluster is irregular and sparse, with the pieces spread out rather than piled, giving it a natural, weathered look suitable for scattered ground detail."
+differs = "The most compact and sparse cluster, with the largest individual boulders, best for a single focal debris patch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 168
+meshes = 1
+materials = 1
+size = [1.922548, 0.281198, 1.908691]
+
+[mesh.sm_terrain_rubble_pebbles_02]
+name = "SM_Terrain_Rubble_Pebbles_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Rubble_Pebbles_02.fbx"
+sha256 = "4a322e27274d2ecce6d2f52149f079787436fa458319680a6844d7457e9d207c"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "Four loose clusters of angular, low-poly stones in pale beige and grey, scattered flat across the ground. The faceted rocks vary from small chips to larger, blocky chunks, with subtle mottled texture suggesting dusty, weathered surfaces."
+differs = "The most angular and blocky, with the most distinct separate groupings, ideal for breaking up flat ground into multiple zones."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 238
+meshes = 1
+materials = 1
+size = [1.085883, 0.281138, 1.610984]
+
+[mesh.sm_terrain_rubble_pebbles_03]
+name = "SM_Terrain_Rubble_Pebbles_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Rubble_Pebbles_03.fbx"
+sha256 = "324c8831b9648bb74572a6a9bf95eea8ad3b62dfb90b2d502658d622df13c917"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A loose, irregular scatter of small, rounded stones in pale grey and beige, forming a flat, low-lying cluster that reads as natural debris. The pebbles are smooth and worn, with subtle mottled markings, and the arrangement is sparse enough to look like a light dusting of gravel rather than a solid mound."
+differs = "The flattest and most spread-out scatter, with the smallest, most numerous pebbles, perfect for a light gravel dusting over a wide area."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 242
+meshes = 1
+materials = 1
+size = [2.262001, 0.161764, 1.917898]
+
+[mesh.sm_terrain_swamp_growth_01]
+name = "SM_Terrain_Swamp_Growth_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Swamp_Growth_01.fbx"
+sha256 = "dd5f162e4320cc7002a55efd88db8f2dc92c71e9da791fe43b29a254ad35be8f"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, flat, irregular patch of dark olive-green terrain, shaped like a splat with jagged, uneven edges and a slightly raised, lumpy centre. It appears to be a simple, stylised mound of swampy ground or mud, with a matte finish and no visible vegetation or water, making it a versatile base for adding your own props or."
+differs = "The plainest and most versatile, with no rocks or bone, ideal as a bare mud base for custom props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 120
+meshes = 1
+materials = 1
+size = [1.800196, 0.098004, 1.601364]
+
+[mesh.sm_terrain_swamp_growth_02]
+name = "SM_Terrain_Swamp_Growth_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Swamp_Growth_02.fbx"
+sha256 = "2f459260e928ab99f01e844a3f23c0fc0424642b3606d0ff7091da370a7bdd30"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, irregular slab of dark, mossy green terrain, shaped like a flattened, jagged island with a raised central mound and a few small, blocky rock outcrops. The surface is textured with subtle mottling, suggesting damp earth and sparse vegetation, giving it a weathered, organic look suited for swamp or marsh..."
+differs = "The most detailed, with blocky rock outcrops and mottled texture, best for adding instant ruggedness to a marsh."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 120
+meshes = 1
+materials = 1
+size = [1.248404, 0.111617, 1.458138]
+
+[mesh.sm_terrain_swamp_growth_03]
+name = "SM_Terrain_Swamp_Growth_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Terrain_Swamp_Growth_03.fbx"
+sha256 = "e8220e19ad5719ab5317b36a85fa57b32e2e4b5d22771e1ffb9517ddf2ceb4da"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, irregular slab of dark olive-green terrain, faceted and flat-topped, with a jagged, uneven rim and a small pale rock or bone fragment embedded at one edge, suggesting a mossy swamp mound or a patch of damp earth ready for placement in a wetland scene."
+differs = "The largest and most faceted, with a pale bone fragment, perfect for a stark, skeletal swamp focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [2.179086, 0.127481, 2.174708]
+
+[mesh.sm_tree_01]
+name = "SM_Tree_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_01.fbx"
+sha256 = "341a45c9ff7cdf9f20f8028fae7636bd4ac5313a520ed13af0b7df44ae9b2d40"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stout, low-poly tree with a broad, irregular canopy of pale green, faceted leaves that taper to a soft point, supported by a short, straight brown trunk with a flared base. The angular foliage gives it a stylized, chunky look, making it ideal for filling out forests or groves in a stylized game environment."
+differs = "Tallest and most pointed canopy, the classic forest filler with the most angular silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 266
+meshes = 1
+materials = 1
+size = [3.181884, 6.214172, 2.831299]
+
+[mesh.sm_tree_02]
+name = "SM_Tree_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_02.fbx"
+sha256 = "770df9b6895774a0da69f7f1247fdfd4c139f865e55dd3a8ac09d1735b8fe144"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stout, low-poly tree with a broad, irregularly faceted canopy of pale sage green, supported by a short, straight brown trunk. The angular foliage is dense and rounded, giving it a young, sturdy appearance suitable for stylized forests or parkland."
+differs = "The plainest and most uniform of the four, with the densest, roundest sage-green foliage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 300
+meshes = 1
+materials = 1
+size = [3.058792, 6.245544, 3.01178]
+
+[mesh.sm_tree_03]
+name = "SM_Tree_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_03.fbx"
+sha256 = "ee21dad65e15c19abccefbce3589bdafb5bc17a36c6bb230286f1ddd1a44fc42"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stout, low-poly sapling with a short, slightly curved brown trunk and a broad, irregular canopy of pale green faceted leaves, featuring a single small offshoot cluster near the base. Its compact, rounded proportions and soft, muted tones give it a gentle, youthful appearance, making it ideal for filling out forest..."
+differs = "The only one with a curved trunk and a small offshoot cluster, making it the most damaged or youthful."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 334
+meshes = 1
+materials = 1
+size = [3.181884, 6.214172, 2.831299]
+
+[mesh.sm_tree_04]
+name = "SM_Tree_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_04.fbx"
+sha256 = "3b7970c7bc7b397000c90ff99ee8e968791ead6163be587964d964d619ae15be"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stout, low-poly tree with a broad, rounded canopy of pale sage-green facets, supported by a short, dark brown trunk. The foliage is dense and slightly irregular, giving it a soft, stylized appearance that reads as a young or orchard tree."
+differs = "The shortest and widest, with the flattest, most orchard-like canopy and the darkest trunk."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 308
+meshes = 1
+materials = 1
+size = [3.9868279, 4.695387, 3.66486]
+
+[mesh.sm_tree_birch_01]
+name = "SM_Tree_Birch_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Birch_01.fbx"
+sha256 = "08e2a431bda58c368c770b0613ceea8dddae73b32b0e84dc3e8ee695f64b77e0"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, narrow deciduous tree with a dense, irregular canopy of dark, near-black foliage, rising from a slender, pale trunk. The silhouette is jagged and clumpy, suggesting a mature or weathered specimen, and the stark contrast between the dark leaves and light bark gives it a moody, stylized appearance."
+differs = "The widest and most balanced canopy, with the most even foliage distribution, best for a standard dark deciduous tree."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 666
+meshes = 1
+materials = 2
+size = [2.453926, 4.546611, 2.289298]
+
+[mesh.sm_tree_birch_01_leaves]
+name = "SM_Tree_Birch_01_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Birch_01_Leaves.obj"
+sha256 = "0cbe90bb9c6bcadf65fa30e4f4b01bddb02e23ee4f7c63dd92003e54c6baa75a"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A dense, rounded canopy of pale green foliage sits atop a slender, pale grey trunk with dark, horizontal bark markings. The leaves are clustered in irregular, blocky clumps, giving the tree a soft, stylized appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 570
+meshes = 1
+materials = 1
+size = [245.39261, 353.1928, 228.92984]
+
+[mesh.sm_tree_birch_02]
+name = "SM_Tree_Birch_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Birch_02.fbx"
+sha256 = "962cd71eaa02aa229ce36be0bf1ad17946893005054766a74b483056958262de"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, narrow conifer with a dense, jagged silhouette and a short, barely visible trunk. Its foliage is rendered in near-black, with only faint hints of dark green and brown, giving it a charred or shadowed appearance. The irregular, clumpy branches make it ideal for a dead, burnt, or stylized dark forest setting."
+differs = "The tallest and most detailed, with the most jagged, conifer-like silhouette, ideal for a burnt or shadowed forest centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 936
+meshes = 1
+materials = 2
+size = [2.497849, 5.399467, 2.788859]
+
+[mesh.sm_tree_birch_02_leaves]
+name = "SM_Tree_Birch_02_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Birch_02_Leaves.obj"
+sha256 = "3b624943f40eae8b218c0b09d90233a30edc3c35d3a30526ef0be03e5865819e"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, upright birch with a pale, papery trunk marked by dark horizontal bands, supporting a compact, conical canopy of small, bright green leaves. The foliage is dense but airy, with a slightly irregular, natural silhouette that reads well from all angles."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 840
+meshes = 1
+materials = 1
+size = [249.78485, 517.97217, 278.88586]
+
+[mesh.sm_tree_birch_03]
+name = "SM_Tree_Birch_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Birch_03.fbx"
+sha256 = "65d756e3e917089bab963c71e3b443f51038b39ee66f8648b14090365b39d812"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, conical birch with a narrow, upright crown of dark, almost black foliage, suggesting a shadowed or wintery setting. The sparse, jagged leaf clusters cling to a thin, pale trunk, giving it a weathered, gnarled appearance."
+differs = "The narrowest and most conical, with the most upright, sparse crown, perfect for a wintery or gnarled accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 666
+meshes = 1
+materials = 2
+size = [2.140297, 5.399467, 2.105933]
+
+[mesh.sm_tree_birch_03_leaves]
+name = "SM_Tree_Birch_03_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Birch_03_Leaves.obj"
+sha256 = "414bebe0f8b6a8c1d25e5ff77855cf13e2c1958f8bfd3981d8cd1f322c8d8906"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, upright birch with a pale, papery trunk marked by dark horizontal bands, supporting a compact, conical canopy of small, bright green leaves. The foliage is dense and layered, giving the tree a neat, tidy silhouette ideal for a stylised forest edge or parkland scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 570
+meshes = 1
+materials = 1
+size = [214.0297, 411.3769, 210.59335]
+
+[mesh.sm_tree_birch_04]
+name = "SM_Tree_Birch_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Birch_04.fbx"
+sha256 = "fd7dc59e208611f828512ab13fa35b3bf10c84313ceea86838b2f568851dc542"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, pale trunk supports a sparse, irregular canopy of dark, almost black foliage with hints of deep brown, giving it a charred or withered appearance. The clumps are clustered unevenly, with a distinct gap between the upper and lower sections, making it ideal for depicting a dead or blighted tree in a dark..."
+differs = "The most damaged and sparse, with a distinct gap in its foliage, making it the only choice for a blighted or dead tree."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 514
+meshes = 1
+materials = 2
+size = [2.522316, 4.89054, 2.460664]
+
+[mesh.sm_tree_birch_04_leaves]
+name = "SM_Tree_Birch_04_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Birch_04_Leaves.obj"
+sha256 = "6ead0ea8ec849b2aa7d244b822440a31d8d0b09d2cf9d554610c707fd90888b7"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, low-poly birch tree with a pale, papery trunk marked by dark horizontal bands, supporting a compact, rounded canopy of small, bright green leaves. The foliage is dense and slightly irregular, giving it a natural, youthful appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 330
+meshes = 1
+materials = 1
+size = [252.2316, 346.2284, 246.0664]
+
+[mesh.sm_tree_birch_dead_01]
+name = "SM_Tree_Birch_Dead_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Birch_Dead_01.fbx"
+sha256 = "7cf88527417bf97d48e600a613c20b2e4e5cbe937caf7bb9c682546b6054d2f7"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, upright sapling with a thin, dark trunk and sparse, jagged branches, bearing a few ragged, brown and grey leaves that cling to the twigs. The muted, earthy palette and withered foliage give it a stark, desolate appearance, perfect for a ruined or autumnal forest setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1644
+meshes = 1
+materials = 2
+size = [2.1582341, 4.48842, 2.103327]
+
+[mesh.sm_tree_birch_dead_01_branches]
+name = "SM_Tree_Birch_Dead_01_Branches"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Birch_Dead_01_Branches.obj"
+sha256 = "04240052b9b14a7a504ab14cb816a4999e9e426254922c18bfa09b4f379e2ab4"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stark, leafless birch skeleton with pale, papery bark marked by dark horizontal lenticels, rising from a short, forked trunk into a dense, upward-reaching crown of thin, jagged twigs. The bare, angular branches convey a wintry or desolate mood, making it ideal for adding vertical interest to a dead forest or a..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 588
+meshes = 1
+materials = 1
+size = [215.82336, 364.03775, 210.3327]
+
+[mesh.sm_tree_birch_small_01]
+name = "SM_Tree_Birch_Small_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Birch_Small_01.fbx"
+sha256 = "bcb9dadbf3e1a751460306b4c25a0206fdf2f9ba8a2e81b6b7a5bff75e965430"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, pale trunk supports a dense, irregular crown of dark, almost black foliage with subtle reddish-brown highlights, giving it a charred or shadowed appearance. The silhouette is compact and rounded, with jagged, clumpy leaf clusters that suggest a stylized, low-poly birch in a moody or burnt state, ideal for..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 336
+meshes = 1
+materials = 2
+size = [1.165977, 1.875005, 1.2738061]
+
+[mesh.sm_tree_birch_small_01_leaves]
+name = "SM_Tree_Birch_Small_01_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Birch_Small_01_Leaves.obj"
+sha256 = "32411050cd8472e8583e6552871312c9f8fb833a17b08c83eeb0c5895205db2b"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A dense, rounded cluster of dark, jagged foliage, appearing almost black with subtle hints of deep green and brown, suggesting a shadowed or stylized canopy. The irregular silhouette is composed of chunky, angular leaf clumps that give it a rugged, naturalistic look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [116.59775, 156.82259, 127.38058]
+
+[mesh.sm_tree_branch_01]
+name = "SM_Tree_Branch_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Branch_01.fbx"
+sha256 = "4c77f2d86ef86468d10835db770be169c9b6aed81ab6796d9b344ffdf08657ab"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A gnarled, dead branch with a thick main stem and several jagged, broken offshoots, rendered in muted grey-brown bark with a rough, weathered texture. Its twisted, asymmetrical form and lack of foliage make it ideal for adding natural, rugged detail to forest floors or debris piles."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 416
+meshes = 1
+materials = 1
+size = [1.304599, 1.038175, 2.739057]
+
+[mesh.sm_tree_dead_01]
+name = "SM_Tree_Dead_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Dead_01.fbx"
+sha256 = "a062a30d8d49ad3c37d79d2ce00c482c2c3a9128ea50eaf24167deb0e8b6eb31"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, upright sapling with a thin, dark trunk and sparse, jagged branches, bearing a few clusters of withered, brown and grey leaves that appear dry and brittle. The low-poly foliage is angular and muted, giving the impression of a dead or dormant young tree suitable for a barren or autumnal environment."
+differs = "Tallest and most detailed with the most leaf clusters, best for a prominent dead sapling."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 436
+meshes = 1
+materials = 2
+size = [1.2459099, 3.503062, 1.423376]
+
+[mesh.sm_tree_dead_01_branches]
+name = "SM_Tree_Dead_01_Branches"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Dead_01_Branches.obj"
+sha256 = "d9a40483a05b202f162bf7e4d41198d5373a85360c7ed767d366c709e0e7d647"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A gnarled, leafless trunk with jagged, broken branches, rendered in dark grey-brown bark with a few pale green moss patches clinging to the wood. The silhouette is sparse and twisted, giving it a weathered, ancient look that suits a desolate or haunted forest setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 1
+materials = 1
+size = [124.591064, 280.18915, 142.33752]
+
+[mesh.sm_tree_dead_02]
+name = "SM_Tree_Dead_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Dead_02.fbx"
+sha256 = "57f313ac3525feda63c604e46b5b596ff93de664ab97ed2cc79b47a37c3a9214"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, gnarled sapling with a dark, twisted trunk and sparse, jagged clusters of withered leaves in mottled rust, brown, and faded green, giving it a brittle, wind-worn appearance ideal for desolate or autumnal environments."
+differs = "Mid-sized with a twisted trunk and rust-green leaves, ideal for a wind-worn accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 296
+meshes = 1
+materials = 2
+size = [1.188735, 2.662675, 1.069636]
+
+[mesh.sm_tree_dead_02_branches]
+name = "SM_Tree_Dead_02_Branches"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Dead_02_Branches.obj"
+sha256 = "d0c7d1ce21da746733ba8d9cad693732804f16ca832ce5e3007e0176c426cb0f"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A jagged, low-poly dead tree with a broken, leaning trunk and a few thick, angular branches, its bark a mix of grey and dark brown with a single rust-red patch on the lower trunk. The sparse, blocky foliage is a muted olive green, giving it a weathered, desolate look perfect for a ruined or autumnal forest setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [118.8736, 191.22578, 106.963554]
+
+[mesh.sm_tree_dead_03]
+name = "SM_Tree_Dead_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Dead_03.fbx"
+sha256 = "3ded6179684aa2313d5cccd88f3d8029faba35a4ffed5a3b3e1922908fb0901f"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A gnarled, leafless trunk splits into jagged, angular branches that fan out unevenly, giving the silhouette a scraggly, windswept look. The bark is a muted grey-brown, while the flat, faceted leaf clusters are a desaturated olive green with striking rust-red patches, suggesting autumn decay or a blighted condition."
+differs = "Shortest and leafless with a scraggly silhouette, perfect for a blighted shrub."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 132
+meshes = 1
+materials = 2
+size = [0.99039507, 1.231457, 0.723095]
+
+[mesh.sm_tree_dead_03_branches]
+name = "SM_Tree_Dead_03_Branches"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Dead_03_Branches.obj"
+sha256 = "2808e9de4bd789cb61e7156c1efe5f6e3ad9a320d7d122114b910735e5805943"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A jagged, hollow cluster of angular shards, resembling a shattered stump or a broken, leafless crown. The flat, faceted planes are textured with mottled greys, browns, and dark greens, with a few striking red accents that suggest exposed wood or lichen."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 42
+meshes = 1
+materials = 1
+size = [99.03946, 102.642456, 72.3095]
+
+[mesh.sm_tree_generic_01]
+name = "SM_Tree_Generic_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Generic_01.fbx"
+sha256 = "1cbbc5d81374156cfa0079c5797e9fea287d0fc8c3f83eeb2630b3e1d0bed505"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stout, low-poly tree with a short, pale tan trunk that splits into two main branches, supporting a broad, irregular canopy of dark, almost black-green foliage with subtle brownish highlights."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1308
+meshes = 1
+materials = 2
+size = [3.425743, 5.602009, 4.2281313]
+
+[mesh.sm_tree_generic_01_leaves]
+name = "SM_Tree_Generic_01_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Generic_01_Leaves.obj"
+sha256 = "5c41d1823a917336f3308bcbad1259779d60c24a8054eb32694e38021b1305bd"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A broad, rounded canopy of layered, faceted leaf clusters sits atop a short, thick trunk, giving it a dense, mature silhouette. The foliage is a muted, natural green with subtle tonal variation, while the bark is a simple grey-brown."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 930
+meshes = 1
+materials = 1
+size = [342.5743, 279.73184, 422.81305]
+
+[mesh.sm_tree_generic_dead_01]
+name = "SM_Tree_Generic_Dead_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Generic_Dead_01.fbx"
+sha256 = "3b3fd1fd2d9b33e8926180500ed8c7a8b45c26f0e9fe30794ccb140377282bd2"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A gnarled, leafless tree with a short, thick trunk and a broad, rounded crown of jagged, dark grey branches. Sparse, withered brown leaves cling to the tips, giving it a desolate, autumnal appearance suited for a barren or haunted landscape."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2340
+meshes = 1
+materials = 2
+size = [3.557976, 5.330717, 4.11155]
+
+[mesh.sm_tree_generic_dead_01_branches]
+name = "SM_Tree_Generic_Dead_01_Branches"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Generic_Dead_01_Branches.obj"
+sha256 = "a8ea4d6377f9ff041db5517142fa5d390285e89f6d1cc661058eaf01d873813e"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A bare, gnarled trunk rises from a wide, flared base, splitting into a few thick, jagged limbs that end in short, broken stubs. The bark is a muted grey-brown with subtle darker streaks, giving it a weathered, long-dead appearance. Its stark silhouette makes it ideal for a desolate forest or a barren battlefield."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 630
+meshes = 1
+materials = 1
+size = [355.79758, 345.29517, 411.15497]
+
+[mesh.sm_tree_generic_giant_01]
+name = "SM_Tree_Generic_Giant_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Generic_Giant_01.fbx"
+sha256 = "03aec6d4fbb8140e49139bcbad8eaedcc90472626d13b315397252a8e25da3cb"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A broad, sprawling canopy of dark, near-black foliage with pale, mottled highlights, supported by a short, thick trunk that splits into several heavy branches. The dense, irregular silhouette suggests an ancient, weathered tree, ideal for creating a sense of age and weight in a forest scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5494
+meshes = 1
+materials = 3
+size = [12.604261, 11.191615, 13.120045]
+
+[mesh.sm_tree_generic_giant_01_branches]
+name = "SM_Tree_Generic_Giant_01_Branches"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Generic_Giant_01_Branches.obj"
+sha256 = "93ff942c21c857ca52843c4fbd6c2befc84e6d2c3f491c0b3a88df8a9a527aa0"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A towering, broad-canopied tree with a thick, slightly tapered trunk and a dense, rounded crown of layered foliage. The bark is a muted grey-brown, while the leaves are a rich, varied green with subtle highlights, giving it a sturdy, mature appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 210
+meshes = 1
+materials = 1
+size = [1025.591, 579.5252, 1173.7358]
+
+[mesh.sm_tree_generic_giant_01_leaves]
+name = "SM_Tree_Generic_Giant_01_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Generic_Giant_01_Leaves.obj"
+sha256 = "76213ea9464fa2c4c2a9360040de396a4c9b8a39fde3c4ab83a76fe451f97589"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A towering, broad-canopied tree with a thick, slightly gnarled trunk that flares at the base, supporting a dense, rounded crown of layered, stylised green foliage. The leaves are chunky and faceted, giving it a bold, low-poly silhouette perfect for a fantasy forest centrepiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3030
+meshes = 1
+materials = 1
+size = [1244.3052, 868.1411, 1312.0045]
+
+[mesh.sm_tree_large_01]
+name = "SM_Tree_Large_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Large_01.fbx"
+sha256 = "ca93c855a0fb76799b100b7ea8def66943648fb7d4a465a302e6b25c9c5bcdd4"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A broad, spreading canopy of clustered, pale-green leaf pads sits atop a short, gnarled trunk with exposed, splayed roots, giving it a weathered, savanna-like appearance distinct from a typical tall forest tree."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12370
+meshes = 1
+materials = 1
+size = [9.297973, 8.832779, 5.421967]
+
+[mesh.sm_tree_log_01]
+name = "SM_Tree_Log_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Log_01.fbx"
+sha256 = "a2f536bfae839ecc41136dcfcf095cdeb122f40440ef3b3e79e95a1e13266a38"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A long, weathered grey-brown log with a splintered, broken end and a cleanly cut opposite end, featuring a deep central split and rough bark texture, ideal for a fallen forest prop or debris."
+differs = "Longest and most splintered, with a deep central split and clean-cut end, best for a fallen forest prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 306
+meshes = 1
+materials = 1
+size = [0.49392998, 0.461613, 3.054014]
+
+[mesh.sm_tree_log_02]
+name = "SM_Tree_Log_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Log_02.fbx"
+sha256 = "675c2870aa0ed48d1a3e54dfd5c1d9861acd20071ae20b72d31284edf029dd62"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A long, weathered grey-brown log with a jagged, splintered end and a few short, broken branch stubs, lying flat and ready to be scattered across a forest floor or used as a rustic prop."
+differs = "Shortest and most detailed, with jagged end and broken branch stubs, ideal for scattered rustic debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 288
+meshes = 1
+materials = 1
+size = [0.554998, 0.69096005, 2.342859]
+
+[mesh.sm_tree_pine_01]
+name = "SM_Tree_Pine_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Pine_01.fbx"
+sha256 = "d1dfedbb28d1d613b73f800cdb4fdaa9c463f3c23219b9d743e3fca4582ae0a3"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A conical pine with a short, thick trunk and dense, jagged foliage that reads as a stylized, low-poly evergreen. The leaves are a muted, dusty green with prominent rust-orange highlights, giving the tree a weathered, autumnal appearance."
+differs = "Taller and narrower with a visible trunk, best for a sparse, towering evergreen."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 648
+meshes = 1
+materials = 2
+size = [3.135754, 5.683202, 3.165942]
+
+[mesh.sm_tree_pine_01_leaves]
+name = "SM_Tree_Pine_01_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Pine_01_Leaves.obj"
+sha256 = "23e22ce4b9c60acde3cadc57994001a239c57bce8ebbca8d5ff0954cef89ce9e"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, conical pine with dense, layered foliage in a muted green, tapering to a sharp point. The trunk is short and dark brown, mostly hidden by the low-hanging branches, giving it a full, mature silhouette. The flat-shaded texture provides a clean, stylised look ideal for a forest backdrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 564
+meshes = 1
+materials = 1
+size = [313.57538, 497.60916, 316.59412]
+
+[mesh.sm_tree_pine_02]
+name = "SM_Tree_Pine_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Pine_02.fbx"
+sha256 = "5ea497a22aa0e2136f209870fb3689451c03915b7d705b860ba35e8621153691"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stout, conical pine with a broad base and a blunt, rounded tip, built from chunky, faceted foliage layers that flare outward. The muted green needles are heavily accented with warm, rusty orange patches, giving the tree an autumnal or weathered appearance."
+differs = "Shorter and stouter with a blunt tip, ideal for a dense, bushy pine."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 636
+meshes = 1
+materials = 2
+size = [2.9928741, 4.591271, 2.995004]
+
+[mesh.sm_tree_pine_02_leaves]
+name = "SM_Tree_Pine_02_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Pine_02_Leaves.obj"
+sha256 = "0025a75e2d35f47e354486698e0b73502d7cb8b808cfca7f9b7aec6a7a0901c7"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, narrow pine with a dense, conical crown of layered, jagged foliage in muted greens, supported by a short, straight brown trunk. The low-poly faceting gives the leaves a crisp, stylized look, ideal for a mid-ground forest asset. Its upright, symmetrical silhouette reads clearly as a mature evergreen."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 564
+meshes = 1
+materials = 1
+size = [299.2874, 441.66306, 299.5005]
+
+[mesh.sm_tree_pine_base_01]
+name = "SM_Tree_Pine_Base_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Pine_Base_01.fbx"
+sha256 = "814aa56db8cb6ddf0dbcdd62c98d2cbde2a6492726f37958c4364b846a78d2d7"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, broad-based pine with a squat, conical silhouette, its faceted trunk flaring outward at the ground. The flat-shaded, muted brown bark is broken by a single pale, angular patch near the base, suggesting a cut or exposed wood."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 98
+meshes = 1
+materials = 1
+size = [1.230113, 1.3340399, 1.16476]
+
+[mesh.sm_tree_pine_dead_01]
+name = "SM_Tree_Pine_Dead_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Pine_Dead_01.fbx"
+sha256 = "5fdab8a4fff41fec09a45f74d7b6b04259ca13e370c0c5587cc9a6161d0ba18a"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stark, bare trunk tapering to a thin tip, with a flared, root-like base and only a few short, broken stubs for branches. The bark is a uniform, muted grey-brown, giving it a weathered, lifeless appearance suited for desolate or wintery environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 310
+meshes = 1
+materials = 1
+size = [1.000701, 6.730214, 1.130397]
+
+[mesh.sm_tree_pine_large_01]
+name = "SM_Tree_Pine_Large_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Pine_Large_01.fbx"
+sha256 = "8103b6bd041abd50c4d6c16358daf2ca01e2b7236c2f012c9aa11a684f6b36bc"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, narrow conifer with a straight, bare trunk and a dense, conical crown of layered, drooping branches. The foliage is a muted grey-green with distinct reddish-brown tips, giving it a weathered, autumnal look."
+differs = "The smaller, narrower variant with a more pronounced reddish-brown tip colouring, suited for tighter, more compact placements."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 660
+meshes = 1
+materials = 2
+size = [2.444886, 7.528541, 2.341881]
+
+[mesh.sm_tree_pine_large_01_leaves]
+name = "SM_Tree_Pine_Large_01_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Pine_Large_01_Leaves.obj"
+sha256 = "7b1b11b3d8825d71517301833dc43028d172cb763c1502c7812ef0dbe4855727"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, conical pine with a dense, layered canopy of dark green needles that taper to a pointed crown, supported by a short, sturdy trunk with visible bark texture. The foliage is thick and full, giving it a mature, healthy appearance ideal for forest backdrops or landscape scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 564
+meshes = 1
+materials = 1
+size = [244.48853, 514.81274, 234.18808]
+
+[mesh.sm_tree_pine_large_02]
+name = "SM_Tree_Pine_Large_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Pine_Large_02.fbx"
+sha256 = "57bd19e7a6eef3221a928d7c59307393811aa5e67a284804a5fce38314494834"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, narrow conifer with a slender bare trunk and a tight, layered canopy of blocky, faceted foliage in muted sage green with a heavy dusting of rust-red and brown, giving it an autumnal or weathered appearance."
+differs = "The larger, wider variant with a more muted sage-green canopy and a heavier rust-brown dusting, ideal for filling larger spaces."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 660
+meshes = 1
+materials = 2
+size = [3.135742, 8.589844, 3.1659398]
+
+[mesh.sm_tree_pine_large_02_leaves]
+name = "SM_Tree_Pine_Large_02_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Pine_Large_02_Leaves.obj"
+sha256 = "248845f253de06ccd6e0537795394f52f60b82d7730f6a189ffcc6f37e038f77"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, conical pine with a dense, layered canopy of dark green needles, tapering to a pointed crown. The trunk is straight and sturdy, with a subtle brown bark texture that contrasts with the lush foliage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 564
+meshes = 1
+materials = 1
+size = [313.57498, 498.63193, 316.59412]
+
+[mesh.sm_tree_pine_small_01]
+name = "SM_Tree_Pine_Small_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Pine_Small_01.fbx"
+sha256 = "c0b9e9cc0bd4ccd9ba5a1a4fb7cefc71e9597d72c3dd12cfe89e3ff408e7cbda"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A compact, conical pine with a short, straight trunk and dense, chunky foliage built from overlapping, faceted planes. The leaves are a muted grey-green with distinct, rusty orange-red tips, giving the tree a weathered, autumnal look that stands out from standard green pines."
+differs = "Taller and denser with more triangles, best for a fuller, more prominent pine in a scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 404
+meshes = 1
+materials = 2
+size = [2.0121078, 3.482106, 1.9631209]
+
+[mesh.sm_tree_pine_small_01_leaves]
+name = "SM_Tree_Pine_Small_01_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Pine_Small_01_Leaves.obj"
+sha256 = "fd394318ed0eb95ebdd552f85dd27cabce34d1433cdca6dd23356c76128a756c"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A compact, conical pine with dense, layered foliage in muted greens and browns, featuring a short, visible trunk and a rounded, slightly irregular crown. The low-poly texture gives it a stylized, faceted look, making it ideal for filling forest edges or as a standalone background tree in a stylized nature scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 324
+meshes = 1
+materials = 1
+size = [201.21078, 272.1162, 196.31203]
+
+[mesh.sm_tree_pine_small_02]
+name = "SM_Tree_Pine_Small_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Pine_Small_02.fbx"
+sha256 = "068fef3baac5a1fafeb808f808926633e5d34ea8b920ed6b95d14e23c4d36078"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A narrow, conical pine with a short, bare trunk and layered, jagged foliage clusters that flare outward toward the base. The leaves are a muted grey-green, heavily accented with striking patches of rust-orange, giving the tree an autumnal or stylized, weathered appearance."
+differs = "Narrower and more jagged with a flared base, ideal for a sparser, more weathered look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 344
+meshes = 1
+materials = 2
+size = [1.914864, 3.097257, 1.9149511]
+
+[mesh.sm_tree_pine_small_02_leaves]
+name = "SM_Tree_Pine_Small_02_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Pine_Small_02_Leaves.obj"
+sha256 = "561439824655965d783111e569e7dad0da8eef6e92157f627e820e2bed9f0cd3"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A compact, conical pine with a short trunk and dense, layered foliage that tapers to a soft point, rendered in muted greens with subtle brown under-branch shadows. The low-poly faceting gives it a crisp, stylized look that reads clearly at a distance, making it ideal for filling out forest edges or as a mid-ground..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 264
+meshes = 1
+materials = 1
+size = [191.48636, 254.47113, 191.49507]
+
+[mesh.sm_tree_polypine_01]
+name = "SM_Tree_PolyPine_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_PolyPine_01.fbx"
+sha256 = "77f7696f979d1dea1edb1ca6ca358488cfdf58479f7b005620d600994edad364"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stylized conifer with a narrow, conical silhouette, featuring a single, straight brown trunk and layered, jagged tiers of pale green foliage that taper to a pointed tip. The flat-shaded, low-poly geometry gives it a crisp, faceted look, making it ideal for a stylized forest or alpine environment."
+differs = "Largest and most detailed, with the most foliage tiers; best as a hero tree or focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 420
+meshes = 1
+materials = 1
+size = [2.512848, 6.691318, 2.35746]
+
+[mesh.sm_tree_polypine_02]
+name = "SM_Tree_PolyPine_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_PolyPine_02.fbx"
+sha256 = "53216218ee1e7d24f090bab7ff8a5d078e8568b3ceb13f9108b794f7e2b0d548"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A narrow, conical pine with a tall, bare brown trunk and four distinct, drooping tiers of pale green foliage, each tier edged with a lighter, almost white rim that suggests frost or a stylised highlight."
+differs = "Mid-sized with a taller bare trunk and frost-like rim highlights; ideal for snowy or alpine scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 276
+meshes = 1
+materials = 1
+size = [1.478379, 4.512238, 1.521167]
+
+[mesh.sm_tree_polypine_03]
+name = "SM_Tree_PolyPine_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_PolyPine_03.fbx"
+sha256 = "6343f387e98f89c5d1c677149efe6aa6ec1ca6c891fb6f7491fd2732c8177092"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, conical pine with three distinct, faceted tiers of pale green foliage that taper to a sharp point, supported by a straight, dark brown trunk with a flared base. The low-poly geometry gives it a crisp, stylized look, and its narrow proportions make it ideal for filling vertical space in dense forests or as a."
+differs = "Smallest and simplest, with only three tiers; perfect for background filler or distant forest clusters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 190
+meshes = 1
+materials = 1
+size = [1.132645, 3.187467, 1.098103]
+
+[mesh.sm_tree_polypine_sparse_01]
+name = "SM_Tree_PolyPine_Sparse_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_PolyPine_Sparse_01.fbx"
+sha256 = "3a663e0e5863900c7052f6e6b827e1219ce87b69329e6b0ed5221221f81d8e09"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, conical pine with a tall, bare brown trunk and sparse, jagged clusters of pale green foliage concentrated near the top, giving it a young or wind-swept appearance. The low-poly faceting is visible in the flat, angular leaf planes, and the muted, desaturated palette makes it ideal for background or distant..."
+differs = "Tallest and most detailed, with the palest, most scattered foliage; best as a distant background silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 559
+meshes = 1
+materials = 1
+size = [1.5624161, 7.932906, 1.502308]
+
+[mesh.sm_tree_polypine_sparse_02]
+name = "SM_Tree_PolyPine_Sparse_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_PolyPine_Sparse_02.fbx"
+sha256 = "d78946e3e8de72c0e084994e8787a2f6ed2f9978a1afb49a0af7e671512bd97a"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, conical pine with a tall, bare brown trunk and a narrow crown of drooping, layered green foliage, giving it a sparse, windswept appearance ideal for high-altitude or northern forest settings."
+differs = "Mid-sized with the densest, most drooping crown; ideal for a windswept northern forest mid-ground."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 446
+meshes = 1
+materials = 1
+size = [1.476227, 5.777217, 1.330509]
+
+[mesh.sm_tree_polypine_sparse_03]
+name = "SM_Tree_PolyPine_Sparse_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_PolyPine_Sparse_03.fbx"
+sha256 = "f104381c9f3d3732ec528c37e344087e963e1b3ff2efb57cd56d6943dc6389e3"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, conical pine with a tall, bare brown trunk and sparse, jagged layers of muted sage-green foliage, giving it a weathered, windswept appearance ideal for adding vertical variety to a forest without visual bulk."
+differs = "Smallest and plainest, with the least foliage; perfect for cheap vertical filler in a low-poly scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 288
+meshes = 1
+materials = 1
+size = [1.188698, 4.0863037, 1.256355]
+
+[mesh.sm_tree_round_01]
+name = "SM_Tree_Round_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Round_01.fbx"
+sha256 = "3773ba18058284497ea7beeb99dfc62513a5c3b7e4b5375709d22198cdaed292"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, rounded canopy of pale sage-green faceted foliage sits atop a short, dark brown trunk, giving it a broad, almost mushroom-like silhouette. The low-poly clusters are dense and uniform, with no visible branches or gaps, making it ideal for filling out forest floors or creating stylized, compact tree lines."
+differs = "The plainest, widest, and most mushroom-like; a single unbranched trunk with the lowest triangle count of the broad-canopy set, best for mass forest-floor filling."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 514
+meshes = 1
+materials = 1
+size = [2.921573, 3.759332, 2.242273]
+
+[mesh.sm_tree_round_02]
+name = "SM_Tree_Round_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Round_02.fbx"
+sha256 = "a9d035a97bf0503725bcc40a9f531ed9c7d9ab4daf179082b5b6e45550488c7b"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stout, rounded canopy of pale sage-green faceted leaves sits atop a short, dark brown trunk that splits into two main branches, giving it a compact, youthful appearance ideal for filling gaps in a forest without dominating the scene."
+differs = "The only one with a visible split into two main branches among the compact, uniform-canopy trees, giving it a youthful, gap-filling look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 628
+meshes = 1
+materials = 1
+size = [3.860016, 4.7312794, 2.456482]
+
+[mesh.sm_tree_round_03]
+name = "SM_Tree_Round_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Round_03.fbx"
+sha256 = "68f15b4b2b36f58e4d18da813b83b876a77e7c7932014bc77b184d2e4c231bd0"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stout, rounded tree with a dense, faceted canopy of muted sage-green leaves, supported by a short, dark brown trunk that flares slightly at the base. Its compact, almost spherical silhouette gives it a tidy, ornamental look, making it ideal for filling small garden plots or lining pathways in a stylized low-poly..."
+differs = "The smallest and narrowest, with the lowest triangle count overall; a tidy, spherical ornamental for garden plots or pathway lining."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 372
+meshes = 1
+materials = 1
+size = [1.777302, 3.60069, 1.6825509]
+
+[mesh.sm_tree_round_04]
+name = "SM_Tree_Round_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Round_04.fbx"
+sha256 = "715b234eba4947eaa848dad16363ffc54ca581921f47bbe63903be06ba2effa6"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stout, rounded deciduous tree with a short, thick trunk and a dense, lumpy canopy of muted sage-green facets, giving it a soft, mossy appearance. The foliage is broad and slightly irregular, suggesting a mature, well-established tree suited for filling woodland or parkland scenes."
+differs = "The most irregular and mossy-looking canopy with a single thick trunk, ideal for a mature, well-established woodland or parkland tree."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 504
+meshes = 1
+materials = 1
+size = [2.329029, 3.833823, 1.813609]
+
+[mesh.sm_tree_round_05]
+name = "SM_Tree_Round_05"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Round_05.fbx"
+sha256 = "801e213dca49312e26324e89b8fec3050ae8d3b950a6ccffeb0b25c264479006"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stout, rounded deciduous tree with a short, thick trunk that splits into two main branches, supporting a dense, lumpy canopy of muted sage-green leaves. The low-poly foliage is faceted and chunky, giving it a stylised, hand-crafted look, while the bark is a simple dark brown."
+differs = "The most detailed and largest, with the highest triangle count and a chunky, hand-crafted look from its split trunk and lumpy foliage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1099
+meshes = 1
+materials = 1
+size = [3.803741, 4.8532863, 2.6463952]
+
+[mesh.sm_tree_stump_01]
+name = "SM_Tree_Stump_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Stump_01.fbx"
+sha256 = "d4e1b4cc3ed93423368eb5d5754b22f66e1c9bca69d617152ed831ecbf3c2cdc"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, tapered stump with a flat top and flared base, rendered in dark, weathered brown with a lighter cut face and subtle vertical bark ridges. Its chunky, faceted silhouette and simple texture make it a versatile, low-poly ground prop for forest or woodland scenes."
+differs = "The shortest and simplest stump, with a flat top and no roots, best for a plain ground filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 114
+meshes = 1
+materials = 1
+size = [0.86702, 0.80292904, 0.820958]
+
+[mesh.sm_tree_stump_02]
+name = "SM_Tree_Stump_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Stump_02.fbx"
+sha256 = "86773fd9f101504a8c5d1a93f51ee53d681691b055cdb5c87546b774f45a4aaa"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A weathered, jagged stump with a hollowed, splintered top and thick, gnarled roots spreading outward for stability. Its low-poly bark is a muted grey-brown, with darker recesses suggesting age and decay, making it ideal for a forest floor or a ruined clearing."
+differs = "The largest and most detailed stump, with a hollowed top and wide roots, ideal as a central forest landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 238
+meshes = 1
+materials = 1
+size = [1.898661, 2.360788, 2.751714]
+
+[mesh.sm_tree_stump_03]
+name = "SM_Tree_Stump_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Stump_03.fbx"
+sha256 = "c21b751edbe22a7e285df3deba0d63cfc25e40e0e69b854366f90c3ff4b44437"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, jagged stump with a flared, irregular base and a splintered, broken top, rendered in dark grey-brown wood with a lighter, exposed inner core. The low-poly facets give it a weathered, aged look, making it ideal for a dead forest or a ruined clearing."
+differs = "The tallest and most jagged stump, with a flared base and splintered top, perfect for a ruined clearing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 222
+meshes = 1
+materials = 1
+size = [0.792077, 1.364706, 0.74921405]
+
+[mesh.sm_tree_stump_04]
+name = "SM_Tree_Stump_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Stump_04.fbx"
+sha256 = "894dfd2e73ea9dd43989aa6e2b389e4411c805e4ff6ead521fe96fe475595bc6"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A tall, weathered stump with a jagged, splintered top and a hollowed core, rendered in muted brown bark tones with a flat, low-poly finish. Its clean silhouette and simple texture make it ideal for background forest detailing."
+differs = "The thinnest and most vertical stump, with a hollowed core, best for background detailing in dense woods."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 142
+meshes = 1
+materials = 1
+size = [0.396252, 1.2001389, 0.396253]
+
+[mesh.sm_tree_swamp_01]
+name = "SM_Tree_Swamp_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Swamp_01.fbx"
+sha256 = "8764be8d8ff16482e1246b913e282942714a5000c721620d12130b4606ea765e"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A dead, leafless tree with a tall, slender trunk and a distinctive flared root system that spreads outward like a cage. Its bark is a muted grey-brown, and the few remaining branches are jagged and broken, giving it a weathered, skeletal appearance."
+differs = "The plainest of the four, with no fungi and the fewest branches, ideal for a bare, minimalist backdrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2334
+meshes = 1
+materials = 1
+size = [2.376494, 7.430051, 2.273269]
+
+[mesh.sm_tree_swamp_02]
+name = "SM_Tree_Swamp_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Swamp_02.fbx"
+sha256 = "7db593a1c0ee456021a07e5e89a07b66ac93d38ca2d905114782d7b1b94422eb"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A dead, leafless tree with a tall, slender trunk and a sparse, jagged canopy of broken branches, rising from a flared, stilt-like root system. The bark is a mottled grey-brown, with a few small, pale shelf fungi clinging to the trunk, giving it a weathered, decayed look."
+differs = "The most detailed and damaged, with the highest triangle count and shelf fungi, perfect for a focal point in a decayed swamp."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2624
+meshes = 1
+materials = 1
+size = [2.6523361, 7.415226, 2.200085]
+
+[mesh.sm_tree_swamp_03]
+name = "SM_Tree_Swamp_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Swamp_03.fbx"
+sha256 = "6388f7dc7f05e2944cb534a22352df2f06f38b0767a3a29693041e6efef5d431"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A dead, leafless tree with a tall, slender trunk and a few brittle, broken branches. The bark is a desaturated grey-brown, and the base flares into a cage of exposed, spindly roots, giving it a skeletal, eerie silhouette suited to a murky bog or haunted forest."
+differs = "The most skeletal and eerie, with the lowest triangle count and a spindly root cage, best for a haunted forest silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1470
+meshes = 1
+materials = 1
+size = [2.376494, 7.430051, 2.273269]
+
+[mesh.sm_tree_swamp_04]
+name = "SM_Tree_Swamp_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Swamp_04.fbx"
+sha256 = "d4ebc9bd8fc4b4b2acf8006bcd128af7edb16229c11d80c62e12772f43cfdf47"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A dead, leafless tree with a tall, slender trunk and a flared, stilt-like root base, rendered in muted grey-browns. Sparse, jagged branches jut from the upper half, giving it a skeletal, weathered appearance suited to murky wetlands or eerie landscapes."
+differs = "A mid-detail variant with a stilt-like base and jagged branches, offering a balance between the plain and the ornate."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1544
+meshes = 1
+materials = 1
+size = [2.6523361, 7.415226, 2.200084]
+
+[mesh.sm_tree_swamp_branch_01]
+name = "SM_Tree_Swamp_Branch_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Swamp_Branch_01.fbx"
+sha256 = "9eaf5dde3158165ce5e2c507a82bc5ca6341df8fde759fad7c7d9631bff604ea"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A gnarled, leafless swamp branch with a thick, bulbous base and a long, tapering limb that forks into two jagged tips. The bark is a muted grey-brown, and a row of short, broken spikes hangs from the underside, giving it a weathered, dead appearance suited to murky environments."
+differs = "The smaller, more compact option with a bulbous base and jagged twin tips, ideal for close-up swamp clutter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 350
+meshes = 1
+materials = 1
+size = [0.521939, 0.759349, 1.795261]
+
+[mesh.sm_tree_swamp_branch_02]
+name = "SM_Tree_Swamp_Branch_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Swamp_Branch_02.fbx"
+sha256 = "8ed389a12ba81ac07a7f48be7e01486f7424b402508f600a45f74e7ccf49e9df"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A gnarled, leafless branch with a thick, broken base and two long, tapering offshoots, one curving sharply upward and the other extending horizontally. The bark is a flat, muted grey-brown with a rough, faceted texture, giving it a weathered, dead appearance."
+differs = "The largest, longest asset with a broken base and two distinct offshoots, perfect for spanning wide gaps or framing tall scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 134
+meshes = 1
+materials = 1
+size = [1.4676521, 1.718986, 5.0481343]
+
+[mesh.sm_tree_swamp_root_01]
+name = "SM_Tree_Swamp_Root_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Swamp_Root_01.fbx"
+sha256 = "b709319c9efb8dde70e42a381c5e33fcb43b983803f6e5edbba64352f7c8f35e"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A gnarled, arching root segment with a low, angular profile and a rough, earthy brown surface, appearing weathered and organic, ideal for adding natural, swampy ground detail to a scene."
+differs = "Taller and longer, with a smoother arch and fewer facets, best for spanning gaps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.187469, 0.483112, 1.012113]
+
+[mesh.sm_tree_swamp_root_02]
+name = "SM_Tree_Swamp_Root_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Swamp_Root_02.fbx"
+sha256 = "221b7c5183412f4c79632cb7a861990eca209c6fb6231a6515403a8392910cd5"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A low, arching root segment with a pronounced zigzag profile, rising from a thick base to a thinner, angled tip. Its dark, earthy brown surface is faceted and matte, with subtle lighter striations suggesting weathered bark or mud, giving it a gnarled, organic look suited for swampy terrain."
+differs = "Shorter and more angular, with a sharper zigzag and extra detail, ideal for dense, broken ground."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 120
+meshes = 1
+materials = 1
+size = [0.210239, 0.48725, 0.920925]
+
+[mesh.sm_tree_swamp_stump_01]
+name = "SM_Tree_Swamp_Stump_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Swamp_Stump_01.fbx"
+sha256 = "447fce67fab575e8d27a74f50159e9ac3691e6818933a26cd736c189a92d6fc0"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, weathered stump with a jagged, broken top and thick, gnarled roots that arch outward and down, creating a cage-like base. The bark is a muted grey-brown with subtle vertical striations, giving it a dry, aged appearance perfect for murky environments."
+differs = "Taller and more upright with a cage-like root structure, ideal for dense swamp clusters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 826
+meshes = 1
+materials = 1
+size = [1.87805, 1.740912, 1.9640169]
+
+[mesh.sm_tree_swamp_stump_02]
+name = "SM_Tree_Swamp_Stump_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Swamp_Stump_02.fbx"
+sha256 = "9292ab56208645796d20a79d23601ffdaad19043707bd8041b20b1e92afdd34a"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A squat, broken stump with a jagged, splintered top and a flared base of thick, gnarled roots that splay outward like fingers. The bark is a muted grey-brown with darker crevices, giving it a weathered, dead appearance."
+differs = "Shorter and flatter with splayed finger-like roots, better for open, scattered placements."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 908
+meshes = 1
+materials = 1
+size = [1.87805, 2.522876, 1.9640179]
+
+[mesh.sm_tree_tallround_01]
+name = "SM_Tree_TallRound_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_TallRound_01.fbx"
+sha256 = "1130c88ed5ac7f022e72aa14f435128b9d6afa04371be64c616eb4f9c3d6aece"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, slightly curved trunk supports a rounded canopy of pale green, faceted foliage clusters, with a few distinct branches reaching outward. The low-poly style gives it a clean, stylized look, and the muted, earthy tones suggest a temperate forest setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 764
+meshes = 1
+materials = 1
+size = [4.7769623, 6.3581758, 2.675225]
+
+[mesh.sm_tree_twig_01]
+name = "SM_Tree_Twig_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Twig_01.fbx"
+sha256 = "4c1d46fea28106fc2ce803748540e6617784eec482b4918f101c27a355757e88"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, bare branch with a few short, angular offshoots, rendered in a flat, muted brown with a low-poly, faceted surface. It appears dry and weathered, suited for use as a simple ground scatter or debris element in a stylized forest environment."
+differs = "The longest and most branched, with the most offshoots, making it the most detailed for dense debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 90
+meshes = 1
+materials = 1
+size = [0.348413, 0.104531005, 0.906331]
+
+[mesh.sm_tree_twig_02]
+name = "SM_Tree_Twig_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Twig_02.fbx"
+sha256 = "702dc544ec505bfe6c31087328f662ab825ae2defd71d9469731cd8f81f2a198"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, bare branch with a few short offshoots, rendered in muted grey-brown tones with a flat, low-poly finish. Its angular, faceted surface suggests a dry, weathered twig, ideal for scattering across forest floors or adding natural debris to a scene."
+differs = "The widest and second-longest, with the most offshoots, but otherwise similar to 01, just thicker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 110
+meshes = 1
+materials = 1
+size = [0.446433, 0.081165, 0.67677504]
+
+[mesh.sm_tree_twig_03]
+name = "SM_Tree_Twig_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Twig_03.fbx"
+sha256 = "198ed5b8588240e944d15ffb0b6ab05ad0cb76cfe4d5616ecd7d7468fca81a2d"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, angular branch with a sharp, upward-curving tip and a single short offshoot near the base, rendered in flat, muted brown tones. Its low-poly facets give it a clean, stylized look, making it ideal for adding sparse, natural detail to a forest floor or underbrush without visual clutter."
+differs = "The shortest and most angular, with a sharp upward tip, ideal for sparse, clean underbrush."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 52
+meshes = 1
+materials = 1
+size = [0.162746, 0.070034996, 0.54238003]
+
+[mesh.sm_tree_twig_04]
+name = "SM_Tree_Twig_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Twig_04.fbx"
+sha256 = "0251dda0f7c5cc45999100edb5766b62418ece203fc8480edacc5a3c8d6269e0"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, weathered brown twig with a single sharp bend near its thicker end, tapering to a fine point. Its low-poly surface shows subtle wood-grain striping and a matte finish, suggesting a dry, brittle branch suitable for scattered ground debris or forest floor detail."
+differs = "The smallest and simplest, with a single bend and no offshoots, perfect for minimal ground scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [0.099613994, 0.053299002, 0.54238]
+
+[mesh.sm_tree_twig_05]
+name = "SM_Tree_Twig_05"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Twig_05.fbx"
+sha256 = "78e457c6a86538836f80d0356edee500d8a56c631b2f7372e6c3b61cda3e3887"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A slender, bare branch with a single sharp bend near its midpoint, tapering to a thin tip and ending in a blunt cut at the base. The bark is a muted grey-brown with subtle darker streaks, giving it a dry, weathered look."
+differs = "The longest and thinnest, with a single mid-bend and no offshoots, best for a lone, sweeping branch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 76
+meshes = 1
+materials = 1
+size = [0.162746, 0.079514, 0.883555]
+
+[mesh.sm_tree_vines_01]
+name = "SM_Tree_Vines_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Vines_01.fbx"
+sha256 = "7870e52bb3c0f2e08716e74a98e6ef46db1a2cf8f71a5b83625c91a34da8cf7b"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+wanted = "FernLeaf.png"
+description = "A slender, pale grey-green U-shaped vine with a smooth, matte finish, appearing as a simple, unadorned arch that could serve as a minimalist hanging element or a subtle environmental detail in a stylized low-poly scene."
+differs = "The only U-shaped arch, not a hanging strand; use it as a minimalist loop or handle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 68
+meshes = 1
+materials = 1
+size = [1.559882, 1.658494, 0.056642]
+
+[mesh.sm_tree_vines_02]
+name = "SM_Tree_Vines_02"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Vines_02.fbx"
+sha256 = "1a346645c0d6a13c7b8b183fb5b3ef524965c7e11ffeca50a259ae5c6bc0d5ec"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+wanted = "FernLeaf.png"
+description = "A slender, vertical vine with a subtle, irregular curve, rendered in a muted grey-green that suggests a weathered or dry state. It is a simple, unadorned strand with no leaves or branches, making it ideal for adding a delicate, hanging element to a scene without visual clutter."
+differs = "The shortest and plainest, with no offshoots; use it as a single, clean vertical line."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 52
+meshes = 1
+materials = 1
+size = [0.130988, 3.047257, 0.106213]
+
+[mesh.sm_tree_vines_03]
+name = "SM_Tree_Vines_03"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Vines_03.fbx"
+sha256 = "0e97393d00dcc35bcd5749a00c081651b0726834321937f49f50cd78605582cf"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+wanted = "FernLeaf.png"
+description = "A slender, vertical vine with a few short, bare tendrils branching off, rendered in a muted grey-green with a flat, matte finish. Its simple, low-poly silhouette makes it ideal for adding subtle vertical detail to forest or jungle scenes without visual clutter."
+differs = "The longest single strand with a few bare tendrils; use it for tall, sparse vertical detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 104
+meshes = 1
+materials = 1
+size = [0.188109, 5.087561, 0.341601]
+
+[mesh.sm_tree_vines_04]
+name = "SM_Tree_Vines_04"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Vines_04.fbx"
+sha256 = "828936e7fdd7d970a04c38ac04af57bbfa61dca0d7461c39a3936bd016b2a06c"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+wanted = "FernLeaf.png"
+description = "A slender, vertical cluster of thin, bare vines, tapering to a point at the top and bottom, with a few small, jagged offshoots along its length. Its muted, desaturated green-grey colouring suggests a dry or weathered state, making it ideal for adding vertical detail to a forest floor or a ruined structure."
+differs = "The most detailed and widest, with a jagged cluster and tapering ends; use it for ruined or dense foliage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 260
+meshes = 1
+materials = 1
+size = [0.331874, 4.665616, 0.98998296]
+
+[mesh.sm_tree_willow_large_01]
+name = "SM_Tree_Willow_Large_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Willow_Large_01.fbx"
+sha256 = "bd197637db9a1ba89b043b8cb651de9ded86877330cf58d6e99a99a19b05941e"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A broad, weeping canopy of dark, layered foliage droops heavily over a short, pale, forked trunk, giving the tree a squat, mushroom-like silhouette. The leaves are rendered in muted greens and browns with a blocky, faceted texture, suggesting a mature, slightly weathered specimen suited for dense forest or swamp..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1834
+meshes = 1
+materials = 2
+size = [5.80145, 9.616688, 6.3529387]
+
+[mesh.sm_tree_willow_large_01_leaves]
+name = "SM_Tree_Willow_Large_01_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Willow_Large_01_Leaves.obj"
+sha256 = "76425b3992655c76c75f2b2ece855a105fd9bd1acea5b78f11f918e3e73a4bf9"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A broad, weeping crown of pale green foliage droops in soft, layered clumps over a short, thick trunk, giving the tree a wide, umbrella-like silhouette. The leaves are a light, yellowish green with subtle mottling, suggesting a fresh, healthy specimen ideal for lush, temperate environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 748
+meshes = 1
+materials = 1
+size = [580.1449, 776.9307, 635.2939]
+
+[mesh.sm_tree_willow_medium_01]
+name = "SM_Tree_Willow_Medium_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Willow_Medium_01.fbx"
+sha256 = "c588acc02f58328dd0eb837889bdc089549c5be0331d4eeb639dd36387c89ac1"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A gnarled, pale trunk splits into a short fork, supporting a dense, blocky canopy of dark, almost black foliage with subtle grey and brown undertones. The low-poly silhouette is tall and rounded, with a slightly ragged, uneven top that gives it a weathered, ancient appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 922
+meshes = 1
+materials = 2
+size = [3.3637772, 6.679766, 3.357934]
+
+[mesh.sm_tree_willow_medium_01_leaves]
+name = "SM_Tree_Willow_Medium_01_Leaves"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Willow_Medium_01_Leaves.obj"
+sha256 = "366748c9e772006e684769610b09788ff33f814aad28faf27a57e2a64bbcfd68"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A broad, weeping canopy of layered, low-poly leaf clusters droops gracefully over a short, sturdy trunk, giving the tree a soft, rounded silhouette. The foliage is a mix of muted greens with subtle yellow highlights, while the bark is a simple grey-brown."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 444
+meshes = 1
+materials = 1
+size = [336.37775, 502.21515, 335.79346]
+
+[mesh.sm_tree_willow_small_01]
+name = "SM_Tree_Willow_Small_01"
+pack = "polygon_nature_pack"
+source = "Source Files/FBX/SM_Tree_Willow_Small_01.fbx"
+sha256 = "9bf51d3c6dcc9e3957fbc40eed9664309ea9440ba88eb52887111c19fb70e77d"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A stout, pale trunk flares at the base and supports a dense, blocky canopy of dark, vertical slabs, giving the tree a rigid, almost architectural silhouette. The foliage is a mix of deep greens and near-black shadows, with subtle hints of brown and a few lighter, reddish accents that suggest sparse leaves or branches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 192
+meshes = 1
+materials = 2
+size = [2.11813, 4.900336, 2.2812872]
+
+[mesh.sm_tree_willow_small_01_leave]
+name = "SM_Tree_Willow_Small_01_Leave"
+pack = "polygon_nature_pack"
+source = "Source Files/OBJ/SM_Tree_Willow_Small_01_Leave.obj"
+sha256 = "dd56b298cc4944d61c7e49a74110fcc5bbbd65f043cfcd0b4b488f6e81f7efef"
+atlas = "PolygonNature_01.png"
+textures = "PolygonNature_01.png"
+description = "A broad, weeping crown of drooping, pale-green foliage cascades over a short, dark trunk, giving the tree a soft, rounded silhouette. The leaves are rendered in a flat, stylized texture with subtle mottling, creating a gentle, airy look that suits a fantasy or low-poly environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 1
+size = [211.81293, 376.90402, 228.12878]

@@ -1,0 +1,1953 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.env_cloudring_larger_02]
+name = "Env_CloudRing_Larger_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Core/Env_CloudRing_Larger_02.fbx"
+sha256 = "f33fb0f50d6f05a48b2e9d4b8a7d8f894dd7daeda89d08cf896edce60e7dbd12"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A flat, low-poly ring of pale grey and white, textured to resemble a soft, wispy cloud bank. Its irregular, lumpy silhouette gives it a natural, organic feel, and the subtle shading suggests a soft, fluffy material."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [310.26807, 54.419323, 295.38898]
+
+[mesh.fx_aurora_mesh_01]
+name = "FX_Aurora_Mesh_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Aurora_Mesh_01.fbx"
+sha256 = "34c45a6d1c876e1afb768d3046d99fed5019f86e62052ad9c45b4ab1e3e238fc"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A long, slender, ribbon-like streak of translucent, shimmering teal and gold, tapering to sharp points at both ends and twisting through the air like a spectral wisp. Its surface is textured with a subtle, iridescent pattern that suggests a magical, ethereal energy, making it ideal for a mystical sky effect or a..."
+differs = "The narrower, more pointed wisp, best for a sharp, piercing magical streak rather than a broad atmospheric band."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 176
+meshes = 1
+materials = 1
+size = [10.322739, 5.7398243, 61.63155]
+
+[mesh.fx_aurora_mesh_02]
+name = "FX_Aurora_Mesh_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Aurora_Mesh_02.fbx"
+sha256 = "1d255ab499f56b70910a542e52789aa3cba3a22e95d57d592062d67addaa807a"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A long, low, ribbon-like arc of glowing aurora light, twisting in a gentle S-curve with a slight vertical lift at one end. The texture blends pale yellow-green and soft blue with darker, smoky patches, giving it a translucent, ethereal quality that reads as a distant atmospheric effect rather than a solid object."
+differs = "The wider, more S-curved arc with a vertical lift, better for a sweeping, distant aurora curtain effect."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 186
+meshes = 1
+materials = 1
+size = [25.791683, 5.799866, 60.790813]
+
+[mesh.fx_butterfly_mesh_alpine_01]
+name = "FX_Butterfly_Mesh_Alpine_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Butterfly_Mesh_Alpine_01.fbx"
+sha256 = "be0a111698b0c16c7429abe37d2c3524fd3acac15547b9da82d0e61ed19a3915"
+atlas = "ButterflyWing_Tex_01.png"
+textures = "ButterflyWing_Tex_01.png"
+description = "A pair of delicate, low-poly wings with a pale, translucent peach and cream mottled texture, shown in four orientations. The wings are spread flat and appear fragile, with a subtle, papery sheen that suggests a lightweight, fluttering effect."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 44
+meshes = 1
+materials = 1
+size = [0.816574, 0.832845, 0.700105]
+
+[mesh.fx_hawk_01]
+name = "FX_Hawk_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Hawk_01.fbx"
+sha256 = "8009f267010c91a4a7fa2521a6b22b60ab8f8d1e5e0bd97c6f3e317f1cb8c451"
+atlas = "HawkWing_Tex_01.png"
+textures = "HawkWing_Tex_01.png"
+description = "A low-poly hawk with broad, slightly ragged wings and a long, straight tail, rendered in muted browns and greys with darker feather tips. The wings are fully extended in a gliding pose, and the simple texture gives it a weathered, natural look suitable for alpine environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 230
+meshes = 1
+materials = 1
+size = [3.608902, 0.280312, 1.558471]
+
+[mesh.fx_leaf_01]
+name = "FX_Leaf_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Leaf_01.fbx"
+sha256 = "780688e09bc23d64f78ea5f179b6906126aaa98f57a5127a55ec045d4c469ad8"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A flat, diamond-shaped leaf with a sharp central crease, tapering to a pointed tip and a short orange stem. The surface is mottled with dark browns and greys, showing signs of decay, and is speckled with white spots and iridescent rainbow patches that suggest moisture or a stylized sheen."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.1, 0.019318, 0.1]
+
+[mesh.fx_sphere_01]
+name = "FX_Sphere_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Sphere_01.fbx"
+sha256 = "1d07e8b767c4f7b2d62cef7f98319a72d49b97d8d47760eacbad0ee6ff62919e"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A faceted, low-poly rock-like sphere in a warm, earthy brown, with flat polygonal surfaces catching light to create a chunky, crystalline appearance. It is a simple, unadorned orb with a matte finish, ideal for use as a boulder, a magical projectile, or a generic environmental prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 46
+meshes = 1
+materials = 1
+size = [0.519158, 0.488465, 0.546848]
+
+[mesh.fx_sunshafts_alpine_01]
+name = "FX_SunShafts_Alpine_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/FX/FX_SunShafts_Alpine_01.fbx"
+sha256 = "ab001fd01b3f145616c46cc4edd088a88dd25772ddb991be57d94a7e244b5f23"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A tall, narrow vertical plane with a jagged, irregular silhouette, rendered with a semi-transparent texture that blends dark greys, blacks, and warm amber highlights. The surface appears to be a flat, billboard-style effect, showing a gradient of light and shadow that suggests a stylized, ethereal shaft of light or a.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [1.0, 3.591922, 1.0]
+
+[mesh.sm_env_background_trees_01]
+name = "SM_Env_Background_Trees_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Background_Trees_01.fbx"
+sha256 = "7e4bd1dfe104459eedbf405c4dec844698f76c7b9684d1c3d860d510a3b1b3cf"
+atlas = "pine04.tga"
+textures = "pine04.tga"
+description = "A cluster of stylized low-poly conifers, featuring jagged, layered dark green canopies and slender brown trunks, arranged in a natural, uneven grouping to serve as a distant forest backdrop."
+differs = "The largest and most detailed option, with the most triangles and widest spread, ideal for a dense, layered distant forest backdrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 2
+size = [27.414352, 16.01988, 8.453215]
+
+[mesh.sm_env_background_trees_02]
+name = "SM_Env_Background_Trees_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Background_Trees_02.fbx"
+sha256 = "6e86c4baa68c3084a9a93a6e0cc8761792aa5c911b95ddac7069a143dff78eb8"
+atlas = "pine04.tga"
+textures = "pine04.tga"
+description = "A low-poly cluster of three conifers on a shared base, with the tallest central tree flanked by two shorter ones. The trunks are dark brown, and the foliage is a muted, slightly desaturated green with a subtle blue tint, giving a cold, alpine feel."
+differs = "The smallest and plainest option, with the fewest triangles and a flatter, more compact footprint, suited for a sparse, cold alpine accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20
+meshes = 1
+materials = 2
+size = [18.956718, 15.972982, 3.6224349]
+
+[mesh.sm_env_branch_01]
+name = "SM_Env_Branch_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Branch_01.fbx"
+sha256 = "6fe8e9aeb43694eeed6c4c18d55639c26dc715302c969ce727ec45ece3f0b7ea"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A slender, weathered branch with a gentle curve and a single short offshoot near one end, rendered in dark, muted browns with a rough, matte finish. The surface appears stripped of bark and slightly gnarled, suggesting a dry, fallen limb suited for scattered ground debris or subtle environmental detail in a low-poly..."
+differs = "The most elongated and slender of the set, with the fewest offshoots, ideal for a single subtle ground detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 110
+meshes = 1
+materials = 1
+size = [0.37727898, 0.226838, 1.7812309]
+
+[mesh.sm_env_branch_02]
+name = "SM_Env_Branch_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Branch_02.fbx"
+sha256 = "a233856e66ed4a0ad662ebb911e028f8e226c106adb6b436439468c11b6af227"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A weathered, dark brown fallen branch with a long, tapering main stem and two angular offshoots, one of which is broken. Its flat, faceted surfaces and muted, earthy tones give it a dry, aged appearance, making it ideal for adding natural debris to alpine forest floors or rocky terrain."
+differs = "The largest and most complex, with the most offshoots and a broken limb, perfect for a focal debris piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 162
+meshes = 1
+materials = 1
+size = [0.95239496, 0.30357, 1.285667]
+
+[mesh.sm_env_branch_03]
+name = "SM_Env_Branch_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Branch_03.fbx"
+sha256 = "898702c311128baf449249ac3c0e693a77ad0683c136252e72b6beee70345271"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A gnarled, weathered branch with a main horizontal limb and two short offshoots, rendered in dark, matte brown with subtle grey highlights. The surface is rough and uneven, suggesting dry, aged wood, and the angular, faceted silhouette makes it ideal for scattered forest floor debris or a simple, natural prop in a..."
+differs = "The widest and most horizontal, with a gnarled, multi-branch silhouette, best for a low, sprawling ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 82
+meshes = 1
+materials = 1
+size = [0.684163, 0.16529, 1.017789]
+
+[mesh.sm_env_branch_04]
+name = "SM_Env_Branch_04"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Branch_04.fbx"
+sha256 = "67bf5b9b2c024ad1361e5ef0c91a4348b324f4b320cf22e5453d2d6b0a4153ec"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A slender, weathered branch with a gentle curve and a short offshoot near one end, rendered in dark, muted browns with subtle grey highlights. The bark texture is rough and organic, suggesting a dry, fallen twig suitable for scattering across alpine terrain or forest floors."
+differs = "The smallest and most compact, a simple curved twig, ideal for tight spaces or as a minor scatter element."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 70
+meshes = 1
+materials = 1
+size = [0.356669, 0.198403, 0.93945503]
+
+[mesh.sm_env_bush_01]
+name = "SM_Env_Bush_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Bush_01.fbx"
+sha256 = "660bd43955085948d0a74f8110a95056f00fcba376d535e8ff5585e90a13b774"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, wide, irregular mound of dry, grey-brown brush with a rough, twiggy silhouette, appearing sparse and weathered rather than lush, making it ideal for arid or rocky alpine terrain."
+differs = "The widest and flattest option, with a sparse, twiggy silhouette that reads as dry, dead brush for rocky, arid slopes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2697
+meshes = 4
+materials = 2
+size = [2.7886639, 1.276394, 2.678684]
+
+[mesh.sm_env_bush_01_alt]
+name = "SM_Env_Bush_01_Alt"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Bush_01_Alt.fbx"
+sha256 = "0af876cf8fd7669b6f5327239912df62eadd63f272ffda40c3e43748a7e131ed"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, wide, rounded mound of dry, brownish-grey brush, appearing as a dense cluster of bare twigs and dead foliage with a slightly flattened top. The texture is rough and matte, with darker shadows in the interior suggesting a hollow or tangled center."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7060
+meshes = 4
+materials = 2
+size = [4.698296, 1.2879729, 4.529623]
+
+[mesh.sm_env_bush_02]
+name = "SM_Env_Bush_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Bush_02.fbx"
+sha256 = "716576f3a233f1a06cef1650f11e22d773df77eeb63e1406658010c5be6ec581"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, rounded clump of dark green and brown foliage, with a few bare, spindly twigs reaching upward from the top. The texture is mottled and slightly patchy, giving it a dry, weathered look, and it appears to be a small, scrubby shrub for alpine environments."
+differs = "The only one with a vertical, spindly shape and upward-reaching twigs, making it the sole choice for a taller, scrubby accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 756
+meshes = 3
+materials = 1
+size = [1.431654, 2.0609012, 1.399519]
+
+[mesh.sm_env_bush_02_alt]
+name = "SM_Env_Bush_02_Alt"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Bush_02_Alt.fbx"
+sha256 = "7388a5fb39ab21ff31992839e4785ef7469c4f8d99c201c27cbb4e4389909c50"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, rounded clump of dark green foliage with a few pale, dry twigs protruding from the sides, suggesting a small, weathered shrub or bush. The dense, irregular silhouette gives it a natural, unkempt appearance, ideal for adding ground-level detail to alpine environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 397
+meshes = 3
+materials = 1
+size = [1.121112, 1.212817, 1.2133031]
+
+[mesh.sm_env_bush_flower_01]
+name = "SM_Env_Bush_Flower_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Bush_Flower_01.fbx"
+sha256 = "b9fd5782fe4928fa4ccee41e00cf0cde41a581c20d9f872312be39635e931610"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A cluster of five upright, jagged rock spires with a dark, weathered grey-brown surface, each topped with a small, bright orange tuft of foliage. The irregular, broken silhouettes suggest a harsh alpine environment, making it a striking, naturalistic accent for rocky terrain or cliff edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 904
+meshes = 3
+materials = 1
+size = [1.84313, 1.751074, 1.707886]
+
+[mesh.sm_env_bush_flower_01_alt]
+name = "SM_Env_Bush_Flower_01_Alt"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Bush_Flower_01_Alt.fbx"
+sha256 = "c36ad2b547dc146b8b9d5bd67daf4ab757a3a2800af89970e4a51ab5b3de443f"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A dense, low-poly cluster of dark, spiky stems with small orange flower buds at the tips, forming a rounded, bushy shape. The dark grey and black stalks are textured with subtle brown and green variations, giving it a rugged, alpine appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2784
+meshes = 3
+materials = 1
+size = [3.492299, 1.787495, 3.65606]
+
+[mesh.sm_env_cloud_ring_01]
+name = "SM_Env_Cloud_Ring_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Cloud_Ring_01.fbx"
+sha256 = "0414c4f45c73af36a004af55e33c25855e3cb3d3df1ef67c34bf63471fbd6a6e"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A flattened, irregular ring of pale grey and white, resembling a low-lying bank of fog or a stylized cloud formation. Its surface is smooth and matte, with subtle darker grey mottling that suggests depth and volume. The shape is organic and uneven, making it ideal for adding atmospheric layers to a scene."
+differs = "The smaller, flatter, and lower-poly option, with a more solid, less wispy surface, best for a tight, low fog bank."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14456
+meshes = 1
+materials = 1
+size = [277.46246, 26.061537, 259.42413]
+
+[mesh.sm_env_cloud_ring_02]
+name = "SM_Env_Cloud_Ring_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Cloud_Ring_02.fbx"
+sha256 = "610e6b7dffb6735502389fd7e49e0af9843b4d18d3ae5706019ee3247b865db2"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A flattened, irregular ring of pale grey and white, resembling a low-lying band of mist or cloud. Its surface is soft and diffuse, with subtle variations in tone that suggest a wispy, atmospheric texture. This asset is ideal for adding a layer of fog or a distant cloud bank to a mountain scene."
+differs = "The larger, taller, and more detailed option, with a softer, more diffuse texture, best for a distant, high cloud layer."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [310.26804, 54.419327, 295.38898]
+
+[mesh.sm_env_fishing_hole_01]
+name = "SM_Env_Fishing_Hole_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Fishing_Hole_01.fbx"
+sha256 = "46f8f3c1d41b0ade53f6ab1d2dea1d22b56e1d6b41bb3620ae001736177e4088"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, irregular mound of dark grey rock, roughly oval and flattened, with a jagged, uneven top surface and a small, stepped ledge on one side. The surface is rough and unpolished, suggesting a natural, weathered stone suitable for a mountain or alpine setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 562
+meshes = 2
+materials = 2
+size = [10.520336, 0.786517, 10.17551]
+
+[mesh.sm_env_flowers_01]
+name = "SM_Env_Flowers_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Flowers_01.fbx"
+sha256 = "808d9b3c93529be9871f97c1cebaedc85d1c59e2d49d0ab8e958283e5c8b68b2"
+atlas = "Flowers_01.tga"
+textures = "Flowers_01.tga"
+description = "A small, low-poly cluster of white bell-shaped flowers with drooping heads, rising from a dense base of dark green leaves and thin stems, with a few pale buds adding height and a natural, slightly unkempt look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 52
+meshes = 2
+materials = 1
+size = [0.545147, 0.642743, 0.595034]
+
+[mesh.sm_env_flowers_01_alt]
+name = "SM_Env_Flowers_01_Alt"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Flowers_01_Alt.fbx"
+sha256 = "a772974b6cd57724c47e854a1e03949064479de0758d2b590897baeedc25cde1"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, dense cluster of blocky stems and leaves, forming a wide, irregular mound with a few taller stalks rising from the centre. The foliage is a mix of dark greens and earthy browns, punctuated by small, bright orange and purple blossoms that give it a lively, colourful appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 344
+meshes = 2
+materials = 1
+size = [1.626634, 0.679758, 1.438282]
+
+[mesh.sm_env_fog_ring_01]
+name = "SM_Env_Fog_Ring_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Fog_Ring_01.fbx"
+sha256 = "af2f0f61402eeea2bc7b76c913c1ca11bde038d9b00e985239267ff96af704cc"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A thin, flat circular band with a subtle, textured surface, rendered in muted grey and tan tones with faint hints of green, resembling a low-lying ring of mist or fog. The interior is completely open, and the band's surface appears slightly weathered or mottled, giving it a natural, atmospheric look suitable for..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [70.17066, 3.939841, 70.17065]
+
+[mesh.sm_env_grass_01]
+name = "SM_Env_Grass_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Grass_01.fbx"
+sha256 = "029ab675bf637406cedfb5da69f8b66b54b7a447782901791c1c77ef684f224c"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, irregular clump of dark, earthy brown soil and rock, topped with a dense, ragged crown of pale grey-green grass blades that fan outwards in all directions. The texture is rough and mottled, with hints of moss and small stones, giving it a weathered, natural look suited for alpine terrain."
+differs = "The larger, more detailed asset with a rocky soil base and pale grey-green blades, ideal for adding rugged, mossy ground cover to alpine scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 2
+materials = 1
+size = [1.648487, 0.931027, 1.50719]
+
+[mesh.sm_env_grass_01_2]
+name = "SM_Env_Grass_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Grass_01.fbx"
+sha256 = "f59f744a4bfe649d74c35943c1c45438b757a06398895e83ea98d3915461d0f9"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, squat clump of dark green blades with a few pale, dry stems rising from the centre, forming a dense, rounded tuft that reads as a hardy alpine grass. The texture is mottled with earthy browns and deep greens, giving it a weathered, natural look suited for rocky or snowy terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 50
+meshes = 3
+materials = 2
+size = [1.893297, 1.028209, 1.900116]
+
+[mesh.sm_env_ground_mound_large_01]
+name = "SM_Env_Ground_Mound_Large_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ground_Mound_Large_01.fbx"
+sha256 = "ea6a08e7e3549fa26e1b33dec86412b98cdd3da9f9afd8836c6a0ee9d7c1ba68"
+atlas = "POLYGON - Military Pack/PolygonMilitary_Texture_01_A.png"
+textures = "PolygonMilitary_Texture_01_A.png"
+description = "A broad, low, irregularly rounded mound of pale sandy earth, its surface gently undulating with a few subtle dips and ridges. The flat, untextured tan colour and smooth, low-poly facets give it a clean, stylised look, making it ideal for a simple terrain bump or a soft, natural ground cover element in an alpine scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 227
+meshes = 1
+materials = 1
+size = [15.456781, 1.289118, 15.508044]
+
+[mesh.sm_env_groundcover_01]
+name = "SM_Env_GroundCover_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_GroundCover_01.fbx"
+sha256 = "1cf062222c852a22b3841aefa735110edcb1f4e839d1e2ae45b2995bd7483084"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, irregular cluster of jagged, faceted rocks and sparse, dry grass tufts, with a few small pinkish flowers. The dark grey and brown stone is broken and weathered, while the warm orange highlights suggest a sunlit, alpine setting. It reads as a natural, scattered ground-cover patch for rugged terrain."
+differs = "Smallest and simplest, with pink flowers; use for sparse, low-detail alpine ground accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 132
+meshes = 2
+materials = 1
+size = [1.892551, 0.54192597, 1.558526]
+
+[mesh.sm_env_groundcover_02]
+name = "SM_Env_GroundCover_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_GroundCover_02.fbx"
+sha256 = "dd7957f771473a7e3745e279dfc10b486546602add92f945a0cf976fc5963b7b"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, chunky cluster of angular rocks and pale grey scree, broken by a few tall, dark, jagged shards that rise from the centre. The rock faces are a mix of dark brown and grey, with a single bright, warm orange patch that suggests a sunlit surface or a mineral vein."
+differs = "Mid-sized with tall jagged shards and a mineral vein; use for rocky, sunlit outcrops."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 210
+meshes = 2
+materials = 1
+size = [2.4013429, 0.991709, 2.0765562]
+
+[mesh.sm_env_groundcover_03]
+name = "SM_Env_GroundCover_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_GroundCover_03.fbx"
+sha256 = "385822850170add59bbcd88e374a7882fd89225ce6e4d614b099e1450e2fd72a"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, irregular cluster of dark, weathered wooden planks and beams, resembling a ruined shack or a pile of debris, sits on a patch of grey and brown rocky ground with sparse, muted green grass."
+differs = "Largest and most detailed, with ruined wooden planks; use for debris or shack remnants."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 486
+meshes = 2
+materials = 1
+size = [3.646674, 1.129044, 3.088914]
+
+[mesh.sm_env_ice_sheet_01]
+name = "SM_Env_Ice_Sheet_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ice_Sheet_01.fbx"
+sha256 = "717746b089414a62216b226af1120affb7d7981b45624e79ee4bd00011456790"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, flat, irregular slab of dark grey ice with jagged, broken edges and a slightly raised, stepped ridge along one side, suggesting a frozen puddle or a fractured sheet of glacial ice. The surface is smooth and matte, with subtle tonal variation that gives it a cold, solid appearance."
+differs = "The only one with a stepped ridge, making it the most sculpted and least flat of the set."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 200
+meshes = 1
+materials = 1
+size = [5.907415, 0.747466, 5.373179]
+
+[mesh.sm_env_ice_sheet_02]
+name = "SM_Env_Ice_Sheet_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ice_Sheet_02.fbx"
+sha256 = "d9f6fcde0abe9403aba057f2ad36d9d82bdd40c5dd8e4042d87a128dcd541d87"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, flat, irregular slab of dark grey rock with jagged, broken edges and a slightly uneven top surface, resembling a frozen sheet or a fractured stone platform. Its muted, untextured appearance suggests a simple, versatile ground piece for alpine environments."
+differs = "The plainest and most uniform, with the lowest triangle count, ideal for a simple, unremarkable ground patch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 142
+meshes = 1
+materials = 1
+size = [4.135901, 0.456934, 3.764432]
+
+[mesh.sm_env_ice_sheet_03]
+name = "SM_Env_Ice_Sheet_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ice_Sheet_03.fbx"
+sha256 = "4b2fa2e6ded21b25c3bbce539197f923ceba7ffd263a1438b7dbb03b8d5e14d6"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, flat, irregular slab of dark grey ice with a faceted, chunky profile and a slightly jagged, uneven top surface. Its muted, slate-like tone and simple, angular form make it ideal for a frozen lake or glacier floor piece, offering a subtle, naturalistic variation for alpine terrain."
+differs = "The most faceted and chunky, with a jagged top that makes it the most angular and least smooth."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 224
+meshes = 1
+materials = 1
+size = [3.17422, 0.55107903, 3.342586]
+
+[mesh.sm_env_ice_sheet_04]
+name = "SM_Env_Ice_Sheet_04"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ice_Sheet_04.fbx"
+sha256 = "95089564116ea64974d9061fa36fece85babdb43114db0006d22a84d644ac34c"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, irregular slab of dark grey rock with a flat top and jagged, broken edges, resembling a frozen sheet or a flat stone platform. Its surface is smooth and untextured, with a subtle sheen that suggests ice or polished stone, and it appears weathered and worn."
+differs = "The only one with a subtle sheen, giving it a polished or wet look that the others lack."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 164
+meshes = 1
+materials = 1
+size = [4.025936, 0.480242, 3.768594]
+
+[mesh.sm_env_ice_sheet_05]
+name = "SM_Env_Ice_Sheet_05"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ice_Sheet_05.fbx"
+sha256 = "aa4d5462a65042ff9a78a408f2b83f7edb602fafa835bfb572e290913dd3b584"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A flat, irregular slab of dark grey ice with a jagged, broken edge, appearing as a frozen puddle or a thin sheet of ice on the ground. Its surface is smooth and matte, with a subtle lighter rim along the fractured side, suggesting a thin, brittle texture."
+differs = "The thinnest and most brittle-looking, with a lighter rim that suggests a delicate, fragile sheet."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 338
+meshes = 1
+materials = 1
+size = [8.777372, 0.96823597, 9.1033745]
+
+[mesh.sm_env_ice_sheet_06]
+name = "SM_Env_Ice_Sheet_06"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ice_Sheet_06.fbx"
+sha256 = "560b73ac2a3381eb1f4d91f5199efb58e9a2272c6b4d34449e8715e717580b5b"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, irregular slab of dark grey ice with a flat, slightly uneven top and jagged, broken edges, resembling a frozen puddle or a thin sheet of glacial ice. Its surface is smooth and matte, with subtle darker patches suggesting dirt or wear, making it ideal for scattered ground cover in cold environments."
+differs = "The largest and most expansive, with the most surface area for covering wide areas of ground."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 326
+meshes = 1
+materials = 1
+size = [15.454852, 1.439904, 14.50734]
+
+[mesh.sm_env_lake_01]
+name = "SM_Env_Lake_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Lake_01.fbx"
+sha256 = "7ad17a78fe1bf097509d70a32f27ab12daa835145539270b15556937cab45e74"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A flat, irregular polygon of pale grey-blue water with a darker, rocky rim, suggesting a shallow alpine tarn. The surface is smooth and uniform, with no ripples or vegetation, making it ideal as a simple, clean water plane for a mountain scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 132
+meshes = 1
+materials = 1
+size = [267.25076, 0.652012, 342.06964]
+
+[mesh.sm_env_moss_lumps_01]
+name = "SM_Env_Moss_Lumps_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Moss_Lumps_01.fbx"
+sha256 = "a5dd042241e98a78900ac3426c55ad68909a05b3c63b3682257b10292268e555"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, irregular cluster of rounded, bulbous forms that reads as a patch of soft, earthy growth rather than a hard stone. The surface is a uniform, muted brown with a matte finish, and the lumpy silhouette suggests a mossy mound or a cluster of small, weathered rocks."
+differs = "Largest and roundest, with the most organic, bulbous silhouette; best for a prominent, soft mossy mound."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 324
+meshes = 1
+materials = 1
+size = [3.091358, 0.92216, 2.604534]
+
+[mesh.sm_env_moss_lumps_02]
+name = "SM_Env_Moss_Lumps_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Moss_Lumps_02.fbx"
+sha256 = "3a80571b9aec8d29b446380fb403af8c48d10b1117152cde09b0f9a0e0d07f73"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, irregular cluster of faceted, earthy-brown lumps with pale, lichen-like mottling, resembling a weathered patch of mossy soil or a small rocky outcrop. Its flat, grounded profile makes it ideal for scattering across terrain as a subtle, natural detail."
+differs = "Most detailed with pale lichen mottling and a flatter profile; ideal for scattering as a subtle, weathered ground detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 248
+meshes = 1
+materials = 1
+size = [2.773979, 0.663931, 2.055046]
+
+[mesh.sm_env_moss_lumps_03]
+name = "SM_Env_Moss_Lumps_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Moss_Lumps_03.fbx"
+sha256 = "6ab7362f3201b84a9f8202f1c2cbf3b388b58498b10af0d2b2904bd173ac8cec"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, irregular cluster of faceted lumps, wider than it is tall, with a flat base and a slightly domed top. The surface is a uniform, muted earthy brown with subtle darker mottling, giving it a damp, mossy appearance."
+differs = "Smallest and plainest, with a uniform matte brown and a simple domed top; best for a basic, low-impact filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 196
+meshes = 1
+materials = 1
+size = [2.195898, 0.572403, 1.677446]
+
+[mesh.sm_env_mountainrange_01]
+name = "SM_Env_MountainRange_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_MountainRange_01.fbx"
+sha256 = "ab74ef184c61ed7a08e6831953c7352bdcf6fc5a9d996a16a3d07374ef6e9f1e"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, broad, irregularly shaped massif with a gently sloping profile, featuring a few small, jagged peaks and scattered rocky outcrops. The surface is a stark, uniform white with dark grey patches indicating exposed stone or shadowed crevices, giving it a snow-covered, alpine appearance."
+differs = "Largest and most detailed, with the broadest, most irregular footprint, ideal for a sprawling background horizon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10771
+meshes = 1
+materials = 1
+size = [23.804142, 5.62663, 24.367853]
+
+[mesh.sm_env_mountainrange_02]
+name = "SM_Env_MountainRange_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_MountainRange_02.fbx"
+sha256 = "a6d96f1634dd75fee459983238e41ddee974b5fdbc8200cb8a6ac9cf1285e2c0"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, broad massif with a jagged, rocky crest and a few sharp peaks, rendered in stark white with dark grey crags and scree. The snow cover is heavy and uniform, giving it a clean, high-altitude look that reads clearly from a distance."
+differs = "Mid-sized with a jagged crest and heavy snow, a clean, readable silhouette for a distant mid-ground ridge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5204
+meshes = 1
+materials = 1
+size = [20.009258, 4.761979, 21.144863]
+
+[mesh.sm_env_mountainrange_03]
+name = "SM_Env_MountainRange_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_MountainRange_03.fbx"
+sha256 = "62bdd22910bf03d56ba5d01ff3b2e687b37ce82979e9a63be387ae1e824c83b0"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, broad massif with a single dominant, jagged peak rising from a wide, snow-covered base, rendered in stark white with dark grey rock exposed on the steepest faces. The silhouette is irregular and asymmetric, suggesting a rugged, weathered alpine ridge rather than a single cone, with the snow appearing thick and.."
+differs = "Compact with a single dominant peak, perfect for a focal point that needs a rugged, asymmetric profile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2381
+meshes = 1
+materials = 1
+size = [15.537106, 4.244504, 16.574936]
+
+[mesh.sm_env_mountainrange_04]
+name = "SM_Env_MountainRange_04"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_MountainRange_04.fbx"
+sha256 = "c01737cf6e1c3fd34e67ca66392332bdf25aed619bd4714a381e80baf221d68e"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A single, jagged peak with a broad, uneven base, its dark rocky faces heavily streaked with snow that clings to the upper slopes and ridges. The low-poly facets give it a sharp, crystalline look, and the stark contrast between the near-black stone and bright white snow makes it a striking, dramatic centrepiece for a..."
+differs = "Smallest and most dramatic, a steep, crystalline peak with stark contrast, ideal as a close-up centrepiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2311
+meshes = 1
+materials = 1
+size = [7.474155, 4.354966, 8.425352]
+
+[mesh.sm_env_pine_01]
+name = "SM_Env_Pine_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Pine_01.fbx"
+sha256 = "ce305d2f9c847014054b05c3ddab6025bd10fa0decdadac860eb3b40de0c8666"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A tall, slender pine with a narrow, conical silhouette and a short, bare trunk, featuring dense, layered foliage that tapers to a pointed crown. The needles are a muted, dark green with subtle brownish undertones, giving it a weathered, alpine look suited to snowy or rocky environments."
+differs = "Tallest and most slender of the set, with the shortest bare trunk and the most uniform, unbroken conical crown."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4368
+meshes = 3
+materials = 1
+size = [6.472206, 16.966515, 5.120942]
+
+[mesh.sm_env_pine_02]
+name = "SM_Env_Pine_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Pine_02.fbx"
+sha256 = "cc7fe475d008bcabf466c2ea8cc0a6182100c5e6899fd87a8c104cdacd4e574c"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A tall, slender pine with a narrow, conical silhouette, featuring a dark, dense canopy of layered needles and a straight, brown trunk. The foliage is textured with subtle green and brown tones, and the tree appears healthy and well-proportioned for alpine environments."
+differs = "The only completely healthy, undamaged pine with a straight trunk and no snow, making it the cleanest choice for temperate scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7402
+meshes = 3
+materials = 1
+size = [5.169464, 11.625747, 5.638144]
+
+[mesh.sm_env_pine_03]
+name = "SM_Env_Pine_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Pine_03.fbx"
+sha256 = "384c13c707f5e9c381cdabfcd5cf7e73bae29f60640c22143184ab86213db422"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A tall, narrow pine with a dark, jagged silhouette and a dense, irregular canopy of grey-green needles, its trunk and branches heavily dusted with snow and ice. The tree is broken and leaning, with a bare, splintered top and exposed roots, giving it a weathered, storm-battered appearance that suits a harsh alpine..."
+differs = "The most damaged and broken tree, with a splintered top, exposed roots, and heavy ice, ideal for storm-battered or ruined landscapes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 17634
+meshes = 4
+materials = 1
+size = [3.514585, 6.906126, 4.121359]
+
+[mesh.sm_env_pine_04]
+name = "SM_Env_Pine_04"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Pine_04.fbx"
+sha256 = "f2f9ae5b30804def104330877132ae5853a29015448778ed71568eb70c8560e1"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, narrow pine with a conical silhouette and a straight trunk, its branches densely packed with small, clustered needles. The foliage is a muted, dark green with brownish undertones, giving it a weathered, alpine look."
+differs = "The widest and most detailed pine, with the densest, most irregular canopy and the highest triangle count, perfect for a hero foreground asset."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 25239
+meshes = 4
+materials = 1
+size = [6.511145, 10.249358, 7.0045567]
+
+[mesh.sm_env_pine_05]
+name = "SM_Env_Pine_05"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Pine_05.fbx"
+sha256 = "d4e05af319c5295eb3f7cb9c2b0f3a16adc9ebd0b2ea90c6201d20154dd9ed64"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, narrow pine with a dense, irregular canopy of dark green needles, its trunk and branches are heavily textured with patches of snow and frost, giving it a rugged, weathered appearance suited to a cold alpine environment."
+differs = "The shortest and most compact pine, with a frost-covered, irregular canopy, making it the best fit for dense, low-lying forest clusters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 16000
+meshes = 4
+materials = 1
+size = [3.641069, 6.102072, 3.660214]
+
+[mesh.sm_env_pine_cone_01]
+name = "SM_Env_Pine_Cone_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Pine_Cone_01.fbx"
+sha256 = "abb956a9f757cc476f0d183443ecda66d4f9f7ea2db982a6d7e2b95e07c56d1f"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A squat, rounded pine cone with tightly packed, chunky scales that flare outward, rendered in a warm, earthy brown with subtle shading to suggest depth. The low-poly facets give it a rugged, natural look, and it appears intact and ready to be scattered across an alpine forest floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 382
+meshes = 3
+materials = 1
+size = [0.14648, 0.139343, 0.13576]
+
+[mesh.sm_env_pine_noleaves_01]
+name = "SM_Env_Pine_NoLeaves_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Pine_NoLeaves_01.fbx"
+sha256 = "1e770a29eb9bcb20008cadd65541545846593c79002dbde4da3ba578c5f99565"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A tall, bare conifer trunk with sparse, jagged branches, stripped of all needles and foliage. The bark is a dark, weathered brown with subtle grey mottling, giving it a dead or winter-killed appearance. Its gaunt, skeletal silhouette makes it ideal for adding a sense of desolation or harsh alpine conditions to a scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3192
+meshes = 2
+materials = 1
+size = [5.44003, 16.324562, 4.4453697]
+
+[mesh.sm_env_pine_stump_01]
+name = "SM_Env_Pine_Stump_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Pine_Stump_01.fbx"
+sha256 = "de97cb62b25ddaab7a1b9176a805463ec376abb1ba0d043f6118b8c9d00676db"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A tall, jagged, broken pine stump with a splintered top, featuring a pale, exposed wood core on one side and dark, weathered bark elsewhere. Its irregular silhouette and low-poly facets give it a rugged, natural look, making it ideal for adding detail to alpine forest floors or clearings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 122
+meshes = 1
+materials = 1
+size = [0.58892703, 1.431543, 0.57656896]
+
+[mesh.sm_env_rock_01]
+name = "SM_Env_Rock_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_01.fbx"
+sha256 = "47a9a429573426c97391310c60b18022577d674a6dcbb449fc1e2da65b06ef37"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, elongated slab of faceted stone with a flat top and irregular, chunky sides, rendered in a muted olive-green with darker crevices. Its weathered, mossy surface suggests a damp alpine setting, making it ideal for scattered ground cover or a natural stepping stone."
+differs = "The longest, flattest slab; best as a bridge or narrow ledge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 786
+meshes = 1
+materials = 1
+size = [6.206802, 2.329367, 2.830454]
+
+[mesh.sm_env_rock_010]
+name = "SM_Env_Rock_010"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_010.fbx"
+sha256 = "28006db148a64deca10b590640e43f62055ae054fb0ad3e719de65778e6512f9"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A jagged, angular boulder with a steep, leaning profile and a broad, uneven base, rendered in flat-shaded olive and khaki tones. Its surface is broken into sharp, faceted planes with subtle darker crevices and lighter highlights, giving it a weathered, sun-bleached appearance."
+differs = "The largest and most jagged; a towering landmark boulder."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1920
+meshes = 1
+materials = 1
+size = [16.161774, 14.680866, 11.341534]
+
+[mesh.sm_env_rock_02]
+name = "SM_Env_Rock_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_02.fbx"
+sha256 = "2ad4a117785d5a238e6c4f79d0c81cdc7626415691722284b9d40e23b9f43fb5"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, elongated slab of faceted rock with a flat top and a slight taper, rendered in muted olive-tan with darker crevices. Its broad, stable profile makes it ideal as a natural stepping stone or a low ledge in an alpine setting."
+differs = "The thinnest and most tapered; a precise stepping stone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 596
+meshes = 1
+materials = 1
+size = [3.775651, 1.176019, 1.43893]
+
+[mesh.sm_env_rock_03]
+name = "SM_Env_Rock_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_03.fbx"
+sha256 = "0acd618732fac5c8b668c0edb7eff51507825822ca978e80d0ea83017b872f4d"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, irregular boulder with a broad, flattened top and a jagged, angular silhouette, rendered in muted olive and grey-green tones with subtle mossy patches. Its faceted surface suggests a weathered, lichen-covered stone, ideal for scattering across alpine slopes or as a natural ground detail."
+differs = "The most balanced, mossy boulder; a versatile scatter piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 592
+meshes = 1
+materials = 1
+size = [4.380872, 2.460501, 2.428621]
+
+[mesh.sm_env_rock_04]
+name = "SM_Env_Rock_04"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_04.fbx"
+sha256 = "b619f055e7e7df222dd0e0ddbf4634df804f5ae702c04aceed278db27779d92d"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, chunky boulder with a broad, uneven base and a stepped, terraced top, rendered in a muted olive-green with flat, faceted shading. Its surface is marked by horizontal striations and a few darker recesses, giving it a weathered, sedimentary look."
+differs = "The only one with clear horizontal striations; a sedimentary accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 596
+meshes = 1
+materials = 1
+size = [2.601281, 1.8249379, 1.702119]
+
+[mesh.sm_env_rock_05]
+name = "SM_Env_Rock_05"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_05.fbx"
+sha256 = "cb07ca1a92ff07f9c16211b9798cf29e492d02f3e083c21348c9f5966fe84f40"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, broad boulder with a flat, slightly tilted top and a chunky, irregular silhouette. Its faceted surface is a muted olive-green with subtle brownish patches, suggesting a mossy or weathered finish."
+differs = "The most tilted top; a natural seat or slanted perch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 576
+meshes = 1
+materials = 1
+size = [3.580566, 1.4747291, 2.394094]
+
+[mesh.sm_env_rock_06]
+name = "SM_Env_Rock_06"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_06.fbx"
+sha256 = "0adf29a87b943c22d578160dc32e654a83a59a6124df6e26223cebb35aa98c9d"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, irregular rock with a broad, flattened top and a chunky, angular silhouette, rendered in muted olive-green with subtle grey-brown shading. Its faceted surface suggests a weathered, mossy boulder suitable for scattering across alpine slopes or forest floors, offering a natural, grounded accent for terrain."
+differs = "The most generic and rounded; a simple ground filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 596
+meshes = 1
+materials = 1
+size = [4.25798, 2.044539, 2.545403]
+
+[mesh.sm_env_rock_07]
+name = "SM_Env_Rock_07"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_07.fbx"
+sha256 = "43f0d4dafa21d302b41750e3dc41656c0203ca9472ee6643fb549a5eb23f938b"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, broad cluster of angular, faceted boulders with a flat, stable base, featuring a muted olive-green and grey palette with subtle mossy shading. The irregular, chunky silhouette suggests a weathered, natural formation suitable for alpine terrain, offering a grounded, organic shape that reads clearly from all..."
+differs = "The only multi-boulder cluster; a compact rock formation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 519
+meshes = 1
+materials = 1
+size = [4.802739, 2.931703, 3.6374369]
+
+[mesh.sm_env_rock_08]
+name = "SM_Env_Rock_08"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_08.fbx"
+sha256 = "09d4c7f0c15ff15d943e629db076445fa5b6e2b2c2e19ac2446d249b3cbdc97a"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A jagged, low-poly rock cluster with a tall, leaning central spire and a broad, uneven base. The flat-shaded faces are a muted olive-green, suggesting moss or lichen over grey stone, with darker crevices adding depth."
+differs = "Taller, mossy, and more weathered, with a leaning spire and olive tint for overgrown alpine settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1476
+meshes = 1
+materials = 1
+size = [9.92042, 7.357537, 5.887241]
+
+[mesh.sm_env_rock_09]
+name = "SM_Env_Rock_09"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_09.fbx"
+sha256 = "cd9d4f956620e8e5baf2920f2c79de29bc3e0e59f9e522e39d38d2b18b047f88"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A jagged, low-poly rock cluster with two prominent, sharply angled peaks rising from a broad, faceted base. The grey stone is unweathered and clean, with flat, matte surfaces that catch light to emphasize its angular silhouette, making it ideal for a rugged alpine outcrop or a natural landmark."
+differs = "Cleaner, unweathered grey stone with twin sharp peaks, ideal for stark, rugged landmarks."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1344
+meshes = 1
+materials = 1
+size = [9.562016, 8.063509, 8.16938]
+
+[mesh.sm_env_rock_cliff_01]
+name = "SM_Env_Rock_Cliff_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_01.fbx"
+sha256 = "efd31f592ef79e7b8cdd1dba35ed978eb9bae47d5244ec8f95e3c4e2a6c2846b"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, blocky rock formation with a flat top and sheer, faceted sides, resembling a weathered stone ledge or a small cliff outcrop. Its muted olive-green surface suggests a covering of moss or lichen, giving it a natural, aged appearance suited for alpine environments."
+differs = "The most blocky and rectangular of the set, with the flattest top and sheerest sides, ideal for a clean, stepped ledge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2484
+meshes = 1
+materials = 1
+size = [22.274277, 10.22667, 9.141661]
+
+[mesh.sm_env_rock_cliff_02]
+name = "SM_Env_Rock_Cliff_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_02.fbx"
+sha256 = "e2f469963c0b4806bf00516a12257f908b9e4e2546501a6231fffb4f95e2b879"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, elongated rock formation with a flat top and jagged, faceted sides, resembling a weathered ledge or a small outcrop. Its surface is a uniform, muted olive-grey with subtle lighter mottling, giving it a dry, mossy appearance."
+differs = "The most elongated and jagged, with the most irregular, broken silhouette, perfect for a rugged, uneven ridge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2409
+meshes = 1
+materials = 1
+size = [24.491596, 10.358023, 12.0582695]
+
+[mesh.sm_env_rock_cliff_03]
+name = "SM_Env_Rock_Cliff_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_03.fbx"
+sha256 = "6312d5141e956cf247c07de24f8e3891d6b1d641a4d08160182300cef52561b5"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A squat, roughly cylindrical block of stone with a flat, slightly irregular top and a few subtle vertical facets, rendered in a muted olive-green tone. Its smooth, low-poly surface suggests a weathered, mossy boulder or a small, rounded outcrop, ideal for scattering across alpine terrain as a simple, unobtrusive..."
+differs = "The simplest and most cylindrical, with the fewest triangles, making it the plainest and most rounded option."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 302
+meshes = 1
+materials = 1
+size = [10.696665, 8.487369, 10.272446]
+
+[mesh.sm_env_rock_cliff_04]
+name = "SM_Env_Rock_Cliff_04"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_04.fbx"
+sha256 = "b777907a3b355b5d70a6210d792764ac3c6dd67008ef9be82b3347ba7365a442"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A squat, chunky rock with a broad, flat top and steep, faceted sides that taper to a narrow base, resembling a weathered boulder or a small, blunt pillar. Its surface is a uniform, muted olive-green with subtle shading that highlights the low-poly planes, giving it a smooth, matte finish."
+differs = "The most tapered and pillar-like, with the narrowest base relative to its top, giving it a distinct blunt-cone shape."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 456
+meshes = 1
+materials = 1
+size = [11.824965, 13.404831, 13.4537945]
+
+[mesh.sm_env_rock_cliff_05]
+name = "SM_Env_Rock_Cliff_05"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_05.fbx"
+sha256 = "321cc5e9afdc060c8091e107ea6b9fae08161fc103a486062b167ad154cca337"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, broad, irregularly shaped rock formation with a flat base and a heavily faceted, jagged top, rendered in a muted olive-green tone with subtle darker mottling. Its wide, squat proportions and lack of sharp vertical spikes make it ideal for a stable, grounded boulder or a low ledge in an alpine setting."
+differs = "The most irregular and jagged on top, with the broadest, flattest base, making it the most stable and grounded boulder."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2012
+meshes = 1
+materials = 1
+size = [15.081599, 8.493141, 10.339793]
+
+[mesh.sm_env_rock_cliff_06]
+name = "SM_Env_Rock_Cliff_06"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_06.fbx"
+sha256 = "772892ab64a89d79debf0de5daf5278d8a42e0b47ecb533b1d5e64dbe0726afb"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A squat, chunky rock with a broad, flat top and sheer, faceted sides, tapering to a narrower base. Its surface is a muted olive-green, suggesting moss or lichen, with a few vertical striations and a small notch on the upper rim. The low-poly silhouette makes it a versatile, natural-looking boulder for alpine terrain."
+differs = "The most vertically striated, with a distinct notch on the rim, making it the most uniquely detailed small boulder."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 504
+meshes = 1
+materials = 1
+size = [9.480513, 12.1482725, 18.389872]
+
+[mesh.sm_env_rock_cliff_07]
+name = "SM_Env_Rock_Cliff_07"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_07.fbx"
+sha256 = "de1d55400517632b3e5dfa1ede98f582c368f99a16b78d3a6dbcecef1981f4ec"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, elongated rock formation with a flat, stable base and a jagged, uneven top, rendered in muted olive and grey-green tones with subtle lighter mottling. Its blocky, faceted silhouette suggests a weathered, mossy boulder or a small natural ledge, ideal for grounding a scene or serving as a stepping stone in a..."
+differs = "The longest and most sprawling, with the most uneven, jagged top, ideal for a wide, low natural wall or stepping stone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1710
+meshes = 1
+materials = 1
+size = [28.776133, 10.217609, 13.857372]
+
+[mesh.sm_env_rock_cliff_arch_01]
+name = "SM_Env_Rock_Cliff_Arch_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_Arch_01.fbx"
+sha256 = "410bf4bd90813a74d67a3984afafdb71b5df409e59d17a7c0df650be9a1c9f08"
+atlas = "Alpine_GroundCover_01 2.tga"
+textures = "Alpine_GroundCover_01 2.tga"
+description = "A broad, low-slung natural arch with a thick, uneven span and chunky, faceted supports, textured in mottled grey stone with subtle earthy patches. Its squat proportions and sturdy silhouette make it ideal for framing a path or creating a rugged, grounded focal point in a low-poly alpine scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1226
+meshes = 1
+materials = 1
+size = [13.102704, 9.122825, 9.397001]
+
+[mesh.sm_env_rock_pebbles_01]
+name = "SM_Env_Rock_Pebbles_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_01.fbx"
+sha256 = "b8df79b1ab6356a8b07a1fdb95569213e5efc6eee97228811a675ee724173e58"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A scattered cluster of angular, low-poly stones in muted grey and beige, with a few larger, faceted chunks anchoring the group and smaller fragments strewn around them. The flat, matte surfaces suggest a dry, weathered texture, making it ideal for adding natural, rocky detail to alpine terrain or riverbanks."
+differs = "The most compact and lowest-profile cluster, with the fewest stones and a tight, anchor-heavy arrangement."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 114
+meshes = 1
+materials = 1
+size = [0.46786398, 0.047124, 0.34699398]
+
+[mesh.sm_env_rock_pebbles_02]
+name = "SM_Env_Rock_Pebbles_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_02.fbx"
+sha256 = "e1d5f93ec3ee3f534d90f194d99201eba62460ff2e25047a9016f75f9df49361"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "Four loose clusters of small, rounded grey stones with subtle beige and brown mottling, scattered as if naturally dropped on a surface. The low, flat profile and irregular spacing make it ideal for adding ground-level detail to alpine trails or rocky terrain without visual clutter."
+differs = "The flattest and most spread-out option, with the most even, rounded scatter and no dominant boulder."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.69739, 0.050235003, 0.349691]
+
+[mesh.sm_env_rock_pebbles_03]
+name = "SM_Env_Rock_Pebbles_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_03.fbx"
+sha256 = "e9d2fbde680bf40704cff7d5817a1e649b43d6eb8f22e3fbaf69a92c21109227"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A scattered cluster of small, angular grey stones with lighter, dusty tops and darker undersides, suggesting a weathered, natural surface. The low-poly facets give the rocks a chunky, crystalline look, and the arrangement is ideal for adding ground-level detail to an alpine path or rocky slope."
+differs = "The most crystalline and angular, with the strongest contrast between dusty tops and dark undersides."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.614545, 0.061214, 0.45813298]
+
+[mesh.sm_env_rock_pebbles_04]
+name = "SM_Env_Rock_Pebbles_04"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_04.fbx"
+sha256 = "88c8b2c2f63952c58168371873af461cda3c2be28e0cb29289579e1200fbe298"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A cluster of four low-poly pebble piles, each composed of two to three angular, faceted stones in muted grey and beige tones. The rocks are scattered in a loose, natural arrangement, with subtle shading that suggests a rough, weathered surface."
+differs = "The most clustered and dense, with the tallest profile and the most distinct, separate piles."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.461389, 0.094279, 0.297032]
+
+[mesh.sm_env_rock_pebbles_05]
+name = "SM_Env_Rock_Pebbles_05"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_05.fbx"
+sha256 = "50f54a083aad9e45a51de97b0fbb57d067aab694d76a139baf942c1fbd2ded07"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, wide cluster of angular grey stones, with one dominant faceted boulder flanked by smaller, flatter rocks and a few scattered pebbles. The surfaces are a uniform, matte grey with subtle lighter mottling, suggesting a clean, weathered stone ideal for scattered ground cover in alpine scenes."
+differs = "The largest and most detailed, with a dominant boulder and the widest footprint for major ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 204
+meshes = 1
+materials = 1
+size = [1.1280639, 0.290556, 0.73922503]
+
+[mesh.sm_env_rock_river_01]
+name = "SM_Env_Rock_River_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_River_01.fbx"
+sha256 = "49b968ad0ef98200c8ccd9aa260584c03ae77a278e69935e99c264d9de8dfe0b"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, irregular cluster of faceted grey boulders, with a larger central mass flanked by smaller stones, suggesting a natural riverbank or stream obstacle. The flat, matte grey texture gives it a weathered, stone-like appearance, ideal for placing along water edges or as a scattered terrain detail."
+differs = "Largest and most complex cluster, with the most triangles and widest footprint, ideal as a major riverbank obstacle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 204
+meshes = 1
+materials = 1
+size = [1.198994, 0.321791, 0.740548]
+
+[mesh.sm_env_rock_river_02]
+name = "SM_Env_Rock_River_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_River_02.fbx"
+sha256 = "ec7f22b05fc1ccd5de48668ffab6071b6d3a1fbfb4c0fdeedd3c3dce117287a7"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, flat cluster of angular grey boulders, with one large central rock flanked by smaller stones, forming a natural riverbank obstacle. The faceted surfaces are shaded in muted grey tones with subtle darker mottling, suggesting a damp, weathered texture."
+differs = "Flattest and widest spread, with the lowest height-to-width ratio, best for a low-profile stream edge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 194
+meshes = 1
+materials = 1
+size = [1.025714, 0.24434099, 0.901082]
+
+[mesh.sm_env_rock_river_03]
+name = "SM_Env_Rock_River_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_River_03.fbx"
+sha256 = "3f1055c73f4c51a8f867d003bb9dce6d30ff3144717b2b41d5d3aa246f2c2e86"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, wide cluster of two angular boulders, one larger and one smaller, with a flat, grey-brown surface and a subtle, mottled texture. The larger rock features a distinct, lighter patch of rough, crystalline detail on its side, adding visual interest."
+differs = "Smallest and simplest, with the fewest triangles and a unique crystalline patch, perfect as a tiny detail accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 1
+size = [0.573048, 0.194324, 0.610692]
+
+[mesh.sm_env_rock_river_04]
+name = "SM_Env_Rock_River_04"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_River_04.fbx"
+sha256 = "47e6fc455761a17ff61637da570da3a82b714c1abf73bd5bd370a28a529f9af9"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, flat cluster of three faceted boulders, with the largest stone resting on two smaller ones, forming a natural, irregular grouping. The rocks are a uniform, muted grey with subtle darker shading, appearing smooth and unweathered, ideal for a riverbank or stream edge."
+differs = "Most uniform and smooth, with a stacked arrangement and no mottling, ideal for a clean, unweathered river edge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.614915, 0.147626, 0.511205]
+
+[mesh.sm_env_rock_rough_01]
+name = "SM_Env_Rock_Rough_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Rough_01.fbx"
+sha256 = "cb2b4fb197066cc3afc78d837d97566e8018b91f1f96a119789ded594d9f3efc"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, broad, irregularly rounded boulder with a heavily faceted, jagged top and a flatter, wider base, rendered in muted olive-green and grey tones with subtle earthy mottling. Its chunky, angular silhouette and weathered surface suggest a rugged, natural rock suitable for alpine terrain, offering a grounded, stable.."
+differs = "Nearly five times the triangles and over twice the height, making it the larger, more detailed centerpiece boulder for alpine scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2330
+meshes = 1
+materials = 1
+size = [8.578444, 3.1394672, 8.228243]
+
+[mesh.sm_env_rock_rough_02]
+name = "SM_Env_Rock_Rough_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Rough_02.fbx"
+sha256 = "41565176abdf02fde090dbb8f2987c26d185050afa0d937db5ab16e748659393"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, elongated wedge of faceted stone with a gently arched top and a small, dark hollow near one end, rendered in a muted olive-green with subtle brown mottling. Its smooth, weathered surface and lack of sharp edges suggest a worn, mossy boulder suited for alpine ground cover."
+differs = "Far lower and flatter with a distinct hollow, ideal as a low ground-cover rock or stepping stone where the larger one is too bulky."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 480
+meshes = 1
+materials = 1
+size = [6.187296, 1.956465, 3.2279449]
+
+[mesh.sm_env_rock_small_01]
+name = "SM_Env_Rock_Small_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Small_01.fbx"
+sha256 = "b9d8d05862e43c8e879e913efc11692b05695333598e11154c110c74303a4d6b"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, squat, irregularly faceted boulder with a flat base and a gently domed top, rendered in muted olive-green with subtle lighter beige patches. Its angular, chunky silhouette suggests a weathered, mossy stone suitable for scattering across alpine terrain, offering a natural, grounded look distinct from sharper or.."
+differs = "The tallest and most domed of the three, with the most complex faceting, best for a focal scatter rock."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 114
+meshes = 1
+materials = 1
+size = [1.6476109, 0.682874, 1.3092489]
+
+[mesh.sm_env_rock_small_02]
+name = "SM_Env_Rock_Small_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Small_02.fbx"
+sha256 = "926fd98078b15eaddf0e4e877e24d734dd778d611a52735fab4b17b5a36edd82"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, flat, elongated rock with a faceted, angular surface, tapering to a blunt point at one end. Its muted olive-green and brownish-grey tones suggest a mossy or lichen-covered alpine stone, with a darker, shadowed underside."
+differs = "The longest and flattest, with a pointed end, ideal for a low, elongated ground cover or stepping stone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 1
+size = [1.9721689, 0.540328, 0.893486]
+
+[mesh.sm_env_rock_small_03]
+name = "SM_Env_Rock_Small_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Small_03.fbx"
+sha256 = "afaa0d512d49667ba59b47c98efdde614cccb9adac6bc90976bf3aa52e39ab01"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, chunky, faceted boulder with a flat base and a slightly angular, irregular top, rendered in a muted olive-green with subtle darker shading on the underside. Its simple, blocky silhouette and lack of surface detail make it a versatile, generic ground scatter piece for alpine environments."
+differs = "The smallest and plainest, with the fewest triangles, perfect as a simple, generic filler rock."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 46
+meshes = 1
+materials = 1
+size = [0.884114, 0.604675, 0.764888]
+
+[mesh.sm_env_skydome_01]
+name = "SM_Env_Skydome_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Skydome_01.fbx"
+sha256 = "480a1154ee48ad7503f0abd625236e39cb85c4123d846c074dda0b9488ebff4c"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+wanted = "Sky.psd"
+description = "A low, flattened dome with a glossy, dark grey upper surface speckled with white dots, resembling a stylised night sky. The base is a thick, faceted band of muted rainbow colours, giving the impression of a stylised aurora or a painted rim."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [65.88029, 26.128487, 65.880295]
+
+[mesh.sm_env_snow_mound_01]
+name = "SM_Env_Snow_Mound_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Snow_Mound_01.fbx"
+sha256 = "5cde4bdbd444afd68a49efe1e00c767579309570b4444553cb0b1071ea5d1da6"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, irregular mound of faceted earth, its silhouette rising to a single rounded peak before sloping away into a broad, flat base. The surface is a uniform reddish-brown, with subtle shading that suggests dry, packed soil or clay, and the clean, angular geometry gives it a stylized, game-ready look."
+differs = "The only mound with a single rounded peak and no rocky protrusions; the plainest brown option for simple terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 250
+meshes = 1
+materials = 1
+size = [1.776196, 0.84631395, 0.997954]
+
+[mesh.sm_env_snow_mound_02]
+name = "SM_Env_Snow_Mound_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Snow_Mound_02.fbx"
+sha256 = "330d49ee49209ca20679616a29dba6d487e3e666673ed2e6ed5b4b503f971626"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, irregular mound of faceted earth with a small rocky peak rising from one end, rendered in flat, muted brown tones with subtle lighter highlights on the upper faces. Its broad, uneven base and simple silhouette make it ideal for grounding a snowy scene or adding a natural, rugged detail to a terrain."
+differs = "The only one with a distinct rocky peak at one end; the most rugged small mound for adding a focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 212
+meshes = 1
+materials = 1
+size = [1.960812, 1.054867, 1.063708]
+
+[mesh.sm_env_snow_mound_03]
+name = "SM_Env_Snow_Mound_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Snow_Mound_03.fbx"
+sha256 = "d0b3081bc17f5072d59ed92e49eaae0d9d89c85b13fb9073722d31707cbb613a"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, flattened mound of dark olive-green earth with a smooth, rounded profile and a few subtle facets, suggesting a soft patch of snow-covered ground or a small hillock. Its muted, uniform colouring and lack of sharp features make it ideal for blending into a winter landscape as a gentle terrain variation."
+differs = "The only olive-green mound, and the flattest and smoothest; the best for a subtle, snow-covered hillock."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 212
+meshes = 1
+materials = 1
+size = [1.377811, 0.61498904, 1.289396]
+
+[mesh.sm_env_snow_mound_04]
+name = "SM_Env_Snow_Mound_04"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Snow_Mound_04.fbx"
+sha256 = "d58b86001ef46f12b343b7ecd6ac804a4a929004a299ae46b56d11b7306ecd13"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, irregular mound of faceted earth and rock, rendered in muted browns with lighter tan highlights on the upper surfaces. Its silhouette is jagged and uneven, with a distinct, narrow ridge extending from one side, giving it a weathered, natural appearance suited for alpine terrain."
+differs = "The largest and most detailed, with a jagged ridge and highest triangle count; the only one for a major terrain feature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 460
+meshes = 1
+materials = 1
+size = [3.3796759, 1.774345, 1.8097229]
+
+[mesh.sm_env_stalactite_01]
+name = "SM_Env_Stalactite_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Stalactite_01.fbx"
+sha256 = "76b16c27b1f45013212298c9180c9a07a2e4591a5a56b692bf883b4045bb8b22"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A pale, icy-blue crystalline formation with a broad, faceted base tapering into a slender, twisted shaft that flares into a jagged, crown-like top, resembling a frozen stalagmite or a mineral spire."
+differs = "The only one that points upward like a stalagmite, with a crown-like top and the tallest profile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 310
+meshes = 1
+materials = 1
+size = [2.270586, 5.0654583, 1.73123]
+
+[mesh.sm_env_stalactite_02]
+name = "SM_Env_Stalactite_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Stalactite_02.fbx"
+sha256 = "5ad8b19d519c5d33fced2c22a66fd5b04eb32cab0d72fdb1834ff2cb4eff6f66"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A slender, pale blue-grey icicle with a bulbous top and a narrower, faceted base, tapering to a sharp point. The low-poly surface is smooth and icy, with subtle vertical striations suggesting frozen water, and it appears clean and pristine, ideal for hanging from cave ceilings or overhangs in an alpine environment."
+differs = "The longest and thinnest single icicle, with a bulbous top and a clean, pristine finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 226
+meshes = 1
+materials = 1
+size = [0.834066, 3.9595232, 0.819134]
+
+[mesh.sm_env_stalactite_03]
+name = "SM_Env_Stalactite_03"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Stalactite_03.fbx"
+sha256 = "55852efe4649298dab320ec31e073c762f9018a10e1a8909aa0d7717229e70d8"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A pale, icy-blue stalactite with a broad, faceted base that tapers to a sharp point, its low-poly surface catching light to suggest frozen, translucent stone. The form is slightly irregular, with subtle ridges and a chipped tip that give it a natural, weathered appearance, ideal for cave ceilings or overhangs in a..."
+differs = "The shortest and simplest single spike, with a chipped tip and a broad, faceted base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 140
+meshes = 1
+materials = 1
+size = [0.60937, 1.638711, 0.536145]
+
+[mesh.sm_env_stalactite_04]
+name = "SM_Env_Stalactite_04"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Stalactite_04.fbx"
+sha256 = "cab0a876dbb4d2f141210eb917659691559c95d6c01c23254c291f16253df4da"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A pale, icy-blue stalactite with a broad, faceted top that tapers into a jagged, irregular point, its low-poly surface catching light to suggest a frosty, crystalline material. The form is slightly asymmetrical, with subtle ridges and a chipped tip that give it a natural, weathered appearance, making it ideal for cave."
+differs = "The most asymmetrical single spike, with a jagged, irregular point and a chipped tip."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 200
+meshes = 1
+materials = 1
+size = [0.760924, 1.670562, 0.782078]
+
+[mesh.sm_env_stalactite_05]
+name = "SM_Env_Stalactite_05"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Stalactite_05.fbx"
+sha256 = "74757bd72043b3be1114eea6a1f3a9b03777839f94576b171284d597d0d74687"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A pale, icy-blue stalactite with a broad, faceted base that tapers into two slender, uneven points, one longer than the other. Its low-poly surface is smooth and unmarked, suggesting a clean, frozen mineral formation ideal for cave ceilings or overhangs."
+differs = "The only one with two uneven points, making it a twin-tipped formation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 252
+meshes = 1
+materials = 1
+size = [1.016786, 1.91596, 0.889514]
+
+[mesh.sm_env_stalactite_06]
+name = "SM_Env_Stalactite_06"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Stalactite_06.fbx"
+sha256 = "dd04920df04949e169a1cba4e21c642e3fee2ef9bc48d9c14f0a73f6417db793"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A pale, icy-blue stalactite with a chunky, faceted top that tapers into a long, jagged point, showing a slight curve and irregular ridges along its length. The low-poly surface is smooth and matte, resembling frozen rock or ice, with a subtle gradient from lighter top to darker tip."
+differs = "The most curved and slender single spike, with a matte finish and a darker tip."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [0.385198, 1.360356, 0.37713498]
+
+[mesh.sm_env_stalactite_07]
+name = "SM_Env_Stalactite_07"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Stalactite_07.fbx"
+sha256 = "c0da84cee23272eca2cc1329ed8398d7f0266bc1518de66961fc42686a50e95b"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A cluster of pale, icy-blue stalactites hangs from a shared rocky base, with several long, tapering spikes descending to sharp points. The low-poly facets give the surface a crystalline, frozen look, suggesting a cold, cavernous environment."
+differs = "The only multi-spike cluster, with the highest triangle count and a shared rocky base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 638
+meshes = 1
+materials = 1
+size = [2.69446, 2.4605038, 1.100652]
+
+[mesh.sm_env_stalactite_08]
+name = "SM_Env_Stalactite_08"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Stalactite_08.fbx"
+sha256 = "d3b6d2e80caaf8b5d95898ee488f123fc049b30795a829d8440ef8a29df84d69"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A pale, icy-blue stalactite with a chunky, faceted top that tapers into a long, jagged point, resembling a frozen icicle or a tooth. Its surface is smooth and unmarked, with subtle shading that highlights its angular, low-poly form."
+differs = "The most tooth-like single spike, with a chunky top and a smooth, unmarked surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 118
+meshes = 1
+materials = 1
+size = [0.728472, 2.169736, 0.615456]
+
+[mesh.sm_env_water_plane_01]
+name = "SM_Env_Water_Plane_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Water_Plane_01.fbx"
+sha256 = "47dbb745231ced49c8221637371c5cce15cbf6cc1f1aca161199382933dffed2"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A flat, square patch of alpine water, rendered as a dark, reflective surface with subtle ripples and a scattering of white foam flecks. The edges are bordered by rocky, earthy banks with patches of grass and a small orange flower, giving it a natural, grounded look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20000
+meshes = 1
+materials = 1
+size = [50.0, 0.000004, 50.0]
+
+[mesh.sm_prop_backpack_01]
+name = "SM_Prop_Backpack_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Backpack_01.fbx"
+sha256 = "a6e1931038924b8a98c611202d1d8a33dd9e29052a4135bf93c0424f65b7c4b2"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A tall, boxy red canvas backpack with a dark grey top lid and a matching grey front pocket, secured by two vertical straps with silver buckles. It is rolled up and strapped to a brown bedroll, with a small side pouch and a top handle, giving it a rugged, expedition-ready look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3278
+meshes = 1
+materials = 1
+size = [0.552502, 0.884243, 0.26583698]
+
+[mesh.sm_prop_bench_01]
+name = "SM_Prop_Bench_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Bench_01.fbx"
+sha256 = "872647c1344961deeace7afd1b13324c7fafcf03670bafad1ddb565e9df2625c"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A sturdy, low-poly wooden bench with a slatted back and seat, supported by two thick, cylindrical log legs. The wood is a warm, medium brown with a subtle grain texture and a few lighter, worn highlights along the edges, giving it a weathered, rustic appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1026
+meshes = 1
+materials = 1
+size = [1.799064, 1.0211, 0.58678]
+
+[mesh.sm_prop_bench_01_collision]
+name = "SM_Prop_Bench_01_Collision"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Bench_01_Collision.fbx"
+sha256 = "34e7cfa3cd404b2d927ebc8c20816e02941ca32ac353fd1f9ffba288c26a3e2e"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low-slung, blocky bench with a thick, dark grey slatted seat and a matching backrest, supported by two chunky, cylindrical tan legs. The surfaces are weathered with scattered white and pale yellow paint flecks, giving it a worn, rustic appearance suited for an alpine trail or mountain overlook."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 104
+meshes = 1
+materials = 1
+size = [1.782419, 1.0525861, 0.60285604]
+
+[mesh.sm_prop_cabin_01]
+name = "SM_Prop_Cabin_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Cabin_01.fbx"
+sha256 = "aebd875cef17f337744ca48dd75ba4b632b765da7345c8fc64d4ed206c1c2c18"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A steeply pitched A-frame cabin with a dark grey-green plank roof and matching walls, featuring a small stone chimney, white-framed windows, and a wooden side porch with stairs. The simple, angular geometry and muted palette give it a sturdy, rustic look suited to alpine settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6284
+meshes = 4
+materials = 3
+size = [6.691746, 7.09339, 7.780842]
+
+[mesh.sm_prop_cabin_01_collision]
+name = "SM_Prop_Cabin_01_Collision"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Cabin_01_Collision.fbx"
+sha256 = "4760c6f19aba6000872c07b44dc461ac45a2db6b0f385799c42578ff7e5cd1a4"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A steep, gabled A-frame cabin with a broad, flat grey stone base and a dark timber facade dotted with irregular white patches, suggesting snow or lichen. The roof is a striking, iridescent rainbow-striped surface that catches the light with a metallic sheen, contrasting with the rustic walls."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 338
+meshes = 1
+materials = 1
+size = [6.789064, 7.264359, 7.7720137]
+
+[mesh.sm_prop_cabin_door_01_collision]
+name = "SM_Prop_Cabin_Door_01_Collision"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Cabin_Door_01_Collision.fbx"
+sha256 = "45c0380f99c76dc34a5b7569ba6ab8b545ab10c27390115e805abf95f245a99d"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A tall, narrow rectangular slab with a thick, pale wooden frame and a dark grey central panel. One face is plain, while the other is pierced with irregular holes of varying sizes, resembling a rustic screen or a damaged door. A small brass handle sits on the side edge, suggesting a sliding or hinged function."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [1.047282, 1.9446111, 0.18639994]
+
+[mesh.sm_prop_campfire_01]
+name = "SM_Prop_Campfire_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Campfire_01.fbx"
+sha256 = "f9b6b23a3ece4706f4ada83aa32621358a65f917fb1e65d258e18d03bcde4a59"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, irregular mound of olive-green grass and earth, topped with a small pile of dark brown logs and charred black stones. The fire pit is unlit, with a few pale grey embers scattered at the base, giving it a weathered, used appearance. Its compact, grounded shape makes it ideal for placing in a campsite or clearing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1112
+meshes = 1
+materials = 1
+size = [0.899998, 0.356939, 0.971426]
+
+[mesh.sm_prop_canoe_01]
+name = "SM_Prop_Canoe_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Canoe_01.fbx"
+sha256 = "16b5e35010920e48d430b8e8a309be99c67acdd710a6883ec566fbc3cbb283f9"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A weathered wooden canoe with a flat, low-poly hull, featuring a raised stern platform with a small railing and a simple bench seat. The wood is a warm, muted brown with subtle plank detailing, and the interior shows a pale, worn finish. It appears sturdy and ready for calm alpine waters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1977
+meshes = 1
+materials = 1
+size = [1.690249, 1.180073, 4.4852867]
+
+[mesh.sm_prop_canoe_01_collision]
+name = "SM_Prop_Canoe_01_Collision"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Canoe_01_Collision.fbx"
+sha256 = "3be4d7b71b1c6e4207c76af300d5db55397e36b45d80f29429a5d600aeb815ca"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A weathered, low-poly wooden canoe with a flat, grey interior and a tan, planked hull. The stern features a small outboard motor with a dark grey casing and a colourful, striped decal. It appears functional and ready for a calm alpine lake."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 162
+meshes = 1
+materials = 1
+size = [1.7241919, 1.2093159, 4.553277]
+
+[mesh.sm_prop_chair_folding_01]
+name = "SM_Prop_Chair_Folding_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Chair_Folding_01.fbx"
+sha256 = "6e67310d9fd2ec0ab058dd7c5b9baf2c1e5b48735e12fae80fd654ce333be547"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A compact, low-slung folding stool with a contoured teal seat and crossed white legs, ending in dark brown feet. The seat shows subtle wear and a small white highlight, suggesting a smooth, slightly glossy finish. Its simple, sturdy design makes it ideal for campsites or rustic alpine scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 588
+meshes = 1
+materials = 1
+size = [0.545271, 0.709268, 0.574915]
+
+[mesh.sm_prop_chair_log_01]
+name = "SM_Prop_Chair_Log_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Chair_Log_01.fbx"
+sha256 = "cef5c23f1133eac64c5ac2fa54d8ecfff46152eae11ca1ef93a6844e5c3a366c"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low-poly armchair built from thick, flat planks in a warm, honey-toned wood, featuring a high, slightly reclined slatted backrest and a solid seat. The blocky, chunky construction gives it a sturdy, rustic feel, with visible grain-like texture and a clean, unweathered finish that suits an alpine cabin or outdoor..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1128
+meshes = 1
+materials = 1
+size = [0.891147, 1.175758, 1.0109171]
+
+[mesh.sm_prop_chair_log_01_collision]
+name = "SM_Prop_Chair_Log_01_Collision"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Chair_Log_01_Collision.fbx"
+sha256 = "50c0f21f1cad1542b41d933ce2b87202fff5b573de16692b02e674f94a983978"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A blocky, low-poly armchair built from thick, chunky planks, featuring a high, slightly reclined backrest and solid side panels. The wood is weathered and greyed, with patches of faded olive-green paint and a distinctive vertical rainbow-striped decal on the left armrest, giving it a rustic, abandoned look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.893275, 1.214842, 1.040558]
+
+[mesh.sm_prop_fish_rack_01]
+name = "SM_Prop_Fish_Rack_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Fish_Rack_01.fbx"
+sha256 = "c72d16bad774345831d4ff150ff77911cdd83ac6d21dbfdcb86d513e66e22c53"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A rustic A-frame rack of pale, knotted logs supports a crossbar hung with five silvery fish, their dark fins and tails contrasting against the light wood, evoking a weathered alpine fishing camp."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4032
+meshes = 11
+materials = 1
+size = [3.408737, 2.083373, 1.6560011]
+
+[mesh.sm_prop_fishing_rod_01]
+name = "SM_Prop_Fishing_Rod_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Fishing_Rod_01.fbx"
+sha256 = "ba769f1910919f5dec564cf6745a3ebdd1bc3e6d0dc8bcc35bc3c938f1919479"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A slender, gently curved rod in muted olive green with a pale grey handle and a small white reel, appearing clean and ready for use in a low-poly alpine setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 870
+meshes = 1
+materials = 1
+size = [0.175646, 1.858432, 0.490991]
+
+[mesh.sm_prop_fishing_rod_stand_01]
+name = "SM_Prop_Fishing_Rod_Stand_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Fishing_Rod_Stand_01.fbx"
+sha256 = "fa2098a2bd93235578bd55c2d7dd9dd609fcc8f7e44ce71296e1d6470b2da0e2"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A simple, low-poly wooden stand with two angled orange legs and a pale grey horizontal rest, designed to hold a fishing rod upright. The clean, faceted geometry and muted alpine palette make it a practical, unobtrusive prop for campsite or lakeside scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 302
+meshes = 1
+materials = 1
+size = [0.416564, 0.332262, 0.45259303]
+
+[mesh.sm_prop_fossil_01]
+name = "SM_Prop_Fossil_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Fossil_01.fbx"
+sha256 = "c9ed4d6223508023fc21fba1a6e3e6bb487e9c171d885d493dc57ed58bd776df"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A complete fossilized skeleton of a marine reptile, posed in a tight, upward-curving arc with a large skull, prominent ribcage, and a tall dorsal fin of neural spines. The bone is a uniform, pale sandy-brown, with a smooth, matte finish that suggests clean, stylized stone rather than weathered remains."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12884
+meshes = 1
+materials = 1
+size = [1.58561, 4.379055, 4.50874]
+
+[mesh.sm_prop_ice_auger_01]
+name = "SM_Prop_Ice_Auger_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Ice_Auger_01.fbx"
+sha256 = "2c6f46ba12ec93659fc46e398358416cadc3b89fa84b4cbbf4ab4729bb22fc60"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A slender, vertical hand tool with a white T-grip handle, a thin pale shaft, and a dark grey helical auger bit with a yellow collar, designed for drilling through ice."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 844
+meshes = 1
+materials = 1
+size = [0.262442, 1.717828, 0.327954]
+
+[mesh.sm_prop_ice_axe_01]
+name = "SM_Prop_Ice_Axe_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Ice_Axe_01.fbx"
+sha256 = "df1674112a8c8f50f8c541a1261fea13a77e9e747a33821d82f282adaf89095a"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A curved yellow shaft with a dark grip and a silver, pointed head, showing a slight bend and worn texture for a rugged, alpine look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 710
+meshes = 1
+materials = 1
+size = [0.067939, 0.70226705, 0.35841]
+
+[mesh.sm_prop_ice_fishing_hut_01]
+name = "SM_Prop_Ice_Fishing_Hut_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Ice_Fishing_Hut_01.fbx"
+sha256 = "512678e1f464f2aac06086daeac6d060587dc5f2b66abf584f3068ddcdfcf1bf"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A compact, boxy wooden cabin with a flat, dark grey roof and a small black stovepipe chimney. Vertical planks in warm tan and light brown are accented by grey corner trim, a single small window, and a door, all resting on a low timber skid base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4499
+meshes = 4
+materials = 2
+size = [3.337562, 3.410704, 3.5902271]
+
+[mesh.sm_prop_ice_fishing_hut_01_collision]
+name = "SM_Prop_Ice_Fishing_Hut_01_Collision"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Ice_Fishing_Hut_01_Collision.fbx"
+sha256 = "d953f985871be6333e407c111cea746eb6eaf3009e2e100ebcfeae5373b47fe8"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A compact, boxy cabin with a flat, planked roof and a small stovepipe chimney, set on a low wooden skid base. The walls are a muted olive green with weathered grey timber framing, and the front features a dark open doorway flanked by large, multi-coloured striped windows."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 230
+meshes = 1
+materials = 1
+size = [3.36108, 3.50126, 3.651557]
+
+[mesh.sm_prop_ice_fishing_hut_01_door_01_collision]
+name = "SM_Prop_Ice_Fishing_Hut_01_Door_01_Collision"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Ice_Fishing_Hut_01_Door_01_Collision.fbx"
+sha256 = "d2c495514af3dfecad8c728461810cf31f500ed5d1ca71241aa5242cbb4ae3b3"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A tall, narrow wooden door with a weathered grey plank face and a warm brown frame, featuring a brass handle and a cluster of irregular, pale frost-like patches that read as ice or snow damage. The reverse side is a plain, dark grey panel, giving it a distinct, worn, and cold-weather character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [0.970315, 1.892158, 0.15171099]
+
+[mesh.sm_prop_jetty_01]
+name = "SM_Prop_Jetty_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Jetty_01.fbx"
+sha256 = "7b29e74fae005d2898d603aaad4454946f1fb25ea9cc9fb4b80ac9b88cf773a3"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A small, weathered wooden dock or jetty with a slatted plank deck supported by four tall, slender posts. The pale, sun-bleached timber shows visible grain and a slightly uneven, rustic finish, suggesting an old, functional structure for mooring small boats or accessing shallow water."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3184
+meshes = 1
+materials = 1
+size = [3.446198, 4.428906, 5.074566]
+
+[mesh.sm_prop_jetty_01_collision]
+name = "SM_Prop_Jetty_01_Collision"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Jetty_01_Collision.fbx"
+sha256 = "c37bb6f770d2dd3818bcf8768eda544bb74f4cbe509e6c71e604685d7b5095bf"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A weathered wooden jetty platform with a slatted deck, supported by four thick, dark posts with lighter, worn ends. The planks show a mix of tan and grey tones, suggesting age and exposure to the elements. It is a simple, functional structure designed for a lakeside or riverbank setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 132
+meshes = 1
+materials = 1
+size = [3.510457, 4.469513, 5.160332]
+
+[mesh.sm_prop_lookout_01]
+name = "SM_Prop_Lookout_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Lookout_01.fbx"
+sha256 = "6139012788525ece0412b9813c393ad3d727261e951c9c7e27b6d5f56e43c038"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A rustic wooden watchtower on four sturdy legs with cross-bracing, featuring a planked platform enclosed by a simple railing. The weathered timber shows a warm brown tone with visible grain and plank details, suggesting a sturdy, functional lookout point for alpine environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8303
+meshes = 1
+materials = 1
+size = [3.242681, 5.797862, 5.466698]
+
+[mesh.sm_prop_lookout_02_collision]
+name = "SM_Prop_Lookout_02_Collision"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Lookout_02_Collision.fbx"
+sha256 = "41c008302c0b2ecc15989630753a766a749d01968bdf7232de7e29a95375ffa9"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A weathered wooden lookout platform on four sturdy legs, featuring a low, open-sided railing and a small ladder for access. The timber is a muted, greyish green with patches of faded red and blue paint, giving it a rustic, abandoned appearance suited to an alpine setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 192
+meshes = 1
+materials = 1
+size = [3.068332, 5.818877, 5.318016]
+
+[mesh.sm_prop_oar_01]
+name = "SM_Prop_Oar_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Oar_01.fbx"
+sha256 = "f0e7be8667197123f5eca2ab7b0dfa659788f90a8dd84860d5a559ad756c30f0"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A long, slender wooden oar with a narrow shaft and a flat, rounded blade, finished in a muted, weathered brown. The handle end is capped with a small, rounded knob, and the blade shows subtle grain and wear, suggesting a functional, well-used prop for rowboats or rafts in a low-poly alpine setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 226
+meshes = 1
+materials = 1
+size = [0.337458, 0.055077, 2.4839072]
+
+[mesh.sm_prop_sleeping_bag_01]
+name = "SM_Prop_Sleeping_Bag_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Sleeping_Bag_01.fbx"
+sha256 = "ce59a314f087bed682246f96becb4aab2f85b5b9e175f2e85fbdc3669839e68d"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, elongated mummy-style bag with a rounded charcoal foot box and a grey hood end, wrapped in a warm ochre shell with faint, lighter stitched panel lines across the top. The fabric appears taut and neatly packed, suggesting a clean, ready-to-use camping prop that reads clearly at a distance."
+differs = "The largest and most detailed mummy-style bag, with stitched panel lines and a hood, suited for rugged alpine camping."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 778
+meshes = 1
+materials = 1
+size = [0.93173003, 0.28477, 2.0937529]
+
+[mesh.sm_prop_sleeping_bag_02]
+name = "SM_Prop_Sleeping_Bag_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Sleeping_Bag_02.fbx"
+sha256 = "404610ed0cbffaa4b02ff22fa614cdb8b83fe5748065a5e9114bb97ce2dfe509"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, flat, rectangular bedroll in a pale mint green, with a grey pillow-like section at one end and a small grey strap detail near the other, suggesting a lightweight, compact camping prop."
+differs = "The plainest and most compact flat bedroll, with a pillow and strap, ideal for lightweight minimalist travel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 602
+meshes = 1
+materials = 1
+size = [0.84349, 0.230057, 1.793711]
+
+[mesh.sm_prop_tent_01]
+name = "SM_Prop_Tent_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Tent_01.fbx"
+sha256 = "3dde53b367dea6b1632e3e5212ad52e481a2da3608767a6876bbb621bdfe4d17"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, wide dome tent with a dark grey base and a rust-red canvas shell, accented by pale pink seams and a tan arched doorway. The faceted, low-poly surface gives it a sturdy, stylized look, and the clean, unworn texture makes it appear brand new and ready for a campsite."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1168
+meshes = 2
+materials = 1
+size = [2.606822, 1.764452, 2.617294]
+
+[mesh.sm_prop_thermos_01]
+name = "SM_Prop_Thermos_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Thermos_01.fbx"
+sha256 = "653aee07dc53a8b9ab088fbab271bf455cfb264bc8454967c6acfa7bfee9731d"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A tall, slender cylindrical flask with a faceted, low-poly body in dark navy blue, topped by a translucent white cap and a matching base. A small, pale label is affixed to the side, and the matte finish suggests a rugged, insulated design for outdoor use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 216
+meshes = 1
+materials = 1
+size = [0.141907, 0.407347, 0.141908]
+
+[mesh.sm_prop_wood_pile_01]
+name = "SM_Prop_Wood_Pile_01"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Wood_Pile_01.fbx"
+sha256 = "822d06f0fe8c22b7250cb88c33b00900ed351ac9e70208efb80dc2856923760c"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, roughly pyramidal stack of cut logs, with the top layer laid crosswise over the base to form a stable, compact pile. The bark is a dark, weathered brown with lighter, pale tan ends showing growth rings, giving it a dry, seasoned look."
+differs = "Taller, more compact pyramidal stack with crosswise top layer, ideal for a neat, stable campfire or fuel pile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1468
+meshes = 1
+materials = 1
+size = [1.409514, 0.613698, 0.682475]
+
+[mesh.sm_prop_wood_pile_02]
+name = "SM_Prop_Wood_Pile_02"
+pack = "polygon_alpine_mountain_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Wood_Pile_02.fbx"
+sha256 = "ffd6037eeeab1b1d73e5ed5d3e2500dc9ae9ffc3d1f4c2e9b5c4e423db0b65d5"
+atlas = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+textures = "PolygonNatureBiomesS2_AlpineMountain_Texture_01_B.png"
+description = "A low, wide stack of roughly a dozen cut logs, with pale, flat-sawn ends and dark brown bark, arranged in a loose, slightly irregular pile that reads as a natural, hand-built stack rather than a uniform crate, making it ideal for a rustic camp or lumber site."
+differs = "Wider, flatter, and more irregular, with a looser hand-built look, best for a rustic lumber site or scattered debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1416
+meshes = 1
+materials = 1
+size = [1.528396, 0.496303, 0.682264]

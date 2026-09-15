@@ -460,6 +460,7 @@ fn index_all(
             dresses: asset.dresses.clone(),
             room: asset.room.clone(),
             leaf: asset.leaf.clone(),
+            glass: asset.glass.clone(),
             scale: asset.scale,
             offset: asset.offset,
             rotation: asset.rotation,

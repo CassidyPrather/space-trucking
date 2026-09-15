@@ -64,6 +64,19 @@ texture and painting nothing is now a refusal — one that is exactly as
 good as the question `usable_image` asks, which is where the third crate
 got past it.
 
+**And a colour is not a light.** The fourth defect was a lamp rather
+than a crate, and it was not grey: it glowed all over. A Synty FBX can
+name TWO textures it cannot find — the colour atlas and, on a fitting
+the pack lights, the emissive atlas beside it, wired by the importer into
+the material's emission. The rebind above rebound the colour atlas onto
+every placeholder node alike, so the lamp's emission was fed its own
+albedo and the whole body burned at the brightness of its paint. An
+image node feeding emission is never a place for the colour atlas: where
+the manifest declares an `emissive`, `light_with` rebinds THAT onto the
+importer's node; where it declares none, `unlight_strays` unwires the
+reference and says so, and the mesh is converted unlit rather than lit
+with the wrong picture.
+
 One thing it still deliberately does not do: correct scale. A Synty FBX
 arrives at whatever unit its exporter chose, and guessing here would put
 the correction somewhere nobody can see it, while `art/manifest.toml`'s
@@ -242,6 +255,32 @@ def paint_with(path):
     return image
 
 
+def principled(tree):
+    """This tree's Principled BSDF, or None for a material built some other way."""
+    return next((node for node in tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
+
+
+def emission_socket(shader):
+    """The shader's emission colour input, under whichever name this Blender gives it."""
+    return shader.inputs.get("Emission Color") or shader.inputs.get("Emission")
+
+
+def feeders(tree, socket):
+    """The image nodes wired into `socket`, each with the link that wires it.
+
+    What the importer leaves behind when an FBX names an emissive: an
+    Image Texture node linked into emission, holding a placeholder if the
+    file was not there. Empty for a socket nobody wired, and for `None`.
+    """
+    if socket is None:
+        return []
+    return [
+        (link.from_node, link)
+        for link in tree.links
+        if link.to_socket == socket and link.from_node.type == "TEX_IMAGE"
+    ]
+
+
 def light_with(path):
     """Wire this emissive atlas into every material in the scene.
 
@@ -252,7 +291,12 @@ def light_with(path):
     Unity, in the `.mat`, which the FBX does not carry — so there is no
     statement here to defer to and the declaration is the whole of it.
     Every material gets it, on the emission slot alone; nothing about
-    Base Color is touched.
+    Base Color is touched. Where the importer already wired an image node
+    into emission — an FBX that named an emissive by a path that is not
+    on this machine — the atlas is rebound onto that node, for the reason
+    `paint_material` rebinds the colour one: the wiring is what the file
+    asked for and only the pixels are missing, and a second node beside
+    it would be two claims on one socket.
 
     The image is the pack's own emissive atlas, laid out on the same
     swatch grid as the colour one: black everywhere the mesh is not lit,
@@ -304,16 +348,25 @@ def light_material(material, image):
     tree = material.node_tree
     if tree is None:
         return
-    shader = next((node for node in tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
+    shader = principled(tree)
     if shader is None:
         return
-    colour = shader.inputs.get("Emission Color") or shader.inputs.get("Emission")
+    colour = emission_socket(shader)
     strength = shader.inputs.get("Emission Strength")
     if colour is None:
         return
-    node = tree.nodes.new("ShaderNodeTexImage")
-    node.image = image
-    tree.links.new(node.outputs["Color"], colour)
+    wired = feeders(tree, colour)
+    if wired:
+        # The importer's own node, rebound — unless it holds an image that
+        # actually loads, which is an FBX that knew where its emissive
+        # was and is left alone like a colour reference that resolves.
+        for node, _ in wired:
+            if not usable_image(node.image):
+                node.image = image
+    else:
+        node = tree.nodes.new("ShaderNodeTexImage")
+        node.image = image
+        tree.links.new(node.outputs["Color"], colour)
     if strength is not None and not strength.is_linked:
         # Blender 4.x defaults this to 0.0 on an untouched Principled
         # node, and a texture into a colour multiplied by nothing is a
@@ -321,6 +374,66 @@ def light_material(material, image):
         # which is the exact failure mode every colourless crate in this
         # pipeline's history has taken.
         strength.default_value = 1.0
+
+
+def unlight_strays(source):
+    """Unwire every emission image reference that resolves nowhere.
+
+    Run only when the manifest declared no `emissive`, which is the case
+    `light_with` does not reach. An FBX that names an emissive atlas by
+    the path of the tree it was exported from arrives with an image node
+    holding a placeholder wired into emission and an Emission Strength
+    the importer set to one — and left like that, what the exporter
+    writes is a material lit by nothing in particular, or by whatever
+    somebody rebound onto the placeholder. The floor lamp this was
+    written for burned at the brightness of its own paint, all over.
+
+    A reference that resolves nowhere is silence (`usable_image`), and
+    silence on the emission slot means unlit: the link comes off, the
+    strength goes to nought, and a sentence on standard error names the
+    file the FBX asked for, because the pack almost certainly ships it
+    and one `emissive` line in the manifest is the whole of the cure. An
+    emission reference that LOADS is a statement and is left alone.
+    """
+    strays = []
+    for obj in mesh_objects():
+        for material in getattr(obj.data, "materials", None) or []:
+            if material is None:
+                continue
+            tree = (
+                getattr(material, "node_tree", None)
+                if getattr(material, "use_nodes", True)
+                else None
+            )
+            if tree is None:
+                continue
+            shader = principled(tree)
+            if shader is None:
+                continue
+            colour = emission_socket(shader)
+            strength = shader.inputs.get("Emission Strength")
+            unwired = 0
+            for node, link in feeders(tree, colour):
+                if usable_image(node.image):
+                    continue
+                named = getattr(node.image, "filepath", "") or getattr(node.image, "name", "")
+                strays.append(named or "an image node holding nothing")
+                tree.links.remove(link)
+                unwired += 1
+            if unwired and strength is not None and not strength.is_linked:
+                # Blender 4.x defaults the colour to white, so a strength
+                # the importer set to one would light the whole mesh
+                # white the moment the texture came off it.
+                strength.default_value = 0.0
+    if strays:
+        names = ", ".join(sorted(set(strays)))
+        print(
+            f"fbx_to_gltf: {source} names an emissive it cannot find, and no `emissive`\n"
+            f"  line declares one, so it is converted unlit: {names}\n"
+            "  The pack's own is usually under Textures/Emissive/, on the same swatch\n"
+            "  grid as the colour atlas; an `emissive` line in art/manifest.toml lights it.",
+            file=sys.stderr,
+        )
 
 
 def paint_material(material, image):
@@ -342,6 +455,12 @@ def paint_material(material, image):
     is enough to leave the whole of it alone, even if some other slot is
     broken. Overruling half of what a file says is how a fallback turns
     into a correction, and this is a fallback.
+
+    And a colour is not a light. An image node the importer wired into
+    EMISSION is a broken emissive reference, not a broken colour one,
+    and the fourth defect was the colour atlas rebound onto it: a lamp
+    lit by its own paint, all over. Those nodes are `light_with`'s and
+    `unlight_strays`'s, and this never touches them.
     """
     # Read through getattr: Blender 5.0 deprecates `Material.use_nodes`
     # and expects 6.0 to remove it, and the removal will mean what a
@@ -356,11 +475,16 @@ def paint_material(material, image):
     textures = [node for node in tree.nodes if node.type == "TEX_IMAGE"]
     if any(usable_image(node.image) for node in textures):
         return  # it named its own, and the name resolved
-    if textures:
-        for node in textures:
+    shader = principled(tree)
+    lit = [node for node, _ in feeders(tree, emission_socket(shader))] if shader else []
+    # Equality and not identity: Blender hands back a fresh wrapper for
+    # the same node on every access, so `is` never matches and the
+    # emission node is swept into the colour rebinding after all.
+    colour_nodes = [node for node in textures if not any(node == one for one in lit)]
+    if colour_nodes:
+        for node in colour_nodes:
             node.image = image
         return
-    shader = next((node for node in tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
     if shader is None:
         shader = tree.nodes.new("ShaderNodeBsdfPrincipled")
         output = next(
@@ -538,6 +662,8 @@ def main():
         refuse_unless_painted(source, texture, paint_with(texture))
     if emissive is not None:
         light_with(emissive)
+    else:
+        unlight_strays(source)
     export_glb(destination)
     report_bounds()
     print(f"fbx_to_gltf: wrote {destination}")

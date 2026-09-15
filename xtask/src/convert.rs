@@ -124,6 +124,27 @@ impl Converter {
                 destination.display()
             ));
         }
+        // **What the script chose to say about a conversion that
+        // succeeded is said here too.** Blender's own standard error is
+        // noise on a good run, so it is not relayed; the script's own
+        // sentences are, because the one it has today names a file the
+        // FBX asked for and the manifest never declared — the fitting
+        // that would glow if one line were added — and a notice nobody
+        // sees is a notice nobody acts on.
+        let said = String::from_utf8_lossy(&output.stderr);
+        let notices: Vec<&str> = said
+            .lines()
+            .filter(|line| line.starts_with("fbx_to_gltf:") || line.starts_with("  "))
+            .collect();
+        if !notices.is_empty() {
+            eprintln!(
+                "{}",
+                indent(&notices.join(
+                    "
+"
+                ))
+            );
+        }
         Ok(measured(&String::from_utf8_lossy(&output.stdout)))
     }
 

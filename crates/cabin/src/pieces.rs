@@ -306,6 +306,13 @@ impl Plugin for PiecesPlugin {
                     .chain()
                     .in_set(Phase::View),
             );
+        // A bought lamp's glass is copied for it before the level is
+        // written, so a scene that lands this frame wakes this frame.
+        #[cfg(feature = "art")]
+        app.add_systems(
+            Update,
+            wake_fittings.in_set(Phase::View).before(sync_fixtures),
+        );
     }
 }
 
@@ -484,16 +491,23 @@ struct RatTail {
 /// the sim's `lamp_lit` says so: berthed in the hold, nowhere else — a
 /// lamp on the counter or boxed in a cubby is dark glass.
 ///
-/// **`mat` is `None` on a lamp somebody bought**, and that is the whole
-/// of what a purchased lamp gives up. A Synty fitting is painted from a
-/// flat atlas with no emissive in it, so there is no glass of its own to
-/// wake; what says a bought lamp is burning is the pool of light under
-/// it, which is this component's other sink and the one the room reads.
+/// **`mat` is `None` on a lamp somebody bought, and `lit` is what it
+/// has instead.** A purchased lamp's glass arrives as a scene, frames
+/// later, painted from the pack's own emissive atlas — and a glTF
+/// material is shared by every copy of its scene, so the level cannot
+/// be written into the one the loader made. [`wake_fittings`] gives the
+/// lamp its own copies of every material the pack lit as the scene
+/// lands and files them here; `sync_fixtures` writes the level into
+/// them from then on exactly as it writes the whitebox bulb's glass. A
+/// bought lamp whose pack lit nothing (no `emissive` line) keeps an
+/// empty list and is read by the pool of light under it alone.
 #[derive(Component)]
 struct LampGlow {
     piece: u32,
     color: Color,
     mat: Option<Handle<StandardMaterial>>,
+    /// A bought lamp's own copies of the materials its pack lit.
+    lit: Vec<Handle<StandardMaterial>>,
     /// Eased lit level, `0..=1`.
     level: f32,
 }
@@ -1847,6 +1861,11 @@ fn sync_fixtures(
             && let Some(mut mat) = materials.get_mut(glass)
         {
             glow::set_lamp(&mut mat, lamp.color, lamp.level);
+        }
+        for fitting in &lamp.lit {
+            if let Some(mut mat) = materials.get_mut(fitting) {
+                glow::set_fitting(&mut mat, lamp.level);
+            }
         }
     }
     for (arm, mut transform) in &mut arms {
@@ -5400,6 +5419,125 @@ fn bulb_part(kind: Kind, shade: &Part, radius: f32) -> Part {
     .role(Role::Bulb { range })
 }
 
+/// A bought body that already carries its lamp's own material copy
+/// ([`wake_fittings`]), so the walk that copies leaves it be.
+#[cfg(feature = "art")]
+#[derive(Component)]
+struct Woken;
+
+/// **A bought lamp's own glass, found as its scene lands.**
+///
+/// A whitebox bulb owns a material instance from the frame it is cut,
+/// and `sync_fixtures` writes the eased level into it. A purchased lamp
+/// arrives frames later as a scene, and a glTF material is shared by
+/// every copy of that scene — write a level into it and every lamp of
+/// that kind aboard wakes at once. So this walks each bought lamp's
+/// descendants the way `art::mask_dressed` does, and gives the lamp its
+/// own copy of every material the pack lit: one whose emissive is a
+/// texture, which is the `emissive` line's atlas — black everywhere the
+/// pack meant no light and the lamp's colour where it did — so the
+/// level scales exactly the faces Synty lit and nothing else. The copy
+/// is filed on the lamp's [`LampGlow`] and written from then on like
+/// the whitebox glass is, and the body is marked [`Woken`] so a rig
+/// carrying a copy is not copied again next frame.
+///
+/// The `glass` line's node gets a copy too, drawn see-through
+/// (`glow::glaze`): the packs that model a shade put the bulb INSIDE
+/// it, and an opaque shade over a lit bulb is a lamp that reads dark.
+/// **The node is not the body that draws it.** The loader spawns a
+/// glTF node under its own name and hangs each primitive that carries
+/// a material as a CHILD of it, named after the mesh — so the name the
+/// manifest spells is an ancestor of the material, never on it, and
+/// what is glazed is everything under the node so named. A body whose
+/// piece hangs no light — a bought crate with a lit panel on it — is
+/// left on the shared material, burning flat as the pack meant; the
+/// level is a lamp's fact and nobody else's.
+///
+/// **A lamp with no such node is said once and drawn as it came**, for
+/// the reason `art::open_doors` says so about a leaf: the resolver
+/// never opens the mesh, so here is the first place the name meets the
+/// file, and a misspelled glass is a shade drawn opaque over the bulb
+/// it was named to reveal.
+#[cfg(feature = "art")]
+fn wake_fittings(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut bodies: Query<
+        (
+            Entity,
+            &crate::outline::MaskBody,
+            Option<&mut crate::art::Glazed>,
+        ),
+        With<crate::art::Worn>,
+    >,
+    kin: Query<&Children>,
+    names: Query<&Name>,
+    parts: Query<&MeshMaterial3d<StandardMaterial>, Without<Woken>>,
+    mut lamps: Query<&mut LampGlow>,
+) {
+    use std::collections::HashSet;
+
+    for (root, mark, mut glazed) in &mut bodies {
+        let mut lamp = lamps.iter_mut().find(|lamp| lamp.piece == mark.piece());
+        // The nodes spelled by the glass line, and everything under them.
+        let panes: Vec<Entity> = glazed.as_ref().map_or_else(Vec::new, |glazed| {
+            kin.iter_descendants(root)
+                .filter(|node| {
+                    names
+                        .get(*node)
+                        .is_ok_and(|name| name.as_str() == glazed.node)
+                })
+                .collect()
+        });
+        let glass: HashSet<Entity> = panes
+            .iter()
+            .flat_map(|&node| std::iter::once(node).chain(kin.iter_descendants(node)))
+            .collect();
+        let mut landed = false;
+        for part in kin.iter_descendants(root) {
+            landed = true;
+            let Ok(worn) = parts.get(part) else {
+                continue;
+            };
+            let is_glass = glass.contains(&part);
+            let Some(mut own) = materials.get(&worn.0).cloned() else {
+                continue;
+            };
+            let lit = own.emissive_texture.is_some() && lamp.is_some();
+            if !is_glass && !lit {
+                continue;
+            }
+            if lit && let Some(lamp) = lamp.as_ref() {
+                glow::set_fitting(&mut own, lamp.level);
+            }
+            if is_glass {
+                glow::glaze(&mut own);
+            }
+            let handle = materials.add(own);
+            if lit && let Some(lamp) = lamp.as_mut() {
+                lamp.lit.push(handle.clone());
+            }
+            commands
+                .entity(part)
+                .insert((MeshMaterial3d(handle), Woken));
+        }
+        if let Some(glazed) = glazed.as_mut()
+            && landed
+            && !glazed.looked
+        {
+            glazed.looked = true;
+            if panes.is_empty() {
+                eprintln!(
+                    "art: `{}` names `{}` as its glass, and its scene has no node by that \
+                     name to draw see-through — the lamp keeps its shade as it came. \
+                     `cargo xtask art dex` lists what a file is made of.",
+                    glazed.what, glazed.node
+                );
+            }
+        }
+    }
+}
+
 // ------------------------------------------------------------ the stamping --
 
 /// **Stamp one piece's rig into the world**: every part [`parts`]
@@ -5443,6 +5581,14 @@ fn build_kind(rig: &mut RigParts, piece: &Piece) {
         // the mark down to each body as it arrives. Without it a bought
         // mesh selects and never wears the line.
         rig.mask(body);
+        // **A lamp's shade, named, goes on the root too**, for the pass
+        // that draws it see-through once the scene has landed
+        // (`wake_fittings`) — the same shape as a doorway's `leaf`.
+        if let Some(node) = &dressing.glass {
+            rig.commands
+                .entity(body)
+                .insert(crate::art::Glazed::new(dressing.id.clone(), node.clone()));
+        }
         // **What it replaces is the DRAWING, and a lamp is not only a
         // drawing.** Three of this game's kinds are lamps and a fourth
         // is paint that glows; each of them hangs a real `PointLight`
@@ -5690,6 +5836,7 @@ fn stamp_light(
                     piece: piece.id,
                     color,
                     mat: glass,
+                    lit: Vec::new(),
                     level: 0.0,
                 },
                 ChildOf(rig.root),
@@ -7638,6 +7785,202 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// **A bought lamp wakes its own glass and nobody else's.**
+    ///
+    /// A glTF material is shared by every copy of its scene, and for a
+    /// year that was the reason a purchased lamp burned flat: writing
+    /// `sync_fixtures`'s level into the shared material would light
+    /// every lamp of that kind aboard at once. So the walk that finds a
+    /// bought lamp's bodies gives each lamp its own copy of every
+    /// material the pack lit, files the copy on that lamp's rig, draws
+    /// the named glass see-through, and leaves the shared material to
+    /// the bodies that hang no light. Asked with two lamps sharing one
+    /// material, a glass line on one of them, and a bought crate the
+    /// pack happened to light.
+    #[cfg(feature = "art")]
+    #[test]
+    #[allow(clippy::too_many_lines)] // two lamps, a crate, and every claim about the copies
+    fn a_bought_lamp_wakes_its_own_glass_and_nobody_elses() {
+        use crate::art::Glazed;
+        use crate::outline::MaskBody;
+
+        let mut app = App::new();
+        app.init_resource::<Assets<StandardMaterial>>()
+            .init_resource::<Assets<Image>>()
+            .add_systems(Update, wake_fittings);
+        let atlas = app
+            .world_mut()
+            .resource_mut::<Assets<Image>>()
+            .add(Image::default());
+        let shared = app
+            .world_mut()
+            .resource_mut::<Assets<StandardMaterial>>()
+            .add(StandardMaterial {
+                emissive_texture: Some(atlas),
+                ..default()
+            });
+
+        // A rig as `build_kind` leaves one: the light with its glow
+        // beside the bought root, and the scene's bodies under the root
+        // as the spawner copies them in — a shade and a pane, one shared
+        // material between them, as the packs really ship a sconce, and
+        // laid out as the loader really lays a scene out: a node under
+        // the name the file gives it, with the primitive that carries
+        // the material a child of it, named after the mesh.
+        let rig = |app: &mut App, piece: u32, glass: Option<&str>| {
+            let root = app.world_mut().spawn(Transform::default()).id();
+            let light = app
+                .world_mut()
+                .spawn((
+                    LampGlow {
+                        piece,
+                        color: palette::GLINT,
+                        mat: None,
+                        lit: Vec::new(),
+                        level: 0.0,
+                    },
+                    ChildOf(root),
+                ))
+                .id();
+            let mut body = app.world_mut().spawn((
+                crate::art::Worn(Kind::WallLamp),
+                MaskBody::of(piece),
+                Transform::default(),
+                ChildOf(root),
+            ));
+            if let Some(node) = glass {
+                body.insert(Glazed::new(String::from("sconce"), String::from(node)));
+            }
+            let body = body.id();
+            let primitive = |app: &mut App, node: &str| {
+                let node = app
+                    .world_mut()
+                    .spawn((Name::new(node.to_owned()), ChildOf(body)))
+                    .id();
+                app.world_mut()
+                    .spawn((
+                        Name::new("Mesh.001"),
+                        MeshMaterial3d(shared.clone()),
+                        ChildOf(node),
+                    ))
+                    .id()
+            };
+            let shade = primitive(app, "SM_Shade");
+            let pane = primitive(app, "SM_Glass");
+            (light, shade, pane)
+        };
+        let (light_a, shade_a, pane_a) = rig(&mut app, 7_001, Some("SM_Glass"));
+        let (light_b, shade_b, pane_b) = rig(&mut app, 7_002, None);
+        // And a bought crate the pack lit a panel on: no light of its own.
+        let crate_root = app
+            .world_mut()
+            .spawn((
+                crate::art::Worn(Kind::SuspiciousCrate),
+                MaskBody::of(7_003),
+                Transform::default(),
+            ))
+            .id();
+        let crate_body = app
+            .world_mut()
+            .spawn((MeshMaterial3d(shared.clone()), ChildOf(crate_root)))
+            .id();
+
+        app.update();
+
+        let drawn = |app: &App, body: Entity| {
+            app.world()
+                .entity(body)
+                .get::<MeshMaterial3d<StandardMaterial>>()
+                .expect("still drawn")
+                .0
+                .clone()
+        };
+        let lit = |app: &App, light: Entity| {
+            app.world()
+                .entity(light)
+                .get::<LampGlow>()
+                .expect("the light")
+                .lit
+                .clone()
+        };
+        let (a_shade, a_pane) = (drawn(&app, shade_a), drawn(&app, pane_a));
+        let (b_shade, b_pane) = (drawn(&app, shade_b), drawn(&app, pane_b));
+        assert_ne!(
+            a_shade, shared,
+            "a bought lamp still draws the material every copy of its scene shares"
+        );
+        assert_ne!(
+            a_shade, b_shade,
+            "two lamps were handed one copy, which is the shared material with an extra step"
+        );
+        assert_ne!(
+            a_pane, a_shade,
+            "the glass node was not given a copy of its own to draw see-through"
+        );
+        for (light, own, other) in [
+            (light_a, [&a_shade, &a_pane], [&b_shade, &b_pane]),
+            (light_b, [&b_shade, &b_pane], [&a_shade, &a_pane]),
+        ] {
+            let filed = lit(&app, light);
+            assert_eq!(
+                filed.len(),
+                2,
+                "a lamp's rig filed {} copies of two",
+                filed.len()
+            );
+            assert!(
+                own.iter().all(|one| filed.contains(one)),
+                "a lamp's own copies were filed on nobody"
+            );
+            assert!(
+                other.iter().all(|one| !filed.contains(one)),
+                "a lamp was handed the other lamp's glass to wake"
+            );
+        }
+        {
+            let materials = app.world().resource::<Assets<StandardMaterial>>();
+            let pane = materials.get(&a_pane).expect("the copy exists");
+            assert!(
+                matches!(pane.alpha_mode, AlphaMode::Blend) && pane.base_color.alpha() < 1.0,
+                "the named glass is drawn opaque over the bulb it was named to reveal"
+            );
+            let shade = materials.get(&a_shade).expect("the copy exists");
+            assert!(
+                matches!(shade.alpha_mode, AlphaMode::Opaque),
+                "a shade nobody called glass was drawn see-through"
+            );
+            let unnamed = materials.get(&b_pane).expect("the copy exists");
+            assert!(
+                matches!(unnamed.alpha_mode, AlphaMode::Opaque),
+                "a lamp with no glass line had a node glazed by the other lamp's"
+            );
+            assert_eq!(
+                shade.emissive,
+                LinearRgba::NONE,
+                "a copy taken from a dark lamp was left burning at the scene's own level"
+            );
+            assert!(
+                shade.emissive_texture.is_some(),
+                "the copy lost the atlas that masks the level to the lit faces"
+            );
+        }
+        assert_eq!(
+            drawn(&app, crate_body),
+            shared,
+            "a bought body that hangs no light was given a copy to wake"
+        );
+
+        // A second frame copies nothing again: the bodies are woken.
+        let before = app.world().resource::<Assets<StandardMaterial>>().len();
+        app.update();
+        assert_eq!(
+            app.world().resource::<Assets<StandardMaterial>>().len(),
+            before,
+            "a woken body was copied a second time"
+        );
+        assert_eq!(lit(&app, light_a).len(), 2);
     }
 
     /// **A lamp's bulb burns inside the shade that shades it.** Three

@@ -164,6 +164,13 @@ pub struct Asset {
     /// to hide. Checked for shape here, like `room`; which roles draw a
     /// leaf open is the cabin's own question.
     pub leaf: Option<String>,
+    /// **Which node of the mesh is a lamp's glass**, and only for a
+    /// `cargo/` binding. A bought fitting's shade is a node of its own
+    /// in the packs that model one, and naming it is what lets the
+    /// cabin draw that node see-through, so the lit body inside it
+    /// reads. Whether the node is IN the mesh is, like a leaf, the
+    /// cabin's own question.
+    pub glass: Option<String>,
     /// Multiplied onto the size the game's own description asks for.
     pub scale: [f32; 3],
     /// Shifted, in the description's frame, after scaling.
@@ -244,6 +251,7 @@ impl Manifest {
         Ok(())
     }
 
+    #[allow(clippy::too_many_lines)] // one line per key, and a table has this many keys
     fn read_assets(
         &mut self,
         path: &Path,
@@ -266,6 +274,7 @@ impl Manifest {
             let dresses = draft.take_optional_str("dresses", "asset", &id, path)?;
             let room = draft.take_optional_str("room", "asset", &id, path)?;
             let leaf = draft.take_optional_str("leaf", "asset", &id, path)?;
+            let glass = draft.take_optional_str("glass", "asset", &id, path)?;
             let scale = draft.take_triple("scale", "asset", &id, path, [1.0; 3])?;
             let offset = draft.take_triple("offset", "asset", &id, path, [0.0; 3])?;
             let rotation = draft.take_triple("rotation", "asset", &id, path, [0.0; 3])?;
@@ -296,6 +305,7 @@ impl Manifest {
                 dresses.as_deref(),
                 room.as_deref(),
                 leaf.as_deref(),
+                glass.as_deref(),
             )?;
             if !sha256.is_empty() && !is_digest(&sha256) {
                 return Err(complain(
@@ -340,6 +350,7 @@ impl Manifest {
                     dresses,
                     room,
                     leaf,
+                    glass,
                     scale,
                     offset,
                     rotation,
@@ -535,15 +546,20 @@ const NAMESPACES: [&str; 3] = ["cargo", "fabric", "fitting"];
 /// The namespace whose bindings a `room` line may qualify.
 const ROOMED: &str = "fabric";
 
-/// A `dresses` line and the `room` and `leaf` lines beside it, refused
-/// together where any cannot be used: the binding's shape first, then
-/// each of the other two against the binding.
+/// The namespace whose bindings a `glass` line may name a node of: the
+/// lamps are cargo.
+const CARGO: &str = "cargo";
+
+/// A `dresses` line and the `room`, `leaf` and `glass` lines beside it,
+/// refused together where any cannot be used: the binding's shape first,
+/// then each of the others against the binding.
 fn check_binding(
     path: &Path,
     line: usize,
     dresses: Option<&str>,
     room: Option<&str>,
     leaf: Option<&str>,
+    glass: Option<&str>,
 ) -> Result<(), Complaint> {
     let complain = |message: String| Complaint {
         file: path.to_path_buf(),
@@ -565,7 +581,45 @@ fn check_binding(
     {
         return Err(complain(format!("`leaf` {reason}")));
     }
+    if let Some(glass) = glass
+        && let Some(reason) = glass_trouble(dresses, glass)
+    {
+        return Err(complain(format!("`glass` {reason}")));
+    }
     Ok(())
+}
+
+/// Why a `glass` line cannot be used, or `None` if it can.
+///
+/// [`leaf_trouble`]'s twin on the other side of the namespace line: a
+/// lamp is cargo, so a `glass` line beside a fabric or fitting binding,
+/// or beside no binding, could never apply. Whether the node is in the
+/// mesh is the cabin's question, answered on stderr the way a missing
+/// leaf is.
+fn glass_trouble(dresses: Option<&str>, glass: &str) -> Option<String> {
+    match dresses.and_then(|binding| binding.split_once('/')) {
+        Some((namespace, _)) if namespace == CARGO => {}
+        Some((namespace, _)) => {
+            return Some(format!(
+                "is `{glass}`, and a `glass` line goes with a `{CARGO}/` binding, not a \
+                 `{namespace}/` one: the lamps are cargo, and a wall has no glass to wake"
+            ));
+        }
+        None => {
+            return Some(format!(
+                "is `{glass}`, and nothing here dresses anything; a `glass` line names the \
+                 node of a bought lamp that is its shade, so it wants a `dresses` line \
+                 beside it"
+            ));
+        }
+    }
+    if glass.trim().is_empty() {
+        return Some(String::from(
+            "is empty, and a glass is the name of a node in the mesh, like \
+             `SM_Prop_Lighting_Wall_Glass_05`",
+        ));
+    }
+    None
 }
 
 /// Why a `leaf` line cannot be used, or `None` if it can.
@@ -962,6 +1016,9 @@ pub struct Resolved {
     /// Which node of the mesh is a door's leaf, carried through the same
     /// way. Absent means the module has no leaf to draw open.
     pub leaf: Option<String>,
+    /// Which node of the mesh is a lamp's glass, carried through the
+    /// same way. Absent means nothing on the body is drawn see-through.
+    pub glass: Option<String>,
     pub scale: [f32; 3],
     pub offset: [f32; 3],
     pub rotation: [f32; 3],
@@ -1006,8 +1063,9 @@ pub fn render_index(resolved: &[Resolved]) -> String {
          # stale is read.\n\
          #\n\
          # `dresses` is which body of the game draws this one, `room` which room\n\
-         # kind a `fabric/` binding is for, and `leaf` which node of the mesh a\n\
-         # doorway draws open. `measured_mid` and\n\
+         # kind a `fabric/` binding is for, `leaf` which node of the mesh a\n\
+         # doorway draws open, and `glass` which node of a lamp is drawn\n\
+         # see-through. `measured_mid` and\n\
          # `measured_half` are the tight box the converter reported round the mesh, in\n\
          # the glb's own units — the fact the `fill` promise beside them was checked\n\
          # against. Both are absent where the converter reported nothing.\n",
@@ -1026,6 +1084,9 @@ pub fn render_index(resolved: &[Resolved]) -> String {
         }
         if let Some(leaf) = &entry.leaf {
             let _ = writeln!(text, "leaf = \"{leaf}\"");
+        }
+        if let Some(glass) = &entry.glass {
+            let _ = writeln!(text, "glass = \"{glass}\"");
         }
         let _ = write!(
             text,
@@ -1143,6 +1204,7 @@ pub fn read_index(path: &Path, text: &str) -> Result<Vec<Resolved>, Complaint> {
         let dresses = draft.take_optional_str("dresses", "asset", &id, path)?;
         let room = draft.take_optional_str("room", "asset", &id, path)?;
         let leaf = draft.take_optional_str("leaf", "asset", &id, path)?;
+        let glass = draft.take_optional_str("glass", "asset", &id, path)?;
         let scale = draft.take_triple("scale", "asset", &id, path, [1.0; 3])?;
         let offset = draft.take_triple("offset", "asset", &id, path, [0.0; 3])?;
         let rotation = draft.take_triple("rotation", "asset", &id, path, [0.0; 3])?;
@@ -1155,6 +1217,7 @@ pub fn read_index(path: &Path, text: &str) -> Result<Vec<Resolved>, Complaint> {
             dresses,
             room,
             leaf,
+            glass,
             scale,
             offset,
             rotation,
@@ -1307,6 +1370,7 @@ mod tests {
             dresses: Some("fabric/doorway".to_owned()),
             room: None,
             leaf: Some("SM_Bld_Wall_Door_01".to_owned()),
+            glass: None,
             scale: [1.0; 3],
             offset: [0.0; 3],
             rotation: [0.0; 3],
@@ -1316,6 +1380,65 @@ mod tests {
         assert!(text.contains("leaf = \"SM_Bld_Wall_Door_01\""), "{text}");
         let read = read_index(Path::new("index.toml"), &text).expect("its own dialect");
         assert_eq!(read[0].leaf.as_deref(), Some("SM_Bld_Wall_Door_01"));
+    }
+
+    /// **A `glass` line goes with a cargo binding, and is carried
+    /// through.** The lamps are cargo, so a glass named beside a wall
+    /// panel — or beside nothing — is a line that could never apply;
+    /// one beside a lamp reaches the index verbatim, because the game
+    /// reads the index and never the manifest.
+    #[test]
+    fn a_glass_goes_with_a_cargo_binding_and_survives_the_index() {
+        for (tail, wrong) in [
+            (
+                "dresses = \"fabric/wall\"\nglass = \"SM_Glass\"\n",
+                "fabric",
+            ),
+            ("glass = \"SM_Glass\"\n", "dresses"),
+            ("dresses = \"cargo/wall_lamp\"\nglass = \"\"\n", "empty"),
+        ] {
+            let complaint = parse(&format!(
+                "{PACK}\n[asset.lamp]\npack = \"demo\"\nsource = \"a.fbx\"\n{tail}"
+            ))
+            .err()
+            .unwrap_or_else(|| panic!("a glass that never applies was accepted: {tail}"));
+            assert!(
+                complaint.message.starts_with("`glass`") && complaint.message.contains(wrong),
+                "{complaint}"
+            );
+        }
+        let manifest = parse(&format!(
+            "{PACK}\n[asset.lamp]\npack = \"demo\"\nsource = \"a.fbx\"\n\
+             dresses = \"cargo/wall_lamp\"\nglass = \"SM_Prop_Lighting_Wall_Glass_05\"\n"
+        ))
+        .expect("a glass beside a lamp");
+        assert_eq!(
+            manifest.assets["lamp"].glass.as_deref(),
+            Some("SM_Prop_Lighting_Wall_Glass_05")
+        );
+        let text = render_index(&[Resolved {
+            id: "lamp".to_owned(),
+            glb: "glb/lamp.glb".to_owned(),
+            sha256: "c".repeat(64),
+            dresses: Some("cargo/wall_lamp".to_owned()),
+            room: None,
+            leaf: None,
+            glass: Some("SM_Prop_Lighting_Wall_Glass_05".to_owned()),
+            scale: [1.0; 3],
+            offset: [0.0; 3],
+            rotation: [0.0; 3],
+            fill: [1.0; 3],
+            measured: None,
+        }]);
+        assert!(
+            text.contains("glass = \"SM_Prop_Lighting_Wall_Glass_05\""),
+            "{text}"
+        );
+        let read = read_index(Path::new("index.toml"), &text).expect("its own dialect");
+        assert_eq!(
+            read[0].glass.as_deref(),
+            Some("SM_Prop_Lighting_Wall_Glass_05")
+        );
     }
 
     /// **A path in the manifest is a relative path inside its pack,
@@ -1360,6 +1483,7 @@ mod tests {
             dresses: Some("cargo/suspicious_crate".to_owned()),
             room: None,
             leaf: None,
+            glass: None,
             scale: [0.013_7, 1.0, 2.5],
             offset: [-0.25, 0.0, 0.125],
             rotation: [0.0, -90.0, 0.0],

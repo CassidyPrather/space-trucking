@@ -138,12 +138,13 @@ changing; remove a line only by shipping it or striking it in review.
   reason (docs/ART_PIPELINE.md, "Light is not a drawing"). A `form`
   line, or a second binding, is the fix; either wants a rule for what a
   covering with only one of the two declared should draw for the other
-- **A bought lamp's glass.** The three lamps are dressed and their room
-  light is kept, but a Synty fitting's atlas carries no emissive, so a
-  purchased lamp does not wake and dim the way a whitebox one does — it
-  is read by the pool of light under it alone. A `glass` line naming
-  the node (both node names are already measured and written down in
-  the manifest) plus a per-instance material clone is the fix
+- **A bought lamp's shade is glass by one number.** The three lamps
+  wake and dim their own glass now (docs/ART_PIPELINE.md, "Light is
+  not a drawing"), and the sconce's teardrop is drawn see-through so the
+  bulb inside it reads. What makes it see-through is one alpha in
+  `glow::glaze`, the same for every glass anybody names; the day a pack
+  ships a frosted shade and a clear one, that wants to be the line's
+  own number rather than the module's
 - The rest of the shell's dressing (docs/ART_PIPELINE.md, "The fabric
   namespace"): the nudge bench takes cargo and not panels, so a panel's
   four numbers are typed and checked by `resolve` rather than nudged;

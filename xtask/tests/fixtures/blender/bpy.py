@@ -8,8 +8,10 @@ came out grey because no atlas was ever handed over. The second came out
 grey because one was, and a skip rule read a broken texture reference as
 a material that knew its own texture. The third came out grey because
 the rewritten rule read Blender 5.0's placeholder for the same reference
-— `has_data` set, nought by nought — as pixels. None needed a mesh, a
-renderer or a `.glb` to catch. All three needed somebody to run the
+— `has_data` set, nought by nought — as pixels. The fourth was a lamp
+and it glowed all over, because the FBX named an emissive atlas it could
+not find and the rebind painted the colour atlas onto that node too.
+None needed a mesh, a renderer or a `.glb` to catch. All three needed somebody to run the
 script against what Blender actually answers, which is why the `Image`
 below models the answer and not the assumption.
 
@@ -76,6 +78,22 @@ class Socket:
     def __init__(self, node, name):
         self.node = node
         self.name = name
+        self._default_value = None
+
+    @property
+    def is_linked(self):
+        return any(link.to_socket == self for link in self.node.tree.links)
+
+    @property
+    def default_value(self):
+        return self._default_value
+
+    @default_value.setter
+    def default_value(self, value):
+        # A written default is a decision the script made about a socket
+        # — the strength that turns an emission on, or off.
+        say(f"{self.node.tree.material}/{self.node.name}.{self.name} = {value}")
+        self._default_value = value
 
 
 class Sockets:
@@ -96,7 +114,10 @@ class Sockets:
 # reaches for by name.
 PORTS = {
     "TEX_IMAGE": ((), ("Color", "Alpha")),
-    "BSDF_PRINCIPLED": (("Base Color", "Metallic", "Roughness"), ("BSDF",)),
+    "BSDF_PRINCIPLED": (
+        ("Base Color", "Metallic", "Roughness", "Emission Color", "Emission Strength"),
+        ("BSDF",),
+    ),
     "OUTPUT_MATERIAL": (("Surface",), ()),
 }
 
@@ -142,18 +163,83 @@ class Nodes(list):
         return node
 
 
+class Wrapper:
+    """A fresh Python object over the same Blender datablock.
+
+    What `bpy` really hands back: every access to `link.from_node` or
+    `link.to_socket` builds a new wrapper round the same RNA pointer,
+    equal to the last one and never identical to it. A script that asks
+    `node is other` therefore never matches in Blender and always
+    matches in a fake that hands out the objects themselves — which is
+    how the emission node got swept into the colour rebinding with every
+    guard green. So the wires answer through this, and `==` is the only
+    question that works, here as there.
+    """
+
+    def __init__(self, real):
+        object.__setattr__(self, "_real", real)
+
+    def __getattr__(self, name):
+        return getattr(object.__getattribute__(self, "_real"), name)
+
+    def __setattr__(self, name, value):
+        setattr(object.__getattribute__(self, "_real"), name, value)
+
+    def __eq__(self, other):
+        real = object.__getattribute__(self, "_real")
+        if isinstance(other, Wrapper):
+            other = object.__getattribute__(other, "_real")
+        return real is other
+
+    def __hash__(self):
+        return id(object.__getattribute__(self, "_real"))
+
+
+class Link:
+    """One wire, with the four names Blender's `NodeLink` answers to —
+    each a fresh [`Wrapper`] per access, as in Blender."""
+
+    def __init__(self, source, sink):
+        self._source = source
+        self._sink = sink
+
+    @property
+    def from_socket(self):
+        return Wrapper(self._source)
+
+    @property
+    def to_socket(self):
+        return Wrapper(self._sink)
+
+    @property
+    def from_node(self):
+        return Wrapper(self._source.node)
+
+    @property
+    def to_node(self):
+        return Wrapper(self._sink.node)
+
+    def __str__(self):
+        return (
+            f"{self.from_node.name}.{self.from_socket.name}"
+            f" -> {self.to_node.name}.{self.to_socket.name}"
+        )
+
+
 class Links(list):
     def __init__(self, tree):
         super().__init__()
         self.tree = tree
 
     def new(self, source, sink):
-        say(
-            f"linked {source.node.name}.{source.name}"
-            f" -> {sink.node.name}.{sink.name}"
-        )
-        self.append((source, sink))
-        return (source, sink)
+        link = Link(source, sink)
+        say(f"linked {link}")
+        self.append(link)
+        return link
+
+    def remove(self, link):
+        say(f"unlinked {link}")
+        super().remove(link)
 
 
 class NodeTree:
@@ -208,19 +294,24 @@ class Material:
         shader = Node(tree, "BSDF_PRINCIPLED", "Principled BSDF")
         output = Node(tree, "OUTPUT_MATERIAL", "Material Output")
         tree.nodes.extend([shader, output])
-        tree.links.append((shader.outputs["BSDF"], output.inputs["Surface"]))
+        tree.links.append(Link(shader.outputs["BSDF"], output.inputs["Surface"]))
         self.node_tree = tree
 
-    def wire_image(self, image, name="imported_diffuse"):
+    def wire_image(self, image, name="imported_diffuse", sink="Base Color"):
         """What an FBX importer leaves behind: an image node, a UV-fed
-        Base Color link, and — when the file it named is not here — an
+        link into `sink` — Base Color, or Emission Color for a fitting
+        the pack lights — and, when the file it named is not here, an
         image datablock with no pixels in it."""
         self.use_nodes = True
         tree = self.node_tree
         node = Node(tree, "TEX_IMAGE", name, image=image)
         tree.nodes.append(node)
         shader = next(one for one in tree.nodes if one.type == "BSDF_PRINCIPLED")
-        tree.links.append((node.outputs["Color"], shader.inputs["Base Color"]))
+        tree.links.append(Link(node.outputs["Color"], shader.inputs[sink]))
+        if sink == "Emission Color":
+            # The importer reads the FBX's EmissiveFactor into the
+            # strength, silently — a scene fact, not a script decision.
+            shader.inputs["Emission Strength"]._default_value = 1.0
         return node
 
 
@@ -320,6 +411,34 @@ def build_scene():
             )
         )
         return [Object("SM_Prop_Crate_01", MeshData([material]))]
+    if SCENE == "broken_emissive_reference":
+        # The case that shipped the lamp that glowed all over: a fitting
+        # the pack lights names BOTH atlases by Synty's own Dropbox paths,
+        # so the importer leaves two placeholders — one on Base Color and
+        # one on Emission Color, strength set to one. The paths are the
+        # ones SM_Prop_Lamp_01.fbx really carries.
+        material = Material("MAT_01A")
+        material.wire_image(
+            Image(
+                "PolygonHorrorSpace_Texture_01_A.png",
+                "U:/Dropbox/SyntyStudios/PolygonHorrorSpace/Working/_Textures/Alts/"
+                "PolygonHorrorSpace_Texture_01_A.png",
+                has_data=True,
+                size=(0, 0),
+            )
+        )
+        material.wire_image(
+            Image(
+                "PolygonHorrorSpace_Emissive_01_A.png",
+                "U:/Dropbox/SyntyStudios/PolygonHorrorSpace/Working/_Textures/Emissive/"
+                "PolygonHorrorSpace_Emissive_01_A.png",
+                has_data=True,
+                size=(0, 0),
+            ),
+            name="imported_emissive",
+            sink="Emission Color",
+        )
+        return [Object("SM_Prop_Lamp_01", MeshData([material]))]
     if SCENE == "image_node_without_image":
         material = Material("M_Crate")
         material.wire_image(None)

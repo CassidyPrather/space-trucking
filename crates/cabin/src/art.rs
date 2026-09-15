@@ -261,6 +261,13 @@ pub struct Dressing {
     /// Read by [`Fabric::Doorway`] alone — a doorway hides it — and
     /// carried, unread, on every other binding.
     pub leaf: Option<String>,
+    /// **The node of the scene that is a lamp's glass**, where the
+    /// fitting has one. The packs that model a shade hang it as a node
+    /// of its own with the lit bulb inside, so naming it is what lets
+    /// the cabin draw that node see-through (`pieces::wake_fittings`)
+    /// and the light inside it read. Carried, unread, on every binding
+    /// that is not a lamp's.
+    pub glass: Option<String>,
 }
 
 impl Dressing {
@@ -525,6 +532,7 @@ impl Dressings {
                 fill: table.triple("fill").unwrap_or(Vec3::ONE),
                 measured: mid.zip(half),
                 leaf: table.string("leaf").map(str::to_owned),
+                glass: table.string("glass").map(str::to_owned),
             };
             if let Some(name) = binding.strip_prefix("cargo/") {
                 let Some(kind) = kind_named(name) else {
@@ -900,7 +908,7 @@ fn number(value: f32) -> String {
 // ------------------------------------------------------- the loading half --
 
 #[cfg(feature = "art")]
-pub use loading::{Clad, Dressed, Fitted, Open, Worn, cache_root, plugin};
+pub use loading::{Clad, Dressed, Fitted, Glazed, Open, Worn, cache_root, plugin};
 
 #[cfg(feature = "art")]
 mod loading {
@@ -1097,6 +1105,39 @@ mod loading {
         pub const fn new(leaf: String) -> Self {
             Self {
                 leaf,
+                looked: false,
+            }
+        }
+    }
+
+    /// **A bought lamp whose shade is a node of its own**, with the
+    /// name of that node. Put beside [`Worn`] on the root by
+    /// `pieces::build_kind` when the binding carries a `glass` line, and
+    /// read by `pieces::wake_fittings`, which draws that node
+    /// see-through once the scene has landed — the same shape as
+    /// [`Open`], for the same reason: the scene arrives frames after
+    /// its root, and a name can only meet a file that is there.
+    #[derive(Component, Clone, Debug)]
+    pub struct Glazed {
+        /// The asset id, for saying which line named a node that is
+        /// not in its file.
+        pub what: String,
+        /// The node to draw as glass, by its glTF name.
+        pub node: String,
+        /// Whether the scene has arrived and been looked through once —
+        /// so a lamp with no such node is said on stderr once rather
+        /// than every frame.
+        pub looked: bool,
+    }
+
+    impl Glazed {
+        /// A lamp whose glass is the node so named, in the asset so
+        /// named.
+        #[must_use]
+        pub const fn new(what: String, node: String) -> Self {
+            Self {
+                what,
+                node,
                 looked: false,
             }
         }
@@ -2454,6 +2495,34 @@ offset = [0.25, 0.0, 0.0]
     /// one line and then give the furnace its own; a fallback that did
     /// not fall back, or a kind's table that did not win, would each be
     /// a colour quietly wrong in one room.
+    /// **A `glass` line is read where it is named and absent where it
+    /// is not**, and a lamp's glass reaches the kind's dressing whole:
+    /// the node name is what `pieces::wake_fittings` draws see-through,
+    /// and a name that did not survive the read is a shade drawn opaque
+    /// over a lit bulb.
+    #[test]
+    fn a_glass_line_is_read_where_it_is_named() {
+        let declared = Dressings::read(
+            "[asset.sconce]\ndresses = \"cargo/wall_lamp\"\nglb = \"glb/a.glb\"\n\
+             glass = \"SM_Prop_Lighting_Wall_Glass_05\"\n\
+             [asset.column]\ndresses = \"cargo/floor_lamp\"\nglb = \"glb/b.glb\"\n",
+        )
+        .expect("the dialect");
+        assert_eq!(
+            declared
+                .of(Kind::WallLamp)
+                .and_then(|one| one.glass.as_deref()),
+            Some("SM_Prop_Lighting_Wall_Glass_05")
+        );
+        assert_eq!(
+            declared
+                .of(Kind::FloorLamp)
+                .and_then(|one| one.glass.as_deref()),
+            None,
+            "a lamp with no glass line was handed somebody else's node"
+        );
+    }
+
     #[test]
     fn a_fabric_binding_is_read_by_role_and_by_room() {
         let declared = Dressings::read(

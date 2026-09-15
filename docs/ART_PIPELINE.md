@@ -1195,10 +1195,11 @@ would make the manifest impossible to write in the order people write it
 ### The converter contract, extended
 
 A converter is run with the mesh, the file to write, and — when the
-manifest declared one — the atlas to paint with:
+manifest declared them — the atlas to paint with and the emissive atlas
+to light with, in that order:
 
 ```text
-<program> <source> <destination.glb> [texture]
+<program> <source> <destination.glb> [texture [emissive]]
 ```
 
 **The `texture` line is a declaration, and this is where it is spoken.**
@@ -1249,6 +1250,25 @@ question, agreed with it. So `usable_image` now asks for the image's
 **size**, which Blender can only answer by opening the file: a reference
 that resolves nowhere comes back 0×0, and 0×0 is silence whatever the
 flag beside it says.
+
+**And a colour is not a light.** That cost a fourth conversion, and it
+was not grey: a floor lamp came out lit all over, at the brightness of
+its own paint. Its FBX names *two* textures it cannot find — the colour
+atlas and, because the pack lights the fitting, the emissive atlas
+beside it, which the importer wires into the material's emission with
+the strength turned up — and the rebind, asking only which nodes held no
+pixels, fed the colour atlas to both. An image node feeding emission is
+never a place for the colour atlas. Where the manifest declares an
+`emissive`, `light_with` rebinds *that* onto the importer's node, the
+way the colour one is rebound; where it declares none, `unlight_strays`
+unwires the reference, turns the strength back to nought, and says on
+stderr which file the FBX asked for — because the pack almost certainly
+ships it and one line is the cure. The mesh is converted unlit rather
+than lit with the wrong picture. Forty-odd bodies in this manifest had
+been doing the same thing quietly — every fitting off a pack whose FBX
+names its emissive — and read flat and bright in a room whose lamps
+they ignored; they are lit by the room now, which is what the
+lights-are-cargo law was always owed.
 
 **And a conversion handed an atlas it painted nothing with is refused.**
 Before exporting, the script checks that at least one material in the
@@ -1431,35 +1451,66 @@ through so the two cannot drift, and
 set of kinds the sim calls a light source to the set of descriptions
 that describe one.
 
-**What a purchased lamp gives up is its glass — and half of that has
-since been bought back.** A whitebox bulb owns a material instance and
+**A purchased lamp wakes its own glass too, and it took two lines and
+a pass to buy that back.** A whitebox bulb owns a material instance and
 `sync_fixtures` writes the eased level into it, so a lamp on the barter
-counter is visibly dark glass.
+counter is visibly dark glass. A Synty fitting is painted from an atlas
+shared by every copy of its scene, and for a while that was read as
+"cannot glow", then as "can glow, but not dim". Neither is true now.
 
-A Synty fitting used to be painted from a flat atlas with nothing to
-write a level into. That half is no longer true: the packs ship an
-emissive atlas beside the colour one, laid out on the same swatch grid,
-and an `emissive` line in the manifest declares it
-([the fitting namespace](#the-fitting-namespace-a-stations-own-furniture)).
-A bought body can therefore be lit where its own pack meant it to be
-lit, statically, and the Guild's hangar strip is.
+The first line is `emissive`. The packs ship an emissive atlas beside
+the colour one, laid out on the same swatch grid and black everywhere
+the mesh is not a lamp, so declaring it lights exactly the faces Synty
+lit ([the fitting namespace](#the-fitting-namespace-a-stations-own-furniture)):
+the pendant's frosted panels, the sconce's bulb, the column's band.
+Declared on the three lamps now, and on the Guild's hangar strip before
+them. Before it was, a bought lamp was a dark body with a point light
+inside it — the shade's outside lit by nothing, its rim blown white by
+a source a hand's breadth away — which is a lamp drawn as a thing in the
+way of its own light rather than the source of it.
 
-What is still missing is the LEVEL. `LampGlow::mat` is `None` on a bought
-lamp because a glTF material is shared by every copy of its scene, so
-writing an eased value into one would light every lamp aboard at once —
-the cure is a material instance per lamp, and it is the same cure the
-`glass` line wants. Until then a bought lamp burns flat and what says it
-is dimming is the pool of light under it, which is the tell the room
-reads.
+The LEVEL is the cabin's. A glTF material is shared by every copy of its
+scene, so writing an eased value into the one the loader made would
+light every lamp of that kind aboard at once. `pieces::wake_fittings`
+therefore walks each bought lamp's bodies as they land — the same walk
+`art::mask_dressed` makes, for the same reason: the scene arrives frames
+after its root — and gives the lamp its own copy of every material whose
+emissive is a texture, files the copies on the lamp's `LampGlow` beside
+where the whitebox glass would be, and marks the body so it is copied
+once. From then on `sync_fixtures` writes the level into them
+(`glow::set_fitting`, emissive only: the atlas's black masks the level to
+the lit faces and the body keeps its paint). A bought lamp aboard burns,
+one on the counter is dark, and the omen dims both. A bought body that
+hangs no light — a crate the pack lit a panel on — keeps the shared
+material and burns flat, as the pack meant.
 
-It need not stay lost. Two of the three fittings named today carry their
-glass as a node of their own — `SM_Prop_Lighting_Wall_Glass_05` on the
-sconce, `SM_Prop_Lamp_01_Light_01` on the floor lamp — so a `glass` line
-beside `leaf` would name it, and `art::open_doors` is the shape of the
-pass that would find it. What it needs beyond that is a material
-instance per lamp rather than per scene, because a glTF material is
-shared by every copy of its scene and writing to it would light every
-lamp aboard at once.
+The second line is `glass`, and it is the sconce's. The packs that model
+a shade hang it as a node of its own with the lit bulb *inside* it, and
+an opaque shade over a lit bulb is a lamp that reads dark. So
+
+```toml
+[asset.sconce_arm]
+dresses = "cargo/wall_lamp"
+emissive = "SourceFiles/Textures/PolygonShops_Texture_01_Emissive.png"
+glass = "SM_Prop_Lighting_Wall_Glass_05"
+```
+
+names the node, and the same pass gives it a copy drawn see-through
+(`glow::glaze`). Like `leaf`, the line goes only where it could apply —
+beside a `cargo/` binding, the lamps being cargo — and the resolver
+checks its shape without opening the mesh, so a misspelled node is said
+once on stderr by the running game and the shade is drawn as it came.
+The pendant needs no such line: its glass is the head's own faces, and
+the emissive atlas is the whole of it.
+
+**What the sconce also taught: the catalogue's atlas is a guess.** Its
+FBX names `PolygonShops_Texture_01` — a `.psd` on Synty's disk — and the
+dex had guessed the pack's *building* atlas, which is not laid out on
+the same grid and painted the whole fitting one brown ("muted brown
+metal finish", said the description, of a fitting that is orange, tan
+and dark grey with teal glass). The `texture` line is the one the FBX
+asked for now, under the name the pack ships it by. When a mesh names a
+texture, that name is the answer, however it is spelled.
 
 **The luminous paint is still not dressed**, and for a different reason
 now: what it lights with is a painted deck cell, and nobody models a

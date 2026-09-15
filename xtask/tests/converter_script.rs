@@ -20,7 +20,13 @@
 //! measurement, wrote a file the same size as the colourless one it
 //! replaced, and was found out by somebody looking at a grey box.
 //!
-//! None of the three was in Blender. All were in the script's control
+//! The fourth was not grey. A floor lamp came out lit all over, at the
+//! brightness of its own paint, because its FBX named the pack's emissive
+//! atlas as well as the colour one — both by Synty's own paths — and the
+//! rebind painted the colour atlas onto both placeholders alike. A colour
+//! is not a light.
+//!
+//! None of the four was in Blender. All were in the script's control
 //! flow, which is a thing a fake `bpy` can execute — see
 //! `tests/fixtures/blender/bpy.py`, which builds a scene, records every
 //! image binding and node the script makes, and lets a guard read the
@@ -34,7 +40,10 @@
 //! repaint reuses the importer's own node instead of building a second
 //! one beside it, that a reference which resolves is left alone, that a
 //! conversion handed an atlas and painting nothing refuses and writes no
-//! file, and that a conversion handed no atlas is unchanged. Not proved
+//! file, that a conversion handed no atlas is unchanged, that a broken
+//! emissive reference is never fed the colour atlas — unwired when no
+//! emissive was declared, rebound to the declared one when it was — and
+//! that a material naming no emissive gets one built for it. Not proved
 //! here, and not provable without the owner's disk: that a repainted
 //! material exports as a textured glTF. `docs/ART_PIPELINE.md` names the
 //! command that asks that.
@@ -66,11 +75,12 @@ struct Ran {
 }
 
 /// Run the real converter script against the fake Blender, in `scene`,
-/// with or without a texture argument.
+/// with or without a texture argument, and with or without the emissive
+/// that rides behind it.
 ///
 /// `None` when there is no interpreter, which every guard below reports
 /// and skips rather than passing quietly.
-fn drive(name: &str, scene: &str, texture: bool) -> Option<Ran> {
+fn drive(name: &str, scene: &str, texture: bool, emissive: bool) -> Option<Ran> {
     let python = python()?;
     let xtask = Path::new(env!("CARGO_MANIFEST_DIR"));
     let dir = std::env::temp_dir().join(format!("space-trucking-script-{name}"));
@@ -80,12 +90,14 @@ fn drive(name: &str, scene: &str, texture: bool) -> Option<Ran> {
     let source = dir.join("SM_Prop_Crate_01.fbx");
     let glb = dir.join("out.glb");
     let atlas = dir.join("atlas.png");
+    let lit = dir.join("emissive.png");
     // The one scene that needs an image reference which actually
     // resolves needs a file for it to resolve to.
     let already_there = dir.join("already_there.png");
     for (path, contents) in [
         (&source, "a crate"),
         (&atlas, "the atlas the whole pack is painted from"),
+        (&lit, "the emissive atlas beside it"),
         (&already_there, "a texture the FBX knew the way to"),
     ] {
         std::fs::write(path, contents).expect("a fixture file");
@@ -99,6 +111,10 @@ fn drive(name: &str, scene: &str, texture: bool) -> Option<Ran> {
         .arg(&glb);
     if texture {
         command.arg(&atlas);
+    }
+    // Positional, behind the atlas: the resolver refuses a lone one.
+    if texture && emissive {
+        command.arg(&lit);
     }
     command
         .env("PYTHONPATH", xtask.join("tests/fixtures/blender"))
@@ -119,7 +135,10 @@ fn drive(name: &str, scene: &str, texture: bool) -> Option<Ran> {
 /// Say that a guard did not run, rather than letting it read as passed.
 macro_rules! script {
     ($name:literal, $scene:literal, $texture:literal) => {
-        match drive($name, $scene, $texture) {
+        script!($name, $scene, $texture, false)
+    };
+    ($name:literal, $scene:literal, $texture:literal, $emissive:literal) => {
+        match drive($name, $scene, $texture, $emissive) {
             Some(ran) => ran,
             None => {
                 println!("no python3: the converter script's decisions went unchecked");
@@ -352,4 +371,111 @@ fn a_conversion_handed_no_texture_paints_nothing_and_refuses_nothing() {
         "the measurement stopped being printed:\n{}",
         ran.said
     );
+}
+
+/// **A colour is not a light: an emissive reference the FBX cannot
+/// find is never painted with the colour atlas.**
+///
+/// The fourth defect. A fitting the pack lights names two atlases by
+/// Synty's own paths, the importer leaves a placeholder on Base Color
+/// and another on Emission Color, and the rebind — asked only "which
+/// nodes hold no pixels?" — fed the colour atlas to both. The lamp came
+/// out lit all over at the brightness of its own paint, which is a
+/// conversion that succeeded like the three grey ones did.
+///
+/// With no `emissive` declared, the emission node is unwired and the
+/// strength the importer set is put back to nought, so the mesh is
+/// converted unlit; the colour node is rebound as before; and standard
+/// error names the file the FBX asked for, because the cure is one line.
+#[test]
+fn a_broken_emissive_reference_is_unwired_rather_than_painted_with_the_colour_atlas() {
+    let ran = script!("stray-emissive", "broken_emissive_reference", true);
+    assert!(ran.ok, "{}", ran.said);
+    assert!(
+        ran.said
+            .contains("MAT_01A/imported_diffuse image = atlas.png"),
+        "the colour reference was not rebound:\n{}",
+        ran.said
+    );
+    assert!(
+        !ran.said.contains("imported_emissive image = atlas.png"),
+        "the colour atlas was painted onto the emission node — a lamp lit by its own paint:\n{}",
+        ran.said
+    );
+    assert!(
+        ran.said
+            .contains("unlinked imported_emissive.Color -> Principled BSDF.Emission Color"),
+        "the broken emission reference was left wired:\n{}",
+        ran.said
+    );
+    assert!(
+        ran.said
+            .contains("MAT_01A/Principled BSDF.Emission Strength = 0.0"),
+        "the strength the importer set was left on, over a colour that defaults to white:\n{}",
+        ran.said
+    );
+    assert!(
+        ran.said.contains("names an emissive it cannot find")
+            && ran.said.contains("PolygonHorrorSpace_Emissive_01_A.png"),
+        "nothing said which file the FBX asked for:\n{}",
+        ran.said
+    );
+    assert!(ran.glb.is_file(), "{}", ran.said);
+}
+
+/// **A declared emissive is rebound onto the emission node the importer
+/// built**, the way the colour atlas is rebound onto the colour one: the
+/// wiring is what the FBX asked for, only the pixels are missing, and a
+/// second node would be two claims on one socket.
+#[test]
+fn a_declared_emissive_is_rebound_onto_the_node_the_importer_built() {
+    let ran = script!("rebound-emissive", "broken_emissive_reference", true, true);
+    assert!(ran.ok, "{}", ran.said);
+    assert!(
+        ran.said
+            .contains("MAT_01A/imported_emissive image = emissive.png"),
+        "the declared emissive did not reach the importer's emission node:\n{}",
+        ran.said
+    );
+    assert!(
+        ran.said
+            .contains("MAT_01A/imported_diffuse image = atlas.png"),
+        "the colour reference was not rebound beside it:\n{}",
+        ran.said
+    );
+    assert!(
+        !ran.said.contains("made ShaderNodeTexImage"),
+        "a second image node was built beside the importer's wiring:\n{}",
+        ran.said
+    );
+    assert!(
+        !ran.said.contains("unlinked"),
+        "a reference the declaration was about to fill was unwired instead:\n{}",
+        ran.said
+    );
+    assert!(ran.glb.is_file(), "{}", ran.said);
+}
+
+/// **A material naming no emissive gets one built for it, and switched
+/// on.** The common Synty case — emission assigned in Unity, the FBX
+/// silent — with the trap `light_material` was written around: Blender
+/// 4.x defaults Emission Strength to nought, and a texture into a colour
+/// multiplied by nothing exports a dark mesh that reports success.
+#[test]
+fn a_material_naming_no_emissive_gets_one_built_and_switched_on() {
+    let ran = script!("built-emissive", "bare_material", true, true);
+    assert!(ran.ok, "{}", ran.said);
+    assert!(
+        ran.said
+            .contains("linked ShaderNodeTexImage.Color -> Principled BSDF.Emission Color"),
+        "no emission node was wired for a material that named none:\n{}",
+        ran.said
+    );
+    assert!(
+        ran.said
+            .contains("M_Crate/Principled BSDF.Emission Strength = 1.0"),
+        "the emission was wired and left at a strength of nought:\n{}",
+        ran.said
+    );
+    assert!(ran.glb.is_file(), "{}", ran.said);
 }

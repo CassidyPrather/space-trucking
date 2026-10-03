@@ -2373,8 +2373,8 @@ mod tests {
             let origin = lane_origin(id);
             assert_eq!(lane_cell_at(origin), Some((id, 0, 0)));
             let far = Vec2::new(
-                origin.x + f32::from(LANE_COLS - 1) * CELL + 1.0,
-                origin.y + f32::from(LANE_ROWS - 1) * CELL + 1.0,
+                f32::from(LANE_COLS - 1).mul_add(CELL, origin.x) + 1.0,
+                f32::from(LANE_ROWS - 1).mul_add(CELL, origin.y) + 1.0,
             );
             assert_eq!(lane_cell_at(far), Some((id, LANE_COLS - 1, LANE_ROWS - 1)));
         }

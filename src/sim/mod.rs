@@ -3330,9 +3330,9 @@ mod tests {
             ..InputFrame::default()
         };
         sim.advance(0.0, &pause);
-        assert!(!sim.cues().is_empty());
+        assert!(!sim.cues().is_empty(), "the pause press cues nothing");
         sim.advance(0.0, &InputFrame::default());
-        assert!(sim.cues().is_empty());
+        assert!(sim.cues().is_empty(), "{:?}", sim.cues());
     }
 
     #[test]
@@ -3769,7 +3769,7 @@ mod tests {
     fn the_room_answers_a_proposal_with_goods_and_the_handshake_commits() {
         let mut sim = Sim::new(31);
         let before: Vec<u32> = stock_ids(&sim, TRADE);
-        assert!(!before.is_empty());
+        assert!(!before.is_empty(), "the trade room stocks nothing");
         // Nothing proposed: the handshake has nothing to commit.
         let shake = handshake(&sim, TRADE);
         sim.advance(0.0, &press_at(shake.x, shake.y));
@@ -3818,7 +3818,7 @@ mod tests {
         );
         sim.advance(0.0, &press_at(at.x, at.y));
         assert_eq!(sim.cues(), [Cue::Mark { on: false }]);
-        assert!(sim.marks().is_empty());
+        assert!(sim.marks().is_empty(), "{:?}", sim.marks());
         // Marking never lifts: the room's goods stay on their tiles.
         assert!(sim.held(0).is_none());
         assert_eq!(stock_ids(&sim, TRADE), stock);
@@ -3847,7 +3847,8 @@ mod tests {
         assert_eq!(sim.karma(), 0);
         // The hermits stock nothing for strangers, so a proposal buys
         // nothing back and the handshake reads as the gift it is.
-        assert!(stock_ids(&sim, TRADE).is_empty());
+        let stock = stock_ids(&sim, TRADE);
+        assert!(stock.is_empty(), "{stock:?}");
         let piece = *sim
             .pieces()
             .iter()
@@ -3940,7 +3941,11 @@ mod tests {
         travel_to(&mut sim, SATURN);
         let room = sim.rooms().find(RoomKind::Trade).expect("alongside");
         assert_eq!(sim.launch_gate(), Ok(()), "an empty caller holds nothing");
-        assert!(sim.detained_cargo().is_empty());
+        assert!(
+            sim.detained_cargo().is_empty(),
+            "{:?}",
+            sim.detained_cargo()
+        );
         let mut swept = 0;
         for (x, y) in berths(&sim, room, Kind::RationBricks, Tile::Staging) {
             let id = inject_at(&mut sim, Kind::RationBricks, Loc::Hold { room, x, y });

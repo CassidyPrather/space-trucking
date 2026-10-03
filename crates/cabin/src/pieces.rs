@@ -3775,7 +3775,7 @@ fn tin_parts(shell: Coat, lid: Coat, sole: f32, deep: f32) -> Vec<Part> {
                 facets: None,
             },
             shell,
-            Transform::from_xyz(0.0, sole + drum * 0.5, deep),
+            Transform::from_xyz(0.0, drum.mul_add(0.5, sole), deep),
         ),
         // Proud of the shell and straddling its rim, which is what a lid
         // pressed onto a tin looks like and keeps the two off one plane.
@@ -4144,7 +4144,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                     facets: None,
                 },
                 shaded(0.35),
-                Transform::from_xyz(0.0, sole + pot * 0.5, deep),
+                Transform::from_xyz(0.0, pot.mul_add(0.5, sole), deep),
             ));
             // Rooted a finger inside the pot rather than balanced on its
             // rim, which is the joint every other body in this file makes.
@@ -4228,8 +4228,8 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
         // rim. Upright, the ring is a collar round the core's waist,
         // which is what a frost ring on a cryogenic flask is.
         Kind::CryoCore => {
-            let core = 18.0;
-            let waist = sole + core * 0.5;
+            let core: f32 = 18.0;
+            let waist = core.mul_add(0.5, sole);
             out.push(Part::new(
                 "core",
                 Body::Drum {
@@ -4411,7 +4411,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                     h: shard,
                 },
                 body,
-                Transform::from_xyz(0.0, sole + shard * 0.5, deep),
+                Transform::from_xyz(0.0, shard.mul_add(0.5, sole), deep),
             ));
             out.push(Part::new(
                 "glint",
@@ -4475,7 +4475,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
             let r = fw * 0.28;
             // It sits on the deck on the widest of its three tufts;
             // the other two and the eyes are measured off that one.
-            let sit = sole + r * 0.85;
+            let sit = r.mul_add(0.85, sole);
             for (i, (coat, ball, at)) in [
                 (shaded(0.08), r * 0.85, Vec3::new(-4.0, sit, 7.0)),
                 (body, r * 0.75, Vec3::new(4.5, sit - 0.5, 6.5)),
@@ -4554,7 +4554,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                         facets: None,
                     },
                     body,
-                    Transform::from_xyz(0.0, sole + chip * 0.5, deep),
+                    Transform::from_xyz(0.0, chip.mul_add(0.5, sole), deep),
                 )
                 .pointing(AXLE, Vec3::Y),
             );
@@ -6637,7 +6637,8 @@ mod tests {
             );
             assert_eq!(bars.is_empty(), frame_only, "{rule:?}");
         }
-        assert!(glyph_spec(None, rect).is_empty());
+        let bars = glyph_spec(None, rect);
+        assert!(bars.is_empty(), "{bars:?}");
     }
 
     /// The instrument mount, mechanised: the chart tank's station lands

@@ -1057,7 +1057,7 @@ fn star_mesh(bucket: u64) -> Mesh {
         // the poles.
         let z = ((h & 0xFFFF) as f32 / 65_535.0).mul_add(2.0, -1.0);
         let angle = (((h >> 16) & 0xFFFF) as f32 / 65_535.0) * TAU;
-        let ring = (1.0 - z * z).max(0.0).sqrt();
+        let ring = z.mul_add(-z, 1.0).max(0.0).sqrt();
         let dir = Vec3::new(ring * angle.cos(), z, ring * angle.sin());
         let size = if (h >> 40).trailing_zeros() >= 3 {
             STAR_BIG

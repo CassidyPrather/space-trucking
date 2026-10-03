@@ -593,7 +593,7 @@ mod tests {
             .expect("a boarding roll within 500 legs");
         fresh.on_depart(9, legs, 100, &pieces, false, &mut cues);
         assert!(fresh.rat.is_none(), "it boarded a lit hold");
-        assert!(cues.is_empty());
+        assert!(cues.is_empty(), "{cues:?}");
     }
 
     #[test]

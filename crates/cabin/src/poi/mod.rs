@@ -1301,7 +1301,11 @@ mod tests {
         assert_eq!(neutral.handshake.knob_coat.color, palette::BRASS);
         assert!((neutral.handshake.throw - 0.045).abs() < 1e-6);
         assert_eq!(neutral.handshake.lamp, palette::AMBER);
-        assert!(neutral.handshake.trim.is_empty());
+        assert!(
+            neutral.handshake.trim.is_empty(),
+            "{:?}",
+            neutral.handshake.trim
+        );
         assert_eq!(neutral.light.color, palette::GLINT);
         assert!((neutral.light.burn - 1.0).abs() < 1e-6);
         assert_eq!(neutral.light.shade, Shape::Cone);
@@ -1575,7 +1579,10 @@ mod tests {
         // Form, not hue alone: the handshake is a different SHAPE, not a
         // repainted plunger.
         assert_ne!(guild.handshake.knob, NEUTRAL.handshake.knob);
-        assert!(!guild.handshake.trim.is_empty());
+        assert!(
+            !guild.handshake.trim.is_empty(),
+            "the guild's handshake wears no trim"
+        );
         // And the filled-against-hollow reading survives the repaint,
         // because there is no knob that could break it.
         assert_eq!(guild.tiles.stock.finish, Finish::Enamel);

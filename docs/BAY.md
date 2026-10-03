@@ -143,9 +143,57 @@ and names the same berth on every failure.
 
 **The frontend.** `layout::piece_rect` is the berth's true rect,
 fractions and all, so every body, pick face and halo placed from it
-follows the piece off the grid. The carry ghost, the per-cell hint
-plates and the refusal flash still anchor on the aimed cell; they move
-to `Sim::drop_preview` in the next pass.
+follows the piece off the grid. Everything a carry previews is drawn
+from `Sim::drop_preview` and nothing from the aimed cell, so what the
+cabin shows and where the release lands are one answer:
+
+- **The ghost stands where the piece will land.** While roaming and
+  aimed at the room, the carried rig takes the pose of the berth the
+  preview names — the same `site_on` pose a settled piece takes, at
+  that berth's rect — a tenth large about the middle of its plan and
+  lifted the carry's 5 cm off its chart. It follows the aim a
+  sixteenth at a time because the berth does, and the drop's glide
+  has nothing left to travel but the lift. Grown about the plan's
+  middle rather than the rig's origin, so a body standing on a deck
+  still stands on it while it is a tenth too big. A cubby drop
+  (`Loc::Stow`) hovers at the hit as it always did, and aimed at
+  nothing the carry stays hitched on the arm.
+- **One footprint patch replaces the per-cell hint plates.** A single
+  plate for the whole ship, moved and resized every frame onto the
+  previewed berth's rect: `LAMP_OK` when the drop would land, `LAMP_NO`
+  with a slash corner to corner when it would be refused (illegality
+  never rides hue alone), dark on a soft miss — a room's own goods,
+  which simply go home. The plates lit the cells a footprint anchored
+  on the aimed cell would cover, which is ground a centred, clamped,
+  snapped drop never took.
+- **The berth wells are retired.** There are no berths to show: a berth
+  is a position, not a cell, and a lattice of sockets would be a grid
+  of invitations to places the drop does not take. Plain and staging
+  deck paint nothing (the deck's own art or whitebox already reads as
+  a floor). The painted regions that mean something — offer chalk,
+  station stock, the burner's hazard field — stay exactly as they
+  were: they are regions now, and a piece reads the one under its
+  centre.
+- **The refusal flash** burns over the berth the carry previewed on its
+  last frame — where the ghost stood and the patch burned red — since
+  the release has let go before the cue arrives. A refusal with nothing
+  previewed (a bare grab of a full cabinet, a cubby that will not take
+  the piece) flashes the one cell under the hand.
+- **The backing rule's seam is a rule now, not a rounding allowance.**
+  A deck or deckhead body turns its back on a seam it stands half a
+  cell from or less, so a body that faces a seam always keeps more
+  than half a cell of deck in front of it. While every berth was a
+  whole cell the threshold only ever met gaps of zero or a cell; a
+  berth exactly half a cell from the front wall used to face it.
+
+The cabin's berth sweep (`every_kind_hangs_true_on_every_legal_berth`)
+and the gauntlet's berths take whole-cell anchors and the
+`cargo::FRACTIONS` sample on each axis. The sweep holds the ghost to
+the preview: aimed at the middle of a berth, the drop has to name that
+berth (or, within a quarter cell of a chart edge, the flush one the
+snap moves it to) with the verdict the arbiter gives, and the ghost has
+to be that berth's pose plus the lift. The gauntlet re-keyed its air
+from cells to footprints; docs/GAUNTLET.md says how.
 
 ## The decision: the 2D console retires
 
@@ -230,7 +278,8 @@ down. Under the hood nothing new reaches the sim:
 
   > Superseded by *The grid comes out*: a drop no longer anchors on the
   > aimed cell, so per-cell plates read a berth the drop does not take.
-  > The hint is to be drawn from `Sim::drop_preview`.
+  > One footprint patch now lies under the berth `Sim::drop_preview`
+  > names, the ghost stands on that berth, and the flash burns there.
 - Carrying has reach: the grab/place ray only bites within arm's
   length plus a step, so placement always happens near the body and
   the piece never teleports across the room.
@@ -429,7 +478,9 @@ the firebox, and a big crate on a near tile pokes into the doorway.
 
 Two smaller reads landed with it: **berth tiles are contextual** — the
 bay's socket grid fades in only while a carry is live, so an idle bay
-reads as a furnished room, not a warehouse diagram — and the couch was
+reads as a furnished room, not a warehouse diagram (superseded by *The
+grid comes out*: the wells are retired, and the footprint patch under
+the previewed berth answers "where can this go?") — and the couch was
 recomposed with true depth (rigs began as desk-era bas-reliefs where
 +Z meant relief height; standing rigs re-purpose +Z as room depth, so
 asymmetric furniture must put its back at the wall — the convention is

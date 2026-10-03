@@ -140,10 +140,10 @@ pub mod layer {
     /// How thick a backer plate is. Kept under [`BACKER`] so the whole
     /// slab lives strictly between the chart and the hull.
     pub const BACKER_T: f32 = 0.002;
-    /// **The tile field**: berth socket wells, and the flat paint a
-    /// colored class lays over its whole region. A field is the ground
-    /// a mark is read against and never a pattern itself, which is why
-    /// it is the lowest rung a room paints on.
+    /// **The tile field**: the flat paint a colored class lays over its
+    /// whole region. A field is the ground a mark is read against and
+    /// never a pattern itself, which is why it is the lowest rung a room
+    /// paints on.
     pub const TILE: f32 = 0.002;
     /// **The tile mark**: the form a class carries so it never signals
     /// on hue alone — the offer's chalk line, the stock's border band,
@@ -158,9 +158,9 @@ pub mod layer {
     pub const TREAD: f32 = 0.010;
     /// Laid coverings' base; a rug's pile rises `RUG_THICK` above it.
     pub const LAID: f32 = 0.014;
-    /// Placement hint quads.
+    /// The footprint patch: the plate under the berth a carry previews.
     pub const HINT: f32 = 0.030;
-    /// The hint's refusal slash.
+    /// The footprint patch's refusal slash.
     pub const SLASH: f32 = 0.034;
     /// The violation flash frame.
     pub const FLASH: f32 = 0.038;
@@ -762,23 +762,11 @@ pub struct Dimmable {
 #[derive(Component)]
 pub struct Crosshair;
 
-/// One bay berth well. The grid is placement furniture, not wall decor:
-/// [`fade_tiles`] shows it only while a carry is live, so an idle bay
-/// reads as a furnished room instead of a warehouse diagram.
-#[derive(Component)]
-pub struct BerthTile;
-
-/// The berth wells' shared translucent ink and its eased level. One ink
-/// for every room aboard: the grid is one answer to one question.
-#[derive(Resource)]
-pub struct TileFade {
-    pub mat: Handle<StandardMaterial>,
-    level: f32,
-}
-
-/// How fast the berth grid answers a grab, per second — feedback, so it
-/// finishes well inside the half-second law.
-const TILE_FADE_RATE: f32 = 6.0;
+// The berth wells — a translucent socket per deck cell, raised while a
+// carry was live — retired with the grid (docs/BAY.md, "The grid comes
+// out"): a berth is not a cell any more, so there is no lattice of
+// places to invite a crate to. Where a carry would land is the
+// footprint patch's to say (`pieces::footprint_patch`).
 
 // The glint frame that used to invite a hull panel's focus retired with
 // the hull panels. The invitation itself did not: an instrument is cargo,
@@ -953,27 +941,12 @@ pub fn spawn(
     // (an instrument's own riding face).
 
     // --- The bay: the cabin's own share of the room net. The charts
-    // themselves, the berth wells, and every colored tile are `room`'s
-    // now — one code path for every room aboard, spawned and retired with
-    // the graph. What stays here is the cabin's own furniture: the backer
-    // plates behind its aft wall and deck, the gantry, and the hazard lip
-    // along the front gutter, all derived from the same charts so a
-    // retuned bay still moves as one thing.
-    //
-    // The berth wells' one translucent ink lives here because it is one
-    // ink for the whole ship: `fade_tiles` raises every room's grid
-    // together, since the grid answers one question and there is only one.
-    let tile_mat = materials.add(StandardMaterial {
-        base_color: palette::SOCKET.with_alpha(0.0),
-        perceptual_roughness: 1.0,
-        metallic: 0.0,
-        alpha_mode: AlphaMode::Blend,
-        ..default()
-    });
-    commands.insert_resource(TileFade {
-        mat: tile_mat,
-        level: 0.0,
-    });
+    // themselves and every colored tile are `room`'s now — one code path
+    // for every room aboard, spawned and retired with the graph. What
+    // stays here is the cabin's own furniture: the backer plates behind
+    // its aft wall and deck, the gantry, and the hazard lip along the
+    // front gutter, all derived from the same charts so a retuned bay
+    // still moves as one thing.
     // The backer plates behind the aft wall's chart and the deck's went
     // with the hull (`room::cabin_backers`): a backer stands in the notch
     // a bought panel's relief fills, so whether to draw one is the same
@@ -1365,28 +1338,6 @@ pub fn present_mode(
 /// The glide's easing: smoothstep, no overshoot.
 fn smooth(t: f32) -> f32 {
     t * t * 2.0f32.mul_add(-t, 3.0)
-}
-
-/// Raise the berth wells while a carry is live and sink them after: the
-/// grid is an answer to "where can this go?", so it appears when the
-/// question does. One shared ink fades every tile as one.
-pub fn fade_tiles(
-    time: Res<Time>,
-    shell: Res<crate::Shell>,
-    fade: Option<ResMut<TileFade>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    let Some(mut fade) = fade else { return };
-    let target = f32::from(u8::from(shell.bridge.sim.held(0).is_some()));
-    let step = time.delta_secs() * TILE_FADE_RATE;
-    fade.level = if fade.level < target {
-        (fade.level + step).min(target)
-    } else {
-        (fade.level - step).max(target)
-    };
-    if let Some(mut mat) = materials.get_mut(&fade.mat) {
-        mat.base_color = palette::SOCKET.with_alpha(smooth(fade.level));
-    }
 }
 
 #[cfg(test)]

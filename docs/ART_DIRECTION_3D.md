@@ -867,6 +867,14 @@ What that frees us to do in 3D, next experiments in rough order:
    floor plates versus high shelves; cryo-hugs-the-hull means berths on
    the outer wall; violatile adjacency reads as spacing between plates.
    The rules stay in `cargo.rs`; the room *is* the diagram.
+
+   > Superseded by *The grid comes out* ([BAY.md](BAY.md)): a berth is a
+   > position on a chart in sixteenths of a cell, not a plate or a
+   > bracket, and the cabin draws no socket per cell any more. What the
+   > room shows of a placement is the carried piece standing on the
+   > berth its drop would take and one footprint patch under it, both
+   > read off `Sim::drop_preview`. Positions stay integers in sim state,
+   > so nothing below about free coordinates or physics has changed.
 4. **Crew ownership** maps to lockstep player indices unchanged — two
    players carrying crates in 3D is exactly two `held` slots the sim
    already simulates.

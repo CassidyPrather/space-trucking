@@ -541,8 +541,7 @@ fn main() {
             .chain()
             .in_set(Phase::Input),
     )
-    .add_systems(Update, advance.in_set(Phase::Advance))
-    .add_systems(Update, rig::fade_tiles.in_set(Phase::View));
+    .add_systems(Update, advance.in_set(Phase::Advance));
     // **The seam.** Off in the default build and not merely inert there:
     // the half of `art` that reads a cache does not exist without the
     // feature, so a whitebox build has no line of code that could open a

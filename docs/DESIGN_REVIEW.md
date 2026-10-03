@@ -426,3 +426,15 @@ Every line is reversible; strike one by overruling it.
   whole-cell anchors.** They set things out a tile at a time; only
   `first_fit` and `dress_fit` learned the flush-against-a-neighbour
   anchors that find snug gaps.
+- **The carry ghost stands on the berth, not at the crosshair.** It
+  takes the pose the drop would land in, a tenth large and lifted 5 cm,
+  so the piece can sit up to half its own footprint from the point
+  aimed at. The alternative — hanging it at the hit and drawing the
+  berth separately — shows two answers to one question.
+- **Plain and staging deck paint nothing, ever.** The berth wells were
+  the grid's invitation, and a lattice of sockets under a free drop
+  invites the eye to places the piece does not go. The one footprint
+  patch under the previewed berth is the whole placement hint.
+- **A body half a cell or less from a seam turns its back on it.** The
+  backing rule's threshold was a rounding allowance on the grid; off it,
+  a couch exactly half a cell from the front wall used to face the wall.

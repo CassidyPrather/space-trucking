@@ -3,15 +3,17 @@
 //! bay (rows 0–2 hung on the aft wall band, row 3 standing on the deck,
 //! the fold-straddling 1×2 kinds rising across both), everything else a
 //! scale model on the barter counter: the broker's diorama, the deliberate
-//! scale conceit `docs/BAY.md` records. Plus the carried piece riding the
-//! crosshair, per-cell placement hints, drop-target invitations, the
-//! hard-reject flash with its rule glyphs, and the stowaway.
+//! scale conceit `docs/BAY.md` records. Plus the carried piece standing
+//! where its drop would land, the footprint patch under it, drop-target
+//! invitations, the hard-reject flash with its rule glyphs, and the
+//! stowaway.
 //!
 //! Semantics keep the retired 2D console's law: the sim stays the only
 //! arbiter — footprints come from `layout::piece_rect` and `cubby_rect`,
-//! legality from `placement_check`, invites from `drop_targets` — and no
-//! refusal rides on hue alone: illegality always carries a slash, gnawing
-//! carries a wedge, shapes over colors.
+//! where a drop would land and whether it may from `drop_preview`,
+//! invites from `drop_targets` — and no refusal rides on hue alone:
+//! illegality always carries a slash, gnawing carries a wedge, shapes
+//! over colors.
 //!
 //! The fixture kinds go further, per `docs/FIXTURES.md`: every lamp rig
 //! owns a real `PointLight` gated by the sim's `lamp_lit` and dimmed by
@@ -41,8 +43,8 @@ use space_trucking::sim::room::{CABIN, RoomId, Rooms};
 #[allow(unused_imports)]
 use space_trucking::sim::{};
 use space_trucking::sim::{
-    Cue, Kind, Loc, Mount, Piece, ShipState, Vec2 as SimVec2, Violation, cargo, lamp_lit,
-    placement_check, player_owned, splitmix,
+    Cue, Kind, Loc, Mount, Piece, ShipState, Sim, Vec2 as SimVec2, Violation, cargo, lamp_lit,
+    player_owned, splitmix,
 };
 
 use crate::poi::{Coat, Shape, Worn};
@@ -195,8 +197,8 @@ const LAID_LIFT: f32 = crate::rig::layer::LAID;
 /// paints are coats, millimetres of enamel.
 const RUG_THICK: f32 = 0.012;
 
-/// The hint quads' rung on the decal ladder (`rig::layer`): above the
-/// dressing layer's thickest covering (a laid rug's pile), so a hint
+/// The footprint patch's rung on the decal ladder (`rig::layer`): above
+/// the dressing layer's thickest covering (a laid rug's pile), so a patch
 /// over a rug reads instead of burning underneath it.
 const OVERLAY_LIFT: f32 = crate::rig::layer::HINT;
 
@@ -294,7 +296,7 @@ impl Plugin for PiecesPlugin {
                     xray_focus,
                     hover_glint,
                     carry_held,
-                    placement_hints,
+                    footprint_patch,
                     invite_glows,
                     violation_flash,
                     rat_watch,
@@ -322,11 +324,17 @@ impl Plugin for PiecesPlugin {
 #[derive(Resource, Default)]
 struct PieceIndex(HashMap<u32, Entity>);
 
-/// Last frame's held piece. `Place` and `Reject` fire after the sim already
+/// Last frame's carry. `Place` and `Reject` fire after the sim already
 /// let go, so the cues need yesterday's grip to know what was carried —
-/// the same trick the 2D juice's `held_was` plays.
+/// the same trick the 2D juice's `held_was` plays — and yesterday's
+/// preview to know where a refused drop would have stood.
 #[derive(Resource, Default)]
-struct HeldMemo(Option<(u32, Kind)>);
+struct HeldMemo {
+    grip: Option<u32>,
+    /// The rect of the berth the carry previewed last frame
+    /// ([`previewed`]): what the ghost stood on and the patch lit.
+    berth: Option<Rect>,
+}
 
 /// A `Cue::Place` waiting for [`sync_pieces`] to wind the settle on its rig.
 #[derive(Resource, Default)]
@@ -401,13 +409,14 @@ struct Pulse {
     phase: f32,
 }
 
-/// One hold-cell hint quad, with its refusal slash alongside. Every
-/// attached room gets a set, spawned and retired with the room.
+/// The footprint patch: the one plate that lights the berth a carry's
+/// drop would take ([`footprint_patch`]), with its refusal slash
+/// alongside. One for the whole ship, because there is one carry and one
+/// drop: it is moved and resized onto whichever chart the preview names
+/// rather than spawned per cell, and it belongs to no room, so it
+/// outlives every rebuild.
 #[derive(Component)]
-struct HintCell {
-    room: RoomId,
-    x: u8,
-    y: u8,
+struct FootPatch {
     slash: Entity,
 }
 
@@ -563,8 +572,8 @@ struct CoatGlow {
 /// phosphor, the one violation-flash material every frame bar burns
 /// through, and the glyph pool's ink.
 #[derive(Resource)]
-pub struct SharedBits {
-    pub slash: Handle<StandardMaterial>,
+struct SharedBits {
+    slash: Handle<StandardMaterial>,
     flash: Handle<StandardMaterial>,
     glyph: Handle<StandardMaterial>,
 }
@@ -650,8 +659,15 @@ fn floor_facing(surface: &SimSurface, aft: &SimSurface, rect: Rect) -> Quat {
     // is what lets the same rule stand a couch up in the cabin, in a
     // derelict's hold, and in a station's trade room.
     let plan = surface.rect;
-    let seam = layout::CELL * 0.5;
-    let one_column = (rect.w - layout::CELL).abs() < seam;
+    // **Against a seam is half a cell from it or less.** That was only a
+    // rounding allowance while every footprint stood on whole cells; a
+    // berth is a position now, so it is a rule: a body that faces a seam
+    // keeps MORE than half a cell of deck in front of its face, which is
+    // the ground `gauntlet::berth_turned` holds it to. Half a sixteenth
+    // past the half, so a berth exactly half a cell out reads the same
+    // on every machine.
+    let seam = layout::CELL.mul_add(0.5, layout::CELL / f32::from(2 * cargo::FINE));
+    let one_column = (rect.w - layout::CELL).abs() < layout::CELL * 0.5;
     // Sim axes on the floor chart, in world: `u` port -> starboard,
     // `v` aft -> front (the floor's aft row lies at the aft seam).
     let u = surface.half_u.normalize();
@@ -800,7 +816,7 @@ fn wall_rolled(station: Station, surface: &SimSurface) -> bool {
 }
 
 /// Where a laid footprint lies: flat AGAINST its chart, lifted
-/// [`LAID_LIFT`] proud of the quad so the coat clears the socket plates
+/// [`LAID_LIFT`] proud of the quad so the coat clears the room's paint
 /// yet stays under everything standing on the same cells. No
 /// [`BAY_FIT`] margin — a covering covers; its own geometry insets
 /// where the berth edge should still read.
@@ -1124,30 +1140,39 @@ fn berth_site(
     }
 }
 
-/// The footprint a drop at `sim` would cover: the aimed cell as the
-/// anchor and `cargo::plan`'s answer for that cell's own chart — the
-/// very plan [`placement_hints`] lights, so hint, ghost, and berth all
-/// read one geometry.
-// phase 2: the sim's drop centres, clamps and snaps the footprint
-// (`Sim::drop_preview`); this still anchors it on the aimed cell, so the
-// ghost and the berth agree only where the two coincide.
-fn aimed_rect(rooms: &Rooms, kind: Kind, sim: SimVec2) -> Option<Rect> {
-    let (room, ax, ay) = layout::cell_at(sim)?;
-    let (w, h) = cargo::plan(rooms.kind(room)?, kind, ax, ay)?;
-    let anchor = layout::cell_rect(room, ax, ay);
-    Some(Rect::new(
-        anchor.x,
-        anchor.y,
-        f32::from(w) * layout::CELL,
-        f32::from(h) * layout::CELL,
+/// **The berth the held piece's drop at `aim` would take, drawn**: that
+/// berth's rect on its chart, and the sim's ruling on it.
+///
+/// It is [`Sim::drop_preview`]'s answer, which is the release's own
+/// resolution asked early — centred on the aim, clamped into the chart,
+/// snapped flush — so the ghost, the footprint patch, and the refusal
+/// flash all stand where the drop lands, to the sixteenth, and colour
+/// themselves with the verdict the release will get. Nothing in here
+/// re-derives a footprint from the aimed cell any more: that was the
+/// grid's answer, and the grid is gone (docs/BAY.md, "The grid comes
+/// out").
+///
+/// `None` while nothing is held, off every net, and for a cubby drop: a
+/// cubby is inside a piece and has no ground of its own to stand a
+/// ghost or light a patch on.
+fn previewed(sim: &Sim, aim: SimVec2) -> Option<(Rect, Result<(), Option<Violation>>)> {
+    let held = sim.held(0)?;
+    let piece = sim.pieces().iter().find(|piece| piece.id == held.piece)?;
+    let (loc, verdict) = sim.drop_preview(0, aim)?;
+    if matches!(loc, Loc::Stow { .. }) {
+        return None;
+    }
+    let berth = Piece { loc, ..*piece };
+    Some((
+        layout::piece_rect(sim.rooms(), sim.pieces(), &berth),
+        verdict,
     ))
 }
 
-/// **The pose a drop at `sim` would settle the carried kind into**: the
-/// turn [`site_on`] would give it, and where the same berth would stand
-/// its origin relative to the middle of the cells it takes, in metres.
-/// `None` where the aim is off the net (the caller falls back to the
-/// chart's own facing and no stand-off at all).
+/// **The turn and the stand-off a berth on `rect` gives the carried
+/// kind**: the rotation [`site_on`] stands it at, and where that berth
+/// stands its origin relative to the middle of the rect on the chart,
+/// in metres.
 ///
 /// So the carried ghost promises the pose the piece will actually take —
 /// the upright rule on the side walls, the backing rule on the floor,
@@ -1168,17 +1193,40 @@ fn aimed_rect(rooms: &Rooms, kind: Kind, sim: SimVec2) -> Option<Rect> {
 /// the deck. Both numbers are read off `site_on` here rather than
 /// restated, so the ghost and the berth move together.
 fn hover_pose(
-    rooms: &Rooms,
     station: Station,
     surface: &SimSurface,
-    aft: Option<&SimSurface>,
+    aft: &SimSurface,
     kind: Kind,
-    sim: SimVec2,
-) -> Option<(Quat, Vec3)> {
-    let rect = aimed_rect(rooms, kind, sim)?;
-    let (pos, rot, _) = site_on(station, surface, aft?, kind, rect);
-    let chart = surface.to_world(rect_center(rect));
-    Some((rot, pos - chart))
+    rect: Rect,
+) -> (Quat, Vec3) {
+    let (pos, rot, _) = site_on(station, surface, aft, kind, rect);
+    (rot, pos - surface.to_world(rect_center(rect)))
+}
+
+/// **Where the carried ghost stands over the berth on `rect`**: that
+/// berth's own pose, [`HOVER_FIT`] large about the middle of the ground
+/// it stands on, lifted [`CARRY_LIFT`] off its chart.
+///
+/// Grown about the middle of its plan rather than about the rig's
+/// origin, so a body standing on a deck still stands on it while it is
+/// a tenth too big, and the drop's glide from here to the berth has
+/// nothing left to travel but the lift and the tenth it shrinks back by.
+/// The ghost follows the aim in sixteenths because the berth does
+/// ([`previewed`]).
+fn ghost_pose(
+    station: Station,
+    surface: &SimSurface,
+    aft: &SimSurface,
+    kind: Kind,
+    rect: Rect,
+) -> (Vec3, Quat) {
+    let (rot, stand) = hover_pose(station, surface, aft, kind, rect);
+    (
+        surface.to_world(rect_center(rect))
+            + stand * HOVER_FIT
+            + station.inward(surface) * CARRY_LIFT,
+        rot,
+    )
 }
 
 // -------------------------------------------------------- riding surfaces --
@@ -1547,9 +1595,8 @@ fn ico(radius: f32) -> Mesh {
 // ----------------------------------------------------------------- overlays --
 
 /// Pre-spawn everything that waits dark for a sim state to light it: the
-/// violation frame bars (four per bay surface — a refused footprint may
-/// straddle the fold), and the glyph bar pool. The per-cell hints belong
-/// to their rooms and are spawned with them ([`hint_cells`]).
+/// footprint patch and its slash, the violation frame bars, and the
+/// glyph bar pool.
 fn spawn_overlays(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -1559,10 +1606,29 @@ fn spawn_overlays(
     let flash_mat = glow::phosphor(&mut materials, palette::LAMP_NO, 0.0);
     let glyph_mat = glow::phosphor(&mut materials, palette::GLINT, 0.0);
     commands.insert_resource(SharedBits {
-        slash: slash_mat,
+        slash: slash_mat.clone(),
         flash: flash_mat.clone(),
         glyph: glyph_mat.clone(),
     });
+
+    // The footprint patch: one plate and one slash, aimed every frame at
+    // the berth the carry previews ([`footprint_patch`]). The plate owns
+    // its material because it changes hue with the ruling.
+    let slash = commands
+        .spawn((
+            Mesh3d(skin.cube.clone()),
+            MeshMaterial3d(slash_mat),
+            Transform::default(),
+            Visibility::Hidden,
+        ))
+        .id();
+    commands.spawn((
+        Mesh3d(skin.cube.clone()),
+        MeshMaterial3d(glow::phosphor(&mut materials, palette::LAMP_OK, 0.0)),
+        Transform::default(),
+        Visibility::Hidden,
+        FootPatch { slash },
+    ));
 
     // The violation flash's frame bars — four per bay surface — and the
     // glyph pool, all aimed when a hard reject lands. The gantry that
@@ -1588,72 +1654,10 @@ fn spawn_overlays(
     }
 }
 
-/// One room's net-cell hints: a thin quad per cell on whichever chart
-/// holds it, its refusal slash floating just above (shape channel —
-/// illegality never rides hue alone). The socket plates themselves are
-/// the room's own furniture; these are the glow layer over them, lifted
-/// past [`OVERLAY_LIFT`] so a hint over a laid rug burns over the pile
-/// rather than inside it. Holes get no hint; nothing can land there.
-///
-/// Spawned with the room and retired with it, because a hint that
-/// outlived its floor would light a cell in space.
-pub fn hint_cells(
-    commands: &mut Commands,
-    cube: &Handle<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    shared: &SharedBits,
-    placed: &crate::room::Placed,
-) {
-    let tag = crate::room::InRoom {
-        room: placed.id,
-        kind: placed.kind,
-    };
-    let room = placed.id;
-    let (cols, rows) = placed.kind.grid();
-    for y in 0..rows {
-        for x in 0..cols {
-            let cell = layout::cell_rect(room, x, y);
-            let Some((station, surface)) = chart_at(&placed.charts, rect_center(cell)) else {
-                continue;
-            };
-            let (su, sv) = (surface.scale_u(), surface.scale_v());
-            let rot = station.face(&surface);
-            let normal = station.inward(&surface);
-            let center = surface.to_world(rect_center(cell));
-            let slash = commands
-                .spawn((
-                    Mesh3d(cube.clone()),
-                    MeshMaterial3d(shared.slash.clone()),
-                    Transform::from_translation(center + normal * crate::rig::layer::SLASH)
-                        .with_rotation(rot * Quat::from_rotation_z((cell.h / cell.w).atan()))
-                        .with_scale(Vec3::new(
-                            cell.w.hypot(cell.h) * 0.82 * su,
-                            2.6 * sv,
-                            0.0015,
-                        )),
-                    Visibility::Hidden,
-                    tag,
-                ))
-                .id();
-            let mat = glow::phosphor(materials, palette::LAMP_OK, 0.0);
-            commands.spawn((
-                Mesh3d(cube.clone()),
-                MeshMaterial3d(mat),
-                Transform::from_translation(center + normal * OVERLAY_LIFT)
-                    .with_rotation(rot)
-                    .with_scale(Vec3::new((cell.w - 4.0) * su, (cell.h - 4.0) * sv, 0.0015)),
-                Visibility::Hidden,
-                HintCell { room, x, y, slash },
-                tag,
-            ));
-        }
-    }
-}
-
 // -------------------------------------------------------------------- cues --
 
 /// Latch what this frame's cues mean for cargo before the view systems run:
-/// the settle target, the violation flash, and yesterday's grip.
+/// the settle target, the violation flash, and yesterday's carry.
 fn latch_cues(
     shell: Res<Shell>,
     pointer: Res<VirtualPointer>,
@@ -1664,28 +1668,23 @@ fn latch_cues(
     let sim = &shell.bridge.sim;
     for cue in sim.cues() {
         match cue {
-            Cue::Place => settle.0 = memo.0.map(|(id, _)| id),
+            Cue::Place => settle.0 = memo.grip,
             Cue::Reject { hard: true } => {
                 if let Some(rule) = sim.last_violation() {
-                    // The footprint the drop would have covered, anchored at
-                    // the pointer's cell this frame — the 2D juice's aim.
-                    // (An Occupied reject can fire from a bare grab, so an
-                    // empty memo means a one-cell flash under the hand.)
-                    // phase 2: flash the berth `Sim::drop_preview` names,
-                    // not the aimed cell's anchor.
-                    let (room, x, y) = layout::cell_at(pointer.sim).unwrap_or((CABIN, 0, 0));
-                    let (w, h) = memo
-                        .0
-                        .and_then(|(_, kind)| cargo::plan(sim.rooms().kind(room)?, kind, x, y))
-                        .unwrap_or((1, 1));
-                    let anchor = layout::cell_rect(room, x, y);
+                    // The berth the drop would have taken: the one the
+                    // carry previewed on its last frame, which is where
+                    // the ghost stood and the patch burned red. The
+                    // release has already let go, so the preview cannot
+                    // be asked again; it ran the release's own function
+                    // on the same board, a frame of aim earlier. A
+                    // refusal with nothing previewed — a bare grab of a
+                    // full cabinet, a cubby that will not take the
+                    // piece — flashes the one cell under the hand.
                     flash.left = FLASH_LEN;
-                    flash.area = Some(Rect::new(
-                        anchor.x,
-                        anchor.y,
-                        f32::from(w) * layout::CELL,
-                        f32::from(h) * layout::CELL,
-                    ));
+                    flash.area = memo.berth.or_else(|| {
+                        layout::cell_at(pointer.sim)
+                            .map(|(room, x, y)| layout::cell_rect(room, x, y))
+                    });
                     // The rule picks the glyph, and Suspicious the violet.
                     flash.rule = Some(rule);
                 }
@@ -1699,12 +1698,8 @@ fn latch_cues(
             _ => {}
         }
     }
-    memo.0 = sim.held(0).and_then(|held| {
-        sim.pieces()
-            .iter()
-            .find(|piece| piece.id == held.piece)
-            .map(|piece| (piece.id, piece.kind))
-    });
+    memo.grip = sim.held(0).map(|held| held.piece);
+    memo.berth = previewed(sim, pointer.sim).map(|(rect, _)| rect);
 }
 
 // -------------------------------------------------------------------- sync --
@@ -1957,10 +1952,11 @@ fn sync_dressings(
 ///
 /// - **Focused** (the desk): glued to the pointer exactly as the 2D drag
 ///   was — lifted off the struck panel, a tenth larger.
-/// - **Roaming** (the bay): pinned upright at the crosshair's aim point
-///   on the bay surfaces; aimed at nothing — the pointer parks off the
-///   bay constantly mid-walk — it floats low-center ahead of the camera,
-///   carried in both arms rather than visually dropped.
+/// - **Roaming** (the bay): standing over the berth the drop at the
+///   crosshair would take, posed as it will land there; aimed at
+///   nothing — the pointer parks off the bay constantly mid-walk — it
+///   floats low-center ahead of the camera, carried in both arms rather
+///   than visually dropped.
 #[allow(clippy::too_many_arguments)]
 fn carry_held(
     shell: Res<Shell>,
@@ -2009,29 +2005,54 @@ fn carry_held(
         if let (Some(world), Some(station), Some(surface), Some(kind)) =
             (pointer.world, pointer.station, pointer.surface, kind)
         {
-            // Aimed at the room: hover the piece at the hit, standing
-            // exactly the way it would land. The promise is kept by
-            // deriving the rotation from the SAME berth maths the drop
-            // will use ([`hover_pose`]) — a preview that computed its
-            // own facing drifted from the berth (the playtest's
-            // quarter-turned starboard chart hovering upright, then
-            // landing sideways, and the reverse once the upright rule
-            // landed). Only the lift off the surface is the preview's.
+            // Aimed at the room: the piece stands where its drop would
+            // land, as it would stand there, a lift proud and a tenth
+            // large ([`ghost_pose`]). The berth is the sim's own answer
+            // for this aim ([`previewed`]), so the ghost slides in
+            // sixteenths as the aim does and the release cannot put the
+            // piece anywhere the ghost was not. The turn is derived from
+            // the SAME berth maths a settled piece takes — a preview that
+            // computed its own facing drifted from the berth (the
+            // playtest's quarter-turned starboard chart hovering upright,
+            // then landing sideways, and the reverse once the upright
+            // rule landed).
             //
-            // The berth is whatever chart the aimed CELL belongs to,
-            // which is not always the surface the ray struck: a
-            // crosshair resting on a standing rig's own face reads that
-            // piece's cells, and those cells are still the floor's.
-            let (berth, plane) = chart_of(&surfaces, pointer.sim).unwrap_or((station, surface));
-            let aft = aft_for(&surfaces, &plane);
-            let (rot, stand) =
-                hover_pose(sim.rooms(), berth, &plane, aft.as_ref(), kind, pointer.sim)
-                    .unwrap_or_else(|| (station.face(&surface), Vec3::ZERO));
-            (
-                world + station.inward(&surface) * CARRY_LIFT + stand * HOVER_FIT,
-                rot,
-                HOVER_FIT,
-            )
+            // The berth's chart is read off the berth, which is not
+            // always the surface the ray struck: a crosshair resting on
+            // a standing rig's own face reads that piece's cells, and
+            // those cells are still the floor's.
+            let ghost = previewed(sim, pointer.sim).and_then(|(rect, _)| {
+                let (berth, plane) = chart_of(&surfaces, rect_center(rect))?;
+                let aft = aft_for(&surfaces, &plane)?;
+                Some(ghost_pose(berth, &plane, &aft, kind, rect))
+            });
+            let (pos, rot) = ghost.unwrap_or_else(|| {
+                // No ground to stand on: a cubby drop, or an aim off
+                // every net. Hover at the hit, a lift off the struck
+                // face. A cubby takes only a one-cell kind, so the cell
+                // under the hand is the plan its pose is read from;
+                // off the net there is no cell at all, and the struck
+                // face's own facing is all there is.
+                let cubby = matches!(
+                    sim.drop_preview(0, pointer.sim),
+                    Some((Loc::Stow { .. }, _))
+                );
+                let (berth, plane) = chart_of(&surfaces, pointer.sim).unwrap_or((station, surface));
+                let (rot, stand) = layout::cell_at(pointer.sim)
+                    .filter(|_| cubby)
+                    .zip(aft_for(&surfaces, &plane))
+                    .map_or_else(
+                        || (station.face(&surface), Vec3::ZERO),
+                        |((room, x, y), aft)| {
+                            hover_pose(berth, &plane, &aft, kind, layout::cell_rect(room, x, y))
+                        },
+                    );
+                (
+                    world + station.inward(&surface) * CARRY_LIFT + stand * HOVER_FIT,
+                    rot,
+                )
+            });
+            (pos, rot, HOVER_FIT)
         } else {
             // Aimed at nothing: hitched low on one arm, off center and
             // compact, its open face turned back toward the carrier —
@@ -2253,90 +2274,85 @@ fn hover_glint(
 
 // -------------------------------------------------------------------- hints --
 
-/// While a player-owned (or flotsam) piece is held and the pointer maps
-/// into the grid, light the footprint cells the drop would cover — the
-/// sim's `placement_check` picks the color, a slash marks every refused
-/// cell so the ruling survives without hue.
-fn placement_hints(
+/// **The footprint patch**: while a piece is held, one plate lies on the
+/// chart under the berth its drop would take ([`previewed`]), the size of
+/// that berth's footprint — `LAMP_OK` for a drop that would land,
+/// `LAMP_NO` and a slash corner to corner for one the arbiter refuses
+/// (shape channel: illegality never rides hue alone). A soft miss — a
+/// room's own goods, which cross only at the handshake — lights nothing,
+/// because nothing would be refused: the piece simply goes home.
+///
+/// It replaces a plate per cell. Those lit the cells a footprint
+/// anchored on the aimed cell would cover, and a berth is not a cell any
+/// more: a drop centres, clamps, and snaps, so per-cell plates lit
+/// ground the drop never took. One plate moved onto the berth itself
+/// cannot disagree with the drop, and the ruling it wears is the drop's
+/// own.
+fn footprint_patch(
     shell: Res<Shell>,
     pointer: Res<VirtualPointer>,
+    surfaces: Query<(&Station, &SimSurface)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut hints: Query<(
-        &HintCell,
+    patch: Single<(
+        &FootPatch,
         &MeshMaterial3d<StandardMaterial>,
+        &mut Transform,
         &mut Visibility,
     )>,
-    mut slashes: Query<&mut Visibility, Without<HintCell>>,
+    mut slashes: Query<(&mut Transform, &mut Visibility), Without<FootPatch>>,
 ) {
-    let sim = &shell.bridge.sim;
-    // phase 2: the plates light the aimed cell's anchored footprint; the
-    // drop itself centres, clamps and snaps (`Sim::drop_preview`), so the
-    // plates should light the cells that berth covers, with its verdict.
-    let plan = sim.held(0).and_then(|held| {
-        let piece = sim.pieces().iter().find(|piece| piece.id == held.piece)?;
-        let ours = player_owned(sim.rooms(), sim.pieces(), piece.kind, held.origin);
-        if !ours {
-            return None;
-        }
-        let (room, ax, ay) = layout::cell_at(pointer.sim)?;
-        // The hint must consult the SAME arbiter the drop will: a
-        // covering answers to the dressing rules (a tin coats any
-        // chart), everything else to placement. The playtest's
-        // green-frame-over-red-hint contradiction was this line using
-        // one arbiter for both.
-        let legal = if piece.kind.covering() {
-            space_trucking::sim::cargo::dressing_check(
-                sim.rooms(),
-                sim.pieces(),
-                piece.id,
-                piece.kind,
-                room,
-                cargo::fine(ax),
-                cargo::fine(ay),
-            )
-            .is_ok()
-        } else {
-            placement_check(
-                sim.rooms(),
-                sim.pieces(),
-                piece.id,
-                piece.kind,
-                room,
-                cargo::fine(ax),
-                cargo::fine(ay),
-            )
-            .is_ok()
+    let (patch, material, mut transform, mut visibility) = patch.into_inner();
+    let lit = previewed(&shell.bridge.sim, pointer.sim).and_then(|(rect, verdict)| {
+        let legal = match verdict {
+            Ok(()) => true,
+            Err(Some(_)) => false,
+            Err(None) => return None,
         };
-        let (w, h) = cargo::plan(sim.rooms().kind(room)?, piece.kind, ax, ay)?;
-        Some((room, ax, ay, w, h, legal))
+        let (station, surface) = chart_of(&surfaces, rect_center(rect))?;
+        Some((rect, legal, station, surface))
     });
-    for (cell, material, mut visibility) in &mut hints {
-        let lit = plan.filter(|&(room, ax, ay, w, h, _)| {
-            room == cell.room && cell.x >= ax && cell.x < ax + w && cell.y >= ay && cell.y < ay + h
-        });
-        if let Some((_, _, _, _, _, legal)) = lit {
-            *visibility = Visibility::Visible;
-            if let Some(mut mat) = materials.get_mut(&material.0) {
-                let col = if legal {
-                    palette::LAMP_OK
-                } else {
-                    palette::LAMP_NO
-                };
-                glow::set_lamp(&mut mat, col, 0.8);
-            }
-            if let Ok(mut slash) = slashes.get_mut(cell.slash) {
-                *slash = if legal {
-                    Visibility::Hidden
-                } else {
-                    Visibility::Visible
-                };
-            }
-        } else {
-            *visibility = Visibility::Hidden;
-            if let Ok(mut slash) = slashes.get_mut(cell.slash) {
-                *slash = Visibility::Hidden;
-            }
+    let Some((rect, legal, station, surface)) = lit else {
+        visibility.set_if_neq(Visibility::Hidden);
+        if let Ok((_, mut slash)) = slashes.get_mut(patch.slash) {
+            slash.set_if_neq(Visibility::Hidden);
         }
+        return;
+    };
+    let (su, sv) = (surface.scale_u(), surface.scale_v());
+    let rot = station.face(&surface);
+    let normal = station.inward(&surface);
+    let center = surface.to_world(rect_center(rect));
+    // Two sim units in from the footprint's edge all round, so the plate
+    // reads as laid under the piece rather than painted to its rim.
+    *transform = Transform::from_translation(center + normal * OVERLAY_LIFT)
+        .with_rotation(rot)
+        .with_scale(Vec3::new(
+            (rect.w - 4.0) * su,
+            (rect.h - 4.0) * sv,
+            crate::rig::layer::SKIN,
+        ));
+    visibility.set_if_neq(Visibility::Visible);
+    if let Some(mut mat) = materials.get_mut(&material.0) {
+        let col = if legal {
+            palette::LAMP_OK
+        } else {
+            palette::LAMP_NO
+        };
+        glow::set_lamp(&mut mat, col, 0.8);
+    }
+    if let Ok((mut slash, mut shown)) = slashes.get_mut(patch.slash) {
+        *slash = Transform::from_translation(center + normal * crate::rig::layer::SLASH)
+            .with_rotation(rot * Quat::from_rotation_z((rect.h / rect.w).atan()))
+            .with_scale(Vec3::new(
+                rect.w.hypot(rect.h) * 0.82 * su,
+                2.6 * sv,
+                crate::rig::layer::SKIN,
+            ));
+        shown.set_if_neq(if legal {
+            Visibility::Hidden
+        } else {
+            Visibility::Visible
+        });
     }
 }
 
@@ -6032,6 +6048,8 @@ fn paint_artwork(
 
 #[cfg(test)]
 mod tests {
+    use space_trucking::sim::placement_check;
+
     use super::*;
     use crate::rig;
 
@@ -6860,13 +6878,8 @@ mod tests {
         let aft = chart(Station::BayWall);
         let starboard = chart(Station::BayStarboard);
         let floor = chart(Station::BayFloor);
-        let rooms = space_trucking::sim::Sim::new(1).rooms().clone();
         let hover = |station: Station, surface: &SimSurface, kind: Kind, x: u8, y: u8| {
-            let cell = layout::cell_rect(CABIN, x, y);
-            let at = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
-            hover_pose(&rooms, station, surface, Some(&aft), kind, at)
-                .expect("the aim is on the net")
-                .0
+            ghost_pose(station, surface, &aft, kind, rect_of(x, y, kind)).1
         };
         let up = hover(Station::BayStarboard, &starboard, Kind::ChartTank, 12, 5);
         assert!(
@@ -6903,11 +6916,281 @@ mod tests {
         );
     }
 
-    /// One berth under test: a kind hung at one cell of one chart, with
-    /// everything the three claims below need to interrogate it.
+    /// **The ghost, the patch, and the flash stand where the drop lands**,
+    /// asked of the running systems rather than of the maths beneath
+    /// them: a crate carried over the cabin's deck stands over the berth
+    /// the sim previews for the aim, a sixteenth off the grid and
+    /// following the aim a sixteenth at a time; the one footprint patch
+    /// lies under it in `LAMP_OK`; aimed onto a neighbour the patch burns
+    /// `LAMP_NO` with its slash struck; aimed at nothing the patch goes
+    /// dark; and a refused release flashes the berth the ghost was
+    /// standing on, not the cell under the hand.
+    #[test]
+    #[allow(clippy::too_many_lines)] // one carry, walked through four aims and a release
+    fn the_ghost_and_its_patch_stand_where_the_drop_lands() {
+        use space_trucking::sim::InputFrame;
+
+        let floor = chart(Station::BayFloor);
+        let aft = chart(Station::BayWall);
+        let kind = Kind::ScrapAlloy;
+        // A point on the deck, `cells` in from its own top-left corner.
+        let deck = |across: f32, down: f32| {
+            SimVec2::new(
+                across.mul_add(layout::CELL, floor.rect.x),
+                down.mul_add(layout::CELL, floor.rect.y),
+            )
+        };
+        let (fx, fy) = layout::fine_at(CABIN, deck(1.0, 1.0));
+        let neighbour = Loc::Hold {
+            room: CABIN,
+            x: u16::try_from(fx).expect("on the net"),
+            y: u16::try_from(fy).expect("on the net"),
+        };
+        let rooms = Sim::new(1).rooms().clone();
+        let neighbour_piece = Piece {
+            id: 0,
+            kind,
+            variant: 0,
+            gnawed: false,
+            loc: neighbour,
+        };
+        let (room, x, y) = cargo::first_fit(&rooms, &[neighbour_piece], 1, kind)
+            .expect("the cabin has room for a second crate");
+        let mut sim = board_of(&[(kind, neighbour), (kind, Loc::Hold { room, x, y })]);
+        lift(&mut sim, 1);
+
+        let mut app = App::new();
+        app.init_resource::<Time>()
+            .init_resource::<Assets<StandardMaterial>>()
+            .init_resource::<PieceIndex>()
+            .init_resource::<HeldMemo>()
+            .init_resource::<PendingSettle>()
+            .init_resource::<CarryState>()
+            .init_resource::<FlashState>()
+            .init_resource::<VirtualPointer>()
+            .insert_resource(crate::rig::CameraRig::boot(None))
+            .add_systems(
+                Update,
+                (latch_cues, carry_held, footprint_patch, violation_flash).chain(),
+            );
+        let (slash_mat, flash, glyph, patch_mat) = {
+            let mut materials = app.world_mut().resource_mut::<Assets<StandardMaterial>>();
+            (
+                materials.add(StandardMaterial::default()),
+                materials.add(StandardMaterial::default()),
+                materials.add(StandardMaterial::default()),
+                materials.add(StandardMaterial::default()),
+            )
+        };
+        app.insert_resource(SharedBits {
+            slash: slash_mat,
+            flash,
+            glyph,
+        });
+        let world = app.world_mut();
+        world.spawn((crate::rig::CabinCamera, Transform::default()));
+        for (station, surface) in rig::bay() {
+            world.spawn((station, surface));
+        }
+        let slash = world.spawn((Transform::default(), Visibility::Hidden)).id();
+        let patch = world
+            .spawn((
+                MeshMaterial3d(patch_mat.clone()),
+                Transform::default(),
+                Visibility::Hidden,
+                FootPatch { slash },
+            ))
+            .id();
+        let mut part = || world.spawn(Visibility::Hidden).id();
+        let (bite, body_root, rig_slash) = (part(), part(), part());
+        let carried = world
+            .spawn((
+                PieceRig {
+                    from: Vec3::ZERO,
+                    goal: Vec3::ZERO,
+                    rot_from: Quat::IDENTITY,
+                    rot_goal: Quat::IDENTITY,
+                    scale_from: Vec3::ONE,
+                    scale_goal: Vec3::ONE,
+                    ease: 0.0,
+                    settle: 0.0,
+                    gnawed_shown: false,
+                    bite,
+                    body_root,
+                    slash: rig_slash,
+                    grab_mat: None,
+                },
+                Transform::default(),
+            ))
+            .id();
+        world.resource_mut::<PieceIndex>().0.insert(1, carried);
+        app.insert_resource(Shell {
+            bridge: crate::bridge::Bridge::boot_fixture(&sim.save_string()),
+            outcome: crate::bridge::FrameOutcome::default(),
+            muted: false,
+        });
+        // The fixture boot is a fresh sim from the save, and a save holds
+        // no carry: hand it the one this test lifted.
+        app.world_mut().resource_mut::<Shell>().bridge.sim = sim;
+
+        let aim_at = |app: &mut App, at: SimVec2| {
+            *app.world_mut().resource_mut::<VirtualPointer>() = VirtualPointer {
+                sim: at,
+                world: Some(floor.to_world(at)),
+                station: Some(Station::BayFloor),
+                surface: Some(floor),
+                ..default()
+            };
+            app.update();
+            let preview = app
+                .world()
+                .resource::<Shell>()
+                .bridge
+                .sim
+                .drop_preview(0, at)
+                .expect("the aim is on the deck");
+            let (Loc::Hold { x, y, .. }, verdict) = preview else {
+                panic!("a crate on the deck previews a berth on it: {preview:?}");
+            };
+            (rect_at(x, y, kind), (x, y), verdict)
+        };
+        let shown = |app: &App, entity: Entity| {
+            *app.world()
+                .entity(entity)
+                .get::<Visibility>()
+                .expect("a visibility")
+        };
+        let placed = |app: &App, entity: Entity| {
+            *app.world()
+                .entity(entity)
+                .get::<Transform>()
+                .expect("a transform")
+        };
+        let hue = |app: &App| {
+            app.world()
+                .resource::<Assets<StandardMaterial>>()
+                .get(&patch_mat)
+                .expect("the patch's own material")
+                .emissive
+        };
+
+        // Aimed at open deck, off the grid: the ghost stands over the
+        // berth the sim previews, a sixteenth at a time.
+        let open = deck(4.4, 3.0);
+        let (rect, (x, _), verdict) = aim_at(&mut app, open);
+        assert_eq!(verdict, Ok(()), "open deck takes the crate");
+        assert_ne!(x % cargo::FINE, 0, "the aim was meant to land off the grid");
+        let (pos, rot) = ghost_pose(Station::BayFloor, &floor, &aft, kind, rect);
+        let ghost = placed(&app, carried);
+        assert!(
+            (ghost.translation - pos).length() < 1e-5 && ghost.rotation.angle_between(rot) < 1e-5,
+            "the ghost stands at {ghost:?}, and the berth the drop previews puts it at {pos:?}"
+        );
+        let nudged = SimVec2::new(open.x + layout::CELL / f32::from(cargo::FINE), open.y);
+        let (_, (x2, _), _) = aim_at(&mut app, nudged);
+        assert_eq!(x2, x + 1, "a sixteenth of aim is a sixteenth of berth");
+        let step = placed(&app, carried).translation - ghost.translation;
+        let sixteenth = floor.scale_u() * layout::CELL / f32::from(cargo::FINE);
+        assert!(
+            (step.length() - sixteenth).abs() < 1e-5,
+            "the ghost moved {step:?} for a sixteenth of aim, not {sixteenth} m"
+        );
+        let (rect, _, _) = aim_at(&mut app, open);
+        let at = placed(&app, patch);
+        assert_eq!(
+            shown(&app, patch),
+            Visibility::Visible,
+            "a legal drop lights its patch"
+        );
+        assert_eq!(
+            shown(&app, slash),
+            Visibility::Hidden,
+            "and strikes nothing"
+        );
+        let middle = floor.to_world(rect_center(rect));
+        assert!(
+            (at.translation - middle).dot(Station::BayFloor.inward(&floor)) > 0.0
+                && (at.translation - middle)
+                    .cross(Station::BayFloor.inward(&floor))
+                    .length()
+                    < 1e-5,
+            "the patch lies at {:?}, which is not over the berth's middle {middle:?}",
+            at.translation
+        );
+        let footprint = Vec2::new(
+            (rect.w - 4.0) * floor.scale_u(),
+            (rect.h - 4.0) * floor.scale_v(),
+        );
+        assert!(
+            (at.scale.truncate() - footprint).length() < 1e-5,
+            "the patch is not the berth's own footprint: {:?}",
+            at.scale
+        );
+        let ok = hue(&app);
+        assert!(ok.green > ok.red, "a legal patch burns green: {ok:?}");
+
+        // Aimed onto the neighbour: refused, red, and struck through.
+        let onto = rect_center(layout::piece_rect(
+            &rooms,
+            &[neighbour_piece],
+            &neighbour_piece,
+        ));
+        let (refused, _, verdict) = aim_at(&mut app, onto);
+        assert_eq!(verdict, Err(Some(Violation::Overlap)));
+        assert_eq!(
+            shown(&app, patch),
+            Visibility::Visible,
+            "a refusal is shown"
+        );
+        assert_eq!(
+            shown(&app, slash),
+            Visibility::Visible,
+            "and never by hue alone"
+        );
+        let no = hue(&app);
+        assert!(no.red > no.green, "a refused patch burns red: {no:?}");
+
+        // Aimed at nothing: no berth, no patch.
+        *app.world_mut().resource_mut::<VirtualPointer>() = VirtualPointer::default();
+        app.update();
+        assert_eq!(
+            shown(&app, patch),
+            Visibility::Hidden,
+            "a parked aim lights nothing"
+        );
+        assert_eq!(shown(&app, slash), Visibility::Hidden);
+
+        // Back onto the neighbour, and let go: the release is refused, and
+        // the flash burns over the berth the ghost was standing on.
+        let _ = aim_at(&mut app, onto);
+        app.world_mut().resource_mut::<Shell>().bridge.sim.advance(
+            space_trucking::sim::TICK_DT,
+            &InputFrame {
+                pointer: onto,
+                release: true,
+                ..default()
+            },
+        );
+        app.update();
+        let flash = app.world().resource::<FlashState>();
+        assert_eq!(
+            flash.rule,
+            Some(Violation::Overlap),
+            "the release was refused"
+        );
+        assert_eq!(
+            flash.area,
+            Some(refused),
+            "the flash burns where the drop would have stood"
+        );
+    }
+
+    /// One berth under test: a kind hung at one fine anchor of one chart,
+    /// with everything the claims below need to interrogate it.
     struct Berth {
         kind: Kind,
-        cell: (u8, u8),
+        /// The footprint's top-left corner, in `cargo::FINE` units.
+        at: (u16, u16),
         rooms: Rooms,
         station: Station,
         surface: SimSurface,
@@ -7018,9 +7301,9 @@ mod tests {
     }
 
     /// Claim two: the carried ghost promises the berth it would take, to
-    /// the last bit — the turn AND the stand-off. Preview and berth
-    /// share [`site_on`] today; the claim is here so no refactor can
-    /// quietly split them again.
+    /// the last bit — the berth itself, the turn, AND the stand-off.
+    /// Preview and berth share [`site_on`] today; the claim is here so no
+    /// refactor can quietly split them again.
     ///
     /// **The stand-off half of it is the half that was missing**, and it
     /// was invisible while every kind was drawn centred in its own cell:
@@ -7030,52 +7313,101 @@ mod tests {
     /// drawn wholly above its origin now, and the same hover would have
     /// put the whole of it under the floor.
     ///
-    /// Coverings are the one exemption, and honestly so: a carried rug
+    /// **Aimed where a player would aim: at the middle of the berth it
+    /// means.** The drop centres the footprint on the aim (docs/BAY.md,
+    /// "The grid comes out"), so that aim has to name this very berth,
+    /// and it is asked of `held`'s own [`Sim::drop_preview`] — the
+    /// release's resolution asked early, with the verdict the release
+    /// would get. The ghost the runtime stands over the berth it names
+    /// ([`ghost_pose`]) is that berth's own pose, a lift proud and a
+    /// tenth large about the middle of its plan, and differs from it by
+    /// nothing else: the drop's glide has only the lift left to travel.
+    ///
+    /// The one berth no aim names is one the drop's snap moves: an edge
+    /// within a quarter cell of its chart's own edge lands flush on it.
+    /// The claim then holds the drop to that much and no more — moved a
+    /// quarter cell at most, and flush — and asks the ghost about the
+    /// flush berth it does name, which the sweep visits in its own right.
+    ///
+    /// Coverings are exempt from the pose, and honestly so: a carried rug
     /// is ROLLED UP — a different body of the same rig — and its ghost
-    /// promises the berth THAT body takes.
-    fn the_ghost_promises_the_berth(b: &Berth) {
+    /// promises the berth THAT body takes. The drop still has to name the
+    /// berth its middle is aimed at.
+    fn the_ghost_promises_the_berth(b: &Berth, held: &Sim) {
+        let name = &b.name;
+        let (loc, verdict) = held
+            .drop_preview(0, rect_center(b.rect))
+            .unwrap_or_else(|| panic!("{name}: the aim at the berth's middle is off the net"));
+        assert_eq!(
+            verdict,
+            Ok(()),
+            "{name}: the arbiter allows this berth and the drop aimed at its middle refuses it"
+        );
+        let (Loc::Hold { room, x, y } | Loc::Laid { room, x, y }) = loc else {
+            panic!("{name}: an empty cabin offered a cubby: {loc:?}");
+        };
+        assert_eq!(
+            room, CABIN,
+            "{name}: the drop left the room it was aimed into"
+        );
+        let rect = rect_at(x, y, b.kind);
+        let chart = b.surface.rect;
+        for (axis, want, got, near, far, edge, end) in [
+            (
+                "across",
+                b.at.0,
+                x,
+                rect.x,
+                rect.x + rect.w,
+                chart.x,
+                chart.x + chart.w,
+            ),
+            (
+                "down",
+                b.at.1,
+                y,
+                rect.y,
+                rect.y + rect.h,
+                chart.y,
+                chart.y + chart.h,
+            ),
+        ] {
+            if want == got {
+                continue;
+            }
+            assert!(
+                want.abs_diff(got) <= cargo::FINE / 4
+                    && ((near - edge).abs() < 1e-3 || (far - end).abs() < 1e-3),
+                "{name}: the drop aimed at the berth's middle moved it {axis} to {got}, \
+                 which is no snap flush onto its chart's edge"
+            );
+        }
         if b.laid {
             return;
         }
-        // Aimed at the ANCHOR cell: a ghost's footprint hangs off the
-        // cell under the crosshair, so that is the aim this berth would
-        // ever be reached by.
-        // phase 2: the drop centres the footprint on the aim
-        // (`Sim::drop_preview`); aim at the berth's middle and hold the
-        // ghost to the berth that preview names.
-        let aim = rect_center(layout::cell_rect(CABIN, b.cell.0, b.cell.1));
-        let (preview, stand) =
-            hover_pose(&b.rooms, b.station, &b.surface, Some(&b.aft), b.kind, aim)
-                .expect("the aim is on the net");
-        let (name, rot) = (&b.name, b.site.1);
+        let (pos, rot) = ghost_pose(b.station, &b.surface, &b.aft, b.kind, rect);
+        let (berth, turn, _) = site_on(b.station, &b.surface, &b.aft, b.kind, rect);
         for axis in [Vec3::X, Vec3::Y, Vec3::Z] {
             assert!(
-                (preview * axis - rot * axis).length() < 1e-5,
-                "{name}: the preview's {axis:?} ({:?}) drifted from the berth's ({:?})",
-                preview * axis,
-                rot * axis
+                (rot * axis - turn * axis).length() < 1e-5,
+                "{name}: the ghost's {axis:?} ({:?}) drifted from the berth's ({:?})",
+                rot * axis,
+                turn * axis
             );
         }
-        // And the hover the runtime builds out of that stand-off stands
-        // the piece exactly where the berth will, one lift proud of it.
-        //
         // **The whole offset, not merely the reach off the chart.** A
         // standing berth draws its rig back onto its own cells
         // ([`site_on`]), so a ghost carrying only the height hovered
         // square over the cell and promised a landing most of half a
-        // cell out into the aisle. What the crosshair is allowed to move
-        // is where the ghost hangs, not how the berth is composed: the
-        // aim is the ANCHOR cell and a footprint hangs off it, so the
-        // ghost and the berth differ by exactly that cell's own offset
-        // from the middle of the rect, and by nothing else.
+        // cell out into the aisle. Take the lift and the tenth back out
+        // of the ghost and what is left is the berth, to the micron.
         let inward = b.station.inward(&b.surface);
-        let hovered = b.surface.to_world(aim) + inward * CARRY_LIFT + stand;
-        let promised = b.site.0 + inward * CARRY_LIFT;
-        let anchored = b.surface.to_world(aim) - b.surface.to_world(rect_center(b.rect));
+        let middle = b.surface.to_world(rect_center(rect));
+        let landed = middle + (pos - inward * CARRY_LIFT - middle) / HOVER_FIT;
         assert!(
-            (hovered - promised - anchored).length() < 1e-4,
-            "{name}: the ghost hovers at {hovered:?}, the berth stands it at {promised:?}, \
-             and the aimed cell is only {anchored:?} off the plan's own middle"
+            (landed - berth).length() < 1e-4,
+            "{name}: the ghost at {pos:?} lands at {landed:?}, and the berth stands it at \
+             {berth:?}"
         );
     }
 
@@ -7101,8 +7433,8 @@ mod tests {
             gnawed: false,
             loc: Loc::Hold {
                 room: CABIN,
-                x: cargo::fine(b.cell.0),
-                y: cargo::fine(b.cell.1),
+                x: b.at.0,
+                y: b.at.1,
             },
         }];
         let face = standing_surface(charts, b.kind, b.rect);
@@ -7277,8 +7609,8 @@ mod tests {
             gnawed: false,
             loc: Loc::Hold {
                 room: CABIN,
-                x: cargo::fine(b.cell.0),
-                y: cargo::fine(b.cell.1),
+                x: b.at.0,
+                y: b.at.1,
             },
         }];
         let mut aims: Vec<Aimable> = charts
@@ -7361,14 +7693,96 @@ mod tests {
         asked > 0
     }
 
+    /// **The boot's own ship with nothing aboard but `cargo`**, ids in
+    /// order: a board a carry can be asked about without the starter
+    /// cargo's neighbours in the answer. The other rooms keep what the
+    /// boot gave them, minus their goods.
+    fn board_of(cargo: &[(Kind, Loc)]) -> Sim {
+        use std::fmt::Write as _;
+
+        let mut save = String::new();
+        for line in Sim::new(1).save_string().lines() {
+            if line.starts_with("piece ") {
+                continue;
+            }
+            if line.starts_with("next_piece") {
+                // Writing into a String cannot fail.
+                for (id, (kind, loc)) in cargo.iter().enumerate() {
+                    let (layer, room, x, y) = match *loc {
+                        Loc::Hold { room, x, y } => ("hold", room, x, y),
+                        Loc::Laid { room, x, y } => ("laid", room, x, y),
+                        Loc::Stow { .. } => unreachable!("a board is laid out in rooms"),
+                    };
+                    let _ = writeln!(
+                        save,
+                        "piece {id} {} 0 0 {layer} {room} {x} {y}",
+                        kind.index()
+                    );
+                }
+                let _ = writeln!(save, "next_piece {}", cargo.len());
+                continue;
+            }
+            save.push_str(line);
+            save.push('\n');
+        }
+        Sim::from_save(&save).expect("a hand-laid board parses")
+    }
+
+    /// Player 0 presses on piece `id`, and must come away holding it.
+    fn lift(sim: &mut Sim, id: u32) {
+        let piece = *sim
+            .pieces()
+            .iter()
+            .find(|piece| piece.id == id)
+            .expect("the piece is aboard");
+        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        sim.advance(
+            space_trucking::sim::TICK_DT,
+            &space_trucking::sim::InputFrame {
+                pointer: at,
+                press: true,
+                held: true,
+                ..default()
+            },
+        );
+        assert_eq!(
+            sim.held(0).map(|held| held.piece),
+            Some(id),
+            "{:?} could not be lifted at {at:?}",
+            piece.kind
+        );
+    }
+
+    /// **A cabin holding nothing but one `kind`, lifted by player 0**:
+    /// the sweep's own empty board with a carry in it, so a drop is asked
+    /// about the chart and never about the neighbours.
+    fn holding(kind: Kind) -> Sim {
+        let rooms = Sim::new(1).rooms().clone();
+        let fit = if kind.covering() {
+            cargo::dress_fit(&rooms, &[], 0, kind).map(|(room, x, y)| Loc::Laid { room, x, y })
+        } else {
+            cargo::first_fit(&rooms, &[], 0, kind).map(|(room, x, y)| Loc::Hold { room, x, y })
+        };
+        let loc = fit.unwrap_or_else(|| panic!("an empty ship has no room for {kind:?}"));
+        let mut sim = board_of(&[(kind, loc)]);
+        lift(&mut sim, 0);
+        sim
+    }
+
     /// The orientation defect class, closed by sweep: every kind, at
-    /// every placement the sim's own arbiter allows, put to all four
+    /// every placement the sim's own arbiter allows, put to all five
     /// claims above. Each of them held on the wall it was written
     /// against and nowhere else at some point in this class's history —
     /// the sideways star chart, the front wall's upside-down sky, the
     /// grab bar a quarter turn off the band that routes it — so a sweep
     /// is the only shape of test that can say "on every wall" and mean
     /// it.
+    ///
+    /// **Every placement is every whole-cell anchor and the fixed sample
+    /// of sixteenths off it** (`cargo::FRACTIONS`), because a berth is a
+    /// position now and not a cell: a body that hangs true on the grid
+    /// and a sixteenth off it has been asked about the ground it
+    /// straddles as well as the ground it owns.
     #[test]
     fn every_kind_hangs_true_on_every_legal_berth() {
         use space_trucking::sim::cargo::{dressing_check, placement_check};
@@ -7376,62 +7790,68 @@ mod tests {
         let ship = Rooms::new();
         let charts = rig::bay();
         let aft = chart(Station::BayWall);
+        let (cols, rows) = space_trucking::sim::RoomKind::Cabin.grid();
+        let anchors: Vec<(u16, u16)> = (0..rows)
+            .flat_map(|y| {
+                (0..cols).flat_map(move |x| {
+                    cargo::FRACTIONS.into_iter().flat_map(move |dy| {
+                        cargo::FRACTIONS
+                            .into_iter()
+                            .map(move |dx| (cargo::fine(x) + dx, cargo::fine(y) + dy))
+                    })
+                })
+            })
+            .collect();
         let mut swept = 0_u32;
         let mut handled = 0_u32;
         let mut faced = 0_u32;
         let mut seen = 0_u32;
         let mut walls_handled: Vec<Station> = Vec::new();
         for kind in Kind::ALL {
-            let (cols, rows) = space_trucking::sim::RoomKind::Cabin.grid();
-            for y in 0..rows {
-                for x in 0..cols {
-                    // The sim rules the board; the cabin only draws it.
-                    // A covering answers to the dressing arbiter — it
-                    // has no hold form aboard at all — and everything
-                    // else to the placement ladder, on an empty board so
-                    // the sweep asks about charts, not about neighbours.
-                    let laid = kind.covering();
-                    // phase 2: whole-cell anchors only; the claims below
-                    // are about a berth's own cells, which a free berth
-                    // straddles.
-                    let (fx, fy) = (cargo::fine(x), cargo::fine(y));
-                    let legal = if laid {
-                        dressing_check(&ship, &[], 0, kind, CABIN, fx, fy).is_ok()
+            let held = holding(kind);
+            for &(fx, fy) in &anchors {
+                // The sim rules the board; the cabin only draws it. A
+                // covering answers to the dressing arbiter — it has no
+                // hold form aboard at all — and everything else to the
+                // placement ladder, on an empty board so the sweep asks
+                // about charts, not about neighbours.
+                let laid = kind.covering();
+                let legal = if laid {
+                    dressing_check(&ship, &[], 0, kind, CABIN, fx, fy).is_ok()
+                } else {
+                    placement_check(&ship, &[], 0, kind, CABIN, fx, fy).is_ok()
+                };
+                if !legal {
+                    continue;
+                }
+                let rect = rect_at(fx, fy, kind);
+                let (station, surface) =
+                    chart_at(&charts, rect_center(rect)).expect("a legal berth is on a chart");
+                let berth = Berth {
+                    kind,
+                    at: (fx, fy),
+                    rooms: ship.clone(),
+                    station,
+                    surface,
+                    aft,
+                    rect,
+                    laid,
+                    site: if laid {
+                        laid_on(station, &surface, rect)
                     } else {
-                        placement_check(&ship, &[], 0, kind, CABIN, fx, fy).is_ok()
-                    };
-                    if !legal {
-                        continue;
-                    }
-                    let rect = rect_at(fx, fy, kind);
-                    let (station, surface) =
-                        chart_at(&charts, rect_center(rect)).expect("a legal berth is on a chart");
-                    let berth = Berth {
-                        kind,
-                        cell: (x, y),
-                        rooms: ship.clone(),
-                        station,
-                        surface,
-                        aft,
-                        rect,
-                        laid,
-                        site: if laid {
-                            laid_on(station, &surface, rect)
-                        } else {
-                            site_on(station, &surface, &aft, kind, rect)
-                        },
-                        name: format!("{kind:?} at ({x}, {y}) on {station:?}"),
-                    };
-                    swept += 1;
-                    the_body_hangs_true(&berth);
-                    the_ghost_promises_the_berth(&berth);
-                    faced += u32::from(the_face_is_the_body_it_draws(&berth, &charts));
-                    seen += u32::from(the_body_answers_from_all_round(&berth, &charts));
-                    if the_amber_is_the_routing_region(&berth, &charts) {
-                        handled += 1;
-                        if !walls_handled.contains(&station) {
-                            walls_handled.push(station);
-                        }
+                        site_on(station, &surface, &aft, kind, rect)
+                    },
+                    name: format!("{kind:?} at fine ({fx}, {fy}) on {station:?}"),
+                };
+                swept += 1;
+                the_body_hangs_true(&berth);
+                the_ghost_promises_the_berth(&berth, &held);
+                faced += u32::from(the_face_is_the_body_it_draws(&berth, &charts));
+                seen += u32::from(the_body_answers_from_all_round(&berth, &charts));
+                if the_amber_is_the_routing_region(&berth, &charts) {
+                    handled += 1;
+                    if !walls_handled.contains(&station) {
+                        walls_handled.push(station);
                     }
                 }
             }
@@ -7661,18 +8081,18 @@ mod tests {
             ("backer face", -layer::BACKER),
             // A colored tile carries up to three readings, and they get
             // three rungs, room after room, because a room's tiles are
-            // the cabin's tiles one lane over: the class's FIELD under
-            // the berth wells, the class's own MARK on its region's rim,
-            // and the TREAD of any doorway crossing the same deck. All
-            // three landed on one square metre of the Guild's floor in
-            // the playtest, two of them sharing a rung, and shimmered.
-            ("tile field / berth well", layer::TILE),
+            // the cabin's tiles one lane over: the class's FIELD, the
+            // class's own MARK on its region's rim, and the TREAD of any
+            // doorway crossing the same deck. All three landed on one
+            // square metre of the Guild's floor in the playtest, two of
+            // them sharing a rung, and shimmered.
+            ("tile field", layer::TILE),
             ("tile mark", layer::MARK),
             ("threshold tread", layer::TREAD),
             ("laid", layer::LAID),
             ("rug pile top", LAID_LIFT + RUG_THICK),
-            ("hint", layer::HINT),
-            ("slash", layer::SLASH),
+            ("footprint patch", layer::HINT),
+            ("patch slash", layer::SLASH),
             ("flash", layer::FLASH),
             ("glyph", layer::GLYPH),
         ];

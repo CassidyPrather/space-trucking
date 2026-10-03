@@ -547,6 +547,13 @@ in the same change:
 | `Threshold` | a studded tread and a brass sill, on the deck the door stands on | an aperture's footprint. Never a berth (see the threshold rule) |
 | `Fixture` | bare fabric — the room's own hardware is standing on it | the cells a room's handshake and pendant already fill. Never a berth (see the fixture rule) |
 
+> Since BAY.md's *The grid comes out*, a class is a **region** a piece
+> stands in rather than a cell it occupies: a footprint touching any
+> cell of a class that refuses cargo is refused, and every other
+> question reads the tile under the footprint's centre. The paint is
+> unchanged — chalk, enamel, and tape still mark regions on their rims —
+> and the plain classes' berth wells are retired with the grid.
+
 Four laws over that table:
 
 - **The color is the behavior's own reading, never decoration.** The
@@ -649,6 +656,11 @@ never come apart. Four clauses, each doing work:
    carry, and refuses nothing `Plain` accepts. That uniformity is the
    point of the class and not a convenience: one grid, one set of
    mechanics, everywhere in the room.
+
+   > Superseded in part by BAY.md, *The grid comes out*: there are no
+   > berth wells any more — `Plain` and `Staging` both paint nothing,
+   > and the one footprint patch under the berth `Sim::drop_preview`
+   > names answers the carry on either. The uniformity stands.
 2. **Nothing stays.** `cargo::staying` already asks whether a berth is
    one a piece would still hold after a launch, and a calling room's
    never is. So a spare instrument staged on a station's deck does not

@@ -120,10 +120,11 @@
 
 use std::collections::BTreeMap;
 use std::fmt;
+use std::sync::OnceLock;
 
 use bevy::prelude::*;
 use space_trucking::sim::cargo::{
-    Foot, Kind, Loc, Mount, Piece, fine, mount_accepts, placement_check,
+    FRACTIONS, Foot, Kind, Loc, Mount, Piece, fine, mount_accepts, placement_check,
 };
 use space_trucking::sim::layout;
 use space_trucking::sim::room::{CABIN, RoomId, RoomKind, Rooms, Surf, Tile};
@@ -403,12 +404,21 @@ impl Box3 {
     /// Whether this box genuinely stands in `other` — [`CLIP_SLACK`] of
     /// overlap on every axis, and [`CLIP_BITE`] of the smaller body eaten.
     fn clips(self, other: Self) -> Option<Vec3> {
-        let meet = self.meet(other);
+        self.clips_part(other, other)
+    }
+
+    /// [`Box3::clips`], asked of one `part` of a `whole` body: the overlap
+    /// is measured in the part, and the bite against the whole. Cutting a
+    /// body into shares must never turn a graze into a clip by making the
+    /// thing grazed small — a sixteenth of a crate's air is not a body a
+    /// fitting can eat most of.
+    fn clips_part(self, part: Self, whole: Self) -> Option<Vec3> {
+        let meet = self.meet(part);
         let span = meet.span();
         if span.min_element() <= CLIP_SLACK {
             return None;
         }
-        let smaller = self.volume().min(other.volume()).max(f32::EPSILON);
+        let smaller = self.volume().min(whole.volume()).max(f32::EPSILON);
         (meet.volume() / smaller > CLIP_BITE).then_some(span)
     }
 }
@@ -672,26 +682,48 @@ pub fn loaded_save(base: &str) -> Option<String> {
 
 // ------------------------------------------------------------- the berths --
 
-/// One berth: a cell of a room's net cargo may legally take, and the air
-/// the biggest rig that may take it actually spends.
+/// One berth: a footprint's worth of a room's net that cargo may legally
+/// take, and the air the biggest rig that may take it actually spends.
 ///
-/// The air is the CELL's own column, not the rig's whole body: a standing
-/// rig keeps its bas-relief depth and reaches past its own footprint into
-/// the aisle in front of it, and a fitting in that aisle is a composition
-/// note rather than a clip. What a berth owns is its own cell, floor to
-/// the top of the tallest thing that may stand on it.
-#[derive(Clone, Copy, Debug)]
+/// **A berth is ground, not a cell**, because cargo stands anywhere a
+/// sixteenth of a cell can name (docs/BAY.md, "The grid comes out"). It
+/// used to be one cell keyed to the deepest air of any berth touching it,
+/// which was honest while every footprint covered whole cells and stops
+/// being honest the moment one does not: a wardrobe a sixteenth into a
+/// cell would have charged that cell's WHOLE face with its height. So
+/// the air is keyed by the footprint's own fine rect, and a fitting is
+/// judged against the ground a berth actually spends.
+///
+/// The air is the footprint's own column, not the rig's whole body: a
+/// standing rig keeps its bas-relief depth and reaches past its own
+/// footprint into the aisle in front of it, and a fitting in that aisle
+/// is a composition note rather than a clip. What a berth owns is its own
+/// ground, floor to the top of the tallest thing that may stand on it.
+#[derive(Clone, Debug)]
 pub struct Berth {
+    /// The ground itself, in `cargo::FINE` units of the room's net.
+    pub foot: Foot,
+    /// The cell under its middle (`Foot::centre`): the one a finding
+    /// names, and the one whose class the berth reads.
     pub cell: (u8, u8),
     pub station: Station,
-    /// What the cell reads as. Carried on the berth rather than looked up
-    /// again, because two rules turn on it and a rule that re-derived a
-    /// class could rule about a different cell than the one it measured.
+    /// What the berth reads as: the class of the tile under its middle,
+    /// which is the reading every rule that asks "what does this piece
+    /// stand on" takes (`cargo::berth_tile`). Carried on the berth rather
+    /// than looked up again, because two rules turn on it and a rule that
+    /// re-derived a class could rule about different ground than the
+    /// ground it measured.
     pub class: Tile,
-    /// The cell's own face on its chart.
+    /// The footprint's own face on its chart.
     pub face: Box3,
     /// The face plus the air a rig fills, out into the room.
     pub air: Box3,
+    /// That air cut at the cell lines, each share with the cell it stands
+    /// over and that cell's own class: a berth a sixteenth over a region's
+    /// edge spends a sixteenth of its air over the next region, and a
+    /// rule about what a room may stand in its own ground reads the
+    /// ground, not the middle of the crate ([`berth_clear`]).
+    pub over: Vec<((u8, u8), Tile, Box3)>,
     /// Which way the room is, from this berth.
     pub inward: Vec3,
     /// The kind whose body sets the depth — the tallest thing that stands
@@ -732,61 +764,123 @@ fn rig_air(
     Some((lo - plane).dot(inward).max((hi - plane).dot(inward)))
 }
 
-/// Every berth of one placed room, with the air each one spends.
+/// **Every anchor a berth sweep tries in a room**: each whole cell's
+/// corner and the shared sample of sixteenths off it on each axis
+/// (`cargo::FRACTIONS`), in fine units, row-major.
+///
+/// A berth may be any of 256 positions per cell, and asking all of them
+/// buys very little the sample does not: on the grid, a sixteenth off it
+/// either way, and either side of the half. Twenty-five per cell, asked
+/// once per run ([`swept`]), keeps a sweep near a second; and the sample
+/// is fixed, so a finding names the same berth every run.
+fn anchors(kind: RoomKind) -> impl Iterator<Item = (u16, u16)> {
+    let (cols, rows) = kind.grid();
+    (0..rows).flat_map(move |y| {
+        (0..cols).flat_map(move |x| {
+            FRACTIONS.into_iter().flat_map(move |dy| {
+                FRACTIONS
+                    .into_iter()
+                    .map(move |dx| (fine(x) + dx, fine(y) + dy))
+            })
+        })
+    })
+}
+
+/// **Whether anything can ever come to stand on `foot`**, beyond the
+/// arbiter allowing it.
+///
+/// On the grid, the arbiter is the whole answer: a room sets out its own
+/// goods a cell at a time, on cells no player's drop may touch. Off the
+/// grid it is not, because only the player's own carry ever puts a piece
+/// there — the drop and `cargo::first_fit` — and the drop refuses a
+/// footprint touching any cell of a class that does not take your cargo
+/// (`Tile::takes_your_cargo`), while `first_fit` keeps to the ship's own
+/// rooms, which keep no stock and whose doorways the arbiter refuses
+/// anyway. A sixteenth off a shelf of the room's stock is
+/// ground the arbiter would allow and nothing can ever take, and a
+/// fitting standing beside the shelf is not standing in a berth.
+fn takeable(host: RoomKind, foot: Foot) -> bool {
+    (foot.x.is_multiple_of(fine(1)) && foot.y.is_multiple_of(fine(1)))
+        || foot
+            .cells()
+            .all(|(x, y)| host.tile_of(x, y).is_some_and(Tile::takes_your_cargo))
+}
+
+/// Every berth of one placed room, with the air each one spends: every
+/// footprint any kind may legally take there ([`anchors`]), once, at the
+/// air of the deepest kind that may take it.
 #[must_use]
 pub fn berths(rooms: &Rooms, placed: &Placed) -> Vec<Berth> {
-    let (cols, rows) = placed.kind.grid();
-    let mut deepest: BTreeMap<(u8, u8), (f32, Kind)> = BTreeMap::new();
+    let mut deepest: BTreeMap<(u16, u16, u16, u16), (f32, Kind)> = BTreeMap::new();
     for kind in Kind::ALL {
         if kind.covering() {
             continue;
         }
-        for y in 0..rows {
-            for x in 0..cols {
-                // phase 2: whole-cell anchors only; the air a berth
-                // spends is keyed by cell, and a free berth spends it
-                // across the cells its footprint touches.
-                let (fx, fy) = (fine(x), fine(y));
-                if placement_check(rooms, &[], u32::MAX, kind, placed.id, fx, fy).is_err() {
-                    continue;
-                }
-                let Some(foot) = Foot::of(placed.kind, kind, fx, fy) else {
-                    continue;
-                };
-                let rect = layout::foot_rect(placed.id, foot);
-                for cell in foot.cells() {
-                    let Some((station, surface)) = chart_of(placed, cell) else {
-                        continue;
-                    };
-                    let Some(air) = rig_air(
-                        &placed.charts,
-                        kind,
-                        rect,
-                        surface.center,
-                        station.inward(&surface),
-                    ) else {
-                        continue;
-                    };
-                    let slot = deepest.entry(cell).or_insert((0.0, kind));
-                    if air > slot.0 {
-                        *slot = (air, kind);
-                    }
-                }
+        for (fx, fy) in anchors(placed.kind) {
+            if placement_check(rooms, &[], u32::MAX, kind, placed.id, fx, fy).is_err() {
+                continue;
+            }
+            let Some(foot) =
+                Foot::of(placed.kind, kind, fx, fy).filter(|&foot| takeable(placed.kind, foot))
+            else {
+                continue;
+            };
+            let Some((station, surface)) = chart_of(placed, foot.centre()) else {
+                continue;
+            };
+            let rect = layout::foot_rect(placed.id, foot);
+            let Some(air) = rig_air(
+                &placed.charts,
+                kind,
+                rect,
+                surface.center,
+                station.inward(&surface),
+            ) else {
+                continue;
+            };
+            let slot = deepest
+                .entry((foot.x, foot.y, foot.w, foot.h))
+                .or_insert((0.0, kind));
+            if air > slot.0 {
+                *slot = (air, kind);
             }
         }
     }
     deepest
         .into_iter()
-        .filter_map(|(cell, (air, by))| {
+        .filter_map(|((x, y, w, h), (air, by))| {
+            let foot = Foot { x, y, w, h };
+            let cell = foot.centre();
             let (station, surface) = chart_of(placed, cell)?;
-            let face = cell_face(placed.id, cell, &surface);
+            let face = plan_face(&surface, layout::foot_rect(placed.id, foot));
             let inward = station.inward(&surface);
+            let over = foot
+                .cells()
+                .filter_map(|(cx, cy)| {
+                    let cell = Foot::cell(cx, cy);
+                    let (x0, y0) = (foot.x.max(cell.x), foot.y.max(cell.y));
+                    let share = Foot {
+                        x: x0,
+                        y: y0,
+                        w: foot.right().min(cell.right()) - x0,
+                        h: foot.bottom().min(cell.bottom()) - y0,
+                    };
+                    let face = plan_face(&surface, layout::foot_rect(placed.id, share));
+                    Some((
+                        (cx, cy),
+                        placed.kind.tile_of(cx, cy)?,
+                        face.reaching(inward, 0.0, air),
+                    ))
+                })
+                .collect();
             Some(Berth {
+                foot,
                 cell,
                 station,
                 class: placed.kind.tile_of(cell.0, cell.1)?,
                 face,
                 air: face.reaching(inward, 0.0, air),
+                over,
                 inward,
                 by,
             })
@@ -1245,15 +1339,17 @@ fn tile_fields(placed: &Placed) -> Vec<Drawn> {
             let Some((station, surface)) = chart_of(placed, (x, y)) else {
                 continue;
             };
-            // A threshold IS the opening, a struck line is a rim mark,
-            // and a fixture's cell is left bare for the room's own
-            // hardware: none of the three lays a field over its own
-            // cell, so none has a face for anything to fight.
+            // A threshold IS the opening, a struck line is a rim mark, a
+            // fixture's cell is left bare for the room's own hardware,
+            // and plain and staging deck paint nothing at all now that
+            // their berth wells are retired: none of the five lays a
+            // field over its own cell, so none has a face for anything
+            // to fight.
             let lift = match tile {
-                Tile::Threshold | Tile::Offer | Tile::Fixture => continue,
-                Tile::Plain | Tile::Staging | Tile::Stock | Tile::Consume => {
-                    crate::rig::layer::TILE
+                Tile::Threshold | Tile::Offer | Tile::Fixture | Tile::Plain | Tile::Staging => {
+                    continue;
                 }
+                Tile::Stock | Tile::Consume => crate::rig::layer::TILE,
             };
             let inward = station.inward(&surface);
             let face = cell_face(placed.id, (x, y), &surface);
@@ -1496,16 +1592,18 @@ pub fn sweep_dressed(declared: &Dressings) -> Vec<Finding> {
     // reads every room's charts at once and files one finding for a
     // defect all fifteen of them share.
     let stages = roster();
-    for stage in &stages {
-        out.extend(berth_clear(stage));
-        out.extend(berth_seen(stage));
-        out.extend(berth_reached(stage));
+    let (swept, plans) = swept();
+    for (stage, (name, berths)) in stages.iter().zip(swept) {
+        debug_assert_eq!(&stage.name, name, "the roster changed order mid-run");
+        out.extend(berth_clear(stage, berths));
+        out.extend(berth_seen(stage, berths));
+        out.extend(berth_reached(stage, berths));
         out.extend(coplanar(stage));
         out.extend(walk_clear(stage));
         out.extend(grid_fits(stage));
         out.extend(furniture_seated(stage));
         out.extend(fixture_reached(stage));
-        out.extend(fixture_seen(stage));
+        out.extend(fixture_seen(stage, berths));
     }
     out.extend(prop_points(declared));
     out.extend(part_seated(declared));
@@ -1513,11 +1611,75 @@ pub fn sweep_dressed(declared: &Dressings) -> Vec<Finding> {
     out.extend(rig_fits(declared));
     out.extend(rig_faces(declared));
     out.extend(rig_seated(declared));
-    out.extend(berth_filled(&stages));
-    out.extend(berth_turned(&stages));
+    out.extend(berth_filled(plans));
+    out.extend(berth_turned(plans));
     out.extend(deck_reached());
     out.sort();
     out.dedup();
+    out
+}
+
+/// Every stage's berths under its name, in roster order, and the plans of
+/// every distinct ground: what [`swept`] holds for the run.
+type Swept = (Vec<(String, Vec<Berth>)>, Vec<Plan>);
+
+/// **Every room's berths, and every berth's plan, swept once per run.**
+///
+/// Neither reads a dressing — a berth is the sim's ruling and a plan is
+/// the pose the runtime gives it — so every sweep of a run asks them of
+/// the same roster and gets the same answer. Asking is most of what a
+/// sweep costs now that a berth is any position a sixteenth can name, and
+/// the sweep is asked once per kind by the test that holds the dressed
+/// families to account, so the answer is held for the run. Each room's
+/// berths are filed under its stage's name, so a roster that ever stopped
+/// being one constant order would be caught rather than misread.
+///
+/// And a room's berths are swept once per distinct GROUND ([`ground_of`]):
+/// twelve stations serve their trade from one room kind docked at one
+/// port, so most of the roster is the same ground under different
+/// furniture, and the furniture is what the families judge.
+fn swept() -> &'static Swept {
+    static SWEPT: OnceLock<Swept> = OnceLock::new();
+    SWEPT.get_or_init(|| {
+        let stages = roster();
+        let mut known: Vec<(String, Vec<Berth>)> = Vec::new();
+        let mut swept = Vec::new();
+        for stage in &stages {
+            let ground = ground_of(&stage.placed);
+            let found = if let Some((_, found)) = known.iter().find(|(seen, _)| *seen == ground) {
+                found.clone()
+            } else {
+                let found = berths(&stage.rooms, &stage.placed);
+                known.push((ground, found.clone()));
+                found
+            };
+            swept.push((stage.name.clone(), found));
+        }
+        (swept, plans(&stages))
+    })
+}
+
+/// **A room's ground, as a key**: its kind, its lane, and every chart it
+/// is drawn on, to the bit. Two stages with one key have one set of
+/// berths and one set of plans — which ground cargo may take, and how
+/// the runtime stands it there, are questions about geometry and the
+/// arbiter, and neither reads whose room it is.
+fn ground_of(placed: &Placed) -> String {
+    format!("{:?} {} {:?}", placed.kind, placed.id, placed.charts)
+}
+
+/// The cells a run of berths stands over, each named once, in the order
+/// first named. A footprint a sixteenth off the grid is a berth of its
+/// own, so one cell is the middle of many berths, and a fixer is handed
+/// the ground to go and look at rather than every berth a sweep tried
+/// on it.
+fn once(cells: impl IntoIterator<Item = (u8, u8)>) -> Vec<(u8, u8)> {
+    let mut out: Vec<(u8, u8)> = Vec::new();
+    for cell in cells {
+        if !out.contains(&cell) {
+            out.push(cell);
+        }
+    }
     out
 }
 
@@ -1538,7 +1700,7 @@ fn some_cells(cells: &[(u8, u8)]) -> String {
     }
 }
 
-/// **Which berths a room owes cargo air in**: everything but staging.
+/// **Which ground a room owes cargo air over**: everything but staging.
 ///
 /// The line the owner drew. A staging cell is the room's own deck lent
 /// to the player between one launch and the next — nothing stays there,
@@ -1552,20 +1714,29 @@ fn some_cells(cells: &[(u8, u8)]) -> String {
 /// `Threshold` and `Fixture` are not berths at all — the arbiter refuses
 /// them, so [`berths`] never produces one — and they stay defended by the
 /// rule that already defends them.
-fn kept(berth: &Berth) -> bool {
-    berth.class != Tile::Staging
+///
+/// **The line is drawn on the ground, not round the crate.** A berth is a
+/// position now, so one whose middle is on the chalk may stand a
+/// sixteenth over the line into staging; the air it spends there is
+/// staging air, and a bollard standing in it is the incident nobody
+/// minds. A rule asking what a room may stand in its own ground asks it
+/// of each share of a berth's air ([`Berth::over`]); a rule asking about
+/// the berth as a whole (whether it is seen, whether it is reached) asks
+/// it of the class the berth reads, the one under its middle.
+fn kept(class: Tile) -> bool {
+    class != Tile::Staging
 }
 
-/// What stands in a berth on the loaded board, if anything — so a finding
-/// can name the crate a fitting is standing inside of, not merely the
-/// cell it could stand in.
-fn standing(stage: &Stage, cell: (u8, u8)) -> Option<String> {
+/// What stands on a berth's ground on the loaded board, if anything — so
+/// a finding can name the crate a fitting is standing inside of, not
+/// merely the ground it could stand on.
+fn standing(stage: &Stage, foot: Foot) -> Option<String> {
     stage
         .cargo
         .iter()
         .find(|piece| {
-            matches!(piece.loc, Loc::Hold { room, x, y }
-                if room == stage.placed.id && (x, y) == (fine(cell.0), fine(cell.1)))
+            Foot::at(&stage.rooms, piece)
+                .is_some_and(|(room, other)| room == stage.placed.id && other.overlaps(foot))
         })
         .map(|piece| format!("{:?} #{}", piece.kind, piece.id))
 }
@@ -1584,41 +1755,53 @@ fn standing(stage: &Stage, cell: (u8, u8)) -> Option<String> {
 /// not a defect. What is left on the list is the honest half: a fitting
 /// biting the room's own goods, a proposal's chalk, a doorway, or the
 /// counter's own cell still has to move.
-fn berth_clear(stage: &Stage) -> Vec<Finding> {
-    let berths: Vec<Berth> = berths(&stage.rooms, &stage.placed)
-        .into_iter()
-        .filter(kept)
-        .collect();
+fn berth_clear(stage: &Stage, berths: &[Berth]) -> Vec<Finding> {
     let mut out = Vec::new();
     for fitting in fittings(&stage.placed) {
-        // One line per offender, not one per cell: a bar standing across
-        // six berths is one thing to move, and six lines that say so are
-        // a work order somebody has to summarise before they can start.
-        let mut hits: Vec<(&Berth, Vec3)> = berths
+        // One line per offender, not one per berth: a bar standing across
+        // six cells of berths is one thing to move, and six lines that
+        // say so are a work order somebody has to summarise before they
+        // can start.
+        let mut hits: Vec<(&Berth, (u8, u8), Vec3)> = berths
             .iter()
-            .filter_map(|berth| fitting.body.clips(berth.air).map(|span| (berth, span)))
+            .flat_map(|berth| {
+                berth
+                    .over
+                    .iter()
+                    .filter(|(_, class, _)| kept(*class))
+                    .filter_map(move |(cell, _, air)| {
+                        fitting
+                            .body
+                            .clips_part(*air, berth.air)
+                            .map(|span| (berth, *cell, span))
+                    })
+            })
             .collect();
         if hits.is_empty() {
             continue;
         }
-        hits.sort_by(|a, b| b.1.min_element().total_cmp(&a.1.min_element()));
-        let cells: Vec<(u8, u8)> = hits.iter().map(|(berth, _)| berth.cell).collect();
-        let standing_on = hits
-            .iter()
-            .filter(|(berth, _)| matches!(berth.station, Station::BayFloor | Station::BayCeiling))
-            .count();
-        let (worst, span) = hits[0];
-        let (x, y) = worst.cell;
-        let held = standing(stage, worst.cell).unwrap_or_else(|| format!("{:?}", worst.by));
+        hits.sort_by(|a, b| b.2.min_element().total_cmp(&a.2.min_element()));
+        let cells = once(hits.iter().map(|(_, cell, _)| *cell));
+        let standing_on = once(
+            hits.iter()
+                .filter(|(berth, _, _)| {
+                    matches!(berth.station, Station::BayFloor | Station::BayCeiling)
+                })
+                .map(|(_, cell, _)| *cell),
+        )
+        .len();
+        let (worst, (x, y), span) = hits[0];
+        let held = standing(stage, worst.foot).unwrap_or_else(|| format!("{:?}", worst.by));
         out.push(Finding {
             room: stage.name.clone(),
             rule: BERTH_CLEAR,
             offender: fitting.what.clone(),
             detail: format!(
-                "occupies {} berth(s) cargo may take ({standing_on} of them deck or \
-                 ceiling): {}; worst is ({x}, {y}) on {:?}, where {held} stands, by \
-                 {:.3}x{:.3}x{:.3} m",
+                "occupies the air of {} berth(s) cargo may take, over {} cell(s) \
+                 ({standing_on} of them deck or ceiling): {}; worst is over ({x}, {y}) on \
+                 {:?}, where {held} stands, by {:.3}x{:.3}x{:.3} m",
                 hits.len(),
+                cells.len(),
                 some_cells(&cells),
                 worst.station,
                 span.x,
@@ -1640,15 +1823,11 @@ fn berth_clear(stage: &Stage) -> Vec<Finding> {
 /// construction standing between that wall and the room, so a rule that
 /// allowed the clip and forbade the occlusion would forbid nothing and
 /// merely say so twice.
-fn berth_seen(stage: &Stage) -> Vec<Finding> {
-    let berths: Vec<Berth> = berths(&stage.rooms, &stage.placed)
-        .into_iter()
-        .filter(kept)
-        .collect();
+fn berth_seen(stage: &Stage, berths: &[Berth]) -> Vec<Finding> {
     let mut out = Vec::new();
     for fitting in fittings(&stage.placed) {
         let mut hidden: Vec<((u8, u8), Station, f32)> = Vec::new();
-        for berth in &berths {
+        for berth in berths.iter().filter(|berth| kept(berth.class)) {
             if matches!(berth.station, Station::BayFloor | Station::BayCeiling) {
                 continue;
             }
@@ -1659,10 +1838,10 @@ fn berth_seen(stage: &Stage) -> Vec<Finding> {
             if span.min_element() <= CLIP_SLACK {
                 continue;
             }
-            // How much of the cell's own face the fitting stands across.
+            // How much of the berth's own face the fitting stands across.
             let flat = Vec3::ONE - berth.inward.abs();
-            let cell = berth.face.span() * flat + berth.inward.abs();
-            let cover = (span * flat + berth.inward.abs()) / cell;
+            let ground = berth.face.span() * flat + berth.inward.abs();
+            let cover = (span * flat + berth.inward.abs()) / ground;
             let cover = cover.x * cover.y * cover.z;
             if cover > OCCLUDE_BITE {
                 hidden.push((berth.cell, berth.station, cover));
@@ -1672,7 +1851,7 @@ fn berth_seen(stage: &Stage) -> Vec<Finding> {
             continue;
         }
         hidden.sort_by(|a, b| b.2.total_cmp(&a.2));
-        let cells: Vec<(u8, u8)> = hidden.iter().map(|(cell, _, _)| *cell).collect();
+        let cells = once(hidden.iter().map(|(cell, _, _)| *cell));
         let (worst, station, cover) = hidden[0];
         let (x, y) = worst;
         out.push(Finding {
@@ -1680,9 +1859,10 @@ fn berth_seen(stage: &Stage) -> Vec<Finding> {
             rule: BERTH_SEEN,
             offender: fitting.what.clone(),
             detail: format!(
-                "stands between the room and {} wall berth(s): {}; worst hides {:.0}% \
-                 of ({x}, {y}) on {station:?}",
+                "stands between the room and {} wall berth(s), over {} cell(s): {}; \
+                 worst hides {:.0}% of the one over ({x}, {y}) on {station:?}",
                 hidden.len(),
+                cells.len(),
                 some_cells(&cells),
                 cover * 100.0
             ),
@@ -1753,11 +1933,11 @@ fn stances(stage: &Stage) -> Vec<Vec3> {
 /// answered where it arises: the amber frame round detained cargo is
 /// drawn with a depth bias and reads through a station's furniture
 /// (`room::CLAIM_BIAS`).
-fn berth_reached(stage: &Stage) -> Vec<Finding> {
+fn berth_reached(stage: &Stage, berths: &[Berth]) -> Vec<Finding> {
     let scene = scene(stage);
     let stances = stances(stage);
     let mut blamed: BTreeMap<String, Vec<(u8, u8)>> = BTreeMap::new();
-    for berth in berths(&stage.rooms, &stage.placed).into_iter().filter(kept) {
+    for berth in berths.iter().filter(|berth| kept(berth.class)) {
         let probe = (berth.face.lo + berth.face.hi) * 0.5 + berth.inward * 0.02;
         // The reading is [`worked`]'s, shared with `fixture-reached`: a
         // berth and a room's own counter are the same question asked of
@@ -1768,15 +1948,20 @@ fn berth_reached(stage: &Stage) -> Vec<Finding> {
     }
     blamed
         .into_iter()
-        .map(|(blame, cells)| Finding {
-            room: stage.name.clone(),
-            rule: BERTH_REACHED,
-            offender: blame,
-            detail: format!(
-                "leaves {} berth(s) workable from nowhere a body may stand: {}",
-                cells.len(),
-                some_cells(&cells)
-            ),
+        .map(|(blame, berths)| {
+            let cells = once(berths.iter().copied());
+            Finding {
+                room: stage.name.clone(),
+                rule: BERTH_REACHED,
+                offender: blame,
+                detail: format!(
+                    "leaves {} berth(s), over {} cell(s), workable from nowhere a body \
+                     may stand: {}",
+                    berths.len(),
+                    cells.len(),
+                    some_cells(&cells)
+                ),
+            }
         })
         .collect()
 }
@@ -2584,7 +2769,7 @@ struct Plan {
 }
 
 /// **Every berth in the game, with both claims about it.** The sim's
-/// arbiter rules which cells a kind may take, `cargo::plan` says how many
+/// arbiter rules where a kind may stand, `cargo::Foot` says what ground
 /// it then owns, and `pieces::berth_box` poses the body through the very
 /// function the runtime poses it with — so a retune of the berth pose
 /// moves the question and the answer together.
@@ -2594,8 +2779,17 @@ struct Plan {
 /// rule nobody can catch out.
 fn plans(stages: &[Stage]) -> Vec<Plan> {
     let mut out = Vec::new();
+    let mut planned: Vec<String> = Vec::new();
     for stage in stages {
-        let (cols, rows) = stage.placed.kind.grid();
+        // Both families that read plans answer about a kind and a chart
+        // class, not about a room, so ground already planned once is not
+        // planned again ([`ground_of`]).
+        let ground = ground_of(&stage.placed);
+        if planned.contains(&ground) {
+            continue;
+        }
+        planned.push(ground);
+        let host = stage.placed.kind;
         for kind in Kind::ALL {
             // A covering does not stand on its cells, it LIES into them
             // (`pieces::laid_on`), so the ground it owns is the chart
@@ -2603,39 +2797,42 @@ fn plans(stages: &[Stage]) -> Vec<Plan> {
             if kind.covering() {
                 continue;
             }
-            for y in 0..rows {
-                for x in 0..cols {
-                    let (fx, fy) = (fine(x), fine(y));
-                    if placement_check(&stage.rooms, &[], u32::MAX, kind, stage.placed.id, fx, fy)
-                        .is_err()
-                    {
-                        continue;
-                    }
-                    let (Some(foot), Some(surf), Some((_, chart))) = (
-                        Foot::of(stage.placed.kind, kind, fx, fy),
-                        stage.placed.kind.surface_of(x, y),
-                        chart_of(&stage.placed, (x, y)),
-                    ) else {
-                        continue;
-                    };
-                    let rect = layout::foot_rect(stage.placed.id, foot);
-                    let (Some((lo, hi)), Some((station, _, _, rot, _))) = (
-                        crate::pieces::berth_box(&stage.placed.charts, kind, rect),
-                        crate::pieces::berth_pose(&stage.placed.charts, kind, rect),
-                    ) else {
-                        continue;
-                    };
-                    out.push(Plan {
-                        kind,
-                        surf,
-                        station,
-                        chart,
-                        rect,
-                        rot,
-                        owned: plan_face(&chart, rect),
-                        spent: Box3 { lo, hi },
-                    });
+            // Off the grid as well as on it ([`anchors`]): the backing
+            // rule reads a footprint's distance from its chart's seams,
+            // and a berth a sixteenth from one is a berth it has to turn
+            // right as surely as one flush against it.
+            for (fx, fy) in anchors(host) {
+                if placement_check(&stage.rooms, &[], u32::MAX, kind, stage.placed.id, fx, fy)
+                    .is_err()
+                {
+                    continue;
                 }
+                let Some(foot) = Foot::of(host, kind, fx, fy).filter(|&foot| takeable(host, foot))
+                else {
+                    continue;
+                };
+                let (Some(surf), Some((_, chart))) =
+                    (foot.chart(host), chart_of(&stage.placed, foot.centre()))
+                else {
+                    continue;
+                };
+                let rect = layout::foot_rect(stage.placed.id, foot);
+                let (Some((lo, hi)), Some((station, _, _, rot, _))) = (
+                    crate::pieces::berth_box(&stage.placed.charts, kind, rect),
+                    crate::pieces::berth_pose(&stage.placed.charts, kind, rect),
+                ) else {
+                    continue;
+                };
+                out.push(Plan {
+                    kind,
+                    surf,
+                    station,
+                    chart,
+                    rect,
+                    rot,
+                    owned: plan_face(&chart, rect),
+                    spent: Box3 { lo, hi },
+                });
             }
         }
     }
@@ -2695,12 +2892,12 @@ fn plans(stages: &[Stage]) -> Vec<Plan> {
 /// Filed under [`RIGS`] and keyed by kind and chart class, because the
 /// same crate stands in every room in the game and a defect in how a
 /// deck berths it is not fifteen defects.
-fn berth_filled(stages: &[Stage]) -> Vec<Finding> {
+fn berth_filled(plans: &[Plan]) -> Vec<Finding> {
     // Per kind and chart class, on each world axis: the worst offset off
     // the middle, the worst span, the margin that span should have been,
     // and the ground the plan owns there.
     let mut worst: BTreeMap<(String, usize), (f32, f32, f32, f32)> = BTreeMap::new();
-    for berth in plans(stages) {
+    for berth in plans {
         for dir in [
             berth.chart.half_u.normalize(),
             berth.chart.half_v.normalize(),
@@ -2827,11 +3024,11 @@ fn looked_at(chart: &SimSurface, rect: layout::Rect, rot: Quat) -> space_truckin
 /// Filed under [`RIGS`] and keyed by kind and chart class, for
 /// [`berth_filled`]'s reason: the same crate stands in every room in the
 /// game, and a defect in how a deck turns it is not fifteen defects.
-fn berth_turned(stages: &[Stage]) -> Vec<Finding> {
+fn berth_turned(plans: &[Plan]) -> Vec<Finding> {
     // Per kind, chart class and clause: the worst reading of the lot,
     // with the cell it was read at.
     let mut worst: BTreeMap<(String, u8), (f32, String)> = BTreeMap::new();
-    for berth in plans(stages) {
+    for berth in plans {
         let key = |clause: u8| {
             (
                 format!("{:?} on a {:?} berth", berth.kind, berth.surf),
@@ -3162,10 +3359,10 @@ pub fn across(face: Box3, inward: Vec3, body: Box3) -> f32 {
 /// class — a player standing their own crate in front of their own latch
 /// — is a crate they can pick up again, and docs/GAUNTLET.md carries it
 /// as a bounded blind spot rather than as a rule nobody could obey.
-fn fixture_seen(stage: &Stage) -> Vec<Finding> {
+fn fixture_seen(stage: &Stage, berths: &[Berth]) -> Vec<Finding> {
     let mut out = Vec::new();
     for placed in &stage.all {
-        out.extend(fixture_seen_in(stage, placed));
+        out.extend(fixture_seen_in(stage, placed, berths));
     }
     out
 }
@@ -3183,13 +3380,28 @@ fn fixture_seen(stage: &Stage) -> Vec<Finding> {
 /// the control the owner reported. The finding is filed under the room
 /// the face stands in, so the same cabin seen from fifteen ships answers
 /// once.
-fn fixture_seen_in(stage: &Stage, placed: &Placed) -> Vec<Finding> {
+fn fixture_seen_in(stage: &Stage, placed: &Placed, staged: &[Berth]) -> Vec<Finding> {
     let faces = worked_faces(placed);
     if faces.is_empty() {
         return Vec::new();
     }
-    let stocked: Vec<Berth> = berths(&stage.rooms, placed)
-        .into_iter()
+    // The staged room's berths are swept already. Any other room's are
+    // asked for only where it keeps stock at all, which the ship's own
+    // rooms never do — and those are most of what this is asked of.
+    let (cols, rows) = placed.kind.grid();
+    let shelved =
+        (0..rows).any(|y| (0..cols).any(|x| placed.kind.tile_of(x, y) == Some(Tile::Stock)));
+    let others;
+    let berths: &[Berth] = if placed.id == stage.placed.id {
+        staged
+    } else if shelved {
+        others = berths(&stage.rooms, placed);
+        &others
+    } else {
+        &[]
+    };
+    let stocked: Vec<&Berth> = berths
+        .iter()
         .filter(|berth| berth.class == Tile::Stock)
         .collect();
     let mut out = Vec::new();
@@ -3225,7 +3437,7 @@ fn fixture_seen_in(stage: &Stage, placed: &Placed) -> Vec<Finding> {
             continue;
         }
         hidden.sort_by(|a, b| b.2.total_cmp(&a.2));
-        let cells: Vec<(u8, u8)> = hidden.iter().map(|(cell, _, _)| *cell).collect();
+        let cells = once(hidden.iter().map(|(cell, _, _)| *cell));
         let (worst, station, cover) = hidden[0];
         let (x, y) = worst;
         out.push(Finding {
@@ -3233,9 +3445,11 @@ fn fixture_seen_in(stage: &Stage, placed: &Placed) -> Vec<Finding> {
             rule: FIXTURE_SEEN,
             offender: what,
             detail: format!(
-                "is read through the air {} of the room's own stock berth(s) spend: {}; \
-                 worst is ({x}, {y}) on {station:?}, standing across {:.0}% of it",
+                "is read through the air {} of the room's own stock berth(s) spend, over \
+                 {} cell(s): {}; worst is the one over ({x}, {y}) on {station:?}, \
+                 standing across {:.0}% of it",
                 hidden.len(),
+                cells.len(),
                 some_cells(&cells),
                 cover * 100.0
             ),
@@ -4064,7 +4278,7 @@ mod tests {
             assert!(
                 (air - reach).abs() < 1e-4,
                 "berth {:?} on {:?} spends {air} m of air where a rig reaches {reach} m",
-                berth.cell,
+                berth.foot,
                 berth.station,
             );
         }
@@ -4294,31 +4508,42 @@ mod tests {
         }
     }
 
-    /// Berths come out of the sim, never a hand list: every one of them
-    /// is a real cell of its own room's net, never a threshold, and never
-    /// the handshake's own socket.
+    /// Berths come out of the sim, never a hand list: every cell any of
+    /// them stands on is a real cell of its own room's net, never a
+    /// threshold, and never the handshake's own socket — and the sweep
+    /// reaches off the grid, because a berth is a position now.
     #[test]
     fn berths_are_derived_from_the_sim() {
         for stage in roster() {
             let berths = berths(&stage.rooms, &stage.placed);
             assert!(!berths.is_empty(), "{} has no berths at all", stage.name);
+            assert!(
+                berths
+                    .iter()
+                    .any(|berth| berth.foot.x % fine(1) != 0 || berth.foot.y % fine(1) != 0),
+                "{} was swept on the grid alone",
+                stage.name
+            );
             for berth in &berths {
-                let (x, y) = berth.cell;
-                let tile = stage.placed.kind.tile_of(x, y);
-                assert!(
-                    matches!(tile, Some(tile) if tile != Tile::Threshold),
-                    "{}: berth ({x}, {y}) is {tile:?}, which holds nothing",
-                    stage.name
-                );
-                assert_ne!(
-                    Some((x, y)),
-                    stage.placed.kind.handshake(),
-                    "{}: the fixture's own socket is not a berth",
-                    stage.name
-                );
+                let foot = berth.foot;
+                for (x, y) in foot.cells() {
+                    let tile = stage.placed.kind.tile_of(x, y);
+                    assert!(
+                        matches!(tile, Some(tile) if tile != Tile::Threshold),
+                        "{}: berth {foot:?} stands on ({x}, {y}), which is {tile:?} and \
+                         holds nothing",
+                        stage.name
+                    );
+                    assert_ne!(
+                        Some((x, y)),
+                        stage.placed.kind.handshake(),
+                        "{}: berth {foot:?} stands on the fixture's own socket",
+                        stage.name
+                    );
+                }
                 assert!(
                     berth.air.span().min_element() > 0.0,
-                    "{}: berth ({x}, {y}) spends no air",
+                    "{}: berth {foot:?} spends no air",
                     stage.name
                 );
             }
@@ -4517,6 +4742,7 @@ mod tests {
                     stranded.push(berth.cell);
                 }
             }
+            let stranded = once(stranded);
             assert!(
                 stranded.is_empty(),
                 "{}: {} staging cell(s) its own room fences off, so a crate set \
@@ -5077,7 +5303,7 @@ mod tests {
                     );
                 }
             }
-            let found = fixture_seen(&stage);
+            let found = fixture_seen(&stage, &berths(&stage.rooms, &stage.placed));
             assert!(found.is_empty(), "{}: {found:?}", stage.name);
         }
         assert_eq!(counters, 15, "every calling room shakes hands: {counters}");

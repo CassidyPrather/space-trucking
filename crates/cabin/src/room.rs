@@ -54,7 +54,7 @@ use space_trucking::sim::room::{
 use space_trucking::sim::{Cue, Sim};
 
 use crate::art::Fabric;
-use crate::rig::{BAY_CELL, BAY_WALL_Z, EYE_HEIGHT, REACH, Skin, TileFade, WALK_MAX, WALK_MIN};
+use crate::rig::{BAY_CELL, BAY_WALL_Z, EYE_HEIGHT, REACH, Skin, WALK_MAX, WALK_MIN};
 use crate::surface::{SimSurface, Station};
 use crate::{Phase, Shell, glow, palette};
 
@@ -1152,15 +1152,13 @@ pub fn rebuild(
     mut commands: Commands,
     plan: Res<Plan>,
     skin: Option<Res<Skin>>,
-    fade: Option<Res<TileFade>>,
-    shared: Option<Res<crate::pieces::SharedBits>>,
     #[cfg(feature = "art")] dressed: Option<Res<crate::art::Dressed>>,
     mut built: ResMut<Built>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     standing: Query<(Entity, &InRoom)>,
 ) {
-    let (Some(skin), Some(fade), Some(shared)) = (skin, fade, shared) else {
+    let Some(skin) = skin else {
         return;
     };
     if built.0 == plan.signature {
@@ -1242,7 +1240,6 @@ pub fn rebuild(
             &cube,
             &mut materials,
             &skin,
-            &fade,
             &character.tiles,
             placed,
             tag,
@@ -1279,7 +1276,6 @@ pub fn rebuild(
         );
         #[cfg(feature = "art")]
         fit(&mut commands, placed, tag, &bought_piece);
-        crate::pieces::hint_cells(&mut commands, &cube, &mut materials, &shared, placed);
         crate::airlock::fittings(
             &mut commands,
             &cube,
@@ -2564,7 +2560,6 @@ fn tiles(
     cube: &Handle<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     skin: &Skin,
-    fade: &TileFade,
     paint: &crate::poi::Tiles,
     placed: &Placed,
     tag: InRoom,
@@ -2622,40 +2617,6 @@ fn tiles(
                     lift: crate::rig::layer::MARK,
                 };
                 match tile {
-                    // Ordinary deck, and a station's own deck, which
-                    // berths identically: the contextual berth well,
-                    // raised by `rig::fade_tiles` only while a carry asks
-                    // "where can this go?".
-                    //
-                    // **`Staging` paints exactly what `Plain` paints, and
-                    // that is the class saying what it means.** The owner
-                    // asked that the whole room stay one grid with one
-                    // set of pickup and placement mechanics; a second
-                    // well, a second hue, or a hatched field would be the
-                    // paint quietly claiming a second mechanic that the
-                    // arbiter does not have. What is different about a
-                    // station's deck is not where you may set a crate
-                    // down — it is that the room leaves — and that is a
-                    // fact about a crate rather than about a cell, so it
-                    // is read on the crate: `Sim::detained_cargo` names
-                    // it and the amber frame goes round it.
-                    Tile::Plain | Tile::Staging => {
-                        commands.spawn((
-                            Mesh3d(cube.clone()),
-                            MeshMaterial3d(fade.mat.clone()),
-                            Transform::from_translation(
-                                patch.at + normal * crate::rig::layer::TILE,
-                            )
-                            .with_rotation(rot)
-                            .with_scale(Vec3::new(
-                                (cell.w - 4.0) * su,
-                                (cell.h - 4.0) * sv,
-                                crate::rig::layer::SKIN,
-                            )),
-                            crate::rig::BerthTile,
-                            tag,
-                        ));
-                    }
                     // Bare deck inside a chalk line: what stands here is
                     // proposed, not surrendered, and the room has not
                     // painted over it. The line is the whole mark.
@@ -2675,9 +2636,33 @@ fn tiles(
                         patch.field(commands, &scorch);
                         patch.rim_mark(commands, mark(&skin.hazard, BAND), edges);
                     }
-                    // The two classes that paint nothing, for the same
-                    // reason from opposite directions: something else is
-                    // already there.
+                    // Ordinary deck, and a station's own deck, which
+                    // berths identically: nothing. The deck's own art
+                    // (or its whitebox) already reads as a floor, and a
+                    // berth is not a cell any more — cargo stands
+                    // anywhere a sixteenth of a cell can name (docs/BAY.md,
+                    // "The grid comes out") — so a well per cell would be
+                    // a grid of invitations to places the drop does not
+                    // take. Where a carry would land is the footprint
+                    // patch's to say (`pieces::footprint_patch`), at the
+                    // berth itself.
+                    //
+                    // **`Staging` paints exactly what `Plain` paints, and
+                    // that is the class saying what it means.** The owner
+                    // asked that the whole room keep one set of pickup
+                    // and placement mechanics; a second hue or a hatched
+                    // field would be the paint quietly claiming a second
+                    // mechanic that the arbiter does not have. What is
+                    // different about a station's deck is not where you
+                    // may set a crate down — it is that the room leaves —
+                    // and that is a fact about a crate rather than about
+                    // the deck, so it is read on the crate:
+                    // `Sim::detained_cargo` names it and the amber frame
+                    // goes round it.
+                    //
+                    // And the two classes that paint nothing for the
+                    // same reason from opposite directions: something
+                    // else is already there.
                     //
                     // An aperture's own cells are the OPENING — a leaf
                     // hangs there when the port is shut and there is
@@ -2688,10 +2673,8 @@ fn tiles(
                     // from the very same declaration. A fixture's cells
                     // are the room's own hardware — the counter stands
                     // on that deck and the pendant hangs from that
-                    // ceiling — so the fabric under them stays bare, and
-                    // a berth well above all, because a well is an
-                    // invitation and nothing may berth here.
-                    Tile::Threshold | Tile::Fixture => {}
+                    // ceiling — so the fabric under them stays bare.
+                    Tile::Plain | Tile::Staging | Tile::Threshold | Tile::Fixture => {}
                 }
             }
         }

@@ -132,7 +132,7 @@ oldest lesson and it bounds the table before it starts.
 | a station's furniture | `poi::character_of` (`poi::Seat`, `Shape::fill`) | the room layer |
 | a room's own worked hardware | `room::handshake_face`, `Dress::Grab` | `fixture-reached` |
 | the painted fields | `gauntlet::tile_fields`, off `RoomKind::tile_of` | the room layer |
-| a berth | `gauntlet::berths`, off the sim's arbiter | the room layer |
+| a berth | `gauntlet::berths`, off the sim's arbiter (and, off the grid, the drop's tile gate) | the room layer |
 | the player | `rig::EYE_HEIGHT`, `REACH`, `PITCH_LIMIT`, `room::walk_boxes` | the room layer |
 
 ### The frames
@@ -242,6 +242,27 @@ bollard, or a console growing through a chart tank. The finding names the
 worst cell, the piece standing in it on the loaded board, and the
 overlap in metres on all three axes.
 
+> Superseded in part by *The grid comes out* (BAY.md): a berth is a
+> footprint's worth of ground now, not a cell. `gauntlet::berths` sweeps
+> every whole-cell anchor and the `cargo::FRACTIONS` sample on each axis,
+> keys the air by the footprint's own fine rect at the deepest kind that
+> may take it, and names a finding by the cell under a berth's middle.
+> Off the grid a berth counts only where something could ever stand
+> (`gauntlet::takeable`): only a player's carry puts a piece off the
+> grid, and the drop refuses a footprint touching a class that does not
+> take your cargo, so a sixteenth off a room's stock shelf is ground the
+> arbiter allows and nothing ever takes. This family reads the owner's
+> staging line on the ground rather than round the crate: a berth's air
+> is cut at the cell lines (`Berth::over`), the share over a staging cell
+> is staging air, and a share's clip is bitten against the whole berth
+> (`Box3::clips_part`), so cutting a crate into shares never turns a
+> graze into a clip. The first fractional sweep without those two
+> readings filed 79 findings, every one of them a fitting beside a
+> stock shelf or a chalk line clipping a sixteenth of a berth nothing
+> could take or that stood over staging. A run asks the berths and the
+> plans once and holds them, once per distinct ground
+> (`gauntlet::swept`), which is what keeps a sweep under two seconds.
+
 Spent on cargo too, where it means something related but not the same: a
 part reaching outside `pieces::RIG_NEAR..RIG_FAR`, the depth every kind
 is composed within — one cell of the cargo grid, wearing the same
@@ -258,7 +279,9 @@ aisle a standing rig may reach into.
 ### `berth-seen` — nothing stands between a wall berth and the room
 
 A fitting covering more than a quarter of a wall cell's face, from the
-room's side. In the world: the window you hung is behind the station's
+room's side. (Since *The grid comes out*, of a wall berth's face: the
+whole footprint's, so a fitting in front of the sixteenth a berth
+reaches over a neighbouring cell hides a sixteenth of it, not all.) In the world: the window you hung is behind the station's
 signage; the painting reads as a dark rectangle behind a pipe.
 
 ### `berth-reached` — every berth is workable from somewhere
@@ -479,7 +502,9 @@ rig's ORIGIN at the point the crosshair struck: a body centred on its
 origin sat half in the deck and read as roughly resting on it, and a
 body drawn wholly above its origin sits wholly under it. The hover reads
 the berth's own stand-off now (`pieces::hover_pose`), so the ghost
-promises the berth's position as well as its turn. And the sweep that
+promises the berth's position as well as its turn. (Since *The grid comes
+out* the ghost stands on the very berth `Sim::drop_preview` names,
+`pieces::ghost_pose`, rather than at the struck point.) And the sweep that
 aims at each corner of a drawn body drew the aim back toward the rig's
 origin, which is the body's own middle only while the body is centred
 there.
@@ -706,7 +731,9 @@ Two clauses and one reading:
   owns, to within `GRID_EPS` — the same millimetre `grid-fits` calls a
   face on its line, because this is the same question one layer up. In
   the world: the berth wells light under a carry and the crate is not
-  in one.
+  in one. (Superseded by *The grid comes out*: the wells are retired;
+  in the world now, the footprint patch lights under a carry and the
+  crate is not on it.)
 - **How much.** And it is `pieces::BAY_FIT` of that ground, which is the
   one margin a rig wears, said on the axes a plan spends. A body
   claiming ground it does not fill is a berth measured in the wrong
@@ -770,6 +797,16 @@ room was a hand's breadth away — the couch-facing-the-wall defect stood
 on its head, and above eye level where nobody looks. A pendant takes the
 backing rule now. Mid-room the rule's own default *is* the turn that was
 hardcoded, so nothing away from a seam moved.
+
+Its first pass off the grid (*The grid comes out*, BAY.md) found eighteen
+kinds, every one a body standing **exactly half a cell** from a front
+seam and facing it: the backing rule turned its back on a seam it stood
+*less* than half a cell from, so at half a cell it looked at the wall
+line itself. While every berth was a whole cell that threshold only ever
+met gaps of nothing or a cell, and it was a rounding allowance; now it is
+a rule, and it reads "half a cell or less" (`pieces::floor_facing`), so a
+body that faces a seam always keeps more than half a cell of deck in
+front of it.
 
 **What it deliberately does not ask** is the turn of a square-planned
 body in the middle of a deck. A crate there may face any of four ways and

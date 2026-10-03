@@ -239,29 +239,25 @@ pub(crate) const LIT_BONUS: u8 = 1;
 pub(crate) const STOCK_MARKUP: u32 = 1;
 
 /// Whether `piece` is a painting shown in good light. On an ordinary
-/// berth that is literal: some cell of its footprint reads
-/// [`super::cargo::lit_adjacent`]. On a calling room's offer area — the
-/// only place valuation actually prices — the piece is appraised under
-/// the ship's own lamplight, so any lamp lit aboard counts.
+/// berth that is literal: its footprint reads
+/// [`super::cargo::lit_within_reach`]. On a calling room's offer area —
+/// the only place valuation actually prices — the piece is appraised
+/// under the ship's own lamplight, so any lamp lit aboard counts.
 fn well_lit(rooms: &Rooms, piece: &Piece, pieces: &[Piece]) -> bool {
-    if piece.kind != Kind::Painting {
+    if piece.kind != Kind::Painting || !matches!(piece.loc, Loc::Hold { .. }) {
         return false;
     }
-    let Loc::Hold { room, x, y } = piece.loc else {
-        return false;
-    };
-    if rooms.tile(room, x, y) == Some(Tile::Offer) {
+    if super::cargo::berth_tile(rooms, piece.kind, piece.loc) == Some(Tile::Offer) {
         return pieces.iter().any(|other| {
             lamp_lit(other) && matches!(other.loc, Loc::Hold { room, .. } if rooms.riding(room))
         });
     }
-    let Some(host) = rooms.kind(room) else {
+    let Some((room, foot)) = super::cargo::Foot::at(rooms, piece) else {
         return false;
     };
-    let Some((w, h)) = super::cargo::plan(host, piece.kind, x, y) else {
-        return false;
-    };
-    (0..w).any(|dx| (0..h).any(|dy| super::cargo::lit_adjacent(host, pieces, room, x + dx, y + dy)))
+    rooms
+        .kind(room)
+        .is_some_and(|host| super::cargo::lit_within_reach(host, pieces, room, foot))
 }
 
 /// One piece's worth under this visit's table: its kind's jittered value,
@@ -395,7 +391,7 @@ pub fn tiles_of(rooms: &Rooms, room: RoomId, class: Tile) -> Vec<(u8, u8)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sim::cargo::placement_check;
+    use crate::sim::cargo::{fine, placement_check};
     use crate::sim::map::SATURN;
     use crate::sim::room::{CABIN, RoomKind};
 
@@ -476,9 +472,16 @@ mod tests {
         }
         for kind in rollable {
             assert!(
-                shelf
-                    .iter()
-                    .any(|&(x, y)| placement_check(&rooms, &[], 0, kind, trade, x, y).is_ok()),
+                shelf.iter().any(|&(x, y)| placement_check(
+                    &rooms,
+                    &[],
+                    0,
+                    kind,
+                    trade,
+                    fine(x),
+                    fine(y)
+                )
+                .is_ok()),
                 "{kind:?} can be rolled onto a shelf it can never stand on"
             );
         }
@@ -580,8 +583,8 @@ mod tests {
             Kind::Painting,
             Loc::Hold {
                 room: trade,
-                x: offer.0,
-                y: offer.1,
+                x: fine(offer.0),
+                y: fine(offer.1),
             },
         );
         assert_eq!(piece_value(&rooms, &art, &[art], &values, false), 3);
@@ -590,8 +593,8 @@ mod tests {
             Kind::CeilingLamp,
             Loc::Hold {
                 room: CABIN,
-                x: 16,
-                y: 4,
+                x: fine(16),
+                y: fine(4),
             },
         );
         assert_eq!(piece_value(&rooms, &art, &[art, lamp], &values, false), 4);
@@ -601,8 +604,8 @@ mod tests {
             Kind::Painting,
             Loc::Hold {
                 room: CABIN,
-                x: 5,
-                y: 1,
+                x: fine(5),
+                y: fine(1),
             },
         );
         assert_eq!(piece_value(&rooms, &hung, &[hung, lamp], &values, false), 3);
@@ -616,8 +619,8 @@ mod tests {
         values[Kind::PerfumeVial.index()] = 1;
         let at = Loc::Hold {
             room: CABIN,
-            x: 4,
-            y: 4,
+            x: fine(4),
+            y: fine(4),
         };
         let fresh = piece(Kind::BrinePearls, at);
         let bitten = Piece {
@@ -657,8 +660,8 @@ mod tests {
             Kind::SuspiciousCrate,
             Loc::Hold {
                 room: CABIN,
-                x: 4,
-                y: 4,
+                x: fine(4),
+                y: fine(4),
             },
         )];
         for n in 1..200 {
@@ -712,8 +715,8 @@ mod tests {
             Kind::SuspiciousCrate,
             Loc::Hold {
                 room: CABIN,
-                x: 4,
-                y: 4,
+                x: fine(4),
+                y: fine(4),
             },
         )];
         for n in 1..=100 {

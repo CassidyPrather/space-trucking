@@ -22,11 +22,17 @@
 //! hold: that is the frame that can silently snap a phantom drag home
 //! (window blur mid-drag), and the replay must snap at the same tick.
 //!
-//! Format `RPL3`, line-oriented like the save and the wire: a header, the
+//! Format `RPL4`, line-oriented like the save and the wire: a header, the
 //! byte-length-prefixed base save embedded verbatim, then one `SNP3 input`
-//! line per entry — the version bumped when the input frame grew its
+//! line per entry — `RPL3` bumped when the input frame grew its
 //! occupied-room field and the room graph's attach and detach requests
-//! (docs/ROOMS.md, "The one new input field") — the recorder reuses the lockstep wire codec
+//! (docs/ROOMS.md, "The one new input field"), and `RPL4` when the grid
+//! came out (docs/BAY.md, "The grid comes out"): not one byte of the
+//! tape's grammar moved, but the same pointer frames now settle cargo
+//! somewhere else — centred on the pointer, clamped, snapped — so an
+//! `RPL3` tape replayed today would be a different game told with the
+//! same inputs, and it fails safe as unsupported instead. The recorder
+//! reuses the lockstep wire codec
 //! ([`Message::Input`]) rather than invent a second frame encoding, so
 //! pointer floats travel as exact bit patterns. Parsing never panics; every
 //! malformed payload maps to a [`ReplayError`], and a recording that would
@@ -41,7 +47,7 @@ use crate::sim::{CrewFrame, InputFrame, SaveError, Sim, Vec2};
 
 /// Magic-plus-version header of every recording this build writes. Bump on
 /// any breaking change; older versions fail safe as unsupported.
-const MAGIC: &str = "RPL3";
+const MAGIC: &str = "RPL4";
 
 /// Rolling cap on recorded entries.
 ///
@@ -994,16 +1000,22 @@ mod tests {
             Recording::parse("RPL9\nend 0\nbase 0\n"),
             Err(ReplayError::UnsupportedVersion)
         ));
+        // A grid-era tape would replay into a different game: the same
+        // frames settle cargo somewhere else now, so it is refused whole.
         assert!(matches!(
-            Recording::parse("RPL3"),
+            Recording::parse("RPL3\nend 0\nbase 0\n"),
+            Err(ReplayError::UnsupportedVersion)
+        ));
+        assert!(matches!(
+            Recording::parse("RPL4"),
             Err(ReplayError::Parse { line: 0 })
         ));
         assert!(matches!(
-            Recording::parse("RPL3\nend NaN\nbase 0\n"),
+            Recording::parse("RPL4\nend NaN\nbase 0\n"),
             Err(ReplayError::Parse { line: 2 })
         ));
         assert!(matches!(
-            Recording::parse("RPL3\nend 0\nbase 99999999999999999999999\n"),
+            Recording::parse("RPL4\nend 0\nbase 99999999999999999999999\n"),
             Err(ReplayError::Parse { line: 3 })
         ));
 
@@ -1017,7 +1029,7 @@ mod tests {
             .to_wire()
         };
         let build = |end: u64, entries: &str| {
-            format!("RPL3\nend {end}\nbase {}\n{base}{entries}", base.len())
+            format!("RPL4\nend {end}\nbase {}\n{base}{entries}", base.len())
         };
         // A player other than 0 has no business in a solo black box.
         assert!(Recording::parse(&build(5, &entry(1, 3))).is_err());
@@ -1037,7 +1049,7 @@ mod tests {
     /// anything that happens to parse re-serialises without panicking.
     #[test]
     fn arbitrary_garbage_never_panics() {
-        let alphabet: Vec<char> = "RPL3 SNP\nend base input 0-9abcdefx \u{FFFD}\u{1F680}\t"
+        let alphabet: Vec<char> = "RPL4 SNP\nend base input 0-9abcdefx \u{FFFD}\u{1F680}\t"
             .chars()
             .collect();
         for round in 0_u64..300 {

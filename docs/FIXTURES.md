@@ -54,7 +54,11 @@ accepted during prototyping, per DESIGN.md's compatibility stance.
 
 1. **Lamps are lit while stowed.** A lamp in the hold casts light on its
    orthogonal neighbours (same adjacency the volatile rule uses). 2D:
-   a warm halo over adjacent cells. 3D: a real point light on the rack,
+   a warm halo over adjacent cells.
+
+   > Superseded by BAY.md, *The grid comes out*: a lamp lights anything
+   > less than a cell away, corners included (`lit_within_reach`), and
+   > the volatile rule asks for half a cell of clear air instead. 3D: a real point light on the rack,
    obeying `sim.light()` like every cabin lamp — the omen dims cargo too.
 2. **Rats fear light.** The rat will not hop to, board in, or nibble in
    a cell adjacent to a lit lamp. If every candidate is lit, it skips

@@ -385,3 +385,44 @@ Every line is reversible; strike one by overruling it.
   scene and a trace of what got bound to what catches the class without a
   300 MB install. Python is not a dependency and does not become one: a
   machine with no interpreter says the guards did not run.
+- **A berth is quantised to a sixteenth of a cell** (`cargo::FINE = 16`,
+  about 34 mm). Finer buys nothing a player can see and costs every
+  sweep a factor; coarser starts to show as a visible step when a crate
+  is nudged along a wall. It is the frontend's existing finest cut, so
+  the two agree on what "the smallest move" is.
+- **Two volatile pieces need half a cell of clear air, corners
+  included.** The grid's rule was "no shared edge"; with free placement a
+  gap of one sixteenth would satisfy that, which makes the rule a
+  formality. Half a cell is the smallest buffer that still reads as a
+  gap from across the room.
+- **Light reaches one cell, and corners count.** A lamp lights anything
+  less than a cell away by Chebyshev gap and not wholly inside it. The
+  grid's "orthogonal neighbours only" has no meaning once nothing sits
+  on the grid: a lamp a sixteenth past a crate's corner is not darker
+  than one a sixteenth past its edge. The rat fears a little more of the
+  room than it did.
+- **A tall piece shadows the wall while it stands less than a cell from
+  it.** The grid's rule was "touching the baseboard"; a wardrobe half a
+  cell off the wall still hides what hangs behind it. A whole cell out
+  leaves room to hang a painting.
+- **The drop snaps within a quarter of a cell**, inclusive, onto chart
+  edges first and neighbours' edges second. Enough to make flush (and so
+  cryo) easy to hit without the piece visibly jumping; a neighbour never
+  pulls a piece off the wall it was aimed at.
+- **Every rule that asks "what tile is this piece on" reads the tile
+  under its centre**, with a centre on a seam reading the cell above and
+  to the left. The classes that refuse cargo (stock, threshold, fixture)
+  still refuse a footprint touching any of their cells. The tie-break
+  is chosen so a piece at a whole-cell anchor reads exactly what the
+  grid read.
+- **The drop centres the footprint on the pointer**, so lifting a
+  two-cell piece by one end and putting it straight back moves it half a
+  cell. Keeping the grab offset is a frontend choice (it can aim the
+  release where the piece's middle would be) and is left to the carry
+  preview's pass.
+- **No rotation.** A body's yaw still follows its chart. Free yaw is a
+  likely follow-up and changes footprints, so it waits for the owner.
+- **Shelves, deals, fluff and the save reader's room-local walks keep
+  whole-cell anchors.** They set things out a tile at a time; only
+  `first_fit` and `dress_fit` learned the flush-against-a-neighbour
+  anchors that find snug gaps.

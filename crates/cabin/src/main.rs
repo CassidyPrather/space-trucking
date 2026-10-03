@@ -1694,8 +1694,12 @@ mod session {
                 .pieces()
                 .iter()
                 .find(|piece| {
-                    matches!(piece.loc, Loc::Hold { room: at, x, y }
-                        if at == room && sim.rooms().tile(at, x, y) != Some(Tile::Stock))
+                    matches!(piece.loc, Loc::Hold { room: at, .. } if at == room)
+                        && space_trucking::sim::cargo::berth_tile(
+                            sim.rooms(),
+                            piece.kind,
+                            piece.loc,
+                        ) != Some(Tile::Stock)
                 })
                 .map(|piece| layout::piece_rect(sim.rooms(), sim.pieces(), piece))?;
             Some(SimVec2::new(

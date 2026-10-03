@@ -30,6 +30,14 @@ use super::{KIND_COUNT, KNOWN_ALL, MAX_CREW, Sim, barter};
 
 /// Magic-plus-version header of every save this build writes.
 ///
+/// `STV20` is the grid coming out (docs/BAY.md, "The grid comes out"): a
+/// berth is a position rather than a cell, so the two numbers after a
+/// `hold` or `laid` berth's room are the footprint's top-left corner in
+/// sixteenths of a cell (`cargo::FINE`) rather than the cell it is
+/// anchored in. Nothing else about the GRAMMAR moved — the same line,
+/// the same tokens, finer numbers — and nothing about what a berth means
+/// moved either: a document's cells load as the same ground, exactly.
+///
 /// `STV19` is the re-authored 3D extent (docs/BAY.md): a kind states
 /// what it takes up as across, deep and tall, and a berth spends
 /// whichever two of the three its own chart is for — a plan on the deck
@@ -107,10 +115,19 @@ use super::{KIND_COUNT, KNOWN_ALL, MAX_CREW, Sim, barter};
 /// it belonged to. `STV10` widened the cabin from a 6×5 floor to an 8×7
 /// one; `STV7` added the banked burner's stoke to the ship line's tail;
 /// `STV6` added the `laid` piece location; `STV5` added `stow`.
-const MAGIC: &str = "STV19";
+const MAGIC: &str = "STV20";
 
 /// Older headers this build still reads, each with its own migration,
 /// applied oldest-first so a `STV4` document walks the whole chain.
+///
+/// `STV20` took the grid out. Every older document names its berths in
+/// whole cells, and each loads as that cell times `cargo::FINE` — the
+/// cell's own top-left corner, so the piece stands on exactly the ground
+/// it stood on, and every later rule reads it as it did. That conversion
+/// happens as the berth is read, so every migration below it in the
+/// chain, which was written in cells, sees whole multiples of a cell
+/// and reads them back as cells to do its arithmetic. Validation on load
+/// still runs the arbiter, unchanged.
 ///
 /// `STV19` restated every footprint in its own chart's frame. A
 /// document from before it names berths whose cells this build reads
@@ -191,9 +208,9 @@ const MAGIC: &str = "STV19";
 /// hold cells, which the net embeds at (+3, 0). Whatever the room-grid
 /// rules no longer accept once the translations have run re-berths at its
 /// first legal cell. Everything else stays one additive grammar.
-const READABLE: [&str; 16] = [
-    MAGIC, "STV18", "STV17", "STV16", "STV15", "STV14", "STV13", "STV12", "STV11", "STV10", "STV9",
-    "STV8", "STV7", "STV6", "STV5", "STV4",
+const READABLE: [&str; 17] = [
+    MAGIC, "STV19", "STV18", "STV17", "STV16", "STV15", "STV14", "STV13", "STV12", "STV11",
+    "STV10", "STV9", "STV8", "STV7", "STV6", "STV5", "STV4",
 ];
 
 /// Why a save string was refused.
@@ -423,6 +440,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let legacy = !matches!(
         header,
         MAGIC
+            | "STV19"
             | "STV18"
             | "STV17"
             | "STV16"
@@ -440,6 +458,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let uninstrumented = !matches!(
         header,
         MAGIC
+            | "STV19"
             | "STV18"
             | "STV17"
             | "STV16"
@@ -456,6 +475,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let narrow = !matches!(
         header,
         MAGIC
+            | "STV19"
             | "STV18"
             | "STV17"
             | "STV16"
@@ -469,42 +489,57 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     // Pre-STV11 headers know one room and a barter counter.
     let roomless = !matches!(
         header,
-        MAGIC | "STV18" | "STV17" | "STV16" | "STV15" | "STV14" | "STV13" | "STV12" | "STV11"
+        MAGIC
+            | "STV19"
+            | "STV18"
+            | "STV17"
+            | "STV16"
+            | "STV15"
+            | "STV14"
+            | "STV13"
+            | "STV12"
+            | "STV11"
     );
     // Pre-STV12 headers were written when every room declared six ports;
     // an edge through a slot its kind no longer fills is re-seated.
     let six_ported = !matches!(
         header,
-        MAGIC | "STV18" | "STV17" | "STV16" | "STV15" | "STV14" | "STV13" | "STV12"
+        MAGIC | "STV19" | "STV18" | "STV17" | "STV16" | "STV15" | "STV14" | "STV13" | "STV12"
     );
     // Pre-STV13 headers were written before the window family, so their
     // ledger masks are narrower than the table is now.
     let unglazed = !matches!(
         header,
-        MAGIC | "STV18" | "STV17" | "STV16" | "STV15" | "STV14" | "STV13"
+        MAGIC | "STV19" | "STV18" | "STV17" | "STV16" | "STV15" | "STV14" | "STV13"
     );
     // Pre-STV14 headers were written when an offer band ran clean across
     // the room, doorway and all; a proposal left on what is deck now
     // walks onto the offer area this build actually has.
     let doorway_offers = !matches!(
         header,
-        MAGIC | "STV18" | "STV17" | "STV16" | "STV15" | "STV14"
+        MAGIC | "STV19" | "STV18" | "STV17" | "STV16" | "STV15" | "STV14"
     );
     // Pre-STV15 headers were written when a room's own hardware stood in
     // cells anybody could berth in; cargo left inside the counter or the
     // pendant walks off them.
-    let open_fixtures = !matches!(header, MAGIC | "STV18" | "STV17" | "STV16" | "STV15");
+    let open_fixtures = !matches!(
+        header,
+        MAGIC | "STV19" | "STV18" | "STV17" | "STV16" | "STV15"
+    );
     // Pre-STV16 headers were written when three of the calling rooms
     // were narrower, so a berth in one names a cell of a smaller net.
-    let cramped_callers = !matches!(header, MAGIC | "STV18" | "STV17" | "STV16");
+    let cramped_callers = !matches!(header, MAGIC | "STV19" | "STV18" | "STV17" | "STV16");
     // Pre-STV18 headers were written when rooms mated flush, so an edge
     // that fitted then may not fit with a cube of padding round it. Such
     // a room is re-seated rather than lost.
-    let flush_mated = !matches!(header, MAGIC | "STV18");
+    let flush_mated = !matches!(header, MAGIC | "STV19" | "STV18");
     // Pre-STV19 headers were written when a footprint was stated in the
     // net sheet's frame rather than its own chart's, so a berth in one
     // names a different set of cells than the same berth does now.
-    let sheet_footprints = header != MAGIC;
+    let sheet_footprints = !matches!(header, MAGIC | "STV19");
+    // Pre-STV20 headers name every berth in whole cells; each loads as
+    // its cell's own top-left corner in fine units, as it is read.
+    let cellular = header != MAGIC;
 
     let seed = reader.kv("seed")?;
     let tick = reader.kv("tick")?;
@@ -550,7 +585,8 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         (rooms, marks)
     };
 
-    let (mut pieces, berths, mut next_piece) = parse_pieces(&mut reader, &rooms, roomless)?;
+    let (mut pieces, berths, mut next_piece) =
+        parse_pieces(&mut reader, &rooms, roomless, cellular)?;
     if roomless {
         resettle(&reader, &rooms, &mut pieces, &berths, legacy, narrow)?;
     }
@@ -578,8 +614,8 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         .filter(|id| {
             pieces.iter().any(|piece| {
                 piece.id == *id
-                    && matches!(piece.loc, Loc::Hold { room, x, y }
-                        if rooms.tile(room, x, y) == Some(Tile::Stock))
+                    && matches!(piece.loc, Loc::Hold { .. })
+                    && cargo::berth_tile(&rooms, piece.kind, piece.loc) == Some(Tile::Stock)
             })
         })
         .collect();
@@ -1032,6 +1068,7 @@ fn parse_pieces(
     reader: &mut Reader<'_>,
     rooms: &Rooms,
     roomless: bool,
+    cellular: bool,
 ) -> Result<(Vec<Piece>, Vec<Berth>, u32), SaveError> {
     let mut pieces = Vec::new();
     let mut berths = Vec::new();
@@ -1049,7 +1086,7 @@ fn parse_pieces(
                     Some("1") => true,
                     _ => return Err(reader.err()),
                 };
-                let berth = parse_loc(reader, &mut tokens, rooms, kind, roomless)?;
+                let berth = parse_loc(reader, &mut tokens, rooms, kind, roomless, cellular)?;
                 berths.push(berth);
                 pieces.push(Piece {
                     id,
@@ -1060,8 +1097,16 @@ fn parse_pieces(
                     // answers for every one of them before anyone looks.
                     loc: match berth {
                         Berth::Settled(loc) => loc,
-                        Berth::Cell(x, y) => Loc::Hold { room: CABIN, x, y },
-                        Berth::Dress(x, y) => Loc::Laid { room: CABIN, x, y },
+                        Berth::Cell(x, y) => Loc::Hold {
+                            room: CABIN,
+                            x: cargo::fine(x),
+                            y: cargo::fine(y),
+                        },
+                        Berth::Dress(x, y) => Loc::Laid {
+                            room: CABIN,
+                            x: cargo::fine(x),
+                            y: cargo::fine(y),
+                        },
                         _ => Loc::Stow {
                             cabinet: u32::MAX,
                             slot: 0,
@@ -1128,12 +1173,15 @@ fn resettle(
         .collect();
     for (_, piece, _) in &mut order {
         if let Loc::Hold { x, y, .. } | Loc::Laid { x, y, .. } = &mut piece.loc {
+            // Read in cells, so translated in cells.
+            let (mut cx, mut cy) = (cargo::coarse(*x), cargo::coarse(*y));
             if legacy {
-                *x += 3;
+                cx += 3;
             }
             if narrow {
-                (*x, *y) = widen(*x, *y);
+                (cx, cy) = widen(cx, cy);
             }
+            (*x, *y) = (cargo::fine(cx), cargo::fine(cy));
         }
     }
     // Settled berths go down first, so the pieces that must find a home
@@ -1186,6 +1234,7 @@ fn resettle(
                     burner.and_then(|room| {
                         barter::tiles_of(rooms, room, Tile::Consume)
                             .into_iter()
+                            .map(|(x, y)| (cargo::fine(x), cargo::fine(y)))
                             .find(|&(x, y)| {
                                 cargo::placement_legal(rooms, &board, id, kind, room, x, y)
                             })
@@ -1271,7 +1320,9 @@ fn walk_proposals_off_the_doorway(rooms: &Rooms, pieces: &mut [Piece]) {
         .iter()
         .enumerate()
         .filter(|(_, piece)| match piece.loc {
-            Loc::Hold { room, x, y } => rooms.kind(room).is_some_and(|kind| retired(kind, x, y)),
+            Loc::Hold { room, x, y } => rooms
+                .kind(room)
+                .is_some_and(|kind| retired(kind, cargo::coarse(x), cargo::coarse(y))),
             _ => false,
         })
         .map(|(at, _)| at)
@@ -1284,6 +1335,7 @@ fn walk_proposals_off_the_doorway(rooms: &Rooms, pieces: &mut [Piece]) {
         let settled: Vec<Piece> = pieces.to_vec();
         let Some((x, y)) = barter::tiles_of(rooms, room, Tile::Offer)
             .into_iter()
+            .map(|(x, y)| (cargo::fine(x), cargo::fine(y)))
             .find(|&(x, y)| super::placement_legal(rooms, &settled, id, kind, room, x, y))
         else {
             continue;
@@ -1397,7 +1449,9 @@ fn regrow_the_calling_rooms(rooms: &Rooms, pieces: &mut [Piece]) {
         let Some(host) = rooms.kind(room) else {
             continue;
         };
-        let (x, y) = regrown(host, x, y);
+        // Read in cells, so translated in cells.
+        let (x, y) = regrown(host, cargo::coarse(x), cargo::coarse(y));
+        let (x, y) = (cargo::fine(x), cargo::fine(y));
         piece.loc = match piece.loc {
             Loc::Laid { .. } => Loc::Laid { room, x, y },
             _ => Loc::Hold { room, x, y },
@@ -1479,7 +1533,7 @@ fn walk_the_refused(rooms: &Rooms, pieces: &mut [Piece], stranded: &[usize]) {
         let settled: Vec<Piece> = pieces.to_vec();
         let (cols, rows) = host.grid();
         let free = (0..rows)
-            .flat_map(|y| (0..cols).map(move |x| (x, y)))
+            .flat_map(|y| (0..cols).map(move |x| (cargo::fine(x), cargo::fine(y))))
             .find(|&(x, y)| {
                 if laid {
                     cargo::dressing_check(rooms, &settled, id, kind, room, x, y).is_ok()
@@ -1513,6 +1567,7 @@ fn inject_instruments(
             continue;
         }
         let id = *next_piece;
+        let (x, y) = (cargo::fine(x), cargo::fine(y));
         let loc = if cargo::placement_check(rooms, pieces, id, kind, CABIN, x, y).is_ok() {
             Loc::Hold { room: CABIN, x, y }
         } else {
@@ -1564,9 +1619,8 @@ fn validate_stows(reader: &Reader<'_>, rooms: &Rooms, pieces: &[Piece]) -> Resul
                 }
                 laid.push(*piece);
             }
-            Loc::Hold { room, x, y } => {
-                if rooms
-                    .tile(room, x, y)
+            Loc::Hold { .. } => {
+                if cargo::berth_tile(rooms, piece.kind, piece.loc)
                     .is_none_or(|tile| tile == Tile::Threshold)
                 {
                     return Err(reader.err());
@@ -1578,23 +1632,40 @@ fn validate_stows(reader: &Reader<'_>, rooms: &Rooms, pieces: &[Piece]) -> Resul
 }
 
 /// A piece's location tokens, bounds-checked so later indexing never panics.
+///
+/// `cellular` is every document before `STV20`, whose berths are cells:
+/// each reads as its cell's top-left corner in fine units, the same
+/// ground exactly.
 fn parse_loc<'a>(
     reader: &Reader<'_>,
     tokens: &mut impl Iterator<Item = &'a str>,
     rooms: &Rooms,
     kind: Kind,
     roomless: bool,
+    cellular: bool,
 ) -> Result<Berth, SaveError> {
     let cell = |reader: &Reader<'_>,
                 tokens: &mut dyn Iterator<Item = &'a str>|
-     -> Result<(RoomId, u8, u8), SaveError> {
+     -> Result<(RoomId, u16, u16), SaveError> {
         let room: RoomId = reader.token(tokens.next())?;
-        let x: u8 = reader.token(tokens.next())?;
-        let y: u8 = reader.token(tokens.next())?;
+        let (x, y) = if cellular {
+            let x: u8 = reader.token(tokens.next())?;
+            let y: u8 = reader.token(tokens.next())?;
+            (cargo::fine(x), cargo::fine(y))
+        } else {
+            let x: u16 = reader.token(tokens.next())?;
+            let y: u16 = reader.token(tokens.next())?;
+            (x, y)
+        };
         let host = rooms.kind(room).ok_or_else(|| reader.err())?;
-        let (w, h) = cargo::plan(host, kind, x, y).ok_or_else(|| reader.err())?;
         let (cols, rows) = host.grid();
-        if x + w > cols || y + h > rows {
+        // Bounded before any arithmetic, so a lying document cannot
+        // overflow the footprint's far edge.
+        if x >= cargo::fine(cols) || y >= cargo::fine(rows) {
+            return Err(reader.err());
+        }
+        let foot = cargo::Foot::of(host, kind, x, y).ok_or_else(|| reader.err())?;
+        if foot.right() > cargo::fine(cols) || foot.bottom() > cargo::fine(rows) {
             return Err(reader.err());
         }
         Ok((room, x, y))
@@ -1755,6 +1826,7 @@ impl<'a> Reader<'a> {
 mod tests {
     use super::super::{InputFrame, TICK_DT, Vec2, layout};
     use super::*;
+    use crate::sim::cargo::fine;
 
     #[test]
     fn errors_display_without_panicking() {
@@ -1929,9 +2001,9 @@ mod tests {
             .to_owned();
         for bad in [
             "piece 0 99 0 0 hold 0 4 4",
-            "piece 0 0 0 0 hold 0 22 13",
+            "piece 0 0 0 0 hold 0 352 208",
             "piece 0 0 0 0 hold 9 4 4",
-            "piece 0 0 0 0 hold 0 11 3",
+            "piece 0 0 0 0 hold 0 176 48",
             "piece 0 0 0 0 nowhere 0",
             "piece 0 0 0 2 hold 0 4 4",
             "piece 0 0 0 gnawed hold 0 4 4",
@@ -1942,7 +2014,7 @@ mod tests {
     }
 
     /// A sim with a stocked cabinet, its cubby lines pinned.
-    fn furnished() -> (Sim, String, u32, (u8, u8)) {
+    fn furnished() -> (Sim, String, u32, (u16, u16)) {
         let mut sim = Sim::new(3);
         let (_, x, y) = cargo::first_fit(sim.rooms(), sim.pieces(), u32::MAX, Kind::Cabinet)
             .expect("room for a cabinet");
@@ -1956,8 +2028,8 @@ mod tests {
                 Kind::Rug,
                 Loc::Laid {
                     room: CABIN,
-                    x: 3,
-                    y: 6,
+                    x: fine(3),
+                    y: fine(6),
                 },
             ),
             (
@@ -1965,7 +2037,7 @@ mod tests {
                 Kind::LuminousPaint,
                 Loc::Laid {
                     room: CABIN,
-                    x: 5,
+                    x: fine(5),
                     y: 0,
                 },
             ),
@@ -2031,7 +2103,7 @@ mod tests {
     /// every berth.
     fn deroom(save: &str, header: &str) -> String {
         let mut out = String::new();
-        for line in save.lines() {
+        for line in cells_only(save).lines() {
             if line.starts_with("rooms ") || line.starts_with("room ") {
                 continue;
             }
@@ -2057,6 +2129,104 @@ mod tests {
             out.push('\n');
         }
         out.replacen(MAGIC, header, 1)
+    }
+
+    /// **A modern save's berths, written in whole cells** — the way every
+    /// document before `STV20` wrote them. Every board the tests forge
+    /// from stands on whole cells, and this insists on it, so a forged
+    /// document says exactly what its modern original said.
+    fn cells_only(save: &str) -> String {
+        let mut out = String::new();
+        for line in save.lines() {
+            let mut tokens: Vec<String> = line.split_whitespace().map(str::to_owned).collect();
+            if tokens.first().is_some_and(|token| token == "piece")
+                && tokens
+                    .get(5)
+                    .is_some_and(|token| token == "hold" || token == "laid")
+            {
+                for at in [7, 8] {
+                    let fine: u16 = tokens[at].parse().expect("a berth coordinate");
+                    assert_eq!(
+                        fine % cargo::FINE,
+                        0,
+                        "a forged berth is a whole cell: {line}"
+                    );
+                    tokens[at] = (fine / cargo::FINE).to_string();
+                }
+                out.push_str(&tokens.join(" "));
+            } else {
+                out.push_str(line);
+            }
+            out.push('\n');
+        }
+        out
+    }
+
+    /// **A modern save, re-dated**: [`cells_only`], under `header`.
+    fn forge(save: &str, header: &str) -> String {
+        cells_only(save).replacen(MAGIC, header, 1)
+    }
+
+    /// **A berth off the grid survives the trip to the sixteenth**: the
+    /// document carries fine coordinates and the reader takes them as
+    /// written.
+    #[test]
+    fn a_fractional_berth_round_trips() {
+        let mut sim = Sim::new(3);
+        let vial = sim
+            .pieces
+            .iter()
+            .position(|piece| piece.kind == Kind::PerfumeVial)
+            .expect("the starter vial");
+        let id = sim.pieces[vial].id;
+        let (x, y) = (fine(6) + 5, fine(7) + 11);
+        assert!(
+            super::super::placement_legal(
+                sim.rooms(),
+                sim.pieces(),
+                id,
+                Kind::PerfumeVial,
+                CABIN,
+                x,
+                y
+            ),
+            "the fixture's berth is a legal one"
+        );
+        sim.pieces[vial].loc = Loc::Hold { room: CABIN, x, y };
+        let save = sim.save_string();
+        assert!(
+            save.contains(&format!("piece {id} 0 "))
+                && save.contains(&format!(" hold 0 {x} {y}\n")),
+            "the line carries the fine berth"
+        );
+        let restored = Sim::from_save(&save).expect("a fractional board loads");
+        assert_eq!(restored.pieces, sim.pieces);
+        assert_eq!(restored.save_string(), save);
+    }
+
+    /// **The grid's documents load as the same ground, exactly**: every
+    /// cell an `STV19` document names becomes that cell's own corner in
+    /// fine units, so the board that comes out is the board that went in,
+    /// piece for piece and berth for berth — nothing walks.
+    #[test]
+    fn a_grid_era_document_loads_at_its_cells_times_fine() {
+        let sim = Sim::new(3);
+        let (furnished, save, _, _) = furnished();
+        for (board, document) in [(&sim, sim.save_string()), (&furnished, save)] {
+            let old = forge(&document, "STV19");
+            assert!(old.contains(" hold 0 3 3\n"), "the starter vial, in cells");
+            let loaded = Sim::from_save(&old).expect("an STV19 document must still load");
+            assert_eq!(loaded.pieces, board.pieces, "a berth moved on the way in");
+            assert!(loaded.pieces.iter().any(|piece| piece.loc
+                == Loc::Hold {
+                    room: CABIN,
+                    x: fine(3),
+                    y: fine(3)
+                }));
+            // And it is written back in fine units, under this build's
+            // header.
+            assert_eq!(loaded.save_string(), document);
+        }
     }
 
     /// A pre-rooms document loads into the graph: every berth becomes a
@@ -2106,11 +2276,14 @@ mod tests {
         assert!(find(901).is_none(), "the station's stock stayed behind");
         // And the fuel is in the furnace room, on its hazard tiles.
         let fuel = find(903).expect("staged fuel survives");
-        let Loc::Hold { room, x, y } = fuel.loc else {
+        let Loc::Hold { room, .. } = fuel.loc else {
             panic!("fuel must occupy a cell")
         };
         assert_eq!(sim.rooms().kind(room), Some(RoomKind::Burner));
-        assert_eq!(sim.rooms().tile(room, x, y), Some(Tile::Consume));
+        assert_eq!(
+            cargo::berth_tile(sim.rooms(), fuel.kind, fuel.loc),
+            Some(Tile::Consume)
+        );
     }
 
     /// The entry-path law's migration: a pre-STV14 document's proposal
@@ -2137,7 +2310,7 @@ mod tests {
         assert!(RoomKind::Trade.entry_path(nx, ny), "that is the way in");
         assert_eq!(RoomKind::Trade.tile_of(nx, ny), Some(Tile::Staging));
         let lamp = Kind::WallLamp.index();
-        let forged = sim.save_string().replacen(MAGIC, "STV13", 1).replacen(
+        let forged = forge(&sim.save_string(), "STV13").replacen(
             "next_piece",
             &format!("piece 900 {lamp} 0 0 hold {trade} {x} {y}\nnext_piece"),
             1,
@@ -2149,7 +2322,7 @@ mod tests {
             .find(|piece| piece.id == 900)
             .copied()
             .expect("the proposal survives the load");
-        let Loc::Hold { room, x, y } = piece.loc else {
+        let Loc::Hold { room, .. } = piece.loc else {
             panic!("a proposal occupies a cell")
         };
         assert_eq!(
@@ -2157,7 +2330,7 @@ mod tests {
             "the proposal stayed in the room it was made to"
         );
         assert_eq!(
-            loaded.rooms().tile(room, x, y),
+            cargo::berth_tile(loaded.rooms(), piece.kind, piece.loc),
             Some(Tile::Offer),
             "the proposal is standing on deck rather than on the offer area"
         );
@@ -2193,7 +2366,7 @@ mod tests {
             Some(Tile::Fixture),
             "that deck is the counter's"
         );
-        let forged = sim.save_string().replacen(MAGIC, "STV14", 1).replacen(
+        let forged = forge(&sim.save_string(), "STV14").replacen(
             "next_piece",
             &format!("piece 901 7 0 0 hold {trade} {x} {y}\nnext_piece"),
             1,
@@ -2205,12 +2378,12 @@ mod tests {
             .find(|piece| piece.id == 901)
             .copied()
             .expect("the crate survives the load");
-        let Loc::Hold { room, x, y } = piece.loc else {
+        let Loc::Hold { room, .. } = piece.loc else {
             panic!("a crate occupies a cell")
         };
         assert_eq!(room, trade, "the crate stayed in the room it was left in");
         assert_ne!(
-            loaded.rooms().tile(room, x, y),
+            cargo::berth_tile(loaded.rooms(), piece.kind, piece.loc),
             Some(Tile::Fixture),
             "the crate is still standing inside the counter"
         );
@@ -2247,7 +2420,7 @@ mod tests {
             (COURSES + 1, COURSES + was_h + 1),
         );
         let lamp = Kind::WallLamp.index();
-        let forged = sim.save_string().replacen(MAGIC, "STV15", 1).replacen(
+        let forged = forge(&sim.save_string(), "STV15").replacen(
             "next_piece",
             &format!(
                 "piece 910 {lamp} 0 0 hold {trade} {} {}\n\
@@ -2267,7 +2440,7 @@ mod tests {
                 panic!("a lamp occupies a cell")
             };
             assert_eq!(room, trade, "piece {id} left the room it was hung in");
-            RoomKind::Trade.surface_of(x, y)
+            RoomKind::Trade.surface_of(cargo::coarse(x), cargo::coarse(y))
         };
         assert_eq!(charted(910), Some(Surf::Starboard));
         assert_eq!(charted(911), Some(Surf::Front));
@@ -2304,7 +2477,7 @@ mod tests {
         let old = format!(
             "familiar 0000 00ff {narrow:04x} 0000 0000 0000 {narrow:04x} 0000 0000 0000 0000 0000"
         );
-        let forged = plain.replacen(MAGIC, "STV12", 1).replacen(ledger, &old, 1);
+        let forged = forge(&plain, "STV12").replacen(ledger, &old, 1);
         let sim = Sim::from_save(&forged).expect("an STV12 document must still load");
         assert_eq!(
             sim.familiar[usize::from(super::super::map::GUILD)],
@@ -2354,9 +2527,7 @@ mod tests {
                 .count()
         };
         // The same document, written when a market carried a hatch.
-        let forged = plain
-            .replacen(MAGIC, "STV11", 1)
-            .replacen(&dock, "room 2 2 0 4 5", 1);
+        let forged = forge(&plain, "STV11").replacen(&dock, "room 2 2 0 4 5", 1);
         let sim = Sim::from_save(&forged).expect("an STV11 document must still load");
         assert_eq!(
             sim.rooms().kind(2),
@@ -2431,7 +2602,7 @@ mod tests {
                 out.push_str(line);
                 out.push('\n');
             }
-            out.replacen(MAGIC, "STV17", 1)
+            forge(&out, "STV17")
         };
         let sim = Sim::from_save(&old).expect("an STV17 document must still load");
         assert_eq!(
@@ -2571,56 +2742,56 @@ next_piece 7
                 0,
                 Loc::Hold {
                     room: CABIN,
-                    x: 5,
-                    y: 1,
+                    x: fine(5),
+                    y: fine(1),
                 },
             ), // aft: held still
             (
                 1,
                 Loc::Hold {
                     room: CABIN,
-                    x: 1,
-                    y: 6,
+                    x: fine(1),
+                    y: fine(6),
                 },
             ), // port: held still
             (
                 2,
                 Loc::Hold {
                     room: CABIN,
-                    x: 7,
-                    y: 6,
+                    x: fine(7),
+                    y: fine(6),
                 },
             ), // floor: held still
             (
                 3,
                 Loc::Hold {
                     room: CABIN,
-                    x: 12,
-                    y: 5,
+                    x: fine(12),
+                    y: fine(5),
                 },
             ), // starboard: +2 columns
             (
                 4,
                 Loc::Hold {
                     room: CABIN,
-                    x: 5,
-                    y: 10,
+                    x: fine(5),
+                    y: fine(10),
                 },
             ), // front: +2 rows
             (
                 5,
                 Loc::Hold {
                     room: CABIN,
-                    x: 16,
-                    y: 5,
+                    x: fine(16),
+                    y: fine(5),
                 },
             ), // ceiling: +2 columns
             (
                 6,
                 Loc::Laid {
                     room: CABIN,
-                    x: 3,
-                    y: 7,
+                    x: fine(3),
+                    y: fine(7),
                 },
             ),
         ] {
@@ -2651,9 +2822,7 @@ next_piece 7
         // The starter window hangs at the front wall's cornice punch-out;
         // hang it down the port flank instead, in a document from the
         // build before the athwart rule.
-        let flank = plain
-            .replacen(" hold 0 4 12", " hold 0 0 5", 1)
-            .replacen(MAGIC, "STV16", 1);
+        let flank = forge(&plain, "STV16").replacen(" hold 0 4 12", " hold 0 0 5", 1);
         assert_ne!(flank, plain, "the starter window's berth line moved");
         let sim = Sim::from_save(&flank).expect("an older board still reads");
         let window = sim
@@ -2666,7 +2835,7 @@ next_piece 7
             Loc::Hold {
                 room: CABIN,
                 x: 0,
-                y: 5
+                y: fine(5)
             },
             "it stays where it was put",
         );
@@ -2678,7 +2847,7 @@ next_piece 7
                 window.kind,
                 CABIN,
                 0,
-                5
+                fine(5)
             )
             .is_ok(),
             "and the arbiter takes it",
@@ -2701,9 +2870,7 @@ next_piece 7
         // The far end of the port flank: (0, 9) is the last cell along
         // that wall, so a level window would need (0, 10), which is not
         // a port cell at all.
-        let overhung = plain
-            .replacen(" hold 0 4 12", " hold 0 0 9", 1)
-            .replacen(MAGIC, "STV16", 1);
+        let overhung = forge(&plain, "STV16").replacen(" hold 0 4 12", " hold 0 0 9", 1);
         assert_ne!(overhung, plain, "the starter window's berth line moved");
         let sim = Sim::from_save(&overhung).expect("an older board still reads");
         let window = sim
@@ -2714,7 +2881,7 @@ next_piece 7
         let Loc::Hold { room, x, y } = window.loc else {
             panic!("it must come out hanging, not nowhere");
         };
-        assert_ne!((x, y), (0, 9), "it cannot stay where it does not fit");
+        assert_ne!((x, y), (0, fine(9)), "it cannot stay where it does not fit");
         assert!(
             cargo::placement_check(sim.rooms(), &sim.pieces, window.id, window.kind, room, x, y)
                 .is_ok(),
@@ -2755,23 +2922,23 @@ next_piece 7
             ),
             // A laid non-covering (the couch, index 19).
             (
-                format!("piece {} 22 0 0 laid 0 3 6", cabinet + 3),
-                format!("piece {} 19 0 0 laid 0 3 6", cabinet + 3),
+                format!("piece {} 22 0 0 laid 0 48 96", cabinet + 3),
+                format!("piece {} 19 0 0 laid 0 48 96", cabinet + 3),
             ),
             // A rug up the wall.
             (
-                format!("piece {} 22 0 0 laid 0 3 6", cabinet + 3),
-                format!("piece {} 22 0 0 laid 0 5 1", cabinet + 3),
+                format!("piece {} 22 0 0 laid 0 48 96", cabinet + 3),
+                format!("piece {} 22 0 0 laid 0 80 16", cabinet + 3),
             ),
             // Two dressings on one cell.
             (
-                format!("piece {} 24 0 0 laid 0 5 0", cabinet + 4),
-                format!("piece {} 24 0 0 laid 0 3 6", cabinet + 4),
+                format!("piece {} 24 0 0 laid 0 80 0", cabinet + 4),
+                format!("piece {} 24 0 0 laid 0 48 96", cabinet + 4),
             ),
             // A coat off the grid entirely.
             (
-                format!("piece {} 24 0 0 laid 0 5 0", cabinet + 4),
-                format!("piece {} 24 0 0 laid 0 21 12", cabinet + 4),
+                format!("piece {} 24 0 0 laid 0 80 0", cabinet + 4),
+                format!("piece {} 24 0 0 laid 0 336 192", cabinet + 4),
             ),
         ] {
             let mangled = save.replacen(&needle, &bad, 1);

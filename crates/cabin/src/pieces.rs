@@ -15,7 +15,7 @@
 //!
 //! The fixture kinds go further, per `docs/FIXTURES.md`: every lamp rig
 //! owns a real `PointLight` gated by the sim's `lamp_lit` and dimmed by
-//! the omen through `rig::Dimmable`, seedlings bloom in `lit_adjacent`
+//! the omen through `rig::Dimmable`, seedlings bloom in `lit_within_reach`
 //! lamplight, paintings carry one seeded artwork painted through the
 //! shared `canvas`, a couch under the rat settles it into a nap pose, and
 //! the cabinet is furniture that stores: an open-fronted wardrobe whose
@@ -42,7 +42,7 @@ use space_trucking::sim::room::{CABIN, RoomId, Rooms};
 use space_trucking::sim::{};
 use space_trucking::sim::{
     Cue, Kind, Loc, Mount, Piece, ShipState, Vec2 as SimVec2, Violation, cargo, lamp_lit,
-    lit_adjacent, placement_check, player_owned, splitmix,
+    placement_check, player_owned, splitmix,
 };
 
 use crate::poi::{Coat, Shape, Worn};
@@ -521,8 +521,8 @@ struct WallArm {
     piece: u32,
 }
 
-/// One blossom on a Seedlings rig, visible only while some footprint
-/// cell sits in lamplight (`lit_adjacent`) — presentation only, the 3D
+/// One blossom on a Seedlings rig, visible only while its footprint
+/// sits in lamplight (`lit_within_reach`) — presentation only, the 3D
 /// reading of the 2D bloom.
 #[derive(Component)]
 struct Blossom {
@@ -1128,6 +1128,9 @@ fn berth_site(
 /// anchor and `cargo::plan`'s answer for that cell's own chart — the
 /// very plan [`placement_hints`] lights, so hint, ghost, and berth all
 /// read one geometry.
+// phase 2: the sim's drop centres, clamps and snaps the footprint
+// (`Sim::drop_preview`); this still anchors it on the aimed cell, so the
+// ghost and the berth agree only where the two coincide.
 fn aimed_rect(rooms: &Rooms, kind: Kind, sim: SimVec2) -> Option<Rect> {
     let (room, ax, ay) = layout::cell_at(sim)?;
     let (w, h) = cargo::plan(rooms.kind(room)?, kind, ax, ay)?;
@@ -1668,6 +1671,8 @@ fn latch_cues(
                     // the pointer's cell this frame — the 2D juice's aim.
                     // (An Occupied reject can fire from a bare grab, so an
                     // empty memo means a one-cell flash under the hand.)
+                    // phase 2: flash the berth `Sim::drop_preview` names,
+                    // not the aimed cell's anchor.
                     let (room, x, y) = layout::cell_at(pointer.sim).unwrap_or((CABIN, 0, 0));
                     let (w, h) = memo
                         .0
@@ -1827,7 +1832,7 @@ fn sync_pieces(
 /// dark glass over [`LAMP_WAKE`] seconds (`lamp_lit` — hold only; a lamp
 /// riding a shelf or pad is dark), wall-lamp arms reach for whichever
 /// stile their wall column touches, and seedlings blossom exactly where
-/// `lit_adjacent` says the lamplight falls.
+/// `lit_within_reach` says the lamplight falls.
 ///
 /// The lights themselves are gated through [`Dimmable`]'s base intensity:
 /// fx.rs's `dim_cabin` overwrites `PointLight::intensity` from it every
@@ -1869,9 +1874,10 @@ fn sync_fixtures(
         }
     }
     for (arm, mut transform) in &mut arms {
-        let left = pieces
-            .iter()
-            .any(|piece| piece.id == arm.piece && matches!(piece.loc, Loc::Hold { x: 0, .. }));
+        let left = pieces.iter().any(|piece| {
+            piece.id == arm.piece
+                && matches!(piece.loc, Loc::Hold { x, .. } if cargo::coarse(x) == 0)
+        });
         transform.rotation = if left {
             Quat::from_rotation_z(PI)
         } else {
@@ -1881,13 +1887,11 @@ fn sync_fixtures(
     for (blossom, mut visibility) in &mut blossoms {
         let blooming = pieces.iter().any(|piece| {
             piece.id == blossom.piece
-                && matches!(piece.loc, Loc::Hold { room, x, y } if {
-                    rooms.kind(room).and_then(|host| {
-                        let (w, h) = cargo::plan(host, piece.kind, x, y)?;
-                        Some((0..w).any(|dx| {
-                            (0..h).any(|dy| lit_adjacent(host, pieces, room, x + dx, y + dy))
-                        }))
-                    }) == Some(true)
+                && matches!(piece.loc, Loc::Hold { .. })
+                && cargo::Foot::at(rooms, piece).is_some_and(|(room, foot)| {
+                    rooms
+                        .kind(room)
+                        .is_some_and(|host| cargo::lit_within_reach(host, pieces, room, foot))
                 })
         });
         *visibility = if blooming {
@@ -2265,12 +2269,15 @@ fn placement_hints(
     mut slashes: Query<&mut Visibility, Without<HintCell>>,
 ) {
     let sim = &shell.bridge.sim;
+    // phase 2: the plates light the aimed cell's anchored footprint; the
+    // drop itself centres, clamps and snaps (`Sim::drop_preview`), so the
+    // plates should light the cells that berth covers, with its verdict.
     let plan = sim.held(0).and_then(|held| {
-        let ours = player_owned(sim.rooms(), sim.pieces(), held.origin);
+        let piece = sim.pieces().iter().find(|piece| piece.id == held.piece)?;
+        let ours = player_owned(sim.rooms(), sim.pieces(), piece.kind, held.origin);
         if !ours {
             return None;
         }
-        let piece = sim.pieces().iter().find(|piece| piece.id == held.piece)?;
         let (room, ax, ay) = layout::cell_at(pointer.sim)?;
         // The hint must consult the SAME arbiter the drop will: a
         // covering answers to the dressing rules (a tin coats any
@@ -2284,8 +2291,8 @@ fn placement_hints(
                 piece.id,
                 piece.kind,
                 room,
-                ax,
-                ay,
+                cargo::fine(ax),
+                cargo::fine(ay),
             )
             .is_ok()
         } else {
@@ -2295,8 +2302,8 @@ fn placement_hints(
                 piece.id,
                 piece.kind,
                 room,
-                ax,
-                ay,
+                cargo::fine(ax),
+                cargo::fine(ay),
             )
             .is_ok()
         };
@@ -2669,19 +2676,11 @@ fn rat_watch(
     // the cushions, nothing fidgeting — so it reads asleep in a still.
     let napping = t >= 1.0
         && sim.pieces().iter().any(|piece| {
-            let Loc::Hold { room: CABIN, x, y } = piece.loc else {
-                return false;
-            };
-            let Some((w, h)) = sim
-                .rooms()
-                .kind(CABIN)
-                .and_then(|host| cargo::plan(host, piece.kind, x, y))
-            else {
-                return false;
-            };
             piece.kind == Kind::Couch
-                && (x..x + w).contains(&rat.cell.0)
-                && (y..y + h).contains(&rat.cell.1)
+                && matches!(piece.loc, Loc::Hold { room: CABIN, .. })
+                && cargo::Foot::at(sim.rooms(), piece).is_some_and(|(_, foot)| {
+                    foot.overlaps(cargo::Foot::cell(rat.cell.0, rat.cell.1))
+                })
         });
     let unit = f32::midpoint(floor.scale_u(), floor.scale_v()) * RAT_FIT;
     let hop = (PI * t).sin() * 5.0 * unit;
@@ -2941,7 +2940,7 @@ fn lever_lamp(
         && !sim.pieces().iter().any(|piece| {
             matches!(piece.loc, Loc::Hold { room, .. } | Loc::Laid { room, .. }
                 if !sim.rooms().riding(room))
-                && player_owned(sim.rooms(), sim.pieces(), piece.loc)
+                && player_owned(sim.rooms(), sim.pieces(), piece.kind, piece.loc)
         });
     // Decoration: the go-glow breathes gently while a pull would work.
     // Hover feedback: pointing at the lever wakes its lamp faintly even
@@ -4126,7 +4125,7 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
             ));
         }
         // A pot with a sprout on top. Under lamplight it blooms: three
-        // PerfumeVial-pink buds, hidden until `lit_adjacent` says the
+        // PerfumeVial-pink buds, hidden until `lit_within_reach` says the
         // footprint sits in a lit lamp's halo (presentation only, the
         // 2D bloom's reading).
         // **A pot stands on the deck and a sprout grows up out of it.**
@@ -6054,16 +6053,16 @@ mod tests {
             && sub.y + sub.h <= whole.y + whole.h + SLACK
     }
 
+    /// The rect `kind` takes anchored on cell `(x, y)` of the cabin's net.
     fn rect_of(x: u8, y: u8, kind: Kind) -> Rect {
-        let (w, h) = cargo::plan(space_trucking::sim::room::RoomKind::Cabin, kind, x, y)
+        rect_at(cargo::fine(x), cargo::fine(y), kind)
+    }
+
+    /// The rect `kind` takes at fine `(x, y)` of the cabin's net.
+    fn rect_at(x: u16, y: u16, kind: Kind) -> Rect {
+        let foot = cargo::Foot::of(space_trucking::sim::room::RoomKind::Cabin, kind, x, y)
             .expect("the tests berth on real cells");
-        let anchor = layout::cell_rect(CABIN, x, y);
-        Rect::new(
-            anchor.x,
-            anchor.y,
-            f32::from(w) * layout::CELL,
-            f32::from(h) * layout::CELL,
-        )
+        layout::foot_rect(CABIN, foot)
     }
 
     /// The net mapping's regimes: wall cells hang flat on their chart's
@@ -6218,16 +6217,29 @@ mod tests {
         let (cols, rows) = space_trucking::sim::RoomKind::Cabin.grid();
         let mut swept = 0_u32;
         let mut floors = 0_u32;
+        // Every whole-cell anchor and the fixed sample of sixteenths off
+        // it: a body drawn from its berth's rect fills that rect wherever
+        // on the net the rect lies.
+        let anchors = (0..rows).flat_map(|y| {
+            (0..cols).flat_map(move |x| {
+                cargo::FRACTIONS.into_iter().flat_map(move |dx| {
+                    cargo::FRACTIONS
+                        .into_iter()
+                        .map(move |dy| (cargo::fine(x) + dx, cargo::fine(y) + dy))
+                })
+            })
+        });
+        let anchors: Vec<(u16, u16)> = anchors.collect();
         for kind in Kind::ALL {
             if kind.covering() {
                 continue;
             }
-            for y in 0..rows {
-                for x in 0..cols {
+            for &(x, y) in &anchors {
+                {
                     if placement_check(&ship, &[], 0, kind, CABIN, x, y).is_err() {
                         continue;
                     }
-                    let rect = rect_of(x, y, kind);
+                    let rect = rect_at(x, y, kind);
                     let (station, surface) =
                         chart_at(&charts, rect_center(rect)).expect("a legal berth is charted");
                     let (lo, hi) = berth_box(&charts, kind, rect).expect("and so is its box");
@@ -6301,6 +6313,7 @@ mod tests {
         let Loc::Hold { x, y, .. } = cabinet.loc else {
             panic!("it stands on the deck");
         };
+        let (x, y) = (cargo::coarse(x), cargo::coarse(y));
         let floor = chart(Station::BayFloor);
         let eye = Vec3::new(0.0, crate::rig::EYE_HEIGHT, 0.0);
         let read_at = |cell: (u8, u8)| {
@@ -6536,8 +6549,8 @@ mod tests {
             gnawed: false,
             loc: Loc::Hold {
                 room: CABIN,
-                x: 3,
-                y: 4,
+                x: cargo::fine(3),
+                y: cargo::fine(4),
             },
         }];
         // Three cubbies boxed, one left bare: the sim's rack tiles the
@@ -7026,6 +7039,9 @@ mod tests {
         // Aimed at the ANCHOR cell: a ghost's footprint hangs off the
         // cell under the crosshair, so that is the aim this berth would
         // ever be reached by.
+        // phase 2: the drop centres the footprint on the aim
+        // (`Sim::drop_preview`); aim at the berth's middle and hold the
+        // ghost to the berth that preview names.
         let aim = rect_center(layout::cell_rect(CABIN, b.cell.0, b.cell.1));
         let (preview, stand) =
             hover_pose(&b.rooms, b.station, &b.surface, Some(&b.aft), b.kind, aim)
@@ -7084,8 +7100,8 @@ mod tests {
             gnawed: false,
             loc: Loc::Hold {
                 room: CABIN,
-                x: b.cell.0,
-                y: b.cell.1,
+                x: cargo::fine(b.cell.0),
+                y: cargo::fine(b.cell.1),
             },
         }];
         let face = standing_surface(charts, b.kind, b.rect);
@@ -7260,8 +7276,8 @@ mod tests {
             gnawed: false,
             loc: Loc::Hold {
                 room: CABIN,
-                x: b.cell.0,
-                y: b.cell.1,
+                x: cargo::fine(b.cell.0),
+                y: cargo::fine(b.cell.1),
             },
         }];
         let mut aims: Vec<Aimable> = charts
@@ -7374,15 +7390,19 @@ mod tests {
                     // else to the placement ladder, on an empty board so
                     // the sweep asks about charts, not about neighbours.
                     let laid = kind.covering();
+                    // phase 2: whole-cell anchors only; the claims below
+                    // are about a berth's own cells, which a free berth
+                    // straddles.
+                    let (fx, fy) = (cargo::fine(x), cargo::fine(y));
                     let legal = if laid {
-                        dressing_check(&ship, &[], 0, kind, CABIN, x, y).is_ok()
+                        dressing_check(&ship, &[], 0, kind, CABIN, fx, fy).is_ok()
                     } else {
-                        placement_check(&ship, &[], 0, kind, CABIN, x, y).is_ok()
+                        placement_check(&ship, &[], 0, kind, CABIN, fx, fy).is_ok()
                     };
                     if !legal {
                         continue;
                     }
-                    let rect = rect_of(x, y, kind);
+                    let rect = rect_at(fx, fy, kind);
                     let (station, surface) =
                         chart_at(&charts, rect_center(rect)).expect("a legal berth is on a chart");
                     let berth = Berth {
@@ -7767,7 +7787,7 @@ mod tests {
     fn a_bought_light_source_still_lights_the_room() {
         for kind in Kind::ALL {
             // The sim's own answer: the three affixed lamps, and the
-            // luminous coat, which `cargo::lit_adjacent` reads as a
+            // luminous coat, which `cargo::lit_within_reach` reads as a
             // source in the same breath as it reads a lamp.
             let source = cargo::lamp(kind) || kind == Kind::LuminousPaint;
             for screens in Screens::BOTH {
@@ -8152,8 +8172,8 @@ mod band {
             gnawed: false,
             loc: Loc::Hold {
                 room: CABIN,
-                x: 2,
-                y: 2,
+                x: cargo::fine(2),
+                y: cargo::fine(2),
             },
         }
     }

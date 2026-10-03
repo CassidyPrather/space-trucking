@@ -299,7 +299,7 @@ const SEED_SWEEP: u64 = 2000;
 pub fn panes_board(seed: u64, n: usize) -> String {
     use std::fmt::Write as _;
 
-    use space_trucking::sim::cargo::{Loc, Piece, placement_check};
+    use space_trucking::sim::cargo::{Loc, Piece, fine, placement_check};
     use space_trucking::sim::room::{CABIN, RoomKind, Surf};
     use space_trucking::sim::{Kind, Sim};
 
@@ -325,6 +325,7 @@ pub fn panes_board(seed: u64, n: usize) -> String {
             if RoomKind::Cabin.surface_of(x, y) != Some(Surf::Aft) {
                 continue;
             }
+            let (x, y) = (fine(x), fine(y));
             let piece = Piece {
                 id: next,
                 kind: Kind::Window,
@@ -380,7 +381,9 @@ pub fn panes_board(seed: u64, n: usize) -> String {
 #[cfg(test)]
 mod tests {
     use space_trucking::sim::Sim;
-    use space_trucking::sim::cargo::{Kind, Loc, dressing_check, placement_check};
+    use space_trucking::sim::cargo::{
+        Kind, Loc, berth_tile, coarse, dressing_check, placement_check,
+    };
     use space_trucking::sim::room::{RoomKind, Tile};
 
     /// The fixture is a real save and an honest board: it parses, its
@@ -443,7 +446,9 @@ mod tests {
             .map(|p| match p.loc {
                 Loc::Hold { room, x, y } => (
                     Some(room),
-                    rooms.kind(room).and_then(|kind| kind.surface_of(x, y)),
+                    rooms
+                        .kind(room)
+                        .and_then(|kind| kind.surface_of(coarse(x), coarse(y))),
                 ),
                 _ => (None, None),
             })
@@ -462,7 +467,7 @@ mod tests {
         // Mid-trade, on purpose: the room's own goods on its stock band,
         // a proposal standing on its offer band, and one good marked.
         let tile = |piece: &space_trucking::sim::Piece| match piece.loc {
-            Loc::Hold { room, x, y } => rooms.tile(room, x, y),
+            Loc::Hold { .. } => berth_tile(rooms, piece.kind, piece.loc),
             _ => None,
         };
         assert!(pieces.iter().any(|p| tile(p) == Some(Tile::Stock)));
@@ -505,7 +510,7 @@ mod tests {
     #[test]
     fn the_showcase_leaves_every_seam_latch_workable() {
         use bevy::prelude::Vec3;
-        use space_trucking::sim::cargo::{Piece, first_fit, plan};
+        use space_trucking::sim::cargo::{Foot, Piece, first_fit};
         use space_trucking::sim::layout;
 
         use crate::gauntlet::{Box3, OCCLUDE_BITE, across, worked_faces};
@@ -539,14 +544,7 @@ mod tests {
                 return None;
             };
             let host = placed.iter().find(|host| host.id == room)?;
-            let (w, h) = plan(host.kind, piece.kind, x, y)?;
-            let anchor = layout::cell_rect(room, x, y);
-            let rect = layout::Rect::new(
-                anchor.x,
-                anchor.y,
-                f32::from(w) * layout::CELL,
-                f32::from(h) * layout::CELL,
-            );
+            let rect = layout::foot_rect(room, Foot::of(host.kind, piece.kind, x, y)?);
             let (lo, hi) = crate::pieces::berth_box(&host.charts, piece.kind, rect)?;
             Some(Box3::spanning(lo, hi))
         };
@@ -578,9 +576,9 @@ mod tests {
         let mut carried = aboard;
         let mut walked = 0_u32;
         while let Some(nth) = carried.iter().position(|piece| match piece.loc {
-            Loc::Hold { room, x, y } => {
+            Loc::Hold { room, .. } => {
                 rooms.kind(room).is_some_and(|kind| !kind.riding())
-                    && rooms.tile(room, x, y) != Some(Tile::Stock)
+                    && berth_tile(rooms, piece.kind, piece.loc) != Some(Tile::Stock)
             }
             _ => false,
         }) {

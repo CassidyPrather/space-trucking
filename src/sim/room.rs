@@ -467,6 +467,29 @@ impl RoomKind {
         (COURSES, COURSES, w, h)
     }
 
+    /// **A chart's bounding rect** on the net, `(x0, y0, w, h)` in cells:
+    /// the cross of six charts laid flat, read off the same arithmetic
+    /// [`RoomKind::surface_of`] classifies by.
+    ///
+    /// Every chart is a rectangle of the net, so a free drop can be
+    /// clamped into the chart it was aimed at by four comparisons
+    /// (`Sim::drop_preview`). The handshake's socket is the one hole a
+    /// rect cannot see; the arbiter still refuses a footprint over it.
+    #[must_use]
+    pub const fn chart_rect(self, surf: Surf) -> (u8, u8, u8, u8) {
+        let (w, h) = self.floor();
+        let c = COURSES;
+        match surf {
+            Surf::Aft => (c, 0, w, c),
+            Surf::Port => (0, c, c, h),
+            Surf::Floor => (c, c, w, h),
+            Surf::Starboard => (c + w, c, c, h),
+            // The ceiling folds over the starboard cornice.
+            Surf::Ceiling => (2 * c + w, c, w, h),
+            Surf::Front => (c, c + h, w, c),
+        }
+    }
+
     /// The net cells one port punches: two by two, always. `None` where
     /// the kind declares no such port — an undeclared slot punches
     /// nothing, so the wall stays a wall.
@@ -1582,6 +1605,32 @@ pub fn lane_cell_at(p: Vec2) -> Option<(RoomId, u8, u8)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **Every chart is the rectangle its rect says it is**: a cell lies
+    /// in a chart's rect exactly when the net classifies it as that
+    /// chart, the handshake's socket being the one hole a rect cannot
+    /// see. The free drop clamps into these rects, so a rect one cell
+    /// too generous would slide a piece over a fold.
+    #[test]
+    fn every_chart_is_the_rectangle_its_rect_says() {
+        for kind in ROOM_KINDS {
+            let (cols, rows) = kind.grid();
+            for y in 0..rows {
+                for x in 0..cols {
+                    let socket = kind.handshake() == Some((x, y));
+                    for surf in Surf::ALL {
+                        let (cx, cy, cw, ch) = kind.chart_rect(surf);
+                        let inside = (cx..cx + cw).contains(&x) && (cy..cy + ch).contains(&y);
+                        assert_eq!(
+                            inside && !socket,
+                            kind.surface_of(x, y) == Some(surf),
+                            "({x}, {y}) of a {kind:?} against the {surf:?} chart's rect",
+                        );
+                    }
+                }
+            }
+        }
+    }
 
     /// The cabin's net is the one BAY.md describes, chart for chart —
     /// the generalization did not move a single cabin cell.

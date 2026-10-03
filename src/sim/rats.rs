@@ -45,7 +45,7 @@
 //! line, its own cues. `event::Omen` keeps the same shape; a third event
 //! should copy the convention rather than grow a framework.
 
-use super::cargo::{self, Kind, Loc, Piece, lit_adjacent};
+use super::cargo::{self, Foot, Kind, Loc, Piece, lit_adjacent};
 use super::layout;
 use super::room::{CABIN, RoomKind, Surf};
 use super::{Cue, Vec2, splitmix};
@@ -271,26 +271,27 @@ pub fn occupied_cells(pieces: &[Piece]) -> u32 {
     pieces
         .iter()
         .filter_map(|piece| match piece.loc {
+            // Ground, not cells: a crate standing off the grid covers a
+            // crate's worth of deck, however many cells it straddles.
             Loc::Hold { room: CABIN, x, y } => {
-                let on_floor = RATS_ROOM
-                    .surface_of(x, y)
-                    .is_some_and(|surf| matches!(surf, Surf::Floor));
-                let (w, h) = cargo::plan(RATS_ROOM, piece.kind, x, y)?;
-                on_floor.then_some(u32::from(w) * u32::from(h))
+                let foot = Foot::of(RATS_ROOM, piece.kind, x, y)?;
+                let on_floor = foot.chart(RATS_ROOM) == Some(Surf::Floor);
+                let area = u32::from(foot.w) * u32::from(foot.h);
+                on_floor.then_some(area / u32::from(cargo::FINE * cargo::FINE))
             }
             _ => None,
         })
         .sum()
 }
 
-/// Whether hold cell `(cx, cy)` sits under a stowed piece's footprint.
+/// Whether hold cell `(cx, cy)` sits under a stowed piece's footprint —
+/// any of it, since the rat walks cells and the cargo does not.
 fn covered(pieces: &[Piece], cx: u8, cy: u8) -> bool {
     pieces.iter().any(|piece| {
         let Loc::Hold { room: CABIN, x, y } = piece.loc else {
             return false;
         };
-        cargo::plan(RATS_ROOM, piece.kind, x, y)
-            .is_some_and(|(w, h)| cx >= x && cx < x + w && cy >= y && cy < y + h)
+        Foot::of(RATS_ROOM, piece.kind, x, y).is_some_and(|foot| foot.overlaps(Foot::cell(cx, cy)))
     })
 }
 
@@ -338,14 +339,10 @@ fn couch_cells(pieces: &[Piece]) -> Vec<(u8, u8)> {
         let Loc::Hold { room: CABIN, x, y } = piece.loc else {
             continue;
         };
-        let Some((w, h)) = cargo::plan(RATS_ROOM, piece.kind, x, y) else {
+        let Some(foot) = Foot::of(RATS_ROOM, piece.kind, x, y) else {
             continue;
         };
-        for dy in 0..h {
-            for dx in 0..w {
-                cells.push((x + dx, y + dy));
-            }
-        }
+        cells.extend(foot.cells());
     }
     cells
 }
@@ -399,8 +396,9 @@ fn couch_step(
 }
 
 /// THE nibble target rule: the stowed or laid piece nearest the rat's
-/// cell by Manhattan distance to the closest cell of its footprint (zero
-/// when the rat perches on it), ties broken by the lower piece id. Laid
+/// cell by Manhattan distance to the closest cell its footprint touches
+/// (zero when the footprint intersects the rat's cell — the rat is
+/// sitting on it), ties broken by the lower piece id. Laid
 /// dressings count — a rug is famously gnawable — but cubby cargo never
 /// does (`Loc::Stow` has no cell here at all). Returns an index into
 /// `pieces`; `None` when nothing is reachable (a bare hold at a dock),
@@ -414,8 +412,12 @@ fn nearest_hold_piece(pieces: &[Piece], (cx, cy): (u8, u8)) -> Option<usize> {
             else {
                 return None;
             };
-            let (w, h) = cargo::plan(RATS_ROOM, piece.kind, x, y)?;
-            let distance = u32::from(axis_gap(cx, x, w)) + u32::from(axis_gap(cy, y, h));
+            let foot = Foot::of(RATS_ROOM, piece.kind, x, y)?;
+            // The run of cells the footprint touches on each axis.
+            let (x0, x1) = (cargo::coarse(foot.x), cargo::coarse(foot.right() - 1));
+            let (y0, y1) = (cargo::coarse(foot.y), cargo::coarse(foot.bottom() - 1));
+            let distance =
+                u32::from(axis_gap(cx, x0, x1 - x0 + 1)) + u32::from(axis_gap(cy, y0, y1 - y0 + 1));
             Some((distance, piece.id, index))
         })
         .min_by_key(|&(distance, id, _)| (distance, id))
@@ -435,7 +437,7 @@ const fn axis_gap(c: u8, start: u8, len: u8) -> u8 {
 
 #[cfg(test)]
 mod tests {
-    use super::super::cargo::Kind;
+    use super::super::cargo::{Kind, fine};
     use super::*;
 
     /// A stowed piece for the pure helpers below.
@@ -445,7 +447,11 @@ mod tests {
             kind,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold { room: CABIN, x, y },
+            loc: Loc::Hold {
+                room: CABIN,
+                x: fine(x),
+                y: fine(y),
+            },
         }
     }
 

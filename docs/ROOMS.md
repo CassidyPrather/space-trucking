@@ -1211,6 +1211,10 @@ accident:
 - **No free placement and no physics.** Cargo stays discrete berths
   driven by input frames (ART_DIRECTION_3D.md's cargo law); rooms stay
   integer boxes on the lattice.
+
+  > Superseded in part by BAY.md, *The grid comes out*: cargo is placed
+  > freely, in sixteenths of a cell — still integers, still driven by
+  > input frames. Rooms stay on the lattice, and physics stays out.
 - **No economy redesign.** The values, wants, and jitter are the ones
   already shipped. The interface changed; the arithmetic did not.
 - **No room interiors beyond grids and tile classes.** A room is a net

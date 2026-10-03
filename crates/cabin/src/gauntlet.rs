@@ -122,7 +122,9 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use bevy::prelude::*;
-use space_trucking::sim::cargo::{Kind, Loc, Mount, Piece, mount_accepts, placement_check, plan};
+use space_trucking::sim::cargo::{
+    Foot, Kind, Loc, Mount, Piece, fine, mount_accepts, placement_check,
+};
 use space_trucking::sim::layout;
 use space_trucking::sim::room::{CABIN, RoomId, RoomKind, Rooms, Surf, Tile};
 
@@ -553,7 +555,11 @@ pub fn load(rooms: &Rooms) -> Vec<Piece> {
                     kind,
                     variant: 0,
                     gnawed: false,
-                    loc: Loc::Hold { room: id, x, y },
+                    loc: Loc::Hold {
+                        room: id,
+                        x: fine(x),
+                        y: fine(y),
+                    },
                 });
                 next += 1;
             }
@@ -577,7 +583,7 @@ pub fn load(rooms: &Rooms) -> Vec<Piece> {
 /// lie flat on their chart, spending no air at all.
 fn fills(rooms: &Rooms, cargo: &[Piece], next: u32, id: RoomId, x: u8, y: u8) -> Option<Kind> {
     let legal = |kind: &Kind| {
-        !kind.covering() && placement_check(rooms, cargo, next, *kind, id, x, y).is_ok()
+        !kind.covering() && placement_check(rooms, cargo, next, *kind, id, fine(x), fine(y)).is_ok()
     };
     Kind::ALL
         .into_iter()
@@ -627,7 +633,11 @@ pub fn loaded_save(base: &str) -> Option<String> {
                     kind,
                     variant: 0,
                     gnawed: false,
-                    loc: Loc::Hold { room: id, x, y },
+                    loc: Loc::Hold {
+                        room: id,
+                        x: fine(x),
+                        y: fine(y),
+                    },
                 };
                 aboard.push(piece);
                 added.push(piece);
@@ -733,38 +743,33 @@ pub fn berths(rooms: &Rooms, placed: &Placed) -> Vec<Berth> {
         }
         for y in 0..rows {
             for x in 0..cols {
-                if placement_check(rooms, &[], u32::MAX, kind, placed.id, x, y).is_err() {
+                // phase 2: whole-cell anchors only; the air a berth
+                // spends is keyed by cell, and a free berth spends it
+                // across the cells its footprint touches.
+                let (fx, fy) = (fine(x), fine(y));
+                if placement_check(rooms, &[], u32::MAX, kind, placed.id, fx, fy).is_err() {
                     continue;
                 }
-                let Some((w, h)) = plan(placed.kind, kind, x, y) else {
+                let Some(foot) = Foot::of(placed.kind, kind, fx, fy) else {
                     continue;
                 };
-                let anchor = layout::cell_rect(placed.id, x, y);
-                let rect = layout::Rect::new(
-                    anchor.x,
-                    anchor.y,
-                    f32::from(w) * layout::CELL,
-                    f32::from(h) * layout::CELL,
-                );
-                for j in 0..h {
-                    for i in 0..w {
-                        let cell = (x + i, y + j);
-                        let Some((station, surface)) = chart_of(placed, cell) else {
-                            continue;
-                        };
-                        let Some(air) = rig_air(
-                            &placed.charts,
-                            kind,
-                            rect,
-                            surface.center,
-                            station.inward(&surface),
-                        ) else {
-                            continue;
-                        };
-                        let slot = deepest.entry(cell).or_insert((0.0, kind));
-                        if air > slot.0 {
-                            *slot = (air, kind);
-                        }
+                let rect = layout::foot_rect(placed.id, foot);
+                for cell in foot.cells() {
+                    let Some((station, surface)) = chart_of(placed, cell) else {
+                        continue;
+                    };
+                    let Some(air) = rig_air(
+                        &placed.charts,
+                        kind,
+                        rect,
+                        surface.center,
+                        station.inward(&surface),
+                    ) else {
+                        continue;
+                    };
+                    let slot = deepest.entry(cell).or_insert((0.0, kind));
+                    if air > slot.0 {
+                        *slot = (air, kind);
                     }
                 }
             }
@@ -1560,7 +1565,7 @@ fn standing(stage: &Stage, cell: (u8, u8)) -> Option<String> {
         .iter()
         .find(|piece| {
             matches!(piece.loc, Loc::Hold { room, x, y }
-                if room == stage.placed.id && x == cell.0 && y == cell.1)
+                if room == stage.placed.id && (x, y) == (fine(cell.0), fine(cell.1)))
         })
         .map(|piece| format!("{:?} #{}", piece.kind, piece.id))
 }
@@ -2600,25 +2605,20 @@ fn plans(stages: &[Stage]) -> Vec<Plan> {
             }
             for y in 0..rows {
                 for x in 0..cols {
-                    if placement_check(&stage.rooms, &[], u32::MAX, kind, stage.placed.id, x, y)
+                    let (fx, fy) = (fine(x), fine(y));
+                    if placement_check(&stage.rooms, &[], u32::MAX, kind, stage.placed.id, fx, fy)
                         .is_err()
                     {
                         continue;
                     }
-                    let (Some((w, h)), Some(surf), Some((_, chart))) = (
-                        plan(stage.placed.kind, kind, x, y),
+                    let (Some(foot), Some(surf), Some((_, chart))) = (
+                        Foot::of(stage.placed.kind, kind, fx, fy),
                         stage.placed.kind.surface_of(x, y),
                         chart_of(&stage.placed, (x, y)),
                     ) else {
                         continue;
                     };
-                    let anchor = layout::cell_rect(stage.placed.id, x, y);
-                    let rect = layout::Rect::new(
-                        anchor.x,
-                        anchor.y,
-                        f32::from(w) * layout::CELL,
-                        f32::from(h) * layout::CELL,
-                    );
+                    let rect = layout::foot_rect(stage.placed.id, foot);
                     let (Some((lo, hi)), Some((station, _, _, rot, _))) = (
                         crate::pieces::berth_box(&stage.placed.charts, kind, rect),
                         crate::pieces::berth_pose(&stage.placed.charts, kind, rect),

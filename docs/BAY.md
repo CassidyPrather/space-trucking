@@ -6,6 +6,147 @@ walking up to it, with the first piece of storage furniture — the
 cabinet — stretching the berth architecture. This document also records
 the project's largest scope decision so far: the 2D console retires.
 
+## The grid comes out
+
+The owner's decree (2026-10-03): "get rid of the grid-based system and
+transition to free-form placement & movement of cargo for now". Details
+are to follow from the owner, so this pass makes conservative defaults,
+writes each one down here with its reason, and keeps every law that is
+not *about* cell-snapping. Passages below that the decree overrules are
+marked "Superseded by *The grid comes out*" rather than deleted.
+
+**What moved: where a piece may stand.** A berth is no longer a cell. It
+is any position on a chart, quantised by a unit fine enough that a
+player never sees it. `Loc::Hold` and `Loc::Laid` carry the footprint's
+top-left corner in sixteenths of a cell (`cargo::FINE = 16`, about
+34 mm, the frontend's own finest cut of the world). Positions are
+integers, so no floating point reaches the arbiter and a crew in
+lockstep agrees to the unit. One helper, `cargo::Foot`, holds the rect
+arithmetic — the cells a footprint touches, the cell under its centre,
+intersection, and the gap between two footprints — so no caller
+re-derives it.
+
+**What did not move.** The room lattice, ports, the pad, room nets,
+charts and tile classes and their paint: rooms are architecture and stay
+on the lattice, and a tile class is now a region a piece stands in.
+Cubbies stay discrete slots inside a piece. Footprints stay whole cells
+in size (`Kind::extent`, `Kind::plan_on`); only their position is free.
+There is no rotation in this pass — a body's yaw still follows its chart
+— because free yaw is a separate decision. There is no physics, and the
+sim still learns no player position, because determinism, lockstep and
+the input-frame spine are load-bearing.
+
+**The arbiter, restated over fine rects.** Same ladder, same order, same
+`Violation` names:
+
+- **Bounds**: every cell the footprint touches exists and lies in one
+  chart — the chart of the cell holding its top-left corner — because a
+  piece bent over a fold is still nowhere.
+- **Threshold, Fixture**: refused if the footprint touches any cell of
+  that class, because half a crate in a doorway is a crate in a doorway.
+- **Affix**: unchanged; the chart class still has to suit the mount.
+- **Cryo**: an edge of the footprint lies ON a floor-chart edge (gap
+  zero), because the cold is in the plating and a sixteenth of air is
+  insulation. The drop's edge snap makes flush easy to hit.
+- **Overlap**: half-open rect intersection with another standing piece
+  in the room. Touching is legal, so pieces may stand flush.
+- **Shadow**: a tall floor piece shadows the wall behind any floor edge
+  it stands *less than one cell* from, across its own extent along the
+  seam and up its stature (three courses at most), because a wardrobe
+  half a cell off the wall still hides what hangs behind it.
+- **Volatile**: two volatile pieces need half a cell of clear air,
+  corners included (Chebyshev gap `< FINE / 2` refuses), because the old
+  "no shared edge" would be defeated by a gap of one sixteenth.
+- **Suspicious**: unchanged.
+- **Dressings**: one dressing per point of the room, and the pinned
+  rule as rect overlap with standing pieces, both directions.
+
+**Which tile a piece stands on.** The classes that refuse cargo refuse
+a footprint that touches any of their cells (above, and the drop's own
+gate). Everything else that asks what a piece stands on — ownership,
+`staying`, the offer area and the fire, the drop's exits, the launch
+gate, the burner's beat — reads **the tile under the footprint's
+centre** (`cargo::berth_tile`), because a piece half on the chalk is on
+whichever side its middle is. A centre lying exactly on a seam reads
+the cell above and to the left, which is chosen for what it keeps: at
+any whole-cell anchor every kind the game has reads its anchor cell,
+which is what the grid's rules always read.
+
+**Light reaches a cell.** A cell or a footprint is lit when a lit
+lamp's footprint (or a laid luminous coat's) in the same room is less
+than one cell away by Chebyshev gap and does not wholly contain it.
+**Corners count now**, because a lamp a sixteenth past a crate's corner
+is not darker than one a sixteenth past its edge. The rat still asks of
+one cell (`lit_adjacent`); everything else asks of a footprint
+(`lit_within_reach`).
+
+**The rat stays on its cells.** It is not cargo: it walks its lattice
+as before, perches on a cell any footprint touches, nibbles the piece
+whose footprint is nearest its cell (zero when the footprint touches
+it), and the crowding gate counts floor area in cells.
+
+**Placing a piece for the player.** Shift-press, the comet harvest, the
+??? exchange, the hopper's banking and the save reader's rehoming all go
+through `first_fit` / `dress_fit`. Their candidates are every whole-cell
+anchor plus every anchor flush against the right or bottom edge of a
+piece already in the room, sorted (room order, row, column), first legal
+wins — which finds a snug gap between pieces that do not sit on the grid
+without scanning 256 positions per cell. A chart's own far edges need no
+anchors of their own, because a chart and a footprint are both whole
+cells. The room-local scans — a shelf setting out its goods, a deal's
+answer, the offer area a migration walks a proposal onto, a fluff
+budding a whole cell over — keep whole-cell anchors, because they set
+things out a tile at a time.
+
+**The drop.** The pointer was always continuous; now the berth is too.
+A release resolves a position before it asks any rule about it, in the
+sim and deterministically (`Sim::settle`):
+
+1. The cell under the pointer names the room and the chart; off the net
+   is a soft miss, as it always was.
+2. The held kind is planned on that chart and **centred** on the
+   pointer. The pointer becomes fine units once, rounded to the nearest
+   sixteenth with halves away from zero (`layout::fine_at`), and every
+   step after that is integer arithmetic.
+3. The rect is **clamped** into the chart's bounding rect
+   (`RoomKind::chart_rect`), so aiming at the edge of a wall slides the
+   piece flush instead of refusing it for bounds.
+4. Each axis **snaps** on its own: an edge within a quarter cell
+   (`FINE / 4`, inclusive) of a chart edge, or of a same-chart
+   neighbour's edge, moves flush onto it. Occupancy snaps to occupancy
+   and dressings to dressings. Chart edges win outright, then the
+   nearest edge, then the lower coordinate, so the answer never depends
+   on the order the board was read in.
+5. Then the tile-class gate, the cubby, dressing against occupancy, and
+   the arbiter, exactly as before, of the resolved footprint.
+
+`Sim::drop_preview(player, p)` is that resolution asked early, so a carry
+preview can draw the berth and the verdict the release will get. The
+release runs the same function on the same board, and the same-tick
+race reading (`contested_only`) runs it too, against the board as it
+stood before the winner landed; the ghost and the drop cannot disagree.
+One consequence is worth knowing: a press and a release at the same
+point re-centre a piece on that point, so a two-cell piece lifted by its
+end and put straight back moves half a cell.
+
+**Saves and tapes.** Saves are `STV20`: a `hold` or `laid` line carries
+fine coordinates, and every older document's cells load as `cell *
+FINE`, the same ground exactly, before the rest of the migration chain
+runs. Tapes are `RPL4` with an unchanged grammar: the same frames now
+settle cargo somewhere else, so an `RPL3` tape fails safe as unsupported
+instead of replaying into a different game.
+
+**Sweeps.** A test that means "every berth" sweeps every whole-cell
+anchor plus a fixed sample of sixteenths on each axis
+(`cargo::FRACTIONS`, `{0, 1, 7, 8, 15}`), which keeps the runtime sane
+and names the same berth on every failure.
+
+**The frontend.** `layout::piece_rect` is the berth's true rect,
+fractions and all, so every body, pick face and halo placed from it
+follows the piece off the grid. The carry ghost, the per-cell hint
+plates and the refusal flash still anchor on the aimed cell; they move
+to `Sim::drop_preview` in the next pass.
+
 ## The decision: the 2D console retires
 
 The owner weighed keeping the 2D frontend as a forcing function for
@@ -61,6 +202,10 @@ cabin's aft half, like opening a cardboard box:
 
 The sim is untouched by any of this: cells, footprints, the placement
 ladder, the rat's hops, lamp adjacency — all keep their grid meaning.
+
+> Superseded by *The grid comes out* (above): a footprint now stands
+> anywhere a sixteenth of a cell can name, and lamplight reaches a cell
+> every way, corners included. The rat's hops keep their grid meaning.
 The fold is presentation, expressed as two `SimSurface`s (the wall band
 and the deck strip) that map into the same `layout` grid rect the desk
 rack used to.
@@ -82,6 +227,10 @@ down. Under the hood nothing new reaches the sim:
 - Placement hints are physical: the aimed cell's plate glows the
   legal/illegal answer the sim already computes for the held piece,
   and a refusal flashes the violation glyph on the plate itself.
+
+  > Superseded by *The grid comes out*: a drop no longer anchors on the
+  > aimed cell, so per-cell plates read a berth the drop does not take.
+  > The hint is to be drawn from `Sim::drop_preview`.
 - Carrying has reach: the grab/place ray only bites within arm's
   length plus a step, so placement always happens near the body and
   the piece never teleports across the room.
@@ -189,7 +338,9 @@ Two mechanics ride along:
 
 - **Luminous coats join the light economy.** A laid `LuminousPaint`
   footprint lights its orthogonal neighbours through the same
-  `lit_adjacent` read lamps use: the rat fears glow-painted corners,
+  `lit_adjacent` read lamps use (superseded by *The grid comes out*:
+  everything within a cell, corners included, through
+  `lit_within_reach`): the rat fears glow-painted corners,
   seedlings bloom beside them, a hold painting catches their
   spotlight. The pad-side well-lit-art price bonus stays lamp-only —
   a coat is ambiance, not gallery lighting — and the omen dims coats
@@ -304,6 +455,11 @@ rig on, so a kind is composed against the floor it will stand on rather
 than against the middle of a cell.
 
 ## The room grid (spec): everything is cargo, everywhere is grid
+
+> Superseded in part by *The grid comes out*: rooms, nets and charts
+> stay on the grid, and cargo does not. A berth is a position on a
+> chart in sixteenths of a cell, and `Loc::Hold { x, y }` names that
+> position rather than a cell.
 
 Owner's requirements, spelled out after the burner round — this
 section supersedes the earlier "instruments come off the wall" spec,
@@ -755,3 +911,6 @@ multiple rooms and the barter redesign are specified together in
 carry room nets of their own, and the barter interface is deleted
 rather than redesigned. Free placement and physics remain out, forever
 as far as anyone can tell.
+
+> Superseded by *The grid comes out*: free placement is in, by decree.
+> Physics remains out.

@@ -93,6 +93,42 @@ pub fn cell_at(p: Vec2) -> Option<(RoomId, u8, u8)> {
     room::lane_cell_at(p)
 }
 
+/// One sixteenth of a cell (`cargo::FINE`), in world units. `CELL` is
+/// 34, so this is 2.125 — exact in binary, which is what keeps a whole
+/// cell's berth on the very rect its cell has.
+const SIXTEENTH: f32 = CELL / cargo::FINE as f32;
+
+/// World rect of footprint `foot` in room `room`.
+#[must_use]
+pub fn foot_rect(room: RoomId, foot: cargo::Foot) -> Rect {
+    let origin = lane_origin(room);
+    Rect::new(
+        f32::from(foot.x).mul_add(SIXTEENTH, origin.x),
+        f32::from(foot.y).mul_add(SIXTEENTH, origin.y),
+        f32::from(foot.w) * SIXTEENTH,
+        f32::from(foot.h) * SIXTEENTH,
+    )
+}
+
+/// **Where `p` falls on room `room`'s net, in `cargo::FINE` units**,
+/// which may lie off the net or be negative: the caller clamps.
+///
+/// The one float-to-integer step a drop takes, so it is stated exactly:
+/// the offset from the lane's corner is divided by [`SIXTEENTH`] and
+/// rounded to the nearest whole sixteenth, halves away from zero
+/// (`f32::round`), then converted once to `i32`. Everything after this
+/// is integer arithmetic. A sixteenth is exact in binary and so is a
+/// cell's centre, so aiming at the middle of a cell names its middle
+/// sixteenth on every machine a crew plays on.
+#[must_use]
+pub fn fine_at(room: RoomId, p: Vec2) -> (i32, i32) {
+    let origin = lane_origin(room);
+    (
+        ((p.x - origin.x) / SIXTEENTH).round() as i32,
+        ((p.y - origin.y) / SIXTEENTH).round() as i32,
+    )
+}
+
 /// A rect parked outside the world: what a berth nobody can name gets,
 /// so it is never grabbed and never collides.
 const NOWHERE: Rect = Rect::new(-1000.0, -1000.0, 0.0, 0.0);
@@ -105,6 +141,12 @@ const NOWHERE: Rect = Rect::new(-1000.0, -1000.0, 0.0, 0.0);
 /// the chart is the room's to say. Two berths of one wardrobe are two
 /// different rects, and neither of them is a property of the wardrobe.
 ///
+/// The rect is the berth's TRUE one, fractions of a cell and all
+/// (`cargo::Foot`): a piece standing five sixteenths off the grid is
+/// drawn, grabbed and lit five sixteenths off the grid. A sixteenth is
+/// `CELL / 16` exactly, so a berth on a whole cell lands on the very
+/// rect [`cell_rect`] gives that cell.
+///
 /// A stowed piece sits in a cubby sub-rect of its cabinet's own footprint,
 /// which is why the whole board is a parameter too: the cabinet must be
 /// looked up. A stow whose cabinet is missing (impossible by the placement
@@ -113,13 +155,9 @@ const NOWHERE: Rect = Rect::new(-1000.0, -1000.0, 0.0, 0.0);
 #[must_use]
 pub fn piece_rect(rooms: &Rooms, pieces: &[Piece], piece: &Piece) -> Rect {
     match piece.loc {
-        Loc::Hold { room, x, y } | Loc::Laid { room, x, y } => rooms
-            .kind(room)
-            .and_then(|host| cargo::plan(host, piece.kind, x, y))
-            .map_or(NOWHERE, |(w, h)| {
-                let anchor = cell_rect(room, x, y);
-                Rect::new(anchor.x, anchor.y, f32::from(w) * CELL, f32::from(h) * CELL)
-            }),
+        Loc::Hold { room, .. } | Loc::Laid { room, .. } => {
+            cargo::Foot::at(rooms, piece).map_or(NOWHERE, |(_, foot)| foot_rect(room, foot))
+        }
         Loc::Stow { cabinet, slot } => pieces
             .iter()
             .find(|other| other.id == cabinet)

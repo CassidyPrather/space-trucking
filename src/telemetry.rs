@@ -111,7 +111,7 @@ impl Snapshot {
             goods_alongside: sim.pieces().iter().any(|piece| {
                 matches!(piece.loc, Loc::Hold { room, .. } | Loc::Laid { room, .. }
                     if !sim.rooms().riding(room))
-                    && crate::sim::player_owned(sim.rooms(), sim.pieces(), piece.loc)
+                    && crate::sim::player_owned(sim.rooms(), sim.pieces(), piece.kind, piece.loc)
             }),
         }
     }

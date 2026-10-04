@@ -2822,8 +2822,8 @@ mod tests {
         };
         let hang = |materials: &mut Assets<StandardMaterial>, (spot, foot): (Spot, Foot)| {
             let rect = layout::foot_rect(CABIN, foot);
-            let (_, _, pos, rot, scale) =
-                berth_pose(&charts, Kind::Window, rect, spot.turn).expect("a berth on a chart");
+            let (_, _, pos, rot, scale) = berth_pose(&charts, Kind::Window, rect, (spot.turn, 0))
+                .expect("a berth on a chart");
             let piece = Piece {
                 id: 0,
                 kind: Kind::Window,

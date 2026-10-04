@@ -44,7 +44,7 @@ cabin's art rules live in `docs/ART_DIRECTION_3D.md`.
   adapter. `examples/convoy.rs` runs six clients in one command.
 - `src/synth.rs` — procedural sound effects as WAV bytes. Also pure, also
   unit-tested; the game ships no audio assets.
-- `src/replay.rs` — the flight-recorder tape format (`RPL7`).
+- `src/replay.rs` — the flight-recorder tape format (`RPL8`).
 - `src/telemetry.rs` — the opt-in play-statistics contract; dormant (no
   frontend collects today).
 - `build.rs` — embeds a `git describe` version string.

@@ -11,8 +11,11 @@
 /art/cache/
 # quad-storage's native persistence file (the desktop stand-in for localStorage)
 /local.data
-# The cabin's save + flight recorder (same roles, different frontend)
+# The cabin's save + flight recorder (same roles, different frontend),
+# and the carry's key bindings kept beside them
 /cabin.data
 /cabin.replay
+/cabin.keys
 /crates/cabin/cabin.data
 /crates/cabin/cabin.replay
+/crates/cabin/cabin.keys

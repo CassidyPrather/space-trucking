@@ -8,7 +8,9 @@ the project's largest scope decision so far: the 2D console retires.
 
 > Superseded in part by *Cargo stops colliding*: the cabinet is
 > furniture that stores nothing, and cargo no longer collides with
-> cargo.
+> cargo. And by *Lift, and the keys*: a vase goes on the cabinet's top
+> by standing a lift off the deck, and the carry's keys are a table the
+> `Esc` menu rebinds.
 
 ## The grid comes out
 
@@ -216,6 +218,10 @@ cabin shows and where the release lands are one answer:
   (`Loc::Stow`) hovers at the hit as it always did (superseded by
   *Cargo stops colliding*: there is no cubby drop), and aimed at
   nothing the carry stays hitched on the arm.
+
+  > Superseded by *Lift, and the keys*: the ghost is the berth's pose
+  > exactly — no tenth large, no 5 cm — at the berth's own lift, and it
+  > reads as a ghost by its outline and its slash.
 - **One footprint patch replaces the per-cell hint plates.** A single
   plate for the whole ship, moved and resized every frame onto the
   previewed berth's rect: `LAMP_OK` when the drop would land, `LAMP_NO`
@@ -262,7 +268,9 @@ to be that berth's pose plus the lift. The gauntlet re-keyed its air
 from cells to footprints; docs/GAUNTLET.md says how.
 
 > Superseded in part by *Cargo turns*: the snap reaches an eighth of a
-> cell, and the ghost is asked at the berth's own turn.
+> cell, and the ghost is asked at the berth's own turn. And by *Lift,
+> and the keys*: the ghost is that berth's pose and nothing added, and
+> the sweep asks it lifted to its cap as well.
 
 ## Cargo turns
 
@@ -508,6 +516,11 @@ piece in hand:
 - **The release keeps the facing**, the preview asks at it, and a piece
   set down turned and lifted again carries on from the turn it stands at.
 
+> Superseded in part by *Lift, and the keys*: `Q` and `E` are the two
+> turn keys, read off a table the `Esc` menu rebinds, and `Shift+Q` is
+> gone. `Shift` with the wheel lifts now. `E` turns with a piece in hand
+> and is focus with an empty one.
+
 **What the cabin does at any angle.**
 
 - **The ghost** stands at the berth the sim previews at the carry's
@@ -685,7 +698,8 @@ doorstep.
 > Superseded by ROOMS.md, *The walls reach the deckhead*: saves are
 > `STV23`, tapes `RPL7`, and the wire `SNP6`, because every room's net
 > grew a course on each wall and the same berth or pointer names
-> another place.
+> another place. And by *Lift, and the keys*: `STV24`, `RPL8` and
+> `SNP7`, for the lift.
 
 **The gauntlet already judged the room.** Every berth family
 (`berth-clear`, `berth-seen`, `berth-reached`, and the rest of
@@ -697,6 +711,202 @@ the arbiter alone would now stand a piece on every cell of every room,
 so the load sets cargo out the way the game does, clear of what it
 already stood (`gauntlet::load`), and it is the board it always was. The
 docket stays empty.
+
+## Lift, and the keys
+
+The owner, after a playtest: "Q + Shift Q feel weird, maybe Q + E
+instead? Ctrl felt fine. Maybe time to add a keybind menu option to this
+one." And, of the cabinet's cubbies: "the entire system related to
+shelving units with special extra slots can be axed now ... We probably
+need controls to nudge things up and down to re-create the visual of
+things in the same way, more or less (and I never really liked the
+re-scaling part of it anyway)."
+
+The cubbies went with *Cargo stops colliding*, and with them the only
+way anything ever stood above the deck. A vase on a cabinet now is a
+vase put where the cabinet's top is, and that takes a third coordinate.
+So **a standing berth has a lift**, the ghost is drawn at the size the
+piece lands at, and **the carry's keys are a table the player rebinds**
+on a page of the `Esc` menu. Passages this overrules are marked
+"Superseded by *Lift, and the keys*".
+
+### Lift: a berth's height off its surface
+
+- **The unit and the direction.** `Loc::Hold` carries `lift`, in
+  `cargo::FINE` units (256 to the cell, about 2 mm), along the chart's
+  normal and away from it into the room: up off the deck, down from the
+  deckhead, out from a wall. `Loc::lift` is nought for a laid covering,
+  which stays flush: a coat has no height, and a rug carried at a lift
+  is laid on the deck.
+- **The cap, stated once.** `cargo::lift_cap(host, kind, surf)` is the
+  room's section off the chart (`RoomKind::section`: `COURSES` from deck
+  to deckhead, the deck's depth off the aft and front walls, its width
+  off the flanks) less the body's own reach off it (`Kind::proud`: its
+  height on a deck or a deckhead, its depth on a wall), so a lifted body
+  stays inside the room's box. A wardrobe two courses tall raised as far
+  as it goes has its top at the deckhead; a vial goes three courses up;
+  a pendant lowered all the way stands on the deck; a painting carried
+  out from the cabin's aft wall stops a cell short of the front one. The
+  drop holds a carry to it, a save refuses a berth past it, the frontend
+  asks it, and a gauntlet test holds the sim's cells to the cabin's
+  metres in every room
+  (`gauntlet::tests::every_berth_is_asked_lifted_and_its_cap_stops_inside_the_room`).
+- **A taste coordinate.** The sim stores it, saves it and sends it, and
+  no rule reads it. The arbiter is asked about the plane (`Loc::spot`
+  carries no lift), so light reach, volatile spacing, the rat's walk and
+  every tile class read the ground under the body: a lamp lifted onto a
+  cabinet lights what is around it in plan, as it did standing there,
+  and two canisters keep their half cell of air in plan at whatever
+  heights they stand (`sim::tests::no_rule_reads_a_lift`).
+- **Carry state, like the facing.** The frontend owns the carry's lift
+  (`bridge::Bridge::lift`) and sends it absolute in `InputFrame::lift`,
+  which only the release and the preview read, so a sparse tape stays
+  exact. A carry starts at the held piece's own lift. **When the carry
+  is aimed at a chart of another class than the one it was last on** —
+  deck to wall, wall to deckhead (`Mount::of`) — **the lift starts again
+  from that surface**, because a height off the deck means nothing on a
+  wall; between two walls, or aimed off every net, it is kept. The
+  bridge holds it to the cap of the chart it was last aimed at, so a key
+  held past the deckhead saves nothing up that a key the other way would
+  have to spend.
+- **One resolution.** `Sim::drop_preview(player, p, turn, lift)` and the
+  release are the same `Sim::settle`: the lift is held to the cap for
+  the kind on the chart under the pointer, then the rest of the drop
+  runs as it did.
+- **The cabin poses every rig with its lift.** `pieces::site_on` carries
+  the whole pose along the chart's inward normal by the lift
+  (`pieces::lift_off`) and moves nothing else — the frame, the turn, the
+  scale and the stand-off onto the plan are the berth's. An instrument's
+  glass and a standing body's pick face ride the lifted pose, and a wall
+  body lifted off its chart carries a pick face of its own as a turned
+  one does, because the chart a lift behind it reads somewhere else at
+  every angle but square on. So the crosshair finds a vase on a cabinet
+  by the vase.
+- **Saves are `STV24`** (`hold {room} {x} {y} {turn} {lift}`), tapes
+  `RPL8`, the wire `SNP7` with the lift after the facing. Another version
+  starts a new run, as ever (DESIGN_REVIEW.md, *An old save or tape
+  starts a new run*). The fixture board gained a nought on every `hold`
+  line and nothing else.
+
+### The ghost is true size
+
+The ghost stood a tenth large and lifted 5 cm off its berth
+(`HOVER_FIT`, `CARRY_LIFT`), which said "not landed yet" by promising a
+pose the piece would not take. It now **stands exactly where and how
+the piece will land**: `site_on` at the berth the preview names, at its
+turn and its lift, at the berth's own scale, and nothing added. It
+reads as a ghost by its outline, which wears the drop's ruling
+(`crate::outline`), and by its refusal slash — not by its size. The
+two constants survive only as the focus drag's (`GLASS_LIFT`,
+`GLASS_FIT`): a piece carried over a station's glass, where nothing
+lands, still floats off it a shade large.
+
+- **Aimed at nothing placeable**, which now includes a station's glass,
+  the carry is hitched on the arm, compact. That is a carry pose, not a
+  placement preview, and it is kept.
+- **The ghost cannot move, so the patch does.** The footprint patch,
+  its slash and the refusal flash are laid at their rungs of the decal
+  ladder off the berth's own plane — the chart's, carried out by the
+  berth's lift (`pieces::Ground::off`). So they stand in the same place
+  against the ghost's faces at every lift, and the coplanar detector the
+  gauntlet judges every room with finds no plane a ghost shares with its
+  patch or its slash, in any body any kind draws, on any chart it may
+  take — nor with its own surface at any fine unit of lift the room has
+  for it (`gauntlet::tests::no_ghost_fights_its_patch_or_its_surface`).
+  A vase raised onto a cabinet lights the cabinet's top.
+- **The sweeps ask it.** The cabin's every-berth sweep asks the drop at
+  a lift past any room's and holds it to the cap, on the same ground,
+  with the ghost there the berth's own pose carried that far along the
+  normal and nowhere else; an App-driven test holds the lifted ghost,
+  its scale and its riding patch to the berth the release lands on. The
+  gauntlet asks `berth-reached` of every berth lifted to its kind's cap,
+  and `berth-filled` and `berth-turned` of every whole-cell berth lifted
+  to its cap, on deck, wall and deckhead; the docket stays empty.
+  `berth-clear` and `berth-seen` stay on the ground: what a room hangs in
+  the air above its deck is no more a clip with a lifted crate than one
+  crate is with another (*Cargo stops colliding*).
+
+### The keys
+
+| Action | Default |
+|---|---|
+| Turn counter-clockwise, to the next 15° | `Q`, wheel up |
+| Turn clockwise, to the next 15° | `E`, wheel down |
+| Turn one degree | `Ctrl` + wheel |
+| Raise, away from the surface | `X`, `Shift` + wheel up |
+| Lower, toward it | `Z`, `Shift` + wheel down |
+| Raise or lower one fine unit | `Ctrl` + `Shift` + wheel |
+
+- **The lift step** is a sixteenth of a cell, about 34 mm, a key press or
+  a notch (`bridge::LIFT_STEP`) — the grid's old quantum, which a hand
+  can see and a hand asks for one press at a time; `Ctrl` + `Shift` +
+  wheel is a single fine unit, about 2 mm, for the rest. Two keys of one
+  pair pressed together cancel.
+- **`E` turns with a piece in hand and focuses with an empty one.** `E`
+  was focus, and still is with an empty hand. Roaming with a piece in
+  hand, a carry action holds `E` by default, so `E` turns the carry
+  clockwise and focuses nothing; a click still focuses with a piece in
+  hand, exactly as before (`rig::steer`). At a station or mid-glide
+  nothing turns a carry, so there `E` is the way back out as it always
+  was. Rebound off `E`, the turn takes its new key and `E` is focus in
+  either hand; bind another carry action to `E` and `E` does that with a
+  full hand.
+- **`Shift+Q` is gone.** `Shift` is read with the wheel, for the lift,
+  and on a press, for quick-move; neither is a press that ends a carry.
+- **One table.** Every place that reads a carry key reads
+  `keys::Bindings` (`main::hands`, `rig::steer`); nothing reads one by
+  its `KeyCode`. The wheel's gestures are not in it: they are a wheel
+  and two modifiers, and this pass rebinds keys.
+- `R` stays nobody's, `F` is warp, `Space` pause, `M` mute, `W` `A` `S`
+  `D` walk; the nudge bench's keys are its own (`--nudge`), and its
+  clash test reads the table's defaults and asks the page's gate of
+  every bench key.
+
+### The keys page
+
+A fourth face on the `Esc` menu's icon row, a stamped keyboard, swaps
+the panel's lower half between the reading (the tally and the **New
+run** bar) and the keys, and its lamp is lit while the keys show. The
+page is a table of actions, so the next thing a key does is a row: each
+action drawn as a glyph, stamped the way the menu's other controls are
+— a loop with its arrow either way for the turns, an arrow off or onto
+a bar for the lift — and beside it **a keycap with its key's name**.
+Under the table a keycap reading **Defaults** puts every key back; it
+sits sunk to the socket while there is nothing to put back.
+
+- **Click a keycap, press a key, done.** A clicked keycap goes blank and
+  amber, waiting; the next key binds. The key that answers a waiting
+  cap is the cap's and nothing else's — it is taken off the frame's
+  input before the game reads it, so binding `F` warps nothing.
+- **Binding a key another action holds swaps the two**, so no action is
+  ever unbound and no key does two things (`keys::Bindings::bind`).
+- **`Esc` while a cap waits stops the waiting** and leaves the menu
+  standing; the next `Esc` closes it as ever. The menu opens on its
+  reading next time.
+- **Refused keys** leave the cap waiting, framed red with the refusal
+  slash over it for a moment — shape, not hue alone (`keys::refusal`
+  says why each is kept):
+  - the game's own: `Esc`; `W` `A` `S` `D`; `Space`, `F` and `M`, live in
+    every mode; `Shift` and `Ctrl`, read with the wheel and the click;
+    `Alt` and `Super`, the system's;
+  - the nudge bench's: the arrows, the brackets, `T`, `R`, `G`, `Tab`,
+    `Enter` and `Backspace`, in every build, because the bindings are
+    kept in a file every build reads;
+  - and any key the page has no name for — it prints a key by name, from
+    a closed list of short plain names its font has.
+- **Kept beside the save**: `cabin.keys` in the working directory, next
+  to `cabin.data`, in a line format like the save's — a `KEYS1` header,
+  then one `action key` line per action (`turn-ccw KeyQ`). A missing or
+  unreadable file is the defaults; a malformed line is skipped and its
+  action keeps its default, never a failed boot; the lines are read
+  through the page's own swap, so a hand-edited file cannot make one
+  key do two things. A browser build has no working directory and keeps
+  its bindings for the session.
+- **The keycaps are the second sanctioned exception to the text-free
+  law** (DESIGN.md): a key's name is text by nature, and a keyboard's
+  own caps are where a player has always read it. The **Defaults** cap
+  wears its word for the reason the **New run** bar does.
+- `--menu keys` boots with the page standing, for a screenshot.
 
 ## The decision: the 2D console retires
 

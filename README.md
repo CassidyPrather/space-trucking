@@ -34,11 +34,12 @@ attachment surface in one sitting; the fixture's own test keeps its
 board legal as rules grow.
 
 Controls: mouse looks and `WASD` walks; aim at a station and click
-(or `E`) to focus it — the camera glides to a fitted viewpoint and the
-cursor frees for the usual clicking and dragging. `Esc`, right-click, or
-`E` steps back out of a station; `Esc` while roaming raises the menu —
-pause, fast-forward, mute, the delivery tally, and a bar labelled
-**New run** — and hands the cursor back, so you can reach your desktop
+(or `E`, with empty hands) to focus it — the camera glides to a fitted
+viewpoint and the cursor frees for the usual clicking and dragging.
+`Esc`, right-click, or `E` steps back out of a station; `Esc` while
+roaming raises the menu — pause, fast-forward, mute, the delivery tally,
+a bar labelled **New run**, and a keyboard that turns the panel to the
+carry's keys — and hands the cursor back, so you can reach your desktop
 too (`Esc` again puts it away). Space, `F`, and `M` throw the same three
 toggles from the keyboard. A new run has no key: it throws the current
 run away for good, so it is asked for on the menu, in words.
@@ -50,8 +51,14 @@ carrying. A carried piece turns at any angle and lands at the turn you
 carry it at: the mouse wheel turns it to the next multiple of 15° (up
 and away is counter-clockwise, as you look at the floor or the wall it
 is bound for), `Ctrl`+wheel turns it one degree a notch, and `Q` and
-`Shift`+`Q` take the wheel's 15° step either way for a hand with no
-wheel. The ghost and the patch under it turn with it. Placement is to
+`E` take the wheel's 15° step either way. It lands at a height, too:
+`X` and `Z` raise and lower it a sixteenth of a cell off whatever it
+stands on — up off the deck, down from the deckhead, out from a wall —
+and so does `Shift`+wheel (`Ctrl`+`Shift`+wheel for a hair), so a vase
+goes on top of the cabinet. The ghost stands exactly where and how the
+piece will land, and the patch under it goes with it. The four carry
+keys can be rebound on the `Esc` menu's keys page: click a keycap and
+press a key. Placement is to
 taste: cargo does not collide with cargo, so a crate can stand in the
 wardrobe, a painting can hang behind it, and two rugs can overlap —
 where two pieces share ground, the click lifts the one the crosshair
@@ -65,7 +72,8 @@ swings — and the throw fires at the detent. `Space`
 pauses and `M` mutes (`F` warps, in dev mode).
 
 Saves: the cabin keeps its own slot (`cabin.data` + `cabin.replay` in
-the working directory). A save or tape from another version is not
+the working directory, and the carry's key bindings beside them in
+`cabin.keys`). A save or tape from another version is not
 read, and the game starts a new run (docs/DESIGN_REVIEW.md).
 
 ## Playing
@@ -106,20 +114,23 @@ is tipped over the side. Encounter salvage drifts onto the same tiles,
 the dial housing wears the badge of whatever pulls alongside mid-leg,
 and at stranger berths the counter shows stranger things.
 
-| Input             | Effect                                                |
-| ----------------- | ----------------------------------------------------- |
-| Mouse             | look, focus stations, pull levers                     |
-| Click (bay)       | pick up / set down the aimed cargo                    |
-| Right-click       | cancel a carry (the piece snaps home)                 |
-| `WASD`            | walk the cabin                                        |
-| `E`               | focus / unfocus the aimed station                     |
-| `Shift`+click     | quick-move a piece to its obvious destination         |
-| Wheel             | carrying: turn the piece to the next 15° that way     |
-| `Ctrl`+wheel      | carrying: turn the piece 1°                           |
-| `Q` / `Shift`+`Q` | carrying: turn the piece 15° counter-clockwise / back |
-| `Esc`             | step out of a station, else raise/lower the menu      |
-| `Space`           | pause                                                 |
-| `M`               | mute                                                  |
+| Input                | Effect                                                  |
+| -------------------- | ------------------------------------------------------- |
+| Mouse                | look, focus stations, pull levers                       |
+| Click (bay)          | pick up / set down the aimed cargo                      |
+| Right-click          | cancel a carry (the piece snaps home)                   |
+| `WASD`               | walk the cabin                                          |
+| `E`                  | focus the aimed station (empty-handed); step back out   |
+| `Shift`+click        | quick-move a piece to its obvious destination           |
+| Wheel                | carrying: turn the piece to the next 15° that way       |
+| `Ctrl`+wheel         | carrying: turn the piece 1°                             |
+| `Q` / `E`            | carrying: turn the piece 15° counter-clockwise / back   |
+| `X` / `Z`            | carrying: raise / lower the piece a sixteenth of a cell |
+| `Shift`+wheel        | carrying: raise / lower the piece a sixteenth a notch   |
+| `Ctrl`+`Shift`+wheel | carrying: raise / lower the piece about 2 mm            |
+| `Esc`                | step out of a station, else raise/lower the menu        |
+| `Space`              | pause                                                   |
+| `M`                  | mute                                                    |
 
 No signal relies on color alone; refusals, warnings, and states all carry
 a shape, brightness, or position tell alongside their hue. (The retired
@@ -144,7 +155,7 @@ guild server whose counters cannot double-count. The architecture and its
 required network-failure properties live in
 [docs/NETWORKING.md](docs/NETWORKING.md); `cargo run --example convoy` runs
 a six-client crew over a deliberately hostile simulated network. The live
-multiplayer cabin is a later slice; the protocol it will speak (`SNP6`)
+multiplayer cabin is a later slice; the protocol it will speak (`SNP7`)
 is already under test.
 
 Sound is synthesised at startup in `src/synth.rs` — no audio assets —

@@ -412,7 +412,13 @@ mod tests {
     fn whole(rooms: &Rooms, room: RoomId, kind: Kind, x: u8, y: u8) -> Loc {
         let host = rooms.kind(room).expect("attached");
         let (x, y, turn) = anchored(host, kind, fine(x), fine(y)).expect("on the net");
-        Loc::Hold { room, x, y, turn }
+        Loc::Hold {
+            room,
+            x,
+            y,
+            turn,
+            lift: 0,
+        }
     }
 
     /// A piece at `loc`, id and variant immaterial to valuation.

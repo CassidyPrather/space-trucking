@@ -12,9 +12,9 @@ deliberately below.
 
 - [ ] Whimsy first: did this change add or remove delight? Name one whimsical
       detail it touched.
-- [ ] Zero text: no rendered strings besides the version corner and the
-      `Esc` menu's New run label (DESIGN.md says why); every new state
-      communicates via shape/color/motion/sound.
+- [ ] Zero text: no rendered strings besides the version corner, the
+      `Esc` menu's New run label and its keys page's keycaps (DESIGN.md
+      says why); every new state communicates via shape/color/motion/sound.
 - [ ] No currency: nothing countable functions as money — no credits, scores,
       or ratings.
 - [ ] No progression creep: no upgrades, unlocks, or permanent power
@@ -482,6 +482,10 @@ Every line is reversible; strike one by overruling it.
   so the piece can sit up to half its own footprint from the point
   aimed at. The alternative — hanging it at the hit and drawing the
   berth separately — shows two answers to one question.
+
+  > Superseded in part by docs/BAY.md, *Lift, and the keys*: the owner
+  > never liked the re-scaling, and the ghost is the landed pose
+  > exactly, at scale and at no carry lift.
 - **Plain and staging deck paint nothing, ever.** The berth wells were
   the grid's invitation, and a lattice of sockets under a free drop
   invites the eye to places the piece does not go. The one footprint
@@ -584,6 +588,10 @@ Every line is reversible; strike one by overruling it.
   was cut from the keyboard to keep one key from ending a run and is not
   brought back for this, `E` is focus, and the nudge bench's own `Shift`
   is its fine step on its own six keys, which nothing else answers.
+
+  > Superseded by docs/BAY.md, *Lift, and the keys*: the owner found
+  > `Q` and `Shift+Q` weird and asked for `Q` and `E`; `Shift+Q` is gone,
+  > and `Shift` with the wheel lifts.
 - **The carry's facing is held in forty-fifths of a `Turn` unit**, the
   coarsest unit in which a degree and a `Turn` unit are both whole
   numbers, and the sim is sent the nearest `Turn`. So 360 degree-notches
@@ -647,3 +655,65 @@ Every line is reversible; strike one by overruling it.
   now stand a piece on every cell of every room, each half over the
   last; the load sets cargo out clear of what it already stood, so the
   board the families name their culprits on is the one it always was.
+- **A lift step is a sixteenth of a cell**, about 34 mm, a key press or a
+  notch of `Shift` + wheel, and `Ctrl` + `Shift` + wheel is one fine
+  unit, about 2 mm. A sixteenth is the grid's old quantum: a step a hand
+  can see and asks for a press at a time. A vase reaches a wardrobe's top
+  in 32 presses or notches; a coarser step would make the top a step
+  nobody can land on exactly without `Ctrl`.
+- **A carry's lift starts again from the surface when it is aimed at a
+  chart of another class** — deck, wall, deckhead — and is kept between
+  two walls and while aimed off every net. A height off the deck means
+  nothing on a wall. The cost: a raised crate swept across a wall on its
+  way to another spot of deck comes back down to the deck; the other
+  reading, keeping the lift by chart class and remembering one per class,
+  would be a lift the player cannot see.
+- **The carry keys are `Q` and `E` for the turns and `X` and `Z` for the
+  lift**: the turns as the owner asked, and the lift on the row under
+  them, left of the walk, where the hand already is. `X` raises and `Z`
+  lowers. No default is a key the game or the bench answers, and `R`
+  stays nobody's.
+- **`E` turns a full hand and focuses an empty one.** While the body
+  roams with a piece in hand and a carry action holds `E`, `E` turns and
+  focuses nothing; a click still focuses with a piece in hand. At a
+  station or mid-glide `E` is the way out, as it always was, whatever is
+  in hand. Rebinding the turn off `E` gives `E` back to focus in both
+  hands.
+- **The compact arm carry is kept.** Aimed at nothing placeable — off
+  every net, or at a station's glass, where nothing lands — a carried
+  piece hitches on the arm at a fraction of its size so the room stays
+  visible through it. It is a carry pose, not a placement preview, and
+  the owner has not objected to it; strike it and the carry would have
+  to stand somewhere at full size with no berth to stand on.
+- **The ghost is not translucent.** The brief that asked for the true
+  size spoke of the ghost's translucency, and the carried rig is drawn
+  opaque: what has always marked it is the outline the drop's ruling is
+  worn in and the refusal slash. Making it see-through means a
+  see-through copy of every material of every part, bought meshes
+  included, and was not done in passing.
+- **The footprint patch rides the lift.** It is laid at its rung off the
+  berth's own lifted plane, so a vase raised onto a cabinet lights the
+  cabinet's top and the patch can never share a plane with the ghost at
+  any lift. The other reading — the patch stays on the deck as a shadow
+  of where the piece is in plan — would cross every face of every ghost
+  low enough to reach it on the way up, and under a cabinet nobody
+  would see it.
+- **Binding a key another action holds swaps the two**, rather than
+  refusing or leaving the other action unbound: no action is ever
+  unbound and no key does two things, and a player who wanted the swap
+  has it in one press. A bindings file a hand edited is read through the
+  same swap.
+- **The nudge bench's keys are refused on the keys page in every build.**
+  The bindings are kept in a file every build reads, so a carry key on an
+  arrow in a played session would be a carry key on an arrow under
+  `--nudge`. That costs a player the arrows, the brackets, `T`, `R`,
+  `G`, `Tab`, `Enter` and `Backspace` as carry keys; strike it, and the
+  bench's clash test has to learn to read the player's file.
+- **The keys page's reset is a keycap reading Defaults**, in the
+  keycaps' own style, for the New run bar's reason: a wordless control
+  that throws a player's bindings away can be pressed by someone who
+  thought it meant something else. It is the second word on the menu.
+- **No rule reads a lift.** Light reach, volatile spacing, the rat's walk
+  and every tile class read the ground under a body, so a lamp on a
+  cabinet lights in plan and two canisters at different heights over one
+  patch of deck are as near each other as the deck says.

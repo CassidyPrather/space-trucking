@@ -361,6 +361,19 @@ pub struct InputFrame {
     /// exact. Absolute rather than a delta, because a VR hand reports a
     /// pose, not a key press.
     pub facing: Turn,
+    /// **The carry's lift**: how far off its chart the held piece is
+    /// carried, in [`cargo::FINE`] units along the chart's normal and
+    /// into the room (docs/BAY.md, "Lift").
+    ///
+    /// The frontend's, as the facing is — initialised from the held
+    /// piece's own lift when it is lifted, raised and lowered by the
+    /// player, and started again from the surface when the carry crosses
+    /// to a chart of another class — and consulted exactly where the
+    /// facing is: the release and the preview, which hold it to the cap
+    /// ([`cargo::lift_cap`]). Like the facing, no tick reads it, so
+    /// sparse recordings stay exact, and it is absolute for the same
+    /// reason.
+    pub lift: u16,
     /// **The piece the player is aiming at**, by id, where the frontend
     /// knows.
     ///
@@ -630,6 +643,7 @@ impl Sim {
                         x,
                         y,
                         turn,
+                        lift: 0,
                     },
                 };
                 next_piece += 1;
@@ -1376,7 +1390,7 @@ impl Sim {
             self.on_press(player, input.pointer, input.aim, input.shift);
         }
         if input.release {
-            self.on_release(player, input.pointer, input.facing);
+            self.on_release(player, input.pointer, input.facing, input.lift);
         }
         let slot = usize::from(player);
         if self.held[slot].is_some() && !input.held && !input.press && !input.release {
@@ -1391,7 +1405,7 @@ impl Sim {
                 .iter()
                 .find(|piece| piece.id == held.piece)
                 .is_some_and(|piece| {
-                    self.resolve_drop(piece, input.pointer, input.facing)
+                    self.resolve_drop(piece, input.pointer, input.facing, input.lift)
                         .is_ok()
                 });
             if let Some(held) = &mut self.held[slot] {
@@ -1969,10 +1983,11 @@ impl Sim {
         }
     }
 
-    /// A release drops the held piece, carried at `turn`: place it if the
-    /// target is legal, snap it back otherwise. A drop never destroys or
-    /// surrenders a piece — ownership crosses only at a room's handshake.
-    fn on_release(&mut self, player: PlayerId, p: Vec2, turn: Turn) {
+    /// A release drops the held piece, carried at `turn` and `lift`: place
+    /// it if the target is legal, snap it back otherwise. A drop never
+    /// destroys or surrenders a piece — ownership crosses only at a room's
+    /// handshake.
+    fn on_release(&mut self, player: PlayerId, p: Vec2, turn: Turn, lift: u16) {
         let Some(held) = self.held[usize::from(player)].take() else {
             return;
         };
@@ -1980,7 +1995,7 @@ impl Sim {
             return;
         };
         let piece = self.pieces[index];
-        match self.resolve_drop(&piece, p, turn) {
+        match self.resolve_drop(&piece, p, turn, lift) {
             Ok(loc) => {
                 self.pieces[index].loc = loc;
                 self.last_violation = None;
@@ -1998,14 +2013,20 @@ impl Sim {
         }
     }
 
-    /// Where dropping `piece` at `p`, carried at `turn`, would settle it,
-    /// or which flavour of rejection it earns. `Err(Some(_))` is the hard
-    /// reject — a stowage rule refused an in-room drop — and names the
-    /// rule; `Err(None)` is a soft, ignorable miss that snaps the piece
-    /// home. The answer is [`Sim::settle`]'s, which is also
+    /// Where dropping `piece` at `p`, carried at `turn` and `lift`, would
+    /// settle it, or which flavour of rejection it earns. `Err(Some(_))`
+    /// is the hard reject — a stowage rule refused an in-room drop — and
+    /// names the rule; `Err(None)` is a soft, ignorable miss that snaps
+    /// the piece home. The answer is [`Sim::settle`]'s, which is also
     /// [`Sim::drop_preview`]'s.
-    fn resolve_drop(&self, piece: &Piece, p: Vec2, turn: Turn) -> Result<Loc, Option<Violation>> {
-        match self.settle(piece, p, turn) {
+    fn resolve_drop(
+        &self,
+        piece: &Piece,
+        p: Vec2,
+        turn: Turn,
+        lift: u16,
+    ) -> Result<Loc, Option<Violation>> {
+        match self.settle(piece, p, turn, lift) {
             Some((loc, Ok(()))) => Ok(loc),
             Some((_, Err(violation))) => Err(violation),
             None => Err(None),
@@ -2013,7 +2034,7 @@ impl Sim {
     }
 
     /// **What `player`'s carry would do if it were released at `p`,
-    /// carried at `turn`**: the berth the piece would take, and the
+    /// carried at `turn` and `lift`**: the berth the piece would take, and the
     /// verdict on it — `Ok(())` for a drop that lands, `Err(Some(_))` for
     /// a hard reject naming the rule, `Err(None)` for a soft miss that
     /// snaps the piece home. `None` while the player holds nothing, or
@@ -2022,26 +2043,39 @@ impl Sim {
     /// This is the drop, asked early. A release runs the same function
     /// (`Sim::settle`) on the same board, so the berth a carry preview
     /// draws from this is the berth the release takes, to the unit and
-    /// to the turn, and the verdict it colours the ghost with is the
-    /// verdict the release gets. The turn is the caller's because it is
-    /// the carry's, not the board's: a frontend asks with the facing it
-    /// will send on the release (`InputFrame::facing`). A refused verdict
-    /// still names a berth — where the piece WOULD have stood — so a
-    /// refusal can be drawn where it happens.
+    /// to the turn and to the lift, and the verdict it colours the ghost
+    /// with is the verdict the release gets. The turn and the lift are the
+    /// caller's because they are the carry's, not the board's: a frontend
+    /// asks with the facing and the lift it will send on the release
+    /// (`InputFrame::facing`, `InputFrame::lift`). A refused verdict still
+    /// names a berth — where the piece WOULD have stood — so a refusal can
+    /// be drawn where it happens.
     #[must_use]
     pub fn drop_preview(
         &self,
         player: PlayerId,
         p: Vec2,
         turn: Turn,
+        lift: u16,
     ) -> Option<(Loc, Result<(), Option<Violation>>)> {
         let held = self.held(player)?;
         let piece = self.pieces.iter().find(|piece| piece.id == held.piece)?;
-        self.settle(piece, p, turn)
+        self.settle(piece, p, turn, lift)
+    }
+
+    /// **The chart under `p`**: the room it is in and which of that room's
+    /// planes, or `None` off every net. The chart a drop at `p` is planned
+    /// on ([`Sim::settle`]), and the one a frontend asks about when it
+    /// keeps a carry's lift (docs/BAY.md, "Lift"): a carry that crosses to
+    /// a chart of another class starts again from the surface.
+    #[must_use]
+    pub fn chart_at(&self, p: Vec2) -> Option<(RoomId, Surf)> {
+        let (room, cx, cy) = self.cell_at(p)?;
+        Some((room, self.rooms.kind(room)?.surface_of(cx, cy)?))
     }
 
     /// **The drop, whole**: where `piece` released at `p` and carried at
-    /// `turn` stands, and whether it may.
+    /// `turn` and `lift` stands, and whether it may.
     ///
     /// The pointer is continuous and the berth is free, so the release
     /// resolves a position before it asks any rule about it, in this
@@ -2063,22 +2097,28 @@ impl Sim {
     ///    a neighbour's edges, and it is gone: a hand that set a crate a
     ///    hair off its neighbour meant the hair (docs/BAY.md, "Cargo
     ///    turns").
-    /// 5. Then the tile-class gates and the arbiter of the layer the piece
+    /// 5. The **lift** is held to the cap ([`cargo::lift_cap`]) for this
+    ///    kind on this chart, so the body stays inside the room's box,
+    ///    and taken as it comes below it. A covering lies flush whatever
+    ///    it was carried at (docs/BAY.md, "Lift").
+    /// 6. Then the tile-class gates and the arbiter of the layer the piece
     ///    lies in, of the resolved footprint. Nothing about the drop asks
-    ///    what is already standing there: a piece set down in a wardrobe
-    ///    stands in the wardrobe (docs/BAY.md, "Cargo stops colliding").
+    ///    what is already standing there — a piece set down in a wardrobe
+    ///    stands in the wardrobe (docs/BAY.md, "Cargo stops colliding") —
+    ///    and nothing asks the lift: the arbiter rules on the plane.
     fn settle(
         &self,
         piece: &Piece,
         p: Vec2,
         turn: Turn,
+        lift: u16,
     ) -> Option<(Loc, Result<(), Option<Violation>>)> {
-        let (room, cx, cy) = self.cell_at(p)?;
+        let (room, surf) = self.chart_at(p)?;
         let host = self.rooms.kind(room)?;
-        let surf = host.surface_of(cx, cy)?;
+        let lift = lift.min(cargo::lift_cap(host, piece.kind, surf));
         let berth = self
             .aim(piece.kind, room, surf, layout::fine_at(room, p), turn)?
-            .berth(piece.kind);
+            .berth_at(piece.kind, lift);
         Some(match self.judge(piece, berth) {
             Ok(loc) => (loc, Ok(())),
             Err(violation) => (berth, Err(violation)),
@@ -2122,7 +2162,7 @@ impl Sim {
         })
     }
 
-    /// Step 5 of [`Sim::settle`]: the gates and the arbiter, asked of the
+    /// Step 6 of [`Sim::settle`]: the gates and the arbiter, asked of the
     /// resolved `berth`. Every arm gates on the tile class, the same
     /// reading [`Sim::drop_targets`] advertises from, so the glowing
     /// regions and the legal ones cannot drift apart.
@@ -2975,6 +3015,13 @@ mod tests {
             .map_or(Turn::ZERO, |held| held.origin.spot().turn)
     }
 
+    /// The lift a frontend sends while `player` carries: the held piece's
+    /// own, the way the cabin sends it until the player raises or lowers
+    /// it (`InputFrame::lift`). Nought while nothing is held.
+    fn lift(sim: &Sim, player: PlayerId) -> u16 {
+        sim.held(player).map_or(0, |held| held.origin.lift())
+    }
+
     /// A docked sim with the cabin emptied: starter cargo swept aside so
     /// tests can lay exact boards.
     fn cleared(seed: u64) -> Sim {
@@ -2985,15 +3032,16 @@ mod tests {
     }
 
     /// Carry as three zero-dt frames: press, mid-carry hold, release,
-    /// carried at the piece's own turn.
+    /// carried at the piece's own turn and lift.
     fn drag(sim: &mut Sim, from: Vec2, to: Vec2) {
         sim.advance(0.0, &press_at(from.x, from.y));
         assert!(sim.held(0).is_some(), "nothing to lift at {from:?}");
-        let facing = facing(sim, 0);
+        let (facing, lift) = (facing(sim, 0), lift(sim, 0));
         sim.advance(
             0.0,
             &InputFrame {
                 facing,
+                lift,
                 ..held_at(to.x, to.y)
             },
         );
@@ -3001,6 +3049,7 @@ mod tests {
             0.0,
             &InputFrame {
                 facing,
+                lift,
                 ..release_at(to.x, to.y)
             },
         );
@@ -3769,6 +3818,7 @@ mod tests {
                         x: fine(x) + FINE / 2,
                         y: fine(y) + FINE / 2,
                         turn: Turn::ZERO,
+                        lift: 0,
                     };
                     assert_eq!(
                         player_owned(&sim.rooms, Kind::PerfumeVial, loc),
@@ -4270,6 +4320,10 @@ mod tests {
                     release: rng.bool(),
                     shift: rng.u8(..8) == 0,
                     aim,
+                    // Now and then a carry turned and lifted, to past any
+                    // cap: a lift moves nothing out of anybody's hands.
+                    facing: Turn(rng.u16(..)),
+                    lift: if rng.u8(..4) == 0 { rng.u16(..) } else { 0 },
                     detach: (rng.u8(..64) == 0).then(|| rng.u8(..4)),
                     ..InputFrame::default()
                 };
@@ -5008,6 +5062,8 @@ mod tests {
                     release: rng.bool(),
                     occupied: rng.u8(..3),
                     aim: (rng.u8(..2) == 0).then(|| rng.u32(..16)),
+                    facing: Turn(rng.u16(..)),
+                    lift: rng.u16(..1024),
                     ..InputFrame::default()
                 };
             }
@@ -5052,6 +5108,16 @@ mod tests {
     /// and release there: what the preview said while aiming, and where
     /// the piece stands after.
     fn carry(sim: &mut Sim, id: u32, to: Vec2, turn: Turn) -> (Option<(Loc, Verdict)>, Loc) {
+        carry_at(sim, id, to, (turn, 0))
+    }
+
+    /// [`carry`], carried at a lift as well as a turn.
+    fn carry_at(
+        sim: &mut Sim,
+        id: u32,
+        to: Vec2,
+        (turn, lift): (Turn, u16),
+    ) -> (Option<(Loc, Verdict)>, Loc) {
         let piece = *sim
             .pieces()
             .iter()
@@ -5066,10 +5132,11 @@ mod tests {
         );
         let carried = |frame: InputFrame| InputFrame {
             facing: turn,
+            lift,
             ..frame
         };
         sim.advance(0.0, &carried(held_at(to.x, to.y)));
-        let preview = sim.drop_preview(0, to, turn);
+        let preview = sim.drop_preview(0, to, turn, lift);
         sim.advance(0.0, &carried(release_at(to.x, to.y)));
         let landed = sim.pieces().iter().find(|p| p.id == id).expect("conserved");
         (preview, landed.loc)
@@ -5082,6 +5149,7 @@ mod tests {
             x,
             y,
             turn,
+            lift: 0,
         }
     }
 
@@ -5143,6 +5211,118 @@ mod tests {
         .1
         .aabb();
         assert_eq!((span.w(), span.h()), (i32::from(FINE), 2 * i32::from(FINE)));
+    }
+
+    /// **A carried piece lands at the lift it was carried at, held to the
+    /// cap** (docs/BAY.md, "Lift"). A vial raised half a course off the
+    /// deck stands there, and the preview said so first. Carried at more
+    /// than the room has room for, it stands with its top against the
+    /// deckhead, which is the cap and not a unit past it. Lifted again it
+    /// carries on from where it stands, and a carry let go of over
+    /// nothing goes home at the lift it left.
+    #[test]
+    fn a_drop_keeps_the_lift_it_was_carried_at_held_to_the_cap() {
+        let mut sim = cleared(126);
+        let vial = inject_hold(&mut sim, Kind::PerfumeVial, deck(1, 2));
+        let (fx, fy, _, _) = RoomKind::Cabin.floor_rect();
+        let (x, y) = (fine(fx + 4) + FINE / 2, fine(fy + 3) + FINE / 2);
+        let to = fine_point(CABIN, x, y);
+        let (preview, landed) = carry_at(&mut sim, vial, to, (Turn::ZERO, FINE / 2));
+        let raised = Spot {
+            room: CABIN,
+            x,
+            y,
+            turn: Turn::ZERO,
+        };
+        assert_eq!(landed, raised.lifted(FINE / 2));
+        assert_eq!(preview, Some((landed, Ok(()))), "the preview said so first");
+
+        let cap = cargo::lift_cap(RoomKind::Cabin, Kind::PerfumeVial, Surf::Floor);
+        assert_eq!(
+            cap,
+            3 * FINE,
+            "a vial a course tall stands three up at most"
+        );
+        let (preview, landed) = carry_at(&mut sim, vial, to, (Turn::ZERO, u16::MAX));
+        assert_eq!(
+            landed,
+            raised.lifted(cap),
+            "the drop let a vial through the deckhead"
+        );
+        assert_eq!(preview.map(|(loc, _)| loc), Some(landed));
+
+        let from = rect_center(layout::piece_rect(
+            sim.rooms(),
+            sim.pieces().iter().find(|p| p.id == vial).expect("aboard"),
+        ));
+        sim.advance(0.0, &press_at(from.x, from.y));
+        assert_eq!(
+            sim.held(0).map(|held| held.origin),
+            Some(landed),
+            "lifted again, the carry forgot where it stood"
+        );
+        sim.advance(0.0, &release_at(-1000.0, -1000.0));
+        assert!(sim.held(0).is_none());
+        assert_eq!(
+            sim.pieces().iter().find(|p| p.id == vial).map(|p| p.loc),
+            Some(landed),
+            "a carry sent home came back at another lift"
+        );
+    }
+
+    /// **A covering lies flush whatever it is carried at.** A coat has no
+    /// height, so a rug carried a course up is laid on the deck, and the
+    /// preview names the berth it lands on rather than the one it was
+    /// carried at.
+    #[test]
+    fn a_covering_lies_flush_whatever_it_is_carried_at() {
+        let mut sim = cleared(127);
+        let laid = cell_spot(&sim, CABIN, Kind::Rug, deck(1, 4)).laid();
+        let rug = inject_at(&mut sim, Kind::Rug, laid);
+        let spot = cell_spot(&sim, CABIN, Kind::Rug, deck(4, 1));
+        let to = fine_point(CABIN, spot.x, spot.y);
+        let (preview, landed) = carry_at(&mut sim, rug, to, (spot.turn, FINE));
+        assert_eq!(landed, spot.laid());
+        assert_eq!(landed.lift(), 0);
+        assert_eq!(preview, Some((landed, Ok(()))));
+    }
+
+    /// **No rule reads a lift** (docs/BAY.md, "Lift"). Two canisters keep
+    /// half a cell of air in plan at whatever height either stands, so a
+    /// canister raised to the deckhead over its neighbour's elbow is
+    /// refused as it is on the deck; and a lamp raised to the deckhead
+    /// lights the ground round it exactly as it did standing on it.
+    #[test]
+    fn no_rule_reads_a_lift() {
+        let mut sim = cleared(128);
+        inject_hold(&mut sim, Kind::GasCanister, deck(1, 1));
+        let high = inject_hold(&mut sim, Kind::GasCanister, deck(4, 4));
+        let beside = cell_spot(&sim, CABIN, Kind::GasCanister, deck(1, 2));
+        let to = fine_point(CABIN, beside.x, beside.y);
+        let cap = cargo::lift_cap(RoomKind::Cabin, Kind::GasCanister, Surf::Floor);
+        for lift in [0, cap / 2, cap] {
+            let (preview, landed) = carry_at(&mut sim, high, to, (beside.turn, lift));
+            assert_eq!(
+                preview.map(|(_, verdict)| verdict),
+                Some(Err(Some(Violation::Volatile))),
+                "a canister {lift} units up shared air with its neighbour"
+            );
+            assert_ne!(landed.spot(), beside, "the refused drop landed anyway");
+        }
+
+        let mut sim = cleared(129);
+        let lamp = cell_spot(&sim, CABIN, Kind::FloorLamp, deck(3, 3));
+        let id = inject_at(&mut sim, Kind::FloorLamp, lamp.hold());
+        let (nx, ny) = deck(4, 3);
+        let lit = |sim: &Sim| cargo::lit_adjacent(RoomKind::Cabin, sim.pieces(), CABIN, nx, ny);
+        assert!(lit(&sim), "a lamp on the deck lights the cell beside it");
+        let cap = cargo::lift_cap(RoomKind::Cabin, Kind::FloorLamp, Surf::Floor);
+        let index = sim.pieces.iter().position(|p| p.id == id).expect("aboard");
+        sim.pieces[index].loc = lamp.lifted(cap);
+        assert!(
+            lit(&sim),
+            "a lamp raised to the deckhead stopped lighting in plan"
+        );
     }
 
     /// **A turned couch answers for its own ground and nothing beside

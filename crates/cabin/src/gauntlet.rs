@@ -698,14 +698,21 @@ pub fn loaded_save(base: &str) -> Option<String> {
     for line in base.lines() {
         if line.starts_with("next_piece") {
             for piece in &added {
-                let Loc::Hold { room, x, y, turn } = piece.loc else {
+                let Loc::Hold {
+                    room,
+                    x,
+                    y,
+                    turn,
+                    lift,
+                } = piece.loc
+                else {
                     continue;
                 };
                 // Writing into a String cannot fail; `save.rs`'s own
                 // convention drops the plumbing.
                 let _ = writeln!(
                     out,
-                    "piece {} {} 0 0 hold {room} {x} {y} {}",
+                    "piece {} {} 0 0 hold {room} {x} {y} {} {lift}",
                     piece.id,
                     piece.kind.index(),
                     turn.0
@@ -774,6 +781,11 @@ pub struct Berth {
     /// The kind whose body sets the depth — the tallest thing that stands
     /// here, or the deepest thing that hangs here.
     pub by: Kind,
+    /// **How far off its chart that kind may be lifted here**, in metres:
+    /// its cap on this chart of this room (`cargo::lift_cap`), up to the
+    /// deckhead, down to the deck, out to the far wall (docs/BAY.md,
+    /// "Lift"). The lift sample [`berth_reached`] asks a body at.
+    pub lift: f32,
 }
 
 /// How much air one berthed rig spends off its own chart, in metres —
@@ -805,7 +817,7 @@ fn rig_air(
     plane: Vec3,
     inward: Vec3,
 ) -> Option<f32> {
-    let (lo, hi) = crate::pieces::berth_box(charts, kind, rect, turn)?;
+    let (lo, hi) = crate::pieces::berth_box(charts, kind, rect, (turn, 0))?;
     Some((lo - plane).dot(inward).max((hi - plane).dot(inward)))
 }
 
@@ -972,6 +984,8 @@ pub fn berths(rooms: &Rooms, placed: &Placed) -> Vec<Berth> {
                     ))
                 })
                 .collect();
+            let cap =
+                space_trucking::sim::cargo::lift_cap(placed.kind, by, foot.chart(placed.kind)?);
             Some(Berth {
                 foot,
                 cell,
@@ -982,6 +996,7 @@ pub fn berths(rooms: &Rooms, placed: &Placed) -> Vec<Berth> {
                 over,
                 inward,
                 by,
+                lift: crate::pieces::lift_off(&surface, cap),
             })
         })
         .collect()
@@ -2101,12 +2116,25 @@ fn berth_reached(stage: &Stage, berths: &[Berth]) -> Vec<Finding> {
     let stances = stances(stage);
     let mut blamed: BTreeMap<String, Vec<(u8, u8)>> = BTreeMap::new();
     for berth in berths.iter().filter(|berth| kept(berth.class)) {
-        let probe = (berth.face.lo + berth.face.hi) * 0.5 + berth.inward * 0.02;
-        // The reading is [`worked`]'s, shared with `fixture-reached`: a
-        // berth and a room's own counter are the same question asked of
-        // two things, and one arithmetic is what keeps them one question.
-        if let Err(blame) = worked(&scene, &stances, probe) {
-            blamed.entry(blame).or_default().push(berth.cell);
+        let middle = (berth.face.lo + berth.face.hi) * 0.5;
+        // **And lifted as far as the room lets it go** (docs/BAY.md,
+        // "Lift"): a body raised to the deckhead, lowered from it to the
+        // deck, or carried out from its wall to the far side of the room is
+        // still a body somebody has to be able to take back down. The
+        // sample is the berth's own kind at its cap, on deck, wall and
+        // deckhead alike, and the probe is the lifted body's near face.
+        for (lift, how) in [(0.0, ""), (berth.lift, " (lifted to its cap)")] {
+            let probe = middle + berth.inward * (lift + 0.02);
+            // The reading is [`worked`]'s, shared with `fixture-reached`:
+            // a berth and a room's own counter are the same question asked
+            // of two things, and one arithmetic is what keeps them one
+            // question.
+            if let Err(blame) = worked(&scene, &stances, probe) {
+                blamed
+                    .entry(format!("{blame}{how}"))
+                    .or_default()
+                    .push(berth.cell);
+            }
         }
     }
     blamed
@@ -2378,6 +2406,7 @@ fn rig_parts(
             x: 0,
             y: 0,
             turn: Turn::ZERO,
+            lift: 0,
         },
     };
     crate::pieces::parts(&piece, screens)
@@ -2991,25 +3020,49 @@ fn plans(stages: &[Stage]) -> Vec<Plan> {
                     continue;
                 };
                 let rect = layout::foot_rect(stage.placed.id, foot);
-                let (Some((lo, hi)), Some((station, _, _, rot, _))) = (
-                    crate::pieces::berth_box(&stage.placed.charts, kind, rect, spot.turn),
-                    crate::pieces::berth_pose(&stage.placed.charts, kind, rect, spot.turn),
-                ) else {
-                    continue;
-                };
-                out.push(Plan {
-                    kind,
-                    surf,
-                    station,
-                    chart,
-                    rect,
-                    rot,
-                    given: anchored(host, kind, corner.0, corner.1)
-                        .is_some_and(|(_, _, turn)| turn == spot.turn),
-                    square: spot.turn.square(),
-                    owned: plan_face(&chart, rect),
-                    spent: Box3 { lo, hi },
-                });
+                let given = anchored(host, kind, corner.0, corner.1)
+                    .is_some_and(|(_, _, turn)| turn == spot.turn);
+                // **And lifted to its cap, on deck, wall and deckhead**
+                // (docs/BAY.md, "Lift"), at a whole-cell anchor and the
+                // turn the game gives a body there: a lift carries the body
+                // along its chart's normal and nowhere else, so lifted it
+                // must fill the same plan, centred the same, turned the
+                // same. Not at every fraction and turn, for `legal_berths`'
+                // reason: what a lift could get wrong is the direction it
+                // goes, and that is no different a unit off the grid.
+                let on_grid = corner.0 % fine(1) == 0 && corner.1 % fine(1) == 0;
+                let cap = space_trucking::sim::cargo::lift_cap(host, kind, surf);
+                let lifts: &[u16] = if given && on_grid { &[0, cap] } else { &[0] };
+                for &lift in lifts {
+                    let (Some((lo, hi)), Some((station, _, _, rot, _))) = (
+                        crate::pieces::berth_box(
+                            &stage.placed.charts,
+                            kind,
+                            rect,
+                            (spot.turn, lift),
+                        ),
+                        crate::pieces::berth_pose(
+                            &stage.placed.charts,
+                            kind,
+                            rect,
+                            (spot.turn, lift),
+                        ),
+                    ) else {
+                        continue;
+                    };
+                    out.push(Plan {
+                        kind,
+                        surf,
+                        station,
+                        chart,
+                        rect,
+                        rot,
+                        given,
+                        square: spot.turn.square(),
+                        owned: plan_face(&chart, rect),
+                        spent: Box3 { lo, hi },
+                    });
+                }
             }
         }
     }
@@ -4141,6 +4194,157 @@ pub const ALLOWED: &[(&str, &str, &str)] = &[];
 mod tests {
     use super::*;
 
+    /// **The three flat things a ghost on chart class `surf` stands among**,
+    /// in its rig's own frame and in metres, each showing the room the one
+    /// face a paint shows: the footprint patch and its slash, at their
+    /// rungs off the berth's plane, and the chart itself under them.
+    ///
+    /// The footprint lies across the rig's own x, and down its z on a
+    /// deck or a deckhead — where `pieces::site_on` draws a standing rig
+    /// back onto its plan — or up its y on a wall. The patch is pulled two
+    /// sim units in all round, as `pieces::footprint_patch` lays it; the
+    /// slash spans the footprint's box, which errs toward reporting; and
+    /// the chart runs a cell past the footprint every way, because the
+    /// surface is everywhere.
+    fn ghost_marks(kind: Kind, surf: Surf, joint: Joint) -> [Drawn; 3] {
+        use crate::rig::layer::{HINT, SKIN, SLASH};
+
+        // Metres per sim unit, on every chart of every room.
+        let su = crate::rig::BAY_CELL / layout::CELL;
+        let inward = -joint.toward;
+        let (across, span) = kind.face_on(surf);
+        let half =
+            |cells: u8, inset: f32| (f32::from(cells) * layout::CELL).mul_add(0.5, -inset) * su;
+        let (mid, second) = if matches!(surf, Surf::Floor | Surf::Ceiling) {
+            (
+                joint.at + Vec3::Z * crate::pieces::rig_mid() * crate::pieces::RIG_UNIT,
+                Vec3::Z,
+            )
+        } else {
+            (joint.at, Vec3::Y)
+        };
+        let plate = |what: &str, (from, to): (f32, f32), inset: f32| {
+            let plan = Vec3::X * half(across, inset) + second * half(span, inset);
+            Drawn {
+                what: what.to_owned(),
+                body: Box3::spanning(mid + inward * from - plan, mid + inward * to + plan),
+                faces: Faces::showing(inward),
+                character: true,
+                name: None,
+                seat: None,
+            }
+        };
+        let rung = |at: f32| (SKIN.mul_add(-0.5, at), SKIN.mul_add(0.5, at));
+        [
+            plate("patch", rung(HINT), 2.0),
+            plate("slash", rung(SLASH), 0.0),
+            plate("chart", (-SKIN, 0.0), -layout::CELL),
+        ]
+    }
+
+    /// **No ghost fights its patch, or its surface, at any lift**
+    /// (docs/BAY.md, "Lift, and the keys"), by the very arithmetic
+    /// `coplanar-faces` judges every room with ([`shared_faces`]).
+    ///
+    /// The ghost stands exactly where the piece will land, at scale and at
+    /// no carry lift, so it cannot move out of anything's way: the patch
+    /// does. It is laid at its rung of the decal ladder off the berth's own
+    /// plane — the chart's, carried out by the berth's lift
+    /// (`pieces::Ground::off`) — so the patch and its slash stand where they
+    /// stand against the ghost's faces at every lift, and this asks every
+    /// kind's rig, in each body it draws, on every class of chart it may
+    /// take, at no lift, which is every lift. The surface does not ride:
+    /// every face the ghost shows the room is asked against the chart's own
+    /// plane at every fine unit of lift the room has for it, because a
+    /// face buried under the chart at no lift crosses it on the way up.
+    #[test]
+    fn no_ghost_fights_its_patch_or_its_surface() {
+        let whitebox = Dressings::default();
+        let mut fights = Vec::new();
+        let mut asked = 0_u32;
+        for kind in Kind::ALL.into_iter().filter(|kind| !kind.covering()) {
+            for surf in Surf::ALL {
+                let Some(joint) = chart_joint(kind, surf) else {
+                    continue;
+                };
+                let [patch, slash, chart] = ghost_marks(kind, surf, joint);
+                let cap = space_trucking::sim::room::ROOM_KINDS
+                    .into_iter()
+                    .map(|host| space_trucking::sim::cargo::lift_cap(host, kind, surf))
+                    .max()
+                    .unwrap_or(0);
+                for screens in Screens::BOTH {
+                    for showing in rig_forms(kind) {
+                        for ghost in rig_scene(&whitebox, kind, screens, showing) {
+                            asked += 1;
+                            for mark in [&patch, &slash] {
+                                for fight in shared_faces(&ghost, mark) {
+                                    fights.push(format!(
+                                        "{kind:?} on {surf:?}: \"{}\" and the {} {fight}",
+                                        ghost.what, mark.what
+                                    ));
+                                }
+                            }
+                            for lift in 0..=cap {
+                                let up = -joint.toward
+                                    * (f32::from(lift) * crate::rig::BAY_CELL
+                                        / f32::from(space_trucking::sim::cargo::FINE));
+                                let lifted = Drawn {
+                                    body: Box3 {
+                                        lo: ghost.body.lo + up,
+                                        hi: ghost.body.hi + up,
+                                    },
+                                    ..ghost.clone()
+                                };
+                                for fight in shared_faces(&lifted, &chart) {
+                                    fights.push(format!(
+                                        "{kind:?} on {surf:?} lifted {lift}: \"{}\" and the \
+                                         chart {fight}",
+                                        ghost.what
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assert!(asked > 100, "only {asked} bodies were asked");
+        assert!(
+            fights.is_empty(),
+            "the ghost fights:\n{}",
+            fights.join("\n")
+        );
+
+        // **And the reading has teeth.** A plate laid on the very top of a
+        // crate's own lid shares a plane with it, and is found.
+        let joint = chart_joint(Kind::ScrapAlloy, Surf::Floor).expect("a crate stands");
+        let scene = rig_scene(&whitebox, Kind::ScrapAlloy, Screens::LIVE, Under::Rig);
+        let lid = scene
+            .iter()
+            .max_by(|a, b| a.body.hi.y.total_cmp(&b.body.hi.y))
+            .expect("a crate draws something");
+        let top = Drawn {
+            what: "a plate on the lid".to_owned(),
+            body: Box3 {
+                lo: Vec3::new(
+                    joint.at.x - 1.0,
+                    lid.body.hi.y - crate::rig::layer::SKIN,
+                    joint.at.z - 1.0,
+                ),
+                hi: Vec3::new(joint.at.x + 1.0, lid.body.hi.y, joint.at.z + 1.0),
+            },
+            faces: Faces::showing(Vec3::Y),
+            character: true,
+            name: None,
+            seat: None,
+        };
+        assert!(
+            !shared_faces(lid, &top).is_empty(),
+            "a plate on a crate's lid was not found sharing its plane"
+        );
+    }
+
     /// **The seat family is asked about real joints, and it answers when
     /// one opens.**
     ///
@@ -4754,6 +4958,53 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// **Every berth is asked lifted, on deck, wall and deckhead, and the
+    /// cap the sim sets stops inside the room the cabin draws**
+    /// (docs/BAY.md, "Lift"). The sim states the cap in cells — the room's
+    /// section less the body's reach off its chart (`cargo::lift_cap`) —
+    /// and the cabin draws the room in metres, so this holds the two to
+    /// each other: in every room on the roster, a berth's air carried out
+    /// by its cap ends inside the room's own box, to the centimetre a
+    /// rig's sole may sink. And the sample is asked of all three classes
+    /// of chart, so `berth-reached`'s lifted probe ([`berth_reached`]) is
+    /// never a probe of nothing.
+    #[test]
+    fn every_berth_is_asked_lifted_and_its_cap_stops_inside_the_room() {
+        let stages = roster();
+        let mut lifted: Vec<Mount> = Vec::new();
+        for (name, berths) in &swept().0 {
+            let stage = stages
+                .iter()
+                .find(|stage| stage.name == *name)
+                .expect("a swept room is on the roster");
+            let (lo, hi) = (stage.placed.lo, stage.placed.hi);
+            for berth in berths {
+                let surf = berth
+                    .foot
+                    .chart(stage.placed.kind)
+                    .expect("a berth stands on a chart");
+                if berth.lift > 0.0 && !lifted.contains(&Mount::of(surf)) {
+                    lifted.push(Mount::of(surf));
+                }
+                let up = berth.inward * berth.lift;
+                let (a, b) = (berth.air.lo + up, berth.air.hi + up);
+                assert!(
+                    a.cmpge(lo - Vec3::splat(SOLE_SINK)).all()
+                        && b.cmple(hi + Vec3::splat(SOLE_SINK)).all(),
+                    "{name}: a berth over {:?} lifted {:.3} m spends {a:?}..{b:?}, outside \
+                     the room's {lo:?}..{hi:?}",
+                    berth.cell,
+                    berth.lift
+                );
+            }
+        }
+        assert_eq!(
+            lifted.len(),
+            3,
+            "only {lifted:?} were asked lifted: the deck, the walls and the deckhead all lift"
+        );
     }
 
     /// **A turned berth spends its air over its own ground**, not over the

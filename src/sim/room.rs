@@ -303,6 +303,22 @@ impl RoomKind {
         }
     }
 
+    /// **How deep the room stands off chart `surf`**, in cells: from that
+    /// chart to the one facing it across the room. Its section is
+    /// [`COURSES`] from the deck to the deckhead, and its floor's own two
+    /// sides across — the deck's depth, fore and aft, off the aft and
+    /// front walls, and its width, athwart, off the flanks. What a lifted
+    /// body may stand in (`cargo::lift_cap`).
+    #[must_use]
+    pub const fn section(self, surf: Surf) -> u8 {
+        let (w, h) = self.floor();
+        match surf {
+            Surf::Floor | Surf::Ceiling => COURSES,
+            Surf::Aft | Surf::Front => h,
+            Surf::Port | Surf::Starboard => w,
+        }
+    }
+
     /// The net's bounding grid, `(cols, rows)`: the cross of six charts
     /// laid flat. [`COURSES`] of wall on every side of a `w × h` floor,
     /// with the ceiling folded over the starboard cornice.

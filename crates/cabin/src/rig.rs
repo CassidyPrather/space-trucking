@@ -1095,6 +1095,7 @@ pub fn steer(
     shell: Res<crate::Shell>,
     envelope: Res<crate::room::Envelope>,
     menu: Res<crate::menu::Menu>,
+    bindings: Res<crate::keys::Bindings>,
     mut rig: ResMut<CameraRig>,
     camera: Single<&Transform, With<CabinCamera>>,
 ) {
@@ -1105,7 +1106,16 @@ pub fn steer(
     if menu.open {
         return;
     }
+    // **`E` is focus with an empty hand, and a carry key with a full
+    // one** (docs/BAY.md, "Lift, and the keys"). The owner asked for the
+    // turns on `Q` and `E`, and `E` was focus; a roaming body with a piece
+    // in hand turns it with `E` by default (`crate::keys`), so here `E`
+    // focuses nothing while a carry action holds it and the hand is full —
+    // the click still does, exactly as before. Bound elsewhere, `E` is
+    // focus in either hand. At a station or mid-glide nothing turns a
+    // carry, so there `E` is the way back out, as it always was.
     let toggle = keys.just_pressed(KeyCode::KeyE);
+    let carrying = shell.bridge.sim.held(0).is_some() && bindings.action(KeyCode::KeyE).is_some();
     match rig.mode {
         Mode::Roam => {
             // A parked cursor belongs to the OS until the game is
@@ -1187,7 +1197,7 @@ pub fn steer(
             // the camera transform this system is reading, so the
             // routing and the hover tell that promised it can never
             // disagree about which half of the piece the aim is on.
-            if buttons.just_pressed(MouseButton::Left) || toggle {
+            if buttons.just_pressed(MouseButton::Left) || (toggle && !carrying) {
                 let sim = &shell.bridge.sim;
                 let holding = sim.held(0).is_some();
                 let focus = match pointer.aimed(sim) {
@@ -1471,7 +1481,7 @@ mod tests {
                             &charts,
                             piece.kind,
                             layout::piece_rect(sim.rooms(), piece),
-                            crate::pieces::berth_turn(piece),
+                            crate::pieces::berth_at(piece),
                         )
                     })
                     .flatten()
@@ -1594,7 +1604,7 @@ mod tests {
                 &charts,
                 piece.kind,
                 rect,
-                crate::pieces::berth_turn(piece),
+                crate::pieces::berth_at(piece),
             ) {
                 panels.push(pair);
             }

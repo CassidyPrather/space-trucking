@@ -1065,6 +1065,7 @@ mod tests {
                             x: fine(x) + FINE / 2,
                             y: fine(y) + FINE / 2,
                             turn: Turn::ZERO,
+                            lift: 0,
                         }),
             "the joiner's drag must land"
         );
@@ -1149,6 +1150,7 @@ mod tests {
                     x: fine(x) + FINE / 2,
                     y: fine(y) + FINE / 2,
                     turn: Turn::ZERO,
+                    lift: 0,
                 })),
             "the held piece must snap home"
         );

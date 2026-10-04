@@ -432,6 +432,10 @@ did, so the same berth or pointer names another place, and another
 version starts a new run as ever (DESIGN_REVIEW.md, *An old save or
 tape starts a new run*).
 
+> Superseded by docs/BAY.md, *Lift, and the keys*: saves are `STV24`,
+> tapes `RPL8`, and the wire `SNP7`, because a standing berth carries
+> its lift and every frame the carry's.
+
 ## Closure: what happens where two rooms touch
 
 Placing a room can bring its walls flush against rooms it was never

@@ -279,6 +279,7 @@ pub fn occupied_cells(pieces: &[Piece]) -> u32 {
                 x,
                 y,
                 turn,
+                ..
             } => {
                 let foot = Foot::of(RATS_ROOM, piece.kind, x, y, turn)?;
                 let on_floor = foot.chart(RATS_ROOM) == Some(Surf::Floor);
@@ -291,7 +292,10 @@ pub fn occupied_cells(pieces: &[Piece]) -> u32 {
 }
 
 /// Whether hold cell `(cx, cy)` sits under a stowed piece's footprint —
-/// any of it, since the rat walks cells and the cargo does not.
+/// any of it, since the rat walks cells and the cargo does not. In plan,
+/// at whatever lift the piece stands: a lift is taste and no rule reads
+/// it (docs/BAY.md, "Lift"), so a crate raised off the deck still covers
+/// the ground it stands over.
 fn covered(pieces: &[Piece], cx: u8, cy: u8) -> bool {
     pieces.iter().any(|piece| {
         let Loc::Hold {
@@ -299,6 +303,7 @@ fn covered(pieces: &[Piece], cx: u8, cy: u8) -> bool {
             x,
             y,
             turn,
+            ..
         } = piece.loc
         else {
             return false;
@@ -354,6 +359,7 @@ fn couch_cells(pieces: &[Piece]) -> Vec<(u8, u8)> {
             x,
             y,
             turn,
+            ..
         } = piece.loc
         else {
             continue;
@@ -486,6 +492,7 @@ mod tests {
                 x,
                 y,
                 turn,
+                lift: 0,
             },
         }
     }

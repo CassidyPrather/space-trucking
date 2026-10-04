@@ -101,9 +101,12 @@ use space_trucking::sim::room::RoomKind;
 /// deck and the four walls, two across and one down for the deckhead —
 /// and the rat by the deck's, so every piece stands where it stood; and
 /// the board was read by the new reader and written by the new writer,
-/// which handed it back byte for byte.)
+/// which handed it back byte for byte. The move to `STV24` gave every
+/// standing berth its lift (docs/BAY.md, "Lift"): nothing on the board
+/// stands off its chart, so each `hold` line gained a nought and nothing
+/// else, and the new writer hands it back byte for byte.)
 pub const SAVE: &str = "\
-STV23
+STV24
 seed 7
 tick 12000
 rng 3c76e098a8f74c8a
@@ -125,37 +128,37 @@ room 0 0 - - -
 room 1 1 0 1 3
 room 2 2 0 0 0
 marks 1 16
-piece 0 21 0 0 hold 0 1920 1408 0
-piece 1 9 0 0 hold 0 2176 1664 0
-piece 2 8 0 0 hold 0 1536 2176 0
-piece 3 19 1 0 hold 0 1536 1920 0
-piece 4 18 2 0 hold 0 1152 1920 49152
-piece 5 12 0 0 hold 0 1664 1152 0
-piece 6 6 1 0 hold 0 1152 2688 32768
-piece 7 20 3 0 hold 0 2304 640 0
-piece 8 17 1 0 hold 0 384 1664 0
-piece 9 16 2 0 hold 0 4480 1408 0
+piece 0 21 0 0 hold 0 1920 1408 0 0
+piece 1 9 0 0 hold 0 2176 1664 0 0
+piece 2 8 0 0 hold 0 1536 2176 0 0
+piece 3 19 1 0 hold 0 1536 1920 0 0
+piece 4 18 2 0 hold 0 1152 1920 49152 0
+piece 5 12 0 0 hold 0 1664 1152 0 0
+piece 6 6 1 0 hold 0 1152 2688 32768 0
+piece 7 20 3 0 hold 0 2304 640 0 0
+piece 8 17 1 0 hold 0 384 1664 0 0
+piece 9 16 2 0 hold 0 4480 1408 0 0
 piece 10 22 0 1 laid 0 1536 1920 0
 piece 11 23 1 0 laid 0 1920 640 0
 piece 12 24 0 0 laid 0 896 1920 0
-piece 13 0 1 0 hold 0 1920 1152 0
-piece 14 13 2 0 hold 0 2176 1152 0
-piece 15 14 0 0 hold 0 2688 1152 0
-piece 16 4 3 0 hold 2 1664 1152 0
-piece 17 7 1 0 hold 2 1920 2432 0
-piece 18 1 2 0 hold 2 2176 2432 0
-piece 19 11 0 0 hold 0 2432 1152 0
-piece 20 2 1 0 hold 0 2304 2176 0
-piece 21 5 0 0 hold 2 2816 1152 0
-piece 22 3 3 1 hold 2 2304 1152 0
-piece 23 15 2 0 hold 2 1664 2432 0
-piece 24 26 0 0 hold 0 1536 3072 0
-piece 25 25 1 0 hold 0 1536 3456 0
-piece 26 27 2 0 hold 0 2688 3200 0
-piece 27 28 3 0 hold 0 2688 3456 0
-piece 28 29 0 0 hold 0 2688 2944 0
-piece 29 30 0 0 hold 2 384 1408 0
-piece 30 31 1 0 hold 0 768 2304 0
+piece 13 0 1 0 hold 0 1920 1152 0 0
+piece 14 13 2 0 hold 0 2176 1152 0 0
+piece 15 14 0 0 hold 0 2688 1152 0 0
+piece 16 4 3 0 hold 2 1664 1152 0 0
+piece 17 7 1 0 hold 2 1920 2432 0 0
+piece 18 1 2 0 hold 2 2176 2432 0 0
+piece 19 11 0 0 hold 0 2432 1152 0 0
+piece 20 2 1 0 hold 0 2304 2176 0 0
+piece 21 5 0 0 hold 2 2816 1152 0 0
+piece 22 3 3 1 hold 2 2304 1152 0 0
+piece 23 15 2 0 hold 2 1664 2432 0 0
+piece 24 26 0 0 hold 0 1536 3072 0 0
+piece 25 25 1 0 hold 0 1536 3456 0 0
+piece 26 27 2 0 hold 0 2688 3200 0 0
+piece 27 28 3 0 hold 0 2688 3456 0 0
+piece 28 29 0 0 hold 0 2688 2944 0 0
+piece 29 30 0 0 hold 2 384 1408 0 0
+piece 30 31 1 0 hold 0 768 2304 0 0
 next_piece 31
 ";
 
@@ -541,12 +544,19 @@ mod tests {
         // The world box one berthed piece fills, posed through the very
         // function the runtime poses a rig with.
         let filled = |piece: &Piece| {
-            let Loc::Hold { room, x, y, turn } = piece.loc else {
+            let Loc::Hold {
+                room,
+                x,
+                y,
+                turn,
+                lift,
+            } = piece.loc
+            else {
                 return None;
             };
             let host = placed.iter().find(|host| host.id == room)?;
             let rect = layout::foot_rect(room, Foot::of(host.kind, piece.kind, x, y, turn)?);
-            let (lo, hi) = crate::pieces::berth_box(&host.charts, piece.kind, rect, turn)?;
+            let (lo, hi) = crate::pieces::berth_box(&host.charts, piece.kind, rect, (turn, lift))?;
             Some(Box3::spanning(lo, hi))
         };
 

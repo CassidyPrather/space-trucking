@@ -261,6 +261,7 @@ mod tests {
                 x: 0,
                 y: 0,
                 turn: space_trucking::sim::Turn::ZERO,
+                lift: 0,
             },
         };
         let arm = parts(&piece, crate::pieces::Screens::LIVE)

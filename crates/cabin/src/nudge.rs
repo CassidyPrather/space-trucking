@@ -297,6 +297,20 @@ const SAVE: KeyCode = KeyCode::Enter;
 /// Held, the step is a tenth.
 const FINE: [KeyCode; 2] = [KeyCode::ShiftLeft, KeyCode::ShiftRight];
 
+/// **Every key the bench answers**, modifier included: what the carry's
+/// bindings may never take (`keys::refusal`), so the keys below stay the
+/// bench's in every build a player could rebind a key in.
+#[must_use]
+pub fn bench_keys() -> Vec<KeyCode> {
+    DIRECTIONS
+        .iter()
+        .map(|(key, _, _)| *key)
+        .chain(HANDLES.iter().map(|(key, _)| *key))
+        .chain([TAKE, UNDO, SAVE])
+        .chain(FINE)
+        .collect()
+}
+
 /// **Read a frame of keys into asks.** Edges only: one press is one
 /// step, and a key held down asks once.
 #[must_use]
@@ -842,17 +856,26 @@ measured_half = [0.5, 0.5, 0.5]
     /// has not taken `R`.
     ///
     /// `main.rs` is one of them. It reads the keys the sim hears — pause,
-    /// warp, mute, the quick-move modifier — and the one that turns a
-    /// carry, and it was missing from this list while `R` still started a
-    /// new run, which is how the bench's turn handle and a thrown-away
-    /// run came to share a key unseen.
+    /// warp, mute, the quick-move modifier — and it was missing from this
+    /// list while `R` still started a new run, which is how the bench's
+    /// turn handle and a thrown-away run came to share a key unseen.
+    ///
+    /// **The carry's keys are a table now, and a player rebinds them**
+    /// (`crate::keys`). So the table's own source is read too — its
+    /// defaults, `Q`, `E`, `X` and `Z`, must turn up there and nowhere the
+    /// bench is — and a source read is not enough on its own, because a
+    /// binding is not in any source: it is whatever the player pressed on
+    /// the keys page. That half is asked of the page's own gate: every key
+    /// the bench answers is one no binding may take
+    /// (`keys::refusal`), so no rebinding a player can make puts a carry
+    /// action on a bench key, in any build.
     ///
     /// **A modifier is the exception, and it is one by reason rather than
     /// by list.** A modifier means nothing alone; it means something with
     /// the key it is held with. The bench's fine step is `Shift` with its
     /// own six directions, which this test has just proved are the
     /// bench's alone; the cabin's `Shift` is quick-move with a click and
-    /// the reverse turn with `Q`, neither of which the bench answers. So
+    /// the lift with the wheel, neither of which the bench answers. So
     /// the modifier is shared and no chord is.
     #[test]
     fn the_benchs_keys_are_the_benchs_alone() {
@@ -862,6 +885,7 @@ measured_half = [0.5, 0.5, 0.5]
             include_str!("menu.rs"),
             include_str!("gesture.rs"),
             include_str!("main.rs"),
+            include_str!("keys.rs"),
         ] {
             let game = source.split("#[cfg(test)]\nmod ").next().unwrap_or(source);
             for after in game.split("KeyCode::").skip(1) {
@@ -874,10 +898,13 @@ measured_half = [0.5, 0.5, 0.5]
                 }
             }
         }
-        assert!(
-            taken.iter().any(|name| name == "KeyQ"),
-            "the key that turns a carry went unread"
-        );
+        for action in crate::keys::Action::ALL {
+            let name = format!("{:?}", action.default_key());
+            assert!(
+                taken.contains(&name),
+                "{action:?}'s default key went unread"
+            );
+        }
         let chords: Vec<KeyCode> = DIRECTIONS
             .iter()
             .map(|(key, _, _)| *key)
@@ -889,6 +916,10 @@ measured_half = [0.5, 0.5, 0.5]
             assert!(
                 !taken.contains(&name),
                 "the cabin already answers {name}; the bench may not have it too"
+            );
+            assert!(
+                crate::keys::refusal(*key).is_some(),
+                "a player may bind {name} to a carry action, and the bench answers it"
             );
         }
         // And no key of the bench's own means two things either.

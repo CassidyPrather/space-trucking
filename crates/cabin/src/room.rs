@@ -4353,7 +4353,7 @@ mod tests {
                 &charts,
                 piece.kind,
                 rect,
-                crate::pieces::berth_turn(piece),
+                crate::pieces::berth_at(piece),
             ) {
                 aims.push(Aimable {
                     station,
@@ -4366,7 +4366,7 @@ mod tests {
                 &charts,
                 piece.kind,
                 rect,
-                crate::pieces::berth_turn(piece),
+                crate::pieces::berth_at(piece),
             ) {
                 aims.push(Aimable {
                     station: Station::Standing,

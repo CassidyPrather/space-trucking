@@ -15,7 +15,7 @@ use std::path::PathBuf;
 
 use space_trucking::replay::Recording;
 use space_trucking::sim::room::{CABIN, RoomId};
-use space_trucking::sim::{Cue, InputFrame, Sim, Turn, Vec2};
+use space_trucking::sim::{Cue, InputFrame, Mount, RoomKind, Sim, Surf, Turn, Vec2, cargo};
 // `std::time` on native, `Date.now()` on wasm32, where std's clock is a
 // panic rather than a number. The market hours below ask chrono instead,
 // which the manifest routes the same way for wasm32 (`wasmbind`).
@@ -89,32 +89,43 @@ pub struct FrameInput {
     /// A detach asked for this frame — the door's own amber latch was
     /// clicked. The sim's gangway gates answer; a refusal is a cue.
     pub detach: Option<RoomId>,
-    /// **The hands on the carry's facing this frame**: the wheel, `Ctrl`
-    /// and `Q` (docs/BAY.md, "Cargo turns"). The bridge turns the carry
-    /// by them ([`Bridge::facing`]); the sim only ever hears the facing.
-    pub turning: Turning,
+    /// **The hands on the carry this frame**: the wheel, its two
+    /// modifiers and the carry's keys (docs/BAY.md, "Cargo turns" and
+    /// "Lift"). The bridge turns and lifts the carry by them
+    /// ([`Bridge::facing`], [`Bridge::lift`]); the sim only ever hears the
+    /// facing and the lift.
+    pub hands: Hands,
 }
 
-/// **One frame of turning the carry**, as the hands gave it.
+/// **One frame of the hands on the carry**: turning it and lifting it, as
+/// the hands gave it.
 ///
 /// Gathered by the cabin only while the body roams with a piece in hand
-/// — the menu, a focus and an empty hand all send nothing — and spent by
-/// the bridge on the carry's facing, which it alone holds
-/// ([`Bridge::facing`]).
+/// — the menu, a focus and an empty hand all send nothing — and read off
+/// the binding table, never off a key by name (`crate::keys`). Spent by
+/// the bridge on the carry's facing and lift, which it alone holds.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct Turning {
+pub struct Hands {
     /// How far the wheel rolled, in notches: positive is rolled up, away
     /// from you, which turns the carry counter-clockwise as seen from the
-    /// room. A fine wheel and a touchpad send fractions of a notch, and
-    /// the bridge adds them up until they make one.
+    /// room, or raises it with `Shift` held. A fine wheel and a touchpad
+    /// send fractions of a notch, and the bridge adds them up until they
+    /// make one.
     pub wheel: f32,
-    /// `Ctrl` is held: a notch turns one degree, from wherever the carry
-    /// is, instead of to the next multiple of fifteen.
+    /// `Ctrl` is held: a notch turns one degree from wherever the carry
+    /// is, instead of to the next multiple of fifteen, or with `Shift`
+    /// lifts it one fine unit instead of a sixteenth of a cell.
     pub fine: bool,
-    /// `Q` went down this frame: `1` for one fifteen-degree step the way
-    /// the wheel rolled up turns, `-1` for `Shift+Q`, the other way, and
-    /// `0` for neither.
-    pub key: i8,
+    /// `Shift` is held: the wheel raises and lowers the carry instead of
+    /// turning it.
+    pub lifting: bool,
+    /// The turn keys this frame: `1` for one fifteen-degree step the way
+    /// the wheel rolled up turns, `-1` the other way, `0` for neither or
+    /// both.
+    pub turn: i8,
+    /// The lift keys this frame: `1` for a sixteenth of a cell up off the
+    /// surface, `-1` back toward it, `0` for neither or both.
+    pub lift: i8,
 }
 
 impl Default for FrameInput {
@@ -135,7 +146,7 @@ impl Default for FrameInput {
             menu_reseed: false,
             occupied: CABIN,
             detach: None,
-            turning: Turning::default(),
+            hands: Hands::default(),
         }
     }
 }
@@ -280,9 +291,10 @@ impl Bridge {
             self.clock_check = SAVE_EVERY;
         }
 
-        // The hands turn the carry before the frame is built, so a release
-        // this frame lands at the turn they left it at.
-        self.turn_carry(input.turning);
+        // The hands turn and lift the carry before the frame is built, so
+        // a release this frame lands at the turn and the lift they left it
+        // at.
+        self.work_carry(input.hands, input.pointer);
         let frame = self.input_frame(input);
         // Mute is the shell's business; the sim never hears about it.
         outcome.toggle_mute = input.key_mute || input.menu_mute;
@@ -321,6 +333,7 @@ impl Bridge {
             // only thing the gates learn about where anybody is.
             occupied: input.occupied,
             facing: self.facing(),
+            lift: self.lift(),
             // Which of the pieces under the pointer the press means, as
             // the crosshair met them: the frontend's to know, consulted
             // by the sim only in the press handler.
@@ -367,72 +380,161 @@ impl Bridge {
     pub fn facing(&self) -> Turn {
         match self.sim.held(0) {
             Some(held) if self.carry.piece == Some(held.piece) => self.carry.facing.turn(),
-            _ => lifted_at(&self.sim),
+            _ => lifted_at(&self.sim).0,
+        }
+    }
+
+    /// **The lift the carry is sent at** (`InputFrame::lift`): the
+    /// carry's own, in fine units off its chart, which starts at the held
+    /// piece's own lift when it is lifted, goes wherever the player
+    /// raises or lowers it, and starts again from the surface when the
+    /// carry crosses to a chart of another class (docs/BAY.md, "Lift");
+    /// nought while nothing is held.
+    ///
+    /// The one place the cabin keeps it, beside the facing and for the
+    /// same reason: the release and the preview the ghost is drawn from
+    /// ask with the same lift. A carry the bridge has not seen begin is at
+    /// the piece's own lift until it is raised or lowered.
+    #[must_use]
+    pub fn lift(&self) -> u16 {
+        match self.sim.held(0) {
+            Some(held) if self.carry.piece == Some(held.piece) => self.carry.lift,
+            Some(held) => held.origin.lift(),
+            None => 0,
         }
     }
 
     /// Keep the carry with the piece in hand: a carry that begins starts
-    /// at the turn the piece was lifted at ([`lifted_at`]), and one that
-    /// ends forgets its facing and any wheel travel short of a notch, so
-    /// the next carry starts from its own piece and nothing else.
+    /// at the turn and the lift the piece was lifted at ([`lifted_at`]),
+    /// on the chart it stood on, and one that ends forgets all of it and
+    /// any wheel travel short of a notch, so the next carry starts from
+    /// its own piece and nothing else.
     fn follow(&mut self) {
         let piece = self.sim.held(0).map(|held| held.piece);
         if self.carry.piece != piece {
+            let (turn, lift, chart) = lifted_at(&self.sim);
             self.carry = Carry {
                 piece,
-                facing: Facing::of(lifted_at(&self.sim)),
+                facing: Facing::of(turn),
+                lift,
+                chart,
                 wheel: 0.0,
             };
         }
     }
 
-    /// **Turn the carry by this frame's hands.** Nothing turns while
-    /// nothing is held.
+    /// **Turn and lift the carry by this frame's hands**, aimed at
+    /// `pointer`. Nothing moves while nothing is held.
     ///
-    /// A notch of the wheel turns to the next multiple of fifteen degrees
-    /// its way ([`Facing::stop`]), and with `Ctrl` held one degree
-    /// exactly, from wherever the carry is ([`Facing::by`]); `Q` and
-    /// `Shift+Q` take the plain notch's step. Wheel travel short of a
-    /// whole notch waits for the next frame's.
-    fn turn_carry(&mut self, turning: Turning) {
+    /// First the chart: a carry aimed at a chart of another class than
+    /// the one it was last on — the deck, a wall, the deckhead — starts
+    /// again from that surface, because a height off the deck means
+    /// nothing on a wall ([`Mount::of`]); between two walls, or off every
+    /// net, it keeps its lift.
+    ///
+    /// Then the wheel. A notch turns to the next multiple of fifteen
+    /// degrees its way ([`Facing::stop`]), and with `Ctrl` held one degree
+    /// exactly, from wherever the carry is ([`Facing::by`]). With `Shift`
+    /// held the same notch lifts instead: [`LIFT_STEP`] up off the surface
+    /// for a notch rolled up, and one fine unit with `Ctrl` too. Wheel
+    /// travel short of a whole notch waits for the next frame's. Then the
+    /// keys: a turn key takes the plain notch's step, a lift key the
+    /// plain notch's lift.
+    ///
+    /// The lift is held to the sim's cap for the piece on the chart it is
+    /// aimed at (`cargo::lift_cap`), so a key held past the deckhead
+    /// saves nothing up that a key the other way would have to spend.
+    fn work_carry(&mut self, hands: Hands, pointer: Vec2) {
         self.follow();
-        if self.carry.piece.is_none() {
+        let Some(kind) = self
+            .carry
+            .piece
+            .and_then(|id| self.sim.pieces().iter().find(|piece| piece.id == id))
+            .map(|piece| piece.kind)
+        else {
             return;
+        };
+        if let Some((room, surf)) = self.sim.chart_at(pointer)
+            && let Some(host) = self.sim.rooms().kind(room)
+        {
+            let class = |chart: Option<(RoomKind, Surf)>| chart.map(|(_, surf)| Mount::of(surf));
+            if class(self.carry.chart) != class(Some((host, surf))) {
+                self.carry.lift = 0;
+            }
+            self.carry.chart = Some((host, surf));
         }
-        self.carry.wheel += turning.wheel;
+        self.carry.wheel += hands.wheel;
         let notches = self.carry.wheel.trunc();
         self.carry.wheel -= notches;
         let notches = notches as i64;
-        let facing = &mut self.carry.facing;
-        if turning.fine {
-            *facing = facing.by(notches * Facing::DEGREE);
-        } else if notches != 0 {
-            // Past the first, every step starts on a stop, and twenty-four
-            // of them from a stop are a whole turn back to it.
-            for _ in 0..=(notches.unsigned_abs() - 1) % 24 {
-                *facing = facing.stop(notches.signum());
+        let mut lift = i64::from(self.carry.lift);
+        if hands.lifting {
+            lift += notches * if hands.fine { 1 } else { i64::from(LIFT_STEP) };
+        } else {
+            let facing = &mut self.carry.facing;
+            if hands.fine {
+                *facing = facing.by(notches * Facing::DEGREE);
+            } else if notches != 0 {
+                // Past the first, every step starts on a stop, and
+                // twenty-four of them from a stop are a whole turn back
+                // to it.
+                for _ in 0..=(notches.unsigned_abs() - 1) % 24 {
+                    *facing = facing.stop(notches.signum());
+                }
             }
         }
-        if turning.key != 0 {
-            *facing = facing.stop(i64::from(turning.key.signum()));
+        if hands.turn != 0 {
+            let facing = &mut self.carry.facing;
+            *facing = facing.stop(i64::from(hands.turn.signum()));
         }
+        lift += i64::from(hands.lift.signum()) * i64::from(LIFT_STEP);
+        let cap = self
+            .carry
+            .chart
+            .map_or(0, |(host, surf)| cargo::lift_cap(host, kind, surf));
+        self.carry.lift = u16::try_from(lift.clamp(0, i64::from(cap))).unwrap_or(0);
     }
 }
 
-/// **The turn a carry starts at**: the held piece's own — the turn it
-/// was lifted at, which the sim keeps as the carry's origin — or the
-/// upright frame while nothing is held.
-fn lifted_at(sim: &Sim) -> Turn {
-    sim.held(0)
-        .map_or(Turn::ZERO, |held| held.origin.spot().turn)
+/// **A lift key's step, and a plain notch's with `Shift`**: a sixteenth
+/// of a cell, about 34 mm, in the sim's fine units. The grid's old
+/// quantum, which a hand can see — the right size for a step a player
+/// asks for one press at a time; `Ctrl` takes a single fine unit, about
+/// 2 mm, for the rest (docs/BAY.md, "Lift").
+pub const LIFT_STEP: u16 = cargo::FINE / 16;
+
+/// **Where a carry starts**: the held piece's own turn and lift — the
+/// berth it was lifted from, which the sim keeps as the carry's origin —
+/// and the chart that berth stands on; the upright frame, the surface and
+/// no chart while nothing is held.
+fn lifted_at(sim: &Sim) -> (Turn, u16, Option<(RoomKind, Surf)>) {
+    let Some(held) = sim.held(0) else {
+        return (Turn::ZERO, 0, None);
+    };
+    let origin = held.origin;
+    let chart = sim
+        .pieces()
+        .iter()
+        .find(|piece| piece.id == held.piece)
+        .and_then(|piece| {
+            let host = sim.rooms().kind(origin.room())?;
+            let spot = origin.spot();
+            let foot = cargo::Foot::of(host, piece.kind, spot.x, spot.y, spot.turn)?;
+            Some((host, foot.chart(host)?))
+        });
+    (origin.spot().turn, origin.lift(), chart)
 }
 
 /// **The carry, as the frontend keeps it**: which piece is in hand, the
-/// facing it is carried at, and the wheel's travel short of a notch.
+/// facing and the lift it is carried at, the chart it was last aimed at
+/// (whose class decides whether the lift is kept, and whose cap holds
+/// it), and the wheel's travel short of a notch.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 struct Carry {
     piece: Option<u32>,
     facing: Facing,
+    lift: u16,
+    chart: Option<(RoomKind, Surf)>,
     wheel: f32,
 }
 
@@ -543,8 +645,9 @@ fn local_night() -> bool {
     !(360..1410).contains(&minutes)
 }
 
-/// Where the cabin keeps a data file: the working directory.
-fn save_path(name: &str) -> PathBuf {
+/// Where the cabin keeps a data file: the working directory. The save,
+/// the tape and the carry's key bindings (`crate::keys`) all live here.
+pub fn save_path(name: &str) -> PathBuf {
     PathBuf::from(name)
 }
 
@@ -597,7 +700,7 @@ mod tests {
             menu_reseed: false,
             occupied: CABIN,
             detach: None,
-            turning: Turning::default(),
+            hands: Hands::default(),
         });
         assert!(frame.press && frame.held && !frame.release && frame.shift);
         // The aim rides through untouched: the sim decides what it means.
@@ -1092,7 +1195,7 @@ mod tests {
             menu_reseed: false,
             occupied: CABIN,
             detach: None,
-            turning: Turning::default(),
+            hands: Hands::default(),
         };
 
         // Press on Jupiter's live tank position: the sim arms the course.
@@ -1233,34 +1336,34 @@ mod tests {
 
     /// **The carry's facing is the bridge's own, and the drop lands on
     /// it.** A carry starts at the piece's own turn; the hands turn it —
-    /// half a notch and half again are one, `Ctrl` turns degrees, `Q`
-    /// and its reverse take the plain notch — and nothing turns while the
-    /// hand is empty. The release lands the piece at the facing the
+    /// half a notch and half again are one, `Ctrl` turns degrees, and the
+    /// turn keys take the plain notch either way — and nothing turns while
+    /// the hand is empty. The release lands the piece at the facing the
     /// frame carried, and the piece lifted again starts its carry there.
     #[test]
     fn the_hands_turn_the_carry_and_the_drop_lands_turned() {
         let (mut bridge, id, home) = lifting();
-        let own = lifted_at(&bridge.sim);
+        let own = lifted_at(&bridge.sim).0;
         assert_eq!(
             bridge.facing(),
             own,
             "a carry starts at the piece's own turn"
         );
-        let carry = |bridge: &mut Bridge, turning: Turning| {
+        let carry = |bridge: &mut Bridge, hands: Hands| {
             bridge.frame(
                 0.0,
                 &FrameInput {
                     pointer: home,
                     held: true,
-                    turning,
+                    hands,
                     ..FrameInput::default()
                 },
             );
             bridge.facing()
         };
-        let wheel = |wheel: f32| Turning {
+        let wheel = |wheel: f32| Hands {
             wheel,
-            ..Turning::default()
+            ..Hands::default()
         };
         let next = Facing::of(own).stop(1).turn();
         assert_eq!(
@@ -1271,30 +1374,37 @@ mod tests {
         assert_eq!(carry(&mut bridge, wheel(0.5)), next, "and half again is");
         let fine = carry(
             &mut bridge,
-            Turning {
+            Hands {
                 wheel: -3.0,
                 fine: true,
-                ..Turning::default()
+                ..Hands::default()
             },
         );
         assert_eq!(fine, Facing::of(next).by(-3 * Facing::DEGREE).turn());
-        let q = |key: i8| Turning {
-            key,
-            ..Turning::default()
+        let key = |turn: i8| Hands {
+            turn,
+            ..Hands::default()
         };
-        assert_eq!(carry(&mut bridge, q(1)), next, "Q is the plain notch up");
-        assert_eq!(carry(&mut bridge, q(-1)), own, "and Shift+Q the notch back");
+        assert_eq!(
+            carry(&mut bridge, key(1)),
+            next,
+            "a turn key is the plain notch up"
+        );
+        assert_eq!(
+            carry(&mut bridge, key(-1)),
+            own,
+            "and the other one the notch back"
+        );
         let back = carry(
             &mut bridge,
-            Turning {
+            Hands {
                 wheel: 7.0,
                 fine: true,
-                ..Turning::default()
+                ..Hands::default()
             },
         );
         assert_eq!(back, Facing::of(own).by(7 * Facing::DEGREE).turn());
         assert!(!back.square(), "the carry was meant to end up off square");
-
         // Let go where it was lifted from: it lands at the turn it was
         // carried at, not the one it was lifted at.
         bridge.frame(
@@ -1333,5 +1443,122 @@ mod tests {
         );
         assert_eq!(bridge.sim.held(0).map(|held| held.piece), Some(id));
         assert_eq!(bridge.facing(), back, "a piece lifted again lost its turn");
+    }
+    /// **The carry's lift is the bridge's own, held to the cap, and the
+    /// drop lands on it** (docs/BAY.md, "Lift"). A carry starts at the
+    /// piece's own lift; a lift key and a `Shift` notch each raise it a
+    /// sixteenth of a cell and `Ctrl` + `Shift` a fine unit, half a notch
+    /// waiting for its other half as a turn's does; the other key and a
+    /// notch rolled down lower it; it never goes under the surface nor
+    /// over the sim's cap for the piece on the chart it is aimed at, so a
+    /// key held past the deckhead saves nothing up. Aimed at a chart of
+    /// another class it starts again from the surface, and the release
+    /// lands the piece at the lift the frame carried.
+    #[test]
+    fn the_hands_lift_the_carry_to_the_cap_and_the_drop_lands_lifted() {
+        let (mut bridge, id, home) = lifting();
+        assert_eq!(bridge.lift(), 0, "a carry starts at the piece's own lift");
+        let carry = |bridge: &mut Bridge, pointer: Vec2, hands: Hands| {
+            bridge.frame(
+                0.0,
+                &FrameInput {
+                    pointer,
+                    held: true,
+                    hands,
+                    ..FrameInput::default()
+                },
+            );
+            bridge.lift()
+        };
+        let key = |lift: i8| Hands {
+            lift,
+            ..Hands::default()
+        };
+        let shift = |wheel: f32, fine: bool| Hands {
+            wheel,
+            fine,
+            lifting: true,
+            ..Hands::default()
+        };
+        assert_eq!(
+            carry(&mut bridge, home, key(1)),
+            LIFT_STEP,
+            "a lift key is a sixteenth"
+        );
+        assert_eq!(carry(&mut bridge, home, shift(1.0, false)), 2 * LIFT_STEP);
+        assert_eq!(carry(&mut bridge, home, shift(0.5, true)), 2 * LIFT_STEP);
+        assert_eq!(
+            carry(&mut bridge, home, shift(0.5, true)),
+            2 * LIFT_STEP + 1,
+            "Ctrl and Shift lift a fine unit a notch"
+        );
+        let turned = bridge.facing();
+        assert_eq!(carry(&mut bridge, home, shift(-1.0, true)), 2 * LIFT_STEP);
+        assert_eq!(bridge.facing(), turned, "a Shift notch turned the carry");
+        assert_eq!(carry(&mut bridge, home, key(-1)), LIFT_STEP);
+        assert_eq!(
+            carry(&mut bridge, home, shift(-5.0, false)),
+            0,
+            "under the deck"
+        );
+
+        let held = bridge.sim.held(0).expect("in hand").piece;
+        let kind = bridge
+            .sim
+            .pieces()
+            .iter()
+            .find(|piece| piece.id == held)
+            .expect("aboard")
+            .kind;
+        let cap = cargo::lift_cap(RoomKind::Cabin, kind, Surf::Floor);
+        assert_eq!(
+            carry(&mut bridge, home, shift(200.0, false)),
+            cap,
+            "past the cap"
+        );
+        assert_eq!(
+            carry(&mut bridge, home, key(-1)),
+            cap - LIFT_STEP,
+            "the keys held past the cap saved something up"
+        );
+
+        // Off every net the lift is kept; on a wall it starts again.
+        assert_eq!(carry(&mut bridge, POINTER_PARKED, key(0)), cap - LIFT_STEP);
+        let (cx, cy) = RoomKind::Cabin.wall_cell(0, 3, 2);
+        let wall = space_trucking::sim::layout::cell_rect(CABIN, cx, cy);
+        let wall = Vec2::new(wall.w.mul_add(0.5, wall.x), wall.h.mul_add(0.5, wall.y));
+        assert_eq!(
+            bridge.sim.chart_at(wall).map(|(_, surf)| surf),
+            Some(Surf::Aft)
+        );
+        assert_eq!(
+            carry(&mut bridge, wall, key(0)),
+            0,
+            "a deck's lift went up the wall"
+        );
+        assert_eq!(
+            carry(&mut bridge, home, key(1)),
+            LIFT_STEP,
+            "nor came back down it"
+        );
+
+        // The release lands it at the lift the frame carried.
+        bridge.frame(
+            0.0,
+            &FrameInput {
+                pointer: home,
+                release: true,
+                ..FrameInput::default()
+            },
+        );
+        let landed = bridge
+            .sim
+            .pieces()
+            .iter()
+            .find(|piece| piece.id == id)
+            .map(|piece| piece.loc)
+            .expect("aboard");
+        assert_eq!(landed.lift(), LIFT_STEP, "the drop forgot its lift");
+        assert_eq!(bridge.lift(), 0, "an empty hand has no lift");
     }
 }

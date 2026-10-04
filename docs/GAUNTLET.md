@@ -325,6 +325,20 @@ and cannot work. The finding names the body blocking the nearest viable
 stance, because an "unreachable" with no culprit is a puzzle rather than
 a work order.
 
+> Since *Lift, and the keys* (BAY.md): every berth is asked twice, on
+> its chart and lifted as far as the room lets the kind that sets its
+> air go (`cargo::lift_cap`) — raised to the deckhead, lowered from it to
+> the deck, carried out from its wall to the far one — with the probe on
+> the lifted body's near face, because a body a player has raised is a
+> body a player has to be able to take back down. A finding at the lift
+> says "(lifted to its cap)". Its first run found nothing, and
+> `gauntlet::tests::every_berth_is_asked_lifted_and_its_cap_stops_inside_the_room`
+> holds the sample to all three classes of chart and the sim's cap,
+> stated in cells, to the box the cabin draws the room in. `berth-clear`
+> and `berth-seen` are asked on the chart alone: what a room hangs in the
+> air above its own deck is no more a clip with a lifted crate than one
+> crate is with another (*Cargo stops colliding*).
+
 ### `coplanar-faces` — no two drawn faces share a plane and a facing
 
 The general z-fight detector, and the family that finds the most. In the
@@ -362,6 +376,16 @@ recognising them is most of the fix:
 3. **A part run out flush with its parent's own edge.** The cure is to
    stop being flush: straddle the edge (which is what a door lining is
    for), or begin somewhere the parent does not.
+
+> Since *Lift, and the keys* (BAY.md): the carried ghost is asked too,
+> by this family's own arithmetic (`shared_faces`), in a test rather
+> than a sweep of the rooms
+> (`gauntlet::tests::no_ghost_fights_its_patch_or_its_surface`). The
+> ghost stands exactly where the piece lands, so it cannot move out of
+> anything's way; the footprint patch and its slash ride the berth's
+> lift instead, and every body every kind draws, on every chart class it
+> may take, shares no plane with them — nor with its own chart at any
+> fine unit of lift the largest room allows.
 
 ### `prop-points` — a rig's named features point where their names say
 
@@ -536,7 +560,9 @@ body drawn wholly above its origin sits wholly under it. The hover reads
 the berth's own stand-off now (`pieces::hover_pose`), so the ghost
 promises the berth's position as well as its turn. (Since *The grid comes
 out* the ghost stands on the very berth `Sim::drop_preview` names,
-`pieces::ghost_pose`, rather than at the struck point.) And the sweep that
+rather than at the struck point; since *Lift, and the keys* it is that
+berth's own `pieces::site_on` pose, and `hover_pose` and `ghost_pose`
+are gone.) And the sweep that
 aims at each corner of a drawn body drew the aim back toward the rig's
 origin, which is the body's own middle only while the body is centred
 there.
@@ -794,6 +820,13 @@ as a berth filled.
 > 362, and wears 96% of the true one, four millimetres short of 96% of
 > the rounded. The first clause needs no allowance, since the rounding
 > is symmetric and the middle is exact.
+
+> Since *Lift, and the keys* (BAY.md): every whole-cell berth at the
+> turn the game gives a body there is planned lifted to its cap as well,
+> on deck, wall and deckhead, and must read centred and full on the
+> same plan — a lift carries a body along its chart's normal and
+> nowhere else. `berth-turned` reads the same lifted plans. Neither
+> found anything.
 
 ### `berth-turned` — a rig stands up and shows the room its face
 

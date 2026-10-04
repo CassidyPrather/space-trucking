@@ -39,7 +39,7 @@ use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 /// or tape starts a new run"). Bump it whenever what a line MEANS
 /// changes, not only its grammar: a save read under the wrong rules
 /// loads a board the player never built.
-const MAGIC: &str = "STV23";
+const MAGIC: &str = "STV24";
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -218,8 +218,14 @@ pub(crate) fn serialize(sim: &Sim) -> String {
             u8::from(piece.gnawed)
         );
         match piece.loc {
-            Loc::Hold { room, x, y, turn } => {
-                let _ = writeln!(out, " hold {room} {x} {y} {}", turn.0);
+            Loc::Hold {
+                room,
+                x,
+                y,
+                turn,
+                lift,
+            } => {
+                let _ = writeln!(out, " hold {room} {x} {y} {} {lift}", turn.0);
             }
             Loc::Laid { room, x, y, turn } => {
                 let _ = writeln!(out, " laid {room} {x} {y} {}", turn.0);
@@ -661,7 +667,10 @@ fn parse_pieces(reader: &mut Reader<'_>, rooms: &Rooms) -> Result<(Vec<Piece>, u
 }
 
 /// A piece's location tokens, bounds-checked so later indexing never
-/// panics: a room, the footprint's centre in fine units, and its turn.
+/// panics: a room, the footprint's centre in fine units, and its turn —
+/// and, for a standing berth, its lift off its chart, which may not
+/// exceed the cap for its kind on that chart (`cargo::lift_cap`): a body
+/// through the deckhead is a save that lies.
 ///
 /// Each line is checked on its own, because nothing a line says is about
 /// another line any more: there are no cubbies to point at a cabinet
@@ -703,8 +712,16 @@ fn parse_loc<'a>(
     };
     match tokens.next() {
         Some("hold") => {
-            let berth = spot(reader, tokens)?.hold();
-            if cargo::berth_tile(rooms, kind, berth).is_none_or(|tile| tile == Tile::Threshold) {
+            let spot = spot(reader, tokens)?;
+            let lift: u16 = reader.token(tokens.next())?;
+            let host = rooms.kind(spot.room).ok_or_else(|| reader.err())?;
+            let cap = cargo::Foot::of(host, kind, spot.x, spot.y, spot.turn)
+                .and_then(|foot| foot.chart(host))
+                .map_or(0, |surf| cargo::lift_cap(host, kind, surf));
+            let berth = spot.lifted(lift);
+            if lift > cap
+                || cargo::berth_tile(rooms, kind, berth).is_none_or(|tile| tile == Tile::Threshold)
+            {
                 return Err(reader.err());
             }
             Ok(berth)
@@ -825,6 +842,7 @@ mod tests {
     use super::super::{InputFrame, TICK_DT, Vec2, layout};
     use super::*;
     use crate::sim::cargo::{FINE, fine};
+    use crate::sim::room::Surf;
 
     /// The cabin's deck cell `(i, j)`, as a cell of its net. Every cell
     /// below is named by the place in the room it is, so a wall that
@@ -1028,7 +1046,12 @@ mod tests {
             .expect("a fresh save has pieces")
             .to_owned();
         // Piece fields, too: a berth that runs off the net, a turn past a
-        // whole one or below none, and a berth with no turn at all.
+        // whole one or below none, a berth with no turn at all, and a
+        // lift with no sign, no fraction, nothing past a `u16` and
+        // nothing past the cap for its kind on its chart: a vial a course
+        // tall stands three courses off the deck at most, and the
+        // previous version's line, which carried no lift, is not this
+        // version's line.
         let middle = |(x, y): (u8, u8)| format!("{} {}", fine(x) + FINE / 2, fine(y) + FINE / 2);
         let on_deck = middle(deck(1, 1));
         let (cols, rows) = RoomKind::Cabin.grid();
@@ -1039,18 +1062,24 @@ mod tests {
             fine(cols) - FINE / 8,
             fine(deck(1, 1).1) + FINE / 2
         );
+        let past = cargo::lift_cap(RoomKind::Cabin, Kind::PerfumeVial, Surf::Floor) + 1;
         for bad in [
-            format!("piece 0 99 0 0 hold 0 {on_deck} 0"),
-            format!("piece 0 0 0 0 hold 0 {off_net} 0"),
-            format!("piece 0 0 0 0 hold 9 {on_deck} 0"),
-            format!("piece 0 0 0 0 hold 0 {doorway} 0"),
+            format!("piece 0 99 0 0 hold 0 {on_deck} 0 0"),
+            format!("piece 0 0 0 0 hold 0 {off_net} 0 0"),
+            format!("piece 0 0 0 0 hold 9 {on_deck} 0 0"),
+            format!("piece 0 0 0 0 hold 0 {doorway} 0 0"),
             "piece 0 0 0 0 nowhere 0".to_owned(),
-            format!("piece 0 0 0 2 hold 0 {on_deck} 0"),
-            format!("piece 0 0 0 gnawed hold 0 {on_deck} 0"),
-            format!("piece 0 0 0 0 hold 0 {on_deck} 65536"),
-            format!("piece 0 0 0 0 hold 0 {on_deck} -1"),
+            format!("piece 0 0 0 2 hold 0 {on_deck} 0 0"),
+            format!("piece 0 0 0 gnawed hold 0 {on_deck} 0 0"),
+            format!("piece 0 0 0 0 hold 0 {on_deck} 65536 0"),
+            format!("piece 0 0 0 0 hold 0 {on_deck} -1 0"),
             format!("piece 0 0 0 0 hold 0 {on_deck}"),
-            format!("piece 0 0 0 0 hold 0 {overhang} 0"),
+            format!("piece 0 0 0 0 hold 0 {overhang} 0 0"),
+            format!("piece 0 0 0 0 hold 0 {on_deck} 0"),
+            format!("piece 0 0 0 0 hold 0 {on_deck} 0 -1"),
+            format!("piece 0 0 0 0 hold 0 {on_deck} 0 1.5"),
+            format!("piece 0 0 0 0 hold 0 {on_deck} 0 65536"),
+            format!("piece 0 0 0 0 hold 0 {on_deck} 0 {past}"),
         ] {
             let mangled = docked.replacen(&piece_line, &bad, 1);
             assert!(Sim::from_save(&mangled).is_err(), "{bad:?} parsed anyway");
@@ -1101,7 +1130,7 @@ mod tests {
         }
         sim.next_piece += 6;
         let save = sim.save_string();
-        let at = format!("{} {} {} {}", spot.room, spot.x, spot.y, spot.turn.0);
+        let at = format!("{} {} {} {} 0", spot.room, spot.x, spot.y, spot.turn.0);
         (sim, save, cabinet, at)
     }
 
@@ -1130,7 +1159,7 @@ mod tests {
     #[test]
     fn a_save_from_any_other_version_is_refused() {
         let save = Sim::new(9).save_string();
-        for header in ["STV4", "STV21", "STV22", "STV24"] {
+        for header in ["STV4", "STV22", "STV23", "STV25"] {
             assert_eq!(
                 Sim::from_save(&save.replacen(MAGIC, header, 1)).err(),
                 Some(SaveError::UnsupportedVersion),
@@ -1173,16 +1202,72 @@ mod tests {
             super::super::placement_legal(sim.rooms(), sim.pieces(), id, Kind::PerfumeVial, spot),
             "the fixture's berth is a legal one"
         );
-        sim.pieces[vial].loc = spot.hold();
+        sim.pieces[vial].loc = spot.lifted(37);
         let save = sim.save_string();
         assert!(
             save.contains(&format!("piece {id} 0 "))
-                && save.contains(&format!(" hold 0 {} {} 9362\n", spot.x, spot.y)),
-            "the line carries the fine berth and its turn"
+                && save.contains(&format!(" hold 0 {} {} 9362 37\n", spot.x, spot.y)),
+            "the line carries the fine berth, its turn and its lift"
         );
         let restored = Sim::from_save(&save).expect("an odd board loads");
         assert_eq!(restored.pieces, sim.pieces);
         assert_eq!(restored.save_string(), save);
+    }
+
+    /// **A lift survives the trip on every class of chart, up to the cap
+    /// and not a unit past it** (docs/BAY.md, "Lift"): a vial on top of
+    /// the room, a painting carried out from its wall to the far side of
+    /// the room, and a pendant lowered to the deck all come back where
+    /// they stood, and the same lines a unit higher are a body through
+    /// the room's own fabric, which no board the game builds can hold.
+    #[test]
+    fn a_lift_round_trips_to_the_cap_and_no_further() {
+        for (kind, at) in [
+            (Kind::PerfumeVial, deck(2, 2)),
+            (Kind::Painting, wall(0, 2, 1)),
+            (Kind::CeilingLamp, RoomKind::Cabin.deckhead_cell(2, 2)),
+        ] {
+            let mut sim = Sim::new(3);
+            let (spot, _) = tokens(kind, at);
+            let surf = cargo::Foot::of(RoomKind::Cabin, kind, spot.x, spot.y, spot.turn)
+                .and_then(|foot| foot.chart(RoomKind::Cabin))
+                .expect("on a chart");
+            let cap = cargo::lift_cap(RoomKind::Cabin, kind, surf);
+            assert!(cap > 0, "{kind:?} has nowhere to be lifted to");
+            let id = sim.next_piece;
+            sim.pieces.push(Piece {
+                id,
+                kind,
+                variant: 0,
+                gnawed: false,
+                loc: spot.lifted(cap),
+            });
+            sim.next_piece += 1;
+            let save = sim.save_string();
+            let restored = Sim::from_save(&save).expect("a lifted board loads");
+            assert_eq!(restored.pieces, sim.pieces, "{kind:?} came back elsewhere");
+            let line = format!(" {} {cap}\n", spot.turn.0);
+            let past = format!(" {} {}\n", spot.turn.0, cap + 1);
+            let at_cap = save
+                .lines()
+                .find(|line| line.starts_with(&format!("piece {id} ")))
+                .expect("the lifted line")
+                .to_owned();
+            assert!(
+                save.contains(&line),
+                "{kind:?}'s line carries no cap: {at_cap}"
+            );
+            let mangled = save.replacen(
+                &format!("{at_cap}\n"),
+                &format!("{at_cap}\n").replace(&line, &past),
+                1,
+            );
+            assert_ne!(mangled, save, "the lift was not where the line said");
+            assert!(
+                Sim::from_save(&mangled).is_err(),
+                "{kind:?} a unit past its cap loaded"
+            );
+        }
     }
 
     #[test]
@@ -1205,7 +1290,7 @@ mod tests {
             (
                 vial_line,
                 format!(
-                    "piece {} 0 0 0 hold {CABIN} {} {} 0",
+                    "piece {} 0 0 0 hold {CABIN} {} {} 0 0",
                     cabinet + 1,
                     fine(doorway.0) + FINE / 2,
                     fine(doorway.1) + FINE / 2

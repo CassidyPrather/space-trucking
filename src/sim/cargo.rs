@@ -171,10 +171,27 @@ pub enum Mount {
 /// (`cabin::gauntlet`, `rig-seated`).
 #[must_use]
 pub const fn mount_accepts(mount: Mount, surf: Surf) -> bool {
-    match mount {
-        Mount::Floor => matches!(surf, Surf::Floor),
-        Mount::Ceiling => matches!(surf, Surf::Ceiling),
-        Mount::Wall => matches!(surf, Surf::Aft | Surf::Port | Surf::Starboard | Surf::Front),
+    matches!(
+        (mount, Mount::of(surf)),
+        (Mount::Floor, Mount::Floor)
+            | (Mount::Ceiling, Mount::Ceiling)
+            | (Mount::Wall, Mount::Wall)
+    )
+}
+
+impl Mount {
+    /// **The class of chart `surf`**: the deck, the deckhead, or a wall,
+    /// any of the four. [`mount_accepts`] asks a kind's mount of it, and a
+    /// carry's lift is kept from one chart to another of the same class
+    /// and starts again from the surface across two (docs/BAY.md, "Lift"):
+    /// a height off the deck means nothing on a wall.
+    #[must_use]
+    pub const fn of(surf: Surf) -> Self {
+        match surf {
+            Surf::Floor => Self::Floor,
+            Surf::Ceiling => Self::Ceiling,
+            Surf::Aft | Surf::Port | Surf::Starboard | Surf::Front => Self::Wall,
+        }
     }
 }
 
@@ -328,6 +345,21 @@ impl Kind {
         }
     }
 
+    /// **How far a body of this kind reaches off a chart of class
+    /// `surf`**, in cells along the chart's normal: the one of its three
+    /// extents that [`Kind::face_on`] leaves over. Its height, standing on
+    /// the deck or hanging from the deckhead, and its depth out of a wall.
+    /// What [`lift_cap`] takes off the room's section, so a lifted body
+    /// stops where its far side meets the room's.
+    #[must_use]
+    pub const fn proud(self, surf: Surf) -> u8 {
+        let (_, deep, tall) = self.extent();
+        match surf {
+            Surf::Floor | Surf::Ceiling => tall,
+            Surf::Aft | Surf::Front | Surf::Port | Surf::Starboard => deep,
+        }
+    }
+
     /// Stowage constraint, if any.
     #[must_use]
     pub const fn tag(self) -> Option<Tag> {
@@ -469,15 +501,29 @@ impl Kind {
 /// centre is the anchor because it is the one point of a footprint no
 /// turn moves: a top-left corner is somewhere else at every angle. The
 /// footprint itself is still whole cells in size ([`Foot`]).
+///
+/// **And a standing body has a height off its surface** (docs/BAY.md,
+/// "Lift"). `lift` is how far a berth stands off its chart, in [`FINE`]
+/// units along the chart's normal and away from it into the room: up off
+/// the deck, down from the deckhead, out from a wall. It is the third
+/// coordinate a vase needs to stand on a cabinet's top now that nothing
+/// stores anything, and it is a TASTE coordinate: the sim stores it,
+/// saves it, sends it and caps it ([`lift_cap`]), and no rule reads it.
+/// The arbiter is asked about the plane ([`Loc::spot`]), so light, the
+/// volatile spacing and every other ruling stay what they were on the
+/// ground under the body. A laid covering has no lift: a coat is flush
+/// with what it coats.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Loc {
     /// Standing in a room: the footprint's centre, in fine units of the
-    /// room's net, and the body's turn on its chart.
+    /// room's net, the body's turn on its chart, and how far it stands
+    /// off that chart into the room.
     Hold {
         room: RoomId,
         x: u16,
         y: u16,
         turn: Turn,
+        lift: u16,
     },
     /// Laid into a room centred on `(x, y)`, in fine units, at `turn`:
     /// the dressing layer. Coexists with occupancy over the same ground
@@ -500,13 +546,26 @@ impl Loc {
         }
     }
 
-    /// The room position this berth names, whichever layer it lies in.
+    /// The room position this berth names, whichever layer it lies in:
+    /// the plane, and nothing of the [`Loc::lift`], because the plane is
+    /// all an arbiter is asked about.
     #[must_use]
     pub const fn spot(self) -> Spot {
         match self {
-            Self::Hold { room, x, y, turn } | Self::Laid { room, x, y, turn } => {
-                Spot { room, x, y, turn }
+            Self::Hold {
+                room, x, y, turn, ..
             }
+            | Self::Laid { room, x, y, turn } => Spot { room, x, y, turn },
+        }
+    }
+
+    /// How far this berth stands off its chart, in [`FINE`] units: a
+    /// standing body's own lift, and nothing for a laid covering.
+    #[must_use]
+    pub const fn lift(self) -> u16 {
+        match self {
+            Self::Hold { lift, .. } => lift,
+            Self::Laid { .. } => 0,
         }
     }
 }
@@ -527,14 +586,24 @@ pub struct Spot {
 }
 
 impl Spot {
-    /// This spot as a berth standing in its room.
+    /// This spot as a berth standing on its chart: no lift, which is
+    /// where the game sets down everything it places itself.
     #[must_use]
     pub const fn hold(self) -> Loc {
+        self.lifted(0)
+    }
+
+    /// This spot as a berth standing `lift` [`FINE`] units off its chart
+    /// (docs/BAY.md, "Lift"). Only a player's carry ever asks for one
+    /// above the chart, and the drop has already held it to the cap.
+    #[must_use]
+    pub const fn lifted(self, lift: u16) -> Loc {
         Loc::Hold {
             room: self.room,
             x: self.x,
             y: self.y,
             turn: self.turn,
+            lift,
         }
     }
 
@@ -553,10 +622,18 @@ impl Spot {
     /// otherwise — the one layer each kind has.
     #[must_use]
     pub const fn berth(self, kind: Kind) -> Loc {
+        self.berth_at(kind, 0)
+    }
+
+    /// The berth `kind` takes here `lift` off its chart: a standing body
+    /// [`Spot::lifted`], and a covering laid flush whatever it is asked,
+    /// because a coat has no height to stand at.
+    #[must_use]
+    pub const fn berth_at(self, kind: Kind, lift: u16) -> Loc {
         if kind.covering() {
             self.laid()
         } else {
-            self.hold()
+            self.lifted(lift)
         }
     }
 }
@@ -581,6 +658,33 @@ pub const FINE: u16 = 256;
 /// way, and either side of the half. Deterministic, so a failure names
 /// the same berth every run.
 pub const FRACTIONS: [u16; 5] = [0, 1, FINE / 2 - 1, FINE / 2, FINE - 1];
+
+/// **The highest a body of `kind` may stand off chart `surf` of `host`**,
+/// in [`FINE`] units.
+///
+/// The room's section off that chart ([`RoomKind::section`]) less the
+/// body's own reach off it ([`Kind::proud`]), so a lifted body stays
+/// inside the room's box. A
+/// wardrobe raised as far as it goes meets the deckhead with its top, a
+/// pendant lowered all the way stands on the deck, and a painting carried
+/// out from its wall stops with its face against the wall across the
+/// room. A covering's is nought: a coat is flush with what it coats.
+///
+/// **The one statement of the cap** (docs/BAY.md, "Lift"). The drop holds
+/// a carry's lift to it (`Sim::drop_preview`, the release's own
+/// resolution), a save refuses a berth past it, and a frontend asks it so
+/// the lift it keeps never climbs where the drop will not follow. Whole
+/// cells, because a room's section and a kind's extent both are.
+#[must_use]
+pub const fn lift_cap(host: RoomKind, kind: Kind, surf: Surf) -> u16 {
+    let room = host.section(surf);
+    let body = kind.proud(surf);
+    if kind.covering() || room <= body {
+        0
+    } else {
+        (room - body) as u16 * FINE
+    }
+}
 
 /// The fine coordinate of cell `cell`'s top-left edge.
 #[must_use]
@@ -1506,7 +1610,10 @@ pub fn placement_check(
         // Two volatile pieces keep half a cell of clear air between them,
         // straight across at whatever angle either stands. Without a
         // buffer a unit of daylight would satisfy "not touching", and the
-        // rule would be a formality.
+        // rule would be a formality. **The air is measured in plan**, at
+        // whatever lift either stands: a lift is taste and no rule reads
+        // it (docs/BAY.md, "Lift"), so a canister raised over another is
+        // as near it as the ground under the two says.
         if volatile
             && at == spot.room
             && matches!(other.kind.tag(), Some(Tag::Volatile))
@@ -2017,6 +2124,12 @@ pub fn lit_adjacent(host: RoomKind, pieces: &[Piece], room: RoomId, x: u8, y: u8
 /// reads through this one predicate; the well-lit-art price bonus
 /// deliberately does not on the offer area (a coat is ambiance, not
 /// gallery lighting).
+///
+/// **Light reaches in plan.** A lift is taste and no rule reads it
+/// (docs/BAY.md, "Lift"): a lamp lifted onto a cabinet lights what is
+/// around it on the ground under it, as it did standing there, and a
+/// crate raised to the deckhead over a lamp is as lit as the ground it
+/// stands over.
 ///
 /// `host` is the room's own kind, because a lamp's footprint is a
 /// question about the chart it stands on ([`Foot::of`]) and the caller
@@ -2647,6 +2760,7 @@ mod tests {
                 x,
                 y,
                 turn,
+                lift: 0,
             }
         };
         let owned = |loc| player_owned(&rooms, Kind::PerfumeVial, loc);
@@ -2665,6 +2779,41 @@ mod tests {
         assert!(owned(
             cell(Kind::PerfumeVial, deck(1, 1)).expect("aboard").hold()
         ));
+    }
+
+    /// **A lift stops where the body meets the far side of the room**
+    /// (docs/BAY.md, "Lift"): the room's section off the chart, less the
+    /// body's own reach off it. A wardrobe two courses tall is raised two
+    /// courses and its top is at the deckhead; a pendant a course deep is
+    /// lowered three and stands on the deck; a painting is carried out
+    /// from the aft wall to a cell short of the front one, and from a
+    /// flank to a cell short of the other. A covering is flush. And for
+    /// every kind on every chart of every room, the cap and the body make
+    /// the room exactly.
+    #[test]
+    fn a_lift_stops_where_the_body_meets_the_far_side_of_the_room() {
+        let (w, h) = RoomKind::Cabin.floor();
+        let cells = |n: u8| u16::from(n) * FINE;
+        let cabin = |kind, surf| lift_cap(RoomKind::Cabin, kind, surf);
+        assert_eq!(cabin(Kind::Cabinet, Surf::Floor), cells(COURSES - 2));
+        assert_eq!(cabin(Kind::CeilingLamp, Surf::Ceiling), cells(COURSES - 1));
+        assert_eq!(cabin(Kind::Painting, Surf::Aft), cells(h - 1));
+        assert_eq!(cabin(Kind::Painting, Surf::Front), cells(h - 1));
+        assert_eq!(cabin(Kind::Painting, Surf::Port), cells(w - 1));
+        assert_eq!(cabin(Kind::Painting, Surf::Starboard), cells(w - 1));
+        assert_eq!(cabin(Kind::Rug, Surf::Floor), 0);
+        assert_eq!(cabin(Kind::LuminousPaint, Surf::Aft), 0);
+        for host in crate::sim::room::ROOM_KINDS {
+            for kind in Kind::ALL.into_iter().filter(|kind| !kind.covering()) {
+                for surf in Surf::ALL {
+                    assert_eq!(
+                        lift_cap(host, kind, surf) + cells(kind.proud(surf)),
+                        cells(host.section(surf)),
+                        "{kind:?} on {host:?}'s {surf:?} does not fill the room at its cap"
+                    );
+                }
+            }
+        }
     }
 
     /// A held piece never answers for its own old berth: a canister
@@ -2699,6 +2848,7 @@ mod tests {
                 x,
                 y,
                 turn,
+                lift: 0,
             },
         }
     }

@@ -524,10 +524,33 @@ Every line is reversible; strike one by overruling it.
   half a turn lays the very same ground, and the arbiter reads ground.
   A piece is only turned onto its side when nothing aboard takes it
   upright.
-- **A carry keeps the held piece's own turn until the controls land**,
-  and a piece taken out of a cubby comes out at `Turn(0)`, the one turn a
-  shelf has.
-- **The carry turns by 15° on the wheel, 1° on Ctrl + wheel, and 15° on
-  `Q`** — the convenient angles the owner offered, as a frontend offer on
-  input and never a rule. Recorded here with the units they need; they
-  land with the controls pass, which picks `Q`'s reverse.
+- **A carry starts at the held piece's own turn**, and a piece taken out
+  of a cubby comes out at `Turn(0)`, the one turn a shelf has. A piece
+  set down turned and lifted again carries on from the turn it stands
+  at.
+- **The carry turns by 15° on the wheel, 1° on `Ctrl` + wheel, and 15°
+  on `Q`, and `Shift+Q` is `Q`'s reverse** — the convenient angles the
+  owner offered, as a frontend offer on input and never a rule. A notch
+  turns to the *next* multiple of 15° its way, so from 7° one notch up
+  is 15° and not 22°; `Ctrl` turns a degree from wherever the carry is,
+  snapping to nothing. The wheel rolled up, away from you, turns the
+  piece counter-clockwise as seen from the room — as you face the wall,
+  for a wall piece. The reverse is `Shift` rather than a second letter
+  because nothing reads `Shift` while a piece is in hand: quick-move is
+  read on a press, and the click that ends a carry is a release. `R`
+  was cut from the keyboard to keep one key from ending a run and is not
+  brought back for this, `E` is focus, and the nudge bench's own `Shift`
+  is its fine step on its own six keys, which nothing else answers.
+- **The carry's facing is held in forty-fifths of a `Turn` unit**, the
+  coarsest unit in which a degree and a `Turn` unit are both whole
+  numbers, and the sim is sent the nearest `Turn`. So 360 degree-notches
+  come back exactly, fifteen of them land on the very turn one plain
+  notch does, and a notch that would send the sim the turn it already
+  has (a piece set down at 15° and lifted again sits a hair past 15°)
+  goes on to the next stop instead of doing nothing visible.
+- **Only a carry turns, and only while the body roams.** With the `Esc`
+  menu up or a station focused, the wheel and `Q` do what they did
+  before, which is nothing; with an empty hand they turn nothing, and
+  no wheel travel is saved up for the next carry. A wheel that reports
+  pixels (a touchpad, a smooth wheel) is read at Bevy's hundred to the
+  notch, and part-notches add up.

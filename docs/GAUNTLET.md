@@ -263,6 +263,17 @@ overlap in metres on all three axes.
 > plans once and holds them, once per distinct ground
 > (`gauntlet::swept`), which is what keeps a sweep under two seconds.
 
+> Since *Cargo turns* (BAY.md): a player sets cargo down at any turn, so
+> `gauntlet::legal_berths` asks every whole-cell anchor at every turn of
+> the cabin's shared sample as well (`pieces::TURNS`: the quarters, 1°,
+> 15°, 45° and a seventh of a turn), keys a berth by its footprint's own
+> four corners — a footprint and its half turn are one ground — and cuts
+> each cell's share of the air from the footprint itself
+> (`gauntlet::share`): the box round the part of a turned footprint that
+> stands over the cell, not the part of the box round it. The sample costs
+> a run about a third again. Its first run found nothing new here or in
+> `berth-seen`.
+
 Spent on cargo too, where it means something related but not the same: a
 part reaching outside `pieces::RIG_NEAR..RIG_FAR`, the depth every kind
 is composed within — one cell of the cargo grid, wearing the same
@@ -751,6 +762,18 @@ that has moved — the same box slid half a notch along its chart, and the
 same box shrunk to half the ground it claims, both have to stop reading
 as a berth filled.
 
+> Since *Cargo turns* (BAY.md): asked at the turn sample too, on every
+> chart class, which the guard now also insists on. A turned footprint's
+> half-axes are rounded to whole units once (`cargo::Foot`) and the body
+> is drawn at the true turn, so on a berth off square the second clause
+> reads the ground to `TURNED_SLACK` — two fine units and the
+> millimetre — and no finer. The first run at the sample filed 92
+> findings, every one of them that rounding and none of them a body: a
+> one-cell crate at 45° owns a box 364 units across where the true one is
+> 362, and wears 96% of the true one, four millimetres short of 96% of
+> the rounded. The first clause needs no allowance, since the rounding
+> is symmetric and the middle is exact.
+
 ### `berth-turned` — a rig stands up and shows the room its face
 
 The thirteenth family, and the first of four written from the map above
@@ -798,6 +821,15 @@ room was a hand's breadth away — the couch-facing-the-wall defect stood
 on its head, and above eye level where nobody looks. A pendant takes the
 backing rule now. Mid-room the rule's own default *is* the turn that was
 hardcoded, so nothing away from a seam moved.
+
+> Since *Cargo turns* (BAY.md): the sweep's berths include the turns a
+> player may carry a body at, and this family asks only the turn the
+> game gives a body itself (`Plan::given`). Asked of the sample, it
+> reported every window a player could hang upside down and every couch
+> they could set facing the wall behind it — which is the player's
+> choice, made on purpose. That a player's turn is drawn as the turn it
+> is, on every chart, is `pieces::tests::every_kind_hangs_true_on_every_legal_berth`'s
+> claim.
 
 Its first pass off the grid (*The grid comes out*, BAY.md) found eighteen
 kinds, every one a body standing **exactly half a cell** from a front

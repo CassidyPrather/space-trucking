@@ -205,13 +205,30 @@ const RIM: f32 = 0.999;
 /// An oriented quad bound to a sim rect, and whatever body stands
 /// behind it. `half_u` spans sim +x (half the panel's width), `half_v`
 /// spans sim +y — which is *down* in the sim's world, so `half_v` points
-/// down-panel in 3D as well.
+/// down-panel in 3D as well — unless [`SimSurface::axes`] lays the
+/// reading along two other directions.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct SimSurface {
     pub center: Vec3,
     pub half_u: Vec3,
     pub half_v: Vec3,
     pub rect: SimRect,
+    /// **The two sim half-axes a reading is laid along, where they are
+    /// not `rect`'s own.** A point of the quad `a` of the way across
+    /// `half_u` and `b` of the way along `half_v` (each −1 to +1) reads
+    /// `rect`'s centre plus `a` of the first plus `b` of the second, and
+    /// `rect` is the box round what the quad reads. `None` reads
+    /// straight onto `rect`, which is what a chart and a pane do.
+    ///
+    /// A standing rig's face is what sets it (`pieces::onto_net`). Its
+    /// body stands at whatever turn it was set down at, and a rect
+    /// cannot turn: a face read along the rect's axes was only ever
+    /// right at a quarter turn, and read an odd one as the nearest
+    /// quarter. Laid along the very half-axes the sim's footprint is
+    /// built from (`cargo::Foot`), the point the aim lands on is the
+    /// point the sim carries back into the piece's own frame, at any
+    /// angle — which cubby, and whether the amber handle.
+    pub axes: Option<(SimVec2, SimVec2)>,
     /// **Half the depth of the body this face reads for**, along the
     /// normal, in world units. Zero says the face IS the thing: a wall's
     /// chart has nothing in front of it to aim at, and an instrument's
@@ -269,6 +286,7 @@ impl SimSurface {
             half_u: rot * (Vec3::X * (width * 0.5)),
             half_v: rot * (Vec3::NEG_Y * (height * 0.5)),
             rect,
+            axes: None,
             deep: 0.0,
         }
     }
@@ -309,11 +327,7 @@ impl SimSurface {
         if !(-1.0..=1.0).contains(&a) || !(-1.0..=1.0).contains(&b) {
             return None;
         }
-        let sim = SimVec2::new(
-            f32::midpoint(a, 1.0).mul_add(self.rect.w, self.rect.x),
-            f32::midpoint(b, 1.0).mul_add(self.rect.h, self.rect.y),
-        );
-        Some((t, sim, world))
+        Some((t, self.read(a, b), world))
     }
 
     /// **Ray → the body this face reads for**, as `(distance, sim
@@ -366,40 +380,75 @@ impl SimSurface {
         }
         let world = ray.origin + ray.direction * reached;
         let local = world - self.center;
-        let sim = SimVec2::new(
-            f32::midpoint(
-                (local.dot(self.half_u) / self.half_u.length_squared()).clamp(-RIM, RIM),
-                1.0,
-            )
-            .mul_add(self.rect.w, self.rect.x),
-            f32::midpoint(
-                (local.dot(self.half_v) / self.half_v.length_squared()).clamp(-RIM, RIM),
-                1.0,
-            )
-            .mul_add(self.rect.h, self.rect.y),
+        let sim = self.read(
+            (local.dot(self.half_u) / self.half_u.length_squared()).clamp(-RIM, RIM),
+            (local.dot(self.half_v) / self.half_v.length_squared()).clamp(-RIM, RIM),
         );
         Some((reached, sim, world))
     }
 
-    /// Sim position → world position on the quad's plane. Positions
-    /// outside the bound rect extrapolate — callers clamp if they care.
+    /// **The sim point a reading names**: `a` of the way across `half_u`
+    /// and `b` of the way along `half_v`, each −1 to +1, laid onto `rect`
+    /// — or along [`Self::axes`] from its centre, where the face says so.
+    const fn read(&self, a: f32, b: f32) -> SimVec2 {
+        let Some((across, along)) = self.axes else {
+            return SimVec2::new(
+                f32::midpoint(a, 1.0).mul_add(self.rect.w, self.rect.x),
+                f32::midpoint(b, 1.0).mul_add(self.rect.h, self.rect.y),
+            );
+        };
+        let mid = self.mid();
+        SimVec2::new(
+            b.mul_add(along.x, a.mul_add(across.x, mid.x)),
+            b.mul_add(along.y, a.mul_add(across.y, mid.y)),
+        )
+    }
+
+    /// The middle of `rect`, which is the middle of what the quad reads.
+    const fn mid(&self) -> SimVec2 {
+        SimVec2::new(
+            self.rect.w.mul_add(0.5, self.rect.x),
+            self.rect.h.mul_add(0.5, self.rect.y),
+        )
+    }
+
+    /// Sim position → world position on the quad's plane: [`Self::read`]
+    /// backwards. Positions outside what the quad reads extrapolate —
+    /// callers clamp if they care.
     #[must_use]
     pub fn to_world(self, sim: SimVec2) -> Vec3 {
-        let a = ((sim.x - self.rect.x) / self.rect.w).mul_add(2.0, -1.0);
-        let b = ((sim.y - self.rect.y) / self.rect.h).mul_add(2.0, -1.0);
+        let (a, b) = if let Some((across, along)) = self.axes {
+            // `sim − mid = a·across + b·along`, solved by the two cross
+            // products: the reading's axes are never parallel.
+            let d = sim - self.mid();
+            let cross = |p: SimVec2, q: SimVec2| p.x.mul_add(q.y, -(p.y * q.x));
+            let whole = cross(across, along);
+            (cross(d, along) / whole, cross(across, d) / whole)
+        } else {
+            (
+                ((sim.x - self.rect.x) / self.rect.w).mul_add(2.0, -1.0),
+                ((sim.y - self.rect.y) / self.rect.h).mul_add(2.0, -1.0),
+            )
+        };
         self.center + self.half_u * a + self.half_v * b
     }
 
     /// World length of one sim unit along the panel's u axis.
     #[must_use]
     pub fn scale_u(&self) -> f32 {
-        self.half_u.length() * 2.0 / self.rect.w
+        self.axes.map_or_else(
+            || self.half_u.length() * 2.0 / self.rect.w,
+            |(across, _)| self.half_u.length() / across.length(),
+        )
     }
 
     /// World length of one sim unit along the panel's v axis.
     #[must_use]
     pub fn scale_v(&self) -> f32 {
-        self.half_v.length() * 2.0 / self.rect.h
+        self.axes.map_or_else(
+            || self.half_v.length() * 2.0 / self.rect.h,
+            |(_, along)| self.half_v.length() / along.length(),
+        )
     }
 }
 

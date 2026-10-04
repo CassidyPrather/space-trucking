@@ -124,7 +124,7 @@ use std::sync::OnceLock;
 
 use bevy::prelude::*;
 use space_trucking::sim::cargo::{
-    Aabb, FRACTIONS, Foot, Kind, Loc, Mount, Piece, Spot, Turn, anchored, fine, mount_accepts,
+    FRACTIONS, Foot, Kind, Loc, Mount, Piece, Spot, Turn, anchored, fine, mount_accepts,
     placement_check,
 };
 use space_trucking::sim::layout;
@@ -300,6 +300,19 @@ const GRID_STEP: f32 = crate::rig::BAY_CELL / 16.0;
 /// A millimetre: below what any eye or any depth buffer can tell, and an
 /// order under the thinnest paint the decal ladder carries.
 const GRID_EPS: f32 = 0.001;
+
+/// **How well the box round a footprint turned off square is known**, in
+/// metres: two fine units, and the millimetre [`GRID_EPS`] allows any
+/// face. A turned footprint's half-axes are rounded to whole units once
+/// (`cargo::Foot`), so each corner is within a unit of true on each axis
+/// and the box round it within a unit at either end; the body standing
+/// on it is drawn at the true turn. So the two agree to two units across
+/// the box, about four millimetres, which is the price of an arbiter that
+/// decides in integers, and a body inside that has not missed its ground.
+const TURNED_SLACK: f32 = 2.0 * crate::rig::BAY_CELL / FINE_UNITS + GRID_EPS;
+
+/// Fine units to the cell, as a length divisor.
+const FINE_UNITS: f32 = space_trucking::sim::cargo::FINE as f32;
 
 // ------------------------------------------------------------ a finding --
 
@@ -709,8 +722,9 @@ pub fn loaded_save(base: &str) -> Option<String> {
 /// which was honest while every footprint covered whole cells and stops
 /// being honest the moment one does not: a wardrobe a sixteenth into a
 /// cell would have charged that cell's WHOLE face with its height. So
-/// the air is keyed by the footprint's own fine rect, and a fitting is
-/// judged against the ground a berth actually spends.
+/// the air is keyed by the footprint's own ground — its four corners, at
+/// whatever turn — and a fitting is judged against the ground a berth
+/// actually spends.
 ///
 /// The air is the footprint's own column, not the rig's whole body: a
 /// standing rig keeps its bas-relief depth and reaches past its own
@@ -720,7 +734,8 @@ pub fn loaded_save(base: &str) -> Option<String> {
 #[derive(Clone, Debug)]
 pub struct Berth {
     /// The ground itself, in `cargo::FINE` units of the room's net, at
-    /// the turn the game gives a body there.
+    /// the turn the game gives a body there or one a player may carry it
+    /// at ([`legal_berths`]).
     pub foot: Foot,
     /// The cell under its middle (`Foot::centre_cell`): the one a finding
     /// names, and the one whose class the berth reads.
@@ -741,7 +756,9 @@ pub struct Berth {
     /// over and that cell's own class: a berth a sixteenth over a region's
     /// edge spends a sixteenth of its air over the next region, and a
     /// rule about what a room may stand in its own ground reads the
-    /// ground, not the middle of the crate ([`berth_clear`]).
+    /// ground, not the middle of the crate ([`berth_clear`]). A share is
+    /// the part of the footprint over its cell ([`share`]), so a turned
+    /// berth spends no air over the corners of the box round it.
     pub over: Vec<((u8, u8), Tile, Box3)>,
     /// Which way the room is, from this berth.
     pub inward: Vec3,
@@ -793,14 +810,8 @@ fn rig_air(
 /// them buys very little the sample does not: on the grid, a unit off it
 /// either way, and either side of the half. Twenty-five per cell, asked
 /// once per run ([`swept`]), keeps a sweep near a second; and the sample
-/// is fixed, so a finding names the same berth every run.
-///
-/// phase 2: the sweeps ask the turn the game would give each berth and
-/// no other. A player may set anything down at any turn, so the sweeps
-/// that judge a berth's air (`berth-clear`, `berth-seen`) and its drawn
-/// body (`berth-filled`) want a sample of turns on top of this — the four
-/// quarters and a few odd angles — once the cabin can draw a body turned
-/// off square.
+/// is fixed, so a finding names the same berth every run. Which turns
+/// each anchor is asked at is [`legal_berths`]'s.
 fn anchors(kind: RoomKind) -> impl Iterator<Item = (u16, u16)> {
     let (cols, rows) = kind.grid();
     (0..rows).flat_map(move |y| {
@@ -836,20 +847,55 @@ fn takeable(host: RoomKind, foot: Foot) -> bool {
             .all(|(x, y)| host.tile_of(x, y).is_some_and(Tile::takes_your_cargo))
 }
 
-/// The berth `kind` takes in `placed` with its footprint's top-left at
-/// fine `(x, y)`, turned the way the game would turn it there, if the
+/// **Every berth a sweep asks at one anchor**: the one `kind` takes in
+/// `placed` with its footprint's top-left at fine `(fx, fy)`, turned the
+/// way the game would turn it there (`cargo::anchored`), first, and — at
+/// a whole-cell anchor — the same middle at every turn of the shared
+/// sample a player may carry it at (`pieces::TURNS`), each where the
 /// arbiter allows it on an empty board.
-fn legal_berth(rooms: &Rooms, placed: &Placed, kind: Kind, (x, y): (u16, u16)) -> Option<Spot> {
-    let (x, y, turn) = anchored(placed.kind, kind, x, y)?;
-    let spot = Spot {
-        room: placed.id,
-        x,
-        y,
-        turn,
-    };
-    placement_check(rooms, &[], u32::MAX, kind, spot)
-        .is_ok()
-        .then_some(spot)
+///
+/// A player sets anything down at any turn, and a body turned off
+/// square spends its air over different ground and draws a different
+/// box round itself, so the families that judge a berth's air and its
+/// drawn body are asked about turned ones too. **Not at every anchor**:
+/// what a turn can change is the ground and the body's frame, and
+/// neither is any different a unit off the grid, so the product of the
+/// twenty-five fractions and the eight turns would multiply the sweep by
+/// eight for nothing the grid does not already ask. The fractions are
+/// asked at the game's own turn and the turns on the grid, which costs
+/// the sweep about a third again.
+fn legal_berths(
+    rooms: &Rooms,
+    placed: &Placed,
+    kind: Kind,
+    (fx, fy): (u16, u16),
+) -> impl Iterator<Item = Spot> {
+    let given = anchored(placed.kind, kind, fx, fy);
+    let on_grid = fx % fine(1) == 0 && fy % fine(1) == 0;
+    let turns = given
+        .filter(|_| on_grid)
+        .into_iter()
+        .flat_map(|(_, _, turn)| {
+            crate::pieces::TURNS
+                .into_iter()
+                .filter(move |other| *other != turn)
+        });
+    given
+        .map(|(_, _, turn)| turn)
+        .into_iter()
+        .chain(turns)
+        .filter_map(move |turn| {
+            let (x, y, _) = given?;
+            let spot = Spot {
+                room: placed.id,
+                x,
+                y,
+                turn,
+            };
+            placement_check(rooms, &[], u32::MAX, kind, spot)
+                .is_ok()
+                .then_some(spot)
+        })
 }
 
 /// Every berth of one placed room, with the air each one spends: every
@@ -857,15 +903,14 @@ fn legal_berth(rooms: &Rooms, placed: &Placed, kind: Kind, (x, y): (u16, u16)) -
 /// air of the deepest kind that may take it.
 #[must_use]
 pub fn berths(rooms: &Rooms, placed: &Placed) -> Vec<Berth> {
-    let mut deepest: BTreeMap<Aabb, (f32, Kind, Foot)> = BTreeMap::new();
+    let mut deepest: BTreeMap<[(i32, i32); 4], (f32, Kind, Foot)> = BTreeMap::new();
     for kind in Kind::ALL {
         if kind.covering() {
             continue;
         }
-        for corner in anchors(placed.kind) {
-            let Some(site) = legal_berth(rooms, placed, kind, corner) else {
-                continue;
-            };
+        for site in
+            anchors(placed.kind).flat_map(|corner| legal_berths(rooms, placed, kind, corner))
+        {
             let Some(foot) = Foot::of(placed.kind, kind, site.x, site.y, site.turn)
                 .filter(|&foot| takeable(placed.kind, foot))
             else {
@@ -884,7 +929,11 @@ pub fn berths(rooms: &Rooms, placed: &Placed) -> Vec<Berth> {
             ) else {
                 continue;
             };
-            let slot = deepest.entry(foot.aabb()).or_insert((0.0, kind, foot));
+            // One ground is one berth however it came to be turned: a
+            // footprint and its half turn lie on the same four corners.
+            let mut ground = foot.corners();
+            ground.sort_unstable();
+            let slot = deepest.entry(ground).or_insert((0.0, kind, foot));
             if air > slot.0 {
                 *slot = (air, kind, foot);
             }
@@ -897,21 +946,16 @@ pub fn berths(rooms: &Rooms, placed: &Placed) -> Vec<Berth> {
             let (station, surface) = chart_of(placed, cell)?;
             let face = plan_face(&surface, layout::foot_rect(placed.id, foot));
             let inward = station.inward(&surface);
-            // phase 2: a footprint turned off square spends its air over
-            // its own ground, not over the box round it; the shares here
-            // are boxes because every berth swept is square.
-            let span = foot.aabb();
+            // Each cell's share is the box round the part of the
+            // FOOTPRINT over it, not the part of the box round the
+            // footprint: a crate a seventh of a turn round stands on a
+            // slant across its cells, and the corner of the box round it
+            // is air it never reaches into. At a quarter turn the two are
+            // the same box.
             let over = foot
                 .cells()
                 .filter_map(|(cx, cy)| {
-                    let cell = Foot::cell(cx, cy).aabb();
-                    let share = Aabb {
-                        x0: span.x0.max(cell.x0),
-                        y0: span.y0.max(cell.y0),
-                        x1: span.x1.min(cell.x1),
-                        y1: span.y1.min(cell.y1),
-                    };
-                    let face = plan_face(&surface, layout::fine_rect(placed.id, share));
+                    let face = plan_face(&surface, share(placed.id, foot, (cx, cy))?);
                     Some((
                         (cx, cy),
                         placed.kind.tile_of(cx, cy)?,
@@ -954,6 +998,70 @@ fn chart_of(placed: &Placed, (x, y): (u8, u8)) -> Option<(Station, SimSurface)> 
 /// One net cell's own face on its chart, in the world.
 fn cell_face(id: RoomId, (x, y): (u8, u8), surface: &SimSurface) -> Box3 {
     plan_face(surface, layout::cell_rect(id, x, y))
+}
+
+/// **The part of `foot` that stands over net cell `cell`**, as the box
+/// round it, in the world rect of room `room`'s net — `None` where the
+/// two share no area.
+///
+/// The footprint is clipped to the cell's square, one edge at a time,
+/// and what is left is boxed: at a quarter turn that is the box the
+/// footprint and the cell share, and at any other it is the slanted
+/// piece of the footprint the cell actually holds. Exact on integer
+/// corners up to the one division each clip takes.
+fn share(room: RoomId, foot: Foot, (cx, cy): (u8, u8)) -> Option<layout::Rect> {
+    let cell = Foot::cell(cx, cy).aabb();
+    let mut ring: Vec<(f64, f64)> = foot
+        .corners()
+        .into_iter()
+        .map(|(x, y)| (f64::from(x), f64::from(y)))
+        .collect();
+    // Each edge of the cell as (axis, its coordinate, which side keeps).
+    for (axis, at, keep_above) in [
+        (0, cell.x0, true),
+        (0, cell.x1, false),
+        (1, cell.y0, true),
+        (1, cell.y1, false),
+    ] {
+        let at = f64::from(at);
+        let side = |p: (f64, f64)| {
+            let v = if axis == 0 { p.0 } else { p.1 };
+            if keep_above { v - at } else { at - v }
+        };
+        let mut kept = Vec::with_capacity(ring.len() + 1);
+        for (i, &p) in ring.iter().enumerate() {
+            let q = ring[(i + 1) % ring.len()];
+            let (sp, sq) = (side(p), side(q));
+            if sp >= 0.0 {
+                kept.push(p);
+            }
+            if (sp >= 0.0) != (sq >= 0.0) {
+                let t = sp / (sp - sq);
+                kept.push((t.mul_add(q.0 - p.0, p.0), t.mul_add(q.1 - p.1, p.1)));
+            }
+        }
+        ring = kept;
+        if ring.is_empty() {
+            return None;
+        }
+    }
+    let (mut lo, mut hi) = ((f64::MAX, f64::MAX), (f64::MIN, f64::MIN));
+    for (x, y) in ring {
+        lo = (lo.0.min(x), lo.1.min(y));
+        hi = (hi.0.max(x), hi.1.max(y));
+    }
+    if hi.0 <= lo.0 || hi.1 <= lo.1 {
+        return None;
+    }
+    // Read onto the net the way `layout::fine_rect` reads a whole box.
+    let unit = layout::CELL / f32::from(fine(1));
+    let origin = layout::lane_origin(room);
+    Some(layout::Rect::new(
+        (lo.0 as f32).mul_add(unit, origin.x),
+        (lo.1 as f32).mul_add(unit, origin.y),
+        (hi.0 - lo.0) as f32 * unit,
+        (hi.1 - lo.1) as f32 * unit,
+    ))
 }
 
 /// **The ground a footprint owns**, in the world: the sim rect a berth
@@ -2811,6 +2919,13 @@ struct Plan {
     rect: layout::Rect,
     /// The turn the berth gave it — the half of a pose no box carries.
     rot: Quat,
+    /// Whether that turn is the one the game itself gives a body here
+    /// (`cargo::anchored`) rather than one of the sample a player may
+    /// carry it at ([`legal_berths`]).
+    given: bool,
+    /// Whether that turn is a quarter, where the ground the sim gives it
+    /// is exact; at any other its corners are rounded to the unit.
+    square: bool,
     owned: Box3,
     spent: Box3,
 }
@@ -2848,11 +2963,13 @@ fn plans(stages: &[Stage]) -> Vec<Plan> {
             // rule (`cargo::default_turn`) reads a footprint's distance
             // from its chart's seams, and a berth a unit from one is a
             // berth it has to turn right as surely as one flush against
-            // it.
-            for corner in anchors(host) {
-                let Some(spot) = legal_berth(&stage.rooms, &stage.placed, kind, corner) else {
-                    continue;
-                };
+            // it. And at the turns a player may carry a body at
+            // ([`legal_berths`]), because a body's box is the shape the
+            // turn leaves it.
+            for (corner, spot) in anchors(host).flat_map(|corner| {
+                legal_berths(&stage.rooms, &stage.placed, kind, corner)
+                    .map(move |spot| (corner, spot))
+            }) {
                 let Some(foot) = Foot::of(host, kind, spot.x, spot.y, spot.turn)
                     .filter(|&foot| takeable(host, foot))
                 else {
@@ -2878,6 +2995,9 @@ fn plans(stages: &[Stage]) -> Vec<Plan> {
                     chart,
                     rect,
                     rot,
+                    given: anchored(host, kind, corner.0, corner.1)
+                        .is_some_and(|(_, _, turn)| turn == spot.turn),
+                    square: spot.turn.square(),
                     owned: plan_face(&chart, rect),
                     spent: Box3 { lo, hi },
                 });
@@ -2937,6 +3057,14 @@ fn plans(stages: &[Stage]) -> Vec<Plan> {
 ///   measured in the wrong place, which is what `berth-clear` then tells
 ///   a station's furniture about.
 ///
+/// **At every turn a player may carry a body at** ([`legal_berths`]),
+/// where the box a turned body spends is the box round its turned
+/// ground. A footprint turned off square has its corners rounded to the
+/// unit, each within one of true (`cargo::Foot`), and the body is drawn
+/// at the true turn, so on those the second clause reads the ground to
+/// the [`TURNED_SLACK`] that rounding leaves and no finer. The first
+/// needs nothing: the rounding is symmetric, and the middle is exact.
+///
 /// Filed under [`RIGS`] and keyed by kind and chart class, because the
 /// same crate stands in every room in the game and a defect in how a
 /// deck berths it is not fifteen defects.
@@ -2953,6 +3081,10 @@ fn berth_filled(plans: &[Plan]) -> Vec<Finding> {
             let (off, got) = off_plan(berth.spent, berth.owned, dir);
             let ground = berth.owned.span().dot(dir.abs());
             let want = ground * crate::pieces::BAY_FIT;
+            // A turned ground's box is known to the unit at either end, so
+            // a body within that of its margin wears its margin, and is no
+            // berth to speak for its class.
+            let worn = !berth.square && (got - want).abs() <= TURNED_SLACK;
             let kind = berth.kind;
             let surf = berth.surf;
             let key = (format!("{kind:?} on a {surf:?} berth"), axis_of(dir));
@@ -2963,7 +3095,7 @@ fn berth_filled(plans: &[Plan]) -> Vec<Finding> {
             if off.abs() > seen.0.abs() {
                 seen.0 = off;
             }
-            if (got - want).abs() > (seen.1 - seen.2).abs() {
+            if !worn && (got - want).abs() > (seen.1 - seen.2).abs() {
                 seen.1 = got;
                 seen.2 = want;
                 seen.3 = ground;
@@ -3069,6 +3201,15 @@ fn looked_at(chart: &SimSurface, rect: layout::Rect, rot: Quat) -> space_truckin
 /// player can walk round. Composition is the art direction's business and
 /// this file measures shapes.
 ///
+/// **Nor a turn a player chose.** The sweep's berths include the sample
+/// of turns a body may be carried at ([`legal_berths`]), and a window a
+/// player hung upside down, or a couch they set down facing the wall it
+/// stands against, is turned exactly the way they turned it. This family
+/// is about the turn the game gives a body ITSELF (`cargo::default_turn`),
+/// so it reads only those; that a player's turn is drawn as the turn it
+/// is, on every chart, is `pieces`' own sweep's claim
+/// (`pieces::tests::every_kind_hangs_true_on_every_legal_berth`).
+///
 /// Filed under [`RIGS`] and keyed by kind and chart class, for
 /// [`berth_filled`]'s reason: the same crate stands in every room in the
 /// game, and a defect in how a deck turns it is not fifteen defects.
@@ -3076,7 +3217,7 @@ fn berth_turned(plans: &[Plan]) -> Vec<Finding> {
     // Per kind, chart class and clause: the worst reading of the lot,
     // with the cell it was read at.
     let mut worst: BTreeMap<(String, u8), (f32, String)> = BTreeMap::new();
-    for berth in plans {
+    for berth in plans.iter().filter(|berth| berth.given) {
         let key = |clause: u8| {
             (
                 format!("{:?} on a {:?} berth", berth.kind, berth.surf),
@@ -4559,7 +4700,8 @@ mod tests {
     /// Berths come out of the sim, never a hand list: every cell any of
     /// them stands on is a real cell of its own room's net, never a
     /// threshold, and never the handshake's own socket — and the sweep
-    /// reaches off the grid, because a berth is a position now.
+    /// reaches off the grid, because a berth is a position now, and off
+    /// square, because it is a turn too.
     #[test]
     fn berths_are_derived_from_the_sim() {
         for stage in roster() {
@@ -4572,6 +4714,11 @@ mod tests {
                     span.x0 % cell != 0 || span.y0 % cell != 0
                 }),
                 "{} was swept on the grid alone",
+                stage.name
+            );
+            assert!(
+                berths.iter().any(|berth| !berth.foot.angle.square()),
+                "{} was swept square alone",
                 stage.name
             );
             for berth in &berths {
@@ -4598,6 +4745,55 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// **A turned berth spends its air over its own ground**, not over the
+    /// box round it: each cell's share is the box round the piece of the
+    /// footprint that cell actually holds ([`share`]).
+    ///
+    /// A one-cell crate turned an eighth stands as a diamond on the cell
+    /// it is centred on, with a tip in each of the four cells beside it.
+    /// The box round it covers the whole middle of each of those, so a
+    /// share cut from the box would charge a neighbour's whole edge with
+    /// the crate's air where the crate reaches a sliver of it. At a
+    /// quarter turn the footprint and its box are one rect, and so are
+    /// the shares.
+    #[test]
+    fn a_turned_berths_air_is_cut_from_its_own_ground() {
+        let cell = |x: u8, y: u8| layout::cell_rect(CABIN, x, y);
+        let (cx, cy) = (5_u8, 5_u8);
+        let half = i32::from(fine(1)) / 2;
+        let centre = (i32::from(fine(cx)) + half, i32::from(fine(cy)) + half);
+        let diamond = Foot::new(centre.0, centre.1, (half, half), Turn(8192));
+        let tip = share(CABIN, diamond, (cx + 1, cy)).expect("a tip reaches the next cell");
+        let beside = cell(cx + 1, cy);
+        // The tip is a sliver against the cell's own edge, a little under
+        // a fifth of a cell deep and a little over two fifths tall —
+        // nothing like the whole middle of the cell the box round the
+        // diamond would charge.
+        assert!(
+            (tip.x - beside.x).abs() < 1e-3 && tip.w < layout::CELL * 0.22,
+            "the tip is {tip:?}, which is not a sliver against {beside:?}'s edge"
+        );
+        assert!(
+            tip.h > layout::CELL * 0.4 && tip.h < layout::CELL * 0.43,
+            "the tip is {} tall, where the diamond's is two fifths of a cell",
+            tip.h
+        );
+        // A diagonal neighbour holds none of it.
+        assert!(share(CABIN, diamond, (cx + 1, cy + 1)).is_none());
+        // Square, the share is the part of the box over the cell: a crate
+        // a quarter-cell over the next column charges a quarter of it.
+        let square = Foot::new(centre.0 + half / 2, centre.1, (half, half), Turn::QUARTER);
+        let over = share(CABIN, square, (cx + 1, cy)).expect("over the next column");
+        let want = cell(cx + 1, cy);
+        assert!(
+            (over.x - want.x).abs() < 1e-4
+                && layout::CELL.mul_add(-0.25, over.w).abs() < 1e-4
+                && (over.y - want.y).abs() < 1e-4
+                && (over.h - layout::CELL).abs() < 1e-4,
+            "a square share is {over:?}, not the quarter of {want:?} the crate covers"
+        );
     }
 
     /// The walk is the walk the post-mortem named: in through the door,
@@ -5053,17 +5249,30 @@ mod tests {
     /// body that has moved: the same box slid half a notch along the
     /// chart, and the same box shrunk to half the ground it claims, both
     /// have to stop reading as a berth filled.
+    ///
+    /// Every berth includes every turn a player may carry a body at, on
+    /// every chart class, and a body turned off square is held to its
+    /// ground as finely as that ground is known ([`TURNED_SLACK`]).
     #[test]
     fn the_fill_family_is_asked_about_every_berth_and_answers_when_a_body_slides() {
         let seen = plans(&roster());
         let mut classes: BTreeMap<String, u32> = BTreeMap::new();
+        let mut turned: BTreeMap<String, u32> = BTreeMap::new();
         for berth in &seen {
             *classes.entry(format!("{:?}", berth.surf)).or_default() += 1;
+            if !berth.square {
+                *turned.entry(format!("{:?}", berth.surf)).or_default() += 1;
+            }
         }
         assert_eq!(
             classes.len(),
             Surf::ALL.len(),
             "a chart class went unmeasured: {classes:?}"
+        );
+        assert_eq!(
+            turned.len(),
+            Surf::ALL.len(),
+            "a chart class went unmeasured off square: {turned:?}"
         );
         assert!(
             seen.len() > 1000,
@@ -5083,8 +5292,9 @@ mod tests {
                     "{kind:?} on a {surf:?} berth is composed {off} m off the middle of \
                      the cells its plan spends"
                 );
+                let known = if berth.square { GRID_EPS } else { TURNED_SLACK };
                 assert!(
-                    (got - want).abs() <= GRID_EPS,
+                    (got - want).abs() <= known,
                     "{kind:?} on a {surf:?} berth fills {got} m of the {want} m its plan \
                      spends"
                 );
@@ -5121,13 +5331,16 @@ mod tests {
     /// recomputed the backing rule and compared it with itself would pass
     /// two thousand berths and mean nothing — which is the mistake this
     /// file has already made once, and docs/GAUNTLET.md keeps the receipt.
+    ///
+    /// Every berth is every one the game turns itself: a turn a player
+    /// chose is theirs, and the family does not read it ([`berth_turned`]).
     #[test]
     fn the_turn_family_is_asked_about_every_berth_and_answers_when_a_body_spins() {
         let seen = plans(&roster());
         let mut classes: BTreeMap<String, u32> = BTreeMap::new();
         let mut flat = 0_u32;
         let mut edges = 0_u32;
-        for berth in &seen {
+        for berth in seen.iter().filter(|berth| berth.given) {
             *classes.entry(format!("{:?}", berth.surf)).or_default() += 1;
             let (kind, surf) = (berth.kind, berth.surf);
             let up = berth.rot * Vec3::Y;

@@ -46,7 +46,12 @@ Cargo lives in the aft bay and is carried, not dragged: walk up, aim
 the crosshair at a piece and click to pick it up, walk it over, click a
 berth to set it down — clicking at nothing (or right-clicking) sends it
 back where it came from, and `Shift`+click quick-moves without
-carrying. Drop a small item onto a cabinet and it takes a cubby; a
+carrying. A carried piece turns at any angle and lands at the turn you
+carry it at: the mouse wheel turns it to the next multiple of 15° (up
+and away is counter-clockwise, as you look at the floor or the wall it
+is bound for), `Ctrl`+wheel turns it one degree a notch, and `Q` and
+`Shift`+`Q` take the wheel's 15° step either way for a hand with no
+wheel. The ghost and the patch under it turn with it. Drop a small item onto a cabinet and it takes a cubby; a
 loaded cabinet won't budge until it's emptied. Rugs and paint *lay
 into* the room instead of occupying it: a rug goes down on the deck
 (and cargo stands on it),
@@ -98,17 +103,20 @@ is tipped over the side. Encounter salvage drifts onto the same tiles,
 the dial housing wears the badge of whatever pulls alongside mid-leg,
 and at stranger berths the counter shows stranger things.
 
-| Input           | Effect                                                     |
-| --------------- | ---------------------------------------------------------- |
-| Mouse           | look, focus stations, pull levers                          |
-| Click (bay)     | pick up / set down the aimed cargo                         |
-| Right-click     | cancel a carry (the piece snaps home)                      |
-| `WASD`          | walk the cabin                                             |
-| `E`             | focus / unfocus the aimed station                          |
-| `Shift`+click   | quick-move a piece to its obvious destination              |
-| `Esc`           | step out of a station, else raise/lower the menu           |
-| `Space`         | pause                                                      |
-| `M`             | mute                                                       |
+| Input             | Effect                                                |
+| ----------------- | ----------------------------------------------------- |
+| Mouse             | look, focus stations, pull levers                     |
+| Click (bay)       | pick up / set down the aimed cargo                    |
+| Right-click       | cancel a carry (the piece snaps home)                 |
+| `WASD`            | walk the cabin                                        |
+| `E`               | focus / unfocus the aimed station                     |
+| `Shift`+click     | quick-move a piece to its obvious destination         |
+| Wheel             | carrying: turn the piece to the next 15° that way     |
+| `Ctrl`+wheel      | carrying: turn the piece 1°                           |
+| `Q` / `Shift`+`Q` | carrying: turn the piece 15° counter-clockwise / back |
+| `Esc`             | step out of a station, else raise/lower the menu      |
+| `Space`           | pause                                                 |
+| `M`               | mute                                                  |
 
 No signal relies on color alone; refusals, warnings, and states all carry
 a shape, brightness, or position tell alongside their hue. (The retired
@@ -133,7 +141,7 @@ guild server whose counters cannot double-count. The architecture and its
 required network-failure properties live in
 [docs/NETWORKING.md](docs/NETWORKING.md); `cargo run --example convoy` runs
 a six-client crew over a deliberately hostile simulated network. The live
-multiplayer cabin is a later slice; the protocol it will speak (`SNP2`)
+multiplayer cabin is a later slice; the protocol it will speak (`SNP4`)
 is already under test.
 
 Sound is synthesised at startup in `src/synth.rs` — no audio assets —

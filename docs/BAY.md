@@ -257,9 +257,10 @@ POIs) so it is probably fine."
 So **the sim is the authority on a piece's position and on its turn,
 and both are arbitrary**, quantised only by integer units nobody can
 see. Snapping is a convenience layered on input, never something a rule
-depends on. This pass is the sim and the cabin's drawing of what the sim
-says; the controls that turn a carry are the next pass (below). Passages
-the decisions overrule are marked "Superseded by *Cargo turns*".
+depends on. The sim and the cabin's drawing of what it says landed
+first; the controls that turn a carry, and the cabin's reading of a body
+at an odd angle, landed after them (*The controls*, below). Passages the
+decisions overrule are marked "Superseded by *Cargo turns*".
 
 **What did not move.** The sim is deterministic and engine-free, and a
 crew in lockstep has to agree on every ruling on every platform, so no
@@ -415,24 +416,95 @@ run*).
 **Sweeps.** `cargo::FRACTIONS` is `{0, 1, 127, 128, 255}` in the new
 unit — on the line, a unit past it, either side of the middle, a unit
 short of the next — and the sim's every-berth sweep crosses it with
-upright, a quarter turn, an eighth and a seventh.
+upright, a quarter turn, an eighth and a seventh. The cabin's sweeps
+share one turn sample (`pieces::TURNS`): the four quarters, 1°, 15°,
+45° and a seventh of a turn, each the `Turn` nearest. They ask every
+placement at the turn the game gives it and every whole-cell placement
+at every turn of the sample, on every chart — the product with the
+fractions as well would be eight times the sweep for nothing the grid
+does not already ask, since what a turn changes is the ground and the
+frame, and neither is any different a unit off the grid.
 
 **The cabin draws the sim's turn and nothing else.** Every rig is posed
 in its chart's upright frame turned by the piece's `Turn` about the
 chart's normal, through the one mapping (`pieces::turned_frame`): the
 upright rule's remaining job is the frame, and which way a body faces
-in it is the sim's. `floor_facing` is gone. Until the controls land a
-carry keeps the held piece's own turn (`bridge::carry_facing`), and the
-ghost and the footprint patch are asked at that turn, which is the turn
-the release will carry.
+in it is the sim's. `floor_facing` is gone. A carry's facing is the
+frontend's own (`bridge::Bridge::facing`): it starts at the held
+piece's own turn when the piece is lifted, the player turns it, and the
+ghost, the footprint patch and the release are all asked at it.
 
-**The controls are the next pass.** While carrying: the mouse wheel
-turns to the next multiple of 15° in its direction; Ctrl + wheel turns
-1° a notch, unsnapped; and `Q` takes the wheel's 15° step for a
-trackpad. The ghost, the footprint patch (an oriented quad), the refusal
-flash, standing faces, carry handles, cubbies, windows and instrument
-focus poses all ride the turned berth then. Where that work lands in
-the cabin is marked in the code (`phase 2:`); none of it is built.
+**The controls.** While carrying, and only while the body roams with a
+piece in hand:
+
+| Input | Turns the carry |
+|---|---|
+| Wheel | to the next multiple of 15° that way |
+| `Ctrl` + wheel | one degree a notch, from wherever it is |
+| `Q` | the wheel's 15° step, counter-clockwise |
+| `Shift` + `Q` | the same step back |
+
+- **Which way.** The wheel rolled up, away from you, turns the piece
+  counter-clockwise as seen from the room: looking down at the deck, up
+  at the deckhead, or straight at the wall it is bound for. `Q` turns
+  the way the wheel's up does.
+- **The next multiple, strictly.** From 7° one notch up lands on 15°,
+  not 22°, and the next on 30°. Those are the convenient angles the
+  owner offered "with the tool"; the sim snaps nothing, and `Ctrl`
+  leaves every angle a few notches away. `Q` is the plain notch for a
+  hand with no wheel, and `Shift+Q` is its reverse because nothing
+  reads `Shift` while a piece is in hand — quick-move is read on a
+  press, and the click that ends a carry is a release. `R` stays cut,
+  and `E` is focus.
+- **Held finer than a turn.** The bridge holds the facing in
+  forty-fifths of a `Turn` unit, the coarsest unit in which a degree and
+  a `Turn` unit are both whole, and sends the sim the nearest `Turn`; so
+  a degree a notch is a degree exactly however many notches are turned,
+  and a notch that would send the sim the turn it already has goes on to
+  the next stop rather than doing nothing visible.
+- **Only a carry, only in the room.** With the `Esc` menu up or a
+  station focused the wheel and `Q` do what they always did, which is
+  nothing; with an empty hand they turn nothing, and nothing is saved up
+  for the next carry. A wheel that reports pixels — a touchpad, a smooth
+  wheel — is read at a hundred to the notch, and part-notches add up.
+- **The release keeps the facing**, the preview asks at it, and a piece
+  set down turned and lifted again carries on from the turn it stands at.
+
+**What the cabin does at any angle.**
+
+- **The ghost** stands at the berth the sim previews at the carry's
+  facing, turned with it, so a notch of the wheel turns the ghost and
+  re-rules it the same frame.
+- **The footprint patch** is the footprint's own quad, laid along the
+  half-axes the sim rounded it to (`pieces::Ground`), not the box round
+  it, with its slash from the footprint's own top left to its own bottom
+  right. The **refusal flash** burns a bar along each of the refused
+  footprint's four edges; its glyph stays upright on its chart, up as
+  up, over the footprint's middle.
+- **Standing faces read exactly.** A standing body's pick face lays its
+  reading along the same half-axes (`SimSurface::axes`), so the point
+  the aim lands on is the point the sim carries back into the piece's
+  frame, at any angle: a cabinet a seventh of a turn round answers each
+  cubby a hair either side of its rack's middle lines, and a tank hung
+  that crooked routes carry and focus a hair either side of its amber
+  band's edges. A face used to read along the sheet's own two axes,
+  which can say a quarter turn and nothing else.
+- **Windows and instruments needed nothing new**, and are pinned by
+  tests at odd angles: a pane hung a seventh of a turn round, sharing a
+  wall with a square one, reads its own crooked piece of the wall's one
+  sky (`viewport::sub_uv` is affine and carries the turn), and a chart
+  tank hung 15° off true is focused square on to its own glass, rolled
+  with it (`rig::focus_pose` reads the station the turned berth hangs).
+- **The sweeps ask the turns.** `pieces`' every-berth sweep holds every
+  body at every turn of the sample to its ground, its frame, its face,
+  its handle and its ghost. The gauntlet asks its berth families the
+  sample too, and cuts each cell's share of a berth's air from the
+  footprint itself — the box round the part of the footprint over that
+  cell — rather than from the box round the footprint. `berth-filled`
+  reads a turned ground to the two fine units its rounding leaves
+  (`TURNED_SLACK`), and `berth-turned` asks only the turns the game
+  gives a body itself: a window a player hangs upside down is turned the
+  way they turned it.
 
 ## The decision: the 2D console retires
 

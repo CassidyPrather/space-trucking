@@ -834,10 +834,26 @@ measured_half = [0.5, 0.5, 0.5]
     ///
     /// A dev mode that quietly stole `W` would be a dev mode that walks
     /// the body across the room while you nudge, and the failure would
-    /// read as a physics defect. So the two modules that answer the
-    /// keyboard in the game are asked what they already use — read out of their
+    /// read as a physics defect. So the modules that answer the keyboard
+    /// in the game are asked what they already use — read out of their
     /// own source, so a key bound there tomorrow fails this rather than
-    /// silently doubling up.
+    /// silently doubling up. That is the game's own code and not its test
+    /// modules: a test that presses `R` to prove it does nothing any more
+    /// has not taken `R`.
+    ///
+    /// `main.rs` is one of them. It reads the keys the sim hears — pause,
+    /// warp, mute, the quick-move modifier — and the one that turns a
+    /// carry, and it was missing from this list while `R` still started a
+    /// new run, which is how the bench's turn handle and a thrown-away
+    /// run came to share a key unseen.
+    ///
+    /// **A modifier is the exception, and it is one by reason rather than
+    /// by list.** A modifier means nothing alone; it means something with
+    /// the key it is held with. The bench's fine step is `Shift` with its
+    /// own six directions, which this test has just proved are the
+    /// bench's alone; the cabin's `Shift` is quick-move with a click and
+    /// the reverse turn with `Q`, neither of which the bench answers. So
+    /// the modifier is shared and no chord is.
     #[test]
     fn the_benchs_keys_are_the_benchs_alone() {
         let mut taken: Vec<String> = Vec::new();
@@ -845,8 +861,10 @@ measured_half = [0.5, 0.5, 0.5]
             include_str!("rig.rs"),
             include_str!("menu.rs"),
             include_str!("gesture.rs"),
+            include_str!("main.rs"),
         ] {
-            for after in source.split("KeyCode::").skip(1) {
+            let game = source.split("#[cfg(test)]\nmod ").next().unwrap_or(source);
+            for after in game.split("KeyCode::").skip(1) {
                 let name: String = after
                     .chars()
                     .take_while(char::is_ascii_alphanumeric)
@@ -856,14 +874,17 @@ measured_half = [0.5, 0.5, 0.5]
                 }
             }
         }
-        let mine: Vec<KeyCode> = DIRECTIONS
+        assert!(
+            taken.iter().any(|name| name == "KeyQ"),
+            "the key that turns a carry went unread"
+        );
+        let chords: Vec<KeyCode> = DIRECTIONS
             .iter()
             .map(|(key, _, _)| *key)
             .chain(HANDLES.iter().map(|(key, _)| *key))
             .chain([TAKE, UNDO, SAVE])
-            .chain(FINE)
             .collect();
-        for key in &mine {
+        for key in &chords {
             let name = format!("{key:?}");
             assert!(
                 !taken.contains(&name),
@@ -871,6 +892,7 @@ measured_half = [0.5, 0.5, 0.5]
             );
         }
         // And no key of the bench's own means two things either.
+        let mine: Vec<KeyCode> = chords.iter().copied().chain(FINE).collect();
         let mut seen = mine.clone();
         seen.sort_by_key(|key| format!("{key:?}"));
         seen.dedup();

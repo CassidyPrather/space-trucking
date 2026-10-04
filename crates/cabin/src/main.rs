@@ -39,6 +39,7 @@ mod wear;
 
 use std::time::Duration;
 
+use bevy::input::mouse::{AccumulatedMouseScroll, MouseScrollUnit};
 use bevy::prelude::*;
 use bevy::render::RenderPlugin;
 use bevy::time::{TimeSystems, Virtual};
@@ -975,6 +976,7 @@ fn advance(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     buttons: Res<ButtonInput<MouseButton>>,
+    scroll: Res<AccumulatedMouseScroll>,
     pointer: Res<VirtualPointer>,
     camera: Res<rig::CameraRig>,
     grips: Res<gesture::Grips>,
@@ -1048,6 +1050,14 @@ fn advance(
     // arrives the same way and has no key beside it: the labelled bar on
     // the menu is the only thing that starts one (`crate::menu`).
     let worked = menu.take();
+    // The carry turns while the body roams with it, and at no other
+    // time: an open menu parks the roam and a focus leaves it, and there
+    // the wheel does what it always did, which is nothing.
+    let turning = if holding && camera.roaming() {
+        turning(&keys, &scroll)
+    } else {
+        bridge::Turning::default()
+    };
     let input = FrameInput {
         pointer: at,
         press,
@@ -1063,12 +1073,52 @@ fn advance(
         menu_reseed: worked.reseed,
         occupied: occupancy.0,
         detach: parting,
+        turning,
     };
     let outcome = shell.bridge.frame(time.delta_secs(), &input);
     if outcome.toggle_mute {
         shell.muted = !shell.muted;
     }
     shell.outcome = outcome;
+}
+
+/// The key that turns the carry: `Q`, and with `Shift` held the other
+/// way. `R` was the run's and is nobody's now, and `E` is focus.
+const TURN_KEY: KeyCode = KeyCode::KeyQ;
+
+/// **The hands on the carry's facing**, as the bridge takes them
+/// (`bridge::Turning`; docs/BAY.md, "Cargo turns").
+///
+/// - **The wheel**, rolled up and away from you, turns the carry
+///   counter-clockwise as seen from the room — as you face a wall, for a
+///   piece bound for one — and down turns it back. Each notch turns to
+///   the next multiple of fifteen degrees that way: the convenient
+///   angles, offered by the tool and never by the sim. A wheel that
+///   reports pixels (a touchpad, a smooth wheel) is read at
+///   `MouseScrollUnit::SCROLL_UNIT_CONVERSION_FACTOR` to the notch.
+/// - **`Ctrl` + wheel** turns one degree a notch from wherever the carry
+///   is, with nothing to snap to, so every angle is a few notches away.
+/// - **`Q`** is the plain notch for a hand with no wheel, and **`Shift+Q`**
+///   the notch back. `Shift` is quick-move, and quick-move is read on a
+///   press — a press that lifts — so a hand already carrying has no use
+///   for it until the drop.
+fn turning(keys: &ButtonInput<KeyCode>, scroll: &AccumulatedMouseScroll) -> bridge::Turning {
+    let held = |pair: [KeyCode; 2]| pair.into_iter().any(|key| keys.pressed(key));
+    let back = held([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
+    bridge::Turning {
+        wheel: match scroll.unit {
+            MouseScrollUnit::Line => scroll.delta.y,
+            MouseScrollUnit::Pixel => {
+                scroll.delta.y / MouseScrollUnit::SCROLL_UNIT_CONVERSION_FACTOR
+            }
+        },
+        fine: held([KeyCode::ControlLeft, KeyCode::ControlRight]),
+        key: match (keys.just_pressed(TURN_KEY), back) {
+            (false, _) => 0,
+            (true, false) => 1,
+            (true, true) => -1,
+        },
+    }
 }
 
 /// **The body stands where a body can stand.**
@@ -1212,7 +1262,10 @@ mod tests {
 #[cfg(test)]
 mod session {
     use bevy::input::InputPlugin;
+    use bevy::input::mouse::MouseWheel;
+    use bevy::input::touch::TouchPhase;
     use bevy::time::TimeUpdateStrategy;
+    use space_trucking::sim::Turn;
     use space_trucking::sim::cargo::Loc;
     use space_trucking::sim::room::{CABIN, RoomId, Tile};
     use space_trucking::sim::{Cue, ShipState, TICK_DT, Vec2 as SimVec2, layout, splitmix};
@@ -1672,6 +1725,73 @@ mod session {
                 .map(|(_, surface)| *surface)
         }
 
+        /// Roll the wheel `notches` this frame, the way a mouse reports
+        /// it: in lines, positive up and away.
+        fn wheel(&mut self, notches: f32) {
+            self.app.world_mut().write_message(MouseWheel {
+                unit: MouseScrollUnit::Line,
+                x: 0.0,
+                y: notches,
+                window: Entity::PLACEHOLDER,
+                phase: TouchPhase::Moved,
+            });
+        }
+
+        /// The facing the carry is sent at.
+        fn facing(&self) -> Turn {
+            self.app.world().resource::<Shell>().bridge.facing()
+        }
+
+        /// **A cabin with one crate aboard**, standing in the middle of the
+        /// deck facing the front, and a body standing over it close enough
+        /// to reach it, looking at it: the crate's id, and the deck point it
+        /// stands on.
+        fn over_a_crate() -> (Self, u32, SimVec2) {
+            use std::fmt::Write as _;
+
+            let (fx, fy, fw, fh) = RoomKind::Cabin.floor_rect();
+            let fine = |cell: u8, span: u8| {
+                space_trucking::sim::cargo::fine(cell + span / 2)
+                    + space_trucking::sim::cargo::FINE / 2
+            };
+            let (x, y) = (fine(fx, fw), fine(fy, fh));
+            let mut save = String::new();
+            for line in space_trucking::sim::Sim::new(1).save_string().lines() {
+                if line.starts_with("piece ") {
+                    continue;
+                }
+                if line.starts_with("next_piece") {
+                    // Writing into a String cannot fail.
+                    let _ = writeln!(
+                        save,
+                        "piece 0 {} 0 0 hold {CABIN} {x} {y} 0",
+                        space_trucking::sim::Kind::ScrapAlloy.index()
+                    );
+                    let _ = writeln!(save, "next_piece 1");
+                    continue;
+                }
+                save.push_str(line);
+                save.push('\n');
+            }
+            let mut cabin = Self::new(&save);
+            let at = layout::piece_rect(
+                cabin.sim().rooms(),
+                cabin.sim().pieces(),
+                &cabin.sim().pieces()[0],
+            );
+            let at = SimVec2::new(at.w.mul_add(0.5, at.x), at.h.mul_add(0.5, at.y));
+            let floor = cabin.face(Station::BayFloor).expect("the cabin's deck");
+            let target = floor.to_world(at);
+            let eye = [Vec3::Z, Vec3::NEG_Z, Vec3::X, Vec3::NEG_X]
+                .into_iter()
+                .map(|way| Vec3::new(target.x, EYE_HEIGHT, target.z) + way * 0.9)
+                .find(|eye| cabin.app.world().resource::<Envelope>().holds(*eye))
+                .expect("somewhere to stand beside the crate");
+            cabin.stand(eye, target);
+            cabin.steps(3);
+            (cabin, 0, at)
+        }
+
         /// Walk everything of the player's out of `room` the way a
         /// shift-click quick-move does. Board setup, straight through
         /// the bridge: not the path under test.
@@ -2075,6 +2195,172 @@ mod session {
         assert!(
             cabin.sim().tick() > tick,
             "the world stopped instead of going on"
+        );
+    }
+
+    /// The `Turn` nearest `d` degrees, the way the carry is sent at one.
+    fn degrees(d: i32) -> Turn {
+        // A degree is 65,536 / 360 of a Turn unit: nearest, halves up.
+        let units = (i64::from(d.rem_euclid(360)) * 65_536 * 2 + 360) / 720;
+        Turn(u16::try_from(units % 65_536).expect("a turn"))
+    }
+
+    /// **The hands turn the carry, through the whole input schedule, and
+    /// the drop keeps the turn.**
+    ///
+    /// A crate lifted off the deck carries at its own turn. `Ctrl` and
+    /// the wheel turn it a degree a notch, to seven; a plain notch up
+    /// from seven lands on fifteen and not twenty-two, and another on
+    /// thirty; a notch down is fifteen again. `Q` is the plain notch for
+    /// a hand with no wheel and `Shift+Q` the notch back. Each turn is
+    /// the turn the sim previews the drop at, the patch's own question,
+    /// and the release lands the crate at it — a twenty-second of a turn
+    /// off square, nothing snapped. Lifted again, it carries on from
+    /// there.
+    #[test]
+    fn the_wheel_and_q_turn_the_carry_and_the_drop_keeps_the_turn() {
+        let (mut cabin, id, at) = Cabin::over_a_crate();
+        cabin.click();
+        assert_eq!(
+            cabin.sim().held(0).map(|held| held.piece),
+            Some(id),
+            "the crate under the crosshair did not lift"
+        );
+        assert_eq!(
+            cabin.facing(),
+            Turn::ZERO,
+            "a carry starts at the crate's own turn"
+        );
+        let turned = |cabin: &mut Cabin, keys: &[KeyCode], notches: f32| {
+            cabin.hold_keys(keys);
+            cabin.wheel(notches);
+            cabin.step();
+            cabin.hold_keys(&[]);
+            cabin.step();
+            cabin.facing()
+        };
+        let ctrl = [KeyCode::ControlLeft];
+        assert_eq!(
+            turned(&mut cabin, &ctrl, 7.0),
+            degrees(7),
+            "Ctrl turns degrees"
+        );
+        assert_eq!(
+            turned(&mut cabin, &[], 1.0),
+            degrees(15),
+            "up from seven is fifteen"
+        );
+        assert_eq!(turned(&mut cabin, &[], 1.0), degrees(30));
+        assert_eq!(
+            turned(&mut cabin, &[], -1.0),
+            degrees(15),
+            "and down is the way back"
+        );
+        assert_eq!(turned(&mut cabin, &ctrl, -1.0), degrees(14));
+        assert_eq!(
+            turned(&mut cabin, &[KeyCode::KeyQ], 0.0),
+            degrees(15),
+            "Q is a notch"
+        );
+        assert_eq!(
+            turned(&mut cabin, &[KeyCode::ShiftLeft, KeyCode::KeyQ], 0.0),
+            degrees(0),
+            "Shift+Q is a notch back"
+        );
+        let facing = turned(&mut cabin, &ctrl, -16.0);
+        assert_eq!(facing, degrees(-16));
+        assert!(!facing.square(), "the carry was meant to end up off square");
+
+        // The preview the ghost and the patch are drawn from is asked at
+        // that turn, and the release lands exactly where it said.
+        let pointer = cabin.app.world().resource::<VirtualPointer>().sim;
+        let shell = &cabin.app.world().resource::<Shell>().bridge;
+        let (berth, verdict) = shell
+            .sim
+            .drop_preview(0, pointer, shell.facing())
+            .expect("the aim is on the deck");
+        assert_eq!(verdict, Ok(()), "open deck refused the turned crate");
+        assert_eq!(berth.spot().map(|spot| spot.turn), Some(facing));
+        cabin.click();
+        let landed = cabin.sim().pieces()[0].loc;
+        assert!(cabin.sim().held(0).is_none(), "the release did not land");
+        assert_eq!(
+            landed, berth,
+            "the crate landed somewhere the preview never said"
+        );
+        assert_eq!(
+            landed.spot().map(|spot| spot.turn),
+            Some(facing),
+            "the drop forgot the turn it was carried at"
+        );
+
+        // Lifted again, the carry starts at the turn the crate stands at.
+        let floor = cabin.face(Station::BayFloor).expect("the deck");
+        cabin.look(floor.to_world(at));
+        cabin.steps(2);
+        cabin.click();
+        assert_eq!(cabin.sim().held(0).map(|held| held.piece), Some(id));
+        assert_eq!(cabin.facing(), facing, "a crate lifted again lost its turn");
+    }
+
+    /// **Nothing but a carry turns, and only while the body roams.** The
+    /// wheel and `Q` with an empty hand turn nothing — the carry that
+    /// follows starts at its crate's own turn, with no stray notch saved
+    /// up for it — and with the `Esc` menu standing over a carry they
+    /// are the menu's, which reads neither. Close the menu and the same
+    /// notch turns the carry.
+    #[test]
+    fn the_wheel_turns_only_a_carry_and_only_in_the_room() {
+        let (mut cabin, id, _) = Cabin::over_a_crate();
+        cabin.hold_keys(&[KeyCode::KeyQ]);
+        cabin.wheel(3.0);
+        cabin.step();
+        cabin.hold_keys(&[]);
+        cabin.wheel(0.5);
+        cabin.step();
+        assert_eq!(cabin.facing(), Turn::ZERO);
+        cabin.click();
+        assert_eq!(cabin.sim().held(0).map(|held| held.piece), Some(id));
+        cabin.wheel(0.5);
+        cabin.step();
+        assert_eq!(
+            cabin.facing(),
+            Turn::ZERO,
+            "a carry began with wheel saved up from an empty hand"
+        );
+
+        cabin.hold_keys(&[KeyCode::Escape]);
+        cabin.step();
+        cabin.hold_keys(&[]);
+        cabin.step();
+        assert!(
+            cabin.app.world().resource::<menu::Menu>().open,
+            "Esc opens the menu"
+        );
+        assert!(cabin.sim().held(0).is_some(), "the menu dropped the carry");
+        cabin.wheel(2.0);
+        cabin.step();
+        cabin.hold_keys(&[KeyCode::KeyQ]);
+        cabin.step();
+        cabin.hold_keys(&[]);
+        cabin.step();
+        assert_eq!(
+            cabin.facing(),
+            Turn::ZERO,
+            "the wheel turned a carry under the menu"
+        );
+
+        cabin.hold_keys(&[KeyCode::Escape]);
+        cabin.step();
+        cabin.hold_keys(&[]);
+        cabin.step();
+        assert!(!cabin.app.world().resource::<menu::Menu>().open);
+        cabin.wheel(1.0);
+        cabin.step();
+        assert_eq!(
+            cabin.facing(),
+            degrees(15),
+            "back in the room, the wheel turns it"
         );
     }
 }

@@ -17,12 +17,14 @@
 //! documented in `docs/TELEMETRY.md` first; none exists today) could batch
 //! buffers without double-count anxiety.
 //!
-//! Consent gating, storage, and deletion-on-decline live in the frontend:
-//! `src/main.rs` reads the consent key the web shell's card writes and
-//! constructs an [`Aggregate`] only on a recorded `"yes"`. This module is
-//! pure and macroquad-free so every row is testable. Parsing never panics:
-//! a malformed buffer maps to [`TelemetryError`] and the caller starts
-//! fresh.
+//! Consent gating, storage, and deletion-on-decline belong to a frontend,
+//! and no frontend does any of it today: the web shell whose card wrote
+//! the consent key retired with the 2D console, and the cabin has no card,
+//! never reads the key, and never constructs an [`Aggregate`] — so nothing
+//! is recorded. A frontend that ever does must construct one only on a
+//! recorded `"yes"`. This module is pure and engine-free so every row is
+//! testable. Parsing never panics: a malformed buffer maps to
+//! [`TelemetryError`] and the caller starts fresh.
 
 use std::fmt;
 use std::fmt::Write as _;

@@ -964,6 +964,7 @@ mod tests {
         .init_resource::<Time>()
         .init_resource::<ButtonInput<KeyCode>>()
         .init_resource::<ButtonInput<MouseButton>>()
+        .init_resource::<bevy::input::mouse::AccumulatedMouseScroll>()
         .init_resource::<crate::surface::VirtualPointer>()
         .init_resource::<crate::gesture::Grips>()
         .init_resource::<crate::room::Occupancy>()

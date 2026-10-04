@@ -2776,6 +2776,135 @@ mod tests {
         }
     }
 
+    /// **A pane hung crooked reads its own crooked piece of the one sky.**
+    ///
+    /// Panes are posed by their berths now, and a berth may be at any
+    /// turn: a window hung a seventh of a turn round, on the aft wall
+    /// beside a square one. Both glasses are read off the very pose the
+    /// runtime gives their rigs (`pieces::berth_pose`, the parts' own
+    /// transforms), so the turned pane is turned exactly as it is drawn.
+    /// A turn about the wall's normal leaves the glass on the wall's
+    /// plane, so the two still share the wall's one sky; the remap that
+    /// picks a pane's rectangle out of it is affine and carries the turn;
+    /// and so the crooked pane lands on exactly the texel its OWN
+    /// aperture would have drawn, all over the void — a crooked view of
+    /// the right sky, not a straight view of a slanted hole.
+    #[test]
+    #[allow(clippy::too_many_lines)] // two berths found, two panes posed, one sky asked of both
+    fn a_crooked_pane_reads_its_own_piece_of_the_one_sky() {
+        use crate::pieces::{Cut, Screens, berth_pose, parts};
+        use space_trucking::sim::cargo::{self, Foot, Kind, Piece, Spot, Turn};
+
+        let charts = crate::rig::bay();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let rooms = space_trucking::sim::room::Rooms::new();
+        // The middle course of the aft wall, a cell's middle at a time,
+        // wherever the arbiter lets a window hang at `turn` clear of
+        // `other`: the wall's doorway is a threshold, and nothing hangs
+        // across one.
+        let berth = |turn: Turn, other: Option<Foot>| {
+            (3..11_u8).find_map(|cell| {
+                let (x, y) = (
+                    cargo::fine(cell) + cargo::FINE / 2,
+                    cargo::fine(1) + cargo::FINE / 2,
+                );
+                let spot = Spot {
+                    room: CABIN,
+                    x,
+                    y,
+                    turn,
+                };
+                let foot = Foot::of(RoomKind::Cabin, Kind::Window, x, y, turn)?;
+                (space_trucking::sim::placement_check(&rooms, &[], 0, Kind::Window, spot).is_ok()
+                    && other.is_none_or(|other| !other.overlaps(foot)))
+                .then_some((spot, foot))
+            })
+        };
+        let hang = |materials: &mut Assets<StandardMaterial>, (spot, foot): (Spot, Foot)| {
+            let rect = layout::foot_rect(CABIN, foot);
+            let (_, _, pos, rot, scale) =
+                berth_pose(&charts, Kind::Window, rect, spot.turn).expect("a berth on a chart");
+            let piece = Piece {
+                id: 0,
+                kind: Kind::Window,
+                variant: 0,
+                gnawed: false,
+                loc: spot.hold(),
+            };
+            let glass = parts(&piece, Screens::LIVE)
+                .into_iter()
+                .find(|part| matches!(part.cut, Cut::Sky))
+                .expect("a window glazes a sky");
+            let rig = Transform {
+                translation: pos,
+                rotation: rot,
+                scale,
+            };
+            let at = rig.mul_transform(glass.under.rest() * glass.at);
+            let axes = at.compute_affine().matrix3;
+            let half_u = Vec3::from(axes.x_axis) * 0.5;
+            let half_v = Vec3::from(axes.y_axis) * 0.5;
+            Pane {
+                glass: materials.add(StandardMaterial::default()),
+                centre: at.translation,
+                half_u,
+                half_v,
+                facing: half_u.normalize().cross(half_v.normalize()),
+            }
+        };
+        let tilted = berth(Turn(9362), None).expect("the aft wall takes a crooked window");
+        let level = berth(Turn::ZERO, Some(tilted.1)).expect("and a square one beside it");
+        let crooked = hang(&mut materials, tilted);
+        let square = hang(&mut materials, level);
+        assert!(
+            crooked.half_u.normalize().dot(square.half_u.normalize()) < 0.7,
+            "the crooked pane was meant to hang a seventh of a turn round"
+        );
+        let eye = Vec3::new(0.2, 1.5, 0.4);
+        let panes = vec![(0, crooked), (1, square)];
+        let alone: Vec<(Aperture, Quat)> = panes
+            .iter()
+            .map(|(_, pane)| {
+                Aperture::through(eye, pane.centre, pane.half_u, pane.half_v)
+                    .expect("each pane is a hole on its own")
+            })
+            .collect();
+        let corners: Vec<[Vec3; 4]> = panes.iter().map(|(_, pane)| pane.corners()).collect();
+        let (plans, dark) = plan_skies(panes, eye, Grouping::Wall);
+        assert!(
+            dark.is_empty() && plans.len() == 1,
+            "one wall, one sky, turned or not"
+        );
+        let plan = &plans[0];
+        for (i, (_, uv)) in plan.panes.iter().enumerate() {
+            let (aperture, rot) = alone[i];
+            for at in [
+                Vec3::new(0.0, 1.4, -60.0),
+                Vec3::new(-40.0, 20.0, -90.0),
+                Vec3::new(55.0, -18.0, -140.0),
+                Vec3::new(300.0, 300.0, -900.0),
+            ] {
+                let n = ndc(aperture, rot, eye, at);
+                let own = Vec2::new(n.x.mul_add(0.5, 0.5), 0.5f32.mul_add(-n.y, 0.5));
+                let shared = sky_uv(plan, eye, at);
+                assert!(
+                    (uv.transform_point2(own) - shared).length() < 1e-4,
+                    "pane {i} reads {} where its own sky is {shared} (point {at})",
+                    uv.transform_point2(own)
+                );
+            }
+            // Its own piece of the sky lies inside the sky: the wall's
+            // render bounds every pane on the plane.
+            for corner in corners[i] {
+                let at = sky_uv(plan, eye, corner);
+                assert!(
+                    (-1e-4..=1.0 + 1e-4).contains(&at.x) && (-1e-4..=1.0 + 1e-4).contains(&at.y),
+                    "pane {i}'s corner {corner} lies off the sky, at {at}"
+                );
+            }
+        }
+    }
+
     /// The whimsy rule survives the sharing: two panes on DIFFERENT
     /// walls get different skies, aimed different ways, because the
     /// gathering is by plane and a plane is a fact about the wall. Hang

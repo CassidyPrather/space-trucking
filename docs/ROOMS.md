@@ -482,6 +482,11 @@ lattice.
 **Room kinds are an appended table**, like `Kind`: new kinds go on the
 end and old saves keep parsing (FIXTURES.md's convention, unchanged).
 
+> Superseded in part by DESIGN_REVIEW.md, *An old save or tape starts a
+> new run*: an old save does not parse. Appending still keeps every
+> token a current save holds meaning what it did, so a new kind needs
+> no new header.
+
 ### The one new input field
 
 The launch and detach gates need to know **which room a player's body is
@@ -529,6 +534,9 @@ family. The cabin is simply the room you start in.
   `{ room, x, y }`. Cubbies do not need one — a cabinet knows what room
   it stands in. The cabin is room 0, which is also how pre-rooms saves
   migrate: every old berth is a room-0 berth.
+
+  > Superseded in part by DESIGN_REVIEW.md, *An old save or tape starts
+  > a new run*: a pre-rooms save is not read.
 
 ### The tile-class vocabulary
 
@@ -741,6 +749,10 @@ has ever stored a tile class, `tile_of` is pure in `(kind, x, y)`, and
 the cells `Staging` names are the identical cells `Plain` named in those
 rooms the day before.
 
+> Superseded in part by DESIGN_REVIEW.md, *An old save or tape starts a
+> new run*: a pre-growth document is not read, so nothing is translated
+> or walked.
+
 ### The entry-path law
 
 > **An `Offer` band may not fall in a declared door's own lane.**
@@ -782,6 +794,9 @@ The tile layout changed what a berth means, so the save bumped: `STV14`,
 and a pre-STV14 proposal left standing in a lane walks onto the offer
 area the law actually leaves. Conservation before convenience — the
 proposal comes out standing somewhere else, never withdrawn.
+
+> Superseded in part by DESIGN_REVIEW.md, *An old save or tape starts a
+> new run*: a pre-STV14 document is not read, so no proposal walks.
 
 ### The doorstep law
 
@@ -1092,6 +1107,11 @@ goes with the collision. The vital rule stays — it guards *ability*, not
 mobility.
 
 ### Migration posture
+
+> Superseded by DESIGN_REVIEW.md, *An old save or tape starts a new
+> run*: nothing below migrates any more. A save from before any of these
+> bumps is not read, and the game starts a new run; a current save that
+> lies still fails safe.
 
 - **Legacy mid-trade saves resolve on load**: every player-owned piece
   on a pad or the received shelf walks back aboard to the first legal

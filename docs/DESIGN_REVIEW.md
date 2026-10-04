@@ -426,6 +426,9 @@ Every line is reversible; strike one by overruling it.
   whole-cell anchors.** They set things out a tile at a time; only
   `first_fit` and `dress_fit` learned the flush-against-a-neighbour
   anchors that find snug gaps.
+
+  > Superseded in part by *An old save or tape starts a new run*
+  > (below): the save reader walks nothing now.
 - **The carry ghost stands on the berth, not at the crosshair.** It
   takes the pose the drop would land in, a tenth large and lifted 5 cm,
   so the piece can sit up to half its own footprint from the point
@@ -438,3 +441,26 @@ Every line is reversible; strike one by overruling it.
 - **A body half a cell or less from a seam turns its back on it.** The
   backing rule's threshold was a rounding allowance on the grid; off it,
   a couch exactly half a cell from the front wall used to face the wall.
+- **An old save or tape starts a new run.** This one was the owner's,
+  not a call made without asking: "This is a scrappy prototype, save
+  version invalidation isn't a concern yet. In fact, worth double
+  checking we aren't carrying any weighty migration code and just start
+  a new save." So the save reader takes exactly the header this build
+  writes (`STV20`) and the tape reader exactly its own (`RPL4`), and
+  anything else is refused like an unreadable file, which the cabin
+  answers with a fresh run. What went: the save's migration chain back
+  to the console's `STV4` — its translations, re-seats and walks — and
+  the cabin's first-boot adoption of the console's `local.data`, its
+  run and its stored dev mode alike. Each existed to carry an old run
+  forward, and a prototype pays for that on every format change. What
+  stays is integrity, because a current save can still lie: its graph
+  is replayed through the validated attach, its berths are
+  bounds-checked, its stows and dressings are re-checked, and a save
+  that fails any of it is refused whole. Bump a header whenever
+  what a line *means* changes, not only its grammar, because a save read
+  under the wrong rules loads a board nobody built. The replay, wire and
+  telemetry readers already took only their own headers. DESIGN.md asked
+  for this stance from the start ("Don't worry too much about
+  forwards/backwards compatibility during the prototyping phase"); older
+  passages in these docs that promise an old save keeps loading are
+  marked superseded by this line.

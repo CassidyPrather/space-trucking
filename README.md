@@ -55,12 +55,9 @@ down to the end of the track — the way the handle itself
 swings — and the throw fires at the detent. `Space`
 pauses, `M` mutes, `R` starts a new run (`F` warps, in dev mode).
 
-Saves: the cabin keeps its own slot (`cabin.data` + `cabin.replay`
-beside the working directory). On a boot with no slot of its own it
-**adopts the retired 2D console's `local.data`** — same save string,
-same offline catch-up, and a dev mode earned in the console carries
-over. Adoption happens once; delete `cabin.data`/`cabin.replay` to
-re-adopt.
+Saves: the cabin keeps its own slot (`cabin.data` + `cabin.replay` in
+the working directory). A save or tape from another version is not
+read, and the game starts a new run (docs/DESIGN_REVIEW.md).
 
 ## Playing
 
@@ -162,9 +159,8 @@ Test: `cargo test --workspace`
 ### Developer mode (fast-forward)
 
 The game runs at 1× for everyone; the 16× fast-forward is a development
-tool, hidden until asked for nicely: run with `-- --dev`. A dev-mode save
-keeps the privilege across boots. Developer mode reveals the warp button
-and the `F` key.
+tool, hidden until asked for nicely: run with `-- --dev`. Developer mode
+reveals the warp button and the `F` key.
 
 ### Flight recorder
 

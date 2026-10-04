@@ -375,22 +375,6 @@ impl Kind {
         matches!(self, Self::ChartTank | Self::LaunchLever)
     }
 
-    /// Whether this kind is one of the ship's instruments — the wall
-    /// fittings every hull launches with. Named so the save reader can
-    /// hang the missing ones when it loads a document from before they
-    /// were cargo.
-    ///
-    /// The porthole and the bay window are NOT here, and the distinction
-    /// is the point: a hull launches with one window, and everything
-    /// else with glass in it was bought.
-    #[must_use]
-    pub const fn instrument(self) -> bool {
-        matches!(
-            self,
-            Self::Window | Self::ChartTank | Self::EtaGauge | Self::DestPreview | Self::LaunchLever
-        )
-    }
-
     /// Whether this kind is a **window**: a hole in the hull with glass
     /// in it, whatever size the hole is.
     ///
@@ -1118,10 +1102,10 @@ fn anchors(
 /// with you.
 ///
 /// Shared by the shift-click quick-stow, the comet harvest, the ???
-/// exchange, the hopper's banking, and every save migration that has to
-/// rehome a piece — "first legal spot, even if that is a bad idea" is the
-/// contract, so all of them agree on what "first" means. Coverings have
-/// no occupancy berth at all ([`dress_fit`] is their scan).
+/// exchange, and the hopper's banking — "first legal spot, even if that
+/// is a bad idea" is the contract, so all of them agree on what "first"
+/// means. Coverings have no occupancy berth at all ([`dress_fit`] is
+/// their scan).
 #[must_use]
 pub fn first_fit(
     rooms: &Rooms,
@@ -1792,14 +1776,6 @@ mod tests {
             assert_eq!(kind.mount(), Mount::Wall, "{kind:?} hangs on a wall");
             assert_eq!(kind.flammable(), 0, "glass and brass do not burn");
             assert!(!kind.vital(), "a ship flies blind, unhappily");
-            // A hull launches with ONE window and buys the rest, which
-            // is what keeps an old save from being handed a bay window
-            // it never paid the freight on.
-            assert_eq!(
-                kind.instrument(),
-                kind == Kind::Window,
-                "{kind:?} disagrees about what a hull comes with"
-            );
             // Every room kind must be able to take it somewhere. Every
             // wall is "somewhere" now — a footprint is stated in the
             // wall's own frame, so the flanks take a non-square one the

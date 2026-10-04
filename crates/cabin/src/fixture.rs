@@ -80,19 +80,17 @@
 
 use space_trucking::sim::room::RoomKind;
 
-/// The fixture save, hand-authored at the version this build writes —
-/// the timestamp line is added at boot so no catch-up elapses.
+/// The fixture save, written at the version this build writes — the
+/// timestamp line is added at boot so no catch-up elapses.
 ///
-/// It used to be authored at STV11 and walk the migration chain on every
-/// boot, which read as free coverage and was not: the chain's job is to
-/// carry a board from a net that no longer exists onto one that does,
-/// and a showcase whose proposal ends up wherever the arithmetic leaves
-/// it is a showcase of the arithmetic. The market grew to 8×7 at STV16
-/// and the front rows it gained are rows no older document can name, so
-/// the board is written in the net it is meant to show.
-/// Every migration keeps its own test in `sim::save`.
+/// The save reader reads no other version (`docs/DESIGN_REVIEW.md`), so
+/// the change that bumps the header re-saves this board in the new one —
+/// read by the reader it replaces, written by the writer it adds — or
+/// `--fixture` stops booting and the tests below say so. Re-saved, not
+/// re-typed: a hand edit of the numbers is a guess at the board, and the
+/// board is what this file is for.
 pub const SAVE: &str = "\
-STV16
+STV20
 seed 7
 tick 12000
 rng 3c76e098a8f74c8a
@@ -114,37 +112,37 @@ room 0 0 - - -
 room 1 1 0 1 3
 room 2 2 0 0 0
 marks 1 16
-piece 0 21 0 0 hold 0 6 4
-piece 1 9 0 0 hold 0 7 5
-piece 2 8 0 0 hold 0 4 7
-piece 3 19 1 0 hold 0 4 6
-piece 4 18 2 0 hold 0 3 6
+piece 0 21 0 0 hold 0 96 64
+piece 1 9 0 0 hold 0 112 80
+piece 2 8 0 0 hold 0 64 112
+piece 3 19 1 0 hold 0 64 96
+piece 4 18 2 0 hold 0 48 96
 piece 5 12 0 0 stow 0 3
-piece 6 6 1 0 hold 0 3 9
-piece 7 20 3 0 hold 0 7 1
-piece 8 17 1 0 hold 0 0 5
-piece 9 16 2 0 hold 0 15 4
-piece 10 22 0 1 laid 0 4 6
-piece 11 23 1 0 laid 0 6 1
-piece 12 24 0 0 laid 0 2 6
+piece 6 6 1 0 hold 0 48 144
+piece 7 20 3 0 hold 0 112 16
+piece 8 17 1 0 hold 0 0 80
+piece 9 16 2 0 hold 0 240 64
+piece 10 22 0 1 laid 0 64 96
+piece 11 23 1 0 laid 0 96 16
+piece 12 24 0 0 laid 0 32 96
 piece 13 0 1 0 stow 0 0
 piece 14 13 2 0 stow 0 1
 piece 15 14 0 0 stow 0 2
-piece 16 4 3 0 hold 2 5 3
-piece 17 7 1 0 hold 2 6 8
-piece 18 1 2 0 hold 2 7 8
-piece 19 11 0 0 hold 0 8 3
-piece 20 2 1 0 hold 0 7 7
-piece 21 5 0 0 hold 2 9 3
-piece 22 3 3 1 hold 2 7 3
-piece 23 15 2 0 hold 2 5 8
-piece 24 26 0 0 hold 0 4 10
-piece 25 25 1 0 hold 0 4 12
-piece 26 27 2 0 hold 0 9 11
-piece 27 28 3 0 hold 0 9 12
-piece 28 29 0 0 hold 0 9 10
-piece 29 30 0 0 hold 2 0 4
-piece 30 31 1 0 hold 0 1 7
+piece 16 4 3 0 hold 2 80 48
+piece 17 7 1 0 hold 2 96 128
+piece 18 1 2 0 hold 2 112 128
+piece 19 11 0 0 hold 0 128 48
+piece 20 2 1 0 hold 0 112 112
+piece 21 5 0 0 hold 2 144 48
+piece 22 3 3 1 hold 2 112 48
+piece 23 15 2 0 hold 2 80 128
+piece 24 26 0 0 hold 0 64 160
+piece 25 25 1 0 hold 0 64 192
+piece 26 27 2 0 hold 0 144 176
+piece 27 28 3 0 hold 0 144 192
+piece 28 29 0 0 hold 0 144 160
+piece 29 30 0 0 hold 2 0 64
+piece 30 31 1 0 hold 0 16 112
 next_piece 31
 ";
 

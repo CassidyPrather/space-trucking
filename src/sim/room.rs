@@ -185,7 +185,8 @@ impl Tile {
 }
 
 /// Everything a room can be. An **appended table**, like `Kind`: new
-/// kinds go on the end and old saves keep parsing.
+/// kinds go on the end, so adding one leaves every token a current save
+/// holds meaning what it did and needs no new save header.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RoomKind {
     /// The cabin, room 0: an 8×7 floor and the walls three courses tall.
@@ -234,7 +235,7 @@ pub enum Port {
 }
 
 impl RoomKind {
-    /// Stable save token. Appended, so old documents keep parsing.
+    /// Stable save token. Appended, so a new kind moves no old token.
     #[must_use]
     pub const fn token(self) -> u8 {
         self as u8
@@ -1387,24 +1388,6 @@ impl Rooms {
         }
         let (anchor, anchor_port, port) = self.berth(kind, from)?;
         self.attach(anchor, anchor_port, kind, port)
-    }
-
-    /// Re-seat a room whose recorded mate no longer exists, keeping its
-    /// id: the migration path for a document written when its kind
-    /// declared ports it no longer does (docs/ROOMS.md's port law, and
-    /// `save`'s pre-STV12 chain). Conservation before convenience — the
-    /// room's cargo is berthed by id, so the id is what must survive.
-    pub fn reseat(&mut self, id: RoomId, kind: RoomKind, from: RoomId) -> Result<(), Refusal> {
-        if usize::from(id) >= MAX_ROOMS || self.get(id).is_some() {
-            return Err(Refusal::Full);
-        }
-        let from = if self.get(from).is_some() {
-            from
-        } else {
-            CABIN
-        };
-        let (anchor, anchor_port, port) = self.berth(kind, from)?;
-        self.replay(id, anchor, anchor_port, kind, port)
     }
 
     /// Cut a room loose. The gates are the caller's (docs/ROOMS.md's

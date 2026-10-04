@@ -6,11 +6,10 @@
 //!
 //! The contract survives the 2D console's retirement: the sim never reads
 //! the wall clock or the window; whatever the cabin wants to tell it goes
-//! in an `InputFrame`. The save reader still accepts the console's
-//! `STV4` and writes whatever header the sim's own format is on, so a
-//! console-era run walks aboard through the migration chain, and the
-//! tape format is unchanged — one deterministic game, whatever the
-//! window.
+//! in an `InputFrame` — one deterministic game, whatever the window. A
+//! save from any version but the sim's own is not read, and the boot
+//! below starts a new run, as it does for any save it cannot read
+//! (`docs/DESIGN_REVIEW.md`).
 
 use std::path::PathBuf;
 
@@ -36,24 +35,15 @@ const CATCH_UP_RATE: f64 = 60.0;
 /// `fast_forward` instead of being clamped away.
 const STALL_SECONDS: f64 = 1.0;
 
-/// The cabin's save file, beside the working directory like the 2D
-/// console's `local.data`. First line is the unix timestamp of the save;
-/// the rest is the sim's own save string, written at the current header
-/// and read back at that or any older one the chain still carries.
+/// The cabin's save file, in the working directory. First line is the
+/// unix timestamp of the save; the rest is the sim's own save string,
+/// written at the current header and read back only at that one.
 const SAVE_FILE: &str = "cabin.data";
 
 /// The flight recorder's black box, same cadence as the save. The tape
 /// format is the shared `Recording` — a cabin session replays in the 2D
 /// console's `--replay` viewer bit-identically.
 const REPLAY_FILE: &str = "cabin.replay";
-
-/// The 2D console's own native save container (quad-storage writes a
-/// JSON object `{"local":{key:value,..}}`). When the cabin has no save
-/// of its own, an existing console run walks aboard from here — the
-/// reader accepts its `STV4`, the same catch-up runs, and the next save
-/// lands at the current header in the cabin's own slot. Adoption
-/// happens once.
-const CONSOLE_FILE: &str = "local.data";
 
 /// A virtual pointer position that no rect contains and no POI is near:
 /// where the pointer rests while the cursor touches nothing mapped.
@@ -152,13 +142,12 @@ pub struct Bridge {
 
 impl Bridge {
     /// Load the save and replay the absence, or start fresh. `dev` unlocks
-    /// the warp toggle, same as the 2D console's `--dev` — and a dev mode
-    /// earned in the console (its stored pretty-please) carries over.
+    /// the warp toggle, same as the 2D console's `--dev`.
     #[must_use]
     pub fn boot(dev: bool) -> Self {
-        let dev = dev || console_dev();
         let now = unix_now();
-        // An absent or unreadable save becomes a fresh run, quietly.
+        // An absent or unreadable save becomes a fresh run, quietly, and
+        // a save from another version is an unreadable one.
         let (sim, arrived_while_away) = load_save()
             .and_then(|(save, saved_at)| Sim::from_save(&save).ok().map(|sim| (sim, saved_at)))
             .map_or_else(
@@ -355,57 +344,17 @@ fn local_night() -> bool {
     !(360..1410).contains(&minutes)
 }
 
-/// Where the cabin keeps a data file: the working directory, matching the
-/// 2D console's `local.data` convention.
+/// Where the cabin keeps a data file: the working directory.
 fn save_path(name: &str) -> PathBuf {
     PathBuf::from(name)
 }
 
-/// Read the save: the cabin's own file first, else adopt the 2D
-/// console's `local.data` sitting in the same directory.
+/// The cabin's save: (sim save string, unix seconds it was written).
 fn load_save() -> Option<(String, f64)> {
-    load_own().or_else(load_console)
-}
-
-/// The cabin's own slot: (sim save string, unix seconds it was written).
-fn load_own() -> Option<(String, f64)> {
     let text = std::fs::read_to_string(save_path(SAVE_FILE)).ok()?;
     let (stamp, save) = text.split_once('\n')?;
     let saved_at = stamp.trim().parse::<f64>().ok()?;
     Some((save.to_string(), saved_at))
-}
-
-/// The console's slot, via its container format.
-fn load_console() -> Option<(String, f64)> {
-    let text = std::fs::read_to_string(save_path(CONSOLE_FILE)).ok()?;
-    parse_console_save(&text)
-}
-
-/// Pull the save and its stamp out of quad-storage's JSON container. The
-/// stamp is `f64::to_bits` in hex, exactly as `src/storage.rs` writes it.
-fn parse_console_save(text: &str) -> Option<(String, f64)> {
-    let root: serde_json::Value = serde_json::from_str(text).ok()?;
-    let local = root.get("local")?;
-    let save = local.get("space-trucking/save")?.as_str()?;
-    let stamp = local.get("space-trucking/saved_at")?.as_str()?;
-    let saved_at = f64::from_bits(u64::from_str_radix(stamp, 16).ok()?);
-    saved_at.is_finite().then(|| (save.to_string(), saved_at))
-}
-
-/// Whether the console's stored developer mode says the pretty-please
-/// was once said. Saying it once is saying it forever, across frontends.
-fn console_dev() -> bool {
-    let Ok(text) = std::fs::read_to_string(save_path(CONSOLE_FILE)) else {
-        return false;
-    };
-    serde_json::from_str::<serde_json::Value>(&text)
-        .ok()
-        .and_then(|root| {
-            root.get("local")?
-                .get("space-trucking/dev")
-                .map(|dev| dev.as_str() == Some("1"))
-        })
-        .unwrap_or(false)
 }
 
 /// Write the save file, timestamp first. Failure is silent by design: a
@@ -771,30 +720,6 @@ mod tests {
         assert_eq!(ticks_of(0.0), 0);
         assert_eq!(ticks_of(1.0), 60);
         assert_eq!(ticks_of(-5.0), 0);
-    }
-
-    /// A run started in the 2D console walks aboard: the quad-storage
-    /// container parses, the stamp's hex bits round-trip, and the save
-    /// string inside satisfies the sim.
-    #[test]
-    fn adopts_the_console_container() {
-        let save = Sim::new(9).save_string();
-        let stamp = format!("{:x}", 1_700_000_000.0f64.to_bits());
-        let container = serde_json::json!({
-            "local": {
-                "space-trucking/dev": "1",
-                "space-trucking/save": save,
-                "space-trucking/saved_at": stamp,
-            }
-        })
-        .to_string();
-        let (parsed, at) = parse_console_save(&container).expect("container parses");
-        assert_eq!(parsed, save);
-        assert!((at - 1_700_000_000.0).abs() < f64::EPSILON);
-        assert!(Sim::from_save(&parsed).is_ok());
-        // Garbage fails safe into a fresh run, never a panic.
-        assert!(parse_console_save("not json").is_none());
-        assert!(parse_console_save("{\"local\":{}}").is_none());
     }
 
     /// A bare shell around a sim, for the gate tests below.

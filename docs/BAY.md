@@ -98,6 +98,9 @@ answer, the offer area a migration walks a proposal onto, a fluff
 budding a whole cell over — keep whole-cell anchors, because they set
 things out a tile at a time.
 
+> Superseded in part by DESIGN_REVIEW.md, *An old save or tape starts a
+> new run*: no migration walks anything now.
+
 **The drop.** The pointer was always continuous; now the berth is too.
 A release resolves a position before it asks any rule about it, in the
 sim and deterministically (`Sim::settle`):
@@ -135,6 +138,10 @@ FINE`, the same ground exactly, before the rest of the migration chain
 runs. Tapes are `RPL4` with an unchanged grammar: the same frames now
 settle cargo somewhere else, so an `RPL3` tape fails safe as unsupported
 instead of replaying into a different game.
+
+> Superseded in part by DESIGN_REVIEW.md, *An old save or tape starts a
+> new run*: an older document is not read at all, in cells or
+> otherwise, and the game starts a new run. Tapes were already there.
 
 **Sweeps.** A test that means "every berth" sweeps every whole-cell
 anchor plus a fixed sample of sixteenths on each axis
@@ -232,6 +239,10 @@ the commit titled "The 2D console retires" removes it, so its parent is
 the last commit where `cargo run` still opened the CRT. Its save file
 still walks aboard: the cabin adopts a `local.data` on first boot, and
 the save reader keeps accepting the console's `STV4` format.
+
+> Superseded by DESIGN_REVIEW.md, *An old save or tape starts a new
+> run*: the cabin no longer reads `local.data` and the reader no longer
+> accepts `STV4`, so a console-era run starts over.
 
 ## The conceit: the grid unfolds
 
@@ -354,6 +365,10 @@ piece must be stowable — a save that lies fails safe into a fresh run,
 as ever. Replays stay `RPL2`: carry synthesizes ordinary pointer
 frames, so the tape format never heard about any of this.
 
+> Superseded in part by DESIGN_REVIEW.md, *An old save or tape starts a
+> new run*: the reader accepts only the header the build writes. The
+> stow validation stands.
+
 ## Coverings: the dressing layer (second slice)
 
 The owner's cargo direction — away from raw materials, toward rugs,
@@ -405,6 +420,9 @@ The house refuses wagers on coverings — the casino badge simply does
 not take carpets — because a transmuted chip could not legally stay
 laid. Saves bump to `STV6` for the one new `laid x y` line form; the
 reader keeps accepting `STV5` and `STV4`.
+
+> Superseded by DESIGN_REVIEW.md, *An old save or tape starts a new
+> run*: neither is read now.
 
 ## Where placement rules go next
 
@@ -635,6 +653,9 @@ of. Three guards, all sim-side and monkey-proven:
   pieces, so the reader hangs the missing ones at their traditional
   berths on load (first legal cell when the board claims a berth),
   chaining with the pre-STV8 console-grid translation.
+
+  > Superseded by DESIGN_REVIEW.md, *An old save or tape starts a new
+  > run*: a pre-STV9 document is not read, so nothing is hung for it.
 - **The logical rects stay the law**: `layout::MAP_PANEL` et al. never
   move; the *binding* moves — a mounted instrument carries its
   station's `SimSurface` at its own cells, so rulings and tape format
@@ -847,6 +868,10 @@ it (the roll a flank wants is now always the one its cells have paid
 for); and a saved board carrying a flank window comes out hanging level
 where the player left it (`STV19`).
 
+> Superseded in part by DESIGN_REVIEW.md, *An old save or tape starts a
+> new run*: a board saved before `STV19` is not read, so it comes out
+> as a new run rather than as a level window.
+
 The same statement takes the **deck apron** off the front of every
 standing piece, and that is the half a playtest can point at. The
 retired console's glyph `(w, h)` was doing all three axes' work, and
@@ -916,6 +941,9 @@ for camera reasons:
 - Save and replay formats bump (STV8 / RPL4) when the net lands; old
   saves migrate hold cells onto the aft-wall/floor charts they already
   present as.
+
+  > Superseded by DESIGN_REVIEW.md, *An old save or tape starts a new
+  > run*: no save migrates; one from before a bump starts a new run.
 
 Build order: occlusion fixes first (presentation-only, immediate),
 then the net in the sim, then the net's presentation, then the

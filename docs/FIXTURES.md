@@ -31,6 +31,10 @@ tokens on that line just grow digits, so old saves still parse; a
 fixture-era save read by an older build fails safe into a fresh game,
 as appended kind indices already guaranteed.)
 
+> Superseded in part by DESIGN_REVIEW.md, *An old save or tape starts a
+> new run*: old `STV4` saves do not load. A save from any version but
+> the build's own is not read, and the game starts a new run.
+
 In 2D the grid edges *are* the walls and ceiling — the analogue is
 exact. In 3D the hold rack grows a gantry frame (top rail, deck lip,
 side stiles) that the fixtures visibly mount to, and lamps emit real
@@ -49,6 +53,10 @@ light into the cabin.
 Appending kinds keeps old saves parsing. It does shift future
 procedural rolls (shelf stocks sample the kind space) on resumed runs —
 accepted during prototyping, per DESIGN.md's compatibility stance.
+
+> Superseded in part by DESIGN_REVIEW.md, *An old save or tape starts a
+> new run*: an old save does not parse. Appending still keeps every
+> token a current save holds meaning what it did.
 
 ## Mechanics
 

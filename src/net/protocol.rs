@@ -108,7 +108,7 @@ impl Message {
             }
             Self::Schedule { tick, frames } => {
                 let _ = writeln!(out, "{MAGIC} schedule {tick}");
-                for frame in frames {
+                for frame in &**frames {
                     out.push_str("frame ");
                     write_frame(&mut out, frame);
                 }

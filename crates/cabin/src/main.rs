@@ -1033,11 +1033,12 @@ fn advance(
             place || cancel,
         )
     } else if !live && holding {
-        // Mid-glide with cargo in hand — the player clicked a station
-        // while carrying, and the camera is on its way. A frame without
-        // a held signal would snap the piece home (the sim's phantom-
-        // pointer guard), so the grip keeps synthesizing until the
-        // focus arrives and the drag continues at the station.
+        // Cargo in hand and no crosshair to carry it by: the menu or the
+        // desktop has the cursor, or the camera is walking back out of a
+        // focus a press there lifted something in (`rig::steer`). A
+        // frame without a held signal would snap the piece home (the
+        // sim's phantom-pointer guard), so the grip keeps synthesizing
+        // until the body roams again and the carry goes on.
         (bridge::POINTER_PARKED, false, true, false)
     } else {
         // The gesture layer merges with raw input in one place
@@ -1452,11 +1453,12 @@ mod session {
     }
 
     /// `surface::track_pointer` without a window: the same two regimes,
-    /// the same `pick`, aimed at a sim point instead of at a screen
-    /// pixel.
+    /// the same `pick` told the same about the hand, aimed at a sim point
+    /// instead of at a screen pixel.
     fn aim(
         rig: Res<CameraRig>,
         cursor: Res<Cursor>,
+        shell: Res<Shell>,
         camera: Single<&Transform, With<CabinCamera>>,
         surfaces: Query<(&Station, &SimSurface, Option<&Riding>, Option<&InRoom>)>,
         mut pointer: ResMut<VirtualPointer>,
@@ -1493,7 +1495,8 @@ mod session {
         } else {
             return;
         };
-        *pointer = crate::surface::pick(ray, roam_only, reach, aimables());
+        let holding = shell.bridge.sim.held(0).is_some();
+        *pointer = crate::surface::pick(ray, roam_only, reach, holding, aimables());
     }
 
     /// Two places to stand and one latch: the spot where a piece
@@ -1729,8 +1732,9 @@ mod session {
                     if behind > REACH {
                         continue;
                     }
-                    let pointer = crate::surface::pick(ray, true, REACH, aims.iter().copied());
-                    let nearer = pointer.world.is_some_and(|at| at.distance(eye) < behind);
+                    let pointer =
+                        crate::surface::pick(ray, true, REACH, false, aims.iter().copied());
+                    let nearer = pointer.depth < behind;
                     if !nearer {
                         clear.get_or_insert(eye);
                         continue;
@@ -1860,6 +1864,74 @@ mod session {
             at
         }
 
+        /// Stand arm's length in front of piece `id`'s own pick face,
+        /// looking at its middle.
+        fn stand_before(&mut self, id: u32) {
+            let face = self
+                .riding(id, Station::Standing)
+                .expect("the piece carries its own pick face");
+            let eye = face.center + Station::Standing.inward(&face) * 0.75;
+            self.stand(Vec3::new(eye.x, EYE_HEIGHT, eye.z), face.center);
+            self.steps(3);
+        }
+
+        /// **A line through piece `id`'s body that comes down on bare deck
+        /// beyond it**: an eye a body can stand at, beside the piece, and
+        /// the deck point past the piece's far side the line from it ends
+        /// on, inside [`REACH`]. Half way along, the line passes over the
+        /// middle of the piece's ground at half the eye's height.
+        fn through(&mut self, id: u32) -> (Vec3, Vec3) {
+            let piece = *self
+                .sim()
+                .pieces()
+                .iter()
+                .find(|piece| piece.id == id)
+                .expect("aboard");
+            let at = layout::piece_rect(self.sim().rooms(), &piece);
+            let at = SimVec2::new(at.w.mul_add(0.5, at.x), at.h.mul_add(0.5, at.y));
+            let middle = self
+                .face(Station::BayFloor)
+                .expect("the cabin's deck")
+                .to_world(at);
+            [Vec3::Z, Vec3::NEG_Z, Vec3::X, Vec3::NEG_X]
+                .into_iter()
+                .map(|way| {
+                    (
+                        Vec3::new(middle.x, EYE_HEIGHT, middle.z) + way * 0.6,
+                        middle - way * 0.6,
+                    )
+                })
+                .find(|(eye, _)| self.app.world().resource::<Envelope>().holds(*eye))
+                .expect("somewhere to stand beside the piece")
+        }
+
+        /// This frame's pointer.
+        fn pointer(&self) -> VirtualPointer {
+            *self.app.world().resource::<VirtualPointer>()
+        }
+
+        /// What the room alone reads along `ray`: the pick with every
+        /// surface that rides a piece taken away.
+        fn room_alone(&mut self, ray: Ray3d) -> VirtualPointer {
+            let bare: Vec<Aimable> = self
+                .aimables()
+                .into_iter()
+                .filter(|aim| aim.riding.is_none())
+                .collect();
+            crate::surface::pick(ray, true, REACH, false, bare)
+        }
+
+        /// Where the held piece's drop at this frame's pointer would land,
+        /// and the sim's ruling on it: the ghost's own question.
+        fn preview(&self) -> (Loc, Result<(), Option<space_trucking::sim::Violation>>) {
+            let pointer = self.pointer().sim;
+            let bridge = &self.app.world().resource::<Shell>().bridge;
+            bridge
+                .sim
+                .drop_preview(0, pointer, bridge.facing(), bridge.lift())
+                .expect("the aim is on a net")
+        }
+
         /// The surface piece `id` carries as `station` this frame, if it
         /// carries one: a standing body's pick face rides its own pose.
         fn riding(&mut self, id: u32, want: Station) -> Option<SimSurface> {
@@ -1930,10 +2002,11 @@ mod session {
         }
 
         /// **Can the player still act?** Let go of everything, step out
-        /// of whatever the camera is in, walk up to the chart tank,
-        /// focus it, and chart a course. Every step is something a
-        /// player does with the hardware they have; the mouse alone is
-        /// enough for all of it, which is why no key is pressed here.
+        /// of whatever the camera is in, send home whatever is still in
+        /// hand, walk up to the chart tank, focus it, and chart a course.
+        /// Every step is something a player does with the hardware they
+        /// have; the mouse alone is enough for all of it, which is why no
+        /// key is pressed here.
         fn can_still_chart(&mut self) -> Result<(), String> {
             self.hold_left(false);
             self.hold_right(false);
@@ -1957,6 +2030,18 @@ mod session {
                     "the camera never came back: {:?}",
                     self.app.world().resource::<CameraRig>().mode
                 ));
+            }
+            // A carry outlives the buttons — it is hands-free — and a
+            // click with a piece in hand is the drop, never a focus. A
+            // right click sends the piece home.
+            if self.sim().held(0).is_some() {
+                self.hold_right(true);
+                self.step();
+                self.hold_right(false);
+                self.steps(2);
+            }
+            if let Some(held) = self.sim().held(0) {
+                return Err(format!("a right click left piece {} in hand", held.piece));
             }
             let Some(map) = self.face(Station::Map) else {
                 return Err("no chart tank aboard".into());
@@ -2409,8 +2494,11 @@ mod session {
     /// whole input schedule (docs/BAY.md, "Lift, and the keys"). Standing
     /// at the chart tank with nothing in hand, `E` focuses it and `E`
     /// steps back out. With a crate in hand, at the same tank, `E` turns
-    /// the crate a notch clockwise and focuses nothing — and a click still
-    /// focuses, crate and all, exactly as it did.
+    /// the crate a notch clockwise and focuses nothing — and so does a
+    /// click, which is the drop with a piece in hand and nothing else
+    /// (docs/BAY.md, "The carry sees the room"): the wall behind the glass
+    /// takes no crate, so the crate goes home, and the camera stays in
+    /// the room.
     #[test]
     fn e_turns_a_full_hand_and_focuses_an_empty_one() {
         let (x, y) = deck_middle(0);
@@ -2442,6 +2530,7 @@ mod session {
         cabin.steps(60);
         assert!(cabin.roaming(), "E did not step back out of the tank");
 
+        let home = cabin.sim().pieces()[0].loc;
         cabin.stand_over(0);
         cabin.click();
         assert_eq!(cabin.sim().held(0).map(|held| held.piece), Some(0));
@@ -2453,14 +2542,78 @@ mod session {
         );
         assert_eq!(cabin.facing(), degrees(-15), "E did not turn the crate");
         cabin.click();
+        cabin.steps(2);
         assert!(
-            focused(&cabin),
-            "a click with a crate in hand stopped focusing"
+            cabin.roaming() && !focused(&cabin),
+            "a click with a crate in hand flew to the tank"
         );
+        assert!(
+            cabin.sim().held(0).is_none(),
+            "a click with a crate in hand did not end the carry"
+        );
+        assert_eq!(
+            cabin.sim().pieces()[0].loc,
+            home,
+            "the wall behind the tank took a crate"
+        );
+    }
+
+    /// **A piece lifted at a station takes the camera back to the room.**
+    /// Nothing in the room starts a focus with a full hand, but a focused
+    /// cursor works the room's charts as well as the glass, and a press on
+    /// a crate down on the deck lifts it. A carry is worked in the room:
+    /// the camera walks back out with the crate in hand, the grip holds
+    /// through the glide, and the next click drops it.
+    #[test]
+    fn a_piece_lifted_at_a_station_takes_the_camera_back_to_the_room() {
+        let (x, y) = deck_middle(0);
+        let mut cabin = Cabin::furnished(&[(Kind::ScrapAlloy, x, y)], &[Kind::ChartTank]);
+        let tank = cabin.face(Station::Map).expect("the starting board's tank");
+        let stand = tank.center + tank.normal() * 0.75;
+        cabin.stand(Vec3::new(stand.x, EYE_HEIGHT, stand.z), tank.center);
+        cabin.steps(3);
+        cabin.click();
+        cabin.steps(60);
+        assert!(
+            matches!(
+                cabin.app.world().resource::<CameraRig>().mode,
+                Mode::Focused { focus: Focus::Tank }
+            ),
+            "a click on the tank did not focus it"
+        );
+
+        let crate_at = layout::piece_rect(cabin.sim().rooms(), &cabin.sim().pieces()[0]);
+        cabin.rest_cursor(Some(SimVec2::new(
+            crate_at.w.mul_add(0.5, crate_at.x),
+            crate_at.h.mul_add(0.5, crate_at.y),
+        )));
+        cabin.steps(2);
+        cabin.click();
         assert_eq!(
             cabin.sim().held(0).map(|held| held.piece),
             Some(0),
-            "the focus dropped the crate"
+            "the focused cursor did not lift the crate"
+        );
+        assert!(
+            !matches!(
+                cabin.app.world().resource::<CameraRig>().mode,
+                Mode::Focused { .. } | Mode::ToFocus { .. }
+            ),
+            "the camera kept its focus with a crate in hand"
+        );
+        cabin.rest_cursor(None);
+        cabin.steps(60);
+        assert!(cabin.roaming(), "the camera never came back to the room");
+        assert_eq!(
+            cabin.sim().held(0).map(|held| held.piece),
+            Some(0),
+            "the glide dropped the crate"
+        );
+        cabin.stand_over(0);
+        cabin.click();
+        assert!(
+            cabin.sim().held(0).is_none(),
+            "a click in the room did not drop the crate"
         );
     }
 
@@ -2518,82 +2671,268 @@ mod session {
         );
     }
 
-    /// **A vase raised onto a cabinet's top stands on it, and keeps its
-    /// lift when it is lifted again** — the owner's own example (docs/
-    /// BAY.md, "Lift"), through the whole input schedule. The vial is
-    /// raised the cabinet's own height with `Shift` and the wheel; the
-    /// crosshair rests on the cabinet's body, which reads the cabinet's
-    /// own ground; the release stands the vial there, on top; and the
-    /// crosshair finds the vial up there by its own lifted body, which
-    /// lifts it at the lift it stands at.
+    /// **A carry aims through cargo, at the room behind it** (docs/BAY.md,
+    /// "The carry sees the room"), through the whole input schedule.
+    ///
+    /// A line from a standing eye down through a cabinet's body to bare
+    /// deck beyond it: with an empty hand the cabinet answers, the nearest
+    /// body along the ray, and it is the piece a press would lift. With a
+    /// vial in hand the same line reads the deck it comes down on, exactly
+    /// what the room would read with no cargo in it; the drop is centred
+    /// there, out past the cabinet's back and not on its ground; and the
+    /// release lands it where the preview said.
     #[test]
-    fn a_vase_raised_onto_a_cabinet_stands_on_it_and_keeps_its_lift() {
+    fn a_carry_aims_through_a_cabinet_at_the_deck_beyond_it() {
         let (cx, cy) = deck_middle(0);
-        let (vx, vy) = deck_middle(1);
+        let (vx, vy) = deck_middle(2);
         let mut cabin =
             Cabin::furnished(&[(Kind::Cabinet, cx, cy), (Kind::PerfumeVial, vx, vy)], &[]);
-        cabin.stand_over(1);
-        cabin.click();
-        assert_eq!(cabin.sim().held(0).map(|held| held.piece), Some(1));
-        let top = u16::from(Kind::Cabinet.stature()) * cargo::FINE;
-        cabin.hold_keys(&[KeyCode::ShiftLeft]);
-        cabin.wheel(f32::from(top / LIFT_STEP));
-        cabin.step();
-        cabin.hold_keys(&[]);
-        cabin.step();
-        assert_eq!(
-            cabin.lift(),
-            top,
-            "the vial was not raised to the cabinet's top"
-        );
-
-        let cabinet = cabin
-            .riding(0, Station::Standing)
-            .expect("the cabinet carries its own pick face");
-        cabin.look(cabinet.center);
-        cabin.steps(2);
-        let aimed = cabin.app.world().resource::<VirtualPointer>().sim;
         let ground = cargo::Foot::at(cabin.sim().rooms(), &cabin.sim().pieces()[0])
             .expect("the cabinet stands on the deck")
             .1;
+        let (eye, beyond) = cabin.through(0);
+        let look = |cabin: &mut Cabin| {
+            cabin.stand(eye, beyond);
+            cabin.steps(2);
+            cabin.pointer()
+        };
+
+        let pointer = look(&mut cabin);
+        assert_eq!(
+            pointer.piece,
+            Some(0),
+            "an empty hand aimed through the cabinet met {:?}",
+            pointer.station
+        );
+        assert_eq!(
+            pointer.aimed(cabin.sim()).map(|piece| piece.id),
+            Some(0),
+            "an empty hand aimed at the cabinet would lift something else"
+        );
+
+        cabin.stand_over(1);
+        cabin.click();
+        assert_eq!(cabin.sim().held(0).map(|held| held.piece), Some(1));
+        let pointer = look(&mut cabin);
+        let ray = pointer.ray.expect("a roaming crosshair casts");
+        let room = cabin.room_alone(ray);
+        assert_eq!(
+            (pointer.piece, pointer.station),
+            (None, Some(Station::BayFloor)),
+            "the carry was answered by a body, not by the deck behind it"
+        );
+        assert_eq!(
+            pointer.sim, room.sim,
+            "the carry read a point the room does not"
+        );
+        let met = ray.get_point(pointer.depth);
         assert!(
-            ground.contains(layout::fine_at(CABIN, aimed)),
-            "the crosshair on the cabinet read {aimed:?}, which is not the cabinet's ground"
+            met.distance(beyond) < 1e-3,
+            "the carry met the line at {met:?}, not on the deck at {beyond:?}"
+        );
+        let (berth, verdict) = cabin.preview();
+        assert_eq!(verdict, Ok(()), "bare deck refused the vial");
+        let spot = berth.spot();
+        let centre = (i32::from(spot.x), i32::from(spot.y));
+        assert_eq!(
+            centre,
+            layout::fine_at(CABIN, pointer.sim),
+            "the drop is not centred where the line meets the deck"
+        );
+        assert!(
+            !ground.contains(centre),
+            "the drop was drawn into the cabinet's footprint, at {centre:?}"
         );
         cabin.click();
         assert!(cabin.sim().held(0).is_none(), "the vial did not land");
-        let vial = cabin.sim().pieces()[1];
         assert_eq!(
-            vial.loc.lift(),
-            top,
-            "the vial landed off the cabinet's top"
+            cabin.sim().pieces()[1].loc,
+            berth,
+            "the vial landed somewhere the preview never said"
         );
-        let spot = vial.loc.spot();
+    }
+
+    /// **A carry aims through an instrument's glass, and a click with a
+    /// piece in hand drops it there.** The starting board's chart tank
+    /// hangs on the starboard flank. With an empty hand, a crosshair on
+    /// the middle of its glass names the tank and routes the click to its
+    /// focus, and a click focuses it. With the sconce in hand, the same
+    /// aim reads the wall behind the glass, as the bare wall would; the
+    /// drop is centred there; and the click hangs the sconce on that wall
+    /// and leaves the camera roaming.
+    #[test]
+    fn a_carry_aims_through_an_instruments_glass_and_a_click_drops_it_there() {
+        let mut cabin = Cabin::furnished(&[], &[Kind::ChartTank, Kind::WallLamp]);
+        let id = |cabin: &Cabin, kind: Kind| {
+            cabin
+                .sim()
+                .pieces()
+                .iter()
+                .find(|piece| piece.kind == kind)
+                .map(|piece| piece.id)
+                .expect("the starting board's")
+        };
+        let (tank, lamp) = (id(&cabin, Kind::ChartTank), id(&cabin, Kind::WallLamp));
+        let glass = cabin.face(Station::Map).expect("the tank's glass");
+        let stand = glass.center + glass.normal() * 0.75;
+        let at_the_tank = |cabin: &mut Cabin| {
+            cabin.stand(Vec3::new(stand.x, EYE_HEIGHT, stand.z), glass.center);
+            cabin.steps(3);
+            cabin.pointer()
+        };
+        let mode = |cabin: &Cabin| cabin.app.world().resource::<CameraRig>().mode;
+
+        let pointer = at_the_tank(&mut cabin);
+        let over = *pointer
+            .aimed(cabin.sim())
+            .expect("an empty hand at the glass names the tank");
+        assert_eq!(over.id, tank);
+        assert_eq!(
+            crate::rig::handle_route(cabin.sim().rooms(), &over, pointer.sim),
+            Some(Focus::Tank),
+            "the glass no longer routes to the tank's focus"
+        );
+
+        cabin.stand_before(lamp);
+        cabin.click();
+        assert_eq!(cabin.sim().held(0).map(|held| held.piece), Some(lamp));
+        let pointer = at_the_tank(&mut cabin);
+        let ray = pointer.ray.expect("a roaming crosshair casts");
+        let room = cabin.room_alone(ray);
+        assert_eq!(
+            (pointer.piece, pointer.station),
+            (None, Some(Station::BayStarboard)),
+            "the carry was answered by the tank, not by the wall behind it"
+        );
+        assert_eq!(
+            (pointer.sim, pointer.depth),
+            (room.sim, room.depth),
+            "the carry read a point the bare wall does not"
+        );
+        let (berth, verdict) = cabin.preview();
+        assert_eq!(
+            verdict,
+            Ok(()),
+            "the wall behind the tank refused the sconce"
+        );
+        let spot = berth.spot();
+        assert_eq!(
+            (i32::from(spot.x), i32::from(spot.y)),
+            layout::fine_at(CABIN, pointer.sim),
+            "the drop is not centred where the line meets the wall"
+        );
+        cabin.click();
         assert!(
-            ground.contains((i32::from(spot.x), i32::from(spot.y))),
-            "the vial landed at {spot:?}, off the cabinet's ground"
+            matches!(mode(&cabin), Mode::Roam),
+            "a click with the sconce in hand flew to {:?}",
+            mode(&cabin)
+        );
+        assert!(
+            cabin.sim().held(0).is_none(),
+            "the click did not drop the sconce"
+        );
+        let landed = cabin
+            .sim()
+            .pieces()
+            .iter()
+            .find(|piece| piece.id == lamp)
+            .expect("aboard")
+            .loc;
+        assert_eq!(
+            landed, berth,
+            "the sconce landed somewhere the preview never said"
+        );
+
+        at_the_tank(&mut cabin);
+        cabin.click();
+        cabin.steps(60);
+        assert!(
+            matches!(mode(&cabin), Mode::Focused { focus: Focus::Tank }),
+            "an empty hand's click on the glass no longer focuses the tank: {:?}",
+            mode(&cabin)
+        );
+    }
+
+    /// **A piece left at a height stays there, and is lifted again at
+    /// it** (docs/BAY.md, "Lift"), through the whole input schedule. A
+    /// vial raised off the deck with `Shift` and the wheel and set down a
+    /// cell over stands at that height, centred where the crosshair met
+    /// the deck; its pick face rides it up there by exactly the lift, so
+    /// the crosshair finds it by its own raised body; lifted again, the
+    /// carry starts at its height; and set down again with no touch of
+    /// the lift keys, it keeps it.
+    #[test]
+    fn a_lifted_piece_keeps_its_lift_through_a_drop_and_a_regrab() {
+        let (x, y) = deck_middle(0);
+        let mut cabin = Cabin::furnished(&[(Kind::PerfumeVial, x, y)], &[]);
+        let low = cabin
+            .riding(0, Station::Standing)
+            .expect("the vial carries its own pick face")
+            .center;
+        let home = cabin.stand_over(0);
+        cabin.click();
+        assert_eq!(cabin.sim().held(0).map(|held| held.piece), Some(0));
+        let raised = 20 * LIFT_STEP;
+        cabin.hold_keys(&[KeyCode::ShiftLeft]);
+        cabin.wheel(20.0);
+        cabin.step();
+        cabin.hold_keys(&[]);
+        cabin.step();
+        assert_eq!(cabin.lift(), raised, "the vial was not raised");
+
+        let floor = cabin.face(Station::BayFloor).expect("the cabin's deck");
+        let over = SimVec2::new(home.x + layout::CELL, home.y);
+        cabin.look(floor.to_world(over));
+        cabin.steps(2);
+        let (berth, verdict) = cabin.preview();
+        assert_eq!(verdict, Ok(()), "open deck refused the raised vial");
+        cabin.click();
+        let landed = cabin.sim().pieces()[0].loc;
+        assert!(cabin.sim().held(0).is_none(), "the vial did not land");
+        assert_eq!(
+            landed, berth,
+            "the vial landed somewhere the preview never said"
+        );
+        assert_eq!(landed.lift(), raised, "the drop forgot the vial's height");
+        let spot = landed.spot();
+        assert_eq!(
+            (i32::from(spot.x), i32::from(spot.y)),
+            layout::fine_at(CABIN, over),
+            "the raised vial is not centred where the crosshair met the deck"
         );
 
         let face = cabin
-            .riding(1, Station::Standing)
-            .expect("the lifted vial carries its own pick face");
+            .riding(0, Station::Standing)
+            .expect("the raised vial carries its own pick face");
+        let up = f32::from(raised) / f32::from(cargo::FINE) * crate::rig::BAY_CELL;
         assert!(
-            face.center.y > cabinet.center.y,
-            "the vial's pick face stayed down at {:?}, under the cabinet's top",
-            face.center
+            (face.center.y - low.y - up).abs() < 1e-3,
+            "the vial's pick face stands {} m up, not the {up} m it was raised",
+            face.center.y - low.y
         );
         cabin.look(face.center);
         cabin.steps(2);
         cabin.click();
         assert_eq!(
             cabin.sim().held(0).map(|held| held.piece),
-            Some(1),
-            "the crosshair on the vial up there lifted something else"
+            Some(0),
+            "the crosshair on the raised vial lifted something else"
         );
         assert_eq!(
             cabin.lift(),
-            top,
+            raised,
             "lifted again, the vial forgot its height"
+        );
+
+        cabin.look(floor.to_world(home));
+        cabin.steps(2);
+        cabin.click();
+        let landed = cabin.sim().pieces()[0].loc;
+        assert!(cabin.sim().held(0).is_none(), "the vial did not land again");
+        assert_eq!(
+            landed.lift(),
+            raised,
+            "set down again, the vial forgot its height"
         );
     }
 

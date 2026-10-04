@@ -61,18 +61,6 @@ const SETTLE_LEN: f32 = 0.18;
 /// Violation flash length — the 2D juice's clock, kept.
 const FLASH_LEN: f32 = 0.45;
 
-/// How far a piece carried over a focused station's glass hovers off it,
-/// metres: the focus drag, glued to the pointer as the 2D drag was. Not
-/// the ghost's — the ghost stands on its berth, exactly as the piece will
-/// land ([`carry_held`]) — and nothing else's.
-const GLASS_LIFT: f32 = 0.05;
-
-/// How much bigger than its berth the focus drag draws a carried piece
-/// over a station's glass, which is somewhere nothing lands: a shade
-/// over full size, which says "in hand, not set down". The ghost wears
-/// no such thing (docs/BAY.md, "Lift, and the keys").
-const GLASS_FIT: f32 = 1.1;
-
 /// Where the carried piece floats while the crosshair aims at nothing
 /// placeable: ahead of and below the eye, nudged off center, like a box
 /// hitched on one arm — carried, never dropped, and never a blindfold.
@@ -355,12 +343,13 @@ struct HeldMemo {
 #[derive(Resource, Default)]
 struct PendingSettle(Option<u32>);
 
-/// The carry: which piece rides the pointer, and where it last hovered so a
-/// parked pointer keeps the piece in hand instead of dropping it visually.
+/// The carry: which piece rides the pointer, and the pose it last took —
+/// place, turn and scale — so a carry with no crosshair to follow keeps
+/// the piece in hand where it was instead of dropping it visually.
 #[derive(Resource, Default)]
 struct CarryState {
     carrying: Option<u32>,
-    last: Option<(Vec3, Quat)>,
+    last: Option<(Vec3, Quat, Vec3)>,
 }
 
 /// The hard-reject flash: the refused footprint, the ground it would have
@@ -730,9 +719,9 @@ fn turned_frame(station: Station, surface: &SimSurface, turn: Turn, laid: bool) 
 /// chart's own inward normal ([`lift_off`]; docs/BAY.md, "Lift"): up off
 /// the deck, down from the deckhead, out from a wall. Nothing else about
 /// the pose moves — the frame, the turn, the scale, the stand-off onto
-/// the plan — so a body raised onto a cabinet's top is the body that
-/// stood on the deck, that much higher, and every surface that rides it
-/// (an instrument's glass, a standing body's pick face) rides it there.
+/// the plan — so a raised body is the body that stood on the deck, that
+/// much higher, and every surface that rides it (an instrument's glass,
+/// a standing body's pick face) rides it there.
 fn site_on(
     station: Station,
     surface: &SimSurface,
@@ -1438,8 +1427,7 @@ impl Ground {
     /// stands between it and the ghost's own faces is fixed at every lift,
     /// and a sweep of the ghost at no lift is a sweep at all of them
     /// (`gauntlet::tests::no_ghost_fights_its_patch_or_its_surface`).
-    /// Where the ghost stands on a cabinet, its patch lies on the
-    /// cabinet's top.
+    /// A raised ghost's patch lies under it, at its own height.
     fn off(self, surface: &SimSurface) -> f32 {
         lift_off(surface, self.lift)
     }
@@ -1509,7 +1497,7 @@ pub fn instrument_surface(
 /// plane. The face reads the body and lays the reading onto the net
 /// ([`onto_net`]), so the sim can carry it back into the piece's frame.
 ///
-/// And a body LIFTED off its chart — a vase on a cabinet's top, a
+/// And a body LIFTED off its chart — a vase raised off the deck, a
 /// painting carried out from its wall (docs/BAY.md, "Lift") — is the
 /// first case on any chart: the chart is a lift behind it, and a ray
 /// through the body meets the chart somewhere else at every angle but
@@ -2003,15 +1991,21 @@ fn sync_dressings(
 
 /// The held piece rides the hand, wearing its legality frame — `LAMP_OK`
 /// glow for a drop that would land, `LAMP_NO` plus a diagonal slash for
-/// one that would not. Two grips, one carry:
+/// one that would not. A carry is worked in the room and nowhere else:
 ///
-/// - **Focused** (the desk): glued to the pointer exactly as the 2D drag
-///   was — lifted off the struck panel, a tenth larger.
-/// - **Roaming** (the bay): the ghost, standing on the berth the drop at
-///   the crosshair would take, exactly as it will land there; aimed at
+/// - **Roaming**: the ghost, standing on the berth the drop at the
+///   crosshair would take, exactly as it will land there; aimed at
 ///   nothing placeable — the pointer parks off the bay constantly
 ///   mid-walk — it floats low-center ahead of the camera, carried in both
 ///   arms rather than visually dropped.
+/// - **Parked**, with the menu or the desktop holding the cursor and the
+///   camera standing still: where it last stood, ghost or arm.
+/// - **Gliding** back out of a focus a press there lifted it in
+///   (`rig::steer`): on the arm, which goes with the camera.
+///
+/// There is no focus drag. A carry never glides to a station any more —
+/// a click with a piece in hand is the drop — so nothing is carried over
+/// a station's glass, and a focus a piece is lifted in lets go of it.
 #[allow(clippy::too_many_arguments)]
 fn carry_held(
     shell: Res<Shell>,
@@ -2056,6 +2050,21 @@ fn carry_held(
         .find(|piece| piece.id == held.piece)
         .map(|piece| piece.kind);
 
+    // Aimed at nothing placeable — off every net — or carried along by a
+    // glide: hitched low on one arm, off center and compact, its open face
+    // turned back toward the carrier, so the carrier keeps their view
+    // (occlusion, BAY.md). A carry pose, not a preview, and the one place
+    // a carried piece is not at full size.
+    let hitched = || {
+        let forward = *camera.forward();
+        let level = Vec3::new(forward.x, 0.0, forward.z).normalize_or(Vec3::NEG_Z);
+        (
+            camera.translation + forward * CARRY_AHEAD + *camera.right() * CARRY_SIDE
+                - Vec3::Y * CARRY_DOWN,
+            Quat::from_rotation_y((-level.x).atan2(-level.z)),
+            rig.scale_goal * CARRY_COMPACT,
+        )
+    };
     let (pos, rot, scale) = if camera_rig.roaming() {
         // **The ghost stands EXACTLY where and how the piece will land**:
         // the berth's own pose ([`site_on`]) — its place, its turn, its
@@ -2069,10 +2078,11 @@ fn carry_held(
         // The berth is the sim's own answer for this aim ([`previewed`]),
         // so the ghost slides a fine unit at a time as the aim does, turns
         // as the wheel does and rises as the lift keys do, and the release
-        // cannot put the piece anywhere the ghost was not. Its chart is
-        // read off the berth, which is not always the surface the ray
-        // struck: a crosshair resting on a standing rig's own face reads
-        // that piece's cells, and those cells are still the floor's.
+        // cannot put the piece anywhere the ghost was not. The aim is the
+        // room's own, read through whatever cargo stands in the way
+        // (`surface::pick`), so the ghost goes where the crosshair meets
+        // the room and never onto another piece's ground for being in
+        // front of it.
         let ghost = kind.and_then(|kind| {
             let preview = previewed(&shell.bridge, pointer.sim)?;
             let (berth, plane) = chart_of(&surfaces, rect_center(preview.rect))?;
@@ -2084,37 +2094,15 @@ fn carry_held(
                 (preview.turn, preview.lift),
             ))
         });
-        ghost.unwrap_or_else(|| {
-            // Aimed at nothing placeable — off every net, or at a
-            // station's glass, where nothing lands: hitched low on one
-            // arm, off center and compact, its open face turned back
-            // toward the carrier, so the carrier keeps their view
-            // (occlusion, BAY.md). A carry pose, not a preview, and the
-            // one place a carried piece is not at full size.
-            let forward = *camera.forward();
-            let level = Vec3::new(forward.x, 0.0, forward.z).normalize_or(Vec3::NEG_Z);
-            (
-                camera.translation + forward * CARRY_AHEAD + *camera.right() * CARRY_SIDE
-                    - Vec3::Y * CARRY_DOWN,
-                Quat::from_rotation_y((-level.x).atan2(-level.z)),
-                rig.scale_goal * CARRY_COMPACT,
-            )
-        })
+        ghost.unwrap_or_else(hitched)
+    } else if camera_rig.parked
+        && let Some(last) = carry.last
+    {
+        last
     } else {
-        // The focus drag: the ray's hit lifted off that panel, or —
-        // parked pointer — simply wherever it last hovered. There is no
-        // console face left to float over as a last resort (the hull
-        // owns no panels), so a drag with no history at all simply waits
-        // for the pointer to land somewhere real.
-        if let (Some(world), Some(surface)) = (pointer.world, pointer.surface) {
-            carry.last = Some((world + surface.normal() * GLASS_LIFT, surface.orientation()));
-        }
-        let Some((pos, rot)) = carry.last else {
-            return;
-        };
-        (pos, rot, rig.scale_goal * GLASS_FIT)
+        hitched()
     };
-    carry.last = Some((pos, rot));
+    carry.last = Some((pos, rot, scale));
 
     transform.translation = pos;
     transform.rotation = rot;
@@ -2332,8 +2320,8 @@ fn hover_glint(
 /// lift proves it never shares a plane with one at any lift
 /// (`gauntlet::tests::no_ghost_fights_its_patch_or_its_surface`).
 /// Against the surface it is a rung of the decal ladder at no lift and
-/// further off it at any other. A vase raised onto a cabinet's top
-/// lights the cabinet's top.
+/// further off it at any other. A raised piece's patch lies under it,
+/// at its own height.
 fn footprint_patch(
     shell: Res<Shell>,
     pointer: Res<VirtualPointer>,
@@ -6497,6 +6485,7 @@ mod tests {
                 Ray3d::new(eye, dir),
                 true,
                 f32::INFINITY,
+                false,
                 aims.iter().copied(),
             );
             layout::pick(rooms, pieces, hit.sim, hit.piece).copied()
@@ -6765,7 +6754,7 @@ mod tests {
             let n = Station::Standing.inward(&face);
             let eye = face.center + n * 0.9 + Vec3::Y * 0.3;
             let ray = Ray3d::new(eye, Dir3::new(face.center - eye).expect("a look direction"));
-            let hit = pick(ray, true, f32::INFINITY, [floor, face_of(piece)]);
+            let hit = pick(ray, true, f32::INFINITY, false, [floor, face_of(piece)]);
             assert_eq!(
                 hit.piece,
                 Some(piece.id),
@@ -7195,12 +7184,9 @@ mod tests {
         /// sim previews there, at the facing and the lift the carry is
         /// sent at.
         fn aim(&mut self, at: SimVec2) -> (Loc, Result<(), Option<Violation>>) {
-            let floor = chart(Station::BayFloor);
             *self.app.world_mut().resource_mut::<VirtualPointer>() = VirtualPointer {
                 sim: at,
-                world: Some(floor.to_world(at)),
                 station: Some(Station::BayFloor),
-                surface: Some(floor),
                 ..default()
             };
             self.app.update();
@@ -8465,6 +8451,7 @@ mod tests {
                         Ray3d::new(eye, dir),
                         true,
                         crate::rig::REACH,
+                        false,
                         aims.iter().copied(),
                     );
                     assert_eq!(

@@ -505,9 +505,10 @@ impl Kind {
 /// **And a standing body has a height off its surface** (docs/BAY.md,
 /// "Lift"). `lift` is how far a berth stands off its chart, in [`FINE`]
 /// units along the chart's normal and away from it into the room: up off
-/// the deck, down from the deckhead, out from a wall. It is the third
-/// coordinate a vase needs to stand on a cabinet's top now that nothing
-/// stores anything, and it is a TASTE coordinate: the sim stores it,
+/// the deck, down from the deckhead, out from a wall. It is a height, the
+/// third coordinate a body needs to stand anywhere but on its surface,
+/// and a body left at one keeps it wherever it is, with or without
+/// anything under it. It is a TASTE coordinate: the sim stores it,
 /// saves it, sends it and caps it ([`lift_cap`]), and no rule reads it.
 /// The arbiter is asked about the plane ([`Loc::spot`]), so light, the
 /// volatile spacing and every other ruling stay what they were on the
@@ -2126,7 +2127,7 @@ pub fn lit_adjacent(host: RoomKind, pieces: &[Piece], room: RoomId, x: u8, y: u8
 /// gallery lighting).
 ///
 /// **Light reaches in plan.** A lift is taste and no rule reads it
-/// (docs/BAY.md, "Lift"): a lamp lifted onto a cabinet lights what is
+/// (docs/BAY.md, "Lift"): a lamp raised off the deck lights what is
 /// around it on the ground under it, as it did standing there, and a
 /// crate raised to the deckhead over a lamp is as lit as the ground it
 /// stands over.

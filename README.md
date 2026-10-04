@@ -33,9 +33,10 @@ a sandbox that never touches your real save. Sweep the whole
 attachment surface in one sitting; the fixture's own test keeps its
 board legal as rules grow.
 
-Controls: mouse looks and `WASD` walks; aim at a station and click
-(or `E`, with empty hands) to focus it — the camera glides to a fitted
-viewpoint and the cursor frees for the usual clicking and dragging.
+Controls: mouse looks and `WASD` walks; with empty hands, aim at a
+station and click (or press `E`) to focus it — the camera glides to a
+fitted viewpoint and the cursor frees for the usual clicking and
+dragging.
 `Esc`, right-click, or `E` steps back out of a station; `Esc` while
 roaming raises the menu — pause, fast-forward, mute, the delivery tally,
 a bar labelled **New run**, and a keyboard that turns the panel to the
@@ -47,18 +48,22 @@ Cargo lives in the aft bay and is carried, not dragged: walk up, aim
 the crosshair at a piece and click to pick it up, walk it over, click a
 berth to set it down — clicking at nothing (or right-clicking) sends it
 back where it came from, and `Shift`+click quick-moves without
-carrying. A carried piece turns at any angle and lands at the turn you
-carry it at: the mouse wheel turns it to the next multiple of 15° (up
-and away is counter-clockwise, as you look at the floor or the wall it
-is bound for), `Ctrl`+wheel turns it one degree a notch, and `Q` and
-`E` take the wheel's 15° step either way. It lands at a height, too:
-`X` and `Z` raise and lower it a sixteenth of a cell off whatever it
-stands on — up off the deck, down from the deckhead, out from a wall —
-and so does `Shift`+wheel (`Ctrl`+`Shift`+wheel for a hair), so a vase
-goes on top of the cabinet. The ghost stands exactly where and how the
-piece will land, and the patch under it goes with it. The four carry
-keys can be rebound on the `Esc` menu's keys page: click a keycap and
-press a key. Placement is to
+carrying. With a piece in hand a click always sets it down, and the
+crosshair looks through other cargo, instruments included, to the deck,
+wall or deckhead behind it. A carried piece turns at any angle and
+lands at the turn you carry it at: the mouse wheel turns it to the next
+multiple of 15° (up and away is counter-clockwise, as you look at the
+floor or the wall it is bound for), `Ctrl`+wheel turns it one degree a
+notch, and `Q` and `E` take the wheel's 15° step either way. It lands
+at a height, too: `X` and `Z` raise and lower it a sixteenth of a cell
+off whatever it stands on — up off the deck, down from the deckhead,
+out from a wall — and so does `Shift`+wheel (`Ctrl`+`Shift`+wheel for a
+hair), and it stays at that height wherever you set it down, whatever
+stands under it: aim at the deck where it should go, through anything
+in the way. The ghost stands exactly where and how the piece will land,
+and the patch under it goes with it. The four carry keys can be rebound
+on the `Esc` menu's keys page: click a keycap and press a key.
+Placement is to
 taste: cargo does not collide with cargo, so a crate can stand in the
 wardrobe, a painting can hang behind it, and two rugs can overlap —
 where two pieces share ground, the click lifts the one the crosshair
@@ -117,7 +122,7 @@ and at stranger berths the counter shows stranger things.
 | Input                | Effect                                                  |
 | -------------------- | ------------------------------------------------------- |
 | Mouse                | look, focus stations, pull levers                       |
-| Click (bay)          | pick up / set down the aimed cargo                      |
+| Click (bay)          | pick up the aimed cargo; with a piece in hand, set down |
 | Right-click          | cancel a carry (the piece snaps home)                   |
 | `WASD`               | walk the cabin                                          |
 | `E`                  | focus the aimed station (empty-handed); step back out   |

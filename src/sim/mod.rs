@@ -1074,11 +1074,10 @@ impl Sim {
         self.poi_visible(id) && !self.inner_ring_locked(id) && !(id == COMET && self.comet_spent())
     }
 
-    /// Mysterious crates aboard: berthed in a room that rides. Deliberately
-    /// NOT counted: crates boxed in a cabinet — ??? does not open your
-    /// furniture (docs/BAY.md), which makes the cabinet the one place a
-    /// crate can ride without a summons — nor crates lying in a room that
-    /// is only alongside.
+    /// Mysterious crates aboard: berthed in a room that rides, wherever in
+    /// it they stand — nothing stores anything, so ??? counts every crate
+    /// (docs/BAY.md, "Cargo stops colliding"). Deliberately NOT counted:
+    /// crates lying in a room that is only alongside.
     #[must_use]
     pub fn mysterious_aboard(&self) -> u32 {
         self.pieces
@@ -3250,11 +3249,10 @@ mod tests {
     ///
     /// Not "the table holds two lamp kinds": what the player gets is
     /// light, so the sweep asks the two predicates light is read
-    /// through — [`lamp_lit`], which is false for a lamp boxed in a
-    /// cabinet, and the chart the berth lies on — and it asks them of
-    /// the board the ship actually leaves the yard with, at every seed,
-    /// because the variant roll is the only thing a seed moves and a
-    /// lamp's berth had better not be one of them.
+    /// through — [`lamp_lit`] and the chart the berth lies on — and it
+    /// asks them of the board the ship actually leaves the yard with, at
+    /// every seed, because the variant roll is the only thing a seed
+    /// moves and a lamp's berth had better not be one of them.
     #[test]
     fn a_new_ship_burns_a_lamp_overhead_and_a_lamp_on_a_wall() {
         for seed in 0..64 {

@@ -658,9 +658,9 @@ Every line is reversible; strike one by overruling it.
 - **A lift step is a sixteenth of a cell**, about 34 mm, a key press or a
   notch of `Shift` + wheel, and `Ctrl` + `Shift` + wheel is one fine
   unit, about 2 mm. A sixteenth is the grid's old quantum: a step a hand
-  can see and asks for a press at a time. A vase reaches a wardrobe's top
-  in 32 presses or notches; a coarser step would make the top a step
-  nobody can land on exactly without `Ctrl`.
+  can see and asks for a press at a time. Two courses, a wardrobe's
+  height, are 32 presses or notches; a coarser step would make a height
+  like that a step nobody can land on exactly without `Ctrl`.
 - **A carry's lift starts again from the surface when it is aimed at a
   chart of another class** — deck, wall, deckhead — and is kept between
   two walls and while aimed off every net. A height off the deck means
@@ -679,12 +679,24 @@ Every line is reversible; strike one by overruling it.
   station or mid-glide `E` is the way out, as it always was, whatever is
   in hand. Rebinding the turn off `E` gives `E` back to focus in both
   hands.
+
+  > Superseded by docs/BAY.md, *The carry sees the room*: the owner's
+  > playtest found the carry snapping onto a wardrobe, and the fix lets
+  > a carry aim through every piece's body. A click that could also
+  > glide to the instrument it aims through would fight the drop for
+  > it, so nothing focuses with a piece in hand: a click with one is the
+  > drop, and `E` with one is a carry key or nothing.
 - **The compact arm carry is kept.** Aimed at nothing placeable — off
   every net, or at a station's glass, where nothing lands — a carried
   piece hitches on the arm at a fraction of its size so the room stays
   visible through it. It is a carry pose, not a placement preview, and
   the owner has not objected to it; strike it and the carry would have
   to stand somewhere at full size with no berth to stand on.
+
+  > Superseded in part by docs/BAY.md, *The carry sees the room*: a
+  > carry aimed at a station's glass reads the wall behind it, so
+  > nothing placeable is off every net. The arm also carries a piece
+  > lifted at a station back to the room.
 - **The ghost is not translucent.** The brief that asked for the true
   size spoke of the ghost's translucency, and the carried rig is drawn
   opaque: what has always marked it is the outline the drop's ruling is
@@ -692,11 +704,11 @@ Every line is reversible; strike one by overruling it.
   see-through copy of every material of every part, bought meshes
   included, and was not done in passing.
 - **The footprint patch rides the lift.** It is laid at its rung off the
-  berth's own lifted plane, so a vase raised onto a cabinet lights the
-  cabinet's top and the patch can never share a plane with the ghost at
-  any lift. The other reading — the patch stays on the deck as a shadow
-  of where the piece is in plan — would cross every face of every ghost
-  low enough to reach it on the way up, and under a cabinet nobody
+  berth's own lifted plane, so a raised piece's patch lies under it at
+  its own height and can never share a plane with the ghost at any
+  lift. The other reading — the patch stays on the deck as a shadow of
+  where the piece is in plan — would cross every face of every ghost
+  low enough to reach it on the way up, and under a wardrobe nobody
   would see it.
 - **Binding a key another action holds swaps the two**, rather than
   refusing or leaving the other action unbound: no action is ever
@@ -714,6 +726,15 @@ Every line is reversible; strike one by overruling it.
   that throws a player's bindings away can be pressed by someone who
   thought it meant something else. It is the second word on the menu.
 - **No rule reads a lift.** Light reach, volatile spacing, the rat's walk
-  and every tile class read the ground under a body, so a lamp on a
-  cabinet lights in plan and two canisters at different heights over one
-  patch of deck are as near each other as the deck says.
+  and every tile class read the ground under a body, so a raised lamp
+  lights in plan and two canisters at different heights over one patch
+  of deck are as near each other as the deck says.
+- **A piece lifted at a station takes the camera back to the room.**
+  Focus wants an empty hand now (docs/BAY.md, *The carry sees the
+  room*), but a focused cursor works the room's charts as well as the
+  glass, and a press on cargo beside a panel lifts it. A piece in hand
+  ends the focus, and the camera glides back to the room with it, where
+  a carry is worked. The other reading — a focused cursor that answers
+  only its own station's glass, so nothing can be lifted from a focus —
+  changes what a focused cursor reads everywhere off the glass, and was
+  not done in passing.

@@ -32,6 +32,13 @@
 //! the one answer the hover, the outline, the handle's routing and the
 //! press all read.
 //!
+//! **That is a question for an empty hand.** A carry asks where in the
+//! room a piece would go, and with cargo standing in cargo another
+//! piece's body is no answer to it: while a piece is in hand nothing that
+//! rides a piece answers the pointer at all, and the ray goes through
+//! every body and every pane to the deck, wall or deckhead behind
+//! ([`pick`]; docs/BAY.md, "The carry sees the room").
+//!
 //! What a rig's is bound to is a BODY and not a quad. A chart is a
 //! surface because a wall is one; a crate is not, and a plane cut
 //! through a crate answers only from square on — walk a quarter turn
@@ -103,6 +110,10 @@ pub enum Station {
     /// Several of these stand at once, one per piece, which is why
     /// nothing looks a face up by station: the pointer hands over the
     /// one it struck.
+    ///
+    /// It answers an empty hand only. A carry is not looking for a body
+    /// but for somewhere in the room, so with a piece in hand every face
+    /// is passed over ([`pick`]).
     Standing,
 }
 
@@ -461,27 +472,20 @@ impl SimSurface {
 }
 
 /// The virtual pointer: where the cursor ray landed in sim terms this
-/// frame, plus the 3D point for carrying pieces along the ray.
+/// frame, and what it landed on.
 #[derive(Resource, Clone, Copy, Debug)]
 pub struct VirtualPointer {
     /// Sim-space pointer; [`crate::bridge::POINTER_PARKED`] when the
     /// cursor touches nothing mapped.
     pub sim: SimVec2,
-    /// The 3D hit point, if any surface was struck.
-    pub world: Option<Vec3>,
     /// The station struck, for views that care where attention rests.
     pub station: Option<Station>,
     /// **The piece whose own face the ray struck**, if the surface it
     /// landed on rides one ([`Riding`]): the nearest body along the one
     /// ray (docs/BAY.md, "The nearest rule"). `None` on a chart, which
-    /// rides nothing — there the sim's point-pick order decides.
+    /// rides nothing — there the sim's point-pick order decides — and
+    /// always while a piece is in hand, which no body answers.
     pub piece: Option<u32>,
-    /// The struck quad itself. Handed over rather than looked up again:
-    /// a station is no longer a unique surface — every standing piece
-    /// carries a [`Station::Standing`] face — and a consumer that
-    /// re-found "the" surface by station would answer about a different
-    /// piece than the ray hit.
-    pub surface: Option<SimSurface>,
     /// The ray this frame's pointer was cast along, so a consumer that
     /// has its own hardware to test can test it against the same line
     /// the crosshair used rather than casting a second one from a
@@ -489,8 +493,8 @@ pub struct VirtualPointer {
     /// while the pointer is parked and nothing was cast at all.
     pub ray: Option<Ray3d>,
     /// **How far along `ray` the pointer got before something stopped
-    /// it**, [`f32::INFINITY`] when nothing did. Not the same as the
-    /// distance to `world`: a surface may block the crosshair without
+    /// it**, [`f32::INFINITY`] when nothing did. Not always where the
+    /// pointer landed: a surface may block the crosshair without
     /// answering it (an opaque station in roam), and what a rival
     /// affordance has to beat is whatever is actually in the way, not
     /// whatever happened to be worth reporting.
@@ -501,10 +505,8 @@ impl Default for VirtualPointer {
     fn default() -> Self {
         Self {
             sim: crate::bridge::POINTER_PARKED,
-            world: None,
             station: None,
             piece: None,
-            surface: None,
             ray: None,
             depth: f32::INFINITY,
         }
@@ -537,12 +539,16 @@ impl VirtualPointer {
 /// - **Roaming**: the crosshair ray straight out of the camera, against
 ///   the bay surfaces only, and only within [`crate::rig::REACH`] — the
 ///   carry's aim. Stations need focus; the bay needs proximity.
+///
+/// And whether a piece is in hand, which is the sim's to say (`held`):
+/// a carry's ray passes every piece's body by ([`pick`]).
 #[allow(clippy::needless_pass_by_value)]
 pub fn track_pointer(
     window: Single<&Window, With<bevy::window::PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<crate::rig::CabinCamera>>,
     surfaces: Query<(&Station, &SimSurface, Option<&Riding>, Option<&InRoom>)>,
     rig: Res<crate::rig::CameraRig>,
+    shell: Res<crate::Shell>,
     mut pointer: ResMut<VirtualPointer>,
 ) {
     *pointer = VirtualPointer::default();
@@ -581,6 +587,7 @@ pub fn track_pointer(
         ray,
         roam_only,
         reach,
+        shell.bridge.sim.held(0).is_some(),
         surfaces
             .iter()
             .map(|(station, surface, riding, in_room)| Aimable {
@@ -608,36 +615,52 @@ pub struct Aimable {
 /// over a plain list on purpose: the carry begins here, so the grab has
 /// to be drivable end to end without a window
 /// (`room::tests::a_press_on_a_berthed_piece_lifts_it`).
+///
+/// **`holding` is whether a piece is in hand**, as the sim says
+/// (`Sim::held`), and it is handed in rather than looked up so a test can
+/// drive either hand. In hand, a piece is on its way somewhere in the
+/// room, and nothing that rides a piece answers: the ray goes through
+/// every body and every pane to the deck, wall or deckhead behind them,
+/// within `reach` as ever (docs/BAY.md, "The carry sees the room").
+/// Cargo stands in cargo, so another piece's body is no answer to where
+/// this one goes, and a pick face that caught the carry drew the drop
+/// onto that body's own ground — the snap a playtest felt crossing a
+/// wardrobe. An empty hand is asked exactly what it always was: the
+/// nearest body along the ray (docs/BAY.md, "The nearest rule").
 #[must_use]
 pub fn pick(
     ray: Ray3d,
     roam_only: bool,
     reach: f32,
+    holding: bool,
     surfaces: impl IntoIterator<Item = Aimable>,
 ) -> VirtualPointer {
     let mut pointer = VirtualPointer::default();
     let mut nearest = f32::INFINITY;
     for aim in surfaces {
         let (station, surface) = (aim.station, aim.surface);
-        // A surface that rides a piece answers in exactly ONE regime,
-        // and `roamable` is which:
+        // A surface that rides a piece is cargo, and a hand already
+        // carrying a piece asks the room, never the cargo in it.
+        //
+        // An empty hand meets it in exactly ONE regime, and `roamable`
+        // is which:
         //
         // - An instrument's station is glass ON cargo, and in roam the
         //   cargo comes first — the ray passes straight through to the
-        //   cells the instrument hangs on, so the crosshair can hover
-        //   it, the amber handle can be grabbed THROUGH its own panel,
-        //   and a carry aimed at it reads the berth it would take. The
-        //   focus interaction the rest of the piece answers with is
-        //   `rig::steer`'s business, not the pointer's.
+        //   body the instrument hangs by, its own face or the cells it
+        //   hangs on, so the crosshair can hover it and the amber handle
+        //   can be grabbed THROUGH its own panel. The focus interaction
+        //   the rest of the piece answers with is `rig::steer`'s
+        //   business, not the pointer's.
         // - A standing rig's face is the mirror case: it exists to
         //   answer the crosshair, and it must not stand in the way of
         //   panel work — the x-ray already ghosts whatever the focus
         //   flies through, and a ghost the cursor cannot reach through
         //   would be a wall with the paint stripped off.
-        if aim.riding.is_some() && roam_only != station.roamable() {
+        if aim.riding.is_some() && (holding || roam_only != station.roamable()) {
             continue;
         }
-        if let Some((t, sim, world)) = surface.strike(ray)
+        if let Some((t, sim, _)) = surface.strike(ray)
             && t < nearest
             && t <= reach
         {
@@ -649,11 +672,13 @@ pub fn pick(
             if station.chart_flipped() && !aim.in_room.is_some_and(|room| chart_cell(room, sim)) {
                 continue;
             }
-            // While roaming, the focusable stations are opaque but not
-            // interactive: an instrument's glass stops the ray (nothing
-            // lands on the wall chart BEHIND a chart tank) without
-            // becoming aim — a click there glides to focus instead
-            // (`rig::steer`).
+            // While roaming, a focusable station screwed to the room's
+            // own fabric would be opaque but not interactive: it stops
+            // the ray without becoming aim, and a click there glides to
+            // focus instead (`rig::steer`). None stands today — the hull
+            // owns no panels, and an instrument's glass rides its piece,
+            // which is passed over above in roam — so this is the rule
+            // the next one is held to (`SimSurface::panel`).
             if roam_only && !station.roamable() {
                 nearest = t;
                 pointer = VirtualPointer::default();
@@ -662,10 +687,8 @@ pub fn pick(
             nearest = t;
             pointer = VirtualPointer {
                 sim,
-                world: Some(world),
                 station: Some(station),
                 piece: aim.riding,
-                surface: Some(surface),
                 ..VirtualPointer::default()
             };
         }
@@ -752,6 +775,53 @@ mod tests {
         );
         // And the normal faces the +Z hemisphere (toward the seat).
         assert!(n.z > 0.3, "normal {n:?} should face the seat");
+    }
+
+    /// **A full hand reads the room through every piece; an empty one
+    /// meets the nearest body.** One line of sight through an
+    /// instrument's glass, then the body it rides, then the room's own
+    /// fabric behind both. Roaming, an empty hand is answered by the body
+    /// (the glass is focus work); focused, by the glass (the body would
+    /// stand in the way of panel work). With a piece in hand neither
+    /// answers in either regime, and the ray reaches the room.
+    #[test]
+    fn a_full_hand_reads_the_room_through_every_piece() {
+        let at =
+            |z: f32| SimSurface::panel(Vec3::new(0.0, 1.5, z), 1.0, 1.0, 0.0, layout::MAP_PANEL);
+        let aims = [
+            Aimable {
+                station: Station::Map,
+                surface: at(-0.5),
+                riding: Some(7),
+                in_room: None,
+            },
+            Aimable {
+                station: Station::Standing,
+                surface: at(-1.0),
+                riding: Some(7),
+                in_room: None,
+            },
+            Aimable {
+                station: Station::Handshake,
+                surface: at(-2.0),
+                riding: None,
+                in_room: None,
+            },
+        ];
+        let ray = Ray3d::new(Vec3::new(0.0, 1.5, 0.0), Dir3::NEG_Z);
+        for (roam_only, holding, station, piece) in [
+            (true, false, Station::Standing, Some(7)),
+            (false, false, Station::Map, Some(7)),
+            (true, true, Station::Handshake, None),
+            (false, true, Station::Handshake, None),
+        ] {
+            let pointer = pick(ray, roam_only, f32::INFINITY, holding, aims);
+            assert_eq!(
+                (pointer.station, pointer.piece),
+                (Some(station), piece),
+                "roaming {roam_only}, holding {holding}"
+            );
+        }
     }
 
     #[test]

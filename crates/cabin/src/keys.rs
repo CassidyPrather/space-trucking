@@ -8,9 +8,9 @@
 //! key in one table ([`Bindings`]), and the defaults are `Q` and `E` for
 //! the turns and `X` and `Z` for the lift (docs/BAY.md, "Lift, and the
 //! keys"). Nothing reads a carry key by its `KeyCode` but this table:
-//! `main::hands` asks it which actions were pressed, `rig::steer` asks it
-//! whether `E` belongs to a carry before it focuses with one, and the
-//! menu's keys page rebinds it (`crate::menu`).
+//! `main::hands` asks it which actions were pressed, and the menu's keys
+//! page rebinds it (`crate::menu`). A carry key never has to be told
+//! apart from focus, because focus wants an empty hand (`rig::steer`).
 //!
 //! **The table is a list of actions, not four fields**, so the next thing
 //! a key does joins it as a row: a token for the file, a default, and a
@@ -67,9 +67,10 @@ impl Action {
     ///
     /// `Q` and `E` for the turns, under the fingers that walk, as the
     /// owner asked; `E` is focus too, and which one it is depends on the
-    /// hand (`rig::steer`). `X` and `Z` for the lift, on the row under
-    /// the walk where the same hand already is, `X` up and `Z` down. None
-    /// is a key the game or the bench answers, and `R` stays nobody's.
+    /// hand: focus wants an empty one (`rig::steer`). `X` and `Z` for the
+    /// lift, on the row under the walk where the same hand already is, `X`
+    /// up and `Z` down. None is a key the game or the bench answers, and
+    /// `R` stays nobody's.
     #[must_use]
     pub const fn default_key(self) -> KeyCode {
         match self {

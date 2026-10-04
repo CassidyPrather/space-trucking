@@ -4450,6 +4450,7 @@ mod tests {
                     Ray3d::new(eye, dir),
                     true,
                     crate::rig::REACH,
+                    bridge.sim.held(0).is_some(),
                     aims.iter().copied(),
                 );
                 if pointer.aimed(&bridge.sim).map(|hit| hit.id) == Some(id) {
@@ -4510,6 +4511,7 @@ mod tests {
                     Ray3d::new(eye, dir),
                     true,
                     crate::rig::REACH,
+                    bridge.sim.held(0).is_some(),
                     aims.iter().copied(),
                 );
                 if layout::cell_at(aim.sim).is_some() {
@@ -4657,6 +4659,7 @@ mod tests {
                     Ray3d::new(eye, dir),
                     true,
                     crate::rig::REACH,
+                    bridge.sim.held(0).is_some(),
                     aims.iter().copied(),
                 );
                 if pointer.station == Some(Station::Handshake) {

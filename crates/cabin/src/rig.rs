@@ -1095,7 +1095,6 @@ pub fn steer(
     shell: Res<crate::Shell>,
     envelope: Res<crate::room::Envelope>,
     menu: Res<crate::menu::Menu>,
-    bindings: Res<crate::keys::Bindings>,
     mut rig: ResMut<CameraRig>,
     camera: Single<&Transform, With<CabinCamera>>,
 ) {
@@ -1106,16 +1105,15 @@ pub fn steer(
     if menu.open {
         return;
     }
-    // **`E` is focus with an empty hand, and a carry key with a full
-    // one** (docs/BAY.md, "Lift, and the keys"). The owner asked for the
-    // turns on `Q` and `E`, and `E` was focus; a roaming body with a piece
-    // in hand turns it with `E` by default (`crate::keys`), so here `E`
-    // focuses nothing while a carry action holds it and the hand is full —
-    // the click still does, exactly as before. Bound elsewhere, `E` is
-    // focus in either hand. At a station or mid-glide nothing turns a
-    // carry, so there `E` is the way back out, as it always was.
+    // **Focus wants an empty hand** (docs/BAY.md, "The carry sees the
+    // room"). A carry aims through every instrument at the wall behind it,
+    // so with a piece in hand a click is the drop, always, and never a
+    // glide to the station the drop is aimed through; and `E` is a carry
+    // key (`crate::keys` binds the clockwise turn to it by default) or
+    // nothing. At a station or mid-glide nothing turns a carry, so there
+    // `E` is the way back out, as it always was.
     let toggle = keys.just_pressed(KeyCode::KeyE);
-    let carrying = shell.bridge.sim.held(0).is_some() && bindings.action(KeyCode::KeyE).is_some();
+    let holding = shell.bridge.sim.held(0).is_some();
     match rig.mode {
         Mode::Roam => {
             // A parked cursor belongs to the OS until the game is
@@ -1186,24 +1184,21 @@ pub fn steer(
             };
             let bend = DUCK_RATE * time.delta_secs();
             rig.pos.y += (stance - rig.pos.y).clamp(-bend, bend);
-            // Focus what the crosshair rests on — cargo in hand
-            // included: the click carries the piece along (the carry
-            // survives the glide; `advance` keeps the grip synthesized),
-            // and because this runs before `advance`, the same click
-            // never doubles as a placement.
+            // Focus what the crosshair rests on, with an empty hand.
+            // Because this runs before `advance`, the click that starts
+            // a glide never doubles as a grab.
             //
             // An instrument in the room answers to the handle rule
             // first. The pointer is last frame's, computed from exactly
             // the camera transform this system is reading, so the
             // routing and the hover tell that promised it can never
             // disagree about which half of the piece the aim is on.
-            if buttons.just_pressed(MouseButton::Left) || (toggle && !carrying) {
+            if !holding && (buttons.just_pressed(MouseButton::Left) || toggle) {
                 let sim = &shell.bridge.sim;
-                let holding = sim.held(0).is_some();
-                let focus = match pointer.aimed(sim) {
-                    Some(over) if !holding => handle_route(sim.rooms(), over, pointer.sim),
-                    _ => aimed_station(&camera, &surfaces).and_then(Focus::of),
-                };
+                let focus = pointer.aimed(sim).map_or_else(
+                    || aimed_station(&camera, &surfaces).and_then(Focus::of),
+                    |over| handle_route(sim.rooms(), over, pointer.sim),
+                );
                 if let Some(focus) = focus {
                     rig.mode = Mode::ToFocus {
                         focus,
@@ -1220,8 +1215,17 @@ pub fn steer(
         // cannot read — and then a swallowed `Esc` is the difference
         // between a bad camera and a soft-lock. `Mode::ToRoam` is
         // already on its way home and needs no second answer.
+        //
+        // **And a piece in hand is the way out by itself.** Nothing in
+        // roam starts a focus with a full hand, but a focused cursor
+        // works the room's charts as well as the glass, and a press on
+        // cargo beside the panel lifts it. A carry is worked in the room,
+        // so the camera walks back there with it in hand rather than
+        // parking a carry at a panel; `advance` keeps the grip through
+        // the glide.
         Mode::Focused { .. } | Mode::ToFocus { .. } => {
             if toggle
+                || holding
                 || keys.just_pressed(KeyCode::Escape)
                 || buttons.just_pressed(MouseButton::Right)
             {

@@ -31,10 +31,12 @@ move is deliberate, nothing to get seasick over:
   WASD walks a clamped envelope, a small glint crosshair marks aim. Aim
   at an instrument and its own rig invites with a glint outline — the
   tell belongs to the piece, because the station does.
-- **Focused**: click (or `E`) glides the camera (~0.4 s, eased, no
-  overshoot) to that station's viewpoint, wherever the cargo carrying it
-  hangs; the cursor frees and precise sim interaction works exactly as
-  in 2D. `Esc`, right-click, or `E` steps back out.
+- **Focused**: with empty hands, click (or `E`) glides the camera
+  (~0.4 s, eased, no overshoot) to that station's viewpoint, wherever
+  the cargo carrying it hangs; the cursor frees and precise sim
+  interaction works exactly as in 2D. `Esc`, right-click, or `E` steps
+  back out. With a piece in hand the click is the drop (docs/BAY.md,
+  "The carry sees the room").
 - **The menu**: `Esc` while roaming raises the meta-controls — pause,
   fast-forward (dev), mute, the delivery tally, a new run — as a screen
   overlay, and frees the cursor exactly as `Esc` always did. It is

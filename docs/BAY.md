@@ -8,9 +8,10 @@ the project's largest scope decision so far: the 2D console retires.
 
 > Superseded in part by *Cargo stops colliding*: the cabinet is
 > furniture that stores nothing, and cargo no longer collides with
-> cargo. And by *Lift, and the keys*: a vase goes on the cabinet's top
-> by standing a lift off the deck, and the carry's keys are a table the
-> `Esc` menu rebinds.
+> cargo. And by *Lift, and the keys*: a standing piece has a height off
+> its surface, and the carry's keys are a table the `Esc` menu rebinds.
+> And by *The carry sees the room*: a carry reads the room through every
+> piece's body, and a click with a piece in hand is the drop.
 
 ## The grid comes out
 
@@ -723,12 +724,13 @@ things in the same way, more or less (and I never really liked the
 re-scaling part of it anyway)."
 
 The cubbies went with *Cargo stops colliding*, and with them the only
-way anything ever stood above the deck. A vase on a cabinet now is a
-vase put where the cabinet's top is, and that takes a third coordinate.
-So **a standing berth has a lift**, the ghost is drawn at the size the
-piece lands at, and **the carry's keys are a table the player rebinds**
-on a page of the `Esc` menu. Passages this overrules are marked
-"Superseded by *Lift, and the keys*".
+way anything ever stood above the deck. A piece standing above its
+surface takes a third coordinate, and it is a height: a piece left at
+one stays at it wherever it is left, whatever stands under it or does
+not. So **a standing berth has a lift**, the ghost is drawn at the size
+the piece lands at, and **the carry's keys are a table the player
+rebinds** on a page of the `Esc` menu. Passages this overrules are
+marked "Superseded by *Lift, and the keys*".
 
 ### Lift: a berth's height off its surface
 
@@ -754,8 +756,8 @@ on a page of the `Esc` menu. Passages this overrules are marked
 - **A taste coordinate.** The sim stores it, saves it and sends it, and
   no rule reads it. The arbiter is asked about the plane (`Loc::spot`
   carries no lift), so light reach, volatile spacing, the rat's walk and
-  every tile class read the ground under the body: a lamp lifted onto a
-  cabinet lights what is around it in plan, as it did standing there,
+  every tile class read the ground under the body: a lamp raised off
+  the deck lights what is around it in plan, as it did standing there,
   and two canisters keep their half cell of air in plan at whatever
   heights they stand (`sim::tests::no_rule_reads_a_lift`).
 - **Carry state, like the facing.** The frontend owns the carry's lift
@@ -780,8 +782,8 @@ on a page of the `Esc` menu. Passages this overrules are marked
   glass and a standing body's pick face ride the lifted pose, and a wall
   body lifted off its chart carries a pick face of its own as a turned
   one does, because the chart a lift behind it reads somewhere else at
-  every angle but square on. So the crosshair finds a vase on a cabinet
-  by the vase.
+  every angle but square on. So an empty hand's crosshair finds a raised
+  piece by its own raised body, whatever stands under it.
 - **Saves are `STV24`** (`hold {room} {x} {y} {turn} {lift}`), tapes
   `RPL8`, the wire `SNP7` with the lift after the facing. Another version
   starts a new run, as ever (DESIGN_REVIEW.md, *An old save or tape
@@ -801,9 +803,19 @@ two constants survive only as the focus drag's (`GLASS_LIFT`,
 `GLASS_FIT`): a piece carried over a station's glass, where nothing
 lands, still floats off it a shade large.
 
+> Superseded by *The carry sees the room*: the focus drag is gone, and
+> its two constants with it.
+
 - **Aimed at nothing placeable**, which now includes a station's glass,
   the carry is hitched on the arm, compact. That is a carry pose, not a
   placement preview, and it is kept.
+
+  > Superseded in part by *The carry sees the room*: a station's glass
+  > never stopped a roaming carry — the glass rides its piece, and the
+  > roaming ray already passed it by — and what caught a carry aimed at
+  > a tank was the tank's own pick face. No cargo answers a carry now,
+  > so aimed at a station's glass the carry reads the wall behind it.
+  > Nothing placeable is off every net.
 - **The ghost cannot move, so the patch does.** The footprint patch,
   its slash and the refusal flash are laid at their rungs of the decal
   ladder off the berth's own plane — the chart's, carried out by the
@@ -813,7 +825,7 @@ lands, still floats off it a shade large.
   patch or its slash, in any body any kind draws, on any chart it may
   take — nor with its own surface at any fine unit of lift the room has
   for it (`gauntlet::tests::no_ghost_fights_its_patch_or_its_surface`).
-  A vase raised onto a cabinet lights the cabinet's top.
+  A raised piece's patch lies at its own height, under it.
 - **The sweeps ask it.** The cabin's every-berth sweep asks the drop at
   a lift past any room's and holds it to the cap, on the same ground,
   with the ghost there the berth's own pose carried that far along the
@@ -851,10 +863,14 @@ lands, still floats off it a shade large.
   was. Rebound off `E`, the turn takes its new key and `E` is focus in
   either hand; bind another carry action to `E` and `E` does that with a
   full hand.
+
+  > Superseded by *The carry sees the room*: nothing focuses with a
+  > piece in hand. A click with one is the drop, and `E` with one is
+  > whatever carry action holds it, or nothing.
 - **`Shift+Q` is gone.** `Shift` is read with the wheel, for the lift,
   and on a press, for quick-move; neither is a press that ends a carry.
 - **One table.** Every place that reads a carry key reads
-  `keys::Bindings` (`main::hands`, `rig::steer`); nothing reads one by
+  `keys::Bindings` (`main::hands`); nothing reads one by
   its `KeyCode`. The wheel's gestures are not in it: they are a wheel
   and two modifiers, and this pass rebinds keys.
 - `R` stays nobody's, `F` is warp, `Space` pause, `M` mute, `W` `A` `S`
@@ -907,6 +923,84 @@ sits sunk to the socket while there is nothing to put back.
   own caps are where a player has always read it. The **Defaults** cap
   wears its word for the reason the **New run** bar does.
 - `--menu keys` boots with the page standing, for a screenshot.
+
+## The carry sees the room
+
+The owner, after a playtest: "I did notice some weird snapping code that
+would kick in when the cursor moved to the cell with the 'shelves',
+which to me indicates that not all of the special shelf handling code
+got ripped out, though. It should all be gone with no special logic at
+this point."
+
+**What it was.** Every standing body carries its own pick face (*The
+standing rule*, below), and the pick stopped the crosshair at the
+nearest one whether or not a piece was in hand. So a carry swept across
+a wardrobe's tall body read a point of the wardrobe's own ground,
+`Sim::drop_preview` centred the carried piece there, and the ghost
+jumped onto the wardrobe; a tank hung on a flank caught a carry the
+same way, by its own face. The faces were born for the cubbies — the
+cubby you look at is the cubby you get — and with no cubbies and no
+collision another piece's body says nothing about where this one goes.
+The sim had no part in it: it centred the drop on whatever point it was
+sent. Passages this overrules are marked "Superseded by *The carry sees
+the room*".
+
+- **With a piece in hand, no cargo answers the pointer.**
+  `surface::pick` is told whether a piece is held — the sim's `held`,
+  handed in rather than looked up, so a test drives either hand — and
+  holding, it passes over every surface that rides a piece: the
+  standing faces and the instruments' glass alike. The ray goes on
+  through cargo to the deck, wall or deckhead behind it, within
+  `rig::REACH` as ever, and the drop is centred where it meets the room.
+  The room's own fabric still answers, because it is no cargo: the
+  charts, and a room's handshake fixture, whose cell takes no cargo.
+  The lift's reset (*Lift*, above) reads the class of the chart under
+  that aim, which is now always the chart behind whatever stands in
+  front.
+- **An empty hand is asked exactly what it was.** The nearest body
+  along the ray answers (*The nearest rule*, below), so a grab, the
+  hover glint, the outline and the handle's routing between carry and
+  focus read the pointer they always read.
+- **A piece stands over another the way it stands anywhere.** Raise it
+  to the height wanted and aim at the deck under the spot, through
+  whatever stands there. Nothing under a raised piece holds it up, and
+  nothing about any kind is special.
+- **A click with a piece in hand is the drop, always.** `rig::steer`
+  used to let that click glide to the station under the aim with the
+  piece along, the retired desk drag's last leftover. With cargo
+  transparent to the carry, the same click would have fought the drop
+  onto the wall behind the instrument. Focus wants an empty hand: with a
+  piece in hand a click drops it, and `E` is whatever carry action holds
+  it (the clockwise turn, by default) or nothing. At a station or
+  mid-glide `E` is the way back out, as it always was.
+- **The focus drag is gone**: a carried piece glued to a focused
+  panel's glass, a tenth large and 5 cm proud (`GLASS_FIT`,
+  `GLASS_LIFT`), and the pointer's hit point and struck quad, which only
+  it read. A carry is worked in the room. Roaming, it is the ghost or
+  the arm; parked under the menu or the desktop, it stays where it last
+  stood, at the size it stood at; carried along by a glide, it rides the
+  arm.
+- **A piece lifted at a station takes the camera back to the room.**
+  Nothing in the room starts a focus with a full hand, but a focused
+  cursor works the room's charts as well as the glass, so a press on
+  cargo beside a panel lifts it. A piece in hand is a way out of a focus
+  by itself: the camera walks back to the room with it, `advance` keeps
+  the grip through the glide, and the next click drops it
+  (DESIGN_REVIEW.md, *Decided without asking*, says what else it could
+  have been).
+
+The tests drive the whole input schedule: a carry aimed down through a
+cabinet reads the deck beyond it, as the bare room would, and lands the
+vial there, while an empty hand on the same line names the cabinet; a
+carry aimed at the chart tank's glass reads the wall behind, and the
+click hangs the sconce there and leaves the camera roaming, while an
+empty hand on the glass routes to the tank's focus and a click focuses
+it; a crate in hand at the tank turns on `E`, and a click ends its
+carry instead of focusing; a crate lifted from a focus walks the camera
+back out still in hand; and a raised vial keeps its height through a
+drop and a re-grab. The plain pick is held to the whole matrix — glass,
+body and room on one line, each hand in each regime
+(`surface::tests::a_full_hand_reads_the_room_through_every_piece`).
 
 ## The decision: the 2D console retires
 
@@ -1509,6 +1603,11 @@ of. Three guards, all sim-side and monkey-proven:
   > in front.
 
 ### The standing rule: cargo that stands maps its own body
+
+> Superseded in part by *The carry sees the room*: the faces serve the
+> empty-handed pick only. A carry passes over every one of them and
+> reads the room behind, because another piece's body is no answer to
+> where this one goes; there is no stow drop for a face to agree with.
 
 Reported from playtest: aiming at the top-right of a standing cabinet
 highlighted the top-LEFT cubby. The room net's charts are flat; a rig

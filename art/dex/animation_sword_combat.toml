@@ -1,0 +1,122 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.bigrig_01]
+name = "BigRig_01"
+pack = "animation_sword_combat"
+source = "SourceFiles/Models/BigRig_01.fbx"
+sha256 = "d564d0a8cc494c6a23da885a755b145d0a2e16a646d7b48d6a962ad8899b68a4"
+atlas = "POLYGON - Fantasy Rivals Pack/FantasyRivals_Texture_01_D.png"
+textures = "FantasyRivals_Texture_01_D.png"
+description = "A humanoid figure in a T-pose, rendered in a pale, sandy beige with a flat, untextured finish that suggests a base or placeholder model. The proportions are stocky and blocky, with a simple head, broad shoulders, and thick limbs, lacking any facial features or clothing details."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1246
+meshes = 1
+materials = 1
+size = [2.889158, 1.824378, 0.51142]
+
+[mesh.kidrig_01]
+name = "KidRig_01"
+pack = "animation_sword_combat"
+source = "SourceFiles/Models/KidRig_01.fbx"
+sha256 = "14b644e050d729b3af276f7c7ae4167c51a8fa1c91899a32d06404d37858cb18"
+atlas = "POLYGON - Kids Pack/Polygon_Kids_Texture_A.png"
+textures = "Polygon_Kids_Texture_A.png"
+description = "A stylized child character in a T-pose, wearing a white and yellow space suit with a grey helmet and backpack. The suit features orange accents and grey boots, with a clean, low-poly aesthetic suitable for sci-fi or adventure games."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2002
+meshes = 1
+materials = 1
+size = [1.31194, 1.165017, 0.23884201]
+
+[mesh.modularsyntycharacter]
+name = "ModularSyntyCharacter"
+pack = "animation_sword_combat"
+source = "SourceFiles/Models/ModularSyntyCharacter.fbx"
+sha256 = "8583d027d188321b614c39b04da5ab767f14e4b00de7d3ab451e1559774dff7f"
+atlas = "T_Polygon_Dummy_01.png"
+textures = "T_Polygon_Dummy_01.png"
+description = "A humanoid figure in a rigid T-pose, clad in segmented red and dark grey armour with a full helmet, suggesting a sci-fi soldier or robot. The low-poly texture is worn and mottled, giving it a battle-scarred look, and the proportions are stocky and game-ready."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6628
+meshes = 1
+materials = 1
+size = [1.896755, 1.787625, 0.36606002]
+
+[mesh.polygonrig_01]
+name = "POLYGONRig_01"
+pack = "animation_sword_combat"
+source = "SourceFiles/Models/POLYGONRig_01.fbx"
+sha256 = "881819102b456130cb417ef69594b3479d8c7dd77e4d390a9f1b85dce911a7c7"
+atlas = "T_Polygon_Dummy_01.png"
+textures = "T_Polygon_Dummy_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A slender, featureless humanoid figure in a deep crimson red, posed in a T-pose with arms outstretched. The smooth, untextured surface suggests a basic rigging dummy or placeholder for animation, with no facial features or clothing details."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2521
+meshes = 4
+materials = 1
+size = [2.047514, 1.822315, 0.311946]
+
+[mesh.polygonsyntycharacter]
+name = "PolygonSyntyCharacter"
+pack = "animation_sword_combat"
+source = "SourceFiles/Models/PolygonSyntyCharacter.fbx"
+sha256 = "a3d9b8dd69dc35dd9e42479b1b4cbb430f3267f582a637335dd2d85a7b2dc62f"
+atlas = "T_Polygon_Dummy_01.png"
+textures = "T_Polygon_Dummy_01.png"
+description = "A humanoid figure in a T-pose, clad in segmented red and dark grey armour with a rounded helmet and a small backpack, marked with a white cross on the chest. The suit is scuffed and weathered, suggesting a combat medic or futuristic soldier, with a matte finish that gives it a practical, battle-ready appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4898
+meshes = 1
+materials = 1
+size = [2.0484562, 1.793554, 0.367265]
+
+[mesh.sm_generic_skydome]
+name = "SM_Generic_SkyDome"
+pack = "animation_sword_combat"
+source = "SourceFiles/Models/SM_Generic_SkyDome.fbx"
+sha256 = "8326892169d2a303d06ad72c1fe569bafdecbabea815b57fab57cebf39ba17cd"
+atlas = "SIMPLE - Dungeons/SimpleDungeonTexture.png"
+textures = "SimpleDungeonTexture.png"
+description = "A squat, flattened sphere with a broad, dull red cap and a banded, grey-brown lower body, accented by thin yellow and white stripes. The surface is smooth and matte, resembling a stylised, low-poly planet or a decorative stone weight, with no visible seams or damage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 320
+meshes = 1
+materials = 1
+size = [131.76057, 104.51394, 131.76059]
+
+[mesh.sm_wep_sword_01]
+name = "SM_Wep_Sword_01"
+pack = "animation_sword_combat"
+source = "SourceFiles/Models/SM_Wep_Sword_01.fbx"
+sha256 = "2847fcf7d35dedf1a05803d2fa6612644a70cb71741df1838e11ce98afab66a8"
+atlas = "T_Polygon_Dummy_01.png"
+textures = "T_Polygon_Dummy_01.png"
+description = "A slender, straight-bladed arming sword with a simple crossguard and a purple-wrapped grip, finished with a gold pommel. The steel blade is unadorned and clean, while the vibrant purple and gold accents give it a regal, fantasy appearance suitable for a knight or noble character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 334
+meshes = 1
+materials = 1
+size = [0.054273, 1.035023, 0.188988]

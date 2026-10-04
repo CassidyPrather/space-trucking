@@ -1,0 +1,837 @@
+//! Sim surfaces: the trick that makes the 3D cabin the same game.
+//!
+//! The sim's whole interaction model is a pointer in its 800×600 console
+//! world (`sim::layout`). Each interactive surface in the cabin — the nav
+//! tank's glass, the launch handle's track, the bay's charts —
+//! is a [`SimSurface`]: an oriented quad in 3D
+//! space bound to one sim rect.
+//! Each frame the cursor ray is cast against every surface; the nearest
+//! hit maps to sim coordinates and becomes the virtual pointer the sim
+//! reads. The inverse mapping places sim things (POIs, crates, the rat)
+//! back onto cabin geometry. Hit-testing thus stays where it always was:
+//! inside the sim, where the rules live.
+//!
+//! Some of them are not screwed to the hull at all. The instruments are
+//! cargo, so the chart tank and the launch handle carry their stations
+//! at their own cells ([`Riding`]) and the rest of the game never hears
+//! about it — the logical rects stay the law, only the binding moves
+//! (docs/BAY.md, "Instruments as cargo"). And a rig whose own frame
+//! leaves its chart's carries its own reading the same way
+//! ([`Station::Standing`]): floor cargo, a pendant, a crate on a hopper
+//! tile stand bodily where the chart is not, and wall cargo drawn off
+//! its chart's lie shares the plane but not the lie — so in both cases
+//! the aim has to meet the piece in the frame the rig was drawn in, and
+//! the reading is laid back onto the net, where the sim carries it into
+//! the piece's own frame to ask whether it landed on the handle.
+//!
+//! **And the pointer says which body it met.** Pieces share ground now
+//! (docs/BAY.md, "Cargo stops colliding"), so a point on a chart can lie
+//! on several of them and the point alone cannot say which the player is
+//! looking at. A face that rides a piece knows ([`VirtualPointer::piece`]),
+//! and [`VirtualPointer::aimed`] hands the two to the sim's own pick —
+//! the one answer the hover, the outline, the handle's routing and the
+//! press all read.
+//!
+//! **That is a question for an empty hand.** A carry asks where in the
+//! room a piece would go, and with cargo standing in cargo another
+//! piece's body is no answer to it: while a piece is in hand nothing that
+//! rides a piece answers the pointer at all, and the ray goes through
+//! every body and every pane to the deck, wall or deckhead behind
+//! ([`pick`]; docs/BAY.md, "The carry sees the room").
+//!
+//! What a rig's is bound to is a BODY and not a quad. A chart is a
+//! surface because a wall is one; a crate is not, and a plane cut
+//! through a crate answers only from square on — walk a quarter turn
+//! round a column of pearls and the plane goes edge-on, so the aim
+//! passes through the thing the player is looking at and lands on the
+//! deck behind it. So the quad stays the READING, and
+//! [`SimSurface::deep`] carries the body the reading is taken off.
+
+use bevy::prelude::*;
+use space_trucking::sim::layout::{self, Rect as SimRect};
+use space_trucking::sim::room::Surf;
+use space_trucking::sim::{Piece, Sim, Vec2 as SimVec2};
+
+use crate::pieces::Riding;
+use crate::room::InRoom;
+
+/// Which mapped surface (or view system) is being talked about.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Station {
+    /// The star map tank — `layout::MAP_PANEL`. Carried by the
+    /// `ChartTank` piece: the logical rect never moves, the binding
+    /// does (docs/BAY.md, "Instruments as cargo").
+    Map,
+    // No `Console`. The face that carried the pause/warp/speaker plate
+    // and the hangar tally was the last station screwed to the hull, and
+    // meta-controls are not a place you walk up to: they are the `Esc`
+    // menu now (`crate::menu`), overlay rather than room. Its icon
+    // hardware waits on the shelf in `crate::console` for the day
+    // somebody makes it cargo.
+    /// The launch handle's own panel — a region around
+    /// `layout::LAUNCH_LEVER`, carried by the `LaunchLever` piece so
+    /// the pull gesture never learns the handle moved.
+    Lever,
+    /// A room net's aft wall chart (docs/BAY.md, "The room grid").
+    ///
+    /// The six chart roles belong to the NET, not to the cabin: every
+    /// attached room folds its own box the same way (`crate::room`), so
+    /// several of each stand at once and each carries a `room::InRoom`
+    /// saying whose it is. Nothing looks a chart up by station alone.
+    BayWall,
+    /// The net's floor chart — the room's walkable deck.
+    BayFloor,
+    /// The net's port wall chart.
+    BayPort,
+    /// The net's starboard wall chart.
+    BayStarboard,
+    /// The net's front wall chart.
+    BayFront,
+    /// The net's ceiling chart.
+    BayCeiling,
+    /// A room's handshake fixture: the one click-functional thing set
+    /// into a room's own fabric (docs/ROOMS.md, beat five). Its face is
+    /// bound to its declared cell and stands proud of the chart behind
+    /// it, so the crosshair meets the brass rather than the wall.
+    Handshake,
+    /// A rig's own face, bound to that piece's own ground and riding the
+    /// pose the rig actually took — its chart's upright frame, turned by
+    /// the piece's own turn. The standing rule (docs/BAY.md): where a
+    /// rig's frame leaves its chart's, projecting the aim onto that
+    /// chart answers about something the player is not looking at. A
+    /// piece that STANDS is bodily somewhere the chart is not; a wall
+    /// piece drawn off its chart's lie shares the chart's plane but not
+    /// its lie, so a reading taken in chart coordinates lands a quarter
+    /// turn off the hardware drawn from the same numbers. Either way the
+    /// piece carries the mapping on its own body — the whole of it, all
+    /// three extents ([`SimSurface::deep`]), so the aim meets it from
+    /// wherever the player is standing — and where the aim lands on it
+    /// is laid back onto the net, which is where the sim reads it.
+    /// Several of these stand at once, one per piece, which is why
+    /// nothing looks a face up by station: the pointer hands over the
+    /// one it struck.
+    ///
+    /// It answers an empty hand only. A carry is not looking for a body
+    /// but for somewhere in the room, so with a piece in hand every face
+    /// is passed over ([`pick`]).
+    Standing,
+}
+
+impl Station {
+    /// Whether the roaming crosshair works this surface — every room's
+    /// six charts, the handshake fixtures, and the standing rigs' own
+    /// faces; the focusable stations need a focus pose instead. For a
+    /// piece-riding surface this is also *which regime it answers in*:
+    /// cargo is worked from roam, panels from focus, and neither wants
+    /// the other's ray (see [`track_pointer`]).
+    #[must_use]
+    pub const fn roamable(self) -> bool {
+        matches!(
+            self,
+            Self::BayWall
+                | Self::BayFloor
+                | Self::BayPort
+                | Self::BayStarboard
+                | Self::BayFront
+                | Self::BayCeiling
+                | Self::Handshake
+                | Self::Standing
+        )
+    }
+
+    /// Whether this surface is one of the net's six charts, whose quad
+    /// math turns every normal *outward*: the seam law pins both axes
+    /// of every chart (columns match across folds, cornices up), and a
+    /// box's interior is orientable — pin the paper and all six cross
+    /// products point out of the room together. Rendering consumers
+    /// flip through the two helpers below; `SimSurface::project` never
+    /// cared which way a normal points.
+    #[must_use]
+    pub const fn chart_flipped(self) -> bool {
+        matches!(
+            self,
+            Self::BayWall
+                | Self::BayFloor
+                | Self::BayPort
+                | Self::BayStarboard
+                | Self::BayFront
+                | Self::BayCeiling
+        )
+    }
+
+    /// **Which of the sim's chart classes this station is**, for one of
+    /// the net's six: the name the sim's own rules use for the same
+    /// plane (`space_trucking::sim::Surf`), so a pose can be asked of the
+    /// sim's mapping from chart to net (`cargo::net_angle`). `None` for
+    /// everything that is not a chart.
+    #[must_use]
+    pub const fn surf(self) -> Option<Surf> {
+        match self {
+            Self::BayWall => Some(Surf::Aft),
+            Self::BayFloor => Some(Surf::Floor),
+            Self::BayPort => Some(Surf::Port),
+            Self::BayStarboard => Some(Surf::Starboard),
+            Self::BayFront => Some(Surf::Front),
+            Self::BayCeiling => Some(Surf::Ceiling),
+            Self::Map | Self::Lever | Self::Handshake | Self::Standing => None,
+        }
+    }
+
+    /// **Whether this surface reads points of the net as the net lays
+    /// them out**, seen from outside the room: the six charts, and a
+    /// standing rig's own face, which lays its reading onto the net
+    /// round the piece's footprint (`pieces::onto_net`) so the sim can
+    /// carry it back into the piece's own frame. Both share the net's
+    /// handedness, so both turn their normal away from the room, and the
+    /// two helpers below flip both.
+    #[must_use]
+    pub const fn reads_the_net(self) -> bool {
+        self.chart_flipped() || matches!(self, Self::Standing)
+    }
+
+    /// The into-the-room normal of this station's surface.
+    #[must_use]
+    pub fn inward(self, surface: &SimSurface) -> Vec3 {
+        if self.reads_the_net() {
+            -surface.normal()
+        } else {
+            surface.normal()
+        }
+    }
+
+    /// The orientation a rig standing ON this surface faces the room
+    /// with: [`SimSurface::orientation`], spun half a turn on the
+    /// surfaces that read the net so local +Z looks into the room, not
+    /// the hull.
+    #[must_use]
+    pub fn face(self, surface: &SimSurface) -> Quat {
+        if self.reads_the_net() {
+            surface.orientation() * Quat::from_rotation_y(std::f32::consts::PI)
+        } else {
+            surface.orientation()
+        }
+    }
+}
+
+/// How near a face's own rim a body's reading may be taken, as a
+/// fraction of the half-extent. A ray coming in through the side of a
+/// box lands exactly ON the rim, and the rim of a piece's sub-rect is
+/// the boundary between it and whatever is next door — so the reading is
+/// drawn this much in and the answer belongs to the piece that was
+/// actually struck.
+const RIM: f32 = 0.999;
+
+/// An oriented quad bound to a sim rect, and whatever body stands
+/// behind it. `half_u` spans sim +x (half the panel's width), `half_v`
+/// spans sim +y — which is *down* in the sim's world, so `half_v` points
+/// down-panel in 3D as well — unless [`SimSurface::axes`] lays the
+/// reading along two other directions.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct SimSurface {
+    pub center: Vec3,
+    pub half_u: Vec3,
+    pub half_v: Vec3,
+    pub rect: SimRect,
+    /// **The two sim half-axes a reading is laid along, where they are
+    /// not `rect`'s own.** A point of the quad `a` of the way across
+    /// `half_u` and `b` of the way along `half_v` (each −1 to +1) reads
+    /// `rect`'s centre plus `a` of the first plus `b` of the second, and
+    /// `rect` is the box round what the quad reads. `None` reads
+    /// straight onto `rect`, which is what a chart and a pane do.
+    ///
+    /// A standing rig's face is what sets it (`pieces::onto_net`). Its
+    /// body stands at whatever turn it was set down at, and a rect
+    /// cannot turn: a face read along the rect's axes was only ever
+    /// right at a quarter turn, and read an odd one as the nearest
+    /// quarter. Laid along the very half-axes the sim's footprint is
+    /// built from (`cargo::Foot`), the point the aim lands on is the
+    /// point the sim carries back into the piece's own frame, at any
+    /// angle — whether the amber handle, and where on the body.
+    pub axes: Option<(SimVec2, SimVec2)>,
+    /// **Half the depth of the body this face reads for**, along the
+    /// normal, in world units. Zero says the face IS the thing: a wall's
+    /// chart has nothing in front of it to aim at, and an instrument's
+    /// glass is a pane.
+    ///
+    /// A rig is not like that. It is a body with three extents and it is
+    /// looked at from all round, so a face cut through it answers only
+    /// from square on: aim at the top of a column of pearls from ninety
+    /// degrees off and the quad is edge-on, the ray goes past it, and
+    /// the piece the player is looking straight at answers nothing. What
+    /// a rig's face carries is therefore the box the tell draws
+    /// (`pieces::drawn_box`), and the aim meets the box
+    /// ([`SimSurface::strike`]) and is read on the quad through it — so
+    /// the thing you can click and the thing that lights up are one
+    /// shape, whichever way you walk round it.
+    pub deep: f32,
+}
+
+impl SimSurface {
+    /// A panel standing near-vertical, facing +Z (toward the seat), tilted
+    /// `tilt` radians about X: positive tilt reclines the top away and
+    /// raises the face toward the viewer — desk-like at large angles.
+    ///
+    /// **Nothing calls this at runtime any more** — the hull owns no
+    /// panels, and every surface aboard is a chart or a piece's own face,
+    /// each built from its room's or its rig's pose. The constructor
+    /// outlives them because it is the one place the tilt/yaw frame is
+    /// written down, and the mapping tests below drive the projection
+    /// math through it: the next thing that wants a tilted face (a bolt-
+    /// on instrument, a room's own fixture) should build it here rather
+    /// than derive the quaternion again by hand.
+    #[allow(dead_code)]
+    #[must_use]
+    pub fn panel(center: Vec3, width: f32, height: f32, tilt: f32, rect: SimRect) -> Self {
+        Self::panel_yawed(center, width, height, tilt, 0.0, rect)
+    }
+
+    /// [`Self::panel`] rotated `yaw` radians about Y afterwards, for
+    /// panels mounted on other walls: `FRAC_PI_2` faces +X (the left
+    /// wall's inward normal), `-FRAC_PI_2` faces -X. Dormant with its
+    /// sibling above, and for the same reason.
+    #[allow(dead_code)]
+    #[must_use]
+    pub fn panel_yawed(
+        center: Vec3,
+        width: f32,
+        height: f32,
+        tilt: f32,
+        yaw: f32,
+        rect: SimRect,
+    ) -> Self {
+        let rot = Quat::from_rotation_y(yaw) * Quat::from_rotation_x(-tilt);
+        Self {
+            center,
+            half_u: rot * (Vec3::X * (width * 0.5)),
+            half_v: rot * (Vec3::NEG_Y * (height * 0.5)),
+            rect,
+            axes: None,
+            deep: 0.0,
+        }
+    }
+
+    /// The quad's outward normal.
+    #[must_use]
+    pub fn normal(&self) -> Vec3 {
+        self.half_v.cross(self.half_u).normalize()
+    }
+
+    /// The rotation carrying local `+X`/`+Y`/`+Z` onto the panel's
+    /// u / up-panel / normal frame — what furniture meshes orient by.
+    /// (Sim v runs *down* the panel, so panel-up is `-v̂`.)
+    #[must_use]
+    pub fn orientation(&self) -> Quat {
+        let u = self.half_u.normalize();
+        let v = self.half_v.normalize();
+        Quat::from_mat3(&Mat3::from_cols(u, -v, self.normal()))
+    }
+
+    /// Ray → (distance, sim position, world position), if the ray crosses
+    /// the quad within its bounds.
+    #[must_use]
+    pub fn project(&self, ray: Ray3d) -> Option<(f32, SimVec2, Vec3)> {
+        let normal = self.normal();
+        let denom = ray.direction.dot(normal);
+        if denom.abs() < 1e-6 {
+            return None;
+        }
+        let t = (self.center - ray.origin).dot(normal) / denom;
+        if t <= 0.0 {
+            return None;
+        }
+        let world = ray.origin + ray.direction * t;
+        let local = world - self.center;
+        let a = local.dot(self.half_u) / self.half_u.length_squared();
+        let b = local.dot(self.half_v) / self.half_v.length_squared();
+        if !(-1.0..=1.0).contains(&a) || !(-1.0..=1.0).contains(&b) {
+            return None;
+        }
+        Some((t, self.read(a, b), world))
+    }
+
+    /// **Ray → the body this face reads for**, as `(distance, sim
+    /// position, world position)`: [`Self::project`] where the face is a
+    /// plane ([`Self::deep`] zero), and the box it is cut through where
+    /// it is not.
+    ///
+    /// The reading stays the quad's. Whatever face of the body the ray
+    /// comes in by, where it lands is laid straight back onto the
+    /// elevation the rig was drawn in — so a cabinet met on its flank at
+    /// the height of its lower shelf reads its lower shelf, which is
+    /// what a player aiming at it means. An entry exactly on a rim would
+    /// read the very edge of the piece's own cells, where the sim has to
+    /// pick a side, so it is drawn a hair in.
+    #[must_use]
+    pub fn strike(&self, ray: Ray3d) -> Option<(f32, SimVec2, Vec3)> {
+        if self.deep <= 0.0 {
+            return self.project(ray);
+        }
+        let (across, down) = (self.half_u.length(), self.half_v.length());
+        if across <= 0.0 || down <= 0.0 {
+            return None;
+        }
+        // The slab test, in the box's own three directions.
+        let mut near = f32::NEG_INFINITY;
+        let mut far = f32::INFINITY;
+        for (axis, half) in [
+            (self.half_u / across, across),
+            (self.half_v / down, down),
+            (self.normal(), self.deep),
+        ] {
+            let along = ray.direction.dot(axis);
+            let from = (ray.origin - self.center).dot(axis);
+            if along.abs() < 1e-6 {
+                if from.abs() > half {
+                    return None;
+                }
+                continue;
+            }
+            let (enter, leave) = ((-half - from) / along, (half - from) / along);
+            near = near.max(enter.min(leave));
+            far = far.min(enter.max(leave));
+        }
+        // A body the eye is already inside answers at the eye: a stance
+        // that close is standing in the cargo, and the alternative is a
+        // piece that stops answering when you walk into it.
+        let reached = near.max(0.0);
+        if far < reached {
+            return None;
+        }
+        let world = ray.origin + ray.direction * reached;
+        let local = world - self.center;
+        let sim = self.read(
+            (local.dot(self.half_u) / self.half_u.length_squared()).clamp(-RIM, RIM),
+            (local.dot(self.half_v) / self.half_v.length_squared()).clamp(-RIM, RIM),
+        );
+        Some((reached, sim, world))
+    }
+
+    /// **The sim point a reading names**: `a` of the way across `half_u`
+    /// and `b` of the way along `half_v`, each −1 to +1, laid onto `rect`
+    /// — or along [`Self::axes`] from its centre, where the face says so.
+    const fn read(&self, a: f32, b: f32) -> SimVec2 {
+        let Some((across, along)) = self.axes else {
+            return SimVec2::new(
+                f32::midpoint(a, 1.0).mul_add(self.rect.w, self.rect.x),
+                f32::midpoint(b, 1.0).mul_add(self.rect.h, self.rect.y),
+            );
+        };
+        let mid = self.mid();
+        SimVec2::new(
+            b.mul_add(along.x, a.mul_add(across.x, mid.x)),
+            b.mul_add(along.y, a.mul_add(across.y, mid.y)),
+        )
+    }
+
+    /// The middle of `rect`, which is the middle of what the quad reads.
+    const fn mid(&self) -> SimVec2 {
+        SimVec2::new(
+            self.rect.w.mul_add(0.5, self.rect.x),
+            self.rect.h.mul_add(0.5, self.rect.y),
+        )
+    }
+
+    /// Sim position → world position on the quad's plane: [`Self::read`]
+    /// backwards. Positions outside what the quad reads extrapolate —
+    /// callers clamp if they care.
+    #[must_use]
+    pub fn to_world(self, sim: SimVec2) -> Vec3 {
+        let (a, b) = if let Some((across, along)) = self.axes {
+            // `sim − mid = a·across + b·along`, solved by the two cross
+            // products: the reading's axes are never parallel.
+            let d = sim - self.mid();
+            let cross = |p: SimVec2, q: SimVec2| p.x.mul_add(q.y, -(p.y * q.x));
+            let whole = cross(across, along);
+            (cross(d, along) / whole, cross(across, d) / whole)
+        } else {
+            (
+                ((sim.x - self.rect.x) / self.rect.w).mul_add(2.0, -1.0),
+                ((sim.y - self.rect.y) / self.rect.h).mul_add(2.0, -1.0),
+            )
+        };
+        self.center + self.half_u * a + self.half_v * b
+    }
+
+    /// World length of one sim unit along the panel's u axis.
+    #[must_use]
+    pub fn scale_u(&self) -> f32 {
+        self.axes.map_or_else(
+            || self.half_u.length() * 2.0 / self.rect.w,
+            |(across, _)| self.half_u.length() / across.length(),
+        )
+    }
+
+    /// World length of one sim unit along the panel's v axis.
+    #[must_use]
+    pub fn scale_v(&self) -> f32 {
+        self.axes.map_or_else(
+            || self.half_v.length() * 2.0 / self.rect.h,
+            |(_, along)| self.half_v.length() / along.length(),
+        )
+    }
+}
+
+/// The virtual pointer: where the cursor ray landed in sim terms this
+/// frame, and what it landed on.
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct VirtualPointer {
+    /// Sim-space pointer; [`crate::bridge::POINTER_PARKED`] when the
+    /// cursor touches nothing mapped.
+    pub sim: SimVec2,
+    /// The station struck, for views that care where attention rests.
+    pub station: Option<Station>,
+    /// **The piece whose own face the ray struck**, if the surface it
+    /// landed on rides one ([`Riding`]): the nearest body along the one
+    /// ray (docs/BAY.md, "The nearest rule"). `None` on a chart, which
+    /// rides nothing — there the sim's point-pick order decides — and
+    /// always while a piece is in hand, which no body answers.
+    pub piece: Option<u32>,
+    /// The ray this frame's pointer was cast along, so a consumer that
+    /// has its own hardware to test can test it against the same line
+    /// the crosshair used rather than casting a second one from a
+    /// camera transform of its own (`crate::room::aim_latch`). `None`
+    /// while the pointer is parked and nothing was cast at all.
+    pub ray: Option<Ray3d>,
+    /// **How far along `ray` the pointer got before something stopped
+    /// it**, [`f32::INFINITY`] when nothing did. Not always where the
+    /// pointer landed: a surface may block the crosshair without
+    /// answering it (an opaque station in roam), and what a rival
+    /// affordance has to beat is whatever is actually in the way, not
+    /// whatever happened to be worth reporting.
+    pub depth: f32,
+}
+
+impl Default for VirtualPointer {
+    fn default() -> Self {
+        Self {
+            sim: crate::bridge::POINTER_PARKED,
+            station: None,
+            piece: None,
+            ray: None,
+            depth: f32::INFINITY,
+        }
+    }
+}
+
+impl VirtualPointer {
+    /// **The piece the aim rests on**: the sim's own pick
+    /// (`layout::pick`) at this pointer, told which body the ray met
+    /// first ([`VirtualPointer::piece`]).
+    ///
+    /// The ONE resolution of "which piece": the hover glint, the outline,
+    /// the handle's routing (`rig::handle_route`) and the press the
+    /// frame sends (`InputFrame::aim`) all ask it, of the same pointer and
+    /// the same board, so none of them can light, route or lift a
+    /// different piece than another. Where pieces share ground, the face
+    /// the ray met first answers; on a chart, or with nothing struck, the
+    /// sim's point-pick order does.
+    #[must_use]
+    pub fn aimed<'a>(&self, sim: &'a Sim) -> Option<&'a Piece> {
+        layout::pick(sim.rooms(), sim.pieces(), self.sim, self.piece)
+    }
+}
+
+/// Cast this frame's pointer ray onto the mapped surfaces; the nearest
+/// hit becomes the virtual pointer. Two regimes, one mapping:
+///
+/// - **Focused**: the freed cursor ray, against every surface — precise
+///   panel work, exactly as in the 2D console.
+/// - **Roaming**: the crosshair ray straight out of the camera, against
+///   the bay surfaces only, and only within [`crate::rig::REACH`] — the
+///   carry's aim. Stations need focus; the bay needs proximity.
+///
+/// And whether a piece is in hand, which is the sim's to say (`held`):
+/// a carry's ray passes every piece's body by ([`pick`]).
+#[allow(clippy::needless_pass_by_value)]
+pub fn track_pointer(
+    window: Single<&Window, With<bevy::window::PrimaryWindow>>,
+    camera: Single<(&Camera, &GlobalTransform), With<crate::rig::CabinCamera>>,
+    surfaces: Query<(&Station, &SimSurface, Option<&Riding>, Option<&InRoom>)>,
+    rig: Res<crate::rig::CameraRig>,
+    shell: Res<crate::Shell>,
+    mut pointer: ResMut<VirtualPointer>,
+) {
+    *pointer = VirtualPointer::default();
+    let (camera, camera_tf) = *camera;
+    let (ray, roam_only, reach) = if rig.interactive() {
+        let Some(cursor) = window.cursor_position() else {
+            return;
+        };
+        // The camera renders into the crunch target, so its viewport
+        // speaks crunch pixels; rescale the window cursor into that space.
+        let size = window.size();
+        if size.x <= 0.0 || size.y <= 0.0 {
+            return;
+        }
+        let scaled =
+            cursor / size * Vec2::new(crate::rig::CRUNCH_W as f32, crate::rig::CRUNCH_H as f32);
+        let Ok(ray) = camera.viewport_to_world(camera_tf, scaled) else {
+            return;
+        };
+        (ray, false, f32::INFINITY)
+    } else if rig.roaming() {
+        let forward = camera_tf.forward();
+        let Ok(dir) = Dir3::new(forward.into()) else {
+            return;
+        };
+        (
+            Ray3d::new(camera_tf.translation(), dir),
+            true,
+            crate::rig::REACH,
+        )
+    } else {
+        // Glides and parked cursors keep the pointer parked.
+        return;
+    };
+    *pointer = pick(
+        ray,
+        roam_only,
+        reach,
+        shell.bridge.sim.held(0).is_some(),
+        surfaces
+            .iter()
+            .map(|(station, surface, riding, in_room)| Aimable {
+                station: *station,
+                surface: *surface,
+                riding: riding.map(|riding| riding.0),
+                in_room: in_room.copied(),
+            }),
+    );
+}
+
+/// One mapped quad, as the pick sees it: what it answers as, where it
+/// is, which piece it rides if it rides one, and (for a chart) whose
+/// room it is.
+#[derive(Clone, Copy, Debug)]
+pub struct Aimable {
+    pub station: Station,
+    pub surface: SimSurface,
+    pub riding: Option<u32>,
+    pub in_room: Option<InRoom>,
+}
+
+/// **The pick, whole.** The nearest mapped quad the ray reaches within
+/// `reach` becomes the virtual pointer — and this is a plain function
+/// over a plain list on purpose: the carry begins here, so the grab has
+/// to be drivable end to end without a window
+/// (`room::tests::a_press_on_a_berthed_piece_lifts_it`).
+///
+/// **`holding` is whether a piece is in hand**, as the sim says
+/// (`Sim::held`), and it is handed in rather than looked up so a test can
+/// drive either hand. In hand, a piece is on its way somewhere in the
+/// room, and nothing that rides a piece answers: the ray goes through
+/// every body and every pane to the deck, wall or deckhead behind them,
+/// within `reach` as ever (docs/BAY.md, "The carry sees the room").
+/// Cargo stands in cargo, so another piece's body is no answer to where
+/// this one goes, and a pick face that caught the carry drew the drop
+/// onto that body's own ground — the snap a playtest felt crossing a
+/// wardrobe. An empty hand is asked exactly what it always was: the
+/// nearest body along the ray (docs/BAY.md, "The nearest rule").
+#[must_use]
+pub fn pick(
+    ray: Ray3d,
+    roam_only: bool,
+    reach: f32,
+    holding: bool,
+    surfaces: impl IntoIterator<Item = Aimable>,
+) -> VirtualPointer {
+    let mut pointer = VirtualPointer::default();
+    let mut nearest = f32::INFINITY;
+    for aim in surfaces {
+        let (station, surface) = (aim.station, aim.surface);
+        // A surface that rides a piece is cargo, and a hand already
+        // carrying a piece asks the room, never the cargo in it.
+        //
+        // An empty hand meets it in exactly ONE regime, and `roamable`
+        // is which:
+        //
+        // - An instrument's station is glass ON cargo, and in roam the
+        //   cargo comes first — the ray passes straight through to the
+        //   body the instrument hangs by, its own face or the cells it
+        //   hangs on, so the crosshair can hover it and the amber handle
+        //   can be grabbed THROUGH its own panel. The focus interaction
+        //   the rest of the piece answers with is `rig::steer`'s
+        //   business, not the pointer's.
+        // - A standing rig's face is the mirror case: it exists to
+        //   answer the crosshair, and it must not stand in the way of
+        //   panel work — the x-ray already ghosts whatever the focus
+        //   flies through, and a ghost the cursor cannot reach through
+        //   would be a wall with the paint stripped off.
+        if aim.riding.is_some() && (holding || roam_only != station.roamable()) {
+            continue;
+        }
+        if let Some((t, sim, _)) = surface.strike(ray)
+            && t < nearest
+            && t <= reach
+        {
+            // The net's holes are holes, and so are its doorways: a
+            // chart hit on a cell nothing can berth on is a miss, and the
+            // ray carries on to whatever lies beyond — the room across
+            // the threshold, space through the glass. Which cells those
+            // are is the hit room's OWN net's answer, never the cabin's.
+            if station.chart_flipped() && !aim.in_room.is_some_and(|room| chart_cell(room, sim)) {
+                continue;
+            }
+            // While roaming, a focusable station screwed to the room's
+            // own fabric would be opaque but not interactive: it stops
+            // the ray without becoming aim, and a click there glides to
+            // focus instead (`rig::steer`). None stands today — the hull
+            // owns no panels, and an instrument's glass rides its piece,
+            // which is passed over above in roam — so this is the rule
+            // the next one is held to (`SimSurface::panel`).
+            if roam_only && !station.roamable() {
+                nearest = t;
+                pointer = VirtualPointer::default();
+                continue;
+            }
+            nearest = t;
+            pointer = VirtualPointer {
+                sim,
+                station: Some(station),
+                piece: aim.riding,
+                ..VirtualPointer::default()
+            };
+        }
+    }
+    // The line and the depth belong to the cast, not to whatever it
+    // happened to land on: they are stamped on last so a hit that
+    // blocked without answering still says how far the ray got.
+    VirtualPointer {
+        ray: Some(ray),
+        depth: nearest,
+        ..pointer
+    }
+}
+
+/// Whether `sim` names a cell of `chart`'s own room that a piece could
+/// actually berth on: a real cell of that room's net, in that room's own
+/// lane, and not a doorway's threshold (which belongs to two rooms and
+/// holds nothing).
+fn chart_cell(chart: InRoom, sim: SimVec2) -> bool {
+    space_trucking::sim::layout::cell_at(sim)
+        .is_some_and(|(room, x, y)| room == chart.room && chart.berthable(x, y))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn map_panel() -> SimSurface {
+        SimSurface::panel(Vec3::new(0.0, 1.5, -1.0), 1.0, 0.84, 0.0, layout::MAP_PANEL)
+    }
+
+    #[test]
+    fn round_trip_center_and_corners() {
+        let s = map_panel();
+        let r = s.rect;
+        for (sx, sy) in [
+            (r.w.mul_add(0.5, r.x), r.h.mul_add(0.5, r.y)),
+            (r.x, r.y),
+            (r.x + r.w, r.y + r.h),
+            (r.w.mul_add(0.25, r.x), r.h.mul_add(0.75, r.y)),
+        ] {
+            let world = s.to_world(SimVec2::new(sx, sy));
+            // Cast from straight in front of the found point.
+            let ray = Ray3d::new(world + Vec3::Z, Dir3::NEG_Z);
+            let (_, sim, hit) = s.project(ray).expect("hit");
+            assert!((sim.x - sx).abs() < 1e-3, "x {} vs {}", sim.x, sx);
+            assert!((sim.y - sy).abs() < 1e-3, "y {} vs {}", sim.y, sy);
+            assert!((hit - world).length() < 1e-4);
+        }
+    }
+
+    #[test]
+    fn misses_outside_the_quad() {
+        let s = map_panel();
+        let ray = Ray3d::new(Vec3::new(2.0, 1.5, 0.0), Dir3::NEG_Z);
+        assert!(s.project(ray).is_none());
+    }
+
+    #[test]
+    fn tilt_preserves_the_mapping() {
+        let s = SimSurface::panel(
+            Vec3::new(-0.6, 0.9, -0.9),
+            0.78,
+            0.52,
+            55f32.to_radians(),
+            layout::Rect::new(
+                layout::GRID_ORIGIN.x,
+                layout::GRID_ORIGIN.y,
+                f32::from(layout::GRID_COLS) * layout::CELL,
+                f32::from(layout::GRID_ROWS) * layout::CELL,
+            ),
+        );
+        // The center of a real aft-chart cell should round-trip through
+        // a ray fired along the panel normal.
+        let (x, y) = space_trucking::sim::RoomKind::Cabin.wall_cell(0, 1, 1);
+        let cell = layout::cell_rect(space_trucking::sim::room::CABIN, x, y);
+        let target = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
+        let world = s.to_world(target);
+        let n = s.normal();
+        let ray = Ray3d::new(world + n * 0.5, Dir3::new(-n).expect("unit"));
+        let (_, sim, _) = s.project(ray).expect("hit");
+        assert!(
+            layout::cell_at(sim) == Some((space_trucking::sim::room::CABIN, x, y)),
+            "landed at {sim:?}"
+        );
+        // And the normal faces the +Z hemisphere (toward the seat).
+        assert!(n.z > 0.3, "normal {n:?} should face the seat");
+    }
+
+    /// **A full hand reads the room through every piece; an empty one
+    /// meets the nearest body.** One line of sight through an
+    /// instrument's glass, then the body it rides, then the room's own
+    /// fabric behind both. Roaming, an empty hand is answered by the body
+    /// (the glass is focus work); focused, by the glass (the body would
+    /// stand in the way of panel work). With a piece in hand neither
+    /// answers in either regime, and the ray reaches the room.
+    #[test]
+    fn a_full_hand_reads_the_room_through_every_piece() {
+        let at =
+            |z: f32| SimSurface::panel(Vec3::new(0.0, 1.5, z), 1.0, 1.0, 0.0, layout::MAP_PANEL);
+        let aims = [
+            Aimable {
+                station: Station::Map,
+                surface: at(-0.5),
+                riding: Some(7),
+                in_room: None,
+            },
+            Aimable {
+                station: Station::Standing,
+                surface: at(-1.0),
+                riding: Some(7),
+                in_room: None,
+            },
+            Aimable {
+                station: Station::Handshake,
+                surface: at(-2.0),
+                riding: None,
+                in_room: None,
+            },
+        ];
+        let ray = Ray3d::new(Vec3::new(0.0, 1.5, 0.0), Dir3::NEG_Z);
+        for (roam_only, holding, station, piece) in [
+            (true, false, Station::Standing, Some(7)),
+            (false, false, Station::Map, Some(7)),
+            (true, true, Station::Handshake, None),
+            (false, true, Station::Handshake, None),
+        ] {
+            let pointer = pick(ray, roam_only, f32::INFINITY, holding, aims);
+            assert_eq!(
+                (pointer.station, pointer.piece),
+                (Some(station), piece),
+                "roaming {roam_only}, holding {holding}"
+            );
+        }
+    }
+
+    #[test]
+    fn sim_y_runs_down_the_panel() {
+        let s = map_panel();
+        let top = s.to_world(SimVec2::new(260.0, s.rect.y));
+        let bottom = s.to_world(SimVec2::new(260.0, s.rect.y + s.rect.h));
+        assert!(
+            top.y > bottom.y,
+            "sim +y must map downward: top {top:?} bottom {bottom:?}"
+        );
+    }
+}

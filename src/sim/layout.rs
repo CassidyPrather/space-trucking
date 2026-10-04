@@ -3,9 +3,18 @@
 //! The sim hit-tests against these rects and the renderer draws inside them,
 //! so the two can never disagree about where a button is. Everything is a
 //! constant: the console does not rearrange itself.
+//!
+//! The room grid lives east of the classic rects, in **net lanes**: one
+//! reserved rect of logical space per attached room, indexed by its dense
+//! `RoomId` (`super::room`). Lanes are fixed by id, so a room's rects are a
+//! pure function of that id and no attach ever reflows another room's
+//! coordinates.
 
 use super::Vec2;
-use super::cargo::{Loc, Piece};
+use super::cargo::{self, Loc, Piece};
+use super::room::{self, RoomId, Rooms};
+
+pub use super::room::{CELL, LANE_COLS as GRID_COLS, LANE_ROWS as GRID_ROWS, lane_origin};
 
 /// Axis-aligned rectangle in world coordinates.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -57,160 +66,260 @@ pub const WARP_BTN: Rect = Rect::new(580.0, 380.0, 40.0, 40.0);
 /// Speaker icon. Mute is frontend state; the sim never hears about it.
 pub const SPEAKER: Rect = Rect::new(630.0, 380.0, 40.0, 40.0);
 
-/// Hold grid width, in cells.
-pub const GRID_COLS: u8 = 6;
+/// Top-left corner of the cabin's lane — where the room grid used to
+/// begin, back when there was only one room.
+pub const GRID_ORIGIN: Vec2 = room::LANE_ORIGIN;
 
-/// Hold grid height, in cells.
-pub const GRID_ROWS: u8 = 4;
-
-/// Hold cell size, in world units.
-pub const CELL: f32 = 34.0;
-
-/// Top-left corner of the hold grid.
-pub const GRID_ORIGIN: Vec2 = Vec2::new(30.0, 450.0);
-
-/// The barter surface, bottom-right: shelves, pads, dial, and accept lever.
-pub const BARTER_PANEL: Rect = Rect::new(260.0, 440.0, 530.0, 150.0);
-
-/// The station's goods on offer, top-left of the barter panel.
-pub const SHELF_SLOTS: [Rect; 4] = slot_row(270.0, 448.0);
-
-/// Goods received in a concluded trade, below the shelf.
-pub const RECEIVED_SLOTS: [Rect; 4] = slot_row(270.0, 542.0);
-
-/// What the player is offering, top-middle of the barter panel.
-pub const GIVE_SLOTS: [Rect; 4] = slot_row(470.0, 448.0);
-
-/// What the player is asking for, below the give pads.
-pub const TAKE_SLOTS: [Rect; 4] = slot_row(470.0, 542.0);
-
-/// Pull to conclude the trade on the pads.
-pub const ACCEPT_LEVER: Rect = Rect::new(660.0, 530.0, 120.0, 40.0);
-
-/// Where travel-encounter flotsam drifts: the station shelf's own four
-/// sockets, doubling as the outboard rail.
-///
-/// The two meanings are mutually exclusive by construction — shelf goods
-/// exist only docked at a trading station (barter open), drift only
-/// underway or at barterless berths — so one row of wells serves both
-/// without a single ambiguous drop.
-pub const FLOTSAM_SLOTS: [Rect; 4] = SHELF_SLOTS;
-
-/// The encounter badge.
-///
-/// Whatever is alongside shows its sign in the dial housing's corner of
-/// the barter panel — which is dormant underway, when encounters happen —
-/// and pressing (or dropping cargo on) it is how the player engages.
-pub const ENCOUNTER_BADGE: Rect = Rect::new(666.0, 451.0, 68.0, 68.0);
-
-/// Centre of the eagerness dial, right of the pads.
-pub const DIAL_CENTER: Vec2 = Vec2::new(700.0, 485.0);
-
-/// Slot edge length. Slots are square.
-const SLOT: f32 = 40.0;
-
-/// Horizontal spacing between slot lefts in a row.
-const SLOT_STEP: f32 = 46.0;
-
-/// A row of four slots starting at `(x, y)`.
-const fn slot_row(x: f32, y: f32) -> [Rect; 4] {
-    [
-        Rect::new(x, y, SLOT, SLOT),
-        Rect::new(x + SLOT_STEP, y, SLOT, SLOT),
-        Rect::new(x + 2.0 * SLOT_STEP, y, SLOT, SLOT),
-        Rect::new(x + 3.0 * SLOT_STEP, y, SLOT, SLOT),
-    ]
-}
-
-/// World rect of hold cell `(x, y)`.
+/// World rect of net cell `(x, y)` in room `room`.
 #[must_use]
-pub fn cell_rect(x: u8, y: u8) -> Rect {
+pub fn cell_rect(room: RoomId, x: u8, y: u8) -> Rect {
+    let origin = lane_origin(room);
     Rect::new(
-        f32::from(x).mul_add(CELL, GRID_ORIGIN.x),
-        f32::from(y).mul_add(CELL, GRID_ORIGIN.y),
+        f32::from(x).mul_add(CELL, origin.x),
+        f32::from(y).mul_add(CELL, origin.y),
         CELL,
         CELL,
     )
 }
 
-/// Hold cell under `p`, if any.
+/// Which room and raw net cell `p` falls in, if any.
+///
+/// Raw: this answers about lanes, not about the room net's validity
+/// mask, because a lane's geometry is fixed and a room's charts are not.
+/// `Sim::cell_at` is the arbiter that also asks whether the room exists
+/// and whether the cell is a cell.
 #[must_use]
-pub fn cell_at(p: Vec2) -> Option<(u8, u8)> {
-    let dx = p.x - GRID_ORIGIN.x;
-    let dy = p.y - GRID_ORIGIN.y;
-    if dx < 0.0 || dy < 0.0 {
-        // Truncation rounds toward zero, so just-outside would land in the
-        // edge cells without this check.
+pub fn cell_at(p: Vec2) -> Option<(RoomId, u8, u8)> {
+    room::lane_cell_at(p)
+}
+
+/// One fine unit (`cargo::FINE`, a 256th of a cell), in world units.
+/// `CELL` is 34, so this is 0.1328125 — 17/128, exact in binary, which
+/// is what keeps a whole cell's berth on the very rect its cell has.
+const FINE_UNIT: f32 = CELL / cargo::FINE as f32;
+
+/// World rect of a box of net `room` given in fine units.
+#[must_use]
+pub fn fine_rect(room: RoomId, span: cargo::Aabb) -> Rect {
+    let origin = lane_origin(room);
+    Rect::new(
+        (span.x0 as f32).mul_add(FINE_UNIT, origin.x),
+        (span.y0 as f32).mul_add(FINE_UNIT, origin.y),
+        span.w() as f32 * FINE_UNIT,
+        span.h() as f32 * FINE_UNIT,
+    )
+}
+
+/// World rect of the box round footprint `foot` in room `room`: the
+/// footprint itself at a quarter turn, and its bounds at any other.
+#[must_use]
+pub fn foot_rect(room: RoomId, foot: cargo::Foot) -> Rect {
+    fine_rect(room, foot.aabb())
+}
+
+/// **Where `p` falls on room `room`'s net, in `cargo::FINE` units**,
+/// which may lie off the net or be negative: the caller clamps.
+///
+/// The one float-to-integer step a drop takes, so it is stated exactly:
+/// the offset from the lane's corner is divided by [`FINE_UNIT`] and
+/// rounded to the nearest whole unit, halves away from zero
+/// (`f32::round`), then converted once to `i32`. Everything after this
+/// is integer arithmetic. A fine unit is exact in binary and so is a
+/// cell's centre, so aiming at the middle of a cell names its middle
+/// unit on every machine a crew plays on.
+#[must_use]
+pub fn fine_at(room: RoomId, p: Vec2) -> (i32, i32) {
+    let origin = lane_origin(room);
+    (
+        ((p.x - origin.x) / FINE_UNIT).round() as i32,
+        ((p.y - origin.y) / FINE_UNIT).round() as i32,
+    )
+}
+
+/// **How finely a pointer is read for hit-testing**: sub-units per fine
+/// unit. A berth is placed in whole fine units ([`fine_at`]), but a
+/// reading taken a hair inside a piece's rim — which is where a frontend
+/// reads the edge of a body it struck — must stay inside it, and a
+/// whole unit is wider than the hair.
+const READING: i64 = 256;
+
+/// How far off a net a reading may lie, in [`READING`] units: far past
+/// every lane, and short of anything the frame arithmetic could overflow
+/// on. A pointer out there is on nothing either way.
+const READING_REACH: f64 = (1_i64 << 40) as f64;
+
+/// **Where `p` falls on room `room`'s net**, in `1 / READING` of a fine
+/// unit: the pointer read once, finely, for asking which piece it is on.
+/// `None` for a pointer that is not a point at all (a NaN, an infinity),
+/// which no piece contains.
+///
+/// The one rounding a hit-test takes, stated as exactly as the drop's
+/// ([`fine_at`]): in `f64`, offset from the lane's corner, over
+/// [`FINE_UNIT`], times [`READING`], held within [`READING_REACH`], and
+/// rounded halves away from zero. Every step is basic IEEE arithmetic,
+/// correctly rounded on every platform, so a crew agrees on which piece a
+/// press lands on.
+fn net_point(room: RoomId, p: Vec2) -> Option<(i64, i64)> {
+    if !(p.x.is_finite() && p.y.is_finite()) {
         return None;
     }
-    let x = u8::try_from((dx / CELL) as i32).ok()?;
-    let y = u8::try_from((dy / CELL) as i32).ok()?;
-    (x < GRID_COLS && y < GRID_ROWS).then_some((x, y))
+    let origin = lane_origin(room);
+    let read = |at: f32, from: f32| {
+        ((f64::from(at) - f64::from(from)) / f64::from(FINE_UNIT) * READING as f64)
+            .clamp(-READING_REACH, READING_REACH)
+            .round() as i64
+    };
+    Some((read(p.x, origin.x), read(p.y, origin.y)))
 }
 
-/// Slot index under `p` within a row of slots, if any.
+/// A rect parked outside the world: what a berth nobody can name gets,
+/// so it is never drawn anywhere it could be mistaken for a piece.
+const NOWHERE: Rect = Rect::new(-1000.0, -1000.0, 0.0, 0.0);
+
+/// **World rect a piece's berth spans** at its current [`Loc`]: the box
+/// round it on the net's own axes.
+///
+/// A drawing's bounds — never an answer to "which piece is at this
+/// point", which is [`piece_contains`]'s, because the box round a couch
+/// turned an eighth is mostly the air beside it.
+///
+/// **The graph is a parameter because a footprint is** (`cargo::Foot::of`):
+/// a berth's ground is the kind and the chart it lands on together, and
+/// the chart is the room's to say. Two berths of one wardrobe are two
+/// different rects, and neither of them is a property of the wardrobe.
+///
+/// The rect is the berth's TRUE one, fractions of a cell and all: a
+/// piece standing five units off the grid is drawn five units off the
+/// grid. A fine unit is `CELL / 256` exactly, so a berth on a whole cell
+/// at a quarter turn lands on the very rect [`cell_rect`] gives that
+/// cell. A berth off its room's net resolves to [`NOWHERE`].
 #[must_use]
-pub fn slot_at(slots: &[Rect; 4], p: Vec2) -> Option<u8> {
-    slots
+pub fn piece_rect(rooms: &Rooms, piece: &Piece) -> Rect {
+    cargo::Foot::at(rooms, piece).map_or(NOWHERE, |(room, foot)| foot_rect(room, foot))
+}
+
+/// Where `p` lies in the frame of the footprint `piece` stands on: read
+/// on that room's net ([`net_point`]) and carried into the piece's own
+/// frame (`cargo::Foot::frame`).
+fn framed(rooms: &Rooms, piece: &Piece, p: Vec2) -> Option<cargo::Framed> {
+    let (room, foot) = cargo::Foot::at(rooms, piece)?;
+    Some(foot.frame(net_point(room, p)?, READING))
+}
+
+/// **Whether `p` is on `piece`**: on the footprint it stands or lies on,
+/// at whatever turn.
+///
+/// The footprint is the oriented one, and the test is made in the
+/// piece's OWN frame: the pointer is carried into it, never the piece out
+/// onto the sheet's axes, so the air beside a turned couch is not the
+/// couch.
+#[must_use]
+pub fn piece_contains(rooms: &Rooms, piece: &Piece, p: Vec2) -> bool {
+    framed(rooms, piece, p).is_some_and(cargo::Framed::inside)
+}
+
+/// **Where `p` lies on `piece`'s own face**, as fractions.
+///
+/// `(0, 0)` at its top left and `(1, 1)` at its bottom right as a person
+/// facing it sees it, whatever its turn. `None` for a berth off its
+/// room's net, or a pointer that is not a point.
+///
+/// For a frontend measuring a sub-rect it declared in the piece's own
+/// units — a carry handle — against the pointer, so the band it draws and
+/// the band it routes are one band at every angle.
+#[must_use]
+pub fn piece_frame(rooms: &Rooms, piece: &Piece, p: Vec2) -> Option<Vec2> {
+    framed(rooms, piece, p).map(|at| {
+        let (x, y) = at.fractions();
+        Vec2::new(x, y)
+    })
+}
+
+/// **The piece under `p`, when nothing says which one is meant**: of
+/// every piece `p` is on ([`piece_contains`]), a standing piece before a
+/// laid one, then the smaller footprint, then the lower id.
+///
+/// Bodies share ground now (docs/BAY.md, "Cargo stops colliding"), so
+/// one point of a chart can be on several pieces and the point alone
+/// cannot say which the player meant. A frontend that knows says so with
+/// an aim ([`pick`]); this is the order for everything that does not — a
+/// test, a monkey, a tape recorded without one — and it is chosen to be
+/// the least surprising guess:
+///
+/// - **Standing before laid**, as it always was: a rug underlies whatever
+///   stands on it, so the couch takes the click and only a bare stretch
+///   of rug answers for the rug.
+/// - **Smaller before bigger**, because a small piece standing inside a
+///   big one's ground could otherwise never be reached by a point at
+///   all, while the big one still answers everywhere the small one is
+///   not. A vial set in a wardrobe is picked out of it, and the wardrobe
+///   is lifted by its other cell.
+/// - **Lower id last**, so the answer never depends on the order the
+///   board happens to be listed in.
+#[must_use]
+pub fn piece_at<'a>(rooms: &Rooms, pieces: &'a [Piece], p: Vec2) -> Option<&'a Piece> {
+    pieces
         .iter()
-        .position(|slot| slot.contains(p))
-        .map(|i| i as u8)
+        .filter_map(|piece| {
+            let (room, foot) = cargo::Foot::at(rooms, piece)?;
+            foot.frame(net_point(room, p)?, READING)
+                .inside()
+                .then_some((piece, i64::from(foot.half.0) * i64::from(foot.half.1)))
+        })
+        .min_by_key(|&(piece, area)| (matches!(piece.loc, Loc::Laid { .. }), area, piece.id))
+        .map(|(piece, _)| piece)
 }
 
-/// World rect a piece occupies at its current [`Loc`]. Shared by hit-testing
-/// and the renderer, so pieces are grabbed exactly where they are drawn.
+/// **The piece a press at `p` lands on, given the one the player aimed
+/// at**: `aim`, when it names a piece `p` is on, and [`piece_at`]'s order
+/// otherwise.
+///
+/// The aim is the frontend's answer to the question a point cannot
+/// settle once bodies share ground (`InputFrame::aim`): the cabin casts
+/// ONE ray and knows which body it met first (docs/BAY.md, "The nearest
+/// rule"). It only ever chooses among the pieces the pointer is on — the
+/// sim still does the hit-test — so an aim naming a piece the pointer is
+/// not on, or no piece at all, changes nothing, and a stale or hostile
+/// one reaches no further than a pointer could already. Everything that
+/// asks which piece the player is on — the press, and in the cabin the
+/// hover, the outline and the handle's routing — asks this with the same
+/// aim, which is why none of them can answer differently.
 #[must_use]
-pub fn piece_rect(piece: &Piece) -> Rect {
-    match piece.loc {
-        Loc::Hold { x, y } => {
-            let (w, h) = piece.kind.cells();
-            let anchor = cell_rect(x, y);
-            Rect::new(anchor.x, anchor.y, f32::from(w) * CELL, f32::from(h) * CELL)
-        }
-        Loc::StationShelf { slot } => SHELF_SLOTS[usize::from(slot)],
-        Loc::GivePad { slot } => GIVE_SLOTS[usize::from(slot)],
-        Loc::TakePad { slot } => TAKE_SLOTS[usize::from(slot)],
-        Loc::ReceivedShelf { slot } => RECEIVED_SLOTS[usize::from(slot)],
-        Loc::Flotsam { slot } => FLOTSAM_SLOTS[usize::from(slot)],
-    }
+pub fn pick<'a>(
+    rooms: &Rooms,
+    pieces: &'a [Piece],
+    p: Vec2,
+    aim: Option<u32>,
+) -> Option<&'a Piece> {
+    aim.and_then(|id| pieces.iter().find(|piece| piece.id == id))
+        .filter(|piece| piece_contains(rooms, piece, p))
+        .or_else(|| piece_at(rooms, pieces, p))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sim::room::MAX_ROOMS;
 
     /// Every interactive rect, named, for the pairwise checks below.
     fn interactive() -> Vec<(&'static str, Rect)> {
         let mut rects = vec![
             ("launch", LAUNCH_LEVER),
-            ("accept", ACCEPT_LEVER),
             ("pause", PAUSE_BTN),
             ("warp", WARP_BTN),
             ("speaker", SPEAKER),
-            (
-                "grid",
+        ];
+        for id in 0..MAX_ROOMS as RoomId {
+            let origin = lane_origin(id);
+            rects.push((
+                Box::leak(format!("lane[{id}]").into_boxed_str()),
                 Rect::new(
-                    GRID_ORIGIN.x,
-                    GRID_ORIGIN.y,
+                    origin.x,
+                    origin.y,
                     f32::from(GRID_COLS) * CELL,
                     f32::from(GRID_ROWS) * CELL,
                 ),
-            ),
-        ];
-        // FLOTSAM_SLOTS are the shelf rects themselves (exclusive
-        // contexts), so listing them would self-collide by design.
-        rects.push(("encounter", ENCOUNTER_BADGE));
-        for (name, row) in [
-            ("shelf", &SHELF_SLOTS),
-            ("received", &RECEIVED_SLOTS),
-            ("give", &GIVE_SLOTS),
-            ("take", &TAKE_SLOTS),
-        ] {
-            for (i, &slot) in row.iter().enumerate() {
-                // The name survives the loop; leaking four tiny strings in a
-                // test beats losing which slot collided.
-                rects.push((&*format!("{name}[{i}]").leak(), slot));
-            }
+            ));
         }
         rects
     }
@@ -221,7 +330,8 @@ mod tests {
 
     /// A drop can only mean one thing: no two click/drop targets may share
     /// any area. This is the guard against a hit-test resolving somewhere
-    /// the player did not aim.
+    /// the player did not aim — and, since every room now has a lane, the
+    /// guard that two rooms never share a rect.
     #[test]
     fn interactive_rects_never_overlap() {
         let rects = interactive();
@@ -235,23 +345,69 @@ mod tests {
         }
     }
 
-    /// The barter furniture stays inside its panel, so hiding the panel
-    /// while traveling also hides every target that needs a station.
+    /// **The point-pick's order, where pieces share ground**: standing
+    /// before laid, the smaller footprint before the bigger, the lower id
+    /// last — whatever order the board lists them in. And an aim chooses
+    /// among the pieces under the point, and only among them.
     #[test]
-    fn barter_furniture_sits_inside_the_panel() {
-        let inside = |r: Rect| {
-            r.x >= BARTER_PANEL.x
-                && r.y >= BARTER_PANEL.y
-                && r.x + r.w <= BARTER_PANEL.x + BARTER_PANEL.w
-                && r.y + r.h <= BARTER_PANEL.y + BARTER_PANEL.h
-        };
-        for row in [&SHELF_SLOTS, &RECEIVED_SLOTS, &GIVE_SLOTS, &TAKE_SLOTS] {
-            for &slot in row {
-                assert!(inside(slot), "slot {slot:?} escapes the barter panel");
+    fn a_shared_point_picks_standing_then_smaller_then_lower_id() {
+        use crate::sim::cargo::{Kind, Spot, anchored, fine};
+        use crate::sim::room::{CABIN, RoomKind};
+
+        let rooms = Rooms::new();
+        let at = |id: u32, kind: Kind, laid: bool| {
+            let (x, y, turn) =
+                anchored(RoomKind::Cabin, kind, fine(5), fine(5)).expect("on the deck");
+            let spot = Spot {
+                room: CABIN,
+                x,
+                y,
+                turn,
+            };
+            Piece {
+                id,
+                kind,
+                variant: 0,
+                gnawed: false,
+                loc: if laid { spot.laid() } else { spot.hold() },
             }
-        }
-        assert!(inside(ACCEPT_LEVER));
-        assert!(BARTER_PANEL.contains(DIAL_CENTER));
+        };
+        let rug = at(1, Kind::Rug, true);
+        let couch = at(2, Kind::Couch, false);
+        let board = [
+            rug,
+            couch,
+            at(9, Kind::PerfumeVial, false),
+            at(4, Kind::PerfumeVial, false),
+        ];
+        let middle = |x: u8| {
+            let r = cell_rect(CABIN, x, 5);
+            Vec2::new(r.w.mul_add(0.5, r.x), r.h.mul_add(0.5, r.y))
+        };
+        let (shared, beside) = (middle(5), middle(6));
+        let picked = |pieces: &[Piece], p, aim| pick(&rooms, pieces, p, aim).map(|piece| piece.id);
+        assert_eq!(
+            picked(&board, shared, None),
+            Some(4),
+            "the lower of two vials"
+        );
+        assert_eq!(
+            picked(&board[..2], shared, None),
+            Some(2),
+            "the couch over the rug"
+        );
+        assert_eq!(picked(&board[..1], shared, None), Some(1), "a bare rug");
+        // The aim chooses among what the point is on.
+        assert_eq!(picked(&board, shared, Some(2)), Some(2));
+        assert_eq!(picked(&board, shared, Some(1)), Some(1));
+        assert_eq!(
+            picked(&board, shared, Some(99)),
+            Some(4),
+            "an aim at nothing"
+        );
+        // And a vial is not under the couch's other cell, so an aim at it
+        // there changes nothing.
+        assert_eq!(picked(&board, beside, Some(9)), Some(2));
     }
 
     /// Everything sits inside the logical world.

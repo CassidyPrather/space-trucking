@@ -26,5 +26,18 @@ version `"0.1.2"` while the quad-storage-sys 0.1.0 crate reports its version
 as a packed integer (65536), so gl.js logs a harmless version-mismatch
 `console.error` at startup; also theirs, also left alone.
 
+**Bought art is referenced, not carried.** Synty's licence lets their meshes
+ship inside a built game and forbids redistributing them as source, so no pack
+is in this repository and none ever will be — not in git, not in LFS. What is
+here is `art/manifest.toml`: a stable id, the pack it came out of, the path
+inside that pack, and the digest of the bytes the line was written against, one
+table per asset. That file is the intake record this convention asks for, and
+it is the place to look when somebody needs to know which licences a build
+carried. `docs/ART_PIPELINE.md` explains how the payload reaches a build.
+
+The cube and checker texture under `xtask/tests/fixtures/` are this project's
+own, written to prove the converter on a machine with no packs on it, and are
+covered by [LICENSE](LICENSE) like the rest of the code.
+
 The sound effects themselves need no credit line — `src/synth.rs` generates
 them from arithmetic at startup, so there are no audio assets to track.

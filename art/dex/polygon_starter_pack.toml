@@ -1,0 +1,1075 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.characters]
+name = "Characters"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Characters.fbx"
+sha256 = "881819102b456130cb417ef69594b3479d8c7dd77e4d390a9f1b85dce911a7c7"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A slender, untextured humanoid figure in a rigid T-pose, rendered entirely in a flat, monochromatic blue. The model is featureless, with a smooth, generic head and no facial details, clothing, or accessories, making it a blank canvas for rigging or further texturing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2521
+meshes = 4
+materials = 1
+size = [2.047514, 1.822315, 0.311946]
+
+[mesh.sm_bean_cop_01]
+name = "SM_Bean_Cop_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Bean_Cop_01.fbx"
+sha256 = "e0ee29f72ccbd94b278ba38114fb2a27db0f1005f7b88110bbd8442a052ec669"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A stout, cylindrical figure with a flat-topped blue cap, a white face, and a brown belt, resembling a stylized police officer. A yellow badge sits on the cap, and the body is a solid blue, giving it a toy-like, low-poly appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 648
+meshes = 1
+materials = 1
+size = [1.13591, 2.122281, 1.1835029]
+
+[mesh.sm_bean_cowboy_01]
+name = "SM_Bean_Cowboy_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Bean_Cowboy_01.fbx"
+sha256 = "aa07611534ba9b7eae5a6a1a55e03db33ccbca21c0c9ccea33182810425c874c"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A stout, cylindrical green bean character topped with a large, wide-brimmed tan cowboy hat and a dark brown bandana tied around its neck, featuring a simple, low-poly face with dark eyes and a mustache."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 704
+meshes = 1
+materials = 1
+size = [1.729366, 2.032325, 1.575191]
+
+[mesh.sm_bean_female_01]
+name = "SM_Bean_Female_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Bean_Female_01.fbx"
+sha256 = "9f13187122dc12841efb7b5d46a569eae382316d9a3503216d5bb3838203cec4"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A stout, faceted figure with a rounded red body and a pale grey face, framed by a tan hood that drapes over the head and shoulders. The face features simple dark eyes and a small mouth, giving it a neutral, stoic expression."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 398
+meshes = 1
+materials = 1
+size = [1.0557909, 1.724517, 0.993459]
+
+[mesh.sm_bean_town_female_01]
+name = "SM_Bean_Town_Female_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Bean_Town_Female_01.fbx"
+sha256 = "119f20463a3cecd21bbefbd57c2e992bd644773a812af6d67650b65d2e7e9ea8"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A stout, rounded teal body supports a large, blocky brown hat with a wide brim and a tall crown. A red ribbon is tied around the hat, with a bow and trailing ends, while red rectangular glasses are perched on the front. The low-poly faceting gives it a chunky, stylized look, suggesting a whimsical, storybook character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 688
+meshes = 1
+materials = 1
+size = [1.290357, 1.936883, 1.09431]
+
+[mesh.sm_bld_door_01]
+name = "SM_Bld_Door_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Bld_Door_01.fbx"
+sha256 = "f8bf71ccede563e0176788232ee516de757dc5935cf23388544a251ec6d46bf5"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A tall, flat-panelled door in a muted blue, featuring a rounded arch top and a grid of six recessed window panes. A small, round brass knob sits on the left edge, and a lower rectangular panel adds detail. The low-poly styling gives it a clean, stylised look suitable for fantasy or medieval settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 456
+meshes = 1
+materials = 1
+size = [1.025299, 2.224348, 0.28314]
+
+[mesh.sm_buildings_block_1x1_01]
+name = "SM_Buildings_Block_1x1_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_Buildings_Block_1x1_01.fbx"
+sha256 = "d200b00467bf99bd357290aa78a10666cca7b5dae16e4934a84f7b899ef968cf"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A plain, featureless cube in a flat, bright orange, with a single darker orange patch wrapping around one corner, giving it a simple, stylized look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [1.0, 1.0, 1.0]
+
+[mesh.sm_buildings_column_2x3_01]
+name = "SM_Buildings_Column_2x3_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_Buildings_Column_2x3_01.fbx"
+sha256 = "6359896a7cb6a62f05210eae54b5ffa99d019a9c0c10a5c868f9deacd0f49874"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A slender, square pillar with a flat, unadorned surface, rendered in a solid, warm yellow-orange tone. Its simple, geometric form is marked by a single, sharp diagonal cut near the base, giving it a slightly broken or chipped appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [0.4, 2.999999, 0.40000102]
+
+[mesh.sm_buildings_doorframe_01]
+name = "SM_Buildings_DoorFrame_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_Buildings_DoorFrame_01.fbx"
+sha256 = "efc9da2d1b662f8dd6dfdf27c3b0db376a2bd66ac628ac58d4e7eb2bae84472a"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A tall, narrow, open rectangular frame with a flat top and squared edges, rendered in a solid, untextured mustard-yellow. The inner faces of the uprights feature a small, stepped notch halfway up, suggesting a simple latch or hinge point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [1.307112, 2.253556, 0.172893]
+
+[mesh.sm_buildings_floor_1x1_01]
+name = "SM_Buildings_Floor_1x1_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_Buildings_Floor_1x1_01.fbx"
+sha256 = "4b223bda75caad264ec004fe1b9da4931d10d4fb8e593afbee32b49e0873a0e2"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A flat, square slab with a thin profile and a solid, bright orange surface, featuring a single darker brown patch on one corner that suggests wear or a distinct tile. Its clean, unadorned geometry makes it a versatile base for any low-poly environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [1.0, 0.1, 1.0]
+
+[mesh.sm_buildings_ramp_25_1x1_01]
+name = "SM_Buildings_Ramp_25_1x1_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_Buildings_Ramp_25_1x1_01.fbx"
+sha256 = "b93a8cd3c7f8aca3f0f11d1e7df3d18de591cf7829048a5feb3e5acc59bc52e5"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A simple, flat-shaded wedge with a steep slope and a small rectangular notch cut into its lower right edge, rendered in a solid, bright orange-yellow. The clean, untextured surface gives it a pristine, prototype appearance, making it ideal for use as a basic ramp or architectural accent in a stylized low-poly..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8
+meshes = 1
+materials = 1
+size = [1.0, 0.466255, 1.0]
+
+[mesh.sm_buildings_stairs_1x1_01]
+name = "SM_Buildings_Stairs_1x1_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_Buildings_Stairs_1x1_01.fbx"
+sha256 = "d1fb38dac8c23f7c94e839dfbcbd31d3748f0bf5433b0bed3bef28990430d6ad"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A compact, blocky flight of four steps with a solid, wedge-shaped side profile, rendered in a flat, bright orange with a subtle darker brown patch along the lower edge, suggesting wear or a different material."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 36
+meshes = 1
+materials = 1
+size = [1.0, 0.499489, 1.0]
+
+[mesh.sm_buildings_stairs_1x3_01]
+name = "SM_Buildings_Stairs_1x3_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_Buildings_Stairs_1x3_01.fbx"
+sha256 = "4199140f6445e02df05fbe3b3141785099c1bceb3e6a1adfc4f01817d5c23602"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A solid, wedge-shaped block of bright orange, featuring a stepped staircase cut into its sloped face, with a flat, unadorned rear and sides. The uniform colour and clean, untextured surface give it a simple, prototype look, making it a versatile, low-poly stair piece for basic architectural layouts."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 196
+meshes = 1
+materials = 1
+size = [1.0, 2.996932, 6.0]
+
+[mesh.sm_buildings_walldoor_2x3_01]
+name = "SM_Buildings_WallDoor_2x3_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_Buildings_WallDoor_2x3_01.fbx"
+sha256 = "8ecf5c84939ed2f0253524092d6c0b28c81b1671a940a38239cbfb65d6f8b66d"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A flat, rectangular slab with a tall, narrow rectangular cutout in the centre, forming a simple archway or door frame. It is a solid, untextured orange with a matte finish, appearing clean and new. The stark, uniform colour and lack of detail make it a versatile, blank canvas for a stylised environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [2.0, 3.0, 0.172894]
+
+[mesh.sm_buildings_wallwindow_2x3_01]
+name = "SM_Buildings_WallWindow_2x3_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_Buildings_WallWindow_2x3_01.fbx"
+sha256 = "7e6f968163bdf3e1a5b6eedf2a951885f161df3c74dc49109dda6a7721423aec"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A flat, rectangular facade panel in bright, saturated yellow, featuring a single square window opening with a deep, recessed sill that casts a strong shadow, giving it a clean, stylized look ideal for low-poly architectural scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 78
+meshes = 1
+materials = 1
+size = [2.0, 3.0, 0.172894]
+
+[mesh.sm_generic_cloudring_01]
+name = "SM_Generic_CloudRing_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_CloudRing_01.fbx"
+sha256 = "b34957b547466af1d137d6f569155f403f398ab1deb5ca3da85e5b9c47f8642f"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A flat, low-poly ring of white, puffy cloud clusters, forming a perfect circular halo with a large open centre. The blocky, faceted shapes give it a stylised, cartoonish look, ideal for floating sky decorations or magical effects."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14456
+meshes = 1
+materials = 1
+size = [265.0409, 24.894798, 247.81012]
+
+[mesh.sm_generic_ground_01]
+name = "SM_Generic_Ground_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Ground_01.fbx"
+sha256 = "158ac4850aba41391d5b7f887785356d062b23c4f2bddc15adf0c59f14b1683d"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A low, flat, roughly octagonal slab of earth, slightly irregular in outline and gently mounded toward the centre, rendered in a single muted olive-green tone with subtle darker patches suggesting damp soil or sparse moss."
+differs = "Smallest and flattest, the most subtle option for tiny ground patches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 200
+meshes = 1
+materials = 1
+size = [5.526026, 0.257535, 5.677135]
+
+[mesh.sm_generic_ground_02]
+name = "SM_Generic_Ground_02"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Ground_02.fbx"
+sha256 = "50b12578c68be0b0daecfc75e5937ee01067bb4d4a91b2bafca366335c726c9b"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A low, irregularly shaped mound of earth, slightly wider than it is long, with a gently rounded top and a soft, matte olive-green surface. It features subtle darker patches and mottling that suggest sparse grass or moss over bare soil, giving it a natural, weathered appearance."
+differs = "Mid-sized, slightly larger and more mounded than 01, but less detailed than 03."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 439
+meshes = 1
+materials = 1
+size = [10.420649, 0.523817, 11.228956]
+
+[mesh.sm_generic_ground_03]
+name = "SM_Generic_Ground_03"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Ground_03.fbx"
+sha256 = "04b7a4cac02c75067ceb9a7dae998b1a79ad604ef4dd07f45eecfcfc593b16c3"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A low, flat, roughly oval mound of earth, slightly irregular in outline and gently domed, with a smooth, matte olive-green surface that suggests moss or short grass. Its subtle, naturalistic shape makes it a versatile, unobtrusive ground detail for adding gentle terrain variation to outdoor scenes."
+differs = "Largest and widest, offering the broadest coverage with the same low profile as 01."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 760
+meshes = 1
+materials = 1
+size = [18.854588, 0.86153, 18.74131]
+
+[mesh.sm_generic_ground_04]
+name = "SM_Generic_Ground_04"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Ground_04.fbx"
+sha256 = "87a53b6ff51e3a9cc96af214d17c0387c29cbfa2309a0b9c6d2ea46d55ad26e4"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A low, rounded mound of pale green, faceted terrain, resembling a small grassy hillock or a patch of soft earth. Its gentle, organic silhouette and muted, natural colouring make it ideal for adding subtle ground variation to outdoor scenes without drawing attention."
+differs = "Tallest and most faceted, with a pale green color and a distinct hillock silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 760
+meshes = 1
+materials = 1
+size = [18.3765, 2.472426, 19.12336]
+
+[mesh.sm_generic_ground_flat_01]
+name = "SM_Generic_Ground_Flat_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Ground_Flat_01.fbx"
+sha256 = "cfffcdd559c3d536de74636ab2e080dda49600f2a09f21663a1f1ef01fe279e6"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A flat, low-poly square of grassy terrain with a subtle, mottled olive-green texture, featuring a single darker rectangular patch of soil or shadow on one corner, ideal for use as a simple ground tile or base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 555
+meshes = 1
+materials = 1
+size = [15.853669, 0.46430802, 14.697468]
+
+[mesh.sm_generic_mountains_grass_02]
+name = "SM_Generic_Mountains_Grass_02"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Mountains_Grass_02.fbx"
+sha256 = "210bcee0432ac6391b8741d9455a4cd054defe4cb1a47eb5aebe5c6850747671"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A low, rounded grassy mound with a single grey rocky peak rising from its centre, surrounded by a few smaller stone outcrops. The green base is smooth and gently sloping, while the grey summit is faceted and jagged, giving it a natural, weathered look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 457
+meshes = 1
+materials = 1
+size = [14.486708, 5.544923, 14.481067]
+
+[mesh.sm_generic_mountains_soft_01]
+name = "SM_Generic_Mountains_Soft_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Mountains_Soft_01.fbx"
+sha256 = "8b34ae23d1e1f28aa587d748c8644c34ac03ac806fed0fc9d2ceaabd796c6279"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A low, gently undulating landmass with soft, rounded slopes and a single darker, rocky peak rising near one end, rendered in a muted olive-green with subtle shading. Its smooth, organic silhouette suggests a distant hill or a small island, ideal for filling background terrain in a stylized low-poly environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 332
+meshes = 1
+materials = 1
+size = [36.916077, 2.392798, 21.062222]
+
+[mesh.sm_generic_small_rocks_01]
+name = "SM_Generic_Small_Rocks_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Small_Rocks_01.fbx"
+sha256 = "7e11a6b00266c06aa8957618aa87f89fe94648f2f29c4a1b92972c9f61f7b2c3"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A scattered cluster of small, jagged grey stones with flat, angular facets, forming a low, irregular mound. The uniform grey texture and sharp edges give it a clean, stylized look, ideal for adding subtle ground detail to rocky terrain or ruins."
+differs = "The most detailed and widest scatter, with the highest triangle count, ideal for dense ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 180
+meshes = 1
+materials = 1
+size = [1.305752, 0.094956, 1.6317711]
+
+[mesh.sm_generic_small_rocks_02]
+name = "SM_Generic_Small_Rocks_02"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Small_Rocks_02.fbx"
+sha256 = "c7e66cfe391f85ca924ba885fa0d1438963fd520fd619b4093feed5262d744be"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A flat, low-poly scatter of small grey stones, each cluster forming a jagged, angular pile with a rough, weathered texture. The muted, uniform grey palette and simple geometry make it ideal for ground-level decoration or terrain detail in a stylized environment."
+differs = "The largest footprint and most spread-out cluster, offering the broadest coverage of any scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 200
+meshes = 1
+materials = 1
+size = [2.040637, 0.094956, 1.969599]
+
+[mesh.sm_generic_small_rocks_03]
+name = "SM_Generic_Small_Rocks_03"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Small_Rocks_03.fbx"
+sha256 = "2e68ba52a941b51dbc2d1f167c03bd6d02df539dae91eda955a6799c9dcadd0b"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A low, flat cluster of angular grey boulders, with a larger faceted mass joined to a smaller, lower chunk by a narrow neck. The uniform stone-grey texture and smooth, unblemished surface give it a clean, generic look, ideal for scattered ground cover or subtle terrain decoration."
+differs = "The most compact and tallest single formation, with a distinctive two-lobed neck structure."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 36
+meshes = 1
+materials = 1
+size = [0.482198, 0.101592, 0.325]
+
+[mesh.sm_generic_small_rocks_04]
+name = "SM_Generic_Small_Rocks_04"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Small_Rocks_04.fbx"
+sha256 = "cac25a8af1fb756d469acd99546cad739d0376c698ba238070ef4283976f5439"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A cluster of four low-poly rock formations, each composed of angular, faceted chunks in a uniform light grey. The pieces are flat and wide, with a smooth, untextured surface that suggests a clean, stylized look. The arrangement is scattered and irregular, ideal for ground cover or debris."
+differs = "The most elongated and narrowest scatter, with the most distinct separate pieces in a line."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.356882, 0.099072, 0.743392]
+
+[mesh.sm_generic_small_rocks_05]
+name = "SM_Generic_Small_Rocks_05"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Small_Rocks_05.fbx"
+sha256 = "2d9c0be7172b876b5b8923bad70dfc27fdc12fe1c0f6f25d901f4c3b19d47042"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A low, squat cluster of faceted grey stone, wider than it is tall, with a flat base and a gently peaked top. The angular planes catch light to suggest a smooth, worn surface, making it read as a small, weathered boulder or a pile of rubble."
+differs = "The smallest and simplest single rock, with the lowest triangle count, perfect for minimal debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20
+meshes = 1
+materials = 1
+size = [0.261442, 0.084275, 0.25208]
+
+[mesh.sm_generic_tree_01]
+name = "SM_Generic_Tree_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Tree_01.fbx"
+sha256 = "9dba656d9f799833ae0005642aa75845dfc3a91714e77a5812c8fa11d35c138f"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A stout, low-poly tree with a short, slightly curved brown trunk and a broad, irregular canopy of pale green, faceted foliage. The chunky, angular leaves form a rounded, lumpy crown that overhangs the trunk, giving it a stylized, toy-like appearance."
+differs = "Highest poly count and widest canopy, with the most irregular, overhanging silhouette for a hero tree."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 598
+meshes = 1
+materials = 1
+size = [1.811821, 3.295694, 1.704562]
+
+[mesh.sm_generic_tree_02]
+name = "SM_Generic_Tree_02"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Tree_02.fbx"
+sha256 = "fb2d1ed06eaffcecc3b35868b11fd6ac7a408595ddc0987802e4d03b8a8a7913"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A stout, conical conifer with a short, brown trunk and layered, jagged foliage in muted sage green, accented by pale highlights on the upper edges of its branches. Its compact, chunky silhouette reads as a stylized pine or fir, ideal for populating dense forests or as a background filler in low-poly environments."
+differs = "Only conifer, with the tallest, narrowest profile and layered branches, ideal for pine forests."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 288
+meshes = 1
+materials = 1
+size = [1.390632, 3.51156, 1.469784]
+
+[mesh.sm_generic_tree_03]
+name = "SM_Generic_Tree_03"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Tree_03.fbx"
+sha256 = "8a5d6610558d333075bc470e17ec45e8f26c93a10aae868037d9301dd1d26d22"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A stout, low-poly tree with a broad, irregularly faceted canopy of muted green, supported by a short, tapered brown trunk. The angular silhouette and simple flat shading give it a clean, stylised look, making it ideal for filling out forests or backgrounds in a low-poly environment."
+differs = "Lowest poly count and plainest, most angular canopy, best as a cheap background filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 266
+meshes = 1
+materials = 1
+size = [1.732379, 3.493274, 1.5415051]
+
+[mesh.sm_generic_tree_04]
+name = "SM_Generic_Tree_04"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_Tree_04.fbx"
+sha256 = "327c4f41a44c3798ce1cded21a0733eb370484b17800873fdd8c3c0ad6994e74"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A stout, low-poly sapling with a broad, irregular canopy of faceted, pale-green leaves that overhangs a short, straight brown trunk, giving it a young, rounded silhouette ideal for filling out woodland edges or garden beds."
+differs = "Shortest and most rounded, with the straightest trunk, suited for saplings or garden edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 316
+meshes = 1
+materials = 1
+size = [1.815784, 3.219553, 1.536354]
+
+[mesh.sm_generic_treedead_01]
+name = "SM_Generic_TreeDead_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_TreeDead_01.fbx"
+sha256 = "0f207733877ec6feb154a6e6a86de481a5ec7b6ee2a06acfd33dd96fd7ef5238"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A slender, weathered trunk rises to a forked crown of bare, jagged branches, its bark a muted grey-brown with a darker base. The silhouette is sparse and angular, evoking a long-dead tree in a dry or wintery landscape, with a simple, faceted finish that suits stylized environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 306
+meshes = 1
+materials = 1
+size = [2.027736, 5.237155, 3.0022688]
+
+[mesh.sm_generic_treestump_01]
+name = "SM_Generic_TreeStump_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Generic_TreeStump_01.fbx"
+sha256 = "3680b8dfe63067e26ba9a2aa0381da473355e366d7ed4b178ae082fea0c6857e"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A squat, faceted stump with a flat, pale-cut top and a flared, jagged root base, rendered in muted grey-browns with a darker bark band and a small side stub. Its chunky, stylised silhouette and worn, weathered look make it ideal for forest floors or ruined clearings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 228
+meshes = 1
+materials = 1
+size = [0.777562, 0.497575, 0.82104]
+
+[mesh.sm_polygonapocalypse_bld_house_01]
+name = "SM_PolygonApocalypse_Bld_House_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonApocalypse_Bld_House_01.fbx"
+sha256 = "0c7a9aaa2add9b0083f7fb2c0d1df27db95722aa402d4930623390115ea5d86d"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A single-storey L-shaped house with a low-pitched hip roof, rendered in a flat, untextured blue-grey. It features a central doorway, several dark rectangular windows, and a small chimney, giving it a clean, undamaged appearance suitable for a suburban or post-apocalyptic setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4449
+meshes = 1
+materials = 1
+size = [14.165609, 6.3592763, 11.957275]
+
+[mesh.sm_polygonapocalypse_bld_house_01_collision]
+name = "SM_PolygonApocalypse_Bld_House_01_Collision"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_PolygonApocalypse_Bld_House_01_Collision.fbx"
+sha256 = "57538bb2a69ce00b670e5722c146eea1923ba4ceaa51490ba91d6679b8a76151"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+description = "A low, flat-roofed, L-shaped structure with a grey concrete facade and dark window glazing, marked by a large white chevron symbol on the roof. It features a small rooftop unit and a side annex, suggesting a utilitarian facility or outpost building."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 264
+meshes = 1
+materials = 1
+size = [14.148384, 6.296721, 11.964682]
+
+[mesh.sm_polygoncity_veh_car_small_01]
+name = "SM_PolygonCity_Veh_Car_Small_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonCity_Veh_Car_Small_01.fbx"
+sha256 = "67a4f856448160997e6da8a02e04977283746be91f22d273dbe416448cf98548"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A compact five-door hatchback with a rounded, slightly bulbous profile, a black roof panel, and a bright blue body. It features silver alloy wheels, dark tinted windows, and a small rear spoiler, with a clean, modern look suited for urban street scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5668
+meshes = 8
+materials = 1
+size = [2.068335, 1.734184, 4.0848513]
+
+[mesh.sm_polygonprototype_buildings_block_1x1_01p]
+name = "SM_PolygonPrototype_Buildings_Block_1x1_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Buildings_Block_1x1_01P.fbx"
+sha256 = "82dcb6aac25fa417f4dd04a54ab84ec44112e1c1e5b4bf6c9681423fa7996efe"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A plain, roughly cubic block in a flat, medium blue, with slightly beveled edges and a few small, shallow chips and dents on its faces. It appears to be a simple, untextured stone or metal cube, useful as a basic building component or a generic, sturdy prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [1.0, 1.0, 1.0]
+
+[mesh.sm_polygonprototype_buildings_column_2x3_01p]
+name = "SM_PolygonPrototype_Buildings_Column_2x3_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Buildings_Column_2x3_01P.fbx"
+sha256 = "1eb5a3d6c6a05090a7f55db18d7c3a0fbbb340736da543b0b1d4c0d821b605d6"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A slender, tall rectangular pillar in a flat, muted blue, with a subtle darker blue shading on one side suggesting a simple painted or plastic material. The surface is mostly plain, but features a small, dark circular indentation near the top and a jagged, irregular notch cut into the lower half, giving it a weathered."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [0.4, 3.0, 0.4]
+
+[mesh.sm_polygonprototype_buildings_doorframe_01p]
+name = "SM_PolygonPrototype_Buildings_DoorFrame_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Buildings_DoorFrame_01P.fbx"
+sha256 = "943e8d6379d9ba32186782cc78e6512e2cf7cada7e81722ed5090e06c42b1134"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A tall, narrow rectangular frame with a flat top lintel and straight vertical jambs, rendered in a flat, untextured medium blue. The surface is smooth and unadorned, with no weathering or detail, giving it a clean, prototype appearance. Its simple, open structure suggests a basic doorway or portal for low-poly scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 106
+meshes = 1
+materials = 1
+size = [1.307112, 2.253556, 0.172893]
+
+[mesh.sm_polygonprototype_buildings_floor_1x1_01p]
+name = "SM_PolygonPrototype_Buildings_Floor_1x1_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Buildings_Floor_1x1_01P.fbx"
+sha256 = "acd9a12c9cf8ab363a65e9a3b3a76ee8effbd6d07121e1cdcc0d0a8f6eda1463"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A flat, square slab of blue material with a slightly rounded edge, featuring a darker blue rectangular panel on one face, resembling a simple floor tile or platform."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 54
+meshes = 1
+materials = 1
+size = [1.0, 0.1, 1.0]
+
+[mesh.sm_polygonprototype_buildings_floor_5x5_01p]
+name = "SM_PolygonPrototype_Buildings_Floor_5x5_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Buildings_Floor_5x5_01P.fbx"
+sha256 = "83379366d07e7d5c4edf4d16e67f27b5f72ddc3a9b2a5436061927b6b58c1352"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A flat, square slab of solid blue, with a single darker blue rectangular patch on one face, suggesting a simple floor tile or platform."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 70
+meshes = 1
+materials = 1
+size = [5.0, 0.1, 4.999985]
+
+[mesh.sm_polygonprototype_buildings_ramp_25_1x1_01p]
+name = "SM_PolygonPrototype_Buildings_Ramp_25_1x1_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Buildings_Ramp_25_1x1_01P.fbx"
+sha256 = "1f98380017fa97fd43a81a3b2f2575d6f2e7519165d2b4ba7a00d512e92ce502"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A wedge-shaped ramp with a flat top and a steep, angled face, rendered in a solid, matte blue-grey. The surface is clean and untextured, with no visible markings or wear, giving it a pristine, prototype appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [1.0, 0.466255, 1.0]
+
+[mesh.sm_polygonprototype_buildings_ramp_45_1x1_01p]
+name = "SM_PolygonPrototype_Buildings_Ramp_45_1x1_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Buildings_Ramp_45_1x1_01P.fbx"
+sha256 = "d08d620365a50cf2b520fd2489a687d92523f41a9a6ef9a3941f2f9a0b8dd949"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A wedge-shaped ramp with a steep 45-degree incline, featuring a flat top and a small rectangular notch cut into the lower side. The surface is a solid, matte blue with subtle shading that highlights the sharp, angular geometry."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 44
+meshes = 1
+materials = 1
+size = [1.0, 1.0, 1.0]
+
+[mesh.sm_polygonprototype_buildings_stairs_1x1_01p]
+name = "SM_PolygonPrototype_Buildings_Stairs_1x1_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Buildings_Stairs_1x1_01P.fbx"
+sha256 = "c328ea32b32ba4c1ef27f160f6b4198ecf6e4ccce0da1a2380726f4eff7282f4"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A compact, low-poly block of four steps in a muted blue, with a small dark grey patch on the side, suggesting a worn or damaged area. The stepped profile is clean and chunky, ideal for simple platforming or architectural detailing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [1.0, 0.499489, 1.0]
+
+[mesh.sm_polygonprototype_buildings_stairs_1x3_01p]
+name = "SM_PolygonPrototype_Buildings_Stairs_1x3_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Buildings_Stairs_1x3_01P.fbx"
+sha256 = "ee0886cf792faf84d59d8a2b8a2e891854321cdfe20819058dab7b21be3504d2"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A solid, wedge-shaped flight of stairs with a flat, untextured blue surface and a stepped top edge, shown from four angles. The clean, uniform colour and simple geometry make it a versatile, low-detail architectural element for stylised environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 268
+meshes = 1
+materials = 1
+size = [1.0, 2.996932, 6.0]
+
+[mesh.sm_polygonprototype_buildings_walldoor_2x3_01p]
+name = "SM_PolygonPrototype_Buildings_WallDoor_2x3_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Buildings_WallDoor_2x3_01P.fbx"
+sha256 = "6d54516fa6afdabe836b15c79a330f35a51bc4527aeabc744e10593eb90abb3a"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A freestanding rectangular doorframe with a flat lintel and thick, blocky jambs, rendered in a uniform matte blue with no visible door panel, hinges, or hardware. The clean, untextured surface and simple geometry give it a prototype or placeholder appearance, useful for blocking out entryways in low-poly scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 216
+meshes = 1
+materials = 1
+size = [1.998254, 3.0, 0.172894]
+
+[mesh.sm_polygonprototype_buildings_wallwindow_2x3_01p]
+name = "SM_PolygonPrototype_Buildings_WallWindow_2x3_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Buildings_WallWindow_2x3_01P.fbx"
+sha256 = "2bcaf3c2d05333dacaa61db4aa0e4c7d0a23f0cb0ed083b09e015f3990a995ff"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A tall, flat rectangular wall panel in a solid, matte blue, featuring a single square window opening cut through its centre. The window is framed by a simple, slightly raised border, and the panel's surface is smooth and unadorned, suggesting a clean, modular building component."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 229
+meshes = 1
+materials = 1
+size = [1.998256, 3.0, 0.172894]
+
+[mesh.sm_polygonprototype_icon_arrow_small_01]
+name = "SM_PolygonPrototype_Icon_Arrow_Small_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Icon_Arrow_Small_01.fbx"
+sha256 = "8d57e024a79372c102a3590000eb94260ad01cdd86d333d807ccf01df6c25b10"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A chunky, faceted blue arrow with a broad triangular head and a short rectangular shaft, rendered in a flat, matte style with subtle shading that emphasises its low-poly edges. The uniform steel-blue colour and clean, unmarked surface give it a crisp, prototype-like appearance, making it ideal for UI prompts or..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 24
+meshes = 1
+materials = 1
+size = [0.457712, 0.537104, 0.077884]
+
+[mesh.sm_polygonprototype_icon_coin_01]
+name = "SM_PolygonPrototype_Icon_Coin_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Icon_Coin_01.fbx"
+sha256 = "f921c7611423630112cda07e61b028c6cc393f5812563f6093be3fe231d11d14"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A chunky, decagonal gold coin with a raised rim and a flat, unadorned inner face, rendered in a warm, matte low-poly style. The faceted surface catches light to suggest a solid, weighty feel, making it a versatile, generic currency piece for any fantasy or adventure setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 1
+size = [0.588238, 0.588238, 0.08063]
+
+[mesh.sm_polygonprototype_icon_letter_question_01]
+name = "SM_PolygonPrototype_Icon_Letter_Question_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Icon_Letter_Question_01.fbx"
+sha256 = "42303dafb2356609eb0bcbce0daf91ea32b2f55d2b524e99b656cecca260964a"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A chunky, faceted question mark in a muted steel blue, with a separate floating cube as its dot. The low-poly geometry gives it a solid, toy-like presence, and the flat, untextured surface makes it ideal for stylized UI prompts or puzzle markers."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [0.357622, 0.68022, 0.113894]
+
+[mesh.sm_polygonprototype_primitive_cone_01p]
+name = "SM_PolygonPrototype_Primitive_Cone_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Primitive_Cone_01P.fbx"
+sha256 = "0d54258ee4fa47f037122a9907fd6c9cf1f898e25924db8a1a9b91b0e4992ab2"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A simple, faceted cone in a flat, medium blue, with a slightly darker blue band around the base. The low-poly geometry gives it a clean, stylized look, and it appears to be a basic, untextured primitive suitable for prototyping or as a generic game element."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [1.0, 1.0, 1.0]
+
+[mesh.sm_polygonprototype_primitive_cylander_01p]
+name = "SM_PolygonPrototype_Primitive_Cylander_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Primitive_Cylander_01P.fbx"
+sha256 = "95d618dd35cddc717d68d3165bec26b44e8c997b5228c44d455f4d0f635c9a57"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A faceted, ten-sided blue cylinder with a flat top and bottom, featuring a dark, irregular chipped or broken patch along one side of its surface. The matte, low-poly finish gives it a simple, blocky appearance, suggesting it is a basic geometric prop or a damaged pillar."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 74
+meshes = 1
+materials = 1
+size = [1.0, 1.0, 1.0]
+
+[mesh.sm_polygonprototype_primitive_sphere_01p]
+name = "SM_PolygonPrototype_Primitive_Sphere_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Primitive_Sphere_01P.fbx"
+sha256 = "513dd967bb7dbf7928b6bcb4d7e7aeb6cc718cf7a6563a413acacc35103fc868"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A faceted, low-poly blue sphere with a matte finish, its surface broken into flat, angular planes that catch light unevenly to give it a chunky, crystalline look. The uniform blue colour and simple geometry make it a versatile, clean primitive for prototyping or as a stylised ball."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 1
+materials = 1
+size = [0.953556, 1.002626, 1.002626]
+
+[mesh.sm_polygonprototype_primitive_tube_01p]
+name = "SM_PolygonPrototype_Primitive_Tube_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Primitive_Tube_01P.fbx"
+sha256 = "be0984146af0738055cfb9d2d365ef5a8f8229fc094959409ffa8015250cfa7d"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A short, wide octagonal tube with a hollow core, rendered in a flat, matte blue-grey. The faceted sides give it a clean, low-poly look, and the open ends suggest it is a simple pipe or socket piece. Its uniform colour and lack of detail make it a versatile, unobtrusive prop for industrial or sci-fi scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 108
+meshes = 1
+materials = 1
+size = [1.000904, 1.0, 1.0]
+
+[mesh.sm_polygonprototype_prop_cone_01]
+name = "SM_PolygonPrototype_Prop_Cone_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Prop_Cone_01.fbx"
+sha256 = "f568d7edba0caf9bd20b4e39aa62abaf39838cddea090014cd1a4a9365dfdbbd"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A low-poly traffic cone with a broad square base and a tapered body, painted in alternating blue and white bands. The top is capped with a small brown tip, and the surface is flat-shaded with a slightly worn, matte finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 184
+meshes = 1
+materials = 1
+size = [0.453186, 0.824968, 0.45319098]
+
+[mesh.sm_polygonprototype_prop_crate_03]
+name = "SM_PolygonPrototype_Prop_Crate_03"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Prop_Crate_03.fbx"
+sha256 = "f3c8fd810289e58b6d8b693b66cc07c5f40bd35a944342976a82c9517dc67233"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A cube-shaped shipping crate with a sturdy blue wooden frame and dark grey slatted panels, reinforced by diagonal cross-braces on every face. The slats are weathered and slightly uneven, giving it a rugged, industrial look suited for storage or cover in a low-poly environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 405
+meshes = 1
+materials = 1
+size = [0.9965, 0.996496, 0.996496]
+
+[mesh.sm_polygonprototype_prop_ladder_1x2_01p]
+name = "SM_PolygonPrototype_Prop_Ladder_1x2_01P"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Prop_Ladder_1x2_01P.fbx"
+sha256 = "a60cc01f57a35e668c4516c03cac838702d0aa009403dda36d7b95eff3585664"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A simple, straight ladder with two vertical rails and six flat rungs, rendered in a flat, untextured cornflower blue. The clean, low-poly silhouette and uniform colour give it a prototype or placeholder appearance, making it ideal for early level blocking or as a generic utility prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 194
+meshes = 1
+materials = 1
+size = [0.6, 2.0, 0.1]
+
+[mesh.sm_polygonprototype_prop_sword_01]
+name = "SM_PolygonPrototype_Prop_Sword_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Prop_Sword_01.fbx"
+sha256 = "493370b18ca3f84a6d2c99d819f651ee873caa2e4a40a2f3d598d7ae582becc5"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A straight, double-edged blade with a central ridge tapers to a sharp point, paired with a simple crossguard and a wrapped brown grip ending in a rounded pommel. The steel-grey metal shows a subtle worn sheen, while the handle's warm tones add contrast, giving it the look of a reliable, functional weapon ready for a..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 350
+meshes = 1
+materials = 1
+size = [0.215013, 1.256457, 0.05397]
+
+[mesh.sm_polygonprototype_prop_target_03]
+name = "SM_PolygonPrototype_Prop_Target_03"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_PolygonPrototype_Prop_Target_03.fbx"
+sha256 = "8c6fdef60495143d581a0646f2e6430ab76f649485cfbc9c873aef195a67b703"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A flat, circular disc with a faceted, low-poly rim, painted in a bold blue and white concentric ring pattern on the front face, while the reverse is a solid, unadorned blue. The simple, chunky design and clear target markings make it instantly readable as a practice or shooting target for gameplay, with a clean..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 174
+meshes = 1
+materials = 1
+size = [0.717454, 0.717454, 0.071746]
+
+[mesh.sm_primitive_cone_02]
+name = "SM_Primitive_Cone_02"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_Primitive_Cone_02.fbx"
+sha256 = "c552780c4aa4e7159e9a7fab2fdaaf6530e3b7829ee4e2023f1f59333d038d99"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A low, faceted cone with a broad base and a sharp apex, rendered in a flat, saturated orange with subtle shading that highlights its polygonal edges. Its simple, geometric form and clean texture make it a versatile prop for stylized environments, suitable for use as a tent, marker, or abstract shape."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14
+meshes = 1
+materials = 1
+size = [1.0, 1.0, 1.0]
+
+[mesh.sm_primitive_cylander_02]
+name = "SM_Primitive_Cylander_02"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_Primitive_Cylander_02.fbx"
+sha256 = "7618788e08b51a065c2498bca91707cd713525bbfb7ce0ca7c1f06e8af69fd6d"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A squat, ten-sided prism in flat-shaded amber, with a single darker band wrapping the upper rim to suggest a lid or seam. The faceted silhouette and warm, matte finish give it the look of a simple wooden crate or barrel, making it a versatile prop for storage or industrial scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [1.0, 1.0, 1.0]
+
+[mesh.sm_primitive_sphere_02]
+name = "SM_Primitive_Sphere_02"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/Collision/SM_Primitive_Sphere_02.fbx"
+sha256 = "fb5528d593cc9802575201706923b55b009c5ec2bebe532b4566a7fda8f642b9"
+atlas = "POLYGON - Prototype Pack/PolygonPrototype_Texture_01.png"
+textures = "PolygonPrototype_Texture_01.png"
+description = "A faceted, low-poly sphere with a warm orange hue, its surface broken into flat, triangular planes that catch light unevenly, giving it a crystalline or rough-hewn appearance. The material is a simple, matte texture with no markings or wear, suggesting a generic, versatile prop for stylized environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 80
+meshes = 1
+materials = 1
+size = [0.953556, 1.002626, 1.002626]
+
+[mesh.sm_prop_plane_ring_01]
+name = "SM_Prop_Plane_Ring_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Prop_Plane_Ring_01.fbx"
+sha256 = "15ed7f46087adca6d02c41b1114a54f73facce4e572a304bf674a964ef98b536"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A thin, flat circular ring with a segmented blue-and-white pattern, resembling a stylized propeller blade or a decorative hoop. The surface is smooth and matte, with clean, crisp edges and no visible wear, giving it a pristine, game-ready appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 192
+meshes = 1
+materials = 1
+size = [17.380207, 17.380207, 0.695018]
+
+[mesh.sm_simplesky_dome_01]
+name = "SM_SimpleSky_Dome_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_SimpleSky_Dome_01.fbx"
+sha256 = "abece932cd768442b700afa6561e7a72633ffdc313aea9d7200459831e80f005"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Sky.psd"
+description = "A squat, low-poly hemisphere with a flat base, featuring a pale grey dome and a darker grey rim accented by a thin orange band. The faceted surface gives it a stylized, clean look, suggesting a simple sci-fi button, a small hatch, or a stylized ground marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [65.88029, 26.128487, 65.880295]
+
+[mesh.sm_veh_plane_stunt_01]
+name = "SM_Veh_Plane_Stunt_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Veh_Plane_Stunt_01.fbx"
+sha256 = "23985ff56abcbec85bd35687d889efba8f6baaa4dd9ca2254bdeb7ec66f26db5"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Regular_Version.psd"
+description = "A compact, twin-boom stunt plane with a low-slung fuselage, a forward-mounted propeller, and a small tailplane. The livery is a stark white and grey scheme with orange accents on the wingtips and tail, giving it a sporty, aggressive look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3866
+meshes = 13
+materials = 1
+size = [14.82797, 3.4981918, 9.561734]
+
+[mesh.sm_wep_shield_04]
+name = "SM_Wep_Shield_04"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Wep_Shield_04.fbx"
+sha256 = "ded39e34a971e7d5eee526abd1b79a74e2211eb3bebdbb6987745839e0b9064e"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A tall, slightly curved kite shield with a dark grey metal rim and a pale grey face, bearing a bold blue cross on the front and a pair of brown leather straps on the reverse. The surface is clean and unblemished, suggesting a standard-issue piece of equipment for a holy warrior or crusader."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 944
+meshes = 1
+materials = 1
+size = [0.531364, 0.68219197, 0.14092499]
+
+[mesh.sm_wep_watergun_01]
+name = "SM_Wep_Watergun_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Wep_Watergun_01.fbx"
+sha256 = "81813c45dcc21a352e2535003dd00b0e7160f8b8beb6f18d364e4e5df8bcdb39"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A chunky, toy-like water blaster with a bright green body, a large yellow cylindrical tank on top, and a blue side panel. The short, stubby proportions and vivid, flat colours give it a playful, cartoonish look, with a small orange nozzle and a simple grip suggesting a lightweight, fun prop for casual games."
+differs = "The shorter, more compact option with a top-mounted tank and orange nozzle, best for close-range or handheld props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1046
+meshes = 4
+materials = 1
+size = [0.086182, 0.327113, 0.54928803]
+
+[mesh.sm_wep_watergun_02]
+name = "SM_Wep_Watergun_02"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Wep_Watergun_02.fbx"
+sha256 = "071a28c0e49128650a19242256da693d3581e656bb15bd64864f7eeed85b9588"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A chunky, toy-like water blaster with a bright lime-green body, a bulbous orange tank along the top, and a blue pump handle beneath the barrel. The design features a short, stubby profile with a small grip and a red nozzle tip, giving it a playful, low-poly aesthetic that clearly reads as a water gun rather than a..."
+differs = "The longer, more detailed variant with a pump handle and red tip, ideal for two-handed or long-range water fights."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1017
+meshes = 4
+materials = 1
+size = [0.123139, 0.326517, 0.875851]
+
+[mesh.sm_wep_waterpistol_01]
+name = "SM_Wep_WaterPistol_01"
+pack = "polygon_starter_pack"
+source = "SourceFiles/FBX/SM_Wep_WaterPistol_01.fbx"
+sha256 = "b4b5e77de0f3286865abb7c688844cf08615ad437c8a2c2a2ada84b8f489d38d"
+atlas = "PolygonStarter_Texture_01.png"
+textures = "PolygonStarter_Texture_01.png"
+wanted = "Polygonstarter_Texture_01_A_2k.psd"
+description = "A chunky, toy-like sidearm with a bright lime-green body and a vivid orange muzzle tip, trigger, and rear grip accent. The blocky, low-poly silhouette features a short, squared barrel and a simple trigger guard, giving it a playful, water-pistol appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 461
+meshes = 2
+materials = 1
+size = [0.039802, 0.174235, 0.261357]

@@ -1,0 +1,2371 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.env_cloudring_larger_02]
+name = "Env_CloudRing_Larger_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Env_CloudRing_Larger_02.fbx"
+sha256 = "f33fb0f50d6f05a48b2e9d4b8a7d8f894dd7daeda89d08cf896edce60e7dbd12"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, low-poly ring of pale grey stone, weathered and cracked, with a few small, dark green tufts of marsh grass sprouting from its surface. The ring is uneven and broken in places, giving it a natural, ancient look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [310.26807, 54.419323, 295.38898]
+
+[mesh.fx_bubble_01]
+name = "FX_Bubble_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/FX_Bubble_01.fbx"
+sha256 = "edf5ccba88589079cd494b254ea705c3aeecf689724655bbd7454814e8f0159b"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A low, faceted dome of murky olive green, resembling a viscous bubble or a mound of swamp sludge. Its smooth, glossy surface catches a soft highlight, suggesting a wet or slimy texture, with no visible markings or attached geometry."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.761008, 0.380504, 0.761008]
+
+[mesh.fx_frog_idle_mesh_01]
+name = "FX_Frog_Idle_Mesh_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/FX_Frog_Idle_Mesh_01.fbx"
+sha256 = "1478ed2800eb92e30602132e66c0238d5d7c8d38247e2b02517360ba010ba448"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A low-poly frog in a crouched, alert pose with a rounded body, prominent black eyes, and splayed legs. Its mottled brown and tan faceted texture gives it a natural, earthy look, ideal for swamp ambience."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 472
+meshes = 1
+materials = 1
+size = [0.288342, 0.141736, 0.242697]
+
+[mesh.fx_frog_jump_mesh_01]
+name = "FX_Frog_Jump_Mesh_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/FX_Frog_Jump_Mesh_01.fbx"
+sha256 = "73f71652f7672843be7ce83f768d17a5993efe55dd6da7b53809124be2640def"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A low-poly frog frozen mid-leap, its body stretched horizontally with long hind legs trailing and front limbs reaching forward. The mottled brown and tan texture gives a natural, earthy look, and the pose is dynamic, making it ideal for swamp ambience or jump animations."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 408
+meshes = 1
+materials = 1
+size = [0.227498, 0.133645, 0.635037]
+
+[mesh.fx_leaf_swamp_01]
+name = "FX_Leaf_Swamp_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/FX_Leaf_Swamp_01.fbx"
+sha256 = "7b80ac9570316999df87f7371686945bc71e10ce20d97b22980232dea689f576"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, diamond-shaped leaf with a sharp central crease, rendered in mottled olive and brown with a bright orange tip. The surface shows a subtle, glossy sheen and faint iridescent speckles, suggesting a damp, decaying leaf floating on a swamp surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.1, 0.019318, 0.1]
+
+[mesh.fx_plane_01]
+name = "FX_Plane_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/FX_Plane_01.fbx"
+sha256 = "e06ff9b818e417663765e1dc62e03086517695e412b4e19bab1cb444554ff9d9"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, diamond-shaped plane with a dark, glossy surface that reflects a spectrum of rainbow colours, resembling an iridescent oil slick or a magical puddle. The edges are jagged and irregular, with a bright orange glow at the tips, suggesting a supernatural or hazardous element."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.1, 0.019318, 0.1]
+
+[mesh.fx_sphere_01]
+name = "FX_Sphere_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/FX_Sphere_01.fbx"
+sha256 = "d9abf06b46d9eaa6a72d103ecedfccdd667ccd9ea11bfaf44014268ef95a9ab8"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A faceted, roughly spherical orb with a low-poly silhouette, wrapped in a mottled texture of murky greens, browns, and greys that suggests swampy water or a mossy stone. Its surface is marked by vertical, iridescent streaks of orange, purple, and blue, giving it a magical or ethereal quality."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 46
+meshes = 1
+materials = 1
+size = [1.3823371, 1.3006101, 1.4560649]
+
+[mesh.fx_sphere_swamp_01]
+name = "FX_Sphere_Swamp_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/FX_Sphere_Swamp_01.fbx"
+sha256 = "0e69b69303d148bc22388eea8469a4f571b10e12cecc3e9d6b1f7f2b16fda7f8"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A low-poly, faceted orb with a roughly spherical form, slightly flattened at the base, rendered in a uniform, pale grey. Its surface is composed of flat, untextured polygons, giving it a clean, minimalist look that resembles a smooth stone or a generic placeholder."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 46
+meshes = 1
+materials = 1
+size = [0.519158, 0.488465, 0.546848]
+
+[mesh.fx_sunshafts_swamp_01]
+name = "FX_SunShafts_Swamp_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/FX_SunShafts_Swamp_01.fbx"
+sha256 = "8b19bf8824fbdebb7cb2bb7455d07ad87ffc44db7027805c92a51b46427c4ac6"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A tall, narrow vertical plane with a jagged, irregular silhouette, rendered in dark, murky tones with faint amber highlights. The surface appears translucent and layered, suggesting a stylized shaft of light filtering through a swamp canopy, with a weathered, textured finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [1.0, 3.591924, 1.0]
+
+[mesh.sm_bld_outhouse_01]
+name = "SM_Bld_Outhouse_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Bld_Outhouse_01.fbx"
+sha256 = "671aa8b26d413af71d1e92a885b35106035f26aeeff1279aa20101c716e6dd66"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered wooden privy with vertical plank siding, a sagging, warped metal roof, and a simple door with a small crescent cutout, elevated on short legs. The muted brown and grey palette and peeling paint give it a damp, aged look, perfect for a swampy outhouse."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3701
+meshes = 2
+materials = 1
+size = [1.937938, 2.905083, 2.10958]
+
+[mesh.sm_bld_shack_ruins_01]
+name = "SM_Bld_Shack_Ruins_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Bld_Shack_Ruins_01.fbx"
+sha256 = "9acf1c395108bc4f057ed49911dc22ab44fc51a9e5d459b4ecf7c7470539f297"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A skeletal timber frame on stilts, with a single intact wall panel bearing a small window opening, the rest collapsed or missing. The wood is weathered grey-brown with dark, mossy streaks, and jagged splinters at the broken ends suggest a long-abandoned watchtower or hunting stand."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2714
+meshes = 1
+materials = 1
+size = [5.434205, 5.8368287, 2.26175]
+
+[mesh.sm_bld_shack_swamp_01]
+name = "SM_Bld_Shack_Swamp_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Bld_Shack_Swamp_01.fbx"
+sha256 = "bfda230c07c1b410f2a8eee47f8ab0408173e49fab21a9cd12104118d9318162"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered, stilted wooden shack with a steep, gabled roof of rusted, patched metal sheets and a small chimney. The plank walls are uneven and greyed, with a single door and a few small, dark openings, giving it a ramshackle, abandoned look suited to a swamp or marsh."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12884
+meshes = 2
+materials = 1
+size = [5.511098, 6.555062, 4.506467]
+
+[mesh.sm_env_background_hill_01]
+name = "SM_Env_Background_Hill_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Background_Hill_01.fbx"
+sha256 = "e7608ce369a83a847a18b4c66b4c10280b31a6ca04cf50daf6fdd9e859af3640"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "PolygonCastle_Texture_01_A.psd"
+description = "A low, elongated mound with a gently rounded crest, its surface is covered in a dense, repeating pattern of small, dark, rounded bumps that resemble clustered rocks or pebbles. The texture is a mottled mix of earthy browns, greys, and muted greens, giving it a weathered, organic appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 1
+materials = 1
+size = [17.268147, 1.9317889, 9.342052]
+
+[mesh.sm_env_background_land_01]
+name = "SM_Env_Background_Land_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Background_Land_01.fbx"
+sha256 = "ced5aa82716ba96278d6e144d90d9bc33b37684c7fc41e4ebf093222688d6e39"
+atlas = "Background_Trees_01.png"
+textures = "Background_Trees_01.png"
+description = "A low, wide, gently undulating landmass with a soft, rounded profile, rising to a subtle central ridge and tapering to flat, marshy edges. Its surface is a uniform, pale grey-green, suggesting a distant, misty background element rather than a playable terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 82
+meshes = 1
+materials = 1
+size = [160.90741, 24.482384, 61.244446]
+
+[mesh.sm_env_background_tree_01]
+name = "SM_Env_Background_Tree_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Background_Tree_01.fbx"
+sha256 = "d44a9a8a6cee37626a0ec16f809d835c16b27da9a674ac004c688534bfb2ef60"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "SeaWeed_Texture_01.png"
+description = "A tall, flat, vertical plane with a jagged, irregular top edge, textured to resemble a dense, layered backdrop of swamp foliage. The surface is a muted, hazy mix of grey-green and brown with patches of orange and pale blue, suggesting distant trees and mist."
+differs = "Identical to _02 in geometry and size; only the texture differs, with a hazier, more muted grey-green palette for distant misty backdrops."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [8.581968, 19.427155, 0.161708]
+
+[mesh.sm_env_background_tree_02]
+name = "SM_Env_Background_Tree_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Background_Tree_02.fbx"
+sha256 = "2cd1d8045797411c8bfd23a923e3a13c86219dc53199c846ae782c365a36a1c1"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "SeaWeed_Texture_01.png"
+description = "A tall, narrow, flat backdrop of swamp foliage, featuring a vertical column of orange and green leaves with a few pale blue accents, designed to stand upright as a distant background element."
+differs = "Identical to _01 in geometry and size; only the texture differs, with a brighter orange and green palette for more visible mid-ground foliage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [8.581968, 19.427155, 0.161708]
+
+[mesh.sm_env_background_trees_01]
+name = "SM_Env_Background_Trees_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Background_Trees_01.fbx"
+sha256 = "62bbe17ad8c49e8c3aa329ef580c0f927bd5a09aee0363a8666d35d0d969cb12"
+atlas = "TreeBeards_01.tga"
+textures = "TreeBeards_01.tga"
+wanted = "SeaWeed_Texture_01.png"
+description = "A long, low silhouette of a dense tree line, forming a continuous, irregular canopy with a jagged top edge and a solid, dark base. The muted, grey-green foliage suggests a distant, hazy forest, making it ideal for a background layer that adds depth without drawing focus."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 2
+size = [160.36508, 30.41106, 63.76423]
+
+[mesh.sm_env_bush_bramble_01]
+name = "SM_Env_Bush_Bramble_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Bush_Bramble_01.fbx"
+sha256 = "8aa4a945485cfb35fd72b892fb80c609cca9459ddf5ea2315658a9c24334ef4f"
+atlas = "ANIMATION - Base Locomotion/T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, sprawling thicket of tangled, thorny branches that spreads wider than it is tall, with a dense, chaotic core of dark, woody stems radiating outward into spiky, bare tips. The silhouette is irregular and jagged, suggesting a dry, weathered bramble with no foliage, making it ideal for adding harsh, natural detail."
+differs = "The smaller, lower-poly option, with a more chaotic, spiky silhouette and no flattened top, suited for harsh, dry accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3142
+meshes = 3
+materials = 2
+size = [2.843184, 1.649256, 2.651453]
+
+[mesh.sm_env_bush_bramble_02]
+name = "SM_Env_Bush_Bramble_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Bush_Bramble_02.fbx"
+sha256 = "cd825f997c357c24991f14cd6ab041c5dbff4530f6d9a97b7d5da5324ce8325b"
+atlas = "ANIMATION - Base Locomotion/T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, wide, tangled mound of dry, grey-brown twigs and thorny branches, forming a dense, spiky thicket with a slightly flattened top and irregular, jagged silhouette. The bare, weathered wood suggests a dormant or dead bramble, offering a stark, rugged look distinct from leafy bushes."
+differs = "The larger, more detailed variant, with a distinct flattened top and denser, more uniform twig mass, ideal for broader, dormant thickets."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4454
+meshes = 3
+materials = 2
+size = [3.429703, 1.5975289, 2.916706]
+
+[mesh.sm_env_cloud_ring_01]
+name = "SM_Env_Cloud_Ring_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Cloud_Ring_01.fbx"
+sha256 = "0414c4f45c73af36a004af55e33c25855e3cb3d3df1ef67c34bf63471fbd6a6e"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flattened, irregular ring of pale grey stone, resembling a weathered halo or a broken circular platform. Its surface is rough and pitted, with a subtle, mottled texture that suggests age and exposure to the elements."
+differs = "The smaller, flatter, and more damaged stone ring, best for a broken ancient ruin or weathered platform."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14456
+meshes = 1
+materials = 1
+size = [277.46246, 26.061537, 259.42413]
+
+[mesh.sm_env_cloud_ring_02]
+name = "SM_Env_Cloud_Ring_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Cloud_Ring_02.fbx"
+sha256 = "610e6b7dffb6735502389fd7e49e0af9843b4d18d3ae5706019ee3247b865db2"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, low-poly ring of pale grey cloud puffs, rendered as a single solid band with a slightly irregular, lumpy silhouette. The surface is a uniform light grey with subtle shading, giving it a soft, stylized look."
+differs = "The larger, taller, and more detailed cloud-puff ring, best for a soft, stylized floating island or magical barrier."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [310.26804, 54.419327, 295.38898]
+
+[mesh.sm_env_fog_ring_01]
+name = "SM_Env_Fog_Ring_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Fog_Ring_01.fbx"
+sha256 = "af2f0f61402eeea2bc7b76c913c1ca11bde038d9b00e985239267ff96af704cc"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, wide ring of translucent mist, rendered as a thin, elliptical band with a subtle, pale grey-blue tint and faint, earthy brown mottling along its upper edge. Its low, circular profile suggests a ground-level fog effect or a magical boundary marker, with a clean, unbroken surface that reads as a soft, ethereal..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [70.17066, 3.939841, 70.17065]
+
+[mesh.sm_env_grass_swamp_01]
+name = "SM_Env_Grass_Swamp_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Grass_Swamp_01.fbx"
+sha256 = "3dbdf42918fc7c2052db193c50a811cc37538e92ee08831c9c9595fed3cdca27"
+atlas = "SwampGrass_01.tga"
+textures = "SwampGrass_01.tga"
+description = "A low, wide clump of dark green blades, jagged and irregular, with a dense, bushy silhouette that reads as a thick patch of marsh grass. The texture is mottled with deep shadows and lighter highlights, giving it a damp, organic feel."
+differs = "The largest and most detailed, with the widest, bushiest silhouette, best for a dominant foreground patch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 378
+meshes = 3
+materials = 1
+size = [4.28463, 1.245041, 4.681891]
+
+[mesh.sm_env_grass_swamp_02]
+name = "SM_Env_Grass_Swamp_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Grass_Swamp_02.fbx"
+sha256 = "e82c503127dbc7a87b8363c54e931fc9107330100219013693923f9df2eb1748"
+atlas = "SwampGrass_01.tga"
+textures = "SwampGrass_01.tga"
+description = "A low, rounded clump of marsh grass with a dense, wispy texture and a muted grey-green palette, featuring a small dark gap in the centre that suggests a hidden hollow or a spot for a small creature to shelter."
+differs = "The plainest and most wispy, with a pale grey-green palette and a central hollow, ideal for a tiny shelter spot."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 2
+materials = 1
+size = [1.785118, 0.82707703, 1.460731]
+
+[mesh.sm_env_grass_swamp_03]
+name = "SM_Env_Grass_Swamp_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Grass_Swamp_03.fbx"
+sha256 = "54346847ab7511ff4f8be9bb3bfa74de39f9bd5df296762c25e2151eb3a9bc10"
+atlas = "SwampGrass_01.tga"
+textures = "SwampGrass_01.tga"
+description = "A low, irregular clump of dark green blades, jagged and uneven, suggesting a dense patch of marsh grass. The silhouette is spiky and organic, with a mottled texture that gives it a damp, shaded appearance, ideal for adding ground-level detail to swampy terrain."
+differs = "The mid-sized, spiky clump, less dense than 01 but more solid than 02, for varied ground-level detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 54
+meshes = 3
+materials = 1
+size = [1.914472, 0.797962, 1.926012]
+
+[mesh.sm_env_grass_tall_clump_01]
+name = "SM_Env_Grass_Tall_Clump_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Grass_Tall_Clump_01.fbx"
+sha256 = "64e127b24b7d7fc9d06181a420f5968e3bf789d86a8c58b86c0a456733d9dc40"
+atlas = "SwampGrass_01.tga"
+textures = "SwampGrass_01.tga"
+description = "A dense, upright clump of tall, thin grass blades that fan outward from a narrow base, with a few seed heads rising above the main body. The muted, desaturated green and brown tones give it a dry, weathered look, suggesting it is suited for marsh or swamp environments where it can add vertical texture without..."
+differs = "The smallest, most basic 10-triangle clump; identical to _06 but with a more upright, fan-like shape for sparse accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10
+meshes = 2
+materials = 1
+size = [1.0, 1.0, 0.999999]
+
+[mesh.sm_env_grass_tall_clump_02]
+name = "SM_Env_Grass_Tall_Clump_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Grass_Tall_Clump_02.fbx"
+sha256 = "31254b684c2a5a0bbf36e469322842bc85f3a96b809eae3e681ad00e9cd0a4eb"
+atlas = "SwampGrass_01.tga"
+textures = "SwampGrass_01.tga"
+description = "A dense, upright clump of marsh grass with a rounded, bushy silhouette, featuring a mix of thin, wispy blades and broader leaves that fan outward from the base. The muted, desaturated green and brown tones suggest a weathered, natural look, making it ideal for filling wetland edges or adding organic texture to swampy.."
+differs = "The 18-triangle bushy variant; identical to _07 but with broader leaves, ideal for mid-density wetland edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 2
+materials = 1
+size = [1.785118, 1.065725, 1.460731]
+
+[mesh.sm_env_grass_tall_clump_03]
+name = "SM_Env_Grass_Tall_Clump_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Grass_Tall_Clump_03.fbx"
+sha256 = "200f98435c05557b06b93cc920989a6bc5e2f4443f3089350600c395df8356ef"
+atlas = "SwampGrass_01.tga"
+textures = "SwampGrass_01.tga"
+description = "A dense, low, rounded clump of dark green blades, appearing as a compact, bushy tuft with a slightly ragged, uneven silhouette. The texture is a mottled mix of deep greens and near-black shadows, giving it a damp, shaded look suited for marsh undergrowth."
+differs = "The darkest, most shadowed 54-triangle clump; identical to _08 but with a more ragged, uneven silhouette for murky undergrowth."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 54
+meshes = 3
+materials = 1
+size = [1.914472, 1.028209, 1.926012]
+
+[mesh.sm_env_grass_tall_clump_06]
+name = "SM_Env_Grass_Tall_Clump_06"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Grass_Tall_Clump_06.fbx"
+sha256 = "dffbae2f8f8754bf0d7e7b276ce39093379c5e82ff691137dc015d8abf579dee"
+atlas = "SwampGrass_01.tga"
+textures = "SwampGrass_01.tga"
+description = "A dense, upright clump of tall, slender grass blades with a few seed heads, rendered in muted, desaturated greens and browns that suggest a damp, shaded marshland. The blades are slightly irregular and windblown, giving it a natural, unkempt look that suits a swampy environment."
+differs = "The smallest, most basic 10-triangle clump; identical to _01 but with a windblown, irregular blade arrangement for natural scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10
+meshes = 2
+materials = 1
+size = [1.0, 1.0, 0.999999]
+
+[mesh.sm_env_grass_tall_clump_07]
+name = "SM_Env_Grass_Tall_Clump_07"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Grass_Tall_Clump_07.fbx"
+sha256 = "e3616ccc550c902c7f148b8e68d08ee2214c775ef06fef95183a2711aba3fa13"
+atlas = "SwampGrass_01.tga"
+textures = "SwampGrass_01.tga"
+description = "A dense, upright clump of thin, wispy blades that fan out into a rounded, bushy silhouette, with a few taller stalks rising above the main mass. The muted, desaturated green and brown tones suggest dry or marshland grass, and the slightly ragged, uneven edges give it a natural, wind-blown appearance."
+differs = "The 18-triangle bushy variant; identical to _02 but with wispy blades and taller stalks, suited for wind-swept marsh edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 2
+materials = 1
+size = [1.785118, 1.065725, 1.460731]
+
+[mesh.sm_env_grass_tall_clump_08]
+name = "SM_Env_Grass_Tall_Clump_08"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Grass_Tall_Clump_08.fbx"
+sha256 = "7456fbf2e55da45a0a2839f5419ea37bc0dfbdff9ef07699de06f05cb09cbebc"
+atlas = "SwampGrass_01.tga"
+textures = "SwampGrass_01.tga"
+description = "A dense, low, rounded clump of dark green blades, appearing as a solid, shadowed mass with a slightly ragged, uneven top edge. The texture is mottled with deep olive and near-black tones, giving it a wet, murky appearance suited to swampy ground."
+differs = "The darkest, most shadowed 54-triangle clump; identical to _03 but with a solid, compact mass for dense swamp ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 54
+meshes = 3
+materials = 1
+size = [1.914472, 1.028209, 1.926012]
+
+[mesh.sm_env_lillypads_01]
+name = "SM_Env_LillyPads_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_LillyPads_01.fbx"
+sha256 = "1b1d81f3ec947d92d559f2c20bf845cbd385c66ed023b582c732f9cea9835c57"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, irregular cluster of round green lily pads floating on a translucent, pale blue water plane, with a few small tan lily pads interspersed among the leaves. The pads are densely packed in the center and thin out toward the edges, creating a natural, organic grouping suitable for decorating swamp surfaces."
+differs = "Largest and densest cluster with a visible water plane, ideal for a central swamp focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1658
+meshes = 2
+materials = 2
+size = [4.26458, 0.095037006, 4.264579]
+
+[mesh.sm_env_lillypads_02]
+name = "SM_Env_LillyPads_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_LillyPads_02.fbx"
+sha256 = "98eec2a463a68e0c87e1e5b8f8d953c5119163c77f27575d664d51bf917f16cf"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "Four flat, irregular clusters of small, round green lily pads float on a barely visible, translucent water surface, with a few tiny white blossoms adding subtle detail. The low-poly pads show slight colour variation from deep to pale green, giving the clusters a natural, scattered look ideal for populating swamp or..."
+differs = "Most scattered and elongated arrangement with white blossoms, best for spreading across a wide surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 647
+meshes = 2
+materials = 2
+size = [2.396611, 0.075675994, 3.652125]
+
+[mesh.sm_env_lillypads_03]
+name = "SM_Env_LillyPads_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_LillyPads_03.fbx"
+sha256 = "1ba09549825928b3a2b00574da825d04aa61d7ba5d5b94b7f808370a72301afd"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, low-poly cluster of round green lily pads, with a few pads showing a tan underside, floating on a barely visible water plane. The pads vary in size and overlap naturally, creating a small, dense patch suitable for decorating swamp or marsh surfaces."
+differs = "Smallest and plainest patch with tan undersides, suited for subtle background detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 462
+meshes = 2
+materials = 2
+size = [2.832681, 0.075675994, 1.8332081]
+
+[mesh.sm_env_lillypads_04]
+name = "SM_Env_LillyPads_04"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_LillyPads_04.fbx"
+sha256 = "ca4e062a930cb73e98012d5a27432451bfcbc0a767350adc9bb49ce16646998e"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, low-lying cluster of four rounded green lily pads floating on a translucent, shimmering water surface, with a few small orange flowers and buds nestled among the leaves, ideal for adding calm, natural detail to swamp or pond scenes."
+differs = "Only one with orange flowers and buds, adding a warm accent to calm pond scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 371
+meshes = 2
+materials = 2
+size = [1.713094, 0.072149, 2.367641]
+
+[mesh.sm_env_mossmound_01]
+name = "SM_Env_MossMound_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_MossMound_01.fbx"
+sha256 = "cf72b8b9000567d3dcf26a1475714ef171aa127658b795abbb9df339be2f22d9"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "PolygonCastle_Texture_01_A.psd"
+description = "A low, broad, roughly oval mound with a gently domed top and irregular, sloping sides, resembling a flattened hump of earth or a weathered rock outcrop. Its surface is a patchwork of muted olive greens, muddy browns, and dark greys, with scattered flecks of orange and pale yellow suggesting moss, lichen, or exposed..."
+differs = "Largest and most detailed, with the most irregular, weathered silhouette; ideal as a large terrain feature or landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 268
+meshes = 2
+materials = 1
+size = [1.983806, 0.51660097, 2.21953]
+
+[mesh.sm_env_mossmound_02]
+name = "SM_Env_MossMound_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_MossMound_02.fbx"
+sha256 = "d45ad6a6536e74c040dd5a3627f406d6587b93bfeae0dd5c1cc3d0060cc640b0"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "PolygonCastle_Texture_01_A.psd"
+description = "A low, rounded mound with a broad, flattened base, its surface broken into large, angular facets that catch the light. The texture is a patchwork of earthy browns, mossy greens, and dark greys, with a few iridescent, rainbow-like streaks suggesting dampness or mineral deposits."
+differs = "Smallest and most angular, with iridescent streaks; best for a compact, mineral-rich accent or a damp, shiny detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 71
+meshes = 2
+materials = 1
+size = [1.198964, 0.466937, 0.980418]
+
+[mesh.sm_env_mossmound_03]
+name = "SM_Env_MossMound_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_MossMound_03.fbx"
+sha256 = "5d7bd75fdc0f863d7aeb6b283093ef1f0d7072d4672bb093fc43b5fed1a285bf"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "PolygonCastle_Texture_01_A.psd"
+description = "A low, wide mound with a smooth, rounded profile, its surface broken by a few small, dark rocks and patches of pale, dry grass. The texture is a mix of earthy browns, muted greens, and grey, with a distinct, glossy sheen that suggests a damp or mossy surface."
+differs = "Widest and flattest, with a smooth profile and glossy sheen; perfect for a low, damp ground cover or a subtle, wet patch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 141
+meshes = 2
+materials = 1
+size = [2.06521, 0.513191, 1.35202]
+
+[mesh.sm_env_reeds_01]
+name = "SM_Env_Reeds_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Reeds_01.fbx"
+sha256 = "10bd3334855dc829c9a8f6e9e310cd81854cdbe9b9a9cf3fe804706305b9b924"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A tight cluster of tall, slender cattail stalks rises from a small, dark patch of muddy ground, topped with elongated brown seed heads and a few pale, withered leaves. The muted grey-brown palette and slightly weathered texture give it a realistic, damp marshland feel, making it ideal for adding vertical detail to..."
+differs = "The smaller, lower-poly option with a muddy base and withered leaves, best for adding damp, weathered detail to tight marsh spots."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 536
+meshes = 3
+materials = 2
+size = [0.954111, 3.557669, 1.018672]
+
+[mesh.sm_env_reeds_02]
+name = "SM_Env_Reeds_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Reeds_02.fbx"
+sha256 = "bd8077a230472c4a54511d515a7df1e1ab63cdc81a4d9c4ce129f408b7db3f9d"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A tight cluster of tall, slender reeds with pale, weathered stalks and dark brown, elongated seed heads, rising vertically from a small, flat base. The muted, desaturated tones and slightly irregular arrangement give it a natural, windswept look, ideal for adding vertical detail to swamp edges or marsh banks."
+differs = "The larger, higher-poly option with a flat base and windswept look, best for adding clean, vertical detail to swamp edges or banks."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 836
+meshes = 3
+materials = 2
+size = [1.137989, 3.47315, 1.190128]
+
+[mesh.sm_env_rock_swamp_01]
+name = "SM_Env_Rock_Swamp_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Rock_Swamp_01.fbx"
+sha256 = "7f2166518e7cc7c15ec323669014ba267a1581c984deb6f5e5da8effe1e65e83"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A low, rounded boulder with a broad, irregular base and a slightly flattened top, built from large, chunky facets. Its surface is a uniform, pale sandy beige with no cracks, moss, or sharp edges, giving it a smooth, clean look that suits a dry or sandy swamp edge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 182
+meshes = 1
+materials = 1
+size = [2.8667178, 2.295289, 3.139591]
+
+[mesh.sm_env_skydome_01]
+name = "SM_Env_Skydome_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Skydome_01.fbx"
+sha256 = "480a1154ee48ad7503f0abd625236e39cb85c4123d846c074dda0b9488ebff4c"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "Sky.psd"
+description = "A squat, hemispherical dome with a glossy black upper surface and a textured, swampy base ringed by a thin, iridescent rainbow band, suggesting a stylized magical barrier or environmental bubble for marshland scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [65.88029, 26.128487, 65.880295]
+
+[mesh.sm_env_swamp_leaves_01]
+name = "SM_Env_Swamp_Leaves_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Swamp_Leaves_01.fbx"
+sha256 = "cc27d45d0f7a6e72e9f00a0eaaba5eaba6b8614b891281eec5971804141c4714"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A cluster of broad, upright green leaves with a few thin, dry stalks rising from the base, forming a dense, bushy clump. The foliage is a vibrant, saturated green with subtle darker shading, while the stems are a pale, desaturated grey-brown."
+differs = "The taller, more upright clump with a narrower footprint, best for adding vertical accents among shorter ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 924
+meshes = 3
+materials = 1
+size = [2.200645, 3.418276, 2.582533]
+
+[mesh.sm_env_swamp_leaves_02]
+name = "SM_Env_Swamp_Leaves_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Swamp_Leaves_02.fbx"
+sha256 = "a9e8478e40969e848855327a5e64feac79c8f666244d7047c951616da7867eb9"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A cluster of broad, upright green leaves with a few slender, pale stalks rising from the base, forming a low, bushy clump. The foliage is a vibrant, saturated green with subtle darker shading, and the plant appears healthy and fresh, ideal for adding dense, leafy detail to swampy ground or water edges."
+differs = "The wider, lower, and more spread-out clump, ideal for filling broad areas of swampy ground or water edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1260
+meshes = 3
+materials = 1
+size = [3.531396, 3.3273401, 4.085703]
+
+[mesh.sm_env_swamp_log_01]
+name = "SM_Env_Swamp_Log_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Swamp_Log_01.fbx"
+sha256 = "0b40790c0810e62b5c79822b9de677e0fdd0dfff97457f1c6a03f8ff440f606a"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A gnarled, fallen tree trunk with a jagged, splintered root mass at one end, tapering to a thin, broken tip with a few bare, crooked branches. The bark is a pale, weathered grey-brown, suggesting sun-bleached driftwood or a long-dead swamp tree, with a rough, textured surface that conveys age and decay."
+differs = "The largest and most detailed, with a dramatic root mass and broken branches, ideal as a hero prop or focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2296
+meshes = 1
+materials = 1
+size = [23.550995, 7.4988337, 7.7884483]
+
+[mesh.sm_env_swamp_log_02]
+name = "SM_Env_Swamp_Log_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Swamp_Log_02.fbx"
+sha256 = "025f444624732965f99ba97c440855ae4aeaedb5c53f1c504c78b906f33ba1f2"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered, pale grey-brown log with a rough, splintered texture and a few small, bare branch stubs protruding from its surface. The trunk is slightly tapered and uneven, with a hollowed, broken end that suggests it has been dead for some time."
+differs = "The plainest and smallest, a simple tapered trunk with stubs, best for scattered background debris or filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 684
+meshes = 1
+materials = 1
+size = [11.862881, 2.59748, 4.2248154]
+
+[mesh.sm_env_swamp_scum_01]
+name = "SM_Env_Swamp_Scum_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Swamp_Scum_01.fbx"
+sha256 = "08375cade6c0c55acd2cfd87aff9baa8e6f5b1145cc9a69d8864f8145aba81ae"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, roughly square patch of murky water covered by a dense, low-lying layer of green algae and scum, with a few tan lily pads or debris floating at the edges. The surface is textured with mottled greens and browns, giving it a stagnant, organic appearance."
+differs = "The largest and most detailed square patch, with the densest scum and tan debris, ideal for a large stagnant pond surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 9629
+meshes = 2
+materials = 2
+size = [4.058947, 0.14529401, 4.058948]
+
+[mesh.sm_env_swamp_scum_02]
+name = "SM_Env_Swamp_Scum_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Swamp_Scum_02.fbx"
+sha256 = "e28ef2a6f710bb0c59fac83dce80f35db879f9dbf84070fa85e35048eb26f5fb"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, irregular patch of murky green algae and scum, with a few small, pale tan lily pads or debris clusters floating at the edges. The surface is textured with mottled dark and light greens, suggesting a thick, organic film on calm water."
+differs = "A mid-sized rectangular patch with a more irregular, elongated shape and less dense scum than 01, for varied marsh edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2869
+meshes = 2
+materials = 2
+size = [4.058957, 0.105582, 2.899455]
+
+[mesh.sm_env_swamp_scum_03]
+name = "SM_Env_Swamp_Scum_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Swamp_Scum_03.fbx"
+sha256 = "2bf5ab828ac49b295fb82472e85e73326685149cb2571b8624da107bee31c98d"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, irregular patch of murky water with a pale, frothy rim, scattered with dark green algae clumps and small orange-brown lily pads, giving it a stagnant, swampy appearance ideal for adding surface detail to marshland scenes."
+differs = "The smallest and simplest patch, with a pale frothy rim and orange debris, perfect for a quick, low-poly detail accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 458
+meshes = 2
+materials = 2
+size = [2.5167542, 0.103585005, 1.1913221]
+
+[mesh.sm_env_swamp_scum_04]
+name = "SM_Env_Swamp_Scum_04"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Swamp_Scum_04.fbx"
+sha256 = "9355aea59e3ada1102d4f7b7262f667bb39dc42dae008d695282ffc4b8b87a20"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, irregular patch of pale grey mud or silt, scattered with small, low-lying clumps of dark green algae and moss. The surface is uneven and textured, with the organic matter concentrated in the center and thinning towards the edges, giving it a natural, weathered appearance."
+differs = "The only one with a pale grey mud base and sparse central algae, making it the plainest and most weathered-looking option."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 870
+meshes = 2
+materials = 2
+size = [2.3494158, 0.105921, 1.814215]
+
+[mesh.sm_env_swamp_tree_root_preset_01]
+name = "SM_Env_Swamp_Tree_Root_Preset_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Swamp_Tree_Root_Preset_01.fbx"
+sha256 = "a5da8cb30456ded996a55fb1422c82cdd9f745612dc11f960bf6bb74a4bee56e"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A cluster of eight jagged, tapering wooden stakes rising from a shared base, resembling broken roots or sharpened posts. The bark is a weathered grey-brown with darker vertical striations, giving it a rough, aged texture."
+differs = "The largest and most detailed, with eight jagged stakes and a wider footprint, ideal for a dense, imposing root barrier."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1144
+meshes = 1
+materials = 1
+size = [6.550086, 3.858087, 6.65197]
+
+[mesh.sm_env_swamp_tree_root_preset_02]
+name = "SM_Env_Swamp_Tree_Root_Preset_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Swamp_Tree_Root_Preset_02.fbx"
+sha256 = "5eb94ca397431dd16fbb2c2fba02da6bdf080854188206bd8d0c09a0aae3cef7"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A cluster of weathered, dark brown wooden stakes, some forked and some single-pointed, rising from a shared base. The bark is rough and uneven, with a few splintered tips suggesting age and decay. The arrangement is irregular and natural, evoking a broken fence or a marshy barrier."
+differs = "The plainest and most damaged, with fewer, forked stakes and a narrower spread, suited for a sparse, broken fence or decayed marsh marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 572
+meshes = 1
+materials = 1
+size = [7.327138, 3.858086, 4.23385]
+
+[mesh.sm_env_swampgrass_group_01]
+name = "SM_Env_SwampGrass_Group_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_SwampGrass_Group_01.fbx"
+sha256 = "d43944133184c37049b6db9cffbf33423a5f0deb755cacb70daea9bf9b4b2cb5"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A dense, low-poly cluster of tall, blade-like reeds and cattails, with several stalks bearing pale, tan seed heads. The foliage is a muted, dark green with subtle brownish undertones, giving it a weathered, natural look."
+differs = "The smallest and most compact, with the fewest triangles, best for tight, low-poly accents where detail is not needed."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1374
+meshes = 3
+materials = 2
+size = [6.318973, 4.647929, 5.591736]
+
+[mesh.sm_env_swampgrass_group_02]
+name = "SM_Env_SwampGrass_Group_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_SwampGrass_Group_02.fbx"
+sha256 = "7a30c4fc5b0b58feeea714670b654c0d15e051fe1d202a74dc097d3db0e42538"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A low, sprawling cluster of dark green, spiky grass tufts with a few pale tan seed heads, forming a dense, irregular mound that reads as a natural swamp patch. The clumps are unevenly distributed, with some taller blades and a few bare stems, giving it a wild, unkempt look."
+differs = "The largest and widest, with the most triangles, forming a sprawling, low mound ideal for filling broad swamp floor areas."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4138
+meshes = 3
+materials = 2
+size = [10.004192, 4.5208297, 8.429099]
+
+[mesh.sm_env_swampgrass_group_03]
+name = "SM_Env_SwampGrass_Group_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_SwampGrass_Group_03.fbx"
+sha256 = "42b646cec2d268695772c44755aab2e6d5cc0c58d42b77047451a49595efd52f"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A dense, irregular clump of tall, blade-like reeds in varied shades of olive and dark green, with pale, yellowish seed heads crowning several stalks. The foliage is thick and tangled, with a few thin, dry brown stems mixed in, giving it a wild, unkempt marshland appearance."
+differs = "The most vertical and dense, with a tangled, upright profile and the most seed heads, perfect for adding height to marsh edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2484
+meshes = 3
+materials = 2
+size = [3.8247852, 4.611835, 4.33523]
+
+[mesh.sm_env_swampgrass_medium_01]
+name = "SM_Env_SwampGrass_Medium_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_SwampGrass_Medium_01.fbx"
+sha256 = "fa9924461c38d1791dd2583267fc91eadd6008a3365dd920ebeeef5723012486"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A clump of tall, blade-like leaves rising from a dark, muddy base, with a few slender stems topped by pale, peach-coloured buds or seed heads. The foliage is a muted, desaturated green with subtle brown and grey variation, giving it a weathered, damp appearance suited to a swamp."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 194
+meshes = 3
+materials = 2
+size = [3.633223, 2.137624, 2.225915]
+
+[mesh.sm_env_swampgrass_small_01]
+name = "SM_Env_SwampGrass_Small_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_SwampGrass_Small_01.fbx"
+sha256 = "521f506a409f282b2d875ad890d5b006ac7344584490919be3b734fe68b83198"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A small clump of dark green, blade-like leaves rising from a short, thick stalk, with a few slender, arching fronds extending outward. The foliage is a deep, muted green with subtle lighter highlights, and the base is a darker, earthy tone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 3
+materials = 2
+size = [1.816555, 1.973032, 1.9338859]
+
+[mesh.sm_env_swampgrass_tall_01]
+name = "SM_Env_SwampGrass_Tall_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_SwampGrass_Tall_01.fbx"
+sha256 = "b40d100b5a6b62c15498b6208b19278cbd63ccc0fcc9ce0beb3b7fd84a8a7ae5"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A cluster of tall, slender blades rising from a narrow base, with a few long leaves arching outward and drooping near the tips. The foliage is a muted, desaturated green with subtle brownish highlights, suggesting a slightly withered or dry state typical of marshland."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 414
+meshes = 3
+materials = 2
+size = [1.938212, 4.611294, 2.6820922]
+
+[mesh.sm_env_toetoe_01]
+name = "SM_Env_Toetoe_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Toetoe_01.fbx"
+sha256 = "f91c2279c154d718e66e273a678035e3289b0e90ccb012f3a5986583c34c7d5b"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A dense cluster of tall, slender stalks topped with feathery, pale cream plumes, resembling pampas grass or toetoe. The stems are a muted grey-green, suggesting a weathered or dry condition typical of marshland vegetation."
+differs = "Denser, taller, and more detailed cluster for filling large marsh areas; the other is sparser."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2332
+meshes = 3
+materials = 2
+size = [2.659481, 5.192618, 1.478397]
+
+[mesh.sm_env_toetoe_02]
+name = "SM_Env_Toetoe_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Toetoe_02.fbx"
+sha256 = "dd8c897306b36c631c1d62abdb2d35e43a4803503be54fa6a5251fa4784e4a0b"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "Slender, vertical stalks with pale, feathery plumes at the tips, resembling dry pampas grass or toetoe. The stems are a muted grey-green, while the seed heads are a soft, creamy beige, giving a weathered, natural look."
+differs = "Sparser, shorter, and simpler, ideal for scattered accents or background filler where the dense cluster is too heavy."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 848
+meshes = 3
+materials = 2
+size = [1.860796, 5.132093, 1.7129331]
+
+[mesh.sm_env_tree_dead_01]
+name = "SM_Env_Tree_Dead_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Tree_Dead_01.fbx"
+sha256 = "b270612d599f95c8396530821bc433dba79f1e111dfe6af2ca47ae3020ef37fd"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A tall, slender, bare trunk that tapers sharply from a flared, rooted base to a thin, broken tip, with only a few short, stubby branches jutting out at irregular intervals. The bark is a muted grey-brown with subtle vertical striations, giving it a weathered, desiccated look that reads as long-dead and bleached by the."
+differs = "The smallest, plainest, and least detailed option, with a simple flared base and no spreading roots, best for distant background filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 342
+meshes = 1
+materials = 1
+size = [1.404901, 9.137533, 1.262894]
+
+[mesh.sm_env_tree_dead_02]
+name = "SM_Env_Tree_Dead_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Tree_Dead_02.fbx"
+sha256 = "fdc183663137f86b559f504ef3b7b2db7f41782f6cc64154384d83d7736d48f7"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A gaunt, vertical dead tree with a bare, tapering trunk and a few short, broken branch stubs, rising from a wide, gnarled root system that spreads across the ground. The bark is a desaturated grey-brown, weathered and stripped of all foliage, giving it a stark, skeletal silhouette perfect for a marshland's eerie..."
+differs = "The largest and most detailed, with a wide, gnarled root system and higher triangle count, ideal for a foreground focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1826
+meshes = 1
+materials = 1
+size = [5.1492844, 14.833263, 5.215756]
+
+[mesh.sm_env_tree_mangrove_01]
+name = "SM_Env_Tree_Mangrove_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Tree_Mangrove_01.fbx"
+sha256 = "3dd93290629151241e92813c4d631816c958d26f83cf4224bdf149c9e3e29def"
+atlas = "ANIMATION - Base Locomotion/T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A tall, narrow trunk with a jagged, broken top, supporting a dense, dark canopy of drooping, spiky foliage that clings to the upper third. The bark is a mottled grey-brown with a rough, weathered texture, while the leaves are a deep, shadowy green, giving it a gnarled, ancient appearance suited for a murky swamp."
+differs = "Tallest and most detailed, with drooping spiky foliage; best for a towering, ancient swamp centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5580
+meshes = 4
+materials = 1
+size = [3.576705, 8.473686, 3.919105]
+
+[mesh.sm_env_tree_mangrove_02]
+name = "SM_Env_Tree_Mangrove_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Tree_Mangrove_02.fbx"
+sha256 = "4fe31dc1a84d2940c4a15500d3ffbfe2ffb1b988cec2f13082d5e1fb978debf6"
+atlas = "ANIMATION - Base Locomotion/T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A tall, narrow trunk with a jagged, broken top, supporting a dense, dark canopy of angular leaves that cluster near the crown. The bark is heavily textured with vertical striations and dark, weathered patches, giving it a gnarled, ancient appearance."
+differs = "Mid-sized with angular leaves and vertical striations; the plainest option, ideal for background filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5176
+meshes = 4
+materials = 1
+size = [3.380583, 7.165748, 3.45508]
+
+[mesh.sm_env_tree_mangrove_03]
+name = "SM_Env_Tree_Mangrove_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Tree_Mangrove_03.fbx"
+sha256 = "3660109a6a680b549f1c3ef08bf78dc3789245c39ec533b2df0619e70f03cfb9"
+atlas = "ANIMATION - Base Locomotion/T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A tall, narrow trunk rises from a flared, buttressed base, topped by a dense, irregular crown of jagged, angular foliage. The bark is dark and heavily textured, with a rough, weathered appearance, while the canopy is a chaotic mass of sharp, faceted shapes."
+differs = "Shortest with a flared buttressed base and chaotic crown; best for a gnarled, low-lying foreground accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5276
+meshes = 4
+materials = 1
+size = [2.9573631, 5.734954, 3.287772]
+
+[mesh.sm_env_tree_swamp_01]
+name = "SM_Env_Tree_Swamp_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Tree_Swamp_01.fbx"
+sha256 = "0a8b9c3250e49f86b8098f83c71c29dfe259b5d90bbf786d0bb4cf4a1acfa120"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A gnarled, low-poly swamp tree with a thick, pale grey trunk that flares into a wide, stilted root system, topped by a dense, dark olive and brown canopy with a few hanging, ochre leaves. The bark is smooth and weathered, giving it a dead, ancient look, making it ideal for murky, eerie marshland environments."
+differs = "The only one with ochre accents and a stilted root system, best for a focal point in a swamp."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 55081
+meshes = 7
+materials = 3
+size = [10.967237, 24.786499, 9.812508]
+
+[mesh.sm_env_tree_swamp_01_alt]
+name = "SM_Env_Tree_Swamp_01_ALT"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Tree_Swamp_01_ALT.fbx"
+sha256 = "b8560e5f4ed2598c9732768a956b7462f19e7ad2c0668bd7f20c9c234a7a9153"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A gnarled, leaning swamp tree with a thick, twisted trunk and a dense, irregular canopy of dark, murky green foliage, accented by pale, dead branches and hanging moss. The bark is a deep, wet brown, suggesting a damp, boggy habitat, and the silhouette is more organic and crooked than a standard tree, making it ideal..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 53805
+meshes = 7
+materials = 2
+size = [10.967237, 23.390127, 9.583604]
+
+[mesh.sm_env_tree_swamp_02]
+name = "SM_Env_Tree_Swamp_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Tree_Swamp_02.fbx"
+sha256 = "c9b56e99f07e9b67d6faa2dcf58c1e7c592e6d414548f46457c7a40743191969"
+atlas = "ANIMATION - Base Locomotion/T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A tall, gaunt swamp tree with a split, jagged trunk and a sparse canopy of dark, angular foliage, rendered in a desaturated grey palette. The bark is heavily textured with deep vertical grooves and broken branches, giving it a weathered, dead appearance suited to a gloomy marshland."
+differs = "The tallest and most damaged, with a split trunk, ideal for a dead, jagged silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 52477
+meshes = 7
+materials = 1
+size = [10.266461, 17.364971, 9.986147]
+
+[mesh.sm_env_tree_swamp_03]
+name = "SM_Env_Tree_Swamp_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Tree_Swamp_03.fbx"
+sha256 = "15f8eff09b5f4caf34d57c827b1659d268213a838a7804704fa017e354ca380b"
+atlas = "ANIMATION - Base Locomotion/T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A gnarled, low-poly swamp tree with a thick, twisted trunk and a dense, irregular canopy of dark, jagged foliage, rendered in a monochrome grey palette. Its roots flare out into a wide, uneven base, giving it a weathered, ancient appearance suited for murky marshland environments."
+differs = "The widest and most twisted, with a dense, irregular canopy, perfect for a central, ancient landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 23158
+meshes = 7
+materials = 1
+size = [11.696021, 11.219177, 12.637833]
+
+[mesh.sm_env_tree_swamp_04]
+name = "SM_Env_Tree_Swamp_04"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Tree_Swamp_04.fbx"
+sha256 = "68cabee035634801b1b15586813a4a29ecb4d85a6e1ff7db21bfc9399a89d380"
+atlas = "ANIMATION - Base Locomotion/T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A gnarled, low-poly swamp tree with a short, twisted trunk and a dense, irregular canopy of dark, jagged foliage. The bark is a deep, near-black grey, while the leaves are rendered in muted charcoal and slate tones, giving it a dead or shadowed appearance."
+differs = "The smallest and simplest, with a near-black palette, best for a shadowed, background filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6490
+meshes = 4
+materials = 1
+size = [4.2078886, 5.843118, 3.7680092]
+
+[mesh.sm_env_water_plane_01]
+name = "SM_Env_Water_Plane_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Env_Water_Plane_01.fbx"
+sha256 = "47dbb745231ced49c8221637371c5cce15cbf6cc1f1aca161199382933dffed2"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat, square patch of murky swamp water with a dark, reflective surface, bordered by muddy banks and scattered debris. The water is broken by patches of algae and floating wood, with small orange and purple accents suggesting reeds or litter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20000
+meshes = 1
+materials = 1
+size = [50.0, 0.000004, 50.0]
+
+[mesh.sm_prop_barrel_01]
+name = "SM_Prop_Barrel_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Barrel_01.fbx"
+sha256 = "158c7a2f7390b436363999426721abd01b7d2b1ffc4e2dbf370b6e82028273ab"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A squat, faceted cylinder with a flat lid and two raised hoops, painted a weathered ochre with dark grime and rust streaks concentrated near the base and seams, suggesting a used, industrial container suited for swampy environments."
+differs = "The smallest and simplest single container, ideal for a lone industrial prop rather than a storage cluster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 374
+meshes = 1
+materials = 1
+size = [0.697833, 1.068989, 0.733164]
+
+[mesh.sm_prop_barrel_02]
+name = "SM_Prop_Barrel_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Barrel_02.fbx"
+sha256 = "18f2b7299d762bcffe02936518407e3c09a3acde36f3e1e5595e4ef502940d2f"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A cluster of three weathered wooden barrels, two standing upright and one resting horizontally, bound by dark metal hoops and showing a pale, sun-bleached tan finish with visible grain, suggesting a rustic, aged storage prop for swamp environments."
+differs = "The largest and most detailed multi-barrel arrangement, best for a rustic, aged storage focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1122
+meshes = 1
+materials = 1
+size = [1.96695, 1.314154, 1.707202]
+
+[mesh.sm_prop_bone_01]
+name = "SM_Prop_Bone_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Bone_01.fbx"
+sha256 = "67354bca6963336f46274a38036b6f035a3e1fb7931cc95d0d11f809b58321d5"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A weathered, pale beige long bone with a slight curve and enlarged, faceted knobs at both ends, resembling a femur or humerus. The low-poly surface shows subtle mottling and darker shading in the joints, suggesting age and exposure."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 94
+meshes = 1
+materials = 1
+size = [0.311278, 0.11806, 0.55128]
+
+[mesh.sm_prop_bone_feet_01]
+name = "SM_Prop_Bone_Feet_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Bone_Feet_01.fbx"
+sha256 = "272c67efed42ef9079c65ecbdf120a2076d82ec89bcdd7bea6e456ab732a580b"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A severed, low-poly foot with five distinct toes, severed at the ankle with a jagged, blocky stump. Rendered in a pale, bone-like beige with subtle darker striations along the top, it appears weathered and skeletal, evoking a grisly prop for horror or swamp environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 298
+meshes = 1
+materials = 1
+size = [0.280048, 0.165099, 0.274014]
+
+[mesh.sm_prop_bone_hand_01]
+name = "SM_Prop_Bone_Hand_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Bone_Hand_01.fbx"
+sha256 = "fb550de9fd2271bfbfabc1e830401e2e964818aaa8de2a5dbe7ccd46f634423e"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A skeletal hand with long, slender fingers and a prominent wrist stub, rendered in a pale, bone-like beige with subtle darker shading in the crevices. The fingers are slightly curled and separated, giving it a grasping or reaching pose, and the surface appears dry and weathered, suggesting it is a macabre prop for..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 358
+meshes = 1
+materials = 1
+size = [0.259548, 0.092352994, 0.339541]
+
+[mesh.sm_prop_bone_hip_01]
+name = "SM_Prop_Bone_Hip_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Bone_Hip_01.fbx"
+sha256 = "e2629e061e40790cd2700efda04a1a12da9683578081d9f6d0a33ab2a208946b"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A weathered, pale-brown bone fragment with a chunky, faceted silhouette, featuring a large, irregular socket at one end and a tapering shaft that curves into a small, hooked protrusion. The low-poly surface is smooth and unadorned, with subtle tonal variation suggesting age and exposure, making it ideal for scattered.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [0.413092, 0.17110799, 0.286602]
+
+[mesh.sm_prop_bone_pile_01]
+name = "SM_Prop_Bone_Pile_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Bone_Pile_01.fbx"
+sha256 = "1e02d6572adada7b659f6a68e1e8f9528c46d35c10801b6a0fae3f305692b6d1"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A low, scattered jumble of weathered, pale beige bones, including long limb shafts and a jointed spine, resting flat on the ground. The arrangement is irregular and organic, suggesting a natural, undisturbed death site rather than a neatly stacked pile, with a rough, matte texture that conveys age and decay."
+differs = "The smallest, plainest, and least detailed option, with no skull, best for a subtle, low-poly ground scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 424
+meshes = 1
+materials = 1
+size = [0.82624996, 0.177432, 0.892802]
+
+[mesh.sm_prop_bone_pile_02]
+name = "SM_Prop_Bone_Pile_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Bone_Pile_02.fbx"
+sha256 = "c524dc4e1989a27e5366779ed063306334a0d88dfc2f376ea7288dbd19b5287a"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A scattered, low mound of weathered long bones and a partial skull, bleached bone-white with dusty brown shading and dark hollows, suggesting a natural, unarranged predator's kill or ancient grave site."
+differs = "The largest and most detailed, featuring a partial skull and a denser mound, ideal for a focal kill site."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1138
+meshes = 1
+materials = 1
+size = [1.096106, 0.17817299, 1.21945]
+
+[mesh.sm_prop_bone_ribcage_01]
+name = "SM_Prop_Bone_Ribcage_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Bone_Ribcage_01.fbx"
+sha256 = "d0bb7fa598815bbdc08bd4b06bfb9d9fcfdbfb01abad011e8a9e9af42bd338e1"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A weathered, pale-bone ribcage with a broad, arched profile and a prominent central spine, featuring a large, hollow chest cavity and a few broken, jagged rib tips. The surface is textured with subtle cracks and a matte, aged finish, suggesting a long-forgotten swamp burial."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 914
+meshes = 1
+materials = 1
+size = [0.608096, 0.374043, 0.742119]
+
+[mesh.sm_prop_bone_skull_01]
+name = "SM_Prop_Bone_Skull_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Bone_Skull_01.fbx"
+sha256 = "01cd7cc2d6b051b08cd9340a59a79409cf85c38f146da185162d956db76da715"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A weathered, low-poly animal skull with a blunt, blocky cranium and a short, squared-off snout, rendered in a pale, dusty bone tone. The eye sockets are deep and dark, while the rear view shows a flat, faceted back with no horns or antlers, giving it a clean, generic look suitable for scattered ground debris or a..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 388
+meshes = 1
+materials = 1
+size = [0.371829, 0.357408, 0.425756]
+
+[mesh.sm_prop_bone_spine_01]
+name = "SM_Prop_Bone_Spine_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Bone_Spine_01.fbx"
+sha256 = "d783e11fb9ee5d9d43772dcd64d879697d322adc3870590492ad5079e5cabc15"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A weathered, greyish-brown spinal column with a broad, flat base at one end, tapering into a long, gently curved series of knobby vertebrae. The bone is pitted and stained, suggesting age and decay, and its elongated, segmented form makes it ideal for scattered skeletal remains or macabre swamp props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 646
+meshes = 1
+materials = 1
+size = [0.216724, 0.22043, 0.994716]
+
+[mesh.sm_prop_canoe_01]
+name = "SM_Prop_Canoe_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Canoe_01.fbx"
+sha256 = "f087d86d2ae79cca934eb280c27b12db3e3b31d9151cee8c48e68ef8bd97ab44"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A slender, low-poly dugout canoe with gently upturned ends and a hollowed interior, featuring four built-in cross thwarts. The weathered grey-brown wood shows subtle grain and a matte finish, suggesting a sturdy, utilitarian craft for navigating shallow swamp waters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 808
+meshes = 1
+materials = 1
+size = [1.100208, 0.732311, 5.054444]
+
+[mesh.sm_prop_cemeteryfence_01]
+name = "SM_Prop_CemeteryFence_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_CemeteryFence_01.fbx"
+sha256 = "51dc7dce4ac0c6a96a0d8da65494999124ae1cd1f626dc693924245698ae13e1"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A low, dark iron fence section with closely spaced vertical pales, each topped by a pointed finial, joined by two horizontal rails. The metal appears weathered and slightly uneven, giving it a rustic, aged look suited to an overgrown graveyard or marsh boundary."
+differs = "The longest, straightest, and most intact option, with the highest triangle count, for a continuous, orderly boundary."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 502
+meshes = 1
+materials = 1
+size = [2.499999, 1.067952, 0.127893]
+
+[mesh.sm_prop_cemeteryfence_02]
+name = "SM_Prop_CemeteryFence_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_CemeteryFence_02.fbx"
+sha256 = "d8f292e0918b1b2dc844210a028bcfdacec2d63a1a38a66a74a5132745efa845"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A short, weathered section of iron fencing with pointed pickets and a broken, leaning end post, rendered in a dark, desaturated grey. The irregular, sagging profile and missing pickets give it a dilapidated, abandoned look, ideal for marking boundaries in a gloomy marsh or ruined graveyard."
+differs = "The most damaged and broken variant, with a leaning end post and missing pickets, for a ruined, abandoned look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 328
+meshes = 1
+materials = 1
+size = [1.822818, 1.166129, 0.458229]
+
+[mesh.sm_prop_cemeteryfence_end_01]
+name = "SM_Prop_CemeteryFence_End_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_CemeteryFence_End_01.fbx"
+sha256 = "a6ac0083795d4105ada36341717dce6600df475af37b8b9c85ea6ba94b476833"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A single, weathered grey stone post with a square base, a tapered shaft, a flared cap, and a spherical finial, showing chipped edges and a rough, aged texture that suggests a broken or standalone cemetery fence marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 260
+meshes = 1
+materials = 1
+size = [0.213663, 1.3154, 0.2119]
+
+[mesh.sm_prop_crate_01]
+name = "SM_Prop_Crate_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Crate_01.fbx"
+sha256 = "276feb867c49ed80977df8aa925998f5ec66dd7ebc6b39147e01ac0e6e9f7621"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A weathered, pale wooden cube with a broken-open front, revealing a tangle of splintered planks and debris inside. The grey-brown timber is heavily scuffed and stained, suggesting long exposure to damp marshland conditions, making it ideal for abandoned or ruined environments."
+differs = "The most damaged and detailed, with a broken-open front and debris, ideal for ruined scenes needing a focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1211
+meshes = 1
+materials = 1
+size = [1.070982, 1.110785, 1.0709801]
+
+[mesh.sm_prop_crate_02]
+name = "SM_Prop_Crate_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Crate_02.fbx"
+sha256 = "aee3445d6014daad75915fa3314aaf79a46d8cacf872f73ea4f97d2345408b8d"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A weathered, pale grey wooden crate with an open, skeletal frame of diagonal cross-braces, revealing a hollow interior. The planks are worn and slightly splintered, suggesting long exposure to the elements, making it ideal for abandoned or ruined swamp environments."
+differs = "The plainest and most skeletal, with a fully open frame and no debris, ideal for a cleaner, hollow prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 967
+meshes = 1
+materials = 1
+size = [1.070982, 1.070983, 1.0709801]
+
+[mesh.sm_prop_dreamcatcher_01]
+name = "SM_Prop_DreamCatcher_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_DreamCatcher_01.fbx"
+sha256 = "33fdb0a4679c32b603fb9a0a0f50042326a7e1dcc2f560feb40cbe343fcdd19e"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A slender, elongated dreamcatcher with a woven, web-like hoop in pale tan and brown, suspended from a long cord. Dark, feather-like tassels hang from the bottom, giving it a rustic, tribal aesthetic suited for swamp or woodland environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1870
+meshes = 1
+materials = 1
+size = [0.551597, 1.535041, 0.095276]
+
+[mesh.sm_prop_effigy_01]
+name = "SM_Prop_Effigy_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Effigy_01.fbx"
+sha256 = "2dedee9f0ee1b76aa5792b990f3b6534d00d8cf6aaa7b856d5df17db653d90ea"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tall, narrow wooden totem with a dark, red-painted central figure and a small skull-like head, crowned by a spiky, antler-like frame. Bone-white ornaments and small pale skulls hang from the branches, giving it a grim, ritualistic presence."
+differs = "The largest and most detailed, with a red-painted figure and antler frame, best for a central ritual focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7444
+meshes = 1
+materials = 1
+size = [2.148817, 4.511034, 0.710225]
+
+[mesh.sm_prop_effigy_02]
+name = "SM_Prop_Effigy_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Effigy_02.fbx"
+sha256 = "0ea8b1543f9d97451ae18bcaf4e617bd7137017f85c807488814b8b48feeaa11"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tall, slender wooden pole topped with a bleached animal skull and large antlers, bound by pale rope and adorned with small hanging charms and feathers. The weathered, grey-brown wood and bone textures suggest an ancient, mystical shrine or tribal boundary marker, ideal for adding eerie atmosphere to a swamp..."
+differs = "The plainest and smallest, a simple skull-topped pole with charms, ideal for a subtle boundary marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3198
+meshes = 1
+materials = 1
+size = [1.356619, 3.6744401, 0.70390403]
+
+[mesh.sm_prop_fence_01]
+name = "SM_Prop_Fence_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Fence_01.fbx"
+sha256 = "7ffdc350257fc82d99b88a7e0f75c286df61aa40de31a2e28775ef07b5d48ded"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A rustic three-rail fence section with two upright posts and slightly irregular, hand-hewn rails, rendered in pale, weathered wood with subtle grain and a few darker knots, suggesting a simple, functional boundary for a marshland or swamp setting."
+differs = "Highest poly count and most detailed grain, but the only one with straight rails and no X-frames."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 720
+meshes = 1
+materials = 1
+size = [1.8228469, 1.316542, 0.221956]
+
+[mesh.sm_prop_fence_02]
+name = "SM_Prop_Fence_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Fence_02.fbx"
+sha256 = "57352b58298d495bb4dec46d0df2b0f3226f6170d905545cd720b603ca494f7e"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A rustic three-rail fence section with two upright posts and slightly bowed, uneven horizontal rails, rendered in weathered tan wood with darker brown knots and grain, suggesting a hand-built, aged boundary for a swamp or marshland setting."
+differs = "The only one with bowed rails and darker knots, but lacks the X-frame structure of the third."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 427
+meshes = 1
+materials = 1
+size = [1.752251, 1.363629, 0.282664]
+
+[mesh.sm_prop_fence_03]
+name = "SM_Prop_Fence_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Fence_03.fbx"
+sha256 = "8d9ed985d2154e280c5be219b462e2285628af1cc1315113b6ba96025b0e1638"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A low, rustic barrier of pale, weathered wood, formed by two crossed X-shaped end frames connected by three horizontal rails. The timber is rough-hewn and knotted, with a light, sun-bleached tan hue that suggests dry marshland."
+differs = "The only one with X-shaped end frames and the widest, lowest profile, but has no upright posts."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 436
+meshes = 1
+materials = 1
+size = [2.72188, 1.132166, 1.183356]
+
+[mesh.sm_prop_fence_broken_01]
+name = "SM_Prop_Fence_Broken_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Fence_Broken_01.fbx"
+sha256 = "c258384a628c843bda37c551f0b7e69ab92296ce855fed7482e27c7917c6a72d"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered, low-poly wooden fence section with two upright posts and three horizontal rails, one of which is snapped and hanging at a sharp angle. The pale, dry timber shows visible grain and knots, with a splintered break that gives it a distinctly abandoned, dilapidated look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 384
+meshes = 1
+materials = 1
+size = [1.732795, 1.656352, 0.29083902]
+
+[mesh.sm_prop_jetty_01]
+name = "SM_Prop_Jetty_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_01.fbx"
+sha256 = "26fd291d67e35602b83c9f1bf1de9acdbe7f803d74474456c81b1f345b602b8b"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered, low-slung wooden platform on four uneven, mossy legs, built from rough-hewn planks and lashed crossbeams. The pale, grey-brown timber shows signs of age and damp, with green moss clinging to the lower supports, suggesting a rustic, functional structure for traversing swampy ground."
+differs = "The shortest and most compact, a square platform for a dead end or lookout, not a crossing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1184
+meshes = 1
+materials = 1
+size = [2.0566, 2.61734, 2.4595869]
+
+[mesh.sm_prop_jetty_02]
+name = "SM_Prop_Jetty_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_02.fbx"
+sha256 = "835e27d8bc23763939f1955d59b3abe4ba5660360318517e9ef7c0cafca0994f"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A short, weathered wooden footbridge with uneven plank decking and rough-hewn posts, elevated on spindly legs. The pale, grey-brown timber shows signs of rot and mossy green staining, giving it a dilapidated, swamp-worn appearance."
+differs = "The middle length, a simple footbridge with the most pronounced sag and rot, for short gaps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2044
+meshes = 1
+materials = 1
+size = [2.029409, 2.740337, 4.284533]
+
+[mesh.sm_prop_jetty_03]
+name = "SM_Prop_Jetty_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_03.fbx"
+sha256 = "fd96295d19c0c66c1f1f1c9725d663d13b14ed686903badb3300ad1e63c8f5b0"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A low, narrow wooden walkway on paired stilts, built from rough-hewn planks and lashed crossbeams in weathered brown and grey, with a slight sag and uneven spacing that suggests a rustic, hand-built marsh crossing."
+differs = "The longest and most detailed, a straight walkway for spanning wide marsh stretches, with the most legs."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2894
+meshes = 1
+materials = 1
+size = [2.068647, 2.740337, 6.153107]
+
+[mesh.sm_prop_jetty_broken_01]
+name = "SM_Prop_Jetty_Broken_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_Broken_01.fbx"
+sha256 = "145de1232537be6245607fca281d26082f78916047402212080fb0c174b0969d"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered wooden platform on four uneven legs, with several planks snapped and jutting out at jagged angles, leaving a gaping hole in the deck. The pale, grey-brown timber is streaked with dark rot and green moss, suggesting a long-abandoned structure sinking into a marsh."
+differs = "The most compact and lowest-poly option, a standalone platform with a central hole, ideal for a small ruined dock or stepping point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 870
+meshes = 1
+materials = 1
+size = [2.00743, 2.611809, 2.354538]
+
+[mesh.sm_prop_jetty_broken_02]
+name = "SM_Prop_Jetty_Broken_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_Broken_02.fbx"
+sha256 = "b2f8ee247ef44ea4e9197682f61cfa0b4f881bb39db5be0f0cdaab971ddef3cd"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered wooden walkway on uneven, mossy stilts, with several planks missing or snapped, leaving a jagged, broken surface. The pale, grey-brown timber is stained with dark rot and green algae, suggesting a damp, abandoned crossing over marshland."
+differs = "The longest and most detailed walkway, with a higher triangle count, best for spanning a gap or creating a broken path across water."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1498
+meshes = 1
+materials = 1
+size = [2.078232, 2.628031, 3.425784]
+
+[mesh.sm_prop_jetty_plank_01]
+name = "SM_Prop_Jetty_Plank_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_Plank_01.fbx"
+sha256 = "f1452d2e3e53343f81fa49693fdab51bcc58fdbc50b7f26f112ed6dca0b93229"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A single, long, weathered plank of pale, grey-brown wood, slightly bowed along its length and with a rough, splintered texture, appears to be a simple, standalone piece of timber rather than a complete jetty structure, making it suitable for use as a walkway, a fallen bridge, or a scattered piece of debris in a swamp.."
+differs = "The thinnest and most bowed plank, with the lowest triangle count, best for a simple fallen walkway."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 64
+meshes = 1
+materials = 1
+size = [0.395162, 0.150508, 6.204134]
+
+[mesh.sm_prop_jetty_plank_02]
+name = "SM_Prop_Jetty_Plank_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_Plank_02.fbx"
+sha256 = "714e826ecd153532aff2f789d36007c051fb1802666aa374805e5f54636263cc"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A single, long, weathered plank of pale, grey-brown wood, slightly warped and tapered along its length, with visible grain and a rough, splintered end. It appears to be a loose, worn piece of timber, likely intended as a simple walkway or structural element in a swamp setting."
+differs = "The shortest and narrowest plank, with the fewest triangles, making it the most basic and plain option."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [0.640991, 0.186015, 5.861424]
+
+[mesh.sm_prop_jetty_plank_03]
+name = "SM_Prop_Jetty_Plank_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_Plank_03.fbx"
+sha256 = "6f72597363c97e08f9661f0930712821239574497da3c5f6b6dd3ddcc475776a"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A single, long, weathered plank of pale, desaturated wood, slightly warped and tapered along its length, with visible grain and a rough, splintered end, appearing as a loose, discarded piece of timber suitable for a swamp boardwalk or debris."
+differs = "The most detailed and widest single plank, with a pronounced taper, ideal for a main boardwalk piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 1
+materials = 1
+size = [0.763518, 0.186015, 6.103516]
+
+[mesh.sm_prop_jetty_plank_04]
+name = "SM_Prop_Jetty_Plank_04"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_Plank_04.fbx"
+sha256 = "41e1049d7a35b171172caa253d12d95a493f7b0fe500368220118a07f541942f"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A long, narrow, weathered plank of pale, greyish-brown wood, slightly bowed and tapering to a rough, splintered end, with a subtle grain texture and a small dark knot or nail hole near one tip, appearing as a single, simple piece of driftwood or a loose board from a broken walkway, ideal for a scattered debris prop in."
+differs = "The thickest and most damaged single plank, with a knot hole, perfect for a debris prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [0.893996, 0.263401, 6.204134]
+
+[mesh.sm_prop_jetty_plank_05]
+name = "SM_Prop_Jetty_Plank_05"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_Plank_05.fbx"
+sha256 = "42e9668e21eb4613c9a7f6e0e1f38238139e7f4a79caf9f8a18de6ab9c2c576a"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A pair of thin, weathered wooden poles crossed near their midpoints, forming a loose X shape with splintered, uneven ends. The pale, desaturated wood shows subtle grain and a rough, aged texture, suggesting a simple, rustic marker or a fragment of a broken structure."
+differs = "The only crossed-pole asset, not a plank, used as a rustic marker or broken structure fragment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 1
+materials = 1
+size = [0.76354, 1.2692521, 6.052504]
+
+[mesh.sm_prop_jetty_stairs_01]
+name = "SM_Prop_Jetty_Stairs_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_Stairs_01.fbx"
+sha256 = "beab0767efe40cf407a54cad5f7cdbd5acad1f1c89100de2b9d68a186ef828fe"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered wooden jetty with a slatted ramp descending into the water, supported by uneven, mossy stilts. The pale, grey-brown timber shows signs of rot and age, with a small rope-wrapped post at the top, evoking a rustic, abandoned swamp crossing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1890
+meshes = 1
+materials = 1
+size = [2.04238, 3.152399, 4.532326]
+
+[mesh.sm_prop_jetty_support_01]
+name = "SM_Prop_Jetty_Support_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_Support_01.fbx"
+sha256 = "fcecef230cc60a9e1413de374c5a4eb381537de3466ce6bced9693781018c62a"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered wooden A-frame support with two vertical posts and a crossbeam, featuring a small diagonal brace and mossy green staining at the base. The pale, rough-hewn timber suggests a damp, swampy environment, making it ideal for underpinning docks or walkways."
+differs = "The plainest A-frame with a diagonal brace, ideal for bare structural underpinning without a seat."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 376
+meshes = 1
+materials = 1
+size = [1.226784, 2.595292, 0.369374]
+
+[mesh.sm_prop_jetty_support_02]
+name = "SM_Prop_Jetty_Support_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Jetty_Support_02.fbx"
+sha256 = "7385a63a734b05129005fed1ebbc609763d94ecd16104633c56bbeee89dd2258"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered wooden frame of two vertical posts and a crossbeam, with a small plank seat or platform, showing mossy green staining at the base and joints, suggesting a rustic support for a jetty or walkway in a swamp."
+differs = "The only one with a plank seat or platform, making it suitable for a rustic resting spot or step."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 374
+meshes = 1
+materials = 1
+size = [1.229646, 2.611808, 0.433668]
+
+[mesh.sm_prop_junk_chair_01]
+name = "SM_Prop_Junk_Chair_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Junk_Chair_01.fbx"
+sha256 = "a92f4682fca8f3d76110cc8bad988df959ef9feeec59f01fc5526910908adab4"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A battered, dark grey chair with a high, slightly curved back and a low seat, supported by four thin, straight legs with small feet. The seat is marked with pale, worn vertical streaks, suggesting grime or weathering, giving it a neglected, abandoned look suited to a swamp environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 502
+meshes = 1
+materials = 1
+size = [0.559096, 0.907395, 0.516006]
+
+[mesh.sm_prop_junk_rusty_engine_01]
+name = "SM_Prop_Junk_Rusty_Engine_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Junk_Rusty_Engine_01.fbx"
+sha256 = "f9500732b9a3f5e7c5d8f5a0ab51bc11d0b1f206b39be2fd3648c01c3c676b3f"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A compact, blocky engine block with a flat circular top plate, flanked by cylindrical components and a ribbed radiator, all heavily rusted in mottled browns and greys. The weathered metal surfaces and exposed copper wiring suggest long abandonment in a swamp, making it ideal for industrial ruins or scrap piles."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2106
+meshes = 1
+materials = 1
+size = [0.916616, 0.745089, 0.707184]
+
+[mesh.sm_prop_junk_rusty_exhaust_01]
+name = "SM_Prop_Junk_Rusty_Exhaust_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Junk_Rusty_Exhaust_01.fbx"
+sha256 = "ca54bd10228eadc0b5f25bff85deba70f253d7104aa79a380cba88f911995fe1"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered, rust-brown exhaust pipe with a rectangular muffler and a curved tailpipe, supported by a small bracket. The surface is heavily corroded with dark grime and orange rust patches, giving it a discarded, industrial look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 196
+meshes = 1
+materials = 1
+size = [0.618812, 0.245608, 1.220682]
+
+[mesh.sm_prop_junk_wheel_01]
+name = "SM_Prop_Junk_Wheel_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Junk_Wheel_01.fbx"
+sha256 = "59ad88dda8eae0400c77fc748ea78483b0929751f90f7e574b1ca3e4d1986f3f"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A weathered, pale grey wooden wheel with a thick rim and eight slender spokes radiating from a chunky, splintered hub, suggesting an abandoned cart or wagon part. The wood is bleached and worn, with a rough, matte finish that conveys age and exposure to the elements, making it ideal for adding rustic decay to a..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 706
+meshes = 1
+materials = 1
+size = [0.150882, 0.998292, 0.998294]
+
+[mesh.sm_prop_sewerpipe_01]
+name = "SM_Prop_Sewerpipe_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Sewerpipe_01.fbx"
+sha256 = "bcc50243dcce0a429c5652bbd26bcd2e93bd1635d02c297054c68b81c110d6e5"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered grey concrete pipe with a flared collar at one end, showing subtle stains and a rough, matte finish that suggests age and exposure to damp conditions. Its simple cylindrical form and open ends make it suitable for drainage or as a tunnel entrance in a swamp environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 146
+meshes = 1
+materials = 1
+size = [0.474001, 0.46581, 1.627811]
+
+[mesh.sm_prop_sewerpipe_corner_01]
+name = "SM_Prop_Sewerpipe_Corner_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Sewerpipe_Corner_01.fbx"
+sha256 = "9e743504a77f43ee60593cbc0b7e2eb9f3ef4e79f4a330fae34849f53aced269"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A chunky, low-poly L-shaped pipe elbow with a flared, ridged collar at one end and a smooth, open socket at the other. Its uniform, matte grey surface suggests weathered concrete or stone, with no visible grime or moss, making it a clean, versatile piece for a sewer or drainage system."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 230
+meshes = 1
+materials = 1
+size = [1.125348, 0.46595198, 1.253025]
+
+[mesh.sm_prop_sewerpipe_end_01]
+name = "SM_Prop_Sewerpipe_End_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Sewerpipe_End_01.fbx"
+sha256 = "e83885941a8b731a4992fe08cbbbe670c617431ebb4c17491fb808ac25e09a22"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered, grey concrete pipe with a flared, rusted rim, angled to show a dark, hollow interior. A single, jagged green weed sprouts from the bottom edge, suggesting a damp, neglected environment. The low-poly faceting gives it a chunky, stylized look perfect for a swamp or marsh setting."
+differs = "The only straight pipe with a visible hollow opening and weed, ideal for a protruding drain end."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 376
+meshes = 2
+materials = 1
+size = [0.478996, 0.79107404, 1.818125]
+
+[mesh.sm_prop_sewerpipe_end_02]
+name = "SM_Prop_Sewerpipe_End_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Sewerpipe_End_02.fbx"
+sha256 = "60377ed0833c0d97b32facc4359ae712f16b0ab0b6c2b3f0caef2a6ee6800e21"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered grey pipe bent at a right angle, with a flared, open end and a smooth, rounded elbow, suggesting a drainage or sewer fitting. The low-poly surface shows subtle tonal variation and grime, giving it a worn, utilitarian look suited for swamp or marsh environments."
+differs = "The only bent elbow pipe, perfect for a corner or vertical-to-horizontal transition in a drainage system."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 170
+meshes = 1
+materials = 1
+size = [0.47321, 1.521968, 0.74679196]
+
+[mesh.sm_prop_sewerpipe_slime_01]
+name = "SM_Prop_Sewerpipe_Slime_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Sewerpipe_Slime_01.fbx"
+sha256 = "f2c24aebed28743b0f34f4c4438bf22b133b715c23cc0716e7ca448a55518e0c"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A cluster of jagged, drooping green slime tendrils hanging from a dark, flat underside, resembling a broken pipe's dripping contents. The surface is glossy and uneven, with darker olive and brown patches suggesting decay or moss."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 117
+meshes = 1
+materials = 1
+size = [0.174978, 0.614817, 1.554607]
+
+[mesh.sm_prop_sewerpipe_stand_01]
+name = "SM_Prop_Sewerpipe_Stand_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Sewerpipe_Stand_01.fbx"
+sha256 = "3d4d76ad5a00d6eb8d905c2a0e7b1262c14cb3b0981e0017da179e753c4dbae8"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered wooden A-frame stand with a dark metal loop at the top, cross-braced legs, and heavy stone block feet, suggesting a mooring or support structure for swampy environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 224
+meshes = 1
+materials = 1
+size = [1.064812, 1.7042799, 0.253968]
+
+[mesh.sm_prop_shrunken_head_01]
+name = "SM_Prop_Shrunken_Head_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Shrunken_Head_01.fbx"
+sha256 = "d02b50ca7014fb5c727d87b66ae30ac5a75b1444f8f9574b7d7bde649d874ac1"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A shrunken head trophy hangs from a thin red cord, its pale, desiccated skin stretched tight over a squarish skull. Dark, matted hair is gathered in a topknot, and the face is marked by deep, sunken eye sockets and a grim, stitched mouth, giving it a macabre, eerie presence perfect for swamp or voodoo-themed scenes."
+differs = "The pale, light-skinned variant, slightly narrower and shorter, best for a cleaner, less gruesome display."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1058
+meshes = 1
+materials = 1
+size = [0.269642, 1.0214981, 0.276238]
+
+[mesh.sm_prop_shrunken_head_02]
+name = "SM_Prop_Shrunken_Head_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Shrunken_Head_02.fbx"
+sha256 = "7d77efe4c76ef066bac6a0e3a625f569e456eebf7769b054ae1826261d1d3f42"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A shrunken head hangs from a thin red cord, its dark, wrinkled skin contrasting with a pale, carved face featuring hollow eyes and a stitched mouth. A small bone pierces the nose, and the hair is tied in a topknot, giving it a macabre, trophy-like appearance suitable for swamp or voodoo-themed scenes."
+differs = "The dark-skinned variant with a nose bone, slightly larger and wider, best for a more weathered, trophy-like look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1056
+meshes = 1
+materials = 1
+size = [0.38414198, 1.112121, 0.291651]
+
+[mesh.sm_prop_stump_01]
+name = "SM_Prop_Stump_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Stump_01.fbx"
+sha256 = "ec19bb1298612ce1907d03fbe071f250261b581d78da077dfb4d38cc1908de83"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A squat, weathered tree stump with a jagged, splintered top and thick, gnarled roots flaring outward for stability. The bark is a muted grey-brown with darker crevices, giving it a damp, aged appearance suited to a murky swamp floor."
+differs = "Taller and more jagged, with a darker, splintered top for a grittier, more damaged swamp look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1223
+meshes = 1
+materials = 1
+size = [3.029772, 1.956608, 2.615003]
+
+[mesh.sm_prop_stump_02]
+name = "SM_Prop_Stump_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Stump_02.fbx"
+sha256 = "95e6d891bf755cb545c021c4dab04fcac2a803310a64d5fc8285bf4027cef497"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A squat, weathered tree stump with a pale, sun-bleached cut top and dark, grey-brown bark, its base splitting into thick, gnarled roots that splay outward like clawed feet, giving it a stable, grounded stance ideal for marsh terrain."
+differs = "Shorter with a pale, sun-bleached flat top, making it the cleaner, more stable choice for open marsh terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 869
+meshes = 1
+materials = 1
+size = [3.0297709, 1.661418, 2.615003]
+
+[mesh.sm_prop_swamp_lantern_01]
+name = "SM_Prop_Swamp_Lantern_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Swamp_Lantern_01.fbx"
+sha256 = "13568c157e0574958ad06e0a92b60e592edd84b826f494563309c9576290a5d9"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A gnarled, twisted dead tree with exposed roots and a few bare, crooked branches, each ending in a hanging, glowing greenish-yellow lantern with a small cap. The bark is a pale, weathered grey-brown, giving it a spectral, eerie look perfect for a haunted swamp."
+differs = "Tallest and most tree-like, with multiple hanging lanterns on branches, ideal as a large focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4513
+meshes = 1
+materials = 1
+size = [1.28345, 2.786456, 1.050138]
+
+[mesh.sm_prop_swamp_lantern_02]
+name = "SM_Prop_Swamp_Lantern_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Swamp_Lantern_02.fbx"
+sha256 = "926ce0f30319aa56b2962e9d735ad7c5c7c44f18962e8ccf92d7fbae3e6425a5"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered, crooked wooden post with a gnarled branch curving over to suspend a small green glass lantern by a chain, its base wrapped in pale, tattered cloth and bound with dark rope, evoking a decaying, eerie marshland atmosphere."
+differs = "Shortest and most post-like, with a single lantern and cloth-wrapped base, ideal for lining paths or edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4504
+meshes = 1
+materials = 1
+size = [1.1857951, 1.946376, 1.137238]
+
+[mesh.sm_prop_swamp_log_01]
+name = "SM_Prop_Swamp_Log_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Swamp_Log_01.fbx"
+sha256 = "3bf5c9c19b3eb05cf78561ee98c17d7a5ac8ada6454c65df827ef78105a29c68"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A long, weathered grey log with a gnarled, branching root system at one end, tapering to a broken tip at the other. Its surface is textured with pale, faded bark and subtle mossy patches, suggesting a damp, marshland environment."
+differs = "The only one with a full root system at one end, ideal for a fallen tree base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1111
+meshes = 1
+materials = 1
+size = [3.018886, 3.311577, 11.399808]
+
+[mesh.sm_prop_swamp_log_02]
+name = "SM_Prop_Swamp_Log_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Swamp_Log_02.fbx"
+sha256 = "79ef13532803f65ecfa2af6edff3dbfae646f84a515d969ed57005e454dde9c6"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A weathered, pale grey-brown log with a jagged, splintered end and a broken branch stub, its surface textured with peeling bark and pale wood grain, suggesting a dry, sun-bleached piece of driftwood or a fallen marsh tree."
+differs = "The shortest and plainest, with a jagged splintered end and no roots or branches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 576
+meshes = 1
+materials = 1
+size = [2.219192, 2.1292, 6.88859]
+
+[mesh.sm_prop_swamp_log_03]
+name = "SM_Prop_Swamp_Log_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Swamp_Log_03.fbx"
+sha256 = "72de24cdbb00fac3b64985686decc126aafcd7b0091c4070e99e9eba929c9153"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A gnarled, pale driftwood branch with a thick, knotted base and several thin, twisting offshoots, its bleached grey-brown surface suggesting long weathering. The irregular, spindly silhouette makes it ideal for scattered debris or a natural prop in marshland scenes."
+differs = "The most spindly and branch-like, with twisting offshoots, not a straight log."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 748
+meshes = 1
+materials = 1
+size = [5.3941336, 6.809088, 6.985833]
+
+[mesh.sm_prop_swamp_log_04]
+name = "SM_Prop_Swamp_Log_04"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Swamp_Log_04.fbx"
+sha256 = "2e2e71e84d6750e172648cc75779962f97fde0525a4f516b4f010fbef639bec3"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A long, slender, gently curved branch or driftwood piece, tapering to a point at one end and featuring a jagged, broken stump at the other. Its pale, bleached bone-white surface is smooth and weathered, with subtle grey-brown streaks suggesting sun-bleached wood."
+differs = "The thinnest and most curved, a smooth bone-white piece for subtle debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 308
+meshes = 1
+materials = 1
+size = [1.75332, 1.82112, 8.263459]
+
+[mesh.sm_prop_swamp_log_05]
+name = "SM_Prop_Swamp_Log_05"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Swamp_Log_05.fbx"
+sha256 = "3c36b07b2e98345503ce53f1647c01dda8a4b8ee3b73355aae2b7cf1b0a08b3d"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A weathered, pale grey-brown log with a splintered, jagged end and a smooth, rounded cut at the other, featuring a hollowed knot and a mossy green patch along its bark."
+differs = "The only one with a hollowed knot and a clean rounded cut at one end."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1258
+meshes = 1
+materials = 1
+size = [4.335012, 4.117771, 14.541573]
+
+[mesh.sm_prop_swamp_log_06]
+name = "SM_Prop_Swamp_Log_06"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Swamp_Log_06.fbx"
+sha256 = "d390935564a710a392341f085838bb512f7d11ac879d59b0be030cac06fb2db4"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A long, weathered log with a pale, bleached bark finish, broken at one end to reveal a splintered, lighter interior. Several short, broken branch stubs protrude from the surface, giving it a gnarled, natural silhouette."
+differs = "The most gnarled with multiple short branch stubs, but no root system."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 968
+meshes = 1
+materials = 1
+size = [3.088996, 3.338953, 11.848784]
+
+[mesh.sm_prop_swamp_log_07]
+name = "SM_Prop_Swamp_Log_07"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Swamp_Log_07.fbx"
+sha256 = "2631f8f225232071b2ed5d9b02785e3bd02075855f9f7d9a048d2e0d6d48c02c"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A long, weathered grey log with a pale, bleached surface, featuring a cluster of jagged, broken branch stubs at one end and a few small twigs along its length, suggesting a fallen, dead tree trunk suitable for marshland ground cover."
+differs = "The largest and most detailed, with a cluster of jagged stubs and twigs, ideal for a hero prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1720
+meshes = 1
+materials = 1
+size = [5.8470373, 6.481813, 15.459774]
+
+[mesh.sm_prop_swamp_ritualpyre_01]
+name = "SM_Prop_Swamp_RitualPyre_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Swamp_RitualPyre_01.fbx"
+sha256 = "0355309f645e1f481929fd203546163174aa4691a6ea06caea2f0568fc61337b"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tall, conical stack of weathered grey logs bound by dark rope, topped with a spiky crown of antler-like branches and a central pole. The wood is pale and bleached, with a rough, barky texture, and the structure looks like a primitive, eerie beacon or funeral pyre ready for a flame."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 26917
+meshes = 1
+materials = 1
+size = [4.025046, 6.5470033, 3.762614]
+
+[mesh.sm_prop_swamp_trunk_01]
+name = "SM_Prop_Swamp_Trunk_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Swamp_Trunk_01.fbx"
+sha256 = "4bdb9652a30ff7a4e16c3449b9070a7e81b8f6c3d65ab4a59f1aa36a8862bd5a"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A gnarled, sprawling root cluster with a jagged, broken central stump, its pale tan bark streaked with green moss and dark rot. The thick, twisting roots arch outward and downward, giving it a spidery silhouette that reads as a weathered, ancient swamp remnant."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3470
+meshes = 1
+materials = 1
+size = [13.760297, 7.331523, 14.584055]
+
+[mesh.sm_prop_tombstone_01]
+name = "SM_Prop_Tombstone_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Tombstone_01.fbx"
+sha256 = "3d8d9672093b552ed9c67249619229657af36be94f630ff1635ddc7d31a2259f"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered, arched stone slab with a chipped lower corner, framed by a raised, blocky border and set on a small plinth. Its grey, faceted surface shows subtle cracks and a dark, mossy stain at the base, suggesting age and dampness. The rounded top and sturdy construction make it a fitting marker for a swamp graveyard."
+differs = "The most compact and blocky of the arched slabs, with a chipped lower corner and a mossy stain, ideal for a dense, low-poly graveyard cluster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 696
+meshes = 1
+materials = 1
+size = [0.807593, 1.192203, 0.17986101]
+
+[mesh.sm_prop_tombstone_02]
+name = "SM_Prop_Tombstone_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Tombstone_02.fbx"
+sha256 = "98739fbd98b7af54fd9d3efe3c3acaa7dfd9a02aff8165663d0d28e8abc07bba"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered, grey stone headstone with a rounded top and a recessed, arched central panel, flanked by stepped pillars and resting on a tiered base. The surface shows cracks and chipped edges, giving it an aged, mossy appearance suitable for a swamp graveyard."
+differs = "The tallest and most ornate arched headstone, with stepped pillars and a recessed panel, making it the most detailed choice for a prominent grave."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 843
+meshes = 1
+materials = 1
+size = [0.990476, 1.5746241, 0.309372]
+
+[mesh.sm_prop_tombstone_03]
+name = "SM_Prop_Tombstone_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Tombstone_03.fbx"
+sha256 = "adeef597bcd149b4583cdb0b9c25a90d742ed98d02fbbb45081db7ebce800c3c"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered, rounded headstone with a stepped base and a small dark rock at its foot, showing a pale grey stone surface with a subtle crack and a faint, worn inscription."
+differs = "The plainest and lowest-poly option, with a simple rounded top and a small rock at its foot, perfect for a background filler or a mass grave."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 130
+meshes = 1
+materials = 1
+size = [0.769756, 1.257836, 0.174336]
+
+[mesh.sm_prop_tombstone_04]
+name = "SM_Prop_Tombstone_04"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Tombstone_04.fbx"
+sha256 = "e04ba2df146a6374f78ad2b2b2b28eb917452b1d684ecf53bd01068b6b5e72f3"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered stone Celtic cross on a tiered plinth, with a chipped, uneven surface and a distinct ring connecting the arms. The grey stone is cracked and mossy, suggesting age and dampness, making it ideal for a graveyard or ancient ruin scene."
+differs = "The only Celtic cross, with a distinct ring and a tiered plinth, making it the sole choice for a religious or ancient ruin setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 700
+meshes = 1
+materials = 1
+size = [0.758402, 1.613707, 0.515369]
+
+[mesh.sm_prop_vinetree_01]
+name = "SM_Prop_VineTree_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_VineTree_01.fbx"
+sha256 = "055fa0ee3d27dedc0497f982334c7c8795e8afb7b92e8fef61e5860868c9b65a"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A gnarled, leafless trunk twists upward with a pronounced spiral, splitting into bare, claw-like branches at the top and splaying into thick, root-like buttresses at the base. The bark is a mottled, sickly green with dark, shadowed crevices, giving it a damp, decaying look suited to a murky swamp."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5540
+meshes = 1
+materials = 1
+size = [6.141171, 15.610222, 5.153923]
+
+[mesh.sm_prop_wooden_bath_01]
+name = "SM_Prop_Wooden_Bath_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Wooden_Bath_01.fbx"
+sha256 = "df90686a76babb0a1f09bb6b834ab35a0d688fb2553f38dcfb77bafc65e33ee5"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A low, wide circular tub of pale, weathered wooden staves bound by two grey metal hoops, with a dark, empty interior suggesting a small soaking pool or wash basin."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 884
+meshes = 1
+materials = 1
+size = [1.351126, 0.593266, 1.290538]
+
+[mesh.sm_prop_wooden_broom_01]
+name = "SM_Prop_Wooden_Broom_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Wooden_Broom_01.fbx"
+sha256 = "84dfdb7731d1f008af0b411c58d20a0d1b4eab089c1c6a5186627bdb9197732d"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A long, slender handle extends from a compact, rectangular head with short, blunt bristles, giving it a stiff, utilitarian look. The pale, weathered wood and bristles are rendered in muted beige and grey tones, suggesting a well-used tool for sweeping or clearing debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 256
+meshes = 1
+materials = 1
+size = [0.590108, 0.24, 1.978502]
+
+[mesh.sm_prop_wooden_ladder_01]
+name = "SM_Prop_Wooden_Ladder_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Wooden_Ladder_01.fbx"
+sha256 = "df2e5e6b2b177eb8731c04b26f79119df36d5a53f62c33b97ff9edece4dea1c2"
+atlas = "POLYGON - Dungeons Map/Dungeons_Bookcase_Texture_Diffuse.png"
+textures = "Dungeons_Bookcase_Texture_Diffuse.png"
+description = "A tall, narrow wooden ladder with two straight side rails and seven round rungs, rendered in a pale, weathered tan with subtle grain and dark knots. The rungs are evenly spaced and slightly uneven, giving it a rustic, hand-hewn look suited for a swamp or marsh environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 342
+meshes = 1
+materials = 1
+size = [0.762021, 3.10403, 0.160037]
+
+[mesh.sm_prop_wooden_table_01]
+name = "SM_Prop_Wooden_Table_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Wooden_Table_01.fbx"
+sha256 = "d90e3034ac29f5167a3687c7067a45144366f4c2be8c9e5da6a958b41ab01405"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A simple, weathered wooden table with a slatted top and four straight legs, rendered in pale grey-brown tones. The surface appears worn and unfinished, with visible gaps between the planks, giving it a rustic, utilitarian look suited for a swamp or marsh setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 642
+meshes = 1
+materials = 1
+size = [1.511654, 0.885559, 0.939084]
+
+[mesh.sm_prop_wreckage_01]
+name = "SM_Prop_Wreckage_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Wreckage_01.fbx"
+sha256 = "9088b19e735cea8c62847bf580fd41b7c5c892dd4df9fcba34e4d7f98edb825e"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A long, low, splintered wooden plank with jagged, broken ends and a few protruding nails, weathered to a pale grey with tan patches, suggesting a piece of ruined boardwalk or fencing."
+differs = "The longest and most linear piece, ideal for a single fallen beam or fence segment, lacking any metal frame or debris cluster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 990
+meshes = 1
+materials = 1
+size = [9.950354, 2.566101, 4.909498]
+
+[mesh.sm_prop_wreckage_02]
+name = "SM_Prop_Wreckage_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Wreckage_02.fbx"
+sha256 = "0ee5b46eeeb4e72306ba84337c39605198d24dc97df6c7be40d34044481b1ae6"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A low, flat slab of weathered grey planks with a broken, splintered end, framed by a rusty brown metal rim and resting on a twisted metal frame with a protruding handle, resembling a ruined sled or pallet dragged through a swamp."
+differs = "The only one with a metal rim and handle, making it a distinct ruined sled or pallet, and the smallest and least detailed."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 478
+meshes = 1
+materials = 1
+size = [3.936534, 0.847718, 2.541278]
+
+[mesh.sm_prop_wreckage_03]
+name = "SM_Prop_Wreckage_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Prop_Wreckage_03.fbx"
+sha256 = "ad09daaed4e62d03e5e2c6be8090b0bd2521859af8217e2131a9caab45d530a6"
+atlas = "PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A cluster of shattered, splintered wooden planks and jagged beams, resembling the collapsed remains of a small structure or barricade. The wood is weathered grey and brown, with broken ends and scattered debris suggesting a violent impact or long decay."
+differs = "The largest, most complex, and most damaged, with the highest triangle count, perfect for a collapsed structure or barricade."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1714
+meshes = 1
+materials = 1
+size = [10.107437, 8.272285, 10.395028]
+
+[mesh.sm_veh_airboat_01]
+name = "SM_Veh_Airboat_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/SM_Veh_Airboat_01.fbx"
+sha256 = "d80a66546775837540df2147661791b49c6443f9ffb67fb000ab57bc181766e4"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A flat-bottomed swamp skiff with a raised bow, a rear-mounted caged fan, and a central driver's seat with a steering wheel. The hull is weathered grey with yellow-orange side rails and a dark, worn interior, suggesting a utilitarian craft for navigating shallow, muddy waters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7864
+meshes = 6
+materials = 1
+size = [2.38866, 2.370656, 5.159357]
+
+[mesh.swamp_tree_01]
+name = "Swamp_Tree_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Swamp_Tree_01.fbx"
+sha256 = "aeb8be485c5665b3124a03e1e49a981fbc1f21bf5202d66815e7f054139ae774"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A gnarled, spindly tree with a tall, slender trunk that flares into a wide, tangled root system, topped by a sparse canopy of drooping, grey-green leaves. The bark is a weathered, pale grey-brown, giving it a dead or ancient appearance, and the exposed roots suggest it thrives in marshy, unstable ground."
+differs = "Tallest and most detailed, with the most tangled roots and widest canopy spread."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10785
+meshes = 1
+materials = 3
+size = [5.5758276, 14.858803, 5.491899]
+
+[mesh.swamp_tree_02]
+name = "Swamp_Tree_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Swamp_Tree_02.fbx"
+sha256 = "46feb84dc373e9258ad8e3ee8d8836aacf68d0cf802fcf854786d72416461fd4"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A tall, slender tree with a flared, buttressed base and a narrow, tapering trunk that supports a sparse, layered canopy of drooping, grey-green fronds. The bark is a muted, weathered brown, and the foliage has a dusty, desaturated look, suggesting a dead or dying tree in a swamp."
+differs = "Tallest with the most uniform, layered fronds and a cleaner, less gnarled trunk."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10155
+meshes = 1
+materials = 3
+size = [5.5758276, 13.517447, 4.816029]
+
+[mesh.swamp_tree_03]
+name = "Swamp_Tree_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Swamp_Tree_03.fbx"
+sha256 = "fcb4074c5e1b94802a3871556d1a6e40d020bf81dbf4a9e3256136c2999df260"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A tall, slender palm-like tree with a flared, fibrous trunk base and a narrow crown of drooping, grey-green fronds, suggesting a dead or weathered swamp specimen. The muted, desaturated palette and sparse, ragged foliage give it a distinctly aged and eerie appearance, ideal for adding a sense of decay to marshland..."
+differs = "Most palm-like silhouette with a fibrous base, shorter and less spindly than 01 or 02."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8236
+meshes = 1
+materials = 3
+size = [5.080029, 10.172933, 4.986766]
+
+[mesh.swamp_tree_04]
+name = "Swamp_Tree_04"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Swamp_Tree_04.fbx"
+sha256 = "1c88cf3b764486ed2ca6a239e9d719762854034ffcd6b34b2e809e1c3eb02183"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A gnarled, leaning tree with a twisted trunk and a broad, flat canopy of layered, plate-like foliage in muted olive and brown, with pale, mottled lichen patches and a flared, rooted base, evoking a windswept marshland specimen."
+differs = "Shortest and widest, with a leaning trunk and broad, flat plate-like canopy, ideal for a windswept look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2964
+meshes = 1
+materials = 3
+size = [6.11185, 4.9578323, 6.390326]
+
+[mesh.swamp_tree_05]
+name = "Swamp_Tree_05"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Swamp_Tree_05.fbx"
+sha256 = "efafafe717189847b803f477986dc1badd51f95281fcc8d2123c03d66a352f2f"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A slender, gnarled trunk rises from a flared, root-like base, supporting a sparse canopy of three dark, flattened, disc-like pads that resemble fungal caps or withered leaves. The bark is a pale, weathered grey-brown, while the pads are a deep, desaturated charcoal, giving the asset a dead, eerie, and distinctly..."
+differs = "Smallest and lowest-poly, with dark fungal disc pads instead of leaves, perfect for a dead, eerie accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 688
+meshes = 1
+materials = 2
+size = [1.520944, 3.8017352, 1.520896]
+
+[mesh.swamp_tree_beard_01]
+name = "Swamp_Tree_Beard_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Swamp_Tree_Beard_01.fbx"
+sha256 = "0f5ba0727e55dae7f4168ab834b1fd73821e9e3fa0a32b71930277b32fafee2f"
+atlas = "TreeBeards_01.tga"
+textures = "TreeBeards_01.tga"
+description = "A tall, narrow, flat slab of grey-brown wood, tapering slightly toward the top and ending in a jagged, splintered point, with a rough, fibrous texture suggesting a weathered, dead tree trunk or a broken plank."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 34
+meshes = 1
+materials = 1
+size = [0.58017004, 1.768894, 0.159051]
+
+[mesh.swamp_tree_root_01]
+name = "Swamp_Tree_Root_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Swamp_Tree_Root_01.fbx"
+sha256 = "d51ec9082b5916db49e72cb750c6c95484d42d4188cf1ef34dcd17979c1cae38"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A tall, slender, weathered grey-brown wooden spike with a flared, root-like base and a single jagged branch protruding from its upper half, resembling a broken, dead snag or a primitive stake. Its faceted, low-poly surface suggests a dry, aged texture, making it ideal for adding vertical, gnarled accents to swamp or..."
+differs = "Tallest and most detailed, with a jagged branch the others lack, ideal for a broken snag."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.64212596, 2.264079, 0.597906]
+
+[mesh.swamp_tree_root_02]
+name = "Swamp_Tree_Root_02"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Swamp_Tree_Root_02.fbx"
+sha256 = "1cb8934491efdef5d35f229db82cee06d27ca2b15477a7d369be33ef4a37ad79"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A tall, tapering spike of weathered grey-brown wood, rising from a flared, chunky base with a pale, worn tip, resembling a broken, petrified stump or a jagged root reaching upward."
+differs = "A mid-sized, plain spike with a pale tip, less gnarled than 01 or 03."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 1
+materials = 1
+size = [0.55468, 1.575239, 0.584881]
+
+[mesh.swamp_tree_root_03]
+name = "Swamp_Tree_Root_03"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Swamp_Tree_Root_03.fbx"
+sha256 = "c3a487a1a32c9a9bdcfe923dfefb71d6290cd267d21c6ceccfc0b4d087a359dc"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered, grey-brown wooden stump rising vertically with a flared, irregular base and a forked top that splits into two blunt, uneven prongs. The low-poly facets give it a rough, bark-like texture, and its narrow, tall proportions make it ideal for adding vertical interest to a swamp floor or as a broken, dead tree."
+differs = "The only one with a forked, two-pronged top, making it the most distinctive for a dead tree."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [0.42217702, 1.810499, 0.490716]
+
+[mesh.swamp_tree_root_04]
+name = "Swamp_Tree_Root_04"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Swamp_Tree_Root_04.fbx"
+sha256 = "26b3de84b5c1d3d0b97a53e1ff264534d67798fa515ea89f2d05b080d9020d01"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A single, slender, tapering spike of dark grey-brown wood, rising from a flared, irregular base like a broken stump or a buried root tip. The surface is faceted and weathered, with a lighter, worn tip that suggests age and exposure."
+differs = "The slimmest and most minimal spike, with no branches or forks, for a subtle root tip."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 80
+meshes = 1
+materials = 1
+size = [0.338703, 1.919252, 0.391098]
+
+[mesh.swamp_tree_root_05]
+name = "Swamp_Tree_Root_05"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Swamp_Tree_Root_05.fbx"
+sha256 = "16c43233d916af45c424dfbb67cc1ca76a98a601c8b9418735f8132c06c1be53"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A weathered, faceted stump rising from a broad, irregular base, tapering sharply to a flat, pale top. The bark is a muted grey-brown with darker, vertical streaks and a small, dark hollow near the bottom, giving it a gnarled, ancient look."
+differs = "The shortest and stoutest, with a flat top and a hollow, unlike the taller pointed spikes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 46
+meshes = 1
+materials = 1
+size = [0.253738, 0.569812, 0.292996]
+
+[mesh.swamp_tree_roots_01]
+name = "Swamp_Tree_Roots_01"
+pack = "polygon_swamp_marshland_nature_biomes"
+source = "Swamp_Source_Files/FBX/Swamp_Tree_Roots_01.fbx"
+sha256 = "734f96c0632d3a37f31e38ce5d06cc7826e9347ed66ab394806f621ce6fc14cd"
+atlas = "PolygonNatureBiomes_Swamp_Texture_01.png"
+textures = "PolygonNatureBiomes_Swamp_Texture_01.png"
+description = "A low, sprawling cluster of thick, gnarled roots radiating outward from a central stump, with several tapering tendrils curving down to anchor into the ground. The bark is a muted, pale grey-brown with subtle darker crevices, giving it a weathered, aged appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1048
+meshes = 1
+materials = 1
+size = [4.267654, 2.454811, 4.35292]

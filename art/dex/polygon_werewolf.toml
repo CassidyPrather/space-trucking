@@ -1,0 +1,442 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sk_chr_werewolf_01]
+name = "SK_Chr_Werewolf_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/Unreal_Characters/SK_Chr_Werewolf_01.fbx"
+sha256 = "a937c87d5c5875c32f635433c168cfbf9b88a14f77f1fe904eb91b7ece8cd905"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Window_01.tga"
+textures = "PolygonDarkFantasy_Window_01.tga"
+description = "A gaunt, hunched werewolf with a digitigrade stance and long, clawed arms held out in a T-pose, its fur a mottled dark grey and black. The model is heavily textured with a gritty, worn look, suggesting a feral, battle-scarred creature ready for a dark fantasy setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5926
+meshes = 1
+materials = 2
+size = [3.051318, 1.821222, 0.688771]
+
+[mesh.sk_chr_werewolf_undead_01]
+name = "SK_Chr_Werewolf_Undead_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/Unreal_Characters/SK_Chr_Werewolf_Undead_01.fbx"
+sha256 = "85daea5b1182c777b4e9dfcae3a1047f77327a22bd7e26dd6b9a56762c985aa0"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Window_01.tga"
+textures = "PolygonDarkFantasy_Window_01.tga"
+description = "A gaunt, hunched werewolf with a pronounced snout and digitigrade legs, posed in a T-pose with arms outstretched. Its body is covered in dark, matted fur with a mottled grey and black texture, giving it a decayed, undead appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7478
+meshes = 1
+materials = 2
+size = [3.049511, 1.821218, 0.682106]
+
+[mesh.sm_chr_attach_bandana_01]
+name = "SM_Chr_Attach_Bandana_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Bandana_01.fbx"
+sha256 = "e2ae7b6a7affcbb7df2af7e6165f1f947fd66ec4651fd5dd9d6d7dd71e661e0a"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A low-poly, rust-red fabric headband with a small knot or tail at the back, shown in a circular loop with a flat, faceted surface. The matte, unadorned texture and simple geometric form suggest a basic, versatile accessory for a character, with a slightly worn or dusty appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 204
+meshes = 1
+materials = 1
+size = [0.336025, 0.17842299, 0.302039]
+
+[mesh.sm_chr_attach_beard_01]
+name = "SM_Chr_Attach_Beard_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Beard_01.fbx"
+sha256 = "c1c3bd0c3036e432841457928e0c561c73597348fa7e551667250e8bd04a3d39"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A jagged, dark grey beard of chunky, low-poly spikes, with two long, upward-pointing horns at the front and a shorter, thicker spike at the chin. The surface is rough and matte, with lighter grey highlights on the edges, giving it a weathered, stone-like appearance."
+differs = "The only beard with horn-like protrusions and the most triangular, stone-like appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1190
+meshes = 1
+materials = 1
+size = [0.343292, 0.419822, 0.33538]
+
+[mesh.sm_chr_attach_beard_02]
+name = "SM_Chr_Attach_Beard_02"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Beard_02.fbx"
+sha256 = "4aa44d108135a8628ca1fe4881d5e650219254e114b1d46bbe211a4ff748257d"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A jagged, low-poly beard of dark charcoal-grey hair, styled in a thick, unkempt mass with sharp, angular tufts that flare outward and downward. The faceted surface catches light to suggest coarse, wiry texture, and the silhouette is broad and full, covering the jaw and chin with a wild, rugged look suited to a feral..."
+differs = "The broadest and most voluminous beard, with the most unkempt, wiry silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 426
+meshes = 1
+materials = 1
+size = [0.324938, 0.346233, 0.29451698]
+
+[mesh.sm_chr_attach_beard_03]
+name = "SM_Chr_Attach_Beard_03"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Beard_03.fbx"
+sha256 = "222763c29f29e2b2e57da06bde1f3685b565e6893f0404b1d663aadc629b6ba5"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A chunky, faceted beard of dark charcoal-grey hair, styled into two thick, upward-pointing spikes at the temples and a shorter, blunt-cut mass at the chin. Each of the three sections is bound by a pale silver-grey metal band, giving it a rugged, warrior-like appearance suitable for a barbarian or dwarf character."
+differs = "The only beard with metal bands, making it the most warrior-like and detailed."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1046
+meshes = 1
+materials = 1
+size = [0.426102, 0.33879, 0.21635999]
+
+[mesh.sm_chr_attach_beard_04]
+name = "SM_Chr_Attach_Beard_04"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Beard_04.fbx"
+sha256 = "c815ee7fbf6771ab9ca299191aa69bf22b646d43ef95058d005f1a98f9202595"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A thick, dark grey, faceted beard with two upward-sweeping prongs and a solid chin block, styled as a forked goatee. The low-poly surface is uniformly matte with no visible hair strands or texture variation, giving it a carved stone or hardened clay appearance."
+differs = "The most symmetrical and uniform, with a forked goatee shape and no texture variation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 434
+meshes = 1
+materials = 1
+size = [0.24523601, 0.256841, 0.289278]
+
+[mesh.sm_chr_attach_beard_05]
+name = "SM_Chr_Attach_Beard_05"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Beard_05.fbx"
+sha256 = "a1228a188d49419a304a8ad04f95650c5683cb25157f82d4fdd45ca894dfab4a"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A jagged, low-poly beard with a wavy, uneven silhouette and a dark charcoal-grey tone, rendered in a flat, untextured style. The faceted surface gives it a rough, unkempt appearance, and the shape is asymmetrical, with a thicker central mass tapering to pointed ends."
+differs = "The smallest and flattest, with a wavy, asymmetrical silhouette and no distinct prongs."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 114
+meshes = 1
+materials = 1
+size = [0.203506, 0.06964101, 0.059663996]
+
+[mesh.sm_chr_attach_beard_06]
+name = "SM_Chr_Attach_Beard_06"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Beard_06.fbx"
+sha256 = "e7d8df5a786beb1e9a47e0ebbc17c89c33aea7fe15a5086ad10a5d6ec5e52e77"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A jagged, dark grey facial hair piece with a sharply angled, downward-curving silhouette, featuring a central tuft and two long, pointed side sections that sweep back. The low-poly facets give it a rough, unkempt texture, and its matte finish suggests a coarse material, making it ideal for a rugged or feral werewolf..."
+differs = "The most curved and swept-back, with a downward-angled shape and no upward spikes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 146
+meshes = 1
+materials = 1
+size = [0.219172, 0.080475, 0.07269299]
+
+[mesh.sm_chr_attach_beard_07]
+name = "SM_Chr_Attach_Beard_07"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Beard_07.fbx"
+sha256 = "2d60d8e10a90b482b81ec776ff925242c371d2a86fa03701ffce41e12e1ad64d"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A jagged, dark grey facial attachment with a sharp, angular silhouette, featuring two upward-pointing horn-like spikes and a central ridge. The faceted surface suggests a rough, stone-like or hardened leather texture, giving it a menacing, aggressive appearance suited for a werewolf or beast character."
+differs = "The most menacing and aggressive, with a central ridge and horn-like spikes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 220
+meshes = 1
+materials = 1
+size = [0.248802, 0.19759001, 0.161549]
+
+[mesh.sm_chr_attach_beard_attach_01]
+name = "SM_Chr_Attach_Beard_Attach_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Beard_Attach_01.fbx"
+sha256 = "a0b10b31228ff2f32311695ecfdcc3bcd76c94446991e50e4a0a65c04827649e"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A chunky, faceted beard of dark charcoal grey, styled as a thick, tapered braid that ends in a sharp, downward point. A pale grey band wraps around the lower third, cinching the mass of angular, low-poly hair into a neat, rigid tail."
+differs = "The longest, most tapered braid, ending in a sharp point, ideal for a long, dramatic werewolf beard."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 326
+meshes = 1
+materials = 1
+size = [0.116234004, 0.286259, 0.12432499]
+
+[mesh.sm_chr_attach_beard_attach_02]
+name = "SM_Chr_Attach_Beard_Attach_02"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Beard_Attach_02.fbx"
+sha256 = "4fcd3181891028eeccd08be9a30caed43728dddc1aac93ecafb2eee255618f87"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A chunky, faceted dark grey beard with a pale grey band at the base, ending in a small black knot. The low-poly style gives it a rugged, stylized look, and the band suggests a strap or tie for attachment."
+differs = "The shortest, most compact beard with a blunt black knot, better for a shorter, stubbier look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 306
+meshes = 1
+materials = 1
+size = [0.089998, 0.21174501, 0.13052301]
+
+[mesh.sm_chr_attach_glasses_01]
+name = "SM_Chr_Attach_Glasses_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Glasses_01.fbx"
+sha256 = "a463f3865c61080fcd4cb82ba986a93b880c98a628220010305a120d414d3db9"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A pair of round, dark-lensed spectacles with thin, light-grey metal frames and long, straight temples that extend far back, suggesting an oversized or stylised fit for a large head. The lenses are opaque and glossy, giving the accessory a sleek, modern appearance suitable for a scholarly or eccentric character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 260
+meshes = 1
+materials = 1
+size = [0.176926, 0.10469, 0.250473]
+
+[mesh.sm_chr_attach_grandma_hat_01]
+name = "SM_Chr_Attach_Grandma_Hat_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Grandma_Hat_01.fbx"
+sha256 = "542cdf10373eefcf067736eff424ee4db940984d1ecda6a33bca40ff9eb45d91"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A low-poly, faceted lavender hat with a rounded crown and a short, uneven brim, rendered in a flat, matte purple. The brim is slightly wavy and irregular, giving it a handcrafted or worn appearance. Its simple, stylized shape makes it a versatile accessory for a variety of characters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 300
+meshes = 1
+materials = 1
+size = [0.270689, 0.16837999, 0.35228097]
+
+[mesh.sm_chr_attach_hair_afro_01]
+name = "SM_Chr_Attach_Hair_Afro_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_Afro_01.fbx"
+sha256 = "e4883a7cbe5cafb772543c02359af85c19ed062903e8ce3be5d6760327e3cccb"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A dense, low-poly mass of dark charcoal hair, faceted into sharp, chunky planes that form a rounded, voluminous afro silhouette. The matte, untextured surface is uniformly dark grey, with a slightly uneven, tousled shape that suggests a wild, unkempt style."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 318
+meshes = 1
+materials = 1
+size = [0.346035, 0.246434, 0.30453098]
+
+[mesh.sm_chr_attach_hair_fancy_01]
+name = "SM_Chr_Attach_Hair_Fancy_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_Fancy_01.fbx"
+sha256 = "6b1fbab88a2d4685344d48f00d039ba4e6687dd49e5e97ae7c3a4ee7cdd3a512"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A voluminous, low-poly wig of jet-black hair styled in an elaborate updo with a large bun and loose, jagged strands framing the face. The dark, matte texture is accented by two bright orange-gold hair ornaments, giving it a formal, aristocratic look suitable for a noble or vampire character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1760
+meshes = 1
+materials = 1
+size = [0.355438, 0.317609, 0.347373]
+
+[mesh.sm_chr_attach_hair_long_01]
+name = "SM_Chr_Attach_Hair_Long_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_Long_01.fbx"
+sha256 = "93af66556ae2dd16b7c3cc22bde301d505aeab044ad003548cd3e823aee09bb5"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A voluminous, low-poly mane of dark charcoal hair, styled in a messy, swept-back fashion with jagged, faceted strands. Two long, thin braids hang down the sides, each tipped with a small, bright orange band, adding a distinct accent to the otherwise monochrome, matte texture."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1610
+meshes = 1
+materials = 1
+size = [0.463538, 0.384273, 0.34100002]
+
+[mesh.sm_chr_attach_hair_mohawk_01]
+name = "SM_Chr_Attach_Hair_Mohawk_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_Mohawk_01.fbx"
+sha256 = "c865c6e4752154fdd004bd748803b479fc0b07e8f7e92f2fd5660e4576cf9312"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A jagged, low-poly crest of dark grey hair, styled as a short mohawk that rises in a sharp ridge and tapers down the back of the head. The faceted surface is uniformly shaded in a matte charcoal, with no visible texture or markings, giving it a clean, unadorned look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.091472, 0.252613, 0.347907]
+
+[mesh.sm_chr_attach_hair_pigtails_01]
+name = "SM_Chr_Attach_Hair_Pigtails_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_Pigtails_01.fbx"
+sha256 = "67607700ffac0c5a28fc7b36e1a98e1c4d23baf6d2c148ec11d2b41a5af6e3d3"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A chunky, faceted charcoal-grey hairpiece with two thick braided pigtails that hang down and end in bright orange bands, giving it a stylized, low-poly look suitable for a rugged or feral character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1191
+meshes = 1
+materials = 1
+size = [0.404762, 0.391318, 0.343854]
+
+[mesh.sm_chr_attach_hair_ponytail_01]
+name = "SM_Chr_Attach_Hair_Ponytail_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_Ponytail_01.fbx"
+sha256 = "abb0b5f26104e3c79aabbfeb8101ac401ba99384a4ef29b987fbfb6fb5ed7528"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A chunky, low-poly ponytail of dark charcoal hair, bound by a thick red band that cinches the strands into a short, stiff tail. The faceted strands flare outward with jagged tips, giving it a wild, unkempt look suitable for a rugged or feral character."
+differs = "The smaller, more detailed option with a red band and jagged, wild strands, ideal for a rugged or feral character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 340
+meshes = 1
+materials = 1
+size = [0.133915, 0.28427202, 0.475581]
+
+[mesh.sm_chr_attach_hair_ponytail_02]
+name = "SM_Chr_Attach_Hair_Ponytail_02"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_Ponytail_02.fbx"
+sha256 = "c61d9403e1f085087f483d94ef8ac850a1ed2b5d2f1be8793297eca7050d5d78"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A dark grey, low-poly ponytail with a swept-back, jagged silhouette and a small tie at the base, featuring a matte, untextured finish that suggests a base or unassigned material state."
+differs = "The larger, plainer version with a matte, untextured finish and no red band, suitable for a base or unassigned state."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 506
+meshes = 1
+materials = 1
+size = [0.21555799, 0.347865, 0.566626]
+
+[mesh.sm_chr_attach_hair_rows_01]
+name = "SM_Chr_Attach_Hair_Rows_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_Rows_01.fbx"
+sha256 = "2b2ad14a7ed78c091c6b655cab6593d52989b5d13beb3b4b1cea678b6bd767f1"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A chunky, faceted hairpiece of swept-back spikes, rendered in a flat dark charcoal grey with no visible texture detail. The silhouette is jagged and angular, with a pronounced peak at the crown and a short, blunt tail at the nape."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 294
+meshes = 1
+materials = 1
+size = [0.14952, 0.17121899, 0.314094]
+
+[mesh.sm_chr_attach_santa_hat_01]
+name = "SM_Chr_Attach_Santa_Hat_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Chr_Attach_Santa_Hat_01.fbx"
+sha256 = "3d40631e206399b96fe28c78fd4a8add12476bb4f0060ee21d397264fdcd024f"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A low-poly Santa hat with a floppy, drooping tip that ends in a small white pom-pom, featuring a thick white fur brim and a muted red crown with subtle shading. The tip bends sharply to the side, giving it a lively, worn appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 336
+meshes = 1
+materials = 1
+size = [0.205389, 0.186912, 0.33864]
+
+[mesh.sm_prop_base_01]
+name = "SM_Prop_Base_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Prop_Base_01.fbx"
+sha256 = "ba83cf78f81903fa0a9789486fa9544988fc86ca763e0928b5c78013ca5ca421"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Window_01.tga"
+textures = "PolygonDarkFantasy_Window_01.tga"
+description = "A low, roughly circular stone base with a flat, uneven top surface, supporting a jagged, broken slab that leans at an angle. The surface is textured with cracks and rough, weathered stone details, giving it a ruined, ancient appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1319
+meshes = 1
+materials = 1
+size = [2.106562, 0.850442, 2.10656]
+
+[mesh.sm_wep_axe_01]
+name = "SM_Wep_Axe_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Wep_Axe_01.fbx"
+sha256 = "ee966a94424ae2e7805cd861e8b33d746a3199c400f95ef67f1d91ad0bc01702"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Window_01.tga"
+textures = "PolygonDarkFantasy_Window_01.tga"
+description = "A double-headed battleaxe with a long, dark shaft and a central circular hub, featuring two crescent-shaped grey blades with jagged, stylised edges. The metal has a worn, matte finish with subtle dark mottling, giving it a battle-scarred appearance suited to a fantasy werewolf warrior."
+differs = "Double-headed with two crescent blades, suited for sweeping two-handed strikes rather than close-quarters work."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1972
+meshes = 1
+materials = 1
+size = [0.12897, 0.998548, 1.120216]
+
+[mesh.sm_wep_axe_01_collision]
+name = "SM_Wep_Axe_01_Collision"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Wep_Axe_01_Collision.fbx"
+sha256 = "b36e5364dfa4e8bb6205df7f7af07948badd9309af417b9f13aac55aaeb387f8"
+atlas = "PolygonWerewolf_Texture_01_A.png"
+textures = "PolygonWerewolf_Texture_01_A.png"
+description = "A short, broad-bladed hand axe with a flat, grey metal head and a straight, dark handle, featuring a worn, multicoloured edge that suggests chipped paint or rust, giving it a rugged, battle-worn appearance suitable for a werewolf's arsenal."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.077476, 1.004924, 1.022961]
+
+[mesh.sm_wep_axe_02]
+name = "SM_Wep_Axe_02"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Wep_Axe_02.fbx"
+sha256 = "4c50528a2468825b5b3b886a4897948975a89b2b345e04968a53794e5f692e6a"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Window_01.tga"
+textures = "PolygonDarkFantasy_Window_01.tga"
+description = "A short, dark iron hand-axe with a crescent-shaped blade and a spiked, pointed haft, featuring a central circular boss with a cross motif and a weathered, battle-worn finish suited to grim fantasy settings."
+differs = "Single-bladed with a spiked haft, better for one-handed throwing or close-in stabbing, lacking the second blade."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1972
+meshes = 1
+materials = 1
+size = [0.12897, 0.998548, 1.120216]
+
+[mesh.sm_werewolf_01]
+name = "SM_Werewolf_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Werewolf_01.fbx"
+sha256 = "c24ef0329e6c141464adb1ba973a2fd82e284ba7d5a020ad5da56c92d1d331e7"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Window_01.tga"
+textures = "PolygonDarkFantasy_Window_01.tga"
+description = "A gaunt, hunched humanoid with a pronounced snout and pointed ears, posed in a menacing T-pose with arms outstretched and claws extended. The fur is a dark, mottled grey, and the creature appears lean and skeletal, with a tattered, ragged silhouette that suggests a feral, predatory nature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 13404
+meshes = 2
+materials = 4
+size = [3.051316, 1.821218, 0.700035]
+
+[mesh.sm_werewolf_tail_01]
+name = "SM_Werewolf_Tail_01"
+pack = "polygon_werewolf"
+source = "SourceFiles/FBX/SM_Werewolf_Tail_01.fbx"
+sha256 = "5f4e93969b345f33cbcf788b0da4dc94625960e95a8b98863b534896107bcbfc"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Window_01.tga"
+textures = "PolygonDarkFantasy_Window_01.tga"
+description = "A thick, bushy appendage with a jagged, layered silhouette, tapering to a blunt tip and curving slightly upward. The dark grey fur is sculpted in chunky, stylized tufts, giving it a rough, wild appearance suited to a beast or monster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 288
+meshes = 2
+materials = 2
+size = [0.23245901, 0.401159, 0.959092]

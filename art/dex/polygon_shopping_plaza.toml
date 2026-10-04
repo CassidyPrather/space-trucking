@@ -1,0 +1,514 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_bld_base_wall_45_glass_01]
+name = "SM_Bld_Base_Wall_45_Glass_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Bld_Base_Wall_45_Glass_01.fbx"
+sha256 = "0c72cbd63d1cc1d2ee367118d773cea98eadd693462bbad0f20b49784e575529"
+atlas = "POLYGON - Office Pack/PolygonOffice_Texture_01_A.png"
+textures = "PolygonOffice_Texture_01_A.png"
+description = "A flat, rectangular wall segment featuring a large, dark glass window divided into four panes by a simple cross mullion. The frame is a muted grey, and the glass is opaque and reflective, suggesting a modern commercial facade. The clean, unadorned surface makes it ideal for modular plaza construction."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 136
+meshes = 2
+materials = 2
+size = [2.683956, 3.005743, 2.6839569]
+
+[mesh.sm_bld_base_wall_door_glass_01]
+name = "SM_Bld_Base_Wall_Door_Glass_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Bld_Base_Wall_Door_Glass_01.fbx"
+sha256 = "f23f9ba1a5b6e0a585a013d931180a664e4406cbd7912ce6d52dbd7474ace92f"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A freestanding, flat-topped rectangular portal with a wide central opening, flanked by thick, blocky pillars. The pale grey concrete surface is plain, with a subtle darker vertical seam running down the centre of the lintel and faint edge detailing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 252
+meshes = 2
+materials = 1
+size = [2.499991, 3.005744, 0.288034]
+
+[mesh.sm_bld_base_wall_glass_01]
+name = "SM_Bld_Base_Wall_Glass_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Bld_Base_Wall_Glass_01.fbx"
+sha256 = "1afad2ba93dbc31e7edfd0d83960708d3dcea882994b52f5bb663a02cbc25d92"
+atlas = "POLYGON - Office Pack/PolygonOffice_Texture_01_A.png"
+textures = "PolygonOffice_Texture_01_A.png"
+description = "A flat, rectangular wall segment with a thick, pale grey frame and a large, dark glass pane divided by a cross-shaped mullion. The glass is tinted and reflective, with a subtle diagonal sheen, and the lower-left view shows a set of vertical bars or louvers, suggesting a vent or security grille."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 136
+meshes = 2
+materials = 2
+size = [2.499992, 3.005743, 0.26016]
+
+[mesh.sm_bld_base_wall_glass_half_01]
+name = "SM_Bld_Base_Wall_Glass_Half_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Bld_Base_Wall_Glass_Half_01.fbx"
+sha256 = "8837be6c2efac06d9acb166ed431b3397865ae597066f6fce945fcf4a12c062e"
+atlas = "POLYGON - Office Pack/PolygonOffice_Texture_01_A.png"
+textures = "PolygonOffice_Texture_01_A.png"
+description = "A tall, narrow rectangular wall segment with a thick frame and a large inset glass panel, divided by horizontal mullions. The glass is a dark, reflective grey, while the frame is a matte, light grey."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 2
+materials = 2
+size = [1.249996, 3.005743, 0.26016]
+
+[mesh.sm_bld_pillar_01]
+name = "SM_Bld_Pillar_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Bld_Pillar_01.fbx"
+sha256 = "e2e75818d4ec46708e6b7004d7b6073f6ec34a0255e7513e328beb159d894e59"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A slender, cylindrical column with a simple flared base and a flat, slightly wider cap, rendered in a uniform, muted blue. The surface is smooth and unadorned, with no visible weathering or texture, giving it a clean, modern look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 192
+meshes = 1
+materials = 1
+size = [1.33167, 6.0, 1.2664919]
+
+[mesh.sm_bld_railing_01]
+name = "SM_Bld_Railing_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Bld_Railing_01.fbx"
+sha256 = "0aa47c913dd4a2dff457d5db65240b9223f6f227e4ed0dcaabe3e50d557a4373"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A low, wide safety barrier with a chunky grey top rail and a matching base, supported by thin vertical posts. The infill consists of translucent, slightly bluish glass panels that catch the light, giving a clean, modern look suitable for a shopping plaza balcony or walkway edge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 2
+materials = 1
+size = [0.13576299, 1.027119, 2.5]
+
+[mesh.sm_bld_railing_beam_01]
+name = "SM_Bld_Railing_Beam_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Bld_Railing_Beam_01.fbx"
+sha256 = "901aba682434a31edcacf6735f88c9cf67e4fcf779afefdf78e100c80a272274"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A slender, square post with a simple flat cap, rendered in a cool grey with a subtle darker shading on one face, giving it a clean, unadorned look. Its proportions are tall and narrow, suggesting a vertical support or baluster for a low-poly plaza railing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.262551, 1.224647, 0.262554]
+
+[mesh.sm_bld_railing_half_01]
+name = "SM_Bld_Railing_Half_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Bld_Railing_Half_01.fbx"
+sha256 = "13d60470a8bbb9ff393dc71919af448a357671f2d66681a060cbd380388d0a85"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A short, rectangular railing segment with a thick top rail, a thinner mid-rail, and a bottom rail, all in a flat, light grey. It features a central vertical post and two outer posts, with a translucent, frosted glass panel filling the space between the rails."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 58
+meshes = 2
+materials = 1
+size = [0.13576, 1.027119, 1.158228]
+
+[mesh.sm_bld_wall_elevator_01]
+name = "SM_Bld_Wall_Elevator_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Bld_Wall_Elevator_01.fbx"
+sha256 = "35d5020a6a13801b7c054acf595acc823e6a9b60e89da67c0d5a4c97ab7e436e"
+atlas = "POLYGON - Office Pack/PolygonOffice_Texture_01_A.png"
+textures = "PolygonOffice_Texture_01_A.png"
+description = "A dark grey, square shaft with a recessed, pyramidal interior, suggesting a lift enclosure or a decorative well. The exterior is plain, with subtle vertical panel lines and a smooth, matte finish, while the interior is shadowed and empty, giving it a clean, modern look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 58
+meshes = 1
+materials = 1
+size = [2.499994, 3.001915, 2.500916]
+
+[mesh.sm_env_plant_bed_01_small_01]
+name = "SM_Env_Plant_Bed_01_Small_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Env_Plant_Bed_01_Small_01.fbx"
+sha256 = "53eb58697761e52f1b3517c7e4c5cb445d31cf282a2f6156f51898658ddd30a1"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A low, flat, octagonal planter with a pale grey concrete rim and a dark brown soil surface, appearing slightly uneven and weathered. Its compact, geometric shape makes it a versatile choice for filling small plaza spaces or adding natural detail to paved areas."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 184
+meshes = 2
+materials = 1
+size = [2.473562, 0.14606899, 2.537175]
+
+[mesh.sm_prop_awning_cover_01]
+name = "SM_Prop_Awning_Cover_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Awning_Cover_01.fbx"
+sha256 = "06b642347e889134057255986d0b5990164e2f15525b6e37b4a34bb441aa6508"
+atlas = "PolygonShoppingPlaza_Ceiling_Tile_01.png"
+textures = "PolygonShoppingPlaza_Ceiling_Tile_01.png"
+wanted = "PolygonGeneric_Texture_01_A.psd"
+description = "A broad, low-poly wedge of pale, off-white canvas, stretched taut and sloping downward from a higher rear edge to a sharp, pointed front. The fabric shows subtle creases and a slightly weathered, matte finish, with a small dark grey support bracket visible at the rear."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 444
+meshes = 1
+materials = 1
+size = [6.928061, 0.47133923, 8.88937]
+
+[mesh.sm_prop_awning_pole_01]
+name = "SM_Prop_Awning_Pole_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Awning_Pole_01.fbx"
+sha256 = "b4d91ce90334634bbf27c07fcfea0c5daf08ef626a788e129a9775e302077d96"
+atlas = "PolygonShoppingPlaza_Ceiling_Tile_01.png"
+textures = "PolygonShoppingPlaza_Ceiling_Tile_01.png"
+wanted = "PolygonGeneric_Texture_01_A.psd"
+description = "A slender, plain vertical post with a square cross-section, rendered in a flat, matte grey. It is completely unadorned, lacking any brackets, finials, or mounting hardware, and appears as a bare, functional support column."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 144
+meshes = 1
+materials = 1
+size = [0.149084, 5.1557026, 0.149084]
+
+[mesh.sm_prop_billboard_01]
+name = "SM_Prop_Billboard_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Billboard_01.fbx"
+sha256 = "f1d946b09f2552b187278dfac9f747d9d85f402148ffe96a9a5a4ba8636d3bc4"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A wide, rectangular billboard frame with a grid of twelve blank white panels, supported by a dark grey metal frame and three small top-mounted floodlights. The surface is clean and unmarked, ready for custom signage, making it a versatile, neutral prop for any plaza scene."
+differs = "The only one with floodlights and a wider, landscape layout, ideal for horizontal custom signage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 300
+meshes = 1
+materials = 1
+size = [6.77415, 3.5104942, 1.058098]
+
+[mesh.sm_prop_billboard_02]
+name = "SM_Prop_Billboard_02"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Billboard_02.fbx"
+sha256 = "ad761b1d17cc3b26fed29b1f4e9ddf4fd26c97095701ebfcd76eb06621f29a45"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A tall, narrow dark grey metal frame with a four-by-five grid of empty rectangular panels, topped by two short hooks, resembling a bare billboard scaffold or a windowless ladder-like rack, with a matte finish and no signage or graphics."
+differs = "The only one with a tall, portrait orientation and top hooks, suited for vertical racks or scaffold-like displays."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 254
+meshes = 1
+materials = 1
+size = [3.29556, 6.98672, 1.058098]
+
+[mesh.sm_prop_billboard_sign_01]
+name = "SM_Prop_Billboard_Sign_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Billboard_Sign_01.fbx"
+sha256 = "ba19a34a555f7d8a1eceba571bdb69a29b6c9c82144655687bccff91353ca992"
+atlas = "PolygonShoppingPlaza_Ceiling_Tile_01.png"
+textures = "PolygonShoppingPlaza_Ceiling_Tile_01.png"
+wanted = "bilboard_02.png"
+description = "A flat, rectangular panel with a pale, off-white face, framed by a thin grey border and divided into a grid of six recessed squares. The lower right corner is broken away, revealing a dark, jagged edge and hollow interior, giving it a weathered, damaged look suited for urban decay or construction scenes."
+differs = "The only damaged, broken panel, with a jagged hole and hollow interior, ideal for post-apocalyptic or construction settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [6.55567, 3.162368, 0.093677]
+
+[mesh.sm_prop_billboard_sign_02]
+name = "SM_Prop_Billboard_Sign_02"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Billboard_Sign_02.fbx"
+sha256 = "f0d374bc400b2e056f466e14adcb580d8c0b80a3b8f24216aed2d82af9de9045"
+atlas = "PolygonShoppingPlaza_Ceiling_Tile_01.png"
+textures = "PolygonShoppingPlaza_Ceiling_Tile_01.png"
+wanted = "bilboard_02.png"
+description = "A tall, narrow rectangular panel with a subtle grid of pale blue lines over a light beige surface, resembling a tiled wall section. A dark triangular shadow or graphic element cuts across the lower corner, adding visual interest. The flat, clean design suggests a simple architectural detail or a stylized sign face."
+differs = "The only intact, clean panel with a tall portrait orientation, featuring a dark triangular shadow graphic, suited for modern architectural or stylized signage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [3.162368, 6.555672, 0.093677]
+
+[mesh.sm_prop_bus_stop_01]
+name = "SM_Prop_Bus_Stop_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Bus_Stop_01.fbx"
+sha256 = "10bcd85b5b5d6a1f8ff70bc3bb112d5c30c1b46819cec6994726053c326a34f7"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A three-bay open-front shelter with a segmented blue roof and clear glass panels, supported by dark grey posts and small feet. The glass is clean and reflective, and the structure is empty, ready for benches or signage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1028
+meshes = 4
+materials = 1
+size = [4.829762, 2.938717, 1.841659]
+
+[mesh.sm_prop_couch_01]
+name = "SM_Prop_Couch_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Couch_01.fbx"
+sha256 = "5223a36950cf369d5a68709bc1231c4fcde769b29f44ded91be329994b3de27b"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A low-poly barrel armchair with a rounded, tub-style back that curves seamlessly into the armrests, upholstered in a muted brick-red material with a subtle sheen. The seat cushion is a separate, slightly darker block, and the chair rests on four short, cylindrical wooden legs."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 272
+meshes = 1
+materials = 1
+size = [1.148605, 1.017651, 0.861539]
+
+[mesh.sm_prop_display_case_01]
+name = "SM_Prop_Display_Case_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Display_Case_01.fbx"
+sha256 = "e1d0431ee4d46a44968506fb857dbc9c14e116032d8480b526a0e78ed711dbb7"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A low, wide rectangular display cabinet with a dark grey frame and a large, pale cyan glass front. The interior features a dark brown wooden base with a subtle grain, suggesting a retail showcase for small items. The glass is opaque and slightly reflective, giving it a clean, modern look suitable for a shopping plaza."
+differs = "The widest and lowest option, with a long glass front and wooden base, ideal for displaying flat items like jewellery or watches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 402
+meshes = 2
+materials = 1
+size = [2.5, 1.120544, 0.419804]
+
+[mesh.sm_prop_display_case_02]
+name = "SM_Prop_Display_Case_02"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Display_Case_02.fbx"
+sha256 = "fc9606408b837933aa3f55552010683e7ede29e5a60fad0e048f8c5b9862758b"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A tall, narrow pedestal with a dark grey frame and horizontal brown wooden slats, topped by a large, solid teal cube that resembles a glass display block. The cube is opaque and unmarked, giving the piece a clean, modern look suitable for a shop or museum setting."
+differs = "The tallest and narrowest, with a solid teal block on a slatted pedestal, perfect for showcasing a single hero object or sculpture."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 468
+meshes = 2
+materials = 2
+size = [0.544646, 1.16322, 0.531152]
+
+[mesh.sm_prop_display_case_curved_01]
+name = "SM_Prop_Display_Case_Curved_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Display_Case_Curved_01.fbx"
+sha256 = "ce1b22fd9a9140acaf82bf5489ea2c70b1237fe7e6256ca9c0b82a5b04c6eb2b"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A curved corner display case with a black frame, a pale blue glass top, and a dark wood-paneled base, featuring a small gold plaque on the front. The glass is reflective, and the unit appears clean and modern, suited for showcasing items in a retail plaza setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2248
+meshes = 2
+materials = 1
+size = [1.611166, 1.120544, 1.459902]
+
+[mesh.sm_prop_display_case_half_01]
+name = "SM_Prop_Display_Case_Half_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Display_Case_Half_01.fbx"
+sha256 = "a6c3512c4713b6b2b2197ac26afce84e680fa33cc83a8e591d5a1c12eeeb6469"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A rectangular wall-mounted display case with a dark grey frame, a large teal glass front, and a brown slatted wooden base, appearing clean and modern for retail use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 366
+meshes = 2
+materials = 1
+size = [1.249996, 1.120544, 0.419804]
+
+[mesh.sm_prop_light_post_01]
+name = "SM_Prop_Light_Post_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Light_Post_01.fbx"
+sha256 = "c2b92b8c41e9ac8cb72983153a34089103924ce26a8dcf89f0d2a16208f51342"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A tall, slender dark grey metal pole rises from a small flared base to a square, flat-topped lamp head with a teal glass panel, giving it a slightly weathered, industrial look suited to a plaza or street scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 574
+meshes = 2
+materials = 1
+size = [0.736529, 2.8648841, 0.736529]
+
+[mesh.sm_prop_necklace_display_01]
+name = "SM_Prop_Necklace_Display_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Necklace_Display_01.fbx"
+sha256 = "dee6fd3479b98ac2e87b8b2c138ee6953195f72b8e990c9dbfab8013d1ba2546"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A faceted dark grey bust on a small base, draped with a bright gold necklace that has a small pendant, ideal for a jewellery shop display."
+differs = "The only one with a gold necklace and pendant, suited for luxury or high-end jewellery displays."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 194
+meshes = 1
+materials = 1
+size = [0.321025, 0.294429, 0.235291]
+
+[mesh.sm_prop_necklace_display_02]
+name = "SM_Prop_Necklace_Display_02"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Necklace_Display_02.fbx"
+sha256 = "6340f2c92905d9f12862036bf0fccef06ec535188fadf5e4cd0a410170b5dc42"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A faceted grey bust on a small base, featuring a white collar band and a pale blue necklace with teardrop pendants, styled as a low-poly jewellery display stand."
+differs = "The only one with a white collar and pale blue teardrop pendants, suited for modern or boutique jewellery displays."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 258
+meshes = 1
+materials = 1
+size = [0.317736, 0.291414, 0.232881]
+
+[mesh.sm_prop_pizza_box_01]
+name = "SM_Prop_Pizza_Box_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Pizza_Box_01.fbx"
+sha256 = "20aab72d3168557d192493e9e9d785db59e9068149d92a383181a68976cb917b"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A flat, square cardboard box with a slightly raised lid and a small semicircular tab on the front edge for opening. The plain grey surface shows subtle wear and a faint darker patch, suggesting a used, generic takeaway container ready for customisation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 250
+meshes = 2
+materials = 2
+size = [0.641342, 0.081347, 0.582214]
+
+[mesh.sm_prop_popcorn_01]
+name = "SM_Prop_Popcorn_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Popcorn_01.fbx"
+sha256 = "1aa280f274076e98e55766e3cdcd0f9e39f7b832d7cab3f96e41cc7faf165e82"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A classic tapered white paper tub with vertical red stripes, overflowing with irregular, pale-yellow popcorn pieces. The low-poly styling gives the kernels a chunky, faceted look, and the container appears full and ready for a cinema or carnival scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 848
+meshes = 1
+materials = 1
+size = [0.15759799, 0.239422, 0.157599]
+
+[mesh.sm_prop_poster_movie_01]
+name = "SM_Prop_Poster_Movie_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Poster_Movie_01.fbx"
+sha256 = "7304efd77cdca7dbdd3069b1cb7210d1f0335f5596c456bd2aef13e0fac86a66"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A tall, thin rectangular board with a slight backward lean, its front face covered in a dense, colourful collage of tiny movie posters and text, while the back and edges are a flat, untextured purple."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [1.237688, 1.578589, 0.07307501]
+
+[mesh.sm_prop_projector_01]
+name = "SM_Prop_Projector_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Projector_01.fbx"
+sha256 = "2805e9f9cf029e64e2999702bdfd4937a1f5c31d421ed872ffb3e7031d237797"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A compact, dark grey ceiling-mounted projector with a boxy main body and a short, cylindrical lens barrel extending from the front. A small blue indicator light sits on the side, and the unit is suspended by a short stem from a square mounting plate, giving it a utilitarian, functional appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 352
+meshes = 1
+materials = 1
+size = [0.276792, 0.30633003, 0.40453]
+
+[mesh.sm_prop_ring_display_01]
+name = "SM_Prop_Ring_Display_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Ring_Display_01.fbx"
+sha256 = "5849cc2d1e1b91a14aaf3186f0ba4be429eebe5b22ba3647e4e1beaa8475d80a"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A chunky, low-poly white octagonal pedestal with a recessed top, holding a small orange pyramid topped by a pale blue gem, suggesting a jewellery or artifact display stand."
+differs = "The only octagonal pedestal with a single gem, smallest and most compact, for a hero item."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 66
+meshes = 1
+materials = 1
+size = [0.076456, 0.056833, 0.079954]
+
+[mesh.sm_prop_ring_display_02]
+name = "SM_Prop_Ring_Display_02"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Ring_Display_02.fbx"
+sha256 = "fe6ce85a5a60dc9bb90779dcc8cf9e4d8e3c118344370c66a3c74d7d0b75d460"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A low, flat, rounded-corner rectangular base with a recessed top, holding a scattered arrangement of small, faceted orange and blue gems or studs, with a few grey accents, all set against a clean white surface. The display looks pristine and modern, suggesting a retail setting for jewelry or small collectibles."
+differs = "The only tray with faceted studs and blue accents, most detailed, for a premium jewelry display."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [0.250246, 0.077003, 0.172688]
+
+[mesh.sm_prop_ring_display_03]
+name = "SM_Prop_Ring_Display_03"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Ring_Display_03.fbx"
+sha256 = "8d2dd74d144008e03ccd9c1a2ee02707d1bb6b02644497b7f378c1899a1f2976"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A low, flat, rounded-corner white display tray with a raised lip, holding a scattered arrangement of small orange and grey rings. The rings are tilted and piled loosely, suggesting a retail jewellery display. The clean, untextured white base and simple shapes make it a versatile prop for shop interiors."
+differs = "The only tray with a raised lip and loose rings, plainest, for a casual retail jewelry display."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 206
+meshes = 1
+materials = 1
+size = [0.250246, 0.072572, 0.172688]
+
+[mesh.sm_prop_veh_car_01]
+name = "SM_Prop_Veh_Car_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Veh_Car_01.fbx"
+sha256 = "f1a1379bd1e890234efaf478c09b738deaa19e316fc2381c7bbccc5213cbbd7d"
+atlas = "POLYGON - Street Racer/PolygonStreetRacer_Texture_01_A.png"
+textures = "PolygonStreetRacer_Texture_01_A.png"
+description = "A low-slung, boxy sedan with a matte blue-grey body and a flat, angular roofline. The front end is dominated by a rainbow-striped hood and a white grille with silver headlights, while the rear features a matching rainbow panel and simple taillights."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 76
+meshes = 1
+materials = 1
+size = [2.062906, 1.71919, 6.011988]
+
+[mesh.sm_prop_watch_display_01]
+name = "SM_Prop_Watch_Display_01"
+pack = "polygon_shopping_plaza"
+source = "SourceFiles/FBX/SM_Prop_Watch_Display_01.fbx"
+sha256 = "9390a9aaa8ba325baa75dae54d219f8535a88302d0c50052abd58db4c26ece8d"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A chunky, low-poly wristwatch with a dark brown strap and a grey case, mounted upright on a stepped, beige display plinth. The watch face is a pale, blank square, and the strap is looped open, giving the piece a clear retail presentation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 176
+meshes = 1
+materials = 1
+size = [0.113088, 0.236576, 0.120573]

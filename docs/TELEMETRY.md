@@ -44,7 +44,7 @@ Session aggregates, all of them coarse:
 | `arrivals` | dockings |
 | `places`, `pickups` | cargo handling volume |
 | `rejects_soft`, `rejects_hard` | friction signals (hard = a stowage rule) |
-| `trades`, `gifts` | accepts, split by whether the take pad was empty |
+| `trades`, `gifts` | accepts, split by whether the room answered with goods |
 | `trade_value[4]` | accepts bucketed by generosity quartile |
 | `refusals` | lever pulls the station declined |
 | `deliveries` | hangar deliveries |

@@ -7,15 +7,85 @@ ambitions live in [DESIGN.md](DESIGN.md); the recurring stay-on-target
 checklist lives in [docs/DESIGN_REVIEW.md](docs/DESIGN_REVIEW.md). This file
 sticks to what the prototype does today and how to work on it.
 
-Rust + [macroquad](https://macroquad.rs/), compiled to wasm, deployed as a
-static page. Native desktop builds work too. Initialized from
-[CassidyPrather/game-template](https://github.com/CassidyPrather/game-template),
-which is based on [rust-template](https://github.com/CassidyPrather/rust-template).
+The game is a first-person freighter cabin: Rust + [Bevy](https://bevy.org/)
+(`crates/cabin`), native only for now. The game itself — sim, saves, replay
+tapes, netcode, soundscape — is a pure, engine-free library (`src/`) the
+frontend drives through input frames; everything interesting runs headless
+in `cargo test`. The original 2D macroquad console that hammered out the
+game logic retired when the walkable-bay work began — the decision and
+what replaced its discipline live in [docs/BAY.md](docs/BAY.md), and the
+console itself lives on in version history. Direction for the 3D pass
+lives in [docs/ART_DIRECTION_3D.md](docs/ART_DIRECTION_3D.md).
+
+Run it:
+
+```bash
+cargo run --release -p cabin          # --release is the way to *play*
+cargo run --release -p cabin -- --dev # with the 16x warp unlocked
+```
+
+Dev builds trade frame rate for compile speed; dev tooling:
+`-- --shot out.png --view bay` renders one screenshot and exits
+(`--menu` raises the Esc menu for the shot), and
+`-- --fixture` boots the developer showcase save — one of every cargo
+kind across every berth class, mid-run and actuated off defaults — in
+a sandbox that never touches your real save. Sweep the whole
+attachment surface in one sitting; the fixture's own test keeps its
+board legal as rules grow.
+
+Controls: mouse looks and `WASD` walks; with empty hands, aim at a
+station and click (or press `E`) to focus it — the camera glides to a
+fitted viewpoint and the cursor frees for the usual clicking and
+dragging.
+`Esc`, right-click, or `E` steps back out of a station; `Esc` while
+roaming raises the menu — pause, fast-forward, mute, the delivery tally,
+a bar labelled **New run**, and a keyboard that turns the panel to the
+carry's keys — and hands the cursor back, so you can reach your desktop
+too (`Esc` again puts it away). Space, `F`, and `M` throw the same three
+toggles from the keyboard. A new run has no key: it throws the current
+run away for good, so it is asked for on the menu, in words.
+Cargo lives in the aft bay and is carried, not dragged: walk up, aim
+the crosshair at a piece and click to pick it up, walk it over, click a
+berth to set it down — clicking at nothing (or right-clicking) sends it
+back where it came from, and `Shift`+click quick-moves without
+carrying. With a piece in hand a click always sets it down, and the
+crosshair looks through other cargo, instruments included, to the deck,
+wall or deckhead behind it. A carried piece turns at any angle and
+lands at the turn you carry it at: the mouse wheel turns it to the next
+multiple of 15° (up and away is counter-clockwise, as you look at the
+floor or the wall it is bound for), `Ctrl`+wheel turns it one degree a
+notch, and `Q` and `E` take the wheel's 15° step either way. It lands
+at a height, too: `X` and `Z` raise and lower it a sixteenth of a cell
+off whatever it stands on — up off the deck, down from the deckhead,
+out from a wall — and so does `Shift`+wheel (`Ctrl`+`Shift`+wheel for a
+hair), and it stays at that height wherever you set it down, whatever
+stands under it: aim at the deck where it should go, through anything
+in the way. The ghost stands exactly where and how the piece will land,
+and the patch under it goes with it. The four carry keys can be rebound
+on the `Esc` menu's keys page: click a keycap and press a key.
+Placement is to
+taste: cargo does not collide with cargo, so a crate can stand in the
+wardrobe, a painting can hang behind it, and two rugs can overlap —
+where two pieces share ground, the click lifts the one the crosshair
+meets first. The cabinet is furniture and stores nothing. Rugs and
+paint *lay into* the room instead of occupying it: a rug goes down on
+the deck (and cargo stands on it), paint coats a wall or floor cell,
+and either lifts out from under whatever stands on it. Luminous paint
+really glows — rats keep clear of it. The launch lever is a pull: grab, drag
+down to the end of the track — the way the handle itself
+swings — and the throw fires at the detent. `Space`
+pauses and `M` mutes (`F` warps, in dev mode).
+
+Saves: the cabin keeps its own slot (`cabin.data` + `cabin.replay` in
+the working directory, and the carry's key bindings beside them in
+`cabin.keys`). A save or tape from another version is not
+read, and the game starts a new run (docs/DESIGN_REVIEW.md).
 
 ## Playing
 
-The screen is the ship's console: a star map, a 6×4 cargo hold, and a barter
-panel. The planets orbit the sun in real time — Venus through Neptune,
+The cabin's stations are the ship's console made physical: a star map in
+its chart nook, the console face by the window, a cargo bay, and a barter
+counter. The planets orbit the sun in real time — Venus through Neptune,
 Saturn included, plus a Spacing Guild station running its orbit the wrong
 way round — and a few stranger stops that only show themselves under the
 right conditions. While docked, click a point of interest and pull the
@@ -32,48 +102,55 @@ dial only reads true for goods you have traded at that station before;
 unfamiliar goods fog the needle, and finding out what a station really pays
 means pulling the lever and living with the answer. Stations have patience,
 and three wasted pulls ends the visit's trading — though no station in the
-system refuses a gift. Cargo has opinions about stowage (heavy rides low,
-volatiles refuse adjacency, cryo hugs the hull), and one matte-black kind of
-crate hums, vanishes into a Guild hangar on delivery, and fills an unlabeled
-lamp plate with whatever is being counted. The barter panel moonlights
-when no trade is open: underway, its shelf row becomes the outboard rail —
-drag cargo there to jettison it, recoverable until the next port call or
-cast-off sweeps it away (the humming crate refuses to go) — and its dial
-housing wears the badge of whatever pulls alongside mid-leg. Encounter
-salvage drifts into the same rail, and at stranger berths the panel shows
-stranger things.
+system refuses a gift. Cargo has a few opinions about where it goes
+(volatiles keep their distance from each other, cryo hugs the hull,
+fixtures demand their surface, nothing blocks a doorway) and none about
+what else is there, and one matte-black kind of crate hums, vanishes into a Guild
+hangar on delivery, and fills an unlabeled lamp plate with whatever is
+being counted. Disposal is a furnace: stage cargo on the burner room's
+hazard-bordered tiles (starboard annex, sized so the biggest crate only
+just fits) and underway the stoker feeds the fire a piece every dozen
+seconds — the firebox glass flares, and anything that burns pushes the
+ship at double speed while the stoke lasts (a couch buys most of a
+minute; scrap is slag and merely stops existing). Until the shovel
+everything is recoverable, the humming crate refuses to go at all, and
+docking banks the unburned fuel back into the hold — only true overflow
+is tipped over the side. Encounter salvage drifts onto the same tiles,
+the dial housing wears the badge of whatever pulls alongside mid-leg,
+and at stranger berths the counter shows stranger things.
 
-| Input           | Effect                                                     |
-| --------------- | ---------------------------------------------------------- |
-| Mouse           | everything — select, pull levers, drag cargo               |
-| `Shift`+click   | quick-move a piece to its obvious destination              |
-| `Space`         | pause                                                      |
-| `M`             | mute                                                       |
-| `R`             | new run                                                    |
+| Input                | Effect                                                  |
+| -------------------- | ------------------------------------------------------- |
+| Mouse                | look, focus stations, pull levers                       |
+| Click (bay)          | pick up the aimed cargo; with a piece in hand, set down |
+| Right-click          | cancel a carry (the piece snaps home)                   |
+| `WASD`               | walk the cabin                                          |
+| `E`                  | focus the aimed station (empty-handed); step back out   |
+| `Shift`+click        | quick-move a piece to its obvious destination           |
+| Wheel                | carrying: turn the piece to the next 15° that way       |
+| `Ctrl`+wheel         | carrying: turn the piece 1°                             |
+| `Q` / `E`            | carrying: turn the piece 15° counter-clockwise / back   |
+| `X` / `Z`            | carrying: raise / lower the piece a sixteenth of a cell |
+| `Shift`+wheel        | carrying: raise / lower the piece a sixteenth a notch   |
+| `Ctrl`+`Shift`+wheel | carrying: raise / lower the piece about 2 mm            |
+| `Esc`                | step out of a station, else raise/lower the menu        |
+| `Space`              | pause                                                   |
+| `M`                  | mute                                                    |
 
-Accessibility: on the web the game honors your system's reduced-motion
-preference (applied at load) — decorative idle animation freezes to a
-readable static pose, while everything caused by play still moves. No signal
-relies on color alone; refusals, warnings, and states all carry a shape,
-brightness, or position tell alongside their hue.
+No signal relies on color alone; refusals, warnings, and states all carry
+a shape, brightness, or position tell alongside their hue. (The retired
+web build's reduced-motion support returns if a web target ever does.)
 
-The game auto-saves — to localStorage on the web, to a `local.data` file
-natively (via quad-storage) — and on load fast-forwards up to six hours of
-elapsed real time, so the ship keeps flying while the tab is closed. A
-backgrounded tab catches up the same way the moment it wakes: real time
-always passes. The save format is versioned (`STV4`) with no compatibility
-promises before 1.0; an unreadable save becomes a fresh run, quietly.
+The game auto-saves and on load fast-forwards up to six hours of elapsed
+real time, so the ship keeps flying while the window is closed. The save
+format is versioned with no compatibility promises before 1.0; an
+unreadable save becomes a fresh run, quietly.
 
 ### Privacy
 
-Telemetry is opt-in and off by default. The web page asks once, before first
-play, whether the game may keep anonymous play statistics — coarse counts
-and whole-second durations only, no identity — stored in your own browser's
-localStorage and sent nowhere. Decline, or never answer, and nothing is
-recorded; any previously stored buffer is deleted on the next boot. Clearing
-site data clears the choice and re-asks. Native builds never ask and never
-collect. The full contract, including the exact schema, lives in
-[docs/TELEMETRY.md](docs/TELEMETRY.md).
+The opt-in telemetry contract from the web prototype lives on in
+[docs/TELEMETRY.md](docs/TELEMETRY.md) and `src/telemetry.rs`, but native
+builds never ask and never collect — today, nothing is recorded, ever.
 
 ## Multiplayer
 
@@ -83,71 +160,71 @@ guild server whose counters cannot double-count. The architecture and its
 required network-failure properties live in
 [docs/NETWORKING.md](docs/NETWORKING.md); `cargo run --example convoy` runs
 a six-client crew over a deliberately hostile simulated network. The live
-multiplayer console is a later slice; the protocol it will speak (`SNP2`)
+multiplayer cabin is a later slice; the protocol it will speak (`SNP7`)
 is already under test.
 
 Sound is synthesised at startup in `src/synth.rs` — no audio assets —
-ambient only, no music. `M` mutes. On the web it needs macroquad's `audio`
-feature and quad-snd's `audio.js` plugin in `web/`, and browsers refuse to
-make noise before the first click.
+ambient only, no music. `M` mutes.
 
 ## Development
 
-Requires [Rust](https://rustup.rs/). Native builds on Linux also need ALSA's
-development files (`libasound2-dev` on Debian/Ubuntu, `alsa-lib-devel` on
-Fedora) — without them the link step fails with `unable to find library
--lasound`. The wasm build needs none of this; the browser handles audio.
+Requires [Rust](https://rustup.rs/). On Linux, Bevy needs ALSA and udev
+development files plus the wayland/xkbcommon headers
+(`libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev` on
+Debian/Ubuntu) — without them the build fails at the link or
+window-system probe step.
 
 Build: `cargo build`
 
-Run (native): `cargo run`
+Run: `cargo run --release -p cabin`
 
-Lint: `cargo clippy --all-targets --all-features -- -D warnings`
-
-Lint (wasm): `cargo clippy --target wasm32-unknown-unknown -- -D warnings`
+Lint: `cargo clippy --workspace --all-targets -- -D warnings`
 
 Format: `cargo fmt`
 
-Test: `cargo test`
-
-Web build: `./scripts/build-web.sh` (needs
-`rustup target add wasm32-unknown-unknown`; uses `wasm-opt` from
-[binaryen](https://github.com/WebAssembly/binaryen) if installed)
-
-Serve the result: `python3 -m http.server --directory dist/web 8080`
+Test: `cargo test --workspace`
 
 ### Developer mode (fast-forward)
 
 The game runs at 1× for everyone; the 16× fast-forward is a development
-tool, hidden until asked for nicely. Natively, run with `--dev`. On the
-web, open the page with `#pretty-please` in the URL and answer the shell's
-one question honestly (`#no-thank-you` revokes). Developer mode reveals the
-warp button and the `F` key.
+tool, hidden until asked for nicely: run with `-- --dev`. Developer mode
+reveals the warp button and the `F` key.
 
 ### Flight recorder
 
-The game keeps a black box: a recent save plus every input frame since,
-stored beside the autosave under the key `space-trucking/replay`
-(localStorage on the web, quad-storage's `local.data` natively) and re-based
-on a rolling cap so it always holds the recent past. The sim is
-deterministic, so that small text file *is* the session: copy it out and
-`cargo run -- --replay <file>` plays it back natively, bit-identically,
-with the version string tinted amber as the only tell. A recording attached
-to a bug report is a perfect reproduction.
+The game keeps a black box: a recent save plus every input frame since
+(`cabin.replay`), re-based on a rolling cap so it always holds the recent
+past. The sim is deterministic, so that small text file *is* the session
+— the bridge replays it after a stall, and a recording attached to a bug
+report is a perfect reproduction under `cargo test`. An in-cabin playback
+mode is on the deferred list.
 
 ### Advanced
 
 Benchmark: `cargo bench --bench sim_bench -- --quick`
 
 Performance budgets (CI-enforced ceilings, see
-[docs/BUDGETS.md](docs/BUDGETS.md)): `cargo test --release --test perf -- --ignored`
+[docs/BUDGETS.md](docs/BUDGETS.md)): `cargo test --release -p space-trucking --test perf -- --ignored`
+
+Purchased art (none is in this repository; see
+[docs/ART_PIPELINE.md](docs/ART_PIPELINE.md)):
+`cargo xtask art check`
+
+Search that art by what it looks like rather than by what it is called
+(`describe` renders each mesh, measures it, and files a sentence about it
+in `art/dex/`): `cargo xtask art dex "hazard stripe"`
 
 Security audit: `cargo audit` (requires `cargo install cargo-audit`)
 
 Pre-commit hook: `git config core.hooksPath .githooks` (runs `cargo fmt`)
 
+Headless screenshots (works under xvfb + llvmpipe, for CI-shaped review):
+`cargo run -p cabin -- --shot out.png --view tank`
+
 ## More
 
 See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for framework and
-asset-source links, and [docs/DEPLOYING.md](docs/DEPLOYING.md) for how the
-web build reaches GitHub Pages (or any static host).
+asset-source links, [docs/DEPLOYING.md](docs/DEPLOYING.md) for how
+releases are built and shipped, and
+[docs/ART_PIPELINE.md](docs/ART_PIPELINE.md) for how bought art reaches a
+build without ever entering the repository.

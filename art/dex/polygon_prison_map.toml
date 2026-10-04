@@ -1,0 +1,1113 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_bld_prison_fence_01]
+name = "SM_Bld_Prison_Fence_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Fence_01.fbx"
+sha256 = "ed029722094f66dad9238c2241d12dca90470bce8c1e8d06a5e5703f72dc042b"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A tall, narrow fence panel with a thick, cylindrical top rail, heavily weathered and covered in dense, colourful graffiti posters and stickers. The rusted red-brown frame supports a mesh of vertical and horizontal bars, giving it a gritty, urban prison-yard appearance."
+differs = "The only single-panel fence with a roller top, ideal for a standalone barrier or gate in a narrow gap."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 74
+meshes = 1
+materials = 3
+size = [2.579025, 5.678774, 0.873012]
+
+[mesh.sm_bld_prison_fence_02]
+name = "SM_Bld_Prison_Fence_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Fence_02.fbx"
+sha256 = "81f36f4a621661aadd83a74ba667ac82924fa886687e7b357813576df984ae2e"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A low, wide section of prison fencing with a dark metal top rail and vertical posts, clad in heavily weathered, rusted panels. The surface is a patchwork of brown, orange, and grey, suggesting aged metal or stained concrete, with a central gate section visible in one view."
+differs = "The only mid-length fence with a central gate section, perfect for a small entrance in a perimeter wall."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 370
+meshes = 1
+materials = 3
+size = [12.579025, 5.825372, 0.94756496]
+
+[mesh.sm_bld_prison_fence_03]
+name = "SM_Bld_Prison_Fence_03"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Fence_03.fbx"
+sha256 = "ae88a98ff8a198334e4bbf48faaf139de97e5915a9d9d88991a8291524a99f18"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A long, low, flat-topped wall segment with a heavily weathered, rusted metal surface in mottled browns and greys. It features a repeating pattern of vertical panels and a darker, solid section at one end, suggesting a gate or reinforced barrier."
+differs = "The longest and tallest fence, with a solid dark end section, ideal for a major perimeter wall or reinforced barrier."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 740
+meshes = 1
+materials = 3
+size = [25.079025, 5.780377, 0.873012]
+
+[mesh.sm_bld_prison_fence_04]
+name = "SM_Bld_Prison_Fence_04"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Fence_04.fbx"
+sha256 = "18c59f5ea2db062c649397baa2289c8b3d3458123feae0f467fa2e487f83cdf9"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+wanted = "PolygonGeneric_Texture_01_A.psd"
+description = "A tall, narrow gate panel with a thick, rust-red frame and a heavily weathered surface covered in dense, multicoloured graffiti and posters. A cylindrical roller mechanism sits atop the frame, suggesting a sliding or retractable barrier. The chaotic, layered markings give it a gritty, urban prison-yard appearance."
+differs = "The only standalone gate with a roller mechanism, designed for a sliding or retractable barrier in a narrow opening."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 82
+meshes = 1
+materials = 3
+size = [2.639985, 4.014248, 0.811075]
+
+[mesh.sm_bld_prison_fence_05]
+name = "SM_Bld_Prison_Fence_05"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Fence_05.fbx"
+sha256 = "03f1ea09d2f91b96872c2e523cfb54f866d61b75d1a6ee30c0370a4d2583e6d7"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+wanted = "PolygonGeneric_Texture_01_A.psd"
+description = "A long, low wall segment of weathered concrete panels with a rusted metal top rail, punctuated by vertical posts. The surface is heavily stained with grime and graffiti, giving it a gritty, dilapidated prison-yard appearance. The flat, rectangular form is ideal for lining corridors or enclosing small areas."
+differs = "The only mid-length wall with a flat top rail and no spikes, best for lining corridors or enclosing small areas."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 410
+meshes = 1
+materials = 3
+size = [12.639984, 4.075311, 0.824568]
+
+[mesh.sm_bld_prison_fence_06]
+name = "SM_Bld_Prison_Fence_06"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Fence_06.fbx"
+sha256 = "a009d0742658cb04eb0768e8b992f70adbb96c0c3c5545dc50a2b68e49fa26de"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+wanted = "PolygonGeneric_Texture_01_A.psd"
+description = "A long, low wall segment of vertical planks with a weathered, rusty metal finish, topped by a row of jagged spikes and reinforced with horizontal crossbars, suggesting a heavy-duty security barrier for a prison yard or industrial perimeter."
+differs = "The only fence with jagged spikes on top, making it the most overtly hostile and best for a high-security perimeter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 820
+meshes = 1
+materials = 3
+size = [25.139984, 4.050335, 0.811075]
+
+[mesh.sm_bld_prison_fence_door_01]
+name = "SM_Bld_Prison_Fence_Door_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Fence_Door_01.fbx"
+sha256 = "c26363906b5932cc8c88fee817febb7e8d634c955a6c19875eb6cf3aa650e86c"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+wanted = "aaa.png"
+description = "A tall, narrow metal gate with a rectangular frame and a central crossbar, featuring a heavy latch mechanism on the left edge. The upper half is filled with a translucent, grimy pane bearing a faded yellow hazard symbol, while the lower half is a solid, weathered grey panel with a subtle grid pattern."
+differs = "The only one with a translucent pane and hazard symbol, best for a contaminated or hazardous zone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 900
+meshes = 1
+materials = 2
+size = [0.959298, 1.928736, 0.17396301]
+
+[mesh.sm_bld_prison_fence_door_02]
+name = "SM_Bld_Prison_Fence_Door_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Fence_Door_02.fbx"
+sha256 = "d0f0b8977d5eedf4df79acfdad724e4cb45a2ab553117b299cdb0017e8ee68f7"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A tall, narrow rectangular gate with a light grey metal frame and dark grey infill panels, secured by a heavy crossbar and a central locking plate. The frame is studded with small rivets, and the lower section features a solid kickplate, giving it a sturdy, industrial look suited for a prison yard or secure perimeter."
+differs = "The only one with a solid kickplate and riveted frame, best for a high-security perimeter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 812
+meshes = 1
+materials = 1
+size = [0.993191, 1.968318, 0.163671]
+
+[mesh.sm_bld_prison_fence_doorway_01]
+name = "SM_Bld_Prison_Fence_Doorway_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Fence_Doorway_01.fbx"
+sha256 = "2ef18a29e22f1161eac01acd704e1c0df0654cd95f7c0fc02c87f94e28d8d732"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+wanted = "PolygonGeneric_Texture_01_A.psd"
+description = "A freestanding, weathered doorway frame with a cylindrical roller bar across the top, heavily plastered with torn, colourful posters and graffiti over a rusty red-brown base, giving it a gritty, urban prison-yard appearance."
+differs = "Taller and more detailed with a roller bar, best for a taller, more imposing prison-yard gate."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 286
+meshes = 1
+materials = 3
+size = [2.579025, 5.678774, 0.873012]
+
+[mesh.sm_bld_prison_fence_doorway_02]
+name = "SM_Bld_Prison_Fence_Doorway_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Fence_Doorway_02.fbx"
+sha256 = "e1dc362f5288e8f5c0d54577764b67f12377f258e47d0c536859489f8fad1b42"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+wanted = "PolygonGeneric_Texture_01_A.psd"
+description = "A freestanding, rectangular archway with a thick, cylindrical roll of barbed wire mounted across the top, supported by two vertical posts. The structure is heavily plastered with a chaotic collage of colourful, weathered posters and graffiti, giving it a gritty, urban decay aesthetic."
+differs = "Shorter and simpler with barbed wire, best for a lower, more compact fence doorway."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 176
+meshes = 1
+materials = 3
+size = [2.639984, 4.014248, 0.811075]
+
+[mesh.sm_bld_prison_fence_pillar_01]
+name = "SM_Bld_Prison_Fence_Pillar_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Fence_Pillar_01.fbx"
+sha256 = "3f1422e79ecf3469aa104f4be2fd8c4d301bb726a1945749aa8e6bc9a551bdac"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A slender, dark grey metal post with a forked, Y-shaped top, rising from a small square base plate. The surface is smooth and unadorned, with a matte finish that suggests painted steel or iron, and the proportions are tall and thin, giving it a utilitarian, industrial look."
+differs = "Taller and thinner with a Y-shaped top, ideal for barbed-wire or razor-wire runs."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 38
+meshes = 1
+materials = 1
+size = [0.15805, 5.137914, 0.82731]
+
+[mesh.sm_bld_prison_fence_pillar_02]
+name = "SM_Bld_Prison_Fence_Pillar_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Fence_Pillar_02.fbx"
+sha256 = "3067c0f3c152f69b65b7bba8281eee698a90301c0a9eebf22435e3ea47e4c5e0"
+atlas = "Prison_Corrugated_01.png"
+textures = "Prison_Corrugated_01.png"
+wanted = "PolygonGeneric_Texture_01_A.psd"
+description = "A tall, slender, dark grey post with a flat, rectangular profile, topped by a small, blocky cap. The surface is plain, with a subtle corrugated texture and a small notch near the top, suggesting a utilitarian, weathered metal fence support."
+differs = "Shorter and wider with a blocky cap and notch, suited for flat-topped chain-link or mesh fencing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 40
+meshes = 1
+materials = 1
+size = [0.279968, 4.0073857, 0.463143]
+
+[mesh.sm_bld_prison_railing_01]
+name = "SM_Bld_Prison_Railing_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Railing_01.fbx"
+sha256 = "b19d30845e18d92acfa665beaa0df6e913e822ddb6f0c3ddbff5ee190c26e2f4"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A low, three-rail metal barrier with a flat top rail and two thinner lower rails, supported by five vertical posts. The grey steel finish is clean and uniform, with a subtle wire-mesh texture suggesting a utilitarian, institutional setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 131
+meshes = 1
+materials = 1
+size = [2.5, 1.027119, 0.13576299]
+
+[mesh.sm_bld_prison_railing_45_01]
+name = "SM_Bld_Prison_Railing_45_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Railing_45_01.fbx"
+sha256 = "ae3ccd29e55ed25a20f1961d7abb6e3b81fa5db2a84c1a5d3f185feca1b21755"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A straight, low-poly metal railing segment with three horizontal bars and five vertical posts, finished in a weathered grey steel. The simple, utilitarian design and clean geometry make it ideal for prison walkways, industrial balconies, or any secure perimeter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 144
+meshes = 1
+materials = 1
+size = [2.595991, 1.027119, 2.59599]
+
+[mesh.sm_bld_prison_railing_half_01]
+name = "SM_Bld_Prison_Railing_Half_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Railing_Half_01.fbx"
+sha256 = "1c8c19239966bdf1655474b81ae1bed112b89650960f23f32307159c658f8d4d"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A short, three-rung metal railing segment with a single central post, finished in a flat, matte grey. The horizontal bars are squared and chunky, with the lowest bar extending slightly past the post, giving it a utilitarian, industrial look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 57
+meshes = 1
+materials = 1
+size = [1.250006, 1.027119, 0.13576]
+
+[mesh.sm_bld_prison_railing_pillar_01]
+name = "SM_Bld_Prison_Railing_Pillar_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Railing_Pillar_01.fbx"
+sha256 = "97564b0054c4ba900d8d8375b13b4d7dbadf4c5e4cbc2a7061177100d49b2974"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A slender, squared stone pillar with a subtle mid-height twist, tapering slightly toward a flat top and base. Its pale grey surface shows faint wire-mesh texture and darker shading along the angled facets, giving it a weathered, utilitarian look suited to prison corridors or courtyard fencing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 44
+meshes = 1
+materials = 1
+size = [0.22242099, 1.224647, 0.22241199]
+
+[mesh.sm_bld_prison_railing_stairs_01]
+name = "SM_Bld_Prison_Railing_Stairs_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Railing_Stairs_01.fbx"
+sha256 = "09c01b26b794d4055f8b225fe56c255b3c2025d8d125924890ec70bb8de4669a"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A short, slanted flight of stairs with a simple three-rail metal balustrade on one side, rendered in flat, untextured grey. The steps are solid and blocky, with a clean, angular silhouette typical of low-poly prison architecture."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 186
+meshes = 1
+materials = 1
+size = [2.49999, 2.6673808, 0.17778501]
+
+[mesh.sm_bld_prison_tower_bottom_01]
+name = "SM_Bld_Prison_Tower_Bottom_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Tower_Bottom_01.fbx"
+sha256 = "c3335ecca8fab8eb558e5a4102acf156d92f6f1dcd4bd19075591f3afcb1bf49"
+atlas = "Brick_Large_01.png"
+textures = "Brick_Large_01.png"
+description = "A stout cylindrical tower base with a thick, hollow core, featuring a single open doorway cut into the side. The exterior is clad in large, grey stone bricks with a subtle, weathered texture, while the interior reveals a darker, shadowed shaft."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 601
+meshes = 1
+materials = 2
+size = [2.312525, 3.019103, 2.373126]
+
+[mesh.sm_bld_prison_tower_frame_01]
+name = "SM_Bld_Prison_Tower_Frame_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Tower_Frame_01.fbx"
+sha256 = "2746023ad6d608b6c091d954657db787bffdf4f25024409f3a4201d5f133c4af"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A weathered grey steel lattice tower frame with four thick legs, cross-bracing, and a central ladder, topped by a small platform. The metal shows a worn, matte finish with subtle rust and grime, suggesting an old industrial or prison watchtower structure."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1920
+meshes = 1
+materials = 1
+size = [5.065258, 6.202291, 4.619776]
+
+[mesh.sm_bld_prison_tower_middle_01]
+name = "SM_Bld_Prison_Tower_Middle_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Tower_Middle_01.fbx"
+sha256 = "bd6a27213e53c1f2eb172bf7ce4d3dc1370c2b80630f40b54b94f6a70adc6448"
+atlas = "Brick_Large_01.png"
+textures = "Brick_Large_01.png"
+description = "A stout cylindrical tower segment with a hollow core, wrapped in a mid-grey brick texture and divided by a horizontal seam. The top rim is open, revealing a dark interior, while a large, jagged dark grey patch on the side suggests damage or a missing section of the outer wall."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 384
+meshes = 1
+materials = 2
+size = [2.312526, 3.000001, 2.312526]
+
+[mesh.sm_bld_prison_tower_top_01]
+name = "SM_Bld_Prison_Tower_Top_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Prison_Tower_Top_01.fbx"
+sha256 = "deed99cb0ac4ad467b033519b7e2d431b56c28bfd2dfc6845ca0192a87318ae5"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "Prison_Corrugated_01.png, PolygonPoliceStation_Texture_01_A.png"
+description = "A square, low-poly rooftop cap with a stepped, pyramidal top and a wide, overhanging eave. The sides feature dark, recessed panels framed by light grey vertical ribs, giving it a corrugated, industrial look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2738
+meshes = 4
+materials = 4
+size = [6.092294, 4.4789586, 6.092295]
+
+[mesh.sm_bld_roof_corrugated_01]
+name = "SM_Bld_Roof_Corrugated_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Roof_Corrugated_01.fbx"
+sha256 = "7d0f7ba78b4535ab5fd75cd26b131d6245dab1d8febfa5372ee54dabbb910f9e"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+wanted = "MilCorrigatedIron_Blue_Diff.png"
+description = "A low, flat, square block with a heavily weathered, corrugated metal roof, its surface a chaotic patchwork of faded red, yellow, blue, and grey panels. The sides show exposed brickwork and dark, grimy stains, giving it a rundown, industrial look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20
+meshes = 1
+materials = 2
+size = [2.5, 0.751485, 2.49999]
+
+[mesh.sm_bld_roof_corrugated_corner_01]
+name = "SM_Bld_Roof_Corrugated_Corner_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Roof_Corrugated_Corner_01.fbx"
+sha256 = "3b589778ed47981feb947a4e7bc2de337c37af0852ad7fe7827f342257126e46"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+wanted = "MilCorrigatedIron_Blue_Diff.png"
+description = "A low, flat L-shaped roof corner with a thick, pale pinkish-tan edge and a heavily weathered, multicoloured top surface. The top is covered in a chaotic patchwork of graffiti, faded paint, and grime in shades of grey, yellow, red, and blue, giving it a gritty, urban look."
+differs = "L-shaped footprint with a pale pinkish-tan edge, lacking the brick parapet and corrugated metal of its sibling."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20
+meshes = 1
+materials = 2
+size = [2.499997, 0.751484, 2.5]
+
+[mesh.sm_bld_roof_corrugated_corner_02]
+name = "SM_Bld_Roof_Corrugated_Corner_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Roof_Corrugated_Corner_02.fbx"
+sha256 = "cd184e5618b43e20c112e9dc5cb1ac1c71d00f8e90d446b7a8af41abdf6a8061"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+wanted = "MilCorrigatedIron_Blue_Diff.png"
+description = "A low, square roof corner with a slight slope, clad in weathered grey corrugated metal and bordered by a low brick parapet. The surface is heavily littered with colourful debris, graffiti, and scattered papers, giving it a gritty, abandoned urban feel."
+differs = "Square sloped roof with a brick parapet and corrugated metal, lacking the L-shape and pale edge of its sibling."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20
+meshes = 1
+materials = 2
+size = [2.5, 0.751484, 2.5]
+
+[mesh.sm_bld_roof_corrugated_edge_01]
+name = "SM_Bld_Roof_Corrugated_Edge_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Roof_Corrugated_Edge_01.fbx"
+sha256 = "5e89d0dabb9514adfda7d4ee5d691e95dbc798ae0750041049526aa72541e14e"
+atlas = "Prison_Corrugated_01.png"
+textures = "Prison_Corrugated_01.png"
+description = "A long, narrow, low-profile rectangular slab with a raised central ridge and a stepped, flanged edge, finished in weathered grey corrugated metal. The surface shows subtle streaks and grime, suggesting an aged industrial roof edge or trim piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 148
+meshes = 1
+materials = 2
+size = [2.540518, 0.350101, 0.546223]
+
+[mesh.sm_bld_roof_corrugated_edge_corner_01]
+name = "SM_Bld_Roof_Corrugated_Edge_Corner_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Roof_Corrugated_Edge_Corner_01.fbx"
+sha256 = "b27c1511386ec21c8975f672ac74bdbc53f64b7af1e308375ee02b1a7f02f2b3"
+atlas = "Prison_Corrugated_01.png"
+textures = "Prison_Corrugated_01.png"
+description = "A chunky, low-poly corner roof piece with a thick, angled profile and a raised, faceted cap at the outer corner. The surface is a flat, dark grey with no visible weathering or texture, giving it a clean, uniform look."
+differs = "The smallest, plainest, and most compact piece, with a raised faceted cap for a decorative corner accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 78
+meshes = 1
+materials = 2
+size = [0.384102, 0.348486, 0.384102]
+
+[mesh.sm_bld_roof_corrugated_edge_corner_02]
+name = "SM_Bld_Roof_Corrugated_Edge_Corner_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Roof_Corrugated_Edge_Corner_02.fbx"
+sha256 = "7f168e9ff1d30f7986c55b06112a48008ff015b7215403b0f17df5b44f1c66bb"
+atlas = "Prison_Corrugated_01.png"
+textures = "Prison_Corrugated_01.png"
+description = "A low, flat L-shaped strip of grey corrugated metal, forming a right-angled corner with a raised lip along the outer edge. The surface shows subtle weathering and a dull, matte finish, suggesting a utilitarian roof edge or flashing component for a prison building."
+differs = "The largest and most detailed, with a weathered finish and a low flat profile for extensive roof flashing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 346
+meshes = 1
+materials = 2
+size = [2.68119, 0.350101, 2.680672]
+
+[mesh.sm_bld_roof_corrugated_edge_end_01]
+name = "SM_Bld_Roof_Corrugated_Edge_End_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Roof_Corrugated_Edge_End_01.fbx"
+sha256 = "390e79f5efab62f96db73ac171903852dcff1864ed9633dfb94e450b16560b4e"
+atlas = "Prison_Corrugated_01.png"
+textures = "Prison_Corrugated_01.png"
+wanted = "PolygonGeneric_Texture_01_A.psd"
+description = "A short, chunky wedge of dark grey corrugated metal, with a beveled edge and a small lighter grey cap at one end, resembling a low roof segment or a heavy industrial block."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 24
+meshes = 1
+materials = 1
+size = [0.065916, 0.313011, 0.42505002]
+
+[mesh.sm_bld_roof_corrugated_edge_half_01]
+name = "SM_Bld_Roof_Corrugated_Edge_Half_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Roof_Corrugated_Edge_Half_01.fbx"
+sha256 = "c4ddea6f420c663980a47300878fb0ea4fdc4b2489ba4147ef520848a75ee9ad"
+atlas = "Prison_Corrugated_01.png"
+textures = "Prison_Corrugated_01.png"
+description = "A low, narrow, rectangular slab of corrugated grey metal, with a raised lip along one long edge and a small notch cut into one end, suggesting a modular roof edge piece for a prison building. The surface is weathered and slightly dirty, with a dark, worn patch near the notch, giving it a utilitarian, industrial look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 2
+size = [1.2905179, 0.34113598, 0.54051995]
+
+[mesh.sm_bld_roof_corrugated_edge_straight_01]
+name = "SM_Bld_Roof_Corrugated_Edge_Straight_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Roof_Corrugated_Edge_Straight_01.fbx"
+sha256 = "a10fd2988ffc519db72dfbd54cd8368c540ccfe72805fd883bdcd0579d4eea3a"
+atlas = "Prison_Corrugated_01.png"
+textures = "Prison_Corrugated_01.png"
+description = "A long, narrow strip of corrugated roofing with a wavy profile, rendered in weathered grey metal with subtle rust and grime. The surface shows distinct raised ridges and a slightly uneven, worn edge, suggesting a utilitarian piece for industrial or prison architecture."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 272
+meshes = 1
+materials = 1
+size = [2.500786, 0.161986, 0.613342]
+
+[mesh.sm_bld_roof_corrugated_slope_01]
+name = "SM_Bld_Roof_Corrugated_Slope_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Roof_Corrugated_Slope_01.fbx"
+sha256 = "6545511a62e6d09aad1d073c1c33ff48327a79d983426c34b7ed4e8c9c97bfd6"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+wanted = "MilCorrigatedIron_Blue_Diff.png"
+description = "A low, flat wedge with a shallow, uniform slope, its surface is a chaotic collage of brightly coloured, weathered posters and graffiti over a pale pinkish base, giving it a gritty, urban look. The dense, layered markings suggest a heavily used public surface, making it ideal for a rundown city or industrial setting..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20
+meshes = 1
+materials = 2
+size = [2.5, 0.751484, 2.49999]
+
+[mesh.sm_bld_wall_cell_half_01]
+name = "SM_Bld_Wall_Cell_Half_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Wall_Cell_Half_01.fbx"
+sha256 = "3f1bafafafdc2e19cdbe2125c2c9b7f4f9533ce7f7d9614c9f3431773cbcaef8"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A low, narrow concrete wall segment with a weathered grey surface, featuring a single rectangular window opening filled with vertical metal bars. The top edge is flat and plain, while the base shows subtle staining, suggesting a utilitarian prison interior."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 690
+meshes = 1
+materials = 1
+size = [1.249996, 2.999998, 0.128499]
+
+[mesh.sm_bld_wall_half_window_cell_01]
+name = "SM_Bld_Wall_Half_Window_Cell_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Wall_Half_Window_Cell_01.fbx"
+sha256 = "c7e8868a5cc24f913c1c2ddec5539d5fd8405d82e869fd00bfe9a8c0f84a816f"
+atlas = "POLYGON - Shops Pack/PolygonShops_Texture_01_C.png"
+textures = "PolygonShops_Texture_01_C.png"
+description = "A tall, narrow wall segment with a barred window opening near the top, featuring a vibrant, graffiti-covered brick facade in a patchwork of bright colours. The surface is heavily weathered and tagged, giving it a gritty, urban prison-block appearance."
+differs = "Heaviest graffiti coverage and thickest depth; ideal for a vivid, fully tagged prison exterior."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 202
+meshes = 1
+materials = 3
+size = [1.249995, 3.005743, 0.347496]
+
+[mesh.sm_bld_wall_half_window_cell_02]
+name = "SM_Bld_Wall_Half_Window_Cell_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Wall_Half_Window_Cell_02.fbx"
+sha256 = "44bbf6b6cb035d5a60a4de1ea050ca511c8c7df1b15898cb99db2ead6eeabee6"
+atlas = "POLYGON - Horror Asylum/PolygonHorrorAsylum_Texture_01_C.png"
+textures = "PolygonHorrorAsylum_Texture_01_C.png"
+description = "A tall, narrow wall segment with a barred window set in a tan frame, the lower half covered in grimy, multi-coloured graffiti and peeling posters, giving it a worn, institutional look."
+differs = "Cleaner tan-framed window with posters; thinner profile suits a more institutional, less chaotic interior wall."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 2
+materials = 4
+size = [1.249995, 3.005743, 0.29057902]
+
+[mesh.sm_bld_wall_prison_hole_01]
+name = "SM_Bld_Wall_Prison_Hole_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Bld_Wall_Prison_Hole_01.fbx"
+sha256 = "c8d20d867386fc715c6db852080a96e9491dbad17324e7109c4ed7b5fd27fecd"
+atlas = "Prison_Corrugated_01.png"
+textures = "Prison_Corrugated_01.png"
+description = "A flat, rectangular wall panel with a jagged, irregular hole punched through its centre, revealing a dark, shadowed interior. The surface is a uniform, dark grey with a subtle corrugated texture, suggesting weathered metal or concrete."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 276
+meshes = 1
+materials = 3
+size = [2.499991, 3.005743, 0.225]
+
+[mesh.sm_prop_book_stash_01]
+name = "SM_Prop_Book_Stash_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Book_Stash_01.fbx"
+sha256 = "b160926219e934a0cda4da884d026f6c2f363e1cd8a407cdf04e8c5b8d3a71fa"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A low, flat, rectangular stack of books or papers, with a small, dark object resting on top, rendered in a uniform, muted grey. The object appears worn and slightly uneven, suggesting a used or weathered condition. Its simple, blocky form makes it a versatile prop for a desk or shelf in a prison setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 236
+meshes = 2
+materials = 1
+size = [0.343276, 0.113183, 0.504185]
+
+[mesh.sm_prop_dummy_head_01]
+name = "SM_Prop_Dummy_Head_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Dummy_Head_01.fbx"
+sha256 = "2bdaddac64f5a63d7fd82f6cbec85e6e9fe9d083a08006d6dbaa4e2c284b3943"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A stylized male head with a short, blocky brown haircut, pale skin, and simple dark facial features, severed at the neck with a jagged, torn base. The low-poly facets give it a clean, game-ready look, and the neutral expression makes it suitable for a training dummy or a generic character head."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 260
+meshes = 1
+materials = 1
+size = [0.235173, 0.37235498, 0.257362]
+
+[mesh.sm_prop_guard_bulletin_01]
+name = "SM_Prop_Guard_Bulletin_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Guard_Bulletin_01.fbx"
+sha256 = "b6102c9b756ed9ba7b8e9a28fbf81f64e07c3467f9b1fa75b739c494c716d73d"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A flat, rectangular board with a slight frame, holding several overlapping paper notices of varying sizes, some slightly askew or curled at the edges. The surface is a muted grey, with the papers in lighter shades, suggesting a worn, utilitarian noticeboard for a police station."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 616
+meshes = 1
+materials = 1
+size = [1.406229, 0.909958, 0.038460005]
+
+[mesh.sm_prop_license_machine_01]
+name = "SM_Prop_License_Machine_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_License_Machine_01.fbx"
+sha256 = "ab3883d7946ef1f28cb819c5e4cfb6aa3298897c6d7abd0d0ca2a94d0e847246"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A boxy, pale blue kiosk with a sloped console, a small screen, a yellow warning sticker, and a side vent, set on a dark grey base with cabinet doors, resembling a self-service terminal or vending machine."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 877
+meshes = 2
+materials = 2
+size = [2.357401, 2.054189, 1.030758]
+
+[mesh.sm_prop_license_plate_large_01]
+name = "SM_Prop_License_Plate_Large_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_License_Plate_Large_01.fbx"
+sha256 = "631c9642a2e094f1a999eaf4477228e77417aa61790007cd4cf85b3753f6f00b"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_VehicleTexture_01.png"
+textures = "PolygonPoliceStation_VehicleTexture_01.png"
+description = "A chunky, rectangular block of stacked orange planks, bound by a single dark strap, with a faded black stencil reading 'PRISON PROPERTY' and a number on the top face. The wood is worn and weathered, suggesting a heavy, industrial crate used for storage or transport within a prison setting."
+differs = "Larger, more weathered wooden crate with orange planks and a strap, suited for prison storage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 224
+meshes = 1
+materials = 1
+size = [0.32487, 0.20838499, 0.55216503]
+
+[mesh.sm_prop_license_plate_large_02]
+name = "SM_Prop_License_Plate_Large_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_License_Plate_Large_02.fbx"
+sha256 = "18c51dfbef1aee4e3fe28bec0d85473de27277a3d12829869249b76043644341"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_VehicleTexture_01.png"
+textures = "PolygonPoliceStation_VehicleTexture_01.png"
+description = "A thick, rectangular slab with a stepped, chamfered lower edge, bearing a white plate with black lettering that reads 'W 1234' and 'W 1234' on a grey, horizontally ridged base, appearing as a clean, modern, and stylized prop for a police station or vehicle."
+differs = "Smaller, cleaner grey ridged slab with white plates, suited for police or vehicle use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 184
+meshes = 1
+materials = 1
+size = [0.293046, 0.208995, 0.48773]
+
+[mesh.sm_prop_license_plate_medium_01]
+name = "SM_Prop_License_Plate_Medium_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_License_Plate_Medium_01.fbx"
+sha256 = "ecdc3f437c375dc60e9d66b4771c78aedb31d0d6f576ba069d51c49a55b40483"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_VehicleTexture_01.png"
+textures = "PolygonPoliceStation_VehicleTexture_01.png"
+description = "A chunky, rectangular block of weathered orange wood, resembling a crate or a large sign, with a small protruding tab on one end. The top surface features a stencilled black alphanumeric code, and the sides are marked with dark, horizontal streaks that suggest wear and exposure."
+differs = "The most damaged and weathered option, with a protruding tab and orange wood, ideal for rustic or worn prison props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 104
+meshes = 1
+materials = 1
+size = [0.155974, 0.195998, 0.385142]
+
+[mesh.sm_prop_license_plate_medium_02]
+name = "SM_Prop_License_Plate_Medium_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_License_Plate_Medium_02.fbx"
+sha256 = "076c448f99b4d9f82304aff28cd7d4df298524293235c5f925c98bc80decc038"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_VehicleTexture_01.png"
+textures = "PolygonPoliceStation_VehicleTexture_01.png"
+description = "A rectangular block with a slightly angled front face, wrapped in horizontal grey and white stripes that suggest a corrugated or slatted surface. The top bears a black alphanumeric code, W6532 46, in a stencilled font, giving it the appearance of a heavy industrial crate or shipping container."
+differs = "The cleanest and most industrial, with a slatted grey-white finish and angled face, suited for modern shipping or storage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [0.137501, 0.195998, 0.35587]
+
+[mesh.sm_prop_license_plate_small_01]
+name = "SM_Prop_License_Plate_Small_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_License_Plate_Small_01.fbx"
+sha256 = "f2f49b040b712dc9d1237ab70fd359548a63ed0e1214da2277cfb59ffc643f85"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_VehicleTexture_01.png"
+textures = "PolygonPoliceStation_VehicleTexture_01.png"
+description = "A slim, rectangular plate with rounded corners, finished in a worn, matte orange-yellow with a dark, scuffed border. Black stencilled lettering reads 'SM4Y22' across the centre, with a smaller, illegible line of text beneath it. The surface shows subtle grime and scratches, suggesting a weathered, used vehicle part."
+differs = "The only orange-yellow plate, with a scuffed border and a second illegible line, best for a weathered, older vehicle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20
+meshes = 1
+materials = 1
+size = [0.137501, 0.018111, 0.35587]
+
+[mesh.sm_prop_license_plate_small_02]
+name = "SM_Prop_License_Plate_Small_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_License_Plate_Small_02.fbx"
+sha256 = "01364444955fbe06ffd242c5ee5bda69ad79d6d48209d7895ab97dd720575640"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_VehicleTexture_01.png"
+textures = "PolygonPoliceStation_VehicleTexture_01.png"
+description = "A slim, rectangular white plate with a subtle bevel, bearing the black registration W6532 46 in a stencilled font. The surface shows faint weathering and grime, suggesting a used, functional vehicle part."
+differs = "The only white plate, with a bevel and a cleaner, more legible registration, best for a standard, functional vehicle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20
+meshes = 1
+materials = 1
+size = [0.137501, 0.018111, 0.35587]
+
+[mesh.sm_prop_prison_bed_01]
+name = "SM_Prop_Prison_Bed_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Bed_01.fbx"
+sha256 = "a5a473f44289f2522119ceb01774ae473556447e43e7e44a4fdf245ec70155d5"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A low, rectangular frame with a raised headboard and footboard, fitted with a thin, flat mattress and a single pillow. The frame is a dark, worn metal or wood, while the bedding is a pale, off-white fabric with subtle grime and creases."
+differs = "The smallest and plainest option, with no blanket, best for a bare, low-detail cell."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 786
+meshes = 2
+materials = 1
+size = [1.24237, 1.172145, 2.399428]
+
+[mesh.sm_prop_prison_bed_02]
+name = "SM_Prop_Prison_Bed_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Bed_02.fbx"
+sha256 = "0f2c089662056e8e0e6b89170d757e86a7191b7397a89c973643483cac78dd15"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A low, flat rectangular frame with a thin, worn grey mattress, supported by short legs and a simple headboard, with a single pillow and a folded blanket at the foot, showing scuffed metal and faded fabric in a utilitarian, institutional style."
+differs = "The largest and most detailed, with a folded blanket, ideal for a more furnished, lived-in prison cell."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1696
+meshes = 3
+materials = 1
+size = [1.4041619, 1.4294909, 2.509506]
+
+[mesh.sm_prop_prison_bunkbed_01]
+name = "SM_Prop_Prison_Bunkbed_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Bunkbed_01.fbx"
+sha256 = "345d18324efb18a20991a204b0fef3d96b8969ffbcdd560776998a82ebb3a28c"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A weathered, two-tier metal bunk with a ladder on the left side, featuring a worn grey frame and thin, dark mattresses with subtle stains. The utilitarian design and institutional look make it ideal for a prison cell or a rundown holding area."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1558
+meshes = 3
+materials = 1
+size = [1.314939, 2.188375, 2.4256191]
+
+[mesh.sm_prop_prison_gurney_01]
+name = "SM_Prop_Prison_Gurney_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Gurney_01.fbx"
+sha256 = "400a6118702d437e832a592ebde7428090b9fe02a409e64c288d87ef7c17451e"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A low, flat metal-framed cot on four small caster wheels, with a thin, pale mattress and a single dark strap across the middle, suggesting a secure or medical restraint bed for a prison cell. The frame is a dull, worn grey, and the mattress is a faded off-white, giving it a utilitarian, institutional look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2943
+meshes = 3
+materials = 1
+size = [1.090557, 1.3993889, 2.548967]
+
+[mesh.sm_prop_prison_mattress_01]
+name = "SM_Prop_Prison_Mattress_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Mattress_01.fbx"
+sha256 = "c9765a68307c11fec6928845cd55df05a176cd2c0ff66cac67d570df46151ad1"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A thin, rectangular slab of pale grey foam with a subtle quilted texture and a darker, worn edge, suggesting a basic, institutional mattress. Its flat, unadorned surface and simple proportions make it ideal for a prison cell or bunk, conveying a utilitarian and slightly aged look."
+differs = "The plainest and thinnest option, with no stain, ideal for a clean, unadorned cell."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 390
+meshes = 1
+materials = 1
+size = [1.24237, 0.39542, 2.3470721]
+
+[mesh.sm_prop_prison_mattress_02]
+name = "SM_Prop_Prison_Mattress_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Mattress_02.fbx"
+sha256 = "f98ab6ec4ef0dc1f6c5782fdc70d55fe81bc96f28cd5a6e1bb0954b4814db184"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A low, rectangular slab with a rounded, pillowed top and a thicker, squared-off foot end, rendered in a pale, off-white fabric with subtle creases. A single dark, circular stain sits near the head, suggesting wear and grime."
+differs = "The thickest and most detailed, with a stain and pillowed top, best for a grimy, lived-in bunk."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 790
+meshes = 2
+materials = 2
+size = [1.24237, 0.569111, 2.3470721]
+
+[mesh.sm_prop_prison_pillow_01]
+name = "SM_Prop_Prison_Pillow_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Pillow_01.fbx"
+sha256 = "4a3d5cf992f7b2d7fe45bb4c1fbc01f22d10ba510cd4ffd67039060feb88622c"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A flat, rectangular cushion with rounded corners and a slight central bulge, rendered in a muted grey-blue fabric with a subtle woven texture. It features a thin, darker border seam around the edge and a faint, darker rectangular patch in the center, suggesting a simple stitched design."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [0.688656, 0.160591, 0.35711598]
+
+[mesh.sm_prop_prison_postbox_01]
+name = "SM_Prop_Prison_Postbox_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Postbox_01.fbx"
+sha256 = "115bc8be25ffe4aaec864c88602ad095a1fe090f667c914a643567f49040cef5"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A chunky, rectangular blue metal box with a slanted top face, featuring a narrow horizontal slot for mail and small white labels. The paint is scuffed and chipped, revealing dark metal underneath, giving it a worn, utilitarian look suitable for a prison yard or industrial setting."
+differs = "The only blue one, with the most chipped paint and a slanted top, best for a worn, industrial prison yard."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 2
+materials = 1
+size = [0.57698, 0.44485, 0.345085]
+
+[mesh.sm_prop_prison_postbox_02]
+name = "SM_Prop_Prison_Postbox_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Postbox_02.fbx"
+sha256 = "1bdddaf2c544737ad17765e598bb811a7530e21fe9618b537d3c20727a37734c"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A boxy, weathered white postbox with a dark grey slot and handle on top, showing chipped paint and grime for a worn, institutional look."
+differs = "The smallest and plainest, with a top handle and no front door, ideal for a simple, grimy wall-mounted drop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 144
+meshes = 2
+materials = 1
+size = [0.495432, 0.355176, 0.35353503]
+
+[mesh.sm_prop_prison_postbox_03]
+name = "SM_Prop_Prison_Postbox_03"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Postbox_03.fbx"
+sha256 = "f207304cf0097e6521cbb70f02372be5a73a4da9d0448ba2e32603b9b326b21a"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A boxy, low-poly red postbox with a slanted top and a wide horizontal slot, featuring a raised back panel and a small front access door, all in a flat, matte finish."
+differs = "The largest and most detailed, with a raised back panel and front access door, suited for a prominent, functional mail station."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 2
+materials = 1
+size = [0.52566, 0.448028, 0.398293]
+
+[mesh.sm_prop_prison_poster_01]
+name = "SM_Prop_Prison_Poster_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Poster_01.fbx"
+sha256 = "ef46ae893201140a6f79bec0c462ebdbedd37aa56995d6fa1d0ed5331a24f2aa"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A thin, upright rectangular slab with a slightly uneven, chipped top edge and a small notch at the bottom right, suggesting a torn or weathered paper sheet. The front face is marked with a dark, abstract silhouette resembling a hooded figure or a stylized skull, while the reverse is plain."
+differs = "The most damaged and detailed, with a torn top and hooded figure, best for a creepy cell wall."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 342
+meshes = 1
+materials = 1
+size = [0.76582503, 1.019151, 0.046952]
+
+[mesh.sm_prop_prison_poster_02]
+name = "SM_Prop_Prison_Poster_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Poster_02.fbx"
+sha256 = "90c630eaa16ffc7a93f7cba76af26e8471d3ecd3bee91cf7d88a4b81623dbb48"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A thin, upright rectangular board with a slightly curved profile, bearing a large, stylized grey face with a jagged, open mouth and a single eye, resembling a crude warning or propaganda poster. The surface is a flat, muted grey with darker shading, giving it a worn, metallic or weathered paper look."
+differs = "The largest and most detailed, with a curved face and jagged mouth, ideal for a warning sign."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 602
+meshes = 1
+materials = 1
+size = [0.69182396, 0.969659, 0.032003]
+
+[mesh.sm_prop_prison_powerbox_01]
+name = "SM_Prop_Prison_Powerbox_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Powerbox_01.fbx"
+sha256 = "8ecdcd03e13d6b0b2094b28bb5d6ed4e98f113ca4cf0def8605182920d104cb0"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A tall, narrow rectangular cabinet with a recessed front panel and a small handle, painted a flat, muted red. A white label with illegible text sits near the top, and the surface shows slight wear, suggesting an industrial electrical box or utility unit."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 172
+meshes = 2
+materials = 1
+size = [0.825562, 1.318894, 0.322495]
+
+[mesh.sm_prop_prison_shank_01]
+name = "SM_Prop_Prison_Shank_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Shank_01.fbx"
+sha256 = "5dccc3356dadf5352a9c9b6009ee9ac347b545b7a5caac84318911284bc4a7c8"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A slender, improvised weapon with a thin grey metal spike emerging from a chunky, segmented blue handle that looks like wrapped cloth or plastic. The blue grip is glossy and slightly uneven, with a small rusty brown collar where the metal meets the handle, giving it a worn, makeshift appearance suited for a prison..."
+differs = "The only one with a rusty collar and a glossy blue grip; the shortest and thinnest, best for a hidden, close-quarters stab."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 132
+meshes = 1
+materials = 1
+size = [0.060922, 0.360874, 0.052759]
+
+[mesh.sm_prop_prison_shank_02]
+name = "SM_Prop_Prison_Shank_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Shank_02.fbx"
+sha256 = "373b9b1f4eb7316c6c17b61fd90cbd98037f3bec8676875bf1025b6619e2c4da"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A crude, improvised shiv with a long, flat grey blade and a blue handle wrapped in tan cord, resembling a makeshift prison weapon."
+differs = "The longest and most detailed with a tan cord wrap; the only one with a flat, blade-like profile for a slashing motion."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 195
+meshes = 1
+materials = 1
+size = [0.04045, 0.40521201, 0.06106]
+
+[mesh.sm_prop_prison_shank_03]
+name = "SM_Prop_Prison_Shank_03"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Shank_03.fbx"
+sha256 = "1f6f0a01ad57caaf33485bc9144cb212747d473a11910d87d1dd1660474fcffc"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A slim, red-handled shank with a grey, wrapped grip and a small, pale blade, appearing worn and utilitarian, ideal for a prison break scene."
+differs = "The only one with a red handle and a pale blade; the most worn and utilitarian, ideal for a generic, low-key prison break scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 166
+meshes = 1
+materials = 1
+size = [0.036544, 0.317561, 0.050694]
+
+[mesh.sm_prop_prison_shank_04]
+name = "SM_Prop_Prison_Shank_04"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Shank_04.fbx"
+sha256 = "6d8ac78149ebb0cddfa60142a20a0eb7d9c61b15cbcec57fc79b71acf7320707"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A crude, improvised shiv with a broad, flat grey blade and a blue wrapped handle, the grip formed by a thick band of blue material with a lighter blue stripe. The blade is chipped and uneven, suggesting a sharpened piece of scrap metal, while the handle's wrap is bulky and slightly misaligned, giving it a handcrafted.."
+differs = "The only one with a broad, chipped blade and a bulky, misaligned blue wrap; the most handcrafted and visually distinct for a makeshift weapon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 162
+meshes = 1
+materials = 1
+size = [0.031017, 0.27891698, 0.093665004]
+
+[mesh.sm_prop_prison_shower_01]
+name = "SM_Prop_Prison_Shower_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Shower_01.fbx"
+sha256 = "67a9ed9f45dda4f2c5060cd901282b6fae28542ee73e3f3a5d832e2679c408b3"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A compact, low-poly wall-mounted shower fixture with a hexagonal head, a curved arm, and a circular base plate, rendered in a uniform light grey with no visible wear or markings, suggesting a clean, functional prop for a prison cell or communal washroom."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 142
+meshes = 2
+materials = 1
+size = [0.19353199, 0.258764, 0.322662]
+
+[mesh.sm_prop_prison_shower_taps_01]
+name = "SM_Prop_Prison_Shower_Taps_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Shower_Taps_01.fbx"
+sha256 = "d7190001633d6a82ab4a52cfcfed35d89bd9eeb6117fb3637ab31196a83b2c94"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A compact wall-mounted fixture with two chunky, angular cross-shaped handles projecting from a rectangular backplate, one accented with a red circular marker. The pale grey metal surfaces show slight weathering and a subtle blue tint on the handle tips, suggesting a utilitarian, institutional design for a prison..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 188
+meshes = 3
+materials = 2
+size = [0.310666, 0.146252, 0.092245]
+
+[mesh.sm_prop_prison_soap_01]
+name = "SM_Prop_Prison_Soap_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Soap_01.fbx"
+sha256 = "f35b26acb1de94e50c54d3ebcc60f1e1a3d7e8b3880afc767f7e706c94e8044d"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A chunky, low-poly rectangular bar of soap with a recessed oval top and a small notch cut into one side, rendered in a flat, pale grey-white with no visible texture or branding, giving it a clean, generic look that suits a utilitarian prison shower or washroom prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [0.089038, 0.04865, 0.154936]
+
+[mesh.sm_prop_prison_soap_holder_01]
+name = "SM_Prop_Prison_Soap_Holder_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Soap_Holder_01.fbx"
+sha256 = "293e3a7bce4fd7f83a620fa64d7da77cebad6e295818b8f3f1f2961bba94398f"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A compact, wall-mounted bracket with a curved, scoop-like basin and a flat backplate, secured by two dark circular screws. The pale grey, low-poly plastic surface is clean and unmarked, suggesting a utilitarian dispenser or holder for a bar of soap in a prison washroom."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 88
+meshes = 1
+materials = 1
+size = [0.23665, 0.105408, 0.161185]
+
+[mesh.sm_prop_prison_speaker_port_01]
+name = "SM_Prop_Prison_Speaker_Port_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Speaker_Port_01.fbx"
+sha256 = "fc185b2cfc52dc6b9b0def2ecf5b3e3119d3c8b7416c99cf4bbd4f3a6fc013b5"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A flat, octagonal wall-mounted speaker with a recessed dark grille of horizontal slats, rendered in a muted grey-blue with a worn, matte finish. The low-poly faceting gives it a chunky, industrial look, ideal for prison or security environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 70
+meshes = 1
+materials = 1
+size = [0.20589, 0.20589, 0.023252]
+
+[mesh.sm_prop_prison_table_01]
+name = "SM_Prop_Prison_Table_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Table_01.fbx"
+sha256 = "32179c35ece7f5ee7a88dd0b50ceff2cd352fbc2be8a0873da61b5de401a8302"
+atlas = "Prison_Corrugated_01.png"
+textures = "Prison_Corrugated_01.png"
+wanted = "PolygonGeneric_Texture_01_A.psd"
+description = "A low, rectangular grey metal table with a flat top and a raised lip along the back edge, supported by a single central pedestal leg with a wide, flat base. The surface is plain, with a subtle corrugated texture and a darker, worn patch in the centre, suggesting a utilitarian, institutional design for a prison cell or."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 272
+meshes = 1
+materials = 1
+size = [1.205832, 0.60682297, 0.76065]
+
+[mesh.sm_prop_prison_telebooth_01]
+name = "SM_Prop_Prison_Telebooth_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Telebooth_01.fbx"
+sha256 = "50d22e8d1bd24afbba9c9defb29e92800d0967fd2ae1038dc493dea3142b1930"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A compact, wall-mounted booth with a dark grey exterior and pale grey interior, featuring an open front, a small interior shelf, and a curved black arm supporting a round seat, resembling a vintage telephone or guard station."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 375
+meshes = 1
+materials = 1
+size = [0.851548, 1.180628, 0.967478]
+
+[mesh.sm_prop_prison_telebooth_insert_01]
+name = "SM_Prop_Prison_Telebooth_Insert_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Telebooth_Insert_01.fbx"
+sha256 = "c6e505467c7f3f4d80f367bfa62954d111f4b95703dea238e576ac2b860e5c1e"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A flat, square panel with a dark grey frame and a lighter grey central face, bearing a stylized, low-poly portrait of a stern-looking man in a peaked cap. The muted, monochrome palette and simple geometry suggest a wanted poster or a security notice, making it a functional prop for prison or police environments."
+differs = "The only stern, peaked-cap guard portrait, ideal for a security or authority notice."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3
+meshes = 1
+materials = 1
+size = [0.389314, 0.33602303, 0.0]
+
+[mesh.sm_prop_prison_telebooth_insert_02]
+name = "SM_Prop_Prison_Telebooth_Insert_02"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Telebooth_Insert_02.fbx"
+sha256 = "81aa74dc777edc57edce4584fff01a445fa85de41044b264770e0a1d3515f87e"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A flat, rectangular panel with a stylized, low-poly portrait of a prisoner in a striped uniform and cap, rendered in muted greys and off-whites. The image is framed within a darker border, suggesting a wanted poster or identification placard, and appears clean and unweathered."
+differs = "The only prisoner in a striped uniform and cap, perfect for a criminal identification placard."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3
+meshes = 1
+materials = 1
+size = [0.389314, 0.33602303, 0.0]
+
+[mesh.sm_prop_prison_telebooth_insert_03]
+name = "SM_Prop_Prison_Telebooth_Insert_03"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Telebooth_Insert_03.fbx"
+sha256 = "1c6ac539efc9c1e695924eef1ed508c8e1bb0f857ef380562a0dd0c153674f63"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A flat, rectangular panel bearing a stylized, low-poly portrait of a pale-skinned person with short grey hair and dark clothing, rendered in muted greys and blacks. The face has a neutral, slightly melancholic expression, and the surface appears clean and unmarked, resembling a wanted poster or a simple framed..."
+differs = "The only pale-skinned, grey-haired melancholic figure, suited for a somber or aged missing-person poster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3
+meshes = 1
+materials = 1
+size = [0.389314, 0.33602303, 0.0]
+
+[mesh.sm_prop_prison_telebooth_insert_04]
+name = "SM_Prop_Prison_Telebooth_Insert_04"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Prison_Telebooth_Insert_04.fbx"
+sha256 = "d769355ae9ca1557b589cc41b8a9237a2a933f7f52be7b808bb9e5d0aab7c641"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Texture_01_A.png"
+textures = "PolygonPoliceStation_Texture_01_A.png"
+description = "A flat, rectangular panel bearing a stylized, low-poly portrait of a young man with brown hair and a neutral expression, rendered in muted grey and brown tones. The image is framed by a darker border, suggesting a wanted poster or identification photo, and appears clean and unblemished."
+differs = "The only young man with brown hair and a neutral expression, fitting for a standard mugshot or generic ID."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3
+meshes = 1
+materials = 1
+size = [0.389315, 0.33602303, 0.0]
+
+[mesh.sm_prop_rope_sheet_01]
+name = "SM_Prop_Rope_Sheet_01"
+pack = "polygon_prison_map"
+source = "SourceFiles/FBX/SM_Prop_Rope_Sheet_01.fbx"
+sha256 = "52ea2f076b26b110d368b2a31b302fd53f224df561f01cdfe72979059c1e5f3e"
+atlas = "POLYGON - Police Station/PolygonPoliceStation_Wire_01.tga"
+textures = "PolygonPoliceStation_Wire_01.tga"
+description = "A tall, slender coil of rope, wound tightly into a vertical cylinder with a few loose strands at the top and bottom. The rope is a muted, dirty beige with subtle darker shading, suggesting a worn, fibrous texture. It stands upright, ready to be placed as a prop in a prison or industrial setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 328
+meshes = 2
+materials = 1
+size = [0.223705, 3.296922, 0.216764]

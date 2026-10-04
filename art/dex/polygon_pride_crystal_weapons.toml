@@ -1,0 +1,93 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_wep_arrow_01]
+name = "SM_Wep_Arrow_01"
+pack = "polygon_pride_crystal_weapons"
+source = "SourceFiles/Models/SM_Wep_Arrow_01.fbx"
+sha256 = "7d2a10379d6eb4622e0c261b919a8b96de44660289daf6a7b48beb32f417fe8c"
+atlas = "PolygonPrideWeapons_Texture_Alt_01.png"
+textures = "PolygonPrideWeapons_Texture_Alt_01.png"
+description = "A slender, straight-shafted arrow with a small, pointed head and a short, fletched tail, rendered in a low-poly style. The shaft is a pale, iridescent yellow-green, while the head and fletching are a deep, translucent blue-purple, giving it a magical, crystalline appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 482
+meshes = 1
+materials = 1
+size = [0.079064, 1.249994, 0.08252]
+
+[mesh.sm_wep_bow_01]
+name = "SM_Wep_Bow_01"
+pack = "polygon_pride_crystal_weapons"
+source = "SourceFiles/Models/SM_Wep_Bow_01.fbx"
+sha256 = "55d3d541b2033ff1fad3ac0078f7dcf66f4be42c4d197b91b9237e96fe778541"
+atlas = "PolygonPrideWeapons_Texture_Alt_01.png"
+textures = "PolygonPrideWeapons_Texture_Alt_01.png"
+description = "A slender, elegant recurve bow with a crystalline, faceted body in a gradient of orange, purple, and green, accented by a bright white string. The grip is a cluster of purple and green gems, giving it a magical, ceremonial appearance suited for a fantasy archer."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 524
+meshes = 1
+materials = 1
+size = [0.06488, 1.7128141, 0.30030498]
+
+[mesh.sm_wep_bow_rigged_01]
+name = "SM_Wep_Bow_Rigged_01"
+pack = "polygon_pride_crystal_weapons"
+source = "SourceFiles/Models/SM_Wep_Bow_Rigged_01.fbx"
+sha256 = "e0965388d4e2c64377c4a866985809265813d3eb635442f3a0798fba064cb475"
+atlas = "PolygonPrideWeapons_Texture_Alt_01.png"
+textures = "PolygonPrideWeapons_Texture_Alt_01.png"
+description = "A slender, elegant recurve bow with a crystalline, faceted body in a gradient of orange, purple, and green, featuring a central grip and small decorative protrusions, appearing as a magical, ceremonial weapon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 524
+meshes = 1
+materials = 1
+size = [0.06488, 1.7128141, 0.300607]
+
+[mesh.sm_wep_spear_01]
+name = "SM_Wep_Spear_01"
+pack = "polygon_pride_crystal_weapons"
+source = "SourceFiles/Models/SM_Wep_Spear_01.fbx"
+sha256 = "a72f51c731403c31a3d427095a7102f5e0af20c919886bcbc80048335d28c267"
+atlas = "PolygonPrideWeapons_Texture_Alt_01.png"
+textures = "PolygonPrideWeapons_Texture_Alt_01.png"
+description = "A slender, straight shaft with a small, ornate crystal head, wrapped in iridescent purple and gold bands along its length. The head features a glowing orange gem set in a gold mount, giving it a magical, ceremonial appearance. The surface is smooth and pristine, suggesting a high-quality, enchanted weapon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 802
+meshes = 1
+materials = 1
+size = [0.076374, 2.488256, 0.236173]
+
+[mesh.sm_wep_sword_01]
+name = "SM_Wep_Sword_01"
+pack = "polygon_pride_crystal_weapons"
+source = "SourceFiles/Models/SM_Wep_Sword_01.fbx"
+sha256 = "49ef1210096c0c86ba518da36b5080c73b765c5e5cccebe6b66518350a3a9bda"
+atlas = "PolygonPrideWeapons_Texture_Alt_01.png"
+textures = "PolygonPrideWeapons_Texture_Alt_01.png"
+description = "A slender, ceremonial sword with a long, tapering blade that transitions from a warm orange tip to a yellow base, suggesting a gradient of heat or magical energy. The hilt is a deep violet with a small, ornate crossguard and a pommel that glows with a bright yellow gem, giving it a regal, enchanted appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 586
+meshes = 1
+materials = 1
+size = [0.05932, 1.241292, 0.227855]

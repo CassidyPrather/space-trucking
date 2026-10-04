@@ -1,0 +1,3288 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.env_cloudring_larger_02]
+name = "Env_CloudRing_Larger_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Core/Env_CloudRing_Larger_02.fbx"
+sha256 = "f33fb0f50d6f05a48b2e9d4b8a7d8f894dd7daeda89d08cf896edce60e7dbd12"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A broad, flattened ring of pale, luminous cloud, rendered in soft white and grey with a subtle blue tint, forms a perfect circular halo. Its surface is smooth and puffy, with gentle undulations that suggest a slow, ethereal drift, making it ideal for framing magical clearings or floating islands in a fantasy scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [310.26807, 54.419323, 295.38898]
+
+[mesh.fx_leaf_01]
+name = "FX_Leaf_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Leaf_01.fbx"
+sha256 = "780688e09bc23d64f78ea5f179b6906126aaa98f57a5127a55ec045d4c469ad8"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A flat, diamond-shaped leaf with a mottled, autumnal texture of brown, grey, and orange, featuring a small, bright orange stem at one tip. The surface is weathered and patchy, with a dark, shadowed underside, giving it a dry, fallen appearance suitable for ground scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.1, 0.019318, 0.1]
+
+[mesh.fx_sphere_pivoted_01]
+name = "FX_Sphere_Pivoted_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Sphere_Pivoted_01.fbx"
+sha256 = "42100d95c24094a525337e1becaa27129ad675e38a057cdd806d7eb6131066d7"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A faceted, roughly spherical polyhedron with a flat, pale-grey base, wrapped in a weathered red-and-white canvas texture with scattered white dots and brown patches, suggesting a worn, magical orb or a stylized, low-poly mushroom cap."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 22
+meshes = 1
+materials = 1
+size = [0.205046, 0.202662, 0.23541498]
+
+[mesh.fx_sunshaft_01]
+name = "FX_SunShaft_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/FX/FX_SunShaft_01.fbx"
+sha256 = "ab001fd01b3f145616c46cc4edd088a88dd25772ddb991be57d94a7e244b5f23"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A tall, narrow vertical shaft with a flared, jagged base, resembling a crystalline spire or a stylised beam of light. The surface is a dark, translucent mix of deep reds, purples, and golds, with a bright orange glow at the top and a textured, glassy finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [1.0, 3.591922, 1.0]
+
+[mesh.fx_weta_01]
+name = "FX_Weta_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Weta_01.fbx"
+sha256 = "e2106cb4ee711ee5d4be125ae5fb6b292337546c5b7175931c1b2fbe14d7781a"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, low-poly insect with a broad, segmented abdomen and long, spindly legs, rendered in mottled earthy browns and tans. Two long, thin antennae sweep forward from the head, and the body shows a subtle banded pattern. The creature appears to be a stylized weta, posed in a neutral, grounded stance."
+differs = "Narrowest footprint and flattest profile, ideal for tight ground placements where a compact, low-slung insect is needed."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1588
+meshes = 1
+materials = 1
+size = [0.291436, 0.112439, 0.444207]
+
+[mesh.fx_weta_02]
+name = "FX_Weta_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Weta_02.fbx"
+sha256 = "a8543fe190ff5d68ab15e0a17bd4e3e4de8506f29442caa5822c70a25287c68c"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, low-poly weta with a broad, segmented abdomen and long, spindly legs that splay outward, giving it a grounded, insectoid stance. Its mottled brown and tan texture suggests a natural, earthy camouflage, while the long antennae and pronounced rear cerci add to its realistic, if stylized, appearance."
+differs = "Taller and wider stance with more splayed legs, better for open terrain where a broader, more imposing silhouette is required."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1582
+meshes = 1
+materials = 1
+size = [0.308934, 0.293342, 0.422994]
+
+[mesh.sm_env_background_trees_01]
+name = "SM_Env_Background_Trees_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Background_Trees_01.fbx"
+sha256 = "49d0de951a12e214e636e2c8440405bffa38236ca15045d8e0f8b74d8685e98f"
+atlas = "TreeMedium_01.tga"
+textures = "TreeMedium_01.tga"
+description = "A cluster of three slender, low-poly trees with pale grey trunks and sparse, muted green foliage, forming a natural backdrop grouping. The trunks are slightly curved and branch out into a few distinct canopy clumps, giving a stylized, hand-crafted look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [311.6715, 58.306034, 125.10085]
+
+[mesh.sm_env_branch_01]
+name = "SM_Env_Branch_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Branch_01.fbx"
+sha256 = "37112765531ad3d603f2eb82ddd35b57b426cfd440cc1e3f7618178312ab67f9"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A slender, gently curved wooden limb with a small offshoot stub near its base, rendered in a dark, weathered brown with subtle grain. The surface appears smooth and slightly worn, suggesting a dry, aged branch suitable for forest floor scatter or subtle environmental detail."
+differs = "The longest and most slender, with the fewest offshoots; ideal for a single, subtle ground detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 110
+meshes = 1
+materials = 1
+size = [0.305632, 0.192168, 1.486576]
+
+[mesh.sm_env_branch_02]
+name = "SM_Env_Branch_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Branch_02.fbx"
+sha256 = "b76605bc228687616bcc6ea29ff66c5e0702a1d046b7843b0be76662e43732e2"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A gnarled, weathered branch with a thick, tapering main stem and two angular offshoots, one long and one short, giving it an asymmetrical, reaching silhouette. The bark is a dark, matte brown with subtle grey mottling, suggesting age and dampness."
+differs = "The largest and most detailed, with the most complex, reaching silhouette; best as a hero prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 162
+meshes = 1
+materials = 1
+size = [0.95239496, 0.30357, 1.285667]
+
+[mesh.sm_env_branch_03]
+name = "SM_Env_Branch_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Branch_03.fbx"
+sha256 = "092fe20ad601a97cd16788b124a81ed8b34810f6f203d14a0b1c831f09449178"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A gnarled, bare branch with a thick main stem and two smaller offshoots, rendered in dark brown with subtle grey highlights. The wood appears weathered and textured, with a slightly jagged, broken end, making it ideal for adding a natural, decaying touch to forest floors or as a prop for a rustic scene."
+differs = "The most damaged, with a jagged broken end; perfect for a decaying, rustic scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 82
+meshes = 1
+materials = 1
+size = [0.48653698, 0.16529, 1.071383]
+
+[mesh.sm_env_branch_04]
+name = "SM_Env_Branch_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Branch_04.fbx"
+sha256 = "bdf4f68c276980dedb25ff8477945d4bf60efe903b2c6db4fd245651a6e68c44"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A slender, weathered brown branch with a distinct kink near its thicker end, tapering to a thin tip. The bark is textured with subtle ridges and a dark, earthy tone, giving it a dry, aged appearance. Its simple, angular form makes it ideal for scattered ground debris or a small, natural prop in a forest scene."
+differs = "The smallest and most kinked, with a simple angular form; best for scattered debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 70
+meshes = 1
+materials = 1
+size = [0.399524, 0.198403, 0.74403596]
+
+[mesh.sm_env_cloud_ring_01]
+name = "SM_Env_Cloud_Ring_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Cloud_Ring_01.fbx"
+sha256 = "0414c4f45c73af36a004af55e33c25855e3cb3d3df1ef67c34bf63471fbd6a6e"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A flattened, wide ring of soft, puffy white clouds with a subtle blue-grey underside, forming a perfect circular halo. The surface is smooth and stylized, with gentle bumps and a clean, unblemished finish. It is ideal for floating high in a sky to frame a magical scene or serve as a distant atmospheric marker."
+differs = "The smaller, fluffier, and smoother option, ideal as a soft, ethereal halo for magical skies."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14456
+meshes = 1
+materials = 1
+size = [277.46246, 26.061537, 259.42413]
+
+[mesh.sm_env_cloud_ring_02]
+name = "SM_Env_Cloud_Ring_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Cloud_Ring_02.fbx"
+sha256 = "610e6b7dffb6735502389fd7e49e0af9843b4d18d3ae5706019ee3247b865db2"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A flattened, irregular ring of pale grey stone with a rough, weathered surface, resembling a floating island or a natural rock formation. Its uneven, jagged edges and subtle earthy tones give it a mystical, ancient feel, making it ideal for a fantasy environment where a floating platform or a magical cloud-like..."
+differs = "The larger, more detailed, and rugged stone variant, best for a floating island platform with ancient, weathered charm."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [310.26804, 54.419327, 295.38898]
+
+[mesh.sm_env_dirt_cliff_01]
+name = "SM_Env_Dirt_Cliff_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Dirt_Cliff_01.fbx"
+sha256 = "137b3cb0260939946b07c75cee730dccfdde9c318a463963cde7b4952e3c47c6"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A chunky, irregular rock with a flat base and a jagged, angular top, featuring a distinct overhang and a small notch on one side. Its surface is a muted, earthy brown with subtle darker crevices and lighter highlights that emphasize its faceted, low-poly form."
+differs = "The most compact and overhanging of the set, ideal for a single, dramatic rock outcrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 764
+meshes = 1
+materials = 1
+size = [11.576042, 9.154619, 11.882828]
+
+[mesh.sm_env_dirt_cliff_02]
+name = "SM_Env_Dirt_Cliff_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Dirt_Cliff_02.fbx"
+sha256 = "2951be1d827d238a8ed7312f9dbd1ccefc20f1bbefadbcac47721f6f66080744"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A chunky, low-poly rock formation with a broad, uneven base and a slightly flattened top, rendered in a muted grey-brown with subtle lighter highlights on its faceted surfaces. Its irregular silhouette and lack of sharp edges give it a weathered, natural look, making it ideal for scattered terrain or cliff-edge..."
+differs = "The most rounded and weathered, with no sharp edges, perfect for a soft, natural boulder."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 826
+meshes = 1
+materials = 1
+size = [13.374038, 10.217516, 9.351125]
+
+[mesh.sm_env_dirt_cliff_03]
+name = "SM_Env_Dirt_Cliff_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Dirt_Cliff_03.fbx"
+sha256 = "80139ead7b0a895cfdd9c01a219c9bd082b9d075f91d6c58fb66b5fae68c9210"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, irregular rock formation with a flat, slightly stepped top and a sheer, faceted face, rendered in muted grey-brown tones with subtle earthy striations. Its blocky silhouette and weathered texture suggest a natural cliff edge or a rugged outcrop, ideal for creating ledges or terrain breaks in a stylized forest..."
+differs = "The widest and most stepped, offering a long, flat ledge for a cliff-edge path."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1092
+meshes = 1
+materials = 1
+size = [25.442995, 10.0716915, 14.106255]
+
+[mesh.sm_env_dirt_cliff_04]
+name = "SM_Env_Dirt_Cliff_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Dirt_Cliff_04.fbx"
+sha256 = "aed91c17a16c33fd26e8e22faa73e926d619fa477302369d00528f1b7f44b241"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, elongated rock ledge with a flat, slightly uneven top and a sheer, blocky face, rendered in a muted grey-brown with subtle darker striations. Its chunky, faceted silhouette suggests a natural cliff outcrop or a stepped embankment, with a small overhang on one side that adds a touch of rugged character."
+differs = "The most elongated and blocky, with a sheer face and a small overhang, ideal for a long embankment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1712
+meshes = 1
+materials = 1
+size = [25.541885, 9.967332, 14.102226]
+
+[mesh.sm_env_dirt_cliff_05]
+name = "SM_Env_Dirt_Cliff_05"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Dirt_Cliff_05.fbx"
+sha256 = "12e3a9ba8aa5ce75ca5f8f4db80dd86b7b4eb55d44f0b951a0d487713d1c3071"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A chunky, low-poly rock formation with a broad, overhanging top and a deeply undercut, shadowed base, giving it a top-heavy, mushroom-like silhouette. The surface is a flat, warm grey-brown with subtle earthy variation, and the faceted planes catch light to emphasise its rugged, natural form."
+differs = "The most top-heavy and mushroom-shaped, with a deep undercut, perfect for a dramatic, shadowed overhang."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 524
+meshes = 1
+materials = 1
+size = [11.921434, 9.799288, 14.21254]
+
+[mesh.sm_env_dirt_cliff_06]
+name = "SM_Env_Dirt_Cliff_06"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Dirt_Cliff_06.fbx"
+sha256 = "b94cbe0c345ee65b6d818c77f99c0bf06b6c45cfd8c3eeafeffd727e18196970"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A chunky, low-poly rock formation with a flat, slightly angled top and a sheer, vertical face that drops into a flared, uneven base. The surface is a muted, earthy taupe with subtle, darker striations running down the cliff side, giving it a weathered, natural look."
+differs = "The most vertical and sheer, with a flared base, ideal for a tall, narrow cliff face."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 638
+meshes = 1
+materials = 1
+size = [13.743061, 10.414313, 12.279585]
+
+[mesh.sm_env_dirt_cliff_07]
+name = "SM_Env_Dirt_Cliff_07"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Dirt_Cliff_07.fbx"
+sha256 = "d9018c02b5d36c1bf1a0efdc8a1a74f6d50993fb53fd4c5744cfc607368eb33c"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, rounded mound of bare earth with a smooth, weathered top and a slightly jagged, uneven base, rendered in a muted taupe-brown. Its broad, flat profile suggests a natural ground cover or a small hillock, with subtle tonal shifts hinting at packed dirt and a touch of mossy green on the underside."
+differs = "The flattest and lowest, a simple mound for ground cover, with a hint of mossy green."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 636
+meshes = 1
+materials = 1
+size = [12.195089, 6.1036, 18.382412]
+
+[mesh.sm_env_dirt_cliff_08]
+name = "SM_Env_Dirt_Cliff_08"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Dirt_Cliff_08.fbx"
+sha256 = "efd3a0baf55f220f290d2ee9151fea69e4e5a0554b7303c267b7e0ae34733d37"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, low-poly rock formation with a broad, flat top and a narrower, faceted base that flares outward. The surface is a uniform, muted grey-brown with subtle vertical striations, giving it a weathered, natural look."
+differs = "The most squat and uniform, with a broad flat top and a flared base, ideal for a stable, flat-topped pedestal."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 862
+meshes = 1
+materials = 1
+size = [12.199765, 8.139488, 12.026901]
+
+[mesh.sm_env_dirt_cliff_09]
+name = "SM_Env_Dirt_Cliff_09"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Dirt_Cliff_09.fbx"
+sha256 = "d48b1a20efefeaa32ed7683b562c4d40040f6e21134da9a2731cdb0270591b85"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A compact, low-poly rock pillar with a flat, irregular top and a wider, jagged base, rendered in a uniform grey-brown with subtle darker patches. The faceted surfaces and clean silhouette make it ideal for a standalone stone marker or a small natural outcrop in a stylized forest setting."
+differs = "The tallest and most vertical of the set, ideal as a standalone pillar or marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 872
+meshes = 1
+materials = 1
+size = [8.85624, 10.091178, 9.67823]
+
+[mesh.sm_env_dirt_cliff_10]
+name = "SM_Env_Dirt_Cliff_10"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Dirt_Cliff_10.fbx"
+sha256 = "8fce2c6adc0300df1351234e916eb220e39dca627beef2db1de8f7f619c5f9b9"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, roughly cylindrical rock formation with a flat, slightly irregular top and a wider, flared base, resembling a weathered stone pillar or stump. Its surface is a uniform, matte grey-brown with subtle vertical striations and a few small chips, giving it a natural, eroded look."
+differs = "The widest and most cylindrical, resembling a weathered stump with a flared base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 918
+meshes = 1
+materials = 1
+size = [12.242006, 11.9080925, 13.513284]
+
+[mesh.sm_env_dirt_cliff_11]
+name = "SM_Env_Dirt_Cliff_11"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Dirt_Cliff_11.fbx"
+sha256 = "b00a0d83a88b3309122709be63a1f7cf45309c5137562b4b3dfdac2f1aee5364"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, chunky rock formation with a broad, flat top and a slightly flared base, rendered in a muted grey-brown. The low-poly facets create a rough, weathered surface with subtle vertical striations, suggesting a stable, natural boulder suitable for a forest floor or cliff edge."
+differs = "The most massive and broad-topped, best for a stable boulder or cliff-edge anchor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 868
+meshes = 1
+materials = 1
+size = [10.011074, 12.3759775, 18.06189]
+
+[mesh.sm_env_dirt_cliff_12]
+name = "SM_Env_Dirt_Cliff_12"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Dirt_Cliff_12.fbx"
+sha256 = "65ee1a8971335fd90903b040d41a9d46ebdb036723ed52babeb90d2bb4e1ce7a"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, broad chunk of earth with a flat top and a jagged, uneven underside, suggesting a floating island or a broken ledge. The faceted surface is a uniform, muted brown with no visible texture, giving it a clean, stylized look."
+differs = "The flattest and lowest, with a jagged underside for floating islands or broken ledges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 300
+meshes = 1
+materials = 1
+size = [12.777623, 6.102201, 12.594633]
+
+[mesh.sm_env_fern_01]
+name = "SM_Env_Fern_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Fern_01.fbx"
+sha256 = "1e8745fa35afb6b9418068b9160688149f1086e674edf32c61018ecf15a96299"
+atlas = "Fern_3_TGA.tga"
+textures = "Fern_3_TGA.tga"
+description = "A low, spreading cluster of pale, grey-green fronds radiating from a dark, compact central base, giving it a soft, feathery silhouette that reads as a young or shaded fern. The muted, desaturated tones and simple, flat-shaded texture make it ideal for adding subtle ground-level detail to a forest floor without drawing."
+differs = "The largest and palest of the three, with no mushroom or red core, best for subtle, shaded ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 495
+meshes = 3
+materials = 1
+size = [2.41857, 0.985989, 2.632175]
+
+[mesh.sm_env_fern_02]
+name = "SM_Env_Fern_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Fern_02.fbx"
+sha256 = "2337e9ff656f685afcc1de7923e3678fb54e4f8d5aaab77cda9fdf714bdaa1fb"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, spreading cluster of arching fronds fans out from a central crown, with a small, reddish-brown core visible at the base. The muted olive-green leaves are broad and slightly jagged, giving the plant a dry, weathered appearance that suggests a hardy forest floor species."
+differs = "The only one with a reddish-brown core and no mushroom, offering a dry, weathered look for hardy forest floors."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 519
+meshes = 3
+materials = 1
+size = [1.761662, 0.73320204, 1.967294]
+
+[mesh.sm_env_fern_03]
+name = "SM_Env_Fern_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Fern_03.fbx"
+sha256 = "82f16aa9ed80826aac8290ea35e6dcbffe9484e07e0ceaa50bc961299d842373"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, spreading cluster of broad, olive-green fronds with a dark, almost black central crown, topped by a prominent, fleshy red-and-white spotted mushroom cap. The fronds curve outward and downward, giving the plant a squat, ground-hugging silhouette that reads as a mature, slightly wilted fern."
+differs = "The smallest and most damaged, uniquely featuring a red-and-white spotted mushroom cap, ideal for a mature, wilted accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 225
+meshes = 3
+materials = 1
+size = [1.4764359, 0.556044, 0.88747096]
+
+[mesh.sm_env_fern_koru_01]
+name = "SM_Env_Fern_Koru_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Fern_Koru_01.fbx"
+sha256 = "77fd0c779240f43b639d17cf03f1e06228e16c9059b5ce6dd9de8cae5fde957a"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A slender, upright green stalk that curls tightly into a spiral at the top, resembling a young fern frond or koru. The surface is smooth and matte, with a gradient from a darker base to a lighter, yellowish-green tip."
+differs = "Identical to _02 in geometry and size; only the description differs, so pick either for the same use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 334
+meshes = 2
+materials = 1
+size = [0.297604, 1.068542, 0.059752002]
+
+[mesh.sm_env_fern_koru_02]
+name = "SM_Env_Fern_Koru_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Fern_Koru_02.fbx"
+sha256 = "ed432a72608bbdb64ff7af050cad3127ab01ca7d792f69daba3d2e86ade49688"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A slender, upright fern frond with a tightly coiled, spiral tip, rendered in a muted, natural green with subtle darker striping along the stem. The low-poly form gives it a clean, stylized look, ideal for adding delicate, vertical detail to forest floors or enchanted undergrowth."
+differs = "Identical to _01 in geometry and size; only the description differs, so pick either for the same use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 334
+meshes = 2
+materials = 1
+size = [0.297604, 1.068542, 0.059752002]
+
+[mesh.sm_env_fern_tree_01]
+name = "SM_Env_Fern_Tree_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Fern_Tree_01.fbx"
+sha256 = "9e6433f2940405168dfa7c99b99e7c7a5b26664cf028cd1a1a0016da9c8ed4f5"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A stout, short-trunked palm-like tree with a dense crown of arching, olive-green fronds, each tipped with a reddish-pink blush. The trunk is dark brown and textured with a fibrous, layered bark, while a cluster of pale, bulbous growths sits at the crown's base."
+differs = "The shorter, rounder option with reddish-pink frond tips and bulbous crown growths, best for lush, vibrant enchanted clearings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2865
+meshes = 4
+materials = 2
+size = [3.415718, 4.480093, 3.628984]
+
+[mesh.sm_env_fern_tree_02]
+name = "SM_Env_Fern_Tree_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Fern_Tree_02.fbx"
+sha256 = "cec7696cdd805d7e93bed6ff7cbc484c1373d6709c4f14c42dac32af7bfdd4d0"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A slender, upright trunk supports a broad, flat canopy of intersecting fronds, giving the tree a distinct, layered silhouette. The foliage is a muted, desaturated green with brownish undertones, while the bark is a pale, weathered grey, suggesting a dry or ancient specimen."
+differs = "The taller, wider option with a pale grey trunk and desaturated, flat-topped foliage, best for dry, ancient, or weathered forest edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2865
+meshes = 4
+materials = 1
+size = [3.675205, 4.480093, 3.999867]
+
+[mesh.sm_env_fog_ring_01]
+name = "SM_Env_Fog_Ring_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Fog_Ring_01.fbx"
+sha256 = "af2f0f61402eeea2bc7b76c913c1ca11bde038d9b00e985239267ff96af704cc"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A flattened, elliptical ring with a thin, translucent, glassy surface, accented by a band of warm orange and red hues along its upper edge, resembling a low-lying mist or magical aura."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [70.17066, 3.939841, 70.17065]
+
+[mesh.sm_env_grass_01]
+name = "SM_Env_Grass_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Grass_01.fbx"
+sha256 = "f59f744a4bfe649d74c35943c1c45438b757a06398895e83ea98d3915461d0f9"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide clump of dark green blades with a few pale, wispy strands rising from the centre, forming a dense, rounded tuft that reads as a mature grass patch. The muted, earthy tones and simple silhouette make it a natural, unobtrusive ground cover for forest floors and meadows."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 50
+meshes = 3
+materials = 2
+size = [1.893297, 1.028209, 1.900116]
+
+[mesh.sm_env_ground_grass_01]
+name = "SM_Env_Ground_Grass_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ground_Grass_01.fbx"
+sha256 = "0079dcab04d17d3e749c920d9fbf5cfc56fe3a42bf5907bd0c9d2e31f66e008a"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, flat, irregular mound of dark olive-green earth with a slightly rounded top and uneven edges, appearing as a simple, unadorned patch of ground cover. Its muted, uniform colouring and lack of distinct features make it a versatile base for layering under other props in a dark fantasy setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 236
+meshes = 1
+materials = 1
+size = [9.379233, 0.38026, 9.499632]
+
+[mesh.sm_env_ground_grass_flat_01]
+name = "SM_Env_Ground_Grass_Flat_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ground_Grass_Flat_01.fbx"
+sha256 = "42c1962dceee6f7ea5bb4ba42f05ae9c3f99d3c633340c65606ed47a4944f9fb"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A flat, square patch of ground with a subtle, mottled olive-green texture, appearing as a simple, low-poly tile. One face shows a slightly more detailed, patchy variation, while the others are uniform, suggesting a versatile base for terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 1
+materials = 1
+size = [5.000009, 0.171975, 5.000008]
+
+[mesh.sm_env_ground_grass_round_01]
+name = "SM_Env_Ground_Grass_Round_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ground_Grass_Round_01.fbx"
+sha256 = "831a89ec0aed8c22ef0c68a50c953943e3889cba41b6d078e81376094019929f"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A flat, roughly circular patch of ground with an irregular, organic edge, rendered in a muted olive green with subtle darker mottling and faint lighter speckles that suggest sparse grass or soil variation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 319
+meshes = 1
+materials = 1
+size = [7.79703, 0.088394, 7.524512]
+
+[mesh.sm_env_ground_path_01]
+name = "SM_Env_Ground_Path_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ground_Path_01.fbx"
+sha256 = "24077dbb1e34d5c8ac361174a6e60bdef33d3c0ac8b318fe2b6a12ab941cef76"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, irregular slab of mossy earth, tapering to a thin edge at one end and rising into a rounded hump at the other, with a subtle, worn path worn across its surface. The muted olive-green texture suggests damp, weathered stone or packed soil, making it ideal for a natural, overgrown trail segment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 385
+meshes = 1
+materials = 1
+size = [13.786338, 2.7535782, 16.91248]
+
+[mesh.sm_env_leaves_01]
+name = "SM_Env_Leaves_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Leaves_01.fbx"
+sha256 = "de3c4da2960d5fef1b50958e8e886bf226009c8fc7ea6731670ef118afb61f4f"
+atlas = "Leaves_TGA.tga"
+textures = "Leaves_TGA.tga"
+description = "A flat, roughly square patch of ground cover, textured with scattered, mottled leaf clusters in muted greens and browns, designed to lie flush with the terrain as a subtle, naturalistic detail for forest floors."
+differs = "The most detailed and organic, with scattered mottled clusters; best for dense, varied forest floor scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8
+meshes = 1
+materials = 1
+size = [1.578962, 0.055788, 1.67683]
+
+[mesh.sm_env_leaves_02]
+name = "SM_Env_Leaves_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Leaves_02.fbx"
+sha256 = "c15e5f189e26a6c895432c148fbb637f74c17e0642c9aebbdd6ffd327ed89604"
+atlas = "Leaves_TGA.tga"
+textures = "Leaves_TGA.tga"
+description = "A flat, roughly square patch of low-poly ground cover, shaped as a cluster of broad, overlapping leaves with jagged, serrated edges and a subtle central vein. The surface is a muted, desaturated green with darker mottling, and the underside is a lighter, yellowish-green, giving it a slightly weathered, natural look."
+differs = "The most structured, with serrated edges and a central vein; ideal for a single, distinct leaf cluster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [1.265754, 0.072678, 1.278358]
+
+[mesh.sm_env_leaves_03]
+name = "SM_Env_Leaves_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Leaves_03.fbx"
+sha256 = "e24764adcdb04711626c6940e5ef18c49e80cf0782a12ff5f1970ce395cf6bd1"
+atlas = "Leaves_TGA.tga"
+textures = "Leaves_TGA.tga"
+description = "A flat, elongated oval of pale, desaturated green, this asset reads as a single broad leaf or a small cluster of overlapping leaves lying flat on the ground. Its surface is smooth and unmarked, with a subtle, soft texture that suggests a matte, natural finish."
+differs = "The largest and plainest, a smooth elongated oval; perfect for a broad, uncluttered ground patch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10
+meshes = 1
+materials = 1
+size = [2.5, 0.072548, 1.321072]
+
+[mesh.sm_env_log_01]
+name = "SM_Env_Log_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Log_01.fbx"
+sha256 = "750b6ff3af73f93dcb1fc5f9953233f30aab01b0f2dbbc785b15214ea274818a"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A weathered, broken log with a jagged, splintered end and a hollowed core, rendered in pale grey-brown wood with dark, charred-looking patches. Its low-poly facets give it a rough, aged texture, making it ideal for a fallen tree or debris in a forest floor setting."
+differs = "The largest and most detailed, with a hollowed core and charred patches, ideal for a burnt forest centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2084
+meshes = 1
+materials = 1
+size = [5.341539, 5.342007, 8.870237]
+
+[mesh.sm_env_log_01_collision]
+name = "SM_Env_Log_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Log_01_Collision.fbx"
+sha256 = "8b8fff9af12a53e1045ce95a9e6c221afbf31ba3b5f69bb4f14caf49f32c70d6"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A weathered, hollow log segment with a pale grey, bark-stripped surface and a jagged, splintered break at one end, revealing a dark, reddish-brown interior. The exterior is marked with subtle vertical grooves and patches of faded red and green, suggesting moss or lichen clinging to the wood."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 608
+meshes = 1
+materials = 1
+size = [5.4002123, 5.376227, 8.587453]
+
+[mesh.sm_env_log_02]
+name = "SM_Env_Log_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Log_02.fbx"
+sha256 = "200b1d0c5473cdba078d9bdf5ba57f4412e7bd27ba95b5f4d9602d7262d26198"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A weathered, pale-barked log with a jagged, splintered end and a cluster of dark, spiky roots at the other, giving it a gnarled, organic silhouette. The wood is light tan with subtle grey striations and a few small dark knots, suggesting dry, aged timber."
+differs = "The shortest and most gnarled, with spiky roots at one end, perfect for a dense, tangled undergrowth prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1114
+meshes = 1
+materials = 1
+size = [1.514896, 1.8801601, 2.795214]
+
+[mesh.sm_env_log_02_collision]
+name = "SM_Env_Log_02_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Log_02_Collision.fbx"
+sha256 = "1c277caa3f0222f2843b36b35ae938d8c0786f5a842cba7fa82f2863da118d18"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A weathered, low-poly fallen log with a reddish-brown bark and pale, jagged broken ends, featuring a cluster of grey, splintered branches at one end and a small orange mushroom growing near the base, suggesting a forest floor prop with a distinct, storybook charm."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 292
+meshes = 1
+materials = 1
+size = [1.605574, 1.900301, 2.854645]
+
+[mesh.sm_env_log_03]
+name = "SM_Env_Log_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Log_03.fbx"
+sha256 = "9803bf1a46c06901be38322f0e158317043cf8f69dda99f05db11352fb1e4a32"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A weathered, dark brown log with a rough, bark-like texture and a slight bend, featuring a few small, jagged branch stubs along its length. The ends are blunt and cut flat, revealing a lighter, tan interior that suggests aged wood, making it suitable for a forest floor or a rustic barrier."
+differs = "The plainest and straightest, with flat-cut ends and the lowest triangle count, best for a simple barrier or fence."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 868
+meshes = 1
+materials = 1
+size = [1.267756, 1.2190421, 6.0973997]
+
+[mesh.sm_env_log_03_collision]
+name = "SM_Env_Log_03_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Log_03_Collision.fbx"
+sha256 = "b6cdf393f96a874370a20c56e15f9fb917f859dfa1a5d4a8204bb12602a5c767"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A long, slender, slightly gnarled log with a subtle bend and a few small, broken branch stubs, rendered in a muted, earthy brown with a rough, weathered bark texture. Its simple, elongated form and low-poly finish make it ideal for scattered ground cover or a fallen timber piece in a dark fantasy forest setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 142
+meshes = 1
+materials = 1
+size = [0.863817, 0.848801, 6.061175]
+
+[mesh.sm_env_log_04]
+name = "SM_Env_Log_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Log_04.fbx"
+sha256 = "5bdaaf41bf594f60f259c4712fadaaecef35f9d503ecf662b80fa152d538982d"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, fallen branch with a pronounced S-curve, featuring a broken, splintered end and a small offshoot stub. The bark is a mottled mix of dark brown and mossy green, giving it a weathered, damp forest-floor appearance. Its irregular silhouette makes it ideal for natural scatter and debris."
+differs = "The only one with a pronounced S-curve and mossy green bark, ideal for a damp, winding forest path scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1052
+meshes = 1
+materials = 1
+size = [2.3488731, 2.01916, 8.109995]
+
+[mesh.sm_env_log_04_collision]
+name = "SM_Env_Log_04_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Log_04_Collision.fbx"
+sha256 = "4d68dde9a7ef61d3aca16801c78c8df89d288a377db5f70e0c3cb8d3d280e5e6"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A long, dark, weathered log with a pronounced curve, featuring a broken branch stub and a flat, grey cut end. The bark is a deep charcoal brown with a distinct, worn red-orange painted band near the tip, suggesting it was once marked or used as a boundary."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 340
+meshes = 1
+materials = 1
+size = [2.358387, 2.043006, 7.98089]
+
+[mesh.sm_env_moss_lumps_01]
+name = "SM_Env_Moss_Lumps_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Moss_Lumps_01.fbx"
+sha256 = "01b7a705640c9f82c4e4b8f142dd12cbec10224ac9001e520a504c5fb936c8e9"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, irregular cluster of rounded, lumpy forms that reads as a patch of soft, earthy moss or a small mound of soil. The surface is a muted, matte brown with subtle tonal variation, giving it a natural, weathered appearance."
+differs = "Largest and most detailed moss mound, with the most irregular, organic silhouette for hero ground patches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 324
+meshes = 1
+materials = 1
+size = [5.15226, 1.536935, 4.340888]
+
+[mesh.sm_env_moss_lumps_02]
+name = "SM_Env_Moss_Lumps_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Moss_Lumps_02.fbx"
+sha256 = "b62737eb82c6e1ba66b4d0635a4d15b10e2453a7b79c98a4c5a2dececb25f0f1"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, irregular cluster of rounded, earthy-brown lumps with a matte finish, resembling a patch of soft, damp moss or a small mound of soil. The surface is smooth and unadorned, with subtle tonal variation suggesting organic growth, making it ideal for scattering across forest floors or adding natural ground detail."
+differs = "Mid-sized, plainest moss lump with the flattest profile, ideal for subtle, low-lying ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 248
+meshes = 1
+materials = 1
+size = [4.623308, 1.106552, 3.425077]
+
+[mesh.sm_env_moss_lumps_03]
+name = "SM_Env_Moss_Lumps_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Moss_Lumps_03.fbx"
+sha256 = "9a6a92430dbf5a027235d84f11e5e953dae548ee6a0780f02f5a806f51f9a46d"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, irregular cluster of faceted lumps in a muted earthy brown, forming a flat, organic mound with a slightly glossy finish that suggests dampness or a subtle sheen. Its broad, low profile makes it ideal for scattering across forest floors as a natural ground detail, offering a softer, more rounded alternative to..."
+differs = "Smallest moss mound with a glossy, damp sheen, perfect for wet or shaded forest floor accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 196
+meshes = 1
+materials = 1
+size = [3.659828, 0.954005, 2.795744]
+
+[mesh.sm_env_moss_lumps_04]
+name = "SM_Env_Moss_Lumps_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Moss_Lumps_04.fbx"
+sha256 = "80ffddf2affda2add84c8f370b2998ea90abdcb66e78c73348354a6d7ecdd81b"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of four low-poly, faceted stones in a muted grey-brown, each with a slightly irregular, rounded form and a flat base, appearing as a natural, weathered scatter of rocks for grounding forest scenes."
+differs = "Only asset that is a scatter of separate stones, not a moss lump, for rocky ground detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 62
+meshes = 1
+materials = 1
+size = [0.90287, 0.71445, 0.968848]
+
+[mesh.sm_env_mushroom_01]
+name = "SM_Env_Mushroom_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_01.fbx"
+sha256 = "cbcb3c25e46e89a708e29a89a95a4ca783ddeca09ef6c11146d437c9c934b38d"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A stout, low-poly toadstool with a broad, domed cap in deep red, heavily speckled with irregular cream spots. The thick, pale tan stalk flares at the base into a small, earthy foot, giving it a grounded, sturdy silhouette ideal for forest floor scatter."
+differs = "Tallest and most domed red cap, with the most pronounced flared base for a grounded look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6560
+meshes = 3
+materials = 1
+size = [5.229849, 6.0020366, 4.994059]
+
+[mesh.sm_env_mushroom_01_collision]
+name = "SM_Env_Mushroom_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_01_Collision.fbx"
+sha256 = "93dc5157c1ea26da939cfafea392d37eaab409d9b5669d2798c1996c92132f3a"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A stout, low-poly mushroom with a broad, flattened cap in muted grey and brown, supported by a thick, tapering stem with a red base and dark banding. The cap features a distinct red underside with a pale, glowing spot, giving it a slightly weathered, organic appearance suited for forest floor decoration."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 188
+meshes = 1
+materials = 1
+size = [5.1118937, 5.896913, 4.750216]
+
+[mesh.sm_env_mushroom_02]
+name = "SM_Env_Mushroom_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_02.fbx"
+sha256 = "99d75caa87098de07b3ab2ecf00b24c30ebf5a25e6d64c7ab0e74b47cfaf7cae"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A stout, low-poly mushroom with a broad, slightly flattened red cap covered in irregular white spots, supported by a thick, pale tan stem that flares into a small, earthy base. The cap's underside is a darker, shadowed red, and the simple, faceted geometry gives it a clean, stylized look perfect for a forest floor."
+differs = "Broadest and flattest red cap with the most even, regular white spot distribution."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6574
+meshes = 3
+materials = 1
+size = [6.23814, 6.400426, 5.853144]
+
+[mesh.sm_env_mushroom_02_collision]
+name = "SM_Env_Mushroom_02_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_02_Collision.fbx"
+sha256 = "46c36504bf919c9de9622577b4c7ffd6331ae0a166a2836e0372b7432e30cecf"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, low-poly mushroom with a broad, angular cap and a thick, tapering stem. The cap is a deep charcoal black with bold, jagged red-orange stripes and a matching red rim, while the stem is dark with a red base. Its stylized, chunky silhouette and vivid markings make it a striking, magical forest prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 264
+meshes = 1
+materials = 1
+size = [6.268423, 6.275176, 6.495524]
+
+[mesh.sm_env_mushroom_03]
+name = "SM_Env_Mushroom_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_03.fbx"
+sha256 = "b07c626e9d080ec0a6e8722e3e2e356f2426a7b150565dac1a9739b066c6f9a9"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A stout, low-poly mushroom with a broad, flattened crimson cap heavily speckled with irregular white spots, supported by a thick, pale tan stalk that flares into a small base. The faceted surfaces give it a stylized, chunky look, and the slightly uneven cap edge adds a natural, organic feel perfect for forest floor..."
+differs = "Most uneven and organic cap edge, with the highest triangle count for extra detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6598
+meshes = 3
+materials = 1
+size = [6.238139, 6.424395, 6.0034456]
+
+[mesh.sm_env_mushroom_03_collision]
+name = "SM_Env_Mushroom_03_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_03_Collision.fbx"
+sha256 = "f3165273ce0ab3a0e5f485c3a836ca889e30d9c33d4ed7c514ca63269b53a030"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, broad-capped mushroom with a dark charcoal underside and a thick, curved stalk that flares into a small, earthy base. The cap is a muted brick red with pale, jagged streaks radiating from the centre, giving it a weathered, natural look. Its low, sturdy proportions make it ideal for ground-level forest clutter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 272
+meshes = 1
+materials = 1
+size = [6.271037, 6.299642, 6.316566]
+
+[mesh.sm_env_mushroom_04]
+name = "SM_Env_Mushroom_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_04.fbx"
+sha256 = "3ec2eb2b9e8aa4b936c010e0a87f9c391e01dd862deaab41ef60d3cfd933bdf1"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A stout, low-poly mushroom with a broad, flattened cap in a muted terracotta orange, supported by a thick, pale grey-brown stalk that flares at the base. The cap shows subtle, lighter speckled markings, and the simple, faceted geometry gives it a clean, stylised look perfect for a forest floor."
+differs = "Smallest and most compact orange mushroom, with the most muted terracotta color."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3626
+meshes = 3
+materials = 1
+size = [3.4491858, 5.252133, 3.4948359]
+
+[mesh.sm_env_mushroom_04_collision]
+name = "SM_Env_Mushroom_04_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_04_Collision.fbx"
+sha256 = "b24b9e7e48868ef94eb72627b39673984de1d00a66bf31c9ae11406afe392a50"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A stout, low-poly mushroom with a broad, faceted cap in dark charcoal and muted red, supported by a thick, tapering stem. The cap features a distinct pale, curved gash or scar across its surface, while the stem shows a lighter, vertical stripe and a small, earthy base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 208
+meshes = 1
+materials = 1
+size = [3.706431, 5.084599, 3.706431]
+
+[mesh.sm_env_mushroom_05]
+name = "SM_Env_Mushroom_05"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_05.fbx"
+sha256 = "be51af03669b93a8b0efeec51935efba15991b145d75dfd2863204dc9e921a43"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, broad-capped mushroom with a gently domed top and a thick, slightly curved stem that widens at the base. The cap is a flat, matte terracotta orange, while the stem is a pale, dusty beige, giving it a simple, stylised woodland look."
+differs = "Tallest and most curved stem, with the plainest, most matte orange cap of the set."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3788
+meshes = 3
+materials = 1
+size = [5.6908607, 7.179798, 5.9339437]
+
+[mesh.sm_env_mushroom_05_collision]
+name = "SM_Env_Mushroom_05_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_05_Collision.fbx"
+sha256 = "d2bc834904098d37ea61a005d8653570984e857ca0419479ea5542749d6f0bcd"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, broad-capped mushroom with a thick, tapering stalk, rendered in low-poly facets. The cap is split between dark charcoal and a rusty red-orange, with pale cream streaks radiating from the centre, while the stalk is a dark, woody brown."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 240
+meshes = 1
+materials = 1
+size = [6.008461, 6.979495, 6.008462]
+
+[mesh.sm_env_mushroom_cap_01]
+name = "SM_Env_Mushroom_Cap_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Cap_01.fbx"
+sha256 = "d4f294379a2a342883d2784433066d67065f8c52568daf194dc4b2b022cb7c09"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, squat, irregularly lobed cap with a wavy, undulating rim, painted in a deep brick red and heavily speckled with irregular cream spots. The underside is a pale tan, and the surface has a smooth, matte finish, giving it the look of a classic fly agaric mushroom cap ready to be placed on a stem or nestled into..."
+differs = "Largest and most detailed, with heavy cream speckling and a lobed rim, ideal as a hero fly agaric piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2804
+meshes = 3
+materials = 1
+size = [6.313037, 1.919758, 5.1222563]
+
+[mesh.sm_env_mushroom_cap_01_collision]
+name = "SM_Env_Mushroom_Cap_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Cap_01_Collision.fbx"
+sha256 = "392c654150980f9a7b5f5d00c484eed86300cbde73cfbf8c6731a0cb0af732af"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, wide, irregularly lobed cap in a deep brick red, scattered with pale cream spots of varying size. The underside shows a lighter tan gill area, and the surface has a soft, matte finish with a slightly worn, organic look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 398
+meshes = 1
+materials = 1
+size = [6.3045216, 1.919758, 5.1012774]
+
+[mesh.sm_env_mushroom_cap_02]
+name = "SM_Env_Mushroom_Cap_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Cap_02.fbx"
+sha256 = "319ad1d0b586f49765b8ade004c88ccb27f8e1cf9ef376790ec20ad100a05e79"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, flattened cap with a wavy, irregular rim and a slightly glossy, deep red surface, undercut by a pale cream underside that suggests gills. Its squat, organic form reads as a wide, mature mushroom top, ideal for forest floor scatter or as a base for a larger stem."
+differs = "Glossy red with a pale gilled underside, a wide mature cap for a larger stem or focal scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2804
+meshes = 3
+materials = 1
+size = [3.482236, 1.023479, 2.857038]
+
+[mesh.sm_env_mushroom_cap_02_collision]
+name = "SM_Env_Mushroom_Cap_02_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Cap_02_Collision.fbx"
+sha256 = "1e2d3d6676a996c80de110804262be04ca9e327fb97b274aff4e103681e57502"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, squat, irregularly lobed cap with a wavy, undulating rim and a slightly domed top, rendered in a flat, matte brick-red. The underside shows a pale cream gill area, and the surface is smooth with no visible spots or gills, giving it a clean, stylized look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 398
+meshes = 1
+materials = 1
+size = [3.465513, 1.021286, 2.857038]
+
+[mesh.sm_env_mushroom_cap_03]
+name = "SM_Env_Mushroom_Cap_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Cap_03.fbx"
+sha256 = "82b5507f7148b831c9e1fb58ef6d478778fcb72ecd47b99272c102863ad40a08"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, wide, irregularly rounded cap with a slightly wavy rim, rendered in a flat, muted brick-red with a subtle sheen. The surface is mostly smooth with a few shallow, darker indentations, giving it a simple, stylized look that reads as a generic fungal top rather than a specific species."
+differs = "Plainest and most generic, with a muted brick-red and shallow indentations, a simple filler cap."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2026
+meshes = 3
+materials = 1
+size = [3.683165, 1.024733, 2.504705]
+
+[mesh.sm_env_mushroom_cap_03_collision]
+name = "SM_Env_Mushroom_Cap_03_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Cap_03_Collision.fbx"
+sha256 = "c2f410454c1d1cb1d3943865ed7a83c508f20ba0f057acb8c1a6b9afd85a15c4"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, flattened cap with a wavy, irregular rim and a slightly lumpy top, rendered in a muted brick-red with darker shading in the crevices. Its broad, squat proportions make it read as a wide, mature mushroom cap rather than a young, rounded one, and the simple, faceted surface gives it a sturdy, grounded appearance.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 284
+meshes = 1
+materials = 1
+size = [3.663968, 0.981605, 2.482713]
+
+[mesh.sm_env_mushroom_cap_04]
+name = "SM_Env_Mushroom_Cap_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Cap_04.fbx"
+sha256 = "ff14b032e508adc87e7d602853cc2ee04db3aed4708b3bde1798f1a15042003f"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A broad, low-domed cap with a gently wavy rim, rendered in a flat, matte terracotta orange with subtle darker mottling across its surface. The underside is a simple, smooth hollow, giving it a clean, stylized look ideal for a forest floor scatter piece."
+differs = "Only terracotta orange, with a smooth hollow underside and a clean matte finish for uniform scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2070
+meshes = 3
+materials = 1
+size = [4.2294483, 0.982244, 4.283987]
+
+[mesh.sm_env_mushroom_cap_04_collision]
+name = "SM_Env_Mushroom_Cap_04_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Cap_04_Collision.fbx"
+sha256 = "ff32cfde2333ccc5086713a10990666424726cbcf51bd6543e511631fed5e2e7"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A flat, low-poly disc with a slightly irregular, organic rim, rendered in a solid terracotta brown with subtle faceted shading. It appears to be a simple collision mesh or a flat cap, lacking any gills, stem, or spots, making it a clean, minimal piece for ground-level detailing or as a base for a larger mushroom..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 294
+meshes = 1
+materials = 1
+size = [4.203397, 0.962837, 4.256708]
+
+[mesh.sm_env_mushroom_small_01]
+name = "SM_Env_Mushroom_Small_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_01.fbx"
+sha256 = "08d90a9c96ec4ab06ba45b73d99068561a85f96301f56d5c2b140cab31d8b669"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, low-poly mushroom with a broad, slightly domed cap and a thick, tapering stem, rendered in a uniform, pale blue-grey. The faceted surfaces give it a crystalline or icy appearance, with no visible gills or spots, suggesting a magical or frost-enchanted variant rather than a natural woodland specimen."
+differs = "The broadest, most domed cap of the squat set, with the most crystalline, icy faceting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 814
+meshes = 3
+materials = 2
+size = [1.271549, 1.234629, 1.269839]
+
+[mesh.sm_env_mushroom_small_01_collision]
+name = "SM_Env_Mushroom_Small_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_01_Collision.fbx"
+sha256 = "ca0f0dd97d6fdab72aaf19dbfef7965a8ccaf8079b75410b24727931c2b1f3b2"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, faceted mushroom with a broad, low-poly cap and a thick, tapering stem, rendered in a uniform, cool blue-grey with no visible gills or spots. The surface appears smooth and matte, suggesting a stylized, possibly icy or stone-like material rather than organic flesh."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 54
+meshes = 1
+materials = 1
+size = [1.1235061, 1.205629, 1.103917]
+
+[mesh.sm_env_mushroom_small_02]
+name = "SM_Env_Mushroom_Small_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_02.fbx"
+sha256 = "f2f6e6cecb4ae640082c4e8b016b2625151d7013020685d28f2b93f6948e087f"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, pale blue-grey mushroom with a broad, slightly flattened cap and a thick, short stem, rendered in a clean low-poly style. The cap shows subtle faceting and a darker underside, while the stem has a lighter, icy tint that suggests a cool, frosty material."
+differs = "The smallest and flattest of the squat set, with the most uniform, least detailed surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 806
+meshes = 3
+materials = 2
+size = [1.005982, 0.94119, 1.056329]
+
+[mesh.sm_env_mushroom_small_02_collision]
+name = "SM_Env_Mushroom_Small_02_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_02_Collision.fbx"
+sha256 = "0199aa7da5878a058644a0f4bc40a61732608f0fe749a9e3c2dab5d9d1f4ff8a"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, low-poly mushroom with a broad, slightly angular cap and a thick, short stem, rendered in a uniform, pale blue-grey tone with a subtle icy sheen. The faceted surfaces give it a crystalline or frozen appearance, suggesting a magical or frosty environment rather than a typical woodland fungus."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 70
+meshes = 1
+materials = 1
+size = [0.952407, 0.917155, 0.980632]
+
+[mesh.sm_env_mushroom_small_03]
+name = "SM_Env_Mushroom_Small_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_03.fbx"
+sha256 = "a110778823dca5d149b45b4871ba4839ca2ae8fb8593ed35e6f6596a0c980f72"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, broad-capped mushroom with a thick, slightly curved stem, rendered in a cool, icy blue-grey palette with subtle white speckling on the cap. The low-poly faceting gives it a crystalline, almost frozen appearance, making it ideal for arctic or magical environments."
+differs = "The only squat mushroom with white speckling on its cap, making it the most textured of the group."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 904
+meshes = 3
+materials = 2
+size = [1.2208669, 1.258694, 1.231411]
+
+[mesh.sm_env_mushroom_small_03_collision]
+name = "SM_Env_Mushroom_Small_03_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_03_Collision.fbx"
+sha256 = "fd590470b206d2b9d39fd965a8147813519c1d445ddeb7c02edf1f5035e710b0"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, icy-blue mushroom with a broad, faceted cap and a short, tapered stem, rendered in a cool, frosted palette that suggests a frozen or enchanted biome. The low-poly geometry gives it a crystalline, gem-like appearance, making it ideal for adding a touch of magic to cold or mystical environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 86
+meshes = 1
+materials = 1
+size = [1.021771, 1.2250481, 1.145941]
+
+[mesh.sm_env_mushroom_small_04]
+name = "SM_Env_Mushroom_Small_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_04.fbx"
+sha256 = "c7f29e4837c8ea38099820498b95fe6356dc303301b503e8afe9aa408349f226"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, tall-stemmed mushroom with a small, angular cap, rendered in a flat, untextured blue. The cap is slightly tilted and faceted, while the stem is thin and gently curved, giving it a delicate, stylized look. Its simple silhouette makes it ideal for background detail in a low-poly forest scene."
+differs = "The shortest of the slender set, with a tilted, angular cap and a curved stem."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 502
+meshes = 3
+materials = 1
+size = [0.221508, 0.696512, 0.30917898]
+
+[mesh.sm_env_mushroom_small_04_alt_01]
+name = "SM_Env_Mushroom_Small_04_Alt_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_04_Alt_01.fbx"
+sha256 = "d0337f9e10516f8729084aef35ffcc1379d0e4db1698f4b16bb644c4e9472d05"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, tall-stemmed mushroom with a small, conical cap that leans slightly to one side, giving it a delicate, windswept appearance. The cap is smooth and unadorned, lacking the gills or spots of other variants, while the stem is thin and slightly curved with a subtle bulge at the base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 580
+meshes = 3
+materials = 1
+size = [0.221508, 0.696512, 0.30917898]
+
+[mesh.sm_env_mushroom_small_04_alt_01_collision]
+name = "SM_Env_Mushroom_Small_04_Alt_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_04_Alt_01_Collision.fbx"
+sha256 = "e38130426c068c23ac552a9e3559b5b698aff766d044476171ec799e35566c61"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, curved stalk rises to a small, angular cap, rendered in a flat, untextured blue that suggests a placeholder or a stylized silhouette. The cap is tilted and asymmetrical, giving it a slightly wilted or wind-blown appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.203766, 0.696512, 0.301235]
+
+[mesh.sm_env_mushroom_small_04_collision]
+name = "SM_Env_Mushroom_Small_04_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_04_Collision.fbx"
+sha256 = "2db55c79a3445fee1653b64dcebb51d96d1ba89bee97ae6434a4981bc789c9f6"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, curved stalk rises to a small, angular cap, rendered in a flat, untextured blue that suggests a placeholder or collision mesh rather than a finished asset. The silhouette is simple and stylized, with a slight lean that gives it a natural, organic feel despite the low-poly geometry."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.203766, 0.696512, 0.301235]
+
+[mesh.sm_env_mushroom_small_05]
+name = "SM_Env_Mushroom_Small_05"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_05.fbx"
+sha256 = "4e2d438654941413b07ea63ccff8f440bcab805bbf82b165f0009dc2831dc060"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A tall, slender mushroom with a smooth, conical cap and a thin, straight stem, rendered in a flat, untextured blue. Its simple, clean silhouette makes it ideal for stylized environments where a distinct, readable shape is needed."
+differs = "The thinnest and straightest stem of all, with a perfectly conical cap and no curve."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 478
+meshes = 3
+materials = 1
+size = [0.22258599, 0.739308, 0.22105101]
+
+[mesh.sm_env_mushroom_small_05_alt_01]
+name = "SM_Env_Mushroom_Small_05_Alt_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_05_Alt_01.fbx"
+sha256 = "dea17640e965e642db196708c6fc95e9e12611bd755332ff5d3d0bb0490f7d32"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, stylized mushroom with a tall, thin stalk and a small, conical cap, rendered in a flat, untextured blue. The cap is smooth and pointed, while the stem is slightly wider at the base, giving it a simple, clean silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 558
+meshes = 3
+materials = 1
+size = [0.22258599, 0.739308, 0.22105101]
+
+[mesh.sm_env_mushroom_small_05_alt_01_collision]
+name = "SM_Env_Mushroom_Small_05_Alt_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_05_Alt_01_Collision.fbx"
+sha256 = "adab299c427c2aa7ed7a63d8686a7437397f9b731a14e5ba1c206d3400f3d995"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, stylised mushroom with a tall, straight stalk and a simple conical cap, rendered in a flat, untextured blue. The cap is smooth and slightly angular, while the stem is perfectly cylindrical, giving it a clean, geometric look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.197636, 0.739308, 0.195588]
+
+[mesh.sm_env_mushroom_small_05_collision]
+name = "SM_Env_Mushroom_Small_05_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_05_Collision.fbx"
+sha256 = "ed8f886ceb7d304c228e1bc18306779bc84306834baed6aa3af9ee73e1cebe3e"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, stylized mushroom with a tall, thin stalk and a small, conical cap, rendered in a flat, untextured blue. The simple, geometric silhouette makes it ideal for background or filler placement in a low-poly forest scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.197636, 0.739308, 0.195588]
+
+[mesh.sm_env_mushroom_small_06]
+name = "SM_Env_Mushroom_Small_06"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_06.fbx"
+sha256 = "5c8ff8ef7799d9b430b7b0901531e1edbe0b36de72eeba400375cda931a36cd6"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, elongated mushroom with a tall, narrow conical cap and a thin, gracefully curved stem that bends in a gentle S-shape. The entire asset is rendered in a flat, uniform blue, suggesting a stylized or magical variant, and its smooth, untextured surface gives it a clean, almost crystalline appearance."
+differs = "The tallest of the slender set, with the most pronounced S-shaped curve in its stem."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 502
+meshes = 3
+materials = 1
+size = [0.222585, 1.003682, 0.299705]
+
+[mesh.sm_env_mushroom_small_06_alt_01]
+name = "SM_Env_Mushroom_Small_06_Alt_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_06_Alt_01.fbx"
+sha256 = "18c3d65702949ebeec126ce7a045a537c5642af30150a40f679a76803bb4bf34"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, tall-stemmed mushroom with a smooth, conical cap and a pronounced, graceful curve to its stalk, rendered in a uniform, flat blue tone. The simple, unadorned silhouette and lack of gills or spots make it a versatile, stylised accent for enchanted forest scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 594
+meshes = 3
+materials = 1
+size = [0.22258699, 1.003682, 0.299705]
+
+[mesh.sm_env_mushroom_small_06_alt_01_collision]
+name = "SM_Env_Mushroom_Small_06_Alt_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_06_Alt_01_Collision.fbx"
+sha256 = "2a90d64a521401618b1af8e86ba7e1d4431f7d70c612316453099894a45aef6e"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, conical blue cap sits atop a thin, wavy stem that bends and curves, giving the mushroom a delicate, wind-blown appearance. The uniform blue colouring and smooth, untextured surface suggest a stylised, minimalist asset ideal for adding subtle vertical accents to enchanted forest scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.19763601, 1.002997, 0.27749]
+
+[mesh.sm_env_mushroom_small_06_collision]
+name = "SM_Env_Mushroom_Small_06_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_06_Collision.fbx"
+sha256 = "0de2325480743e7530c5a31734391e1f27c4932209c0225701e2394010dd67bc"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, conical blue cap sits atop a thin, wavy stem, giving the asset a delicate, spindly silhouette. The uniform blue colouring and smooth surface suggest a stylized, untextured look, making it ideal for a magical or alien environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.19763601, 1.002997, 0.27749]
+
+[mesh.sm_env_mushroom_small_07]
+name = "SM_Env_Mushroom_Small_07"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_07.fbx"
+sha256 = "a799220b3d03208486ea51c1bd891f63a1026697d5298213c37ec8700e88ec08"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, tall-stemmed mushroom with a conical, slightly flared cap and a pronounced, graceful curve in its stalk, rendered in a flat, untextured blue. The silhouette is elegant and organic, suggesting a delicate forest floor specimen. Its simple, clean geometry makes it ideal for background or cluster placement."
+differs = "The only slender mushroom with a flared, bell-like cap and a graceful, organic curve."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 522
+meshes = 3
+materials = 1
+size = [0.307579, 0.846329, 0.312729]
+
+[mesh.sm_env_mushroom_small_07_alt_01]
+name = "SM_Env_Mushroom_Small_07_Alt_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_07_Alt_01.fbx"
+sha256 = "aaee943145305958359626669eb5f080751c9c05434ca36f12a50173cb798723"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, conical mushroom with a smooth, untextured blue surface, featuring a gently curved stem and a simple, pointed cap, appearing as a clean, stylized asset with a solid, uniform colour."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 582
+meshes = 3
+materials = 1
+size = [0.30758, 0.846329, 0.312729]
+
+[mesh.sm_env_mushroom_small_07_alt_01_collision]
+name = "SM_Env_Mushroom_Small_07_Alt_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_07_Alt_01_Collision.fbx"
+sha256 = "7170679bc2dca3663c393fa089f979ef316635366c3edc2fb0cbe4351a445f07"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, tall mushroom with a conical cap and a thin, slightly bent stem, rendered in a flat, untextured blue. The simple silhouette and lack of surface detail make it ideal for stylized or placeholder use, offering a clean, readable shape that stands out from more ornate mushroom variants."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.269658, 0.84523, 0.271483]
+
+[mesh.sm_env_mushroom_small_07_collision]
+name = "SM_Env_Mushroom_Small_07_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_07_Collision.fbx"
+sha256 = "092cc918606051391fd8d7ac27c0aa08f156f015e1e8fdf78ca94ba2250026a6"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, angular mushroom with a tall, conical cap and a thin, slightly bent stem, rendered in a flat, untextured blue. The silhouette is clean and minimal, suggesting a stylised, low-poly asset that could serve as a simple environmental prop or a placeholder for a more detailed model."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.269658, 0.84523, 0.271483]
+
+[mesh.sm_env_mushroom_small_08]
+name = "SM_Env_Mushroom_Small_08"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_08.fbx"
+sha256 = "07a7a0380573a066a4df98ed285efe755bc57b5c7290c45b2b4b8db5866a89fa"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, conical cap with a gently curved, tapering stem, rendered in a uniform, flat blue tone with subtle highlights that suggest a smooth, slightly glossy surface. The cap is disproportionately large compared to the thin stalk, giving it a delicate, almost top-heavy silhouette."
+differs = "The most top-heavy silhouette, with the largest cap relative to its thin, tapering stalk."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 522
+meshes = 3
+materials = 1
+size = [0.349363, 0.968305, 0.35157898]
+
+[mesh.sm_env_mushroom_small_08_alt_01]
+name = "SM_Env_Mushroom_Small_08_Alt_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_08_Alt_01.fbx"
+sha256 = "d927967e26981b5608ea623702032158368d4f264b9a34986812722986a2a873"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, conical cap tilts on a long, thin stalk, giving the mushroom a delicate, windswept silhouette. The surface is a uniform, flat blue with subtle shading that suggests a smooth, matte finish, and the cap's irregular, slightly drooping edge adds a natural, organic feel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 612
+meshes = 3
+materials = 1
+size = [0.349363, 0.968305, 0.35157898]
+
+[mesh.sm_env_mushroom_small_08_alt_01_collision]
+name = "SM_Env_Mushroom_Small_08_Alt_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_08_Alt_01_Collision.fbx"
+sha256 = "fc4cc05fc099f4a21f2492e4608946b3b41c4bf0f8c2c6c757352b01be400c9a"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, tall-stemmed mushroom with a small, angular, conical cap, rendered in a flat, untextured blue. The silhouette is clean and geometric, with a slight bend in the stem, giving it a delicate, stylized look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 88
+meshes = 1
+materials = 1
+size = [0.316897, 0.95211, 0.338806]
+
+[mesh.sm_env_mushroom_small_08_collision]
+name = "SM_Env_Mushroom_Small_08_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_08_Collision.fbx"
+sha256 = "2bdd2e183f2c86c908b02b12f5f10a6a3b0a952cfd7fdce7694b1abd6914eeac"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, slightly curved blue stalk supports a small, angular cap with a flat top and a pointed rim, giving it a stylized, geometric look. The uniform blue colour and smooth, untextured surface suggest a simple, clean design that would fit well in a low-poly environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.299334, 0.968305, 0.33427298]
+
+[mesh.sm_env_mushroom_small_09]
+name = "SM_Env_Mushroom_Small_09"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_09.fbx"
+sha256 = "1c7e8097ba3aea6c44a5d449fa61a816aec266ab63948e9e3a3a8f3b2e5787ba"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, conical mushroom with a smooth, pointed cap and a thin, straight stem, rendered in a uniform, flat blue. The cap is slightly wider than the stem and tapers to a soft tip, giving it a simple, stylized silhouette."
+differs = "Tallest and most pointed cap, best for a focal forest landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 514
+meshes = 3
+materials = 1
+size = [0.238749, 0.650791, 0.242746]
+
+[mesh.sm_env_mushroom_small_09_alt_01]
+name = "SM_Env_Mushroom_Small_09_Alt_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_09_Alt_01.fbx"
+sha256 = "f2a3b08e47a0463818312c8acbece0bb18f4ea7320e4ce8ebb2fb5c73810c6ea"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, conical mushroom with a tall, thin stalk and a pointed cap that flares slightly at the base, rendered in a uniform, flat blue. The surface is smooth and untextured, lacking any gills, spots, or organic detail, giving it a stylised, almost crystalline appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 578
+meshes = 3
+materials = 1
+size = [0.238749, 0.650791, 0.242746]
+
+[mesh.sm_env_mushroom_small_09_alt_01_collision]
+name = "SM_Env_Mushroom_Small_09_Alt_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_09_Alt_01_Collision.fbx"
+sha256 = "437fa6b969a1f6132cae30941f266bfef5430222fdc1076645e7540f5e1731ac"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, tall mushroom with a conical cap and a long, thin, straight stem, rendered in a flat, untextured blue. The cap is smooth and pointed, with a slight flare at the base, while the stem is uniform in width."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 40
+meshes = 1
+materials = 1
+size = [0.212518, 0.650791, 0.21301201]
+
+[mesh.sm_env_mushroom_small_09_collision]
+name = "SM_Env_Mushroom_Small_09_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_09_Collision.fbx"
+sha256 = "05e07f3e8298206f4b0fa485168dcd2287237b35af18cb2779ce44d1161d62a5"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, stylized mushroom with a tall, thin stalk and a simple conical cap, rendered in a flat, untextured blue. The cap is smooth and unadorned, lacking gills or spots, giving it a clean, minimalist look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 40
+meshes = 1
+materials = 1
+size = [0.212518, 0.650791, 0.21301201]
+
+[mesh.sm_env_mushroom_small_10]
+name = "SM_Env_Mushroom_Small_10"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_10.fbx"
+sha256 = "d13d73798a134f70f32bc2ee5c429645bb879f861f0cd91bff221d9e20cdc8ed"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, conical cap with a slight downward flare sits atop a thin, straight stem, giving it a delicate, almost umbrella-like silhouette. The entire asset is rendered in a uniform, flat blue, lacking any natural mushroom markings or texture, suggesting it is a placeholder or a stylized, untextured version."
+differs = "Shortest and most flared, best for a ground-level filler or distant cluster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 466
+meshes = 3
+materials = 1
+size = [0.204312, 0.47937602, 0.211413]
+
+[mesh.sm_env_mushroom_small_10_alt_01]
+name = "SM_Env_Mushroom_Small_10_Alt_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_10_Alt_01.fbx"
+sha256 = "76a276544ef69a00284034f051817b02703e58e672bb99962faff99d5c10c1a9"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, conical cap with a slight downward flare sits atop a straight, narrow stem, giving the asset a tall, elegant silhouette. The surface is a uniform, flat blue with no visible spots or gills, suggesting a stylized, untextured look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 540
+meshes = 3
+materials = 1
+size = [0.204312, 0.47937602, 0.211413]
+
+[mesh.sm_env_mushroom_small_10_alt_01_collision]
+name = "SM_Env_Mushroom_Small_10_Alt_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_10_Alt_01_Collision.fbx"
+sha256 = "8457e6540b4fb441745d94c86ef53deb832bc3a49dc19abcc19a839f50e82074"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A tall, slender mushroom with a conical cap and a thin, straight stem, rendered in a flat, untextured blue. The cap is angular and faceted, while the stem is smooth and cylindrical, giving it a clean, stylised look. This asset is ideal for adding a simple, geometric touch to a low-poly environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.190617, 0.472817, 0.18011099]
+
+[mesh.sm_env_mushroom_small_10_collision]
+name = "SM_Env_Mushroom_Small_10_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_10_Collision.fbx"
+sha256 = "0bf6e685b5b1b88c76ad58702d0fbe5244f4393bc8540bae73715fb831d6ccbd"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A tall, slender stalk supports a small, angular cap with a flat top and faceted sides, rendered in a solid, untextured blue. The low-poly silhouette is clean and geometric, with no gills or spots visible, giving it a stylized, toy-like appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.190617, 0.472817, 0.18011099]
+
+[mesh.sm_env_mushroom_small_group_01]
+name = "SM_Env_Mushroom_Small_Group_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_Group_01.fbx"
+sha256 = "e5c6865309c7ceacd7e8c1604685c4e77f9ad98326c7af4606837ef732c22485"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three low-poly mushrooms with broad, flat caps and thick, sturdy stems, rendered in a uniform, cool blue-grey tone. The largest cap dominates the grouping, flanked by two smaller companions, giving it a natural, organic arrangement."
+differs = "The only asset with flat, broad caps and a wide, low footprint, ideal for a ground-level cluster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4234
+meshes = 3
+materials = 1
+size = [2.053979, 1.23463, 1.275574]
+
+[mesh.sm_env_mushroom_small_group_01_collision]
+name = "SM_Env_Mushroom_Small_Group_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_Group_01_Collision.fbx"
+sha256 = "595064ccb34eec8275267b6ee15518599d62fa47aa9da83d8d6dff69aa1c5116"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three low-poly mushrooms with broad, faceted caps and thick, tapering stems, rendered in a cool, icy blue-grey palette that suggests a frosty or moonlit enchanted forest. The caps are smooth and unmarked, while the stems show subtle vertical banding, giving the group a clean, stylized look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 366
+meshes = 1
+materials = 1
+size = [2.00864, 1.205629, 1.206616]
+
+[mesh.sm_env_mushroom_small_group_02]
+name = "SM_Env_Mushroom_Small_Group_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_Group_02.fbx"
+sha256 = "ee1ea375dd16a418befb2816e1ebd95c7ba37e98643bdd26999f814dc2321435"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A tight cluster of three stout mushrooms with broad, slightly wavy caps and thick, pale stems, rendered in a cool, monochromatic blue-grey that suggests a frosty or enchanted woodland setting. The low-poly faceting gives the caps a chunky, crystalline look, while the short, sturdy proportions make it ideal for adding.."
+differs = "The widest and tallest of the broad-cap groups, with the most chunky, crystalline faceting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2524
+meshes = 3
+materials = 1
+size = [2.348396, 1.845101, 1.9751841]
+
+[mesh.sm_env_mushroom_small_group_02_collision]
+name = "SM_Env_Mushroom_Small_Group_02_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_Group_02_Collision.fbx"
+sha256 = "4fd069adb5c3432120c3679c77a8523c61874fb7ff9fb99f8e1c6d7d97bff006"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three low-poly mushrooms with faceted, pale blue caps and short, thick stems, arranged in a tight, natural grouping. The cool, icy colouring gives it a frosty or magical appearance, making it ideal for adding a touch of enchanted detail to a forest floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 210
+meshes = 1
+materials = 1
+size = [2.252876, 1.79578, 1.906106]
+
+[mesh.sm_env_mushroom_small_group_03]
+name = "SM_Env_Mushroom_Small_Group_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_Group_03.fbx"
+sha256 = "f1f1382af2463bbd5dd373c36663045d53b1e0e1446e3349e09d08bc2b6514f7"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three stylized mushrooms with thick, slightly curved stems and broad, rounded caps, rendered in a flat, untextured blue. The tallest central mushroom is flanked by a shorter one and a small button, all leaning slightly, giving the group a natural, organic arrangement."
+differs = "The only one with a tall central mushroom flanked by a button, all leaning for a natural look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1502
+meshes = 3
+materials = 1
+size = [0.476685, 0.978683, 0.546363]
+
+[mesh.sm_env_mushroom_small_group_03_alt_01]
+name = "SM_Env_Mushroom_Small_Group_03_Alt_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_Group_03_Alt_01.fbx"
+sha256 = "9a547e8268cb7b8c4432d1dc760077c6d33e02c2c907bb0e48ae8f25edf744a7"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three stylised mushrooms with tall, slender stems and smooth, conical caps, rendered in a flat, unshaded blue. The tallest stem curves gracefully, while two smaller companions flank it, creating an asymmetrical, organic silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1754
+meshes = 3
+materials = 1
+size = [0.470929, 1.003861, 0.56659]
+
+[mesh.sm_env_mushroom_small_group_03_alt_01_collision]
+name = "SM_Env_Mushroom_Small_Group_03_Alt_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_Group_03_Alt_01_Collision.fbx"
+sha256 = "902f61a7741717b4e6639c87f23f5cb9bc9c1535c65fec7921252aa6d873ba68"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three stylized mushrooms with conical caps and slender, slightly curved stems, rendered in a flat, untextured blue. The tallest central stem is flanked by a shorter one and a tiny one, giving an irregular, natural grouping."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 136
+meshes = 1
+materials = 1
+size = [0.448725, 1.003175, 0.532374]
+
+[mesh.sm_env_mushroom_small_group_03_collision]
+name = "SM_Env_Mushroom_Small_Group_03_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_Group_03_Collision.fbx"
+sha256 = "da737120f331f423555007cb4d5d45fd9c8962b6db0204c4c6dabe15b29ad3b8"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three stylised mushrooms with tall, slender stems and angular, faceted caps, rendered in a flat, solid blue tone. The caps are broad and slightly tilted, giving the group a whimsical, low-poly silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 1
+materials = 1
+size = [0.453136, 0.978683, 0.522943]
+
+[mesh.sm_env_mushroom_small_group_04]
+name = "SM_Env_Mushroom_Small_Group_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_Group_04.fbx"
+sha256 = "41709711c8774cf5726e91e0911549226873b9588bdf5c10bd9a29953f8a03fa"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A tight cluster of small mushrooms with slender stems and rounded caps, rendered in a flat, unshaded blue that suggests a placeholder or untextured material. The grouping is irregular and organic, with a few tiny sprouts at the base, giving it a natural, scattered look for forest floor decoration."
+differs = "The most detailed and irregular, with the highest triangle count and tiny sprouts at the base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5374
+meshes = 3
+materials = 1
+size = [1.088807, 1.006883, 0.79881]
+
+[mesh.sm_env_mushroom_small_group_04_alt_01]
+name = "SM_Env_Mushroom_Small_Group_04_Alt_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_Group_04_Alt_01.fbx"
+sha256 = "a5ab5b12875e4adeb568a2a6a878d15edf833f72b01398505e61eba0af6a7af8"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of stylized mushrooms in varied sizes, with tall, slender stems and broad, conical caps, rendered in a flat, untextured blue. The arrangement is irregular and organic, featuring a central grouping of larger fungi flanked by smaller, isolated specimens."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6264
+meshes = 3
+materials = 1
+size = [1.148047, 1.2508761, 0.958809]
+
+[mesh.sm_env_mushroom_small_group_04_alt_01_collision]
+name = "SM_Env_Mushroom_Small_Group_04_Alt_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_Group_04_Alt_01_Collision.fbx"
+sha256 = "9c400a6d821ecd2224d8bee01c4521b6e680a1336e1dbdba9711828d215b760e"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of low-poly mushrooms with conical caps, featuring a mix of tall, slender stems and shorter, stouter forms, all rendered in a flat, untextured blue silhouette. The arrangement is irregular and organic, with some caps tilted or overlapping, giving it a natural, scattered appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 472
+meshes = 1
+materials = 1
+size = [1.1223, 1.2492521, 0.940013]
+
+[mesh.sm_env_mushroom_small_group_04_collision]
+name = "SM_Env_Mushroom_Small_Group_04_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_Group_04_Collision.fbx"
+sha256 = "bb39ac559f328d35008ed64a33df8e7667a0cdd3cab6663f581d3d009f20686d"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A tight cluster of five stylized mushrooms with angular, faceted caps and slender stems, rendered in a flat, solid blue tone that suggests a placeholder or untextured state. The caps vary in height and tilt, with the tallest leaning outward, creating an asymmetrical, natural-looking grouping."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 432
+meshes = 1
+materials = 1
+size = [1.08087, 1.006883, 0.773104]
+
+[mesh.sm_env_mushroom_small_group_05]
+name = "SM_Env_Mushroom_Small_Group_05"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_Group_05.fbx"
+sha256 = "9044cbdb13404a621c13231fb41f9617c6a181d00652817315fb1b60c0dd038a"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "Three slender blue mushrooms with conical caps grow from a single base, one tall stalk flanked by two shorter companions, their smooth surfaces catching a soft sheen that suggests a damp, glossy finish."
+differs = "The only one with a glossy, damp sheen and conical caps on a single base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 996
+meshes = 3
+materials = 1
+size = [0.304504, 1.0073661, 0.322106]
+
+[mesh.sm_env_mushroom_small_group_05_alt_01]
+name = "SM_Env_Mushroom_Small_Group_05_Alt_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_Group_05_Alt_01.fbx"
+sha256 = "a038c6b854baec559da8b3ab31cd34df39efae2e7228c7e158f6864f591b1529"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three slender, conical mushrooms with a smaller fourth sprouting at the base, all rendered in a flat, untextured blue. The caps are smooth and pointed, with thin stems that curve slightly, giving the group a delicate, organic silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1732
+meshes = 3
+materials = 1
+size = [0.45222, 1.003682, 0.521945]
+
+[mesh.sm_env_mushroom_small_group_05_alt_01_collision]
+name = "SM_Env_Mushroom_Small_Group_05_Alt_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_Group_05_Alt_01_Collision.fbx"
+sha256 = "4bff74f49b4dabef3ff6de0478448d3024aa6cd16eec573c7e86c5b5cfe6a144"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three slender mushrooms with tall, gently curving stems and conical caps, including one small button and two larger fruiting bodies, rendered in a flat, untextured blue that suggests a placeholder or collision mesh."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 1
+materials = 1
+size = [0.433232, 1.002997, 0.504188]
+
+[mesh.sm_env_mushroom_small_group_05_collision]
+name = "SM_Env_Mushroom_Small_Group_05_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_Group_05_Collision.fbx"
+sha256 = "fcbdbf114fbb828f7955963d25b3efbcbad9a9ce5d436ff92400034bba3a601b"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three slender mushrooms, with one tall stem supporting a conical cap and two shorter, thinner stalks rising beside it. The caps are smooth and pointed, while the stems are slightly curved and uneven, giving the group a natural, organic silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 1
+size = [0.284932, 1.0073661, 0.299337]
+
+[mesh.sm_env_mushroom_small_group_06]
+name = "SM_Env_Mushroom_Small_Group_06"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_Group_06.fbx"
+sha256 = "bb19559be4f7b7e74e6a2c11c7720234c8d61a1f9aeb334bd51af6cbf67e01be"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three stylized mushrooms with conical caps and slender stems, rendered in a flat, untextured blue that suggests a placeholder or unlit material. The arrangement is asymmetrical, with one tall mushroom flanked by two shorter ones, giving a natural, scattered look."
+differs = "The plainest and most asymmetrical, with the lowest triangle count and no glossy finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1020
+meshes = 3
+materials = 1
+size = [0.477229, 0.98656404, 0.456227]
+
+[mesh.sm_env_mushroom_small_group_06_alt_01]
+name = "SM_Env_Mushroom_Small_Group_06_Alt_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Mushroom_Small_Group_06_Alt_01.fbx"
+sha256 = "8dfd4c19373778d65f304fadb9136bc87a4061962f9701a83ad2790d87bc627d"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three stylised mushrooms with tall, slender stems and conical caps, one large and two smaller, all rendered in a flat, solid blue tone with no visible texture or markings, giving them a clean, untextured appearance that suggests a placeholder or a base material ready for customisation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1772
+meshes = 3
+materials = 1
+size = [0.50878096, 0.96830404, 0.48247]
+
+[mesh.sm_env_mushroom_small_group_06_alt_01_collision]
+name = "SM_Env_Mushroom_Small_Group_06_Alt_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_Group_06_Alt_01_Collision.fbx"
+sha256 = "319daa91d9a94af1327e33f3425a48a3b60c7fc92ee1304b035b62570db4b954"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three stylized mushrooms, with one tall central cap flanked by two smaller companions, all rendered in a flat, untextured blue. The caps are simple, angular cones atop slender, straight stems, giving the group a clean, geometric silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 176
+meshes = 1
+materials = 1
+size = [0.47416902, 0.95210904, 0.456002]
+
+[mesh.sm_env_mushroom_small_group_06_collision]
+name = "SM_Env_Mushroom_Small_Group_06_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Mushroom_Small_Group_06_Collision.fbx"
+sha256 = "fcba5c6cbf59882de0678cb08375eef2021c1b8ca31e4a5c700b92c175a32d52"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three slender mushrooms with conical caps, one tall and two shorter, rendered in a flat, untextured blue silhouette. The caps are angular and faceted, while the stems are thin and slightly curved, giving the group a delicate, spindly appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 88
+meshes = 1
+materials = 1
+size = [0.452688, 0.980793, 0.42219502]
+
+[mesh.sm_env_rock_pebbles_01]
+name = "SM_Env_Rock_Pebbles_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_01.fbx"
+sha256 = "2aaedf8b37779e07b0ce9eb96e67f51b9d71318a72cadd0cf25e2791709c6bd7"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of five low-poly grey stones, angular and faceted, with a flat, weathered surface and subtle mottled texture, arranged in a natural, scattered formation that suggests a small, realistic ground detail for an enchanted forest setting."
+differs = "The tightest, most compact cluster, ideal for a single focal point rather than a wide scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 114
+meshes = 1
+materials = 1
+size = [0.59762704, 0.076857, 0.32109]
+
+[mesh.sm_env_rock_pebbles_02]
+name = "SM_Env_Rock_Pebbles_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_02.fbx"
+sha256 = "fe8e872c200847ebd40865d4f260ec5e63fc953ead3c03b9fad4151abd9fe2ac"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, flat scatter of small, rounded grey stones, each with a smooth, weathered surface and subtle mottled shading, arranged in a loose, natural cluster that reads as a ground-level detail for forest paths or stream edges."
+differs = "The flattest and most spread-out scatter, perfect for a subtle, low-profile ground detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.980358, 0.091517, 0.396522]
+
+[mesh.sm_env_rock_pebbles_03]
+name = "SM_Env_Rock_Pebbles_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_03.fbx"
+sha256 = "da428c71945c9da3adb455147ffaf1f33c016c8be367df51d8ba08f30fc9f4ea"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three low-poly grey stones, each with flat, faceted surfaces and a matte finish, arranged in a tight, irregular grouping that suggests a natural, scattered placement for ground cover or trail edges."
+differs = "The simplest and most minimal, with only three stones, making it the most versatile for tight spaces."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.55982697, 0.13431701, 0.472533]
+
+[mesh.sm_env_rock_pebbles_04]
+name = "SM_Env_Rock_Pebbles_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_04.fbx"
+sha256 = "c736b67a4bf3874a93be5b02fff69ed24c0ece33c4d155cb1be6c3a29a55e2b9"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "Four low, irregular clusters of small grey stones, each with a few angular facets and a matte, weathered finish, scattered loosely to suggest natural debris on a forest floor."
+differs = "The most fragmented, with four distinct, separate clusters, best for a scattered debris effect."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.90574, 0.116666004, 0.469887]
+
+[mesh.sm_env_rock_pebbles_05]
+name = "SM_Env_Rock_Pebbles_05"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_05.fbx"
+sha256 = "a2ae14d575bcce29d8ba1a8d2980a349baabd94d965cc1d32a798b1aca58515d"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, flat scatter of angular grey stones, with a few larger, faceted chunks clustered among smaller, flatter pebbles. The surfaces are smooth and matte, with subtle lighter grey highlights on the top faces, giving them a clean, weathered look."
+differs = "The largest and most substantial, with the biggest individual chunks, ideal for a prominent foreground feature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 204
+meshes = 1
+materials = 1
+size = [1.495148, 0.290556, 0.765176]
+
+[mesh.sm_env_rock_pebbles_06]
+name = "SM_Env_Rock_Pebbles_06"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_06.fbx"
+sha256 = "58bee87fa955c0272421c370166793a28550927420d219e7b3b7cdb49ffe079a"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, flat scatter of angular grey stones, each with sharp, faceted planes and a matte finish, forming four distinct clusters that read as natural ground cover for a forest floor. The pebbles vary in size and are tightly grouped, with some showing subtle darker mottling, giving them a weathered, realistic appearance.."
+differs = "The most angular and sharp-edged, with the most distinct faceted planes, giving it a crystalline look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.83595, 0.119176, 0.633358]
+
+[mesh.sm_env_roots_01]
+name = "SM_Env_Roots_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_01.fbx"
+sha256 = "3ea95c3e21247b8a50a674fce7f3417f60a8cd9f666897b21fabafbdc463f2d3"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, low-slung tangle of weathered grey-brown roots, with a thick central trunk that splits into several jagged, tapering limbs reaching outwards and downwards. The bark is textured with subtle ridges and darker crevices, giving it a dry, aged appearance suited for a forest floor or swampy terrain."
+differs = "The most detailed and largest, with the most jagged, downward-reaching limbs, ideal for a dense, tangled forest floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1314
+meshes = 1
+materials = 1
+size = [3.909826, 1.0670071, 3.4409552]
+
+[mesh.sm_env_roots_02]
+name = "SM_Env_Roots_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_02.fbx"
+sha256 = "b758e587bdd56e6cd3ff59f8a4f9eea6e1dc95bd51a50409a0717e4a4c22841e"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, low-poly root system sprawls horizontally, with a thick main trunk that splits into several twisting, tapering branches. The bark is a muted, earthy brown with subtle lighter highlights, giving it a weathered, organic look."
+differs = "The most balanced and horizontally sprawling, with a wider spread than 01 but less height, for covering open ground."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 980
+meshes = 1
+materials = 1
+size = [2.861769, 0.815531, 3.8396769]
+
+[mesh.sm_env_roots_03]
+name = "SM_Env_Roots_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_03.fbx"
+sha256 = "645d9cd25317ca0f2c45206eaf2fe2dc06a9ec868c9addc94956f1bc7f0e6e4b"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, pale-brown root system with a thick central trunk that splits into several twisting, tapering branches, some of which curve back toward the ground. The surface is smooth and weathered, with subtle darker striations along the wood, giving it a dry, aged appearance."
+differs = "The most slender and low-profile, with the fewest branches, perfect for a subtle, flat ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 722
+meshes = 1
+materials = 1
+size = [2.588355, 0.584523, 3.846789]
+
+[mesh.sm_env_roots_04]
+name = "SM_Env_Roots_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_04.fbx"
+sha256 = "56b776e65249eda00f78f02ca9daed0ebb072992a455ecf2c5e1612c982ca1f5"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, sprawling cluster of gnarled, pale-brown roots that spreads horizontally across the ground, with several thick, twisting branches reaching outward and upward. The bark is smooth and weathered, with a few small, jagged stubs where smaller roots have broken off, giving it a natural, organic feel perfect for..."
+differs = "The most damaged, with broken stubs and the widest horizontal reach, for a heavily weathered, organic look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1364
+meshes = 1
+materials = 1
+size = [3.147155, 0.83842504, 3.687183]
+
+[mesh.sm_env_roots_05]
+name = "SM_Env_Roots_05"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_05.fbx"
+sha256 = "0d1f83d89fb6dd0dc22ecba783767e18849c9efba8359f5a7fb8b8422d2f81b7"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, arching root system with a low, wide profile, featuring a thick, twisted main body that splits into several stubby, downward-pointing legs. The bark is a muted, earthy brown with subtle lighter highlights, giving it a weathered, organic look."
+differs = "The most compact and arching, with stubby legs, making it the best choice for a small, tunnel-like root arch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 376
+meshes = 1
+materials = 1
+size = [0.93157196, 1.401553, 2.812016]
+
+[mesh.sm_env_roots_06]
+name = "SM_Env_Roots_06"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_06.fbx"
+sha256 = "556347a08be2089f2c3d8e6765b67e48b9cb9e315be6885cea7f52ee86f7ad2e"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, arching root system with three thick, knobby supports and a long, tapering limb, rendered in a muted, earthy brown with subtle surface variation. The low-poly form is organic and weathered, with a distinctively twisted, uneven silhouette that adds natural, aged character to any forest floor or cave setting."
+differs = "The most arching and knobby, with three distinct supports and a long limb, for a dramatic, uneven silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 488
+meshes = 1
+materials = 1
+size = [1.904175, 1.308604, 3.8188438]
+
+[mesh.sm_env_roots_cluster_01]
+name = "SM_Env_Roots_Cluster_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_Cluster_01.fbx"
+sha256 = "2798ddb1ce4693e2ca1b3fae06781f03304c5aa60be290e730ebf65ff0e75229"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, sprawling tangle of gnarled, twisting roots, with several thick, tapering branches reaching outward and upward from a central knot. The bark is a pale, weathered grey-brown with subtle darker striations, giving it a dry, aged look."
+differs = "The most compact and upright, with the fewest ground-hugging tendrils, best for a tight, vertical accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1040
+meshes = 1
+materials = 1
+size = [4.3249083, 0.764408, 3.486429]
+
+[mesh.sm_env_roots_cluster_02]
+name = "SM_Env_Roots_Cluster_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_Cluster_02.fbx"
+sha256 = "ddf2598c981a928f977cd0271ca3c0b16a746534b86a02a1a232d25a83c6e4de"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, sprawling tangle of gnarled, pale-brown roots that spreads horizontally across the ground, with several thick, twisted limbs reaching outward and upward from a central knot. The bark is smooth and weathered, with subtle darker crevices and a few small, broken stubs, giving it a dry, ancient look."
+differs = "The smallest and most broken, with visible stubs, ideal for a damaged, ancient look in tight spaces."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1108
+meshes = 1
+materials = 1
+size = [3.378563, 0.89368504, 3.632617]
+
+[mesh.sm_env_roots_cluster_03]
+name = "SM_Env_Roots_Cluster_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_Cluster_03.fbx"
+sha256 = "43dc7e89b66e271fc2d9a4f8d31ed7ade45176ac36872f78bbda3c38ef4ade34"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A sprawling, low-slung tangle of gnarled, pale-brown roots with a rough, bark-like texture, spreading horizontally with several tapering, finger-like tendrils reaching outward and upward. The cluster appears weathered and organic, ideal for adding natural, uneven ground detail to a forest floor."
+differs = "The widest and most sprawling, with the most finger-like tendrils, perfect for covering large ground areas."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1124
+meshes = 1
+materials = 1
+size = [4.885732, 0.767774, 3.867599]
+
+[mesh.sm_env_roots_large_01]
+name = "SM_Env_Roots_Large_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_Large_01.fbx"
+sha256 = "fe00c4c0dc96fee0f09a8215a8ddabe68a75cbf615d45dfa71b301bf5c5766e4"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, sprawling root mass with a thick, domed crown that splays into numerous tapering, twisted tendrils, creating a wide, low silhouette. The bark is a dry, weathered grey-brown with deep crevices and a rough, matte finish, suggesting ancient age and decay."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 26242
+meshes = 3
+materials = 1
+size = [12.570653, 10.223903, 12.845619]
+
+[mesh.sm_env_roots_large_01_collision]
+name = "SM_Env_Roots_Large_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Roots_Large_01_Collision.fbx"
+sha256 = "4b43b7e5f92475c2b426447d4f3cc076d4777dd89a1f0bfedabf24a7ec19c6fe"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, sprawling root mass with a broad, flattened top and numerous tapering, twisted tendrils splaying outward and downward, resembling a fallen tree stump or an upturned root ball. The bark is heavily weathered, with deep grooves and a dry, grey-brown palette that suggests aged, dead wood."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5620
+meshes = 1
+materials = 1
+size = [12.542131, 10.21669, 12.845533]
+
+[mesh.sm_env_roots_low_01]
+name = "SM_Env_Roots_Low_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_Low_01.fbx"
+sha256 = "d04f3e33390464877e0c9fcd31dd116f6ef0bef32096ace55e1dca24b167911c"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, twisting root segment with a rough, bark-like texture in muted browns, featuring a few small offshoots and a broken end, ideal for scattering across forest floors or embedding into terrain."
+differs = "The longest, most twisted, and most broken-ended root, with more offshoots, best for dense debris or terrain embedding."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 368
+meshes = 1
+materials = 1
+size = [1.585873, 0.534801, 3.639701]
+
+[mesh.sm_env_roots_low_02]
+name = "SM_Env_Roots_Low_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_Low_02.fbx"
+sha256 = "c26ff8be2061155f5c9e5f867ea0dc0182600b962ff47b827a0aab444eecd2d3"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, weathered root segment with a thick base that splits into two tapering, finger-like prongs, rendered in muted browns with subtle grey and green mottling for a mossy, aged look. The low-poly faceting gives it a chunky, stylised silhouette, ideal for scattered forest floor debris or a natural obstacle."
+differs = "The shortest, plainest, and most fork-like root with a thick base and two prongs, best as a simple obstacle or floor scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 260
+meshes = 1
+materials = 1
+size = [0.98247397, 0.455985, 3.357557]
+
+[mesh.sm_env_roots_small_01]
+name = "SM_Env_Roots_Small_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_Small_01.fbx"
+sha256 = "dc189561413b2091b357e8878bd06d8a6b882bf2434f1ee309cc13c197c2f33e"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, twisting root segment with a forked tip and a rounded, broken end, rendered in a flat, earthy brown with subtle lighter striations along its length. Its low-poly silhouette suggests a weathered, organic piece of debris suitable for scattering across a forest floor to add natural clutter."
+differs = "The simplest and most linear, with a single forked tip and broken end, ideal for a lone ground scatter piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 258
+meshes = 1
+materials = 1
+size = [0.85272, 0.24599, 1.52241]
+
+[mesh.sm_env_roots_small_02]
+name = "SM_Env_Roots_Small_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_Small_02.fbx"
+sha256 = "b95c7791c16e11682ba84af6f76c2b018a9dbb2f766f0a24009fed07d7cb545d"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, twisting root or branch with a thick base that tapers into two or three jagged, finger-like offshoots, rendered in a muted, earthy brown with subtle lighter striations along its length."
+differs = "The most jagged and detailed, with three finger-like offshoots, best for a complex, claw-like debris accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 436
+meshes = 1
+materials = 1
+size = [0.704499, 0.267954, 1.602301]
+
+[mesh.sm_env_roots_small_03]
+name = "SM_Env_Roots_Small_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_Small_03.fbx"
+sha256 = "20858e8ba7dfa3785329d040e0a68852ba56aec76c0e1fb6494176fffda6d9ee"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, twisting root segment with a thick, bulbous base that tapers into two thin, forked tips, rendered in a muted, earthy brown with subtle lighter streaks along the bark. The surface is smooth and stylized, with a weathered, organic look that suggests it is a broken piece of a larger tree system, ideal for..."
+differs = "The thinnest and most compact, with a bulbous base and two forked tips, perfect for tight, vertical clutter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 306
+meshes = 1
+materials = 1
+size = [0.4628, 0.22614601, 1.498355]
+
+[mesh.sm_env_roots_small_04]
+name = "SM_Env_Roots_Small_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Roots_Small_04.fbx"
+sha256 = "6afdf9144cf2de46a8ed0e540c8cd227669bde9486c39db7d7f52e5edf456261"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, low-poly root cluster with a thick, knobby base that splits into three tapering, twisted branches, one of which curves sharply upward. The bark is a muted, earthy brown with subtle darker striations and a slightly weathered, organic texture."
+differs = "The most twisted and dynamic, with a knobby base and a sharply upward-curving branch, ideal for a focal root cluster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 446
+meshes = 1
+materials = 1
+size = [0.859059, 0.261631, 1.463387]
+
+[mesh.sm_env_skydome_01]
+name = "SM_Env_Skydome_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Skydome_01.fbx"
+sha256 = "480a1154ee48ad7503f0abd625236e39cb85c4123d846c074dda0b9488ebff4c"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+wanted = "Sky.psd"
+description = "A low, flattened dome with a broad, circular base, capped by a glossy black top and wrapped in a vibrant, multi-coloured band of red, grey, and yellow with white speckles. The surface is painted with a stylised, painterly texture that suggests a magical, enchanted canopy or a decorative shield, giving it a whimsical..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [65.88029, 26.128487, 65.880295]
+
+[mesh.sm_env_tree_giant_01]
+name = "SM_Env_Tree_Giant_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Giant_01.fbx"
+sha256 = "0d07aa33164c54428ba9d45de34741f28b2030f6ae1a388df703483baecb0356"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A towering, stylized tree with a thick, gnarled trunk that splits into a broad, jagged canopy of dark brown bark and vibrant green, yellow, and orange foliage. The trunk features a hollowed, vertical opening with a warm, glowing interior, suggesting a hidden shelter or magical core."
+differs = "The only living tree with glowing hollow core and colorful foliage, ideal for magical shelters or quest hubs."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 74572
+meshes = 7
+materials = 1
+size = [55.618572, 85.39652, 59.222534]
+
+[mesh.sm_env_tree_giant_01_collision]
+name = "SM_Env_Tree_Giant_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Tree_Giant_01_Collision.fbx"
+sha256 = "1e4593648f8d2e782ba1c4e22d19f6cc8a584a2292658b1aefee474839c32d4a"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A towering, slender trunk that flares into a wide, gnarled root base, with a smooth, pale grey-brown bark that transitions into a striking, deep red upper section. The surface is clean and unblemished, with a subtle vertical grain and a few small, jagged root spurs near the ground, giving it a stylized, ancient look..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4282
+meshes = 1
+materials = 1
+size = [23.336025, 74.1692, 25.362783]
+
+[mesh.sm_env_tree_giant_02]
+name = "SM_Env_Tree_Giant_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Giant_02.fbx"
+sha256 = "1c3e4253259cc9792a115e2e74473bc9a49496948d3258fb8a487d800529dd5a"
+atlas = "Branches_01.tga"
+textures = "Branches_01.tga"
+description = "A gnarled, leafless giant tree with a thick, twisted trunk and a broad, flat canopy of jagged, dead branches, rendered in muted browns and greys. The bark is rough and weathered, with a small cluster of dark rocks at the base, giving it a desolate, ancient appearance suited for a barren or enchanted forest floor."
+differs = "The only leafless dead tree with rocks at base, perfect for barren or spooky forest scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 63600
+meshes = 7
+materials = 2
+size = [50.648743, 87.25247, 54.27482]
+
+[mesh.sm_env_tree_giant_02_collision]
+name = "SM_Env_Tree_Giant_02_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Tree_Giant_02_Collision.fbx"
+sha256 = "fd12c68218038f11ff1e6b2e740bd235373f75ea738e4095b66f06e226afcc8c"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A towering, slender trunk with a flared, gnarled root base and a broken, flat top, suggesting a dead or felled giant. The bark is a mottled mix of grey and brown, with a striking vertical band of red-orange running up the length, giving it a distinctive, almost painted appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4964
+meshes = 1
+materials = 1
+size = [26.502163, 73.33679, 26.672205]
+
+[mesh.sm_env_tree_house_01]
+name = "SM_Env_Tree_House_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_House_01.fbx"
+sha256 = "21c63fb9b4dd12c82e7e8f681a11870af40caa4415a6117cce91f60fae911b66"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A stout, multi-tiered treehouse with a broad, overhanging red canopy roof and a thick, gnarled trunk base, wrapped in a dense, speckled foliage of orange, brown, and green. The structure features a small wooden balcony and a ladder, giving it a rustic, weathered appearance that suggests a cozy, elevated woodland..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56024
+meshes = 15
+materials = 1
+size = [15.36871, 17.519243, 15.093119]
+
+[mesh.sm_env_tree_house_01_collision]
+name = "SM_Env_Tree_House_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Tree_House_01_Collision.fbx"
+sha256 = "c606572060c6c908dd9341d2fe8e87251dd1c06568f7a2e574ffae7094e3d855"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, dead tree stump with a thick, twisted trunk and a sprawling root system, rendered in pale, weathered grey-brown bark with a dark hollow near the base. The jagged, broken top and exposed roots give it a skeletal, eerie silhouette, making it ideal for a haunted or desolate forest setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2192
+meshes = 1
+materials = 1
+size = [10.583621, 11.946006, 10.437022]
+
+[mesh.sm_env_tree_large_01]
+name = "SM_Env_Tree_Large_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Large_01.fbx"
+sha256 = "2027bb7375fd1d75591b91a6096ff5a8dfeddc189186c60f48738a92348f4340"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A tall, slender trunk rises into a broad, irregular canopy of dense, mottled brown and grey foliage, with a few green leaves and a red accent visible near the top. The bark is textured with vertical streaks of purple, green, and gold, giving it a weathered, magical appearance."
+differs = "The most colourful and magical variant, with purple, green, and gold bark streaks and a red accent, ideal for enchanted or mystical scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 39995
+meshes = 4
+materials = 1
+size = [25.491009, 44.94809, 25.074986]
+
+[mesh.sm_env_tree_large_01_collision]
+name = "SM_Env_Tree_Large_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Tree_Large_01_Collision.fbx"
+sha256 = "c85a4eaf4d53efac8abb90b36b5d6697de5a1f7ed9a3874e48b755262f3ca31c"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A tall, slender, bare trunk that tapers to a fine point, with a slightly wider, gnarled base suggesting a cut stump. The bark is a dark, weathered brown with subtle vertical striations, giving it a dry, aged appearance. Its stark, minimalist silhouette makes it ideal for a dead tree or a distant background element."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 232
+meshes = 1
+materials = 1
+size = [4.36179, 41.452564, 4.412591]
+
+[mesh.sm_env_tree_large_02]
+name = "SM_Env_Tree_Large_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Large_02.fbx"
+sha256 = "6216aab85e61d596ec3d08748a291bf29aa63bdbd480f6529eb08c0045787e5c"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A tall, slender trunk rises from a flared base, supporting a broad, irregular canopy of dense, mottled brown and green foliage. The bark is textured with vertical striations and patches of moss, while the leaves show subtle colour variation from olive to deep umber."
+differs = "The more natural and grounded option, with mossy bark and olive-to-umber leaves, suited for realistic forest environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 40710
+meshes = 4
+materials = 1
+size = [25.328642, 45.937046, 24.023972]
+
+[mesh.sm_env_tree_large_02_collision]
+name = "SM_Env_Tree_Large_02_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Tree_Large_02_Collision.fbx"
+sha256 = "ccde582cfde46a69e2de4e5b99c334550b10fd166733cacb3ed4b2d1ffaa77e4"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A bare, dead tree trunk, tapering to a sharp point with no branches or foliage, rises from a flared, root-like base. Its bark is a mottled grey-brown, appearing weathered and stripped, giving it a stark, skeletal silhouette. This asset is ideal for creating a haunting, desolate atmosphere in a dark forest scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 444
+meshes = 1
+materials = 1
+size = [4.7952223, 43.69875, 4.892373]
+
+[mesh.sm_env_tree_medium_01]
+name = "SM_Env_Tree_Medium_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Medium_01.fbx"
+sha256 = "27cc63a8acd2e5609d87b4c85dad295801a20184e133ec6390f9250bde3c3107"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A stout, blocky tree with a thick, straight trunk that flares into a wide, flat-topped canopy of clustered, angular foliage. The bark is a muted grey-brown, while the leaves mix deep greens with warm orange and red patches, suggesting an autumnal or enchanted palette."
+differs = "The shorter, wider variant with a flatter, more spread canopy, best for filling horizontal space in a forest."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14950
+meshes = 4
+materials = 1
+size = [10.529991, 15.9323845, 13.901349]
+
+[mesh.sm_env_tree_medium_01_collision]
+name = "SM_Env_Tree_Medium_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Tree_Medium_01_Collision.fbx"
+sha256 = "b4168db3b9ff369b586753afce013d85e08fe1dfd5de6c0b0b7b16f33f1cc491"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A tall, slender trunk that flares at the base, rising to a small, bare crown of three short, forking branches. The bark is a smooth, muted brown with a subtle vertical grain, while the flared foot is ringed with a patch of bright green moss."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 360
+meshes = 1
+materials = 1
+size = [2.13466, 11.9843645, 2.934257]
+
+[mesh.sm_env_tree_medium_02]
+name = "SM_Env_Tree_Medium_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Medium_02.fbx"
+sha256 = "df9453fac9751c9930b6e7757f567ddea95b97a857dff4eda5aa0f1c0e520784"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A stout, blocky tree with a thick, straight trunk and a broad, dense canopy of angular, low-poly foliage. The bark is a muted grey-brown, while the leaves mix deep greens with striking patches of autumnal orange and red, giving it a vibrant, magical appearance."
+differs = "The taller, more vertical variant with a denser, more rounded canopy, best for adding height and depth to a scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14913
+meshes = 4
+materials = 1
+size = [11.503483, 18.777794, 14.009083]
+
+[mesh.sm_env_tree_medium_02_collision]
+name = "SM_Env_Tree_Medium_02_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Tree_Medium_02_Collision.fbx"
+sha256 = "14852ed42dd7393e04996ccd13080df8b497b02c16ee4f8b9a79ef06a39fa2d2"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, tapering trunk with a flared, grassy base, rendered in muted brown bark with a subtle green mossy skirt at the ground line. Its simple, clean silhouette and low-poly aesthetic make it an ideal background filler for stylized forest scenes, offering a distinct, upright shape that reads clearly from all angles."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 244
+meshes = 1
+materials = 1
+size = [2.794258, 10.5781975, 2.206759]
+
+[mesh.sm_env_tree_portal_01]
+name = "SM_Env_Tree_Portal_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Portal_01.fbx"
+sha256 = "b74945422d909f1a01697df1628f4b1d7a7b5df8734da6e340665bec8a286922"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, blackened tree trunk twisted into a natural archway, its bark textured with deep, charred grooves and a faint, mossy green underlayer. The silhouette is jagged and organic, with a dense canopy of bare, spindly branches and a root system that spreads wide, suggesting an ancient, ominous gateway for a dark..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 45592
+meshes = 2
+materials = 1
+size = [20.404064, 31.822723, 19.346178]
+
+[mesh.sm_env_tree_portal_01_collision]
+name = "SM_Env_Tree_Portal_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Tree_Portal_01_Collision.fbx"
+sha256 = "085c7e0a475ba5e1153e43e154ce1c4e52d1f5734d4322256c2140a352c48752"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, twisted trunk of pale grey-brown wood that splits into two thick, reaching branches at the top, with a dense, tangled root system spreading at the base. The bark is heavily textured with deep grooves and knots, giving it a weathered, ancient appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 11916
+meshes = 1
+materials = 1
+size = [19.496563, 23.804459, 16.4615]
+
+[mesh.sm_env_tree_small_01]
+name = "SM_Env_Tree_Small_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Small_01.fbx"
+sha256 = "162f7fa9bb310c77ec478d36d2979ccd048c2c7f3b0880ba4aa72e17eefb7ccf"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, broad-crowned tree with a thick, pale trunk, its dense canopy is a patchwork of autumnal red, orange, and brown leaves with a few green accents, giving it a weathered, rustic look perfect for a magical forest floor."
+differs = "The most autumnal and weathered, with a thicker pale trunk and a broader, more rustic canopy for magical forest floors."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5300
+meshes = 4
+materials = 1
+size = [8.070686, 7.686174, 8.963833]
+
+[mesh.sm_env_tree_small_01_collision]
+name = "SM_Env_Tree_Small_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Tree_Small_01_Collision.fbx"
+sha256 = "1800d939465615630f732aa19651195ca9e1ad48e4cb9fa0164a619634fb576b"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, weathered brown trunk with a pronounced kink near the top, tapering to a blunt tip and lacking any foliage or branches. Its simple, low-poly form and muted, earthy tones make it ideal for a broken or dead tree in a forest floor setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [0.70446, 3.6840801, 0.673574]
+
+[mesh.sm_env_tree_small_02]
+name = "SM_Env_Tree_Small_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Small_02.fbx"
+sha256 = "9d3abd1d30dfe5ce2ac298b8d5e88621996116d4b9e7810bfd9d32e147945c45"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A stout, low-poly sapling with a short grey trunk and a dense, rounded canopy of layered, jagged leaves in muted greens, ochres, and russet browns, suggesting an autumnal or mixed-forest setting."
+differs = "The stoutest and most muted, with a short grey trunk and a denser, more layered rounded canopy for mixed-forest settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5818
+meshes = 4
+materials = 1
+size = [8.226474, 8.413096, 8.820243]
+
+[mesh.sm_env_tree_small_02_collision]
+name = "SM_Env_Tree_Small_02_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Tree_Small_02_Collision.fbx"
+sha256 = "f59fe449b590849e45bb34dd96fbd1d19bf92d7a0827ea4d2c15de9bc309a8e3"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, weathered wooden trunk with a pronounced lean and a flared, uneven base, rising to a single broken tip with no branches or foliage. The bark is a muted, earthy brown with subtle vertical grain, appearing dry and aged, suited for a sparse or dead forest floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 68
+meshes = 1
+materials = 1
+size = [0.649425, 4.754595, 0.692729]
+
+[mesh.sm_env_tree_trunk_01]
+name = "SM_Env_Tree_Trunk_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Trunk_01.fbx"
+sha256 = "0569eb74b3d166d6cc5cee433c7d5825afb06736c15ba4ea8cba4fb45277cd9d"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A jagged, weathered stump with a splintered top and a flared, gnarled root system, rendered in earthy browns with subtle mossy green patches. The bark is rough and textured, with a hollowed section near the base, giving it a decayed, ancient look perfect for a forest floor."
+differs = "The largest and most detailed stump, with a hollowed base and heavy moss, ideal as a dense forest centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 36732
+meshes = 3
+materials = 1
+size = [48.159424, 40.245743, 35.015343]
+
+[mesh.sm_env_tree_trunk_01_collision]
+name = "SM_Env_Tree_Trunk_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Tree_Trunk_01_Collision.fbx"
+sha256 = "45eba51e925da55cd276e89e5f9aa139019b19fae6ddf65e8613522f5a4bb844"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gnarled, weathered stump with jagged, splintered top edges and thick, twisting roots flaring outward at the base. The bark is a pale, dry grey-brown with deep vertical grooves, giving it a dead, ancient appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5274
+meshes = 1
+materials = 1
+size = [47.717373, 40.245743, 34.735058]
+
+[mesh.sm_env_tree_trunk_02]
+name = "SM_Env_Tree_Trunk_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Trunk_02.fbx"
+sha256 = "499082c9f4049f4e4e9d707a90ef2039c3455ce36f0cb391c030406455044129"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A jagged, broken stump with a splintered top and a wide, sprawling root system, painted in earthy browns with vibrant green moss clinging to the roots and lower trunk, giving it a weathered, ancient look perfect for a forest floor."
+differs = "The smaller, lighter variant with vibrant green roots, best for scattered, low-poly ground clutter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 9756
+meshes = 2
+materials = 1
+size = [25.839573, 24.56759, 21.19397]
+
+[mesh.sm_env_tree_trunk_02_collision]
+name = "SM_Env_Tree_Trunk_02_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Env_Tree_Trunk_02_Collision.fbx"
+sha256 = "097dfc06091f1a9aba45d7596e4e3656816208763be2ba623b0bc3eec8c03ef3"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A jagged, splintered stump with a hollowed, broken top, its pale grey-brown bark peeling in vertical strips. Thick, gnarled roots splay outward at the base, tipped with vivid green moss that suggests a damp forest floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3251
+meshes = 1
+materials = 1
+size = [25.839573, 24.56759, 21.102097]
+
+[mesh.sm_env_undergrowth_fern_01]
+name = "SM_Env_Undergrowth_Fern_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Undergrowth_Fern_01.fbx"
+sha256 = "f37dd5f09832488a077ca01d64c64869aeadf141d2e0d11d8cc3191e974171f9"
+atlas = "Undergrowth.tga"
+textures = "Undergrowth.tga"
+description = "A low, flat cluster of feathery fronds radiating from a central point, forming a soft, rounded mound of pale green foliage with subtle darker shading along the leaf edges, ideal for ground cover in a stylised forest setting."
+differs = "The smallest and flattest of the four-triangle ferns, with the most compact, rounded mound shape."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.649542, 0.064191, 0.69785]
+
+[mesh.sm_env_undergrowth_fern_02]
+name = "SM_Env_Undergrowth_Fern_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Undergrowth_Fern_02.fbx"
+sha256 = "76647dffc8d2c22c1f9fb5a32a99b76d0fb3f93133025ae40dbb65eb901ecf0e"
+atlas = "Undergrowth.tga"
+textures = "Undergrowth.tga"
+description = "A low, flat cluster of pale green fronds radiating from a central point, forming a dense, star-like ground cover. The leaves are broad and slightly jagged, with a soft, matte finish that suggests a young, healthy plant."
+differs = "The most star-like and dense of the low-poly ferns, with the broadest, most jagged leaves."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.52886605, 0.064763, 0.518994]
+
+[mesh.sm_env_undergrowth_fern_03]
+name = "SM_Env_Undergrowth_Fern_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Undergrowth_Fern_03.fbx"
+sha256 = "45237ac139540bfa50bd24edb78605ac577f7b9c0cf94f425e75efca7eef0e33"
+atlas = "Undergrowth.tga"
+textures = "Undergrowth.tga"
+description = "A low, flat cluster of broad, lobed fronds spreading outward from a central point, forming a dense, ground-hugging rosette. The leaves are a muted, pale green with subtle darker veining, giving it a soft, organic look."
+differs = "The widest and tallest of the four-triangle ferns, with the most pronounced lobed rosette form."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.70113, 0.082471, 0.688044]
+
+[mesh.sm_env_undergrowth_fern_04]
+name = "SM_Env_Undergrowth_Fern_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Undergrowth_Fern_04.fbx"
+sha256 = "b129cc99b165b302935fa11418c82506da2ef62618e47a892cbbc98e66361f46"
+atlas = "Undergrowth.tga"
+textures = "Undergrowth.tga"
+description = "A low, spreading cluster of broad, lobed fronds that fan out from a central base, forming a dense, rounded mound. The leaves are a muted, natural green with subtle darker veining, giving it a soft, organic appearance."
+differs = "Nearly identical to Fern_03 but smaller and with a more fan-like, less circular spread."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.528864, 0.06958, 0.518994]
+
+[mesh.sm_env_undergrowth_fern_05]
+name = "SM_Env_Undergrowth_Fern_05"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Undergrowth_Fern_05.fbx"
+sha256 = "9eec1ba50ec5ad752bd2269bbe85e68c28bf885194627bbdf42c113ad01e4d75"
+atlas = "Undergrowth.tga"
+textures = "Undergrowth.tga"
+description = "A low, spreading cluster of arching fronds, each with a central rib and paired leaflets, forming a rounded, ground-hugging mound. The foliage is a muted, desaturated green with darker tips and a slightly dusty, matte finish, giving it a weathered, natural look."
+differs = "The most weathered and dusty-looking fern, with the darkest tips and a distinctly matte finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20
+meshes = 1
+materials = 1
+size = [0.829592, 0.16794801, 0.80385303]
+
+[mesh.sm_env_undergrowth_fern_06]
+name = "SM_Env_Undergrowth_Fern_06"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Undergrowth_Fern_06.fbx"
+sha256 = "be63b7cbad7df3171178419f985021d2e4d3df8f24aa54be66b858bf075ec028"
+atlas = "Undergrowth.tga"
+textures = "Undergrowth.tga"
+description = "A low, spreading cluster of feathery fronds, forming a soft, rounded mound with a slightly flattened top. The pale, muted green leaves radiate outward from a central base, creating a dense, ground-hugging silhouette that reads as a mature fern clump."
+differs = "The largest and tallest of all ferns, with the most mature, flattened-top clump silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20
+meshes = 1
+materials = 1
+size = [1.12591, 0.270135, 1.1104419]
+
+[mesh.sm_env_undergrowth_fern_07]
+name = "SM_Env_Undergrowth_Fern_07"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Undergrowth_Fern_07.fbx"
+sha256 = "560e3708edbd713c7e9615253219b190f8b4b1aaed2f33d68d6fa48313e4c05c"
+atlas = "Undergrowth.tga"
+textures = "Undergrowth.tga"
+description = "A low, spreading cluster of pale green fronds, each leaf tapering to a point and arching outward from a short central stalk, giving a soft, feathery silhouette. The muted, desaturated colouring and simple geometry suggest a subtle ground cover that blends into the forest floor, ideal for adding natural detail without.."
+differs = "The most elongated and narrow fern, with a distinct short central stalk and tapering, feathery fronds."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 34
+meshes = 1
+materials = 1
+size = [0.85870194, 0.277723, 0.609635]
+
+[mesh.sm_env_undergrowth_fern_08]
+name = "SM_Env_Undergrowth_Fern_08"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Undergrowth_Fern_08.fbx"
+sha256 = "4e7476e31d710c3b9671c3a7998a8bbb6153339323ab21d913f397e321c08b25"
+atlas = "Undergrowth.tga"
+textures = "Undergrowth.tga"
+description = "A low, spreading cluster of pale grey-green fronds radiating from a short central stem, forming a flat, fan-like canopy that hugs the ground. The muted, desaturated tones and simple, angular silhouette suggest a hardy, low-lying forest floor plant, ideal for adding subtle ground cover detail to a woodland scene."
+differs = "The most angular and fan-like fern, with the palest grey-green tones and a flat, canopy-like spread."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 34
+meshes = 1
+materials = 1
+size = [0.987883, 0.331908, 0.707788]
+
+[mesh.sm_env_undergrowth_fern_09]
+name = "SM_Env_Undergrowth_Fern_09"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Undergrowth_Fern_09.fbx"
+sha256 = "0ac1016e809e3dc89e81aaaed26a489802d7a43d85ff5560e477346b65ef7739"
+atlas = "Undergrowth.tga"
+textures = "Undergrowth.tga"
+description = "A low, spreading cluster of feathery fronds, each arching outward from a central base to form a wide, fan-like mound. The soft, muted green foliage is dense and layered, giving it a lush, natural appearance ideal for forest floor ground cover."
+differs = "The smaller, lower-poly option, with a wider, flatter fan shape suited for dense, low ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [0.90316105, 0.38131598, 0.846434]
+
+[mesh.sm_env_undergrowth_fern_10]
+name = "SM_Env_Undergrowth_Fern_10"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Undergrowth_Fern_10.fbx"
+sha256 = "85144cf36b07a64ca1163795a1d94373c739a4183bcdb2ae3c4ee7623bbb6a92"
+atlas = "Undergrowth.tga"
+textures = "Undergrowth.tga"
+description = "A low, spreading cluster of arching fronds, each tapering to a fine point and radiating from a central base to form a rounded, fan-like silhouette. The muted, desaturated green tones and soft, diffuse texture give it a weathered, natural appearance, making it ideal for adding subtle ground-level detail to forest..."
+differs = "The larger, more detailed variant, with taller, more pointed fronds for a taller, more weathered silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [0.941074, 0.417705, 0.859016]
+
+[mesh.sm_env_vines_01]
+name = "SM_Env_Vines_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Vines_01.fbx"
+sha256 = "8980a0c955c336339f9e0d16c81b69d642ca38cec48246d9713b2c81337441b9"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A tall, narrow cluster of thin, twisting vines with sparse green leaves, rising from a flat, pale grey base that suggests a rocky or mossy ground patch. The vines are a muted, earthy green with brownish highlights, giving a dry, weathered appearance suitable for an enchanted forest floor."
+differs = "The only upright, ground-based vine cluster with a flat base, ideal for floor placement rather than hanging."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1960
+meshes = 2
+materials = 2
+size = [1.339276, 2.871711, 0.202867]
+
+[mesh.sm_env_vines_02]
+name = "SM_Env_Vines_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Vines_02.fbx"
+sha256 = "d98d6ed54831cd6903995f709bd18c241017a7983f6d5f16310026127a2cdb62"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of thin, drooping vines hangs from a curved, leafy top, with a few small leaves scattered along the strands. The muted olive-green foliage and brown stems give it a weathered, natural look, ideal for adding vertical detail to trees or cave entrances."
+differs = "The only hanging cluster with a curved, leafy top, perfect for draping over ledges or cave mouths."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2224
+meshes = 2
+materials = 2
+size = [1.339276, 2.659017, 1.210241]
+
+[mesh.sm_env_vines_03]
+name = "SM_Env_Vines_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Vines_03.fbx"
+sha256 = "cae90b7a6b460f1c3a24fae3f30609342c9fcee023409aa54bed9622ebe4372c"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A dense cluster of thick, twisting vines with a few small leaves, rising vertically from a flat, pale stone base. The bark is a muted brown with subtle green mossy highlights, giving it a weathered, organic look. The tall, narrow proportions make it ideal for adding vertical detail to forest walls or ruins."
+differs = "The thickest, most bark-heavy upright vines with a stone base, best for ruins or wall detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 968
+meshes = 2
+materials = 2
+size = [2.23037, 3.009456, 0.300554]
+
+[mesh.sm_env_vines_03_alt]
+name = "SM_Env_Vines_03_Alt"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Vines_03_Alt.fbx"
+sha256 = "e4cfe29fcfee13149092bda28bf7d1f89b709a220d6a08e35328760697119416"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A flat, vertical patch of four thick, twisting vines with a muted olive-brown and grey-green palette, featuring subtle highlights that suggest a slightly glossy, damp surface. The vines are knotted and intertwined, with a few small, pale leaves sprouting from the stems, creating a dense, natural barrier ideal for..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 962
+meshes = 2
+materials = 2
+size = [2.76479, 3.0243921, 0.44073302]
+
+[mesh.sm_env_vines_04]
+name = "SM_Env_Vines_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Vines_04.fbx"
+sha256 = "5130f83eef63b39ecca966506aadc840403f7c6be846040eb2a598d85ea05371"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of long, slender vines arching downward from a thick, woody top, with a few thin tendrils hanging straight. The foliage is a muted olive green with brown stems, and the base is cut flat, suggesting it is meant to hang from a ledge or ceiling."
+differs = "The largest and widest hanging cluster, with the most dramatic arch and straight tendrils for ceiling coverage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1220
+meshes = 2
+materials = 2
+size = [2.3978372, 3.2711291, 1.810895]
+
+[mesh.sm_env_water_plane_01]
+name = "SM_Env_Water_Plane_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Water_Plane_01.fbx"
+sha256 = "e30f95a18f4dc87f85daaed6b140ca90780c31db0ed669cc4543bad1844ebb70"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gently undulating rectangular sheet, textured as a stylized river with a dark grey-blue base, a central band of white and blue ripples, and a sandy-orange bank along one edge, with a few scattered white stones and a small wooden plank bridge crossing the water."
+differs = "The only arched water with a bridge and sandy bank, for rivers, not flat ponds."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 400
+meshes = 1
+materials = 1
+size = [5.0, 0.786411, 9.971392]
+
+[mesh.sm_env_water_plane_01_2]
+name = "SM_Env_Water_Plane_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Water_Plane_01.fbx"
+sha256 = "47dbb745231ced49c8221637371c5cce15cbf6cc1f1aca161199382933dffed2"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A flat, square patch of stylized water with a central red lily-pad cluster, bordered by dark mud and tan wooden planks. Small orange flowers and scattered stones add detail, while the low-poly texture gives it a vibrant, game-ready look for a pond or swamp surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20000
+meshes = 1
+materials = 1
+size = [50.0, 0.000004, 50.0]
+
+[mesh.sm_env_water_plane_02]
+name = "SM_Env_Water_Plane_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Water_Plane_02.fbx"
+sha256 = "954ef5944863af7f0e31adc714ce084b92cf810d9de733968b80762866c9459e"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A flat, rectangular plane with a low-poly, faceted surface, textured with a patchwork of autumnal colours including red, orange, grey, and green, resembling a stylized forest floor or a patch of earth with scattered leaves and stones."
+differs = "The only flat, non-water plane, a forest floor patch, not a water surface."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 400
+meshes = 1
+materials = 1
+size = [5.0, 0.100891, 10.0]
+
+[mesh.sm_env_water_plane_03]
+name = "SM_Env_Water_Plane_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Water_Plane_03.fbx"
+sha256 = "8c5a07fb4c6fcc0ea742ac5d4a51983910b9fa1efd0c4c5b8dc222addd67c5f2"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A gently arched, rectangular sheet of water with a subtle ripple, its surface painted with a patchwork of grey, orange, and purple reflections that suggest a vibrant, stylized forest setting. The texture is flat and illustrative, giving it a distinct low-poly look that stands out from more realistic water planes."
+differs = "The only arched water with autumnal reflections, for a stylized forest stream."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 400
+meshes = 1
+materials = 1
+size = [5.808838, 0.786411, 9.971392]
+
+[mesh.sm_env_water_plane_square_01]
+name = "SM_Env_Water_Plane_Square_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Water_Plane_Square_01.fbx"
+sha256 = "472a7adf3ce0e79ec639d3ee716ce957124bc35d1df2e8b60bb92d585eac67d9"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A flat, square plane of stylized water, painted with a vibrant, swirling pattern of red, orange, and green, with a bright yellow-orange patch at one corner. The surface is textured to suggest a magical, colorful liquid, ideal for adding a distinct, eye-catching water feature to a fantasy environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1800
+meshes = 1
+materials = 1
+size = [15.352743, 0.16326201, 15.047155]
+
+[mesh.sm_prop_archway_01]
+name = "SM_Prop_Archway_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Archway_01.fbx"
+sha256 = "e1c8e6ec6d973c7828cc3e29f152f70f85b07f9aa158b311762907b3a4edd98e"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A narrow, tall horseshoe arch of dark, faceted stone rises from two blocky, squared pillars, its inner curve smooth and unadorned. The surface is a uniform charcoal grey with subtle lighter mottling, suggesting weathered, ancient masonry."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 960
+meshes = 1
+materials = 1
+size = [3.8000512, 5.48364, 1.375342]
+
+[mesh.sm_prop_archway_01_collision]
+name = "SM_Prop_Archway_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Archway_01_Collision.fbx"
+sha256 = "b4eecd46f7626e6f644b3a0cf13d014bc3cbffbf78e4d592a3102844832947d9"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A narrow, weathered stone archway with a rounded top, flanked by two blocky pillars. The pillars are clad in faded red and white panels with gold trim, suggesting an old ceremonial or ruined gate. The stone is cracked and mossy, giving it an ancient, overgrown appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 180
+meshes = 1
+materials = 1
+size = [3.794639, 5.487079, 1.372261]
+
+[mesh.sm_prop_chair_01]
+name = "SM_Prop_Chair_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Chair_01.fbx"
+sha256 = "c35652fdc7c55b20b1aba6ff9ea764e806592a1d90320071fbe162fa8946cd65"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A rustic armchair carved from a single tree stump, featuring a flat circular seat and a tall, curved backrest that wraps around the sides. The bark is deeply grooved with vertical fissures, rendered in a muted brown with lighter tan highlights on the seat, giving it a weathered, natural look suited for woodland..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1078
+meshes = 1
+materials = 1
+size = [0.731612, 0.872804, 0.740451]
+
+[mesh.sm_prop_chair_01_collision]
+name = "SM_Prop_Chair_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Chair_01_Collision.fbx"
+sha256 = "db747102abddc77299cd2483b58b9e8c6fb6544a337aafafc9066027fa8cf348"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A stout, cylindrical tub chair with a high, wrap-around back and a low, flat seat, rendered in low-poly style. The upholstery is a warm, muted red with scattered white speckles, contrasting with a dark charcoal backrest and a thick, tan woven base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 80
+meshes = 1
+materials = 1
+size = [0.762964, 0.854617, 0.754342]
+
+[mesh.sm_prop_crystal_01]
+name = "SM_Prop_Crystal_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Crystal_01.fbx"
+sha256 = "29c189590f1576a14b71a67e3214da5bf3b0ea5f52555cc538dd554196e1e4bf"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of faceted violet crystals, with one tall central spire flanked by shorter, angled shards emerging from a dark rocky base. The low-poly surfaces catch light to suggest a glossy, semi-translucent mineral, making it ideal for a magical or enchanted forest setting."
+differs = "The largest and most detailed violet cluster, with the tallest central spire, ideal as a hero landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 919
+meshes = 1
+materials = 2
+size = [3.45616, 4.6669707, 3.16244]
+
+[mesh.sm_prop_crystal_02]
+name = "SM_Prop_Crystal_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Crystal_02.fbx"
+sha256 = "66df95357f307183b2d6c684a42e75e85f2cb2fdf63dd5d51da4f1cda6de12ba"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of faceted violet crystals, with one tall central spire flanked by shorter, angled shards, all rising from a small, rocky base. The low-poly surfaces catch light to suggest a semi-translucent, glassy material, giving it a magical, glowing appearance ideal for enchanted environments."
+differs = "A mid-sized, balanced cluster with a prominent central spire, perfect for a medium-scale focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 613
+meshes = 1
+materials = 2
+size = [1.432544, 1.621398, 1.17676]
+
+[mesh.sm_prop_crystal_03]
+name = "SM_Prop_Crystal_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Crystal_03.fbx"
+sha256 = "54dca119ee632b5d4634d92ad4a219878229016d54bee3c0f00de474b137b580"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of jagged, faceted purple crystals rising from a rocky base, with a few smaller shards angled outward for a natural, unpolished look. The translucent violet material catches light with a subtle glow, suggesting a magical or enchanted origin perfect for fantasy environments."
+differs = "A compact, natural-looking cluster with angled shards, suited for scattered ground detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 394
+meshes = 1
+materials = 2
+size = [1.021996, 1.033674, 0.912398]
+
+[mesh.sm_prop_crystal_04]
+name = "SM_Prop_Crystal_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Crystal_04.fbx"
+sha256 = "e3eafe80b6060c42fa5ca3c31ea5ac4bba78bdd58ccd00d5cc57b8153768cb3c"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three jagged, faceted violet shards rising from a low, rocky base, with a smaller crystal leaning against the tallest spire. The flat-shaded surfaces catch light to suggest a translucent, gem-like material, while the dark purple base grounds it as a natural growth."
+differs = "The smallest and simplest violet cluster, with a leaning shard, ideal for tiny, subtle accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 198
+meshes = 1
+materials = 2
+size = [0.676759, 0.832505, 0.472451]
+
+[mesh.sm_prop_crystal_05]
+name = "SM_Prop_Crystal_05"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Crystal_05.fbx"
+sha256 = "370c61f7e8cf96b675f41ff519fa4ff415e141154765cdf19af9cbcf0fd8d51b"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of three faceted violet crystals rising from a jagged rocky base, with the tallest central spire flanked by two shorter angled shards. The translucent purple surfaces catch light with sharp, flat highlights, giving it a magical, gem-like appearance suited for enchanted environments."
+differs = "A minimal three-shard cluster with a tall central spire, best for a clean, uncluttered magical accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 190
+meshes = 1
+materials = 2
+size = [0.529198, 0.84616, 0.448551]
+
+[mesh.sm_prop_crystal_06]
+name = "SM_Prop_Crystal_06"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Crystal_06.fbx"
+sha256 = "546549bb371085f71d8165b4d1bd5d877332dcb17a8e5b0f49c1f9008af8a1f8"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A jagged cluster of violet crystals, with sharp, angular shards of varying heights rising from a low, rocky base. The faceted surfaces catch light to create a bright, gem-like sheen, while the darker purple base grounds the formation."
+differs = "The tallest and most jagged violet cluster, with the highest triangle count, for a dramatic, towering formation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2659
+meshes = 1
+materials = 2
+size = [3.925602, 3.97741, 5.4071913]
+
+[mesh.sm_prop_crystal_07]
+name = "SM_Prop_Crystal_07"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Crystal_07.fbx"
+sha256 = "c3f8f52938b382a1b80e2538355eb866dac95b8a4c02d0a7b983d073075519d2"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of jagged, grey-brown rock shards, heavily encrusted with vibrant violet crystals that jut out at sharp angles, giving it a magical, mineral-rich appearance. The faceted surfaces and bright purple accents make it a striking, enchanted landmark for a fantasy environment."
+differs = "The only rock-dominant asset, with violet crystals encrusting a grey-brown base, for a mineral-rich, earthy landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1680
+meshes = 1
+materials = 2
+size = [2.3303342, 2.178468, 2.033495]
+
+[mesh.sm_prop_crystal_08]
+name = "SM_Prop_Crystal_08"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Crystal_08.fbx"
+sha256 = "27239d340f57a4da728a76555a089577ecf284491633f4dd5d8232c98bba8c35"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A cluster of jagged, translucent blue crystals erupting from a low, rounded grey-brown rock base, with several smaller shards scattered around the main formation. The faceted surfaces catch light, giving a cool, icy glow that contrasts with the matte stone, suggesting a magical or enchanted origin."
+differs = "The only blue crystal asset, with a low rounded rock base, for a cool, icy contrast in a magical setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1095
+meshes = 1
+materials = 2
+size = [3.1919398, 1.8608121, 2.1036081]
+
+[mesh.sm_prop_geode_01]
+name = "SM_Prop_Geode_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Geode_01.fbx"
+sha256 = "a47be03fd5359303e732b540869a6b76ac788b41b42ade6cd246c8ecb0e08bca"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A jagged, irregular grey-brown rock shell split open to reveal a vibrant, faceted purple crystal core. The exposed gemstone glows with a luminous intensity, contrasting sharply against the dull, matte exterior. This broken geode serves as a striking, magical focal point for any enchanted forest environment."
+differs = "The smaller, more compact geode with a brighter, more luminous crystal core, ideal for a focal point or collectible."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 476
+meshes = 1
+materials = 2
+size = [1.9563651, 2.2092218, 1.206381]
+
+[mesh.sm_prop_geode_02]
+name = "SM_Prop_Geode_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Geode_02.fbx"
+sha256 = "9526c08a3a11fac278537d7b6f151870f9872836bf479419a2e7846a05f43873"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A faceted, irregular grey-brown rock split open to reveal a jagged, glowing violet crystal core, with a rough, unpolished exterior and a smooth, luminous interior that suggests a magical energy source."
+differs = "The larger, more massive geode with a rougher, more jagged exterior, better suited as a large terrain feature or landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 492
+meshes = 1
+materials = 2
+size = [2.71321, 2.578964, 1.8357451]
+
+[mesh.sm_prop_lantern_01]
+name = "SM_Prop_Lantern_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Lantern_01.fbx"
+sha256 = "4d4b416c08bf19fd4161961c920acceb24c7e6e7c933150dd7cecdf5c2ad4837"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A faceted purple acorn with a brown cap and a small hanging loop, resembling a magical forest charm or lantern. The low-poly style gives it a stylized, game-ready look, and the vibrant purple body contrasts with the earthy brown cap."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 348
+meshes = 2
+materials = 2
+size = [0.164386, 0.259017, 0.164387]
+
+[mesh.sm_prop_lantern_01_collision]
+name = "SM_Prop_Lantern_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Lantern_01_Collision.fbx"
+sha256 = "65750dcb205e113d26cfe65b0afaf14578abd6cc6028afae95836ded9803cb79"
+atlas = "POLYGON - Horror Carnival/PolygonHorrorCarnival_Texture_01_C.png"
+textures = "PolygonHorrorCarnival_Texture_01_C.png"
+description = "A squat, faceted golden-yellow lump with a flat top and rounded, low-poly sides, resembling a stylised nugget or a small, smooth stone. Its uniform ochre colour and lack of any fixtures or openings make it read as a simple, solid prop, likely a collision mesh or a decorative mound."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 142
+meshes = 1
+materials = 1
+size = [0.154351, 0.13180599, 0.154351]
+
+[mesh.sm_prop_lantern_stand_01]
+name = "SM_Prop_Lantern_Stand_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Lantern_Stand_01.fbx"
+sha256 = "f079147b82088c5e289996ec2817d1255153c4f6f0325d72906642c304a3c8ac"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, weathered wooden post that curls into a spiral at the top, with a small hanging ring and a few green leaves sprouting from the side, suggesting a rustic, enchanted forest lantern stand."
+differs = "The only wooden post with foliage and a hanging ring, the tallest and most detailed, for a natural, enchanted look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 704
+meshes = 1
+materials = 1
+size = [0.473468, 1.05749, 0.103646]
+
+[mesh.sm_prop_lantern_stand_02]
+name = "SM_Prop_Lantern_Stand_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Lantern_Stand_02.fbx"
+sha256 = "a0f56588f7c7b2738563243fffa059f038207890c762f1a212274c910c25e601"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, dark brown wrought-iron stand with a flat circular base and a tall, gracefully curved stem ending in a shepherd's crook, designed to hang a lantern. The metal has a slightly weathered, matte finish, giving it a rustic and aged appearance suitable for an enchanted forest setting."
+differs = "The only freestanding stand with a flat base, the widest and most stable, for placing on ground."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 434
+meshes = 1
+materials = 1
+size = [0.366592, 1.059092, 0.278226]
+
+[mesh.sm_prop_lantern_stand_03]
+name = "SM_Prop_Lantern_Stand_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Lantern_Stand_03.fbx"
+sha256 = "4a78a0cbf9a23a8ab841bb16edac19b4e435f2047bc96d068b59da6e7e0dbe47"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A slender, weathered iron hook with a curled top, rising from a short straight stem, finished in a muted brown-grey patina. Its simple shepherd's crook silhouette suggests a hanging bracket for lanterns or signs, offering a rustic, aged look that suits enchanted woodland settings."
+differs = "The smallest, plainest, and most damaged hook, with no base or leaves, for wall mounting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 212
+meshes = 1
+materials = 1
+size = [0.264327, 0.75068104, 0.063564]
+
+[mesh.sm_prop_portal_01]
+name = "SM_Prop_Portal_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Portal_01.fbx"
+sha256 = "cb27855b9e66a0f70a0322be83f6474ef22949f02256044d15049274146ba724"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A jagged, low-poly rock formation with a single, tall, irregular spire rising from a broad, uneven base. The dark, near-black stone is heavily faceted, giving it a sharp, crystalline appearance, and the silhouette suggests a natural, weathered monolith or a mysterious, ancient waypoint."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6666
+meshes = 1
+materials = 1
+size = [12.227497, 11.696353, 17.66883]
+
+[mesh.sm_prop_portal_01_collision]
+name = "SM_Prop_Portal_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Portal_01_Collision.fbx"
+sha256 = "630e13e726f40e9b8de38e8ec33d29dcf4e49b127fd9998379bf8383588a69b7"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, chunky stone archway with a rounded top, built from irregular grey and tan blocks with patches of mossy green and a few red accents. The structure is weathered and uneven, with a pale, sandy path leading through the opening, suggesting a magical gateway or ancient ruin in a forest setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1196
+meshes = 1
+materials = 1
+size = [12.403297, 11.474289, 17.631632]
+
+[mesh.sm_prop_ruins_01]
+name = "SM_Prop_Ruins_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Ruins_01.fbx"
+sha256 = "d832404d2c968c528e2a6d943fca966686e103ea32025f8e3b44940bb801dc50"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, stepped stone structure with a rounded cap, resembling a weathered shrine or small monument. The blocky, tiered form is heavily textured with dark, mottled grey and black tones, suggesting age and decay. Its compact, symmetrical silhouette makes it ideal for scattered ruins or ancient forest set dressing."
+differs = "The only fully symmetrical, tiered monument; tallest and most detailed, best as a standalone shrine or focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7844
+meshes = 1
+materials = 1
+size = [11.437998, 10.060705, 11.487497]
+
+[mesh.sm_prop_ruins_01_collision]
+name = "SM_Prop_Ruins_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Ruins_01_Collision.fbx"
+sha256 = "9859904b39c7af134bf8f0b8ab51fa4025dc5d5f3de16b144ced9fe1561ab074"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A squat, stepped stone ruin with a rounded, domed top, resembling a weathered pagoda or shrine. The blocky masonry is cracked and chipped, with patches of mossy green and faded red brick revealing age and decay. Its compact, symmetrical form suggests a standalone landmark or a piece of a larger ruined complex."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 968
+meshes = 1
+materials = 1
+size = [11.437999, 10.060704, 11.438]
+
+[mesh.sm_prop_ruins_02]
+name = "SM_Prop_Ruins_02"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Ruins_02.fbx"
+sha256 = "88ed12b4447ad4332bc32e6692ff014fa3e1050b5b6ab63ab89e919a251602d7"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, rectangular stone block with a flat top, broken and weathered, featuring two large arched openings on its long face and a smaller square opening on one end, suggesting a ruined foundation or a fragment of an ancient wall."
+differs = "The only one with arched openings and a flat top; a ruined wall fragment, not a freestanding structure."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3170
+meshes = 1
+materials = 1
+size = [7.7010307, 4.052176, 2.8617501]
+
+[mesh.sm_prop_ruins_02_collision]
+name = "SM_Prop_Ruins_02_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Ruins_02_Collision.fbx"
+sha256 = "8ee0cf210389033e261d86e101d5a27804e3949882d8705d520b61a9c7efa2b2"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, rectangular block of weathered stone, broken and uneven, with a large, dark, arched opening cut into one long face. The surface is a patchwork of grey, brown, and muted red, with faint, pale markings that suggest faded carvings or paint."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 1
+materials = 1
+size = [7.52385, 4.052176, 2.434715]
+
+[mesh.sm_prop_ruins_03]
+name = "SM_Prop_Ruins_03"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Ruins_03.fbx"
+sha256 = "9e88cb15afe468a1b15db92284df360b0941cf91fa2352ad68a73575d99c048c"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, elongated fragment of a stone structure, featuring a stepped, blocky pedestal at one end and a flat, broken slab extending outward. The dark, weathered grey stonework shows chipped edges and a rough, uneven surface, suggesting an ancient, ruined plinth or altar piece."
+differs = "The only one with a stepped pedestal and a broken slab; a low plinth or altar, not a wall or arch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2306
+meshes = 1
+materials = 1
+size = [7.697448, 4.052176, 2.8617501]
+
+[mesh.sm_prop_ruins_03_collision]
+name = "SM_Prop_Ruins_03_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Ruins_03_Collision.fbx"
+sha256 = "043f3fc8f85382f9cb7550f6389468e7397785df773a7c6d9404e0bb65aaac2a"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, chunky stone block with a steeply sloped, stepped profile, resembling a ruined stair or altar base. The surface is weathered grey stone with patches of mossy green and exposed reddish-brown earth, while one side features a faded, painted mural of vertical stripes in muted red, blue, and yellow."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 1
+size = [7.52385, 4.052176, 2.434715]
+
+[mesh.sm_prop_ruins_04]
+name = "SM_Prop_Ruins_04"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Ruins_04.fbx"
+sha256 = "80dcf1684cfeca558aab31b6287f37a0e892eb938440c13665ecbef691cb96c4"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A dark, weathered stone archway with a leaning, broken profile, supported by two thick, blocky pillars. The surface is heavily textured with cracks and mossy patches, suggesting ancient, ruined masonry."
+differs = "The only leaning archway; the most damaged and dynamic, ideal for framing paths or creating a ruined gateway."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4435
+meshes = 1
+materials = 1
+size = [8.404616, 5.91739, 7.539261]
+
+[mesh.sm_prop_ruins_04_collision]
+name = "SM_Prop_Ruins_04_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Ruins_04_Collision.fbx"
+sha256 = "b8c9ebde27cc4a562f678c7e53057db5459e050d32e20c6b2fc45e89c0784bdd"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A weathered, mossy stone archway with a curved, stepped profile, featuring a flat top and a single circular hole in the side. The grey stone is streaked with red paint and green moss, suggesting an ancient, ruined structure."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [8.43961, 5.9095573, 7.453829]
+
+[mesh.sm_prop_table_01]
+name = "SM_Prop_Table_01"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Table_01.fbx"
+sha256 = "cd30da281cd46600d6044087e200535293117deb50c47f13fc63c9cb783d55a6"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, chunky wooden table with a thick, irregular slab top and a flared, root-like pedestal base, carved from pale, sandy-brown timber with a few dark knots and a small hole in the surface, giving it a rustic, hand-hewn look suited to a woodland camp or forest floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 781
+meshes = 1
+materials = 1
+size = [1.8453109, 0.872632, 2.029059]
+
+[mesh.sm_prop_table_01_collision]
+name = "SM_Prop_Table_01_Collision"
+pack = "polygon_enchanted_forest_nature_biome"
+source = "SourceFiles/FBX/Collision/SM_Prop_Table_01_Collision.fbx"
+sha256 = "2a9ae840ed9c4224f58c510e113c5190ed13e1d7b439766e3695727e99fc1cb5"
+atlas = "PolygonNatureBiomesS2_Texture_01.png"
+textures = "PolygonNatureBiomesS2_Texture_01.png"
+description = "A low, broad table with an irregular, organic top, supported by a cluster of jagged, root-like legs. The surface is a warm reddish-brown with a large, dark charcoal patch, while the base shows lighter tan wood tones. It appears weathered and rustic, suited for a forest floor or a magical dwelling."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 204
+meshes = 1
+materials = 1
+size = [1.8625441, 0.865781, 1.9764311]

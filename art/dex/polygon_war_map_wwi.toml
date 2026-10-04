@@ -1,0 +1,1568 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sk_character_british_ww1_01]
+name = "SK_Character_British_WW1_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Character_British_WW1_01.fbx"
+sha256 = "3a3352f0e31fd34b4b5873142d45ad45d9153255cd849035e637d01b3d82cbbb"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low-poly soldier in a T-pose, wearing a khaki British WWI uniform with a peaked cap, webbing straps, and a belt with pouches. The figure has a pale face and is rendered in a flat, stylized texture with muted earth tones, ready for animation or placement in a war-themed game."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2252
+meshes = 1
+materials = 1
+size = [2.047512, 1.787926, 0.335646]
+
+[mesh.sk_character_german_ww1_01]
+name = "SK_Character_German_WW1_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Character_German_WW1_01.fbx"
+sha256 = "c33d9e3d186e0e1ddf0a9a2858522d389f15c7c9aa1d9a29e97b53630d3d6a0b"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A slender male figure in a T-pose, wearing a greyish-blue tunic with a darker vest, blue-grey trousers, and brown boots. He has a pale face, short light hair, and a small moustache, with a brown belt and a dark strap across his chest."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2106
+meshes = 1
+materials = 1
+size = [2.047512, 1.787926, 0.335646]
+
+[mesh.sk_veh_artillery_01]
+name = "SK_Veh_Artillery_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Veh_Artillery_01.fbx"
+sha256 = "868432afafd5129c2dfa8f20d34d2052133586bfd658199723ef15e827a716f4"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A towed field gun on two large spoked wheels with a flat, angled shield and a long barrel, finished in weathered tan and olive drab with dark metal fittings and a green towing loop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4989
+meshes = 5
+materials = 1
+size = [5.351158, 2.521775, 2.513884]
+
+[mesh.sk_veh_blimp_01]
+name = "SK_Veh_Blimp_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Veh_Blimp_01.fbx"
+sha256 = "258c8d5342f4b48e384a7bcf121249df692e4311eb2660236fce255d6c0b9121"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+wanted = "Fokker_Texture.psd"
+description = "A long, slender grey airship with a pointed nose and a rounded tail, featuring a small gondola and twin engines slung beneath the hull. The surface is weathered with subtle panel lines and a faded red cross marking on the tail fin, giving it a utilitarian, combat-worn appearance suited for reconnaissance or early-war.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6416
+meshes = 10
+materials = 1
+size = [122.13655, 21.946577, 17.332207]
+
+[mesh.sk_veh_british_tank_01]
+name = "SK_Veh_British_Tank_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Veh_British_Tank_01.fbx"
+sha256 = "d8a0263ebc438b8b0cfeba14953f076c9d976e8f81437d0a6d17da38805310cd"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, wide, rhomboid hull with a fully traversable turret and a single short barrel, wrapped in a brown, grey, and tan camouflage pattern with a pale blue band on the turret roof. The flat, faceted surfaces and muted palette give it a weathered, battle-worn look, and its compact, ground-hugging stance suggests a..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6666
+meshes = 10
+materials = 2
+size = [7.858665, 2.436257, 4.873072]
+
+[mesh.sk_veh_german_tank_01]
+name = "SK_Veh_German_Tank_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Veh_German_Tank_01.fbx"
+sha256 = "6a7240f9d928a22d626b24465728159b47eb90e99fc73452609b0296eb74975e"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, boxy armoured car with a sloped glacis plate and a small, flat turret bearing a short gun, finished in a three-tone desert camouflage of tan, brown, and pale blue. The hull is weathered with dark streaks and grime, and a white cross is painted on the side, suggesting a field-modified or captured vehicle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8118
+meshes = 29
+materials = 2
+size = [7.772161, 3.334961, 3.466321]
+
+[mesh.sk_veh_plane_british_ww1_01]
+name = "SK_Veh_Plane_British_WW1_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Veh_Plane_British_WW1_01.fbx"
+sha256 = "10fa728d5d1182971bc95e80dcc38154efcdfe8f2a7a87d1e6b9647bebf01a89"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+wanted = "Fokker_Texture.psd"
+description = "A boxy, low-poly WWI biplane with staggered wings, a single central fuselage, and a two-bladed propeller. It features a green and cream camouflage scheme with red roundels on the wings and tail, plus a dark cockpit and fixed landing gear with spatted wheels."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5210
+meshes = 12
+materials = 1
+size = [5.896436, 2.8437958, 8.632812]
+
+[mesh.sk_veh_plane_german_ww1_01]
+name = "SK_Veh_Plane_German_WW1_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Veh_Plane_German_WW1_01.fbx"
+sha256 = "fbf57d24ee512a68f4a766b8313349ad04fbf6e81f08572a0ec4c95f85831b6e"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+wanted = "Fokker_Texture.psd"
+description = "A boxy, twin-bay biplane with a prominent nose-mounted engine and a two-blade propeller, finished in a weathered, muted grey-green camouflage with a pale cross on the tail. The fuselage is angular and slab-sided, with a fixed undercarriage and a single tail skid, giving it a sturdy, utilitarian look typical of early..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7620
+meshes = 10
+materials = 1
+size = [5.8491697, 3.01926, 7.080196]
+
+[mesh.sk_veh_small_tank_01]
+name = "SK_Veh_Small_Tank_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Veh_Small_Tank_01.fbx"
+sha256 = "f77ab39a0202afb8c66783a17492adaf7bca0e51870f96bcd58d72161332cd85"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A compact, boxy interwar tank with a small cylindrical turret and a single short-barreled gun, mounted on full-length tracks with a raised rear tail. The hull is painted in a weathered, dusty tan with pale blue-grey panels and dark green accents, showing chipped edges and a worn, battle-scarred finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7310
+meshes = 21
+materials = 2
+size = [5.0676622, 2.455481, 1.854176]
+
+[mesh.sk_wep_aagun_01]
+name = "SK_Wep_AAGun_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Wep_AAGun_01.fbx"
+sha256 = "74cc4dcc2a553a1732a2b0dbd480b4f1bfaa5b117c75c60f6452e58732b7de26"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A single-barrel anti-aircraft gun on a flared, dark grey pedestal mount, with a tan barrel and black receiver, plus a small seat and handwheels for a gunner. The low-poly style keeps the silhouette clean and readable, making it a versatile defensive emplacement for trench or home-front scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3053
+meshes = 6
+materials = 1
+size = [1.9950321, 1.8875, 0.76236]
+
+[mesh.sk_wep_british_heavymachinegun_01]
+name = "SK_Wep_British_HeavyMachineGun_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Wep_British_HeavyMachineGun_01.fbx"
+sha256 = "6c3b4df015c7d8f9814425ee3ba63db2c1bd5797bb5a7e0875098fe978a419df"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A heavy machine gun on a low tripod mount, featuring a long, water-cooled barrel jacket and a boxy receiver in olive drab green with black metal fittings. The weapon is shown with a small ammunition box attached to the right side and a wooden stock, with a brass muzzle tip."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4525
+meshes = 5
+materials = 1
+size = [1.414472, 0.43837798, 0.575508]
+
+[mesh.sk_wep_british_rifle_01]
+name = "SK_Wep_British_Rifle_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Wep_British_Rifle_01.fbx"
+sha256 = "c0a26a4220be202b004a9bab8fdc5ab4216f6f092208c114d9743f914278c8c2"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A long, slender bolt-action rifle with a straight wooden stock, a dark metal barrel, and a prominent box magazine beneath the action. The wood is a warm mid-brown with subtle grain, while the receiver and barrel are a dark, worn steel grey."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1716
+meshes = 4
+materials = 1
+size = [1.081838, 0.197219, 0.073927]
+
+[mesh.sk_wep_german_heavymachinegun_01]
+name = "SK_Wep_German_HeavyMachineGun_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Wep_German_HeavyMachineGun_01.fbx"
+sha256 = "b15211f2c24b523331cc25e6f94d0fbbc02cb1a9c5b47c691fde215852ccb64e"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A long, dark grey machine gun with a heavy, rectangular olive-green ammo box mounted on the right side, featuring a prominent muzzle and a small rear grip. The weapon sits on a compact, low-profile tripod mount, giving it a stable, grounded stance typical of a defensive emplacement."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4287
+meshes = 5
+materials = 1
+size = [1.51302, 0.43837798, 0.575508]
+
+[mesh.sk_wep_german_rifle_01]
+name = "SK_Wep_German_Rifle_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SK_Wep_German_Rifle_01.fbx"
+sha256 = "6f3323b33ca9766cd2f0d2602970bc93664b0af74d1dbefc135719e4730edaa0"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A long, bolt-action rifle with a slender profile, featuring a straight wooden stock, a dark metal barrel, and a prominent curved trigger guard. The wood is a warm, medium brown with a subtle grain, while the metal parts are a dark, matte grey, giving it a clean, functional appearance suitable for a WWI infantryman."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1586
+meshes = 3
+materials = 1
+size = [1.19432, 0.184785, 0.059572]
+
+[mesh.sm_chr_attach_british_hat_01]
+name = "SM_Chr_Attach_British_Hat_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_British_Hat_01.fbx"
+sha256 = "595379f6078c283da56682eb7881105544746607184327d3640a84c9b09fcbfe"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A wide-brimmed, low-poly military helmet with a rounded crown, rendered in a flat, matte olive-drab. The brim is slightly upturned at the edges, and a small circular badge with a gold centre is fixed to the front."
+differs = "The only wide-brimmed helmet, largest and most protective, for trench warfare rather than parade dress."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 279
+meshes = 1
+materials = 1
+size = [0.402638, 0.196937, 0.42884398]
+
+[mesh.sm_chr_attach_british_hat_02]
+name = "SM_Chr_Attach_British_Hat_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_British_Hat_02.fbx"
+sha256 = "aa27ac1f39a67f4cbce32a3c882d6c5d23e53c45ab8b87e631ab8ff16aeb1640"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A flat-topped military peaked cap with a short stiff visor, rendered in muted olive-brown with a darker band and a small brass-toned circular badge on the front. The low-poly faceting gives it a crisp, angular silhouette, and the simple texture suggests a worn canvas or wool finish, ideal for a British WWI soldier..."
+differs = "The only peaked cap with a visor, plainest and most standard, for general service over ceremonial use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 260
+meshes = 1
+materials = 1
+size = [0.35595602, 0.21396199, 0.450855]
+
+[mesh.sm_chr_attach_british_hat_03]
+name = "SM_Chr_Attach_British_Hat_03"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_British_Hat_03.fbx"
+sha256 = "292c7057372c928a9548b81ab79a33104f18cb80098098a4f45e578559db3fa2"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low-poly peaked military cap with a dark charcoal crown and a distinctive red-and-white checkered band around the base. A small gold circular emblem is affixed to the front, and the faceted geometry gives it a crisp, stylized look suitable for WWI-era British soldiers."
+differs = "The only cap with a checkered band, smallest and most distinctive, for dress or ceremonial roles."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 233
+meshes = 1
+materials = 1
+size = [0.27464598, 0.199065, 0.29917902]
+
+[mesh.sm_chr_attach_british_helmet_01]
+name = "SM_Chr_Attach_British_Helmet_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_British_Helmet_01.fbx"
+sha256 = "925baf7b28c69c58a82d5de94e6848d6ec6b3bcabe67ebd511c5031290c8f99c"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low-poly British Brodie helmet with a wide, sloping brim and a shallow, faceted dome, rendered in a flat, matte olive-drab green. The surface is clean and unadorned, with no visible straps, badges, or weathering, giving it a generic, utilitarian appearance suitable for a soldier character attachment."
+differs = "The larger, olive-drab variant, with 32 fewer triangles than its sibling, suited for a generic soldier attachment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 96
+meshes = 1
+materials = 1
+size = [0.440654, 0.21150899, 0.431199]
+
+[mesh.sm_chr_attach_british_helmet_02]
+name = "SM_Chr_Attach_British_Helmet_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_British_Helmet_02.fbx"
+sha256 = "c90442942ced4d8dea3ac29fcc8ff56bfb1fec9ce419c59d58f49e1343fa1ed3"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low-poly, wide-brimmed Brodie helmet with a shallow, faceted dome and a short, flared rim, rendered in a flat, matte khaki tan. The surface is unadorned and clean, with no visible straps, badges, or weathering, giving it a generic, utilitarian appearance suitable for a basic infantryman's headgear."
+differs = "The smaller, khaki-tan variant, with 32 more triangles than its sibling, suited for a basic infantryman's headgear."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 1
+materials = 1
+size = [0.43006, 0.190725, 0.42595]
+
+[mesh.sm_chr_attach_french_helmet_01]
+name = "SM_Chr_Attach_French_Helmet_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_French_Helmet_01.fbx"
+sha256 = "851eed10cc3dd52999c9ba34aa768e64ffb91605ddfe1956f95c28f96ef5deec"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A rounded, low-poly Adrian-style helmet with a short front brim and a raised central crest running front to back. The matte grey-green surface shows a small, pale cross emblem on the front, suggesting a French military role. The faceted shading gives it a clean, stylized look suitable for a WWI battlefield."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 251
+meshes = 1
+materials = 1
+size = [0.361032, 0.290935, 0.39226002]
+
+[mesh.sm_chr_attach_german_hat_01]
+name = "SM_Chr_Attach_German_Hat_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_German_Hat_01.fbx"
+sha256 = "de82587e739809768f4c19b0ccbc33bf21340457c542882f43d67f8e1f8f98fe"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A field-grey peaked cap with a red band and a small white-and-black cockade on the front, shaped with a flat, oval top and a short, stiff visor. The low-poly facets give it a slightly worn, utilitarian look, fitting for a WWI German soldier's uniform."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 310
+meshes = 1
+materials = 1
+size = [0.287866, 0.184733, 0.38692802]
+
+[mesh.sm_chr_attach_german_helmet_03]
+name = "SM_Chr_Attach_German_Helmet_03"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_German_Helmet_03.fbx"
+sha256 = "a11f311a0a8a98b1464b59528480a163e961a89c8e36b34fd8e1afd3a1d1f3a4"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A dark grey, low-poly German Pickelhaube with a prominent silver spike, a large silver eagle emblem on the front, and a silver rim. The helmet features a rear neck guard and a small front visor, with a matte finish that suggests a leather or painted metal construction."
+differs = "The only silver-trimmed pickelhaube, with a silver eagle and spike; use for parade or ceremonial dress."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 532
+meshes = 1
+materials = 1
+size = [0.341564, 0.44452602, 0.381693]
+
+[mesh.sm_chr_attach_german_helmet_1]
+name = "SM_Chr_Attach_German_Helmet_1"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_German_Helmet_1.fbx"
+sha256 = "a3fb6f57daf2607a98f0864560cef3bc6d09ba212bd21b61a83c6431e1abc05f"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A dark charcoal-grey, low-poly Prussian pickelhaube with a prominent brass spike and a large, ornate eagle plate on the front. The helmet features a brass rim and a rear neck guard, with a slightly worn, matte finish that suggests a well-used piece of field gear."
+differs = "The only brass-trimmed pickelhaube, with a brass eagle and spike; use for a standard Prussian field officer."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 532
+meshes = 1
+materials = 1
+size = [0.341564, 0.44452602, 0.381693]
+
+[mesh.sm_chr_attach_german_helmet_2]
+name = "SM_Chr_Attach_German_Helmet_2"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_German_Helmet_2.fbx"
+sha256 = "d6a17c1528183087087d7e967fa920256b9b61e0af500fd8f31fc967deb18d01"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A faceted, low-poly German-style Stahlhelm with a distinct rear neck guard and side vent lugs, rendered in a muted olive-grey with subtle tonal variation across the flat surfaces. The matte finish and lack of decals or insignia give it a clean, unadorned look suitable for a generic infantryman or a base asset for..."
+differs = "The only Stahlhelm, with no spike or eagle, and the smallest; use for a generic, unadorned infantryman."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 256
+meshes = 1
+materials = 1
+size = [0.35886598, 0.332371, 0.397156]
+
+[mesh.sm_chr_attach_hat_strap_01]
+name = "SM_Chr_Attach_Hat_Strap_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hat_Strap_01.fbx"
+sha256 = "af1f517f2e2126497e789dfdf0be9c8ed63a92258a9ae92e99b00153570414e7"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A simple, open U-shaped strap of weathered brown leather, bent at a sharp angle at the bottom to form a chin cup. The flat, angular segments suggest a rigid, low-poly construction, with a matte finish and slightly darker edges that imply wear and age."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 52
+meshes = 1
+materials = 1
+size = [0.234519, 0.22325599, 0.098908]
+
+[mesh.sm_chr_attach_mask_gas_01]
+name = "SM_Chr_Attach_Mask_Gas_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_Mask_Gas_01.fbx"
+sha256 = "bf7c08e6301e5cc1ec5322307d035a0434a1109207eb4810506cdc77d34371e2"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low-poly gas mask with a tan fabric hood and a grey cylindrical filter, featuring two hexagonal grey eye lenses and a single rear strap. The angular, faceted design gives it a rugged, utilitarian appearance suitable for WWI-era soldiers."
+differs = "The larger, more detailed mask with a rear strap and hexagonal lenses, ideal for a worn, rugged soldier look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 340
+meshes = 1
+materials = 2
+size = [0.250992, 0.39449102, 0.21393698]
+
+[mesh.sm_chr_attach_mask_gas_02]
+name = "SM_Chr_Attach_Mask_Gas_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_Mask_Gas_02.fbx"
+sha256 = "6bc6f8487a2063861b4e79487ff390725b0aefba0af698a843ba58959e1d7aec"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A tan, low-poly gas mask with a faceted, angular facepiece, two grey circular lenses, and a central filter canister, with a short, ribbed hose extending from the bottom, appearing clean and ready for use."
+differs = "The smaller, cleaner mask with circular lenses and a ribbed hose, perfect for a fresh, unissued gas mask."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 394
+meshes = 1
+materials = 2
+size = [0.238225, 0.41348398, 0.164081]
+
+[mesh.sm_chr_attach_ww1_pilot_helmet_01]
+name = "SM_Chr_Attach_WW1_Pilot_Helmet_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Attach_WW1_Pilot_Helmet_01.fbx"
+sha256 = "503930d04feae1e2da78836646e6d4ed6e542d33ff4720b3b11daac8c9a14b15"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low-poly, matte brown leather aviator helmet with a rounded, faceted crown and deep ear flaps, topped by a pair of goggles with pale grey frames and dusty rose lenses. The open front reveals a dark, hollow interior, and the surface is clean and unblemished, suggesting a standard-issue piece of flight gear ready for.."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 446
+meshes = 1
+materials = 1
+size = [0.28662, 0.367164, 0.260376]
+
+[mesh.sm_chr_pilot_torso_01]
+name = "SM_Chr_Pilot_Torso_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Chr_Pilot_Torso_01.fbx"
+sha256 = "0a57b91e410615d46e6656fdaca546590177c70af1d8ca21fa39114b345355dd"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A stylized low-poly bust of a WWI pilot wearing a brown leather flight jacket and a dark aviator cap with goggles pushed up on the forehead. The figure has a pale face, dark gloves, and a neutral expression, with the torso cut off at the waist for a clean display."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1976
+meshes = 1
+materials = 1
+size = [0.624821, 0.929793, 0.559331]
+
+[mesh.sm_env_crater_deep_01]
+name = "SM_Env_Crater_Deep_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Crater_Deep_01.fbx"
+sha256 = "d075c4a176b68c6442445d750d26c1e75e9b964877d9276a06c047b22adf012f"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A shallow, wide, roughly circular depression with a raised, uneven rim, resembling a shell impact scar in dry, sandy earth. The interior is smooth and bowl-like, with a darker, scorched centre that suggests a recent blast, while the surrounding ground is a uniform, pale tan."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 182
+meshes = 1
+materials = 1
+size = [21.088402, 2.732469, 20.887901]
+
+[mesh.sm_env_crater_nomansland_01]
+name = "SM_Env_Crater_NomansLand_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Crater_NomansLand_01.fbx"
+sha256 = "bf5a7ea51f987f0a49e317736d51dff83fecc687d5d0a81155f6631885b7399b"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, irregular mound of churned earth with a shallow, uneven depression at its centre, ringed by scattered dark craters and pocked with small holes. The surface is a dry, sandy tan with darker brown scorch marks and debris, suggesting a shelled, barren battlefield scar."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4390
+meshes = 1
+materials = 1
+size = [40.343796, 2.54711, 43.38156]
+
+[mesh.sm_env_crater_water_01]
+name = "SM_Env_Crater_Water_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Crater_Water_01.fbx"
+sha256 = "fb5366264f49ce5b4399053fd29ab05f3b62ece1ee430f08c80fef2ccc566497"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A flat, circular disc with a shallow, dark grey depression in the centre, resembling a filled puddle or a small, calm pool of water. The surface is a uniform, matte grey, with the darker inner area suggesting depth or a shadow."
+differs = "The only circular option, larger and with a central depression, ideal for a standalone water-filled shell hole."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [10.81598, 0.0, 10.81598]
+
+[mesh.sm_env_crater_water_02]
+name = "SM_Env_Crater_Water_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Crater_Water_02.fbx"
+sha256 = "acce9d99931125f123cab331f3fd26a0975c5dcce37fa7f43f936eeda377dfd5"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A flat, square ground tile with a subtle, pale grey-green tint, featuring a single darker rectangular patch of water or mud set into one corner, giving it a minimal, clean look suitable for a battlefield map."
+differs = "The only square tile, smaller and flatter, with a corner water patch for modular map building."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2
+meshes = 1
+materials = 1
+size = [7.648052, 0.0, 7.648052]
+
+[mesh.sm_env_tree_dead_04]
+name = "SM_Env_Tree_Dead_04"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Tree_Dead_04.fbx"
+sha256 = "1490cfed6ffedca94e9879d16282d468c974d0b52e9b0133f0eb3d6427b7c092"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A bare, weathered tree trunk with a few jagged, broken branches, rendered in muted grey-brown tones with a rough, bark-like texture. Its stark, skeletal silhouette and lack of foliage make it ideal for desolate battlefields or ruined landscapes, offering a grim, war-torn aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 200
+meshes = 1
+materials = 1
+size = [4.6463833, 8.986419, 3.2944689]
+
+[mesh.sm_env_trench_deep_bunker_01]
+name = "SM_Env_Trench_Deep_Bunker_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Bunker_01.fbx"
+sha256 = "2ee4f38c6019d5ac1af76347856b222b67eb86eb4c2897b6007b3937f8d84e64"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, wide, rectangular concrete bunker with a flat, planked roof and a short, open trench section extending from one end, forming a sunken entrance. The weathered grey-brown walls are stained and streaked, with sandbags lining the roof edge and a dark, shadowed doorway."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7845
+meshes = 1
+materials = 1
+size = [15.695704, 3.9917068, 7.88218]
+
+[mesh.sm_env_trench_deep_corner_01]
+name = "SM_Env_Trench_Deep_Corner_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Corner_01.fbx"
+sha256 = "498700cf83e3a6bffa10a2ab1b454764e41db8252e3f8fd01394a55d45516d3d"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, L-shaped trench corner with thick, sandbagged parapets and a raised central machine-gun nest, rendered in muted khaki-brown earth tones with a weathered, battle-worn finish. The open-topped design and firing step suggest a defensive emplacement for infantry cover, with the corner geometry allowing for a natural."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2431
+meshes = 1
+materials = 1
+size = [7.579567, 2.5958152, 7.378914]
+
+[mesh.sm_env_trench_deep_curve_01]
+name = "SM_Env_Trench_Deep_Curve_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Curve_01.fbx"
+sha256 = "5b1b56f7b6dc479d784ed05d5a87dae9dd903b7c131dba7e942109f5e091f0c4"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A curved section of a deep trench, with a raised wooden parapet along the back and a lower firing step at the front, rendered in weathered brown earth tones with a sandy top edge. The interior shows vertical timber supports and a flat, walkable floor, suggesting a defensive position for infantry."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2467
+meshes = 1
+materials = 1
+size = [7.838429, 2.534421, 10.089028]
+
+[mesh.sm_env_trench_deep_end_01]
+name = "SM_Env_Trench_Deep_End_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_End_01.fbx"
+sha256 = "b91e203ad904c6c23022a8a375490fb6ec41c3faac7ed479cb14afb63cf5b134"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A curving, L-shaped trench section with a raised wooden walkway along the outer edge and a recessed, stepped interior. The tan, sandy earth walls are topped with dark timber planks, while the floor features a wooden boardwalk and a small ladder."
+differs = "The only L-shaped variant with a raised wooden walkway and ladder, ideal for a corner or junction in a trench line."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 930
+meshes = 1
+materials = 1
+size = [6.294332, 2.387417, 5.314094]
+
+[mesh.sm_env_trench_deep_end_02]
+name = "SM_Env_Trench_Deep_End_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_End_02.fbx"
+sha256 = "e4c64e39e716a9895c2ef569f7dcd60f475f74a42aa768e0bf756580e7244372"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A short, U-shaped section of a defensive trench, with a raised, sandbagged parapet curving around a dark, recessed interior. The tan and brown earthwork shows a worn, muddy texture, suggesting a fortified position at the end of a line."
+differs = "The only U-shaped dead-end with a sandbagged parapet, perfect for capping off a trench or creating a fortified terminus."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1140
+meshes = 1
+materials = 1
+size = [6.27783, 2.560386, 4.847004]
+
+[mesh.sm_env_trench_deep_end_crater_01]
+name = "SM_Env_Trench_Deep_End_Crater_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_End_Crater_01.fbx"
+sha256 = "ed62fe61852ae8de65c1b82ed0d7bd76735e2a6bde85d2fbf2fb8938edba46ef"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A wide, low mound of tan earth surrounds a deep, dark circular crater, with a short section of wooden trench wall and sandbags built into one side. The surface is textured with dry dirt and subtle debris, suggesting a fortified shell hole in a barren battlefield."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2464
+meshes = 1
+materials = 1
+size = [18.15042, 2.534422, 18.086527]
+
+[mesh.sm_env_trench_deep_intersection_01]
+name = "SM_Env_Trench_Deep_Intersection_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Intersection_01.fbx"
+sha256 = "cf99afc67d310ecac22a0b954e340b9a405477172912c0f27363fb3135d5443c"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A four-way trench junction with a raised central platform, sandbagged parapets, and wooden plank flooring, rendered in muted earth tones with a weathered, muddy finish."
+differs = "The only four-way junction, with a raised central platform and sandbagged parapets, ideal for a crossroads objective."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3068
+meshes = 1
+materials = 1
+size = [8.1156, 2.599856, 8.1156]
+
+[mesh.sm_env_trench_deep_intersection_02]
+name = "SM_Env_Trench_Deep_Intersection_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Intersection_02.fbx"
+sha256 = "b38b0069812814ff4b501b492977ba557f4ab8ade7081ad504a92d66850f8eee"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, wide Y-shaped trench junction with raised earth parapets and wooden plank walkways, rendered in muted browns and greys. The intersection features a central open area with a small step or platform, while the three arms extend outward with varying depths."
+differs = "The only Y-shaped junction, with a small step and varying arm depths, best for a three-way route or flanking position."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2925
+meshes = 1
+materials = 1
+size = [8.1156, 2.582674, 7.22258]
+
+[mesh.sm_env_trench_deep_pit_01]
+name = "SM_Env_Trench_Deep_Pit_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Pit_01.fbx"
+sha256 = "55c7738de963909503b98949040ce4682efe01ede1e0f46dd0aa47a4c2a16586"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A wide, shallow circular pit with a thick, raised earth parapet and a single narrow entry gap, its interior walls stepped down to a flat floor. The sandy-brown soil is textured with subtle striations and darker patches, suggesting a dug-out defensive position ready for sandbags or cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2831
+meshes = 1
+materials = 1
+size = [10.703662, 2.448756, 9.689401]
+
+[mesh.sm_env_trench_deep_straight_01]
+name = "SM_Env_Trench_Deep_Straight_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Straight_01.fbx"
+sha256 = "39c4b495017858f6777c608edbd796493c6b0b6bb8fd31d755782fd0b7b24b68"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A U-shaped trench section with steep, dark earth walls and a flat, sandy dirt floor, capped by low wooden plank parapets along the top edges. The interior is shadowed and uneven, suggesting a dug-out defensive position ready for placement in a battlefield diorama."
+differs = "The plainest, with bare earth walls and no sandbags or revetments, best for a basic dugout."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 888
+meshes = 1
+materials = 1
+size = [6.27783, 2.53442, 3.2286758]
+
+[mesh.sm_env_trench_deep_straight_02]
+name = "SM_Env_Trench_Deep_Straight_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Straight_02.fbx"
+sha256 = "18db6b02d0ca93a3a919699dbcc5d14fea2bfcee164719cd1f02e3390b753d7b"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A short, deep trench section with a sharp right-angle bend, featuring thick, pale sandbag walls and dark, muddy interior floors. The low-poly geometry shows a weathered, battle-worn appearance with brown and tan earth tones, making it ideal for creating defensive networks or dugout corners in a WWI battlefield setting."
+differs = "The only one with sandbag walls, giving it a softer, more fortified look for defensive corners."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1059
+meshes = 1
+materials = 1
+size = [6.27783, 2.53442, 3.2286758]
+
+[mesh.sm_env_trench_deep_straight_03]
+name = "SM_Env_Trench_Deep_Straight_03"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Straight_03.fbx"
+sha256 = "9cfa68bb83d1ade7cf5813569b2af527d57f9afa0787b3e131d409ccf91c6e12"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A short, straight section of deep trench with a sharp right-angle bend, featuring raised earth parapets and wooden plank revetments along the walls. The tan-brown dirt and timber construction suggest a defensive position on the Western Front, with a worn, weathered appearance that adds historical authenticity to any..."
+differs = "The most detailed and largest triangle count, with wooden plank revetments, ideal for a Western Front strongpoint."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1780
+meshes = 1
+materials = 1
+size = [6.27783, 2.53442, 3.2286758]
+
+[mesh.sm_env_trench_deep_straight_crater_01]
+name = "SM_Env_Trench_Deep_Straight_Crater_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Straight_Crater_01.fbx"
+sha256 = "b4aa61c332bfd780d0fc1c309e4f0230802dc01ac7ae8d054cd2683eda330261"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A wide, low trench section with a deep, dark crater sunk into its floor, flanked by a raised wooden walkway and a sandbag parapet. The earth is a dry tan, with the crater interior rendered in near-black shadow, suggesting depth and a scorched or flooded bottom."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3266
+meshes = 1
+materials = 1
+size = [11.774378, 3.207879, 10.51322]
+
+[mesh.sm_env_trench_deep_straight_dugout_01]
+name = "SM_Env_Trench_Deep_Straight_Dugout_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Straight_Dugout_01.fbx"
+sha256 = "178ab93fffd774a520474346e7e9586bc08410437c5d2a820f7a86b2fc1090cc"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A short, straight section of a deep trench with a right-angle bend, lined with weathered grey-brown timber planks and topped with flat wooden duckboards. The interior is dark and shadowed, suggesting a dugout or covered position, with the open top revealing the depth of the cut."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 972
+meshes = 1
+materials = 1
+size = [6.27783, 2.53442, 3.2286758]
+
+[mesh.sm_env_trench_deep_straight_insert_01]
+name = "SM_Env_Trench_Deep_Straight_Insert_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Straight_Insert_01.fbx"
+sha256 = "cc62246e440ab8bb86e56b47d60a3353dc709e26c2ceaca6f5cf7f1f84b66b84"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A short, U-shaped section of a deep trench with steep, angled wooden plank walls and a flat dirt floor, capped by raised sandbag parapets along both rims. The weathered timber and earth-toned textures suggest a muddy, battle-worn environment, making it a functional connector piece for building winding defensive lines."
+differs = "The largest and most detailed piece, with sandbag parapets and a flat floor, ideal for straight defensive runs."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 562
+meshes = 1
+materials = 1
+size = [6.3004007, 2.486628, 3.2231998]
+
+[mesh.sm_env_trench_deep_straight_insert_01_dirt]
+name = "SM_Env_Trench_Deep_Straight_Insert_01_Dirt"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Straight_Insert_01_Dirt.fbx"
+sha256 = "e37fa808f0c1f9fe4f1e771d908d58014ff52811dd0341bc978c2ceb0c40400a"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A short, straight section of deep trench with a sharp, angular profile, featuring raised earthen parapets and a flat, narrow floor. The dirt is a uniform, dry tan-brown with subtle darker shading in the recesses, giving it a clean, unweathered appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 280
+meshes = 1
+materials = 1
+size = [6.3004007, 2.486628, 3.2231998]
+
+[mesh.sm_env_trench_deep_straight_insert_02]
+name = "SM_Env_Trench_Deep_Straight_Insert_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Straight_Insert_02.fbx"
+sha256 = "9f8d7145f73aea03e0055804ec4124ac416dd8bc4370b4d0b584298d2697bc0c"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A short, angled section of a deep trench, featuring a curved, overhanging wooden parapet that provides cover. The interior is lined with weathered, pale timber planks, while the exterior shows exposed earth and a small, dark recess at the base."
+differs = "The plainest and most compact, featuring a curved overhanging parapet and a dark recess, suited for angled cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 261
+meshes = 1
+materials = 1
+size = [2.2121072, 2.5881839, 3.530926]
+
+[mesh.sm_env_trench_deep_straight_insert_02_dirt]
+name = "SM_Env_Trench_Deep_Straight_Insert_02_Dirt"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Straight_Insert_02_Dirt.fbx"
+sha256 = "992df79b8bae56b3ca85a85fa39d7e160021c1ababc984661a1339962687f177"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A short, straight section of deep trench wall, rendered in flat, muted brown dirt tones with a lighter, worn top edge. The low-poly geometry shows a steep, angled face with a slight outward flare at the base, suggesting a dug-out earth bank."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 120
+meshes = 1
+materials = 1
+size = [2.2121072, 2.5881839, 3.530926]
+
+[mesh.sm_env_trench_deep_straight_long_01]
+name = "SM_Env_Trench_Deep_Straight_Long_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Straight_Long_01.fbx"
+sha256 = "9026cb4ed21a49311eac188c26c2aabcf9f7128e6d46309acea793ccb4fbd3b1"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A long, straight trench section with steep, clean-cut earth walls and a flat, narrow floor, rendered in a muted, dry tan palette. The interior is lined with evenly spaced vertical wooden support planks along both sides, reinforcing the sides and suggesting a fortified military position."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3212
+meshes = 1
+materials = 1
+size = [6.6485767, 2.540789, 13.228676]
+
+[mesh.sm_env_trench_deep_transition_01]
+name = "SM_Env_Trench_Deep_Transition_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Transition_01.fbx"
+sha256 = "19edafad44a39a51af9f6dcd32a12e01ad8c7ad2d0b405f0bbb7d80dab1e5ca3"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A short, stepped trench segment with a sharp right-angle turn, featuring sloped earth banks, wooden plank revetments, and a small duckboard walkway at the bottom, all in muted browns and greys with a weathered, muddy finish."
+differs = "The only one with wooden plank revetments, a duckboard walkway, and a muddy, weathered finish, making it the most detailed and damaged choice for a battle-worn trench."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 848
+meshes = 1
+materials = 1
+size = [6.294332, 2.387417, 3.308289]
+
+[mesh.sm_env_trench_deep_transition_02]
+name = "SM_Env_Trench_Deep_Transition_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Transition_02.fbx"
+sha256 = "77c9b24042f40c25c3e26abf18316c594ea7c41426db182af96f4765ec1e9629"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, L-shaped trench segment with a raised rear parapet and a forward firing step, built from flat, faceted earth banks in muted tan and brown. The surface is bare, with no sandbags, planks, or debris, giving it a clean, uncluttered look that suits modular trench networks."
+differs = "The plainest and cleanest option, with a raised rear parapet and forward firing step but no sandbags or debris, ideal for a bare, modular trench network."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 933
+meshes = 1
+materials = 1
+size = [6.294332, 2.6799989, 4.622213]
+
+[mesh.sm_env_trench_deep_zigzag_01]
+name = "SM_Env_Trench_Deep_Zigzag_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Deep_Zigzag_01.fbx"
+sha256 = "9638741d27bf793cebdb03eec4320a20413f755912394cce15255c2059d47048"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, flat-bottomed trench section with a sharp zigzag plan, featuring steep, blocky earth walls and a narrow floor. The tan-brown soil is textured with subtle striations and darker recesses, giving it a dry, dug-out appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4708
+meshes = 1
+materials = 1
+size = [9.24111, 2.6864772, 10.567403]
+
+[mesh.sm_env_trench_dirt_01]
+name = "SM_Env_Trench_Dirt_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Dirt_01.fbx"
+sha256 = "1aee3504847ba63ad6e73c9b881dc1d461a4efd152738e0bb6375ee8e0c1443c"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, irregular mound of churned earth with a flattened, uneven top, rendered in muted browns with darker patches suggesting damp soil or shadow. The faceted surface reads as a simple, generic dirt pile or trench floor segment, lacking any distinct features like planks or sandbags, making it a versatile base for a..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 115
+meshes = 1
+materials = 1
+size = [3.408358, 0.311524, 3.544934]
+
+[mesh.sm_env_trench_firestep_01]
+name = "SM_Env_Trench_Firestep_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Firestep_01.fbx"
+sha256 = "22f888a1dff9e9304876494a7978a7dd2c24a9f1651e70e9c2c6b1119569d6f1"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, elongated block with a sloped front face, resembling a simple wooden step or a short section of trench flooring. The surface is a flat, muted brown with subtle darker patches, suggesting weathered timber or packed earth."
+differs = "The plainest and simplest, with no revetment or detail, just a bare earth step."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 72
+meshes = 1
+materials = 1
+size = [2.81208, 0.88536406, 1.171084]
+
+[mesh.sm_env_trench_firestep_02]
+name = "SM_Env_Trench_Firestep_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Firestep_02.fbx"
+sha256 = "1751b105e0b026a7f709d55ee41ee34a93f3003953a9feace6173614a294eeca"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, wedge-shaped earthwork mound with a flat top, fronted by a dark timber revetment of horizontal planks and vertical posts, suggesting a defensive firing step or trench parapet. The tan-brown soil and grey-brown wood are weathered and battle-worn, with a simple, chunky silhouette that reads clearly at gameplay..."
+differs = "The only one with a full timber revetment of planks and posts, and the most detailed earthwork."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 308
+meshes = 1
+materials = 1
+size = [2.812078, 1.042152, 1.159493]
+
+[mesh.sm_env_trench_firestep_03]
+name = "SM_Env_Trench_Firestep_03"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Firestep_03.fbx"
+sha256 = "f8949742e6e8ccb06b70743821edcfb5c7bf4ef85273275c7d6f8157dc053b17"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, elongated rectangular sandbagged emplacement with a stepped firestep and a narrow top trench, rendered in muted olive-brown earth tones with dark wooden planks and a small metal hatch, showing weathered, battle-worn textures that suggest a sturdy, functional defensive position."
+differs = "The only one with a metal hatch and a narrow top trench, offering a more enclosed defensive position."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 218
+meshes = 1
+materials = 1
+size = [2.812079, 0.86341, 1.08024]
+
+[mesh.sm_env_trench_firestep_04]
+name = "SM_Env_Trench_Firestep_04"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Firestep_04.fbx"
+sha256 = "068a90ae74e50ee0719cce7113430245343008e183edd4918045e17d20f4d90b"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A long, low wooden plank with rounded ends, weathered to a muted grey-brown, features a dark, charred section near one end, suggesting a firestep or trench board."
+differs = "The only one with a charred section, and the simplest long plank with no brackets."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 144
+meshes = 1
+materials = 1
+size = [7.630544, 0.885364, 0.99899995]
+
+[mesh.sm_env_trench_firestep_05]
+name = "SM_Env_Trench_Firestep_05"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Firestep_05.fbx"
+sha256 = "0db151892bda15a0493a8321ee65ea674647ec8cc6968b2293c18589b2ddcc57"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A long, low, narrow wooden firestep with a rounded front, built from weathered planks and supported by dark metal brackets, designed to sit inside a trench for soldiers to stand on and fire over the parapet."
+differs = "The most detailed long option, with metal brackets and a rounded front, and the highest triangle count."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 780
+meshes = 1
+materials = 1
+size = [7.6305428, 1.068212, 1.176599]
+
+[mesh.sm_env_trench_firestep_stairs_01]
+name = "SM_Env_Trench_Firestep_Stairs_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Firestep_Stairs_01.fbx"
+sha256 = "dc012576bcaa4fbf3e501a4d6e9290daea989c87c4fcbc4af66ed919dd2cffd3"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A short, freestanding wooden stairway with two flights and a small mid-level platform, built from weathered grey-brown planks and sturdy posts. The steps are worn and slightly uneven, with dark staining and a small black patch on the lower right side, suggesting mud or scorch marks from trench warfare."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 64
+meshes = 1
+materials = 1
+size = [1.086875, 0.656068, 0.603251]
+
+[mesh.sm_env_trench_mound_01]
+name = "SM_Env_Trench_Mound_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Mound_01.fbx"
+sha256 = "d879ea330e1c49019b1c47b6889ac2e9693a5ee0caaf2cf61a2d68f818fc0379"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, elongated mound of bare earth with a flattened top, its faceted surface showing a dry tan and light brown palette with darker shading in the hollows. The irregular, chunky silhouette suggests a hastily dug defensive berm or a natural rise on a battlefield, with a subtle, darker patch on one side hinting at a..."
+differs = "Most detailed and compact, with a darker patch suggesting damage or a dug-in feature, ideal for a focal berm."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 236
+meshes = 1
+materials = 1
+size = [4.246091, 1.058047, 4.793374]
+
+[mesh.sm_env_trench_mound_02]
+name = "SM_Env_Trench_Mound_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Mound_02.fbx"
+sha256 = "d2ecef36d0779d9c643a1f642471e4e5c1a6037b6bfb56a5f997deb53d75da39"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A long, low, irregularly shaped mound of packed earth, rising gently to a slightly flattened crest and tapering at both ends. Its surface is a dry, sandy tan with subtle darker striations, suggesting loose soil and light weathering."
+differs = "Longest and most stretched, with a gentle crest and striations, perfect for a continuous defensive line."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 142
+meshes = 1
+materials = 1
+size = [4.177604, 0.990659, 11.173188]
+
+[mesh.sm_env_trench_mound_03]
+name = "SM_Env_Trench_Mound_03"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Mound_03.fbx"
+sha256 = "abcd0ef95a02ac0a49c67dacc4c0c3ec69bd3387c864d7ead44d0e82f3b31bd4"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, elongated mound of bare earth with a gently rounded top and irregular, faceted sides, rendered in a flat sandy tan. It appears as a simple, unadorned dirt bank or berm, lacking any grass, debris, or trench features, making it a clean, versatile terrain piece for covering ground or creating subtle elevation..."
+differs = "Plainest and most rounded, a simple dirt bank for clean elevation without any specific character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 53
+meshes = 1
+materials = 1
+size = [1.944942, 0.430113, 3.504211]
+
+[mesh.sm_env_trench_mound_04]
+name = "SM_Env_Trench_Mound_04"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Mound_04.fbx"
+sha256 = "0d762b27f37d06daccd47259b7cd9159e1471496d23a73233c4e208a2df8cf6f"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, elongated ridge of bare earth, its faceted surface rising to a blunt crest and tapering to a point at one end, rendered in a uniform sandy tan with no vegetation, trenches, or other features, making it a clean, versatile terrain accent for open battlefields."
+differs = "Smallest and most tapered, a pointed ridge for subtle ground accent, nearly identical to 03 but shorter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 51
+meshes = 1
+materials = 1
+size = [1.354592, 0.459642, 3.504211]
+
+[mesh.sm_env_trench_pole_01]
+name = "SM_Env_Trench_Pole_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Env_Trench_Pole_01.fbx"
+sha256 = "f32f47722ef9c4ed27f2ff4ceb447ea4af7754f4a7da633fb75f323a9411eba3"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A slender, weathered wooden stake with a slightly irregular, hand-hewn surface, tapering to a blunt point at one end. Its muted brown-grey tones and subtle grain suggest aged, untreated timber, making it ideal for trench revetments, barbed-wire supports, or ground demarcation in a WWI setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 74
+meshes = 1
+materials = 1
+size = [0.19306, 2.211462, 0.212898]
+
+[mesh.sm_prop_barricade_01]
+name = "SM_Prop_Barricade_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Barricade_01.fbx"
+sha256 = "c8ad83affafd0f0ed80fdd6a2562b1f6517da641d54f177b0a664ce3534195a5"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, wide wooden roadblock with two horizontal planks nailed to three upright posts, the middle plank slightly angled. The dark, weathered timber and simple construction suggest a hasty trench-line or battlefield obstacle, with a subtle diagonal brace adding structural detail."
+differs = "The only one with a diagonal brace and three upright posts, making it the most detailed and structurally reinforced option."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 80
+meshes = 1
+materials = 1
+size = [3.641904, 1.5443001, 0.175846]
+
+[mesh.sm_prop_barricade_02]
+name = "SM_Prop_Barricade_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Barricade_02.fbx"
+sha256 = "e5d07e8b1195ef9f61ae249fb18551ff4ad2455ff3debd31d3da4c274380e286"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A simple, weathered wooden cheval de frise, formed by two crossed planks with a short perpendicular stake driven through the joint, creating a low, spiky obstacle. The dark, grey-brown timber appears rough and aged, with a small metal pin or nail visible at the crossing point."
+differs = "The smallest and simplest, with a spiky crossed-plank design and no vertical posts, ideal for a low, sharp obstacle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 40
+meshes = 1
+materials = 1
+size = [3.226934, 1.8617021, 0.175846]
+
+[mesh.sm_prop_barricade_03]
+name = "SM_Prop_Barricade_03"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Barricade_03.fbx"
+sha256 = "e041af34f96478a6aa581a8660389c4ee665268eb37227bd705721dd87d8dd92"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, angled wooden barrier of rough-hewn planks and posts, weathered grey-brown with a diagonal cross-brace, suggesting a makeshift trench obstacle or roadblock."
+differs = "The only one with significant depth, featuring an angled, leaning profile that makes it the most three-dimensional and visually distinct."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 80
+meshes = 1
+materials = 1
+size = [3.622016, 1.630063, 1.478706]
+
+[mesh.sm_prop_blimp_piece_01]
+name = "SM_Prop_Blimp_Piece_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Blimp_Piece_01.fbx"
+sha256 = "6069ade7c0b4ef43d90116c5310d21af1d63b8f259e38092fd7ac50ab4d8ce22"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A weathered, irregular ring of dark, tarnished metal with a greenish patina, resembling a bent hoop or a broken section of a blimp's frame. Its faceted, low-poly surface suggests a damaged or discarded structural piece, ideal for battlefield debris or a ruined airship wreck."
+differs = "The most irregular and bent of the closed rings, with the thickest, most corroded profile for heavy wreckage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 320
+meshes = 1
+materials = 1
+size = [14.61, 9.210945, 2.522862]
+
+[mesh.sm_prop_blimp_piece_02]
+name = "SM_Prop_Blimp_Piece_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Blimp_Piece_02.fbx"
+sha256 = "00d1c38231bcea8bc74a9beb932655c3493d8be8eb7dff8d274a70693bf0c7e3"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A weathered, dark metal ring with a slightly irregular, oval profile, suggesting a damaged or discarded structural hoop from an airship frame. Its muted grey-brown tones and worn surface give it a utilitarian, battle-worn appearance, making it ideal for a debris pile or a broken prop piece."
+differs = "The flattest and widest closed ring, with the thinnest depth, ideal for a low-profile ground hoop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 320
+meshes = 1
+materials = 1
+size = [16.408413, 11.500325, 0.63307405]
+
+[mesh.sm_prop_blimp_piece_03]
+name = "SM_Prop_Blimp_Piece_03"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Blimp_Piece_03.fbx"
+sha256 = "36f31d4350e8c1c5615a81dcf5c7e3db433a958cdf033b6ec43a6a7c7eefb4e0"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A long, low, angular blue-grey beam with a slight zigzag profile, featuring a tan underside and a single dark rivet line along its length, resembling a damaged or detached structural spar or wing segment from a zeppelin."
+differs = "The only angular, zigzag beam with a tan underside, perfect for a broken spar or wing segment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 112
+meshes = 1
+materials = 1
+size = [9.039359, 1.722472, 1.3504679]
+
+[mesh.sm_prop_blimp_piece_04]
+name = "SM_Prop_Blimp_Piece_04"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Blimp_Piece_04.fbx"
+sha256 = "556ba3cf97fe02018ab91b378f3cb6e3c5acf5541da42100d505846aa4b6ed89"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A long, low, gently curved strip of pale blue-grey metal with a worn, brownish central channel, resembling a section of trench or a damaged rail. Its flat, narrow profile and segmented ends suggest a modular piece for building long, uneven defensive lines or track systems."
+differs = "The only gently curved strip with a brown channel, best for building long, uneven trench or rail lines."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 112
+meshes = 1
+materials = 1
+size = [9.556718, 1.429477, 0.876101]
+
+[mesh.sm_prop_blimp_piece_05]
+name = "SM_Prop_Blimp_Piece_05"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Blimp_Piece_05.fbx"
+sha256 = "5f99956c7bc46340fd81eb784d79408e7eb1963378d6e5518248e90f79debb02"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A thin, weathered metal hoop, broken into an open C-shape with slightly flattened, squared-off ends, suggesting a section of a damaged airship frame or a large structural ring. The surface is a dull, mottled grey-brown with subtle greenish oxidation, giving it a worn, utilitarian look."
+differs = "The only open C-shaped hoop with squared ends, the most distinct for a snapped frame section."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 232
+meshes = 1
+materials = 1
+size = [14.518178, 11.551156, 1.488592]
+
+[mesh.sm_prop_iron_sheet_01]
+name = "SM_Prop_Iron_Sheet_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Iron_Sheet_01.fbx"
+sha256 = "4811f7cb4fe0caa78220994781cbbd8d6394434d6e3ef3d4a4d0bbd57cc1d4c5"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A battered, irregularly torn sheet of corrugated metal, bent and warped as if ripped from a larger structure. The surface is weathered with a mix of dull grey and rust-brown tones, suggesting aged iron or steel. Its jagged edges and twisted form make it ideal for debris, improvised cover, or battlefield clutter."
+differs = "Largest and most detailed, with the most irregular, torn shape and mixed rust-grey tones for standout debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 204
+meshes = 1
+materials = 1
+size = [0.886816, 0.19163601, 1.810252]
+
+[mesh.sm_prop_iron_sheet_02]
+name = "SM_Prop_Iron_Sheet_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Iron_Sheet_02.fbx"
+sha256 = "fc11b987091a6d103fa672b42c0f431fab19541c8386c4a9b978eaf1931d283b"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A long, low, rectangular slab of dark grey metal, bent and warped as if torn from a larger structure. The surface is marked with parallel ridges and a few raised rivets, giving it a utilitarian, industrial look. The edges are jagged and uneven, suggesting it is a damaged or discarded piece of battlefield debris."
+differs = "Plainest and most uniform, with a dark grey industrial finish and rivets, ideal for generic cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 172
+meshes = 1
+materials = 1
+size = [0.777617, 0.16660601, 1.749363]
+
+[mesh.sm_prop_iron_sheet_03]
+name = "SM_Prop_Iron_Sheet_03"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Iron_Sheet_03.fbx"
+sha256 = "2db242e1d209e1fcf581211697f6a15e8f51f179d5fe2ad179730e56db4e210a"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A battered, rectangular sheet of dark, rusted metal, warped and bent with a jagged, torn edge along one end, suggesting it was ripped from a larger structure. The surface is textured with streaks of grime and corrosion, giving it a weathered, industrial look suited for trench debris or ruined buildings."
+differs = "Most rusted and corroded, with a jagged torn end, perfect for trench or ruined-building clutter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 172
+meshes = 1
+materials = 1
+size = [0.777616, 0.16660601, 1.7364681]
+
+[mesh.sm_prop_ladder_01]
+name = "SM_Prop_Ladder_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Ladder_01.fbx"
+sha256 = "707bce71f02f096f711394592f5b0f419e4727b91d289b34908172de4ef45850"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A tall, narrow wooden ladder with six rungs, rendered in a muted brown with subtle grain and slight weathering. The simple, sturdy construction suggests a functional prop for trenches or buildings, with a clean low-poly silhouette that reads clearly from any angle."
+differs = "The larger, lighter, more detailed ladder with over double the triangles, best for prominent trench or building placements."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 230
+meshes = 1
+materials = 1
+size = [0.772043, 2.869399, 0.223493]
+
+[mesh.sm_prop_ladder_02]
+name = "SM_Prop_Ladder_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Ladder_02.fbx"
+sha256 = "3caa3bd498036936f62f8264d1a87f75f166f9077503f149d3710ee38797ed0f"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A tall, narrow wooden ladder with six rungs, rendered in a dark, weathered grey-brown that suggests aged timber. The simple, straight stiles and rungs are chunky and blocky, fitting the low-poly style, and the uniform dark finish gives it a utilitarian, battle-worn appearance suitable for trenches or ruined structures."
+differs = "The smaller, darker, simpler ladder with half the triangles, ideal for background or ruined-structure clutter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 108
+meshes = 1
+materials = 1
+size = [0.719432, 2.844727, 0.170305]
+
+[mesh.sm_prop_trench_bridge_01]
+name = "SM_Prop_Trench_Bridge_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Trench_Bridge_01.fbx"
+sha256 = "0d30e3a68048b4b7e2d7fa0b8b3d1e6c87445c919fb41cb16c8615f68830d997"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, flat wooden walkway of weathered grey planks, resting on two simple crossbeams, with a few darker, charred or stained boards near one end, suggesting a battlefield crossing over mud or a shallow trench."
+differs = "The shorter, squarer option with charred boards, best for narrow gaps or muddy patches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 300
+meshes = 1
+materials = 1
+size = [3.158272, 0.444717, 3.0629768]
+
+[mesh.sm_prop_trench_bridge_02]
+name = "SM_Prop_Trench_Bridge_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Trench_Bridge_02.fbx"
+sha256 = "6997343473916f7455f300d9eeb4a3e9de579a649dd5a5a76704b6c758a7b9e1"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, flat wooden footbridge with a slight camber, built from dark, weathered planks laid crosswise over two longitudinal runners. The timber is a desaturated grey-brown, showing wear and gaps between boards, and the structure is simple and functional, suited for spanning narrow trenches or ditches in a muddy..."
+differs = "The longer, cambered bridge with more planks, ideal for spanning wider trenches or ditches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 580
+meshes = 1
+materials = 1
+size = [3.224616, 0.474701, 5.817222]
+
+[mesh.sm_prop_trench_planks_01]
+name = "SM_Prop_Trench_Planks_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Trench_Planks_01.fbx"
+sha256 = "3485e092b5bfa4ef805749324e8375baa19a10f056b0dda869a045fd76ba9c9c"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, flat rectangular walkway of seven parallel planks with visible gaps, each plank showing a slightly uneven, weathered top surface. The wood is a muted, dark brown with subtle greyish variation, suggesting aged, damp timber."
+differs = "The widest and longest option, with seven lengthwise planks and no side rails, best for covering broad trench floors."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 120
+meshes = 1
+materials = 1
+size = [1.763032, 0.101991, 2.722183]
+
+[mesh.sm_prop_trench_planks_02]
+name = "SM_Prop_Trench_Planks_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Trench_Planks_02.fbx"
+sha256 = "b9d9cc88c0be30a82d398138f54ddafd32cc55074d29024fde822327d250c3ca"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, flat wooden walkway or duckboard, made of eight narrow planks laid crosswise between two side rails, with a slight gap between each slat. The wood is a weathered, muted grey-brown with subtle grain, and the ends of the rails are slightly uneven, giving it a rough, battlefield-worn look."
+differs = "The narrowest and shortest, with eight crosswise slats on rails, ideal for tight, single-file duckboard paths."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.849885, 0.170304, 2.84773]
+
+[mesh.sm_prop_wire_fence_01]
+name = "SM_Prop_Wire_Fence_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Wire_Fence_01.fbx"
+sha256 = "365cde62427779f935fd6e91a22b9e792ab8a0d958463b8f58b11ad625ba23bd"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, narrow barrier of dark, weathered wooden posts and rails, strung with a web of thin wire that sags and crosses between the uprights, suggesting a hasty, functional military obstacle. The muted grey-brown tones and rough, splintered texture give it a worn, battle-worn appearance, ideal for trench lines or..."
+differs = "The longest and flattest, with the most regular post spacing; ideal for spanning long trench gaps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 310
+meshes = 1
+materials = 1
+size = [10.066044, 1.6559899, 0.492078]
+
+[mesh.sm_prop_wire_fence_02]
+name = "SM_Prop_Wire_Fence_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Wire_Fence_02.fbx"
+sha256 = "ff07147e687599a203ee95578074f98df8909319b88be5cd25524f6ab6cee9a3"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, thin barrier of dark wooden posts strung with multiple strands of wire, sagging slightly in the middle to suggest age and wear. The wire is tangled and uneven, giving it a makeshift, battle-worn appearance suitable for trench warfare scenes."
+differs = "The tallest of the post-and-rail set, with the most pronounced sag; best for showing heavy wear."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 310
+meshes = 1
+materials = 1
+size = [10.066044, 1.6559911, 0.85264]
+
+[mesh.sm_prop_wire_fence_03]
+name = "SM_Prop_Wire_Fence_03"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Wire_Fence_03.fbx"
+sha256 = "90548135cad7437ac073a5c8d3e0fcf1e17863c3d41be73cedbeca963f4bfe8b"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, weathered section of barbed wire fencing, featuring four dark wooden posts supporting several sagging strands of wire, with a distinct broken and tangled section on the right side, conveying a battle-worn and dilapidated appearance suitable for trench warfare scenes."
+differs = "The shortest and most compact, with a distinct broken section; perfect for a damaged, localized barrier."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 330
+meshes = 1
+materials = 1
+size = [5.880727, 1.462412, 0.49539602]
+
+[mesh.sm_prop_wire_fence_04]
+name = "SM_Prop_Wire_Fence_04"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Wire_Fence_04.fbx"
+sha256 = "a1d839ceb63116a73e635928dde74ffc1788378c43dca385f4faee2ddff5d3a2"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, wide section of tangled barbed wire, formed from loose, irregular loops strung along a single horizontal line, with a few vertical stakes barely visible. The dark, untextured metal appears rusted and weathered, giving it a grim, battle-worn look suited to trench warfare."
+differs = "The most detailed and tangled, with the most irregular loops; the only one that reads as a chaotic, standalone wire obstacle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1088
+meshes = 1
+materials = 1
+size = [5.60235, 2.212802, 1.700312]
+
+[mesh.sm_prop_wire_fence_tangled_01]
+name = "SM_Prop_Wire_Fence_Tangled_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Wire_Fence_Tangled_01.fbx"
+sha256 = "74e3de03e0308caa03ad344699443800987f09fbecf812163d0de193fe9c13db"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, sprawling mass of dark, rusted wire coils and twisted metal stakes, forming a chaotic barrier that reads as a battlefield obstacle. The tangled loops and jagged spikes give it a ruined, improvised look, perfect for dressing trench lines or no-man's-land."
+differs = "The only one with rusted, weathered metal and jagged spikes, making it the most damaged and battle-worn option for ruined scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1076
+meshes = 1
+materials = 1
+size = [6.419844, 2.1457438, 4.41467]
+
+[mesh.sm_prop_wire_fence_tangled_02]
+name = "SM_Prop_Wire_Fence_Tangled_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Wire_Fence_Tangled_02.fbx"
+sha256 = "72ad662e26d17d60a328c229c98e986f0e2696bf80ba1613d69e54dcc6745318"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, sprawling cluster of dark, thin wire loops and jagged coils, forming a chaotic, flattened tangle that reads as a battlefield obstacle. The metal is a uniform, dull grey with no visible rust or weathering, giving it a clean, stylized look."
+differs = "The smallest and plainest, with a clean, uniform grey finish and no rust, ideal for stylized, unweathered environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 568
+meshes = 1
+materials = 1
+size = [4.155746, 2.290743, 2.210271]
+
+[mesh.sm_prop_wire_fence_tangled_03]
+name = "SM_Prop_Wire_Fence_Tangled_03"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Prop_Wire_Fence_Tangled_03.fbx"
+sha256 = "b99e05c26bb45e88bae34436954c52410205ca5e55d548a51d5a8a7eb4130aa7"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low, sprawling mass of dark grey wire coils and loops, heavily tangled and unevenly distributed, with a few straight segments protruding from the chaotic cluster. The thin, metallic strands are densely packed in the centre and thin out towards the edges, giving it a jagged, ruined silhouette."
+differs = "The largest and widest, with a denser, more sprawling tangle and protruding straight segments, best for covering broad ground."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1076
+meshes = 1
+materials = 1
+size = [5.9987173, 2.1876178, 7.238062]
+
+[mesh.sm_veh_artillery_01_destroyed]
+name = "SM_Veh_Artillery_01_Destroyed"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Veh_Artillery_01_Destroyed.fbx"
+sha256 = "ae62c1ac9e9f34875c40fc3bbb257b502fdb1e024a30434c8e02b01eb9c850ad"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A ruined field gun with two spoked wheels, a splintered wooden carriage, and a broken barrel, rendered in muted olive drab and dark grey with red-painted wheel hubs and a faded green cross marking on the shield."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5281
+meshes = 1
+materials = 1
+size = [3.442852, 2.473063, 5.464629]
+
+[mesh.sm_veh_blimp_destroyed_01]
+name = "SM_Veh_Blimp_Destroyed_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Veh_Blimp_Destroyed_01.fbx"
+sha256 = "0b6c9b924a9da0c341090bc202c020cc397c9ea8fafaa7dec4330ecc8f978839"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A skeletal, wireframe-like airship hull with a dark blue-grey frame and pale tan panels, its fabric covering torn away to expose the internal ribs and spars. The envelope is crumpled and broken, with the gondola and tail fins missing, leaving a hollow, ruined shell that reads as a crashed or battle-scarred wreck."
+differs = "The smaller, straighter wreck, with a more uniform rib pattern and a sharper, more angular silhouette for a compact crash site."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3340
+meshes = 1
+materials = 1
+size = [18.420952, 12.152833, 48.09929]
+
+[mesh.sm_veh_blimp_destroyed_01_canvas]
+name = "SM_Veh_Blimp_Destroyed_01_Canvas"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Veh_Blimp_Destroyed_01_Canvas.fbx"
+sha256 = "e606a0abadfb5f6e3c087856070eb7fb029423a3f6e001c09654fce0ee4477f6"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A wrecked zeppelin with a broken, crumpled hull, its canvas skin torn open to reveal a dark, charred interior and exposed framework. The tan and olive drab fabric is scorched and tattered, with the gondola hanging askew beneath the ruined envelope."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2076
+meshes = 1
+materials = 1
+size = [16.764116, 12.421825, 37.97815]
+
+[mesh.sm_veh_blimp_destroyed_02]
+name = "SM_Veh_Blimp_Destroyed_02"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Veh_Blimp_Destroyed_02.fbx"
+sha256 = "653dfa017860449b6882e2c01624daa1639eacca7f00c1a08ab6fd988729fbee"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A crumpled, elongated airship hull with a pointed nose and a blunt tail, its fabric skin torn and sagging between the exposed structural ribs. The pale blue-grey material is heavily dented and twisted, with the tail section broken and missing its gondola and fins, leaving a skeletal, hollow wreck."
+differs = "The larger, more twisted and crumpled variant, with a pronounced bend and a pointed nose, ideal for a dramatic, high-impact crash."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3448
+meshes = 1
+materials = 1
+size = [24.233997, 22.14979, 54.205685]
+
+[mesh.sm_veh_blimp_destroyed_02_canvas]
+name = "SM_Veh_Blimp_Destroyed_02_Canvas"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Veh_Blimp_Destroyed_02_Canvas.fbx"
+sha256 = "43a575a60c7bf1b267f5aff74dbdeb24e35eda3245103fb46c52ec8bac93774b"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A long, slender airship hull with a pointed nose and a small tail fin assembly, broken in two near the middle and listing heavily. The canvas envelope is torn and scorched, revealing a dark internal framework, with a small gondola and propeller unit hanging beneath."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2738
+meshes = 1
+materials = 1
+size = [20.444118, 27.543259, 57.4868]
+
+[mesh.sm_veh_british_plane_01_destroyed]
+name = "SM_Veh_British_Plane_01_Destroyed"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Veh_British_Plane_01_Destroyed.fbx"
+sha256 = "b668b90cbf1c04ada3d90720cf1b99f9b2a3844b774591939d0261cba8ef6f2c"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A low-poly biplane with a broken fuselage, snapped wings, and a missing tail section, resting on its belly. The paint is a weathered mix of olive green, cream, and brown with a red, white, and blue roundel on the remaining wing. The wreckage is scattered and charred, clearly a battlefield casualty."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4366
+meshes = 1
+materials = 1
+size = [8.74854, 2.9626222, 5.481379]
+
+[mesh.sm_veh_british_tank_01_destroyed]
+name = "SM_Veh_British_Tank_01_Destroyed"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Veh_British_Tank_01_Destroyed.fbx"
+sha256 = "a157a690f7866fd7fdb275cabb322c771ba259e807b21ded9f7fe723dd619740"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A boxy, low-slung armoured hull with a turret and stubby side sponsons, finished in a tan and brown camouflage pattern with a pale blue band across the top. The model is heavily damaged, with blackened scorch marks, a bent gun barrel, and a missing track section, making it ideal for battlefield wreckage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8280
+meshes = 1
+materials = 2
+size = [5.443173, 2.458329, 8.549786]
+
+[mesh.sm_veh_german_plane_01_destroyed]
+name = "SM_Veh_German_Plane_01_Destroyed"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Veh_German_Plane_01_Destroyed.fbx"
+sha256 = "1d550602a037a4d3b3386ea15479ad24b1446237c988eda904778c2f5fec1676"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A crashed biplane with a broken fuselage and crumpled wings, its tail section separated and resting askew. The olive-drab and grey camouflage is scorched and chipped, with the propeller bent and the undercarriage collapsed, conveying a battlefield wreck suitable for a war-torn diorama."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4714
+meshes = 1
+materials = 1
+size = [6.53446, 2.72429, 5.772016]
+
+[mesh.sm_veh_german_tank_01_destroyed]
+name = "SM_Veh_German_Tank_01_Destroyed"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Veh_German_Tank_01_Destroyed.fbx"
+sha256 = "765f567c583be4e1f4106cee3415c0d2a4b92a46e97418caff24ce2f503033d2"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A boxy, low-poly armoured vehicle with a sloped front and a small, dark turret, rendered in a tan and brown camouflage pattern with a pale blue-grey top surface. The hull is battered, showing dark scorch marks and exposed metal, and the tracks are visible along the sides, suggesting a wrecked or battle-worn condition."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8074
+meshes = 1
+materials = 2
+size = [3.460235, 3.323271, 7.543372]
+
+[mesh.sm_veh_plane_british_ww1_fx]
+name = "SM_Veh_Plane_British_WW1_FX"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Veh_Plane_British_WW1_FX.fbx"
+sha256 = "a7113b4dfa2555c9d2777600b33e8d7e67429e4d0d2273510951b8aa9766f444"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A boxy, low-poly WWI biplane with a stubby fuselage, double wings, and a fixed undercarriage, painted in pale cream and olive drab with a red, white, and blue roundel on the upper wing and a matching tail fin. The engine cowling and exhaust are dark grey, and the propeller is a simple dark disc."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3390
+meshes = 1
+materials = 1
+size = [8.632812, 2.8437958, 5.640255]
+
+[mesh.sm_veh_plane_german_ww1_fx]
+name = "SM_Veh_Plane_German_WW1_FX"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Veh_Plane_German_WW1_FX.fbx"
+sha256 = "cf0c0f1c4cb5f7b850a296a503abba394dd73b50bdba75252e1b553ef011dfb9"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A boxy, twin-stack biplane with a blunt nose, fixed landing gear, and a tail skid, painted in a faded four-colour lozenge camouflage of olive, brown, green, and pale blue over its wings and fuselage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3434
+meshes = 1
+materials = 1
+size = [7.080196, 3.01926, 5.592988]
+
+[mesh.sm_veh_small_tank_01_destroyed]
+name = "SM_Veh_Small_Tank_01_Destroyed"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Veh_Small_Tank_01_Destroyed.fbx"
+sha256 = "f7bff1f20d0f9ce37278e5c1fd2609f09fe2181f354227ab0e607690f672b3ad"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A squat, boxy early tank with a low, cylindrical turret and a single short cannon, its hull and tracks are battered and scorched, with a broken track link hanging loose and a pale blue-grey and tan camouflage scheme over dark metal."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6936
+meshes = 1
+materials = 2
+size = [2.3804789, 2.490654, 5.2431993]
+
+[mesh.sm_wep_british_heavymachinegun_tripod_01]
+name = "SM_Wep_British_HeavyMachineGun_Tripod_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Wep_British_HeavyMachineGun_Tripod_01.fbx"
+sha256 = "5cc0603c44b9ebbad6bab4b5863c8695debbc6f618727fc965e27d482b3fba6e"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A compact, low-slung tripod mount with three slender, splayed legs ending in flat, circular feet, topped by a small, cylindrical receiver with a short vertical post and a rearward handle. The metal is a uniform, weathered dark grey with subtle brownish rust tones, suggesting a worn, field-ready condition."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 482
+meshes = 1
+materials = 1
+size = [0.637915, 0.46635702, 1.3335619]
+
+[mesh.sm_wep_german_heavymachinegun_tripod_01]
+name = "SM_Wep_German_HeavyMachineGun_Tripod_01"
+pack = "polygon_war_map_wwi"
+source = "SourceFiles/FBX/SM_Wep_German_HeavyMachineGun_Tripod_01.fbx"
+sha256 = "4454ea449588dde32afc2aa18ed48eaf8d45084e0564b823a4f7d22ebce19298"
+atlas = "PolygonWar_Map_Texture_01_A.png"
+textures = "PolygonWar_Map_Texture_01_A.png"
+description = "A dark grey, low-poly tripod mount with three splayed legs, a central column, and a small mounting cradle at the top, designed for a heavy machine gun. The metal surfaces are flat-shaded with subtle wear and a matte finish, giving it a utilitarian, field-ready appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 482
+meshes = 1
+materials = 1
+size = [0.637915, 0.46635702, 1.333561]

@@ -1,0 +1,29 @@
+# A one-metre cube, centred on its own origin.
+#
+# This is not Synty art and has no licence attached to it. It is here so
+# that the converter half of the pipeline can be proved on a machine that
+# has Blender and no packs: see docs/ART_PIPELINE.md, "Proving the
+# converter". It is laid out the way a bought asset is — a pack
+# directory, a Source Files tree, a texture beside it — so that resolving
+# it exercises the same path a real asset takes.
+mtllib unit_cube.mtl
+o unit_cube
+v -0.5 -0.5 -0.5
+v -0.5 -0.5  0.5
+v -0.5  0.5 -0.5
+v -0.5  0.5  0.5
+v  0.5 -0.5 -0.5
+v  0.5 -0.5  0.5
+v  0.5  0.5 -0.5
+v  0.5  0.5  0.5
+vt 0.0 0.0
+vt 1.0 0.0
+vt 1.0 1.0
+vt 0.0 1.0
+usemtl checker
+f 1/1 3/2 4/3 2/4
+f 5/1 6/2 8/3 7/4
+f 1/1 2/2 6/3 5/4
+f 3/1 7/2 8/3 4/4
+f 1/1 5/2 7/3 3/4
+f 2/1 4/2 8/3 6/4

@@ -1,0 +1,2807 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.env_cloudring_larger_01_smooth_03]
+name = "Env_CloudRing_Larger_01_Smooth_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/Env_CloudRing_Larger_01_Smooth_03.fbx"
+sha256 = "e1067d7f14621a501ea5d14ec4b656ec5700a316591c9f525e632f344ff6392d"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A broad, flattened ring of soft, puffy white clouds with a smooth, stylized surface, forming a low, wide halo. The uniform, untextured white material gives it a clean, pristine look, ideal for a distant atmospheric layer or a magical ring floating above a meadow."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [307.80753, 54.123466, 290.6124]
+
+[mesh.env_cloudring_larger_02]
+name = "Env_CloudRing_Larger_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/Env_CloudRing_Larger_02.fbx"
+sha256 = "f33fb0f50d6f05a48b2e9d4b8a7d8f894dd7daeda89d08cf896edce60e7dbd12"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A wide, flat ring of stylized white clouds with soft grey undersides, forming a dense, puffy circle with irregular, billowing edges. The low-poly texture gives it a faceted, chunky look, and it appears to float as a decorative atmospheric element for a meadow scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [310.26807, 54.419323, 295.38898]
+
+[mesh.fx_butterfly_mesh_01]
+name = "FX_Butterfly_Mesh_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/FX_Models/FX_Butterfly_Mesh_01.fbx"
+sha256 = "be0a111698b0c16c7429abe37d2c3524fd3acac15547b9da82d0e61ed19a3915"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "Butterfly_Test_01.png"
+description = "A small, translucent butterfly with four pale grey wings, each marked with faint orange streaks near the body. The wings are semi-transparent, giving a delicate, glassy appearance, and the insect is posed in mid-flight, suggesting it is meant to be animated as a fluttering creature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 44
+meshes = 1
+materials = 1
+size = [0.816574, 0.832845, 0.700105]
+
+[mesh.fx_leaf_meadows_01]
+name = "FX_Leaf_Meadows_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/FX_Models/FX_Leaf_Meadows_01.fbx"
+sha256 = "91952d483ebe5032bc5fc3a359b9fd76e3b642d7f5fb2ee94feff515b216918f"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A flat, diamond-shaped ground decal with a dark, earthy base, speckled with small white flowers and a bright orange patch at one tip, suggesting a cluster of meadow blossoms. The texture is slightly pixelated, giving it a stylized, low-resolution look that reads as a patch of grass or foliage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [0.1, 0.019318, 0.1]
+
+[mesh.fx_sphere_meadows_01]
+name = "FX_Sphere_Meadows_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/FX_Models/FX_Sphere_Meadows_01.fbx"
+sha256 = "1d07e8b767c4f7b2d62cef7f98319a72d49b97d8d47760eacbad0ee6ff62919e"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A faceted, roughly spherical low-poly orb with a matte, pale grey finish, appearing as a neutral, untextured placeholder or a generic stone-like object. Its irregular, angular surface suggests a simple, versatile prop suitable for a variety of meadow environments, offering a clean and unobtrusive visual element."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 46
+meshes = 1
+materials = 1
+size = [0.519158, 0.488465, 0.546848]
+
+[mesh.fx_sunshafts_meadow_01]
+name = "FX_SunShafts_Meadow_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/FX_Models/FX_SunShafts_Meadow_01.fbx"
+sha256 = "dd3b64324e635c3b8c6fdad0efb72ae06ba893ac53f6329028b9b7581855d75c"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A tall, narrow vertical plane with a jagged, irregular silhouette, rendered with a translucent texture that blends dark, smoky greys with warm amber and gold highlights. The surface appears to shimmer with subtle iridescent streaks, suggesting a stylised, ethereal light effect or a magical beam rising from the ground."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [1.0, 3.591924, 1.0]
+
+[mesh.sm_bld_stone_cabin_01]
+name = "SM_Bld_Stone_Cabin_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Bld_Stone_Cabin_01.fbx"
+sha256 = "3c1a77f93543740e911fa2c37c9020f341050d4bdb339d26bcad0d650061036b"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A small, gabled stone cottage with a weathered timber-shingle roof, featuring a single window and a doorway. An unfinished timber frame extends from one side, suggesting a porch or lean-to under construction. The grey stone walls and dark wood give it a rustic, medieval feel, ideal for a village or forest homestead."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10310
+meshes = 1
+materials = 1
+size = [5.992226, 4.04151, 8.113621]
+
+[mesh.sm_bld_warpgate_01]
+name = "SM_Bld_Warpgate_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Bld_Warpgate_01.fbx"
+sha256 = "1ffc98adab353e7316f4e3278e40a08d6b7c322e337ac0c7921e5d0f9725975d"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered stone archway with a jagged, irregular ring of pale grey blocks, flanked by two stepped pillars and a slanted ramp leading to a glowing teal portal. The structure is cracked and mossy, suggesting an ancient, magical ruin in a forest setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6260
+meshes = 3
+materials = 1
+size = [8.306894, 8.274812, 6.829398]
+
+[mesh.sm_bld_windmill_01]
+name = "SM_Bld_Windmill_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Bld_Windmill_01.fbx"
+sha256 = "d45d4794e3d60dba2bb5c0458c292813d372626b634877b7571c1350b4474679"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A stout, weathered wooden windmill with a conical thatched roof and a four-bladed sail assembly, elevated on spindly stilts. The pale, textured blades are angled asymmetrically, and the structure shows visible timber framing and a small side door, suggesting a rustic, functional farm building."
+differs = "The smaller, lighter variant with thatched roof and solid pale blades, best for rustic farm scenes needing a simpler silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8919
+meshes = 2
+materials = 1
+size = [9.476765, 12.954799, 7.791525]
+
+[mesh.sm_bld_windmill_02]
+name = "SM_Bld_Windmill_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Bld_Windmill_02.fbx"
+sha256 = "e2f6e78ec8f6687e04fcba4980a42888f31bf411bb049c6bff2d8039948a2d95"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A stout, weathered wooden windmill with a conical shingled roof and a four-bladed lattice sail, elevated on sturdy timber legs. The structure shows visible wear and patchy plank detailing, with a small side ladder and a rear tailpole, giving it a rustic, functional appearance suited to a medieval or fantasy meadow..."
+differs = "The larger, heavier variant with shingled roof, lattice sails, ladder and tailpole, best for detailed medieval or fantasy settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 9519
+meshes = 2
+materials = 1
+size = [9.60777, 13.032297, 8.261135]
+
+[mesh.sm_env_background_hill_01]
+name = "SM_Env_Background_Hill_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Background_Hill_01.fbx"
+sha256 = "a46154a7db13728190c624cf4c8eb171c9ef20a07573bf529e2ddec8a7934c25"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "PolygonCastle_Texture_01_A.psd"
+description = "A low, elongated mound with a gentle, rounded profile, covered in a dense, repeating pattern of small, dark green and brown tufts that suggest grass or low shrubs. The surface is textured with a mottled, earthy palette of olive, tan, and grey, giving it a natural, weathered appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 128
+meshes = 1
+materials = 1
+size = [17.268147, 1.9317889, 9.342052]
+
+[mesh.sm_env_bush_01]
+name = "SM_Env_Bush_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Bush_01.fbx"
+sha256 = "9e31ebfa0c2766f2b933212bf94369fe34859337467b0da224acab03cdef4354"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A dense, rounded clump of dark, almost black foliage with a rough, spiky silhouette, accented by scattered golden-brown highlights that suggest dried leaves or sunlit tips. The bush sits on a short, thin trunk and appears slightly charred or withered, giving it a rugged, autumnal look that suits a scorched or shadowy.."
+differs = "The only one with a visible trunk and golden-brown highlights; the most damaged, for scorched or shadowy spots."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3642
+meshes = 2
+materials = 1
+size = [2.6763148, 2.8842452, 2.4383578]
+
+[mesh.sm_env_bush_02]
+name = "SM_Env_Bush_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Bush_02.fbx"
+sha256 = "7a5d20c933099567d06a28ca0170dd05fa1cbf72741ad86f3b80ced20be13117"
+atlas = "ANIMATION - Base Locomotion/T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, rounded mound of dense, dark grey foliage, wider than it is tall, with a slightly irregular, lumpy silhouette. The surface is heavily textured with small, jagged leaf clusters, giving it a rough, prickly appearance."
+differs = "The plainest and least detailed, with the lowest triangle count; a simple, wide filler for grey, rocky terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3814
+meshes = 3
+materials = 2
+size = [5.022212, 2.570646, 4.87366]
+
+[mesh.sm_env_bush_03]
+name = "SM_Env_Bush_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Bush_03.fbx"
+sha256 = "288481fdfc57d2f1006da630a54c85ebb245cfb1ec912580304a08d8e591a337"
+atlas = "ANIMATION - Base Locomotion/T_PolygonApocalypse_01.png"
+textures = "T_PolygonApocalypse_01.png"
+description = "A low, rounded mound of dense, jagged foliage, wider than it is tall, with a slightly flattened top and irregular, spiky silhouette. The dark grey-green leaves are tightly packed, giving it a solid, almost rocky appearance, and the surface is heavily textured with small, sharp facets."
+differs = "The most detailed and largest, with a flattened top; the only one for a solid, rocky, high-poly focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10264
+meshes = 4
+materials = 2
+size = [5.919116, 3.4276671, 4.10594]
+
+[mesh.sm_env_cloud_ring_01]
+name = "SM_Env_Cloud_Ring_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Cloud_Ring_01.fbx"
+sha256 = "0414c4f45c73af36a004af55e33c25855e3cb3d3df1ef67c34bf63471fbd6a6e"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A flattened, irregular ring of puffy white cloud segments, each with a soft, rounded silhouette and subtle grey shading that gives a billowing, volumetric feel. The surface is smooth and matte, with no visible texture detail, making it ideal for a stylized, floating sky element in a meadow scene."
+differs = "The flatter, more compact ring with distinct puffy segments, best for a stylized floating cloud layer."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14456
+meshes = 1
+materials = 1
+size = [277.46246, 26.061537, 259.42413]
+
+[mesh.sm_env_cloud_ring_02]
+name = "SM_Env_Cloud_Ring_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Cloud_Ring_02.fbx"
+sha256 = "610e6b7dffb6735502389fd7e49e0af9843b4d18d3ae5706019ee3247b865db2"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A flat, pale grey disc with a soft, irregular edge, resembling a stylised cloud or mist ring viewed from above. Its surface is smooth and untextured, with a subtle, mottled pattern that suggests a soft, fluffy material."
+differs = "The larger, thicker, and more detailed disc with a mottled surface, ideal for a soft misty ground effect."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [310.26804, 54.419327, 295.38898]
+
+[mesh.sm_env_cropfield_clump_01]
+name = "SM_Env_CropField_Clump_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_CropField_Clump_01.fbx"
+sha256 = "b0f5d33d9cedc6fc687387747a6acb0d4bb7a94a31753101167922edb32466bd"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "rapeseed_01.tga"
+description = "A low, rounded clump of dried, harvested crop stalks, with a dark, hollow center and a scattering of golden-orange seed heads across the top, suggesting a cut field ready for collection."
+differs = "The smallest, most detailed, and most damaged option, with a hollow center and scattered seed heads, ideal for a sparse, cut patch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 336
+meshes = 2
+materials = 1
+size = [2.1868339, 1.352261, 2.393862]
+
+[mesh.sm_env_cropfield_clump_02]
+name = "SM_Env_CropField_Clump_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_CropField_Clump_02.fbx"
+sha256 = "d16d59f37d1e6f0ec7c5b3788599c858a943145cc45e9769cc79e382a202d0f3"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "rapeseed_01.tga"
+description = "A low, rounded mound of dry, golden-brown stalks, appearing as a dense, harvested clump of wheat or hay. The texture shows a mix of tan and dark brown tones, giving it a rough, straw-like appearance. It is a compact, natural-looking pile that would fit well in a farm or meadow setting."
+differs = "The largest, plainest, and most dense option, a solid, uniform mound of straw, perfect for a bulky, unbroken pile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2264
+meshes = 2
+materials = 1
+size = [5.118076, 1.384825, 5.090313]
+
+[mesh.sm_env_flowers_flat_01]
+name = "SM_Env_Flowers_Flat_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Flowers_Flat_01.fbx"
+sha256 = "77b8d359f3035ba37d32cb94001a3873a6c22311a8b44703fa49362f22e6a852"
+atlas = "FlowersFlat_01.tga"
+textures = "FlowersFlat_01.tga"
+description = "A low, flat cluster of tiny white blossoms scattered across a broad, square patch of ground, appearing as a sparse, delicate carpet of flowers. The pale petals are interspersed with small green leaves, creating a natural, unmanicured look that is ideal for adding subtle ground detail to meadows or forest floors."
+differs = "The only one with visible green leaves, adding natural texture for detailed meadow floors."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 1
+materials = 1
+size = [2.0657902, 0.1425, 2.021093]
+
+[mesh.sm_env_flowers_flat_02]
+name = "SM_Env_Flowers_Flat_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Flowers_Flat_02.fbx"
+sha256 = "829bb02e405c8188f398f887bcabd9dce72ca96023b639207555c667c25c3a0e"
+atlas = "FlowersFlat_01.tga"
+textures = "FlowersFlat_01.tga"
+description = "A low, flat patch of tiny white and pale yellow blossoms scattered across a square ground plane, forming a sparse, natural-looking cluster. The flowers are small and delicate, with no stems or leaves visible, giving the impression of a subtle ground cover that blends seamlessly into the meadow floor."
+differs = "The only one with pale yellow blossoms, adding subtle color variety for warmer patches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 1
+materials = 1
+size = [2.157782, 0.145157, 2.06864]
+
+[mesh.sm_env_flowers_flat_03]
+name = "SM_Env_Flowers_Flat_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Flowers_Flat_03.fbx"
+sha256 = "9f57af594a1691b67efbc9804ad722b4d51bf1109ad85c27106d615cc50984e4"
+atlas = "FlowersFlat_01.tga"
+textures = "FlowersFlat_01.tga"
+description = "A low, flat cluster of tiny white blossoms scattered across a broad, square patch of ground, forming a sparse, delicate carpet. The flowers are small and evenly distributed, with no stems or leaves visible, giving the impression of a subtle ground cover rather than a tall plant."
+differs = "The plainest and most sparse, with no leaves or color, ideal for minimal ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8
+meshes = 1
+materials = 1
+size = [2.247683, 0.178868, 2.008644]
+
+[mesh.sm_env_fog_ring_01]
+name = "SM_Env_Fog_Ring_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Fog_Ring_01.fbx"
+sha256 = "af2f0f61402eeea2bc7b76c913c1ca11bde038d9b00e985239267ff96af704cc"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A flat, elliptical ring with a thin, translucent, glassy surface, resembling a low-lying mist or fog patch. The rim is textured with subtle, earthy tones of brown and pale green, suggesting a natural, meadow-like setting. Its delicate, ethereal appearance makes it ideal for adding atmospheric depth to a forest floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [70.17066, 3.939841, 70.17065]
+
+[mesh.sm_env_grass_bush_01]
+name = "SM_Env_Grass_Bush_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Bush_01.fbx"
+sha256 = "b85c7b70e4fd3e3525d4c174562b7dc42b5cc602acd251409c832eb8371343f3"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, rounded clump of dark green foliage with jagged, spiky edges, appearing as a dense, irregular mound of grass. The texture is mottled with deep shadows and lighter highlights, giving it a rough, natural look suitable for ground cover in a forest biome."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 110
+meshes = 3
+materials = 2
+size = [2.275693, 1.205254, 2.306943]
+
+[mesh.sm_env_grass_large_01]
+name = "SM_Env_Grass_Large_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Large_01.fbx"
+sha256 = "a55e29d72d630716c3e0afe27c528e301f91fd77c0109113f4870a8e706cbd1b"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide clump of dark green grass with jagged, irregular blades, forming a dense, rounded mound that sits flat against the ground. The silhouette is uneven and organic, with a few blades reaching slightly higher than the rest, giving it a wild, unkempt appearance."
+differs = "Tallest and most jagged silhouette, with the most pronounced upward-reaching blades for a wilder, unkempt look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 36612
+meshes = 3
+materials = 1
+size = [33.954655, 3.989954, 34.490345]
+
+[mesh.sm_env_grass_large_02]
+name = "SM_Env_Grass_Large_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Large_02.fbx"
+sha256 = "580224655dbe60b5b3b47b2b76a5e0758010fa3863f0ceedcf4e88bafb968475"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide, irregular mound of dense dark green foliage, appearing as a thick clump of grass or a small bush with a slightly jagged, uneven top. The surface is heavily textured with small leaf-like shapes, giving it a rough, organic appearance suited for ground cover in a stylized forest setting."
+differs = "Flattest and most uniform mound, with the least variation in height, making it the most subtle ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 35200
+meshes = 3
+materials = 1
+size = [33.202408, 3.461723, 34.589024]
+
+[mesh.sm_env_grass_large_03]
+name = "SM_Env_Grass_Large_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Large_03.fbx"
+sha256 = "30d771f7db6a3cf9f74b0aa59a36a33f6022e2d73fa30dbdd4acde2cd6598e7a"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide, irregular mound of dense, dark green foliage, appearing as a flat-topped clump of grass or a small bush. Its silhouette is jagged and uneven, with a slightly darker, shadowed underside that suggests a solid base."
+differs = "Largest overall footprint and tallest height, with the most pronounced flat top and shadowed underside for a solid base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 37260
+meshes = 3
+materials = 1
+size = [34.68299, 4.151652, 34.773464]
+
+[mesh.sm_env_grass_large_04]
+name = "SM_Env_Grass_Large_04"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Large_04.fbx"
+sha256 = "d91f21b43fa2302adf4680b89a5fb876f170f0b4f7d4ad4180227095a4597ef0"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, irregular mound of dense, dark green foliage, appearing as a clump of grass or a small bush with a slightly jagged, uneven silhouette. The deep, almost black-green colour suggests a shadowed or dense patch of vegetation, giving it a natural, unkempt look suitable for ground cover in a forest setting."
+differs = "Darkest and most shadowed colour, with the most irregular, lumpy silhouette, ideal for dense, shadowy patches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 37422
+meshes = 3
+materials = 1
+size = [34.010105, 3.418746, 34.239548]
+
+[mesh.sm_env_grass_med_clump_01]
+name = "SM_Env_Grass_Med_Clump_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Med_Clump_01.fbx"
+sha256 = "678a736b90fbe3692905bfbc48a338d19396481853445baa0f085104db27e64c"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A dense, rounded clump of pale green blades that fan outward from a central base, with a few taller stalks rising above the main mass. The texture gives the grass a soft, slightly muted look, and the shape is fuller and more circular than a typical sparse tuft, making it ideal for adding natural ground cover."
+differs = "The most compact and upright, with the fewest triangles, best for tight, dense ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10
+meshes = 2
+materials = 1
+size = [1.0, 0.5, 0.999999]
+
+[mesh.sm_env_grass_med_clump_02]
+name = "SM_Env_Grass_Med_Clump_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Med_Clump_02.fbx"
+sha256 = "1357c7b08662c9dbadbc8176e7543d1c39510ee015244a4edd9ffd258bde6ccb"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide clump of meadow grass with a soft, rounded silhouette, featuring pale green blades that fan outward from a dense base. The texture is muted and slightly desaturated, giving it a natural, weathered look suitable for filling ground cover in forest or field scenes."
+differs = "The plainest and widest, with a low, spreading silhouette, ideal for filling broad, flat areas."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 2
+materials = 1
+size = [1.785118, 0.532862, 1.460731]
+
+[mesh.sm_env_grass_med_clump_03]
+name = "SM_Env_Grass_Med_Clump_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Med_Clump_03.fbx"
+sha256 = "259e552607e17ea595754577f93f2141a5c0e91b96fee3b23d42b3072b892b3b"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide clump of pale green meadow grass with a few darker, thicker blades and small stems crossing through the centre, giving it a slightly sparse, natural look. The texture is soft and muted, with a subtle variation in green tones that makes it feel like a wild, untamed patch rather than a manicured lawn."
+differs = "The most detailed and damaged, with darker, thicker blades and stems, perfect for wild, untamed patches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 50
+meshes = 3
+materials = 2
+size = [1.893297, 0.528209, 1.900116]
+
+[mesh.sm_env_grass_med_plane_01]
+name = "SM_Env_Grass_Med_Plane_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Med_Plane_01.fbx"
+sha256 = "28db26007924a2198d530db51092fc98a5880cf01ac1ffd40e6927841b48374f"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A flat, low-poly clump of grass blades fanning outward from a central base, forming a wide, low mound. The muted green blades are broad and angular, with a few shorter stalks interspersed, giving a natural, unkempt meadow look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2
+meshes = 1
+materials = 1
+size = [1.0, 0.5, 0.0]
+
+[mesh.sm_env_grass_short_clump_01]
+name = "SM_Env_Grass_Short_Clump_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Short_Clump_01.fbx"
+sha256 = "ad8ab23b2464e05da429b1623610c8e25d77bbd31db24d7b6042c5e2fefd1555"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, squat clump of pale green blades that fan outwards from a dense central base, with a few taller, wispy stalks rising above the main mass. The texture is a soft, muted green with subtle variation, giving it a dry, natural look."
+differs = "The smallest and most compact, with the fewest triangles; best for tight, sparse accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10
+meshes = 2
+materials = 1
+size = [1.0, 0.25, 0.999999]
+
+[mesh.sm_env_grass_short_clump_02]
+name = "SM_Env_Grass_Short_Clump_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Short_Clump_02.fbx"
+sha256 = "3bbdea061926a66bf865f51c01de041b0b1519a2d77c4e57449a23653886d9fb"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide, irregular clump of meadow grass with a slightly ragged, wind-blown silhouette, rendered in pale, desaturated green with subtle grey-blue shading. Its flat, blade-like leaves fan outwards from a central base, giving it a natural, unkempt appearance that suits scattered ground cover."
+differs = "Mid-sized and irregular, with a wind-blown silhouette; ideal for scattered, unkempt ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 2
+materials = 1
+size = [1.785118, 0.266431, 1.460731]
+
+[mesh.sm_env_grass_short_clump_03]
+name = "SM_Env_Grass_Short_Clump_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Short_Clump_03.fbx"
+sha256 = "429139751683f91b1eee301ba19b2357c19c432bf2f81dbe6c49468a0ac5ac3c"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide, irregular clump of pale green grass blades, flattened into a dense, rounded mound that hugs the ground. The texture is muted and slightly desaturated, giving it a dry, weathered appearance, and the silhouette is soft and diffuse, making it ideal for filling gaps in a meadow floor without adding visual..."
+differs = "The largest and most detailed, forming a dense, flattened mound; best for filling broad meadow gaps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 50
+meshes = 3
+materials = 2
+size = [1.893297, 0.278209, 1.900116]
+
+[mesh.sm_env_grass_short_plane_01]
+name = "SM_Env_Grass_Short_Plane_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Short_Plane_01.fbx"
+sha256 = "3401e23418720db93bf65b799603dbbd5909d74ee19ee2bf8c21d8befe6fb91a"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A flat, rectangular patch of low-poly grass blades, rendered in a muted, desaturated green with subtle tonal variation across the texture. The blades are sparse and jagged, giving it a natural, unkempt appearance suitable for ground cover in a stylized meadow environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2
+meshes = 1
+materials = 1
+size = [1.0, 0.25, 0.0]
+
+[mesh.sm_env_grass_tall_clump_01]
+name = "SM_Env_Grass_Tall_Clump_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Tall_Clump_01.fbx"
+sha256 = "0f56136b3a0784671e285ba351f3a6dcc6b9ed8dc27d0c96e0361184f5d56f0b"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A dense, upright clump of thin, pale green blades that fan outward from a narrow base, with a few taller stalks rising above the main mass. The texture is soft and muted, giving it a natural, slightly weathered look, and the silhouette is irregular enough to read as a wild, untamed tuft rather than a manicured lawn."
+differs = "The smallest, simplest, and most upright tuft, ideal for sparse accents or distant filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 10
+meshes = 2
+materials = 1
+size = [1.0, 1.0, 0.999999]
+
+[mesh.sm_env_grass_tall_clump_02]
+name = "SM_Env_Grass_Tall_Clump_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Tall_Clump_02.fbx"
+sha256 = "c65c67afea62be1a46fa9cecd8339bedbb5347feb12851a54c48c3c9dd984e42"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, rounded clump of pale, desaturated green blades that fan outward from a dense base, with a single dark, vertical stem rising from the center, giving it a slightly sparse and wild appearance suited for meadow ground cover."
+differs = "The only one with a distinct dark central stem, giving it a sparse, wild meadow look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18
+meshes = 2
+materials = 1
+size = [1.785118, 1.065725, 1.460731]
+
+[mesh.sm_env_grass_tall_clump_03]
+name = "SM_Env_Grass_Tall_Clump_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Tall_Clump_03.fbx"
+sha256 = "85a6afa0a7e62ce2749f31d71029b18a2e3199b86f6a3053cb2d09c0a60247d0"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A dense, squat clump of upright grass blades with a dark green base and lighter, yellowish-green tips, giving it a slightly dried or sun-bleached appearance. The irregular, rounded silhouette is wider than it is tall, with a few stray blades poking out at the edges, making it ideal for adding natural, low-lying ground."
+differs = "The most sun-bleached and squat, with a wider-than-tall silhouette for low ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 54
+meshes = 3
+materials = 1
+size = [1.914472, 1.028209, 1.926012]
+
+[mesh.sm_env_grass_tall_clump_04]
+name = "SM_Env_Grass_Tall_Clump_04"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Tall_Clump_04.fbx"
+sha256 = "fd032b1ae395ee60852bc2ab2e6e46649540f32a76d03fad63065d1980571866"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A dense, low-lying clump of dark green grass blades, wider than it is tall, with a slightly irregular, rounded silhouette. The blades are short and tightly packed, giving it a bushy, ground-cover appearance rather than a tall, spiky look."
+differs = "A mid-sized, dense dark green bush, the plainest of the larger clumps for general ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 378
+meshes = 3
+materials = 1
+size = [4.28463, 1.028209, 4.681891]
+
+[mesh.sm_env_grass_tall_clump_05]
+name = "SM_Env_Grass_Tall_Clump_05"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Tall_Clump_05.fbx"
+sha256 = "7223b960a9a4de0ee921d52e59714c327663b3ee070c18ec1bb0365deedec1ae"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide, dense clump of dark green grass with a rounded, mounded silhouette, featuring a few lighter green blades at the base and a slightly irregular, natural top edge. The texture is flat and stylized, with a deep, shadowed underside that gives it a solid, grounded appearance."
+differs = "The largest and most detailed, a wide, mounded dark green mass for filling large meadow areas."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1026
+meshes = 3
+materials = 1
+size = [7.448443, 1.503155, 7.050149]
+
+[mesh.sm_env_grass_tall_plane_01]
+name = "SM_Env_Grass_Tall_Plane_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Grass_Tall_Plane_01.fbx"
+sha256 = "78215507ed984efbfd4649011c0189f13d43e351c2393d1c055f61ce1f537b74"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A flat, cross-shaped cluster of thin, tapering blades, rendered in a muted, desaturated green with a soft, diffuse texture that suggests a low-poly meadow tuft. The blades fan outward from a central base, creating a natural, slightly irregular silhouette that reads as a single clump of tall grass."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2
+meshes = 1
+materials = 1
+size = [1.0, 1.0, 0.0]
+
+[mesh.sm_env_ground_cliff_large_01]
+name = "SM_Env_Ground_Cliff_Large_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Ground_Cliff_Large_01.fbx"
+sha256 = "b9d0352965e4e25f48100398f7678a1995b243d3314d41bcc7bf80de7b0b9f85"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, flat, roughly circular plateau with a dark, earthy top and a lighter, tan rocky rim. The sides are jagged and vertical, suggesting a cut bank or a small mesa. It appears weathered and natural, ideal for a raised ground piece or a platform in a meadow setting."
+differs = "The smallest and flattest of the two, with a more circular, compact footprint for tighter platform placements."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3128
+meshes = 1
+materials = 1
+size = [39.63691, 7.870933, 40.779858]
+
+[mesh.sm_env_ground_cliff_large_02]
+name = "SM_Env_Ground_Cliff_Large_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Ground_Cliff_Large_02.fbx"
+sha256 = "f5d191b4ea66cf53769ade59bb5bca7ddc7f8b633c4ae094c9a96434cf2d8941"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A broad, low, irregular plateau with a flat dark-brown top and sheer, tan, rocky sides, resembling a raised earthen mesa or a large cut ground chunk. The vertical cliff faces are faceted and jagged, giving it a natural, weathered look suitable for a meadow biome's elevated terrain."
+differs = "The largest and tallest asset, with a wider, more irregular spread for covering more ground as a broad mesa."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3139
+meshes = 1
+materials = 1
+size = [41.473877, 6.680654, 42.66979]
+
+[mesh.sm_env_ground_cover_01]
+name = "SM_Env_Ground_Cover_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Ground_Cover_01.fbx"
+sha256 = "cc984f7e713b6befbef64b5203d50311cd08c74444903078854e9dd72f778d08"
+atlas = "GroundCover_01.tga"
+textures = "GroundCover_01.tga"
+description = "A low, irregular clump of dry, pale grass with a few taller, wispy blades arching outward, suggesting a sparse, windswept patch of meadow floor. The muted grey-green tones and thin, brittle texture give it a weathered, natural look, ideal for adding subtle, realistic ground detail to open fields or forest edges."
+differs = "The only pale, dry grass clump; widest and most windswept, for arid or sparse meadow edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 70
+meshes = 2
+materials = 1
+size = [2.888986, 1.594404, 1.638476]
+
+[mesh.sm_env_ground_cover_02]
+name = "SM_Env_Ground_Cover_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Ground_Cover_02.fbx"
+sha256 = "0f06d37a9ca7725865889eae9fa481d707f074b6a69fd8c61b689649d37257ca"
+atlas = "GroundCover_01.tga"
+textures = "GroundCover_01.tga"
+description = "A low, irregular clump of dark green foliage, appearing as a small patch of dense ground cover with a few pale, spiky stems protruding from the sides. The texture is mottled with deep shadows and lighter green highlights, giving it a slightly weathered, natural look."
+differs = "The flattest and lowest, with the least vertical presence; a dense dark patch for tight ground-level detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 92
+meshes = 3
+materials = 1
+size = [1.911725, 0.57041705, 1.9124241]
+
+[mesh.sm_env_ground_cover_03]
+name = "SM_Env_Ground_Cover_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Ground_Cover_03.fbx"
+sha256 = "69a3dd6d9eb4e3eee19e37a6386507e3bc5f94cc02533759e8a433948e415992"
+atlas = "GroundCover_01.tga"
+textures = "GroundCover_01.tga"
+description = "A low, wide clump of dark green foliage with a few pale, wispy stalks rising from it, forming a dense, rounded mound of ground cover. The texture is mottled with deep shadows and lighter highlights, giving it a lush, organic look that reads as a small bush or patch of ferns."
+differs = "The tallest and most voluminous, with the most pronounced wispy stalks; the only one that reads as a bush or fern mound."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 3
+materials = 1
+size = [2.1445441, 1.6041499, 1.611802]
+
+[mesh.sm_env_ground_mound_large_01]
+name = "SM_Env_Ground_Mound_Large_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Ground_Mound_Large_01.fbx"
+sha256 = "99c66e2d2a8fda3d0393038a64d3449212824d8a247382706338221e60c12dfb"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A broad, low, irregularly rounded mound of earth with a gently domed top and a slightly flattened base, rendered in a muted, matte brown. Its surface is smooth and unadorned, lacking any grass, rocks, or distinct features, making it a clean, versatile terrain piece for filling open ground."
+differs = "The plainest and most uniform, with no rocky flecks or darker patches, ideal for a clean, featureless terrain filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 256
+meshes = 1
+materials = 1
+size = [36.644817, 3.205791, 37.298805]
+
+[mesh.sm_env_ground_mound_large_02]
+name = "SM_Env_Ground_Mound_Large_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Ground_Mound_Large_02.fbx"
+sha256 = "9593254b9b0a8f37e50191f350e857ab064b6cefff7e4ef21235f0495c0d2ec6"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A broad, low, gently domed mound of earth with a smooth, rounded profile and a slightly flattened top, rendered in a muted brown with subtle darker patches and a few pale, rocky flecks along its lower rim."
+differs = "The most detailed and damaged, with the highest triangle count and pale rocky flecks along its lower rim, perfect for a weathered, rocky base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 324
+meshes = 1
+materials = 1
+size = [39.4134, 2.6157181, 39.232258]
+
+[mesh.sm_env_ground_mound_large_03]
+name = "SM_Env_Ground_Mound_Large_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Ground_Mound_Large_03.fbx"
+sha256 = "9fc8fee09d1c2b3ad2465325f28c66a5f620e06ab4919106956c588da02299c4"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A broad, low, irregularly rounded mound of earth with a gently domed top and a slightly flattened, uneven base. Its surface is a uniform, muted brown with subtle darker patches, suggesting dry, packed soil or a small bare hillock."
+differs = "The flattest and most compact, with the lowest height and a slightly uneven base, suited for a subtle, low-profile ground bump."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 244
+meshes = 1
+materials = 1
+size = [36.644817, 3.1539981, 37.298805]
+
+[mesh.sm_env_ground_mound_large_04]
+name = "SM_Env_Ground_Mound_Large_04"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Ground_Mound_Large_04.fbx"
+sha256 = "3aca6b92a57001e5fea1229cc1379f8ba44d8b03ce52dd1eeb16a7003446a7c1"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A broad, low, irregularly shaped mound of earth with a gently domed top and a slightly flattened, uneven base. Its surface is a uniform, muted brown with subtle darker patches, suggesting dry, packed soil or clay."
+differs = "The tallest and most irregularly shaped, with the most uneven base, best for a more organic, clay-like hillock with a distinct silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 244
+meshes = 1
+materials = 1
+size = [37.28058, 3.371451, 37.958935]
+
+[mesh.sm_env_lillies_01]
+name = "SM_Env_Lillies_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Lillies_01.fbx"
+sha256 = "5fe79fe1b411ac97901149ce22a00e7aea68971128f023b019318cc95e1d818f"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, flat cluster of lily pads floating on a small patch of water, with a few bright magenta blossoms and a single tan rock at the edge. The pads are a fresh, vibrant green, and the water is a pale, translucent blue, giving it a clean, stylized look perfect for a pond or marsh surface."
+differs = "The only one with a rock and the widest footprint, best for a focal pond edge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2108
+meshes = 2
+materials = 2
+size = [3.4196048, 0.19693801, 2.894298]
+
+[mesh.sm_env_lillies_02]
+name = "SM_Env_Lillies_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Lillies_02.fbx"
+sha256 = "b8141c84276bb8ccf18012f7e95ce0c6f67012a316f75b6447cf9bafb4dd3b79"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A flat, low-lying cluster of lily pads floating on a translucent, rectangular water plane, with a few bright magenta blossoms rising above the green leaves. The pads vary in size and are scattered irregularly, giving a natural, organic feel."
+differs = "The smallest and simplest, with the most visible rectangular water plane, ideal for a tight, clean patch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1194
+meshes = 2
+materials = 2
+size = [3.2422752, 0.17938799, 1.782807]
+
+[mesh.sm_env_lillies_03]
+name = "SM_Env_Lillies_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Lillies_03.fbx"
+sha256 = "141f307ffd24db9c44cf59ef2bcec169216cab6b072f69a0ab216c4d5e3726af"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, flat cluster of lily pads floating on a barely visible water plane, with small magenta and white blossoms rising on slender stems. The pads are a muted, natural green with subtle variation, and the arrangement is sparse and organic, making it ideal for adding delicate detail to pond edges or calm water surfaces."
+differs = "The longest and most elongated, with white blossoms and the sparsest, most delicate arrangement for narrow water strips."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1651
+meshes = 2
+materials = 2
+size = [2.0528078, 0.19693801, 4.352551]
+
+[mesh.sm_env_rapeseed_clump_01]
+name = "SM_Env_Rapeseed_Clump_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rapeseed_Clump_01.fbx"
+sha256 = "14534fd3a20a2bd8a533bd2fea2c5423ca3daab2186a3ef03b24056383f677a5"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "rapeseed_01.tga"
+description = "A dense, low, rounded clump of vertical stalks topped with golden-yellow flower heads, interspersed with dark green foliage and brown stems, giving a wild, unmanicured meadow look. The flat-shaded texture and slightly irregular silhouette make it read as a natural, mature rapeseed patch ready for harvest or field..."
+differs = "The only living, flowering clump, far smaller and denser, for adding bright yellow accents to a green meadow."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 336
+meshes = 2
+materials = 1
+size = [2.1868339, 1.352261, 2.393862]
+
+[mesh.sm_env_rapeseed_clump_02]
+name = "SM_Env_Rapeseed_Clump_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rapeseed_Clump_02.fbx"
+sha256 = "86e6e35c18f14cc1094e5834a22625813e89afe39bf6bf986fbf674aafb5927e"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "rapeseed_01.tga"
+description = "A low, wide mound of dense, dried rapeseed stalks, with a rough, spiky silhouette and a mottled palette of tan, ochre, and dark brown. The clump appears brittle and weathered, forming a compact, rounded patch that reads as a natural, unkempt cluster of dead vegetation."
+differs = "The largest and most detailed, a wide dead patch with a spiky silhouette, for creating dry, autumnal field edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2264
+meshes = 2
+materials = 1
+size = [5.118076, 1.384825, 5.090313]
+
+[mesh.sm_env_rock_01]
+name = "SM_Env_Rock_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_01.fbx"
+sha256 = "a0d4442dcbce89c87d93ecf3eee62e8149fbb8e8ebc7f6244564776614fb83de"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, broad, irregularly faceted boulder with a gently sloping top and a flat base, rendered in a warm sandy beige with subtle darker mottling on one face. Its rounded, asymmetrical silhouette suggests a weathered, natural stone suitable for scattering across a meadow floor or lining a path."
+differs = "The flattest and lowest of the set, best for a subtle ground-hugging accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 196
+meshes = 1
+materials = 1
+size = [2.256806, 1.0399489, 1.728173]
+
+[mesh.sm_env_rock_02]
+name = "SM_Env_Rock_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_02.fbx"
+sha256 = "b8bc79584a239e9fe54b147eb0bd83d4d1d5949b12c8a7db3cb53a293857cd56"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, broad, irregularly faceted boulder with a flat base and a gently domed top, rendered in a warm sandy beige with subtle shading that highlights its angular planes. Its squat, stable proportions make it ideal for ground cover or a natural stepping stone in a meadow setting."
+differs = "The most compact and squat, ideal for a stable stepping stone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 214
+meshes = 1
+materials = 1
+size = [2.442832, 1.489063, 1.9987371]
+
+[mesh.sm_env_rock_03]
+name = "SM_Env_Rock_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_03.fbx"
+sha256 = "fb412a02e584b6a9002fbf800a9e1d14512c71552f36e41600afdc3443eb8e74"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, broad, irregularly faceted boulder with a gently domed top and a flattened base, rendered in a warm, sandy beige with subtle mottling. Its chunky, angular silhouette and smooth, unblemished surface make it a versatile, natural-looking ground cover piece for meadow or forest scenes."
+differs = "The widest and most spread out, offering the broadest footprint."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 162
+meshes = 1
+materials = 1
+size = [2.858901, 2.180579, 2.375249]
+
+[mesh.sm_env_rock_04]
+name = "SM_Env_Rock_04"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_04.fbx"
+sha256 = "1c2fcec02bc8cdb9d3935f2c8068cbc2e589d7d9dfe2c87272ad27b05ed5e73f"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A chunky, low-poly boulder with a broad, squat base and a slightly flattened top, rendered in a warm beige-tan. Its faceted surface shows subtle darker shading in the crevices, giving it a dry, sun-bleached look perfect for a meadow or forest floor."
+differs = "The tallest and most detailed, with the most pronounced crevices."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 538
+meshes = 1
+materials = 1
+size = [3.286572, 3.266804, 3.48228]
+
+[mesh.sm_env_rock_05]
+name = "SM_Env_Rock_05"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_05.fbx"
+sha256 = "a73b77ad8195553ece7ce75656560e4c0b5fe5355e900ae125944bd122a6a94a"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, irregular boulder with a broad, flattened top and a chunky, angular silhouette, rendered in a warm beige with subtle darker mottling that suggests weathering. Its faceted surface and simple form make it a versatile, natural-looking ground cover piece for meadow or forest scenes."
+differs = "The longest and most irregular, with the most angular silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 572
+meshes = 1
+materials = 1
+size = [3.551996, 2.534946, 3.734353]
+
+[mesh.sm_env_rock_06]
+name = "SM_Env_Rock_06"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_06.fbx"
+sha256 = "940f2a11b055a7337e08ad14f43279b12c747e35b5c289e2687b8eea89b258ca"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A chunky, faceted boulder with a broad, slightly flattened top and a narrower base, giving it a stable, grounded look. Its surface is a warm, sandy tan with subtle darker shading that highlights the angular planes, and it shows no cracks or heavy weathering, making it a clean, versatile choice for meadow or forest..."
+differs = "The tallest and most vertical, with a narrow base for a towering presence."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 616
+meshes = 1
+materials = 1
+size = [3.240649, 4.7776613, 3.190506]
+
+[mesh.sm_env_rock_cliff_01]
+name = "SM_Env_Rock_Cliff_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Cliff_01.fbx"
+sha256 = "66dc92e57118dfdfbf39c8823f303730d7118b7fff568f8a8651b85be1937dbf"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A tall, faceted stone pillar with a slightly tapered base and a flat, uneven top, rendered in a warm beige with subtle darker striations. Its low-poly geometry gives it a chunky, angular silhouette, suggesting a weathered monolith or a natural rock spire suitable for a meadow or forest edge."
+differs = "The only tall, vertical spire; best for a lone landmark or pillar, not a ground ledge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 460
+meshes = 1
+materials = 1
+size = [4.99543, 8.121996, 5.065711]
+
+[mesh.sm_env_rock_cliff_02]
+name = "SM_Env_Rock_Cliff_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Cliff_02.fbx"
+sha256 = "6dcd6bc5e67ce94eb2963769f7197b7076ff4fabd5a4f590c89b59be81219e42"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A squat, rounded boulder with a broad, flat top and a slightly wider base, marked by deep vertical fissures that split its sides into blocky, chunky facets. Its sandy beige surface is smooth and uniform, with no visible cracks or weathering, giving it a clean, stylized look that suits a low-poly meadow setting."
+differs = "The smallest and simplest; a plain, rounded boulder with no flat top, ideal for a single scatter prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1262
+meshes = 1
+materials = 1
+size = [11.846748, 8.178359, 7.993634]
+
+[mesh.sm_env_rock_cliff_03]
+name = "SM_Env_Rock_Cliff_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Cliff_03.fbx"
+sha256 = "25d386142ad53a16df7f2a0ab60b9da9b8c47e195d6ce6ce4b5d33e3693ea462"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, broad, and blocky rock formation with a flat top and sheer, faceted sides, resembling a weathered ledge or small outcrop. Its surface is a uniform sandy beige with subtle vertical striations and a few darker recesses, giving it a clean, stylized look."
+differs = "The largest and widest; a long, low ledge with a flat top, perfect for a walkable platform or outcrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3196
+meshes = 1
+materials = 1
+size = [22.274277, 10.22667, 9.141661]
+
+[mesh.sm_env_rock_ground_01]
+name = "SM_Env_Rock_Ground_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Ground_01.fbx"
+sha256 = "aaa637f967bd1b7acde4aa5a9736d1e7185c6c7e26973f0f55e9eed074d2baa9"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, flat, roughly oval slab of pale beige stone with a pitted, uneven top surface and jagged, irregular edges, resembling a weathered stepping stone or a natural ground outcrop. Its muted sandy tones and subtle mottled texture give it a dry, sun-bleached appearance, making it ideal for scattered ground cover in a..."
+differs = "The largest and most detailed, with a pitted top and jagged edges, ideal for broad, weathered ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2219
+meshes = 1
+materials = 1
+size = [21.211308, 4.020496, 20.345388]
+
+[mesh.sm_env_rock_ground_02]
+name = "SM_Env_Rock_Ground_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Ground_02.fbx"
+sha256 = "e963ff4fac5a55e010283a7d33be8231b37011c11e8acbe841e33eab720bf161"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, flat, irregular slab of pale tan stone with a rough, faceted surface and a subtle darker patch on one side, resembling a weathered stepping stone or a natural ground outcrop."
+differs = "The smallest and plainest, with a faceted surface and a darker patch, suited for simple, low-profile stepping stones."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 392
+meshes = 1
+materials = 1
+size = [12.020752, 1.780843, 6.271289]
+
+[mesh.sm_env_rock_pile_01]
+name = "SM_Env_Rock_Pile_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Pile_01.fbx"
+sha256 = "205d93570228618d65d85a27b60f8715dadcf022f0dd0aba6d9238172d96e3fc"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, flat cluster of angular, faceted slabs in a warm sandy beige, resembling a weathered, partially buried outcrop or a collapsed cairn. The irregular silhouette features a few larger, chunky blocks resting on a wider, flatter base, with subtle shading that suggests a dry, dusty surface."
+differs = "The flattest and widest of the set, ideal for a partially buried outcrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2204
+meshes = 1
+materials = 1
+size = [13.380294, 3.3386931, 10.329046]
+
+[mesh.sm_env_rock_pile_02]
+name = "SM_Env_Rock_Pile_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Pile_02.fbx"
+sha256 = "f8de964bd21147501a8032ae03b813a176d1074f71dc9d94a1ed8526137451bc"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, wide cluster of angular, faceted boulders, with a smaller stone resting on the main mass, all in a uniform pale sandy beige with no visible weathering or moss, appearing as a clean, generic ground scatter piece."
+differs = "The plainest and most generic, with the lowest detail and no unique features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 968
+meshes = 1
+materials = 1
+size = [8.777753, 2.6000228, 7.418051]
+
+[mesh.sm_env_rock_pile_03]
+name = "SM_Env_Rock_Pile_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Pile_03.fbx"
+sha256 = "d96371a80ee9806a07c763b91db7c784e0e4d8c7b7bbea0360ad454cf59b5314"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, wide cluster of angular, faceted boulders, forming a flat-topped mound with a few smaller stones scattered at the base. The rock surfaces are a uniform pale beige with subtle, darker striations, giving it a clean, weathered look."
+differs = "The most uniform and clean, with a flat top and subtle striations."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 932
+meshes = 1
+materials = 1
+size = [6.703891, 2.4673269, 5.713936]
+
+[mesh.sm_env_rock_pile_04]
+name = "SM_Env_Rock_Pile_04"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Pile_04.fbx"
+sha256 = "f886f931c0c884831002c6726fb05f78130cae7b3059e89aae6714d2ba403baf"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, broad cluster of angular, faceted stones in a warm sandy beige, with a smaller rock attached to one side and a dark, flat patch on top suggesting a hollow or shadowed crevice. The flat, elongated profile and weathered, matte finish make it ideal for a natural ground scatter or a subtle terrain accent."
+differs = "The most elongated and low, with a distinct dark hollow on top."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 638
+meshes = 1
+materials = 1
+size = [6.154902, 1.795323, 4.63459]
+
+[mesh.sm_env_rock_pile_05]
+name = "SM_Env_Rock_Pile_05"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Pile_05.fbx"
+sha256 = "811086281431b328530b00ce5895496d92432150c6297f5fd238ed1f4ec7de12"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, broad cluster of angular, faceted boulders in a pale sandy beige, with a darker, flatter stone slab resting on top. The irregular, chunky forms suggest a weathered, natural rock formation suitable for scattered ground cover or a small landmark in a meadow setting."
+differs = "The smallest and most compact, with a darker slab resting on top."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 622
+meshes = 1
+materials = 1
+size = [4.802739, 2.931703, 3.6374369]
+
+[mesh.sm_env_rock_pile_06]
+name = "SM_Env_Rock_Pile_06"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Pile_06.fbx"
+sha256 = "5c7b9013306c3bfb0dd8d3609f94e4055c083b96aa842e8b8ac5e59943577ead"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, elongated cluster of angular boulders, with a broad, flat top and a darker, recessed underside that suggests a small shelter or overhang. The faceted surfaces are a warm, sandy beige with subtle mottling, giving it a dry, sun-bleached look."
+differs = "The only one with a recessed underside, perfect for a small shelter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1118
+meshes = 1
+materials = 1
+size = [7.91978, 3.644517, 4.624839]
+
+[mesh.sm_env_rock_pile_07]
+name = "SM_Env_Rock_Pile_07"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Pile_07.fbx"
+sha256 = "ff2290b0f84769614b8ea6df0553e62c0676c210b896e597e14620260f13eb31"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A cluster of angular, low-poly boulders in a warm beige, with a tall central spire flanked by smaller, rounded rocks. The flat-shaded facets give it a clean, stylized look, and the arrangement suggests a natural, weathered formation suitable for a meadow or forest floor."
+differs = "The tallest and most vertical, with a central spire, making it a landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1792
+meshes = 1
+materials = 1
+size = [9.92042, 7.357537, 5.887241]
+
+[mesh.sm_env_rock_round_01]
+name = "SM_Env_Rock_Round_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Round_01.fbx"
+sha256 = "435d82d263c9045e8f826b181cbd72ab83dbe403a56ed1333cd5f8c2c3393563"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, squat boulder with a broad, irregularly faceted surface and a slightly flattened base, rendered in a warm, sandy beige with subtle brown mottling. Its rounded, organic silhouette and lack of sharp edges make it a versatile, natural-looking ground cover piece for meadows or forest floors."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 182
+meshes = 1
+materials = 1
+size = [2.8667178, 2.295289, 3.139591]
+
+[mesh.sm_env_rock_small_01]
+name = "SM_Env_Rock_Small_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Small_01.fbx"
+sha256 = "7a251d100fe643d9ddec2f2b27bc621c4612691e0fe8330ea19126a029fa1196"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, broad, irregularly faceted boulder with a gently rounded top and a flattened base, rendered in a muted grey-beige stone tone. Its angular planes catch light softly, giving it a smooth, weathered appearance that suits a meadow floor or forest edge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 28
+meshes = 1
+materials = 1
+size = [0.327451, 0.25803798, 0.341881]
+
+[mesh.sm_env_rock_small_pile_01]
+name = "SM_Env_Rock_Small_Pile_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Small_Pile_01.fbx"
+sha256 = "639c778bef1a15697e8826c55c45f881cea3fbfcd464e675a7ce68a2bdfac588"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, flat scatter of rounded, light-grey stones, with a few larger boulders clustered near the centre and smaller pebbles trailing outward, giving a natural, weathered look suitable for ground cover or a subtle trail marker."
+differs = "The larger, more spread-out option with rounded stones and a wider footprint, better for covering ground or marking a trail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 168
+meshes = 1
+materials = 1
+size = [0.898849, 0.186688, 1.102262]
+
+[mesh.sm_env_rock_small_pile_02]
+name = "SM_Env_Rock_Small_Pile_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Rock_Small_Pile_02.fbx"
+sha256 = "69646bd64c7ec2d56be2cd8b1147e6b3355ba832edcf314fa8a9f0d588abf6a1"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, scattered cluster of angular, faceted stones in pale grey-beige, forming a flat, irregular mound with a few small outliers. The smooth, untextured surface gives it a clean, stylized look, ideal for a subtle ground detail in a meadow or forest clearing."
+differs = "The more compact, angular cluster with a tighter, faceted mound, ideal for a subtle, clean detail in a clearing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 168
+meshes = 1
+materials = 1
+size = [0.749488, 0.214681, 0.609939]
+
+[mesh.sm_env_skydome_01]
+name = "SM_Env_Skydome_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Skydome_01.fbx"
+sha256 = "480a1154ee48ad7503f0abd625236e39cb85c4123d846c074dda0b9488ebff4c"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "Sky.psd"
+description = "A low, wide dome with a glossy black upper surface and a textured, multi-coloured rim, resembling a stylised meadow horizon or a magical barrier. The base features a vibrant band of green, pink, and yellow, while the lower half shows a more muted, earthy pattern."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [65.88029, 26.128487, 65.880295]
+
+[mesh.sm_env_sunflower_01]
+name = "SM_Env_Sunflower_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Sunflower_01.fbx"
+sha256 = "0f1f9e6d0552aa4526a2cdca4981777e02b571341a9951a819d91d57d147c86c"
+atlas = "POLYGON - Ancient Egypt/PolygonAncientEgypt_Texture_01_C.png"
+textures = "PolygonAncientEgypt_Texture_01_C.png"
+description = "A single, tall sunflower with a slender green stem and a ring of pointed, alternating leaves, topped by a large, textured brown and orange bloom with a dark centre. The plant is rendered with a flat, stylised look, and the flower head is slightly tilted, giving it a natural, growing appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2802
+meshes = 3
+materials = 2
+size = [0.792754, 1.648257, 0.800667]
+
+[mesh.sm_env_tree_birch_01]
+name = "SM_Env_Tree_Birch_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Tree_Birch_01.fbx"
+sha256 = "3423534b45d0be5ef5b58ea3015f6beb848ed3ad7612885e6b1f642c6f81e23c"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A tall, slender trunk rises from a flared base, its bark a mottled mix of grey, brown, and pale patches. A dense, irregular cluster of dark, knotted foliage clings to the upper half, giving it a gnarled, weathered appearance. The overall look is that of a sturdy, ancient tree suited for a dense forest floor."
+differs = "The tallest and most detailed, with the densest canopy, ideal as a dominant forest centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 19776
+meshes = 7
+materials = 1
+size = [5.0706224, 10.563714, 5.233508]
+
+[mesh.sm_env_tree_birch_02]
+name = "SM_Env_Tree_Birch_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Tree_Birch_02.fbx"
+sha256 = "ae11f23bb7d43033a28a43b99c4cfd700657cc42edfa092fe8db7cbe13abb299"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A tall, slender trunk with pale, peeling bark and dark, knotted burls, topped by a dense, irregular canopy of dark green and brown foliage. The trunk is split into two vertical planes, giving it a stylised, low-poly look with a slightly weathered, aged appearance."
+differs = "The mid-sized option, with a split trunk and balanced foliage, best for filling mid-ground forest layers."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20237
+meshes = 6
+materials = 1
+size = [5.4975634, 9.862807, 5.1027]
+
+[mesh.sm_env_tree_birch_03]
+name = "SM_Env_Tree_Birch_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Tree_Birch_03.fbx"
+sha256 = "679e0c61a6e4c6a12765dd08cd7c79c8e259d7262b7ef81bfdb4a1b4ced493a6"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A slender, weathered birch trunk with a distinctively pale, peeling bark marked by dark horizontal scars, rising from a small, rocky base. The upper section is broken and hollowed out, revealing a dark, textured interior that suggests decay or a natural shelter."
+differs = "The smallest and most damaged, with a broken hollow top, perfect for a decayed or sheltering prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5049
+meshes = 6
+materials = 1
+size = [3.049758, 5.234669, 2.3654099]
+
+[mesh.sm_env_tree_fruit_01]
+name = "SM_Env_Tree_Fruit_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Tree_Fruit_01.fbx"
+sha256 = "b836dfd2f0793a723ebcb6f352a4ccf55447dfc0939a90205b4bc5a6b4861df5"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A squat, broad tree with a thick, short trunk and a dense, rounded canopy of dark, mottled foliage, punctuated by small, pale fruit clusters. The bark is a muted grey-brown, and the overall silhouette is compact and sturdy, suggesting a mature, fruit-bearing tree suited for a forest floor setting."
+differs = "Largest and most detailed with visible fruit clusters, ideal as a hero fruit tree."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 11576
+meshes = 3
+materials = 1
+size = [5.309347, 6.151678, 5.2710533]
+
+[mesh.sm_env_tree_fruit_01_fruit_01]
+name = "SM_Env_Tree_Fruit_01_Fruit_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Tree_Fruit_01_Fruit_01.fbx"
+sha256 = "8ec314d39dfb11df02e1e27f152184a85016211ab0080a03fef60e7b644cb65c"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low-poly fruit cluster, appearing as a small, rounded mass of tiny spheres in muted red and green, attached to a short, dark stem. The fruit is tightly packed and slightly irregular, suggesting a bunch of berries or small apples ready for harvest."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 870
+meshes = 1
+materials = 1
+size = [4.558156, 2.5158668, 4.48798]
+
+[mesh.sm_env_tree_fruit_02]
+name = "SM_Env_Tree_Fruit_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Tree_Fruit_02.fbx"
+sha256 = "204639a69d8345cd9787d3bca10fc83aaa101265cff37f58d572436fc21541a2"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A stout, rounded tree with a dense, dark canopy of jagged, low-poly foliage, supported by a short, thick trunk. The leaves are a deep, shadowed green with brown undertones, and the bark is a muted grey-brown."
+differs = "Mid-sized, plainest, and least distinct, best as a generic filler tree."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 9808
+meshes = 3
+materials = 1
+size = [4.646414, 5.756581, 4.699073]
+
+[mesh.sm_env_tree_fruit_03]
+name = "SM_Env_Tree_Fruit_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Tree_Fruit_03.fbx"
+sha256 = "e744b31aab35abe7e5dca98b90b6b30e38c6141c6e306251d5344b2b1f51f859"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A gnarled, dark-barked tree with a dense, irregular canopy of blackened foliage, supported by a cross-shaped trunk base that suggests a stylized, low-poly construction. The muted, earthy tones and weathered texture give it a rugged, ancient appearance, making it ideal for a shadowy or mystical forest setting."
+differs = "Smallest with a cross-shaped trunk, best for mystical or shadowy settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 9447
+meshes = 3
+materials = 1
+size = [3.957383, 4.663043, 4.300685]
+
+[mesh.sm_env_tree_meadow_01]
+name = "SM_Env_Tree_Meadow_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Tree_Meadow_01.fbx"
+sha256 = "dc9daf313558bf176427087a413ea5218cd39c75cd54a92569a49563364a3916"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A gnarled, low-poly tree with a thick, twisted trunk and a dense, irregular canopy of dark, jagged foliage, rendered in muted browns and deep greens. The bark is heavily textured with angular facets, giving it a weathered, ancient appearance, while the broad, blocky silhouette suggests a sturdy, mature meadow tree."
+differs = "The largest and most detailed asset, with a taller, twisted trunk and denser canopy, ideal as a hero tree or focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 44552
+meshes = 7
+materials = 1
+size = [17.200386, 15.175901, 17.87452]
+
+[mesh.sm_env_tree_meadow_02]
+name = "SM_Env_Tree_Meadow_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Tree_Meadow_02.fbx"
+sha256 = "ba211ab9f989705f5dafcc864afd5008529fd7b24ecd1ce6f5992d0a2213c02d"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A stout, broad-trunked meadow tree with a dense, rounded canopy of dark olive and brownish foliage, supported by a short, thick trunk that flares into a wide, gnarled root base. The bark is deeply textured and rugged, giving it a weathered, ancient appearance, while the leaves are clumped in irregular, organic masses.."
+differs = "The smaller, stouter variant with a broader root base, better suited for filling mid-ground clusters or as a secondary tree."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 21846
+meshes = 7
+materials = 1
+size = [8.993771, 8.9418745, 10.13505]
+
+[mesh.sm_env_water_plane_01]
+name = "SM_Env_Water_Plane_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Water_Plane_01.fbx"
+sha256 = "c9672352c9ef99da1e83bb46c6a30d6b99b6ea4a6071a5166c4a82825adeb46f"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A flat, rectangular sheet of water with a subtle, low-poly ripple, featuring a dark, murky base with vibrant, iridescent rainbow reflections and patches of bright orange, suggesting a shallow, sunlit pond or stream with algae or sediment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 400
+meshes = 1
+materials = 1
+size = [5.0, 0.100891, 10.0]
+
+[mesh.sm_env_wildflowers_01]
+name = "SM_Env_Wildflowers_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Wildflowers_01.fbx"
+sha256 = "01bfabe745238af5fd2beb72d9361d162a247b79656215e3c37cb3e0bbad82d1"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A cluster of three slender, upright stems bearing broad, rounded green leaves, with a few small white flower buds at the tips. The foliage is a fresh, vibrant green with subtle texture, and the plants appear healthy and well-formed, ideal for adding natural detail to a meadow or forest floor."
+differs = "The only one with white buds, not brown seed heads, and the smallest, best for fresh spring meadows."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2738
+meshes = 3
+materials = 2
+size = [0.741056, 0.70281404, 0.685053]
+
+[mesh.sm_env_wildflowers_02]
+name = "SM_Env_Wildflowers_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Wildflowers_02.fbx"
+sha256 = "e0d84bae40ebfd77c54acfd76fa869603036bfb6c19394b3e51e5a5eced98831"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A small cluster of slender green stems, each topped with a distinct rounded bud or seed head, rising from a low base of jagged leaves. The foliage is a fresh, bright green with darker shading, giving the plant a healthy, natural look."
+differs = "The plainest, with no flowers or buds at all, just green stems and leaves, for generic ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3231
+meshes = 3
+materials = 2
+size = [0.789763, 0.70281404, 0.72035396]
+
+[mesh.sm_env_wildflowers_03]
+name = "SM_Env_Wildflowers_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Wildflowers_03.fbx"
+sha256 = "8ffa5df2eba62b2b44bc87bb2de490ef3feb4d3718b11bd77642ad39a40ebe39"
+atlas = "POLYGON - Ancient Egypt/PolygonAncientEgypt_Texture_01_C.png"
+textures = "PolygonAncientEgypt_Texture_01_C.png"
+description = "A cluster of three dried, brownish wildflowers with thin green stems and sparse leaves, each topped by a rounded seed head, rising from a small patch of pale, sandy ground. The flowers appear wilted and brittle, with a muted, earthy palette that suggests an autumn or dry meadow setting."
+differs = "The only dried, brownish one with a sandy base, the most damaged, for autumn or dry settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4382
+meshes = 3
+materials = 2
+size = [0.790832, 0.70281404, 0.742635]
+
+[mesh.sm_env_wildflowers_patch_01]
+name = "SM_Env_Wildflowers_Patch_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Wildflowers_Patch_01.fbx"
+sha256 = "8995c27059d3316e4475b07d1c92567306ba340546b83edd84d07f8d88f16d13"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, irregular mound of dense, scattered green foliage, forming a wide oval patch of small leafy sprigs and stems. The texture is a mottled mix of light and dark greens, giving it a natural, slightly unkempt appearance. It reads as a ground-cover cluster for adding organic detail to meadow floors."
+differs = "The only purely green patch with no flowers, ideal for adding foliage texture without color."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 135100
+meshes = 2
+materials = 2
+size = [17.801702, 0.70281595, 18.518993]
+
+[mesh.sm_env_wildflowers_patch_02]
+name = "SM_Env_Wildflowers_Patch_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Wildflowers_Patch_02.fbx"
+sha256 = "e3eff56cb19b0c8d1a9ccc25e9974d9c5d4c3ae0f028cc1a260293226b8fafba"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A low, wide, irregular mound of clustered green stems and tiny white and pink blossoms, forming a dense patch of wildflowers with a soft, rounded silhouette. The foliage is a mix of muted greens, with the flowers scattered throughout to create a natural, speckled texture."
+differs = "The only patch with white and pink blossoms, adding a soft, speckled floral accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 178374
+meshes = 2
+materials = 2
+size = [17.805593, 0.70281595, 18.726273]
+
+[mesh.sm_env_wildflowers_patch_03]
+name = "SM_Env_Wildflowers_Patch_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Env_Wildflowers_Patch_03.fbx"
+sha256 = "1202df234eafaf35cc3795bb87e334269d59ae30a0da6fa67089d634ec8ea0d8"
+atlas = "POLYGON - Ancient Egypt/PolygonAncientEgypt_Texture_01_C.png"
+textures = "PolygonAncientEgypt_Texture_01_C.png"
+description = "A low, wide, roughly oval patch of dense, small wildflowers in muted browns and tans, forming a flat, irregular cluster that reads as a natural ground cover. The flowers are tightly packed with no visible stems or leaves, giving it a uniform, textured surface."
+differs = "The only patch with muted brown and tan flowers, offering a dry, uniform ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 211338
+meshes = 2
+materials = 2
+size = [18.386822, 0.70281595, 18.604984]
+
+[mesh.sm_prop_birdhouse_01]
+name = "SM_Prop_Birdhouse_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Birdhouse_01.fbx"
+sha256 = "fcf1a7dd7a82cbafb1cfdc74b8b4cf838ee97ab119edac5f9fb222e67e09b5ff"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A stout, hexagonal wooden birdhouse with a faceted, conical roof and a grey metal hanging loop. The pale, weathered timber planks show subtle grain, and a small, dark circular entrance hole sits on one face, giving it a rustic, functional look perfect for a meadow setting."
+differs = "Hangs from a loop, no pole, and is the only one with a hexagonal shape and conical roof."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 615
+meshes = 1
+materials = 1
+size = [0.615596, 0.855044, 0.615596]
+
+[mesh.sm_prop_birdhouse_02]
+name = "SM_Prop_Birdhouse_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Birdhouse_02.fbx"
+sha256 = "d380dfe916b1196ff364485d96c1dbf76b8e1107d13ad7882545915d77263cd2"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A small, weathered wooden birdhouse on a tall pole, featuring a steep gabled roof with visible planks and a tiny front porch. The warm brown wood shows a rustic, hand-built charm, with a dark circular entrance hole and a simple, sturdy design suited for a meadow setting."
+differs = "Mounted on a tall pole, has a gabled roof and porch, and is the tallest and most elongated asset."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 522
+meshes = 1
+materials = 1
+size = [0.526176, 1.334676, 0.728479]
+
+[mesh.sm_prop_bridge_01]
+name = "SM_Prop_Bridge_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Bridge_01.fbx"
+sha256 = "1e8cb8470bddc16b70d6fa2ef19490bff50f4298c5e0fab7e9d0ca153ae302fd"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A gently arched footbridge of weathered timber, with a slatted plank deck and low side rails, supported by four pairs of sturdy posts. The wood is a pale, sun-bleached brown with subtle grain, giving it a rustic, well-used appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1904
+meshes = 1
+materials = 1
+size = [3.114481, 6.561296, 10.000002]
+
+[mesh.sm_prop_camp_bucket_01]
+name = "SM_Prop_Camp_Bucket_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Camp_Bucket_01.fbx"
+sha256 = "78f4638b79b574e245877f343e320f4313d132dd2a18f9f0de2ba18ccfd661da"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, wide, octagonal tub with a thick, flared rim and a flat, dark interior, rendered in a uniform matte grey. Its faceted sides and simple, sturdy form suggest a utilitarian vessel for carrying or holding materials, with no visible wear or decoration."
+differs = "The largest and widest, with a plain matte finish and no rust, suited for holding bulk materials."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 158
+meshes = 1
+materials = 1
+size = [0.534448, 0.203804, 0.538111]
+
+[mesh.sm_prop_camp_bucket_02]
+name = "SM_Prop_Camp_Bucket_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Camp_Bucket_02.fbx"
+sha256 = "2f5e3982bbd79f51f184456bb42499a3d94762a4e28bf5aa85e3abfb2127cb10"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A stout, faceted octagonal pail with a flared rim and a flat base, rendered in weathered grey metal with a subtle rust-brown stain near the bottom edge. Its open top reveals a dark, hollow interior, suggesting a simple, functional container for camp use."
+differs = "The smaller, more detailed pail with rust staining, suited for carrying water or supplies."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 140
+meshes = 1
+materials = 1
+size = [0.28986, 0.204109, 0.291848]
+
+[mesh.sm_prop_camp_can_01]
+name = "SM_Prop_Camp_Can_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Camp_Can_01.fbx"
+sha256 = "c3efe837f9cc7648eb8f40248e5504b21e5b3650e33df85708b6500fa4d8d64f"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A squat, faceted cylinder with a flat, slightly recessed lid, rendered in a single matte grey tone. The low-poly silhouette is clean and uniform, with a subtle darker patch near the base suggesting wear or dirt. Its simple, unadorned form makes it a versatile, generic container for any camp or industrial scene."
+differs = "The smallest and plainest, sealed and intact, ideal for storing supplies rather than waste."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 146
+meshes = 1
+materials = 1
+size = [0.156647, 0.200666, 0.156642]
+
+[mesh.sm_prop_camp_can_02]
+name = "SM_Prop_Camp_Can_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Camp_Can_02.fbx"
+sha256 = "b18d173d15613b8df14d7583a3febd8ee6a4ede67d4bac21d56549f7ac0b6512"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A stout, open-topped cylindrical can with a faceted, low-poly surface in flat grey, featuring a hinged lid that is flipped open and rests at an angle on the rim, suggesting a discarded or empty container."
+differs = "The largest and most detailed, with an open hinged lid, perfect for holding trash or discarded items."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 184
+meshes = 1
+materials = 1
+size = [0.24980101, 0.242636, 0.156642]
+
+[mesh.sm_prop_camp_crate_01]
+name = "SM_Prop_Camp_Crate_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Camp_Crate_01.fbx"
+sha256 = "72dcf1b86870c9e64d76246de4d3af0aa934d64545d26ff80c0c01e6c19c1d8f"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A weathered wooden shipping crate with a slatted top and diagonal cross-braces on its sides, rendered in muted grey-brown tones with visible grain and wear, suggesting a sturdy, functional container for transporting goods in a rustic setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 568
+meshes = 1
+materials = 1
+size = [0.545204, 0.540098, 0.800126]
+
+[mesh.sm_prop_camp_fire_tripod_01]
+name = "SM_Prop_Camp_Fire_Tripod_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Camp_Fire_Tripod_01.fbx"
+sha256 = "776b8678e9000cfad37611c22286cb05ea4d8f5869bcbfd7e69f93b4509a8231"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A tall, slender tripod of dark wooden poles supports a small, blackened cooking pot suspended by a hook, with a simple metal ring at the apex. The pot's surface is charred and weathered, suggesting heavy use over a fire, while the wood is rough and unpolished."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 540
+meshes = 1
+materials = 1
+size = [1.092865, 1.669422, 0.99978304]
+
+[mesh.sm_prop_camp_fireplace_01]
+name = "SM_Prop_Camp_Fireplace_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Camp_Fireplace_01.fbx"
+sha256 = "84ffdb358858763edfb51488db219ec285dd45aaa262bee8ac99f05f11fb6807"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, irregular mound of dark earth supports a loose pile of pale, angular logs, some with lighter cut ends, arranged in a rough teepee shape. The wood appears weathered and unlit, with no visible flames or charring, suggesting a prepared but dormant fire pit."
+differs = "Unlit, pale wood on dark earth, for a dormant or prepared campfire scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 326
+meshes = 1
+materials = 1
+size = [0.838207, 0.37967998, 0.797062]
+
+[mesh.sm_prop_camp_fireplace_02]
+name = "SM_Prop_Camp_Fireplace_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Camp_Fireplace_02.fbx"
+sha256 = "e23cbfd89b0f0272e37a076be33af77073edae7099300d34e07d3407d0f558c5"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, roughly circular mound of pale grey ash and stone forms the base, supporting a loose, irregular pile of dark grey, charred logs. The logs are angular and blocky, with some pieces leaning against each other to create a hollow centre, while others lie flat or jut out at angles."
+differs = "Charred, dark logs on pale ash, for an extinguished or burnt-out fire pit."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 326
+meshes = 1
+materials = 1
+size = [0.838207, 0.37967998, 0.79706204]
+
+[mesh.sm_prop_camp_fireplace_stones_01]
+name = "SM_Prop_Camp_Fireplace_Stones_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Camp_Fireplace_Stones_01.fbx"
+sha256 = "822db3066322b188b63dd1915e92d44115885ccb320619c964ff786a0ab36849"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, irregular ring of roughly a dozen grey stones, forming a circular fire pit with a flat, open centre. The rocks are faceted and uneven, with subtle mottled grey-brown textures suggesting weathered stone. It reads as a simple, functional campfire base ready for logs or flames."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 336
+meshes = 1
+materials = 1
+size = [1.187624, 0.22488499, 1.165603]
+
+[mesh.sm_prop_camp_pouch_01]
+name = "SM_Prop_Camp_Pouch_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Camp_Pouch_01.fbx"
+sha256 = "a8cc50cb96f2187f64562cae0c97846519bcbcc1a501cd3ab310c981722885d4"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A squat, faceted vessel with a wide, bulbous base that tapers to a narrow, flared neck, rendered in a plain, untextured light grey. Its low-poly geometry gives it a chunky, hand-carved appearance, and the open top suggests it is designed to hold small items or liquid."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 1
+size = [0.221414, 0.274525, 0.230042]
+
+[mesh.sm_prop_camp_tanning_rack_01]
+name = "SM_Prop_Camp_Tanning_Rack_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Camp_Tanning_Rack_01.fbx"
+sha256 = "74c7ff9117f004497bb533d9683fba2e1b6c2495003c2278170829e644a7c7bd"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A rustic A-frame of lashed, pale wooden poles supports a draped, irregularly torn hide in a light tan, suggesting a camp tanning or drying rack. The hide hangs with natural folds and a slightly weathered, organic texture, while the simple lashings and rough-hewn timber give it a sturdy, handcrafted survivalist feel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1158
+meshes = 1
+materials = 1
+size = [1.98765, 1.931515, 1.071454]
+
+[mesh.sm_prop_camp_tent_01]
+name = "SM_Prop_Camp_Tent_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Camp_Tent_01.fbx"
+sha256 = "a37a5762bacce157ff7843cd1ef857f0138fba7292558c6d016b7328bda0cb6f"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, wide A-frame canvas shelter with a sagging, slightly wrinkled roof, supported by thin dark poles and secured with visible guy lines. The fabric is a warm, weathered tan with subtle shading that suggests a worn, natural material, giving it a rustic and functional appearance suited for a forest campsite."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 722
+meshes = 1
+materials = 1
+size = [1.999642, 1.52096, 2.677888]
+
+[mesh.sm_prop_gate_small_01]
+name = "SM_Prop_Gate_Small_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Gate_Small_01.fbx"
+sha256 = "dfef877e79939fac97b4afb68962676737a0d9e5597e5482110fc9b2cde293c4"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, arched wooden gate with a five-bar lattice design, flanked by two sturdy square posts. The pale, weathered timber is accented with dark metal hinges and a latch, giving it a rustic, well-used appearance suitable for enclosing a meadow or forest path."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 540
+meshes = 2
+materials = 1
+size = [1.515406, 1.298288, 0.195865]
+
+[mesh.sm_prop_handcart_01]
+name = "SM_Prop_HandCart_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_HandCart_01.fbx"
+sha256 = "251c2f13ae8f0c64831f2f05edb4f5e03538235949799219ac7353357a0f028b"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered wooden handcart with two spoked wheels, a slatted open bed, and long curved shafts for pulling. The pale, grey-brown timber shows visible grain and wear, giving it a rustic, well-used look perfect for a farm or village setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2670
+meshes = 3
+materials = 1
+size = [1.87956, 1.50647, 2.750541]
+
+[mesh.sm_prop_horsehitch_01]
+name = "SM_Prop_HorseHitch_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_HorseHitch_01.fbx"
+sha256 = "a83978e1b7a2fbe481549b950c492013302762238ef40e3b03a51a033c024f98"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered wooden rail fence segment with two vertical posts and a single diagonal crossbeam, joined by chunky, rounded knots. The pale, grey-brown timber shows visible grain and wear, suggesting a rustic, low-poly meadow boundary."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 590
+meshes = 1
+materials = 1
+size = [2.528062, 1.20178, 0.226652]
+
+[mesh.sm_prop_kite_01]
+name = "SM_Prop_Kite_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Kite_01.fbx"
+sha256 = "16bb0a2c113792b01be32c4251710989c41a2e001a799cd5874823e3d29a47d3"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A slender, diamond-shaped kite with a red-orange tail and a thin, pale string, rendered in a flat, low-poly style with a muted, weathered red-orange fabric and a simple wooden frame."
+differs = "Lightest at 194 tris and thinnest at 0.12 units, the plainest red-orange option for a distant, minimal silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 194
+meshes = 1
+materials = 1
+size = [0.82273, 15.432604, 0.124654]
+
+[mesh.sm_prop_kite_02]
+name = "SM_Prop_Kite_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Kite_02.fbx"
+sha256 = "8fb1bbf940c04e9a907139ea955040f1ebc820bdeb70eec96209445636b87577"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A slender, diamond-shaped kite with a pale blue and white patchwork pattern, suspended from a long, thin string. The tail is a single, straight line that extends far below the body, ending in a small, blue bow. The design is simple and clean, ideal for a distant background element in a meadow scene."
+differs = "Most detailed with 830 tris and a blue patchwork pattern, the only one with a bow-tipped tail for a distinct background accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 830
+meshes = 1
+materials = 1
+size = [1.448754, 16.419079, 0.949893]
+
+[mesh.sm_prop_kite_03]
+name = "SM_Prop_Kite_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Kite_03.fbx"
+sha256 = "8da5e65b5d34856e6cec1da9191be7ee34271c6878b9ae2796951c17bbd35f89"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A slender, diamond-shaped kite with a long, thin tail, rendered in a warm orange-red hue with a subtle, weathered texture. The simple, flat design and muted colouring give it a rustic, handcrafted appearance, ideal for adding a touch of quiet detail to a meadow scene."
+differs = "Widest at 2.47 units and most weathered, the rustic orange-red choice for a handcrafted, foreground meadow prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 754
+meshes = 1
+materials = 1
+size = [2.467688, 15.237427, 1.116236]
+
+[mesh.sm_prop_leaves_branch_01]
+name = "SM_Prop_Leaves_Branch_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Leaves_Branch_01.fbx"
+sha256 = "d26b6b1839777578600339a0f635cbaa5549161eb2385e533ed5ba815947ea56"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A slender, weathered grey-brown branch with a gentle curve, featuring a few short, bare offshoots and a small cluster of pale orange leaves clinging near the thicker end. The bark is textured with subtle mottling, giving it a dry, natural look suitable for forest floor scatter or ground detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 204
+meshes = 1
+materials = 1
+size = [0.397627, 0.186289, 1.425264]
+
+[mesh.sm_prop_leaves_pile_01]
+name = "SM_Prop_Leaves_Pile_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Leaves_Pile_01.fbx"
+sha256 = "6866b1b9577b0c0dd9333fc475a35837ca5dac999bde66f8b1b31876e49607c4"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, flat, roughly oval scatter of individual leaves, mostly dry brown and tan with a few pale yellow accents, forming a loose, natural-looking pile with irregular edges and visible gaps between the foliage."
+differs = "The largest and most elongated scatter, with pale yellow accents but no twigs, best for wide, open ground coverage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 355
+meshes = 1
+materials = 1
+size = [1.9358499, 0.124558, 2.766846]
+
+[mesh.sm_prop_leaves_pile_02]
+name = "SM_Prop_Leaves_Pile_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Leaves_Pile_02.fbx"
+sha256 = "d325b92b172df5eb9cf6f949791f52c3f15c4f68f15fea89ebb603242d249275"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, flat, irregular scatter of dry, fallen leaves in muted autumn browns and ochres, with a few thin twigs mixed in. The pile is sparse and naturalistic, with individual leaves clearly separated rather than a dense mound, making it ideal for adding subtle ground detail to forest floors."
+differs = "The smaller, denser option with mixed-in twigs, ideal for tight, naturalistic detail in corners or under trees."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 285
+meshes = 1
+materials = 1
+size = [1.506849, 0.104027, 1.243083]
+
+[mesh.sm_prop_meadow_fence_01]
+name = "SM_Prop_Meadow_Fence_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_01.fbx"
+sha256 = "3fdd712221e15dcaaffd74a460a4a68dd55fe24a8e6b37ca1d44dfbe5b0163ff"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A single square post anchors three weathered, pale-brown rails that taper to rough points, forming a simple, rustic barrier. The wood is textured with visible grain and dark knots, giving it a sun-bleached, aged appearance suitable for marking boundaries in a meadow setting."
+differs = "The longest single-post segment, with pointed rail tips for a sharper, more aggressive boundary look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 238
+meshes = 1
+materials = 1
+size = [2.592874, 1.5747321, 0.185362]
+
+[mesh.sm_prop_meadow_fence_02]
+name = "SM_Prop_Meadow_Fence_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_02.fbx"
+sha256 = "19ef0a2570b1ea82fa3136b14d9f6f40af7464bb15b92eb8c55a07b41929e20d"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A single weathered post with three horizontal rails extending to one side, forming a simple fence segment. The wood is pale grey-brown with a rough, textured surface, suggesting age and exposure to the elements."
+differs = "The shortest and plainest single-post segment, with no pointed tips or sagging, for a clean, basic fence."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 202
+meshes = 1
+materials = 1
+size = [1.356709, 1.518881, 0.20344001]
+
+[mesh.sm_prop_meadow_fence_03]
+name = "SM_Prop_Meadow_Fence_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_03.fbx"
+sha256 = "c29c0e610f947f8735bab310e011db0279e8e819545f7f90c656fc18fd2ee732"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A short, weathered wooden fence section with three horizontal rails and two square posts, showing a slightly sagging middle rail and a grey-brown, sun-bleached finish that suggests age and exposure to the elements."
+differs = "The longest two-post section, with a distinct sagging middle rail for a more aged, drooping look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 308
+meshes = 1
+materials = 1
+size = [2.681529, 1.523037, 0.205604]
+
+[mesh.sm_prop_meadow_fence_04]
+name = "SM_Prop_Meadow_Fence_04"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_04.fbx"
+sha256 = "cd169b71ecf2266d3d0dfb229f426eaa8dcf6542e25c0e746c7f7706ff64dc8e"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A short, weathered wooden fence segment with two square posts and three slightly uneven horizontal rails, rendered in muted grey-brown tones with subtle grain and mossy hints, suggesting a rustic, aged boundary for a meadow or forest clearing."
+differs = "The shortest two-post section, with subtle mossy hints for a slightly more overgrown appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 276
+meshes = 1
+materials = 1
+size = [1.457718, 1.518881, 0.20627901]
+
+[mesh.sm_prop_meadow_fence_05]
+name = "SM_Prop_Meadow_Fence_05"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_05.fbx"
+sha256 = "ec62ef9b0446b02aea50f0f3fa63f1836a5879ec0d78b4efb289bb75e1c9bde6"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A short, rustic section of split-rail fencing, consisting of a single upright post with two weathered, slightly irregular horizontal rails that cross diagonally to form a simple X shape. The pale, grey-brown wood has a rough, hand-hewn texture with subtle grain and darker knots, giving it a natural, aged appearance."
+differs = "The only segment with a diagonal X-cross rail pattern, offering a rustic, hand-hewn style."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 244
+meshes = 1
+materials = 1
+size = [2.524717, 1.506112, 0.403673]
+
+[mesh.sm_prop_meadow_fence_06]
+name = "SM_Prop_Meadow_Fence_06"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_06.fbx"
+sha256 = "419fc158fe3b59a6cec3d7efad72f5e2fc6d38fa9024bd8d860d5858b75c2a89"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A single weathered post anchors two long, slender rails that angle sharply downward, forming a broken or collapsed section of rustic fencing. The pale, grey-brown wood shows subtle grain and wear, suggesting an old, neglected boundary in a meadow setting."
+differs = "The only segment with sharply angled, collapsed rails, perfect for a broken or neglected fence."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 242
+meshes = 1
+materials = 1
+size = [2.5379338, 1.537393, 0.46485]
+
+[mesh.sm_prop_meadow_fence_07]
+name = "SM_Prop_Meadow_Fence_07"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_07.fbx"
+sha256 = "0927a81ba82116fe6d1d238723aa9bdd218e9c0b03e279cbea82b2f39362ee63"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A weathered wooden gate section with two upright posts and a diagonal brace, rendered in muted grey-brown tones with a rough, splintered texture. The structure is broken and leaning, with one rail detached and hanging, giving it a dilapidated, abandoned look suitable for ruined or overgrown environments."
+differs = "The only gate structure, with a diagonal brace and a detached hanging rail for a dilapidated, abandoned look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 312
+meshes = 1
+materials = 1
+size = [2.659845, 1.510307, 0.919471]
+
+[mesh.sm_prop_meadow_fence_gate_01]
+name = "SM_Prop_Meadow_Fence_Gate_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_Gate_01.fbx"
+sha256 = "df24ab2be1faf0ca60ab9244362c18f3589e892e9c9a1aca65c51dd0c01d16f4"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, wide wooden gate with a rectangular frame, two vertical mid-rails, and a diagonal cross-brace, finished in weathered grey-brown planks with visible grain and a slightly rustic, worn appearance suitable for enclosing a meadow or pasture."
+differs = "The widest and most detailed option, with a full rectangular frame and two mid-rails, best for a broad, sturdy pasture entrance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 590
+meshes = 1
+materials = 1
+size = [2.273247, 1.279085, 0.160875]
+
+[mesh.sm_prop_meadow_fence_gate_02]
+name = "SM_Prop_Meadow_Fence_Gate_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_Gate_02.fbx"
+sha256 = "88de574d3d3be041f325ad38dd8c07cab825fb9d55cabfd9967a653035606008"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A rustic wooden gate with two sturdy posts, a top rail, and a diagonal cross-brace, finished in weathered grey-brown timber. The simple, low-poly construction and open design make it ideal for marking a meadow boundary or path entrance."
+differs = "The smallest and plainest, with a simpler open frame and fewer rails, ideal for a narrow path or simple boundary marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 329
+meshes = 1
+materials = 1
+size = [1.01094, 1.208577, 0.160876]
+
+[mesh.sm_prop_meadow_fence_gate_set_01]
+name = "SM_Prop_Meadow_Fence_Gate_Set_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_Gate_Set_01.fbx"
+sha256 = "6da80973f11846a2e8c332e34685d90c1ef5ecdc0e797d7b7756c19b3a1997b0"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A rustic wooden gate with a diagonal cross-brace, flanked by two sturdy square posts, rendered in weathered grey-brown timber with visible grain and subtle mossy green accents, suggesting a functional, well-used barrier for a meadow or forest path."
+differs = "The wider, more detailed gate with mossy accents, best for larger meadow or forest path openings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 888
+meshes = 3
+materials = 1
+size = [2.6893609, 1.541987, 0.240458]
+
+[mesh.sm_prop_meadow_fence_gate_set_02]
+name = "SM_Prop_Meadow_Fence_Gate_Set_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_Gate_Set_02.fbx"
+sha256 = "0bbda18c337283c2621c5799b18ca8268e45e74a358cad0edb7ed9b0841f3aca"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A weathered wooden gate with two sturdy posts, a diagonal cross-brace, and a simple latch, rendered in muted grey-brown tones with a rough, rustic finish."
+differs = "The narrower, plainer gate with a latch, ideal for tighter, simpler rustic passages."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 627
+meshes = 3
+materials = 1
+size = [1.440522, 1.541987, 0.243491]
+
+[mesh.sm_prop_meadow_fence_post_01]
+name = "SM_Prop_Meadow_Fence_Post_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_Post_01.fbx"
+sha256 = "798de38a63d81d383d301d8a36058a35fa2ea15674d47e7860f1fb063bcdab53"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A slender, weathered wooden post with a subtly tapered, pointed top, showing a pale grey-brown grain and a darker, damp-looking base that suggests ground contact. Its simple, low-poly form makes it ideal for lining paths or marking boundaries in a meadow setting."
+differs = "The plainest and smallest, with no notches or hardware; best for simple boundary marking."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 74
+meshes = 1
+materials = 1
+size = [0.205603, 1.510307, 0.198793]
+
+[mesh.sm_prop_meadow_fence_post_02]
+name = "SM_Prop_Meadow_Fence_Post_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_Post_02.fbx"
+sha256 = "2b441c1c9cc0c61a62186f98c700fcab7af7789223a9cc6534690cf9f3c80494"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A slender, weathered wooden post with a squared, slightly tapered top, featuring two dark, rectangular notches on one face for rail attachment. The pale, grey-brown timber shows subtle grain and a darker, mossy stain near the base, suggesting a rustic, aged fence support."
+differs = "The only one with rail notches, making it the sole choice for attaching horizontal rails."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 132
+meshes = 1
+materials = 1
+size = [0.23162001, 1.5122739, 0.190183]
+
+[mesh.sm_prop_meadow_fence_post_03]
+name = "SM_Prop_Meadow_Fence_Post_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_Post_03.fbx"
+sha256 = "ce41a48d622f46e98300ad0c2dddeadf97f15f734f22fc2ce1792c89fcaa0e7a"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A slender, weathered wooden post with a slightly tapered top, featuring a small metal ring and a short chain looped through it near the head. The pale, grey-brown wood shows vertical grain and dark, worn patches near the base, suggesting age and exposure to the elements."
+differs = "The largest and most detailed, with a metal ring and chain; ideal for tethering or decorative accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 166
+meshes = 2
+materials = 1
+size = [0.341234, 1.541987, 0.24349]
+
+[mesh.sm_prop_meadow_fence_railing_01]
+name = "SM_Prop_Meadow_Fence_Railing_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Meadow_Fence_Railing_01.fbx"
+sha256 = "3dfc2133fa3646013ee4ff48aa6f1d48c03bc1427b17c1d05872929526a0928c"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A slender, weathered wooden rail, slightly bowed and tapering, with a pale, grey-brown finish and a small knot visible near one end, suggesting a rustic, hand-hewn piece for fencing or barriers."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 46
+meshes = 1
+materials = 1
+size = [2.375998, 0.135938, 0.124230996]
+
+[mesh.sm_prop_mushroom_01]
+name = "SM_Prop_Mushroom_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_01.fbx"
+sha256 = "0ae346101fcb6dfe6bd99033210bb52a29cf296478b03a48c2abe3b247079b63"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A slender, pale blue mushroom with a faceted, low-poly cap and a thin, slightly wavy stem, appearing smooth and clean, ideal for adding a cool-toned, whimsical accent to a meadow scene."
+differs = "The only blue mushroom, and the tallest and thinnest of the set, for cool-toned accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 70
+meshes = 1
+materials = 1
+size = [0.066234, 0.26852, 0.057758]
+
+[mesh.sm_prop_mushroom_02]
+name = "SM_Prop_Mushroom_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_02.fbx"
+sha256 = "b5e2c5e27c17e2cc1e80e9cd2b95ad5f6cafb73393039a44a57b0d4b337b621b"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A squat, low-poly mushroom with a broad, faceted cap in a muted tan-brown and a slender, darker brown stem, appearing clean and unblemished, ideal for adding simple forest floor detail."
+differs = "The only tan-brown mushroom, and the widest of the plain, unspotted caps."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 54
+meshes = 1
+materials = 1
+size = [0.166944, 0.214032, 0.144578]
+
+[mesh.sm_prop_mushroom_03]
+name = "SM_Prop_Mushroom_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_03.fbx"
+sha256 = "1f0703a2e879d8235c7d86d3e2354da45509c19498e9ee5ab5c7f2bb0063a11d"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A squat, faceted cap with a blunt, conical peak sits atop a thin, straight stem, giving the asset a simple, stylized silhouette. The cap is a warm, solid ochre with a lighter, almost cream underside, while the stem is a slightly darker, muted brown, creating a clean, two-tone look."
+differs = "The only ochre mushroom with a conical peak, and the only one with a cream underside."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 60
+meshes = 1
+materials = 1
+size = [0.105678, 0.20790699, 0.09152]
+
+[mesh.sm_prop_mushroom_04]
+name = "SM_Prop_Mushroom_04"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_04.fbx"
+sha256 = "b8a8910c636f59ea80b7391ad1db8c44542fb4d376153c5a124a3e1a40cead35"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A squat, faceted red cap with a flat top and a short, pale grey stem, resembling a stylised toadstool. The cap is broad and rounded, dominating the slender stalk, with a matte finish and no visible spots or gills. Its simple, chunky silhouette makes it ideal for a generic forest floor prop."
+differs = "The only red mushroom with no spots, and the shortest, with a pale grey stem."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 70
+meshes = 1
+materials = 1
+size = [0.091764, 0.154205, 0.07947]
+
+[mesh.sm_prop_mushroom_05]
+name = "SM_Prop_Mushroom_05"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_05.fbx"
+sha256 = "762ea37c6d51d14b4d0d68aebfbaa4604a19a6f695dbdefcf23cf3faa99654db"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A squat, low-poly mushroom with a broad, flattened red cap and a short, pale cream stem. The cap is studded with small, raised white spots, giving it a classic toadstool appearance. Its simple, chunky silhouette makes it ideal for scattered forest floor decoration."
+differs = "The most detailed and widest red spotted mushroom, with the most triangles and a flattened cap."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 316
+meshes = 1
+materials = 1
+size = [0.20284, 0.199338, 0.20284]
+
+[mesh.sm_prop_mushroom_06]
+name = "SM_Prop_Mushroom_06"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_06.fbx"
+sha256 = "18cd914916aa89ff5d630502a01a0310d088b09769418a3f8c276e36834f0013"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A squat, low-poly toadstool with a broad, domed red cap covered in small, pale cream spots, supported by a short, tapered cream stem. The faceted surfaces give it a stylised, chunky look, and the classic fly-agaric colouring makes it instantly recognisable as a forest floor accent."
+differs = "The only red spotted mushroom with a domed cap and a tapered cream stem, with fewer spots than 05."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 236
+meshes = 1
+materials = 1
+size = [0.12662399, 0.198583, 0.13039699]
+
+[mesh.sm_prop_mushroom_group_02]
+name = "SM_Prop_Mushroom_Group_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_Group_02.fbx"
+sha256 = "3c2b8cc5f60d980703ce4ce4a73ccc9291fcfd4ee593b1490adf497f26c0f9e9"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tight cluster of three low-poly mushrooms, with one large cap towering over two smaller companions, all sharing a warm, muted tan and brown palette. The faceted caps are broad and slightly flattened, while the thick, straight stems are a darker, earthy brown, giving the group a sturdy, grounded appearance."
+differs = "The only cluster with a single dominant cap and no spots, in muted browns for a grounded, earthy look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 270
+meshes = 1
+materials = 1
+size = [0.22819999, 0.213042, 0.23302999]
+
+[mesh.sm_prop_mushroom_group_03]
+name = "SM_Prop_Mushroom_Group_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_Group_03.fbx"
+sha256 = "741c14d9e83da36481001b9ac3dda6456596ad4f6c9da373ff4eb06587777cd7"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A cluster of four low-poly mushrooms with faceted, conical caps in a warm, honey-orange hue, supported by slender, tan stems that curve slightly. The caps are smooth and unspotted, giving the group a clean, stylized look that reads as a cheerful, natural forest accent."
+differs = "The only one with conical, unspotted honey-orange caps and slender curved stems, for a clean, cheerful accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 236
+meshes = 1
+materials = 1
+size = [0.216286, 0.209013, 0.208563]
+
+[mesh.sm_prop_mushroom_group_04]
+name = "SM_Prop_Mushroom_Group_04"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_Group_04.fbx"
+sha256 = "363ebd53da726482dc4531c46cc2a1861853e7a42f6130c55e717eb239dc48d2"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A cluster of four low-poly mushrooms with wide, faceted red caps and pale grey stems, arranged with one large central specimen flanked by three smaller ones. The flat-shaded surfaces give it a crisp, stylized look, and the varied heights create a natural, organic grouping perfect for forest floor decoration."
+differs = "The only one with wide red caps and pale grey stems, offering a crisp, flat-shaded organic grouping."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 290
+meshes = 1
+materials = 1
+size = [0.257856, 0.25387, 0.305786]
+
+[mesh.sm_prop_mushroom_group_05]
+name = "SM_Prop_Mushroom_Group_05"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_Group_05.fbx"
+sha256 = "d92fe9a968adb0f840aee0262264044ed6712181bb5499a493ebffb17991f146"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A cluster of three red-capped mushrooms with white spots, featuring a large central cap flanked by two smaller ones on pale, curved stems. The caps are broad and slightly flattened, with a matte finish and subtle darker red mottling, giving them a classic, storybook appearance."
+differs = "The most detailed and largest, with spotted red caps and curved stems, ideal for a storybook focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1046
+meshes = 1
+materials = 1
+size = [0.355559, 0.216537, 0.322806]
+
+[mesh.sm_prop_mushroom_sparse_01]
+name = "SM_Prop_Mushroom_Sparse_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_Sparse_01.fbx"
+sha256 = "eef9adb58b88b6ccf41575db6897397bbd41b16781959b25b83d9724f907eb61"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A low, wide cluster of thin, pale blue stalks with rounded caps, resembling a sparse patch of frost-tipped mushrooms or grass blades. The slender stems rise at varied angles from a flat base, giving a delicate, windblown look."
+differs = "The only blue variant, with the thinnest, most grass-like stalks and the smallest footprint."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 992
+meshes = 1
+materials = 1
+size = [1.192422, 0.259903, 1.103341]
+
+[mesh.sm_prop_mushroom_sparse_02]
+name = "SM_Prop_Mushroom_Sparse_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_Sparse_02.fbx"
+sha256 = "caea77f2414efcf004bc92c48c80c7e0334bdaca82976f063fbad80bf7cbb019"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A loose cluster of small, slender mushrooms with pale tan stems and flat, light-brown caps, scattered irregularly to suggest a natural patch. The low-poly forms are simple and angular, with a few taller stalks rising above the rest, giving the group a varied, organic silhouette."
+differs = "The only tan/brown variant, with the flattest caps and the most irregular, scattered silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1080
+meshes = 1
+materials = 1
+size = [1.446213, 0.251391, 1.417408]
+
+[mesh.sm_prop_mushroom_sparse_03]
+name = "SM_Prop_Mushroom_Sparse_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_Sparse_03.fbx"
+sha256 = "5c8cce070fe72ad84727d642200076348660f3a5c09e6d681d8277e84384d93c"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A loose cluster of slender, pale-orange mushrooms with small rounded caps and thin stems, scattered across a wide, flat footprint. The caps are smooth and uniform in colour, with no visible gills or spots, giving the group a clean, stylised look."
+differs = "The only pale-orange variant, with the cleanest, most uniform caps and the lowest triangle count."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 714
+meshes = 1
+materials = 1
+size = [1.148068, 0.209013, 0.90363204]
+
+[mesh.sm_prop_mushroom_sparse_04]
+name = "SM_Prop_Mushroom_Sparse_04"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_Sparse_04.fbx"
+sha256 = "c056e9a1343b43c8fffc81fe48cdb8164171e76e08cf18d3552edfd76e72e485"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A low, wide cluster of roughly a dozen small mushrooms with bright red caps and pale stems, scattered loosely across a flat patch of ground. The caps are smooth and domed, with a few tiny nubs suggesting young growth, and the arrangement feels natural and organic, ideal for adding a touch of colour to a forest floor..."
+differs = "The only plain red variant, with the widest footprint and the most natural, unspotted arrangement."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 870
+meshes = 1
+materials = 1
+size = [1.67525, 0.25387, 1.1765339]
+
+[mesh.sm_prop_mushroom_sparse_05]
+name = "SM_Prop_Mushroom_Sparse_05"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Mushroom_Sparse_05.fbx"
+sha256 = "3754f7622e64cf3961db85a0e8078f6c3795543ecaad34332fd36d9d19f4f3c0"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A low, wide cluster of small mushrooms with rounded red caps dotted with white spots, supported by short pale stems, scattered loosely across a flat ground plane. The arrangement is sparse and natural, with varying heights and slight tilts, giving it a wild, organic feel."
+differs = "The only spotted red variant, with the highest detail and the most complex, organic cluster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4838
+meshes = 1
+materials = 1
+size = [1.732753, 0.216537, 1.321487]
+
+[mesh.sm_prop_mushroomhouse_01]
+name = "SM_Prop_MushroomHouse_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_MushroomHouse_01.fbx"
+sha256 = "2367f424c40771b7cd582ff910423225f0bed46a0732721fe91efe6beae3d6ce"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A stout, whimsical dwelling shaped like a mushroom with a bulbous green stem and a wide, drooping red cap dotted with cream spots. The cap is topped by a small, crooked chimney, while arched yellow doors and windows are set into the stem, giving it a cozy, fairy-tale appearance."
+differs = "Taller and greener with a yellow door, while the other is shorter with a tan base and wooden-framed doors."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1081
+meshes = 1
+materials = 1
+size = [0.382406, 0.592987, 0.389783]
+
+[mesh.sm_prop_mushroomhouse_02]
+name = "SM_Prop_MushroomHouse_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_MushroomHouse_02.fbx"
+sha256 = "dab42960bf97527df0989145a89e8a3e0247a8ca22d713248d4de51a6edfa21b"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A stout, whimsical dwelling shaped like a red-capped mushroom with cream spots, featuring a small chimney and arched doorways with wooden frames set into a tan stem base."
+differs = "Shorter with a tan stem and wooden door frames, while the other is taller with a green stem and yellow door."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 977
+meshes = 1
+materials = 1
+size = [0.426043, 0.479817, 0.39977]
+
+[mesh.sm_prop_scarecrow_01]
+name = "SM_Prop_ScareCrow_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_ScareCrow_01.fbx"
+sha256 = "53e51001b74092e209d6cfd0994e24c2ccf9b305f0c2d56945b0817592c46688"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A classic straw-stuffed figure with a patched grey hat, red scarf, and button eyes, mounted on a single wooden post with arms outstretched in a T-pose, rendered in a stylised low-poly look with warm tan straw and weathered wood tones."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3402
+meshes = 1
+materials = 1
+size = [2.946599, 3.836227, 0.79736304]
+
+[mesh.sm_prop_scificable_01]
+name = "SM_Prop_SciFiCable_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_SciFiCable_01.fbx"
+sha256 = "5e9a641f4469f2ec0648858da3e18e49439bed8a77dd2b1f45cc29154cc55ef8"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A dark grey, segmented cable with a ribbed texture, coiled in a loose S-shape and terminating in small orange connectors at both ends, suggesting a flexible power or data line for sci-fi machinery."
+differs = "The longest, most detailed cable with a ribbed texture and S-shape, ideal for a prominent sci-fi power line."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1296
+meshes = 1
+materials = 1
+size = [5.359562, 0.326453, 2.055896]
+
+[mesh.sm_prop_scificable_02]
+name = "SM_Prop_SciFiCable_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_SciFiCable_02.fbx"
+sha256 = "8f49eabef927370678969c9226cb58ad8c8b7d5015d28dbd07c9048a950aca62"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A thick, dark grey cable coiled into a loose loop, with both ends terminating in small, cylindrical metallic connectors with orange accents. The surface is smooth and matte, showing subtle wear along the bends, giving it a utilitarian, industrial look suitable for scattered tech debris or power routing in a meadow..."
+differs = "The shorter, smoother, looped cable with a thicker profile, best for compact tech debris or power routing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1024
+meshes = 1
+materials = 1
+size = [2.426992, 0.495338, 2.256198]
+
+[mesh.sm_prop_scificrate_01]
+name = "SM_Prop_SciFiCrate_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_SciFiCrate_01.fbx"
+sha256 = "14ec3d882e62af69b5c52acd2663173c918725bd5729bf70685f62283772e1c4"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A sturdy, cube-shaped container with a recessed top and a thick, chamfered frame, built with a dark grey metal body and four bright orange side panels. The top features a raised, hollow square rim with a small central detail, while the base has a subtle teal accent."
+differs = "The only cube-shaped crate, with a recessed top and chamfered frame, ideal for stackable storage or cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 812
+meshes = 1
+materials = 1
+size = [0.800024, 0.768488, 0.800024]
+
+[mesh.sm_prop_scificrate_02]
+name = "SM_Prop_SciFiCrate_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_SciFiCrate_02.fbx"
+sha256 = "798079b001eb2ac5ef41658984120552107588b570e1a5d395b6d09abdad92eb"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A compact, hexagonal canister with a grey, paneled body and a recessed central band, capped by bright orange rims. Each end features a glowing cyan triangular core, giving it a futuristic, energy-storage appearance."
+differs = "The only hexagonal canister, with glowing cyan cores and orange rims, suited for energy cells or sci-fi props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 332
+meshes = 1
+materials = 1
+size = [1.42395, 0.852117, 0.98394]
+
+[mesh.sm_prop_sign_01]
+name = "SM_Prop_Sign_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Sign_01.fbx"
+sha256 = "11978265ea050f6db79832d1ce9339c11ce9469d180195e174abe6340b975b95"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered wooden post supporting two arrow-shaped planks, one pointing left and one right, with a small rope wrapped around the centre. The pale, grey-brown wood appears aged and rustic, suggesting a directional marker for a meadow trail or forest path."
+differs = "The only one with two opposing arrows and a rope, making it the clearest directional choice for branching paths."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 702
+meshes = 1
+materials = 1
+size = [1.0625241, 2.955056, 0.963377]
+
+[mesh.sm_prop_sign_02]
+name = "SM_Prop_Sign_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Sign_02.fbx"
+sha256 = "cf7cc5b171c1ea03157b670dd00d5e46c387648a84d6d281e08d8f48e62c1b4a"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tall, slender wooden post supporting a spiral of weathered planks, resembling a rustic trail marker or abstract sculpture. The wood is a muted, grey-brown with visible grain and worn edges, giving it an aged, natural look. Its simple, twisted form adds a distinctive, organic silhouette to a meadow or forest setting."
+differs = "The most detailed and organic with its spiral planks, ideal for a decorative, abstract trail marker or sculpture."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 558
+meshes = 1
+materials = 1
+size = [0.991998, 2.955056, 1.097607]
+
+[mesh.sm_prop_sign_03]
+name = "SM_Prop_Sign_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Sign_03.fbx"
+sha256 = "cea9e1678f6f707dd6443f178524e2967c659f074ea3ed055148934f69fd2a6e"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered wooden trail marker with a single crossbar, featuring a small, faded directional plank angled upward. The bark texture is rough and grey-brown, with a slightly splintered top and a lean that suggests age and exposure to the elements."
+differs = "The plainest and most damaged, with a single angled plank and splintered top, perfect for a simple, weathered waypoint."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 430
+meshes = 1
+materials = 1
+size = [0.981778, 2.955056, 0.69203305]
+
+[mesh.sm_prop_stone_hole_01]
+name = "SM_Prop_Stone_Hole_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Stone_Hole_01.fbx"
+sha256 = "86fcedf8325c99302a685e82b08b73e8139af88221af145f2ebfe2290d866f77"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tall, irregularly faceted grey stone monolith with a single dark circular hole near its upper end, resembling a primitive standing stone or a weathered rock with a natural perforation. Its muted grey palette and clean low-poly surface suggest a versatile prop for ruins, caves, or forest floors, offering a distinct..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 276
+meshes = 1
+materials = 1
+size = [1.325322, 3.091907, 1.091192]
+
+[mesh.sm_prop_stonearch_01]
+name = "SM_Prop_StoneArch_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_StoneArch_01.fbx"
+sha256 = "47188f9c6f800f765134bbe855e8a468a60ef6af3d973910e26941951b289a3e"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered dolmen with a thick, irregular capstone resting on two stout, tapered pillars, rendered in pale grey stone with subtle beige mottling. The low-poly facets give it a rugged, ancient feel, suggesting a mystical or prehistoric landmark for a meadow setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 424
+meshes = 1
+materials = 1
+size = [5.548986, 4.019493, 2.600893]
+
+[mesh.sm_prop_stonepile_01]
+name = "SM_Prop_StonePile_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_StonePile_01.fbx"
+sha256 = "9789ab19148629d8b57c3d557e8336e20ffcfb990e203b86fdc72031a615f098"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tapered cairn of flat, irregular stones stacked loosely, with a broad base narrowing to a small cap. The weathered grey and beige rocks show subtle mossy tints and chipped edges, suggesting a trail marker or a natural shrine."
+differs = "Mid-sized, most mossy and irregular, best for a natural shrine or trail marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1144
+meshes = 1
+materials = 1
+size = [0.877562, 1.48434, 0.73193896]
+
+[mesh.sm_prop_stonepile_02]
+name = "SM_Prop_StonePile_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_StonePile_02.fbx"
+sha256 = "fb6a9dfb6a0a79968cca0d8792cbf7205fa157a4c7bac1d073c84546c0dfea52"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tapered cairn of roughly seven flat, angular stones stacked in a precarious spiral, with the largest slabs at the base and the smallest at the top. The pale grey-beige rock has a smooth, weathered finish with subtle darker mottling, suggesting a dry, sun-bleached look."
+differs = "Smallest, plainest, and lowest-poly, with a sun-bleached spiral look for dry, minimalist scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 232
+meshes = 1
+materials = 1
+size = [0.560298, 0.883392, 0.616548]
+
+[mesh.sm_prop_stonepile_03]
+name = "SM_Prop_StonePile_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_StonePile_03.fbx"
+sha256 = "f68e1b0700116872aa42d4ce4e6b9178492c49c155dfb8bccf2bd7f8508de7f4"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tall, roughly conical stack of irregular grey boulders, tapering from a wide base to a rounded peak. The stones are tightly clustered with deep crevices, giving it a weathered, natural look suited for a forest floor or rocky outcrop."
+differs = "Largest, most detailed, and most boulder-like, ideal for a dense forest floor or rocky outcrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1788
+meshes = 1
+materials = 1
+size = [0.963066, 1.525461, 0.922838]
+
+[mesh.sm_prop_stonerunes_01]
+name = "SM_Prop_StoneRunes_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_StoneRunes_01.fbx"
+sha256 = "42939b4d8ab872d7c1d146ed1d0ccca7a73ed58b0e89678ca55ace234971e89f"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tall, narrow, faceted grey stone slab with a rough, chipped top edge, standing upright like a small monolith. One face bears a dark, stylised runic carving of a central vertical line with branching hooks, while the reverse is plain and unmarked."
+differs = "The thinnest and most slab-like, with a plain reverse and a simpler, darker glyph, best for a subtle, single-sided marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 404
+meshes = 1
+materials = 1
+size = [1.333348, 3.325357, 0.573484]
+
+[mesh.sm_prop_stonerunes_02]
+name = "SM_Prop_StoneRunes_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_StoneRunes_02.fbx"
+sha256 = "8ee4e798c69b8cec9676e113b8c7c3d7620522dac0fc3542f4c68cfb1de4d9c1"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tall, faceted grey stone slab with a rough, chipped surface, bearing a dark blue runic glyph carved into its face. The angular, low-poly form suggests an ancient, weathered monument, ideal for a mystical or forgotten ruin setting."
+differs = "The most compact and blocky, with a thicker profile and a more intricate, branching glyph, ideal for a dense, chunky ruin."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 416
+meshes = 1
+materials = 1
+size = [1.382712, 3.092059, 0.991768]
+
+[mesh.sm_prop_stonerunes_03]
+name = "SM_Prop_StoneRunes_03"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_StoneRunes_03.fbx"
+sha256 = "b18c605f6db190770c11c7905e5cf8fc449fbac9890da4db6027254100011381"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A tall, irregularly faceted grey stone slab, chipped and weathered, bearing a dark blue, angular runic glyph carved into its face, suggesting an ancient magical marker or quest object."
+differs = "The largest and most irregularly faceted, with the most complex glyph, best for a central, high-detail quest monument."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 508
+meshes = 1
+materials = 1
+size = [1.557073, 3.489419, 1.009524]
+
+[mesh.sm_prop_stonestack_01]
+name = "SM_Prop_StoneStack_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_StoneStack_01.fbx"
+sha256 = "ece46d31e0d51a41cfd732fe35933c0655d2a408dbf3463064f87368313c99fa"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A low, flat-topped capstone balanced on three thick, irregularly angled legs, forming a small natural dolmen or mushroom-like shelter. The pale grey stone is faceted and unmarked, with a smooth, weathered surface that suggests a sturdy, ancient landmark."
+differs = "The widest and most detailed, with a flat capstone forming a shelter; best for a landmark or cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 612
+meshes = 1
+materials = 1
+size = [5.814518, 4.909804, 5.380434]
+
+[mesh.sm_prop_stonestack_02]
+name = "SM_Prop_StoneStack_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_StoneStack_02.fbx"
+sha256 = "6a530c4d9f739b34cf0b5bf660a222a47515404ad86f2210897085376d66a5ce"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A cluster of three tall, faceted grey stones leaning together in a tight, vertical formation, resembling a small standing stone monument or a natural rock spire. The low-poly surfaces are smooth and unmarked, with a cool, pale grey tone that suggests clean, weathered stone."
+differs = "The tallest and most vertical, with a tight spire formation; best for a monument or boundary marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 412
+meshes = 1
+materials = 1
+size = [4.486405, 5.7274904, 5.928178]
+
+[mesh.sm_prop_stonewall_01]
+name = "SM_Prop_StoneWall_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_StoneWall_01.fbx"
+sha256 = "ed1402c7ba7aaa459d39e3d98c00e41344cec0b6253c61e0ee8c561c76e2c927"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, irregular mound of rounded, grey-brown boulders, stacked in a rough, uneven line with no mortar or flat faces, resembling a natural rock pile or a collapsed dry-stone boundary rather than a built wall."
+differs = "The largest and most irregular, with grey-brown boulders and a collapsed, natural look for ruined boundaries."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2598
+meshes = 3
+materials = 1
+size = [2.743078, 0.946392, 0.700511]
+
+[mesh.sm_prop_stonewall_02]
+name = "SM_Prop_StoneWall_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_StoneWall_02.fbx"
+sha256 = "eb6f05609057a3936cd072d3ea197508c19137e5a9c510bab0c821413da65e77"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, irregular dry-stone wall of chunky, faceted boulders in warm beige and grey, with a slightly uneven top and a few darker stones adding depth. Its weathered, natural look makes it ideal for rustic boundaries or ruined meadow edges."
+differs = "The most detailed and warm-toned, with a slightly uneven top and darker stones for rustic meadow edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2126
+meshes = 3
+materials = 1
+size = [2.739735, 0.930985, 0.65354097]
+
+[mesh.sm_prop_stonewall_end_01]
+name = "SM_Prop_Stonewall_End_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Stonewall_End_01.fbx"
+sha256 = "9b1e4404217f4d60227c33f0c5941fe1956db9c79c2db1870f34fd99ecaacc59"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, irregular heap of rounded grey boulders, tapering from a clustered mass to a few scattered stones, with a flat, weathered surface and a natural, mossy finish suited for a forest floor boundary."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2870
+meshes = 3
+materials = 1
+size = [4.281179, 1.2560079, 0.756871]
+
+[mesh.sm_prop_stonewall_long_01]
+name = "SM_Prop_Stonewall_Long_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Stonewall_Long_01.fbx"
+sha256 = "d05c28b32d1487f3f1514c9e7f27d90e00131510e9b63b551511fd7dfc45db57"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, irregular dry-stone wall built from rounded grey boulders, with a slightly uneven top and a few darker, mossy patches. It reads as a natural, rustic boundary rather than a formal structure, with a weathered, organic look that suits meadow or forest settings."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5188
+meshes = 3
+materials = 1
+size = [5.371416, 1.239473, 0.72422004]
+
+[mesh.sm_prop_stonewall_pillar_01]
+name = "SM_Prop_Stonewall_Pillar_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Stonewall_Pillar_01.fbx"
+sha256 = "4be990cb1bdb14b45e14e49824802e93f3158d5a245ecc6b13326f7b7ceec513"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A weathered, low-poly stone pillar with a chunky, irregular silhouette, featuring a broad, uneven base and a smaller, blocky cap. The surface is a flat, pale grey with subtle mottling, and a deep, jagged notch is carved into one side, giving it a ruined, ancient appearance."
+differs = "The most damaged and detailed, with a jagged notch; ideal for ruined, ancient scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 574
+meshes = 3
+materials = 1
+size = [0.81767297, 1.3787509, 0.997311]
+
+[mesh.sm_prop_stonewall_pillar_02]
+name = "SM_Prop_Stonewall_Pillar_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Stonewall_Pillar_02.fbx"
+sha256 = "d16e62a2c8c77b0980545f80f3edacfb5a08ef8a89c37c71af99a8613a7a7a58"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A stout, irregular cairn of chunky grey stone blocks, roughly conical and wider at the base, with a flat, slightly tilted capstone. The low-poly facets give it a rugged, weathered look, and its compact form suggests a standalone marker or a broken piece of a larger wall."
+differs = "The largest and most detailed, a standalone cairn marker; better for intact, rugged landmarks."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 746
+meshes = 3
+materials = 1
+size = [0.907704, 1.421211, 1.051189]
+
+[mesh.sm_prop_stonewall_small_01]
+name = "SM_Prop_Stonewall_Small_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Stonewall_Small_01.fbx"
+sha256 = "05929af7ef763d017d24e35b6acf099011ed39f5aada776ca7f860a9bf77d9af"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, irregular cluster of rounded grey boulders, tightly packed and weathered, forming a natural-looking rubble barrier or low wall segment. The stones vary in size and are stacked in a slightly uneven, organic arrangement, suggesting a collapsed or ancient structure."
+differs = "Taller and more irregular, with a rougher, collapsed silhouette suited to rubble barriers rather than flat foundations."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2598
+meshes = 3
+materials = 1
+size = [2.849914, 1.308507, 0.761474]
+
+[mesh.sm_prop_stonewall_small_02]
+name = "SM_Prop_Stonewall_Small_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Stonewall_Small_02.fbx"
+sha256 = "7b6bffc93f841ad840835871e00b6a8cbcbbdf5b42347e4f7361f0e45fbaa997"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A low, irregular mound of grey boulders, roughly twice as long as it is deep, with a flat, level top that suggests a ruined foundation or a natural outcrop. The stones are chunky and faceted, with a few darker recesses between them, giving it a weathered, moss-free look suited to dry or rocky meadow terrain."
+differs = "Flatter and more level on top, with a lower profile and fewer triangles, ideal for ruined foundations or outcrops."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2126
+meshes = 3
+materials = 1
+size = [2.84644, 1.195512, 0.71041703]
+
+[mesh.sm_prop_sword_01]
+name = "SM_Prop_Sword_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Sword_01.fbx"
+sha256 = "ffc7f0a2fc82ed310a5633a624bb73ab42ddcc3e0d8928d3167dbf6b613f1479"
+atlas = "POLYGON - Swamp Marshland - Nature Biomes/PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A slender, straight-bladed arming sword with a simple crossguard and rounded pommel, rendered in pale steel with a warm gold or brass finish on the hilt. The blade shows a subtle central fuller and a slight patina, suggesting a well-used but serviceable weapon suited for a low-poly fantasy knight or adventurer."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 754
+meshes = 1
+materials = 1
+size = [0.469441, 2.203825, 0.10495]
+
+[mesh.sm_prop_sword_stone_01]
+name = "SM_Prop_Sword_Stone_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Sword_Stone_01.fbx"
+sha256 = "c7dd67129c68ff84c55d62874007f4e839f901d9be14e4977436b046b97f1da8"
+atlas = "POLYGON - Swamp Marshland - Nature Biomes/PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A weathered, low-poly stone slab with a chipped, irregular edge, its flat surface bearing faint, shallow carved grooves that suggest a worn rune or symbol. The pale grey, matte finish and rounded, battered corners give it the look of an ancient, moss-free marker or a broken piece of a larger monument, ideal for a..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 510
+meshes = 1
+materials = 1
+size = [1.831173, 1.453025, 1.9999781]
+
+[mesh.sm_prop_wagon_broken_01]
+name = "SM_Prop_Wagon_Broken_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Wagon_Broken_01.fbx"
+sha256 = "f150e937921b1028aa729f869030e47056ff588d641c5108fc05503a2fb99609"
+atlas = "POLYGON - Swamp Marshland - Nature Biomes/PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A weathered wooden cart with a slatted bed, four spoked wheels, and a long drawbar, its frame visibly splintered and listing to one side. The grey-brown planks show wear and gaps, with a broken side rail and a missing wheel section that give it a distinct, abandoned look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3914
+meshes = 1
+materials = 1
+size = [3.400704, 2.389944, 5.319913]
+
+[mesh.sm_prop_waterwheel_01]
+name = "SM_Prop_WaterWheel_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_WaterWheel_01.fbx"
+sha256 = "79b1be37309a5ab94f40da4fb0ffdb63a39cd8f54734e3534e43e75cd8e102e4"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A weathered wooden water wheel with a central axle and radial spokes, mounted on a small stone block structure with a dark opening, suggesting a mill or sluice. The pale timber and grey masonry show a rustic, aged finish, ideal for a medieval or fantasy meadow setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4381
+meshes = 3
+materials = 1
+size = [3.0243878, 3.6009982, 3.605592]
+
+[mesh.sm_prop_well_01]
+name = "SM_Prop_Well_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_Well_01.fbx"
+sha256 = "93d2dc9802604c7a88b28fcbddc040d50cbe49d7a1e63bb85888b8f42aacea37"
+atlas = "POLYGON - Swamp Marshland - Nature Biomes/PolygonExplorers_Texture_01_Cameron.png"
+textures = "PolygonExplorers_Texture_01_Cameron.png"
+description = "A weathered stone well with a simple pitched timber roof supported by two upright posts, featuring a small bucket and crank mechanism. The pale grey stonework and light wood planks give it a rustic, aged appearance suited to a village or meadow setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1809
+meshes = 1
+materials = 1
+size = [1.912393, 2.968083, 1.950482]
+
+[mesh.sm_prop_windchime_01]
+name = "SM_Prop_WindChime_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_WindChime_01.fbx"
+sha256 = "e17b128de64bc6ac1d868079ddaa3e955d53b4b52082dfbd07d202b64d8e679e"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A slender hanging ornament with a dark metal hook and a rounded wooden top, from which five weathered tan wooden tubes of varying lengths dangle in a tight cluster. The muted, natural finish and simple silhouette make it a quiet, rustic accent for outdoor scenes."
+differs = "The smaller, plainer option with five simple tubes and no bells, best for a subtle, understated rustic accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 851
+meshes = 1
+materials = 1
+size = [0.301774, 1.45487, 0.308814]
+
+[mesh.sm_prop_windchime_02]
+name = "SM_Prop_WindChime_02"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Prop_WindChime_02.fbx"
+sha256 = "13511ef82c3af37551e3eb30b026d1a9e0e46f23ea64ea5ba712c83995c39e98"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+wanted = "RopeBridge.png"
+description = "A slender hanging ornament with a dark metal hook and ring, supporting two pale yellow, bell-shaped wooden caps above a small round platform. Four weathered brown wooden rods dangle below, ending in small knobs, creating a rustic, natural chime perfect for meadow or forest scenes."
+differs = "The larger, more detailed option with bell-shaped caps and knobs, adding a warmer, more decorative touch to scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 951
+meshes = 1
+materials = 1
+size = [0.481176, 1.6441059, 0.453782]
+
+[mesh.sm_veh_steam_car_01]
+name = "SM_Veh_Steam_Car_01"
+pack = "polygon_meadow_forest_nature_biome"
+source = "Meadow_Source_Files/FBX/SM_Veh_Steam_Car_01.fbx"
+sha256 = "908db4bf4bd36210b9c05248bdebb2f8b15c05b15b374ef3f58382635d0de423"
+atlas = "PolygonNatureBiomes_Meadow_Texture_01.png"
+textures = "PolygonNatureBiomes_Meadow_Texture_01.png"
+description = "A weathered, open-top steam carriage with a flat canopy, a rear boiler, and a front-mounted engine, finished in worn brown wood, dull brass, and faded red canvas. It features spoked wheels, a small chimney, and visible pipes, giving it a rustic, functional look suited to a fantasy or steampunk setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 13345
+meshes = 8
+materials = 1
+size = [2.360042, 2.90273, 4.141759]

@@ -1,0 +1,297 @@
+# **The gauntlet's work order.** One line per violation, as
+# `room | rule | offender` — see `gauntlet.rs`, "The docket".
+#
+# This file is the deliverable of the harness pass and the input to the
+# fixing pass. Strike a line, run `cargo test -p cabin`, and
+# `the_gauntlet_finds_exactly_the_docket` will tell you whether the thing
+# is actually gone: a line struck too early fails, and a defect fixed
+# without striking its line fails too.
+#
+# Regenerate wholesale with:
+#   ./target/debug/space-trucking --gauntlet-docket
+# and read the numbers behind any line with:
+#   ./target/debug/space-trucking --gauntlet
+#
+# Blank lines and `#` comments are ignored.
+#
+# **The file is empty again.** One line stood here for a day — the first
+# purchased binding's fill promise, mid-tune, reaching past its cell —
+# and it came off the way every line does: the owner's machine measured
+# the mesh, the manifest took the measured numbers, and the ratchet
+# demanded the strike. The system's first full round trip through a
+# bought asset, docket to docket.
+#
+# `the_gauntlet_finds_exactly_the_docket` asserts set equality against
+# the sweep, so a line appearing here is not a ratchet loosening: it is
+# the work order for the pass that takes it off again.
+#
+# The last thirty came off in three pieces and they are worth naming,
+# because each is a different shape of cure.
+#
+# **Five were the comet's quarried face.** Blocks of ice that said the
+# starboard wall was what they were cut from and stopped between 22 and
+# 110 mm in front of it. The one-line cure was wrong and the source said
+# so — the frozen block already stood hard against that wall with one of
+# these inside it, and five slabs run out to one plane share their back
+# face wherever they cross. A quarried face is one body now: the back of
+# the cut meets the wall, thin, because the back of a cut is where the
+# ice stopped coming out rather than a wall somebody built, and the five
+# blocks are what was left standing on it.
+#
+# **Five were one vocabulary defect wearing five station badges.** A
+# `Shape::Ring` laid flat "on the deck" — a moon pool's collar, a core
+# cradle, three coiled hoses. A torus's drawn tube is 18% of the frame
+# `Fitting::half` declares and the containment law was reading the
+# frame, so a hoop whose tube met the deck had a frame through the
+# floor and no number a station author could write cured it.
+# `poi::Shape::fill` says the fraction once now; `Fitting::span` reads
+# the body through it, so a claim on space belongs to the thing that
+# occupies it; and `Fitting::meeting` writes the joint instead of the
+# decimal. The other direction — growing the tube until it filled the
+# frame — was tried and measured: every frame in the game was authored
+# against the wafer, so eleven waypoints of the scripted walk ended up
+# inside a lamp cage, six wall berths went behind a hoop and three more
+# were stood in. Twenty new findings to cure five.
+#
+# **Twenty were the re-authoring docs/BAY.md had carried as deferred
+# since the net landed.** Twenty cargo kinds drawn as bas-reliefs
+# centred in their own cell face — the 2D console's glyphs, given depth
+# and never given a floor — so each stood somewhere between one and
+# fifteen centimetres above the deck it was berthed on with nothing
+# under it.
+#
+# The cure was not one translation twenty times, and the reason is the
+# one the earlier pass wrote down: a chit or a chip shoved down onto the
+# deck is a playing card balanced on its edge, which is a worse picture
+# than the one it replaces. **A flat kind lies on a deck; it does not
+# stand on one.** So the question per kind was what pose the object
+# takes on a floor, and the answers came out in three groups. Eleven
+# were already posed and only wanted settling — an idol, a stack of
+# bricks, two rust bars, three pearls, three crates, a puffball, a gas
+# bottle on its side, a floor lamp, a rolled rug. Seven were lying down
+# because a glyph reads a cylinder end-on as a circle, and stood up: a
+# vial, a plant pot, a cryo core, a shard of comet, a bottle of
+# midnight, and both paints' tins. Two lay down, because they are a card
+# and a coin: the chit and the casino chip took a quarter turn onto
+# their backs.
+#
+# Where every kind's sole lands is one function now (`pieces::sole_of`),
+# read off the plane `site_on` stands a deck berth on, so a kind is
+# composed against the floor it will stand on rather than against the
+# middle of a cell.
+#
+# The rest of this note is the history of how the file got emptied, and
+# it is worth keeping while there is anything on it at all. Three layers
+# of the world have been described and swept, and each of them was
+# invisible until somebody wrote the description. What that history says
+# is that the next defect is in the layer nobody has thought to describe
+# yet, not in the ones below — so the useful thing to do with a short
+# file is to read docs/GAUNTLET.md's account of what the sweep can and
+# cannot see, and go and look at something it cannot.
+#
+# The rooms were the first layer. Their lines were three families and one
+# cause, and they came off when a calling room got a deck of its own to
+# lend (`Tile::Staging`, docs/ROOMS.md).
+#
+# The cargo was the second. Thirty-two kinds had never been swept at all,
+# because a rig was built straight into a live world and there was
+# nothing to measure; there is a description now (`pieces::parts`), and
+# the sweep found sixty-one things in it — fifty-nine cured on the spot
+# and two that took a kind re-drawn. Those two were the floor lamp's base
+# disc and the very mysterious crate's core, each hanging out of
+# `pieces::RIG_NEAR..RIG_FAR`, and the parts moved rather than the band:
+# the lamp's plate, pole, shade and bulb stand on one axle now instead of
+# three, and the crate's core is sunk to its own radius so its crown is
+# the band's own face.
+#
+# Widening the band was the other cure, and it prices worse than it looks:
+# the two spill at OPPOSITE ends — the lamp 0.069 m behind the near face,
+# the crate 0.073 m past the far one — so a band that cured either costs
+# about 15% more air on every wall berth in the game, and a band that
+# cured both costs 29%. That is a systemic price for a local defect. The
+# measurement that settled it for good is that neither kind can be
+# berthed on a wall at all — every kind's mount is Floor unless it is
+# tagged otherwise, and a deck berth's air is its own cell's column — so
+# neither was ever the berth-measured-too-shallow defect the line was
+# written up as. Both were a body hanging out of the box the carry tell
+# wraps a carried rig in, which is defect enough and is what the finding
+# says now.
+#
+# The band did move later, and for a reason of its own rather than to
+# swallow a part: the world is built of the cargo grid and the band was
+# nine tenths of a cell. It is one cell now, wearing the same `BAY_FIT`
+# the width and the height wear. It cost a wall berth 31 mm of room
+# (0.466 m of reach becomes 0.497 m) and cost this file nothing, because
+# the reading it feeds was measuring the band's thickness where the
+# reach was what mattered.
+#
+# The doorways were the third. Every piece of hardware in a seam was
+# built straight into the world, so the sweep walked through a dozen
+# doorways a room without being able to name one thing in any of them —
+# which is how a latch came to be drawn twice at one transform and to
+# photograph two ways. A doorway describes itself now
+# (`room::seam_parts`) and is swept from both of its sides, because a
+# seam is drawn once by the room with the lower id and stands on the
+# boundary both of them own. Fifty-three fights came out of that first
+# pass and all fifty-three were cured, in the same three idioms the
+# cargo's were: a body written down twice (the latch, the jamb lamp, and
+# a corner cell's tread laid once per doorway instead of once per cell);
+# two members of one fitting cut to one length so they cross (the lintel
+# against both stiles, the hatch coaming against itself at four corners);
+# and a part run out flush with the edge its parent was cut at (the frame
+# and the coaming against the very plane the aperture was punched on,
+# cured by straddling it — half a jamb over the line, which is what a
+# lining is for).
+#
+# The sentences all three closed are kept said as tests in `gauntlet.rs`,
+# because a docket shrinks and a law does not.
+#
+# The fourth layer was the LATTICE itself, and it is the first one that
+# was not invisible for want of a description — every room's box, every
+# wall and every doorway could always be enumerated. It was invisible for
+# want of a QUESTION. Nothing had ever asked whether the fabric was
+# actually on the grid it was supposed to be built out of, and it was
+# not: a deckhead at 4.109 cells, a wall thickness and a chart trim
+# chosen by eye, a hand-measured cabin hull two centimetres off its own
+# box, and two rooms mating flush so that their hulls stood through each
+# other by two wall thicknesses at every seam on every ship. That last
+# one is the defect the owner reported three times as the incinerator
+# clipping into the main cabin, and no pass that looked at placements
+# could have found it, because no placement was wrong.
+#
+# `grid-fits` is the question. It found 126 things and all 126 were
+# cured; docs/GAUNTLET.md carries what they were and what the two named
+# exemptions are. The lesson from the three layers below still stands and
+# now has a companion: the next defect is either in the layer nobody has
+# described yet, or in the question nobody has thought to ask about a
+# layer that is fully described.
+#
+# `part-seated` was the second of the second kind, and it needed no new
+# description at all: a rig's parts have been enumerable since
+# `pieces::parts` landed. What was missing was that every rule asked
+# about a part and the WORLD — the band it is composed in, the plane it
+# fights, the cells it draws inside, the direction its own name claims —
+# and none asked whether a part meets the other part of the same rig its
+# own name says holds it up. Three did not: the couch's four feet stopped
+# 8.7 mm short of the seat they carry, the destination preview's glass
+# floated 9.3 mm off its bezel (in the played build only — the headless
+# fallback body overlapped the brass, so the one build people look at was
+# the one that showed it), and the porthole's sky pane missed its own
+# bolt ring by 9.3 mm. All three were cured; a joint is spent explicitly
+# now, one ladder step in or one step proud (`pieces::GLAZE`).
+#
+# `rig-seated` is the third of that second kind, and the closest sibling
+# `part-seated` has: the same joint, one plane down and outside the rig.
+# Every family before it measured a part against the world's numbers —
+# the band a rig is composed in, the plane it fights, the cells it draws
+# inside — or against another part of the same rig. None measured the rig
+# against the one thing its berth actually promises: the deck it stands
+# on, the deckhead it hangs from, the wall it is screwed to. `face-fits`
+# comes nearest and looks the other way by design, forgiving a centimetre
+# of a sole BURIED in its own deck and asking nothing at all about a
+# sole a hand's breadth above it.
+#
+# Two of the twenty-two it found were cured on the spot and both were the
+# same shape as the wall lamp's pad, which is the defect this class keeps
+# producing: a fitting composed at the middle of the band instead of at
+# the plane it is bolted to. The ceiling lamp's canopy stopped 8.4 mm
+# under the deckhead it is screwed to, and the porthole's whole
+# assembly — glass, bolt ring and six studs — hung 32.6 mm out in the air
+# in front of its wall, with the room's own paint visible under the brim.
+# Both are drawn from their own plane now, buried one ladder step into it
+# (`pieces::SOLE_BURY`), which is the same step a pane spends on a bezel.
+#
+# `furniture-seated` closed that, and it is the fourth of the second
+# kind. What the family before it could not ask about was a station's own
+# furniture and a doorway's own hardware: a rig declares the chart it is
+# berthed on because the sim berths it, and a `Fitting` is a fraction of
+# a room's box and a seam part is world units off a site, and neither of
+# them declared anything at all. So a beacon bolted to thin air and a
+# latch floating in front of a wall were invisible to every rule in the
+# file, and both were found by a player looking at the screen.
+#
+# The description is a `Seat` on `poi::Fitting` and on `room::SeamPart` —
+# a face of the room's own box, or another body by the name it declares —
+# and the family reads the claim back exactly as `part-seated` does.
+# Two hundred and sixty-four claims are declared across fifteen stations
+# and every doorway in the game, and curing what they found moved 133 of
+# the 292 fittings those rooms hang, every rivet on every shut door, and
+# one bracket that was not there at all — the Hermitage's third ledge had
+# no corbel under it. The shapes repeat, and they are worth naming: four
+# rivets on each of three shut leaves, drawn a plate thickness out past
+# the BACK of the plate they fasten and squarely behind it from every
+# stance in the room; three seized pendants sharing one stem length at
+# three heights, two of them hanging off nothing; a candle 60 mm over the
+# sill it stands on; three cryo cores 55 mm under their rail and five
+# blackout tins 56 mm under theirs; a stack of hull plate 105 mm off the
+# deck; a main riser that ran "deck to cornice" from 176 mm above the
+# deck; three pillars "floor to deckhead" that reached neither; and a
+# dozen plates, patches, plaques and boards standing between 12 and 77 mm
+# off the walls they are bolted to.
+#
+# `berth-filled` is the fifth of the second kind, and it is the one the
+# owner had to report four times. Cargo was described and cargo declared
+# its chart, so neither of the two shapes above covers it. What was
+# missing was the DIRECTION every rule happened to ask in: eleven
+# families all asked whether a body stayed INSIDE something — its plan,
+# its band, its room, its chart — and every one of those is satisfied by
+# a body shoved hard against one edge of the ground it was given. Nothing
+# asked where inside.
+#
+# It was not centred, on every deck and deckhead berth in the game. A
+# rig's own `z = 0` is its BERTH PLANE and the band it is composed in
+# runs from just behind that plane to one cell out into the room, which
+# is right on a wall and meaningless on a deck: a deck berth's rect
+# spends the depth, so the cells own the ground on both sides of their
+# own middle and there is no plane to hang a band off. It hung off the
+# middle of the cell anyway. Thirty-three findings, all one cause, all
+# 0.2329 m — 0.42 of a cell — out into the aisle, on the one axis a plan
+# spends its depth on and never on the other, which is exactly the shape
+# of the report: half-way between cells, on ONE axis, with the other
+# exact.
+#
+# The cure is in `pieces::site_on`, which draws a deck or a deckhead
+# berth back onto its own cells by the band's own middle
+# (`pieces::rig_mid`), and in the carried ghost, which promises the whole
+# offset now rather than the reach off the chart alone. Nothing about a
+# wall berth moved: a wall really does have a plane, and the band really
+# does begin a hair behind it.
+#
+# The last four families are the first that were not written after
+# anybody saw anything. Twelve of them were: a defect was found by
+# playing, and a family was written that would have caught it, which is a
+# harness that is always exactly one round behind whoever is playing.
+# `berth-filled` was the exception and the clue — it came out of listing
+# eleven families, writing what each one asked in a column, and finding a
+# gap in the column.
+#
+# So the space was written down instead of the sightings. Every rule here
+# is a body, a relation between bodies, and the frame the relation is
+# read in; the three lists are short; crossing them and dismissing what
+# is meaningless leaves a table with three columns, and the third one —
+# the questions nothing in the tree can be put to — is the most valuable
+# of the three. docs/GAUNTLET.md, "The map", is that table.
+#
+# It found four cells that were meaningful and unasked, and two of them
+# had defects sitting in them. `berth-turned` asks which way a berth
+# turns a body, which no rule could ask while a rig was measured as an
+# axis-aligned box: every deckhead berth in the game took one fixed turn,
+# so a pendant hung against a wall looked into it. `deck-reached` asks
+# whether the deck a body may use can be walked to from the door it comes
+# in by, which no rule could ask while every rule measured metres and the
+# room's net was measured in cells: a trade room's shopfront ran under
+# its own doorway, so 48 cells of its deck stood behind ground the room
+# had spoken for. `fixture-reached` and `fixture-seen` ask about the two
+# things in a room that answer a press rather than a carry, neither of
+# which is a cell of the net and neither of which any rule about berths
+# was ever about.
+#
+# One clause of the fourth was written, measured, and taken back out, and
+# that is the finding worth keeping. Asked of every berth rather than of
+# the ones a room fills, it reports the cabin's own seam latch crossed by
+# three — the worst standing across the whole of the amber — and nothing
+# is wrong with the latch. Every wall cell beside an aperture is a berth
+# and every deck cell in front of one is a berth, so a control bolted
+# beside a doorway shares air with a berth by construction and there is
+# nowhere to move it to. The rule would have forbidden the latch.
+

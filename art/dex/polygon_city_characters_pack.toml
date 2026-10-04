@@ -1,0 +1,303 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.character]
+name = "Character"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/FBX/Character.fbx"
+sha256 = "def66f1626abda459d156260d51cf403fc02cb394f1a34bf9e21d323c8798ed1"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A blocky, low-poly figure in a T-pose, wearing a tan coat with a red collar and a red cap with a small pom-pom. The coat features a yellow and black checkered trim along the front and sleeves, and the figure has dark trousers and shoes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 40259
+meshes = 19
+materials = 1
+size = [2.047519, 2.06063, 0.61416197]
+
+[mesh.sk_character_biker]
+name = "SK_Character_Biker"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_Biker.fbx"
+sha256 = "c958455023a96d92401724dd82bfc8f1102cda3e7acc62eb99e58c53c8ab8cd6"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A lean, T-posed figure with a grey mohawk and a short beard, wearing a black sleeveless vest over a white shirt with a circular emblem on the back, dark blue jeans, and black boots. The vest has a yellow strap detail, and the character's arms are bare, showing pale skin."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2048
+meshes = 1
+materials = 1
+size = [2.047519, 1.830113, 0.367406]
+
+[mesh.sk_character_fastfoodguy]
+name = "SK_Character_FastFoodGuy"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_FastFoodGuy.fbx"
+sha256 = "9e4921b6472b47e54d07a866aafae25eea8b821e493e96a6567e36732a453cb8"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A stocky male figure in a T-pose, wearing a mustard-yellow short-sleeved shirt, dark blue jeans, and dark shoes, with a brown cap and a red neckerchief, rendered in a low-poly style with flat, muted colours."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1906
+meshes = 1
+materials = 1
+size = [2.047519, 1.900103, 0.358644]
+
+[mesh.sk_character_firefighter]
+name = "SK_Character_FireFighter"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_FireFighter.fbx"
+sha256 = "a71d76c456043b08290aa22123e18f4bce3b2cefaea1f0b5cd3e878df93d3c0b"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A blocky, low-poly figure in a T-pose, wearing a dark charcoal turnout suit with bright yellow reflective bands on the torso, arms, and legs. A red helmet with a wide brim sits atop the head, and the character has a pale face with dark hair."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2194
+meshes = 1
+materials = 1
+size = [2.047513, 1.87877, 0.446383]
+
+[mesh.sk_character_gamergirl]
+name = "SK_Character_GamerGirl"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_GamerGirl.fbx"
+sha256 = "337970c814a67e2b2ba77c64bed2f18b3ccfbb11bf4490707544b08aae007b9d"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A stylized low-poly female character in a T-pose, featuring a purple jacket over a white top, black trousers, and purple shoes. She has a teal bob haircut with pink accents and wears glasses, giving her a distinct gamer or tech aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2479
+meshes = 1
+materials = 1
+size = [2.041504, 1.8587611, 0.34431]
+
+[mesh.sk_character_gangster]
+name = "SK_Character_Gangster"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_Gangster.fbx"
+sha256 = "37e6e0cd6c8494491675dbb4f0a9fcb7f7e963f0e5b6566eb74b99be84fceadb"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A slim, youthful male figure in a T-pose, wearing a green cap, a green graphic t-shirt, and baggy black trousers with white sneakers. The low-poly style gives him a blocky, angular silhouette, and the casual streetwear suggests a modern urban setting."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2044
+meshes = 1
+materials = 1
+size = [2.047513, 1.852115, 0.422478]
+
+[mesh.sk_character_grandma]
+name = "SK_Character_Grandma"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_Grandma.fbx"
+sha256 = "e397dd2de171f3e578b179bf2ba50a9c6c7b26ef46ee6ee78c7ede2ecb3804d1"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A low-poly elderly woman in a T-pose, featuring short grey hair, a knee-length olive-brown dress with a matching belt, and black flat shoes. Her neutral, upright stance and simple, muted palette make her a versatile, understated character for civilian or background roles in urban scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2164
+meshes = 1
+materials = 1
+size = [2.042048, 1.844886, 0.368449]
+
+[mesh.sk_character_grandpa]
+name = "SK_Character_Grandpa"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_Grandpa.fbx"
+sha256 = "c863b717ffbbfe409481cbf4f3720918c9038b3d1f84e9386ecb101712895bff"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A stooped elderly man in a T-pose, with a grey flat cap, a brown jacket over a light blue shirt, and dark trousers. His posture is hunched, and his face is weathered, giving him a distinct, characterful silhouette for a city scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2048
+meshes = 1
+materials = 1
+size = [2.047515, 1.843945, 0.38749]
+
+[mesh.sk_character_hipstergirl]
+name = "SK_Character_HipsterGirl"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_HipsterGirl.fbx"
+sha256 = "b7f59905347ab86b8b07801c6eda14dcbcf58556302942f49d9dfdebb24fb25d"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A slender female figure in a T-pose, wearing a grey beanie, a horizontally striped black-and-white top, a red knee-length skirt, and dark leggings with black boots. The low-poly style gives her a stylized, angular look, and her neutral stance makes her ideal for idle or background scenes in a city environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2400
+meshes = 1
+materials = 1
+size = [2.041503, 1.867947, 0.37586]
+
+[mesh.sk_character_hipsterguy]
+name = "SK_Character_HipsterGuy"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_HipsterGuy.fbx"
+sha256 = "f3776943000b507adb3147f326bd917e97ba6aac1b275ed1af421b757350676a"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A slender male figure in a T-pose, featuring a dark blue short-sleeved shirt with a red tie, black trousers, and dark shoes. He has short brown hair, pale skin, and wears glasses, giving him a distinct, bespectacled look that sets him apart from other city characters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2636
+meshes = 1
+materials = 1
+size = [2.047515, 1.835026, 0.324141]
+
+[mesh.sk_character_hobo]
+name = "SK_Character_Hobo"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_Hobo.fbx"
+sha256 = "3254f2e19341327b381eaa867716185a9df96fc08259d243fb392faf82426286"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A stocky male figure in a T-pose, wearing a flat cap, a teal vest over a long-sleeved olive shirt, and brown trousers with dark shoes. The vest has a small orange patch on the chest, and the character's face is partially obscured by a grey beard."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2248
+meshes = 1
+materials = 1
+size = [2.047519, 1.853767, 0.487035]
+
+[mesh.sk_character_hotdog]
+name = "SK_Character_Hotdog"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_Hotdog.fbx"
+sha256 = "53dd7cc41b9550e3807e5c77981e75a565acd426094d82e0c8419eddb9665be0"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A stout humanoid figure with a bun-shaped torso, a red sausage head, and a squiggly mustard stripe down the front, posed in a T-pose with thin green arms and small blue legs."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1732
+meshes = 1
+materials = 1
+size = [2.047519, 1.941566, 0.56467295]
+
+[mesh.sk_character_jock]
+name = "SK_Character_Jock"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_Jock.fbx"
+sha256 = "54683e9cfcc8ff6bce2bb02726dbc00bf96765867223a09e9901c6bdd2507fdf"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A young man in a T-pose with short blond hair, wearing a maroon varsity jacket with white sleeves and dark blue jeans, standing in black shoes. The jacket features a white collar and trim, giving it a classic athletic look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1814
+meshes = 1
+materials = 1
+size = [2.047516, 1.840838, 0.326848]
+
+[mesh.sk_character_paramedic]
+name = "SK_Character_Paramedic"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_Paramedic.fbx"
+sha256 = "78ad8e33ac42b3ba79897290b7d9ad59e9593d8c76a5bc8a42ac25e794912b4f"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A low-poly male figure in a T-pose with short blond hair, wearing a dark green uniform with a red cross emblem on the chest and back, black boots, and a small medical kit on his belt, ready for emergency response roles."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1678
+meshes = 1
+materials = 1
+size = [2.041329, 1.830101, 0.352516]
+
+[mesh.sk_character_punkgirl]
+name = "SK_Character_PunkGirl"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_PunkGirl.fbx"
+sha256 = "70db598527449f54b5fee87f5b86bb4ce49779282063c1f2c9d9e8c8e076557c"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A young woman in a T-pose with a short, dark undercut hairstyle, wearing a cropped white t-shirt, dark shorts with a belt, and heavy black boots with studded straps. She has a pale complexion, a black choker, and a studded bracelet on her left wrist, giving her a punk aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2402
+meshes = 1
+materials = 1
+size = [2.041502, 1.85291, 0.344284]
+
+[mesh.sk_character_punkguy]
+name = "SK_Character_PunkGuy"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_PunkGuy.fbx"
+sha256 = "666ee1a160b25cf544f3e2966abee1cfe5637892c23b3c5a0ac5c749e4457e0e"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A slender male figure in a T-pose with a tall, spiky red mohawk and pale skin, wearing a black leather jacket over a white shirt, red trousers, and black boots. The low-poly styling gives him a sharp, angular look, and his punk aesthetic is immediately readable, making him a distinct character choice for urban scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1938
+meshes = 1
+materials = 1
+size = [2.047514, 2.0572271, 0.514355]
+
+[mesh.sk_character_roadworker]
+name = "SK_Character_Roadworker"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_Roadworker.fbx"
+sha256 = "db4abc06ee44b0e4c3e429f18678427a4208650d9afe59c9fe437a962333a896"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A stocky, low-poly male figure in a T-pose, wearing a bright yellow high-visibility vest with reflective silver stripes over a tan shirt, dark blue jeans, and black gloves. He has brown hair and a neutral expression, with a simple, blocky silhouette that reads clearly at a distance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1830
+meshes = 1
+materials = 1
+size = [2.047513, 1.86894, 0.364748]
+
+[mesh.sk_character_shopkeeper]
+name = "SK_Character_ShopKeeper"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_ShopKeeper.fbx"
+sha256 = "43c2f4af90e76a7efa0b89ddf192742f822c17e7f46e99f4f00ff3d4d79bc859"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A slim, low-poly female figure in a T-pose, with blonde hair tied back, wearing a red short-sleeved top, a mustard-yellow apron, and dark grey trousers with black shoes. The flat-shaded, stylized look is typical of the pack, and the apron suggests a vendor or service role, making it ideal for populating market or..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2252
+meshes = 1
+materials = 1
+size = [2.041502, 1.874186, 0.368477]
+
+[mesh.sk_character_summergirl]
+name = "SK_Character_SummerGirl"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_SummerGirl.fbx"
+sha256 = "b899b29c4fd6ede08472b9616caba5a857e30c64122e8201b88f319716ad2fff"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A slender female figure in a T-pose, wearing a wide-brimmed straw hat with a blue band, a sleeveless purple top, and blue shorts. Her arms are outstretched, and she has light skin and blonde hair, with dark sandals on her feet. The low-poly style gives her a stylized, casual look, perfect for a beach or summer scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2304
+meshes = 1
+materials = 1
+size = [2.041502, 1.83465, 0.529499]
+
+[mesh.sk_character_tourist]
+name = "SK_Character_Tourist"
+pack = "polygon_city_characters_pack"
+source = "Source_Files/Characters/SK_Character_Tourist.fbx"
+sha256 = "17c5702b5dcbcfada2fbea6113efb055695ed5072e40b7e610f9f18c2ea1e1ec"
+atlas = "Polygon_City_Characters_Texture_01_A.png"
+textures = "Polygon_City_Characters_Texture_01_A.png"
+description = "A low-poly tourist in a T-pose, wearing a khaki bucket hat, a bright orange patterned shirt, and brown shorts. A black camera hangs from a strap across the chest, and the figure wears sandals, ready for sightseeing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2142
+meshes = 1
+materials = 1
+size = [2.047513, 1.869375, 0.494698]

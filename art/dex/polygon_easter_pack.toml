@@ -1,0 +1,325 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_easter_basket_01]
+name = "SM_Easter_Basket_01"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Basket_01.fbx"
+sha256 = "e05dfe0062cae0166140dfa1a54e39ce84afb23ee95d8b06382c143fb30e0abd"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A low, wide, faceted wooden basket with a single arched handle, its pale tan planks showing subtle horizontal grain and a darker brown rim, appearing sturdy and ready for gathering or carrying small items."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 276
+meshes = 1
+materials = 1
+size = [0.454608, 0.575656, 0.681432]
+
+[mesh.sm_easter_bow_1]
+name = "SM_Easter_Bow_1"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Bow_1.fbx"
+sha256 = "7080a4deeb7f58cff89af6d75f63fb055a4a7875f474542dc2373f5053177c61"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A flat, faceted red disc with a small, chunky bow attached to its edge, resembling a wrapped gift or a decorative hat base. The low-poly geometry gives it a crisp, stylised look, and the uniform coral-red colouring makes it a versatile, instantly readable prop for festive scenes."
+differs = "Identical to the others except for its coral-red colour, making it the warmest option for festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 307
+meshes = 1
+materials = 1
+size = [0.219346, 0.15472901, 0.235096]
+
+[mesh.sm_easter_bow_2]
+name = "SM_Easter_Bow_2"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Bow_2.fbx"
+sha256 = "06907199f368751d72c112afcda3bce3f0fd6273c50bf97213c7bed9e248096a"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A flat, low-poly green disc with a chunky, faceted bow and trailing ribbon tails attached to one edge, resembling a wrapped gift or hat. The solid, untextured green surface and simple geometry give it a clean, stylised look suitable for festive or decorative scenes."
+differs = "Identical to the others except for its green colour, making it the most Easter-themed and suitable for springtime props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 307
+meshes = 1
+materials = 1
+size = [0.219346, 0.15472901, 0.235096]
+
+[mesh.sm_easter_bow_3]
+name = "SM_Easter_Bow_3"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Bow_3.fbx"
+sha256 = "7068917965f7084fb034516d1e1667090325cd3ef8a40daeeb22101e38d60e6d"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A flat, low-poly disc with a chunky, faceted bow attached to its rim, rendered in a uniform, muted slate blue. The ribbon tails hang down from the knot, giving it a slightly drooping, relaxed look. Its simple, untextured geometry makes it ideal for stylized gift wrapping or decorative props."
+differs = "Identical to the others except for its slate blue colour, giving it a cooler, more muted tone for subtle decorations."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 307
+meshes = 1
+materials = 1
+size = [0.219346, 0.15472901, 0.235096]
+
+[mesh.sm_easter_bow_4]
+name = "SM_Easter_Bow_4"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Bow_4.fbx"
+sha256 = "958dc6b073f132a333d1467fef94035a5aa0c23b3fcf7351d8e3a1715ffe3823"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A flat, low-poly pink disc with a chunky, faceted bow attached to one edge, featuring two short trailing ribbon tails. The solid pink colour and simple geometry make it ideal for stylized Easter scenes, gift wrapping, or festive decorations."
+differs = "Identical to the others except for its pink colour, making it the most playful and suitable for pastel or baby-themed scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 307
+meshes = 1
+materials = 1
+size = [0.219346, 0.15472901, 0.235096]
+
+[mesh.sm_easter_egg_1]
+name = "SM_Easter_Egg_1"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_1.fbx"
+sha256 = "389cfa7aa6df936237f5fe8d3d3e8483b197dc7860711b1c12482273e38842c4"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A stout, faceted ovoid with a broad, rounded base and a gently tapered top, wrapped in a bold chevron band of slate blue and bright yellow. The upper and lower thirds are a warm, matte terracotta red, giving it a painted, festive look."
+differs = "The only chevron egg with terracotta ends and slate-blue/yellow band, ideal for festive painted props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 180
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]
+
+[mesh.sm_easter_egg_10]
+name = "SM_Easter_Egg_10"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_10.fbx"
+sha256 = "9b7feae6d7bb8f82b0abf13d98537ff95af993604b84bb6af04dd8204ba09960"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A stout, faceted egg with a broad base and a gently pointed top, painted in a muted reddish-brown with a distinct golden-yellow band wrapping the lower third. The low-poly surface catches light in broad, flat planes, giving it a matte, painted look."
+differs = "The plainest of all, with just a single gold band on reddish-brown, best for subtle background dressing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 140
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]
+
+[mesh.sm_easter_egg_11]
+name = "SM_Easter_Egg_11"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_11.fbx"
+sha256 = "c1e80e4c81fc4e4c5ccb3ac1460b392940e95a2ff9284ee6aeffa1ff0dcd8a20"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A squat, faceted egg with a muted purple base and three bright green horizontal stripes, one near the top, one at the middle, and one near the base. The low-poly surface catches light with a soft, matte sheen, giving it a smooth, ceramic-like appearance."
+differs = "The only egg with three green stripes on purple, offering a clean, ceramic-like look for pickups."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 200
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]
+
+[mesh.sm_easter_egg_12]
+name = "SM_Easter_Egg_12"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_12.fbx"
+sha256 = "e7380023cbdea5e7eb4ec13bb2f1326a243e869f3c26e395fcb9ec1235abf650"
+atlas = "POLYGON - Bow and Crossbow/Texture_01.png"
+textures = "Texture_01.png"
+description = "A squat, faceted egg with a broad base and rounded top, wrapped in bold horizontal stripes of red, blue, and yellow. The low-poly geometry gives it a crisp, stylized look, and the matte finish suggests a painted wooden or plastic surface."
+differs = "The only egg with bold red, blue, and yellow horizontal stripes, perfect for classic candy-style props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 180
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]
+
+[mesh.sm_easter_egg_13]
+name = "SM_Easter_Egg_13"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_13.fbx"
+sha256 = "749b5cdac6ef66f2dd3b204ecfb49b173e618c0a3df8e321b2625a09bc36e716"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A squat, faceted egg with a broad base and rounded top, wrapped in horizontal bands of pink, purple, and green. The low-poly surface catches light with a soft sheen, giving it a glossy, painted look. Its simple, cheerful stripes make it a versatile prop for festive scenes or collectible pickups."
+differs = "The only egg with pink, purple, and green bands, giving it a glossy, cheerful look for festive scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 200
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]
+
+[mesh.sm_easter_egg_14]
+name = "SM_Easter_Egg_14"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_14.fbx"
+sha256 = "f1b85ab3e4a5bbd8e04ecd55d5ccb236ff629e1ae44e2087795ffbeffb5fa14a"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A stout, faceted egg with a matte blue-grey upper shell and a broad, jagged red base band, separated by a thin yellow zigzag stripe. The low-poly geometry gives it a crisp, crystalline look, and the bold, contrasting colours make it ideal for festive or treasure-style game environments."
+differs = "The only egg with a blue-grey shell and jagged red base with yellow zigzag, ideal for treasure-style games."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 180
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]
+
+[mesh.sm_easter_egg_2]
+name = "SM_Easter_Egg_2"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_2.fbx"
+sha256 = "555eadaae97e6ab48f8f19bc3088284f143dff8754ce2990393fd1e9168ebf1c"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A squat, faceted egg with a cream body and a broad, jagged red base that resembles a broken shell or a painted zigzag band. The low-poly geometry gives it a crisp, stylised look, and the simple two-tone palette makes it ideal for festive scenes or as a collectible item."
+differs = "The only egg with a cream body and jagged red base, resembling a broken shell for damaged props."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 140
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]
+
+[mesh.sm_easter_egg_3]
+name = "SM_Easter_Egg_3"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_3.fbx"
+sha256 = "d8fa6ab6fedfde03ea4e764df9cdc03fbb5d4dbaa9891196f1ecfa280d1982ea"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A squat, faceted egg with a broad base and gently tapered top, wrapped in a bold chevron pattern of mint green, slate blue, and mustard yellow. The low-poly surface gives it a crisp, geometric look, and the matte finish suggests a painted wooden or ceramic texture."
+differs = "The only chevron egg with mint green, slate blue, and mustard yellow, offering a geometric painted look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 180
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]
+
+[mesh.sm_easter_egg_4]
+name = "SM_Easter_Egg_4"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_4.fbx"
+sha256 = "d6c6446fa1908349358ddea762a8cf57f78aba5567967954c73aff02f093f1c0"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A stout, faceted egg with a blue zigzag crown over a cream body, finished with a red base and a thin yellow stripe, giving it a bold, geometric, festive look."
+differs = "The most complex pattern of the set, with a blue zigzag crown, red base, and yellow stripe, ideal for a hero collectible."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 180
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]
+
+[mesh.sm_easter_egg_5]
+name = "SM_Easter_Egg_5"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_5.fbx"
+sha256 = "aaf2c2ff1f89b927a376887c76a6f30ebc9f87634c35e720de8de6b41213cbf7"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A stout, faceted egg with a broad base and gently tapered top, wrapped in five horizontal bands of red, yellow, pink, green, and blue. The low-poly geometry gives it a crisp, crystalline look, and the matte finish suggests a painted wooden or ceramic surface, making it a cheerful, versatile decoration for festive..."
+differs = "The only egg with five distinct horizontal color bands, making it the most rainbow-like and festive choice."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 140
+meshes = 1
+materials = 1
+size = [0.20522, 0.272486, 0.195176]
+
+[mesh.sm_easter_egg_6]
+name = "SM_Easter_Egg_6"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_6.fbx"
+sha256 = "0eb13c97e5409c2b904fae1ab8c0041d678b6487bed5d49d99350d7f97c031ed"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A plain, unadorned egg with a smooth, matte cream finish and a subtle vertical gradient that darkens toward the base, giving it a soft, natural look. Its simple, rounded form and lack of decoration make it a versatile, neutral prop for scenes requiring a basic, unmarked egg."
+differs = "The plainest and most neutral, with a subtle gradient, perfect for a background prop or a base for custom textures."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 140
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]
+
+[mesh.sm_easter_egg_7]
+name = "SM_Easter_Egg_7"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_7.fbx"
+sha256 = "c8a1f8fa2943fed2c438254c75d4bcf96025bbd9747637d0dbe0d04ae120df9e"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A plain, unadorned egg with a classic ovoid silhouette, slightly taller than it is wide, rendered in a pale beige or off-white tone. The low-poly faceting is clearly visible, giving it a subtle, crystalline texture that catches light across its surface."
+differs = "The most basic and unadorned, with a classic ovoid shape and no color variation, ideal for a generic, unmarked egg."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 140
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]
+
+[mesh.sm_easter_egg_8]
+name = "SM_Easter_Egg_8"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_8.fbx"
+sha256 = "27f1fd254a8a787e6f9ff6857d664003641437758dff3b6d9ba5343a02cbe4c1"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A stout, faceted egg with a broad base and a gently pointed top, painted in a warm, matte yellow. A jagged, deep blue zigzag band wraps around the lower third, giving it a cracked or painted shell appearance."
+differs = "The only egg with a jagged blue zigzag on a yellow body, giving it a cracked or painted shell look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 140
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]
+
+[mesh.sm_easter_egg_9]
+name = "SM_Easter_Egg_9"
+pack = "polygon_easter_pack"
+source = "SourceFiles/FBX/SM_Easter_Egg_9.fbx"
+sha256 = "05d6c16e2611b05049369879121674076f6a5353ba0925c37a59f99f8c2d0e45"
+atlas = "Polygon_Easter_Texture_01.png"
+textures = "Polygon_Easter_Texture_01.png"
+wanted = "xmas_Texture.psd"
+description = "A stout, faceted egg with a broad base and a gently tapered top, rendered in a muted slate-blue with a jagged teal band wrapping the lower third. The low-poly surface catches light in distinct planes, giving it a cool, stone-like sheen, and the subtle colour break makes it read as a painted or mineral-textured..."
+differs = "The only egg with a muted slate-blue body and teal band, offering a cool, stone-like aesthetic for a more subdued scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 140
+meshes = 1
+materials = 1
+size = [0.20522, 0.281238, 0.195176]

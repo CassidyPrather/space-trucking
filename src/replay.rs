@@ -22,9 +22,29 @@
 //! hold: that is the frame that can silently snap a phantom drag home
 //! (window blur mid-drag), and the replay must snap at the same tick.
 //!
-//! Format `RPL2`, line-oriented like the save and the wire: a header, the
-//! byte-length-prefixed base save embedded verbatim, then one `SNP2 input`
-//! line per entry — the recorder reuses the lockstep wire codec
+//! Format `RPL8`, line-oriented like the save and the wire: a header, the
+//! byte-length-prefixed base save embedded verbatim, then one `SNP7 input`
+//! line per entry. `RPL3` was bumped when the input frame grew its
+//! occupied-room field and the room graph's attach and detach requests
+//! (docs/ROOMS.md, "The one new input field"); `RPL4` when the grid came
+//! out (docs/BAY.md, "The grid comes out"): not one byte of the tape's
+//! grammar moved, but the same pointer frames settled cargo somewhere
+//! else — centred on the pointer, clamped, snapped — so an older tape
+//! replayed would be a different game told with the same inputs; and
+//! `RPL5` when cargo turned (docs/BAY.md, "Cargo turns"): every frame
+//! carries the carry's facing, the neighbour snap is gone, and a berth is
+//! anchored at its centre; `RPL6` when cargo stopped colliding
+//! ("Cargo stops colliding"): every frame carries the aimed piece, and
+//! the same drops now land where a neighbour used to refuse them;
+//! `RPL7` when the walls reached the deckhead (docs/ROOMS.md, "One
+//! storey, everywhere"): every room's net grew a course on each wall and
+//! every lane grew to hold it, so the same pointer names another cell
+//! and the same frames build another board; and `RPL8` when a berth grew
+//! its lift (docs/BAY.md, "Lift"): every frame carries the carry's lift,
+//! and the same release lands a body off its chart. A tape
+//! from any other version fails safe as
+//! unsupported, and the frontend starts a new run. The recorder
+//! reuses the lockstep wire codec
 //! ([`Message::Input`]) rather than invent a second frame encoding, so
 //! pointer floats travel as exact bit patterns. Parsing never panics; every
 //! malformed payload maps to a [`ReplayError`], and a recording that would
@@ -35,11 +55,11 @@ use std::fmt;
 use std::fmt::Write as _;
 
 use crate::net::Message;
-use crate::sim::{CrewFrame, InputFrame, SaveError, Sim, Vec2};
+use crate::sim::{CrewFrame, InputFrame, SaveError, Sim, Turn, Vec2};
 
 /// Magic-plus-version header of every recording this build writes. Bump on
 /// any breaking change; older versions fail safe as unsupported.
-const MAGIC: &str = "RPL2";
+const MAGIC: &str = "RPL8";
 
 /// Rolling cap on recorded entries.
 ///
@@ -114,6 +134,8 @@ const fn active(frame: &InputFrame) -> bool {
         || frame.release
         || frame.toggle_pause
         || frame.toggle_warp
+        || frame.attach.is_some()
+        || frame.detach.is_some()
         || frame.reseed.is_some()
 }
 
@@ -358,9 +380,9 @@ pub struct ReplayCursor<'a> {
     index: usize,
     /// Whether the entries due at the base tick have been applied yet.
     primed: bool,
-    /// Pointer to carry while the last entry pressed or held, so gap ticks
-    /// cannot snap a live drag home.
-    carry: Option<Vec2>,
+    /// Pointer, facing and lift to carry while the last entry pressed or
+    /// held, so gap ticks cannot snap a live drag home, turn it or lift it.
+    carry: Option<(Vec2, Turn, u16)>,
     /// The recorded player's last seen pointer, for the frontend to draw.
     pointer: Vec2,
     /// Ticks stepped so far, bounding runaway replays.
@@ -419,7 +441,8 @@ impl ReplayCursor<'_> {
                 return Err(ReplayError::OutOfOrder);
             }
             sim.advance(0.0, &frame);
-            self.carry = (frame.press || frame.held).then_some(frame.pointer);
+            self.carry =
+                (frame.press || frame.held).then_some((frame.pointer, frame.facing, frame.lift));
             self.pointer = frame.pointer;
             self.index += 1;
         }
@@ -432,15 +455,17 @@ impl ReplayCursor<'_> {
     }
 
     /// The continuation crew frame for a gap tick: all defaults, except that
-    /// player 0 keeps holding at the carried pointer while the last entry
-    /// pressed or held — the live session ran these ticks inside one
-    /// `advance`, where no input event could interrupt the drag.
+    /// player 0 keeps holding at the carried pointer, facing and lift while the
+    /// last entry pressed or held — the live session ran these ticks inside
+    /// one `advance`, where no input event could interrupt the drag.
     fn neutral(&self) -> CrewFrame {
         let mut frames = CrewFrame::default();
-        if let Some(pointer) = self.carry {
+        if let Some((pointer, facing, lift)) = self.carry {
             frames[0] = InputFrame {
                 pointer,
                 held: true,
+                facing,
+                lift,
                 ..InputFrame::default()
             };
         }
@@ -532,12 +557,60 @@ mod tests {
         Vec2::new(rect.w.mul_add(0.5, rect.x), rect.h.mul_add(0.5, rect.y))
     }
 
-    fn cell_center(x: u8, y: u8) -> Vec2 {
-        rect_center(layout::cell_rect(x, y))
+    /// Centre of one room's net cell.
+    fn cell_center(room: crate::sim::RoomId, x: u8, y: u8) -> Vec2 {
+        rect_center(layout::cell_rect(room, x, y))
     }
 
-    fn slot_center(slots: &[layout::Rect; 4], i: usize) -> Vec2 {
-        rect_center(slots[i])
+    /// Centre of the cabin's deck cell `(i, j)`.
+    fn cabin_deck(i: u8, j: u8) -> Vec2 {
+        let (x, y) = crate::sim::RoomKind::Cabin.deck_cell(i, j);
+        cell_center(crate::sim::CABIN, x, y)
+    }
+
+    /// The room a dock brings alongside always takes id 2.
+    const CALLER: crate::sim::RoomId = 2;
+
+    /// One of the trade room's tiles of `class`, row-major.
+    fn tile(class: crate::sim::Tile, n: usize) -> Vec2 {
+        let kind = crate::sim::RoomKind::Trade;
+        let (cols, rows) = kind.grid();
+        let mut cells = Vec::new();
+        for y in 0..rows {
+            for x in 0..cols {
+                if kind.tile_of(x, y) == Some(class) {
+                    cells.push((x, y));
+                }
+            }
+        }
+        let (x, y) = cells[n];
+        cell_center(CALLER, x, y)
+    }
+
+    /// The trade room's ordinary deck cells, row-major: where a struck
+    /// deal sets down what has just become yours.
+    fn deck_tiles() -> Vec<(u8, u8)> {
+        let kind = crate::sim::RoomKind::Trade;
+        let (cols, rows) = kind.grid();
+        let mut cells = Vec::new();
+        for y in 0..rows {
+            for x in 0..cols {
+                if kind.tile_of(x, y) == Some(kind.ordinary())
+                    && matches!(kind.surface_of(x, y), Some(crate::sim::room::Surf::Floor))
+                {
+                    cells.push((x, y));
+                }
+            }
+        }
+        cells
+    }
+
+    /// The trade room's handshake fixture.
+    fn shake() -> Vec2 {
+        let (x, y) = crate::sim::RoomKind::Trade
+            .handshake()
+            .expect("a trade room shakes");
+        cell_center(CALLER, x, y)
     }
 
     /// A drag with deliberately awkward frame times: press, a multi-tick
@@ -563,10 +636,9 @@ mod tests {
     /// spanned mid-warp. Returns the script and a coasting index where a
     /// re-base is safe (nothing held).
     fn thorough_script() -> (Vec<(f32, InputFrame)>, usize) {
-        let vial = cell_center(0, 0);
-        let scrap = cell_center(0, 2);
-        let pearls = cell_center(2, 0);
-        let accept = rect_center(layout::ACCEPT_LEVER);
+        let vial = cabin_deck(0, 0);
+        let scrap = cabin_deck(1, 2);
+        let pearls = cabin_deck(3, 0);
         let launch = rect_center(layout::LAUNCH_LEVER);
         let mars = poi_pos(URANUS, 0);
         let pause = |p: Vec2, held| InputFrame {
@@ -598,36 +670,52 @@ mod tests {
                 ..InputFrame::default()
             },
         ));
-        // The odyssey trade: all three starter pieces to the give pads, the
-        // first shelf good to the take pad.
-        drag(&mut s, vial, slot_center(&layout::GIVE_SLOTS, 0));
-        drag(&mut s, scrap, slot_center(&layout::GIVE_SLOTS, 1));
-        drag(&mut s, pearls, slot_center(&layout::GIVE_SLOTS, 2));
-        drag(
-            &mut s,
-            slot_center(&layout::SHELF_SLOTS, 0),
-            slot_center(&layout::TAKE_SLOTS, 0),
-        );
-        // Pause toggled mid-drag and released after: pick up the second
-        // shelf good, pause while holding it, wait, resume, put it back.
-        let shelf1 = slot_center(&layout::SHELF_SLOTS, 1);
-        s.push((0.013, press_at(shelf1.x, shelf1.y)));
-        s.push((0.017, pause(shelf1, true)));
-        s.push((0.019, held_at(shelf1.x + 5.0, shelf1.y)));
-        s.push((0.023, held_at(shelf1.x - 5.0, shelf1.y)));
-        s.push((0.029, pause(shelf1, true)));
-        s.push((0.0, release_at(shelf1.x, shelf1.y)));
-        // Let the dial swing, pull accept, select Mars, bump the launch
-        // gate (received still loaded), stow, and launch for real.
+        // The room flow: all three starter pieces carried through the
+        // doorway onto the station's offer area, one mark on its stock.
+        drag(&mut s, vial, tile(crate::sim::Tile::Offer, 0));
+        drag(&mut s, scrap, tile(crate::sim::Tile::Offer, 1));
+        drag(&mut s, pearls, tile(crate::sim::Tile::Offer, 2));
+        let stock0 = tile(crate::sim::Tile::Stock, 0);
+        s.push((0.013, press_at(stock0.x, stock0.y)));
+        // A pause toggled mid-carry and released after: lift the vial back
+        // off the offer area, pause while holding it, resume, set it down.
+        // The lift is aimed, as the cabin sends every roam press: the tape
+        // carries the aim, and the replay takes it exactly as live did.
+        let held_tile = tile(crate::sim::Tile::Offer, 0);
+        s.push((
+            0.013,
+            InputFrame {
+                aim: Some(1),
+                ..press_at(held_tile.x, held_tile.y)
+            },
+        ));
+        s.push((0.017, pause(held_tile, true)));
+        s.push((0.019, held_at(held_tile.x + 5.0, held_tile.y)));
+        s.push((0.023, held_at(held_tile.x - 5.0, held_tile.y)));
+        s.push((0.029, pause(held_tile, true)));
+        s.push((0.0, release_at(held_tile.x, held_tile.y)));
+        // Let time pass, shake hands, select the destination, bump the
+        // launch gate (the answer is still alongside), sweep the room's
+        // deck with quick-moves so everything of ours walks aboard, and
+        // launch for real.
         coast(&mut s, 30);
-        s.push((0.0, press_at(accept.x, accept.y)));
+        let shake = shake();
+        s.push((0.0, press_at(shake.x, shake.y)));
         s.push((0.017, press_at(mars.x, mars.y)));
         s.push((0.0, press_at(launch.x, launch.y)));
-        drag(
-            &mut s,
-            slot_center(&layout::RECEIVED_SLOTS, 0),
-            cell_center(0, 2),
-        );
+        for (x, y) in deck_tiles() {
+            let at = cell_center(CALLER, x, y);
+            s.push((
+                0.011,
+                InputFrame {
+                    pointer: at,
+                    press: true,
+                    held: true,
+                    shift: true,
+                    ..InputFrame::default()
+                },
+            ));
+        }
         s.push((0.013, press_at(launch.x, launch.y)));
         // Traveling: a re-base-safe stretch, then a zero-dt burst of
         // no-op presses (several entries on one tick).
@@ -719,7 +807,7 @@ mod tests {
     /// piece behaves identically.
     #[test]
     fn interrupted_drag_snaps_back_on_replay() {
-        let vial = cell_center(0, 0);
+        let vial = cabin_deck(0, 0);
         let mut script = vec![
             (0.013, press_at(vial.x, vial.y)),
             (0.017, held_at(vial.x + 30.0, vial.y)),
@@ -790,7 +878,7 @@ mod tests {
     /// get the general case right.)
     #[test]
     fn reseed_mid_recording_replays_exactly() {
-        let vial = cell_center(0, 0);
+        let vial = cabin_deck(0, 0);
         let mut script = Vec::new();
         coast(&mut script, 6);
         script.push((
@@ -864,7 +952,7 @@ mod tests {
     /// panics.
     #[test]
     fn truncation_at_every_boundary_fails_safe() {
-        let vial = cell_center(0, 0);
+        let vial = cabin_deck(0, 0);
         let mut script = vec![
             (0.013, press_at(vial.x, vial.y)),
             (0.017, release_at(vial.x, vial.y)),
@@ -893,7 +981,7 @@ mod tests {
     /// line outright just makes a shorter recording, which must still parse.
     #[test]
     fn mangling_any_line_fails_safe() {
-        let vial = cell_center(0, 0);
+        let vial = cabin_deck(0, 0);
         let mut script = vec![
             (0.013, press_at(vial.x, vial.y)),
             (0.017, release_at(vial.x, vial.y)),
@@ -936,16 +1024,26 @@ mod tests {
             Recording::parse("RPL9\nend 0\nbase 0\n"),
             Err(ReplayError::UnsupportedVersion)
         ));
+        // A tape from before the walls reached the deckhead would replay
+        // into a different game: the same pointer lands in another cell of
+        // a taller net, so it is refused whole, and so are the colliding,
+        // turned, grid-era and older ones.
+        for older in ["RPL3", "RPL4", "RPL5", "RPL6"] {
+            assert!(matches!(
+                Recording::parse(&format!("{older}\nend 0\nbase 0\n")),
+                Err(ReplayError::UnsupportedVersion)
+            ));
+        }
         assert!(matches!(
-            Recording::parse("RPL2"),
+            Recording::parse("RPL8"),
             Err(ReplayError::Parse { line: 0 })
         ));
         assert!(matches!(
-            Recording::parse("RPL2\nend NaN\nbase 0\n"),
+            Recording::parse("RPL8\nend NaN\nbase 0\n"),
             Err(ReplayError::Parse { line: 2 })
         ));
         assert!(matches!(
-            Recording::parse("RPL2\nend 0\nbase 99999999999999999999999\n"),
+            Recording::parse("RPL8\nend 0\nbase 99999999999999999999999\n"),
             Err(ReplayError::Parse { line: 3 })
         ));
 
@@ -959,7 +1057,7 @@ mod tests {
             .to_wire()
         };
         let build = |end: u64, entries: &str| {
-            format!("RPL2\nend {end}\nbase {}\n{base}{entries}", base.len())
+            format!("RPL8\nend {end}\nbase {}\n{base}{entries}", base.len())
         };
         // A player other than 0 has no business in a solo black box.
         assert!(Recording::parse(&build(5, &entry(1, 3))).is_err());
@@ -979,7 +1077,7 @@ mod tests {
     /// anything that happens to parse re-serialises without panicking.
     #[test]
     fn arbitrary_garbage_never_panics() {
-        let alphabet: Vec<char> = "RPL2 SNP\nend base input 0-9abcdefx \u{FFFD}\u{1F680}\t"
+        let alphabet: Vec<char> = "RPL8 SNP\nend base input 0-9abcdefx \u{FFFD}\u{1F680}\t"
             .chars()
             .collect();
         for round in 0_u64..300 {
@@ -1055,9 +1153,21 @@ mod tests {
             ReplayError::BadSave(SaveError::BadMagic).to_string(),
             "recording's base save: not a Space Trucking save"
         );
-        assert!(!ReplayError::OutOfOrder.to_string().is_empty());
-        assert!(!ReplayError::Stalled.to_string().is_empty());
-        assert!(!ReplayError::TooLong.to_string().is_empty());
-        assert!(!ReplayError::UnsupportedVersion.to_string().is_empty());
+        assert!(
+            !ReplayError::OutOfOrder.to_string().is_empty(),
+            "OutOfOrder says nothing"
+        );
+        assert!(
+            !ReplayError::Stalled.to_string().is_empty(),
+            "Stalled says nothing"
+        );
+        assert!(
+            !ReplayError::TooLong.to_string().is_empty(),
+            "TooLong says nothing"
+        );
+        assert!(
+            !ReplayError::UnsupportedVersion.to_string().is_empty(),
+            "UnsupportedVersion says nothing"
+        );
     }
 }

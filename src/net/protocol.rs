@@ -1,7 +1,15 @@
 //! The wire protocol: versioned, line-oriented lockstep messages.
 //!
 //! Style and defenses mirror `sim/save.rs`: a magic-plus-version header
-//! (`SNP2`), whitespace-separated tokens, and parsing that never panics —
+//! (`SNP7` — `SNP3` when the input frame grew its occupied-room field and
+//! the room graph's attach/detach requests, `SNP4` when it grew the
+//! carry's facing, docs/BAY.md "Cargo turns", `SNP5` when it grew the
+//! aimed piece, "Cargo stops colliding", `SNP6` when the walls reached
+//! the deckhead, docs/ROOMS.md "One storey, everywhere": not a token
+//! moved, but every room's net and lane grew, so the same pointer names
+//! another cell to a peer on the old geometry, and `SNP7` when it grew the
+//! carry's lift, docs/BAY.md "Lift"), whitespace-separated tokens,
+//! and parsing that never panics —
 //! every malformed message maps to a [`WireError`] with its 1-based line
 //! number (line 0 means the text ended too early). Floats travel as hex bit
 //! patterns, never decimal, because a pointer position that drifts by one
@@ -15,11 +23,12 @@
 use std::fmt;
 use std::fmt::Write as _;
 
-use crate::sim::{CrewFrame, InputFrame, MAX_CREW, PlayerId, Vec2};
+use crate::sim::room::{MAX_ROOMS, PORTS, RoomKind};
+use crate::sim::{Attach, CrewFrame, InputFrame, MAX_CREW, PlayerId, Turn, Vec2};
 
 /// Magic-plus-version header of every message this build writes. Bump on
 /// any breaking change; older versions fail safe as unsupported.
-const MAGIC: &str = "SNP2";
+const MAGIC: &str = "SNP7";
 
 /// Why a wire payload was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -61,8 +70,11 @@ pub enum Message {
         player: PlayerId,
         frame: InputFrame,
     },
-    /// One sealed tick's canonical crew inputs, in player order.
-    Schedule { tick: u64, frames: CrewFrame },
+    /// One sealed tick's canonical crew inputs, in player order. Boxed:
+    /// six frames are most of a third of a kilobyte, and every other
+    /// message is a few words, so the stream's one large message carries
+    /// its weight on the heap rather than in every message's size.
+    Schedule { tick: u64, frames: Box<CrewFrame> },
     /// A replica asking for sealed history it missed, `from_tick` onward.
     ScheduleRequest { from_tick: u64 },
     /// A cluster helm reporting its ship's monotonic delivery tally.
@@ -100,7 +112,7 @@ impl Message {
             }
             Self::Schedule { tick, frames } => {
                 let _ = writeln!(out, "{MAGIC} schedule {tick}");
-                for frame in frames {
+                for frame in &**frames {
                     out.push_str("frame ");
                     write_frame(&mut out, frame);
                 }
@@ -160,7 +172,10 @@ impl Message {
                     }
                     *slot = parse_frame(&at, &mut tokens)?;
                 }
-                Ok(Self::Schedule { tick, frames })
+                Ok(Self::Schedule {
+                    tick,
+                    frames: Box::new(frames),
+                })
             }
             Some("request") => Ok(Self::ScheduleRequest {
                 from_tick: at.token(tokens.next())?,
@@ -177,16 +192,37 @@ impl Message {
     }
 }
 
-/// One frame as ten tokens plus a newline: pointer x/y as f32 bit
-/// patterns (exact), the seven buttons/modifiers as 0/1, reseed as `-` or
-/// 16 hex digits.
+/// One frame as sixteen tokens plus a newline: pointer x/y as f32 bit
+/// patterns (exact), the seven buttons/modifiers as 0/1, the occupied
+/// room as a small integer, the carry's facing as its turn in decimal,
+/// the carry's lift in fine units in decimal, the aimed piece as `-` or its id in decimal, the attach request as
+/// `-` or four dot-separated small integers, the detach as `-` or a room
+/// id, and reseed as `-` or 16 hex digits.
 fn write_frame(out: &mut String, frame: &InputFrame) {
     let reseed = frame
         .reseed
         .map_or_else(|| "-".to_owned(), |seed| format!("{seed:016x}"));
+    let attach = frame.attach.map_or_else(
+        || "-".to_owned(),
+        |a| {
+            format!(
+                "{}.{}.{}.{}",
+                a.anchor,
+                a.anchor_port,
+                a.kind.token(),
+                a.port
+            )
+        },
+    );
+    let detach = frame
+        .detach
+        .map_or_else(|| "-".to_owned(), |room| room.to_string());
+    let aim = frame
+        .aim
+        .map_or_else(|| "-".to_owned(), |piece| piece.to_string());
     let _ = writeln!(
         out,
-        "{:08x} {:08x} {} {} {} {} {} {} {} {reseed}",
+        "{:08x} {:08x} {} {} {} {} {} {} {} {} {} {} {aim} {attach} {detach} {reseed}",
         frame.pointer.x.to_bits(),
         frame.pointer.y.to_bits(),
         u8::from(frame.press),
@@ -196,10 +232,13 @@ fn write_frame(out: &mut String, frame: &InputFrame) {
         u8::from(frame.toggle_warp),
         u8::from(frame.shift),
         u8::from(frame.night),
+        frame.occupied,
+        frame.facing.0,
+        frame.lift,
     );
 }
 
-/// The ten frame tokens back into an [`InputFrame`].
+/// The sixteen frame tokens back into an [`InputFrame`].
 fn parse_frame<'a>(
     at: &At,
     tokens: &mut impl Iterator<Item = &'a str>,
@@ -216,6 +255,12 @@ fn parse_frame<'a>(
         toggle_warp: at.bit(tokens.next())?,
         shift: at.bit(tokens.next())?,
         night: at.bit(tokens.next())?,
+        occupied: at.room(tokens.next())?,
+        facing: Turn(at.token(tokens.next())?),
+        lift: at.token(tokens.next())?,
+        aim: at.opt_token(tokens.next())?,
+        attach: at.attach(tokens.next())?,
+        detach: at.opt_room(tokens.next())?,
         reseed: at.opt_hex64(tokens.next())?,
     })
 }
@@ -254,6 +299,64 @@ impl At {
         }
     }
 
+    /// A bounds-checked room id.
+    fn room(&self, token: Option<&str>) -> Result<u8, WireError> {
+        let room: u8 = self.token(token)?;
+        if usize::from(room) < MAX_ROOMS {
+            Ok(room)
+        } else {
+            Err(self.err())
+        }
+    }
+
+    /// An optional plain value (`-` for none): the aimed piece's id, which
+    /// any `u32` may be — a frame naming a piece that is not there names
+    /// nothing, and the sim reads it so (`sim::layout::pick`).
+    fn opt_token<T: std::str::FromStr>(&self, token: Option<&str>) -> Result<Option<T>, WireError> {
+        match token {
+            Some("-") => Ok(None),
+            other => self.token(other).map(Some),
+        }
+    }
+
+    /// A bounds-checked optional room id (`-` for none).
+    fn opt_room(&self, token: Option<&str>) -> Result<Option<u8>, WireError> {
+        match token {
+            Some("-") => Ok(None),
+            other => self.room(other).map(Some),
+        }
+    }
+
+    /// An attach request: `-`, or anchor.port.kind.port, every field
+    /// bounds-checked so a hostile frame cannot index off the end.
+    fn attach(&self, token: Option<&str>) -> Result<Option<Attach>, WireError> {
+        let Some(token) = token else {
+            return Err(self.err());
+        };
+        if token == "-" {
+            return Ok(None);
+        }
+        let mut parts = token.split('.');
+        let anchor = self.room(parts.next())?;
+        let anchor_port: u8 = self.token(parts.next())?;
+        let kind = self
+            .token::<u8>(parts.next())
+            .ok()
+            .and_then(RoomKind::from_token)
+            .ok_or_else(|| self.err())?;
+        let port: u8 = self.token(parts.next())?;
+        if parts.next().is_some() || usize::from(anchor_port) >= PORTS || usize::from(port) >= PORTS
+        {
+            return Err(self.err());
+        }
+        Ok(Some(Attach {
+            anchor,
+            anchor_port,
+            kind,
+            port,
+        }))
+    }
+
     /// One token of hex digits, as raw f32 bits.
     fn hex32(&self, token: Option<&str>) -> Result<u32, WireError> {
         token
@@ -289,6 +392,12 @@ mod tests {
         assert_eq!(a.release, b.release);
         assert_eq!(a.toggle_pause, b.toggle_pause);
         assert_eq!(a.toggle_warp, b.toggle_warp);
+        assert_eq!(a.occupied, b.occupied);
+        assert_eq!(a.facing, b.facing);
+        assert_eq!(a.lift, b.lift);
+        assert_eq!(a.aim, b.aim);
+        assert_eq!(a.attach, b.attach);
+        assert_eq!(a.detach, b.detach);
         assert_eq!(a.reseed, b.reseed);
     }
 
@@ -303,6 +412,17 @@ mod tests {
             toggle_warp: true,
             shift: true,
             night: true,
+            occupied: (MAX_ROOMS - 1) as u8,
+            facing: Turn(u16::MAX),
+            lift: u16::MAX,
+            aim: Some(u32::MAX),
+            attach: Some(Attach {
+                anchor: 0,
+                anchor_port: (PORTS - 1) as u8,
+                kind: RoomKind::Pump,
+                port: 0,
+            }),
+            detach: Some(1),
             reseed: Some(u64::MAX),
         }
     }
@@ -327,7 +447,10 @@ mod tests {
                 player: 0,
                 frame: thorny_frame(),
             },
-            Message::Schedule { tick: 42, frames },
+            Message::Schedule {
+                tick: 42,
+                frames: Box::new(frames),
+            },
             Message::ScheduleRequest { from_tick: 0 },
             Message::Report {
                 cluster: u64::MAX,
@@ -387,7 +510,7 @@ mod tests {
                     },
                 ) => {
                     assert_eq!(ta, tb);
-                    for (a, b) in fa.iter().zip(fb) {
+                    for (a, b) in fa.iter().zip(fb.iter()) {
                         assert_frames_eq(a, b);
                     }
                 }
@@ -470,18 +593,55 @@ mod tests {
             Err(WireError::UnsupportedVersion)
         ));
         // Out-of-range crew indices are refused at the wire.
-        assert!(Message::from_wire("SNP2 hello 6").is_err());
-        assert!(Message::from_wire("SNP2 input 1 6 0 0 0 0 0 0 0 0 0 -").is_err());
+        assert!(Message::from_wire("SNP7 hello 6").is_err());
+        assert!(Message::from_wire("SNP7 input 1 6 0 0 0 0 0 0 0 0 0 0 0 0 - - - -").is_err());
         // Loose booleans are refused: the strict wire has no "2" or "true".
-        assert!(Message::from_wire("SNP2 input 1 0 0 0 2 0 0 0 0 -").is_err());
-        assert!(Message::from_wire("SNP2 input 1 0 0 0 true 0 0 0 0 -").is_err());
+        assert!(Message::from_wire("SNP7 input 1 0 0 0 2 0 0 0 0 0 0 0 0 0 - - - -").is_err());
+        assert!(Message::from_wire("SNP7 input 1 0 0 0 true 0 0 0 0 0 0 0 0 0 - - - -").is_err());
+        // A facing is a turn: no sign, no fraction, nothing past a whole
+        // one.
+        let facing = |turn: &str| format!("SNP7 input 1 0 0 0 0 0 0 0 0 0 0 0 {turn} 0 - - - -");
+        for bad in ["65536", "-1", "1.5", "-"] {
+            assert!(Message::from_wire(&facing(bad)).is_err(), "facing {bad}");
+        }
+        assert!(Message::from_wire(&facing("65535")).is_ok());
+        // A lift is fine units off a chart: no sign, no fraction, nothing
+        // past a `u16`. The cap is the drop's, not the wire's: a peer's
+        // lift past it is held to it where every peer resolves the drop.
+        let lift = |units: &str| format!("SNP7 input 1 0 0 0 0 0 0 0 0 0 0 0 0 {units} - - - -");
+        for bad in ["65536", "-1", "1.5", "-"] {
+            assert!(Message::from_wire(&lift(bad)).is_err(), "lift {bad}");
+        }
+        for good in ["0", "34", "65535"] {
+            assert!(Message::from_wire(&lift(good)).is_ok(), "lift {good}");
+        }
+        // An aim is a piece id or nothing: no sign, no fraction, nothing
+        // past a `u32`.
+        let aim = |id: &str| format!("SNP7 input 1 0 0 0 0 0 0 0 0 0 0 0 0 0 {id} - - -");
+        for bad in ["4294967296", "-1", "1.5", "", "--"] {
+            assert!(Message::from_wire(&aim(bad)).is_err(), "aim {bad:?}");
+        }
+        for good in ["-", "0", "4294967295"] {
+            assert!(Message::from_wire(&aim(good)).is_ok(), "aim {good:?}");
+        }
+        // An older version's frame is that version's: the fourteen-token
+        // one, and the previous version's own fifteen, which carries no
+        // lift.
+        assert!(matches!(
+            Message::from_wire("SNP4 input 1 0 0 0 0 0 0 0 0 0 0 0 0 - - -"),
+            Err(WireError::UnsupportedVersion)
+        ));
+        assert!(matches!(
+            Message::from_wire("SNP6 input 1 0 0 0 0 0 0 0 0 0 0 0 0 - - - -"),
+            Err(WireError::UnsupportedVersion)
+        ));
     }
 
     #[test]
     fn schedule_bodies_fail_safe_line_by_line() {
         let wire = Message::Schedule {
             tick: 1,
-            frames: [InputFrame::default(); MAX_CREW],
+            frames: Box::new([InputFrame::default(); MAX_CREW]),
         }
         .to_wire();
         let lines: Vec<&str> = wire.lines().collect();
@@ -500,7 +660,7 @@ mod tests {
                 "",
                 "frame",
                 "frame 0 0 0 0 0 0 0 0 0",
-                "noise 0 0 0 0 0 0 0 0 0 -",
+                "noise 0 0 0 0 0 0 0 0 0 0 0 - - -",
             ] {
                 let mangled: String = lines
                     .iter()
@@ -520,7 +680,7 @@ mod tests {
     #[test]
     fn arbitrary_garbage_never_panics() {
         // Deterministic fuzz: random-ish strings over a spicy alphabet.
-        let alphabet: Vec<char> = "SNP2 hello\nframe 0-9abcdefx \u{FFFD}\u{1F680}\t"
+        let alphabet: Vec<char> = "SNP7 hello\nframe 0-9abcdefx \u{FFFD}\u{1F680}\t"
             .chars()
             .collect();
         for round in 0_u64..300 {

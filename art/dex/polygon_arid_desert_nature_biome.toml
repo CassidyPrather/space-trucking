@@ -1,0 +1,2229 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.env_cloudring_larger_02]
+name = "Env_CloudRing_Larger_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Core/Env_CloudRing_Larger_02.fbx"
+sha256 = "f33fb0f50d6f05a48b2e9d4b8a7d8f894dd7daeda89d08cf896edce60e7dbd12"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A flat, pale grey disc with a subtle, darker mottled texture, appearing as a simple, unadorned ring viewed from above. Its low profile and uniform surface suggest it is a flat, circular platform or a distant, stylised cloud layer, offering a clean, minimalist shape for desert environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [310.26807, 54.419323, 295.38898]
+
+[mesh.fx_bubble_01]
+name = "FX_Bubble_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Bubble_01.fbx"
+sha256 = "edf5ccba88589079cd494b254ea705c3aeecf689724655bbd7454814e8f0159b"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A squat, faceted dome in a muted olive green, with a glossy sheen that suggests a slick or wet surface. The low-poly form is smooth and unadorned, with no visible markings or attached geometry, giving it a clean, generic appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 56
+meshes = 1
+materials = 1
+size = [0.761008, 0.380504, 0.761008]
+
+[mesh.fx_sphere_01]
+name = "FX_Sphere_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Sphere_01.fbx"
+sha256 = "1d07e8b767c4f7b2d62cef7f98319a72d49b97d8d47760eacbad0ee6ff62919e"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A faceted, low-poly sphere with a matte, pale grey finish, resembling a smooth, untextured stone or a stylised rock. Its uniform, neutral colour and lack of surface detail make it a versatile, blank canvas for a desert environment, ideal for a generic boulder or a placeholder for a larger, more complex effect."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 46
+meshes = 1
+materials = 1
+size = [0.519158, 0.488465, 0.546848]
+
+[mesh.fx_sunshafts_01]
+name = "FX_SunShafts_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/FX/FX_SunShafts_01.fbx"
+sha256 = "ab001fd01b3f145616c46cc4edd088a88dd25772ddb991be57d94a7e244b5f23"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A tall, narrow vertical shaft with a dark, jagged silhouette, featuring a warm orange glow at the top and a textured, reddish-brown core that fades into a dark, translucent base, resembling a stylised beam of light or a magical energy column."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4
+meshes = 1
+materials = 1
+size = [1.0, 3.591922, 1.0]
+
+[mesh.fx_tumbleweed_01]
+name = "FX_Tumbleweed_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Tumbleweed_01.fbx"
+sha256 = "9f677855dd9d30d5f2ee745eccc5b58063716131dce3d3e7bba0aaa14d7d448b"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A roughly spherical tangle of dry, brittle twigs, forming an open, airy cage with a hollow centre. The wood is a pale, sun-bleached tan with darker brown shadows, giving it a weathered, dusty look. It appears lightweight and ready to roll across the desert floor."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1298
+meshes = 1
+materials = 1
+size = [0.668136, 0.648506, 0.683168]
+
+[mesh.fx_vulture_01]
+name = "FX_Vulture_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/FX/FX_Vulture_01.fbx"
+sha256 = "e0e71d7342ae62d2e6edc7ec5c44effcb96b3ee68487b59be275e28c76018d1b"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+wanted = "vulture_Test.png"
+description = "A low-poly vulture with broad, angled wings and a short tail, rendered in muted olive, brown, and grey plumage with a bare red head and neck. The flat-shaded facets give it a crisp, stylized look, and the pose is a fixed glide, making it ideal for distant background flocks or aerial ambience."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 434
+meshes = 1
+materials = 1
+size = [6.678642, 0.279662, 2.128172]
+
+[mesh.sm_env_backrgound_hill_01]
+name = "SM_Env_Backrgound_Hill_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Backrgound_Hill_01.fbx"
+sha256 = "56bd56d4f003d24bb765296ea02f418ddb20e3e4cb0ae1fd5a07b5311193d633"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, flat mound of sandy earth with a gently rounded crest, scattered with dark rocks and sparse, dry scrub. Its surface is textured with subtle striations and patches of darker soil, giving it a weathered, sun-baked appearance."
+differs = "Largest and most detailed, with the most pronounced crest and densest scrub, best for a focal background hill."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5278
+meshes = 1
+materials = 1
+size = [26.490135, 3.4127219, 27.11745]
+
+[mesh.sm_env_backrgound_hill_02]
+name = "SM_Env_Backrgound_Hill_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Backrgound_Hill_02.fbx"
+sha256 = "fc22995e3831cd3f7a90b0378d2c8758360f03dfde23a3362b50548d8027bfe3"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, flattened mound of sandy earth with a rough, irregular silhouette, marked by dark, jagged patches of shadow and sparse rocky debris. Its muted tan and brown palette suggests dry, weathered ground, making it a natural, unobtrusive backdrop for arid terrain."
+differs = "Mid-sized with the most jagged, shadow-heavy silhouette, ideal for a rugged, broken terrain accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2523
+meshes = 1
+materials = 1
+size = [22.267048, 2.888285, 23.53078]
+
+[mesh.sm_env_backrgound_hill_03]
+name = "SM_Env_Backrgound_Hill_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Backrgound_Hill_03.fbx"
+sha256 = "95f9d4d34f64882f01d57d119e9d06192e2b8199d8b1fc7a58a9676855c54e8d"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, irregular mound of sandy earth with a flat, uneven top, marked by dark, scattered patches of dry scrub and rocky debris. Its gentle slopes and weathered surface suggest a natural, arid terrain feature, ideal for adding subtle elevation to a desert floor without disrupting sightlines."
+differs = "Smallest and plainest with a flat top, perfect for a subtle, low-profile elevation that won't block sightlines."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1153
+meshes = 1
+materials = 1
+size = [17.290268, 2.57442, 18.442724]
+
+[mesh.sm_env_bush_bramble_01]
+name = "SM_Env_Bush_Bramble_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Bush_Bramble_01.fbx"
+sha256 = "c970ba25d334b8f93a33344e390632146f48a3d077f5d17a05640c6ae89d4dce"
+atlas = "Branches_01.tga"
+textures = "Branches_01.tga"
+description = "A low, wide, tangled mound of dry, grey-brown twigs and thorny branches, with a few dark, withered leaves clinging to the centre. Its scraggly, irregular silhouette suggests a dead or dormant plant, ideal for adding a harsh, arid touch to desert environments."
+differs = "The smaller, denser, more compact option with a tighter silhouette, best for filling gaps or adding low, solid ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3142
+meshes = 3
+materials = 2
+size = [2.843184, 1.649256, 2.651453]
+
+[mesh.sm_env_bush_bramble_02]
+name = "SM_Env_Bush_Bramble_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Bush_Bramble_02.fbx"
+sha256 = "012754ff0205f70b1352edbf14a1dfe11a0cc91d42c6a6506bb240a6738edb19"
+atlas = "Branches_01.tga"
+textures = "Branches_01.tga"
+description = "A low, wide clump of dry, spindly twigs and sparse, dark leaves, forming a scraggly, irregular mound that reads as a dead or dormant bramble. The silhouette is airy and open, with thin, jagged branches radiating outward from a dense, shadowed core, giving it a brittle, weathered look."
+differs = "The larger, airier, more open variant with a wider spread and more intricate branching, ideal for creating a taller, more detailed focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4454
+meshes = 3
+materials = 1
+size = [3.429703, 1.5975289, 2.916706]
+
+[mesh.sm_env_cactus_01]
+name = "SM_Env_Cactus_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Cactus_01.fbx"
+sha256 = "f501dc53152805a284fff4d4768f232788751229e56ba866798da26965eeb606"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A squat, rounded mound of dark, jagged rock shards with deep red and black striations, resembling a low-poly volcanic outcrop or mineral cluster rather than a cactus."
+differs = "The only non-plant, a jagged rock mound with no spines or buds, best for volcanic or mineral debris."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2360
+meshes = 3
+materials = 1
+size = [1.384767, 1.085054, 1.322689]
+
+[mesh.sm_env_cactus_02]
+name = "SM_Env_Cactus_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Cactus_02.fbx"
+sha256 = "892aea35fbe85c731fa833e88e0429272d8048f59dec9d545c270e05df9abaa8"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A low, sprawling cluster of thick, segmented arms radiating outward from a central base, resembling a barrel cactus that has collapsed into a wide, ground-hugging clump. The dark olive-green body is heavily textured with vertical ridges and dotted with small, bright orange and pink buds at the tips of each arm, giving."
+differs = "The widest and lowest, a sprawling clump with bright buds, ideal for ground cover or desert floor detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3780
+meshes = 3
+materials = 1
+size = [2.100708, 0.996417, 1.923301]
+
+[mesh.sm_env_cactus_03]
+name = "SM_Env_Cactus_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Cactus_03.fbx"
+sha256 = "99c8e7e0ab5b1433c180fc11a80525a0a8ed22cb0a25fa48859ab49a82094a10"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A stout, low-poly cactus with a thick central trunk and two short, rounded arms, set against a flat, vertical backdrop of red rock with white speckles and a sandy base. The plant is a muted olive green with darker vertical ridges and small, pale spines, while the backdrop shows a weathered, layered cliff face with a..."
+differs = "The tallest and most detailed, with a built-in rock backdrop, perfect for a standalone focal point or cliff-side placement."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5246
+meshes = 4
+materials = 1
+size = [2.750344, 3.6786308, 2.537142]
+
+[mesh.sm_env_cloud_ring_01]
+name = "SM_Env_Cloud_Ring_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Cloud_Ring_01.fbx"
+sha256 = "0414c4f45c73af36a004af55e33c25855e3cb3d3df1ef67c34bf63471fbd6a6e"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A flattened, irregular ring of pale grey stone with a rough, weathered surface, appearing as a low, broken circular formation. Its uneven top edge and subtle earthy tones suggest a natural, eroded rock feature, ideal for adding a subtle, grounded landmark to a desert scene."
+differs = "The smaller, flatter, and more grounded rock ring, best for a low, broken landmark on the desert floor rather than in the sky."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 14456
+meshes = 1
+materials = 1
+size = [277.46246, 26.061537, 259.42413]
+
+[mesh.sm_env_cloud_ring_02]
+name = "SM_Env_Cloud_Ring_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Cloud_Ring_02.fbx"
+sha256 = "610e6b7dffb6735502389fd7e49e0af9843b4d18d3ae5706019ee3247b865db2"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A flat, low-poly ring of pale grey and white, textured with subtle mottling to suggest a thin, wispy cloud formation. Its irregular, organic silhouette gives it a natural, drifting appearance, making it ideal for adding atmospheric depth to a desert sky."
+differs = "The larger, taller, and more detailed wispy cloud ring, with a more organic silhouette for atmospheric sky depth, not a ground feature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 18556
+meshes = 1
+materials = 1
+size = [310.26804, 54.419327, 295.38898]
+
+[mesh.sm_env_crater_01]
+name = "SM_Env_Crater_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Crater_01.fbx"
+sha256 = "b0a9d1070c6e0587f7ada1fe061f0a5a7115fca0b79e719589b94caa816b6a21"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, wide, roughly circular mound of sandy earth, rising to a dark, rocky, bowl-shaped depression at its centre. The surrounding rim is smooth and pale tan, while the crater interior is a darker, rougher brown, suggesting a dry, weathered impact site or sinkhole in a desert biome."
+differs = "The plainest and lowest, with no rock spires; best for a subtle, natural sinkhole."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 575
+meshes = 1
+materials = 1
+size = [6.958952, 1.371213, 6.869638]
+
+[mesh.sm_env_crater_02]
+name = "SM_Env_Crater_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Crater_02.fbx"
+sha256 = "1c0c05b07d8017652c608b888e3003a77a732b6fc5f28d13e370235bbd90929c"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, wide, irregular mound of sandy earth with a shallow, jagged depression at its centre, ringed by a few sharp, broken rock spires. The surface is a mix of pale tan dirt and darker, weathered grey-brown stone, giving it a dry, sun-baked appearance suited to a desert floor or a small impact site."
+differs = "The most detailed and damaged, with the most jagged spires; ideal for a harsh, broken impact site."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1344
+meshes = 1
+materials = 1
+size = [6.711117, 2.500082, 6.746921]
+
+[mesh.sm_env_crater_03]
+name = "SM_Env_Crater_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Crater_03.fbx"
+sha256 = "7bd20ac7acdefef5af6f660ad3ee1a1397681ede9d974738b3bab58daecf5928"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A shallow, wide depression with a raised, jagged rim, featuring four sharp, uneven rock spires clustered on one side. The surface is a dusty, pale tan with darker brown shading in the hollow, suggesting a dry, weathered impact site."
+differs = "The largest and tallest, with four spires clustered on one side; best for a dramatic, asymmetric focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1000
+meshes = 1
+materials = 1
+size = [7.191738, 2.982379, 7.103086]
+
+[mesh.sm_env_dirtroad_corner_01]
+name = "SM_Env_DirtRoad_Corner_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_DirtRoad_Corner_01.fbx"
+sha256 = "c6af11c0d5b85ff748ca0cc5a528b7e2f537d7b349f2b8c872b97ff0aceb8b8b"
+atlas = "POLYGON - Military Pack/PolygonMilitary_Texture_01_A.png"
+textures = "PolygonMilitary_Texture_01_A.png"
+description = "A low, flat, curved wedge of pale sandy terrain, shaped like a wide, sweeping bend in a dirt track. The surface is smooth with subtle, wavy ridges and a darker, worn patch on the inner curve, suggesting a well-trodden path."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 203
+meshes = 1
+materials = 1
+size = [5.262993, 0.31050402, 7.216929]
+
+[mesh.sm_env_dirtroad_end_01]
+name = "SM_Env_DirtRoad_End_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_DirtRoad_End_01.fbx"
+sha256 = "2f4eab3b0d3e21bbb35fc39cb3e247eb726096fe143f427276c149fbba6551fd"
+atlas = "POLYGON - Military Pack/PolygonMilitary_Texture_01_A.png"
+textures = "PolygonMilitary_Texture_01_A.png"
+description = "A low, flat wedge of pale sandy dirt that tapers to a rounded point at one end, with a slightly raised, irregular hump near the wider base. The surface is smooth and uniform, showing no ruts or debris, giving it a clean, stylized look that reads as a simple, functional end-cap for a dirt path."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 287
+meshes = 1
+materials = 1
+size = [7.84265, 0.383276, 10.945394]
+
+[mesh.sm_env_dirtroad_slope_down_01]
+name = "SM_Env_DirtRoad_Slope_Down_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_DirtRoad_Slope_Down_01.fbx"
+sha256 = "4d66d2de92eb372aa41a0233776fa9be80521150ad993583261088ccfdf48bd5"
+atlas = "POLYGON - Military Pack/PolygonMilitary_Texture_01_A.png"
+textures = "PolygonMilitary_Texture_01_A.png"
+description = "A gently arched strip of pale, sandy earth, tapering slightly at both ends and curving downward along its length. The surface is smooth with subtle, mottled variations in tan and beige, suggesting a worn, sun-bleached path."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [2.67794, 1.115055, 8.311909]
+
+[mesh.sm_env_dirtroad_slope_up_01]
+name = "SM_Env_DirtRoad_Slope_Up_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_DirtRoad_Slope_Up_01.fbx"
+sha256 = "349ebc581aa3a36a12636a67f95f16a7b78f583926c77ff4176eda892551739b"
+atlas = "POLYGON - Military Pack/PolygonMilitary_Texture_01_A.png"
+textures = "PolygonMilitary_Texture_01_A.png"
+description = "A gently curving, elongated wedge of pale sandy earth, rising to a low crest with a subtle central ridge and worn, irregular edges. The surface is smooth and dry, with faint darker streaks suggesting wind-blown dust and light wear, giving it the look of a natural, well-trodden path segment ready to be placed in a..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [2.67794, 0.981719, 8.377373]
+
+[mesh.sm_env_dirtroad_straight_01]
+name = "SM_Env_DirtRoad_Straight_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_DirtRoad_Straight_01.fbx"
+sha256 = "cb0c6b8ab4f922f44b5c1f7ac1ec617507e8ae1896e4e7a4572ff8567a4b739e"
+atlas = "POLYGON - Military Pack/PolygonMilitary_Texture_01_A.png"
+textures = "PolygonMilitary_Texture_01_A.png"
+description = "A flat, rectangular strip of pale sandy ground with a subtle, worn dirt texture and a slightly darker, rougher patch at one end, suggesting a simple, straight path segment for arid environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [2.67794, 0.312652, 8.433145]
+
+[mesh.sm_env_fog_ring_01]
+name = "SM_Env_Fog_Ring_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Fog_Ring_01.fbx"
+sha256 = "af2f0f61402eeea2bc7b76c913c1ca11bde038d9b00e985239267ff96af704cc"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A thin, flat circular band with a slightly irregular, organic edge, resembling a low-lying ring of dust or a stylised sandstorm. The surface is textured with a mottled mix of earthy browns, tans, and hints of red, suggesting a dry, weathered material."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [70.17066, 3.939841, 70.17065]
+
+[mesh.sm_env_grass_01]
+name = "SM_Env_Grass_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Grass_01.fbx"
+sha256 = "f59f744a4bfe649d74c35943c1c45438b757a06398895e83ea98d3915461d0f9"
+atlas = "Grass_01.tga"
+textures = "Grass_01.tga"
+description = "A small, low clump of dark green blades with a few pale, dry stalks rising from the centre, giving it a sparse, weathered look. The flat, angular leaves spread outward in a rough circle, suggesting a hardy desert tuft that would add natural, rugged detail to arid ground."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 50
+meshes = 3
+materials = 2
+size = [1.893297, 1.028209, 1.900116]
+
+[mesh.sm_env_ground_mound_large_01]
+name = "SM_Env_Ground_Mound_Large_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ground_Mound_Large_01.fbx"
+sha256 = "ef47919b7b02585c24d0d61dc4538d877f8e6b36479f761214e550c04f310148"
+atlas = "POLYGON - Military Pack/PolygonMilitary_Texture_01_A.png"
+textures = "PolygonMilitary_Texture_01_A.png"
+description = "A low, broad, irregularly shaped mound of pale sandy earth with a gently rounded peak and a subtle darker shadowed side, appearing as a smooth, weathered natural formation with no distinct markings or built features, suited for use as a soft terrain bump or ground cover in arid environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 256
+meshes = 1
+materials = 1
+size = [14.730415, 1.288658, 14.993304]
+
+[mesh.sm_env_ground_mound_small_01]
+name = "SM_Env_Ground_Mound_Small_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Ground_Mound_Small_01.fbx"
+sha256 = "ab7fbe4a0ec4a105f31dd5a397beb60804279334b8b0ff1cf5b9caf3d30d8f8d"
+atlas = "POLYGON - Military Pack/PolygonMilitary_Texture_01_A.png"
+textures = "PolygonMilitary_Texture_01_A.png"
+description = "A low, flattened dome of sandy beige, its surface broken into broad, faceted planes that catch the light differently from each angle. The underside is a darker, shadowed brown, suggesting a solid, earthy base. Its simple, rounded silhouette makes it a versatile, unobtrusive ground detail for arid environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 88
+meshes = 1
+materials = 1
+size = [1.6957109, 0.193272, 1.702988]
+
+[mesh.sm_env_groundcover_01]
+name = "SM_Env_GroundCover_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_GroundCover_01.fbx"
+sha256 = "840e235c1be543191c97d9f802dd55f1b08b58b47cf56a24812af0ed5e649dce"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A low, irregular mound of dry, grey-brown earth and scattered stones, topped with brittle, ochre and rust-coloured dead grass and a few pale, bleached twigs. The sparse, withered vegetation and dusty texture make it ideal for adding natural, weathered detail to arid wasteland or desert floor scenes."
+differs = "Smallest and simplest, with only dead grass and twigs; best for subtle, low-cost scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 134
+meshes = 2
+materials = 1
+size = [1.892551, 0.568478, 1.558526]
+
+[mesh.sm_env_groundcover_02]
+name = "SM_Env_GroundCover_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_GroundCover_02.fbx"
+sha256 = "0ea4a07a1256ef8c139c2faab064b73cb6a2ab636cb652692b6c8f9ac49e4a0d"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A low, irregular mound of dry, grey-brown earth and scattered stones, topped with a few sparse, brittle twigs and a small, weathered wooden plank. The patch is textured with dusty orange and pale grey tones, suggesting a parched, sun-baked surface with a few tiny, dry leaves."
+differs = "Mid-sized with a unique wooden plank, adding a hint of man-made debris to the scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 244
+meshes = 2
+materials = 1
+size = [2.401342, 0.94486797, 2.0765562]
+
+[mesh.sm_env_groundcover_03]
+name = "SM_Env_GroundCover_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_GroundCover_03.fbx"
+sha256 = "97579388b3fee6f10becb7f710be50bad56c3d192b7839b023a0ce904992169c"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A low, irregular mound of dry, grey-brown earth and scattered stones, topped with brittle, pale-yellow grass tufts and a few small, jagged rock shards. The surface is rough and weathered, suggesting a patch of sparse, arid ground cover that would add natural, broken texture to a desert floor."
+differs = "Largest and most detailed, with jagged rock shards; ideal for a prominent, high-impact ground feature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 480
+meshes = 2
+materials = 1
+size = [3.646674, 1.082936, 3.088914]
+
+[mesh.sm_env_lava_pool_01]
+name = "SM_Env_Lava_Pool_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Lava_Pool_01.fbx"
+sha256 = "bef711e0ccd326d75e40d61c6ffcad974e0e381bed6752d8c0948a6ffd3ce5d9"
+atlas = "Lavawave_Hot.png"
+textures = "Lavawave_Hot.png"
+description = "A low, squat, roughly circular mound of dark, charred rock, its surface broken by concentric rings of glowing, molten red-orange cracks that suggest intense heat radiating from a central vent. The jagged, faceted silhouette and the stark contrast between the blackened crust and the bright lava make it a striking focal."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 108
+meshes = 1
+materials = 1
+size = [5.863546, 0.970412, 6.05551]
+
+[mesh.sm_env_lava_river_01]
+name = "SM_Env_Lava_River_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Lava_River_01.fbx"
+sha256 = "9b661e861a3f84d4c9f89d73fe47925fee7a948939f3ef125df78e402b3950f3"
+atlas = "Lavawave_Hot.png"
+textures = "Lavawave_Hot.png"
+description = "A long, sinuous ribbon of dark, glossy rock with a molten red-orange core, twisting in a gentle S-curve and tapering to a thin point at one end while the other end swells into a rounded, bulbous head."
+differs = "The tallest and most vertical of the set, with a bulbous head that makes it ideal for a lava fall or a flow emerging from a cliff."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 318
+meshes = 1
+materials = 1
+size = [5.9112988, 12.420479, 32.625927]
+
+[mesh.sm_env_lava_river_02]
+name = "SM_Env_Lava_River_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Lava_River_02.fbx"
+sha256 = "ada985498ef267ea203e89dcef16f559824fa14cdf7b71ea9887d09c0436a500"
+atlas = "Lavawave_Hot.png"
+textures = "Lavawave_Hot.png"
+description = "A long, low, winding ribbon of dark, cooled lava with a glossy, glassy surface, marked by a bright, glowing orange-red crack running along its crest. The surface is uneven and jagged, with a few small rocky lumps, giving it a natural, molten appearance."
+differs = "The widest and flattest, with the most jagged, uneven surface and a prominent crest crack, making it the most damaged-looking for rough terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 318
+meshes = 1
+materials = 1
+size = [10.8777, 1.707547, 36.77329]
+
+[mesh.sm_env_lava_river_03]
+name = "SM_Env_Lava_River_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Lava_River_03.fbx"
+sha256 = "8d8155efce6d93c1bee4f9d1fcf7f1f7df6ccf634f5fe5b8e12027f8653cb639"
+atlas = "Lavawave_Hot.png"
+textures = "Lavawave_Hot.png"
+description = "A long, low, irregular ribbon of dark red and black rock, tapering to a point at each end and slightly thicker in the middle, with a glossy, molten-looking surface that suggests a slow-moving flow of cooling lava."
+differs = "The plainest and most uniform, with no bulbous ends or pooling, making it the best for a simple, straight-ish river segment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 318
+meshes = 1
+materials = 1
+size = [5.6418047, 1.707547, 36.77329]
+
+[mesh.sm_env_lava_river_04]
+name = "SM_Env_Lava_River_04"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Lava_River_04.fbx"
+sha256 = "8a6f1b7b8dd80b80531dfd774e5e24888b1156255e0b73c6b94d3aa171f14c04"
+atlas = "Lavawave_Hot.png"
+textures = "Lavawave_Hot.png"
+description = "A low, winding ribbon of dark, glossy rock with a bright, molten red-orange core, tapering to thin ends and pooling slightly at one edge. The surface is smooth and undulating, suggesting a slow, cooling flow of liquid fire across flat ground."
+differs = "The most undulating and smooth, with a distinct pooling edge, making it the best for a slow, cooling flow across flat ground."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 318
+meshes = 1
+materials = 1
+size = [8.604335, 12.414317, 32.57219]
+
+[mesh.sm_env_lava_river_05]
+name = "SM_Env_Lava_River_05"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Lava_River_05.fbx"
+sha256 = "4d9312364743d866daeedf3a4c278638c3053072630716c96efc944f1b93a962"
+atlas = "Lavawave_Hot.png"
+textures = "Lavawave_Hot.png"
+description = "A long, sinuous ribbon of dark, glossy rock with a deep red-hot core, twisting and undulating like a frozen wave of molten stone. The surface is smooth and reflective, with a bulbous, rounded end that suggests a flow emerging from a vent."
+differs = "The most sinuous and wave-like, with a rounded vent end, making it the best for a flow emerging from a volcanic vent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 318
+meshes = 1
+materials = 1
+size = [5.885585, 7.334525, 33.818665]
+
+[mesh.sm_env_lava_spread_01]
+name = "SM_Env_Lava_Spread_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Lava_Spread_01.fbx"
+sha256 = "c91d7688da313496abe287974c61efb4569f21febbc56da8be804b7c6b515f17"
+atlas = "Lavawave_Hot.png"
+textures = "Lavawave_Hot.png"
+description = "A low, flat, irregularly shaped pool of dark, glossy magma with a swirling, bright red-orange pattern across its surface, resembling a cooling lava spill. Its smooth, rounded edges and thin profile make it ideal for placing on terrain as a glowing hazard or decorative ground detail."
+differs = "Highest triangle count and tallest profile, with the most complex swirling surface pattern for a focal hazard."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 276
+meshes = 1
+materials = 1
+size = [11.088058, 0.85218, 6.443578]
+
+[mesh.sm_env_lava_spread_02]
+name = "SM_Env_Lava_Spread_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Lava_Spread_02.fbx"
+sha256 = "c0f91eac20b70ab4dc668d12dd046b938a05bcfce13ff8ee2bdd42d5094db2f8"
+atlas = "Lavawave_Hot.png"
+textures = "Lavawave_Hot.png"
+description = "A low, flat, irregular spread of dark, charred rock with a glossy, molten surface, marked by swirling, bright red-orange cracks that suggest intense heat beneath a cooling crust. Its organic, splatter-like silhouette and thin profile make it ideal for placing on the ground as a glowing hazard or a patch of active..."
+differs = "Mid-sized with a splatter-like silhouette and charred crust, offering a balance of detail and coverage."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 187
+meshes = 1
+materials = 1
+size = [10.9874115, 0.73739, 6.315155]
+
+[mesh.sm_env_lava_spread_03]
+name = "SM_Env_Lava_Spread_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Lava_Spread_03.fbx"
+sha256 = "496415b4bfdac055ae02c74be3e45f4bef70a030e3576f7379d37908ff40cfa5"
+atlas = "Lavawave_Hot.png"
+textures = "Lavawave_Hot.png"
+description = "A low, flat, irregular spread of dark, near-black rock with a glossy, wet-looking surface, marked by vivid, glowing red-orange cracks and veins that suggest molten heat beneath. The shape is organic and uneven, tapering to a thin edge on one side, and the whole piece appears to be a cooling pool or flow of lava, ideal."
+differs = "Lowest triangle count and thinnest profile, with a tapering edge and simpler veins for a subtle ground patch."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 169
+meshes = 1
+materials = 1
+size = [11.087908, 0.73739, 6.238589]
+
+[mesh.sm_env_pool_water_01]
+name = "SM_Env_Pool_Water_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Pool_Water_01.fbx"
+sha256 = "1c64a253f86a33a0e03cc9dd88399f29546465b1e172a70c172cbeb960b92ed9"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A flat, circular disc of dark, murky water with a mottled, reflective surface, ringed by a low, sandy-coloured stone rim. The water's surface shows subtle ripples and a glossy sheen, suggesting a still, shallow pool in an arid environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12
+meshes = 1
+materials = 1
+size = [3.249492, 0.0, 3.249492]
+
+[mesh.sm_env_rock_01]
+name = "SM_Env_Rock_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_01.fbx"
+sha256 = "1d8558150d3256d79383578631acada6d528ff3bd2328984b71f5f41d05cff0e"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, flat, irregular slab of weathered brown stone with a rough, chipped surface and a few small hollows, resembling a broken piece of desert bedrock or a large, worn flagstone."
+differs = "The flattest and most slab-like, with the most pronounced hollows, ideal for a broken bedrock floor piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 786
+meshes = 1
+materials = 1
+size = [6.206802, 2.329367, 2.830454]
+
+[mesh.sm_env_rock_02]
+name = "SM_Env_Rock_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_02.fbx"
+sha256 = "0571611e4ac90240fb947b0794b4b0c86d5c0eab2969e11f5b26319c983eefd2"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, elongated slab of weathered brown stone with a flat top and angled sides, showing a few subtle lighter patches and a slightly chipped edge, suited for use as a desert floor scatter piece or a low step."
+differs = "The most elongated and lowest, with the cleanest flat top, perfect as a simple desert step."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 596
+meshes = 1
+materials = 1
+size = [3.775652, 1.176019, 1.43893]
+
+[mesh.sm_env_rock_03]
+name = "SM_Env_Rock_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_03.fbx"
+sha256 = "6732ee563137c0e59ed4cbbcc0d7fe3c702d2350b076fbafc4fb7fbbfaab5829"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, irregular mound of faceted stone with a broad, flattened top and a tapering tail, rendered in muted grey-brown with lighter, dusty highlights along its upper surfaces. Its jagged, angular silhouette suggests a weathered boulder or a small rocky outcrop, ideal for scattering across arid terrain to break up flat.."
+differs = "The only one with a distinct tapering tail and a broad flattened top, best for a small rocky outcrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 592
+meshes = 1
+materials = 1
+size = [4.380872, 2.460501, 2.428622]
+
+[mesh.sm_env_rock_04]
+name = "SM_Env_Rock_04"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_04.fbx"
+sha256 = "07ab527abe44acb1b7794aaf77025bd0653c0192e612e34b2ed304cd9c8ba76b"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, broad, irregularly shaped slab of weathered brown stone with a flat top and jagged, chipped edges, featuring a stepped ledge on one side and a small hollow near the base, suggesting a versatile, natural-looking ground cover or platform piece."
+differs = "The only one with a stepped ledge and a base hollow, making it a natural platform or ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 596
+meshes = 1
+materials = 1
+size = [2.60128, 1.8249379, 1.702118]
+
+[mesh.sm_env_rock_05]
+name = "SM_Env_Rock_05"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_05.fbx"
+sha256 = "ea33c7cfa31582fe130daba2c49dfcec95db4916ae38fb0bc06695047b8549fb"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, broad, and irregularly shaped boulder with a flat base and a gently sloping top, featuring a few shallow, horizontal striations and a small, pale patch of lighter mineral or lichen on its upper surface."
+differs = "The only one with horizontal striations and a pale lichen patch, adding subtle surface detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 576
+meshes = 1
+materials = 1
+size = [3.580567, 1.4747291, 2.394094]
+
+[mesh.sm_env_rock_06]
+name = "SM_Env_Rock_06"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_06.fbx"
+sha256 = "09d42f2f22fedc9d3ed7d9cb04122e48daeef1399d5f81aba5d3d47e869be88d"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, broad, irregularly shaped rock with a flat, stable base and a gently sloping top, featuring a few subtle ridges and shallow depressions. Its surface is a uniform, muted earthy brown with a matte finish, showing no cracks or vegetation, making it a clean, versatile ground cover piece for arid environments."
+differs = "The plainest and most uniform, with no cracks or vegetation, ideal for clean, versatile ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 594
+meshes = 1
+materials = 1
+size = [4.25798, 2.044539, 2.545403]
+
+[mesh.sm_env_rock_07]
+name = "SM_Env_Rock_07"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_07.fbx"
+sha256 = "91fb50980cbda93db418b6213e36dc8e8b515cf6affb9fd5342a4604b915120e"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, jagged boulder with a flat, angled face and a deep vertical cleft, rendered in a muted grey-brown with subtle lighter striations. Its chunky, faceted silhouette suggests a weathered desert outcrop, ideal for adding rugged variety to a rocky terrain."
+differs = "The tallest and most jagged, with a deep vertical cleft, best for a rugged vertical outcrop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 244
+meshes = 1
+materials = 1
+size = [6.593775, 8.562826, 4.216124]
+
+[mesh.sm_env_rock_08]
+name = "SM_Env_Rock_08"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_08.fbx"
+sha256 = "c3bed5d9e9e284c5a5571bf76955aec8f0be32787e69168b667e1440554c97ac"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, blocky rock with a flat, angled top and a sheer, vertical face, its low-poly facets catching light to suggest a hard, sun-baked surface. The muted brown-grey palette and clean, unweathered geometry make it a versatile, neutral boulder for desert terrain, easily placed as a simple landmark or obstacle."
+differs = "The most blocky and sheer, with the lowest triangle count, serving as a simple landmark or obstacle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 106
+meshes = 1
+materials = 1
+size = [4.289688, 7.726121, 4.668428]
+
+[mesh.sm_env_rock_09]
+name = "SM_Env_Rock_09"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_09.fbx"
+sha256 = "79653b2d50be4f028d1517a65a3a12309a306a854e8398749d35894b106ea885"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, chunky boulder with a flat, slightly angled top and a broad, stable base, its faceted sides catching light to reveal a warm, earthy brown tone. The surface is smooth and unmarked, with no cracks or vegetation, giving it a clean, weathered look that suits a dry, desert environment."
+differs = "The largest and most detailed of the set, with the highest triangle count and the broadest, most stable base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 118
+meshes = 1
+materials = 1
+size = [3.750624, 6.165318, 3.558048]
+
+[mesh.sm_env_rock_10]
+name = "SM_Env_Rock_10"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_10.fbx"
+sha256 = "978eb54598c0ed13286dcc89b0d4c8721a0519027c567bf830ce29ca3e491b94"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, chunky boulder with a flat, angled face and a jagged, broken top, rendered in a muted grey-brown with subtle darker striations. Its blocky silhouette and clean, faceted surfaces make it a versatile, natural-looking rock for desert terrain or cliff edges."
+differs = "The most damaged of the group, with a jagged, broken top and the most pronounced darker striations."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 88
+meshes = 1
+materials = 1
+size = [2.346192, 4.176115, 2.302744]
+
+[mesh.sm_env_rock_11]
+name = "SM_Env_Rock_11"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_11.fbx"
+sha256 = "43354e5fdbe48f6871f09ff0d9dcf42cafd75cf49c83496901b42c5adecafce0"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, irregularly faceted boulder with a chunky, angular silhouette, slightly wider at the base and tapering toward a flat, slanted top. Its surface is a muted, earthy brown with subtle lighter patches, giving it a dry, sun-baked appearance."
+differs = "The widest of the set, with a broader base and a more pronounced taper toward its flat top."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 74
+meshes = 1
+materials = 1
+size = [2.718076, 4.564465, 2.327988]
+
+[mesh.sm_env_rock_12]
+name = "SM_Env_Rock_12"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_12.fbx"
+sha256 = "284d52fd3057714425bf1782d30688604b7c1eeb50e78afa488ed2bb3addcfbc"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, irregularly faceted boulder with a chunky, angular silhouette, tapering slightly toward a blunt, uneven top. Its flat, planar surfaces are shaded in muted earthy browns and greys, giving it a dry, weathered appearance."
+differs = "The most balanced and generic of the tall boulders, with a blunt top and no standout features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 66
+meshes = 1
+materials = 1
+size = [2.25959, 4.118492, 2.560571]
+
+[mesh.sm_env_rock_13]
+name = "SM_Env_Rock_13"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_13.fbx"
+sha256 = "834ab5d4b12786c80adf520f6f204d588110bb0cdb103e850556b84d77209c5d"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, faceted boulder with a slightly leaning profile and a flat, angled top, rendered in a muted taupe-brown with subtle darker mottling. Its chunky, angular planes give it a clean, stylized look that reads as a weathered desert stone, ideal for scattering across arid terrain."
+differs = "The most leaning of the set, with a distinct tilt and a flat, angled top for dynamic placement."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 52
+meshes = 1
+materials = 1
+size = [2.110107, 3.4525151, 2.398521]
+
+[mesh.sm_env_rock_14]
+name = "SM_Env_Rock_14"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_14.fbx"
+sha256 = "eb94685f9c3c76386a6f6ab1770767900a6129e30e590398360f9bd3de63c014"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, faceted monolith with a flat, chipped top and a pointed base, rendered in a muted taupe-brown with subtle lighter highlights on its angular faces. Its clean, low-poly silhouette suggests a weathered standing stone or a natural rock spire, ideal for adding vertical interest to arid environments."
+differs = "The thinnest and most vertical, a monolith with a pointed base for standing-stone accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 52
+meshes = 1
+materials = 1
+size = [1.447051, 3.237918, 1.384126]
+
+[mesh.sm_env_rock_arch_01]
+name = "SM_Env_Rock_Arch_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Arch_01.fbx"
+sha256 = "c3f20fef1d96c3ba92236545129cf97971dc419acafd815da2c8b277dfc509e1"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A weathered, low-slung stone arch with a broad, uneven span and a thick, chunky profile, its surface is a dusty tan-brown with darker crevices and lighter, sun-bleached highlights. The rock is heavily faceted and irregular, with a rugged, eroded texture that suggests a natural desert formation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 5584
+meshes = 1
+materials = 1
+size = [22.681932, 8.967989, 9.289912]
+
+[mesh.sm_env_rock_arch_half_01]
+name = "SM_Env_Rock_Arch_Half_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Arch_Half_01.fbx"
+sha256 = "92a22a2bf1e2a69d57ae704e2774f9f0e091e6ae5aae4131ce57577ad7d032b6"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A jagged, tapering rock spire that leans sharply to one side, resembling a broken tooth or a weathered shark fin. Its surface is rough and chunky, with a flat, angled base that suggests it was snapped off from a larger formation."
+differs = "Taller, leaner, and more sharply angled, ideal for a dramatic leaning spire or broken tooth silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1558
+meshes = 1
+materials = 1
+size = [9.649023, 9.074113, 7.498834]
+
+[mesh.sm_env_rock_arch_half_02]
+name = "SM_Env_Rock_Arch_Half_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Arch_Half_02.fbx"
+sha256 = "12cafbd22b956b730d0749de958043e4d13a883233a6c8ccca0e565fc7da1675"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A jagged, asymmetrical rock formation with a sharp, leaning peak and a broad, uneven base, resembling a broken half-arch or a weathered monolith. The surface is a muted, dusty brown with subtle lighter streaks and darker crevices, giving it a dry, eroded appearance."
+differs = "Broader, more asymmetrical, and lower to the ground, better suited as a weathered half-arch or monolith base."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1120
+meshes = 1
+materials = 1
+size = [10.64585, 8.933565, 8.313125]
+
+[mesh.sm_env_rock_cliff_01]
+name = "SM_Env_Rock_Cliff_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_01.fbx"
+sha256 = "dcd8a1275115474212a72ed3f64e4ee0f078853c93b5718e2d7f3639820089f5"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A chunky, low-poly rock formation with a broad, blocky base and a slightly narrower, uneven top, featuring a few small, sharp protrusions. Its surface is a flat, muted grey-brown with subtle lighter patches, giving it a dry, weathered appearance suitable for arid environments."
+differs = "The tallest and most vertically oriented of the set, with the most pronounced sharp protrusions for a jagged peak."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1200
+meshes = 1
+materials = 1
+size = [11.922548, 9.7069845, 8.969433]
+
+[mesh.sm_env_rock_cliff_02]
+name = "SM_Env_Rock_Cliff_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_02.fbx"
+sha256 = "3aa2f9a26f9e157ffcabf51e5403b2bf561ec50410a22b4161d98b648b42a679"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A chunky, low-poly boulder with a flat, slightly angled top and a broad, uneven base, rendered in a muted taupe-brown with subtle lighter speckling. Its faceted surfaces and sharp, angular silhouette give it a rugged, weathered appearance, making it a versatile natural obstacle or terrain accent for arid environments."
+differs = "A mid-sized, balanced boulder with a flat angled top, offering a versatile, all-purpose silhouette."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1202
+meshes = 1
+materials = 1
+size = [13.465918, 10.180566, 8.922661]
+
+[mesh.sm_env_rock_cliff_03]
+name = "SM_Env_Rock_Cliff_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_03.fbx"
+sha256 = "b12f013e110786f7c60724718469d03f1b0e222dceb951aef1cc5cf93cea9cd8"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, elongated block of weathered stone with a flat top and sheer, jagged sides, marked by deep vertical fissures and a few lighter, dusty patches. Its muted brown-grey palette and chunky, faceted silhouette suggest a sturdy, grounded boulder suitable for arid terrain, offering a stable, horizontal profile distinct.."
+differs = "The longest and most horizontal of the set, with deep vertical fissures for a distinct, grounded ledge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1800
+meshes = 1
+materials = 1
+size = [22.65286, 10.2571335, 9.275312]
+
+[mesh.sm_env_rock_cliff_04]
+name = "SM_Env_Rock_Cliff_04"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_04.fbx"
+sha256 = "acbe2bd66837b7a1da2647968e92b5f2dcfc1c09aa0523a7cf6816f19f41ddcd"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, elongated slab of weathered stone with a flat top and jagged, irregular edges, rendered in a muted grey-brown. Its surface is rough and pitted, with subtle lighter highlights suggesting erosion and a dusty finish, making it ideal for a natural, arid ground scatter or a low ledge."
+differs = "The largest and most detailed asset, with the most complex, pitted surface for a highly eroded look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2414
+meshes = 1
+materials = 1
+size = [24.491596, 10.358022, 12.0582695]
+
+[mesh.sm_env_rock_cliff_05]
+name = "SM_Env_Rock_Cliff_05"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_05.fbx"
+sha256 = "18e4b46c58741b05f534724a50d15fe90a176224eb4d1e5ba7804934ab2ce5e5"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A chunky, low-poly boulder with a flat, angled top and sheer, faceted sides, rendered in a muted, dusty brown. Its surface is mostly smooth with subtle, darker striations, giving it a weathered, sun-baked look."
+differs = "The most angular and faceted boulder, with a sharp, clean silhouette and minimal surface noise."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 366
+meshes = 1
+materials = 1
+size = [12.145156, 10.780474, 8.927306]
+
+[mesh.sm_env_rock_cliff_06]
+name = "SM_Env_Rock_Cliff_06"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_06.fbx"
+sha256 = "c9eec51dd3978cfcfbe8071c994ed7ef455d39e2f2a7d56db2500db87122e044"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A chunky, low-poly boulder with a flat, slightly angled top and sheer, irregular sides, rendered in a uniform matte taupe-brown. Its blocky silhouette and lack of surface detail make it a versatile, neutral filler rock for desert terrain or cliff bases."
+differs = "The plainest and most uniform boulder, with a completely smooth, matte surface for neutral filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 432
+meshes = 1
+materials = 1
+size = [13.999243, 10.911566, 9.998204]
+
+[mesh.sm_env_rock_cliff_07]
+name = "SM_Env_Rock_Cliff_07"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_07.fbx"
+sha256 = "f042301d5ee9d5942d6df963f34dcf11ee9df4fe6c3e0b6db914574a0098377a"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, broad, and irregularly shaped slab of rock with a flat top and a jagged, uneven base, rendered in a muted brownish-grey. Its surface is smooth and unadorned, with subtle tonal variations suggesting a dusty, weathered finish."
+differs = "The flattest and widest slab, with the lowest profile and a smooth, unadorned top for ground scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 506
+meshes = 1
+materials = 1
+size = [12.347369, 6.500338, 19.402983]
+
+[mesh.sm_env_rock_cliff_08]
+name = "SM_Env_Rock_Cliff_08"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_08.fbx"
+sha256 = "d9a5f1712817584e56575d41eb946f107d44f85a0f89e93ea135d4a7bbc979a7"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A squat, roughly cylindrical block of brown stone with a flat top and slightly irregular, faceted sides. The surface is mostly smooth and unadorned, with a few subtle vertical striations and a small patch of lighter, exposed rock on one face."
+differs = "The most cylindrical and squat, with a distinct lighter patch on one face for a unique accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 302
+meshes = 1
+materials = 1
+size = [10.696665, 8.487369, 10.272446]
+
+[mesh.sm_env_rock_cliff_09]
+name = "SM_Env_Rock_Cliff_09"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_09.fbx"
+sha256 = "4beeec7098bc2f02e8d0f8339d6586a132f60e2440ffdde8bb0bd608e4e9f2a4"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A squat, rounded boulder with a broad, flat base and a gently domed top, its silhouette broken by a single deep vertical groove on one face. The surface is a uniform, matte taupe-brown with subtle darker shading in the crevice, suggesting a smooth, weathered finish."
+differs = "The only boulder with a deep vertical groove, making it the most distinct for a single accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 284
+meshes = 1
+materials = 1
+size = [11.074167, 9.466358, 13.861914]
+
+[mesh.sm_env_rock_cliff_10]
+name = "SM_Env_Rock_Cliff_10"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_10.fbx"
+sha256 = "c39ceff43d1245ff0482732a4f6c3c72f714eb8530f548a41e4f1eb12d33002d"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A squat, rounded boulder with a flat, stable base and a slightly domed top, its low-poly facets catching light to suggest a smooth, weathered surface. The uniform grey-brown tone and lack of sharp edges give it a soft, worn appearance, making it ideal for scattered ground cover or a subtle, natural accent in arid..."
+differs = "The plainest and most uniform of the squat boulders, with no grooves or streaks at all."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 302
+meshes = 1
+materials = 1
+size = [11.466482, 8.940309, 13.219682]
+
+[mesh.sm_env_rock_cliff_11]
+name = "SM_Env_Rock_Cliff_11"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_11.fbx"
+sha256 = "dfd3bf8a3e1fa6fd3953909c1027ded39d63e10d945b6a87cc677b090e46cefd"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, narrow, roughly rectangular pillar of rock with a flat top and slightly tapered base, its surface broken by a few deep vertical fissures and a prominent pale streak on one face. The muted tan-brown stone is smooth and unweathered, suggesting a clean, stylized monolith that could serve as a desert landmark or a."
+differs = "The only tall, narrow pillar, and the only one with a pale streak, ideal as a monolith landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 450
+meshes = 1
+materials = 1
+size = [5.627739, 12.864911, 6.566983]
+
+[mesh.sm_env_rock_cliff_12]
+name = "SM_Env_Rock_Cliff_12"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_12.fbx"
+sha256 = "694fed70592baa8398c4ef1ba5ad0e061f118a63651f28d2d6da5d12f5b6310a"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A squat, tapered boulder with a broad, uneven top and a narrower base, its flat facets catching light in a warm grey-brown tone. The surface is smooth and unmarked, with no cracks or vegetation, making it a clean, versatile rock for desert terrain."
+differs = "The only squat boulder with a broad top and narrower base, giving it a tapered, top-heavy look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 456
+meshes = 1
+materials = 1
+size = [11.824965, 13.404831, 13.4537945]
+
+[mesh.sm_env_rock_cliff_13]
+name = "SM_Env_Rock_Cliff_13"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_13.fbx"
+sha256 = "7d6ea0dd36fc046d5cea1eb74527c651e87b50973a2fab1e98e113d8828bc024"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, broad, and irregularly rounded boulder with a flat base, its blocky silhouette is softened by a single texture of warm brown stone with subtle darker crevices and lighter dusty highlights, giving it a weathered, sun-baked appearance that suits a desert floor or canyon edge."
+differs = "The most detailed low boulder, with the highest triangle count among the low, broad rocks."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1864
+meshes = 1
+materials = 1
+size = [16.082876, 7.4189262, 13.131913]
+
+[mesh.sm_env_rock_cliff_14]
+name = "SM_Env_Rock_Cliff_14"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_14.fbx"
+sha256 = "ecacf63f5d66a1ae7b759e8d023b3e0f74d388f3f622618512c57b2ba53da806"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, wide, and chunky rock formation with a flat top and a jagged, uneven base, rendered in a muted earthy brown with subtle darker crevices. Its blocky silhouette suggests a weathered boulder or a small cliff outcrop, ideal for scattering across arid terrain to create natural ground cover and varied elevation."
+differs = "The widest low rock with a jagged base, making it the best for creating uneven ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2016
+meshes = 1
+materials = 1
+size = [15.081599, 8.493141, 10.339793]
+
+[mesh.sm_env_rock_cliff_15]
+name = "SM_Env_Rock_Cliff_15"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_15.fbx"
+sha256 = "d63227baead320e7312b97b5ddc76880ac4b2fecae7bfdea672cf91f70a56af2"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A chunky, irregular boulder with a flat, angled top and a broad, uneven base, tapering to a narrower, rounded profile. Its surface is a muted, dusty brown with subtle darker mottling and a few pale, worn patches, suggesting a weathered, sun-baked stone."
+differs = "The tallest of the chunky irregular boulders, with a flat angled top and the most elongated profile."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 504
+meshes = 1
+materials = 1
+size = [9.480513, 12.310242, 18.389872]
+
+[mesh.sm_env_rock_cliff_16]
+name = "SM_Env_Rock_Cliff_16"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Cliff_16.fbx"
+sha256 = "df1054b7232829b789c6f6a6e6e682ecb14e690dfcf6291cc716409de29fdc85"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A low, elongated slab of weathered stone with a jagged, uneven top and a flat base, rendered in muted grey-brown tones with subtle sandy highlights. Its blocky silhouette suggests a natural ledge or a broken piece of a larger formation, ideal for creating a rugged, arid ground cover or a low obstacle in a desert scene."
+differs = "The longest and lowest slab, with the most extreme width-to-height ratio, ideal for a natural ledge."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1764
+meshes = 1
+materials = 1
+size = [28.776133, 10.217609, 13.857372]
+
+[mesh.sm_env_rock_pebbles_01]
+name = "SM_Env_Rock_Pebbles_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_01.fbx"
+sha256 = "08d0c46401964394f7a0adb4119492465313d5fd60f0ff2646e8b9a883050904"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A cluster of small, low-poly stones with flat, angular facets, rendered in a muted tan-brown with subtle darker mottling. The pieces are irregularly shaped and scattered, with a few larger chunks mixed among smaller fragments, giving a natural, weathered appearance suitable for desert ground scatter."
+differs = "The most compact and lowest-profile scatter, ideal for tiny ground details where larger clusters would overwhelm."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 114
+meshes = 1
+materials = 1
+size = [0.440538, 0.047124, 0.34088]
+
+[mesh.sm_env_rock_pebbles_02]
+name = "SM_Env_Rock_Pebbles_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_02.fbx"
+sha256 = "d30b07994ccbd833cb70d89357ec20f9bfcb4a4d3d3a044fee130164531ed58d"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, flat scatter of small, rounded stones in earthy brown and grey, with a few larger chunks clustered among smaller pebbles. The surface is smooth and matte, with subtle mottling that suggests dry, weathered desert rock. This asset provides a natural, irregular ground detail that reads clearly from a distance."
+differs = "The flattest and most even spread, perfect for a uniform gravel patch with no dominant central stone."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.69739, 0.050235003, 0.49478298]
+
+[mesh.sm_env_rock_pebbles_03]
+name = "SM_Env_Rock_Pebbles_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_03.fbx"
+sha256 = "a65d5781239fa26e39531655295930b19ed43a9bd12f4d2cbc9da44a5db90228"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A flat, low-poly cluster of small, angular brown stones scattered loosely across a wide, thin base, resembling a patch of gravel or scattered debris. The rocks are faceted and earthy, with a dry, dusty texture that suggests a desert floor. This asset provides a natural, irregular ground detail for arid environments."
+differs = "The widest and thinnest scatter, best for covering large ground areas with minimal visual height."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 150
+meshes = 1
+materials = 1
+size = [0.76535, 0.061214, 0.616902]
+
+[mesh.sm_env_rock_pebbles_04]
+name = "SM_Env_Rock_Pebbles_04"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_04.fbx"
+sha256 = "a6b5d4c3e36d43351561bbf54610595febe57d776faf1fd7bbeeaa1dde7c1e3c"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A cluster of four low-poly, angular brown stones with flat, faceted surfaces, arranged in a loose, irregular pile. The muted, earthy tones and simple geometry suggest a natural, weathered appearance suitable for desert terrain."
+differs = "The most distinct and isolated cluster of just four stones, ideal for a deliberate, small focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.392701, 0.094279, 0.326469]
+
+[mesh.sm_env_rock_pebbles_05]
+name = "SM_Env_Rock_Pebbles_05"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_05.fbx"
+sha256 = "9bccf75dbc04332c96bc4caf07b59e83f801a8e3bb1259930f75b02e3a1a19e0"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A cluster of two low, flat, angular stones, one slightly larger and overlapping the other, with a rough, dusty brown surface and a lighter, sandy patch on the underside of the larger rock, suggesting a weathered, sun-baked desert floor."
+differs = "The only asset with a two-stone overlap and a lighter sandy patch, giving it a unique sun-baked underside detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 1
+size = [0.395474, 0.134108, 0.421454]
+
+[mesh.sm_env_rock_pebbles_06]
+name = "SM_Env_Rock_Pebbles_06"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_06.fbx"
+sha256 = "b4871ea93737779df7668c705876c87807206c27e90f16e45590a5372b781724"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, flat cluster of angular, faceted stones in a muted earthy brown, forming a wide, irregular scatter of small boulders and pebbles with a few larger, rounded chunks at the centre. The surface is smooth and unmarked, with a matte finish that suggests dry, sun-baked rock, ideal for adding natural ground detail to a."
+differs = "The largest and most detailed scatter with a central boulder cluster, best for a prominent ground feature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 194
+meshes = 1
+materials = 1
+size = [0.903294, 0.215178, 0.793536]
+
+[mesh.sm_env_rock_pebbles_07]
+name = "SM_Env_Rock_Pebbles_07"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Pebbles_07.fbx"
+sha256 = "8677bbe3224f171b9042b76017703c356ad09d2066a44fc55bb7c6e5d5ce94e0"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, flat cluster of three angular, faceted stones in a muted earthy brown, with a larger central chunk flanked by two smaller pebbles, all sharing a smooth, matte finish with subtle tonal variation that suggests dry, sun-baked desert rock."
+differs = "The tallest and most elongated cluster with a clear three-stone arrangement, ideal for a directional or linear ground accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 204
+meshes = 1
+materials = 1
+size = [1.08261, 0.290556, 0.668664]
+
+[mesh.sm_env_rock_rough_01]
+name = "SM_Env_Rock_Rough_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Rough_01.fbx"
+sha256 = "40e6b6dde4b6ce92786be74934a8dbccaf223d58d94af7deec21956be47b5e64"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, broad, roughly circular boulder with a flat, stable base and a gently domed top, its surface broken by shallow, irregular cracks and subtle vertical striations. The uniform matte brown-grey tone and lack of sharp edges give it a smooth, weathered look, making it a versatile, unobtrusive ground cover piece for..."
+differs = "The largest and most detailed, with a domed top and over twice the triangles, ideal as a central anchor rock."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2330
+meshes = 1
+materials = 1
+size = [8.578444, 3.1394672, 8.228243]
+
+[mesh.sm_env_rock_rough_02]
+name = "SM_Env_Rock_Rough_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Rough_02.fbx"
+sha256 = "9ac2a04edbd3f7c15203dd7f4ca5f04f58b832d5eecb9fe13bb31e3f0bb6c7c2"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, wide, irregularly shaped slab of earth-toned rock with a flat base and a gently angled top, its faceted surface showing subtle variations in brown and tan. The form is weathered and rounded, with no sharp edges, making it read as a natural, worn boulder or ground-level outcrop."
+differs = "The smallest and plainest, a low slab with the fewest triangles, best used as a flat stepping stone or ground filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 960
+meshes = 1
+materials = 1
+size = [6.187296, 2.161716, 3.2279449]
+
+[mesh.sm_env_rock_small_01]
+name = "SM_Env_Rock_Small_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Small_01.fbx"
+sha256 = "e34df279816ce3cb77eef2080d092959c798f445df7a6bc1916d86ef3f3315d7"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, irregularly faceted boulder with a broad base tapering to a rounded peak, its flat surfaces catching light to reveal a dry, dusty tan-brown hue. A prominent pale, almost white, mineral vein streaks diagonally across one face, adding a distinct natural detail that breaks up the otherwise uniform earthy tone."
+differs = "The only rock with a striking white mineral vein, ideal as a focal point or landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 1
+materials = 1
+size = [1.046166, 1.758435, 1.220596]
+
+[mesh.sm_env_rock_small_02]
+name = "SM_Env_Rock_Small_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Small_02.fbx"
+sha256 = "23d142aae20c3083cbd2bef4593af1f252b9e039fbdc07dbc44dcc325c6e6e77"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A chunky, low-poly boulder with an irregular, roughly hexagonal profile and a flat base, rendered in a muted, dusty brown with subtle tonal variation across its faceted surfaces. Its simple, angular form and lack of sharp edges make it a versatile, natural-looking scatter piece for arid environments."
+differs = "The most compact and neutral, a simple scatter piece with no distinctive features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.852369, 0.721995, 0.812262]
+
+[mesh.sm_env_rock_small_03]
+name = "SM_Env_Rock_Small_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Small_03.fbx"
+sha256 = "dcd76dba15991faf73711cc7c4576b36594fbdb1af157b62ae12b4d1571f3290"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, jagged monolith with a chunky, faceted silhouette that tapers to a blunt point, leaning slightly to one side. Its flat, angular faces are painted in muted, dusty browns with lighter beige highlights, suggesting a sun-bleached, weathered surface."
+differs = "The tallest and most jagged, a leaning monolith for vertical interest."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 238
+meshes = 1
+materials = 1
+size = [1.424371, 2.616755, 1.158766]
+
+[mesh.sm_env_rock_small_04]
+name = "SM_Env_Rock_Small_04"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Small_04.fbx"
+sha256 = "8df9e3a544bd21141fc1db90e6432a3489153fd9c76734bba28be49c3492e6f3"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, squat boulder with a flat, slightly angled top and sheer sides, rendered in a muted brown with a rough, granular texture. The surface is marked by lighter, sandy patches and subtle cracks, giving it a weathered, sun-baked appearance."
+differs = "The widest and flattest, a low slab with a flat top for placing objects on."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 114
+meshes = 1
+materials = 1
+size = [1.64761, 0.682874, 1.309248]
+
+[mesh.sm_env_rock_small_05]
+name = "SM_Env_Rock_Small_05"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Small_05.fbx"
+sha256 = "08bfac013a1fce5e6097d19b24b7931af2a0cf68f3e56a1cb7ed9f1bb763fb3c"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, faceted boulder with a slightly tapered top and a broad, stable base, rendered in a muted grey-brown with subtle tan highlights. Its low-poly surface is clean and unweathered, with no cracks or vegetation, making it a versatile, neutral prop for desert terrain or as a simple, unobtrusive landmark."
+differs = "The cleanest and most uniform, a plain boulder with no weathering or cracks."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 134
+meshes = 1
+materials = 1
+size = [1.2313731, 1.902286, 1.195628]
+
+[mesh.sm_env_rock_small_06]
+name = "SM_Env_Rock_Small_06"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Small_06.fbx"
+sha256 = "692f5c6a0c7b08fa277f75cbfd8315f535c47747e664471cea180548297de340"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, flat, elongated slab of rock with a smooth, rounded top and a few sharp, chipped facets along its edges, rendered in a muted, dusty brown with subtle darker striations. Its weathered, worn surface suggests a stone that has been smoothed by wind or water, making it ideal for scattered ground cover or a small..."
+differs = "The longest and lowest, a smooth slab ideal for ground cover or stepping stones."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 100
+meshes = 1
+materials = 1
+size = [1.9721689, 0.540328, 0.893486]
+
+[mesh.sm_env_rock_small_07]
+name = "SM_Env_Rock_Small_07"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rock_Small_07.fbx"
+sha256 = "729af14cf34cb66f98f6158c3148834e130be5c6dba5d650e71d3fe3198ec27f"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, chunky boulder with a broad, flattened top and steeply angled sides, giving it a stable, grounded silhouette. Its surface is a matte, earthy brown with subtle lighter tan mottling across the upper faces, suggesting sun-bleached stone or light dust."
+differs = "The most stable and grounded, a low, chunky rock with a broad, flat top."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 46
+meshes = 1
+materials = 1
+size = [0.884114, 0.604675, 0.764888]
+
+[mesh.sm_env_rocks_spikes_large_01]
+name = "SM_Env_Rocks_Spikes_Large_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rocks_Spikes_Large_01.fbx"
+sha256 = "99f49d8ddf533f19e23081b778ed9017af9ff144d352ffd0950533345372f1e2"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A cluster of jagged, upward-slanting rock spikes with a broad, uneven base, rendered in a muted grey-brown with subtle lighter striations. The sharp, angular facets give it a weathered, natural look, ideal for creating dangerous terrain or desert outcrops."
+differs = "The largest and most detailed, with the most pronounced striations, ideal as a towering centerpiece hazard."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 896
+meshes = 1
+materials = 1
+size = [12.823755, 10.303087, 6.879121]
+
+[mesh.sm_env_rocks_spikes_large_02]
+name = "SM_Env_Rocks_Spikes_Large_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rocks_Spikes_Large_02.fbx"
+sha256 = "a126c71a15be900cc18a2d2c0210b7a92e7c63e9e07e56d056c37974a5a1abd1"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A cluster of jagged, angular stone spikes rising from a low, rocky base, with a dusty brown and grey palette and a weathered, faceted surface that suggests a natural, arid formation."
+differs = "The most weathered and damaged-looking, with the most irregular, natural silhouette for organic terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 900
+meshes = 1
+materials = 1
+size = [8.921308, 8.710136, 5.820616]
+
+[mesh.sm_env_rocks_spikes_large_03]
+name = "SM_Env_Rocks_Spikes_Large_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rocks_Spikes_Large_03.fbx"
+sha256 = "106bbf2533196d9266df1d6cee72aea8577a8df5b5528e8ffd1b367aa8badb66"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A cluster of jagged, upward-shooting stone shards rising from a low, chunky base, with a broad, uneven footprint and a sharp, asymmetrical profile. The surface is a flat, muted brown with no visible cracks or weathering, giving it a clean, stylized look that reads as a natural desert formation or a hazard for cover."
+differs = "The plainest and cleanest, with no weathering, making it the best for stylized, low-detail cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 900
+meshes = 1
+materials = 1
+size = [8.871954, 8.114456, 4.662715]
+
+[mesh.sm_env_rocks_spikey_01]
+name = "SM_Env_Rocks_Spikey_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rocks_Spikey_01.fbx"
+sha256 = "843c44c4ebdd16147ebff96e033806f8e6c6abf11050d980acd06bef2177754f"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A cluster of jagged, upward-pointing rock spires with a broad, uneven base, rendered in muted earthy browns with subtle grey highlights. The low-poly faceting gives the formation a sharp, crystalline appearance, suggesting a weathered, natural desert feature suitable for terrain decoration or a hazard."
+differs = "Largest and most detailed cluster with the highest triangle count, ideal as a central hazard or landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1192
+meshes = 1
+materials = 1
+size = [3.572639, 3.196095, 2.50603]
+
+[mesh.sm_env_rocks_spikey_02]
+name = "SM_Env_Rocks_Spikey_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rocks_Spikey_02.fbx"
+sha256 = "b9f72c00564017de43c8d5a63c633c93554536a998bd4fb2f0ea220749e1a2b8"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A cluster of jagged, upward-pointing rock spires with a broad, uneven base, rendered in a flat, earthy brown with subtle lighter facets. The sharp, irregular peaks give it a weathered, natural look, ideal for adding verticality and rugged texture to arid environments."
+differs = "Tallest multi-spire cluster, offering the most verticality for rugged terrain backdrops."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 900
+meshes = 1
+materials = 1
+size = [2.443799, 2.824336, 2.565796]
+
+[mesh.sm_env_rocks_spikey_03]
+name = "SM_Env_Rocks_Spikey_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rocks_Spikey_03.fbx"
+sha256 = "b94f6f68c095112f8688388d9e210bec36669014c0def923cefe3484eeef1dab"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A cluster of jagged, upward-pointing rock spires with a dusty brown, low-poly finish, resembling a weathered desert outcrop or a natural formation for terrain decoration."
+differs = "Most compact and lowest-profile cluster, perfect for filling gaps without dominating the scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 900
+meshes = 1
+materials = 1
+size = [2.479279, 2.166477, 1.846465]
+
+[mesh.sm_env_rocks_spikey_04]
+name = "SM_Env_Rocks_Spikey_04"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rocks_Spikey_04.fbx"
+sha256 = "004818a62f02abc62d1cab46f2c409709b9582ed70af22203f27c878dd448531"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, jagged stone spire with a sharp, tapering peak and a broad, uneven base, featuring a single prominent vertical crack near the top. Its flat-shaded, earthy brown surface suggests a dry, weathered texture, making it ideal for adding verticality and rugged detail to arid rock formations."
+differs = "Tallest single spire with a prominent crack, making it the most damaged and weathered option."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 238
+meshes = 1
+materials = 1
+size = [0.920015, 2.616755, 0.73327196]
+
+[mesh.sm_env_rocks_spikey_05]
+name = "SM_Env_Rocks_Spikey_05"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rocks_Spikey_05.fbx"
+sha256 = "2627812a7527d7c31794a2fefa93f414e332a82e19e65e2648d6d62de883e429"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, faceted stone spire with a sharp, pointed tip and a broad, uneven base, rendered in a muted grey-brown with subtle tan highlights. Its low-poly surface is smooth and unblemished, suggesting a clean, weathered rock formation."
+differs = "Smoothest and cleanest single spire, with the most uniform surface for a pristine look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 134
+meshes = 1
+materials = 1
+size = [0.856339, 1.902286, 0.750283]
+
+[mesh.sm_env_rocks_spikey_06]
+name = "SM_Env_Rocks_Spikey_06"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Rocks_Spikey_06.fbx"
+sha256 = "d543c3e25764455ad1ab3f196d6fa7ca140815ddbd7261957cb2110a91b0bc2d"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A tall, jagged monolith with a sharp, leaning peak and a broad, uneven base, its flat facets catch light to reveal a dry, dusty brown and tan palette. The surface is unadorned, showing a clean, weathered stone texture with no cracks or debris, making it a versatile, natural-looking spike for desert rock formations."
+differs = "Smallest and most leaning single spire, ideal for subtle accents or edge-of-cliff details."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 126
+meshes = 1
+materials = 1
+size = [0.610844, 1.411147, 0.55313504]
+
+[mesh.sm_env_skydome_01]
+name = "SM_Env_Skydome_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Skydome_01.fbx"
+sha256 = "480a1154ee48ad7503f0abd625236e39cb85c4123d846c074dda0b9488ebff4c"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+wanted = "Sky.psd"
+description = "A low, flattened dome with a broad, circular base, featuring a dark, glossy black cap over a vibrant, patterned body. The surface is a patchwork of red, grey, and tan sections with white speckles, framed by a rainbow-striped rim, giving it a stylized, decorative appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 160
+meshes = 1
+materials = 1
+size = [65.88029, 26.128487, 65.880295]
+
+[mesh.sm_env_succulent_01]
+name = "SM_Env_Succulent_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Succulent_01.fbx"
+sha256 = "2519f7ed629fff416d5037f2b4d914867fe52baddf0c9ba2f0cf47a2f94b4a47"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A cluster of five low-poly desert plants with dark, spiky, star-shaped rosettes of leaves rising from short, pale, woody trunks, arranged in a staggered line with one smaller offset plant, ideal for populating arid ground with a hardy, drought-tolerant look."
+differs = "The smallest and simplest cluster, with the lowest triangle count, best for scattered ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4288
+meshes = 3
+materials = 2
+size = [2.326511, 0.536847, 1.036576]
+
+[mesh.sm_env_succulent_01_alt_01]
+name = "SM_Env_Succulent_01_Alt_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Succulent_01_Alt_01.fbx"
+sha256 = "c7d7284607b242cb76352149f7eea318c41fc706e24a08e6a76ea76847610bc4"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A cluster of five low-poly succulents with thick, pale tan stems and dark, spiky black rosettes. Two tall, thin orange stalks rise from the tallest plants, adding a striking vertical accent. The dark foliage contrasts sharply with the light stems, making it a distinct choice for arid desert scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3976
+meshes = 3
+materials = 2
+size = [1.407187, 0.870506, 0.946553]
+
+[mesh.sm_env_succulent_01_single_01]
+name = "SM_Env_Succulent_01_Single_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Succulent_01_Single_01.fbx"
+sha256 = "80b3b61769080ee5e3015dc53407347dc79c2ca33907a9ded0212822ef55bbc1"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A squat, low rosette of thick, pointed leaves radiating from a central base, with a pale tan stem visible underneath. The foliage is a muted, dusty green with dark, almost black shadows in the core, giving it a dry, weathered appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 600
+meshes = 3
+materials = 2
+size = [0.57689905, 0.277826, 0.576542]
+
+[mesh.sm_env_succulent_02]
+name = "SM_Env_Succulent_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Succulent_02.fbx"
+sha256 = "49d3671875f9b428f7ef7c99c069fba3aded92090879b874372ca55c8f20a66e"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A low, wide cluster of fleshy green leaves, each tipped with a dark, spiky point, forms a dense, rounded mound. Small, pale orange spikes emerge from the centre, giving the plant a defensive, cactus-like appearance. The matte, slightly dusty texture suggests a hardy desert succulent suited for ground cover."
+differs = "The only one with a dense, rounded mound shape and pale orange spikes, ideal for low ground cover."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 13974
+meshes = 3
+materials = 2
+size = [2.679053, 0.676757, 2.3073468]
+
+[mesh.sm_env_succulent_03]
+name = "SM_Env_Succulent_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Succulent_03.fbx"
+sha256 = "7a21c024e70ce70c26b56271683133de551ba43e095b0844311ec948c7b8cf38"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A tight cluster of short, pale tan trunks topped with dense, spiky rosettes of dark olive-green leaves, resembling a miniature desert palm or yucca. The foliage is thick and rounded, giving the plant a bushy, sculpted silhouette that reads clearly at a distance."
+differs = "The most bushy and palm-like, with the thickest foliage, perfect for a sculpted desert accent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 12601
+meshes = 3
+materials = 1
+size = [1.674092, 1.300978, 1.442517]
+
+[mesh.sm_env_succulent_04]
+name = "SM_Env_Succulent_04"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Succulent_04.fbx"
+sha256 = "548693d42cb1893b5aedf4d9c48d46675ae722fc70edc3257582cd39ce68be8d"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A tall, narrow succulent with a single, thick, segmented stem that rises vertically and splits into two short, spiky arms near the top, each ending in a small, dark green rosette. The stem is heavily textured with a vibrant, vertical rainbow gradient of red, orange, yellow, green, and blue, giving it a painted or..."
+differs = "The only one with a vibrant rainbow gradient and a tall, segmented stem, a unique focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4444
+meshes = 3
+materials = 1
+size = [1.349224, 3.0004659, 1.4407821]
+
+[mesh.sm_env_succulent_05]
+name = "SM_Env_Succulent_05"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Succulent_05.fbx"
+sha256 = "7780db6586c34fd4c56e518d8a4c13c5d6f4bbbeb29484f9658b2a95008016db"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A low, mounded cluster of fleshy, pointed leaves in muted greens and dusty reds, topped by several tall, greyish flower stalks with small buds, giving it a weathered, arid look suited to desert rock gardens."
+differs = "The largest and most detailed, with flower stalks and mixed colors, suited for a rock garden centerpiece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 8589
+meshes = 6
+materials = 4
+size = [3.9106631, 2.884043, 3.896642]
+
+[mesh.sm_env_succulent_05_single_01]
+name = "SM_Env_Succulent_05_Single_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Succulent_05_Single_01.fbx"
+sha256 = "9c9997155e4ba23f17120c0fc922de238d79e7815d31fcd1a27ba7f1996ea663"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A low, spiky rosette of thick, pointed leaves fans out from a central base, with a single, tall, dark, segmented stalk rising from the middle. The foliage is a muted mix of dusty green and reddish-brown, giving it a weathered, arid look, while the stalk appears to be a dry, woody remnant."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 780
+meshes = 6
+materials = 1
+size = [1.6454229, 1.3512939, 1.66201]
+
+[mesh.sm_env_succulent_06]
+name = "SM_Env_Succulent_06"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Succulent_06.fbx"
+sha256 = "f4d1a0f8cdf5e1a92f416e9838fe6a49ebcfd4898e17da518aedf16e4a161f6d"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A tall, narrow succulent with a pale, segmented stem and a single rosette of spiky, reddish-brown leaves at the top, set against a dark, textured backdrop that suggests a shadowed crevice or rock face. The plant appears weathered and slightly dry, with a muted, earthy palette that fits a desert environment."
+differs = "The tallest and narrowest, with a single rosette and a shadowed backdrop, for vertical accents."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4158
+meshes = 4
+materials = 1
+size = [3.4312239, 5.4905047, 2.92271]
+
+[mesh.sm_env_sulphur_blob_01]
+name = "SM_Env_Sulphur_Blob_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Sulphur_Blob_01.fbx"
+sha256 = "07658c04a39c75e983d5a9d832d864ccede0f81c177735f99e4fa7f17ba5b855"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A jagged, low-poly rock formation with a central pale yellow peak rising from a cluster of rust-brown angular boulders, resembling a mineral-rich volcanic vent or a sulphur deposit. The faceted surfaces show a mix of earthy reds and pale yellows, suggesting a weathered, crystalline texture."
+differs = "Largest and most detailed, with the most prominent yellow peak, ideal as a hero landmark."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 594
+meshes = 1
+materials = 1
+size = [3.572639, 2.916441, 2.4160452]
+
+[mesh.sm_env_sulphur_blob_02]
+name = "SM_Env_Sulphur_Blob_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Sulphur_Blob_02.fbx"
+sha256 = "8f29e19372ec3e8b3424fcaeb663ed58973f1ef89f3bd50e0d59c1f14518083c"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A cluster of low-poly, jagged rock formations with pale yellow crystalline peaks, rendered in earthy brown and tan tones. The irregular, lumpy shape suggests a mineral deposit or volcanic vent, with a rough, faceted surface that gives it a natural, weathered appearance."
+differs = "Widest and flattest cluster, with multiple small peaks, best for ground-level scatter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 518
+meshes = 1
+materials = 1
+size = [2.47928, 1.291299, 1.745925]
+
+[mesh.sm_env_sulphur_blob_03]
+name = "SM_Env_Sulphur_Blob_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Sulphur_Blob_03.fbx"
+sha256 = "475b40f8dd17edc883227e99ec702630d7e9cddd32a8352a1cc95d4be6ecc250"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A jagged, low-poly rock spire with a pale, sandy tip that fades into a rich, rust-brown base, resembling a mineral-rich volcanic vent or a weathered desert outcrop. Its faceted surface and irregular silhouette give it a natural, rugged appearance, making it ideal for adding geological variety to arid environments."
+differs = "Smallest and simplest single spire, with the least detail, perfect for distant background filler."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 74
+meshes = 1
+materials = 1
+size = [0.571211, 1.057994, 0.513933]
+
+[mesh.sm_env_sulphur_ground_01]
+name = "SM_Env_Sulphur_Ground_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Sulphur_Ground_01.fbx"
+sha256 = "dddfe8918906d0e75d3a1e7df993c6919d1c6a91a2dba2219c092c4684d52073"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, rounded mound of pale grey and white rock with a rough, pitted surface, resembling a weathered sulphur crust or a small mineral deposit. Its irregular, lumpy silhouette and flat base make it ideal for scattering across desert terrain as a natural ground detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2219
+meshes = 1
+materials = 1
+size = [9.368476, 1.898061, 8.871054]
+
+[mesh.sm_env_sulphur_pool_01]
+name = "SM_Env_Sulphur_Pool_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Sulphur_Pool_01.fbx"
+sha256 = "28400cdaf8c5fdbe711699491a2f13f6db121746b1568de21d595cca65278428"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A low, irregular mound of pale grey rock with a wide, dark, glossy pool of liquid at its centre, ringed by a crust of yellow and green crystals that catch the light with iridescent red and purple reflections."
+differs = "Smallest and most compact, with the most saturated iridescent crystal ring, ideal for tight, dense hazard clusters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 582
+meshes = 2
+materials = 2
+size = [5.016365, 1.371213, 4.831563]
+
+[mesh.sm_env_sulphur_pool_02]
+name = "SM_Env_Sulphur_Pool_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Sulphur_Pool_02.fbx"
+sha256 = "cfdcc5ecd81d96300cb83c720951177fd503029d2f57e59f800d2325e2652776"
+atlas = "POLYGON - Dark Fantasy/PolygonDarkFantasy_Texture_01_A.png"
+textures = "PolygonDarkFantasy_Texture_01_A.png"
+description = "A low, irregular mound of pale grey rock with a flat, tiered top, holding three circular pools of vivid, multi-coloured liquid. The pools contain bright patches of orange, red, and green, suggesting a toxic or mineral-rich substance, with a small central rock formation rising from the middle."
+differs = "The only one with three separate pools and a central rock, making it the most complex and best for a multi-stage quest area."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1278
+meshes = 2
+materials = 2
+size = [8.554384, 1.82517, 7.090953]
+
+[mesh.sm_env_sulphur_pool_03]
+name = "SM_Env_Sulphur_Pool_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Sulphur_Pool_03.fbx"
+sha256 = "38d55967d7dbd3171e1d8ea8e175f0c21888b8d73f2289ab9157509a5df028aa"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A low, flat, roughly circular mound of pale grey stone with a dark, glossy, irregular pool at its centre, ringed by jagged, yellowish crystalline shards and small red accents, suggesting a mineral-rich hot spring or volcanic vent."
+differs = "The most circular and symmetrical, with the most jagged, aggressive crystal shards, perfect for a volcanic vent."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1206
+meshes = 2
+materials = 2
+size = [6.6519117, 1.781996, 6.837685]
+
+[mesh.sm_env_sulphur_pool_04]
+name = "SM_Env_Sulphur_Pool_04"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Sulphur_Pool_04.fbx"
+sha256 = "b6da531e3548c918f9845473f367931893c231cbe76340dfc8c1ed961421d848"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A low, irregular mound of pale, sandy rock with a dark, glossy, iridescent pool filling its central depression, reflecting rainbow hues like an oil slick. The surface is smooth and weathered, with a subtle sheen suggesting a wet or mineral-rich environment."
+differs = "The flattest and most weathered, with the most oil-slick-like rainbow sheen, ideal for a subtle, low-profile hazard."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 997
+meshes = 2
+materials = 2
+size = [7.623565, 1.317181, 7.552396]
+
+[mesh.sm_env_sulphur_pool_05]
+name = "SM_Env_Sulphur_Pool_05"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Sulphur_Pool_05.fbx"
+sha256 = "95accb2c1a71f2c52195a2ac7ac3a6cfcf7daf712552ae5381a3221176b2caca"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A low, irregular pool of dark, still liquid ringed by jagged, pale yellow rock. The surface is broken by vivid, iridescent patches of magenta, green, and blue, suggesting a chemical slick or mineral crust. The flat, ground-hugging shape makes it ideal for placing in a desert floor as a hazardous or magical feature."
+differs = "The widest and most ground-hugging, with the most vivid magenta and blue patches, best for a large, flat magical floor feature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 718
+meshes = 2
+materials = 2
+size = [7.959033, 1.341702, 8.301074]
+
+[mesh.sm_env_tree_dead_01]
+name = "SM_Env_Tree_Dead_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Dead_01.fbx"
+sha256 = "7fc6aa58246c4cbb969edf0d6ee0e4e0266791315104a9a856c9e2266dcf911b"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A gnarled, leafless tree with a short, thick trunk that splits into several twisting, jagged branches, all rendered in a pale, sun-bleached grey-brown. The bark is textured with deep, weathered grooves, giving it a dry, brittle appearance."
+differs = "The largest and most detailed, with a wider, more sprawling branch structure for a dominant focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2164
+meshes = 1
+materials = 1
+size = [5.8999767, 5.7025857, 5.633307]
+
+[mesh.sm_env_tree_dead_02]
+name = "SM_Env_Tree_Dead_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Tree_Dead_02.fbx"
+sha256 = "330d4537fd4c8181942f7378a090f43fead7e0dee6c4e03ff14d0bf52ac544d2"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A gnarled, leafless trunk with a flared, root-like base and a jagged, twisting canopy of bare branches, rendered in a pale, dusty tan with subtle darker crevices. The wood appears weathered and sun-bleached, giving it a brittle, long-dead look suited for arid wastelands."
+differs = "The smallest and plainest, a narrow, upright trunk best for background filler or dense clusters."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1122
+meshes = 1
+materials = 1
+size = [1.934137, 4.228481, 1.543015]
+
+[mesh.sm_env_water_plane_01]
+name = "SM_Env_Water_Plane_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Core/SM_Env_Water_Plane_01.fbx"
+sha256 = "47dbb745231ced49c8221637371c5cce15cbf6cc1f1aca161199382933dffed2"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A flat, square patch of arid terrain, textured with a mix of dry, sandy earth and scattered stones, featuring a central area of reddish, cracked ground that suggests a dried-out pool or mineral deposit."
+differs = "The 20000-triangle version is a 50x50 unit plain, flat, unadorned patch of cracked earth, lacking any debris or rocks, and is the largest and most detailed option for a large-scale dried pool."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 20000
+meshes = 1
+materials = 1
+size = [50.0, 0.000004, 50.0]
+
+[mesh.sm_env_water_plane_01_2]
+name = "SM_Env_Water_Plane_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Environment/SM_Env_Water_Plane_01.fbx"
+sha256 = "a34bf6169dbfcbbbbc3320d19fac721a19e5647fbd543f5159733c95bd47da60"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A flat, square patch of arid terrain, textured with a patchwork of dry brown earth, grey stone, and a central area of red, cracked earth. Scattered across the surface are small, colourful debris items and a single orange rock, giving it a weathered, desert-floor appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2
+meshes = 1
+materials = 1
+size = [10.0, 0.0, 10.0]
+
+[mesh.sm_particle_smoke_01]
+name = "SM_Particle_Smoke_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/FX/SM_Particle_Smoke_01.fbx"
+sha256 = "1f9189584c5748bae7acf85ce9468faf050c53cc8eba856fa0f27457c854dcfe"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A faceted, low-poly rock-like chunk with a flat, hexagonal base and irregular sloping sides, painted with a grungy, weathered texture. The surface is a mix of dusty red, olive, and grey patches, with scattered white speckles and a dark, jagged marking on one face."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 32
+meshes = 1
+materials = 1
+size = [0.191407, 0.15191099, 0.193869]
+
+[mesh.sm_prop_artefact_01]
+name = "SM_Prop_Artefact_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Artefact_01.fbx"
+sha256 = "c4ea22a4b9df4c4de7e767b49c2985a3b550b85aae2136e341527a95ae80d083"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A tall, jagged, dark grey stone monolith with a rough, weathered surface and a pointed top, resembling a broken ancient pillar or a natural rock spire. Its narrow, vertical form and chipped edges suggest a mysterious desert relic, ideal for adding a sense of age and mystery to arid environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2397
+meshes = 1
+materials = 1
+size = [1.879574, 10.619785, 1.1729]
+
+[mesh.sm_prop_bones_01]
+name = "SM_Prop_Bones_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Bones_01.fbx"
+sha256 = "a2e0db7aa21e96141f9d48621e29e51409abbd52b9cc8f63e09e606b10d1fbad"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+wanted = "image.png"
+description = "A weathered animal skull with two long, curved horns sweeping back from the sides, rendered in a pale bone colour with dark eye sockets and a faceted low-poly finish. The horns are thick at the base and taper to sharp points, giving the piece a rugged, desert-worn look suitable for arid environments."
+differs = "The only horned skull, ideal as a desert landmark or trophy."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1690
+meshes = 1
+materials = 1
+size = [0.896731, 1.100014, 2.750368]
+
+[mesh.sm_prop_bones_02]
+name = "SM_Prop_Bones_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Bones_02.fbx"
+sha256 = "9c5ef2d053ae6cc23571c85e161555baf2298b181f98c94c1cd942af2b0fae37"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+wanted = "image.png"
+description = "A weathered animal skull with a long snout, a jagged row of teeth, and a large, hollow eye socket, rendered in a pale, dusty bone colour with subtle mottling that suggests age and exposure. The cranium is rounded and the jaw is slightly open, giving it a natural, scavenged look."
+differs = "The only complete animal skull with teeth, perfect for a scavenger camp detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2284
+meshes = 1
+materials = 1
+size = [0.31285, 0.52715397, 0.752081]
+
+[mesh.sm_prop_bones_03]
+name = "SM_Prop_Bones_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Bones_03.fbx"
+sha256 = "24ef594879fa0eb6964697a1b7dd8194197c610e29258f121c9d69ddb85ac824"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+wanted = "image.png"
+description = "A weathered, bleached animal skeleton, likely a large herbivore, featuring a skull with a blunt snout and a long ribcage of curved, tapering ribs. The bone surface is pale beige with subtle darker mottling, suggesting age and exposure to the elements."
+differs = "The largest and most complete skeleton, a full ribcage with skull for a major set piece."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7402
+meshes = 1
+materials = 1
+size = [1.463804, 1.41474, 3.745604]
+
+[mesh.sm_prop_bones_04]
+name = "SM_Prop_Bones_04"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Bones_04.fbx"
+sha256 = "57f20d3bb3d075d0e26c0b6f2103b512d7e9cda7aae0998ed412d4817f93ec05"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A weathered, bleached bone segment of a ribcage, featuring a central spine with six pairs of curved ribs that flare outward and downward. The bone is textured with a pale, sandy off-white hue and subtle mottling, giving it a sun-bleached, desert-worn appearance."
+differs = "A standalone ribcage segment, the only one with a spine and six rib pairs."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2848
+meshes = 1
+materials = 1
+size = [1.06917, 1.063925, 1.71321]
+
+[mesh.sm_prop_bones_05]
+name = "SM_Prop_Bones_05"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Bones_05.fbx"
+sha256 = "2d1d3189aaf154c44f42f0365d9caf1c18cbd42e239536526b439c7c297db552"
+atlas = "POLYGON - Horror Carnival/PolygonHorrorCarnival_Texture_01_A.png"
+textures = "PolygonHorrorCarnival_Texture_01_A.png"
+description = "A weathered, pale-bone-colored long bone with a slender shaft and two distinct, knobby epiphyses, rendered in a low-poly style with a matte finish. The surface shows subtle mottling and a few small chips, suggesting age and exposure."
+differs = "The simplest single long bone, the lightest and most basic scatter prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 238
+meshes = 1
+materials = 1
+size = [1.631279, 0.225182, 0.389758]
+
+[mesh.sm_prop_bones_06]
+name = "SM_Prop_Bones_06"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Bones_06.fbx"
+sha256 = "adf7e716595c8d214b4bad40f0949f5691d2525ca3032c0fa90293080cd5db78"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A scattered pile of weathered, bleached animal bones, including long limb fragments and joint pieces, resting in a loose, irregular heap. The pale, sandy-beige surface shows subtle dark staining and wear, suggesting sun-bleached remains left in a dry environment."
+differs = "A bone pile without a skull, the plainest heap for generic ground clutter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1860
+meshes = 1
+materials = 1
+size = [1.478426, 0.171661, 1.398688]
+
+[mesh.sm_prop_bones_07]
+name = "SM_Prop_Bones_07"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Bones_07.fbx"
+sha256 = "dacb6e4974b8f3ff570089430fd20ce33f05107539c9285204200016152df239"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+wanted = "image.png"
+description = "A scattered pile of bleached, sun-bleached animal bones, including a skull and long limb fragments, resting on the desert floor. The weathered, pale ivory surface suggests long exposure to the arid sun, making it ideal for adding a natural, macabre touch to desert ruins or scavenger camps."
+differs = "The only bone pile that includes a skull, adding a macabre focal point."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3588
+meshes = 1
+materials = 1
+size = [1.797816, 0.352225, 1.648199]
+
+[mesh.sm_prop_bones_08]
+name = "SM_Prop_Bones_08"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Bones_08.fbx"
+sha256 = "4e132e595f0fad231848d81d90cdf529051454f556a99870098164fb47b274bd"
+atlas = "POLYGON - Horror Carnival/PolygonHorrorCarnival_Texture_01_A.png"
+textures = "PolygonHorrorCarnival_Texture_01_A.png"
+description = "A long, weathered bone fragment, bleached pale beige with darker recesses, featuring jagged, broken ends and a slightly curved shaft, suggesting it is a scavenged prop for desert ruins or skeletal remains."
+differs = "The only jagged, broken bone fragment, ideal for a damaged or scavenged look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 858
+meshes = 1
+materials = 1
+size = [1.39356, 0.13111499, 0.376688]
+
+[mesh.sm_prop_bones_09]
+name = "SM_Prop_Bones_09"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Bones_09.fbx"
+sha256 = "feaf8176c366cb8464c92b0425401db41fdc509ce57467a1264936d50673547c"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+wanted = "image.png"
+description = "A weathered, pale-bone limb fragment with two knobby joints and a split, splintered end, suggesting a broken femur or long bone from a large desert creature. Its matte, off-white surface shows subtle dirt staining and wear, making it ideal for scattered skeletal debris in arid environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 394
+meshes = 1
+materials = 1
+size = [1.109278, 0.158675, 0.333694]
+
+[mesh.sm_prop_bridge_large_01]
+name = "SM_Prop_Bridge_Large_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Bridge_Large_01.fbx"
+sha256 = "b158db7d11920a23a027b5fc2f25030f574ae00bcd94dcfd8379d725105f1b4c"
+atlas = "POLYGON - Military Pack/PolygonMilitary_Texture_01_A.png"
+textures = "PolygonMilitary_Texture_01_A.png"
+description = "A long, narrow plank bridge with a slight sag, supported by thin, angled legs and cross-bracing, rendered in a dark, weathered grey-brown wood. The surface is uneven and worn, with visible gaps between the planks, suggesting a rustic, aged structure for crossing gaps in an arid environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 6640
+meshes = 5
+materials = 1
+size = [1.287068, 1.9188681, 15.071131]
+
+[mesh.sm_prop_bridge_small_01]
+name = "SM_Prop_Bridge_Small_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Bridge_Small_01.fbx"
+sha256 = "bc1aebad5df89e1d705544bbcc951cf3b1566a0a97bda66189cdc5a9b2d902c7"
+atlas = "POLYGON - Military Pack/PolygonMilitary_Texture_01_A.png"
+textures = "PolygonMilitary_Texture_01_A.png"
+description = "A narrow, low-slung plank bridge with a single handrail on one side, supported by angled legs and cross-braces. The dark, weathered wood and metal frame suggest a rustic, functional crossing for foot traffic in a desert settlement, with a slightly uneven, worn appearance that adds character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 4116
+meshes = 5
+materials = 1
+size = [1.287068, 1.918867, 10.07113]
+
+[mesh.sm_prop_hose_01]
+name = "SM_Prop_Hose_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Hose_01.fbx"
+sha256 = "d5d5f8f2fd1adb29b83d8651f453f0a9ea39043d27b01fbe689c6a5fd1f648e2"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A slender, dark grey hose with a wavy, serpentine profile, terminating in small, blocky fittings at each end. The surface is smooth and matte, suggesting a rubber or plastic material, and the gentle curves give it a natural, relaxed appearance."
+differs = "The longest and most stretched-out hose, with the simplest smooth surface and no ribbing, best for a straight, relaxed run."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1064
+meshes = 1
+materials = 1
+size = [1.141497, 0.211626, 4.4771023]
+
+[mesh.sm_prop_hose_02]
+name = "SM_Prop_Hose_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Hose_02.fbx"
+sha256 = "241565dc6f33309c4eaea8b5648b3c84e599fd173110e0df68922b4a8982f5a7"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A coiled, flexible black hose with a ribbed texture, ending in two metallic fittings, one with a nozzle and the other with a valve handle, appearing slightly worn and ready for industrial or utility use."
+differs = "The only one with a ribbed texture and a valve handle, making it the most detailed and suited for a functional, industrial connection."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1096
+meshes = 1
+materials = 1
+size = [1.1805819, 0.273167, 2.5837061]
+
+[mesh.sm_prop_hose_03]
+name = "SM_Prop_Hose_03"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Hose_03.fbx"
+sha256 = "a1c502b30e5c79f74fbba84a4b376a55803db118170430fdc982a71e248a8380"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A coiled black rubber hose with two ridged metal fittings at the ends, lying in a loose, tangled loop on the ground. The surface is matte and slightly worn, suggesting a flexible utility line for water or air in a desert outpost."
+differs = "The widest and most tangled loop, with the most complex coil shape, ideal for a messy, ground-level utility line."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1256
+meshes = 1
+materials = 1
+size = [2.3657641, 0.284626, 1.646088]
+
+[mesh.sm_prop_marker_beacon_01]
+name = "SM_Prop_Marker_Beacon_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Marker_Beacon_01.fbx"
+sha256 = "b606593bd89a00ba5d3c6c799f7980dc0a277a194f5273694779fbed0d1152e7"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A slender, tapered spike with a dark metal shaft and a bright orange banded mid-section, topped by a small, flat circular cap. The surface shows subtle wear and grime, giving it a weathered, utilitarian look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 786
+meshes = 1
+materials = 1
+size = [0.122198, 1.273093, 0.122198]
+
+[mesh.sm_prop_pipe_01]
+name = "SM_Prop_Pipe_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Pipe_01.fbx"
+sha256 = "d90236540f1a55f48ddf00afe1941c51af6907b818f89a8115526495ee9f1ff6"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A short, dark metal pipe assembly with a wide cylindrical base, a horizontal arm, and a right-angled elbow ending in a flanged nozzle, suggesting a broken or weathered industrial fixture. The surface is matte black with subtle wear, giving it a rugged, utilitarian look suited for desert ruins or machinery."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1982
+meshes = 1
+materials = 1
+size = [1.121878, 1.760093, 4.021234]
+
+[mesh.sm_prop_satellite_01]
+name = "SM_Prop_Satellite_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Satellite_01.fbx"
+sha256 = "f6c25b77879cead8399f509ec6d254533fadb7c432df5b2c6492c06519a7d007"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A dark grey radar dish on a slender tripod, with a small secondary antenna extending from the back. The dish is tilted upward, and the surface shows a subtle faceted texture. The overall look is functional and weathered, suggesting a piece of long-abandoned surveillance equipment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1539
+meshes = 6
+materials = 1
+size = [1.267886, 2.117087, 1.689149]
+
+[mesh.sm_prop_sign_01]
+name = "SM_Prop_Sign_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Sign_01.fbx"
+sha256 = "3f7dee9a4d17822a21a6e1beb4487d7a65b92b66343ccedbb8a3c926a72c8320"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A weathered rectangular sign on a dark post, tilted slightly askew, with a faded red-brown horizontal stripe across its off-white face, suggesting a rustic desert marker."
+differs = "The largest and most detailed, with a red stripe and tilted post, ideal for a named location or warning marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 218
+meshes = 1
+materials = 1
+size = [0.648795, 1.075705, 0.120385]
+
+[mesh.sm_prop_sign_02]
+name = "SM_Prop_Sign_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Sign_02.fbx"
+sha256 = "999d07a2abbe15c2516faa588a1602356389a25d7c392e8c8d332e0c4d74259e"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A weathered, blank white rectangular sign plate with two visible bolt heads is mounted on a dark, slightly irregular wooden post, suggesting a rustic, worn marker for a trail or boundary in an arid environment."
+differs = "The plainest and smallest, with a blank face and straight post, perfect for a generic, unlabeled trail or boundary marker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 212
+meshes = 1
+materials = 1
+size = [0.321752, 0.940959, 0.106601]
+
+[mesh.sm_prop_solar_panels_01]
+name = "SM_Prop_Solar_Panels_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Solar_Panels_01.fbx"
+sha256 = "c243e4dd2ae083a9c9ed67233fe098ff6636dde23a4487482bc08fe775cbd04a"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A slender dark metal pole supports a wide, flat rectangular solar panel angled to catch the sun, with a small junction box and a dual-headed light fixture mounted near the top. The panel's surface is a deep, matte charcoal with subtle grid lines, while the frame and pole are a slightly lighter, weathered grey..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2872
+meshes = 11
+materials = 1
+size = [2.512908, 3.484612, 0.769642]
+
+[mesh.sm_prop_survey_level_01]
+name = "SM_Prop_Survey_Level_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Survey_Level_01.fbx"
+sha256 = "e55f3e6c4b707f5988436b39e20c92424faae82fb79bcdf069e90bc5f78229b4"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A tripod surveyor's instrument with a dark grey body and a small silver scope, mounted on three slender, segmented legs. The legs are marked with bright orange bands at the joints and tips, giving it a high-visibility, industrial look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 830
+meshes = 2
+materials = 1
+size = [1.199853, 1.624766, 1.047692]
+
+[mesh.sm_prop_tent_01]
+name = "SM_Prop_Tent_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Tent_01.fbx"
+sha256 = "4fb3a8c6d3fbb9b8d9b7553b69f2b1e4bf1094f3b97bdf3fb4c79f7c017b843e"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A squat, faceted dome with a low, wide footprint, built from bright orange triangular panels framed by pale grey struts. A small circular vent sits at the apex, and a dark, open doorway is cut into one side, revealing a shadowed interior."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1632
+meshes = 2
+materials = 2
+size = [4.62331, 3.053696, 4.623306]
+
+[mesh.sm_prop_tumbleweed_01]
+name = "SM_Prop_Tumbleweed_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Tumbleweed_01.fbx"
+sha256 = "2167648d80937bbc58e746fbe7159f710a0df98a69af22b8c52c9b242ec607a7"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A roughly spherical, tangled mass of dry, brittle twigs and stems, rendered in muted browns and greys with a few pale, bleached fragments caught in the weave. The open, airy structure suggests a light, hollow object that would roll easily across the sand, with a slightly weathered, sun-bleached finish that fits a..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1364
+meshes = 3
+materials = 3
+size = [0.755388, 0.75538695, 0.755388]
+
+[mesh.sm_prop_wind_turbine_01]
+name = "SM_Prop_Wind_Turbine_01"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Wind_Turbine_01.fbx"
+sha256 = "83b30d4180b874d53ab1d3df5aa333aab0a1fbde8a88dac3f88cf2e683080c92"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A tall, slender tower with a three-bladed rotor, rendered in a dark, weathered grey metal finish. The blades are curved and aerodynamic, and the nacelle is compact, giving it a realistic, functional silhouette for a desert wind farm."
+differs = "The largest and most detailed, with a realistic silhouette and dark grey finish, ideal for a large-scale wind farm."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2248
+meshes = 2
+materials = 1
+size = [4.342025, 13.982519, 4.342025]
+
+[mesh.sm_prop_wind_turbine_02]
+name = "SM_Prop_Wind_Turbine_02"
+pack = "polygon_arid_desert_nature_biome"
+source = "SourceFiles/FBX/Props/SM_Prop_Wind_Turbine_02.fbx"
+sha256 = "bc02a84c1a31d93bd69ef9585d42a4a6a2df75fa474a77b8860f10d4f9e54b67"
+atlas = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+textures = "PolygonNatureBiomesS2_AridDesert_Texture_01.png"
+description = "A weathered grey wind turbine with a dark central mast and three curved white blades, each tipped with a small black counterweight. The blades are slightly asymmetrical and show subtle panel seams, giving it a functional, used appearance suitable for arid environments."
+differs = "The smallest and plainest, with white blades and black counterweights, suited for a small, weathered desert outpost."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 676
+meshes = 2
+materials = 1
+size = [1.597324, 2.6073282, 1.477375]

@@ -1,0 +1,445 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sk_chr_explorer_female_01]
+name = "SK_Chr_Explorer_Female_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/Characters/SK_Chr_Explorer_Female_01.fbx"
+sha256 = "7cefe494996c43c74cc6490f045ac301241176435b4881077d1fe749aa3d8e3a"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A stylized low-poly female explorer in a T-pose, featuring a short blonde bob and a dark charcoal jacket with an orange undershirt and belt. She wears grey cargo trousers and dark boots, with a neutral expression and a compact, slightly stylized proportioned build suited for adventure or survival game scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2032
+meshes = 1
+materials = 1
+size = [2.04133, 1.791503, 0.304762]
+
+[mesh.sk_chr_explorer_male_01]
+name = "SK_Chr_Explorer_Male_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/Characters/SK_Chr_Explorer_Male_01.fbx"
+sha256 = "dd9b92c73d393d7f6d0b8abf13df3557baeb94d4cc0e844cc9f0c3946a4e33e7"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A male explorer in a T-pose, featuring a shaved head and a short beard, dressed in a brown leather vest over a grey shirt with white trousers and dark boots. The outfit is accented with a dark belt and pouches, and the character has a neutral, ready stance suitable for adventure or survival game scenarios."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2420
+meshes = 1
+materials = 1
+size = [2.047514, 1.78805, 0.33088702]
+
+[mesh.sk_veh_4x4_car_alt_01]
+name = "SK_Veh_4x4_Car_Alt_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SK_Veh_4x4_Car_Alt_01.fbx"
+sha256 = "b0dc3fad9ea27b21bb6cb3d533991a0efc67b8d63030b13518f1e954e5909fc8"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A rugged, open-top off-roader with a boxy body, a white paint job, and a brown canvas roof folded over the rear. It features a black roll cage, a spare tire mounted on the back, and a front bumper with a winch, suggesting it is built for exploration and rough terrain."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7097
+meshes = 11
+materials = 1
+size = [2.277922, 1.993075, 4.6496267]
+
+[mesh.sm_chr_attach_backpack_01]
+name = "SM_Chr_Attach_Backpack_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Backpack_01.fbx"
+sha256 = "59568a936908dad8b66b9908ea3d255af04ae3d5a47b77d93b4ff8deeae736be"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A compact, boxy military-style backpack with a rounded top and a flat, rigid front panel. It features two vertical tan straps with metal buckles on the front, side pouches, and a small top handle, all rendered in a muted olive-grey with a worn, matte finish."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 554
+meshes = 1
+materials = 1
+size = [0.454838, 0.44729, 0.24164599]
+
+[mesh.sm_chr_attach_beard_01]
+name = "SM_Chr_Attach_Beard_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Beard_01.fbx"
+sha256 = "86f2b945085cb73d2f0cdfbe2748e7a152b22a793358a83dc14a97f8dc4d13b7"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A chunky, angular beard formed from two separate side pieces and a central chin block, leaving the mouth area open. The flat-shaded grey surface is untextured, giving it a raw, unpolished look that suits a stylised, low-poly character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 230
+meshes = 1
+materials = 1
+size = [0.223176, 0.137766, 0.128699]
+
+[mesh.sm_chr_attach_hair_female_01]
+name = "SM_Chr_Attach_Hair_Female_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_Female_01.fbx"
+sha256 = "880778418d99e1636ec49dd16c46cd7669869f58be79348cf48764fd16344cfd"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A low-poly, faceted hair asset with a rounded crown and two long, straight side locks that fall past the jawline, rendered in a flat, muted brown. The blocky silhouette and lack of visible texture detail give it a stylized, unadorned look, making it a versatile, neutral choice for a female character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 294
+meshes = 1
+materials = 1
+size = [0.251192, 0.35239, 0.38685697]
+
+[mesh.sm_chr_attach_hair_female_hat_01]
+name = "SM_Chr_Attach_Hair_Female_Hat_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_Female_Hat_01.fbx"
+sha256 = "894a53b6b392ab5e92370321541b982190c90ddac32f22e1c4c96ecaeceeb620"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A weathered, low-poly brown hat with a wide, uneven brim and a tall, open crown, featuring a large, ragged hole in the top. Its faceted surface and muted, earthy tones suggest a worn, practical item for an adventurer or explorer."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 204
+meshes = 1
+materials = 1
+size = [0.251192, 0.296711, 0.290277]
+
+[mesh.sm_chr_attach_hair_male_01]
+name = "SM_Chr_Attach_Hair_Male_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_Male_01.fbx"
+sha256 = "4929ff298708168d241ebe370ae17d64e04cd7124f691d5ec83326798a18b0e3"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A short, swept-back hairstyle with a sharp fringe and a small topknot, rendered in flat grey and white facets. The angular silhouette suggests a stylized, low-poly explorer or adventurer look, with a clean, untextured finish that reads as a neutral base for customization."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 103
+meshes = 1
+materials = 1
+size = [0.276843, 0.219564, 0.289406]
+
+[mesh.sm_chr_attach_hair_male_hat_01]
+name = "SM_Chr_Attach_Hair_Male_Hat_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hair_Male_Hat_01.fbx"
+sha256 = "c791ed6891e483f2edf6d441971ca200ab42fed7555d4f96c655d5c95e74c66a"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A low-poly, open-fronted headband or circlet with a chunky, faceted silhouette, rendered in flat grey with no visible texture. The band is thick and angular, with a small pointed crest at the back and a slight upward flare at the front edges, suggesting a simple, unadorned crown or hair accessory."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.267156, 0.108234, 0.222389]
+
+[mesh.sm_chr_attach_hat_female_01]
+name = "SM_Chr_Attach_Hat_Female_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hat_Female_01.fbx"
+sha256 = "8401f0c4da7b479d6d09b486d0fdc3b8ff2c72b7815813329bb2a250f00ae6ab"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A low-poly explorer's hat with a wide, gently curved brim and a faceted, pinched crown, rendered in a pale beige with a darker brown band circling the base. The angular, flat-shaded surfaces give it a rugged, weathered look, suggesting a practical accessory for desert or jungle adventuring."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [0.458298, 0.21739599, 0.489626]
+
+[mesh.sm_chr_attach_hat_hunter_01]
+name = "SM_Chr_Attach_Hat_Hunter_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hat_Hunter_01.fbx"
+sha256 = "1ef15b6f8ab388c22f4f695272c32f91efe8e34910493d947439ac409949753c"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A low-poly, faceted pith helmet with a rounded dome and a short, angled brim, rendered in a pale beige with a darker brown band circling the base of the crown. The brim features a dark brown trim along its edge, and the overall look is that of a sturdy, utilitarian explorer's hat, ready for a safari or jungle..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 274
+meshes = 1
+materials = 1
+size = [0.315252, 0.26726902, 0.41873]
+
+[mesh.sm_chr_attach_hat_male_01]
+name = "SM_Chr_Attach_Hat_Male_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Hat_Male_01.fbx"
+sha256 = "e7c61b7c6421e5becf92a435b33ead59f9d9a3eb506583420607d8cd1d624013"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A wide-brimmed explorer's hat with a pinched, faceted crown and a dark grey band, rendered in low-poly brown leather with subtle shading. The brim is slightly upturned and uneven, giving it a worn, practical look suited for adventuring."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 124
+meshes = 1
+materials = 1
+size = [0.453488, 0.227823, 0.513108]
+
+[mesh.sm_chr_attach_pouch_01]
+name = "SM_Chr_Attach_Pouch_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Pouch_01.fbx"
+sha256 = "a87c133ff6fc441e09b6fcb087d4e329db936a68fc6476fdedea3e6ca920813d"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A compact, rectangular satchel with a tall, narrow profile and a flat, slightly domed lid. The front face features a dark, chunky buckle and strap assembly, while the sides show a recessed dark panel."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 274
+meshes = 1
+materials = 1
+size = [0.118186, 0.169629, 0.071971]
+
+[mesh.sm_chr_attach_rope_01]
+name = "SM_Chr_Attach_Rope_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Rope_01.fbx"
+sha256 = "8ae5ea1eedf74350d4d106d066c5326a1dd2a0adb83ffba8b7810347d3c658c2"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A coiled loop of bright green rope, hanging vertically with a small frayed tail at the bottom, rendered in a flat, stylised low-poly finish with a subtle white highlight at the top of the coil."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 332
+meshes = 1
+materials = 1
+size = [0.066827, 0.362161, 0.086418]
+
+[mesh.sm_chr_attach_whip_01]
+name = "SM_Chr_Attach_Whip_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Chr_Attach_Whip_01.fbx"
+sha256 = "4e9b8ceefbdf1f24b483555c850567e0cb790f703fdb38d46c21f253d825acca"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A coiled leather whip, faceted and low-poly, with a short handle and a long tapered tail that curls into a tight loop. The brown hide shows subtle tonal variation, suggesting worn, weathered material. Its compact, coiled form makes it easy to attach to a character's belt or hip."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 212
+meshes = 1
+materials = 1
+size = [0.091689005, 0.344647, 0.200925]
+
+[mesh.sm_prop_bag_01]
+name = "SM_Prop_Bag_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_Bag_01.fbx"
+sha256 = "4158043e617915785c7a859bb2e81ec8f0a1ad3987a8a89126a64ce3b23da2c9"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A stout, faceted sack with a cinched neck and a small tied-off top, rendered in a pale, off-white canvas tone. The low-poly folds give it a soft, bulging silhouette, suggesting a travel bag or provisions pouch, with a simple, clean finish that fits a stylized explorer aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 202
+meshes = 1
+materials = 1
+size = [0.20913601, 0.263619, 0.141343]
+
+[mesh.sm_prop_bedroll_01]
+name = "SM_Prop_Bedroll_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_Bedroll_01.fbx"
+sha256 = "70ebda34e1f586097a3f515b030610866a5cb4bd8e14e31ab52cde4ec6cd8907"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A compact, rolled-up sleeping mat with a faceted, cylindrical form, secured by two dark straps near the ends. The pale beige canvas is accented by a spiral pattern on the circular end caps, suggesting a tightly wound fabric."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 400
+meshes = 1
+materials = 1
+size = [0.450174, 0.17341, 0.164924]
+
+[mesh.sm_prop_binoculars_01]
+name = "SM_Prop_Binoculars_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_Binoculars_01.fbx"
+sha256 = "017e340fde05b60b18dce35453832dfc1375c83d7f507baae78326385eea9abf"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A chunky, low-poly pair of field binoculars in olive green with dark grey objective lenses and eyepieces, featuring a raised central bridge and a textured top plate. The blocky, faceted design gives it a rugged, utilitarian look suited for military or survival scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 448
+meshes = 1
+materials = 1
+size = [0.234034, 0.094817, 0.189668]
+
+[mesh.sm_prop_compass_01]
+name = "SM_Prop_Compass_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_Compass_01.fbx"
+sha256 = "7f7c189acce210d1e09d004dd3ea3fa8d10ee604bf6bdf01b5fef94fd33df2fa"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A chunky, low-poly pocket compass with a hinged lid propped open, revealing a cream dial with a red needle and dark grey casing. The octagonal body and rounded lid feature a simple, faceted stone-like texture, giving it a rugged, weathered appearance suitable for adventure or survival scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 156
+meshes = 1
+materials = 1
+size = [0.086422, 0.09348, 0.162862]
+
+[mesh.sm_prop_flashlight_01]
+name = "SM_Prop_Flashlight_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_Flashlight_01.fbx"
+sha256 = "fc4106c0e0bff416ea4cc3f9439ae2d8ee1f13b415490f2e865730f382e3b5fe"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A compact, right-angled torch with a cylindrical body and a squared-off head housing a circular lens, featuring a side-mounted switch and a ridged end cap. The dark grey, matte plastic finish is plain and unmarked, suggesting a utilitarian, functional tool for exploration or survival scenarios."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 376
+meshes = 1
+materials = 1
+size = [0.071892, 0.258737, 0.094721004]
+
+[mesh.sm_prop_iceaxe_01]
+name = "SM_Prop_IceAxe_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_IceAxe_01.fbx"
+sha256 = "212311306ca7dd4c82da5c952436c697b0556b7536d3a679cbe41935bfe7512e"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A curved orange handle with a dark grey grip and a small, silver, double-sided pick head, resembling a compact climbing tool or a stylized ice axe."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 288
+meshes = 1
+materials = 1
+size = [0.051636, 0.73479795, 0.366115]
+
+[mesh.sm_prop_idle_01]
+name = "SM_Prop_Idle_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_Idle_01.fbx"
+sha256 = "c037a5603cbc769f3e45db19687d21951473239109c3619619ae66c9fd6e5e53"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A weathered sandstone monument featuring a tall, arched hood sheltering a small, carved figure with a single red gem set in its chest, all resting on a tiered square base. The low-poly facets give it a chiselled, ancient look, suggesting a shrine or tomb marker for a desert or ruin environment."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 684
+meshes = 1
+materials = 1
+size = [0.318436, 0.392953, 0.100564]
+
+[mesh.sm_prop_knife_01]
+name = "SM_Prop_Knife_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_Knife_01.fbx"
+sha256 = "074f6988849bb6b9d5811d28a2c633c832070c9922c904575c619556bd8ac168"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A slender, utilitarian blade with a pronounced central ridge, a small crossguard, and a wrapped grip. The steel is worn and scratched, while the dark brown handle shows heavy use, suggesting a well-used field tool or weapon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 526
+meshes = 1
+materials = 1
+size = [0.042296, 0.50512797, 0.091514006]
+
+[mesh.sm_prop_knife_cover_01]
+name = "SM_Prop_Knife_Cover_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_Knife_Cover_01.fbx"
+sha256 = "21c070b643cb5ece02df8735d368faeba8c90875c5c4cc1493286b2831269da3"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A slender, worn brown leather sheath with a single stitched seam along the back edge, a small belt loop at the top, and a pointed tip, appearing aged and ready to hold a blade."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 176
+meshes = 1
+materials = 1
+size = [0.048139, 0.494409, 0.097874]
+
+[mesh.sm_prop_map_01]
+name = "SM_Prop_Map_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_Map_01.fbx"
+sha256 = "0420b5163b8b2c20dffe3b34b9200f9b157aceef2e2ea48266489bca2e0d82a0"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A weathered, low-poly parchment map unrolled and held flat by two curled corner weights, its surface marked with faint red route lines and a small compass rose, suggesting a hand-drawn explorer's chart ready for adventure."
+differs = "The only unrolled, flat map, with visible route lines and compass rose; best for tabletop or wall display."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 184
+meshes = 1
+materials = 1
+size = [0.37976, 0.127514, 0.43628]
+
+[mesh.sm_prop_map_02]
+name = "SM_Prop_Map_02"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_Map_02.fbx"
+sha256 = "8e719e9795c4439d8d34e284848cc4d533bc126396801aa7a039c6f7b9261896"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A rolled parchment scroll, unrolled slightly at one end to reveal a spiral of paper, with a flat, rectangular sheet extending from the opposite end. The pale beige paper is marked with faint, illegible lines of text, and the surface appears clean and crisp, suggesting a fresh, unblemished document ready for use in a..."
+differs = "The only rolled scroll, with a spiral end and clean text; best for handheld or desk prop use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 136
+meshes = 1
+materials = 1
+size = [0.138549, 0.094872005, 0.401886]
+
+[mesh.sm_prop_plinth_01]
+name = "SM_Prop_Plinth_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_Plinth_01.fbx"
+sha256 = "23dd467039f6173f7dd7e8ed81bbbb39c145ba7619d5e8ab1526512589a4f12d"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A weathered stone pedestal with a square, slightly overhanging top and a stepped, blocky base, featuring a carved, abstract relief on its central shaft. The grey stone texture shows chipped edges and cracks, giving it an ancient, ruined look suitable for temple or dungeon environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2000
+meshes = 1
+materials = 1
+size = [0.68789303, 1.087567, 0.665659]
+
+[mesh.sm_prop_torch_01]
+name = "SM_Prop_Torch_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Prop_Torch_01.fbx"
+sha256 = "3fab9eaf31fee4ff056324a0a935f2607b545b4efaa85154764b2b4831d14ae2"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A slender, roughly hewn wooden handle with a slight taper and a small peg near the top, capped by a dark, charred head wrapped in pale cloth. The wood is a muted brown with visible grain, and the head shows signs of use, suggesting a simple, functional torch for lighting dark environments."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 204
+meshes = 1
+materials = 1
+size = [0.087597, 0.877993, 0.093976]
+
+[mesh.sm_veh_4x4_car_01]
+name = "SM_Veh_4x4_Car_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Veh_4x4_Car_01.fbx"
+sha256 = "877d916b1c6f1df6cf1d6bc861bdf8af31979a9db1d4b0f523ef19271b833dda"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "Open-top off-roader with a boxy white body, tan canvas-covered rear, and brown side panels. It features a black roll cage, spare tire, front bull bar, and rugged knobby tires, looking weathered and ready for exploration."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7051
+meshes = 11
+materials = 3
+size = [2.277922, 1.993075, 4.6496267]
+
+[mesh.sm_wep_pistol_revolver_01]
+name = "SM_Wep_Pistol_Revolver_01"
+pack = "polygon_explorer_kit"
+source = "SourceFiles/FBX/SM_Wep_Pistol_Revolver_01.fbx"
+sha256 = "6dc3a95b46b46127998063e4dd79ac0f31a04329d32b7e1fa4fa86acf3d6c529"
+atlas = "PolygonExplorers_Texture_01_A.png"
+textures = "PolygonExplorers_Texture_01_A.png"
+description = "A long-barrelled revolver with a matte grey steel frame and a smooth, warm brown wooden grip, featuring a visible cylinder and hammer, with a simple, clean low-poly finish that reads as a sturdy, functional sidearm."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2146
+meshes = 5
+materials = 1
+size = [0.055424, 0.202406, 0.46201]

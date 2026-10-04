@@ -1,0 +1,1729 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sk_chr_attach_axe_01]
+name = "SK_Chr_Attach_Axe_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Chr_Attach_Axe_01.fbx"
+sha256 = "b15b2460a962da2c0c42857231c4748655e9bb859360a01ed385e9b010d87aa8"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A short-handled axe with a straight, light-brown wooden haft and a dark grey, wedge-shaped head, showing a chipped, worn edge and a slightly weathered finish, suited for a survivor's melee weapon."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 188
+meshes = 1
+materials = 1
+size = [0.06468, 0.466191, 0.194715]
+
+[mesh.sk_chr_attach_bar_01]
+name = "SK_Chr_Attach_Bar_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Chr_Attach_Bar_01.fbx"
+sha256 = "06898e95c519053e6b748aa71155b1fb1681cfa876f27ee869aca4dd86d49fd4"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender, dark grey bar with a single, sharp bend near its midpoint, giving it a shallow, angular profile. The surface is smooth and unmarked, suggesting a simple metal or plastic prop. Its minimalist design makes it a versatile accessory for a zombie character, easily read as a makeshift weapon or a piece of debris."
+differs = "Shorter and thicker with a sharper mid-bend, better as a compact club or debris chunk."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.082276, 0.497485, 0.094372004]
+
+[mesh.sk_chr_attach_bar_02]
+name = "SK_Chr_Attach_Bar_02"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Chr_Attach_Bar_02.fbx"
+sha256 = "f13f5cdf4fa54a595f38c1140fb879cd7762cf4b82da3626993be9d49aa104de"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender, dark grey metal bar with a slight bend near the top, appearing as a simple, worn prop for a zombie character, likely a makeshift weapon or a piece of debris."
+differs = "Longer and thinner with a subtle top bend, better as a pipe or baton for reach."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.06348, 0.67652, 0.062172003]
+
+[mesh.sk_chr_attach_cleaver_01]
+name = "SK_Chr_Attach_Cleaver_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Chr_Attach_Cleaver_01.fbx"
+sha256 = "c7a8c4e67a778be8b7151d263b6f4794c669cd6eb51bdf8718f8e161bdb81043"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A broad, rectangular cleaver blade with a straight cutting edge and a small hole near the spine, fitted with a short, dark brown wooden handle secured by two visible rivets. The flat grey metal shows a subtle worn texture, giving it a utilitarian, slightly used appearance suited for melee combat or butchering scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 172
+meshes = 1
+materials = 1
+size = [0.058986, 0.152466, 0.51322]
+
+[mesh.sk_chr_attach_knife_01]
+name = "SK_Chr_Attach_Knife_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Chr_Attach_Knife_01.fbx"
+sha256 = "a3d2955bcc59c2d026fb8e7a6c22a2fcc28c0fb1032046712c84e3878f6501a4"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A simple, worn utility knife with a broad, pale grey blade and a dark brown handle secured by two silver rivets, showing a slightly chipped edge that suggests heavy use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 120
+meshes = 1
+materials = 1
+size = [0.058986, 0.073354, 0.458309]
+
+[mesh.sk_chr_attach_scissors_01]
+name = "SK_Chr_Attach_Scissors_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Chr_Attach_Scissors_01.fbx"
+sha256 = "1ac8e5c3190c25caffe1b006084e518794934d151f865daeee3d7a39be7bfd6f"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A pair of open scissors with dark blue plastic handles and grey metal blades, shown in a slightly worn condition. The blades are crossed and extended, with a small central pivot screw, giving the asset a functional, utilitarian look suitable for a zombie survival scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 206
+meshes = 1
+materials = 1
+size = [0.016754, 0.170493, 0.376109]
+
+[mesh.sk_zombie_bellboy_male_01]
+name = "SK_Zombie_Bellboy_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Bellboy_Male_01.fbx"
+sha256 = "61670ad5f8e2ff7806a63026fb64eb96176f3e3d2a5abe6f47683927b94f5507"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt, grey-skinned zombie in a red bellhop jacket with gold trim and a matching pillbox cap, posed with arms outstretched in a classic shambling stance. The uniform is stained and tattered, with dark trousers and shoes, giving it a distinct, service-industry horror look that stands out from generic zombie assets."
+differs = "Shambling pose with outstretched arms, ideal for background ambience; SK_Zombie_Bellboy_Male_01: T-pose with blood smear, ideal for rigging and animation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2455
+meshes = 1
+materials = 1
+size = [2.0475168, 1.840036, 0.35825]
+
+[mesh.sk_zombie_bellboy_male_01_2]
+name = "SK_Zombie_Bellboy_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Bellboy_Male_01.fbx"
+sha256 = "58a9dc8e0282b1ea87bcfd79cc9f6a2b2e8bf82c1ecf91a8a5704f4c9ea31391"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt, grey-skinned zombie in a T-pose, dressed in a faded red bellboy jacket with yellow trim and a matching pillbox cap, paired with dark trousers and black shoes. The uniform is stained and torn, with a visible blood smear on the chest, and the figure's slack, lifeless posture and decayed features clearly mark it."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2455
+meshes = 1
+materials = 1
+size = [2.0475168, 1.840036, 0.358249]
+
+[mesh.sk_zombie_biker_male_01]
+name = "SK_Zombie_Biker_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Biker_Male_01.fbx"
+sha256 = "2c6f92109444c478a88a487eceea65ffc59d6e096e8c8a6d3b55faabfca94ac4"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched male zombie in a T-pose, wearing a black leather vest with a white skull emblem over a grey shirt, blue jeans, and a grey helmet with a visor. His skin is a sickly green, and his arms are outstretched, suggesting a shambling, aggressive posture."
+differs = "Identical to the other asset in geometry and texture; only the description differs, so no unique traits exist."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2480
+meshes = 1
+materials = 1
+size = [2.0475202, 1.837173, 0.367406]
+
+[mesh.sk_zombie_biker_male_01_2]
+name = "SK_Zombie_Biker_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Biker_Male_01.fbx"
+sha256 = "c08de44d5db80017c33c39c6bf086f12807df8119ada477ca849f77b0d92360c"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose, wearing a sleeveless dark vest over a grimy white shirt, blue jeans, and a grey helmet. The exposed arms are pale and mottled with decay, and a dark stain marks the chest. The low-poly build is lean and angular, suited for a shambling undead biker enemy."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2480
+meshes = 1
+materials = 1
+size = [2.0475202, 1.837173, 0.367406]
+
+[mesh.sk_zombie_biohazardsuit_male_01]
+name = "SK_Zombie_BioHazardSuit_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_BioHazardSuit_Male_01.fbx"
+sha256 = "9056d83371bb7160fa3e6928f50491ed18adf2b474c9ded72400a9b247295e6d"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male figure in a bright yellow hazmat suit with a sealed hood, black gloves, and black boots, posed in a T-pose. The suit is marked with a black biohazard symbol on the chest and a small red patch on the left arm, with grime and wear suggesting a post-apocalyptic setting."
+differs = "Features a chest biohazard symbol and red arm patch, ideal for a clearly marked hazard worker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2177
+meshes = 1
+materials = 1
+size = [2.047514, 1.885512, 0.36338902]
+
+[mesh.sk_zombie_biohazardsuit_male_01_2]
+name = "SK_Zombie_BioHazardSuit_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_BioHazardSuit_Male_01.fbx"
+sha256 = "3e2421ceda1c72c41ee9d62ee3c09978b0e1efede2eb77b32221ef98ccc826c9"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male figure in a T-pose, clad in a bright yellow hazmat suit with a sealed hood and dark visor, black gloves, and black boots. The suit is marked with grime and dark stains, suggesting a biohazard environment, and features a chest strap and utility belt."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2177
+meshes = 1
+materials = 1
+size = [2.047514, 1.885512, 0.36338902]
+
+[mesh.sk_zombie_bride_female_01]
+name = "SK_Zombie_Bride_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Bride_Female_01.fbx"
+sha256 = "f54094b3bd6efeba3f9acd23a1d50b29c664b661e7709a0a065e816bdb3229b0"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female zombie in a tattered, knee-length white dress with a torn hem, posed in a T-pose. Her skin is a pallid grey, and her blonde hair is pulled back, with a bloodstained patch on the dress and a visible wound on her head."
+differs = "Identical to the other asset in geometry and texture; only the description differs, so choose either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2261
+meshes = 1
+materials = 1
+size = [2.04133, 1.847802, 0.39518]
+
+[mesh.sk_zombie_bride_female_01_2]
+name = "SK_Zombie_Bride_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Bride_Female_01.fbx"
+sha256 = "2e80cb085e9ab5569c82eeba3c05ae4117825b6c4325ec4d3b3b8b9043affbbe"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female figure in a tattered, knee-length white dress with a torn veil and a decaying, greyish complexion, posed in a T-pose. The outfit is stained and ragged, with a visible gash across the torso, and the overall look is that of a freshly risen, pale undead bride."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2261
+meshes = 1
+materials = 1
+size = [2.04133, 1.847802, 0.39518]
+
+[mesh.sk_zombie_business_female_01]
+name = "SK_Zombie_Business_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Business_Female_01.fbx"
+sha256 = "7d8b2a14a0215bdd0b4f4c2f569f397531f3493eeb679fffc71fef1ebbb417c9"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a tattered blue dress with a white collar, posed in a T-pose with arms outstretched. She has pale, decayed skin, dark hair, and a bloodied face, with a brown belt and torn hem. The rigid stance and classic undead styling make her ideal for a corporate horror scene."
+differs = "Bloodied face and torn hem make it the more damaged, horror-focused choice for gory scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2891
+meshes = 1
+materials = 1
+size = [2.0413299, 1.824169, 0.340764]
+
+[mesh.sk_zombie_business_female_01_2]
+name = "SK_Zombie_Business_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Business_Female_01.fbx"
+sha256 = "136e61af261a43ca68fbdb9e06497d2a39d92b31a51f0f653b6cca490ae07ede"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a tattered blue dress with a white collar, posed in a T-pose. She has pale, decayed skin, dark hair, and a brown belt with a pouch. Her legs are bare and stained, and her arms are outstretched, suggesting a shambling, undead state."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2891
+meshes = 1
+materials = 1
+size = [2.041331, 1.824169, 0.340764]
+
+[mesh.sk_zombie_businessman_male_01]
+name = "SK_Zombie_Businessman_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Businessman_Male_01.fbx"
+sha256 = "0a4c840b65dd7fef1adfee8564018ac39f6e11961bc8120fdc8453d1dda73196"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched male figure in a torn charcoal suit and loosened cyan tie, posed in a T-pose with a slack jaw and pale, decaying skin. The jacket is unbuttoned, revealing a stained white shirt, while the trousers are ragged at the cuffs. The overall silhouette is gaunt and stiff, conveying a shambling, undead office worker."
+differs = "Identical to the other asset in geometry and texture; no unique features, use for either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2062
+meshes = 1
+materials = 1
+size = [2.047519, 1.847947, 0.366741]
+
+[mesh.sk_zombie_businessman_male_01_2]
+name = "SK_Zombie_Businessman_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Businessman_Male_01.fbx"
+sha256 = "d629a64d4996830d790920d7225d32e1bceec4ba7db1230edd1dd794c1d52e4e"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A suited male figure in a T-pose, with a pale, decayed face and a light blue tie that stands out against the dark grey suit. The jacket and trousers are slightly tattered, and the skin has a sickly, mottled tone, giving it a distinct undead appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2062
+meshes = 1
+materials = 1
+size = [2.04752, 1.847947, 0.366741]
+
+[mesh.sk_zombie_businessshirt_male_01]
+name = "SK_Zombie_BusinessShirt_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_BusinessShirt_Male_01.fbx"
+sha256 = "1e197784d1b3ebd4a027269e078abad32d11a0aab46ab17784f925bf13a9a87f"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male zombie in a T-pose, wearing a short-sleeved white shirt with a red tie, maroon trousers, and black shoes. The figure is slim with a hunched posture, and the face is pale with dark, sunken eyes and a bloody mouth, suggesting a freshly turned office worker."
+differs = "Identical to the other asset; same mesh, texture, and dimensions, with no distinguishing features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2018
+meshes = 1
+materials = 1
+size = [2.04752, 1.82471, 0.339035]
+
+[mesh.sk_zombie_businessshirt_male_01_2]
+name = "SK_Zombie_BusinessShirt_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_BusinessShirt_Male_01.fbx"
+sha256 = "ac5b8a271ffcb134a37a822dbbee051b8fef82bd4678ec541eb0c0e5b9bf5b12"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male zombie in a T-pose, wearing a white short-sleeved shirt with a red tie, maroon trousers, and black shoes. The figure has a hunched, shambling posture with a greyish, decayed skin tone and a visible head wound, suggesting a freshly turned office worker."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2018
+meshes = 1
+materials = 1
+size = [2.04752, 1.82471, 0.339035]
+
+[mesh.sk_zombie_cheerleader_female_01]
+name = "SK_Zombie_Cheerleader_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Cheerleader_Female_01.fbx"
+sha256 = "b05f3b5f3bb2544240a19b9cb13c0bfe2b4d43f1e3b5671fabb3b8395e7e7070"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender undead girl in a T-pose, wearing a torn blue pleated skirt and a white crop top with blue trim, both stained with dark blood. Her blonde hair is pulled into a high ponytail, and her skin is a pallid grey-green with visible wounds, contrasting with her cheerleader outfit."
+differs = "High ponytail variant, identical geometry and texture to the pigtail version, differing only in hairstyle."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2474
+meshes = 1
+materials = 1
+size = [2.041329, 1.839663, 0.35321]
+
+[mesh.sk_zombie_cheerleader_female_01_2]
+name = "SK_Zombie_Cheerleader_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Cheerleader_Female_01.fbx"
+sha256 = "7958906aec0a5865f1839a4ab87d0a7d0b7b6e3d71e68a71a7d349d6e0b5a01e"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female figure in a T-pose, wearing a blue pleated skirt and a white top with blue trim, with blonde hair in pigtails and a decaying, greyish complexion. The outfit is tattered and stained, with visible wounds and torn stockings, giving a clear undead appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2474
+meshes = 1
+materials = 1
+size = [2.04133, 1.839663, 0.35321]
+
+[mesh.sk_zombie_clown_male_01]
+name = "SK_Zombie_Clown_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Clown_Male_01.fbx"
+sha256 = "ca3d088e8c2744a2bd9c7b0edb8961bb019fd73d853b05d9314692ece022c9a9"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt, hunched figure in a T-pose, wearing a faded yellow shirt with a red collar and suspenders, and baggy, green-and-brown striped trousers. The face is a pale, greenish-grey with a manic grin, framed by a small green bowler hat and a ruffled collar, while oversized white gloves and red shoes complete the look."
+differs = "Manic grin, bowler hat, red shoes, and suspenders; ideal for a comedic, less decayed zombie clown."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3151
+meshes = 1
+materials = 1
+size = [2.047513, 1.872319, 0.35310698]
+
+[mesh.sk_zombie_clown_male_01_2]
+name = "SK_Zombie_Clown_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Clown_Male_01.fbx"
+sha256 = "696ed3a35c71453f3d24cfee254aaf7c2f13ecc4bfd24e1991b02b021ac1f25d"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt, pale-skinned figure in a T-pose, wearing a tattered yellow shirt and striped green-and-brown trousers, with a green-haired clown wig and a single red shoe. The face is heavily decayed, with sunken eyes and a grim expression, giving it a distinctly undead, unsettling look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3151
+meshes = 1
+materials = 1
+size = [2.047515, 1.872319, 0.353106]
+
+[mesh.sk_zombie_coat_female_01]
+name = "SK_Zombie_Coat_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Coat_Female_01.fbx"
+sha256 = "3caeec0c533849b42f66844748edafa158eb3e1647ac37191a6d0305a8d33b8b"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a T-pose, wearing a knee-length dark coat over a grey top and black skirt, with short blonde hair and pale, decayed skin. The coat is open, revealing a bloodied shirt, and her arms are outstretched with a hunched, shambling posture."
+differs = "Identical to the other asset; same geometry, textures, and dimensions, with no distinguishing features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2362
+meshes = 1
+materials = 1
+size = [2.041327, 1.821813, 0.372886]
+
+[mesh.sk_zombie_coat_female_01_2]
+name = "SK_Zombie_Coat_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Coat_Female_01.fbx"
+sha256 = "f4c3ba27a822d73e1a7962ada052ad335bca6cc1ace24895681f86ba8b6e9b2c"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a T-pose, wearing a knee-length dark grey coat over a black top and skirt, with pale skin, a blonde bob haircut, and a bloodied face. Her arms are outstretched, and her posture is stiff, suggesting a shambling, undead character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2362
+meshes = 1
+materials = 1
+size = [2.041328, 1.821813, 0.372886]
+
+[mesh.sk_zombie_daughter_female_01]
+name = "SK_Zombie_Daughter_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Daughter_Female_01.fbx"
+sha256 = "c96c8fb81856996fde881bc4ff8d256a197353d700ab21b9d83b1ae4ebceeeff"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A young female zombie in a T-pose, with dark hair and a green t-shirt over a white undershirt, paired with blue jeans and dark shoes. Her skin is a pale, sickly green, and her arms are outstretched, with a slightly hunched posture that suggests a shambling gait."
+differs = "Identical to the other asset; only the description differs, so choose either for the same use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2771
+meshes = 1
+materials = 1
+size = [2.04133, 1.842193, 0.36935902]
+
+[mesh.sk_zombie_daughter_female_01_2]
+name = "SK_Zombie_Daughter_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Daughter_Female_01.fbx"
+sha256 = "5bb682833456854918d29d3392bfc637852f32be7607f2ccaee1328e89d75620"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender child zombie in a T-pose, with dark hair and pale, bruised skin, wearing a green t-shirt and blue jeans, with a bloodied mouth and torn clothing, posed for animation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2771
+meshes = 1
+materials = 1
+size = [2.04133, 1.8421919, 0.36935902]
+
+[mesh.sk_zombie_diver_male_01]
+name = "SK_Zombie_Diver_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Diver_Male_01.fbx"
+sha256 = "eebde228d9edfdf29255b39e22c6bd323950cae214df288cfe4f2645445e04fd"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male zombie in a T-pose, wearing a dark blue diving vest and a diving mask, with a snorkel tube extending from the head. The skin is a sickly grey-green, and the wetsuit is torn, revealing patches of cyan and teal flesh."
+differs = "The cleaner, less damaged variant, with intact wetsuit and snorkel, ideal for underwater or less gory scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3204
+meshes = 1
+materials = 1
+size = [2.047514, 1.845727, 0.64685]
+
+[mesh.sk_zombie_diver_male_01_2]
+name = "SK_Zombie_Diver_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Diver_Male_01.fbx"
+sha256 = "e439e1b439261175d6987cfe392c8c86cd1fec05d6a8a755435d52cf85b614c4"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched, shambling male figure in a T-pose, wearing a torn blue wetsuit with a buoyancy vest and a diving mask pushed up on his head. The suit is heavily stained with dark blood and grime, and his skin is a sickly grey-green, with a visible gash on his torso."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3204
+meshes = 1
+materials = 1
+size = [2.047514, 1.845727, 0.64685]
+
+[mesh.sk_zombie_fastfoodworker_male_01]
+name = "SK_Zombie_FastfoodWorker_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_FastfoodWorker_Male_01.fbx"
+sha256 = "492c1de2ad06f46ac7690c9fc6b867ea4f748b049bd07d89500ed421d3c3d44e"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose, wearing a yellow polo shirt, blue jeans, and a matching yellow cap, with a pale, decayed complexion and dark, sunken eyes. The clothing is stained and torn, and the skin shows patches of rot, clearly marking him as a zombie."
+differs = "Identical to its sibling in geometry and size; only the texture differs, with a paler, more decayed look and less blood, suited for older, drier zombies."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2337
+meshes = 1
+materials = 1
+size = [2.0475202, 1.908069, 0.357581]
+
+[mesh.sk_zombie_fastfoodworker_male_01_2]
+name = "SK_Zombie_FastfoodWorker_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_FastfoodWorker_Male_01.fbx"
+sha256 = "76abf8e5a837a671f4f31fc3d55743dd7cd1e7def01fe81a3b8ec926c7a2d1b8"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male zombie in a yellow polo shirt and blue jeans, wearing a matching yellow cap, stands in a T-pose with arms outstretched. His skin is a sickly grey-green, and his clothes are stained with dark blood, giving him a freshly turned appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2337
+meshes = 1
+materials = 1
+size = [2.047521, 1.908068, 0.357581]
+
+[mesh.sk_zombie_father_male_01]
+name = "SK_Zombie_Father_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Father_Male_01.fbx"
+sha256 = "fb77f413ffbfd0b604d9f2682f971a9aad7b6dd294fb06410d90d244f7d8d17b"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose, with a pale, blood-smeared complexion and a torn white shirt over blue shorts. The face is heavily decayed, with dark hollows around the eyes and mouth, and the skin shows mottled bruising."
+differs = "The plainest, least damaged variant, ideal for a freshly turned background civilian."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2564
+meshes = 1
+materials = 1
+size = [2.047514, 1.832814, 0.343381]
+
+[mesh.sk_zombie_father_male_01_2]
+name = "SK_Zombie_Father_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Father_Male_01.fbx"
+sha256 = "571edd4b6c33f40e6730a06eb206199a39ab0966b8ad3a93184c1272e25d7e8f"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt, pale male figure in a T-pose, wearing a torn white shirt and blue shorts, with a bloodied face and greyish skin, suggesting a freshly turned zombie."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2564
+meshes = 1
+materials = 1
+size = [2.047514, 1.832814, 0.343381]
+
+[mesh.sk_zombie_father_male_02]
+name = "SK_Zombie_Father_Male_02"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Father_Male_02.fbx"
+sha256 = "67b534d6c4d0e1c844156384236a57cd61149d6ee992df26c08cb0f4f7a99ab3"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched, thin male figure in a T-pose with a bald, bloodied head, wearing a torn green shirt and brown trousers, with pale, rotting skin and a dark stain on the chest, suggesting a shambling, infected civilian."
+differs = "The most damaged and hunched, with a dark chest stain, perfect for a shambling, infected threat."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2183
+meshes = 1
+materials = 1
+size = [2.047514, 1.821939, 0.387766]
+
+[mesh.sk_zombie_father_male_02_2]
+name = "SK_Zombie_Father_Male_02"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Father_Male_02.fbx"
+sha256 = "7b851faff3454f42fcb44c1726fd033a9e653b1cdbe229c8929729266d2c98c7"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose with a shambling, hunched posture, wearing a torn green shirt, brown trousers, and a white open jacket, with orange hair and pale, decayed skin."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2183
+meshes = 1
+materials = 1
+size = [2.047514, 1.821938, 0.387766]
+
+[mesh.sk_zombie_firefighter_male_01]
+name = "SK_Zombie_Firefighter_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Firefighter_Male_01.fbx"
+sha256 = "0f80c8aeb98b936f04a05befcc7c21341344f225b80163e2df20cf9630353bef"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched male figure in a T-pose, wearing a black turnout coat and trousers with yellow reflective stripes and a red helmet, with a pale, decayed face and exposed hands, appearing as a shambling undead firefighter ready for a city outbreak scene."
+differs = "Pale decayed skin variant, ideal for a fresher zombie in a city outbreak scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2782
+meshes = 1
+materials = 1
+size = [2.047512, 1.88307, 0.47820002]
+
+[mesh.sk_zombie_firefighter_male_01_2]
+name = "SK_Zombie_Firefighter_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Firefighter_Male_01.fbx"
+sha256 = "fab3e177f2edb68fc753a447c59958854d059d6ffe00e7c10c32b40292da367e"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched, shambling male figure in a T-pose, wearing a grimy black turnout coat and trousers with yellow reflective stripes and a red helmet. The skin is a sickly green, and the uniform is stained and tattered, with a pale, decayed face and exposed hands, clearly a reanimated firefighter."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2782
+meshes = 1
+materials = 1
+size = [2.047512, 1.88307, 0.47820002]
+
+[mesh.sk_zombie_footballer_male_01]
+name = "SK_Zombie_Footballer_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Footballer_Male_01.fbx"
+sha256 = "d270ed81fdb3d8f8108b896692ad370efd59057acd6841c13d50c887b7c445c3"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male zombie in a T-pose, wearing a torn orange football jersey with white shoulder stripes and a number on the chest, paired with white pants and black cleats. The figure has a pale, decaying complexion with a bloody head wound and a helmet, suggesting it is a former player now shambling as the undead."
+differs = "Identical to the other asset in every way; no unique features, use for either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2940
+meshes = 1
+materials = 1
+size = [2.047514, 1.835657, 0.390185]
+
+[mesh.sk_zombie_footballer_male_01_2]
+name = "SK_Zombie_Footballer_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Footballer_Male_01.fbx"
+sha256 = "5a9a457fc9fb384440ab5642d66559dc0512cffb3819dbba0160b2f44f92eba6"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched, shambling male figure in a T-pose, wearing a torn orange football jersey with white shoulder stripes and a number on the chest, paired with grimy white shorts and black cleats. The exposed skin is a sickly grey-green, and the head is wrapped in a dark, tattered helmet or mask, giving it a decayed, undead..."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2940
+meshes = 1
+materials = 1
+size = [2.047514, 1.835657, 0.390185]
+
+[mesh.sk_zombie_gamergirl_female_01]
+name = "SK_Zombie_GamerGirl_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_GamerGirl_Female_01.fbx"
+sha256 = "72330b648424dcf7f7ac0c93f5169f9bfba6c744c1abe69969130d791d608303"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female zombie in a T-pose, wearing a purple hoodie with a white shirt and dark shorts, with a pink-and-purple mohawk and torn, bloodied legs."
+differs = "Identical to the other asset in geometry and texture; only the description differs, so no visual distinction exists."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3038
+meshes = 1
+materials = 1
+size = [2.041503, 1.8587611, 0.34581798]
+
+[mesh.sk_zombie_gamergirl_female_01_2]
+name = "SK_Zombie_GamerGirl_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_GamerGirl_Female_01.fbx"
+sha256 = "b7c31799a7067697e5089f8d44acda04a08fe39447285214b1bb87bb702a8c72"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female zombie in a T-pose, wearing a bright purple hoodie with a white shirt and dark shorts, with a pink beanie and headphones. Her skin is a sickly green, and her legs are covered in dark, grisly wounds, giving her a distinct gamer-girl look that stands out from generic zombies."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3038
+meshes = 1
+materials = 1
+size = [2.041504, 1.8587611, 0.345817]
+
+[mesh.sk_zombie_gangster_male_01]
+name = "SK_Zombie_Gangster_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Gangster_Male_01.fbx"
+sha256 = "90970ccfa511d3ed4a3e1f35b64b7b1c2a352dd5c68bba355fb5f503ab6213e5"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched male figure in a T-pose, wearing a bright green cap, a matching green vest over a white shirt, and pink shorts with dark boots. The skin is a sickly grey-green, and the face is gaunt with a visible jaw, giving a classic shambling undead look."
+differs = "Wears a white shirt under the vest, not bare-chested, and lacks the back emblem."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2454
+meshes = 1
+materials = 1
+size = [2.047513, 1.852115, 0.42295998]
+
+[mesh.sk_zombie_gangster_male_01_2]
+name = "SK_Zombie_Gangster_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Gangster_Male_01.fbx"
+sha256 = "97ca9f1b1f212ba7b2ea10ee00c8272a7c5d2c5490b84880c8e51ea19ddbf9b6"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched, T-posed male zombie with a green cap, a green vest over a bare torso, and pink shorts, with a pale, decayed skin tone and dark, heavy boots. The figure is slumped forward with arms outstretched, and the green vest features a lighter, circular emblem on the back, giving it a distinct, undead gangster look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2454
+meshes = 1
+materials = 1
+size = [2.047514, 1.852115, 0.42295998]
+
+[mesh.sk_zombie_grandma_female_01]
+name = "SK_Zombie_Grandma_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Grandma_Female_01.fbx"
+sha256 = "235088523dd77883f1c084d765afda985b006102ab501dde8a98d453fd572bef"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched elderly female figure in a T-pose, wearing a knee-length beige dress with a dark belt and a grey bun hairstyle, with pale, decayed skin and a tattered hem, evoking a shambling, undead matriarch."
+differs = "Identical to its sibling in geometry and texture; only the description's wording differs, so choose either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2337
+meshes = 1
+materials = 1
+size = [2.0419931, 1.844886, 0.368449]
+
+[mesh.sk_zombie_grandma_female_01_2]
+name = "SK_Zombie_Grandma_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Grandma_Female_01.fbx"
+sha256 = "de0aa8cf6047fd53fdf3701f95fb14aa692ff1b8c4a701503bce4200d954e560"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched elderly female in a knee-length beige dress and dark shoes, with grey hair in a bun, a dark belt, and a necklace. Her arms are outstretched in a T-pose, and her skin is a sickly pale green, with a dark stain on her dress suggesting a bite or wound."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2337
+meshes = 1
+materials = 1
+size = [2.0419931, 1.844886, 0.368449]
+
+[mesh.sk_zombie_grandpa_male_01]
+name = "SK_Zombie_Grandpa_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Grandpa_Male_01.fbx"
+sha256 = "1b9f2959746e1ffbb0f3d38a97439e9b20ab3ee15016f07799f74cb2a2183662"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched elderly male zombie in a T-pose, wearing a tattered grey suit jacket and trousers with a pale blue shirt and a white flat cap. The skin is a sickly grey-green, and the face is gaunt with a visible wound or scar, giving a frail, shuffling appearance distinct from more aggressive zombie variants."
+differs = "Identical to the other asset in geometry and texture; only the descriptive text differs, so choose either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2226
+meshes = 1
+materials = 1
+size = [2.047513, 1.811154, 0.376214]
+
+[mesh.sk_zombie_grandpa_male_01_2]
+name = "SK_Zombie_Grandpa_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Grandpa_Male_01.fbx"
+sha256 = "430f7c844627d519c6da808bcf18707f84561706e02c2bf1e07c6df5275f8ce3"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched elderly male zombie in a T-pose, wearing a grey suit jacket over a light blue shirt, dark trousers, and a flat cap. The skin is a sickly pale green, with a visible bloodstain on the chest and a slack, decaying expression."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2226
+meshes = 1
+materials = 1
+size = [2.047515, 1.811154, 0.376214]
+
+[mesh.sk_zombie_hipster_female_01]
+name = "SK_Zombie_Hipster_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Hipster_Female_01.fbx"
+sha256 = "e607c62ff60764c83b0fe2d5b5abbee67b34add4ba636f2acd6928abe2521bd9"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female zombie in a T-pose, wearing a teal beanie, a striped white-and-grey top, and a short brown skirt with dark boots. Her skin is a pallid green, and her arms are outstretched, with a slightly hunched posture and a vacant, shambling stance that reads clearly as undead."
+differs = "Identical to the other asset; only the description differs, with no visual or size variation."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2876
+meshes = 1
+materials = 1
+size = [2.041503, 1.862172, 0.374796]
+
+[mesh.sk_zombie_hipster_female_01_2]
+name = "SK_Zombie_Hipster_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Hipster_Female_01.fbx"
+sha256 = "486601871468d23704a4c95e88722dcf448f8d5c9e1a85d59abdd9c62cb0906f"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a teal beanie and a striped black-and-white top, paired with a tattered brown skirt and dark boots. Her arms are outstretched in a classic shambling pose, and her skin is a sickly green, with a visible wound on her face."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2876
+meshes = 1
+materials = 1
+size = [2.041504, 1.862172, 0.374796]
+
+[mesh.sk_zombie_hipster_male_01]
+name = "SK_Zombie_Hipster_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Hipster_Male_01.fbx"
+sha256 = "526dc4742c0617b78a371af102564de7372c37dae0f1ad23b3b5f2b6d160273f"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender male zombie in a T-pose, wearing a blue and red plaid shirt over a grey tee, dark trousers, and a flat cap. His skin is a pallid grey-green with a visible head wound, and his posture is stiff and shambling, fitting a freshly turned urban hipster."
+differs = "Identical to the other asset except for the flat cap and red plaid shirt, best for a freshly turned urban hipster."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3596
+meshes = 1
+materials = 1
+size = [2.047515, 1.846921, 0.324141]
+
+[mesh.sk_zombie_hipster_male_01_2]
+name = "SK_Zombie_Hipster_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Hipster_Male_01.fbx"
+sha256 = "38174ec897818a62693932efa994eb447c0ca4092fdc2413f7be37c6d23ae85f"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender male zombie in a T-pose, wearing a blue and red plaid shirt over a white tee, dark trousers, and a black beanie. The figure has a pale, decayed complexion with visible wounds and a slightly hunched posture, giving it a distinct hipster look that stands out from generic zombie models."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3596
+meshes = 1
+materials = 1
+size = [2.047515, 1.84692, 0.324141]
+
+[mesh.sk_zombie_hobo_male_01]
+name = "SK_Zombie_Hobo_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Hobo_Male_01.fbx"
+sha256 = "17982ec22662125570f1f62c8d9adafc8cd80658697cb8548bfcb638236f3afd"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched, gaunt male figure in a T-pose, wearing a teal hooded vest over a grimy yellow long-sleeve shirt, brown trousers, and a matching teal cap. The skin is a sickly green, and the face is obscured by the hood and cap, giving a shambling, anonymous look."
+differs = "Identical to the other asset; only the description differs, so no unique traits or uses."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2759
+meshes = 1
+materials = 1
+size = [2.047518, 1.849605, 0.497662]
+
+[mesh.sk_zombie_hobo_male_01_2]
+name = "SK_Zombie_Hobo_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Hobo_Male_01.fbx"
+sha256 = "c37b0dac6a56541586c80b08f9dce796e8dbb9e5f3f2ed851b4ef0ecfc5025a6"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose, wearing a teal vest over a yellow long-sleeve shirt, brown trousers, and a green cap. The skin is a sickly grey-green, and the posture is stiff, suggesting a shambling, undead character. The clothing is slightly ragged, with a grimy, worn texture that fits a homeless zombie aesthetic."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2759
+meshes = 1
+materials = 1
+size = [2.047519, 1.849605, 0.497662]
+
+[mesh.sk_zombie_hoodie_male_01]
+name = "SK_Zombie_Hoodie_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Hoodie_Male_01.fbx"
+sha256 = "ff73763da4a92d132e2fea4ee3c6b2b6facfce771990b2be407afab509f74148"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched male zombie in a T-pose, wearing a tattered maroon hoodie with a white shirt underneath and blue jeans. His skin is a sickly green, and his head is tilted forward with a slack jaw and dark eye sockets, giving him a shambling, undead appearance."
+differs = "Identical to the other asset in geometry and texture; only the description differs, so no unique use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2066
+meshes = 1
+materials = 1
+size = [2.047518, 1.814351, 0.35158402]
+
+[mesh.sk_zombie_hoodie_male_01_2]
+name = "SK_Zombie_Hoodie_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Hoodie_Male_01.fbx"
+sha256 = "5d59215f36c343ab84a489baa15a7603c065be28019dfabe36faa0b44ba8e28b"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched male zombie in a T-pose, wearing a tattered maroon hoodie over a white shirt, blue jeans, and dark shoes. His greenish skin, bald head, and slack jaw convey a shambling, undead state, while the open hoodie and exposed midriff add a distinct grunge detail."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2066
+meshes = 1
+materials = 1
+size = [2.04752, 1.814351, 0.35158402]
+
+[mesh.sk_zombie_hotdogsuit_male_01]
+name = "SK_Zombie_HotDogSuit_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_HotDogSuit_Male_01.fbx"
+sha256 = "914ff47529335287dc62f76aa08116ed83231c4706014a2562cd50f3a858bd22"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A shambling male figure in a full-body hotdog costume, with a bun torso, a sausage head topped with a squiggle of mustard, and a red-and-yellow condiment bib. His arms are outstretched in a classic zombie pose, with greenish skin visible on his hands and face, and he wears blue jeans and dark shoes."
+differs = "Identical to the other asset in geometry and texture; only the pose differs, with this one featuring outstretched arms for a shambling zombie look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2346
+meshes = 1
+materials = 1
+size = [2.0475202, 1.932247, 0.586915]
+
+[mesh.sk_zombie_hotdogsuit_male_01_2]
+name = "SK_Zombie_HotDogSuit_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_HotDogSuit_Male_01.fbx"
+sha256 = "ce897c51e7dd1c084ea719d47eb6196b470db6e4bca896905efbc10b58888712"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A humanoid zombie in a rigid T-pose, wearing a bulky, tan hot-dog costume with a red sausage and yellow mustard squiggle visible on the front. The costume's bun forms a thick, cylindrical torso, while the exposed head, arms, and legs are a sickly green with blue jeans, giving a comedic, shambling appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2346
+meshes = 1
+materials = 1
+size = [2.047521, 1.932247, 0.586915]
+
+[mesh.sk_zombie_jacket_female_01]
+name = "SK_Zombie_Jacket_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Jacket_Female_01.fbx"
+sha256 = "5374c28467b33faa94336f4b70d9e7f17190ddb976069b3e05da463c5ad99e8e"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a T-pose, wearing a torn red short-sleeved shirt and blue jeans, with a pale, decayed complexion and dark, matted hair. The shirt is ripped open at the chest, exposing a bloody wound, and the figure is covered in grime and gore, giving it a freshly turned, shambling appearance."
+differs = "Torn shirt exposes bloody chest wound, grime and gore for a freshly turned look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2717
+meshes = 1
+materials = 1
+size = [2.058316, 1.808871, 0.321147]
+
+[mesh.sk_zombie_jacket_female_01_2]
+name = "SK_Zombie_Jacket_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Jacket_Female_01.fbx"
+sha256 = "c564c9991947693c1751599f3f4c061fab55aa078192eb165f5416e1bf2fc9a8"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a T-pose, wearing a short-sleeved red shirt with a white graphic, blue jeans, and brown shoes. Her skin is a sickly grey-green with visible wounds, and her dark hair is pulled back. The figure is slumped and decayed, with a hunched posture that conveys a shambling, undead nature."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2717
+meshes = 1
+materials = 1
+size = [2.058316, 1.808871, 0.321147]
+
+[mesh.sk_zombie_jacket_male_01]
+name = "SK_Zombie_Jacket_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Jacket_Male_01.fbx"
+sha256 = "8d69d84be16f6b7e725e3c2f15377d5b7154aac883874ef7255912a77718c6b2"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male zombie in a T-pose, wearing a tattered olive-green jacket over a bloodstained orange shirt and blue jeans, with a pale, decayed face and dark hair. The jacket features a torn shoulder and a small backpack, while the exposed skin and ragged clothing convey a shambling, undead appearance."
+differs = "Includes a small backpack and a torn shoulder; orange shirt; ideal for a scavenger or hiker zombie variant."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2687
+meshes = 1
+materials = 1
+size = [2.047518, 1.81253, 0.315062]
+
+[mesh.sk_zombie_jacket_male_01_2]
+name = "SK_Zombie_Jacket_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Jacket_Male_01.fbx"
+sha256 = "abff850ba7b4da83db2baba4896b74d2e33f4ac2293a682732aa93f76f5d0393"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male zombie in a T-pose, wearing a tattered olive-green jacket over a red shirt and blue jeans, with a pale, decayed complexion and dark hair. The jacket is open and worn, with visible rips and grime, while the figure stands with a slumped, lifeless posture."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2687
+meshes = 1
+materials = 1
+size = [2.047518, 1.81253, 0.315062]
+
+[mesh.sk_zombie_jock_male_01]
+name = "SK_Zombie_Jock_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Jock_Male_01.fbx"
+sha256 = "4eb1200b88e07138a548cc2b6e1c2f3e537b94915a6dd04ec4aac94f7dddc8ad"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose, wearing a torn red varsity jacket with white sleeves and blue jeans, with a pale, decayed complexion and a shambling posture that clearly marks him as undead."
+differs = "Identical to the other asset in geometry and texture; only the description differs, so pick either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2352
+meshes = 1
+materials = 1
+size = [2.047516, 1.840838, 0.327484]
+
+[mesh.sk_zombie_jock_male_01_2]
+name = "SK_Zombie_Jock_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Jock_Male_01.fbx"
+sha256 = "c7437e660a9c3ad2a3e9c7236acdf58eaba734e02e961781a6dedbb6913d0bb8"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose, wearing a torn red varsity jacket with white sleeves and blue jeans, with a pale, decayed complexion and a short, messy haircut. The jacket is stained and the skin is mottled, giving a freshly risen, athletic zombie look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2352
+meshes = 1
+materials = 1
+size = [2.047518, 1.840838, 0.327484]
+
+[mesh.sk_zombie_military_male_01]
+name = "SK_Zombie_Military_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Military_Male_01.fbx"
+sha256 = "2171618acd2fef9b75e61a7daa935fab9b60e3b9c6845fd224fcd322d1850064"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched, shambling male figure in a T-pose, wearing a tattered military uniform and a helmet, with a pale, decayed face and exposed skin. The olive-drab clothing is stained and worn, and the posture suggests a slow, lurching walk, making it ideal for a soldier-turned-zombie enemy."
+differs = "Wears a helmet instead of a cap, with a more hunched, lurching posture suited to a shambling soldier enemy."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2133
+meshes = 1
+materials = 1
+size = [2.047515, 1.818265, 0.39995098]
+
+[mesh.sk_zombie_military_male_01_2]
+name = "SK_Zombie_Military_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Military_Male_01.fbx"
+sha256 = "c833bdbde7e7914f978b948c51fc0a4f280d6ab4774d1cb1c05abeea9f05a43b"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose, wearing a tattered olive-drab military uniform with a matching cap, boots, and a tactical vest. The skin is a sickly grey-green, and the posture is rigid, suggesting a shambling, undead soldier."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2133
+meshes = 1
+materials = 1
+size = [2.047515, 1.818265, 0.399952]
+
+[mesh.sk_zombie_mother_female_01]
+name = "SK_Zombie_Mother_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Mother_Female_01.fbx"
+sha256 = "c5ae4adb128c38240d5cacb4a08f5d6717d336d3bc799a17e1d9dd09df6e3ce0"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a teal dress with a white apron, posed in a T-pose with arms outstretched. She has auburn hair, pale skin, and visible blood stains on her clothing and face, suggesting a freshly turned or recently fed state."
+differs = "Clean teal dress with white apron, auburn hair, and a head wound; ideal for a freshly turned, intact zombie."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2736
+meshes = 1
+materials = 1
+size = [2.0413299, 1.859443, 0.38792902]
+
+[mesh.sk_zombie_mother_female_01_2]
+name = "SK_Zombie_Mother_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Mother_Female_01.fbx"
+sha256 = "7e5571733a29e478be9939641693ce7bde8a0acea47563b37d2e06921931d85e"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female figure in a teal dress with a white apron, posed in a T-pose with arms outstretched. She has auburn hair and pale, bloodied skin, with a visible wound on her head, suggesting a freshly turned zombie. The outfit is clean and intact, contrasting with her undead state."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2736
+meshes = 1
+materials = 1
+size = [2.0413299, 1.859443, 0.38792902]
+
+[mesh.sk_zombie_mother_female_02]
+name = "SK_Zombie_Mother_Female_02"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Mother_Female_02.fbx"
+sha256 = "707b1ee589c53a0af46a1b1c73b63df78ea4884df7ed1fc1a6b26cedc0d3563c"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female zombie in a T-pose, wearing a tattered purple-and-white striped dress and purple shoes, with long, matted hair and pale, decayed skin. Her posture is rigid and lifeless, with a slightly hunched frame and arms outstretched, making her ideal for a shambling horde or a background undead character."
+differs = "Tattered purple-striped dress with matted hair and a hunched frame; perfect for a shambling horde background character."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2041
+meshes = 1
+materials = 1
+size = [2.041328, 1.810923, 0.368213]
+
+[mesh.sk_zombie_mother_female_02_2]
+name = "SK_Zombie_Mother_Female_02"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Mother_Female_02.fbx"
+sha256 = "62a5a524fc6e2c2c852a258f6a1d64a66c6330f3e91ee364a1290c7eac0d2918"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt female zombie in a tattered purple-and-white striped dress, posed in a rigid T-pose with arms outstretched. Her skin is a sickly grey-green, and her long, matted hair hangs over a face frozen in a snarl."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2041
+meshes = 1
+materials = 1
+size = [2.0413299, 1.810923, 0.368213]
+
+[mesh.sk_zombie_paramedic_female_01]
+name = "SK_Zombie_Paramedic_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Paramedic_Female_01.fbx"
+sha256 = "bfe3afb49d11214103d31c1d5725025f9bfc2be8d15e4aaec483d77f6cb3fbc1"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a teal paramedic uniform with a red cross on the chest and back, wearing a matching cap and dark boots. She stands in a T-pose with a hunched, decayed posture, her skin a sickly pale green, and her uniform is stained with dark blood."
+differs = "Identical to the other asset in geometry and texture; only the description differs, so choose either for the same use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2270
+meshes = 1
+materials = 1
+size = [2.04133, 1.835412, 0.370291]
+
+[mesh.sk_zombie_paramedic_female_01_2]
+name = "SK_Zombie_Paramedic_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Paramedic_Female_01.fbx"
+sha256 = "9af4c9c11efe3a6f747640dbdf958225e983501b74e78dc195e34541882bdf47"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a teal paramedic uniform with a red cross on the chest, posed in a T-pose. She has short blonde hair, pale skin, and wears dark boots, with a slightly hunched posture and a vacant expression that clearly marks her as undead."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2270
+meshes = 1
+materials = 1
+size = [2.041331, 1.835412, 0.370291]
+
+[mesh.sk_zombie_patient_female_01]
+name = "SK_Zombie_Patient_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Patient_Female_01.fbx"
+sha256 = "8d3eb52aeeebfb40fc085d73568224e09808d0162dd9dd0d6cc07a0a8e7d786a"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt female figure in a T-pose, wearing a light blue hospital gown with a red cross on the chest and a white nurse's cap over long dark hair. Her skin is a sickly grey-green, and her arms are outstretched, giving her a shambling, vacant look perfect for a hospital-themed zombie encounter."
+differs = "Identical to the other asset; same mesh, same texture, same dimensions, no unique features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1983
+meshes = 1
+materials = 1
+size = [2.04133, 1.799635, 0.36877698]
+
+[mesh.sk_zombie_patient_female_01_2]
+name = "SK_Zombie_Patient_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Patient_Female_01.fbx"
+sha256 = "12af5424276906a978c93d4e7a1b7c65750b194b78d67db3ecd0fee5845e117b"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt female figure in a T-pose, wearing a light blue hospital gown with a red cross on the chest and a white nurse's cap. Her skin is a sickly grey, and her long dark hair hangs down her back, with a visible bloodstain on the gown's front."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1983
+meshes = 1
+materials = 1
+size = [2.04133, 1.799635, 0.36877698]
+
+[mesh.sk_zombie_police_female_01]
+name = "SK_Zombie_Police_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Police_Female_01.fbx"
+sha256 = "7c2d950b9e4768eb0a5ca173d41e8ac2ba1c4618cbda1b1e409ad00fd042a376"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a light blue police uniform with a peaked cap, dark blue trousers, and a black duty belt, posed in a T-pose with arms outstretched. The skin is a sickly grey-green, and the face shows a slack, undead expression with a visible wound on the head."
+differs = "Identical to the other asset in every way; no unique features, use interchangeably."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3034
+meshes = 1
+materials = 1
+size = [2.04133, 1.844188, 0.47104096]
+
+[mesh.sk_zombie_police_female_01_2]
+name = "SK_Zombie_Police_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Police_Female_01.fbx"
+sha256 = "bcd3320015be9deda7c3aba6ee981297e56d50905803c679b5d599da0bbe2167"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "Slender female zombie in a light blue police uniform with a peaked cap, dark tie, and black duty belt, posed in a T-pose with arms outstretched. The skin is a pallid grey-green, and the uniform shows grime and wear, with a badge visible on the chest and shoulder patches."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3034
+meshes = 1
+materials = 1
+size = [2.04133, 1.844188, 0.47104198]
+
+[mesh.sk_zombie_police_male_01]
+name = "SK_Zombie_Police_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Police_Male_01.fbx"
+sha256 = "006e0145d764ea12fb5ef79486403cd6717881d018d433dfb3489fd1c5cd163c"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male figure in a T-pose, wearing a light blue police uniform with a peaked cap, dark tie, and a duty belt with pouches. The skin is a sickly grey-green, and the face is slack, with a visible wound or scar on the head, marking him as undead."
+differs = "Identical to the other asset in geometry and texture; only the descriptive text differs, so choose either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2807
+meshes = 1
+materials = 1
+size = [2.04752, 1.861758, 0.39300698]
+
+[mesh.sk_zombie_police_male_01_2]
+name = "SK_Zombie_Police_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Police_Male_01.fbx"
+sha256 = "5112d8a411f11a1576a52b479e650666bae3d804d197d55261a208aeab30c1b6"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male zombie in a light blue police uniform with a peaked cap, dark tie, and a badge on the chest. The figure stands in a T-pose with a slightly hunched posture, and the skin is a pale, sickly green, suggesting a state of decay."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2807
+meshes = 1
+materials = 1
+size = [2.04752, 1.861757, 0.393008]
+
+[mesh.sk_zombie_prisoner_male_01]
+name = "SK_Zombie_Prisoner_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Prisoner_Male_01.fbx"
+sha256 = "52c2d6020352ef812a279b75473549666cc57f92afc4c1e9041ce089ec4147e5"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose, wearing a grimy white tank top and bright orange trousers, with a shaved, bloodied head and greyish, decayed skin. The outfit is completed with dark shoes and a black collar, giving him a distinct inmate appearance that stands out against other zombie variants."
+differs = "Identical to the other asset; only the description differs, so choose either for the same inmate zombie role."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1882
+meshes = 1
+materials = 1
+size = [2.0474958, 1.813035, 0.34673]
+
+[mesh.sk_zombie_prisoner_male_01_2]
+name = "SK_Zombie_Prisoner_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Prisoner_Male_01.fbx"
+sha256 = "b7f9211c17ef038e0cd1746c3dfbef802810309f78d49f32db9cf2eaaba80ceb"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose, wearing a grimy white tank top and bright orange trousers with a dark belt. The skin is a sickly grey-green with a mottled texture, and the face is heavily disfigured with a dark, bloody wound around the mouth and jaw."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1882
+meshes = 1
+materials = 1
+size = [2.0474958, 1.813035, 0.34673]
+
+[mesh.sk_zombie_punk_female_01]
+name = "SK_Zombie_Punk_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Punk_Female_01.fbx"
+sha256 = "1abd55fca33bf66b9cad9fb401bc1c8e247e4c4aa997f79855a90129c3e5934e"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female figure in a T-pose, with a pale, blood-smeared torso and a short, messy dark ponytail. She wears a torn white crop top, blue denim shorts, and heavy black boots, with a red gash across her chest and a small red mark on her forehead."
+differs = "Identical to the other asset in geometry and texture; only the description differs, so choose either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2748
+meshes = 1
+materials = 1
+size = [2.041502, 1.845545, 0.33862102]
+
+[mesh.sk_zombie_punk_female_01_2]
+name = "SK_Zombie_Punk_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Punk_Female_01.fbx"
+sha256 = "a59e51c6b9d19ac6ef0e705466816da2f44b31b86a2b7e792c1e7c6f21c59a0c"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female zombie in a T-pose, wearing a torn white t-shirt with a red stain, blue shorts, and heavy boots. Her skin is a sickly grey-green, with a pale face and dark hair pulled back, suggesting a punk aesthetic. The model is posed rigidly, ideal for animation, with a distinct bloodied chest wound."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2748
+meshes = 1
+materials = 1
+size = [2.041503, 1.845545, 0.33862102]
+
+[mesh.sk_zombie_punk_male_01]
+name = "SK_Zombie_Punk_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Punk_Male_01.fbx"
+sha256 = "16fc9ef909558b8252cc174a3ca798010f2135a9b04083a4378c41af490c2746"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose with a bright red mohawk, wearing a black leather jacket with white trim over a white shirt, red trousers, and black boots. The pale, decayed skin and tattered clothing give it a distinct punk-zombie look, with a rigid stance ideal for animation."
+differs = "Identical to the other asset in geometry and texture; only the description differs, with no visible variation in the renders."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2190
+meshes = 1
+materials = 1
+size = [2.047514, 2.033688, 0.491095]
+
+[mesh.sk_zombie_punk_male_01_2]
+name = "SK_Zombie_Punk_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Punk_Male_01.fbx"
+sha256 = "a5eecba34da667c260c9fb8f28d7eeef9a1fc3692857c991280684184ce68c08"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose with a bright red mohawk, wearing a black leather jacket over a white shirt, red trousers, and black boots. The skin is a sickly grey-green, and the face is partially obscured by a black mask or bandana, giving him a distinct punk-zombie look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2190
+meshes = 1
+materials = 1
+size = [2.047514, 2.033687, 0.49109602]
+
+[mesh.sk_zombie_riotcop_male_01]
+name = "SK_Zombie_RiotCop_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_RiotCop_Male_01.fbx"
+sha256 = "c70d707586c08e73a445e8b0beef2615e66dd7b6f39ec9962d3ebf1a17cb8d9c"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched male figure in a T-pose, clad in a dark grey riot helmet with a visor, a tactical vest, and knee pads, all rendered in a muted, grimy palette of charcoal and olive. The uniform is weathered and stained, suggesting a decayed, shambling state, while the exposed skin is a sickly pale green, clearly marking it..."
+differs = "Identical to its sibling in every way; no distinguishing features."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3591
+meshes = 1
+materials = 1
+size = [2.047511, 1.836397, 0.361273]
+
+[mesh.sk_zombie_riotcop_male_01_2]
+name = "SK_Zombie_RiotCop_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_RiotCop_Male_01.fbx"
+sha256 = "6cbccfd4ecc67dd5e62777923288e937be303736186db4a1494a3a23a4e71742"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched, shambling male figure in a T-pose, clad in a dark grey riot helmet with a visor, a black tactical vest over a grey shirt, and dark trousers with knee pads. The skin is a sickly green, and the uniform is stained with dark blood, giving it a gritty, post-apocalyptic look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3591
+meshes = 1
+materials = 1
+size = [2.047512, 1.836397, 0.361273]
+
+[mesh.sk_zombie_roadworker_male_01]
+name = "SK_Zombie_Roadworker_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Roadworker_Male_01.fbx"
+sha256 = "0a60b226cce1b043c7a137d756f9f4594d83dc32206efb352e2786a8ea2d1b54"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched male figure in a T-pose, wearing a bright yellow hard hat and a matching high-visibility vest with reflective silver stripes over a grey shirt and dark blue jeans. The skin is a sickly green-grey, and the posture is slumped, with arms outstretched and a slight forward lean, suggesting a shambling, undead..."
+differs = "Identical to the other asset in geometry and texture; no unique features, use interchangeably."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2356
+meshes = 1
+materials = 1
+size = [2.047514, 1.857416, 0.378609]
+
+[mesh.sk_zombie_roadworker_male_01_2]
+name = "SK_Zombie_Roadworker_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Roadworker_Male_01.fbx"
+sha256 = "bfaba59a45ebfaf018783c04ecd0b729d16781a7a293fbcd49e43d375423dbfb"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male zombie in a T-pose, wearing a yellow hard hat, a high-visibility yellow vest with silver reflective stripes over a grey shirt, and blue jeans with brown boots. The figure is slumped forward with a hunched posture, and its skin is a pale, sickly green, with a visible bloody wound on the right side of its head."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2356
+meshes = 1
+materials = 1
+size = [2.047515, 1.857416, 0.378609]
+
+[mesh.sk_zombie_schoolboy_male_01]
+name = "SK_Zombie_SchoolBoy_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_SchoolBoy_Male_01.fbx"
+sha256 = "ff3a6d85def068e414de377346f55e7817e34686414d856a42ca58a630bae502"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched, shambling youth in a T-pose, wearing a tattered blue blazer over a white shirt with a loose tie, dark shorts, and scuffed shoes. The figure's skin is a pallid grey, with a slack jaw and a visible head wound, conveying a freshly turned, low-level undead student."
+differs = "Identical to the other asset in geometry and texture; only the descriptive text differs, so choose either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2191
+meshes = 1
+materials = 1
+size = [2.047514, 1.839628, 0.367692]
+
+[mesh.sk_zombie_schoolboy_male_01_2]
+name = "SK_Zombie_SchoolBoy_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_SchoolBoy_Male_01.fbx"
+sha256 = "10cea58a69f3455b59997ac7ae912f8b4c2bdd9a52493b15aaf4fecb2e2a353e"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched, shambling youth in a T-pose, wearing a torn blue school blazer over a white shirt with a loose tie, and dark shorts with scuffed shoes. The figure's skin is a pallid grey, with a slack jaw and sunken eyes, and the clothing is stained and ragged, conveying a freshly turned, low-level undead student."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2191
+meshes = 1
+materials = 1
+size = [2.047514, 1.839628, 0.367693]
+
+[mesh.sk_zombie_schoolgirl_female_01]
+name = "SK_Zombie_SchoolGirl_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_SchoolGirl_Female_01.fbx"
+sha256 = "bb038aa799ac3d42badcbb52b8d1bb0e2b237fda48505b582252711448091698"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female figure in a T-pose, wearing a white short-sleeved blouse with a red necktie, a pleated blue skirt, and dark knee-high boots. Her brown hair is pulled back in a ponytail, and her pale, greyish skin and slightly slumped posture give her a distinct undead appearance."
+differs = "Identical mesh and texture to the other; only the description differs, so pick either."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2403
+meshes = 1
+materials = 1
+size = [2.04133, 1.831696, 0.373734]
+
+[mesh.sk_zombie_schoolgirl_female_01_2]
+name = "SK_Zombie_SchoolGirl_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_SchoolGirl_Female_01.fbx"
+sha256 = "303740938bc935f17cb1d46a9ad4ef81a96c247fbb13de155b2e70bc8e58b4c6"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female figure in a T-pose, wearing a white short-sleeved blouse with a red necktie, a pleated blue skirt, and dark knee-high boots. Her brown hair is pulled back into a ponytail, and her pale, greyish skin and vacant stare clearly mark her as undead, making her a ready-made horror character for urban scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2403
+meshes = 1
+materials = 1
+size = [2.04133, 1.831696, 0.373734]
+
+[mesh.sk_zombie_shopkeeper_female_01]
+name = "SK_Zombie_ShopKeeper_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_ShopKeeper_Female_01.fbx"
+sha256 = "f1ba45d48262d7a1c967d75f9772777d56449c0a4304c21ec000025902cef408"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a T-pose, wearing a red cap, a red shirt, and a yellow apron over grey trousers, with pale, decaying skin and a hunched, stiff posture that suggests a shambling gait."
+differs = "Identical to the other asset in every way; use either for the same purpose."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2548
+meshes = 1
+materials = 1
+size = [2.041501, 1.874493, 0.36794102]
+
+[mesh.sk_zombie_shopkeeper_female_01_2]
+name = "SK_Zombie_ShopKeeper_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_ShopKeeper_Female_01.fbx"
+sha256 = "23ce571e2a4b294a2088a541e779840b357b548b7db7b4bd538096614b91d180"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A female zombie in a red cap and a yellow apron over a red shirt, with grey trousers and a pale, decayed complexion. Her arms are held out in a T-pose, and her skin shows mottled bruising, suggesting a freshly turned shopkeeper."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2548
+meshes = 1
+materials = 1
+size = [2.041502, 1.874493, 0.36794102]
+
+[mesh.sk_zombie_shopkeeper_male_01]
+name = "SK_Zombie_ShopKeeper_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_ShopKeeper_Male_01.fbx"
+sha256 = "51d9b4aa272ea78bcebba3c7c4bbf91b243c5fe6f811d3f26d899995469b2c6a"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male zombie in a T-pose, wearing a white cap, a green shirt with a white apron, and blue jeans. The skin is pale and mottled, with a hunched posture and a slack jaw, suggesting a shambling shopkeeper. The apron is stained and the clothing is tattered, giving a worn, undead appearance."
+differs = "Identical to the other asset in geometry and texture; only the description differs, so choose either for the same shambling shopkeeper role."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2076
+meshes = 1
+materials = 1
+size = [2.047514, 1.828728, 0.416072]
+
+[mesh.sk_zombie_shopkeeper_male_01_2]
+name = "SK_Zombie_ShopKeeper_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_ShopKeeper_Male_01.fbx"
+sha256 = "9a85e89d8107ed07a1a9b18234980006dbc90d003e494e536624fc873db99ffd"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a T-pose, wearing a white cap, a green shirt with a white apron, and blue jeans. The skin is a sickly grey-green, and the posture is stiff, suggesting a shambling undead shopkeeper. The low-poly style gives it a clean, stylized look suitable for a zombie survival game."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2076
+meshes = 1
+materials = 1
+size = [2.047515, 1.828728, 0.416072]
+
+[mesh.sk_zombie_son_male_01]
+name = "SK_Zombie_Son_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Son_Male_01.fbx"
+sha256 = "03e60ef5a489769a1441e53ecb776b7c41e61ec1cdd3af9b456c7bb366642863"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt, hunched male figure in a T-pose, with a pale, decayed complexion and a single visible, milky eye. He wears a tattered tan shirt, dark blue jeans, and a brown hood pulled over his head, with a bloodied patch on his chest."
+differs = "Identical to the other asset; no unique traits, use as a generic undead enemy."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2276
+meshes = 1
+materials = 1
+size = [2.047515, 1.840595, 0.41588402]
+
+[mesh.sk_zombie_son_male_01_2]
+name = "SK_Zombie_Son_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Son_Male_01.fbx"
+sha256 = "4832d4d6c0d692e2f275d6df1e2a5a21f3ed283284d4c3b714d526f24b3c31bb"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender male zombie in a T-pose, wearing a torn tan shirt, dark blue jeans, and a brown hood over a pale, decayed face with a visible wound. The low-poly model has a hunched, shambling posture, with a bloodied mouth and a single exposed eye, making it ideal for a generic undead enemy."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2276
+meshes = 1
+materials = 1
+size = [2.0475159, 1.840595, 0.41588402]
+
+[mesh.sk_zombie_summergirl_female_01]
+name = "SK_Zombie_SummerGirl_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_SummerGirl_Female_01.fbx"
+sha256 = "609a40d4438c9880071bc01a14f54eb8f663dce4216909ec1581c126b16e84c3"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female zombie in a T-pose, wearing a wide-brimmed straw hat, a purple tank top, and blue shorts. Her skin is a pallid, mottled grey-green, and her arms are outstretched, giving her a shambling, undead appearance. The model is ideal for populating a summer-themed zombie horde."
+differs = "Wears blue shorts and a purple tank top, with a shambling undead look for summer hordes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3024
+meshes = 1
+materials = 1
+size = [2.041503, 1.826557, 0.525037]
+
+[mesh.sk_zombie_summergirl_female_01_2]
+name = "SK_Zombie_SummerGirl_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_SummerGirl_Female_01.fbx"
+sha256 = "f4f00b90eeb1986b7f65b161e17d70cfd2979d5373dc8d818536de6ee1bf2da5"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female figure in a T-pose, wearing a wide-brimmed straw hat, a purple crop top, and a short blue skirt. Her skin is a pallid grey-green, and her limbs are marked with dark, mottled bruising and wounds, clearly indicating a zombie state."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3024
+meshes = 1
+materials = 1
+size = [2.041503, 1.8265561, 0.525037]
+
+[mesh.sk_zombie_tourist_male_01]
+name = "SK_Zombie_Tourist_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Tourist_Male_01.fbx"
+sha256 = "795315a70b9128f79897ab17a5a4155209c455fe3e1ebaa0e622e9eff5f9d254"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A male zombie in a T-pose, wearing a wide-brimmed straw hat, a bright orange t-shirt with a white graphic, and brown shorts. He has a camera hanging from a strap around his neck, and his skin is a sickly green with visible wounds and bloodstains, suggesting he was a tourist before turning."
+differs = "Identical to the other asset in geometry and texture; no unique features, use interchangeably."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3080
+meshes = 1
+materials = 1
+size = [2.047513, 1.869428, 0.489975]
+
+[mesh.sk_zombie_tourist_male_01_2]
+name = "SK_Zombie_Tourist_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Tourist_Male_01.fbx"
+sha256 = "47874f431fff064e7ebaf91eb1ace03888448cdc815e2f944b417a923110f06a"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A hunched male figure in a T-pose, wearing a wide-brimmed straw hat, a bright orange t-shirt, and brown shorts, with a camera hanging from a strap around his neck. The skin is a sickly green, and the clothing is stained with dark blood, giving him a freshly turned, tourist-turned-zombie appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 3080
+meshes = 1
+materials = 1
+size = [2.047515, 1.869428, 0.489975]
+
+[mesh.sk_zombie_underwear_female_01]
+name = "SK_Zombie_Underwear_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Underwear_Female_01.fbx"
+sha256 = "7d176a8cbade5f6f6beb6be01b6f53e9beaec10bd11a4a597c152ec6ab114bb2"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female zombie in a T-pose, wearing a torn white bra and dark panties with a ragged skirt remnant. Her skin is a pallid, mottled grey-green with dark bruising and bloodstains, and her short dark hair is dishevelled. The pose is neutral, making her ideal for animation or as a base for customisation."
+differs = "Includes a ragged skirt remnant and dishevelled hair, with more pronounced bloodstains and bruising, making it the more damaged and grittier option for horror scenes."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2194
+meshes = 1
+materials = 1
+size = [2.037676, 1.801685, 0.29261]
+
+[mesh.sk_zombie_underwear_female_01_2]
+name = "SK_Zombie_Underwear_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Underwear_Female_01.fbx"
+sha256 = "1149b3a6518c15e084e8d96f21b4adc9e20ad2dc687e4b8e9ac78e7beca1f72a"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender female zombie in a T-pose, wearing a torn white bra and dark panties with a black choker. Her skin is a pallid grey-green with mottled bruising and decay, and her dark hair is pulled back."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 2194
+meshes = 1
+materials = 1
+size = [2.037678, 1.801685, 0.292609]
+
+[mesh.sk_zombie_underwear_male_01]
+name = "SK_Zombie_Underwear_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/Unreal_Characters/SK_Zombie_Underwear_Male_01.fbx"
+sha256 = "a1ee44179e797dfa1d2287692e638aea2a05eba7159445804b0c70197e6b1721"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male zombie in a rigid T-pose, wearing only a cap, tattered white briefs, and dark, torn trousers that end at the shins. The skin is a pallid, sickly grey-green with dark bruising and exposed ribs, while the face is a bloody, hollow-eyed ruin."
+differs = "Identical to the other asset in geometry and texture; only the pose differs, with this one in a rigid T-pose for static props or background dressing."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1828
+meshes = 1
+materials = 1
+size = [2.047514, 1.791031, 0.297344]
+
+[mesh.sk_zombie_underwear_male_01_2]
+name = "SK_Zombie_Underwear_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/Characters/SK_Zombie_Underwear_Male_01.fbx"
+sha256 = "f9d6b5a3329e646d0d8dcc38fe23c3eb6f5bb438fafa69a0e23d3f68f7da6a61"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A gaunt male figure in a classic zombie pose, arms outstretched and head tilted back, with a pale, mottled grey-green skin tone. He wears only a pair of dark, tattered shorts, and his body is marked with dark bruising and wounds, giving him a freshly risen, emaciated appearance."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 1828
+meshes = 1
+materials = 1
+size = [2.047514, 1.791031, 0.297344]
+
+[mesh.sm_chr_attach_axe_01]
+name = "SM_Chr_Attach_Axe_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/FBX/SM_Chr_Attach_Axe_01.fbx"
+sha256 = "62d8af4dd2bed1a53fd02eb0096fd66a745df1b9f8e711e0a1affb1737c08521"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A short, single-handed hatchet with a straight, pale wooden haft and a dark grey, slightly weathered steel head. The blade is broad and asymmetrical, with a flat, chipped edge and a blunt rear poll, suggesting a tool for close-quarters work or breaking down doors."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 188
+meshes = 1
+materials = 1
+size = [0.06468, 0.466191, 0.194715]
+
+[mesh.sm_chr_attach_bar_01]
+name = "SM_Chr_Attach_Bar_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/FBX/SM_Chr_Attach_Bar_01.fbx"
+sha256 = "58206efbd326fab5de9b6a7ee869b0959c18cf3c64f5f14e5d47efef138bf210"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender, dark grey metal bar with a single, sharp bend near its midpoint, giving it a shallow, angular profile. The surface is matte and unadorned, with no visible fittings or markings, suggesting a simple structural prop or a piece of debris for a ruined urban scene."
+differs = "The shortest and thickest, with a sharper mid-bend, best for a broken debris prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.082276, 0.497485, 0.094372004]
+
+[mesh.sm_chr_attach_bar_02]
+name = "SM_Chr_Attach_Bar_02"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/FBX/SM_Chr_Attach_Bar_02.fbx"
+sha256 = "89f0a39e42bfdcac6aae02f011d5bb7953d51db798334f7031a287ef408b791f"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A slender, dark grey metal bar with a slight bend near the top, appearing worn and utilitarian, likely a handrail or a structural support piece for a zombie-themed urban environment."
+differs = "The longest and thinnest, with a subtle top bend, ideal as a worn handrail or support."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 48
+meshes = 1
+materials = 1
+size = [0.06348, 0.67652, 0.062172003]
+
+[mesh.sm_chr_attach_cleaver_01]
+name = "SM_Chr_Attach_Cleaver_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/FBX/SM_Chr_Attach_Cleaver_01.fbx"
+sha256 = "f1c29206ad684eeb93f51c6ba2e3dc95530e3bfc49a86d279f8635fc62f81765"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A broad, rectangular cleaver with a short, dark wooden handle and a pale grey steel blade, featuring a single rivet and a small hanging hole at the rear corner. The blade shows a subtle bevel and a worn, matte finish, suggesting a utilitarian tool for close-quarters work."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 172
+meshes = 1
+materials = 1
+size = [0.058986, 0.152466, 0.51322]
+
+[mesh.sm_chr_attach_knife_01]
+name = "SM_Chr_Attach_Knife_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/FBX/SM_Chr_Attach_Knife_01.fbx"
+sha256 = "681895b3fda4cbcc4be7242aad5e1755c44b0723fb17977a425ae11a7558a975"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A compact, utilitarian fixed-blade knife with a broad, flat grey blade and a short, dark brown handle secured by two visible rivets. The blade shows a slight curve and a worn, matte finish, suggesting a practical tool for close-quarters use."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 120
+meshes = 1
+materials = 1
+size = [0.058986, 0.073354, 0.458309]
+
+[mesh.sm_chr_attach_scissors_01]
+name = "SM_Chr_Attach_Scissors_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/FBX/SM_Chr_Attach_Scissors_01.fbx"
+sha256 = "f0e9b68b4e6f6a4ba02018c3c062edcf9bc642eaf00f71238b392be4a523fe2e"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A pair of open scissors with dark blue plastic handles and light grey metal blades, shown in a slightly worn condition. The blades are crossed and extended, with a small pivot screw visible at the joint. The asset is a simple, functional prop suitable for a cluttered desk or workbench scene."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 206
+meshes = 1
+materials = 1
+size = [0.016754, 0.170493, 0.376109]
+
+[mesh.sm_gib_head_female_01]
+name = "SM_Gib_Head_Female_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/FBX/SM_Gib_Head_Female_01.fbx"
+sha256 = "f7c295902eb678ebea7386b86158c69f91f8cfd502a8bb20ead67b39ac4199ac"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A severed female head with a pale, greyish skin tone, featuring a short bob haircut and a distressed expression with an open mouth and wide eyes. The neck is jagged and torn, indicating a violent removal, and the low-poly faceting gives it a stylized, game-ready look."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 332
+meshes = 1
+materials = 1
+size = [0.283084, 0.338554, 0.255612]
+
+[mesh.sm_gib_head_male_01]
+name = "SM_Gib_Head_Male_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/FBX/SM_Gib_Head_Male_01.fbx"
+sha256 = "f1e5d4204f8696dfa767428e23be6dabbcf3988086af0db88c337b041012b2dc"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A severed male head with a blocky, angular skull, a short neck stump, and a dark grey visor-like band across the eyes. The pale grey skin is marked with a jagged red gash on the left cheek and a dark red mouth, suggesting a zombie."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 298
+meshes = 1
+materials = 1
+size = [0.26613, 0.352062, 0.257146]
+
+[mesh.sm_gib_lowerarm_01]
+name = "SM_Gib_LowerArm_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/FBX/SM_Gib_LowerArm_01.fbx"
+sha256 = "e02f0db058b8afa18004ee77e155f0cc7beba4c6fad6e9a3fc002efd225334ba"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A severed forearm ending in a curled, claw-like hand, rendered in a pale, desaturated flesh tone with a flat, low-poly finish. The surface is smooth and unmarked, with no visible wounds or gore, making it suitable for stylized scenes that require a clean, generic body part."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 192
+meshes = 1
+materials = 1
+size = [0.521208, 0.109176, 0.18895]
+
+[mesh.sm_gib_lowerleg_01]
+name = "SM_Gib_LowerLeg_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/FBX/SM_Gib_LowerLeg_01.fbx"
+sha256 = "fbafc01530b0fb8ff3d4dd2cb68113cf4cd7b1c05d9047612bcd3b3092c62cbf"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A severed lower leg and foot, severed cleanly at the ankle with a flat, dark cut face. The pale, desaturated skin is rendered in low-poly facets, with a simple foot shape and no visible gore, making it a clean, versatile horror prop."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 64
+meshes = 1
+materials = 1
+size = [0.109522, 0.451818, 0.241988]
+
+[mesh.sm_gib_upperarm_01]
+name = "SM_Gib_UpperArm_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/FBX/SM_Gib_UpperArm_01.fbx"
+sha256 = "bef1f78052c4c056066688ffe8a7aafd8a220acaca299e676cc3afa6aff2dbc3"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A severed upper arm segment, severed at both ends with a jagged, torn flesh texture in pale, desaturated skin tones. The blocky, low-poly form shows a hint of a shoulder joint at one end, tapering toward the elbow, with dark red blood staining the torn edges."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 84
+meshes = 1
+materials = 1
+size = [0.362446, 0.123042, 0.153762]
+
+[mesh.sm_gib_upperleg_01]
+name = "SM_Gib_UpperLeg_01"
+pack = "polygon_city_zombies_pack"
+source = "Source Files/FBX/SM_Gib_UpperLeg_01.fbx"
+sha256 = "d5c129c0fe1ec4d7489b375ed56bb969605b8048194130cf2883d8296907b03a"
+atlas = "PolygonZombie_Texture_01_A.png"
+textures = "PolygonZombie_Texture_01_A.png"
+description = "A severed upper leg rendered in flat, pale grey-beige with no visible texture detail, appearing as a clean, stylized low-poly chunk with a small protruding bone stub at the top. The form is a simple, faceted cylinder that tapers slightly toward the bottom, with a subtle notch on one side suggesting a knee or joint."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 66
+meshes = 1
+materials = 1
+size = [0.15145, 0.403882, 0.179978]

@@ -1,0 +1,65 @@
+# Written by `cargo xtask art describe`. One table per mesh in one pack.
+#
+# This is a CATALOGUE, not a manifest. `art/manifest.toml` is promises
+# somebody typed and something checks; every `description` here is a
+# sentence a vision model wrote about a picture of the mesh, and nothing
+# in this repository can check it. Search it, read it, then look at the
+# mesh — `described_by` says what saw it.
+#
+# It carries no art: names, digests, counts and English, which is the
+# same kind of thing the manifest already holds. See docs/ART_PIPELINE.md.
+#
+#   name        the file's own stem, as the pack spells it
+#   pack        the `[pack.*]` id the manifest declares, or the directory
+#   source      where it is in that pack — paste this into a manifest
+#   asset       the manifest id already naming this file, if one does
+#   atlas       what the preview was painted with; a guess unless `asset`
+#   textures    the images the preview scene actually bore
+#   wanted      a texture this mesh named and the pack does not carry. Its
+#               picture was painted with the nearest thing there was, so read
+#               the description beside it with suspicion
+#   differs     what sets it apart from the others of its name, written
+#               from a second look at the whole family side by side
+#   size        how big it is across each axis, in the file's own units
+
+[mesh.sm_bld_cafe_01]
+name = "SM_Bld_Cafe_01"
+pack = "polygon_coffee_shop"
+source = "SourceFiles/FBX/SM_Bld_Cafe_01.fbx"
+sha256 = "38f73e49f86ce441c97c99a9da3345ad1c5f9327d62a44fe32a79eca29bb5d41"
+atlas = "Polygon_Texture_01_A.png"
+textures = "Polygon_Texture_01_A.png"
+description = "A compact, two-storey block with a flat roof, wrapped in a tan stucco facade with a dark brown base band and a matching mid-band. A large, cream-coloured cylindrical vent dominates the roof, while a dark metal balcony with railings and a small awning clings to one side."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 7658
+meshes = 8
+materials = 2
+size = [5.800195, 8.58317, 7.231835]
+
+[mesh.sm_prop_chair_01]
+name = "SM_Prop_Chair_01"
+pack = "polygon_coffee_shop"
+source = "SourceFiles/FBX/SM_Prop_Chair_01.fbx"
+sha256 = "853267a41435cdcc90b15f315fe5cfa2c4f1626edf3ba623fbe5f74e3c152fe5"
+atlas = "Polygon_Texture_01_A.png"
+textures = "Polygon_Texture_01_A.png"
+description = "A simple, boxy dining chair with a tall, rectangular backrest and a flat, square seat, both upholstered in dark grey. The frame is a warm, medium brown wood with a clean, matte finish, featuring four straight legs and a supportive back post. It appears sturdy and unadorned, ideal for a generic café or home interior."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 164
+meshes = 1
+materials = 1
+size = [0.557674, 1.074364, 0.558258]
+
+[mesh.sm_prop_table_01]
+name = "SM_Prop_Table_01"
+pack = "polygon_coffee_shop"
+source = "SourceFiles/FBX/SM_Prop_Table_01.fbx"
+sha256 = "f074fcfa5ae689d176bb4963a5d3a88916530427e7597c0ab8f0194aee86de7b"
+atlas = "Polygon_Texture_01_A.png"
+textures = "Polygon_Texture_01_A.png"
+description = "A square, light-wood tabletop with a pale, striped grain sits on a single dark grey cylindrical pedestal, giving it a simple, modern look. The surface shows a subtle, darker patch of wear or discoloration near one corner, adding a touch of age."
+described_by = "deepseek/deepseek-v4-flash-vision-exp"
+triangles = 122
+meshes = 1
+materials = 1
+size = [1.199928, 0.899449, 0.976926]

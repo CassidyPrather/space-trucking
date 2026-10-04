@@ -895,8 +895,9 @@ pub fn spawn(
             ));
         });
 
-    // The game's one piece of text: the version, bottom-right, outside
-    // the crunch — dev information, not part of the fiction.
+    // One of the game's two pieces of text (the other is the menu's
+    // new-run label): the version, bottom-right, outside the crunch —
+    // dev information, not part of the fiction.
     commands.spawn((
         Text::new(format!("space-trucking cabin {}", space_trucking::VERSION)),
         TextFont {

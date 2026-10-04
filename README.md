@@ -37,9 +37,11 @@ Controls: mouse looks and `WASD` walks; aim at a station and click
 (or `E`) to focus it — the camera glides to a fitted viewpoint and the
 cursor frees for the usual clicking and dragging. `Esc`, right-click, or
 `E` steps back out of a station; `Esc` while roaming raises the menu —
-pause, fast-forward, mute, and the delivery tally — and hands the cursor
-back, so you can reach your desktop too (`Esc` again puts it away).
-Space, `F`, and `M` throw the same three toggles from the keyboard.
+pause, fast-forward, mute, the delivery tally, and a bar labelled
+**New run** — and hands the cursor back, so you can reach your desktop
+too (`Esc` again puts it away). Space, `F`, and `M` throw the same three
+toggles from the keyboard. A new run has no key: it throws the current
+run away for good, so it is asked for on the menu, in words.
 Cargo lives in the aft bay and is carried, not dragged: walk up, aim
 the crosshair at a piece and click to pick it up, walk it over, click a
 berth to set it down — clicking at nothing (or right-clicking) sends it
@@ -53,7 +55,7 @@ something stands on top. Luminous paint really glows — rats keep clear
 of it. The launch lever is a pull: grab, drag
 down to the end of the track — the way the handle itself
 swings — and the throw fires at the detent. `Space`
-pauses, `M` mutes, `R` starts a new run (`F` warps, in dev mode).
+pauses and `M` mutes (`F` warps, in dev mode).
 
 Saves: the cabin keeps its own slot (`cabin.data` + `cabin.replay` in
 the working directory). A save or tape from another version is not
@@ -107,7 +109,6 @@ and at stranger berths the counter shows stranger things.
 | `Esc`           | step out of a station, else raise/lower the menu           |
 | `Space`         | pause                                                      |
 | `M`             | mute                                                       |
-| `R`             | new run                                                    |
 
 No signal relies on color alone; refusals, warnings, and states all carry
 a shape, brightness, or position tell alongside their hue. (The retired

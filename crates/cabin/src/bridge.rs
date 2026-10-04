@@ -63,7 +63,6 @@ pub struct FrameInput {
     pub key_pause: bool,
     pub key_warp: bool,
     pub key_mute: bool,
-    pub key_reseed: bool,
     /// The `Esc` menu's pause / fast-forward / mute controls, worked this
     /// frame. These arrive as plain edges rather than as pointer presses
     /// on a rect: the console face that carried those icon rects came
@@ -74,6 +73,9 @@ pub struct FrameInput {
     pub menu_pause: bool,
     pub menu_warp: bool,
     pub menu_mute: bool,
+    /// The `Esc` menu's new-run bar, worked this frame. No key throws
+    /// this one: a run ends only where the menu says so in words.
+    pub menu_reseed: bool,
     /// **Which room the body stands in**, derived from the camera by
     /// `room::occupy` (docs/ROOMS.md, "The one new input field"). The
     /// gates read this and nothing else about where anybody stands.
@@ -94,10 +96,10 @@ impl Default for FrameInput {
             key_pause: false,
             key_warp: false,
             key_mute: false,
-            key_reseed: false,
             menu_pause: false,
             menu_warp: false,
             menu_mute: false,
+            menu_reseed: false,
             occupied: CABIN,
             detach: None,
         }
@@ -281,7 +283,7 @@ impl Bridge {
             // sim decides, and refuses with a cue if the seam would
             // strand something.
             detach: input.detach,
-            reseed: input.key_reseed.then(fresh_seed),
+            reseed: input.menu_reseed.then(fresh_seed),
         }
     }
 
@@ -409,10 +411,10 @@ mod tests {
             key_pause: false,
             key_warp: true,
             key_mute: false,
-            key_reseed: false,
             menu_pause: true,
             menu_warp: false,
             menu_mute: false,
+            menu_reseed: false,
             occupied: CABIN,
             detach: None,
         });
@@ -656,7 +658,7 @@ mod tests {
         paused.frame(
             dt,
             &FrameInput {
-                key_reseed: true,
+                menu_reseed: true,
                 ..FrameInput::default()
             },
         );
@@ -898,10 +900,10 @@ mod tests {
             key_pause: false,
             key_warp: false,
             key_mute: false,
-            key_reseed: false,
             menu_pause: false,
             menu_warp: false,
             menu_mute: false,
+            menu_reseed: false,
             occupied: CABIN,
             detach: None,
         };

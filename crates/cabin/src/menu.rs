@@ -1,21 +1,34 @@
 //! **The `Esc` menu: the controls that were never in the room.**
 //!
-//! Pause, fast-forward, mute, and the Guild's delivery tally are not
-//! things aboard a freighter — they are things you do *to* the game. For
-//! most of this project's life they were bolted to the console face
-//! anyway, three icon buttons and a lamp strip screwed to a wall, which
-//! made the cabin claim to contain its own volume knob. The wall came
-//! down (`crate::console`, which keeps the hardware on the shelf); the
-//! controls landed here, on an overlay that is honestly an overlay.
+//! Pause, fast-forward, mute, a new run, and the Guild's delivery tally
+//! are not things aboard a freighter — they are things you do *to* the
+//! game. For most of this project's life all but the new run were bolted
+//! to the console face anyway, three icon buttons and a lamp strip
+//! screwed to a wall, which made the cabin claim to contain its own
+//! volume knob. The wall came down (`crate::console`, which keeps the
+//! hardware on the shelf); the controls landed here, on an overlay that
+//! is honestly an overlay.
 //!
-//! **Zero text, like everything else** (DESIGN.md's law: nothing renders
-//! a string except the version corner). The icons are *stamped* — a bit
-//! per cell, one `u16` per row, spawned as plain colored nodes. It is
-//! the console face's stroke-and-primitive discipline one dimension
-//! down: no font, no glyph atlas, no words, and the same palette roles
-//! doing the same jobs — AMBER for a live function, a lamp under each
-//! button for its state, a slash across the speaker so mute carries
-//! *shape* and never hue alone.
+//! **Zero text, like everything else, but for one label** (DESIGN.md's
+//! law: nothing renders a string except the version corner and the
+//! new-run label). The icons are *stamped* — a bit per cell, one `u16`
+//! per row, spawned as plain colored nodes. It is the console face's
+//! stroke-and-primitive discipline one dimension down: no font, no glyph
+//! atlas, no words, and the same palette roles doing the same jobs —
+//! AMBER for a live function, a lamp under each button for its state, a
+//! slash across the speaker so mute carries *shape* and never hue alone.
+//!
+//! **The new run is the exception, and it says so in words.** Every
+//! icon here toggles something the next press toggles back. The new run
+//! throws the run away, and nothing brings it back. A wordless button
+//! that ends the run can be pressed by someone who thought it meant
+//! something else, so it wears a plain label as insurance against that
+//! accident. It is a different kind of control and is drawn as one: a
+//! wide bar at the foot of the panel, below the tally and out of the
+//! icon row, framed in the refusal red, with no lamp because it has no
+//! state. It used to be the `R` key, which is gone. A key is pressed by
+//! a hand that was reaching for its neighbour, and no key starts a new
+//! run now.
 //!
 //! **The sim stays the authority.** Nothing here freezes a frame. A
 //! click sets an edge; `advance` folds that edge into the `InputFrame`
@@ -90,6 +103,17 @@ const HOVER_WAKE: f32 = 0.18;
 /// The speaker's honest resting level: audible is a soft green, not a
 /// hot one.
 const SPEAKER_LEVEL: f32 = 0.45;
+
+/// The new-run bar's height, the extra air above it, and its label's
+/// size. The bar spans the panel, so its width is the panel's.
+const NEW_RUN_H: f32 = 32.0;
+const NEW_RUN_GAP: f32 = 10.0;
+const NEW_RUN_TEXT: f32 = 16.0;
+
+/// The menu's one string. Plain and short, and kept in this one place:
+/// DESIGN.md asks that text the game cannot avoid be translatable, and a
+/// translation of this is a change to this line.
+const NEW_RUN: &str = "New run";
 
 /// A stamped icon: one bit per cell, most significant bit leftmost, one
 /// row per `u16`. Drawn as runs of set bits, so a bar is one node.
@@ -187,9 +211,9 @@ struct Panel;
 struct MenuRoot;
 
 /// What a node in the menu is, for the one pass that repaints them all.
-/// One component rather than four markers on purpose: every part of the
-/// menu is a colored rectangle answering to the same frame of sim state,
-/// so one query paints the lot and nothing can drift out of step.
+/// One component rather than a marker per kind, on purpose: every part
+/// of the menu is a colored rectangle answering to the same frame of sim
+/// state, so one query paints the lot and nothing can drift out of step.
 #[derive(Component, Clone, Copy)]
 enum Paint {
     /// A control's clickable face.
@@ -200,6 +224,9 @@ enum Paint {
     Lamp(Control),
     /// One rung of the delivery tally, by ladder index.
     Pip(usize),
+    /// The new-run bar's clickable face. Not a [`Control`]: a control
+    /// toggles and wears a lamp for its state, and this does neither.
+    NewRun,
 }
 
 /// A piece of the mark that says the world is not running as it should:
@@ -221,11 +248,15 @@ struct Slash;
 
 /// The controls worked this frame, drained by `advance` into the
 /// `InputFrame`. Edges, not states: the sim owns every state here.
+// One edge per control is honestly a pile of booleans, same as
+// `FrameInput`.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Worked {
     pub pause: bool,
     pub warp: bool,
     pub mute: bool,
+    pub reseed: bool,
 }
 
 /// The menu: whether it stands, and what was worked on it this frame.
@@ -245,6 +276,7 @@ impl Menu {
                 pause: false,
                 warp: false,
                 mute: false,
+                reseed: false,
             },
         }
     }
@@ -258,6 +290,7 @@ impl Menu {
             pause: false,
             warp: false,
             mute: false,
+            reseed: false,
         };
         worked
     }
@@ -373,6 +406,43 @@ fn button(commands: &mut Commands, row: Entity, control: Control, glyph: &Glyph)
     ));
 }
 
+/// The new-run bar: the one control that ends something, so the one that
+/// says what it does in words. It stands at the panel's foot, below the
+/// tally: out of the icon row, and clear of the screen centre, where the
+/// crosshair was a moment ago and where a freed cursor is most likely to
+/// be when the menu opens. It is a socket-dark well in a red frame, as
+/// wide as the panel, so it never reads as one more plate.
+fn new_run(commands: &mut Commands, panel: Entity) {
+    let bar = commands
+        .spawn((
+            Button,
+            Node {
+                width: percent(100),
+                height: px(NEW_RUN_H),
+                margin: UiRect::top(px(NEW_RUN_GAP)),
+                border: UiRect::all(px(2)),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(palette::SOCKET),
+            BorderColor::all(palette::LAMP_NO),
+            Paint::NewRun,
+            ChildOf(panel),
+        ))
+        .id();
+    commands.spawn((
+        Text::new(NEW_RUN),
+        TextFont {
+            font_size: FontSize::Px(NEW_RUN_TEXT),
+            ..default()
+        },
+        TextColor(palette::GLINT),
+        Pickable::IGNORE,
+        ChildOf(bar),
+    ));
+}
+
 /// Build the whole menu, hidden. Warp is dev-only furniture here for the
 /// same reason it was on the wall: the 16× fast-forward is a developer's
 /// key, and a control the player cannot use is a control that should not
@@ -474,6 +544,8 @@ fn spawn(mut commands: Commands, shell: Res<Shell>) {
             ChildOf(tally),
         ));
     }
+
+    new_run(&mut commands, panel);
 }
 
 /// **Hang the two marks, hidden.** They are not the panel and they are
@@ -562,8 +634,8 @@ pub fn keys(keys: Res<ButtonInput<KeyCode>>, mut rig: ResMut<CameraRig>, mut men
     }
 }
 
-/// Clicks on the faces and the scrim. A face throws its edge; the bare
-/// scrim dismisses.
+/// Clicks on the faces, the new-run bar, and the scrim. A face or the bar
+/// throws its edge; the bare scrim dismisses.
 fn click(
     mut menu: ResMut<Menu>,
     mut rig: ResMut<CameraRig>,
@@ -574,16 +646,15 @@ fn click(
         return;
     }
     for (interaction, paint) in &faces {
-        let Paint::Face(control) = paint else {
-            continue;
-        };
         if *interaction != Interaction::Pressed {
             continue;
         }
-        match control {
-            Control::Pause => menu.worked.pause = true,
-            Control::Warp => menu.worked.warp = true,
-            Control::Mute => menu.worked.mute = true,
+        match paint {
+            Paint::Face(Control::Pause) => menu.worked.pause = true,
+            Paint::Face(Control::Warp) => menu.worked.warp = true,
+            Paint::Face(Control::Mute) => menu.worked.mute = true,
+            Paint::NewRun => menu.worked.reseed = true,
+            Paint::Ink(_) | Paint::Lamp(_) | Paint::Pip(_) => {}
         }
     }
     if scrim
@@ -721,6 +792,18 @@ fn paint(
                     palette::GLASS
                 }
             }
+            // The well rises to plate under the cursor: the same answer
+            // a face gives, one step lower, because it starts lower.
+            Paint::NewRun => {
+                if matches!(
+                    interaction,
+                    Some(Interaction::Hovered | Interaction::Pressed)
+                ) {
+                    palette::PLATE
+                } else {
+                    palette::SOCKET
+                }
+            }
         };
     }
 }
@@ -755,7 +838,7 @@ fn show_mark(shell: Res<Shell>, mut marks: Query<(&Telltale, &mut Visibility), W
 
 #[cfg(test)]
 mod tests {
-    use space_trucking::sim::InputFrame;
+    use space_trucking::sim::{Cue, InputFrame};
 
     use super::*;
     use crate::bridge::{Bridge, FrameOutcome};
@@ -768,10 +851,11 @@ mod tests {
         let mut menu = Menu::boot(false);
         menu.worked.pause = true;
         menu.worked.mute = true;
+        menu.worked.reseed = true;
         let first = menu.take();
-        assert!(first.pause && first.mute && !first.warp);
+        assert!(first.pause && first.mute && first.reseed && !first.warp);
         let second = menu.take();
-        assert!(!second.pause && !second.mute && !second.warp);
+        assert!(!second.pause && !second.mute && !second.reseed && !second.warp);
     }
 
     /// A bare app with the menu's input systems and nothing else — no
@@ -832,9 +916,9 @@ mod tests {
         );
     }
 
-    /// A press on a control face throws exactly that control's edge, and
-    /// only while the menu stands: the sim must never hear from a menu
-    /// that is not on screen.
+    /// A press on a control face, or on the new-run bar, throws exactly
+    /// that control's edge, and only while the menu stands: the sim must
+    /// never hear from a menu that is not on screen.
     #[test]
     fn a_pressed_face_throws_its_own_edge() {
         let mut app = harness(true, Mode::Roam);
@@ -842,17 +926,81 @@ mod tests {
             .spawn((Interaction::Pressed, Paint::Face(Control::Mute)));
         app.update();
         let worked = app.world_mut().resource_mut::<Menu>().take();
-        assert!(worked.mute && !worked.pause && !worked.warp);
+        assert!(worked.mute && !worked.pause && !worked.warp && !worked.reseed);
+
+        let mut app = harness(true, Mode::Roam);
+        app.world_mut().spawn((Interaction::Pressed, Paint::NewRun));
+        app.update();
+        let worked = app.world_mut().resource_mut::<Menu>().take();
+        assert!(worked.reseed && !worked.pause && !worked.warp && !worked.mute);
 
         let mut app = harness(false, Mode::Roam);
         app.world_mut()
             .spawn((Interaction::Pressed, Paint::Face(Control::Pause)));
+        app.world_mut().spawn((Interaction::Pressed, Paint::NewRun));
         app.update();
         let worked = app.world_mut().resource_mut::<Menu>().take();
         assert!(
-            !worked.pause,
-            "a closed menu threw a toggle at the sim anyway"
+            !worked.pause && !worked.reseed,
+            "a closed menu threw an edge at the sim anyway"
         );
+    }
+
+    /// The menu's input systems with the real `advance` behind them, over
+    /// the developer fixture. The clock stands still and the pointer
+    /// rests on nothing, so an edge the menu throws is the only thing
+    /// that can change the world between two frames.
+    fn played() -> App {
+        let mut bridge = Bridge::boot_fixture(crate::fixture::SAVE);
+        bridge.steady();
+        let mut app = App::new();
+        app.insert_resource(Shell {
+            bridge,
+            outcome: FrameOutcome::default(),
+            muted: false,
+        })
+        .insert_resource(Menu::boot(false))
+        .insert_resource(CameraRig::boot(None))
+        .init_resource::<Time>()
+        .init_resource::<ButtonInput<KeyCode>>()
+        .init_resource::<ButtonInput<MouseButton>>()
+        .init_resource::<crate::surface::VirtualPointer>()
+        .init_resource::<crate::gesture::Grips>()
+        .init_resource::<crate::room::Occupancy>()
+        .init_resource::<crate::room::AimedLatch>()
+        .add_systems(Update, (keys, click, crate::advance).chain());
+        app
+    }
+
+    /// **The new-run bar starts a new run, by the road the key took.**
+    /// `click` sets the edge, `advance` drains it into the frame, and the
+    /// bridge hands the sim a fresh seed: the same fold the `R` key fed
+    /// before it was cut. What comes back is a replacement and not an
+    /// advance, so the tick counter reads nought. The key's half of the
+    /// law, that it no longer does this, is asked of the whole input
+    /// schedule in `main`'s session (`r_is_only_a_letter_now`).
+    #[test]
+    fn the_new_run_bar_starts_a_new_run() {
+        let mut app = played();
+        let seed = app.world().resource::<Shell>().bridge.sim.seed();
+        escape(&mut app);
+        assert!(app.world().resource::<Menu>().open, "roam Esc opens it");
+        assert_eq!(
+            app.world().resource::<Shell>().bridge.sim.seed(),
+            seed,
+            "opening the menu replaced the world"
+        );
+
+        app.world_mut().spawn((Interaction::Pressed, Paint::NewRun));
+        app.update();
+        let sim = &app.world().resource::<Shell>().bridge.sim;
+        assert!(
+            sim.cues().contains(&Cue::Reseed),
+            "the bar was pressed and the sim never heard: {:?}",
+            sim.cues()
+        );
+        assert_ne!(sim.seed(), seed, "a new run kept the old seed");
+        assert_eq!(sim.tick(), 0, "a new run advanced instead of replacing");
     }
 
     /// A press on the bare scrim — the room showing through around the
@@ -887,18 +1035,24 @@ mod tests {
         }
     }
 
-    /// The menu renders no strings. The law is DESIGN.md's ("absolutely
-    /// no text"), the version corner is its one exemption, and this file
-    /// is exactly the kind of place that would quietly break it — a
-    /// menu is what menus are usually made of words for.
+    /// The menu renders one string, and it is the new-run label. The law
+    /// is DESIGN.md's ("absolutely no text"). The version corner and this
+    /// label are its two exemptions, and this file is exactly the kind of
+    /// place that would quietly grow a third — a menu is what menus are
+    /// usually made of words for.
     #[test]
-    fn the_menu_speaks_only_in_shapes() {
+    fn the_menu_speaks_in_shapes_but_for_one_label() {
         let source = include_str!("menu.rs");
         // Spelled in pieces so the test does not trip over itself.
         let text_node = ["Text", "::new"].concat();
+        assert_eq!(
+            source.matches(&text_node).count(),
+            1,
+            "the menu grew a rendered string; icons only, the new-run label excepted (DESIGN.md)"
+        );
         assert!(
-            !source.contains(&text_node),
-            "the menu grew a rendered string; icons only (DESIGN.md)"
+            source.contains(&[text_node.as_str(), "(NEW_RUN)"].concat()),
+            "the menu's one string is not the new-run label"
         );
     }
 

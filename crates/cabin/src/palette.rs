@@ -88,7 +88,8 @@ pub const TRIM_RECEIVED: Color = hex(0x567a5d);
 pub const TRIM_GIVE: Color = hex(0x76714f);
 pub const TRIM_TAKE: Color = hex(0x4d7a80);
 
-/// The version string, the game's one piece of text.
+/// The version string, one of the game's two pieces of text (the other
+/// is the menu's new-run label).
 pub const VERSION_TEXT: Color = Color::srgba(0.851, 0.851, 0.902, 0.75);
 
 // ---- POI identity hues (enamel; the tank phosphorizes its readings) ----

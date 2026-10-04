@@ -12,8 +12,9 @@ deliberately below.
 
 - [ ] Whimsy first: did this change add or remove delight? Name one whimsical
       detail it touched.
-- [ ] Zero text: no rendered strings besides the version corner; every new
-      state communicates via shape/color/motion/sound.
+- [ ] Zero text: no rendered strings besides the version corner and the
+      `Esc` menu's New run label (DESIGN.md says why); every new state
+      communicates via shape/color/motion/sound.
 - [ ] No currency: nothing countable functions as money — no credits, scores,
       or ratings.
 - [ ] No progression creep: no upgrades, unlocks, or permanent power
@@ -99,10 +100,11 @@ changing; remove a line only by shipping it or striking it in review.
   and the retired console's per-rule violation glyphs)
 - Anything else in the `Esc` menu. The meta-controls landed there when
   the console face came off the wall — pause, fast-forward, mute, the
-  delivery tally, all icons and no words — and settings, keybinds, and
-  a save browser are all deferred on the same grounds the game defers
-  text: the moment a menu starts explaining itself, it has started
-  explaining the game
+  delivery tally, all icons and no words. The new run followed with
+  the one label the menu wears, because it is the one control nobody
+  can take back. Settings, keybinds, and a save browser are all
+  deferred on the same grounds the game defers text: the moment a menu
+  starts explaining itself, it has started explaining the game
 - ~~Barter redesign~~ — struck in review, decided by decree: the barter
   interface is *removed*, not redesigned, and stations become attached
   rooms cargo is carried into (docs/ROOMS.md). The economy survives its

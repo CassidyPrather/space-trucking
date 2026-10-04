@@ -1044,7 +1044,9 @@ fn advance(
     // The menu's controls are worked with the mouse, but they arrive
     // here as plain edges — exactly where the console face's icon rects
     // used to fold in. One toggle path, whatever threw it: the sim is
-    // still the only thing that decides what pausing means.
+    // still the only thing that decides what pausing means. The new run
+    // arrives the same way and has no key beside it: the labelled bar on
+    // the menu is the only thing that starts one (`crate::menu`).
     let worked = menu.take();
     let input = FrameInput {
         pointer: at,
@@ -1055,10 +1057,10 @@ fn advance(
         key_pause: keys.just_pressed(KeyCode::Space),
         key_warp: keys.just_pressed(KeyCode::KeyF),
         key_mute: keys.just_pressed(KeyCode::KeyM),
-        key_reseed: keys.just_pressed(KeyCode::KeyR),
         menu_pause: worked.pause,
         menu_warp: worked.warp,
         menu_mute: worked.mute,
+        menu_reseed: worked.reseed,
         occupied: occupancy.0,
         detach: parting,
     };
@@ -2046,5 +2048,33 @@ mod session {
         cabin
             .can_still_chart()
             .expect("the market left with the map");
+    }
+
+    /// **`R` is only a letter now.** It used to start a new run, which
+    /// throws the old one away for good, and it sat one key over from
+    /// focus and one row up from the walk. A run ends only from the `Esc`
+    /// menu now, on a bar that says so in words; that half of the law is
+    /// `menu::tests::the_new_run_bar_starts_a_new_run`, on the same road
+    /// into the sim. This half hands the old key to the whole input
+    /// schedule and asks whether the world it had is the world it kept.
+    #[test]
+    fn r_is_only_a_letter_now() {
+        let mut cabin = Cabin::new(crate::fixture::SAVE);
+        let seed = cabin.sim().seed();
+        let tick = cabin.sim().tick();
+        cabin.hold_keys(&[KeyCode::KeyR]);
+        cabin.step();
+        let said = cabin.sim().cues().to_vec();
+        cabin.hold_keys(&[]);
+        cabin.steps(2);
+        assert!(
+            !said.contains(&Cue::Reseed),
+            "R threw the run away: {said:?}"
+        );
+        assert_eq!(cabin.sim().seed(), seed, "R replaced the world");
+        assert!(
+            cabin.sim().tick() > tick,
+            "the world stopped instead of going on"
+        );
     }
 }

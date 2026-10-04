@@ -176,6 +176,7 @@ The `game-template` repo should have some great general principles. These came t
 
 - Whimsy is the #1 requirement
 - The gme must feature **absolutely no text or dialogue**. When you can't do that, make sure it's translatable.
+  - Two strings are excepted. The version corner is dev information, not part of the game. The **New run** bar on the `Esc` menu throws the run away for good, and a wordless button that does that can be pressed by someone who thought it meant something else; its label is insurance against that accident. It is one string in one place (`crates/cabin/src/menu.rs`), so it stays translatable.
 - The game **absolutely must be deterministic and tolerant of network failures**. Allow quick catchup, fast-forward, pausing, saving, the works. These should be top priority to test **at all times**.
 - We don't care about anti-cheat (if there ends up being a central server, anti-cheat must be confined to that)
 - Come up with some sort of system for intermittent design review checklists to make sure we're not getting distracted from our core goals

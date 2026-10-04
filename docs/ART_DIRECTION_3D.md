@@ -36,16 +36,23 @@ move is deliberate, nothing to get seasick over:
   hangs; the cursor frees and precise sim interaction works exactly as
   in 2D. `Esc`, right-click, or `E` steps back out.
 - **The menu**: `Esc` while roaming raises the meta-controls — pause,
-  fast-forward (dev), mute, the delivery tally — as a screen overlay,
-  and frees the cursor exactly as `Esc` always did. It is deliberately
-  *not* diegetic: those four are things you do to the game, not things
-  aboard the ship, and the previous arrangement had the cabin claiming
-  to contain its own volume knob. Zero text like everything else: the
-  icons are stamped from bit rows into colored nodes, palette roles
-  only, with a lamp under each button and a slash that carries mute by
-  shape. The sim keeps ticking behind it — the only pause in the game is
-  the sim's own, folded in through the same `InputFrame` toggles the
-  keys throw.
+  fast-forward (dev), mute, the delivery tally, a new run — as a screen
+  overlay, and frees the cursor exactly as `Esc` always did. It is
+  deliberately *not* diegetic: those five are things you do to the
+  game, not things aboard the ship, and the previous arrangement had the
+  cabin claiming to contain its own volume knob. Zero text like
+  everything else but one label: the icons are stamped from bit rows
+  into colored nodes, palette roles only, with a lamp under each button
+  and a slash that carries mute by shape. The label is the new run's.
+  That control throws the run away for good, and a wordless button that
+  does so can be pressed by someone who thought it meant something
+  else, so it says "New run" in plain words as insurance (DESIGN.md
+  records the exception). It is drawn as a different kind of control: a
+  wide, socket-dark bar in a `LAMP_NO` frame at the panel's foot, under
+  the tally, with no lamp because it has no state. No key starts a new
+  run. The sim keeps ticking behind the menu — the only pause in the
+  game is the sim's own, folded in through the same `InputFrame`
+  toggles the keys throw.
 
 Focus viewpoints are *fitted*, not eyeballed: each is derived from its
 surface group's extents and the camera FOV, so the station fills the
@@ -642,8 +649,9 @@ shake, lamps carry lit-versus-dark-glass, rows sit at fixed stations.
   glows through `glow::phosphor`/`glow::set_lamp`.
 - **Do** give any dynamic brightness its own material instance — shared
   handles light every lamp on the ship at once.
-- **Don't** introduce text (version corner excepted), asset files,
-  pure black or pure white, or physics on cargo.
+- **Don't** introduce text (the version corner and the menu's New run
+  label excepted), asset files, pure black or pure white, or physics on
+  cargo.
 - **Don't** animate past the juice conventions; the cabin must be
   glanceable-away-from for minutes at a time.
 - **Don't** let the GPU budget creep: the target is integrated graphics
@@ -937,4 +945,6 @@ Deliberately unsettled, still:
 - How far bloom can carry the CRT reading before it goes syrupy.
 - How much the `Esc` menu should eventually hold. It is four controls
   and a tally today, deliberately: a menu is the easiest place in a
-  wordless game to start explaining things, and it must not.
+  wordless game to start explaining things, and it must not. Its one
+  label names the one control nobody can take back, and explains
+  nothing else.

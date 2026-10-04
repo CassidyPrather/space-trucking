@@ -24,7 +24,7 @@
 //! vocabulary"): the room's own goods sit on `Stock` tiles, and
 //! everything else aboard or alongside is the player's.
 
-use super::room::{RoomId, RoomKind, Rooms, Surf, Tile};
+use super::room::{COURSES, RoomId, RoomKind, Rooms, Surf, Tile};
 
 /// Everything haulable. Declaration order is the stable [`Kind::index`]
 /// order that the barter value table is written in.
@@ -267,9 +267,13 @@ impl Kind {
             // wall. Bigger was tried and refused by the arithmetic —
             // a calling room's shelf is its aft wall with a handshake
             // in the middle of it and a doorway through the corner,
-            // and nothing three cells wide and two courses tall can
-            // stand anywhere on it. A window no station can put out is
-            // a window nobody can buy (`barter`, the shelf-fit test).
+            // and while the walls were three courses tall nothing three
+            // cells wide and two courses tall could stand anywhere on
+            // it. A window no station can put out is a window nobody
+            // can buy (`barter`, the shelf-fit test). The walls are a
+            // course taller now, so a wider pane would fit over the
+            // counter; whether one is wanted is a design question, and
+            // this square is the answer until somebody asks it.
             | Self::BayWindow
             | Self::ChartTank => (2, 1, 2),
             Self::ScrapAlloy
@@ -1603,7 +1607,7 @@ const fn near_hull(host: RoomKind, foot: Foot) -> bool {
 /// The wall a standing floor footprint shadows: for each floor edge the
 /// piece comes within a cell of, the band of wall directly behind it — as
 /// wide as the piece's shadow on that seam, rising from the baseboard
-/// through the piece's stature (three courses at most, which is all the
+/// through the piece's stature ([`COURSES`] at most, which is all the
 /// wall there is). A piece a whole cell or more off the wall leaves room
 /// to hang something behind it.
 ///
@@ -1617,7 +1621,7 @@ const fn near_hull(host: RoomKind, foot: Foot) -> bool {
 fn shadows(host: RoomKind, foot: Foot, stature: u8) -> Vec<Foot> {
     let floor = floor_box(host);
     let span = foot.aabb();
-    let rise = i32::from(fine(stature.min(3)));
+    let rise = i32::from(fine(stature.min(COURSES)));
     let cell = i32::from(FINE);
     let mut walls = Vec::new();
     if rise == 0 {
@@ -2044,11 +2048,42 @@ mod tests {
         Rooms::new()
     }
 
+    /// The cabin's deck cell `(i, j)`, as a cell of its net. The tests
+    /// below name every cell by the place in the room it is — a deck
+    /// cell, the deckhead over one, a course of a wall counted up from
+    /// the deck — so a wall that grows a course moves none of them.
+    const fn deck(i: u8, j: u8) -> (u8, u8) {
+        RoomKind::Cabin.deck_cell(i, j)
+    }
+
+    /// The cabin's deckhead over deck cell `(i, j)`.
+    const fn deckhead(i: u8, j: u8) -> (u8, u8) {
+        RoomKind::Cabin.deckhead_cell(i, j)
+    }
+
+    /// Course `course` of the cabin's aft wall, `along` cells from its
+    /// port end.
+    const fn aft(along: u8, course: u8) -> (u8, u8) {
+        RoomKind::Cabin.wall_cell(0, along, course)
+    }
+
+    /// Course `course` of the cabin's starboard wall, `along` cells
+    /// from its aft end.
+    const fn starboard(along: u8, course: u8) -> (u8, u8) {
+        RoomKind::Cabin.wall_cell(1, along, course)
+    }
+
+    /// Course `course` of the cabin's port wall, `along` cells from its
+    /// aft end.
+    const fn port(along: u8, course: u8) -> (u8, u8) {
+        RoomKind::Cabin.wall_cell(3, along, course)
+    }
+
     /// **The spot `kind` takes in the cabin with its footprint's top-left
     /// on whole cell `(x, y)`**, at the turn the game gives a body there:
     /// the berth the grid would have called "cell `(x, y)`". `None` where
     /// that corner is on no chart.
-    fn cell(kind: Kind, x: u8, y: u8) -> Option<Spot> {
+    fn cell(kind: Kind, (x, y): (u8, u8)) -> Option<Spot> {
         let (x, y, turn) = anchored(RoomKind::Cabin, kind, fine(x), fine(y))?;
         Some(Spot {
             room: CABIN,
@@ -2060,16 +2095,16 @@ mod tests {
 
     /// A board of pieces berthed in the cabin at the given cells, ids
     /// counting up from 0.
-    fn board(stowed: &[(Kind, u8, u8)]) -> Vec<Piece> {
+    fn board(stowed: &[(Kind, (u8, u8))]) -> Vec<Piece> {
         stowed
             .iter()
             .enumerate()
-            .map(|(i, &(kind, x, y))| Piece {
+            .map(|(i, &(kind, at))| Piece {
                 id: i as u32,
                 kind,
                 variant: 0,
                 gnawed: false,
-                loc: cell(kind, x, y).expect("a cell of the net").hold(),
+                loc: cell(kind, at).expect("a cell of the net").hold(),
             })
             .collect()
     }
@@ -2077,10 +2112,16 @@ mod tests {
     /// The arbiter asked of a whole-cell anchor, against a [`board`];
     /// the candidate takes the next free id after it. A corner on no
     /// chart is out of bounds.
-    fn check(stowed: &[(Kind, u8, u8)], kind: Kind, x: u8, y: u8) -> Result<(), Violation> {
-        cell(kind, x, y).map_or(Err(Violation::Bounds), |spot| {
+    fn check(stowed: &[(Kind, (u8, u8))], kind: Kind, at: (u8, u8)) -> Result<(), Violation> {
+        cell(kind, at).map_or(Err(Violation::Bounds), |spot| {
             check_at(&board(stowed), kind, spot)
         })
+    }
+
+    /// Whether anything on `pieces` lights cell `(x, y)` of the cabin's
+    /// net, read as if it were room `room`'s.
+    fn lit_cell(pieces: &[Piece], room: RoomId, (x, y): (u8, u8)) -> bool {
+        lit_adjacent(RoomKind::Cabin, pieces, room, x, y)
     }
 
     /// The arbiter asked of any spot, against any board.
@@ -2090,15 +2131,16 @@ mod tests {
 
     #[test]
     fn bounds_rule_accepts_inside_and_names_offgrid() {
-        // RationBricks is 2x2: fits on the floor at (4, 3); bent over the
-        // starboard fold at (10, 4); off the net entirely at (21, 3).
-        assert_eq!(check(&[], Kind::RationBricks, 4, 3), Ok(()));
+        // RationBricks is 2x2: fits on the deck by its aft wall; bent
+        // over the starboard fold from the deck's last column; off the
+        // net entirely from the deckhead's far column.
+        assert_eq!(check(&[], Kind::RationBricks, deck(1, 0)), Ok(()));
         assert_eq!(
-            check(&[], Kind::RationBricks, 10, 4),
+            check(&[], Kind::RationBricks, deck(7, 1)),
             Err(Violation::Bounds)
         );
         assert_eq!(
-            check(&[], Kind::RationBricks, 21, 3),
+            check(&[], Kind::RationBricks, deckhead(0, 0)),
             Err(Violation::Bounds)
         );
     }
@@ -2108,23 +2150,24 @@ mod tests {
     /// half over another piece are all berths, in either layer.
     #[test]
     fn cargo_shares_ground_with_cargo() {
-        let stowed = [(Kind::PerfumeVial, 5, 5)];
-        assert_eq!(check(&stowed, Kind::Seedlings, 6, 5), Ok(()));
-        assert_eq!(check(&stowed, Kind::Seedlings, 5, 5), Ok(()));
-        // Multi-cell: ScrapAlloy anchored at (4, 5) covers (5, 5) too.
-        assert_eq!(check(&stowed, Kind::ScrapAlloy, 4, 5), Ok(()));
+        let stowed = [(Kind::PerfumeVial, deck(2, 2))];
+        assert_eq!(check(&stowed, Kind::Seedlings, deck(3, 2)), Ok(()));
+        assert_eq!(check(&stowed, Kind::Seedlings, deck(2, 2)), Ok(()));
+        // Multi-cell: ScrapAlloy anchored at deck (1, 2) covers deck
+        // (2, 2) too.
+        assert_eq!(check(&stowed, Kind::ScrapAlloy, deck(1, 2)), Ok(()));
         // A crate in a wardrobe, and a painting behind one.
-        let wardrobe = [(Kind::Cabinet, 6, 3)];
-        assert_eq!(check(&wardrobe, Kind::PerfumeVial, 6, 3), Ok(()));
-        assert_eq!(check(&wardrobe, Kind::Painting, 5, 1), Ok(()));
+        let wardrobe = [(Kind::Cabinet, deck(3, 0))];
+        assert_eq!(check(&wardrobe, Kind::PerfumeVial, deck(3, 0)), Ok(()));
+        assert_eq!(check(&wardrobe, Kind::Painting, aft(2, 1)), Ok(()));
         // And a dressing under a couch, or over another dressing.
         let rooms = ship();
-        let rug = cell(Kind::Rug, 4, 7).expect("on the deck");
+        let rug = cell(Kind::Rug, deck(1, 4)).expect("on the deck");
         assert_eq!(dressing_check(&rooms, Kind::Rug, rug), Ok(()));
         assert_eq!(
             berth_check(
                 &rooms,
-                &board(&[(Kind::Couch, 4, 7)]),
+                &board(&[(Kind::Couch, deck(1, 4))]),
                 9,
                 Kind::Rug,
                 rug.laid()
@@ -2140,17 +2183,20 @@ mod tests {
     fn the_threshold_rule_keeps_every_aperture_clear() {
         // The cabin's starboard doorway, its aft doorway, its hatch.
         assert_eq!(
-            check(&[], Kind::PerfumeVial, 11, 3),
+            check(&[], Kind::PerfumeVial, starboard(0, 0)),
             Err(Violation::Threshold)
         );
-        assert_eq!(check(&[], Kind::WallLamp, 3, 1), Err(Violation::Threshold));
         assert_eq!(
-            check(&[], Kind::PerfumeVial, 9, 7),
+            check(&[], Kind::WallLamp, aft(0, 1)),
+            Err(Violation::Threshold)
+        );
+        assert_eq!(
+            check(&[], Kind::PerfumeVial, deck(6, 4)),
             Err(Violation::Threshold)
         );
         // And a dressing cannot be laid across one either.
         let rooms = ship();
-        let tin = cell(Kind::PaintTin, 9, 7).expect("on the net");
+        let tin = cell(Kind::PaintTin, deck(6, 4)).expect("on the net");
         assert_eq!(
             dressing_check(&rooms, Kind::PaintTin, tin),
             Err(Violation::Threshold)
@@ -2159,50 +2205,50 @@ mod tests {
 
     #[test]
     fn heavy_lies_dormant_and_the_walls_refuse_plain_cargo() {
-        assert_eq!(check(&[], Kind::GildedIdol, 3, 3), Ok(()));
-        assert_eq!(check(&[], Kind::GildedIdol, 5, 5), Ok(()));
+        assert_eq!(check(&[], Kind::GildedIdol, deck(0, 0)), Ok(()));
+        assert_eq!(check(&[], Kind::GildedIdol, deck(2, 2)), Ok(()));
         // Lifted onto a wall, the mount law refuses (port chart, clear
         // of the doorway the aperture punches through it).
         assert_eq!(
-            check(&[], Kind::GildedIdol, 0, 8),
+            check(&[], Kind::GildedIdol, port(5, 2)),
             Err(Violation::Affix(Mount::Floor))
         );
     }
 
     #[test]
     fn volatile_rule_accepts_gapped_and_names_adjacency() {
-        let stowed = [(Kind::GasCanister, 3, 7)];
-        assert_eq!(check(&stowed, Kind::GasCanister, 3, 5), Ok(()));
+        let stowed = [(Kind::GasCanister, deck(0, 4))];
+        assert_eq!(check(&stowed, Kind::GasCanister, deck(0, 2)), Ok(()));
         assert_eq!(
-            check(&stowed, Kind::GasCanister, 3, 6),
+            check(&stowed, Kind::GasCanister, deck(0, 3)),
             Err(Violation::Volatile)
         );
         assert_eq!(
-            check(&stowed, Kind::GasCanister, 4, 6),
+            check(&stowed, Kind::GasCanister, deck(1, 3)),
             Err(Violation::Volatile)
         );
         // Corner to corner is too close now: half a cell of clear air,
         // every way.
         assert_eq!(
-            check(&stowed, Kind::GasCanister, 5, 6),
+            check(&stowed, Kind::GasCanister, deck(2, 3)),
             Err(Violation::Volatile)
         );
-        assert_eq!(check(&stowed, Kind::GasCanister, 6, 5), Ok(()));
+        assert_eq!(check(&stowed, Kind::GasCanister, deck(3, 2)), Ok(()));
     }
 
     #[test]
     fn cryo_rule_accepts_edge_and_names_interior() {
-        assert_eq!(check(&[], Kind::CryoCore, 3, 4), Ok(()));
-        assert_eq!(check(&[], Kind::CryoCore, 4, 9), Ok(()));
-        assert_eq!(check(&[], Kind::CryoCore, 5, 5), Err(Violation::Cryo));
+        assert_eq!(check(&[], Kind::CryoCore, deck(0, 1)), Ok(()));
+        assert_eq!(check(&[], Kind::CryoCore, deck(1, 6)), Ok(()));
+        assert_eq!(check(&[], Kind::CryoCore, deck(2, 2)), Err(Violation::Cryo));
     }
 
     #[test]
     fn suspicious_rule_accepts_one_and_names_a_second() {
-        assert_eq!(check(&[], Kind::SuspiciousCrate, 3, 3), Ok(()));
-        let stowed = [(Kind::SuspiciousCrate, 3, 3)];
+        assert_eq!(check(&[], Kind::SuspiciousCrate, deck(0, 0)), Ok(()));
+        let stowed = [(Kind::SuspiciousCrate, deck(0, 0))];
         assert_eq!(
-            check(&stowed, Kind::SuspiciousCrate, 5, 5),
+            check(&stowed, Kind::SuspiciousCrate, deck(2, 2)),
             Err(Violation::Suspicious)
         );
     }
@@ -2211,11 +2257,11 @@ mod tests {
     fn the_floor_takes_cargo_anywhere_a_body_could_stand() {
         // The walker passes through cargo, so the floor keeps no
         // reserved lanes: a wall of cargo may close across the room.
-        assert_eq!(check(&[], Kind::PerfumeVial, 10, 3), Ok(()));
-        assert_eq!(check(&[], Kind::PerfumeVial, 6, 7), Ok(()));
-        let wall: Vec<(Kind, u8, u8)> = (3..9).map(|y| (Kind::PerfumeVial, 4, y)).collect();
-        assert_eq!(check(&wall, Kind::PerfumeVial, 4, 9), Ok(()));
-        assert_eq!(check(&wall, Kind::PerfumeVial, 6, 5), Ok(()));
+        assert_eq!(check(&[], Kind::PerfumeVial, deck(7, 0)), Ok(()));
+        assert_eq!(check(&[], Kind::PerfumeVial, deck(3, 4)), Ok(()));
+        let wall: Vec<(Kind, (u8, u8))> = (0..6).map(|j| (Kind::PerfumeVial, deck(1, j))).collect();
+        assert_eq!(check(&wall, Kind::PerfumeVial, deck(1, 6)), Ok(()));
+        assert_eq!(check(&wall, Kind::PerfumeVial, deck(3, 2)), Ok(()));
     }
 
     /// **The game keeps clear of a standing body's bulk**: the cabinet
@@ -2224,64 +2270,70 @@ mod tests {
     /// — though a player may, and the arbiter lets them.
     #[test]
     fn tall_floor_cargo_shadows_the_wall_behind_it_for_the_game() {
-        let tidy_at = |stowed: &[(Kind, u8, u8)], kind, x, y| {
-            let spot = cell(kind, x, y).expect("on the net");
+        let tidy_at = |stowed: &[(Kind, (u8, u8))], kind, at| {
+            let spot = cell(kind, at).expect("on the net");
             let pieces = board(stowed);
             assert_eq!(check_at(&pieces, kind, spot), Ok(()), "{kind:?} is legal");
             clear(&ship(), &pieces, pieces.len() as u32, kind, spot.hold())
         };
-        let stowed = [(Kind::Cabinet, 6, 3)];
-        assert!(!tidy_at(&stowed, Kind::Painting, 5, 1));
+        let stowed = [(Kind::Cabinet, deck(3, 0))];
+        assert!(!tidy_at(&stowed, Kind::Painting, aft(2, 1)));
         // Two columns over, the wall is clear.
-        assert!(tidy_at(&stowed, Kind::Painting, 7, 1));
+        assert!(tidy_at(&stowed, Kind::Painting, aft(4, 1)));
         // And symmetrically.
-        let hung = [(Kind::Painting, 7, 1)];
-        assert!(!tidy_at(&hung, Kind::Cabinet, 7, 3));
-        assert!(tidy_at(&hung, Kind::Cabinet, 5, 3));
+        let hung = [(Kind::Painting, aft(4, 1))];
+        assert!(!tidy_at(&hung, Kind::Cabinet, deck(4, 0)));
+        assert!(tidy_at(&hung, Kind::Cabinet, deck(2, 0)));
     }
 
     #[test]
     fn affix_rule_accepts_the_mount_surface_and_names_the_miss() {
-        assert_eq!(check(&[], Kind::CeilingLamp, 16, 4), Ok(()));
+        assert_eq!(check(&[], Kind::CeilingLamp, deckhead(5, 1)), Ok(()));
         assert_eq!(
-            check(&[], Kind::CeilingLamp, 5, 1),
+            check(&[], Kind::CeilingLamp, aft(2, 1)),
             Err(Violation::Affix(Mount::Ceiling))
         );
-        assert_eq!(check(&[], Kind::WallLamp, 5, 1), Ok(()));
-        assert_eq!(check(&[], Kind::WallLamp, 1, 6), Ok(()));
+        assert_eq!(check(&[], Kind::WallLamp, aft(2, 1)), Ok(()));
+        assert_eq!(check(&[], Kind::WallLamp, port(3, 1)), Ok(()));
         assert_eq!(
-            check(&[], Kind::WallLamp, 5, 5),
+            check(&[], Kind::WallLamp, deck(2, 2)),
             Err(Violation::Affix(Mount::Wall))
         );
-        assert_eq!(check(&[], Kind::Couch, 4, 4), Ok(()));
+        assert_eq!(check(&[], Kind::Couch, deck(1, 1)), Ok(()));
         assert_eq!(
-            check(&[], Kind::Couch, 4, 0),
+            check(&[], Kind::Couch, aft(1, 2)),
             Err(Violation::Affix(Mount::Floor))
         );
     }
 
     #[test]
     fn the_floor_lamp_stands_on_the_floor_and_never_across_a_fold() {
-        assert_eq!(check(&[], Kind::FloorLamp, 4, 4), Ok(()));
-        assert_eq!(check(&[], Kind::FloorLamp, 4, 8), Ok(()));
+        assert_eq!(check(&[], Kind::FloorLamp, deck(1, 1)), Ok(()));
+        assert_eq!(check(&[], Kind::FloorLamp, deck(1, 5)), Ok(()));
         assert_eq!(
-            check(&[], Kind::FloorLamp, 5, 0),
+            check(&[], Kind::FloorLamp, aft(2, 2)),
             Err(Violation::Affix(Mount::Floor))
         );
-        assert_eq!(check(&[], Kind::FloorLamp, 5, 2), Err(Violation::Bounds));
+        assert_eq!(
+            check(&[], Kind::FloorLamp, aft(2, 0)),
+            Err(Violation::Bounds)
+        );
     }
 
     #[test]
     fn the_painting_hangs_on_any_wall_but_never_a_hole() {
-        assert_eq!(check(&[], Kind::Painting, 5, 1), Ok(()));
+        assert_eq!(check(&[], Kind::Painting, aft(2, 1)), Ok(()));
         // A flank too, now that the footprint is stated in the wall's
         // own frame: two cells along the port wall, one course tall.
-        assert_eq!(check(&[], Kind::Painting, 0, 6), Ok(()));
+        assert_eq!(check(&[], Kind::Painting, port(3, 2)), Ok(()));
         assert_eq!(
-            check(&[], Kind::Painting, 4, 4),
+            check(&[], Kind::Painting, deck(1, 1)),
             Err(Violation::Affix(Mount::Wall))
         );
-        assert_eq!(check(&[], Kind::Painting, 13, 9), Err(Violation::Bounds));
+        assert_eq!(
+            check(&[], Kind::Painting, starboard(6, 2)),
+            Err(Violation::Bounds)
+        );
     }
 
     /// Whether `(x, y)` is a wall cell one step off the deck — the
@@ -2384,26 +2436,34 @@ mod tests {
         // And a non-square kind now hangs on a flank, which is the berth
         // the retired athwart rule existed to refuse.
         for kind in [Kind::Window, Kind::Painting] {
-            assert_eq!(check(&[], kind, 5, 1), Ok(()), "{kind:?} on the aft wall");
-            assert_eq!(check(&[], kind, 0, 5), Ok(()), "{kind:?} on the port wall");
+            assert_eq!(
+                check(&[], kind, aft(2, 1)),
+                Ok(()),
+                "{kind:?} on the aft wall"
+            );
+            assert_eq!(
+                check(&[], kind, port(2, 2)),
+                Ok(()),
+                "{kind:?} on the port wall"
+            );
         }
         // A square footprint still cannot tell the flanks from the ends.
-        assert_eq!(check(&[], Kind::Porthole, 1, 8), Ok(()));
-        assert_eq!(check(&[], Kind::ChartTank, 11, 5), Ok(()));
+        assert_eq!(check(&[], Kind::Porthole, port(5, 1)), Ok(()));
+        assert_eq!(check(&[], Kind::ChartTank, starboard(2, 0)), Ok(()));
     }
 
     #[test]
     fn affix_is_checked_before_the_per_piece_scan() {
-        let stowed = [(Kind::RationBricks, 4, 4)];
+        let stowed = [(Kind::RationBricks, deck(1, 1))];
         assert_eq!(
-            check(&stowed, Kind::WallLamp, 4, 4),
+            check(&stowed, Kind::WallLamp, deck(1, 1)),
             Err(Violation::Affix(Mount::Wall))
         );
         // A canister lifted onto the baseboard right behind another one
         // is too close to it AND off the deck, and the mount is named.
-        let stowed = [(Kind::GasCanister, 6, 3)];
+        let stowed = [(Kind::GasCanister, deck(3, 0))];
         assert_eq!(
-            check(&stowed, Kind::GasCanister, 6, 2),
+            check(&stowed, Kind::GasCanister, aft(3, 0)),
             Err(Violation::Affix(Mount::Floor))
         );
     }
@@ -2413,35 +2473,32 @@ mod tests {
         assert!(lamp(Kind::CeilingLamp) && lamp(Kind::WallLamp) && lamp(Kind::FloorLamp));
         assert!(!lamp(Kind::Couch) && !lamp(Kind::Painting) && !lamp(Kind::PerfumeVial));
 
-        let pieces = board(&[(Kind::CeilingLamp, 16, 4)]);
+        let pieces = board(&[(Kind::CeilingLamp, deckhead(5, 1))]);
         assert!(lamp_lit(&pieces[0]));
-        assert!(lit_adjacent(RoomKind::Cabin, &pieces, CABIN, 15, 4));
-        assert!(lit_adjacent(RoomKind::Cabin, &pieces, CABIN, 17, 4));
-        assert!(lit_adjacent(RoomKind::Cabin, &pieces, CABIN, 16, 5));
-        assert!(!lit_adjacent(RoomKind::Cabin, &pieces, CABIN, 16, 4));
+        assert!(lit_cell(&pieces, CABIN, deckhead(6, 1)));
+        assert!(lit_cell(&pieces, CABIN, deckhead(4, 1)));
+        assert!(lit_cell(&pieces, CABIN, deckhead(5, 2)));
+        assert!(!lit_cell(&pieces, CABIN, deckhead(5, 1)));
         // Corners count: light reaches a cell's width, every way.
-        assert!(lit_adjacent(RoomKind::Cabin, &pieces, CABIN, 15, 3));
-        assert!(!lit_adjacent(RoomKind::Cabin, &pieces, CABIN, 18, 4));
+        assert!(lit_cell(&pieces, CABIN, deckhead(6, 0)));
+        assert!(!lit_cell(&pieces, CABIN, deckhead(3, 1)));
         // Light does not cross a seam.
-        assert!(!lit_adjacent(RoomKind::Cabin, &pieces, 1, 15, 4));
+        assert!(!lit_cell(&pieces, 1, deckhead(6, 1)));
 
         // A standing lamp lights from the ONE cell of deck it occupies,
         // however tall it is: a height is spent up the wall behind it
         // (`Kind::stature`) and never across the floor beside it.
-        let tall = board(&[(Kind::FloorLamp, 3, 4)]);
-        assert!(lit_adjacent(RoomKind::Cabin, &tall, CABIN, 4, 4));
-        assert!(lit_adjacent(RoomKind::Cabin, &tall, CABIN, 3, 3));
-        assert!(lit_adjacent(RoomKind::Cabin, &tall, CABIN, 3, 5));
-        assert!(lit_adjacent(RoomKind::Cabin, &tall, CABIN, 4, 5), "corner");
-        assert!(lit_adjacent(RoomKind::Cabin, &tall, CABIN, 4, 3), "corner");
-        assert!(
-            !lit_adjacent(RoomKind::Cabin, &tall, CABIN, 5, 4),
-            "a cell away"
-        );
+        let tall = board(&[(Kind::FloorLamp, deck(0, 1))]);
+        assert!(lit_cell(&tall, CABIN, deck(1, 1)));
+        assert!(lit_cell(&tall, CABIN, deck(0, 0)));
+        assert!(lit_cell(&tall, CABIN, deck(0, 2)));
+        assert!(lit_cell(&tall, CABIN, deck(1, 2)), "corner");
+        assert!(lit_cell(&tall, CABIN, deck(1, 0)), "corner");
+        assert!(!lit_cell(&tall, CABIN, deck(2, 1)), "a cell away");
 
         // Non-lamps light nothing.
-        let art = board(&[(Kind::Painting, 5, 1)]);
-        assert!(!lit_adjacent(RoomKind::Cabin, &art, CABIN, 7, 1));
+        let art = board(&[(Kind::Painting, aft(2, 1))]);
+        assert!(!lit_cell(&art, CABIN, aft(4, 1)));
     }
 
     /// The window family, and what makes it one: every size mounts on a
@@ -2507,38 +2564,41 @@ mod tests {
     #[test]
     fn dressing_rules_cover_the_surface_and_nothing_else() {
         let rooms = ship();
-        let laid = |kind, x, y| {
-            cell(kind, x, y).map_or(Err(Violation::Bounds), |spot| {
+        let laid = |kind, at| {
+            cell(kind, at).map_or(Err(Violation::Bounds), |spot| {
                 dressing_check(&rooms, kind, spot)
             })
         };
-        assert_eq!(laid(Kind::Rug, 4, 7), Ok(()));
-        assert_eq!(laid(Kind::Rug, 5, 1), Err(Violation::Affix(Mount::Floor)));
-        assert_eq!(laid(Kind::Rug, 10, 7), Err(Violation::Bounds));
-        assert_eq!(laid(Kind::PaintTin, 5, 0), Ok(()));
-        assert_eq!(laid(Kind::LuminousPaint, 4, 4), Ok(()));
-        let rug_at = |x, y| cell(Kind::Rug, x, y).expect("on the deck").laid();
-        let couch_at = |x, y| cell(Kind::Couch, x, y).expect("on the deck").hold();
+        assert_eq!(laid(Kind::Rug, deck(1, 4)), Ok(()));
+        assert_eq!(
+            laid(Kind::Rug, aft(2, 1)),
+            Err(Violation::Affix(Mount::Floor))
+        );
+        assert_eq!(laid(Kind::Rug, deck(7, 4)), Err(Violation::Bounds));
+        assert_eq!(laid(Kind::PaintTin, aft(2, 2)), Ok(()));
+        assert_eq!(laid(Kind::LuminousPaint, deck(1, 1)), Ok(()));
+        let rug_at = |at| cell(Kind::Rug, at).expect("on the deck").laid();
+        let couch_at = |at| cell(Kind::Couch, at).expect("on the deck").hold();
         let rug = Piece {
             id: 2,
             kind: Kind::Rug,
             variant: 0,
             gnawed: false,
-            loc: rug_at(4, 7),
+            loc: rug_at(deck(1, 4)),
         };
         let couch = Piece {
             id: 3,
             kind: Kind::Couch,
             variant: 0,
             gnawed: false,
-            loc: couch_at(3, 3),
+            loc: couch_at(deck(0, 0)),
         };
         assert_eq!(first_fit(&rooms, &[], 9, Kind::Rug), None);
         assert_eq!(dress_fit(&rooms, &[], 9, Kind::Couch), None);
         // The first deck corner is under the couch, so the rug goes beside
         // it: free space first.
         let first = dress_fit(&rooms, &[], 9, Kind::Rug).expect("bare deck");
-        assert_eq!(Some(first), cell(Kind::Rug, 3, 3));
+        assert_eq!(Some(first), cell(Kind::Rug, deck(0, 0)));
         let beside = dress_fit(&rooms, &[rug, couch], 9, Kind::Rug).expect("bare deck");
         assert_ne!(beside, first, "the game lays no rug under a couch");
         assert!(clear(&rooms, &[rug, couch], 9, Kind::Rug, beside.laid()));
@@ -2551,30 +2611,23 @@ mod tests {
             kind: Kind::LuminousPaint,
             variant: 0,
             gnawed: false,
-            loc: cell(Kind::LuminousPaint, 5, 1).expect("on the wall").laid(),
+            loc: cell(Kind::LuminousPaint, aft(2, 1))
+                .expect("on the wall")
+                .laid(),
         };
-        assert!(lit_adjacent(RoomKind::Cabin, &[coat], CABIN, 6, 1));
-        assert!(lit_adjacent(RoomKind::Cabin, &[coat], CABIN, 5, 0));
-        assert!(
-            !lit_adjacent(RoomKind::Cabin, &[coat], CABIN, 5, 1),
-            "never inside"
-        );
-        assert!(
-            lit_adjacent(RoomKind::Cabin, &[coat], CABIN, 6, 0),
-            "corners count"
-        );
-        assert!(
-            !lit_adjacent(RoomKind::Cabin, &[coat], CABIN, 7, 1),
-            "a cell away"
-        );
+        assert!(lit_cell(&[coat], CABIN, aft(3, 1)));
+        assert!(lit_cell(&[coat], CABIN, aft(2, 2)));
+        assert!(!lit_cell(&[coat], CABIN, aft(2, 1)), "never inside");
+        assert!(lit_cell(&[coat], CABIN, aft(3, 2)), "corners count");
+        assert!(!lit_cell(&[coat], CABIN, aft(4, 1)), "a cell away");
         let tin = Piece {
             id: 1,
             kind: Kind::PaintTin,
             variant: 0,
             gnawed: false,
-            loc: cell(Kind::PaintTin, 7, 1).expect("on the wall").laid(),
+            loc: cell(Kind::PaintTin, aft(4, 1)).expect("on the wall").laid(),
         };
-        assert!(!lit_adjacent(RoomKind::Cabin, &[tin], CABIN, 6, 1));
+        assert!(!lit_cell(&[tin], CABIN, aft(3, 1)));
     }
 
     /// Ownership is a function of tile class, and nothing else.
@@ -2584,7 +2637,9 @@ mod tests {
         let trade = rooms
             .spawn(RoomKind::Trade, CABIN)
             .expect("a trade room attaches");
-        let at = |x, y| {
+        // A vial on the trade room's own deck cell `(i, j)`.
+        let at = |i, j| {
+            let (x, y) = RoomKind::Trade.deck_cell(i, j);
             let (x, y, turn) =
                 anchored(RoomKind::Trade, Kind::PerfumeVial, fine(x), fine(y)).expect("on the net");
             Loc::Hold {
@@ -2598,16 +2653,18 @@ mod tests {
         // The trade room's aft floor row is its own stock; its front
         // floor row is the chalked offer square; the deck between is
         // ordinary, and so is everything aboard.
-        assert!(!owned(at(5, 3)));
-        assert!(owned(at(3, 6)));
-        assert!(owned(at(3, 4)));
+        assert!(!owned(at(2, 0)));
+        assert!(owned(at(0, 3)));
+        assert!(owned(at(0, 1)));
         // **Except the two cells its own door stands on**, which the
         // doorstep law hands back to the room's ordinary class: a body
         // walking in lands on deck it may use, and the shopfront starts
         // beside the door rather than under it.
-        assert!(owned(at(3, 3)));
-        assert!(owned(at(4, 3)));
-        assert!(owned(cell(Kind::PerfumeVial, 4, 4).expect("aboard").hold()));
+        assert!(owned(at(0, 0)));
+        assert!(owned(at(1, 0)));
+        assert!(owned(
+            cell(Kind::PerfumeVial, deck(1, 1)).expect("aboard").hold()
+        ));
     }
 
     /// A held piece never answers for its own old berth: a canister
@@ -2616,9 +2673,9 @@ mod tests {
     #[test]
     fn held_piece_ignores_its_own_footprint() {
         let rooms = ship();
-        let pieces = board(&[(Kind::GasCanister, 4, 4)]);
-        for (x, y) in [(4, 4), (5, 4)] {
-            let spot = cell(Kind::GasCanister, x, y).expect("on the deck");
+        let pieces = board(&[(Kind::GasCanister, deck(1, 1))]);
+        for at in [deck(1, 1), deck(2, 1)] {
+            let spot = cell(Kind::GasCanister, at).expect("on the deck");
             assert_eq!(
                 placement_check(&rooms, &pieces, 0, Kind::GasCanister, spot),
                 Ok(())
@@ -2897,12 +2954,14 @@ mod tests {
     #[test]
     fn tidy_prefers_free_ground_and_settles_for_legal() {
         let rooms = ship();
-        let crate_at = |x, y| cell(Kind::PerfumeVial, x, y).expect("on the deck");
-        let board = board(&[(Kind::PerfumeVial, 4, 4)]);
-        let taken = crate_at(4, 4).hold();
-        let free = crate_at(5, 4).hold();
+        let crate_at = |at| cell(Kind::PerfumeVial, at).expect("on the deck");
+        let board = board(&[(Kind::PerfumeVial, deck(1, 1))]);
+        let taken = crate_at(deck(1, 1)).hold();
+        let free = crate_at(deck(2, 1)).hold();
         // A wall spot first, which the arbiter refuses a vial outright.
-        let wall = cell(Kind::PerfumeVial, 5, 1).expect("on the wall").hold();
+        let wall = cell(Kind::PerfumeVial, aft(2, 1))
+            .expect("on the wall")
+            .hold();
         assert_eq!(
             tidy(&rooms, &board, 9, Kind::PerfumeVial, [wall, taken, free]),
             Some(free)
@@ -2997,18 +3056,21 @@ mod tests {
     fn cryo_reaches_the_hull_within_a_sixteenth_and_not_a_unit_more() {
         let (fx, fy, fw, _) = RoomKind::Cabin.floor_rect();
         let (left, top, right) = (fine(fx), fine(fy), fine(fx + fw));
+        // The deck's middle, three cells in on each axis, and its second
+        // row.
+        let (mid_x, mid_y, second) = (fine(fx + 3), fine(fy + 3), fine(fy + 1));
         let reach = u16::try_from(HULL_TOUCH).expect("a sixteenth");
         let core = |x, y, turn| check_at(&[], Kind::CryoCore, spot(x, y, turn));
-        assert_eq!(core(left + 128, fine(6), Turn::ZERO), Ok(()));
-        assert_eq!(core(left + 128 + reach, fine(6), Turn::ZERO), Ok(()));
+        assert_eq!(core(left + 128, mid_y, Turn::ZERO), Ok(()));
+        assert_eq!(core(left + 128 + reach, mid_y, Turn::ZERO), Ok(()));
         assert_eq!(
-            core(left + 128 + reach + 1, fine(6), Turn::ZERO),
+            core(left + 128 + reach + 1, mid_y, Turn::ZERO),
             Err(Violation::Cryo)
         );
-        assert_eq!(core(right - 128, fine(4) + 3, Turn::ZERO), Ok(()));
-        assert_eq!(core(fine(6) + 3, top + 128 + reach, Turn::ZERO), Ok(()));
+        assert_eq!(core(right - 128, second + 3, Turn::ZERO), Ok(()));
+        assert_eq!(core(mid_x + 3, top + 128 + reach, Turn::ZERO), Ok(()));
         assert_eq!(
-            core(fine(6) + 3, top + 129 + reach, Turn::ZERO),
+            core(mid_x + 3, top + 129 + reach, Turn::ZERO),
             Err(Violation::Cryo)
         );
         // Turned an eighth, the core reaches the wall with a corner: its
@@ -3017,9 +3079,9 @@ mod tests {
             .aabb()
             .x1;
         let out = u16::try_from(corner).expect("a hand's breadth");
-        assert_eq!(core(left + out + reach, fine(6), EIGHTH), Ok(()));
+        assert_eq!(core(left + out + reach, mid_y, EIGHTH), Ok(()));
         assert_eq!(
-            core(left + out + reach + 1, fine(6), EIGHTH),
+            core(left + out + reach + 1, mid_y, EIGHTH),
             Err(Violation::Cryo)
         );
     }
@@ -3040,34 +3102,39 @@ mod tests {
                 Err("crowded")
             }
         };
-        let (_, fy, _, _) = RoomKind::Cabin.floor_rect();
+        let (fx, fy, _, _) = RoomKind::Cabin.floor_rect();
         let wall = fine(fy);
-        let painting = spot(fine(6), fine(1) + 128, Turn::ZERO);
+        // A painting on the aft wall's second course, centred on the seam
+        // between its third and fourth cells; a cabinet standing in front
+        // of the fourth, and one cell further along.
+        let (_, row) = aft(3, 1);
+        let (seam, beside) = (fine(fx + 3), fine(fx + 4));
+        let painting = spot(seam, fine(row) + 128, Turn::ZERO);
         let cabinet = |x, top: u16| at(0, Kind::Cabinet, x, top + 128, Turn::ZERO);
-        let near = [cabinet(fine(6) + 128, wall + 255)];
+        let near = [cabinet(seam + 128, wall + 255)];
         assert_eq!(check_at(&near, Kind::Painting, painting), Err("crowded"));
-        let clear = [cabinet(fine(6) + 128, wall + 256)];
+        let clear = [cabinet(seam + 128, wall + 256)];
         assert_eq!(check_at(&clear, Kind::Painting, painting), Ok(()));
         // And symmetrically, hanging first.
-        let hung = [at(0, Kind::Painting, fine(6), fine(1) + 128, Turn::ZERO)];
+        let hung = [at(0, Kind::Painting, seam, fine(row) + 128, Turn::ZERO)];
         let standing = |x, top: u16| spot(x, top + 128, Turn::ZERO);
         assert_eq!(
-            check_at(&hung, Kind::Cabinet, standing(fine(6) + 128, wall + 255)),
+            check_at(&hung, Kind::Cabinet, standing(seam + 128, wall + 255)),
             Err("crowded")
         );
         assert_eq!(
-            check_at(&hung, Kind::Cabinet, standing(fine(6) + 128, wall + 256)),
+            check_at(&hung, Kind::Cabinet, standing(seam + 128, wall + 256)),
             Ok(())
         );
         // The shadow is as wide as the piece runs along the seam: a
         // cabinet slid a unit past the painting's end clears it.
         assert_eq!(
-            check_at(&hung, Kind::Cabinet, standing(fine(7) + 128, wall)),
+            check_at(&hung, Kind::Cabinet, standing(beside + 128, wall)),
             Ok(()),
             "flush beside the painting's end"
         );
         assert_eq!(
-            check_at(&hung, Kind::Cabinet, standing(fine(7) + 127, wall)),
+            check_at(&hung, Kind::Cabinet, standing(beside + 127, wall)),
             Err("crowded")
         );
         // Turned an eighth, the cabinet's shadow is its corners' span on
@@ -3081,20 +3148,20 @@ mod tests {
         // Its shadow begins at its own left corner: flush beside the
         // painting's end on the seam is clear, a unit over is not.
         assert_eq!(
-            check_at(&hung, Kind::Cabinet, turned(fine(7) + ex, 0)),
+            check_at(&hung, Kind::Cabinet, turned(beside + ex, 0)),
             Ok(())
         );
         assert_eq!(
-            check_at(&hung, Kind::Cabinet, turned(fine(7) + ex - 1, 0)),
+            check_at(&hung, Kind::Cabinet, turned(beside + ex - 1, 0)),
             Err("crowded")
         );
         // And a cell out from its nearest corner, it shadows nothing.
         assert_eq!(
-            check_at(&hung, Kind::Cabinet, turned(fine(7) + ex - 1, 255)),
+            check_at(&hung, Kind::Cabinet, turned(beside + ex - 1, 255)),
             Err("crowded")
         );
         assert_eq!(
-            check_at(&hung, Kind::Cabinet, turned(fine(7) + ex - 1, 256)),
+            check_at(&hung, Kind::Cabinet, turned(beside + ex - 1, 256)),
             Ok(())
         );
     }

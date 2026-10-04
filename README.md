@@ -144,7 +144,7 @@ guild server whose counters cannot double-count. The architecture and its
 required network-failure properties live in
 [docs/NETWORKING.md](docs/NETWORKING.md); `cargo run --example convoy` runs
 a six-client crew over a deliberately hostile simulated network. The live
-multiplayer cabin is a later slice; the protocol it will speak (`SNP5`)
+multiplayer cabin is a later slice; the protocol it will speak (`SNP6`)
 is already under test.
 
 Sound is synthesised at startup in `src/synth.rs` — no audio assets —

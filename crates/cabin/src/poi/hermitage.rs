@@ -327,11 +327,16 @@ const CELL: [Fitting; 27] = [
     // ---- the rock itself ----
     // Two lumps left in the ceiling where whoever hollowed this out
     // stopped hollowing. A room cut from an asteroid does not have flat
-    // corners, and two bosses is the cheapest honest way to say so.
+    // corners, and two bosses is the cheapest honest way to say so. The
+    // port one used to hang over the aft third, in front of what was a
+    // band of bare rock over the goods' wall; the walls reach the
+    // deckhead now and that band is the top course of the goods' own
+    // wall, so the boss hangs a pace forward of it, out of the sight of
+    // anything the hermits shelve up there.
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::SOOT),
-        Vec3::new(-0.62, 0.86, 0.400),
+        Vec3::new(-0.62, 0.86, 0.100),
         Vec3::new(0.30, 0.14, 0.30),
     )
     .seated(Seat::Face(Face::Deckhead)),

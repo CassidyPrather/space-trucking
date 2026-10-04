@@ -74,7 +74,9 @@ pub const TICK_DT: f32 = 1.0 / 60.0;
 /// when the cabin widened, and again when every room got a **net lane** of
 /// its own: [`MAX_ROOMS`] lanes side by side, each big enough for the
 /// widest room net, so a room's logical rects are a pure function of its id.
-pub const WORLD_W: f32 = 8642.0;
+/// It is where the last lane ends now ([`room::LANES_EAST`]) rather than a
+/// number of its own, so a net that grows grows the world with it.
+pub const WORLD_W: f32 = room::LANES_EAST;
 
 /// Logical world height.
 pub const WORLD_H: f32 = 600.0;
@@ -145,50 +147,62 @@ fn home_familiar() -> [u32; POI_COUNT] {
 /// Starter cargo and where it is stowed in the cabin: trade goods low in
 /// the room, and the ship's fittings — light and instruments alike — hung
 /// at their traditional berths, every one a movable piece.
-const STARTER_CARGO: [(Kind, u8, u8); 11] = [
-    (Kind::ScrapAlloy, 4, 5),
-    (Kind::PerfumeVial, 3, 3),
-    (Kind::BrinePearls, 6, 3),
-    // The ship's two lights. Every lumen aboard is cargo — lights-out is
-    // a legal state and the emissive fittings carry it (docs/BAY.md,
-    // "Lights are cargo") — so both hang where losing them is a choice
-    // and not an accident. The ceiling chart folds over the starboard
-    // cornice, so its columns run BACKWARDS against the floor's:
-    // (18, 6) is the pendant over floor cell (6, 6), the middle of the
-    // wider room.
-    (Kind::CeilingLamp, 18, 6),
-    // And a sconce at the port cornice, over the porthole. A hull that
-    // launched with one lamp launched with one *kind* of lamp, and a
-    // crew that never saw a second one has no reason to believe a wall
-    // takes light at all; the pendant lights the middle of the deck and
-    // leaves the flanks to the starlight floor, which is where the
-    // playtest read black. Column 0 of the port chart is the cornice —
-    // that wall's courses run outward from the deck — so the arm hangs
-    // high, clear of the doorway two cells aft and clear of the
-    // baseboard that standing floor cargo shadows.
-    (Kind::WallLamp, 0, 8),
-    // The instruments (BAY.md, "Instruments are cargo"): the window at
-    // its old cornice punch-out, the gauges and the lever clustered on
-    // the front wall beside it, and the chart tank on the starboard
-    // wall by the burner doorway — off the baseboard ring, and behind
-    // the floor cells flanking the doorway, where tall furniture
-    // rarely stands, so cargo and the tank's housing seldom fight over
-    // the wall. Every one of them clears the cabin's four doorways,
-    // which the threshold rule keeps empty.
-    (Kind::Window, 4, 12),
-    // And the porthole every hull of this class was launched with,
-    // mid-course on the port flank where a bunk would be. It is not an
-    // instrument — nobody hangs one to fly by — but a working ship has
-    // more than one hole in it, and a starter board with exactly one
-    // window is a starter board that never exercises the case the
-    // exterior was rebuilt for (docs/ART_DIRECTION_3D.md, "One wall,
-    // one sky"). Two windows, two walls, two skies, from the first boot.
-    (Kind::Porthole, 1, 8),
-    (Kind::ChartTank, 12, 5),
-    (Kind::EtaGauge, 5, 11),
-    (Kind::DestPreview, 3, 12),
-    (Kind::LaunchLever, 5, 10),
-];
+///
+/// Each is the net cell its footprint's top-left corner stands in, named
+/// by the place in the room it is — a deck cell, the deckhead over one, a
+/// course of a wall counted up from the deck — and never by a row of the
+/// net, which moves whenever the walls do. That is what kept every one of
+/// them where it hung when the walls grew a course to meet the deckhead.
+const STARTER_CARGO: [(Kind, (u8, u8)); 11] = {
+    const CABIN_NET: RoomKind = RoomKind::Cabin;
+    // The walls by their port slots (`room::Port::Door`).
+    const STARBOARD: u8 = 1;
+    const FRONT: u8 = 2;
+    const PORT: u8 = 3;
+    [
+        (Kind::ScrapAlloy, CABIN_NET.deck_cell(1, 2)),
+        (Kind::PerfumeVial, CABIN_NET.deck_cell(0, 0)),
+        (Kind::BrinePearls, CABIN_NET.deck_cell(3, 0)),
+        // The ship's two lights. Every lumen aboard is cargo — lights-out
+        // is a legal state and the emissive fittings carry it
+        // (docs/BAY.md, "Lights are cargo") — so both hang where losing
+        // them is a choice and not an accident. The pendant hangs over
+        // deck cell (3, 3), the middle of the wider room.
+        (Kind::CeilingLamp, CABIN_NET.deckhead_cell(3, 3)),
+        // And a sconce high on the port flank, over the porthole. A hull
+        // that launched with one lamp launched with one *kind* of lamp,
+        // and a crew that never saw a second one has no reason to believe
+        // a wall takes light at all; the pendant lights the middle of the
+        // deck and leaves the flanks to the starlight floor, which is
+        // where the playtest read black. It hangs on the third course —
+        // what was the cornice until the walls reached the deckhead —
+        // clear of the doorway two cells aft and clear of the baseboard
+        // that standing floor cargo shadows.
+        (Kind::WallLamp, CABIN_NET.wall_cell(PORT, 5, 2)),
+        // The instruments (BAY.md, "Instruments are cargo"): the window
+        // at its old cornice punch-out, the gauges and the lever
+        // clustered on the front wall beside it, and the chart tank on
+        // the starboard wall by the burner doorway — off the baseboard
+        // ring, and behind the floor cells flanking the doorway, where
+        // tall furniture rarely stands, so cargo and the tank's housing
+        // seldom fight over the wall. Every one of them clears the
+        // cabin's four doorways, which the threshold rule keeps empty.
+        (Kind::Window, CABIN_NET.wall_cell(FRONT, 1, 2)),
+        // And the porthole every hull of this class was launched with,
+        // mid-course on the port flank where a bunk would be. It is not
+        // an instrument — nobody hangs one to fly by — but a working ship
+        // has more than one hole in it, and a starter board with exactly
+        // one window is a starter board that never exercises the case
+        // the exterior was rebuilt for (docs/ART_DIRECTION_3D.md, "One
+        // wall, one sky"). Two windows, two walls, two skies, from the
+        // first boot.
+        (Kind::Porthole, CABIN_NET.wall_cell(PORT, 5, 1)),
+        (Kind::ChartTank, CABIN_NET.wall_cell(STARBOARD, 2, 1)),
+        (Kind::EtaGauge, CABIN_NET.wall_cell(FRONT, 2, 1)),
+        (Kind::DestPreview, CABIN_NET.wall_cell(FRONT, 0, 2)),
+        (Kind::LaunchLever, CABIN_NET.wall_cell(FRONT, 2, 0)),
+    ]
+};
 
 /// A 2D vector, kept deliberately tiny: the sim needs four operations and a
 /// length, and pulling in a math crate for that would be silly.
@@ -603,7 +617,7 @@ impl Sim {
         // cell, at the turn the game gives a body there.
         let pieces: Vec<Piece> = STARTER_CARGO
             .iter()
-            .filter_map(|&(kind, x, y)| {
+            .filter_map(|&(kind, (x, y))| {
                 let (x, y, turn) =
                     cargo::anchored(RoomKind::Cabin, kind, cargo::fine(x), cargo::fine(y))?;
                 let piece = Piece {
@@ -2827,13 +2841,57 @@ mod tests {
     }
 
     /// The world point at the middle of one room's net cell.
-    fn cell_center(room: RoomId, x: u8, y: u8) -> Vec2 {
+    fn cell_center(room: RoomId, (x, y): (u8, u8)) -> Vec2 {
         rect_center(layout::cell_rect(room, x, y))
     }
 
     /// The cabin's own cells, which most tests mean when they say a cell.
-    fn cabin(x: u8, y: u8) -> Vec2 {
-        cell_center(CABIN, x, y)
+    fn cabin(at: (u8, u8)) -> Vec2 {
+        cell_center(CABIN, at)
+    }
+
+    /// The middle of a cell drawn from anywhere on `room`'s net, a room
+    /// of kind `kind`: where a monkey aims when it aims at a room.
+    fn anywhere(rng: &mut fastrand::Rng, room: RoomId, kind: RoomKind) -> Vec2 {
+        let (cols, rows) = kind.grid();
+        cell_center(room, (rng.u8(0..cols), rng.u8(0..rows)))
+    }
+
+    /// The cabin's deck cell `(i, j)`, as a cell of its net. The tests
+    /// name every cell by the place in its room it is — a deck cell, a
+    /// course of a wall counted up from the deck — so a wall that grows a
+    /// course moves none of them.
+    const fn deck(i: u8, j: u8) -> (u8, u8) {
+        RoomKind::Cabin.deck_cell(i, j)
+    }
+
+    /// Course `course` of the cabin's aft wall, `along` cells from its
+    /// port end.
+    const fn aft(along: u8, course: u8) -> (u8, u8) {
+        RoomKind::Cabin.wall_cell(0, along, course)
+    }
+
+    /// Course `course` of the cabin's starboard wall, `along` cells from
+    /// its aft end.
+    const fn starboard(along: u8, course: u8) -> (u8, u8) {
+        RoomKind::Cabin.wall_cell(1, along, course)
+    }
+
+    /// Course `course` of the cabin's port wall, `along` cells from its
+    /// aft end.
+    const fn port(along: u8, course: u8) -> (u8, u8) {
+        RoomKind::Cabin.wall_cell(3, along, course)
+    }
+
+    /// The furnace room's deck cell `(i, j)`.
+    const fn burner_deck(i: u8, j: u8) -> (u8, u8) {
+        RoomKind::Burner.deck_cell(i, j)
+    }
+
+    /// Course `course` of the furnace room's aft wall, `along` cells
+    /// from its port end.
+    const fn burner_aft(along: u8, course: u8) -> (u8, u8) {
+        RoomKind::Burner.wall_cell(0, along, course)
     }
 
     /// **Where to aim to set a piece down at `spot`**: its centre, because
@@ -2845,7 +2903,7 @@ mod tests {
     /// **The spot `kind` takes in `room` with its footprint's top-left on
     /// whole cell `(x, y)`**, at the turn the game gives a body there: the
     /// berth the grid would have called "cell `(x, y)`".
-    fn cell_spot(sim: &Sim, room: RoomId, kind: Kind, x: u8, y: u8) -> Spot {
+    fn cell_spot(sim: &Sim, room: RoomId, kind: Kind, (x, y): (u8, u8)) -> Spot {
         sim.cell_spot(room, kind, x, y)
             .expect("a cell of that room's net")
     }
@@ -2899,8 +2957,8 @@ mod tests {
 
     /// Test scaffolding: berth an extra piece in the cabin, its
     /// footprint's top-left on whole cell `(x, y)`.
-    fn inject_hold(sim: &mut Sim, kind: Kind, x: u8, y: u8) -> u32 {
-        let spot = cell_spot(sim, CABIN, kind, x, y);
+    fn inject_hold(sim: &mut Sim, kind: Kind, (x, y): (u8, u8)) -> u32 {
+        let spot = cell_spot(sim, CABIN, kind, (x, y));
         let id = inject_at(sim, kind, spot.hold());
         assert!(
             placement_legal(&sim.rooms, &sim.pieces, id, kind, spot),
@@ -2976,8 +3034,8 @@ mod tests {
     /// monkeys meet skitters and nibbles quickly.
     const fn inject_rat(sim: &mut Sim) {
         sim.rats.rat = Some(Rat {
-            cell: (5, 5),
-            prev_cell: (5, 5),
+            cell: deck(2, 2),
+            prev_cell: deck(2, 2),
             moved_at: 0,
             next_move: 60,
             next_nibble: 120,
@@ -2992,18 +3050,17 @@ mod tests {
 
     /// The world point of the `n`th offer tile of the room alongside.
     fn offer(sim: &Sim, room: RoomId, n: usize) -> Vec2 {
-        let (x, y) = tiles(sim, room, Tile::Offer)[n];
-        cell_center(room, x, y)
+        cell_center(room, tiles(sim, room, Tile::Offer)[n])
     }
 
     /// The world point of the room's handshake fixture.
     fn handshake(sim: &Sim, room: RoomId) -> Vec2 {
-        let (x, y) = sim
+        let at = sim
             .rooms
             .kind(room)
             .and_then(RoomKind::handshake)
             .expect("that room has a handshake");
-        cell_center(room, x, y)
+        cell_center(room, at)
     }
 
     /// Ids of the room's own goods, in tile order.
@@ -3324,19 +3381,19 @@ mod tests {
     #[test]
     fn drag_places_and_rejects() {
         let mut sim = cleared(11);
-        let id = inject_hold(&mut sim, Kind::PerfumeVial, 5, 5);
-        drag(&mut sim, cabin(5, 5), cabin(6, 6));
+        let id = inject_hold(&mut sim, Kind::PerfumeVial, deck(2, 2));
+        drag(&mut sim, cabin(deck(2, 2)), cabin(deck(3, 3)));
         let moved = sim.pieces().iter().find(|p| p.id == id).unwrap();
         assert_eq!(
             moved.loc,
-            cell_spot(&sim, CABIN, Kind::PerfumeVial, 6, 6).hold()
+            cell_spot(&sim, CABIN, Kind::PerfumeVial, deck(3, 3)).hold()
         );
         // A wall cell refuses floor cargo, and names the mount.
-        drag(&mut sim, cabin(6, 6), cabin(5, 1));
+        drag(&mut sim, cabin(deck(3, 3)), cabin(aft(2, 1)));
         assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
         assert_eq!(sim.last_violation(), Some(Violation::Affix(Mount::Floor)));
         // And the doorway refuses everything, by name.
-        drag(&mut sim, cabin(6, 6), cabin(11, 3));
+        drag(&mut sim, cabin(deck(3, 3)), cabin(starboard(0, 0)));
         assert_eq!(sim.last_violation(), Some(Violation::Threshold));
     }
 
@@ -3373,8 +3430,8 @@ mod tests {
     /// depart for the outer ring under warp.
     fn odyssey_script(sim: &Sim) -> Vec<(f32, InputFrame)> {
         let mut s = Vec::new();
-        drag_frames(&mut s, cabin(3, 3), offer(sim, TRADE, 0));
-        drag_frames(&mut s, cabin(6, 3), offer(sim, TRADE, 1));
+        drag_frames(&mut s, cabin(deck(0, 0)), offer(sim, TRADE, 0));
+        drag_frames(&mut s, cabin(deck(3, 0)), offer(sim, TRADE, 1));
         // Mark the first good on the station's shelf: I want that one.
         let stock = stock_ids(sim, TRADE);
         let marked = sim
@@ -3445,14 +3502,14 @@ mod tests {
     fn save_load_continues_docked_with_a_proposal_standing() {
         let mut sim = Sim::new(22);
         let to = offer(&sim, TRADE, 0);
-        drag(&mut sim, cabin(3, 3), to);
+        drag(&mut sim, cabin(deck(0, 0)), to);
         assert_save_continues(sim, 120);
     }
 
     #[test]
     fn save_load_continues_mid_omen() {
         let mut sim = cleared(0x00C0_FFEE);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 4);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, deck(1, 1));
         launch(&mut sim, SATURN);
         let mut fired = false;
         for _ in 0..leg_of(&sim) + 10 {
@@ -3472,8 +3529,8 @@ mod tests {
     #[test]
     fn save_load_continues_mid_carry_with_piece_at_origin() {
         let mut sim = cleared(23);
-        let id = inject_hold(&mut sim, Kind::PerfumeVial, 5, 5);
-        let from = cabin(5, 5);
+        let id = inject_hold(&mut sim, Kind::PerfumeVial, deck(2, 2));
+        let from = cabin(deck(2, 2));
         sim.advance(0.0, &press_at(from.x, from.y));
         assert!(sim.held(0).is_some());
         let restored = Sim::from_save(&sim.save_string()).expect("mid-carry save parses");
@@ -3481,7 +3538,7 @@ mod tests {
         let piece = restored.pieces().iter().find(|p| p.id == id).unwrap();
         assert_eq!(
             piece.loc,
-            cell_spot(&sim, CABIN, Kind::PerfumeVial, 5, 5).hold()
+            cell_spot(&sim, CABIN, Kind::PerfumeVial, deck(2, 2)).hold()
         );
     }
 
@@ -3501,7 +3558,7 @@ mod tests {
     #[test]
     fn fast_forward_matches_stepwise_across_an_omen_jump() {
         let mut stepwise = cleared(0x0BAD_F00D);
-        inject_hold(&mut stepwise, Kind::SuspiciousCrate, 4, 4);
+        inject_hold(&mut stepwise, Kind::SuspiciousCrate, deck(1, 1));
         launch(&mut stepwise, SATURN);
         let mut jumped = stepwise.clone();
         let leg = leg_of(&stepwise);
@@ -3669,7 +3726,7 @@ mod tests {
                     // not carrying.
                     sim.advance(
                         0.0,
-                        &press_at(cell_center(id, x, y).x, cell_center(id, x, y).y),
+                        &press_at(cell_center(id, (x, y)).x, cell_center(id, (x, y)).y),
                     );
                     assert!(
                         sim.held(0).is_none(),
@@ -3677,7 +3734,7 @@ mod tests {
                     );
                     assert!(sim.marks().contains(&piece), "the press did not even mark");
                     // And a shift-press does not smuggle it out either.
-                    let at = cell_center(id, x, y);
+                    let at = cell_center(id, (x, y));
                     sim.advance(
                         0.0,
                         &InputFrame {
@@ -3738,7 +3795,7 @@ mod tests {
 
         // Propose the pearls: the room composes an answer out of stock.
         let to = offer(&sim, TRADE, 0);
-        drag(&mut sim, cabin(6, 3), to);
+        drag(&mut sim, cabin(deck(3, 0)), to);
         let composed = sim.composed();
         assert!(!composed.is_empty(), "a rich proposal must buy something");
         for id in &composed {
@@ -3763,7 +3820,7 @@ mod tests {
     fn a_mark_steers_the_offer_and_toggles_off_again() {
         let mut sim = Sim::new(32);
         let to = offer(&sim, TRADE, 0);
-        drag(&mut sim, cabin(6, 3), to);
+        drag(&mut sim, cabin(deck(3, 0)), to);
         let stock = stock_ids(&sim, TRADE);
         assert!(stock.len() >= 2, "this test wants a choice");
         let last = *stock.last().unwrap();
@@ -3801,7 +3858,7 @@ mod tests {
     #[test]
     fn the_hermitage_remembers_a_gift_forever() {
         let mut sim = cleared(41);
-        inject_hold(&mut sim, Kind::BrinePearls, 4, 4);
+        inject_hold(&mut sim, Kind::BrinePearls, deck(1, 1));
         wait_for(&mut sim, HERMITAGE);
         travel_to(&mut sim, HERMITAGE);
         assert_eq!(sim.karma(), 0);
@@ -3826,7 +3883,7 @@ mod tests {
     #[test]
     fn trading_a_kind_teaches_its_value() {
         let mut sim = cleared(42);
-        inject_hold(&mut sim, Kind::BrinePearls, 4, 4);
+        inject_hold(&mut sim, Kind::BrinePearls, deck(1, 1));
         travel_to(&mut sim, SATURN);
         assert!(!sim.kind_familiar(Kind::BrinePearls), "Saturn is new turf");
         let piece = *sim
@@ -3986,7 +4043,7 @@ mod tests {
         sim.occupied[0] = CABIN;
         // A proposal standing on the offer area strands the proposal.
         let to = offer(&sim, TRADE, 0);
-        drag(&mut sim, cabin(3, 3), to);
+        drag(&mut sim, cabin(deck(0, 0)), to);
         assert_eq!(sim.launch_gate(), Err(Refusal::Cargo));
         // Carrying it back aboard clears both.
         let piece = *sim
@@ -3995,7 +4052,7 @@ mod tests {
             .find(|p| p.kind == Kind::PerfumeVial)
             .unwrap();
         let from = rect_center(layout::piece_rect(sim.rooms(), &piece));
-        drag(&mut sim, from, cabin(3, 3));
+        drag(&mut sim, from, cabin(deck(0, 0)));
         assert_eq!(sim.launch_gate(), Ok(()));
     }
 
@@ -4010,7 +4067,7 @@ mod tests {
         sim.occupied[0] = CABIN;
         // Cargo of ours in the room refuses.
         let to = offer(&sim, TRADE, 0);
-        drag(&mut sim, cabin(3, 3), to);
+        drag(&mut sim, cabin(deck(0, 0)), to);
         assert_eq!(sim.part_check(TRADE), Err(Refusal::Cargo));
         // Take it back and the seam parts, taking the station's goods.
         let piece = *sim
@@ -4019,7 +4076,7 @@ mod tests {
             .find(|p| p.kind == Kind::PerfumeVial)
             .unwrap();
         let from = rect_center(layout::piece_rect(sim.rooms(), &piece));
-        drag(&mut sim, from, cabin(3, 3));
+        drag(&mut sim, from, cabin(deck(0, 0)));
         assert_eq!(sim.part_check(TRADE), Ok(()));
         let detach = InputFrame {
             detach: Some(TRADE),
@@ -4184,14 +4241,14 @@ mod tests {
                 // cross seams instead of flapping at empty world.
                 let target = match rng.u8(..6) {
                     0 => rect_center(layout::LAUNCH_LEVER),
-                    1 => cabin(rng.u8(0..22), rng.u8(0..13)),
-                    2 => cell_center(BURNER, rng.u8(0..14), rng.u8(0..9)),
-                    3 => cell_center(TRADE, rng.u8(0..16), rng.u8(0..11)),
+                    1 => anywhere(&mut rng, CABIN, RoomKind::Cabin),
+                    2 => anywhere(&mut rng, BURNER, RoomKind::Burner),
+                    3 => anywhere(&mut rng, TRADE, RoomKind::Trade),
                     4 => Vec2::new(rng.f32() * 800.0, rng.f32() * 600.0),
                     _ => {
                         let pieces = sim.pieces();
                         if pieces.is_empty() {
-                            cabin(5, 5)
+                            cabin(deck(2, 2))
                         } else {
                             let piece = pieces[rng.usize(..pieces.len())];
                             rect_center(layout::piece_rect(sim.rooms(), &piece))
@@ -4240,9 +4297,9 @@ mod tests {
                 let mut frames = [InputFrame::default(); MAX_CREW];
                 for frame in &mut frames {
                     let target = match rng.u8(..4) {
-                        0 => cabin(rng.u8(0..22), rng.u8(0..13)),
-                        1 => cell_center(BURNER, rng.u8(0..14), rng.u8(0..9)),
-                        2 => cell_center(TRADE, rng.u8(0..16), rng.u8(0..11)),
+                        0 => anywhere(&mut rng, CABIN, RoomKind::Cabin),
+                        1 => anywhere(&mut rng, BURNER, RoomKind::Burner),
+                        2 => anywhere(&mut rng, TRADE, RoomKind::Trade),
                         _ => {
                             let pieces = sim.pieces();
                             let piece = pieces[rng.usize(..pieces.len())];
@@ -4282,10 +4339,10 @@ mod tests {
     #[test]
     fn a_crate_set_in_furniture_stands_there_and_either_lifts() {
         let mut sim = cleared(61);
-        let couch = inject_hold(&mut sim, Kind::Couch, 5, 5);
-        let vial = inject_hold(&mut sim, Kind::PerfumeVial, 3, 3);
-        let inside = cabin(5, 5);
-        drag(&mut sim, cabin(3, 3), inside);
+        let couch = inject_hold(&mut sim, Kind::Couch, deck(2, 2));
+        let vial = inject_hold(&mut sim, Kind::PerfumeVial, deck(0, 0));
+        let inside = cabin(deck(2, 2));
+        drag(&mut sim, cabin(deck(0, 0)), inside);
         assert_eq!(sim.cues(), [Cue::Place], "a crate in a couch is a berth");
         let ground = |id: u32| {
             let piece = sim.pieces().iter().find(|p| p.id == id).copied().unwrap();
@@ -4310,7 +4367,7 @@ mod tests {
         sim.advance(0.0, &homeward());
         // The couch's other cell has no vial on it, so an aim at the vial
         // there is an aim at nothing, and the couch answers.
-        let beside = cabin(6, 5);
+        let beside = cabin(deck(3, 2));
         sim.advance(0.0, &aimed(beside, vial));
         assert_eq!(lifted(&sim), Some(couch));
         sim.advance(0.0, &homeward());
@@ -4336,12 +4393,12 @@ mod tests {
     #[test]
     fn dressings_lie_under_cargo_and_lift_out_from_under_it() {
         let mut sim = cleared(62);
-        let laid = cell_spot(&sim, CABIN, Kind::Rug, 4, 7).laid();
+        let laid = cell_spot(&sim, CABIN, Kind::Rug, deck(1, 4)).laid();
         let rug = inject_at(&mut sim, Kind::Rug, laid);
-        let couch = inject_hold(&mut sim, Kind::Couch, 4, 7);
+        let couch = inject_hold(&mut sim, Kind::Couch, deck(1, 4));
         let standing = sim.pieces().iter().find(|p| p.id == couch).unwrap().loc;
         // Unaimed, the couch standing on the rug takes the press.
-        let at = cabin(4, 7);
+        let at = cabin(deck(1, 4));
         sim.advance(0.0, &press_at(at.x, at.y));
         assert_eq!(
             sim.held(0).map(|held| held.piece),
@@ -4363,7 +4420,7 @@ mod tests {
         // turn a body by the front seam half round, and a drop never does.
         let to = Spot {
             turn: Turn::ZERO,
-            ..cell_spot(&sim, CABIN, Kind::Rug, 4, 9)
+            ..cell_spot(&sim, CABIN, Kind::Rug, deck(1, 6))
         };
         let point = berth_point(to);
         sim.advance(0.0, &release_at(point.x, point.y));
@@ -4383,21 +4440,33 @@ mod tests {
     #[test]
     fn the_hopper_is_reversible_and_rides_into_the_fire() {
         let mut sim = cleared(71);
-        let fuel = inject_hold(&mut sim, Kind::PerfumeVial, 5, 5);
+        let fuel = inject_hold(&mut sim, Kind::PerfumeVial, deck(2, 2));
         // Staging is an ordinary carry into an ordinary room.
-        drag(&mut sim, cabin(5, 5), cell_center(BURNER, 3, 3));
+        drag(
+            &mut sim,
+            cabin(deck(2, 2)),
+            cell_center(BURNER, burner_deck(0, 0)),
+        );
         assert_eq!(
             sim.pieces().iter().find(|p| p.id == fuel).unwrap().loc,
-            cell_spot(&sim, BURNER, Kind::PerfumeVial, 3, 3).hold()
+            cell_spot(&sim, BURNER, Kind::PerfumeVial, burner_deck(0, 0)).hold()
         );
         // Snatching it back out is an ordinary carry too.
-        drag(&mut sim, cell_center(BURNER, 3, 3), cabin(5, 5));
+        drag(
+            &mut sim,
+            cell_center(BURNER, burner_deck(0, 0)),
+            cabin(deck(2, 2)),
+        );
         assert!(matches!(
             sim.pieces().iter().find(|p| p.id == fuel).unwrap().loc,
             Loc::Hold { room: CABIN, .. }
         ));
         // Cast off with it staged and the stoker takes it on the beat.
-        drag(&mut sim, cabin(5, 5), cell_center(BURNER, 3, 3));
+        drag(
+            &mut sim,
+            cabin(deck(2, 2)),
+            cell_center(BURNER, burner_deck(0, 0)),
+        );
         launch(&mut sim, SATURN);
         let mut burned = false;
         for _ in 0..STOKE_PERIOD * 2 {
@@ -4418,13 +4487,12 @@ mod tests {
     #[test]
     fn fuel_waits_in_the_furnace_room_and_only_the_fire_takes_it() {
         let mut sim = cleared(72);
-        for (i, cell) in [(3_u8, 3_u8), (4, 3), (6, 3)].into_iter().enumerate() {
-            inject_hold(&mut sim, Kind::PerfumeVial, 3 + i as u8, 5);
-            drag(
-                &mut sim,
-                cabin(3 + i as u8, 5),
-                cell_center(BURNER, cell.0, cell.1),
-            );
+        for (i, cell) in [burner_deck(0, 0), burner_deck(1, 0), burner_deck(3, 0)]
+            .into_iter()
+            .enumerate()
+        {
+            inject_hold(&mut sim, Kind::PerfumeVial, deck(i as u8, 2));
+            drag(&mut sim, cabin(deck(i as u8, 2)), cell_center(BURNER, cell));
         }
         launch(&mut sim, SATURN);
         let staged = sim.pieces().len();
@@ -4450,8 +4518,12 @@ mod tests {
     #[test]
     fn the_fire_pushes_double_time() {
         let mut sim = cleared(73);
-        inject_hold(&mut sim, Kind::Fluff, 5, 5);
-        drag(&mut sim, cabin(5, 5), cell_center(BURNER, 3, 3));
+        inject_hold(&mut sim, Kind::Fluff, deck(2, 2));
+        drag(
+            &mut sim,
+            cabin(deck(2, 2)),
+            cell_center(BURNER, burner_deck(0, 0)),
+        );
         launch(&mut sim, SATURN);
         for _ in 0..STOKE_PERIOD + 5 {
             sim.advance(TICK_DT, &InputFrame::default());
@@ -4488,11 +4560,11 @@ mod tests {
         // So is the incinerator, whose whole net is hazard — a wall
         // instrument burns as readily as a couch, so it goes on the
         // furnace room's wall, and the fire does not care which.
-        drag(&mut sim, from, cell_center(BURNER, 5, 0));
+        drag(&mut sim, from, cell_center(BURNER, burner_aft(2, 2)));
         assert_eq!(sim.last_violation(), Some(Violation::Vital));
         // A spare aboard releases the rule.
-        inject_hold(&mut sim, Kind::ChartTank, 0, 5);
-        drag(&mut sim, from, cell_center(BURNER, 5, 0));
+        inject_hold(&mut sim, Kind::ChartTank, port(2, 2));
+        drag(&mut sim, from, cell_center(BURNER, burner_aft(2, 2)));
         assert!(matches!(
             sim.pieces().iter().find(|p| p.id == tank.id).unwrap().loc,
             Loc::Hold { room: BURNER, .. }
@@ -4502,9 +4574,9 @@ mod tests {
     #[test]
     fn the_humming_crate_refuses_the_fire() {
         let mut sim = cleared(82);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 4);
-        let from = cabin(4, 4);
-        drag(&mut sim, from, cell_center(BURNER, 3, 3));
+        inject_hold(&mut sim, Kind::SuspiciousCrate, deck(1, 1));
+        let from = cabin(deck(1, 1));
+        drag(&mut sim, from, cell_center(BURNER, burner_deck(0, 0)));
         assert_eq!(sim.last_violation(), Some(Violation::Suspicious));
     }
 
@@ -4592,7 +4664,7 @@ mod tests {
     #[test]
     fn the_casino_transmutes_losses_and_pays_winners_on_its_own_floor() {
         let mut sim = launched_with_encounter(EncounterKind::Casino);
-        inject_hold(&mut sim, Kind::BrinePearls, 4, 4);
+        inject_hold(&mut sim, Kind::BrinePearls, deck(1, 1));
         into_the_window(&mut sim);
         let parlor = sim.rooms().find(RoomKind::Parlor).expect("a parlor");
         let wager = *sim
@@ -4655,7 +4727,7 @@ mod tests {
     #[test]
     fn each_guild_docking_steals_the_crate_and_counts_it() {
         let mut sim = cleared(91);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 4);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, deck(1, 1));
         travel_to(&mut sim, SATURN);
         travel_to(&mut sim, GUILD);
         assert_eq!(sim.deliveries(), 1);
@@ -4693,8 +4765,8 @@ mod tests {
     #[test]
     fn three_mysterious_crates_summon_and_feed_the_wanderer() {
         let mut sim = cleared(93);
-        for (i, cell) in [(3_u8, 3_u8), (5, 3), (7, 3)].into_iter().enumerate() {
-            let id = inject_hold(&mut sim, Kind::MysteriousCrate, cell.0, cell.1);
+        for (i, cell) in [deck(0, 0), deck(2, 0), deck(4, 0)].into_iter().enumerate() {
+            let id = inject_hold(&mut sim, Kind::MysteriousCrate, cell);
             assert_eq!(id as usize, sim.next_piece as usize - 1);
             let _ = i;
         }
@@ -4702,9 +4774,9 @@ mod tests {
         assert!(sim.poi_visible(WANDERER));
         travel_to(&mut sim, WANDERER);
         let room = sim.trade_room().expect("??? brings a room");
-        for (i, cell) in [(3_u8, 3_u8), (5, 3), (7, 3)].into_iter().enumerate() {
+        for (i, cell) in [deck(0, 0), deck(2, 0), deck(4, 0)].into_iter().enumerate() {
             let to = offer(&sim, room, i);
-            drag(&mut sim, cabin(cell.0, cell.1), to);
+            drag(&mut sim, cabin(cell), to);
         }
         assert!(
             sim.pieces()
@@ -4720,7 +4792,7 @@ mod tests {
         let mut sim = cleared(94);
         travel_to(&mut sim, INNER_RING[0]);
         assert!(sim.inner_ring_locked(INNER_RING[1]));
-        inject_hold(&mut sim, Kind::TransitChit, 5, 5);
+        inject_hold(&mut sim, Kind::TransitChit, deck(2, 2));
         assert!(!sim.inner_ring_locked(INNER_RING[1]));
     }
 
@@ -4741,7 +4813,7 @@ mod tests {
     #[test]
     fn fluffs_multiply_in_transit_up_to_the_mercy_cap() {
         let mut sim = cleared(96);
-        inject_hold(&mut sim, Kind::Fluff, 5, 5);
+        inject_hold(&mut sim, Kind::Fluff, deck(2, 2));
         launch(&mut sim, SATURN);
         let mut births = 0;
         for _ in 0..FLUFF_WINDOW * 3 {
@@ -4757,7 +4829,7 @@ mod tests {
     #[test]
     fn omen_fires_exactly_once_at_the_derived_tick() {
         let mut sim = cleared(0x00C0_FFEE);
-        inject_hold(&mut sim, Kind::SuspiciousCrate, 4, 4);
+        inject_hold(&mut sim, Kind::SuspiciousCrate, deck(1, 1));
         launch(&mut sim, SATURN);
         let leg = leg_of(&sim);
         let mut starts = 0;
@@ -4846,15 +4918,15 @@ mod tests {
     #[test]
     fn a_press_on_a_perched_rat_chases_and_never_lifts_the_piece() {
         let mut sim = cleared(101);
-        let id = inject_hold(&mut sim, Kind::PerfumeVial, 5, 5);
+        let id = inject_hold(&mut sim, Kind::PerfumeVial, deck(2, 2));
         inject_rat(&mut sim);
-        let at = cabin(5, 5);
+        let at = cabin(deck(2, 2));
         sim.advance(0.0, &press_at(at.x, at.y));
         assert!(sim.cues().contains(&Cue::RatChased));
         assert!(sim.held(0).is_none());
         assert_eq!(
             sim.pieces().iter().find(|p| p.id == id).unwrap().loc,
-            cell_spot(&sim, CABIN, Kind::PerfumeVial, 5, 5).hold()
+            cell_spot(&sim, CABIN, Kind::PerfumeVial, deck(2, 2)).hold()
         );
     }
 
@@ -4864,7 +4936,7 @@ mod tests {
         inject_rat(&mut sim);
         for _ in 0..rats::CHASE_LIMIT {
             let cell = sim.rat().expect("a rat").cell;
-            let at = cabin(cell.0, cell.1);
+            let at = cabin(cell);
             sim.advance(0.0, &press_at(at.x, at.y));
         }
         assert!(sim.rat().is_none());
@@ -4873,7 +4945,7 @@ mod tests {
     #[test]
     fn saves_continue_mid_rat_tenure_with_the_bite_intact() {
         let mut sim = cleared(103);
-        inject_hold(&mut sim, Kind::Couch, 5, 5);
+        inject_hold(&mut sim, Kind::Couch, deck(2, 2));
         inject_rat(&mut sim);
         launch(&mut sim, SATURN);
         coast(&mut sim, 400);
@@ -4895,9 +4967,9 @@ mod tests {
         let mut solo = Sim::new(111);
         let mut lockstep = Sim::new(111);
         let script = [
-            press_at(cabin(3, 3).x, cabin(3, 3).y),
-            held_at(cabin(5, 5).x, cabin(5, 5).y),
-            release_at(cabin(5, 5).x, cabin(5, 5).y),
+            press_at(cabin(deck(0, 0)).x, cabin(deck(0, 0)).y),
+            held_at(cabin(deck(2, 2)).x, cabin(deck(2, 2)).y),
+            release_at(cabin(deck(2, 2)).x, cabin(deck(2, 2)).y),
             InputFrame::default(),
         ];
         for input in script {
@@ -4910,8 +4982,8 @@ mod tests {
     #[test]
     fn same_tick_grab_goes_to_the_lowest_player_in_silence() {
         let mut sim = cleared(112);
-        inject_hold(&mut sim, Kind::PerfumeVial, 5, 5);
-        let at = cabin(5, 5);
+        inject_hold(&mut sim, Kind::PerfumeVial, deck(2, 2));
+        let at = cabin(deck(2, 2));
         let press = press_at(at.x, at.y);
         sim.crew_tick(&crew(&[(0, press), (3, press)]));
         assert!(sim.held(0).is_some());
@@ -4928,7 +5000,7 @@ mod tests {
         for _ in 0..300 {
             let mut frames = [InputFrame::default(); MAX_CREW];
             for frame in &mut frames {
-                let at = cabin(rng.u8(0..22), rng.u8(0..13));
+                let at = anywhere(&mut rng, CABIN, RoomKind::Cabin);
                 *frame = InputFrame {
                     pointer: at,
                     press: rng.bool(),
@@ -5019,12 +5091,13 @@ mod tests {
     #[test]
     fn a_drop_centres_the_footprint_on_the_pointer() {
         let mut sim = cleared(120);
-        let couch = inject_hold(&mut sim, Kind::Couch, 4, 5);
+        let couch = inject_hold(&mut sim, Kind::Couch, deck(1, 2));
+        let (fx, fy, _, _) = RoomKind::Cabin.floor_rect();
         // Centred on the pointer, to the unit, three units off the grid
         // and two off the half because the pointer was.
-        let to = fine_point(CABIN, fine(7) + 3, fine(6) + 130);
+        let to = fine_point(CABIN, fine(fx + 4) + 3, fine(fy + 3) + 130);
         let (preview, landed) = carry(&mut sim, couch, to, Turn::ZERO);
-        let want = hold(fine(7) + 3, fine(6) + 130, Turn::ZERO);
+        let want = hold(fine(fx + 4) + 3, fine(fy + 3) + 130, Turn::ZERO);
         assert_eq!(landed, want);
         assert_eq!(preview, Some((want, Ok(()))), "the preview said so first");
     }
@@ -5036,28 +5109,31 @@ mod tests {
     #[test]
     fn a_drop_keeps_the_turn_it_was_carried_at() {
         let mut sim = cleared(124);
-        let couch = inject_hold(&mut sim, Kind::Couch, 4, 5);
-        let to = fine_point(CABIN, fine(7), fine(6) + 128);
+        let couch = inject_hold(&mut sim, Kind::Couch, deck(1, 2));
+        let (fx, fy, _, fh) = RoomKind::Cabin.floor_rect();
+        let to = fine_point(CABIN, fine(fx + 4), fine(fy + 3) + 128);
         let (preview, landed) = carry(&mut sim, couch, to, SEVENTH);
-        let want = hold(fine(7), fine(6) + 128, SEVENTH);
+        let want = hold(fine(fx + 4), fine(fy + 3) + 128, SEVENTH);
         assert_eq!(landed, want);
         assert_eq!(preview, Some((want, Ok(()))));
         // Against the front wall the game would turn its back to the
         // wall; the hand that carried it facing the front wins.
-        let (_, fy, _, fh) = RoomKind::Cabin.floor_rect();
         let front = fine(fy + fh) - FINE / 2;
         let (_, landed) = carry(
             &mut sim,
             couch,
-            fine_point(CABIN, fine(7), front),
+            fine_point(CABIN, fine(fx + 4), front),
             Turn::ZERO,
         );
-        assert_eq!(landed, hold(fine(7), front, Turn::ZERO));
+        assert_eq!(landed, hold(fine(fx + 4), front, Turn::ZERO));
         // And carried round a quarter, it stands across the deck: two
         // cells deep and one across, which the preview names the same.
-        let to = fine_point(CABIN, fine(5) + 128, fine(6));
+        let to = fine_point(CABIN, fine(fx + 2) + 128, fine(fy + 3));
         let (preview, landed) = carry(&mut sim, couch, to, Turn::QUARTER);
-        assert_eq!(landed, hold(fine(5) + 128, fine(6), Turn::QUARTER));
+        assert_eq!(
+            landed,
+            hold(fine(fx + 2) + 128, fine(fy + 3), Turn::QUARTER)
+        );
         assert_eq!(preview.map(|(loc, _)| loc), Some(landed));
         let span = Foot::at(
             sim.rooms(),
@@ -5078,7 +5154,12 @@ mod tests {
     fn a_turned_couch_is_grabbed_by_its_body_and_not_its_box() {
         let mut sim = cleared(125);
         let eighth = Turn(1 << 13);
-        let id = inject_at(&mut sim, Kind::Couch, hold(fine(7), fine(6), eighth));
+        let (fx, fy, _, _) = RoomKind::Cabin.floor_rect();
+        let id = inject_at(
+            &mut sim,
+            Kind::Couch,
+            hold(fine(fx + 4), fine(fy + 3), eighth),
+        );
         let couch = *sim.pieces().iter().find(|p| p.id == id).unwrap();
         let rect = layout::piece_rect(sim.rooms(), &couch);
         // The box's corners are air: inside the box, nowhere near the body.
@@ -5123,27 +5204,27 @@ mod tests {
     #[test]
     fn a_drop_aimed_past_the_edge_slides_flush_into_its_chart() {
         let mut sim = cleared(121);
-        let couch = inject_hold(&mut sim, Kind::Couch, 4, 5);
+        let couch = inject_hold(&mut sim, Kind::Couch, deck(1, 2));
         // Aimed at the middle of the deck's last column, the couch would
         // hang half a cell over the fold. It is clamped back instead of
         // refused for bounds, and stands flush with the wall.
-        let (fx, _, fw, _) = RoomKind::Cabin.floor_rect();
-        let to = fine_point(CABIN, fine(fx + fw) - FINE / 2, fine(6) + 128);
+        let (fx, fy, fw, _) = RoomKind::Cabin.floor_rect();
+        let to = fine_point(CABIN, fine(fx + fw) - FINE / 2, fine(fy + 3) + 128);
         let (preview, landed) = carry(&mut sim, couch, to, Turn::ZERO);
-        let want = hold(fine(fx + fw) - FINE, fine(6) + 128, Turn::ZERO);
+        let want = hold(fine(fx + fw) - FINE, fine(fy + 3) + 128, Turn::ZERO);
         assert_eq!(landed, want);
         assert_eq!(preview, Some((want, Ok(()))));
         // Turned an eighth, it is the box round it that is clamped: its
         // corner comes to rest against the wall, not its middle (clear of
         // the hatch, which the turned couch's far end would reach a cell
         // further forward).
-        let to = fine_point(CABIN, fine(fx + fw) - FINE / 2, fine(5));
+        let to = fine_point(CABIN, fine(fx + fw) - FINE / 2, fine(fy + 2));
         let (preview, landed) = carry(&mut sim, couch, to, Turn(1 << 13));
         let reach = Foot::planned(Kind::Couch, Surf::Floor, (0, 0), Turn(1 << 13))
             .aabb()
             .x1;
         let x = u16::try_from(i32::from(fine(fx + fw)) - reach).expect("on the deck");
-        let want = hold(x, fine(5), Turn(1 << 13));
+        let want = hold(x, fine(fy + 2), Turn(1 << 13));
         assert_eq!(landed, want);
         assert_eq!(preview, Some((want, Ok(()))));
     }
@@ -5155,38 +5236,41 @@ mod tests {
     #[test]
     fn a_drop_snaps_flush_to_a_wall_and_never_to_a_neighbour() {
         let mut sim = cleared(122);
-        let couch = inject_hold(&mut sim, Kind::Couch, 6, 8);
-        let (fx, _, _, _) = RoomKind::Cabin.floor_rect();
+        let couch = inject_hold(&mut sim, Kind::Couch, deck(3, 5));
+        let (fx, fy, _, _) = RoomKind::Cabin.floor_rect();
         let wall = fine(fx);
         let reach = FINE / 8;
         // An eighth of a cell off the port wall snaps flush onto it...
         let (_, landed) = carry(
             &mut sim,
             couch,
-            fine_point(CABIN, wall + reach + FINE, fine(5) + 128),
+            fine_point(CABIN, wall + reach + FINE, fine(fy + 2) + 128),
             Turn::ZERO,
         );
-        assert_eq!(landed, hold(wall + FINE, fine(5) + 128, Turn::ZERO));
+        assert_eq!(landed, hold(wall + FINE, fine(fy + 2) + 128, Turn::ZERO));
         // ...and a unit further stays where it was put.
         let (_, landed) = carry(
             &mut sim,
             couch,
-            fine_point(CABIN, wall + reach + 1 + FINE, fine(5) + 128),
+            fine_point(CABIN, wall + reach + 1 + FINE, fine(fy + 2) + 128),
             Turn::ZERO,
         );
         assert_eq!(
             landed,
-            hold(wall + reach + 1 + FINE, fine(5) + 128, Turn::ZERO)
+            hold(wall + reach + 1 + FINE, fine(fy + 2) + 128, Turn::ZERO)
         );
         // Three units shy of a neighbour's side stays three units shy.
-        inject_hold(&mut sim, Kind::PerfumeVial, 5, 7);
+        inject_hold(&mut sim, Kind::PerfumeVial, deck(2, 4));
         let (_, landed) = carry(
             &mut sim,
             couch,
-            fine_point(CABIN, fine(6) + 3 + FINE, fine(7) + 128),
+            fine_point(CABIN, fine(fx + 3) + 3 + FINE, fine(fy + 4) + 128),
             Turn::ZERO,
         );
-        assert_eq!(landed, hold(fine(6) + 3 + FINE, fine(7) + 128, Turn::ZERO));
+        assert_eq!(
+            landed,
+            hold(fine(fx + 3) + 3 + FINE, fine(fy + 4) + 128, Turn::ZERO)
+        );
     }
 
     /// **The ghost and the drop cannot disagree.** For a spread of kinds
@@ -5253,16 +5337,16 @@ mod tests {
     #[test]
     fn a_same_tick_drop_lands_both_and_volatile_keeps_its_air() {
         let mut sim = cleared(123);
-        let first = inject_hold(&mut sim, Kind::PerfumeVial, 4, 5);
-        let second = inject_hold(&mut sim, Kind::PerfumeVial, 8, 5);
-        let (a, b) = (cabin(4, 5), cabin(8, 5));
+        let first = inject_hold(&mut sim, Kind::PerfumeVial, deck(1, 2));
+        let second = inject_hold(&mut sim, Kind::PerfumeVial, deck(5, 2));
+        let (a, b) = (cabin(deck(1, 2)), cabin(deck(5, 2)));
         sim.crew_tick(&crew(&[(0, press_at(a.x, a.y)), (1, press_at(b.x, b.y))]));
-        let to = cabin(6, 7);
+        let to = cabin(deck(3, 4));
         sim.crew_tick(&crew(&[
             (0, release_at(to.x, to.y)),
             (1, release_at(to.x, to.y)),
         ]));
-        let there = Some(cell_spot(&sim, CABIN, Kind::PerfumeVial, 6, 7).hold());
+        let there = Some(cell_spot(&sim, CABIN, Kind::PerfumeVial, deck(3, 4)).hold());
         let loc = |sim: &Sim, id| sim.pieces().iter().find(|p| p.id == id).map(|p| p.loc);
         assert_eq!(loc(&sim, first), there);
         assert_eq!(loc(&sim, second), there);
@@ -5274,19 +5358,19 @@ mod tests {
         );
 
         let mut sim = cleared(124);
-        let first = inject_hold(&mut sim, Kind::GasCanister, 4, 4);
-        let second = inject_hold(&mut sim, Kind::GasCanister, 4, 7);
+        let first = inject_hold(&mut sim, Kind::GasCanister, deck(1, 1));
+        let second = inject_hold(&mut sim, Kind::GasCanister, deck(1, 4));
         let home = loc(&sim, second);
-        let (a, b) = (cabin(4, 4), cabin(4, 7));
+        let (a, b) = (cabin(deck(1, 1)), cabin(deck(1, 4)));
         sim.crew_tick(&crew(&[(0, press_at(a.x, a.y)), (1, press_at(b.x, b.y))]));
-        let (to, beside) = (cabin(7, 5), cabin(7, 6));
+        let (to, beside) = (cabin(deck(4, 2)), cabin(deck(4, 3)));
         sim.crew_tick(&crew(&[
             (0, release_at(to.x, to.y)),
             (1, release_at(beside.x, beside.y)),
         ]));
         assert_ne!(
             loc(&sim, first),
-            Some(cell_spot(&sim, CABIN, Kind::GasCanister, 4, 4).hold())
+            Some(cell_spot(&sim, CABIN, Kind::GasCanister, deck(1, 1)).hold())
         );
         assert_eq!(loc(&sim, second), home, "the later canister went home");
         assert_eq!(sim.last_violation(), Some(Violation::Volatile));

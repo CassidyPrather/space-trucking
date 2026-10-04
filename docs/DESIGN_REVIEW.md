@@ -222,6 +222,34 @@ Every line is reversible; strike one by overruling it.
   space cramped. The cost is real and worth knowing: the band above the
   cornices went from 82 mm to 22 mm, and the parlor's coving had to
   become a 20 mm bead.
+
+  > Superseded in part by docs/ROOMS.md, *The walls reach the
+  > deckhead*: `COURSES` is 4 and the walls meet the deckhead, on the
+  > owner's report that nothing could be hung in the band. A room is
+  > still four cells tall.
+- **The walls grew to the deckhead; the deckhead did not come down.**
+  The owner's report named the gap and not the cure, and the other cure
+  — a deckhead three cells up, on the walls as they were — was
+  declined: 1.65 m is under a standing head (`HEAD_CLEAR`, 1.62 m to
+  the crown, with the pendant's shade hung under the deckhead on top of
+  that), and headroom is a body's measurement rather than a wall's.
+  Every wall is four courses, deck to deckhead (docs/ROOMS.md).
+- **The top course is the wall it tops.** It reads whatever the course
+  under it reads — stock on a stocked aft wall, chalk on a chalked front
+  wall, hazard in the furnace, the room's ordinary wall elsewhere —
+  because a band was always a band up its whole wall; a fifth class, or
+  ordinary fabric over the goods, would be a second rule about the same
+  wall. So a market's aft wall is shelf to the deckhead, and a player's
+  own painting goes on none of its courses, the top one included.
+- **Four stations' furniture moved out of the band it was hung in.**
+  The gauntlet's berth families found five fittings in the new course's
+  sight or air, and the fittings moved rather than the course: the
+  comet's second crust lump and the Hermitage's port boss a pace
+  forward, Jupiter's aft manifold collar forward of its riser, and the
+  parlor's cove light laid flat on its wall as a line (`NEON_DEEP`)
+  instead of a bead. The alternative — keeping the furniture and
+  shortening the bands a cell under the deckhead — would put the band
+  of fabric the owner reported back on exactly the walls that sell.
 - **A riding room refuses to part.** `latch_at`'s doc always said a
   riding room's seam is not asked to part; `the_burner_parts_like_any_
   other_room` pinned the opposite and called selling your furnace
@@ -492,10 +520,14 @@ Every line is reversible; strike one by overruling it.
   > Superseded in part by docs/BAY.md, *Cargo stops colliding*: there
   > are no stows to re-check, and a dressing is re-checked against the
   > room alone, line by line. The headers are `STV22` and `RPL6` now.
+  >
+  > And by docs/ROOMS.md, *The walls reach the deckhead*: the headers
+  > are `STV23` and `RPL7`, and the wire's `SNP6`.
 - **A berth is quantised to a 256th of a cell** (`cargo::FINE = 256`,
   about 2 mm). A sixteenth, 34 mm, is a step a VR hand can see, and the
   owner asked for no overly aggressive snapping. Finer buys nothing a
-  hand can place, and the widest lane, 5,632 units, still fits a `u16`
+  hand can place, and the widest lane, 6,144 units (5,632 until the
+  walls reached the deckhead), still fits a `u16`
   with room to spare.
 - **A turn is a binary angle, 65,536 to the turn** (`cargo::Turn(u16)`,
   0.0055°). It wraps for free, a quarter is a power of two so the

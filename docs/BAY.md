@@ -299,7 +299,9 @@ on, or hangs from its chart, turned about that chart's normal.
 
 - **Position.** `cargo::FINE` is 256 to the cell, about 2 mm in the
   cabin, because a 34 mm step is a grid a VR hand can see. The widest
-  lane, 22 cells, is 5,632 units, well inside a `u16`. `Loc::Hold` and
+  lane, 22 cells, is 5,632 units, well inside a `u16` (24 cells and
+  6,144 units since ROOMS.md's *The walls reach the deckhead*, and
+  still well inside). `Loc::Hold` and
   `Loc::Laid` carry the footprint's **centre** and its turn,
   `{ room, x, y, turn }`: once a footprint turns, its top-left corner is
   not a stable anchor.
@@ -378,6 +380,10 @@ order, same `Violation` names:
   nearest a straight edge at a corner and its shadow on a seam is the
   span of its corners, so the box round it says both, exactly, at any
   angle.
+
+  > Superseded in part by ROOMS.md, *The walls reach the deckhead*: a
+  > stature is capped at `sim::room::COURSES`, four, which is still all
+  > the wall there is. No kind stands taller than two.
 - **Volatile**: two volatile pieces need half a cell of clear air,
   **Euclidean**. The grid's Chebyshev gap measured along the room's
   axes, and a rule that changes when the pieces turn is the room's rule,
@@ -675,6 +681,11 @@ the facing (`-` or the id). Another version starts a new run, as ever
 board was re-saved through the new writer; its four cubby pieces stand
 along the aft row of the deck where `cargo::tidy` set them, off the
 doorstep.
+
+> Superseded by ROOMS.md, *The walls reach the deckhead*: saves are
+> `STV23`, tapes `RPL7`, and the wire `SNP6`, because every room's net
+> grew a course on each wall and the same berth or pointer names
+> another place.
 
 **The gauntlet already judged the room.** Every berth family
 (`berth-clear`, `berth-seen`, `berth-reached`, and the rest of
@@ -1063,6 +1074,13 @@ to whole `BAY_CELL` (0.55) multiples — the working plan is a floor of
 the burner annex keeping its carved doorway (its floor joins the
 walkable net through it).
 
+> Superseded in part by ROOMS.md, *The walls reach the deckhead*: every
+> room's four walls are `sim::room::COURSES` tall, four, and each runs
+> from the baseboard to the deckhead. The deckhead is four cells over
+> the deck, as it has been since the lattice took the room's section,
+> and nothing stands between the cornices and it. The cabin's net is
+> 24×15.
+
 The sim stays 2D-logical: the box unfolds into a **net** (a cross of
 six charts — floor, four walls, ceiling) laid into the same 800×600
 logical space at `CELL` (34) — the whole net is ~408×544, it fits.
@@ -1081,6 +1099,13 @@ stored, always classified:
 
 - **baseboard** — a wall cell in the bottom row (touches the floor)
 - **cornice** — a wall cell in the top row (touches the ceiling)
+
+  > True in the room as well as on the sheet only since ROOMS.md's *The
+  > walls reach the deckhead*. For as long as the deckhead stood a cell
+  > over three courses of wall, a cornice touched a band of fabric no
+  > chart reached, and the ceiling chart's seam to it was the one
+  > declared trim seam in the net. They meet now, and every fold of the
+  > net is watertight.
 - **corner** — the seam column where two walls meet; a *floor corner*
   is a floor cell touching two walls
 - (the set extends as rules need it; the classifier is one function)
@@ -1239,6 +1264,11 @@ of. Three guards, all sim-side and monkey-proven:
   accordingly). Owning several is the *ordinary* case now, so the
   exterior was rebuilt to serve it: panes on one plane share one sky
   ([ART_DIRECTION_3D.md](ART_DIRECTION_3D.md), "One wall, one sky").
+
+  > Superseded in part by ROOMS.md, *The walls reach the deckhead*: the
+  > shelf is four courses tall now, and a pane three cells wide and two
+  > courses tall would stand over the counter. The window family is the
+  > size it was until somebody asks for a bigger one.
 - **The handle rule** (the click-vs-carry answer, by decree): a
   click-functional piece wears a physical AMBER carry handle, and the
   handle IS the carry hitbox — hover the handle and a click means

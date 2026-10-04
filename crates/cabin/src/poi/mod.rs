@@ -1429,8 +1429,12 @@ mod tests {
         let (w, h) = (f32::from(w), f32::from(h));
         let x0 = f32::from(offset).mul_add(2.0 / w, -1.0);
         let x1 = f32::from(offset + APERTURE).mul_add(2.0 / w, -1.0);
-        // The aft face is +z, and the opening is two courses of three
-        // tall, standing on the deck.
+        // The aft face is +z, and the opening is two of the room's
+        // courses tall, standing on the deck. The frame runs deck to
+        // deckhead and so do the courses, which it took the walls
+        // reaching the deckhead to make true: while they were three
+        // courses under a deckhead four cells up, this read the doorway a
+        // third of a metre taller than it is.
         let z0 = (h - 1.0).mul_add(2.0 / h, -1.0);
         let y1 = f32::from(APERTURE).mul_add(2.0 / f32::from(COURSES), -1.0);
         (Vec3::new(x0, -1.0, z0), Vec3::new(x1, y1, 1.0))

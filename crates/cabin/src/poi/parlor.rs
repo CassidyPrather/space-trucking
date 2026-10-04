@@ -56,6 +56,7 @@
 
 use bevy::prelude::{Color, Vec3};
 use space_trucking::sim::Kind;
+use space_trucking::sim::room::RoomKind;
 
 use super::{Character, Coat, Face, Fitting, Handshake, Light, Outfit, Seat, Shape, Tiles, Worn};
 use crate::palette;
@@ -240,41 +241,25 @@ const THE_HOUSE: [Fitting; 23] = [
     lamp(-0.393, 0.264),
     // The cove light, all the way round, over the top of the one door.
     //
-    // It is a bead rather than a coving, and the reason is worth writing
-    // down: the band a room has to spare between the top of its wall
-    // courses and the air a ceiling rig hangs into is **22 mm**. It was
-    // 82 mm when the deckhead stood at 2.26, and this ran at 77 mm — it
-    // fitted with a quarter of a millimetre to spare, which is not a
-    // clearance, it is a coincidence. Four courses put the deckhead on
-    // the grid and took the coincidence away.
-    Fitting::new(
-        Shape::Slab,
-        Coat::phosphor(CHIP, 1.8),
-        Vec3::new(0.0, 0.510, 0.970),
-        Vec3::new(0.98, 0.009, 0.030),
-    )
-    .seated(Seat::Face(Face::Aft)),
-    Fitting::new(
-        Shape::Slab,
-        Coat::phosphor(CHIP, 1.8),
-        Vec3::new(0.0, 0.510, -0.970),
-        Vec3::new(0.98, 0.009, 0.030),
-    )
-    .seated(Seat::Face(Face::Fore)),
-    Fitting::new(
-        Shape::Slab,
-        Coat::phosphor(CHIP, 1.8),
-        Vec3::new(-0.970, 0.510, 0.0),
-        Vec3::new(0.030, 0.009, 0.925),
-    )
-    .seated(Seat::Face(Face::Port)),
-    Fitting::new(
-        Shape::Slab,
-        Coat::phosphor(CHIP, 1.8),
-        Vec3::new(0.970, 0.510, 0.0),
-        Vec3::new(0.030, 0.009, 0.925),
-    )
-    .seated(Seat::Face(Face::Starboard)),
+    // It is a line rather than a bead, and before that it was a bead
+    // rather than a coving, and both reasons are worth writing down. The
+    // band a room had to spare between the top of its wall courses and
+    // the air a ceiling rig hangs into was **22 mm** once the deckhead
+    // came onto the grid — it had been 82 mm, and the coving ran at 77
+    // mm, which fitted with a quarter of a millimetre to spare and was
+    // not a clearance but a coincidence. Then the walls grew a course to
+    // meet the deckhead, and the band this ran in became the top course
+    // of every wall: a berth, all the way up, where the owner hangs a
+    // painting or a window. A bead 66 mm proud of the wall ran straight
+    // through the air of every one of those on the chalked front wall.
+    // So it is a line now, no deeper than the hair a wall rig's own back
+    // leaves between itself and its wall ([`NEON_DEEP`]), and the band
+    // stays unbroken: it runs behind whatever the house's guests hang
+    // over it rather than through it.
+    neon(Face::Aft),
+    neon(Face::Fore),
+    neon(Face::Port),
+    neon(Face::Starboard),
     // Plush on both flanks, in a gold reveal: what a room is lined with
     // when nobody in it is meant to notice the time.
     Fitting::new(
@@ -356,6 +341,38 @@ const fn chip(z: f32) -> Fitting {
         Vec3::new(0.022, 0.13, 0.095),
     )
     .seated(Seat::On("chip rack"))
+}
+
+/// **How deep the cove light stands off its wall**, in metres: the hair
+/// between a wall and the back of any rig hung on it, which is a wall
+/// chart's inset (`room::NOTCH`) less the depth a rig is composed behind
+/// its own berth plane (`pieces::RIG_NEAR`). Every course of a wall is a
+/// berth from the baseboard to the deckhead, so this is the one depth a
+/// line round a room can run at without standing in a hung piece's air.
+const NEON_DEEP: f32 = crate::room::NOTCH + crate::pieces::RIG_NEAR * crate::pieces::RIG_UNIT;
+
+/// The parlor's own half-extents across and fore-and-aft, in metres —
+/// what a fraction of the room's box is a fraction of.
+const HALF_ACROSS: f32 = RoomKind::Parlor.floor().0 as f32 * crate::rig::BAY_CELL * 0.5;
+const HALF_DEEP: f32 = RoomKind::Parlor.floor().1 as f32 * crate::rig::BAY_CELL * 0.5;
+
+/// One run of the cove light, along the wall `wall`: a strip of rose
+/// neon two centimetres tall at the foot of the top course, the wall's
+/// whole length, laid flat on it ([`NEON_DEEP`]).
+const fn neon(wall: Face) -> Fitting {
+    let half = if matches!(wall, Face::Aft | Face::Fore) {
+        Vec3::new(0.98, 0.009, NEON_DEEP * 0.5 / HALF_DEEP)
+    } else {
+        Vec3::new(NEON_DEEP * 0.5 / HALF_ACROSS, 0.009, 0.925)
+    };
+    Fitting::new(
+        Shape::Slab,
+        Coat::phosphor(CHIP, 1.8),
+        Vec3::new(0.0, 0.510, 0.0),
+        half,
+    )
+    .meeting(wall)
+    .seated(Seat::Face(wall))
 }
 
 /// **The sign**, outside: a neon halo standing over the roof on two

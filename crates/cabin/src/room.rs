@@ -49,7 +49,7 @@ use bevy::prelude::*;
 
 use space_trucking::sim::layout;
 use space_trucking::sim::room::{
-    APERTURE, CABIN, COURSES, PORTS, Port, PortId, Pose, Room, RoomId, RoomKind, Rooms, Tile,
+    APERTURE, CABIN, COURSES, PORTS, Port, PortId, Pose, Room, RoomId, RoomKind, Rooms, Surf, Tile,
 };
 use space_trucking::sim::{Cue, Sim};
 
@@ -70,25 +70,30 @@ pub const ANCHOR: Vec3 = Vec3::new(
     BAY_WALL_Z,
 );
 
-/// Wall band height: three courses, the same on every room. Uniform
-/// height is what lets any door mate any door (docs/ROOMS.md, "One storey,
-/// everywhere").
+/// Wall height: [`COURSES`] of the cargo grid, the same on every room.
+/// Uniform height is what lets any door mate any door (docs/ROOMS.md,
+/// "One storey, everywhere"), and every wall is a full storey — its
+/// charts run from the baseboard to the deckhead, so there is nothing
+/// over a wall's top course but the deckhead it meets.
 pub const WALL_H: f32 = COURSES as f32 * BAY_CELL;
 
 /// The deck's decal plane, a hair above the floor slab.
 pub const FLOOR_Y: f32 = 0.012;
 
-/// The ceiling chart's plane — **four courses of the cargo grid above the
-/// deck**, so a room is a whole number of cells tall exactly as it is a
-/// whole number of cells wide.
+/// The ceiling chart's plane — **the top of the walls**, so a room is a
+/// whole number of cells tall exactly as it is a whole number of cells
+/// wide, and every cell of that height is a course a chart reaches.
 ///
 /// It was 2.26 m, which is 4.109 cells: sixty millimetres of nothing in
 /// particular above the fourth course, and the one axis of a room that
-/// the lattice did not govern. The walls are [`WALL_H`] — three courses,
-/// on the grid already — so the band between the cornices and the
-/// deckhead is now exactly one cell rather than 0.61 m of trim. The net's
-/// fold seam glues logically, not physically.
-pub const CEIL_Y: f32 = (COURSES + 1) as f32 * BAY_CELL;
+/// the lattice did not govern. It came onto the grid at four cells while
+/// the walls were still three courses, which left a band one cell deep
+/// between the cornices and the deckhead that no chart reached — and the
+/// owner could not hang a painting or a window in it. The walls grew a
+/// course instead of the deckhead coming down: 2.2 m is headroom, and
+/// the pendant (`CALLER_DROP`) is hung off a head rather than off this.
+/// The net's fold seams glue logically and, now, physically as well.
+pub const CEIL_Y: f32 = WALL_H;
 
 /// Centre height of a room's ceiling slab. **Derived**: the slab stands
 /// wholly outside the interior, on the ceiling plane, exactly as the deck
@@ -601,8 +606,11 @@ pub fn placed(rooms: &Rooms, id: RoomId, room: &Room) -> Placed {
     }
 }
 
-/// One net chart's logical rect in room `id`'s own lane.
-fn chart_rect(id: RoomId, cx: u8, cy: u8, cw: u8, ch: u8) -> layout::Rect {
+/// One net chart's logical rect in room `id`'s own lane: the sim's own
+/// rect for it (`RoomKind::chart_rect`), so the cells a chart is drawn
+/// over and the cells the arbiter clamps a drop into are one statement.
+fn chart_rect(id: RoomId, kind: RoomKind, surf: Surf) -> layout::Rect {
+    let (cx, cy, cw, ch) = kind.chart_rect(surf);
     let origin = layout::cell_rect(id, cx, cy);
     layout::Rect::new(
         origin.x,
@@ -614,11 +622,13 @@ fn chart_rect(id: RoomId, cx: u8, cy: u8, cw: u8, ch: u8) -> layout::Rect {
 
 /// The room net's six charts, folded onto a placed room's own box.
 ///
-/// The box unfolds exactly as BAY.md unfolds the cabin's — rows 0–2 stand
-/// on the aft wall, the middle rows fold onto the deck and the side walls,
-/// the last three stand on the front wall, and the ceiling chart folds on
-/// past the starboard cornice — but every plane and every axis now comes
-/// out of the pose, so a room at any yaw folds the same way.
+/// The box unfolds exactly as BAY.md unfolds the cabin's — the first
+/// [`COURSES`] rows stand on the aft wall, the middle rows fold onto the
+/// deck and the side walls, the last [`COURSES`] stand on the front wall,
+/// and the ceiling chart folds on past the starboard cornice — but every
+/// plane and every axis now comes out of the pose, so a room at any yaw
+/// folds the same way. Every wall chart runs from the baseboard to the
+/// deckhead ([`WALL_H`] is [`CEIL_Y`]).
 #[must_use]
 pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
     let kind = room.kind;
@@ -640,7 +650,7 @@ pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
                 center: level(wall_mid) + plane(0, half_j),
                 half_u: i * half_i,
                 half_v: Vec3::NEG_Y * wall_mid,
-                rect: chart_rect(id, COURSES, 0, w, COURSES),
+                rect: chart_rect(id, kind, Surf::Aft),
                 axes: None,
                 deep: 0.0,
             },
@@ -651,7 +661,7 @@ pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
                 center: level(FLOOR_Y),
                 half_u: i * half_i,
                 half_v: j * half_j,
-                rect: chart_rect(id, COURSES, COURSES, w, h),
+                rect: chart_rect(id, kind, Surf::Floor),
                 axes: None,
                 deep: 0.0,
             },
@@ -662,7 +672,7 @@ pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
                 center: level(wall_mid) + plane(3, half_i),
                 half_u: Vec3::NEG_Y * wall_mid,
                 half_v: j * half_j,
-                rect: chart_rect(id, 0, COURSES, COURSES, h),
+                rect: chart_rect(id, kind, Surf::Port),
                 axes: None,
                 deep: 0.0,
             },
@@ -673,7 +683,7 @@ pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
                 center: level(wall_mid) + plane(1, half_i),
                 half_u: Vec3::Y * wall_mid,
                 half_v: j * half_j,
-                rect: chart_rect(id, COURSES + w, COURSES, COURSES, h),
+                rect: chart_rect(id, kind, Surf::Starboard),
                 axes: None,
                 deep: 0.0,
             },
@@ -684,7 +694,7 @@ pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
                 center: level(wall_mid) + plane(2, half_j),
                 half_u: i * half_i,
                 half_v: Vec3::Y * wall_mid,
-                rect: chart_rect(id, COURSES, COURSES + h, w, COURSES),
+                rect: chart_rect(id, kind, Surf::Front),
                 axes: None,
                 deep: 0.0,
             },
@@ -695,7 +705,7 @@ pub fn charts(id: RoomId, room: &Room) -> [(Station, SimSurface); 6] {
                 center: level(CEIL_Y),
                 half_u: -i * half_i,
                 half_v: j * half_j,
-                rect: chart_rect(id, 2 * COURSES + w, COURSES, w, h),
+                rect: chart_rect(id, kind, Surf::Ceiling),
                 axes: None,
                 deep: 0.0,
             },
@@ -2744,7 +2754,8 @@ fn treads(placed: &Placed, out: &mut Vec<SeamPart>) {
     let rot = Station::BayFloor.face(&floor);
     let (su, sv) = (floor.scale_u(), floor.scale_v());
     for ((i, j), jambs) in laid {
-        let cell = layout::cell_rect(placed.id, COURSES + i, COURSES + j);
+        let (x, y) = placed.kind.deck_cell(i, j);
+        let cell = layout::cell_rect(placed.id, x, y);
         let mid = space_trucking::sim::Vec2::new(
             cell.w.mul_add(0.5, cell.x),
             cell.h.mul_add(0.5, cell.y),
@@ -3899,7 +3910,8 @@ mod tests {
     }
 
     /// **A room stands a whole number of cells from deck to deckhead**,
-    /// exactly as it is a whole number of cells wide and deep.
+    /// exactly as it is a whole number of cells wide and deep — and every
+    /// one of them is a course of its walls.
     ///
     /// The lattice governed x and z from the day it arrived and stopped
     /// at y: the deckhead was 2.26 m, which is 4.109 cells, and the sixty
@@ -3908,6 +3920,13 @@ mod tests {
     /// of the constant, because the constant is not what a room is built
     /// from — `room_box` is, and a kind that grew its own ceiling would
     /// pass a test on `CEIL_Y` and fail this one.
+    ///
+    /// The second half is the owner's report. The walls were three
+    /// courses under a deckhead four cells up, so every wall kept a band
+    /// one cell deep that no chart reached, and a painting or a window
+    /// could not be hung in it. The walls reach the deckhead now: every
+    /// wall chart's top edge IS the deckhead, on every wall of every kind,
+    /// and the band is nothing at all.
     #[test]
     fn a_room_stands_a_whole_number_of_courses_deck_to_deckhead() {
         for kind in ROOM_KINDS {
@@ -3930,13 +3949,106 @@ mod tests {
                     "{kind:?} is {cells} cells of {name}"
                 );
             }
-            // And the band above the wall courses is one of those cells,
-            // rather than whatever was left over.
+            // And the walls are every one of those cells: no band over the
+            // cornices, on any wall.
             let band = (hi.y - lo.y) - WALL_H;
             assert!(
-                (band - BAY_CELL).abs() < 1e-4,
-                "{kind:?} keeps {band} m over its cornices, not one cell"
+                band.abs() < 1e-4,
+                "{kind:?} keeps {band} m over its cornices that no wall reaches"
             );
+            for (station, chart) in charts(CABIN, &room) {
+                if matches!(station, Station::BayFloor | Station::BayCeiling) {
+                    continue;
+                }
+                let top = chart.center.y + chart.half_u.y.abs() + chart.half_v.y.abs();
+                let foot = chart.center.y - chart.half_u.y.abs() - chart.half_v.y.abs();
+                assert!(
+                    (top - hi.y).abs() < 1e-4 && (foot - lo.y).abs() < 1e-4,
+                    "{kind:?}'s {station:?} runs {foot}..{top}, not deck to deckhead"
+                );
+            }
+        }
+    }
+
+    /// **A painting and a window hang against the deckhead, on every
+    /// wall of every room kind.**
+    ///
+    /// The owner's report, made a law: "I can't move paintings or windows
+    /// any higher." The walls stopped a course short of the deckhead and
+    /// the course between was fabric no chart reached. Now each kind's
+    /// every wall takes both on its top course, the sim's arbiter allows
+    /// it, and the ground the berth spends runs right up to the deckhead
+    /// in the world — its top edge IS the deckhead, to the millimetre.
+    ///
+    /// It asks the arbiter and not the drop: a stocked wall is the room's
+    /// shelf all the way up, so a painting of the player's is refused
+    /// there by the stock law, on every course alike, and a painting the
+    /// room stocks stands there as its own. What this asks is whether the
+    /// wall reaches, and on every wall it does.
+    #[test]
+    fn a_painting_and_a_window_hang_against_the_deckhead_on_every_wall() {
+        use space_trucking::sim::cargo::{self, Foot, Kind, Spot, berth_check, fine};
+
+        let top = COURSES - 1;
+        for kind in ROOM_KINDS {
+            let mut rooms = Rooms::new();
+            let id = match kind {
+                RoomKind::Cabin => CABIN,
+                RoomKind::Burner => rooms.find(RoomKind::Burner).expect("the furnace rides"),
+                _ => rooms.spawn(kind, CABIN).expect("a caller finds a door"),
+            };
+            let placed = placed(&rooms, id, rooms.get(id).expect("attached"));
+            let deckhead = placed.lo.y + CEIL_Y;
+            let (w, h) = kind.floor();
+            for (wall, station) in [
+                (0, Station::BayWall),
+                (1, Station::BayStarboard),
+                (2, Station::BayFront),
+                (3, Station::BayPort),
+            ] {
+                let chart = placed.chart(station).expect("every room has four walls");
+                let length = if wall % 2 == 0 { w } else { h };
+                for hung in [Kind::Painting, Kind::Window] {
+                    let spot = (0..length)
+                        .find_map(|along| {
+                            let (x, y) = kind.wall_cell(wall, along, top);
+                            let (cx, cy, turn) = cargo::anchored(kind, hung, fine(x), fine(y))?;
+                            let spot = Spot {
+                                room: id,
+                                x: cx,
+                                y: cy,
+                                turn,
+                            };
+                            berth_check(&rooms, &[], u32::MAX, hung, spot.hold())
+                                .is_ok()
+                                .then_some(spot)
+                        })
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "no {hung:?} hangs on the top course of a {kind:?}'s {station:?}"
+                            )
+                        });
+                    let foot = Foot::of(kind, hung, spot.x, spot.y, spot.turn).expect("berthed");
+                    let rect = layout::foot_rect(id, foot);
+                    let corner = |u: f32, v: f32| {
+                        chart
+                            .to_world(space_trucking::sim::Vec2::new(
+                                rect.w.mul_add(u, rect.x),
+                                rect.h.mul_add(v, rect.y),
+                            ))
+                            .y
+                    };
+                    let reach = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)]
+                        .into_iter()
+                        .map(|(u, v)| corner(u, v))
+                        .fold(f32::MIN, f32::max);
+                    assert!(
+                        (reach - deckhead).abs() < 1e-3,
+                        "a {hung:?} on the top course of a {kind:?}'s {station:?} reaches \
+                         {reach}, not the deckhead at {deckhead}"
+                    );
+                }
+            }
         }
     }
 

@@ -70,10 +70,31 @@ pub const HATCH: PortId = 5;
 /// open question), and the working shape is the burner doorway's.
 pub const APERTURE: u8 = 2;
 
-/// Wall courses. Every room's walls are the cabin's height, which is
-/// what makes any door mate any door and a ladder's neighbour sit
-/// exactly one storey up.
-pub const COURSES: u8 = 3;
+/// **The course a room's handshake is set on**, counted up from the deck:
+/// the second, where a standing hand works it.
+///
+/// Stated as a course rather than as a row of the net because a row of
+/// the net is counted from the net's edge, and the net's edge moves
+/// whenever the walls do.
+pub const HANDSHAKE_COURSE: u8 = 1;
+
+/// **Wall courses: the one number a room's section is.**
+///
+/// Every room's walls are the cabin's height, which is what makes any
+/// door mate any door and a ladder's neighbour sit exactly one storey up
+/// — and every wall runs from the baseboard to the deckhead, so this is
+/// also how many cells a room stands from its deck to its deckhead
+/// (docs/ROOMS.md, "One storey, everywhere").
+///
+/// It was three, with the deckhead a cell higher than the last of them:
+/// the walls were the old 6×4 hold's three rows, the deckhead was raised
+/// for headroom later, and the cell between was a band of fabric no chart
+/// reached. The owner could not hang a painting or a window in it. It is
+/// four now and there is no band, and nothing hung on a wall moved: a
+/// course is counted from the deck, so the courses a door, a handshake or
+/// a sconce stands on are the ones it always stood on, and the new one is
+/// on top.
+pub const COURSES: u8 = 4;
 
 /// **Cells of padding between any two rooms.**
 ///
@@ -189,7 +210,7 @@ impl Tile {
 /// holds meaning what it did and needs no new save header.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RoomKind {
-    /// The cabin, room 0: an 8×7 floor and the walls three courses tall.
+    /// The cabin, room 0: an 8×7 floor and the walls [`COURSES`] tall.
     Cabin,
     /// The incinerator. Hopper staging is its floor, as `Consume` tiles;
     /// the stoker reads the lowest occupied one on its own beat.
@@ -283,12 +304,12 @@ impl RoomKind {
     }
 
     /// The net's bounding grid, `(cols, rows)`: the cross of six charts
-    /// laid flat. Three courses of wall on every side of a `w × h`
-    /// floor, with the ceiling folded over the starboard cornice.
+    /// laid flat. [`COURSES`] of wall on every side of a `w × h` floor,
+    /// with the ceiling folded over the starboard cornice.
     #[must_use]
     pub const fn grid(self) -> (u8, u8) {
         let (w, h) = self.floor();
-        (6 + 2 * w, 6 + h)
+        (2 * COURSES + 2 * w, 2 * COURSES + h)
     }
 
     /// Whether this room **rides**: it travels with the ship. Calling
@@ -408,18 +429,69 @@ impl RoomKind {
     /// handshake where a deal is struck (a chit press at the Guild, a
     /// bell at the Hermitage — the form is per-POI, the behavior fixed).
     /// It is set into the room's fabric, so its cell is not a berth.
+    ///
+    /// Answered as a net cell and **declared as a place on the aft
+    /// wall**: so many cells along it, on [`HANDSHAKE_COURSE`]. A
+    /// handshake is worked by a standing hand, so its height is a body's
+    /// and not the wall's, and stating it by its course from the deck is
+    /// what kept it where a hand reaches when the walls grew a course
+    /// over it.
     #[must_use]
     pub const fn handshake(self) -> Option<(u8, u8)> {
-        match self {
-            Self::Cabin | Self::Burner => None,
+        let along = match self {
+            Self::Cabin | Self::Burner => return None,
             // A pump bay's counter is set in its own starboard corner,
             // which is the case the fixture rule's corner clause exists
             // for: the brass turns onto the side wall beside it. The
             // other three set theirs clear of both walls and clear of
             // the doorway's own lane.
-            Self::Trade | Self::Wreck | Self::Pump => Some((6, 1)),
-            Self::Parlor => Some((5, 1)),
+            Self::Trade | Self::Wreck | Self::Pump => 3,
+            Self::Parlor => 2,
+        };
+        Some(self.wall_cell(0, along, HANDSHAKE_COURSE))
+    }
+
+    /// **The net cell of one cell of a wall**: course `course` of wall
+    /// `wall` (0 aft, 1 starboard, 2 front, 3 port), counted up from the
+    /// deck, `along` cells from the wall's low end — the frame a door's
+    /// `offset` is measured in.
+    ///
+    /// The net is the room unfolded and seen from outside, so each wall
+    /// climbs its sheet a different way: the aft wall and the port flank
+    /// climb toward the net's origin, the front wall and the starboard
+    /// flank away from it. This is the one place that says so, and
+    /// everything the game states as a height — an aperture, a fixture,
+    /// a fitting at its traditional berth — is stated in courses and
+    /// read through here, so a wall that grows a course grows it on top.
+    #[must_use]
+    pub const fn wall_cell(self, wall: u8, along: u8, course: u8) -> (u8, u8) {
+        let (w, h) = self.floor();
+        let c = COURSES;
+        match wall % 4 {
+            // Aft: baseboard is the row nearest the floor.
+            0 => (c + along, c - 1 - course),
+            // Starboard: baseboard is the column nearest the floor,
+            // courses running outward.
+            1 => (c + w + course, c + along),
+            2 => (c + along, c + h + course),
+            _ => (c - 1 - course, c + along),
         }
+    }
+
+    /// The net cell of floor cell `(i, j)`.
+    #[must_use]
+    pub const fn deck_cell(self, i: u8, j: u8) -> (u8, u8) {
+        let (x0, y0, _, _) = self.floor_rect();
+        (x0 + i, y0 + j)
+    }
+
+    /// The net cell of the deckhead over floor cell `(i, j)`. The ceiling
+    /// chart folds over the starboard cornice, so its columns run
+    /// backwards.
+    #[must_use]
+    pub const fn deckhead_cell(self, i: u8, j: u8) -> (u8, u8) {
+        let (x0, y0, w, _) = self.chart_rect(Surf::Ceiling);
+        (x0 + w - 1 - i, y0 + j)
     }
 
     /// Which plane a net cell lies in, or `None` where the cross has no
@@ -496,49 +568,21 @@ impl RoomKind {
     /// nothing, so the wall stays a wall.
     #[must_use]
     pub fn aperture_cells(self, port: PortId) -> Option<[(u8, u8); 4]> {
-        let (w, h) = self.floor();
-        let c = COURSES;
-        Some(match self.port(port)? {
-            Port::Door { wall, offset } => {
-                let mut cells = [(0, 0); 4];
-                for course in 0..APERTURE {
-                    for along in 0..APERTURE {
-                        let cell = match wall {
-                            // Aft: baseboard is the row nearest the floor.
-                            0 => (c + offset + along, c - 1 - course),
-                            // Starboard: baseboard is the column nearest
-                            // the floor, courses running outward.
-                            1 => (c + w + course, c + offset + along),
-                            2 => (c + offset + along, c + h + course),
-                            _ => (c - 1 - course, c + offset + along),
-                        };
-                        cells[usize::from(course * APERTURE + along)] = cell;
-                    }
-                }
-                cells
+        let mut cells = [(0, 0); 4];
+        let declared = self.port(port)?;
+        for j in 0..APERTURE {
+            for i in 0..APERTURE {
+                // A door stands on the deck, so its courses are counted
+                // from the baseboard and a taller wall leaves it the
+                // opening it was.
+                cells[usize::from(j * APERTURE + i)] = match declared {
+                    Port::Door { wall, offset } => self.wall_cell(wall, offset + i, j),
+                    Port::Ladder { x, y } => self.deckhead_cell(x + i, y + j),
+                    Port::Hatch { x, y } => self.deck_cell(x + i, y + j),
+                };
             }
-            Port::Ladder { x, y } => {
-                let mut cells = [(0, 0); 4];
-                for j in 0..APERTURE {
-                    for i in 0..APERTURE {
-                        // The ceiling chart folds over the starboard
-                        // cornice, so its columns run backwards.
-                        cells[usize::from(j * APERTURE + i)] =
-                            (2 * c + 2 * w - 1 - (x + i), c + y + j);
-                    }
-                }
-                cells
-            }
-            Port::Hatch { x, y } => {
-                let mut cells = [(0, 0); 4];
-                for j in 0..APERTURE {
-                    for i in 0..APERTURE {
-                        cells[usize::from(j * APERTURE + i)] = (c + x + i, c + y + j);
-                    }
-                }
-                cells
-            }
-        })
+        }
+        Some(cells)
     }
 
     /// Whether net cell `(x, y)` is **deck a declared door stands on** —
@@ -1527,10 +1571,31 @@ fn min_cell(cells: &[(i32, i32)]) -> (i32, i32) {
 
 /// The bounding grid of the widest room net, in cells. Every lane is
 /// this size, so a room's rects are a pure function of its id.
-pub const LANE_COLS: u8 = 22;
+///
+/// Read off the kinds rather than written down, because a lane is only
+/// ever as big as the biggest net it has to hold: a room that grows —
+/// in plan, or a course taller — grows every lane with it.
+pub const LANE_COLS: u8 = lane_grid().0;
 
 /// The bounding grid of the tallest room net, in rows.
-pub const LANE_ROWS: u8 = 13;
+pub const LANE_ROWS: u8 = lane_grid().1;
+
+/// The widest and the tallest of every kind's own net, `(cols, rows)`.
+const fn lane_grid() -> (u8, u8) {
+    let (mut cols, mut rows) = (0, 0);
+    let mut i = 0;
+    while i < ROOM_KINDS.len() {
+        let (c, r) = ROOM_KINDS[i].grid();
+        if c > cols {
+            cols = c;
+        }
+        if r > rows {
+            rows = r;
+        }
+        i += 1;
+    }
+    (cols, rows)
+}
 
 /// Net cell size, in world units.
 pub const CELL: f32 = 34.0;
@@ -1558,11 +1623,10 @@ pub fn lane_origin(id: RoomId) -> Vec2 {
     )
 }
 
-/// How far east the lanes reach — the world must hold them.
-#[must_use]
-pub fn lanes_extent() -> f32 {
-    f32::from(LANE_COLS).mul_add(CELL, lane_origin((MAX_ROOMS - 1) as RoomId).x)
-}
+/// **How far east the lanes reach** — the last lane's far edge, which the
+/// world must hold (`sim::WORLD_W` is this).
+pub const LANES_EAST: f32 =
+    LANE_ORIGIN.x + (MAX_ROOMS as f32 * (LANE_COLS as f32 + LANE_GUTTER) - LANE_GUTTER) * CELL;
 
 /// Which lane and raw cell `p` falls in, if any. The caller decides
 /// whether that room exists and whether the cell is a cell.
@@ -1615,15 +1679,20 @@ mod tests {
         }
     }
 
-    /// The cabin's net is the one BAY.md describes, chart for chart —
-    /// the generalization did not move a single cabin cell.
+    /// The cabin's net is the one BAY.md describes, chart for chart: an
+    /// 8×7 deck and deckhead, and four walls a full storey tall — every
+    /// one of them [`COURSES`] from the baseboard to the deckhead, with no
+    /// band of fabric over them that no chart reaches.
     #[test]
-    fn the_cabin_net_is_the_net_it_always_was() {
+    fn the_cabin_net_is_the_cross_bay_md_describes() {
         let cabin = RoomKind::Cabin;
-        assert_eq!(cabin.grid(), (22, 13));
+        let (width, depth) = cabin.floor();
+        assert_eq!((width, depth), (8, 7));
+        assert_eq!(cabin.grid(), (2 * COURSES + 2 * width, 2 * COURSES + depth));
+        let (cols, rows) = cabin.grid();
         let mut counts = [0_usize; 6];
-        for y in 0..13 {
-            for x in 0..22 {
+        for y in 0..rows {
+            for x in 0..cols {
                 if let Some(surf) = cabin.surface_of(x, y) {
                     counts[match surf {
                         Surf::Aft => 0,
@@ -1636,24 +1705,70 @@ mod tests {
                 }
             }
         }
-        assert_eq!(counts, [24, 21, 56, 21, 24, 56]);
+        let (along, athwart, courses) =
+            (usize::from(width), usize::from(depth), usize::from(COURSES));
+        let plan = along * athwart;
+        assert_eq!(
+            counts,
+            [
+                along * courses,
+                athwart * courses,
+                plan,
+                athwart * courses,
+                along * courses,
+                plan
+            ]
+        );
         // The fold seams that are adjacent in the net are adjacent in
-        // the room; a sample from each glued edge.
-        for ((ax, ay), a, (bx, by), b) in [
-            ((5, 2), Surf::Aft, (5, 3), Surf::Floor),
-            ((2, 5), Surf::Port, (3, 5), Surf::Floor),
-            ((10, 5), Surf::Floor, (11, 5), Surf::Starboard),
-            ((5, 9), Surf::Floor, (5, 10), Surf::Front),
-            ((13, 5), Surf::Starboard, (14, 5), Surf::Ceiling),
+        // the room; a sample from each glued edge, the deckhead's
+        // included — it meets the starboard wall's top course, because
+        // that course is the cornice and the cornice touches the
+        // deckhead.
+        let top = COURSES - 1;
+        for (near, near_surf, far, far_surf) in [
+            (
+                cabin.wall_cell(0, 2, 0),
+                Surf::Aft,
+                cabin.deck_cell(2, 0),
+                Surf::Floor,
+            ),
+            (
+                cabin.wall_cell(3, 2, 0),
+                Surf::Port,
+                cabin.deck_cell(0, 2),
+                Surf::Floor,
+            ),
+            (
+                cabin.deck_cell(width - 1, 2),
+                Surf::Floor,
+                cabin.wall_cell(1, 2, 0),
+                Surf::Starboard,
+            ),
+            (
+                cabin.deck_cell(2, depth - 1),
+                Surf::Floor,
+                cabin.wall_cell(2, 2, 0),
+                Surf::Front,
+            ),
+            (
+                cabin.wall_cell(1, 2, top),
+                Surf::Starboard,
+                cabin.deckhead_cell(width - 1, 2),
+                Surf::Ceiling,
+            ),
         ] {
-            assert_eq!(cabin.surface_of(ax, ay), Some(a));
-            assert_eq!(cabin.surface_of(bx, by), Some(b));
-            assert_eq!(ax.abs_diff(bx) + ay.abs_diff(by), 1);
+            assert_eq!(cabin.surface_of(near.0, near.1), Some(near_surf));
+            assert_eq!(cabin.surface_of(far.0, far.1), Some(far_surf));
+            assert_eq!(near.0.abs_diff(far.0) + near.1.abs_diff(far.1), 1);
         }
-        // The burner doorway keeps its traditional cells, as a
+        // The burner doorway keeps its traditional cells — the first two
+        // along the starboard wall, the bottom two courses — as a
         // threshold rather than a hole.
-        for cell in [(11, 3), (12, 3), (11, 4), (12, 4)] {
-            assert_eq!(cabin.tile_of(cell.0, cell.1), Some(Tile::Threshold));
+        for along in 0..APERTURE {
+            for course in 0..APERTURE {
+                let (x, y) = cabin.wall_cell(1, along, course);
+                assert_eq!(cabin.tile_of(x, y), Some(Tile::Threshold));
+            }
         }
     }
 
@@ -2202,6 +2317,62 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// **A wall's top course is the wall it tops.** The walls grew a
+    /// course to meet the deckhead (docs/ROOMS.md, "One storey,
+    /// everywhere"), and the course they grew is not a new kind of fabric:
+    /// a band of the room's own runs up its wall to the deckhead, so the
+    /// top course of a stocked aft wall is stock, the furnace's is hazard,
+    /// a chalked front wall's is chalk, a doorway's own lane stays the way
+    /// in all the way up, and everything else is the room's ordinary
+    /// wall. Read off the band rules rather than written down here, so the
+    /// claim is about every kind the game has and every kind it grows.
+    ///
+    /// The course under it is the one compared, because nothing is set
+    /// into either: a doorway takes the two courses at the deck and a
+    /// handshake the second, so the top two are the wall's own fabric,
+    /// and a class that differed between them would be a class the walls
+    /// grew rather than one the room declared.
+    #[test]
+    fn a_walls_top_course_reads_as_the_wall_it_tops() {
+        let top = COURSES - 1;
+        let mut swept = 0;
+        for kind in ROOM_KINDS {
+            let (w, h) = kind.floor();
+            for wall in 0..4_u8 {
+                let length = if wall % 2 == 0 { w } else { h };
+                for along in 0..length {
+                    let (x, y) = kind.wall_cell(wall, along, top);
+                    let (bx, by) = kind.wall_cell(wall, along, top - 1);
+                    assert!(
+                        kind.tile_of(x, y).is_some(),
+                        "{kind:?} has no wall at ({x}, {y}), the top of wall {wall}"
+                    );
+                    assert_eq!(
+                        kind.tile_of(x, y),
+                        kind.tile_of(bx, by),
+                        "{kind:?} wall {wall}, {along} along: the top course reads \
+                         differently from the course under it"
+                    );
+                    swept += 1;
+                }
+            }
+        }
+        // Every cell along every wall of every kind was asked — and the
+        // three readings worth naming come out as they should: stock on
+        // a stocked aft wall, hazard in the furnace, plain on the cabin.
+        let walls: usize = ROOM_KINDS
+            .iter()
+            .map(|kind| 2 * (usize::from(kind.floor().0) + usize::from(kind.floor().1)))
+            .sum();
+        assert_eq!(swept, walls);
+        let (x, y) = RoomKind::Trade.wall_cell(0, 2, top);
+        assert_eq!(RoomKind::Trade.tile_of(x, y), Some(Tile::Stock));
+        let (x, y) = RoomKind::Burner.wall_cell(0, 2, top);
+        assert_eq!(RoomKind::Burner.tile_of(x, y), Some(Tile::Consume));
+        let (x, y) = RoomKind::Cabin.wall_cell(2, 5, top);
+        assert_eq!(RoomKind::Cabin.tile_of(x, y), Some(Tile::Plain));
     }
 
     /// **A room keeps the cells its own hardware stands in.**

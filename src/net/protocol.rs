@@ -1,10 +1,13 @@
 //! The wire protocol: versioned, line-oriented lockstep messages.
 //!
 //! Style and defenses mirror `sim/save.rs`: a magic-plus-version header
-//! (`SNP5` — `SNP3` when the input frame grew its occupied-room field and
+//! (`SNP6` — `SNP3` when the input frame grew its occupied-room field and
 //! the room graph's attach/detach requests, `SNP4` when it grew the
-//! carry's facing, docs/BAY.md "Cargo turns", and `SNP5` when it grew the
-//! aimed piece, "Cargo stops colliding"), whitespace-separated tokens,
+//! carry's facing, docs/BAY.md "Cargo turns", `SNP5` when it grew the
+//! aimed piece, "Cargo stops colliding", and `SNP6` when the walls reached
+//! the deckhead, docs/ROOMS.md "One storey, everywhere": not a token
+//! moved, but every room's net and lane grew, so the same pointer names
+//! another cell to a peer on the old geometry), whitespace-separated tokens,
 //! and parsing that never panics —
 //! every malformed message maps to a [`WireError`] with its 1-based line
 //! number (line 0 means the text ended too early). Floats travel as hex bit
@@ -24,7 +27,7 @@ use crate::sim::{Attach, CrewFrame, InputFrame, MAX_CREW, PlayerId, Turn, Vec2};
 
 /// Magic-plus-version header of every message this build writes. Bump on
 /// any breaking change; older versions fail safe as unsupported.
-const MAGIC: &str = "SNP5";
+const MAGIC: &str = "SNP6";
 
 /// Why a wire payload was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -585,30 +588,36 @@ mod tests {
             Err(WireError::UnsupportedVersion)
         ));
         // Out-of-range crew indices are refused at the wire.
-        assert!(Message::from_wire("SNP5 hello 6").is_err());
-        assert!(Message::from_wire("SNP5 input 1 6 0 0 0 0 0 0 0 0 0 0 0 - - - -").is_err());
+        assert!(Message::from_wire("SNP6 hello 6").is_err());
+        assert!(Message::from_wire("SNP6 input 1 6 0 0 0 0 0 0 0 0 0 0 0 - - - -").is_err());
         // Loose booleans are refused: the strict wire has no "2" or "true".
-        assert!(Message::from_wire("SNP5 input 1 0 0 0 2 0 0 0 0 0 0 0 0 - - - -").is_err());
-        assert!(Message::from_wire("SNP5 input 1 0 0 0 true 0 0 0 0 0 0 0 0 - - - -").is_err());
+        assert!(Message::from_wire("SNP6 input 1 0 0 0 2 0 0 0 0 0 0 0 0 - - - -").is_err());
+        assert!(Message::from_wire("SNP6 input 1 0 0 0 true 0 0 0 0 0 0 0 0 - - - -").is_err());
         // A facing is a turn: no sign, no fraction, nothing past a whole
         // one.
-        let facing = |turn: &str| format!("SNP5 input 1 0 0 0 0 0 0 0 0 0 0 0 {turn} - - - -");
+        let facing = |turn: &str| format!("SNP6 input 1 0 0 0 0 0 0 0 0 0 0 0 {turn} - - - -");
         for bad in ["65536", "-1", "1.5", "-"] {
             assert!(Message::from_wire(&facing(bad)).is_err(), "facing {bad}");
         }
         assert!(Message::from_wire(&facing("65535")).is_ok());
         // An aim is a piece id or nothing: no sign, no fraction, nothing
         // past a `u32`.
-        let aim = |id: &str| format!("SNP5 input 1 0 0 0 0 0 0 0 0 0 0 0 0 {id} - - -");
+        let aim = |id: &str| format!("SNP6 input 1 0 0 0 0 0 0 0 0 0 0 0 0 {id} - - -");
         for bad in ["4294967296", "-1", "1.5", "", "--"] {
             assert!(Message::from_wire(&aim(bad)).is_err(), "aim {bad:?}");
         }
         for good in ["-", "0", "4294967295"] {
             assert!(Message::from_wire(&aim(good)).is_ok(), "aim {good:?}");
         }
-        // The previous version's fourteen-token frame is that version's.
+        // An older version's frame is that version's: the fourteen-token
+        // one, and the previous version's own, which parses token for
+        // token and was cut against a shorter net.
         assert!(matches!(
             Message::from_wire("SNP4 input 1 0 0 0 0 0 0 0 0 0 0 0 0 - - -"),
+            Err(WireError::UnsupportedVersion)
+        ));
+        assert!(matches!(
+            Message::from_wire("SNP5 input 1 0 0 0 0 0 0 0 0 0 0 0 0 - - - -"),
             Err(WireError::UnsupportedVersion)
         ));
     }
@@ -656,7 +665,7 @@ mod tests {
     #[test]
     fn arbitrary_garbage_never_panics() {
         // Deterministic fuzz: random-ish strings over a spicy alphabet.
-        let alphabet: Vec<char> = "SNP5 hello\nframe 0-9abcdefx \u{FFFD}\u{1F680}\t"
+        let alphabet: Vec<char> = "SNP6 hello\nframe 0-9abcdefx \u{FFFD}\u{1F680}\t"
             .chars()
             .collect();
         for round in 0_u64..300 {

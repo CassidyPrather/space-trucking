@@ -209,6 +209,12 @@ topological one.
   top of its wall courses and the air a ceiling rig hangs into is
   **22 mm**, was 82 mm, and the coving ran at 77 mm, which is to say it
   fitted by a quarter of a millimetre. It is a bead now.
+
+  > Superseded in part by *The walls reach the deckhead*, below: the
+  > walls are four courses and meet the deckhead, so there is no band
+  > over the cornices at all, and every cell of a room's height is a
+  > course a chart reaches. The deckhead and the pendant did not move.
+  > The parlor's bead is a line laid flat on its wall.
 - **One cube of padding stands between any two rooms.** The owner's
   rule, and the one that retired the paragraph that used to be here.
 
@@ -288,6 +294,143 @@ as a whole before anything changes:
 5. **Every induced seam closes** (next section).
 
 Only then does the room enter the lattice, the graph, and the save.
+
+## The walls reach the deckhead
+
+The owner's report, after a playtest: "the placement area has this weird
+gap between the wall and ceiling that feels like it shouldn't be there?
+Like, I can't move paintings or windows any higher. This has been
+something that has been bothering me for a while, but I think now's
+finally a good time to address it."
+
+The gap was a leftover. A room's walls were the old 6×4 hold's three
+rows — `COURSES` was 3 — and the deckhead was raised over them for
+headroom: to 2.26 m first, then onto the grid at four cells when the
+lattice took the room's section (*One storey, everywhere*, above). The
+wall charts covered the three courses and nothing covered the cell
+between the cornices and the deckhead: a band of fabric round every
+room that no chart reached, no rule could name and no cargo could berth
+in. The cabin's own seam test called it the one declared trim seam left
+in the net.
+
+**So every wall is a full storey: its charts run from the baseboard to
+the deckhead.** The deckhead did not move — 2.2 m is headroom, and the
+pendant is hung off a standing head (`HEAD_CLEAR`, `CALLER_DROP`), which
+are measurements of a body. The walls grew a fourth course to meet it.
+Passages this overrules are marked "Superseded by *The walls reach the
+deckhead*".
+
+**The section is one number.** `sim::room::COURSES` is 4, and nothing
+restates it:
+
+- **The net.** `RoomKind::grid` is `2·COURSES + 2w` by `2·COURSES + h`:
+  four courses of wall on every side of the deck, and the deckhead
+  folded on past the starboard cornice. The cabin's net is 24×15; it
+  was 22×13.
+- **The lanes.** `LANE_COLS` and `LANE_ROWS` are the widest and tallest
+  kind's own net (`room::lane_grid`), so a room that grows grows every
+  lane with it; they are 24 and 15. `room::LANES_EAST` is where the last
+  lane ends — 9,276 world units — and `sim::WORLD_W` is that rather than
+  a number of its own (it was 8,642, set by hand). A lane is 15 rows
+  from y = 16, so the lanes end at 526, inside `WORLD_H`. Nothing else
+  lives east of the console: the classic rects end at x = 790 and the
+  first lane begins at 810 (`layout::tests`).
+- **The presentation.** `cabin::room::WALL_H` is `COURSES` cells and
+  `CEIL_Y` is `WALL_H`: the deckhead stands on the walls. A storey is
+  still the room plus the pad, five cells. Every wall chart is `COURSES`
+  deep, so the deckhead meets the starboard wall at its cornice and every
+  fold of the net is watertight in the room as well as on the sheet
+  (`rig::tests::chart_seams_are_watertight`).
+
+**Nothing hung on a wall moved, because a height is stated in courses
+and a course is counted from the deck.** The net's own rows are counted
+from its edge, which is the end that grew, so every rule that names a
+height says it through one function — `RoomKind::wall_cell(wall, along,
+course)` — and through `deck_cell` and `deckhead_cell` for the planes:
+
+- **A doorway** is two courses from the baseboard (`aperture_cells`), a
+  **ladder** and a **hatch** a patch of the deckhead and the deck.
+- **The handshake** is declared as a place on the aft wall — so many
+  cells along it, on `HANDSHAKE_COURSE`, the second — and answered as
+  the net cell; the fixture rule reads its course back off that cell
+  (`COURSES - 1 - hy`) and gets the second course again, so the corner
+  clause turns the brass onto the side wall where it always did.
+- **The pendant, every station's furniture, and every seam's
+  hardware** are measured off the room's box or a site in it, deck to
+  deckhead, and the box did not move.
+- **The starting board** names every berth by its place
+  (`sim::STARTER_CARGO`): the sconce on the port flank's third course,
+  which was its cornice, the window and the gauges on the front wall's
+  third and second, the tank on the starboard wall's second.
+- **The fixture board** (`--fixture`) was carried berth by berth: each
+  chart's cells moved on the net by that chart's own offset — one across
+  and one down for the deck and the four walls, two across and one down
+  for the deckhead — so every piece stands where it stood, and the board
+  was re-saved through the new writer.
+- **A standing body's shadow up a wall** rises through its stature,
+  `COURSES` at most, which is still the wall there is; no kind is taller
+  than two.
+
+**The top course is the wall it tops.** It is not a new class: a room's
+bands already run up their walls, and `RoomKind::tile_of` gives the new
+course whatever the course under it reads
+(`room::tests::a_walls_top_course_reads_as_the_wall_it_tops`). Per kind:
+
+| Kind | Aft wall | Front wall | Flanks |
+| --- | --- | --- | --- |
+| Cabin | `Plain` | `Plain` | `Plain` |
+| Burner | `Consume` | `Consume` | `Consume` |
+| Trade | `Stock`, the doorway's own columns included | `Offer`, except the door's own lane, which is `Staging` | `Staging` |
+| Wreck | `Stock`, as Trade | `Staging` | `Staging` |
+| Parlor | `Staging` | `Offer`, except the door's lane | `Staging` |
+| Pump | `Staging` | `Staging` | `Staging` |
+
+The doorstep law hands back only the two cells of deck a door stands
+on, so a stocked aft wall is stock to its top course over the doorway's
+own columns too, and the entry-path law hands back the door's lane
+from the deck to the deckhead, as it always did.
+
+**What the band was holding.** Nothing could berth in it, so four
+stations had furniture there, and it is berth now: the gauntlet found
+five fittings standing in the top course's sight or air, and each moved
+rather than the rule. The comet's second lump of crust and the
+Hermitage's port boss hang a pace forward of the stocked wall's top
+course, and Jupiter's aft manifold collar stands forward of its riser,
+because a lump in front of the goods hides a third of every good
+shelved there. The parlor's cove light runs round all four walls as it
+always did, but as a line laid flat on the wall — no deeper than the
+hair between a wall and a hung rig's own back (`poi::parlor::NEON_DEEP`)
+— because a bead 66 mm proud ran straight through the air of every
+painting hung on the chalked front wall. The docket stays empty.
+
+**What the owner hangs there.** Every wall of every kind takes a
+painting and a window with its top edge at the deckhead
+(`cabin::room::tests::a_painting_and_a_window_hang_against_the_deckhead_on_every_wall`),
+and the gauntlet sweeps the new course like any other: every berth is
+workable from the walk envelope, seen, and clear of the room's own
+furniture. A stocked wall is the room's shelf all the way up, so the
+player's own painting is refused there by the stock law, on every
+course alike.
+
+**The art did not move.** A bought wall panel stands from under the
+deck to the deckhead (`room::cladding`, which has always measured a
+panel by `CEIL_Y` and never by the courses) and the deckhead is where it
+was, so `art/manifest.toml` needs nothing, and none of the station
+objects it binds is one of the five fittings that moved. What a dressed
+build changes is in front of the panel: the top course now wears the
+tile paint of the wall below it, so a stocked wall's enamel and border
+band, the offer chalk and the furnace's tape run up to the deckhead, and
+the tape that ran along the old cornices runs along the deckhead
+instead. And a kit panel's own cornice — its relief squeezed into the
+notch (docs/ART_PIPELINE.md, "The fabric namespace") — stands behind
+whatever hangs on the top course now, as its plinth has always stood
+behind the baseboard's.
+
+**Saves, tapes and the wire.** Saves are `STV23`, tapes `RPL7`, the wire
+`SNP6`. Not a token of any grammar moved, but every room's net and lane
+did, so the same berth or pointer names another place, and another
+version starts a new run as ever (DESIGN_REVIEW.md, *An old save or
+tape starts a new run*).
 
 ## Closure: what happens where two rooms touch
 
@@ -524,6 +667,10 @@ family. The cabin is simply the room you start in.
 
 - Each room kind declares its own net: floor extent, wall height (3),
   aperture punch-outs, and tile classes.
+
+  > Superseded in part by *The walls reach the deckhead*: the wall
+  > height is `sim::room::COURSES`, four, the same on every kind, and
+  > every wall runs from the baseboard to the deckhead.
 - Each attached room is allocated a **net lane** — a reserved rect of
   the sim's logical space, indexed by its dense `RoomId`, big enough for
   the largest room net. Lanes are fixed, so a room's logical rects are a

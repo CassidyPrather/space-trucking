@@ -5983,6 +5983,7 @@ fn paint_artwork(
 
 #[cfg(test)]
 mod tests {
+    use space_trucking::sim::room::RoomKind;
     use space_trucking::sim::{Sim, placement_check};
 
     use super::*;
@@ -6006,10 +6007,47 @@ mod tests {
             && sub.y + sub.h <= whole.y + whole.h + SLACK
     }
 
+    /// The cabin's deck cell `(i, j)`, as a cell of its net. The tests
+    /// below name every cell by the place in the room it is — a deck
+    /// cell, the deckhead over one, a course of a wall counted up from
+    /// the deck — so a wall that grows a course moves none of them.
+    const fn deck(i: u8, j: u8) -> (u8, u8) {
+        RoomKind::Cabin.deck_cell(i, j)
+    }
+
+    /// The cabin's deckhead over deck cell `(i, j)`.
+    const fn deckhead(i: u8, j: u8) -> (u8, u8) {
+        RoomKind::Cabin.deckhead_cell(i, j)
+    }
+
+    /// Course `course` of the cabin's aft wall, `along` cells from its
+    /// port end.
+    const fn aft_cell(along: u8, course: u8) -> (u8, u8) {
+        RoomKind::Cabin.wall_cell(0, along, course)
+    }
+
+    /// Course `course` of the cabin's starboard wall, `along` cells from
+    /// its aft end.
+    const fn starboard_cell(along: u8, course: u8) -> (u8, u8) {
+        RoomKind::Cabin.wall_cell(1, along, course)
+    }
+
+    /// Course `course` of the cabin's front wall, `along` cells from its
+    /// port end.
+    const fn front_cell(along: u8, course: u8) -> (u8, u8) {
+        RoomKind::Cabin.wall_cell(2, along, course)
+    }
+
+    /// Course `course` of the cabin's port wall, `along` cells from its
+    /// aft end.
+    const fn port_cell(along: u8, course: u8) -> (u8, u8) {
+        RoomKind::Cabin.wall_cell(3, along, course)
+    }
+
     /// The berth `kind` takes with its footprint's top-left on cell
     /// `(x, y)` of the cabin's net, turned the way the game would turn it
     /// there (`cargo::anchored`): its rect, and its turn.
-    fn berth_of(x: u8, y: u8, kind: Kind) -> (Rect, Turn) {
+    fn berth_of((x, y): (u8, u8), kind: Kind) -> (Rect, Turn) {
         let (cx, cy, turn) = cargo::anchored(
             space_trucking::sim::room::RoomKind::Cabin,
             kind,
@@ -6022,8 +6060,8 @@ mod tests {
 
     /// The rect `kind` takes on cell `(x, y)` of the cabin's net
     /// ([`berth_of`]).
-    fn rect_of(x: u8, y: u8, kind: Kind) -> Rect {
-        berth_of(x, y, kind).0
+    fn rect_of(at: (u8, u8), kind: Kind) -> Rect {
+        berth_of(at, kind).0
     }
 
     /// The rect `kind` takes centred on fine `(x, y)` of the cabin's net
@@ -6036,8 +6074,8 @@ mod tests {
 
     /// [`site_on`] at the berth `kind` takes on cell `(x, y)` of the
     /// cabin's net, on `station`'s chart ([`berth_of`]).
-    fn site_at(station: Station, x: u8, y: u8, kind: Kind) -> (Vec3, Quat, Vec3) {
-        let (rect, turn) = berth_of(x, y, kind);
+    fn site_at(station: Station, at: (u8, u8), kind: Kind) -> (Vec3, Quat, Vec3) {
+        let (rect, turn) = berth_of(at, kind);
         site_on(station, &chart(station), kind, rect, turn)
     }
 
@@ -6050,7 +6088,7 @@ mod tests {
         let port = chart(Station::BayPort);
         // A painting on the aft chart: flat against the aft wall plane,
         // facing into the room.
-        let (pos, rot, _) = site_at(Station::BayWall, 4, 1, Kind::Painting);
+        let (pos, rot, _) = site_at(Station::BayWall, aft_cell(1, 1), Kind::Painting);
         assert!(
             (pos.z - aft.center.z).abs() < 1e-4,
             "wall piece left the wall plane: {pos}"
@@ -6061,8 +6099,8 @@ mod tests {
         );
         // A couch on the floor: upright (local +Y is world up), feet on
         // the plates, spanning about its two 0.55 cells.
-        let couch = rect_of(4, 4, Kind::Couch);
-        let (pos, rot, scale) = site_at(Station::BayFloor, 4, 4, Kind::Couch);
+        let couch = rect_of(deck(1, 1), Kind::Couch);
+        let (pos, rot, scale) = site_at(Station::BayFloor, deck(1, 1), Kind::Couch);
         assert!(
             (rot * Vec3::Y - Vec3::Y).length() < 1e-4,
             "standing rigs must be upright"
@@ -6073,7 +6111,7 @@ mod tests {
         assert!((0.95..=1.15).contains(&width), "couch width {width}");
         // A wall lamp on the port chart: at the port plane, facing
         // starboard (+X is into the room from port).
-        let (pos, rot, _) = site_at(Station::BayPort, 1, 4, Kind::WallLamp);
+        let (pos, rot, _) = site_at(Station::BayPort, port_cell(1, 1), Kind::WallLamp);
         assert!(
             (pos.x - port.center.x).abs() < 1e-4,
             "port piece left its wall plane: {pos}"
@@ -6093,8 +6131,8 @@ mod tests {
     /// does with it have to be the same claim.
     #[test]
     fn the_backing_rule_turns_floor_rigs() {
-        let facing = |x: u8, y: u8, kind: Kind| {
-            let (_, rot, _) = site_at(Station::BayFloor, x, y, kind);
+        let facing = |at: (u8, u8), kind: Kind| {
+            let (_, rot, _) = site_at(Station::BayFloor, at, kind);
             assert!(
                 (rot * Vec3::Y - Vec3::Y).length() < 1e-4,
                 "the backing rule must keep rigs upright"
@@ -6102,27 +6140,30 @@ mod tests {
             rot * Vec3::Z
         };
         // Mid-floor: face the front of the room, toward the user.
-        assert!(facing(5, 4, Kind::Couch).z < -0.9, "mid-floor faces front");
+        assert!(
+            facing(deck(2, 1), Kind::Couch).z < -0.9,
+            "mid-floor faces front"
+        );
         // Against the front gutter: back to the front wall.
         assert!(
-            facing(3, 9, Kind::Couch).z > 0.9,
+            facing(deck(0, 6), Kind::Couch).z > 0.9,
             "front-row cargo turns its back to the front wall"
         );
         // A one-column piece against the port seam backs onto it.
         assert!(
-            facing(3, 4, Kind::FloorLamp).x > 0.9,
+            facing(deck(0, 1), Kind::FloorLamp).x > 0.9,
             "a port-seam lamp faces starboard"
         );
         // A two-wide couch cannot lie along the port wall: the quarter
         // turn would leave its cells, so the default stands.
         assert!(
-            facing(3, 5, Kind::Couch).z < -0.9,
+            facing(deck(0, 2), Kind::Couch).z < -0.9,
             "an incompatible seam keeps the default facing"
         );
         // The aft seam wins the corner: back to the aft wall reads as
         // the flush default (facing front).
         assert!(
-            facing(3, 3, Kind::FloorLamp).z < -0.9,
+            facing(deck(0, 0), Kind::FloorLamp).z < -0.9,
             "the aft corner backs onto the aft wall"
         );
         // **And a deckhead takes the same rule.** It used to take one
@@ -6132,8 +6173,8 @@ mod tests {
         // defect stood on its head, and invisible to every family in the
         // gauntlet until one of them learned to ask which way a berth
         // turns a body.
-        let hung = |x: u8, y: u8, kind: Kind| {
-            let (_, rot, _) = site_at(Station::BayCeiling, x, y, kind);
+        let hung = |at: (u8, u8), kind: Kind| {
+            let (_, rot, _) = site_at(Station::BayCeiling, at, kind);
             assert!(
                 (rot * Vec3::Y - Vec3::Y).length() < 1e-4,
                 "a pendant hangs the author's up world up"
@@ -6141,11 +6182,11 @@ mod tests {
             rot * Vec3::Z
         };
         assert!(
-            hung(16, 6, Kind::CeilingLamp).z < -0.9,
+            hung(deckhead(5, 3), Kind::CeilingLamp).z < -0.9,
             "mid-ceiling faces front, exactly as the deck under it does"
         );
         assert!(
-            hung(16, 9, Kind::CeilingLamp).z > 0.9,
+            hung(deckhead(5, 6), Kind::CeilingLamp).z > 0.9,
             "a pendant on the front row turns its back to the front wall"
         );
     }
@@ -6403,8 +6444,8 @@ mod tests {
                     }),
             )
             .collect();
-        // The starter fixture stands a cabinet at (6, 4) of the cabin's
-        // net: one cell of deck, two courses tall. The cell in front of
+        // The starter fixture stands a cabinet on deck cell (3, 1) of the
+        // cabin: one cell of deck, two courses tall. The cell in front of
         // it — one row toward the front wall — is bare deck.
         let cabinet = pieces
             .iter()
@@ -6455,17 +6496,17 @@ mod tests {
     /// the roll costs nothing.
     #[test]
     fn wall_cargo_hangs_upright() {
-        for (station, x, y, kind) in [
-            (Station::BayWall, 4, 0, Kind::ChartTank),
-            (Station::BayPort, 0, 4, Kind::ChartTank),
-            (Station::BayStarboard, 11, 5, Kind::ChartTank),
-            (Station::BayFront, 4, 10, Kind::ChartTank),
-            (Station::BayWall, 4, 1, Kind::Painting),
-            (Station::BayPort, 0, 4, Kind::Painting),
-            (Station::BayStarboard, 11, 5, Kind::Painting),
+        for (station, at, kind) in [
+            (Station::BayWall, aft_cell(1, 2), Kind::ChartTank),
+            (Station::BayPort, port_cell(1, 2), Kind::ChartTank),
+            (Station::BayStarboard, starboard_cell(2, 0), Kind::ChartTank),
+            (Station::BayFront, front_cell(1, 0), Kind::ChartTank),
+            (Station::BayWall, aft_cell(1, 1), Kind::Painting),
+            (Station::BayPort, port_cell(1, 2), Kind::Painting),
+            (Station::BayStarboard, starboard_cell(2, 0), Kind::Painting),
         ] {
             let surface = chart(station);
-            let (_, rot, _) = site_at(station, x, y, kind);
+            let (_, rot, _) = site_at(station, at, kind);
             assert!(
                 (rot * Vec3::Y).y > 0.9,
                 "{station:?}: the {kind:?}'s up must be world up, got {:?}",
@@ -6492,7 +6533,7 @@ mod tests {
         let floor = chart(Station::BayFloor);
         // One column wide against the port seam: the game turns it its
         // quarter, and the cabinet faces starboard.
-        let (rect, turn) = berth_of(3, 4, Kind::Cabinet);
+        let (rect, turn) = berth_of(deck(0, 1), Kind::Cabinet);
         let (pos, rot, scale) = site_on(Station::BayFloor, &floor, Kind::Cabinet, rect, turn);
         assert!(
             (rot * Vec3::Z).x > 0.9,
@@ -6586,18 +6627,18 @@ mod tests {
         // the tank spend the side charts' quarter turn; and the window,
         // 2×1, spends the front chart's half turn — whose rows climb the
         // wall, so every footprint there can afford the roll.
-        for (x, y, kind) in [
-            (18, 6, Kind::CeilingLamp),
-            (0, 4, Kind::WallLamp),
-            (12, 5, Kind::ChartTank),
-            (4, 12, Kind::Window),
+        for (at, kind) in [
+            (deckhead(3, 3), Kind::CeilingLamp),
+            (port_cell(1, 2), Kind::WallLamp),
+            (starboard_cell(2, 1), Kind::ChartTank),
+            (front_cell(1, 2), Kind::Window),
             // The painting down a flank: a berth the athwart rule used
             // to refuse, upright now and carrying its own face for it.
-            (0, 4, Kind::Painting),
+            (port_cell(1, 2), Kind::Painting),
         ] {
-            let (rect, turn) = berth_of(x, y, kind);
+            let (rect, turn) = berth_of(at, kind);
             let face = standing_surface(&charts, kind, rect, turn)
-                .unwrap_or_else(|| panic!("{kind:?} at ({x}, {y}) leaves its chart's lie"));
+                .unwrap_or_else(|| panic!("{kind:?} at {at:?} leaves its chart's lie"));
             assert!(
                 within(face.rect, rect),
                 "{kind:?}: a face binds a sub-rect of its own cells, got {:?}",
@@ -6606,11 +6647,14 @@ mod tests {
         }
         // The aft chart already stands level, so nothing hung there is
         // turned at all and nothing hung there needs a face of its own.
-        for (x, y, kind) in [(4, 1, Kind::Painting), (4, 1, Kind::ChartTank)] {
-            let (rect, turn) = berth_of(x, y, kind);
+        for (at, kind) in [
+            (aft_cell(1, 1), Kind::Painting),
+            (aft_cell(1, 1), Kind::ChartTank),
+        ] {
+            let (rect, turn) = berth_of(at, kind);
             assert!(
                 standing_surface(&charts, kind, rect, turn).is_none(),
-                "{kind:?} at ({x}, {y}) lies with its chart and needs no face"
+                "{kind:?} at {at:?} lies with its chart and needs no face"
             );
         }
     }
@@ -6623,7 +6667,7 @@ mod tests {
     fn a_wall_face_outranks_the_chart_it_hangs_on() {
         let charts = rig::bay();
         let starboard = chart(Station::BayStarboard);
-        let (rect, turn) = berth_of(12, 5, Kind::ChartTank);
+        let (rect, turn) = berth_of(starboard_cell(2, 1), Kind::ChartTank);
         let face =
             standing_surface(&charts, Kind::ChartTank, rect, turn).expect("the tank turns upright");
         let inward = Station::BayStarboard.inward(&starboard);
@@ -6653,7 +6697,7 @@ mod tests {
         use crate::surface::{Aimable, pick};
 
         let charts = rig::bay();
-        let (rect, turn) = berth_of(5, 6, Kind::Couch);
+        let (rect, turn) = berth_of(deck(2, 3), Kind::Couch);
         let (rooms, couch) = standing(rect, turn, Kind::Couch);
         let vial = Piece {
             id: 2,
@@ -6711,7 +6755,7 @@ mod tests {
     /// outgrows the bar pool.
     #[test]
     fn glyphs_cover_the_violation_ladder() {
-        let rect = rect_of(5, 4, Kind::PerfumeVial);
+        let rect = rect_of(deck(2, 1), Kind::PerfumeVial);
         for rule in [
             Violation::Bounds,
             Violation::Volatile,
@@ -6745,7 +6789,7 @@ mod tests {
     #[test]
     fn the_map_rides_the_tanks_glass() {
         let charts = rig::bay();
-        let (rect, turn) = berth_of(12, 5, Kind::ChartTank);
+        let (rect, turn) = berth_of(starboard_cell(2, 1), Kind::ChartTank);
         let (station, surface) = instrument_surface(&charts, Kind::ChartTank, rect, turn)
             .expect("the tank mounts the map");
         assert_eq!(station, Station::Map);
@@ -6792,7 +6836,7 @@ mod tests {
         );
         // The launch handle hangs the same way, on its own front-wall
         // berth, bound to the rect the gesture layer still watches.
-        let (lever_rect, lever_turn) = berth_of(5, 10, Kind::LaunchLever);
+        let (lever_rect, lever_turn) = berth_of(front_cell(2, 0), Kind::LaunchLever);
         let (station, lever) =
             instrument_surface(&charts, Kind::LaunchLever, lever_rect, lever_turn)
                 .expect("the handle mounts its panel");
@@ -6969,11 +7013,16 @@ mod tests {
     fn the_carry_preview_promises_the_berth() {
         let starboard = chart(Station::BayStarboard);
         let floor = chart(Station::BayFloor);
-        let hover = |station: Station, surface: &SimSurface, kind: Kind, x: u8, y: u8| {
-            let (rect, turn) = berth_of(x, y, kind);
+        let hover = |station: Station, surface: &SimSurface, kind: Kind, at: (u8, u8)| {
+            let (rect, turn) = berth_of(at, kind);
             ghost_pose(station, surface, kind, rect, turn).1
         };
-        let up = hover(Station::BayStarboard, &starboard, Kind::ChartTank, 12, 5);
+        let up = hover(
+            Station::BayStarboard,
+            &starboard,
+            Kind::ChartTank,
+            starboard_cell(2, 1),
+        );
         assert!(
             (up * Vec3::Y).y > 0.9,
             "a hovered tank must stand up, not lie on its side: {:?}",
@@ -6984,7 +7033,7 @@ mod tests {
             "and still face into the room"
         );
         // The placed transform is the same one, to the last bit.
-        let placed = site_at(Station::BayStarboard, 12, 5, Kind::ChartTank).1;
+        let placed = site_at(Station::BayStarboard, starboard_cell(2, 1), Kind::ChartTank).1;
         for axis in [Vec3::X, Vec3::Y, Vec3::Z] {
             assert!(
                 (up * axis - placed * axis).length() < 1e-5,
@@ -6994,7 +7043,7 @@ mod tests {
             );
         }
         // The turn the game gives a front-row body is the ghost's too.
-        let backed = hover(Station::BayFloor, &floor, Kind::Couch, 3, 9);
+        let backed = hover(Station::BayFloor, &floor, Kind::Couch, deck(0, 6));
         assert!(
             (backed * Vec3::Z).z > 0.9,
             "a couch hovered on the front row must already have its back to the wall"
@@ -7489,7 +7538,7 @@ mod tests {
         // Onto the hatch in the deck: refused — a couch stands on a crate
         // now, but never in a doorway — and struck through along the
         // couch's own diagonal.
-        let onto = rect_center(layout::cell_rect(CABIN, 9, 7));
+        let onto = deck(6.5, 4.5);
         let (refused, verdict) = drawn.aim(onto);
         assert_eq!(verdict, Err(Some(Violation::Threshold)));
         assert_eq!(drawn.shown(drawn.slash), Visibility::Visible);
@@ -8547,7 +8596,7 @@ mod tests {
                 station,
                 &surface,
                 Kind::Painting,
-                rect_of(4, 1, Kind::Painting),
+                rect_of(aft_cell(1, 1), Kind::Painting),
                 Turn::ZERO,
             );
             for spent in [scale.x, scale.y, scale.z] {
@@ -9125,7 +9174,8 @@ mod band {
     /// **A rig is drawn one cell deep.**
     ///
     /// The world is built of `rig::BAY_CELL` cubes — rooms four cells
-    /// tall, walls three courses, a cell of padding between rooms — and
+    /// tall, walls four courses to meet them, a cell of padding between
+    /// rooms — and
     /// the band every kind is composed within was the last length in it
     /// that was not. It was 0.497 m, nine tenths of a cell, which is a
     /// number off no line in particular; it is one cell wearing the same

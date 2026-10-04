@@ -737,16 +737,17 @@ mod tests {
                 f32::from(layout::GRID_ROWS) * layout::CELL,
             ),
         );
-        // The center of net cell (4, 1) — a real aft-chart cell — should
-        // round-trip through a ray fired along the panel normal.
-        let cell = layout::cell_rect(space_trucking::sim::room::CABIN, 4, 1);
+        // The center of a real aft-chart cell should round-trip through
+        // a ray fired along the panel normal.
+        let (x, y) = space_trucking::sim::RoomKind::Cabin.wall_cell(0, 1, 1);
+        let cell = layout::cell_rect(space_trucking::sim::room::CABIN, x, y);
         let target = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
         let world = s.to_world(target);
         let n = s.normal();
         let ray = Ray3d::new(world + n * 0.5, Dir3::new(-n).expect("unit"));
         let (_, sim, _) = s.project(ray).expect("hit");
         assert!(
-            layout::cell_at(sim) == Some((space_trucking::sim::room::CABIN, 4, 1)),
+            layout::cell_at(sim) == Some((space_trucking::sim::room::CABIN, x, y)),
             "landed at {sim:?}"
         );
         // And the normal faces the +Z hemisphere (toward the seat).

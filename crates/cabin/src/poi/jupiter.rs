@@ -245,6 +245,11 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
     .part_of("bottle_rack")
     .seated(Seat::On("bottle")),
     // The manifold, high along the starboard cornice, with its collars.
+    // The aft collar stands forward of the riser rather than aft of it:
+    // aft of it, its flange was a hand's breadth in front of the goods'
+    // wall at the height of that wall's top course, which was a band of
+    // bare plate until the walls grew to meet the deckhead and is shelf
+    // now.
     Fitting::new(
         Shape::Slab,
         Coat::metal(Worn::Socket),
@@ -253,7 +258,7 @@ const DISPATCH_FLOOR: [Fitting; 20] = [
     )
     .called("manifold"),
     collar(-0.16),
-    collar(0.44),
+    collar(0.26),
     // The riser off it, dropping at the aft end of the run, where the
     // meter is.
     Fitting::new(

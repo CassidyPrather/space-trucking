@@ -447,10 +447,34 @@ mod tests {
     use super::super::cargo::{Kind, anchored, fine};
     use super::*;
 
+    /// The cabin's deck cell `(i, j)`, as a cell of its net. Every cell
+    /// below is named by the place in the room it is, so a wall that
+    /// grows a course moves none of them.
+    const fn deck(i: u8, j: u8) -> (u8, u8) {
+        RATS_ROOM.deck_cell(i, j)
+    }
+
+    /// The cabin's deckhead over deck cell `(i, j)`.
+    const fn deckhead(i: u8, j: u8) -> (u8, u8) {
+        RATS_ROOM.deckhead_cell(i, j)
+    }
+
+    /// Course `course` of the cabin's aft wall, `along` cells from its
+    /// port end.
+    const fn aft(along: u8, course: u8) -> (u8, u8) {
+        RATS_ROOM.wall_cell(0, along, course)
+    }
+
+    /// Course `course` of the cabin's port wall, `along` cells from its
+    /// aft end.
+    const fn port(along: u8, course: u8) -> (u8, u8) {
+        RATS_ROOM.wall_cell(3, along, course)
+    }
+
     /// A stowed piece for the pure helpers below, its footprint's
     /// top-left on whole cell `(x, y)` of the cabin, turned the way the
     /// game would turn it there.
-    fn hold_piece(id: u32, kind: Kind, x: u8, y: u8) -> Piece {
+    fn hold_piece(id: u32, kind: Kind, (x, y): (u8, u8)) -> Piece {
         let (x, y, turn) = anchored(RATS_ROOM, kind, fine(x), fine(y)).expect("on the net");
         Piece {
             id,
@@ -469,11 +493,11 @@ mod tests {
     #[test]
     fn occupied_cells_sums_floor_footprints_and_ignores_the_rest() {
         let pieces = [
-            hold_piece(0, Kind::RationBricks, 4, 4), // 2 across, 1 deep
-            hold_piece(1, Kind::PerfumeVial, 3, 3),  // 1 floor cell
+            hold_piece(0, Kind::RationBricks, deck(1, 1)), // 2 across, 1 deep
+            hold_piece(1, Kind::PerfumeVial, deck(0, 0)),  // 1 floor cell
             // Wall and ceiling berths are not food density.
-            hold_piece(2, Kind::ChartTank, 4, 0),
-            hold_piece(3, Kind::CeilingLamp, 14, 5),
+            hold_piece(2, Kind::ChartTank, aft(1, 2)),
+            hold_piece(3, Kind::CeilingLamp, deckhead(7, 2)),
         ];
         assert_eq!(occupied_cells(&pieces), 3);
         assert_eq!(occupied_cells(&[]), 0);
@@ -481,26 +505,27 @@ mod tests {
 
     #[test]
     fn cell_choice_prefers_empty_cells_and_avoids_the_current_one() {
-        // Every net cell covered except (5, 5): a vial on each of them.
+        // Every net cell covered except one of the deck's: a vial on each
+        // of them.
         let mut pieces = Vec::new();
         for y in 0..GRID_ROWS {
             for x in 0..GRID_COLS {
-                if RATS_ROOM.surface_of(x, y).is_none() || (x, y) == (5, 5) {
+                if RATS_ROOM.surface_of(x, y).is_none() || (x, y) == deck(2, 2) {
                     continue;
                 }
-                pieces.push(hold_piece(pieces.len() as u32, Kind::PerfumeVial, x, y));
+                pieces.push(hold_piece(pieces.len() as u32, Kind::PerfumeVial, (x, y)));
             }
         }
         // One free cell: every hash lands on it.
         for h in 0..50 {
-            assert_eq!(choose_cell(h, &pieces, None), Some((5, 5)));
+            assert_eq!(choose_cell(h, &pieces, None), Some(deck(2, 2)));
         }
         // With that cell the one to avoid, the rat perches on cargo instead
         // of staying put, and the draw stays deterministic.
-        let perch = choose_cell(7, &pieces, Some((5, 5)));
-        assert_ne!(perch, Some((5, 5)));
+        let perch = choose_cell(7, &pieces, Some(deck(2, 2)));
+        assert_ne!(perch, Some(deck(2, 2)));
         assert!(perch.is_some(), "an unlit hold always has somewhere to go");
-        assert_eq!(perch, choose_cell(7, &pieces, Some((5, 5))));
+        assert_eq!(perch, choose_cell(7, &pieces, Some(deck(2, 2))));
     }
 
     /// A rat mid-tenure with both schedules due almost immediately.
@@ -523,12 +548,12 @@ mod tests {
         // keeps the nibbles coming. Over a long deterministic run the rat
         // must never occupy a lit cell nor gnaw from one.
         let mut pieces = vec![
-            hold_piece(0, Kind::CeilingLamp, 15, 4),
-            hold_piece(1, Kind::FloorLamp, 3, 5),
-            hold_piece(2, Kind::RationBricks, 4, 0),
-            hold_piece(3, Kind::Seedlings, 3, 3),
+            hold_piece(0, Kind::CeilingLamp, deckhead(6, 1)),
+            hold_piece(1, Kind::FloorLamp, deck(0, 2)),
+            hold_piece(2, Kind::RationBricks, aft(1, 2)),
+            hold_piece(3, Kind::Seedlings, deck(0, 0)),
         ];
-        let mut rats = wound_rat((3, 1));
+        let mut rats = wound_rat(aft(0, 1));
         let mut cues = Vec::new();
         let mut skitters = 0_u32;
         for tick in 1..300_000_u64 {
@@ -561,7 +586,7 @@ mod tests {
         for y in 0..GRID_ROWS {
             for x in 0..GRID_COLS {
                 if RATS_ROOM.surface_of(x, y).is_some() && x % 2 == 0 {
-                    pieces.push(hold_piece(pieces.len() as u32, Kind::CeilingLamp, x, y));
+                    pieces.push(hold_piece(pieces.len() as u32, Kind::CeilingLamp, (x, y)));
                 }
             }
         }
@@ -577,13 +602,13 @@ mod tests {
         }
         // A rat already aboard (lamps stowed around it) skips every beat:
         // no hop, no nibble, schedules still re-armed.
-        let mut rats = wound_rat((5, 4));
+        let mut rats = wound_rat(deck(2, 1));
         let mut cues = Vec::new();
         for tick in 1..30_000_u64 {
             rats.on_tick(7, tick, &mut pieces, &mut cues);
         }
         let rat = rats.rat.expect("light deters, it never evicts");
-        assert_eq!(rat.cell, (5, 4), "nowhere unlit to go");
+        assert_eq!(rat.cell, deck(2, 1), "nowhere unlit to go");
         assert!(rat.next_move > 29_999, "skipped beats must re-arm");
         assert!(cues.is_empty(), "a skipped beat makes no sound: {cues:?}");
         assert!(pieces.iter().all(|piece| !piece.gnawed));
@@ -600,13 +625,13 @@ mod tests {
     #[test]
     fn the_couch_tempts_the_rat_into_a_nap() {
         let mut pieces = vec![
-            hold_piece(0, Kind::Couch, 4, 3),
-            hold_piece(1, Kind::Seedlings, 3, 7),
-            hold_piece(2, Kind::RationBricks, 6, 6),
+            hold_piece(0, Kind::Couch, deck(1, 0)),
+            hold_piece(1, Kind::Seedlings, deck(0, 4)),
+            hold_piece(2, Kind::RationBricks, deck(3, 3)),
         ];
         let couch = couch_cells(&pieces);
-        assert_eq!(couch, [(4, 3), (5, 3)]);
-        let mut rats = wound_rat((0, 3));
+        assert_eq!(couch, [deck(1, 0), deck(2, 0)]);
+        let mut rats = wound_rat(port(0, 2));
         let mut cues = Vec::new();
         let mut napped_beats = 0_u32;
         let mut woke = false;
@@ -652,7 +677,7 @@ mod tests {
         );
         // The nap cadence itself: a rat on the couch re-arms its hop at
         // least NAP_LAZE * MOVE_BASE out.
-        let mut napping = wound_rat((4, 3));
+        let mut napping = wound_rat(deck(1, 0));
         cues.clear();
         napping.on_tick(0xC0C4, 1, &mut pieces, &mut cues);
         let rat = napping.rat.expect("aboard");
@@ -664,15 +689,15 @@ mod tests {
     #[test]
     fn the_nearest_piece_rule_measures_to_the_footprint_and_breaks_ties_low() {
         let pieces = [
-            hold_piece(4, Kind::RationBricks, 3, 3), // footprint out to (4, 3)
-            hold_piece(2, Kind::PerfumeVial, 8, 3),
+            hold_piece(4, Kind::RationBricks, deck(0, 0)), // footprint out to deck (1, 0)
+            hold_piece(2, Kind::PerfumeVial, deck(5, 0)),
         ];
-        // (5, 3): the bricks' edge is 1 away, the vial 3: bricks.
-        assert_eq!(nearest_hold_piece(&pieces, (5, 3)), Some(0));
-        // (6, 3): both 2 away — the lower id wins, which is the vial.
-        assert_eq!(nearest_hold_piece(&pieces, (6, 3)), Some(1));
+        // Deck (2, 0): the bricks' edge is 1 away, the vial 3: bricks.
+        assert_eq!(nearest_hold_piece(&pieces, deck(2, 0)), Some(0));
+        // Deck (3, 0): both 2 away — the lower id wins, which is the vial.
+        assert_eq!(nearest_hold_piece(&pieces, deck(3, 0)), Some(1));
         // Perched on a footprint is distance zero.
-        assert_eq!(nearest_hold_piece(&pieces, (4, 3)), Some(0));
+        assert_eq!(nearest_hold_piece(&pieces, deck(1, 0)), Some(0));
         // Nothing stowed, nothing to gnaw.
         assert_eq!(nearest_hold_piece(&[], (0, 0)), None);
     }

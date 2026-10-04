@@ -2797,15 +2797,16 @@ mod tests {
         let charts = crate::rig::bay();
         let mut materials = Assets::<StandardMaterial>::default();
         let rooms = space_trucking::sim::room::Rooms::new();
-        // The middle course of the aft wall, a cell's middle at a time,
+        // The aft wall's second course, a cell's middle at a time,
         // wherever the arbiter lets a window hang at `turn` clear of
         // `other`: the wall's doorway is a threshold, and nothing hangs
         // across one.
         let berth = |turn: Turn, other: Option<Foot>| {
-            (3..11_u8).find_map(|cell| {
+            (0..RoomKind::Cabin.floor().0).find_map(|along| {
+                let (cx, cy) = RoomKind::Cabin.wall_cell(0, along, 1);
                 let (x, y) = (
-                    cargo::fine(cell) + cargo::FINE / 2,
-                    cargo::fine(1) + cargo::FINE / 2,
+                    cargo::fine(cx) + cargo::FINE / 2,
+                    cargo::fine(cy) + cargo::FINE / 2,
                 );
                 let spot = Spot {
                     room: CABIN,

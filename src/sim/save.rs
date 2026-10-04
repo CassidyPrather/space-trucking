@@ -39,7 +39,7 @@ use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 /// or tape starts a new run"). Bump it whenever what a line MEANS
 /// changes, not only its grammar: a save read under the wrong rules
 /// loads a board the player never built.
-const MAGIC: &str = "STV22";
+const MAGIC: &str = "STV23";
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -824,7 +824,25 @@ impl<'a> Reader<'a> {
 mod tests {
     use super::super::{InputFrame, TICK_DT, Vec2, layout};
     use super::*;
-    use crate::sim::cargo::fine;
+    use crate::sim::cargo::{FINE, fine};
+
+    /// The cabin's deck cell `(i, j)`, as a cell of its net. Every cell
+    /// below is named by the place in the room it is, so a wall that
+    /// grows a course moves none of them.
+    const fn deck(i: u8, j: u8) -> (u8, u8) {
+        RoomKind::Cabin.deck_cell(i, j)
+    }
+
+    /// Course `course` of the cabin's wall `wall` (0 aft, 1 starboard,
+    /// 3 port), `along` cells from its low end.
+    const fn wall(wall: u8, along: u8, course: u8) -> (u8, u8) {
+        RoomKind::Cabin.wall_cell(wall, along, course)
+    }
+
+    /// The rat's cell in [`worked_save`]: the aft wall's second course,
+    /// and the port baseboard it hopped from.
+    const RAT_AT: (u8, u8) = wall(0, 1, 1);
+    const RAT_FROM: (u8, u8) = wall(3, 0, 0);
 
     #[test]
     fn errors_display_without_panicking() {
@@ -860,8 +878,8 @@ mod tests {
             sim.advance(TICK_DT, &InputFrame::default());
         }
         sim.rats.rat = Some(Rat {
-            cell: (4, 1),
-            prev_cell: (2, 3),
+            cell: RAT_AT,
+            prev_cell: RAT_FROM,
             moved_at: 30,
             next_move: 700,
             next_nibble: 2800,
@@ -878,8 +896,8 @@ mod tests {
         assert_eq!(
             sim.rats.rat,
             Some(Rat {
-                cell: (4, 1),
-                prev_cell: (2, 3),
+                cell: RAT_AT,
+                prev_cell: RAT_FROM,
                 moved_at: 30,
                 next_move: 700,
                 next_nibble: 2800,
@@ -974,20 +992,29 @@ mod tests {
     #[test]
     fn out_of_range_fields_fail_safe() {
         let save = worked_save();
-        let rat_line = "rat 4 1 2 3 30 700 2800 1";
-        assert!(save.contains(rat_line), "worked save must carry the rat");
+        let rat = |(x, y): (u8, u8), (px, py): (u8, u8), chases: &str| {
+            format!("rat {x} {y} {px} {py} 30 700 2800 {chases}")
+        };
+        let rat_line = rat(RAT_AT, RAT_FROM, "1");
+        assert!(save.contains(&rat_line), "worked save must carry the rat");
+        // A cell one past the net's far column, and one past its last row.
+        let (cols, rows) = RoomKind::Cabin.grid();
+        let (wide, deep) = ((cols, RAT_AT.1), (RAT_AT.0, rows));
         for (needle, bad) in [
-            ("ship travel 6 7", "ship travel 6 12"), // POI out of range
-            ("tick 90", "tick -90"),
-            ("tick 90", "tick 99999999999999999999999"),
-            (rat_line, "rat 22 1 2 3 30 700 2800 1"),
-            (rat_line, "rat 4 13 2 3 30 700 2800 1"),
-            (rat_line, "rat 4 1 22 3 30 700 2800 1"),
-            (rat_line, "rat 4 1 2 13 30 700 2800 1"),
-            (rat_line, "rat 4 1 2 3 30 700 2800 3"),
-            (rat_line, "rat 4 1 2 3 30 700 2800 -1"),
+            ("ship travel 6 7".to_owned(), "ship travel 6 12".to_owned()), // POI out of range
+            ("tick 90".to_owned(), "tick -90".to_owned()),
+            (
+                "tick 90".to_owned(),
+                "tick 99999999999999999999999".to_owned(),
+            ),
+            (rat_line.clone(), rat(wide, RAT_FROM, "1")),
+            (rat_line.clone(), rat(deep, RAT_FROM, "1")),
+            (rat_line.clone(), rat(RAT_AT, wide, "1")),
+            (rat_line.clone(), rat(RAT_AT, deep, "1")),
+            (rat_line.clone(), rat(RAT_AT, RAT_FROM, "3")),
+            (rat_line, rat(RAT_AT, RAT_FROM, "-1")),
         ] {
-            let mangled = save.replacen(needle, bad, 1);
+            let mangled = save.replacen(&needle, &bad, 1);
             assert_ne!(mangled, save, "needle {needle:?} not found in save");
             assert!(Sim::from_save(&mangled).is_err(), "{bad:?} parsed anyway");
         }
@@ -1002,20 +1029,30 @@ mod tests {
             .to_owned();
         // Piece fields, too: a berth that runs off the net, a turn past a
         // whole one or below none, and a berth with no turn at all.
+        let middle = |(x, y): (u8, u8)| format!("{} {}", fine(x) + FINE / 2, fine(y) + FINE / 2);
+        let on_deck = middle(deck(1, 1));
+        let (cols, rows) = RoomKind::Cabin.grid();
+        let off_net = format!("{} {}", fine(cols), fine(rows));
+        let doorway = middle(wall(1, 0, 0));
+        let overhang = format!(
+            "{} {}",
+            fine(cols) - FINE / 8,
+            fine(deck(1, 1).1) + FINE / 2
+        );
         for bad in [
-            "piece 0 99 0 0 hold 0 1152 1152 0",
-            "piece 0 0 0 0 hold 0 5632 3328 0",
-            "piece 0 0 0 0 hold 9 1152 1152 0",
-            "piece 0 0 0 0 hold 0 2944 896 0",
-            "piece 0 0 0 0 nowhere 0",
-            "piece 0 0 0 2 hold 0 1152 1152 0",
-            "piece 0 0 0 gnawed hold 0 1152 1152 0",
-            "piece 0 0 0 0 hold 0 1152 1152 65536",
-            "piece 0 0 0 0 hold 0 1152 1152 -1",
-            "piece 0 0 0 0 hold 0 1152 1152",
-            "piece 0 0 0 0 hold 0 5600 1152 0",
+            format!("piece 0 99 0 0 hold 0 {on_deck} 0"),
+            format!("piece 0 0 0 0 hold 0 {off_net} 0"),
+            format!("piece 0 0 0 0 hold 9 {on_deck} 0"),
+            format!("piece 0 0 0 0 hold 0 {doorway} 0"),
+            "piece 0 0 0 0 nowhere 0".to_owned(),
+            format!("piece 0 0 0 2 hold 0 {on_deck} 0"),
+            format!("piece 0 0 0 gnawed hold 0 {on_deck} 0"),
+            format!("piece 0 0 0 0 hold 0 {on_deck} 65536"),
+            format!("piece 0 0 0 0 hold 0 {on_deck} -1"),
+            format!("piece 0 0 0 0 hold 0 {on_deck}"),
+            format!("piece 0 0 0 0 hold 0 {overhang} 0"),
         ] {
-            let mangled = docked.replacen(&piece_line, bad, 1);
+            let mangled = docked.replacen(&piece_line, &bad, 1);
             assert!(Sim::from_save(&mangled).is_err(), "{bad:?} parsed anyway");
         }
     }
@@ -1023,7 +1060,7 @@ mod tests {
     /// The berth `kind` takes in the cabin with its footprint's top-left
     /// on whole cell `(x, y)`, at the turn the game gives a body there,
     /// and that berth's tokens on a save line: room, centre, turn.
-    fn tokens(kind: Kind, x: u8, y: u8) -> (cargo::Spot, String) {
+    fn tokens(kind: Kind, (x, y): (u8, u8)) -> (cargo::Spot, String) {
         let (x, y, turn) =
             cargo::anchored(RoomKind::Cabin, kind, fine(x), fine(y)).expect("on the net");
         (
@@ -1045,12 +1082,12 @@ mod tests {
         let spot = cargo::first_fit(sim.rooms(), sim.pieces(), u32::MAX, Kind::Cabinet)
             .expect("room for a cabinet");
         let cabinet = sim.next_piece;
-        let coat = tokens(Kind::LuminousPaint, 5, 0).0.laid();
+        let coat = tokens(Kind::LuminousPaint, wall(0, 2, 2)).0.laid();
         for (offset, kind, loc) in [
             (0, Kind::Cabinet, spot.hold()),
             (1, Kind::PerfumeVial, spot.hold()),
             (2, Kind::Fluff, spot.hold()),
-            (3, Kind::Rug, tokens(Kind::Rug, 3, 6).0.laid()),
+            (3, Kind::Rug, tokens(Kind::Rug, deck(0, 3)).0.laid()),
             (4, Kind::LuminousPaint, coat),
             (5, Kind::PaintTin, coat),
         ] {
@@ -1093,7 +1130,7 @@ mod tests {
     #[test]
     fn a_save_from_any_other_version_is_refused() {
         let save = Sim::new(9).save_string();
-        for header in ["STV4", "STV20", "STV21", "STV23"] {
+        for header in ["STV4", "STV21", "STV22", "STV24"] {
             assert_eq!(
                 Sim::from_save(&save.replacen(MAGIC, header, 1)).err(),
                 Some(SaveError::UnsupportedVersion),
@@ -1151,8 +1188,10 @@ mod tests {
     #[test]
     fn lying_berth_lines_fail_safe() {
         let (_, save, cabinet, at) = furnished();
-        let rug = tokens(Kind::Rug, 3, 6).1;
-        let coat = tokens(Kind::LuminousPaint, 5, 0).1;
+        let rug = tokens(Kind::Rug, deck(0, 3)).1;
+        let coat = tokens(Kind::LuminousPaint, wall(0, 2, 2)).1;
+        let doorway = wall(1, 0, 0);
+        let (cols, rows) = RoomKind::Cabin.grid();
         let vial_line = format!("piece {} 0 0 0 hold {at}", cabinet + 1);
         assert!(save.contains(&vial_line), "vial line changed shape");
         for (needle, bad) in [
@@ -1168,8 +1207,8 @@ mod tests {
                 format!(
                     "piece {} 0 0 0 hold {CABIN} {} {} 0",
                     cabinet + 1,
-                    fine(11) + 128,
-                    fine(3) + 128
+                    fine(doorway.0) + FINE / 2,
+                    fine(doorway.1) + FINE / 2
                 ),
             ),
             // A laid non-covering (the couch, index 19).
@@ -1183,13 +1222,19 @@ mod tests {
                 format!(
                     "piece {} 22 0 0 laid {}",
                     cabinet + 3,
-                    tokens(Kind::Rug, 5, 1).1
+                    tokens(Kind::Rug, wall(0, 2, 1)).1
                 ),
             ),
-            // A coat off the grid entirely: no chart under its centre.
+            // A coat off the grid entirely: no chart under its centre,
+            // in the net's far corner, which the cross never reaches.
             (
                 format!("piece {} 24 0 0 laid {coat}", cabinet + 4),
-                format!("piece {} 24 0 0 laid 0 5504 3200 0", cabinet + 4),
+                format!(
+                    "piece {} 24 0 0 laid 0 {} {} 0",
+                    cabinet + 4,
+                    fine(cols - 1) + FINE / 2,
+                    fine(rows - 1) + FINE / 2
+                ),
             ),
         ] {
             let mangled = save.replacen(&needle, &bad, 1);

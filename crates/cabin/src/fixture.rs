@@ -18,10 +18,10 @@
 //! one of them marked) and a three-piece proposal standing on its offer
 //! band — which sits clear of the door's own lane now, so the showcase
 //! also shows the entry-path law holding (docs/ROOMS.md). A rat
-//! rides at (4, 4). Two rules shape the roster: `VeryMysteriousCrate`
-//! stays ashore (at most one suspicious piece aboard), and the fuel
-//! hopper arrives EMPTY, so staging is tested by casting off and
-//! staging it yourself.
+//! rides on deck cell (1, 1). Two rules shape the roster:
+//! `VeryMysteriousCrate` stays ashore (at most one suspicious piece
+//! aboard), and the fuel hopper arrives EMPTY, so staging is tested by
+//! casting off and staging it yourself.
 //!
 //! **Three windows, three sizes, three walls, two rooms**, because a
 //! crew that owns several is the case the exterior was rebuilt for
@@ -63,9 +63,10 @@
 //! seam's amber latch. The tests below re-check all of it. Pieces may
 //! share ground now (docs/BAY.md, "Cargo stops colliding"), and this
 //! board was laid out when they could not, so nothing on it does: the
-//! wall sconce at the cornice and the chart tank on the front wall are
-//! where the old shadow rule put them, out from behind the cabinet and
-//! the floor lamp, and the gnawed rug still lies under the couch.
+//! wall sconce high on the port flank and the chart tank on the front
+//! wall are where the old shadow rule put them, out from behind the
+//! cabinet and the floor lamp, and the gnawed rug still lies under the
+//! couch.
 //!
 //! One more courtesy, which is not a rule: the deck cells a doorway
 //! stands on are kept clear. Nothing forbids berthing there — the aisle
@@ -93,9 +94,16 @@ use space_trucking::sim::room::RoomKind;
 /// board is what this file is for. (The move to `STV22` dropped a line
 /// nothing reads any more, `stow`: the four pieces it berthed were set
 /// down by `cargo::tidy` over the cabin deck's whole cells, doorsteps
-/// skipped, and the board written by the new writer.)
+/// skipped, and the board written by the new writer. The move to `STV23`
+/// grew every wall a course to meet the deckhead, which moves every
+/// chart of the net and none of the room: each berth was carried by its
+/// own chart's offset on the net — a cell across and a cell down for the
+/// deck and the four walls, two across and one down for the deckhead —
+/// and the rat by the deck's, so every piece stands where it stood; and
+/// the board was read by the new reader and written by the new writer,
+/// which handed it back byte for byte.)
 pub const SAVE: &str = "\
-STV22
+STV23
 seed 7
 tick 12000
 rng 3c76e098a8f74c8a
@@ -111,43 +119,43 @@ omen - idle 0 3f800000 00000000
 enc -
 drone -
 parade - -
-rat 4 4 4 4 11800 12300 12600 1
+rat 5 5 5 5 11800 12300 12600 1
 rooms 3
 room 0 0 - - -
 room 1 1 0 1 3
 room 2 2 0 0 0
 marks 1 16
-piece 0 21 0 0 hold 0 1664 1152 0
-piece 1 9 0 0 hold 0 1920 1408 0
-piece 2 8 0 0 hold 0 1280 1920 0
-piece 3 19 1 0 hold 0 1280 1664 0
-piece 4 18 2 0 hold 0 896 1664 49152
-piece 5 12 0 0 hold 0 1408 896 0
-piece 6 6 1 0 hold 0 896 2432 32768
-piece 7 20 3 0 hold 0 2048 384 0
-piece 8 17 1 0 hold 0 128 1408 0
-piece 9 16 2 0 hold 0 3968 1152 0
-piece 10 22 0 1 laid 0 1280 1664 0
-piece 11 23 1 0 laid 0 1664 384 0
-piece 12 24 0 0 laid 0 640 1664 0
-piece 13 0 1 0 hold 0 1664 896 0
-piece 14 13 2 0 hold 0 1920 896 0
-piece 15 14 0 0 hold 0 2432 896 0
-piece 16 4 3 0 hold 2 1408 896 0
-piece 17 7 1 0 hold 2 1664 2176 0
-piece 18 1 2 0 hold 2 1920 2176 0
-piece 19 11 0 0 hold 0 2176 896 0
-piece 20 2 1 0 hold 0 2048 1920 0
-piece 21 5 0 0 hold 2 2560 896 0
-piece 22 3 3 1 hold 2 2048 896 0
-piece 23 15 2 0 hold 2 1408 2176 0
-piece 24 26 0 0 hold 0 1280 2816 0
-piece 25 25 1 0 hold 0 1280 3200 0
-piece 26 27 2 0 hold 0 2432 2944 0
-piece 27 28 3 0 hold 0 2432 3200 0
-piece 28 29 0 0 hold 0 2432 2688 0
-piece 29 30 0 0 hold 2 128 1152 0
-piece 30 31 1 0 hold 0 512 2048 0
+piece 0 21 0 0 hold 0 1920 1408 0
+piece 1 9 0 0 hold 0 2176 1664 0
+piece 2 8 0 0 hold 0 1536 2176 0
+piece 3 19 1 0 hold 0 1536 1920 0
+piece 4 18 2 0 hold 0 1152 1920 49152
+piece 5 12 0 0 hold 0 1664 1152 0
+piece 6 6 1 0 hold 0 1152 2688 32768
+piece 7 20 3 0 hold 0 2304 640 0
+piece 8 17 1 0 hold 0 384 1664 0
+piece 9 16 2 0 hold 0 4480 1408 0
+piece 10 22 0 1 laid 0 1536 1920 0
+piece 11 23 1 0 laid 0 1920 640 0
+piece 12 24 0 0 laid 0 896 1920 0
+piece 13 0 1 0 hold 0 1920 1152 0
+piece 14 13 2 0 hold 0 2176 1152 0
+piece 15 14 0 0 hold 0 2688 1152 0
+piece 16 4 3 0 hold 2 1664 1152 0
+piece 17 7 1 0 hold 2 1920 2432 0
+piece 18 1 2 0 hold 2 2176 2432 0
+piece 19 11 0 0 hold 0 2432 1152 0
+piece 20 2 1 0 hold 0 2304 2176 0
+piece 21 5 0 0 hold 2 2816 1152 0
+piece 22 3 3 1 hold 2 2304 1152 0
+piece 23 15 2 0 hold 2 1664 2432 0
+piece 24 26 0 0 hold 0 1536 3072 0
+piece 25 25 1 0 hold 0 1536 3456 0
+piece 26 27 2 0 hold 0 2688 3200 0
+piece 27 28 3 0 hold 0 2688 3456 0
+piece 28 29 0 0 hold 0 2688 2944 0
+piece 29 30 0 0 hold 2 384 1408 0
+piece 30 31 1 0 hold 0 768 2304 0
 next_piece 31
 ";
 

@@ -285,6 +285,16 @@ overlap in metres on all three axes.
 > of what it already stood (`gauntlet::load`, `cargo::clear`), and it is
 > the board it always was. The docket stayed empty.
 
+> Since *The walls reach the deckhead* (ROOMS.md): every wall grew a top
+> course, and its first sweep filed five findings, every one of them
+> furniture hung in the band no chart used to reach. Two were this
+> family's — the parlor's cove bead through the air of the chalked front
+> wall's top course, on the wall itself and at the starboard corner —
+> and three were `berth-seen`'s: the comet's and the Hermitage's lumps of
+> deckhead and Jupiter's aft manifold collar, each standing in front of
+> a market's stocked top course. All five were cured in the furniture
+> (ROOMS.md says how), and the docket stayed empty.
+
 Spent on cargo too, where it means something related but not the same: a
 part reaching outside `pieces::RIG_NEAR..RIG_FAR`, the depth every kind
 is composed within — one cell of the cargo grid, wearing the same

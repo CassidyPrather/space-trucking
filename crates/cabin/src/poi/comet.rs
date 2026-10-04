@@ -276,10 +276,16 @@ const CUT_FACE: [Fitting; 20] = [
         Vec3::new(0.34, 0.11, 0.34),
     )
     .seated(Seat::Face(Face::Deckhead)),
+    // The second lump hung over the aft third of the room, in front of
+    // the goods. That was a band of bare rind while the walls stopped a
+    // cell short of the deckhead; it is the top course of the stocked
+    // wall now, and a lump hanging in front of it hid a third of every
+    // good shelved there. It hangs a pace further forward and out to
+    // starboard of the pendant, clear of both.
     Fitting::new(
         Shape::Dome,
         Coat::enamel(palette::SOOT),
-        Vec3::new(0.24, 0.91, 0.42),
+        Vec3::new(0.52, 0.91, 0.12),
         Vec3::new(0.28, 0.09, 0.28),
     )
     .seated(Seat::Face(Face::Deckhead)),

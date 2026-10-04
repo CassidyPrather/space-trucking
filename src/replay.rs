@@ -22,8 +22,8 @@
 //! hold: that is the frame that can silently snap a phantom drag home
 //! (window blur mid-drag), and the replay must snap at the same tick.
 //!
-//! Format `RPL6`, line-oriented like the save and the wire: a header, the
-//! byte-length-prefixed base save embedded verbatim, then one `SNP5 input`
+//! Format `RPL7`, line-oriented like the save and the wire: a header, the
+//! byte-length-prefixed base save embedded verbatim, then one `SNP6 input`
 //! line per entry. `RPL3` was bumped when the input frame grew its
 //! occupied-room field and the room graph's attach and detach requests
 //! (docs/ROOMS.md, "The one new input field"); `RPL4` when the grid came
@@ -33,9 +33,13 @@
 //! replayed would be a different game told with the same inputs; and
 //! `RPL5` when cargo turned (docs/BAY.md, "Cargo turns"): every frame
 //! carries the carry's facing, the neighbour snap is gone, and a berth is
-//! anchored at its centre; and `RPL6` when cargo stopped colliding
+//! anchored at its centre; `RPL6` when cargo stopped colliding
 //! ("Cargo stops colliding"): every frame carries the aimed piece, and
-//! the same drops now land where a neighbour used to refuse them. A tape
+//! the same drops now land where a neighbour used to refuse them; and
+//! `RPL7` when the walls reached the deckhead (docs/ROOMS.md, "One
+//! storey, everywhere"): every room's net grew a course on each wall and
+//! every lane grew to hold it, so the same pointer names another cell
+//! and the same frames build another board. A tape
 //! from any other version fails safe as
 //! unsupported, and the frontend starts a new run. The recorder
 //! reuses the lockstep wire codec
@@ -53,7 +57,7 @@ use crate::sim::{CrewFrame, InputFrame, SaveError, Sim, Turn, Vec2};
 
 /// Magic-plus-version header of every recording this build writes. Bump on
 /// any breaking change; older versions fail safe as unsupported.
-const MAGIC: &str = "RPL6";
+const MAGIC: &str = "RPL7";
 
 /// Rolling cap on recorded entries.
 ///
@@ -554,8 +558,9 @@ mod tests {
         rect_center(layout::cell_rect(room, x, y))
     }
 
-    /// Centre of a cabin cell.
-    fn cabin_cell(x: u8, y: u8) -> Vec2 {
+    /// Centre of the cabin's deck cell `(i, j)`.
+    fn cabin_deck(i: u8, j: u8) -> Vec2 {
+        let (x, y) = crate::sim::RoomKind::Cabin.deck_cell(i, j);
         cell_center(crate::sim::CABIN, x, y)
     }
 
@@ -627,9 +632,9 @@ mod tests {
     /// spanned mid-warp. Returns the script and a coasting index where a
     /// re-base is safe (nothing held).
     fn thorough_script() -> (Vec<(f32, InputFrame)>, usize) {
-        let vial = cabin_cell(3, 3);
-        let scrap = cabin_cell(4, 5);
-        let pearls = cabin_cell(6, 3);
+        let vial = cabin_deck(0, 0);
+        let scrap = cabin_deck(1, 2);
+        let pearls = cabin_deck(3, 0);
         let launch = rect_center(layout::LAUNCH_LEVER);
         let mars = poi_pos(URANUS, 0);
         let pause = |p: Vec2, held| InputFrame {
@@ -798,7 +803,7 @@ mod tests {
     /// piece behaves identically.
     #[test]
     fn interrupted_drag_snaps_back_on_replay() {
-        let vial = cabin_cell(0, 0);
+        let vial = cabin_deck(0, 0);
         let mut script = vec![
             (0.013, press_at(vial.x, vial.y)),
             (0.017, held_at(vial.x + 30.0, vial.y)),
@@ -869,7 +874,7 @@ mod tests {
     /// get the general case right.)
     #[test]
     fn reseed_mid_recording_replays_exactly() {
-        let vial = cabin_cell(0, 0);
+        let vial = cabin_deck(0, 0);
         let mut script = Vec::new();
         coast(&mut script, 6);
         script.push((
@@ -943,7 +948,7 @@ mod tests {
     /// panics.
     #[test]
     fn truncation_at_every_boundary_fails_safe() {
-        let vial = cabin_cell(0, 0);
+        let vial = cabin_deck(0, 0);
         let mut script = vec![
             (0.013, press_at(vial.x, vial.y)),
             (0.017, release_at(vial.x, vial.y)),
@@ -972,7 +977,7 @@ mod tests {
     /// line outright just makes a shorter recording, which must still parse.
     #[test]
     fn mangling_any_line_fails_safe() {
-        let vial = cabin_cell(0, 0);
+        let vial = cabin_deck(0, 0);
         let mut script = vec![
             (0.013, press_at(vial.x, vial.y)),
             (0.017, release_at(vial.x, vial.y)),
@@ -1015,26 +1020,26 @@ mod tests {
             Recording::parse("RPL9\nend 0\nbase 0\n"),
             Err(ReplayError::UnsupportedVersion)
         ));
-        // A tape from before cargo stopped colliding would replay into a
-        // different game: the same frames settle cargo somewhere else now,
-        // so it is refused whole, and so are the turned, grid-era and
-        // older ones.
-        for older in ["RPL3", "RPL4", "RPL5"] {
+        // A tape from before the walls reached the deckhead would replay
+        // into a different game: the same pointer lands in another cell of
+        // a taller net, so it is refused whole, and so are the colliding,
+        // turned, grid-era and older ones.
+        for older in ["RPL3", "RPL4", "RPL5", "RPL6"] {
             assert!(matches!(
                 Recording::parse(&format!("{older}\nend 0\nbase 0\n")),
                 Err(ReplayError::UnsupportedVersion)
             ));
         }
         assert!(matches!(
-            Recording::parse("RPL6"),
+            Recording::parse("RPL7"),
             Err(ReplayError::Parse { line: 0 })
         ));
         assert!(matches!(
-            Recording::parse("RPL6\nend NaN\nbase 0\n"),
+            Recording::parse("RPL7\nend NaN\nbase 0\n"),
             Err(ReplayError::Parse { line: 2 })
         ));
         assert!(matches!(
-            Recording::parse("RPL6\nend 0\nbase 99999999999999999999999\n"),
+            Recording::parse("RPL7\nend 0\nbase 99999999999999999999999\n"),
             Err(ReplayError::Parse { line: 3 })
         ));
 
@@ -1048,7 +1053,7 @@ mod tests {
             .to_wire()
         };
         let build = |end: u64, entries: &str| {
-            format!("RPL6\nend {end}\nbase {}\n{base}{entries}", base.len())
+            format!("RPL7\nend {end}\nbase {}\n{base}{entries}", base.len())
         };
         // A player other than 0 has no business in a solo black box.
         assert!(Recording::parse(&build(5, &entry(1, 3))).is_err());
@@ -1068,7 +1073,7 @@ mod tests {
     /// anything that happens to parse re-serialises without panicking.
     #[test]
     fn arbitrary_garbage_never_panics() {
-        let alphabet: Vec<char> = "RPL6 SNP\nend base input 0-9abcdefx \u{FFFD}\u{1F680}\t"
+        let alphabet: Vec<char> = "RPL7 SNP\nend base input 0-9abcdefx \u{FFFD}\u{1F680}\t"
             .chars()
             .collect();
         for round in 0_u64..300 {

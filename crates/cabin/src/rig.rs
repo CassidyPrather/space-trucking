@@ -4,9 +4,10 @@
 //! (the console face, with its toggle plate and hangar strip) came off
 //! this pass; its meta-controls live in the `Esc` menu (`crate::menu`),
 //! which is overlay, not room. What the ship itself owns is the walkable
-//! cargo bay: the sim's room net — an 8×7 floor inside three courses of
-//! wall — unfolded onto the whole hull at furniture scale (docs/BAY.md),
-//! worked from roam with the crosshair instead of from a focus pose.
+//! cargo bay: the sim's room net — an 8×7 floor inside four walls a full
+//! storey tall — unfolded onto the whole hull at furniture scale
+//! (docs/BAY.md), worked from roam with the crosshair instead of from a
+//! focus pose.
 //!
 //! Two camera postures. **Roaming**: a conventional first-person walk —
 //! pointer locked, mouse to look, WASD to move, a crosshair dot; aim at
@@ -221,13 +222,14 @@ const PLATE_MARGIN: f32 = 0.03;
 // also carry, sell, or lose.
 
 /// The cabin's six mapped surfaces: the room net unfolded like an opened
-/// box. Rows 0–2 stand on the aft wall (row 0 the cornice), rows 3–9
-/// fold onto the deck and the two side walls, rows 10–12 stand on the
-/// front wall, and the ceiling chart folds on past the starboard
-/// cornice. Sim +x runs to the player's right when facing the aft wall;
-/// the seams are watertight (or declared gutters) by test. Cursor rays
-/// from roam project through these exactly as focus cursors project
-/// through panels, so the sim keeps every ruling.
+/// box. The first `sim::room::COURSES` rows stand on the aft wall (row 0
+/// the cornice, which meets the deckhead), the next seven fold onto the
+/// deck and the two side walls, the last `COURSES` stand on the front
+/// wall, and the ceiling chart folds on past the starboard cornice. Sim
+/// +x runs to the player's right when facing the aft wall; every seam is
+/// watertight by test. Cursor rays from roam project through these
+/// exactly as focus cursors project through panels, so the sim keeps
+/// every ruling.
 ///
 /// Every room folds this way now ([`crate::room::charts`]); the cabin is
 /// simply the room you start in, at the lattice origin. This wrapper is
@@ -250,14 +252,21 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
     // ceiling chart hangs just under the ceiling slab at 2.32.
     //
     // The seam law pins every axis: columns match across the folds (floor
-    // col 3 lies to port because the port chart's baseboard is x2),
-    // cornices sit up, y3 rows lie aft. Every normal therefore points OUT
+    // col 4 lies to port because the port chart's baseboard is x3),
+    // cornices sit up, y4 rows lie aft. Every normal therefore points OUT
     // of the room (`Station::chart_flipped`); consumers use
     // `Station::inward`/`Station::face`.
     //
     // The front chart's plane moved when the front gutter went: it sits
     // just inside the cabin's own floor box now, like the side charts.
-    const BAY_WALL_H: f32 = 3.0 * BAY_CELL;
+    //
+    // Four courses of the cargo grid, which is where the deckhead went
+    // when the lattice took over the one axis it had never governed —
+    // and every wall runs all four of them, baseboard to deckhead, since
+    // the owner could not hang anything in the band that used to stand
+    // over the cornices.
+    const BAY_CEIL_Y: f32 = 4.0 * BAY_CELL;
+    const BAY_WALL_H: f32 = BAY_CEIL_Y;
     const BAY_FLOOR_D: f32 = 7.0 * BAY_CELL;
     const BAY_FLOOR_ZC: f32 = BAY_WALL_Z - BAY_FLOOR_D * 0.5;
     // Every wall chart stands one sixteenth of a cell inside its own box
@@ -272,9 +281,6 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
     const BAY_SIDE_X: f32 = 4.0 * BAY_CELL - BAY_TRIM;
     const BAY_FRONT_Z: f32 = 7.0f32.mul_add(-BAY_CELL, BAY_WALL_Z) + BAY_TRIM;
     const BAY_AFT_Z: f32 = BAY_WALL_Z - BAY_TRIM;
-    // Four courses of the cargo grid, which is where the deckhead went
-    // when the lattice took over the one axis it had never governed.
-    const BAY_CEIL_Y: f32 = 4.0 * BAY_CELL;
     const BAY_FLOOR_Y: f32 = 0.012;
 
     // One chart's logical rect, in net cells.
@@ -294,7 +300,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
                 center: Vec3::new(0.0, wall_mid, BAY_AFT_Z),
                 half_u: Vec3::X * (BAY_W * 0.5),
                 half_v: Vec3::NEG_Y * wall_mid,
-                rect: chart(3, 0, 8, 3),
+                rect: chart(4, 0, 8, 4),
                 axes: None,
                 deep: 0.0,
             },
@@ -305,7 +311,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
                 center: Vec3::new(0.0, BAY_FLOOR_Y, BAY_FLOOR_ZC),
                 half_u: Vec3::X * (BAY_W * 0.5),
                 half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
-                rect: chart(3, 3, 8, 7),
+                rect: chart(4, 4, 8, 7),
                 axes: None,
                 deep: 0.0,
             },
@@ -316,7 +322,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
                 center: Vec3::new(-BAY_SIDE_X, wall_mid, BAY_FLOOR_ZC),
                 half_u: Vec3::NEG_Y * wall_mid,
                 half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
-                rect: chart(0, 3, 3, 7),
+                rect: chart(0, 4, 4, 7),
                 axes: None,
                 deep: 0.0,
             },
@@ -327,7 +333,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
                 center: Vec3::new(BAY_SIDE_X, wall_mid, BAY_FLOOR_ZC),
                 half_u: Vec3::Y * wall_mid,
                 half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
-                rect: chart(11, 3, 3, 7),
+                rect: chart(12, 4, 4, 7),
                 axes: None,
                 deep: 0.0,
             },
@@ -338,7 +344,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
                 center: Vec3::new(0.0, wall_mid, BAY_FRONT_Z),
                 half_u: Vec3::X * (BAY_W * 0.5),
                 half_v: Vec3::Y * wall_mid,
-                rect: chart(3, 10, 8, 3),
+                rect: chart(4, 11, 8, 4),
                 axes: None,
                 deep: 0.0,
             },
@@ -349,7 +355,7 @@ pub fn bay_authored() -> [(Station, SimSurface); 6] {
                 center: Vec3::new(0.0, BAY_CEIL_Y, BAY_FLOOR_ZC),
                 half_u: Vec3::NEG_X * (BAY_W * 0.5),
                 half_v: Vec3::NEG_Z * (BAY_FLOOR_D * 0.5),
-                rect: chart(14, 3, 8, 7),
+                rect: chart(16, 4, 8, 7),
                 axes: None,
                 deep: 0.0,
             },
@@ -1687,13 +1693,15 @@ mod tests {
     }
 
     /// The net's charts land their seam cells where the room glues
-    /// them. FOUR folds are physically watertight now — aft, port,
-    /// starboard and front all meet the floor at their baseboards,
-    /// because the front gutter that used to hold that seam open is
-    /// gone. One declared trim seam is left: the ceiling chart sits a
-    /// trim band above the starboard cornice (BAY.md).
+    /// them, and **every fold is physically watertight**. Aft, port,
+    /// starboard and front all meet the floor at their baseboards, since
+    /// the front gutter that used to hold that seam open went; and the
+    /// deckhead meets the starboard wall at its cornice, since the walls
+    /// grew the course that used to stand between them as a band of trim
+    /// no chart reached (docs/ROOMS.md, "One storey, everywhere"). There
+    /// is no declared gutter left anywhere in the net.
     #[test]
-    fn chart_seams_are_watertight_or_bounded_gutters() {
+    fn chart_seams_are_watertight() {
         let chart = |want: Station| {
             bay()
                 .into_iter()
@@ -1732,11 +1740,9 @@ mod tests {
             "starboard fold gapes"
         );
         assert!(gap(&floor, bottom, &front, top) < 0.10, "front fold gapes");
-        // The one trim seam left: adjacent in the net, offset in the
-        // room by a declared, bounded margin.
         assert!(
-            gap(&starboard, east, &ceiling, west) < 0.75,
-            "ceiling trim wider than declared"
+            gap(&starboard, east, &ceiling, west) < 0.10,
+            "ceiling fold gapes: a band stands between the cornice and the deckhead"
         );
     }
 
@@ -1876,7 +1882,8 @@ mod tests {
         let (w, h) = RoomKind::Burner.floor();
         for j in 0..h {
             for i in 0..w {
-                let cell = layout::cell_rect(burner.id, 3 + i, 3 + j);
+                let (x, y) = RoomKind::Burner.deck_cell(i, j);
+                let cell = layout::cell_rect(burner.id, x, y);
                 let mid = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
                 let probe = floor.to_world(mid) + Vec3::Y * 0.004;
                 let workable = boxes.rooms.iter().any(|(lo, hi)| {
@@ -1930,7 +1937,8 @@ mod tests {
             .expect("floor chart");
         let (_, depth) = space_trucking::sim::RoomKind::Cabin.floor();
         for row in 0..depth {
-            let cell = layout::cell_rect(CABIN, 3, space_trucking::sim::room::COURSES + row);
+            let (x, y) = space_trucking::sim::RoomKind::Cabin.deck_cell(0, row);
+            let cell = layout::cell_rect(CABIN, x, y);
             let mid = SimVec2::new(cell.w.mul_add(0.5, cell.x), cell.h.mul_add(0.5, cell.y));
             let over = floor.to_world(mid).z;
             assert!(

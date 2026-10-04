@@ -6,7 +6,7 @@
 
 The cargo experiment's first slice ("actuate the 3D space"): five new
 kinds that live in the room — lamps in three affixations, a couch, a
-painting — plus mechanics tying cargo to light, vermin, and value.
+painting — plus mechanics tying cargo to light and value.
 Everything here obeys the standing law from
 [ART_DIRECTION_3D.md](ART_DIRECTION_3D.md)'s cargo section: the sim
 stays discrete, presentation gets physical, and every mechanic has a 2D
@@ -68,20 +68,7 @@ accepted during prototyping, per DESIGN.md's compatibility stance.
    > less than a cell away, corners included (`lit_within_reach`), and
    > the volatile rule asks for half a cell of clear air instead. 3D: a real point light on the rack,
    obeying `sim.light()` like every cabin lamp — the omen dims cargo too.
-2. **Rats fear light.** The rat will not hop to, board in, or nibble in
-   a cell adjacent to a lit lamp. If every candidate is lit, it skips
-   its beat and re-arms its schedule — light is deterrence, not damage,
-   and a hold lit wall to wall never boards a stowaway at all.
-3. **The couch tempts the rat.** With a couch aboard, the rat drifts
-   toward it — hops become single Manhattan steps toward the nearest
-   couch cell, splitmix tiebreaks, light fear still binding, cargo
-   underfoot no obstacle (the couch itself is covered ground) — and
-   *naps* there: no nibbling while on the couch, hop cadence stretched
-   `NAP_LAZE` (3×). An ordinary lazy hop eventually rolls it back off
-   before the drift pulls it home again, so a couch is rat *insurance*,
-   not immunity, for the price of two floor cells — and the nap is the
-   tell.
-4. **Well-lit art.** A `Painting` shown in lamplight is worth one more
+2. **Well-lit art.** A `Painting` shown in lamplight is worth one more
    everywhere — the one cargo-cargo-light interaction in the economy,
    and it only ever raises a price (the dial's monotone law holds).
    Precisely, since the pads are where valuation happens: a painting on
@@ -91,7 +78,7 @@ accepted during prototyping, per DESIGN.md's compatibility stance.
    In the hold the reading is literal adjacency (`lit_adjacent` on the
    painting's footprint), which is the halo/spotlight cue frontends
    draw, not a priced state.
-5. **Blooming seedlings** (presentation only): `Seedlings` adjacent to a
+3. **Blooming seedlings** (presentation only): `Seedlings` adjacent to a
    lit lamp draw in bloom, both frontends. No sim state changes — it is
    a pure reading of placement, like the placement hints.
 

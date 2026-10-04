@@ -1,10 +1,11 @@
 # The art pipeline: references in, meshes out
 
-The game draws a whitebox. Every crate, lamp, hoop and console in it is
-geometry this repository cuts in code, and that is why the repository can
-be public. The plan is two graphical implementations of every object —
-the whitebox that exists, and a purchased asset — and this file is about
-how the second one reaches a build.
+Every object in the game has two graphical implementations: a whitebox —
+geometry this repository cuts in code, which is why the repository can be
+public — and a purchased asset. The default build draws the purchased one
+wherever the art cache has it and the whitebox wherever it does not, so a
+fresh clone with no cache still runs. This file is about how the
+purchased half reaches a build.
 
 ## The licence decides the architecture
 
@@ -263,10 +264,9 @@ cargo xtask art hash crate_small   # paste the `sha256 = "..."` line it prints
 cargo xtask art resolve
 ```
 
-The numbers that put the mesh in its berth come last, and they do not
-have to be typed: add a `dresses` line, resolve, and then run the bench —
-`--nudge`, below — which writes them back into this very table from in
-front of the body.
+The numbers that put the mesh in its berth come last, and for now they
+are typed by hand into this very table (see "Adjusting the numbers",
+below).
 
 ## The catalogue: searching art by what it looks like
 
@@ -759,10 +759,9 @@ fill = [1.0, 1.0, 1.0]
 They were here from the first day, before anything read them, and the
 reason is worth keeping said. Geometry in this game is a *pure
 description* — `pieces::parts`, `room::seam_parts`, `room::charts`,
-`poi::character_of` — that something else stamps into the world, and
-[the gauntlet](GAUNTLET.md) measures the description. That is what makes
-swapping in a bought mesh a swap rather than a rewrite: the description
-does not change, only what gets stamped.
+`poi::character_of` — that something else stamps into the world. That
+is what makes swapping in a bought mesh a swap rather than a rewrite:
+the description does not change, only what gets stamped.
 
 But a description claims a **box**, and an imported mesh occupies some
 unknown fraction of it. `poi::Shape::fill` is the existing precedent, and
@@ -799,10 +798,7 @@ world = berth pose ∘ T(offset ⊙ berth half) ∘ R(rotation) ∘ S(scale ⊙ 
 ```
 
 `|offset| + fill ≤ 1` on an axis is exactly "the body stays inside its
-berth". It is **not enforced** at read time, deliberately: a body that
-leaves its berth is a finding, and the gauntlet's families already know
-how to say so — a `fill` past the cells is `face-fits`, an `offset` out
-of the band is `berth-clear`.
+berth". It is **not enforced**.
 
 Three consequences to know before writing numbers.
 
@@ -839,14 +835,12 @@ The one declaration this moved was the gas canister, whose berth is
 came out of the old reading with the anisotropy hand-cancelled into it,
 `x` and `y` in the ratio 2, and the cure is the two numbers swapped. Its
 body is in the same place, the same size, to five decimal places; only
-the bookkeeping changed, and `rig-seated` catching it the moment the
-frame changed is how that was known rather than hoped.
+the bookkeeping changed.
 
 **The game draws the index's numbers, not the manifest's.** An edit to
 `art/manifest.toml` reaches the game through `resolve`, which is also the
-only moment it is checked. The gauntlet is the other way round: it reads
-the manifest, because the manifest is what is in git. The bench writes
-both, for exactly this reason — see "The bench", below.
+only moment it is checked, so an edit is followed by a `resolve` before
+it shows.
 
 ### `dresses`: which body a mesh stands in for
 
@@ -869,9 +863,8 @@ second list can fall out of step with `Kind::ALL`.
 
 The resolver checks the *shape* of a binding and deliberately not its
 meaning: `xtask` cannot see a `cargo::Kind` and should not learn to. The
-other half is a guard in the cabin
-(`art::tests::every_dressed_name_in_the_manifest_is_a_body_this_game_has`)
-which reads this very file and refuses a name the game has no body for.
+other half is the cabin's reader, which names on stderr any binding the
+game has no body for — a *stranger* — and leaves that body undressed.
 
 The thirty-two names, in `Kind::index` order:
 
@@ -972,7 +965,7 @@ disc. Two picks were dropped for this rather than shipped bent —
 table, which is exactly what an object nobody has picked a mesh for looks
 like. The cure when it matters is a `rotation`, and a quarter turn there
 makes `scale` depend on the room's own aspect rather than only the
-mesh's, which is a thing to work out at the bench and not in a text
+mesh's, which is a thing to work out in Blender and not in a text
 editor.
 
 Two constraints ride on every pick and both come from the art direction:
@@ -1128,33 +1121,30 @@ choosing which atlas is the whole of the cabin's say
 same crate in every room and a line that could never apply is this
 file's idea of a bug.
 
-The cabin's guard over this file
-(`art::tests::every_dressed_name_in_the_manifest_is_a_body_this_game_has`)
-reads the roles and the room kinds the same way it reads cargo names:
-a `fabric/gable`, or a `room = "attic"`, is a stranger it refuses.
+The cabin's reader takes the roles and the room kinds the same way it
+takes cargo names: a `fabric/gable`, or a `room = "attic"`, is a
+stranger it names on stderr.
 
 One thing about looking at it: **`--shot` waits for the art.** The
 screenshot's settle is forty-five pinned frames, and on a small machine a
 dozen scenes with a 2048² atlas each are still loading then, so a shot of
-a dressed room used to be a picture of the void. Under `--features art`
+a dressed room used to be a picture of the void. In the default build
 the shot fires once every scene the index named has loaded (or failed,
 which is a whitebox and a sentence on stderr). The first dressed room
 was photographed on a 7 GB laptop, where the dressed build also runs
 close to the memory the integrated GPU shares with everything else — a
 dressed session there is worth keeping short.
 
-**What is not there yet**, said plainly: the bench (`--nudge`) takes
-cargo and not panels, so a panel's numbers are typed; a wall is one
-panel repeated, with no alternation between variants; and the pack's
-emissive strips are painted, not lit, because the converter carries the
-base atlas and nothing else — which is also what the lamps-are-cargo law
-would want.
+**What is not there yet**, said plainly: a wall is one panel repeated,
+with no alternation between variants; and the pack's emissive strips
+are painted, not lit, because the converter carries the base atlas and
+nothing else — which is also what the lamps-are-cargo law would want.
 
 ### The promise, and where it meets the fact
 
 `scale` and `fill` are **redundant on purpose**, and the redundancy is
-the mechanism. `fill` is a promise living in a public repository, which
-is what lets continuous integration sweep it with no art on the machine.
+the mechanism. `fill` is a promise living in a public repository,
+readable with no art on the machine.
 `scale` times the mesh's own measured size is the fact, and it lives on
 the owner's disk. `cargo xtask art resolve` is the one place both exist
 at once, so it is where they are made to meet:
@@ -1180,9 +1170,8 @@ crate_small is not the size cargo/suspicious_crate says it is.
 ```
 
 The slack is **0.02 of a berth half-extent** — a fiftieth of the
-half-box, about 5 mm on a one-cell kind. That is the same order as the
-gauntlet's own clip slack and coarser than the two decimals a `fill` is
-written with by hand; tighter and a correctly-rounded `0.18` is a
+half-box, about 5 mm on a one-cell kind. That is coarser than the two
+decimals a `fill` is written with by hand; tighter and a correctly-rounded `0.18` is a
 refusal, looser and a mesh can be a centimetre bigger than the box every
 containment rule reads for it.
 
@@ -1368,10 +1357,11 @@ every run, including the runs with nothing to do — and "a second
 noticing that you swapped Blender for FBX2glTF. If you do swap, delete
 `art/cache/glb/`.
 
-## The loading path: what `--features art` actually turns on
+## The loading path: what the default build turns on
 
-The cabin's `art` feature was declared long before anything read it,
-because the seam is the expensive half. It reads it now.
+The art seam was declared long before anything read it, because the seam
+is the expensive half. It is the default build now; `--features whitebox`
+is the development alternative that compiles the loading half out.
 
 **One Bevy feature, not the three that were predicted.** `bevy_gltf`
 brings `bevy_world_serialization` with it, and in Bevy 0.19 a loaded
@@ -1381,7 +1371,8 @@ game authors no scenes. And no image decoder was added: `png` has been on
 the cabin's list since screenshots needed it to *write*, Bevy's `png`
 feature is `image/png`, and a Blender-exported `.glb` embeds its textures
 as PNG unless the source was a JPEG. If a pack ever ships one that is
-not, `"jpeg"` on the `art` line is the fix.
+not, `"jpeg"` beside `"bevy_gltf"` in the cabin's Bevy features is the
+fix.
 
 **That prediction stayed a prediction for two fixes longer than it
 should have.** It was written down as checked, on the day the atlas first
@@ -1404,10 +1395,11 @@ asset line), so `"jpeg"` stays one word away and unneeded.
 Eight crates: `bevy_gltf`, `bevy_world_serialization`, `gltf`,
 `gltf-json`, `gltf-derive`, `base64`, `byteorder`, `inflections`.
 
-**The default build pays nothing**, and that is measured rather than
-asserted: 338 packages before and 338 after, the same 338.
+They are in every build, the whitebox one included: `bevy_gltf` is an
+unconditional dependency, and `--features whitebox` changes only the
+cabin's own `cfg`, so switching between the two recompiles one crate.
 
-At boot, under the feature and only under it, the cabin reads
+At boot, in every build but the whitebox one, the cabin reads
 `$ART_CACHE/index.toml` and asks the asset server for every `.glb` a
 `dresses` line names. The art cache is the asset root — nothing else in
 this game reads a file through the asset server, so there is no
@@ -1435,8 +1427,8 @@ so, in a comment listing the four kinds it must not name.
 The rule it was breaking is real and stays: **a bought body replaces the
 description.** What was wrong was the reading of it, because a lamp's
 pool of light on the deck is not a picture of a lamp. It is the sim's
-`lamp_lit` answered in the world — the same predicate the rat's fear,
-the seedlings' bloom and the well-lit-art bonus read — and where it
+`lamp_lit` answered in the world — the same predicate the seedlings'
+bloom and the well-lit-art bonus read — and where it
 comes from and how far it carries are facts about the KIND, written once
 in that kind's description. Buying a mesh does not buy new answers to
 them.
@@ -1522,135 +1514,28 @@ glowing patch on the deck replaced by a can lying in the middle of the
 cell. The day a binding can say which of a covering's two bodies it is,
 that tin is a four-line table.
 
-## The bench: nudging a body into its berth
+## Adjusting the numbers
 
-The four numbers have to come from somewhere, and until now that
-somewhere was a text editor, a guess, `resolve`, a relaunch and a look —
-a minute-long loop for a change worth a thousandth of a berth. The bench
-is the same loop with the editor and the relaunch taken out.
+The four numbers are edited by hand in the asset's table in
+`art/manifest.toml`, then `cargo xtask art resolve` and a relaunch to
+look — a minute-long loop for a change worth a thousandth of a berth.
+It is not expected to last: a Blender-first workflow is expected to
+replace it (not designed yet). An in-game placement bench was built and
+taken out again, because placement tooling inside the game was a pale
+imitation of doing it in Blender or Unity.
 
-```sh
-cargo run -p cabin --features art -- --nudge --fixture
-```
-
-Stand in front of a purchased body, take it, move it until it sits
-right, and press `Enter`. The three numbers go back into that asset's
-table in `art/manifest.toml`, where they ride version control like every
-other promise this repository makes.
-
-**Two gates, and the second is the one that matters.** `--features art`
-decides whether there is a bought mesh to nudge at all. `--nudge` decides
-whether this process contains a system that can write to a tracked file —
-without the flag the bench's systems are never added to the schedule, so
-an ordinary player session is *incapable* of editing the repository
-rather than merely unlikely to. A key chord would have been fewer
-characters to type and would have left the file-writing code live in
-every session anybody ever plays.
-
-### What the hands do
-
-| | |
-| --- | --- |
-| `Tab` | take the dressed body under the crosshair, or let go |
-| `T` `R` `G` | what the six direction keys move: offset, rotation, scale |
-| `←` `→` | the berth's own x, minus and plus |
-| `↑` `↓` | its y, plus and minus |
-| `[` `]` | its z, minus and plus — into the wall and out of it |
-| `Shift` | the fine step |
-| `Backspace` | put the numbers back to what the file says |
-| `Enter` | write them into the manifest |
-
-One press is one step: a coarse move is 0.05 of a berth half-unit (about
-14 mm on a one-cell kind) and a fine one is 0.005; a coarse turn is 15°
-and a fine one 1°. There is no key repeat, because a held arrow at sixty
-steps a second crosses a whole berth in a third of a second. Every number
-lands on a thousandth, so the fourth press of `↑` writes `0.2` into the
-owner's file and not `0.20000002`.
-
-**The arrows move the body in the berth's own axes, not in yours.**
-Standing behind a body on the aft wall, `→` moves it to your left, and
-that is correct: what the key moves is the *number*, in the frame the
-number is written in ("The placement frame", above), so what you press is
-what the diff says. Which way is plus is not left to be remembered — the
-overlay draws a tip on the plus end of every axis.
-
-Every copy of that kind aboard moves together, because one declaration
-dresses them all.
-
-### What it draws
-
-Shapes, and only shapes — the zero-text law covers everything rendered.
-Rods along the axes for the offset, rings round them for the turn,
-calipers across them for the size, a tip on every plus end, and above the
-body **a ring that is whole while what you are looking at is what the
-file says, and broken into dashes while it is not**. Broken-means-
-provisional is the cabin's existing vocabulary, not a new one: it is what
-a room's mark on a good already says. The overlay's description carries
-no colour at all, which is the strongest form of the no-hue-alone rule
-available.
-
-Confirmations, refusals and file names go to **stderr**, which the law
-has never covered and where the rest of this pipeline already talks.
-
-### What a save does, and what it will not
-
-It writes `scale`, `offset` and `rotation` into `[asset.<id>]` — the id
-comes from the index, which is where the numbers being drawn came from —
-as a **surgical line edit**. The value on each line is replaced and
-nothing else in the file is touched: not the prose, not the blank lines,
-not the spacing round the `=`, not a comment on the value's own line, not
-the order tables stand in, not even the line endings. A key the table
-never had is added among that table's own keys. The number style is held
-to the real file by a guard that rewrites the shipped manifest's own
-table with the numbers already in it and requires the result to be the
-same bytes: saving what was already there is a diff of nothing.
-
-The manifest is found the way `xtask` finds it — `$ART_MANIFEST`, and
-`art/manifest.toml` otherwise — so a nudge and a resolve cannot end up
-reading different files. An id the manifest has no table for is a refusal
-that writes nothing at all, which is the case that matters when an index
-has drifted from the manifest.
-
-Then the same three lines are carried into `$ART_CACHE/index.toml`,
-best-effort, so the body is still where you put it after a restart rather
-than back where the last `resolve` left it. That file is derived and
-gitignored; the next `resolve` rewrites it from the manifest, which by
-then says the same thing.
-
-**It does not write `fill`.** `fill` is the promise the mesh is measured
-against, and a bench that derived it from the mesh would make it
-unbreakable — precisely the thing it exists not to be. So nudging `scale`
-can leave a `fill` that is no longer true. The save says so on stderr,
-and the next `cargo xtask art resolve` refuses with the line to paste.
-
-### What is proven, and what needs eyes
-
-The transform arithmetic, the gesture vocabulary, the state machine, the
-writer and the round trip are all proven headless, and the round trip
-goes out through the writer and back through **the loader's own parse** —
-what the owner was looking at when they pressed the key is asserted to be
-the pose the file describes, never a second reader written for the test.
-Three scripted sessions drive the real systems over a real sim with real
-key edges, the way `crate::session` drives the cabin's own input.
-
-What none of that can answer is whether the overlay is *legible* — how
-the rings read against a dark cabin, whether the calipers are told apart
-from the rods at a glance, whether the plus tip is big enough to find.
-That needs a window and an eye. It is recorded in
-[GAUNTLET.md](GAUNTLET.md) rather than assumed.
-
-One thing to know while using it: the crosshair still picks a dressed
-body by its **whitebox** box, because the pick face comes from
-`pieces::drawn_box`, which is a pure function of `Kind` (GAUNTLET.md's
-blind-spot list). A bought mesh much smaller than its berth is taken by
-aiming where the whitebox was.
+`resolve` still refuses a `fill` the measured mesh disagrees with, and
+prints the line to paste. And the crosshair picks a dressed body by its
+**whitebox** box, because the pick face comes from `pieces::drawn_box`,
+which is a pure function of `Kind`: a bought mesh much smaller than its
+berth is taken by aiming where the whitebox was.
 
 ## What continuous integration does, and does not
 
 CI **never** resolves art and never will: the payload is not in the
 repository, so there is nothing for it to resolve. It builds and tests
-the whitebox, which is where all sixteen gauntlet families and the
-determinism guards live.
+the default build, which finds no cache and so draws the whitebox, and
+lints the `--features whitebox` build beside it.
 
 What CI does run is `xtask`'s own guards, which are about the resolver's
 rules and need no art: the manifest dialect, the missing-asset message,
@@ -1711,25 +1596,13 @@ What that stops at is Blender itself. That a repainted material survives
 it renders in colour is proved on the owner's machine and nowhere else —
 `cargo xtask art resolve` and then a look at the crate in the cabin.
 
-**It also builds and tests the art seam**, with `--features art`, and
-that is new. The feature is off everywhere else, so without those two
-steps the only code in the repository that loads a purchased mesh would
-compile nowhere and rot unlinted. They still resolve nothing and prove
-nothing about a Synty mesh. What they prove is that the seam compiles,
-that its guards pass, and that the cabin's own glTF path reads a binary
-glTF — because the test writes one, byte by byte: a unit cube, header,
-both chunks, accessors, a mesh, a node and a scene, with no new
-dependency. A fixture built by the library under test would only prove
-that the library agrees with itself.
-
-The cost, measured on a four-core runner: about **25 seconds** once the
-dependency cache holds both feature sets — 4 s of clippy and 21 s of
-tests — and about **7 minutes** on the first run after it lands, because
-the art feature is a second compilation of Bevy's upper crates plus the
-eight the glTF loader brings. `Swatinem/rust-cache` keeps that.
-
-`the_cabin_ships_the_whitebox_unless_art_is_asked_for` still holds
-`default = []`, so the whitebox stays the build everything else means.
+**It does build and test the art seam**, because the default build is
+the art build. That proves nothing about a Synty mesh; what it proves is
+that the seam compiles, that its guards pass, and that the cabin's own
+glTF path reads a binary glTF — because the test writes one, byte by
+byte: a unit cube, header, both chunks, accessors, a mesh, a node and a
+scene, with no new dependency. A fixture built by the library under test
+would only prove that the library agrees with itself.
 
 ## The three claims, checked
 

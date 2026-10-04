@@ -64,16 +64,6 @@ Measure before reaching for a linker. On this project the link is about
 install one bought nothing. `cargo build --timings` names the crates that
 actually cost; the two items above were worth more than any of them.
 
-## Verification
-
-- [GAUNTLET.md](GAUNTLET.md) — this project's own answer to "how do you
-  check a 3D scene without a human looking at it". Worth reading for the
-  shape of the idea before the specifics: describe the geometry purely,
-  sweep the descriptions for defect classes a screenshot cannot show, and
-  keep the findings in a file the build asserts equality against. The
-  timestep link below is the other half of it: a picture only reproduces
-  if the clock does.
-
 ## Shaders and Techniques
 
 - [Shadertoy](https://www.shadertoy.com/) — the ideal zero-setup shader-fidget environment
@@ -96,7 +86,7 @@ Not in the template. Add per toy.
 
 - [quad-storage](https://github.com/optozorax/quad-storage) — localStorage persistence; background-tick toys compute elapsed time on load, no server needed
 - [quad-url](https://github.com/optozorax/quad-url) — URL params, so seeds become shareable links
-- [binaryen / wasm-opt](https://github.com/WebAssembly/binaryen) — what shrinks the wasm; CI assumes it. Name the wasm features explicitly (`build-web.sh` does) — rustc emits post-MVP instructions that older wasm-opt refuses to validate without being told they are allowed
+- [binaryen / wasm-opt](https://github.com/WebAssembly/binaryen) — what shrinks the wasm. Name the wasm features explicitly (`build-web.sh` does) — rustc emits post-MVP instructions that older wasm-opt refuses to validate without being told they are allowed
 - [Are we game yet](https://arewegameyet.rs/) — ecosystem index
 
 ## Licensing

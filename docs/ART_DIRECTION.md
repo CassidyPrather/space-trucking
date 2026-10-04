@@ -39,8 +39,7 @@ native resolution: it is dev information, not part of the fiction.
 ## Palette
 
 All color lives in `src/palette.rs`. **No raw `Color::new` anywhere else in
-the frontend** — a unit test greps the frontend sources and fails the build
-otherwise. Naming is by role, not by hue, so retuning the palette never
+the frontend** — a convention, kept in review. Naming is by role, not by hue, so retuning the palette never
 touches the renderer.
 
 Starting values (tune by screenshot, in one place):
@@ -105,14 +104,14 @@ destination preview may afford a slightly richer tint as the "big screen."
 Every animation is one of three things, and each must know which:
 
 - **Feedback** answers a player action or a sim event and communicates a
-  change: the juice tweens, the rat's sim-driven hop, a lamp waking, the
+  change: the juice tweens, a lamp waking, the
   dial's needle easing, shakes and flashes, ship travel itself. Feedback
   finishes inside half a second (the catch-up dock pulse is the one
   sanctioned exception) and **always runs**.
 - **Decoration** loops while nothing changes: the sonar sweep and its
   afterglow, star twinkle, Venus's glitter sparkles (the planets' own orbits are sim state, not decoration, and never freeze), the Guild hexagon's
   pulse, the lit-lamp shimmer, the crate's violet breathing, the invite
-  glow's and go-glows' breathing, engine flicker, the rat's tail sway, the
+  glow's and go-glows' breathing, engine flicker, the
   crew-ghost's breathing frame, the omen's screen flicker. Decoration
   **gates on the reduced-motion flag** and freezes to a legible static
   state — the sweep parks at its zero bearing, shimmers and pulses hold
@@ -134,7 +133,7 @@ writing the key, so they always run full motion.
 No meaning may be carried by hue alone: every signal needs a second channel
 — geometry, brightness, or position. The dial has its needle and break-even
 notch under the colour ramp, lamps carry lit-versus-dark-glass brightness,
-violation flashes carry rule glyphs, the bite mark and the mute stroke are
+violation flashes carry rule glyphs, the mute stroke is
 geometry, the row trims sit at fixed positions. The refused half of the drag
 placement hint therefore wears a diagonal slash across each refused
 footprint cell — and across the held piece itself — `LAMP_NO`-coloured but
@@ -152,8 +151,9 @@ shape-carried; the legal state stays a plain fill.
 
 ## Guards
 
-- Palette purity is enforced by test (`palette.rs` scans the frontend
-  sources for raw color constructors).
+- Palette purity is a convention, not a test: colours live in
+  `palette.rs`, and a raw color constructor anywhere else is a review
+  finding.
 - Wear determinism falls under the sim's rule: hashes, not RNG state.
 - The design-review checklist asks whether new visuals follow this file or
   amend it — those are the only two options.

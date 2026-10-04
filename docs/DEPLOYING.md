@@ -10,14 +10,16 @@ reference for the shape: a folder of files, no external requests.
 
 ## The browser target
 
-The cabin compiles for wasm32 today, and CI checks that it keeps doing
-so:
+Nothing builds or checks a web target now, CI included, by choice: a web
+release would have to be squared with the Synty licence first, and that
+conversation has not been had. The cabin compiled for wasm32 when last
+tried, and the way back in is:
 
 ```bash
 cargo check --target wasm32-unknown-unknown -p cabin
 ```
 
-Nothing goes on the command line: `crates/cabin/Cargo.toml` carries a
+Nothing else goes on the command line: `crates/cabin/Cargo.toml` carries a
 wasm-only dependency table (Bevy's `web` and `webgl2` features, chrono's
 `wasmbind`) that cargo unions in for that target and ignores for every
 other, so a native build's graph is untouched. The sim library was the

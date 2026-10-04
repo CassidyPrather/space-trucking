@@ -256,7 +256,6 @@ fn paint_map(cv: &mut Canvas, sim: &Sim, t: f32, pointer: SimVec2, fb: &Feedback
     draw_travel_company(cv, sim, glass, t);
     draw_sweep(cv, glass, t);
     finish_screen(cv, glass, sim.omen(), t);
-    draw_ad_static(cv, sim, glass, t);
 }
 
 /// The tube face: SCREEN glass over the whole panel (the raised PLATE
@@ -799,9 +798,9 @@ fn draw_parade(cv: &mut Canvas, sim: &Sim, glass: Rect, t: f32) {
     }
 }
 
-/// Whatever is alongside mid-leg: the whale's spectacle on the glass and
-/// the ad drone's tiny billboard. (The flotsam net wells are console
-/// furniture in 3D, not a map reading.)
+/// Whatever is alongside mid-leg: the whale's spectacle on the glass.
+/// (The flotsam net wells are console furniture in 3D, not a map
+/// reading.)
 #[allow(clippy::cast_sign_loss)] // cosmetic clocks are non-negative
 fn draw_travel_company(cv: &mut Canvas, sim: &Sim, glass: Rect, t: f32) {
     if !matches!(sim.ship().state, ShipState::Traveling { .. }) {
@@ -832,76 +831,6 @@ fn draw_travel_company(cv: &mut Canvas, sim: &Sim, glass: Rect, t: f32) {
             at + SimVec2::new(18.0, -2.0),
             1.2,
             fade(ink(palette::PHOSPHOR), 0.8),
-        );
-    }
-
-    // The ad drone: a tiny billboard on a tight orbit, wobbling per swat.
-    if let Some(at) = sim.drone_pos() {
-        let wobble = f32::from(sim.drone_swats()) * (t * 21.0).sin() * 2.0;
-        let at = at + SimVec2::new(wobble, 0.0);
-        cv.dot(at, 2.2, fade(ink(palette::AMBER), 0.9));
-        let board = Rect::new(at.x - 7.0, at.y - 12.0, 14.0, 8.0);
-        cv.fill(board, fade(ink(palette::GLINT), 0.85));
-        for (i, ch) in [3_u8, 11, 7].into_iter().enumerate() {
-            ad_rune(
-                cv,
-                ch.wrapping_add((t * 2.0) as u8),
-                SimVec2::new((i as f32).mul_add(4.4, board.x + 2.0), board.y + 1.5),
-                4.0,
-                ink(palette::SHADOW),
-            );
-        }
-        cv.seg(
-            at,
-            at + SimVec2::new(0.0, -4.0),
-            1.0,
-            fade(ink(palette::AMBER), 0.7),
-        );
-    }
-}
-
-/// One rune of the ad tongue: an angular scrawl derived from the byte, in
-/// a language nobody aboard reads.
-fn ad_rune(cv: &mut Canvas, ch: u8, at: SimVec2, size: f32, col: Rgba) {
-    let h = splitmix(0xAD_51_11, u64::from(ch));
-    let point = |n: u64| {
-        SimVec2::new(
-            (((h >> n) % 4) as f32 / 3.0).mul_add(size, at.x),
-            (((h >> (n + 8)) % 5) as f32 / 4.0 * size).mul_add(1.4, at.y),
-        )
-    };
-    let mut prev = point(0);
-    for leg_bits in [16_u64, 32, 48] {
-        let next = point(leg_bits);
-        cv.seg(prev, next, 1.0, col);
-        prev = next;
-    }
-}
-
-/// The ad ticker: while the drone is attached, every screen in the shop
-/// runs its incomprehensible pitch. Swat the drone to make it stop.
-fn draw_ad_static(cv: &mut Canvas, sim: &Sim, glass: Rect, t: f32) {
-    if !sim.advertising() {
-        return;
-    }
-    // The pitch, in lojban, transliterated into the rune alphabet. It
-    // says something like "buy the great shining thing"; nobody asked.
-    let pitch = b"ko te vecnu lo banli je carmi dacti .i e'osai";
-    let band = Rect::new(glass.x, glass.y + 6.0, glass.w, 12.0);
-    cv.fill(band, fade(ink(palette::SHADOW), 0.55));
-    let step = 9.0;
-    let scroll = (t * 30.0) % (pitch.len() as f32 * step);
-    for (i, &ch) in pitch.iter().enumerate() {
-        let x = (i as f32).mul_add(step, band.x + band.w - scroll);
-        if x < band.x + 2.0 || x > band.x + band.w - step {
-            continue;
-        }
-        ad_rune(
-            cv,
-            ch,
-            SimVec2::new(x, band.y + 2.0),
-            6.0,
-            fade(ink(palette::AMBER), 0.85),
         );
     }
 }
@@ -1012,7 +941,6 @@ fn paint_preview(cv: &mut Canvas, sim: &Sim, t: f32) {
         cv.fill(glass, fade(ink(palette::SHADOW), 0.35));
     }
     finish_screen(cv, glass, sim.omen(), t);
-    draw_ad_static(cv, sim, glass, t);
 }
 
 /// Faint alignment grid on the preview glass: the tube is powered even

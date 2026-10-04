@@ -7,7 +7,7 @@
 //! space bound to one sim rect.
 //! Each frame the cursor ray is cast against every surface; the nearest
 //! hit maps to sim coordinates and becomes the virtual pointer the sim
-//! reads. The inverse mapping places sim things (POIs, crates, the rat)
+//! reads. The inverse mapping places sim things (POIs, crates)
 //! back onto cabin geometry. Hit-testing thus stays where it always was:
 //! inside the sim, where the rules live.
 //!

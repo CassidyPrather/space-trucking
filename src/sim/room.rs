@@ -880,8 +880,7 @@ impl RoomKind {
     /// **Which cells `open` calls open that a step from `seeds` never
     /// reaches**, walking the deck four ways.
     ///
-    /// [`RoomKind::marooned`]'s one arithmetic, factored out for the
-    /// reason the gauntlet factors its own readings out: a rule whose
+    /// [`RoomKind::marooned`]'s one arithmetic, factored out because a rule whose
     /// reading is buried inside its own loop cannot be handed a fenced
     /// room, and a rule nobody can catch out is a green tick that means
     /// nothing. The law is which cells count as open and where a body
@@ -2289,7 +2288,7 @@ mod tests {
     ///
     /// The clause that matters is the second one. `Plain` in a room that
     /// parts would be a berth whose cargo the launch gate refuses on
-    /// while the paint and the gauntlet both read it as the cabin's own
+    /// while the paint reads it as the cabin's own
     /// deck — which is exactly the confusion this class ends.
     #[test]
     fn a_room_that_leaves_has_no_ordinary_deck() {

@@ -31,11 +31,11 @@ cabin's art rules live in `docs/ART_DIRECTION_3D.md`.
     Positions are pure functions of the tick; nothing is stored.
   - `cargo.rs` — cargo kinds, pieces, and placement rules.
   - `barter.rs` — valuation and trade resolution.
-  - `event.rs` / `rats.rs` / `encounter.rs` — the events, as siblings
-    with a uniform hook shape (on_depart/on_dock/travel_tick/on_press +
-    own save lines and cues); a new event should copy the shape, not
-    invent a framework. `encounter.rs` holds both the travel encounters
-    (derelict/gas station/casino/meteors/whale) and the ad drone.
+  - `event.rs` / `encounter.rs` — the events, as siblings with a
+    uniform hook shape (on_depart/on_dock/travel_tick/on_press + own save
+    lines and cues); a new event should copy the shape, not invent a
+    framework. `encounter.rs` holds the travel encounters
+    (derelict/gas station/casino/meteors/whale).
   - `save.rs` — versioned save serialization.
 - `src/net/` — deterministic lockstep multiplayer per `docs/NETWORKING.md`:
   protocol messages, helm/client session state machines, the guild server
@@ -48,15 +48,15 @@ cabin's art rules live in `docs/ART_DIRECTION_3D.md`.
 - `src/telemetry.rs` — the opt-in play-statistics contract; dormant (no
   frontend collects today).
 - `build.rs` — embeds a `git describe` version string.
-- `.github/workflows/ci-cd.yml` — lint, test, perf budgets, audit,
-  release artifacts.
+- `.github/workflows/ci-cd.yml` — fmt, clippy, tests, a whitebox lint,
+  and native release artifacts. No web/wasm build.
 - `benches/` — criterion bench over the sim. Unit tests live in `src/sim/`.
 - `crates/cabin/` — the game people play. `bridge.rs` owns the sim/save/
   tape (shell duties), `surface.rs` maps 3D quads onto sim rects, `rig.rs`
   builds the room, camera (roam + focus), and the 480×270 pixel-crunch
-  pipeline with invariant/sightline tests, `gesture.rs` synthesizes
-  pointer frames (lever pulls, carry), `palette.rs` restates the palette
-  discipline (purity test included), `canvas.rs`+`crt.rs` are the software
+  pipeline, `gesture.rs` synthesizes pointer frames (lever pulls, carry),
+  `palette.rs` holds every frontend color, `art.rs` loads purchased art
+  from the local cache (whitebox fallback), `canvas.rs`+`crt.rs` are the software
   rasterizer behind the phosphor screens, and the view modules
   (`room`, `pieces`, `viewport`, `fx`, `audio`) read sim accessors onto
   geometry. `menu` is the one surface that is not in the room: the Esc
@@ -65,34 +65,35 @@ cabin's art rules live in `docs/ART_DIRECTION_3D.md`.
 ## Commands
 
 ```bash
-cargo run --release -p cabin                         # play
+cargo run --release -p cabin                         # play (art build)
+cargo run -p cabin --features whitebox               # code-cut geometry only
 cargo build                                          # build
 cargo clippy --workspace --all-targets -- -D warnings # lint
 cargo fmt                                            # format
 cargo test --workspace                               # test
 cargo bench --bench sim_bench -- --quick             # bench
-cargo audit                                          # audit
 cargo run -p cabin -- --shot out.png --view bay      # headless screenshot
-cargo run -p cabin -- --gauntlet                    # adversarial geometry sweep
+cargo xtask art resolve                              # fill the art cache
 ```
 
-The last one is the harness that grades the cabin's geometry; when it
-turns the build red, `docs/GAUNTLET.md` says what the line means and how
-to find the millimetres behind it.
+**Art is the default build.** Purchased Synty meshes are never in the
+repository (the licence allows shipping them inside a built game, not
+redistributing them as source); `cargo xtask art resolve` converts them
+into a local cache the default build reads, and with no cache the cabin
+falls back to the whitebox. `--features whitebox` compiles the loader out.
 
 ## Solid vs. soft (change tolerance)
 
 DESIGN.md work is ongoing and requirements will keep moving. Know which
 walls are load-bearing:
 
-- **Solid — change deliberately, with tests and a save-magic bump**:
+- **Solid — change deliberately, with a save-magic bump where formats move**:
   `src/sim/` (the game), `src/net/` (lockstep + guild), the save/tape
   formats, the `InputFrame` contract, and the cabin's bridge/surface
   contract (surfaces map layout rects; the sim does all hit-testing).
 - **Soft — expected to churn freely**: every cabin view module (`crt`,
-  `room`, `pieces`, `viewport`, `fx`, `menu`), the rig's room layout
-  (data-first geometry + invariant/sightline tests make rearrangement
-  cheap), palette values, canvas paintings, audio gains. The barter
+  `room`, `pieces`, `viewport`, `fx`, `menu`), the rig's room layout,
+  palette values, canvas paintings, audio gains. The barter
   economy and its presentation are *expected* to be redesigned until
   they click — playtest verdict — so avoid deep investment there.
 - **Amend-in-the-same-change**: the art direction docs and
@@ -120,13 +121,24 @@ the next. `fast_forward` (used for warp and offline catch-up) suppresses
 cues, so six hours of catch-up does not arrive as six hours of clunks.
 
 The wider rule: logic you want tested must live engine-free like `sim` and
-`synth` do; frontend modules get verified by the cabin's invariant and
-sightline tests, headless screenshots, or eyeballs — and by the gauntlet
-(`docs/GAUNTLET.md`), which grades geometry adversarially and can only
-see what something has been described by. A new family of thing in the
-cabin gets a pure description before it gets a mesh; twice now a whole
-layer of the art has been built straight into the world and gone
-unchecked for want of one.
+`synth` do; frontend modules get verified by headless screenshots and
+eyeballs.
+
+## Testing (keep it light)
+
+The test suite was deliberately cut back: exhaustive harnesses that had to
+be appeased on every change cost more than they caught. Write tests that
+earn their keep:
+
+- **Do** test the sim's rules and invariants (cargo conservation, save
+  round-trips, determinism, lockstep), parsers and formats, and frontend
+  behaviour a player would notice breaking (input, carry, menu, keys).
+- **Don't** write tests that pin geometry to the millimetre, sweep "every
+  X has property Y" across the whole cabin, read source files, enforce
+  style, or exist to keep another test's list in sync. Art and layout are
+  soft and change constantly; check them with `--shot` and your eyes.
+- When a change makes a test obsolete, delete the test rather than
+  contorting the change to keep it.
 
 ## House Rules
 
@@ -155,22 +167,19 @@ place (`cargo::player_owned`), the drop matrix consumes it in
 `Sim::drop_targets()` — never restate any of them. The drag-monkey tests in
 `src/sim/mod.rs` feed thousands of arbitrary input frames (solo and
 six-player) and fail the moment any interaction loses a piece outside those
-doors, so new surfaces are guarded the moment they exist. The cabin's
-gesture monkey extends the same guarantee through the lever/carry
-synthesis layer.
+doors, so new surfaces are guarded the moment they exist.
 
 Aesthetics are directed, not defaulted: `docs/ART_DIRECTION_3D.md` holds
 the conceit, and all frontend color lives in `crates/cabin/src/palette.rs`
-— a purity test fails the build on any raw color constructor elsewhere in
-the crate. Follow the file or amend it in the same change.
+by convention. Follow the file or amend it in the same change.
 
 The save string is versioned, hand-rolled in `src/sim/save.rs`, with no
 compatibility guarantees before 1.0. Bump the magic on any breaking change;
 an old or corrupt save fails safe into a fresh game, never a panic.
 
 Every asset gets a `CREDITS.md` line at intake — source, author, license,
-URL. CC0 first. (Today there are none: geometry, textures, and sound are
-all code.)
+URL. Purchased packs are declared in `art/manifest.toml` and resolved
+locally; nothing derived from them is committed.
 
 The soundscape is synthesised in `src/synth.rs` — four seamless loops
 (engine, warp engine, suspicious hum, station air) plus one-shots mapped

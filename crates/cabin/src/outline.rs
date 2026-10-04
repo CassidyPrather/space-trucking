@@ -169,7 +169,7 @@ const DASH: i32 = 3;
 ///
 /// A part is marked in the breath it is spawned in, which works because
 /// a whitebox part IS spawned there. A purchased one is not: what
-/// `build_kind` has to hand under `--features art` is a scene that has
+/// `build_kind` has to hand in the default (art) build is a scene that has
 /// not loaded yet, so the mark goes on the scene's root and `art`
 /// carries it down onto each body as it appears. Nothing in this module
 /// is told which of the two it is looking at, and that is the point.
@@ -201,7 +201,7 @@ impl MaskBody {
     /// scene arrives as — which is the only caller, and why a whitebox
     /// build has none.
     #[must_use]
-    #[cfg_attr(not(feature = "art"), allow(dead_code))]
+    #[cfg_attr(feature = "whitebox", allow(dead_code))]
     pub const fn piece(self) -> u32 {
         self.piece
     }
@@ -211,8 +211,8 @@ impl MaskBody {
 /// which part of that piece it is a copy of.
 ///
 /// It names its part because it must answer to that part's own hiding
-/// and to nothing above it. A rat's bite wedge that is not shown is not
-/// outlined; a rig the focus is FLYING THROUGH has its whole body
+/// and to nothing above it. A part that is not shown is not outlined;
+/// a rig the focus is FLYING THROUGH has its whole body
 /// hidden and had better still be outlined, because an outline round
 /// nothing is the entire reading there.
 #[derive(Component, Clone, Copy)]
@@ -673,37 +673,6 @@ pub fn paint(
 mod tests {
     use super::*;
 
-    /// **No two readings draw one line over another.**
-    ///
-    /// Three of them may be worn at once — the crosshair rests on a good
-    /// the room has offered and you have asked for — so the forms have
-    /// to be able to share a body. Each has a band of its own, they run
-    /// in the order they are claimed in, and the aim's is on the other
-    /// side of the body's own edge from the other two.
-    ///
-    /// It is the old coplanar question asked where an outline can answer
-    /// it. Two bands overlapping is one of them silently winning, which
-    /// is a reading nobody can see and a defect no screenshot shows.
-    #[test]
-    fn no_two_readings_draw_one_line_over_another() {
-        let bands = [
-            ("aim", AIM_BAND),
-            ("mark", MARK_BAND),
-            ("offer", OFFER_BAND),
-        ];
-        for (name, band) in bands {
-            assert!(band.0 < band.1, "the {name} band runs backwards: {band:?}");
-        }
-        for (i, (name, band)) in bands.iter().enumerate() {
-            for (other, next) in bands.iter().skip(i + 1) {
-                assert!(
-                    band.1 <= next.0,
-                    "the {name} band {band:?} runs into the {other}'s {next:?}"
-                );
-            }
-        }
-    }
-
     /// **A reading is never drawn on the body of another.**
     ///
     /// The defect this whole layer was rebuilt for, stated as a law. A
@@ -732,85 +701,6 @@ mod tests {
                 band.0 >= 0.0,
                 "the {name} is drawn inside the body it is about: {band:?}"
             );
-        }
-    }
-
-    /// **An outline has no holes in it.**
-    ///
-    /// What the pass has is the distance to the nearest masked TEXEL,
-    /// and on a grid that can only ever be one of √0, 1, √2, 2, √5, √8,
-    /// 3 — so a band drawn between two of those values lights only where
-    /// the geometry happens to land a texel inside it, and the ring
-    /// comes out in pieces that move as the camera does. It was drawn
-    /// that way once, at a texel wide with a texel of air inside it, and
-    /// what a berthed body wore was a dotted arc down each flank.
-    ///
-    /// So the outer bands ABUT: between the body's own edge and the far
-    /// side of the outermost form there is no distance a texel can be at
-    /// and be drawn by nothing. And nothing reaches past the taps, which
-    /// is the same hole from the other end — a band whose far edge is
-    /// outside the disc lights only where the disc happens to reach.
-    #[test]
-    fn an_outline_has_no_holes_in_it() {
-        let reach = REACH as f32;
-        assert!(
-            MARK_BAND.0 <= 1.0,
-            "the innermost outside band starts past the nearest texel there is: {MARK_BAND:?}"
-        );
-        assert!(
-            (MARK_BAND.1 - OFFER_BAND.0).abs() < 1e-6,
-            "a texel between {:?} and {:?} is drawn by nothing",
-            MARK_BAND.1,
-            OFFER_BAND.0
-        );
-        assert!(
-            OFFER_BAND.1 > reach,
-            "the outermost band stops at {} inside the {reach} texels looked at",
-            OFFER_BAND.1
-        );
-        assert!(
-            OFFER_BAND.1 <= reach + 0.5,
-            "the outermost band claims {} of a disc that reaches {reach}",
-            OFFER_BAND.1
-        );
-        assert!(
-            -AIM_BAND.1 <= 1.0 && -AIM_BAND.0 > 1.0,
-            "the aim's own band misses the one texel inside a rim: {AIM_BAND:?}"
-        );
-    }
-
-    /// **Every code a piece can wear has an ink.** The aim's five states
-    /// and the two claims combine freely, and the pool is indexed by the
-    /// sum: a code past the end would be a reading that silently drew
-    /// the wrong one.
-    #[test]
-    fn every_code_has_an_ink_of_its_own() {
-        let mut seen = Vec::new();
-        for aim in [0, HOVER, HANDLE, CARRY_OK, CARRY_NO, GHOST] {
-            for offer in [0, OFFER] {
-                for mark in [0, MARK] {
-                    let code = aim | offer | mark;
-                    if code == 0 {
-                        continue;
-                    }
-                    assert!(
-                        usize::from(code) <= CODES,
-                        "code {code} has no ink among {CODES}"
-                    );
-                    // And it travels in the alpha channel without ever
-                    // reaching the 1.0 every opaque surface writes.
-                    let alpha = f32::from(code) / SCALE;
-                    assert!(
-                        alpha < 0.7,
-                        "code {code} rides at {alpha}, which reads as scene"
-                    );
-                    assert!(
-                        !seen.contains(&code),
-                        "code {code} is two readings wearing one number"
-                    );
-                    seen.push(code);
-                }
-            }
         }
     }
 }

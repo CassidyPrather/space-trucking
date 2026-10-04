@@ -1,9 +1,8 @@
 //! Versioned, line-oriented text saves.
 //!
 //! The format stores only what cannot be recomputed: seed, clock, RNG state,
-//! delivery tally, visit counts, ship, leg counter, both event machines (the
-//! omen and the rat), the room graph as its **edge list in attach order**,
-//! the interest marks, and the pieces with their gnaw marks. Carries are
+//! delivery tally, visit counts, ship, leg counter, the omen, the room graph as its **edge list in attach order**,
+//! the interest marks, and the pieces. Carries are
 //! transient — a held piece serialises at its origin, so a save mid-carry
 //! drops every player's carry on load. Everything a visit derives (stock
 //! rolls, wants) is rebuilt from the seed on load, and every room's pose is
@@ -21,10 +20,9 @@ use std::fmt::Write as _;
 use std::str::FromStr;
 
 use super::cargo::{self, Kind, Loc, Piece};
-use super::encounter::{Drone, Drones, Encounter, EncounterKind, Encounters};
+use super::encounter::{Encounter, EncounterKind, Encounters};
 use super::event::{Omen, Phase};
 use super::map::{POI_COUNT, PoiId, Ship, ShipState};
-use super::rats::{CHASE_LIMIT, Rat, Rats};
 use super::room::{CABIN, MAX_ROOMS, PORTS, PortId, RoomId, RoomKind, Rooms, Tile};
 use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 
@@ -39,7 +37,7 @@ use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 /// or tape starts a new run"). Bump it whenever what a line MEANS
 /// changes, not only its grammar: a save read under the wrong rules
 /// loads a board the player never built.
-const MAGIC: &str = "STV24";
+const MAGIC: &str = "STV25";
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -141,47 +139,12 @@ pub(crate) fn serialize(sim: &Sim) -> String {
             );
         }
     }
-    match &sim.drones.drone {
-        None => {
-            let _ = writeln!(out, "drone -");
-        }
-        Some(drone) => {
-            let _ = writeln!(
-                out,
-                "drone {} {} {} {} {}",
-                drone.start,
-                drone.end,
-                u8::from(drone.attached),
-                u8::from(drone.gone),
-                drone.swats
-            );
-        }
-    }
     let _ = writeln!(
         out,
         "parade {} {}",
         opt_token(sim.parade_at),
         opt_token(sim.comet_visit)
     );
-    match &sim.rats.rat {
-        None => {
-            let _ = writeln!(out, "rat -");
-        }
-        Some(rat) => {
-            let _ = writeln!(
-                out,
-                "rat {} {} {} {} {} {} {} {}",
-                rat.cell.0,
-                rat.cell.1,
-                rat.prev_cell.0,
-                rat.prev_cell.1,
-                rat.moved_at,
-                rat.next_move,
-                rat.next_nibble,
-                rat.chases
-            );
-        }
-    }
     // The graph, as its edge list in attach order. Every pose is a pure
     // function of these four small integers, so the lattice is re-derived
     // on load rather than stored.
@@ -211,11 +174,10 @@ pub(crate) fn serialize(sim: &Sim) -> String {
     for piece in &sim.pieces {
         let _ = write!(
             out,
-            "piece {} {} {} {}",
+            "piece {} {} {}",
             piece.id,
             piece.kind.index(),
-            piece.variant,
-            u8::from(piece.gnawed)
+            piece.variant
         );
         match piece.loc {
             Loc::Hold {
@@ -258,9 +220,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let legs = reader.kv("legs")?;
     let omen = parse_omen(&mut reader)?;
     let encounters = parse_encounter(&mut reader)?;
-    let drones = parse_drone(&mut reader)?;
     let (parade_at, comet_visit) = parse_parade(&mut reader)?;
-    let rats = parse_rat(&mut reader)?;
     let rooms = parse_rooms(&mut reader)?;
     let marks = parse_marks(&mut reader)?;
     let (pieces, next_piece) = parse_pieces(&mut reader, &rooms)?;
@@ -311,9 +271,7 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
         visits,
         legs,
         omen,
-        rats,
         encounters,
-        drones,
         parade_at,
         comet_visit,
         stoke,
@@ -424,46 +382,6 @@ fn parse_encounter(reader: &mut Reader<'_>) -> Result<Encounters, SaveError> {
                     opened,
                     closed,
                     used,
-                }),
-            })
-        }
-        None => Err(reader.err()),
-    }
-}
-
-/// The `drone` line: this leg's ad drone, if any.
-fn parse_drone(reader: &mut Reader<'_>) -> Result<Drones, SaveError> {
-    let line = reader.next_line()?;
-    let mut tokens = line.split_whitespace();
-    if tokens.next() != Some("drone") {
-        return Err(reader.err());
-    }
-    match tokens.next() {
-        Some("-") => Ok(Drones { drone: None }),
-        Some(token) => {
-            let start: u64 = token.parse().map_err(|_| reader.err())?;
-            let end: u64 = reader.token(tokens.next())?;
-            if end <= start {
-                return Err(reader.err());
-            }
-            let flag = |reader: &Reader<'_>, t: Option<&str>| match t {
-                Some("0") => Ok(false),
-                Some("1") => Ok(true),
-                _ => Err(reader.err()),
-            };
-            let attached = flag(reader, tokens.next())?;
-            let gone = flag(reader, tokens.next())?;
-            let swats: u8 = reader.token(tokens.next())?;
-            if swats > super::encounter::AD_SWATS {
-                return Err(reader.err());
-            }
-            Ok(Drones {
-                drone: Some(Drone {
-                    start,
-                    end,
-                    attached,
-                    gone,
-                    swats,
                 }),
             })
         }
@@ -589,48 +507,6 @@ fn parse_omen(reader: &mut Reader<'_>) -> Result<Omen, SaveError> {
     })
 }
 
-/// The `rat` line: `-` for no stowaway, else its cell, the cell it last
-/// hopped from, the hop tick, both schedules, and the chase count — all
-/// bounds-checked so a hostile save cannot smuggle a rat off the grid or
-/// past the chase limit.
-fn parse_rat(reader: &mut Reader<'_>) -> Result<Rats, SaveError> {
-    let line = reader.next_line()?;
-    let mut tokens = line.split_whitespace();
-    if tokens.next() != Some("rat") {
-        return Err(reader.err());
-    }
-    let (cols, rows) = RoomKind::Cabin.grid();
-    match tokens.next() {
-        Some("-") => Ok(Rats { rat: None }),
-        first => {
-            let x: u8 = reader.token(first)?;
-            let y: u8 = reader.token(tokens.next())?;
-            let px: u8 = reader.token(tokens.next())?;
-            let py: u8 = reader.token(tokens.next())?;
-            if x >= cols || y >= rows || px >= cols || py >= rows {
-                return Err(reader.err());
-            }
-            let moved_at = reader.token(tokens.next())?;
-            let next_move = reader.token(tokens.next())?;
-            let next_nibble = reader.token(tokens.next())?;
-            let chases: u8 = reader.token(tokens.next())?;
-            if chases >= CHASE_LIMIT {
-                return Err(reader.err());
-            }
-            Ok(Rats {
-                rat: Some(Rat {
-                    cell: (x, y),
-                    prev_cell: (px, py),
-                    moved_at,
-                    next_move,
-                    next_nibble,
-                    chases,
-                }),
-            })
-        }
-    }
-}
-
 /// The `piece` lines, terminated by the `next_piece` line.
 fn parse_pieces(reader: &mut Reader<'_>, rooms: &Rooms) -> Result<(Vec<Piece>, u32), SaveError> {
     let mut pieces = Vec::new();
@@ -643,17 +519,11 @@ fn parse_pieces(reader: &mut Reader<'_>, rooms: &Rooms) -> Result<(Vec<Piece>, u
                 let kind_index: usize = reader.token(tokens.next())?;
                 let kind = *Kind::ALL.get(kind_index).ok_or_else(|| reader.err())?;
                 let variant = reader.token(tokens.next())?;
-                let gnawed = match tokens.next() {
-                    Some("0") => false,
-                    Some("1") => true,
-                    _ => return Err(reader.err()),
-                };
                 let loc = parse_loc(reader, &mut tokens, rooms, kind)?;
                 pieces.push(Piece {
                     id,
                     kind,
                     variant,
-                    gnawed,
                     loc,
                 });
             }
@@ -857,11 +727,6 @@ mod tests {
         RoomKind::Cabin.wall_cell(wall, along, course)
     }
 
-    /// The rat's cell in [`worked_save`]: the aft wall's second course,
-    /// and the port baseboard it hopped from.
-    const RAT_AT: (u8, u8) = wall(0, 1, 1);
-    const RAT_FROM: (u8, u8) = wall(3, 0, 0);
-
     #[test]
     fn errors_display_without_panicking() {
         assert_eq!(SaveError::BadMagic.to_string(), "not a Space Trucking save");
@@ -876,8 +741,7 @@ mod tests {
     }
 
     /// A worked save with every section populated: launched mid-leg so
-    /// ship/event lines are rich — including a mid-tenure rat and a
-    /// bitten piece, so the whole grammar is exercised.
+    /// ship/event lines are rich, so the whole grammar is exercised.
     fn worked_save() -> String {
         let mut sim = Sim::new(0xFADE);
         let press = |p: Vec2| InputFrame {
@@ -895,36 +759,7 @@ mod tests {
         for _ in 0..90 {
             sim.advance(TICK_DT, &InputFrame::default());
         }
-        sim.rats.rat = Some(Rat {
-            cell: RAT_AT,
-            prev_cell: RAT_FROM,
-            moved_at: 30,
-            next_move: 700,
-            next_nibble: 2800,
-            chases: 1,
-        });
-        sim.pieces[0].gnawed = true;
         sim.save_string()
-    }
-
-    #[test]
-    fn the_rat_line_and_gnaw_token_round_trip_exactly() {
-        let save = worked_save();
-        let sim = Sim::from_save(&save).expect("the worked save parses");
-        assert_eq!(
-            sim.rats.rat,
-            Some(Rat {
-                cell: RAT_AT,
-                prev_cell: RAT_FROM,
-                moved_at: 30,
-                next_move: 700,
-                next_nibble: 2800,
-                chases: 1,
-            })
-        );
-        assert!(sim.pieces[0].gnawed, "the bite must survive the trip");
-        assert!(!sim.pieces[1].gnawed, "and must not spread in transit");
-        assert_eq!(sim.save_string(), save);
     }
 
     /// The graph rides the save as its edge list, and the lattice is
@@ -1010,14 +845,6 @@ mod tests {
     #[test]
     fn out_of_range_fields_fail_safe() {
         let save = worked_save();
-        let rat = |(x, y): (u8, u8), (px, py): (u8, u8), chases: &str| {
-            format!("rat {x} {y} {px} {py} 30 700 2800 {chases}")
-        };
-        let rat_line = rat(RAT_AT, RAT_FROM, "1");
-        assert!(save.contains(&rat_line), "worked save must carry the rat");
-        // A cell one past the net's far column, and one past its last row.
-        let (cols, rows) = RoomKind::Cabin.grid();
-        let (wide, deep) = ((cols, RAT_AT.1), (RAT_AT.0, rows));
         for (needle, bad) in [
             ("ship travel 6 7".to_owned(), "ship travel 6 12".to_owned()), // POI out of range
             ("tick 90".to_owned(), "tick -90".to_owned()),
@@ -1025,20 +852,13 @@ mod tests {
                 "tick 90".to_owned(),
                 "tick 99999999999999999999999".to_owned(),
             ),
-            (rat_line.clone(), rat(wide, RAT_FROM, "1")),
-            (rat_line.clone(), rat(deep, RAT_FROM, "1")),
-            (rat_line.clone(), rat(RAT_AT, wide, "1")),
-            (rat_line.clone(), rat(RAT_AT, deep, "1")),
-            (rat_line.clone(), rat(RAT_AT, RAT_FROM, "3")),
-            (rat_line, rat(RAT_AT, RAT_FROM, "-1")),
         ] {
             let mangled = save.replacen(&needle, &bad, 1);
             assert_ne!(mangled, save, "needle {needle:?} not found in save");
             assert!(Sim::from_save(&mangled).is_err(), "{bad:?} parsed anyway");
         }
         // Piece fields: an unknown kind, an off-net cell, a room that is
-        // not attached, a doorway berth, an unknown surface, a gnaw token
-        // that is neither 0 nor 1.
+        // not attached, a doorway berth, an unknown surface.
         let docked = Sim::new(3).save_string();
         let piece_line = docked
             .lines()
@@ -1064,22 +884,20 @@ mod tests {
         );
         let past = cargo::lift_cap(RoomKind::Cabin, Kind::PerfumeVial, Surf::Floor) + 1;
         for bad in [
-            format!("piece 0 99 0 0 hold 0 {on_deck} 0 0"),
-            format!("piece 0 0 0 0 hold 0 {off_net} 0 0"),
-            format!("piece 0 0 0 0 hold 9 {on_deck} 0 0"),
-            format!("piece 0 0 0 0 hold 0 {doorway} 0 0"),
-            "piece 0 0 0 0 nowhere 0".to_owned(),
-            format!("piece 0 0 0 2 hold 0 {on_deck} 0 0"),
-            format!("piece 0 0 0 gnawed hold 0 {on_deck} 0 0"),
-            format!("piece 0 0 0 0 hold 0 {on_deck} 65536 0"),
-            format!("piece 0 0 0 0 hold 0 {on_deck} -1 0"),
-            format!("piece 0 0 0 0 hold 0 {on_deck}"),
-            format!("piece 0 0 0 0 hold 0 {overhang} 0 0"),
-            format!("piece 0 0 0 0 hold 0 {on_deck} 0"),
-            format!("piece 0 0 0 0 hold 0 {on_deck} 0 -1"),
-            format!("piece 0 0 0 0 hold 0 {on_deck} 0 1.5"),
-            format!("piece 0 0 0 0 hold 0 {on_deck} 0 65536"),
-            format!("piece 0 0 0 0 hold 0 {on_deck} 0 {past}"),
+            format!("piece 0 99 0 hold 0 {on_deck} 0 0"),
+            format!("piece 0 0 0 hold 0 {off_net} 0 0"),
+            format!("piece 0 0 0 hold 9 {on_deck} 0 0"),
+            format!("piece 0 0 0 hold 0 {doorway} 0 0"),
+            "piece 0 0 0 nowhere 0".to_owned(),
+            format!("piece 0 0 0 hold 0 {on_deck} 65536 0"),
+            format!("piece 0 0 0 hold 0 {on_deck} -1 0"),
+            format!("piece 0 0 0 hold 0 {on_deck}"),
+            format!("piece 0 0 0 hold 0 {overhang} 0 0"),
+            format!("piece 0 0 0 hold 0 {on_deck} 0"),
+            format!("piece 0 0 0 hold 0 {on_deck} 0 -1"),
+            format!("piece 0 0 0 hold 0 {on_deck} 0 1.5"),
+            format!("piece 0 0 0 hold 0 {on_deck} 0 65536"),
+            format!("piece 0 0 0 hold 0 {on_deck} 0 {past}"),
         ] {
             let mangled = docked.replacen(&piece_line, &bad, 1);
             assert!(Sim::from_save(&mangled).is_err(), "{bad:?} parsed anyway");
@@ -1124,7 +942,6 @@ mod tests {
                 id: cabinet + offset,
                 kind,
                 variant: 0,
-                gnawed: false,
                 loc,
             });
         }
@@ -1144,7 +961,7 @@ mod tests {
             save.starts_with(&format!("{MAGIC}\n")),
             "the writer stamps the current version"
         );
-        assert!(save.contains(&format!("piece {} 0 0 0 hold {at}\n", cabinet + 1)));
+        assert!(save.contains(&format!("piece {} 0 0 hold {at}\n", cabinet + 1)));
         let restored = Sim::from_save(&save).expect("furnished save parses");
         assert_eq!(restored.pieces, sim.pieces);
     }
@@ -1159,7 +976,7 @@ mod tests {
     #[test]
     fn a_save_from_any_other_version_is_refused() {
         let save = Sim::new(9).save_string();
-        for header in ["STV4", "STV22", "STV23", "STV25"] {
+        for header in ["STV4", "STV23", "STV24", "STV26"] {
             assert_eq!(
                 Sim::from_save(&save.replacen(MAGIC, header, 1)).err(),
                 Some(SaveError::UnsupportedVersion),
@@ -1239,7 +1056,6 @@ mod tests {
                 id,
                 kind,
                 variant: 0,
-                gnawed: false,
                 loc: spot.lifted(cap),
             });
             sim.next_piece += 1;
@@ -1277,20 +1093,20 @@ mod tests {
         let coat = tokens(Kind::LuminousPaint, wall(0, 2, 2)).1;
         let doorway = wall(1, 0, 0);
         let (cols, rows) = RoomKind::Cabin.grid();
-        let vial_line = format!("piece {} 0 0 0 hold {at}", cabinet + 1);
+        let vial_line = format!("piece {} 0 0 hold {at}", cabinet + 1);
         assert!(save.contains(&vial_line), "vial line changed shape");
         for (needle, bad) in [
             // A cubby, which no cabinet has any more: the line is not a
             // berth at all.
             (
                 vial_line.clone(),
-                format!("piece {} 0 0 0 stow {cabinet} 0", cabinet + 1),
+                format!("piece {} 0 0 stow {cabinet} 0", cabinet + 1),
             ),
             // A standing berth on a doorway.
             (
                 vial_line,
                 format!(
-                    "piece {} 0 0 0 hold {CABIN} {} {} 0 0",
+                    "piece {} 0 0 hold {CABIN} {} {} 0 0",
                     cabinet + 1,
                     fine(doorway.0) + FINE / 2,
                     fine(doorway.1) + FINE / 2
@@ -1298,14 +1114,14 @@ mod tests {
             ),
             // A laid non-covering (the couch, index 19).
             (
-                format!("piece {} 22 0 0 laid {rug}", cabinet + 3),
-                format!("piece {} 19 0 0 laid {rug}", cabinet + 3),
+                format!("piece {} 22 0 laid {rug}", cabinet + 3),
+                format!("piece {} 19 0 laid {rug}", cabinet + 3),
             ),
             // A rug up the wall.
             (
-                format!("piece {} 22 0 0 laid {rug}", cabinet + 3),
+                format!("piece {} 22 0 laid {rug}", cabinet + 3),
                 format!(
-                    "piece {} 22 0 0 laid {}",
+                    "piece {} 22 0 laid {}",
                     cabinet + 3,
                     tokens(Kind::Rug, wall(0, 2, 1)).1
                 ),
@@ -1313,9 +1129,9 @@ mod tests {
             // A coat off the grid entirely: no chart under its centre,
             // in the net's far corner, which the cross never reaches.
             (
-                format!("piece {} 24 0 0 laid {coat}", cabinet + 4),
+                format!("piece {} 24 0 laid {coat}", cabinet + 4),
                 format!(
-                    "piece {} 24 0 0 laid 0 {} {} 0",
+                    "piece {} 24 0 laid 0 {} {} 0",
                     cabinet + 4,
                     fine(cols - 1) + FINE / 2,
                     fine(rows - 1) + FINE / 2

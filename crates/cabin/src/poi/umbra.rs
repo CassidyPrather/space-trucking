@@ -1,8 +1,7 @@
 //! **The Umbra Market** — floats in Mercury's shadow and only answers
 //! hails while the *caller's* clock reads deep night, which should not be
 //! possible and is not explained (DESIGN.md). It bottles midnight and
-//! sells it. It pays extra for rat-gnawed goods — "aged in transit,
-//! artisanal" — and it prices light at **zero**, because light is a rival
+//! sells it. It prices light at **zero**, because light is a rival
 //! product: it fences seized lamps and seized portholes cheap, snuffed,
 //! in blackout tins.
 //!

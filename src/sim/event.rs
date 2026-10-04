@@ -6,8 +6,8 @@
 //! eases back to normal. All timing derives from `splitmix(seed, legs)`, so
 //! the whole episode replays and saves exactly.
 //!
-//! Structurally [`Omen`] is one of the two event siblings (the other is
-//! `rats::Rats`): its own state struct, a deterministic schedule hashed off
+//! Structurally [`Omen`] is an event sibling (encounters are the other):
+//! its own state struct, a deterministic schedule hashed off
 //! the seed, `on_depart` / `on_dock` / `on_tick` hooks called from `Sim`,
 //! its own save line, its own cues. The one extra hook, [`Omen::travel_tick`],
 //! exists because this event steers leg progress; a sibling adds hooks like

@@ -87,8 +87,7 @@
 //!   character that will ever be written;
 //! - every [`Seat`] a fitting declares is **met**: a fitting that says
 //!   the deckhead holds it up reaches the deckhead, and one that names a
-//!   fitting beside it meets that one (`cabin::gauntlet`,
-//!   `furniture-seated`).
+//!   fitting beside it meets that one.
 //!
 //! ## Saying what holds a fitting up
 //!
@@ -101,7 +100,7 @@
 //! a `Fitting` declared a shape, a coat and a place and nothing else. It
 //! declares a [`Seat`] now where it has one — a [`Face`] of the room's
 //! own box, or another fitting by the name it takes with
-//! [`Fitting::called`] — and the sweep reads the claim back.
+//! [`Fitting::called`].
 //!
 //! **Declare one where the piece you are drawing genuinely rests on
 //! something, and declare nothing where it does not.** Things that hang
@@ -112,8 +111,8 @@
 //! What is NOT a station's to take is a berth cargo *stays* in and the
 //! trade surface — the room's own goods, a proposal's chalk, a doorway,
 //! the counter's own cell — and no berth may be fenced off from every
-//! place a body can stand, staging included. Both are swept
-//! (`cabin::gauntlet`), because neither is a thing a frame can prevent.
+//! place a body can stand, staging included. Check both by walking the
+//! room (`--docked n`), because neither is a thing a frame can prevent.
 //!
 //! Four art laws ride along, and they are laws rather than taste:
 //!
@@ -636,8 +635,7 @@ impl Face {
 /// and the thing a station's furniture had no way to say.
 ///
 /// A cargo rig declares the chart it is berthed on because the sim
-/// berths it, and the gauntlet's `rig-seated` family reads that claim
-/// back. A fitting is a fraction of a room's box and declared nothing at
+/// berths it. A fitting is a fraction of a room's box and declared nothing at
 /// all, so a beacon bolted to thin air was invisible to every rule in
 /// the harness — one was, and a player found it by eye, hood face down
 /// over a lamp 0.42 m under the ceiling it had lost.
@@ -668,7 +666,7 @@ pub enum Seat {
 /// The stem is FIXED to the deckhead and runs right up to it; a station's
 /// hanger is not, and one run out flush with the fixing shares the stem's
 /// own top face with it at the same plane and the same facing, which is
-/// the third of the coplanar idioms (docs/GAUNTLET.md). So a hanger stops
+/// z-fighting. So a hanger stops
 /// a finger's breadth short of the ceiling it hangs from, which is also
 /// what a hanger looks like. The bound it is measured against stays
 /// [`crate::room::CAGE_RISE`] — a thing you check is not a thing you
@@ -919,8 +917,7 @@ impl Frame {
     }
 
     /// **The world plane one side of this box is**, as a point on it and
-    /// the direction a body reaches along to meet it — the same pair the
-    /// gauntlet measures a rig's sole against its own chart with.
+    /// the direction a body reaches along to meet it.
     #[must_use]
     pub fn plane(&self, face: Face) -> (Vec3, Vec3) {
         let (axis, sign) = face.along();
@@ -1195,8 +1192,7 @@ mod tests {
     /// [`Shape::fill`] is the one place the two are allowed to differ,
     /// and it exists because a torus's tube is 18% of the frame it lies
     /// in. Everything downstream reads it: `Fitting::span` is what the
-    /// containment law holds a station to, and the gauntlet cuts its own
-    /// boxes from it. So it is measured against the vertices the mesher
+    /// containment law holds a station to. So it is measured against the vertices the mesher
     /// hands back rather than checked against a number written twice —
     /// a claim written by hand and a body cut by a primitive are two
     /// statements about one thing, and this is the joint between them.
@@ -1596,8 +1592,7 @@ mod tests {
     /// A hanger may clasp the pendant's stem and a strap may run through
     /// it, but a flank cut to within a hair of the stem's own is four
     /// faces of brass fighting four of grey for the depth buffer, all the
-    /// way up. Saturn's hook was cut a millimetre inside the stem, which
-    /// is how the gauntlet found it.
+    /// way up.
     ///
     /// A cage is measured off a box one shade across on every side of the
     /// lamp (`room::caller_lamp`), so all three numbers are the room's:

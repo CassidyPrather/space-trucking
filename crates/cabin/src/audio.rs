@@ -71,31 +71,6 @@ const DELIVERED_GAIN: f32 = 0.35;
 /// Quiet: creaks are texture, not information.
 const CREAK_GAIN: f32 = 0.25;
 
-/// Gain for a rat stowing away: one soft creak off the round-robin bank —
-/// something shifted in the hold as the ship cast off. Under [`CREAK_GAIN`]
-/// so it hides among the ordinary hull noises; the rat is a discovery, not
-/// an announcement.
-const RAT_ABOARD_GAIN: f32 = 0.2;
-
-/// Peak gain for a rat hop, scaled by [`loudness`] of its intensity. The
-/// quietest recurring sound in the game — `tick_pick` at a whisper, every
-/// ten seconds or so, deliberately ignorable.
-const RAT_SKITTER_GAIN: f32 = 0.12;
-
-/// Gain for a nibble: the buzz voice at very low gain, more felt than
-/// heard. It recurs for as long as the rat is ignored, so anything louder
-/// would nag — and nagging is exactly what this event must not do.
-const RAT_NIBBLE_GAIN: f32 = 0.08;
-
-/// Gain for a chase: `tick_pick` at pickup strength — the player acted and
-/// gets the same tactile acknowledgement a lift does.
-const RAT_CHASED_GAIN: f32 = 0.3;
-
-/// Gain for the rat leaving: the latch voice, low — a small door closing
-/// somewhere below decks. Under [`DEPART_GAIN`], since it usually lands
-/// beside an arrival clunk.
-const RAT_LEFT_GAIN: f32 = 0.25;
-
 /// Gain for the pause and warp blips, which do not vary.
 const UI_GAIN: f32 = 0.35;
 
@@ -123,12 +98,6 @@ const CASINO_LOSS_GAIN: f32 = 0.35;
 
 /// Peak gain for a whale verse, scaled by [`loudness`].
 const WHALE_GAIN: f32 = 0.45;
-
-/// The ad drone's arrival buzz and departure blip.
-const AD_GAIN: f32 = 0.3;
-
-/// A swat landing on the drone.
-const AD_SWAT_GAIN: f32 = 0.5;
 
 /// One fluff becoming two, barely audibly.
 const FLUFF_GAIN: f32 = 0.15;
@@ -422,10 +391,6 @@ fn play(commands: &mut Commands, bank: &mut SoundBank, cue: Cue) {
         Cue::CasinoLoss | Cue::Refit { .. } => (bank.buzz.clone(), CASINO_LOSS_GAIN),
         // The whale, through the hull. The creak bank at whale scale.
         Cue::WhaleSong { intensity } => (bank.creaks[0].clone(), WHALE_GAIN * loudness(intensity)),
-        // Ads. Ads ads ads. Then, mercifully, not.
-        Cue::AdStart => (bank.buzz.clone(), AD_GAIN),
-        Cue::AdSwat => (bank.thock.clone(), AD_SWAT_GAIN),
-        Cue::AdEnd => (bank.blip_down.clone(), AD_GAIN),
         // A very soft pop, like a second yawn — and the same tick for a
         // mark taken or given back, because a mark is a small thing said
         // quietly.
@@ -444,18 +409,6 @@ fn play(commands: &mut Commands, bank: &mut SoundBank, cue: Cue) {
             bank.next_creak = (bank.next_creak + 1) % bank.creaks.len();
             (creak, CREAK_GAIN * loudness(intensity))
         }
-        Cue::RatAboard => {
-            let creak = bank.creaks[bank.next_creak].clone();
-            bank.next_creak = (bank.next_creak + 1) % bank.creaks.len();
-            (creak, RAT_ABOARD_GAIN)
-        }
-        Cue::RatSkitter { intensity } => (
-            bank.tick_pick.clone(),
-            RAT_SKITTER_GAIN * loudness(intensity),
-        ),
-        Cue::RatNibble => (bank.buzz.clone(), RAT_NIBBLE_GAIN),
-        Cue::RatChased => (bank.tick_pick.clone(), RAT_CHASED_GAIN),
-        Cue::RatLeft => (bank.latch.clone(), RAT_LEFT_GAIN),
         Cue::Pause { paused: false } | Cue::Warp { engaged: true } => {
             (bank.blip_up.clone(), UI_GAIN)
         }

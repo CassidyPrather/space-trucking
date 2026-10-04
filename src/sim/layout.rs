@@ -368,7 +368,6 @@ mod tests {
                 id,
                 kind,
                 variant: 0,
-                gnawed: false,
                 loc: if laid { spot.laid() } else { spot.hold() },
             }
         };

@@ -90,7 +90,7 @@ use space_trucking::sim::room::RoomKind;
 /// re-typed: a hand edit of the numbers is a guess at the board, and the
 /// board is what this file is for.
 pub const SAVE: &str = "\
-STV20
+STV21
 seed 7
 tick 12000
 rng 3c76e098a8f74c8a
@@ -112,37 +112,37 @@ room 0 0 - - -
 room 1 1 0 1 3
 room 2 2 0 0 0
 marks 1 16
-piece 0 21 0 0 hold 0 96 64
-piece 1 9 0 0 hold 0 112 80
-piece 2 8 0 0 hold 0 64 112
-piece 3 19 1 0 hold 0 64 96
-piece 4 18 2 0 hold 0 48 96
+piece 0 21 0 0 hold 0 1664 1152 0
+piece 1 9 0 0 hold 0 1920 1408 0
+piece 2 8 0 0 hold 0 1280 1920 0
+piece 3 19 1 0 hold 0 1280 1664 0
+piece 4 18 2 0 hold 0 896 1664 49152
 piece 5 12 0 0 stow 0 3
-piece 6 6 1 0 hold 0 48 144
-piece 7 20 3 0 hold 0 112 16
-piece 8 17 1 0 hold 0 0 80
-piece 9 16 2 0 hold 0 240 64
-piece 10 22 0 1 laid 0 64 96
-piece 11 23 1 0 laid 0 96 16
-piece 12 24 0 0 laid 0 32 96
+piece 6 6 1 0 hold 0 896 2432 32768
+piece 7 20 3 0 hold 0 2048 384 0
+piece 8 17 1 0 hold 0 128 1408 0
+piece 9 16 2 0 hold 0 3968 1152 0
+piece 10 22 0 1 laid 0 1280 1664 0
+piece 11 23 1 0 laid 0 1664 384 0
+piece 12 24 0 0 laid 0 640 1664 0
 piece 13 0 1 0 stow 0 0
 piece 14 13 2 0 stow 0 1
 piece 15 14 0 0 stow 0 2
-piece 16 4 3 0 hold 2 80 48
-piece 17 7 1 0 hold 2 96 128
-piece 18 1 2 0 hold 2 112 128
-piece 19 11 0 0 hold 0 128 48
-piece 20 2 1 0 hold 0 112 112
-piece 21 5 0 0 hold 2 144 48
-piece 22 3 3 1 hold 2 112 48
-piece 23 15 2 0 hold 2 80 128
-piece 24 26 0 0 hold 0 64 160
-piece 25 25 1 0 hold 0 64 192
-piece 26 27 2 0 hold 0 144 176
-piece 27 28 3 0 hold 0 144 192
-piece 28 29 0 0 hold 0 144 160
-piece 29 30 0 0 hold 2 0 64
-piece 30 31 1 0 hold 0 16 112
+piece 16 4 3 0 hold 2 1408 896 0
+piece 17 7 1 0 hold 2 1664 2176 0
+piece 18 1 2 0 hold 2 1920 2176 0
+piece 19 11 0 0 hold 0 2176 896 0
+piece 20 2 1 0 hold 0 2048 1920 0
+piece 21 5 0 0 hold 2 2560 896 0
+piece 22 3 3 1 hold 2 2048 896 0
+piece 23 15 2 0 hold 2 1408 2176 0
+piece 24 26 0 0 hold 0 1280 2816 0
+piece 25 25 1 0 hold 0 1280 3200 0
+piece 26 27 2 0 hold 0 2432 2944 0
+piece 27 28 3 0 hold 0 2432 3200 0
+piece 28 29 0 0 hold 0 2432 2688 0
+piece 29 30 0 0 hold 2 128 1152 0
+piece 30 31 1 0 hold 0 512 2048 0
 next_piece 31
 ";
 
@@ -297,7 +297,7 @@ const SEED_SWEEP: u64 = 2000;
 pub fn panes_board(seed: u64, n: usize) -> String {
     use std::fmt::Write as _;
 
-    use space_trucking::sim::cargo::{Loc, Piece, fine, placement_check};
+    use space_trucking::sim::cargo::{Piece, Spot, anchored, fine, placement_check};
     use space_trucking::sim::room::{CABIN, RoomKind, Surf};
     use space_trucking::sim::{Kind, Sim};
 
@@ -323,15 +323,24 @@ pub fn panes_board(seed: u64, n: usize) -> String {
             if RoomKind::Cabin.surface_of(x, y) != Some(Surf::Aft) {
                 continue;
             }
-            let (x, y) = (fine(x), fine(y));
+            let Some((x, y, turn)) = anchored(RoomKind::Cabin, Kind::Window, fine(x), fine(y))
+            else {
+                continue;
+            };
+            let spot = Spot {
+                room: CABIN,
+                x,
+                y,
+                turn,
+            };
             let piece = Piece {
                 id: next,
                 kind: Kind::Window,
                 variant: 0,
                 gnawed: false,
-                loc: Loc::Hold { room: CABIN, x, y },
+                loc: spot.hold(),
             };
-            if placement_check(rooms, &aboard, piece.id, piece.kind, CABIN, x, y).is_ok() {
+            if placement_check(rooms, &aboard, piece.id, piece.kind, spot).is_ok() {
                 aboard.push(piece);
                 hung.push(piece);
                 next += 1;
@@ -343,16 +352,17 @@ pub fn panes_board(seed: u64, n: usize) -> String {
     for line in sim.save_string().lines() {
         if line.starts_with("next_piece") {
             for piece in &hung {
-                let Loc::Hold { room, x, y } = piece.loc else {
+                let Some(Spot { room, x, y, turn }) = piece.loc.spot() else {
                     unreachable!("the search only berths in holds");
                 };
                 // Writing into a String cannot fail, so the fmt
                 // plumbing is dropped — `save.rs`'s own convention.
                 let _ = writeln!(
                     out,
-                    "piece {} {} 0 0 hold {room} {x} {y}",
+                    "piece {} {} 0 0 hold {room} {x} {y} {}",
                     piece.id,
-                    piece.kind.index()
+                    piece.kind.index(),
+                    turn.0
                 );
             }
             let _ = writeln!(out, "next_piece {next}");
@@ -396,27 +406,28 @@ mod tests {
         assert_eq!(rooms.kind(2), Some(RoomKind::Trade));
         let pieces = sim.pieces();
         for piece in pieces {
-            match piece.loc {
-                Loc::Hold { room, x, y } => assert_eq!(
-                    placement_check(rooms, pieces, piece.id, piece.kind, room, x, y),
+            let Some(spot) = piece.loc.spot() else {
+                continue;
+            };
+            if matches!(piece.loc, Loc::Laid { .. }) {
+                let laid: Vec<_> = pieces
+                    .iter()
+                    .filter(|other| matches!(other.loc, Loc::Laid { .. }))
+                    .copied()
+                    .collect();
+                assert_eq!(
+                    dressing_check(rooms, &laid, piece.id, piece.kind, spot),
                     Ok(()),
-                    "{:?} berthed illegally at room {room} ({x}, {y})",
+                    "{:?} laid illegally at {spot:?}",
                     piece.kind
-                ),
-                Loc::Laid { room, x, y } => {
-                    let laid: Vec<_> = pieces
-                        .iter()
-                        .filter(|other| matches!(other.loc, Loc::Laid { .. }))
-                        .copied()
-                        .collect();
-                    assert_eq!(
-                        dressing_check(rooms, &laid, piece.id, piece.kind, room, x, y),
-                        Ok(()),
-                        "{:?} laid illegally at room {room} ({x}, {y})",
-                        piece.kind
-                    );
-                }
-                Loc::Stow { .. } => {}
+                );
+            } else {
+                assert_eq!(
+                    placement_check(rooms, pieces, piece.id, piece.kind, spot),
+                    Ok(()),
+                    "{:?} berthed illegally at {spot:?}",
+                    piece.kind
+                );
             }
         }
         let mut kinds: Vec<Kind> = pieces.iter().map(|piece| piece.kind).collect();
@@ -442,7 +453,7 @@ mod tests {
         let mut walls: Vec<(Option<u8>, Option<space_trucking::sim::room::Surf>)> = glass
             .iter()
             .map(|p| match p.loc {
-                Loc::Hold { room, x, y } => (
+                Loc::Hold { room, x, y, .. } => (
                     Some(room),
                     rooms
                         .kind(room)
@@ -538,12 +549,12 @@ mod tests {
         // The world box one berthed piece fills, posed through the very
         // function the runtime poses a rig with.
         let filled = |piece: &Piece| {
-            let Loc::Hold { room, x, y } = piece.loc else {
+            let Loc::Hold { room, x, y, turn } = piece.loc else {
                 return None;
             };
             let host = placed.iter().find(|host| host.id == room)?;
-            let rect = layout::foot_rect(room, Foot::of(host.kind, piece.kind, x, y)?);
-            let (lo, hi) = crate::pieces::berth_box(&host.charts, piece.kind, rect)?;
+            let rect = layout::foot_rect(room, Foot::of(host.kind, piece.kind, x, y, turn)?);
+            let (lo, hi) = crate::pieces::berth_box(&host.charts, piece.kind, rect, turn)?;
             Some(Box3::spanning(lo, hi))
         };
 
@@ -581,14 +592,13 @@ mod tests {
             _ => false,
         }) {
             let piece = carried[nth];
-            let (room, x, y) =
-                first_fit(rooms, &carried, piece.id, piece.kind).unwrap_or_else(|| {
-                    panic!(
-                        "{:?} #{} has no berth to come home to",
-                        piece.kind, piece.id
-                    )
-                });
-            carried[nth].loc = Loc::Hold { room, x, y };
+            let spot = first_fit(rooms, &carried, piece.id, piece.kind).unwrap_or_else(|| {
+                panic!(
+                    "{:?} #{} has no berth to come home to",
+                    piece.kind, piece.id
+                )
+            });
+            carried[nth].loc = spot.hold();
             walked += 1;
         }
         assert!(

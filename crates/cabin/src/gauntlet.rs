@@ -124,7 +124,8 @@ use std::sync::OnceLock;
 
 use bevy::prelude::*;
 use space_trucking::sim::cargo::{
-    FRACTIONS, Foot, Kind, Loc, Mount, Piece, fine, mount_accepts, placement_check,
+    Aabb, FRACTIONS, Foot, Kind, Loc, Mount, Piece, Spot, Turn, anchored, fine, mount_accepts,
+    placement_check,
 };
 use space_trucking::sim::layout;
 use space_trucking::sim::room::{CABIN, RoomId, RoomKind, Rooms, Surf, Tile};
@@ -282,8 +283,9 @@ const FIGHT_FOOT: f32 = 0.01;
 /// Grid resolution of the standing-point search, per envelope box.
 const STANCES: u8 = 8;
 
-/// **The finest the cargo grid is ever cut**, and the unit every length
-/// in the world's fabric has to be a whole number of.
+/// **The finest the world's fabric is ever cut**, and the unit every
+/// length in it has to be a whole number of ([`crate::room::NOTCH`]'s
+/// reasoning; cargo itself lies finer, at `cargo::FINE`).
 ///
 /// A sixteenth of a cell, because that is what the fabric's own two
 /// derived lengths already are: a hull plane is a quarter of the padding
@@ -557,7 +559,7 @@ pub fn load(rooms: &Rooms) -> Vec<Piece> {
         let (cols, rows) = room.kind.grid();
         for y in 0..rows {
             for x in 0..cols {
-                let Some(kind) = fills(rooms, &cargo, next, id, x, y) else {
+                let Some((kind, spot)) = fills(rooms, &cargo, next, id, x, y) else {
                     continue;
                 };
                 cargo.push(Piece {
@@ -565,11 +567,7 @@ pub fn load(rooms: &Rooms) -> Vec<Piece> {
                     kind,
                     variant: 0,
                     gnawed: false,
-                    loc: Loc::Hold {
-                        room: id,
-                        x: fine(x),
-                        y: fine(y),
-                    },
+                    loc: spot.hold(),
                 });
                 next += 1;
             }
@@ -578,8 +576,10 @@ pub fn load(rooms: &Rooms) -> Vec<Piece> {
     cargo
 }
 
-/// What the load puts on one cell: the first legal kind that carries no
-/// lamp, and only then the first legal kind of any sort.
+/// What the load puts on one cell, and the berth it takes there — its
+/// footprint's top-left on the cell, turned the way the game would turn
+/// it (`cargo::anchored`): the first legal kind that carries no lamp, and
+/// only then the first legal kind of any sort.
 ///
 /// **Bodies, not lumens.** A plain sweep down `Kind::ALL` hangs a sconce
 /// on every wall cell in the room, and sixty point lights in one
@@ -591,14 +591,35 @@ pub fn load(rooms: &Rooms) -> Vec<Piece> {
 ///
 /// Coverings are skipped outright: they answer a different arbiter and
 /// lie flat on their chart, spending no air at all.
-fn fills(rooms: &Rooms, cargo: &[Piece], next: u32, id: RoomId, x: u8, y: u8) -> Option<Kind> {
-    let legal = |kind: &Kind| {
-        !kind.covering() && placement_check(rooms, cargo, next, *kind, id, fine(x), fine(y)).is_ok()
+fn fills(
+    rooms: &Rooms,
+    cargo: &[Piece],
+    next: u32,
+    id: RoomId,
+    x: u8,
+    y: u8,
+) -> Option<(Kind, Spot)> {
+    let host = rooms.kind(id)?;
+    let legal = |kind: Kind| {
+        if kind.covering() {
+            return None;
+        }
+        let (x, y, turn) = anchored(host, kind, fine(x), fine(y))?;
+        let spot = Spot {
+            room: id,
+            x,
+            y,
+            turn,
+        };
+        placement_check(rooms, cargo, next, kind, spot)
+            .is_ok()
+            .then_some((kind, spot))
     };
     Kind::ALL
         .into_iter()
-        .find(|kind| !burns(*kind) && legal(kind))
-        .or_else(|| Kind::ALL.into_iter().find(legal))
+        .filter(|kind| !burns(*kind))
+        .find_map(legal)
+        .or_else(|| Kind::ALL.into_iter().find_map(legal))
 }
 
 /// Whether a kind lights the room it is berthed in.
@@ -635,7 +656,7 @@ pub fn loaded_save(base: &str) -> Option<String> {
         let (cols, rows) = room.kind.grid();
         for y in 0..rows {
             for x in 0..cols {
-                let Some(kind) = fills(rooms, &aboard, next, id, x, y) else {
+                let Some((kind, spot)) = fills(rooms, &aboard, next, id, x, y) else {
                     continue;
                 };
                 let piece = Piece {
@@ -643,11 +664,7 @@ pub fn loaded_save(base: &str) -> Option<String> {
                     kind,
                     variant: 0,
                     gnawed: false,
-                    loc: Loc::Hold {
-                        room: id,
-                        x: fine(x),
-                        y: fine(y),
-                    },
+                    loc: spot.hold(),
                 };
                 aboard.push(piece);
                 added.push(piece);
@@ -659,16 +676,17 @@ pub fn loaded_save(base: &str) -> Option<String> {
     for line in base.lines() {
         if line.starts_with("next_piece") {
             for piece in &added {
-                let Loc::Hold { room, x, y } = piece.loc else {
+                let Loc::Hold { room, x, y, turn } = piece.loc else {
                     continue;
                 };
                 // Writing into a String cannot fail; `save.rs`'s own
                 // convention drops the plumbing.
                 let _ = writeln!(
                     out,
-                    "piece {} {} 0 0 hold {room} {x} {y}",
+                    "piece {} {} 0 0 hold {room} {x} {y} {}",
                     piece.id,
-                    piece.kind.index()
+                    piece.kind.index(),
+                    turn.0
                 );
             }
             let _ = writeln!(out, "next_piece {next}");
@@ -685,8 +703,8 @@ pub fn loaded_save(base: &str) -> Option<String> {
 /// One berth: a footprint's worth of a room's net that cargo may legally
 /// take, and the air the biggest rig that may take it actually spends.
 ///
-/// **A berth is ground, not a cell**, because cargo stands anywhere a
-/// sixteenth of a cell can name (docs/BAY.md, "The grid comes out"). It
+/// **A berth is ground, not a cell**, because cargo stands anywhere, at
+/// any turn (docs/BAY.md, "The grid comes out" and "Cargo turns"). It
 /// used to be one cell keyed to the deepest air of any berth touching it,
 /// which was honest while every footprint covered whole cells and stops
 /// being honest the moment one does not: a wardrobe a sixteenth into a
@@ -701,9 +719,10 @@ pub fn loaded_save(base: &str) -> Option<String> {
 /// ground, floor to the top of the tallest thing that may stand on it.
 #[derive(Clone, Debug)]
 pub struct Berth {
-    /// The ground itself, in `cargo::FINE` units of the room's net.
+    /// The ground itself, in `cargo::FINE` units of the room's net, at
+    /// the turn the game gives a body there.
     pub foot: Foot,
-    /// The cell under its middle (`Foot::centre`): the one a finding
+    /// The cell under its middle (`Foot::centre_cell`): the one a finding
     /// names, and the one whose class the berth reads.
     pub cell: (u8, u8),
     pub station: Station,
@@ -756,23 +775,32 @@ pub struct Berth {
 fn rig_air(
     charts: &[(Station, SimSurface)],
     kind: Kind,
-    rect: layout::Rect,
+    (rect, turn): (layout::Rect, Turn),
     plane: Vec3,
     inward: Vec3,
 ) -> Option<f32> {
-    let (lo, hi) = crate::pieces::berth_box(charts, kind, rect)?;
+    let (lo, hi) = crate::pieces::berth_box(charts, kind, rect, turn)?;
     Some((lo - plane).dot(inward).max((hi - plane).dot(inward)))
 }
 
 /// **Every anchor a berth sweep tries in a room**: each whole cell's
-/// corner and the shared sample of sixteenths off it on each axis
-/// (`cargo::FRACTIONS`), in fine units, row-major.
+/// corner and the shared sample of units off it on each axis
+/// (`cargo::FRACTIONS`), in fine units, row-major — the corner a
+/// footprint's top-left is set down at, turned the way the game would
+/// turn a body there (`cargo::anchored`).
 ///
-/// A berth may be any of 256 positions per cell, and asking all of them
-/// buys very little the sample does not: on the grid, a sixteenth off it
+/// A berth may be any of 65,536 positions per cell, and asking all of
+/// them buys very little the sample does not: on the grid, a unit off it
 /// either way, and either side of the half. Twenty-five per cell, asked
 /// once per run ([`swept`]), keeps a sweep near a second; and the sample
 /// is fixed, so a finding names the same berth every run.
+///
+/// phase 2: the sweeps ask the turn the game would give each berth and
+/// no other. A player may set anything down at any turn, so the sweeps
+/// that judge a berth's air (`berth-clear`, `berth-seen`) and its drawn
+/// body (`berth-filled`) want a sample of turns on top of this — the four
+/// quarters and a few odd angles — once the cabin can draw a body turned
+/// off square.
 fn anchors(kind: RoomKind) -> impl Iterator<Item = (u16, u16)> {
     let (cols, rows) = kind.grid();
     (0..rows).flat_map(move |y| {
@@ -800,10 +828,28 @@ fn anchors(kind: RoomKind) -> impl Iterator<Item = (u16, u16)> {
 /// ground the arbiter would allow and nothing can ever take, and a
 /// fitting standing beside the shelf is not standing in a berth.
 fn takeable(host: RoomKind, foot: Foot) -> bool {
-    (foot.x.is_multiple_of(fine(1)) && foot.y.is_multiple_of(fine(1)))
+    let span = foot.aabb();
+    let cell = i32::from(fine(1));
+    (span.x0 % cell == 0 && span.y0 % cell == 0)
         || foot
             .cells()
             .all(|(x, y)| host.tile_of(x, y).is_some_and(Tile::takes_your_cargo))
+}
+
+/// The berth `kind` takes in `placed` with its footprint's top-left at
+/// fine `(x, y)`, turned the way the game would turn it there, if the
+/// arbiter allows it on an empty board.
+fn legal_berth(rooms: &Rooms, placed: &Placed, kind: Kind, (x, y): (u16, u16)) -> Option<Spot> {
+    let (x, y, turn) = anchored(placed.kind, kind, x, y)?;
+    let spot = Spot {
+        room: placed.id,
+        x,
+        y,
+        turn,
+    };
+    placement_check(rooms, &[], u32::MAX, kind, spot)
+        .is_ok()
+        .then_some(spot)
 }
 
 /// Every berth of one placed room, with the air each one spends: every
@@ -811,61 +857,61 @@ fn takeable(host: RoomKind, foot: Foot) -> bool {
 /// air of the deepest kind that may take it.
 #[must_use]
 pub fn berths(rooms: &Rooms, placed: &Placed) -> Vec<Berth> {
-    let mut deepest: BTreeMap<(u16, u16, u16, u16), (f32, Kind)> = BTreeMap::new();
+    let mut deepest: BTreeMap<Aabb, (f32, Kind, Foot)> = BTreeMap::new();
     for kind in Kind::ALL {
         if kind.covering() {
             continue;
         }
-        for (fx, fy) in anchors(placed.kind) {
-            if placement_check(rooms, &[], u32::MAX, kind, placed.id, fx, fy).is_err() {
+        for corner in anchors(placed.kind) {
+            let Some(site) = legal_berth(rooms, placed, kind, corner) else {
                 continue;
-            }
-            let Some(foot) =
-                Foot::of(placed.kind, kind, fx, fy).filter(|&foot| takeable(placed.kind, foot))
+            };
+            let Some(foot) = Foot::of(placed.kind, kind, site.x, site.y, site.turn)
+                .filter(|&foot| takeable(placed.kind, foot))
             else {
                 continue;
             };
-            let Some((station, surface)) = chart_of(placed, foot.centre()) else {
+            let Some((station, surface)) = chart_of(placed, foot.centre_cell()) else {
                 continue;
             };
             let rect = layout::foot_rect(placed.id, foot);
             let Some(air) = rig_air(
                 &placed.charts,
                 kind,
-                rect,
+                (rect, site.turn),
                 surface.center,
                 station.inward(&surface),
             ) else {
                 continue;
             };
-            let slot = deepest
-                .entry((foot.x, foot.y, foot.w, foot.h))
-                .or_insert((0.0, kind));
+            let slot = deepest.entry(foot.aabb()).or_insert((0.0, kind, foot));
             if air > slot.0 {
-                *slot = (air, kind);
+                *slot = (air, kind, foot);
             }
         }
     }
     deepest
-        .into_iter()
-        .filter_map(|((x, y, w, h), (air, by))| {
-            let foot = Foot { x, y, w, h };
-            let cell = foot.centre();
+        .into_values()
+        .filter_map(|(air, by, foot)| {
+            let cell = foot.centre_cell();
             let (station, surface) = chart_of(placed, cell)?;
             let face = plan_face(&surface, layout::foot_rect(placed.id, foot));
             let inward = station.inward(&surface);
+            // phase 2: a footprint turned off square spends its air over
+            // its own ground, not over the box round it; the shares here
+            // are boxes because every berth swept is square.
+            let span = foot.aabb();
             let over = foot
                 .cells()
                 .filter_map(|(cx, cy)| {
-                    let cell = Foot::cell(cx, cy);
-                    let (x0, y0) = (foot.x.max(cell.x), foot.y.max(cell.y));
-                    let share = Foot {
-                        x: x0,
-                        y: y0,
-                        w: foot.right().min(cell.right()) - x0,
-                        h: foot.bottom().min(cell.bottom()) - y0,
+                    let cell = Foot::cell(cx, cy).aabb();
+                    let share = Aabb {
+                        x0: span.x0.max(cell.x0),
+                        y0: span.y0.max(cell.y0),
+                        x1: span.x1.min(cell.x1),
+                        y1: span.y1.min(cell.y1),
                     };
-                    let face = plan_face(&surface, layout::foot_rect(placed.id, share));
+                    let face = plan_face(&surface, layout::fine_rect(placed.id, share));
                     Some((
                         (cx, cy),
                         placed.kind.tile_of(cx, cy)?,
@@ -1628,7 +1674,7 @@ type Swept = (Vec<(String, Vec<Berth>)>, Vec<Plan>);
 /// Neither reads a dressing — a berth is the sim's ruling and a plan is
 /// the pose the runtime gives it — so every sweep of a run asks them of
 /// the same roster and gets the same answer. Asking is most of what a
-/// sweep costs now that a berth is any position a sixteenth can name, and
+/// sweep costs now that a berth is any position a fine unit can name, and
 /// the sweep is asked once per kind by the test that holds the dressed
 /// families to account, so the answer is held for the run. Each room's
 /// berths are filed under its stage's name, so a roster that ever stopped
@@ -2214,6 +2260,7 @@ fn rig_parts(
             room: CABIN,
             x: 0,
             y: 0,
+            turn: Turn::ZERO,
         },
     };
     crate::pieces::parts(&piece, screens)
@@ -2798,28 +2845,29 @@ fn plans(stages: &[Stage]) -> Vec<Plan> {
                 continue;
             }
             // Off the grid as well as on it ([`anchors`]): the backing
-            // rule reads a footprint's distance from its chart's seams,
-            // and a berth a sixteenth from one is a berth it has to turn
-            // right as surely as one flush against it.
-            for (fx, fy) in anchors(host) {
-                if placement_check(&stage.rooms, &[], u32::MAX, kind, stage.placed.id, fx, fy)
-                    .is_err()
-                {
+            // rule (`cargo::default_turn`) reads a footprint's distance
+            // from its chart's seams, and a berth a unit from one is a
+            // berth it has to turn right as surely as one flush against
+            // it.
+            for corner in anchors(host) {
+                let Some(spot) = legal_berth(&stage.rooms, &stage.placed, kind, corner) else {
                     continue;
-                }
-                let Some(foot) = Foot::of(host, kind, fx, fy).filter(|&foot| takeable(host, foot))
+                };
+                let Some(foot) = Foot::of(host, kind, spot.x, spot.y, spot.turn)
+                    .filter(|&foot| takeable(host, foot))
                 else {
                     continue;
                 };
-                let (Some(surf), Some((_, chart))) =
-                    (foot.chart(host), chart_of(&stage.placed, foot.centre()))
-                else {
+                let (Some(surf), Some((_, chart))) = (
+                    foot.chart(host),
+                    chart_of(&stage.placed, foot.centre_cell()),
+                ) else {
                     continue;
                 };
                 let rect = layout::foot_rect(stage.placed.id, foot);
                 let (Some((lo, hi)), Some((station, _, _, rot, _))) = (
-                    crate::pieces::berth_box(&stage.placed.charts, kind, rect),
-                    crate::pieces::berth_pose(&stage.placed.charts, kind, rect),
+                    crate::pieces::berth_box(&stage.placed.charts, kind, rect, spot.turn),
+                    crate::pieces::berth_pose(&stage.placed.charts, kind, rect, spot.turn),
                 ) else {
                     continue;
                 };
@@ -2868,7 +2916,7 @@ fn plans(stages: &[Stage]) -> Vec<Plan> {
 ///
 /// **It asks about the two axes the RECT pays for and not the third.**
 /// A berth's rect spends two of a kind's three extents and the chart
-/// fixes the other (`cargo::Kind::plan_on`): a deck berth spends across
+/// fixes the other (`cargo::Kind::face_on`): a deck berth spends across
 /// and deep and the deck fixes the height, a wall berth spends across
 /// and tall and the wall fixes the depth. What the chart fixes is
 /// [`rig_seated`]'s question from one side and [`rig_fits`]'s from the
@@ -2999,8 +3047,8 @@ fn looked_at(chart: &SimSurface, rect: layout::Rect, rot: Quat) -> space_truckin
 /// has:
 ///
 /// - **It stands up.** A rig's own up is the room's up. On a wall that is
-///   the upright rule's whole purpose (`pieces::wall_upright` rolls a
-///   chart's lie back onto the room's); on a deck and under a deckhead it
+///   the upright rule's whole purpose (a wall's `Turn(0)` is its upright
+///   frame, and every turn is drawn from it); on a deck and under a deckhead it
 ///   is what "standing" and "hanging" mean. A quarter turn about the face
 ///   normal breaks it, and so does an upside-down one — which is what
 ///   makes this the clause that catches a SQUARE footprint, the one case
@@ -3012,8 +3060,8 @@ fn looked_at(chart: &SimSurface, rect: layout::Rect, rot: Quat) -> space_truckin
 ///   room** ([`looked_at`]). A couch with its face in the front wall is
 ///   the defect, and it reads as one here without this file ever learning
 ///   the backing rule's branches — which matters, because a sweep that
-///   recomputed `pieces::floor_facing` and compared it with itself would
-///   pass every berth in the game and mean nothing.
+///   recomputed the backing rule (`cargo::default_turn`) and compared it
+///   with itself would pass every berth in the game and mean nothing.
 ///
 /// What is deliberately NOT asked is the turn of a body whose plan is
 /// square and whose cell is nowhere near a wall: a crate in the middle of
@@ -4518,9 +4566,11 @@ mod tests {
             let berths = berths(&stage.rooms, &stage.placed);
             assert!(!berths.is_empty(), "{} has no berths at all", stage.name);
             assert!(
-                berths
-                    .iter()
-                    .any(|berth| berth.foot.x % fine(1) != 0 || berth.foot.y % fine(1) != 0),
+                berths.iter().any(|berth| {
+                    let span = berth.foot.aabb();
+                    let cell = i32::from(fine(1));
+                    span.x0 % cell != 0 || span.y0 % cell != 0
+                }),
                 "{} was swept on the grid alone",
                 stage.name
             );
@@ -5067,7 +5117,7 @@ mod tests {
     /// edge of its own chart has to stop reading as facing the room.
     ///
     /// The catch-out is deliberately built out of a direction rather than
-    /// out of [`crate::pieces::floor_facing`]'s branches. A sweep that
+    /// out of the backing rule's branches (`cargo::default_turn`). A sweep that
     /// recomputed the backing rule and compared it with itself would pass
     /// two thousand berths and mean nothing — which is the mistake this
     /// file has already made once, and docs/GAUNTLET.md keeps the receipt.

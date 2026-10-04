@@ -39,7 +39,7 @@ use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 /// or tape starts a new run"). Bump it whenever what a line MEANS
 /// changes, not only its grammar: a save read under the wrong rules
 /// loads a board the player never built.
-const MAGIC: &str = "STV20";
+const MAGIC: &str = "STV21";
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -218,14 +218,14 @@ pub(crate) fn serialize(sim: &Sim) -> String {
             u8::from(piece.gnawed)
         );
         match piece.loc {
-            Loc::Hold { room, x, y } => {
-                let _ = writeln!(out, " hold {room} {x} {y}");
+            Loc::Hold { room, x, y, turn } => {
+                let _ = writeln!(out, " hold {room} {x} {y} {}", turn.0);
             }
             Loc::Stow { cabinet, slot } => {
                 let _ = writeln!(out, " stow {cabinet} {slot}");
             }
-            Loc::Laid { room, x, y } => {
-                let _ = writeln!(out, " laid {room} {x} {y}");
+            Loc::Laid { room, x, y, turn } => {
+                let _ = writeln!(out, " laid {room} {x} {y} {}", turn.0);
             }
         }
     }
@@ -686,12 +686,13 @@ fn validate_stows(reader: &Reader<'_>, rooms: &Rooms, pieces: &[Piece]) -> Resul
                 }
                 seen.push((cabinet, slot));
             }
-            Loc::Laid { room, x, y } => {
+            Loc::Laid { room, x, y, turn } => {
                 // Re-run the dressing rules against the other dressings
                 // only: bounds, surface, and one-per-cell. Occupancy is
                 // deliberately absent from the slice — a rug pinned
                 // under a couch is a LEGAL state and saves as such.
-                if cargo::dressing_check(rooms, &laid, piece.id, piece.kind, room, x, y).is_err() {
+                let spot = cargo::Spot { room, x, y, turn };
+                if cargo::dressing_check(rooms, &laid, piece.id, piece.kind, spot).is_err() {
                     return Err(reader.err());
                 }
                 laid.push(*piece);
@@ -708,19 +709,21 @@ fn validate_stows(reader: &Reader<'_>, rooms: &Rooms, pieces: &[Piece]) -> Resul
     Ok(())
 }
 
-/// A piece's location tokens, bounds-checked so later indexing never panics.
+/// A piece's location tokens, bounds-checked so later indexing never
+/// panics: a room, the footprint's centre in fine units, and its turn.
 fn parse_loc<'a>(
     reader: &Reader<'_>,
     tokens: &mut impl Iterator<Item = &'a str>,
     rooms: &Rooms,
     kind: Kind,
 ) -> Result<Loc, SaveError> {
-    let cell = |reader: &Reader<'_>,
+    let spot = |reader: &Reader<'_>,
                 tokens: &mut dyn Iterator<Item = &'a str>|
-     -> Result<(RoomId, u16, u16), SaveError> {
+     -> Result<cargo::Spot, SaveError> {
         let room: RoomId = reader.token(tokens.next())?;
         let x: u16 = reader.token(tokens.next())?;
         let y: u16 = reader.token(tokens.next())?;
+        let turn = cargo::Turn(reader.token(tokens.next())?);
         let host = rooms.kind(room).ok_or_else(|| reader.err())?;
         let (cols, rows) = host.grid();
         // Bounded before any arithmetic, so a lying document cannot
@@ -728,33 +731,39 @@ fn parse_loc<'a>(
         if x >= cargo::fine(cols) || y >= cargo::fine(rows) {
             return Err(reader.err());
         }
-        let foot = cargo::Foot::of(host, kind, x, y).ok_or_else(|| reader.err())?;
-        if foot.right() > cargo::fine(cols) || foot.bottom() > cargo::fine(rows) {
+        let span = cargo::Foot::of(host, kind, x, y, turn)
+            .ok_or_else(|| reader.err())?
+            .aabb();
+        if span.x0 < 0
+            || span.y0 < 0
+            || span.x1 > i32::from(cargo::fine(cols))
+            || span.y1 > i32::from(cargo::fine(rows))
+        {
             return Err(reader.err());
         }
-        Ok((room, x, y))
+        Ok(cargo::Spot { room, x, y, turn })
     };
     match tokens.next() {
-        Some("hold") => {
-            let (room, x, y) = cell(reader, tokens)?;
-            Ok(Loc::Hold { room, x, y })
-        }
+        Some("hold") => Ok(spot(reader, tokens)?.hold()),
         Some("laid") => {
-            let (room, x, y) = cell(reader, tokens)?;
+            let spot = spot(reader, tokens)?;
             if !kind.covering() {
                 return Err(reader.err());
             }
-            Ok(Loc::Laid { room, x, y })
+            Ok(spot.laid())
         }
         Some("stow") => {
             let cabinet: u32 = reader.token(tokens.next())?;
-            let slot: u8 = reader.token(tokens.next())?;
-            if slot >= cargo::CABINET_SLOTS {
+            let cubby: u8 = reader.token(tokens.next())?;
+            if cubby >= cargo::CABINET_SLOTS {
                 return Err(reader.err());
             }
             // The cabinet reference is checked in `validate_stows`, once
             // the whole piece list exists.
-            Ok(Loc::Stow { cabinet, slot })
+            Ok(Loc::Stow {
+                cabinet,
+                slot: cubby,
+            })
         }
         _ => Err(reader.err()),
     }
@@ -1040,47 +1049,59 @@ mod tests {
             .find(|line| line.starts_with("piece"))
             .expect("a fresh save has pieces")
             .to_owned();
+        // Piece fields, too: a berth that runs off the net, a turn past a
+        // whole one or below none, and a berth with no turn at all.
         for bad in [
-            "piece 0 99 0 0 hold 0 4 4",
-            "piece 0 0 0 0 hold 0 352 208",
-            "piece 0 0 0 0 hold 9 4 4",
-            "piece 0 0 0 0 hold 0 176 48",
+            "piece 0 99 0 0 hold 0 1152 1152 0",
+            "piece 0 0 0 0 hold 0 5632 3328 0",
+            "piece 0 0 0 0 hold 9 1152 1152 0",
+            "piece 0 0 0 0 hold 0 2944 896 0",
             "piece 0 0 0 0 nowhere 0",
-            "piece 0 0 0 2 hold 0 4 4",
-            "piece 0 0 0 gnawed hold 0 4 4",
+            "piece 0 0 0 2 hold 0 1152 1152 0",
+            "piece 0 0 0 gnawed hold 0 1152 1152 0",
+            "piece 0 0 0 0 hold 0 1152 1152 65536",
+            "piece 0 0 0 0 hold 0 1152 1152 -1",
+            "piece 0 0 0 0 hold 0 1152 1152",
+            "piece 0 0 0 0 hold 0 5600 1152 0",
         ] {
             let mangled = docked.replacen(&piece_line, bad, 1);
             assert!(Sim::from_save(&mangled).is_err(), "{bad:?} parsed anyway");
         }
     }
 
-    /// A sim with a stocked cabinet, its cubby lines pinned.
-    fn furnished() -> (Sim, String, u32, (u16, u16)) {
+    /// The berth `kind` takes in the cabin with its footprint's top-left
+    /// on whole cell `(x, y)`, at the turn the game gives a body there,
+    /// and that berth's tokens on a save line: room, centre, turn.
+    fn tokens(kind: Kind, x: u8, y: u8) -> (cargo::Spot, String) {
+        let (x, y, turn) =
+            cargo::anchored(RoomKind::Cabin, kind, fine(x), fine(y)).expect("on the net");
+        (
+            cargo::Spot {
+                room: CABIN,
+                x,
+                y,
+                turn,
+            },
+            format!("{CABIN} {x} {y} {}", turn.0),
+        )
+    }
+
+    /// A sim with a stocked cabinet, its cubby lines pinned, and the save
+    /// tokens of the cabinet's berth.
+    fn furnished() -> (Sim, String, u32, String) {
         let mut sim = Sim::new(3);
-        let (_, x, y) = cargo::first_fit(sim.rooms(), sim.pieces(), u32::MAX, Kind::Cabinet)
+        let spot = cargo::first_fit(sim.rooms(), sim.pieces(), u32::MAX, Kind::Cabinet)
             .expect("room for a cabinet");
         let cabinet = sim.next_piece;
         for (offset, kind, loc) in [
-            (0, Kind::Cabinet, Loc::Hold { room: CABIN, x, y }),
+            (0, Kind::Cabinet, spot.hold()),
             (1, Kind::PerfumeVial, Loc::Stow { cabinet, slot: 0 }),
             (2, Kind::Fluff, Loc::Stow { cabinet, slot: 1 }),
-            (
-                3,
-                Kind::Rug,
-                Loc::Laid {
-                    room: CABIN,
-                    x: fine(3),
-                    y: fine(6),
-                },
-            ),
+            (3, Kind::Rug, tokens(Kind::Rug, 3, 6).0.laid()),
             (
                 4,
                 Kind::LuminousPaint,
-                Loc::Laid {
-                    room: CABIN,
-                    x: fine(5),
-                    y: 0,
-                },
+                tokens(Kind::LuminousPaint, 5, 0).0.laid(),
             ),
         ] {
             sim.pieces.push(Piece {
@@ -1093,7 +1114,8 @@ mod tests {
         }
         sim.next_piece += 5;
         let save = sim.save_string();
-        (sim, save, cabinet, (x, y))
+        let at = format!("{} {} {} {}", spot.room, spot.x, spot.y, spot.turn.0);
+        (sim, save, cabinet, at)
     }
 
     #[test]
@@ -1124,7 +1146,7 @@ mod tests {
     #[test]
     fn a_save_from_any_other_version_is_refused() {
         let save = Sim::new(9).save_string();
-        for header in ["STV4", "STV19", "STV21"] {
+        for header in ["STV4", "STV20", "STV22"] {
             assert_eq!(
                 Sim::from_save(&save.replacen(MAGIC, header, 1)).err(),
                 Some(SaveError::UnsupportedVersion),
@@ -1144,11 +1166,12 @@ mod tests {
         }
     }
 
-    /// **A berth off the grid survives the trip to the sixteenth**: the
-    /// document carries fine coordinates and the reader takes them as
-    /// written.
+    /// **A berth off the grid and off square survives the trip to the
+    /// unit**: the document carries the fine centre and the turn, and the
+    /// reader takes them as written — a seventh of a turn comes back a
+    /// seventh of a turn, not the nearest anything.
     #[test]
-    fn a_fractional_berth_round_trips() {
+    fn an_odd_berth_round_trips() {
         let mut sim = Sim::new(3);
         let vial = sim
             .pieces
@@ -1156,34 +1179,33 @@ mod tests {
             .position(|piece| piece.kind == Kind::PerfumeVial)
             .expect("the starter vial");
         let id = sim.pieces[vial].id;
-        let (x, y) = (fine(6) + 5, fine(7) + 11);
+        let spot = cargo::Spot {
+            room: CABIN,
+            x: fine(6) + 5,
+            y: fine(7) + 11,
+            turn: cargo::Turn(9362),
+        };
         assert!(
-            super::super::placement_legal(
-                sim.rooms(),
-                sim.pieces(),
-                id,
-                Kind::PerfumeVial,
-                CABIN,
-                x,
-                y
-            ),
+            super::super::placement_legal(sim.rooms(), sim.pieces(), id, Kind::PerfumeVial, spot),
             "the fixture's berth is a legal one"
         );
-        sim.pieces[vial].loc = Loc::Hold { room: CABIN, x, y };
+        sim.pieces[vial].loc = spot.hold();
         let save = sim.save_string();
         assert!(
             save.contains(&format!("piece {id} 0 "))
-                && save.contains(&format!(" hold 0 {x} {y}\n")),
-            "the line carries the fine berth"
+                && save.contains(&format!(" hold 0 {} {} 9362\n", spot.x, spot.y)),
+            "the line carries the fine berth and its turn"
         );
-        let restored = Sim::from_save(&save).expect("a fractional board loads");
+        let restored = Sim::from_save(&save).expect("an odd board loads");
         assert_eq!(restored.pieces, sim.pieces);
         assert_eq!(restored.save_string(), save);
     }
 
     #[test]
     fn lying_stow_lines_fail_safe() {
-        let (_, save, cabinet, (x, y)) = furnished();
+        let (_, save, cabinet, at) = furnished();
+        let rug = tokens(Kind::Rug, 3, 6).1;
+        let coat = tokens(Kind::LuminousPaint, 5, 0).1;
         let vial_line = format!("piece {} 0 0 0 stow {cabinet} 0", cabinet + 1);
         assert!(save.contains(&vial_line), "vial line changed shape");
         for (needle, bad) in [
@@ -1209,28 +1231,36 @@ mod tests {
             ),
             // A host that is not standing in a room.
             (
-                format!("piece {cabinet} 21 0 0 hold 0 {x} {y}"),
+                format!("piece {cabinet} 21 0 0 hold {at}"),
                 format!("piece {cabinet} 21 0 0 stow {cabinet} 3"),
             ),
             // A laid non-covering (the couch, index 19).
             (
-                format!("piece {} 22 0 0 laid 0 48 96", cabinet + 3),
-                format!("piece {} 19 0 0 laid 0 48 96", cabinet + 3),
+                format!("piece {} 22 0 0 laid {rug}", cabinet + 3),
+                format!("piece {} 19 0 0 laid {rug}", cabinet + 3),
             ),
             // A rug up the wall.
             (
-                format!("piece {} 22 0 0 laid 0 48 96", cabinet + 3),
-                format!("piece {} 22 0 0 laid 0 80 16", cabinet + 3),
+                format!("piece {} 22 0 0 laid {rug}", cabinet + 3),
+                format!(
+                    "piece {} 22 0 0 laid {}",
+                    cabinet + 3,
+                    tokens(Kind::Rug, 5, 1).1
+                ),
             ),
             // Two dressings on one cell.
             (
-                format!("piece {} 24 0 0 laid 0 80 0", cabinet + 4),
-                format!("piece {} 24 0 0 laid 0 48 96", cabinet + 4),
+                format!("piece {} 24 0 0 laid {coat}", cabinet + 4),
+                format!(
+                    "piece {} 24 0 0 laid {}",
+                    cabinet + 4,
+                    tokens(Kind::LuminousPaint, 3, 6).1
+                ),
             ),
-            // A coat off the grid entirely.
+            // A coat off the grid entirely: no chart under its centre.
             (
-                format!("piece {} 24 0 0 laid 0 80 0", cabinet + 4),
-                format!("piece {} 24 0 0 laid 0 336 192", cabinet + 4),
+                format!("piece {} 24 0 0 laid {coat}", cabinet + 4),
+                format!("piece {} 24 0 0 laid 0 5504 3200 0", cabinet + 4),
             ),
         ] {
             let mangled = save.replacen(&needle, &bad, 1);

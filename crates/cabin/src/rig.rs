@@ -1054,12 +1054,11 @@ fn aimed_station(
 #[must_use]
 pub fn handle_route(rooms: &Rooms, pieces: &[Piece], at: SimVec2) -> Option<Focus> {
     let piece = layout::piece_at(rooms, pieces, at)?;
-    let handle =
-        crate::pieces::carry_handle_rect(piece.kind, layout::piece_rect(rooms, pieces, piece))?;
+    crate::pieces::carry_handle(piece.kind)?;
     // Off its wall — staged on a hopper tile, boxed in a cubby, laid
     // on the deck — an instrument is only cargo again: it carries no
     // station, so its whole body grabs, handle or no handle.
-    if handle.contains(at) || !matches!(piece.loc, Loc::Hold { .. }) {
+    if crate::pieces::on_carry_handle(rooms, piece, at) || !matches!(piece.loc, Loc::Hold { .. }) {
         return None;
     }
     Focus::of(crate::pieces::instrument(piece.kind)?.station)
@@ -1462,6 +1461,7 @@ mod tests {
                             &charts,
                             piece.kind,
                             layout::piece_rect(sim.rooms(), sim.pieces(), piece),
+                            crate::pieces::berth_turn(piece),
                         )
                     })
                     .flatten()
@@ -1580,7 +1580,12 @@ mod tests {
                 continue;
             }
             let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
-            if let Some(pair) = crate::pieces::instrument_surface(&charts, piece.kind, rect) {
+            if let Some(pair) = crate::pieces::instrument_surface(
+                &charts,
+                piece.kind,
+                rect,
+                crate::pieces::berth_turn(piece),
+            ) {
                 panels.push(pair);
             }
         }

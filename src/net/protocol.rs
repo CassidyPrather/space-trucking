@@ -1,8 +1,10 @@
 //! The wire protocol: versioned, line-oriented lockstep messages.
 //!
 //! Style and defenses mirror `sim/save.rs`: a magic-plus-version header
-//! (`SNP3` — bumped when the input frame grew its occupied-room field and
-//! the room graph's attach/detach requests), whitespace-separated tokens, and parsing that never panics —
+//! (`SNP4` — `SNP3` when the input frame grew its occupied-room field and
+//! the room graph's attach/detach requests, and `SNP4` when it grew the
+//! carry's facing, docs/BAY.md "Cargo turns"), whitespace-separated
+//! tokens, and parsing that never panics —
 //! every malformed message maps to a [`WireError`] with its 1-based line
 //! number (line 0 means the text ended too early). Floats travel as hex bit
 //! patterns, never decimal, because a pointer position that drifts by one
@@ -17,11 +19,11 @@ use std::fmt;
 use std::fmt::Write as _;
 
 use crate::sim::room::{MAX_ROOMS, PORTS, RoomKind};
-use crate::sim::{Attach, CrewFrame, InputFrame, MAX_CREW, PlayerId, Vec2};
+use crate::sim::{Attach, CrewFrame, InputFrame, MAX_CREW, PlayerId, Turn, Vec2};
 
 /// Magic-plus-version header of every message this build writes. Bump on
 /// any breaking change; older versions fail safe as unsupported.
-const MAGIC: &str = "SNP3";
+const MAGIC: &str = "SNP4";
 
 /// Why a wire payload was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -179,11 +181,11 @@ impl Message {
     }
 }
 
-/// One frame as thirteen tokens plus a newline: pointer x/y as f32 bit
+/// One frame as fourteen tokens plus a newline: pointer x/y as f32 bit
 /// patterns (exact), the seven buttons/modifiers as 0/1, the occupied
-/// room as a small integer, the attach request as `-` or four
-/// dot-separated small integers, the detach as `-` or a room id, and
-/// reseed as `-` or 16 hex digits.
+/// room as a small integer, the carry's facing as its turn in decimal,
+/// the attach request as `-` or four dot-separated small integers, the
+/// detach as `-` or a room id, and reseed as `-` or 16 hex digits.
 fn write_frame(out: &mut String, frame: &InputFrame) {
     let reseed = frame
         .reseed
@@ -205,7 +207,7 @@ fn write_frame(out: &mut String, frame: &InputFrame) {
         .map_or_else(|| "-".to_owned(), |room| room.to_string());
     let _ = writeln!(
         out,
-        "{:08x} {:08x} {} {} {} {} {} {} {} {} {attach} {detach} {reseed}",
+        "{:08x} {:08x} {} {} {} {} {} {} {} {} {} {attach} {detach} {reseed}",
         frame.pointer.x.to_bits(),
         frame.pointer.y.to_bits(),
         u8::from(frame.press),
@@ -216,10 +218,11 @@ fn write_frame(out: &mut String, frame: &InputFrame) {
         u8::from(frame.shift),
         u8::from(frame.night),
         frame.occupied,
+        frame.facing.0,
     );
 }
 
-/// The thirteen frame tokens back into an [`InputFrame`].
+/// The fourteen frame tokens back into an [`InputFrame`].
 fn parse_frame<'a>(
     at: &At,
     tokens: &mut impl Iterator<Item = &'a str>,
@@ -237,6 +240,7 @@ fn parse_frame<'a>(
         shift: at.bit(tokens.next())?,
         night: at.bit(tokens.next())?,
         occupied: at.room(tokens.next())?,
+        facing: Turn(at.token(tokens.next())?),
         attach: at.attach(tokens.next())?,
         detach: at.opt_room(tokens.next())?,
         reseed: at.opt_hex64(tokens.next())?,
@@ -361,6 +365,7 @@ mod tests {
         assert_eq!(a.toggle_pause, b.toggle_pause);
         assert_eq!(a.toggle_warp, b.toggle_warp);
         assert_eq!(a.occupied, b.occupied);
+        assert_eq!(a.facing, b.facing);
         assert_eq!(a.attach, b.attach);
         assert_eq!(a.detach, b.detach);
         assert_eq!(a.reseed, b.reseed);
@@ -378,6 +383,7 @@ mod tests {
             shift: true,
             night: true,
             occupied: (MAX_ROOMS - 1) as u8,
+            facing: Turn(u16::MAX),
             attach: Some(Attach {
                 anchor: 0,
                 anchor_port: (PORTS - 1) as u8,
@@ -552,11 +558,23 @@ mod tests {
             Err(WireError::UnsupportedVersion)
         ));
         // Out-of-range crew indices are refused at the wire.
-        assert!(Message::from_wire("SNP3 hello 6").is_err());
-        assert!(Message::from_wire("SNP3 input 1 6 0 0 0 0 0 0 0 0 0 - - -").is_err());
+        assert!(Message::from_wire("SNP4 hello 6").is_err());
+        assert!(Message::from_wire("SNP4 input 1 6 0 0 0 0 0 0 0 0 0 0 0 - - -").is_err());
         // Loose booleans are refused: the strict wire has no "2" or "true".
-        assert!(Message::from_wire("SNP3 input 1 0 0 0 2 0 0 0 0 0 - - -").is_err());
-        assert!(Message::from_wire("SNP3 input 1 0 0 0 true 0 0 0 0 0 - - -").is_err());
+        assert!(Message::from_wire("SNP4 input 1 0 0 0 2 0 0 0 0 0 0 0 0 - - -").is_err());
+        assert!(Message::from_wire("SNP4 input 1 0 0 0 true 0 0 0 0 0 0 0 0 - - -").is_err());
+        // A facing is a turn: no sign, no fraction, nothing past a whole
+        // one.
+        let facing = |turn: &str| format!("SNP4 input 1 0 0 0 0 0 0 0 0 0 0 0 {turn} - - -");
+        for bad in ["65536", "-1", "1.5", "-"] {
+            assert!(Message::from_wire(&facing(bad)).is_err(), "facing {bad}");
+        }
+        assert!(Message::from_wire(&facing("65535")).is_ok());
+        // The previous version's thirteen-token frame is that version's.
+        assert!(matches!(
+            Message::from_wire("SNP3 input 1 0 0 0 0 0 0 0 0 0 0 - - -"),
+            Err(WireError::UnsupportedVersion)
+        ));
     }
 
     #[test]
@@ -582,7 +600,7 @@ mod tests {
                 "",
                 "frame",
                 "frame 0 0 0 0 0 0 0 0 0",
-                "noise 0 0 0 0 0 0 0 0 0 0 - - -",
+                "noise 0 0 0 0 0 0 0 0 0 0 0 - - -",
             ] {
                 let mangled: String = lines
                     .iter()
@@ -602,7 +620,7 @@ mod tests {
     #[test]
     fn arbitrary_garbage_never_panics() {
         // Deterministic fuzz: random-ish strings over a spicy alphabet.
-        let alphabet: Vec<char> = "SNP3 hello\nframe 0-9abcdefx \u{FFFD}\u{1F680}\t"
+        let alphabet: Vec<char> = "SNP4 hello\nframe 0-9abcdefx \u{FFFD}\u{1F680}\t"
             .chars()
             .collect();
         for round in 0_u64..300 {

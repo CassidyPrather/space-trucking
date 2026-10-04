@@ -852,7 +852,7 @@ impl Convoy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sim::cargo::fine;
+    use crate::sim::cargo::{FINE, Turn, fine};
     use crate::sim::{Loc, WARP_FACTOR};
 
     /// The wire form is the honest frame equality (no `PartialEq`).
@@ -1058,8 +1058,9 @@ mod tests {
                     && p.loc
                         == Loc::Hold {
                             room: CABIN,
-                            x: fine(3),
-                            y: fine(3)
+                            x: fine(3) + FINE / 2,
+                            y: fine(3) + FINE / 2,
+                            turn: Turn::ZERO,
                         }),
             "the joiner's drag must land"
         );
@@ -1140,8 +1141,9 @@ mod tests {
             sim.pieces().iter().any(|p| p.loc
                 == (Loc::Hold {
                     room: CABIN,
-                    x: fine(6),
-                    y: fine(3)
+                    x: fine(6) + FINE / 2,
+                    y: fine(3) + FINE / 2,
+                    turn: Turn::ZERO,
                 })),
             "the held piece must snap home"
         );

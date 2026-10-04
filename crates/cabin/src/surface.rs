@@ -18,9 +18,11 @@
 //! (docs/BAY.md, "Instruments as cargo"). And a rig whose own frame
 //! leaves its chart's carries its own reading the same way
 //! ([`Station::Standing`]): floor cargo, a pendant, a crate on a hopper
-//! tile stand bodily where the chart is not, and wall cargo the upright
-//! rule rolls shares the plane but not the lie — so in both cases the
-//! aim has to meet the piece in the frame the rig was drawn in.
+//! tile stand bodily where the chart is not, and wall cargo drawn off
+//! its chart's lie shares the plane but not the lie — so in both cases
+//! the aim has to meet the piece in the frame the rig was drawn in, and
+//! the reading is laid back onto the net, where the sim carries it into
+//! the piece's own frame to ask which cubby or which handle.
 //!
 //! What a rig's is bound to is a BODY and not a quad. A chart is a
 //! surface because a wall is one; a crate is not, and a plane cut
@@ -33,6 +35,7 @@
 use bevy::prelude::*;
 use space_trucking::sim::Vec2 as SimVec2;
 use space_trucking::sim::layout::Rect as SimRect;
+use space_trucking::sim::room::Surf;
 
 use crate::pieces::Riding;
 use crate::room::InRoom;
@@ -76,22 +79,22 @@ pub enum Station {
     /// bound to its declared cell and stands proud of the chart behind
     /// it, so the crosshair meets the brass rather than the wall.
     Handshake,
-    /// A rig's own face, bound to that piece's own rect and riding the
-    /// pose the rig actually took — the yaw the backing rule spun it
-    /// by, the roll the upright rule rolled it by, all of it. The
-    /// standing rule (docs/BAY.md): where a rig's frame leaves its
-    /// chart's, projecting the aim onto that chart answers about
-    /// something the player is not looking at. A piece that STANDS is
-    /// bodily somewhere the chart is not; a wall piece the upright rule
-    /// ROLLS shares the chart's plane but not its lie, so a sub-rect
-    /// read in chart coordinates lands a quarter turn off the hardware
-    /// drawn from the same numbers. Either way the piece carries the
-    /// mapping on its own body — the whole of it, all three extents
-    /// ([`SimSurface::deep`]), so the aim meets it from wherever the
-    /// player is standing — and where the aim lands on it is where the
-    /// sim reads it. Several of these stand at once, one per piece,
-    /// which is why nothing looks a face up by station: the pointer
-    /// hands over the one it struck.
+    /// A rig's own face, bound to that piece's own ground and riding the
+    /// pose the rig actually took — its chart's upright frame, turned by
+    /// the piece's own turn. The standing rule (docs/BAY.md): where a
+    /// rig's frame leaves its chart's, projecting the aim onto that
+    /// chart answers about something the player is not looking at. A
+    /// piece that STANDS is bodily somewhere the chart is not; a wall
+    /// piece drawn off its chart's lie shares the chart's plane but not
+    /// its lie, so a reading taken in chart coordinates lands a quarter
+    /// turn off the hardware drawn from the same numbers. Either way the
+    /// piece carries the mapping on its own body — the whole of it, all
+    /// three extents ([`SimSurface::deep`]), so the aim meets it from
+    /// wherever the player is standing — and where the aim lands on it
+    /// is laid back onto the net, which is where the sim reads it.
+    /// Several of these stand at once, one per piece, which is why
+    /// nothing looks a face up by station: the pointer hands over the
+    /// one it struck.
     Standing,
 }
 
@@ -137,10 +140,40 @@ impl Station {
         )
     }
 
+    /// **Which of the sim's chart classes this station is**, for one of
+    /// the net's six: the name the sim's own rules use for the same
+    /// plane (`space_trucking::sim::Surf`), so a pose can be asked of the
+    /// sim's mapping from chart to net (`cargo::net_angle`). `None` for
+    /// everything that is not a chart.
+    #[must_use]
+    pub const fn surf(self) -> Option<Surf> {
+        match self {
+            Self::BayWall => Some(Surf::Aft),
+            Self::BayFloor => Some(Surf::Floor),
+            Self::BayPort => Some(Surf::Port),
+            Self::BayStarboard => Some(Surf::Starboard),
+            Self::BayFront => Some(Surf::Front),
+            Self::BayCeiling => Some(Surf::Ceiling),
+            Self::Map | Self::Lever | Self::Handshake | Self::Standing => None,
+        }
+    }
+
+    /// **Whether this surface reads points of the net as the net lays
+    /// them out**, seen from outside the room: the six charts, and a
+    /// standing rig's own face, which lays its reading onto the net
+    /// round the piece's footprint (`pieces::onto_net`) so the sim can
+    /// carry it back into the piece's own frame. Both share the net's
+    /// handedness, so both turn their normal away from the room, and the
+    /// two helpers below flip both.
+    #[must_use]
+    pub const fn reads_the_net(self) -> bool {
+        self.chart_flipped() || matches!(self, Self::Standing)
+    }
+
     /// The into-the-room normal of this station's surface.
     #[must_use]
     pub fn inward(self, surface: &SimSurface) -> Vec3 {
-        if self.chart_flipped() {
+        if self.reads_the_net() {
             -surface.normal()
         } else {
             surface.normal()
@@ -149,10 +182,11 @@ impl Station {
 
     /// The orientation a rig standing ON this surface faces the room
     /// with: [`SimSurface::orientation`], spun half a turn on the
-    /// flipped charts so local +Z looks into the room, not the hull.
+    /// surfaces that read the net so local +Z looks into the room, not
+    /// the hull.
     #[must_use]
     pub fn face(self, surface: &SimSurface) -> Quat {
-        if self.chart_flipped() {
+        if self.reads_the_net() {
             surface.orientation() * Quat::from_rotation_y(std::f32::consts::PI)
         } else {
             surface.orientation()

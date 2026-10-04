@@ -22,16 +22,19 @@
 //! hold: that is the frame that can silently snap a phantom drag home
 //! (window blur mid-drag), and the replay must snap at the same tick.
 //!
-//! Format `RPL4`, line-oriented like the save and the wire: a header, the
-//! byte-length-prefixed base save embedded verbatim, then one `SNP3 input`
-//! line per entry — `RPL3` bumped when the input frame grew its
+//! Format `RPL5`, line-oriented like the save and the wire: a header, the
+//! byte-length-prefixed base save embedded verbatim, then one `SNP4 input`
+//! line per entry. `RPL3` was bumped when the input frame grew its
 //! occupied-room field and the room graph's attach and detach requests
-//! (docs/ROOMS.md, "The one new input field"), and `RPL4` when the grid
-//! came out (docs/BAY.md, "The grid comes out"): not one byte of the
-//! tape's grammar moved, but the same pointer frames now settle cargo
-//! somewhere else — centred on the pointer, clamped, snapped — so an
-//! `RPL3` tape replayed today would be a different game told with the
-//! same inputs, and it fails safe as unsupported instead. The recorder
+//! (docs/ROOMS.md, "The one new input field"); `RPL4` when the grid came
+//! out (docs/BAY.md, "The grid comes out"): not one byte of the tape's
+//! grammar moved, but the same pointer frames settled cargo somewhere
+//! else — centred on the pointer, clamped, snapped — so an older tape
+//! replayed would be a different game told with the same inputs; and
+//! `RPL5` when cargo turned (docs/BAY.md, "Cargo turns"): every frame
+//! carries the carry's facing, the neighbour snap is gone, and a berth is
+//! anchored at its centre. A tape from any other version fails safe as
+//! unsupported, and the frontend starts a new run. The recorder
 //! reuses the lockstep wire codec
 //! ([`Message::Input`]) rather than invent a second frame encoding, so
 //! pointer floats travel as exact bit patterns. Parsing never panics; every
@@ -43,11 +46,11 @@ use std::fmt;
 use std::fmt::Write as _;
 
 use crate::net::Message;
-use crate::sim::{CrewFrame, InputFrame, SaveError, Sim, Vec2};
+use crate::sim::{CrewFrame, InputFrame, SaveError, Sim, Turn, Vec2};
 
 /// Magic-plus-version header of every recording this build writes. Bump on
 /// any breaking change; older versions fail safe as unsupported.
-const MAGIC: &str = "RPL4";
+const MAGIC: &str = "RPL5";
 
 /// Rolling cap on recorded entries.
 ///
@@ -368,9 +371,9 @@ pub struct ReplayCursor<'a> {
     index: usize,
     /// Whether the entries due at the base tick have been applied yet.
     primed: bool,
-    /// Pointer to carry while the last entry pressed or held, so gap ticks
-    /// cannot snap a live drag home.
-    carry: Option<Vec2>,
+    /// Pointer and facing to carry while the last entry pressed or held,
+    /// so gap ticks cannot snap a live drag home or turn it.
+    carry: Option<(Vec2, Turn)>,
     /// The recorded player's last seen pointer, for the frontend to draw.
     pointer: Vec2,
     /// Ticks stepped so far, bounding runaway replays.
@@ -429,7 +432,7 @@ impl ReplayCursor<'_> {
                 return Err(ReplayError::OutOfOrder);
             }
             sim.advance(0.0, &frame);
-            self.carry = (frame.press || frame.held).then_some(frame.pointer);
+            self.carry = (frame.press || frame.held).then_some((frame.pointer, frame.facing));
             self.pointer = frame.pointer;
             self.index += 1;
         }
@@ -442,15 +445,16 @@ impl ReplayCursor<'_> {
     }
 
     /// The continuation crew frame for a gap tick: all defaults, except that
-    /// player 0 keeps holding at the carried pointer while the last entry
-    /// pressed or held — the live session ran these ticks inside one
-    /// `advance`, where no input event could interrupt the drag.
+    /// player 0 keeps holding at the carried pointer and facing while the
+    /// last entry pressed or held — the live session ran these ticks inside
+    /// one `advance`, where no input event could interrupt the drag.
     fn neutral(&self) -> CrewFrame {
         let mut frames = CrewFrame::default();
-        if let Some(pointer) = self.carry {
+        if let Some((pointer, facing)) = self.carry {
             frames[0] = InputFrame {
                 pointer,
                 held: true,
+                facing,
                 ..InputFrame::default()
             };
         }
@@ -1000,22 +1004,25 @@ mod tests {
             Recording::parse("RPL9\nend 0\nbase 0\n"),
             Err(ReplayError::UnsupportedVersion)
         ));
-        // A grid-era tape would replay into a different game: the same
-        // frames settle cargo somewhere else now, so it is refused whole.
+        // A tape from before cargo turned would replay into a different
+        // game: the same frames settle cargo somewhere else now, so it is
+        // refused whole, and so is a grid-era one.
+        for older in ["RPL3", "RPL4"] {
+            assert!(matches!(
+                Recording::parse(&format!("{older}\nend 0\nbase 0\n")),
+                Err(ReplayError::UnsupportedVersion)
+            ));
+        }
         assert!(matches!(
-            Recording::parse("RPL3\nend 0\nbase 0\n"),
-            Err(ReplayError::UnsupportedVersion)
-        ));
-        assert!(matches!(
-            Recording::parse("RPL4"),
+            Recording::parse("RPL5"),
             Err(ReplayError::Parse { line: 0 })
         ));
         assert!(matches!(
-            Recording::parse("RPL4\nend NaN\nbase 0\n"),
+            Recording::parse("RPL5\nend NaN\nbase 0\n"),
             Err(ReplayError::Parse { line: 2 })
         ));
         assert!(matches!(
-            Recording::parse("RPL4\nend 0\nbase 99999999999999999999999\n"),
+            Recording::parse("RPL5\nend 0\nbase 99999999999999999999999\n"),
             Err(ReplayError::Parse { line: 3 })
         ));
 
@@ -1029,7 +1036,7 @@ mod tests {
             .to_wire()
         };
         let build = |end: u64, entries: &str| {
-            format!("RPL4\nend {end}\nbase {}\n{base}{entries}", base.len())
+            format!("RPL5\nend {end}\nbase {}\n{base}{entries}", base.len())
         };
         // A player other than 0 has no business in a solo black box.
         assert!(Recording::parse(&build(5, &entry(1, 3))).is_err());
@@ -1049,7 +1056,7 @@ mod tests {
     /// anything that happens to parse re-serialises without panicking.
     #[test]
     fn arbitrary_garbage_never_panics() {
-        let alphabet: Vec<char> = "RPL4 SNP\nend base input 0-9abcdefx \u{FFFD}\u{1F680}\t"
+        let alphabet: Vec<char> = "RPL5 SNP\nend base input 0-9abcdefx \u{FFFD}\u{1F680}\t"
             .chars()
             .collect();
         for round in 0_u64..300 {

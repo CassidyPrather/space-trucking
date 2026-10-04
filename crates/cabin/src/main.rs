@@ -1323,12 +1323,20 @@ mod session {
                 continue;
             }
             let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
-            if let Some((station, surface)) =
-                crate::pieces::instrument_surface(&charts, piece.kind, rect)
-            {
+            if let Some((station, surface)) = crate::pieces::instrument_surface(
+                &charts,
+                piece.kind,
+                rect,
+                crate::pieces::berth_turn(piece),
+            ) {
                 live.push((piece.id, station, surface));
             }
-            if let Some(face) = crate::pieces::standing_surface(&charts, piece.kind, rect) {
+            if let Some(face) = crate::pieces::standing_surface(
+                &charts,
+                piece.kind,
+                rect,
+                crate::pieces::berth_turn(piece),
+            ) {
                 live.push((piece.id, Station::Standing, face));
             }
         }

@@ -391,7 +391,7 @@ pub fn tiles_of(rooms: &Rooms, room: RoomId, class: Tile) -> Vec<(u8, u8)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sim::cargo::{fine, placement_check};
+    use crate::sim::cargo::{anchored, fine, placement_check};
     use crate::sim::map::SATURN;
     use crate::sim::room::{CABIN, RoomKind};
 
@@ -405,6 +405,14 @@ mod tests {
             .spawn(RoomKind::Trade, CABIN)
             .expect("a trade room attaches");
         (rooms, trade)
+    }
+
+    /// The berth `kind` takes in `room` with its footprint's top-left on
+    /// whole cell `(x, y)`, at the turn the game gives a body there.
+    fn whole(rooms: &Rooms, room: RoomId, kind: Kind, x: u8, y: u8) -> Loc {
+        let host = rooms.kind(room).expect("attached");
+        let (x, y, turn) = anchored(host, kind, fine(x), fine(y)).expect("on the net");
+        Loc::Hold { room, x, y, turn }
     }
 
     /// A piece at `loc`, id and variant immaterial to valuation.
@@ -472,16 +480,10 @@ mod tests {
         }
         for kind in rollable {
             assert!(
-                shelf.iter().any(|&(x, y)| placement_check(
-                    &rooms,
-                    &[],
-                    0,
-                    kind,
-                    trade,
-                    fine(x),
-                    fine(y)
-                )
-                .is_ok()),
+                shelf.iter().any(|&(x, y)| {
+                    let spot = whole(&rooms, trade, kind, x, y).spot().expect("on the net");
+                    placement_check(&rooms, &[], 0, kind, spot).is_ok()
+                }),
                 "{kind:?} can be rolled onto a shelf it can never stand on"
             );
         }
@@ -581,33 +583,18 @@ mod tests {
         let offer = tiles_of(&rooms, trade, Tile::Offer)[0];
         let art = piece(
             Kind::Painting,
-            Loc::Hold {
-                room: trade,
-                x: fine(offer.0),
-                y: fine(offer.1),
-            },
+            whole(&rooms, trade, Kind::Painting, offer.0, offer.1),
         );
         assert_eq!(piece_value(&rooms, &art, &[art], &values, false), 3);
         // A lamp lit aboard appraises the proposal one dearer.
         let lamp = piece(
             Kind::CeilingLamp,
-            Loc::Hold {
-                room: CABIN,
-                x: fine(16),
-                y: fine(4),
-            },
+            whole(&rooms, CABIN, Kind::CeilingLamp, 16, 4),
         );
         assert_eq!(piece_value(&rooms, &art, &[art, lamp], &values, false), 4);
         // Berthed aboard, the rule is literal adjacency instead: hung on
         // the far aft wall, the same lamp lights nothing.
-        let hung = piece(
-            Kind::Painting,
-            Loc::Hold {
-                room: CABIN,
-                x: fine(5),
-                y: fine(1),
-            },
-        );
+        let hung = piece(Kind::Painting, whole(&rooms, CABIN, Kind::Painting, 5, 1));
         assert_eq!(piece_value(&rooms, &hung, &[hung, lamp], &values, false), 3);
     }
 
@@ -617,11 +604,7 @@ mod tests {
         let mut values = [0_u8; KIND_COUNT];
         values[Kind::BrinePearls.index()] = 5;
         values[Kind::PerfumeVial.index()] = 1;
-        let at = Loc::Hold {
-            room: CABIN,
-            x: fine(4),
-            y: fine(4),
-        };
+        let at = whole(&rooms, CABIN, Kind::BrinePearls, 4, 4);
         let fresh = piece(Kind::BrinePearls, at);
         let bitten = Piece {
             gnawed: true,
@@ -658,11 +641,7 @@ mod tests {
         // here comes from the ordinary rolls under test.
         let aboard = [piece(
             Kind::SuspiciousCrate,
-            Loc::Hold {
-                room: CABIN,
-                x: fine(4),
-                y: fine(4),
-            },
+            whole(&Rooms::new(), CABIN, Kind::SuspiciousCrate, 4, 4),
         )];
         for n in 1..200 {
             let stock = stock_kinds(0xFEED, VENUS, n, &aboard, 0, false, 5);
@@ -713,11 +692,7 @@ mod tests {
         // One aboard anywhere suppresses the offer.
         let aboard = [piece(
             Kind::SuspiciousCrate,
-            Loc::Hold {
-                room: CABIN,
-                x: fine(4),
-                y: fine(4),
-            },
+            whole(&Rooms::new(), CABIN, Kind::SuspiciousCrate, 4, 4),
         )];
         for n in 1..=100 {
             assert!(

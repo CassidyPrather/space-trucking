@@ -716,7 +716,7 @@ axis was the load-bearing half of the report.
 
 **It asks about the two axes the rect pays for and not the third.** A
 berth's rect spends two of a kind's three extents and the chart fixes
-the other (`cargo::Kind::plan_on`): a deck berth spends across by deep
+the other (`cargo::Kind::face_on`): a deck berth spends across by deep
 and the deck fixes the height, a wall berth spends across by tall and
 the wall fixes the depth. What the chart fixes is `rig-seated`'s
 question from one side and `berth-clear`'s from the other, and on a wall
@@ -771,13 +771,13 @@ Two claims, and between them they pin the turn on every chart the game
 has:
 
 - **It stands up.** A rig's own up is the room's up. On a wall that is
-  the upright rule's whole purpose (`pieces::wall_upright` rolls a
-  chart's lie back onto the room's); on a deck and under a deckhead it is
-  what "standing" and "hanging" mean. A quarter turn about the face
-  normal breaks it and so does an upside-down one, which makes this the
-  clause that catches a **square** footprint — the one case `berth-filled`
-  is blind to by construction, because a square plan's world box is the
-  same box either way round.
+  the upright rule's whole purpose (a wall's `Turn(0)` is its upright
+  frame, and every turn is drawn from it); on a deck and under a
+  deckhead it is what "standing" and "hanging" mean. A quarter turn
+  about the face normal breaks it and so does an upside-down one, which
+  makes this the clause that catches a **square** footprint — the one
+  case `berth-filled` is blind to by construction, because a square
+  plan's world box is the same box either way round.
 - **It shows its face to the room.** On a wall, the face a rig turns to
   the room is the wall's own inward normal. On a deck or under a deckhead
   there is no such normal, so the claim is the player's instead: **the
@@ -786,9 +786,10 @@ has:
   without this file ever learning the backing rule's branches.
 
 That last point is the whole reason the family is worth trusting. A sweep
-that recomputed `pieces::floor_facing` and compared it with itself would
-pass two thousand berths and mean nothing — which is a mistake this file
-has already made once (see `the_body_hangs_true`, below).
+that recomputed the backing rule (`cargo::default_turn`) and compared it
+with itself would pass two thousand berths and mean nothing — which is a
+mistake this file has already made once (see `the_body_hangs_true`,
+below).
 
 Its first pass found **every deckhead berth in the game**. A deck took
 the backing rule and a deckhead took one fixed turn, facing the front of
@@ -804,9 +805,18 @@ seam and facing it: the backing rule turned its back on a seam it stood
 *less* than half a cell from, so at half a cell it looked at the wall
 line itself. While every berth was a whole cell that threshold only ever
 met gaps of nothing or a cell, and it was a rounding allowance; now it is
-a rule, and it reads "half a cell or less" (`pieces::floor_facing`), so a
-body that faces a seam always keeps more than half a cell of deck in
-front of it.
+a rule, and it reads "half a cell or less" (`cargo::default_turn`, the
+sim's since *Cargo turns*), so a body that faces a seam always keeps more
+than half a cell of deck in front of it.
+
+Its first pass under *Cargo turns* (BAY.md) found six berths whose middle
+was not on the chart their corner was. A berth is a centre now, and a
+fitting scan's corner on the edge of one chart could put a body's middle
+on the next one over, planned there at the turn the first chart gives:
+a gilded idol stood on the edge of the deck facing the front wall, and a
+painting hung sideways on the starboard flank. A corner's berth is no
+berth when its centre lands off the corner's chart (`cargo::anchored`),
+so a scan asks its next corner instead.
 
 **What it deliberately does not ask** is the turn of a square-planned
 body in the middle of a deck. A crate there may face any of four ways and

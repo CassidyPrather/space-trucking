@@ -390,17 +390,25 @@ Every line is reversible; strike one by overruling it.
   sweep a factor; coarser starts to show as a visible step when a crate
   is nudged along a wall. It is the frontend's existing finest cut, so
   the two agree on what "the smallest move" is.
+
+  > Superseded by *A berth is quantised to a 256th of a cell* (below).
 - **Two volatile pieces need half a cell of clear air, corners
   included.** The grid's rule was "no shared edge"; with free placement a
   gap of one sixteenth would satisfy that, which makes the rule a
   formality. Half a cell is the smallest buffer that still reads as a
   gap from across the room.
+
+  > Superseded in part by *Volatile and light distances are Euclidean*
+  > (below): the half cell stands, measured the same way at every angle.
 - **Light reaches one cell, and corners count.** A lamp lights anything
   less than a cell away by Chebyshev gap and not wholly inside it. The
   grid's "orthogonal neighbours only" has no meaning once nothing sits
   on the grid: a lamp a sixteenth past a crate's corner is not darker
   than one a sixteenth past its edge. The rat fears a little more of the
   room than it did.
+
+  > Superseded in part by *Volatile and light distances are Euclidean*
+  > (below).
 - **A tall piece shadows the wall while it stands less than a cell from
   it.** The grid's rule was "touching the baseboard"; a wardrobe half a
   cell off the wall still hides what hangs behind it. A whole cell out
@@ -409,6 +417,9 @@ Every line is reversible; strike one by overruling it.
   edges first and neighbours' edges second. Enough to make flush (and so
   cryo) easy to hit without the piece visibly jumping; a neighbour never
   pulls a piece off the wall it was aimed at.
+
+  > Superseded by *The wall snap reaches an eighth of a cell* and *The
+  > neighbour snap is gone* (below).
 - **Every rule that asks "what tile is this piece on" reads the tile
   under its centre**, with a centre on a seam reading the cell above and
   to the left. The classes that refuse cargo (stock, threshold, fixture)
@@ -422,6 +433,9 @@ Every line is reversible; strike one by overruling it.
   preview's pass.
 - **No rotation.** A body's yaw still follows its chart. Free yaw is a
   likely follow-up and changes footprints, so it waits for the owner.
+
+  > Superseded by docs/BAY.md, *Cargo turns*: the owner decided it, and
+  > cargo turns at any angle on every surface.
 - **Shelves, deals, fluff and the save reader's room-local walks keep
   whole-cell anchors.** They set things out a tile at a time; only
   `first_fit` and `dress_fit` learned the flush-against-a-neighbour
@@ -441,12 +455,16 @@ Every line is reversible; strike one by overruling it.
 - **A body half a cell or less from a seam turns its back on it.** The
   backing rule's threshold was a rounding allowance on the grid; off it,
   a couch exactly half a cell from the front wall used to face the wall.
+
+  > Superseded in part by *Default facing is procedural only* (below):
+  > the threshold stands, in the sim, for what the game places.
 - **An old save or tape starts a new run.** This one was the owner's,
   not a call made without asking: "This is a scrappy prototype, save
   version invalidation isn't a concern yet. In fact, worth double
   checking we aren't carrying any weighty migration code and just start
   a new save." So the save reader takes exactly the header this build
-  writes (`STV20`) and the tape reader exactly its own (`RPL4`), and
+  writes (`STV20` then, `STV21` since cargo turned) and the tape reader
+  exactly its own (`RPL4` then, `RPL5`), and
   anything else is refused like an unreadable file, which the cabin
   answers with a fresh run. What went: the save's migration chain back
   to the console's `STV4` — its translations, re-seats and walks — and
@@ -464,3 +482,50 @@ Every line is reversible; strike one by overruling it.
   forwards/backwards compatibility during the prototyping phase"); older
   passages in these docs that promise an old save keeps loading are
   marked superseded by this line.
+- **A berth is quantised to a 256th of a cell** (`cargo::FINE = 256`,
+  about 2 mm). A sixteenth, 34 mm, is a step a VR hand can see, and the
+  owner asked for no overly aggressive snapping. Finer buys nothing a
+  hand can place, and the widest lane, 5,632 units, still fits a `u16`
+  with room to spare.
+- **A turn is a binary angle, 65,536 to the turn** (`cargo::Turn(u16)`,
+  0.0055°). It wraps for free, a quarter is a power of two so the
+  quarter turns are exact, and it is finer than any hand. The trig is a
+  Q30 Taylor series on one octant, chosen over a table or CORDIC because
+  it is the shortest integer code that lands within a hundred-millionth
+  of true with the quarters exact.
+- **Cryo reaches the hull within a sixteenth of a cell** (`HULL_TOUCH`,
+  inclusive). A hand is not exact, and a body a degree off square meets
+  a wall at one corner a hair before the other. The wall snap makes
+  flush easy anyway, so a deliberate placement never needs the allowance.
+- **Volatile and light distances are Euclidean.** Half a cell of clear
+  air between two volatile pieces, and less than a cell from a lamp to
+  what it lights. A Chebyshev gap is measured along the room's axes, and
+  a rule that changes when the pieces turn is the room's rule rather
+  than theirs.
+- **The wall snap reaches an eighth of a cell**, inclusive, nearer edge
+  first and a tie to the lower coordinate. The owner allowed "snap
+  placement to wall"; an eighth (32 mm) makes flush easy to hit without
+  a piece visibly jumping, where the grid's quarter cell was a jump.
+- **The neighbour snap is gone.** The owner asked for no overly
+  aggressive snapping, and a hand that set a crate a hair off its
+  neighbour meant the hair. Pieces still stand flush: touching is legal.
+- **Default facing is procedural only.** `cargo::default_turn` turns
+  what the game places itself — the starting board, shelves, salvage,
+  harvest, the exchange, the hopper, fluff budding, fixture boards — and
+  never a player's drop, which keeps the turn it was carried at. It is
+  the cabin's backing rule ported to integers unchanged, so the deckhead
+  keeps the rule the cabin gave it (a pendant on the front row backs onto
+  the front wall) rather than a flat `Turn(0)`: the gauntlet's
+  `berth-turned` family holds a pendant to facing the room.
+- **A fitting scan offers the default turn first, then a quarter turn on
+  for a footprint that is not square**, and never the other two quarters:
+  half a turn lays the very same ground, and the arbiter reads ground.
+  A piece is only turned onto its side when nothing aboard takes it
+  upright.
+- **A carry keeps the held piece's own turn until the controls land**,
+  and a piece taken out of a cubby comes out at `Turn(0)`, the one turn a
+  shelf has.
+- **The carry turns by 15° on the wheel, 1° on Ctrl + wheel, and 15° on
+  `Q`** — the convenient angles the owner offered, as a frontend offer on
+  input and never a rule. Recorded here with the units they need; they
+  land with the controls pass, which picks `Q`'s reverse.

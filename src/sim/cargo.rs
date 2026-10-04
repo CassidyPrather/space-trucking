@@ -1,9 +1,10 @@
 //! Cargo pieces: what they are, where they sit, and the stowage rules.
 //!
 //! A [`Piece`] is one draggable object. Its [`Loc`] says which room it
-//! stands in and where on that room's net, in sixteenths of a cell
-//! ([`FINE`]) — every berth in the game is a position on a room's net or
-//! a cubby inside a piece standing on one — and [`placement_check`] is
+//! stands in, where on that room's net, in 256ths of a cell ([`FINE`]),
+//! and how far it is turned on its chart ([`Turn`]) — every berth in the
+//! game is a position on a room's net or a cubby inside a piece standing
+//! on one — and [`placement_check`] is
 //! the single arbiter of whether a piece may sit there. The renderer and the drag logic both defer to it, so there is
 //! exactly one opinion about what fits, and a failure names the
 //! [`Violation`] so the frontend can flash the right icon.
@@ -211,7 +212,7 @@ impl Kind {
     /// A body has one shape and this is it — across the face it shows
     /// the room, deep away from whatever it sits against, tall up from
     /// it. Which two of the three a berth spends is the BERTH's business
-    /// ([`Kind::plan_on`]) and never the kind's: a wardrobe is one cell
+    /// ([`Kind::face_on`]) and never the kind's: a wardrobe is one cell
     /// of deck and two courses tall, and it is that whichever chart it
     /// finds itself on.
     ///
@@ -272,18 +273,17 @@ impl Kind {
 
     /// **The face a rig is drawn on**, `(across, tall)`: the kind's own
     /// upright frame, which no berth turns. A drawing is composed here
-    /// and a berth spins it; the cells it lands on are
-    /// [`Kind::plan_on`]'s answer, and on a flank the two are transposes
-    /// of one another.
+    /// and a berth spins it: the piece's own [`Turn`] about its chart's
+    /// normal, laid on the sheet by [`net_angle`].
     #[must_use]
     pub const fn upright(self) -> (u8, u8) {
         let (across, _, tall) = self.extent();
         (across, tall)
     }
 
-    /// **The net cells this kind covers on a chart of class `surf`** —
-    /// its footprint, stated in the SURFACE's own frame and read back
-    /// into the sheet's.
+    /// **The two of this kind's three extents a berth on a chart of
+    /// class `surf` spends**, `(across, span)`, in the BODY's own frame:
+    /// its footprint before anything turns it.
     ///
     /// Two readings, and the chart picks:
     ///
@@ -291,27 +291,26 @@ impl Kind {
     ///   the plan: across by deep. What is left over is the height, and
     ///   the height is not the deck's to spend ([`Kind::stature`]).
     /// - A chart a body hangs **against** spends the elevation: across
-    ///   by tall. Which way round those land on the sheet depends on
-    ///   the wall, because the net is one sheet of paper folded into a
-    ///   box and its two side flaps fold out SIDEWAYS: a flank's courses
-    ///   climb the sheet's **x** where the aft and front walls' climb
-    ///   its **y**. So a flank takes the elevation transposed.
+    ///   by tall, and the wall fixes the depth.
     ///
-    /// That transposition is the whole of the old athwart rule, done
-    /// properly. A footprint used to be declared in the sheet's frame,
-    /// which made the same two cells mean "side by side" on one wall
-    /// and "one above the other" on another — so a window carried one
-    /// wall over came out a quarter turn from the window that left, and
-    /// the arbiter's only answer was to refuse the wall. A body keeps
-    /// its shape now and the CELLS turn under it, which is what was
-    /// turning all along.
+    /// Which way round those land on the sheet is not the kind's to say,
+    /// and it is not this function's either. The net is one sheet of
+    /// paper folded into a box and its two side flaps fold out SIDEWAYS:
+    /// a flank's courses climb the sheet's **x** where the aft and front
+    /// walls' climb its **y**. That used to be a transposition written
+    /// here, and before that it was the athwart rule, which refused the
+    /// wall: a footprint declared in the sheet's frame meant "side by
+    /// side" on one wall and "one above the other" on another, so a
+    /// window carried one wall over came out a quarter turn from the
+    /// window that left. A body keeps its shape, and [`net_angle`] is the
+    /// one place that lays it on the sheet, at whatever turn it has
+    /// (docs/BAY.md, "Cargo turns").
     #[must_use]
-    pub const fn plan_on(self, surf: Surf) -> (u8, u8) {
+    pub const fn face_on(self, surf: Surf) -> (u8, u8) {
         let (across, deep, tall) = self.extent();
         match surf {
             Surf::Floor | Surf::Ceiling => (across, deep),
-            Surf::Aft | Surf::Front => (across, tall),
-            Surf::Port | Surf::Starboard => (tall, across),
+            Surf::Aft | Surf::Front | Surf::Port | Surf::Starboard => (across, tall),
         }
     }
 
@@ -449,25 +448,38 @@ impl Kind {
 /// inside a piece standing on one. Cubbies need no room qualifier — a
 /// cabinet knows what room it stands in.
 ///
-/// **A position is not a cell** (docs/BAY.md, "The grid comes out"). `x`
-/// and `y` are the footprint's top-left corner in [`FINE`] units of the
-/// room's net — net cell `(cx, cy)` spans `cx * FINE .. (cx + 1) * FINE`
-/// — so a piece may stand anywhere a sixteenth of a cell can name. The
+/// **A position is not a cell, and a body has a turn** (docs/BAY.md,
+/// "The grid comes out" and "Cargo turns"). `x` and `y` are the
+/// footprint's CENTRE in [`FINE`] units of the room's net — net cell
+/// `(cx, cy)` spans `cx * FINE .. (cx + 1) * FINE` — and `turn` is how
+/// far the body is turned about its chart's normal ([`Turn`]). The
+/// centre is the anchor because it is the one point of a footprint no
+/// turn moves: a top-left corner is somewhere else at every angle. The
 /// footprint itself is still whole cells in size ([`Foot`]).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Loc {
-    /// Standing in a room: the footprint's top-left corner, in fine
-    /// units of the room's net.
-    Hold { room: RoomId, x: u16, y: u16 },
+    /// Standing in a room: the footprint's centre, in fine units of the
+    /// room's net, and the body's turn on its chart.
+    Hold {
+        room: RoomId,
+        x: u16,
+        y: u16,
+        turn: Turn,
+    },
     /// Inside a cabinet's cubby. The berth exists only while that cabinet
     /// piece does: an occupied cabinet cannot be lifted, so the cubby can
     /// never find itself without a home.
     Stow { cabinet: u32, slot: u8 },
-    /// Laid into a room with its top-left corner at `(x, y)`, in fine
-    /// units: the dressing layer. Coexists with occupancy over the same
-    /// ground (a couch stands on a laid rug); no two dressings overlap
+    /// Laid into a room centred on `(x, y)`, in fine units, at `turn`:
+    /// the dressing layer. Coexists with occupancy over the same ground
+    /// (a couch stands on a laid rug); no two dressings overlap
     /// ([`dressing_check`]).
-    Laid { room: RoomId, x: u16, y: u16 },
+    Laid {
+        room: RoomId,
+        x: u16,
+        y: u16,
+        turn: Turn,
+    },
 }
 
 impl Loc {
@@ -480,6 +492,68 @@ impl Loc {
                 .iter()
                 .find(|piece| piece.id == cabinet)
                 .and_then(|host| host.loc.room(pieces)),
+        }
+    }
+
+    /// The room position this berth names, whichever layer it lies in;
+    /// `None` for a cubby, which has no ground of its own.
+    #[must_use]
+    pub const fn spot(self) -> Option<Spot> {
+        match self {
+            Self::Hold { room, x, y, turn } | Self::Laid { room, x, y, turn } => {
+                Some(Spot { room, x, y, turn })
+            }
+            Self::Stow { .. } => None,
+        }
+    }
+}
+
+/// **A position in a room**: the room, a footprint's centre on its net in
+/// [`FINE`] units, and the body's [`Turn`] on its chart.
+///
+/// Everything a berth in a room says except which layer it lies in — what
+/// the two arbiters ([`placement_check`], [`dressing_check`]) are asked
+/// about, and what the fitting scans ([`first_fit`], [`dress_fit`]) and
+/// the drop answer with.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Spot {
+    pub room: RoomId,
+    pub x: u16,
+    pub y: u16,
+    pub turn: Turn,
+}
+
+impl Spot {
+    /// This spot as a berth standing in its room.
+    #[must_use]
+    pub const fn hold(self) -> Loc {
+        Loc::Hold {
+            room: self.room,
+            x: self.x,
+            y: self.y,
+            turn: self.turn,
+        }
+    }
+
+    /// This spot as a dressing laid into its room.
+    #[must_use]
+    pub const fn laid(self) -> Loc {
+        Loc::Laid {
+            room: self.room,
+            x: self.x,
+            y: self.y,
+            turn: self.turn,
+        }
+    }
+
+    /// The berth `kind` takes here: laid if it is a covering, standing
+    /// otherwise — the one layer each kind has.
+    #[must_use]
+    pub const fn berth(self, kind: Kind) -> Loc {
+        if kind.covering() {
+            self.laid()
+        } else {
+            self.hold()
         }
     }
 }
@@ -505,44 +579,26 @@ pub const fn stowable(kind: Kind) -> bool {
         && !matches!(kind.tag(), Some(Tag::Cryo | Tag::Suspicious))
 }
 
-/// **The net cells `kind` covers anchored at `(x, y)` of `host`'s net.**
-///
-/// The one place a berth turns into cells. A footprint is a property of
-/// the kind and the CHART it lands on together ([`Kind::plan_on`]) —
-/// a plan on the deck, an elevation on a wall, that elevation transposed
-/// down a flank — so nothing may answer "which cells" from the kind
-/// alone, and everything that used to (the arbiter, the rects the
-/// renderer grabs pieces by, the rat's idea of what is underfoot) comes
-/// through here.
-///
-/// `None` where `(x, y)` is not a cell of that net at all: a hole, a
-/// fold, a fixture's own socket. A berth nobody can name has no
-/// footprint, and the callers that can be handed one say so.
-#[must_use]
-pub const fn plan(host: RoomKind, kind: Kind, x: u8, y: u8) -> Option<(u8, u8)> {
-    match host.surface_of(x, y) {
-        Some(surf) => Some(kind.plan_on(surf)),
-        None => None,
-    }
-}
-
 /// **Sub-units per cell**: the quantum a berth is positioned in.
 ///
-/// A sixteenth of a cell — about 34 mm in the cabin, which is also the
-/// frontend's finest cut of the world — so a player never sees it, and
-/// whole numbers all the way down, so no floating point ever reaches
-/// the arbiter and a lockstep crew agrees to the unit.
-pub const FINE: u16 = 16;
+/// A 256th of a cell, about 2 mm in the cabin. It was a sixteenth, 34 mm,
+/// which is a grid a hand can see: cargo is placed by somebody grabbing
+/// and moving it, eventually in VR, and the owner wants no snapping a
+/// hand can feel (docs/BAY.md, "Cargo turns"). Whole numbers all the way
+/// down, so no floating point ever reaches the arbiter and a lockstep
+/// crew agrees to the unit. The widest lane is 22 cells, 5,632 units, so
+/// a `u16` holds every centre a net has with room to spare.
+pub const FINE: u16 = 256;
 
-/// **The sixteenths a sweep tries on each axis** of every whole-cell
+/// **The fine offsets a sweep tries on each axis** of every whole-cell
 /// anchor, when a test means "every berth".
 ///
-/// A berth can be any of 256 positions per cell, and a sweep over all of
-/// them is 256 times the runtime for very little more coverage, so the
-/// sweeps share one fixed sample instead: on the grid, a sixteenth off
-/// it either way, and either side of the half. Deterministic, so a
-/// failure names the same berth every run.
-pub const FRACTIONS: [u16; 5] = [0, 1, 7, 8, 15];
+/// A berth can be any of 65,536 positions per cell, and a sweep over all
+/// of them buys very little a sample does not, so the sweeps share one
+/// fixed sample instead: on the grid, the finest unit past it either
+/// way, and either side of the half. Deterministic, so a failure names
+/// the same berth every run.
+pub const FRACTIONS: [u16; 5] = [0, 1, FINE / 2 - 1, FINE / 2, FINE - 1];
 
 /// The fine coordinate of cell `cell`'s top-left edge.
 #[must_use]
@@ -562,39 +618,449 @@ pub const fn coarse(fine: u16) -> u8 {
     }
 }
 
-/// **A footprint as ground**: a half-open rect on a room's net, in
+/// The cell holding signed fine coordinate `fine`: [`coarse`] for the
+/// geometry, whose corners may stand a hair off the net's own sheet.
+/// Anything left of the sheet reads the sheet's first cell.
+const fn cell_of(fine: i32) -> u8 {
+    if fine <= 0 {
+        0
+    } else {
+        let fine = fine.unsigned_abs();
+        coarse(if fine > u16::MAX as u32 {
+            u16::MAX
+        } else {
+            fine as u16
+        })
+    }
+}
+
+/// **A turn about a chart's normal**: a binary angle, 65,536 to the full
+/// turn (0.0055°), wrapping where a `u16` wraps.
+///
+/// Positive is counter-clockwise **as seen by a person in the room looking
+/// at the surface** — down at the deck, up at the deckhead, straight at a
+/// wall. `Turn(0)` is the chart's upright frame: on a wall up is up, and
+/// on the deck and the deckhead the body faces the room's front. Which
+/// way any of that lies on the net is [`net_angle`]'s to say, and nobody
+/// else's.
+///
+/// Any angle is a berth (docs/BAY.md, "Cargo turns"). The unit is one
+/// nobody can see, and nothing in the sim snaps a turn: a convenient
+/// angle is a frontend's offer on input, never something a rule depends
+/// on. It is a whole number for the reason a position is ([`FINE`]): the
+/// arbiter decides with integers, so a crew in lockstep agrees on every
+/// ruling at every angle.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct Turn(pub u16);
+
+impl Turn {
+    /// The chart's own upright frame.
+    pub const ZERO: Self = Self(0);
+    /// A quarter turn, counter-clockwise as seen from the room.
+    pub const QUARTER: Self = Self(1 << 14);
+    /// Half a turn.
+    pub const HALF: Self = Self(1 << 15);
+
+    /// `n` quarter turns, wrapping.
+    #[must_use]
+    pub const fn quarters(n: u8) -> Self {
+        Self((n as u16 % 4) << 14)
+    }
+
+    /// Whether this is a whole number of quarter turns: a turn that lays
+    /// a footprint along the net's own axes, where the trig is exact and
+    /// a footprint is exactly the rectangle the grid always drew.
+    #[must_use]
+    pub const fn square(self) -> bool {
+        self.0 & (Self::QUARTER.0 - 1) == 0
+    }
+
+    /// The cosine, in [`TRIG_ONE`] units.
+    #[must_use]
+    pub const fn cos(self) -> i64 {
+        let r = (self.0 & (Self::QUARTER.0 - 1)) as i64;
+        match self.0 >> 14 {
+            0 => cos_quadrant(r),
+            1 => -sin_quadrant(r),
+            2 => -cos_quadrant(r),
+            _ => sin_quadrant(r),
+        }
+    }
+
+    /// The sine, in [`TRIG_ONE`] units.
+    #[must_use]
+    pub const fn sin(self) -> i64 {
+        let r = (self.0 & (Self::QUARTER.0 - 1)) as i64;
+        match self.0 >> 14 {
+            0 => sin_quadrant(r),
+            1 => cos_quadrant(r),
+            2 => -sin_quadrant(r),
+            _ => -cos_quadrant(r),
+        }
+    }
+
+    /// This turn in radians, counter-clockwise as seen from the room —
+    /// for a frontend posing a body, never for a rule. The one
+    /// multiplication is basic arithmetic, and no rule reads the answer.
+    #[must_use]
+    pub fn radians(self) -> f32 {
+        f32::from(self.0) * (std::f32::consts::TAU / 65_536.0)
+    }
+}
+
+impl std::ops::Add for Turn {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self(self.0.wrapping_add(other.0))
+    }
+}
+
+impl std::ops::Sub for Turn {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Self(self.0.wrapping_sub(other.0))
+    }
+}
+
+/// **The fixed-point one [`Turn::cos`] and [`Turn::sin`] answer in**:
+/// 2^30, so a cosine is good to about a billionth and its product with
+/// any coordinate a net has fits an `i64` with room to spare.
+pub const TRIG_ONE: i64 = 1 << 30;
+
+/// π in [`TRIG_ONE`] units, rounded: the one transcendental number the
+/// trig is built from, written down rather than computed.
+const PI_FIX: i64 = 3_373_259_426;
+
+/// A product of two [`TRIG_ONE`]-scaled magnitudes, rounded back to one
+/// scale. Both are non-negative wherever it is used.
+const fn q30(a: i64, b: i64) -> i64 {
+    (a * b + TRIG_ONE / 2) >> 30
+}
+
+/// The first octant's sine and cosine, `x` in `0..=8192` sixty-five
+/// thousandths of a turn, by their Taylor series to the eleventh and
+/// twelfth powers in Horner form — integer multiplies and divides, each
+/// rounded the one way, so every machine computes the same bits. On an
+/// octant the dropped terms are below a part in a hundred billion.
+const fn octant(x: i64) -> (i64, i64) {
+    // The angle in radians, TRIG_ONE-scaled: x / 32768 of π.
+    let t = (x * PI_FIX + (1 << 14)) >> 15;
+    let t2 = q30(t, t);
+    let mut sin = TRIG_ONE;
+    let mut k = 11;
+    while k > 1 {
+        sin = TRIG_ONE - (q30(t2, sin) + k * (k - 1) / 2) / (k * (k - 1));
+        k -= 2;
+    }
+    let mut cos = TRIG_ONE;
+    let mut k = 12;
+    while k > 0 {
+        cos = TRIG_ONE - (q30(t2, cos) + k * (k - 1) / 2) / (k * (k - 1));
+        k -= 2;
+    }
+    (q30(t, sin), cos)
+}
+
+/// The sine of `r` in `0..=16384` (one quadrant). Past the octant it is
+/// the cosine of the complement, so the two halves of a quadrant are one
+/// polynomial read from either end and the quarter turns come out exact:
+/// zero is zero and a quarter is [`TRIG_ONE`].
+const fn sin_quadrant(r: i64) -> i64 {
+    if r <= 8192 {
+        octant(r).0
+    } else {
+        octant(16_384 - r).1
+    }
+}
+
+/// The cosine of `r` in `0..=16384`: the sine of its complement, which
+/// is what makes `cos(θ) == sin(quarter − θ)` an identity in the bits and
+/// not just in the arithmetic.
+const fn cos_quadrant(r: i64) -> i64 {
+    sin_quadrant(16_384 - r)
+}
+
+/// A product with a [`TRIG_ONE`]-scaled factor, back to whole units:
+/// the nearest, halves away from zero, so a footprint turned half a turn
+/// rounds to exactly the negation of the unturned one.
+const fn fix(v: i64) -> i32 {
+    let half = TRIG_ONE / 2;
+    let whole = if v >= 0 {
+        (v + half) / TRIG_ONE
+    } else {
+        -((half - v) / TRIG_ONE)
+    };
+    whole as i32
+}
+
+/// **The one mapping from chart to net**: the net angle a body berthed on
+/// chart `surf` at `turn` lays its own across axis at.
+///
+/// The net is the room unfolded and seen from OUTSIDE, so a chart's own
+/// axes are not the room's: a chart's +x can read mirrored from inside,
+/// the front chart unfolds downward, and the flanks' courses climb the
+/// sheet's x. Everything that needs a footprint asks here — [`Foot::of`],
+/// and through it the arbiter, the drop, the light and the rat — and the
+/// frontend poses bodies with the same answer, so a drawn body and the
+/// ground the sim gave it are one claim (`cabin::pieces::site_on`).
+///
+/// A net angle is measured the sheet's way: from the sheet's +x toward
+/// its +y (which runs DOWN the sheet), in [`Turn`] units. The answer is a
+/// base angle per chart plus the turn:
+///
+/// - **The base** is where the across axis of an upright body lies on
+///   that chart's sheet — a viewer's right as they face the surface. On
+///   the aft wall that is the sheet's −x (the wall is seen from behind
+///   on the sheet); on the front wall, which unfolds downward off the
+///   deck's far edge, its +x; on the port flank its +y and on the
+///   starboard flank its −y, because the flanks fold out sideways. On
+///   the deck an upright body faces the front, which on the sheet is +y,
+///   so its across axis lies along −x; under the deckhead, which folds on
+///   past the starboard cornice, along +x.
+/// - **The handedness** is the same on every chart, and that is why the
+///   turn is simply added. The net is one sheet unfolded from one box:
+///   every chart shows the sheet the same side out, and the room's inside
+///   is the other side of every one of them. Turning from a chart's +x
+///   toward its +y is therefore counter-clockwise as seen from inside the
+///   room on all six alike — which is the way a [`Turn`] counts — and no
+///   chart flips it. (The cabin's charts say the same in 3D: all six
+///   normals point out of the room together, `cabin::surface::Station::
+///   chart_flipped`.)
+#[must_use]
+pub const fn net_angle(surf: Surf, turn: Turn) -> Turn {
+    let base = match surf {
+        Surf::Front | Surf::Ceiling => Turn::ZERO,
+        Surf::Port => Turn::QUARTER,
+        Surf::Aft | Surf::Floor => Turn::HALF,
+        Surf::Starboard => Turn::quarters(3),
+    };
+    Turn(base.0.wrapping_add(turn.0))
+}
+
+/// Half of `cells` cells, in fine units: a footprint's half-extent.
+const fn half_of(cells: u8) -> i32 {
+    cells as i32 * FINE as i32 / 2
+}
+
+/// **An axis-aligned box on a net**, half-open, in [`FINE`] units.
+///
+/// What a footprint spans on the sheet's own axes ([`Foot::aabb`]): the
+/// rect a renderer draws over, a drop clamps into a chart, and the cells
+/// a band of wall shadows. For a footprint at a quarter turn it is the
+/// footprint exactly; at any other angle it is the box round it, and
+/// nothing that asks which ground a piece covers asks this.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Aabb {
+    pub x0: i32,
+    pub y0: i32,
+    pub x1: i32,
+    pub y1: i32,
+}
+
+impl Aabb {
+    /// Width, in fine units.
+    #[must_use]
+    pub const fn w(self) -> i32 {
+        self.x1 - self.x0
+    }
+
+    /// Height, in fine units.
+    #[must_use]
+    pub const fn h(self) -> i32 {
+        self.y1 - self.y0
+    }
+
+    /// Every net cell the half-open box intersects, row-major.
+    pub fn cells(self) -> impl Iterator<Item = (u8, u8)> + use<> {
+        let (x0, x1) = (cell_of(self.x0), cell_of(self.x1 - 1));
+        let (y0, y1) = (cell_of(self.y0), cell_of(self.y1 - 1));
+        (y0..=y1).flat_map(move |cy| (x0..=x1).map(move |cx| (cx, cy)))
+    }
+
+    /// The box as a footprint at the sheet's own lie, for asking the
+    /// footprint questions of a band of wall or a cell. Every box the sim
+    /// builds has even sides, so its centre is a whole unit.
+    #[must_use]
+    pub const fn foot(self) -> Foot {
+        Foot::new(
+            (self.x0 + self.x1) / 2,
+            (self.y0 + self.y1) / 2,
+            (self.w() / 2, self.h() / 2),
+            Turn::ZERO,
+        )
+    }
+}
+
+/// **A footprint as ground**: an oriented rectangle on a room's net, in
 /// [`FINE`] units.
 ///
-/// The one place the rect arithmetic lives, so nothing that asks what a
-/// piece covers, where its middle is, or how far it stands from another
-/// re-derives it. A footprint is still whole cells in size — `plan * FINE`
-/// on each axis ([`Kind::plan_on`]) — and only its position is free.
-/// Which chart it is planned against is the chart of the cell holding
-/// its top-left fine point ([`Foot::chart`]); the arbiter insists it lie
-/// wholly in that chart anyway.
+/// The one place the geometry lives, so nothing that asks what a piece
+/// covers, where its middle is, or how near it stands to another
+/// re-derives it. A footprint is a centre, two half-extents in the body's
+/// own frame — whole cells in size, [`Kind::face_on`] — and the net angle
+/// its across axis lies at ([`net_angle`]).
+///
+/// Its two half-axis vectors are rounded to whole units ONCE, the one way
+/// ([`TRIG_ONE`]), and its corners are the centre plus or minus each of
+/// them: everything after that is exact integer geometry on those
+/// corners, products in `i64` and `i128` wherever they need it. At a
+/// quarter turn there is nothing to round — the trig is exact there — so
+/// an axis-aligned footprint is exactly the rectangle the grid always
+/// drew, and at any other angle its corners are within a unit of true.
+///
+/// **Its own frame**: `x` across the body, its right as a person facing
+/// it sees it; `y` a quarter turn short of that, which is down its face
+/// on a wall, and the same quarter laid flat on a deck or a deckhead.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Foot {
-    pub x: u16,
-    pub y: u16,
-    pub w: u16,
-    pub h: u16,
+    /// The centre, in fine units of the net.
+    pub x: i32,
+    pub y: i32,
+    /// Half the footprint across its own frame and down it, fine units.
+    pub half: (i32, i32),
+    /// The net angle its across axis lies at.
+    pub angle: Turn,
+    /// The half-axis vectors, rounded once: along `angle` and a quarter
+    /// short of it.
+    across: (i32, i32),
+    down: (i32, i32),
+}
+
+/// `a · b`, wide.
+const fn dot(a: (i64, i64), b: (i64, i64)) -> i64 {
+    a.0 * b.0 + a.1 * b.1
+}
+
+/// `a × b`, wide: the signed area the two span.
+const fn cross(a: (i64, i64), b: (i64, i64)) -> i64 {
+    a.0 * b.1 - a.1 * b.0
+}
+
+/// A pair, widened.
+const fn wide((x, y): (i32, i32)) -> (i64, i64) {
+    (x as i64, y as i64)
+}
+
+/// The squared length of the shortest way from `p` to the segment
+/// `q0 .. q1`, against `r` squared: whether it is under `r`, exactly.
+/// The perpendicular case compares a cross product squared with `r²`
+/// times the segment's length squared, so nothing is ever divided.
+fn segment_within(point: (i64, i64), from: (i64, i64), to: (i64, i64), reach: i64) -> bool {
+    let edge = (to.0 - from.0, to.1 - from.1);
+    let off = (point.0 - from.0, point.1 - from.1);
+    let along = dot(off, edge);
+    let length = dot(edge, edge);
+    let limit = i128::from(reach) * i128::from(reach);
+    if along <= 0 {
+        i128::from(dot(off, off)) < limit
+    } else if along >= length {
+        let past = (point.0 - to.0, point.1 - to.1);
+        i128::from(dot(past, past)) < limit
+    } else {
+        let side = i128::from(cross(edge, off));
+        side * side < limit * i128::from(length)
+    }
+}
+
+/// **Where a point lies in a footprint's own frame**, exactly
+/// ([`Foot::frame`]).
+///
+/// Its two coordinates along the footprint's own axes, as fractions of
+/// the half-extents: `across / whole` and `down / whole`, −1 at the
+/// footprint's left edge and its top and +1 at its right and its foot,
+/// as a person facing it sees them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Framed {
+    across: i128,
+    down: i128,
+    whole: i128,
+}
+
+impl Framed {
+    /// **Whether the point is on the footprint**: half-open, its left
+    /// edge and its top in and its right edge and its foot out, so two
+    /// footprints standing flush never both answer for the seam between
+    /// them.
+    #[must_use]
+    pub const fn inside(self) -> bool {
+        -self.whole <= self.across
+            && self.across < self.whole
+            && -self.whole <= self.down
+            && self.down < self.whole
+    }
+
+    /// Which quarter of the footprint the point is in, row-major from its
+    /// own top left — the numbering a cabinet's cubby rack is declared in
+    /// ([`CABINET_SLOTS`]).
+    #[must_use]
+    pub const fn quarter(self) -> u8 {
+        (self.across >= 0) as u8 + 2 * (self.down >= 0) as u8
+    }
+
+    /// The point as fractions of the footprint's own face, `(0, 0)` at its
+    /// top left and `(1, 1)` at its bottom right — for a frontend
+    /// measuring a sub-rect it declared in the piece's own units (a carry
+    /// handle) against the point, which no rule reads.
+    #[must_use]
+    pub fn fractions(self) -> (f32, f32) {
+        let whole = self.whole as f64;
+        (
+            f64::midpoint(self.across as f64 / whole, 1.0) as f32,
+            f64::midpoint(self.down as f64 / whole, 1.0) as f32,
+        )
+    }
 }
 
 impl Foot {
-    /// The footprint `kind` takes with its top-left corner at fine
-    /// `(x, y)` of `host`'s net, or `None` where that corner is on no
-    /// chart at all.
+    /// The footprint centred on fine `(x, y)` with half-extents `half` in
+    /// its own frame and its across axis at net angle `angle`.
     #[must_use]
-    pub const fn of(host: RoomKind, kind: Kind, x: u16, y: u16) -> Option<Self> {
-        match plan(host, kind, coarse(x), coarse(y)) {
-            Some((w, h)) => Some(Self {
-                x,
-                y,
-                w: fine(w),
-                h: fine(h),
-            }),
+    pub const fn new(x: i32, y: i32, half: (i32, i32), angle: Turn) -> Self {
+        let (cos, sin) = (angle.cos(), angle.sin());
+        let (hw, hh) = (half.0 as i64, half.1 as i64);
+        Self {
+            x,
+            y,
+            half,
+            angle,
+            across: (fix(hw * cos), fix(hw * sin)),
+            down: (fix(hh * sin), fix(-hh * cos)),
+        }
+    }
+
+    /// **The footprint `kind` takes centred on fine `(x, y)` of `host`'s
+    /// net at `turn`**, or `None` where that centre is on no chart.
+    ///
+    /// The chart is the one under the centre ([`Foot::centre_cell`]), and
+    /// it decides both what the footprint spends ([`Kind::face_on`]) and
+    /// which way it lies on the sheet ([`net_angle`]): a wardrobe covers
+    /// one cell of deck or two courses of wall, and which it is doing is
+    /// the chart's answer, not the kind's.
+    #[must_use]
+    pub const fn of(host: RoomKind, kind: Kind, x: u16, y: u16, turn: Turn) -> Option<Self> {
+        let (cx, cy) = (cell_of(x as i32 - 1), cell_of(y as i32 - 1));
+        match host.surface_of(cx, cy) {
+            Some(surf) => Some(Self::planned(kind, surf, (x as i32, y as i32), turn)),
             None => None,
         }
+    }
+
+    /// The footprint `kind` takes on a chart of class `surf`, centred on
+    /// fine `centre` at `turn` — [`Foot::of`] with the chart already
+    /// named, for a caller that has one in hand (the drop, which plans a
+    /// carry against the chart under the pointer before it knows where
+    /// the centre will settle).
+    #[must_use]
+    pub const fn planned(kind: Kind, surf: Surf, centre: (i32, i32), turn: Turn) -> Self {
+        let (across, span) = kind.face_on(surf);
+        Self::new(
+            centre.0,
+            centre.1,
+            (half_of(across), half_of(span)),
+            net_angle(surf, turn),
+        )
     }
 
     /// Where `piece` stands, if it stands in a room: its room and its
@@ -602,116 +1068,232 @@ impl Foot {
     /// room's net covers nothing.
     #[must_use]
     pub fn at(rooms: &Rooms, piece: &Piece) -> Option<(RoomId, Self)> {
-        match piece.loc {
-            Loc::Hold { room, x, y } | Loc::Laid { room, x, y } => {
-                Some((room, Self::of(rooms.kind(room)?, piece.kind, x, y)?))
-            }
-            Loc::Stow { .. } => None,
-        }
+        let spot = piece.loc.spot()?;
+        let host = rooms.kind(spot.room)?;
+        Some((
+            spot.room,
+            Self::of(host, piece.kind, spot.x, spot.y, spot.turn)?,
+        ))
     }
 
     /// Net cell `(x, y)` as a footprint: what a question about one cell
     /// (the rat's, the light's) asks with.
     #[must_use]
     pub const fn cell(x: u8, y: u8) -> Self {
-        Self {
-            x: fine(x),
-            y: fine(y),
-            w: FINE,
-            h: FINE,
+        let half = FINE as i32 / 2;
+        Self::new(
+            fine(x) as i32 + half,
+            fine(y) as i32 + half,
+            (half, half),
+            Turn::ZERO,
+        )
+    }
+
+    /// The four corners, in order round the footprint.
+    #[must_use]
+    pub const fn corners(self) -> [(i32, i32); 4] {
+        let (a, b) = (self.across, self.down);
+        [
+            (self.x + a.0 + b.0, self.y + a.1 + b.1),
+            (self.x - a.0 + b.0, self.y - a.1 + b.1),
+            (self.x - a.0 - b.0, self.y - a.1 - b.1),
+            (self.x + a.0 - b.0, self.y + a.1 - b.1),
+        ]
+    }
+
+    /// The box round the footprint on the sheet's own axes. Exactly the
+    /// footprint at a quarter turn.
+    #[must_use]
+    pub const fn aabb(self) -> Aabb {
+        let ex = self.across.0.abs() + self.down.0.abs();
+        let ey = self.across.1.abs() + self.down.1.abs();
+        Aabb {
+            x0: self.x - ex,
+            y0: self.y - ey,
+            x1: self.x + ex,
+            y1: self.y + ey,
         }
-    }
-
-    /// The fine coordinate one past the right edge.
-    #[must_use]
-    pub const fn right(self) -> u16 {
-        self.x + self.w
-    }
-
-    /// The fine coordinate one past the bottom edge.
-    #[must_use]
-    pub const fn bottom(self) -> u16 {
-        self.y + self.h
-    }
-
-    /// The chart this footprint is planned against: the one holding its
-    /// top-left fine point.
-    #[must_use]
-    pub const fn chart(self, host: RoomKind) -> Option<Surf> {
-        host.surface_of(coarse(self.x), coarse(self.y))
-    }
-
-    /// Every net cell the half-open rect intersects, row-major. A
-    /// footprint that sits a sixteenth off the grid covers a row and a
-    /// column more than its size, because it is standing on them.
-    pub fn cells(self) -> impl Iterator<Item = (u8, u8)> + use<> {
-        let (x0, x1) = (coarse(self.x), coarse(self.right() - 1));
-        let (y0, y1) = (coarse(self.y), coarse(self.bottom() - 1));
-        (y0..=y1).flat_map(move |cy| (x0..=x1).map(move |cx| (cx, cy)))
     }
 
     /// **The cell under the footprint's centre**: the one every rule
     /// that asks "what tile does this piece stand on" reads.
     ///
-    /// Exactly, the cell holding the fine unit just short of the centre
-    /// on each axis, so a centre lying on a seam reads the cell above
-    /// and to the left of it. That tie-break is chosen for what it
-    /// keeps: at any whole-cell anchor, every kind the game has (none is
-    /// wider or taller than two cells) reads its ANCHOR cell, which is
-    /// the cell the grid's rules always read.
+    /// Exactly, the cell holding the fine unit just short of the centre on
+    /// each axis, so a centre lying on a seam reads the cell above and to
+    /// the left of it. That tie-break is chosen for what it keeps: at any
+    /// whole-cell berth, every kind the game has (none is wider or taller
+    /// than two cells) reads the cell its footprint's top-left corner is
+    /// in, which is the cell the grid's rules always read.
     #[must_use]
-    pub const fn centre(self) -> (u8, u8) {
-        (
-            coarse(self.x + (self.w / 2).saturating_sub(1)),
-            coarse(self.y + (self.h / 2).saturating_sub(1)),
-        )
+    pub const fn centre_cell(self) -> (u8, u8) {
+        (cell_of(self.x - 1), cell_of(self.y - 1))
     }
 
-    /// Whether the two rects share any ground. Half-open, so two
-    /// footprints touching along an edge do not overlap: flush is legal.
+    /// The chart this footprint is planned against: the one under its
+    /// centre. The arbiter insists it lie wholly in that chart anyway.
     #[must_use]
-    pub const fn overlaps(self, other: Self) -> bool {
-        self.x < other.right()
-            && other.x < self.right()
-            && self.y < other.bottom()
-            && other.y < self.bottom()
+    pub const fn chart(self, host: RoomKind) -> Option<Surf> {
+        let (cx, cy) = self.centre_cell();
+        host.surface_of(cx, cy)
     }
 
-    /// Whether `other` lies wholly inside this rect.
-    #[must_use]
-    pub const fn contains(self, other: Self) -> bool {
-        other.x >= self.x
-            && other.y >= self.y
-            && other.right() <= self.right()
-            && other.bottom() <= self.bottom()
+    /// Every net cell whose square the footprint's INTERIOR intersects,
+    /// row-major. A footprint a unit off the grid covers a row and a
+    /// column more than its size, because it is standing on them; a
+    /// corner merely touching a cell does not stand on it.
+    pub fn cells(self) -> impl Iterator<Item = (u8, u8)> + use<> {
+        let exact = self.angle.square();
+        self.aabb()
+            .cells()
+            .filter(move |&(cx, cy)| exact || self.overlaps(Self::cell(cx, cy)))
     }
 
-    /// The **Chebyshev gap** between two rects, in fine units: the
-    /// larger of the clear air between them across and down. Zero when
-    /// they touch, corner to corner included, or overlap.
+    /// The footprint's two edge normals: each half-axis turned a quarter.
+    const fn normals(self) -> [(i64, i64); 2] {
+        [
+            (-(self.across.1 as i64), self.across.0 as i64),
+            (-(self.down.1 as i64), self.down.0 as i64),
+        ]
+    }
+
+    /// How far the footprint reaches either side of its centre along
+    /// `n`, in units of `n`'s own length.
+    const fn reach(self, n: (i64, i64)) -> i64 {
+        dot(wide(self.across), n).abs() + dot(wide(self.down), n).abs()
+    }
+
+    /// The separating-axis reading both overlap questions share: on each
+    /// edge normal of either footprint, how far apart the two centres lie
+    /// against how far the two reach. `Less` on every axis is ground the
+    /// two share; `Equal` at worst is two footprints touching; `Greater`
+    /// on any axis is daylight between them.
+    fn worst_axis(self, other: Self) -> std::cmp::Ordering {
+        let apart = (i64::from(other.x - self.x), i64::from(other.y - self.y));
+        self.normals()
+            .into_iter()
+            .chain(other.normals())
+            .map(|n| dot(apart, n).abs().cmp(&(self.reach(n) + other.reach(n))))
+            .max()
+            .unwrap_or(std::cmp::Ordering::Less)
+    }
+
+    /// **Whether the two footprints share ground.** Touching is legal —
+    /// two pieces may stand flush along an edge or corner to corner at any
+    /// angle — and any intersection of positive area is not.
     #[must_use]
-    pub const fn gap(self, other: Self) -> u16 {
-        let across = if other.x >= self.right() {
-            other.x - self.right()
-        } else if self.x >= other.right() {
-            self.x - other.right()
-        } else {
-            0
+    pub fn overlaps(self, other: Self) -> bool {
+        self.worst_axis(other) == std::cmp::Ordering::Less
+    }
+
+    /// Whether the point `p` lies on the footprint, edges included.
+    #[must_use]
+    pub const fn contains(self, p: (i32, i32)) -> bool {
+        let d = (p.0 as i64 - self.x as i64, p.1 as i64 - self.y as i64);
+        let whole = cross(wide(self.across), wide(self.down)).abs();
+        cross(d, wide(self.down)).abs() <= whole && cross(wide(self.across), d).abs() <= whole
+    }
+
+    /// Whether `other` lies wholly on this footprint, edges included.
+    #[must_use]
+    pub const fn holds(self, other: Self) -> bool {
+        let [a, b, c, d] = other.corners();
+        self.contains(a) && self.contains(b) && self.contains(c) && self.contains(d)
+    }
+
+    /// **Where the point `p` lies in this footprint's own frame**, exactly.
+    ///
+    /// `p` is in `1 / per` of a fine unit: a pointer is read finer than a
+    /// berth is placed (`layout::net_point`), because a reading taken a
+    /// hair inside a piece's rim must stay inside it. The answer is
+    /// rational and its parts are integers, so which piece and which cubby
+    /// a press lands on is the same on every machine a crew plays on.
+    #[must_use]
+    pub const fn frame(self, p: (i64, i64), per: i64) -> Framed {
+        let d = (p.0 - self.x as i64 * per, p.1 - self.y as i64 * per);
+        let (a, b) = (wide(self.across), wide(self.down));
+        let area = cross(a, b);
+        let sign: i128 = if area < 0 { -1 } else { 1 };
+        // d = s·a + t·b, so s = (d × b) / (a × b) and t = (a × d) / (a × b).
+        let (ax, ay, bx, by) = (a.0 as i128, a.1 as i128, b.0 as i128, b.1 as i128);
+        let (dx, dy) = (d.0 as i128, d.1 as i128);
+        Framed {
+            across: sign * (dx * by - dy * bx),
+            down: sign * (ax * dy - ay * dx),
+            whole: sign * area as i128 * per as i128,
+        }
+    }
+
+    /// **Whether the shortest way between the two footprints is under
+    /// `r` fine units**, Euclidean and exact: squares compared with
+    /// squares, rationals cross-multiplied, nothing ever rooted. Ground
+    /// they share or a seam they touch along is no distance at all.
+    ///
+    /// Euclidean because the pieces turn. A Chebyshev buffer is a square,
+    /// and a rule that is a square depends on which way the room is
+    /// turned: two canisters a hand apart corner to corner would be legal
+    /// at one angle and refused at the next.
+    #[must_use]
+    pub fn clearance_below(self, other: Self, r: i32) -> bool {
+        if self.worst_axis(other) != std::cmp::Ordering::Greater {
+            return true;
+        }
+        // Daylight between the boxes round them settles it cheaply.
+        let (a, b) = (self.aabb(), other.aabb());
+        if a.x0 - b.x1 >= r || b.x0 - a.x1 >= r || a.y0 - b.y1 >= r || b.y0 - a.y1 >= r {
+            return false;
+        }
+        // Two convex shapes with daylight between them are nearest at a
+        // corner of one and an edge of the other.
+        let near = |from: Self, to: Self| {
+            let edges = to.corners().map(wide);
+            from.corners().into_iter().map(wide).any(|p| {
+                (0..4).any(|i| segment_within(p, edges[i], edges[(i + 1) % 4], i64::from(r)))
+            })
         };
-        let down = if other.y >= self.bottom() {
-            other.y - self.bottom()
-        } else if self.y >= other.bottom() {
-            self.y - other.bottom()
-        } else {
-            0
-        };
-        if across > down { across } else { down }
+        near(self, other) || near(other, self)
+    }
+
+    /// The rect of one cubby of a footprint: its quarter `slot`, row-major
+    /// from its own top left ([`Framed::quarter`]), as the box round it on
+    /// the sheet.
+    #[must_use]
+    pub const fn quarter_box(self, slot: u8) -> Aabb {
+        let sa = if slot % 2 == 0 { -1 } else { 1 };
+        let sb = if slot / 2 == 0 { -1 } else { 1 };
+        let (a, b) = (
+            (sa * self.across.0, sa * self.across.1),
+            (sb * self.down.0, sb * self.down.1),
+        );
+        // The quarter's corners: the centre, and it plus each half-axis
+        // and both.
+        let xs = [self.x, self.x + a.0, self.x + b.0, self.x + a.0 + b.0];
+        let ys = [self.y, self.y + a.1, self.y + b.1, self.y + a.1 + b.1];
+        Aabb {
+            x0: min4(xs),
+            y0: min4(ys),
+            x1: max4(xs),
+            y1: max4(ys),
+        }
     }
 }
 
+/// The least of four.
+const fn min4(v: [i32; 4]) -> i32 {
+    let ab = if v[0] < v[1] { v[0] } else { v[1] };
+    let cd = if v[2] < v[3] { v[2] } else { v[3] };
+    if ab < cd { ab } else { cd }
+}
+
+/// The greatest of four.
+const fn max4(v: [i32; 4]) -> i32 {
+    let ab = if v[0] > v[1] { v[0] } else { v[1] };
+    let cd = if v[2] > v[3] { v[2] } else { v[3] };
+    if ab > cd { ab } else { cd }
+}
+
 /// **The tile a berth stands on**: the class of the cell under its
-/// footprint's centre ([`Foot::centre`]), or `None` for a cubby or a
-/// berth off its room's net.
+/// footprint's centre ([`Foot::centre_cell`]), or `None` for a cubby or a
+/// berth with no footprint.
 ///
 /// Every rule that asks what a piece is standing on — ownership,
 /// [`staying`], the offer and the fire, the launch gate — asks it
@@ -722,13 +1304,9 @@ impl Foot {
 /// the drop's own gate).
 #[must_use]
 pub fn berth_tile(rooms: &Rooms, kind: Kind, loc: Loc) -> Option<Tile> {
-    match loc {
-        Loc::Hold { room, x, y } | Loc::Laid { room, x, y } => {
-            let (cx, cy) = Foot::of(rooms.kind(room)?, kind, x, y)?.centre();
-            rooms.tile(room, cx, cy)
-        }
-        Loc::Stow { .. } => None,
-    }
+    let spot = loc.spot()?;
+    let (cx, cy) = Foot::of(rooms.kind(spot.room)?, kind, spot.x, spot.y, spot.turn)?.centre_cell();
+    rooms.tile(spot.room, cx, cy)
 }
 
 /// Whether any piece rides in `cabinet`'s cubbies.
@@ -765,9 +1343,7 @@ pub fn free_cubby(pieces: &[Piece], cabinet: u32) -> Option<u8> {
 /// matrix, the [`crate::sim::Sim::drop_targets`] affordances, and any
 /// renderer hint all derive from this one predicate. Never restate it.
 ///
-/// The tile is the one under the footprint's centre ([`berth_tile`]),
-/// which is why the kind is asked for: where a piece's middle is depends
-/// on how big it is.
+/// The tile is the one under the footprint's centre ([`berth_tile`]).
 #[must_use]
 pub fn player_owned(rooms: &Rooms, pieces: &[Piece], kind: Kind, loc: Loc) -> bool {
     match loc {
@@ -809,11 +1385,11 @@ pub enum Violation {
     /// wall cargo cannot share that space. Touching is not overlapping:
     /// two pieces may stand flush.
     Overlap,
-    /// Two volatile pieces closer than half a cell, corners included
-    /// (fold seams count: the baseboard is next to the floor in the
-    /// room, so it is here).
+    /// Two volatile pieces with less than half a cell of clear air between
+    /// them, measured straight across (fold seams count: the baseboard is
+    /// next to the floor in the room, so it is here).
     Volatile,
-    /// A cryo piece whose edge does not lie on the floor's hull edge.
+    /// A cryo piece that does not reach the floor's hull edge.
     Cryo,
     /// A second suspicious piece aboard.
     Suspicious,
@@ -837,22 +1413,119 @@ pub enum Violation {
     Fixture,
 }
 
-/// Whether `kind` may stand at fine `(x, y)` of `room`'s net.
+/// **The turn the game gives a `kind` it places itself, centred on fine
+/// `centre` of chart `surf` of `host`'s net.**
 ///
-/// `(x, y)` is the footprint's top-left corner, judged against every
-/// other piece in `pieces`. The piece with `id` is ignored, so a held
-/// piece never collides with its own old footprint.
+/// Default facing is procedural and nothing more (docs/BAY.md, "Cargo
+/// turns"): the starting board, a station's stock and furniture,
+/// [`first_fit`] and [`dress_fit`] — and through them salvage, the comet's
+/// ice, the exchange, banking the hopper — fluff budding, and the
+/// frontend's fixture boards all take it. A player's drop NEVER does: a
+/// carried piece keeps the turn it was carried at, because a rule that
+/// re-faced a couch the player had just set down would be the sim
+/// overruling a hand.
+///
+/// It is the backing rule, and it used to be the frontend's, decided
+/// where a body was drawn rather than where it was ruled: a body
+/// standing within half a cell of a seam of its deck turns its back to
+/// that wall — the couch against the wall — and anywhere else faces the
+/// front. The aft seam is asked first, then the front, then the flanks,
+/// and a flank only turns a body whose plan is one cell across, which is
+/// the turn that does not move a footprint off its own cells. "Half a
+/// cell or less" is a rule and not a rounding allowance: a body that
+/// faces a seam keeps more than half a cell of deck in front of its
+/// face. The deckhead takes the same rule,
+/// because a pendant hung on the front row looking into the front wall a
+/// hand's breadth away is the couch defect stood on its head. A wall
+/// takes `Turn(0)`, its upright frame: up is up.
+///
+/// On both charts a body stands on, `Turn(0)` faces the sheet's +y
+/// ([`net_angle`]) and the plan at `Turn(0)` lies along the sheet's own
+/// axes, so one reading in sheet terms serves the deck and the deckhead
+/// alike: away from the near edge, every time.
 #[must_use]
-pub fn placement_legal(
-    rooms: &Rooms,
-    pieces: &[Piece],
-    id: u32,
-    kind: Kind,
-    room: RoomId,
-    x: u16,
-    y: u16,
-) -> bool {
-    placement_check(rooms, pieces, id, kind, room, x, y).is_ok()
+pub fn default_turn(host: RoomKind, kind: Kind, surf: Surf, centre: (u16, u16)) -> Turn {
+    if !matches!(surf, Surf::Floor | Surf::Ceiling) {
+        return Turn::ZERO;
+    }
+    let (across, deep) = kind.face_on(surf);
+    let (hw, hh) = (half_of(across), half_of(deep));
+    let (cx, cy, cw, ch) = host.chart_rect(surf);
+    let (left, top) = (i32::from(fine(cx)), i32::from(fine(cy)));
+    let (right, bottom) = (left + i32::from(fine(cw)), top + i32::from(fine(ch)));
+    let (x, y) = (i32::from(centre.0), i32::from(centre.1));
+    let seam = i32::from(FINE / 2);
+    let one_column = across == 1;
+    if y - hh - top <= seam {
+        Turn::ZERO
+    } else if bottom - (y + hh) <= seam {
+        Turn::HALF
+    } else if x - hw - left <= seam && one_column {
+        // Facing the sheet's +x: three quarters round from facing +y.
+        Turn::quarters(3)
+    } else if right - (x + hw) <= seam && one_column {
+        Turn::QUARTER
+    } else {
+        Turn::ZERO
+    }
+}
+
+/// The half-extents of the box round `kind` on chart `surf` at a quarter
+/// turn `turn`, on the sheet's own axes: its own two extents, or the two
+/// transposed when the turn lays it across the sheet's other axis.
+const fn square_reach(kind: Kind, surf: Surf, turn: Turn) -> (i32, i32) {
+    let (across, span) = kind.face_on(surf);
+    let (hw, hh) = (half_of(across), half_of(span));
+    if net_angle(surf, turn).0 & Turn::QUARTER.0 == 0 {
+        (hw, hh)
+    } else {
+        (hh, hw)
+    }
+}
+
+/// **The berth the game gives `kind` with its footprint's top-left at
+/// fine `(x, y)` of `host`'s net**: the centre that puts it there and the
+/// turn [`default_turn`] gives it.
+///
+/// Whole-cell-aligned berths are how the game sets things out — a
+/// shelf's stock, a derelict's salvage, the starting board, a fitting
+/// scan — and a centre is not a whole cell, so this is where the one
+/// becomes the other. `None` where that corner is on no chart, or where
+/// the centre is off the corner's: the footprint is planned against the
+/// corner's own chart, and a centre that lands on another chart is no
+/// berth of this one — a wall body two courses tall set down by the
+/// deck's edge would put its middle on the deck, where it is a different
+/// body. The backing rule turns only a body whose plan is one cell
+/// across, which no quarter turn moves off its corner.
+#[must_use]
+pub fn anchored(host: RoomKind, kind: Kind, x: u16, y: u16) -> Option<(u16, u16, Turn)> {
+    let surf = host.surface_of(coarse(x), coarse(y))?;
+    let (hw, hh) = square_reach(kind, surf, Turn::ZERO);
+    let centre = (
+        u16::try_from(i32::from(x) + hw).ok()?,
+        u16::try_from(i32::from(y) + hh).ok()?,
+    );
+    centred_on(host, surf, centre)
+        .then(|| (centre.0, centre.1, default_turn(host, kind, surf, centre)))
+}
+
+/// Whether fine `centre` of `host`'s net lies on chart `surf`, read the
+/// way [`Foot::of`] reads the chart a footprint is planned on.
+fn centred_on(host: RoomKind, surf: Surf, centre: (u16, u16)) -> bool {
+    let middle = (
+        cell_of(i32::from(centre.0) - 1),
+        cell_of(i32::from(centre.1) - 1),
+    );
+    host.surface_of(middle.0, middle.1) == Some(surf)
+}
+
+/// Whether `kind` may stand at `spot`.
+///
+/// Judged against every other piece in `pieces`. The piece with `id` is
+/// ignored, so a held piece never collides with its own old footprint.
+#[must_use]
+pub fn placement_legal(rooms: &Rooms, pieces: &[Piece], id: u32, kind: Kind, spot: Spot) -> bool {
+    placement_check(rooms, pieces, id, kind, spot).is_ok()
 }
 
 /// [`placement_legal`], but naming the rule that refused.
@@ -860,27 +1533,25 @@ pub fn placement_legal(
 /// Checks run in a fixed order (bounds/chart, threshold, fixture, mount,
 /// cryo, then per-piece overlap-and-shadow / volatile / suspicious in
 /// stowage order) so the reported violation is deterministic. Every rung
-/// is integer arithmetic over fine rects ([`Foot`]): no floating point
-/// reaches the arbiter, so a crew in lockstep agrees on every ruling.
-/// Nothing here reasons about where a body may walk: the walker passes
-/// through cargo, so a berth is refused for what it collides with, never
-/// for what it fences off.
+/// is integer arithmetic over oriented footprints ([`Foot`]): no floating
+/// point reaches the arbiter, so a crew in lockstep agrees on every
+/// ruling at every angle. Nothing here reasons about where a body may
+/// walk: the walker passes through cargo, so a berth is refused for what
+/// it collides with, never for what it fences off.
 pub fn placement_check(
     rooms: &Rooms,
     pieces: &[Piece],
     id: u32,
     kind: Kind,
-    room: RoomId,
-    x: u16,
-    y: u16,
+    spot: Spot,
 ) -> Result<(), Violation> {
-    let Some(host) = rooms.kind(room) else {
+    let Some(host) = rooms.kind(spot.room) else {
         return Err(Violation::Bounds);
     };
-    // The CORNER's chart first, because the footprint is a function of
+    // The CENTRE's chart first, because the footprint is a function of
     // it: a wardrobe covers one cell of deck and two of wall, and which
     // it is doing here is the chart's answer, not the kind's.
-    let Some(foot) = Foot::of(host, kind, x, y) else {
+    let Some(foot) = Foot::of(host, kind, spot.x, spot.y, spot.turn) else {
         return Err(Violation::Bounds);
     };
     let Some(surf) = footprint_surface(host, foot) else {
@@ -897,7 +1568,7 @@ pub fn placement_check(
         return Err(Violation::Affix(mount));
     }
     let standing = matches!(surf, Surf::Floor);
-    if matches!(kind.tag(), Some(Tag::Cryo)) && !touches_hull(host, foot) {
+    if matches!(kind.tag(), Some(Tag::Cryo)) && !near_hull(host, foot) {
         return Err(Violation::Cryo);
     }
     // A standing piece's volume: the wall it shadows behind it.
@@ -906,7 +1577,7 @@ pub fn placement_check(
     } else {
         Vec::new()
     };
-    let suspicious_here = matches!(kind.tag(), Some(Tag::Suspicious)) && rooms.riding(room);
+    let suspicious_here = matches!(kind.tag(), Some(Tag::Suspicious)) && rooms.riding(spot.room);
     for other in pieces {
         if other.id == id {
             continue;
@@ -915,6 +1586,7 @@ pub fn placement_check(
             room: oroom,
             x: ox,
             y: oy,
+            turn: oturn,
         } = other.loc
         else {
             continue;
@@ -926,10 +1598,10 @@ pub fn placement_check(
         {
             return Err(Violation::Suspicious);
         }
-        if oroom != room {
+        if oroom != spot.room {
             continue;
         }
-        let Some(theirs) = Foot::of(host, other.kind, ox, oy) else {
+        let Some(theirs) = Foot::of(host, other.kind, ox, oy, oturn) else {
             continue;
         };
         if foot.overlaps(theirs) {
@@ -947,12 +1619,13 @@ pub fn placement_check(
                 return Err(Violation::Overlap);
             }
         }
-        // Two volatile pieces keep half a cell of clear air between
-        // them, corners included. Without a buffer a sixteenth of a cell
-        // would satisfy "not touching", and the rule would be a formality.
+        // Two volatile pieces keep half a cell of clear air between them,
+        // straight across at whatever angle either stands. Without a
+        // buffer a unit of daylight would satisfy "not touching", and the
+        // rule would be a formality.
         if matches!(kind.tag(), Some(Tag::Volatile))
             && matches!(other.kind.tag(), Some(Tag::Volatile))
-            && foot.gap(theirs) < FINE / 2
+            && foot.clearance_below(theirs, i32::from(FINE / 2))
         {
             return Err(Violation::Volatile);
         }
@@ -960,109 +1633,137 @@ pub fn placement_check(
     Ok(())
 }
 
-/// The one chart a footprint lies wholly inside, if any — a piece bent
-/// over a fold, crossing a hole, or leaving the net is nowhere. Every
-/// cell the rect so much as touches must be a cell of that chart.
+/// The chart a footprint lies wholly inside, if any — a piece bent over a
+/// fold, crossing a hole, or leaving the net is nowhere. Every corner
+/// lies in the chart's rect (edges included: a footprint flush with a
+/// fold is on its chart), and no cell its interior covers is a hole.
 fn footprint_surface(host: RoomKind, foot: Foot) -> Option<Surf> {
-    let (cols, rows) = host.grid();
-    if foot.right() > fine(cols) || foot.bottom() > fine(rows) {
-        return None;
-    }
-    let anchor = foot.chart(host)?;
-    foot.cells()
-        .all(|(cx, cy)| host.surface_of(cx, cy) == Some(anchor))
-        .then_some(anchor)
+    let chart = foot.chart(host)?;
+    let (cx, cy, cw, ch) = host.chart_rect(chart);
+    let (left, top) = (i32::from(fine(cx)), i32::from(fine(cy)));
+    let (right, bottom) = (left + i32::from(fine(cw)), top + i32::from(fine(ch)));
+    let inside = foot
+        .corners()
+        .iter()
+        .all(|&(x, y)| (left..=right).contains(&x) && (top..=bottom).contains(&y));
+    (inside
+        && foot
+            .cells()
+            .all(|(x, y)| host.surface_of(x, y) == Some(chart)))
+    .then_some(chart)
 }
 
-/// Every tile class a footprint covers, any part of a cell counting.
+/// Every tile class a footprint covers, any part of a cell's interior
+/// counting.
 fn footprint_tiles(host: RoomKind, foot: Foot) -> impl Iterator<Item = Tile> + use<> {
     foot.cells()
         .filter_map(move |(cx, cy)| host.tile_of(cx, cy))
 }
 
-/// The floor chart as a fine rect.
-const fn floor_foot(host: RoomKind) -> Foot {
+/// The floor chart as a fine box.
+const fn floor_box(host: RoomKind) -> Aabb {
     let (fx, fy, fw, fh) = host.floor_rect();
-    Foot {
-        x: fine(fx),
-        y: fine(fy),
-        w: fine(fw),
-        h: fine(fh),
+    Aabb {
+        x0: fine(fx) as i32,
+        y0: fine(fy) as i32,
+        x1: fine(fx + fw) as i32,
+        y1: fine(fy + fh) as i32,
     }
 }
 
-/// Whether a floor footprint's edge lies ON the floor's hull edge (any
-/// side of the floor chart — every side of a room is hull). On it, not
-/// near it: the cold is in the plating, and a sixteenth of a cell of air
-/// is insulation. The drop's edge snap (`Sim::drop_preview`) is what
-/// makes flush easy to hit.
-const fn touches_hull(host: RoomKind, foot: Foot) -> bool {
-    let floor = floor_foot(host);
-    foot.x == floor.x
-        || foot.y == floor.y
-        || foot.right() == floor.right()
-        || foot.bottom() == floor.bottom()
+/// **How near the floor's hull edge a cryo piece must reach**: a
+/// sixteenth of a cell (about 3 cm), in fine units.
+///
+/// The cold is in the plating, so the rule is "on the hull edge", and it
+/// used to be exactly that — flush, to the unit. A hand is not exact,
+/// and a body turned a degree off square touches a wall at one corner a
+/// hair later than its neighbour does, so the rule allows the hair: an
+/// edge within a sixteenth of the hull is on it. More would be cheating
+/// the plating — the drop's wall snap slides a footprint flush from an
+/// eighth of a cell out (`Sim::drop_preview`), so a deliberate placement
+/// never needs the allowance at all.
+pub const HULL_TOUCH: i32 = FINE as i32 / 16;
+
+/// Whether a floor footprint reaches the floor's hull edge (any side of
+/// the floor chart — every side of a room is hull), within
+/// [`HULL_TOUCH`]. A convex footprint is nearest a straight edge at one
+/// of its corners, so the box round it says exactly how near.
+const fn near_hull(host: RoomKind, foot: Foot) -> bool {
+    let floor = floor_box(host);
+    let span = foot.aabb();
+    span.x0 - floor.x0 <= HULL_TOUCH
+        || span.y0 - floor.y0 <= HULL_TOUCH
+        || floor.x1 - span.x1 <= HULL_TOUCH
+        || floor.y1 - span.y1 <= HULL_TOUCH
 }
 
 /// The wall a standing floor footprint shadows: for each floor edge the
-/// piece stands within a cell of, the rect of wall directly behind it —
-/// as wide as the piece runs along the seam, rising from the baseboard
+/// piece comes within a cell of, the band of wall directly behind it — as
+/// wide as the piece's shadow on that seam, rising from the baseboard
 /// through the piece's stature (three courses at most, which is all the
 /// wall there is). A piece a whole cell or more off the wall leaves room
 /// to hang something behind it.
+///
+/// A footprint is nearest a seam at a corner and its shadow on the seam
+/// is the span of its corners along it, so both are read off the box
+/// round it — exactly, at any angle.
 fn shadows(host: RoomKind, foot: Foot, stature: u8) -> Vec<Foot> {
-    let floor = floor_foot(host);
-    let rise = fine(stature.min(3));
+    let floor = floor_box(host);
+    let span = foot.aabb();
+    let rise = i32::from(fine(stature.min(3)));
+    let cell = i32::from(FINE);
     let mut walls = Vec::new();
     if rise == 0 {
-        return walls;
+        return Vec::new();
     }
-    if foot.y.saturating_sub(floor.y) < FINE {
+    if span.y0 - floor.y0 < cell {
         // The aft wall's baseboard row sits just above the floor's aft edge.
-        walls.push(Foot {
-            x: foot.x,
-            y: floor.y - rise,
-            w: foot.w,
-            h: rise,
+        walls.push(Aabb {
+            x0: span.x0,
+            y0: floor.y0 - rise,
+            x1: span.x1,
+            y1: floor.y0,
         });
     }
-    if floor.bottom().saturating_sub(foot.bottom()) < FINE {
-        walls.push(Foot {
-            x: foot.x,
-            y: floor.bottom(),
-            w: foot.w,
-            h: rise,
+    if floor.y1 - span.y1 < cell {
+        walls.push(Aabb {
+            x0: span.x0,
+            y0: floor.y1,
+            x1: span.x1,
+            y1: floor.y1 + rise,
         });
     }
-    if foot.x.saturating_sub(floor.x) < FINE {
-        walls.push(Foot {
-            x: floor.x - rise,
-            y: foot.y,
-            w: rise,
-            h: foot.h,
+    if span.x0 - floor.x0 < cell {
+        walls.push(Aabb {
+            x0: floor.x0 - rise,
+            y0: span.y0,
+            x1: floor.x0,
+            y1: span.y1,
         });
     }
-    if floor.right().saturating_sub(foot.right()) < FINE {
-        walls.push(Foot {
-            x: floor.right(),
-            y: foot.y,
-            w: rise,
-            h: foot.h,
+    if floor.x1 - span.x1 < cell {
+        walls.push(Aabb {
+            x0: floor.x1,
+            y0: span.y0,
+            x1: floor.x1 + rise,
+            y1: span.y1,
         });
     }
-    walls
+    walls.into_iter().map(Aabb::foot).collect()
 }
 
-/// **The anchors a fitting scan tries in `room`**, sorted `(y, x)`.
+/// **The corners a fitting scan sets footprints down at in `room`**,
+/// sorted `(y, x)`.
 ///
-/// Every whole-cell anchor, plus every anchor flush against the right or
-/// bottom edge of some other piece already standing or laid in the room.
-/// The second set is what finds a snug fit between pieces that do not
-/// sit on the grid, without scanning every sixteenth of every cell —
-/// which would be 256 times the work to find, nearly always, the same
-/// berth. A chart's own far edges need no anchors of their own: a chart
-/// is whole cells and so is every footprint, so the anchor flush against
-/// one is already a whole-cell anchor.
+/// Every whole-cell corner, plus every corner flush against the right or
+/// bottom edge of the box round some other piece already standing or
+/// laid in the room. The second set is what finds a snug fit between
+/// pieces that do not sit on the grid, without scanning every unit of
+/// every cell — which would be 65,536 times the work to find, nearly
+/// always, the same berth. A chart's own far edges need no corners of
+/// their own: a chart is whole cells and so is every footprint at a
+/// quarter turn, so the corner flush against one is already a whole-cell
+/// corner.
 fn anchors(
     rooms: &Rooms,
     pieces: &[Piece],
@@ -1079,8 +1780,9 @@ fn anchors(
         }
         if let Some((at, foot)) = Foot::at(rooms, other) {
             if at == room {
-                xs.push(foot.right());
-                ys.push(foot.bottom());
+                let span = foot.aabb();
+                xs.extend(u16::try_from(span.x1));
+                ys.extend(u16::try_from(span.y1));
             }
         }
     }
@@ -1095,11 +1797,72 @@ fn anchors(
         .collect()
 }
 
-/// The first berth aboard where `kind` may legally sit, in fine units.
+/// **The spots a fitting scan offers `kind`, in the order it offers
+/// them**, for one pass: every [`anchors`] corner of every riding room, in
+/// room-id order, with the footprint's top-left set down there.
 ///
-/// Rooms in id order, then the [`anchors`] in `(y, x)` order — riding
-/// rooms only, because "aboard" means the part of the ship that leaves
-/// with you.
+/// Pass 0 is the turn the game gives a body there ([`default_turn`]);
+/// pass 1 is a quarter turn on from it. Those are all the passes there
+/// are, because the arbiter reads a footprint and never the way a body
+/// faces on it: half a turn lays the very same ground down again, so the
+/// other two quarters could only be refused for what the first two were.
+/// A body square on its chart has one shape at every quarter and gets
+/// pass 0 alone.
+fn fitting_spots(rooms: &Rooms, pieces: &[Piece], id: u32, kind: Kind, pass: u8) -> Vec<Spot> {
+    let mut spots = Vec::new();
+    for (room, host) in rooms.iter() {
+        if !host.kind.riding() {
+            continue;
+        }
+        for (x, y) in anchors(rooms, pieces, id, room, host.kind) {
+            let Some((cx, cy, turn)) = anchored(host.kind, kind, x, y) else {
+                continue;
+            };
+            if pass == 0 {
+                spots.push(Spot {
+                    room,
+                    x: cx,
+                    y: cy,
+                    turn,
+                });
+                continue;
+            }
+            let Some(surf) = host.kind.surface_of(coarse(x), coarse(y)) else {
+                continue;
+            };
+            let (across, span) = kind.face_on(surf);
+            if across == span {
+                continue;
+            }
+            let turn = turn + Turn::QUARTER;
+            let (hw, hh) = square_reach(kind, surf, turn);
+            let (Ok(cx), Ok(cy)) = (
+                u16::try_from(i32::from(x) + hw),
+                u16::try_from(i32::from(y) + hh),
+            ) else {
+                continue;
+            };
+            if !centred_on(host.kind, surf, (cx, cy)) {
+                continue;
+            }
+            spots.push(Spot {
+                room,
+                x: cx,
+                y: cy,
+                turn,
+            });
+        }
+    }
+    spots
+}
+
+/// The first berth aboard where `kind` may legally sit.
+///
+/// Riding rooms only, because "aboard" means the part of the ship that
+/// leaves with you; then [`fitting_spots`]' order — every room at the
+/// turn the game would give a body there before any room at the turn
+/// after it, so a piece is only ever turned onto its side when nothing
+/// aboard takes it upright.
 ///
 /// Shared by the shift-click quick-stow, the comet harvest, the ???
 /// exchange, and the hopper's banking — "first legal spot, even if that
@@ -1107,30 +1870,18 @@ fn anchors(
 /// means. Coverings have no occupancy berth at all ([`dress_fit`] is
 /// their scan).
 #[must_use]
-pub fn first_fit(
-    rooms: &Rooms,
-    pieces: &[Piece],
-    id: u32,
-    kind: Kind,
-) -> Option<(RoomId, u16, u16)> {
+pub fn first_fit(rooms: &Rooms, pieces: &[Piece], id: u32, kind: Kind) -> Option<Spot> {
     if kind.covering() {
         return None;
     }
-    for (room, host) in rooms.iter() {
-        if !host.kind.riding() {
-            continue;
-        }
-        for (x, y) in anchors(rooms, pieces, id, room, host.kind) {
-            if placement_legal(rooms, pieces, id, kind, room, x, y) {
-                return Some((room, x, y));
-            }
-        }
-    }
-    None
+    (0..2).find_map(|pass| {
+        fitting_spots(rooms, pieces, id, kind, pass)
+            .into_iter()
+            .find(|&spot| placement_legal(rooms, pieces, id, kind, spot))
+    })
 }
 
-/// Whether covering `kind` may be laid with its top-left corner at fine
-/// `(x, y)` of `room`'s net.
+/// Whether covering `kind` may be laid at `spot`.
 ///
 /// The dressing layer's own [`placement_check`], reusing the violation
 /// ladder whole and consulting every other piece. Checks run in a fixed
@@ -1142,15 +1893,13 @@ pub fn dressing_check(
     pieces: &[Piece],
     id: u32,
     kind: Kind,
-    room: RoomId,
-    x: u16,
-    y: u16,
+    spot: Spot,
 ) -> Result<(), Violation> {
     debug_assert!(kind.covering(), "dressing_check is for coverings only");
-    let Some(host) = rooms.kind(room) else {
+    let Some(host) = rooms.kind(spot.room) else {
         return Err(Violation::Bounds);
     };
-    let Some(foot) = Foot::of(host, kind, x, y) else {
+    let Some(foot) = Foot::of(host, kind, spot.x, spot.y, spot.turn) else {
         return Err(Violation::Bounds);
     };
     // Wholly on one chart — a rug bent over a fold is not a rug anyone
@@ -1178,7 +1927,7 @@ pub fn dressing_check(
         let Some((oroom, theirs)) = Foot::at(rooms, other) else {
             continue;
         };
-        if oroom != room || !theirs.overlaps(foot) {
+        if oroom != spot.room || !theirs.overlaps(foot) {
             continue;
         }
         match other.loc {
@@ -1193,27 +1942,16 @@ pub fn dressing_check(
     Ok(())
 }
 
-/// The first anchor (riding rooms in id order, then the [`anchors`] in
-/// `(y, x)` order) where covering `kind` may be laid — the dressing
-/// layer's [`first_fit`]. Coordinates are fine units.
+/// The first spot aboard where covering `kind` may be laid — the
+/// dressing layer's [`first_fit`], offering the same spots in the same
+/// order.
 #[must_use]
-pub fn dress_fit(
-    rooms: &Rooms,
-    pieces: &[Piece],
-    id: u32,
-    kind: Kind,
-) -> Option<(RoomId, u16, u16)> {
-    for (room, host) in rooms.iter() {
-        if !host.kind.riding() {
-            continue;
-        }
-        for (x, y) in anchors(rooms, pieces, id, room, host.kind) {
-            if dressing_check(rooms, pieces, id, kind, room, x, y).is_ok() {
-                return Some((room, x, y));
-            }
-        }
-    }
-    None
+pub fn dress_fit(rooms: &Rooms, pieces: &[Piece], id: u32, kind: Kind) -> Option<Spot> {
+    (0..2).find_map(|pass| {
+        fitting_spots(rooms, pieces, id, kind, pass)
+            .into_iter()
+            .find(|&spot| dressing_check(rooms, pieces, id, kind, spot).is_ok())
+    })
 }
 
 /// Whether occupancy cargo stands on `piece`'s laid footprint.
@@ -1307,40 +2045,36 @@ pub fn lit_adjacent(host: RoomKind, pieces: &[Piece], room: RoomId, x: u8, y: u8
 
 /// Whether `target` — a cell, or a piece's footprint — sits in light.
 ///
-/// Lit means within reach of — never wholly inside — some lit lamp's
-/// footprint OR some laid luminous coat's: a Chebyshev gap of less than
-/// one cell ([`Foot::gap`]). Corners count; under the grid they did not,
-/// and a free berth has no corners worth exempting, because a lamp a
-/// sixteenth past a crate's corner is not darker than one a sixteenth
-/// past its edge. Light does not cross a seam: a lamp lights its own
-/// room. Everything light touches — the rat's fear, the seedlings'
-/// bloom, the hold painting's spotlight — reads through this one
-/// predicate; the well-lit-art price bonus deliberately does not on the
-/// offer area (a coat is ambiance, not gallery lighting).
+/// Lit means less than one cell away from — and never wholly inside —
+/// some lit lamp's footprint OR some laid luminous coat's, measured
+/// straight across ([`Foot::clearance_below`]). Corners count, as they
+/// have since the grid came out: a lamp a unit past a crate's corner is
+/// not darker than one a unit past its edge. Euclidean, because light
+/// does not care which way the room is turned, and a rule that did would
+/// light a crate at one angle and not the next. Light does not cross a
+/// seam: a lamp lights its own room. Everything light touches — the
+/// rat's fear, the seedlings' bloom, the hold painting's spotlight —
+/// reads through this one predicate; the well-lit-art price bonus
+/// deliberately does not on the offer area (a coat is ambiance, not
+/// gallery lighting).
 ///
 /// `host` is the room's own kind, because a lamp's footprint is a
-/// question about the chart it stands on (`plan`) and the caller
+/// question about the chart it stands on ([`Foot::of`]) and the caller
 /// already knows whose room this is.
 #[must_use]
 pub fn lit_within_reach(host: RoomKind, pieces: &[Piece], room: RoomId, target: Foot) -> bool {
     pieces.iter().any(|piece| {
-        let (source, lroom, lx, ly) = match piece.loc {
-            Loc::Hold {
-                room: r,
-                x: px,
-                y: py,
-            } => (lamp_lit(piece), r, px, py),
-            Loc::Laid {
-                room: r,
-                x: px,
-                y: py,
-            } => (piece.kind == Kind::LuminousPaint, r, px, py),
-            Loc::Stow { .. } => return false,
+        let source = match piece.loc {
+            Loc::Hold { .. } => lamp_lit(piece),
+            Loc::Laid { .. } => piece.kind == Kind::LuminousPaint,
+            Loc::Stow { .. } => false,
         };
-        source
-            && lroom == room
-            && Foot::of(host, piece.kind, lx, ly)
-                .is_some_and(|light| light.gap(target) < FINE && !light.contains(target))
+        let Some(spot) = piece.loc.spot().filter(|spot| source && spot.room == room) else {
+            return false;
+        };
+        Foot::of(host, piece.kind, spot.x, spot.y, spot.turn).is_some_and(|light| {
+            light.clearance_below(target, i32::from(FINE)) && !light.holds(target)
+        })
     })
 }
 
@@ -1354,6 +2088,20 @@ mod tests {
         Rooms::new()
     }
 
+    /// **The spot `kind` takes in the cabin with its footprint's top-left
+    /// on whole cell `(x, y)`**, at the turn the game gives a body there:
+    /// the berth the grid would have called "cell `(x, y)`". `None` where
+    /// that corner is on no chart.
+    fn cell(kind: Kind, x: u8, y: u8) -> Option<Spot> {
+        let (x, y, turn) = anchored(RoomKind::Cabin, kind, fine(x), fine(y))?;
+        Some(Spot {
+            room: CABIN,
+            x,
+            y,
+            turn,
+        })
+    }
+
     /// A board of pieces berthed in the cabin at the given cells, ids
     /// counting up from 0.
     fn board(stowed: &[(Kind, u8, u8)]) -> Vec<Piece> {
@@ -1365,24 +2113,23 @@ mod tests {
                 kind,
                 variant: 0,
                 gnawed: false,
-                loc: Loc::Hold {
-                    room: CABIN,
-                    x: fine(x),
-                    y: fine(y),
-                },
+                loc: cell(kind, x, y).expect("a cell of the net").hold(),
             })
             .collect()
     }
 
     /// The arbiter asked of a whole-cell anchor, against a [`board`];
-    /// the candidate takes the next free id after it.
+    /// the candidate takes the next free id after it. A corner on no
+    /// chart is out of bounds.
     fn check(stowed: &[(Kind, u8, u8)], kind: Kind, x: u8, y: u8) -> Result<(), Violation> {
-        check_fine(&board(stowed), kind, fine(x), fine(y))
+        cell(kind, x, y).map_or(Err(Violation::Bounds), |spot| {
+            check_at(&board(stowed), kind, spot)
+        })
     }
 
-    /// The arbiter asked of a fine anchor, against any board.
-    fn check_fine(pieces: &[Piece], kind: Kind, x: u16, y: u16) -> Result<(), Violation> {
-        placement_check(&ship(), pieces, pieces.len() as u32, kind, CABIN, x, y)
+    /// The arbiter asked of any spot, against any board.
+    fn check_at(pieces: &[Piece], kind: Kind, spot: Spot) -> Result<(), Violation> {
+        placement_check(&ship(), pieces, pieces.len() as u32, kind, spot)
     }
 
     #[test]
@@ -1432,8 +2179,9 @@ mod tests {
         );
         // And a dressing cannot be laid across one either.
         let rooms = ship();
+        let tin = cell(Kind::PaintTin, 9, 7).expect("on the net");
         assert_eq!(
-            dressing_check(&rooms, &[], 9, Kind::PaintTin, CABIN, fine(9), fine(7)),
+            dressing_check(&rooms, &[], 9, Kind::PaintTin, tin),
             Err(Violation::Threshold)
         );
     }
@@ -1608,12 +2356,13 @@ mod tests {
     /// turn when it was carried one wall over, and why the arbiter's
     /// only answer used to be to refuse the wall.
     ///
-    /// A footprint is stated in the wall's own frame now, so the claim
-    /// can be made positively: on EVERY wall of EVERY room, a kind
-    /// covers its own `across` along the wall and its own `tall` up it.
-    /// Which sheet axis is which comes off the net's own fold
-    /// ([`down_the_wall`]) and not off the arbiter's table, so the guard
-    /// is not the implementation read back.
+    /// A footprint is stated in the body's own frame and laid on the
+    /// sheet by [`net_angle`], so the claim can be made positively: on
+    /// EVERY wall of EVERY room, an upright kind covers its own `across`
+    /// along the wall and its own `tall` up it. Which sheet axis is which
+    /// comes off the net's own fold ([`courses_climb_the_sheets_x`]) and
+    /// not off the mapping's table, so the guard is not the
+    /// implementation read back.
     #[test]
     fn a_footprint_keeps_its_shape_on_every_wall_it_may_take() {
         let mut seen: Vec<(RoomKind, Surf)> = Vec::new();
@@ -1635,12 +2384,13 @@ mod tests {
                         if !baseboard(host, x, y) {
                             continue;
                         }
-                        let (w, h) = plan(host, kind, x, y).expect("a wall cell has a plan");
+                        let span = Foot::planned(kind, surf, (0, 0), Turn::ZERO).aabb();
+                        let (w, h) = (span.w() / i32::from(FINE), span.h() / i32::from(FINE));
                         let sideways = courses_climb_the_sheets_x(host, x, y);
                         let (along, up) = if sideways { (h, w) } else { (w, h) };
                         assert_eq!(
                             (along, up),
-                            (across, tall),
+                            (i32::from(across), i32::from(tall)),
                             "{kind:?} on the {surf:?} wall of a {host:?} at ({x}, {y}) \
                              covers {along} along and {up} up",
                         );
@@ -1788,7 +2538,21 @@ mod tests {
                         matches!(
                             host.surface_of(x, y),
                             Some(Surf::Aft | Surf::Port | Surf::Starboard | Surf::Front)
-                        ) && placement_check(&ship(), &[], 0, kind, CABIN, fine(x), fine(y)).is_ok()
+                        ) && anchored(host, kind, fine(x), fine(y)).is_some_and(|(x, y, turn)| {
+                            placement_check(
+                                &ship(),
+                                &[],
+                                0,
+                                kind,
+                                Spot {
+                                    room: CABIN,
+                                    x,
+                                    y,
+                                    turn,
+                                },
+                            )
+                            .is_ok()
+                        })
                     })
                 });
                 assert!(fits, "{kind:?} fits no wall of a {host:?}");
@@ -1804,11 +2568,7 @@ mod tests {
             kind: Kind::Cabinet,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold {
-                room: CABIN,
-                x: fine(4),
-                y: fine(4),
-            },
+            loc: cell(Kind::Cabinet, 4, 4).expect("on the deck").hold(),
         }];
         assert!(!cabinet_occupied(&pieces, cabinet));
         assert_eq!(free_cubby(&pieces, cabinet), Some(0));
@@ -1831,7 +2591,9 @@ mod tests {
     fn dressing_rules_cover_surface_overlap_and_pinning() {
         let rooms = ship();
         let laid = |pieces: &[Piece], kind, x, y| {
-            dressing_check(&rooms, pieces, 9, kind, CABIN, fine(x), fine(y))
+            cell(kind, x, y).map_or(Err(Violation::Bounds), |spot| {
+                dressing_check(&rooms, pieces, 9, kind, spot)
+            })
         };
         assert_eq!(laid(&[], Kind::Rug, 4, 7), Ok(()));
         assert_eq!(
@@ -1841,16 +2603,14 @@ mod tests {
         assert_eq!(laid(&[], Kind::Rug, 10, 7), Err(Violation::Bounds));
         assert_eq!(laid(&[], Kind::PaintTin, 5, 0), Ok(()));
         assert_eq!(laid(&[], Kind::LuminousPaint, 4, 4), Ok(()));
+        let rug_at = |x, y| cell(Kind::Rug, x, y).expect("on the deck").laid();
+        let couch_at = |x, y| cell(Kind::Couch, x, y).expect("on the deck").hold();
         let mut pieces = vec![Piece {
             id: 0,
             kind: Kind::Rug,
             variant: 0,
             gnawed: false,
-            loc: Loc::Laid {
-                room: CABIN,
-                x: fine(4),
-                y: fine(7),
-            },
+            loc: rug_at(4, 7),
         }];
         assert_eq!(laid(&pieces, Kind::PaintTin, 5, 7), Err(Violation::Overlap));
         assert_eq!(laid(&pieces, Kind::PaintTin, 3, 7), Ok(()));
@@ -1859,11 +2619,7 @@ mod tests {
             kind: Kind::Couch,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold {
-                room: CABIN,
-                x: fine(3),
-                y: fine(7),
-            },
+            loc: couch_at(3, 7),
         });
         assert_eq!(
             laid(&pieces, Kind::PaintTin, 3, 7),
@@ -1874,29 +2630,21 @@ mod tests {
             kind: Kind::Rug,
             variant: 0,
             gnawed: false,
-            loc: Loc::Laid {
-                room: CABIN,
-                x: fine(4),
-                y: fine(7),
-            },
+            loc: rug_at(4, 7),
         };
         let couch = Piece {
             id: 3,
             kind: Kind::Couch,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold {
-                room: CABIN,
-                x: fine(5),
-                y: fine(7),
-            },
+            loc: couch_at(5, 7),
         };
         assert!(laid_pinned(&rooms, &[rug, couch], &rug));
         assert!(!laid_pinned(&rooms, &[rug], &rug));
         assert_eq!(first_fit(&rooms, &[], 9, Kind::Rug), None);
         assert_eq!(
             dress_fit(&rooms, &[rug, couch], 9, Kind::Rug),
-            Some((CABIN, fine(3), fine(3)))
+            cell(Kind::Rug, 3, 3)
         );
     }
 
@@ -1907,11 +2655,7 @@ mod tests {
             kind: Kind::LuminousPaint,
             variant: 0,
             gnawed: false,
-            loc: Loc::Laid {
-                room: CABIN,
-                x: fine(5),
-                y: fine(1),
-            },
+            loc: cell(Kind::LuminousPaint, 5, 1).expect("on the wall").laid(),
         };
         assert!(lit_adjacent(RoomKind::Cabin, &[coat], CABIN, 6, 1));
         assert!(lit_adjacent(RoomKind::Cabin, &[coat], CABIN, 5, 0));
@@ -1932,11 +2676,7 @@ mod tests {
             kind: Kind::PaintTin,
             variant: 0,
             gnawed: false,
-            loc: Loc::Laid {
-                room: CABIN,
-                x: fine(7),
-                y: fine(1),
-            },
+            loc: cell(Kind::PaintTin, 7, 1).expect("on the wall").laid(),
         };
         assert!(!lit_adjacent(RoomKind::Cabin, &[tin], CABIN, 6, 1));
     }
@@ -1948,10 +2688,15 @@ mod tests {
         let trade = rooms
             .spawn(RoomKind::Trade, CABIN)
             .expect("a trade room attaches");
-        let at = |x, y| Loc::Hold {
-            room: trade,
-            x: fine(x),
-            y: fine(y),
+        let at = |x, y| {
+            let (x, y, turn) =
+                anchored(RoomKind::Trade, Kind::PerfumeVial, fine(x), fine(y)).expect("on the net");
+            Loc::Hold {
+                room: trade,
+                x,
+                y,
+                turn,
+            }
         };
         let owned = |loc| player_owned(&rooms, &[], Kind::PerfumeVial, loc);
         // The trade room's aft floor row is its own stock; its front
@@ -1966,283 +2711,734 @@ mod tests {
         // beside the door rather than under it.
         assert!(owned(at(3, 3)));
         assert!(owned(at(4, 3)));
-        assert!(owned(Loc::Hold {
-            room: CABIN,
-            x: fine(4),
-            y: fine(4)
-        }));
+        assert!(owned(cell(Kind::PerfumeVial, 4, 4).expect("aboard").hold()));
     }
 
     #[test]
     fn held_piece_ignores_its_own_footprint() {
         let rooms = ship();
         let pieces = board(&[(Kind::RationBricks, 4, 4)]);
-        assert_eq!(
-            placement_check(
-                &rooms,
-                &pieces,
-                0,
-                Kind::RationBricks,
-                CABIN,
-                fine(4),
-                fine(4)
-            ),
-            Ok(())
-        );
-        assert_eq!(
-            placement_check(
-                &rooms,
-                &pieces,
-                0,
-                Kind::RationBricks,
-                CABIN,
-                fine(5),
-                fine(4)
-            ),
-            Ok(())
-        );
+        for (x, y) in [(4, 4), (5, 4)] {
+            let spot = cell(Kind::RationBricks, x, y).expect("on the deck");
+            assert_eq!(
+                placement_check(&rooms, &pieces, 0, Kind::RationBricks, spot),
+                Ok(())
+            );
+        }
     }
 
-    /// A piece at fine `(x, y)` of the cabin, id `id`.
-    const fn at(id: u32, kind: Kind, x: u16, y: u16) -> Piece {
+    /// A piece centred on fine `(x, y)` of the cabin at `turn`, id `id`.
+    const fn at(id: u32, kind: Kind, x: u16, y: u16, turn: Turn) -> Piece {
         Piece {
             id,
             kind,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold { room: CABIN, x, y },
+            loc: Loc::Hold {
+                room: CABIN,
+                x,
+                y,
+                turn,
+            },
         }
     }
 
-    /// The footprint's arithmetic, stated once: the cells a rect a
-    /// sixteenth off the grid stands on, the cell under its middle, and
-    /// the gap between two of them.
+    /// The cabin spot centred on fine `(x, y)` at `turn`.
+    const fn spot(x: u16, y: u16, turn: Turn) -> Spot {
+        Spot {
+            room: CABIN,
+            x,
+            y,
+            turn,
+        }
+    }
+
+    /// One seventh of a turn: an angle no sum of halvings ever lands on,
+    /// so nothing about it is square.
+    const SEVENTH: Turn = Turn(9362);
+
+    /// An eighth of a turn.
+    const EIGHTH: Turn = Turn(1 << 13);
+
+    /// **The trig is exact where it has to be and the same every time it
+    /// is asked.** The quarter turns come out as zeroes and ones, so an
+    /// axis-aligned footprint is exactly the rectangle the grid drew; the
+    /// identities that make a turn's frame a frame hold in the bits, at
+    /// every one of the 65,536 turns; and the values are pinned, so a
+    /// machine that computed them differently would fail here before it
+    /// forked a crew.
+    #[test]
+    fn the_trig_is_exact_at_the_quarters_and_the_same_everywhere() {
+        let one = TRIG_ONE;
+        for (turn, cos, sin) in [
+            (Turn::ZERO, one, 0),
+            (Turn::QUARTER, 0, one),
+            (Turn::HALF, -one, 0),
+            (Turn::quarters(3), 0, -one),
+        ] {
+            assert_eq!((turn.cos(), turn.sin()), (cos, sin), "{turn:?}");
+            assert!(turn.square());
+        }
+        assert!(!SEVENTH.square() && !EIGHTH.square() && !Turn(1).square());
+        let mut worst = 0.0_f64;
+        for raw in 0..=u16::MAX {
+            let turn = Turn(raw);
+            // A quarter on is the same pair, turned: in the bits.
+            let on = turn + Turn::QUARTER;
+            assert_eq!((on.cos(), on.sin()), (-turn.sin(), turn.cos()), "{turn:?}");
+            // Turning back is the mirror: in the bits.
+            let back = Turn::ZERO - turn;
+            assert_eq!((back.cos(), back.sin()), (turn.cos(), -turn.sin()));
+            // And the pair is a unit vector to within a few billionths.
+            let (c, s) = (
+                turn.cos() as f64 / one as f64,
+                turn.sin() as f64 / one as f64,
+            );
+            let truth = f64::from(raw) * std::f64::consts::TAU / 65_536.0;
+            worst = worst
+                .max((c - truth.cos()).abs())
+                .max((s - truth.sin()).abs());
+        }
+        assert!(worst < 1e-8, "the trig strays {worst} from the true value");
+        // Asked twice, answered the same; and pinned, so a platform that
+        // computed one bit differently is caught here.
+        for turn in [Turn(1), SEVENTH, EIGHTH, Turn(12_345)] {
+            assert_eq!(
+                (turn.cos(), turn.sin()),
+                (turn.cos(), turn.sin()),
+                "{turn:?}"
+            );
+        }
+        assert_eq!((Turn(1).cos(), Turn(1).sin()), (1_073_741_819, 102_944));
+        assert_eq!((SEVENTH.cos(), SEVENTH.sin()), (669_490_072, 839_466_823));
+        assert_eq!((EIGHTH.cos(), EIGHTH.sin()), (759_250_125, 759_250_125));
+    }
+
+    /// **A footprint's corners land within a unit of true at any angle**,
+    /// even four cells across, and at a quarter turn they are exactly the
+    /// axis-aligned rectangle — the box round it IS it.
+    #[test]
+    fn corners_are_within_a_unit_of_true_and_exact_at_the_quarters() {
+        let half = (2 * i32::from(FINE), i32::from(FINE) / 2);
+        for raw in (0..=u16::MAX).step_by(97).chain([9362, 16_384, 32_768]) {
+            let turn = Turn(raw);
+            let foot = Foot::new(3000, 2000, half, turn);
+            let angle = f64::from(raw) * std::f64::consts::TAU / 65_536.0;
+            let (c, s) = (angle.cos(), angle.sin());
+            let truth = |sa: f64, sb: f64| {
+                let (hw, hh) = (f64::from(half.0), f64::from(half.1));
+                (
+                    (sb * hh).mul_add(s, (sa * hw).mul_add(c, 3000.0)),
+                    (-sb * hh).mul_add(c, (sa * hw).mul_add(s, 2000.0)),
+                )
+            };
+            let want = [
+                truth(1.0, 1.0),
+                truth(-1.0, 1.0),
+                truth(-1.0, -1.0),
+                truth(1.0, -1.0),
+            ];
+            for (got, want) in foot.corners().iter().zip(want) {
+                // A unit, and the trig's billionths of one.
+                let unit = 1.0 + 1e-6;
+                assert!(
+                    (f64::from(got.0) - want.0).abs() <= unit
+                        && (f64::from(got.1) - want.1).abs() <= unit,
+                    "{turn:?}: corner {got:?}, true {want:?}"
+                );
+            }
+        }
+        for quarter in 0..4 {
+            let foot = Foot::new(3000, 2000, half, Turn::quarters(quarter));
+            let span = foot.aabb();
+            let (w, h) = if quarter % 2 == 0 {
+                (2 * half.0, 2 * half.1)
+            } else {
+                (2 * half.1, 2 * half.0)
+            };
+            assert_eq!((span.w(), span.h()), (w, h), "quarter {quarter}");
+            let mut corners = foot.corners().to_vec();
+            corners.sort_unstable();
+            assert_eq!(
+                corners,
+                [
+                    (span.x0, span.y0),
+                    (span.x0, span.y1),
+                    (span.x1, span.y0),
+                    (span.x1, span.y1)
+                ],
+                "quarter {quarter} is exactly its box"
+            );
+        }
+    }
+
+    /// **Flush is legal at any angle and a unit of overlap is not.** Two
+    /// equal footprints side by side along their own across axis share an
+    /// edge exactly — corners are rounded once, so the shared edge is the
+    /// same two points in both — and the arbiter's own test reads that as
+    /// touching. A unit closer, at the square turn, the eighth, and the
+    /// seventh alike, and they share ground.
+    #[test]
+    fn touching_is_legal_and_a_unit_of_overlap_is_not_at_any_angle() {
+        let half = (i32::from(FINE), i32::from(FINE) / 2);
+        for turn in [Turn::ZERO, EIGHTH, SEVENTH, Turn(1)] {
+            let a = Foot::new(2000, 2000, half, turn);
+            let [(x0, y0), (x1, y1), ..] = a.corners();
+            // One footprint along: the far edge of `a` is the near edge of
+            // the next, exactly.
+            let step = (x0 - x1, y0 - y1);
+            let b = Foot::new(2000 + step.0, 2000 + step.1, half, turn);
+            assert!(
+                !a.overlaps(b) && !b.overlaps(a),
+                "{turn:?}: flush overlapped"
+            );
+            assert!(a.clearance_below(b, 1), "{turn:?}: flush is no distance");
+            // A unit back along the dominant axis of that step is a sliver
+            // of shared ground.
+            let nudge = if step.0.abs() >= step.1.abs() {
+                (step.0.signum(), 0)
+            } else {
+                (0, step.1.signum())
+            };
+            let c = Foot::new(2000 + step.0 - nudge.0, 2000 + step.1 - nudge.1, half, turn);
+            assert!(a.overlaps(c) && c.overlaps(a), "{turn:?}: a unit in stood");
+            // Corner to corner, diagonally across: touching again.
+            let [(cx0, cy0), _, (cx2, cy2), _] = a.corners();
+            let d = Foot::new(2000 + cx0 - cx2, 2000 + cy0 - cy2, half, turn);
+            assert!(!a.overlaps(d), "{turn:?}: corner to corner overlapped");
+        }
+    }
+
+    /// The footprint's arithmetic, stated once: the cells a footprint a
+    /// few units off the grid stands on, the cell under its middle, and
+    /// the distance between two of them.
     #[test]
     fn a_foot_covers_what_it_touches_and_reads_its_middle() {
         let host = RoomKind::Cabin;
-        // A couch is two cells of deck; three sixteenths off the grid it
+        // A couch is two cells of deck; three units off the grid it
         // stands on three.
-        let couch = Foot::of(host, Kind::Couch, fine(4) + 3, fine(4)).expect("on the deck");
+        let couch = Foot::of(host, Kind::Couch, fine(5) + 3, fine(4) + 128, Turn::ZERO)
+            .expect("on the deck");
         assert_eq!(couch.cells().collect::<Vec<_>>(), [(4, 4), (5, 4), (6, 4)]);
-        assert_eq!(couch.centre(), (5, 4));
-        // At a whole-cell anchor the middle lies on a seam and reads the
-        // anchor cell, which is the cell the grid's rules always read.
-        let square = Foot::of(host, Kind::Couch, fine(4), fine(4)).expect("on the deck");
-        assert_eq!(square.centre(), (4, 4));
+        assert_eq!(couch.centre_cell(), (5, 4));
+        // At a whole-cell berth the middle may lie on a seam, and it reads
+        // the cell the footprint's top-left is in, which is the cell the
+        // grid's rules always read.
         for kind in Kind::ALL {
-            let foot = Foot::of(host, kind, fine(4), fine(4)).expect("on the deck");
-            assert_eq!(foot.centre(), (4, 4), "{kind:?} reads its anchor");
+            let (x, y, turn) = anchored(host, kind, fine(4), fine(4)).expect("on the deck");
+            let foot = Foot::of(host, kind, x, y, turn).expect("on the deck");
+            assert_eq!(foot.centre_cell(), (4, 4), "{kind:?} reads its corner");
         }
-        // Gaps are Chebyshev: the larger of across and down.
+        // Distance is straight across: flush and corner to corner are no
+        // distance, and a cell's daylight is a cell's.
         let a = Foot::cell(4, 4);
-        assert_eq!(a.gap(Foot::cell(5, 4)), 0, "flush");
-        assert_eq!(a.gap(Foot::cell(5, 5)), 0, "corner to corner");
-        assert_eq!(a.gap(Foot::cell(6, 5)), FINE);
+        assert!(a.clearance_below(Foot::cell(5, 4), 1), "flush");
+        assert!(a.clearance_below(Foot::cell(5, 5), 1), "corner to corner");
+        assert!(!a.clearance_below(Foot::cell(6, 5), i32::from(FINE)));
+        assert!(a.clearance_below(Foot::cell(6, 5), i32::from(FINE) + 1));
+        // Two cells off on each axis is a cell's daylight each way: √2 of
+        // a cell, which a Chebyshev reading would have called one.
+        assert!(!a.clearance_below(Foot::cell(6, 6), 362));
+        assert!(a.clearance_below(Foot::cell(6, 6), 363));
         assert!(!a.overlaps(Foot::cell(5, 4)), "touching is not overlapping");
-        assert!(a.contains(a) && !a.contains(couch));
+        assert!(a.holds(a) && !a.holds(couch));
+        // Turned an eighth, a couch stands on the cells its body crosses
+        // and not on the ones the box round it merely spans.
+        let turned = Foot::of(host, Kind::Couch, fine(6), fine(6), EIGHTH).expect("on the deck");
+        let cells: Vec<(u8, u8)> = turned.cells().collect();
+        let boxed: Vec<(u8, u8)> = turned.aabb().cells().collect();
+        assert!(cells.len() < boxed.len(), "{cells:?} against {boxed:?}");
+        assert!(cells.contains(&(5, 5)) && cells.contains(&(6, 6)));
+        assert!(!cells.contains(&(4, 7)) && !cells.contains(&(7, 4)));
     }
 
     #[test]
-    fn flush_neighbours_stand_and_a_sixteenth_of_overlap_is_refused() {
-        let vial = [at(0, Kind::PerfumeVial, fine(5), fine(5))];
-        assert_eq!(check_fine(&vial, Kind::Seedlings, fine(6), fine(5)), Ok(()));
-        assert_eq!(check_fine(&vial, Kind::Seedlings, fine(4), fine(5)), Ok(()));
+    fn flush_neighbours_stand_and_a_unit_of_overlap_is_refused() {
+        let vial = [at(
+            0,
+            Kind::PerfumeVial,
+            fine(5) + 128,
+            fine(5) + 128,
+            Turn::ZERO,
+        )];
+        let one = |x, y| spot(x, y, Turn::ZERO);
         assert_eq!(
-            check_fine(&vial, Kind::Seedlings, fine(6) - 1, fine(5)),
-            Err(Violation::Overlap)
-        );
-        assert_eq!(
-            check_fine(&vial, Kind::Seedlings, fine(4) + 1, fine(5) + 15),
-            Err(Violation::Overlap)
-        );
-        // Off the grid entirely, flush on two sides at once.
-        let pair = [
-            at(0, Kind::PerfumeVial, fine(4) + 5, fine(5)),
-            at(1, Kind::PerfumeVial, fine(4) + 5 + FINE, fine(5) + FINE),
-        ];
-        assert_eq!(
-            check_fine(&pair, Kind::Seedlings, fine(4) + 5 + FINE, fine(5)),
+            check_at(&vial, Kind::Seedlings, one(fine(6) + 128, fine(5) + 128)),
             Ok(())
         );
+        assert_eq!(
+            check_at(&vial, Kind::Seedlings, one(fine(4) + 128, fine(5) + 128)),
+            Ok(())
+        );
+        assert_eq!(
+            check_at(&vial, Kind::Seedlings, one(fine(6) + 127, fine(5) + 128)),
+            Err(Violation::Overlap)
+        );
+        assert_eq!(
+            check_at(&vial, Kind::Seedlings, one(fine(4) + 129, fine(6) + 127)),
+            Err(Violation::Overlap)
+        );
+        // A neighbour standing in the corner of the vial's cell: refused
+        // by the square vial, whose corner is there, and not by the vial
+        // turned an eighth, whose waist is not.
+        let turned = [at(
+            0,
+            Kind::PerfumeVial,
+            fine(5) + 128,
+            fine(5) + 128,
+            EIGHTH,
+        )];
+        let corner = one(fine(6) + 92, fine(4) + 164);
+        assert_eq!(
+            check_at(&vial, Kind::Seedlings, corner),
+            Err(Violation::Overlap)
+        );
+        assert_eq!(check_at(&turned, Kind::Seedlings, corner), Ok(()));
     }
 
+    /// Two volatile pieces keep half a cell of clear air, **straight
+    /// across**: directly below, half a cell is the line; corner to
+    /// corner, the same half cell is the diagonal, which a Chebyshev
+    /// buffer would have drawn at half a cell on each axis instead.
     #[test]
     fn volatile_cargo_keeps_half_a_cell_of_clear_air() {
+        let half = FINE / 2;
         // A gas canister is two cells across the deck.
-        let can = [at(0, Kind::GasCanister, fine(4), fine(5))];
-        let below = fine(6);
+        let can = [at(0, Kind::GasCanister, fine(5), fine(5) + 128, Turn::ZERO)];
+        let below = |gap: u16| spot(fine(5), fine(6) + 128 + gap, Turn::ZERO);
         assert_eq!(
-            check_fine(&can, Kind::GasCanister, fine(4), below + 7),
+            check_at(&can, Kind::GasCanister, below(half - 1)),
+            Err(Violation::Volatile)
+        );
+        assert_eq!(check_at(&can, Kind::GasCanister, below(half)), Ok(()));
+        // Corner to corner, `d` units of daylight each way is d√2 apart:
+        // 90 is under half a cell and 91 is not.
+        let diagonal = |d: u16| spot(fine(7) + d, fine(6) + 128 + d, Turn::ZERO);
+        assert_eq!(
+            check_at(&can, Kind::GasCanister, diagonal(90)),
+            Err(Violation::Volatile)
+        );
+        assert_eq!(check_at(&can, Kind::GasCanister, diagonal(91)), Ok(()));
+        // And the rule does not care which way either one is turned:
+        // spun an eighth, the same canister at the same centre is the same
+        // distance from a neighbour straight below its tip.
+        let spun = [at(0, Kind::GasCanister, fine(6), fine(6), EIGHTH)];
+        let tip = Foot::of(RoomKind::Cabin, Kind::GasCanister, fine(6), fine(6), EIGHTH)
+            .expect("on the deck")
+            .aabb()
+            .y1;
+        let under = |gap: i32| {
+            let y = u16::try_from(tip + 128 + gap).expect("on the deck");
+            spot(fine(6), y, Turn::ZERO)
+        };
+        assert_eq!(
+            check_at(&spun, Kind::GasCanister, under(i32::from(half) - 1)),
             Err(Violation::Volatile)
         );
         assert_eq!(
-            check_fine(&can, Kind::GasCanister, fine(4), below + 8),
-            Ok(())
-        );
-        // Corners count: the gap is the larger of across and down.
-        let past = fine(6);
-        assert_eq!(
-            check_fine(&can, Kind::GasCanister, past + 7, below + 7),
-            Err(Violation::Volatile)
-        );
-        assert_eq!(
-            check_fine(&can, Kind::GasCanister, past + 8, below + 7),
+            check_at(&spun, Kind::GasCanister, under(i32::from(half))),
             Ok(())
         );
     }
 
+    /// Cryo reaches the hull within a sixteenth of a cell ([`HULL_TOUCH`])
+    /// and not a unit more — square on, and turned, where it is the
+    /// corner that reaches.
     #[test]
-    fn cryo_stands_flush_on_the_hull_and_not_a_sixteenth_off() {
+    fn cryo_reaches_the_hull_within_a_sixteenth_and_not_a_unit_more() {
         let (fx, fy, fw, _) = RoomKind::Cabin.floor_rect();
         let (left, top, right) = (fine(fx), fine(fy), fine(fx + fw));
-        assert_eq!(check_fine(&[], Kind::CryoCore, left, fine(6)), Ok(()));
+        let reach = u16::try_from(HULL_TOUCH).expect("a sixteenth");
+        let core = |x, y, turn| check_at(&[], Kind::CryoCore, spot(x, y, turn));
+        assert_eq!(core(left + 128, fine(6), Turn::ZERO), Ok(()));
+        assert_eq!(core(left + 128 + reach, fine(6), Turn::ZERO), Ok(()));
         assert_eq!(
-            check_fine(&[], Kind::CryoCore, left + 1, fine(6)),
+            core(left + 128 + reach + 1, fine(6), Turn::ZERO),
             Err(Violation::Cryo)
         );
+        assert_eq!(core(right - 128, fine(4) + 3, Turn::ZERO), Ok(()));
+        assert_eq!(core(fine(6) + 3, top + 128 + reach, Turn::ZERO), Ok(()));
         assert_eq!(
-            check_fine(&[], Kind::CryoCore, right - FINE, fine(4) + 3),
-            Ok(())
+            core(fine(6) + 3, top + 129 + reach, Turn::ZERO),
+            Err(Violation::Cryo)
         );
-        assert_eq!(check_fine(&[], Kind::CryoCore, fine(6) + 3, top), Ok(()));
+        // Turned an eighth, the core reaches the wall with a corner: its
+        // half-diagonal from the centre.
+        let corner = Foot::planned(Kind::CryoCore, Surf::Floor, (0, 0), EIGHTH)
+            .aabb()
+            .x1;
+        let out = u16::try_from(corner).expect("a hand's breadth");
+        assert_eq!(core(left + out + reach, fine(6), EIGHTH), Ok(()));
         assert_eq!(
-            check_fine(&[], Kind::CryoCore, fine(6) + 3, top + 1),
+            core(left + out + reach + 1, fine(6), EIGHTH),
             Err(Violation::Cryo)
         );
     }
 
-    /// A tall piece shadows the wall behind it while it stands within a
+    /// A tall piece shadows the wall behind it while it comes within a
     /// cell of that wall, and a whole cell out it leaves room to hang
-    /// something behind it.
+    /// something behind it — square on, and turned, where the corner
+    /// nearest the wall is what comes within the cell and the shadow is
+    /// as wide as the body's own shadow on the seam.
     #[test]
     fn a_shadow_reaches_a_cell_off_the_wall_and_no_further() {
         let (_, fy, _, _) = RoomKind::Cabin.floor_rect();
         let wall = fine(fy);
-        let near = [at(0, Kind::Cabinet, fine(6), wall + 15)];
+        let painting = spot(fine(6), fine(1) + 128, Turn::ZERO);
+        let cabinet = |x, top: u16| at(0, Kind::Cabinet, x, top + 128, Turn::ZERO);
+        let near = [cabinet(fine(6) + 128, wall + 255)];
         assert_eq!(
-            check_fine(&near, Kind::Painting, fine(5), fine(1)),
+            check_at(&near, Kind::Painting, painting),
             Err(Violation::Overlap)
         );
-        let clear = [at(0, Kind::Cabinet, fine(6), wall + 16)];
-        assert_eq!(check_fine(&clear, Kind::Painting, fine(5), fine(1)), Ok(()));
+        let clear = [cabinet(fine(6) + 128, wall + 256)];
+        assert_eq!(check_at(&clear, Kind::Painting, painting), Ok(()));
         // And symmetrically, hanging first.
-        let hung = [at(0, Kind::Painting, fine(5), fine(1))];
+        let hung = [at(0, Kind::Painting, fine(6), fine(1) + 128, Turn::ZERO)];
+        let standing = |x, top: u16| spot(x, top + 128, Turn::ZERO);
         assert_eq!(
-            check_fine(&hung, Kind::Cabinet, fine(6), wall + 15),
+            check_at(&hung, Kind::Cabinet, standing(fine(6) + 128, wall + 255)),
             Err(Violation::Overlap)
         );
-        assert_eq!(check_fine(&hung, Kind::Cabinet, fine(6), wall + 16), Ok(()));
-        // The shadow is as wide as the piece runs along the seam: a
-        // cabinet slid a sixteenth past the painting's end clears it.
         assert_eq!(
-            check_fine(&hung, Kind::Cabinet, fine(7), wall),
+            check_at(&hung, Kind::Cabinet, standing(fine(6) + 128, wall + 256)),
+            Ok(())
+        );
+        // The shadow is as wide as the piece runs along the seam: a
+        // cabinet slid a unit past the painting's end clears it.
+        assert_eq!(
+            check_at(&hung, Kind::Cabinet, standing(fine(7) + 128, wall)),
             Ok(()),
             "flush beside the painting's end"
         );
         assert_eq!(
-            check_fine(&hung, Kind::Cabinet, fine(7) - 1, wall),
+            check_at(&hung, Kind::Cabinet, standing(fine(7) + 127, wall)),
             Err(Violation::Overlap)
+        );
+        // Turned an eighth, the cabinet's shadow is its corners' span on
+        // the seam, and its nearest corner is what comes within the cell.
+        let reach = Foot::planned(Kind::Cabinet, Surf::Floor, (0, 0), EIGHTH).aabb();
+        let (ex, ey) = (
+            u16::try_from(reach.x1).expect("small"),
+            u16::try_from(reach.y1).expect("small"),
+        );
+        let turned = |x: u16, gap: u16| spot(x, wall + gap + ey, EIGHTH);
+        // Its shadow begins at its own left corner: flush beside the
+        // painting's end on the seam is clear, a unit over is not.
+        assert_eq!(
+            check_at(&hung, Kind::Cabinet, turned(fine(7) + ex, 0)),
+            Ok(())
+        );
+        assert_eq!(
+            check_at(&hung, Kind::Cabinet, turned(fine(7) + ex - 1, 0)),
+            Err(Violation::Overlap)
+        );
+        // And a cell out from its nearest corner, it shadows nothing.
+        assert_eq!(
+            check_at(&hung, Kind::Cabinet, turned(fine(7) + ex - 1, 255)),
+            Err(Violation::Overlap)
+        );
+        assert_eq!(
+            check_at(&hung, Kind::Cabinet, turned(fine(7) + ex - 1, 256)),
+            Ok(())
         );
     }
 
+    /// Light reaches less than a cell, **straight across**: a vial whose
+    /// corner is a cell less a unit off the lamp's on both axes is lit by
+    /// a Chebyshev reading and dark by the true one, √2 of that away.
     #[test]
-    fn light_reaches_a_cell_and_not_a_sixteenth_more() {
-        let lamp = [at(0, Kind::FloorLamp, fine(4), fine(5))];
+    fn light_reaches_less_than_a_cell_straight_across() {
+        let lamp = [at(
+            0,
+            Kind::FloorLamp,
+            fine(4) + 128,
+            fine(5) + 128,
+            Turn::ZERO,
+        )];
         let host = RoomKind::Cabin;
-        let vial = |x, y| Foot::of(host, Kind::PerfumeVial, x, y).expect("on the deck");
-        assert!(lit_within_reach(
-            host,
-            &lamp,
-            CABIN,
-            vial(fine(5) + 15, fine(5))
-        ));
-        assert!(!lit_within_reach(
-            host,
-            &lamp,
-            CABIN,
-            vial(fine(6), fine(5))
-        ));
-        assert!(lit_within_reach(
-            host,
-            &lamp,
-            CABIN,
-            vial(fine(5) + 15, fine(6) + 15)
-        ));
-        assert!(!lit_within_reach(
-            host,
-            &lamp,
-            CABIN,
-            vial(fine(5) + 15, fine(7))
-        ));
-        // Never inside.
-        assert!(!lit_within_reach(
-            host,
-            &lamp,
-            CABIN,
-            vial(fine(4), fine(5))
-        ));
+        let vial = |x, y, turn| Foot::of(host, Kind::PerfumeVial, x, y, turn).expect("on the deck");
+        let lit = |foot| lit_within_reach(host, &lamp, CABIN, foot);
+        // Beside it: a cell less a unit lights, a cell does not.
+        assert!(lit(vial(fine(6) + 127, fine(5) + 128, Turn::ZERO)));
+        assert!(!lit(vial(fine(6) + 128, fine(5) + 128, Turn::ZERO)));
+        // Off its corner: d units of daylight each way is d√2 away.
+        assert!(lit(vial(
+            fine(5) + 128 + 181,
+            fine(6) + 128 + 181,
+            Turn::ZERO
+        )));
+        assert!(!lit(vial(
+            fine(5) + 128 + 182,
+            fine(6) + 128 + 182,
+            Turn::ZERO
+        )));
+        // Never inside — and a vial turned an eighth on the lamp's own
+        // cell pokes its corners out past the lamp, so it is lit.
+        assert!(!lit(vial(fine(4) + 128, fine(5) + 128, Turn::ZERO)));
+        assert!(lit(vial(fine(4) + 128, fine(5) + 128, EIGHTH)));
+        // A lamp turned an eighth lights a cell's width from its corners.
+        let spun = [at(0, Kind::FloorLamp, fine(4) + 128, fine(5) + 128, EIGHTH)];
+        let corner = Foot::of(host, Kind::FloorLamp, fine(4) + 128, fine(5) + 128, EIGHTH)
+            .expect("on the deck")
+            .aabb()
+            .x1;
+        let right = |gap: i32| {
+            let x = u16::try_from(corner + gap + 128).expect("on the deck");
+            vial(x, fine(5) + 128, Turn::ZERO)
+        };
+        assert!(lit_within_reach(host, &spun, CABIN, right(255)));
+        assert!(!lit_within_reach(host, &spun, CABIN, right(256)));
     }
 
-    /// `first_fit` tries the anchors flush against what is already
+    /// `first_fit` tries the corners flush against what is already
     /// standing, so a gap that is exactly a crate wide but sits off the
-    /// grid is found — before any whole-cell anchor further along.
+    /// grid is found — before any whole-cell corner further along.
     #[test]
     fn first_fit_finds_a_snug_gap_off_the_grid() {
         let (fx, fy, _, _) = RoomKind::Cabin.floor_rect();
         let (left, top) = (fine(fx), fine(fy));
         // Two vials on the first row of deck, a vial's width apart, both
-        // half a cell off the grid: every whole-cell anchor up to the
+        // half a cell off the grid: every whole-cell corner up to the
         // second one's far side overlaps one of them.
         let board = [
-            at(0, Kind::PerfumeVial, left + 8, top),
-            at(1, Kind::PerfumeVial, left + 8 + 2 * FINE, top),
+            at(0, Kind::PerfumeVial, left + 256, top + 128, Turn::ZERO),
+            at(
+                1,
+                Kind::PerfumeVial,
+                left + 256 + 2 * FINE,
+                top + 128,
+                Turn::ZERO,
+            ),
         ];
         assert_eq!(
             first_fit(&ship(), &board, 9, Kind::PerfumeVial),
-            Some((CABIN, left + 8 + FINE, top))
+            Some(spot(left + 256 + FINE, top + 128, Turn::ZERO))
         );
     }
 
+    /// **`first_fit` turns a body only when nothing aboard takes it the
+    /// way the game would stand it**, and then a quarter turn is a berth
+    /// like any other. A deck filled with vials everywhere but one gap
+    /// two cells deep and one across has no room for a couch standing
+    /// upright, and the gap is a couch turned on its side.
+    #[test]
+    fn first_fit_turns_a_body_only_when_nothing_takes_it_upright() {
+        let rooms = ship();
+        let mut pieces: Vec<Piece> = Vec::new();
+        for (room, placed) in rooms.iter() {
+            let (fx, fy, fw, fh) = placed.kind.floor_rect();
+            for y in fy..fy + fh {
+                for x in fx..fx + fw {
+                    if room == CABIN && x == 6 && (5..7).contains(&y) {
+                        continue;
+                    }
+                    let Some((cx, cy, turn)) =
+                        anchored(placed.kind, Kind::PerfumeVial, fine(x), fine(y))
+                    else {
+                        continue;
+                    };
+                    let vial = Spot {
+                        room,
+                        x: cx,
+                        y: cy,
+                        turn,
+                    };
+                    let id = pieces.len() as u32;
+                    if placement_legal(&rooms, &pieces, id, Kind::PerfumeVial, vial) {
+                        pieces.push(Piece {
+                            id,
+                            kind: Kind::PerfumeVial,
+                            variant: 0,
+                            gnawed: false,
+                            loc: vial.hold(),
+                        });
+                    }
+                }
+            }
+        }
+        let found = first_fit(&rooms, &pieces, 999, Kind::Couch).expect("the gap");
+        assert_eq!(
+            (found.room, found.x, found.y),
+            (CABIN, fine(6) + 128, fine(6)),
+            "the couch stands in the gap"
+        );
+        assert!(
+            found.turn == Turn::QUARTER || found.turn == Turn::quarters(3),
+            "on its side: {:?}",
+            found.turn
+        );
+        // A square body is never offered a turn it could not use.
+        assert!(
+            fitting_spots(&rooms, &pieces, 999, Kind::PerfumeVial, 1).is_empty(),
+            "a vial has one shape at every quarter"
+        );
+    }
+
+    /// **The backing rule, as the game's own placements read it**: a
+    /// deck body within half a cell of a seam turns its back to it, the
+    /// aft seam first; a flank turns only a one-column body; everything
+    /// else faces the front; a deckhead reads the same rule off its own
+    /// sheet; a wall is upright.
+    #[test]
+    fn the_game_turns_a_body_against_the_seam_it_stands_by() {
+        let host = RoomKind::Cabin;
+        let (fx, fy, fw, fh) = host.floor_rect();
+        let (left, top) = (fine(fx), fine(fy));
+        let (right, bottom) = (fine(fx + fw), fine(fy + fh));
+        let deck = |kind, x, y| default_turn(host, kind, Surf::Floor, (x, y));
+        let mid = (fine(7), fine(6) + 128);
+        assert_eq!(deck(Kind::Cabinet, mid.0, mid.1), Turn::ZERO);
+        // Half a cell or less off the aft seam: back to it, facing front.
+        assert_eq!(deck(Kind::Cabinet, mid.0, top + 128 + 128), Turn::ZERO);
+        // Off the front seam: back to it, which is half a turn.
+        assert_eq!(deck(Kind::Cabinet, mid.0, bottom - 128), Turn::HALF);
+        assert_eq!(deck(Kind::Cabinet, mid.0, bottom - 128 - 128), Turn::HALF);
+        assert_eq!(deck(Kind::Cabinet, mid.0, bottom - 128 - 129), Turn::ZERO);
+        // Off the port seam, a one-column body faces starboard: its back
+        // to the port wall, three quarters round from facing the front.
+        assert_eq!(deck(Kind::Cabinet, left + 128, mid.1), Turn::quarters(3));
+        assert_eq!(deck(Kind::Cabinet, right - 128, mid.1), Turn::QUARTER);
+        // A couch two cells across stays facing the front there: a
+        // quarter turn would stand it off its own cells.
+        assert_eq!(deck(Kind::Couch, left + 256, mid.1), Turn::ZERO);
+        // The aft seam is asked first: a corner reads as aft.
+        assert_eq!(deck(Kind::Cabinet, left + 128, top + 128), Turn::ZERO);
+        // The deckhead reads the same rule off its own sheet.
+        let (cx, cy, cw, _) = host.chart_rect(Surf::Ceiling);
+        let ceiling = |x, y| default_turn(host, Kind::CeilingLamp, Surf::Ceiling, (x, y));
+        assert_eq!(
+            ceiling(fine(cx) + 128, fine(cy) + 3 * 256 + 128),
+            Turn::quarters(3)
+        );
+        assert_eq!(
+            ceiling(fine(cx + cw) - 128, fine(cy) + 3 * 256 + 128),
+            Turn::QUARTER
+        );
+        // A wall is upright wherever it is hung.
+        for surf in [Surf::Aft, Surf::Port, Surf::Starboard, Surf::Front] {
+            assert_eq!(default_turn(host, Kind::Painting, surf, mid), Turn::ZERO);
+        }
+    }
+
+    /// **The one mapping from chart to net, pinned against the net's own
+    /// folds.** The base angle of every chart is read back off the sheet
+    /// the way a player reads the room: on a wall, a body's up points
+    /// away from the deck it folds off; on the deck and the deckhead, an
+    /// upright body faces the front, which is the sheet's +y on both.
+    /// And the handedness is one for all six: the four walls' "right" —
+    /// the base itself — runs round the deck's own edge the same way on
+    /// every side, which is what a sheet seen all from one side does.
+    #[test]
+    fn the_chart_to_net_mapping_reads_the_nets_own_folds() {
+        let unit = |turn: Turn| {
+            (
+                (turn.cos() / TRIG_ONE) as i32,
+                (turn.sin() / TRIG_ONE) as i32,
+            )
+        };
+        for host in super::super::room::ROOM_KINDS {
+            let (fx, fy, fw, fh) = host.floor_rect();
+            let walls = [
+                (Surf::Aft, (fx, fy - 1), (0, 1)),
+                (Surf::Front, (fx, fy + fh), (0, -1)),
+                (Surf::Port, (fx - 1, fy), (1, 0)),
+                (Surf::Starboard, (fx + fw, fy), (-1, 0)),
+            ];
+            for (surf, (x, y), toward_deck) in walls {
+                assert_eq!(host.surface_of(x, y), Some(surf), "{host:?} {surf:?}");
+                // Up is a quarter on from across, and it leads away from
+                // the deck: one step down that wall lands on the deck.
+                let up = unit(net_angle(surf, Turn::QUARTER));
+                assert_eq!(up, (-toward_deck.0, -toward_deck.1), "{host:?} {surf:?} up");
+                // Right runs along the seam.
+                let right = unit(net_angle(surf, Turn::ZERO));
+                assert_eq!(right.0 * toward_deck.0 + right.1 * toward_deck.1, 0);
+                // And it runs round the deck one way on every wall: turning
+                // from the way to the deck onto the way right leads is the
+                // same turn on all four sides, which is a sheet seen from
+                // one side and no chart flipped over.
+                let turning = toward_deck.0 * right.1 - toward_deck.1 * right.0;
+                assert_eq!(turning, 1, "{host:?} {surf:?} is mirrored");
+            }
+            // On the deck and the deckhead an upright body faces the front,
+            // which is the sheet's +y on both: its face a quarter short of
+            // its across axis on the deck, standing up out of it, and a
+            // quarter past it on the deckhead, hanging down.
+            assert_eq!(unit(net_angle(Surf::Floor, Turn::quarters(3))), (0, 1));
+            assert_eq!(unit(net_angle(Surf::Ceiling, Turn::QUARTER)), (0, 1));
+        }
+        // The mapping is the base plus the turn, and a turn wraps.
+        for surf in Surf::ALL {
+            for turn in [Turn::ZERO, Turn(1), SEVENTH, Turn(u16::MAX)] {
+                assert_eq!(
+                    net_angle(surf, turn) - net_angle(surf, Turn::ZERO),
+                    turn,
+                    "{surf:?}"
+                );
+            }
+        }
+    }
+
     /// **Every yes the arbiter says is ground a piece can stand on**, at
-    /// every whole-cell anchor and a fixed sample of sixteenths off it
-    /// ([`FRACTIONS`]) on each axis: the footprint lies in its net, on
-    /// one chart, and over no cell a refusing class keeps.
+    /// every whole-cell centre and a fixed sample of units off it
+    /// ([`FRACTIONS`]) on each axis, at the square turns and some that
+    /// are not: every corner lies in its net, on one chart, and over no
+    /// cell a refusing class keeps.
     #[test]
     fn every_accepted_berth_lies_on_one_chart_clear_of_refusals() {
         for host in super::super::room::ROOM_KINDS {
             let rooms = Rooms::root(host);
             let (cols, rows) = host.grid();
             for kind in Kind::ALL {
-                for y in 0..rows {
-                    for x in 0..cols {
-                        for (dx, dy) in FRACTIONS
-                            .into_iter()
-                            .flat_map(|dx| FRACTIONS.into_iter().map(move |dy| (dx, dy)))
-                        {
-                            let (fx, fy) = (fine(x) + dx, fine(y) + dy);
-                            let ruling = if kind.covering() {
-                                dressing_check(&rooms, &[], 0, kind, 0, fx, fy)
-                            } else {
-                                placement_check(&rooms, &[], 0, kind, 0, fx, fy)
-                            };
-                            if ruling.is_err() {
-                                continue;
-                            }
-                            let foot = Foot::of(host, kind, fx, fy).expect("accepted");
-                            let chart = foot.chart(host);
-                            for (cx, cy) in foot.cells() {
-                                assert_eq!(
-                                    host.surface_of(cx, cy),
-                                    chart,
-                                    "{kind:?} at ({fx}, {fy})"
-                                );
-                                assert!(
-                                    !matches!(
-                                        host.tile_of(cx, cy),
-                                        Some(Tile::Threshold | Tile::Fixture)
-                                    ),
-                                    "{kind:?} at ({fx}, {fy}) of a {host:?}"
-                                );
+                for turn in [Turn::ZERO, Turn::QUARTER, SEVENTH, EIGHTH] {
+                    for y in 0..rows {
+                        for x in 0..cols {
+                            for (dx, dy) in FRACTIONS
+                                .into_iter()
+                                .flat_map(|dx| FRACTIONS.into_iter().map(move |dy| (dx, dy)))
+                            {
+                                let (fx, fy) = (fine(x) + dx, fine(y) + dy);
+                                let spot = Spot {
+                                    room: 0,
+                                    x: fx,
+                                    y: fy,
+                                    turn,
+                                };
+                                let ruling = if kind.covering() {
+                                    dressing_check(&rooms, &[], 0, kind, spot)
+                                } else {
+                                    placement_check(&rooms, &[], 0, kind, spot)
+                                };
+                                if ruling.is_err() {
+                                    continue;
+                                }
+                                let foot = Foot::of(host, kind, fx, fy, turn).expect("accepted");
+                                let chart = foot.chart(host);
+                                let (cx, cy, cw, ch) = host.chart_rect(chart.expect("on a chart"));
+                                for (px, py) in foot.corners() {
+                                    assert!(
+                                        (i32::from(fine(cx))..=i32::from(fine(cx + cw)))
+                                            .contains(&px)
+                                            && (i32::from(fine(cy))..=i32::from(fine(cy + ch)))
+                                                .contains(&py),
+                                        "{kind:?} at ({fx}, {fy}) {turn:?} leaves its chart"
+                                    );
+                                }
+                                for (cx, cy) in foot.cells() {
+                                    assert_eq!(
+                                        host.surface_of(cx, cy),
+                                        chart,
+                                        "{kind:?} at ({fx}, {fy}) {turn:?}"
+                                    );
+                                    assert!(
+                                        !matches!(
+                                            host.tile_of(cx, cy),
+                                            Some(Tile::Threshold | Tile::Fixture)
+                                        ),
+                                        "{kind:?} at ({fx}, {fy}) {turn:?} of a {host:?}"
+                                    );
+                                }
                             }
                         }
                     }

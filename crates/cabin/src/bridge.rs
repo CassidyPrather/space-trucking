@@ -15,7 +15,7 @@ use std::path::PathBuf;
 
 use space_trucking::replay::Recording;
 use space_trucking::sim::room::{CABIN, RoomId};
-use space_trucking::sim::{Cue, InputFrame, Sim, Vec2};
+use space_trucking::sim::{Cue, InputFrame, Sim, Turn, Vec2};
 // `std::time` on native, `Date.now()` on wasm32, where std's clock is a
 // panic rather than a number. The market hours below ask chrono instead,
 // which the manifest routes the same way for wasm32 (`wasmbind`).
@@ -274,6 +274,7 @@ impl Bridge {
             // box the eye stands in — `room::occupy`'s answer, and the
             // only thing the gates learn about where anybody is.
             occupied: input.occupied,
+            facing: carry_facing(&self.sim),
             attach: None,
             // The detach gesture is the door's own amber latch, and it
             // rides the input schedule exactly like a pointer press: the
@@ -301,6 +302,24 @@ impl Bridge {
         let _ = std::fs::write(save_path(REPLAY_FILE), self.recording.serialize());
         self.last_save = wall_now;
     }
+}
+
+/// **The facing the carry is sent at** (`InputFrame::facing`): the held
+/// piece's own turn — the turn it was lifted at, which the sim keeps as
+/// the carry's origin — or the upright frame for a piece lifted out of a
+/// cubby, and while nothing is held.
+///
+/// The one place the cabin decides it, so the release and the preview the
+/// ghost is drawn from (`crate::pieces`) ask with the same turn.
+///
+/// phase 2: the turning controls make this the carry's own state —
+/// initialised from the held piece's turn on the grab, then turned by the
+/// wheel, `Ctrl`+wheel and `Q` — rather than a reading of the sim.
+#[must_use]
+pub fn carry_facing(sim: &Sim) -> Turn {
+    sim.held(0)
+        .and_then(|held| held.origin.spot())
+        .map_or(Turn::ZERO, |spot| spot.turn)
 }
 
 /// Whether this frame produced a cue worth writing the save for.

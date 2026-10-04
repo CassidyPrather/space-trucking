@@ -260,6 +260,7 @@ mod tests {
                 room: CABIN,
                 x: 0,
                 y: 0,
+                turn: space_trucking::sim::Turn::ZERO,
             },
         };
         let arm = parts(&piece, crate::pieces::Screens::LIVE)

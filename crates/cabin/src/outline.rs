@@ -606,11 +606,7 @@ pub fn paint(
         && let Some(piece) =
             space_trucking::sim::layout::piece_at(sim.rooms(), sim.pieces(), pointer.sim)
     {
-        let on_handle = crate::pieces::carry_handle_rect(
-            piece.kind,
-            space_trucking::sim::layout::piece_rect(sim.rooms(), sim.pieces(), piece),
-        )
-        .is_some_and(|handle| handle.contains(pointer.sim));
+        let on_handle = crate::pieces::on_carry_handle(sim.rooms(), piece, pointer.sim);
         aiming(piece.id, if on_handle { HANDLE } else { HOVER });
     }
     // And what the room is saying about it, which may be both at once

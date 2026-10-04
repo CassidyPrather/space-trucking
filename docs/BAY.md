@@ -26,15 +26,22 @@ arithmetic — the cells a footprint touches, the cell under its centre,
 intersection, and the gap between two footprints — so no caller
 re-derives it.
 
+> Superseded by *Cargo turns*: a fine unit is a 256th of a cell now,
+> and a berth names its footprint's centre and turn rather than its
+> top-left corner.
+
 **What did not move.** The room lattice, ports, the pad, room nets,
 charts and tile classes and their paint: rooms are architecture and stay
 on the lattice, and a tile class is now a region a piece stands in.
 Cubbies stay discrete slots inside a piece. Footprints stay whole cells
-in size (`Kind::extent`, `Kind::plan_on`); only their position is free.
+in size (`Kind::extent`, `Kind::face_on`); only their position is free.
 There is no rotation in this pass — a body's yaw still follows its chart
 — because free yaw is a separate decision. There is no physics, and the
 sim still learns no player position, because determinism, lockstep and
 the input-frame spine are load-bearing.
+
+> Superseded in part by *Cargo turns*: cargo turns now, at any angle,
+> on every chart, and the turn is the sim's. Physics stays out.
 
 **The arbiter, restated over fine rects.** Same ladder, same order, same
 `Violation` names:
@@ -61,6 +68,12 @@ the input-frame spine are load-bearing.
 - **Dressings**: one dressing per point of the room, and the pinned
   rule as rect overlap with standing pieces, both directions.
 
+> Superseded by *Cargo turns*: the ladder is restated over oriented
+> footprints — bounds by corners, separating axes for overlap and
+> dressings, cryo within a sixteenth of the hull rather than on it, the
+> shadow off the box round a turned body, and Euclidean distance for
+> the volatile rule.
+
 **Which tile a piece stands on.** The classes that refuse cargo refuse
 a footprint that touches any of their cells (above, and the drop's own
 gate). Everything else that asks what a piece stands on — ownership,
@@ -79,6 +92,9 @@ than one cell away by Chebyshev gap and does not wholly contain it.
 is not darker than one a sixteenth past its edge. The rat still asks of
 one cell (`lit_adjacent`); everything else asks of a footprint
 (`lit_within_reach`).
+
+> Superseded in part by *Cargo turns*: "less than one cell away" is
+> Euclidean now.
 
 **The rat stays on its cells.** It is not cargo: it walks its lattice
 as before, perches on a cell any footprint touches, nibbles the piece
@@ -100,6 +116,11 @@ things out a tile at a time.
 
 > Superseded in part by DESIGN_REVIEW.md, *An old save or tape starts a
 > new run*: no migration walks anything now.
+
+> Superseded in part by *Cargo turns*: a candidate corner is a
+> footprint's top-left set down at the turn the game gives a body
+> there, then — for a footprint that is not square — a quarter turn on;
+> the berth it stores is the centre.
 
 **The drop.** The pointer was always continuous; now the berth is too.
 A release resolves a position before it asks any rule about it, in the
@@ -132,6 +153,11 @@ One consequence is worth knowing: a press and a release at the same
 point re-centre a piece on that point, so a two-cell piece lifted by its
 end and put straight back moves half a cell.
 
+> Superseded in part by *Cargo turns*: the footprint is centred at the
+> carry's turn, and the snap reaches an eighth of a cell, onto a
+> chart's edge only — the neighbour snap is gone.
+> `Sim::drop_preview` takes the turn as well.
+
 **Saves and tapes.** Saves are `STV20`: a `hold` or `laid` line carries
 fine coordinates, and every older document's cells load as `cell *
 FINE`, the same ground exactly, before the rest of the migration chain
@@ -143,10 +169,15 @@ instead of replaying into a different game.
 > new run*: an older document is not read at all, in cells or
 > otherwise, and the game starts a new run. Tapes were already there.
 
+> Superseded by *Cargo turns*: saves are `STV21` and tapes `RPL5`.
+
 **Sweeps.** A test that means "every berth" sweeps every whole-cell
 anchor plus a fixed sample of sixteenths on each axis
 (`cargo::FRACTIONS`, `{0, 1, 7, 8, 15}`), which keeps the runtime sane
 and names the same berth on every failure.
+
+> Superseded in part by *Cargo turns*: the sample is `{0, 1, 127, 128,
+> 255}` in 256ths, crossed with a sample of turns.
 
 **The frontend.** `layout::piece_rect` is the berth's true rect,
 fractions and all, so every body, pick face and halo placed from it
@@ -193,6 +224,11 @@ cabin shows and where the release lands are one answer:
   whole cell the threshold only ever met gaps of zero or a cell; a
   berth exactly half a cell from the front wall used to face it.
 
+  > Superseded by *Cargo turns*: the backing rule is no longer the
+  > cabin's, and no law of placement. It is the turn the sim gives a
+  > body the game places itself (`cargo::default_turn`); a player's
+  > drop keeps the turn it was carried at.
+
 The cabin's berth sweep (`every_kind_hangs_true_on_every_legal_berth`)
 and the gauntlet's berths take whole-cell anchors and the
 `cargo::FRACTIONS` sample on each axis. The sweep holds the ghost to
@@ -201,6 +237,202 @@ berth (or, within a quarter cell of a chart edge, the flush one the
 snap moves it to) with the verdict the arbiter gives, and the ghost has
 to be that berth's pose plus the lift. The gauntlet re-keyed its air
 from cells to footprints; docs/GAUNTLET.md says how.
+
+> Superseded in part by *Cargo turns*: the snap reaches an eighth of a
+> cell, and the ghost is asked at the berth's own turn.
+
+## Cargo turns
+
+The owner's decisions (2026-10-04): "Any angle eventually; things will
+end up being placed by somebody grabbing / moving in VR, I don't want
+overly aggressive snapping. We could do something like, *snap* to
+convenient angles with the tool or something, but the core logic needs
+to be resilient against arbitrary locations / angles." Then: "By that
+logic, all surfaces should be able to turn. A 'snap placement to wall'
+for things like paintings is fine." And of the backing rule: "Automatic
+facing probably won't survive in its current form but may be handy for
+procedural assets (e.g. default object placings and orientations at
+POIs) so it is probably fine."
+
+So **the sim is the authority on a piece's position and on its turn,
+and both are arbitrary**, quantised only by integer units nobody can
+see. Snapping is a convenience layered on input, never something a rule
+depends on. This pass is the sim and the cabin's drawing of what the sim
+says; the controls that turn a carry are the next pass (below). Passages
+the decisions overrule are marked "Superseded by *Cargo turns*".
+
+**What did not move.** The sim is deterministic and engine-free, and a
+crew in lockstep has to agree on every ruling on every platform, so no
+float transcendental (`sin`, `cos`, `sqrt`, ...) reaches sim state and
+everything the arbiter decides is integer arithmetic. Rooms, nets,
+charts, tile classes and ports stay on the lattice; cubbies stay
+discrete slots; footprint SIZES stay whole cells (`Kind::extent`,
+`Kind::face_on`). There is no physics and no tilt: a body lies on, hangs
+on, or hangs from its chart, turned about that chart's normal.
+
+**The units.**
+
+- **Position.** `cargo::FINE` is 256 to the cell, about 2 mm in the
+  cabin, because a 34 mm step is a grid a VR hand can see. The widest
+  lane, 22 cells, is 5,632 units, well inside a `u16`. `Loc::Hold` and
+  `Loc::Laid` carry the footprint's **centre** and its turn,
+  `{ room, x, y, turn }`: once a footprint turns, its top-left corner is
+  not a stable anchor.
+- **Turn.** `cargo::Turn(u16)`, a binary angle: 65,536 to the turn
+  (0.0055°), wrapping. Positive is counter-clockwise **as seen by a
+  person in the room looking at the surface** — down at the deck, up at
+  the deckhead, straight at a wall. `Turn(0)` is the chart's upright
+  frame: on a wall up is up, and on the deck and the deckhead a body
+  faces the room's front.
+- **Trig.** `Turn::cos` and `Turn::sin` are integers in Q30
+  (`cargo::TRIG_ONE`, 2³⁰), computed by integer-only code: a Taylor
+  series in Horner form over one octant, and symmetry for the rest. The
+  quarter turns are exact — `cos(QUARTER)` is zero, not nearly — so an
+  axis-aligned turn lays exactly the rectangle the grid always drew. A
+  quarter on and a turn back are identities in the bits at all 65,536
+  turns, every value is within a hundred-millionth of the true one, and
+  a footprint four cells across has its corners within one unit of true.
+
+**One mapping from chart to net** (`cargo::net_angle(surf, turn)`). The
+net is the room unfolded and seen from OUTSIDE: a chart's +x can read
+mirrored from inside, the front chart unfolds downward, and the flanks'
+courses climb the sheet's x. One function turns a chart and a turn into
+the angle a body's across axis (its right, as you face it) lies at on
+the sheet, measured from +x toward +y, which runs down the sheet. It is
+a base per chart plus the turn:
+
+| Chart | Base | An upright body's right lies along |
+|---|---|---|
+| Front wall, deckhead | 0 | the sheet's +x |
+| Port flank | a quarter | +y |
+| Aft wall, deck | a half | −x |
+| Starboard flank | three quarters | −y |
+
+**The handedness is the same on every chart**, which is why the turn is
+simply added: the net is one sheet folded into one box, every chart
+shows the sheet the same side out, and so turning from a chart's +x
+toward its +y is counter-clockwise from inside the room on all six. The
+cabin's charts say the same in 3D: all six normals point out of the
+room. Everything that needs a footprint asks this function (`Foot::of`,
+and through it the arbiter, the drop, the light and the rat), and the
+cabin poses every body with its answer (`pieces::across_on`). A sim test
+pins the table against the net's own folds, and a cabin sweep
+(`every_chart_draws_the_turn_the_sim_lays_on_its_net`) holds the drawing
+to it: on every chart, at the quarters and at 1°, 15°, 45° and a seventh
+of a turn, the body a berth draws covers the footprint the sim lays,
+each axis with its sign, and nothing more.
+
+**The footprint** (`cargo::Foot`) is an oriented rectangle: a centre,
+half-extents from the planned size, and the net angle. Its two half-axis
+vectors are rounded to whole units once, and everything after that is
+exact integer geometry on its corners: `aabb`; `contains`, closed;
+`cells`, every cell the footprint's INTERIOR meets, so a corner grazing
+a cell does not take it; `centre_cell`; `overlaps`, by separating axes,
+where touching is legal and any positive area is not; and
+`clearance_below`, which decides whether a Euclidean distance is under a
+radius exactly — squares compared, rationals cross-multiplied, never a
+square root.
+
+**The arbiter, restated over oriented footprints.** Same ladder, same
+order, same `Violation` names:
+
+- **Bounds**: every corner lies inside one chart's rect, and every cell
+  the footprint covers is that chart's — no hole, no fold.
+- **Threshold, Fixture**: any covered cell of that class refuses.
+- **Affix**: unchanged.
+- **Cryo**: the footprint comes within `cargo::HULL_TOUCH` — a sixteenth
+  of a cell, inclusive — of the floor chart's edge. A hand is not exact,
+  and a body a degree off square meets a wall at one corner a hair
+  before the next; the wall snap makes flush easy anyway, so the
+  allowance only ever forgives a hand.
+- **Overlap**: separating axes against every other occupancy piece in
+  the room. Touching is legal, so pieces stand flush at any angle.
+- **Shadow**: a tall floor piece whose box comes within one cell of a
+  floor edge shadows the wall behind it, across its projection onto the
+  seam and up its stature (three courses at most). A footprint is
+  nearest a straight edge at a corner and its shadow on a seam is the
+  span of its corners, so the box round it says both, exactly, at any
+  angle.
+- **Volatile**: two volatile pieces need half a cell of clear air,
+  **Euclidean**. The grid's Chebyshev gap measured along the room's
+  axes, and a rule that changes when the pieces turn is the room's rule,
+  not theirs.
+- **Suspicious**: unchanged.
+- **Dressings**: one dressing per point (separating axes among laid
+  pieces), and the pinned rule is separating axes against standing
+  pieces, both ways.
+- **Light**: a lit source lights a target less than one cell away,
+  Euclidean, that it does not wholly contain. Corners count, as before.
+- **Which tile** a piece stands on is the tile under its centre, and a
+  refusing class refuses any covered cell, as before. The rat keeps to
+  its cells: it perches on a cell any footprint covers, and nibbles the
+  piece whose covered cells are nearest its own.
+
+**Hit-testing happens in the piece's own frame.** `layout::piece_at`
+asks the oriented footprint, so the air beside a turned couch grabs
+nothing. A sub-rect declared in a piece's own units — a cabinet's
+cubbies, an instrument's amber handle — is asked by carrying the pointer
+INTO the piece's frame (`layout::piece_contains`, `layout::piece_frame`),
+never by turning the sub-rect out into a box. The pointer is read once,
+by basic IEEE arithmetic, into whole sub-units of the net; every step
+after that is an integer.
+
+**Default facing is procedural only.** The backing rule left the cabin
+for the sim as `cargo::default_turn(host, kind, chart, centre)`, an
+integer port of what the cabin drew: a deck body within half a cell of a
+seam turns its back to that wall — the aft seam first, then the front,
+then a flank for a body one cell across — and anywhere else it faces the
+front. The deckhead takes the same rule, as it did in the cabin, and a
+wall takes `Turn(0)`. It is used by **everything the game places
+itself** — the starting board, shelves, furniture, salvage, harvest, the
+exchange, banking the hopper, fluff budding and fixture boards — and
+never by a player's drop: a carried piece keeps the turn it was carried
+at. `first_fit` and `dress_fit` offer every candidate corner aboard at
+the default turn first, then, for a footprint that is not square, a
+quarter turn on from it, so a body is turned onto its side only when
+nothing aboard takes it upright. Half a turn lays the very same ground
+and is never asked.
+
+**The drop** (`Sim::settle`; `Sim::drop_preview(player, p, turn)` is the
+same resolution asked early). The chart under the pointer names the
+room and the chart; the footprint is centred on the pointer at the
+carry's turn; the box round it is clamped inside the chart's rect; then
+the **wall snap**: an axis whose box lies within an eighth of a cell of
+a chart edge, inclusive, slides flush onto it, the nearer edge winning
+and a tie going to the lower coordinate. That is the only position snap.
+**The neighbour snap is gone** — a hand that set a crate a hair off its
+neighbour meant the hair — and the sim snaps no angle at all. The input
+frame carries the carry's facing as an absolute `Turn`, because a VR
+hand reports a pose and not a key press, and only the release and the
+preview read it, so a sparse recording stays exact.
+
+**Saves, tapes and the wire.** Saves are `STV21` (`hold {room} {x} {y}
+{turn}`: centre and turn), tapes `RPL5`, the wire `SNP4` with the
+facing after the occupied room. A document from any other version
+starts a new run (DESIGN_REVIEW.md, *An old save or tape starts a new
+run*).
+
+**Sweeps.** `cargo::FRACTIONS` is `{0, 1, 127, 128, 255}` in the new
+unit — on the line, a unit past it, either side of the middle, a unit
+short of the next — and the sim's every-berth sweep crosses it with
+upright, a quarter turn, an eighth and a seventh.
+
+**The cabin draws the sim's turn and nothing else.** Every rig is posed
+in its chart's upright frame turned by the piece's `Turn` about the
+chart's normal, through the one mapping (`pieces::turned_frame`): the
+upright rule's remaining job is the frame, and which way a body faces
+in it is the sim's. `floor_facing` is gone. Until the controls land a
+carry keeps the held piece's own turn (`bridge::carry_facing`), and the
+ghost and the footprint patch are asked at that turn, which is the turn
+the release will carry.
+
+**The controls are the next pass.** While carrying: the mouse wheel
+turns to the next multiple of 15° in its direction; Ctrl + wheel turns
+1° a notch, unsnapped; and `Q` takes the wheel's 15° step for a
+trackpad. The ghost, the footprint patch (an oriented quad), the refusal
+flash, standing faces, carry handles, cubbies, windows and instrument
+focus poses all ride the turned berth then. Where that work lands in
+the cabin is marked in the code (`phase 2:`); none of it is built.
 
 ## The decision: the 2D console retires
 
@@ -811,6 +1043,11 @@ no cells at all takes the roll unconditionally, since it has nothing to
 leave: the violation glyphs have a top like any other drawn thing, and
 a hazard triangle that points down is not a hazard triangle.
 
+> Superseded in part by *Cargo turns*: the upright rule's remaining
+> job is the frame. Which way a body faces in it is the sim's `Turn`,
+> measured from upright on every chart, so nothing rolls a body to
+> stand it up any more.
+
 **A rolled wall piece carries its own face**, a standoff proud of the
 chart so it outranks the coplanar plane behind it (an instrument
 answers on its own glass; everything else on a small standoff — a tie
@@ -852,7 +1089,7 @@ walls away from every window and every painting. The cure is the thing
 the containment said it was waiting for: **a kind states its extent in
 its own frame** — across, deep, tall (`cargo::Kind::extent`) — and a
 berth spends whichever two of the three its chart is for
-(`Kind::plan_on`):
+(`Kind::face_on`):
 
 - A chart a body lies **on** — the deck, the deckhead — spends the
   plan: across by deep.
@@ -937,7 +1174,7 @@ for camera reasons:
 - Every kind re-authors its extent for the plane it mounts (the couch
   is 2 wide × 1 deep on a real floor, not a 2×2 bas-relief). **Landed**
   — `cargo::Kind::extent` states across, deep and tall, and
-  `Kind::plan_on` spends the pair the chart is for.
+  `Kind::face_on` spends the pair the chart is for.
 - Save and replay formats bump (STV8 / RPL4) when the net lands; old
   saves migrate hold cells onto the aft-wall/floor charts they already
   present as.
@@ -993,3 +1230,6 @@ as far as anyone can tell.
 
 > Superseded by *The grid comes out*: free placement is in, by decree.
 > Physics remains out.
+
+> Superseded by *Cargo turns*: and it turns, at any angle, on every
+> surface. Physics remains out.

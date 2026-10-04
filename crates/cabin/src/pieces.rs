@@ -9,7 +9,8 @@
 //! stowaway.
 //!
 //! Semantics keep the retired 2D console's law: the sim stays the only
-//! arbiter — footprints come from `layout::piece_rect` and `cubby_rect`,
+//! arbiter — footprints come from `layout::piece_rect`, the piece under
+//! the aim from `layout::piece_at`,
 //! where a drop would land and whether it may from `drop_preview`,
 //! invites from `drop_targets` — and no refusal rides on hue alone:
 //! illegality always carries a slash, gnawing carries a wedge, shapes
@@ -43,8 +44,8 @@ use space_trucking::sim::room::{CABIN, RoomId, Rooms};
 #[allow(unused_imports)]
 use space_trucking::sim::{};
 use space_trucking::sim::{
-    Cue, Kind, Loc, Mount, Piece, ShipState, Sim, Vec2 as SimVec2, Violation, cargo, lamp_lit,
-    player_owned, splitmix,
+    Cue, Kind, Loc, Mount, Piece, ShipState, Sim, Surf, Turn, Vec2 as SimVec2, Violation, cargo,
+    lamp_lit, player_owned, splitmix,
 };
 
 use crate::poi::{Coat, Shape, Worn};
@@ -123,7 +124,7 @@ pub const RIG_FAR: f32 = RIG_NEAR + layout::CELL;
 ///
 /// **A chart a body stands ON has no such plane**, and that is what this
 /// exists to say. The rect a deck or deckhead berth is given spends the
-/// DEPTH (`cargo::Kind::plan_on`), so the cells own the ground on both
+/// DEPTH (`cargo::Kind::face_on`), so the cells own the ground on both
 /// sides of their own middle and there is nothing for a band hung off a
 /// plane to hang from. [`site_on`] draws a standing rig back by exactly
 /// this, which lands the band on the cells; without it every standing
@@ -589,21 +590,6 @@ fn chart_room(surface: &SimSurface) -> Option<RoomId> {
         .map(|(room, _, _)| room)
 }
 
-/// The net chart a sim point reads through, whichever room's it is. The
-/// old wall-band/deck-strip pair generalized first to the cabin's six
-/// charts and now to every attached room's: lanes are disjoint, so the
-/// rect that CONTAINS the point is the only possible answer. `None` off
-/// every net.
-fn chart_of(
-    surfaces: &Query<(&Station, &SimSurface)>,
-    sim: SimVec2,
-) -> Option<(Station, SimSurface)> {
-    surfaces
-        .iter()
-        .find(|(station, surface)| station.chart_flipped() && surface.rect.contains(sim))
-        .map(|(station, surface)| (*station, *surface))
-}
-
 /// One named chart of one named room.
 fn room_chart(
     surfaces: &Query<(&Station, &SimSurface)>,
@@ -619,73 +605,92 @@ fn room_chart(
         .map(|(_, surface)| *surface)
 }
 
-/// The aft chart of the same room as `surface` — the frame the backing
-/// rule reads "room-forward" from, and the one thing a rig needs beyond
-/// its own chart.
-fn aft_for(surfaces: &Query<(&Station, &SimSurface)>, surface: &SimSurface) -> Option<SimSurface> {
-    room_chart(surfaces, chart_room(surface)?, Station::BayWall)
+/// The net chart a sim point reads through, whichever room's it is. The
+/// old wall-band/deck-strip pair generalized first to the cabin's six
+/// charts and now to every attached room's: lanes are disjoint, so the
+/// rect that CONTAINS the point is the only possible answer. `None` off
+/// every net.
+fn chart_of(
+    surfaces: &Query<(&Station, &SimSurface)>,
+    sim: SimVec2,
+) -> Option<(Station, SimSurface)> {
+    surfaces
+        .iter()
+        .find(|(station, surface)| station.chart_flipped() && surface.rect.contains(sim))
+        .map(|(station, surface)| (*station, *surface))
 }
 
-/// Where a hold footprint (its `layout::piece_rect`) sits in the room,
-/// as the rig root's (translation, rotation, scale). On the floor chart
-/// a rig STANDS: feet on its plan rect, upright, turned by the backing
-/// rule ([`floor_facing`]) and keeping its bas-relief height (the
-/// re-authored 3D extents are deferred; BAY.md). On a wall or the
-/// ceiling it hangs flat against the chart. Sizes derive from the
-/// surface scales, so retuning `rig::BAY_CELL` re-scales every rig.
+/// **Where a hold footprint (its `layout::piece_rect`) sits in the room
+/// at `turn`**, as the rig root's (translation, rotation, scale). On the
+/// floor chart a rig STANDS: feet on its ground, upright, turned by the
+/// piece's own turn ([`turned_frame`]) and keeping its height. On a wall
+/// it hangs against the chart, and from the ceiling it hangs pendant.
+/// Sizes derive from the surface scales, so retuning `rig::BAY_CELL`
+/// re-scales every rig.
 fn net_site(
     surfaces: &Query<(&Station, &SimSurface)>,
     kind: Kind,
     rect: Rect,
+    turn: Turn,
 ) -> Option<(Vec3, Quat, Vec3)> {
     let (station, surface) = chart_of(surfaces, rect_center(rect))?;
-    let aft = aft_for(surfaces, &surface)?;
-    Some(site_on(station, &surface, &aft, kind, rect))
+    Some(site_on(station, &surface, kind, rect, turn))
 }
 
-/// The backing rule (BAY.md): where a standing rig's orientation cannot
-/// be read off its cells, its footprint decides. A footprint against a
-/// wall seam turns its BACK to that wall (the couch against the wall);
-/// mid-floor it faces the front of the room, toward the user. Only the
-/// yaws that keep the visual plan on its logical cells are candidates:
-/// a half turn is always compatible, quarter turns only for one-column
-/// footprints (a 2-wide couch cannot lie along the port wall without
-/// leaving its cells). Seam priority aft, front, then the sides —
-/// stable, and the always-compatible flips first.
-fn floor_facing(surface: &SimSurface, aft: &SimSurface, rect: Rect) -> Quat {
-    let base = Station::BayWall.face(aft);
-    // The floor chart's OWN rect is the floor rect — of whichever room's
-    // deck this is. Reading the seams off it rather than off a named room
-    // is what lets the same rule stand a couch up in the cabin, in a
-    // derelict's hold, and in a station's trade room.
-    let plan = surface.rect;
-    // **Against a seam is half a cell from it or less.** That was only a
-    // rounding allowance while every footprint stood on whole cells; a
-    // berth is a position now, so it is a rule: a body that faces a seam
-    // keeps MORE than half a cell of deck in front of its face, which is
-    // the ground `gauntlet::berth_turned` holds it to. Half a sixteenth
-    // past the half, so a berth exactly half a cell out reads the same
-    // on every machine.
-    let seam = layout::CELL.mul_add(0.5, layout::CELL / f32::from(2 * cargo::FINE));
-    let one_column = (rect.w - layout::CELL).abs() < layout::CELL * 0.5;
-    // Sim axes on the floor chart, in world: `u` port -> starboard,
-    // `v` aft -> front (the floor's aft row lies at the aft seam).
-    let u = surface.half_u.normalize();
-    let v = surface.half_v.normalize();
-    let want = if (rect.y - plan.y).abs() < seam {
-        v
-    } else if ((rect.y + rect.h) - (plan.y + plan.h)).abs() < seam {
-        -v
-    } else if (rect.x - plan.x).abs() < seam && one_column {
-        u
-    } else if ((rect.x + rect.w) - (plan.x + plan.w)).abs() < seam && one_column {
-        -u
-    } else {
-        v
+/// **The way a body berthed on chart `surf` at `turn` lays its across
+/// axis, in the world**: the sim's own answer (`cargo::net_angle`, the one
+/// mapping from chart to net) read off `surface`'s sheet axes.
+///
+/// The cabin never decides which way a body faces. It used to: the
+/// backing rule lived here and turned a couch's back to
+/// whichever wall it stood by. The sim owns that now, for the bodies the
+/// game places itself (`cargo::default_turn`), and a body the player set
+/// down keeps the turn it was carried at — so all the drawing does is lay
+/// the sim's angle on the chart's two axes, the sheet's +x and +y.
+fn across_on(surf: Surf, surface: &SimSurface, turn: Turn) -> Vec3 {
+    let angle = cargo::net_angle(surf, turn);
+    let unit = |v: i64| (v as f64 / cargo::TRIG_ONE as f64) as f32;
+    surface.half_u.normalize() * unit(angle.cos()) + surface.half_v.normalize() * unit(angle.sin())
+}
+
+/// **A chart's upright frame, turned by a body's own turn**: the rotation
+/// a rig berthed on `station`'s chart at `turn` is drawn at. The upright
+/// rule's whole job now is the FRAME; which way a body faces in it is the
+/// sim's ([`across_on`]).
+///
+/// Two frames, and how the body meets its chart picks:
+///
+/// - **Against the chart** — anything on a wall, and anything laid flat
+///   into any chart (`laid`): the body's own +Z is the chart's inward
+///   normal, its +X the across axis, and its +Y a quarter on from that,
+///   which is up the wall at `Turn(0)` because a wall's `Turn(0)` is its
+///   upright frame. A turn spins the body about the normal, counter-
+///   clockwise as the room sees it, which is the way a `Turn` counts.
+/// - **Standing on the deck, hanging from the deckhead**: the body's own
+///   +Y is the room's up — a pendant hangs below its canopy, it is not
+///   pasted flat against the plane — its +X the across axis, and its face
+///   the way that leaves it, which is the room's front at `Turn(0)`.
+///
+/// The net is one sheet folded into a box, so the charts do not all lie
+/// the same way once they stand — the aft wall's rows run level, the
+/// front unfolds downward, the flanks' columns run up the wall — and that
+/// is all in the mapping's base angles, read off each chart's own axes.
+/// Nothing here rolls a body to make it stand up any more: it is drawn
+/// upright because its turn is measured from upright.
+fn turned_frame(station: Station, surface: &SimSurface, turn: Turn, laid: bool) -> Quat {
+    let Some(surf) = station.surf() else {
+        return station.face(surface);
     };
-    let ahead = base * Vec3::Z;
-    let yaw = ahead.cross(want).dot(Vec3::Y).atan2(ahead.dot(want));
-    Quat::from_rotation_y(yaw) * base
+    let x = across_on(surf, surface, turn);
+    let inward = station.inward(surface);
+    let standing = !laid && matches!(surf, Surf::Floor | Surf::Ceiling);
+    let (y, z) = if standing {
+        let up = if surf == Surf::Floor { inward } else { -inward };
+        (up, x.cross(up))
+    } else {
+        (inward.cross(x), inward)
+    };
+    Quat::from_mat3(&Mat3::from_cols(x, y, z))
 }
 
 /// [`net_site`]'s pure core, for a known chart — shared with the unit
@@ -693,136 +698,73 @@ fn floor_facing(surface: &SimSurface, aft: &SimSurface, rect: Rect) -> Quat {
 ///
 /// **A flat chart's berth spends two axes and the chart fixes the
 /// third**, and getting that backwards on one of them is what stood
-/// every crate half a berth out into the aisle. A deck berth's rect is a
-/// plan — across by deep — so the deck fixes the HEIGHT (the rig rises
-/// half its own off the plane) and the cells own the depth. A wall
-/// berth's rect is an elevation — across by tall — so the wall fixes the
+/// every crate half a berth out into the aisle. A deck berth's footprint
+/// is a plan — across by deep — so the deck fixes the HEIGHT (the rig
+/// rises half its own off the plane) and the ground owns the depth. A
+/// wall berth's is an elevation — across by tall — so the wall fixes the
 /// DEPTH, and that is the one case where the band every rig is composed
 /// within ([`RIG_NEAR`], [`RIG_FAR`]) already begins where it should.
-/// Everywhere else it has to be drawn back onto the cells ([`rig_mid`]).
+/// Everywhere else it has to be drawn back onto the ground ([`rig_mid`]),
+/// along whichever way the body is turned to look.
 fn site_on(
     station: Station,
     surface: &SimSurface,
-    aft: &SimSurface,
     kind: Kind,
     rect: Rect,
+    turn: Turn,
 ) -> (Vec3, Quat, Vec3) {
     let (su, sv) = (surface.scale_u(), surface.scale_v());
     let scale = Vec3::new(su, sv, su.min(sv)) * BAY_FIT;
-    // How tall the kind stands, in sim units. A deck berth's rect is a
-    // PLAN — across by deep — so the height a rig rises through is the
-    // kind's own and never the rect's (`cargo::Kind::extent`).
+    // How tall the kind stands, in sim units. A deck berth's footprint is
+    // a PLAN — across by deep — so the height a rig rises through is the
+    // kind's own and never the footprint's (`cargo::Kind::extent`).
     let tall = f32::from(kind.upright().1) * layout::CELL;
+    let rot = turned_frame(station, surface, turn, false);
     // Back onto the plan: the depth band's middle, laid off along the
-    // way the rig is turned to look, so the band covers the cells the
-    // rect spent on it instead of reaching out of them.
-    let onto_plan = |rot: Quat| rot * (Vec3::Z * (rig_mid() * scale.z));
+    // way the rig is turned to look, so the band covers the ground the
+    // footprint spent on it instead of reaching out of it.
+    let onto_plan = rot * (Vec3::Z * (rig_mid() * scale.z));
+    let base = surface.to_world(rect_center(rect));
     match station {
-        Station::BayFloor => {
-            let base = surface.to_world(rect_center(rect));
-            let rot = floor_facing(surface, aft, rect);
-            (
-                base + Vec3::Y * (tall * 0.5 * scale.y) - onto_plan(rot),
-                rot,
-                scale,
-            )
-        }
-        // Ceiling cargo hangs PENDANT: upright like a floor rig, author
-        // up staying world up — the lamp's cord meets the ceiling and
-        // its shade swings below — rather than pasted flat against the
-        // plane, which is what the playtest called out.
-        //
-        // **And it takes the backing rule, exactly as a floor rig does.**
-        // It used to take one fixed turn, facing the front of the room
-        // from every cell of the deckhead, which is the couch-facing-the-
-        // wall defect stood on its head: a pendant hung on the front row
-        // looked into the front wall a hand's breadth in front of it. A
-        // deckhead is a chart a body stands on with gravity the other way
-        // round, its seams are the same four seams, and there was never a
-        // reason for it to be the one chart whose bodies do not turn. Mid-
-        // room the rule's own default is the turn this used to hardcode,
-        // so nothing away from a seam moves.
-        Station::BayCeiling => {
-            let base = surface.to_world(rect_center(rect));
-            let rot = floor_facing(surface, aft, rect);
-            (
-                base - Vec3::Y * (tall * 0.5 * scale.y) - onto_plan(rot),
-                rot,
-                scale,
-            )
-        }
-        _ => (
-            surface.to_world(rect_center(rect)),
-            wall_upright(station, surface),
+        Station::BayFloor => (
+            base + Vec3::Y * (tall * 0.5 * scale.y) - onto_plan,
+            rot,
             scale,
         ),
+        Station::BayCeiling => (
+            base - Vec3::Y * (tall * 0.5 * scale.y) - onto_plan,
+            rot,
+            scale,
+        ),
+        _ => (base, rot, scale),
     }
 }
 
-/// The turn about a chart's inward normal that carries the chart's own
-/// up onto the ROOM's up. The net is one sheet of paper folded into a
-/// box, so the charts do not all lie the same way once they stand:
-/// nothing to do on the aft wall, whose rows already run level; a HALF
-/// turn on the front, which unfolds downward off the floor's front edge
-/// so its +y climbs the wall; a QUARTER on the side walls, whose
-/// columns run up the wall — the playtest's sideways star chart.
-/// `None` where up has no direction in the plane at all: the floor and
-/// the ceiling lie flat, and flat has no upright.
-fn upright_roll(station: Station, surface: &SimSurface) -> Option<f32> {
-    if !station.chart_flipped() {
-        return None;
-    }
-    let n = station.inward(surface);
-    let want = Vec3::Y - n * Vec3::Y.dot(n);
-    if want.length_squared() < 0.5 {
-        return None;
-    }
-    let want = want.normalize();
-    let up = station.face(surface) * Vec3::Y;
-    Some(up.cross(want).dot(n).atan2(up.dot(want)))
-}
-
-/// **The upright rule for wall cargo, and it no longer has a clause.**
-/// A rig hung on a chart inherits that chart's lie, so it rolls back
-/// upright about the wall normal (facing is untouched). Every wall, every
-/// footprint, always.
-///
-/// It used to have to count cells first. A HALF turn maps any footprint
-/// onto itself; a QUARTER turn trades width for height, so a non-square
-/// footprint was refused one and hung sideways instead — the starting
-/// window coming out a quarter turn from the window that left. What was
-/// turning was the CELLS: the net's side flaps fold out sideways, and a
-/// footprint stated in the sheet's frame therefore meant a different
-/// shape on a flank than on an end. The footprint is stated in the
-/// wall's own frame now (`cargo::Kind::plan_on`), which means the cells
-/// a flank berth owns are already the rolled ones — so the roll a body
-/// wants is always the one its cells have paid for, and there is nothing
-/// left to refuse.
-fn wall_upright(station: Station, surface: &SimSurface) -> Quat {
+/// Whether a berth's rig is drawn off its chart's own lie — turned, or
+/// standing up out of it. That is exactly when the rig's frame and the
+/// chart's frame stop agreeing about where a sub-rect of the piece lies,
+/// and so exactly when the piece must carry its own reading
+/// ([`standing_surface`]). The aft wall is the one chart whose lie IS the
+/// upright frame, so a wall piece there at `Turn(0)` reads through the
+/// chart; every other wall rolls its upright frame off the chart's lie.
+fn off_its_chart(station: Station, surface: &SimSurface, turn: Turn) -> bool {
     let base = station.face(surface);
-    upright_roll(station, surface).map_or(base, |roll| {
-        Quat::from_axis_angle(station.inward(surface), roll) * base
-    })
+    let rot = turned_frame(station, surface, turn, false);
+    (rot * Vec3::Y).dot(base * Vec3::Y) < 0.999
 }
 
-/// Whether the upright rule turned a berth's rig off its chart's own
-/// lie. That is exactly when the rig's frame and the chart's frame stop
-/// agreeing about where a sub-rect of the footprint lies — and so
-/// exactly when the piece must carry its own reading
-/// ([`standing_surface`]).
-fn wall_rolled(station: Station, surface: &SimSurface) -> bool {
-    let base = station.face(surface);
-    (wall_upright(station, surface) * Vec3::Y).dot(base * Vec3::Y) < 0.999
-}
-
-/// Where a laid footprint lies: flat AGAINST its chart, lifted
+/// Where a laid footprint lies at `turn`: flat AGAINST its chart, lifted
 /// [`LAID_LIFT`] proud of the quad so the coat clears the room's paint
-/// yet stays under everything standing on the same cells. No
+/// yet stays under everything standing on the same ground. No
 /// [`BAY_FIT`] margin — a covering covers; its own geometry insets
 /// where the berth edge should still read.
-fn net_laid(surfaces: &Query<(&Station, &SimSurface)>, rect: Rect) -> Option<(Vec3, Quat, Vec3)> {
+fn net_laid(
+    surfaces: &Query<(&Station, &SimSurface)>,
+    rect: Rect,
+    turn: Turn,
+) -> Option<(Vec3, Quat, Vec3)> {
     let (station, surface) = chart_of(surfaces, rect_center(rect))?;
-    Some(laid_on(station, &surface, rect))
+    Some(laid_on(station, &surface, rect, turn))
 }
 
 /// The chart a sim point reads through, among a plain list of them —
@@ -834,55 +776,43 @@ fn chart_at(charts: &[(Station, SimSurface)], sim: SimVec2) -> Option<(Station, 
         .find(|(station, surface)| station.chart_flipped() && surface.rect.contains(sim))
 }
 
-/// The aft chart of `surface`'s own room, among a plain list.
-fn aft_in(charts: &[(Station, SimSurface)], surface: &SimSurface) -> Option<SimSurface> {
-    let room = chart_room(surface)?;
-    charts
-        .iter()
-        .find(|(station, other)| *station == Station::BayWall && chart_room(other) == Some(room))
-        .map(|(_, other)| *other)
-}
-
 /// [`net_laid`]'s pure core, for a known chart — shared with the unit
-/// tests. A coat takes the upright rule like any other thing drawn on a
-/// wall: paint has a top, and wallpaper will have a pattern. The floor
-/// and ceiling have no upright to take, and a rug's non-square
-/// footprint keeps its cells, so today's dressings all lie exactly
-/// where they always did.
-fn laid_on(station: Station, surface: &SimSurface, rect: Rect) -> (Vec3, Quat, Vec3) {
+/// tests. A coat is drawn in the frame a wall body is, turned by its own
+/// turn about the chart's normal: paint has a top, and wallpaper will
+/// have a pattern.
+fn laid_on(station: Station, surface: &SimSurface, rect: Rect, turn: Turn) -> (Vec3, Quat, Vec3) {
     let (su, sv) = (surface.scale_u(), surface.scale_v());
     (
         surface.to_world(rect_center(rect)) + station.inward(surface) * LAID_LIFT,
-        wall_upright(station, surface),
+        turned_frame(station, surface, turn, true),
         Vec3::new(su, sv, su.min(sv)),
     )
 }
 
-/// **The pose a rig berthed on `rect` actually takes**, with the chart it
-/// takes it on: [`site_on`]'s own answer, for a caller holding a
-/// snapshot of the charts rather than a live world.
+/// **The pose a rig berthed on `rect` at `turn` actually takes**, with
+/// the chart it takes it on: [`site_on`]'s own answer, for a caller
+/// holding a snapshot of the charts rather than a live world.
 ///
 /// Pure, and it exists so the gauntlet can ask which way a berth turns a
 /// body without spawning one (`crate::gauntlet`). A berth's TURN is the
 /// half of its pose no box can carry: an axis-aligned box is the same
 /// box after a half turn, and it is the same box after a quarter turn
 /// whenever the footprint is square — so a rule handed only
-/// [`berth_box`]'s corners cannot ask which way a couch is looking, and
-/// for as long as that was all there was, nothing did.
+/// [`berth_box`]'s corners cannot ask which way a couch is looking.
 #[must_use]
 pub fn berth_pose(
     charts: &[(Station, SimSurface)],
     kind: Kind,
     rect: Rect,
+    turn: Turn,
 ) -> Option<(Station, SimSurface, Vec3, Quat, Vec3)> {
     let (station, surface) = chart_at(charts, rect_center(rect))?;
-    let aft = aft_in(charts, &surface)?;
-    let (pos, rot, scale) = site_on(station, &surface, &aft, kind, rect);
+    let (pos, rot, scale) = site_on(station, &surface, kind, rect, turn);
     Some((station, surface, pos, rot, scale))
 }
 
-/// **The world box a rig berthed on `rect` actually fills**, as an
-/// axis-aligned `(lo, hi)` — [`site_on`]'s pose plus the common rig
+/// **The world box a rig berthed on `rect` at `turn` actually fills**, as
+/// an axis-aligned `(lo, hi)` — [`site_on`]'s pose plus the common rig
 /// depth ([`RIG_NEAR`], [`RIG_FAR`]), spun onto the world axes.
 ///
 /// Pure, and it exists so the gauntlet can ask what a berth costs in air
@@ -890,8 +820,13 @@ pub fn berth_pose(
 /// function the runtime poses rigs with, so a retune of the berth pose
 /// moves the question and the answer together.
 #[must_use]
-pub fn berth_box(charts: &[(Station, SimSurface)], kind: Kind, rect: Rect) -> Option<(Vec3, Vec3)> {
-    let (_, _, pos, rot, scale) = berth_pose(charts, kind, rect)?;
+pub fn berth_box(
+    charts: &[(Station, SimSurface)],
+    kind: Kind,
+    rect: Rect,
+    turn: Turn,
+) -> Option<(Vec3, Vec3)> {
+    let (_, _, pos, rot, scale) = berth_pose(charts, kind, rect, turn)?;
     // The body, in rig-local sim units: the kind's OWN frame across and
     // up (`cargo::Kind::upright`, which no berth turns) and the common
     // rig depth along the local normal. Read off the kind rather than
@@ -1056,6 +991,7 @@ pub fn features(kind: Kind) -> Vec<Feature> {
             room: CABIN,
             x: 0,
             y: 0,
+            turn: Turn::ZERO,
         },
     };
     parts(&piece, Screens::LIVE)
@@ -1080,6 +1016,7 @@ pub fn seats(kind: Kind) -> Vec<Seat> {
             room: CABIN,
             x: 0,
             y: 0,
+            turn: Turn::ZERO,
         },
     };
     Screens::BOTH
@@ -1090,7 +1027,7 @@ pub fn seats(kind: Kind) -> Vec<Seat> {
 }
 
 /// Cubby anchor centres in the cabinet rig's local space, sim units.
-/// Slot order matches `layout::cubby_rect`: row-major from the top-left
+/// Slot order matches `cargo::Foot::quarter_box`: row-major from the top-left
 /// facing the open front — local +X is sim +x, local +Y is up, so slot 0
 /// sits up-left of the rig's centre. `z` recesses the cargo into the
 /// carcass so it reads shelved, not stuck on.
@@ -1117,20 +1054,27 @@ fn berth_site(
     surfaces: &Query<(&Station, &SimSurface)>,
 ) -> Option<(Vec3, Quat, Vec3)> {
     match piece.loc {
-        Loc::Hold { .. } => net_site(
+        Loc::Hold { turn, .. } => net_site(
             surfaces,
             piece.kind,
             layout::piece_rect(rooms, pieces, piece),
+            turn,
         ),
-        Loc::Laid { .. } => net_laid(surfaces, layout::piece_rect(rooms, pieces, piece)),
+        Loc::Laid { turn, .. } => {
+            net_laid(surfaces, layout::piece_rect(rooms, pieces, piece), turn)
+        }
         Loc::Stow { cabinet, slot } => {
             // An occupied cabinet cannot leave its room, so the host is a
             // standing floor rig whenever this berth exists at all.
             let host = pieces
                 .iter()
                 .find(|other| other.id == cabinet && matches!(other.loc, Loc::Hold { .. }))?;
-            let (pos, rot, scale) =
-                net_site(surfaces, host.kind, layout::piece_rect(rooms, pieces, host))?;
+            let (pos, rot, scale) = net_site(
+                surfaces,
+                host.kind,
+                layout::piece_rect(rooms, pieces, host),
+                host.loc.spot()?.turn,
+            )?;
             Some((
                 pos + rot * (cubby_anchor(slot) * scale),
                 rot,
@@ -1141,42 +1085,43 @@ fn berth_site(
 }
 
 /// **The berth the held piece's drop at `aim` would take, drawn**: that
-/// berth's rect on its chart, and the sim's ruling on it.
+/// berth's rect on its chart, the turn it would stand at, and the sim's
+/// ruling on it.
 ///
 /// It is [`Sim::drop_preview`]'s answer, which is the release's own
 /// resolution asked early — centred on the aim, clamped into the chart,
-/// snapped flush — so the ghost, the footprint patch, and the refusal
-/// flash all stand where the drop lands, to the sixteenth, and colour
-/// themselves with the verdict the release will get. Nothing in here
-/// re-derives a footprint from the aimed cell any more: that was the
-/// grid's answer, and the grid is gone (docs/BAY.md, "The grid comes
-/// out").
+/// snapped flush to a wall — so the ghost, the footprint patch, and the
+/// refusal flash all stand where the drop lands, to the unit and to the
+/// turn, and colour themselves with the verdict the release will get.
+/// It is asked with the facing the release will carry
+/// (`crate::bridge::carry_facing`), which is the held piece's own turn
+/// until the player can turn it. Nothing in here re-derives a footprint
+/// from the aimed cell any more: that was the grid's answer, and the
+/// grid is gone (docs/BAY.md, "The grid comes out").
 ///
 /// `None` while nothing is held, off every net, and for a cubby drop: a
 /// cubby is inside a piece and has no ground of its own to stand a
 /// ghost or light a patch on.
-fn previewed(sim: &Sim, aim: SimVec2) -> Option<(Rect, Result<(), Option<Violation>>)> {
+fn previewed(sim: &Sim, aim: SimVec2) -> Option<(Rect, Turn, Result<(), Option<Violation>>)> {
     let held = sim.held(0)?;
     let piece = sim.pieces().iter().find(|piece| piece.id == held.piece)?;
-    let (loc, verdict) = sim.drop_preview(0, aim)?;
-    if matches!(loc, Loc::Stow { .. }) {
-        return None;
-    }
+    let (loc, verdict) = sim.drop_preview(0, aim, crate::bridge::carry_facing(sim))?;
+    let turn = loc.spot()?.turn;
     let berth = Piece { loc, ..*piece };
     Some((
         layout::piece_rect(sim.rooms(), sim.pieces(), &berth),
+        turn,
         verdict,
     ))
 }
 
-/// **The turn and the stand-off a berth on `rect` gives the carried
-/// kind**: the rotation [`site_on`] stands it at, and where that berth
-/// stands its origin relative to the middle of the rect on the chart,
-/// in metres.
+/// **The rotation and the stand-off a berth on `rect` at `turn` gives
+/// the carried kind**: the rotation [`site_on`] stands it at, and where
+/// that berth stands its origin relative to the middle of the rect on the
+/// chart, in metres.
 ///
-/// So the carried ghost promises the pose the piece will actually take —
-/// the upright rule on the side walls, the backing rule on the floor,
-/// the hopper tile's turn toward the doorway.
+/// So the carried ghost promises the pose the piece will actually take:
+/// its chart's upright frame, turned by the turn it is carried at.
 ///
 /// **The stand-off is a whole offset and not a height**, because a
 /// standing berth spends one ([`site_on`] draws a deck rig back onto its
@@ -1195,11 +1140,11 @@ fn previewed(sim: &Sim, aim: SimVec2) -> Option<(Rect, Result<(), Option<Violati
 fn hover_pose(
     station: Station,
     surface: &SimSurface,
-    aft: &SimSurface,
     kind: Kind,
     rect: Rect,
+    turn: Turn,
 ) -> (Quat, Vec3) {
-    let (pos, rot, _) = site_on(station, surface, aft, kind, rect);
+    let (pos, rot, _) = site_on(station, surface, kind, rect, turn);
     (rot, pos - surface.to_world(rect_center(rect)))
 }
 
@@ -1211,16 +1156,16 @@ fn hover_pose(
 /// origin, so a body standing on a deck still stands on it while it is
 /// a tenth too big, and the drop's glide from here to the berth has
 /// nothing left to travel but the lift and the tenth it shrinks back by.
-/// The ghost follows the aim in sixteenths because the berth does
-/// ([`previewed`]).
+/// The ghost follows the aim a unit at a time because the berth does,
+/// and stands at the turn the berth would ([`previewed`]).
 fn ghost_pose(
     station: Station,
     surface: &SimSurface,
-    aft: &SimSurface,
     kind: Kind,
     rect: Rect,
+    turn: Turn,
 ) -> (Vec3, Quat) {
-    let (rot, stand) = hover_pose(station, surface, aft, kind, rect);
+    let (rot, stand) = hover_pose(station, surface, kind, rect, turn);
     (
         surface.to_world(rect_center(rect))
             + stand * HOVER_FIT
@@ -1335,6 +1280,7 @@ pub fn drawn_box(kind: Kind) -> (Vec3, Vec3) {
             room: CABIN,
             x: 0,
             y: 0,
+            turn: Turn::ZERO,
         },
     };
     let (w, h) = kind.upright();
@@ -1396,59 +1342,127 @@ pub fn drawn_box(kind: Kind) -> (Vec3, Vec3) {
 /// elevation the rig was drawn in — and the body is what the aim has to
 /// meet ([`SimSurface::strike`]).
 #[must_use]
-fn standing_face(kind: Kind, rect: Rect, site: (Vec3, Quat, Vec3)) -> SimSurface {
+fn standing_face(
+    kind: Kind,
+    surf: Surf,
+    rect: Rect,
+    angle: Turn,
+    site: (Vec3, Quat, Vec3),
+) -> SimSurface {
     let (box_mid, box_half) = drawn_box(kind);
     let (at, half) = (box_mid.truncate(), box_half.truncate());
     let (a, t) = kind.upright();
-    // **Sim units of rect per sim unit of rig, on each axis.** A rig is
-    // composed in its own upright frame ([`Kind::upright`]) and a berth
-    // may hand it a rect of quite another shape: a deck berth's rect is
-    // a PLAN, across by deep, where the rig is across by tall, and a
-    // flank's is the wall frame transposed. The body is read onto the
-    // rect it owns rather than assumed to fill it — which is the whole
-    // of the deck apron defect on the pick side, since a wardrobe's
-    // elevation laid straight onto its plan spilled a cell of bare deck
-    // in front of it that answered for the wardrobe.
+    // **Sim units of footprint per sim unit of rig, on each axis.** A rig
+    // is composed in its own upright frame ([`Kind::upright`]) and its
+    // footprint, in that same frame, may be quite another shape: a deck
+    // berth spends a PLAN, across by deep, where the rig is across by
+    // tall. The body is read onto the ground it owns rather than assumed
+    // to fill it — which is the whole of the deck apron defect on the
+    // pick side, since a wardrobe's elevation laid straight onto its plan
+    // spilled a cell of bare deck in front of it that answered for the
+    // wardrobe.
+    let (across, span) = kind.face_on(surf);
     let per = Vec2::new(
-        rect.w / (f32::from(a) * layout::CELL),
-        rect.h / (f32::from(t) * layout::CELL),
+        f32::from(across) / f32::from(a),
+        f32::from(span) / f32::from(t),
     );
-    let mid = rect_center(rect);
-    // The rig's +Y is up-panel and the sim's +y runs down, so the box
-    // reads back onto the piece's rect with its vertical flipped.
-    let bound = Rect::new(
-        (at.x - half.x).mul_add(per.x, mid.x),
-        (-at.y - half.y).mul_add(per.y, mid.y),
-        half.x * 2.0 * per.x,
-        half.y * 2.0 * per.y,
+    // The box in the piece's own frame, as its offset from the
+    // footprint's centre and its half-size: across, and down its face —
+    // the rig's +Y is up and the frame's runs down, so the box's
+    // vertical flips.
+    let own = (
+        Vec2::new(at.x * per.x, -at.y * per.y),
+        Vec2::new(half.x * per.x, half.y * per.y),
     );
-    riding_face(
-        bound,
+    let face = riding_face(
+        Rect::new(0.0, 0.0, 1.0, 1.0),
         at,
         (half.x * 2.0, half.y * 2.0),
         box_mid.z,
         box_half.z,
         site,
-    )
+    );
+    onto_net(face, rect_center(rect), own, angle)
 }
 
-/// Where a berthed instrument's station hangs, from its hold cells
+/// **A pick face's reading, laid onto the net.** `face` reads its body's
+/// own frame — its `half_u` runs across the body, its `half_v` down its
+/// face — over `own`, the box the body's silhouette covers in the piece's
+/// own frame (offset from the footprint's centre, half-size, in sim
+/// units). This lays that reading onto the net round the footprint's
+/// centre `centre`, at the net angle `angle` its across axis lies at
+/// (`cargo::net_angle`), so the point a player aims at on the body is the
+/// point of the net the sim hit-tests — and the sim carries it back into
+/// the piece's own frame to ask which cubby or which band
+/// (`layout::piece_contains`, `layout::piece_frame`).
+///
+/// A face reads along the two axes of a box, so it can say a frame
+/// turned by quarters exactly: across and down each lie along one of
+/// the sheet's two axes, one way round or the other.
+///
+/// phase 2: a body at any other angle is read here as though it stood at
+/// the nearest quarter turn, which is near enough to find the body but
+/// not its cubbies or its handle; the face has to carry the turn itself
+/// to read an odd angle exactly.
+fn onto_net(face: SimSurface, centre: SimVec2, own: (Vec2, Vec2), angle: Turn) -> SimSurface {
+    // The sheet directions the piece's own across and down axes take,
+    // down being a quarter short of across (`cargo::Foot`).
+    let ((ax, ay), along_x) = match angle.0.wrapping_add(Turn::QUARTER.0 / 2) >> 14 {
+        0 => ((1.0, 0.0), true),
+        1 => ((0.0, 1.0), false),
+        2 => ((-1.0, 0.0), true),
+        _ => ((0.0, -1.0), false),
+    };
+    let (dx, dy) = (ay, -ax);
+    let (off, half) = own;
+    let mid = SimVec2::new(
+        off.y.mul_add(dx, off.x.mul_add(ax, centre.x)),
+        off.y.mul_add(dy, off.x.mul_add(ay, centre.y)),
+    );
+    if along_x {
+        SimSurface {
+            half_u: face.half_u * ax,
+            half_v: face.half_v * dy,
+            rect: Rect::new(mid.x - half.x, mid.y - half.y, half.x * 2.0, half.y * 2.0),
+            ..face
+        }
+    } else {
+        // Across runs down the sheet, so the sheet's x is read down the
+        // body's face and its y across it.
+        SimSurface {
+            half_u: face.half_v * dx,
+            half_v: face.half_u * ay,
+            rect: Rect::new(mid.x - half.y, mid.y - half.x, half.y * 2.0, half.x * 2.0),
+            ..face
+        }
+    }
+}
+
+/// **The turn a piece's berth stands it at**: its own, or the upright
+/// frame for a piece with no ground of its own (a cubby's).
+#[must_use]
+pub fn berth_turn(piece: &Piece) -> Turn {
+    piece.loc.spot().map_or(Turn::ZERO, |spot| spot.turn)
+}
+
+/// Where a berthed instrument's station hangs, from its hold berth
 /// alone: the piece's BERTH pose — never the eased tween, since a
 /// station that lagged its own housing would hand the sim stale
 /// coordinates mid-glide — through the same [`site_on`] the rig lands
-/// with. `None` for passive cargo, or off the net.
+/// with, at the piece's own turn. `None` for passive cargo, or off the
+/// net.
 #[must_use]
 pub fn instrument_surface(
     charts: &[(Station, SimSurface)],
     kind: Kind,
     rect: Rect,
+    turn: Turn,
 ) -> Option<(Station, SimSurface)> {
     let mount = instrument(kind)?;
     let (station, surface) = chart_at(charts, rect_center(rect))?;
-    let aft = aft_in(charts, &surface)?;
     Some((
         mount.station,
-        ride_surface(&mount, kind, site_on(station, &surface, &aft, kind, rect)),
+        ride_surface(&mount, kind, site_on(station, &surface, kind, rect, turn)),
     ))
 }
 
@@ -1461,14 +1475,15 @@ pub fn instrument_surface(
 /// deck answers about a plate two steps behind it, skewed and mirrored
 /// (the playtest's top-right cubby selecting the top-left one).
 ///
-/// A rig the upright rule ROLLS lies in its chart's plane but a quarter
-/// (or a half) turn off its lie, so a sub-rect declared in the chart's
-/// own y — the amber handle band — is nowhere near the bar the rig
-/// draws from those very numbers: the tank on a side wall wears its
-/// grab across the bottom and routes carry down one flank. Same defect
-/// class, other plane.
+/// A wall rig drawn off its chart's own lie — a flank's or the front's
+/// upright frame, or any turn of its own — lies in its chart's plane but
+/// turned on it, so a point read on the chart is a point of the net and
+/// not of the body: the tank on a side wall wears its grab across the
+/// bottom and would route carry down one flank. Same defect class, other
+/// plane. The face reads the body and lays the reading onto the net
+/// ([`onto_net`]), so the sim can carry it back into the piece's frame.
 ///
-/// **Wall cargo the rule leaves alone still carries none, and the
+/// **Wall cargo drawn on its chart's own lie still carries none, and the
 /// reason is the room's own hardware.** There the chart lies in the
 /// rig's very plane and answers for the rig's very cells, so the
 /// reading is right for anything but a glancing aim at a deep body —
@@ -1493,15 +1508,15 @@ pub fn standing_surface(
     charts: &[(Station, SimSurface)],
     kind: Kind,
     rect: Rect,
+    turn: Turn,
 ) -> Option<SimSurface> {
     let (station, surface) = chart_at(charts, rect_center(rect))?;
-    let aft = aft_in(charts, &surface)?;
-    let site = site_on(station, &surface, &aft, kind, rect);
-    match station {
-        Station::BayFloor | Station::BayCeiling => Some(standing_face(kind, rect, site)),
-        _ if wall_rolled(station, &surface) => Some(standing_face(kind, rect, site)),
-        _ => None,
-    }
+    let surf = station.surf()?;
+    let stands = matches!(station, Station::BayFloor | Station::BayCeiling);
+    (stands || off_its_chart(station, &surface, turn)).then(|| {
+        let site = site_on(station, &surface, kind, rect, turn);
+        standing_face(kind, surf, rect, cargo::net_angle(surf, turn), site)
+    })
 }
 
 /// Hang, move, and retire the surfaces that ride the cargo: an
@@ -1536,10 +1551,12 @@ fn ride_pieces(
         // deck is floor cargo one room over, and is grabbed by its body
         // for exactly the reason floor cargo always was.
         if matches!(piece.loc, Loc::Hold { .. }) {
-            if let Some((station, surface)) = instrument_surface(&charts, piece.kind, rect) {
+            if let Some((station, surface)) =
+                instrument_surface(&charts, piece.kind, rect, berth_turn(piece))
+            {
                 live.push((piece.id, station, surface));
             }
-            if let Some(face) = standing_surface(&charts, piece.kind, rect) {
+            if let Some(face) = standing_surface(&charts, piece.kind, rect, berth_turn(piece)) {
                 live.push((piece.id, Station::Standing, face));
             }
         }
@@ -1699,7 +1716,9 @@ fn latch_cues(
         }
     }
     memo.grip = sim.held(0).map(|held| held.piece);
-    memo.berth = previewed(sim, pointer.sim).map(|(rect, _)| rect);
+    // phase 2: the flash burns over this box, which is the berth's own
+    // ground only at a quarter turn; at any other it is the box round it.
+    memo.berth = previewed(sim, pointer.sim).map(|(rect, _, _)| rect);
 }
 
 // -------------------------------------------------------------------- sync --
@@ -2008,8 +2027,8 @@ fn carry_held(
             // Aimed at the room: the piece stands where its drop would
             // land, as it would stand there, a lift proud and a tenth
             // large ([`ghost_pose`]). The berth is the sim's own answer
-            // for this aim ([`previewed`]), so the ghost slides in
-            // sixteenths as the aim does and the release cannot put the
+            // for this aim ([`previewed`]), so the ghost slides a fine
+            // unit at a time as the aim does and the release cannot put the
             // piece anywhere the ghost was not. The turn is derived from
             // the SAME berth maths a settled piece takes — a preview that
             // computed its own facing drifted from the berth (the
@@ -2021,10 +2040,12 @@ fn carry_held(
             // always the surface the ray struck: a crosshair resting on
             // a standing rig's own face reads that piece's cells, and
             // those cells are still the floor's.
-            let ghost = previewed(sim, pointer.sim).and_then(|(rect, _)| {
+            // phase 2: when the player can turn the carry, the ghost turns
+            // with it here — `previewed` already asks at the facing the
+            // release will carry.
+            let ghost = previewed(sim, pointer.sim).and_then(|(rect, turn, _)| {
                 let (berth, plane) = chart_of(&surfaces, rect_center(rect))?;
-                let aft = aft_for(&surfaces, &plane)?;
-                Some(ghost_pose(berth, &plane, &aft, kind, rect))
+                Some(ghost_pose(berth, &plane, kind, rect, turn))
             });
             let (pos, rot) = ghost.unwrap_or_else(|| {
                 // No ground to stand on: a cubby drop, or an aim off
@@ -2033,20 +2054,18 @@ fn carry_held(
                 // under the hand is the plan its pose is read from;
                 // off the net there is no cell at all, and the struck
                 // face's own facing is all there is.
+                let facing = crate::bridge::carry_facing(sim);
                 let cubby = matches!(
-                    sim.drop_preview(0, pointer.sim),
+                    sim.drop_preview(0, pointer.sim, facing),
                     Some((Loc::Stow { .. }, _))
                 );
                 let (berth, plane) = chart_of(&surfaces, pointer.sim).unwrap_or((station, surface));
-                let (rot, stand) = layout::cell_at(pointer.sim)
-                    .filter(|_| cubby)
-                    .zip(aft_for(&surfaces, &plane))
-                    .map_or_else(
-                        || (station.face(&surface), Vec3::ZERO),
-                        |((room, x, y), aft)| {
-                            hover_pose(berth, &plane, &aft, kind, layout::cell_rect(room, x, y))
-                        },
-                    );
+                let (rot, stand) = layout::cell_at(pointer.sim).filter(|_| cubby).map_or_else(
+                    || (station.face(&surface), Vec3::ZERO),
+                    |(room, x, y)| {
+                        hover_pose(berth, &plane, kind, layout::cell_rect(room, x, y), facing)
+                    },
+                );
                 (
                     world + station.inward(&surface) * CARRY_LIFT + stand * HOVER_FIT,
                     rot,
@@ -2251,13 +2270,7 @@ fn hover_glint(
             .pieces()
             .iter()
             .find(|piece| piece.id == id)
-            .and_then(|piece| {
-                carry_handle_rect(
-                    piece.kind,
-                    layout::piece_rect(sim.rooms(), sim.pieces(), piece),
-                )
-            })
-            .is_some_and(|handle| handle.contains(pointer.sim));
+            .is_some_and(|piece| on_carry_handle(sim.rooms(), piece, pointer.sim));
         // The hardware itself answers: the amber bar the aim rests on
         // flares to the grab brightness. The tell is on the piece and
         // not only in the line round it — brightness, not hue alone.
@@ -2302,7 +2315,10 @@ fn footprint_patch(
     mut slashes: Query<(&mut Transform, &mut Visibility), Without<FootPatch>>,
 ) {
     let (patch, material, mut transform, mut visibility) = patch.into_inner();
-    let lit = previewed(&shell.bridge.sim, pointer.sim).and_then(|(rect, verdict)| {
+    // phase 2: the patch is the box round the previewed footprint, which
+    // is the footprint itself only at a quarter turn; a body carried at
+    // any other turn wants the oriented quad here.
+    let lit = previewed(&shell.bridge.sim, pointer.sim).and_then(|(rect, _, verdict)| {
         let legal = match verdict {
             Ok(()) => true,
             Err(Some(_)) => false,
@@ -2624,10 +2640,14 @@ fn violation_flash(
     let (su, sv) = (surface.scale_u(), surface.scale_v());
     // The frame bars are drawn in the chart's own axes and stay there —
     // a rectangle has no up. The GLYPH does: a hazard triangle points
-    // somewhere and a crate has a lid, so the icon takes the upright
-    // rule whole, on every wall the net folds up (charts whose columns
-    // run sideways, and the front's rows that climb).
-    let rot = wall_upright(station, &surface);
+    // somewhere and a crate has a lid, so the icon is drawn in its
+    // chart's upright frame, on every wall the net folds up (charts whose
+    // columns run sideways, and the front's rows that climb).
+    //
+    // phase 2: the frame bars and the glyph burn over the box round the
+    // refused berth, upright; a refusal at an odd turn wants the
+    // oriented berth and the turn it was carried at.
+    let rot = turned_frame(station, &surface, Turn::ZERO, true);
     let anchor = surface.to_world(mid) + inward * crate::rig::layer::GLYPH;
     for (bar, mut transform, mut visibility) in &mut glyphs {
         let Some(&(offset, size, tilt)) = spec.get(usize::from(bar.0)) else {
@@ -3131,16 +3151,16 @@ pub const fn instrument(kind: Kind) -> Option<Instrument> {
     }
 }
 
-/// [`carry_handle`] in sim units over a berthed piece's rect.
-pub fn carry_handle_rect(kind: Kind, rect: Rect) -> Option<Rect> {
-    carry_handle(kind).map(|frac| {
-        Rect::new(
-            frac.x.mul_add(rect.w, rect.x),
-            frac.y.mul_add(rect.h, rect.y),
-            frac.w * rect.w,
-            frac.h * rect.h,
-        )
-    })
+/// **Whether `at` is on `piece`'s declared carry handle** ([`carry_handle`]),
+/// read in the piece's own frame (`layout::piece_frame`): the pointer is
+/// carried into the piece, never the band out onto the sheet, so the band
+/// the rig draws and the band that routes are one band at any turn.
+/// `false` for passive cargo, which declares none.
+#[must_use]
+pub fn on_carry_handle(rooms: &Rooms, piece: &Piece, at: SimVec2) -> bool {
+    carry_handle(piece.kind)
+        .zip(layout::piece_frame(rooms, piece, at))
+        .is_some_and(|(band, own)| band.contains(own))
 }
 
 /// The amber grab's resting emissive, and the brightness it flares to
@@ -6071,16 +6091,39 @@ mod tests {
             && sub.y + sub.h <= whole.y + whole.h + SLACK
     }
 
-    /// The rect `kind` takes anchored on cell `(x, y)` of the cabin's net.
-    fn rect_of(x: u8, y: u8, kind: Kind) -> Rect {
-        rect_at(cargo::fine(x), cargo::fine(y), kind)
+    /// The berth `kind` takes with its footprint's top-left on cell
+    /// `(x, y)` of the cabin's net, turned the way the game would turn it
+    /// there (`cargo::anchored`): its rect, and its turn.
+    fn berth_of(x: u8, y: u8, kind: Kind) -> (Rect, Turn) {
+        let (cx, cy, turn) = cargo::anchored(
+            space_trucking::sim::room::RoomKind::Cabin,
+            kind,
+            cargo::fine(x),
+            cargo::fine(y),
+        )
+        .expect("the tests berth on real cells");
+        (rect_at(cx, cy, kind, turn), turn)
     }
 
-    /// The rect `kind` takes at fine `(x, y)` of the cabin's net.
-    fn rect_at(x: u16, y: u16, kind: Kind) -> Rect {
-        let foot = cargo::Foot::of(space_trucking::sim::room::RoomKind::Cabin, kind, x, y)
+    /// The rect `kind` takes on cell `(x, y)` of the cabin's net
+    /// ([`berth_of`]).
+    fn rect_of(x: u8, y: u8, kind: Kind) -> Rect {
+        berth_of(x, y, kind).0
+    }
+
+    /// The rect `kind` takes centred on fine `(x, y)` of the cabin's net
+    /// at `turn`.
+    fn rect_at(x: u16, y: u16, kind: Kind, turn: Turn) -> Rect {
+        let foot = cargo::Foot::of(space_trucking::sim::room::RoomKind::Cabin, kind, x, y, turn)
             .expect("the tests berth on real cells");
         layout::foot_rect(CABIN, foot)
+    }
+
+    /// [`site_on`] at the berth `kind` takes on cell `(x, y)` of the
+    /// cabin's net, on `station`'s chart ([`berth_of`]).
+    fn site_at(station: Station, x: u8, y: u8, kind: Kind) -> (Vec3, Quat, Vec3) {
+        let (rect, turn) = berth_of(x, y, kind);
+        site_on(station, &chart(station), kind, rect, turn)
     }
 
     /// The net mapping's regimes: wall cells hang flat on their chart's
@@ -6089,17 +6132,10 @@ mod tests {
     #[test]
     fn net_sites_hang_and_stand_per_chart() {
         let aft = chart(Station::BayWall);
-        let floor = chart(Station::BayFloor);
         let port = chart(Station::BayPort);
         // A painting on the aft chart: flat against the aft wall plane,
         // facing into the room.
-        let (pos, rot, _) = site_on(
-            Station::BayWall,
-            &aft,
-            &aft,
-            Kind::Painting,
-            rect_of(4, 1, Kind::Painting),
-        );
+        let (pos, rot, _) = site_at(Station::BayWall, 4, 1, Kind::Painting);
         assert!(
             (pos.z - aft.center.z).abs() < 1e-4,
             "wall piece left the wall plane: {pos}"
@@ -6111,7 +6147,7 @@ mod tests {
         // A couch on the floor: upright (local +Y is world up), feet on
         // the plates, spanning about its two 0.55 cells.
         let couch = rect_of(4, 4, Kind::Couch);
-        let (pos, rot, scale) = site_on(Station::BayFloor, &floor, &aft, Kind::Couch, couch);
+        let (pos, rot, scale) = site_at(Station::BayFloor, 4, 4, Kind::Couch);
         assert!(
             (rot * Vec3::Y - Vec3::Y).length() < 1e-4,
             "standing rigs must be upright"
@@ -6122,13 +6158,7 @@ mod tests {
         assert!((0.95..=1.15).contains(&width), "couch width {width}");
         // A wall lamp on the port chart: at the port plane, facing
         // starboard (+X is into the room from port).
-        let (pos, rot, _) = site_on(
-            Station::BayPort,
-            &port,
-            &aft,
-            Kind::WallLamp,
-            rect_of(1, 4, Kind::WallLamp),
-        );
+        let (pos, rot, _) = site_at(Station::BayPort, 1, 4, Kind::WallLamp);
         assert!(
             (pos.x - port.center.x).abs() < 1e-4,
             "port piece left its wall plane: {pos}"
@@ -6139,15 +6169,17 @@ mod tests {
         );
     }
 
-    /// The backing rule: seam contact turns a standing rig's back to
-    /// the wall, quarter turns only where the plan allows them, and
-    /// mid-floor cargo faces the front of the room.
+    /// The backing rule, as the game gives it (`cargo::default_turn`) and
+    /// the cabin draws it through the one mapping from chart to net: seam
+    /// contact turns a standing rig's back to the wall, quarter turns only
+    /// where the plan allows them, and mid-floor cargo faces the front of
+    /// the room. The cabin no longer decides any of this; it is asked
+    /// here because what the sim says a turn means and what the drawing
+    /// does with it have to be the same claim.
     #[test]
     fn the_backing_rule_turns_floor_rigs() {
-        let aft = chart(Station::BayWall);
-        let floor = chart(Station::BayFloor);
         let facing = |x: u8, y: u8, kind: Kind| {
-            let (_, rot, _) = site_on(Station::BayFloor, &floor, &aft, kind, rect_of(x, y, kind));
+            let (_, rot, _) = site_at(Station::BayFloor, x, y, kind);
             assert!(
                 (rot * Vec3::Y - Vec3::Y).length() < 1e-4,
                 "the backing rule must keep rigs upright"
@@ -6185,15 +6217,8 @@ mod tests {
         // defect stood on its head, and invisible to every family in the
         // gauntlet until one of them learned to ask which way a berth
         // turns a body.
-        let ceiling = chart(Station::BayCeiling);
         let hung = |x: u8, y: u8, kind: Kind| {
-            let (_, rot, _) = site_on(
-                Station::BayCeiling,
-                &ceiling,
-                &aft,
-                kind,
-                rect_of(x, y, kind),
-            );
+            let (_, rot, _) = site_at(Station::BayCeiling, x, y, kind);
             assert!(
                 (rot * Vec3::Y - Vec3::Y).length() < 1e-4,
                 "a pendant hangs the author's up world up"
@@ -6235,9 +6260,9 @@ mod tests {
         let (cols, rows) = space_trucking::sim::RoomKind::Cabin.grid();
         let mut swept = 0_u32;
         let mut floors = 0_u32;
-        // Every whole-cell anchor and the fixed sample of sixteenths off
-        // it: a body drawn from its berth's rect fills that rect wherever
-        // on the net the rect lies.
+        // Every whole-cell anchor and the fixed sample of units off it,
+        // at the turn the game gives a body there: a body drawn from its
+        // berth's rect fills that rect wherever on the net the rect lies.
         let anchors = (0..rows).flat_map(|y| {
             (0..cols).flat_map(move |x| {
                 cargo::FRACTIONS.into_iter().flat_map(move |dx| {
@@ -6253,34 +6278,176 @@ mod tests {
                 continue;
             }
             for &(x, y) in &anchors {
-                {
-                    if placement_check(&ship, &[], 0, kind, CABIN, x, y).is_err() {
-                        continue;
-                    }
-                    let rect = rect_at(x, y, kind);
-                    let (station, surface) =
-                        chart_at(&charts, rect_center(rect)).expect("a legal berth is charted");
-                    let (lo, hi) = berth_box(&charts, kind, rect).expect("and so is its box");
-                    let body = hi - lo;
-                    for (axis, cells, scale, along) in [
-                        (surface.half_u.normalize(), rect.w, surface.scale_u(), "u"),
-                        (surface.half_v.normalize(), rect.h, surface.scale_v(), "v"),
-                    ] {
-                        let drawn = body.dot(axis.abs());
-                        let owned = cells * scale;
-                        assert!(
-                            (drawn / owned - BAY_FIT).abs() < 1e-3,
-                            "{kind:?} at ({x}, {y}) on {station:?} draws {drawn} m along \
-                             {along} where its cells own {owned} m",
-                        );
-                    }
-                    swept += 1;
-                    floors += u32::from(station == Station::BayFloor);
+                let Some((x, y, turn)) =
+                    cargo::anchored(space_trucking::sim::RoomKind::Cabin, kind, x, y)
+                else {
+                    continue;
+                };
+                let spot = cargo::Spot {
+                    room: CABIN,
+                    x,
+                    y,
+                    turn,
+                };
+                if placement_check(&ship, &[], 0, kind, spot).is_err() {
+                    continue;
                 }
+                let rect = rect_at(x, y, kind, turn);
+                let (station, surface) =
+                    chart_at(&charts, rect_center(rect)).expect("a legal berth is charted");
+                let (lo, hi) = berth_box(&charts, kind, rect, turn).expect("and so is its box");
+                let body = hi - lo;
+                for (axis, cells, scale, along) in [
+                    (surface.half_u.normalize(), rect.w, surface.scale_u(), "u"),
+                    (surface.half_v.normalize(), rect.h, surface.scale_v(), "v"),
+                ] {
+                    let drawn = body.dot(axis.abs());
+                    let owned = cells * scale;
+                    assert!(
+                        (drawn / owned - BAY_FIT).abs() < 1e-3,
+                        "{kind:?} at ({x}, {y}) on {station:?} draws {drawn} m along \
+                         {along} where its cells own {owned} m",
+                    );
+                }
+                swept += 1;
+                floors += u32::from(station == Station::BayFloor);
             }
         }
         assert!(swept > 500, "the sweep went thin: {swept} berths");
         assert!(floors > 0, "no deck berth was measured at all");
+    }
+
+    /// **The drawing lays the sim's turn on the net, at every angle.**
+    ///
+    /// There is one mapping from chart to net (`cargo::net_angle`), the
+    /// sim lays every footprint through it, and the cabin poses every
+    /// body through it ([`across_on`]); this holds the two together. On
+    /// every chart, at the quarter turns and at the odd angles a carry
+    /// can leave a body at — a degree, fifteen, forty-five, and a seventh
+    /// of a turn that lands on no convenient number at all — the body a
+    /// berth draws covers the footprint the sim lays and nothing more:
+    /// its two half-axes in the chart's plane are the footprint's own
+    /// (`cargo::Foot`), carried onto the chart and worn at [`BAY_FIT`].
+    /// Each with its sign, too, because a box is the same box after a
+    /// half turn and a couch is not the same couch: across is the body's
+    /// right, and the footprint's "down its face" runs down a wall body,
+    /// the way a standing body looks, and the way a hanging one backs —
+    /// seen from the room, the deckhead is the deck's mirror.
+    ///
+    /// A covering wears no margin (it covers), so a coat is held to its
+    /// frame alone: paint has a top.
+    #[test]
+    fn every_chart_draws_the_turn_the_sim_lays_on_its_net() {
+        const TURNS: [Turn; 8] = [
+            Turn::ZERO,
+            Turn::QUARTER,
+            Turn::HALF,
+            Turn::quarters(3),
+            Turn(182),
+            Turn(2731),
+            Turn(8192),
+            Turn(9362),
+        ];
+        // A fine point of the cabin's net, where the chart draws it.
+        let sheet = |x: i32, y: i32| {
+            let at = layout::fine_rect(
+                CABIN,
+                cargo::Aabb {
+                    x0: x,
+                    y0: y,
+                    x1: x,
+                    y1: y,
+                },
+            );
+            SimVec2::new(at.x, at.y)
+        };
+        let mut swept = 0_u32;
+        for (station, surface) in rig::bay() {
+            let Some(surf) = station.surf() else {
+                continue;
+            };
+            let (cx, cy) = layout::fine_at(CABIN, rect_center(surface.rect));
+            let centre = surface.to_world(sheet(cx, cy));
+            let inward = station.inward(&surface);
+            // A fine vector of the net, as the chart lays it in the room.
+            let unit = layout::CELL / f32::from(cargo::FINE);
+            let world = |v: (f32, f32)| {
+                surface.half_u * (v.0 * unit * 2.0 / surface.rect.w)
+                    + surface.half_v * (v.1 * unit * 2.0 / surface.rect.h)
+            };
+            // Two fine units of slack: the footprint's corners are whole
+            // units, each within half of one of the true turn.
+            let slack = world((2.0, 0.0)).length();
+            for kind in Kind::ALL {
+                let laid = kind.covering();
+                if !laid && !cargo::mount_accepts(kind.mount(), surf) {
+                    continue;
+                }
+                for turn in TURNS {
+                    let foot = cargo::Foot::planned(kind, surf, (cx, cy), turn);
+                    let [c0, c1, _, c3] = foot.corners().map(|(x, y)| (x as f32, y as f32));
+                    let across = world(((c0.0 - c1.0) * 0.5, (c0.1 - c1.1) * 0.5));
+                    let down = world(((c0.0 - c3.0) * 0.5, (c0.1 - c3.1) * 0.5));
+                    let rect = layout::foot_rect(CABIN, foot);
+                    let at = format!("{kind:?} on {station:?} at {turn:?}");
+                    if laid {
+                        let (_, rot, _) = laid_on(station, &surface, rect, turn);
+                        assert!(
+                            (rot * Vec3::X).dot(across.normalize()) > 0.999
+                                && (rot * Vec3::NEG_Y).dot(down.normalize()) > 0.999,
+                            "{at}: the coat lies off the footprint's frame",
+                        );
+                        swept += 1;
+                        continue;
+                    }
+                    let (pos, rot, scale) = site_on(station, &surface, kind, rect, turn);
+                    let (a, t) = kind.upright();
+                    let wide = rot * Vec3::X * (f32::from(a) * layout::CELL * 0.5 * scale.x);
+                    let (mid, deep) = if matches!(surf, Surf::Floor | Surf::Ceiling) {
+                        // Standing or hanging: the plan is across by the
+                        // rig's depth band. Down the plan is a quarter
+                        // clockwise of across as the room sees it, which
+                        // is the way a standing body looks — and, looking
+                        // UP at a pendant whose right is the lamp's right,
+                        // the way a hanging one backs.
+                        let band = rot * Vec3::Z;
+                        let looks = if surf == Surf::Floor { 1.0 } else { -1.0 };
+                        (
+                            pos + band * (rig_mid() * scale.z),
+                            band * ((RIG_FAR - RIG_NEAR) * 0.5 * scale.z * looks),
+                        )
+                    } else {
+                        // Against a wall: across by tall, and down its
+                        // face is down the body.
+                        (
+                            pos,
+                            rot * Vec3::NEG_Y * (f32::from(t) * layout::CELL * 0.5 * scale.y),
+                        )
+                    };
+                    let on_chart = mid - inward * inward.dot(mid - centre);
+                    assert!(
+                        on_chart.distance(centre) < slack,
+                        "{at}: the body stands {on_chart} on the chart where the sim centres \
+                         it at {centre}",
+                    );
+                    for (drawn, laid_down, axis) in
+                        [(wide, across, "across"), (deep, down, "down its face")]
+                    {
+                        assert!(
+                            inward.dot(drawn).abs() < 1e-4,
+                            "{at}: the body's {axis} axis leaves the chart's plane",
+                        );
+                        assert!(
+                            drawn.distance(laid_down * BAY_FIT) < slack,
+                            "{at}: the body draws {drawn} {axis} where the sim lays {}",
+                            laid_down * BAY_FIT,
+                        );
+                    }
+                    swept += 1;
+                }
+            }
+        }
+        assert!(swept > 150, "the sweep went thin: {swept} poses");
     }
 
     /// **The deck in front of a wardrobe is deck.**
@@ -6311,15 +6478,24 @@ mod tests {
                     kind: space_trucking::sim::RoomKind::Cabin,
                 }),
             })
-            .chain(pieces.iter().filter_map(|piece| {
-                let rect = layout::piece_rect(rooms, pieces, piece);
-                standing_surface(&charts, piece.kind, rect).map(|surface| Aimable {
-                    station: Station::Standing,
-                    surface,
-                    riding: true,
-                    in_room: None,
-                })
-            }))
+            // Hold berths only, as `ride_pieces` hangs them: a shelved
+            // piece is drawn inside its cabinet, and carries no face.
+            .chain(
+                pieces
+                    .iter()
+                    .filter(|piece| matches!(piece.loc, Loc::Hold { .. }))
+                    .filter_map(|piece| {
+                        let rect = layout::piece_rect(rooms, pieces, piece);
+                        standing_surface(&charts, piece.kind, rect, berth_turn(piece)).map(
+                            |surface| Aimable {
+                                station: Station::Standing,
+                                surface,
+                                riding: true,
+                                in_room: None,
+                            },
+                        )
+                    }),
+            )
             .collect();
         // The starter fixture stands a cabinet at (6, 4) of the cabin's
         // net: one cell of deck, two courses tall. The cell in front of
@@ -6375,7 +6551,6 @@ mod tests {
     /// the roll costs nothing.
     #[test]
     fn wall_cargo_hangs_upright() {
-        let aft = chart(Station::BayWall);
         for (station, x, y, kind) in [
             (Station::BayWall, 4, 0, Kind::ChartTank),
             (Station::BayPort, 0, 4, Kind::ChartTank),
@@ -6386,7 +6561,7 @@ mod tests {
             (Station::BayStarboard, 11, 5, Kind::Painting),
         ] {
             let surface = chart(station);
-            let (_, rot, _) = site_on(station, &surface, &aft, kind, rect_of(x, y, kind));
+            let (_, rot, _) = site_at(station, x, y, kind);
             assert!(
                 (rot * Vec3::Y).y > 0.9,
                 "{station:?}: the {kind:?}'s up must be world up, got {:?}",
@@ -6400,21 +6575,45 @@ mod tests {
         }
     }
 
-    /// Cubby anchors follow `layout::cubby_rect`'s row-major order from
-    /// the top-left, seen facing the open front.
+    /// Cubby anchors follow the sim's rack: row-major from the top-left,
+    /// seen facing the open front, in the cabinet's OWN frame
+    /// (`cargo::Framed::quarter`) — whatever way the cabinet is turned.
     #[test]
     fn cubby_anchors_match_the_sim_rack() {
-        // Slot 0 top-left … 3 bottom-right; local +X is sim +x, +Y up.
+        // Slot 0 top-left … 3 bottom-right; local +X is the rig's right,
+        // +Y up.
         assert!(cubby_anchor(0).x < cubby_anchor(1).x);
         assert!(cubby_anchor(2).x < cubby_anchor(3).x);
         assert!(cubby_anchor(0).y > cubby_anchor(2).y);
         assert!(cubby_anchor(1).y > cubby_anchor(3).y);
-        // And the sim agrees which sub-rect is which: cubby 0 sits
-        // up-left of cubby 3 in sim coordinates (sim +y runs down).
-        let body = Rect::new(0.0, 0.0, layout::CELL, 2.0 * layout::CELL);
-        let c0 = layout::cubby_rect(body, 0);
-        let c3 = layout::cubby_rect(body, 3);
-        assert!(c0.x < c3.x && c0.y < c3.y);
+        // And the sim agrees which quarter is which: cubby 0 is the top
+        // left of the cabinet's own face and cubby 3 its bottom right, at
+        // every turn the cabinet may stand at.
+        let rooms = Rooms::new();
+        for turn in [Turn::ZERO, Turn::QUARTER, Turn::HALF, Turn(9362)] {
+            let cabinet = Piece {
+                id: 0,
+                kind: Kind::Cabinet,
+                variant: 0,
+                gnawed: false,
+                loc: Loc::Hold {
+                    room: CABIN,
+                    x: cargo::fine(6),
+                    y: cargo::fine(6),
+                    turn,
+                },
+            };
+            let (_, foot) = cargo::Foot::at(&rooms, &cabinet).expect("on the deck");
+            let own = |slot: u8| {
+                let at = rect_center(layout::fine_rect(CABIN, foot.quarter_box(slot)));
+                layout::piece_frame(&rooms, &cabinet, at).expect("standing")
+            };
+            let (c0, c3) = (own(0), own(3));
+            assert!(
+                c0.x < 0.5 && c0.y < 0.5 && c3.x > 0.5 && c3.y > 0.5,
+                "{turn:?}: cubby 0 reads {c0:?} and cubby 3 {c3:?} of the cabinet's face"
+            );
+        }
     }
 
     /// The standing rule: a rig that stands OFF its chart is picked on
@@ -6427,61 +6626,95 @@ mod tests {
     #[test]
     fn a_yawed_cabinets_cubbies_are_picked_on_its_face() {
         let charts = rig::bay();
-        let aft = chart(Station::BayWall);
         let floor = chart(Station::BayFloor);
-        // One column wide against the port seam: the backing rule spends
-        // its quarter turn and the cabinet faces starboard.
-        let rect = rect_of(3, 4, Kind::Cabinet);
-        let (pos, rot, scale) = site_on(Station::BayFloor, &floor, &aft, Kind::Cabinet, rect);
+        // One column wide against the port seam: the game turns it its
+        // quarter, and the cabinet faces starboard.
+        let (rect, turn) = berth_of(3, 4, Kind::Cabinet);
+        let (pos, rot, scale) = site_on(Station::BayFloor, &floor, Kind::Cabinet, rect, turn);
         assert!(
             (rot * Vec3::Z).x > 0.9,
             "the backing rule must turn this cabinet to starboard: {:?}",
             rot * Vec3::Z
         );
-        let face =
-            standing_surface(&charts, Kind::Cabinet, rect).expect("a standing rig carries a face");
+        let face = standing_surface(&charts, Kind::Cabinet, rect, turn)
+            .expect("a standing rig carries a face");
         assert!(
             within(face.rect, rect),
             "the face binds the silhouette's own cells, {:?} inside {rect:?}",
             face.rect
         );
+        let n = Station::Standing.inward(&face);
         assert!(
-            face.normal().dot(rot * Vec3::Z) > 0.99,
+            n.dot(rot * Vec3::Z) > 0.99,
             "the face must look the way the rig looks"
         );
+        // Which cubby the sim reads at a point: a full rack, asked
+        // through the sim's own hit test, in the cabinet's own frame.
+        let (rooms, rack) = racked(rect, turn);
+        let cubby = |sim: SimVec2| {
+            layout::piece_at(&rooms, &rack, sim).and_then(|piece| match piece.loc {
+                Loc::Stow { slot, .. } => Some(slot),
+                _ => None,
+            })
+        };
         // Every cubby the rig DRAWS is the cubby the sim reads there.
         for slot in 0..CABINET_SLOTS {
             let drawn = pos + rot * (cubby_anchor(slot) * scale);
-            let n = face.normal();
             let ray = Ray3d::new(drawn + n * 0.6, Dir3::new(-n).expect("a unit normal"));
             let (_, sim, _) = face.project(ray).expect("the face takes the aim");
-            assert!(
-                layout::cubby_rect(rect, slot).contains(sim),
+            assert_eq!(
+                cubby(sim),
+                Some(slot),
                 "cubby {slot} is drawn where the sim reads {sim:?}"
             );
         }
         // And the report itself, put to the test: standing in front of
         // the cabinet and aiming at the TOP-RIGHT of what is on show
         // selects the top-right cubby, slot 1 — not its mirror.
-        let n = face.normal();
         let eye = face.center + n * 0.9 + Vec3::Y * 0.25;
         let right = (-n).cross(Vec3::Y).normalize();
-        let target = face.center
-            + right * (face.half_u.length() * 0.5)
-            + Vec3::Y * (face.half_v.length() * 0.5);
+        let (across, up) = (
+            face.half_u.dot(right).abs() + face.half_v.dot(right).abs(),
+            face.half_u.y.abs() + face.half_v.y.abs(),
+        );
+        let target = face.center + right * (across * 0.5) + Vec3::Y * (up * 0.5);
         let ray = Ray3d::new(eye, Dir3::new(target - eye).expect("a look direction"));
         let (_, sim, _) = face.project(ray).expect("the aim meets the face");
-        assert!(
-            layout::cubby_rect(rect, 1).contains(sim),
-            "the top-right quadrant read {sim:?}"
-        );
+        assert_eq!(cubby(sim), Some(1), "the top-right quadrant read {sim:?}");
         // The defect it retires: that same ray, read through the flat
         // deck chart, cannot name the cubby the player is looking at.
         let flat = floor.project(ray).map(|(_, sim, _)| sim);
         assert!(
-            flat.is_none_or(|sim| !layout::cubby_rect(rect, 1).contains(sim)),
+            flat.is_none_or(|sim| cubby(sim) != Some(1)),
             "the deck chart must not be able to answer for a standing rig: {flat:?}"
         );
+    }
+
+    /// A cabinet standing on `rect` at `turn` with a vial in every
+    /// cubby, on the ship the boot builds: the board a cubby is read off.
+    fn racked(rect: Rect, turn: Turn) -> (Rooms, Vec<Piece>) {
+        let rooms = Rooms::new();
+        let (x, y) = layout::fine_at(CABIN, rect_center(rect));
+        let mut rack = vec![Piece {
+            id: 1,
+            kind: Kind::Cabinet,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Hold {
+                room: CABIN,
+                x: u16::try_from(x).expect("on the net"),
+                y: u16::try_from(y).expect("on the net"),
+                turn,
+            },
+        }];
+        rack.extend((0..CABINET_SLOTS).map(|slot| Piece {
+            id: 10 + u32::from(slot),
+            kind: Kind::PerfumeVial,
+            variant: 0,
+            gnawed: false,
+            loc: Loc::Stow { cabinet: 1, slot },
+        }));
+        (rooms, rack)
     }
 
     /// Which berths carry a face: the ones whose rig leaves its chart's
@@ -6507,8 +6740,8 @@ mod tests {
             // to refuse, upright now and carrying its own face for it.
             (0, 4, Kind::Painting),
         ] {
-            let rect = rect_of(x, y, kind);
-            let face = standing_surface(&charts, kind, rect)
+            let (rect, turn) = berth_of(x, y, kind);
+            let face = standing_surface(&charts, kind, rect, turn)
                 .unwrap_or_else(|| panic!("{kind:?} at ({x}, {y}) leaves its chart's lie"));
             assert!(
                 within(face.rect, rect),
@@ -6519,8 +6752,9 @@ mod tests {
         // The aft chart already stands level, so nothing hung there is
         // turned at all and nothing hung there needs a face of its own.
         for (x, y, kind) in [(4, 1, Kind::Painting), (4, 1, Kind::ChartTank)] {
+            let (rect, turn) = berth_of(x, y, kind);
             assert!(
-                standing_surface(&charts, kind, rect_of(x, y, kind)).is_none(),
+                standing_surface(&charts, kind, rect, turn).is_none(),
                 "{kind:?} at ({x}, {y}) lies with its chart and needs no face"
             );
         }
@@ -6534,13 +6768,14 @@ mod tests {
     fn a_wall_face_outranks_the_chart_it_hangs_on() {
         let charts = rig::bay();
         let starboard = chart(Station::BayStarboard);
-        let rect = rect_of(12, 5, Kind::ChartTank);
-        let face = standing_surface(&charts, Kind::ChartTank, rect).expect("the tank rolls");
+        let (rect, turn) = berth_of(12, 5, Kind::ChartTank);
+        let face =
+            standing_surface(&charts, Kind::ChartTank, rect, turn).expect("the tank turns upright");
         let inward = Station::BayStarboard.inward(&starboard);
         let off = (face.center - starboard.to_world(rect_center(rect))).dot(inward);
         assert!(off > 0.02, "the face sits in the wall: {off}");
         assert!(
-            face.normal().dot(inward) > 0.99,
+            Station::Standing.inward(&face).dot(inward) > 0.99,
             "the face must look into the room"
         );
         // A ray in from the room meets the face first, every time.
@@ -6558,19 +6793,10 @@ mod tests {
     #[test]
     fn stowed_cargo_is_grabbed_where_it_is_drawn() {
         let charts = rig::bay();
-        let aft = chart(Station::BayWall);
         let floor = chart(Station::BayFloor);
-        let mut pieces = vec![Piece {
-            id: 1,
-            kind: Kind::Cabinet,
-            variant: 0,
-            gnawed: false,
-            loc: Loc::Hold {
-                room: CABIN,
-                x: cargo::fine(3),
-                y: cargo::fine(4),
-            },
-        }];
+        let (rect, turn) = berth_of(3, 4, Kind::Cabinet);
+        let mut pieces = racked(rect, turn).1;
+        pieces.truncate(1);
         // Three cubbies boxed, one left bare: the sim's rack tiles the
         // whole body, so an empty mouth is the only place the furniture
         // itself answers — which is exactly where it should.
@@ -6587,12 +6813,13 @@ mod tests {
                 }),
         );
         let rooms = space_trucking::sim::Sim::new(1).rooms().clone();
-        let rect = layout::piece_rect(&rooms, &pieces, &pieces[0]);
-        let (pos, rot, scale) = site_on(Station::BayFloor, &floor, &aft, Kind::Cabinet, rect);
-        let face = standing_surface(&charts, Kind::Cabinet, rect).expect("the cabinet stands");
+        assert_eq!(rect, layout::piece_rect(&rooms, &pieces, &pieces[0]));
+        let (pos, rot, scale) = site_on(Station::BayFloor, &floor, Kind::Cabinet, rect, turn);
+        let face =
+            standing_surface(&charts, Kind::Cabinet, rect, turn).expect("the cabinet stands");
         for slot in 0..CABINET_SLOTS {
             let drawn = pos + rot * (cubby_anchor(slot) * scale);
-            let n = face.normal();
+            let n = Station::Standing.inward(&face);
             let ray = Ray3d::new(drawn + n * 0.6, Dir3::new(-n).expect("a unit normal"));
             let (_, sim, _) = face.project(ray).expect("the face takes the aim");
             let want = if slot == bare {
@@ -6612,15 +6839,7 @@ mod tests {
     /// scale stays inside ~0.18 world units, without vanishing.
     #[test]
     fn stowed_pieces_shrink_to_the_cubby() {
-        let aft = chart(Station::BayWall);
-        let floor = chart(Station::BayFloor);
-        let (_, _, scale) = site_on(
-            Station::BayFloor,
-            &floor,
-            &aft,
-            Kind::Cabinet,
-            rect_of(4, 4, Kind::Cabinet),
-        );
+        let (_, _, scale) = site_at(Station::BayFloor, 4, 4, Kind::Cabinet);
         let extent = layout::CELL * scale.min_element() * STOW_FIT;
         assert!(extent <= 0.19, "stowed extent {extent}");
         assert!(extent >= 0.12, "stowed cargo should stay visible: {extent}");
@@ -6667,21 +6886,20 @@ mod tests {
     #[test]
     fn the_map_rides_the_tanks_glass() {
         let charts = rig::bay();
-        let rect = rect_of(12, 5, Kind::ChartTank);
-        let (station, surface) =
-            instrument_surface(&charts, Kind::ChartTank, rect).expect("the tank mounts the map");
+        let (rect, turn) = berth_of(12, 5, Kind::ChartTank);
+        let (station, surface) = instrument_surface(&charts, Kind::ChartTank, rect, turn)
+            .expect("the tank mounts the map");
         assert_eq!(station, Station::Map);
         assert_eq!(surface.rect, layout::MAP_PANEL);
         // The berth the rig itself takes, and the glass depth it draws
         // at: the surface must sit exactly there, not on the wall.
         let starboard = chart(Station::BayStarboard);
-        let aft = chart(Station::BayWall);
         let (pos, rot, scale) = site_on(
             Station::BayStarboard,
             &starboard,
-            &aft,
             Kind::ChartTank,
             rect,
+            turn,
         );
         let mount = instrument(Kind::ChartTank).expect("mounted");
         let want = pos + rot * (Vec3::Z * (mount.plane * scale.z));
@@ -6715,12 +6933,10 @@ mod tests {
         );
         // The launch handle hangs the same way, on its own front-wall
         // berth, bound to the rect the gesture layer still watches.
-        let (station, lever) = instrument_surface(
-            &charts,
-            Kind::LaunchLever,
-            rect_of(5, 10, Kind::LaunchLever),
-        )
-        .expect("the handle mounts its panel");
+        let (lever_rect, lever_turn) = berth_of(5, 10, Kind::LaunchLever);
+        let (station, lever) =
+            instrument_surface(&charts, Kind::LaunchLever, lever_rect, lever_turn)
+                .expect("the handle mounts its panel");
         assert_eq!(station, Station::Lever);
         assert!(
             lever.rect.contains(rect_center(layout::LAUNCH_LEVER))
@@ -6841,16 +7057,17 @@ mod tests {
             (Kind::LaunchLever, crate::rig::Focus::Lever),
         ] {
             let piece = of_kind(kind);
-            let rect = layout::piece_rect(rooms, pieces, piece);
-            let handle = carry_handle_rect(kind, rect).expect("click-functional cargo wears one");
+            let handle = carry_handle(kind).expect("click-functional cargo wears one");
+            let grab = own_point(rooms, piece, rect_center(handle));
+            assert!(on_carry_handle(rooms, piece, grab));
             assert_eq!(
-                crate::rig::handle_route(rooms, pieces, rect_center(handle)),
+                crate::rig::handle_route(rooms, pieces, grab),
                 None,
                 "{kind:?}: the grab must reach the sim untouched"
             );
             // A hair above the handle band is still the instrument.
-            let body = SimVec2::new(rect_center(rect).x, rect.h.mul_add(0.25, rect.y));
-            assert!(!handle.contains(body));
+            let body = own_point(rooms, piece, SimVec2::new(0.5, 0.25));
+            assert!(!on_carry_handle(rooms, piece, body));
             assert_eq!(
                 crate::rig::handle_route(rooms, pieces, body),
                 Some(focus),
@@ -6868,18 +7085,43 @@ mod tests {
         );
     }
 
+    /// **The point of `piece`'s own face at fractions `own`** — `(0, 0)`
+    /// its top left and `(1, 1)` its bottom right as a person facing it
+    /// sees them — on its room's net: the inverse of
+    /// `layout::piece_frame`, for aiming at a sub-rect a kind declares in
+    /// its own units.
+    fn own_point(rooms: &Rooms, piece: &Piece, own: SimVec2) -> SimVec2 {
+        let (room, foot) = cargo::Foot::at(rooms, piece).expect("standing in a room");
+        let [c0, c1, _, c3] = foot.corners();
+        // Corner 0 is the centre plus both half-axes; corner 1 has the
+        // across half-axis negated and corner 3 the down one.
+        let across = ((c0.0 - c1.0) / 2, (c0.1 - c1.1) / 2);
+        let down = ((c0.0 - c3.0) / 2, (c0.1 - c3.1) / 2);
+        let (s, t) = (own.x.mul_add(2.0, -1.0), own.y.mul_add(2.0, -1.0));
+        let fine = (
+            (across.0 as f32).mul_add(s, (down.0 as f32).mul_add(t, foot.x as f32)),
+            (across.1 as f32).mul_add(s, (down.1 as f32).mul_add(t, foot.y as f32)),
+        );
+        let span = foot.aabb();
+        let box_ = layout::fine_rect(room, span);
+        SimVec2::new(
+            (fine.0 - span.x0 as f32).mul_add(box_.w / span.w() as f32, box_.x),
+            (fine.1 - span.y0 as f32).mul_add(box_.h / span.h() as f32, box_.y),
+        )
+    }
+
     /// The carried ghost promises the berth it would take: the preview
     /// rotation is [`site_on`]'s, so a piece hovering over a starboard
-    /// cell stands upright (the side charts' quarter turn rolled out)
-    /// and one hovering over a front-row floor cell has already turned
-    /// its back to the wall it would stand against.
+    /// cell stands upright (its chart's upright frame) and one hovering
+    /// over a front-row floor cell at the turn the game would give it
+    /// there has turned its back to the wall it would stand against.
     #[test]
     fn the_carry_preview_promises_the_berth() {
-        let aft = chart(Station::BayWall);
         let starboard = chart(Station::BayStarboard);
         let floor = chart(Station::BayFloor);
         let hover = |station: Station, surface: &SimSurface, kind: Kind, x: u8, y: u8| {
-            ghost_pose(station, surface, &aft, kind, rect_of(x, y, kind)).1
+            let (rect, turn) = berth_of(x, y, kind);
+            ghost_pose(station, surface, kind, rect, turn).1
         };
         let up = hover(Station::BayStarboard, &starboard, Kind::ChartTank, 12, 5);
         assert!(
@@ -6892,14 +7134,7 @@ mod tests {
             "and still face into the room"
         );
         // The placed transform is the same one, to the last bit.
-        let placed = site_on(
-            Station::BayStarboard,
-            &starboard,
-            &aft,
-            Kind::ChartTank,
-            rect_of(12, 5, Kind::ChartTank),
-        )
-        .1;
+        let placed = site_at(Station::BayStarboard, 12, 5, Kind::ChartTank).1;
         for axis in [Vec3::X, Vec3::Y, Vec3::Z] {
             assert!(
                 (up * axis - placed * axis).length() < 1e-5,
@@ -6908,7 +7143,7 @@ mod tests {
                 placed * axis
             );
         }
-        // The floor's backing rule applies to the ghost too.
+        // The turn the game gives a front-row body is the ghost's too.
         let backed = hover(Station::BayFloor, &floor, Kind::Couch, 3, 9);
         assert!(
             (backed * Vec3::Z).z > 0.9,
@@ -6919,8 +7154,8 @@ mod tests {
     /// **The ghost, the patch, and the flash stand where the drop lands**,
     /// asked of the running systems rather than of the maths beneath
     /// them: a crate carried over the cabin's deck stands over the berth
-    /// the sim previews for the aim, a sixteenth off the grid and
-    /// following the aim a sixteenth at a time; the one footprint patch
+    /// the sim previews for the aim, off the grid and following the aim
+    /// a fine unit at a time; the one footprint patch
     /// lies under it in `LAMP_OK`; aimed onto a neighbour the patch burns
     /// `LAMP_NO` with its slash struck; aimed at nothing the patch goes
     /// dark; and a refused release flashes the berth the ghost was
@@ -6931,7 +7166,6 @@ mod tests {
         use space_trucking::sim::InputFrame;
 
         let floor = chart(Station::BayFloor);
-        let aft = chart(Station::BayWall);
         let kind = Kind::ScrapAlloy;
         // A point on the deck, `cells` in from its own top-left corner.
         let deck = |across: f32, down: f32| {
@@ -6940,11 +7174,12 @@ mod tests {
                 down.mul_add(layout::CELL, floor.rect.y),
             )
         };
-        let (fx, fy) = layout::fine_at(CABIN, deck(1.0, 1.0));
+        let (fx, fy) = layout::fine_at(CABIN, deck(2.0, 1.5));
         let neighbour = Loc::Hold {
             room: CABIN,
             x: u16::try_from(fx).expect("on the net"),
             y: u16::try_from(fy).expect("on the net"),
+            turn: Turn::ZERO,
         };
         let rooms = Sim::new(1).rooms().clone();
         let neighbour_piece = Piece {
@@ -6954,9 +7189,9 @@ mod tests {
             gnawed: false,
             loc: neighbour,
         };
-        let (room, x, y) = cargo::first_fit(&rooms, &[neighbour_piece], 1, kind)
+        let spot = cargo::first_fit(&rooms, &[neighbour_piece], 1, kind)
             .expect("the cabin has room for a second crate");
-        let mut sim = board_of(&[(kind, neighbour), (kind, Loc::Hold { room, x, y })]);
+        let mut sim = board_of(&[(kind, neighbour), (kind, spot.hold())]);
         lift(&mut sim, 1);
 
         let mut app = App::new();
@@ -7042,17 +7277,14 @@ mod tests {
                 ..default()
             };
             app.update();
-            let preview = app
-                .world()
-                .resource::<Shell>()
-                .bridge
-                .sim
-                .drop_preview(0, at)
+            let held = &app.world().resource::<Shell>().bridge.sim;
+            let preview = held
+                .drop_preview(0, at, crate::bridge::carry_facing(held))
                 .expect("the aim is on the deck");
-            let (Loc::Hold { x, y, .. }, verdict) = preview else {
+            let (Loc::Hold { x, y, turn, .. }, verdict) = preview else {
                 panic!("a crate on the deck previews a berth on it: {preview:?}");
             };
-            (rect_at(x, y, kind), (x, y), verdict)
+            (rect_at(x, y, kind, turn), (x, y), verdict)
         };
         let shown = |app: &App, entity: Entity| {
             *app.world()
@@ -7075,12 +7307,12 @@ mod tests {
         };
 
         // Aimed at open deck, off the grid: the ghost stands over the
-        // berth the sim previews, a sixteenth at a time.
+        // berth the sim previews, a unit at a time.
         let open = deck(4.4, 3.0);
         let (rect, (x, _), verdict) = aim_at(&mut app, open);
         assert_eq!(verdict, Ok(()), "open deck takes the crate");
         assert_ne!(x % cargo::FINE, 0, "the aim was meant to land off the grid");
-        let (pos, rot) = ghost_pose(Station::BayFloor, &floor, &aft, kind, rect);
+        let (pos, rot) = ghost_pose(Station::BayFloor, &floor, kind, rect, spot.turn);
         let ghost = placed(&app, carried);
         assert!(
             (ghost.translation - pos).length() < 1e-5 && ghost.rotation.angle_between(rot) < 1e-5,
@@ -7088,12 +7320,12 @@ mod tests {
         );
         let nudged = SimVec2::new(open.x + layout::CELL / f32::from(cargo::FINE), open.y);
         let (_, (x2, _), _) = aim_at(&mut app, nudged);
-        assert_eq!(x2, x + 1, "a sixteenth of aim is a sixteenth of berth");
+        assert_eq!(x2, x + 1, "a unit of aim is a unit of berth");
         let step = placed(&app, carried).translation - ghost.translation;
-        let sixteenth = floor.scale_u() * layout::CELL / f32::from(cargo::FINE);
+        let unit = floor.scale_u() * layout::CELL / f32::from(cargo::FINE);
         assert!(
-            (step.length() - sixteenth).abs() < 1e-5,
-            "the ghost moved {step:?} for a sixteenth of aim, not {sixteenth} m"
+            (step.length() - unit).abs() < 1e-5,
+            "the ghost moved {step:?} for a unit of aim, not {unit} m"
         );
         let (rect, _, _) = aim_at(&mut app, open);
         let at = placed(&app, patch);
@@ -7185,16 +7417,16 @@ mod tests {
         );
     }
 
-    /// One berth under test: a kind hung at one fine anchor of one chart,
-    /// with everything the claims below need to interrogate it.
+    /// One berth under test: a kind hung at one spot of one chart, with
+    /// everything the claims below need to interrogate it.
     struct Berth {
         kind: Kind,
-        /// The footprint's top-left corner, in `cargo::FINE` units.
-        at: (u16, u16),
+        /// Where it stands: its footprint's centre in `cargo::FINE` units,
+        /// and its turn.
+        spot: cargo::Spot,
         rooms: Rooms,
         station: Station,
         surface: SimSurface,
-        aft: SimSurface,
         rect: Rect,
         /// A covering LIES into its chart instead of standing on it.
         laid: bool,
@@ -7205,9 +7437,10 @@ mod tests {
     /// Whether the body a rig DRAWS covers exactly the plan the sim
     /// ruled on: the four corners of its `w × h` silhouette land on the
     /// four corners its rect owns on the chart, in whatever order the
-    /// turn left them. A half turn always passes; a quarter turn passes
-    /// only for a square footprint — which is the whole reason the
-    /// upright rule counts cells before it spends a roll.
+    /// turn left them. The sim lays the footprint on the sheet at the
+    /// turn it gives the piece and the drawing turns the body by the
+    /// same answer (`cargo::net_angle`), so a quarter turn that trades a
+    /// body's width for its height trades its cells' too.
     fn lies_on_its_cells(
         surface: &SimSurface,
         kind: Kind,
@@ -7236,10 +7469,8 @@ mod tests {
     /// Claim one: the berth stands its cargo the way the cargo is drawn.
     /// A rig that STANDS answers for its own body, so all its chart owes
     /// is which plates it rises from; anything flat must face into the
-    /// room, lie ON its own cells, and read up-is-up wherever its
-    /// footprint can afford the turn — the side charts' columns run up
-    /// the wall, so their quarter turn would cost a non-square its cells
-    /// and it keeps the chart's own lie instead.
+    /// room, lie ON its own cells, and — hung on a wall at the turn the
+    /// game gives it — read up-is-up.
     ///
     /// **Which way a body on a FLAT chart is looking is asked next door**,
     /// and it is asked there because it cannot be asked here: this sweep
@@ -7280,8 +7511,8 @@ mod tests {
         // sentence the sweep used to be missing.
         //
         // It used to read the other way round: up on the aft and front
-        // charts, *sideways* on the flanks, because that is what
-        // [`wall_upright`] does with a non-square footprint. A test that
+        // charts, *sideways* on the flanks, because that is what the
+        // upright rule did with a non-square footprint. A test that
         // restates the branch it is testing can only fail when the
         // implementation contradicts itself, so this one passed on every
         // one of its two thousand berths while the starting window came
@@ -7289,10 +7520,10 @@ mod tests {
         // in the roll: the CELLS turn, because the net's side flaps fold
         // out sideways, and the body lies on its cells.
         //
-        // A footprint is stated in the wall's own frame now
-        // (`cargo::Kind::plan_on`), so the cells a flank berth owns are
-        // already the rolled ones and the roll is always affordable. The
-        // claim can be the player's rather than the rule's.
+        // A footprint is stated in the body's own frame and laid on the
+        // sheet by the one mapping from chart to net (`cargo::net_angle`),
+        // so the cells a flank berth owns are the ones its upright body
+        // covers. The claim can be the player's rather than the rule's.
         assert!(
             (rot * Vec3::Y).y > 0.999,
             "{name}: a hung body reads up-is-up on every wall it may take, got {:?}",
@@ -7323,11 +7554,13 @@ mod tests {
     /// tenth large about the middle of its plan, and differs from it by
     /// nothing else: the drop's glide has only the lift left to travel.
     ///
-    /// The one berth no aim names is one the drop's snap moves: an edge
-    /// within a quarter cell of its chart's own edge lands flush on it.
-    /// The claim then holds the drop to that much and no more — moved a
-    /// quarter cell at most, and flush — and asks the ghost about the
-    /// flush berth it does name, which the sweep visits in its own right.
+    /// The one berth no aim names is one the drop's wall snap moves: an
+    /// edge within an eighth of a cell of its chart's own edge lands
+    /// flush on it. The claim then holds the drop to that much and no
+    /// more — moved an eighth of a cell at most, and flush — and asks the
+    /// ghost about the flush berth it does name, which the sweep visits in
+    /// its own right. The drop is asked at the berth's own turn, which is
+    /// the turn a carry of it would be sent at.
     ///
     /// Coverings are exempt from the pose, and honestly so: a carried rug
     /// is ROLLED UP — a different body of the same rig — and its ghost
@@ -7336,26 +7569,27 @@ mod tests {
     fn the_ghost_promises_the_berth(b: &Berth, held: &Sim) {
         let name = &b.name;
         let (loc, verdict) = held
-            .drop_preview(0, rect_center(b.rect))
+            .drop_preview(0, rect_center(b.rect), b.spot.turn)
             .unwrap_or_else(|| panic!("{name}: the aim at the berth's middle is off the net"));
         assert_eq!(
             verdict,
             Ok(()),
             "{name}: the arbiter allows this berth and the drop aimed at its middle refuses it"
         );
-        let (Loc::Hold { room, x, y } | Loc::Laid { room, x, y }) = loc else {
+        let Some(cargo::Spot { room, x, y, turn }) = loc.spot() else {
             panic!("{name}: an empty cabin offered a cubby: {loc:?}");
         };
         assert_eq!(
             room, CABIN,
             "{name}: the drop left the room it was aimed into"
         );
-        let rect = rect_at(x, y, b.kind);
+        assert_eq!(turn, b.spot.turn, "{name}: the drop turned the piece");
+        let rect = rect_at(x, y, b.kind, turn);
         let chart = b.surface.rect;
         for (axis, want, got, near, far, edge, end) in [
             (
                 "across",
-                b.at.0,
+                b.spot.x,
                 x,
                 rect.x,
                 rect.x + rect.w,
@@ -7364,7 +7598,7 @@ mod tests {
             ),
             (
                 "down",
-                b.at.1,
+                b.spot.y,
                 y,
                 rect.y,
                 rect.y + rect.h,
@@ -7376,7 +7610,7 @@ mod tests {
                 continue;
             }
             assert!(
-                want.abs_diff(got) <= cargo::FINE / 4
+                want.abs_diff(got) <= cargo::FINE / 8
                     && ((near - edge).abs() < 1e-3 || (far - end).abs() < 1e-3),
                 "{name}: the drop aimed at the berth's middle moved it {axis} to {got}, \
                  which is no snap flush onto its chart's edge"
@@ -7385,14 +7619,14 @@ mod tests {
         if b.laid {
             return;
         }
-        let (pos, rot) = ghost_pose(b.station, &b.surface, &b.aft, b.kind, rect);
-        let (berth, turn, _) = site_on(b.station, &b.surface, &b.aft, b.kind, rect);
+        let (pos, rot) = ghost_pose(b.station, &b.surface, b.kind, rect, turn);
+        let (berth, posed, _) = site_on(b.station, &b.surface, b.kind, rect, turn);
         for axis in [Vec3::X, Vec3::Y, Vec3::Z] {
             assert!(
-                (rot * axis - turn * axis).length() < 1e-5,
+                (rot * axis - posed * axis).length() < 1e-5,
                 "{name}: the ghost's {axis:?} ({:?}) drifted from the berth's ({:?})",
                 rot * axis,
-                turn * axis
+                posed * axis
             );
         }
         // **The whole offset, not merely the reach off the chart.** A
@@ -7419,9 +7653,7 @@ mod tests {
     fn the_amber_is_the_routing_region(b: &Berth, charts: &[(Station, SimSurface)]) -> bool {
         let (w, h) = b.kind.upright();
         let (fw, fh) = (f32::from(w) * layout::CELL, f32::from(h) * layout::CELL);
-        let (Some(handle), Some((at, size))) =
-            (carry_handle_rect(b.kind, b.rect), grab_bar(b.kind, fw, fh))
-        else {
+        let Some((at, size)) = grab_bar(b.kind, fw, fh) else {
             return false;
         };
         // The board this berth would make, so the routing is asked the
@@ -7431,15 +7663,15 @@ mod tests {
             kind: b.kind,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold {
-                room: CABIN,
-                x: b.at.0,
-                y: b.at.1,
-            },
+            loc: b.spot.hold(),
         }];
-        let face = standing_surface(charts, b.kind, b.rect);
+        let handle = |sim: SimVec2| on_carry_handle(&b.rooms, &board[0], sim);
+        let face = standing_surface(charts, b.kind, b.rect, b.spot.turn);
         let quad = face.unwrap_or(b.surface);
-        let n = face.map_or_else(|| b.station.inward(&b.surface), |f| f.normal());
+        let n = face.map_or_else(
+            || b.station.inward(&b.surface),
+            |f| Station::Standing.inward(&f),
+        );
         let (pos, rot, scale) = b.site;
         let name = &b.name;
         // Where the crosshair lands, aiming square at a point of the
@@ -7460,8 +7692,8 @@ mod tests {
             let local = Vec3::new(dx.mul_add(bar.x, at.x), dy.mul_add(bar.y, at.y), 0.0);
             let sim = aim_at(local);
             assert!(
-                handle.contains(sim),
-                "{name}: amber drawn at {local:?} reads {sim:?}, outside {handle:?}"
+                handle(sim),
+                "{name}: amber drawn at {local:?} reads {sim:?}, outside the band"
             );
             assert_eq!(
                 crate::rig::handle_route(&b.rooms, &board, sim),
@@ -7474,7 +7706,7 @@ mod tests {
         // a band at all.
         let sim = aim_at(Vec3::ZERO);
         assert!(
-            !handle.contains(sim),
+            !handle(sim),
             "{name}: the piece's middle reads as grab at {sim:?}"
         );
         assert_eq!(
@@ -7506,15 +7738,18 @@ mod tests {
         if b.laid {
             return false;
         }
-        let Some(face) = standing_surface(charts, b.kind, b.rect) else {
+        let Some(face) = standing_surface(charts, b.kind, b.rect, b.spot.turn) else {
             return false;
         };
         let (mid, half) = silhouette(b.kind);
         let (pos, rot, scale) = b.site;
         let name = &b.name;
+        // The face's reach along the body's own across and up, whichever
+        // of its two axes the net laid each of them on.
+        let reach = |dir: Vec3| face.half_u.dot(dir).abs() + face.half_v.dot(dir).abs();
         for (axis, quad, drawn, unit) in [
-            ("across", face.half_u.length(), half.x, scale.x),
-            ("up", face.half_v.length(), half.y, scale.y),
+            ("across", reach(rot * Vec3::X), half.x, scale.x),
+            ("up", reach(rot * Vec3::Y), half.y, scale.y),
         ] {
             let want = drawn * unit;
             assert!(
@@ -7525,7 +7760,7 @@ mod tests {
         // Every corner of the drawn body reads a point of the piece's
         // own cells, and the aim a hand's breadth beyond it reads
         // nothing at all: the face is the picture, edge included.
-        let n = face.normal();
+        let n = Station::Standing.inward(&face);
         let aim = |local: Vec2| {
             let at = pos + rot * (Vec3::new(local.x, local.y, 0.0) * scale);
             face.project(Ray3d::new(
@@ -7599,19 +7834,16 @@ mod tests {
         use crate::room::InRoom;
         use crate::surface::{Aimable, pick};
 
-        if b.laid || standing_surface(charts, b.kind, b.rect).is_none() {
+        let Some(face) = standing_surface(charts, b.kind, b.rect, b.spot.turn).filter(|_| !b.laid)
+        else {
             return false;
-        }
+        };
         let board = vec![Piece {
             id: 1,
             kind: b.kind,
             variant: 0,
             gnawed: false,
-            loc: Loc::Hold {
-                room: CABIN,
-                x: b.at.0,
-                y: b.at.1,
-            },
+            loc: b.spot.hold(),
         }];
         let mut aims: Vec<Aimable> = charts
             .iter()
@@ -7627,7 +7859,7 @@ mod tests {
             .collect();
         aims.push(Aimable {
             station: Station::Standing,
-            surface: standing_surface(charts, b.kind, b.rect).expect("the berth carries one"),
+            surface: face,
             riding: true,
             in_room: None,
         });
@@ -7708,15 +7940,18 @@ mod tests {
             if line.starts_with("next_piece") {
                 // Writing into a String cannot fail.
                 for (id, (kind, loc)) in cargo.iter().enumerate() {
-                    let (layer, room, x, y) = match *loc {
-                        Loc::Hold { room, x, y } => ("hold", room, x, y),
-                        Loc::Laid { room, x, y } => ("laid", room, x, y),
-                        Loc::Stow { .. } => unreachable!("a board is laid out in rooms"),
+                    let layer = if matches!(loc, Loc::Laid { .. }) {
+                        "laid"
+                    } else {
+                        "hold"
                     };
+                    let cargo::Spot { room, x, y, turn } =
+                        loc.spot().expect("a board is laid out in rooms");
                     let _ = writeln!(
                         save,
-                        "piece {id} {} 0 0 {layer} {room} {x} {y}",
-                        kind.index()
+                        "piece {id} {} 0 0 {layer} {room} {x} {y} {}",
+                        kind.index(),
+                        turn.0
                     );
                 }
                 let _ = writeln!(save, "next_piece {}", cargo.len());
@@ -7759,11 +7994,13 @@ mod tests {
     fn holding(kind: Kind) -> Sim {
         let rooms = Sim::new(1).rooms().clone();
         let fit = if kind.covering() {
-            cargo::dress_fit(&rooms, &[], 0, kind).map(|(room, x, y)| Loc::Laid { room, x, y })
+            cargo::dress_fit(&rooms, &[], 0, kind)
         } else {
-            cargo::first_fit(&rooms, &[], 0, kind).map(|(room, x, y)| Loc::Hold { room, x, y })
+            cargo::first_fit(&rooms, &[], 0, kind)
         };
-        let loc = fit.unwrap_or_else(|| panic!("an empty ship has no room for {kind:?}"));
+        let loc = fit
+            .unwrap_or_else(|| panic!("an empty ship has no room for {kind:?}"))
+            .berth(kind);
         let mut sim = board_of(&[(kind, loc)]);
         lift(&mut sim, 0);
         sim
@@ -7779,17 +8016,20 @@ mod tests {
     /// it.
     ///
     /// **Every placement is every whole-cell anchor and the fixed sample
-    /// of sixteenths off it** (`cargo::FRACTIONS`), because a berth is a
-    /// position now and not a cell: a body that hangs true on the grid
-    /// and a sixteenth off it has been asked about the ground it
-    /// straddles as well as the ground it owns.
+    /// of units off it** (`cargo::FRACTIONS`), at the turn the game gives
+    /// a body there, because a berth is a position now and not a cell: a
+    /// body that hangs true on the grid and a unit off it has been asked
+    /// about the ground it straddles as well as the ground it owns.
+    ///
+    /// phase 2: every placement is also every turn a player may carry a
+    /// body at — the four quarters and a few odd angles — once the cabin
+    /// draws, faces and routes a body turned off square.
     #[test]
     fn every_kind_hangs_true_on_every_legal_berth() {
         use space_trucking::sim::cargo::{dressing_check, placement_check};
         use space_trucking::sim::room::Rooms;
         let ship = Rooms::new();
         let charts = rig::bay();
-        let aft = chart(Station::BayWall);
         let (cols, rows) = space_trucking::sim::RoomKind::Cabin.grid();
         let anchors: Vec<(u16, u16)> = (0..rows)
             .flat_map(|y| {
@@ -7816,32 +8056,42 @@ mod tests {
                 // placement ladder, on an empty board so the sweep asks
                 // about charts, not about neighbours.
                 let laid = kind.covering();
+                let Some((x, y, turn)) =
+                    cargo::anchored(space_trucking::sim::RoomKind::Cabin, kind, fx, fy)
+                else {
+                    continue;
+                };
+                let spot = cargo::Spot {
+                    room: CABIN,
+                    x,
+                    y,
+                    turn,
+                };
                 let legal = if laid {
-                    dressing_check(&ship, &[], 0, kind, CABIN, fx, fy).is_ok()
+                    dressing_check(&ship, &[], 0, kind, spot).is_ok()
                 } else {
-                    placement_check(&ship, &[], 0, kind, CABIN, fx, fy).is_ok()
+                    placement_check(&ship, &[], 0, kind, spot).is_ok()
                 };
                 if !legal {
                     continue;
                 }
-                let rect = rect_at(fx, fy, kind);
+                let rect = rect_at(x, y, kind, turn);
                 let (station, surface) =
                     chart_at(&charts, rect_center(rect)).expect("a legal berth is on a chart");
                 let berth = Berth {
                     kind,
-                    at: (fx, fy),
+                    spot,
                     rooms: ship.clone(),
                     station,
                     surface,
-                    aft,
                     rect,
                     laid,
                     site: if laid {
-                        laid_on(station, &surface, rect)
+                        laid_on(station, &surface, rect, turn)
                     } else {
-                        site_on(station, &surface, &aft, kind, rect)
+                        site_on(station, &surface, kind, rect, turn)
                     },
-                    name: format!("{kind:?} at fine ({fx}, {fy}) on {station:?}"),
+                    name: format!("{kind:?} at fine ({x}, {y}) {turn:?} on {station:?}"),
                 };
                 swept += 1;
                 the_body_hangs_true(&berth);
@@ -7893,6 +8143,7 @@ mod tests {
                     room: CABIN,
                     x: 0,
                     y: 0,
+                    turn: Turn::ZERO,
                 },
             },
             screens,
@@ -7909,7 +8160,6 @@ mod tests {
     #[test]
     fn a_rig_spends_the_same_metre_on_every_chart() {
         let charts = rig::bay();
-        let aft = chart(Station::BayWall);
         let mut seen = 0_u32;
         for (station, surface) in charts {
             if !station.chart_flipped() {
@@ -7918,9 +8168,9 @@ mod tests {
             let (_, _, scale) = site_on(
                 station,
                 &surface,
-                &aft,
                 Kind::Painting,
                 rect_of(4, 1, Kind::Painting),
+                Turn::ZERO,
             );
             for spent in [scale.x, scale.y, scale.z] {
                 assert!(
@@ -8595,6 +8845,7 @@ mod band {
                 room: CABIN,
                 x: cargo::fine(2),
                 y: cargo::fine(2),
+                turn: Turn::ZERO,
             },
         }
     }

@@ -130,14 +130,18 @@ pub const PAD_M: f32 = space_trucking::sim::room::PAD as f32 * BAY_CELL;
 /// are side by side or one above the other.
 const STOREY: f32 = CEIL_Y + PAD_M;
 
-/// **The finest cut of the cargo grid**: a sixteenth of a cell, and the
+/// **The finest cut of a room's fabric**: a sixteenth of a cell, and the
 /// unit every length in a room's fabric is a whole number of.
 ///
 /// It is a sixteenth because that is what the fabric's two derived
 /// lengths already are — a hull plane is four of these and a chart's
 /// trim is one — and because finer than this stops being a fraction of
 /// the grid and starts being a number somebody chose. The gauntlet's
-/// `grid-fits` family holds every face of every shell to it.
+/// `grid-fits` family holds every face of every shell to it. It was the
+/// cargo grid's finest cut too, until cargo came off the grid at any
+/// angle (`cargo::FINE`, docs/BAY.md "Cargo turns"): where a berth lies
+/// is not a length of the fabric, so the notch stayed where the fabric's
+/// own lengths put it.
 pub const NOTCH: f32 = BAY_CELL / 16.0;
 
 /// How far a wall chart stands inside its own box face: **a quarter of
@@ -2640,8 +2644,8 @@ fn tiles(
                     // berths identically: nothing. The deck's own art
                     // (or its whitebox) already reads as a floor, and a
                     // berth is not a cell any more — cargo stands
-                    // anywhere a sixteenth of a cell can name (docs/BAY.md,
-                    // "The grid comes out") — so a well per cell would be
+                    // anywhere, at any turn (docs/BAY.md, "Cargo turns")
+                    // — so a well per cell would be
                     // a grid of invitations to places the drop does not
                     // take. Where a carry would land is the footprint
                     // patch's to say (`pieces::footprint_patch`), at the
@@ -4225,9 +4229,12 @@ mod tests {
                 continue;
             }
             let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
-            if let Some((station, surface)) =
-                crate::pieces::instrument_surface(&charts, piece.kind, rect)
-            {
+            if let Some((station, surface)) = crate::pieces::instrument_surface(
+                &charts,
+                piece.kind,
+                rect,
+                crate::pieces::berth_turn(piece),
+            ) {
                 aims.push(Aimable {
                     station,
                     surface,
@@ -4235,7 +4242,12 @@ mod tests {
                     in_room: None,
                 });
             }
-            if let Some(surface) = crate::pieces::standing_surface(&charts, piece.kind, rect) {
+            if let Some(surface) = crate::pieces::standing_surface(
+                &charts,
+                piece.kind,
+                rect,
+                crate::pieces::berth_turn(piece),
+            ) {
                 aims.push(Aimable {
                     station: Station::Standing,
                     surface,

@@ -45,7 +45,7 @@
 //! line, its own cues. `event::Omen` keeps the same shape; a third event
 //! should copy the convention rather than grow a framework.
 
-use super::cargo::{self, Foot, Kind, Loc, Piece, lit_adjacent};
+use super::cargo::{Foot, Kind, Loc, Piece, lit_adjacent};
 use super::layout;
 use super::room::{CABIN, RoomKind, Surf};
 use super::{Cue, Vec2, splitmix};
@@ -271,13 +271,19 @@ pub fn occupied_cells(pieces: &[Piece]) -> u32 {
     pieces
         .iter()
         .filter_map(|piece| match piece.loc {
-            // Ground, not cells: a crate standing off the grid covers a
-            // crate's worth of deck, however many cells it straddles.
-            Loc::Hold { room: CABIN, x, y } => {
-                let foot = Foot::of(RATS_ROOM, piece.kind, x, y)?;
+            // Ground, not cells: a crate standing off the grid or off
+            // square covers a crate's worth of deck, however many cells it
+            // straddles.
+            Loc::Hold {
+                room: CABIN,
+                x,
+                y,
+                turn,
+            } => {
+                let foot = Foot::of(RATS_ROOM, piece.kind, x, y, turn)?;
                 let on_floor = foot.chart(RATS_ROOM) == Some(Surf::Floor);
-                let area = u32::from(foot.w) * u32::from(foot.h);
-                on_floor.then_some(area / u32::from(cargo::FINE * cargo::FINE))
+                let (across, span) = piece.kind.face_on(Surf::Floor);
+                on_floor.then_some(u32::from(across) * u32::from(span))
             }
             _ => None,
         })
@@ -288,10 +294,17 @@ pub fn occupied_cells(pieces: &[Piece]) -> u32 {
 /// any of it, since the rat walks cells and the cargo does not.
 fn covered(pieces: &[Piece], cx: u8, cy: u8) -> bool {
     pieces.iter().any(|piece| {
-        let Loc::Hold { room: CABIN, x, y } = piece.loc else {
+        let Loc::Hold {
+            room: CABIN,
+            x,
+            y,
+            turn,
+        } = piece.loc
+        else {
             return false;
         };
-        Foot::of(RATS_ROOM, piece.kind, x, y).is_some_and(|foot| foot.overlaps(Foot::cell(cx, cy)))
+        Foot::of(RATS_ROOM, piece.kind, x, y, turn)
+            .is_some_and(|foot| foot.overlaps(Foot::cell(cx, cy)))
     })
 }
 
@@ -336,10 +349,16 @@ fn couch_cells(pieces: &[Piece]) -> Vec<(u8, u8)> {
         if piece.kind != Kind::Couch {
             continue;
         }
-        let Loc::Hold { room: CABIN, x, y } = piece.loc else {
+        let Loc::Hold {
+            room: CABIN,
+            x,
+            y,
+            turn,
+        } = piece.loc
+        else {
             continue;
         };
-        let Some(foot) = Foot::of(RATS_ROOM, piece.kind, x, y) else {
+        let Some(foot) = Foot::of(RATS_ROOM, piece.kind, x, y, turn) else {
             continue;
         };
         cells.extend(foot.cells());
@@ -396,9 +415,9 @@ fn couch_step(
 }
 
 /// THE nibble target rule: the stowed or laid piece nearest the rat's
-/// cell by Manhattan distance to the closest cell its footprint touches
-/// (zero when the footprint intersects the rat's cell — the rat is
-/// sitting on it), ties broken by the lower piece id. Laid
+/// cell by Manhattan distance to the closest cell its footprint stands
+/// on (`Foot::cells`; zero when the footprint covers the rat's cell —
+/// the rat is sitting on it), ties broken by the lower piece id. Laid
 /// dressings count — a rug is famously gnawable — but cubby cargo never
 /// does (`Loc::Stow` has no cell here at all). Returns an index into
 /// `pieces`; `None` when nothing is reachable (a bare hold at a dock),
@@ -408,40 +427,28 @@ fn nearest_hold_piece(pieces: &[Piece], (cx, cy): (u8, u8)) -> Option<usize> {
         .iter()
         .enumerate()
         .filter_map(|(index, piece)| {
-            let (Loc::Hold { room: CABIN, x, y } | Loc::Laid { room: CABIN, x, y }) = piece.loc
-            else {
-                return None;
-            };
-            let foot = Foot::of(RATS_ROOM, piece.kind, x, y)?;
-            // The run of cells the footprint touches on each axis.
-            let (x0, x1) = (cargo::coarse(foot.x), cargo::coarse(foot.right() - 1));
-            let (y0, y1) = (cargo::coarse(foot.y), cargo::coarse(foot.bottom() - 1));
-            let distance =
-                u32::from(axis_gap(cx, x0, x1 - x0 + 1)) + u32::from(axis_gap(cy, y0, y1 - y0 + 1));
+            let spot = piece.loc.spot().filter(|spot| spot.room == CABIN)?;
+            let foot = Foot::of(RATS_ROOM, piece.kind, spot.x, spot.y, spot.turn)?;
+            let distance = foot
+                .cells()
+                .map(|(x, y)| u32::from(cx.abs_diff(x)) + u32::from(cy.abs_diff(y)))
+                .min()?;
             Some((distance, piece.id, index))
         })
         .min_by_key(|&(distance, id, _)| (distance, id))
         .map(|(_, _, index)| index)
 }
 
-/// Cells between `c` and the span `[start, start + len)` on one axis.
-const fn axis_gap(c: u8, start: u8, len: u8) -> u8 {
-    if c < start {
-        start - c
-    } else if c >= start + len {
-        c - (start + len - 1)
-    } else {
-        0
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::super::cargo::{Kind, fine};
+    use super::super::cargo::{Kind, anchored, fine};
     use super::*;
 
-    /// A stowed piece for the pure helpers below.
-    const fn hold_piece(id: u32, kind: Kind, x: u8, y: u8) -> Piece {
+    /// A stowed piece for the pure helpers below, its footprint's
+    /// top-left on whole cell `(x, y)` of the cabin, turned the way the
+    /// game would turn it there.
+    fn hold_piece(id: u32, kind: Kind, x: u8, y: u8) -> Piece {
+        let (x, y, turn) = anchored(RATS_ROOM, kind, fine(x), fine(y)).expect("on the net");
         Piece {
             id,
             kind,
@@ -449,8 +456,9 @@ mod tests {
             gnawed: false,
             loc: Loc::Hold {
                 room: CABIN,
-                x: fine(x),
-                y: fine(y),
+                x,
+                y,
+                turn,
             },
         }
     }
@@ -522,8 +530,8 @@ mod tests {
         // keeps the nibbles coming. Over a long deterministic run the rat
         // must never occupy a lit cell nor gnaw from one.
         let mut pieces = vec![
-            hold_piece(0, Kind::CeilingLamp, 1, 0),
-            hold_piece(1, Kind::FloorLamp, 0, 2),
+            hold_piece(0, Kind::CeilingLamp, 15, 4),
+            hold_piece(1, Kind::FloorLamp, 3, 5),
             hold_piece(2, Kind::RationBricks, 4, 0),
             hold_piece(3, Kind::Seedlings, 3, 3),
         ];

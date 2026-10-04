@@ -532,7 +532,8 @@ family. The cabin is simply the room you start in.
   does today; the sim keeps making every ruling.
 - `Loc` gains a room qualifier: hold cells and laid coverings are
   `{ room, x, y }`. Cubbies do not need one — a cabinet knows what room
-  it stands in. The cabin is room 0, which is also how pre-rooms saves
+  it stands in (superseded by BAY.md, *Cargo stops colliding*: there
+  are no cubbies). The cabin is room 0, which is also how pre-rooms saves
   migrate: every old berth is a room-0 berth.
 
   > Superseded in part by DESIGN_REVIEW.md, *An old save or tape starts
@@ -1164,7 +1165,10 @@ The packing hazards, named, with the rules that pay for them:
 1. **Tearing a live edge.** Lifting a mated door would cut a seam with
    a room on the other side of it. Refused: **a mated aperture cannot be
    lifted.** This is the cabinet's `Occupied` rule one class wider —
-   empty it first, detach first. It also disposes of the whole class of
+   empty it first, detach first. (The cabinet's rule is gone with its
+   cubbies, BAY.md, *Cargo stops colliding*; this one would stand on
+   its own, because it guards a seam rather than a body.) It also
+   disposes of the whole class of
    "a cycle closed through a door the player later moved", for free.
 2. **Two doors on one wall.** Refused by the port law; `Aperture` is
    the name.

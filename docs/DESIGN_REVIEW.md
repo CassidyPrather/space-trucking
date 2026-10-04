@@ -415,6 +415,10 @@ Every line is reversible; strike one by overruling it.
   it.** The grid's rule was "touching the baseboard"; a wardrobe half a
   cell off the wall still hides what hangs behind it. A whole cell out
   leaves room to hang a painting.
+
+  > Superseded in part by docs/BAY.md, *Cargo stops colliding*: the
+  > shadow refuses nothing. The distance stands as what the game keeps
+  > clear of when it places something itself (`cargo::clear`).
 - **The drop snaps within a quarter of a cell**, inclusive, onto chart
   edges first and neighbours' edges second. Enough to make flush (and so
   cryo) easy to hit without the piece visibly jumping; a neighbour never
@@ -484,6 +488,10 @@ Every line is reversible; strike one by overruling it.
   forwards/backwards compatibility during the prototyping phase"); older
   passages in these docs that promise an old save keeps loading are
   marked superseded by this line.
+
+  > Superseded in part by docs/BAY.md, *Cargo stops colliding*: there
+  > are no stows to re-check, and a dressing is re-checked against the
+  > room alone, line by line. The headers are `STV22` and `RPL6` now.
 - **A berth is quantised to a 256th of a cell** (`cargo::FINE = 256`,
   about 2 mm). A sixteenth, 34 mm, is a step a VR hand can see, and the
   owner asked for no overly aggressive snapping. Finer buys nothing a
@@ -528,6 +536,9 @@ Every line is reversible; strike one by overruling it.
   of a cubby comes out at `Turn(0)`, the one turn a shelf has. A piece
   set down turned and lifted again carries on from the turn it stands
   at.
+
+  > Superseded in part by docs/BAY.md, *Cargo stops colliding*: there
+  > are no cubbies to take a piece out of.
 - **The carry turns by 15° on the wheel, 1° on `Ctrl` + wheel, and 15°
   on `Q`, and `Shift+Q` is `Q`'s reverse** — the convenient angles the
   owner offered, as a frontend offer on input and never a rule. A notch
@@ -554,3 +565,53 @@ Every line is reversible; strike one by overruling it.
   no wheel travel is saved up for the next carry. A wheel that reports
   pixels (a touchpad, a smooth wheel) is read at Bevy's hundred to the
   notch, and part-notches add up.
+- **Volatile spacing kept.** The owner's decree took out every rule that
+  sets one piece's body against another's, and kept the special-item
+  conditions (docs/BAY.md, *Cargo stops colliding*). Two gas canisters
+  keeping half a cell of clear air is both: the one rule left that
+  names another piece, and a hazard rather than a clip. It was kept as
+  a special item's own condition, without asking; strike it and
+  `Violation::Volatile` goes with it, and placement asks nothing of any
+  other piece but the one-suspicious-crate rule.
+- **The game's tidiness counts both layers and a standing piece's
+  shadow.** What the game sets down itself goes where nothing is
+  (`cargo::clear`): a rug it lays avoids the couch, a crate it sets out
+  avoids the rug, and a painting it hangs avoids the wall behind a
+  wardrobe. The other reading — each layer minding only its own — would
+  have the hopper bank a rug under the couch and the quick-move stand a
+  crate on the heirloom.
+- **A crowded spot beats none.** When nothing is clear, `cargo::tidy`
+  takes the first spot the arbiter allows rather than refusing. So a full
+  ship still takes the comet's ice and ???'s crate, a hopper banks
+  everything that has a legal berth at all, and a shelf with no gap left
+  still takes the last of a deal's restock. A deal still sends to the
+  back room what has no stock tile left to stand on, one piece to a
+  tile, as before.
+- **The point-pick's order is standing, then smaller, then lower id.**
+  Only presses with no aim read it — tests, monkeys, tapes — so it was
+  chosen to be the least surprising guess rather than to match a
+  picture: laid under standing as always, a small piece out of a big
+  one's ground before the big one, and ids so the board's listing order
+  never decides.
+- **The aim only chooses among what the pointer is on.** The other
+  reading — the sim lifts whatever the aim names — would make the aim a
+  second hit-test the sim cannot check, and a stale aim in a focus could
+  lift the chart tank instead of selecting a star. The sim keeps doing
+  every hit-test; the aim breaks the tie.
+- **A body set wholly inside another's drawn box is picked after it.**
+  The crosshair's one ray meets the nearest pick box first (*The nearest
+  rule*), so a vial standing inside a wardrobe is reached by lifting the
+  wardrobe. A smarter rule (preferring a box nested in the one the ray
+  entered) would pick a vial through a closed crate's walls too, and
+  the picture would no longer be the answer.
+- **The fixture's four cubby pieces were set down by the game.** The
+  vial, fluff, chit and bottled midnight that rode the cabinet's cubbies
+  were placed by `cargo::tidy` over the cabin deck's whole cells,
+  skipping the aft doorway's doorstep (the board's own courtesy), and
+  written by the new writer. They stand along the deck's aft row; one of
+  them stands behind the wardrobe, which is where the game's first free
+  cell was.
+- **The gauntlet's loaded board stays tidy.** The arbiter alone would
+  now stand a piece on every cell of every room, each half over the
+  last; the load sets cargo out clear of what it already stood, so the
+  board the families name their culprits on is the one it always was.

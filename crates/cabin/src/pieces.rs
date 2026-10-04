@@ -10,7 +10,7 @@
 //!
 //! Semantics keep the retired 2D console's law: the sim stays the only
 //! arbiter — footprints come from `layout::piece_rect`, the piece under
-//! the aim from `layout::piece_at`,
+//! the aim from `layout::pick` (asked through `VirtualPointer::aimed`),
 //! where a drop would land and whether it may from `drop_preview`,
 //! invites from `drop_targets` — and no refusal rides on hue alone:
 //! illegality always carries a slash, gnawing carries a wedge, shapes
@@ -21,8 +21,8 @@
 //! the omen through `rig::Dimmable`, seedlings bloom in `lit_within_reach`
 //! lamplight, paintings carry one seeded artwork painted through the
 //! shared `canvas`, a couch under the rat settles it into a nap pose, and
-//! the cabinet is furniture that stores: an open-fronted wardrobe whose
-//! 2×2 cubby rack renders its `Loc::Stow` cargo in miniature.
+//! the cabinet is an open-fronted wardrobe that stores nothing: what
+//! stands in it stands there at full size, because somebody set it there.
 //!
 //! The dressing layer (`docs/BAY.md`) adds a fourth regime: a covering
 //! rig owns two bodies — laid flat into the bay surface versus rolled or
@@ -38,7 +38,6 @@ use bevy::image::ImageSampler;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
-use space_trucking::sim::cargo::CABINET_SLOTS;
 use space_trucking::sim::layout::{self, Rect};
 use space_trucking::sim::room::{CABIN, RoomId, Rooms};
 #[allow(unused_imports)]
@@ -167,11 +166,6 @@ pub const TURNS: [Turn; 8] = [
     Turn(9362),
 ];
 
-/// A stowed piece's scale relative to its host cabinet's: shrunk until
-/// the widest 1×1 rig (~34 sim units across) reads ~0.18 world units —
-/// small enough to sit visibly *inside* a cubby, doors or no doors.
-const STOW_FIT: f32 = 0.34;
-
 /// The rat's per-sim-unit scale relative to the bay's. Nose to tail the
 /// rig spans ~17 sim units, so this reads ~0.12 world units of ship rat.
 const RAT_FIT: f32 = 0.45;
@@ -263,7 +257,7 @@ const THUNK_LEN: f32 = 0.35;
 const SHAKE_LEN: f32 = 0.30;
 
 /// The cabinet carcass's depth in sim units (~0.2 world at bay scale):
-/// slim enough to read wardrobe, deep enough to shelve a shrunken rig.
+/// slim enough to read wardrobe.
 const CABINET_DEPTH: f32 = 14.0;
 
 /// Violation glyph arm length, sim units — the 2D console's `s = 12`.
@@ -316,7 +310,6 @@ impl Plugin for PiecesPlugin {
                     hover_glint,
                     carry_held,
                     footprint_patch,
-                    invite_glows,
                     violation_flash,
                     rat_watch,
                     breathe_pulses,
@@ -449,18 +442,9 @@ struct VioBar(u8);
 
 /// One bar of the violation glyph pool, `0..GLYPH_BARS` — the 2D
 /// console's per-rule icons (weight, bracket, hazard, snowflake, and the
-/// cabinet's full box) restated as emissive hardware over the flash.
+/// doorway's mat) restated as emissive hardware over the flash.
 #[derive(Component)]
 struct GlyphBar(u8);
-
-/// One inviting glow quad in a cabinet cubby's mouth, keyed by the host
-/// piece and its slot; wakes while the sim's drop matrix invites a stow.
-#[derive(Component)]
-struct CubbyGlow {
-    piece: u32,
-    slot: u8,
-    phase: f32,
-}
 
 /// The ETA gauge piece's needle: `reach` is the pivot-to-centre arm in
 /// rig-local sim units; [`eta_needles`] sweeps it with the live leg.
@@ -518,8 +502,8 @@ struct RatTail {
 /// seconds and feeds both the point light's [`Dimmable`] base — fx.rs
 /// keeps the per-frame omen math — and the bulb glass, which is its own
 /// material instance per the shared-handle rule. Lamps burn only while
-/// the sim's `lamp_lit` says so: berthed in the hold, nowhere else — a
-/// lamp on the counter or boxed in a cubby is dark glass.
+/// the sim's `lamp_lit` says so: standing in a room, which is everywhere
+/// a lamp is set down.
 ///
 /// **`mat` is `None` on a lamp somebody bought, and `lit` is what it
 /// has instead.** A purchased lamp's glass arrives as a scene, frames
@@ -1046,22 +1030,10 @@ pub fn seats(kind: Kind) -> Vec<Seat> {
         .collect()
 }
 
-/// Cubby anchor centres in the cabinet rig's local space, sim units.
-/// Slot order matches `cargo::Foot::quarter_box`: row-major from the top-left
-/// facing the open front — local +X is sim +x, local +Y is up, so slot 0
-/// sits up-left of the rig's centre. `z` recesses the cargo into the
-/// carcass so it reads shelved, not stuck on.
-fn cubby_anchor(slot: u8) -> Vec3 {
-    let sx = if slot.is_multiple_of(2) { -1.0 } else { 1.0 };
-    let sy = if slot / 2 == 0 { 1.0 } else { -1.0 };
-    Vec3::new(sx * layout::CELL * 0.22, sy * layout::CELL * 0.47, 3.4)
-}
-
 /// The berth transform for a piece: its own room's net for hold cargo,
-/// flat into that net for laid dressings, a cubby anchor inside the
-/// host's standing rig for stowed cargo. `None` only where the room is
-/// not drawn — a stow whose cabinet is missing, or a lane no chart
-/// stands in yet; the caller hides the rig rather than guess.
+/// flat into that net for laid dressings. `None` only where the room is
+/// not drawn — a lane no chart stands in yet; the caller hides the rig
+/// rather than guess.
 ///
 /// Every attached room is drawn now, so a crate on a station's offer
 /// band, a couch in a derelict's hold, and fuel on the furnace's deck
@@ -1069,38 +1041,14 @@ fn cubby_anchor(slot: u8) -> Vec3 {
 /// room over.
 fn berth_site(
     rooms: &Rooms,
-    pieces: &[Piece],
     piece: &Piece,
     surfaces: &Query<(&Station, &SimSurface)>,
 ) -> Option<(Vec3, Quat, Vec3)> {
     match piece.loc {
-        Loc::Hold { turn, .. } => net_site(
-            surfaces,
-            piece.kind,
-            layout::piece_rect(rooms, pieces, piece),
-            turn,
-        ),
-        Loc::Laid { turn, .. } => {
-            net_laid(surfaces, layout::piece_rect(rooms, pieces, piece), turn)
+        Loc::Hold { turn, .. } => {
+            net_site(surfaces, piece.kind, layout::piece_rect(rooms, piece), turn)
         }
-        Loc::Stow { cabinet, slot } => {
-            // An occupied cabinet cannot leave its room, so the host is a
-            // standing floor rig whenever this berth exists at all.
-            let host = pieces
-                .iter()
-                .find(|other| other.id == cabinet && matches!(other.loc, Loc::Hold { .. }))?;
-            let (pos, rot, scale) = net_site(
-                surfaces,
-                host.kind,
-                layout::piece_rect(rooms, pieces, host),
-                host.loc.spot()?.turn,
-            )?;
-            Some((
-                pos + rot * (cubby_anchor(slot) * scale),
-                rot,
-                Vec3::splat(scale.min_element() * STOW_FIT),
-            ))
-        }
+        Loc::Laid { turn, .. } => net_laid(surfaces, layout::piece_rect(rooms, piece), turn),
     }
 }
 
@@ -1120,18 +1068,16 @@ fn berth_site(
 /// that was the grid's answer, and the grid is gone (docs/BAY.md, "The
 /// grid comes out").
 ///
-/// `None` while nothing is held, off every net, and for a cubby drop: a
-/// cubby is inside a piece and has no ground of its own to stand a
-/// ghost or light a patch on.
+/// `None` while nothing is held, and off every net.
 fn previewed(bridge: &crate::bridge::Bridge, aim: SimVec2) -> Option<Preview> {
     let sim = &bridge.sim;
     let held = sim.held(0)?;
     let piece = sim.pieces().iter().find(|piece| piece.id == held.piece)?;
     let (loc, verdict) = sim.drop_preview(0, aim, bridge.facing())?;
-    let turn = loc.spot()?.turn;
+    let turn = loc.spot().turn;
     let berth = Piece { loc, ..*piece };
     Some(Preview {
-        rect: layout::piece_rect(sim.rooms(), sim.pieces(), &berth),
+        rect: layout::piece_rect(sim.rooms(), &berth),
         ground: Ground::at(sim.rooms(), &berth)?,
         turn,
         verdict,
@@ -1353,9 +1299,9 @@ pub fn drawn_box(kind: Kind) -> (Vec3, Vec3) {
 /// The pick body a rig carries over its OWN: [`drawn_box`], bound to the
 /// sub-rect of its OWN rect that box's silhouette covers, cut through
 /// the middle of its depth. Whatever the sim hit-tests inside the piece
-/// — the cabinet's cubby sub-rects, an instrument's amber handle band —
-/// is then read in the very frame the rig drew it in, so the aim lands
-/// on the cargo the player is looking at.
+/// — an instrument's amber handle band — is then read in the very frame
+/// the rig drew it in, so the aim lands on the cargo the player is
+/// looking at.
 ///
 /// **The region is the body, not the footprint**, and the two are not
 /// the same shape. It used to be the footprint, which meant the region
@@ -1364,8 +1310,8 @@ pub fn drawn_box(kind: Kind) -> (Vec3, Vec3) {
 /// cells across, and a third of a cell of air on either flank of them
 /// picked them up. Binding the sub-rect the silhouette covers rather
 /// than the whole rect keeps the mapping one-to-one in rig-local units,
-/// which is what the handle band and the cubbies are declared in — the
-/// face gets smaller, and nothing declared inside it moves.
+/// which is what the handle band is declared in — the face gets smaller,
+/// and nothing declared inside it moves.
 ///
 /// **And it is not a plane, either.** A silhouette is two of a body's
 /// three extents, and a quad cut on those two answers only from square
@@ -1419,8 +1365,8 @@ fn standing_face(kind: Kind, ground: Ground, site: (Vec3, Quat, Vec3)) -> SimSur
 /// from the centre, and its half-size). This lays that reading along the
 /// footprint's own two half-axes ([`Ground`]), so the point a player
 /// aims at on the body is the point of the net the sim hit-tests — and
-/// the sim carries it back into the piece's own frame to ask which cubby
-/// or which band (`layout::piece_contains`, `layout::piece_frame`).
+/// the sim carries it back into the piece's own frame to ask whether it
+/// is on the band (`layout::piece_contains`, `layout::piece_frame`).
 ///
 /// **At any angle, and exactly.** The reading is laid along the very
 /// half-axes the sim's footprint was rounded to and asks every question
@@ -1429,8 +1375,7 @@ fn standing_face(kind: Kind, ground: Ground, site: (Vec3, Quat, Vec3)) -> SimSur
 /// hair right of it to the sim too. It used to be laid along the
 /// sheet's own two axes, which can say a turn by quarters and nothing
 /// else: a body at any other angle read as though it stood at the
-/// nearest quarter, which found the body and lost its cubbies and its
-/// handle.
+/// nearest quarter, which found the body and lost its handle.
 ///
 /// The net is the room seen from outside, so a face that reads it turns
 /// its normal out of the room the way a chart does
@@ -1509,11 +1454,10 @@ impl Ground {
     }
 }
 
-/// **The turn a piece's berth stands it at**: its own, or the upright
-/// frame for a piece with no ground of its own (a cubby's).
+/// **The turn a piece's berth stands it at.**
 #[must_use]
-pub fn berth_turn(piece: &Piece) -> Turn {
-    piece.loc.spot().map_or(Turn::ZERO, |spot| spot.turn)
+pub const fn berth_turn(piece: &Piece) -> Turn {
+    piece.loc.spot().turn
 }
 
 /// Where a berthed instrument's station hangs, from its hold berth
@@ -1600,7 +1544,7 @@ pub fn standing_surface(
 /// instrument's station on its own glass, a standing rig's pick face on
 /// its own body. Runs before the pointer so the ray meets surfaces that
 /// agree with the hardware they are painted on; a jettisoned (or
-/// carried, or shelved) piece simply has none, and `aimed_station`, the
+/// carried) piece simply has none, and `aimed_station`, the
 /// focus poses, and the pointer all skip what is not there.
 fn ride_pieces(
     mut commands: Commands,
@@ -1621,7 +1565,7 @@ fn ride_pieces(
         if in_hand == Some(piece.id) {
             continue;
         }
-        let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
+        let rect = layout::piece_rect(sim.rooms(), piece);
         // Whichever room the berth is in: an instrument carries its
         // station wherever it hangs, and a standing rig carries its own
         // pick face wherever it stands. A crate staged on the furnace's
@@ -1771,9 +1715,8 @@ fn latch_cues(
                     // release has already let go, so the preview cannot
                     // be asked again; it ran the release's own function
                     // on the same board, a frame of aim earlier. A
-                    // refusal with nothing previewed — a bare grab of a
-                    // full cabinet, a cubby that will not take the
-                    // piece — flashes the one cell under the hand.
+                    // refusal with nothing previewed flashes the one cell
+                    // under the hand.
                     flash.left = FLASH_LEN;
                     flash.area = memo.berth.or_else(|| {
                         layout::cell_at(pointer.sim)
@@ -1801,8 +1744,8 @@ fn latch_cues(
 /// Diff the sim's pieces against the spawned rigs: spawn the new, despawn
 /// the gone (everything on `Cue::Reseed`), re-aim each rig at its berth,
 /// and run the glide/settle tweens. The tween interpolates scale along
-/// with position, so a piece changing worlds — desk model to bay
-/// furniture or into a cubby — grows or shrinks across the same glide.
+/// with position, so a piece changing scale between berths grows or
+/// shrinks across the same glide.
 #[allow(clippy::too_many_arguments)]
 fn sync_pieces(
     mut commands: Commands,
@@ -1831,9 +1774,8 @@ fn sync_pieces(
     }
 
     for piece in sim.pieces() {
-        let Some((goal, rot, scale)) = berth_site(sim.rooms(), sim.pieces(), piece, &surfaces)
-        else {
-            // A stow with no cabinet under it this frame: hide, never
+        let Some((goal, rot, scale)) = berth_site(sim.rooms(), piece, &surfaces) else {
+            // A berth with no chart under it this frame: hide, never
             // crash — the sim's rules say this cannot happen, and the
             // view's job is to stay standing if it somehow does.
             if let Some(&entity) = index.0.get(&piece.id)
@@ -2122,27 +2064,12 @@ fn carry_held(
                 Some(ghost_pose(berth, &plane, kind, preview.rect, preview.turn))
             });
             let (pos, rot) = ghost.unwrap_or_else(|| {
-                // No ground to stand on: a cubby drop, or an aim off
-                // every net. Hover at the hit, a lift off the struck
-                // face. A cubby takes only a one-cell kind, so the cell
-                // under the hand is the plan its pose is read from;
-                // off the net there is no cell at all, and the struck
-                // face's own facing is all there is.
-                let facing = shell.bridge.facing();
-                let cubby = matches!(
-                    sim.drop_preview(0, pointer.sim, facing),
-                    Some((Loc::Stow { .. }, _))
-                );
-                let (berth, plane) = chart_of(&surfaces, pointer.sim).unwrap_or((station, surface));
-                let (rot, stand) = layout::cell_at(pointer.sim).filter(|_| cubby).map_or_else(
-                    || (station.face(&surface), Vec3::ZERO),
-                    |(room, x, y)| {
-                        hover_pose(berth, &plane, kind, layout::cell_rect(room, x, y), facing)
-                    },
-                );
+                // No ground to stand on: an aim off every net. Hover at
+                // the hit, a lift off the struck face, facing the way it
+                // does — there is no cell, so no plan to read a pose off.
                 (
-                    world + station.inward(&surface) * CARRY_LIFT + stand * HOVER_FIT,
-                    rot,
+                    world + station.inward(&surface) * CARRY_LIFT,
+                    station.face(&surface),
                 )
             });
             (pos, rot, HOVER_FIT)
@@ -2216,9 +2143,7 @@ fn segment_distance(a: Vec3, b: Vec3, p: Vec3) -> f32 {
 /// renderer copes, and the outline keeps the ghost honest.
 ///
 /// Desk rows are exempt (they are the focused content), coverings lie
-/// flat and cannot blind, the held piece is the player's own hand, and
-/// a ghosted cabinet keeps its stowed minis visible — x-ray showing
-/// the contents is the point.
+/// flat and cannot blind, and the held piece is the player's own hand.
 #[allow(clippy::too_many_arguments)]
 fn xray_focus(
     mut commands: Commands,
@@ -2321,7 +2246,7 @@ fn hover_glint(
 ) {
     let sim = &shell.bridge.sim;
     let hovered = (camera_rig.roaming() && sim.held(0).is_none())
-        .then(|| layout::piece_at(sim.rooms(), sim.pieces(), pointer.sim).map(|piece| piece.id))
+        .then(|| pointer.aimed(sim).map(|piece| piece.id))
         .flatten();
     if *prev != hovered
         && let Some(old) = *prev
@@ -2487,51 +2412,6 @@ fn square_to(v: SimVec2, length: f32) -> SimVec2 {
 
 // ------------------------------------------------------------ drop targets --
 
-/// Breathe amber over exactly what the sim's drop matrix invites. The
-/// counter's rows of sockets left with the counter (docs/ROOMS.md), so
-/// what is left of this is the cabinets: empty cubby mouths breathe a
-/// gentler amber while the carried piece could box up somewhere.
-fn invite_glows(
-    time: Res<Time>,
-    shell: Res<Shell>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut cubbies: Query<(
-        &CubbyGlow,
-        &MeshMaterial3d<StandardMaterial>,
-        &mut Visibility,
-    )>,
-) {
-    let sim = &shell.bridge.sim;
-    let targets = sim.drop_targets(0);
-    let t = time.elapsed_secs();
-    // Which cubbies to light is sim *state*, never a re-derived rule: the
-    // invitation itself is `targets.stow`; a cubby answers it when its
-    // host stands in the hold (a shelved cabinet stores nothing) and no
-    // piece already rides that slot.
-    let inviting = targets.is_some_and(|targets| targets.stow);
-    for (cubby, material, mut visibility) in &mut cubbies {
-        let hosted = sim
-            .pieces()
-            .iter()
-            .any(|piece| piece.id == cubby.piece && matches!(piece.loc, Loc::Hold { .. }));
-        let empty = !sim.pieces().iter().any(|piece| {
-            matches!(
-                piece.loc,
-                Loc::Stow { cabinet, slot } if cabinet == cubby.piece && slot == cubby.slot
-            )
-        });
-        if inviting && hosted && empty {
-            *visibility = Visibility::Visible;
-            if let Some(mut mat) = materials.get_mut(&material.0) {
-                let level = glow::breathe(t, 2.0, cubby.phase).mul_add(0.2, 0.3);
-                glow::set_lamp(&mut mat, palette::AMBER, level);
-            }
-        } else {
-            *visibility = Visibility::Hidden;
-        }
-    }
-}
-
 // -------------------------------------------------------------------- flash --
 
 /// A glyph bar spanning `a` to `b` with `girth`, as the (centre, size,
@@ -2544,8 +2424,8 @@ fn bar_between(a: Vec2, b: Vec2, girth: f32) -> (Vec2, Vec2, f32) {
 
 /// The violation glyphs, one small bar-built icon per refused rule — the
 /// 2D console's hand-drawn set (the kettlebell, the mount bracket, the
-/// hazard triangle, the snowflake) carried over, plus the cabinet's full
-/// box. Bounds, overlap, and the suspicious objection stay glyphless:
+/// hazard triangle, the snowflake) carried over, plus the doorway's mat.
+/// Bounds and the suspicious objection stay glyphless:
 /// the frame — and its violet — already says everything those rules
 /// mean. Offsets are panel-local sim units, +y up; the footprint's
 /// `centre` steers the affix bracket toward the surface it missed.
@@ -2606,26 +2486,6 @@ fn glyph_spec(rule: Option<Violation>, centre: SimVec2) -> Vec<(Vec2, Vec2, f32)
             }
             bars
         }
-        // The full box: a crate packed past its rim, lid floating off.
-        Some(Violation::Occupied) => vec![
-            bar_between(
-                Vec2::new(-s * 0.7, -s * 0.75),
-                Vec2::new(-s * 0.7, s * 0.35),
-                s * 0.2,
-            ),
-            bar_between(
-                Vec2::new(s * 0.7, -s * 0.75),
-                Vec2::new(s * 0.7, s * 0.35),
-                s * 0.2,
-            ),
-            bar_between(
-                Vec2::new(-s * 0.8, -s * 0.75),
-                Vec2::new(s * 0.8, -s * 0.75),
-                s * 0.2,
-            ),
-            (Vec2::new(0.0, -s * 0.2), Vec2::new(s * 1.1, s * 0.55), 0.0),
-            (Vec2::new(0.0, s * 0.62), Vec2::new(s * 1.9, s * 0.22), 0.0),
-        ],
         // The doormat: three stripes across the way through. An
         // aperture belongs to two rooms at once, so nothing berths on
         // it, and the refusal wears the stripes that say why.
@@ -2642,18 +2502,12 @@ fn glyph_spec(rule: Option<Violation>, centre: SimVec2) -> Vec<(Vec2, Vec2, f32)
                 s * 0.2,
             ),
         ],
-        // Off the net, onto a piece (or its standing shadow), the violet
-        // objection, the last vital instrument refusing its exit, a cell
-        // and a cell the room's own hardware already fills: the frame
-        // alone. (Vital and Fixture are rules still owed their own
-        // glyphs — the frame and the buzz carry them meanwhile.)
-        Some(
-            Violation::Bounds
-            | Violation::Overlap
-            | Violation::Suspicious
-            | Violation::Vital
-            | Violation::Fixture,
-        )
+        // Off the net, the violet objection, the last vital instrument
+        // refusing its exit, and a cell the room's own hardware already
+        // fills: the frame alone. (Vital and Fixture are rules still owed
+        // their own glyphs — the frame and the buzz carry them
+        // meanwhile.)
+        Some(Violation::Bounds | Violation::Suspicious | Violation::Vital | Violation::Fixture)
         | None => vec![],
     }
 }
@@ -3076,7 +2930,7 @@ fn lever_lamp(
         && !sim.pieces().iter().any(|piece| {
             matches!(piece.loc, Loc::Hold { room, .. } | Loc::Laid { room, .. }
                 if !sim.rooms().riding(room))
-                && player_owned(sim.rooms(), sim.pieces(), piece.kind, piece.loc)
+                && player_owned(sim.rooms(), piece.kind, piece.loc)
         });
     // Decoration: the go-glow breathes gently while a pull would work.
     // Hover feedback: pointing at the lever wakes its lamp faintly even
@@ -3663,20 +3517,14 @@ pub enum Role {
     },
     /// A seedling's bud, hidden until the berth stands in lamplight.
     Bud,
-    /// A cubby's amber invitation, hidden until the sim offers the slot.
-    /// It breathes on a phase of its own, so it is the one role that
-    /// insists on a material instance of its own.
-    Cubby {
-        slot: u8,
-    },
     /// The ETA gauge's needle, swept by the live leg.
     Needle {
         reach: f32,
     },
     /// The empty end of the ETA gauge's sweep: the mark the needle
-    /// arrives at, which burns up as it closes. Its own material, like
-    /// the cubby's, because two gauges aboard read two different legs
-    /// only if they are not sharing one amber.
+    /// arrives at, which burns up as it closes. Its own material, because
+    /// two gauges aboard read two different legs only if they are not
+    /// sharing one amber.
     Arrival,
     /// The launch handle's go-lamp, and the halo behind it.
     Knob,
@@ -3693,16 +3541,16 @@ pub enum Role {
 
 impl Role {
     /// Whether the part must own its material outright rather than share
-    /// the rig's instance of its coat. Only the cubby does: four mouths
-    /// wearing one amber would breathe as one, and they are meant to
-    /// breathe out of step (`invite_glows`).
+    /// the rig's instance of its coat. Only the arrival mark does: two
+    /// gauges wearing one amber would burn up as one, and they read two
+    /// different legs.
     const fn alone(self) -> bool {
-        matches!(self, Self::Cubby { .. } | Self::Arrival)
+        matches!(self, Self::Arrival)
     }
 
     /// Whether the part is hung hidden for a system to show later.
     const fn dark(self) -> bool {
-        matches!(self, Self::Bud | Self::Cubby { .. })
+        matches!(self, Self::Bud)
     }
 
     /// **Whether the part hangs a light in the room** rather than only
@@ -4984,13 +4832,10 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                 .scaled(Vec3::new(fw * 0.68, fh * 0.58, 1.0)),
             );
         }
-        // Furniture that stores (docs/BAY.md): a slim wardrobe in oiled
-        // oak, brass where hands go, its front open so the cubby rack —
-        // and everything stowed in it — stays visible. The 2×2 rack's
-        // interiors are socket-dark so the shrunken cargo reads against
-        // them; a hidden amber quad in each mouth answers the sim's stow
-        // invitation through `invite_glows`. Stowed pieces themselves are
-        // ordinary rigs parked at [`cubby_anchor`]s by `sync_pieces`.
+        // Furniture, and only furniture (docs/BAY.md, "Cargo stops
+        // colliding"): a slim wardrobe in oiled oak, brass where hands
+        // go, its front open on a rack of shelves. It stores nothing;
+        // whatever stands in it was set there at full size.
         Kind::Cabinet => {
             let deep = CABINET_DEPTH;
             let rack = shaded(0.25);
@@ -5070,29 +4915,6 @@ pub fn parts(piece: &Piece, screens: Screens) -> Vec<Part> {
                     )
                     .nth(u8::try_from(i).unwrap_or(0))
                     .seated("side"),
-                );
-            }
-            // The cubbies: dark interior backs, invite glows in front.
-            for slot in 0..CABINET_SLOTS {
-                let anchor = cubby_anchor(slot);
-                out.push(
-                    Part::new(
-                        "cubby lining",
-                        Body::Box(Vec3::new(fw * 0.36, fh * 0.4, 1.2)),
-                        socket,
-                        Transform::from_xyz(anchor.x, anchor.y, 2.2),
-                    )
-                    .nth(slot),
-                );
-                out.push(
-                    Part::new(
-                        "cubby mouth",
-                        Body::Box(Vec3::new(fw * 0.33, fh * 0.37, 0.6)),
-                        Coat::phosphor(palette::AMBER, 0.0),
-                        Transform::from_xyz(anchor.x, anchor.y, 3.0),
-                    )
-                    .nth(slot)
-                    .role(Role::Cubby { slot }),
                 );
             }
         }
@@ -5908,13 +5730,6 @@ fn stamp(
                 phase,
             });
         }
-        Role::Cubby { slot } => {
-            rig.commands.entity(entity).insert(CubbyGlow {
-                piece: piece.id,
-                slot,
-                phase: f32::from(slot) * 1.3,
-            });
-        }
         Role::Needle { reach } => {
             rig.commands.entity(entity).insert(EtaNeedle { reach });
         }
@@ -6544,8 +6359,9 @@ mod tests {
     ///
     /// The apron again, this time as the player meets it: a crosshair
     /// aimed at bare deck a step in front of a standing piece used to
-    /// read that piece, and reading a cabinet reaches into its cubbies —
-    /// so a click on the floor came back holding a transit chit. Driven
+    /// read that piece, and reading a cabinet then reached into the
+    /// cubbies it had — so a click on the floor came back holding a
+    /// transit chit. Driven
     /// through [`crate::surface::pick`] from a standing eye, because
     /// that is the path the aim actually takes.
     #[test]
@@ -6562,25 +6378,25 @@ mod tests {
             .map(|(station, surface)| Aimable {
                 station: *station,
                 surface: *surface,
-                riding: false,
+                riding: None,
                 in_room: Some(InRoom {
                     room: CABIN,
                     kind: space_trucking::sim::RoomKind::Cabin,
                 }),
             })
-            // Hold berths only, as `ride_pieces` hangs them: a shelved
-            // piece is drawn inside its cabinet, and carries no face.
+            // Standing berths only, as `ride_pieces` hangs them: a laid
+            // piece lies in its chart, and carries no face.
             .chain(
                 pieces
                     .iter()
                     .filter(|piece| matches!(piece.loc, Loc::Hold { .. }))
                     .filter_map(|piece| {
-                        let rect = layout::piece_rect(rooms, pieces, piece);
+                        let rect = layout::piece_rect(rooms, piece);
                         standing_surface(&charts, piece.kind, rect, berth_turn(piece)).map(
                             |surface| Aimable {
                                 station: Station::Standing,
                                 surface,
-                                riding: true,
+                                riding: Some(piece.id),
                                 in_room: None,
                             },
                         )
@@ -6610,15 +6426,13 @@ mod tests {
                 f32::INFINITY,
                 aims.iter().copied(),
             );
-            layout::piece_at(rooms, pieces, hit.sim).copied()
+            layout::pick(rooms, pieces, hit.sim, hit.piece).copied()
         };
-        // Its own cell answers with the wardrobe, or with whatever is
-        // shelved inside it — a cubby is a berth of the cabinet's.
+        // Its own cell answers with the wardrobe.
         let on_it = read_at((x, y)).expect("the wardrobe answers for its own cell");
-        assert!(
-            on_it.id == cabinet.id
-                || matches!(on_it.loc, Loc::Stow { cabinet: host, .. } if host == cabinet.id),
-            "aiming at the wardrobe read {on_it:?}",
+        assert_eq!(
+            on_it.id, cabinet.id,
+            "aiming at the wardrobe read {on_it:?}"
         );
         // The next cell toward the front wall is bare deck, and bare
         // deck answers for nobody.
@@ -6665,56 +6479,15 @@ mod tests {
         }
     }
 
-    /// Cubby anchors follow the sim's rack: row-major from the top-left,
-    /// seen facing the open front, in the cabinet's OWN frame
-    /// (`cargo::Framed::quarter`) — whatever way the cabinet is turned.
-    #[test]
-    fn cubby_anchors_match_the_sim_rack() {
-        // Slot 0 top-left … 3 bottom-right; local +X is the rig's right,
-        // +Y up.
-        assert!(cubby_anchor(0).x < cubby_anchor(1).x);
-        assert!(cubby_anchor(2).x < cubby_anchor(3).x);
-        assert!(cubby_anchor(0).y > cubby_anchor(2).y);
-        assert!(cubby_anchor(1).y > cubby_anchor(3).y);
-        // And the sim agrees which quarter is which: cubby 0 is the top
-        // left of the cabinet's own face and cubby 3 its bottom right, at
-        // every turn the cabinet may stand at.
-        let rooms = Rooms::new();
-        for turn in [Turn::ZERO, Turn::QUARTER, Turn::HALF, Turn(9362)] {
-            let cabinet = Piece {
-                id: 0,
-                kind: Kind::Cabinet,
-                variant: 0,
-                gnawed: false,
-                loc: Loc::Hold {
-                    room: CABIN,
-                    x: cargo::fine(6),
-                    y: cargo::fine(6),
-                    turn,
-                },
-            };
-            let (_, foot) = cargo::Foot::at(&rooms, &cabinet).expect("on the deck");
-            let own = |slot: u8| {
-                let at = rect_center(layout::fine_rect(CABIN, foot.quarter_box(slot)));
-                layout::piece_frame(&rooms, &cabinet, at).expect("standing")
-            };
-            let (c0, c3) = (own(0), own(3));
-            assert!(
-                c0.x < 0.5 && c0.y < 0.5 && c3.x > 0.5 && c3.y > 0.5,
-                "{turn:?}: cubby 0 reads {c0:?} and cubby 3 {c3:?} of the cabinet's face"
-            );
-        }
-    }
-
     /// The standing rule: a rig that stands OFF its chart is picked on
     /// its own face, so what the aim lands on is what the player is
     /// looking at. The hard case is the cabinet the backing rule turns —
     /// berthed against the port seam it yaws to face starboard, and the
     /// deck chart behind it can only answer about a plate two steps
     /// away, skewed and mirrored (the playtest's top-right cubby
-    /// selecting the top-left one).
+    /// selecting the top-left one, back when it had cubbies).
     #[test]
-    fn a_yawed_cabinets_cubbies_are_picked_on_its_face() {
+    fn a_yawed_cabinet_is_read_on_its_own_face() {
         let charts = rig::bay();
         let floor = chart(Station::BayFloor);
         // One column wide against the port seam: the game turns it its
@@ -6738,29 +6511,27 @@ mod tests {
             n.dot(rot * Vec3::Z) > 0.99,
             "the face must look the way the rig looks"
         );
-        // Which cubby the sim reads at a point: a full rack, asked
-        // through the sim's own hit test, in the cabinet's own frame.
-        let (rooms, rack) = racked(rect, turn);
-        let cubby = |sim: SimVec2| {
-            layout::piece_at(&rooms, &rack, sim).and_then(|piece| match piece.loc {
-                Loc::Stow { slot, .. } => Some(slot),
-                _ => None,
-            })
-        };
-        // Every cubby the rig DRAWS is the cubby the sim reads there.
-        for slot in 0..CABINET_SLOTS {
-            let drawn = pos + rot * (cubby_anchor(slot) * scale);
+        // Where on its own face the sim reads a point: the cabinet's own
+        // frame, `(0, 0)` its top left as a person facing it sees it.
+        let (rooms, cabinet) = standing(rect, turn, Kind::Cabinet);
+        let own = |sim: SimVec2| layout::piece_frame(&rooms, &cabinet, sim);
+        // Every quarter of the body the rig DRAWS is that quarter of the
+        // face the sim reads, in the rig's own frame: +X its right, +Y up.
+        for (sx, sy) in [(-1.0_f32, 1.0_f32), (1.0, 1.0), (-1.0, -1.0), (1.0, -1.0)] {
+            let local = Vec3::new(sx * layout::CELL * 0.22, sy * layout::CELL * 0.47, 3.4);
+            let drawn = pos + rot * (local * scale);
             let ray = Ray3d::new(drawn + n * 0.6, Dir3::new(-n).expect("a unit normal"));
             let (_, sim, _) = face.project(ray).expect("the face takes the aim");
+            let at = own(sim).expect("on the cabinet");
             assert_eq!(
-                cubby(sim),
-                Some(slot),
-                "cubby {slot} is drawn where the sim reads {sim:?}"
+                (at.x > 0.5, at.y < 0.5),
+                (sx > 0.0, sy > 0.0),
+                "the ({sx}, {sy}) quarter is drawn where the sim reads {at:?}"
             );
         }
         // And the report itself, put to the test: standing in front of
         // the cabinet and aiming at the TOP-RIGHT of what is on show
-        // selects the top-right cubby, slot 1 — not its mirror.
+        // reads the top right of its face — not its mirror.
         let eye = face.center + n * 0.9 + Vec3::Y * 0.25;
         let right = (-n).cross(Vec3::Y).normalize();
         let (across, up) = (
@@ -6770,24 +6541,25 @@ mod tests {
         let target = face.center + right * (across * 0.5) + Vec3::Y * (up * 0.5);
         let ray = Ray3d::new(eye, Dir3::new(target - eye).expect("a look direction"));
         let (_, sim, _) = face.project(ray).expect("the aim meets the face");
-        assert_eq!(cubby(sim), Some(1), "the top-right quadrant read {sim:?}");
+        let top_right = |sim: SimVec2| own(sim).is_some_and(|at| at.x > 0.5 && at.y < 0.5);
+        assert!(top_right(sim), "the top-right quadrant read {:?}", own(sim));
         // The defect it retires: that same ray, read through the flat
-        // deck chart, cannot name the cubby the player is looking at.
+        // deck chart, cannot name the part the player is looking at.
         let flat = floor.project(ray).map(|(_, sim, _)| sim);
         assert!(
-            flat.is_none_or(|sim| cubby(sim) != Some(1)),
+            flat.is_none_or(|sim| !top_right(sim)),
             "the deck chart must not be able to answer for a standing rig: {flat:?}"
         );
     }
 
-    /// A cabinet standing on `rect` at `turn` with a vial in every
-    /// cubby, on the ship the boot builds: the board a cubby is read off.
-    fn racked(rect: Rect, turn: Turn) -> (Rooms, Vec<Piece>) {
+    /// A `kind` standing on `rect` at `turn`, on the ship the boot
+    /// builds: the board a face is read off.
+    fn standing(rect: Rect, turn: Turn, kind: Kind) -> (Rooms, Piece) {
         let rooms = Rooms::new();
         let (x, y) = layout::fine_at(CABIN, rect_center(rect));
-        let mut rack = vec![Piece {
+        let piece = Piece {
             id: 1,
-            kind: Kind::Cabinet,
+            kind,
             variant: 0,
             gnawed: false,
             loc: Loc::Hold {
@@ -6796,15 +6568,8 @@ mod tests {
                 y: u16::try_from(y).expect("on the net"),
                 turn,
             },
-        }];
-        rack.extend((0..CABINET_SLOTS).map(|slot| Piece {
-            id: 10 + u32::from(slot),
-            kind: Kind::PerfumeVial,
-            variant: 0,
-            gnawed: false,
-            loc: Loc::Stow { cabinet: 1, slot },
-        }));
-        (rooms, rack)
+        };
+        (rooms, piece)
     }
 
     /// Which berths carry a face: the ones whose rig leaves its chart's
@@ -6876,81 +6641,85 @@ mod tests {
         assert!(near < far, "the chart answered first: {near} vs {far}");
     }
 
-    /// Selection follows the drawing, end to end: with all four cubbies
-    /// of a yawed cabinet full, aiming at a boxed mini picks THAT mini
-    /// out of the sim's own hit test — the law the fixture sweep set,
-    /// now that a standing rig maps its own body.
+    /// **Selection follows the drawing where bodies share ground**: a
+    /// vial set down in the middle of a couch is two pieces under one
+    /// point, and the one the crosshair meets first is the one the aim
+    /// names (`surface::VirtualPointer::aimed`). Struck on the couch's
+    /// face, the couch; struck on the vial's, the vial; with no aim at
+    /// all, the sim's point-pick order — the smaller piece.
     #[test]
-    fn stowed_cargo_is_grabbed_where_it_is_drawn() {
+    fn the_aim_names_the_body_the_ray_met_where_two_share_ground() {
+        use crate::room::InRoom;
+        use crate::surface::{Aimable, pick};
+
         let charts = rig::bay();
-        let floor = chart(Station::BayFloor);
-        let (rect, turn) = berth_of(3, 4, Kind::Cabinet);
-        let mut pieces = racked(rect, turn).1;
-        pieces.truncate(1);
-        // Three cubbies boxed, one left bare: the sim's rack tiles the
-        // whole body, so an empty mouth is the only place the furniture
-        // itself answers — which is exactly where it should.
-        let bare = 2;
-        pieces.extend(
-            (0..CABINET_SLOTS)
-                .filter(|slot| *slot != bare)
-                .map(|slot| Piece {
-                    id: 10 + u32::from(slot),
-                    kind: Kind::PerfumeVial,
-                    variant: 0,
-                    gnawed: false,
-                    loc: Loc::Stow { cabinet: 1, slot },
-                }),
-        );
-        let rooms = space_trucking::sim::Sim::new(1).rooms().clone();
-        assert_eq!(rect, layout::piece_rect(&rooms, &pieces, &pieces[0]));
-        let (pos, rot, scale) = site_on(Station::BayFloor, &floor, Kind::Cabinet, rect, turn);
-        let face =
-            standing_surface(&charts, Kind::Cabinet, rect, turn).expect("the cabinet stands");
-        for slot in 0..CABINET_SLOTS {
-            let drawn = pos + rot * (cubby_anchor(slot) * scale);
+        let (rect, turn) = berth_of(5, 6, Kind::Couch);
+        let (rooms, couch) = standing(rect, turn, Kind::Couch);
+        let vial = Piece {
+            id: 2,
+            kind: Kind::PerfumeVial,
+            ..couch
+        };
+        let board = [couch, vial];
+        let face_of = |piece: &Piece| {
+            let rect = layout::piece_rect(&rooms, piece);
+            Aimable {
+                station: Station::Standing,
+                surface: standing_surface(&charts, piece.kind, rect, berth_turn(piece))
+                    .expect("a standing rig carries a face"),
+                riding: Some(piece.id),
+                in_room: None,
+            }
+        };
+        let floor = Aimable {
+            station: Station::BayFloor,
+            surface: chart(Station::BayFloor),
+            riding: None,
+            in_room: Some(InRoom {
+                room: CABIN,
+                kind: space_trucking::sim::RoomKind::Cabin,
+            }),
+        };
+        // From in front of each body, at the middle of its own face: the
+        // pointer lands on the one cell both stand on, and only the face
+        // the ray met can say which of the two it was.
+        let aimed = |piece: &Piece| {
+            let face = face_of(piece).surface;
             let n = Station::Standing.inward(&face);
-            let ray = Ray3d::new(drawn + n * 0.6, Dir3::new(-n).expect("a unit normal"));
-            let (_, sim, _) = face.project(ray).expect("the face takes the aim");
-            let want = if slot == bare {
-                1
-            } else {
-                10 + u32::from(slot)
-            };
+            let eye = face.center + n * 0.9 + Vec3::Y * 0.3;
+            let ray = Ray3d::new(eye, Dir3::new(face.center - eye).expect("a look direction"));
+            let hit = pick(ray, true, f32::INFINITY, [floor, face_of(piece)]);
             assert_eq!(
-                layout::piece_at(&rooms, &pieces, sim).map(|piece| piece.id),
-                Some(want),
-                "aiming at cubby {slot} must grab piece {want}"
+                hit.piece,
+                Some(piece.id),
+                "the ray met {:?}'s face",
+                piece.kind
             );
-        }
+            assert_eq!(
+                layout::piece_at(&rooms, &board, hit.sim).map(|piece| piece.id),
+                Some(vial.id),
+                "the point alone is on both, and names the smaller"
+            );
+            layout::pick(&rooms, &board, hit.sim, hit.piece).map(|piece| piece.id)
+        };
+        assert_eq!(aimed(&couch), Some(couch.id));
+        assert_eq!(aimed(&vial), Some(vial.id));
     }
 
-    /// A stowed rig fits its cubby: the widest 1×1 footprint at stow
-    /// scale stays inside ~0.18 world units, without vanishing.
-    #[test]
-    fn stowed_pieces_shrink_to_the_cubby() {
-        let (_, _, scale) = site_at(Station::BayFloor, 4, 4, Kind::Cabinet);
-        let extent = layout::CELL * scale.min_element() * STOW_FIT;
-        assert!(extent <= 0.19, "stowed extent {extent}");
-        assert!(extent >= 0.12, "stowed cargo should stay visible: {extent}");
-    }
-
-    /// Every violation names its presentation: a glyph, or (bounds,
-    /// overlap, the violet objection) the bare frame — and no glyph
+    /// Every violation names its presentation: a glyph, or (bounds, the
+    /// violet objection, the vital refusal) the bare frame — and no glyph
     /// outgrows the bar pool.
     #[test]
     fn glyphs_cover_the_violation_ladder() {
         let rect = rect_of(5, 4, Kind::PerfumeVial);
         for rule in [
             Violation::Bounds,
-            Violation::Overlap,
             Violation::Volatile,
             Violation::Cryo,
             Violation::Suspicious,
             Violation::Affix(Mount::Ceiling),
             Violation::Affix(Mount::Floor),
             Violation::Affix(Mount::Wall),
-            Violation::Occupied,
             Violation::Vital,
         ] {
             let bars = glyph_spec(Some(rule), rect_center(rect));
@@ -6960,7 +6729,7 @@ mod tests {
             );
             let frame_only = matches!(
                 rule,
-                Violation::Bounds | Violation::Overlap | Violation::Suspicious | Violation::Vital
+                Violation::Bounds | Violation::Suspicious | Violation::Vital
             );
             assert_eq!(bars.is_empty(), frame_only, "{rule:?}");
         }
@@ -7132,6 +6901,13 @@ mod tests {
     /// means carry, the rest of a click-functional piece means focus,
     /// and passive cargo is all grab — plus the answer stops applying
     /// the moment the instrument leaves its wall.
+    /// [`crate::rig::handle_route`] as a press at `at` meets it with no
+    /// aim: the piece the sim's point-pick answers, routed.
+    fn route(rooms: &Rooms, pieces: &[Piece], at: SimVec2) -> Option<crate::rig::Focus> {
+        layout::piece_at(rooms, pieces, at)
+            .and_then(|piece| crate::rig::handle_route(rooms, piece, at))
+    }
+
     #[test]
     fn the_handle_decides_carry_or_focus() {
         let sim = space_trucking::sim::Sim::new(1);
@@ -7151,7 +6927,7 @@ mod tests {
             let grab = own_point(rooms, piece, rect_center(handle));
             assert!(on_carry_handle(rooms, piece, grab));
             assert_eq!(
-                crate::rig::handle_route(rooms, pieces, grab),
+                route(rooms, pieces, grab),
                 None,
                 "{kind:?}: the grab must reach the sim untouched"
             );
@@ -7159,20 +6935,17 @@ mod tests {
             let body = own_point(rooms, piece, SimVec2::new(0.5, 0.25));
             assert!(!on_carry_handle(rooms, piece, body));
             assert_eq!(
-                crate::rig::handle_route(rooms, pieces, body),
+                route(rooms, pieces, body),
                 Some(focus),
                 "{kind:?}: the body must answer with its station"
             );
         }
         // Passive cargo has no function to guard: every point grabs.
         let lamp = of_kind(Kind::CeilingLamp);
-        let at = rect_center(layout::piece_rect(rooms, pieces, lamp));
-        assert_eq!(crate::rig::handle_route(rooms, pieces, at), None);
+        let at = rect_center(layout::piece_rect(rooms, lamp));
+        assert_eq!(route(rooms, pieces, at), None);
         // Off the net entirely — a parked pointer — routes nowhere.
-        assert_eq!(
-            crate::rig::handle_route(rooms, pieces, crate::bridge::POINTER_PARKED),
-            None
-        );
+        assert_eq!(route(rooms, pieces, crate::bridge::POINTER_PARKED), None);
     }
 
     /// **The point of `piece`'s own face at fractions `own`** — `(0, 0)`
@@ -7440,14 +7213,17 @@ mod tests {
     /// lies under it in `LAMP_OK`; aimed onto a neighbour the patch burns
     /// `LAMP_NO` with its slash struck; aimed at nothing the patch goes
     /// dark; and a refused release flashes the berth the ghost was
-    /// standing on, not the cell under the hand.
+    /// standing on, not the cell under the hand. The crate is a gas
+    /// canister beside another, because volatile spacing is the one rule
+    /// left that a neighbour can break (docs/BAY.md, "Cargo stops
+    /// colliding").
     #[test]
     #[allow(clippy::too_many_lines)] // one carry, walked through four aims and a release
     fn the_ghost_and_its_patch_stand_where_the_drop_lands() {
         use space_trucking::sim::InputFrame;
 
         let floor = chart(Station::BayFloor);
-        let kind = Kind::ScrapAlloy;
+        let kind = Kind::GasCanister;
         // A point on the deck, `cells` in from its own top-left corner.
         let deck = |across: f32, down: f32| {
             SimVec2::new(
@@ -7535,13 +7311,9 @@ mod tests {
         assert!(ok.green > ok.red, "a legal patch burns green: {ok:?}");
 
         // Aimed onto the neighbour: refused, red, and struck through.
-        let onto = rect_center(layout::piece_rect(
-            &rooms,
-            &[neighbour_piece],
-            &neighbour_piece,
-        ));
+        let onto = rect_center(layout::piece_rect(&rooms, &neighbour_piece));
         let (refused, verdict) = drawn.aim(onto);
-        assert_eq!(verdict, Err(Some(Violation::Overlap)));
+        assert_eq!(verdict, Err(Some(Violation::Volatile)));
         assert_eq!(
             drawn.shown(drawn.patch),
             Visibility::Visible,
@@ -7587,7 +7359,7 @@ mod tests {
         let flash = drawn.app.world().resource::<FlashState>();
         assert_eq!(
             flash.rule,
-            Some(Violation::Overlap),
+            Some(Violation::Volatile),
             "the release was refused"
         );
         assert_eq!(
@@ -7603,9 +7375,9 @@ mod tests {
     /// to eleven degrees off its own turn. The ghost stands at the berth
     /// the sim previews at that facing, turned those eleven degrees; the
     /// patch is the couch's own turned footprint, not the box round it;
-    /// onto a neighbour its slash runs the footprint's own diagonal; and
-    /// the refused release burns a frame round the turned ground it would
-    /// have stood on, one bar to an edge.
+    /// onto the deck's hatch its slash runs the footprint's own diagonal;
+    /// and the refused release burns a frame round the turned ground it
+    /// would have stood on, one bar to an edge.
     #[test]
     #[allow(clippy::too_many_lines)] // one carry, turned, then aimed twice and let go
     fn the_ghost_and_its_patch_turn_with_the_carry() {
@@ -7714,11 +7486,12 @@ mod tests {
             "the patch lit the box round the turned couch"
         );
 
-        // Onto the crate: refused, and struck through along the couch's
-        // own diagonal.
-        let onto = rect_center(layout::piece_rect(&rooms, &[crate_piece], &crate_piece));
+        // Onto the hatch in the deck: refused — a couch stands on a crate
+        // now, but never in a doorway — and struck through along the
+        // couch's own diagonal.
+        let onto = rect_center(layout::cell_rect(CABIN, 9, 7));
         let (refused, verdict) = drawn.aim(onto);
-        assert_eq!(verdict, Err(Some(Violation::Overlap)));
+        assert_eq!(verdict, Err(Some(Violation::Threshold)));
         assert_eq!(drawn.shown(drawn.slash), Visibility::Visible);
         let refused = drawn.ground(refused);
         let diagonal = (floor.to_world(refused.centre + refused.across + refused.down)
@@ -7744,7 +7517,7 @@ mod tests {
         let flash = drawn.app.world().resource::<FlashState>();
         assert_eq!(
             flash.rule,
-            Some(Violation::Overlap),
+            Some(Violation::Threshold),
             "the release was refused"
         );
         assert_eq!(flash.area, Some(refused), "the flash forgot the turn");
@@ -7793,17 +7566,17 @@ mod tests {
         face.project(ray).expect("the aim meets the body").1
     }
 
-    /// **A cabinet a seventh of a turn round answers every cubby
-    /// exactly**: the aim lands on the point of the net the sim carries
-    /// back into the cabinet's own frame, wherever on the body it lands.
+    /// **A cabinet a seventh of a turn round is read exactly**: the aim
+    /// lands on the point of the net the sim carries back into the
+    /// cabinet's own frame, wherever on the body it lands.
     ///
     /// The face used to read a body as though it stood at the nearest
-    /// quarter, which found the cabinet and lost its cubbies, thirty-nine
+    /// quarter, which found the cabinet and lost its parts, thirty-nine
     /// degrees out. So this asks the hard places: the middle of every
-    /// cubby the rig draws, and a hair either side of the two lines the
-    /// rack is split on, where the sim's own frame decides.
+    /// quarter the rig draws, and a hair either side of the body's own
+    /// middle lines, where the sim's own frame decides.
     #[test]
-    fn a_cabinet_a_seventh_round_answers_every_cubby_exactly() {
+    fn a_cabinet_a_seventh_round_is_read_exactly() {
         let charts = rig::bay();
         let (fx, fy, fw, fh) = space_trucking::sim::RoomKind::Cabin.floor_rect();
         let (x, y) = (cargo::fine(fx + fw / 2), cargo::fine(fy + fh / 2));
@@ -7819,33 +7592,27 @@ mod tests {
         let site = site_on(Station::BayFloor, &floor, Kind::Cabinet, rect, SEVENTH);
         let face = standing_surface(&charts, Kind::Cabinet, rect, SEVENTH)
             .expect("a standing rig carries a face");
-        let (rooms, rack) = racked(rect, SEVENTH);
-        let cubby = |sim: SimVec2| {
-            layout::piece_at(&rooms, &rack, sim).and_then(|piece| match piece.loc {
-                Loc::Stow { slot, .. } => Some(slot),
-                _ => None,
-            })
+        let (rooms, cabinet) = standing(rect, SEVENTH, Kind::Cabinet);
+        // Which quarter of its own face the sim reads a point in: right
+        // of its middle, and above it.
+        let quarter = |sim: SimVec2| {
+            layout::piece_frame(&rooms, &cabinet, sim).map(|at| (at.x > 0.5, at.y < 0.5))
         };
-        for slot in 0..CABINET_SLOTS {
-            let sim = read_body(&face, site, cubby_anchor(slot).truncate());
+        for (across, up) in [(-1.0_f32, 1.0_f32), (1.0, 1.0), (-1.0, -1.0), (1.0, -1.0)] {
+            let want = Some((across > 0.0, up > 0.0));
+            let middle = Vec2::new(across * layout::CELL * 0.22, up * layout::CELL * 0.47);
+            let sim = read_body(&face, site, middle);
             assert_eq!(
-                cubby(sim),
-                Some(slot),
-                "cubby {slot} is drawn where the sim reads {sim:?}"
+                quarter(sim),
+                want,
+                "the ({across}, {up}) quarter reads {sim:?}"
             );
-        }
-        // The rack splits on the cabinet's own middle, across and up.
-        for (across, up, slot) in [
-            (-1.0, 1.0, 0),
-            (1.0, 1.0, 1),
-            (-1.0, -1.0, 2),
-            (1.0, -1.0, 3),
-        ] {
+            // A hair off the body's own middle lines, the same quarter.
             let sim = read_body(&face, site, Vec2::new(across, up) * HAIR);
             assert_eq!(
-                cubby(sim),
-                Some(slot),
-                "a hair into cubby {slot} from the rack's middle reads {sim:?}"
+                quarter(sim),
+                want,
+                "a hair into the ({across}, {up}) quarter from the middle reads {sim:?}"
             );
         }
     }
@@ -7857,7 +7624,7 @@ mod tests {
     /// sim carries back into the tank's own frame.
     #[test]
     fn a_tank_a_seventh_round_answers_its_handle_exactly() {
-        use crate::rig::{Focus, handle_route};
+        use crate::rig::Focus;
 
         let charts = rig::bay();
         let ship = Rooms::new();
@@ -7880,16 +7647,7 @@ mod tests {
                 turn: SEVENTH,
             },
         };
-        assert!(
-            placement_check(
-                &ship,
-                &[],
-                0,
-                Kind::ChartTank,
-                tank.loc.spot().expect("a berth")
-            )
-            .is_ok()
-        );
+        assert!(placement_check(&ship, &[], 0, Kind::ChartTank, tank.loc.spot()).is_ok());
         let site = site_on(Station::BayWall, &aft, Kind::ChartTank, rect, SEVENTH);
         let face = standing_surface(&charts, Kind::ChartTank, rect, SEVENTH)
             .expect("a wall rig turned off its chart's lie carries a face");
@@ -7918,7 +7676,7 @@ mod tests {
                 if on { "inside" } else { "outside" }
             );
             assert_eq!(
-                handle_route(&ship, &[tank], sim),
+                route(&ship, &[tank], sim),
                 (!on).then_some(Focus::Tank),
                 "and routes the wrong way"
             );
@@ -8177,9 +7935,7 @@ mod tests {
             Ok(()),
             "{name}: the arbiter allows this berth and the drop aimed at its middle refuses it"
         );
-        let Some(cargo::Spot { room, x, y, turn }) = loc.spot() else {
-            panic!("{name}: an empty cabin offered a cubby: {loc:?}");
-        };
+        let cargo::Spot { room, x, y, turn } = loc.spot();
         assert_eq!(
             room, CABIN,
             "{name}: the drop left the room it was aimed into"
@@ -8297,7 +8053,7 @@ mod tests {
                 "{name}: amber drawn at {local:?} reads {sim:?}, outside the band"
             );
             assert_eq!(
-                crate::rig::handle_route(&b.rooms, &board, sim),
+                route(&b.rooms, &board, sim),
                 None,
                 "{name}: the grab must reach the sim as a carry"
             );
@@ -8311,7 +8067,7 @@ mod tests {
             "{name}: the piece's middle reads as grab at {sim:?}"
         );
         assert_eq!(
-            crate::rig::handle_route(&b.rooms, &board, sim),
+            route(&b.rooms, &board, sim),
             instrument(b.kind).and_then(|mount| crate::rig::Focus::of(mount.station)),
             "{name}: the body must answer with its own station"
         );
@@ -8386,7 +8142,7 @@ mod tests {
             let inside = mid + (corner - mid) * 0.999;
             let sim = aim(inside).expect("the aim meets the body").1;
             assert!(
-                layout::piece_contains(&b.rooms, &board, &board[0], sim),
+                layout::piece_contains(&b.rooms, &board[0], sim),
                 "{name}: the body's corner {corner:?} reads {sim:?}, off its own cells"
             );
             let past = Vec2::new(
@@ -8458,7 +8214,7 @@ mod tests {
             .map(|(station, surface)| Aimable {
                 station: *station,
                 surface: *surface,
-                riding: false,
+                riding: None,
                 in_room: Some(InRoom {
                     room: CABIN,
                     kind: space_trucking::sim::RoomKind::Cabin,
@@ -8468,7 +8224,7 @@ mod tests {
         aims.push(Aimable {
             station: Station::Standing,
             surface: face,
-            riding: true,
+            riding: Some(board[0].id),
             in_room: None,
         });
         // Where a body may be stood in: the deck's own quad, a walk's
@@ -8553,8 +8309,7 @@ mod tests {
                     } else {
                         "hold"
                     };
-                    let cargo::Spot { room, x, y, turn } =
-                        loc.spot().expect("a board is laid out in rooms");
+                    let cargo::Spot { room, x, y, turn } = loc.spot();
                     let _ = writeln!(
                         save,
                         "piece {id} {} 0 0 {layer} {room} {x} {y} {}",
@@ -8578,7 +8333,7 @@ mod tests {
             .iter()
             .find(|piece| piece.id == id)
             .expect("the piece is aboard");
-        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let at = rect_center(layout::piece_rect(sim.rooms(), &piece));
         sim.advance(
             space_trucking::sim::TICK_DT,
             &space_trucking::sim::InputFrame {
@@ -8685,7 +8440,7 @@ mod tests {
                         turn,
                     };
                     let legal = if laid {
-                        dressing_check(&ship, &[], 0, kind, spot).is_ok()
+                        dressing_check(&ship, kind, spot).is_ok()
                     } else {
                         placement_check(&ship, &[], 0, kind, spot).is_ok()
                     };

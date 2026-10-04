@@ -347,6 +347,20 @@ pub struct InputFrame {
     /// exact. Absolute rather than a delta, because a VR hand reports a
     /// pose, not a key press.
     pub facing: Turn,
+    /// **The piece the player is aiming at**, by id, where the frontend
+    /// knows.
+    ///
+    /// Bodies share ground (docs/BAY.md, "Cargo stops colliding"), so one
+    /// point of a chart can be on several pieces and the pointer alone no
+    /// longer says which one a press means. The cabin does know: it casts
+    /// one ray and resolves the nearest body along it ("The nearest
+    /// rule"). It is consulted only in the press handler, and only to
+    /// choose among the pieces the pointer is on ([`layout::pick`]), so a
+    /// press with none — a test, a monkey, a tape — takes the documented
+    /// point-pick order ([`layout::piece_at`]). Like `night`, `occupied`
+    /// and `facing`, no tick ever reads it, so sparse recordings stay
+    /// exact.
+    pub aim: Option<u32>,
     /// Attach a room this frame — the multiplayer interface, written now
     /// and wired later (a crewmate joining is an attach).
     pub attach: Option<Attach>,
@@ -484,14 +498,9 @@ pub struct Held {
 /// the berth's room and tile class, and nothing else. The renderer glows
 /// exactly these, so what a room invites is always what a release does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-// One independent flag per tile class is the honest shape here; folding
-// them into an enum would misrepresent that several can invite at once.
-#[allow(clippy::struct_excessive_bools)]
 pub struct DropTargets {
     /// Ordinary cells of any attached room.
     pub berth: bool,
-    /// Some cabinet's cubbies (a stowable piece, a free cubby).
-    pub stow: bool,
     /// A calling room's offer area (the player's own cargo, proposed).
     pub offer: bool,
     /// The incinerator's hazard tiles.
@@ -616,9 +625,7 @@ impl Sim {
         debug_assert!(
             pieces.len() == STARTER_CARGO.len()
                 && pieces.iter().all(|piece| {
-                    piece.loc.spot().is_some_and(|spot| {
-                        placement_legal(&rooms, &pieces, piece.id, piece.kind, spot)
-                    })
+                    placement_legal(&rooms, &pieces, piece.id, piece.kind, piece.loc.spot())
                 }),
             "starter cargo must be stowed legally"
         );
@@ -681,8 +688,7 @@ impl Sim {
         self.night = input.night;
         self.occupied = [CABIN; MAX_CREW];
         self.occupied[0] = input.occupied;
-        let mut placed = Vec::new();
-        self.apply_input(0, input, &mut placed);
+        self.apply_input(0, input);
         if self.paused {
             return 0;
         }
@@ -713,8 +719,10 @@ impl Sim {
     ///   a press on a piece someone already holds (this tick or earlier)
     ///   does nothing, silently.
     /// - Drops: releases resolve in order against the world as earlier
-    ///   players left it; a release refused only because an earlier player
-    ///   just took the spot snaps back with a soft reject.
+    ///   players left it. No drop takes a spot from the next one — bodies
+    ///   share ground — so there is no race to lose; a special item's own
+    ///   condition (two canisters too near) refuses the later drop by
+    ///   name, exactly as it would a tick apart.
     /// - Toggles: each player's pause/warp edge flips the flag in order and
     ///   announces its cue, so two pause toggles in one tick net to no
     ///   change and read `Pause { true }` then `Pause { false }`.
@@ -739,9 +747,8 @@ impl Sim {
         for (player, input) in inputs.iter().enumerate() {
             self.occupied[player] = input.occupied;
         }
-        let mut placed = Vec::new();
         for (player, input) in inputs.iter().enumerate() {
-            self.apply_input(player as PlayerId, input, &mut placed);
+            self.apply_input(player as PlayerId, input);
         }
         if !self.paused {
             self.step();
@@ -750,9 +757,7 @@ impl Sim {
 
     /// One player's input events: reseed, toggles, the graph, then — unless
     /// the sim is paused by the time their turn comes — pointer edges.
-    /// `placed` carries the pieces successfully dropped earlier in the same
-    /// application round, for same-tick drop contention.
-    fn apply_input(&mut self, player: PlayerId, input: &InputFrame, placed: &mut Vec<u32>) {
+    fn apply_input(&mut self, player: PlayerId, input: &InputFrame) {
         if let Some(seed) = input.reseed {
             // Note the ordering: reseeding rebuilds `self`, cue list
             // included, so the cue has to be pushed after it.
@@ -782,7 +787,7 @@ impl Sim {
         // Pointer edges are per-frame events, exactly like the template's
         // burst was: handling them inside the tick loop would fire them once
         // per tick.
-        self.handle_pointer(player, input, placed);
+        self.handle_pointer(player, input);
     }
 
     /// Run `ticks` default-input ticks for offline catch-up, suppressing cue
@@ -1178,22 +1183,10 @@ impl Sim {
     }
 
     /// The tile class of a piece's berth — the cell under its
-    /// footprint's centre (`cargo::berth_tile`) — with a cubby reading
-    /// as plain ground.
+    /// footprint's centre (`cargo::berth_tile`).
     #[must_use]
     fn tile_of(&self, piece: &Piece) -> Option<Tile> {
-        match piece.loc {
-            Loc::Hold { .. } | Loc::Laid { .. } => {
-                cargo::berth_tile(&self.rooms, piece.kind, piece.loc)
-            }
-            Loc::Stow { .. } => Some(Tile::Plain),
-        }
-    }
-
-    /// The room a piece is berthed in, following a cubby to its cabinet.
-    #[must_use]
-    fn room_of(&self, piece: &Piece) -> Option<RoomId> {
-        piece.loc.room(&self.pieces)
+        cargo::berth_tile(&self.rooms, piece.kind, piece.loc)
     }
 
     /// The attached trade room, if a counterparty is alongside.
@@ -1249,13 +1242,10 @@ impl Sim {
             return Err(Refusal::Aboard);
         }
         for piece in &self.pieces {
-            let Some(at) = self.room_of(piece) else {
-                continue;
-            };
-            if !self.rooms.beyond(room, at) {
+            if !self.rooms.beyond(room, piece.loc.room()) {
                 continue;
             }
-            if player_owned(&self.rooms, &self.pieces, piece.kind, piece.loc) {
+            if player_owned(&self.rooms, piece.kind, piece.loc) {
                 return Err(Refusal::Cargo);
             }
         }
@@ -1280,10 +1270,7 @@ impl Sim {
         let doomed: Vec<u32> = self
             .pieces
             .iter()
-            .filter(|piece| {
-                self.room_of(piece)
-                    .is_some_and(|at| self.rooms.beyond(room, at))
-            })
+            .filter(|piece| self.rooms.beyond(room, piece.loc.room()))
             .map(|piece| piece.id)
             .collect();
         self.pieces.retain(|piece| !doomed.contains(&piece.id));
@@ -1345,15 +1332,15 @@ impl Sim {
         self.marks.clear();
     }
 
-    /// Move every player-owned piece out of `room` to its first legal
-    /// berth aboard. Conservation before convenience.
+    /// Move every player-owned piece out of `room` to the berth aboard the
+    /// game would choose for it ([`Sim::fit`]). Conservation before
+    /// convenience.
     fn walk_aboard(&mut self, room: RoomId) {
         let strays: Vec<u32> = self
             .pieces
             .iter()
             .filter(|piece| {
-                self.room_of(piece) == Some(room)
-                    && player_owned(&self.rooms, &self.pieces, piece.kind, piece.loc)
+                piece.loc.room() == room && player_owned(&self.rooms, piece.kind, piece.loc)
             })
             .map(|piece| piece.id)
             .collect();
@@ -1370,12 +1357,12 @@ impl Sim {
 
     /// One frame of one player's pointer handling: presses lift or actuate,
     /// releases drop, and the held piece's legality tracks the pointer.
-    fn handle_pointer(&mut self, player: PlayerId, input: &InputFrame, placed: &mut Vec<u32>) {
+    fn handle_pointer(&mut self, player: PlayerId, input: &InputFrame) {
         if input.press {
-            self.on_press(player, input.pointer, input.shift, placed);
+            self.on_press(player, input.pointer, input.aim, input.shift);
         }
         if input.release {
-            self.on_release(player, input.pointer, input.facing, placed);
+            self.on_release(player, input.pointer, input.facing);
         }
         let slot = usize::from(player);
         if self.held[slot].is_some() && !input.held && !input.press && !input.release {
@@ -1408,7 +1395,15 @@ impl Sim {
     /// marks a room's stock, or actuates whatever it landed on. The rat
     /// comes first: a press on its cell shoos it and does NOT lift the
     /// piece under it.
-    fn on_press(&mut self, player: PlayerId, p: Vec2, shift: bool, placed: &mut Vec<u32>) {
+    ///
+    /// **Which piece is the one `aim` names, when the pointer is on it**
+    /// ([`layout::pick`]): the frontend's nearest body along its ray.
+    /// Without an aim, or with one the pointer is not on, the point-pick
+    /// order decides ([`layout::piece_at`]). Every piece is grabbable:
+    /// nothing stands on anything in a way that pins it, and nothing
+    /// stores anything, so there is no furniture to empty first and no
+    /// rug to free.
+    fn on_press(&mut self, player: PlayerId, p: Vec2, aim: Option<u32>, shift: bool) {
         if self.held(player).is_some() {
             return;
         }
@@ -1429,19 +1424,12 @@ impl Sim {
             self.work_handshake(room);
             return;
         }
-        if shift && self.quick_move(p, placed) {
+        if shift && self.quick_move(p, aim) {
             return;
         }
-        let grabbed = layout::piece_at(&self.rooms, &self.pieces, p).map(|piece| {
-            (
-                piece.id,
-                piece.kind,
-                piece.loc,
-                self.tile_of(piece),
-                cargo::laid_pinned(&self.rooms, &self.pieces, piece),
-            )
-        });
-        if let Some((id, kind, origin, tile, pinned)) = grabbed {
+        let grabbed = layout::pick(&self.rooms, &self.pieces, p, aim)
+            .map(|piece| (piece.id, piece.loc, self.tile_of(piece)));
+        if let Some((id, origin, tile)) = grabbed {
             if tile == Some(Tile::Stock) {
                 // The handle rule already reserved the body-click for
                 // function; on a piece of a room's stock, that function is
@@ -1453,13 +1441,6 @@ impl Sim {
                 // Someone else got there first — this tick (first in
                 // player order wins) or an earlier one. Losing a grab race
                 // is not an error, so it makes no noise at all.
-                return;
-            }
-            if (kind == Kind::Cabinet && cargo::cabinet_occupied(&self.pieces, id)) || pinned {
-                // Furniture full of goods, or a dressing with cargo
-                // standing on it: it stays put until cleared.
-                self.last_violation = Some(Violation::Occupied);
-                self.cues.push(Cue::Reject { hard: true });
                 return;
             }
             self.held[usize::from(player)] = Some(Held {
@@ -1674,8 +1655,9 @@ impl Sim {
             *mask |= 1 << kind.index();
         }
 
-        // What was proposed becomes the room's, restocked in tile order;
-        // whatever will not fit goes into the back room.
+        // What was proposed becomes the room's, restocked in tile order —
+        // tidily, the shelf's free tiles first (`cargo::tidy`), one piece
+        // to a tile; whatever has no tile left goes into the back room.
         let mut doomed = Vec::new();
         let mut used: Vec<(u8, u8)> = Vec::new();
         for id in given {
@@ -1683,16 +1665,24 @@ impl Sim {
                 continue;
             };
             let kind = self.pieces[index].kind;
-            let tile = stock_tiles.iter().copied().find_map(|(x, y)| {
-                let spot = self.cell_spot(room, kind, x, y)?;
-                (!used.contains(&(x, y))
-                    && placement_legal(&self.rooms, &self.pieces, id, kind, spot))
-                .then_some(((x, y), spot))
-            });
+            let tiles: Vec<((u8, u8), Loc)> = stock_tiles
+                .iter()
+                .copied()
+                .filter(|cell| !used.contains(cell))
+                .filter_map(|(x, y)| Some(((x, y), self.cell_spot(room, kind, x, y)?.hold())))
+                .collect();
+            let shelved = cargo::tidy(
+                &self.rooms,
+                &self.pieces,
+                id,
+                kind,
+                tiles.iter().map(|&(_, berth)| berth),
+            );
+            let tile = shelved.and_then(|berth| tiles.iter().find(|&&(_, at)| at == berth));
             match tile {
-                Some((cell, spot)) => {
+                Some(&(cell, berth)) => {
                     used.push(cell);
-                    self.pieces[index].loc = spot.hold();
+                    self.pieces[index].loc = berth;
                 }
                 None => doomed.push(id),
             }
@@ -1809,11 +1799,15 @@ impl Sim {
             .or_else(|| self.free_berth_in(room, Some(id), kind, Tile::Offer))
     }
 
-    /// The first free berth of class `class` in `room` for `kind`, at a
-    /// whole-cell anchor and the turn the game gives a body there
+    /// The berth of class `class` in `room` the game would set `kind` out
+    /// on, at a whole-cell anchor and the turn the game gives a body there
     /// (`cargo::anchored`): a room sets its goods out on its own tiles, a
     /// tile at a time, and a whole-cell berth reads the tile its
-    /// footprint's top-left is on (`cargo::Foot::centre_cell`).
+    /// footprint's top-left is on (`cargo::Foot::centre_cell`). Of those
+    /// tiles, in their own order, the first standing clear of what is
+    /// already there, and the first legal one when none is
+    /// ([`cargo::tidy`]): a shelf lays its goods out side by side, and a
+    /// shelf with no gap left still takes the last one.
     ///
     /// **A room never berths anything on its own doorstep.** Every berth
     /// the game picks for you comes through here — a shelf putting its
@@ -1837,12 +1831,12 @@ impl Sim {
     ) -> Option<Loc> {
         let id = ignore.unwrap_or(u32::MAX);
         let doorstep = self.rooms.kind(room)?;
-        barter::tiles_of(&self.rooms, room, class)
+        let tiles = barter::tiles_of(&self.rooms, room, class)
             .into_iter()
             .filter(|&(x, y)| !doorstep.doorstep(x, y))
             .filter_map(|(x, y)| self.cell_spot(room, kind, x, y))
-            .find(|&spot| placement_legal(&self.rooms, &self.pieces, id, kind, spot))
-            .map(Spot::hold)
+            .map(Spot::hold);
+        cargo::tidy(&self.rooms, &self.pieces, id, kind, tiles)
     }
 
     /// The spot `kind` takes in `room` with its footprint's top-left on
@@ -1853,8 +1847,9 @@ impl Sim {
         Some(Spot { room, x, y, turn })
     }
 
-    /// The first berth aboard for `piece`: [`cargo::dress_fit`] for a
-    /// covering, [`first_fit`] for everything else.
+    /// The berth aboard the game would choose for `piece`:
+    /// [`cargo::dress_fit`] for a covering, [`first_fit`] for everything
+    /// else — free space first, the first legal spot failing that.
     fn fit(&self, piece: &Piece) -> Option<Spot> {
         if piece.kind.covering() {
             cargo::dress_fit(&self.rooms, &self.pieces, piece.id, piece.kind)
@@ -1863,14 +1858,14 @@ impl Sim {
         }
     }
 
-    /// A shift-press: move the piece under `p` straight to its one obvious
-    /// destination — cargo aboard onto the calling room's offer area,
-    /// anything of the player's lying in a calling room back to its first
-    /// legal berth aboard (per the quality-of-life brief: the first legal
-    /// spot, even if that is a bad idea). Returns whether the press was
-    /// consumed.
-    fn quick_move(&mut self, p: Vec2, placed: &mut Vec<u32>) -> bool {
-        let Some(piece) = layout::piece_at(&self.rooms, &self.pieces, p).copied() else {
+    /// A shift-press: move the piece the press lands on ([`layout::pick`])
+    /// straight to its one obvious destination — cargo aboard onto the
+    /// calling room's offer area, anything of the player's lying in a
+    /// calling room back aboard, where the game would put it ([`Sim::fit`]:
+    /// free space first, and the first legal spot when there is none).
+    /// Returns whether the press was consumed.
+    fn quick_move(&mut self, p: Vec2, aim: Option<u32>) -> bool {
+        let Some(piece) = layout::pick(&self.rooms, &self.pieces, p, aim).copied() else {
             return false;
         };
         if self.tile_of(&piece) == Some(Tile::Stock) {
@@ -1881,18 +1876,7 @@ impl Sim {
             // Someone is carrying it; a modifier press cannot yank it away.
             return true;
         }
-        if (piece.kind == Kind::Cabinet && cargo::cabinet_occupied(&self.pieces, piece.id))
-            || cargo::laid_pinned(&self.rooms, &self.pieces, &piece)
-        {
-            // Same refusal as the grab: full furniture and pinned
-            // dressings stay put.
-            self.last_violation = Some(Violation::Occupied);
-            self.cues.push(Cue::Reject { hard: true });
-            return true;
-        }
-        let at = self.room_of(&piece);
-        let aboard = at.is_some_and(|room| self.rooms.riding(room));
-        let target = if aboard {
+        let target = if self.rooms.riding(piece.loc.room()) {
             self.rooms
                 .iter()
                 .find(|(_, room)| !room.kind.riding())
@@ -1908,7 +1892,6 @@ impl Sim {
                     stored.loc = loc;
                 }
                 self.last_violation = None;
-                placed.push(piece.id);
                 self.cues.push(Cue::Place);
                 self.wanderer_retry();
             }
@@ -1975,7 +1958,7 @@ impl Sim {
     /// A release drops the held piece, carried at `turn`: place it if the
     /// target is legal, snap it back otherwise. A drop never destroys or
     /// surrenders a piece — ownership crosses only at a room's handshake.
-    fn on_release(&mut self, player: PlayerId, p: Vec2, turn: Turn, placed: &mut Vec<u32>) {
+    fn on_release(&mut self, player: PlayerId, p: Vec2, turn: Turn) {
         let Some(held) = self.held[usize::from(player)].take() else {
             return;
         };
@@ -1987,42 +1970,18 @@ impl Sim {
             Ok(loc) => {
                 self.pieces[index].loc = loc;
                 self.last_violation = None;
-                placed.push(piece.id);
                 self.cues.push(Cue::Place);
                 self.wanderer_retry();
             }
             Err(violation) => {
-                // Same-tick drop contention: refused only because an
-                // earlier player's piece just landed there means this
-                // player lost a race, not broke a stowage rule — soft
-                // snap-back, no violation flash.
-                let contested = violation == Some(Violation::Overlap)
-                    && !placed.is_empty()
-                    && self.contested_only(&piece, p, turn, placed);
-                let hard = violation.is_some() && !contested;
-                if hard {
+                if violation.is_some() {
                     self.last_violation = violation;
                 }
-                self.cues.push(Cue::Reject { hard });
+                self.cues.push(Cue::Reject {
+                    hard: violation.is_some(),
+                });
             }
         }
-    }
-
-    /// Whether dropping `piece` at `p`, carried at `turn`, would have been
-    /// legal without the pieces placed earlier this round — i.e. the
-    /// refusal is pure same-tick contention. Asked through the very path
-    /// the drop took ([`Sim::settle`]), against the board as it stood
-    /// before them, so the resolution and the arbiter are the same
-    /// resolution and the same arbiter.
-    fn contested_only(&self, piece: &Piece, p: Vec2, turn: Turn, placed: &[u32]) -> bool {
-        let rest: Vec<Piece> = self
-            .pieces
-            .iter()
-            .filter(|other| !placed.contains(&other.id))
-            .copied()
-            .collect();
-        self.settle(&rest, piece, p, turn)
-            .is_some_and(|(_, verdict)| verdict.is_ok())
     }
 
     /// Where dropping `piece` at `p`, carried at `turn`, would settle it,
@@ -2032,7 +1991,7 @@ impl Sim {
     /// home. The answer is [`Sim::settle`]'s, which is also
     /// [`Sim::drop_preview`]'s.
     fn resolve_drop(&self, piece: &Piece, p: Vec2, turn: Turn) -> Result<Loc, Option<Violation>> {
-        match self.settle(&self.pieces, piece, p, turn) {
+        match self.settle(piece, p, turn) {
             Some((loc, Ok(()))) => Ok(loc),
             Some((_, Err(violation))) => Err(violation),
             None => Err(None),
@@ -2054,8 +2013,7 @@ impl Sim {
     /// the carry's, not the board's: a frontend asks with the facing it
     /// will send on the release (`InputFrame::facing`). A refused verdict
     /// still names a berth — where the piece WOULD have stood — so a
-    /// refusal can be drawn where it happens. A drop into a cabinet's
-    /// cubby answers `Loc::Stow`.
+    /// refusal can be drawn where it happens.
     #[must_use]
     pub fn drop_preview(
         &self,
@@ -2065,11 +2023,11 @@ impl Sim {
     ) -> Option<(Loc, Result<(), Option<Violation>>)> {
         let held = self.held(player)?;
         let piece = self.pieces.iter().find(|piece| piece.id == held.piece)?;
-        self.settle(&self.pieces, piece, p, turn)
+        self.settle(piece, p, turn)
     }
 
     /// **The drop, whole**: where `piece` released at `p` and carried at
-    /// `turn` stands, and whether it may, judged against `pieces`.
+    /// `turn` stands, and whether it may.
     ///
     /// The pointer is continuous and the berth is free, so the release
     /// resolves a position before it asks any rule about it, in this
@@ -2091,12 +2049,12 @@ impl Sim {
     ///    a neighbour's edges, and it is gone: a hand that set a crate a
     ///    hair off its neighbour meant the hair (docs/BAY.md, "Cargo
     ///    turns").
-    /// 5. Then the tile-class gates, the cubby, dressing against
-    ///    occupancy, and the arbiter, exactly as ever, of the resolved
-    ///    footprint.
+    /// 5. Then the tile-class gates and the arbiter of the layer the piece
+    ///    lies in, of the resolved footprint. Nothing about the drop asks
+    ///    what is already standing there: a piece set down in a wardrobe
+    ///    stands in the wardrobe (docs/BAY.md, "Cargo stops colliding").
     fn settle(
         &self,
-        pieces: &[Piece],
         piece: &Piece,
         p: Vec2,
         turn: Turn,
@@ -2107,7 +2065,7 @@ impl Sim {
         let berth = self
             .aim(piece.kind, room, surf, layout::fine_at(room, p), turn)?
             .berth(piece.kind);
-        Some(match self.judge(pieces, piece, p, berth) {
+        Some(match self.judge(piece, berth) {
             Ok(loc) => (loc, Ok(())),
             Err(violation) => (berth, Err(violation)),
         })
@@ -2154,17 +2112,9 @@ impl Sim {
     /// resolved `berth`. Every arm gates on the tile class, the same
     /// reading [`Sim::drop_targets`] advertises from, so the glowing
     /// regions and the legal ones cannot drift apart.
-    fn judge(
-        &self,
-        pieces: &[Piece],
-        piece: &Piece,
-        p: Vec2,
-        berth: Loc,
-    ) -> Result<Loc, Option<Violation>> {
-        let Some(spot) = berth.spot() else {
-            return Err(None);
-        };
-        if !player_owned(&self.rooms, pieces, piece.kind, piece.loc) {
+    fn judge(&self, piece: &Piece, berth: Loc) -> Result<Loc, Option<Violation>> {
+        let spot = berth.spot();
+        if !player_owned(&self.rooms, piece.kind, piece.loc) {
             // A room's own goods do not move: they cross at the handshake.
             return Err(None);
         }
@@ -2206,7 +2156,7 @@ impl Sim {
         if let Some(tile @ (Tile::Offer | Tile::Consume)) = tile {
             // Both are exits — the piece is leaving the ship, one way
             // or another — so the vital rule stands at both doors.
-            if cargo::last_vital_aboard(&self.rooms, pieces, piece) {
+            if cargo::last_vital_aboard(&self.rooms, &self.pieces, piece) {
                 return Err(Some(Violation::Vital));
             }
             if tile == Tile::Consume && piece.kind == Kind::SuspiciousCrate {
@@ -2223,71 +2173,29 @@ impl Sim {
         // on a station's deck is not lost, it is simply not going
         // anywhere yet.
         //
-        // A drop over a cabinet's body reaches for its cubbies first — but
-        // only with something cubby-sized. Anything bigger falls through
-        // to the arbiter and collides like furniture does.
-        if piece.kind.extent() == (1, 1, 1) {
-            let host = pieces.iter().find(|other| {
-                other.id != piece.id
-                    && other.kind == Kind::Cabinet
-                    && matches!(other.loc, Loc::Hold { .. })
-                    && layout::piece_contains(&self.rooms, pieces, other, p)
-            });
-            if let Some(host) = host {
-                if !cargo::stowable(piece.kind) {
-                    // The one-cell kinds a cubby refuses, named: the cold
-                    // ones need the hull; a suspicious one (none is 1×1
-                    // today) would name its own rule.
-                    let violation = match piece.kind.tag() {
-                        Some(cargo::Tag::Suspicious) => Violation::Suspicious,
-                        _ => Violation::Cryo,
-                    };
-                    return Err(Some(violation));
-                }
-                return cargo::free_cubby(pieces, host.id).map_or(
-                    Err(Some(Violation::Occupied)),
-                    |slot| {
-                        Ok(Loc::Stow {
-                            cabinet: host.id,
-                            slot,
-                        })
-                    },
-                );
-            }
-        }
         // Coverings lay into the room instead of occupying it: the
         // dressing layer's own check, same violation ladder.
-        let verdict = if piece.kind.covering() {
-            cargo::dressing_check(&self.rooms, pieces, piece.id, piece.kind, spot)
-        } else {
-            placement_check(&self.rooms, pieces, piece.id, piece.kind, spot)
-        };
-        verdict.map(|()| berth).map_err(Some)
+        cargo::berth_check(&self.rooms, &self.pieces, piece.id, piece.kind, berth)
+            .map(|()| berth)
+            .map_err(Some)
     }
 
     /// Which classes of berth would accept `player`'s held piece, for the
     /// renderer to glow. `None` while that player holds nothing. Derived
-    /// from the tile classes exactly as [`Sim::resolve_drop`] is; per-cell
-    /// freeness stays with the drop itself (a glowing area with one
-    /// occupied cell is still an honest invitation).
+    /// from the tile classes exactly as [`Sim::resolve_drop`] is; what a
+    /// particular footprint meets stays with the drop itself (a glowing
+    /// area with a canister in it is still an honest invitation to
+    /// anything but a second canister).
     #[must_use]
     pub fn drop_targets(&self, player: PlayerId) -> Option<DropTargets> {
         let held = self.held(player)?;
         let piece = self.pieces.iter().find(|piece| piece.id == held.piece)?;
-        let ours = player_owned(&self.rooms, &self.pieces, piece.kind, piece.loc);
+        let ours = player_owned(&self.rooms, piece.kind, piece.loc);
         // The exits that would certainly hard-refuse this piece do not
         // glow — the invitation and the arbiter must agree.
         let vital = cargo::last_vital_aboard(&self.rooms, &self.pieces, piece);
         Some(DropTargets {
             berth: ours,
-            stow: ours
-                && cargo::stowable(piece.kind)
-                && self.pieces.iter().any(|other| {
-                    other.id != piece.id
-                        && other.kind == Kind::Cabinet
-                        && matches!(other.loc, Loc::Hold { .. })
-                        && cargo::free_cubby(&self.pieces, other.id).is_some()
-                }),
             offer: ours && !vital && self.rooms.iter().any(|(_, room)| !room.kind.riding()),
             consume: ours && !vital && piece.kind != Kind::SuspiciousCrate,
         })
@@ -2306,8 +2214,7 @@ impl Sim {
     /// [`Sim::launch_gate`] refuses on it and [`Sim::detained`] lights
     /// it, so the law and its reading cannot come apart.
     fn detained(&self, piece: &Piece) -> bool {
-        self.room_of(piece).is_some_and(|at| !self.rooms.riding(at))
-            && player_owned(&self.rooms, &self.pieces, piece.kind, piece.loc)
+        !self.rooms.riding(piece.loc.room()) && player_owned(&self.rooms, piece.kind, piece.loc)
     }
 
     /// The gangway law's launch gate. The lever refuses unless every crew
@@ -2719,10 +2626,11 @@ impl Sim {
 
     /// The fluff arithmetic: while traveling, each breeding window one
     /// berthed fluff (lowest id — the eldest) buds a copy one whole cell
-    /// over in the same room — left, right, up, down on its sheet, the
-    /// first the arbiter accepts, at the turn the game gives a body there
-    /// — up to the mercy cap. Deterministic from the window number,
-    /// stateless, and honestly a little unnerving.
+    /// over in the same room — left, right, up, down on its sheet, at the
+    /// turn the game gives a body there, the first of those that stands
+    /// clear and the first the arbiter accepts when none does
+    /// ([`cargo::tidy`]) — up to the mercy cap. Deterministic from the
+    /// window number, stateless, and honestly a little unnerving.
     fn breed_fluffs(&mut self) {
         if self.tick % FLUFF_WINDOW
             != splitmix(self.seed ^ SALT_FLUFF, self.tick / FLUFF_WINDOW) % FLUFF_WINDOW
@@ -2752,41 +2660,41 @@ impl Sim {
         let Some(host) = self.rooms.kind(room) else {
             return;
         };
-        for (nx, ny) in neighbours {
-            let Some(surf) =
-                Foot::of(host, Kind::Fluff, nx, ny, Turn::ZERO).and_then(|foot| foot.chart(host))
-            else {
-                continue;
-            };
-            let spot = Spot {
-                room,
-                x: nx,
-                y: ny,
-                turn: cargo::default_turn(host, Kind::Fluff, surf, (nx, ny)),
-            };
-            if placement_legal(
-                &self.rooms,
-                &self.pieces,
-                self.next_piece,
-                Kind::Fluff,
-                spot,
-            ) {
-                self.pieces.push(Piece {
-                    id: self.next_piece,
-                    kind: Kind::Fluff,
-                    variant: self.rng.u8(..cargo::VARIANTS),
-                    gnawed: false,
-                    loc: spot.hold(),
-                });
-                self.next_piece += 1;
-                self.cues.push(Cue::FluffBirth);
-                return;
-            }
-        }
+        let buds = neighbours.into_iter().filter_map(|(nx, ny)| {
+            let surf = Foot::of(host, Kind::Fluff, nx, ny, Turn::ZERO)?.chart(host)?;
+            Some(
+                Spot {
+                    room,
+                    x: nx,
+                    y: ny,
+                    turn: cargo::default_turn(host, Kind::Fluff, surf, (nx, ny)),
+                }
+                .hold(),
+            )
+        });
+        let Some(loc) = cargo::tidy(
+            &self.rooms,
+            &self.pieces,
+            self.next_piece,
+            Kind::Fluff,
+            buds,
+        ) else {
+            return;
+        };
+        self.pieces.push(Piece {
+            id: self.next_piece,
+            kind: Kind::Fluff,
+            variant: self.rng.u8(..cargo::VARIANTS),
+            gnawed: false,
+            loc,
+        });
+        self.next_piece += 1;
+        self.cues.push(Cue::FluffBirth);
     }
 
-    /// Stow a fresh `kind` at the first legal berth aboard, if any. Free
-    /// cargo only: a room's own goods arrive through [`Sim::stock_in`].
+    /// Set a fresh `kind` down aboard where the game would choose
+    /// ([`first_fit`]), if anywhere. Free cargo only: a room's own goods
+    /// arrive through [`Sim::stock_in`].
     fn spawn_in_hold(&mut self, kind: Kind) -> bool {
         let Some(spot) = first_fit(&self.rooms, &self.pieces, self.next_piece, kind) else {
             return false;
@@ -3003,11 +2911,10 @@ mod tests {
 
     /// The facing a frontend sends while `player` carries: the held
     /// piece's own turn, the way the cabin sends it until the player
-    /// turns it (`InputFrame::facing`). `Turn(0)` out of a cubby.
+    /// turns it (`InputFrame::facing`). `Turn(0)` while nothing is held.
     fn facing(sim: &Sim, player: PlayerId) -> Turn {
         sim.held(player)
-            .and_then(|held| held.origin.spot())
-            .map_or(Turn::ZERO, |spot| spot.turn)
+            .map_or(Turn::ZERO, |held| held.origin.spot().turn)
     }
 
     /// A docked sim with the cabin emptied: starter cargo swept aside so
@@ -3217,7 +3124,7 @@ mod tests {
             .collect();
         assert_eq!(aboard.len(), STARTER_CARGO.len());
         for piece in aboard {
-            let spot = piece.loc.spot().expect("standing in the cabin");
+            let spot = piece.loc.spot();
             assert!(
                 placement_legal(sim.rooms(), sim.pieces(), piece.id, piece.kind, spot),
                 "{:?} berthed illegally at {spot:?}",
@@ -3229,12 +3136,7 @@ mod tests {
         assert!(!stock.is_empty(), "the Guild put nothing out");
         for id in stock {
             let piece = sim.pieces().iter().find(|p| p.id == id).unwrap();
-            assert!(!player_owned(
-                sim.rooms(),
-                sim.pieces(),
-                piece.kind,
-                piece.loc
-            ));
+            assert!(!player_owned(sim.rooms(), piece.kind, piece.loc));
         }
     }
 
@@ -3480,7 +3382,7 @@ mod tests {
             .iter()
             .find(|p| p.id == stock[0])
             .expect("a stocked good");
-        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), marked));
+        let at = rect_center(layout::piece_rect(sim.rooms(), marked));
         s.push((0.0, press_at(at.x, at.y)));
         for _ in 0..30 {
             s.push((TICK_DT, InputFrame::default()));
@@ -3512,14 +3414,14 @@ mod tests {
             .iter()
             .filter(|p| {
                 matches!(p.loc, Loc::Hold { room: TRADE, .. })
-                    && player_owned(sim.rooms(), sim.pieces(), p.kind, p.loc)
+                    && player_owned(sim.rooms(), p.kind, p.loc)
             })
             .map(|p| p.id)
             .collect();
         assert!(!ours.is_empty(), "the station answered with nothing");
         for id in ours {
             let piece = *sim.pieces().iter().find(|p| p.id == id).unwrap();
-            let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+            let from = rect_center(layout::piece_rect(sim.rooms(), &piece));
             let spot = first_fit(sim.rooms(), sim.pieces(), id, piece.kind).expect("room aboard");
             drag(&mut sim, from, berth_point(spot));
         }
@@ -3650,8 +3552,7 @@ mod tests {
                         let Loc::Hold { room: at, .. } = piece.loc else {
                             continue;
                         };
-                        if at != id || player_owned(&sim.rooms, &sim.pieces, piece.kind, piece.loc)
-                        {
+                        if at != id || player_owned(&sim.rooms, piece.kind, piece.loc) {
                             continue;
                         }
                         let (_, foot) = Foot::at(&sim.rooms, piece).expect("on the net");
@@ -3751,7 +3652,7 @@ mod tests {
                         "{room:?} put a good of its own on a tile the player owns"
                     );
                     assert!(
-                        !player_owned(&sim.rooms, &sim.pieces, kind, loc),
+                        !player_owned(&sim.rooms, kind, loc),
                         "{room:?}'s goods at {loc:?} read as the player's"
                     );
                     // The cell under its centre, which its footprint
@@ -3813,7 +3714,7 @@ mod tests {
                         turn: Turn::ZERO,
                     };
                     assert_eq!(
-                        player_owned(&sim.rooms, &sim.pieces, Kind::PerfumeVial, loc),
+                        player_owned(&sim.rooms, Kind::PerfumeVial, loc),
                         sim.rooms.tile(id, x, y) != Some(Tile::Stock),
                         "ownership at room {id} ({x}, {y}) stopped being tile class"
                     );
@@ -3851,7 +3752,7 @@ mod tests {
         for id in composed {
             let piece = sim.pieces().iter().find(|p| p.id == id).unwrap();
             assert!(
-                player_owned(sim.rooms(), sim.pieces(), piece.kind, piece.loc),
+                player_owned(sim.rooms(), piece.kind, piece.loc),
                 "the answer must cross to the player"
             );
         }
@@ -3867,7 +3768,7 @@ mod tests {
         assert!(stock.len() >= 2, "this test wants a choice");
         let last = *stock.last().unwrap();
         let piece = *sim.pieces().iter().find(|p| p.id == last).unwrap();
-        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let at = rect_center(layout::piece_rect(sim.rooms(), &piece));
         sim.advance(0.0, &press_at(at.x, at.y));
         assert_eq!(sim.cues(), [Cue::Mark { on: true }]);
         assert_eq!(sim.marks(), [last]);
@@ -3888,7 +3789,7 @@ mod tests {
         let mut sim = Sim::new(33);
         let stock = stock_ids(&sim, TRADE);
         let piece = *sim.pieces().iter().find(|p| p.id == stock[0]).unwrap();
-        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let at = rect_center(layout::piece_rect(sim.rooms(), &piece));
         sim.advance(0.0, &press_at(at.x, at.y));
         assert!(sim.held(0).is_none(), "stock marks, it does not lift");
         assert_eq!(
@@ -3913,7 +3814,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::BrinePearls)
             .unwrap();
-        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let from = rect_center(layout::piece_rect(sim.rooms(), &piece));
         let to = offer(&sim, TRADE, 0);
         drag(&mut sim, from, to);
         let shake = handshake(&sim, TRADE);
@@ -3933,7 +3834,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::BrinePearls)
             .unwrap();
-        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let from = rect_center(layout::piece_rect(sim.rooms(), &piece));
         let to = offer(&sim, TRADE, 0);
         drag(&mut sim, from, to);
         let shake = handshake(&sim, TRADE);
@@ -3969,11 +3870,11 @@ mod tests {
                 let id = inject_at(&mut sim, Kind::ChartTank, spot.hold());
                 let piece = *sim.pieces().iter().find(|p| p.id == id).unwrap();
                 assert!(
-                    player_owned(&sim.rooms, &sim.pieces, piece.kind, piece.loc),
+                    player_owned(&sim.rooms, piece.kind, piece.loc),
                     "{kind:?} claimed the crate on its staging cell ({x}, {y})"
                 );
                 assert!(
-                    !cargo::staying(&sim.rooms, &sim.pieces, &piece),
+                    !cargo::staying(&sim.rooms, &piece),
                     "{kind:?} keeps a staying berth at ({x}, {y}), which it leaves with"
                 );
                 sim.pieces.retain(|p| p.id != id);
@@ -4060,13 +3961,7 @@ mod tests {
                 for spot in berths(&sim, room, kind, Tile::Staging) {
                     let (x, y) = (spot.x, spot.y);
                     let id = inject_at(&mut sim, kind, spot.hold());
-                    let piece = *sim.pieces().iter().find(|p| p.id == id).unwrap();
-                    // Liftable: nothing pins a crate to a station's deck.
-                    assert!(
-                        !cargo::laid_pinned(sim.rooms(), &sim.pieces, &piece),
-                        "{host:?}: a {kind:?} on staging ({x}, {y}) is pinned where it stands"
-                    );
-                    // And somewhere aboard to carry it to.
+                    // Somewhere aboard to carry it to.
                     assert!(
                         first_fit(&sim.rooms, &sim.pieces, id, kind).is_some(),
                         "{host:?}: staging ({x}, {y}) took a {kind:?} the ship has no berth for"
@@ -4099,7 +3994,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::PerfumeVial)
             .unwrap();
-        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let from = rect_center(layout::piece_rect(sim.rooms(), &piece));
         drag(&mut sim, from, cabin(3, 3));
         assert_eq!(sim.launch_gate(), Ok(()));
     }
@@ -4123,7 +4018,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::PerfumeVial)
             .unwrap();
-        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let from = rect_center(layout::piece_rect(sim.rooms(), &piece));
         drag(&mut sim, from, cabin(3, 3));
         assert_eq!(sim.part_check(TRADE), Ok(()));
         let detach = InputFrame {
@@ -4299,16 +4194,25 @@ mod tests {
                             cabin(5, 5)
                         } else {
                             let piece = pieces[rng.usize(..pieces.len())];
-                            rect_center(layout::piece_rect(sim.rooms(), pieces, &piece))
+                            rect_center(layout::piece_rect(sim.rooms(), &piece))
                         }
                     }
                 };
+                // Now and then an aim, at any piece aboard or alongside —
+                // under the pointer or not — or at nothing at all.
+                let aim = (rng.u8(..3) == 0).then(|| {
+                    let pieces = sim.pieces();
+                    pieces
+                        .get(rng.usize(..=pieces.len()))
+                        .map_or(u32::MAX, |p| p.id)
+                });
                 let input = InputFrame {
                     pointer: target,
                     press: rng.bool(),
                     held: rng.bool(),
                     release: rng.bool(),
                     shift: rng.u8(..8) == 0,
+                    aim,
                     detach: (rng.u8(..64) == 0).then(|| rng.u8(..4)),
                     ..InputFrame::default()
                 };
@@ -4342,14 +4246,19 @@ mod tests {
                         _ => {
                             let pieces = sim.pieces();
                             let piece = pieces[rng.usize(..pieces.len())];
-                            rect_center(layout::piece_rect(sim.rooms(), pieces, &piece))
+                            rect_center(layout::piece_rect(sim.rooms(), &piece))
                         }
                     };
+                    let aim = (rng.u8(..3) == 0).then(|| {
+                        let pieces = sim.pieces();
+                        pieces[rng.usize(..pieces.len())].id
+                    });
                     *frame = InputFrame {
                         pointer: target,
                         press: rng.bool(),
                         held: rng.bool(),
                         release: rng.bool(),
+                        aim,
                         ..InputFrame::default()
                     };
                 }
@@ -4364,78 +4273,108 @@ mod tests {
 
     // ---- Cabinets and dressings ----
 
+    /// **A crate set down in a couch stands in it**, and either one comes
+    /// back out from the very same point (docs/BAY.md, "Cargo stops
+    /// colliding"): the drop lands the vial on the couch's own ground with
+    /// no complaint, the point-pick hands back the smaller piece, an aim
+    /// at the couch lifts the couch instead, and an aim at a piece the
+    /// pointer is not on changes nothing.
     #[test]
-    fn cubby_flow_stows_grabs_back_and_quick_pops() {
+    fn a_crate_set_in_furniture_stands_there_and_either_lifts() {
         let mut sim = cleared(61);
-        let cabinet = inject_hold(&mut sim, Kind::Cabinet, 5, 5);
+        let couch = inject_hold(&mut sim, Kind::Couch, 5, 5);
         let vial = inject_hold(&mut sim, Kind::PerfumeVial, 3, 3);
-        // The first cubby: the cabinet's own top left, as a person facing
-        // its open front sees it.
-        let (_, body) = Foot::at(
-            sim.rooms(),
-            sim.pieces().iter().find(|p| p.id == cabinet).unwrap(),
-        )
-        .expect("standing in the cabin");
-        let cubby = rect_center(layout::fine_rect(CABIN, body.quarter_box(0)));
-        drag(&mut sim, cabin(3, 3), cubby);
-        assert_eq!(
-            sim.pieces().iter().find(|p| p.id == vial).unwrap().loc,
-            Loc::Stow { cabinet, slot: 0 }
-        );
-        // An occupied cabinet will not budge.
-        let anchor = rect_center(layout::cell_rect(CABIN, 5, 5));
-        sim.advance(0.0, &press_at(anchor.x, anchor.y));
-        assert_eq!(sim.cues(), [Cue::Reject { hard: true }]);
-        assert_eq!(sim.last_violation(), Some(Violation::Occupied));
-        // Shift pops it back aboard.
+        let inside = cabin(5, 5);
+        drag(&mut sim, cabin(3, 3), inside);
+        assert_eq!(sim.cues(), [Cue::Place], "a crate in a couch is a berth");
+        let ground = |id: u32| {
+            let piece = sim.pieces().iter().find(|p| p.id == id).copied().unwrap();
+            Foot::at(sim.rooms(), &piece)
+                .expect("standing in the cabin")
+                .1
+        };
+        assert!(ground(vial).overlaps(ground(couch)));
+        let homeward = || release_at(-1000.0, -1000.0);
+        let lifted = |sim: &Sim| sim.held(0).map(|held| held.piece);
+        // Unaimed, the smaller piece answers.
+        sim.advance(0.0, &press_at(inside.x, inside.y));
+        assert_eq!(lifted(&sim), Some(vial));
+        sim.advance(0.0, &homeward());
+        // Aimed at the couch, the same point lifts the couch.
+        let aimed = |at: Vec2, id: u32| InputFrame {
+            aim: Some(id),
+            ..press_at(at.x, at.y)
+        };
+        sim.advance(0.0, &aimed(inside, couch));
+        assert_eq!(lifted(&sim), Some(couch));
+        sim.advance(0.0, &homeward());
+        // The couch's other cell has no vial on it, so an aim at the vial
+        // there is an aim at nothing, and the couch answers.
+        let beside = cabin(6, 5);
+        sim.advance(0.0, &aimed(beside, vial));
+        assert_eq!(lifted(&sim), Some(couch));
+        sim.advance(0.0, &homeward());
+        // A shift-press takes its aim the same way: the couch goes out to
+        // the dock's offer area, and the vial stays where it was set.
+        let vial_at = sim.pieces().iter().find(|p| p.id == vial).unwrap().loc;
         sim.advance(
             0.0,
             &InputFrame {
-                pointer: cubby,
-                press: true,
-                held: true,
                 shift: true,
-                ..InputFrame::default()
+                ..aimed(inside, couch)
             },
         );
-        assert!(matches!(
+        assert_eq!(lifted(&sim), None, "a quick-move lifts nothing");
+        let moved = sim.pieces().iter().find(|p| p.id == couch).unwrap().loc;
+        assert!(!sim.rooms().riding(moved.room()), "the couch is on offer");
+        assert_eq!(
             sim.pieces().iter().find(|p| p.id == vial).unwrap().loc,
-            Loc::Hold { .. }
-        ));
+            vial_at
+        );
     }
 
     #[test]
-    fn dressings_lay_pin_and_peel() {
+    fn dressings_lie_under_cargo_and_lift_out_from_under_it() {
         let mut sim = cleared(62);
         let laid = cell_spot(&sim, CABIN, Kind::Rug, 4, 7).laid();
         let rug = inject_at(&mut sim, Kind::Rug, laid);
         let couch = inject_hold(&mut sim, Kind::Couch, 4, 7);
-        assert!(cargo::laid_pinned(
-            sim.rooms(),
-            sim.pieces(),
-            sim.pieces().iter().find(|p| p.id == rug).unwrap()
-        ));
-        // A pinned rug refuses to lift.
+        let standing = sim.pieces().iter().find(|p| p.id == couch).unwrap().loc;
+        // Unaimed, the couch standing on the rug takes the press.
         let at = cabin(4, 7);
         sim.advance(0.0, &press_at(at.x, at.y));
-        assert!(sim.held(0).is_some(), "the couch lifts, not the rug");
-        sim.advance(0.0, &release_at(at.x, at.y));
-        // Move the couch, then the rug peels.
-        drag(&mut sim, cabin(4, 7), cabin(7, 4));
-        assert!(matches!(
-            sim.pieces().iter().find(|p| p.id == couch).unwrap().loc,
-            Loc::Hold { .. }
-        ));
+        assert_eq!(
+            sim.held(0).map(|held| held.piece),
+            Some(couch),
+            "the couch lifts, not the rug"
+        );
+        sim.advance(0.0, &release_at(-1000.0, -1000.0));
+        // Aimed at the rug, the rug comes out from under the couch:
+        // nothing pins it.
+        sim.advance(
+            0.0,
+            &InputFrame {
+                aim: Some(rug),
+                ..press_at(at.x, at.y)
+            },
+        );
+        assert_eq!(sim.held(0).map(|held| held.piece), Some(rug));
         // Carried at its own turn, the rug lies down at it: the game would
         // turn a body by the front seam half round, and a drop never does.
         let to = Spot {
             turn: Turn::ZERO,
             ..cell_spot(&sim, CABIN, Kind::Rug, 4, 9)
         };
-        drag(&mut sim, cabin(4, 7), berth_point(to));
+        let point = berth_point(to);
+        sim.advance(0.0, &release_at(point.x, point.y));
         assert_eq!(
             sim.pieces().iter().find(|p| p.id == rug).unwrap().loc,
             to.laid()
+        );
+        assert_eq!(
+            sim.pieces().iter().find(|p| p.id == couch).unwrap().loc,
+            standing,
+            "the couch stood where it was"
         );
     }
 
@@ -4538,7 +4477,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::ChartTank)
             .unwrap();
-        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &tank));
+        let from = rect_center(layout::piece_rect(sim.rooms(), &tank));
         let to = offer(&sim, TRADE, 0);
         drag(&mut sim, from, to);
         assert_eq!(sim.last_violation(), Some(Violation::Vital));
@@ -4608,32 +4547,22 @@ mod tests {
         // The salvage is the wreck's until claimed.
         for id in &salvage {
             let piece = sim.pieces().iter().find(|p| p.id == *id).unwrap();
-            assert!(!player_owned(
-                sim.rooms(),
-                sim.pieces(),
-                piece.kind,
-                piece.loc
-            ));
+            assert!(!player_owned(sim.rooms(), piece.kind, piece.loc));
         }
         // Mark one and work the handshake: it is yours, on the floor.
         let piece = *sim.pieces().iter().find(|p| p.id == salvage[0]).unwrap();
-        let at = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let at = rect_center(layout::piece_rect(sim.rooms(), &piece));
         sim.advance(0.0, &press_at(at.x, at.y));
         assert_eq!(sim.cues(), [Cue::Mark { on: true }]);
         let shake = handshake(&sim, wreck);
         sim.advance(0.0, &press_at(shake.x, shake.y));
         assert!(matches!(sim.cues().first(), Some(Cue::Accept { .. })));
         let claimed = sim.pieces().iter().find(|p| p.id == salvage[0]).unwrap();
-        assert!(player_owned(
-            sim.rooms(),
-            sim.pieces(),
-            claimed.kind,
-            claimed.loc
-        ));
+        assert!(player_owned(sim.rooms(), claimed.kind, claimed.loc));
         // An unresolved event blocks the next takeoff; shutting the door
         // is free and always available — after the claim comes aboard.
         let spot = first_fit(sim.rooms(), sim.pieces(), salvage[0], claimed.kind).expect("a berth");
-        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), claimed));
+        let from = rect_center(layout::piece_rect(sim.rooms(), claimed));
         drag(&mut sim, from, berth_point(spot));
         assert_eq!(sim.part_check(wreck), Ok(()));
     }
@@ -4671,7 +4600,7 @@ mod tests {
             .iter()
             .find(|p| p.kind == Kind::BrinePearls)
             .unwrap();
-        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &wager));
+        let from = rect_center(layout::piece_rect(sim.rooms(), &wager));
         let to = offer(&sim, parlor, 0);
         drag(&mut sim, from, to);
         let before = sim.pieces().len();
@@ -5006,6 +4935,7 @@ mod tests {
                     held: rng.bool(),
                     release: rng.bool(),
                     occupied: rng.u8(..3),
+                    aim: (rng.u8(..2) == 0).then(|| rng.u32(..16)),
                     ..InputFrame::default()
                 };
             }
@@ -5055,7 +4985,7 @@ mod tests {
             .iter()
             .find(|p| p.id == id)
             .expect("on the board");
-        let from = rect_center(layout::piece_rect(sim.rooms(), sim.pieces(), &piece));
+        let from = rect_center(layout::piece_rect(sim.rooms(), &piece));
         sim.advance(0.0, &press_at(from.x, from.y));
         assert_eq!(
             sim.held(0).map(|h| h.piece),
@@ -5150,7 +5080,7 @@ mod tests {
         let eighth = Turn(1 << 13);
         let id = inject_at(&mut sim, Kind::Couch, hold(fine(7), fine(6), eighth));
         let couch = *sim.pieces().iter().find(|p| p.id == id).unwrap();
-        let rect = layout::piece_rect(sim.rooms(), sim.pieces(), &couch);
+        let rect = layout::piece_rect(sim.rooms(), &couch);
         // The box's corners are air: inside the box, nowhere near the body.
         let inset = layout::CELL * 0.2;
         for air in [
@@ -5296,7 +5226,7 @@ mod tests {
                             match preview {
                                 Some((berth, Ok(()))) => {
                                     assert_eq!(landed, berth, "{kind:?} aimed at {to:?}");
-                                    assert_eq!(berth.spot().map(|spot| spot.turn), Some(turn));
+                                    assert_eq!(berth.spot().turn, turn);
                                 }
                                 Some((_, Err(violation))) => {
                                     assert_eq!(landed, loc, "{kind:?} refused at {to:?} yet moved");
@@ -5315,13 +5245,13 @@ mod tests {
         }
     }
 
-    /// **Two crew dropping on one spot in one tick**: the lower player's
-    /// piece lands, and the other lost a race rather than broke a rule —
-    /// a soft snap home with no violation named. The race is judged by
-    /// the same resolution the drop made, against the board as it stood
-    /// before the winner landed.
+    /// **Two crew dropping on one spot in one tick both land**: bodies
+    /// share ground, so there is no race to lose (docs/BAY.md, "Cargo
+    /// stops colliding"). What a special item keeps, it keeps the same way
+    /// in one tick as in two: of two canisters set down side by side, the
+    /// later player's is refused by name.
     #[test]
-    fn a_same_tick_drop_race_is_lost_softly() {
+    fn a_same_tick_drop_lands_both_and_volatile_keeps_its_air() {
         let mut sim = cleared(123);
         let first = inject_hold(&mut sim, Kind::PerfumeVial, 4, 5);
         let second = inject_hold(&mut sim, Kind::PerfumeVial, 8, 5);
@@ -5332,16 +5262,34 @@ mod tests {
             (0, release_at(to.x, to.y)),
             (1, release_at(to.x, to.y)),
         ]));
-        let loc = |id| sim.pieces().iter().find(|p| p.id == id).map(|p| p.loc);
-        assert_eq!(
-            loc(first),
-            Some(cell_spot(&sim, CABIN, Kind::PerfumeVial, 6, 7).hold())
+        let there = Some(cell_spot(&sim, CABIN, Kind::PerfumeVial, 6, 7).hold());
+        let loc = |sim: &Sim, id| sim.pieces().iter().find(|p| p.id == id).map(|p| p.loc);
+        assert_eq!(loc(&sim, first), there);
+        assert_eq!(loc(&sim, second), there);
+        assert_eq!(count_cues(sim.cues(), |cue| *cue == Cue::Place), 2);
+        assert!(
+            !sim.cues()
+                .iter()
+                .any(|cue| matches!(cue, Cue::Reject { .. }))
         );
-        assert_eq!(
-            loc(second),
-            Some(cell_spot(&sim, CABIN, Kind::PerfumeVial, 8, 5).hold())
+
+        let mut sim = cleared(124);
+        let first = inject_hold(&mut sim, Kind::GasCanister, 4, 4);
+        let second = inject_hold(&mut sim, Kind::GasCanister, 4, 7);
+        let home = loc(&sim, second);
+        let (a, b) = (cabin(4, 4), cabin(4, 7));
+        sim.crew_tick(&crew(&[(0, press_at(a.x, a.y)), (1, press_at(b.x, b.y))]));
+        let (to, beside) = (cabin(7, 5), cabin(7, 6));
+        sim.crew_tick(&crew(&[
+            (0, release_at(to.x, to.y)),
+            (1, release_at(beside.x, beside.y)),
+        ]));
+        assert_ne!(
+            loc(&sim, first),
+            Some(cell_spot(&sim, CABIN, Kind::GasCanister, 4, 4).hold())
         );
-        assert_eq!(sim.last_violation(), None, "a lost race names no rule");
-        assert!(sim.cues().contains(&Cue::Reject { hard: false }));
+        assert_eq!(loc(&sim, second), home, "the later canister went home");
+        assert_eq!(sim.last_violation(), Some(Violation::Volatile));
+        assert!(sim.cues().contains(&Cue::Reject { hard: true }));
     }
 }

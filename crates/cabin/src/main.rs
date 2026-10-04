@@ -1058,9 +1058,18 @@ fn advance(
     } else {
         bridge::Turning::default()
     };
+    // **The piece the press means**, resolved where the hover and the
+    // outline resolve it (`VirtualPointer::aimed`): with pieces sharing
+    // ground the point alone cannot say, and the sim takes this aim only
+    // among what the pointer is on. Off the roam there is no body to have
+    // met — a focus works panels, a glide and a latch press nothing.
+    let aim = (press && camera.roaming())
+        .then(|| pointer.aimed(&shell.bridge.sim).map(|piece| piece.id))
+        .flatten();
     let input = FrameInput {
         pointer: at,
         press,
+        aim,
         held,
         release,
         shift: keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight),
@@ -1377,7 +1386,7 @@ mod session {
             if in_hand == Some(piece.id) || !matches!(piece.loc, Loc::Hold { .. }) {
                 continue;
             }
-            let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
+            let rect = layout::piece_rect(sim.rooms(), piece);
             if let Some((station, surface)) = crate::pieces::instrument_surface(
                 &charts,
                 piece.kind,
@@ -1427,14 +1436,14 @@ mod session {
                 .map(|(station, surface, riding, in_room)| Aimable {
                     station: *station,
                     surface: *surface,
-                    riding: riding.is_some(),
+                    riding: riding.map(|riding| riding.0),
                     in_room: in_room.copied(),
                 })
         };
         let (ray, roam_only, reach) = if rig.interactive() {
             let Some(at) = cursor.0 else { return };
             let Some(world) = aimables()
-                .filter(|aim| !aim.riding || !aim.station.roamable())
+                .filter(|aim| aim.riding.is_none() || !aim.station.roamable())
                 .find(|aim| aim.surface.rect.contains(at))
                 .map(|aim| aim.surface.to_world(at))
             else {
@@ -1626,7 +1635,7 @@ mod session {
                 .map(|(station, surface, riding, in_room)| Aimable {
                     station: *station,
                     surface: *surface,
-                    riding: riding.is_some(),
+                    riding: riding.map(|riding| riding.0),
                     in_room: in_room.copied(),
                 })
                 .collect()
@@ -1697,8 +1706,7 @@ mod session {
                     // front of the latch.
                     if eclipsed.is_none()
                         && pointer.station == Some(Station::Standing)
-                        && let Some(piece) =
-                            layout::piece_at(sim.rooms(), sim.pieces(), pointer.sim)
+                        && let Some(piece) = pointer.aimed(sim)
                     {
                         eclipsed = Some((eye, *latch, piece.id));
                     }
@@ -1774,11 +1782,7 @@ mod session {
                 save.push('\n');
             }
             let mut cabin = Self::new(&save);
-            let at = layout::piece_rect(
-                cabin.sim().rooms(),
-                cabin.sim().pieces(),
-                &cabin.sim().pieces()[0],
-            );
+            let at = layout::piece_rect(cabin.sim().rooms(), &cabin.sim().pieces()[0]);
             let at = SimVec2::new(at.w.mul_add(0.5, at.x), at.h.mul_add(0.5, at.y));
             let floor = cabin.face(Station::BayFloor).expect("the cabin's deck");
             let target = floor.to_world(at);
@@ -1830,7 +1834,7 @@ mod session {
                             piece.loc,
                         ) != Some(Tile::Stock)
                 })
-                .map(|piece| layout::piece_rect(sim.rooms(), sim.pieces(), piece))?;
+                .map(|piece| layout::piece_rect(sim.rooms(), piece))?;
             Some(SimVec2::new(
                 rect.w.mul_add(0.5, rect.x),
                 rect.h.mul_add(0.5, rect.y),
@@ -2280,7 +2284,7 @@ mod session {
             .drop_preview(0, pointer, shell.facing())
             .expect("the aim is on the deck");
         assert_eq!(verdict, Ok(()), "open deck refused the turned crate");
-        assert_eq!(berth.spot().map(|spot| spot.turn), Some(facing));
+        assert_eq!(berth.spot().turn, facing);
         cabin.click();
         let landed = cabin.sim().pieces()[0].loc;
         assert!(cabin.sim().held(0).is_none(), "the release did not land");
@@ -2289,8 +2293,8 @@ mod session {
             "the crate landed somewhere the preview never said"
         );
         assert_eq!(
-            landed.spot().map(|spot| spot.turn),
-            Some(facing),
+            landed.spot().turn,
+            facing,
             "the drop forgot the turn it was carried at"
         );
 

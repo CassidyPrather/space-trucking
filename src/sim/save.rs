@@ -39,7 +39,7 @@ use super::{KIND_COUNT, MAX_CREW, Sim, barter};
 /// or tape starts a new run"). Bump it whenever what a line MEANS
 /// changes, not only its grammar: a save read under the wrong rules
 /// loads a board the player never built.
-const MAGIC: &str = "STV21";
+const MAGIC: &str = "STV22";
 
 /// Why a save string was refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -221,9 +221,6 @@ pub(crate) fn serialize(sim: &Sim) -> String {
             Loc::Hold { room, x, y, turn } => {
                 let _ = writeln!(out, " hold {room} {x} {y} {}", turn.0);
             }
-            Loc::Stow { cabinet, slot } => {
-                let _ = writeln!(out, " stow {cabinet} {slot}");
-            }
             Loc::Laid { room, x, y, turn } => {
                 let _ = writeln!(out, " laid {room} {x} {y} {}", turn.0);
             }
@@ -261,7 +258,6 @@ pub(crate) fn parse(s: &str) -> Result<Sim, SaveError> {
     let rooms = parse_rooms(&mut reader)?;
     let marks = parse_marks(&mut reader)?;
     let (pieces, next_piece) = parse_pieces(&mut reader, &rooms)?;
-    validate_stows(&reader, &rooms, &pieces)?;
     let marks = marks
         .into_iter()
         .filter(|id| {
@@ -664,53 +660,15 @@ fn parse_pieces(reader: &mut Reader<'_>, rooms: &Rooms) -> Result<(Vec<Piece>, u
     }
 }
 
-/// Cross-piece stow and dressing validation, after the whole list is
-/// read (a cubby may reference a cabinet on a later line). Everything
-/// those lines could lie about is checked here, so no later indexing or
-/// invariant trips: a stow's host must be a cabinet standing in a room,
-/// the cargo stowable, no cubby doubled; laid dressings must not overlap
-/// one another, and no berth may sit on a threshold.
-fn validate_stows(reader: &Reader<'_>, rooms: &Rooms, pieces: &[Piece]) -> Result<(), SaveError> {
-    let mut seen = Vec::new();
-    let mut laid: Vec<Piece> = Vec::new();
-    for piece in pieces {
-        match piece.loc {
-            Loc::Stow { cabinet, slot } => {
-                let host_ok = pieces.iter().any(|host| {
-                    host.id == cabinet
-                        && host.kind == Kind::Cabinet
-                        && matches!(host.loc, Loc::Hold { .. })
-                });
-                if !host_ok || !cargo::stowable(piece.kind) || seen.contains(&(cabinet, slot)) {
-                    return Err(reader.err());
-                }
-                seen.push((cabinet, slot));
-            }
-            Loc::Laid { room, x, y, turn } => {
-                // Re-run the dressing rules against the other dressings
-                // only: bounds, surface, and one-per-cell. Occupancy is
-                // deliberately absent from the slice — a rug pinned
-                // under a couch is a LEGAL state and saves as such.
-                let spot = cargo::Spot { room, x, y, turn };
-                if cargo::dressing_check(rooms, &laid, piece.id, piece.kind, spot).is_err() {
-                    return Err(reader.err());
-                }
-                laid.push(*piece);
-            }
-            Loc::Hold { .. } => {
-                if cargo::berth_tile(rooms, piece.kind, piece.loc)
-                    .is_none_or(|tile| tile == Tile::Threshold)
-                {
-                    return Err(reader.err());
-                }
-            }
-        }
-    }
-    Ok(())
-}
-
 /// A piece's location tokens, bounds-checked so later indexing never
 /// panics: a room, the footprint's centre in fine units, and its turn.
+///
+/// Each line is checked on its own, because nothing a line says is about
+/// another line any more: there are no cubbies to point at a cabinet
+/// further down, and no layer refuses a piece for what else is there
+/// (docs/BAY.md, "Cargo stops colliding"). A laid line must pass the
+/// dressing rules, which are the room's, and no standing berth may sit on
+/// a threshold — a save that lies about either is refused whole.
 fn parse_loc<'a>(
     reader: &Reader<'_>,
     tokens: &mut impl Iterator<Item = &'a str>,
@@ -744,26 +702,19 @@ fn parse_loc<'a>(
         Ok(cargo::Spot { room, x, y, turn })
     };
     match tokens.next() {
-        Some("hold") => Ok(spot(reader, tokens)?.hold()),
+        Some("hold") => {
+            let berth = spot(reader, tokens)?.hold();
+            if cargo::berth_tile(rooms, kind, berth).is_none_or(|tile| tile == Tile::Threshold) {
+                return Err(reader.err());
+            }
+            Ok(berth)
+        }
         Some("laid") => {
             let spot = spot(reader, tokens)?;
-            if !kind.covering() {
+            if !kind.covering() || cargo::dressing_check(rooms, kind, spot).is_err() {
                 return Err(reader.err());
             }
             Ok(spot.laid())
-        }
-        Some("stow") => {
-            let cabinet: u32 = reader.token(tokens.next())?;
-            let cubby: u8 = reader.token(tokens.next())?;
-            if cubby >= cargo::CABINET_SLOTS {
-                return Err(reader.err());
-            }
-            // The cabinet reference is checked in `validate_stows`, once
-            // the whole piece list exists.
-            Ok(Loc::Stow {
-                cabinet,
-                slot: cubby,
-            })
         }
         _ => Err(reader.err()),
     }
@@ -1086,23 +1037,22 @@ mod tests {
         )
     }
 
-    /// A sim with a stocked cabinet, its cubby lines pinned, and the save
-    /// tokens of the cabinet's berth.
+    /// A sim with a furnished corner — a cabinet with a vial and a fluff
+    /// standing in it, a rug, and two coats on one patch of wall — and the
+    /// save tokens of the cabinet's berth.
     fn furnished() -> (Sim, String, u32, String) {
         let mut sim = Sim::new(3);
         let spot = cargo::first_fit(sim.rooms(), sim.pieces(), u32::MAX, Kind::Cabinet)
             .expect("room for a cabinet");
         let cabinet = sim.next_piece;
+        let coat = tokens(Kind::LuminousPaint, 5, 0).0.laid();
         for (offset, kind, loc) in [
             (0, Kind::Cabinet, spot.hold()),
-            (1, Kind::PerfumeVial, Loc::Stow { cabinet, slot: 0 }),
-            (2, Kind::Fluff, Loc::Stow { cabinet, slot: 1 }),
+            (1, Kind::PerfumeVial, spot.hold()),
+            (2, Kind::Fluff, spot.hold()),
             (3, Kind::Rug, tokens(Kind::Rug, 3, 6).0.laid()),
-            (
-                4,
-                Kind::LuminousPaint,
-                tokens(Kind::LuminousPaint, 5, 0).0.laid(),
-            ),
+            (4, Kind::LuminousPaint, coat),
+            (5, Kind::PaintTin, coat),
         ] {
             sim.pieces.push(Piece {
                 id: cabinet + offset,
@@ -1112,28 +1062,25 @@ mod tests {
                 loc,
             });
         }
-        sim.next_piece += 5;
+        sim.next_piece += 6;
         let save = sim.save_string();
         let at = format!("{} {} {} {}", spot.room, spot.x, spot.y, spot.turn.0);
         (sim, save, cabinet, at)
     }
 
+    /// **Pieces sharing ground survive the trip**: three in one wardrobe's
+    /// cell and two coats on one patch of wall are a board somebody built,
+    /// and it comes back as they built it.
     #[test]
-    fn stowed_pieces_round_trip() {
-        let (sim, save, cabinet, _) = furnished();
+    fn a_board_sharing_ground_round_trips() {
+        let (sim, save, cabinet, at) = furnished();
         assert!(
             save.starts_with(&format!("{MAGIC}\n")),
             "the writer stamps the current version"
         );
+        assert!(save.contains(&format!("piece {} 0 0 0 hold {at}\n", cabinet + 1)));
         let restored = Sim::from_save(&save).expect("furnished save parses");
         assert_eq!(restored.pieces, sim.pieces);
-        assert!(
-            restored
-                .pieces
-                .iter()
-                .any(|p| p.loc == Loc::Stow { cabinet, slot: 0 }),
-            "the cubby survives the trip"
-        );
     }
 
     /// **A save from any other version is refused, whole.** Nothing here
@@ -1146,7 +1093,7 @@ mod tests {
     #[test]
     fn a_save_from_any_other_version_is_refused() {
         let save = Sim::new(9).save_string();
-        for header in ["STV4", "STV20", "STV22"] {
+        for header in ["STV4", "STV20", "STV21", "STV23"] {
             assert_eq!(
                 Sim::from_save(&save.replacen(MAGIC, header, 1)).err(),
                 Some(SaveError::UnsupportedVersion),
@@ -1202,37 +1149,28 @@ mod tests {
     }
 
     #[test]
-    fn lying_stow_lines_fail_safe() {
+    fn lying_berth_lines_fail_safe() {
         let (_, save, cabinet, at) = furnished();
         let rug = tokens(Kind::Rug, 3, 6).1;
         let coat = tokens(Kind::LuminousPaint, 5, 0).1;
-        let vial_line = format!("piece {} 0 0 0 stow {cabinet} 0", cabinet + 1);
+        let vial_line = format!("piece {} 0 0 0 hold {at}", cabinet + 1);
         assert!(save.contains(&vial_line), "vial line changed shape");
         for (needle, bad) in [
-            // A cubby in a cabinet that does not exist.
+            // A cubby, which no cabinet has any more: the line is not a
+            // berth at all.
             (
                 vial_line.clone(),
-                format!("piece {} 0 0 0 stow 4242 0", cabinet + 1),
+                format!("piece {} 0 0 0 stow {cabinet} 0", cabinet + 1),
             ),
-            // A slot past the rack.
-            (
-                vial_line.clone(),
-                format!("piece {} 0 0 0 stow {cabinet} 4", cabinet + 1),
-            ),
-            // Two pieces in one cubby.
-            (
-                format!("piece {} 13 0 0 stow {cabinet} 1", cabinet + 2),
-                format!("piece {} 13 0 0 stow {cabinet} 0", cabinet + 2),
-            ),
-            // An unstowable kind (the couch, index 19) in a cubby.
+            // A standing berth on a doorway.
             (
                 vial_line,
-                format!("piece {} 19 0 0 stow {cabinet} 0", cabinet + 1),
-            ),
-            // A host that is not standing in a room.
-            (
-                format!("piece {cabinet} 21 0 0 hold {at}"),
-                format!("piece {cabinet} 21 0 0 stow {cabinet} 3"),
+                format!(
+                    "piece {} 0 0 0 hold {CABIN} {} {} 0",
+                    cabinet + 1,
+                    fine(11) + 128,
+                    fine(3) + 128
+                ),
             ),
             // A laid non-covering (the couch, index 19).
             (
@@ -1246,15 +1184,6 @@ mod tests {
                     "piece {} 22 0 0 laid {}",
                     cabinet + 3,
                     tokens(Kind::Rug, 5, 1).1
-                ),
-            ),
-            // Two dressings on one cell.
-            (
-                format!("piece {} 24 0 0 laid {coat}", cabinet + 4),
-                format!(
-                    "piece {} 24 0 0 laid {}",
-                    cabinet + 4,
-                    tokens(Kind::LuminousPaint, 3, 6).1
                 ),
             ),
             // A coat off the grid entirely: no chart under its centre.

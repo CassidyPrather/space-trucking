@@ -22,8 +22,8 @@
 //! hold: that is the frame that can silently snap a phantom drag home
 //! (window blur mid-drag), and the replay must snap at the same tick.
 //!
-//! Format `RPL5`, line-oriented like the save and the wire: a header, the
-//! byte-length-prefixed base save embedded verbatim, then one `SNP4 input`
+//! Format `RPL6`, line-oriented like the save and the wire: a header, the
+//! byte-length-prefixed base save embedded verbatim, then one `SNP5 input`
 //! line per entry. `RPL3` was bumped when the input frame grew its
 //! occupied-room field and the room graph's attach and detach requests
 //! (docs/ROOMS.md, "The one new input field"); `RPL4` when the grid came
@@ -33,7 +33,10 @@
 //! replayed would be a different game told with the same inputs; and
 //! `RPL5` when cargo turned (docs/BAY.md, "Cargo turns"): every frame
 //! carries the carry's facing, the neighbour snap is gone, and a berth is
-//! anchored at its centre. A tape from any other version fails safe as
+//! anchored at its centre; and `RPL6` when cargo stopped colliding
+//! ("Cargo stops colliding"): every frame carries the aimed piece, and
+//! the same drops now land where a neighbour used to refuse them. A tape
+//! from any other version fails safe as
 //! unsupported, and the frontend starts a new run. The recorder
 //! reuses the lockstep wire codec
 //! ([`Message::Input`]) rather than invent a second frame encoding, so
@@ -50,7 +53,7 @@ use crate::sim::{CrewFrame, InputFrame, SaveError, Sim, Turn, Vec2};
 
 /// Magic-plus-version header of every recording this build writes. Bump on
 /// any breaking change; older versions fail safe as unsupported.
-const MAGIC: &str = "RPL5";
+const MAGIC: &str = "RPL6";
 
 /// Rolling cap on recorded entries.
 ///
@@ -667,8 +670,16 @@ mod tests {
         s.push((0.013, press_at(stock0.x, stock0.y)));
         // A pause toggled mid-carry and released after: lift the vial back
         // off the offer area, pause while holding it, resume, set it down.
+        // The lift is aimed, as the cabin sends every roam press: the tape
+        // carries the aim, and the replay takes it exactly as live did.
         let held_tile = tile(crate::sim::Tile::Offer, 0);
-        s.push((0.013, press_at(held_tile.x, held_tile.y)));
+        s.push((
+            0.013,
+            InputFrame {
+                aim: Some(1),
+                ..press_at(held_tile.x, held_tile.y)
+            },
+        ));
         s.push((0.017, pause(held_tile, true)));
         s.push((0.019, held_at(held_tile.x + 5.0, held_tile.y)));
         s.push((0.023, held_at(held_tile.x - 5.0, held_tile.y)));
@@ -1004,25 +1015,26 @@ mod tests {
             Recording::parse("RPL9\nend 0\nbase 0\n"),
             Err(ReplayError::UnsupportedVersion)
         ));
-        // A tape from before cargo turned would replay into a different
-        // game: the same frames settle cargo somewhere else now, so it is
-        // refused whole, and so is a grid-era one.
-        for older in ["RPL3", "RPL4"] {
+        // A tape from before cargo stopped colliding would replay into a
+        // different game: the same frames settle cargo somewhere else now,
+        // so it is refused whole, and so are the turned, grid-era and
+        // older ones.
+        for older in ["RPL3", "RPL4", "RPL5"] {
             assert!(matches!(
                 Recording::parse(&format!("{older}\nend 0\nbase 0\n")),
                 Err(ReplayError::UnsupportedVersion)
             ));
         }
         assert!(matches!(
-            Recording::parse("RPL5"),
+            Recording::parse("RPL6"),
             Err(ReplayError::Parse { line: 0 })
         ));
         assert!(matches!(
-            Recording::parse("RPL5\nend NaN\nbase 0\n"),
+            Recording::parse("RPL6\nend NaN\nbase 0\n"),
             Err(ReplayError::Parse { line: 2 })
         ));
         assert!(matches!(
-            Recording::parse("RPL5\nend 0\nbase 99999999999999999999999\n"),
+            Recording::parse("RPL6\nend 0\nbase 99999999999999999999999\n"),
             Err(ReplayError::Parse { line: 3 })
         ));
 
@@ -1036,7 +1048,7 @@ mod tests {
             .to_wire()
         };
         let build = |end: u64, entries: &str| {
-            format!("RPL5\nend {end}\nbase {}\n{base}{entries}", base.len())
+            format!("RPL6\nend {end}\nbase {}\n{base}{entries}", base.len())
         };
         // A player other than 0 has no business in a solo black box.
         assert!(Recording::parse(&build(5, &entry(1, 3))).is_err());
@@ -1056,7 +1068,7 @@ mod tests {
     /// anything that happens to parse re-serialises without panicking.
     #[test]
     fn arbitrary_garbage_never_panics() {
-        let alphabet: Vec<char> = "RPL5 SNP\nend base input 0-9abcdefx \u{FFFD}\u{1F680}\t"
+        let alphabet: Vec<char> = "RPL6 SNP\nend base input 0-9abcdefx \u{FFFD}\u{1F680}\t"
             .chars()
             .collect();
         for round in 0_u64..300 {

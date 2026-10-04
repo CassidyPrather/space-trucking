@@ -414,20 +414,23 @@ fn couch_step(
     Some(pool[(h % pool.len() as u64) as usize])
 }
 
-/// THE nibble target rule: the stowed or laid piece nearest the rat's
+/// THE nibble target rule: the standing or laid piece nearest the rat's
 /// cell by Manhattan distance to the closest cell its footprint stands
 /// on (`Foot::cells`; zero when the footprint covers the rat's cell —
 /// the rat is sitting on it), ties broken by the lower piece id. Laid
-/// dressings count — a rug is famously gnawable — but cubby cargo never
-/// does (`Loc::Stow` has no cell here at all). Returns an index into
-/// `pieces`; `None` when nothing is reachable (a bare hold at a dock),
-/// which skips the nibble.
+/// dressings count — a rug is famously gnawable — and so does anything
+/// set inside a wardrobe, which stores nothing and shelters nothing.
+/// Returns an index into `pieces`; `None` when nothing is reachable (a
+/// bare hold at a dock), which skips the nibble.
 fn nearest_hold_piece(pieces: &[Piece], (cx, cy): (u8, u8)) -> Option<usize> {
     pieces
         .iter()
         .enumerate()
         .filter_map(|(index, piece)| {
-            let spot = piece.loc.spot().filter(|spot| spot.room == CABIN)?;
+            let spot = piece.loc.spot();
+            if spot.room != CABIN {
+                return None;
+            }
             let foot = Foot::of(RATS_ROOM, piece.kind, spot.x, spot.y, spot.turn)?;
             let distance = foot
                 .cells()
@@ -471,16 +474,6 @@ mod tests {
             // Wall and ceiling berths are not food density.
             hold_piece(2, Kind::ChartTank, 4, 0),
             hold_piece(3, Kind::CeilingLamp, 14, 5),
-            Piece {
-                id: 4,
-                kind: Kind::RationBricks,
-                variant: 0,
-                gnawed: false,
-                loc: Loc::Stow {
-                    cabinet: 0,
-                    slot: 0,
-                },
-            },
         ];
         assert_eq!(occupied_cells(&pieces), 3);
         assert_eq!(occupied_cells(&[]), 0);

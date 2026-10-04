@@ -597,7 +597,9 @@ So a rig's face carries its body now (`SimSurface::deep`) and the aim
 meets the box the tell draws (`SimSurface::strike`). The quad stays the
 *reading* — wherever on the body the aim lands is laid back onto the
 elevation the rig was drawn in, so a cabinet met on its flank at the
-height of the third cubby reads the third cubby. After the cure every
+height of the third cubby reads the third cubby (it has no cubbies
+since BAY.md, *Cargo stops colliding*; the reading is the same). After
+the cure every
 one of those kinds answers from all 36 stances at every height, and
 `pieces::tests::the_body_answers_from_all_round` sweeps 1,346 berths and
 111,617 aims to keep it that way.
@@ -899,7 +901,8 @@ cargo interact with light, atmosphere, and other cargo, tying the 3D
 space together. The fixture slice ([FIXTURES.md](FIXTURES.md)) landed
 that idea; the walkable bay ([BAY.md](BAY.md)) is the next slice —
 carry-style interaction at furniture scale, and the cabinet as the
-first berth-providing piece. With the 2D console retired, the "2D
+first berth-providing piece (superseded by BAY.md, *Cargo stops
+colliding*: it stores nothing). With the 2D console retired, the "2D
 analogue" law became the logical-space law: every mechanic must remain
 expressible and testable through `InputFrame`s against `layout` rects.
 

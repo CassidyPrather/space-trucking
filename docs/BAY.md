@@ -6,6 +6,10 @@ walking up to it, with the first piece of storage furniture — the
 cabinet — stretching the berth architecture. This document also records
 the project's largest scope decision so far: the 2D console retires.
 
+> Superseded in part by *Cargo stops colliding*: the cabinet is
+> furniture that stores nothing, and cargo no longer collides with
+> cargo.
+
 ## The grid comes out
 
 The owner's decree (2026-10-03): "get rid of the grid-based system and
@@ -33,7 +37,8 @@ re-derives it.
 **What did not move.** The room lattice, ports, the pad, room nets,
 charts and tile classes and their paint: rooms are architecture and stay
 on the lattice, and a tile class is now a region a piece stands in.
-Cubbies stay discrete slots inside a piece. Footprints stay whole cells
+Cubbies stay discrete slots inside a piece (superseded by *Cargo stops
+colliding*: there are none). Footprints stay whole cells
 in size (`Kind::extent`, `Kind::face_on`); only their position is free.
 There is no rotation in this pass — a body's yaw still follows its chart
 — because free yaw is a separate decision. There is no physics, and the
@@ -73,6 +78,10 @@ the input-frame spine are load-bearing.
 > dressings, cryo within a sixteenth of the hull rather than on it, the
 > shadow off the box round a turned body, and Euclidean distance for
 > the volatile rule.
+
+> Superseded in part by *Cargo stops colliding*: Overlap, Shadow and
+> both Dressings rules are gone from the ladder. The overlap and the
+> shadow survive only as the game's own tidiness (`cargo::clear`).
 
 **Which tile a piece stands on.** The classes that refuse cargo refuse
 a footprint that touches any of their cells (above, and the drop's own
@@ -122,6 +131,12 @@ things out a tile at a time.
 > there, then — for a footprint that is not square — a quarter turn on;
 > the berth it stores is the centre.
 
+> Superseded in part by *Cargo stops colliding*: "first legal wins" is
+> now the fallback. The first candidate standing clear of everything
+> else in its room wins, and only failing one the first legal
+> (`cargo::tidy`), the shelves, the deals' restock and a fluff's bud
+> included.
+
 **The drop.** The pointer was always continuous; now the berth is too.
 A release resolves a position before it asks any rule about it, in the
 sim and deterministically (`Sim::settle`):
@@ -157,6 +172,10 @@ end and put straight back moves half a cell.
 > carry's turn, and the snap reaches an eighth of a cell, onto a
 > chart's edge only — the neighbour snap is gone.
 > `Sim::drop_preview` takes the turn as well.
+
+> Superseded in part by *Cargo stops colliding*: step 5 has no cubby
+> and no dressing-against-occupancy, and there is no same-tick race
+> reading: a drop cannot take a spot from the next one.
 
 **Saves and tapes.** Saves are `STV20`: a `hold` or `laid` line carries
 fine coordinates, and every older document's cells load as `cell *
@@ -194,7 +213,8 @@ cabin shows and where the release lands are one answer:
   has nothing left to travel but the lift. Grown about the plan's
   middle rather than the rig's origin, so a body standing on a deck
   still stands on it while it is a tenth too big. A cubby drop
-  (`Loc::Stow`) hovers at the hit as it always did, and aimed at
+  (`Loc::Stow`) hovers at the hit as it always did (superseded by
+  *Cargo stops colliding*: there is no cubby drop), and aimed at
   nothing the carry stays hitched on the arm.
 - **One footprint patch replaces the per-cell hint plates.** A single
   plate for the whole ship, moved and resized every frame onto the
@@ -217,6 +237,9 @@ cabin shows and where the release lands are one answer:
   the release has let go before the cue arrives. A refusal with nothing
   previewed (a bare grab of a full cabinet, a cubby that will not take
   the piece) flashes the one cell under the hand.
+
+  > Superseded in part by *Cargo stops colliding*: neither of those
+  > refusals exists any more.
 - **The backing rule's seam is a rule now, not a rounding allowance.**
   A deck or deckhead body turns its back on a seam it stands half a
   cell from or less, so a body that faces a seam always keeps more
@@ -267,7 +290,8 @@ crew in lockstep has to agree on every ruling on every platform, so no
 float transcendental (`sin`, `cos`, `sqrt`, ...) reaches sim state and
 everything the arbiter decides is integer arithmetic. Rooms, nets,
 charts, tile classes and ports stay on the lattice; cubbies stay
-discrete slots; footprint SIZES stay whole cells (`Kind::extent`,
+discrete slots (superseded by *Cargo stops colliding*: there are none);
+footprint SIZES stay whole cells (`Kind::extent`,
 `Kind::face_on`). There is no physics and no tilt: a body lies on, hangs
 on, or hangs from its chart, turned about that chart's normal.
 
@@ -362,6 +386,10 @@ order, same `Violation` names:
 - **Dressings**: one dressing per point (separating axes among laid
   pieces), and the pinned rule is separating axes against standing
   pieces, both ways.
+
+  > Superseded by *Cargo stops colliding*: Overlap, Shadow and both
+  > Dressings rules left the arbiter. The separating axes and the shadow
+  > are the game's tidiness now (`cargo::clear`), and a rule of nothing.
 - **Light**: a lit source lights a target less than one cell away,
   Euclidean, that it does not wholly contain. Corners count, as before.
 - **Which tile** a piece stands on is the tile under its centre, and a
@@ -372,7 +400,8 @@ order, same `Violation` names:
 **Hit-testing happens in the piece's own frame.** `layout::piece_at`
 asks the oriented footprint, so the air beside a turned couch grabs
 nothing. A sub-rect declared in a piece's own units — a cabinet's
-cubbies, an instrument's amber handle — is asked by carrying the pointer
+cubbies (superseded by *Cargo stops colliding*: there are none), an
+instrument's amber handle — is asked by carrying the pointer
 INTO the piece's frame (`layout::piece_contains`, `layout::piece_frame`),
 never by turning the sub-rect out into a box. The pointer is read once,
 by basic IEEE arithmetic, into whole sub-units of the net; every step
@@ -412,6 +441,9 @@ preview read it, so a sparse recording stays exact.
 facing after the occupied room. A document from any other version
 starts a new run (DESIGN_REVIEW.md, *An old save or tape starts a new
 run*).
+
+> Superseded by *Cargo stops colliding*: saves are `STV22`, tapes
+> `RPL6`, and the wire `SNP5` with the aim after the facing.
 
 **Sweeps.** `cargo::FRACTIONS` is `{0, 1, 127, 128, 255}` in the new
 unit — on the line, a unit past it, either side of the middle, a unit
@@ -485,7 +517,8 @@ piece in hand:
   reading along the same half-axes (`SimSurface::axes`), so the point
   the aim lands on is the point the sim carries back into the piece's
   frame, at any angle: a cabinet a seventh of a turn round answers each
-  cubby a hair either side of its rack's middle lines, and a tank hung
+  cubby a hair either side of its rack's middle lines (each quarter of
+  its face, since *Cargo stops colliding*), and a tank hung
   that crooked routes carry and focus a hair either side of its amber
   band's edges. A face used to read along the sheet's own two axes,
   which can say a quarter turn and nothing else.
@@ -505,6 +538,154 @@ piece in hand:
   (`TURNED_SLACK`), and `berth-turned` asks only the turns the game
   gives a body itself: a window a player hangs upside down is turned the
   way they turned it.
+
+## Cargo stops colliding
+
+The owner's decisions (2026-10-04, after a playtest): "While the
+placement rules can stay with respect to special item conditions (e.g.
+certain things needing to be placed up against the wall), we shouldn't
+be enforcing that player-placed cargo clip into (or does not clip into)
+each-other anymore. Recall, we are moving broadly from a
+inventory-tetris-y puzzle to more of a decorative/taste casual one (with
+some sample props to test & make sure the mechanics work, not tastefully
+designed yet)". And: "On that note, the entire system related to
+shelving units with special extra slots can be axed now- it shouldn't
+matter anymore, physical placement is more or less an entirely to-taste
+thing."
+
+So **where a piece may stand is the room's question and the special
+item's, never another piece's.** A crate may stand in a wardrobe, a
+painting may hang behind one, two rugs may lie one over the other, and
+nothing the arbiter says depends on what else is already there unless a
+kind's own condition names it. Passages the decisions overrule are
+marked "Superseded by *Cargo stops colliding*".
+
+**What went: every rule whose subject is one body against another.**
+
+- **Overlap** (`Violation::Overlap`): two standing footprints sharing
+  ground.
+- **The standing shadow**: no painting behind the wardrobe. A wardrobe
+  half a cell off a wall still hides what hangs there, and a player who
+  hangs it there anyway has decided to.
+- **One dressing per point**, which was `Overlap` again in the dressing
+  layer.
+- **The pinned rule**, both ways (`Violation::Occupied`): laying a rug
+  under standing cargo, and lifting one out from under it.
+- **Same-tick drop contention** (`contested_only`, and the soft
+  snap-back it bought the player who lost): a race only existed because
+  one drop could take a spot from the next. Two crew dropping on one
+  spot in one tick now both land there.
+
+`Violation::Overlap` and `Violation::Occupied` left with their last
+users. `dressing_check` takes no board at all now, because nothing in a
+dressing's ladder asks about one.
+
+**What stayed, and why each is not about another body:**
+
+- **Bounds and the chart**: a piece bent over a fold or across a hole
+  is nowhere. The room's.
+- **Threshold and Fixture**: a doorway belongs to two rooms, and the
+  counter's deck and the pendant's ceiling are the room's own hardware.
+  The room's, not another piece's.
+- **Mounts** (`Affix`): a painting on a wall, a pendant from the
+  deckhead. The owner's own example of a special item condition.
+- **Cryo against the hull**: the cold is in the plating. A special item's.
+- **Volatile spacing**: two canisters keep half a cell of clear air. It
+  is the ONE rule left that sets a piece against another piece, and it
+  stays as a special item's own condition — a hazard, not a clip — but
+  it was kept without asking, and DESIGN_REVIEW.md lists it for the
+  owner to strike.
+- **One suspicious piece aboard**: the Guild's crate is a plot device
+  rather than a body; it would object to a second one anywhere.
+- **The vital minimum**: guards ability, not space.
+- **The tile-class gates**: the room's stock shelf, the offer chalk, the
+  furnace's hazard tiles. The room's.
+
+**The cabinet stores nothing.** `Kind::Cabinet` is a wardrobe prop, as
+much furniture as the couch and no more: `Loc::Stow`, `CABINET_SLOTS`, `stowable`,
+`free_cubby`, `cabinet_occupied`, the drop's cubby branch,
+`DropTargets::stow`, the save's `stow` line, the cabin's cubby glows,
+cubby sub-rects and the shrunken minis that rode in them, and the
+empty-it-first refusal are all gone. So is everything that *emerged*
+from a cubby being its own berth class (*The cabinet: furniture that
+stores*, below): nothing is rat-proof, no fluff is boxed out of
+breeding, no lamp is dark in a drawer, ??? counts every crate, and a
+trade sees whatever is set out. A vial set inside the wardrobe stands
+there at full size, in reach of the rat like any other.
+
+**The game still places things tidily.** Nothing the arbiter allows is
+refused for want of elbow room, but what the GAME sets down itself —
+`first_fit` and `dress_fit`, and through them the quick-move, salvage,
+the comet's ice, the exchange and banking the hopper; a station's stock
+(`Sim::free_berth_in`) and its restock after a deal; a fluff's bud; the
+frontend's fixture boards — looks for free space first. One helper
+states the preference once (`cargo::tidy`): of the candidates in the
+caller's own deterministic order, the first the arbiter allows that
+stands clear of every other body in its room (`cargo::clear`), and
+failing that, the first the arbiter allows at all. "Clear" counts both
+layers, because free space is space nothing is in — a rug the game lays
+goes on bare deck, and a crate it sets down goes beside the rug — and
+it counts a standing piece's shadow up the wall, because a wardrobe's
+bulk stands in front of that wall whether or not a rule says so. The
+shadow and the separating-axis overlap survive for exactly this, and
+for nothing a rule reads. A full room still takes one more piece, on
+top of something: a crowded spot beats none.
+
+**Which piece a press means.** With bodies sharing ground, one point of
+a chart can be on several pieces, and the point alone cannot say which
+one the player meant. The cabin always could: it casts ONE ray and
+resolves the nearest body along it (*The nearest rule*). That answer
+now reaches the sim as `InputFrame::aim`, an `Option<u32>` piece id,
+resolved by the frontend and consulted only in the press handler — like
+`night`, `occupied` and `facing`, no tick reads it, so a sparse tape
+stays exact.
+
+- **The aim only chooses; the sim still hit-tests.** `layout::pick`
+  honours the aim when it names a piece the pointer is on, and
+  otherwise falls back to the point-pick (`layout::piece_at`). An aim at
+  a piece the pointer is not on — stale, mistaken or hostile — reaches
+  nothing a pointer could not reach already.
+- **The fallback order**, for tests, monkeys and tapes that send no
+  aim: a standing piece before a laid one (the couch takes the press,
+  and a bare stretch of rug answers for the rug, as before); then the
+  smaller footprint, because a small piece inside a big one's ground
+  could otherwise never be reached by a point, while the big one still
+  answers everywhere else; then the lower id, so the answer never
+  depends on the order the board happens to be listed in.
+- **One resolution in the cabin.** The pointer carries the piece whose
+  own face the ray struck (`VirtualPointer::piece`, from the face's
+  `Riding`), and `VirtualPointer::aimed` hands both to `layout::pick`.
+  The hover glint, the outline, the handle-versus-focus routing
+  (`rig::handle_route`, which now takes the resolved piece) and the
+  press's aim all ask it, of the same pointer and the same board, so
+  they cannot disagree. On a chart, which rides nothing, the sim's own
+  order decides for all of them alike.
+- **A consequence worth knowing.** A pick body is the box the tell
+  draws (`pieces::drawn_box`), and the ray meets the nearest box first.
+  A vial set wholly inside a wardrobe's box is behind the wardrobe's
+  front as far as the ray is concerned, so the crosshair lifts the
+  wardrobe, and the vial after it. A body that pokes out of another is
+  picked by the part that pokes out.
+
+**Saves, tapes and the wire.** Saves are `STV22` (no `stow` line; a
+`laid` line passes the dressing rules on its own, a `hold` line may not
+stand on a doorway), tapes `RPL6`, the wire `SNP5` with the aim after
+the facing (`-` or the id). Another version starts a new run, as ever
+(DESIGN_REVIEW.md, *An old save or tape starts a new run*). The fixture
+board was re-saved through the new writer; its four cubby pieces stand
+along the aft row of the deck where `cargo::tidy` set them, off the
+doorstep.
+
+**The gauntlet already judged the room.** Every berth family
+(`berth-clear`, `berth-seen`, `berth-reached`, and the rest of
+docs/GAUNTLET.md's) asks which berths exist of the arbiter on an EMPTY
+board, so a station's furniture is judged against what the player may
+place there, and cargo sharing air with cargo is no finding, by design.
+What changed is the loaded board the findings name their culprits on:
+the arbiter alone would now stand a piece on every cell of every room,
+so the load sets cargo out the way the game does, clear of what it
+already stood (`gauntlet::load`), and it is the board it always was. The
+docket stays empty.
 
 ## The decision: the 2D console retires
 
@@ -616,6 +797,12 @@ so no further investment lands there now.
 
 ## The cabinet: furniture that stores
 
+> Superseded by *Cargo stops colliding*: the cabinet is a wardrobe prop
+> that stores nothing. `Loc::Stow`, the cubbies and everything below
+> that emerged from them are gone; a piece set inside the wardrobe
+> stands there at full size, and the empty-it-first refusal went with
+> `Violation::Occupied`. Kept for the history.
+
 `Kind::Cabinet`, the architecture stretch: a piece that *provides
 berths*. A slim two-cell wardrobe, floor-affixed like the floor lamp,
 with four stow cubbies behind its doors.
@@ -673,6 +860,9 @@ frames, so the tape format never heard about any of this.
 > new run*: the reader accepts only the header the build writes. The
 > stow validation stands.
 
+> Superseded by *Cargo stops colliding*: there is no `stow` line
+> (`STV22`), and nothing to validate it against.
+
 ## Coverings: the dressing layer (second slice)
 
 The owner's cargo direction — away from raw materials, toward rugs,
@@ -683,6 +873,12 @@ coexists with occupancy on the same cells (a couch stands on a laid
 rug), and no two dressings share a cell. Conservation never blinks: a
 laid rug is still the same piece, and peeling it up is an ordinary
 grab.
+
+> Superseded in part by *Cargo stops colliding*: dressings may share a
+> cell, with each other and with what stands on them, and the pinned
+> rule is gone both ways — a rug lifts out from under a couch, by an
+> aim at the rug. The interior-design game is taste, not the shuffle
+> below.
 
 Three kinds carry the slice, appended as indices 22..=24:
 
@@ -734,6 +930,10 @@ reader keeps accepting `STV5` and `STV4`.
   piece; the cabinet shows berths can be *provided by pieces*, so
   shelving, crates-with-compartments, and display cases are the same
   shape with different numbers.
+
+  > Superseded by *Cargo stops colliding*: no berth holds exactly one
+  > piece, and no piece provides berths. A shelf is a prop things are
+  > set on, to taste.
 - **Dressings** (`Loc::Laid`) cover cells without occupying them;
   wallpaper is the same shape as paint with a bigger footprint, and a
   future "finish" tier (deck plating, wall panelling) could stack
@@ -783,6 +983,12 @@ The mechanics, all sim-side and replay-safe:
   Docking *banks* the hopper: unburned pieces walk back aboard to the
   first legal berth, and only true overflow is tipped over the side
   (`Cue::Jettison`, the one ceremony that still discards).
+
+  > Superseded in part by *Cargo stops colliding*: whatever the game
+  > still walks back aboard (`Sim::walk_aboard`, through `Sim::fit`)
+  > takes the first berth clear of everything already there, and the
+  > first legal one only when none is, so "overflow" would be a ship
+  > with no legal berth at all rather than a full one.
 
 Presentation derives, never restates: the outer hatch is a firebox
 door whose glass flares on a feeding and breathes ember with the
@@ -891,6 +1097,10 @@ by `placement_check`, never restated in views:
   pattern turned outward: a host kind declares top slots the way the
   cabinet declares cubbies (`Loc::Stow { host, slot }` generalizes;
   crates and the cabinet's flat top are the first hosts).
+
+  > Superseded by *Cargo stops colliding*: neither class exists, and
+  > neither will as a slot. Placement is to taste: anything may be set
+  > where anything else stands.
 - **Paintings and UI instruments must be on the wall.**
 - **Lamps may hang from the ceiling** (the ceiling lamp finally means
   it); wall sconces stay wall, floor lamps stay floor.
@@ -901,6 +1111,11 @@ by `placement_check`, never restated in views:
   wardrobe; and a deck berth spends the plan rather than the height,
   which is what took the apron off the front of every standing piece
   (see "A footprint is stated in the wall's own frame", below).
+
+  > Superseded in part by *Cargo stops colliding*: the shadow refuses
+  > nothing. It is what the GAME keeps clear of when it sets something
+  > down itself (`cargo::clear`); a player may hang a painting behind
+  > their own wardrobe.
 - Coverings (`Loc::Laid`) extend to every plane the mount table allows
   — rugs stay floor; paint always coated any surface.
 
@@ -1047,6 +1262,12 @@ of. Three guards, all sim-side and monkey-proven:
   instead. Two rays are two opinions, and the picture only ever
   offered one.
 
+  > Extended by *Cargo stops colliding*: the body that one cast met
+  > first now travels to the sim as the press's aim
+  > (`InputFrame::aim`), because a point on a chart can be on several
+  > pieces once they share ground, and only the ray knows which one is
+  > in front.
+
 ### The standing rule: cargo that stands maps its own body
 
 Reported from playtest: aiming at the top-right of a standing cabinet
@@ -1065,7 +1286,13 @@ meets the piece where the piece is, and whatever the sim hit-tests
 inside it — the cabinet's cubby sub-rects today — is read in the frame
 the rig drew it in. Consequences, all falling out of the one binding:
 selection, the hover glint, the carry's grab and its stow drop cannot
-disagree with each other or with the picture. Wall cargo the upright
+disagree with each other or with the picture.
+
+> Superseded in part by *Cargo stops colliding*: there are no cubby
+> sub-rects and no stow drop; the amber handle band is what is read
+> inside a body now. And the face the ray struck names its piece, so
+> where two bodies share ground the selection, the glint and the grab
+> agree on which one (`VirtualPointer::aimed`). Wall cargo the upright
 rule leaves level needs no face — it hangs IN its chart's plane, where
 the chart already is the piece — but wall cargo the rule ROLLS does,
 for the reason below.
@@ -1258,6 +1485,9 @@ Build order: occlusion fixes first (presentation-only, immediate),
 then the net in the sim, then the net's presentation, then the
 instruments, then `supports:top` hosts. Each lands green or not at
 all.
+
+> Superseded in part by *Cargo stops colliding*: there will be no
+> `supports:top` hosts.
 
 ## Lights are cargo
 

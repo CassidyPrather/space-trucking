@@ -34,8 +34,10 @@ use bevy::post_process::bloom::Bloom;
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
+#[cfg(test)]
+use space_trucking::sim::layout;
 use space_trucking::sim::room::{CABIN, Rooms};
-use space_trucking::sim::{Loc, Piece, Vec2 as SimVec2, layout};
+use space_trucking::sim::{Loc, Piece, Vec2 as SimVec2};
 
 use crate::palette;
 use crate::surface::{SimSurface, Station};
@@ -574,8 +576,8 @@ impl CameraRig {
 /// The surfaces are whatever is standing right now, not a fixed list:
 /// an instrument's station rides its cargo, so its pose is its berth's
 /// (BAY.md, "Focus poses become relative to the instrument's berth").
-/// `None` when nothing carries that station — jettisoned, shelved, or
-/// in the player's own hands — and the caller falls back to roam.
+/// `None` when nothing carries that station — jettisoned, sold, or in
+/// the player's own hands — and the caller falls back to roam.
 ///
 /// **One instrument, never a group.** This used to widen the fit until
 /// it framed *every* face carrying the station at once, on the reading
@@ -1058,13 +1060,17 @@ fn aimed_station(
 /// interaction and the camera takes the click instead. Passive cargo
 /// has no function to guard, so its whole body grabs and nothing is
 /// consumed.
+///
+/// **`piece` is the aim's own answer**, resolved once by the caller
+/// (`surface::VirtualPointer::aimed`) — the very piece the hover lights
+/// and the press lifts, so a tank standing behind a crate on the same
+/// ground can never route a click the crate was going to take.
 #[must_use]
-pub fn handle_route(rooms: &Rooms, pieces: &[Piece], at: SimVec2) -> Option<Focus> {
-    let piece = layout::piece_at(rooms, pieces, at)?;
+pub fn handle_route(rooms: &Rooms, piece: &Piece, at: SimVec2) -> Option<Focus> {
     crate::pieces::carry_handle(piece.kind)?;
-    // Off its wall — staged on a hopper tile, boxed in a cubby, laid
-    // on the deck — an instrument is only cargo again: it carries no
-    // station, so its whole body grabs, handle or no handle.
+    // Off its wall — staged on a hopper tile, laid on the deck — an
+    // instrument is only cargo again: it carries no station, so its
+    // whole body grabs, handle or no handle.
     if crate::pieces::on_carry_handle(rooms, piece, at) || !matches!(piece.loc, Loc::Hold { .. }) {
         return None;
     }
@@ -1176,20 +1182,11 @@ pub fn steer(
             // routing and the hover tell that promised it can never
             // disagree about which half of the piece the aim is on.
             if buttons.just_pressed(MouseButton::Left) || toggle {
-                let holding = shell.bridge.sim.held(0).is_some();
-                let over = layout::piece_at(
-                    shell.bridge.sim.rooms(),
-                    shell.bridge.sim.pieces(),
-                    pointer.sim,
-                );
-                let focus = if !holding && over.is_some() {
-                    handle_route(
-                        shell.bridge.sim.rooms(),
-                        shell.bridge.sim.pieces(),
-                        pointer.sim,
-                    )
-                } else {
-                    aimed_station(&camera, &surfaces).and_then(Focus::of)
+                let sim = &shell.bridge.sim;
+                let holding = sim.held(0).is_some();
+                let focus = match pointer.aimed(sim) {
+                    Some(over) if !holding => handle_route(sim.rooms(), over, pointer.sim),
+                    _ => aimed_station(&camera, &surfaces).and_then(Focus::of),
                 };
                 if let Some(focus) = focus {
                     rig.mode = Mode::ToFocus {
@@ -1467,7 +1464,7 @@ mod tests {
                         crate::pieces::instrument_surface(
                             &charts,
                             piece.kind,
-                            layout::piece_rect(sim.rooms(), sim.pieces(), piece),
+                            layout::piece_rect(sim.rooms(), piece),
                             crate::pieces::berth_turn(piece),
                         )
                     })
@@ -1586,7 +1583,7 @@ mod tests {
             if !matches!(piece.loc, Loc::Hold { .. }) {
                 continue;
             }
-            let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
+            let rect = layout::piece_rect(sim.rooms(), piece);
             if let Some(pair) = crate::pieces::instrument_surface(
                 &charts,
                 piece.kind,

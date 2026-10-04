@@ -192,65 +192,37 @@ const NOWHERE: Rect = Rect::new(-1000.0, -1000.0, 0.0, 0.0);
 /// piece standing five units off the grid is drawn five units off the
 /// grid. A fine unit is `CELL / 256` exactly, so a berth on a whole cell
 /// at a quarter turn lands on the very rect [`cell_rect`] gives that
-/// cell.
-///
-/// A stowed piece spans its cubby: a quarter of its cabinet's own
-/// footprint, read in the cabinet's own frame (`cargo::Foot::quarter_box`),
-/// which is why the whole board is a parameter too. A stow whose cabinet
-/// is missing (impossible by the placement and save rules), or a berth
-/// off its room's net, resolves to [`NOWHERE`].
+/// cell. A berth off its room's net resolves to [`NOWHERE`].
 #[must_use]
-pub fn piece_rect(rooms: &Rooms, pieces: &[Piece], piece: &Piece) -> Rect {
-    match piece.loc {
-        Loc::Hold { room, .. } | Loc::Laid { room, .. } => {
-            cargo::Foot::at(rooms, piece).map_or(NOWHERE, |(_, foot)| foot_rect(room, foot))
-        }
-        Loc::Stow { cabinet, slot } => pieces
-            .iter()
-            .find(|other| other.id == cabinet)
-            .and_then(|host| cargo::Foot::at(rooms, host))
-            .map_or(NOWHERE, |(room, foot)| {
-                fine_rect(room, foot.quarter_box(slot))
-            }),
-    }
+pub fn piece_rect(rooms: &Rooms, piece: &Piece) -> Rect {
+    cargo::Foot::at(rooms, piece).map_or(NOWHERE, |(room, foot)| foot_rect(room, foot))
 }
 
-/// Where `p` lies in the frame of the footprint `piece` stands on, if it
-/// stands in a room: read on that room's net ([`net_point`]) and carried
-/// into the piece's own frame (`cargo::Foot::frame`).
+/// Where `p` lies in the frame of the footprint `piece` stands on: read
+/// on that room's net ([`net_point`]) and carried into the piece's own
+/// frame (`cargo::Foot::frame`).
 fn framed(rooms: &Rooms, piece: &Piece, p: Vec2) -> Option<cargo::Framed> {
     let (room, foot) = cargo::Foot::at(rooms, piece)?;
     Some(foot.frame(net_point(room, p)?, READING))
 }
 
 /// **Whether `p` is on `piece`**: on the footprint it stands or lies on,
-/// at whatever turn, or — for a stowed piece — in its cubby.
+/// at whatever turn.
 ///
 /// The footprint is the oriented one, and the test is made in the
 /// piece's OWN frame: the pointer is carried into it, never the piece out
 /// onto the sheet's axes, so the air beside a turned couch is not the
-/// couch. A cubby is a quarter of its cabinet read the same way, row-major
-/// from the cabinet's own top left as a person facing it sees it — the
-/// rack its rig draws.
+/// couch.
 #[must_use]
-pub fn piece_contains(rooms: &Rooms, pieces: &[Piece], piece: &Piece, p: Vec2) -> bool {
-    match piece.loc {
-        Loc::Hold { .. } | Loc::Laid { .. } => {
-            framed(rooms, piece, p).is_some_and(cargo::Framed::inside)
-        }
-        Loc::Stow { cabinet, slot } => pieces
-            .iter()
-            .find(|other| other.id == cabinet)
-            .and_then(|host| framed(rooms, host, p))
-            .is_some_and(|at| at.inside() && at.quarter() == slot),
-    }
+pub fn piece_contains(rooms: &Rooms, piece: &Piece, p: Vec2) -> bool {
+    framed(rooms, piece, p).is_some_and(cargo::Framed::inside)
 }
 
 /// **Where `p` lies on `piece`'s own face**, as fractions.
 ///
 /// `(0, 0)` at its top left and `(1, 1)` at its bottom right as a person
-/// facing it sees it, whatever its turn. `None` for a piece with no
-/// ground of its own (a cubby's).
+/// facing it sees it, whatever its turn. `None` for a berth off its
+/// room's net, or a pointer that is not a point.
 ///
 /// For a frontend measuring a sub-rect it declared in the piece's own
 /// units — a carry handle — against the pointer, so the band it draws and
@@ -263,30 +235,65 @@ pub fn piece_frame(rooms: &Rooms, piece: &Piece, p: Vec2) -> Option<Vec2> {
     })
 }
 
-/// The piece under `p`, cubby contents first and dressings last.
+/// **The piece under `p`, when nothing says which one is meant**: of
+/// every piece `p` is on ([`piece_contains`]), a standing piece before a
+/// laid one, then the smaller footprint, then the lower id.
 ///
-/// A stowed piece's cubby lives inside its cabinet, so scanning stows
-/// before everything else is what lets a click reach into an open cubby
-/// instead of always grabbing the furniture around it. Laid dressings
-/// scan last for the mirror reason: a rug underlies whatever stands on
-/// it, so the couch takes the click and only a bare stretch of rug
-/// answers for the rug. Each is asked [`piece_contains`], so a turned
-/// piece answers for its own ground and nothing beside it.
+/// Bodies share ground now (docs/BAY.md, "Cargo stops colliding"), so
+/// one point of a chart can be on several pieces and the point alone
+/// cannot say which the player meant. A frontend that knows says so with
+/// an aim ([`pick`]); this is the order for everything that does not — a
+/// test, a monkey, a tape recorded without one — and it is chosen to be
+/// the least surprising guess:
+///
+/// - **Standing before laid**, as it always was: a rug underlies whatever
+///   stands on it, so the couch takes the click and only a bare stretch
+///   of rug answers for the rug.
+/// - **Smaller before bigger**, because a small piece standing inside a
+///   big one's ground could otherwise never be reached by a point at
+///   all, while the big one still answers everywhere the small one is
+///   not. A vial set in a wardrobe is picked out of it, and the wardrobe
+///   is lifted by its other cell.
+/// - **Lower id last**, so the answer never depends on the order the
+///   board happens to be listed in.
 #[must_use]
 pub fn piece_at<'a>(rooms: &Rooms, pieces: &'a [Piece], p: Vec2) -> Option<&'a Piece> {
-    let stowed = pieces
+    pieces
         .iter()
-        .filter(|piece| matches!(piece.loc, Loc::Stow { .. }));
-    let rest = pieces
-        .iter()
-        .filter(|piece| !matches!(piece.loc, Loc::Stow { .. } | Loc::Laid { .. }));
-    let laid = pieces
-        .iter()
-        .filter(|piece| matches!(piece.loc, Loc::Laid { .. }));
-    stowed
-        .chain(rest)
-        .chain(laid)
-        .find(|piece| piece_contains(rooms, pieces, piece, p))
+        .filter_map(|piece| {
+            let (room, foot) = cargo::Foot::at(rooms, piece)?;
+            foot.frame(net_point(room, p)?, READING)
+                .inside()
+                .then_some((piece, i64::from(foot.half.0) * i64::from(foot.half.1)))
+        })
+        .min_by_key(|&(piece, area)| (matches!(piece.loc, Loc::Laid { .. }), area, piece.id))
+        .map(|(piece, _)| piece)
+}
+
+/// **The piece a press at `p` lands on, given the one the player aimed
+/// at**: `aim`, when it names a piece `p` is on, and [`piece_at`]'s order
+/// otherwise.
+///
+/// The aim is the frontend's answer to the question a point cannot
+/// settle once bodies share ground (`InputFrame::aim`): the cabin casts
+/// ONE ray and knows which body it met first (docs/BAY.md, "The nearest
+/// rule"). It only ever chooses among the pieces the pointer is on — the
+/// sim still does the hit-test — so an aim naming a piece the pointer is
+/// not on, or no piece at all, changes nothing, and a stale or hostile
+/// one reaches no further than a pointer could already. Everything that
+/// asks which piece the player is on — the press, and in the cabin the
+/// hover, the outline and the handle's routing — asks this with the same
+/// aim, which is why none of them can answer differently.
+#[must_use]
+pub fn pick<'a>(
+    rooms: &Rooms,
+    pieces: &'a [Piece],
+    p: Vec2,
+    aim: Option<u32>,
+) -> Option<&'a Piece> {
+    aim.and_then(|id| pieces.iter().find(|piece| piece.id == id))
+        .filter(|piece| piece_contains(rooms, piece, p))
+        .or_else(|| piece_at(rooms, pieces, p))
 }
 
 #[cfg(test)]
@@ -336,6 +343,71 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// **The point-pick's order, where pieces share ground**: standing
+    /// before laid, the smaller footprint before the bigger, the lower id
+    /// last — whatever order the board lists them in. And an aim chooses
+    /// among the pieces under the point, and only among them.
+    #[test]
+    fn a_shared_point_picks_standing_then_smaller_then_lower_id() {
+        use crate::sim::cargo::{Kind, Spot, anchored, fine};
+        use crate::sim::room::{CABIN, RoomKind};
+
+        let rooms = Rooms::new();
+        let at = |id: u32, kind: Kind, laid: bool| {
+            let (x, y, turn) =
+                anchored(RoomKind::Cabin, kind, fine(5), fine(5)).expect("on the deck");
+            let spot = Spot {
+                room: CABIN,
+                x,
+                y,
+                turn,
+            };
+            Piece {
+                id,
+                kind,
+                variant: 0,
+                gnawed: false,
+                loc: if laid { spot.laid() } else { spot.hold() },
+            }
+        };
+        let rug = at(1, Kind::Rug, true);
+        let couch = at(2, Kind::Couch, false);
+        let board = [
+            rug,
+            couch,
+            at(9, Kind::PerfumeVial, false),
+            at(4, Kind::PerfumeVial, false),
+        ];
+        let middle = |x: u8| {
+            let r = cell_rect(CABIN, x, 5);
+            Vec2::new(r.w.mul_add(0.5, r.x), r.h.mul_add(0.5, r.y))
+        };
+        let (shared, beside) = (middle(5), middle(6));
+        let picked = |pieces: &[Piece], p, aim| pick(&rooms, pieces, p, aim).map(|piece| piece.id);
+        assert_eq!(
+            picked(&board, shared, None),
+            Some(4),
+            "the lower of two vials"
+        );
+        assert_eq!(
+            picked(&board[..2], shared, None),
+            Some(2),
+            "the couch over the rug"
+        );
+        assert_eq!(picked(&board[..1], shared, None), Some(1), "a bare rug");
+        // The aim chooses among what the point is on.
+        assert_eq!(picked(&board, shared, Some(2)), Some(2));
+        assert_eq!(picked(&board, shared, Some(1)), Some(1));
+        assert_eq!(
+            picked(&board, shared, Some(99)),
+            Some(4),
+            "an aim at nothing"
+        );
+        // And a vial is not under the couch's other cell, so an aim at it
+        // there changes nothing.
+        assert_eq!(picked(&board, beside, Some(9)), Some(2));
     }
 
     /// Everything sits inside the logical world.

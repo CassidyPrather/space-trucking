@@ -179,7 +179,10 @@ impl Helm {
         while self.log.len() > HELM_WINDOW {
             self.log.pop_front();
         }
-        vec![Outbound::Broadcast(Message::Schedule { tick, frames })]
+        vec![Outbound::Broadcast(Message::Schedule {
+            tick,
+            frames: Box::new(frames),
+        })]
     }
 
     /// File one player's future input. Sealed ticks are immutable — a late
@@ -214,7 +217,7 @@ impl Helm {
         }
         (from_tick..self.sealed)
             .map(|tick| {
-                let frames = self.log[(tick - start) as usize];
+                let frames = Box::new(self.log[(tick - start) as usize]);
                 Outbound::Reply(Message::Schedule { tick, frames })
             })
             .collect()
@@ -486,8 +489,12 @@ mod tests {
     }
 
     /// The wire form is the honest equality for frames (no `PartialEq`).
-    fn wire_of(tick: u64, frames: CrewFrame) -> String {
-        Message::Schedule { tick, frames }.to_wire()
+    fn wire_of(tick: u64, frames: &CrewFrame) -> String {
+        Message::Schedule {
+            tick,
+            frames: Box::new(*frames),
+        }
+        .to_wire()
     }
 
     fn no_snapshot() -> (String, u64) {
@@ -519,7 +526,7 @@ mod tests {
         assert_eq!(*tick, 0);
         let mut expected = default_frames();
         expected[2] = marked(7.0);
-        assert_eq!(wire_of(0, *frames), wire_of(0, expected));
+        assert_eq!(wire_of(0, frames), wire_of(0, &expected));
         assert_eq!(helm.sealed(), 1);
     }
 
@@ -558,7 +565,7 @@ mod tests {
         };
         let mut expected = default_frames();
         expected[1] = marked(2.0);
-        assert_eq!(wire_of(12, *frames), wire_of(12, expected));
+        assert_eq!(wire_of(12, frames), wire_of(12, &expected));
     }
 
     #[test]
@@ -608,7 +615,7 @@ mod tests {
         let mut client = Client::founding(0, Sim::new(9));
         let schedule = |tick| Message::Schedule {
             tick,
-            frames: default_frames(),
+            frames: Box::new(default_frames()),
         };
         assert!(client.on_message(&schedule(0)).is_empty());
         assert_eq!(client.applied(), 1);

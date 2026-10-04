@@ -603,8 +603,7 @@ pub fn paint(
     if let Some(held) = held {
         aiming(held.piece, if held.legal { CARRY_OK } else { CARRY_NO });
     } else if rig.roaming()
-        && let Some(piece) =
-            space_trucking::sim::layout::piece_at(sim.rooms(), sim.pieces(), pointer.sim)
+        && let Some(piece) = pointer.aimed(sim)
     {
         let on_handle = crate::pieces::on_carry_handle(sim.rooms(), piece, pointer.sim);
         aiming(piece.id, if on_handle { HANDLE } else { HOVER });
@@ -621,12 +620,11 @@ pub fn paint(
         }
     }
     // **Nothing is filtered by where a piece is berthed**, and that is
-    // deliberate: a body is marked only where a rig draws one,
-    // `sync_pieces` retires a rig the sim no longer knows, and a good
-    // SHELVED in a cabinet is drawn as a mini behind its own doors — so
-    // it is a thing the crosshair can rest on and a thing that has to
-    // answer when it does. A code naming a piece nothing draws simply
-    // finds no body wearing that number.
+    // deliberate: a body is marked only where a rig draws one, and
+    // `sync_pieces` retires a rig the sim no longer knows — so a vial set
+    // inside a wardrobe is a thing the crosshair can rest on and a thing
+    // that has to answer when it does. A code naming a piece nothing
+    // draws simply finds no body wearing that number.
 
     // **Cut the copies the moment there is anything to say**, and not
     // before: a cabin nobody is pointing at carries no mask at all, and

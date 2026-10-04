@@ -2161,14 +2161,13 @@ fn glass_charts(sim: &Sim) -> Vec<GlassChart> {
             piece.kind.window() && matches!(piece.loc, space_trucking::sim::Loc::Hold { .. })
         })
         .collect();
-    glass.sort_by_key(|piece| (piece.loc.room(pieces) != Some(CABIN), piece.id));
+    glass.sort_by_key(|piece| (piece.loc.room() != CABIN, piece.id));
     glass
         .into_iter()
         .filter_map(|piece| {
-            let home = piece.loc.room(pieces)?;
+            let home = piece.loc.room();
             let at = crate::canvas::rect_center(space_trucking::sim::layout::piece_rect(
                 sim.rooms(),
-                pieces,
                 piece,
             ));
             sim.rooms().iter().find_map(|(id, room)| {

@@ -568,7 +568,6 @@ mod bench {
     use std::path::PathBuf;
 
     use bevy::prelude::*;
-    use space_trucking::sim::layout;
 
     use super::{Adjust, Mark, Nudge, asked, overlay};
     use crate::art::{Dressings, Worn};
@@ -648,9 +647,10 @@ mod bench {
         let sim = &shell.bridge.sim;
         // The crosshair answers by the whitebox box even where a bought
         // mesh is drawn — a bounded, recorded gap (docs/GAUNTLET.md's
-        // blind-spot list), and not one to close in passing here.
-        let under =
-            layout::piece_at(sim.rooms(), sim.pieces(), pointer.sim).map(|piece| piece.kind);
+        // blind-spot list), and not one to close in passing here. Which
+        // piece it answers for is the aim's one resolution, the piece the
+        // hover lights and a press would lift.
+        let under = pointer.aimed(sim).map(|piece| piece.kind);
         for ask in asks {
             let subject = under.and_then(|kind| dressings.of(kind).map(|worn| (kind, worn)));
             if nudge.hear(ask, subject) {
@@ -1414,7 +1414,7 @@ mod scripted {
     /// here would quietly stop being the coordinate.
     fn a_body(sim: &Sim) -> (Kind, SimVec2) {
         for piece in sim.pieces() {
-            let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
+            let rect = layout::piece_rect(sim.rooms(), piece);
             let at = SimVec2::new(rect.w.mul_add(0.5, rect.x), rect.h.mul_add(0.5, rect.y));
             if layout::piece_at(sim.rooms(), sim.pieces(), at).map(|found| found.id)
                 == Some(piece.id)

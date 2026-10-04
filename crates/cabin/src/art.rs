@@ -2036,7 +2036,7 @@ mod tests {
             {
                 continue;
             }
-            let rect = layout::piece_rect(sim.rooms(), sim.pieces(), piece);
+            let rect = layout::piece_rect(sim.rooms(), piece);
             let at = space_trucking::sim::Vec2::new(
                 rect.w.mul_add(0.5, rect.x),
                 rect.h.mul_add(0.5, rect.y),

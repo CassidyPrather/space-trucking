@@ -274,6 +274,17 @@ overlap in metres on all three axes.
 > a run about a third again. Its first run found nothing new here or in
 > `berth-seen`.
 
+> Since *Cargo stops colliding* (BAY.md): cargo may share air with
+> cargo, by design, so nothing here may ever be a finding about two
+> pieces. None was: every berth family asks the arbiter which berths
+> exist on an EMPTY board (`gauntlet::legal_berths`), so a station's
+> furniture is judged against what the player may place and against the
+> room only. What moved is the loaded board a finding names its culprit
+> on: the arbiter alone would stand a piece on every cell, each half
+> over the last, so the load sets cargo out the way the game does, clear
+> of what it already stood (`gauntlet::load`, `cargo::clear`), and it is
+> the board it always was. The docket stayed empty.
+
 Spent on cargo too, where it means something related but not the same: a
 part reaching outside `pieces::RIG_NEAR..RIG_FAR`, the depth every kind
 is composed within — one cell of the cargo grid, wearing the same

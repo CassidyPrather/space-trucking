@@ -51,13 +51,15 @@ carry it at: the mouse wheel turns it to the next multiple of 15° (up
 and away is counter-clockwise, as you look at the floor or the wall it
 is bound for), `Ctrl`+wheel turns it one degree a notch, and `Q` and
 `Shift`+`Q` take the wheel's 15° step either way for a hand with no
-wheel. The ghost and the patch under it turn with it. Drop a small item onto a cabinet and it takes a cubby; a
-loaded cabinet won't budge until it's emptied. Rugs and paint *lay
-into* the room instead of occupying it: a rug goes down on the deck
-(and cargo stands on it),
-paint coats a wall or floor cell, and neither comes back up while
-something stands on top. Luminous paint really glows — rats keep clear
-of it. The launch lever is a pull: grab, drag
+wheel. The ghost and the patch under it turn with it. Placement is to
+taste: cargo does not collide with cargo, so a crate can stand in the
+wardrobe, a painting can hang behind it, and two rugs can overlap —
+where two pieces share ground, the click lifts the one the crosshair
+meets first. The cabinet is furniture and stores nothing. Rugs and
+paint *lay into* the room instead of occupying it: a rug goes down on
+the deck (and cargo stands on it), paint coats a wall or floor cell,
+and either lifts out from under whatever stands on it. Luminous paint
+really glows — rats keep clear of it. The launch lever is a pull: grab, drag
 down to the end of the track — the way the handle itself
 swings — and the throw fires at the detent. `Space`
 pauses and `M` mutes (`F` warps, in dev mode).
@@ -87,9 +89,10 @@ dial only reads true for goods you have traded at that station before;
 unfamiliar goods fog the needle, and finding out what a station really pays
 means pulling the lever and living with the answer. Stations have patience,
 and three wasted pulls ends the visit's trading — though no station in the
-system refuses a gift. Cargo has opinions about stowage (heavy rides low,
-volatiles refuse adjacency, cryo hugs the hull, fixtures demand their
-surface), and one matte-black kind of crate hums, vanishes into a Guild
+system refuses a gift. Cargo has a few opinions about where it goes
+(volatiles keep their distance from each other, cryo hugs the hull,
+fixtures demand their surface, nothing blocks a doorway) and none about
+what else is there, and one matte-black kind of crate hums, vanishes into a Guild
 hangar on delivery, and fills an unlabeled lamp plate with whatever is
 being counted. Disposal is a furnace: stage cargo on the burner room's
 hazard-bordered tiles (starboard annex, sized so the biggest crate only
@@ -141,7 +144,7 @@ guild server whose counters cannot double-count. The architecture and its
 required network-failure properties live in
 [docs/NETWORKING.md](docs/NETWORKING.md); `cargo run --example convoy` runs
 a six-client crew over a deliberately hostile simulated network. The live
-multiplayer cabin is a later slice; the protocol it will speak (`SNP4`)
+multiplayer cabin is a later slice; the protocol it will speak (`SNP5`)
 is already under test.
 
 Sound is synthesised at startup in `src/synth.rs` — no audio assets —

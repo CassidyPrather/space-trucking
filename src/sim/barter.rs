@@ -481,7 +481,7 @@ mod tests {
         for kind in rollable {
             assert!(
                 shelf.iter().any(|&(x, y)| {
-                    let spot = whole(&rooms, trade, kind, x, y).spot().expect("on the net");
+                    let spot = whole(&rooms, trade, kind, x, y).spot();
                     placement_check(&rooms, &[], 0, kind, spot).is_ok()
                 }),
                 "{kind:?} can be rolled onto a shelf it can never stand on"

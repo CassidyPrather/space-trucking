@@ -9,9 +9,11 @@
 //! stoke so the firebox glows), the ship as its graph of rooms — cabin,
 //! burner, and the Guild's own trade room alongside — and every cargo
 //! kind aboard or alongside through every berth class: floor cargo,
-//! wall painting and sconce, ceiling lamp, an occupied cabinet (vial,
-//! fluff, chit, bottled midnight in the cubbies), a gnawed rug pinned
-//! under the couch, enamel and luminous coats on the walls, the trade
+//! wall painting and sconce, ceiling lamp, a cabinet (furniture now, and
+//! nothing in it — the vial, fluff, chit and bottled midnight it used to
+//! hold stand along the aft row of the deck where the game's own
+//! tidiness set them down, `cargo::tidy`, keeping off the doorstep), a
+//! gnawed rug under the couch, enamel and luminous coats on the walls, the trade
 //! room's own goods on its stock band (seedlings, gas, gnawed scrap,
 //! one of them marked) and a three-piece proposal standing on its offer
 //! band — which sits clear of the door's own lane now, so the showcase
@@ -55,15 +57,15 @@
 //! alongside, and the gangway law will not strand them. Carry them home
 //! and the lever lights.
 //!
-//! Keep the board legal when editing: standing cargo shadows the wall
-//! cells behind it (the cabinet and floor lamp against the port seam
-//! own its baseboard rows, which is why the wall sconce hangs at the
-//! cornice AND why the chart tank hangs on the front wall here rather
-//! than at its traditional port berth), the gnawed rug lies PINNED
-//! under the couch, and no berth may sit on a doorway — the threshold
-//! rule keeps every aperture clear. And nothing the board stands, here
-//! or once it has been carried home, may stand across a seam's amber
-//! latch. The tests below re-check all of it.
+//! Keep the board legal when editing: no berth may sit on a doorway —
+//! the threshold rule keeps every aperture clear — and nothing the board
+//! stands, here or once it has been carried home, may stand across a
+//! seam's amber latch. The tests below re-check all of it. Pieces may
+//! share ground now (docs/BAY.md, "Cargo stops colliding"), and this
+//! board was laid out when they could not, so nothing on it does: the
+//! wall sconce at the cornice and the chart tank on the front wall are
+//! where the old shadow rule put them, out from behind the cabinet and
+//! the floor lamp, and the gnawed rug still lies under the couch.
 //!
 //! One more courtesy, which is not a rule: the deck cells a doorway
 //! stands on are kept clear. Nothing forbids berthing there — the aisle
@@ -88,9 +90,12 @@ use space_trucking::sim::room::RoomKind;
 /// read by the reader it replaces, written by the writer it adds — or
 /// `--fixture` stops booting and the tests below say so. Re-saved, not
 /// re-typed: a hand edit of the numbers is a guess at the board, and the
-/// board is what this file is for.
+/// board is what this file is for. (The move to `STV22` dropped a line
+/// nothing reads any more, `stow`: the four pieces it berthed were set
+/// down by `cargo::tidy` over the cabin deck's whole cells, doorsteps
+/// skipped, and the board written by the new writer.)
 pub const SAVE: &str = "\
-STV21
+STV22
 seed 7
 tick 12000
 rng 3c76e098a8f74c8a
@@ -117,7 +122,7 @@ piece 1 9 0 0 hold 0 1920 1408 0
 piece 2 8 0 0 hold 0 1280 1920 0
 piece 3 19 1 0 hold 0 1280 1664 0
 piece 4 18 2 0 hold 0 896 1664 49152
-piece 5 12 0 0 stow 0 3
+piece 5 12 0 0 hold 0 1408 896 0
 piece 6 6 1 0 hold 0 896 2432 32768
 piece 7 20 3 0 hold 0 2048 384 0
 piece 8 17 1 0 hold 0 128 1408 0
@@ -125,9 +130,9 @@ piece 9 16 2 0 hold 0 3968 1152 0
 piece 10 22 0 1 laid 0 1280 1664 0
 piece 11 23 1 0 laid 0 1664 384 0
 piece 12 24 0 0 laid 0 640 1664 0
-piece 13 0 1 0 stow 0 0
-piece 14 13 2 0 stow 0 1
-piece 15 14 0 0 stow 0 2
+piece 13 0 1 0 hold 0 1664 896 0
+piece 14 13 2 0 hold 0 1920 896 0
+piece 15 14 0 0 hold 0 2432 896 0
 piece 16 4 3 0 hold 2 1408 896 0
 piece 17 7 1 0 hold 2 1664 2176 0
 piece 18 1 2 0 hold 2 1920 2176 0
@@ -277,8 +282,8 @@ const SEED_SWEEP: u64 = 2000;
 
 /// A dev board carrying exactly `n` windows and nothing else unusual:
 /// the starter ship with every pane stripped off it, then `n` hung on
-/// the cabin's aft wall at the first berths the sim's own arbiter will
-/// take (`--panes n`).
+/// the cabin's aft wall where the game would hang them itself (`--panes
+/// n`).
 ///
 /// This exists to be MEASURED. The exterior's whole claim is that a
 /// wall of glass costs about what one window costs
@@ -289,15 +294,17 @@ const SEED_SWEEP: u64 = 2000;
 /// of the same tool: a ship that sold its window, whose hull had better
 /// be solid.
 ///
-/// It cheats at nothing. Every berth goes through `placement_check`, so
-/// a board this returns is a board a player could have built, and a
-/// refit that made these cells illegal would hand back a shorter board
-/// rather than a lie.
+/// It cheats at nothing. Every pane is set down by the sim's own
+/// tidiness (`cargo::tidy`) over the wall's whole-cell berths, row-major:
+/// side by side while the wall has room, and only then over one another,
+/// so a board this returns is a board a player could have built, and a
+/// refit that made the wall refuse a window would hand back a shorter
+/// board rather than a lie.
 #[must_use]
 pub fn panes_board(seed: u64, n: usize) -> String {
     use std::fmt::Write as _;
 
-    use space_trucking::sim::cargo::{Piece, Spot, anchored, fine, placement_check};
+    use space_trucking::sim::cargo::{Piece, Spot, anchored, fine, tidy};
     use space_trucking::sim::room::{CABIN, RoomKind, Surf};
     use space_trucking::sim::{Kind, Sim};
 
@@ -314,47 +321,42 @@ pub fn panes_board(seed: u64, n: usize) -> String {
     // Row-major over the cabin's aft chart: one wall, so one sky, which
     // is the arrangement the measurement is actually about.
     let (cols, rows) = RoomKind::Cabin.grid();
-    let mut hung: Vec<Piece> = Vec::new();
-    'search: for y in 0..rows {
-        for x in 0..cols {
-            if hung.len() >= n {
-                break 'search;
-            }
-            if RoomKind::Cabin.surface_of(x, y) != Some(Surf::Aft) {
-                continue;
-            }
-            let Some((x, y, turn)) = anchored(RoomKind::Cabin, Kind::Window, fine(x), fine(y))
-            else {
-                continue;
-            };
-            let spot = Spot {
+    let wall: Vec<_> = (0..rows)
+        .flat_map(|y| (0..cols).map(move |x| (x, y)))
+        .filter(|&(x, y)| RoomKind::Cabin.surface_of(x, y) == Some(Surf::Aft))
+        .filter_map(|(x, y)| anchored(RoomKind::Cabin, Kind::Window, fine(x), fine(y)))
+        .map(|(x, y, turn)| {
+            Spot {
                 room: CABIN,
                 x,
                 y,
                 turn,
-            };
-            let piece = Piece {
-                id: next,
-                kind: Kind::Window,
-                variant: 0,
-                gnawed: false,
-                loc: spot.hold(),
-            };
-            if placement_check(rooms, &aboard, piece.id, piece.kind, spot).is_ok() {
-                aboard.push(piece);
-                hung.push(piece);
-                next += 1;
             }
-        }
+            .hold()
+        })
+        .collect();
+    let mut hung: Vec<Piece> = Vec::new();
+    while hung.len() < n {
+        let Some(loc) = tidy(rooms, &aboard, next, Kind::Window, wall.iter().copied()) else {
+            break;
+        };
+        let piece = Piece {
+            id: next,
+            kind: Kind::Window,
+            variant: 0,
+            gnawed: false,
+            loc,
+        };
+        aboard.push(piece);
+        hung.push(piece);
+        next += 1;
     }
 
     let mut out = String::new();
     for line in sim.save_string().lines() {
         if line.starts_with("next_piece") {
             for piece in &hung {
-                let Some(Spot { room, x, y, turn }) = piece.loc.spot() else {
-                    unreachable!("the search only berths in holds");
-                };
+                let Spot { room, x, y, turn } = piece.loc.spot();
                 // Writing into a String cannot fail, so the fmt
                 // plumbing is dropped — `save.rs`'s own convention.
                 let _ = writeln!(
@@ -389,9 +391,7 @@ pub fn panes_board(seed: u64, n: usize) -> String {
 #[cfg(test)]
 mod tests {
     use space_trucking::sim::Sim;
-    use space_trucking::sim::cargo::{
-        Kind, Loc, berth_tile, coarse, dressing_check, placement_check,
-    };
+    use space_trucking::sim::cargo::{Kind, Loc, berth_check, berth_tile, coarse};
     use space_trucking::sim::room::{RoomKind, Tile};
 
     /// The fixture is a real save and an honest board: it parses, its
@@ -406,29 +406,13 @@ mod tests {
         assert_eq!(rooms.kind(2), Some(RoomKind::Trade));
         let pieces = sim.pieces();
         for piece in pieces {
-            let Some(spot) = piece.loc.spot() else {
-                continue;
-            };
-            if matches!(piece.loc, Loc::Laid { .. }) {
-                let laid: Vec<_> = pieces
-                    .iter()
-                    .filter(|other| matches!(other.loc, Loc::Laid { .. }))
-                    .copied()
-                    .collect();
-                assert_eq!(
-                    dressing_check(rooms, &laid, piece.id, piece.kind, spot),
-                    Ok(()),
-                    "{:?} laid illegally at {spot:?}",
-                    piece.kind
-                );
-            } else {
-                assert_eq!(
-                    placement_check(rooms, pieces, piece.id, piece.kind, spot),
-                    Ok(()),
-                    "{:?} berthed illegally at {spot:?}",
-                    piece.kind
-                );
-            }
+            assert_eq!(
+                berth_check(rooms, pieces, piece.id, piece.kind, piece.loc),
+                Ok(()),
+                "{:?} berthed illegally at {:?}",
+                piece.kind,
+                piece.loc
+            );
         }
         let mut kinds: Vec<Kind> = pieces.iter().map(|piece| piece.kind).collect();
         kinds.sort_by_key(|kind| kind.index());
@@ -459,7 +443,7 @@ mod tests {
                         .kind(room)
                         .and_then(|kind| kind.surface_of(coarse(x), coarse(y))),
                 ),
-                _ => (None, None),
+                Loc::Laid { .. } => (None, None),
             })
             .collect();
         walls.sort_by_key(|wall| format!("{wall:?}"));
@@ -477,7 +461,7 @@ mod tests {
         // a proposal standing on its offer band, and one good marked.
         let tile = |piece: &space_trucking::sim::Piece| match piece.loc {
             Loc::Hold { .. } => berth_tile(rooms, piece.kind, piece.loc),
-            _ => None,
+            Loc::Laid { .. } => None,
         };
         assert!(pieces.iter().any(|p| tile(p) == Some(Tile::Stock)));
         assert!(pieces.iter().any(|p| tile(p) == Some(Tile::Offer)));
@@ -589,7 +573,7 @@ mod tests {
                 rooms.kind(room).is_some_and(|kind| !kind.riding())
                     && berth_tile(rooms, piece.kind, piece.loc) != Some(Tile::Stock)
             }
-            _ => false,
+            Loc::Laid { .. } => false,
         }) {
             let piece = carried[nth];
             let spot = first_fit(rooms, &carried, piece.id, piece.kind).unwrap_or_else(|| {

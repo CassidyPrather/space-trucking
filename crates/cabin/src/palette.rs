@@ -38,7 +38,7 @@ pub const PLATE_LIT: Color = hex(0x3a443d);
 pub const PLATE_SHADE: Color = hex(0x121614);
 /// Rivet heads; also the rat's fur.
 pub const RIVET: Color = hex(0x465049);
-/// Inset wells: hold sockets, slot cubbies, lever tracks.
+/// Inset wells: hold sockets, lever tracks.
 pub const SOCKET: Color = hex(0x151a17);
 /// Unlit CRT glass.
 pub const SCREEN: Color = hex(0x0a120c);

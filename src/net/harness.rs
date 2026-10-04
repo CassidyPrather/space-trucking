@@ -809,7 +809,7 @@ impl Convoy {
                             self.sealed_log.len(),
                             "broadcasts happen in seal order"
                         );
-                        self.sealed_log.push(*frames);
+                        self.sealed_log.push(**frames);
                     }
                     for ep in &mut self.endpoints {
                         if ep.connected {

@@ -564,6 +564,14 @@ pub fn roster() -> Vec<Stage> {
 /// that is the point: the question is not "does this look right", it is
 /// "is there a cell where cargo may stand and a station's furniture is
 /// already standing".
+///
+/// **Every cell it can, side by side.** Cargo may share ground with
+/// cargo (docs/BAY.md, "Cargo stops colliding"), so the arbiter alone
+/// would stand a piece on every cell of every room, each half over the
+/// last, and a heap is not a loaded room. The load sets out what it sets
+/// out the way the game sets out its own — clear of what it already
+/// stood (`cargo::clear`) — which is also what keeps the board the
+/// families name their findings against the board it always was.
 #[must_use]
 pub fn load(rooms: &Rooms) -> Vec<Piece> {
     let mut cargo: Vec<Piece> = Vec::new();
@@ -591,8 +599,9 @@ pub fn load(rooms: &Rooms) -> Vec<Piece> {
 
 /// What the load puts on one cell, and the berth it takes there — its
 /// footprint's top-left on the cell, turned the way the game would turn
-/// it (`cargo::anchored`): the first legal kind that carries no lamp, and
-/// only then the first legal kind of any sort.
+/// it (`cargo::anchored`): the first kind that may stand there clear of
+/// what the load already stood ([`load`]) and carries no lamp, and only
+/// then the first such kind of any sort.
 ///
 /// **Bodies, not lumens.** A plain sweep down `Kind::ALL` hangs a sconce
 /// on every wall cell in the room, and sixty point lights in one
@@ -624,9 +633,9 @@ fn fills(
             y,
             turn,
         };
-        placement_check(rooms, cargo, next, kind, spot)
-            .is_ok()
-            .then_some((kind, spot))
+        (placement_check(rooms, cargo, next, kind, spot).is_ok()
+            && space_trucking::sim::cargo::clear(rooms, cargo, next, kind, spot.hold()))
+        .then_some((kind, spot))
     };
     Kind::ALL
         .into_iter()

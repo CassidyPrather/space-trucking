@@ -22,7 +22,15 @@
 //! its chart's lie shares the plane but not the lie — so in both cases
 //! the aim has to meet the piece in the frame the rig was drawn in, and
 //! the reading is laid back onto the net, where the sim carries it into
-//! the piece's own frame to ask which cubby or which handle.
+//! the piece's own frame to ask whether it landed on the handle.
+//!
+//! **And the pointer says which body it met.** Pieces share ground now
+//! (docs/BAY.md, "Cargo stops colliding"), so a point on a chart can lie
+//! on several of them and the point alone cannot say which the player is
+//! looking at. A face that rides a piece knows ([`VirtualPointer::piece`]),
+//! and [`VirtualPointer::aimed`] hands the two to the sim's own pick —
+//! the one answer the hover, the outline, the handle's routing and the
+//! press all read.
 //!
 //! What a rig's is bound to is a BODY and not a quad. A chart is a
 //! surface because a wall is one; a crate is not, and a plane cut
@@ -33,9 +41,9 @@
 //! [`SimSurface::deep`] carries the body the reading is taken off.
 
 use bevy::prelude::*;
-use space_trucking::sim::Vec2 as SimVec2;
-use space_trucking::sim::layout::Rect as SimRect;
+use space_trucking::sim::layout::{self, Rect as SimRect};
 use space_trucking::sim::room::Surf;
+use space_trucking::sim::{Piece, Sim, Vec2 as SimVec2};
 
 use crate::pieces::Riding;
 use crate::room::InRoom;
@@ -227,7 +235,7 @@ pub struct SimSurface {
     /// quarter. Laid along the very half-axes the sim's footprint is
     /// built from (`cargo::Foot`), the point the aim lands on is the
     /// point the sim carries back into the piece's own frame, at any
-    /// angle — which cubby, and whether the amber handle.
+    /// angle — whether the amber handle, and where on the body.
     pub axes: Option<(SimVec2, SimVec2)>,
     /// **Half the depth of the body this face reads for**, along the
     /// normal, in world units. Zero says the face IS the thing: a wall's
@@ -338,7 +346,7 @@ impl SimSurface {
     /// The reading stays the quad's. Whatever face of the body the ray
     /// comes in by, where it lands is laid straight back onto the
     /// elevation the rig was drawn in — so a cabinet met on its flank at
-    /// the height of the third cubby reads the third cubby, which is
+    /// the height of its lower shelf reads its lower shelf, which is
     /// what a player aiming at it means. An entry exactly on a rim would
     /// read the very edge of the piece's own cells, where the sim has to
     /// pick a side, so it is drawn a hair in.
@@ -463,6 +471,11 @@ pub struct VirtualPointer {
     pub world: Option<Vec3>,
     /// The station struck, for views that care where attention rests.
     pub station: Option<Station>,
+    /// **The piece whose own face the ray struck**, if the surface it
+    /// landed on rides one ([`Riding`]): the nearest body along the one
+    /// ray (docs/BAY.md, "The nearest rule"). `None` on a chart, which
+    /// rides nothing — there the sim's point-pick order decides.
+    pub piece: Option<u32>,
     /// The struck quad itself. Handed over rather than looked up again:
     /// a station is no longer a unique surface — every standing piece
     /// carries a [`Station::Standing`] face — and a consumer that
@@ -490,10 +503,29 @@ impl Default for VirtualPointer {
             sim: crate::bridge::POINTER_PARKED,
             world: None,
             station: None,
+            piece: None,
             surface: None,
             ray: None,
             depth: f32::INFINITY,
         }
+    }
+}
+
+impl VirtualPointer {
+    /// **The piece the aim rests on**: the sim's own pick
+    /// (`layout::pick`) at this pointer, told which body the ray met
+    /// first ([`VirtualPointer::piece`]).
+    ///
+    /// The ONE resolution of "which piece": the hover glint, the outline,
+    /// the handle's routing (`rig::handle_route`) and the press the
+    /// frame sends (`InputFrame::aim`) all ask it, of the same pointer and
+    /// the same board, so none of them can light, route or lift a
+    /// different piece than another. Where pieces share ground, the face
+    /// the ray met first answers; on a chart, or with nothing struck, the
+    /// sim's point-pick order does.
+    #[must_use]
+    pub fn aimed<'a>(&self, sim: &'a Sim) -> Option<&'a Piece> {
+        layout::pick(sim.rooms(), sim.pieces(), self.sim, self.piece)
     }
 }
 
@@ -554,19 +586,20 @@ pub fn track_pointer(
             .map(|(station, surface, riding, in_room)| Aimable {
                 station: *station,
                 surface: *surface,
-                riding: riding.is_some(),
+                riding: riding.map(|riding| riding.0),
                 in_room: in_room.copied(),
             }),
     );
 }
 
 /// One mapped quad, as the pick sees it: what it answers as, where it
-/// is, whether it rides a piece, and (for a chart) whose room it is.
+/// is, which piece it rides if it rides one, and (for a chart) whose
+/// room it is.
 #[derive(Clone, Copy, Debug)]
 pub struct Aimable {
     pub station: Station,
     pub surface: SimSurface,
-    pub riding: bool,
+    pub riding: Option<u32>,
     pub in_room: Option<InRoom>,
 }
 
@@ -601,7 +634,7 @@ pub fn pick(
         //   panel work — the x-ray already ghosts whatever the focus
         //   flies through, and a ghost the cursor cannot reach through
         //   would be a wall with the paint stripped off.
-        if aim.riding && roam_only != station.roamable() {
+        if aim.riding.is_some() && roam_only != station.roamable() {
             continue;
         }
         if let Some((t, sim, world)) = surface.strike(ray)
@@ -631,6 +664,7 @@ pub fn pick(
                 sim,
                 world: Some(world),
                 station: Some(station),
+                piece: aim.riding,
                 surface: Some(surface),
                 ..VirtualPointer::default()
             };
@@ -658,8 +692,6 @@ fn chart_cell(chart: InRoom, sim: SimVec2) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use space_trucking::sim::layout;
-
     fn map_panel() -> SimSurface {
         SimSurface::panel(Vec3::new(0.0, 1.5, -1.0), 1.0, 0.84, 0.0, layout::MAP_PANEL)
     }

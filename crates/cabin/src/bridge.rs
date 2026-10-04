@@ -58,6 +58,11 @@ pub const POINTER_PARKED: Vec2 = Vec2::new(-1000.0, -1000.0);
 pub struct FrameInput {
     pub pointer: Vec2,
     pub press: bool,
+    /// **The piece the press means**, by id: the nearest body along the
+    /// crosshair's one ray, resolved by the pointer
+    /// (`surface::VirtualPointer::aimed`). Sent as `InputFrame::aim`; the
+    /// sim takes it only among the pieces the pointer is on.
+    pub aim: Option<u32>,
     pub held: bool,
     pub release: bool,
     pub shift: bool,
@@ -117,6 +122,7 @@ impl Default for FrameInput {
         Self {
             pointer: POINTER_PARKED,
             press: false,
+            aim: None,
             held: false,
             release: false,
             shift: false,
@@ -315,6 +321,10 @@ impl Bridge {
             // only thing the gates learn about where anybody is.
             occupied: input.occupied,
             facing: self.facing(),
+            // Which of the pieces under the pointer the press means, as
+            // the crosshair met them: the frontend's to know, consulted
+            // by the sim only in the press handler.
+            aim: input.aim,
             attach: None,
             // The detach gesture is the door's own amber latch, and it
             // rides the input schedule exactly like a pointer press: the
@@ -411,12 +421,10 @@ impl Bridge {
 
 /// **The turn a carry starts at**: the held piece's own — the turn it
 /// was lifted at, which the sim keeps as the carry's origin — or the
-/// upright frame for a piece lifted out of a cubby, and while nothing is
-/// held.
+/// upright frame while nothing is held.
 fn lifted_at(sim: &Sim) -> Turn {
     sim.held(0)
-        .and_then(|held| held.origin.spot())
-        .map_or(Turn::ZERO, |spot| spot.turn)
+        .map_or(Turn::ZERO, |held| held.origin.spot().turn)
 }
 
 /// **The carry, as the frontend keeps it**: which piece is in hand, the
@@ -576,6 +584,7 @@ mod tests {
         let frame = bridge.input_frame(&FrameInput {
             pointer: Vec2::new(4.0, 5.0),
             press: true,
+            aim: Some(7),
             held: true,
             release: false,
             shift: true,
@@ -591,6 +600,8 @@ mod tests {
             turning: Turning::default(),
         });
         assert!(frame.press && frame.held && !frame.release && frame.shift);
+        // The aim rides through untouched: the sim decides what it means.
+        assert_eq!(frame.aim, Some(7));
         // A menu edge folds into the pause toggle, exactly where the
         // console face's icon rect used to.
         assert!(frame.toggle_pause);
@@ -1068,6 +1079,7 @@ mod tests {
         let quiet = FrameInput {
             pointer: POINTER_PARKED,
             press: false,
+            aim: None,
             held: false,
             release: false,
             shift: false,
@@ -1199,12 +1211,12 @@ mod tests {
             .pieces()
             .iter()
             .find(|piece| {
-                piece.loc.spot().is_some_and(|spot| spot.room == CABIN)
+                piece.loc.room() == CABIN
                     && Foot::at(sim.rooms(), piece)
                         .is_some_and(|(_, foot)| foot.chart(host) == Some(Surf::Floor))
             })
             .expect("the starting board stands something on the deck");
-        let rect = layout::piece_rect(sim.rooms(), sim.pieces(), &piece);
+        let rect = layout::piece_rect(sim.rooms(), &piece);
         let at = Vec2::new(rect.w.mul_add(0.5, rect.x), rect.h.mul_add(0.5, rect.y));
         bridge.frame(
             0.0,
@@ -1299,7 +1311,7 @@ mod tests {
             .pieces()
             .iter()
             .find(|piece| piece.id == id)
-            .and_then(|piece| piece.loc.spot())
+            .map(|piece| piece.loc.spot())
             .expect("on the deck");
         assert_eq!(
             landed.turn, back,

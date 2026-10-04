@@ -4,7 +4,7 @@
 //! the whole desk-scale counter are gone (docs/ROOMS.md, "The decision").
 //! What is here is *economy*, not interface, and it keeps working
 //! unchanged behind the new flow: [`VALUE`], the per-visit ±1 jitter, the
-//! wants row, [`GNAW_MALUS`], the Umbra Market's gnaw premium, the
+//! wants row, the
 //! well-lit-art bonus, and the arithmetic a room does when it answers a
 //! proposal with goods.
 //!
@@ -15,7 +15,7 @@
 //! run RNG is spent only on cosmetic variant rolls.
 
 use super::cargo::{KIND_COUNT, Kind, Loc, Piece, Tag, lamp_lit};
-use super::map::{GUILD, HERMITAGE, POI_COUNT, PoiId, UMBRA};
+use super::map::{GUILD, HERMITAGE, POI_COUNT, PoiId};
 use super::room::{RoomId, Rooms, Tile};
 use super::splitmix;
 
@@ -218,19 +218,6 @@ pub(crate) fn stock_kinds(
 /// *sound* scales with what was given.
 const GIFT_WARMTH: f32 = 8.0;
 
-/// What a rat's bite knocks off a piece's value, floored at zero. The gnaw
-/// is permanent, so the discount follows the piece through the economy —
-/// on the offer area, on the room's own tiles, and back again.
-pub(crate) const GNAW_MALUS: u8 = 2;
-
-/// Whether `station` considers a rat's toothwork artisanal. The Umbra
-/// Market does: there, the malus flips into a premium of the same size,
-/// and a stowaway becomes a business partner.
-#[must_use]
-pub(crate) const fn gnaw_loved(station: PoiId) -> bool {
-    station == UMBRA
-}
-
 /// What lamplight adds to a well-lit painting's price.
 pub(crate) const LIT_BONUS: u8 = 1;
 
@@ -261,28 +248,17 @@ fn well_lit(rooms: &Rooms, piece: &Piece, pieces: &[Piece]) -> bool {
 }
 
 /// One piece's worth under this visit's table: its kind's jittered value,
-/// less [`GNAW_MALUS`] if a rat has been at it — or MORE by the same
-/// amount where the bite is loved (see [`gnaw_loved`]) — plus
-/// [`LIT_BONUS`] for a painting under lamplight. The single per-piece
-/// pricing rule; both sides of a deal read it, so a gnawed piece is
-/// cheaper to buy exactly as it is poorer to sell, and well-lit art is
-/// dearer to buy exactly as it is richer to sell.
+/// plus [`LIT_BONUS`] for a painting under lamplight. The single per-piece
+/// pricing rule; both sides of a deal read it, so well-lit art is dearer
+/// to buy exactly as it is richer to sell.
 #[must_use]
 pub(crate) fn piece_value(
     rooms: &Rooms,
     piece: &Piece,
     pieces: &[Piece],
     values: &[u8; KIND_COUNT],
-    gnaw_love: bool,
 ) -> u32 {
-    let value = values[piece.kind.index()];
-    let value = if !piece.gnawed {
-        u32::from(value)
-    } else if gnaw_love {
-        u32::from(value) + u32::from(GNAW_MALUS)
-    } else {
-        u32::from(value.saturating_sub(GNAW_MALUS))
-    };
+    let value = u32::from(values[piece.kind.index()]);
     if well_lit(rooms, piece, pieces) {
         value + u32::from(LIT_BONUS)
     } else {
@@ -392,7 +368,7 @@ pub fn tiles_of(rooms: &Rooms, room: RoomId, class: Tile) -> Vec<(u8, u8)> {
 mod tests {
     use super::*;
     use crate::sim::cargo::{anchored, fine, placement_check};
-    use crate::sim::map::SATURN;
+    use crate::sim::map::{SATURN, UMBRA};
     use crate::sim::room::{CABIN, RoomKind};
 
     /// Venus, whose produce is the perfume at kind index 0.
@@ -427,7 +403,6 @@ mod tests {
             id: 0,
             kind,
             variant: 0,
-            gnawed: false,
             loc,
         }
     }
@@ -591,42 +566,17 @@ mod tests {
             Kind::Painting,
             whole(&rooms, trade, Kind::Painting, offer.0, offer.1),
         );
-        assert_eq!(piece_value(&rooms, &art, &[art], &values, false), 3);
+        assert_eq!(piece_value(&rooms, &art, &[art], &values), 3);
         // A lamp lit aboard appraises the proposal one dearer.
         let lamp = piece(
             Kind::CeilingLamp,
             whole(&rooms, CABIN, Kind::CeilingLamp, 16, 4),
         );
-        assert_eq!(piece_value(&rooms, &art, &[art, lamp], &values, false), 4);
+        assert_eq!(piece_value(&rooms, &art, &[art, lamp], &values), 4);
         // Berthed aboard, the rule is literal adjacency instead: hung on
         // the far aft wall, the same lamp lights nothing.
         let hung = piece(Kind::Painting, whole(&rooms, CABIN, Kind::Painting, 5, 1));
-        assert_eq!(piece_value(&rooms, &hung, &[hung, lamp], &values, false), 3);
-    }
-
-    #[test]
-    fn a_gnawed_piece_prices_two_lower_with_a_floor_at_zero() {
-        let (rooms, _) = stall();
-        let mut values = [0_u8; KIND_COUNT];
-        values[Kind::BrinePearls.index()] = 5;
-        values[Kind::PerfumeVial.index()] = 1;
-        let at = whole(&rooms, CABIN, Kind::BrinePearls, 4, 4);
-        let fresh = piece(Kind::BrinePearls, at);
-        let bitten = Piece {
-            gnawed: true,
-            ..fresh
-        };
-        assert_eq!(piece_value(&rooms, &fresh, &[fresh], &values, false), 5);
-        assert_eq!(piece_value(&rooms, &bitten, &[bitten], &values, false), 3);
-        // The Umbra Market calls the bite artisanal and pays a premium.
-        assert_eq!(piece_value(&rooms, &bitten, &[bitten], &values, true), 7);
-        // The malus floors at zero rather than going negative.
-        let cheap = Piece {
-            kind: Kind::PerfumeVial,
-            gnawed: true,
-            ..fresh
-        };
-        assert_eq!(piece_value(&rooms, &cheap, &[cheap], &values, false), 0);
+        assert_eq!(piece_value(&rooms, &hung, &[hung, lamp], &values), 3);
     }
 
     #[test]

@@ -101,17 +101,11 @@ which is what the grid's rules always read.
 lamp's footprint (or a laid luminous coat's) in the same room is less
 than one cell away by Chebyshev gap and does not wholly contain it.
 **Corners count now**, because a lamp a sixteenth past a crate's corner
-is not darker than one a sixteenth past its edge. The rat still asks of
-one cell (`lit_adjacent`); everything else asks of a footprint
+is not darker than one a sixteenth past its edge. A footprint is asked
 (`lit_within_reach`).
 
 > Superseded in part by *Cargo turns*: "less than one cell away" is
 > Euclidean now.
-
-**The rat stays on its cells.** It is not cargo: it walks its lattice
-as before, perches on a cell any footprint touches, nibbles the piece
-whose footprint is nearest its cell (zero when the footprint touches
-it), and the crowding gate counts floor area in cells.
 
 **Placing a piece for the player.** Shift-press, the comet harvest, the
 ??? exchange, the hopper's banking and the save reader's rehoming all go
@@ -259,20 +253,6 @@ cabin shows and where the release lands are one answer:
   > body the game places itself (`cargo::default_turn`); a player's
   > drop keeps the turn it was carried at.
 
-The cabin's berth sweep (`every_kind_hangs_true_on_every_legal_berth`)
-and the gauntlet's berths take whole-cell anchors and the
-`cargo::FRACTIONS` sample on each axis. The sweep holds the ghost to
-the preview: aimed at the middle of a berth, the drop has to name that
-berth (or, within a quarter cell of a chart edge, the flush one the
-snap moves it to) with the verdict the arbiter gives, and the ghost has
-to be that berth's pose plus the lift. The gauntlet re-keyed its air
-from cells to footprints; docs/GAUNTLET.md says how.
-
-> Superseded in part by *Cargo turns*: the snap reaches an eighth of a
-> cell, and the ghost is asked at the berth's own turn. And by *Lift,
-> and the keys*: the ghost is that berth's pose and nothing added, and
-> the sweep asks it lifted to its cap as well.
-
 ## Cargo turns
 
 The owner's decisions (2026-10-04): "Any angle eventually; things will
@@ -350,13 +330,9 @@ shows the sheet the same side out, and so turning from a chart's +x
 toward its +y is counter-clockwise from inside the room on all six. The
 cabin's charts say the same in 3D: all six normals point out of the
 room. Everything that needs a footprint asks this function (`Foot::of`,
-and through it the arbiter, the drop, the light and the rat), and the
+and through it the arbiter, the drop and the light), and the
 cabin poses every body with its answer (`pieces::across_on`). A sim test
-pins the table against the net's own folds, and a cabin sweep
-(`every_chart_draws_the_turn_the_sim_lays_on_its_net`) holds the drawing
-to it: on every chart, at the quarters and at 1°, 15°, 45° and a seventh
-of a turn, the body a berth draws covers the footprint the sim lays,
-each axis with its sign, and nothing more.
+pins the table against the net's own folds.
 
 **The footprint** (`cargo::Foot`) is an oriented rectangle: a centre,
 half-extents from the planned size, and the net angle. Its two half-axis
@@ -408,9 +384,7 @@ order, same `Violation` names:
 - **Light**: a lit source lights a target less than one cell away,
   Euclidean, that it does not wholly contain. Corners count, as before.
 - **Which tile** a piece stands on is the tile under its centre, and a
-  refusing class refuses any covered cell, as before. The rat keeps to
-  its cells: it perches on a cell any footprint covers, and nibbles the
-  piece whose covered cells are nearest its own.
+  refusing class refuses any covered cell, as before.
 
 **Hit-testing happens in the piece's own frame.** `layout::piece_at`
 asks the oriented footprint, so the air beside a turned couch grabs
@@ -463,14 +437,7 @@ run*).
 **Sweeps.** `cargo::FRACTIONS` is `{0, 1, 127, 128, 255}` in the new
 unit — on the line, a unit past it, either side of the middle, a unit
 short of the next — and the sim's every-berth sweep crosses it with
-upright, a quarter turn, an eighth and a seventh. The cabin's sweeps
-share one turn sample (`pieces::TURNS`): the four quarters, 1°, 15°,
-45° and a seventh of a turn, each the `Turn` nearest. They ask every
-placement at the turn the game gives it and every whole-cell placement
-at every turn of the sample, on every chart — the product with the
-fractions as well would be eight times the sweep for nothing the grid
-does not already ask, since what a turn changes is the ground and the
-frame, and neither is any different a unit off the grid.
+upright, a quarter turn, an eighth and a seventh.
 
 **The cabin draws the sim's turn and nothing else.** Every rig is posed
 in its chart's upright frame turned by the piece's `Turn` about the
@@ -542,22 +509,12 @@ piece in hand:
   that crooked routes carry and focus a hair either side of its amber
   band's edges. A face used to read along the sheet's own two axes,
   which can say a quarter turn and nothing else.
-- **Windows and instruments needed nothing new**, and are pinned by
-  tests at odd angles: a pane hung a seventh of a turn round, sharing a
-  wall with a square one, reads its own crooked piece of the wall's one
-  sky (`viewport::sub_uv` is affine and carries the turn), and a chart
-  tank hung 15° off true is focused square on to its own glass, rolled
-  with it (`rig::focus_pose` reads the station the turned berth hangs).
-- **The sweeps ask the turns.** `pieces`' every-berth sweep holds every
-  body at every turn of the sample to its ground, its frame, its face,
-  its handle and its ghost. The gauntlet asks its berth families the
-  sample too, and cuts each cell's share of a berth's air from the
-  footprint itself — the box round the part of the footprint over that
-  cell — rather than from the box round the footprint. `berth-filled`
-  reads a turned ground to the two fine units its rounding leaves
-  (`TURNED_SLACK`), and `berth-turned` asks only the turns the game
-  gives a body itself: a window a player hangs upside down is turned the
-  way they turned it.
+- **Windows and instruments needed nothing new**: a pane hung a
+  seventh of a turn round, sharing a wall with a square one, reads its
+  own crooked piece of the wall's one sky (`viewport::sub_uv` is affine
+  and carries the turn), and a chart tank hung 15° off true is focused
+  square on to its own glass, rolled with it (`rig::focus_pose` reads
+  the station the turned berth hangs).
 
 ## Cargo stops colliding
 
@@ -628,10 +585,10 @@ much furniture as the couch and no more: `Loc::Stow`, `CABINET_SLOTS`, `stowable
 cubby sub-rects and the shrunken minis that rode in them, and the
 empty-it-first refusal are all gone. So is everything that *emerged*
 from a cubby being its own berth class (*The cabinet: furniture that
-stores*, below): nothing is rat-proof, no fluff is boxed out of
-breeding, no lamp is dark in a drawer, ??? counts every crate, and a
-trade sees whatever is set out. A vial set inside the wardrobe stands
-there at full size, in reach of the rat like any other.
+stores*, below): no fluff is boxed out of breeding, no lamp is dark in
+a drawer, ??? counts every crate, and a trade sees whatever is set out.
+A vial set inside the wardrobe stands there at full size like any
+other.
 
 **The game still places things tidily.** Nothing the arbiter allows is
 refused for want of elbow room, but what the GAME sets down itself —
@@ -702,17 +659,6 @@ doorstep.
 > another place. And by *Lift, and the keys*: `STV24`, `RPL8` and
 > `SNP7`, for the lift.
 
-**The gauntlet already judged the room.** Every berth family
-(`berth-clear`, `berth-seen`, `berth-reached`, and the rest of
-docs/GAUNTLET.md's) asks which berths exist of the arbiter on an EMPTY
-board, so a station's furniture is judged against what the player may
-place there, and cargo sharing air with cargo is no finding, by design.
-What changed is the loaded board the findings name their culprits on:
-the arbiter alone would now stand a piece on every cell of every room,
-so the load sets cargo out the way the game does, clear of what it
-already stood (`gauntlet::load`), and it is the board it always was. The
-docket stays empty.
-
 ## Lift, and the keys
 
 The owner, after a playtest: "Q + Shift Q feel weird, maybe Q + E
@@ -749,14 +695,12 @@ marked "Superseded by *Lift, and the keys*".
   as it goes has its top at the deckhead; a vial goes three courses up;
   a pendant lowered all the way stands on the deck; a painting carried
   out from the cabin's aft wall stops a cell short of the front one. The
-  drop holds a carry to it, a save refuses a berth past it, the frontend
-  asks it, and a gauntlet test holds the sim's cells to the cabin's
-  metres in every room
-  (`gauntlet::tests::every_berth_is_asked_lifted_and_its_cap_stops_inside_the_room`).
+  drop holds a carry to it, a save refuses a berth past it, and the
+  frontend asks it.
 - **A taste coordinate.** The sim stores it, saves it and sends it, and
   no rule reads it. The arbiter is asked about the plane (`Loc::spot`
-  carries no lift), so light reach, volatile spacing, the rat's walk and
-  every tile class read the ground under the body: a lamp raised off
+  carries no lift), so light reach, volatile spacing and every tile
+  class read the ground under the body: a lamp raised off
   the deck lights what is around it in plan, as it did standing there,
   and two canisters keep their half cell of air in plan at whatever
   heights they stand (`sim::tests::no_rule_reads_a_lift`).
@@ -790,6 +734,10 @@ marked "Superseded by *Lift, and the keys*".
   starts a new run*). The fixture board gained a nought on every `hold`
   line and nothing else.
 
+  > Superseded: saves are `STV25`. The rat stowaway and the ad drone
+  > were cut from the prototype, and their `rat` and `drone` lines and
+  > each piece's gnaw token went with them.
+
 ### The ghost is true size
 
 The ghost stood a tenth large and lifted 5 cm off its berth
@@ -820,23 +768,8 @@ lands, still floats off it a shade large.
   its slash and the refusal flash are laid at their rungs of the decal
   ladder off the berth's own plane — the chart's, carried out by the
   berth's lift (`pieces::Ground::off`). So they stand in the same place
-  against the ghost's faces at every lift, and the coplanar detector the
-  gauntlet judges every room with finds no plane a ghost shares with its
-  patch or its slash, in any body any kind draws, on any chart it may
-  take — nor with its own surface at any fine unit of lift the room has
-  for it (`gauntlet::tests::no_ghost_fights_its_patch_or_its_surface`).
-  A raised piece's patch lies at its own height, under it.
-- **The sweeps ask it.** The cabin's every-berth sweep asks the drop at
-  a lift past any room's and holds it to the cap, on the same ground,
-  with the ghost there the berth's own pose carried that far along the
-  normal and nowhere else; an App-driven test holds the lifted ghost,
-  its scale and its riding patch to the berth the release lands on. The
-  gauntlet asks `berth-reached` of every berth lifted to its kind's cap,
-  and `berth-filled` and `berth-turned` of every whole-cell berth lifted
-  to its cap, on deck, wall and deckhead; the docket stays empty.
-  `berth-clear` and `berth-seen` stay on the ground: what a room hangs in
-  the air above its deck is no more a clip with a lifted crate than one
-  crate is with another (*Cargo stops colliding*).
+  against the ghost's faces at every lift. A raised piece's patch lies
+  at its own height, under it.
 
 ### The keys
 
@@ -874,9 +807,7 @@ lands, still floats off it a shade large.
   its `KeyCode`. The wheel's gestures are not in it: they are a wheel
   and two modifiers, and this pass rebinds keys.
 - `R` stays nobody's, `F` is warp, `Space` pause, `M` mute, `W` `A` `S`
-  `D` walk; the nudge bench's keys are its own (`--nudge`), and its
-  clash test reads the table's defaults and asks the page's gate of
-  every bench key.
+  `D` walk.
 
 ### The keys page
 
@@ -905,9 +836,6 @@ sits sunk to the socket while there is nothing to put back.
   - the game's own: `Esc`; `W` `A` `S` `D`; `Space`, `F` and `M`, live in
     every mode; `Shift` and `Ctrl`, read with the wheel and the click;
     `Alt` and `Super`, the system's;
-  - the nudge bench's: the arrows, the brackets, `T`, `R`, `G`, `Tab`,
-    `Enter` and `Backspace`, in every build, because the bindings are
-    kept in a file every build reads;
   - and any key the page has no name for — it prints a key by name, from
     a closed list of short plain names its font has.
 - **Kept beside the save**: `cabin.keys` in the working directory, next
@@ -1060,11 +988,11 @@ cabin's aft half, like opening a cardboard box:
   rule already points.
 
 The sim is untouched by any of this: cells, footprints, the placement
-ladder, the rat's hops, lamp adjacency — all keep their grid meaning.
+ladder, lamp adjacency — all keep their grid meaning.
 
 > Superseded by *The grid comes out* (above): a footprint now stands
 > anywhere a sixteenth of a cell can name, and lamplight reaches a cell
-> every way, corners included. The rat's hops keep their grid meaning.
+> every way, corners included.
 The fold is presentation, expressed as two `SimSurface`s (the wall band
 and the deck strip) that map into the same `layout` grid rect the desk
 rack used to.
@@ -1142,8 +1070,6 @@ below; the cubby you look at is the cubby you get.
 Everything below **emerges** from `Loc::Stow` being its own berth class
 rather than a hold cell — none of it is special-cased:
 
-- **Rat-proof**: the rat schedules against hold cells, so cubby cargo
-  can never be nibbled. Storage furniture is vermin insurance.
 - **Fluff containment**: only hold fluffs breed. Boxed fluff is
   inventory, not a population.
 - **Lamps go dark inside** (`lamp_lit` requires the hold), and a
@@ -1199,7 +1125,7 @@ Three kinds carry the slice, appended as indices 22..=24:
 
 | Kind | Cells | Covers | Story |
 | --- | --- | --- | --- |
-| `Rug` | 2×1 | deck cells only | somebody's heirloom, gnawably soft |
+| `Rug` | 2×1 | deck cells only | somebody's heirloom, soft underfoot |
 | `PaintTin` | 1×1 | any one cell | ship enamel, color by the tin's roll |
 | `LuminousPaint` | 1×1 | any one cell | glows; the Umbra Market sells it snuffed, in blackout tins |
 
@@ -1213,23 +1139,18 @@ standing cargo nor lift one out from under it. Painting behind the
 sconce means moving the sconce; that shuffle *is* the interior-design
 game.
 
-Two mechanics ride along:
+One mechanic rides along:
 
 - **Luminous coats join the light economy.** A laid `LuminousPaint`
   footprint lights its orthogonal neighbours through the same
   `lit_adjacent` read lamps use (superseded by *The grid comes out*:
   everything within a cell, corners included, through
-  `lit_within_reach`): the rat fears glow-painted corners,
-  seedlings bloom beside them, a hold painting catches their
-  spotlight. The pad-side well-lit-art price bonus stays lamp-only —
+  `lit_within_reach`): seedlings bloom beside them, and a hold
+  painting catches their spotlight. The pad-side well-lit-art price bonus stays lamp-only —
   a coat is ambiance, not gallery lighting — and the omen dims coats
   like everything else. The Umbra Market prices luminous paint at
   zero, files it under local produce, and shelves it cheap: light
   remains a rival product.
-- **Rugs are gnawable.** The rat's nibble reaches laid rugs exactly
-  as it reaches hold cargo; a gnawed rug keeps its notch and its
-  discount forever. Vermin control (lamps, glow paint, a couch to nap
-  on) is now genuinely part of decorating.
 
 The house refuses wagers on coverings — the casino badge simply does
 not take carpets — because a transmuted chip could not legally stay
@@ -1334,8 +1255,7 @@ took a rule rather than a pass of the eye. A glyph's height is a drawing
 on a flat console; given depth and a deck it becomes a standing pose,
 and for two thirds of the kinds that pose was wrong — so twenty of them
 stood between one and fifteen centimetres above their own deck cells
-with nothing under them, which nothing could see until the gauntlet grew
-a family for it (`rig-seated`, docs/GAUNTLET.md).
+with nothing under them.
 
 The rule is **a flat kind lies on a deck; it does not stand on one.**
 Settling all twenty downward cures the arithmetic and makes two of the
@@ -1654,9 +1574,7 @@ is what answers.
 Every one of the thirty-two kinds had a face wider or taller than its
 body, from the rug at 98% × 96% of its cells to the bottled midnight at
 48% × 48%, and the wall sconce's sat a third of a cell off centre as
-well. The gauntlet's `face-fits` family holds the other side of it: a
-body that reached OUTSIDE its cells would be paint the aim cannot
-follow, since the face has to stop at the cell edge.
+well.
 
 The sim never hears about any of it: the pointer it receives is still a
 point in its own rect space. Which surface produced that point is the
@@ -1695,17 +1613,6 @@ chart's y still lies the chart's, which is exactly how the tank's amber
 handle band came to sit a quarter turn off the bar drawn from those
 very numbers, and how the front wall's launch handle came to route its
 carry along the band above its own grab.
-
-What keeps it closed is a sweep rather than a case. Every kind, at
-every berth the sim's own arbiter allows, must hang its body ON its own
-cells, read up-is-up wherever the footprint can afford the turn, hand
-the carried ghost exactly the berth's own rotation (preview and berth
-share one derivation, and the test pins them so no refactor can split
-them again), and — where the kind wears amber — route every texel of
-the grab it DRAWS as a carry, with the body around it still answering
-for the instrument. Every defect in this class held on the wall it was
-written against and nowhere else, so only a table sweep can say "on
-every wall" and mean it.
 
 ### A footprint is stated in the wall's own frame
 
@@ -1774,18 +1681,7 @@ with the other exact to the last bit, which is why the report was always
 "half-way between cells on ONE axis". The bodies drawn inside that band
 stood 0.117 m to 0.250 m off, kind by kind. `pieces::site_on` draws a deck or deckhead berth
 back onto its cells now (`pieces::rig_mid`), and the carried ghost
-promises the whole offset rather than the height alone. The harness
-grew a family for it, because eleven of them had only ever asked
-whether a body stayed INSIDE something (`berth-filled`, GAUNTLET.md).
-
-The sweep learned the same sentence. It used to assert the crooked
-ruling — up on the aft and front charts, sideways on the flanks — which
-is a test restating the branch it is testing, and it passed on every
-one of its two thousand berths while the window turned its corner. It
-asks the player's question now: **a hung body reads up-is-up on every
-wall it may take**, and **a berth owns the ground its body stands on
-and not a cell more**, with the fold direction read off the net itself
-rather than off the arbiter's own table.
+promises the whole offset rather than the height alone.
 
 ### Occlusion: a defect class, named
 
@@ -1800,9 +1696,7 @@ for camera reasons:
 - **Placed cargo can block a focus pose** (legal cargo between the
   fitted camera and its panel). Anything intersecting the camera→panel
   sightline while focused gets **x-ray treatment**: the occluder drops
-  to a translucent outline until the pose releases. The static
-  sightline tests keep proving the *architecture* never blocks a
-  panel; x-ray covers what mobile cargo does at runtime.
+  to a translucent outline until the pose releases.
 
 ### Consequences accepted
 

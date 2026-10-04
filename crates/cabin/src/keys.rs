@@ -69,8 +69,7 @@ impl Action {
     /// owner asked; `E` is focus too, and which one it is depends on the
     /// hand: focus wants an empty one (`rig::steer`). `X` and `Z` for the
     /// lift, on the row under the walk where the same hand already is, `X`
-    /// up and `Z` down. None is a key the game or the bench answers, and
-    /// `R` stays nobody's.
+    /// up and `Z` down. None is a key the game answers.
     #[must_use]
     pub const fn default_key(self) -> KeyCode {
         match self {
@@ -110,8 +109,6 @@ pub enum Refused {
     /// The game answers it already: `Esc`, the walk, a toggle, a
     /// modifier the carry or the click reads, or the system's own.
     Game,
-    /// The placement bench answers it, under `--nudge`.
-    Bench,
     /// The page has no name to print on its keycap.
     Unnamed,
 }
@@ -147,22 +144,11 @@ const GAME: [KeyCode; 16] = [
 ];
 
 /// **Whether `key` may be bound, and why not.** The game's own keys
-/// first, then the bench's, then whether the page can name it.
-///
-/// **The bench's keys are refused in every build**, not only under
-/// `--nudge`. The bindings are kept in a file every build reads, so a key
-/// bound in a played session is bound in the bench's session too, and the
-/// bench's own test (`nudge::tests::the_benchs_keys_are_the_benchs_alone`)
-/// can promise the bench its keys only if no binding can ever take them.
-/// That costs the arrows, the brackets, `T`, `R`, `G`, `Tab`, `Enter` and
-/// `Backspace`, and keeps `R` — which once threw a run away — nobody's
-/// (`docs/DESIGN_REVIEW.md`).
+/// first, then whether the page can name it.
 #[must_use]
 pub fn refusal(key: KeyCode) -> Option<Refused> {
     if GAME.contains(&key) {
         Some(Refused::Game)
-    } else if crate::nudge::bench_keys().contains(&key) {
-        Some(Refused::Bench)
     } else if name(key).is_none() {
         Some(Refused::Unnamed)
     } else {
@@ -375,7 +361,7 @@ impl Bindings {
     }
 
     /// **Whether `action`'s key went down this frame.** An edge: one press
-    /// is one step, as the nudge bench's are, because a held key at sixty
+    /// is one step, because a held key at sixty
     /// steps a second is a key no hand can stop where it wanted.
     #[must_use]
     pub fn pressed(&self, keys: &ButtonInput<KeyCode>, action: Action) -> bool {
@@ -489,7 +475,7 @@ mod tests {
         assert!(bindings.defaults());
     }
 
-    /// **The game's keys and the bench's are refused, and so is a key
+    /// **The game's keys are refused, and so is a key
     /// the page cannot name**, and a refusal leaves the table as it was.
     #[test]
     fn a_reserved_key_is_refused() {
@@ -499,9 +485,6 @@ mod tests {
             (KeyCode::KeyW, Refused::Game),
             (KeyCode::Space, Refused::Game),
             (KeyCode::ShiftLeft, Refused::Game),
-            (KeyCode::KeyR, Refused::Bench),
-            (KeyCode::ArrowUp, Refused::Bench),
-            (KeyCode::Tab, Refused::Bench),
             (KeyCode::CapsLock, Refused::Unnamed),
         ] {
             assert_eq!(bindings.bind(Action::Lower, key), Err(why), "{key:?}");
@@ -515,10 +498,7 @@ mod tests {
     #[test]
     fn every_named_key_is_bindable_and_plain() {
         for &(key, token, name) in NAMED {
-            assert!(
-                !GAME.contains(&key) && !crate::nudge::bench_keys().contains(&key),
-                "{token} is named and reserved"
-            );
+            assert!(!GAME.contains(&key), "{token} is named and reserved");
             assert!(
                 !name.is_empty() && name.len() <= 4 && name.is_ascii(),
                 "{token}'s keycap reads {name:?}"

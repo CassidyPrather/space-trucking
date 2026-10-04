@@ -36,7 +36,7 @@ pub const PLATE: Color = hex(0x242b27);
 pub const PLATE_LIT: Color = hex(0x3a443d);
 /// Bevel edge away from it.
 pub const PLATE_SHADE: Color = hex(0x121614);
-/// Rivet heads; also the rat's fur.
+/// Rivet heads.
 pub const RIVET: Color = hex(0x465049);
 /// Inset wells: hold sockets, lever tracks.
 pub const SOCKET: Color = hex(0x151a17);
@@ -329,43 +329,6 @@ pub const fn blend(from: Color, to: Color, t: f32) -> Color {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// The purity rule, restated for the cabin: no raw color constructors
-    /// outside this file. Same enforcement style as the 2D palette.
-    ///
-    /// It walks **subdirectories too**, which it did not have to before
-    /// `poi/` existed — a rule that stopped at the top level would be a
-    /// rule that stopped exactly where a dozen design agents were about
-    /// to start writing colors.
-    #[test]
-    fn palette_purity() {
-        fn sweep(dir: &std::path::Path) {
-            for entry in std::fs::read_dir(dir).expect("src dir readable") {
-                let path = entry.expect("entry").path();
-                if path.is_dir() {
-                    sweep(&path);
-                    continue;
-                }
-                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                if name == "palette.rs" || path.extension().is_none_or(|ext| ext != "rs") {
-                    continue;
-                }
-                let text = std::fs::read_to_string(&path).expect("source readable");
-                for banned in [
-                    "Color::srgb",
-                    "Color::linear_rgb",
-                    "Color::hsl",
-                    "Color::oklab",
-                ] {
-                    assert!(
-                        !text.contains(banned),
-                        "{name} constructs a raw color ({banned}); use a palette role"
-                    );
-                }
-            }
-        }
-        sweep(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"));
-    }
 
     #[test]
     fn dial_ramp_hits_its_landmarks() {

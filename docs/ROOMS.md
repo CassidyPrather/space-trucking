@@ -59,9 +59,8 @@ Rejected alternatives, for the record:
 What survives the demolition is stated once, as a law:
 
 > **The economy survives its interface.** `barter::VALUE`, the per-visit
-> ±1 jitter, the wants row, the `familiar` masks, `deal_value`,
-> `GNAW_MALUS`, the Umbra Market's gnaw premium, the well-lit-art
-> bonus, and the Hermitage's karma are *economy*, not *interface*. They
+> ±1 jitter, the wants row, the `familiar` masks, `deal_value`, the
+> well-lit-art bonus, and the Hermitage's karma are *economy*, not *interface*. They
 > keep working, unchanged, behind the new flow. Only what the player
 > touched with a mouse dies.
 
@@ -235,9 +234,7 @@ topological one.
   each other. The measure is **Chebyshev** — a corner is an adjacency
   too, and two rooms touching at one would have their corner posts in
   the same cube. Every room's hull is its interior grown by one wall,
-  and a cell is wider than two walls, so **no two hulls can meet**
-  (`room::tests::no_two_rooms_hulls_ever_share_a_cubic_centimetre`,
-  which fails by exactly 0.20 m with the pad taken out).
+  and a cell is wider than two walls, so **no two hulls can meet**.
 
   The pad is a **lattice** quantity, declared in the sim beside the
   ports it constrains, because it is the thing that makes overlap
@@ -339,8 +336,7 @@ restates it:
   `CEIL_Y` is `WALL_H`: the deckhead stands on the walls. A storey is
   still the room plus the pad, five cells. Every wall chart is `COURSES`
   deep, so the deckhead meets the starboard wall at its cornice and every
-  fold of the net is watertight in the room as well as on the sheet
-  (`rig::tests::chart_seams_are_watertight`).
+  fold of the net is watertight in the room as well as on the sheet.
 
 **Nothing hung on a wall moved, because a height is stated in courses
 and a course is counted from the deck.** The net's own rows are counted
@@ -391,8 +387,8 @@ own columns too, and the entry-path law hands back the door's lane
 from the deck to the deckhead, as it always did.
 
 **What the band was holding.** Nothing could berth in it, so four
-stations had furniture there, and it is berth now: the gauntlet found
-five fittings standing in the top course's sight or air, and each moved
+stations had furniture there, and it is berth now: five fittings stood
+in the top course's sight or air, and each moved
 rather than the rule. The comet's second lump of crust and the
 Hermitage's port boss hang a pace forward of the stocked wall's top
 course, and Jupiter's aft manifold collar stands forward of its riser,
@@ -401,14 +397,10 @@ shelved there. The parlor's cove light runs round all four walls as it
 always did, but as a line laid flat on the wall — no deeper than the
 hair between a wall and a hung rig's own back (`poi::parlor::NEON_DEEP`)
 — because a bead 66 mm proud ran straight through the air of every
-painting hung on the chalked front wall. The docket stays empty.
+painting hung on the chalked front wall.
 
 **What the owner hangs there.** Every wall of every kind takes a
-painting and a window with its top edge at the deckhead
-(`cabin::room::tests::a_painting_and_a_window_hang_against_the_deckhead_on_every_wall`),
-and the gauntlet sweeps the new course like any other: every berth is
-workable from the walk envelope, seen, and clear of the room's own
-furniture. A stocked wall is the room's shelf all the way up, so the
+painting and a window with its top edge at the deckhead. A stocked wall is the room's shelf all the way up, so the
 player's own painting is refused there by the stock law, on every
 course alike.
 
@@ -434,7 +426,8 @@ tape starts a new run*).
 
 > Superseded by docs/BAY.md, *Lift, and the keys*: saves are `STV24`,
 > tapes `RPL8`, and the wire `SNP7`, because a standing berth carries
-> its lift and every frame the carry's.
+> its lift and every frame the carry's. (Saves are `STV25` since the
+> rats and the ad drone were cut.)
 
 ## Closure: what happens where two rooms touch
 
@@ -830,14 +823,12 @@ never come apart. Four clauses, each doing work:
    was always going to have to say about a station's whole deck rather
    than about its offer area alone. `Sim::detained_cargo` derives the
    pieces holding it from the very predicate the gate refuses on.
-4. **A fitting standing in a staging cell is not a defect.** The
-   geometry sweep's `berth-clear` and `berth-seen` ask about the berths
-   cargo *stays* in and about the trade surface, and they ask nothing
-   about staging. A crate set down inside a station's bollard is the
-   clipping incident the owner said not to care about.
+4. **A fitting standing in a staging cell is not a defect.** A crate
+   set down inside a station's bollard is the clipping incident the
+   owner said not to care about.
 
-What the law does **not** relax is `berth-reached`, which still holds
-over every berth in the game, staging included. A clip is a clipping
+What the law does **not** relax is reach: every berth in the game,
+staging included, must stay workable. A clip is a clipping
 incident; a berth no body can work is a soft-lock — a crate set down
 behind a bollard would hold the launch forever — and it is also the
 refusal's own legibility, because the amber frame that says *this is what
@@ -1002,8 +993,7 @@ The doorstep law is an instance; this is the question it is an instance
 of, and it is stated as reachability so that the next room kind answers
 it without anybody remembering to check. It is swept over every room kind
 × every declared door
-(`a_rooms_own_goods_do_not_stand_between_its_door_and_its_deck`) and
-reported by the gauntlet as `deck-reached`.
+(`a_rooms_own_goods_do_not_stand_between_its_door_and_its_deck`).
 
 Which classes count is one declaration, `Tile::takes_your_cargo`, read by
 the arbiter that refuses a drop and by the walk alike — the room's own
@@ -1069,8 +1059,8 @@ below is what they differentiate *from*.
    painting hung flat on its wall covered its own mark exactly.
 4. **The room answers with an offer.** Core slice: the existing
    deterministic economy does the arithmetic — the station's `VALUE`
-   row, jittered ±1 for this visit, its wants row, the gnaw malus and
-   the Umbra Market's premium, the well-lit-art bonus. The room
+   row, jittered ±1 for this visit, its wants row, the well-lit-art
+   bonus. The room
    composes the best pile of its own stock the proposed value covers,
    preferring marked kinds, ties broken deterministically, and **places
    those pieces on its offer area**. The offer is not a number and not a
@@ -1159,9 +1149,8 @@ something knocking is good.
 
 The derelict has a hold, the gas station has a pump bay, the casino has
 a parlor with no visible doors, the whale has *something* — those
-attach. The omen, the meteor shower, the rats, and the ad drone are
-weather and stay exactly what they are: schedules hashed off the seed,
-with cues.
+attach. The omen and the meteor shower are weather and stay exactly what
+they are: schedules hashed off the seed, with cues.
 
 Two rules on event rooms:
 
@@ -1378,7 +1367,7 @@ Each stage lands green or not at all, in the project's usual way.
    like treasure — and, since the window became a family, cutting the
    bay pane out of that ring, because somebody else's hull is the only
    place four flawless cells of glass were coming from — the Umbra
-   Market paying a premium for rat-gnawed goods, pricing light at zero,
+   Market pricing light at zero,
    and fencing seized portholes beside the seized lamps for the same
    reason, the Hermitage remembering gifts forever and showing one lit
    window, the comet's free ice, and whatever ??? is doing with three

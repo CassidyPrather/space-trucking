@@ -86,12 +86,12 @@ pub fn set_fitting(material: &mut StandardMaterial, level: f32) {
 /// How much of a bought shade's own colour is left over what is behind
 /// it. The packs that model a shade put the bulb inside it, so an
 /// opaque shade over a lit bulb is a lamp that reads dark.
-#[cfg_attr(not(feature = "art"), allow(dead_code))] // only a bought shade is glazed
+#[cfg_attr(feature = "whitebox", allow(dead_code))] // only a bought shade is glazed
 const GLAZE_ALPHA: f32 = 0.45;
 
 /// Draw a bought lamp's shade as glass: see-through, its atlas colour
 /// kept as a tint, and a shade's gloss rather than a housing's matte.
-#[cfg_attr(not(feature = "art"), allow(dead_code))] // only a bought shade is glazed
+#[cfg_attr(feature = "whitebox", allow(dead_code))] // only a bought shade is glazed
 pub fn glaze(material: &mut StandardMaterial) {
     material.alpha_mode = AlphaMode::Blend;
     material.base_color = material.base_color.with_alpha(GLAZE_ALPHA);

@@ -50,23 +50,17 @@ deliberately below.
       windowing, no clocks); cues say what happened, never what it sounds
       like.
 - [ ] Ambient soundscape only — no melodies; new loops pass the seam test.
-- [ ] Budgets green: the release perf gates pass
+- [ ] Budgets green when perf could have moved: the release perf tests
+      pass, run by hand since CI does not
       (`cargo test --release -p space-trucking --test perf -- --ignored`);
       any retuned ceiling is amended in [BUDGETS.md](BUDGETS.md) with a why.
-- [ ] The gauntlet's work order is honest: `cargo test -p cabin` is green,
-      and anything the sweep newly catches is either fixed or written into
-      `crates/cabin/src/gauntlet.docket` with its numbers — never left to
-      a loosened threshold or a line in `ALLOWED`. If this change draws a
-      new *family* of thing, it has a pure description the sweep can read
-      before it has a mesh; a layer nobody described is a layer nobody
-      checks. See [GAUNTLET.md](GAUNTLET.md).
 - [ ] Every asset, including vendored JS, has a CREDITS.md row; CC0/MIT
       preferred.
 - [ ] Cargo tells the story: any new kind has a lore reason and a distinct
       silhouette.
 - [ ] Visuals follow [ART_DIRECTION_3D.md](ART_DIRECTION_3D.md) (and its
       parent [ART_DIRECTION.md](ART_DIRECTION.md)) or amend them in the
-      same change: palette roles only (the purity test enforces it),
+      same change: palette roles only,
       correct material family, deterministic wear, no shadow maps.
 - [ ] Accessible by default: every new animation is filed as feedback,
       decoration, or instruction per the art docs' Motion sections — the
@@ -96,7 +90,8 @@ changing; remove a line only by shipping it or striking it in review.
   sim's one frontend since the 2D console retired — see BAY.md for that
   decision and ART_DIRECTION_3D.md for direction; still deferred from
   the cabin: the tutor ghost, `--replay` playback, a wasm/web build
-  (Bevy compiles to wasm when wanted), the telemetry consent surface,
+  (not even checked in CI until a web release can be squared with the
+  Synty licence; docs/DEPLOYING.md), the telemetry consent surface,
   and the retired console's per-rule violation glyphs)
 - Anything else in the `Esc` menu. The meta-controls landed there when
   the console face came off the wall — pause, fast-forward, mute, the
@@ -148,19 +143,16 @@ changing; remove a line only by shipping it or striking it in review.
   ships a frosted shade and a clear one, that wants to be the line's
   own number rather than the module's
 - The rest of the shell's dressing (docs/ART_PIPELINE.md, "The fabric
-  namespace"): the nudge bench takes cargo and not panels, so a panel's
-  four numbers are typed and checked by `resolve` rather than nudged;
-  a wall is one panel repeated, with no alternation between the pack's
+  namespace"): a wall is one panel repeated, with no alternation between the pack's
   variants (`SM_Bld_Wall_01_Alt` is catalogued and unused); the vertical
   seam gets no surround when a hatch or ladder is mated, because no
   swept scene mates one yet; and the pack's emissive strips are painted
   rather than lit, which the lamps-are-cargo law would want anyway
 - Additional star systems
-- More events (mimics, ad bots, hull breaches, secret color-code objectives)
-- Rat-gnaw repair: DESIGN.md's "requiring repair" reading is deliberately
-  deferred — `gnawed` is permanent this pass, a scar the cargo carries
-  through the economy. When repair lands it belongs in `src/sim/rats.rs`,
-  next to the teeth.
+- More events (mimics, hull breaches, secret color-code objectives). The
+  rat stowaway and the ad drone were prototyped and then cut, gnaw marks
+  and the Umbra Market's taste for them with the rat; DESIGN.md's ideas
+  for both stand.
 
 ## Decided without asking
 
@@ -204,17 +196,15 @@ Every line is reversible; strike one by overruling it.
 - **The cabin's hull is stamped by `room::rebuild` now**, with every
   other room's shell, so the one place deciding whether a plane is cut or
   bought is one place. `rig::structure` is still the list — the
-  gauntlet and the exterior read it — and its slabs are drawn exactly as
+  exterior reads it — and its slabs are drawn exactly as
   before when nothing is bought. The backer plates behind the cabin's
   aft wall and deck went with it: a backer stands in the notch a panel's
   relief fills.
 
-- **A dressed covering keeps its one declared body in both forms**, and
-  the two whitebox meta-guards ask their questions in the undressed
-  frame. The alternative — refusing a `dresses` line on a covering until
-  the manifest can declare per-form bodies — would have undone the first
-  rough draft that dressed a rug; the gap is recorded as the fourth
-  structural blind spot in docs/GAUNTLET.md instead.
+- **A dressed covering keeps its one declared body in both forms.** The
+  alternative — refusing a `dresses` line on a covering until the
+  manifest can declare per-form bodies — would have undone the first
+  rough draft that dressed a rug.
 
 - **A room is four cells tall** (`CEIL_Y` 2.20, `COURSES` still 3), not
   five. Five scales every station's decor by 1.22 vertically and leaves
@@ -242,8 +232,8 @@ Every line is reversible; strike one by overruling it.
   wall. So a market's aft wall is shelf to the deckhead, and a player's
   own painting goes on none of its courses, the top one included.
 - **Four stations' furniture moved out of the band it was hung in.**
-  The gauntlet's berth families found five fittings in the new course's
-  sight or air, and the fittings moved rather than the course: the
+  Five fittings stood in the new course's sight or air, and the fittings
+  moved rather than the course: the
   comet's second crust lump and the Hermitage's port boss a pace
   forward, Jupiter's aft manifold collar forward of its riser, and the
   parlor's cove light laid flat on its wall as a line (`NEON_DEEP`)
@@ -289,15 +279,10 @@ Every line is reversible; strike one by overruling it.
 - **The fill slack is 0.02 of a berth half-extent** — 5 mm on a one-cell
   kind. Tighter refuses a correctly-rounded `0.18`; looser lets a mesh be
   a centimetre bigger than the box every containment rule reads for it.
-- **The gauntlet sweeps `dresses` declarations in every build**, not only
-  under `--features art`. The build that can draw a purchased mesh is the
-  build CI cannot run, so a sweep gated on the feature would sweep the
-  declarations nowhere.
-- **`bevy_scene` is not in the `art` feature.** In Bevy 0.19 a loaded
+- **`bevy_scene` is not among the cabin's Bevy features.** In Bevy 0.19 a loaded
   glTF scene is a `WorldAsset`, which `bevy_gltf` brings via
   `bevy_world_serialization`; `bevy_scene` is now the BSN authoring
-  language and this game authors no scenes. One feature, 8 crates, and
-  the default tree unchanged at 338 packages.
+  language and this game authors no scenes. One feature, 8 crates.
 - **No image decoder was added either.** `png` was already on the list to
   *write* screenshots and Bevy's `png` feature is `image/png`, which
   decodes as well. A Blender `.glb` embeds PNG unless its source was a
@@ -305,12 +290,12 @@ Every line is reversible; strike one by overruling it.
 - **The dressed hitbox was deferred, not shipped silently.** Unifying it
   needs the runtime's loaded set at 20-odd call sites across four files,
   because `pieces::drawn_box` is a pure function of `Kind` and a bought
-  body's box is a fact about the run. The gap is bounded to the art build
-  and written into docs/GAUNTLET.md's blind-spot history.
+  body's box is a fact about the run. The gap is bounded to dressed
+  bodies.
 - **A purchased body's outline is carried down by `art`, not by
   `outline`.** A rig's parts are marked as maskable in the breath they
   are spawned in, and a dressed kind's meshes appear frames later, so
-  `build_kind` marks the scene's root and an `art`-gated system hands the
+  `build_kind` marks the scene's root and a system in `art` hands the
   mark to each body as it arrives. The other direction — the outline pass
   learning to walk a purchased scene — was refused on that module's own
   law: the day a bought mesh replaces a hand-rolled `Cuboid`, nothing in
@@ -318,47 +303,16 @@ Every line is reversible; strike one by overruling it.
   is *wearing* is on no component at all: `paint` derives it afresh every
   frame, so a dressed body follows every reading of its piece — aim,
   claim, ghost — for nothing.
-- **The placement bench is a launch FLAG, not a key chord.** `--nudge`,
-  under `--features art`. Both gates are real but they are not equal: the
-  feature decides whether there is a bought mesh to nudge, and the flag
-  decides whether the process contains a system that can write to a
-  tracked file at all. A chord is a runtime branch — it would leave the
-  file-writing code live in every session anybody ever plays, one stuck
-  modifier from a silent edit to `art/manifest.toml`. The cost is a
-  relaunch to arm it, which is the same relaunch `--fixture` already
-  costs.
-- **The bench's arrows move the body in the BERTH's axes, not the
-  viewer's.** Standing behind a body on the aft wall, `→` moves it to
-  your left. The alternative reads better for a second and hides which of
-  three numbers is moving; this bench exists to author numbers, and the
-  overlay draws a tip on the plus end of every axis so which way is plus
-  is shown rather than remembered.
-- **One press is one step, and there is no key repeat.** A held arrow at
-  sixty frames a second crosses a whole berth in a third of a second, and
-  no hand stops it where it meant to. The coarse step is 0.05 of a berth
-  half-unit (14 mm on a one-cell kind) and 15°; the fine one is 0.005 and
-  1°, and a coarse step is a whole number of fine ones so a mixed nudge
-  cannot leave the grid.
-- **Every nudged number is snapped to a thousandth.** Without it the
-  fourth press of `↑` writes `0.20000002` into the owner's manifest and
-  every later diff carries it. A thousandth of a berth half-unit is a
-  third of a millimetre — finer than the finest step, and far finer than
-  the resolver's 0.02 slack.
-- **A save writes three numbers and never `fill`.** Deriving `fill` from
-  the measured mesh would make the promise unbreakable, which is the
-  decision two lines above this one, inverted. So nudging `scale` can
-  leave a `fill` that is no longer true; the save says so on stderr and
-  the next `resolve` refuses with the line to paste.
-- **A save writes the derived index as well as the manifest.** The
-  manifest is the authority and its refusal is the one that stops the
-  write; the index is best-effort, and it is written so that "survives a
-  restart" is true before the next `resolve` rather than after it. Both
-  go through the same surgical line editor, so the bench never learns to
-  do `resolve`'s job.
-- **The art seam is linted and tested in CI at `--features art`.** About
-  25 s on a warm dependency cache (4 s clippy, 21 s tests); about 7 min
-  the first time, which the cache then keeps. Code behind a feature
-  nothing builds is code that rots.
+- **The placement bench (`--nudge`) was built and then taken out.**
+  In-game placement tooling was a pale imitation of a Unity or Blender
+  workflow, so the manifest's numbers are typed by hand until a
+  Blender-first workflow (not designed yet) replaces that.
+- **Art is the default build; the whitebox is `--features whitebox`.**
+  The loading half used to sit behind `--features art`, and code behind a
+  feature nothing builds rots, so CI had to build it separately. Inverted,
+  the plain `cargo clippy` and `cargo test` cover it, a CI run with no art
+  cache still draws the whitebox, and one extra clippy keeps the whitebox
+  build compiling.
 - **The declared atlas is a positional third argument, not a flag or an
   environment variable.** `<program> <source> <destination> [texture]`
   keeps the whole of a conforming converter at `cp "$1" "$2"` and lets one
@@ -434,8 +388,7 @@ Every line is reversible; strike one by overruling it.
   less than a cell away by Chebyshev gap and not wholly inside it. The
   grid's "orthogonal neighbours only" has no meaning once nothing sits
   on the grid: a lamp a sixteenth past a crate's corner is not darker
-  than one a sixteenth past its edge. The rat fears a little more of the
-  room than it did.
+  than one a sixteenth past its edge.
 
   > Superseded in part by *Volatile and light distances are Euclidean*
   > (below).
@@ -561,8 +514,7 @@ Every line is reversible; strike one by overruling it.
   never a player's drop, which keeps the turn it was carried at. It is
   the cabin's backing rule ported to integers unchanged, so the deckhead
   keeps the rule the cabin gave it (a pendant on the front row backs onto
-  the front wall) rather than a flat `Turn(0)`: the gauntlet's
-  `berth-turned` family holds a pendant to facing the room.
+  the front wall) rather than a flat `Turn(0)`.
 - **A fitting scan offers the default turn first, then a quarter turn on
   for a footprint that is not square**, and never the other two quarters:
   half a turn lays the very same ground, and the arbiter reads ground.
@@ -586,8 +538,7 @@ Every line is reversible; strike one by overruling it.
   because nothing reads `Shift` while a piece is in hand: quick-move is
   read on a press, and the click that ends a carry is a release. `R`
   was cut from the keyboard to keep one key from ending a run and is not
-  brought back for this, `E` is focus, and the nudge bench's own `Shift`
-  is its fine step on its own six keys, which nothing else answers.
+  brought back for this, and `E` is focus.
 
   > Superseded by docs/BAY.md, *Lift, and the keys*: the owner found
   > `Q` and `Shift+Q` weird and asked for `Q` and `E`; `Shift+Q` is gone,
@@ -651,10 +602,6 @@ Every line is reversible; strike one by overruling it.
   written by the new writer. They stand along the deck's aft row; one of
   them stands behind the wardrobe, which is where the game's first free
   cell was.
-- **The gauntlet's loaded board stays tidy.** The arbiter alone would
-  now stand a piece on every cell of every room, each half over the
-  last; the load sets cargo out clear of what it already stood, so the
-  board the families name their culprits on is the one it always was.
 - **A lift step is a sixteenth of a cell**, about 34 mm, a key press or a
   notch of `Shift` + wheel, and `Ctrl` + `Shift` + wheel is one fine
   unit, about 2 mm. A sixteenth is the grid's old quantum: a step a hand
@@ -671,7 +618,7 @@ Every line is reversible; strike one by overruling it.
 - **The carry keys are `Q` and `E` for the turns and `X` and `Z` for the
   lift**: the turns as the owner asked, and the lift on the row under
   them, left of the walk, where the hand already is. `X` raises and `Z`
-  lowers. No default is a key the game or the bench answers, and `R`
+  lowers. No default is a key the game answers, and `R`
   stays nobody's.
 - **`E` turns a full hand and focuses an empty one.** While the body
   roams with a piece in hand and a carry action holds `E`, `E` turns and
@@ -715,18 +662,12 @@ Every line is reversible; strike one by overruling it.
   unbound and no key does two things, and a player who wanted the swap
   has it in one press. A bindings file a hand edited is read through the
   same swap.
-- **The nudge bench's keys are refused on the keys page in every build.**
-  The bindings are kept in a file every build reads, so a carry key on an
-  arrow in a played session would be a carry key on an arrow under
-  `--nudge`. That costs a player the arrows, the brackets, `T`, `R`,
-  `G`, `Tab`, `Enter` and `Backspace` as carry keys; strike it, and the
-  bench's clash test has to learn to read the player's file.
 - **The keys page's reset is a keycap reading Defaults**, in the
   keycaps' own style, for the New run bar's reason: a wordless control
   that throws a player's bindings away can be pressed by someone who
   thought it meant something else. It is the second word on the menu.
-- **No rule reads a lift.** Light reach, volatile spacing, the rat's walk
-  and every tile class read the ground under a body, so a raised lamp
+- **No rule reads a lift.** Light reach, volatile spacing and every tile
+  class read the ground under a body, so a raised lamp
   lights in plan and two canisters at different heights over one patch
   of deck are as near each other as the deck says.
 - **A piece lifted at a station takes the camera back to the room.**

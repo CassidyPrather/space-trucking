@@ -13,12 +13,11 @@
 //! nothing in it — the vial, fluff, chit and bottled midnight it used to
 //! hold stand along the aft row of the deck where the game's own
 //! tidiness set them down, `cargo::tidy`, keeping off the doorstep), a
-//! gnawed rug under the couch, enamel and luminous coats on the walls, the trade
-//! room's own goods on its stock band (seedlings, gas, gnawed scrap,
+//! rug under the couch, enamel and luminous coats on the walls, the trade
+//! room's own goods on its stock band (seedlings, gas, scrap,
 //! one of them marked) and a three-piece proposal standing on its offer
 //! band — which sits clear of the door's own lane now, so the showcase
-//! also shows the entry-path law holding (docs/ROOMS.md). A rat
-//! rides on deck cell (1, 1). Two rules shape the roster:
+//! also shows the entry-path law holding (docs/ROOMS.md). Two rules shape the roster:
 //! `VeryMysteriousCrate` stays ashore (at most one suspicious piece
 //! aboard), and the fuel hopper arrives EMPTY, so staging is tested by
 //! casting off and staging it yourself.
@@ -46,9 +45,8 @@
 //! seam's amber latch is bolted to: the bay window walked home stood
 //! across 78% of it, and one berth further on, 100%. Nothing was wrong
 //! with the latch and nothing was wrong with the berth — a player may
-//! hide their own latch with their own cargo and that stays legal
-//! (docs/GAUNTLET.md, "A latch and a berth want the same piece of
-//! wall") — but a debug board that boots you into a cabin you cannot
+//! hide their own latch with their own cargo and that stays legal —
+//! but a debug board that boots you into a cabin you cannot
 //! part a room from is a bad debug board. So the small pane is the one
 //! that goes ashore, and the big one is already home.
 //!
@@ -65,7 +63,7 @@
 //! board was laid out when they could not, so nothing on it does: the
 //! wall sconce high on the port flank and the chart tank on the front
 //! wall are where the old shadow rule put them, out from behind the
-//! cabinet and the floor lamp, and the gnawed rug still lies under the
+//! cabinet and the floor lamp, and the rug still lies under the
 //! couch.
 //!
 //! One more courtesy, which is not a rule: the deck cells a doorway
@@ -104,9 +102,11 @@ use space_trucking::sim::room::RoomKind;
 /// which handed it back byte for byte. The move to `STV24` gave every
 /// standing berth its lift (docs/BAY.md, "Lift"): nothing on the board
 /// stands off its chart, so each `hold` line gained a nought and nothing
-/// else, and the new writer hands it back byte for byte.)
+/// else, and the new writer hands it back byte for byte. The move to
+/// `STV25` retired the rat and the ad drone: their two lines and every
+/// piece's gnaw token went, and nothing else moved.)
 pub const SAVE: &str = "\
-STV24
+STV25
 seed 7
 tick 12000
 rng 3c76e098a8f74c8a
@@ -120,45 +120,43 @@ ship docked 6 7 5400
 legs 4
 omen - idle 0 3f800000 00000000
 enc -
-drone -
 parade - -
-rat 5 5 5 5 11800 12300 12600 1
 rooms 3
 room 0 0 - - -
 room 1 1 0 1 3
 room 2 2 0 0 0
 marks 1 16
-piece 0 21 0 0 hold 0 1920 1408 0 0
-piece 1 9 0 0 hold 0 2176 1664 0 0
-piece 2 8 0 0 hold 0 1536 2176 0 0
-piece 3 19 1 0 hold 0 1536 1920 0 0
-piece 4 18 2 0 hold 0 1152 1920 49152 0
-piece 5 12 0 0 hold 0 1664 1152 0 0
-piece 6 6 1 0 hold 0 1152 2688 32768 0
-piece 7 20 3 0 hold 0 2304 640 0 0
-piece 8 17 1 0 hold 0 384 1664 0 0
-piece 9 16 2 0 hold 0 4480 1408 0 0
-piece 10 22 0 1 laid 0 1536 1920 0
-piece 11 23 1 0 laid 0 1920 640 0
-piece 12 24 0 0 laid 0 896 1920 0
-piece 13 0 1 0 hold 0 1920 1152 0 0
-piece 14 13 2 0 hold 0 2176 1152 0 0
-piece 15 14 0 0 hold 0 2688 1152 0 0
-piece 16 4 3 0 hold 2 1664 1152 0 0
-piece 17 7 1 0 hold 2 1920 2432 0 0
-piece 18 1 2 0 hold 2 2176 2432 0 0
-piece 19 11 0 0 hold 0 2432 1152 0 0
-piece 20 2 1 0 hold 0 2304 2176 0 0
-piece 21 5 0 0 hold 2 2816 1152 0 0
-piece 22 3 3 1 hold 2 2304 1152 0 0
-piece 23 15 2 0 hold 2 1664 2432 0 0
-piece 24 26 0 0 hold 0 1536 3072 0 0
-piece 25 25 1 0 hold 0 1536 3456 0 0
-piece 26 27 2 0 hold 0 2688 3200 0 0
-piece 27 28 3 0 hold 0 2688 3456 0 0
-piece 28 29 0 0 hold 0 2688 2944 0 0
-piece 29 30 0 0 hold 2 384 1408 0 0
-piece 30 31 1 0 hold 0 768 2304 0 0
+piece 0 21 0 hold 0 1920 1408 0 0
+piece 1 9 0 hold 0 2176 1664 0 0
+piece 2 8 0 hold 0 1536 2176 0 0
+piece 3 19 1 hold 0 1536 1920 0 0
+piece 4 18 2 hold 0 1152 1920 49152 0
+piece 5 12 0 hold 0 1664 1152 0 0
+piece 6 6 1 hold 0 1152 2688 32768 0
+piece 7 20 3 hold 0 2304 640 0 0
+piece 8 17 1 hold 0 384 1664 0 0
+piece 9 16 2 hold 0 4480 1408 0 0
+piece 10 22 0 laid 0 1536 1920 0
+piece 11 23 1 laid 0 1920 640 0
+piece 12 24 0 laid 0 896 1920 0
+piece 13 0 1 hold 0 1920 1152 0 0
+piece 14 13 2 hold 0 2176 1152 0 0
+piece 15 14 0 hold 0 2688 1152 0 0
+piece 16 4 3 hold 2 1664 1152 0 0
+piece 17 7 1 hold 2 1920 2432 0 0
+piece 18 1 2 hold 2 2176 2432 0 0
+piece 19 11 0 hold 0 2432 1152 0 0
+piece 20 2 1 hold 0 2304 2176 0 0
+piece 21 5 0 hold 2 2816 1152 0 0
+piece 22 3 3 hold 2 2304 1152 0 0
+piece 23 15 2 hold 2 1664 2432 0 0
+piece 24 26 0 hold 0 1536 3072 0 0
+piece 25 25 1 hold 0 1536 3456 0 0
+piece 26 27 2 hold 0 2688 3200 0 0
+piece 27 28 3 hold 0 2688 3456 0 0
+piece 28 29 0 hold 0 2688 2944 0 0
+piece 29 30 0 hold 2 384 1408 0 0
+piece 30 31 1 hold 0 768 2304 0 0
 next_piece 31
 ";
 
@@ -355,7 +353,6 @@ pub fn panes_board(seed: u64, n: usize) -> String {
             id: next,
             kind: Kind::Window,
             variant: 0,
-            gnawed: false,
             loc,
         };
         aboard.push(piece);
@@ -372,7 +369,7 @@ pub fn panes_board(seed: u64, n: usize) -> String {
                 // plumbing is dropped — `save.rs`'s own convention.
                 let _ = writeln!(
                     out,
-                    "piece {} {} 0 0 hold {room} {x} {y} {}",
+                    "piece {} {} 0 hold {room} {x} {y} {}",
                     piece.id,
                     piece.kind.index(),
                     turn.0
@@ -466,7 +463,6 @@ mod tests {
                 .any(|p| !matches!(p.loc, Loc::Hold { room: 0, .. })),
             "one pane rides a room that is only alongside"
         );
-        assert!(sim.rat().is_some(), "the stowaway rides the fixture");
         assert!(sim.stoked(), "the firebox arrives banked");
         // Mid-trade, on purpose: the room's own goods on its stock band,
         // a proposal standing on its offer band, and one good marked.
@@ -478,136 +474,6 @@ mod tests {
         assert!(pieces.iter().any(|p| tile(p) == Some(Tile::Offer)));
         assert_eq!(sim.marks().len(), 1, "one good is spoken for");
         assert!(!sim.composed().is_empty(), "the room answers the proposal");
-    }
-
-    /// **Nothing the showcase stands hides a seam's amber latch.**
-    ///
-    /// The latch is the one control that sends a room away, and
-    /// `--fixture` is booted to poke at exactly that sort of thing. A
-    /// board that hands you a cabin whose seam control is behind glass
-    /// is not a board with a defect in the rules; it is a board that
-    /// chose a bad berth, which is this file's business to fix.
-    ///
-    /// **It is asked twice, and the second reading is the one that
-    /// caught it.** The board is mid-trade on purpose, so the gangway
-    /// law will not let anything launch until the goods standing in the
-    /// room that is only alongside have been carried aboard — and the
-    /// berth they land in is the sim's own, not this file's
-    /// ([`first_fit`], the very berth a shift-press picks). A 2×2 pane
-    /// left ashore comes home onto the cabin's aft wall beside its own
-    /// doorway, which is where the latch is bolted. Asked only of the
-    /// board as it boots, this would have been a green tick over a
-    /// cabin nobody could part a room from.
-    ///
-    /// The reading is the gauntlet's own — [`across`] over
-    /// [`worked_faces`], at [`OCCLUDE_BITE`] — so what counts as hiding
-    /// a worked face is tuned in one place and this moves with it,
-    /// rather than a second number growing up beside the first.
-    ///
-    /// **This is not a law about berths, and must not become one.**
-    /// Every wall cell beside an aperture is a berth and every deck cell
-    /// in front of one is a berth, so a player standing their own crate
-    /// in front of their own latch is legal by construction and stays
-    /// legal (docs/GAUNTLET.md, "A latch and a berth want the same piece
-    /// of wall"). What is asserted here is about the board this file
-    /// ships and nothing else.
-    #[test]
-    fn the_showcase_leaves_every_seam_latch_workable() {
-        use bevy::prelude::Vec3;
-        use space_trucking::sim::cargo::{Foot, Piece, first_fit};
-        use space_trucking::sim::layout;
-
-        use crate::gauntlet::{Box3, OCCLUDE_BITE, across, worked_faces};
-        use crate::room::{self, Placed};
-
-        let sim = Sim::from_save(super::SAVE).expect("the fixture parses");
-        let rooms = sim.rooms();
-        let placed: Vec<Placed> = rooms
-            .iter()
-            .map(|(id, room)| room::placed(rooms, id, room))
-            .collect();
-
-        // Every amber latch the graph draws. `worked_faces` carries a
-        // calling room's handshake too; a latch is the half this is
-        // about, and it is named off the part rather than counted off
-        // the graph so a second seam arrives on the list by itself.
-        let latches: Vec<(String, Box3, Vec3)> = placed
-            .iter()
-            .flat_map(worked_faces)
-            .filter(|(what, _, _)| what.contains("latch"))
-            .collect();
-        assert!(
-            !latches.is_empty(),
-            "the showcase grew no seam latch, so this measured nothing at all"
-        );
-
-        // The world box one berthed piece fills, posed through the very
-        // function the runtime poses a rig with.
-        let filled = |piece: &Piece| {
-            let Loc::Hold {
-                room,
-                x,
-                y,
-                turn,
-                lift,
-            } = piece.loc
-            else {
-                return None;
-            };
-            let host = placed.iter().find(|host| host.id == room)?;
-            let rect = layout::foot_rect(room, Foot::of(host.kind, piece.kind, x, y, turn)?);
-            let (lo, hi) = crate::pieces::berth_box(&host.charts, piece.kind, rect, (turn, lift))?;
-            Some(Box3::spanning(lo, hi))
-        };
-
-        let judge = |board: &[Piece], when: &str| {
-            for (what, face, inward) in &latches {
-                for piece in board {
-                    let Some(body) = filled(piece) else { continue };
-                    let cover = across(*face, *inward, body);
-                    assert!(
-                        cover <= OCCLUDE_BITE,
-                        "{when}: {:?} #{} stands across {:.0}% of {what}, and a board \
-                         whose seam control cannot be worked is a board that cannot \
-                         part a room",
-                        piece.kind,
-                        piece.id,
-                        cover * 100.0
-                    );
-                }
-            }
-        };
-
-        let aboard: Vec<Piece> = sim.pieces().to_vec();
-        judge(&aboard, "as it boots");
-
-        // And once the gangway law has been obeyed, which on this board
-        // is not a hypothesis: nothing launches until every piece of the
-        // player's standing in the room alongside is carried aboard.
-        let mut carried = aboard;
-        let mut walked = 0_u32;
-        while let Some(nth) = carried.iter().position(|piece| match piece.loc {
-            Loc::Hold { room, .. } => {
-                rooms.kind(room).is_some_and(|kind| !kind.riding())
-                    && berth_tile(rooms, piece.kind, piece.loc) != Some(Tile::Stock)
-            }
-            Loc::Laid { .. } => false,
-        }) {
-            let piece = carried[nth];
-            let spot = first_fit(rooms, &carried, piece.id, piece.kind).unwrap_or_else(|| {
-                panic!(
-                    "{:?} #{} has no berth to come home to",
-                    piece.kind, piece.id
-                )
-            });
-            carried[nth].loc = spot.hold();
-            walked += 1;
-        }
-        assert!(
-            walked > 0,
-            "the showcase left nothing ashore, so the carry home tested nothing"
-        );
-        judge(&carried, "carried home");
     }
 
     /// **Every station's room can be looked at.** `--docked n` re-berths

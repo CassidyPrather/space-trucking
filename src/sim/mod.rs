@@ -39,7 +39,6 @@ mod encounter;
 mod event;
 pub mod layout;
 pub mod map;
-mod rats;
 pub mod room;
 pub mod save;
 
@@ -50,15 +49,13 @@ pub use cargo::{
     FINE, Foot, KIND_COUNT, Kind, Loc, Mount, Piece, Spot, Tag, Turn, Violation, first_fit, lamp,
     lamp_lit, lit_adjacent, mount_accepts, placement_check, placement_legal, player_owned,
 };
-pub use encounter::{AD_SWATS, Drone, Encounter, EncounterKind};
-use encounter::{Drones, Encounters};
+use encounter::Encounters;
+pub use encounter::{Encounter, EncounterKind};
 use event::Omen;
 pub use map::{
     COMET, GUILD, HERMITAGE, INNER_RING, POI_COUNT, POIS, Poi, PoiId, SATURN, SHIP_SPEED, SUN,
     Ship, ShipState, Track, UMBRA, WANDERER, comet_visible, leg_endpoints, poi_pos,
 };
-pub use rats::Rat;
-use rats::Rats;
 pub use room::{CABIN, MAX_ROOMS, PortId, Refusal, RoomId, RoomKind, Rooms, Surf, Tile};
 pub use save::SaveError;
 
@@ -121,12 +118,6 @@ const STOKE_PERIOD: u64 = 720;
 /// at double speed for forty-five seconds. Public so views can scale
 /// "how much fire is banked" against the same number the fire uses.
 pub const STOKE_PER_FLAM: u64 = 900;
-
-/// The drone hangs this far from the ship while advertising.
-const DRONE_ORBIT: f32 = 22.0;
-
-/// Click radius for swatting the drone.
-const DRONE_RADIUS: f32 = 10.0;
 
 /// Every kind's bit set in a discovery-ledger mask (see `Sim::familiar`).
 ///
@@ -462,12 +453,6 @@ pub enum Cue {
     WhaleSong {
         intensity: f32,
     },
-    /// An ad drone latched onto the hull; every screen is ads now.
-    AdStart,
-    /// A swat landed on the drone.
-    AdSwat,
-    /// The ads stopped — swatted off, bored, or docked away.
-    AdEnd,
     /// A fluff became two fluffs. Nobody saw it happen.
     FluffBirth,
     /// The burner took a piece from the hopper: it is gone, and the
@@ -482,19 +467,6 @@ pub enum Cue {
     Creak {
         intensity: f32,
     },
-    /// A rat stowed away as the ship cast off.
-    RatAboard,
-    /// The rat hopped to another cabin cell. Quiet; ambient texture.
-    RatSkitter {
-        intensity: f32,
-    },
-    /// The rat gnawed the piece nearest its cell (see `rats` for the rule).
-    RatNibble,
-    /// A press on the rat's cell shooed it; it relocated instantly.
-    RatChased,
-    /// The rat left the ship — walked off at a lean-hold dock, or driven
-    /// off by the third chase.
-    RatLeft,
     /// Pause was toggled. `paused` is the state just entered.
     Pause {
         paused: bool,
@@ -583,9 +555,7 @@ pub struct Sim {
     /// event siblings, so it lives here rather than in either of them.
     legs: u64,
     omen: Omen,
-    rats: Rats,
     encounters: Encounters,
-    drones: Drones,
     /// The tick the hangar counter filled and the Grand Parade cast off,
     /// if it ever has. Set once per run; the sky is different after.
     parade_at: Option<u64>,
@@ -637,7 +607,6 @@ impl Sim {
                     id: next_piece,
                     kind,
                     variant: rng.u8(..cargo::VARIANTS),
-                    gnawed: false,
                     loc: Loc::Hold {
                         room: CABIN,
                         x,
@@ -687,9 +656,7 @@ impl Sim {
             visits,
             legs: 0,
             omen: Omen::new(),
-            rats: Rats::new(),
             encounters: Encounters::new(),
-            drones: Drones::new(),
             parade_at: None,
             comet_visit: None,
             stoke: 0,
@@ -1014,13 +981,6 @@ impl Sim {
         self.legs
     }
 
-    /// The stowaway rat, if one is aboard. The renderer derives its hop
-    /// tween from `prev_cell` and `moved_at` plus [`Sim::alpha`].
-    #[must_use]
-    pub const fn rat(&self) -> Option<Rat> {
-        self.rats.rat
-    }
-
     /// Pieces ever gifted to the Hermitage this run.
     #[must_use]
     pub const fn karma(&self) -> u32 {
@@ -1119,33 +1079,6 @@ impl Sim {
     #[must_use]
     pub const fn encounter(&self) -> Option<&Encounter> {
         self.encounters.current.as_ref()
-    }
-
-    /// Whether the ad drone is attached and advertising.
-    #[must_use]
-    pub fn advertising(&self) -> bool {
-        self.drones.advertising()
-    }
-
-    /// Swats already landed on the drone, for the renderer's wobble.
-    #[must_use]
-    pub fn drone_swats(&self) -> u8 {
-        self.drones.drone.map_or(0, |drone| drone.swats)
-    }
-
-    /// Where the ad drone hangs while advertising: a tight orbit around
-    /// the ship, position derived from the tick so the sim's hit-test and
-    /// the renderer agree exactly.
-    #[must_use]
-    pub fn drone_pos(&self) -> Option<Vec2> {
-        if !self.drones.advertising() {
-            return None;
-        }
-        let angle = (self.tick % 720) as f32 / 720.0 * std::f32::consts::TAU;
-        Some(Vec2::new(
-            angle.cos().mul_add(DRONE_ORBIT, self.ship.pos.x),
-            angle.sin().mul_add(DRONE_ORBIT, self.ship.pos.y),
-        ))
     }
 
     /// The Grand Parade's crossing, `0..=1`, while it is in the sky.
@@ -1418,10 +1351,8 @@ impl Sim {
         self.held.iter().flatten().any(|held| held.piece == piece)
     }
 
-    /// A press chases the rat, works a room's handshake, lifts a piece,
-    /// marks a room's stock, or actuates whatever it landed on. The rat
-    /// comes first: a press on its cell shoos it and does NOT lift the
-    /// piece under it.
+    /// A press works a room's handshake, lifts a piece, marks a room's
+    /// stock, or actuates whatever it landed on.
     ///
     /// **Which piece is the one `aim` names, when the pointer is on it**
     /// ([`layout::pick`]): the frontend's nearest body along its ray.
@@ -1433,19 +1364,6 @@ impl Sim {
     fn on_press(&mut self, player: PlayerId, p: Vec2, aim: Option<u32>, shift: bool) {
         if self.held(player).is_some() {
             return;
-        }
-        if self
-            .rats
-            .on_press(self.seed, self.tick, p, &self.pieces, &mut self.cues)
-        {
-            return;
-        }
-        if matches!(self.ship.state, ShipState::Traveling { .. }) {
-            if let Some(at) = self.drone_pos() {
-                if (p - at).length() <= DRONE_RADIUS && self.drones.on_press(&mut self.cues) {
-                    return;
-                }
-            }
         }
         if let Some(room) = self.handshake_at(p) {
             self.work_handshake(room);
@@ -1587,16 +1505,15 @@ impl Sim {
     /// the best pile of its own stock the proposal's value covers, marked
     /// kinds preferred, ties broken deterministically.
     fn compose_for(&self, room: RoomId) -> Vec<u32> {
-        let Some(barter) = &self.barter else {
+        if self.barter.is_none() {
             return Vec::new();
-        };
-        let gnaw = barter::gnaw_loved(barter.station);
+        }
         let value = |id: u32| {
             self.pieces
                 .iter()
                 .find(|piece| piece.id == id)
                 .map_or(0, |piece| {
-                    barter::piece_value(&self.rooms, piece, &self.pieces, &self.values, gnaw)
+                    barter::piece_value(&self.rooms, piece, &self.pieces, &self.values)
                 })
         };
         let budget: u32 = self.proposal(room).into_iter().map(value).sum();
@@ -1631,13 +1548,12 @@ impl Sim {
             return;
         }
         let taken = self.compose_for(room);
-        let gnaw = barter::gnaw_loved(station);
         let worth = |sim: &Self, id: u32| {
             sim.pieces
                 .iter()
                 .find(|piece| piece.id == id)
                 .map_or(0, |piece| {
-                    barter::piece_value(&sim.rooms, piece, &sim.pieces, &sim.values, gnaw)
+                    barter::piece_value(&sim.rooms, piece, &sim.pieces, &sim.values)
                 })
         };
         let given_value: u32 = given.iter().map(|&id| worth(self, id)).sum();
@@ -2322,7 +2238,6 @@ impl Sim {
         self.omen
             .on_depart(self.seed, self.legs, leg_ticks, suspicious);
         self.encounters.on_depart(self.seed, self.legs, leg_ticks);
-        self.drones.on_depart(self.seed, self.legs, leg_ticks);
         self.ship.state = ShipState::Traveling {
             from,
             to,
@@ -2330,15 +2245,6 @@ impl Sim {
             leg_ticks,
         };
         self.cues.push(Cue::Depart);
-        // After the departure clunk: the stowaway slips in with the cargo.
-        self.rats.on_depart(
-            self.seed,
-            self.legs,
-            self.tick,
-            &self.pieces,
-            suspicious,
-            &mut self.cues,
-        );
     }
 
     /// One fixed step.
@@ -2382,11 +2288,10 @@ impl Sim {
             let opened =
                 watched == Some(false) && self.encounters.current.is_some_and(|enc| enc.opened);
             self.open_encounter_room(opened, &spawn);
-            self.drones.travel_tick(progress, &mut self.cues);
             if self
                 .cues
                 .iter()
-                .any(|cue| matches!(cue, Cue::EncounterStart | Cue::AdStart | Cue::OmenStart))
+                .any(|cue| matches!(cue, Cue::EncounterStart | Cue::OmenStart))
             {
                 // Whatever just started, a fast-forwarding developer
                 // should be looking at it.
@@ -2410,8 +2315,6 @@ impl Sim {
         }
 
         self.omen.on_tick();
-        self.rats
-            .on_tick(self.seed, self.tick, &mut self.pieces, &mut self.cues);
     }
 
     /// An encounter with a counterparty or a place brings its own room
@@ -2458,7 +2361,6 @@ impl Sim {
         self.disengage_warp();
         self.omen.on_dock(&mut self.cues);
         self.encounters.on_dock(&mut self.cues);
-        self.drones.on_dock(&mut self.cues);
         // Whatever was alongside falls astern with its room, and anything
         // of the player's inside walks aboard first.
         self.dismiss_callers();
@@ -2466,9 +2368,6 @@ impl Sim {
         if poi == GUILD {
             self.steal_crate();
         }
-        // After any hangar steal, so the walk-off gate reads the cabin as
-        // the dock leaves it.
-        self.rats.on_dock(&self.pieces, &mut self.cues);
         self.visits[usize::from(poi)] += 1;
         let visit = self.visits[usize::from(poi)];
         match poi {
@@ -2513,7 +2412,6 @@ impl Sim {
             id: self.next_piece,
             kind,
             variant: self.rng.u8(..cargo::VARIANTS),
-            gnawed: false,
             loc,
         });
         self.next_piece += 1;
@@ -2531,7 +2429,6 @@ impl Sim {
             id: self.next_piece,
             kind,
             variant: self.rng.u8(..cargo::VARIANTS),
-            gnawed: false,
             loc,
         });
         self.next_piece += 1;
@@ -2624,7 +2521,6 @@ impl Sim {
             id: self.next_piece,
             kind: Kind::VeryMysteriousCrate,
             variant: self.rng.u8(..cargo::VARIANTS),
-            gnawed: false,
             loc: spot.hold(),
         });
         self.next_piece += 1;
@@ -2738,7 +2634,6 @@ impl Sim {
             id: self.next_piece,
             kind: Kind::Fluff,
             variant: self.rng.u8(..cargo::VARIANTS),
-            gnawed: false,
             loc,
         });
         self.next_piece += 1;
@@ -2756,7 +2651,6 @@ impl Sim {
             id: self.next_piece,
             kind,
             variant: self.rng.u8(..cargo::VARIANTS),
-            gnawed: false,
             loc: spot.hold(),
         });
         self.next_piece += 1;
@@ -2846,8 +2740,8 @@ mod tests {
     const TRADE: RoomId = 2;
 
     /// Seed for the scripted odyssey, found by search: the Guild's first
-    /// visit stocks something, and the first leg meets no encounter or
-    /// ad drone (either would auto-disengage the scripted warp).
+    /// visit stocks something, and the first leg meets no encounter
+    /// (which would auto-disengage the scripted warp).
     const ODYSSEY_SEED: u64 = 1;
 
     fn press_at(x: f32, y: f32) -> InputFrame {
@@ -2988,7 +2882,6 @@ mod tests {
             id,
             kind,
             variant: 0,
-            gnawed: false,
             loc,
         });
         id
@@ -3078,19 +2971,6 @@ mod tests {
         }
     }
 
-    /// Test scaffolding: a rat mid-tenure, schedules wound close so the
-    /// monkeys meet skitters and nibbles quickly.
-    const fn inject_rat(sim: &mut Sim) {
-        sim.rats.rat = Some(Rat {
-            cell: deck(2, 2),
-            prev_cell: deck(2, 2),
-            moved_at: 0,
-            next_move: 60,
-            next_nibble: 120,
-            chases: 0,
-        });
-    }
-
     /// The cells of a class in the room alongside, in tile order.
     fn tiles(sim: &Sim, room: RoomId, class: Tile) -> Vec<(u8, u8)> {
         barter::tiles_of(&sim.rooms, room, class)
@@ -3124,9 +3004,7 @@ mod tests {
         sim
     }
 
-    /// Select `poi` on an already-docked sim and pull the lever. The depart
-    /// frame may also carry a `RatAboard` on a crowded cabin, so only the
-    /// departure itself is asserted exactly.
+    /// Select `poi` on an already-docked sim and pull the lever.
     fn launch(sim: &mut Sim, poi: PoiId) {
         let target = sim.poi_pos(poi);
         sim.advance(0.0, &press_at(target.x, target.y));
@@ -4045,11 +3923,6 @@ mod tests {
     /// a piece may take is one the same arbiter will lift it out of, and
     /// there is a berth aboard to carry it to — so the sentence "clear
     /// the deck and go" is always a thing the player can actually do.
-    ///
-    /// The geometric half of the same guarantee — that no station's
-    /// furniture fences a staging cell off from every place a body may
-    /// stand — is the gauntlet's `berth-reached`, which is deliberately
-    /// **not** narrowed for staging (`cabin::gauntlet`).
     #[test]
     fn every_staging_cell_gives_back_what_it_took() {
         let mut swept = 0;
@@ -4282,7 +4155,6 @@ mod tests {
         let mut rng = fastrand::Rng::with_seed(0x5EA1);
         for run in 0..24 {
             let mut sim = Sim::new(run);
-            inject_rat(&mut sim);
             let mut count = sim.pieces().len();
             for _ in 0..900 {
                 // Aim mostly at the rooms' own lanes, so carries really do
@@ -4748,32 +4620,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn two_swats_knock_the_ad_drone_off() {
-        for seed in 0..4000_u64 {
-            let mut sim = cleared(seed);
-            launch(&mut sim, SATURN);
-            let mut attached = false;
-            for _ in 0..leg_of(&sim) {
-                sim.advance(TICK_DT, &InputFrame::default());
-                if sim.advertising() {
-                    attached = true;
-                    break;
-                }
-            }
-            if !attached {
-                continue;
-            }
-            for _ in 0..AD_SWATS {
-                let at = sim.drone_pos().expect("it is right there");
-                sim.advance(0.0, &press_at(at.x, at.y));
-            }
-            assert!(!sim.advertising());
-            return;
-        }
-        panic!("no seed produced an ad drone");
-    }
-
     // ---- The rest of the world, unchanged by the rooms ----
 
     #[test]
@@ -4963,45 +4809,6 @@ mod tests {
         let leg = leg_of(&sim);
         sim.fast_forward(leg + 10);
         assert!(!sim.is_warp());
-    }
-
-    // ---- The rat ----
-
-    #[test]
-    fn a_press_on_a_perched_rat_chases_and_never_lifts_the_piece() {
-        let mut sim = cleared(101);
-        let id = inject_hold(&mut sim, Kind::PerfumeVial, deck(2, 2));
-        inject_rat(&mut sim);
-        let at = cabin(deck(2, 2));
-        sim.advance(0.0, &press_at(at.x, at.y));
-        assert!(sim.cues().contains(&Cue::RatChased));
-        assert!(sim.held(0).is_none());
-        assert_eq!(
-            sim.pieces().iter().find(|p| p.id == id).unwrap().loc,
-            cell_spot(&sim, CABIN, Kind::PerfumeVial, deck(2, 2)).hold()
-        );
-    }
-
-    #[test]
-    fn three_chases_evict_the_stowaway() {
-        let mut sim = cleared(102);
-        inject_rat(&mut sim);
-        for _ in 0..rats::CHASE_LIMIT {
-            let cell = sim.rat().expect("a rat").cell;
-            let at = cabin(cell);
-            sim.advance(0.0, &press_at(at.x, at.y));
-        }
-        assert!(sim.rat().is_none());
-    }
-
-    #[test]
-    fn saves_continue_mid_rat_tenure_with_the_bite_intact() {
-        let mut sim = cleared(103);
-        inject_hold(&mut sim, Kind::Couch, deck(2, 2));
-        inject_rat(&mut sim);
-        launch(&mut sim, SATURN);
-        coast(&mut sim, 400);
-        assert_save_continues(sim, 400);
     }
 
     // ---- Lockstep ----

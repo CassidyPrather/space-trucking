@@ -502,45 +502,6 @@ fn nothing_is_indexed_until_every_asset_resolves() {
     );
 }
 
-/// **The cabin ships the whitebox unless art is asked for.**
-///
-/// Continuous integration cannot build the art version and never will:
-/// the payload is not in this repository. So the feature that gates
-/// purchased art has to exist — the seam is the expensive half — and it
-/// has to be off by default, because the day it is on by default is the
-/// day CI goes red everywhere at once with a missing file it has no way
-/// to fetch.
-#[test]
-fn the_cabin_ships_the_whitebox_unless_art_is_asked_for() {
-    let cargo = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("the workspace root")
-        .join("crates/cabin/Cargo.toml");
-    let text = std::fs::read_to_string(&cargo).expect("the cabin's manifest");
-    let features = text
-        .split("\n[features]\n")
-        .nth(1)
-        .expect("the cabin declares [features]")
-        .split("\n[")
-        .next()
-        .expect("a section ends");
-    assert!(
-        features
-            .lines()
-            .any(|line| line.trim_start().starts_with("art")),
-        "no `art` feature in:\n{features}"
-    );
-    let default = features
-        .lines()
-        .find(|line| line.trim_start().starts_with("default"))
-        .expect("an explicit default");
-    assert_eq!(
-        default.trim(),
-        "default = []",
-        "the default build must be the whitebox"
-    );
-}
-
 /// **A resolved asset is cached under the digest of the source it came
 /// from, and the index says the same digest.** That is what makes "is
 /// this already converted?" answerable without trusting a timestamp: a

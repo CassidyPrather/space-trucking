@@ -242,18 +242,10 @@ impl Aggregate {
                 | Cue::CasinoWin
                 | Cue::CasinoLoss
                 | Cue::WhaleSong { .. }
-                | Cue::AdStart
-                | Cue::AdSwat
-                | Cue::AdEnd
                 | Cue::FluffBirth
                 | Cue::Burn { .. }
                 | Cue::ParadeStart
                 | Cue::Creak { .. }
-                | Cue::RatAboard
-                | Cue::RatSkitter { .. }
-                | Cue::RatNibble
-                | Cue::RatChased
-                | Cue::RatLeft
                 | Cue::Pause { .. }
                 | Cue::Warp { .. } => {}
             }

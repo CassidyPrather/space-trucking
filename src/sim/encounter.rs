@@ -1,4 +1,4 @@
-//! Travel encounters and the ad drone: things to meet over a leg.
+//! Travel encounters: things to meet over a leg.
 //!
 //! DESIGN.md asks events to be ignorable ("disengagement is
 //! participation") and never wholly arbitrary. An encounter is a window
@@ -20,12 +20,9 @@
 //! comparing `progress` against the window bounds instead of counting
 //! elapsed ticks.
 //!
-//! The ad drone is the second, smaller machine in this file: a billboard
-//! that latches onto the ship mid-leg and plays unintelligible ads over
-//! the console's screens until swatted twice or bored. Structurally both
-//! follow the event-sibling convention (`on_depart` / `travel_tick` /
-//! `on_dock` hooks, own save lines, own cues) that `event.rs` and
-//! `rats.rs` established.
+//! Structurally it follows the event-sibling convention (`on_depart` /
+//! `travel_tick` / `on_dock` hooks, own save lines, own cues) that
+//! `event.rs` established.
 
 use super::cargo::Kind;
 use super::{Cue, splitmix};
@@ -33,14 +30,8 @@ use super::{Cue, splitmix};
 /// One leg in this many carries an encounter.
 const ENCOUNTER_CHANCE: u64 = 3;
 
-/// One leg in this many attracts an ad drone (independent of encounters).
-const AD_CHANCE: u64 = 4;
-
 /// Longest an encounter window runs, in ticks (two minutes alongside).
 const WINDOW_CAP: u64 = 7200;
-
-/// Swats needed to knock the ad drone off the hull.
-pub const AD_SWATS: u8 = 2;
 
 /// Ticks between the meteor shower's extra creak volleys.
 const METEOR_CREAK_EVERY: u64 = 90;
@@ -50,7 +41,6 @@ const WHALE_VERSE_EVERY: u64 = 600;
 
 /// Stream salts, disjoint from every other derived stream in the sim.
 const SALT_ENCOUNTER: u64 = 0xE4C0_0117;
-const SALT_AD: u64 = 0xAD_D12073;
 const SALT_CASINO: u64 = 0xCA_51F0;
 
 /// What is out there this leg.
@@ -266,112 +256,5 @@ impl Encounters {
     #[must_use]
     pub const fn casino_coin(seed: u64, tick: u64) -> bool {
         splitmix(seed ^ SALT_CASINO, tick) % 2 == 0
-    }
-}
-
-/// The ad drone: a flying billboard that latches on mid-leg and plays
-/// ads in a language nobody reads over every screen on the console.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Drone {
-    /// Window bounds in leg progress ticks.
-    pub start: u64,
-    pub end: u64,
-    /// It is currently attached and advertising.
-    pub attached: bool,
-    /// It has left (swatted off or bored), never to return this leg.
-    pub gone: bool,
-    /// Swats landed so far, `0..AD_SWATS`.
-    pub swats: u8,
-}
-
-/// The drone machine: at most one per leg.
-#[derive(Clone, Debug, Default)]
-pub struct Drones {
-    pub drone: Option<Drone>,
-}
-
-impl Drones {
-    pub const fn new() -> Self {
-        Self { drone: None }
-    }
-
-    /// Roll this leg's drone, if any. Independent of the encounter roll.
-    pub fn on_depart(&mut self, seed: u64, legs: u64, leg_ticks: u64) {
-        self.drone = None;
-        let h = splitmix(seed ^ SALT_AD, legs);
-        if h % AD_CHANCE != 0 || leg_ticks < 3600 {
-            return;
-        }
-        let start = leg_ticks / 6 + (h >> 16) % (leg_ticks / 2).max(1);
-        let end = (start + (leg_ticks / 3).min(WINDOW_CAP)).min(leg_ticks.saturating_sub(300));
-        if end <= start {
-            return;
-        }
-        self.drone = Some(Drone {
-            start,
-            end,
-            attached: false,
-            gone: false,
-            swats: 0,
-        });
-    }
-
-    /// One travel tick: latch on or get bored, against `progress`.
-    pub fn travel_tick(&mut self, progress: u64, cues: &mut Vec<Cue>) {
-        let Some(drone) = &mut self.drone else {
-            return;
-        };
-        if drone.gone {
-            return;
-        }
-        if !drone.attached {
-            if progress >= drone.end {
-                drone.gone = true;
-            } else if progress >= drone.start {
-                drone.attached = true;
-                cues.push(Cue::AdStart);
-            }
-            return;
-        }
-        if progress >= drone.end {
-            drone.attached = false;
-            drone.gone = true;
-            cues.push(Cue::AdEnd);
-        }
-    }
-
-    /// A press landed on the drone: one swat. The second knocks it off.
-    /// Returns whether the press was consumed.
-    pub fn on_press(&mut self, cues: &mut Vec<Cue>) -> bool {
-        let Some(drone) = &mut self.drone else {
-            return false;
-        };
-        if !drone.attached {
-            return false;
-        }
-        drone.swats += 1;
-        cues.push(Cue::AdSwat);
-        if drone.swats >= AD_SWATS {
-            drone.attached = false;
-            drone.gone = true;
-            cues.push(Cue::AdEnd);
-        }
-        true
-    }
-
-    /// Docked: any surviving drone peels away to bother someone else.
-    pub fn on_dock(&mut self, cues: &mut Vec<Cue>) {
-        if let Some(drone) = &self.drone {
-            if drone.attached {
-                cues.push(Cue::AdEnd);
-            }
-        }
-        self.drone = None;
-    }
-
-    /// Whether the ads are playing right now.
-    #[must_use]
-    pub fn advertising(&self) -> bool {
-        self.drone.is_some_and(|drone| drone.attached)
     }
 }

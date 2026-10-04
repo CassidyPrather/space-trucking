@@ -255,7 +255,6 @@ mod tests {
             id: 0,
             kind: Kind::LaunchLever,
             variant: 0,
-            gnawed: false,
             loc: Loc::Hold {
                 room: CABIN,
                 x: 0,

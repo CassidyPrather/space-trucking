@@ -142,9 +142,7 @@ that wall, and each pane reads its own rectangle back out of it (a
 two co-planar apertures seen from one eye have the same near plane and
 the same view axis, so their projections differ by an affine map of that
 plane and the larger render *contains* the smaller one texel for texel.
-`viewport::sub_uv` is that map written out, and
-`a_shared_sky_is_the_pane_s_own_sky` checks it against each pane's own
-independently-built projection rather than against itself.
+`viewport::sub_uv` is that map written out.
 
 A "sky" is one pass over the whole outside — six thousand star quads,
 every attached room's shell, the stream, the dock, and whatever is
@@ -192,7 +190,7 @@ window may be free, but glass is never unbounded*:
 The rehang rule is untouched by all of this, because the gathering is by
 **plane** and a plane is a fact about the wall: move a window to another
 wall and it joins that wall's sky, aimed that way, showing what is out
-there. `two_walls_are_two_skies_pointed_two_ways` is the assertion.
+there.
 
 #### Why not a stencil portal
 
@@ -240,7 +238,7 @@ check them against each other rather than against a golden image.
 The sim remains the authority for everything out there: `ShipState`
 decides which world grows off the bow and which shrinks astern,
 `is_warp`/`stoked` set how hard the near field streams past,
-`encounter`/`parade`/`advertising` bring the company, `Cue::Jump` floods
+`encounter`/`parade` bring the company, `Cue::Jump` floods
 the aperture violet, and `light`/`omen` lean on the void's one light
 exactly as they lean on the cabin's lamps.
 
@@ -310,7 +308,7 @@ shape of it, for everyone else:
   no forms, so `Offer` stays hollow and `Stock` stays filled at every
   station (no signal on hue alone); `poi::Worn` does not offer the
   hazard material, so stripes stay `Consume`'s alone; every colour is a
-  palette role and the purity test walks `poi/` too; geometry is the
+  palette role; geometry is the
   same five code-built primitives everything else uses.
 - **Looking at your own work.** `--docked n` re-berths the developer
   fixture at any place on the chart, and `--view berth` stands outside,
@@ -343,8 +341,8 @@ untouched at three orders of magnitude of headroom.
 
 All color lives in `crates/cabin/src/palette.rs`, and the roles and hex
 values are the 2D palette's, verbatim — retuning still happens in one
-place, and a purity test still fails the build on raw color constructors
-anywhere else in the crate. (Rooms the 2D console never had may add
+place, and by convention nothing else in the crate writes a raw colour.
+(Rooms the 2D console never had may add
 roles there, documented at the constant — the burner's `EMBER` firebox
 glow was the first, and its `SOOT` deck the second.) Cargo keeps its identity hues; POIs keep their
 enamel identities. What changed is interpretation: a role is
@@ -395,27 +393,21 @@ smaller change than it sounds — it is throwing away the thing that was
 bought — and the honest position is that a dressed build looks like the
 pack it was dressed from.
 
-`palette_purity` needs no loosening for this, and the reason is a happy
-accident of how it was written. It is a **source sweep**, not a material
-sweep: it walks `crates/cabin/src/`, subdirectories and all, and fails
-the build on `Color::srgb` and its siblings outside `palette.rs`. That is
-already exactly "materials the cabin itself authors", in the strongest
-available sense — the cabin authors a colour only by writing one down.
-`art.rs` writes none: it hands the asset server a path and spawns what
-comes back. So the test covers the art module and passes, and it covers
-it in a **whitebox** build too, where the module is compiled but its
-loading half is not.
+The palette convention needs no loosening for this: the cabin authors a
+colour only by writing one down, and `art.rs` writes none — it hands the
+asset server a path and spawns what comes back.
 
 Two consequences worth knowing.
 
 **A dressed build is not a graded build.** The two voices will not agree,
 and the lighting is the palette's — the cabin's lamps, fog and dust do
-not change when a crate does. Judging that is a job for the nudge tool
-and for eyes, not for a test.
+not change when a crate does. Judging that is a job for eyes, not for a
+test.
 
 **The whitebox is still the design.** Every rule in this file is about
-geometry the repository cuts, because that is the version continuous
-integration builds and the version that has to stand on its own. Art is
+geometry the repository cuts, because that is what any build without
+the art cache draws — CI and a fresh clone included — and the version
+that has to stand on its own. Art is
 presentation over a description that does not change.
 
 #### Colour on a bought mesh is the atlas you choose
@@ -432,8 +424,7 @@ where it is used: a `fabric/` binding in `art/manifest.toml` may carry a
 `room` line, and the furnace's walls are the cabin's walls painted from
 the pack's red family (docs/ART_PIPELINE.md, "`room`: one mesh, many
 colours"). Nothing in the cabin tints, multiplies or repaints a bought
-material, and the palette purity sweep still passes untouched: the art
-module still writes no colour.
+material: the art module still writes no colour.
 
 Two consequences for the room. **The no-hue-alone law is untouched**,
 because the room's readings — the tile fields and marks, the tread, the
@@ -473,9 +464,8 @@ rather than two hues of the same fill.
 
 Anything flat drawn over a chart rides a **named rung** of the decal
 ladder (`rig::layer`), and one reading gets one rung: field, mark, and
-tread are three. A new reading adds a rung and a row in the ladder test,
-which fails the build; a new reading sharing a rung is a shimmer at
-every tile boundary, which fails only the eye.
+tread are three. A new reading adds a rung; a new reading sharing a rung
+is a shimmer at every tile boundary.
 
 ## The three tells: an outline, drawn round the body's own edge
 
@@ -602,9 +592,7 @@ elevation the rig was drawn in, so a cabinet met on its flank at the
 height of the third cubby reads the third cubby (it has no cubbies
 since BAY.md, *Cargo stops colliding*; the reading is the same). After
 the cure every
-one of those kinds answers from all 36 stances at every height, and
-`pieces::tests::the_body_answers_from_all_round` sweeps 1,346 berths and
-111,617 aims to keep it that way.
+one of those kinds answers from all 36 stances at every height.
 
 **Level wall cargo still reads through its chart, and that is a measured
 trade rather than an omission.** There the chart lies in the rig's very
@@ -623,8 +611,7 @@ worth less than the seam.
 The showcase used to supply that pane without meaning to: its bay window
 rode the market, and the one berth the arbiter will bring a 2×2 home to
 is that very cell. It berths aboard now and the porthole goes ashore in
-its place (`fixture::tests::the_showcase_leaves_every_seam_latch_workable`).
-That fixes a bad debug board and changes nothing above — the berth is
+its place. That fixes a bad debug board and changes nothing above — the berth is
 still legal, still a berth a player may take, and a crate a player puts
 there is still their own business.
 
@@ -664,124 +651,6 @@ shake, lamps carry lit-versus-dark-glass, rows sit at fixed stations.
   aboard (`crate::outline`) and its cost is written down with numbers; a
   second one needs the same measurement before it lands.
 
-## The gauntlet: what a screenshot structurally cannot see
-
-A human playtest of the station wave found some fifteen defects that
-fifteen design agents and their screenshots had all signed off on, and
-the post-mortem blamed the *shape* of the checking rather than anybody's
-care: a still cannot see time, agents shot the framing they designed for
-rather than the path a player walks, rooms were photographed empty, and
-designers graded their own work. `crates/cabin/src/gauntlet.rs` is the
-adversarial pass that closes those, and it splits in two:
-
-- **Pure geometry, always on.** `cargo test -p cabin` sweeps every room
-  in the game — the twelve stations, the three event rooms, the cabin
-  and the burner — against a **loaded** board (`gauntlet::load` fills
-  every legal berth through the sim's own arbiter, so decor has cargo to
-  clip through), every cargo kind, and every doorway. Sixteen rule
-  families: no fitting stands in a berth cargo may take at the height a
-  rig occupies; nothing occludes a wall berth from its room; every berth
-  stays workable from the walk envelope; no two drawn faces share a plane
-  and a facing (the general z-fight detector); a rig's named features
-  point where their names say (`pieces::features` — a sconce's cup INTO
-  the room, a floor lamp's base plate FLAT on the deck); a rig draws
-  inside the cells the sim gave it, so its pick face can be cut from its
-  picture rather than its plan; the walked path stands in air; every body
-  lands on the cargo grid; a part that names a seat meets it; a rig
-  reaches the chart it is berthed on; a hung body says what holds it up;
-  a rig fills the cells its berth spends rather than merely staying
-  inside them; a rig stands up and shows the room its face; every cell of
-  deck a body may set cargo on is walkable to from the door it comes in
-  by; and a room's own worked hardware — the counter, the latch — can be
-  reached and is not stood across.
-- **Pixels, opt-in.** `--gauntlet-walk <dir>` drives the scripted room
-  walk — in through the door, round the room, up to the counter — and
-  writes one PNG per waypoint, then holds the camera still for ten
-  frames and compares them (the flicker detector: the only mechanism
-  that would ever have caught the every-other-frame lamp), then backs
-  off along an approach sampling the room's own brightness (the
-  light-pop detector). It needs a rasteriser, so it runs under `xvfb`.
-
-**It measures descriptions, not the world**, and that is the first rule
-this file cares about: anything drawn from something other than a pure
-description of it — `poi::character_of`, `room::shell_boxes`,
-`pieces::parts`, `room::seam_parts` — is invisible to every rule in the
-sweep, however loud it is on screen. Twice a whole layer of the art was
-built straight into the world and went unchecked for that reason: the
-cargo rigs, and then the hardware in every doorway. **A new family of
-thing gets a description before it gets a mesh.**
-
-The second rule was learned the harder way, after four defects the owner
-found by eye in bodies that had been described all along: a wall lamp's
-mount pad, a station's beacon, a porthole, and a doorway's latch, each
-hanging in the air off the surface it is bolted to. **A description says
-where a body is; it takes a declaration to say what a body means.** A
-fitting's `at` is a position, and a position is not a promise — nothing
-could ask whether the beacon reached its wall until the beacon said it
-had one. So the sweep asks bodies to declare: `Part::pointing` for the
-way a part faces, `Part::seated` for the joint it makes, `Fitting::seated`
-and `SeamPart`'s own seat for what holds a piece of furniture up. Where a
-body genuinely hangs on nothing — the Wanderer's collar, its hum rings —
-it declares nothing, and that stays legal. **When a rule cannot be
-written, ask what the description leaves unsaid, not only what it fails
-to enumerate.**
-
-The third rule came off five hoops that five different stations had each
-declared "set into the deck" and each drew hovering over it. Nobody had
-mis-declared anything: a `Fitting`'s `half` is the box the unit body is
-scaled into, and four of the five silhouettes fill that box exactly
-while a torus's tube fills 18% of it. The declaration meant one thing
-for a slab and another for a ring, and every author of a ring had been
-quietly wrong about which. **A vocabulary term that means one thing for
-most of its bodies and another for one of them will be read the common
-way by everybody, so the odd body is what needs saying out loud** —
-`poi::Shape::fill`, one statement of the fraction, read by the
-containment law and by the sweep alike. It is worth looking for: the
-suspicious shape is the one whose mesh does not fill its own box.
-
-The fourth rule came off a crate the owner reported four times and the
-harness passed every time. Eleven families all asked the same *kind* of
-question — is the body inside its plan, inside its band, inside the
-room, touching its chart — and every one of them is satisfied by a body
-shoved hard against one edge of the ground it was given. On a deck that
-is exactly what happened: the depth band is measured off the berth
-plane, a wall has one and a deck does not, and every standing rig in the
-game was composed half a cell out into the aisle on the one axis nobody
-had a rule for. **A rule that only ever asks whether a body is inside
-something cannot see a body that is inside it and in the wrong place, so
-where a claim fixes two axes, ask what fixes the third.** `berth-filled`
-is that question asked of the two axes a berth's rect pays for.
-
-The fifth rule is about the other four. Each of them was learned from a
-defect somebody found by playing, written down afterwards, and each one
-is a point rather than a method: knowing that a defect once hid in an
-undescribed layer, in an undeclared joint, in a vocabulary term read two
-ways and in an unasked axis does not say where the next one is. The owner
-said as much — patch a class, fail, catch a batch at integration test,
-repeat — and the way out was already visible in the fourth, which was
-found by *reasoning* rather than by looking: eleven families were listed,
-what each one asked was written in a column, and the column had a gap in
-it.
-
-So the space itself gets written down. Every rule in the sweep is a
-**triple** — a body, a relation, and the frame the relation is read in —
-and the three lists are short and finite: what the game describes, what
-one body can be to another, and the half-dozen frames anything is
-measured in. Crossing them gives eight hundred triples, most of them
-meaningless, and the work is dismissing those convincingly. What is left
-is a list of questions with three columns: asked, unasked, and
-**unaskable**, the last being a question a player could answer by looking
-and nothing in the tree can be put to. **Enumerate the space a rule can
-be about and close it, rather than adding a family per sighting** — and
-an unaskable question is the first rule said from the other side, because
-what it names is a description that does not exist yet. The map, its
-dismissals, and the four families that came out of it are in
-[GAUNTLET.md](GAUNTLET.md).
-
-[GAUNTLET.md](GAUNTLET.md) is the operator's side — how to run it, how to
-read a docket line, what each family looks like in the world when it
-fires, and what the harness still cannot see.
-
 ## Keeping geometry honest
 
 The class of defect where a mass swallows a face's edge, or a viewpoint
@@ -792,19 +661,6 @@ clips a wall, is handled structurally, not by eyeballing:
   rig's own face — is **derived from that surface's corners and
   extents**, never authored twice. Nothing is measured off a panel any
   more, because there are no panels.
-- Unit tests walk the invariants: every focus pose must be a legal
-  camera position facing its station, the roaming envelope must be clear
-  of every slab, and **every cell of the net must be workable** — that
-  last one used to forgive cells a station panel stood in front of, and
-  the exemption retired with the panels. Break the layout and the build
-  breaks.
-- **Sightlines are tested, not eyeballed**: from each station's focus
-  viewpoint, every corner of its face and every interactive control
-  (levers, grid cells) must sit inside the camera frustum with an
-  unoccluded line from the eye — checked by frustum math plus occlusion
-  rays against every slab. Hull is the only thing that can be in the
-  way, and a control a refit pushes off-screen or behind it fails the
-  build with the blocking geometry named.
 - The cabin has a **screenshot mode** (`--shot out.png`, optionally
   `--view tank|lever|bay|front|starboard` or a room's name, and `--menu`
   to raise the `Esc` menu for the shot) that renders, saves one capture,
@@ -820,9 +676,7 @@ clips a wall, is handled structurally, not by eyeballing:
   frame that needs them rather than whenever they are ready. So a
   refactor that was meant to change nothing can be proved to have
   changed nothing by shooting the same view before and after and
-  comparing the bytes — which is what
-  `the_same_view_shot_twice_is_the_same_bytes` does on every view it
-  covers. `--gauge` is deliberately not on that clock: it measures a
+  comparing the bytes. `--gauge` is deliberately not on that clock: it measures a
   duration, and a counted clock would only give it back the number it
   was told.
 - Four `--view` names belong to the window and are *derived*, like
@@ -857,7 +711,7 @@ The owner's playtest note: drag-and-drop cargo between little slots is a
 networking). The architectural answer, so the experiment can run free:
 
 **The sim's discrete cargo model is the network model, and it is already
-right.** A piece is `(id, kind, variant, gnawed, Loc)` where `Loc` is a
+right.** A piece is `(id, kind, variant, Loc)` where `Loc` is a
 discrete berth — hold cell, pad slot, rail slot. Lockstep multiplayer
 ships only `InputFrame`s; cargo state never travels, and the drag-monkey
 tests prove no interleaving of six players' inputs can lose a piece.
@@ -927,7 +781,7 @@ Answered by iteration so far:
   became a near field the ship actually passes, the destination a body
   that grows off the bow, the berth a world and a dock alongside, the
   jump a flood on the aperture's own near plane, and the whale, the
-  parade, the meteors and the ad drone real things out there. What did
+  parade and the meteors real things out there. What did
   not survive, and why: the **twinkle** (there is no air to twinkle
   through, and it was standing in for the parallax the aperture now
   supplies), the **parked dust motes and their sparkle** (a painted

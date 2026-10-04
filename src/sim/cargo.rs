@@ -65,7 +65,7 @@ pub enum Kind {
     WallLamp,
     /// A standing lamp, shade up top, base bolted to the deck.
     FloorLamp,
-    /// Somebody's living room, in transit. The rat agrees.
+    /// Somebody's living room, in transit.
     Couch,
     /// Gilt frame, subject debatable. Shows best under lamplight.
     Painting,
@@ -167,8 +167,7 @@ pub enum Mount {
 /// The arbiter's own clause, and public because the drawing has to ask
 /// it too: which charts a kind may be berthed on decides which plane
 /// its body has to reach, and a frontend that answered that from the
-/// mount itself would be a second copy of this table
-/// (`cabin::gauntlet`, `rig-seated`).
+/// mount itself would be a second copy of this table.
 #[must_use]
 pub const fn mount_accepts(mount: Mount, surf: Surf) -> bool {
     matches!(
@@ -889,7 +888,7 @@ const fn fix(v: i64) -> i32 {
 /// axes are not the room's: a chart's +x can read mirrored from inside,
 /// the front chart unfolds downward, and the flanks' courses climb the
 /// sheet's x. Everything that needs a footprint asks here — [`Foot::of`],
-/// and through it the arbiter, the drop, the light and the rat — and the
+/// and through it the arbiter, the drop and the light — and the
 /// frontend poses bodies with the same answer, so a drawn body and the
 /// ground the sim gave it are one claim (`cabin::pieces::site_on`).
 ///
@@ -1155,7 +1154,7 @@ impl Foot {
     }
 
     /// Net cell `(x, y)` as a footprint: what a question about one cell
-    /// (the rat's, the light's) asks with.
+    /// (the light's) asks with.
     #[must_use]
     pub const fn cell(x: u8, y: u8) -> Self {
         let half = FINE as i32 / 2;
@@ -1378,11 +1377,6 @@ pub struct Piece {
     pub kind: Kind,
     /// Visual flavour roll, for the renderer to vary sprites with.
     pub variant: u8,
-    /// A rat has been at it: permanently bitten (see `rats`), worth a
-    /// little less at every station (see `barter::GNAW_MALUS`), rendered
-    /// with a notch, and otherwise a perfectly ordinary piece — it stands,
-    /// trades, and resells like anything else.
-    pub gnawed: bool,
     pub loc: Loc,
 }
 
@@ -2087,7 +2081,7 @@ pub const fn lamp(kind: Kind) -> bool {
 ///
 /// Lamps are lit while they stand in a room, which is everywhere a lamp
 /// can be: nothing boxes one up any more. Everything lighting touches —
-/// the rat's fear, the well-lit art bonus, any frontend halo — reads lamp
+/// the well-lit art bonus, any frontend halo — reads lamp
 /// state through this one predicate.
 #[must_use]
 pub const fn lamp_lit(piece: &Piece) -> bool {
@@ -2104,8 +2098,7 @@ pub const fn lamp_room(piece: &Piece) -> Option<RoomId> {
 }
 
 /// Whether cell `(room, x, y)` sits in light: [`lit_within_reach`],
-/// asked of one cell. The rat walks its lattice a cell at a time, and
-/// this is the shape of question it asks.
+/// asked of one cell.
 #[must_use]
 pub fn lit_adjacent(host: RoomKind, pieces: &[Piece], room: RoomId, x: u8, y: u8) -> bool {
     lit_within_reach(host, pieces, room, Foot::cell(x, y))
@@ -2121,7 +2114,7 @@ pub fn lit_adjacent(host: RoomKind, pieces: &[Piece], room: RoomId, x: u8, y: u8
 /// does not care which way the room is turned, and a rule that did would
 /// light a crate at one angle and not the next. Light does not cross a
 /// seam: a lamp lights its own room. Everything light touches — the
-/// rat's fear, the seedlings' bloom, the hold painting's spotlight —
+/// the seedlings' bloom, the hold painting's spotlight —
 /// reads through this one predicate; the well-lit-art price bonus
 /// deliberately does not on the offer area (a coat is ambiance, not
 /// gallery lighting).
@@ -2217,7 +2210,6 @@ mod tests {
                 id: i as u32,
                 kind,
                 variant: 0,
-                gnawed: false,
                 loc: cell(kind, at).expect("a cell of the net").hold(),
             })
             .collect()
@@ -2697,14 +2689,12 @@ mod tests {
             id: 2,
             kind: Kind::Rug,
             variant: 0,
-            gnawed: false,
             loc: rug_at(deck(1, 4)),
         };
         let couch = Piece {
             id: 3,
             kind: Kind::Couch,
             variant: 0,
-            gnawed: false,
             loc: couch_at(deck(0, 0)),
         };
         assert_eq!(first_fit(&rooms, &[], 9, Kind::Rug), None);
@@ -2724,7 +2714,6 @@ mod tests {
             id: 0,
             kind: Kind::LuminousPaint,
             variant: 0,
-            gnawed: false,
             loc: cell(Kind::LuminousPaint, aft(2, 1))
                 .expect("on the wall")
                 .laid(),
@@ -2738,7 +2727,6 @@ mod tests {
             id: 1,
             kind: Kind::PaintTin,
             variant: 0,
-            gnawed: false,
             loc: cell(Kind::PaintTin, aft(4, 1)).expect("on the wall").laid(),
         };
         assert!(!lit_cell(&[tin], CABIN, aft(3, 1)));
@@ -2843,7 +2831,6 @@ mod tests {
             id,
             kind,
             variant: 0,
-            gnawed: false,
             loc: Loc::Hold {
                 room: CABIN,
                 x,
@@ -3133,7 +3120,6 @@ mod tests {
                 id: full.len() as u32,
                 kind: Kind::PerfumeVial,
                 variant: 0,
-                gnawed: false,
                 loc: spot.hold(),
             });
         }
@@ -3423,7 +3409,6 @@ mod tests {
                             id,
                             kind: Kind::PerfumeVial,
                             variant: 0,
-                            gnawed: false,
                             loc: vial.hold(),
                         });
                     }

@@ -20,9 +20,16 @@ lives in [docs/ART_DIRECTION_3D.md](docs/ART_DIRECTION_3D.md).
 Run it:
 
 ```bash
-cargo run --release -p cabin          # --release is the way to *play*
-cargo run --release -p cabin -- --dev # with the 16x warp unlocked
+cargo run --release -p cabin                      # --release is the way to *play*
+cargo run --release -p cabin -- --dev             # with the 16x warp unlocked
+cargo run --release -p cabin --features whitebox  # code-cut geometry only
 ```
+
+The default build draws purchased Synty art from the local art cache
+(see [docs/ART_PIPELINE.md](docs/ART_PIPELINE.md)); none of that art is in
+this repository. Without a cache — a fresh clone, CI — it falls back to the
+code-cut whitebox and says so once on stderr. `--features whitebox` compiles
+the art loader out entirely, for working on geometry without it.
 
 Dev builds trade frame rate for compile speed; dev tooling:
 `-- --shot out.png --view bay` renders one screenshot and exits
@@ -71,7 +78,7 @@ meets first. The cabinet is furniture and stores nothing. Rugs and
 paint *lay into* the room instead of occupying it: a rug goes down on
 the deck (and cargo stands on it), paint coats a wall or floor cell,
 and either lifts out from under whatever stands on it. Luminous paint
-really glows — rats keep clear of it. The launch lever is a pull: grab, drag
+really glows. The launch lever is a pull: grab, drag
 down to the end of the track — the way the handle itself
 swings — and the throw fires at the detent. `Space`
 pauses and `M` mutes (`F` warps, in dev mode).
@@ -203,18 +210,17 @@ mode is on the deferred list.
 
 Benchmark: `cargo bench --bench sim_bench -- --quick`
 
-Performance budgets (CI-enforced ceilings, see
+Performance budgets (run by hand, see
 [docs/BUDGETS.md](docs/BUDGETS.md)): `cargo test --release -p space-trucking --test perf -- --ignored`
 
 Purchased art (none is in this repository; see
 [docs/ART_PIPELINE.md](docs/ART_PIPELINE.md)):
-`cargo xtask art check`
+`cargo xtask art check`, then `cargo xtask art resolve` to fill the cache
+the default build reads
 
 Search that art by what it looks like rather than by what it is called
 (`describe` renders each mesh, measures it, and files a sentence about it
 in `art/dex/`): `cargo xtask art dex "hazard stripe"`
-
-Security audit: `cargo audit` (requires `cargo install cargo-audit`)
 
 Pre-commit hook: `git config core.hooksPath .githooks` (runs `cargo fmt`)
 

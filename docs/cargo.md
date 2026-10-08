@@ -17,12 +17,13 @@ Retcon: Delete mercury from the solar system. It is gone. Get rid of the night m
 
 You can still try to sell stuff that isn't a planet's specific import, these are general valuation guidelines for economy tuning.
 
+See game-prototypes project for Synty-mapping of food assets. There should be some flow-charts for some basic items in there. Can map those to the planets to an extent here
+
 # Specific Locations
 
 ## Venus
 
-### Imports
-
+- Gems
 - Fancy food
 - Decorative plants
 - Scientific equipment, e.g. 
@@ -123,6 +124,7 @@ Earth does **not** import or export food.
 - Computers
   - Assets/PolygonOffice/Prefabs/Props/Desk Props/SM_Prop_Computer_Tower_02.prefab
   - Assets/PolygonOffice/Prefabs/Props/Desk Props/SM_Prop_Computer_Tower_Flat_01.prefab
+- Oil (from Europa)
 
 ## Saturn
 
@@ -167,6 +169,7 @@ Moons of this planet have huge chunks knocked out of them.
 - Complex chemicals
 - Water
 - Fuel
+- Gems
 
 Try these:
 - Assets/PolygonConstruction/Prefabs/Props/SM_Prop_BarrelStack_01.prefab
